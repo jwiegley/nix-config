@@ -899,6 +899,7 @@ def _catalog_executor(record: dict) -> Optional[str]:
     if update["kind"] in {
         "fixed-flake-input",
         "flake-input",
+        "flake-input+build",
         "flake-input+copy",
     }:
         return "update-agents"
@@ -932,7 +933,10 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
         "explicit-rev": (common_update_fields | {"branch"}, set()),
         "fixed-flake-input": (common_update_fields | {"input"}, {"input"}),
         "flake-input": (common_update_fields | {"input"}, {"input"}),
-        "flake-input+build": (common_update_fields | {"input"}, {"input"}),
+        "flake-input+build": (
+            common_update_fields | {"buildPackage", "input"},
+            {"buildPackage", "input"},
+        ),
         "flake-input+copy": (common_update_fields | {"input"}, {"input"}),
         "github-commit": (common_update_fields | {"branch"}, {"branch"}),
         "github-release": (common_update_fields | {"tagPrefix"}, set()),
@@ -982,6 +986,14 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
             if "reason" in update and (not isinstance(update["reason"], str) or not update["reason"]):
                 raise RuntimeError(f"invalid update reason for source catalog record: {name}")
             kind = update["kind"]
+            if kind == "flake-input+build" and (
+                not isinstance(update["buildPackage"], str)
+                or not update["buildPackage"]
+                or not hashes
+            ):
+                raise RuntimeError(
+                    f"invalid flake input build strategy for source catalog record: {name}"
+                )
             source_args = record["source"]["args"]
             source_fetcher = record["source"]["fetcher"]
             if source_fetcher == "fetchTree" and "input" in update and portable_lock is None:
@@ -1068,8 +1080,21 @@ in
     return version
 
 
+def resolve_flake_input_dependent_hash(
+    nix_dir: Path, package_name: str, hash_type: str
+) -> str:
+    value = HashComputer(nix_dir)._compute_fod_hash(package_name, hash_type)
+    if not value:
+        raise RuntimeError(
+            f"failed to resolve flake input dependent hash: {package_name}.{hash_type}"
+        )
+    return value
+
+
 def sync_flake_projections(
-    nix_dir: Path, version_resolver=resolve_flake_input_version
+    nix_dir: Path,
+    version_resolver=resolve_flake_input_version,
+    dependent_hash_resolver=resolve_flake_input_dependent_hash,
 ) -> int:
     """Refresh catalog fetchTree projections from the selected portable lock nodes."""
     lock_path = nix_dir / "config" / "ai" / "flake.lock"
@@ -1102,13 +1127,27 @@ def sync_flake_projections(
                 source["args"] = projected
                 source["url"] = projected_url
                 record_changed = True
-            if update["kind"] == "flake-input+copy":
+            if update["kind"] in {"flake-input+build", "flake-input+copy"}:
                 projected_version = version_resolver(
                     nix_dir, update["input"], locked
                 )
                 if record.get("version") != projected_version:
                     record["version"] = projected_version
                     record_changed = True
+            if update["kind"] == "flake-input+build" and record_changed:
+                dependent_hashes = record.get("hashes", {})
+                if not dependent_hashes:
+                    raise RuntimeError(
+                        f"flake input build has no dependent hashes: {name}"
+                    )
+                for hash_type in dependent_hashes:
+                    dependent_hashes[hash_type] = (
+                        "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+                    )
+                    path.write_text(json.dumps(payload, indent=2) + "\n")
+                    dependent_hashes[hash_type] = dependent_hash_resolver(
+                        nix_dir, update["buildPackage"], hash_type
+                    )
             if record_changed:
                 changed_document = True
                 changed_records += 1

@@ -587,6 +587,7 @@
           "flake.lock",
           "config/ai/flake.lock"
         ],
+        "buildPackage": "agent-resources",
         "input": "pi-mcp-adapter",
         "kind": "flake-input+build",
         "policy": "manual"

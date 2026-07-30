@@ -576,6 +576,7 @@ fi
             IFS=$'\t' read -r target_kind target_executor target_input <<<"$target_row"
             if [[ $target_executor != update-agents || -z $target_input ]] ||
                 [[ $target_kind != fixed-flake-input && $target_kind != flake-input &&
+                    $target_kind != flake-input+build &&
                     $target_kind != flake-input+copy ]]; then
                 echo "update-agents: target is not owned by this transaction: $target_name" >&2
                 exit 2

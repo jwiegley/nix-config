@@ -54,6 +54,7 @@ ISSUE34_UPDATE_AGENTS = frozenset({
     "mcp-remote",
     "mcp-servers-nix",
     "pal-mcp-server",
+    "pi-mcp-adapter",
     "pi-openai-server-compaction",
     "pi-quiet",
     "rust-overlay",
@@ -293,7 +294,7 @@ class UpdateInventoryTests(unittest.TestCase):
         )
         self.assertEqual(
             {name for name in ISSUE34_TARGETS if catalog[name]["executor"] is None},
-            {"pi-mcp-adapter"},
+            set(),
         )
         self.assertEqual(
             {name for name in ISSUE34_TARGETS if catalog[name]["_record"]["source"]["fetcher"] == "fetchTree"},
@@ -483,6 +484,52 @@ class UpdateInventoryTests(unittest.TestCase):
         self.assertIn('\\"repo\\": \\"ponytail\\"', command[-1])
         self.assertIn('input.outPath + "/package.json"', command[-1])
         self.assertEqual(kwargs["cwd"], Path("/repo"))
+
+    def test_flake_input_build_syncs_version_and_dependent_hash(self):
+        def make_build_stale(document, lock):
+            record = document["sources"]["example"]
+            record["version"] = "1.0.0"
+            record["hashes"] = {"npmDepsHash": "sha256-old"}
+            record["update"].update(
+                kind="flake-input+build", buildPackage="agent-resources"
+            )
+            record["source"]["args"]["rev"] = "0" * 40
+            record["source"]["args"]["narHash"] = "sha256-stale"
+            lock["nodes"]["example"]["locked"]["rev"] = "d" * 40
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self._write_projection_fixture(root, make_build_stale)
+            hash_calls = []
+
+            def resolve_hash(_root, package, hash_type):
+                on_disk = json.loads((root / "sources/test.json").read_text())[
+                    "sources"
+                ]["example"]
+                hash_calls.append((package, hash_type))
+                self.assertEqual(on_disk["version"], "2.0.0")
+                self.assertEqual(on_disk["source"]["args"]["rev"], "a" * 40)
+                self.assertEqual(
+                    on_disk["hashes"]["npmDepsHash"],
+                    "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+                )
+                return "sha256-new"
+
+            self.assertEqual(
+                sync_flake_projections(
+                    root,
+                    version_resolver=lambda _root, _input, _locked: "2.0.0",
+                    dependent_hash_resolver=resolve_hash,
+                ),
+                1,
+            )
+            record = json.loads((root / "sources/test.json").read_text())["sources"][
+                "example"
+            ]
+            self.assertEqual(hash_calls, [("agent-resources", "npmDepsHash")])
+            self.assertEqual(record["version"], "2.0.0")
+            self.assertEqual(record["source"]["args"]["rev"], "a" * 40)
+            self.assertEqual(record["hashes"]["npmDepsHash"], "sha256-new")
 
     def test_issue38_ws_uses_fetchzip_with_an_executor(self):
         record = {
@@ -1205,7 +1252,6 @@ class UpdateInventoryTests(unittest.TestCase):
             "pi-insights",
             "pi-lens",
             "pi-markdown-preview",
-            "pi-mcp-adapter",
             "pi-subagents",
             "pi-smart-fetch",
             "pi-smart-web-search",
@@ -1234,6 +1280,11 @@ class UpdateInventoryTests(unittest.TestCase):
         )
         self.assertEqual(by_name["git-ai"]["executor"], "update-agents")
         self.assertEqual(by_name["pi-ponytail"]["executor"], "update-agents")
+        self.assertEqual(by_name["pi-mcp-adapter"]["executor"], "update-agents")
+        self.assertEqual(
+            manifest["pi-mcp-adapter"]["_record"]["update"]["buildPackage"],
+            "agent-resources",
+        )
         self.assertEqual(by_name["ws"]["executor"], "update-overlay")
         self.assertFalse(by_name["pi-lens"]["managed"])
         self.assertIsNone(by_name["pi-lens"]["executor"])
@@ -1409,6 +1460,17 @@ if "--inventory" in arguments:
             "managed": True,
             "executor": "update-agents",
             "policy": "automatic",
+        })
+    if os.environ.get("UPDATE_TEST_BUILD_TARGET") == "1":
+        packages.append({
+            "name": "build",
+            "files": ["projection.json"],
+            "input": "build-input",
+            "inventoried": True,
+            "kind": "flake-input+build",
+            "managed": True,
+            "executor": "update-agents",
+            "policy": "manual",
         })
     print(json.dumps({
         "schemaVersion": 1,
@@ -1926,6 +1988,57 @@ fi
                 "mcp-servers-nix pal-mcp-server pi-openai-server-compaction "
                 "pi-quiet translate-tool copy-input",
             )
+
+    def test_update_agents_routes_flake_input_build_through_named_locks(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            command_log = Path(temp_dir) / "commands.log"
+            environment["UPDATE_TEST_BUILD_TARGET"] = "1"
+            environment["UPDATE_TEST_COMMAND_LOG"] = str(command_log)
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "build"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip(),
+                baseline,
+            )
+            self.assertEqual((root / "fixed.txt").read_text(), "fixed before\n")
+            self.assertEqual((root / "tracked.txt").read_text(), "before\n")
+            self.assertEqual((root / "projection.json").read_text(), '{"projected": true}\n')
+            self.assertEqual(
+                command_log.read_text().splitlines(),
+                [
+                    "flake update --flake ./config/ai build-input",
+                    "flake update nix-config-ai",
+                    "flake check ./config/ai --all-systems --no-build",
+                    "flake check --no-build",
+                ],
+            )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment["UPDATE_TEST_BUILD_TARGET"] = "1"
+            environment["UPDATE_TEST_FAILURE_PHASE"] = "candidate-projection"
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "build"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self._assert_update_agents_unchanged(root, baseline, before)
 
     def test_update_agents_rejects_undeclared_candidate_mutation(self):
         for environment_name in (
