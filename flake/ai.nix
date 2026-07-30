@@ -1886,6 +1886,15 @@ let
           EOF
           sha256sum -c pi-tool-renderer-wrapper.sha256
           patch -p1 --fuzz=0 < ${../overlays/ai/patches/pi-tool-renderer-wrapper.patch}
+          for openai_api in \
+            node_modules/@earendil-works/pi-ai/dist/api/openai-completions.js \
+            node_modules/@earendil-works/pi-ai/dist/api/openai-responses.js
+          do
+            substituteInPlace "$openai_api" \
+              --replace-fail \
+                '        defaultHeaders: headers,' \
+                $'        defaultHeaders: headers,\n        timeout: model.provider === "litellm" &&\n            (model.id.startsWith("clio/omlx/") ||\n                (model.id.startsWith("hera/") && !model.id.startsWith("hera/claude-")))\n            ? 7_200_000\n            : undefined,'
+          done
           substituteInPlace dist/core/http-dispatcher.js \
             --replace-fail \
               'DEFAULT_HTTP_IDLE_TIMEOUT_MS = 300_000' \
