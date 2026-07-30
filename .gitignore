@@ -1,4 +1,5 @@
 .DS_Store
+.metadata_never_index
 /result*
 /.claude
 __pycache__/
