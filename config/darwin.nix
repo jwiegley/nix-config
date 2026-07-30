@@ -67,7 +67,7 @@ in
             "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb cardno:14_476_831"
 
             # Vulcan data server
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID/5S98ifv/slBhGzSLMK+/3JAHNzzglOfau6RlqKeYs johnw@vulcan"
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFZYNrQfHWNV09OQz7uMhjQKflCWKwLG4pp1tJb2QRRq vulcan-model-metadata"
 
             # drafts-mcp bridge (vulcan drafts-mcp.service) — pinned to exec
             # drafts-mcp-server ONLY; SSH_ORIGINAL_COMMAND is ignored by the
