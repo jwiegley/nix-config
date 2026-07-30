@@ -38,43 +38,6 @@
         "kind": "fixed-flake-input"
       }
     },
-    "betterwright": {
-      "hashes": {
-        "npmDepsHash": "sha256-GaWzEjyMTolRN8Y2S/jpaoqxW1LVn0N/l0IjDeGDDBY="
-      },
-      "source": {
-        "args": {
-          "hash": "sha256-NEYEHCZoEKV8AeItyZluJfQnZQJAE06w2F7XBnBmSYo=",
-          "url": "https://registry.npmjs.org/betterwright/-/betterwright-1.5.0.tgz"
-        },
-        "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/betterwright/-/betterwright-1.5.0.tgz"
-      },
-      "update": {
-        "artifacts": [
-          "packages/pi-gallery/locks/betterwright-package-lock.json"
-        ],
-        "kind": "npm-release",
-        "package": "betterwright"
-      },
-      "version": "1.5.0"
-    },
-    "betterwright-chromium": {
-      "source": {
-        "args": {
-          "hash": "sha256-B0zvvemozxDy7hXN2xrGdhPr2jsVSeiUitnur75SKtY=",
-          "url": "https://github.com/BetterWright/betterwright/releases/download/chromium-150.0.7871.129/betterwright-chromium-mac-arm64.zip"
-        },
-        "fetcher": "fetchurl",
-        "url": "https://github.com/BetterWright/betterwright/releases/download/chromium-150.0.7871.129/betterwright-chromium-mac-arm64.zip"
-      },
-      "update": {
-        "kind": "explicit-rev",
-        "policy": "manual",
-        "reason": "BetterWright pins this browser build and its archive checksum in the extension release"
-      },
-      "version": "150.0.7871.129"
-    },
     "cymbal": {
       "artifacts": {
         "aarch64-linux": {

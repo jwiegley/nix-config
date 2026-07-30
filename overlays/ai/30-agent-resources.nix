@@ -17,7 +17,6 @@ let
       python3
       runCommand
       stdenv
-      unzip
       writeShellScript
       ;
     inherit inputs;

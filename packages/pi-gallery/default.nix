@@ -14,7 +14,6 @@
   python3,
   runCommand,
   stdenv,
-  unzip,
   writeShellScript,
 }:
 
@@ -26,7 +25,6 @@ let
     packages = {
       inherit
         agent-browser
-        betterwright
         cymbal
         pi-agent-browser-native
         pi-artifacts
@@ -277,11 +275,6 @@ let
     tarball = releaseTarballs.pi-markdown-preview;
     lockFile = ./locks/pi-markdown-preview-package-lock.json;
   };
-  betterwrightSource = mkReleaseSource {
-    name = "betterwright";
-    tarball = releaseTarballs.betterwright;
-    lockFile = ./locks/betterwright-package-lock.json;
-  };
   artifactsSource = mkReleaseSource {
     name = "pi-artifacts";
     tarball = releaseTarballs.pi-artifacts;
@@ -345,12 +338,6 @@ let
     version = members.subagents.version;
     src = subagentsSource;
     npmDepsHash = members.subagents.hashes.npmDepsHash;
-  };
-  betterwright = mkNpmPackageRoot {
-    pname = members.betterwright.attrName;
-    version = members.betterwright.version;
-    src = betterwrightSource;
-    npmDepsHash = members.betterwright.hashes.npmDepsHash;
   };
   pi-artifacts = mkNpmPackageRoot {
     pname = members.artifacts.attrName;
@@ -646,24 +633,6 @@ let
   rtk = mkBinaryTool "rtk" supportSources.rtk;
   cymbal = mkBinaryTool "cymbal" supportSources.cymbal;
 
-  betterwrightBrowser =
-    runCommand "betterwright-browser-${manifest.sourceCatalog.betterwright-chromium.version}"
-      {
-        nativeBuildInputs = [
-          makeWrapper
-          unzip
-        ];
-        passthru.version = manifest.sourceCatalog.betterwright-chromium.version;
-        meta.mainProgram = "betterwright-chromium";
-      }
-      ''
-        mkdir -p "$out/bin"
-        unzip -q ${fetchurl manifest.sourceCatalog.betterwright-chromium.source.args} -d "$out"
-        binary="$out/mac-arm64/Chromium.app/Contents/MacOS/Chromium"
-        test -x "$binary"
-        makeWrapper "$binary" "$out/bin/betterwright-chromium"
-      '';
-
   agent-browser =
     runCommand "agent-browser-${supportSources.agent-browser.version}"
       {
@@ -755,9 +724,6 @@ let
             roots
             ;
           packages = galleryPackages;
-        }
-        // lib.optionalAttrs stdenv.hostPlatform.isDarwin {
-          inherit betterwrightBrowser;
         };
       }
       ''
@@ -772,10 +738,6 @@ let
           process.env.PONYTAIL_HIDE_STATUS = "1";
           process.env.PI_LENS_DISABLE_LSP_INSTALL = "1";
           process.env.PI_LENS_AUTO_INSTALL = "0";
-          ${lib.optionalString stdenv.hostPlatform.isDarwin ''
-            process.env.BETTERWRIGHT_CHROMIUM_PATH ??= ${builtins.toJSON "${betterwrightBrowser}/mac-arm64/Chromium.app/Contents/MacOS/Chromium"};
-            process.env.PUPPETEER_EXECUTABLE_PATH ??= process.env.BETTERWRIGHT_CHROMIUM_PATH;
-          ''}
 
           const toolOwnersFile = process.env.PI_GALLERY_TOOL_OWNERS_FILE;
           const toolOwners: Record<string, string[]> = {};
