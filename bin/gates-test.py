@@ -959,10 +959,6 @@ class TestConsumerInventoryLoadBearingFacet(unittest.TestCase):
             ]
             self.assertEqual(bad, [], "%s references were demoted" % needle)
         self.assertFalse(
-            [r for r in self.refs if r["file"] == "packages/update-manifest.nix"],
-            "empty transitional manifest retained ghost references",
-        )
-        self.assertFalse(
             [
                 r
                 for r in self.refs

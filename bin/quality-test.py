@@ -529,7 +529,7 @@ class UpdaterEssentialPlanTests(unittest.TestCase):
         plan = runpy.run_path(str(UPDATER_ESSENTIAL))
         self.assertEqual(
             plan["COMPLETE_CLASSES"],
-            ("OverlayParserTests", "UpdateInventoryTests"),
+            ("UpdateCliTests", "UpdateInventoryTests"),
         )
         self.assertEqual(
             plan["INTEGRATION_METHODS"],
@@ -568,10 +568,10 @@ class UpdaterEssentialPlanTests(unittest.TestCase):
 
         resolved = sorted(test_ids(suite))
         resolved_listing = "\n" + "\n".join(resolved)
-        self.assertEqual(len(resolved), 61, resolved_listing)
+        self.assertEqual(len(resolved), 59, resolved_listing)
         self.assertEqual(
             hashlib.sha256("\n".join(resolved).encode()).hexdigest(),
-            "c70fe87dd670ecd7b9579a73caefe1f05717f1722045da79c182e6aa3bf59212",
+            "6c2a34236bf352136c3d669c42c6db585075eb859d07f36e84f0fb6d92a32ca0",
             resolved_listing,
         )
 

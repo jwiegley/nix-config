@@ -54,7 +54,7 @@ System and Home Manager switches are owned by each authoritative checkout. Build
 
 - `bin/update-agents` atomically updates executable shared inputs and, by default, leaves reviewable changes without pull/commit/switch/push/Homebrew side effects. Those actions require explicit flags.
 - `make update` delegates the all-input root/portable transaction to the same command.
-- `bin/update-overlay --inventory --json` lists all known pins. Simple automatic and targeted manual catalog records are executable; only artifact- and lock-coupled targets remain pending.
+- `bin/update-overlay --inventory --json` validates and lists every catalog-owned update target. Inventory and execution derive exclusively from `sources/*.json`; every inventoried target is executable, with no Nix-overlay discovery or secondary update manifest.
 
 ## Structure
 

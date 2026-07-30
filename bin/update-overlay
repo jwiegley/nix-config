@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-update-overlay - Update Nix overlay package definitions to their latest versions.
+update-overlay - Update catalog-managed Nix package sources to their latest versions.
 
 Usage:
     update-overlay <package1> [package2] ...
@@ -31,7 +31,6 @@ import sys
 import tempfile
 import threading
 import tomllib
-from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Optional
 from urllib.parse import quote, urlsplit
@@ -146,385 +145,6 @@ def registry_only_proxy():
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
-
-
-@dataclass
-class PackageInfo:
-    """Information about a package in an overlay."""
-    name: str
-    file_path: Path
-    owner: str = ""
-    repo: str = ""
-    npm_package: str = ""
-    version: str = ""
-    version_prefix: str = ""  # e.g., "v", "b", ""
-    src_hash: str = ""
-    vendor_hash: Optional[str] = None
-    cargo_hash: Optional[str] = None
-    npm_deps_hash: Optional[str] = None
-    # Track where in the file each field is located
-    version_line: int = 0
-    hash_line: int = 0
-    vendor_hash_line: int = 0
-    cargo_hash_line: int = 0
-    npm_deps_hash_line: int = 0
-    # Raw text patterns for replacement
-    raw_version_pattern: str = ""
-    raw_hash_pattern: str = ""
-    # Package type
-    package_type: str = "standard"  # standard, go, rust, npm
-    # Commit-based versioning (no tags/releases)
-    uses_commit: bool = False  # True if rev = "full-commit-hash" pattern
-    full_rev: str = ""  # Full commit hash if uses_commit
-    hash_format: str = "sri"  # "sri" (sha256-...) or "base32" (old format)
-    source_type: str = "github"  # github, npm
-
-
-@dataclass
-class OverlaySource:
-    """An overlay tree that can be scanned and updated."""
-
-    name: str
-    repo_dir: Path
-    overlays_dir: Path
-    parser: "OverlayParser"
-    hash_computer: "HashComputer"
-
-
-class OverlayParser:
-    """Parse Nix overlay files to extract package information."""
-
-    # Overlay files to skip entirely (not auto-updatable)
-    SKIP_FILES = {
-        '00-last-known-good.nix',  # Packages pinned to specific nixpkgs revisions
-    }
-
-    # Package names to skip when using --all (not updatable or special)
-    SKIP_PACKAGES = {
-        'pythonPackagesExtensions',  # Not a package, extends python packages
-        'coqPackages', 'coq',  # References to other packages
-        'coqPackages_HEAD', 'coqPackages_9_1', 'coqPackages_9_0',
-        'coqPackages_8_20', 'coqPackages_8_19', 'coqPackages_8_18',
-        'coqPackages_8_17', 'coqPackages_8_16', 'coqPackages_8_15',
-        'coqPackages_8_14', 'coqPackages_8_13', 'coqPackages_8_12',
-        'coqPackages_8_11', 'coqPackages_8_10',
-        'coq_HEAD', 'coq_9_1', 'coq_9_0', 'coq_8_20', 'coq_8_19',
-        'coq_8_18', 'coq_8_17', 'coq_8_16', 'coq_8_15', 'coq_8_14',
-        'coq_8_13', 'coq_8_12', 'coq_8_11', 'coq_8_10',
-        'ledger_HEAD',  # Local build from source
-        'mcp-server-sequential-thinking',  # Override only, no version
-        'myEmacsPackageOverrides',  # Function definition, not a package
-        'mkEmacsPackages',  # Function definition, not a package
-        'paths',  # Local path import, not a package
-    }
-
-    def __init__(
-        self,
-        overlays_dir: Path,
-        include_files: tuple[str, ...] | None = None,
-    ):
-        self.overlays_dir = overlays_dir
-        self.include_files = include_files
-
-    def _overlay_files(self) -> list[Path]:
-        """Return production overlay files, including the integrated AI subtree."""
-        candidates = (
-            (self.overlays_dir / relative for relative in self.include_files)
-            if self.include_files is not None
-            else self.overlays_dir.rglob("*.nix")
-        )
-        return sorted(
-            path
-            for path in candidates
-            if path.is_file()
-            and path.name not in self.SKIP_FILES
-            and "tests" not in path.relative_to(self.overlays_dir).parts
-        )
-
-    def find_package_owners(self) -> dict[str, list[Path]]:
-        """Return every discovered package name with all defining overlay files."""
-        owners: dict[str, list[Path]] = {}
-        for overlay_file in self._overlay_files():
-            for name in self._find_packages_in_file(overlay_file):
-                if name not in self.SKIP_PACKAGES:
-                    owners.setdefault(name, []).append(overlay_file)
-        return owners
-
-    def find_all_packages(self) -> list[str]:
-        """Find all package names defined in overlay files."""
-        return sorted(self.find_package_owners())
-
-    def _find_packages_in_file(self, file_path: Path) -> list[str]:
-        """Find all package names defined in a single overlay file."""
-        content = file_path.read_text()
-        packages = []
-
-        # Match top-level package definitions: name = ...
-        # These are inside the `final: prev: { ... }` block, typically indented 2 spaces
-        for line in content.split('\n'):
-            # Skip empty lines and comments
-            stripped = line.strip()
-            if not stripped or stripped.startswith('#') or stripped.startswith('//'):
-                continue
-            # Match package definitions at top-level (column 0) or standard
-            # overlay indentation (2 spaces inside final: prev: { })
-            indent = len(line) - len(line.lstrip())
-            if indent <= 2:
-                match = re.match(r'^([a-zA-Z_][a-zA-Z0-9_-]*)\s*=', stripped)
-                if match:
-                    name = match.group(1)
-                    # Skip 'self', 'super', 'pkgs', 'let', 'in', etc.
-                    if name not in ('self', 'super', 'pkgs', 'let', 'in', 'with', 'inherit'):
-                        packages.append(name)
-
-        # Also find packages inside rec { } blocks (e.g., Emacs packages)
-        # Look for fetchFromGitHub blocks and extract the enclosing package name
-        packages.extend(self._find_nested_packages(content))
-
-        return packages
-
-    def _find_nested_packages(self, content: str) -> list[str]:
-        """Find packages defined inside rec { } blocks with fetchFromGitHub."""
-        packages = []
-        lines = content.split('\n')
-
-        # Track if we're inside a rec { } block
-        in_rec_block = False
-        brace_depth = 0
-
-        for i, line in enumerate(lines):
-            stripped = line.strip()
-
-            # Detect rec { or in rec {
-            if re.search(r'\brec\s*\{', line):
-                in_rec_block = True
-
-            # Count braces to track depth
-            brace_depth += line.count('{') - line.count('}')
-
-            if brace_depth <= 0:
-                in_rec_block = False
-
-            # Inside rec block, look for package definitions with fetchFromGitHub
-            if in_rec_block and line.startswith('    '):  # Must be indented
-                # Match: "package-name = compileEmacsFiles {" or similar on the stripped line
-                match = re.match(r'^([a-zA-Z_][a-zA-Z0-9_-]*)\s*=\s*(?:compileEmacsFiles|compileEmacsWikiFile|mkDerivation)', stripped)
-                if match:
-                    name = match.group(1)
-                    # Check if this package has fetchFromGitHub within its own block
-                    # Track brace depth to stay within the package boundary
-                    pkg_depth = lines[i].count('{') - lines[i].count('}')
-                    has_fetch = 'fetchFromGitHub' in lines[i]
-                    for j in range(i + 1, min(i + 30, len(lines))):
-                        if has_fetch:
-                            break
-                        pkg_line = lines[j]
-                        if 'fetchFromGitHub' in pkg_line:
-                            has_fetch = True
-                            break
-                        pkg_depth += pkg_line.count('{') - pkg_line.count('}')
-                        if pkg_depth <= 0:
-                            break  # Exited this package's block
-                    if has_fetch:
-                        packages.append(name)
-
-        return packages
-
-    def find_package(self, package_name: str) -> Optional[PackageInfo]:
-        """Find a package definition in overlay files."""
-        for overlay_file in self._overlay_files():
-            result = self._parse_file_for_package(overlay_file, package_name)
-            if result:
-                return result
-        return None
-
-    def _parse_file_for_package(self, file_path: Path, package_name: str) -> Optional[PackageInfo]:
-        """Parse a single overlay file for a package definition."""
-        content = file_path.read_text()
-
-        # Pattern 1: Standard package definition (name = ... { })
-        # Pattern 2: overrideAttrs pattern (name = prev.name.overrideAttrs...)
-        # Pattern 3: Nested package (indented, inside rec { } block)
-
-        # First, find the package definition block
-        patterns = [
-            # Standard: llama-swap = { ... } or llama-swap = with super; { ... }
-            # Allow up to 2 spaces for overlay indentation (inside final: prev: { })
-            rf'^[ ]{{0,2}}{re.escape(package_name)}\s*=',
-            # overrideAttrs: llama-cpp = super.llama-cpp.overrideAttrs
-            rf'^[ ]{{0,2}}{re.escape(package_name)}\s*=\s*(?:super|prev|pkgs)\.[a-zA-Z0-9_-]+\.overrideAttrs',
-            # Nested (indented): gnus-harvest = compileEmacsFiles {
-            rf'^\s+{re.escape(package_name)}\s*=\s*(?:compileEmacsFiles|compileEmacsWikiFile|mkDerivation)',
-        ]
-
-        for line_num, line in enumerate(content.split('\n'), 1):
-            for pattern in patterns:
-                if re.match(pattern, line):
-                    return self._extract_package_info(content, file_path, package_name, line_num)
-
-        return None
-
-    def _extract_package_block(self, content: str, package_name: str) -> Optional[str]:
-        """Extract just the block of code defining a specific package."""
-        lines = content.split('\n')
-
-        # Find the line where the package definition starts
-        start_idx = None
-        start_indent = 0  # Track the indentation level of the package
-        for i, line in enumerate(lines):
-            # Match: "package_name =" or "package_name=" (at any indentation)
-            match = re.match(rf'^(\s*){re.escape(package_name)}\s*=', line)
-            if match:
-                start_idx = i
-                start_indent = len(match.group(1))
-                break
-
-        if start_idx is None:
-            return None
-
-        # Find the end by looking for the next definition at same or lower indentation
-        block_lines = [lines[start_idx]]
-
-        # Track brace depth to understand nesting
-        brace_depth = lines[start_idx].count('{') - lines[start_idx].count('}')
-
-        for i in range(start_idx + 1, len(lines)):
-            line = lines[i]
-
-            # Check if we've reached a new definition at same or lower indentation
-            # BEFORE updating brace depth, so opening braces on new package
-            # definitions don't prevent block termination
-            stripped = line.lstrip()
-            if stripped:
-                current_indent = len(line) - len(stripped)
-
-                # If brace depth is 0 or negative, and we find a new definition
-                # at same/lower indent, we're done
-                if brace_depth <= 0 and current_indent <= start_indent:
-                    if re.match(r'^in(?:\s|$)', stripped):
-                        break
-                    if re.match(r'^[a-zA-Z_][a-zA-Z0-9_-]*\s*=', stripped):
-                        break
-                    # Also stop at closing brace at same/lower indent
-                    if stripped.startswith('}') and current_indent <= start_indent:
-                        break
-
-            # Update brace depth AFTER termination check
-            brace_depth += line.count('{') - line.count('}')
-
-            block_lines.append(line)
-
-            # Safety limit
-            if len(block_lines) > 500:
-                break
-
-        return '\n'.join(block_lines)
-
-    def _extract_package_info(self, content: str, file_path: Path, package_name: str, start_line: int) -> Optional[PackageInfo]:
-        """Extract package information from the content."""
-        info = PackageInfo(name=package_name, file_path=file_path)
-
-        # Extract just the package block, not the whole file
-        block = self._extract_package_block(content, package_name)
-        if not block:
-            return None
-
-        # Sanity check: a single package definition shouldn't span hundreds of lines.
-        # If the block is unreasonably large, it's likely a function/let-binding that
-        # contains nested packages, not an actual package definition.
-        if len(block.split('\n')) > 200:
-            return None
-
-        # Extract GitHub owner/repo or npm package name from the block
-        owner_match = re.search(r'owner\s*=\s*"([^"]+)"', block)
-        repo_match = re.search(r'repo\s*=\s*"([^"]+)"', block)
-        npm_package_match = re.search(r'npmPackage\s*=\s*"([^"]+)"', block)
-
-        if npm_package_match:
-            info.source_type = "npm"
-            info.npm_package = npm_package_match.group(1)
-        elif owner_match and repo_match:
-            info.source_type = "github"
-            info.owner = owner_match.group(1)
-            info.repo = repo_match.group(1)
-        else:
-            return None
-
-        # Extract version - multiple patterns
-        version_patterns = [
-            # tag = "v${version}";
-            (r'tag\s*=\s*"v\$\{version\}"', "v", False),
-            # tag = "b${version}";
-            (r'tag\s*=\s*"b\$\{version\}"', "b", False),
-            # tag = version;
-            (r'tag\s*=\s*version', "", False),
-            # tag = "${version}";
-            (r'tag\s*=\s*"\$\{version\}"', "", False),
-            # rev = "v${version}";
-            (r'rev\s*=\s*"v\$\{version\}"', "v", False),
-            # rev = "${version}";
-            (r'rev\s*=\s*"\$\{version\}"', "", False),
-            # version = "123";
-            (r'version\s*=\s*"([^"]+)"', "", False),
-        ]
-
-        for pattern, prefix, is_commit in version_patterns:
-            match = re.search(pattern, block)
-            if match:
-                info.version_prefix = prefix
-                info.uses_commit = is_commit
-                break
-
-        # Check for commit-based versioning: rev = "full-40-char-hash"
-        # This is when rev is a literal commit hash, not interpolated
-        rev_literal_match = re.search(r'rev\s*=\s*"([a-f0-9]{40})"', block)
-        if rev_literal_match:
-            info.uses_commit = True
-            info.full_rev = rev_literal_match.group(1)
-
-        # Now find the actual version value
-        version_match = re.search(r'\bversion\s*=\s*"([^"$]+)"', block)
-        if version_match:
-            info.version = version_match.group(1)
-            info.raw_version_pattern = version_match.group(0)
-
-        # Extract source hash (SRI format: sha256-/sha512-... or base32 format)
-        sri_match = re.search(r'hash\s*=\s*"(sha(?:256|512)-[^"]+)"', block)
-        base32_match = re.search(r'sha256\s*=\s*"([^"]+)"', block)
-
-        if sri_match:
-            info.src_hash = sri_match.group(1)
-            info.raw_hash_pattern = sri_match.group(0)
-            info.hash_format = "sri"
-        elif base32_match:
-            info.src_hash = base32_match.group(1)
-            info.raw_hash_pattern = base32_match.group(0)
-            info.hash_format = "base32"
-
-        # Extract ALL hashes found in the block (packages can have multiple)
-        # e.g., llama-swap has vendorHash (main) + npmDepsHash (ui subpackage)
-
-        vendor_match = re.search(r'vendorHash\s*=\s*"(sha256-[^"]+)"', block)
-        cargo_match = re.search(r'cargoHash\s*=\s*"(sha256-[^"]+)"', block)
-        npm_match = re.search(r'npmDepsHash\s*=\s*"(sha256-[^"]+)"', block)
-
-        if vendor_match:
-            info.vendor_hash = vendor_match.group(1)
-        if cargo_match:
-            info.cargo_hash = cargo_match.group(1)
-        if npm_match:
-            info.npm_deps_hash = npm_match.group(1)
-
-        # Set primary package type for display purposes
-        # Priority: vendorHash (Go) > cargoHash (Rust) > npmDepsHash (npm)
-        if vendor_match or 'buildGoModule' in block:
-            info.package_type = "go"
-        elif cargo_match or 'buildRustPackage' in block:
-            info.package_type = "rust"
-        elif npm_match or 'buildNpmPackage' in block:
-            info.package_type = "npm"
-
-        return info
 
 
 class GitHubClient:
@@ -864,22 +484,6 @@ in
 """
         return self._realize_nix_expression(expression)
 
-    def compute_src_hash(self, owner: str, repo: str, rev: str) -> Optional[str]:
-        """Compute source hash using nix-prefetch-github."""
-        try:
-            result = subprocess.run(
-                ["nix", "run", "nixpkgs#nix-prefetch-github", "--",
-                 owner, repo, "--rev", rev, "--json"],
-                capture_output=True, text=True, timeout=300
-            )
-            if result.returncode == 0:
-                data = json.loads(result.stdout)
-                # nix-prefetch-github returns hash in SRI format
-                return data.get("hash", data.get("sha256"))
-        except Exception as e:
-            print(f"  Error computing src hash: {e}", file=sys.stderr)
-        return None
-
     def compute_native_hash(self, source: dict, replacements: dict) -> Optional[str]:
         """Hash through the repository-locked native fetcher with exact arguments."""
         args = copy.deepcopy(source["args"])
@@ -939,18 +543,6 @@ in
         except (OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as error:
             print(f"  Error computing native source hash: {error}", file=sys.stderr)
             return None
-
-    def compute_vendor_hash(self, package_name: str) -> Optional[str]:
-        """Compute vendorHash by attempting a build with fake hash."""
-        return self._compute_fod_hash(package_name, "vendorHash")
-
-    def compute_cargo_hash(self, package_name: str) -> Optional[str]:
-        """Compute cargoHash by attempting a build with fake hash."""
-        return self._compute_fod_hash(package_name, "cargoHash")
-
-    def compute_npm_deps_hash(self, package_name: str) -> Optional[str]:
-        """Compute npmDepsHash by attempting a build with fake hash."""
-        return self._compute_fod_hash(package_name, "npmDepsHash")
 
     def _package_build_command(
         self, package_name: str, build_mode: str = "pkg"
@@ -1124,35 +716,6 @@ in
         except (OSError, UnicodeError, subprocess.TimeoutExpired) as error:
             print(f"  Error validating Cargo.lock: {error}", file=sys.stderr)
             return False
-
-
-def make_overlay_sources(args, nix_dir: Path) -> list[OverlaySource]:
-    """Create the single integrated overlay tree to update."""
-    local_overlays_dir = args.overlays_dir.resolve()
-    package_dir = nix_dir / "packages"
-    return [
-        OverlaySource(
-            name="nix",
-            repo_dir=nix_dir,
-            overlays_dir=local_overlays_dir,
-            parser=OverlayParser(local_overlays_dir),
-            hash_computer=HashComputer(nix_dir),
-        ),
-        OverlaySource(
-            name="packages",
-            repo_dir=nix_dir,
-            overlays_dir=package_dir,
-            parser=OverlayParser(
-                package_dir,
-                include_files=(
-                    "ai-llm.nix",
-                    "ai-mcp.nix",
-                    "llm-mlx.nix",
-                ),
-            ),
-            hash_computer=HashComputer(nix_dir),
-        ),
-    ]
 
 
 def _unique_object(pairs):
@@ -2333,75 +1896,14 @@ def require_detached_linked_worktree(nix_dir: Path) -> None:
         raise RuntimeError("projection sync requires a detached linked worktree")
 
 
-def load_update_manifest(nix_dir: Path) -> dict[str, dict]:
-    """Evaluate and validate explicit update targets outside ordinary overlays."""
-    manifest_path = nix_dir / "packages" / "update-manifest.nix"
-    result = subprocess.run(
-        ["nix", "eval", "--json", "--file", str(manifest_path)],
-        capture_output=True,
-        text=True,
-        timeout=60,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"failed to evaluate {manifest_path}: {result.stderr.strip()}")
-    payload = json.loads(result.stdout)
-    if payload.get("schemaVersion") != 1 or not isinstance(payload.get("targets"), dict):
-        raise RuntimeError(f"invalid update manifest schema: {manifest_path}")
-    for name, target in payload["targets"].items():
-        if not isinstance(target, dict) or not target.get("kind") or not target.get("files"):
-            raise RuntimeError(f"invalid update target: {name}")
-        missing = [path for path in target["files"] if not (nix_dir / path).is_file()]
-        if missing:
-            raise RuntimeError(f"update target {name} references missing files: {missing}")
-    return payload["targets"]
-
-
-def build_inventory(
-    sources: list[OverlaySource], explicit_targets: dict[str, dict], nix_dir: Path
-) -> dict:
-    """Return every supported update target and separately list non-package attrs."""
+def build_inventory(catalog_targets: dict[str, dict]) -> dict:
+    """Return the catalog-owned update target inventory."""
     packages = []
-    unsupported = []
-    seen = set()
-    catalog_names = {
-        name for name, target in explicit_targets.items() if target.get("source") == "catalog"
-    }
-    for source in sources:
-        for name, owner_files in source.parser.find_package_owners().items():
-            if name in catalog_names:
-                continue
-            definitions = [
-                info for path in owner_files
-                if (info := source.parser._parse_file_for_package(path, name)) is not None
-            ]
-            if len(definitions) > 1:
-                owners = [str(info.file_path.relative_to(nix_dir)) for info in definitions]
-                raise RuntimeError(f"duplicate overlay owners for {name}: {owners}")
-            if not definitions:
-                unsupported.append(f"{source.name}/{name}")
-                continue
-            info = definitions[0]
-            if name in seen:
-                raise RuntimeError(f"duplicate update target: {name}")
-            seen.add(name)
-            packages.append({
-                "name": name,
-                "source": source.name,
-                "kind": f"overlay-{info.source_type}",
-                "version": info.version,
-                "files": [str(info.file_path.relative_to(nix_dir))],
-                "inventoried": True,
-                "managed": True,
-                "executor": "update-overlay",
-            })
-    for name, target in explicit_targets.items():
-        if name in seen:
-            raise RuntimeError(f"duplicate manifest/overlay update target: {name}")
-        seen.add(name)
+    for name, target in catalog_targets.items():
         executor = target.get("executor")
         package = {
             "name": name,
-            "source": target.get("source", "manifest"),
+            "source": "catalog",
             "kind": target["kind"],
             "version": target.get("version", target.get("rev", "")),
             "files": target["files"],
@@ -2409,16 +1911,14 @@ def build_inventory(
             "managed": executor is not None,
             "executor": executor,
         }
-        if target.get("source") == "catalog":
-            update = target["_record"]["update"]
-            package["policy"] = update.get("policy", "automatic")
-            if "input" in update:
-                package["input"] = update["input"]
+        update = target["_record"]["update"]
+        package["policy"] = update.get("policy", "automatic")
+        if "input" in update:
+            package["input"] = update["input"]
         packages.append(package)
     return {
         "schemaVersion": 1,
         "packages": sorted(packages, key=lambda item: item["name"]),
-        "unsupportedOverlayAttributes": sorted(unsupported),
     }
 
 
@@ -2432,43 +1932,8 @@ def print_inventory(inventory: dict, json_output: bool) -> None:
     pending = len(inventory["packages"]) - managed
     print(
         f"{len(inventory['packages'])} inventoried targets; {managed} executable; "
-        f"{pending} pending executors; "
-        f"{len(inventory['unsupportedOverlayAttributes'])} non-package overlay attributes"
+        f"{pending} pending executors"
     )
-
-
-def collect_targets(
-    args, sources: list[OverlaySource], skip_names: set[str] | None = None
-) -> list[tuple[OverlaySource, str]]:
-    """Collect package update targets across all configured overlay trees."""
-    skip_names = skip_names or set()
-    targets: list[tuple[OverlaySource, str]] = []
-
-    if args.all:
-        total = 0
-        for source in sources:
-            packages = [p for p in source.parser.find_all_packages() if p not in skip_names]
-            if args.packages:
-                packages = [p for p in packages if p in args.packages]
-            total += len(packages)
-            print(f"Found {len(packages)} packages in {source.name} overlay files")
-            targets.extend((source, package) for package in packages)
-        print(f"Found {total} packages across {len(sources)} overlay trees")
-        return targets
-
-    for package in args.packages:
-        if package in skip_names:
-            continue
-        matches = [
-            source for source in sources
-            if source.parser.find_package(package) is not None
-        ]
-        if matches:
-            targets.extend((source, package) for source in matches)
-        else:
-            targets.append((sources[0], package))
-
-    return targets
 
 
 def delegate_to_update_agents(nix_dir: Path, names: list[str], args, runner=subprocess.run) -> int:
@@ -3293,184 +2758,6 @@ def update_github_projection_target(
     )
 
 
-class OverlayUpdater:
-    """Update overlay files with new versions and hashes."""
-
-    def set_dummy_hash(self, file_path: Path, package_name: str, hash_type: str, old_hash: str) -> bool:
-        """Set a dummy hash for a specific package to trigger hash computation on build."""
-        content = file_path.read_text()
-        lines = content.split('\n')
-
-        start_idx, end_idx = self._find_package_block_lines(content, package_name)
-        if start_idx < 0:
-            return False
-
-        # Extract and update the block
-        block_lines = lines[start_idx:end_idx + 1]
-        block = '\n'.join(block_lines)
-
-        # Map hash type to pattern
-        patterns = {
-            'vendorHash': rf'(vendorHash\s*=\s*")({re.escape(old_hash)})(")',
-            'cargoHash': rf'(cargoHash\s*=\s*")({re.escape(old_hash)})(")',
-            'npmDepsHash': rf'(npmDepsHash\s*=\s*")({re.escape(old_hash)})(")',
-        }
-
-        pattern = patterns.get(hash_type)
-        if not pattern:
-            return False
-
-        dummy_hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-        new_block = re.sub(pattern, rf'\g<1>{dummy_hash}\g<3>', block)
-
-        if new_block == block:
-            return False
-
-        # Reconstruct file
-        new_lines = lines[:start_idx] + new_block.split('\n') + lines[end_idx + 1:]
-        file_path.write_text('\n'.join(new_lines))
-        return True
-
-    def _find_package_block_lines(self, content: str, package_name: str) -> tuple[int, int]:
-        """Find the start and end line indices for a package block."""
-        lines = content.split('\n')
-
-        # Find start (at any indentation level)
-        start_idx = None
-        start_indent = 0
-        for i, line in enumerate(lines):
-            match = re.match(rf'^(\s*){re.escape(package_name)}\s*=', line)
-            if match:
-                start_idx = i
-                start_indent = len(match.group(1))
-                break
-
-        if start_idx is None:
-            return (-1, -1)
-
-        # Find end by tracking brace depth
-        end_idx = start_idx
-        brace_depth = lines[start_idx].count('{') - lines[start_idx].count('}')
-
-        for i in range(start_idx + 1, len(lines)):
-            line = lines[i]
-
-            # Check termination BEFORE updating brace depth, so opening braces
-            # on new package definitions don't prevent block termination
-            stripped = line.lstrip()
-            if stripped:
-                current_indent = len(line) - len(stripped)
-
-                # If brace depth is 0 or negative, and we find a new definition
-                # at same/lower indent, we're done
-                if brace_depth <= 0 and current_indent <= start_indent:
-                    if re.match(r'^in(?:\s|$)', stripped):
-                        end_idx = i - 1
-                        break
-                    if re.match(r'^[a-zA-Z_][a-zA-Z0-9_-]*\s*=', stripped):
-                        end_idx = i - 1
-                        break
-                    if stripped.startswith('}') and current_indent <= start_indent:
-                        end_idx = i - 1
-                        break
-
-            brace_depth += line.count('{') - line.count('}')
-            end_idx = i
-
-        return (start_idx, end_idx)
-
-    def update_package(self, info: PackageInfo, new_version: str, new_src_hash: str,
-                      new_vendor_hash: Optional[str] = None,
-                      new_cargo_hash: Optional[str] = None,
-                      new_npm_deps_hash: Optional[str] = None,
-                      new_full_rev: Optional[str] = None,
-                      dry_run: bool = False) -> bool:
-        """Update a package in its overlay file."""
-        content = info.file_path.read_text()
-        lines = content.split('\n')
-
-        # Find the package block boundaries
-        start_idx, end_idx = self._find_package_block_lines(content, info.name)
-        if start_idx < 0:
-            print(f"  Could not find package block for {info.name}")
-            return False
-
-        # Extract the block
-        block_lines = lines[start_idx:end_idx + 1]
-        block = '\n'.join(block_lines)
-        original_block = block
-
-        # Update version within the block
-        old_version = info.version
-        block = re.sub(
-            rf'(\bversion\s*=\s*")({re.escape(old_version)})(")',
-            rf'\g<1>{new_version}\g<3>',
-            block
-        )
-
-        # For commit-based packages, also update the rev
-        if info.uses_commit and new_full_rev and info.full_rev:
-            block = re.sub(
-                rf'(rev\s*=\s*")({re.escape(info.full_rev)})(")',
-                rf'\g<1>{new_full_rev}\g<3>',
-                block
-            )
-
-        # Update source hash within the block
-        if new_src_hash and info.src_hash:
-            if info.hash_format == "sri":
-                block = re.sub(
-                    rf'(hash\s*=\s*")({re.escape(info.src_hash)})(")',
-                    rf'\g<1>{new_src_hash}\g<3>',
-                    block
-                )
-            else:
-                # base32 format - update sha256 = "..."
-                block = re.sub(
-                    rf'(sha256\s*=\s*")({re.escape(info.src_hash)})(")',
-                    rf'\g<1>{new_src_hash}\g<3>',
-                    block
-                )
-
-        # Update vendorHash if present
-        if new_vendor_hash and info.vendor_hash:
-            block = re.sub(
-                rf'(vendorHash\s*=\s*")({re.escape(info.vendor_hash)})(")',
-                rf'\g<1>{new_vendor_hash}\g<3>',
-                block
-            )
-
-        # Update cargoHash if present
-        if new_cargo_hash and info.cargo_hash:
-            block = re.sub(
-                rf'(cargoHash\s*=\s*")({re.escape(info.cargo_hash)})(")',
-                rf'\g<1>{new_cargo_hash}\g<3>',
-                block
-            )
-
-        # Update npmDepsHash if present
-        if new_npm_deps_hash and info.npm_deps_hash:
-            block = re.sub(
-                rf'(npmDepsHash\s*=\s*")({re.escape(info.npm_deps_hash)})(")',
-                rf'\g<1>{new_npm_deps_hash}\g<3>',
-                block
-            )
-
-        if block == original_block:
-            return False
-
-        if dry_run:
-            return True
-
-        # Reconstruct the file with the updated block
-        new_lines = lines[:start_idx] + block.split('\n') + lines[end_idx + 1:]
-        new_content = '\n'.join(new_lines)
-
-        # Write the updated content
-        info.file_path.write_text(new_content)
-        return True
-
-
 def extract_version_number(tag: str, prefix: str = "") -> str:
     """Extract a version number using the declared prefix exactly."""
     if prefix and tag.startswith(prefix):
@@ -3484,15 +2771,13 @@ def extract_version_number(tag: str, prefix: str = "") -> str:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Update Nix overlay package definitions to their latest versions",
+        description="Update catalog-managed Nix package sources to their latest versions",
         epilog="""
 Examples:
   update-overlay llama-cpp gguf-tools    Update to latest release/commit
   update-overlay --dry-run llama-swap    Preview changes without modifying
-  update-overlay --no-build hfdownloader Skip slow hash computation (src only)
   update-overlay -V 1.2.3 browser-control-mcp  Force specific version
-  update-overlay --all --dry-run         Preview updates for all packages
-  update-overlay --all --no-build        Update all packages (src hash only)
+  update-overlay --all --dry-run         Preview all automatic catalog updates
 """,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -3502,20 +2787,15 @@ Examples:
     )
     parser.add_argument(
         "--all", "-a", action="store_true",
-        help="Update all packages found in overlay files"
+        help="Update every automatic catalog target handled by this command"
     )
     parser.add_argument(
         "--dry-run", "-n", action="store_true",
         help="Show what would be changed without making changes"
     )
     parser.add_argument(
-        "--overlays-dir", "-d", type=Path,
-        default=Path(__file__).parent.parent / "overlays",
-        help="Directory containing overlay files"
-    )
-    parser.add_argument(
         "--no-build", action="store_true",
-        help="Skip computing vendorHash/cargoHash/npmDepsHash (faster but incomplete)"
+        help="Retired; catalog updates always validate required dependent hashes"
     )
     parser.add_argument(
         "--version", "-V",
@@ -3523,11 +2803,11 @@ Examples:
     )
     parser.add_argument(
         "--verbose", "-v", action="store_true",
-        help="Show skipped packages (no supported source)"
+        help="Show automatic catalog targets delegated to another executor"
     )
     parser.add_argument(
         "--inventory", action="store_true",
-        help="List every managed update target without network access"
+        help="List every catalog-owned update target without network access"
     )
     parser.add_argument(
         "--json", dest="json_output", action="store_true",
@@ -3555,6 +2835,12 @@ Examples:
     args = parser.parse_args()
 
     # Validate arguments
+    if args.no_build:
+        parser.error(
+            "--no-build is no longer supported; catalog updates always validate "
+            "required dependent hashes"
+        )
+
     if (
         not args.inventory
         and not args.all
@@ -3576,7 +2862,6 @@ Examples:
         or args.packages
         or args.version
         or args.dry_run
-        or args.no_build
         or args.verbose
         or args.json_output
         or args.prepare_npm_locks
@@ -3591,7 +2876,6 @@ Examples:
         or args.sync_flake_projections
         or args.prepare_npm_locks
         or args.dry_run
-        or args.no_build
         or args.verbose
         or args.json_output
     ):
@@ -3604,7 +2888,6 @@ Examples:
         or args.prepare_fixed_inputs
         or args.prepare_npm_locks
         or args.dry_run
-        or args.no_build
         or args.verbose
         or args.json_output
         or args.prepare_pypi_artifacts
@@ -3620,7 +2903,6 @@ Examples:
         or args.prepare_npm_flake_inputs
         or args.prepare_npm_locks
         or args.dry_run
-        or args.no_build
         or args.verbose
         or args.json_output
         or args.prepare_github_projections
@@ -3636,7 +2918,6 @@ Examples:
         or args.prepare_npm_locks
         or args.prepare_pypi_artifacts
         or args.dry_run
-        or args.no_build
         or args.verbose
         or args.json_output
     ):
@@ -3651,7 +2932,6 @@ Examples:
         or args.prepare_pypi_artifacts
         or args.prepare_github_projections
         or args.dry_run
-        or args.no_build
         or args.verbose
         or args.json_output
     ):
@@ -3701,15 +2981,12 @@ Examples:
         changed = sync_flake_projections(nix_dir)
         print(f"synchronized {changed} flake input projection(s)")
         return 0
-    sources = make_overlay_sources(args, nix_dir)
-    explicit_targets = load_update_manifest(nix_dir)
     catalog_targets = load_source_catalog(nix_dir)
-    duplicates = explicit_targets.keys() & catalog_targets.keys()
-    if duplicates:
-        raise RuntimeError(f"source catalog duplicates update manifest: {sorted(duplicates)}")
-    explicit_targets.update(catalog_targets)
+    unknown_names = sorted(set(args.packages) - catalog_targets.keys())
+    if unknown_names:
+        parser.error(f"unknown catalog target ID(s): {', '.join(unknown_names)}")
     if args.inventory:
-        print_inventory(build_inventory(sources, explicit_targets, nix_dir), args.json_output)
+        print_inventory(build_inventory(catalog_targets), args.json_output)
         return 0
 
     if (
@@ -3724,20 +3001,18 @@ Examples:
         delegated_names = [
             name
             for name in args.packages
-            if name in catalog_targets
-            and catalog_targets[name].get("executor") == "update-agents"
+            if catalog_targets[name].get("executor") == "update-agents"
         ]
         if delegated_names:
             if len(delegated_names) != len(args.packages):
                 parser.error("update-agents targets cannot be mixed with direct targets")
-            if args.no_build or args.verbose:
-                parser.error("update-agents targets do not accept --no-build or --verbose")
+            if args.verbose:
+                parser.error("update-agents targets do not accept --verbose")
             return delegate_to_update_agents(nix_dir, delegated_names, args)
 
     github_client = GitHubClient()
     npm_client = NpmRegistryClient()
     pypi_client = PypiClient()
-    updater = OverlayUpdater()
     transaction = SourceTransaction()
     atexit.register(transaction.rollback_unless_committed)
     success_count = 0
@@ -3797,9 +3072,7 @@ Examples:
             and (not args.packages or name in args.packages)
         ]
     else:
-        selected_catalog_names = [
-            name for name in args.packages if name in catalog_targets
-        ]
+        selected_catalog_names = args.packages
     catalog_record_snapshots = (
         snapshot_catalog_record_isolation(
             selected_catalog_names, catalog_targets, transaction
@@ -3908,197 +3181,15 @@ Examples:
             transaction.commit()
         return 0 if fail_count == 0 else 1
 
-    targets = collect_targets(args, sources, set(catalog_targets))
-    for source, package_name in targets:
-        # Find package in overlays
-        info = source.parser.find_package(package_name)
-        if not info:
-            if args.all:
-                # In --all mode, silently skip packages without source metadata.
-                if args.verbose:
-                    print(
-                        f"{Colors.DIM}{source.name}/{package_name}: "
-                        f"skipped (no supported source){Colors.RESET}"
-                    )
-                skipped_count += 1
-            else:
-                print(
-                    f"{Colors.RED}{package_name}: not found or no supported source"
-                    f"{Colors.RESET}"
-                )
-                fail_count += 1
-            continue
-
-        # Build hash info string
-        hash_types = []
-        if info.src_hash:
-            hash_types.append("src")
-        if info.vendor_hash:
-            hash_types.append("vendor")
-        if info.cargo_hash:
-            hash_types.append("cargo")
-        if info.npm_deps_hash:
-            hash_types.append("npm")
-        hash_info = f" [{','.join(hash_types)}]" if len(hash_types) > 1 else ""
-
-        # Compact package info
-        pkg_display = f"{Colors.BOLD}{source.name}/{package_name}{Colors.RESET}"
-        version_display = f"{Colors.DIM}{info.version}{Colors.RESET}"
-        print(f"{pkg_display} {version_display}{hash_info}", end=" ")
-
-        # Get latest version
-        latest_tag = None
-        new_version = None
-        new_full_rev = None
-
-        if info.source_type == "npm":
-            if args.version:
-                npm_version = npm_client.get_version(info.npm_package, args.version)
-                if not npm_version:
-                    print(f"{Colors.RED}✗ fetch failed{Colors.RESET}")
-                    fail_count += 1
-                    continue
-                new_version, new_src_hash = npm_version
-                latest_tag = new_version
-            else:
-                npm_version = npm_client.get_version(info.npm_package)
-                if not npm_version:
-                    print(f"{Colors.RED}✗ fetch failed{Colors.RESET}")
-                    fail_count += 1
-                    continue
-                new_version, new_src_hash = npm_version
-                latest_tag = new_version
-        elif args.version:
-            latest_tag = args.version
-            if not latest_tag.startswith(("v", "b")):
-                latest_tag = f"{info.version_prefix}{args.version}"
-            new_version = extract_version_number(latest_tag, info.version_prefix)
-        elif info.uses_commit:
-            # Legacy regex targets follow the repository's declared default branch.
-            branch = github_client.get_default_branch(info.owner, info.repo)
-            commit_info = (
-                github_client.get_latest_commit(info.owner, info.repo, branch)
-                if branch
-                else None
+    if args.dry_run:
+        restored = transaction.rollback()
+        if restored:
+            print(
+                f"Dry-run attempted to mutate {restored} source file(s)",
+                file=sys.stderr,
             )
-            if not commit_info:
-                print(f"{Colors.RED}✗ fetch failed{Colors.RESET}")
-                fail_count += 1
-                continue
-            new_full_rev, new_version = commit_info
-            latest_tag = new_full_rev
-        else:
-            latest_tag = github_client.get_latest_release(info.owner, info.repo)
-            if not latest_tag:
-                print(f"{Colors.RED}✗ fetch failed{Colors.RESET}")
-                fail_count += 1
-                continue
-            new_version = extract_version_number(latest_tag, info.version_prefix)
-        if new_version == info.version:
-            print(f"{Colors.GREEN}✓ up-to-date{Colors.RESET}")
-            skipped_count += 1
-            continue
-
-        # Show update arrow
-        print(f"{Colors.YELLOW}→ {new_version}{Colors.RESET}", end="")
-
-        # Compute new source hash
-        if info.source_type != "npm":
-            new_src_hash = source.hash_computer.compute_src_hash(info.owner, info.repo, latest_tag)
-        if not new_src_hash:
-            print(f" {Colors.RED}✗ hash failed{Colors.RESET}")
             fail_count += 1
-            continue
-
-        # Update the overlay file with new version and src hash first
-        # This is needed so we can compute the other hashes. Watch the source
-        # before any mutation so one failed target rolls back the whole command.
-        transaction.watch(info.file_path)
-        updater.update_package(
-            info, new_version, new_src_hash,
-            new_full_rev=new_full_rev,
-            dry_run=args.dry_run
-        )
-
-        # Compute additional hashes if needed
-        new_vendor_hash = None
-        new_cargo_hash = None
-        new_npm_deps_hash = None
-        extra_hashes = []
-        hash_failed = False
-
-        if not args.no_build and not args.dry_run:
-            def apply_computed_hash(**hashes):
-                current_info = source.parser.find_package(package_name)
-                if current_info:
-                    updater.update_package(
-                        current_info,
-                        new_version,
-                        new_src_hash,
-                        new_vendor_hash=hashes.get("vendor"),
-                        new_cargo_hash=hashes.get("cargo"),
-                        new_npm_deps_hash=hashes.get("npm"),
-                        new_full_rev=new_full_rev,
-                        dry_run=False
-                    )
-
-            # Compute hashes for nested/build-time dependencies before hashes
-            # for packages that may consume them. Otherwise Nix can report an
-            # npmDepsHash mismatch while we are trying to compute vendorHash.
-            if info.npm_deps_hash:
-                updater.set_dummy_hash(info.file_path, package_name, 'npmDepsHash', info.npm_deps_hash)
-                new_npm_deps_hash = source.hash_computer.compute_npm_deps_hash(package_name)
-                if new_npm_deps_hash:
-                    apply_computed_hash(npm=new_npm_deps_hash)
-                    extra_hashes.append("npm")
-                else:
-                    apply_computed_hash(npm=info.npm_deps_hash)
-                    hash_failed = True
-
-            if not hash_failed and info.cargo_hash:
-                updater.set_dummy_hash(info.file_path, package_name, 'cargoHash', info.cargo_hash)
-                new_cargo_hash = source.hash_computer.compute_cargo_hash(package_name)
-                if new_cargo_hash:
-                    apply_computed_hash(cargo=new_cargo_hash)
-                    extra_hashes.append("cargo")
-                else:
-                    apply_computed_hash(cargo=info.cargo_hash)
-                    hash_failed = True
-
-            if not hash_failed and info.vendor_hash:
-                updater.set_dummy_hash(info.file_path, package_name, 'vendorHash', info.vendor_hash)
-                new_vendor_hash = source.hash_computer.compute_vendor_hash(package_name)
-                if new_vendor_hash:
-                    apply_computed_hash(vendor=new_vendor_hash)
-                    extra_hashes.append("vendor")
-                else:
-                    apply_computed_hash(vendor=info.vendor_hash)
-                    hash_failed = True
-
-        if hash_failed:
-            print(f" {Colors.RED}✗ hash failed{Colors.RESET}")
-            fail_count += 1
-            continue
-
-        # Final update with all hashes
-        if not args.dry_run:
-            info = source.parser.find_package(package_name)
-            updater.update_package(
-                info, new_version, new_src_hash,
-                new_vendor_hash=new_vendor_hash,
-                new_cargo_hash=new_cargo_hash,
-                new_npm_deps_hash=new_npm_deps_hash,
-                new_full_rev=new_full_rev,
-                dry_run=False
-            )
-        success_count += 1
-        extra_info = f" +{','.join(extra_hashes)}" if extra_hashes else ""
-        if args.dry_run:
-            print(f" {Colors.CYAN}(dry-run){Colors.RESET}")
-        else:
-            print(f" {Colors.GREEN}✓{Colors.RESET}{extra_info}")
-
-    if fail_count and not args.dry_run:
+    elif fail_count:
         restored = transaction.rollback()
         if restored:
             print(f"Rolled back {restored} source file(s) after update failure")

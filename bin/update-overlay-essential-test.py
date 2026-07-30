@@ -2,7 +2,7 @@
 
 """Bounded, safety-critical subset of the complete updater test suite.
 
-The ordinary commit gate runs every parser and catalog/unit test plus the
+The ordinary commit gate runs every updater CLI and catalog/unit test plus the
 bounded integration checks below.  The low-frequency expensive tier runs the
 unfiltered ``bin/update-overlay-test.py`` suite, including its temporary-Git
 publication, signal, and rollback matrix.
@@ -17,7 +17,7 @@ TARGET = Path(__file__).with_name("update-overlay-test.py")
 TARGET_MODULE = runpy.run_path(str(TARGET))
 
 COMPLETE_CLASSES = (
-    "OverlayParserTests",
+    "UpdateCliTests",
     "UpdateInventoryTests",
 )
 

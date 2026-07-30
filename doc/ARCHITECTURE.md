@@ -92,7 +92,7 @@ Package rules:
 
 ## Source catalog
 
-The migration target is for all hand-maintained coordinates for Internet-fetched, future-upgraded package sources to live in data-only JSON files under `sources/`. Anvil is the first migrated category; remaining categories are tracked per-category in the [Fleet Configuration Programme](https://github.com/users/jwiegley/projects/9) under the `epic:2-update-authority` label. Category-local derivations keep their native Nix fetcher and build logic; they load records through `packages/source-catalog.nix`.
+All hand-maintained coordinates for Internet-fetched, future-upgraded package sources live in data-only JSON files under `sources/`. Category-local derivations keep their native Nix fetcher and build logic; they load records through `packages/source-catalog.nix`.
 
 A record uses `schemaVersion = 1` at the category-file level and contains a stable ID with `fetcher`, canonical `url`, fetcher coordinates (`owner`, `repo`, `rev` as applicable), `hash`, optional `version`/`date`, and a closed `update.kind`. To add a source:
 
@@ -100,7 +100,7 @@ A record uses `schemaVersion = 1` at the category-file level and contains a stab
 2. In the derivation, load the category with `import ../source-catalog.nix "category"` (adjusting the relative path) and pass the record's existing fields to the same native fetcher.
 3. Run `bin/update-overlay --inventory`, the updater unit tests, and an exact pre/post derivation-path comparison.
 
-Do not add package builders, patches, platform policy, gallery projections, shell commands, or runtime service URLs to the catalog. Generated npm/Cargo/flake locks remain beside their consumers as updater-owned projections. `bin/update-overlay` validates duplicate IDs, schema, fetcher-specific fields, HTTPS upstream identity, hashes, and update strategy before inventory or network work.
+Do not add package builders, patches, platform policy, gallery projections, shell commands, or runtime service URLs to the catalog. Generated npm/Cargo/flake locks remain beside their consumers as updater-owned projections. Inventory and execution derive exclusively from `sources/*.json`; `bin/update-overlay` neither discovers update targets by parsing Nix overlays nor merges a secondary update manifest. It validates duplicate IDs, schema, fetcher-specific fields, HTTPS upstream identity, hashes, and update strategy before inventory or network work.
 
 ## State boundaries
 

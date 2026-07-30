@@ -47,7 +47,7 @@ usage() {
 usage: update-agents [--all-inputs] [--target NAME] [--version VALUE] [--dry-run]
                      [--pull] [--commit] [--switch] [--push] [--brew]
 
-Update integrated AI inputs, both repository locks, and local overlays.
+Update integrated AI inputs, both repository locks, and catalog-managed package sources.
 By default, leave reviewed working-tree changes without external side effects.
 
 Options:
@@ -763,7 +763,7 @@ fi
             "${npm_lock_target_names[@]}"
     fi
     if ((${#requested_targets[@]} == 0)); then
-        python bin/update-overlay --all --overlays-dir overlays/ai
+        python bin/update-overlay --all
     fi
     mapfile -t changed_nix < <(git diff --no-renames --name-only -- '*.nix')
     if ((${#changed_nix[@]})); then

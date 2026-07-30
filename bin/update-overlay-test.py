@@ -29,14 +29,11 @@ UPGRADE = Path(__file__).with_name("upgrade")
 SWITCH = Path(__file__).with_name("switch")
 BUILD = Path(__file__).parent.parent / "build"
 MODULE = runpy.run_path(str(SCRIPT))
-OverlayParser = MODULE["OverlayParser"]
-OverlayUpdater = MODULE["OverlayUpdater"]
 GitHubClient = MODULE["GitHubClient"]
 HashComputer = MODULE["HashComputer"]
 PypiClient = MODULE["PypiClient"]
 NpmRegistryClient = MODULE["NpmRegistryClient"]
 SourceTransaction = MODULE["SourceTransaction"]
-load_update_manifest = MODULE["load_update_manifest"]
 load_source_catalog = MODULE["load_source_catalog"]
 load_pi_normalization_contract = MODULE.get("load_pi_normalization_contract")
 pi_npm_lock_flags = MODULE.get("pi_npm_lock_flags")
@@ -57,7 +54,6 @@ update_pypi_artifact_target = MODULE.get("update_pypi_artifact_target")
 update_github_release_asset_target = MODULE.get("update_github_release_asset_target")
 update_github_commit_artifact_target = MODULE.get("update_github_commit_artifact_target")
 update_github_projection_target = MODULE.get("update_github_projection_target")
-build_inventory = MODULE["build_inventory"]
 snapshot_catalog_record_isolation = MODULE.get(
     "snapshot_catalog_record_isolation"
 )
@@ -104,54 +100,37 @@ ISSUE34_UPDATE_AGENTS = frozenset({
 })
 
 VENDOR_HASH = "sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
-HELPER_LINE = "  buildGoHelper = prev.buildGoModule.override { go = prev.go; };"
-MULTILINE_HELPER = '''  useHelper =
-    package:
-    package.overrideAttrs (oldAttrs: {
-      env = oldAttrs.env or { };
-    });'''
-OVERLAY = f'''final: prev:
-let
-{HELPER_LINE}
-{MULTILINE_HELPER}
-in
-{{
-  actual = prev.buildGoModule rec {{
-    pname = "actual";
-    version = "1.0.0";
-    src = prev.fetchFromGitHub {{
-      owner = "example";
-      repo = "actual";
-      tag = "v${{version}}";
-      hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-    }};
-    vendorHash = "{VENDOR_HASH}";
-  }};
-}}
-'''
 
 
-class OverlayParserTests(unittest.TestCase):
-    def test_discovers_nested_ai_overlays_but_ignores_test_fixtures(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            (root / "ai").mkdir()
-            (root / "tests").mkdir()
-            (root / "root.nix").write_text(OVERLAY)
-            (root / "ai" / "nested.nix").write_text(
-                OVERLAY.replace('pname = "actual"', 'pname = "nested"')
-                .replace("actual =", "nested =")
-            )
-            (root / "tests" / "ignored.nix").write_text(
-                OVERLAY.replace('pname = "actual"', 'pname = "ignored"')
-                .replace("actual =", "ignored =")
-            )
+def write_minimal_catalog(root):
+    (root / "sources").mkdir()
+    url = "https://example.invalid/actual-1.0.0.tar.gz"
+    (root / "sources/test.json").write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "sources": {
+                    "actual": {
+                        "version": "1.0.0",
+                        "source": {
+                            "fetcher": "fetchurl",
+                            "url": url,
+                            "args": {"url": url, "hash": "sha256-old"},
+                        },
+                        "update": {
+                            "kind": "url-release",
+                            "policy": "automatic",
+                        },
+                    }
+                },
+            },
+            indent=2,
+        )
+        + "\n"
+    )
 
-            packages = OverlayParser(root).find_all_packages()
-            self.assertIn("actual", packages)
-            self.assertIn("nested", packages)
-            self.assertNotIn("ignored", packages)
 
+class UpdateCliTests(unittest.TestCase):
     def test_retired_ai_nix_flags_are_rejected(self):
         for flag in ("--ai-nix-dir", "--no-ai-nix", "--only-ai-nix", "--no-ai-nix-advice"):
             with self.subTest(flag=flag):
@@ -164,41 +143,104 @@ class OverlayParserTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 2)
                 self.assertIn("unrecognized arguments", result.stderr)
 
-    def test_let_helper_does_not_absorb_output_packages(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            overlay_path = Path(temp_dir) / "overlay.nix"
-            overlay_path.write_text(OVERLAY)
 
-            parser = OverlayParser(Path(temp_dir))
-            updater = OverlayUpdater()
+    def test_retired_overlay_options_and_unknown_ids_are_rejected(self):
+        cases = (
+            (
+                ["--all", "--overlays-dir", "overlays/ai"],
+                "unrecognized arguments: --overlays-dir",
+            ),
+            (
+                ["--all", "--no-build"],
+                "--no-build is no longer supported",
+            ),
+            (
+                ["definitely-not-a-catalog-id"],
+                "unknown catalog target ID(s): definitely-not-a-catalog-id",
+            ),
+        )
+        for arguments, expected in cases:
+            with self.subTest(arguments=arguments):
+                result = subprocess.run(
+                    [sys.executable, str(SCRIPT), *arguments],
+                    cwd=SCRIPT.parent.parent,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertIn(expected, result.stderr)
 
-            for helper_name, helper_block in (
-                ("buildGoHelper", HELPER_LINE),
-                ("useHelper", MULTILINE_HELPER),
-            ):
-                with self.subTest(helper=helper_name):
-                    self.assertEqual(
-                        parser._extract_package_block(OVERLAY, helper_name),
-                        helper_block,
-                    )
-                    self.assertIsNone(parser.find_package(helper_name))
+    def test_catalog_selection_preserves_manual_direct_and_filtered_all(self):
+        def target(policy, executor):
+            return {
+                "executor": executor,
+                "kind": "url-release",
+                "_record": {
+                    "update": {"kind": "url-release", "policy": policy}
+                },
+            }
 
-                    start_idx, end_idx = updater._find_package_block_lines(
-                        OVERLAY, helper_name
-                    )
-                    self.assertEqual(
-                        "\n".join(OVERLAY.splitlines()[start_idx : end_idx + 1]),
-                        helper_block,
-                    )
+        catalog = {
+            "automatic-direct": target("automatic", "update-overlay"),
+            "automatic-delegated": target("automatic", "update-agents"),
+            "manual-direct": target("manual", "update-overlay"),
+        }
+        observed = []
+        mutate_path = None
 
-                    before = overlay_path.read_text()
-                    changed = updater.set_dummy_hash(
-                        overlay_path, helper_name, "vendorHash", VENDOR_HASH
-                    )
-                    self.assertFalse(changed)
-                    self.assertEqual(overlay_path.read_text(), before)
+        def fake_update(name, *_args):
+            observed.append(name)
+            if mutate_path is not None:
+                transaction = _args[-1]
+                transaction.watch(mutate_path)
+                mutate_path.write_text("changed\n")
+            return "skipped"
 
-            self.assertEqual(parser.find_package("actual").version, "1.0.0")
+        globals_ = MODULE["main"].__globals__
+        replacements = {
+            "load_source_catalog": lambda _root: catalog,
+            "snapshot_catalog_record_isolation": lambda *_args: {},
+            "update_catalog_target": fake_update,
+        }
+        originals = {name: globals_[name] for name in replacements}
+        old_argv = sys.argv
+        try:
+            globals_.update(replacements)
+            sys.argv = [str(SCRIPT), "manual-direct"]
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(MODULE["main"](), 0)
+            self.assertEqual(observed, ["manual-direct"])
+            self.assertIn("Summary: 0 updated, 1 up-to-date, 0 failed", output.getvalue())
+
+            observed.clear()
+            sys.argv = [str(SCRIPT), "--all", "--verbose"]
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(MODULE["main"](), 0)
+            self.assertEqual(observed, ["automatic-direct"])
+            self.assertIn(
+                "catalog/automatic-delegated: skipped (no executor)",
+                output.getvalue(),
+            )
+            self.assertIn("Summary: 0 updated, 2 up-to-date, 0 failed", output.getvalue())
+
+            with tempfile.TemporaryDirectory() as temp_dir:
+                mutate_path = Path(temp_dir) / "catalog.json"
+                mutate_path.write_text("original\n")
+                sys.argv = [str(SCRIPT), "manual-direct", "--dry-run"]
+                stderr = io.StringIO()
+                with (
+                    contextlib.redirect_stdout(io.StringIO()),
+                    contextlib.redirect_stderr(stderr),
+                ):
+                    self.assertEqual(MODULE["main"](), 1)
+                self.assertEqual(mutate_path.read_text(), "original\n")
+                self.assertIn("Dry-run attempted to mutate 1 source file", stderr.getvalue())
+        finally:
+            globals_.update(originals)
+            sys.argv = old_argv
 
 
 class UpdateInventoryTests(unittest.TestCase):
@@ -272,6 +314,13 @@ class UpdateInventoryTests(unittest.TestCase):
                 },
             }))
             self.assertIn("multi", load_source_catalog(temp))
+            (temp / "sources/duplicate.json").write_text(
+                (temp / "sources/multi.json").read_text()
+            )
+            with self.assertRaisesRegex(
+                RuntimeError, "duplicate source catalog id: multi"
+            ):
+                load_source_catalog(temp)
 
     @staticmethod
     def _write_projection_fixture(root, mutate=None):
@@ -320,11 +369,9 @@ class UpdateInventoryTests(unittest.TestCase):
         )
         return document, lock
 
-    def test_issue34_manifest_records_are_catalog_owned(self):
+    def test_issue34_records_are_catalog_owned(self):
         root = SCRIPT.parent.parent
-        manifest = load_update_manifest(root)
         catalog = load_source_catalog(root)
-        self.assertEqual(manifest, {})
         self.assertTrue(ISSUE34_TARGETS <= catalog.keys())
         self.assertEqual(
             {name for name in ISSUE34_TARGETS if catalog[name]["source"] == "catalog"},
@@ -3499,14 +3546,12 @@ got: sha256-requested
             self.assertEqual(lock_path.read_text(), new_lock)
             self.assertEqual(len(valid_source_lock.validations), 1)
 
-    def test_manifest_and_cli_inventory_cover_hidden_update_targets(self):
+    def test_catalog_and_cli_inventory_cover_all_update_targets(self):
         root = SCRIPT.parent.parent
         try:
-            manifest = load_update_manifest(root)
-            self.assertEqual(manifest, {})
-            manifest.update(load_source_catalog(root))
+            catalog = load_source_catalog(root)
         except (RuntimeError, subprocess.SubprocessError, ValueError) as error:
-            self.fail(f"manifest evaluation failed: {error}")
+            self.fail(f"catalog evaluation failed: {error}")
         required = {
             "agent-browser-source",
             "anvil-mcp",
@@ -3521,20 +3566,20 @@ got: sha256-requested
             "llm-agents",
             "translate-tool",
         }
-        self.assertTrue(required <= manifest.keys())
-        self.assertIn("packages/pi-gallery/locks/pi-lens-package-lock.json", manifest["pi-lens"]["files"])
+        self.assertTrue(required <= catalog.keys())
+        self.assertIn("packages/pi-gallery/locks/pi-lens-package-lock.json", catalog["pi-lens"]["files"])
         self.assertIn(
             "packages/pi-gallery/locks/pi-smart-fetch-package-lock.json",
-            manifest["pi-smart-fetch"]["files"],
+            catalog["pi-smart-fetch"]["files"],
         )
         self.assertIn(
             "packages/pi-gallery/locks/pi-smart-web-search-package-lock.json",
-            manifest["pi-smart-web-search"]["files"],
+            catalog["pi-smart-web-search"]["files"],
         )
-        self.assertIn("sources/pi.json", manifest["pi-mcp-adapter"]["files"])
-        self.assertNotIn("config/ai/catalog.nix", manifest["pi-mcp-adapter"]["files"])
-        self.assertIn("packages/anvil-mcp/Cargo.lock", manifest["nelisp"]["files"])
-        self.assertEqual(manifest["ws"]["_record"]["update"]["package"], "ws")
+        self.assertIn("sources/pi.json", catalog["pi-mcp-adapter"]["files"])
+        self.assertNotIn("config/ai/catalog.nix", catalog["pi-mcp-adapter"]["files"])
+        self.assertIn("packages/anvil-mcp/Cargo.lock", catalog["nelisp"]["files"])
+        self.assertEqual(catalog["ws"]["_record"]["update"]["package"], "ws")
 
         result = subprocess.run(
             [sys.executable, str(SCRIPT), "--inventory", "--json"],
@@ -3550,8 +3595,15 @@ got: sha256-requested
             self.fail(f"inventory returned invalid JSON: {error}")
         names = [item["name"] for item in inventory["packages"]]
         self.assertEqual(len(names), len(set(names)))
+        self.assertEqual(set(names), set(catalog))
+        self.assertEqual(names, sorted(catalog))
+        self.assertEqual(
+            hashlib.sha256("\n".join(names).encode()).hexdigest(),
+            "4e5b6cdb25ccc7617dbdefe79afc06e31ee15392f70416f59b0529397ce49261",
+        )
         self.assertTrue(required <= set(names))
         self.assertTrue(all(item["inventoried"] for item in inventory["packages"]))
+        self.assertEqual(set(inventory), {"packages", "schemaVersion"})
         by_name = {item["name"]: item for item in inventory["packages"]}
         relocated = {
             "agent-deck",
@@ -3570,9 +3622,6 @@ got: sha256-requested
             "omlx",
             "rustdocs-mcp-server",
         }
-        package_owned = {
-            item["name"] for item in inventory["packages"] if item["source"] == "packages"
-        }
         catalog_owned = {
             item["name"] for item in inventory["packages"] if item["source"] == "catalog"
         }
@@ -3585,7 +3634,7 @@ got: sha256-requested
             len([item for item in inventory["packages"] if item["managed"]]),
             199,
         )
-        self.assertFalse(package_owned & relocated)
+        self.assertEqual(catalog_owned, set(catalog))
         self.assertTrue(relocated <= catalog_owned)
         self.assertTrue(all(by_name[name]["managed"] for name in relocated))
         self.assertTrue(by_name["git-ai"]["managed"])
@@ -3611,7 +3660,7 @@ got: sha256-requested
         self.assertEqual(by_name["pi-mcp-adapter"]["executor"], "update-agents")
         self.assertEqual(by_name["pi-btw"]["executor"], "update-agents")
         self.assertEqual(
-            manifest["pi-mcp-adapter"]["_record"]["update"]["buildPackage"],
+            catalog["pi-mcp-adapter"]["_record"]["update"]["buildPackage"],
             "agent-resources",
         )
         self.assertEqual(by_name["ws"]["executor"], "update-overlay")
@@ -3645,7 +3694,7 @@ got: sha256-requested
         )
         self.assertTrue(
             all(
-                manifest[name]["_record"]["update"].get("normalizer")
+                catalog[name]["_record"]["update"].get("normalizer")
                 == "pi-gallery-v1"
                 for name in ISSUE39_TARGETS
             )
@@ -3653,15 +3702,18 @@ got: sha256-requested
         for item in inventory["packages"]:
             for path in item["files"]:
                 self.assertTrue((root / path).is_file(), (item["name"], path))
-
-    def test_inventory_rejects_duplicate_overlay_owners(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            (root / "one.nix").write_text(OVERLAY)
-            (root / "two.nix").write_text(OVERLAY)
-            source = SimpleNamespace(name="test", parser=OverlayParser(root))
-            with self.assertRaisesRegex(RuntimeError, "duplicate overlay owners for actual"):
-                build_inventory([source], {}, root)
+        human = subprocess.run(
+            [sys.executable, str(SCRIPT), "--inventory"],
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=root,
+        )
+        self.assertEqual(human.returncode, 0, human.stderr)
+        self.assertEqual(
+            human.stdout.splitlines()[-1],
+            "199 inventoried targets; 199 executable; 0 pending executors",
+        )
 
     def test_source_transaction_rolls_back_and_commit_preserves(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -3760,8 +3812,6 @@ got: sha256-requested
             globals_ = MODULE["main"].__globals__
             replacements = {
                 "load_source_catalog": lambda _root: {"selected": target},
-                "load_update_manifest": lambda _root: {},
-                "make_overlay_sources": lambda _args, _root: [],
                 "require_detached_linked_worktree": lambda _root: None,
                 "update_npm_lock_target": mutate_sibling,
             }
@@ -3793,49 +3843,6 @@ got: sha256-requested
             self.assertEqual(status, 1)
             self.assertIn("changed unselected data", stderr.getvalue())
             self.assertEqual(path.read_text(), before)
-
-    def test_failed_dependent_hash_rolls_back_complete_update(self):
-        class FakeGitHubClient:
-            def get_latest_release(self, _owner, _repo):
-                return "v2.0.0"
-
-        class FakeHashComputer:
-            def __init__(self, _repo_dir):
-                pass
-
-            def compute_src_hash(self, _owner, _repo, _rev):
-                return "sha256-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC="
-
-            def compute_vendor_hash(self, _package_name):
-                return None
-
-            def compute_cargo_hash(self, _package_name):
-                return None
-
-            def compute_npm_deps_hash(self, _package_name):
-                return None
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            overlay = Path(temp_dir) / "overlay.nix"
-            overlay.write_text(OVERLAY)
-            before = overlay.read_text()
-            globals_ = MODULE["main"].__globals__
-            old_github = globals_["GitHubClient"]
-            old_hash = globals_["HashComputer"]
-            old_argv = sys.argv
-            try:
-                globals_["GitHubClient"] = FakeGitHubClient
-                globals_["HashComputer"] = FakeHashComputer
-                sys.argv = [str(SCRIPT), "--overlays-dir", temp_dir, "actual"]
-                with contextlib.redirect_stdout(io.StringIO()):
-                    status = MODULE["main"]()
-            finally:
-                globals_["GitHubClient"] = old_github
-                globals_["HashComputer"] = old_hash
-                sys.argv = old_argv
-            self.assertEqual(status, 1)
-            self.assertEqual(overlay.read_text(), before)
-
 
 class IntegratedWorkflowTests(unittest.TestCase):
     def setUp(self):
@@ -4026,7 +4033,6 @@ if "--inventory" in arguments:
     print(json.dumps({
         "schemaVersion": 1,
         "packages": packages,
-        "unsupportedOverlayAttributes": [],
     }))
 elif "--prepare-fixed-inputs" in arguments:
     if arguments != ["--prepare-fixed-inputs", "fixed"]:
@@ -4838,9 +4844,7 @@ fi
             root_lock = events.index("nix flake update")
             projection_sync = events.index("overlay --sync-flake-projections")
             npm_locks = events.index("overlay --prepare-npm-locks npm-lock")
-            generic_update = events.index(
-                "overlay --all --overlays-dir overlays/ai"
-            )
+            generic_update = events.index("overlay --all")
             self.assertLess(portable_lock, projection_sync)
             self.assertLess(root_lock, projection_sync)
             self.assertLess(projection_sync, npm_locks)
@@ -5332,7 +5336,8 @@ fi
             empty_lock = json.dumps({"nodes": {"root": {"inputs": {}}}, "root": "root", "version": 7})
             (root / "flake.lock").write_text(empty_lock + "\n")
             (root / "config/ai/flake.lock").write_text(empty_lock + "\n")
-            (root / "overlays/ai/package.nix").write_text(OVERLAY)
+            (root / "overlays/ai/package.nix").write_text("baseline\n")
+            write_minimal_catalog(root)
 
             def executable(name, text):
                 path = fake_bin / name
@@ -5352,7 +5357,7 @@ fi
             executable("python", """#!/usr/bin/env bash
 set -euo pipefail
 if [[ ${2:-} == --sync-flake-projections ]]; then exec python3 "$@"; fi
-echo overlay-change >> overlays/ai/package.nix
+echo catalog-change >> sources/test.json
 """)
             executable("nixfmt", "#!/usr/bin/env bash\nexit 0\n")
 
@@ -5409,7 +5414,8 @@ echo overlay-change >> overlays/ai/package.nix
             empty_lock = json.dumps({"nodes": {"root": {"inputs": {}}}, "root": "root", "version": 7})
             (root / "flake.lock").write_text(empty_lock + "\n")
             (root / "config/ai/flake.lock").write_text(empty_lock + "\n")
-            (root / "overlays/ai/package.nix").write_text(OVERLAY)
+            (root / "overlays/ai/package.nix").write_text("baseline\n")
+            write_minimal_catalog(root)
 
             real_git = shutil.which("git") or "/usr/bin/git"
 
@@ -5431,7 +5437,7 @@ fi
             executable("python", """#!/usr/bin/env bash
 set -euo pipefail
 if [[ ${2:-} == --sync-flake-projections ]]; then exec python3 "$@"; fi
-echo overlay-change >> overlays/ai/package.nix
+echo catalog-change >> sources/test.json
 """)
             executable("nixfmt", "#!/usr/bin/env bash\nexit 0\n")
             executable("git", """#!/usr/bin/env bash
@@ -5556,7 +5562,7 @@ exec "$REAL_GIT" "$@"
         )
         self.assertNotIn("\n    nixpkgs\n", update_agents)
         self.assertNotIn("\n    rust-overlay\n", update_agents)
-        for manifest_only in (
+        for catalog_routed in (
             "agent-browser-source",
             "pi-agent-browser-native",
             "pi-artifacts",
@@ -5569,11 +5575,10 @@ exec "$REAL_GIT" "$@"
             "pi-smart-web-search",
             "ponytail",
         ):
-            with self.subTest(manifest_only=manifest_only):
-                self.assertNotIn(f"\n    {manifest_only}\n", update_agents)
-        self.assertIn(
-            "python bin/update-overlay --all --overlays-dir overlays/ai", update_agents
-        )
+            with self.subTest(catalog_routed=catalog_routed):
+                self.assertNotIn(f"\n    {catalog_routed}\n", update_agents)
+        self.assertIn("python bin/update-overlay --all", update_agents)
+        self.assertNotIn("--overlays-dir", update_agents)
         self.assertEqual(update_agents.count('git_pull_clean "$config_dir"'), 1)
         self.assertIn("run_commit=false", update_agents)
         self.assertIn("run_switch=false", update_agents)
@@ -5586,10 +5591,9 @@ exec "$REAL_GIT" "$@"
         self.assertIn("bin/update-agents --all-inputs --brew", makefile)
         self.assertIn("if [[ $run_all_inputs == true ]]", update_agents)
         self.assertIn("nix flake update --flake ./config/ai", update_agents)
-        manifest = load_update_manifest(root)
-        manifest.update(load_source_catalog(root))
+        catalog = load_source_catalog(root)
         expected_inputs = {
-            name for name, target in manifest.items()
+            name for name, target in catalog.items()
             if target.get("executor") == "update-agents"
             and target.get("kind") == "flake-input"
         }
@@ -5964,9 +5968,9 @@ exec "$REAL_GIT" "$@"
     # KNOWN_UNFETCHABLE_ROOT_NODES above).
 
     # Production seams: flake.nix plus every .nix under these roots. `test`/
-    # `tests` path components are excluded to match OverlayParser's own
-    # production rule (bin/update-overlay:144); doc/ and the top-level test/
-    # tree are simply not roots. sources/*.json is catalog DATA, not a seam.
+    # `tests` path components are excluded because fixtures are not production;
+    # doc/ and the top-level test/ tree are simply not roots. sources/*.json is
+    # catalog DATA, not a seam.
     _SEAM_ROOTS = ("overlays", "packages", "config", "flake")
 
     # Fetchers whose inline argument attrset is a package-source coordinate.

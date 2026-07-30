@@ -218,7 +218,7 @@
       "path": "bin/update-overlay-essential-test.py",
       "kind": "test",
       "tier": "pre-commit",
-      "evidence": ["quality:python-test executes every updater parser/catalog test plus the bounded routing, purity, and negative-gate integration plan"],
+      "evidence": ["quality:python-test executes every updater catalog and inventory unit test plus the bounded routing, purity, and negative-gate integration plan"],
       "gap": "The complete temporary-Git publication, signal, and rollback matrix remains in the expensive tier."
     },
     {
