@@ -1384,6 +1384,7 @@ got: sha256-requested
                         "pname": pname,
                         "version": "1.0.0",
                         "format": "wheel",
+                        "dist": python,
                         "python": python,
                         "abi": abi,
                         "platform": "macosx_14_0_arm64",
@@ -1467,9 +1468,47 @@ got: sha256-requested
             self.assertEqual(calls, ["example", "example-metal"])
             updated = json.loads(path.read_text())["sources"]["example"]
             self.assertEqual(updated["version"], "2.0.0")
-            for fetch in [updated["source"], *updated["artifacts"].values()]:
-                self.assertEqual(fetch["args"]["version"], "2.0.0")
-                self.assertRegex(fetch["args"]["hash"], r"^sha256-[A-Za-z0-9+/]+=*$")
+            self.assertEqual(
+                {
+                    "source": updated["source"]["args"],
+                    **{
+                        f"artifact:{name}": fetch["args"]
+                        for name, fetch in updated["artifacts"].items()
+                    },
+                },
+                {
+                    "source": {
+                        "pname": "example",
+                        "version": "2.0.0",
+                        "format": "wheel",
+                        "dist": "cp313",
+                        "python": "cp313",
+                        "abi": "cp313",
+                        "platform": "macosx_14_0_arm64",
+                        "hash": "sha256-IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                    },
+                    "artifact:cp311": {
+                        "pname": "example",
+                        "version": "2.0.0",
+                        "format": "wheel",
+                        "dist": "cp311",
+                        "python": "cp311",
+                        "abi": "cp311",
+                        "platform": "macosx_14_0_arm64",
+                        "hash": "sha256-ERERERERERERERERERERERERERERERERERERERERERE=",
+                    },
+                    "artifact:metal": {
+                        "pname": "example_metal",
+                        "version": "2.0.0",
+                        "format": "wheel",
+                        "dist": "py3",
+                        "python": "py3",
+                        "abi": "none",
+                        "platform": "macosx_14_0_arm64",
+                        "hash": "sha256-MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM=",
+                    },
+                },
+            )
 
             updated["artifacts"]["cp311"]["args"]["version"] = "1.0.0"
             path.write_text(json.dumps({
