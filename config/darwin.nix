@@ -246,6 +246,7 @@ in
       "fantastical"
       "github"
       "handy"
+      "hermes-desktop"
       "home-assistant"
       "iterm2"
       "itermai"
