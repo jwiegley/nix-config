@@ -816,6 +816,25 @@ class ArtifactTests(RepositoryFixture):
         )
         coverage_report.check_artifact(self.repo)
 
+    def test_check_allows_unstaged_content_not_read_from_worktree(self) -> None:
+        report = self.ready_report()
+        artifact = self.write_json("test/baseline/coverage-fixture.json", report)
+        self.git("add", artifact.relative_to(self.repo).as_posix())
+        self.git("commit", "-qm", "coverage artifact")
+        self.write("flake.nix", "{ value = 99; }\n")
+        coverage_report.check_artifact(self.repo)
+
+    def test_check_rejects_unstaged_quality_driver(self) -> None:
+        report = self.ready_report()
+        artifact = self.write_json("test/baseline/coverage-fixture.json", report)
+        self.git("add", artifact.relative_to(self.repo).as_posix())
+        self.git("commit", "-qm", "coverage artifact")
+        self.write("bin/quality", "#!/usr/bin/env bash\nprintf '%s\\n' changed\n")
+        with self.assertRaisesRegex(
+            coverage_report.CoverageError, "tracked source differs.*bin/quality"
+        ):
+            coverage_report.check_artifact(self.repo)
+
     def test_check_rejects_nix_reach_regression_against_head_artifact(self) -> None:
         self.write("b.nix", "{ value = 2; }\n")
         self.git("add", "b.nix")

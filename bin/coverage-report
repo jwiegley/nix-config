@@ -1116,7 +1116,10 @@ def load_index_json(
 
 
 def ensure_projected_worktree_matches_index(
-    repo: Path, runner: RunCommand = run_command
+    repo: Path,
+    runner: RunCommand = run_command,
+    *,
+    required_paths: frozenset[str] | None = None,
 ) -> None:
     proc = _checked_command(
         runner,
@@ -1129,9 +1132,12 @@ def ensure_projected_worktree_matches_index(
         if not path:
             continue
         pure = PurePosixPath(_relative_path(path, "changed tracked path"))
+        relative = pure.as_posix()
         if pure.parent == ARTIFACT_DIRECTORY and ARTIFACT_RE.fullmatch(pure.name):
             continue
-        changed.append(pure.as_posix())
+        if required_paths is not None and relative not in required_paths:
+            continue
+        changed.append(relative)
     if changed:
         raise CoverageError(
             f"tracked source differs between index and worktree: {sorted(changed)}"
@@ -1779,9 +1785,12 @@ def derive_report(
     runner: RunCommand = run_command,
     probe_runner: RunCommand = run_nix_probe_command,
     probe_tier: str | None = None,
+    worktree_dependencies: frozenset[str] | None = None,
 ) -> dict[str, Any]:
     repo = repo.resolve()
-    ensure_projected_worktree_matches_index(repo, runner)
+    ensure_projected_worktree_matches_index(
+        repo, runner, required_paths=worktree_dependencies
+    )
     initial_tree = source_tree(repo, runner)
     manifest = validate_manifest(load_index_json(repo, MANIFEST_RELATIVE, runner))
     files = discover_files(repo, runner)
@@ -1905,7 +1914,9 @@ def derive_report(
             "commands": provenance_commands,
         },
     }
-    ensure_projected_worktree_matches_index(repo, runner)
+    ensure_projected_worktree_matches_index(
+        repo, runner, required_paths=worktree_dependencies
+    )
     if source_tree(repo, runner) != initial_tree:
         raise CoverageError("source index changed during coverage collection")
     validate_report(
@@ -2316,9 +2327,10 @@ def check_artifact(
     explicit: str | None = None,
     runner: RunCommand = run_command,
 ) -> Path:
-    ensure_projected_worktree_matches_index(repo, runner)
     manifest = validate_manifest(load_index_json(repo, MANIFEST_RELATIVE, runner))
-    live = derive_report(repo, runner=runner)
+    live = derive_report(
+        repo, runner=runner, worktree_dependencies=frozenset({"bin/quality"})
+    )
     path = _resolve_artifact(repo, runner, explicit, for_write=False)
     artifact = _expect_object(
         load_index_json(repo, path.relative_to(repo).as_posix(), runner), "artifact"
