@@ -14,6 +14,7 @@ Examples:
 import argparse
 import atexit
 import base64
+import binascii
 import copy
 import json
 import os
@@ -483,19 +484,31 @@ class GitHubClient:
         )
         try:
             result = subprocess.run(
-                [
-                    "gh",
-                    "api",
-                    "-H",
-                    "Accept: application/vnd.github.raw+json",
-                    endpoint,
-                ],
+                ["gh", "api", endpoint],
                 capture_output=True,
                 text=True,
                 timeout=60,
             )
-            return result.stdout if result.returncode == 0 and result.stdout else None
-        except (OSError, subprocess.TimeoutExpired):
+            if result.returncode != 0 or not result.stdout:
+                return None
+            payload = json.loads(result.stdout)
+            if (
+                not isinstance(payload, dict)
+                or payload.get("type") != "file"
+                or payload.get("encoding") != "base64"
+                or not isinstance(payload.get("content"), str)
+            ):
+                return None
+            encoded = "".join(payload["content"].split())
+            return base64.b64decode(encoded, validate=True).decode("utf-8")
+        except (
+            OSError,
+            ValueError,
+            UnicodeDecodeError,
+            binascii.Error,
+            json.JSONDecodeError,
+            subprocess.TimeoutExpired,
+        ):
             return None
 
 
@@ -1189,7 +1202,7 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
         ),
         "github-release-asset": (
             common_update_fields | {"assets", "owner", "repo", "tagPrefix"},
-            {"assets", "owner", "repo"},
+            {"assets", "owner", "repo", "tagPrefix"},
         ),
         "npm-release": (common_update_fields | {"package"}, {"package"}),
         "npm-release+flake-input": (
@@ -1253,6 +1266,13 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                 )
             source_args = record["source"]["args"]
             source_fetcher = record["source"]["fetcher"]
+            if build_mode is not None and kind in {
+                "github-commit",
+                "github-release",
+            } and source_fetcher != "fetchFromGitHub":
+                raise RuntimeError(
+                    f"GitHub dependent-hash projection requires fetchFromGitHub: {name}"
+                )
             if (
                 source_fetcher == "fetchTree" or kind == "npm-release+flake-input"
             ) and "input" in update and portable_lock is None:
@@ -1300,6 +1320,7 @@ def load_source_catalog(nix_dir: Path) -> dict[str, dict]:
                     or not isinstance(assets, dict)
                     or "source" in artifacts
                     or set(assets) != expected_asset_labels
+                    or bool(hashes)
                     or not all(
                         isinstance(asset, str)
                         and asset
@@ -1903,11 +1924,14 @@ def update_github_release_asset_target(
     if not new_tag or not new_tag.startswith(prefix):
         print(f"catalog/{name} {Colors.RED}✗ release lookup failed{Colors.RESET}")
         return "failed"
-    new_version = extract_version_number(new_tag, prefix)
+    new_version = new_tag[len(prefix):] if prefix else new_tag
 
     fetches = {"source": record["source"]}
     fetches.update(
-        {f"artifact:{key}": source for key, source in record["artifacts"].items()}
+        {
+            f"artifact:{key}": source
+            for key, source in record.get("artifacts", {}).items()
+        }
     )
     resolved: dict[str, tuple[str, str]] = {}
     for label, source in fetches.items():

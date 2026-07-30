@@ -575,6 +575,28 @@ got: sha256-requested
                 ),
                 ["./build", "python", "hf-xet", "--no-link"],
             )
+            computer = HashComputer(root)
+            build_calls = []
+
+            def fake_build(package, build_mode):
+                build_calls.append((package, build_mode))
+                return SimpleNamespace(
+                    returncode=1,
+                    stdout=(
+                        f"specified: {MODULE['DUMMY_SRI_HASH']}\n"
+                        "got: sha256-cHl0aG9u\n"
+                    ),
+                    stderr="",
+                )
+
+            computer._run_package_build = fake_build
+            self.assertEqual(
+                computer._compute_fod_hash(
+                    "hf-xet", "cargoDepsHash", "python"
+                ),
+                "sha256-cHl0aG9u",
+            )
+            self.assertEqual(build_calls, [("hf-xet", "python")])
 
     def test_issue38_ws_uses_fetchzip_with_an_executor(self):
         record = {
@@ -1074,38 +1096,48 @@ got: sha256-requested
         self.assertIn("releases/latest", calls[0][2])
         self.assertEqual("repos/example/project", calls[1][2])
         self.assertIn("commits/topic", calls[2][2])
-        self.assertEqual(calls[3][0:4], [
-            "gh",
-            "api",
-            "-H",
-            "Accept: application/vnd.github.raw+json",
-        ])
-        self.assertIn(f"contents/Cargo.lock?ref={'a' * 40}", calls[3][4])
+        self.assertEqual(calls[3][:2], ["gh", "api"])
+        self.assertIn(f"contents/Cargo.lock?ref={'a' * 40}", calls[3][2])
 
         successful_calls = []
+        responses = [
+            json.dumps({
+                "content": "ZXhhY3QgY29udGVudHMK",
+                "encoding": "base64",
+                "type": "file",
+            }),
+            json.dumps([{"name": "Cargo.lock", "type": "file"}]),
+            json.dumps({
+                "content": "%%%",
+                "encoding": "base64",
+                "type": "file",
+            }),
+        ]
 
         def successful_run(command, **kwargs):
             successful_calls.append((command, kwargs))
-            return SimpleNamespace(returncode=0, stdout="exact contents\n")
+            return SimpleNamespace(returncode=0, stdout=responses.pop(0))
 
         subprocess.run = successful_run
         try:
-            content = GitHubClient().get_file(
+            client = GitHubClient()
+            content = client.get_file(
                 "example", "project", "b" * 40, "locks/Cargo lock"
+            )
+            self.assertIsNone(
+                client.get_file("example", "project", "b" * 40, "locks")
+            )
+            self.assertIsNone(
+                client.get_file("example", "project", "b" * 40, "bad")
             )
         finally:
             subprocess.run = real_run
         self.assertEqual(content, "exact contents\n")
-        self.assertEqual(len(successful_calls), 1)
+        self.assertEqual(len(successful_calls), 3)
         command, kwargs = successful_calls[0]
-        self.assertEqual(command[:4], [
-            "gh",
-            "api",
-            "-H",
-            "Accept: application/vnd.github.raw+json",
-        ])
+        self.assertEqual(command[:2], ["gh", "api"])
         self.assertIn(
-            f"contents/locks/Cargo%20lock?ref={'b' * 40}", command[4]
+            f"contents/locks/Cargo%20lock?ref={'b' * 40}", command[2]
         )
         self.assertEqual(kwargs["timeout"], 60)
 
@@ -1124,7 +1156,12 @@ got: sha256-requested
             calls.append((command, kwargs))
             if command[:3] == ["git", "init", "--quiet"]:
                 Path(command[3]).mkdir(parents=True)
-            elif command[0] == "git" and "checkout" in command:
+            elif command[0] == "git" and command[3:] == [
+                "checkout",
+                "--quiet",
+                "--detach",
+                "FETCH_HEAD",
+            ]:
                 checkout = Path(command[2])
                 (checkout / "Cargo.toml").write_text(
                     '[package]\nname = "project"\nversion = "1.0.0"\n'
@@ -1180,6 +1217,15 @@ got: sha256-requested
             "https://github.com/example/project",
             revision,
         ])
+        checkout_command = next(
+            command
+            for command, _kwargs in calls
+            if command[0] == "git" and "checkout" in command
+        )
+        self.assertEqual(
+            checkout_command[3:],
+            ["checkout", "--quiet", "--detach", "FETCH_HEAD"],
+        )
         cargo_command, cargo_kwargs = next(
             (command, kwargs) for command, kwargs in calls if command[0] == "cargo"
         )
@@ -1747,6 +1793,67 @@ got: sha256-requested
                 },
             )
 
+            source_only = copy.deepcopy(record)
+            source_only.pop("artifacts")
+            source_only["update"]["assets"] = {
+                "source": "tool-darwin-arm64"
+            }
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"tool": source_only},
+            }))
+            source_only_target = load_source_catalog(root)["tool"]
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_github_release_asset_target(
+                    "tool",
+                    source_only_target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    SimpleNamespace(
+                        get_latest_release=lambda _owner, _repo: "v3.0.0"
+                    ),
+                    SimpleNamespace(
+                        compute_native_hash=lambda _source, _replacements: (
+                            "sha256-source-only"
+                        )
+                    ),
+                    transaction,
+                )
+            transaction.commit()
+            self.assertEqual(status, "updated")
+            source_only_updated = json.loads(path.read_text())["sources"]["tool"]
+            self.assertEqual(source_only_updated["version"], "3.0.0")
+            self.assertNotIn("artifacts", source_only_updated)
+
+            missing_prefix = copy.deepcopy(record)
+            del missing_prefix["update"]["tagPrefix"]
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"tool": missing_prefix},
+            }))
+            with self.assertRaisesRegex(RuntimeError, "update strategy fields"):
+                load_source_catalog(root)
+
+            wrong_prefix = copy.deepcopy(record)
+            wrong_prefix["update"]["tagPrefix"] = ""
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"tool": wrong_prefix},
+            }))
+            with self.assertRaisesRegex(RuntimeError, "asset URL does not match"):
+                load_source_catalog(root)
+
+            dependent_hash = copy.deepcopy(record)
+            dependent_hash["hashes"] = {"cargoHash": "sha256-stale"}
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"tool": dependent_hash},
+            }))
+            with self.assertRaisesRegex(
+                RuntimeError, "invalid GitHub release asset projection"
+            ):
+                load_source_catalog(root)
+
             updated["update"]["assets"]["source"] = "wrong-name"
             path.write_text(json.dumps({
                 "schemaVersion": 1,
@@ -1847,6 +1954,25 @@ got: sha256-requested
             self.assertEqual(status, "failed")
             self.assertEqual(transaction.rollback(), 1)
             self.assertEqual(path.read_text(), before_failure)
+
+            wrong_fetcher = copy.deepcopy(record)
+            wrong_fetcher["source"] = {
+                "fetcher": "fetchurl",
+                "url": "https://example.invalid/project-v1.0.0.tar.gz",
+                "args": {
+                    "url": "https://example.invalid/project-v1.0.0.tar.gz",
+                    "hash": "sha256-source-old",
+                },
+            }
+            path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "sources": {"python-project": wrong_fetcher},
+            }))
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "requires fetchFromGitHub",
+            ):
+                load_source_catalog(root)
 
     def test_github_commit_build_mode_uses_generic_projection_dispatch(self):
         with tempfile.TemporaryDirectory() as temp_dir:
