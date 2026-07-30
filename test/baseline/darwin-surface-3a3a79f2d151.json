@@ -1,6 +1,6 @@
 {
   "schema": "darwin-value-surface/2",
-  "baselineRev": "aedaf3e15f0243d2f2c9b4941dabc84da9ef291d",
+  "baselineRev": "3a3a79f2d151759eee025ee6cac0cced9c3fa7b6",
   "note": "Seven nix-darwin value surfaces at the recorded revision. Only 32-character /nix/store hash prefixes are masked; derivation names remain. Launchd scripts are hashed after that normalization, so their text is not persisted; sensitive keys and assignments are refused.",
   "commands": {
     "hostSurface": "nix eval --impure --json '.#darwinConfigurations.<host>' --apply 'darwin: import ./test/darwin/darwin-surface.nix darwin'",
@@ -102,6 +102,7 @@
           "factory",
           "fantastical",
           "github",
+          "google-gemini",
           "handy",
           "hermes-desktop",
           "home-assistant",
@@ -708,6 +709,7 @@
           "factory",
           "fantastical",
           "github",
+          "google-gemini",
           "handy",
           "hermes-desktop",
           "home-assistant",

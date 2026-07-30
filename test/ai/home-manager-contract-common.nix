@@ -1709,6 +1709,7 @@ let
       "x-litellm-tags" = "pi";
       "x-litellm-timeout" = "7200";
     };
+    modelOverrides."hera/GLM-5.2".contextWindow = 1048576;
     modelOverrides."openrouter/z-ai/glm-5.2".compat = {
       sendSessionAffinityHeaders = true;
       sessionAffinityFormat = "openrouter";
@@ -1851,7 +1852,6 @@ let
     "app.model.cycleForward" = [ ];
     "app.model.cycleBackward" = [ ];
   };
-
   expectedClaudeSettings =
     profileId:
     let
