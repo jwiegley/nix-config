@@ -2696,8 +2696,9 @@ got: sha256-requested
         real_shaped_stderr = (
             "\x1b[31;1merror:\x1b[0m Cannot build '/nix/store/example.drv'.\n"
             "       Last 3 log lines:\n"
-            "       > fatal: repository 'https://codeberg.org/example/gone' "
-            "not found\x00\n"
+            "       > \x1b]8;;https://codeberg.org/example/gone\x1b\\"
+            "fatal: repository 'https://codeberg.org/example/gone' not found"
+            "\x1b]8;;\x1b\\\x00\n"
             "       > ERROR: git fetch failed for the declared source\n"
             "       > Unable to checkout the requested revision\n"
             + ("       > unhelpful trailing noise\n" * 100)
@@ -2732,6 +2733,7 @@ got: sha256-requested
             detail = hashes.last_error
             self.assertIsNotNone(detail)
             self.assertIn("fatal: repository", detail)
+            self.assertIn("https://codeberg.org/example/gone", detail)
             self.assertIn("ERROR: git fetch", detail)
             self.assertIn("Unable to checkout", detail)
             self.assertNotIn("Cannot build", detail)

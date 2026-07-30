@@ -80,7 +80,7 @@ MAX_NPM_TAR_DECLARED_BYTES = 256 * 1024 * 1024
 MAX_NPM_TAR_MEMBERS = 10000
 MAX_ACTIONABLE_ERROR_CHARS = 512
 ANSI_ESCAPE_RE = re.compile(
-    r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\))"
+    r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\))"
 )
 CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
 
