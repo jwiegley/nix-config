@@ -590,19 +590,21 @@ fi
             fi
         done
     else
-        while IFS=$'\t' read -r target_name target_input; do
+        while IFS=$'\t' read -r target_name target_input target_kind; do
             [[ -n $target_name && -n $target_input ]] || continue
-            fixed_target_names+=("$target_name")
             lock_target_inputs+=("$target_input")
+            if [[ $target_kind == fixed-flake-input ]]; then
+                fixed_target_names+=("$target_name")
+            fi
         done < <(
             jq -r --arg include_manual "$run_all_inputs" '
                 .packages[]
                 | select(
-                    .kind == "fixed-flake-input"
+                    (.kind == "fixed-flake-input" or .kind == "flake-input+copy")
                     and .executor == "update-agents"
                     and ($include_manual == "true" or .policy == "automatic")
                 )
-                | [.name, .input] | @tsv
+                | [.name, .input, .kind] | @tsv
             ' "$transaction_dir/inventory.json"
         )
     fi

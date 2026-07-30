@@ -429,12 +429,14 @@ class UpdateInventoryTests(unittest.TestCase):
         self.assertIn("detached linked worktree", forged.stderr)
 
     def test_flake_input_copy_syncs_projected_package_version(self):
-        def make_copy_stale(document, _lock):
+        def make_copy_stale(document, lock):
             record = document["sources"]["example"]
             record["version"] = "1.0.0"
             record["update"]["kind"] = "flake-input+copy"
             record["source"]["args"]["rev"] = "0" * 40
             record["source"]["args"]["narHash"] = "sha256-stale"
+            lock["nodes"]["example"]["locked"]["rev"] = "d" * 40
+            lock["nodes"]["example"]["locked"]["narHash"] = "sha256-decoy"
 
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -443,8 +445,8 @@ class UpdateInventoryTests(unittest.TestCase):
             self.assertEqual(
                 sync_flake_projections(
                     root,
-                    version_resolver=lambda _root, input_name, _locked: (
-                        seen.append(input_name) or "2.0.0"
+                    version_resolver=lambda _root, input_name, locked: (
+                        seen.append((input_name, locked["rev"])) or "2.0.0"
                     ),
                 ),
                 1,
@@ -452,7 +454,7 @@ class UpdateInventoryTests(unittest.TestCase):
             record = json.loads((root / "sources/test.json").read_text())["sources"][
                 "example"
             ]
-            self.assertEqual(seen, ["example"])
+            self.assertEqual(seen, [("example", "a" * 40)])
             self.assertEqual(record["version"], "2.0.0")
             self.assertEqual(record["source"]["args"]["rev"], "a" * 40)
             self.assertEqual(record["source"]["args"]["narHash"], "sha256-selected")
@@ -1901,6 +1903,28 @@ fi
                     "flake check ./config/ai --all-systems --no-build",
                     "flake check --no-build",
                 ],
+            )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _root, environment, _baseline = self._create_update_agents_fixture(
+                temp_dir
+            )
+            command_log = Path(temp_dir) / "commands.log"
+            environment["UPDATE_TEST_COPY_TARGET"] = "1"
+            environment["UPDATE_TEST_COMMAND_LOG"] = str(command_log)
+            result = subprocess.run(
+                [str(UPDATE_AGENTS)],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                command_log.read_text().splitlines()[0],
+                "flake update --flake ./config/ai git-ai llm-agents mcp-remote "
+                "mcp-servers-nix pal-mcp-server pi-openai-server-compaction "
+                "pi-quiet translate-tool copy-input",
             )
 
     def test_update_agents_rejects_undeclared_candidate_mutation(self):
