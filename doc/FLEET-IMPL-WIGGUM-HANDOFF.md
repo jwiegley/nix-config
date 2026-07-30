@@ -985,8 +985,9 @@ Implemented design:
 - The first staged core measurement completed in **41.61s**; the initial artifact
   recorded **42.139/120s**, and the exact hook including structural coverage
   completed in **44.91s**.  The stale artifact was watched failing before that
-  regeneration.  Subsequent audited runs with the strict supervisor and four new
-  Python files remain below 51 seconds, leaving more than 50 seconds before TERM.
+  regeneration.  The final artifact records **51.346/120s** for the core; exact
+  hooks under varying cache contention ranged from **44.91s to 74.28s**, all below
+  the 105-second work deadline.
 - The expensive-tier fess run exposed and fixed the moved Pi-gallery consumer
   inventory reference.  Scheduled macOS native coverage moves to `macos-15` and
   omits the cache action whose Darwin binary currently fails before the build.

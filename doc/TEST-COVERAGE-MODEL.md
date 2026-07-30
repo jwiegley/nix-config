@@ -44,8 +44,9 @@ Hera collection after tiering:
 - the superseded pre-commit core reached **164.603 seconds** against a
   **180-second** budget; the ordinary hook is now hard-capped at 120 seconds and
   runs the bounded updater authority rather than its temporary-Git workflow matrix;
-  the refreshed artifact measures that core at **45.575/120s**, and the exact
-  hook including structural coverage completed in **44.91s**;
+  the refreshed artifact measures that core at **51.346/120s**; observed exact
+  hooks including structural coverage range from **44.91s to 74.28s**, all below
+  the hard envelope;
 - the complete Nix refresh took 442.4 seconds on Hera, inside the 1800-second
   CI/on-demand ceiling;
 - `gates-test.py` measured 522.331 seconds and `publish-test.py` 23.274 seconds, so
