@@ -516,6 +516,22 @@ let
     version = members.retry.version;
     install = root: ''
       tar -xzf ${releaseTarballs.pi-retry} -C ${root} --strip-components=1
+      substituteInPlace ${root}/src/retry.ts \
+        --replace-fail \
+          'const DEFAULT_STALL_TIMEOUT_MS = 90_000;' \
+          $'const DEFAULT_STALL_TIMEOUT_MS = 90_000;\nconst LOCAL_STALL_TIMEOUT_MS = 7_200_000;' \
+        --replace-fail \
+          'type WatchdogContext = StatusContext & Pick<ExtensionContext, "abort" | "isIdle">;' \
+          $'type WatchdogContext = StatusContext &\n\tPick<ExtensionContext, "abort" | "isIdle" | "model">;' \
+        --replace-fail \
+          $'\tconst getStallTimeoutMs = () =>\n\t\tparseStallTimeoutMs(pi.getFlag(STALL_TIMEOUT_FLAG)) ??\n\t\tparseStallTimeoutMs(process.env[STALL_TIMEOUT_ENV]) ??\n\t\tDEFAULT_STALL_TIMEOUT_MS;' \
+          $'\tconst getStallTimeoutMs = (model: ExtensionContext["model"]) =>\n\t\tparseStallTimeoutMs(pi.getFlag(STALL_TIMEOUT_FLAG)) ??\n\t\tparseStallTimeoutMs(process.env[STALL_TIMEOUT_ENV]) ??\n\t\tdefaultStallTimeoutForModel(model);' \
+        --replace-fail \
+          'export default function retry(pi: ExtensionAPI, options: RetryOptions = {}) {' \
+          $'export function defaultStallTimeoutForModel(\n\tmodel: ExtensionContext["model"],\n): number {\n\tconst id = model?.id ?? "";\n\tconst localLiteLLMModel =\n\t\tmodel?.provider === "litellm" &&\n\t\t(id.startsWith("clio/omlx/") ||\n\t\t\t(id.startsWith("hera/") && !id.startsWith("hera/claude-")));\n\n\treturn localLiteLLMModel ? LOCAL_STALL_TIMEOUT_MS : DEFAULT_STALL_TIMEOUT_MS;\n}\n\nexport default function retry(pi: ExtensionAPI, options: RetryOptions = {}) {' \
+        --replace-fail \
+          $'\t\tconst timeoutMs = getStallTimeoutMs();' \
+          $'\t\tconst timeoutMs = getStallTimeoutMs(ctx.model);'
     '';
   };
 
