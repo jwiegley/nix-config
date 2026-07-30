@@ -125,6 +125,7 @@ let
       modelOverrides = {
         "hera/GLM-5.2" = {
           contextWindow = 1048576;
+          headers."x-litellm-num-retries" = "0";
         };
         "openrouter/z-ai/glm-5.2".compat = {
           sendSessionAffinityHeaders = true;
