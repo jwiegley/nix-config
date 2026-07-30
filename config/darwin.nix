@@ -245,6 +245,7 @@ in
       "factory"
       "fantastical"
       "github"
+      "google-gemini"
       "handy"
       "hermes-desktop"
       "home-assistant"
