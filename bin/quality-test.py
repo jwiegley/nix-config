@@ -32,6 +32,7 @@ import unittest
 from pathlib import Path
 
 QUALITY = Path(__file__).resolve().parent / "quality"
+REPO = QUALITY.parent.parent
 DEADLINE_SUPERVISOR = Path(__file__).resolve().parent / "deadline-supervisor.py"
 UNITTEST_STRICT = Path(__file__).resolve().parent / "unittest-strict.py"
 UPDATER_ESSENTIAL = (
@@ -568,6 +569,38 @@ class UpdaterEssentialPlanTests(unittest.TestCase):
             hashlib.sha256("\n".join(resolved).encode()).hexdigest(),
             "86d87c8f30840c80d8c40ceaca69e2fdc71592a7d4d7643c409c763a47c2bd76",
         )
+
+
+class GeneratedRevisionReachabilityTests(unittest.TestCase):
+    def test_generated_evidence_revisions_are_reachable_ancestors(self):
+        consumer = json.loads(
+            (REPO / "test/inventory/consumer-inventory.json").read_text()
+        )
+        darwin = list((REPO / "test/baseline").glob("darwin-surface-*.json"))
+        coverage = list((REPO / "test/baseline").glob("coverage-*.json"))
+        self.assertEqual(len(darwin), 1)
+        self.assertEqual(len(coverage), 1)
+        revisions = {
+            "consumer inventory": consumer["repoHead"],
+            "Darwin baseline": json.loads(darwin[0].read_text())["baselineRev"],
+            "coverage artifact": json.loads(coverage[0].read_text())["sourceBaseRev"],
+        }
+        for label, revision in revisions.items():
+            with self.subTest(label=label, revision=revision):
+                exists = subprocess.run(
+                    ["git", "cat-file", "-e", f"{revision}^{{commit}}"],
+                    cwd=REPO,
+                    capture_output=True,
+                    check=False,
+                )
+                self.assertEqual(exists.returncode, 0, f"{label} is unavailable")
+                ancestor = subprocess.run(
+                    ["git", "merge-base", "--is-ancestor", revision, "HEAD"],
+                    cwd=REPO,
+                    capture_output=True,
+                    check=False,
+                )
+                self.assertEqual(ancestor.returncode, 0, f"{label} is not ancestral")
 
 
 class GitScrubRegressionTest(unittest.TestCase):

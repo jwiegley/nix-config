@@ -1,6 +1,6 @@
 {
   "schema": "darwin-value-surface/2",
-  "baselineRev": "15b831cfe111f5dc631af59564f73bd3a0d600ce",
+  "baselineRev": "aedaf3e15f0243d2f2c9b4941dabc84da9ef291d",
   "note": "Seven nix-darwin value surfaces at the recorded revision. Only 32-character /nix/store hash prefixes are masked; derivation names remain. Launchd scripts are hashed after that normalization, so their text is not persisted; sensitive keys and assignments are refused.",
   "commands": {
     "hostSurface": "nix eval --impure --json '.#darwinConfigurations.<host>' --apply 'darwin: import ./test/darwin/darwin-surface.nix darwin'",
