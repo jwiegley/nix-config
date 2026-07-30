@@ -1878,6 +1878,7 @@ let
         preInstall = ''
           cat > pi-tool-renderer-wrapper.sha256 <<'EOF'
           dcc738a40b23c337a788422d370154299633a4770687190da3d05aa210f68968  dist/core/agent-session.js
+          a4dafd2ea75625be11021365c9bb60f15ec9e133e20ad4a31cef5a3cfeec2dce  dist/core/http-dispatcher.js
           5ebc2b2d8e13e0d90d6279d34e016b6f441208af9e73f3d4e75975376eb8987c  dist/core/extensions/loader.js
           05a9e39f5c1109d168e4b9327a7858243b77ea3bbe836961549e67d282b5a231  dist/core/extensions/runner.js
           b7878c503c0d4ef7a9ad878775b67a7e99ee8e56005d55e973c8aad4ca116b10  dist/core/extensions/runner.d.ts
@@ -1885,6 +1886,10 @@ let
           EOF
           sha256sum -c pi-tool-renderer-wrapper.sha256
           patch -p1 --fuzz=0 < ${../overlays/ai/patches/pi-tool-renderer-wrapper.patch}
+          substituteInPlace dist/core/http-dispatcher.js \
+            --replace-fail \
+              'DEFAULT_HTTP_IDLE_TIMEOUT_MS = 300_000' \
+              'DEFAULT_HTTP_IDLE_TIMEOUT_MS = 7_200_000'
           ${pkgs.nodejs_22}/bin/node \
             ${../test/ai/pi-tool-renderer-wrapper.test.mjs} "$PWD"
         ''

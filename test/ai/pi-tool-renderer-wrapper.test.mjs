@@ -8,6 +8,11 @@ const source = process.argv[2];
 assert.ok(source, "patched Pi source path is required");
 const importFromSource = (relative) => import(pathToFileURL(join(source, relative)));
 
+const { DEFAULT_HTTP_IDLE_TIMEOUT_MS } = await importFromSource(
+  "dist/core/http-dispatcher.js",
+);
+assert.equal(DEFAULT_HTTP_IDLE_TIMEOUT_MS, 7_200_000);
+
 const { applyToolRendererWrappers } = await importFromSource(
   "dist/core/extensions/tool-renderers.js",
 );
