@@ -532,6 +532,13 @@
       "gap": "No argument or mocked-prefetch behavioral test."
     },
     {
+      "path": "bin/immutable-subflake-check",
+      "kind": "production",
+      "tier": "ci-on-demand",
+      "evidence": ["bin/gates-test.py executes exact-revision archive, immutable metadata, lock-drift, and byte-stability fixtures", "quality:immutable-subflake executes the live expensive gate"],
+      "gap": null
+    },
+    {
       "path": "bin/lib/host-routing.sh",
       "kind": "library",
       "tier": "pre-commit",
@@ -758,6 +765,7 @@
       "python-lint",
       "python-test",
       "portable-eval",
+      "immutable-subflake",
       "darwin-surface",
       "consumer-eval",
       "signatures",

@@ -35,8 +35,8 @@
 #   bin/quality --files shell        # print the discovered file set and exit
 #
 # Suites: nix-format nix-lint nix-deadcode shell-lint shell-format
-#         python-lint python-test portable-eval darwin-surface consumer-eval
-#         signatures coverage coverage-live
+#         python-lint python-test portable-eval immutable-subflake
+#         darwin-surface consumer-eval signatures coverage coverage-live
 #
 # Refs: jwiegley/nix-config#46.
 
@@ -58,6 +58,7 @@ SUITES=(
     python-lint
     python-test
     portable-eval
+    immutable-subflake
     darwin-surface
     consumer-eval
     signatures
@@ -85,6 +86,7 @@ PRE_COMMIT_CORE_SUITES=(
 EXPENSIVE_SUITES=(
     python-test
     portable-eval
+    immutable-subflake
     consumer-eval
     signatures
     coverage
@@ -502,6 +504,23 @@ run_portable_eval() {
     fi
 }
 
+# Unlike portable-eval, this reads no source from the working tree during Nix
+# evaluation.  The script archives an exact commit, content-pins that tarball,
+# proves Nix reports a tarball lock with the committed subflake lock graph, then
+# checks the ?dir=config/ai flake without allowing a lock write.  It is expensive
+# closeout evidence and therefore deliberately absent from pre-commit.
+run_immutable_subflake() {
+    if [[ ! -x bin/immutable-subflake-check ]]; then
+        fail "immutable-subflake: bin/immutable-subflake-check is missing or not executable"
+        return
+    fi
+    if bin/immutable-subflake-check; then
+        note "immutable-subflake: immutable config/ai archive is lock-stable"
+    else
+        fail "immutable-subflake: immutable archive verification failed"
+    fi
+}
+
 # The nix-darwin system layer has no useful drvPath parity signal: source-path
 # propagation changes several store hashes on every commit. This targeted check
 # compares seven evaluated value surfaces while masking only store hash prefixes.
@@ -695,6 +714,7 @@ for suite in "${want[@]}"; do
     python-lint) run_python_lint ;;
     python-test) run_python_test ;;
     portable-eval) run_portable_eval ;;
+    immutable-subflake) run_immutable_subflake ;;
     darwin-surface) run_darwin_surface ;;
     consumer-eval) run_consumer_eval ;;
     signatures) run_signatures ;;

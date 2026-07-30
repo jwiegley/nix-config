@@ -39,6 +39,7 @@ CONSUMER_INVENTORY = BIN / "consumer-inventory"
 DARWIN_SURFACE_DIFF = BIN / "darwin-surface-diff"
 DARWIN_SURFACE_BASELINE = BIN / "darwin-surface-baseline"
 COVERAGE_REPORT = BIN / "coverage-report"
+IMMUTABLE_SUBFLAKE_CHECK = BIN / "immutable-subflake-check"
 
 # Repository-pointing git variables. A test that shells out to git in a temp
 # directory MUST scrub these: under a git hook they name the REAL repository and
@@ -715,6 +716,253 @@ class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
         self.assert_no_temporary_inventory()
 
 
+class TestImmutableSubflakeCheck(unittest.TestCase):
+    """The immutable proof must use committed bytes and a pinned tarball."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="gates-immutable-subflake-")
+        self.root = Path(self.temp.name)
+        self.repo = self.root / "repo"
+        self.repo.mkdir()
+        (self.repo / "bin").mkdir()
+        (self.repo / "config" / "ai").mkdir(parents=True)
+        shutil.copy2(IMMUTABLE_SUBFLAKE_CHECK, self.repo / "bin")
+
+        self.committed_lock = {
+            "nodes": {"root": {"inputs": {}}},
+            "root": "root",
+            "version": 7,
+        }
+        self.committed_lock_bytes = json.dumps(
+            self.committed_lock, separators=(",", ":")
+        ) + "\n"
+        self.committed_up_import = "# committed up-import authority\n"
+        (self.repo / "config" / "ai" / "flake.lock").write_text(
+            self.committed_lock_bytes, encoding="utf-8"
+        )
+        (self.repo / "config" / "ai" / "flake.nix").write_text(
+            "{ outputs = _: {}; }\n", encoding="utf-8"
+        )
+        (self.repo / "flake-ai.nix").write_text(
+            self.committed_up_import, encoding="utf-8"
+        )
+        git("init", "-q", ".", cwd=self.repo)
+        git("config", "user.email", "test@example.invalid", cwd=self.repo)
+        git("config", "user.name", "Test", cwd=self.repo)
+        git("config", "commit.gpgsign", "false", cwd=self.repo)
+        git("add", ".", cwd=self.repo)
+        git("commit", "-qm", "fixture", cwd=self.repo)
+        self.revision = git("rev-parse", "HEAD", cwd=self.repo).stdout.strip()
+
+        # Deliberately disagree with the selected commit.  The gate may inspect
+        # the working lock only for byte stability; archive and lock semantics
+        # must both come from the requested revision.
+        self.worktree_lock = self.repo / "config" / "ai" / "flake.lock"
+        self.worktree_lock_bytes = b'{"dirty-working-tree":true}\n'
+        self.worktree_lock.write_bytes(self.worktree_lock_bytes)
+
+        self.fakebin = self.root / "fakebin"
+        self.fakebin.mkdir()
+        self.log = self.root / "nix-calls.jsonl"
+        self.metadata_lock = self.root / "metadata-lock.json"
+        self.metadata_lock.write_text(
+            json.dumps(self.committed_lock, indent=4) + "\n", encoding="utf-8"
+        )
+        self.expected_archive_lock = self.root / "expected-archive-lock"
+        self.expected_archive_lock.write_text(
+            self.committed_lock_bytes, encoding="utf-8"
+        )
+        self.expected_up_import = self.root / "expected-up-import"
+        self.expected_up_import.write_text(
+            self.committed_up_import, encoding="utf-8"
+        )
+        self.scratch = self.root / "scratch"
+        self.scratch.mkdir()
+        self._write_fake_nix()
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def _write_fake_nix(self):
+        fake = self.fakebin / "nix"
+        fake.write_text(
+            r'''#!/usr/bin/env python3
+import json
+import os
+import sys
+import tarfile
+from pathlib import Path
+from urllib.parse import unquote, urlparse
+
+args = sys.argv[1:]
+log_path = Path(os.environ["FAKE_NIX_LOG"])
+
+
+def record(row):
+    with log_path.open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(row, sort_keys=True) + "\n")
+
+
+row = {"args": args}
+if args[:2] == ["flake", "prefetch"]:
+    reference = args[-1]
+    if not reference.startswith("tarball+file://"):
+        record(row)
+        raise SystemExit(90)
+    archive_path = Path(unquote(urlparse(reference[len("tarball+"):]).path))
+    row["archivePath"] = str(archive_path)
+    with tarfile.open(archive_path) as archive:
+        row["archiveLock"] = archive.extractfile(
+            "config/ai/flake.lock"
+        ).read().decode()
+        row["archiveUpImport"] = archive.extractfile("flake-ai.nix").read().decode()
+    record(row)
+    if row["archiveLock"] != Path(
+        os.environ["FAKE_EXPECTED_ARCHIVE_LOCK"]
+    ).read_text():
+        raise SystemExit(91)
+    if row["archiveUpImport"] != Path(
+        os.environ["FAKE_EXPECTED_UP_IMPORT"]
+    ).read_text():
+        raise SystemExit(92)
+    print(json.dumps({"hash": "sha256-/+fixture=", "storePath": "/nix/store/fake"}))
+elif args[:2] == ["flake", "metadata"]:
+    locked = {
+        "type": os.environ.get("FAKE_METADATA_TYPE", "tarball"),
+        "dir": os.environ.get("FAKE_METADATA_DIR", "config/ai"),
+        "narHash": os.environ.get("FAKE_METADATA_HASH", "sha256-/+fixture="),
+        "url": "file:///the/archive.tar",
+    }
+    metadata = {
+        "locked": locked,
+        "locks": json.loads(Path(os.environ["FAKE_METADATA_LOCK"]).read_text()),
+    }
+    record(row)
+    if os.environ.get("FAKE_MUTATE_ON") == "metadata":
+        Path(os.environ["FAKE_WORKTREE_LOCK"]).write_text("rewritten by metadata\n")
+    print(json.dumps(metadata))
+elif args[:2] == ["flake", "check"]:
+    record(row)
+    if os.environ.get("FAKE_MUTATE_ON") == "check":
+        Path(os.environ["FAKE_WORKTREE_LOCK"]).write_text("rewritten by check\n")
+    raise SystemExit(int(os.environ.get("FAKE_CHECK_STATUS", "0")))
+else:
+    record(row)
+    raise SystemExit(93)
+''',
+            encoding="utf-8",
+        )
+        fake.chmod(0o755)
+
+    def run_gate(self, *, include_revision=True, **overrides):
+        if self.log.exists():
+            self.log.unlink()
+        env = clean_env(
+            PATH=f"{self.fakebin}{os.pathsep}{os.environ['PATH']}",
+            TMPDIR=str(self.scratch),
+            FAKE_NIX_LOG=str(self.log),
+            FAKE_METADATA_LOCK=str(self.metadata_lock),
+            FAKE_EXPECTED_ARCHIVE_LOCK=str(self.expected_archive_lock),
+            FAKE_EXPECTED_UP_IMPORT=str(self.expected_up_import),
+            FAKE_WORKTREE_LOCK=str(self.worktree_lock),
+        )
+        env.update(overrides)
+        argv = [str(self.repo / "bin" / "immutable-subflake-check")]
+        if include_revision:
+            argv.append(self.revision)
+        return subprocess.run(
+            argv,
+            cwd=self.root,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    def calls(self):
+        if not self.log.exists():
+            return []
+        return [json.loads(line) for line in self.log.read_text().splitlines()]
+
+    def test_exact_revision_uses_url_pinned_tarball_and_preserves_worktree_lock(self):
+        result = self.run_gate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.worktree_lock.read_bytes(), self.worktree_lock_bytes)
+
+        calls = self.calls()
+        self.assertEqual(len(calls), 3, calls)
+        prefetch, metadata, check = calls
+        self.assertEqual(prefetch["args"][:3], ["flake", "prefetch", "--json"])
+        self.assertEqual(prefetch["archiveLock"], self.committed_lock_bytes)
+        self.assertEqual(prefetch["archiveUpImport"], self.committed_up_import)
+        self.assertFalse(Path(prefetch["archivePath"]).exists())
+
+        immutable_ref = metadata["args"][-1]
+        self.assertTrue(immutable_ref.startswith("tarball+file://"), immutable_ref)
+        self.assertIn(
+            "?dir=config/ai&narHash=sha256-%2F%2Bfixture%3D", immutable_ref
+        )
+        self.assertNotIn("git+file", immutable_ref)
+        self.assertEqual(
+            metadata["args"],
+            ["flake", "metadata", "--json", "--no-write-lock-file", immutable_ref],
+        )
+        self.assertEqual(
+            check["args"],
+            [
+                "flake",
+                "check",
+                immutable_ref,
+                "--all-systems",
+                "--no-build",
+                "--no-write-lock-file",
+            ],
+        )
+        self.assertEqual(list(self.scratch.iterdir()), [])
+
+    def test_default_revision_is_head(self):
+        result = self.run_gate(include_revision=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(self.revision[:12], result.stdout)
+        self.assertEqual(self.worktree_lock.read_bytes(), self.worktree_lock_bytes)
+
+    def test_metadata_requires_tarball_dir_and_prefetched_nar_hash(self):
+        cases = (
+            ({"FAKE_METADATA_TYPE": "git"}, "locked.type is not tarball"),
+            ({"FAKE_METADATA_DIR": "config/fleet"}, "locked.dir is not config/ai"),
+            ({"FAKE_METADATA_HASH": "sha256-other="}, "locked.narHash differs"),
+        )
+        for override, diagnostic in cases:
+            with self.subTest(override=override):
+                result = self.run_gate(**override)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(diagnostic, result.stdout + result.stderr)
+                self.assertEqual(len(self.calls()), 2)
+                self.assertEqual(self.worktree_lock.read_bytes(), self.worktree_lock_bytes)
+
+    def test_metadata_lock_graph_must_equal_selected_revision_semantically(self):
+        drift = self.root / "drift-lock.json"
+        drift.write_text('{"version":8,"root":"root","nodes":{}}\n')
+        result = self.run_gate(FAKE_METADATA_LOCK=str(drift))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("metadata locks differ", result.stdout + result.stderr)
+        self.assertEqual(len(self.calls()), 2)
+
+    def test_any_nix_lock_rewrite_fails_and_cleanup_remains_exact(self):
+        for phase in ("metadata", "check"):
+            with self.subTest(phase=phase):
+                self.worktree_lock.write_bytes(self.worktree_lock_bytes)
+                result = self.run_gate(FAKE_MUTATE_ON=phase)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(
+                    "working-tree config/ai/flake.lock changed",
+                    result.stdout + result.stderr,
+                )
+                expected_calls = 2 if phase == "metadata" else 3
+                self.assertEqual(len(self.calls()), expected_calls)
+                self.assertEqual(list(self.scratch.iterdir()), [])
+
+
 class TestGatesAreRegistered(unittest.TestCase):
     """A gate nothing invokes is not a gate."""
 
@@ -726,6 +974,7 @@ class TestGatesAreRegistered(unittest.TestCase):
             DARWIN_SURFACE_DIFF,
             DARWIN_SURFACE_BASELINE,
             COVERAGE_REPORT,
+            IMMUTABLE_SUBFLAKE_CHECK,
         ):
             self.assertTrue(os.access(tool, os.X_OK), "%s is not executable" % tool)
 
@@ -737,6 +986,7 @@ class TestGatesAreRegistered(unittest.TestCase):
             "darwin-surface",
             "coverage",
             "coverage-live",
+            "immutable-subflake",
         ):
             self.assertIn(
                 "%s) run_%s ;;" % (suite, suite.replace("-", "_")),
@@ -831,6 +1081,7 @@ class TestGatesAreRegistered(unittest.TestCase):
             "coverage",
             "coverage-live",
             "darwin-surface",
+            "immutable-subflake",
         ):
             self.assertRegex(expensive.group("body"), rf"(?m)^    {suite}$")
         registered = set(
@@ -881,6 +1132,7 @@ class TestGatesAreRegistered(unittest.TestCase):
             CONSUMER_INVENTORY,
             DARWIN_SURFACE_DIFF,
             DARWIN_SURFACE_BASELINE,
+            IMMUTABLE_SUBFLAKE_CHECK,
         ):
             body = tool.read_text()
             for pattern in ("ghp_", "github_pat_", "PRIVATE KEY", "password="):
