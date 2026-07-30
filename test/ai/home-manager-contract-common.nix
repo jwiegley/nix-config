@@ -1856,6 +1856,9 @@ let
     "app.model.cycleForward" = [ ];
     "app.model.cycleBackward" = [ ];
   };
+  expectedPiLens = {
+    widget.visible = false;
+  };
 
   expectedClaudeSettings =
     profileId:
@@ -1969,6 +1972,7 @@ let
       ++ map (name: "${root}/prompts/${name}.md") (selectedNames profileId "prompts")
       ++ [
         ".config/mcp/mcp.json"
+        ".pi-lens/config.json"
         "${root}/extensions/auto-compact-resume/index.ts"
         "${root}/extensions/nix-gallery/index.ts"
         "${root}/extensions/pi-mcp-adapter"
@@ -2425,6 +2429,13 @@ let
       file = path: render.files.${path};
     in
     [
+      {
+        kind = "json";
+        label = "${profileId} lens";
+        path = documentSource "${profileId}-lens.json" (file ".pi-lens/config.json");
+        expected = expectedPiLens;
+        forbidden = [ ];
+      }
       {
         kind = "json";
         label = "${profileId} keybindings";
@@ -3251,6 +3262,7 @@ let
     ".config/factory/nix-managed-settings.json"
     ".config/mcp/mcp.json"
     ".config/opencode/opencode.json"
+    ".pi-lens/config.json"
     ".pi/agent/extensions/auto-compact-resume/index.ts"
     ".pi/agent/extensions/nix-gallery/index.ts"
     ".pi/agent/extensions/pi-mcp-adapter"

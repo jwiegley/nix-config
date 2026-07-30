@@ -396,6 +396,9 @@ assert builtins.hasAttr "pi-gallery" pkgs;
     commandFiles
     promptFiles
     {
+      ".pi-lens/config.json".source = json.generate "pi-${profile.id}-lens.json" {
+        widget.visible = false;
+      };
       "${root}/extensions/auto-compact-resume/index.ts".source = autoCompactResumeSource;
       "${root}/extensions/nix-gallery/index.ts".source = "${pkgs.pi-gallery}/share/pi-gallery/index.ts";
       "${root}/extensions/pi-mcp-adapter".source = "${extensionRoot}/pi-mcp-adapter";
