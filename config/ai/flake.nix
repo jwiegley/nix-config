@@ -47,7 +47,7 @@
     };
 
     pi-btw = {
-      url = "github:dbachelder/pi-btw";
+      url = "github:dbachelder/pi-btw/4f858102706910ee9d520a9666832f3103631b61";
       flake = false;
     };
 
