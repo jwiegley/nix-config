@@ -2364,12 +2364,13 @@ got: sha256-requested
         finally:
             subprocess.run = real_run
 
-        self.assertEqual(len(calls), 4)
+        self.assertEqual(len(calls), 5)
         self.assertIn("releases/latest", calls[0][2])
         self.assertEqual("repos/example/project", calls[1][2])
         self.assertIn("commits/topic", calls[2][2])
-        self.assertEqual(calls[3][:2], ["gh", "api"])
-        self.assertIn(f"contents/Cargo.lock?ref={'a' * 40}", calls[3][2])
+        self.assertEqual("repos/example/project", calls[3][2])
+        self.assertEqual(calls[4][:2], ["gh", "api"])
+        self.assertIn(f"contents/Cargo.lock?ref={'a' * 40}", calls[4][2])
 
         successful_calls = []
         responses = [
@@ -2412,6 +2413,83 @@ got: sha256-requested
             f"contents/locks/Cargo%20lock?ref={'b' * 40}", command[2]
         )
         self.assertEqual(kwargs["timeout"], 60)
+
+    def test_github_commit_failure_reports_requested_and_default_branches(self):
+        responses = [
+            SimpleNamespace(
+                returncode=1,
+                stdout="",
+                stderr="gh: branch topic was not found\n",
+            ),
+            SimpleNamespace(returncode=0, stdout="main\n", stderr=""),
+        ]
+
+        def fake_run(_command, **_kwargs):
+            return responses.pop(0)
+
+        real_run = subprocess.run
+        subprocess.run = fake_run
+        try:
+            client = GitHubClient()
+            self.assertIsNone(
+                client.get_latest_commit("example", "project", "topic")
+            )
+        finally:
+            subprocess.run = real_run
+
+        self.assertIn("example/project", client.last_error)
+        self.assertIn("requested branch 'topic'", client.last_error)
+        self.assertIn("repository default branch is 'main'", client.last_error)
+        self.assertIn("branch topic was not found", client.last_error)
+
+    def test_github_diagnostics_reset_and_default_lookup_has_safe_fallback(self):
+        responses = [
+            SimpleNamespace(returncode=1, stdout="", stderr="release missing"),
+            SimpleNamespace(
+                returncode=0,
+                stdout=json.dumps({"tag_name": "v2.0.0"}),
+                stderr="",
+            ),
+            SimpleNamespace(returncode=1, stdout="", stderr="repository missing"),
+            SimpleNamespace(returncode=0, stdout="trunk\n", stderr=""),
+        ]
+
+        def fake_run(_command, **_kwargs):
+            return responses.pop(0)
+
+        real_run = subprocess.run
+        subprocess.run = fake_run
+        try:
+            client = GitHubClient()
+            self.assertIsNone(client.get_latest_release("example", "project"))
+            self.assertIn("release missing", client.last_error)
+            self.assertEqual(
+                client.get_latest_release("example", "project"), "v2.0.0"
+            )
+            self.assertIsNone(client.last_error)
+            self.assertIsNone(client.get_default_branch("example", "project"))
+            self.assertIn("repository missing", client.last_error)
+            self.assertEqual(
+                client.get_default_branch("example", "project"), "trunk"
+            )
+            self.assertIsNone(client.last_error)
+        finally:
+            subprocess.run = real_run
+
+        def raising_run(_command, **_kwargs):
+            raise OSError("gh executable unavailable")
+
+        subprocess.run = raising_run
+        try:
+            client = GitHubClient()
+            self.assertIsNone(
+                client.get_latest_commit("example", "project", "missing")
+            )
+        finally:
+            subprocess.run = real_run
+        self.assertIn("requested branch 'missing'", client.last_error)
+        self.assertIn("default branch is unavailable", client.last_error)
+        self.assertIn("gh executable unavailable", client.last_error)
 
     def test_cargo_lock_validation_uses_exact_checkout(self):
         revision = "c" * 40
@@ -2613,6 +2691,231 @@ got: sha256-requested
         self.assertIn("pkgs.fetchzip", calls[2][-1])
         self.assertIn("example-2.0.0.tgz", calls[2][-1])
         self.assertNotIn("example-1.0.0.tgz", calls[2][-1])
+
+    def test_native_hash_surfaces_sanitized_actionable_nix_failure(self):
+        real_shaped_stderr = (
+            "\x1b[31;1merror:\x1b[0m Cannot build '/nix/store/example.drv'.\n"
+            "       Last 3 log lines:\n"
+            "       > fatal: repository 'https://codeberg.org/example/gone' "
+            "not found\x00\n"
+            "       > ERROR: git fetch failed for the declared source\n"
+            "       > Unable to checkout the requested revision\n"
+            + ("       > unhelpful trailing noise\n" * 100)
+        )
+        responses = [
+            SimpleNamespace(returncode=1, stdout="", stderr=real_shaped_stderr),
+            SimpleNamespace(
+                returncode=1,
+                stdout="",
+                stderr=(
+                    "error: hash mismatch in fixed-output derivation\n"
+                    "  got: sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=\n"
+                ),
+            ),
+        ]
+
+        def fake_run(_command, **_kwargs):
+            return responses.pop(0)
+
+        source = {
+            "fetcher": "fetchurl",
+            "args": {
+                "url": "https://example.invalid/source.tgz",
+                "hash": "sha256-old",
+            },
+        }
+        real_run = subprocess.run
+        subprocess.run = fake_run
+        try:
+            hashes = HashComputer(Path("/repo"))
+            self.assertIsNone(hashes.compute_native_hash(source, {}))
+            detail = hashes.last_error
+            self.assertIsNotNone(detail)
+            self.assertIn("fatal: repository", detail)
+            self.assertIn("ERROR: git fetch", detail)
+            self.assertIn("Unable to checkout", detail)
+            self.assertNotIn("Cannot build", detail)
+            self.assertNotIn("\x1b", detail)
+            self.assertNotIn("\x00", detail)
+            self.assertNotIn(" > ", detail)
+            self.assertLessEqual(
+                len(detail), MODULE["MAX_ACTIONABLE_ERROR_CHARS"]
+            )
+            self.assertEqual(
+                hashes.compute_native_hash(source, {}),
+                "sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=",
+            )
+            self.assertIsNone(hashes.last_error)
+        finally:
+            subprocess.run = real_run
+
+    def test_native_hash_records_exception_conversion_and_fetchtree_failures(self):
+        sri = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        source = {
+            "fetcher": "fetchurl",
+            "args": {
+                "url": "https://example.invalid/source.tgz",
+                "sha256": "old-nix32",
+            },
+        }
+        real_run = subprocess.run
+
+        def raising_run(_command, **_kwargs):
+            raise OSError("nix executable unavailable")
+
+        subprocess.run = raising_run
+        try:
+            hashes = HashComputer(Path("/repo"))
+            self.assertIsNone(hashes.compute_native_hash(source, {}))
+        finally:
+            subprocess.run = real_run
+        self.assertIn("native source hash computation failed", hashes.last_error)
+        self.assertIn("nix executable unavailable", hashes.last_error)
+
+        responses = [
+            SimpleNamespace(
+                returncode=1,
+                stdout="",
+                stderr=f"got: {sri}\n",
+            ),
+            SimpleNamespace(
+                returncode=1,
+                stdout="",
+                stderr="error: invalid hash conversion\n",
+            ),
+        ]
+
+        def conversion_run(_command, **_kwargs):
+            return responses.pop(0)
+
+        subprocess.run = conversion_run
+        try:
+            self.assertIsNone(hashes.compute_native_hash(source, {}))
+        finally:
+            subprocess.run = real_run
+        self.assertIn("hash conversion failed", hashes.last_error)
+        self.assertIn("invalid hash conversion", hashes.last_error)
+
+        fetch_tree = {
+            "fetcher": "fetchTree",
+            "args": {
+                "owner": "example",
+                "repo": "project",
+                "rev": "a" * 40,
+                "narHash": "sha256-old",
+                "type": "github",
+            },
+        }
+
+        def fetch_tree_run(_command, **_kwargs):
+            return SimpleNamespace(
+                returncode=1,
+                stdout="",
+                stderr="       > Unable to resolve the declared revision\n",
+            )
+
+        subprocess.run = fetch_tree_run
+        try:
+            self.assertIsNone(hashes.compute_native_hash(fetch_tree, {}))
+        finally:
+            subprocess.run = real_run
+        self.assertIn("fetchTree hash evaluation failed", hashes.last_error)
+        self.assertIn("Unable to resolve", hashes.last_error)
+
+        def invalid_json_run(_command, **_kwargs):
+            return SimpleNamespace(returncode=0, stdout="not-json", stderr="")
+
+        subprocess.run = invalid_json_run
+        try:
+            self.assertIsNone(hashes.compute_native_hash(fetch_tree, {}))
+        finally:
+            subprocess.run = real_run
+        self.assertIn("native source hash computation failed", hashes.last_error)
+
+    def test_update_callers_preserve_target_context_with_underlying_detail(self):
+        target = {
+            "_record": {
+                "version": "1.0.0",
+                "source": {
+                    "fetcher": "fetchurl",
+                    "url": "https://example.invalid/project-1.0.0.tgz",
+                    "args": {
+                        "url": "https://example.invalid/project-1.0.0.tgz",
+                        "hash": "sha256-old",
+                    },
+                },
+                "update": {"kind": "url-release"},
+            },
+            "_path": Path("/repo/sources/test.json"),
+        }
+
+        class FailedHashes:
+            last_error = (
+                "native fetcher build failed: fatal: repository not found"
+            )
+
+            def compute_native_hash(self, _source, _replacements):
+                return None
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            status = update_catalog_target(
+                "project",
+                target,
+                SimpleNamespace(version=None, dry_run=False),
+                SimpleNamespace(),
+                SimpleNamespace(),
+                SimpleNamespace(),
+                FailedHashes(),
+                SimpleNamespace(),
+            )
+        self.assertEqual(status, "failed")
+        self.assertIn("catalog/project", output.getvalue())
+        self.assertIn("hash failed: native fetcher build failed", output.getvalue())
+        self.assertIn("fatal: repository not found", output.getvalue())
+
+        commit_target = copy.deepcopy(target)
+        commit_target["_record"] = {
+            "version": "aaaaaaaa",
+            "source": {
+                "fetcher": "fetchFromGitHub",
+                "url": "https://github.com/example/project",
+                "args": {
+                    "owner": "example",
+                    "repo": "project",
+                    "rev": "a" * 40,
+                    "hash": "sha256-old",
+                },
+            },
+            "update": {"kind": "github-commit", "branch": "gone"},
+        }
+
+        class FailedGitHub:
+            last_error = None
+
+            def get_latest_commit(self, _owner, _repo, _branch):
+                self.last_error = (
+                    "GitHub commit lookup failed for example/project; "
+                    "requested branch 'gone'; repository default branch is 'main'"
+                )
+                return None
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            status = update_catalog_target(
+                "project",
+                commit_target,
+                SimpleNamespace(version=None, dry_run=False),
+                FailedGitHub(),
+                SimpleNamespace(),
+                SimpleNamespace(),
+                FailedHashes(),
+                SimpleNamespace(),
+            )
+        self.assertEqual(status, "failed")
+        self.assertIn("catalog/project", output.getvalue())
+        self.assertIn("fetch failed: GitHub commit lookup failed", output.getvalue())
+        self.assertIn("requested branch 'gone'", output.getvalue())
 
     def test_catalog_npm_update_rewrites_source_and_dependent_hash_atomically(self):
         with tempfile.TemporaryDirectory() as temp_dir:

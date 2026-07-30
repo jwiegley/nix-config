@@ -78,6 +78,57 @@ MAX_NPM_TARBALL_BYTES = 256 * 1024 * 1024
 MAX_NPM_TAR_MEMBER_BYTES = 64 * 1024 * 1024
 MAX_NPM_TAR_DECLARED_BYTES = 256 * 1024 * 1024
 MAX_NPM_TAR_MEMBERS = 10000
+MAX_ACTIONABLE_ERROR_CHARS = 512
+ANSI_ESCAPE_RE = re.compile(
+    r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\))"
+)
+CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
+
+
+def _bounded_actionable_error(*output: object, fallback: str) -> str:
+    """Extract one bounded, terminal-safe command failure summary."""
+    lines = []
+    for value in output:
+        if value is None:
+            continue
+        if isinstance(value, bytes):
+            text = value.decode("utf-8", "replace")
+        else:
+            text = str(value)
+        text = ANSI_ESCAPE_RE.sub("", text)
+        text = CONTROL_CHAR_RE.sub(" ", text)
+        for raw_line in text.splitlines():
+            line = re.sub(r"^\s*>\s?", "", raw_line)
+            line = re.sub(r"\s+", " ", line).strip()
+            if line and line not in lines:
+                lines.append(line)
+
+    meaningful = [
+        line
+        for line in lines
+        if re.search(r"\bfatal:", line, re.IGNORECASE)
+        or re.search(r"\bERROR\b", line)
+        or re.search(r"\bUnable\b", line, re.IGNORECASE)
+    ]
+    secondary = [
+        line
+        for line in lines
+        if re.search(r"\berror:", line, re.IGNORECASE)
+        and "cannot build" not in line.lower()
+    ]
+    candidates = meaningful or secondary
+    if not candidates:
+        candidates = [
+            line for line in lines if "cannot build" not in line.lower()
+        ] or lines
+    summary = "; ".join(candidates[:4]) if candidates else fallback
+    if len(summary) > MAX_ACTIONABLE_ERROR_CHARS:
+        summary = summary[: MAX_ACTIONABLE_ERROR_CHARS - 3].rstrip() + "..."
+    return summary
+
+
+def _failure_message(label: str, detail: Optional[str]) -> str:
+    return f"{label}: {detail}" if detail else label
 
 
 class _RegistryProxyServer(socketserver.ThreadingTCPServer):
@@ -150,46 +201,137 @@ def registry_only_proxy():
 class GitHubClient:
     """Client for GitHub API operations using gh CLI."""
 
+    def __init__(self):
+        self.last_error: Optional[str] = None
+
     def get_latest_release(self, owner: str, repo: str) -> Optional[str]:
         """Get the latest GitHub release tag without changing strategy."""
+        self.last_error = None
         try:
             result = subprocess.run(
                 ["gh", "api", f"repos/{owner}/{repo}/releases/latest"],
                 capture_output=True, text=True
             )
             if result.returncode != 0:
+                detail = _bounded_actionable_error(
+                    getattr(result, "stderr", ""),
+                    result.stdout,
+                    fallback=f"gh exited with status {result.returncode}",
+                )
+                self.last_error = _bounded_actionable_error(
+                    f"GitHub release lookup failed for {owner}/{repo}: {detail}",
+                    fallback="GitHub release lookup failed",
+                )
                 return None
-            return json.loads(result.stdout).get("tag_name") or None
-        except (OSError, ValueError, json.JSONDecodeError):
+            payload = json.loads(result.stdout)
+            tag = (
+                payload.get("tag_name")
+                if isinstance(payload, dict)
+                and isinstance(payload.get("tag_name"), str)
+                and payload["tag_name"]
+                else None
+            )
+            if tag is None:
+                self.last_error = _bounded_actionable_error(
+                    f"GitHub release lookup returned no tag for {owner}/{repo}",
+                    fallback="GitHub release lookup returned no tag",
+                )
+            return tag
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            detail = _bounded_actionable_error(
+                error,
+                fallback="GitHub release lookup raised an exception",
+            )
+            self.last_error = _bounded_actionable_error(
+                f"GitHub release lookup failed for {owner}/{repo}: {detail}",
+                fallback="GitHub release lookup failed",
+            )
             return None
 
     def get_default_branch(self, owner: str, repo: str) -> Optional[str]:
         """Get the repository's declared default branch."""
+        self.last_error = None
         try:
             result = subprocess.run(
                 ["gh", "api", f"repos/{owner}/{repo}", "--jq", ".default_branch"],
                 capture_output=True, text=True
             )
-            return result.stdout.strip() if result.returncode == 0 and result.stdout.strip() else None
-        except OSError:
+            branch = (
+                result.stdout.strip()
+                if result.returncode == 0 and result.stdout.strip()
+                else None
+            )
+            if branch is None:
+                detail = _bounded_actionable_error(
+                    getattr(result, "stderr", ""),
+                    result.stdout,
+                    fallback=f"gh exited with status {result.returncode}",
+                )
+                self.last_error = _bounded_actionable_error(
+                    f"GitHub default branch lookup failed for {owner}/{repo}: {detail}",
+                    fallback="GitHub default branch lookup failed",
+                )
+            return branch
+        except OSError as error:
+            detail = _bounded_actionable_error(
+                error,
+                fallback="GitHub default branch lookup raised an exception",
+            )
+            self.last_error = _bounded_actionable_error(
+                f"GitHub default branch lookup failed for {owner}/{repo}: {detail}",
+                fallback="GitHub default branch lookup failed",
+            )
             return None
 
     def get_latest_commit(self, owner: str, repo: str, branch: str) -> Optional[tuple[str, str]]:
         """Get the latest commit SHA from exactly the declared branch."""
+        self.last_error = None
+        result = None
+        command_error = None
         try:
             result = subprocess.run(
                 ["gh", "api", f"repos/{owner}/{repo}/commits/{branch}", "--jq", ".sha"],
                 capture_output=True, text=True
             )
-            if result.returncode != 0 or not result.stdout.strip():
-                return None
-            full_sha = result.stdout.strip()
-            return full_sha, full_sha[:8]
-        except OSError:
-            return None
+            if result.returncode == 0 and result.stdout.strip():
+                full_sha = result.stdout.strip()
+                return full_sha, full_sha[:8]
+            command_error = _bounded_actionable_error(
+                getattr(result, "stderr", ""),
+                result.stdout,
+                fallback=f"gh exited with status {result.returncode}",
+            )
+        except OSError as error:
+            command_error = _bounded_actionable_error(
+                error,
+                fallback="GitHub commit lookup raised an exception",
+            )
+
+        default_branch = self.get_default_branch(owner, repo)
+        default_error = self.last_error
+        default_summary = (
+            f"repository default branch is {default_branch!r}"
+            if default_branch
+            else "repository default branch is unavailable"
+        )
+        details = [
+            f"GitHub commit lookup failed for {owner}/{repo}",
+            f"requested branch {branch!r}",
+            default_summary,
+        ]
+        if command_error:
+            details.append(command_error)
+        if default_branch is None and default_error:
+            details.append(default_error)
+        self.last_error = _bounded_actionable_error(
+            "; ".join(details),
+            fallback="GitHub commit lookup failed",
+        )
+        return None
 
     def get_file(self, owner: str, repo: str, rev: str, path: str) -> Optional[str]:
         """Read one UTF-8 repository file from an exact revision."""
+        self.last_error = None
         endpoint = (
             f"repos/{owner}/{repo}/contents/{quote(path, safe='/')}?"
             f"ref={quote(rev, safe='')}"
@@ -202,6 +344,15 @@ class GitHubClient:
                 timeout=60,
             )
             if result.returncode != 0 or not result.stdout:
+                detail = _bounded_actionable_error(
+                    getattr(result, "stderr", ""),
+                    result.stdout,
+                    fallback=f"gh exited with status {result.returncode}",
+                )
+                self.last_error = _bounded_actionable_error(
+                    f"GitHub file lookup failed for {owner}/{repo}:{path}@{rev}: {detail}",
+                    fallback="GitHub file lookup failed",
+                )
                 return None
             payload = json.loads(result.stdout)
             if (
@@ -210,6 +361,11 @@ class GitHubClient:
                 or payload.get("encoding") != "base64"
                 or not isinstance(payload.get("content"), str)
             ):
+                self.last_error = _bounded_actionable_error(
+                    f"GitHub file lookup returned invalid payload for "
+                    f"{owner}/{repo}:{path}@{rev}",
+                    fallback="GitHub file lookup returned invalid payload",
+                )
                 return None
             encoded = "".join(payload["content"].split())
             return base64.b64decode(encoded, validate=True).decode("utf-8")
@@ -220,7 +376,17 @@ class GitHubClient:
             binascii.Error,
             json.JSONDecodeError,
             subprocess.TimeoutExpired,
-        ):
+        ) as error:
+            detail = _bounded_actionable_error(
+                getattr(error, "stderr", ""),
+                getattr(error, "output", ""),
+                error,
+                fallback="GitHub file lookup raised an exception",
+            )
+            self.last_error = _bounded_actionable_error(
+                f"GitHub file lookup failed for {owner}/{repo}:{path}@{rev}: {detail}",
+                fallback="GitHub file lookup failed",
+            )
             return None
 
 
@@ -395,6 +561,7 @@ class HashComputer:
     def __init__(self, repo_dir: Path):
         self.repo_dir = repo_dir
         self._tool_paths: dict[tuple[str, str], Path] = {}
+        self.last_error: Optional[str] = None
 
     def _realize_nix_expression(
         self,
@@ -486,13 +653,15 @@ in
 
     def compute_native_hash(self, source: dict, replacements: dict) -> Optional[str]:
         """Hash through the repository-locked native fetcher with exact arguments."""
-        args = copy.deepcopy(source["args"])
-        args.update(replacements)
-        hash_name = next(iter({"hash", "sha256", "narHash"} & args.keys()))
-        old_hash = args[hash_name]
-        fetcher = source["fetcher"]
-
+        self.last_error = None
+        operation = "native source hash computation"
         try:
+            args = copy.deepcopy(source["args"])
+            args.update(replacements)
+            hash_name = next(iter({"hash", "sha256", "narHash"} & args.keys()))
+            old_hash = args[hash_name]
+            fetcher = source["fetcher"]
+
             if fetcher == "fetchTree":
                 args.pop("narHash")
                 expression = (
@@ -507,7 +676,23 @@ in
                     cwd=self.repo_dir,
                 )
                 if result.returncode == 0:
-                    return json.loads(result.stdout)
+                    value = json.loads(result.stdout)
+                    if isinstance(value, str) and value:
+                        return value
+                    self.last_error = _bounded_actionable_error(
+                        "nix eval returned an invalid fetchTree hash",
+                        fallback="nix eval returned an invalid fetchTree hash",
+                    )
+                    return None
+                detail = _bounded_actionable_error(
+                    result.stderr,
+                    result.stdout,
+                    fallback=f"nix eval exited with status {result.returncode}",
+                )
+                self.last_error = _bounded_actionable_error(
+                    f"fetchTree hash evaluation failed: {detail}",
+                    fallback="fetchTree hash evaluation failed",
+                )
                 return None
 
             args[hash_name] = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
@@ -528,10 +713,20 @@ in
             )
             match = re.search(r"got:\s+(sha256-[A-Za-z0-9+/=]+)", result.stdout + result.stderr)
             if not match:
+                detail = _bounded_actionable_error(
+                    result.stderr,
+                    result.stdout,
+                    fallback=f"nix build exited with status {result.returncode}",
+                )
+                self.last_error = _bounded_actionable_error(
+                    f"native fetcher build failed: {detail}",
+                    fallback="native fetcher build failed",
+                )
                 return None
             value = match.group(1)
             if old_hash.startswith("sha256-"):
                 return value
+            operation = "native source hash conversion"
             converted = subprocess.run(
                 ["nix", "hash", "convert", "--hash-algo", "sha256", "--to", "nix32", value],
                 capture_output=True,
@@ -539,9 +734,38 @@ in
                 timeout=60,
                 cwd=self.repo_dir,
             )
-            return converted.stdout.strip() if converted.returncode == 0 else None
-        except (OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as error:
-            print(f"  Error computing native source hash: {error}", file=sys.stderr)
+            converted_hash = converted.stdout.strip()
+            if converted.returncode == 0 and converted_hash:
+                return converted_hash
+            detail = _bounded_actionable_error(
+                converted.stderr,
+                converted.stdout,
+                fallback=f"nix hash convert exited with status {converted.returncode}",
+            )
+            self.last_error = _bounded_actionable_error(
+                f"native source hash conversion failed: {detail}",
+                fallback="native source hash conversion failed",
+            )
+            return None
+        except (
+            KeyError,
+            OSError,
+            StopIteration,
+            TypeError,
+            ValueError,
+            json.JSONDecodeError,
+            subprocess.TimeoutExpired,
+        ) as error:
+            detail = _bounded_actionable_error(
+                getattr(error, "stderr", ""),
+                getattr(error, "output", ""),
+                error,
+                fallback=f"{operation} raised an exception",
+            )
+            self.last_error = _bounded_actionable_error(
+                f"{operation} failed: {detail}",
+                fallback=f"{operation} failed",
+            )
             return None
 
     def _package_build_command(
@@ -2120,9 +2344,20 @@ def update_npm_flake_target(
     )
     new_rev = metadata["gitHead"]
     new_tar_hash = hash_computer.compute_native_hash(source, {"url": new_url})
+    if not new_tar_hash:
+        message = _failure_message(
+            "source archive hash failed",
+            getattr(hash_computer, "last_error", None),
+        )
+        print(f"{Colors.RED}{name}: {message}{Colors.RESET}")
+        return "failed"
     new_git_hash = hash_computer.compute_native_hash(git_source, {"rev": new_rev})
-    if not new_tar_hash or not new_git_hash:
-        print(f"{Colors.RED}{name}: source hash failed{Colors.RESET}")
+    if not new_git_hash:
+        message = _failure_message(
+            "flake input hash failed",
+            getattr(hash_computer, "last_error", None),
+        )
+        print(f"{Colors.RED}{name}: {message}{Colors.RESET}")
         return "failed"
 
     flake_path = target["_path"].parent.parent / "config" / "ai" / "flake.nix"
@@ -2195,7 +2430,11 @@ def update_npm_lock_target(
     hash_name = next(iter({"hash", "sha256"} & source_args.keys()))
     new_source_hash = hash_computer.compute_native_hash(source, {"url": new_url})
     if not new_source_hash:
-        print(f"catalog/{name} {Colors.RED}✗ source hash failed{Colors.RESET}")
+        message = _failure_message(
+            "source hash failed",
+            getattr(hash_computer, "last_error", None),
+        )
+        print(f"catalog/{name} {Colors.RED}✗ {message}{Colors.RESET}")
         return "failed"
     source_path = hash_computer.realize_native_source(
         source,
@@ -2357,8 +2596,14 @@ def update_github_release_asset_target(
         )
     else:
         new_tag = github_client.get_latest_release(update["owner"], update["repo"])
+        release_error = (
+            getattr(github_client, "last_error", None) if new_tag is None else None
+        )
+    if args.version:
+        release_error = None
     if not new_tag or not new_tag.startswith(prefix):
-        print(f"catalog/{name} {Colors.RED}✗ release lookup failed{Colors.RESET}")
+        message = _failure_message("release lookup failed", release_error)
+        print(f"catalog/{name} {Colors.RED}✗ {message}{Colors.RESET}")
         return "failed"
     new_version = new_tag[len(prefix):] if prefix else new_tag
 
@@ -2386,7 +2631,11 @@ def update_github_release_asset_target(
         )
         new_hash = hash_computer.compute_native_hash(source, {"url": new_url})
         if not new_hash:
-            print(f"catalog/{name} {Colors.RED}✗ {asset_label} hash failed{Colors.RESET}")
+            message = _failure_message(
+                f"{asset_label} hash failed",
+                getattr(hash_computer, "last_error", None),
+            )
+            print(f"catalog/{name} {Colors.RED}✗ {message}{Colors.RESET}")
             return "failed"
         resolved[label] = new_url, new_hash
 
@@ -2463,19 +2712,32 @@ def update_github_commit_artifact_target(
             source_args["owner"], source_args["repo"], update["branch"]
         )
     )
+    lookup_error = (
+        getattr(github_client, "last_error", None)
+        if not args.version and candidate is None
+        else None
+    )
     new_ref = candidate[0] if candidate else None
     if not new_ref or re.fullmatch(r"[0-9a-f]{40}", new_ref) is None:
-        print(f"catalog/{name} {Colors.RED}✗ exact commit lookup failed{Colors.RESET}")
+        message = _failure_message("exact commit lookup failed", lookup_error)
+        print(f"catalog/{name} {Colors.RED}✗ {message}{Colors.RESET}")
         return "failed"
 
     new_hash = hash_computer.compute_native_hash(source, {"rev": new_ref})
     if not new_hash:
-        print(f"catalog/{name} {Colors.RED}✗ source hash failed{Colors.RESET}")
+        message = _failure_message(
+            "source hash failed",
+            getattr(hash_computer, "last_error", None),
+        )
+        print(f"catalog/{name} {Colors.RED}✗ {message}{Colors.RESET}")
         return "failed"
     resolved_files: dict[Path, str] = {}
     for local, remote in update["artifactSources"].items():
         content = github_client.get_file(
             source_args["owner"], source_args["repo"], new_ref, remote
+        )
+        file_error = (
+            getattr(github_client, "last_error", None) if content is None else None
         )
         cargo_lock = Path(local).name == "Cargo.lock"
         if content is None or (
@@ -2487,7 +2749,8 @@ def update_github_commit_artifact_target(
                 )
             )
         ):
-            print(f"catalog/{name} {Colors.RED}✗ {remote} validation failed{Colors.RESET}")
+            message = _failure_message(f"{remote} validation failed", file_error)
+            print(f"catalog/{name} {Colors.RED}✗ {message}{Colors.RESET}")
             return "failed"
         resolved_files[target["_path"].parent.parent / local] = content
 
@@ -2541,6 +2804,8 @@ def update_catalog_target(
     new_version = None
     new_hash = None
     new_url = None
+    fetch_error = None
+    hash_error = None
 
     display = f"{Colors.BOLD}catalog/{name}{Colors.RESET} {Colors.DIM}{old_version}{Colors.RESET}"
     print(display, end=" ")
@@ -2552,6 +2817,8 @@ def update_catalog_target(
             branch = github_client.get_default_branch(
                 source_args["owner"], source_args["repo"]
             )
+            if branch is None:
+                fetch_error = getattr(github_client, "last_error", None)
             candidate = (
                 github_client.get_latest_commit(
                     source_args["owner"], source_args["repo"], branch
@@ -2561,6 +2828,8 @@ def update_catalog_target(
             )
             if candidate:
                 new_ref = candidate[0]
+            elif branch:
+                fetch_error = getattr(github_client, "last_error", None)
         if new_ref:
             new_version = new_ref
     elif kind == "npm-release":
@@ -2584,6 +2853,8 @@ def update_catalog_target(
             )
             if candidate:
                 new_ref = candidate[0]
+            else:
+                fetch_error = getattr(github_client, "last_error", None)
         if new_ref:
             current_version = record.get("version")
             new_version = (
@@ -2603,6 +2874,8 @@ def update_catalog_target(
             new_ref = args.version if args.version.startswith(prefix) else f"{prefix}{args.version}"
         else:
             new_ref = github_client.get_latest_release(source_args["owner"], source_args["repo"])
+            if new_ref is None:
+                fetch_error = getattr(github_client, "last_error", None)
         if new_ref:
             new_version = extract_version_number(new_ref, prefix)
     elif kind == "explicit-rev":
@@ -2636,7 +2909,8 @@ def update_catalog_target(
             new_url = current_url
 
     if new_version is None:
-        print(f"{Colors.RED}✗ fetch failed{Colors.RESET}")
+        message = _failure_message("fetch failed", fetch_error)
+        print(f"{Colors.RED}✗ {message}{Colors.RESET}")
         return "failed"
     if kind == "npm-release" and new_url is None:
         print(f"{Colors.RED}✗ URL rewrite failed{Colors.RESET}")
@@ -2649,8 +2923,11 @@ def update_catalog_target(
         replacements["url"] = new_url
     if kind != "pypi-release":
         new_hash = hash_computer.compute_native_hash(source, replacements)
+        if not new_hash:
+            hash_error = getattr(hash_computer, "last_error", None)
     if not new_hash:
-        print(f"{Colors.RED}✗ hash failed{Colors.RESET}")
+        message = _failure_message("hash failed", hash_error)
+        print(f"{Colors.RED}✗ {message}{Colors.RESET}")
         return "failed"
 
     same_location = (new_ref is None or new_ref == current_ref) and (

@@ -568,10 +568,10 @@ class UpdaterEssentialPlanTests(unittest.TestCase):
 
         resolved = sorted(test_ids(suite))
         resolved_listing = "\n" + "\n".join(resolved)
-        self.assertEqual(len(resolved), 59, resolved_listing)
+        self.assertEqual(len(resolved), 64, resolved_listing)
         self.assertEqual(
             hashlib.sha256("\n".join(resolved).encode()).hexdigest(),
-            "6c2a34236bf352136c3d669c42c6db585075eb859d07f36e84f0fb6d92a32ca0",
+            "269843e39edd5b93fca7569f99458e32003bc43d70c8d29cfc6897f1d9331ce8",
             resolved_listing,
         )
 
