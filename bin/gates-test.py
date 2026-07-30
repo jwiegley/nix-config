@@ -635,7 +635,7 @@ class TestGatesAreRegistered(unittest.TestCase):
         self.assertEqual(pre_commit & expensive_set, {"python-test", "coverage"})
 
     def test_expensive_assurance_is_low_frequency_and_manual(self):
-        workflow = (REPO / ".github/workflows/expensive.yml").read_text()
+        workflow = (REPO / ".github/workflows/portable-assurance.yml").read_text()
         self.assertIn('cron: "17 2,14 * * *"', workflow)
         self.assertIn("workflow_dispatch:", workflow)
         self.assertNotRegex(workflow, r"(?m)^  (push|pull_request):")

@@ -3,7 +3,7 @@
  "artifact": "consumer-inventory",
  "generatedBy": "bin/consumer-inventory",
  "purpose": "Merged, classified inventory of every reference from every consumer into nix-config, so the config/ai -> config/fleet rename (#47) and its straggler sweep (#63) know exactly who breaks. One record per reference.",
- "repoHead": "aedaf3e15f0243d2f2c9b4941dabc84da9ef291d",
+ "repoHead": "72f10276e38f5d06bfc83392c37460374ce605c0",
  "consumerLayout": "nix-config at the repository root; consumer checkouts as siblings (nixos, vps, andoria). Absolute paths are intentionally omitted: see the comment at this key in bin/consumer-inventory.",
  "classificationScheme": {
   "rename-now": "Reference to the literal config/ai path inside nix-config's own tree; #47 rewrites it in the rename commit.",
@@ -48,7 +48,7 @@
   "internalConfigAiRefCount": 263,
   "internalConfigAiFileCount": 50,
   "internalConfigAiFiles": [
-   ".github/workflows/expensive.yml",
+   ".github/workflows/portable-assurance.yml",
    "CLAUDE.md",
    "README.md",
    "config/ai.nix",
@@ -279,7 +279,7 @@
    "consumer": "internal",
    "kind": "internal-config-ai-ref",
    "classification": "rename-now",
-   "file": ".github/workflows/expensive.yml",
+   "file": ".github/workflows/portable-assurance.yml",
    "line": 55,
    "text": "run: nix build --no-link \"./config/ai#checks.${{ matrix.system }}.pi-gallery\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",

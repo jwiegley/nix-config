@@ -16,7 +16,7 @@ name: CI
 # runner cannot evaluate that check honestly until a remote-safe boundary exists.
 # Full Python integration remains available through the local/manual expensive
 # tier.  Its remote-safe portable evaluation and native builds live in
-# expensive.yml (twice daily plus manual dispatch), not on every push or pull
+# portable-assurance.yml (twice daily plus manual dispatch), not on every push or pull
 # request.
 #
 # Refs: jwiegley/nix-config#46.

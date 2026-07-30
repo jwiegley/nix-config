@@ -1,4 +1,4 @@
-name: Expensive assurance
+name: Portable assurance
 
 # Remote-safe portable Nix checks intentionally do not run for every commit.
 # The ordinary commit gate is hard-capped at two minutes; this subset runs twice

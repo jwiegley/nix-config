@@ -56,27 +56,44 @@ def _shell_status(status: int) -> int:
     return 128 + (-status) if status < 0 else status
 
 
-class ForwardedSignal(BaseException):
-    def __init__(self, signum: int):
-        self.signum = signum
-
-
-def run(argv: list[str], term_after: float, kill_after: float) -> int:
-    blocked = {signal.SIGHUP, signal.SIGTERM}
-    previous_handlers = {sig: signal.getsignal(sig) for sig in blocked}
+def run(
+    argv: list[str],
+    term_after: float,
+    kill_after: float,
+    *,
+    popen=subprocess.Popen,
+) -> int:
+    handled_signals = {signal.SIGHUP, signal.SIGTERM}
+    previous_handlers = {sig: signal.getsignal(sig) for sig in handled_signals}
     process: subprocess.Popen[bytes] | None = None
+    forwarded_signal: int | None = None
 
     def forward(signum, _frame):
-        raise ForwardedSignal(signum)
+        nonlocal forwarded_signal
+        if forwarded_signal is None:
+            forwarded_signal = signum
 
     try:
-        for sig in blocked:
+        for sig in handled_signals:
             signal.signal(sig, forward)
-        try:
-            process = subprocess.Popen(argv, start_new_session=True)
-            pgid = process.pid
-            status = process.wait(timeout=term_after)
-        except subprocess.TimeoutExpired:
+        if forwarded_signal is not None:
+            return 128 + forwarded_signal
+        process = popen(argv, start_new_session=True)
+        pgid = process.pid
+        deadline = time.monotonic() + term_after
+        while True:
+            if forwarded_signal is not None:
+                _stop_group(process, pgid, kill_after)
+                return 128 + forwarded_signal
+            status = process.poll()
+            if status is not None:
+                break
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                status = None
+                break
+            time.sleep(min(0.02, remaining))
+        if status is None:
             escalated, gone = _stop_group(process, pgid, kill_after)
             if not escalated:
                 print(
@@ -100,15 +117,6 @@ def run(argv: list[str], term_after: float, kill_after: float) -> int:
             )
             return 125
         return _shell_status(status)
-    except ForwardedSignal as event:
-        if process is not None:
-            _escalated, gone = _stop_group(process, process.pid, kill_after)
-            if not gone:
-                print(
-                    "deadline-supervisor: process group remains after forwarded signal",
-                    file=sys.stderr,
-                )
-        return 128 + event.signum
     except KeyboardInterrupt:
         if process is not None:
             _escalated, gone = _stop_group(process, process.pid, kill_after)

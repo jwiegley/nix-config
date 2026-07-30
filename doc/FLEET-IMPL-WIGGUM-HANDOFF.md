@@ -954,7 +954,7 @@ The old policy was measurably noncompliant: the last committed core record was
 `/Users/johnw/src/nix-impl`; concurrent Pi edits remain in the shared `main`
 worktree and are not part of this unit.
 
-Current staged design:
+Implemented design:
 
 - `bin/update-overlay-essential-test.py` runs every parser/catalog unit plus 16
   bounded routing, purity, and negative-gate integration cases.  It resolves 47
@@ -967,9 +967,10 @@ Current staged design:
   unfiltered, portable all-system evaluation, consumer/signature gates,
   structural/live coverage, and the Darwin value surface under the existing
   CI/on-demand ceiling.  Because some full Python cases intentionally
-  exercise LAN-only consumers, `.github/workflows/expensive.yml` schedules only
-  a distinct remote-safe portable evaluation/native companion twice daily and supports
-  manual dispatch; the complete tier remains a local/manual authority.
+  exercise LAN-only consumers, `.github/workflows/portable-assurance.yml`
+  schedules a distinct remote-safe portable evaluation/native companion twice
+  daily and supports manual dispatch; the complete tier remains a local/manual
+  authority.
 - The first implementation used nested GNU `timeout` process groups.  Independent
   fess reproduced a child escaping under PID 1 after the outer gate returned.
   The fix uses one Python process-group supervisor that remains alive through
@@ -984,18 +985,20 @@ Current staged design:
 - The first staged core measurement completed in **41.61s**; the initial artifact
   recorded **42.139/120s**, and the exact hook including structural coverage
   completed in **44.91s**.  The stale artifact was watched failing before that
-  regeneration.  A final refresh is required because the fess fixes add four
-  tracked Python files and change tier structure.
+  regeneration.  Subsequent audited runs with the strict supervisor and four new
+  Python files remain below 51 seconds, leaving more than 50 seconds before TERM.
 - The expensive-tier fess run exposed and fixed the moved Pi-gallery consumer
   inventory reference.  Scheduled macOS native coverage moves to `macos-15` and
   omits the cache action whose Darwin binary currently fails before the build.
 - The first complete expensive run then reached the final Darwin value gate and
   correctly rejected the maintainer's intentional `hermes-desktop` cask addition.
   The diff contained that one insertion on Hera and Clio; exact-revision generator
-  output `darwin-surface-15b831cfe111.json` now passes the live value check.
+  output at the reachable rebased evidence commit passes the live value check.
 
-Signed implementation `15b831cf` passed its 45-second hook.  Its fess verdict was
-not clean; the fixes above are uncommitted.  Remaining: final artifact refresh,
-ordinary and expensive tier verification, signed fess-fix, final audit, and #80
-closeout.  #41 is preserved but paused.  No activation or push was performed by
+The signed stack contains the tier split, audited lifecycle/assurance fixes,
+rebased evidence, and generated-revision reachability guards.  The complete local
+expensive tier passes every component with zero Python skips.  Tracker closeout is
+permitted only after the last process-creation signal-race fix is signed, its
+ordinary hook passes, and an independent final audit is clean.  #41 remains
+preserved but paused until that boundary.  No activation or push is authorized by
 this programme lane.

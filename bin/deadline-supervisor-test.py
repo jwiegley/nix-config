@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import runpy
 import signal
 import subprocess
 import sys
@@ -11,6 +12,7 @@ from pathlib import Path
 
 
 SUPERVISOR = Path(__file__).with_name("deadline-supervisor.py")
+SUPERVISOR_MODULE = runpy.run_path(str(SUPERVISOR))
 
 
 def process_exists(pid: int) -> bool:
@@ -147,6 +149,34 @@ class DeadlineSupervisorTests(unittest.TestCase):
                         break
                     time.sleep(0.02)
                 self.assertFalse(process_exists(child_pid), "signal left child alive")
+
+    def test_signal_during_process_creation_cannot_orphan_group(self):
+        child_pid = None
+
+        def injected_popen(argv, **kwargs):
+            nonlocal child_pid
+            process = subprocess.Popen(argv, **kwargs)
+            child_pid = process.pid
+            os.kill(os.getpid(), signal.SIGTERM)
+            return process
+
+        child = (
+            "import signal,time; "
+            "signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(30)"
+        )
+        status = SUPERVISOR_MODULE["run"](
+            [sys.executable, "-c", child],
+            30,
+            0.2,
+            popen=injected_popen,
+        )
+        self.assertEqual(status, 143)
+        self.assertIsNotNone(child_pid)
+        for _attempt in range(50):
+            if not process_exists(child_pid):
+                break
+            time.sleep(0.02)
+        self.assertFalse(process_exists(child_pid), "startup signal left child alive")
 
     def test_nonfinite_deadlines_refuse(self):
         for value in ("nan", "inf", "-inf", "1e309"):
