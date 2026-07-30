@@ -842,10 +842,12 @@ class TestGatesAreRegistered(unittest.TestCase):
                 check=True,
             ).stdout.splitlines()
         )
-        pre_commit = set(core.group("body").split()) | {"coverage"}
+        pre_commit = set(core.group("body").split())
         expensive_set = set(expensive.group("body").split())
+        self.assertNotIn("coverage", pre_commit)
+        self.assertIn("coverage", expensive_set)
         self.assertEqual(pre_commit | expensive_set, registered)
-        self.assertEqual(pre_commit & expensive_set, {"python-test", "coverage"})
+        self.assertEqual(pre_commit & expensive_set, {"python-test"})
 
     def test_expensive_assurance_is_low_frequency_and_manual(self):
         workflow = (REPO / ".github/workflows/portable-assurance.yml").read_text()

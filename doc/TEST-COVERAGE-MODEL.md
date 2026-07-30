@@ -209,13 +209,15 @@ versioned artifact; they do not require those bare numbers forever. In particula
 
 | Tier | Content | Placement | Budget semantics |
 |---|---|---|---|
-| pre-commit | formatting/lint, bounded unit tests, the essential updater parser/catalog/routing/negative plan, structural coverage regression | one supervised local quality tier | Hard wall-clock envelope: **120 seconds**, implemented as TERM at 105 seconds, five seconds of kill grace, and ten seconds reserved for supervisor startup, post-KILL verification, and reporting. The complete updater matrix and portable all-system evaluation are excluded here but remain mandatory in the expensive tier. |
+| pre-commit | formatting/lint, bounded unit tests, and the essential updater parser/catalog/routing/negative plan | one supervised local quality tier | Hard wall-clock envelope: **120 seconds**, implemented as TERM at 105 seconds, five seconds of kill grace, and ten seconds reserved for supervisor startup, post-KILL verification, and reporting. Coverage-artifact freshness, the complete updater matrix, and portable all-system evaluation are excluded here but remain mandatory at issue closeout and in their broader tiers. |
 | pre-push | slow focused Python suites, live Nix-reach comparison, Darwin surface, consumers, signatures, system/agent checks | local hook | Initial planning ceiling: **900 seconds**; compliance is not yet claimed or enforced as one aggregate measurement. The live probes are explicitly assigned here; configuration probes allow 600 seconds of contention headroom, bounded metadata probes 120–240 seconds. |
 | expensive | Local authority: unfiltered tracked Python integration, portable all-system evaluation, consumer/signature gates, structural/live coverage, and Darwin value surface. Remote companion: portable evaluation plus three portable-native gallery builds. | `bin/quality --tier expensive` locally; the distinct remote-safe companion runs twice daily on GitHub plus manual dispatch | **1800-second** local quality ceiling; scheduled remote-safe checks run at most twice daily rather than per commit. Platform-specific native builds have a separate 60-minute workflow bound. LAN-only root tests remain local and are not presented as GitHub evidence. |
 
 The limits are policy ceilings. The hook itself runs `bin/quality --tier pre-commit`
-under the 120-second supervisor. Artifact refresh independently executes and records
-the same core tier without the self-referential coverage check. Full updater
+under the 120-second supervisor. Intermediate commits may carry stale consolidated
+coverage evidence; pre-push, `make test`, the expensive tier, and issue closeout retain
+the `coverage` authority. Artifact refresh independently executes and records the
+same core tier without a self-referential coverage check. Full updater
 integration and portable evaluation run through `bin/quality --tier expensive`, which
 selects every tracked `bin/*-test.py` suite unfiltered. A timing regression is a
 concern even when correctness remains green; tiering cannot silently delete a test

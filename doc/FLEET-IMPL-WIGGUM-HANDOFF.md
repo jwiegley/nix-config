@@ -1003,3 +1003,14 @@ permitted only after the last process-creation signal-race fix is signed, its
 ordinary hook passes, and an independent final audit is clean.  #41 remains
 preserved but paused until that boundary.  No activation or push is authorized by
 this programme lane.
+
+## 2026-07-30 — coverage evidence cadence correction
+
+The maintainer narrowed the cadence after the implementation above: ordinary
+`bin/quality --tier pre-commit` runs the seven bounded static and essential-test
+suites, but no longer requires the consolidated coverage artifact to match every
+intermediate commit. Coverage freshness remains mandatory in pre-push,
+`make test`, the expensive tier, and the single closeout evidence cycle for each
+issue. This supersedes the earlier statement that structural coverage runs on
+every commit; it does not remove the coverage authority or its low-frequency
+collection.
