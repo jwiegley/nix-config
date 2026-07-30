@@ -541,9 +541,9 @@
     {
       "path": "bin/switch",
       "kind": "production",
-      "tier": "ci-on-demand",
-      "evidence": ["quality:shell-lint and quality:shell-format provide static evidence"],
-      "gap": "The routing library is tested, but no branch of bin/switch is executed."
+      "tier": "pre-commit",
+      "evidence": ["bin/update-overlay-test.py executes the packaged-profile Darwin branch through a two-hop symlink chain", "quality:shell-lint and quality:shell-format provide static evidence"],
+      "gap": "The NixOS and Home Manager fallback branches are not executed."
     },
     {
       "path": "bin/u",

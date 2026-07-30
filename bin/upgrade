@@ -2,14 +2,10 @@
 
 set -euo pipefail
 
-script_path=${BASH_SOURCE[0]}
-while [[ -L $script_path ]]; do
-    script_dir=$(cd -P -- "$(dirname -- "$script_path")" && pwd)
-    script_path=$(readlink "$script_path")
-    [[ $script_path == /* ]] || script_path=$script_dir/$script_path
-done
-script_dir=$(cd -P -- "$(dirname -- "$script_path")" && pwd)
-routing=$script_dir/lib/host-routing.sh
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+installed_routing_path=
+installed_upgrade_projects=
+routing=${installed_routing_path:-$script_dir/lib/host-routing.sh}
 [[ -r $routing ]] || routing=$script_dir/../libexec/nix-scripts/host-routing.sh
 # shellcheck source=bin/lib/host-routing.sh
 source "$routing"
@@ -76,5 +72,5 @@ if [[ $run_host == true ]]; then
 fi
 
 if [[ $run_projects == true ]]; then
-    exec "$script_dir/upgrade-projects"
+    exec "${installed_upgrade_projects:-$script_dir/upgrade-projects}"
 fi

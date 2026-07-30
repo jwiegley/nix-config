@@ -3266,7 +3266,10 @@ exec "$REAL_GIT" "$@"
         self.assertIn("refusing external action without a newly signed commit", update_agents)
         self.assertIn("set -euo pipefail", upgrade)
         self.assertRegex(upgrade, r"(?m)^\s*\./bin/update-agents --commit\s*$")
-        self.assertIn('exec "$script_dir/upgrade-projects"', upgrade)
+        self.assertIn(
+            'exec "${installed_upgrade_projects:-$script_dir/upgrade-projects}"',
+            upgrade,
+        )
         self.assertNotIn("set +e", upgrade)
         self.assertNotIn("if [[ $?", upgrade_projects)
         self.assertIn("if (run_project_body", upgrade_projects)
@@ -3993,19 +3996,43 @@ exec "$REAL_GIT" "$@"
     def test_profile_symlinked_scripts_find_packaged_routing_library(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            closure_bin = root / "closure/bin"
-            closure_lib = root / "closure/libexec/nix-scripts"
+            closure_bin = root / "nix-scripts/bin"
+            closure_lib = root / "nix-scripts/libexec/nix-scripts"
+            home_manager_bin = root / "home-manager-path/bin"
             profile_bin = root / "profile/bin"
             fake_bin = root / "fake-bin"
-            for directory in (closure_bin, closure_lib, profile_bin, fake_bin):
+            for directory in (
+                closure_bin,
+                closure_lib,
+                home_manager_bin,
+                profile_bin,
+                fake_bin,
+            ):
                 directory.mkdir(parents=True)
             (fake_bin / "bash").symlink_to(shutil.which("bash") or "/bin/bash")
 
             shutil.copy2(SCRIPT.parent / "lib/host-routing.sh", closure_lib)
+            shutil.copy2(UPGRADE_PROJECTS, closure_bin)
             for source in (SWITCH, UPGRADE, UPDATE_AGENTS):
                 target = closure_bin / source.name
                 shutil.copy2(source, target)
-                (profile_bin / source.name).symlink_to(target)
+                packaged = target.read_text()
+                self.assertEqual(packaged.count("installed_routing_path="), 1)
+                packaged = packaged.replace(
+                    "installed_routing_path=",
+                    f"installed_routing_path={closure_lib / 'host-routing.sh'}",
+                )
+                if source == UPGRADE:
+                    self.assertEqual(packaged.count("installed_upgrade_projects="), 1)
+                    packaged = packaged.replace(
+                        "installed_upgrade_projects=",
+                        f"installed_upgrade_projects={closure_bin / 'upgrade-projects'}",
+                    )
+                target.write_text(packaged)
+                (home_manager_bin / source.name).symlink_to(target)
+                (profile_bin / source.name).symlink_to(
+                    Path("../../home-manager-path/bin") / source.name
+                )
 
             def executable(name, text):
                 path = fake_bin / name
@@ -4022,7 +4049,7 @@ exec "$REAL_GIT" "$@"
             environment = {
                 **os.environ,
                 "HOME": str(root),
-                "PATH": f"{fake_bin}:/usr/bin:/bin",
+                "PATH": f"{fake_bin}:{os.environ['PATH']}",
                 "PROFILE_TEST_LOG": str(log),
             }
 
