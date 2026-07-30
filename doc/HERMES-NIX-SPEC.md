@@ -77,7 +77,12 @@ The current setup application is `com.nousresearch.hermes.setup` version `0.0.1`
 
 Mutable state already present includes `state.db` and its WAL files, `projects.db`, `kanban.db`, cron state, pairing state, `SOUL.md`, configuration, credentials, user skills, logs, caches, and desktop support data. These paths are evidence to preserve, not inputs to print or import wholesale into Nix.
 
-The working tree currently contains an uncommitted addition of the Homebrew cask name `hermes-desktop` in `config/darwin.nix`. That line makes the setup application declarative, but it does not make the cloned runtime or its dependencies declarative. The completed implementation removes the cask entry rather than activating it.
+Commit `f3d75450` added the Homebrew cask name `hermes-desktop` to the active
+`homebrew.casks` list as an interim declarative installation of the signed setup
+application. It does not make the cloned runtime or its dependencies declarative.
+Phase 5 removes the cask only after the Nix-built replacement passes the authorized
+cutover acceptance; until then, an ordinary authorized activation may install or retain
+the setup application.
 
 ## 5. Target architecture
 
@@ -128,7 +133,7 @@ The following existing authorities require modification during implementation:
 | `config/ai.nix` | Register the renderer, select packages from the profile, and extend ownership guards |
 | `flake/ai.nix` | Export the package where portable outputs require it |
 | `test/ai/*` | Extend compatibility, lock, renderer, package-selection, and projection contracts |
-| `config/darwin.nix` | Remove the uncommitted `hermes-desktop` cask entry |
+| `config/darwin.nix` | Remove the committed interim `hermes-desktop` cask in Phase 5 after authorized cutover acceptance |
 | `bin/update-agents` | Include Hermes in the paired root/portable update transaction |
 
 Client-specific serialization remains in `config/ai/renderers/hermes.nix`, preserving the repository invariant. The `config/ai/hermes/` directory owns policy, not renderer mechanics or package builds.
