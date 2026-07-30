@@ -470,23 +470,71 @@ class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
     an uninterpretable one.
     """
 
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="gates-inv-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name) / "repo"
+        self.root.mkdir()
+        subprocess.run(
+            ["git", "-C", str(self.root), "init", "--quiet"],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=clean_env(),
+        )
+        self.sample = self.root / "sample.nix"
+        self.sample.write_text("{ }\n")
+        subprocess.run(
+            ["git", "-C", str(self.root), "add", "--", "sample.nix"],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=clean_env(),
+        )
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(self.root),
+                "-c",
+                "user.name=Inventory Test",
+                "-c",
+                "user.email=inventory@example.invalid",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "--quiet",
+                "-m",
+                "baseline",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=clean_env(),
+        )
+
+    def run_write(self, dest, **environment):
+        return subprocess.run(
+            [str(CONSUMER_INVENTORY), "--write", str(dest)],
+            cwd=str(BIN.parent),
+            capture_output=True,
+            text=True,
+            env=clean_env(
+                CONSUMER_INVENTORY_REPO_ROOT=str(self.root),
+                CONSUMER_INVENTORY_CONSUMER_BASE=self.temp.name,
+                **environment,
+            ),
+        )
+
     def test_write_refuses_when_repo_head_is_unresolvable(self):
-        tmp = tempfile.mkdtemp(prefix="gates-inv-")
-        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
-        dest = os.path.join(tmp, "inventory.json")
+        dest = Path(self.temp.name) / "null-head.json"
         # The override is an ENV VAR, not a flag. An earlier manual check of this
         # guard passed for the wrong reason: it used a `--repo-head` flag that
         # does not exist, so the tool died on "unknown argument" rather than on
         # the null-head refusal. That is precisely the vacuous-negative-test
         # failure this file exists to prevent, and it happened in my own
         # verification of this very guard.
-        r = subprocess.run(
-            [str(CONSUMER_INVENTORY), "--write", dest],
-            cwd=str(BIN.parent),
-            capture_output=True,
-            text=True,
-            env=clean_env(CONSUMER_INVENTORY_REPO_HEAD=""),
-        )
+        r = self.run_write(dest, CONSUMER_INVENTORY_REPO_HEAD="")
         self.assertNotIn(
             "unknown argument",
             r.stdout + r.stderr,
@@ -496,10 +544,30 @@ class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
             r.returncode, 0, "wrote an artifact with no revision:\n%s" % r.stdout
         )
         self.assertFalse(
-            os.path.exists(dest),
+            dest.exists(),
             "refused but still left a file behind, which is worse than either",
         )
         self.assertIn("repoHead", r.stdout + r.stderr)
+
+    def test_write_stamps_clean_head_and_refuses_dirty_tree(self):
+        clean_dest = Path(self.temp.name) / "clean.json"
+        result = self.run_write(clean_dest)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        actual_head = subprocess.run(
+            ["git", "-C", str(self.root), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=clean_env(),
+        ).stdout.strip()
+        self.assertEqual(json.loads(clean_dest.read_text())["repoHead"], actual_head)
+
+        self.sample.rename(self.root / "moved.nix")
+        dirty_dest = Path(self.temp.name) / "dirty.json"
+        result = self.run_write(dirty_dest)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("tracked files differ from HEAD", result.stdout + result.stderr)
+        self.assertFalse(dirty_dest.exists())
 
 
 class TestGatesAreRegistered(unittest.TestCase):
