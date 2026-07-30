@@ -75,7 +75,7 @@ in
                       else if($i=="--n-predict")       print "NPRED\t" $(i+1)+0
                       else if($i=="--jinja")           print "FLAG\tjinja"
                       else if($i=="--reasoning-format")print "FLAG\treasoning-format=" $(i+1)
-                      else if($i=="--embeddings")      print "FLAG\tembeddings"
+                      else if($i=="--embeddings"||$i=="--embedding") print "FLAG\tembeddings"
                       else if($i=="--pooling")         print "FLAG\tpooling"
                     }
                   }' /Users/johnw/Models/llama-swap.yaml
