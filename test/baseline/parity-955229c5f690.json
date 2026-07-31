@@ -1,6 +1,6 @@
 {
  "schema": "fleet-parity-oracle/2",
- "baselineRev": "a78ba0904f2818f6b2f04a5405f17ac68f597f2c",
+ "baselineRev": "955229c5f69026ca005d7b1a252ce00a28c3a83f",
  "armedRefactorAncestor": "a3cc3843",
  "note": "Stored evidence for the Fleet Configuration Programme parity gates. Package counts are derived from the lists in this file, never asserted separately. Re-derive with bin/parity-baseline --check <this file>.",
  "history": [
@@ -28,7 +28,7 @@
   },
   {
    "old_rev": "3f5f425f378859b3c43b2f26c1750d274b236965",
-   "new_rev": "a78ba0904f2818f6b2f04a5405f17ac68f597f2c",
+   "new_rev": "f91e2c0afbc28c363f4978c49932721ec873030c",
    "reason": "Issue #47 renamed the portable core from config/ai to config/fleet without changing package selection.",
    "intentional_deltas": [
     "All portable systems: removed betterwright in 14b96e8e and bigpowers in 5e605918.",
@@ -58,7 +58,22 @@
     "gained portable/x86_64-linux: pi-smart-fetch",
     "gained portable/x86_64-linux: pi-smart-web-search"
    ],
-   "derivation_command_change": "portablePackages: ./config/ai#packages -> ./config/fleet#packages"
+   "derivation_command_change": "portablePackages: ./config/ai#packages -> ./config/fleet#packages",
+   "rebased_from": "a78ba0904f2818f6b2f04a5405f17ac68f597f2c",
+   "rebase_patch_id": "5a5ec3a1f434065ef5599b7737e9294828ec036a"
+  },
+  {
+   "old_rev": "f91e2c0afbc28c363f4978c49932721ec873030c",
+   "new_rev": "955229c5f69026ca005d7b1a252ce00a28c3a83f",
+   "reason": "Rebased unpublished #47 preparation onto live main, incorporating the approved Pi Retry removal without changing the rename patch.",
+   "intentional_deltas": [
+    "All portable systems: removed pi-retry in signed main commit 4087db69."
+   ],
+   "observed_deltas": [
+    "lost portable/aarch64-darwin: pi-retry",
+    "lost portable/aarch64-linux: pi-retry",
+    "lost portable/x86_64-linux: pi-retry"
+   ]
   }
  ],
  "commands": {
@@ -73,7 +88,7 @@
    "kind": "darwin",
    "target": "clio",
    "user": "johnw",
-   "drvPath": "/nix/store/rg3x5skp6vywdlaw23yyvsjqpfp2zpg4-darwin-system-26.11.57a3171.drv",
+   "drvPath": "/nix/store/7cd1l4lfy99k9nfc51c21himdb7xyr3a-darwin-system-26.11.57a3171.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -468,7 +483,7 @@
    "kind": "darwin",
    "target": "hera",
    "user": "johnw",
-   "drvPath": "/nix/store/y193rzhii8q9x6ls5fykx12jazyi795j-darwin-system-26.11.57a3171.drv",
+   "drvPath": "/nix/store/qkvgkk16gp5r11ac003mnkvxj4i1zmif-darwin-system-26.11.57a3171.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -890,7 +905,7 @@
   {
    "kind": "home-manager",
    "target": "johnw@aarch64-linux",
-   "drvPath": "/nix/store/7p5bf4p1796xd2325942wvdpll446sam-home-manager-generation.drv",
+   "drvPath": "/nix/store/7zqgy2araa5gz85iw0ms3rdcbyqap5aa-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1265,7 +1280,7 @@
   {
    "kind": "home-manager",
    "target": "jwiegley@x86_64-linux",
-   "drvPath": "/nix/store/7nai9xzm234ghf5vkxxx16iq9xn973qp-home-manager-generation.drv",
+   "drvPath": "/nix/store/7qg207mxk01rvxzsb12ahrrr3fwzmvz2-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1664,7 +1679,6 @@
     "pi-multi-pass",
     "pi-ponytail",
     "pi-provider-litellm",
-    "pi-retry",
     "pi-rewind",
     "pi-rtk-optimizer",
     "pi-scroll",
@@ -1675,7 +1689,7 @@
     "plasma-wiki",
     "rtk"
    ],
-   "packageCount": 32
+   "packageCount": 31
   },
   {
    "kind": "portable",
@@ -1703,7 +1717,6 @@
     "pi-multi-pass",
     "pi-ponytail",
     "pi-provider-litellm",
-    "pi-retry",
     "pi-rewind",
     "pi-rtk-optimizer",
     "pi-scroll",
@@ -1714,7 +1727,7 @@
     "plasma-wiki",
     "rtk"
    ],
-   "packageCount": 32
+   "packageCount": 31
   },
   {
    "kind": "portable",
@@ -1742,7 +1755,6 @@
     "pi-multi-pass",
     "pi-ponytail",
     "pi-provider-litellm",
-    "pi-retry",
     "pi-rewind",
     "pi-rtk-optimizer",
     "pi-scroll",
@@ -1753,7 +1765,7 @@
     "plasma-wiki",
     "rtk"
    ],
-   "packageCount": 32
+   "packageCount": 31
   }
  ]
 }
