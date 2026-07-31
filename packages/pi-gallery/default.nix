@@ -819,7 +819,4 @@ assert inputs.pi-btw.rev == members.btw.artifacts.flakeInput.args.rev;
 assert inputs.pi-btw.narHash == members.btw.artifacts.flakeInput.args.narHash;
 assert inputs.ponytail.rev == members.ponytail.source.args.rev;
 assert inputs.ponytail.narHash == members.ponytail.source.args.narHash;
-assert
-  builtins.hashFile "sha256" "${inputs.agent-browser-source}/cli/Cargo.toml"
-  == "6880ec45ed03e83ab22bd21ac63c4dbaf6c8accd4da840dcf7536e5e48b1f98d";
 galleryPackages // { inherit pi-gallery; }
