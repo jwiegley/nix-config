@@ -4411,9 +4411,7 @@ let
       alternateRegistry.selections.claudeSubagent.model
     )
     (expectEqual "alternate OpenCode default fan-out" alternateModelData.profileDefaults {
-      clio-opencode = alternateRegistry.selections.default;
       hera-opencode = alternateRegistry.selections.default;
-      shared-work-opencode-positron = alternateRegistry.selections.default;
     })
     (expectEqual "alternate synchronization selection" alternateModelData.syncInputs {
       chatUrl = "https://integrate.api.nvidia.com/v1/chat/completions";
