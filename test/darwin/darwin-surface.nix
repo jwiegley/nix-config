@@ -79,8 +79,13 @@ in
       _: user:
       let
         keys = user.openssh.authorizedKeys.keys or [ ];
-        # Nix paths must become strings before store-prefix normalization.
-        keyFiles = map toString (user.openssh.authorizedKeys.keyFiles or [ ]);
+        keyFilePaths = user.openssh.authorizedKeys.keyFiles or [ ];
+        # Source paths inherit the whole flake's store prefix. Hash file content
+        # exactly, but normalize that incidental prefix before the aggregate hash.
+        keyFiles = map (path: {
+          contentSha256 = builtins.hashFile "sha256" path;
+          path = normalizeStoreString (toString path);
+        }) keyFilePaths;
       in
       {
         home = stringOrNull (user.home or null);
@@ -92,7 +97,7 @@ in
         authorizedKeys = {
           keysCount = builtins.length keys;
           keysSha256 = hashExactJsonValue keys;
-          keyFilesCount = builtins.length keyFiles;
+          keyFilesCount = builtins.length keyFilePaths;
           keyFilesSha256 = hashExactJsonValue keyFiles;
         };
       }

@@ -1,14 +1,14 @@
 {
   "schema": "darwin-value-surface/3",
-  "baselineRev": "1fcb7614662a4aa49b4f41bf13ca38999351a322",
-  "note": "Seven nix-darwin value surfaces at the recorded revision. Only 32-character /nix/store hash prefixes are masked; derivation names remain. Launchd scripts are hashed after that normalization, so their text is not persisted. Authorized-key lists, authorized-key file paths, and build-machine private-key paths are persisted only as normalized aggregate hashes plus non-sensitive counts; sensitive keys and assignments are refused.",
+  "baselineRev": "675bf9517eb0b89d96f4825b3bf12464fb7475ed",
+  "note": "Seven nix-darwin value surfaces at the recorded revision. Only 32-character /nix/store hash prefixes are masked; derivation names remain. Launchd scripts are hashed after that normalization, so their text is not persisted. Authorized-key lists, authorized-key file paths, and build-machine private-key paths are persisted only as exact opaque aggregate hashes plus non-sensitive counts; sensitive keys and assignments are refused.",
   "commands": {
     "hostSurface": "nix eval --impure --json '.#darwinConfigurations.<host>' --apply 'darwin: import ./test/darwin/darwin-surface.nix darwin'",
     "compare": "bin/darwin-surface-diff --normalize-store <before.json> <after.json>",
     "refresh": "bin/darwin-surface-baseline --rev <rev> --write"
   },
   "projection": {
-    "test/darwin/darwin-surface.nix": "00162339a5134960f0528aa2c03adc52f67dfa5750e1dc10062681b7f8e1c1d4",
+    "test/darwin/darwin-surface.nix": "b965427a6a16c0452959bc8f736e832c170333ae39d01f4790ef3039ebab31bc",
     "test/darwin/surface-helpers.nix": "dbf47403da79ac1670112c761163694c92b52dde8e5e530a969592510f49c4a3",
     "bin/darwin-surface-diff": "19fc0e40e02fae77ac954cf2ccc026dcc18910fae8b646ad12aa64ed0d5c3204"
   },
@@ -604,9 +604,9 @@
           "johnw": {
             "authorizedKeys": {
               "keyFilesCount": 1,
-              "keyFilesSha256": "3ca62b9b2f5e239369de9b22a283167954b69fc07fb723f2fd2a11f903b99539",
+              "keyFilesSha256": "f5e9818ed171cbbc67e3fccab54861f72cca85fd53cce3e62e1a9a22fc5ead63",
               "keysCount": 4,
-              "keysSha256": "7eccc386d113e90430eddcd250a903514b4484c80eee8d527d56508c7ef1e627"
+              "keysSha256": "3cecd1a6da1e6eb626f66b086432a3e5a8160e47d829f11c95f764f3553c1180"
             },
             "createHome": false,
             "description": null,
@@ -1291,9 +1291,9 @@
           "johnw": {
             "authorizedKeys": {
               "keyFilesCount": 1,
-              "keyFilesSha256": "a601abb0a282b0d5b8d81791d2624cf7901db19829bda236dc203780bce98d10",
+              "keyFilesSha256": "3fc3cec19c68c3562a6493aeeb6273d349846a8074b652fca32d31685ea66312",
               "keysCount": 4,
-              "keysSha256": "7eccc386d113e90430eddcd250a903514b4484c80eee8d527d56508c7ef1e627"
+              "keysSha256": "3cecd1a6da1e6eb626f66b086432a3e5a8160e47d829f11c95f764f3553c1180"
             },
             "createHome": false,
             "description": null,

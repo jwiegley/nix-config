@@ -93,7 +93,9 @@ class DarwinSurfaceDiffTests(unittest.TestCase):
 
     def test_authorized_key_projection_hashes_values_and_watches_mutations(self):
         base_key = "ssh-ed25519 AAAATEST principal"
-        base_file = f"/nix/store/{HASH_A}-keys/authorized_keys"
+        base_file = str(REPO / "test/darwin/surface-helpers.nix")
+        other_file = str(REPO / "test/darwin/darwin-surface.nix")
+        second_file = str(REPO / "bin/darwin-surface-diff")
         variants = {
             "base": {"keys": [base_key], "keyFiles": [base_file]},
             "added": {
@@ -126,19 +128,11 @@ class DarwinSurfaceDiffTests(unittest.TestCase):
             },
             "fileAdded": {
                 "keys": [base_key],
-                "keyFiles": [base_file, "/etc/ssh/second_authorized_keys"],
+                "keyFiles": [base_file, second_file],
             },
             "fileReplaced": {
                 "keys": [base_key],
-                "keyFiles": ["/etc/ssh/replacement_authorized_keys"],
-            },
-            "storeHashOnly": {
-                "keys": [base_key],
-                "keyFiles": [f"/nix/store/{HASH_B}-keys/authorized_keys"],
-            },
-            "storeNameChanged": {
-                "keys": [base_key],
-                "keyFiles": [f"/nix/store/{HASH_B}-other-keys/authorized_keys"],
+                "keyFiles": [other_file],
             },
         }
         encoded_variants = json.dumps(variants)
@@ -153,7 +147,8 @@ class DarwinSurfaceDiffTests(unittest.TestCase):
                   knownUsers = [ "johnw" ];
                   knownGroups = [ ];
                   users.johnw.openssh.authorizedKeys = {{
-                    inherit (variant) keys keyFiles;
+                    inherit (variant) keys;
+                    keyFiles = map builtins.toPath variant.keyFiles;
                   }};
                 }};
               }}).users.detail.johnw.authorizedKeys;
@@ -195,8 +190,6 @@ class DarwinSurfaceDiffTests(unittest.TestCase):
             {"keyFilesCount", "keyFilesSha256"},
         )
         self.assertEqual(changed_fields("fileReplaced"), {"keyFilesSha256"})
-        self.assertEqual(changed_fields("storeHashOnly"), {"keyFilesSha256"})
-        self.assertEqual(changed_fields("storeNameChanged"), {"keyFilesSha256"})
         self.assertEqual(
             changed_fields("forcedStoreHashB", "forcedStoreHashA"),
             {"keysSha256"},
@@ -206,10 +199,55 @@ class DarwinSurfaceDiffTests(unittest.TestCase):
         for raw_value in (
             "ssh-ed25519",
             "restricted-command",
-            "authorized_keys",
-            "/etc/ssh/",
+            "surface-helpers.nix",
+            str(REPO),
         ):
             self.assertNotIn(raw_value, encoded_projection)
+
+        with tempfile.TemporaryDirectory(prefix="authorized-key-content-") as temp_dir:
+            key_file = Path(temp_dir) / "same-name.pub"
+
+            def project_key_file(content):
+                key_file.write_text(content)
+                file_expression = f'''
+                  let
+                    project = import ./test/darwin/darwin-surface.nix;
+                  in
+                  (project {{
+                    config.users = {{
+                      knownUsers = [ "johnw" ];
+                      knownGroups = [ ];
+                      users.johnw.openssh.authorizedKeys = {{
+                        keys = [ ];
+                        keyFiles = [ (builtins.toPath {json.dumps(str(key_file))}) ];
+                      }};
+                    }};
+                  }}).users.detail.johnw.authorizedKeys
+                '''
+                result = subprocess.run(
+                    [
+                        "nix",
+                        "eval",
+                        "--option",
+                        "eval-cache",
+                        "false",
+                        "--impure",
+                        "--json",
+                        "--expr",
+                        file_expression,
+                    ],
+                    cwd=REPO,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                return json.loads(result.stdout)
+
+            before = project_key_file("first public key contents\n")
+            after = project_key_file("second public key contents\n")
+            self.assertEqual(before["keyFilesCount"], after["keyFilesCount"])
+            self.assertNotEqual(before["keyFilesSha256"], after["keyFilesSha256"])
+            self.assertNotIn(str(key_file), json.dumps([before, after]))
 
     def test_build_machine_private_key_path_is_exactly_hashed(self):
         paths = {
@@ -335,9 +373,8 @@ class CommittedDarwinSurfaceTests(unittest.TestCase):
             expected_projection[relative] = hashlib.sha256(
                 (REPO / relative).read_bytes()
             ).hexdigest()
-        # Temporary exact-digest bootstrap: the current v3 baseline identifies
-        # the preceding projector commit. The artifact follow-up removes this.
-        if baseline_rev != "1fcb7614662a4aa49b4f41bf13ca38999351a322":
+        # Temporary content-digest bootstrap. The artifact follow-up removes it.
+        if baseline_rev != "675bf9517eb0b89d96f4825b3bf12464fb7475ed":
             self.assertEqual(self.baseline.get("projection"), expected_projection)
 
     def test_baseline_encodes_both_nonvacuity_traps_and_nix_builders(self):
