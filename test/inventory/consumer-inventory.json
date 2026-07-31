@@ -3,7 +3,7 @@
  "artifact": "consumer-inventory",
  "generatedBy": "bin/consumer-inventory",
  "purpose": "Merged, classified inventory of every reference from every consumer into nix-config, so the config/ai -> config/fleet rename (#47) and its straggler sweep (#63) know exactly who breaks. One record per reference.",
- "repoHead": "a78ba0904f2818f6b2f04a5405f17ac68f597f2c",
+ "repoHead": "e2fa22cc7c08aaa327dfe95f69297cb28f1b52c1",
  "consumerLayout": "nix-config at the repository root; consumer checkouts as siblings (nixos, vps, andoria). Absolute paths are intentionally omitted: see the comment at this key in bin/consumer-inventory.",
  "classificationScheme": {
   "rename-now": "Stale operational reference to the literal config/ai directory inside nix-config; #47 must leave none.",
@@ -44,8 +44,8 @@
   "note": "re-run the commands (needs network + gh auth) to refresh; not run inside derive() to keep the artifact reproducible offline."
  },
  "summary": {
-  "totalReferences": 246,
-  "internalConfigAiRefCount": 205,
+  "totalReferences": 245,
+  "internalConfigAiRefCount": 204,
   "internalConfigAiFileCount": 34,
   "internalConfigAiFiles": [
    "bin/consumer-inventory",
@@ -86,7 +86,7 @@
   "flakeAiInternalConsumerCount": 4,
   "flakeAiMentionCount": 29,
   "byClassification": {
-   "rename-now": 3,
+   "rename-now": 2,
    "retain-with-owner": 215,
    "retire": 18,
    "stub-covered": 10
@@ -96,21 +96,21 @@
    "flake-ai-internal-consumer": 4,
    "flake-input": 6,
    "input-follows": 3,
-   "internal-config-ai-ref": 205,
+   "internal-config-ai-ref": 204,
    "reach-in-attr": 8,
    "reach-in-path": 10,
    "subflake-overlay-use": 4
   },
   "byLoadBearing": {
-   "false": 149,
+   "false": 147,
    "n/a": 41,
-   "true": 56
+   "true": 57
   },
   "byRefKind": {
-   "comment": 15,
+   "comment": 13,
    "data": 17,
    "doc-prose": 134,
-   "import": 4,
+   "import": 5,
    "n/a": 41,
    "path": 35
   }
@@ -957,34 +957,21 @@
    "kind": "internal-config-ai-ref",
    "classification": "rename-now",
    "file": "bin/parity-baseline",
-   "line": 34,
-   "text": "#       drvPaths did not move, since config/ai does not depend on bin/.",
+   "line": 152,
+   "text": "needle = \"./config/ai#packages\"",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
    "trigger": "rewrite before #47 reaches its local verification boundary",
    "note": "stale operational reference to the renamed config/ai directory",
-   "refKind": "comment",
-   "loadBearing": false
+   "refKind": "import",
+   "loadBearing": true
   },
   {
    "consumer": "internal",
    "kind": "internal-config-ai-ref",
    "classification": "rename-now",
    "file": "bin/parity-baseline",
-   "line": 76,
-   "text": "# path is ./config/ai and changing it here is the single edit that follows.",
-   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewrite before #47 reaches its local verification boundary",
-   "note": "stale operational reference to the renamed config/ai directory",
-   "refKind": "comment",
-   "loadBearing": false
-  },
-  {
-   "consumer": "internal",
-   "kind": "internal-config-ai-ref",
-   "classification": "rename-now",
-   "file": "bin/parity-baseline",
-   "line": 77,
-   "text": "PORTABLE_DIR=./config/ai",
+   "line": 160,
+   "text": "command_migration_observed='portablePackages: ./config/ai#packages -> ./config/fleet#packages'",
    "owner": "jwiegley/nix-config#47 (E3-RENAME)",
    "trigger": "rewrite before #47 reaches its local verification boundary",
    "note": "stale operational reference to the renamed config/ai directory",

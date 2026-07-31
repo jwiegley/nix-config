@@ -121,6 +121,7 @@ INTENTIONAL_CONFIG_AI_FILES = {
     "bin/consumer-inventory",
     "bin/gates-test.py",
     "bin/immutable-subflake-check",
+    "bin/parity-baseline",
     "doc/AI-NIX-REINTEGRATION-WIGGUM-HANDOFF.md",
     "doc/AI-NIX-REINTEGRATION-WIGGUM-PLAN.md",
     "doc/AI-UPDATE-FOLLOWUPS-2026-07-24.md",
