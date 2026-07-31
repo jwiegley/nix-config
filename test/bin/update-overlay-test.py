@@ -4899,6 +4899,22 @@ else:
         )
         updater.chmod(0o700)
 
+        publisher = root / "bin/publish"
+        publisher.write_text(
+            """#!/usr/bin/env bash
+set -euo pipefail
+[[ $1 == --publish && $2 == --rev && -n $3 && $4 == --branch && -n $5 ]]
+if [[ -n ${UPDATE_TEST_EXTERNAL_LOG:-} ]]; then
+  printf 'push\n' >>"$UPDATE_TEST_EXTERNAL_LOG"
+fi
+if [[ -n ${UPDATE_TEST_PUSH_MARKER:-} ]]; then
+  : >"$UPDATE_TEST_PUSH_MARKER"
+fi
+exit "${UPDATE_TEST_PUSH_STATUS:-0}"
+"""
+        )
+        publisher.chmod(0o700)
+
         def executable(name, text):
             path = fake_bin / name
             path.write_text(text)
@@ -6734,6 +6750,8 @@ exec "$REAL_GIT" "$@"
             update_agents,
         )
         self.assertIn('merge --ff-only "$committed_head"', update_agents)
+        self.assertIn('"$config_dir/bin/publish" --publish', update_agents)
+        self.assertNotIn('git -C "$config_dir" push', update_agents)
         candidate_build = update_agents.index(
             'nix build --no-link "$candidate_dir#darwinConfigurations.$output.system"'
         )
@@ -6741,7 +6759,7 @@ exec "$REAL_GIT" "$@"
             'darwin-rebuild switch --flake "$candidate_dir#$output"'
         )
         publication = update_agents.index('merge --ff-only "$committed_head"')
-        push = update_agents.index('git -C "$config_dir" push')
+        push = update_agents.index('"$config_dir/bin/publish" --publish')
         self.assertLess(candidate_build, candidate_switch)
         self.assertLess(candidate_switch, publication)
         self.assertLess(publication, push)

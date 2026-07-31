@@ -772,9 +772,9 @@ commands = {
         "interpolations, for 'inherit (import \"${inputs.nix-config}/...\") ATTR ;' "
         "cherry-picks, and for 'inputs.nix-config-ai.overlays' uses"),
     "remoteChecks": [
-        "gh search code 'dir=config/ai nix-config' --owner jwiegley --limit 30",
-        "gh search code 'dir=config/ai' --owner positron-ai --limit 30",
-        "gh api repos/jwiegley/nix-config --jq .default_branch",
+        "GH_TOKEN=\"$(gh auth token --hostname github.com --user jwiegley)\" gh search code 'dir=config/ai nix-config' --owner jwiegley --limit 30",
+        "GH_TOKEN=\"$(gh auth token --hostname github.com --user jwiegley)\" gh search code 'dir=config/ai' --owner positron-ai --limit 30",
+        "GH_TOKEN=\"$(gh auth token --hostname github.com --user jwiegley)\" gh api repos/jwiegley/nix-config --jq .default_branch",
     ],
 }
 
