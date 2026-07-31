@@ -1,6 +1,6 @@
 {
  "schema": "fleet-parity-oracle/2",
- "baselineRev": "8a24f533c296e59d4588e8a8201f797f44b87255",
+ "baselineRev": "a54ad16554bc2378b62cf5dd4fb1fde7526498ae",
  "armedRefactorAncestor": "a3cc3843",
  "note": "Stored evidence for the Fleet Configuration Programme parity gates. Package counts are derived from the lists in this file, never asserted separately. Re-derive with bin/parity-baseline --check <this file>.",
  "history": [
@@ -74,6 +74,22 @@
     "lost portable/aarch64-linux: pi-retry",
     "lost portable/x86_64-linux: pi-retry"
    ]
+  },
+  {
+   "old_rev": "8a24f533c296e59d4588e8a8201f797f44b87255",
+   "new_rev": "a54ad16554bc2378b62cf5dd4fb1fde7526498ae",
+   "reason": "Merge current main security, SSH-oracle, Pi-source, and history fixes into unpublished #47",
+   "intentional_deltas": [
+    "darwin/hera: codex host-state renamed to host-state-hera-credentials by fa83400c",
+    "portable all systems: remove disabled pi-provider-litellm source under #95"
+   ],
+   "observed_deltas": [
+    "lost darwin/hera: codex-0.145.0-host-state",
+    "gained darwin/hera: codex-0.145.0-host-state-hera-credentials",
+    "lost portable/aarch64-darwin: pi-provider-litellm",
+    "lost portable/aarch64-linux: pi-provider-litellm",
+    "lost portable/x86_64-linux: pi-provider-litellm"
+   ]
   }
  ],
  "commands": {
@@ -88,7 +104,7 @@
    "kind": "darwin",
    "target": "clio",
    "user": "johnw",
-   "drvPath": "/nix/store/7cd1l4lfy99k9nfc51c21himdb7xyr3a-darwin-system-26.11.57a3171.drv",
+   "drvPath": "/nix/store/86h4qsw0lc4ld7j27mpdi9zsy8cirhiv-darwin-system-26.11.57a3171.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -483,7 +499,7 @@
    "kind": "darwin",
    "target": "hera",
    "user": "johnw",
-   "drvPath": "/nix/store/qkvgkk16gp5r11ac003mnkvxj4i1zmif-darwin-system-26.11.57a3171.drv",
+   "drvPath": "/nix/store/hy4wndb8x866czdjvp3dcnkvkprwddcf-darwin-system-26.11.57a3171.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -530,7 +546,7 @@
     "claude-vault",
     "cmake",
     "cmdperf",
-    "codex-0.145.0-host-state",
+    "codex-0.145.0-host-state-hera-credentials",
     "contacts",
     "context-hub",
     "context7-mcp",
@@ -905,7 +921,7 @@
   {
    "kind": "home-manager",
    "target": "johnw@aarch64-linux",
-   "drvPath": "/nix/store/7zqgy2araa5gz85iw0ms3rdcbyqap5aa-home-manager-generation.drv",
+   "drvPath": "/nix/store/9805iw7iivjkg0slbnizxmsrqr5wbw2h-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1280,7 +1296,7 @@
   {
    "kind": "home-manager",
    "target": "jwiegley@x86_64-linux",
-   "drvPath": "/nix/store/7qg207mxk01rvxzsb12ahrrr3fwzmvz2-home-manager-generation.drv",
+   "drvPath": "/nix/store/v23qlga2cymgwwz1dzc2wlxvkxl5nr02-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1678,7 +1694,6 @@
     "pi-model-router",
     "pi-multi-pass",
     "pi-ponytail",
-    "pi-provider-litellm",
     "pi-rewind",
     "pi-rtk-optimizer",
     "pi-scroll",
@@ -1689,7 +1704,7 @@
     "plasma-wiki",
     "rtk"
    ],
-   "packageCount": 31
+   "packageCount": 30
   },
   {
    "kind": "portable",
@@ -1716,7 +1731,6 @@
     "pi-model-router",
     "pi-multi-pass",
     "pi-ponytail",
-    "pi-provider-litellm",
     "pi-rewind",
     "pi-rtk-optimizer",
     "pi-scroll",
@@ -1727,7 +1741,7 @@
     "plasma-wiki",
     "rtk"
    ],
-   "packageCount": 31
+   "packageCount": 30
   },
   {
    "kind": "portable",
@@ -1754,7 +1768,6 @@
     "pi-model-router",
     "pi-multi-pass",
     "pi-ponytail",
-    "pi-provider-litellm",
     "pi-rewind",
     "pi-rtk-optimizer",
     "pi-scroll",
@@ -1765,7 +1778,7 @@
     "plasma-wiki",
     "rtk"
    ],
-   "packageCount": 31
+   "packageCount": 30
   }
  ]
 }
