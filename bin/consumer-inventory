@@ -119,6 +119,8 @@ CONFIG_AI = "config/ai"
 CONFIG_FLEET = "config/fleet"
 INTENTIONAL_CONFIG_AI_FILES = {
     "bin/consumer-inventory",
+    "bin/coverage-report",
+    "bin/coverage-report-test.py",
     "bin/gates-test.py",
     "bin/immutable-subflake-check",
     "bin/parity-baseline",
@@ -138,6 +140,7 @@ INTENTIONAL_CONFIG_AI_FILES = {
     "doc/UNIFIED-CONFIG-WIGGUM-PLAN.md",
     "doc/designs/HOST-REGISTRY-PLAN.md",
     "doc/migrations/nix-managed-agent-oracle.md",
+    "test/coverage/manifest.json",
 }
 INTENTIONAL_CONFIG_AI_PREFIXES = ("doc/superpowers/plans/",)
 FLAKE_AI_RE = re.compile(r"flake-ai\.nix")
