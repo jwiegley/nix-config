@@ -17,7 +17,7 @@
 #       Y  good signature made by a key that has since expired. Git still verifies
 #          the historical signature; revoked keys remain rejected as R.
 #   Everything else is rejected:
-#       X expired signature   Y expired key   R revoked key
+#       X expired signature   R revoked key
 #       E cannot check (no public key available)   B bad   N none (unsigned)
 #   X (an expired signature) remains rejected. Y describes the key's current
 #   expiration, not a failure to verify the historical signature.
@@ -64,7 +64,7 @@
 #         makes a bare invocation a correct local pre-push guard.
 #
 # EXIT CODES
-#   0  every commit in range is G or U (or the range is empty)
+#   0  every commit in range is G, U or Y (or the range is empty outside strict mode)
 #   1  at least one commit is unsigned or otherwise not-good
 #   2  usage or range-resolution error (loud -- never silently green)
 #   3  a required tool (git, gpg) is missing
@@ -288,8 +288,8 @@ while read -r sig sha subject; do
     # historical commit starts failing at once, discovered live in CI rather than by
     # this suite. The signing key here expires 2026-11-25, which is what surfaced it.
     #
-    # X stays rejected and is a different condition -- the SIGNATURE itself carried an
-    # expiration (bin/verify-signatures:18: "X expired signature   Y expired key").
+    # X stays rejected and is a different condition: the signature itself expired;
+    # Y means the signature is good but its signing key has since expired.
     G | U | Y) : ;;
     *)
         warn "REJECTED [$sig] $sha $subject"

@@ -35,9 +35,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # A pull_request checkout normally creates an unsigned synthetic merge.
-          # Verify the actual contributor head instead.
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # On pull requests the verifier and authorized keys must come from the
+          # trusted base, never from contributor-controlled head contents.
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+      - name: Fetch the untrusted PR head as objects only
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags origin "pull/${{ github.event.pull_request.number }}/head"
       - name: Verify every introduced commit signature
         env:
           SIGVERIFY_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
