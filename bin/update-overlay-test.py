@@ -237,7 +237,8 @@ class UpdateCliTests(unittest.TestCase):
             with contextlib.redirect_stdout(output):
                 self.assertEqual(MODULE["main"](), 0)
             self.assertEqual(observed, ["manual-direct"])
-            self.assertIn("Summary: 0 updated, 1 up-to-date, 0 failed", output.getvalue())
+            rendered = MODULE["ANSI_ESCAPE_RE"].sub("", output.getvalue())
+            self.assertIn("Summary: 0 updated, 1 up-to-date, 0 failed", rendered)
 
             observed.clear()
             sys.argv = [str(SCRIPT), "--all", "--verbose"]
@@ -249,7 +250,8 @@ class UpdateCliTests(unittest.TestCase):
                 "catalog/automatic-delegated: skipped (no executor)",
                 output.getvalue(),
             )
-            self.assertIn("Summary: 0 updated, 2 up-to-date, 0 failed", output.getvalue())
+            rendered = MODULE["ANSI_ESCAPE_RE"].sub("", output.getvalue())
+            self.assertIn("Summary: 0 updated, 2 up-to-date, 0 failed", rendered)
 
             with tempfile.TemporaryDirectory() as temp_dir:
                 mutate_path = Path(temp_dir) / "catalog.json"
