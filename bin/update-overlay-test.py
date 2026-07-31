@@ -5397,7 +5397,7 @@ fi
                 command_log.read_text().splitlines()[0],
                 "flake update --flake ./config/fleet git-ai llm-agents mcp-remote "
                 "mcp-servers-nix pal-mcp-server pi-openai-server-compaction "
-                "pi-quiet translate-tool copy-input",
+                "pi-quiet rust-overlay translate-tool copy-input",
             )
 
     def test_update_agents_routes_flake_input_build_through_named_locks(self):
