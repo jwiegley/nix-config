@@ -9,7 +9,7 @@
 }:
 
 let
-  root = ".config/pi";
+  root = ".config/pi/agent";
   json = pkgs.formats.json { };
   mergeFiles = import ./merge-files.nix { inherit lib; };
 
@@ -439,7 +439,7 @@ assert builtins.hasAttr "pi-gallery" pkgs;
   );
 
   mutableMcpGuard = {
-    path = ".config/pi/mcp.json";
+    path = ".config/pi/agent/mcp.json";
     forbiddenKeys = [
       "mcpServers"
       "imports"

@@ -1101,7 +1101,6 @@
           "pi-model-router",
           "pi-multi-pass",
           "pi-ponytail",
-          "pi-provider-litellm",
           "pi-rewind",
           "pi-rtk-optimizer",
           "pi-scroll",

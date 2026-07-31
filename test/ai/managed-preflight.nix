@@ -19,6 +19,10 @@ let
     inherit pkgs;
   };
   piProfileMigration = piProfileMigrationFactory { root = ".config/pi"; };
+  piAgentProfileMigration = piProfileMigrationFactory {
+    root = ".config/pi/agent";
+    compatibilityRoot = ".config/pi";
+  };
   # Managed-file preflight contract: collision, permission, and symlink safety.
   task9PreflightWithPi = preflightFactory {
     newPaths = [
@@ -26,7 +30,7 @@ let
       ".config/claude/personal/agents/retained.md"
     ];
     piGuard = {
-      path = ".config/pi/mcp.json";
+      path = ".config/pi/agent/mcp.json";
       forbiddenKeys = [
         "mcpServers"
         "imports"
@@ -41,10 +45,10 @@ let
     ];
   };
   task9PiLeafPreflight = preflightFactory {
-    newPaths = [ ".config/pi/agents/bash-reviewer.md" ];
+    newPaths = [ ".config/pi/agent/agents/bash-reviewer.md" ];
   };
   task9PiKeybindingsPreflight = preflightFactory {
-    newPaths = [ ".config/pi/keybindings.json" ];
+    newPaths = [ ".config/pi/agent/keybindings.json" ];
   };
   task9SharedLeafPreflight = preflightFactory {
     newPaths = [
@@ -56,7 +60,7 @@ let
       ".config/codex/agents/nix-managed.md"
       ".config/factory/droids/nix-managed.md"
       ".config/opencode/agents/nix-managed.md"
-      ".config/pi/agents/nix-managed.md"
+      ".config/pi/agent/agents/nix-managed.md"
     ];
   };
   task9StoreAliasEscape = pkgs.runCommand "task9-store-alias-escape" { } ''
@@ -87,6 +91,24 @@ let
     }
     ${piProfileMigration.script}
   '';
+  task9PiLegacyRootScript = pkgs.writeShellScript "task9-ai-pi-legacy-root" ''
+    set -euo pipefail
+    run() {
+      if [[ ! -v DRY_RUN ]]; then
+        "$@"
+      fi
+    }
+    ${piAgentProfileMigration.legacyRootScript}
+  '';
+  task9PiAgentProfileMigrationScript = pkgs.writeShellScript "task9-ai-pi-agent-profile-migration" ''
+    set -euo pipefail
+    run() {
+      if [[ ! -v DRY_RUN ]]; then
+        "$@"
+      fi
+    }
+    ${piAgentProfileMigration.script}
+  '';
   invalidPreflightProbe = builtins.tryEval (preflightFactory {
     newPaths = [ ".config/not-a-managed-ai-leaf" ];
   });
@@ -99,16 +121,29 @@ assert
     "activation"
     "script"
   ];
+assert
+  builtins.attrNames piProfileMigration == [
+    "activation"
+    "legacyRootActivation"
+    "legacyRootScript"
+    "script"
+  ];
 assert task9PreflightWithPi.activation.before == [ "checkLinkTargets" ];
 assert task9PreflightWithPi.activation.after == [ ];
 assert piProfileMigration.activation.before == [ "linkGeneration" ];
 assert piProfileMigration.activation.after == [ "writeBoundary" ];
+assert piProfileMigration.legacyRootActivation.before == [ "linkGeneration" ];
+assert piProfileMigration.legacyRootActivation.after == [ "aiPiProfileMigration" ];
 assert lib.hasInfix ".pi/agent" piProfileMigration.script;
 assert lib.hasInfix ".config/pi" piProfileMigration.script;
 assert lib.hasInfix "--archive --no-preserve=links --update=none" piProfileMigration.script;
-assert lib.hasInfix ".config/pi/mcp.json" task9PreflightWithPi.script;
+assert lib.hasInfix ".pi-legacy-v1" piProfileMigration.legacyRootScript;
+assert lib.hasInfix "mv -T" piProfileMigration.legacyRootScript;
+assert !(lib.hasInfix "cp " piProfileMigration.legacyRootScript);
+assert lib.hasInfix ".config/pi/agent" piAgentProfileMigration.script;
+assert lib.hasInfix ".config/pi/agent/mcp.json" task9PreflightWithPi.script;
 assert lib.hasInfix ".pi/agent/mcp.json" task9PreflightWithPi.script;
-assert !(lib.hasInfix ".config/pi/mcp.json" task9PreflightWithoutPi.script);
+assert !(lib.hasInfix ".config/pi/agent/mcp.json" task9PreflightWithoutPi.script);
 assert !(lib.hasInfix ".pi/agent/mcp.json" task9PreflightWithoutPi.script);
 assert
   !(lib.any (fragment: lib.hasInfix fragment task9PreflightWithPi.script) [
@@ -178,8 +213,8 @@ pkgs.runCommand "ai-managed-preflight"
     new_path=".config/claude/personal/agents/new.md"
     retained_path=".config/claude/personal/agents/retained.md"
     removed_path=".config/claude/personal/agents/removed.md"
-    pi_leaf_path=".config/pi/agents/bash-reviewer.md"
-    pi_keybindings_path=".config/pi/keybindings.json"
+    pi_leaf_path=".config/pi/agent/agents/bash-reviewer.md"
+    pi_keybindings_path=".config/pi/agent/keybindings.json"
     legacy_claude=".local/bin/claude"
 
     make_leaf() {
@@ -236,10 +271,14 @@ pkgs.runCommand "ai-managed-preflight"
       old_gen="$case_root/old-generation"
       old_files="$case_root/old-files"
       pi_root="$case_root/pi-root"
-      mkdir -p "$old_gen" "$old_files/.config" "$case_home/.config" "$pi_root"
+      mkdir -p \
+        "$old_gen" \
+        "$old_files/.config/pi" \
+        "$case_home/.config/pi" \
+        "$pi_root"
       ln -s "$old_files" "$old_gen/home-files"
-      ln -s "$pi_root" "$old_files/.config/pi"
-      ln -s "$old_files/.config/pi" "$case_home/.config/pi"
+      ln -s "$pi_root" "$old_files/.config/pi/agent"
+      ln -s "$old_files/.config/pi/agent" "$case_home/.config/pi/agent"
       make_leaf "$pi_root" "unmanaged-sibling.json" '{"kept":true}'
     }
 
@@ -483,9 +522,9 @@ pkgs.runCommand "ai-managed-preflight"
     mkdir -p "$old_files/unreadable"
     chmod 000 "$old_files/unreadable"
     make_leaf "$case_home" "$new_path" collision
-    make_leaf "$case_home" ".config/pi/mcp.json" '{"imports":[]}'
+    make_leaf "$case_home" ".config/pi/agent/mcp.json" '{"imports":[]}'
     aggregate_output="$new_path: blocking leaf is a regular file: $case_home/$new_path
-    .config/pi/mcp.json: keep valid adapter JSON without top-level mcpServers or imports"
+    .config/pi/agent/mcp.json: keep valid adapter JSON without top-level mcpServers or imports"
     run_checked fail aggregate-unreadable-old-files "$aggregate_output" \
       "${task9PreflightScript}" present
 
@@ -631,14 +670,14 @@ pkgs.runCommand "ai-managed-preflight"
       ".config/codex/agents/user-owned.md" \
       ".config/factory/droids/user-owned.md" \
       ".config/opencode/agents/user-owned.md" \
-      ".config/pi/agents/user-owned.md"
+      ".config/pi/agent/agents/user-owned.md"
     do
       make_leaf "$case_home" "$sibling" user-owned
     done
     run_checked pass shared-agent-directories "" "${task9SharedLeafPreflightScript}" absent
 
     setup_empty_case shared-pi-real-directory
-    make_leaf "$case_home" ".config/pi/unmanaged-sibling.json" '{"kept":true}'
+    make_leaf "$case_home" ".config/pi/agent/unmanaged-sibling.json" '{"kept":true}'
     run_checked pass shared-pi-real-directory "" "${task9PiLeafPreflightScript}" absent
 
     setup_pi_alias_case shared-pi-xdg-alias
@@ -656,8 +695,8 @@ pkgs.runCommand "ai-managed-preflight"
 
     write_pi() {
       value=$1
-      mkdir -p "$case_home/.config/pi"
-      printf '%s' "$value" > "$case_home/.config/pi/mcp.json"
+      mkdir -p "$case_home/.config/pi/agent"
+      printf '%s' "$value" > "$case_home/.config/pi/agent/mcp.json"
     }
 
     write_legacy_pi() {
@@ -687,33 +726,33 @@ pkgs.runCommand "ai-managed-preflight"
     write_pi '{"imports":[]}'
     write_legacy_pi '{"mcpServers":null}'
     aggregate_output="$(printf '%s\n%s' \
-      '.config/pi/mcp.json: keep valid adapter JSON without top-level mcpServers or imports' \
+      '.config/pi/agent/mcp.json: keep valid adapter JSON without top-level mcpServers or imports' \
       '.pi/agent/mcp.json: keep valid adapter JSON without top-level mcpServers or imports')"
     run_checked fail aggregate-pi-both-roots-invalid "$aggregate_output" \
       "${task9PreflightScript}" absent
 
     setup_empty_case pi-benign-symlink
     make_leaf "$case_root" pi-settings '{}'
-    mkdir -p "$case_home/.config/pi"
-    ln -s "$case_root/pi-settings" "$case_home/.config/pi/mcp.json"
+    mkdir -p "$case_home/.config/pi/agent"
+    ln -s "$case_root/pi-settings" "$case_home/.config/pi/agent/mcp.json"
     run_checked pass pi-benign-symlink "" "${task9PreflightScript}" absent
 
     setup_empty_case pi-mcp-servers
     write_pi '{"mcpServers":null}'
-    run_checked fail pi-mcp-servers ".config/pi/mcp.json" "${task9PreflightScript}" absent
+    run_checked fail pi-mcp-servers ".config/pi/agent/mcp.json" "${task9PreflightScript}" absent
 
     setup_empty_case pi-imports
     write_pi '{"imports":[]}'
-    run_checked fail pi-imports ".config/pi/mcp.json" "${task9PreflightScript}" absent
+    run_checked fail pi-imports ".config/pi/agent/mcp.json" "${task9PreflightScript}" absent
 
     setup_empty_case pi-malformed
     write_pi '{SECRET_SENTINEL'
-    run_checked fail pi-malformed ".config/pi/mcp.json" "${task9PreflightScript}" absent
+    run_checked fail pi-malformed ".config/pi/agent/mcp.json" "${task9PreflightScript}" absent
 
     setup_empty_case pi-fifo
-    mkdir -p "$case_home/.config/pi"
-    mkfifo "$case_home/.config/pi/mcp.json"
-    run_checked fail pi-fifo ".config/pi/mcp.json"       "${task9PreflightBoundedScript}" absent
+    mkdir -p "$case_home/.config/pi/agent"
+    mkfifo "$case_home/.config/pi/agent/mcp.json"
+    run_checked fail pi-fifo ".config/pi/agent/mcp.json"       "${task9PreflightBoundedScript}" absent
 
     for pi_case in array string number true false null; do
       setup_empty_case "pi-$pi_case"
@@ -725,7 +764,7 @@ pkgs.runCommand "ai-managed-preflight"
         false) write_pi 'false' ;;
         null) write_pi 'null' ;;
       esac
-      run_checked fail "pi-$pi_case" ".config/pi/mcp.json" \
+      run_checked fail "pi-$pi_case" ".config/pi/agent/mcp.json" \
         "${task9PreflightScript}" absent
     done
 
@@ -999,6 +1038,137 @@ pkgs.runCommand "ai-managed-preflight"
     grep -F "destination is not a directory" \
       "$migration_root/invalid-destination.output" >/dev/null
 
+    migration_home="$migration_root/production-agent-root"
+    mkdir -p \
+      "$migration_home/.pi/agent/sessions" \
+      "$migration_home/.config/pi/agent/sessions"
+    printf '%s' legacy > "$migration_home/.pi/agent/auth.json"
+    printf '%s' late > "$migration_home/.pi/agent/sessions/late.jsonl"
+    printf '%s' destination > "$migration_home/.config/pi/agent/auth.json"
+    migration_source_before="$(python3 -I "$digest_script" "$migration_home/.pi/agent")"
+    HOME="$migration_home" ${task9PiAgentProfileMigrationScript}
+    test "$(cat "$migration_home/.config/pi/agent/auth.json")" = destination
+    test "$(cat "$migration_home/.config/pi/agent/sessions/late.jsonl")" = late
+    test -f "$migration_home/.config/pi/.nix-pi-profile-migrated-v1"
+    migration_source_after="$(python3 -I "$digest_script" "$migration_home/.pi/agent")"
+    test "$migration_source_before" = "$migration_source_after"
 
+    migration_home="$migration_root/production-agent-identity"
+    mkdir -p "$migration_home/.config/pi/agent"
+    printf '%s' shared > "$migration_home/.config/pi/agent/auth.json"
+    ln -s "$migration_home/.config/pi" "$migration_home/.pi"
+    migration_identity_inode="$(stat -c %i "$migration_home/.config/pi/agent")"
+    migration_identity_before="$(python3 -I "$digest_script" \
+      "$migration_home/.config/pi/agent")"
+    HOME="$migration_home" ${task9PiAgentProfileMigrationScript}
+    test -f "$migration_home/.config/pi/.nix-pi-profile-migrated-v1"
+    test "$(stat -c %i "$migration_home/.config/pi/agent")" = "$migration_identity_inode"
+    migration_identity_after="$(python3 -I "$digest_script" \
+      "$migration_home/.config/pi/agent")"
+    test "$migration_identity_before" = "$migration_identity_after"
+
+    migration_home="$migration_root/production-agent-inverse-parent"
+    mkdir -p "$migration_home/.config" "$migration_home/.pi/agent"
+    printf '%s' source > "$migration_home/.pi/agent/auth.json"
+    ln -s ../.pi "$migration_home/.config/pi"
+    migration_inverse_before="$(python3 -I "$digest_script" "$migration_home")"
+    set +e
+    HOME="$migration_home" ${task9PiAgentProfileMigrationScript} \
+      >"$migration_root/production-agent-inverse-parent.output" 2>&1
+    migration_status=$?
+    set -e
+    test "$migration_status" -ne 0
+    grep -F "destination parent is a symlink" \
+      "$migration_root/production-agent-inverse-parent.output" >/dev/null
+    migration_inverse_after="$(python3 -I "$digest_script" "$migration_home")"
+    test "$migration_inverse_before" = "$migration_inverse_after"
+
+    migration_home="$migration_root/legacy-root-finalizer"
+    mkdir -p "$migration_home/.config/pi/agent" "$migration_home/.pi/agent" "$migration_home/.pi/rules"
+    printf '%s' active > "$migration_home/.config/pi/agent/auth.json"
+    printf '%s' legacy > "$migration_home/.pi/agent/auth.json"
+    printf '%s' rule > "$migration_home/.pi/rules/local.md"
+    ln "$migration_home/.pi/rules/local.md" "$migration_home/.pi/rules/linked.md"
+    migration_legacy_before="$(python3 -I "$digest_script" "$migration_home/.pi")"
+    HOME="$migration_home" ${task9PiLegacyRootScript}
+    test -L "$migration_home/.pi"
+    test "$(readlink -f "$migration_home/.pi")" = \
+      "$(readlink -f "$migration_home/.config/pi")"
+    test -d "$migration_home/.pi-legacy-v1"
+    migration_legacy_after="$(python3 -I "$digest_script" \
+      "$migration_home/.pi-legacy-v1")"
+    test "$migration_legacy_before" = "$migration_legacy_after"
+    test "$migration_home/.pi-legacy-v1/rules/local.md" -ef \
+      "$migration_home/.pi-legacy-v1/rules/linked.md"
+    HOME="$migration_home" ${task9PiLegacyRootScript}
+    test -L "$migration_home/.pi"
+    test -d "$migration_home/.pi-legacy-v1"
+
+    migration_home="$migration_root/legacy-root-fresh-home"
+    mkdir -p "$migration_home"
+    HOME="$migration_home" ${task9PiLegacyRootScript}
+    test -d "$migration_home/.config/pi"
+    test "$(stat -c %a "$migration_home/.config/pi")" = 700
+    test -L "$migration_home/.pi"
+    test "$(readlink -f "$migration_home/.pi")" = \
+      "$(readlink -f "$migration_home/.config/pi")"
+
+    migration_home="$migration_root/legacy-root-dry-run"
+    mkdir -p "$migration_home/.config/pi/agent" "$migration_home/.pi/agent"
+    DRY_RUN=1 HOME="$migration_home" ${task9PiLegacyRootScript}
+    test -d "$migration_home/.pi"
+    test ! -L "$migration_home/.pi"
+    test ! -e "$migration_home/.pi-legacy-v1"
+
+    migration_home="$migration_root/legacy-root-conflict"
+    mkdir -p \
+      "$migration_home/.config/pi" \
+      "$migration_home/.pi" \
+      "$migration_home/.pi-legacy-v1"
+    set +e
+    HOME="$migration_home" ${task9PiLegacyRootScript} \
+      >"$migration_root/legacy-root-conflict.output" 2>&1
+    migration_status=$?
+    set -e
+    test "$migration_status" -ne 0
+    grep -F "legacy root and backup both exist" \
+      "$migration_root/legacy-root-conflict.output" >/dev/null
+    test -d "$migration_home/.pi"
+    test -d "$migration_home/.pi-legacy-v1"
+
+    migration_home="$migration_root/legacy-root-wrong-link"
+    mkdir -p "$migration_home/.config/pi" "$migration_home/wrong"
+    ln -s "$migration_home/wrong" "$migration_home/.pi"
+    set +e
+    HOME="$migration_home" ${task9PiLegacyRootScript} \
+      >"$migration_root/legacy-root-wrong-link.output" 2>&1
+    migration_status=$?
+    set -e
+    test "$migration_status" -ne 0
+    grep -F "legacy root symlink has an unexpected target" \
+      "$migration_root/legacy-root-wrong-link.output" >/dev/null
+    test ! -e "$migration_home/.pi-legacy-v1"
+
+    migration_home="$migration_root/legacy-root-interrupted-after-move"
+    mkdir -p "$migration_home/.config/pi/agent" "$migration_home/.pi-legacy-v1/rules"
+    printf '%s' backup > "$migration_home/.pi-legacy-v1/rules/local.md"
+    migration_legacy_before="$(python3 -I "$digest_script" \
+      "$migration_home/.pi-legacy-v1")"
+    HOME="$migration_home" ${task9PiLegacyRootScript}
+    test -L "$migration_home/.pi"
+    migration_legacy_after="$(python3 -I "$digest_script" \
+      "$migration_home/.pi-legacy-v1")"
+    test "$migration_legacy_before" = "$migration_legacy_after"
+
+    migration_home="$migration_root/legacy-root-missing-destination-with-backup"
+    mkdir -p "$migration_home/.pi-legacy-v1"
+    set +e
+    HOME="$migration_home" ${task9PiLegacyRootScript} \
+      >"$migration_root/legacy-root-missing-destination-with-backup.output" 2>&1
+    migration_status=$?
+    set -e
+    test "$migration_status" -ne 0
+    grep -F "destination is absent after profile migration" \
+      "$migration_root/legacy-root-missing-destination-with-backup.output" >/dev/null
     touch "$out"
   ''

@@ -46,6 +46,8 @@ pkgs.runCommand "ai-home-manager-integration"
       profile_path="${common.task9JohnwHera.config.home.path}"
       test -x "$profile_path/bin/claude"
       test -x "$profile_path/bin/claude-real"
+      test -x "$profile_path/bin/codex"
+      test -x "$profile_path/bin/pi"
       test -x "$profile_path/bin/agent-http-header-bridge"
       test -x "$profile_path/bin/persona"
       grep -Fq 'classify_managed_artifacts' "$profile_path/bin/claude"
@@ -54,12 +56,16 @@ pkgs.runCommand "ai-home-manager-integration"
         = "$(readlink -e "${common.task9WrappedClaude}/bin/claude")"
       test "$(readlink -e "$profile_path/bin/claude-real")" \
         = "$(readlink -e "${common.task9WrappedClaude}/bin/claude-real")"
+      test "$(readlink -e "$profile_path/bin/codex")" \
+        = "$(readlink -e "${common.task9HeraCredentialCodex}/bin/codex")"
       test "$(readlink -e "$profile_path/bin/agent-http-header-bridge")" \
         = "$(readlink -e "${common.task9HeraBridge}/bin/agent-http-header-bridge")"
       test "$(readlink "${common.task9JohnwHera.config.home.file.".codex".source}")" \
         = "${common.task9JohnwHera.config.xdg.configHome}/codex"
       test "$(readlink "${common.task9JohnwHera.config.home.file.".factory".source}")" \
         = "${common.task9JohnwHera.config.xdg.configHome}/factory"
+      test "$(readlink "${common.task9JohnwHera.config.home.file.".pi".source}")" \
+        = "${common.task9JohnwHera.config.xdg.configHome}/pi"
       test -f "${common.task9JohnwHera.config.home.file.".claude/skills/sherlock/SKILL.md".source}"
 
       droid_command="$("${pkgs.jq}/bin/jq" -er '.mcpServers.Ref.command' \
@@ -101,15 +107,30 @@ pkgs.runCommand "ai-home-manager-integration"
         '
       rm -rf "${common.task9JohnwHera.config.home.homeDirectory}"
 
+      pi_home="$TMPDIR/pi-symlink-root"
+      mkdir -p "$pi_home/.config/pi/agent"
+      ln -s "${common.task9JohnwHera.config.home.file.".config/pi/agent/models.json".source}" \
+        "$pi_home/.config/pi/agent/models.json"
+      ln -s "$pi_home/.config/pi" "$pi_home/.pi"
+      env -u PI_CODING_AGENT_DIR \
+        HOME="$pi_home" \
+        XDG_CONFIG_HOME="$pi_home/.config" \
+        "$profile_path/bin/pi" --offline --list-models > "$pi_home/models.log"
+      grep -F 'GLM-5.2' "$pi_home/models.log" >/dev/null
+
       activation="${common.task9Evaluations.hera.activationPackage}/activate"
       preflight_line="$(grep -nF '_iNote "Activating %s" "aiManagedPreflight"' "$activation" | head -1 | cut -d: -f1)"
       collision_line="$(grep -nF '_iNote "Activating %s" "checkLinkTargets"' "$activation" | head -1 | cut -d: -f1)"
       boundary_line="$(grep -nF '_iNote "Activating %s" "writeBoundary"' "$activation" | head -1 | cut -d: -f1)"
+      migration_line="$(grep -nF '_iNote "Activating %s" "aiPiProfileMigration"' "$activation" | head -1 | cut -d: -f1)"
+      legacy_root_line="$(grep -nF '_iNote "Activating %s" "aiPiLegacyRootLink"' "$activation" | head -1 | cut -d: -f1)"
       links_line="$(grep -nF '_iNote "Activating %s" "linkGeneration"' "$activation" | head -1 | cut -d: -f1)"
       test -n "$preflight_line"
       test "$preflight_line" -lt "$collision_line"
       test "$collision_line" -lt "$boundary_line"
-      test "$boundary_line" -lt "$links_line"
+      test "$boundary_line" -lt "$migration_line"
+      test "$migration_line" -lt "$legacy_root_line"
+      test "$legacy_root_line" -lt "$links_line"
     ''}
 
     touch "$out"

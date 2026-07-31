@@ -10,6 +10,7 @@ from pathlib import Path
 WRAPPER = Path(__file__).with_name("codex-litellm")
 SYNTHETIC_LITELLM_SECRET = "synthetic-litellm-secret"
 SYNTHETIC_REF_SECRET = "synthetic-ref-secret"
+SYNTHETIC_PERPLEXITY_SECRET = "synthetic-perplexity-secret"
 
 
 def write_executable(path: Path, content: str) -> None:
@@ -37,6 +38,9 @@ case "$1" in
   api.ref.tools)
     printf '%s\\n' '{SYNTHETIC_REF_SECRET}' 'ignored-line'
     ;;
+  api.perplexity.ai)
+    printf '%s\\n' '{SYNTHETIC_PERPLEXITY_SECRET}' 'ignored-line'
+    ;;
   *)
     exit 1
     ;;
@@ -48,7 +52,8 @@ esac
                 """#!/usr/bin/env bash
 set -euo pipefail
 printf '%s\\0' "$@" >"$CAPTURE_ARGV"
-printf '%s\\n%s' "$LITELLM_API_KEY" "$REF_API_KEY" >"$CAPTURE_ENV"
+printf '%s\\n%s\\n%s' \
+  "$LITELLM_API_KEY" "$REF_API_KEY" "$PERPLEXITY_API_KEY" >"$CAPTURE_ENV"
 : >"$CAPTURE_INVOKED"
 """,
             )
@@ -84,7 +89,11 @@ printf '%s\\n%s' "$LITELLM_API_KEY" "$REF_API_KEY" >"$CAPTURE_ENV"
             self.assertTrue(invoked_path.exists())
             self.assertEqual(
                 env_path.read_text(),
-                f"{SYNTHETIC_LITELLM_SECRET}\n{SYNTHETIC_REF_SECRET}",
+                (
+                    f"{SYNTHETIC_LITELLM_SECRET}\n"
+                    f"{SYNTHETIC_REF_SECRET}\n"
+                    f"{SYNTHETIC_PERPLEXITY_SECRET}"
+                ),
             )
 
             argv = [
@@ -93,7 +102,11 @@ printf '%s\\n%s' "$LITELLM_API_KEY" "$REF_API_KEY" >"$CAPTURE_ENV"
                 if item
             ]
             rendered_argv = "\n".join(argv)
-            for secret in (SYNTHETIC_LITELLM_SECRET, SYNTHETIC_REF_SECRET):
+            for secret in (
+                SYNTHETIC_LITELLM_SECRET,
+                SYNTHETIC_REF_SECRET,
+                SYNTHETIC_PERPLEXITY_SECRET,
+            ):
                 self.assertNotIn(secret, rendered_argv)
                 self.assertNotIn(secret, result.stdout)
                 self.assertNotIn(secret, result.stderr)
@@ -118,7 +131,7 @@ printf '%s\\n%s' "$LITELLM_API_KEY" "$REF_API_KEY" >"$CAPTURE_ENV"
             self.assertIn('model_providers.litellm.wire_api="responses"', argv)
             self.assertEqual(
                 argv.count(
-                    'shell_environment_policy.exclude=["LITELLM_API_KEY","REF_API_KEY"]'
+                    'shell_environment_policy.exclude=["LITELLM_API_KEY","REF_API_KEY","PERPLEXITY_API_KEY"]'
                 ),
                 1,
             )
@@ -157,6 +170,7 @@ printf '%s\\n%s' "$LITELLM_API_KEY" "$REF_API_KEY" >"$CAPTURE_ENV"
 case "$1" in
   litellm.vulcan.lan) printf '%s\\n' '{SYNTHETIC_LITELLM_SECRET}' ;;
   api.ref.tools) printf '%s\\n' '{SYNTHETIC_REF_SECRET}' ;;
+  api.perplexity.ai) printf '%s\\n' '{SYNTHETIC_PERPLEXITY_SECRET}' ;;
   *) exit 1 ;;
 esac
 """,
@@ -207,6 +221,7 @@ printf '%s\\0' "$@" >"$CAPTURE_ARGV"
 case "$1" in
   litellm.vulcan.lan) printf '%s\\n' '{SYNTHETIC_LITELLM_SECRET}' ;;
   api.ref.tools) printf '%s\\n' '{SYNTHETIC_REF_SECRET}' ;;
+  api.perplexity.ai) printf '%s\\n' '{SYNTHETIC_PERPLEXITY_SECRET}' ;;
   *) exit 1 ;;
 esac
 """,

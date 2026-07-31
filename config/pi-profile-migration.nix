@@ -1,9 +1,14 @@
 { lib, pkgs }:
 
-{ root }:
+{
+  root,
+  compatibilityRoot ? root,
+}:
 
 let
   sourceRoot = ".pi/agent";
+  legacyRoot = ".pi";
+  legacyBackupRoot = ".pi-legacy-v1";
   markerRoot = builtins.dirOf root;
   markerName = ".nix-pi-profile-migrated-v1";
   validRelativePath =
@@ -22,11 +27,18 @@ let
     pi_destination_parent="''${pi_destination%/*}"
     pi_destination_backup="$pi_destination_parent/.pi-profile-destination-backup-v1"
     pi_source_resolved=
+    pi_destination_resolved=
 
     pi_fail() {
       printf '%s\n' "Pi profile migration: $1" >&2
       exit 1
     }
+
+    if [ -L "$pi_destination_parent" ]; then
+      pi_fail "destination parent is a symlink: $pi_destination_parent"
+    elif [ -e "$pi_destination_parent" ] && [ ! -d "$pi_destination_parent" ]; then
+      pi_fail "destination parent is not a directory: $pi_destination_parent"
+    fi
 
     pi_copy_tree() {
       pi_copy_source=$1
@@ -191,9 +203,19 @@ let
             pi_fail "destination symlink has an unexpected target: $pi_destination"
           fi
         fi
+        pi_destination_resolved="$(${pkgs.coreutils}/bin/readlink -m -- "$pi_destination")"
       fi
 
-      if [[ -v DRY_RUN ]]; then
+      if [ -n "$pi_source_resolved" ] \
+        && [ "$pi_source_resolved" = "$pi_destination_resolved" ] \
+        && [ ! -L "$pi_destination" ]; then
+        if [[ -v DRY_RUN ]]; then
+          printf '%s\n' \
+            "Pi profile migration: would mark the already-shared profile complete: $pi_destination"
+        else
+          run ${pkgs.coreutils}/bin/touch -- "$pi_marker"
+        fi
+      elif [[ -v DRY_RUN ]]; then
         printf '%s\n' \
           "Pi profile migration: would stage and install the XDG profile: $pi_destination"
       else
@@ -280,11 +302,113 @@ let
       fi
     fi
   '';
+
+  legacyRootScript = ''
+    pi_legacy_root="$HOME"/${lib.escapeShellArg legacyRoot}
+    pi_legacy_backup="$HOME"/${lib.escapeShellArg legacyBackupRoot}
+    pi_legacy_destination="$HOME"/${lib.escapeShellArg compatibilityRoot}
+    pi_legacy_marker="$HOME"/${lib.escapeShellArg "${markerRoot}/${markerName}"}
+
+    pi_legacy_fail() {
+      printf '%s\n' "Pi legacy-root finalizer: $1" >&2
+      exit 1
+    }
+
+    if [ -L "$pi_legacy_destination" ] \
+      || { [ -e "$pi_legacy_destination" ] && [ ! -d "$pi_legacy_destination" ]; }; then
+      pi_legacy_fail "destination is not a real directory: $pi_legacy_destination"
+    elif [ ! -e "$pi_legacy_destination" ]; then
+      if [ -e "$pi_legacy_marker" ] || [ -L "$pi_legacy_marker" ] \
+        || [ -e "$pi_legacy_backup" ] || [ -L "$pi_legacy_backup" ]; then
+        pi_legacy_fail "destination is absent after profile migration: $pi_legacy_destination"
+      fi
+      if [[ -v DRY_RUN ]]; then
+        printf '%s\n' \
+          "Pi legacy-root finalizer: would create $pi_legacy_destination"
+      else
+        run ${pkgs.coreutils}/bin/mkdir -m 0700 -p -- "$pi_legacy_destination"
+      fi
+    fi
+    pi_legacy_destination_resolved="$(${pkgs.coreutils}/bin/readlink -m -- \
+      "$pi_legacy_destination")"
+
+    pi_legacy_validate_compatibility() {
+      pi_compat_path=$1
+      pi_compat_backup=$2
+      pi_compat_label=$3
+
+      if [ -e "$pi_compat_backup" ] || [ -L "$pi_compat_backup" ]; then
+        if [ -L "$pi_compat_backup" ] || [ ! -d "$pi_compat_backup" ]; then
+          pi_legacy_fail "$pi_compat_label backup is not a real directory: $pi_compat_backup"
+        fi
+        if [ -e "$pi_compat_path" ] && [ ! -L "$pi_compat_path" ]; then
+          pi_legacy_fail "$pi_compat_label and backup both exist: $pi_compat_backup"
+        fi
+      fi
+      if [ -L "$pi_compat_path" ]; then
+        pi_compat_resolved="$(${pkgs.coreutils}/bin/readlink -m -- "$pi_compat_path")"
+        if [ "$pi_compat_resolved" != "$pi_legacy_destination_resolved" ]; then
+          pi_legacy_fail "$pi_compat_label symlink has an unexpected target: $pi_compat_path"
+        fi
+      elif [ -e "$pi_compat_path" ] && [ ! -d "$pi_compat_path" ]; then
+        pi_legacy_fail "$pi_compat_label is not a directory: $pi_compat_path"
+      fi
+    }
+
+    pi_legacy_install_compatibility() {
+      pi_compat_path=$1
+      pi_compat_backup=$2
+      pi_compat_label=$3
+
+      if [ -e "$pi_compat_path" ] && [ ! -L "$pi_compat_path" ]; then
+        if [ ! -d "$pi_compat_path" ]; then
+          pi_legacy_fail "$pi_compat_label is not a directory: $pi_compat_path"
+        fi
+        if [ -e "$pi_compat_backup" ] || [ -L "$pi_compat_backup" ]; then
+          pi_legacy_fail "$pi_compat_label and backup both exist: $pi_compat_backup"
+        fi
+        if [[ -v DRY_RUN ]]; then
+          printf '%s\n' \
+            "Pi legacy-root finalizer: would move $pi_compat_path to $pi_compat_backup"
+        else
+          # ponytail: preserve each legacy tree whole; reconcile backups manually.
+          run ${pkgs.coreutils}/bin/mv -T -- "$pi_compat_path" "$pi_compat_backup"
+          run ${pkgs.coreutils}/bin/ln -s -- "$pi_legacy_destination" "$pi_compat_path"
+        fi
+      elif [ ! -L "$pi_compat_path" ] && [[ ! -v DRY_RUN ]]; then
+        run ${pkgs.coreutils}/bin/ln -s -- "$pi_legacy_destination" "$pi_compat_path"
+      fi
+
+      if [[ ! -v DRY_RUN ]]; then
+        if [ ! -L "$pi_compat_path" ]; then
+          pi_legacy_fail "$pi_compat_label link was not created: $pi_compat_path"
+        fi
+        pi_compat_resolved="$(${pkgs.coreutils}/bin/readlink -m -- "$pi_compat_path")"
+        if [ "$pi_compat_resolved" != "$pi_legacy_destination_resolved" ]; then
+          pi_legacy_fail "$pi_compat_label link has an unexpected target: $pi_compat_path"
+        fi
+      fi
+    }
+
+    pi_legacy_validate_compatibility \
+      "$pi_legacy_root" "$pi_legacy_backup" "legacy root"
+    pi_legacy_install_compatibility \
+      "$pi_legacy_root" "$pi_legacy_backup" "legacy root"
+  '';
 in
 assert validRelativePath root;
+assert validRelativePath compatibilityRoot;
+assert validRelativePath legacyRoot;
+assert validRelativePath legacyBackupRoot;
 assert markerRoot != ".";
 assert root != sourceRoot;
+assert root != legacyRoot;
+assert compatibilityRoot != legacyRoot;
+assert legacyBackupRoot != legacyRoot;
 {
-  inherit script;
+  inherit script legacyRootScript;
   activation = lib.hm.dag.entryBetween [ "linkGeneration" ] [ "writeBoundary" ] script;
+  legacyRootActivation =
+    lib.hm.dag.entryBetween [ "linkGeneration" ] [ "aiPiProfileMigration" ]
+      legacyRootScript;
 }

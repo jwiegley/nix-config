@@ -48,7 +48,7 @@ let
     hera-codex = ".config/codex";
     hera-droid = ".config/factory";
     hera-opencode = ".config/opencode";
-    hera-pi = ".config/pi";
+    hera-pi = ".config/pi/agent";
     shared-work-claude-positron = ".claude";
     shared-work-codex = ".codex";
     shared-work-opencode-positron = ".config/opencode";
@@ -958,7 +958,14 @@ let
 
     perplexity = mkMcp "perplexity" "Perplexity AI web search via MCP" {
       command = "uvx";
-      args = [ "perplexity-mcp" ];
+      # 0.1.7 declares mcp>=1.0.2 but still calls the pre-2.0 Server API.
+      args = [
+        "--from"
+        "perplexity-mcp==0.1.7"
+        "--with"
+        "mcp==1.28.1"
+        "perplexity-mcp"
+      ];
       env.PERPLEXITY_API_KEY = typedEnv "PERPLEXITY_API_KEY";
     } baseMcpSelectors;
 
