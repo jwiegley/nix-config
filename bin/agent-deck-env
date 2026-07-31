@@ -3,15 +3,15 @@ set -euo pipefail
 set +x
 
 if (($# == 0)); then
-    echo "agent-deck-litellm-env: command is required" >&2
+    echo "agent-deck-env: command is required" >&2
     exit 2
 fi
 
 user=${USER:-$(id -un)}
-pass_bin=${AGENT_DECK_LITELLM_PASS_BIN:-/etc/profiles/per-user/${user}/bin/pass}
+pass_bin=${AGENT_DECK_ENV_PASS_BIN:-/etc/profiles/per-user/${user}/bin/pass}
 
 if [[ ! -x $pass_bin ]]; then
-    echo "agent-deck-litellm-env: credential helper is unavailable" >&2
+    echo "agent-deck-env: credential helper is unavailable" >&2
     exit 1
 fi
 
@@ -20,20 +20,19 @@ load_credential() {
 
     credential=""
     if ! credential=$("$pass_bin" "$entry"); then
-        echo "agent-deck-litellm-env: $label credential is unavailable or empty" >&2
+        echo "agent-deck-env: $label credential is unavailable or empty" >&2
         return 1
     fi
     value=${credential%%$'\n'*}
     unset credential
     if [[ -z $value ]]; then
-        echo "agent-deck-litellm-env: $label credential is unavailable or empty" >&2
+        echo "agent-deck-env: $label credential is unavailable or empty" >&2
         return 1
     fi
     printf -v "$variable" '%s' "$value"
     export "${variable?}"
 }
 
-load_credential litellm.vulcan.lan LITELLM_API_KEY LiteLLM
 load_credential api.ref.tools REF_API_KEY Ref
 load_credential api.perplexity.ai PERPLEXITY_API_KEY Perplexity
 

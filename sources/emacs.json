@@ -289,22 +289,6 @@
         "kind": "github-commit"
       }
     },
-    "gptel-litellm": {
-      "source": {
-        "args": {
-          "owner": "jwiegley",
-          "repo": "gptel-litellm",
-          "rev": "c6b8603816dd72ab9ee0aaf8c8382f0fcaefe15b",
-          "sha256": "sha256-MEkkjI3BFCXkVbc5PidNwqef1KMKZvonTcLCGozjBmA="
-        },
-        "fetcher": "fetchFromGitHub",
-        "url": "https://github.com/jwiegley/gptel-litellm"
-      },
-      "update": {
-        "branch": "main",
-        "kind": "github-commit"
-      }
-    },
     "gptel-prompts": {
       "source": {
         "args": {
@@ -1244,7 +1228,8 @@
       },
       "update": {
         "kind": "url-release",
-        "policy": "manual"
+        "policy": "manual",
+        "reason": "Upstream exposes only a mutable single-file URL without versioned releases"
       }
     },
     "col-highlight": {
@@ -1258,7 +1243,8 @@
       },
       "update": {
         "kind": "url-release",
-        "policy": "manual"
+        "policy": "manual",
+        "reason": "Upstream exposes only a mutable single-file URL without versioned releases"
       }
     },
     "crosshairs": {
@@ -1272,7 +1258,8 @@
       },
       "update": {
         "kind": "url-release",
-        "policy": "manual"
+        "policy": "manual",
+        "reason": "Upstream exposes only a mutable single-file URL without versioned releases"
       }
     },
     "cursor-chg": {
@@ -1286,7 +1273,8 @@
       },
       "update": {
         "kind": "url-release",
-        "policy": "manual"
+        "policy": "manual",
+        "reason": "Upstream exposes only a mutable single-file URL without versioned releases"
       }
     },
     "erc-highlight-nicknames": {
@@ -1300,7 +1288,8 @@
       },
       "update": {
         "kind": "url-release",
-        "policy": "manual"
+        "policy": "manual",
+        "reason": "Upstream exposes only a mutable single-file URL without versioned releases"
       }
     },
     "gptel-got": {
@@ -1315,7 +1304,8 @@
       },
       "update": {
         "kind": "explicit-rev",
-        "policy": "manual"
+        "policy": "manual",
+        "reason": "The Emacs package override is held at a reviewed release or compatibility commit"
       }
     },
     "highlight-cl": {
@@ -1329,7 +1319,8 @@
       },
       "update": {
         "kind": "url-release",
-        "policy": "manual"
+        "policy": "manual",
+        "reason": "Upstream exposes only a mutable single-file URL without versioned releases"
       }
     },
     "hl-line+": {
@@ -1343,7 +1334,8 @@
       },
       "update": {
         "kind": "url-release",
-        "policy": "manual"
+        "policy": "manual",
+        "reason": "Upstream exposes only a mutable single-file URL without versioned releases"
       }
     },
     "org": {
@@ -1360,7 +1352,8 @@
       },
       "update": {
         "kind": "explicit-rev",
-        "policy": "manual"
+        "policy": "manual",
+        "reason": "The Emacs package override is held at a reviewed release or compatibility commit"
       }
     },
     "org-checklist": {
@@ -1374,7 +1367,8 @@
       },
       "update": {
         "kind": "url-release",
-        "policy": "manual"
+        "policy": "manual",
+        "reason": "Upstream exposes only a mutable single-file URL without versioned releases"
       }
     },
     "popup-ruler": {
@@ -1388,7 +1382,8 @@
       },
       "update": {
         "kind": "url-release",
-        "policy": "manual"
+        "policy": "manual",
+        "reason": "Upstream exposes only a mutable single-file URL without versioned releases"
       }
     },
     "pp-c-l": {
@@ -1402,7 +1397,8 @@
       },
       "update": {
         "kind": "url-release",
-        "policy": "manual"
+        "policy": "manual",
+        "reason": "Upstream exposes only a mutable single-file URL without versioned releases"
       }
     },
     "tidy": {
@@ -1416,7 +1412,8 @@
       },
       "update": {
         "kind": "url-release",
-        "policy": "manual"
+        "policy": "manual",
+        "reason": "Upstream exposes only a mutable single-file URL without versioned releases"
       }
     },
     "vterm-tmux": {
@@ -1431,7 +1428,8 @@
       },
       "update": {
         "kind": "explicit-rev",
-        "policy": "manual"
+        "policy": "manual",
+        "reason": "The Emacs package override is held at a reviewed release or compatibility commit"
       }
     },
     "xray": {
@@ -1445,7 +1443,8 @@
       },
       "update": {
         "kind": "url-release",
-        "policy": "manual"
+        "policy": "manual",
+        "reason": "Upstream exposes only a mutable single-file URL without versioned releases"
       }
     },
     "yaoddmuse": {
@@ -1459,7 +1458,8 @@
       },
       "update": {
         "kind": "url-release",
-        "policy": "manual"
+        "policy": "manual",
+        "reason": "Upstream exposes only a mutable single-file URL without versioned releases"
       }
     }
   }

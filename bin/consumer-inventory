@@ -35,7 +35,7 @@
 #                    four flake-ai.nix internal imports (GAP-FLAKEAI-INTERNAL, out
 #                    of scope for #47), the supported config/*.nix portable surface,
 #                    the root flake=false nix-config inputs, and the
-#                    ai-nix/node-red/global-Anvil compat surfaces routed to EPIC 7.
+#                    ai-nix/node-red compatibility surfaces routed to EPIC 7.
 #
 # Determinism contract: for a fixed tracked working tree and fixed consumer locks,
 # every record below is a pure function of on-disk tracked files. The internal
@@ -154,7 +154,6 @@ FLAKE_AI_IMPORT_RE = re.compile(r"(\.\.?/)+[\w./-]*flake-ai\.nix|\$\{inputs\.nix
 COMPAT_SURFACES = [
     ("ai-nix", r"ai-nix"),
     ("node-red", r"node-red"),
-    ("global-anvil", r"global.*[Aa]nvil"),
 ]
 
 # References into nix-config from a consumer file.
@@ -177,11 +176,8 @@ OVERLAY_USE_RE = re.compile(r"inputs\.nix-config-ai\.overlays[.\w]*")
 #
 # The rule is deliberately CONSERVATIVE and mirrors the one this script already applies
 # to flake-ai a few lines below (`.nix and not startswith("#")`): anything in code is
-# load-bearing. That keeps two real traps on the safe side --
-#   test/ai/home-manager-contract-common.nix:929 reads like prose but is the expected
-#     value of an assertion, and
-#   the sources/*.json entries look like message strings but are the update
-#     tooling's artifact lists,
+# load-bearing. The sources/*.json entries look like message strings but are
+# update-tool artifact lists,
 # both of which a prose-detecting filter would wrongly demote.
 def ref_kind(path, text):
     stripped = text.strip()
@@ -818,7 +814,7 @@ out = {
         "rename-now": "Stale operational reference to the literal config/ai directory inside nix-config; #47 must leave none.",
         "stub-covered": "External consumer edge still resolving through stale ?dir=config/ai. #47's throwing stub makes this fail loudly; migrate the URL in the authorized coordinated transaction.",
         "retire": "Consumer reach-in into nix-config internal overlay files (${inputs.nix-config}/overlays/*.nix) and the attributes cherry-picked from them; not a supported API (this class broke vulcan at a3cc3843). Delete once the consumer moves to typed config/fleet outputs.",
-        "retain-with-owner": "Keep as-is with owner + retirement trigger: the four flake-ai.nix internal imports (GAP-FLAKEAI-INTERNAL), the supported config/*.nix portable surface, root flake=false nix-config inputs, and the ai-nix/node-red/global-Anvil compat surfaces (EPIC 7).",
+        "retain-with-owner": "Keep as-is with owner + retirement trigger: the four flake-ai.nix internal imports (GAP-FLAKEAI-INTERNAL), the supported config/*.nix portable surface, root flake=false nix-config inputs, and the ai-nix/node-red compatibility surfaces (EPIC 7).",
     },
     "derivation": commands,
     "remoteChecks": {

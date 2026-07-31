@@ -23,7 +23,7 @@ from urllib.parse import urlsplit
 
 
 SCRIPT = Path(__file__).with_name("update-overlay")
-UPDATE_AGENTS = Path(__file__).with_name("update-agents")
+UPDATE_AGENTS = Path(__file__).with_name("update")
 UPGRADE_PROJECTS = Path(__file__).with_name("upgrade-projects")
 UPGRADE = Path(__file__).with_name("upgrade")
 SWITCH = Path(__file__).with_name("switch")
@@ -52,77 +52,54 @@ update_catalog_target = MODULE["update_catalog_target"]
 update_npm_flake_target = MODULE.get("update_npm_flake_target")
 update_pypi_artifact_target = MODULE.get("update_pypi_artifact_target")
 update_github_release_asset_target = MODULE.get("update_github_release_asset_target")
-update_github_commit_artifact_target = MODULE.get("update_github_commit_artifact_target")
+update_github_commit_artifact_target = MODULE.get(
+    "update_github_commit_artifact_target"
+)
 update_github_projection_target = MODULE.get("update_github_projection_target")
-snapshot_catalog_record_isolation = MODULE.get(
-    "snapshot_catalog_record_isolation"
-)
-validate_catalog_record_isolation = MODULE.get(
-    "validate_catalog_record_isolation"
-)
-enforce_catalog_record_isolation = MODULE.get(
-    "enforce_catalog_record_isolation"
-)
+snapshot_catalog_record_isolation = MODULE.get("snapshot_catalog_record_isolation")
+validate_catalog_record_isolation = MODULE.get("validate_catalog_record_isolation")
+enforce_catalog_record_isolation = MODULE.get("enforce_catalog_record_isolation")
 
 ISSUE40_TARGETS = frozenset({"cohere-melody", "mlx"})
-ISSUE41_TARGETS = frozenset({"hf-xet", "nelisp", "sherlock-db"})
-ISSUE45_TARGETS = frozenset({
-    "anvil-ide",
-    "anvil-mcp",
-    "nelisp",
-    "standalone-anvil",
-})
-ISSUE45_BRANCHES = {
-    "anvil-ide": "main",
-    "anvil-mcp": "fix/anvil-root-resilience",
-    "nelisp": "main",
-    "standalone-anvil": "master",
-}
-ISSUE45_EXECUTORS = {
-    "anvil-ide": "update-overlay",
-    "anvil-mcp": "update-overlay",
-    "nelisp": "update-agents",
-    "standalone-anvil": "update-overlay",
-}
-ISSUE45_POLICIES = {
-    "anvil-ide": "automatic",
-    "anvil-mcp": "automatic",
-    "nelisp": "manual",
-    "standalone-anvil": "manual",
-}
-ISSUE45_ARTIFACT = "packages/anvil-mcp/Cargo.lock"
+ISSUE41_TARGETS = frozenset({"hf-xet", "sherlock-db"})
 ISSUE39_TARGETS = frozenset(
     json.loads(
-        (SCRIPT.parent.parent / "packages/pi-gallery/normalization-policy.json").read_text()
+        (
+            SCRIPT.parent.parent / "packages/pi-gallery/normalization-policy.json"
+        ).read_text()
     )["targets"]
 )
 
-ISSUE34_TARGETS = frozenset({
-    "pi-mcp-adapter",
-    "ws",
-    "git-ai",
-    "llm-agents",
-    "mcp-remote",
-    "mcp-servers-nix",
-    "pal-mcp-server",
-    "pi-openai-server-compaction",
-    "pi-quiet",
-    "translate-tool",
-    "rust-overlay",
-})
+ISSUE34_TARGETS = frozenset(
+    {
+        "pi-mcp-adapter",
+        "ws",
+        "git-ai",
+        "llm-agents",
+        "mcp-remote",
+        "mcp-servers-nix",
+        "pal-mcp-server",
+        "pi-openai-server-compaction",
+        "pi-quiet",
+        "translate-tool",
+        "rust-overlay",
+    }
+)
 ISSUE34_FLAKE_PROJECTIONS = ISSUE34_TARGETS - {"ws"}
-ISSUE34_UPDATE_AGENTS = frozenset({
-    "git-ai",
-    "llm-agents",
-    "mcp-remote",
-    "mcp-servers-nix",
-    "pal-mcp-server",
-    "pi-mcp-adapter",
-    "pi-openai-server-compaction",
-    "pi-quiet",
-    "rust-overlay",
-    "translate-tool",
-})
+ISSUE34_UPDATE_AGENTS = frozenset(
+    {
+        "git-ai",
+        "llm-agents",
+        "mcp-remote",
+        "mcp-servers-nix",
+        "pal-mcp-server",
+        "pi-mcp-adapter",
+        "pi-openai-server-compaction",
+        "pi-quiet",
+        "rust-overlay",
+        "translate-tool",
+    }
+)
 
 VENDOR_HASH = "sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
 
@@ -157,7 +134,12 @@ def write_minimal_catalog(root):
 
 class UpdateCliTests(unittest.TestCase):
     def test_retired_ai_nix_flags_are_rejected(self):
-        for flag in ("--ai-nix-dir", "--no-ai-nix", "--only-ai-nix", "--no-ai-nix-advice"):
+        for flag in (
+            "--ai-nix-dir",
+            "--no-ai-nix",
+            "--only-ai-nix",
+            "--no-ai-nix-advice",
+        ):
             with self.subTest(flag=flag):
                 result = subprocess.run(
                     [sys.executable, str(SCRIPT), flag, "--all"],
@@ -167,7 +149,6 @@ class UpdateCliTests(unittest.TestCase):
                 )
                 self.assertEqual(result.returncode, 2)
                 self.assertIn("unrecognized arguments", result.stderr)
-
 
     def test_retired_overlay_options_and_unknown_ids_are_rejected(self):
         cases = (
@@ -201,14 +182,12 @@ class UpdateCliTests(unittest.TestCase):
             return {
                 "executor": executor,
                 "kind": "url-release",
-                "_record": {
-                    "update": {"kind": "url-release", "policy": policy}
-                },
+                "_record": {"update": {"kind": "url-release", "policy": policy}},
             }
 
         catalog = {
             "automatic-direct": target("automatic", "update-overlay"),
-            "automatic-delegated": target("automatic", "update-agents"),
+            "automatic-delegated": target("automatic", "update"),
             "manual-direct": target("manual", "update-overlay"),
         }
         observed = []
@@ -264,7 +243,9 @@ class UpdateCliTests(unittest.TestCase):
                 ):
                     self.assertEqual(MODULE["main"](), 1)
                 self.assertEqual(mutate_path.read_text(), "original\n")
-                self.assertIn("Dry-run attempted to mutate 1 source file", stderr.getvalue())
+                self.assertIn(
+                    "Dry-run attempted to mutate 1 source file", stderr.getvalue()
+                )
         finally:
             globals_.update(originals)
             sys.argv = old_argv
@@ -274,8 +255,6 @@ class UpdateInventoryTests(unittest.TestCase):
     def test_source_catalog_is_data_only_unique_and_consumed(self):
         root = SCRIPT.parent.parent
         catalog = load_source_catalog(root)
-        self.assertIn("anvil-ide", catalog)
-        self.assertIn("anvil-mcp", catalog)
         self.assertIn("pi-lens", catalog)
         for name in (
             "ascii",
@@ -291,62 +270,10 @@ class UpdateInventoryTests(unittest.TestCase):
         self.assertIn('member "pi-lens"', pi_manifest)
         self.assertNotIn("version =", pi_manifest)
         self.assertNotIn("registry.npmjs.org", pi_manifest)
-        anvil_document = json.loads((root / "sources/anvil.json").read_text())
-        self.assertEqual(anvil_document["sources"]["anvil-ide"]["update"]["branch"], "main")
         self.assertEqual(
-            anvil_document["sources"]["anvil-mcp"]["update"]["branch"],
-            "fix/anvil-root-resilience",
-        )
-        self.assertTrue(ISSUE45_TARGETS <= catalog.keys())
-        self.assertEqual(
-            {name: catalog[name]["source"] for name in ISSUE45_TARGETS},
-            {name: "catalog" for name in ISSUE45_TARGETS},
-        )
-        self.assertEqual(
-            {name: catalog[name]["executor"] for name in ISSUE45_TARGETS},
-            ISSUE45_EXECUTORS,
-        )
-        self.assertEqual(
-            {
-                name: catalog[name]["_record"]["update"].get(
-                    "policy", "automatic"
-                )
-                for name in ISSUE45_TARGETS
-            },
-            ISSUE45_POLICIES,
-        )
-        self.assertEqual(
-            {
-                name: catalog[name]["_record"]["update"]["branch"]
-                for name in ISSUE45_TARGETS
-            },
-            ISSUE45_BRANCHES,
-        )
-        self.assertEqual(
-            {
-                name: catalog[name]["_record"]["update"]["kind"]
-                for name in ISSUE45_TARGETS
-            },
-            {name: "github-commit" for name in ISSUE45_TARGETS},
-        )
-        self.assertEqual(
-            catalog["nelisp"]["_record"]["update"]["artifacts"],
-            [ISSUE45_ARTIFACT],
-        )
-        self.assertEqual(
-            catalog["nelisp"]["_record"]["update"]["artifactSources"],
-            {ISSUE45_ARTIFACT: "Cargo.lock"},
-        )
-        self.assertEqual(
-            {
-                name
-                for name in ISSUE45_TARGETS
-                if catalog[name]["_record"]["update"].get("artifactSources")
-            },
-            {"nelisp"},
-        )
-        self.assertEqual(
-            json.loads((root / "sources/emacs.json").read_text())["sources"]["org"]["commit"],
+            json.loads((root / "sources/emacs.json").read_text())["sources"]["org"][
+                "commit"
+            ],
             "cdc16898fd46a30d7187c0a5830b2b898ffbd2de",
         )
         self.assertIn(
@@ -354,10 +281,9 @@ class UpdateInventoryTests(unittest.TestCase):
             (root / "overlays/00-last-known-good.nix").read_text(),
         )
         self.assertIn('gitSource "org"', (root / "overlays/10-emacs.nix").read_text())
-        self.assertTrue(all(path.suffix == ".json" for path in (root / "sources").iterdir()))
-        self.assertFalse((root / "packages/anvil-mcp/source.nix").exists())
-        self.assertIn('import ../source-catalog.nix "anvil"', (root / "packages/anvil-mcp/default.nix").read_text())
-
+        self.assertTrue(
+            all(path.suffix == ".json" for path in (root / "sources").iterdir())
+        )
         with tempfile.TemporaryDirectory() as temp_dir:
             temp = Path(temp_dir)
             (temp / "sources").mkdir()
@@ -367,27 +293,40 @@ class UpdateInventoryTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "duplicate JSON key: same"):
                 load_source_catalog(temp)
             (temp / "sources/bad.json").unlink()
-            (temp / "sources/multi.json").write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {
-                    "multi": {
-                        "source": {
-                            "fetcher": "fetchurl",
-                            "url": "https://example.invalid/main",
-                            "args": {"url": "https://example.invalid/main", "hash": "sha256-main"},
-                        },
-                        "hashes": {"cargoHash": "sha256-cargo"},
-                        "artifacts": {
-                            "docs": {
-                                "fetcher": "fetchurl",
-                                "url": "https://example.invalid/docs",
-                                "args": {"url": "https://example.invalid/docs", "hash": "sha256-docs"},
+            (temp / "sources/multi.json").write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {
+                            "multi": {
+                                "source": {
+                                    "fetcher": "fetchurl",
+                                    "url": "https://example.invalid/main",
+                                    "args": {
+                                        "url": "https://example.invalid/main",
+                                        "hash": "sha256-main",
+                                    },
+                                },
+                                "hashes": {"cargoHash": "sha256-cargo"},
+                                "artifacts": {
+                                    "docs": {
+                                        "fetcher": "fetchurl",
+                                        "url": "https://example.invalid/docs",
+                                        "args": {
+                                            "url": "https://example.invalid/docs",
+                                            "hash": "sha256-docs",
+                                        },
+                                    }
+                                },
+                                "update": {
+                                    "kind": "url-release",
+                                    "policy": "automatic",
+                                },
                             }
                         },
-                        "update": {"kind": "url-release", "policy": "automatic"},
                     }
-                },
-            }))
+                )
+            )
             self.assertIn("multi", load_source_catalog(temp))
             (temp / "sources/duplicate.json").write_text(
                 (temp / "sources/multi.json").read_text()
@@ -453,7 +392,7 @@ class UpdateInventoryTests(unittest.TestCase):
             ISSUE34_TARGETS,
         )
         self.assertEqual(
-            {name for name in ISSUE34_TARGETS if catalog[name]["executor"] == "update-agents"},
+            {name for name in ISSUE34_TARGETS if catalog[name]["executor"] == "update"},
             ISSUE34_UPDATE_AGENTS,
         )
         self.assertEqual(
@@ -461,31 +400,49 @@ class UpdateInventoryTests(unittest.TestCase):
             set(),
         )
         self.assertEqual(
-            {name for name in ISSUE34_TARGETS if catalog[name]["_record"]["source"]["fetcher"] == "fetchTree"},
+            {
+                name
+                for name in ISSUE34_TARGETS
+                if catalog[name]["_record"]["source"]["fetcher"] == "fetchTree"
+            },
             ISSUE34_FLAKE_PROJECTIONS,
         )
         self.assertEqual(catalog["ws"]["_record"]["source"]["fetcher"], "fetchzip")
         self.assertEqual(catalog["ws"]["_record"]["update"]["package"], "ws")
         self.assertEqual(catalog["ws"]["executor"], "update-overlay")
         self.assertNotIn("flake.nix", catalog["rust-overlay"]["files"])
-        self.assertIn("config/fleet/flake.nix", catalog["rust-overlay"]["files"])
+        self.assertNotIn("config/fleet/flake.nix", catalog["rust-overlay"]["files"])
+        self.assertEqual(catalog["rust-overlay"]["kind"], "flake-input")
 
         ai_names = set(json.loads((root / "sources/ai.json").read_text())["sources"])
         pi_names = set(json.loads((root / "sources/pi.json").read_text())["sources"])
-        self.assertEqual(ISSUE34_TARGETS & ai_names, {
-            "git-ai", "llm-agents", "mcp-remote", "mcp-servers-nix",
-            "pal-mcp-server", "rust-overlay", "translate-tool",
-        })
-        self.assertEqual(ISSUE34_TARGETS & pi_names, {
-            "pi-mcp-adapter", "pi-openai-server-compaction", "pi-quiet", "ws",
-        })
+        self.assertEqual(
+            ISSUE34_TARGETS & ai_names,
+            {
+                "git-ai",
+                "llm-agents",
+                "mcp-remote",
+                "mcp-servers-nix",
+                "pal-mcp-server",
+                "rust-overlay",
+                "translate-tool",
+            },
+        )
+        self.assertEqual(
+            ISSUE34_TARGETS & pi_names,
+            {
+                "pi-mcp-adapter",
+                "pi-openai-server-compaction",
+                "pi-quiet",
+                "ws",
+            },
+        )
         consumer_text = "\n".join(
             (root / path).read_text()
             for path in (
                 "packages/agent-resources.nix",
                 "config/fleet/catalog.nix",
                 "test/ai/agent-resources.nix",
-                "test/ai/home-manager-contract-common.nix",
             )
         )
         for duplicate in (
@@ -507,23 +464,35 @@ class UpdateInventoryTests(unittest.TestCase):
             self.assertIsInstance(node_name, str)
             locked = lock["nodes"][node_name]["locked"]
             self.assertEqual(
-                {field: record["source"]["args"][field] for field in ("type", "owner", "repo", "rev", "narHash")},
-                {field: locked[field] for field in ("type", "owner", "repo", "rev", "narHash")},
+                {
+                    field: record["source"]["args"][field]
+                    for field in ("type", "owner", "repo", "rev", "narHash")
+                },
+                {
+                    field: locked[field]
+                    for field in ("type", "owner", "repo", "rev", "narHash")
+                },
             )
         self.assertEqual(root_inputs["rust-overlay"], "rust-overlay_2")
         self.assertNotEqual(root_inputs["rust-overlay"], "rust-overlay")
 
     def test_issue34_projection_mutations_fail_for_the_named_field(self):
         mutations = {
-            "owner does not match declared input":
-                lambda _document, lock: lock["nodes"]["selected"]["original"].update(owner="other"),
-            "rev does not match portable lock":
-                lambda _document, lock: lock["nodes"]["selected"]["locked"].update(rev="b" * 40),
-            "narHash does not match portable lock":
-                lambda _document, lock: lock["nodes"]["selected"]["locked"].update(narHash="sha256-other"),
+            "owner does not match declared input": lambda _document, lock: lock[
+                "nodes"
+            ]["selected"]["original"].update(owner="other"),
+            "rev does not match portable lock": lambda _document, lock: lock["nodes"][
+                "selected"
+            ]["locked"].update(rev="b" * 40),
+            "narHash does not match portable lock": lambda _document, lock: lock[
+                "nodes"
+            ]["selected"]["locked"].update(narHash="sha256-other"),
         }
         for expected, mutate in mutations.items():
-            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as temp_dir:
+            with (
+                self.subTest(expected=expected),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
                 root = Path(temp_dir)
                 self._write_projection_fixture(root, mutate)
                 with self.assertRaisesRegex(RuntimeError, expected):
@@ -541,7 +510,9 @@ class UpdateInventoryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_projection_fixture(root, drift_selected)
-            with self.assertRaisesRegex(RuntimeError, "rev does not match portable lock"):
+            with self.assertRaisesRegex(
+                RuntimeError, "rev does not match portable lock"
+            ):
                 load_source_catalog(root)
 
     def test_issue34_projection_rejects_literal_url_drift(self):
@@ -551,7 +522,9 @@ class UpdateInventoryTests(unittest.TestCase):
             (root / "config/fleet/flake.nix").write_text(
                 '{\n  inputs = {\n    example.url = "github:other/project";\n  };\n}\n'
             )
-            with self.assertRaisesRegex(RuntimeError, "owner does not match flake literal"):
+            with self.assertRaisesRegex(
+                RuntimeError, "owner does not match flake literal"
+            ):
                 load_source_catalog(root)
 
     def test_issue34_sync_refreshes_selected_lock_projection(self):
@@ -569,7 +542,9 @@ class UpdateInventoryTests(unittest.TestCase):
             args = target["_record"]["source"]["args"]
             self.assertEqual(args["rev"], "a" * 40)
             self.assertEqual(args["narHash"], "sha256-selected")
-            self.assertEqual(target["_record"]["source"]["url"], "https://github.com/example/project")
+            self.assertEqual(
+                target["_record"]["source"]["url"], "https://github.com/example/project"
+            )
 
         env = os.environ.copy()
         env.pop("UPDATE_AGENTS_CANDIDATE", None)
@@ -582,7 +557,7 @@ class UpdateInventoryTests(unittest.TestCase):
             check=False,
         )
         self.assertNotEqual(refused.returncode, 0)
-        self.assertIn("restricted to the update-agents candidate", refused.stderr)
+        self.assertIn("restricted to the update candidate", refused.stderr)
         with tempfile.TemporaryDirectory() as temp_dir:
             primary = Path(temp_dir)
             (primary / ".git").mkdir()
@@ -706,7 +681,7 @@ class UpdateInventoryTests(unittest.TestCase):
         unrelated = """specified: sha256-old
 got: sha256-unrelated
 """
-        requested = f"""specified: {MODULE['DUMMY_SRI_HASH']}
+        requested = f"""specified: {MODULE["DUMMY_SRI_HASH"]}
 got: sha256-requested
 """
         self.assertIsNone(parse(unrelated))
@@ -727,9 +702,7 @@ got: sha256-requested
                 ["./build", "pkg", "agent-resources", "--no-link"],
             )
             self.assertEqual(
-                MODULE["HashComputer"](root)._package_build_command(
-                    "hf-xet", "python"
-                ),
+                MODULE["HashComputer"](root)._package_build_command("hf-xet", "python"),
                 ["./build", "python", "hf-xet", "--no-link"],
             )
             computer = HashComputer(root)
@@ -740,17 +713,14 @@ got: sha256-requested
                 return SimpleNamespace(
                     returncode=1,
                     stdout=(
-                        f"specified: {MODULE['DUMMY_SRI_HASH']}\n"
-                        "got: sha256-cHl0aG9u\n"
+                        f"specified: {MODULE['DUMMY_SRI_HASH']}\ngot: sha256-cHl0aG9u\n"
                     ),
                     stderr="",
                 )
 
             computer._run_package_build = fake_build
             self.assertEqual(
-                computer._compute_fod_hash(
-                    "hf-xet", "cargoDepsHash", "python"
-                ),
+                computer._compute_fod_hash("hf-xet", "cargoDepsHash", "python"),
                 "sha256-cHl0aG9u",
             )
             self.assertEqual(build_calls, [("hf-xet", "python")])
@@ -803,9 +773,7 @@ got: sha256-requested
             ):
                 with self.subTest(tool_resolution=label):
                     self.assertIsNone(
-                        HashComputer(root).resolve_build_tool(
-                            "jq", "jq", runner=runner
-                        )
+                        HashComputer(root).resolve_build_tool("jq", "jq", runner=runner)
                     )
             self.assertIsNone(
                 HashComputer(root).resolve_build_tool(
@@ -862,9 +830,7 @@ got: sha256-requested
                     set(contract["targets"][target]["defensiveForbidDependencies"]),
                     special.get(target, set()),
                 )
-                self.assertEqual(
-                    contract["targets"][target]["forbidDependencies"], []
-                )
+                self.assertEqual(contract["targets"][target]["forbidDependencies"], [])
                 normalized_text = normalize_pi_manifest(
                     root,
                     target,
@@ -884,16 +850,10 @@ got: sha256-requested
                 )
                 for dependency in special.get(target, set()):
                     self.assertNotIn(dependency, normalized["dependencies"])
-                    self.assertNotIn(
-                        dependency, normalized["optionalDependencies"]
-                    )
-                for dependency in (
-                    all_special_dependencies - special.get(target, set())
-                ):
+                    self.assertNotIn(dependency, normalized["optionalDependencies"])
+                for dependency in all_special_dependencies - special.get(target, set()):
                     self.assertIn(dependency, normalized["dependencies"])
-                    self.assertIn(
-                        dependency, normalized["optionalDependencies"]
-                    )
+                    self.assertIn(dependency, normalized["optionalDependencies"])
                 if target == "pi-hashline-edit-pro":
                     self.assertNotIn("allowScripts", normalized)
                 else:
@@ -970,9 +930,9 @@ got: sha256-requested
             self.assertIn("missing-enforced-dependency", inert_result.stderr)
 
             defensive = copy.deepcopy(contract)
-            defensive["targets"]["pi-artifacts"][
-                "defensiveForbidDependencies"
-            ] = ["future-defensive-dependency"]
+            defensive["targets"]["pi-artifacts"]["defensiveForbidDependencies"] = [
+                "future-defensive-dependency"
+            ]
             defensive_result = run_policy(defensive)
             self.assertEqual(
                 defensive_result.returncode,
@@ -994,9 +954,7 @@ got: sha256-requested
 
             rejected_by_both(
                 "scripts enabled",
-                lambda value: value["npmDependencyFlags"].remove(
-                    "--ignore-scripts"
-                ),
+                lambda value: value["npmDependencyFlags"].remove("--ignore-scripts"),
             )
             rejected_by_both(
                 "unknown contract field",
@@ -1012,9 +970,7 @@ got: sha256-requested
                 "dependency repeated across policies",
                 lambda value: (
                     value["common"]["forbidDependencies"].append("duplicate"),
-                    value["common"]["defensiveForbidDependencies"].append(
-                        "duplicate"
-                    ),
+                    value["common"]["defensiveForbidDependencies"].append("duplicate"),
                 ),
             )
             rejected_by_both(
@@ -1038,9 +994,7 @@ got: sha256-requested
             rejected_by_both(
                 "defensive dependency repeated across common and target",
                 lambda value: (
-                    value["common"]["defensiveForbidDependencies"].append(
-                        "duplicate"
-                    ),
+                    value["common"]["defensiveForbidDependencies"].append("duplicate"),
                     value["targets"]["pi-artifacts"][
                         "defensiveForbidDependencies"
                     ].append("duplicate"),
@@ -1074,7 +1028,7 @@ got: sha256-requested
             check=False,
         )
         self.assertNotEqual(refused.returncode, 0)
-        self.assertIn("restricted to the update-agents candidate", refused.stderr)
+        self.assertIn("restricted to the update candidate", refused.stderr)
         environment["UPDATE_AGENTS_CANDIDATE"] = "1"
         attached = subprocess.run(
             [
@@ -1122,9 +1076,7 @@ got: sha256-requested
             digest = hashlib.sha512(archive_path.read_bytes()).digest()
             integrity = f"sha512-{base64.b64encode(digest).decode()}"
             self.assertTrue(verify_npm_integrity(archive_path, integrity))
-            self.assertFalse(
-                verify_npm_integrity(archive_path, "sha512-AAAAAAAA")
-            )
+            self.assertFalse(verify_npm_integrity(archive_path, "sha512-AAAAAAAA"))
             sha1 = base64.b64encode(
                 hashlib.sha1(archive_path.read_bytes()).digest()
             ).decode()
@@ -1263,12 +1215,18 @@ got: sha256-requested
                 archive.addfile(manifest_member, io.BytesIO(payload))
             with self.assertRaisesRegex(RuntimeError, "extended headers"):
                 read_npm_tarball_manifest(gnu_longlink)
-        prior_lock = json.dumps({
-            "name": "example",
-            "version": "1.0.0",
-            "lockfileVersion": 3,
-            "packages": {"": manifest},
-        }, indent=2) + "\n"
+        prior_lock = (
+            json.dumps(
+                {
+                    "name": "example",
+                    "version": "1.0.0",
+                    "lockfileVersion": 3,
+                    "packages": {"": manifest},
+                },
+                indent=2,
+            )
+            + "\n"
+        )
         calls = []
 
         def fake_npm(command, **kwargs):
@@ -1300,9 +1258,7 @@ got: sha256-requested
             )
             return SimpleNamespace(returncode=0, stdout="", stderr="")
 
-        flags = pi_npm_lock_flags(
-            load_pi_normalization_contract(SCRIPT.parent.parent)
-        )
+        flags = pi_npm_lock_flags(load_pi_normalization_contract(SCRIPT.parent.parent))
         with registry_only_proxy() as proxy:
             parsed_proxy = urlsplit(proxy)
             with socket.create_connection(
@@ -1339,9 +1295,7 @@ got: sha256-requested
         )
         raw = copy.deepcopy(manifest)
         raw["devDependencies"] = {"raw-only": "1"}
-        self.assertFalse(
-            validate_npm_manifest_lock(json.dumps(raw), generated)
-        )
+        self.assertFalse(validate_npm_manifest_lock(json.dumps(raw), generated))
         generated_document = json.loads(generated)
         for label, mutate in (
             (
@@ -1352,9 +1306,7 @@ got: sha256-requested
             ),
             (
                 "missing integrity",
-                lambda value: value["packages"]["node_modules/keep"].pop(
-                    "integrity"
-                ),
+                lambda value: value["packages"]["node_modules/keep"].pop("integrity"),
             ),
             (
                 "malformed integrity",
@@ -1364,9 +1316,7 @@ got: sha256-requested
             ),
             (
                 "link package",
-                lambda value: value["packages"]["node_modules/keep"].update(
-                    link=True
-                ),
+                lambda value: value["packages"]["node_modules/keep"].update(link=True),
             ),
             (
                 "root identity",
@@ -1385,9 +1335,7 @@ got: sha256-requested
         optional_mismatch = copy.deepcopy(manifest)
         optional_mismatch["optionalDependencies"]["optional"] = "2"
         self.assertFalse(
-            validate_npm_manifest_lock(
-                json.dumps(optional_mismatch), generated
-            )
+            validate_npm_manifest_lock(json.dumps(optional_mismatch), generated)
         )
         peer_mismatch = copy.deepcopy(manifest)
         peer_mismatch["peerDependencies"] = {"peer": "1"}
@@ -1399,9 +1347,7 @@ got: sha256-requested
         self.assertEqual(kwargs["env"]["CI"], "true")
         self.assertNotEqual(kwargs["env"]["HOME"], os.environ.get("HOME"))
         self.assertIn("npm_config_userconfig", kwargs["env"])
-        self.assertEqual(
-            kwargs["env"]["PATH"], "/nix/store/fake-node/bin"
-        )
+        self.assertEqual(kwargs["env"]["PATH"], "/nix/store/fake-node/bin")
         self.assertEqual(
             kwargs["env"]["npm_config_registry"],
             "https://registry.npmjs.org",
@@ -1501,65 +1447,79 @@ got: sha256-requested
             lock_dir = root / "packages/pi-gallery/locks"
             lock_dir.mkdir(parents=True)
             policy_path = root / "packages/pi-gallery/normalization-policy.json"
-            policy_path.write_text(json.dumps({
-                "schemaVersion": 2,
-                "npmDependencyFlags": [
-                    "--ignore-scripts",
-                    "--omit=dev",
-                    "--omit=peer",
-                    "--legacy-peer-deps",
-                ],
-                "common": {
-                    "removeTopLevel": [],
-                    "forbidDependencies": [],
-                    "defensiveForbidDependencies": [],
-                },
-                "targets": {
-                    "project": {
-                        "removeTopLevel": [],
-                        "forbidDependencies": [],
-                        "defensiveForbidDependencies": [],
+            policy_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 2,
+                        "npmDependencyFlags": [
+                            "--ignore-scripts",
+                            "--omit=dev",
+                            "--omit=peer",
+                            "--legacy-peer-deps",
+                        ],
+                        "common": {
+                            "removeTopLevel": [],
+                            "forbidDependencies": [],
+                            "defensiveForbidDependencies": [],
+                        },
+                        "targets": {
+                            "project": {
+                                "removeTopLevel": [],
+                                "forbidDependencies": [],
+                                "defensiveForbidDependencies": [],
+                            }
+                        },
                     }
-                },
-            }))
+                )
+            )
             (root / "packages/pi-gallery/normalize-manifest.jq").write_text(".\n")
             lock_path = lock_dir / "project-package-lock.json"
             old_manifest = {"name": "project", "version": "1.0.0"}
-            old_lock = json.dumps({
-                "name": "project",
-                "version": "1.0.0",
-                "lockfileVersion": 3,
-                "packages": {"": old_manifest},
-            }, indent=2) + "\n"
+            old_lock = (
+                json.dumps(
+                    {
+                        "name": "project",
+                        "version": "1.0.0",
+                        "lockfileVersion": 3,
+                        "packages": {"": old_manifest},
+                    },
+                    indent=2,
+                )
+                + "\n"
+            )
             lock_path.write_text(old_lock)
             catalog_path = root / "sources/pi.json"
-            catalog_path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {
-                    "project": {
-                        "version": "1.0.0",
-                        "source": {
-                            "fetcher": "fetchurl",
-                            "url": "https://registry.npmjs.org/project/-/project-1.0.0.tgz",
-                            "args": {
-                                "url": "https://registry.npmjs.org/project/-/project-1.0.0.tgz",
-                                "hash": "sha256-source-old",
-                            },
-                        },
-                        "hashes": {"npmDepsHash": "sha256-npm-old"},
-                        "update": {
-                            "artifacts": [
-                                "packages/pi-gallery/locks/project-package-lock.json"
-                            ],
-                            "kind": "npm-release",
-                            "normalizer": "pi-gallery-v1",
-                            "package": "project",
+            catalog_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {
+                            "project": {
+                                "version": "1.0.0",
+                                "source": {
+                                    "fetcher": "fetchurl",
+                                    "url": "https://registry.npmjs.org/project/-/project-1.0.0.tgz",
+                                    "args": {
+                                        "url": "https://registry.npmjs.org/project/-/project-1.0.0.tgz",
+                                        "hash": "sha256-source-old",
+                                    },
+                                },
+                                "hashes": {"npmDepsHash": "sha256-npm-old"},
+                                "update": {
+                                    "artifacts": [
+                                        "packages/pi-gallery/locks/project-package-lock.json"
+                                    ],
+                                    "kind": "npm-release",
+                                    "normalizer": "pi-gallery-v1",
+                                    "package": "project",
+                                },
+                            }
                         },
                     }
-                },
-            }))
+                )
+            )
             target = load_source_catalog(root)["project"]
-            self.assertEqual(target["executor"], "update-agents")
+            self.assertEqual(target["executor"], "update")
             valid_catalog = catalog_path.read_text()
 
             shared_record = {
@@ -1579,9 +1539,7 @@ got: sha256-requested
                     "kind": "url-release",
                 },
             }
-            canonical_lock = (
-                "packages/pi-gallery/locks/project-package-lock.json"
-            )
+            canonical_lock = "packages/pi-gallery/locks/project-package-lock.json"
             for sibling_document, artifact_alias in (
                 ("a.json", canonical_lock),
                 ("z.json", f"./{canonical_lock}"),
@@ -1590,10 +1548,14 @@ got: sha256-requested
                     sibling_path = root / "sources" / sibling_document
                     sibling_record = copy.deepcopy(shared_record)
                     sibling_record["update"]["artifacts"] = [artifact_alias]
-                    sibling_path.write_text(json.dumps({
-                        "schemaVersion": 1,
-                        "sources": {"sibling": sibling_record},
-                    }))
+                    sibling_path.write_text(
+                        json.dumps(
+                            {
+                                "schemaVersion": 1,
+                                "sources": {"sibling": sibling_record},
+                            }
+                        )
+                    )
                     with self.assertRaisesRegex(
                         RuntimeError, "exactly its normalizer target as owner"
                     ):
@@ -1602,30 +1564,34 @@ got: sha256-requested
 
             (root / "flake.lock").write_text("{}\n")
             shared_flake_path = root / "sources/shared-flake.json"
-            shared_flake_path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {
-                    f"shared-{index}": {
-                        **copy.deepcopy(shared_record),
-                        "source": {
-                            "fetcher": "fetchurl",
-                            "url": f"https://example.invalid/shared-{index}-1.0.0.tgz",
-                            "args": {
-                                "url": (
-                                    "https://example.invalid/"
-                                    f"shared-{index}-1.0.0.tgz"
-                                ),
-                                "hash": f"sha256-shared-{index}",
-                            },
-                        },
-                        "update": {
-                            "artifacts": ["flake.lock"],
-                            "kind": "url-release",
+            shared_flake_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {
+                            f"shared-{index}": {
+                                **copy.deepcopy(shared_record),
+                                "source": {
+                                    "fetcher": "fetchurl",
+                                    "url": f"https://example.invalid/shared-{index}-1.0.0.tgz",
+                                    "args": {
+                                        "url": (
+                                            "https://example.invalid/"
+                                            f"shared-{index}-1.0.0.tgz"
+                                        ),
+                                        "hash": f"sha256-shared-{index}",
+                                    },
+                                },
+                                "update": {
+                                    "artifacts": ["flake.lock"],
+                                    "kind": "url-release",
+                                },
+                            }
+                            for index in (1, 2)
                         },
                     }
-                    for index in (1, 2)
-                },
-            }))
+                )
+            )
             shared_targets = load_source_catalog(root)
             self.assertTrue({"shared-1", "shared-2"} <= set(shared_targets))
             shared_flake_path.unlink()
@@ -1651,9 +1617,7 @@ got: sha256-requested
             future_record["source"]["url"] = (
                 "https://registry.npmjs.org/future/-/future-1.0.0.tgz"
             )
-            future_record["source"]["args"]["url"] = future_record["source"][
-                "url"
-            ]
+            future_record["source"]["args"]["url"] = future_record["source"]["url"]
             future["sources"]["future"] = future_record
             (lock_dir / "future-package-lock.json").write_text(old_lock)
             catalog_path.write_text(json.dumps(future))
@@ -1707,8 +1671,7 @@ got: sha256-requested
                             "version": requested,
                             "integrity": "sha512-integrity",
                             "tarball": (
-                                "https://cdn.example.invalid/project-"
-                                f"{requested}.tgz"
+                                f"https://cdn.example.invalid/project-{requested}.tgz"
                             ),
                         }
                     ),
@@ -1719,23 +1682,35 @@ got: sha256-requested
             self.assertEqual(off_registry_hashes.calls, [])
             self.assertEqual(transaction.original, {})
 
-            normalized = json.dumps({
-                "name": "project",
-                "version": "2.0.0",
-                "dependencies": {"keep": "1"},
-            }, indent=2) + "\n"
-            new_lock = json.dumps({
-                "name": "project",
-                "version": "2.0.0",
-                "lockfileVersion": 3,
-                "packages": {
-                    "": {
+            normalized = (
+                json.dumps(
+                    {
                         "name": "project",
                         "version": "2.0.0",
                         "dependencies": {"keep": "1"},
-                    }
-                },
-            }, indent=2) + "\n"
+                    },
+                    indent=2,
+                )
+                + "\n"
+            )
+            new_lock = (
+                json.dumps(
+                    {
+                        "name": "project",
+                        "version": "2.0.0",
+                        "lockfileVersion": 3,
+                        "packages": {
+                            "": {
+                                "name": "project",
+                                "version": "2.0.0",
+                                "dependencies": {"keep": "1"},
+                            }
+                        },
+                    },
+                    indent=2,
+                )
+                + "\n"
+            )
 
             def reject_normalization(*_args):
                 raise RuntimeError(
@@ -1777,9 +1752,7 @@ got: sha256-requested
 
             observed = []
 
-            def fake_normalizer(
-                _root, target_name, expected_name, version, raw, jq
-            ):
+            def fake_normalizer(_root, target_name, expected_name, version, raw, jq):
                 observed.append(
                     ("normalize", target_name, expected_name, version, raw, jq)
                 )
@@ -1983,9 +1956,7 @@ got: sha256-requested
                     manifest_normalizer=lambda *_args: normalized.replace(
                         "2.0.0", "3.0.0"
                     ),
-                    lock_generator=lambda *_args: new_lock.replace(
-                        "2.0.0", "3.0.0"
-                    ),
+                    lock_generator=lambda *_args: new_lock.replace("2.0.0", "3.0.0"),
                     integrity_verifier=lambda _path, _integrity: True,
                 )
             self.assertEqual(status, "failed")
@@ -2011,7 +1982,9 @@ got: sha256-requested
             (root / "sources").mkdir()
             document = {"schemaVersion": 1, "sources": {"ws": record}}
             (root / "sources/test.json").write_text(json.dumps(document))
-            self.assertEqual(load_source_catalog(root)["ws"]["executor"], "update-overlay")
+            self.assertEqual(
+                load_source_catalog(root)["ws"]["executor"], "update-overlay"
+            )
             document["sources"]["ws"]["update"]["package"] = "other"
             (root / "sources/test.json").write_text(json.dumps(document))
             with self.assertRaisesRegex(RuntimeError, "npm source identity"):
@@ -2019,7 +1992,9 @@ got: sha256-requested
             document["sources"]["ws"]["update"]["package"] = "ws"
             document["sources"]["ws"]["version"] = "8.18.4"
             (root / "sources/test.json").write_text(json.dumps(document))
-            with self.assertRaisesRegex(RuntimeError, "URL does not match catalog version"):
+            with self.assertRaisesRegex(
+                RuntimeError, "URL does not match catalog version"
+            ):
                 load_source_catalog(root)
 
     def test_fixed_flake_input_rewrites_literal_and_rolls_back_atomically(self):
@@ -2035,31 +2010,39 @@ got: sha256-requested
             new_hash = "sha256-new"
 
             def write_old_state():
-                catalog_path.write_text(json.dumps({
-                    "schemaVersion": 1,
-                    "sources": {
-                        "example": {
-                            "source": {
-                                "fetcher": "fetchTree",
-                                "url": "https://github.com/example/project",
-                                "args": {
-                                    "owner": "example",
-                                    "repo": "project",
-                                    "rev": old_rev,
-                                    "narHash": old_hash,
-                                    "type": "github",
-                                },
+                catalog_path.write_text(
+                    json.dumps(
+                        {
+                            "schemaVersion": 1,
+                            "sources": {
+                                "example": {
+                                    "source": {
+                                        "fetcher": "fetchTree",
+                                        "url": "https://github.com/example/project",
+                                        "args": {
+                                            "owner": "example",
+                                            "repo": "project",
+                                            "rev": old_rev,
+                                            "narHash": old_hash,
+                                            "type": "github",
+                                        },
+                                    },
+                                    "update": {
+                                        "artifacts": ["config/fleet/flake.nix"],
+                                        "input": "example",
+                                        "kind": "fixed-flake-input",
+                                    },
+                                }
                             },
-                            "update": {
-                                "artifacts": ["config/fleet/flake.nix"],
-                                "input": "example",
-                                "kind": "fixed-flake-input",
-                            },
-                        }
-                    },
-                }, indent=2) + "\n")
+                        },
+                        indent=2,
+                    )
+                    + "\n"
+                )
                 flake_path.write_text(
-                    '{ inputs.example.url = "github:example/project/' + old_rev + '"; }\n'
+                    '{ inputs.example.url = "github:example/project/'
+                    + old_rev
+                    + '"; }\n'
                 )
 
             def load_target():
@@ -2134,10 +2117,10 @@ got: sha256-requested
             return 17
 
         globals_ = MODULE["main"].__globals__
-        real_delegate = globals_["delegate_to_update_agents"]
+        real_delegate = globals_["delegate_to_update"]
         old_argv = sys.argv
         try:
-            globals_["delegate_to_update_agents"] = fake_delegate
+            globals_["delegate_to_update"] = fake_delegate
             sys.argv = [
                 str(SCRIPT),
                 "agent-browser-source",
@@ -2148,7 +2131,7 @@ got: sha256-requested
             with contextlib.redirect_stdout(io.StringIO()):
                 status = MODULE["main"]()
         finally:
-            globals_["delegate_to_update_agents"] = real_delegate
+            globals_["delegate_to_update"] = real_delegate
             sys.argv = old_argv
 
         self.assertEqual(status, 17)
@@ -2165,7 +2148,7 @@ got: sha256-requested
             runner_calls.append((command, kwargs))
             return SimpleNamespace(returncode=23)
 
-        delegated = MODULE["delegate_to_update_agents"](
+        delegated = MODULE["delegate_to_update"](
             Path("/repo"),
             ["agent-browser-source"],
             SimpleNamespace(version="b" * 40, dry_run=True),
@@ -2198,41 +2181,47 @@ got: sha256-requested
             new_rev = "b" * 40
 
             def write_old_state():
-                catalog_path.write_text(json.dumps({
-                    "schemaVersion": 1,
-                    "sources": {
-                        "example": {
-                            "version": "1.0.0",
-                            "source": {
-                                "fetcher": "fetchurl",
-                                "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
-                                "args": {
-                                    "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
-                                    "hash": "sha256-tar-old",
-                                },
-                            },
-                            "artifacts": {
-                                "flakeInput": {
-                                    "fetcher": "fetchTree",
-                                    "url": "https://github.com/example/project",
-                                    "args": {
-                                        "owner": "example",
-                                        "repo": "project",
-                                        "rev": old_rev,
-                                        "narHash": "sha256-git-old",
-                                        "type": "github",
+                catalog_path.write_text(
+                    json.dumps(
+                        {
+                            "schemaVersion": 1,
+                            "sources": {
+                                "example": {
+                                    "version": "1.0.0",
+                                    "source": {
+                                        "fetcher": "fetchurl",
+                                        "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
+                                        "args": {
+                                            "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
+                                            "hash": "sha256-tar-old",
+                                        },
+                                    },
+                                    "artifacts": {
+                                        "flakeInput": {
+                                            "fetcher": "fetchTree",
+                                            "url": "https://github.com/example/project",
+                                            "args": {
+                                                "owner": "example",
+                                                "repo": "project",
+                                                "rev": old_rev,
+                                                "narHash": "sha256-git-old",
+                                                "type": "github",
+                                            },
+                                        }
+                                    },
+                                    "update": {
+                                        "artifacts": ["config/fleet/flake.nix"],
+                                        "input": "example",
+                                        "kind": "npm-release+flake-input",
+                                        "package": "example",
                                     },
                                 }
                             },
-                            "update": {
-                                "artifacts": ["config/fleet/flake.nix"],
-                                "input": "example",
-                                "kind": "npm-release+flake-input",
-                                "package": "example",
-                            },
-                        }
-                    },
-                }, indent=2) + "\n")
+                        },
+                        indent=2,
+                    )
+                    + "\n"
+                )
                 flake_path.write_text(
                     '{ inputs.example.url = "github:example/project"; }\n'
                 )
@@ -2310,9 +2299,7 @@ got: sha256-requested
             record = json.loads(catalog_path.read_text())["sources"]["example"]
             self.assertEqual(record["version"], "2.0.0")
             self.assertEqual(record["source"]["args"]["hash"], "sha256-tar-new")
-            self.assertEqual(
-                record["artifacts"]["flakeInput"]["args"]["rev"], new_rev
-            )
+            self.assertEqual(record["artifacts"]["flakeInput"]["args"]["rev"], new_rev)
             self.assertEqual(
                 record["artifacts"]["flakeInput"]["args"]["narHash"],
                 "sha256-git-new",
@@ -2358,7 +2345,6 @@ got: sha256-requested
             self.assertEqual(catalog_path.read_text(), before_catalog)
             self.assertEqual(flake_path.read_text(), before_flake)
 
-
     def test_source_catalog_rejects_ambiguous_native_fetcher_shapes(self):
         valid = {
             "version": "1.0.0",
@@ -2389,6 +2375,12 @@ got: sha256-requested
         tag["source"]["args"]["tag"] = tag["source"]["args"].pop("rev")
         tag["update"] = {"kind": "github-release"}
         self.assertEqual(load(tag)["example"]["version"], "deadbeef")
+
+        manual = copy.deepcopy(valid)
+        manual["update"].update(policy="manual", reason="Compatibility hold")
+        self.assertEqual(
+            load(manual)["example"]["_record"]["update"]["policy"], "manual"
+        )
 
         invalid = []
         both_refs = copy.deepcopy(valid)
@@ -2424,7 +2416,9 @@ got: sha256-requested
         invalid.append(fetchurl_without_url)
 
         insecure_fetch_url = copy.deepcopy(fetchurl_without_url)
-        insecure_fetch_url["source"]["args"]["url"] = "http://example.invalid/archive.tgz"
+        insecure_fetch_url["source"]["args"]["url"] = (
+            "http://example.invalid/archive.tgz"
+        )
         invalid.append(insecure_fetch_url)
 
         commit_tag = copy.deepcopy(valid)
@@ -2438,6 +2432,10 @@ got: sha256-requested
         empty_reason = copy.deepcopy(valid)
         empty_reason["update"]["reason"] = ""
         invalid.append(empty_reason)
+
+        unreasoned_manual = copy.deepcopy(valid)
+        unreasoned_manual["update"]["policy"] = "manual"
+        invalid.append(unreasoned_manual)
 
         bad_pypi_identity = {
             "version": "1.0.0",
@@ -2497,17 +2495,21 @@ got: sha256-requested
 
         successful_calls = []
         responses = [
-            json.dumps({
-                "content": "ZXhhY3QgY29udGVudHMK",
-                "encoding": "base64",
-                "type": "file",
-            }),
+            json.dumps(
+                {
+                    "content": "ZXhhY3QgY29udGVudHMK",
+                    "encoding": "base64",
+                    "type": "file",
+                }
+            ),
             json.dumps([{"name": "Cargo.lock", "type": "file"}]),
-            json.dumps({
-                "content": "%%%",
-                "encoding": "base64",
-                "type": "file",
-            }),
+            json.dumps(
+                {
+                    "content": "%%%",
+                    "encoding": "base64",
+                    "type": "file",
+                }
+            ),
         ]
 
         def successful_run(command, **kwargs):
@@ -2520,21 +2522,15 @@ got: sha256-requested
             content = client.get_file(
                 "example", "project", "b" * 40, "locks/Cargo lock"
             )
-            self.assertIsNone(
-                client.get_file("example", "project", "b" * 40, "locks")
-            )
-            self.assertIsNone(
-                client.get_file("example", "project", "b" * 40, "bad")
-            )
+            self.assertIsNone(client.get_file("example", "project", "b" * 40, "locks"))
+            self.assertIsNone(client.get_file("example", "project", "b" * 40, "bad"))
         finally:
             subprocess.run = real_run
         self.assertEqual(content, "exact contents\n")
         self.assertEqual(len(successful_calls), 3)
         command, kwargs = successful_calls[0]
         self.assertEqual(command[:2], ["gh", "api"])
-        self.assertIn(
-            f"contents/locks/Cargo%20lock?ref={'b' * 40}", command[2]
-        )
+        self.assertIn(f"contents/locks/Cargo%20lock?ref={'b' * 40}", command[2])
         self.assertEqual(kwargs["timeout"], 60)
 
     def test_github_commit_failure_reports_requested_and_default_branches(self):
@@ -2554,9 +2550,7 @@ got: sha256-requested
         subprocess.run = fake_run
         try:
             client = GitHubClient()
-            self.assertIsNone(
-                client.get_latest_commit("example", "project", "topic")
-            )
+            self.assertIsNone(client.get_latest_commit("example", "project", "topic"))
         finally:
             subprocess.run = real_run
 
@@ -2586,15 +2580,11 @@ got: sha256-requested
             client = GitHubClient()
             self.assertIsNone(client.get_latest_release("example", "project"))
             self.assertIn("release missing", client.last_error)
-            self.assertEqual(
-                client.get_latest_release("example", "project"), "v2.0.0"
-            )
+            self.assertEqual(client.get_latest_release("example", "project"), "v2.0.0")
             self.assertIsNone(client.last_error)
             self.assertIsNone(client.get_default_branch("example", "project"))
             self.assertIn("repository missing", client.last_error)
-            self.assertEqual(
-                client.get_default_branch("example", "project"), "trunk"
-            )
+            self.assertEqual(client.get_default_branch("example", "project"), "trunk")
             self.assertIsNone(client.last_error)
         finally:
             subprocess.run = real_run
@@ -2605,9 +2595,7 @@ got: sha256-requested
         subprocess.run = raising_run
         try:
             client = GitHubClient()
-            self.assertIsNone(
-                client.get_latest_commit("example", "project", "missing")
-            )
+            self.assertIsNone(client.get_latest_commit("example", "project", "missing"))
         finally:
             subprocess.run = real_run
         self.assertIn("requested branch 'missing'", client.last_error)
@@ -2616,12 +2604,7 @@ got: sha256-requested
 
     def test_cargo_lock_validation_uses_exact_checkout(self):
         revision = "c" * 40
-        lock = (
-            "version = 4\n\n"
-            "[[package]]\n"
-            'name = "project"\n'
-            'version = "1.0.0"\n'
-        )
+        lock = 'version = 4\n\n[[package]]\nname = "project"\nversion = "1.0.0"\n'
         calls = []
         cargo_succeeds = True
 
@@ -2684,12 +2667,17 @@ got: sha256-requested
             subprocess.run = real_run
 
         first_fetch = next(
-            command for command, _kwargs in calls if command[0] == "git" and "fetch" in command
+            command
+            for command, _kwargs in calls
+            if command[0] == "git" and "fetch" in command
         )
-        self.assertEqual(first_fetch[-2:], [
-            "https://github.com/example/project",
-            revision,
-        ])
+        self.assertEqual(
+            first_fetch[-2:],
+            [
+                "https://github.com/example/project",
+                revision,
+            ],
+        )
         checkout_command = next(
             command
             for command, _kwargs in calls
@@ -2712,22 +2700,30 @@ got: sha256-requested
             root = Path(temp_dir)
             (root / "sources").mkdir()
             path = root / "sources/tools.json"
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {
-                    "example": {
-                        "source": {
-                            "fetcher": "fetchurl",
-                            "url": "https://example.invalid/tool",
-                            "args": {
-                                "url": "https://example.invalid/tool",
-                                "sha256": "old-hash",
-                            },
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {
+                            "example": {
+                                "source": {
+                                    "fetcher": "fetchurl",
+                                    "url": "https://example.invalid/tool",
+                                    "args": {
+                                        "url": "https://example.invalid/tool",
+                                        "sha256": "old-hash",
+                                    },
+                                },
+                                "update": {
+                                    "kind": "url-release",
+                                    "policy": "manual",
+                                    "reason": "Fixture requires an explicit update",
+                                },
+                            }
                         },
-                        "update": {"kind": "url-release", "policy": "manual"},
                     }
-                },
-            }))
+                )
+            )
             target = load_source_catalog(root)["example"]
             self.assertEqual(target["executor"], "update-overlay")
 
@@ -2748,7 +2744,9 @@ got: sha256-requested
             transaction.commit()
             self.assertEqual(status, "updated")
             self.assertEqual(
-                json.loads(path.read_text())["sources"]["example"]["source"]["args"]["sha256"],
+                json.loads(path.read_text())["sources"]["example"]["source"]["args"][
+                    "sha256"
+                ],
                 "new-hash",
             )
             with contextlib.redirect_stdout(io.StringIO()):
@@ -2810,7 +2808,9 @@ got: sha256-requested
         self.assertEqual(value, "nix32-new")
         self.assertIn("nix-config-ai.inputs.nixpkgs", calls[0][-1])
         self.assertEqual(calls[1][1:3], ["hash", "convert"])
-        self.assertEqual(zip_value, "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+        self.assertEqual(
+            zip_value, "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        )
         self.assertIn("pkgs.fetchzip", calls[2][-1])
         self.assertIn("example-2.0.0.tgz", calls[2][-1])
         self.assertNotIn("example-1.0.0.tgz", calls[2][-1])
@@ -2863,9 +2863,7 @@ got: sha256-requested
             self.assertNotIn("\x1b", detail)
             self.assertNotIn("\x00", detail)
             self.assertNotIn(" > ", detail)
-            self.assertLessEqual(
-                len(detail), MODULE["MAX_ACTIONABLE_ERROR_CHARS"]
-            )
+            self.assertLessEqual(len(detail), MODULE["MAX_ACTIONABLE_ERROR_CHARS"])
             self.assertEqual(
                 hashes.compute_native_hash(source, {}),
                 "sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=",
@@ -2975,9 +2973,7 @@ got: sha256-requested
         }
 
         class FailedHashes:
-            last_error = (
-                "native fetcher build failed: fatal: repository not found"
-            )
+            last_error = "native fetcher build failed: fatal: repository not found"
 
             def compute_native_hash(self, _source, _replacements):
                 return None
@@ -3047,24 +3043,28 @@ got: sha256-requested
             root = Path(temp_dir)
             (root / "sources").mkdir()
             path = root / "sources/ai.json"
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {
-                    "example": {
-                        "version": "1.0.0",
-                        "source": {
-                            "fetcher": "fetchzip",
-                            "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
-                            "args": {
-                                "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
-                                "hash": "sha512-old",
-                            },
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {
+                            "example": {
+                                "version": "1.0.0",
+                                "source": {
+                                    "fetcher": "fetchzip",
+                                    "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
+                                    "args": {
+                                        "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
+                                        "hash": "sha512-old",
+                                    },
+                                },
+                                "hashes": {"npmDepsHash": "sha256-old"},
+                                "update": {"kind": "npm-release", "package": "example"},
+                            }
                         },
-                        "hashes": {"npmDepsHash": "sha256-old"},
-                        "update": {"kind": "npm-release", "package": "example"},
                     }
-                },
-            }))
+                )
+            )
             target = load_source_catalog(root)["example"]
 
             class FakeNpmClient:
@@ -3149,25 +3149,29 @@ got: sha256-requested
             root = Path(temp_dir)
             (root / "sources").mkdir()
             path = root / "sources/ai.json"
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {
-                    "example": {
-                        "version": "1.0.0",
-                        "source": {
-                            "fetcher": "fetchFromGitHub",
-                            "url": "https://github.com/example/project",
-                            "args": {
-                                "owner": "example",
-                                "repo": "project",
-                                "tag": "v1.0.0",
-                                "hash": "sha256-old",
-                            },
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {
+                            "example": {
+                                "version": "1.0.0",
+                                "source": {
+                                    "fetcher": "fetchFromGitHub",
+                                    "url": "https://github.com/example/project",
+                                    "args": {
+                                        "owner": "example",
+                                        "repo": "project",
+                                        "tag": "v1.0.0",
+                                        "hash": "sha256-old",
+                                    },
+                                },
+                                "update": {"kind": "github-release", "tagPrefix": "v"},
+                            }
                         },
-                        "update": {"kind": "github-release", "tagPrefix": "v"},
                     }
-                },
-            }))
+                )
+            )
             target = load_source_catalog(root)["example"]
 
             github = SimpleNamespace(get_latest_release=lambda _owner, _repo: "v2.0.0")
@@ -3190,31 +3194,38 @@ got: sha256-requested
             record = json.loads(path.read_text())["sources"]["example"]
             self.assertEqual(status, "updated")
             self.assertEqual(record["source"]["args"]["tag"], "v2.0.0")
-            self.assertNotIn("rev", record["source"]["args"] )
+            self.assertNotIn("rev", record["source"]["args"])
 
     def test_catalog_pypi_update_preserves_fetchpypi_arguments(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             (root / "sources").mkdir()
             path = root / "sources/ai.json"
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {
-                    "example": {
-                        "version": "1.0.0",
-                        "source": {
-                            "fetcher": "fetchPypi",
-                            "url": "https://pypi.org/project/example",
-                            "args": {
-                                "pname": "example",
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {
+                            "example": {
                                 "version": "1.0.0",
-                                "hash": "sha256-old",
-                            },
+                                "source": {
+                                    "fetcher": "fetchPypi",
+                                    "url": "https://pypi.org/project/example",
+                                    "args": {
+                                        "pname": "example",
+                                        "version": "1.0.0",
+                                        "hash": "sha256-old",
+                                    },
+                                },
+                                "update": {
+                                    "kind": "pypi-release",
+                                    "package": "example",
+                                },
+                            }
                         },
-                        "update": {"kind": "pypi-release", "package": "example"},
                     }
-                },
-            }))
+                )
+            )
             target = load_source_catalog(root)["example"]
             pypi = SimpleNamespace(
                 get_release=lambda _package, _record, _requested=None: (
@@ -3241,8 +3252,10 @@ got: sha256-requested
             self.assertEqual(record["version"], "2.0.0")
             self.assertEqual(record["source"]["args"]["version"], "2.0.0")
             self.assertEqual(record["source"]["args"]["hash"], "sha256-new")
-            self.assertNotIn("url", record["source"]["args"] )
-            self.assertEqual(record["source"]["url"], "https://pypi.org/project/example")
+            self.assertNotIn("url", record["source"]["args"])
+            self.assertEqual(
+                record["source"]["url"], "https://pypi.org/project/example"
+            )
 
     def test_compound_pypi_resolves_every_artifact_before_writing(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -3275,12 +3288,16 @@ got: sha256-requested
                 },
                 "update": {"kind": "pypi-release", "package": "example"},
             }
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"example": record},
-            }))
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"example": record},
+                    }
+                )
+            )
             target = load_source_catalog(root)["example"]
-            self.assertEqual(target["executor"], "update-agents")
+            self.assertEqual(target["executor"], "update")
 
             def artifact(filename, byte):
                 return {
@@ -3292,16 +3309,27 @@ got: sha256-requested
             documents = {
                 "example": {
                     "info": {"version": "2.0.0"},
-                    "releases": {"2.0.0": [
-                        artifact("example-2.0.0-cp311-cp311-macosx_14_0_arm64.whl", "1"),
-                        artifact("example-2.0.0-cp313-cp313-macosx_14_0_arm64.whl", "2"),
-                    ]},
+                    "releases": {
+                        "2.0.0": [
+                            artifact(
+                                "example-2.0.0-cp311-cp311-macosx_14_0_arm64.whl", "1"
+                            ),
+                            artifact(
+                                "example-2.0.0-cp313-cp313-macosx_14_0_arm64.whl", "2"
+                            ),
+                        ]
+                    },
                 },
                 "example-metal": {
                     "info": {"version": "2.0.0"},
-                    "releases": {"2.0.0": [
-                        artifact("example_metal-2.0.0-py3-none-macosx_14_0_arm64.whl", "3"),
-                    ]},
+                    "releases": {
+                        "2.0.0": [
+                            artifact(
+                                "example_metal-2.0.0-py3-none-macosx_14_0_arm64.whl",
+                                "3",
+                            ),
+                        ]
+                    },
                 },
             }
 
@@ -3385,10 +3413,14 @@ got: sha256-requested
             )
 
             updated["artifacts"]["cp311"]["args"]["version"] = "1.0.0"
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"example": updated},
-            }))
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"example": updated},
+                    }
+                )
+            )
             with self.assertRaisesRegex(
                 RuntimeError, "compound PyPI artifact version does not match"
             ):
@@ -3410,14 +3442,10 @@ got: sha256-requested
 
             record = {
                 "version": "1.0.0",
-                "source": asset(
-                    "tool-1.0.0-darwin-arm64", "sha256-darwin-old"
-                ),
+                "source": asset("tool-1.0.0-darwin-arm64", "sha256-darwin-old"),
                 "artifacts": {
-                    "aarch64-linux": asset(
-                        "tool-1.0.0-linux-arm64", "sha256-arm-old"
-                    ),
-                    "x86_64-linux": asset("tool-linux-x64", "sha256-linux-old")
+                    "aarch64-linux": asset("tool-1.0.0-linux-arm64", "sha256-arm-old"),
+                    "x86_64-linux": asset("tool-linux-x64", "sha256-linux-old"),
                 },
                 "update": {
                     "assets": {
@@ -3431,21 +3459,27 @@ got: sha256-requested
                     "tagPrefix": "v",
                 },
             }
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"tool": record},
-            }))
-            target = load_source_catalog(root)["tool"]
-            self.assertEqual(target["executor"], "update-agents")
-            github = SimpleNamespace(
-                get_latest_release=lambda _owner, _repo: "v2.0.0"
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"tool": record},
+                    }
+                )
             )
+            target = load_source_catalog(root)["tool"]
+            self.assertEqual(target["executor"], "update")
+            github = SimpleNamespace(get_latest_release=lambda _owner, _repo: "v2.0.0")
 
             calls = []
 
             def incomplete_hash(_source, replacements):
                 calls.append(replacements["url"])
-                return None if replacements["url"].endswith("tool-linux-x64") else "sha256-darwin"
+                return (
+                    None
+                    if replacements["url"].endswith("tool-linux-x64")
+                    else "sha256-darwin"
+                )
 
             before = path.read_text()
             transaction = SourceTransaction()
@@ -3546,13 +3580,15 @@ got: sha256-requested
 
             source_only = copy.deepcopy(record)
             source_only.pop("artifacts")
-            source_only["update"]["assets"] = {
-                "source": "tool-{version}-darwin-arm64"
-            }
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"tool": source_only},
-            }))
+            source_only["update"]["assets"] = {"source": "tool-{version}-darwin-arm64"}
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"tool": source_only},
+                    }
+                )
+            )
             source_only_target = load_source_catalog(root)["tool"]
             transaction = SourceTransaction()
             with contextlib.redirect_stdout(io.StringIO()):
@@ -3560,9 +3596,7 @@ got: sha256-requested
                     "tool",
                     source_only_target,
                     SimpleNamespace(version=None, dry_run=False),
-                    SimpleNamespace(
-                        get_latest_release=lambda _owner, _repo: "v3.0.0"
-                    ),
+                    SimpleNamespace(get_latest_release=lambda _owner, _repo: "v3.0.0"),
                     SimpleNamespace(
                         compute_native_hash=lambda _source, _replacements: (
                             "sha256-source-only"
@@ -3581,10 +3615,14 @@ got: sha256-requested
                 "https://github.com/example/tool/releases/download/v3.0.0/tool-3.0.0-darwin-arm64",
             )
 
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"tool": record},
-            }))
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"tool": record},
+                    }
+                )
+            )
             failing_target = load_source_catalog(root)["tool"]
             failing_before = path.read_text()
             failing_builds = []
@@ -3594,9 +3632,7 @@ got: sha256-requested
                     "tool",
                     failing_target,
                     SimpleNamespace(version=None, dry_run=False),
-                    SimpleNamespace(
-                        get_latest_release=lambda _owner, _repo: "v4.0.0"
-                    ),
+                    SimpleNamespace(get_latest_release=lambda _owner, _repo: "v4.0.0"),
                     SimpleNamespace(
                         compute_native_hash=hashes.compute_native_hash,
                         validate_package_build=lambda package: (
@@ -3624,10 +3660,14 @@ got: sha256-requested
                     invalid = copy.deepcopy(record)
                     invalid["version"] = version
                     invalid["update"]["assets"]["source"] = template
-                    path.write_text(json.dumps({
-                        "schemaVersion": 1,
-                        "sources": {"tool": invalid},
-                    }))
+                    path.write_text(
+                        json.dumps(
+                            {
+                                "schemaVersion": 1,
+                                "sources": {"tool": invalid},
+                            }
+                        )
+                    )
                     with self.assertRaisesRegex(
                         RuntimeError, "invalid GitHub release asset projection"
                     ):
@@ -3635,38 +3675,54 @@ got: sha256-requested
 
             missing_prefix = copy.deepcopy(record)
             del missing_prefix["update"]["tagPrefix"]
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"tool": missing_prefix},
-            }))
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"tool": missing_prefix},
+                    }
+                )
+            )
             with self.assertRaisesRegex(RuntimeError, "update strategy fields"):
                 load_source_catalog(root)
 
             wrong_prefix = copy.deepcopy(record)
             wrong_prefix["update"]["tagPrefix"] = ""
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"tool": wrong_prefix},
-            }))
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"tool": wrong_prefix},
+                    }
+                )
+            )
             with self.assertRaisesRegex(RuntimeError, "asset URL does not match"):
                 load_source_catalog(root)
 
             dependent_hash = copy.deepcopy(record)
             dependent_hash["hashes"] = {"cargoHash": "sha256-stale"}
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"tool": dependent_hash},
-            }))
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"tool": dependent_hash},
+                    }
+                )
+            )
             with self.assertRaisesRegex(
                 RuntimeError, "invalid GitHub release asset projection"
             ):
                 load_source_catalog(root)
 
             updated["update"]["assets"]["source"] = "wrong-name"
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"tool": updated},
-            }))
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"tool": updated},
+                    }
+                )
+            )
             with self.assertRaisesRegex(RuntimeError, "asset URL does not match"):
                 load_source_catalog(root)
 
@@ -3694,12 +3750,16 @@ got: sha256-requested
                     "tagPrefix": "v",
                 },
             }
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"python-project": record},
-            }))
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"python-project": record},
+                    }
+                )
+            )
             target = load_source_catalog(root)["python-project"]
-            self.assertEqual(target["executor"], "update-agents")
+            self.assertEqual(target["executor"], "update")
 
             class FakeHashes:
                 def __init__(self, valid=True):
@@ -3718,9 +3778,7 @@ got: sha256-requested
                     self.calls.append(("validate", package, build_mode))
                     return self.valid
 
-            github = SimpleNamespace(
-                get_latest_release=lambda _owner, _repo: "v2.0.0"
-            )
+            github = SimpleNamespace(get_latest_release=lambda _owner, _repo: "v2.0.0")
             hashes = FakeHashes()
             transaction = SourceTransaction()
             with contextlib.redirect_stdout(io.StringIO()):
@@ -3772,10 +3830,14 @@ got: sha256-requested
                     "hash": "sha256-source-old",
                 },
             }
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"python-project": wrong_fetcher},
-            }))
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"python-project": wrong_fetcher},
+                    }
+                )
+            )
             with self.assertRaisesRegex(
                 RuntimeError,
                 "requires fetchFromGitHub",
@@ -3784,21 +3846,27 @@ got: sha256-requested
 
             wrong_prefix_type = copy.deepcopy(record)
             wrong_prefix_type["update"]["tagPrefix"] = 7
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"python-project": wrong_prefix_type},
-            }))
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"python-project": wrong_prefix_type},
+                    }
+                )
+            )
             with self.assertRaisesRegex(RuntimeError, "tag prefix"):
                 load_source_catalog(root)
 
             fetch_artifact = copy.deepcopy(record)
-            fetch_artifact["artifacts"] = {
-                "linux": copy.deepcopy(record["source"])
-            }
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"python-project": fetch_artifact},
-            }))
+            fetch_artifact["artifacts"] = {"linux": copy.deepcopy(record["source"])}
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"python-project": fetch_artifact},
+                    }
+                )
+            )
             with self.assertRaisesRegex(
                 RuntimeError,
                 "cannot also declare artifacts",
@@ -3808,10 +3876,14 @@ got: sha256-requested
             local_artifact = copy.deepcopy(record)
             local_artifact["update"]["artifacts"] = ["projection.lock"]
             (root / "projection.lock").write_text("old\n")
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"python-project": local_artifact},
-            }))
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"python-project": local_artifact},
+                    }
+                )
+            )
             with self.assertRaisesRegex(
                 RuntimeError,
                 "cannot also declare artifacts",
@@ -3987,12 +4059,16 @@ got: sha256-requested
                     "kind": "github-commit",
                 },
             }
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"project": record},
-            }))
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"project": record},
+                    }
+                )
+            )
             target = load_source_catalog(root)["project"]
-            self.assertEqual(target["executor"], "update-agents")
+            self.assertEqual(target["executor"], "update")
 
             class FakeHashes:
                 def __init__(self):
@@ -4043,10 +4119,14 @@ got: sha256-requested
             combined["update"]["artifacts"] = ["Cargo.lock"]
             combined["update"]["artifactSources"] = {"Cargo.lock": "Cargo.lock"}
             (root / "Cargo.lock").write_text("version = 4\n")
-            path.write_text(json.dumps({
-                "schemaVersion": 1,
-                "sources": {"project": combined},
-            }))
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"project": combined},
+                    }
+                )
+            )
             with self.assertRaisesRegex(
                 RuntimeError,
                 "cannot also declare artifacts",
@@ -4057,12 +4137,12 @@ got: sha256-requested
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             (root / "sources").mkdir()
-            (root / "packages/anvil-mcp").mkdir(parents=True)
-            lock_path = root / "packages/anvil-mcp/Cargo.lock"
+            (root / "packages/project").mkdir(parents=True)
+            lock_path = root / "packages/project/Cargo.lock"
             old_lock = 'version = 4\n\n[[package]]\nname = "old"\nversion = "1.0.0"\n'
             new_lock = 'version = 4\n\n[[package]]\nname = "new"\nversion = "2.0.0"\n'
             lock_path.write_text(old_lock)
-            path = root / "sources/anvil.json"
+            path = root / "sources/project.json"
             old_ref = "1" * 40
             new_ref = "2" * 40
             record = {
@@ -4078,10 +4158,8 @@ got: sha256-requested
                     },
                 },
                 "update": {
-                    "artifacts": ["packages/anvil-mcp/Cargo.lock"],
-                    "artifactSources": {
-                        "packages/anvil-mcp/Cargo.lock": "Cargo.lock"
-                    },
+                    "artifacts": ["packages/project/Cargo.lock"],
+                    "artifactSources": {"packages/project/Cargo.lock": "Cargo.lock"},
                     "branch": "main",
                     "kind": "github-commit",
                 },
@@ -4097,7 +4175,7 @@ got: sha256-requested
             before_lock = lock_path.read_bytes()
             self.assertEqual(
                 load_source_catalog(root)["project"]["executor"],
-                "update-agents",
+                "update",
             )
 
             expected_commit_request = ("example", "project", "main")
@@ -4139,12 +4217,8 @@ got: sha256-requested
                         else None
                     )
 
-                def validate_cargo_lock(
-                    self, source_url, revision, remote, content
-                ):
-                    self.validations.append(
-                        (source_url, revision, remote, content)
-                    )
+                def validate_cargo_lock(self, source_url, revision, remote, content):
+                    self.validations.append((source_url, revision, remote, content))
                     return self.lock_valid
 
             def run_update(github, hashes):
@@ -4264,7 +4338,6 @@ got: sha256-requested
             self.fail(f"catalog evaluation failed: {error}")
         required = {
             "agent-browser-source",
-            "anvil-mcp",
             "pi-artifacts",
             "pi-lens",
             "pi-mcp-adapter",
@@ -4277,7 +4350,10 @@ got: sha256-requested
             "translate-tool",
         }
         self.assertTrue(required <= catalog.keys())
-        self.assertIn("packages/pi-gallery/locks/pi-lens-package-lock.json", catalog["pi-lens"]["files"])
+        self.assertIn(
+            "packages/pi-gallery/locks/pi-lens-package-lock.json",
+            catalog["pi-lens"]["files"],
+        )
         self.assertIn(
             "packages/pi-gallery/locks/pi-smart-fetch-package-lock.json",
             catalog["pi-smart-fetch"]["files"],
@@ -4288,7 +4364,6 @@ got: sha256-requested
         )
         self.assertIn("sources/pi.json", catalog["pi-mcp-adapter"]["files"])
         self.assertNotIn("config/fleet/catalog.nix", catalog["pi-mcp-adapter"]["files"])
-        self.assertIn("packages/anvil-mcp/Cargo.lock", catalog["nelisp"]["files"])
         self.assertEqual(catalog["ws"]["_record"]["update"]["package"], "ws")
 
         result = subprocess.run(
@@ -4309,7 +4384,7 @@ got: sha256-requested
         self.assertEqual(names, sorted(catalog))
         self.assertEqual(
             hashlib.sha256("\n".join(names).encode()).hexdigest(),
-            "2e88ed859039e5450f9c55f5c125ad553ab994d0f59fc68b4b117fefb175ecf3",
+            "91d298d92996c2f0daf56ead7291be2a2913a967595a54d4695e1ec6ed821c87",
         )
         self.assertTrue(required <= set(names))
         self.assertTrue(all(item["inventoried"] for item in inventory["packages"]))
@@ -4333,16 +4408,18 @@ got: sha256-requested
             "rustdocs-mcp-server",
         }
         catalog_owned = {
-            item["name"] for item in inventory["packages"] if item["source"] == "catalog"
+            item["name"]
+            for item in inventory["packages"]
+            if item["source"] == "catalog"
         }
         self.assertEqual(
             {item["name"] for item in inventory["packages"] if not item["managed"]},
             set(),
         )
-        self.assertEqual(len(inventory["packages"]), 197)
+        self.assertEqual(len(inventory["packages"]), 192)
         self.assertEqual(
             len([item for item in inventory["packages"] if item["managed"]]),
-            197,
+            192,
         )
         self.assertEqual(catalog_owned, set(catalog))
         self.assertTrue(relocated <= catalog_owned)
@@ -4353,22 +4430,18 @@ got: sha256-requested
             ISSUE34_TARGETS,
         )
         self.assertEqual(
-            {name for name in ISSUE34_TARGETS if by_name[name]["executor"] == "update-agents"},
+            {name for name in ISSUE34_TARGETS if by_name[name]["executor"] == "update"},
             ISSUE34_UPDATE_AGENTS,
         )
-        self.assertEqual(
-            by_name["anvil-ide"]["version"],
-            "0e6130457ac2bdc6c6db2eebeba67a5223231190",
-        )
-        self.assertEqual(by_name["git-ai"]["executor"], "update-agents")
+        self.assertEqual(by_name["git-ai"]["executor"], "update")
         for name in ("cymbal", "rtk"):
             self.assertTrue(by_name[name]["managed"])
             self.assertEqual(by_name[name]["kind"], "github-release-asset")
-            self.assertEqual(by_name[name]["executor"], "update-agents")
+            self.assertEqual(by_name[name]["executor"], "update")
             self.assertEqual(by_name[name]["policy"], "manual")
-        self.assertEqual(by_name["pi-ponytail"]["executor"], "update-agents")
-        self.assertEqual(by_name["pi-mcp-adapter"]["executor"], "update-agents")
-        self.assertEqual(by_name["pi-btw"]["executor"], "update-agents")
+        self.assertEqual(by_name["pi-ponytail"]["executor"], "update")
+        self.assertEqual(by_name["pi-mcp-adapter"]["executor"], "update")
+        self.assertEqual(by_name["pi-btw"]["executor"], "update")
         self.assertEqual(
             catalog["pi-mcp-adapter"]["_record"]["update"]["buildPackage"],
             "agent-resources",
@@ -4379,7 +4452,7 @@ got: sha256-requested
             ISSUE40_TARGETS,
         )
         self.assertEqual(
-            {name for name in ISSUE40_TARGETS if by_name[name]["executor"] == "update-agents"},
+            {name for name in ISSUE40_TARGETS if by_name[name]["executor"] == "update"},
             ISSUE40_TARGETS,
         )
         self.assertEqual(
@@ -4387,7 +4460,7 @@ got: sha256-requested
             ISSUE41_TARGETS,
         )
         self.assertEqual(
-            {name for name in ISSUE41_TARGETS if by_name[name]["executor"] == "update-agents"},
+            {name for name in ISSUE41_TARGETS if by_name[name]["executor"] == "update"},
             ISSUE41_TARGETS,
         )
         self.assertEqual(
@@ -4395,17 +4468,12 @@ got: sha256-requested
             ISSUE39_TARGETS,
         )
         self.assertEqual(
-            {
-                name
-                for name in ISSUE39_TARGETS
-                if by_name[name]["executor"] == "update-agents"
-            },
+            {name for name in ISSUE39_TARGETS if by_name[name]["executor"] == "update"},
             ISSUE39_TARGETS,
         )
         self.assertTrue(
             all(
-                catalog[name]["_record"]["update"].get("normalizer")
-                == "pi-gallery-v1"
+                catalog[name]["_record"]["update"].get("normalizer") == "pi-gallery-v1"
                 for name in ISSUE39_TARGETS
             )
         )
@@ -4422,7 +4490,7 @@ got: sha256-requested
         self.assertEqual(human.returncode, 0, human.stderr)
         self.assertEqual(
             human.stdout.splitlines()[-1],
-            "197 inventoried targets; 197 executable; 0 pending executors",
+            "192 inventoried targets; 192 executable; 0 pending executors",
         )
 
     def test_source_transaction_rolls_back_and_commit_preserves(self):
@@ -4442,7 +4510,9 @@ got: sha256-requested
             committed.rollback_unless_committed()
             self.assertEqual(path.read_text(), "new\n")
 
-    def test_explicit_catalog_record_isolation_allows_selected_and_rolls_back_sibling(self):
+    def test_explicit_catalog_record_isolation_allows_selected_and_rolls_back_sibling(
+        self,
+    ):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "shared.json"
             initial = {
@@ -4501,7 +4571,7 @@ got: sha256-requested
             path.write_text(before)
             target = {
                 "kind": "npm-release",
-                "executor": "update-agents",
+                "executor": "update",
                 "_path": path,
                 "_record": {
                     "update": {
@@ -4553,6 +4623,7 @@ got: sha256-requested
             self.assertEqual(status, 1)
             self.assertIn("changed unselected data", stderr.getvalue())
             self.assertEqual(path.read_text(), before)
+
 
 class IntegratedWorkflowTests(unittest.TestCase):
     def setUp(self):
@@ -4635,7 +4706,7 @@ internal_modes = {
     "--sync-flake-projections",
 }
 if internal_modes.intersection(arguments) and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
-    print("internal update requires update-agents candidate", file=sys.stderr)
+    print("internal update requires update candidate", file=sys.stderr)
     raise SystemExit(77)
 declared = [
     "tracked.txt", "mode.sh", "binary.bin", "format.nix", "projection.json", "link",
@@ -4660,7 +4731,7 @@ if "--inventory" in arguments:
             "inventoried": True,
             "kind": "fixed-flake-input",
             "managed": True,
-            "executor": "update-agents",
+            "executor": "update",
             "policy": "manual",
         })
     if os.environ.get("UPDATE_TEST_COPY_TARGET") == "1":
@@ -4671,7 +4742,7 @@ if "--inventory" in arguments:
             "inventoried": True,
             "kind": "flake-input+copy",
             "managed": True,
-            "executor": "update-agents",
+            "executor": "update",
             "policy": "automatic",
         })
     if os.environ.get("UPDATE_TEST_BUILD_TARGET") == "1":
@@ -4682,7 +4753,7 @@ if "--inventory" in arguments:
             "inventoried": True,
             "kind": "flake-input+build",
             "managed": True,
-            "executor": "update-agents",
+            "executor": "update",
             "policy": "manual",
         })
     if os.environ.get("UPDATE_TEST_NPM_FLAKE_TARGET") == "1":
@@ -4693,7 +4764,7 @@ if "--inventory" in arguments:
             "inventoried": True,
             "kind": "npm-release+flake-input",
             "managed": True,
-            "executor": "update-agents",
+            "executor": "update",
             "policy": "automatic",
         })
     if os.environ.get("UPDATE_TEST_PYPI_TARGET") == "1":
@@ -4703,7 +4774,7 @@ if "--inventory" in arguments:
             "inventoried": True,
             "kind": "pypi-release",
             "managed": True,
-            "executor": "update-agents",
+            "executor": "update",
             "policy": "manual",
         })
     if os.environ.get("UPDATE_TEST_NPM_LOCK_TARGET") == "1":
@@ -4713,7 +4784,7 @@ if "--inventory" in arguments:
             "inventoried": True,
             "kind": "npm-release",
             "managed": True,
-            "executor": "update-agents",
+            "executor": "update",
             "policy": (
                 "automatic"
                 if os.environ.get("UPDATE_TEST_NPM_LOCK_AUTOMATIC") == "1"
@@ -4727,7 +4798,7 @@ if "--inventory" in arguments:
             "inventoried": True,
             "kind": "npm-release",
             "managed": True,
-            "executor": "update-agents",
+            "executor": "update",
             "policy": "manual",
         })
     if os.environ.get("UPDATE_TEST_GITHUB_TARGET") == "1":
@@ -4737,7 +4808,7 @@ if "--inventory" in arguments:
             "inventoried": True,
             "kind": "github-release-asset",
             "managed": True,
-            "executor": "update-agents",
+            "executor": "update",
             "policy": "manual",
         })
     print(json.dumps({
@@ -4779,7 +4850,8 @@ elif "--prepare-github-projections" in arguments:
         raise SystemExit(81)
     (root / "github.txt").write_text("github after\\n")
 elif "--sync-flake-projections" in arguments:
-    (root / "projection.json").write_text('{"projected": true}\\n')
+    if os.environ.get("UPDATE_TEST_NO_CHANGES") != "1":
+        (root / "projection.json").write_text('{"projected": true}\\n')
     if os.environ.get("UPDATE_TEST_SIGNAL_PHASE") == "candidate-projection":
         Path(os.environ["UPDATE_TEST_SIGNAL_MARKER"]).touch()
         os.kill(os.getppid(), signal.SIGTERM)
@@ -4787,8 +4859,10 @@ elif "--sync-flake-projections" in arguments:
         raise SystemExit(71)
 else:
     if os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
-        print("compound update requires update-agents candidate", file=sys.stderr)
+        print("compound update requires update candidate", file=sys.stderr)
         raise SystemExit(77)
+    if os.environ.get("UPDATE_TEST_NO_CHANGES") == "1":
+        raise SystemExit(0)
     (root / "tracked.txt").write_text("after\\n")
     (root / "binary.bin").write_bytes(b"\\x00after\\xfe\\n")
     (root / "format.nix").write_text("{ changed = true; }\\n")
@@ -4872,6 +4946,11 @@ elif [[ $1 == flake && $2 == check ]]; then
     signal_phase candidate-root-validation
     fail_phase candidate-root-validation
   fi
+elif [[ $1 == build ]]; then
+  if [[ -n ${UPDATE_TEST_EXTERNAL_LOG:-} ]]; then
+    printf 'build\n' >>"$UPDATE_TEST_EXTERNAL_LOG"
+  fi
+  fail_phase candidate-build
 else
   exit 2
 fi
@@ -4984,8 +5063,35 @@ if [[ $phase == after-read-tree && " $* " == *" read-tree "* ]]; then
   if [[ ! -e $marker ]]; then : >"$marker"; kill -TERM "$PPID"; fi
   exit 0
 fi
+if [[ " $* " == *" merge --ff-only "* \
+  && -n ${UPDATE_TEST_EXTERNAL_LOG:-} ]]; then
+  printf 'publish\n' >>"$UPDATE_TEST_EXTERNAL_LOG"
+fi
+if [[ " $* " == *" push "* ]]; then
+  if [[ -n ${UPDATE_TEST_EXTERNAL_LOG:-} ]]; then
+    printf 'push\n' >>"$UPDATE_TEST_EXTERNAL_LOG"
+  fi
+  if [[ -n ${UPDATE_TEST_PUSH_MARKER:-} ]]; then
+    : >"$UPDATE_TEST_PUSH_MARKER"
+  fi
+  exit "${UPDATE_TEST_PUSH_STATUS:-0}"
+fi
 exec "$REAL_GIT" "$@"
             """,
+        )
+        executable("hostname", "#!/bin/sh\nprintf 'hera\\n'\n")
+        executable("sudo", '#!/bin/sh\nexec "$@"\n')
+        executable(
+            "darwin-rebuild",
+            """#!/usr/bin/env bash
+set -euo pipefail
+if [[ -n ${UPDATE_TEST_EXTERNAL_LOG:-} ]]; then
+  printf 'switch\n' >>"$UPDATE_TEST_EXTERNAL_LOG"
+fi
+if [[ ${UPDATE_TEST_FAILURE_PHASE:-} == candidate-switch ]]; then
+  exit 71
+fi
+""",
         )
         executable(
             "chmod",
@@ -5057,7 +5163,9 @@ fi
     @staticmethod
     def _update_agents_projection(root: Path):
         projection = {}
-        for current, directories, files in os.walk(root, topdown=True, followlinks=False):
+        for current, directories, files in os.walk(
+            root, topdown=True, followlinks=False
+        ):
             current_path = Path(current)
             if current_path == root:
                 directories[:] = [name for name in directories if name != ".git"]
@@ -5114,7 +5222,7 @@ fi
         ).stdout
         self.assertEqual(worktrees.count("worktree "), 1)
         self.assertFalse((root / ".git/update-agents.lock").exists())
-        self.assertEqual(list(root.parent.glob("update-agents.*")), [])
+        self.assertEqual(list(root.parent.glob("update.*")), [])
 
     def test_update_agents_publishes_declared_filesystem_identities(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -5138,8 +5246,12 @@ fi
             )
             projection = self._update_agents_projection(root)
             self.assertEqual(projection["tracked.txt"], ("file", 0o640, b"after\n"))
-            self.assertEqual(projection["mode.sh"], ("file", 0o755, b"#!/bin/sh\nexit 0\n"))
-            self.assertEqual(projection["binary.bin"], ("file", 0o644, b"\x00after\xfe\n"))
+            self.assertEqual(
+                projection["mode.sh"], ("file", 0o755, b"#!/bin/sh\nexit 0\n")
+            )
+            self.assertEqual(
+                projection["binary.bin"], ("file", 0o644, b"\x00after\xfe\n")
+            )
             self.assertEqual(
                 projection["format.nix"],
                 ("file", 0o644, b"{ changed = true; }\n"),
@@ -5149,9 +5261,7 @@ fi
                 ("file", 0o644, b'{"projected": true}\n'),
             )
             self.assertEqual(projection["link"], ("symlink", "target-new"))
-            self.assertEqual(
-                projection["regular-to-link"], ("symlink", "target-new")
-            )
+            self.assertEqual(projection["regular-to-link"], ("symlink", "target-new"))
             self.assertEqual(
                 projection["link-to-regular"],
                 ("file", 0o644, b"regular after\n"),
@@ -5173,7 +5283,7 @@ fi
                 ("file", 0o644, b"{}\n"),
             )
             self.assertFalse((root / ".git/update-agents.lock").exists())
-            self.assertEqual(list(root.parent.glob("update-agents.*")), [])
+            self.assertEqual(list(root.parent.glob("update.*")), [])
 
     def test_update_agents_runs_one_fixed_input_without_unrelated_updates(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -5203,7 +5313,9 @@ fi
             )
             self.assertEqual((root / "fixed.txt").read_text(), "fixed after\n")
             self.assertEqual((root / "tracked.txt").read_text(), "before\n")
-            self.assertEqual((root / "projection.json").read_text(), '{"projected": true}\n')
+            self.assertEqual(
+                (root / "projection.json").read_text(), '{"projected": true}\n'
+            )
             commands = command_log.read_text().splitlines()
             self.assertEqual(
                 commands,
@@ -5255,7 +5367,9 @@ fi
             )
             self.assertEqual((root / "fixed.txt").read_text(), "fixed before\n")
             self.assertEqual((root / "tracked.txt").read_text(), "before\n")
-            self.assertEqual((root / "projection.json").read_text(), '{"projected": true}\n')
+            self.assertEqual(
+                (root / "projection.json").read_text(), '{"projected": true}\n'
+            )
             self.assertEqual(
                 command_log.read_text().splitlines(),
                 [
@@ -5267,9 +5381,7 @@ fi
             )
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            root, environment, _baseline = self._create_update_agents_fixture(
-                temp_dir
-            )
+            root, environment, _baseline = self._create_update_agents_fixture(temp_dir)
             command_log = Path(temp_dir) / "commands.log"
             environment["UPDATE_TEST_COPY_TARGET"] = "1"
             environment["UPDATE_TEST_COMMAND_LOG"] = str(command_log)
@@ -5313,7 +5425,9 @@ fi
             )
             self.assertEqual((root / "fixed.txt").read_text(), "fixed before\n")
             self.assertEqual((root / "tracked.txt").read_text(), "before\n")
-            self.assertEqual((root / "projection.json").read_text(), '{"projected": true}\n')
+            self.assertEqual(
+                (root / "projection.json").read_text(), '{"projected": true}\n'
+            )
             self.assertEqual(
                 command_log.read_text().splitlines(),
                 [
@@ -5375,9 +5489,7 @@ fi
             )
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            root, environment, _baseline = self._create_update_agents_fixture(
-                temp_dir
-            )
+            root, environment, _baseline = self._create_update_agents_fixture(temp_dir)
             command_log = Path(temp_dir) / "commands.log"
             environment["UPDATE_TEST_NPM_FLAKE_TARGET"] = "1"
             environment["UPDATE_TEST_COMMAND_LOG"] = str(command_log)
@@ -5393,9 +5505,7 @@ fi
             self.assertIn("npm-flake-input", command_log.read_text().splitlines()[0])
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            root, environment, baseline = self._create_update_agents_fixture(
-                temp_dir
-            )
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
             before = self._update_agents_projection(root)
             interleaving_log = Path(temp_dir) / "interleaving.log"
             environment.update(
@@ -5430,8 +5540,7 @@ fi
                 "overlay --prepare-github-projections github",
                 "overlay --prepare-npm-flake-inputs npm-flake",
                 "overlay --prepare-fixed-inputs fixed",
-                "nix flake update --flake ./config/fleet "
-                "npm-flake-input fixed-input",
+                "nix flake update --flake ./config/fleet npm-flake-input fixed-input",
                 "overlay --sync-flake-projections",
             ]
             positions = [events.index(event) for event in ordered]
@@ -5580,9 +5689,7 @@ fi
 
     def test_all_inputs_prepares_npm_locks_after_lock_sync_before_generic_update(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            root, environment, _baseline = self._create_update_agents_fixture(
-                temp_dir
-            )
+            root, environment, _baseline = self._create_update_agents_fixture(temp_dir)
             interleaving_log = Path(temp_dir) / "interleaving.log"
             environment.update(
                 UPDATE_TEST_INTERLEAVING_LOG=str(interleaving_log),
@@ -5694,7 +5801,9 @@ fi
     def test_update_agents_sigterm_rolls_back_every_publication_phase(self):
         for phase in ("after-apply", "after-normalize", "after-read-tree"):
             with self.subTest(phase=phase), tempfile.TemporaryDirectory() as temp_dir:
-                root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+                root, environment, baseline = self._create_update_agents_fixture(
+                    temp_dir
+                )
                 before = self._update_agents_projection(root)
                 marker = Path(temp_dir) / "signal-delivered"
                 environment.update(
@@ -5765,7 +5874,9 @@ fi
     def test_update_agents_rolls_back_interrupted_commit_publication(self):
         for phase in ("merge-failure", "merge-partial-failure", "merge-sigterm"):
             with self.subTest(phase=phase), tempfile.TemporaryDirectory() as temp_dir:
-                root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+                root, environment, baseline = self._create_update_agents_fixture(
+                    temp_dir
+                )
                 before = self._update_agents_projection(root)
                 marker = Path(temp_dir) / "merge-interrupted"
                 environment.update(
@@ -5818,7 +5929,7 @@ fi
             self.assertEqual(projection["link"], ("symlink", "target-new"))
             self.assertNotIn("deleted.txt", projection)
             self.assertFalse((root / ".git/update-agents.lock").exists())
-            self.assertEqual(list(root.parent.glob("update-agents.*")), [])
+            self.assertEqual(list(root.parent.glob("update.*")), [])
 
     def test_update_agents_rejects_post_merge_untracked_mutation(self):
         for phase, path_name in (
@@ -5826,7 +5937,9 @@ fi
             ("merge-ignored", "ignored.tmp"),
         ):
             with self.subTest(phase=phase), tempfile.TemporaryDirectory() as temp_dir:
-                root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+                root, environment, baseline = self._create_update_agents_fixture(
+                    temp_dir
+                )
                 before = self._update_agents_projection(root)
                 environment["UPDATE_TEST_SIGNAL_PHASE"] = phase
                 result = subprocess.run(
@@ -5870,7 +5983,9 @@ fi
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("live repository changed before publication", result.stderr)
-            self.assertEqual((root / "verify-external.txt").read_text(), "verify edit\n")
+            self.assertEqual(
+                (root / "verify-external.txt").read_text(), "verify edit\n"
+            )
             after = self._update_agents_projection(root)
             external = after.pop("verify-external.txt")
             self.assertEqual(external[0], "file")
@@ -5899,7 +6014,9 @@ fi
                 check=False,
             )
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("signed commit did not capture the complete transaction", result.stderr)
+            self.assertIn(
+                "signed commit did not capture the complete transaction", result.stderr
+            )
             self._assert_update_agents_unchanged(root, baseline, before)
 
     def test_update_agents_sigterm_during_lock_acquisition_releases_lock(self):
@@ -5930,7 +6047,15 @@ fi
             real_git = environment["REAL_GIT"]
             unrelated = Path(temp_dir) / "unrelated-worktree"
             subprocess.run(
-                [real_git, "-C", str(root), "worktree", "add", "--detach", str(unrelated)],
+                [
+                    real_git,
+                    "-C",
+                    str(root),
+                    "worktree",
+                    "add",
+                    "--detach",
+                    str(unrelated),
+                ],
                 capture_output=True,
                 text=True,
                 check=True,
@@ -5978,7 +6103,7 @@ fi
             self.assertTrue(unrelated_git_dir.is_dir())
             self.assertNotIn("/candidate\n", worktrees)
             self.assertFalse((root / ".git/update-agents.lock").exists())
-            self.assertEqual(list(root.parent.glob("update-agents.*")), [])
+            self.assertEqual(list(root.parent.glob("update.*")), [])
 
     def test_update_agents_fails_closed_when_worktree_verification_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -5994,7 +6119,7 @@ fi
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("failed to verify candidate worktree removal", result.stderr)
             self.assertFalse((root / ".git/update-agents.lock").exists())
-            self.assertEqual(list(root.parent.glob("update-agents.*")), [])
+            self.assertEqual(list(root.parent.glob("update.*")), [])
 
     def test_update_agents_sigterm_discards_every_candidate_phase(self):
         for phase in (
@@ -6007,7 +6132,9 @@ fi
             "candidate-root-validation",
         ):
             with self.subTest(phase=phase), tempfile.TemporaryDirectory() as temp_dir:
-                root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+                root, environment, baseline = self._create_update_agents_fixture(
+                    temp_dir
+                )
                 before = self._update_agents_projection(root)
                 marker = Path(temp_dir) / "signal-delivered"
                 environment.update(
@@ -6038,7 +6165,9 @@ fi
             "candidate-root-validation",
         ):
             with self.subTest(phase=phase), tempfile.TemporaryDirectory() as temp_dir:
-                root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+                root, environment, baseline = self._create_update_agents_fixture(
+                    temp_dir
+                )
                 before = self._update_agents_projection(root)
                 environment["UPDATE_TEST_FAILURE_PHASE"] = phase
                 result = subprocess.run(
@@ -6065,7 +6194,9 @@ fi
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("live repository changed before publication", result.stderr)
-            self.assertEqual((root / "external.txt").read_text(), "external\nexternal\n")
+            self.assertEqual(
+                (root / "external.txt").read_text(), "external\nexternal\n"
+            )
             after = self._update_agents_projection(root)
             external = after.pop("external.txt")
             self.assertEqual(external[0], "file")
@@ -6099,7 +6230,9 @@ fi
             fake_bin.mkdir()
             (root / "bin/update-overlay").write_text(SCRIPT.read_text())
             (root / "bin/update-overlay").chmod(0o700)
-            empty_lock = json.dumps({"nodes": {"root": {"inputs": {}}}, "root": "root", "version": 7})
+            empty_lock = json.dumps(
+                {"nodes": {"root": {"inputs": {}}}, "root": "root", "version": 7}
+            )
             (root / "flake.lock").write_text(empty_lock + "\n")
             (root / "config/fleet/flake.lock").write_text(empty_lock + "\n")
             (root / "overlays/ai/package.nix").write_text("baseline\n")
@@ -6110,7 +6243,9 @@ fi
                 path.write_text(text)
                 path.chmod(0o700)
 
-            executable("nix", """#!/usr/bin/env bash
+            executable(
+                "nix",
+                """#!/usr/bin/env bash
 set -euo pipefail
 if [[ $1 == eval ]]; then
   printf '{"schemaVersion":1,"targets":{}}\n'
@@ -6119,24 +6254,40 @@ elif [[ $1 == flake && $2 == update ]]; then
 elif [[ $1 == flake && $2 == check ]]; then
   exit 23
 fi
-""")
-            executable("python", """#!/usr/bin/env bash
+""",
+            )
+            executable(
+                "python",
+                """#!/usr/bin/env bash
 set -euo pipefail
 if [[ ${2:-} == --sync-flake-projections ]]; then exec python3 "$@"; fi
 echo catalog-change >> sources/test.json
-""")
+""",
+            )
             executable("nixfmt", "#!/usr/bin/env bash\nexit 0\n")
 
             subprocess.run(["git", "init", "-q", str(root)], check=True)
             subprocess.run(["git", "-C", str(root), "add", "."], check=True)
             subprocess.run(
-                ["git", "-C", str(root), "-c", "user.name=Test",
-                 "-c", "user.email=test@example.invalid", "commit", "-qm", "baseline"],
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "-c",
+                    "user.name=Test",
+                    "-c",
+                    "user.email=test@example.invalid",
+                    "commit",
+                    "-qm",
+                    "baseline",
+                ],
                 check=True,
             )
             baseline = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
-                capture_output=True, text=True, check=True,
+                capture_output=True,
+                text=True,
+                check=True,
             ).stdout.strip()
             env = {
                 **os.environ,
@@ -6144,24 +6295,34 @@ echo catalog-change >> sources/test.json
                 "PATH": f"{fake_bin}:{os.environ['PATH']}",
             }
             result = subprocess.run(
-                [str(UPDATE_AGENTS)], capture_output=True, text=True, env=env, check=False
+                [str(UPDATE_AGENTS)],
+                capture_output=True,
+                text=True,
+                env=env,
+                check=False,
             )
             self.assertEqual(result.returncode, 23)
             status = subprocess.run(
                 ["git", "-C", str(root), "status", "--porcelain"],
-                capture_output=True, text=True, check=True,
+                capture_output=True,
+                text=True,
+                check=True,
             )
             self.assertEqual(status.stdout, "")
             self.assertEqual(
                 subprocess.run(
                     ["git", "-C", str(root), "rev-parse", "HEAD"],
-                    capture_output=True, text=True, check=True,
+                    capture_output=True,
+                    text=True,
+                    check=True,
                 ).stdout.strip(),
                 baseline,
             )
             worktrees = subprocess.run(
                 ["git", "-C", str(root), "worktree", "list", "--porcelain"],
-                capture_output=True, text=True, check=True,
+                capture_output=True,
+                text=True,
+                check=True,
             ).stdout
             self.assertEqual(worktrees.count("worktree "), 1)
             self.assertFalse((root / ".git/update-agents.lock").exists())
@@ -6177,7 +6338,9 @@ echo catalog-change >> sources/test.json
             fake_bin.mkdir()
             (root / "bin/update-overlay").write_text(SCRIPT.read_text())
             (root / "bin/update-overlay").chmod(0o700)
-            empty_lock = json.dumps({"nodes": {"root": {"inputs": {}}}, "root": "root", "version": 7})
+            empty_lock = json.dumps(
+                {"nodes": {"root": {"inputs": {}}}, "root": "root", "version": 7}
+            )
             (root / "flake.lock").write_text(empty_lock + "\n")
             (root / "config/fleet/flake.lock").write_text(empty_lock + "\n")
             (root / "overlays/ai/package.nix").write_text("baseline\n")
@@ -6190,7 +6353,9 @@ echo catalog-change >> sources/test.json
                 path.write_text(text)
                 path.chmod(0o700)
 
-            executable("nix", """#!/usr/bin/env bash
+            executable(
+                "nix",
+                """#!/usr/bin/env bash
 set -euo pipefail
 if [[ $1 == eval ]]; then
   printf '{"schemaVersion":1,"targets":{}}\n'
@@ -6199,32 +6364,51 @@ elif [[ $1 == flake && $2 == update ]]; then
 elif [[ $1 == flake && $2 == check ]]; then
   exit 0
 fi
-""")
-            executable("python", """#!/usr/bin/env bash
+""",
+            )
+            executable(
+                "python",
+                """#!/usr/bin/env bash
 set -euo pipefail
 if [[ ${2:-} == --sync-flake-projections ]]; then exec python3 "$@"; fi
 echo catalog-change >> sources/test.json
-""")
+""",
+            )
             executable("nixfmt", "#!/usr/bin/env bash\nexit 0\n")
-            executable("git", """#!/usr/bin/env bash
+            executable(
+                "git",
+                """#!/usr/bin/env bash
 set -euo pipefail
 for arg in "$@"; do
   if [[ $arg == commit ]]; then exit 42; fi
   if [[ $arg == push ]]; then : > "$PUSH_MARKER"; exit 0; fi
 done
 exec "$REAL_GIT" "$@"
-""")
+""",
+            )
 
             subprocess.run([real_git, "init", "-q", str(root)], check=True)
             subprocess.run([real_git, "-C", str(root), "add", "."], check=True)
             subprocess.run(
-                [real_git, "-C", str(root), "-c", "user.name=Test",
-                 "-c", "user.email=test@example.invalid", "commit", "-qm", "baseline"],
+                [
+                    real_git,
+                    "-C",
+                    str(root),
+                    "-c",
+                    "user.name=Test",
+                    "-c",
+                    "user.email=test@example.invalid",
+                    "commit",
+                    "-qm",
+                    "baseline",
+                ],
                 check=True,
             )
             baseline = subprocess.run(
                 [real_git, "-C", str(root), "rev-parse", "HEAD"],
-                capture_output=True, text=True, check=True,
+                capture_output=True,
+                text=True,
+                check=True,
             ).stdout.strip()
             env = {
                 **os.environ,
@@ -6235,7 +6419,10 @@ exec "$REAL_GIT" "$@"
             }
             result = subprocess.run(
                 [str(UPDATE_AGENTS), "--commit", "--push"],
-                capture_output=True, text=True, env=env, check=False,
+                capture_output=True,
+                text=True,
+                env=env,
+                check=False,
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("signed commit failed", result.stderr)
@@ -6243,17 +6430,148 @@ exec "$REAL_GIT" "$@"
             self.assertEqual(
                 subprocess.run(
                     [real_git, "-C", str(root), "rev-parse", "HEAD"],
-                    capture_output=True, text=True, check=True,
+                    capture_output=True,
+                    text=True,
+                    check=True,
                 ).stdout.strip(),
                 baseline,
             )
             self.assertEqual(
                 subprocess.run(
                     [real_git, "-C", str(root), "status", "--porcelain"],
-                    capture_output=True, text=True, check=True,
+                    capture_output=True,
+                    text=True,
+                    check=True,
                 ).stdout,
                 "",
             )
+
+    def test_update_build_failure_never_switches_publishes_or_pushes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            external_log = Path(temp_dir) / "external.log"
+            push_marker = Path(temp_dir) / "push-called"
+            environment.update(
+                {
+                    "UPDATE_TEST_EXTERNAL_LOG": str(external_log),
+                    "UPDATE_TEST_FAILURE_PHASE": "candidate-build",
+                    "UPDATE_TEST_PUSH_MARKER": str(push_marker),
+                }
+            )
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--commit", "--switch", "--push"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(external_log.read_text().splitlines(), ["build"])
+            self.assertFalse(push_marker.exists())
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_switch_failure_never_publishes_or_pushes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            external_log = Path(temp_dir) / "external.log"
+            push_marker = Path(temp_dir) / "push-called"
+            environment.update(
+                {
+                    "UPDATE_TEST_EXTERNAL_LOG": str(external_log),
+                    "UPDATE_TEST_FAILURE_PHASE": "candidate-switch",
+                    "UPDATE_TEST_PUSH_MARKER": str(push_marker),
+                }
+            )
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--commit", "--switch", "--push"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(external_log.read_text().splitlines(), ["build", "switch"])
+            self.assertFalse(push_marker.exists())
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_success_orders_build_switch_publication_and_push(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            external_log = Path(temp_dir) / "external.log"
+            push_marker = Path(temp_dir) / "push-called"
+            environment.update(
+                {
+                    "UPDATE_TEST_EXTERNAL_LOG": str(external_log),
+                    "UPDATE_TEST_PUSH_MARKER": str(push_marker),
+                }
+            )
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--commit", "--switch", "--push"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                external_log.read_text().splitlines(),
+                ["build", "switch", "publish", "push"],
+            )
+            self.assertTrue(push_marker.exists())
+            self.assertNotEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip(),
+                baseline,
+            )
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "status", "--porcelain"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout,
+                "",
+            )
+
+    def test_update_no_change_is_idempotent_and_skips_publication(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            external_log = Path(temp_dir) / "external.log"
+            push_marker = Path(temp_dir) / "push-called"
+            environment.update(
+                {
+                    "UPDATE_TEST_EXTERNAL_LOG": str(external_log),
+                    "UPDATE_TEST_NO_CHANGES": "1",
+                    "UPDATE_TEST_PUSH_MARKER": str(push_marker),
+                }
+            )
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--commit", "--switch", "--push"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("no changes", result.stdout)
+            self.assertEqual(external_log.read_text().splitlines(), ["build", "switch"])
+            self.assertFalse(push_marker.exists())
+            self._assert_update_agents_unchanged(root, baseline, before)
 
     def test_update_agents_rejects_concurrent_transaction(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -6263,8 +6581,18 @@ exec "$REAL_GIT" "$@"
             subprocess.run(["git", "init", "-q", str(root)], check=True)
             subprocess.run(["git", "-C", str(root), "add", "tracked"], check=True)
             subprocess.run(
-                ["git", "-C", str(root), "-c", "user.name=Test",
-                 "-c", "user.email=test@example.invalid", "commit", "-qm", "baseline"],
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "-c",
+                    "user.name=Test",
+                    "-c",
+                    "user.email=test@example.invalid",
+                    "commit",
+                    "-qm",
+                    "baseline",
+                ],
                 check=True,
             )
             (root / ".git/update-agents.lock").mkdir()
@@ -6280,21 +6608,33 @@ exec "$REAL_GIT" "$@"
             self.assertEqual(
                 subprocess.run(
                     ["git", "-C", str(root), "status", "--porcelain"],
-                    capture_output=True, text=True, check=True,
+                    capture_output=True,
+                    text=True,
+                    check=True,
                 ).stdout,
                 "",
             )
 
     def test_active_commands_have_one_repository_update_transaction(self):
         root = SCRIPT.parent.parent
-        update_agents = (root / "bin" / "update-agents").read_text()
+        update_agents = (root / "bin" / "update").read_text()
         build = (root / "build").read_text()
         makefile = (root / "Makefile").read_text()
         upgrade = (root / "bin" / "upgrade").read_text()
         upgrade_projects = (root / "bin" / "upgrade-projects").read_text()
         switch = (root / "bin" / "switch").read_text()
         update_remote = (root / "bin" / "update-remote").read_text()
-        active = "\n".join((update_agents, build, makefile, upgrade, upgrade_projects, switch, update_remote))
+        active = "\n".join(
+            (
+                update_agents,
+                build,
+                makefile,
+                upgrade,
+                upgrade_projects,
+                switch,
+                update_remote,
+            )
+        )
 
         for retired in (
             "AI_NIX_DIR",
@@ -6327,7 +6667,6 @@ exec "$REAL_GIT" "$@"
             update_agents,
         )
         self.assertNotIn("\n    nixpkgs\n", update_agents)
-        self.assertNotIn("\n    rust-overlay\n", update_agents)
         for catalog_routed in (
             "agent-browser-source",
             "pi-agent-browser-native",
@@ -6350,22 +6689,25 @@ exec "$REAL_GIT" "$@"
         self.assertIn("run_switch=false", update_agents)
         self.assertIn("run_push=false", update_agents)
         self.assertIn("run_brew=false", update_agents)
-        self.assertIn('commit -S -m "Update AI agents"', update_agents)
+        self.assertIn('commit -S -m "Update project pins"', update_agents)
         self.assertIn("--switch/--push require --commit", update_agents)
-        self.assertNotIn("git -C \"$repo\" add -A", update_agents)
+        self.assertNotIn('git -C "$repo" add -A', update_agents)
         self.assertNotIn("commit_and_push_if_changed", update_agents)
-        self.assertIn("bin/update-agents --all-inputs --brew", makefile)
+        self.assertIn(
+            "bin/update --all-inputs --pull --commit --switch --push", makefile
+        )
         self.assertIn("if [[ $run_all_inputs == true ]]", update_agents)
         self.assertIn("nix flake update --flake ./config/fleet", update_agents)
         catalog = load_source_catalog(root)
         expected_inputs = {
-            name for name, target in catalog.items()
-            if target.get("executor") == "update-agents"
+            name
+            for name, target in catalog.items()
+            if target.get("executor") == "update"
             and target.get("kind") == "flake-input"
         }
         block = re.search(r"ai_inputs=\((.*?)\n\)", update_agents, re.DOTALL)
         if block is None:
-            self.fail("update-agents has no ai_inputs array")
+            self.fail("update has no ai_inputs array")
         declared_inputs = {
             line.strip() for line in block.group(1).splitlines() if line.strip()
         }
@@ -6387,11 +6729,24 @@ exec "$REAL_GIT" "$@"
             update_agents,
         )
         self.assertIn('merge --ff-only "$committed_head"', update_agents)
+        candidate_build = update_agents.index(
+            'nix build --no-link "$candidate_dir#darwinConfigurations.$output.system"'
+        )
+        candidate_switch = update_agents.index(
+            'darwin-rebuild switch --flake "$candidate_dir#$output"'
+        )
+        publication = update_agents.index('merge --ff-only "$committed_head"')
+        push = update_agents.index('git -C "$config_dir" push')
+        self.assertLess(candidate_build, candidate_switch)
+        self.assertLess(candidate_switch, publication)
+        self.assertLess(publication, push)
         self.assertIn("nix flake check --no-build", update_agents)
         self.assertNotIn("rollback_transaction", update_agents)
-        self.assertIn("refusing external action without a newly signed commit", update_agents)
         self.assertIn("set -euo pipefail", upgrade)
-        self.assertRegex(upgrade, r"(?m)^\s*\./bin/update-agents --commit\s*$")
+        self.assertRegex(
+            upgrade,
+            r"(?m)^\s*\./bin/update --all-inputs --pull --commit --switch --push\s*$",
+        )
         self.assertIn(
             'exec "${installed_upgrade_projects:-$script_dir/upgrade-projects}"',
             upgrade,
@@ -6405,7 +6760,7 @@ exec "$REAL_GIT" "$@"
         self.assertIn('nixos-rebuild switch --flake ".#$output"', switch)
         self.assertNotIn("nixos-rebuild switch", update_remote)
         self.assertIn("&& switch", update_remote)
-        self.assertNotIn("./bin/update-agents --no-switch --no-brew", upgrade)
+        self.assertNotIn("./bin/update --no-switch --no-brew", upgrade)
 
     def test_overlay_manifests_are_explicit_and_inputs_do_not_leak_through_pkgs(self):
         root = SCRIPT.parent.parent
@@ -6476,15 +6831,15 @@ exec "$REAL_GIT" "$@"
                 path = fake_bin / command
                 path.write_text(
                     "#!/usr/bin/env bash\n"
-                    "printf '%s|%s|%s\\n' \"$(basename \"$0\")\" \"$PWD\" \"$*\" >> \"$UPGRADE_TRACE\"\n"
-                    "[[ $(basename \"$0\") != rag-client ]] || exit 23\n"
+                    'printf \'%s|%s|%s\\n\' "$(basename "$0")" "$PWD" "$*" >> "$UPGRADE_TRACE"\n'
+                    '[[ $(basename "$0") != rag-client ]] || exit 23\n'
                     "exit 0\n"
                 )
                 path.chmod(0o700)
             nix = fake_bin / "nix"
             nix.write_text(
                 "#!/usr/bin/env bash\n"
-                "printf 'nix|%s|%s\\n' \"$PWD\" \"$*\" >> \"$UPGRADE_TRACE\"\n"
+                'printf \'nix|%s|%s\\n\' "$PWD" "$*" >> "$UPGRADE_TRACE"\n'
                 "[[ $PWD != */org-jw ]] || exit 19\n"
                 "exit 0\n"
             )
@@ -6503,26 +6858,56 @@ exec "$REAL_GIT" "$@"
                 },
             )
             self.assertEqual(result.returncode, 1)
-            self.assertEqual(sum(line.endswith("FAIL") for line in result.stdout.splitlines()), 2)
+            self.assertEqual(
+                sum(line.endswith("FAIL") for line in result.stdout.splitlines()), 2
+            )
             self.assertIn("2 failure(s)", result.stderr)
 
             events = [line.split("|", 2) for line in trace.read_text().splitlines()]
-            nix_directories = {directory for command, directory, _ in events if command == "nix"}
-            self.assertEqual(nix_directories, {str(home / project) for project in projects})
+            nix_directories = {
+                directory for command, directory, _ in events if command == "nix"
+            }
+            self.assertEqual(
+                nix_directories, {str(home / project) for project in projects}
+            )
             command_counts = {
                 command: sum(event[0] == command for event in events)
-                for command in ("nix", "cabal", "cargo", "rag-client", "huggingface-cli")
+                for command in (
+                    "nix",
+                    "cabal",
+                    "cargo",
+                    "rag-client",
+                    "huggingface-cli",
+                )
             }
             self.assertEqual(
                 command_counts,
-                {"nix": 17, "cabal": 22, "cargo": 1, "rag-client": 1, "huggingface-cli": 1},
+                {
+                    "nix": 17,
+                    "cabal": 22,
+                    "cargo": 1,
+                    "rag-client": 1,
+                    "huggingface-cli": 1,
+                },
             )
             expected_logs = {
-                "category-theory-build.log", "ltl-coq-build.log", "notes-haskell-build.log",
-                "org-jw-build.log", "pushme-build.log", "gitlib-build.log", "hours-build.log",
-                "renamer-build.log", "simple-amount-build.log", "sizes-build.log",
-                "three-partition-build.log", "trade-journal-build.log", "una-build.log",
-                "comparable-build.log", "rag-client-build.log", "hf-build.log", "ledger-build.log",
+                "category-theory-build.log",
+                "ltl-coq-build.log",
+                "notes-haskell-build.log",
+                "org-jw-build.log",
+                "pushme-build.log",
+                "gitlib-build.log",
+                "hours-build.log",
+                "renamer-build.log",
+                "simple-amount-build.log",
+                "sizes-build.log",
+                "three-partition-build.log",
+                "trade-journal-build.log",
+                "una-build.log",
+                "comparable-build.log",
+                "rag-client-build.log",
+                "hf-build.log",
+                "ledger-build.log",
             }
             self.assertEqual({path.name for path in logs.iterdir()}, expected_logs)
 
@@ -6592,7 +6977,9 @@ exec "$REAL_GIT" "$@"
         queue = [("root", ("root",))]
         while queue:
             name, route = queue.pop(0)
-            for input_name, reference in (nodes.get(name, {}).get("inputs") or {}).items():
+            for input_name, reference in (
+                nodes.get(name, {}).get("inputs") or {}
+            ).items():
                 target = resolve(reference)
                 if target is None or target in routes:
                     continue
@@ -6720,7 +7107,6 @@ exec "$REAL_GIT" "$@"
         offenders = self._closure_impurities(synthetic)
         self.assertIn("shared", offenders)
 
-
     # ---- production source-coordinate completeness gate ----------------
     #
     # Issue #25 (DoD item 3): every production Internet source coordinate must
@@ -6751,9 +7137,20 @@ exec "$REAL_GIT" "$@"
     # and arbitrary URL strings that are not a fetcher argument (runtime/service
     # endpoints, lockfile-patch strings) -- see the runtime-URL positive control.
     _FETCHERS = (
-        "fetchFromGitHub", "fetchFromGitLab", "fetchFromGitiles", "fetchgit",
-        "fetchurl", "fetchzip", "fetchpatch", "fetchPypi", "fetchTree",
-        "fetchTarball", "fetchCrate", "fetchsvn", "fetchhg", "fetchGit",
+        "fetchFromGitHub",
+        "fetchFromGitLab",
+        "fetchFromGitiles",
+        "fetchgit",
+        "fetchurl",
+        "fetchzip",
+        "fetchpatch",
+        "fetchPypi",
+        "fetchTree",
+        "fetchTarball",
+        "fetchCrate",
+        "fetchsvn",
+        "fetchhg",
+        "fetchGit",
     )
     _FETCH_TOKEN = re.compile(
         r"(?<![\w\"'])(?:[A-Za-z_][\w'-]*\.)?(" + "|".join(_FETCHERS) + r")\b"
@@ -6792,14 +7189,14 @@ exec "$REAL_GIT" "$@"
         i, n = 0, len(text)
         while i < n:
             c = text[i]
-            two = text[i:i + 2]
+            two = text[i : i + 2]
             if c == "#":
                 while i < n and text[i] != "\n":
                     out[i] = " "
                     i += 1
                 continue
             if two == "/*":
-                while i < n and text[i:i + 2] != "*/":
+                while i < n and text[i : i + 2] != "*/":
                     if text[i] != "\n":
                         out[i] = " "
                     i += 1
@@ -6811,7 +7208,7 @@ exec "$REAL_GIT" "$@"
                 out[i] = out[i + 1] = " "
                 i += 2
                 while i < n:
-                    if text[i:i + 2] == "''":
+                    if text[i : i + 2] == "''":
                         out[i] = out[i + 1] = " "
                         i += 2
                         break
@@ -6869,7 +7266,7 @@ exec "$REAL_GIT" "$@"
                 j += 1
             if j >= len(mask) or mask[j] != "{":
                 continue
-            block = text[j:cls._match_brace(mask, j)]
+            block = text[j : cls._match_brace(mask, j)]
             coord = cls._COORD_FIELD.search(block)
             if not coord:
                 continue
@@ -6918,8 +7315,10 @@ exec "$REAL_GIT" "$@"
         if url.startswith("git+file:") or url.startswith("file:"):
             return "external-filesystem"
         if url.startswith("path:"):
-            rest = url[len("path:"):]
-            return "external-filesystem" if rest.startswith("/") else "repo-internal-path"
+            rest = url[len("path:") :]
+            return (
+                "external-filesystem" if rest.startswith("/") else "repo-internal-path"
+            )
         if re.match(r"[a-z][a-z0-9+.-]*:", url):
             return "remote"
         return "unknown"
@@ -6953,48 +7352,34 @@ exec "$REAL_GIT" "$@"
         header = "final: prev: {\n  broken = prev.stdenv.mkDerivation {\n    "
         footer = "\n  };\n}\n"
         rejected = {
-            "fetchFromGitHub":
-                'src = prev.fetchFromGitHub {\n      owner = "evil";\n'
-                '      repo = "sneak"; rev = "v1"; hash = "sha256-A";\n    };',
-            "fetchgit":
-                'src = fetchgit {\n      url = "https://x.invalid/r.git";\n'
-                '      rev = "abc"; hash = "sha256-B";\n    };',
-            "fetchurl":
-                'src = fetchurl {\n      url = "https://x.invalid/a.tar.gz";\n'
-                '      hash = "sha256-C";\n    };',
-            "fetchzip":
-                'src = fetchzip {\n      url = "https://x.invalid/a.zip";\n'
-                '      hash = "sha256-D";\n    };',
-            "fetchpatch":
-                'p = fetchpatch {\n      url = "https://x.invalid/p.patch";\n'
-                '      hash = "sha256-E";\n    };',
-            "fetchPypi":
-                'src = fetchPypi {\n      pname = "evil"; version = "1.0";\n'
-                '      hash = "sha256-F";\n    };',
-            "fetchTree (pinned flake URL)":
-                'src = builtins.fetchTree {\n      type = "github";\n'
-                '      owner = "evil"; repo = "flake"; rev = "dead";\n    };',
+            "fetchFromGitHub": 'src = prev.fetchFromGitHub {\n      owner = "evil";\n'
+            '      repo = "sneak"; rev = "v1"; hash = "sha256-A";\n    };',
+            "fetchgit": 'src = fetchgit {\n      url = "https://x.invalid/r.git";\n'
+            '      rev = "abc"; hash = "sha256-B";\n    };',
+            "fetchurl": 'src = fetchurl {\n      url = "https://x.invalid/a.tar.gz";\n'
+            '      hash = "sha256-C";\n    };',
+            "fetchzip": 'src = fetchzip {\n      url = "https://x.invalid/a.zip";\n'
+            '      hash = "sha256-D";\n    };',
+            "fetchpatch": 'p = fetchpatch {\n      url = "https://x.invalid/p.patch";\n'
+            '      hash = "sha256-E";\n    };',
+            "fetchPypi": 'src = fetchPypi {\n      pname = "evil"; version = "1.0";\n'
+            '      hash = "sha256-F";\n    };',
+            "fetchTree (pinned flake URL)": 'src = builtins.fetchTree {\n      type = "github";\n'
+            '      owner = "evil"; repo = "flake"; rev = "dead";\n    };',
         }
         for kind, body in rejected.items():
             with self.subTest(reject=kind):
                 hits = self._inline_fetcher_offenders(header + body + footer)
                 self.assertEqual(len(hits), 1, hits)
         allowed = {
-            "catalog-resolved":
-                "src = prev.fetchFromGitHub sources.foo.source.args;",
-            "catalog-resolved-paren":
-                'src = prev.fetchFromGitHub (sourceArgs "fetchFromGitHub" n);',
-            "commented-out":
-                '# src = fetchFromGitHub { owner = "a"; repo = "b"; };',
-            "block-commented":
-                '/* src = fetchurl { url = "https://x"; hash = "y"; }; */',
-            "fetcher-string-compare":
-                'assert source.source.fetcher == "fetchFromGitHub";',
-            "runtime-service-url":
-                'services.x.endpoint = "https://api.example.com/v1";',
-            "lockfile-patch-url":
-                'substituteInPlace lock --replace-fail '
-                '"https://registry.npmjs.org/ws/-/ws-1.0.0.tgz" "x";',
+            "catalog-resolved": "src = prev.fetchFromGitHub sources.foo.source.args;",
+            "catalog-resolved-paren": 'src = prev.fetchFromGitHub (sourceArgs "fetchFromGitHub" n);',
+            "commented-out": '# src = fetchFromGitHub { owner = "a"; repo = "b"; };',
+            "block-commented": '/* src = fetchurl { url = "https://x"; hash = "y"; }; */',
+            "fetcher-string-compare": 'assert source.source.fetcher == "fetchFromGitHub";',
+            "runtime-service-url": 'services.x.endpoint = "https://api.example.com/v1";',
+            "lockfile-patch-url": "substituteInPlace lock --replace-fail "
+            '"https://registry.npmjs.org/ws/-/ws-1.0.0.tgz" "x";',
         }
         for kind, body in allowed.items():
             with self.subTest(allow=kind):
@@ -7065,6 +7450,43 @@ exec "$REAL_GIT" "$@"
         ):
             with self.subTest(bad=bad):
                 self.assertEqual(classify(bad), "external-filesystem")
+
+    def test_literal_flake_revisions_are_catalog_owned_projections(self):
+        root = SCRIPT.parent.parent
+        revision_url = re.compile(
+            r"(?:^github:[^/]+/[^/?]+/[0-9a-f]{7,40}(?:[?].*)?$|[?&]rev=[0-9a-f]{7,40}(?:&|$))"
+        )
+
+        root_urls = re.findall(
+            r'\burl\s*=\s*"([^"]*)"', (root / "flake.nix").read_text()
+        )
+        self.assertEqual([url for url in root_urls if revision_url.search(url)], [])
+
+        portable = (root / "config/fleet/flake.nix").read_text().splitlines()
+        current = None
+        portable_literals = set()
+        for line in portable:
+            start = re.match(r"^    ([A-Za-z0-9_-]+) = \{$", line)
+            if start:
+                current = start.group(1)
+                continue
+            if current is not None:
+                url = re.match(r'^      url = "([^"]+)";$', line)
+                if url and revision_url.search(url.group(1)):
+                    portable_literals.add(current)
+                if line == "    };":
+                    current = None
+
+        catalog = load_source_catalog(root)
+        catalog_literals = {
+            name
+            for name, target in catalog.items()
+            if target["_record"]["update"].get("input") == name
+            and target["kind"] in {"fixed-flake-input", "npm-release+flake-input"}
+            and "config/fleet/flake.nix" in target["files"]
+        }
+        self.assertEqual(portable_literals, catalog_literals)
+
     def test_root_consumes_portable_input_authority_transitively(self):
         root = SCRIPT.parent.parent
         root_lock = json.loads((root / "flake.lock").read_text())
@@ -7081,11 +7503,19 @@ exec "$REAL_GIT" "$@"
             node_name = "root"
             for input_name in path:
                 reference = lock["nodes"][node_name]["inputs"][input_name]
-                node_name = reference if isinstance(reference, str) else follow_node(lock, reference)
+                node_name = (
+                    reference
+                    if isinstance(reference, str)
+                    else follow_node(lock, reference)
+                )
             return node_name
 
         def canonical_reference(lock, reference):
-            name = reference if isinstance(reference, str) else follow_node(lock, reference)
+            name = (
+                reference
+                if isinstance(reference, str)
+                else follow_node(lock, reference)
+            )
             return canonical_node(lock, name)
 
         def canonical_node(lock, name):
@@ -7113,7 +7543,9 @@ exec "$REAL_GIT" "$@"
         llm_node = drifted["nodes"][drifted["nodes"]["root"]["inputs"]["llm-agents"]]
         llm_nixpkgs = llm_node["inputs"]["nixpkgs"]
         drifted["nodes"][llm_nixpkgs]["locked"]["rev"] = "transitive-drift"
-        self.assertNotEqual(root_graph, canonical_inputs(drifted, drifted["nodes"]["root"]))
+        self.assertNotEqual(
+            root_graph, canonical_inputs(drifted, drifted["nodes"]["root"])
+        )
 
         root_flake = (root / "flake.nix").read_text()
         self.assertIn('nix-config-ai.url = "path:./config/fleet"', root_flake)
@@ -7190,14 +7622,14 @@ exec "$REAL_GIT" "$@"
             self.assertEqual(log.read_text(), "switch\n")
 
             update_help = subprocess.run(
-                [str(profile_bin / "update-agents"), "--help"],
+                [str(profile_bin / "update"), "--help"],
                 capture_output=True,
                 text=True,
                 env=environment,
                 check=False,
             )
             self.assertEqual(update_help.returncode, 0, update_help.stderr)
-            self.assertIn("usage: update-agents", update_help.stdout)
+            self.assertIn("usage: update", update_help.stdout)
 
             conflict = subprocess.run(
                 [str(profile_bin / "upgrade"), "--host-only", "--projects-only"],
@@ -7216,7 +7648,7 @@ exec "$REAL_GIT" "$@"
                 "bash",
                 "-c",
                 'source "$1"; normalize_nix_host Andoria-08; '
-                'nix_flake_output_for_host vps; nix_flake_output_for_host vulcan',
+                "nix_flake_output_for_host vps; nix_flake_output_for_host vulcan",
                 "host-routing-test",
                 str(routing),
             ],
@@ -7224,7 +7656,9 @@ exec "$REAL_GIT" "$@"
             text=True,
             check=True,
         )
-        self.assertEqual(result.stdout.splitlines(), ["shared-work", "ovh-vps", "vulcan"])
+        self.assertEqual(
+            result.stdout.splitlines(), ["shared-work", "ovh-vps", "vulcan"]
+        )
 
         # Every one of the eight fleet hosts must route to a switch target. The
         # table used to normalize all eight but resolve an output for only four,
@@ -7332,7 +7766,11 @@ exec "$REAL_GIT" "$@"
 
         minimal_env = {**os.environ, "PATH": "/usr/bin:/bin"}
         build_help = subprocess.run(
-            [str(BUILD), "--help"], capture_output=True, text=True, env=minimal_env, check=False
+            [str(BUILD), "--help"],
+            capture_output=True,
+            text=True,
+            env=minimal_env,
+            check=False,
         )
         self.assertEqual(build_help.returncode, 0, build_help.stderr)
         self.assertIn("Usage: ./build", build_help.stdout)

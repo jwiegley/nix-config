@@ -548,8 +548,7 @@
         ],
         "buildPackage": "agent-resources",
         "input": "pi-mcp-adapter",
-        "kind": "flake-input+build",
-        "policy": "manual"
+        "kind": "flake-input+build"
       },
       "version": "2.12.1"
     },
@@ -606,8 +605,7 @@
       },
       "update": {
         "kind": "npm-release",
-        "package": "ws",
-        "policy": "manual"
+        "package": "ws"
       },
       "version": "8.18.3"
     }

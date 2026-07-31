@@ -192,8 +192,8 @@ The union contains 161 unique sorted selectors: 26 agents, 1 bundle, 65 commands
     marketplace:claude-code-plugins
     marketplace:claude-plugins-official
     mcp:Ref
-    mcp:anvil
-    mcp:anvil-tools
+    mcp:retired-emacs-mcp
+    mcp:retired-emacs-mcp-tools
     mcp:context-hub
     mcp:context7
     mcp:devonthink
@@ -214,7 +214,7 @@ The union contains 161 unique sorted selectors: 26 agents, 1 bundle, 65 commands
     prompt:ponytail-review
     prompt:spanish
     settings:settings
-    skill:anvil
+    skill:retired-emacs-mcp
     skill:brainstorming
     skill:caveman
     skill:comment-audit
@@ -327,7 +327,7 @@ ai-nix agent-resources at /nix/store/rwa7n4cn1fgr5wy454vciy33qymcfg7g-agent-reso
 
 Ponytail contributes only six static skill trees: ponytail, ponytail-review, ponytail-audit, ponytail-debt, ponytail-gain, and ponytail-help. Dormant hooks, modes, status lines, runtime publication, and the OpenCode plugin are excluded. GPTel Ponytail prompt projections remain outside this migration.
 
-The disabled anvil-tools source is a migration tombstone only, SHA-256 1d4fd2d3b9f723dce1cb53d5b34c0b3cc05bca05859ee11875ec0bed5ab95284. It is not catalog content. The active unified anvil source is SHA-256 d3abda1a763759dadf0940dcade1718c7485114d2126c7dcd06f72207ce2225d.
+The disabled retired-emacs-mcp-tools source is a migration tombstone only, SHA-256 1d4fd2d3b9f723dce1cb53d5b34c0b3cc05bca05859ee11875ec0bed5ab95284. It is not catalog content. The active unified retired-emacs-mcp source is SHA-256 d3abda1a763759dadf0940dcade1718c7485114d2126c7dcd06f72207ce2225d.
 
 ### Native secret-reference transformations
 
@@ -356,13 +356,13 @@ Pi has no fabricated Promptdeploy target. Its direct acceptance inventory is:
 - selected shared skills under ~/.agents/skills, including 6 Ponytail trees;
 - 59 command-* and 2 prompt-* Codex projections visible through the same shared skill root;
 - keybindings.json contains the exact nine-command Emacs-style map;
-- models.json contains the LiteLLM provider plus the local logical router provider, guarantees only `positron_openai/gpt-5.6-sol` statically, resolves LiteLLM auth through a Nix-store password-command helper rather than inherited environment, and has no direct-provider fallback or managed default;
+- models.json contains the retired proxy provider plus the local logical router provider, guarantees only `openai/gpt-5.6-sol` statically, resolves retired proxy auth through a Nix-store password-command helper rather than inherited environment, and has no direct-provider fallback or managed default;
 - model-router.json exposes `router/sol` with high/medium/low heuristic tiers that vary Sol's reasoning level without introducing unverified model routes;
-- global MCP catalog entries Ref, Anvil, Context Hub, Context7, DEVONthink, Drafts, Memory Vault, PAL, Perplexity, Sequential Thinking, and stock-trader;
+- global MCP catalog entries Ref, retired Emacs MCP backend, Context Hub, Context7, DEVONthink, Drafts, Memory Vault, PAL, Perplexity, Sequential Thinking, and stock-trader;
 - exact auto-compact-resume, nix-gallery, pi-mcp-adapter, and pi-quiet extension leaves;
 - immutable Pi BTW, Artifacts, Insights, and Subagentura roots in the gallery, with the old pi-subagent root absent.
 
-Pi excludes hooks, marketplaces, and anvil-tools. Mutable Pi settings, auth, sessions, model store, adapter cache/OAuth, adapter-only settings, artifacts, reports, workflows, and subagent session state remain unmanaged.
+Pi excludes hooks, marketplaces, and retired-emacs-mcp-tools. Mutable Pi settings, auth, sessions, model store, adapter cache/OAuth, adapter-only settings, artifacts, reports, workflows, and subagent session state remain unmanaged.
 
 ## Per-file imported asset evidence
 
@@ -463,8 +463,8 @@ The table is generated from the private extraction report and records extraction
 | commands/wiggum.md | 0644 | 1556 | 2f34894458b270aaa76b4d10b9f404240af402e7f9eef23fc76d139607145eb6 |
 | prompts/emacs.md | 0644 | 7919 | bf97fe8df58266d9684ed863d9cffcdf4a5c6ae3efa324bb2a8c9e442b67d30b |
 | prompts/spanish.md | 0644 | 648 | 1887e44e53ebb1da4fa8f4db713ad35720ac85b994b302822c18a1854ff2cfd5 |
-| skills/anvil/SKILL.md | 0600 | 11464 | e705eb5a28e7cc4a434c217fc379ce4bc55cc275abd209a310275453f745a969 |
-| skills/anvil/references/tools.md | 0644 | 25890 | d3739013980f9b2f2eeff3704421252b3a543d879a9dc936873c2668c6ac9f2a |
+| skills/retired-emacs-mcp/SKILL.md | 0600 | 11464 | e705eb5a28e7cc4a434c217fc379ce4bc55cc275abd209a310275453f745a969 |
+| skills/retired-emacs-mcp/references/tools.md | 0644 | 25890 | d3739013980f9b2f2eeff3704421252b3a543d879a9dc936873c2668c6ac9f2a |
 | skills/caveman/SKILL.md | 0600 | 2566 | f7086975a7ab691166e4d40f2b1f8ae1ef9c98d5c65c8b0437e74c3a56a06086 |
 | skills/comment-audit/SKILL.md | 0600 | 7567 | dddd5da4d1f6151836fb15ea4138443be154c2bc63e4cf8455c5921ea9f47d44 |
 | skills/comment-audit/references/claim-taxonomy.md | 0664 | 5856 | a020fe146f5d027d54daedbf998cd65999938f3aeff44750b1f2247aed325a79 |

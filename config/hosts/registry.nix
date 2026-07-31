@@ -40,16 +40,8 @@ let
     signingKey = null;
   };
 
-  # The Linux hosts (Vulcan plus the four shared-work NFS machines) that run a
-  # dedicated headless Emacs for Anvil. Kept as ONE source of truth by reading
-  # the existing config/anvil-hosts.nix rather than re-listing the names; this
-  # is exactly the list config/johnw.nix consumed before the refactor, so the
-  # derived `isDedicatedAnvilLinux` flag is byte-identical.
-  dedicatedAnvilLinux = (import ../anvil-hosts.nix).dedicatedLinux;
 in
 {
-  inherit dedicatedAnvilLinux;
-
   # The canonical host/group table. Keyed by evalId: hera/clio/vulcan/vps are
   # machines; `andoria` is ONE GROUP ROW for FOUR machines. Its key is a group
   # label, never a machine name — that is what keeps the shared-work derivation
@@ -137,7 +129,6 @@ in
   #
   # Each expression is the byte-for-byte boolean the replaced compare produced:
   #   isDarwinWorkstation   matches the former hera-or-clio membership test
-  #   isDedicatedAnvilLinux matches the former dedicated-Anvil membership test
   #   isSharedWork keys off the CLASS, so all four NFS members agree.
   capabilitiesFor =
     {
@@ -168,9 +159,6 @@ in
       # name) so every NFS member derives the identical flag. Not consumed by
       # any #50 compare rewrite yet; provided for FD-STAGE5-1 (work routing).
       isSharedWork = cls == "shared-work";
-
-      # Linux hosts running a dedicated headless Emacs for Anvil.
-      isDedicatedAnvilLinux = builtins.elem id dedicatedAnvilLinux;
 
       # The synthetic CI evaluation fixtures pin the name to "linux".
       isCiFixture = id == "linux";

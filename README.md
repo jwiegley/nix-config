@@ -52,8 +52,8 @@ System and Home Manager switches are owned by each authoritative checkout. Build
 
 ## Updates
 
-- `bin/update-agents` atomically updates executable shared inputs and, by default, leaves reviewable changes without pull/commit/switch/push/Homebrew side effects. Those actions require explicit flags.
-- `make update` delegates the all-input root/portable transaction to the same command.
+- `bin/update` owns the isolated update transaction for both lock files and every automatic catalog pin; targeted and dry-run modes remain available for review.
+- `make update` runs the complete sequence: fast-forward, update, validate, signed candidate commit, exact-candidate build and switch, then fast-forward and push. Homebrew runs separately after the repository transaction.
 - `bin/update-overlay --inventory --json` validates and lists every catalog-owned update target. Inventory and execution derive exclusively from `sources/*.json`; every inventoried target is executable, with no Nix-overlay discovery or secondary update manifest.
 
 ## Structure
@@ -64,7 +64,7 @@ System and Home Manager switches are owned by each authoritative checkout. Build
 | `config/` | Shared Home Manager/Darwin policy and AI catalog/renderers |
 | `config/fleet/` | Portable AI subflake, models, profiles, resources, and client adapters |
 | `overlays/` | Root and AI package overrides/composition |
-| `packages/` | Package implementations, immutable Pi gallery, and Anvil runtime |
+| `packages/` | Package implementations and immutable Pi gallery |
 | `test/` | Root, portable, wrapper, renderer, and activation contracts |
 | `bin/` | Operator and maintenance commands |
 | `doc/` | Durable architecture and historical evidence |

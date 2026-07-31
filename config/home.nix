@@ -29,12 +29,6 @@ in
   # make both hosts compete for the same bot connection.
   johnw.agentDeck.enableConductorDiscordBridge = config.johnw.host.isHera;
 
-  johnw.anvil = {
-    useDedicatedDarwinEmacs = config.johnw.host.isDarwinWorkstation;
-    # The code is ready on both hosts; deploy and prove Hera before Clio.
-    usePerAgentDaemon = true;
-  };
-
   home = {
     # Darwin has been on 23.11 longer than NixOS
     stateVersion = "23.11";

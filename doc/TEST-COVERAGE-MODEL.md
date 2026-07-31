@@ -202,7 +202,7 @@ versioned artifact; they do not require those bare numbers forever. In particula
   with nine lock-bearing npm records, so the then-current delta would be 23 → 14).
 - #43’s “inventory total stays 188” is replaced by **total is unchanged across the
   change**. The current total happens to be 199.
-- `bin/quality` prose saying 11 Anvil MCP Python `*-test.py` files is stale; 12 are
+- `bin/quality` prose saying 11 retired Emacs MCP backend MCP Python `*-test.py` files is stale; 12 are
   tracked today (three additional Elisp `*-test.el` files are a separate inventory).
 
 ## Tiers and cost contract

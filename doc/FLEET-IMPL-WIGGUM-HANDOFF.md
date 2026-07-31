@@ -229,7 +229,7 @@ decision), #28 (live verdict pending), `nixos-config#1` (needs vulcan sync).
   lands **+15 pending** and pushes #43 further from zero. Needs the executor/count
   decision (Q3 in `doc/FLEET-DECISIONS.md`).
 
-### Anvil
+### retired Emacs MCP backend
 
 Available on this host, **dedicated** backend. Its buffer view cannot prove a
 separate interactive Emacs has no unsaved copy, so no such claim is made. One
@@ -1037,11 +1037,11 @@ latest session file.
 The Codex incident had two independent causes. Hera's intended credential-loading
 wrapper lived in `~/.local/bin` behind the Nix profile on `PATH`; the actual profile
 package now owns that wrapper and pins its underlying Codex and `pass` paths. It loads
-and shell-excludes the LiteLLM, Ref, and Perplexity credentials. Separately,
+and shell-excludes the retired proxy, Ref, and Perplexity credentials. Separately,
 `perplexity-mcp` 0.1.7 had resolved incompatible `mcp` 2.0.0 and crashed on the removed
 `Server.list_prompts` API; both packages are now pinned (`perplexity-mcp==0.1.7`,
 `mcp==1.28.1`). A fresh Codex probe reached the prompt with all seven MCP servers and
-the intended LiteLLM/ultra routing. `agent-deck codex-hooks status` reports the managed
+the intended retired proxy/ultra routing. `agent-deck codex-hooks status` reports the managed
 custom notify hook.
 
 Verification at the pre-commit boundary:

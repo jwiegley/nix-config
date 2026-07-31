@@ -11,9 +11,6 @@
 final: prev:
 
 let
-  anvilSources = import ../packages/source-catalog.nix "anvil";
-  anvilSource = anvilSources.anvil-mcp;
-  anvilIdeSource = anvilSources.anvil-ide;
   emacsSources = import ../packages/source-catalog.nix "emacs";
   sourceArgs =
     fetcher: name:
@@ -29,8 +26,6 @@ let
   myEmacsPackageOverrides =
     eself: esuper:
     let
-      inherit (prev) fetchFromGitHub;
-
       withPatches =
         pkg: patches:
         pkg.overrideAttrs (_attrs: {
@@ -148,39 +143,6 @@ let
           null;
 
       ########################################################################
-
-      anvil =
-        (compileEmacsFiles {
-          name = "anvil";
-          src = fetchFromGitHub anvilSource.source.args;
-        }).overrideAttrs
-          (attrs: {
-            # anvil-server-commands.el resolves anvil-stdio.sh (the MCP stdio
-            # bridge) next to the installed lisp via locate-library, so it
-            # must ship alongside the *.el files.
-            installPhase = attrs.installPhase + ''
-              install anvil-stdio.sh $out/share/emacs/site-lisp
-              mkdir -p $out/share/emacs/site-lisp/tests
-              install -m644 \
-                tests/anvil-eval-async-isolation-test.el \
-                tests/anvil-host-reentrancy-test.el \
-                tests/anvil-offload-ownership-test.el \
-                tests/anvil-server-unified-registry-test.el \
-                tests/anvil-stdio-readiness-test.py \
-                $out/share/emacs/site-lisp/tests
-            '';
-          });
-
-      anvil-ide = compileEmacsFiles {
-        name = "anvil-ide";
-        src = fetchFromGitHub anvilIdeSource.source.args;
-        propagatedBuildInputs = with eself; [
-          anvil
-        ];
-        buildInputs = with eself; [
-          anvil
-        ];
-      };
 
       ecard = compileEmacsFiles {
         name = "ecard";
@@ -700,17 +662,6 @@ let
         ];
       };
 
-      gptel-litellm = compileEmacsFiles {
-        name = "gptel-litellm";
-        src = githubSource "gptel-litellm";
-        buildInputs = with eself; [
-          gptel
-          transient
-          compat
-          uuidgen
-        ];
-      };
-
       gptel-prompts = compileEmacsFiles {
         name = "gptel-prompts";
         src = githubSource "gptel-prompts";
@@ -965,8 +916,6 @@ let
     );
 
 in
-assert anvilSource.source.fetcher == "fetchFromGitHub";
-assert anvilIdeSource.source.fetcher == "fetchFromGitHub";
 {
 
   # NOTE: Using 'final' for emacs aliases because they reference

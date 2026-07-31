@@ -47,7 +47,7 @@ help:
 	  '  darwin-surface-baseline  Regenerate the exact-commit Darwin value baseline' \
 	  '  lint             Run every quality suite (bin/quality)' \
 	  '  switch           Re-lock local inputs and switch nix-darwin' \
-	  '  update           Update the root lock and Homebrew metadata' \
+	  '  update           Update all locks/pins, switch, commit, and push' \
 	  '  upgrade          Update, switch, and run upgrade tasks' \
 	  '  clean / purge    Delete old Nix generations and store paths'
 
@@ -57,10 +57,6 @@ test:
 	nix build --no-link \
 	  .#checks.$(SYSTEM).agent-resources \
 	  .#checks.$(SYSTEM).agent-wrappers \
-	  .#checks.$(SYSTEM).ai-home-manager-catalog-renderers \
-	  .#checks.$(SYSTEM).ai-home-manager-integration \
-	  .#checks.$(SYSTEM).ai-home-manager-model-sync \
-	  .#checks.$(SYSTEM).ai-home-manager-package-selection \
 	  .#checks.$(SYSTEM).pi-gallery
 
 expensive:
@@ -173,8 +169,8 @@ switch: lock-local
 	@echo "Darwin generation: $$(sudo darwin-rebuild --list-generations | tail -1)"
 
 update:
-	$(call announce,bin/update-agents --all-inputs --brew)
-	bin/update-agents --all-inputs --brew
+	$(call announce,bin/update --all-inputs --pull --commit --switch --push)
+	bin/update --all-inputs --pull --commit --switch --push
 
 update-projects:
 	$(call announce,nix flake update (in projects))
@@ -186,7 +182,7 @@ update-projects:
 	    );					\
 	done
 
-upgrade-tasks: switch travel-ready
+upgrade-tasks: travel-ready
 	@if [[ -f /opt/homebrew/bin/brew ]]; then	\
 	    eval "$(/opt/homebrew/bin/brew shellenv)";	\
 	elif [[ -f /usr/local/bin/brew ]]; then		\

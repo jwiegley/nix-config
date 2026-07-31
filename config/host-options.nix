@@ -173,11 +173,6 @@ in
       default = false;
       description = "A member of the shared-\$HOME Positron work group (home class \"shared-work\").";
     };
-    isDedicatedAnvilLinux = mkOption {
-      type = types.bool;
-      default = false;
-      description = "A Linux host that runs a dedicated headless Emacs for Anvil.";
-    };
     isCiFixture = mkOption {
       type = types.bool;
       default = false;

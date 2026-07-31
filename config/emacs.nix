@@ -15,8 +15,6 @@ with epkgs;
   alert
   (exclude all-the-icons)
   (exclude anki-editor)
-  anvil
-  anvil-ide
   aria2
   ascii
   async
@@ -174,7 +172,6 @@ with epkgs;
   gptel-emacs-tools
   gptel-fn-complete
   (exclude gptel-got)
-  gptel-litellm
   gptel-prompts
   gptel-quick
   gptel-rag

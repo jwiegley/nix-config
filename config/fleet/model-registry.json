@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "selections": {
     "default": {
-      "provider": "nvidia",
-      "model": "qwen/qwen3-coder-480b-a35b-instruct"
+      "provider": "omlx",
+      "model": "Qwen3.6-27B-oQ4e-mtp"
     },
     "claudeDefault": {
       "provider": "positron-anthropic",

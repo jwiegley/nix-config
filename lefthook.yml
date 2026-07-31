@@ -3,7 +3,7 @@
 # Do NOT inline a tool invocation or a file list in this file. That is how these
 # hooks and .github/workflows/ci.yml drifted apart badly enough that CI checked 9
 # shell scripts while this file checked 19, and how a 45-line shfmt diff in
-# bin/update-agents passed every gate: the old loops here did not propagate
+# bin/update passed every gate: the old loops here did not propagate
 # failure, so the loop exited with the status of its last iteration and a bad file
 # in the middle was invisible.
 #
@@ -51,10 +51,6 @@ pre-push:
         nix build --no-link
         .#checks.aarch64-darwin.agent-resources
         .#checks.aarch64-darwin.agent-wrappers
-        .#checks.aarch64-darwin.ai-home-manager-catalog-renderers
-        .#checks.aarch64-darwin.ai-home-manager-integration
-        .#checks.aarch64-darwin.ai-home-manager-model-sync
-        .#checks.aarch64-darwin.ai-home-manager-package-selection
         .#checks.aarch64-darwin.pi-gallery
     darwin-surface:
       run: ": {files}; bin/quality darwin-surface"

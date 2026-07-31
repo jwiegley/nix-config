@@ -12,10 +12,10 @@
 #     from "19 / blind to 10": the extra file was bin/quality itself, already in
 #     the working tree when the measurement was taken.)
 #   * Both hardcoded the same 4 Python files while the tree tracks 35. The other
-#     31 — the whole packages/anvil-mcp suite among them — were never linted.
+#     31 additional tracked Python files were never linted.
 #   * Worse, both looped over files WITHOUT propagating failure: no `set -e`, no
 #     accumulation, so the loop exited with the status of its last iteration. A
-#     misformatted file in the middle passed silently. bin/update-agents had a
+#     misformatted file in the middle passed silently. bin/update had a
 #     45-line shfmt diff and every gate reported success.
 #
 # So the two rules this script exists to enforce:
@@ -132,8 +132,8 @@ files_python() {
 # unittest suites, by the repo's bin/<name>-test.py convention.
 #
 # Scope boundary, stated rather than left to be discovered: this is deliberately
-# narrower than files_python. The tree also tracks 12 packages/anvil-mcp/*-test.py
-# suites and test/ai/statusline-command-test.py. Those are LINTED by python-lint
+# narrower than files_python. The tree also tracks test/ai/statusline-command-test.py
+# and other non-bin suites. Those are LINTED by python-lint
 # but not EXECUTED here, because several drive a live Emacs or a long soak and are
 # not safe to run unattended in a pre-commit hook. They have their own flake
 # checks. Widening this glob without first tiering those suites would make every

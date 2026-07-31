@@ -71,7 +71,7 @@ No CI expansion is part of this transaction.
 ### Previously requested Pi and review work
 
 - Package and install `arpagon/pi-rewind` through the immutable Pi gallery.
-- Compare `xec-abailey/pi-litellm` with the installed `pi-provider-litellm`
+- Compare `xec-abailey/pi-retired-proxy` with the installed `pi-provider-retired-proxy`
   using source, behavior, credential, discovery, and maintenance evidence.
 - Add the `heavy-review` command coordinating deep, Alexey-discipline,
   ponytail, dead-code, and comment audits across repository, PR, and working-tree

@@ -22,7 +22,7 @@ in
     extraInstall = ''
       mkdir -p $out/libexec/nix-scripts
       cp -R ${../bin/lib}/. $out/libexec/nix-scripts/
-      substituteInPlace $out/bin/switch $out/bin/update-agents $out/bin/upgrade \
+      substituteInPlace $out/bin/switch $out/bin/update $out/bin/upgrade \
         --replace-fail 'installed_routing_path=' \
         "installed_routing_path=$out/libexec/nix-scripts/host-routing.sh"
       substituteInPlace $out/bin/upgrade \

@@ -369,12 +369,26 @@ class TestVerifySignaturesRejects(unittest.TestCase):
         verifier.write_text(VERIFY_SIGNATURES.read_text())
         verifier.chmod(0o755)
         git("add", "bin/verify-signatures", cwd=self.repo)
-        git("commit", "-q", "--no-gpg-sign", "-m", "trusted base verifier", cwd=self.repo)
+        git(
+            "commit",
+            "-q",
+            "--no-gpg-sign",
+            "-m",
+            "trusted base verifier",
+            cwd=self.repo,
+        )
         base = git("rev-parse", "HEAD", cwd=self.repo).stdout.strip()
 
         verifier.write_text("#!/bin/sh\nexit 0\n")
         git("add", "bin/verify-signatures", cwd=self.repo)
-        git("commit", "-q", "--no-gpg-sign", "-m", "malicious success stub", cwd=self.repo)
+        git(
+            "commit",
+            "-q",
+            "--no-gpg-sign",
+            "-m",
+            "malicious success stub",
+            cwd=self.repo,
+        )
         head = git("rev-parse", "HEAD", cwd=self.repo).stdout.strip()
 
         trusted = Path(self.tmp) / "trusted" / "verify-signatures"
@@ -1169,9 +1183,7 @@ class TestGatesAreRegistered(unittest.TestCase):
 
             fixture = root / "Makefile"
             fixture.write_text(
-                f"include {REPO / 'Makefile'}\n"
-                "verify-inputs: ;\n"
-                "lock-local: ;\n"
+                f"include {REPO / 'Makefile'}\nverify-inputs: ;\nlock-local: ;\n"
             )
             env = clean_env(
                 PATH=f"{fake_bin}:{os.environ['PATH']}",
@@ -1181,7 +1193,14 @@ class TestGatesAreRegistered(unittest.TestCase):
             result_file = root / "result"
             result_file.touch()
             build = subprocess.run(
-                ["make", "--no-print-directory", "-f", str(fixture), "build", "HOSTNAME=hera"],
+                [
+                    "make",
+                    "--no-print-directory",
+                    "-f",
+                    str(fixture),
+                    "build",
+                    "HOSTNAME=hera",
+                ],
                 cwd=root,
                 env=env,
                 capture_output=True,
@@ -1193,7 +1212,14 @@ class TestGatesAreRegistered(unittest.TestCase):
 
             sudo_log.write_text("")
             switch = subprocess.run(
-                ["make", "--no-print-directory", "-f", str(fixture), "switch", "HOSTNAME=hera"],
+                [
+                    "make",
+                    "--no-print-directory",
+                    "-f",
+                    str(fixture),
+                    "switch",
+                    "HOSTNAME=hera",
+                ],
                 cwd=root,
                 env=env,
                 capture_output=True,
@@ -1212,12 +1238,12 @@ class TestGatesAreRegistered(unittest.TestCase):
             fake_bin.mkdir()
             nix = fake_bin / "nix"
             nix.write_text(
-                '#!/bin/sh\n'
+                "#!/bin/sh\n"
                 'printf "warning: filtered warning\\n"\n'
                 'if [ "${NIX_FAIL:-0}" = 1 ]; then\n'
                 '  printf "lock update failed\\n" >&2\n'
-                '  exit 73\n'
-                'fi\n'
+                "  exit 73\n"
+                "fi\n"
             )
             nix.chmod(0o755)
             sudo = fake_bin / "sudo"
@@ -1238,10 +1264,7 @@ class TestGatesAreRegistered(unittest.TestCase):
                 )
             )
             fixture = root / "Makefile"
-            fixture.write_text(
-                f"include {REPO / 'Makefile'}\n"
-                "verify-inputs: ;\n"
-            )
+            fixture.write_text(f"include {REPO / 'Makefile'}\nverify-inputs: ;\n")
             env = clean_env(
                 PATH=f"{fake_bin}:{os.environ['PATH']}",
                 SUDO_LOG=str(sudo_log),
@@ -1314,7 +1337,9 @@ class TestGatesAreRegistered(unittest.TestCase):
                 check=False,
             )
             self.assertNotEqual(switch.returncode, 0, switch.stdout + switch.stderr)
-            self.assertFalse(sudo_log.exists(), "switch reached sudo after lock failure")
+            self.assertFalse(
+                sudo_log.exists(), "switch reached sudo after lock failure"
+            )
 
     def test_precommit_tier_always_runs_python_authorities(self):
         config = (REPO / "lefthook.yml").read_text()
@@ -1507,7 +1532,6 @@ class TestConsumerInventoryLoadBearingFacet(unittest.TestCase):
     def test_known_code_and_stub_traps_stay_load_bearing(self):
         """The module name, stale-path detector, and throwing stub remain code."""
         for needle in (
-            "home-manager-contract-common.nix",
             "bin/gates-test.py",
             "config/ai/flake.nix",
         ):

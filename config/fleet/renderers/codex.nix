@@ -37,7 +37,9 @@ let
   nativeSolAutoCompactTokenLimit =
     assert builtins.isInt nativeSol.context_window;
     builtins.div (nativeSol.context_window * 4) 5;
-  managedModelCatalog = codexSourceCatalog;
+  managedModelCatalog = pkgs.runCommand "codex-nix-managed-model-catalog.json" { } ''
+    cp ${codexSourceCatalog} "$out"
+  '';
   isTypedEnv =
     value:
     builtins.isAttrs value && builtins.attrNames value == [ "env" ] && builtins.isString value.env;

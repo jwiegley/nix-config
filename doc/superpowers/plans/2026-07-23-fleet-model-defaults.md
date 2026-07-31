@@ -22,8 +22,8 @@ legacy service shape without a second generated model file.
 - Claude Haiku selection remains unchanged.
 - `llm-setup-reset` must not write `models.yaml`, invoke Nix, commit, push, or
   contact hosts.
-- Vulcan accepts only a `litellm` general default because its consumers call
-  the local LiteLLM endpoint.
+- Vulcan accepts only a `retired-proxy` general default because its consumers call
+  the local retired proxy endpoint.
 - Retry policy, OpenClaw transport metadata, and `hera/bge-m3` remain
   Vulcan-owned policy.
 - Keep ordinary flake locks and fixed-output hashes; remove only manually
@@ -112,11 +112,11 @@ legacy service shape without a second generated model file.
 - Produces the existing `{ llm; embedding; }` compatibility value for all
   NixOS, Home Manager, microVM, and `/etc/models.json` consumers.
 
-- [ ] Add a pure evaluation test showing a changed `litellm` default changes
+- [ ] Add a pure evaluation test showing a changed `retired-proxy` default changes
   primary, fast, and agent names and effective limits.
 - [ ] Confirm the test fails against the host-local `models.yaml` adapter.
 - [ ] Make `models.nix` accept the locked `nix-config` source, resolve one exact
-  provider/model pair, reject non-LiteLLM defaults, and derive context/output
+  provider/model pair, reject non-retired proxy defaults, and derive context/output
   limits while preserving Vulcan policy.
 - [ ] Pass the computed value through NixOS, Home Manager, and OpenClaw guest
   module arguments; remove stale `models.yaml` comments and the file itself.

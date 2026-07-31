@@ -55,7 +55,7 @@
         "fetcher": "fetchurl",
         "url": "https://go.dev/dl/go1.26.5.src.tar.gz"
       },
-      "update": { "kind": "url-release", "policy": "manual" },
+      "update": { "kind": "url-release", "policy": "manual", "reason": "The Go source version is coupled to the explicit toolchain override" },
       "version": "1.26.5"
     },
     "gogcli": {
@@ -73,7 +73,7 @@
         "args": { "owner": "jwiegley", "repo": "hammer", "rev": "b5a7543b4741d9b54dad49ecfca8908a4aedf124", "sha256": "sha256-SGHB8UTJ9cT/hZiv4V/rc3GwKlB6r9WCYsMXFA+Iw4c=" },
         "fetcher": "fetchFromGitHub", "url": "https://github.com/jwiegley/hammer"
       },
-      "update": { "branch": "master", "kind": "github-commit", "policy": "manual" },
+      "update": { "branch": "master", "kind": "github-commit" },
       "version": "b5a7543b"
     },
     "hashdb": {
@@ -89,7 +89,7 @@
         "args": { "rev": "f9fc6a164cd94df4d146c69fc7e48aeb143afe16", "sha256": "0cr16p6z0spr9xdabw4da77hrsmn4dzvfxd15kllva8w28xqsbl6", "url": "https://codeberg.org/buhtz/hyperorg.git" },
         "fetcher": "fetchgit", "url": "https://codeberg.org/buhtz/hyperorg.git"
       },
-      "update": { "kind": "explicit-rev", "policy": "manual" },
+      "update": { "kind": "explicit-rev", "policy": "manual", "reason": "This unreleased source is held at a reviewed compatibility commit" },
       "version": "a814c4bf5e"
     },
     "iterm2-shell-integration": {
@@ -97,15 +97,15 @@
         "args": { "sha256": "0yhfnaigim95sk1idrc3hpwii8hfhjl5m3lyc0ip3vi1a9npq0li", "url": "https://iterm2.com/shell_integration/zsh" },
         "fetcher": "fetchurl", "url": "https://iterm2.com/shell_integration/zsh"
       },
-      "update": { "kind": "url-release", "policy": "manual" }
+      "update": { "kind": "url-release", "policy": "manual", "reason": "Upstream exposes a mutable unversioned integration script" }
     },
     "linkdups": {
       "source": { "args": { "owner": "jwiegley", "repo": "linkdups", "rev": "e1d5b82da048300a78f2fc7d62f200bbfc5d973b", "sha256": "sha256-N0MAdqn8yHrEvAbbtfHhToa9Kefs6LSwA/tVPUzWOSs=" }, "fetcher": "fetchFromGitHub", "url": "https://github.com/jwiegley/linkdups" },
-      "update": { "branch": "master", "kind": "github-commit", "policy": "manual" }, "version": "e1d5b82d"
+      "update": { "branch": "master", "kind": "github-commit" }, "version": "e1d5b82d"
     },
     "lipotell": {
       "source": { "args": { "owner": "jwiegley", "repo": "lipotell", "rev": "1502a4753f42618efcf2d0d561c818af377b0d92", "sha256": "sha256-TnaiGFXRzc4hwSgKvmxHJcCQW6H9Qh7VWQL+RoFb024=" }, "fetcher": "fetchFromGitHub", "url": "https://github.com/jwiegley/lipotell" },
-      "update": { "branch": "master", "kind": "github-commit", "policy": "manual" }, "version": "1502a475"
+      "update": { "branch": "master", "kind": "github-commit" }, "version": "1502a475"
     },
     "markless": {
       "hashes": { "cargoHash": "sha256-kMMglmIsc3HkCx24Zir3NtZitwrxYwa7FgLgAZ2/ffo=" },
@@ -114,15 +114,15 @@
     },
     "sift": {
       "source": { "args": { "owner": "jwiegley", "repo": "sift", "rev": "c823f340be8818cc7aa970f9da4c81247f5b5535", "sha256": "1yadjgjcghi2fhyayl3ry67w3cz6f7w0ibni9dikdp3vnxp94y58" }, "fetcher": "fetchFromGitHub", "url": "https://github.com/jwiegley/sift" },
-      "update": { "branch": "master", "kind": "github-commit", "policy": "manual" }, "version": "c823f340"
+      "update": { "branch": "master", "kind": "github-commit" }, "version": "c823f340"
     },
     "sshify": {
       "source": { "args": { "owner": "jwiegley", "repo": "sshify", "rev": "a6fb0d529ec01158dd031431099b0ba8c8d64eb6", "sha256": "sha256-wl2BZhVIpIFrcReQrMbkbxkrPA7vKKdkPfAYo5IlbIs=" }, "fetcher": "fetchFromGitHub", "url": "https://github.com/jwiegley/sshify" },
-      "update": { "branch": "master", "kind": "github-commit", "policy": "manual" }, "version": "a6fb0d52"
+      "update": { "branch": "master", "kind": "github-commit" }, "version": "a6fb0d52"
     },
     "tsvutils": {
       "source": { "args": { "owner": "brendano", "repo": "tsvutils", "rev": "a286c8179342285803871834bb92c39cd52e516d", "sha256": "sha256-0dLLB8ckSN5XxOOCpmp2d2T4pPuRgjJSl7zePZkZL8s=" }, "fetcher": "fetchFromGitHub", "url": "https://github.com/brendano/tsvutils" },
-      "update": { "branch": "master", "kind": "github-commit", "policy": "manual" }, "version": "a286c817"
+      "update": { "branch": "master", "kind": "github-commit" }, "version": "a286c817"
     },
     "z": {
       "source": { "args": { "owner": "rupa", "repo": "z", "rev": "d37a763a6a30e1b32766fecc3b8ffd6127f8a0fd", "sha256": "10azqw3da1mamfxhx6r0x481gsnjjipcfv6q91vp2bhsi22l35hy" }, "fetcher": "fetchFromGitHub", "url": "https://github.com/rupa/z" },

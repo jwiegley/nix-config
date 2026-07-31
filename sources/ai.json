@@ -383,8 +383,7 @@
       },
       "update": {
         "kind": "pypi-release",
-        "package": "cohere-melody",
-        "policy": "manual"
+        "package": "cohere-melody"
       },
       "version": "0.9.0"
     },
@@ -436,8 +435,7 @@
       },
       "update": {
         "branch": "main",
-        "kind": "github-commit",
-        "policy": "manual"
+        "kind": "github-commit"
       },
       "version": "0.1.10"
     },
@@ -498,7 +496,6 @@
       "update": {
         "buildMode": "python",
         "kind": "github-release",
-        "policy": "manual",
         "tagPrefix": "v"
       },
       "version": "1.5.1"
@@ -516,7 +513,6 @@
       },
       "update": {
         "kind": "github-release",
-        "policy": "manual",
         "tagPrefix": "v"
       },
       "version": "1.19.0"
@@ -610,8 +606,7 @@
       },
       "update": {
         "kind": "pypi-release",
-        "package": "mlx",
-        "policy": "manual"
+        "package": "mlx"
       },
       "version": "0.32.0"
     },
@@ -628,8 +623,7 @@
       },
       "update": {
         "branch": "main",
-        "kind": "github-commit",
-        "policy": "manual"
+        "kind": "github-commit"
       },
       "version": "0.4.3"
     },
@@ -661,8 +655,7 @@
       },
       "update": {
         "branch": "main",
-        "kind": "github-commit",
-        "policy": "manual"
+        "kind": "github-commit"
       },
       "version": "0.31.3-unstable-2026-07-07"
     },
@@ -679,8 +672,7 @@
       },
       "update": {
         "branch": "main",
-        "kind": "github-commit",
-        "policy": "manual"
+        "kind": "github-commit"
       },
       "version": "0-unstable-2025-03-30"
     },
@@ -697,8 +689,7 @@
       },
       "update": {
         "branch": "main",
-        "kind": "github-commit",
-        "policy": "manual"
+        "kind": "github-commit"
       },
       "version": "0.6.3"
     },
@@ -833,7 +824,6 @@
         },
         "kind": "github-release-asset",
         "owner": "michaelbromley",
-        "policy": "manual",
         "repo": "sherlock",
         "tagPrefix": "v"
       },
@@ -974,12 +964,10 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/fleet/flake.lock",
-          "config/fleet/flake.nix"
+          "config/fleet/flake.lock"
         ],
         "input": "rust-overlay",
-        "kind": "fixed-flake-input",
-        "policy": "manual"
+        "kind": "flake-input"
       }
     },
     "translate-tool": {

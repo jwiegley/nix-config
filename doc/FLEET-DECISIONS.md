@@ -67,7 +67,7 @@ never contained.
 | I15-Q1 | What single mechanism should own npm manifest normalization so Nix packaging and lock generation cannot drift? | **Settled → Q1(a)** |
 | I15-Q2 | Should direct `bin/update-overlay` always delegate compound work to the isolated `update-agents` candidate transaction, or should the catalog command itself gain an equivalent candidate mode? | **Open → Q2** |
 | I15-Q3 | Which fixed root inputs are package-producing policy pins versus ordinary lock-owned infrastructure? | **Open → Q3** (private-remote/`file://` policy already **settled**, S6) |
-| I15-Q4 | Which external consumers still require global Anvil mode, Node-RED templates, `flake-ai.nix`, or fallback imports? | **Open → Q4** |
+| I15-Q4 | Which external consumers still require global retired Emacs MCP backend mode, Node-RED templates, `flake-ai.nix`, or fallback imports? | **Open → Q4** |
 | I15-Q5 | When will native Clio, Andoria, Vulcan, and VPS routes be available? | **Open → Q5** (scheduling, not a design fork) |
 | I15-Q6 | Will activation be separately authorized after native evidence is complete? | **Settled → S1** (standing policy: yes, always) |
 
@@ -146,14 +146,14 @@ Q3. Which fixed root inputs are **package-producing policy pins** (to be catalog
 
 ---
 
-Q4. Per compatibility surface — global Anvil mode, Node-RED asset templates, `flake-ai.nix`, and the `nix-ai`/`git-ai` fallback imports — is each **retained** or **retired**?
+Q4. Per compatibility surface — global retired Emacs MCP backend mode, Node-RED asset templates, `flake-ai.nix`, and the `nix-ai`/`git-ai` fallback imports — is each **retained** or **retired**?
 
-- **Origin / unblocks:** I15-Q4 → [#53](https://github.com/jwiegley/nix-config/issues/53) (`E7-COMPAT-DECISIONS`: Anvil mode, Node-RED, standalone ai-nix, runtime fallbacks) and [#60](https://github.com/jwiegley/nix-config/issues/60) (`E7-FLAKEAI-RETIRE`: `flake-ai.nix` + fallback). Both are `EPIC 7` decision owners.
+- **Origin / unblocks:** I15-Q4 → [#53](https://github.com/jwiegley/nix-config/issues/53) (`E7-COMPAT-DECISIONS`: retired Emacs MCP backend mode, Node-RED, standalone ai-nix, runtime fallbacks) and [#60](https://github.com/jwiegley/nix-config/issues/60) (`E7-FLAKEAI-RETIRE`: `flake-ai.nix` + fallback). Both are `EPIC 7` decision owners.
 - **Type:** policy. The evidence input — the merged cross-consumer inventory ([#17](https://github.com/jwiegley/nix-config/issues/17), now **closed/done**) — exists, so the decision is *answerable now*. The `flake-ai.nix` internal-import migration ([#54](https://github.com/jwiegley/nix-config/issues/54)) is a hard prerequisite before its retirement can be *executed*, but not before the keep/retire *decision* is recorded.
 - **Why it matters if defaulted:** CLAUDE.md permits deleting compatibility only after zero maintained-consumer usage is proven, and requires a retained surface to record owner, reason, current consumer, and retirement trigger. Defaulting means either a surface is deleted while a consumer still needs it (breakage), or dead compatibility accretes forever with no owner (the exact rot this programme removes). Each surface needs its own recorded verdict.
 - **Options (per surface):** **retain** — record owner, reason, current consumer, concrete retirement trigger; or **retire** — delete only after the #17 inventory proves zero maintained-consumer usage (and, for `flake-ai.nix`, after #54 migrates the four internal imports).
 - **Recommendation:** none. The verdict must be read off the #17 inventory of maintained consumers on both remotes; this analysis has not read that inventory and must not guess a consumer's needs.
-- **Answer (global Anvil mode):** _(unanswered)_
+- **Answer (global retired Emacs MCP backend mode):** _(unanswered)_
 - **Answer (Node-RED templates):** _(unanswered)_
 - **Answer (`flake-ai.nix` + fallback):** _(unanswered)_
 - **Date:** _______  **Decided by:** _______  **Follow-up:** record each verdict in #53/#60 with the CLAUDE.md fields; if any is "retire `flake-ai.nix`", sequence after #54.

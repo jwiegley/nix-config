@@ -31,7 +31,7 @@ Another autonomous session is actively working in this repository:
   **cwd `/Users/johnw/src/nix`**.
 - It is mid-series on the source-catalog migration continuing commits
   `c4332fe6 → 598e1430 → 315291cc → 8a661b96`. Working files written at:
-  `sources/pi.json` 11:31, `sources/ai.json` 12:10, `sources/anvil.json` 12:30,
+  `sources/pi.json` 11:31, `sources/ai.json` 12:10, `sources/retired-emacs-mcp.json` 12:30,
   `sources/tools.json` 12:48 (staged, uncommitted).
 - Its in-flight change refactors `mkSimpleGitHubBinary` from
   `version`/`rev`/`sha256` args to a `source` arg sourced from
@@ -63,7 +63,7 @@ Read-only analysis and design work continues safely and is unaffected.
 
 ## Tooling state
 
-- Anvil MCP **available** on this host (dedicated backend; `git-status`,
+- retired Emacs MCP backend MCP **available** on this host (dedicated backend; `git-status`,
   `file-batch`, `file-outline` probed successfully). Use progressive-disclosure
   reads and batched typed edits for the rest of the loop.
 - Repos `~/src/nix`, `~/src/nixos`, `~/src/andoria` all had **clean** working
@@ -159,9 +159,9 @@ the comment states the shared flake "supplies `andoria-08` on every NFS client"
 (line 63 is the `useHeadlessEmacs` code itself).
 
 The build-time decision
-`johnw.anvil.useHeadlessEmacs = lib.mkDefault (lib.elem hostname dedicatedAnvilLinuxHosts)`
+`johnw.retired-emacs-mcp.useHeadlessEmacs = lib.mkDefault (lib.elem hostname dedicatedretired Emacs MCP backendLinuxHosts)`
 is therefore evaluated against a knowingly wrong hostname on three of the four
-work machines. **Correction on the consequence:** `config/anvil-hosts.nix`
+work machines. **Correction on the consequence:** `config/retired-emacs-mcp-hosts.nix`
 lists all four work machines (`andoria-08`, `andoria-t2`, `delphi-3bd4`,
 `gpu-server`) in `dedicatedLinux`, so the membership test returns `true`
 regardless of which of them is being built. This decision is thus *accidentally

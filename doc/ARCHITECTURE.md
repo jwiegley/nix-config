@@ -105,7 +105,7 @@ Do not add package builders, patches, platform policy, gallery projections, shel
 ## State boundaries
 
 - Agent Deck and tmux use `/tmp` as the persistent fleet socket parent; this avoids PAM/logind lifetime coupling.
-- Anvil dedicated processes own isolated runtime/state roots and must not disturb interactive Emacs.
+- retired Emacs MCP backend dedicated processes own isolated runtime/state roots and must not disturb interactive Emacs.
 - Generated agent configuration uses preflight collision guards before Home Manager linking.
 - Environment credentials are references only; secret values never enter Nix derivations or argv.
 - Mutable profiles are migrated atomically and preserve the last usable state on failure.

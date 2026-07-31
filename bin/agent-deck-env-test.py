@@ -7,8 +7,7 @@ import unittest
 from pathlib import Path
 
 
-WRAPPER = Path(__file__).with_name("agent-deck-litellm-env")
-SYNTHETIC_SECRET = "synthetic-litellm-secret"
+WRAPPER = Path(__file__).with_name("agent-deck-env")
 SYNTHETIC_REF_SECRET = "synthetic-ref-secret"
 SYNTHETIC_PERPLEXITY_SECRET = "synthetic-perplexity-secret"
 
@@ -24,7 +23,6 @@ def clean_environment(**updates: str) -> dict[str, str]:
         "ANTHROPIC_API_KEY",
         "FACTORY_API_KEY",
         "GEMINI_API_KEY",
-        "LITELLM_API_KEY",
         "OPENAI_API_KEY",
         "PERPLEXITY_API_KEY",
         "REF_API_KEY",
@@ -34,7 +32,7 @@ def clean_environment(**updates: str) -> dict[str, str]:
     return environment
 
 
-class AgentDeckLiteLLMEnvTests(unittest.TestCase):
+class AgentDeckEnvTests(unittest.TestCase):
     def test_exports_first_password_line_without_exposing_it(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -49,8 +47,7 @@ class AgentDeckLiteLLMEnvTests(unittest.TestCase):
 set -euo pipefail
 [[ $# == 1 ]]
 case $1 in
-  litellm.vulcan.lan) printf '%s\\n' '{SYNTHETIC_SECRET}' 'ignored-line' ;;
-  api.ref.tools) printf '%s\\n' '{SYNTHETIC_REF_SECRET}' ;;
+  api.ref.tools) printf '%s\\n' '{SYNTHETIC_REF_SECRET}' 'ignored-line' ;;
   api.perplexity.ai) printf '%s\\n' '{SYNTHETIC_PERPLEXITY_SECRET}' ;;
   *) exit 1 ;;
 esac
@@ -61,8 +58,7 @@ esac
                 """#!/usr/bin/env bash
 set -euo pipefail
 printf '%s\\0' "$@" >"$CAPTURE_ARGV"
-printf '%s\n%s\n%s' \
-  "$LITELLM_API_KEY" "$REF_API_KEY" "$PERPLEXITY_API_KEY" >"$CAPTURE_ENV"
+printf '%s\n%s' "$REF_API_KEY" "$PERPLEXITY_API_KEY" >"$CAPTURE_ENV"
 """,
             )
 
@@ -71,7 +67,7 @@ printf '%s\n%s\n%s' \
                 capture_output=True,
                 text=True,
                 env=clean_environment(
-                    AGENT_DECK_LITELLM_PASS_BIN=str(pass_bin),
+                    AGENT_DECK_ENV_PASS_BIN=str(pass_bin),
                     CAPTURE_ARGV=str(argv_path),
                     CAPTURE_ENV=str(env_path),
                 ),
@@ -81,14 +77,13 @@ printf '%s\n%s\n%s' \
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(
                 env_path.read_text().splitlines(),
-                [SYNTHETIC_SECRET, SYNTHETIC_REF_SECRET, SYNTHETIC_PERPLEXITY_SECRET],
+                [SYNTHETIC_REF_SECRET, SYNTHETIC_PERPLEXITY_SECRET],
             )
             self.assertEqual(
                 [item.decode() for item in argv_path.read_bytes().split(b"\0") if item],
                 ["first", "second value"],
             )
             for secret in (
-                SYNTHETIC_SECRET,
                 SYNTHETIC_REF_SECRET,
                 SYNTHETIC_PERPLEXITY_SECRET,
             ):
@@ -98,7 +93,6 @@ printf '%s\n%s\n%s' \
 
     def test_each_unavailable_credential_fails_before_running_command(self):
         entries = (
-            "litellm.vulcan.lan",
             "api.ref.tools",
             "api.perplexity.ai",
         )
@@ -119,7 +113,6 @@ set -euo pipefail
 [[ $FAILURE_MODE != helper-failure || $1 != $FAILING_ENTRY ]] || exit 1
 [[ $FAILURE_MODE != empty || $1 != $FAILING_ENTRY ]] || exit 0
 case $1 in
-  litellm.vulcan.lan) printf '%s\\n' '{SYNTHETIC_SECRET}' ;;
   api.ref.tools) printf '%s\\n' '{SYNTHETIC_REF_SECRET}' ;;
   api.perplexity.ai) printf '%s\\n' '{SYNTHETIC_PERPLEXITY_SECRET}' ;;
   *) exit 1 ;;
@@ -136,7 +129,7 @@ esac
                             capture_output=True,
                             text=True,
                             env=clean_environment(
-                                AGENT_DECK_LITELLM_PASS_BIN=str(pass_bin),
+                                AGENT_DECK_ENV_PASS_BIN=str(pass_bin),
                                 FAILURE_MODE=failure_mode,
                                 FAILING_ENTRY=failing_entry,
                             ),
@@ -149,7 +142,6 @@ esac
                             "credential is unavailable or empty", result.stderr
                         )
                         for secret in (
-                            SYNTHETIC_SECRET,
                             SYNTHETIC_REF_SECRET,
                             SYNTHETIC_PERPLEXITY_SECRET,
                         ):

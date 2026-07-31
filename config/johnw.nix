@@ -40,7 +40,6 @@ in
     [
       ./agent-deck.nix
       ./ai.nix
-      ./anvil.nix
       ./fractal.nix
       ./git-options.nix
       ./host-options.nix
@@ -54,15 +53,6 @@ in
     ++ lib.optionals (inputs ? git-ai) [
       inputs.git-ai.homeManagerModules.default
     ];
-
-  # These workstations default to complete, dedicated Emacs-backed Anvil.
-  # `mkDefault` preserves the per-host Boolean escape hatch back to NeLisp.
-  # The shared Andoria Home Manager flake currently supplies "andoria-08" on
-  # every NFS client; the runtime still derives the real host name for sockets.
-  johnw.anvil = lib.mkIf isLinux {
-    useHeadlessEmacs = lib.mkDefault config.johnw.host.isDedicatedAnvilLinux;
-    usePerAgentDaemon = lib.mkDefault true;
-  };
 
   home = {
     stateVersion = lib.mkDefault "24.11"; # overridden by wrappers; fallback only
@@ -89,7 +79,6 @@ in
       HOSTNAME = hostname;
       JAVA_OPTS = "-Xverify:none";
       LESSHISTFILE = "${config.xdg.cacheHome}/less/history";
-      LITELLM_PROXY_URL = "http://litellm.vulcan.lan";
       LLM_USER_PATH = "${config.xdg.configHome}/llm";
       NIX_CONF = "${vars.home}/src/nix";
       NLTK_DATA = "${config.xdg.dataHome}/nltk";

@@ -41,57 +41,52 @@
     };
 
     git-all = {
-      url = "github:jwiegley/git-all/a3dc16f5a45dbd7fda347d9b58dd713b654a7031";
+      url = "github:jwiegley/git-all";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     gitlib = {
-      url = "github:jwiegley/gitlib/119009b2cf1866e0c776f8e9ebcfed46f914d314?submodules=0";
-      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
-    };
-
-    hakyll = {
-      url = "github:jwiegley/hakyll/023b4124ab791e3b436b554434be42f2f86a2f7b";
+      url = "github:jwiegley/gitlib?submodules=0";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     hours = {
-      url = "github:jwiegley/hours/a5874f56f7c62ad841d8830176e9c4a54710f43a";
+      url = "github:jwiegley/hours";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     pushme = {
-      url = "github:jwiegley/pushme/f8ea0cc7c47a7ea8e6d3755f58284b0b8a9ad42d";
+      url = "github:jwiegley/pushme";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     renamer = {
-      url = "github:jwiegley/renamer/971df26662ef4af621dafce1f9527c0c97c080b0";
+      url = "github:jwiegley/renamer";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     sizes = {
-      url = "github:jwiegley/sizes/821d3d5d4fd071ffd49d3a499a4140712ea610c9";
+      url = "github:jwiegley/sizes";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     trade-journal = {
-      url = "github:jwiegley/trade-journal/4531503f65cad5c7a744cc382188b71cf3fc21a1";
+      url = "github:jwiegley/trade-journal";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     una = {
-      url = "github:jwiegley/una/745f2efc7a9e9fe0981017eeff7500eaaf7fd320";
+      url = "github:jwiegley/una";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     gh-to-org = {
-      url = "github:jwiegley/gh-to-org/4126e800315afabdaa5c5821e3c4fc54824bc123";
+      url = "github:jwiegley/gh-to-org";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     obr = {
-      url = "github:jwiegley/obr/fcbbce29aef9605e9e07c3031a013cbb64ee0c04";
+      url = "github:jwiegley/obr";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
       #
       # obr's own committed flake.lock pins its org2jsonl input at a local
@@ -112,27 +107,27 @@
     };
 
     org2jsonl = {
-      url = "github:jwiegley/org2jsonl/59521f99a490703d4d02f9b0f312a92ec9135ba8";
+      url = "github:jwiegley/org2jsonl";
       # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     scripts = {
-      url = "github:jwiegley/scripts/3bfc546d418fd0324c481b4dcfe0d4fe42ab3af1";
+      url = "github:jwiegley/scripts";
       flake = false;
     };
 
     git-scripts = {
-      url = "github:jwiegley/git-scripts/27614fb2b4937aab09ca2701e8dd0a0f7c760fb7";
+      url = "github:jwiegley/git-scripts";
       flake = false;
     };
 
     dirscan = {
-      url = "github:jwiegley/dirscan/8e03e1bbd32d2f924deb858070f9c6a152e8e319";
+      url = "github:jwiegley/dirscan";
       inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     emacs-src = {
-      url = "github:emacs-mirror/emacs/0f086c307c12b74aeedfba07cfe5b57ef2f99808";
+      url = "github:emacs-mirror/emacs";
       flake = false;
     };
 
@@ -142,7 +137,7 @@
     };
 
     stock-trader = {
-      url = "git+ssh://gitea/johnw/stock-trader.git?rev=51d7895348a44681d8a450d8e21a725278eecfe5";
+      url = "git+ssh://gitea/johnw/stock-trader.git";
       flake = false;
     };
 
@@ -182,21 +177,6 @@
           inherit system;
           config.allowUnfree = true;
         }
-      );
-      pkgsFor = forAllSystems (
-        system:
-        if system == "aarch64-darwin" then
-          import nixpkgs {
-            inherit system;
-            overlays = [
-              ((import ./overlays/10-emacs.nix) {
-                hours = inputs.hours or null;
-                emacsSrc = inputs.emacs-src or null;
-              })
-            ];
-          }
-        else
-          stockPkgsFor.${system}
       );
       agentTestPkgsFor = forAllSystems (
         system:
@@ -245,23 +225,7 @@
 
       darwinPackages = darwinConfigurations."hera".pkgs;
 
-      packages = nixpkgs.lib.genAttrs aiSystems (
-        system:
-        portableAi.packages.${system}
-        // {
-          anvil-mcp = pkgsFor.${system}.callPackage ./packages/anvil-mcp { };
-        }
-        // nixpkgs.lib.optionalAttrs (system == "aarch64-darwin") {
-          anvil-mcp-dedicated = pkgsFor.${system}.callPackage ./packages/anvil-mcp {
-            useDedicatedDarwinEmacs = true;
-          };
-        }
-        // nixpkgs.lib.optionalAttrs (nixpkgs.lib.hasSuffix "-linux" system) {
-          anvil-mcp-headless = pkgsFor.${system}.callPackage ./packages/anvil-mcp {
-            useHeadlessEmacs = true;
-          };
-        }
-      );
+      packages = nixpkgs.lib.genAttrs aiSystems (system: portableAi.packages.${system});
 
       inherit (portableAi) apps overlays;
 
@@ -514,13 +478,12 @@
                     done
                     echo "Running ruff..."
                     ruff check \
-                      ${src}/bin/agent-deck-litellm-env-test.py \
+                      ${src}/bin/agent-deck-env-test.py \
                       ${src}/bin/codex-env-test.py \
                       ${src}/bin/update-overlay \
-                      ${src}/bin/update-overlay-test.py \
-                      ${src}/packages/anvil-mcp
-                    echo "Running Agent Deck LiteLLM environment wrapper tests..."
-                    python3 ${src}/bin/agent-deck-litellm-env-test.py
+                      ${src}/bin/update-overlay-test.py
+                    echo "Running Agent Deck environment wrapper tests..."
+                    python3 ${src}/bin/agent-deck-env-test.py
                     echo "Running Codex environment wrapper tests..."
                     python3 ${src}/bin/codex-env-test.py
                     echo "Running update-overlay tests..."
@@ -528,38 +491,6 @@
                     touch $out
                   '';
 
-              ai-home-manager-catalog-renderers = pkgs.callPackage ./test/ai/home-manager-catalog-renderers.nix {
-                inherit inputs src;
-                aiFlake = portableAi;
-                agentResources = agentTestPkgsFor.${system}.agent-resources;
-                homeManagerLib = home-manager.lib;
-                piGallery = agentTestPkgsFor.${system}.pi-gallery;
-                testPkgsFor = agentTestPkgsFor;
-              };
-              ai-home-manager-integration = pkgs.callPackage ./test/ai/home-manager-integration.nix {
-                inherit inputs src;
-                aiFlake = portableAi;
-                agentResources = agentTestPkgsFor.${system}.agent-resources;
-                homeManagerLib = home-manager.lib;
-                piGallery = agentTestPkgsFor.${system}.pi-gallery;
-                testPkgsFor = agentTestPkgsFor;
-              };
-              ai-home-manager-model-sync = pkgs.callPackage ./test/ai/home-manager-model-sync.nix {
-                inherit inputs src;
-                aiFlake = portableAi;
-                agentResources = agentTestPkgsFor.${system}.agent-resources;
-                homeManagerLib = home-manager.lib;
-                piGallery = agentTestPkgsFor.${system}.pi-gallery;
-                testPkgsFor = agentTestPkgsFor;
-              };
-              ai-home-manager-package-selection = pkgs.callPackage ./test/ai/home-manager-package-selection.nix {
-                inherit inputs src;
-                aiFlake = portableAi;
-                agentResources = agentTestPkgsFor.${system}.agent-resources;
-                homeManagerLib = home-manager.lib;
-                piGallery = agentTestPkgsFor.${system}.pi-gallery;
-                testPkgsFor = agentTestPkgsFor;
-              };
               ai-lock-coherence = pkgs.callPackage ./test/ai/lock-coherence.nix { inherit src; };
               home-manager-release-skew = pkgs.callPackage ./test/home-manager-release-skew.nix {
                 inherit src;
@@ -573,38 +504,15 @@
                 homeManagerLib = home-manager.lib;
               };
             }
-            // pkgs.lib.optionalAttrs (pkgs.stdenv.isLinux || system == "aarch64-darwin") {
-              anvil-home-manager = pkgs.callPackage ./packages/anvil-mcp/home-manager-smoke.nix {
-                homeManagerLib = home-manager.lib;
-                inherit inputs;
-                testPkgs = agentTestPkgsFor.${system};
-              };
-              anvil-mcp-persistent-soak = pkgs.callPackage ./packages/anvil-mcp/persistent-bridge-soak.nix {
-                anvilMcp =
-                  if pkgs.stdenv.isLinux then
-                    packages.${system}.anvil-mcp-headless
-                  else
-                    packages.${system}.anvil-mcp-dedicated;
-              };
-            }
             // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
               darwin-overrides-inactive = pkgs.callPackage ./test/ai/overlay-isolation.nix {
                 inherit inputs;
                 configured = agentTestPkgsFor.${system};
               };
-              anvil-mcp = pkgs.callPackage ./packages/anvil-mcp/smoke.nix {
-                anvilMcp = packages.${system}.anvil-mcp;
-              };
-              anvil-mcp-headless = pkgs.callPackage ./packages/anvil-mcp/headless-smoke.nix {
-                anvilMcp = packages.${system}.anvil-mcp-headless;
-              };
             }
             // pkgs.lib.optionalAttrs (system == "aarch64-darwin") {
               gpg-agent-handoff = pkgs.callPackage ./test/darwin/gpg-agent-handoff.nix {
                 inherit darwinConfigurations;
-              };
-              anvil-mcp-dedicated = pkgs.callPackage ./packages/anvil-mcp/headless-smoke.nix {
-                anvilMcp = packages.${system}.anvil-mcp-dedicated;
               };
             }
           );

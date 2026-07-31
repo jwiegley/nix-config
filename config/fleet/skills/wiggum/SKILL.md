@@ -5,7 +5,7 @@ description: Methodology for the user-triggered /wiggum command (do not self-inv
   until a defined Definition of Done holds or a stop-and-escalate condition fires.
   Covers durable handoff state, baseline re-verification after context compaction,
   per-commit self-audit, work-unit commit and restack cadence, subagent fan-out limits,
-  host-conditional anvil (live Emacs) tooling, and escalation.
+  and escalation.
 ---
 # Wiggum
 
@@ -79,17 +79,6 @@ Keep the branch rebased on its base as you go: on a Graphite stack follow the `r
 ## Parallelize non-interfering work
 
 Use the `parallelize` skill. As coordinator you keep all git and shared-state changes in this session and dispatch only safe, non-interfering work -- research, isolated file generation, the `fess` audit, reviews -- to subagents that write only inside their own namespaces and return artifacts you integrate. Bound fan-out to what you can review (roughly 3-5 at a time), and do not let subagents spawn their own subagents.
-
-## Use Anvil where the host provides it
-
-At loop start -- and again as part of every post-compaction refresh -- check whether the single `anvil` MCP registration is available on this host. Probe an advertised capability appropriate to the backend: `emacs-eval` for Emacs-backed mode, or a typed host/file tool for NeLisp. Dedicated mode advertises typed tools such as `file-batch` under the same `anvil` registration (for example `mcp__anvil__file_batch` in Claude Code); the retired `anvil-tools` sibling must not be required. If Anvil is available, invoke the `anvil` skill once and follow its tool-selection rules for the rest of the loop: progressive-disclosure reads for large files, batched typed edits (`file-batch` / `file-batch-across`) over one-at-a-time writes, the org tools for any org-file work, structured git queries for repo state, and async eval for heavy Emacs-side operations. Anvil's live-session safety rules apply unchanged inside the loop -- in particular the unsaved-buffer check before disk edits.
-
-If the tools are absent, note that once in the handoff document and proceed
-with standard tools. If a probe fails, follow the Anvil skill's bounded
-recovery policy: fall back only for the current operation, then reprobe at the
-next mandatory checkpoint or after ten minutes. Never turn one failed probe
-into a loop-wide Anvil disablement -- Anvil is an amplifier, never a hard
-dependency of the loop.
 
 ## Confer via PAL for real decisions
 

@@ -1655,17 +1655,17 @@ def _validate_fetch_record(name: str, source: dict) -> None:
 def _catalog_executor(record: dict) -> Optional[str]:
     update = record["update"]
     if update["kind"] == "npm-release" and update.get("normalizer") == "pi-gallery-v1":
-        return "update-agents"
+        return "update"
     if update["kind"] == "github-release-asset" or update.get("buildMode") or update.get(
         "artifactSources"
     ):
-        return "update-agents"
+        return "update"
     if (
         update["kind"] == "pypi-release"
         and record.get("artifacts")
         and not record.get("hashes")
     ):
-        return "update-agents"
+        return "update"
     if update["kind"] in {
         "fixed-flake-input",
         "flake-input",
@@ -1673,7 +1673,7 @@ def _catalog_executor(record: dict) -> Optional[str]:
         "flake-input+copy",
         "npm-release+flake-input",
     }:
-        return "update-agents"
+        return "update"
     expected_fetchers = {
         "explicit-rev": {"fetchgit", "fetchpatch", "fetchTree", "fetchurl"},
         "github-commit": {"fetchFromGitHub"},
@@ -1777,10 +1777,13 @@ def load_source_catalog(
             update_allowed, update_required = update_schema[update["kind"]]
             if update.keys() - update_allowed or update_required - update.keys():
                 raise RuntimeError(f"invalid update strategy fields for source catalog record: {name}")
-            if update.get("policy", "automatic") not in {"automatic", "manual"}:
+            policy = update.get("policy", "automatic")
+            if policy not in {"automatic", "manual"}:
                 raise RuntimeError(f"invalid update policy for source catalog record: {name}")
             if "reason" in update and (not isinstance(update["reason"], str) or not update["reason"]):
                 raise RuntimeError(f"invalid update reason for source catalog record: {name}")
+            if policy == "manual" and "reason" not in update:
+                raise RuntimeError(f"manual source catalog record requires a reason: {name}")
             kind = update["kind"]
             build_mode = update.get("buildMode")
             if build_mode is not None and (
@@ -2183,6 +2186,8 @@ def build_inventory(catalog_targets: dict[str, dict]) -> dict:
         }
         update = target["_record"]["update"]
         package["policy"] = update.get("policy", "automatic")
+        if "reason" in update:
+            package["reason"] = update["reason"]
         if "input" in update:
             package["input"] = update["input"]
         packages.append(package)
@@ -2206,8 +2211,8 @@ def print_inventory(inventory: dict, json_output: bool) -> None:
     )
 
 
-def delegate_to_update_agents(nix_dir: Path, names: list[str], args, runner=subprocess.run) -> int:
-    command = [str(Path(__file__).with_name("update-agents"))]
+def delegate_to_update(nix_dir: Path, names: list[str], args, runner=subprocess.run) -> int:
+    command = [str(Path(__file__).with_name("update"))]
     for name in names:
         command.extend(["--target", name])
     if args.version:
@@ -3269,22 +3274,22 @@ Examples:
         parser.error("--prepare-npm-locks cannot be combined with another operation")
 
     if args.sync_flake_projections and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
-        parser.error("--sync-flake-projections is restricted to the update-agents candidate")
+        parser.error("--sync-flake-projections is restricted to the update candidate")
 
     if args.prepare_fixed_inputs and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
-        parser.error("--prepare-fixed-inputs is restricted to the update-agents candidate")
+        parser.error("--prepare-fixed-inputs is restricted to the update candidate")
 
     if args.prepare_npm_flake_inputs and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
-        parser.error("--prepare-npm-flake-inputs is restricted to the update-agents candidate")
+        parser.error("--prepare-npm-flake-inputs is restricted to the update candidate")
 
     if args.prepare_npm_locks and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
-        parser.error("--prepare-npm-locks is restricted to the update-agents candidate")
+        parser.error("--prepare-npm-locks is restricted to the update candidate")
 
     if args.prepare_pypi_artifacts and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
-        parser.error("--prepare-pypi-artifacts is restricted to the update-agents candidate")
+        parser.error("--prepare-pypi-artifacts is restricted to the update candidate")
 
     if args.prepare_github_projections and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
-        parser.error("--prepare-github-projections is restricted to the update-agents candidate")
+        parser.error("--prepare-github-projections is restricted to the update candidate")
 
     if args.inventory and (args.all or args.packages or args.version):
         parser.error("--inventory cannot be combined with package updates")
@@ -3344,14 +3349,14 @@ Examples:
         delegated_names = [
             name
             for name in args.packages
-            if catalog_targets[name].get("executor") == "update-agents"
+            if catalog_targets[name].get("executor") == "update"
         ]
         if delegated_names:
             if len(delegated_names) != len(args.packages):
-                parser.error("update-agents targets cannot be mixed with direct targets")
+                parser.error("update targets cannot be mixed with direct targets")
             if args.verbose:
-                parser.error("update-agents targets do not accept --verbose")
-            return delegate_to_update_agents(nix_dir, delegated_names, args)
+                parser.error("update targets do not accept --verbose")
+            return delegate_to_update(nix_dir, delegated_names, args)
 
     github_client = GitHubClient()
     npm_client = NpmRegistryClient()
@@ -3427,7 +3432,7 @@ Examples:
     for name in selected_catalog_names:
         target = catalog_targets[name]
         expected_executor = (
-            "update-agents"
+            "update"
             if (
                 args.prepare_fixed_inputs
                 or args.prepare_npm_flake_inputs

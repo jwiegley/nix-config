@@ -19,7 +19,6 @@ let
   ];
   expectedMcpNames = [
     "Ref"
-    "anvil"
     "context-hub"
     "context7"
     "devonthink"
@@ -365,7 +364,7 @@ assert xdgConfigHome == "${homeDirectory}/.config";
 assert builtins.length (builtins.attrNames selected.agents) == 26;
 assert builtins.length (builtins.attrNames selected.commands) == 61;
 assert builtins.length (builtins.attrNames selected.prompts) == 2;
-assert builtins.length (builtins.attrNames selected.skills) == 25;
+assert builtins.length (builtins.attrNames selected.skills) == 24;
 assert selected.hooks == { };
 assert selected.marketplaces == { };
 assert selected.settings == { };

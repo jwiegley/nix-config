@@ -172,13 +172,13 @@
 - **Risk:** Several flake inputs use `flake = false`, which means Nix doesn't verify their outputs structure. While the lock file still pins revisions, the lack of flake schema validation means changes to the upstream repository layout could silently break builds or introduce unexpected behavior.
 - **Remediation:** This is a known trade-off for inputs that aren't proper flakes. Where possible, encourage upstream projects to provide flake metadata or wrap them in a local flake.
 
-#### 15. LiteLLM API key placeholders in committed config
+#### 15. retired proxy API key placeholders in committed config
 
-- **File:** `litellm_proxy_config.yaml:230-233`
+- **File:** `retired-proxy_proxy_config.yaml:230-233`
 - **Risk:** The `environment_variables` section has empty string values for all API keys. While currently empty (keys come from `os.environ/`), this pattern creates risk: if someone fills in the values and commits, the keys would be in plaintext in git history. The `os.environ/` pattern used in `model_list` is good practice, but the `environment_variables` section at the bottom is a footgun.
 - **Remediation:**
   1. Remove the `environment_variables` section entirely — the `os.environ/` references in `model_list` are sufficient.
-  2. Add `litellm_proxy_config.yaml` to `.gitignore` if local overrides are needed.
+  2. Add `retired-proxy_proxy_config.yaml` to `.gitignore` if local overrides are needed.
 
 ---
 

@@ -15,11 +15,7 @@
     omlx = "http://localhost:8000/v1";
   };
 
-  profileDefaultProfiles = [
-    "clio-opencode"
-    "hera-opencode"
-    "shared-work-opencode-positron"
-  ];
+  profileDefaultProfiles = [ ];
 
   syncChatPath = "chat/completions";
 

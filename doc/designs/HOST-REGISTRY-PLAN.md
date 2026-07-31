@@ -58,7 +58,7 @@ both pass `nixfmt --check`, `statix check`, and the repo's exact
 |---|---|---|---|
 | S1 | home.nix:24 | singleton Discord gateway host | `isHera` |
 | S2 | home.nix:27 | Darwin GUI workstation | `isDarwinWorkstation` |
-| S3 | johnw.nix:64 | dedicated-Anvil Linux host | `isDedicatedAnvilLinux` |
+| S3 | johnw.nix:64 | dedicated-retired Emacs MCP backend Linux host | `isDedicatedretired Emacs MCP backendLinux` |
 | S4 | ai.nix:177 | the personal-linux CI fixture | `isCiFixture` |
 | S5 | ai.nix:220 | Hera (Darwin) model-sync | `isHera` |
 | S6 | fractal.nix:9 | Hera only | `isHera` |
@@ -94,8 +94,8 @@ both pass `nixfmt --check`, `statix check`, and the repo's exact
 
 ### N1 — `config/hosts/registry.nix`
 Create from the accompanying `registry.nix`. Plain data + one pure
-`capabilitiesFor` function; no module args. Reads `../anvil-hosts.nix` for the
-dedicated-Anvil Linux list (single source of truth). Contains NO
+`capabilitiesFor` function; no module args. Reads `../retired-emacs-mcp-hosts.nix` for the
+dedicated-retired Emacs MCP backend Linux list (single source of truth). Contains NO
 `hostname ==` / `elem hostname` token sequences (verified), so it does not trip
 the acceptance grep even though it lives under `config/`.
 
@@ -134,8 +134,8 @@ Count of anchor: 1. After S3, these two bindings are unused; `deadnix`
 (nix-deadcode gate) would fail on them, so they MUST be removed.
 ```
   isPositronRemoteLinux = isLinux && nixManagedAiHomeClass == "shared-work";
-  anvilHosts = import ./anvil-hosts.nix;
-  dedicatedAnvilLinuxHosts = anvilHosts.dedicatedLinux;
+  retired-emacs-mcpHosts = import ./retired-emacs-mcp-hosts.nix;
+  dedicatedretired Emacs MCP backendLinuxHosts = retired-emacs-mcpHosts.dedicatedLinux;
 
   # Shared variables - also imported by sub-modules
 ```
@@ -145,7 +145,7 @@ Count of anchor: 1. After S3, these two bindings are unused; `deadnix`
 
   # Shared variables - also imported by sub-modules
 ```
-(`config/anvil-hosts.nix` itself is untouched; `registry.nix` and the smoke test
+(`config/retired-emacs-mcp-hosts.nix` itself is untouched; `registry.nix` and the smoke test
 still import it.)
 
 ### W3 — `config/darwin.nix` imports (nix-darwin)
@@ -263,11 +263,11 @@ unless noted.
 
 ### S3 — `config/johnw.nix:64`
 ```
-    useHeadlessEmacs = lib.mkDefault (lib.elem hostname dedicatedAnvilLinuxHosts);
+    useHeadlessEmacs = lib.mkDefault (lib.elem hostname dedicatedretired Emacs MCP backendLinuxHosts);
 ```
 →
 ```
-    useHeadlessEmacs = lib.mkDefault config.johnw.host.isDedicatedAnvilLinux;
+    useHeadlessEmacs = lib.mkDefault config.johnw.host.isDedicatedretired Emacs MCP backendLinux;
 ```
 
 ### S4 — `config/ai.nix:177`  (leave ai.nix:47 `homeClass` untouched)
@@ -626,7 +626,7 @@ trade: less elegant than §6.4, far less likely to move a derivation.
 ## Two module systems — the load-bearing constraint
 
 `darwin.nix` + `launchd.nix` are **nix-darwin** modules; their `config` tree is
-disjoint from Home Manager's. `johnw.anvil`/`agentDeck`/`git` are HM-only. So
+disjoint from Home Manager's. `johnw.retired-emacs-mcp`/`agentDeck`/`git` are HM-only. So
 `johnw.host` is declared/populated **twice** — once per system, both by the same
 `host-options.nix` import — which is correct, not duplication: each system reads
 its own `config.johnw.host`. `host-options.nix` is deliberately free of any HM-
@@ -669,7 +669,7 @@ bin/parity-baseline --compare test/baseline/parity-e0ed94fabbc0.json
 Expect "package multisets: IDENTICAL on every target". A `drvPath moved`
 line is expected and uninformative. Only `PACKAGE MULTISET DRIFT` fails.
 The only site that touches `home.packages` is S11 (packages.nix, Hera's
-`himalaya`/`openai-whisper`/… list) and S2/S3 (anvil-mcp variant selection,
+`himalaya`/`openai-whisper`/… list) and S2/S3 (retired-emacs-mcp-mcp variant selection,
 whose `pname` is stable). Because every flag reproduces the exact prior boolean,
 the multiset must not move.
 
@@ -683,8 +683,8 @@ nix eval --json \
   '.#darwinConfigurations.hera.config.home-manager.users.johnw' \
   --apply 'c: {
     discordBridge        = c.johnw.agentDeck.enableConductorDiscordBridge; # S1
-    dedicatedDarwinEmacs = c.johnw.anvil.useDedicatedDarwinEmacs;          # S2
-    headlessEmacs        = c.johnw.anvil.useHeadlessEmacs;                 # S3
+    dedicatedDarwinEmacs = c.johnw.retired-emacs-mcp.useDedicatedDarwinEmacs;          # S2
+    headlessEmacs        = c.johnw.retired-emacs-mcp.useHeadlessEmacs;                 # S3
     aiAssertionsAllPass  = builtins.all (a: a.assertion) c.assertions;     # S4
     hasModelSync         = c.home.activation ? aiManagedModelSync;         # S5
     homeFileNames        = builtins.sort builtins.lessThan (builtins.attrNames c.home.file); # S6,S9,S10
@@ -735,7 +735,7 @@ Definition values: - In '<unknown-file>': "x86-64-linux"
 Positive resolution was confirmed for hera/clio/vulcan/vps, both `linux`
 fixtures (personal-linux and shared-work), and the smoke-test representative
 `andoria-08`/shared-work — the last yields all-identity-false + `isSharedWork` +
-`isDedicatedAnvilLinux`, i.e. byte-identical to every prior compare being false.
+`isDedicatedretired Emacs MCP backendLinux`, i.e. byte-identical to every prior compare being false.
 In-repo, this same throw fires under `nix flake check` and `./build system`
 because both force `config.assertions`. To DEMONSTRATE per the acceptance
 criterion: transiently set `johnw.hostRegistry.hera.system = lib.mkForce
@@ -792,7 +792,7 @@ the work-identity wiring OUT; this spec does not touch git/email.
 - **nixfmt/statix/deadnix on the EDITED existing files.** I linted the two NEW
   files only. After applying S1–S29/C1–C2, run `bin/quality nix-format nix-lint
   nix-deadcode` over the changed files. The one deadnix hazard I already
-  accounted for is W2 (removing the now-dead `anvilHosts` bindings).
+  accounted for is W2 (removing the now-dead `retired-emacs-mcpHosts` bindings).
 - **nix-darwin exposes `config.assertions` at the pinned rev.** Home Manager
   certainly does (used throughout this repo). nix-darwin has shipped an
   `assertions` module for years, so this is high-confidence but unproven against
@@ -811,15 +811,15 @@ the work-identity wiring OUT; this spec does not touch git/email.
 - **Semantic options** (`johnw.fractal.enable`, `johnw.darwin.dockOrientation`,
   `johnw.agentDeck.singletonGateway`): behavior-preserving renames of *meaning*;
   do after parity is banked, one option per small commit.
-- **`packages/anvil-mcp/home-manager-smoke.nix:147-148`** (`builtins.elem
+- **`packages/retired-emacs-mcp-mcp/home-manager-smoke.nix:147-148`** (`builtins.elem
   hostname sharedLinuxHostnames`): a hostname compare, but in `packages/` + a
   TEST harness, outside the acceptance grep (`config/` only). It is the gate's
   OWN logic for choosing username/homeClass; changing the gate and the thing it
   measures in one commit is bad practice. Convert it later to
   `registry.capabilitiesFor`/`registry.hosts.andoria.sharedHome.members` as its
   own change.
-- **Dedup `config/anvil-hosts.nix`.** The registry now re-reads it; a later
-  cleanup could make the registry the sole owner and have `anvil-hosts.nix`
+- **Dedup `config/retired-emacs-mcp-hosts.nix`.** The registry now re-reads it; a later
+  cleanup could make the registry the sole owner and have `retired-emacs-mcp-hosts.nix`
   (or its consumers) read back from the registry. Left alone here to keep the
   #50 diff minimal and byte-identical.
 - **The gitPkg/lean-profile/work-identity seams (#35/#42/CON-CORE-WORKID).**
@@ -884,14 +884,14 @@ let
   };
 
   # The Linux hosts (Vulcan plus the four shared-work NFS machines) that run a
-  # dedicated headless Emacs for Anvil. Kept as ONE source of truth by reading
-  # the existing config/anvil-hosts.nix rather than re-listing the names; this
+  # dedicated headless Emacs for retired Emacs MCP backend. Kept as ONE source of truth by reading
+  # the existing config/retired-emacs-mcp-hosts.nix rather than re-listing the names; this
   # is exactly the list config/johnw.nix consumed before the refactor, so the
-  # derived `isDedicatedAnvilLinux` flag is byte-identical.
-  dedicatedAnvilLinux = (import ../anvil-hosts.nix).dedicatedLinux;
+  # derived `isDedicatedretired Emacs MCP backendLinux` flag is byte-identical.
+  dedicatedretired Emacs MCP backendLinux = (import ../retired-emacs-mcp-hosts.nix).dedicatedLinux;
 in
 {
-  inherit dedicatedAnvilLinux;
+  inherit dedicatedretired Emacs MCP backendLinux;
 
   # The canonical host/group table. Keyed by evalId: hera/clio/vulcan/vps are
   # machines; `andoria` is ONE GROUP ROW for FOUR machines. Its key is a group
@@ -980,7 +980,7 @@ in
   #
   # Each expression is the byte-for-byte boolean the replaced compare produced:
   #   isDarwinWorkstation   matches the former hera-or-clio membership test
-  #   isDedicatedAnvilLinux matches the former dedicated-Anvil membership test
+  #   isDedicatedretired Emacs MCP backendLinux matches the former dedicated-retired Emacs MCP backend membership test
   #   isSharedWork keys off the CLASS, so all four NFS members agree.
   capabilitiesFor =
     {
@@ -1012,8 +1012,8 @@ in
       # any #50 compare rewrite yet; provided for FD-STAGE5-1 (work routing).
       isSharedWork = cls == "shared-work";
 
-      # Linux hosts running a dedicated headless Emacs for Anvil.
-      isDedicatedAnvilLinux = builtins.elem id dedicatedAnvilLinux;
+      # Linux hosts running a dedicated headless Emacs for retired Emacs MCP backend.
+      isDedicatedretired Emacs MCP backendLinux = builtins.elem id dedicatedretired Emacs MCP backendLinux;
 
       # The synthetic CI evaluation fixtures pin the name to "linux".
       isCiFixture = id == "linux";
@@ -1199,10 +1199,10 @@ in
       default = false;
       description = "A member of the shared-\$HOME Positron work group (home class \"shared-work\").";
     };
-    isDedicatedAnvilLinux = mkOption {
+    isDedicatedretired Emacs MCP backendLinux = mkOption {
       type = types.bool;
       default = false;
-      description = "A Linux host that runs a dedicated headless Emacs for Anvil.";
+      description = "A Linux host that runs a dedicated headless Emacs for retired Emacs MCP backend.";
     };
     isCiFixture = mkOption {
       type = types.bool;

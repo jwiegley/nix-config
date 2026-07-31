@@ -7,14 +7,38 @@
   ],
   "hosts": {
     "machineIds": [
-      { "id": "hera", "root": "hera" },
-      { "id": "clio", "root": "clio" },
-      { "id": "vulcan", "root": "vulcan" },
-      { "id": "vps", "root": "vps" },
-      { "id": "andoria-08", "root": "shared-work" },
-      { "id": "andoria-t2", "root": "shared-work" },
-      { "id": "delphi-3bd4", "root": "shared-work" },
-      { "id": "gpu-server", "root": "shared-work" }
+      {
+        "id": "hera",
+        "root": "hera"
+      },
+      {
+        "id": "clio",
+        "root": "clio"
+      },
+      {
+        "id": "vulcan",
+        "root": "vulcan"
+      },
+      {
+        "id": "vps",
+        "root": "vps"
+      },
+      {
+        "id": "andoria-08",
+        "root": "shared-work"
+      },
+      {
+        "id": "andoria-t2",
+        "root": "shared-work"
+      },
+      {
+        "id": "delphi-3bd4",
+        "root": "shared-work"
+      },
+      {
+        "id": "gpu-server",
+        "root": "shared-work"
+      }
     ],
     "groupRows": [
       {
@@ -42,8 +66,12 @@
       "id": "hera",
       "kind": "darwin-configuration",
       "system": "aarch64-darwin",
-      "members": ["hera"],
-      "aliases": ["darwinConfigurations.hera"],
+      "members": [
+        "hera"
+      ],
+      "aliases": [
+        "darwinConfigurations.hera"
+      ],
       "qualityEvidence": [
         "quality:darwin-surface",
         "lefthook:system-build"
@@ -53,17 +81,29 @@
       "id": "clio",
       "kind": "darwin-configuration",
       "system": "aarch64-darwin",
-      "members": ["clio"],
-      "aliases": ["darwinConfigurations.clio"],
-      "qualityEvidence": ["quality:darwin-surface"]
+      "members": [
+        "clio"
+      ],
+      "aliases": [
+        "darwinConfigurations.clio"
+      ],
+      "qualityEvidence": [
+        "quality:darwin-surface"
+      ]
     },
     {
       "id": "linux-fixture",
       "kind": "synthetic-home-manager",
       "system": "aarch64-linux",
-      "members": ["linux"],
-      "aliases": ["homeConfigurations.johnw@aarch64-linux"],
-      "qualityEvidence": ["nix-file-reach:home-aarch64-linux"]
+      "members": [
+        "linux"
+      ],
+      "aliases": [
+        "homeConfigurations.johnw@aarch64-linux"
+      ],
+      "qualityEvidence": [
+        "nix-file-reach:home-aarch64-linux"
+      ]
     },
     {
       "id": "shared-work",
@@ -88,657 +128,650 @@
       "id": "vps",
       "kind": "external-consumer",
       "system": "x86_64-linux",
-      "members": ["vps"],
-      "aliases": ["vps:nixosConfigurations.ovh-vps"],
-      "qualityEvidence": ["quality:consumer-eval"]
+      "members": [
+        "vps"
+      ],
+      "aliases": [
+        "vps:nixosConfigurations.ovh-vps"
+      ],
+      "qualityEvidence": [
+        "quality:consumer-eval"
+      ]
     },
     {
       "id": "vulcan",
       "kind": "external-consumer",
       "system": "aarch64-linux",
-      "members": ["vulcan"],
-      "aliases": ["vulcan:checks.aarch64-linux.nix-config-reachin-compat"],
-      "qualityEvidence": ["quality:consumer-eval"]
+      "members": [
+        "vulcan"
+      ],
+      "aliases": [
+        "vulcan:checks.aarch64-linux.nix-config-reachin-compat"
+      ],
+      "qualityEvidence": [
+        "quality:consumer-eval"
+      ]
     }
   ],
   "pythonInventory": [
     {
-      "path": "bin/agent-deck-litellm-env-test.py",
+      "path": "bin/agent-deck-env-test.py",
       "kind": "test",
       "tier": "pre-commit",
-      "evidence": ["quality:python-test executes wrapper behavior in temporary environments"],
+      "evidence": [
+        "quality:python-test executes wrapper behavior in temporary environments"
+      ],
       "gap": null
     },
     {
       "path": "bin/codex-env-test.py",
       "kind": "test",
       "tier": "pre-commit",
-      "evidence": ["quality:python-test executes routing and credential-failure behavior"],
+      "evidence": [
+        "quality:python-test executes argument forwarding, first-line credential export, non-disclosure, and credential refusal"
+      ],
       "gap": null
     },
     {
       "path": "bin/deadline-supervisor.py",
       "kind": "product",
       "tier": "pre-commit",
-      "evidence": ["bin/deadline-supervisor-test.py executes success, TERM, KILL, owned process-group cleanup, and early-leader-exit behavior"],
+      "evidence": [
+        "bin/deadline-supervisor-test.py executes success, TERM, KILL, owned process-group cleanup, and early-leader-exit behavior"
+      ],
       "gap": null
     },
     {
       "path": "bin/deadline-supervisor-test.py",
       "kind": "test",
       "tier": "pre-commit",
-      "evidence": ["quality:python-test executes real shortened process-group deadline fixtures"],
+      "evidence": [
+        "quality:python-test executes real shortened process-group deadline fixtures"
+      ],
       "gap": null
     },
     {
       "path": "bin/coverage-report",
       "kind": "product",
       "tier": "pre-commit",
-      "evidence": ["bin/coverage-report-test.py executes schema, collection, refusal, and atomic-write behavior"],
+      "evidence": [
+        "bin/coverage-report-test.py executes schema, collection, refusal, and atomic-write behavior"
+      ],
       "gap": "Expensive Nix file-reach probes and dynamic language measurements are refreshed explicitly."
     },
     {
       "path": "bin/coverage-report-test.py",
       "kind": "test",
       "tier": "pre-commit",
-      "evidence": ["quality:python-test executes the collector fault-injection suite"],
+      "evidence": [
+        "quality:python-test executes the collector fault-injection suite"
+      ],
       "gap": null
     },
     {
       "path": "bin/darwin-surface-baseline",
       "kind": "product",
       "tier": "pre-commit",
-      "evidence": ["bin/darwin-surface-baseline-test.py executes its CLI and write/refusal paths"],
+      "evidence": [
+        "bin/darwin-surface-baseline-test.py executes its CLI and write/refusal paths"
+      ],
       "gap": "Live Nix evaluation and the write path remain on-demand and are mocked in unit coverage."
     },
     {
       "path": "bin/darwin-surface-baseline-test.py",
       "kind": "test",
       "tier": "pre-commit",
-      "evidence": ["quality:python-test executes the suite"],
+      "evidence": [
+        "quality:python-test executes the suite"
+      ],
       "gap": null
     },
     {
       "path": "bin/darwin-surface-diff",
       "kind": "product",
       "tier": "pre-commit",
-      "evidence": ["bin/darwin-surface-diff-test.py executes comparison behavior"],
+      "evidence": [
+        "bin/darwin-surface-diff-test.py executes comparison behavior"
+      ],
       "gap": "Nix-sandbox execution needs separate dynamic-coverage collection."
     },
     {
       "path": "bin/darwin-surface-diff-test.py",
       "kind": "test",
       "tier": "pre-commit",
-      "evidence": ["quality:python-test executes the suite"],
+      "evidence": [
+        "quality:python-test executes the suite"
+      ],
       "gap": null
     },
     {
       "path": "bin/gates-test.py",
       "kind": "test",
       "tier": "pre-push",
-      "evidence": ["quality:python-test executes replayable gate mutations and refusal fixtures"],
+      "evidence": [
+        "quality:python-test executes replayable gate mutations and refusal fixtures"
+      ],
       "gap": "Measured at 522.331 seconds on Hera because two cases perform full shared-work evaluations; the pre-push and expensive selectors preserve invocation outside the 120-second pre-commit tier."
     },
     {
       "path": "bin/oracle-currency-test.py",
       "kind": "test",
       "tier": "pre-commit",
-      "evidence": ["quality:python-test executes oracle currency and self-test fixtures"],
+      "evidence": [
+        "quality:python-test executes oracle currency and self-test fixtures"
+      ],
       "gap": "Expensive parity derivation is intentionally not part of this suite."
     },
     {
       "path": "bin/pi-mcp-adapter-normalize-test.py",
       "kind": "test",
       "tier": "pre-commit",
-      "evidence": ["quality:python-test executes legacy, current, and refusal fixtures"],
+      "evidence": [
+        "quality:python-test executes legacy, current, and refusal fixtures"
+      ],
       "gap": null
     },
     {
       "path": "bin/publish-test.py",
       "kind": "test",
       "tier": "pre-push",
-      "evidence": ["quality:python-test executes temporary-Git publication fixtures"],
+      "evidence": [
+        "quality:python-test executes temporary-Git publication fixtures"
+      ],
       "gap": "Measured at 23.274 seconds on Hera; unavailable GPG cases must report non-pass."
     },
     {
       "path": "bin/quality-test.py",
       "kind": "test",
       "tier": "pre-commit",
-      "evidence": ["quality:python-test executes temporary-repository quality fixtures"],
+      "evidence": [
+        "quality:python-test executes temporary-repository quality fixtures"
+      ],
       "gap": null
     },
     {
       "path": "bin/update-overlay",
       "kind": "product",
       "tier": "pre-commit",
-      "evidence": ["bin/update-overlay-essential-test.py executes inventory, refusal, update, routing, and purity behavior on every commit", "bin/update-overlay-test.py executes the unfiltered temporary-Git matrix in pre-push and expensive tiers"],
+      "evidence": [
+        "bin/update-overlay-essential-test.py executes inventory, refusal, update, routing, and purity behavior on every commit",
+        "bin/update-overlay-test.py executes the unfiltered temporary-Git matrix in pre-push and expensive tiers"
+      ],
       "gap": "Network, hash, and update execution remains on-demand and is mocked in unit coverage."
     },
     {
       "path": "bin/update-overlay-essential-test.py",
       "kind": "test",
       "tier": "pre-commit",
-      "evidence": ["quality:python-test executes every updater catalog and inventory unit test plus the bounded routing, purity, and negative-gate integration plan"],
+      "evidence": [
+        "quality:python-test executes every updater catalog and inventory unit test plus the bounded routing, purity, and negative-gate integration plan"
+      ],
       "gap": "The complete temporary-Git publication, signal, and rollback matrix remains in the expensive tier."
     },
     {
       "path": "bin/update-overlay-test.py",
       "kind": "test",
       "tier": "pre-push",
-      "evidence": ["quality:python-test executes the unfiltered suite in the pre-push and expensive tiers"],
+      "evidence": [
+        "quality:python-test executes the unfiltered suite in the pre-push and expensive tiers"
+      ],
       "gap": "Ordinary commits use bin/update-overlay-essential-test.py instead of the expensive temporary-Git workflow matrix."
     },
     {
       "path": "bin/unittest-strict.py",
       "kind": "product",
       "tier": "pre-commit",
-      "evidence": ["bin/unittest-strict-test.py proves pass/fail and treats skipped tests as non-pass"],
+      "evidence": [
+        "bin/unittest-strict-test.py proves pass/fail and treats skipped tests as non-pass"
+      ],
       "gap": null
     },
     {
       "path": "bin/unittest-strict-test.py",
       "kind": "test",
       "tier": "pre-commit",
-      "evidence": ["quality:python-test executes pass, failure, skip, and missing-name fixtures"],
+      "evidence": [
+        "quality:python-test executes pass, failure, skip, and missing-name fixtures"
+      ],
       "gap": null
     },
     {
       "path": "packages/pi-mcp-adapter-normalize.py",
       "kind": "product",
       "tier": "pre-commit",
-      "evidence": ["bin/pi-mcp-adapter-normalize-test.py executes both known upstream forms and rejects drift"],
+      "evidence": [
+        "bin/pi-mcp-adapter-normalize-test.py executes both known upstream forms and rejects drift"
+      ],
       "gap": null
     },
     {
       "path": "config/fleet/skills/comment-audit/scripts/inventory_comments.py",
       "kind": "product",
       "tier": "ci-on-demand",
-      "evidence": ["The comment-audit skill invokes its inventory, pending, show, update, and stats commands"],
+      "evidence": [
+        "The comment-audit skill invokes its inventory, pending, show, update, and stats commands"
+      ],
       "gap": "No behavioral fixture is registered."
     },
     {
       "path": "config/fleet/skills/node-red/scripts/create_flow_template.py",
       "kind": "product",
       "tier": "ci-on-demand",
-      "evidence": ["The node-red skill exposes the create_flow_template.py command"],
+      "evidence": [
+        "The node-red skill exposes the create_flow_template.py command"
+      ],
       "gap": "No behavioral fixture is registered."
     },
     {
       "path": "config/fleet/skills/node-red/scripts/generate_uuid.py",
       "kind": "product",
       "tier": "ci-on-demand",
-      "evidence": ["The node-red skill exposes the generate_uuid.py command"],
+      "evidence": [
+        "The node-red skill exposes the generate_uuid.py command"
+      ],
       "gap": "No behavioral fixture is registered."
     },
     {
       "path": "config/fleet/skills/node-red/scripts/validate_flow.py",
       "kind": "product",
       "tier": "ci-on-demand",
-      "evidence": ["The node-red skill exposes the validate_flow.py command"],
+      "evidence": [
+        "The node-red skill exposes the validate_flow.py command"
+      ],
       "gap": "No behavioral fixture is registered."
     },
     {
       "path": "config/fleet/skills/node-red/scripts/wire_nodes.py",
       "kind": "product",
       "tier": "ci-on-demand",
-      "evidence": ["The node-red skill exposes the wire_nodes.py command"],
+      "evidence": [
+        "The node-red skill exposes the wire_nodes.py command"
+      ],
       "gap": "No behavioral fixture is registered."
     },
     {
       "path": "config/fleet/skills/skill-creator/scripts/init_skill.py",
       "kind": "product",
       "tier": "ci-on-demand",
-      "evidence": ["The skill-creator workflow exposes the init_skill.py command"],
+      "evidence": [
+        "The skill-creator workflow exposes the init_skill.py command"
+      ],
       "gap": "No behavioral fixture is registered."
     },
     {
       "path": "config/fleet/skills/skill-creator/scripts/package_skill.py",
       "kind": "product",
       "tier": "ci-on-demand",
-      "evidence": ["The skill-creator workflow exposes the package_skill.py command"],
+      "evidence": [
+        "The skill-creator workflow exposes the package_skill.py command"
+      ],
       "gap": "No behavioral fixture is registered."
     },
     {
       "path": "config/fleet/skills/skill-creator/scripts/quick_validate.py",
       "kind": "product",
       "tier": "ci-on-demand",
-      "evidence": ["The skill-creator workflow exposes the quick_validate.py command"],
+      "evidence": [
+        "The skill-creator workflow exposes the quick_validate.py command"
+      ],
       "gap": "No behavioral fixture is registered."
     },
     {
       "path": "overlays/tests/omlx-host-vm-info64-count.py",
       "kind": "test",
       "tier": "pre-push",
-      "evidence": ["packages/ai-llm.nix executes the probe in the OMLX installCheckPhase reached by the pre-push system build"],
+      "evidence": [
+        "packages/ai-llm.nix executes the probe in the OMLX installCheckPhase reached by the pre-push system build"
+      ],
       "gap": "There is no dedicated top-level check; in-derivation Python needs dynamic-coverage instrumentation."
-    },
-    {
-      "path": "packages/anvil-mcp/agent-supervisor-smoke.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["checks.*.anvil-mcp-persistent-soak executes the smoke"],
-      "gap": null
-    },
-    {
-      "path": "packages/anvil-mcp/agent-supervisor-test.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["Anvil package checks execute deterministic supervisor tests"],
-      "gap": "Not selected by quality:python-test."
-    },
-    {
-      "path": "packages/anvil-mcp/agent-supervisor.py",
-      "kind": "product",
-      "tier": "ci-on-demand",
-      "evidence": ["agent-supervisor-test.py and agent-supervisor-smoke.py exercise the product"],
-      "gap": null
-    },
-    {
-      "path": "packages/anvil-mcp/alternate-editor-test.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["checks.*.anvil-mcp-headless or anvil-mcp-dedicated executes the test where applicable"],
-      "gap": null
-    },
-    {
-      "path": "packages/anvil-mcp/child-shell-test.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["The Anvil package build executes the direct child-shell trampoline test"],
-      "gap": null
-    },
-    {
-      "path": "packages/anvil-mcp/clean-environment-test.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["Anvil package checks execute cleaner boundary and race tests"],
-      "gap": null
-    },
-    {
-      "path": "packages/anvil-mcp/clean-environment.py",
-      "kind": "product",
-      "tier": "ci-on-demand",
-      "evidence": ["clean-environment-test.py exercises the product"],
-      "gap": null
-    },
-    {
-      "path": "packages/anvil-mcp/environment-output-probe.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["checks.*.anvil-mcp-headless or anvil-mcp-dedicated invokes the fixture"],
-      "gap": null
-    },
-    {
-      "path": "packages/anvil-mcp/headless-smoke.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["checks.*.anvil-mcp-headless or anvil-mcp-dedicated executes the smoke"],
-      "gap": null
-    },
-    {
-      "path": "packages/anvil-mcp/legacy-migration-test.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["checks.*.anvil-mcp-headless or anvil-mcp-dedicated executes the test"],
-      "gap": null
-    },
-    {
-      "path": "packages/anvil-mcp/lock-launcher.py.in",
-      "kind": "product",
-      "tier": "ci-on-demand",
-      "evidence": ["python-lint renders placeholders before Ruff; Anvil dedicated/headless checks execute the packaged program"],
-      "gap": "Dynamic coverage is not collected from the substituted packaged program."
-    },
-    {
-      "path": "packages/anvil-mcp/parent-guard.py.in",
-      "kind": "product",
-      "tier": "ci-on-demand",
-      "evidence": ["python-lint renders placeholders before Ruff; Anvil dedicated/headless checks execute the packaged program"],
-      "gap": "Dynamic coverage is not collected from the substituted packaged program."
-    },
-    {
-      "path": "packages/anvil-mcp/persistent-bridge-soak-test.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["checks.*.anvil-mcp-persistent-soak executes the test"],
-      "gap": null
-    },
-    {
-      "path": "packages/anvil-mcp/persistent-bridge-soak.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["checks.*.anvil-mcp-persistent-soak executes this long-lived reliability harness"],
-      "gap": "The name lacks -test but the file is a test harness; in-derivation coverage is required."
-    },
-    {
-      "path": "packages/anvil-mcp/safe-emacsclient.py",
-      "kind": "product",
-      "tier": "ci-on-demand",
-      "evidence": ["packages/anvil-mcp/safe-emacsclient-test.py exercises the extracted runtime program"],
-      "gap": "Packaged-path behavior is exercised by the Anvil dedicated/headless checks; dynamic coverage is not collected."
-    },
-    {
-      "path": "packages/anvil-mcp/safe-emacsclient-test.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["checks.*.anvil-mcp-headless or anvil-mcp-dedicated executes the test"],
-      "gap": null
-    },
-    {
-      "path": "packages/anvil-mcp/smoke.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["checks.*.anvil-mcp executes the packaged-runtime smoke on Linux"],
-      "gap": null
-    },
-    {
-      "path": "packages/anvil-mcp/stdio-concurrency-test.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["checks.*.anvil-mcp-headless or anvil-mcp-dedicated executes the test"],
-      "gap": null
-    },
-    {
-      "path": "packages/anvil-mcp/stdio-postdispatch-test.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["checks.*.anvil-mcp-headless or anvil-mcp-dedicated executes the test"],
-      "gap": null
-    },
-    {
-      "path": "packages/anvil-mcp/stdio-reconnect-test.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["checks.*.anvil-mcp-headless or anvil-mcp-dedicated executes the test"],
-      "gap": null
-    },
-    {
-      "path": "packages/anvil-mcp/timeout-ordering-test.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["checks.*.anvil-mcp-headless or anvil-mcp-dedicated executes the test"],
-      "gap": null
-    },
-    {
-      "path": "packages/anvil-mcp/watchdog-test-support.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["watchdog-test.py imports this support module during the Anvil check"],
-      "gap": "No independent support-module suite."
-    },
-    {
-      "path": "packages/anvil-mcp/watchdog-test.py",
-      "kind": "test",
-      "tier": "ci-on-demand",
-      "evidence": ["checks.*.anvil-mcp-headless or anvil-mcp-dedicated executes the test"],
-      "gap": null
     },
     {
       "path": "test/ai/recording-https-bridge-oracle.py",
       "kind": "test",
       "tier": "pre-push",
-      "evidence": ["checks.*.agent-wrappers executes the oracle through run-bridge-oracle.sh"],
+      "evidence": [
+        "checks.*.agent-wrappers executes the oracle through run-bridge-oracle.sh"
+      ],
       "gap": "Nix-sandbox subprocess execution needs dynamic-coverage collection."
     },
     {
-      "path": "test/ai/statusline-command-test.py",
+      "path": "bin/statusline-command-test.py",
       "kind": "test",
-      "tier": "pre-push",
-      "evidence": ["checks.*.ai-home-manager-catalog-renderers executes the suite"],
-      "gap": "Nix-sandbox Python execution needs dynamic-coverage collection."
+      "tier": "pre-commit",
+      "evidence": [
+        "quality:python-test executes the suite"
+      ],
+      "gap": null
     }
   ],
   "shellOwnership": [
     {
-      "path": "bin/agent-deck-litellm-env",
+      "path": "bin/agent-deck-env",
       "kind": "production",
       "tier": "pre-commit",
-      "evidence": ["bin/agent-deck-litellm-env-test.py executes export, non-disclosure, and refusal behavior"],
+      "evidence": [
+        "bin/agent-deck-env-test.py executes export, non-disclosure, and refusal behavior"
+      ],
       "gap": null
     },
     {
       "path": "bin/codex-env",
       "kind": "production",
       "tier": "pre-commit",
-      "evidence": ["bin/codex-env-test.py executes argument forwarding, credential export, non-disclosure, and refusal behavior"],
+      "evidence": [
+        "bin/codex-env-test.py executes argument forwarding, credential export, non-disclosure, and refusal behavior"
+      ],
       "gap": null
     },
     {
       "path": "bin/consumer-inventory",
       "kind": "production",
       "tier": "pre-push",
-      "evidence": ["bin/gates-test.py executes --write refusal and --print parity"],
+      "evidence": [
+        "bin/gates-test.py executes --write refusal and --print parity"
+      ],
       "gap": null
     },
     {
       "path": "bin/cross-consumer-eval",
       "kind": "production",
       "tier": "pre-push",
-      "evidence": ["bin/gates-test.py executes refusal guards", "quality:consumer-eval executes the live pre-push gate"],
+      "evidence": [
+        "bin/gates-test.py executes refusal guards",
+        "quality:consumer-eval executes the live pre-push gate"
+      ],
       "gap": "No synthetic successful-evaluation fixture."
     },
     {
       "path": "bin/de",
       "kind": "production",
       "tier": "ci-on-demand",
-      "evidence": ["quality:shell-lint and quality:shell-format provide static evidence"],
+      "evidence": [
+        "quality:shell-lint and quality:shell-format provide static evidence"
+      ],
       "gap": "No behavioral test."
     },
     {
       "path": "bin/git-sha",
       "kind": "production",
       "tier": "ci-on-demand",
-      "evidence": ["quality:shell-lint and quality:shell-format provide static evidence"],
+      "evidence": [
+        "quality:shell-lint and quality:shell-format provide static evidence"
+      ],
       "gap": "No argument or mocked-prefetch behavioral test."
     },
     {
       "path": "bin/immutable-subflake-check",
       "kind": "production",
       "tier": "ci-on-demand",
-      "evidence": ["bin/gates-test.py executes exact-revision archive, immutable metadata, lock-drift, and byte-stability fixtures", "quality:immutable-subflake executes the live expensive gate"],
+      "evidence": [
+        "bin/gates-test.py executes exact-revision archive, immutable metadata, lock-drift, and byte-stability fixtures",
+        "quality:immutable-subflake executes the live expensive gate"
+      ],
       "gap": null
     },
     {
       "path": "bin/lib/host-routing.sh",
       "kind": "library",
       "tier": "pre-commit",
-      "evidence": ["bin/update-overlay-test.py sources it and exercises all fleet hosts, idempotence, and unknown-host refusal"],
+      "evidence": [
+        "bin/update-overlay-test.py sources it and exercises all fleet hosts, idempotence, and unknown-host refusal"
+      ],
       "gap": null
     },
     {
       "path": "bin/myhost",
       "kind": "production",
       "tier": "pre-commit",
-      "evidence": ["quality:shell-lint and quality:shell-format provide static evidence"],
+      "evidence": [
+        "quality:shell-lint and quality:shell-format provide static evidence"
+      ],
       "gap": "No mocked hostname or IP behavioral test."
     },
     {
       "path": "bin/parity-baseline",
       "kind": "production",
       "tier": "ci-on-demand",
-      "evidence": ["bin/oracle-currency-test.py executes --commands"],
+      "evidence": [
+        "bin/oracle-currency-test.py executes --commands"
+      ],
       "gap": "Derive, write, check, compare, and refresh behavior is not exercised by that test."
     },
     {
       "path": "bin/persona",
       "kind": "production",
       "tier": "pre-commit",
-      "evidence": ["quality:shell-lint and quality:shell-format provide static evidence"],
+      "evidence": [
+        "quality:shell-lint and quality:shell-format provide static evidence"
+      ],
       "gap": "Home Manager checks installation only; no behavioral test."
     },
     {
       "path": "bin/publish",
       "kind": "production",
       "tier": "pre-push",
-      "evidence": ["bin/publish-test.py executes refusal, gating, race, partial-publication, and no-op behavior"],
+      "evidence": [
+        "bin/publish-test.py executes refusal, gating, race, partial-publication, and no-op behavior"
+      ],
       "gap": null
     },
     {
       "path": "bin/quality",
       "kind": "production",
       "tier": "pre-commit",
-      "evidence": ["bin/quality-test.py executes success, aggregation, missing-path, symlink, and unknown-suite behavior"],
+      "evidence": [
+        "bin/quality-test.py executes success, aggregation, missing-path, symlink, and unknown-suite behavior"
+      ],
       "gap": null
     },
     {
       "path": "bin/switch",
       "kind": "production",
       "tier": "pre-commit",
-      "evidence": ["bin/update-overlay-test.py executes the packaged-profile Darwin branch through a two-hop symlink chain", "quality:shell-lint and quality:shell-format provide static evidence"],
+      "evidence": [
+        "bin/update-overlay-test.py executes the packaged-profile Darwin branch through a two-hop symlink chain",
+        "quality:shell-lint and quality:shell-format provide static evidence"
+      ],
       "gap": "The NixOS and Home Manager fallback branches are not executed."
     },
     {
       "path": "bin/u",
       "kind": "production",
       "tier": "pre-commit",
-      "evidence": ["quality:shell-lint and quality:shell-format provide static evidence"],
+      "evidence": [
+        "quality:shell-lint and quality:shell-format provide static evidence"
+      ],
       "gap": "No fake-host or fake-make behavioral test."
     },
     {
-      "path": "bin/update-agents",
+      "path": "bin/update",
       "kind": "production",
       "tier": "pre-commit",
-      "evidence": ["bin/update-overlay-test.py executes rollback, failed-signing, no-push, and lock-refusal fixtures"],
+      "evidence": [
+        "bin/update-overlay-test.py executes rollback, exact-candidate build/switch ordering, failed build/switch non-publication, idempotence, failed-signing, no-push, and lock-refusal fixtures"
+      ],
       "gap": null
     },
     {
       "path": "bin/update-and-pull",
       "kind": "production",
       "tier": "ci-on-demand",
-      "evidence": ["quality:shell-lint and quality:shell-format provide static evidence"],
+      "evidence": [
+        "quality:shell-lint and quality:shell-format provide static evidence"
+      ],
       "gap": "No bounded fixture test."
     },
     {
       "path": "bin/update-home-manager",
       "kind": "production",
       "tier": "ci-on-demand",
-      "evidence": ["quality:shell-lint and quality:shell-format provide static evidence"],
+      "evidence": [
+        "quality:shell-lint and quality:shell-format provide static evidence"
+      ],
       "gap": "No behavioral test."
     },
     {
       "path": "bin/update-remote",
       "kind": "production",
       "tier": "ci-on-demand",
-      "evidence": ["quality:shell-lint and quality:shell-format provide static evidence"],
+      "evidence": [
+        "quality:shell-lint and quality:shell-format provide static evidence"
+      ],
       "gap": "Source-policy checks are textual; no tmux or SSH orchestration test."
     },
     {
       "path": "bin/upgrade",
       "kind": "production",
       "tier": "ci-on-demand",
-      "evidence": ["bin/update-overlay-test.py executes the mutually-exclusive-option refusal"],
+      "evidence": [
+        "bin/update-overlay-test.py executes the mutually-exclusive-option refusal"
+      ],
       "gap": "Host and project execution branches remain untested."
     },
     {
       "path": "bin/upgrade-all",
       "kind": "production",
       "tier": "ci-on-demand",
-      "evidence": ["quality:shell-lint and quality:shell-format provide static evidence"],
+      "evidence": [
+        "quality:shell-lint and quality:shell-format provide static evidence"
+      ],
       "gap": "No orchestration test."
     },
     {
       "path": "bin/upgrade-projects",
       "kind": "production",
       "tier": "pre-commit",
-      "evidence": ["bin/update-overlay-test.py executes temporary-HOME and fake-tool aggregation fixtures"],
+      "evidence": [
+        "bin/update-overlay-test.py executes temporary-HOME and fake-tool aggregation fixtures"
+      ],
       "gap": null
     },
     {
       "path": "bin/verify-signatures",
       "kind": "production",
       "tier": "pre-push",
-      "evidence": ["bin/gates-test.py executes unsigned, unverifiable, expired-key, empty-range, and strict fixtures", "quality:signatures executes the live pre-push gate"],
+      "evidence": [
+        "bin/gates-test.py executes unsigned, unverifiable, expired-key, empty-range, and strict fixtures",
+        "quality:signatures executes the live pre-push gate"
+      ],
       "gap": null
     },
     {
       "path": "bin/yubikey-switch",
       "kind": "production",
       "tier": "ci-on-demand",
-      "evidence": ["quality:shell-lint and quality:shell-format provide static evidence"],
+      "evidence": [
+        "quality:shell-lint and quality:shell-format provide static evidence"
+      ],
       "gap": "No safe behavioral fixture."
     },
     {
       "path": "build",
       "kind": "production",
       "tier": "pre-push",
-      "evidence": ["bin/update-overlay-test.py executes --help", "lefthook:system-build executes ./build system"],
+      "evidence": [
+        "bin/update-overlay-test.py executes --help",
+        "lefthook:system-build executes ./build system"
+      ],
       "gap": "Package and language modes and failure branches remain untested."
     },
     {
       "path": "config/fleet/statusline-command.sh",
       "kind": "production",
       "tier": "pre-push",
-      "evidence": ["test/ai/statusline-command-test.py executes injection, jq-count, and malformed-input behavior"],
+      "evidence": [
+        "test/ai/statusline-command-test.py executes injection, jq-count, and malformed-input behavior"
+      ],
       "gap": null
     },
     {
       "path": "test/ai/agent-wrappers.sh",
       "kind": "test-driver",
       "tier": "pre-push",
-      "evidence": ["checks.*.agent-wrappers executes the driver and the pre-push hook builds that check"],
+      "evidence": [
+        "checks.*.agent-wrappers executes the driver and the pre-push hook builds that check"
+      ],
       "gap": null
     },
     {
       "path": "test/ai/run-bridge-oracle.sh",
       "kind": "test-driver",
       "tier": "pre-push",
-      "evidence": ["checks.*.agent-wrappers executes the driver and asserts its oracle report"],
+      "evidence": [
+        "checks.*.agent-wrappers executes the driver and asserts its oracle report"
+      ],
       "gap": null
     },
     {
       "path": "test/ai/scripts/build-check.sh",
       "kind": "test-driver",
       "tier": "ci-on-demand",
-      "evidence": ["apps.build-check and apps.check expose the driver"],
+      "evidence": [
+        "apps.build-check and apps.check expose the driver"
+      ],
       "gap": "No flake check or hook executes it."
     },
     {
       "path": "test/ai/scripts/check.sh",
       "kind": "test-driver",
       "tier": "ci-on-demand",
-      "evidence": ["apps.check and apps.default expose the orchestrator"],
+      "evidence": [
+        "apps.check and apps.default expose the orchestrator"
+      ],
       "gap": "No independent behavioral test."
     },
     {
       "path": "test/ai/scripts/format-check.sh",
       "kind": "test-driver",
       "tier": "ci-on-demand",
-      "evidence": ["checks.*.format executes the driver when built"],
+      "evidence": [
+        "checks.*.format executes the driver when built"
+      ],
       "gap": "Routine portable-eval uses --no-build and does not execute it."
     },
     {
       "path": "test/ai/scripts/format.sh",
       "kind": "test-driver",
       "tier": "ci-on-demand",
-      "evidence": ["The formatter and app surfaces expose the driver"],
+      "evidence": [
+        "The formatter and app surfaces expose the driver"
+      ],
       "gap": "No behavioral test executes it."
     },
     {
       "path": "test/ai/scripts/lib.sh",
       "kind": "library",
       "tier": "ci-on-demand",
-      "evidence": ["Portable test drivers source the library"],
+      "evidence": [
+        "Portable test drivers source the library"
+      ],
       "gap": "No focused tests cover root discovery, exclusions, or empty-Nix-config behavior."
     },
     {
       "path": "test/ai/scripts/lint.sh",
       "kind": "test-driver",
       "tier": "ci-on-demand",
-      "evidence": ["checks.*.lint executes the driver when built"],
+      "evidence": [
+        "checks.*.lint executes the driver when built"
+      ],
       "gap": "Routine portable-eval uses --no-build and does not execute it."
     },
     {
       "path": "test/ai/scripts/no-warnings.sh",
       "kind": "test-driver",
       "tier": "ci-on-demand",
-      "evidence": ["apps.no-warnings and apps.check expose the driver"],
+      "evidence": [
+        "apps.no-warnings and apps.check expose the driver"
+      ],
       "gap": "No check attribute executes it."
     },
     {
       "path": "test/ai/scripts/test.sh",
       "kind": "test-driver",
       "tier": "ci-on-demand",
-      "evidence": ["checks.*.tests executes the source-only branch when built"],
+      "evidence": [
+        "checks.*.tests executes the source-only branch when built"
+      ],
       "gap": "The full evaluation branch is app-only."
     }
   ],
@@ -773,89 +806,246 @@
       "coverage-live"
     ],
     "topLevelChecks": [
-      { "system": "aarch64-darwin", "id": "agent-deck-go-compat" },
-      { "system": "aarch64-darwin", "id": "agent-resources" },
-      { "system": "aarch64-darwin", "id": "agent-wrappers" },
-      { "system": "aarch64-darwin", "id": "ai-home-manager-catalog-renderers" },
-      { "system": "aarch64-darwin", "id": "ai-home-manager-integration" },
-      { "system": "aarch64-darwin", "id": "ai-home-manager-model-sync" },
-      { "system": "aarch64-darwin", "id": "ai-home-manager-package-selection" },
-      { "system": "aarch64-darwin", "id": "ai-lock-coherence" },
-      { "system": "aarch64-darwin", "id": "ai-managed-preflight" },
-      { "system": "aarch64-darwin", "id": "anvil-home-manager" },
-      { "system": "aarch64-darwin", "id": "anvil-mcp-dedicated" },
-      { "system": "aarch64-darwin", "id": "anvil-mcp-persistent-soak" },
-      { "system": "aarch64-darwin", "id": "build" },
-      { "system": "aarch64-darwin", "id": "compatibility-contract" },
-      { "system": "aarch64-darwin", "id": "darwin-value-surface" },
-      { "system": "aarch64-darwin", "id": "format" },
-      { "system": "aarch64-darwin", "id": "formatting" },
-      { "system": "aarch64-darwin", "id": "fractal-smoke" },
-      { "system": "aarch64-darwin", "id": "gpg-agent-handoff" },
-      { "system": "aarch64-darwin", "id": "home-manager-release-skew" },
-      { "system": "aarch64-darwin", "id": "input-projection-parity" },
-      { "system": "aarch64-darwin", "id": "lint" },
-      { "system": "aarch64-darwin", "id": "linting" },
-      { "system": "aarch64-darwin", "id": "llama-cpp-platform-compat" },
-      { "system": "aarch64-darwin", "id": "llm-agents-nixpkgs-independent" },
-      { "system": "aarch64-darwin", "id": "pi-gallery" },
-      { "system": "aarch64-darwin", "id": "tests" },
-      { "system": "aarch64-linux", "id": "agent-deck-go-compat" },
-      { "system": "aarch64-linux", "id": "agent-resources" },
-      { "system": "aarch64-linux", "id": "agent-wrappers" },
-      { "system": "aarch64-linux", "id": "ai-home-manager-catalog-renderers" },
-      { "system": "aarch64-linux", "id": "ai-home-manager-integration" },
-      { "system": "aarch64-linux", "id": "ai-home-manager-model-sync" },
-      { "system": "aarch64-linux", "id": "ai-home-manager-package-selection" },
-      { "system": "aarch64-linux", "id": "ai-lock-coherence" },
-      { "system": "aarch64-linux", "id": "ai-managed-preflight" },
-      { "system": "aarch64-linux", "id": "anvil-home-manager" },
-      { "system": "aarch64-linux", "id": "anvil-mcp" },
-      { "system": "aarch64-linux", "id": "anvil-mcp-headless" },
-      { "system": "aarch64-linux", "id": "anvil-mcp-persistent-soak" },
-      { "system": "aarch64-linux", "id": "build" },
-      { "system": "aarch64-linux", "id": "compatibility-contract" },
-      { "system": "aarch64-linux", "id": "darwin-overrides-inactive" },
-      { "system": "aarch64-linux", "id": "darwin-value-surface" },
-      { "system": "aarch64-linux", "id": "format" },
-      { "system": "aarch64-linux", "id": "formatting" },
-      { "system": "aarch64-linux", "id": "fractal-smoke" },
-      { "system": "aarch64-linux", "id": "home-manager-release-skew" },
-      { "system": "aarch64-linux", "id": "input-projection-parity" },
-      { "system": "aarch64-linux", "id": "lint" },
-      { "system": "aarch64-linux", "id": "linting" },
-      { "system": "aarch64-linux", "id": "llama-cpp-platform-compat" },
-      { "system": "aarch64-linux", "id": "llm-agents-nixpkgs-independent" },
-      { "system": "aarch64-linux", "id": "pi-gallery" },
-      { "system": "aarch64-linux", "id": "tests" },
-      { "system": "x86_64-linux", "id": "agent-deck-go-compat" },
-      { "system": "x86_64-linux", "id": "agent-resources" },
-      { "system": "x86_64-linux", "id": "agent-wrappers" },
-      { "system": "x86_64-linux", "id": "ai-home-manager-catalog-renderers" },
-      { "system": "x86_64-linux", "id": "ai-home-manager-integration" },
-      { "system": "x86_64-linux", "id": "ai-home-manager-model-sync" },
-      { "system": "x86_64-linux", "id": "ai-home-manager-package-selection" },
-      { "system": "x86_64-linux", "id": "ai-lock-coherence" },
-      { "system": "x86_64-linux", "id": "ai-managed-preflight" },
-      { "system": "x86_64-linux", "id": "anvil-home-manager" },
-      { "system": "x86_64-linux", "id": "anvil-mcp" },
-      { "system": "x86_64-linux", "id": "anvil-mcp-headless" },
-      { "system": "x86_64-linux", "id": "anvil-mcp-persistent-soak" },
-      { "system": "x86_64-linux", "id": "build" },
-      { "system": "x86_64-linux", "id": "compatibility-contract" },
-      { "system": "x86_64-linux", "id": "darwin-overrides-inactive" },
-      { "system": "x86_64-linux", "id": "darwin-value-surface" },
-      { "system": "x86_64-linux", "id": "format" },
-      { "system": "x86_64-linux", "id": "formatting" },
-      { "system": "x86_64-linux", "id": "fractal-smoke" },
-      { "system": "x86_64-linux", "id": "home-manager-release-skew" },
-      { "system": "x86_64-linux", "id": "input-projection-parity" },
-      { "system": "x86_64-linux", "id": "lint" },
-      { "system": "x86_64-linux", "id": "linting" },
-      { "system": "x86_64-linux", "id": "llama-cpp-platform-compat" },
-      { "system": "x86_64-linux", "id": "llm-agents-nixpkgs-independent" },
-      { "system": "x86_64-linux", "id": "pi-gallery" },
-      { "system": "x86_64-linux", "id": "tests" }
+      {
+        "system": "aarch64-darwin",
+        "id": "agent-deck-go-compat"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "agent-resources"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "agent-wrappers"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "ai-lock-coherence"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "ai-managed-preflight"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "build"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "compatibility-contract"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "darwin-value-surface"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "format"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "formatting"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "fractal-smoke"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "gpg-agent-handoff"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "home-manager-release-skew"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "input-projection-parity"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "lint"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "linting"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "llama-cpp-platform-compat"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "llm-agents-nixpkgs-independent"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "pi-gallery"
+      },
+      {
+        "system": "aarch64-darwin",
+        "id": "tests"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "agent-deck-go-compat"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "agent-resources"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "agent-wrappers"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "ai-lock-coherence"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "ai-managed-preflight"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "build"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "compatibility-contract"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "darwin-overrides-inactive"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "darwin-value-surface"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "format"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "formatting"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "fractal-smoke"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "home-manager-release-skew"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "input-projection-parity"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "lint"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "linting"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "llama-cpp-platform-compat"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "llm-agents-nixpkgs-independent"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "pi-gallery"
+      },
+      {
+        "system": "aarch64-linux",
+        "id": "tests"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "agent-deck-go-compat"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "agent-resources"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "agent-wrappers"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "ai-lock-coherence"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "ai-managed-preflight"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "build"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "compatibility-contract"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "darwin-overrides-inactive"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "darwin-value-surface"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "format"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "formatting"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "fractal-smoke"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "home-manager-release-skew"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "input-projection-parity"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "lint"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "linting"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "llama-cpp-platform-compat"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "llm-agents-nixpkgs-independent"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "pi-gallery"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "tests"
+      }
     ]
   },
   "nixFileReach": {
@@ -873,10 +1063,12 @@
           "--no-write-lock-file",
           "--no-warn-dirty",
           "--raw",
-        ".#darwinConfigurations.hera.config.system.build.toplevel.drvPath"
+          ".#darwinConfigurations.hera.config.system.build.toplevel.drvPath"
         ],
         "normalForm": "One raw nix-darwin top-level drvPath string for Hera.",
-        "expectedRootFiles": ["flake.nix"]
+        "expectedRootFiles": [
+          "flake.nix"
+        ]
       },
       {
         "id": "darwin-clio",
@@ -891,10 +1083,12 @@
           "--no-write-lock-file",
           "--no-warn-dirty",
           "--raw",
-        ".#darwinConfigurations.clio.config.system.build.toplevel.drvPath"
+          ".#darwinConfigurations.clio.config.system.build.toplevel.drvPath"
         ],
         "normalForm": "One raw nix-darwin top-level drvPath string for Clio.",
-        "expectedRootFiles": ["flake.nix"]
+        "expectedRootFiles": [
+          "flake.nix"
+        ]
       },
       {
         "id": "home-aarch64-linux",
@@ -909,10 +1103,12 @@
           "--no-write-lock-file",
           "--no-warn-dirty",
           "--raw",
-        ".#homeConfigurations.\"johnw@aarch64-linux\".activationPackage.drvPath"
+          ".#homeConfigurations.\"johnw@aarch64-linux\".activationPackage.drvPath"
         ],
         "normalForm": "One raw activation-package drvPath string for the ARM Linux fixture.",
-        "expectedRootFiles": ["flake.nix"]
+        "expectedRootFiles": [
+          "flake.nix"
+        ]
       },
       {
         "id": "home-x86_64-linux",
@@ -927,10 +1123,12 @@
           "--no-write-lock-file",
           "--no-warn-dirty",
           "--raw",
-        ".#homeConfigurations.\"jwiegley@x86_64-linux\".activationPackage.drvPath"
+          ".#homeConfigurations.\"jwiegley@x86_64-linux\".activationPackage.drvPath"
         ],
         "normalForm": "One raw activation-package drvPath string for the shared-work proxy.",
-        "expectedRootFiles": ["flake.nix"]
+        "expectedRootFiles": [
+          "flake.nix"
+        ]
       },
       {
         "id": "host-registry",
@@ -967,12 +1165,14 @@
           "--no-write-lock-file",
           "--no-warn-dirty",
           "--json",
-        ".#checks",
+          ".#checks",
           "--apply",
           "x: builtins.mapAttrs (_: checks: builtins.attrNames checks) x"
         ],
         "normalForm": "JSON system-to-sorted-check-name sets for all declared systems; derivations are not built.",
-        "expectedRootFiles": ["flake.nix"]
+        "expectedRootFiles": [
+          "flake.nix"
+        ]
       },
       {
         "id": "root-packages",
@@ -987,12 +1187,14 @@
           "--no-write-lock-file",
           "--no-warn-dirty",
           "--json",
-        ".#packages",
+          ".#packages",
           "--apply",
           "x: builtins.mapAttrs (_: packages: builtins.attrNames packages) x"
         ],
         "normalForm": "JSON system-to-sorted-root-package-name sets for all declared systems; derivations are not built.",
-        "expectedRootFiles": ["flake.nix"]
+        "expectedRootFiles": [
+          "flake.nix"
+        ]
       }
     ]
   },
@@ -1012,7 +1214,11 @@
     "outputKinds": [
       {
         "kind": "apps",
-        "systems": ["aarch64-darwin", "aarch64-linux", "x86_64-linux"],
+        "systems": [
+          "aarch64-darwin",
+          "aarch64-linux",
+          "x86_64-linux"
+        ],
         "expectation": "Schema inventory must observe every app leaf for every declared system.",
         "expectedAttrs": [
           "build-check",
@@ -1027,7 +1233,11 @@
       },
       {
         "kind": "checks",
-        "systems": ["aarch64-darwin", "aarch64-linux", "x86_64-linux"],
+        "systems": [
+          "aarch64-darwin",
+          "aarch64-linux",
+          "x86_64-linux"
+        ],
         "expectation": "Expanded attributes must equal gateDenominator.topLevelChecks and each leaf must expose a drvPath under the expensive sweep.",
         "expectedAttrs": []
       },
@@ -1035,7 +1245,10 @@
         "kind": "darwinConfigurations",
         "systems": [],
         "expectation": "Both named configurations must force their system top-level drvPath through dedicated probes.",
-        "expectedAttrs": ["clio", "hera"]
+        "expectedAttrs": [
+          "clio",
+          "hera"
+        ]
       },
       {
         "kind": "darwinPackages",
@@ -1045,13 +1258,24 @@
       },
       {
         "kind": "devShells",
-        "systems": ["aarch64-darwin", "aarch64-linux", "x86_64-linux"],
+        "systems": [
+          "aarch64-darwin",
+          "aarch64-linux",
+          "x86_64-linux"
+        ],
         "expectation": "Each declared system must expose both bounded shell leaves.",
-        "expectedAttrs": ["ai", "default"]
+        "expectedAttrs": [
+          "ai",
+          "default"
+        ]
       },
       {
         "kind": "formatter",
-        "systems": ["aarch64-darwin", "aarch64-linux", "x86_64-linux"],
+        "systems": [
+          "aarch64-darwin",
+          "aarch64-linux",
+          "x86_64-linux"
+        ],
         "expectation": "Each declared system must expose one formatter derivation leaf.",
         "expectedAttrs": []
       },
@@ -1059,30 +1283,40 @@
         "kind": "homeConfigurations",
         "systems": [],
         "expectation": "Both named Home Manager configurations must force their activation-package drvPath through dedicated probes.",
-        "expectedAttrs": ["johnw@aarch64-linux", "jwiegley@x86_64-linux"]
+        "expectedAttrs": [
+          "johnw@aarch64-linux",
+          "jwiegley@x86_64-linux"
+        ]
       },
       {
         "kind": "homeManagerModules",
         "systems": [],
         "expectation": "Custom module output is bounded by exact outer attribute names; a module value is not serialized or persisted.",
-        "expectedAttrs": ["johnw"]
+        "expectedAttrs": [
+          "johnw"
+        ]
       },
       {
         "kind": "overlays",
         "systems": [],
         "expectation": "Custom overlay output must be present and its outer attribute-name set recorded without attempting to serialize functions.",
-        "expectedAttrs": ["default"]
+        "expectedAttrs": [
+          "default"
+        ]
       },
       {
         "kind": "packages",
-        "systems": ["aarch64-darwin", "aarch64-linux", "x86_64-linux"],
-        "expectation": "Schema inventory must observe every package leaf; all systems include portable packages and anvil-mcp, Darwin adds anvil-mcp-dedicated, and Linux adds anvil-mcp-headless.",
+        "systems": [
+          "aarch64-darwin",
+          "aarch64-linux",
+          "x86_64-linux"
+        ],
+        "expectation": "Schema inventory must observe every package leaf; all systems include the portable package set.",
         "expectedAttrs": [],
         "commonAttrs": [
           "agent-browser",
           "agent-http-header-bridge",
           "agent-resources",
-          "anvil-mcp",
           "cymbal",
           "default",
           "pi-agent-browser-native",
@@ -1112,9 +1346,9 @@
           "rtk"
         ],
         "systemAdditions": {
-          "aarch64-darwin": ["anvil-mcp-dedicated"],
-          "aarch64-linux": ["anvil-mcp-headless"],
-          "x86_64-linux": ["anvil-mcp-headless"]
+          "aarch64-darwin": [],
+          "aarch64-linux": [],
+          "x86_64-linux": []
         }
       }
     ]

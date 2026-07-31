@@ -263,8 +263,6 @@ runCommand "pi-gallery-check"
     ' ${gallery}/projection.json >/dev/null || fail "projection manifest differs"
     grep -F 'PONYTAIL_HIDE_STATUS = "1"' ${gallery}/index.ts >/dev/null
     grep -F 'PI_LENS_DISABLE_LSP_INSTALL = "1"' ${gallery}/index.ts >/dev/null
-    ! grep -F 'pi-provider-litellm' ${gallery}/index.ts >/dev/null \
-      || fail "LiteLLM provider wrapper remains enabled"
     grep -F 'pi-model-router' ${gallery}/index.ts >/dev/null
 
     provider_smoke="$TMPDIR/pi-provider-router-smoke"
@@ -272,25 +270,39 @@ runCommand "pi-gallery-check"
     cat > "$provider_smoke/key-helper" <<'SH'
     #!/bin/sh
     test "$#" -eq 0
-    : > "$PI_LITELLM_HELPER_MARKER"
+    : > "$PI_LOCAL_MODEL_HELPER_MARKER"
     printf '%s\n' synthetic-key
     SH
     chmod +x "$provider_smoke/key-helper"
     cat > "$provider_smoke/agent/models.json" <<JSON
     {
       "providers": {
-        "litellm": {
-          "baseUrl": "https://litellm.invalid/v1",
+        "omlx": {
+          "api": "openai-completions",
+          "baseUrl": "http://localhost:8000/v1",
           "apiKey": "!$provider_smoke/key-helper",
           "models": [{
-            "id": "positron_openai/gpt-5.6-sol",
-            "name": "GPT 5.6 Sol",
-            "api": "openai-responses",
+            "id": "Qwen3.6-27B-oQ4e-mtp",
+            "name": "Qwen3.6 27B",
             "reasoning": true,
-            "input": ["text", "image"],
-            "contextWindow": 1050000,
-            "maxTokens": 128000,
-            "cost": {"input": 5, "output": 30, "cacheRead": 0.5, "cacheWrite": 6.25}
+            "input": ["text"],
+            "contextWindow": 262144,
+            "maxTokens": 65536,
+            "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0}
+          }]
+        },
+        "llama-cpp-local": {
+          "api": "openai-completions",
+          "baseUrl": "http://localhost:8080/v1",
+          "apiKey": "not-needed",
+          "models": [{
+            "id": "GLM-5.2",
+            "name": "GLM 5.2",
+            "reasoning": true,
+            "input": ["text"],
+            "contextWindow": 202752,
+            "maxTokens": 65536,
+            "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0}
           }]
         },
         "router": {
@@ -301,9 +313,9 @@ runCommand "pi-gallery-check"
             "id": "sol",
             "name": "Router sol",
             "reasoning": true,
-            "input": ["text", "image"],
-            "contextWindow": 1050000,
-            "maxTokens": 128000,
+            "input": ["text"],
+            "contextWindow": 262144,
+            "maxTokens": 65536,
             "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
             "thinkingLevelMap": {"xhigh": "xhigh"}
           }]
@@ -314,15 +326,15 @@ runCommand "pi-gallery-check"
     catalog_timestamp=$(date +%s)000
     cat > "$provider_smoke/agent/models-store.json" <<JSON
     {
-      "litellm": {
+      "omlx": {
         "checkedAt": $catalog_timestamp,
         "lastModified": $catalog_timestamp,
         "models": [{
           "id": "native-provider-proof",
           "name": "Native provider proof",
-          "provider": "litellm",
+          "provider": "omlx",
           "api": "openai-completions",
-          "baseUrl": "https://litellm.invalid/v1",
+          "baseUrl": "http://localhost:8000/v1",
           "reasoning": false,
           "input": ["text"],
           "contextWindow": 128000,
@@ -338,9 +350,9 @@ runCommand "pi-gallery-check"
       "phaseBias": 0.5,
       "models": {
         "sol": {
-          "model": "litellm/positron_openai/gpt-5.6-sol",
-          "contextWindow": 1050000,
-          "maxTokens": 128000,
+          "model": "omlx/Qwen3.6-27B-oQ4e-mtp",
+          "contextWindow": 262144,
+          "maxTokens": 65536,
           "reasoning": true,
           "thinkingLevels": ["low", "medium", "high", "xhigh"]
         }
@@ -356,10 +368,10 @@ runCommand "pi-gallery-check"
     JSON
     (
       cd "$provider_smoke/project"
-      env -u LITELLM_API_KEY -u LITELLM_API_KEY_HELPER \
+      env -u OMLX_API_KEY -u LLAMA_SWAP_API_KEY \
       HOME="$provider_smoke/home" \
       PI_CODING_AGENT_DIR="$provider_smoke/agent" \
-      PI_LITELLM_HELPER_MARKER="$provider_smoke/list-helper-invoked" \
+      PI_LOCAL_MODEL_HELPER_MARKER="$provider_smoke/list-helper-invoked" \
       PI_OFFLINE=1 \
       ${coreutils}/bin/timeout 120 \
         ${lib.getExe piPackage} \
@@ -370,13 +382,16 @@ runCommand "pi-gallery-check"
     ) || {
       cat "$provider_smoke/models.log" >&2
       cat "$provider_smoke/error.log" >&2
-      fail "LiteLLM provider/router model listing failed"
+      fail "local provider/router model listing failed"
     }
-    grep -F 'litellm' "$provider_smoke/models.log" | \
-      grep -F 'positron_openai/gpt-5.6-sol' >/dev/null \
-      || fail "native LiteLLM provider did not expose positron_openai/gpt-5.6-sol"
+    grep -F 'omlx' "$provider_smoke/models.log" | \
+      grep -F 'Qwen3.6-27B-oQ4e-mtp' >/dev/null \
+      || fail "oMLX provider did not expose Qwen3.6-27B-oQ4e-mtp"
+    grep -F 'llama-cpp-local' "$provider_smoke/models.log" | \
+      grep -F 'GLM-5.2' >/dev/null \
+      || fail "llama-swap provider did not expose GLM-5.2"
     ! grep -F 'native-provider-proof' "$provider_smoke/models.log" >/dev/null \
-      || fail "disabled LiteLLM provider loaded its dynamic catalog"
+      || fail "local provider loaded its disabled dynamic catalog"
     grep -F 'router' "$provider_smoke/models.log" | grep -F 'sol' >/dev/null \
       || fail "model router did not expose router/sol"
 
@@ -385,22 +400,22 @@ runCommand "pi-gallery-check"
 
     export default function authProbe(pi: any) {
       pi.on("session_start", async (_event: unknown, ctx: any) => {
-        const result = await ctx.modelRegistry.getProviderAuth("litellm");
+        const result = await ctx.modelRegistry.getProviderAuth("omlx");
         if (result?.auth?.apiKey !== "synthetic-key") {
-          throw new Error("LiteLLM command credential did not resolve");
+          throw new Error("oMLX command credential did not resolve");
         }
-        writeFileSync(process.env.PI_LITELLM_AUTH_MARKER!, "ok\n");
+        writeFileSync(process.env.PI_LOCAL_MODEL_AUTH_MARKER!, "ok\n");
       });
     }
     TS
     rm -f "$provider_smoke/auth-helper-invoked" "$provider_smoke/auth-ok"
     printf '%s\n' '{"type":"get_commands"}' | (
       cd "$provider_smoke/project"
-      env -u LITELLM_API_KEY -u LITELLM_API_KEY_HELPER \
+      env -u OMLX_API_KEY -u LLAMA_SWAP_API_KEY \
       HOME="$provider_smoke/home" \
       PI_CODING_AGENT_DIR="$provider_smoke/agent" \
-      PI_LITELLM_HELPER_MARKER="$provider_smoke/auth-helper-invoked" \
-      PI_LITELLM_AUTH_MARKER="$provider_smoke/auth-ok" \
+      PI_LOCAL_MODEL_HELPER_MARKER="$provider_smoke/auth-helper-invoked" \
+      PI_LOCAL_MODEL_AUTH_MARKER="$provider_smoke/auth-ok" \
       PI_OFFLINE=1 \
         ${coreutils}/bin/timeout 60 \
         ${lib.getExe piPackage} \
@@ -410,30 +425,17 @@ runCommand "pi-gallery-check"
         --extension "$provider_smoke/auth-probe.ts"
     ) >"$provider_smoke/auth-output.log" 2>"$provider_smoke/auth-error.log" || {
       cat "$provider_smoke/auth-error.log" >&2
-      fail "LiteLLM command credential probe failed"
+      fail "oMLX command credential probe failed"
     }
     [ -f "$provider_smoke/auth-helper-invoked" ] \
-      || fail "LiteLLM command credential helper was not invoked"
+      || fail "oMLX command credential helper was not invoked"
     grep -Fx ok "$provider_smoke/auth-ok" >/dev/null \
-      || fail "LiteLLM command credential did not reach the model registry"
-
-    ${nodejs_22}/bin/node ${../../bin/pi-litellm-first-token-test.mjs} \
-      --self-test-timeout >"$provider_smoke/timeout-cleanup-proof.json"
-    jq -e \
-      '.timeoutSelfTestMs < 1000 and .readinessCleanupMs < 1000 and .disconnectCleanupMs < 1000 and .requestFailureCleanupMs < 1000 and .dualFailureCleanupMs < 1000' \
-      "$provider_smoke/timeout-cleanup-proof.json" >/dev/null \
-      || fail "LiteLLM probe timeout cleanup failed"
-    ${nodejs_22}/bin/node ${../../bin/pi-litellm-first-token-test.mjs} \
-      --pi ${lib.getExe piPackage} --delay-ms 250 \
-      >"$provider_smoke/first-token-proof.json"
-    jq -e '.delayMs == 250 and .heartbeats >= 1 and .elapsedMs >= .delayMs' \
-      "$provider_smoke/first-token-proof.json" >/dev/null \
-      || fail "LiteLLM delayed first-token proof failed"
+      || fail "oMLX command credential did not reach the model registry"
 
     routing_smoke="$TMPDIR/pi-model-router-smoke"
     mkdir -p "$routing_smoke/home" "$routing_smoke/agent" "$routing_smoke/project"
-    cat > "$routing_smoke/litellm-server.mjs" <<'JS'
-    import { writeFileSync } from "node:fs";
+    cat > "$routing_smoke/local-server.mjs" <<'JS'
+    import { appendFileSync, writeFileSync } from "node:fs";
     import { createServer } from "node:http";
 
     const server = createServer((request, response) => {
@@ -441,50 +443,58 @@ runCommand "pi-gallery-check"
       request.setEncoding("utf8");
       request.on("data", chunk => { body += chunk; });
       request.on("end", () => {
-        if (request.headers["x-litellm-tags"] === "pi" && request.headers["x-litellm-timeout"] === "7200") {
-          writeFileSync(process.env.PI_LITELLM_HEADERS_MARKER, "ok\n");
-        }
+        appendFileSync(process.env.PI_LOCAL_MODELS_MARKER, JSON.parse(body).model + "\n");
         response.writeHead(200, { "content-type": "text/event-stream" });
-        response.write('data: {"id":"proof","object":"chat.completion.chunk","created":1,"model":"header-proof","choices":[{"index":0,"delta":{"role":"assistant","content":"ok"},"finish_reason":null}]}\n\n');
-        response.write('data: {"id":"proof","object":"chat.completion.chunk","created":1,"model":"header-proof","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\n');
+        response.write('data: {"id":"proof","object":"chat.completion.chunk","created":1,"model":"local-proof","choices":[{"index":0,"delta":{"role":"assistant","content":"ok"},"finish_reason":null}]}\n\n');
+        response.write('data: {"id":"proof","object":"chat.completion.chunk","created":1,"model":"local-proof","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\n');
         response.end("data: [DONE]\n\n");
       });
     });
     server.listen(0, "127.0.0.1", () => {
-      writeFileSync(process.env.PI_LITELLM_PORT_FILE, String(server.address().port));
+      writeFileSync(process.env.PI_LOCAL_PORT_FILE, String(server.address().port));
     });
     JS
-    PI_LITELLM_PORT_FILE="$routing_smoke/port" \
-    PI_LITELLM_HEADERS_MARKER="$routing_smoke/headers-ok" \
-      node "$routing_smoke/litellm-server.mjs" &
-    litellm_server_pid=$!
-    trap 'kill "$litellm_server_pid" 2>/dev/null || true' EXIT
+    PI_LOCAL_PORT_FILE="$routing_smoke/port" \
+    PI_LOCAL_MODELS_MARKER="$routing_smoke/models-seen" \
+      node "$routing_smoke/local-server.mjs" &
+    local_server_pid=$!
+    trap 'kill "$local_server_pid" 2>/dev/null || true' EXIT
     for _ in $(seq 1 100); do
       [ -s "$routing_smoke/port" ] && break
       sleep 0.05
     done
-    [ -s "$routing_smoke/port" ] || fail "LiteLLM request oracle did not start"
-    litellm_port=$(cat "$routing_smoke/port")
+    [ -s "$routing_smoke/port" ] || fail "local provider request oracle did not start"
+    local_port=$(cat "$routing_smoke/port")
 
     cat > "$routing_smoke/agent/models.json" <<JSON
     {
       "providers": {
-        "litellm": {
+        "omlx": {
           "api": "openai-completions",
-          "apiKey": "synthetic",
-          "baseUrl": "http://127.0.0.1:$litellm_port/v1",
-          "headers": {
-            "x-litellm-tags": "pi",
-            "x-litellm-timeout": "7200"
-          },
+          "apiKey": "dummy-key",
+          "baseUrl": "http://127.0.0.1:$local_port/v1",
           "models": [{
-            "id": "header-proof",
-            "name": "Header proof",
-            "reasoning": false,
+            "id": "Qwen3.6-27B-oQ4e-mtp",
+            "name": "Qwen3.6 27B",
+            "reasoning": true,
             "input": ["text"],
             "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
-            "contextWindow": 128000,
-            "maxTokens": 16384
+            "contextWindow": 262144,
+            "maxTokens": 65536
+          }]
+        },
+        "llama-cpp-local": {
+          "api": "openai-completions",
+          "apiKey": "not-needed",
+          "baseUrl": "http://127.0.0.1:$local_port/v1",
+          "models": [{
+            "id": "GLM-5.2",
+            "name": "GLM 5.2",
+            "reasoning": true,
+            "input": ["text"],
+            "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
+            "contextWindow": 202752,
+            "maxTokens": 65536
           }]
         },
         "router": {
@@ -586,27 +596,32 @@ runCommand "pi-gallery-check"
       });
     }
     TS
-    mkdir -p "$routing_smoke/sessions"
-    HOME="$routing_smoke/home" \
-    PI_CODING_AGENT_DIR="$routing_smoke/agent" \
-    PI_OFFLINE=1 \
-      ${coreutils}/bin/timeout 60 \
-      ${lib.getExe piPackage} \
-      --print --offline --session-dir "$routing_smoke/sessions" \
-      --session-id 11111111-1111-4111-8111-111111111111 --no-context-files \
-      --no-extensions --no-skills --no-prompt-templates --no-approve \
-      --extension ${gallery}/index.ts \
-      --extension "$routing_smoke/synthetic.ts" \
-      --provider litellm --model header-proof "verify metadata" \
-      </dev/null >"$routing_smoke/litellm-output" 2>"$routing_smoke/litellm-error" || {
-        cat "$routing_smoke/litellm-error" >&2
-        fail "LiteLLM request metadata smoke failed"
-      }
-    grep -Fx ok "$routing_smoke/headers-ok" >/dev/null \
-      || fail "LiteLLM request headers were not assembled"
+    while IFS='|' read -r provider model; do
+      env -u OMLX_API_KEY -u LLAMA_SWAP_API_KEY \
+      HOME="$routing_smoke/home" \
+      PI_CODING_AGENT_DIR="$routing_smoke/agent" \
+      PI_OFFLINE=1 \
+        ${coreutils}/bin/timeout 60 \
+        ${lib.getExe piPackage} \
+        --print --offline --no-session --no-context-files \
+        --no-extensions --no-skills --no-prompt-templates --no-approve \
+        --extension ${gallery}/index.ts \
+        --provider "$provider" --model "$model" "verify direct provider" \
+        </dev/null >"$routing_smoke/$provider-output" 2>"$routing_smoke/$provider-error" || {
+          cat "$routing_smoke/$provider-error" >&2
+          fail "$provider request smoke failed"
+        }
+    done <<'PROVIDERS'
+    omlx|Qwen3.6-27B-oQ4e-mtp
+    llama-cpp-local|GLM-5.2
+    PROVIDERS
+    grep -Fx Qwen3.6-27B-oQ4e-mtp "$routing_smoke/models-seen" >/dev/null \
+      || fail "oMLX request did not reach its direct provider"
+    grep -Fx GLM-5.2 "$routing_smoke/models-seen" >/dev/null \
+      || fail "llama-swap request did not reach its direct provider"
 
     while IFS='|' read -r prompt expected; do
-      env -u LITELLM_API_KEY -u LITELLM_API_KEY_HELPER \
+      env -u OMLX_API_KEY -u LLAMA_SWAP_API_KEY \
       HOME="$routing_smoke/home" \
       PI_CODING_AGENT_DIR="$routing_smoke/agent" \
       PI_OFFLINE=1 \

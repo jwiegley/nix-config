@@ -108,7 +108,6 @@
     "skills": [
       "add-uint-support",
       "alexey-review",
-      "anvil",
       "at-dispatch-v2",
       "caveman",
       "comment-audit",
@@ -233,42 +232,10 @@
   "models": {
     "authority": "llm-setup.el through config/fleet/model-registry.json",
     "default": {
-      "provider": "litellm",
-      "model": "hera/omlx/Qwen3.6-27B-oQ4e-mtp"
+      "provider": "omlx",
+      "model": "Qwen3.6-27B-oQ4e-mtp"
     },
     "sourceOnlyStaleTuples": [
-      {
-        "provider": "litellm",
-        "model": "anthropic/claude-opus-4-7"
-      },
-      {
-        "provider": "litellm",
-        "model": "anthropic/claude-sonnet-4-6"
-      },
-      {
-        "provider": "litellm",
-        "model": "hera/claude-opus-4-7"
-      },
-      {
-        "provider": "litellm",
-        "model": "hera/claude-opus-4-7-thinking-32000"
-      },
-      {
-        "provider": "litellm",
-        "model": "hera/claude-sonnet-4-6"
-      },
-      {
-        "provider": "litellm",
-        "model": "hera/claude-sonnet-4-6-thinking-32000"
-      },
-      {
-        "provider": "litellm",
-        "model": "positron_anthropic/claude-opus-4-7"
-      },
-      {
-        "provider": "litellm",
-        "model": "positron_anthropic/claude-sonnet-4-6"
-      },
       {
         "provider": "positron-anthropic",
         "model": "claude-opus-4-7"

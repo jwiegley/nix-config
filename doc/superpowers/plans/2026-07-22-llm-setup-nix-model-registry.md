@@ -24,7 +24,7 @@ The generated document has exactly this shape:
   "schemaVersion": 2,
   "selections": {
     "default": {
-      "provider": "litellm",
+      "provider": "retired-proxy",
       "model": "hera/omlx/Qwen3.6-27B-oQ4e-mtp"
     },
     "claudeDefault": {
@@ -42,15 +42,15 @@ The generated document has exactly this shape:
   },
   "providers": [
     {
-      "id": "litellm",
-      "displayName": "LiteLLM",
-      "baseUrl": "https://litellm.vulcan.lan/v1/",
-      "apiKey": { "env": "LITELLM_API_KEY" }
+      "id": "retired-proxy",
+      "displayName": "retired proxy",
+      "baseUrl": "https://retired-proxy.vulcan.lan/v1/",
+      "apiKey": { "env": "RETIRED_PROXY_API_KEY" }
     }
   ],
   "models": [
     {
-      "provider": "litellm",
+      "provider": "retired-proxy",
       "id": "hera/omlx/Qwen3.6-27B-oQ4e-mtp",
       "displayName": "Qwen 3.6 27B OQ4E MTP (MLX)",
       "maxOutputTokens": 65536,
@@ -93,11 +93,11 @@ The only added routes are:
 - `positron-openai/gpt-5.6-luna`
 - `positron-openai/gpt-5.6-sol`
 - `positron-openai/gpt-5.6-terra`
-- `litellm/positron_openai/gpt-5.6-luna`
-- `litellm/positron_openai/gpt-5.6-sol`
-- `litellm/positron_openai/gpt-5.6-terra`
-- `litellm/openrouter/moonshotai/kimi-k3`
-- `litellm/openrouter/qwen/qwen3.7-max`
+- `retired-proxy/openai/gpt-5.6-luna`
+- `retired-proxy/openai/gpt-5.6-sol`
+- `retired-proxy/openai/gpt-5.6-terra`
+- `retired-proxy/openrouter/moonshotai/kimi-k3`
+- `retired-proxy/openrouter/qwen/qwen3.7-max`
 
 Every common provider and model field is equal. Common route relative order is equal
 after accounting for the already-audited GLM-5.2 movement from frozen index 28 to
@@ -153,7 +153,7 @@ facts and normalized common model facts so this exception cannot silently widen.
 
 - [x] Call the JSON writer exactly once from `llm-setup-reset`.
 - [x] Remove Promptdeploy and `models.yaml` generation from reset.
-- [x] Keep service-specific LiteLLM and llama-swap generation behavior separate.
+- [x] Keep service-specific retired proxy and llama-swap generation behavior separate.
 
 ### Task 5: verification and publication
 

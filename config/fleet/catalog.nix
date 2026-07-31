@@ -577,11 +577,6 @@ let
     };
   };
   discoveredSkillMetadata = {
-    "anvil" = {
-      "description" =
-        "Use the available Anvil MCP backend — interactive Emacs, dedicated headless Emacs, or NeLisp — for structured file, Org, Git, data, and Elisp work. Detect the advertised capabilities, prefer typed and token-efficient operations, and apply live-session safety only where the backend actually reaches the user's interactive Emacs.";
-      "name" = "anvil";
-    };
     "caveman" = {
       "description" =
         "Compress and simplify prompts to preserve meaning while reducing use of context. Use when asked to compress, shorten, or \"caveman\" a prompt or other text, or when text must fit a smaller context budget without losing meaning.";
@@ -665,7 +660,7 @@ let
     };
     "wiggum" = {
       "description" =
-        "Methodology for the user-triggered /wiggum command (do not self-invoke). An autonomous-continuation loop for long-running work -- run, checkpoint, and verify until a defined Definition of Done holds or a stop-and-escalate condition fires. Covers durable handoff state, baseline re-verification after context compaction, per-commit self-audit, work-unit commit and restack cadence, subagent fan-out limits, host-conditional anvil (live Emacs) tooling, and escalation.";
+        "Methodology for the user-triggered /wiggum command (do not self-invoke). An autonomous-continuation loop for long-running work -- run, checkpoint, and verify until a defined Definition of Done holds or a stop-and-escalate condition fires. Covers durable handoff state, baseline re-verification after context compaction, per-commit self-audit, work-unit commit and restack cadence, subagent fan-out limits, and escalation.";
       "name" = "wiggum";
     };
   };
@@ -723,7 +718,6 @@ let
 
   localBroadSkills = [
     "alexey-review"
-    "anvil"
     "caveman"
     "comment-audit"
     "eliminate-dead-code"
@@ -811,26 +805,6 @@ let
       url = "https://api.ref.tools/mcp";
       headers.x-ref-api-key = typedEnv "REF_API_KEY";
     } baseMcpSelectors;
-
-    anvil =
-      (mkMcp "anvil"
-        "Cross-platform Anvil MCP surface: 13 interactive Emacs tools, 42 NeLisp standalone tools, or 89 unified tools from a dedicated Emacs daemon."
-        {
-          command = "anvil-mcp";
-          args = [ "--server-id=anvil" ];
-        }
-        baseMcpSelectors
-      )
-      // {
-        overrides = {
-          claude.timeout = 540000;
-          codex = {
-            startup_timeout_sec = 540;
-            tool_timeout_sec = 540;
-          };
-          opencode.timeout = 540000;
-        };
-      };
 
     context-hub =
       (mkMcp "context-hub"
@@ -1405,7 +1379,6 @@ let
     unmanagedExclusions = {
       gptel = [ "gptel-emacs" ];
       git-ai = [ "all git-ai personas and state" ];
-      tombstones = [ "anvil-tools" ];
     };
 
     adapterVersions = {
@@ -1670,10 +1643,7 @@ let
       mcpChecks = lib.mapAttrsToList (
         name: server:
         ensure (
-          name != "anvil-tools"
-          && server.name != "anvil-tools"
-          && validateTransport server.transport
-          && validateOverrides (server.overrides or { })
+          validateTransport server.transport && validateOverrides (server.overrides or { })
         ) "invalid MCP server ${name}"
       ) items.mcpServers;
       providerSelectorChecks = lib.mapAttrsToList (

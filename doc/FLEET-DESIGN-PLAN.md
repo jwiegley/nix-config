@@ -75,7 +75,7 @@ does not compete with it. Reading the issue changes the framing substantially.
 **Still open there**, and touching this design: P0-1 (atomic update ownership —
 the source-catalog work in flight now), P1-9 (wrapper implementations), P1-10
 (quality policy encoded five times), P1-11 (checks claiming evidence they do not
-produce), P1-13 (Anvil source container), and **P2-19**, which explicitly names
+produce), P1-13 (retired Emacs MCP backend source container), and **P2-19**, which explicitly names
 `flake-ai.nix` as a compatibility surface requiring a consumer inventory before
 deletion.
 
@@ -508,7 +508,7 @@ a zoo of `mkWorkstation`/`mkServer` constructors is a named anti-pattern, as is
 `readDir` auto-discovery — which would worsen the very ordering opacity that broke
 Vulcan.
 
-Keep the **existing `johnw.*` namespace**. `johnw.anvil` and `johnw.agentDeck`
+Keep the **existing `johnw.*` namespace**. `johnw.retired-emacs-mcp` and `johnw.agentDeck`
 already ship; renaming to `my.*` is churn with no correctness payoff.
 
 ```nix
@@ -592,11 +592,11 @@ options.johnw.host = {
 | `darwin.nix:479-480` builders | fleet topology | derived from registry |
 | `darwin.nix:617` orientation | physical display | `johnw.darwin.dockOrientation` |
 | `ssh.nix:125` vulcan localhost | *is this vulcan itself* | `johnw.host.isSelf "vulcan"` |
-| `johnw.nix:63` `useHeadlessEmacs` | dedicated-Anvil Linux host | `johnw.anvil.dedicated` |
+| `johnw.nix:63` `useHeadlessEmacs` | dedicated-retired Emacs MCP backend Linux host | `johnw.retired-emacs-mcp.dedicated` |
 | `ai.nix:175` | role, already partly modelled | role `shared-work` |
 
 The `useHeadlessEmacs` case deserves a note, because I overstated it earlier.
-`config/anvil-hosts.nix` lists **all four** work machines in `dedicatedLinux`, so
+`config/retired-emacs-mcp-hosts.nix` lists **all four** work machines in `dedicatedLinux`, so
 the shared wrong hostname happens to yield the right answer. The decision is
 *accidentally correct*, not broken. The defect is structural: the moment one work
 machine needs a different answer, it silently gets the wrong one with no error.
@@ -643,7 +643,7 @@ mechanisms:
   *pinned older* h-m lib, forced to evaluate, in the same gate as lock purity. The
   repo already does something of this shape in
   `test/ai/home-manager-contract.nix` and
-  `packages/anvil-mcp/home-manager-smoke.nix`, so the pattern exists to follow.
+  `packages/retired-emacs-mcp-mcp/home-manager-smoke.nix`, so the pattern exists to follow.
 
 Without that gate, "supported within a dated floor" is aspirational and the exact
 failure mode of §3 recurs.

@@ -143,6 +143,39 @@ let
   piSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "pi") profileIds;
   codexSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "codex") profileIds;
   droidSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "droid") profileIds;
+  droidSettingsConvergence = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+    factory_root=${lib.escapeShellArg "${config.xdg.configHome}/factory"}
+    managed_settings="$factory_root/nix-managed-settings.json"
+    mutable_settings="$factory_root/settings.json"
+
+    if [ -e "$managed_settings" ]; then
+      if [ -e "$mutable_settings" ] && { [ ! -f "$mutable_settings" ] || [ -L "$mutable_settings" ]; }; then
+        printf 'nix-managed AI: refusing non-regular Factory settings path: %s\n' \
+          "$mutable_settings" >&2
+        exit 1
+      fi
+
+      ${pkgs.jq}/bin/jq -e '.customModels | type == "array"' \
+        "$managed_settings" >/dev/null
+      if [ -e "$mutable_settings" ]; then
+        ${pkgs.jq}/bin/jq -e 'type == "object"' "$mutable_settings" >/dev/null
+        settings_tmp="$(${pkgs.coreutils}/bin/mktemp \
+          "$factory_root/.settings.json.XXXXXX")"
+        trap '${pkgs.coreutils}/bin/rm -f -- "$settings_tmp"' EXIT
+        ${pkgs.jq}/bin/jq --slurpfile managed "$managed_settings" \
+          '.customModels = $managed[0].customModels' \
+          "$mutable_settings" >"$settings_tmp"
+        ${pkgs.coreutils}/bin/chmod --reference="$mutable_settings" "$settings_tmp"
+        if ! ${pkgs.diffutils}/bin/cmp -s "$mutable_settings" "$settings_tmp"; then
+          ${pkgs.coreutils}/bin/mv -f -- "$settings_tmp" "$mutable_settings"
+        fi
+        ${pkgs.coreutils}/bin/rm -f -- "$settings_tmp"
+        trap - EXIT
+      else
+        ${pkgs.coreutils}/bin/install -m 0600 "$managed_settings" "$mutable_settings"
+      fi
+    fi
+  '';
   piRuntimePackages = with pkgs; [
     actionlint
     agent-browser
@@ -255,6 +288,9 @@ in
     // lib.optionalAttrs piSelected {
       aiPiProfileMigration = piProfileMigration.activation;
       aiPiLegacyRootLink = piProfileMigration.legacyRootActivation;
+    }
+    // lib.optionalAttrs droidSelected {
+      aiDroidSettingsConvergence = droidSettingsConvergence;
     }
     // lib.optionalAttrs (config.johnw.host.isHera && isDarwin) {
       aiManagedModelSync = modelSync.activation;
