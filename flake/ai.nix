@@ -1879,6 +1879,10 @@ let
           b27f2ee319ff784b35f83fb2a2276f32f3383e5e593b05bdfab566d6dd172318  dist/core/extensions/types.d.ts
           EOF
           sha256sum -c pi-tool-renderer-wrapper.sha256
+          patch -p1 --fuzz=0 < ${../overlays/ai/patches/pi-system-prompt-no-docs.patch}
+          substituteInPlace dist/core/system-prompt.js \
+            --replace-fail '//# sourceMappingURL=system-prompt.js.map' ""
+          rm -f dist/core/system-prompt.js.map
           patch -p1 --fuzz=0 < ${../overlays/ai/patches/pi-tool-renderer-wrapper.patch}
           for openai_api in \
             node_modules/@earendil-works/pi-ai/dist/api/openai-completions.js \

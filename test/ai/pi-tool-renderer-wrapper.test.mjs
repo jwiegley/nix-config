@@ -25,6 +25,11 @@ for (const relative of [
   );
 }
 
+const systemPrompt = await readFile(join(source, "dist/core/system-prompt.js"), "utf8");
+assert.doesNotMatch(systemPrompt, /Pi documentation \(read only when/);
+assert.doesNotMatch(systemPrompt, /get(?:Readme|Docs|Examples)Path/);
+assert.match(systemPrompt, /Guidelines:\n\$\{guidelines\}`;/);
+
 const { applyToolRendererWrappers } = await importFromSource(
   "dist/core/extensions/tool-renderers.js",
 );

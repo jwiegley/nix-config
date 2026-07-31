@@ -821,7 +821,16 @@ in
         print(f"  Computing {hash_type} (this may take a while)...")
         try:
             result = self._run_package_build(package_name, build_mode)
-            return self._parse_dummy_hash_mismatch(result.stdout + result.stderr)
+            output = result.stdout + result.stderr
+            value = self._parse_dummy_hash_mismatch(output)
+            if value is None:
+                detail = _bounded_actionable_error(
+                    result.stderr,
+                    result.stdout,
+                    fallback=f"{package_name} build produced no hash mismatch",
+                )
+                print(f"  Error computing {hash_type}: {detail}", file=sys.stderr)
+            return value
         except subprocess.TimeoutExpired:
             print(f"  Timeout computing {hash_type}", file=sys.stderr)
         except Exception as e:
