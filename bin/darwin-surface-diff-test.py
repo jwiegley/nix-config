@@ -373,9 +373,7 @@ class CommittedDarwinSurfaceTests(unittest.TestCase):
             expected_projection[relative] = hashlib.sha256(
                 (REPO / relative).read_bytes()
             ).hexdigest()
-        # Temporary content-digest bootstrap. The artifact follow-up removes it.
-        if baseline_rev != "675bf9517eb0b89d96f4825b3bf12464fb7475ed":
-            self.assertEqual(self.baseline.get("projection"), expected_projection)
+        self.assertEqual(self.baseline.get("projection"), expected_projection)
 
     def test_baseline_encodes_both_nonvacuity_traps_and_nix_builders(self):
         expected_counts = {"hera": (12, 6, 8), "clio": (5, 3, 4)}
