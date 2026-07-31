@@ -39,6 +39,13 @@ class NormalizeStatusTests(unittest.TestCase):
         self.assertIn("disabledCount", result)
         self.assertIn("formatMcpStatus(state.config, status)", result)
 
+    def test_native_compact_setting_needs_no_patch(self):
+        source = (
+            'const footerStatus = state.config.settings?.mcpFooterStatus ?? "full";\n'
+            'const status = footerStatus === "compact" ? "compact" : "full";\n'
+        )
+        self.assertEqual(MODULE.normalize_status(source), source)
+
     def test_unknown_or_ambiguous_status_is_rejected(self):
         legacy = "  let status = `🔌 MCP: ${connectedCount}/${enabledCount} servers`;"
         modern = (
@@ -46,7 +53,8 @@ class NormalizeStatusTests(unittest.TestCase):
             '"servers"} enabled`;\n'
             '  if (connectedCount > 0) status += ` (${connectedCount} connected)`;'
         )
-        for source in ("no status\n", f"{legacy}\n{modern}\n"):
+        native = 'state.config.settings?.mcpFooterStatus ?? "full"'
+        for source in ("no status\n", f"{legacy}\n{modern}\n", f"{legacy}\n{native}\n"):
             with self.subTest(source=source), self.assertRaisesRegex(
                 RuntimeError, "exactly one known shape"
             ):

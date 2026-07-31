@@ -9,15 +9,19 @@ MODERN_STATUS = """  let status = `${enabledCount} ${enabledCount === 1 ? "serve
   if (connectedCount > 0) status += ` (${connectedCount} connected)`;"""
 COMPACT_LEGACY_STATUS = """  let status = `🔌 MCP: ${connectedCount}/${enabledCount}`;"""
 COMPACT_MODERN_STATUS = """  let status = `${connectedCount}/${enabledCount}`;"""
+NATIVE_STATUS_SETTING = 'state.config.settings?.mcpFooterStatus ?? "full"'
 
 
 def normalize_status(text: str) -> str:
     legacy_count = text.count(LEGACY_STATUS)
     modern_count = text.count(MODERN_STATUS)
-    if legacy_count + modern_count != 1:
+    native_count = text.count(NATIVE_STATUS_SETTING)
+    if legacy_count + modern_count + native_count != 1:
         raise RuntimeError(
             "pi-mcp-adapter status renderer must match exactly one known shape"
         )
+    if native_count:
+        return text
     if legacy_count:
         return text.replace(LEGACY_STATUS, COMPACT_LEGACY_STATUS, 1)
     return text.replace(MODERN_STATUS, COMPACT_MODERN_STATUS, 1)

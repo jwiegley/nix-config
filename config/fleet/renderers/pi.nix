@@ -236,6 +236,7 @@ let
       };
   mcp = {
     mcpServers = lib.mapAttrs renderMcpServer selected.mcpServers;
+    settings.mcpFooterStatus = "compact";
   };
   keybindings = {
     "tui.editor.cursorUp" = [
