@@ -1724,7 +1724,12 @@ let
     models = map expectedPiModel (
       orderedValues (
         lib.filterAttrs (
-          _: model: model.provider == providerName && model.id == "positron_openai/gpt-5.6-sol"
+          _: model:
+          model.provider == providerName
+          && builtins.elem model.id [
+            "positron_openai/gpt-5.6-sol"
+            "hera/GLM-5.2"
+          ]
         ) (selectedModels "hera-pi")
       )
     );

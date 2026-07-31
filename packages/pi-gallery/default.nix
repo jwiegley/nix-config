@@ -42,7 +42,6 @@ let
         pi-model-router
         pi-multi-pass
         pi-ponytail
-        pi-provider-litellm
         pi-rewind
         pi-scroll
         pi-smart-fetch
@@ -543,31 +542,6 @@ let
         --replace-fail \
           'return `''${prefix}: ''${statusLabel(goal)}''${usage} - ''${truncateText(goal.objective, 60)}`;' \
           'return `''${prefix}: ''${statusLabel(goal)}''${usage}`;'
-    '';
-  };
-
-  pi-provider-litellm = mkCopyRoot {
-    pname = members.litellm.attrName;
-    version = members.litellm.version;
-    install = root: ''
-      tar -xzf ${releaseTarballs.pi-provider-litellm} -C ${root} \
-        --strip-components=1
-      # Preserve the managed MCP and skill surfaces unless mutable Pi settings opt in.
-      substituteInPlace ${root}/dist/index.js \
-        --replace-fail \
-          'const skillsEnabled = isFeatureEnabled(settings, "skills");' \
-          'const skillsEnabled = settings?.skills?.enabled === true;' \
-        --replace-fail \
-          'const mcpEnabled = isFeatureEnabled(settings, "mcp");' \
-          'const mcpEnabled = settings?.mcp?.enabled === true;' \
-        --replace-fail \
-          'sessionId = getSessionIdFromFile(ctx.sessionManager.getSessionFile());' \
-          'sessionId = ctx.sessionManager.getSessionId() ?? getSessionIdFromFile(ctx.sessionManager.getSessionFile());'
-      # The packaged Pi loader maps peer root exports, not these lazy subpaths.
-      substituteInPlace ${root}/dist/provider.js \
-        --replace-fail \
-          $'import { createProvider } from "@earendil-works/pi-ai";\nimport { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";\nimport { openAIResponsesApi } from "@earendil-works/pi-ai/api/openai-responses.lazy";' \
-          'import { createProvider, openAICompletionsApi, openAIResponsesApi } from "@earendil-works/pi-ai";'
     '';
   };
 

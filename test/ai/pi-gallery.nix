@@ -143,22 +143,6 @@ runCommand "pi-gallery-check"
     [ -f ${roots.insights}/dist/index.html ]
     [ -d ${roots.insights}/node_modules/react ]
     [ -d ${roots.insights}/node_modules/recharts ]
-    [ -f ${roots.litellm}/dist/index.js ]
-    [ ! -e ${roots.litellm}/node_modules ]
-    grep -F 'settings?.skills?.enabled === true' ${roots.litellm}/dist/index.js >/dev/null \
-      || fail "LiteLLM Skills Gateway is not explicit opt-in"
-    grep -F 'settings?.mcp?.enabled === true' ${roots.litellm}/dist/index.js >/dev/null \
-      || fail "LiteLLM MCP discovery is not explicit opt-in"
-    ! grep -R -F '@earendil-works/pi-ai/api/' ${roots.litellm}/dist >/dev/null \
-      || fail "LiteLLM provider retains Pi peer subpath imports"
-    grep -F 'openAIResponsesApi } from "@earendil-works/pi-ai"' \
-      ${roots.litellm}/dist/provider.js >/dev/null \
-      || fail "LiteLLM provider does not use Pi's extension-safe root export"
-    grep -F 'sessionId = ctx.sessionManager.getSessionId() ?? getSessionIdFromFile' \
-      ${roots.litellm}/dist/index.js >/dev/null \
-      || fail "LiteLLM provider does not derive the Pi session ID"
-    grep -F 'next.litellm_session_id = sessionId' ${roots.litellm}/dist/index.js >/dev/null \
-      || fail "LiteLLM provider does not inject litellm_session_id"
     [ -f ${roots.multi-pass}/extensions/multi-sub.ts ]
     [ ! -e ${roots.multi-pass}/node_modules ]
     [ -f ${roots.router}/extensions/index.ts ]
@@ -269,7 +253,8 @@ runCommand "pi-gallery-check"
     ' ${gallery}/projection.json >/dev/null || fail "projection manifest differs"
     grep -F 'PONYTAIL_HIDE_STATUS = "1"' ${gallery}/index.ts >/dev/null
     grep -F 'PI_LENS_DISABLE_LSP_INSTALL = "1"' ${gallery}/index.ts >/dev/null
-    grep -F 'pi-provider-litellm' ${gallery}/index.ts >/dev/null
+    ! grep -F 'pi-provider-litellm' ${gallery}/index.ts >/dev/null \
+      || fail "LiteLLM provider wrapper remains enabled"
     grep -F 'pi-model-router' ${gallery}/index.ts >/dev/null
 
     provider_smoke="$TMPDIR/pi-provider-router-smoke"
@@ -380,9 +365,8 @@ runCommand "pi-gallery-check"
     grep -F 'litellm' "$provider_smoke/models.log" | \
       grep -F 'positron_openai/gpt-5.6-sol' >/dev/null \
       || fail "native LiteLLM provider did not expose positron_openai/gpt-5.6-sol"
-    grep -F 'litellm' "$provider_smoke/models.log" | \
-      grep -F 'native-provider-proof' >/dev/null \
-      || fail "LiteLLM native provider did not load its fresh cached dynamic catalog"
+    ! grep -F 'native-provider-proof' "$provider_smoke/models.log" >/dev/null \
+      || fail "disabled LiteLLM provider loaded its dynamic catalog"
     grep -F 'router' "$provider_smoke/models.log" | grep -F 'sol' >/dev/null \
       || fail "model router did not expose router/sol"
 
@@ -434,12 +418,8 @@ runCommand "pi-gallery-check"
       request.setEncoding("utf8");
       request.on("data", chunk => { body += chunk; });
       request.on("end", () => {
-        const payload = JSON.parse(body);
         if (request.headers["x-litellm-tags"] === "pi" && request.headers["x-litellm-timeout"] === "7200") {
           writeFileSync(process.env.PI_LITELLM_HEADERS_MARKER, "ok\n");
-        }
-        if (typeof payload.litellm_session_id === "string" && payload.litellm_session_id.length > 0) {
-          writeFileSync(process.env.PI_LITELLM_SESSION_MARKER, payload.litellm_session_id + "\n");
         }
         response.writeHead(200, { "content-type": "text/event-stream" });
         response.write('data: {"id":"proof","object":"chat.completion.chunk","created":1,"model":"header-proof","choices":[{"index":0,"delta":{"role":"assistant","content":"ok"},"finish_reason":null}]}\n\n');
@@ -453,7 +433,6 @@ runCommand "pi-gallery-check"
     JS
     PI_LITELLM_PORT_FILE="$routing_smoke/port" \
     PI_LITELLM_HEADERS_MARKER="$routing_smoke/headers-ok" \
-    PI_LITELLM_SESSION_MARKER="$routing_smoke/session-ok" \
       node "$routing_smoke/litellm-server.mjs" &
     litellm_server_pid=$!
     trap 'kill "$litellm_server_pid" 2>/dev/null || true' EXIT
@@ -602,8 +581,6 @@ runCommand "pi-gallery-check"
       }
     grep -Fx ok "$routing_smoke/headers-ok" >/dev/null \
       || fail "LiteLLM request headers were not assembled"
-    grep -Fx 11111111-1111-4111-8111-111111111111 "$routing_smoke/session-ok" >/dev/null \
-      || fail "LiteLLM session ID did not match the active Pi session"
 
     while IFS='|' read -r prompt expected; do
       env -u LITELLM_API_KEY -u LITELLM_API_KEY_HELPER \

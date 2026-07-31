@@ -110,6 +110,11 @@ let
       _: model: model.provider == "litellm" && model.id == "positron_openai/gpt-5.6-sol"
     ) modelData.models
   );
+  glmModels = orderedValues (
+    lib.filterAttrs (
+      _: model: model.provider == "litellm" && model.id == "hera/GLM-5.2"
+    ) modelData.models
+  );
   solModel = builtins.head solModels;
   renderProvider =
     providerName: provider:
@@ -133,7 +138,7 @@ let
           sessionAffinityFormat = "openrouter";
         };
       };
-      models = map renderModel solModels;
+      models = map renderModel (solModels ++ glmModels);
     };
   routerProvider = {
     api = "router-local-api";
@@ -382,6 +387,7 @@ assert selected.settings == { };
 assert builtins.attrNames selected.mcpServers == expectedMcpNames;
 assert builtins.attrNames modelData.providers == expectedProviderNames;
 assert builtins.length solModels == 1;
+assert builtins.length glmModels == 1;
 assert solModel.contextLimit == 1050000;
 assert solModel.outputLimit == 128000;
 assert !(modelData ? default);

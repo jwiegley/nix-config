@@ -27,7 +27,6 @@ in
     "btw"
     "artifacts"
     "insights"
-    "litellm"
     "multi-pass"
     "router"
     "rewind"
@@ -101,12 +100,6 @@ in
       package = packages.pi-insights or null;
       publicName = "@ygncode/pi-insights";
       extension = "index.ts";
-    };
-    litellm = member "pi-provider-litellm" {
-      attrName = "pi-provider-litellm";
-      package = packages.pi-provider-litellm or null;
-      publicName = "pi-provider-litellm";
-      extension = "dist/index.js";
     };
     multi-pass = member "pi-multi-pass" {
       attrName = "pi-multi-pass";
