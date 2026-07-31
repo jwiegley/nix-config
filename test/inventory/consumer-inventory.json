@@ -3,7 +3,7 @@
  "artifact": "consumer-inventory",
  "generatedBy": "bin/consumer-inventory",
  "purpose": "Merged, classified inventory of every reference from every consumer into nix-config, so the config/ai -> config/fleet rename (#47) and its straggler sweep (#63) know exactly who breaks. One record per reference.",
- "repoHead": "b0984fcb0858d2cedf42d89f283b742027ef4b84",
+ "repoHead": "4033e65451efa65727ac4d5787be5cbf9f6b3eaf",
  "consumerLayout": "nix-config at the repository root; consumer checkouts as siblings (nixos, vps, andoria). Absolute paths are intentionally omitted: see the comment at this key in bin/consumer-inventory.",
  "classificationScheme": {
   "rename-now": "Stale operational reference to the literal config/ai directory inside nix-config; #47 must leave none.",
@@ -3080,7 +3080,7 @@
    "kind": "internal-config-ai-ref",
    "classification": "retain-with-owner",
    "file": "test/coverage/manifest.json",
-   "line": 1130,
+   "line": 1129,
    "text": "\"config/ai/flake.nix is an intentional throwing stub verified by immutable-subflake-check's negative probe; successful Nix evaluation cannot positively reach it.\",",
    "owner": "jwiegley/nix-config#47 historical or detector evidence",
    "trigger": "none; preserve recorded history or stale-path detection",
