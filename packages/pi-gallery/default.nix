@@ -82,6 +82,7 @@ let
     && lib.all (item: builtins.isString item && item != "") value
     && builtins.length value == builtins.length (lib.unique value);
   policyKeys = [
+    "defensiveForbidDependencies"
     "forbidDependencies"
     "removeTopLevel"
   ];
@@ -89,8 +90,10 @@ let
     value:
     builtins.isAttrs value
     && lib.sort builtins.lessThan (builtins.attrNames value) == policyKeys
+    && stringList value.defensiveForbidDependencies
     && stringList value.forbidDependencies
-    && stringList value.removeTopLevel;
+    && stringList value.removeTopLevel
+    && lib.intersectLists value.defensiveForbidDependencies value.forbidDependencies == [ ];
   normalizationContractValid =
     lib.sort builtins.lessThan (builtins.attrNames normalizationContract) == [
       "common"
@@ -98,7 +101,7 @@ let
       "schemaVersion"
       "targets"
     ]
-    && normalizationContract.schemaVersion == 1
+    && normalizationContract.schemaVersion == 2
     &&
       normalizationContract.npmDependencyFlags == [
         "--ignore-scripts"
@@ -108,6 +111,15 @@ let
       ]
     && policyValid normalizationContract.common
     && lib.all policyValid (builtins.attrValues normalizationContract.targets)
+    && lib.all (
+      policy:
+      let
+        enforced = normalizationContract.common.forbidDependencies ++ policy.forbidDependencies;
+        defensive =
+          normalizationContract.common.defensiveForbidDependencies ++ policy.defensiveForbidDependencies;
+      in
+      stringList enforced && stringList defensive && lib.intersectLists enforced defensive == [ ]
+    ) (builtins.attrValues normalizationContract.targets)
     && lib.all (
       policy:
       lib.intersectLists (normalizationContract.common.removeTopLevel ++ policy.removeTopLevel) [

@@ -26,7 +26,7 @@ else
       "targets"
     ]) | not) then
       error("invalid Pi npm normalization contract fields")
-    elif $contract.schemaVersion != 1 then
+    elif $contract.schemaVersion != 2 then
       error("unsupported Pi npm normalization contract schema")
     elif $contract.npmDependencyFlags != [
       "--ignore-scripts",
@@ -37,19 +37,30 @@ else
       error("invalid Pi npm dependency flags")
     elif ($contract.common | exact_keys([
       "removeTopLevel",
-      "forbidDependencies"
+      "forbidDependencies",
+      "defensiveForbidDependencies"
     ]) | not) then
       error("invalid Pi npm common normalization policy")
     elif ($contract.common.removeTopLevel | string_array | not) or
-         ($contract.common.forbidDependencies | string_array | not) then
+         ($contract.common.forbidDependencies | string_array | not) or
+         ($contract.common.defensiveForbidDependencies | string_array | not) or
+         (($contract.common.forbidDependencies +
+           $contract.common.defensiveForbidDependencies) | length != (unique | length)) then
       error("invalid Pi npm common normalization policy arrays")
     elif ($contract.targets | type) != "object" or
          ($contract.targets | length) == 0 or
          (all($contract.targets | keys[]; test("^[a-z0-9][a-z0-9-]*$")) | not) or
          (all($contract.targets[];
-           exact_keys(["removeTopLevel", "forbidDependencies"])
+           exact_keys([
+             "removeTopLevel",
+             "forbidDependencies",
+             "defensiveForbidDependencies"
+           ])
            and (.removeTopLevel | string_array)
            and (.forbidDependencies | string_array)
+           and (.defensiveForbidDependencies | string_array)
+           and ((.forbidDependencies + .defensiveForbidDependencies) |
+             length == (unique | length))
          ) | not) then
       error("invalid Pi npm target normalization policies")
     elif ($contract.targets | has($target) | not) then
@@ -57,28 +68,46 @@ else
     else
       $contract.targets[$target] as $targetPolicy
       | ($contract.common.removeTopLevel + $targetPolicy.removeTopLevel) as $removed
-      | ($contract.common.forbidDependencies + $targetPolicy.forbidDependencies) as $forbidden
-      | if any($removed[]; . == "name" or . == "version" or
+      | ($contract.common.forbidDependencies +
+         $targetPolicy.forbidDependencies) as $enforced
+      | ($contract.common.defensiveForbidDependencies +
+         $targetPolicy.defensiveForbidDependencies) as $defensive
+      | ($enforced + $defensive) as $forbidden
+      | if ($forbidden | length) != ($forbidden | unique | length) then
+          error("Pi npm dependency repeats across combined normalization policies")
+        elif any($removed[]; . == "name" or . == "version" or
             . == "dependencies" or . == "optionalDependencies") then
           error("Pi npm normalization policy removes a protected manifest field")
         else
-          reduce $removed[] as $field (.; del(.[$field]))
-          | reduce $forbidden[] as $dependency (
-              .;
-              reduce dependency_sections[] as $section (
-                .;
-                del(.[$section][$dependency])
-              )
-            )
-          | . as $normalized
-          | if any($forbidden[];
-              . as $dependency
-              | any(dependency_sections[];
+          . as $manifest
+          | [
+              $enforced[] as $dependency
+              | select(any(dependency_sections[];
                   . as $section
-                  | (($normalized[$section] // {}) | has($dependency)))) then
-              error("forbidden Pi npm dependency survived normalization")
+                  | (($manifest[$section] // {}) | has($dependency))) | not)
+              | $dependency
+            ] as $inert
+          | if ($inert | length) > 0 then
+              error("inert enforced Pi npm dependencies: \($inert | join(", "))")
             else
-              .
+              reduce $removed[] as $field ($manifest; del(.[$field]))
+              | reduce $forbidden[] as $dependency (
+                .;
+                reduce dependency_sections[] as $section (
+                  .;
+                  del(.[$section][$dependency])
+                )
+              )
+              | . as $normalized
+              | if any($forbidden[];
+                  . as $dependency
+                  | any(dependency_sections[];
+                      . as $section
+                      | (($normalized[$section] // {}) | has($dependency)))) then
+                  error("forbidden Pi npm dependency survived normalization")
+                else
+                  .
+                end
             end
         end
     end
