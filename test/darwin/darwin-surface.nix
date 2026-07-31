@@ -55,6 +55,10 @@ let
     builtins.hashString "sha256" (
       builtins.unsafeDiscardStringContext (builtins.toJSON (normalizeStoreValue value))
     );
+  # Authorization values need exact content identity inside their opaque digest.
+  # Normalizing a store prefix here would hide rebuilt key files or commands.
+  hashExactJsonValue =
+    value: builtins.hashString "sha256" (builtins.unsafeDiscardStringContext (builtins.toJSON value));
   projectBuildMachine =
     machine:
     let
@@ -62,7 +66,7 @@ let
     in
     (builtins.removeAttrs machine [ "sshKey" ])
     // {
-      sshKeySha256 = if sshKey == null then null else hashJsonValue (toString sshKey);
+      sshKeySha256 = if sshKey == null then null else hashExactJsonValue (toString sshKey);
     };
 in
 {
@@ -87,9 +91,9 @@ in
         description = user.description or null;
         authorizedKeys = {
           keysCount = builtins.length keys;
-          keysSha256 = hashJsonValue keys;
+          keysSha256 = hashExactJsonValue keys;
           keyFilesCount = builtins.length keyFiles;
-          keyFilesSha256 = hashJsonValue keyFiles;
+          keyFilesSha256 = hashExactJsonValue keyFiles;
         };
       }
     ) c.users.users;

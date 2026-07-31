@@ -518,7 +518,7 @@ def artifact(
             "32-character /nix/store hash prefixes are masked; derivation names "
             "remain. Launchd scripts are hashed after that normalization, so their "
             "text is not persisted. Authorized-key lists, authorized-key file paths, "
-            "and build-machine private-key paths are persisted only as normalized "
+            "and build-machine private-key paths are persisted only as exact opaque "
             "aggregate hashes plus non-sensitive counts; sensitive keys and "
             "assignments are refused."
         ),
