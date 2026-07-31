@@ -137,7 +137,7 @@
     };
 
     stock-trader = {
-      url = "git+ssh://gitea/johnw/stock-trader.git";
+      url = "git+ssh://gitea@gitea.vulcan.lan:2222/johnw/stock-trader.git";
       flake = false;
     };
 
