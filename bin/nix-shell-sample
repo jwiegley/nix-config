@@ -1,4 +1,0 @@
-#!/usr/bin/env nix-shell
-#! nix-shell -i python -p python pythonPackages.pygments
-
-print "hello world"

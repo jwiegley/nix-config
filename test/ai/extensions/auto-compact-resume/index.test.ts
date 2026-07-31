@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-const modulePath = "./index.ts";
+const modulePath = "../../../../config/fleet/extensions/auto-compact-resume/index.ts";
 const CONTEXT_WINDOW = 1_050_000;
 const COMPACTION_THRESHOLD = 945_000;
 

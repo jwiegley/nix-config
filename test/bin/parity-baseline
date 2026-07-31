@@ -29,7 +29,7 @@
 #       the hash of the entire tree. Measured: adding one unrelated file moves it.
 #       Adding a file under bin/ additionally moves the nix-scripts source. So a
 #       moved host drvPath is uninformative here; the multiset is the signal.
-#       Measured: adding bin/quality and bin/parity-baseline moved all four host
+#       Measured: adding test/bin/quality and test/bin/parity-baseline moved all four host
 #       drvPaths and moved no multiset (386/414/367/368 unchanged). The portable
 #       drvPaths did not move, since config/fleet does not depend on bin/.
 #
@@ -37,14 +37,14 @@
 # "multiset moved" during a refactor is a failure. Use --compare to see which.
 #
 # Usage:
-#   bin/parity-baseline                     # derive, print JSON to stdout
-#   bin/parity-baseline --write             # derive, write test/baseline/parity-<rev>.json
-#   bin/parity-baseline --check FILE        # strict: re-derive at the SAME rev,
+#   test/bin/parity-baseline                     # derive, print JSON to stdout
+#   test/bin/parity-baseline --write             # derive, write test/baseline/parity-<rev>.json
+#   test/bin/parity-baseline --check FILE        # strict: re-derive at the SAME rev,
 #                                           #   require byte-identical (determinism)
-#   bin/parity-baseline --compare FILE      # cross-rev: report multiset drift
+#   test/bin/parity-baseline --compare FILE      # cross-rev: report multiset drift
 #                                           #   separately from drvPath drift
 #   REFRESH_REASON=... [REFRESH_DELTAS=...] \
-#     bin/parity-baseline --refresh FILE    # advance the oracle to HEAD, appending
+#     test/bin/parity-baseline --refresh FILE    # advance the oracle to HEAD, appending
 #                                           #   a provenance entry; refuses a moved
 #                                           #   multiset unless REFRESH_DELTAS names it
 #   PARITY_COMMAND_MIGRATION=config-ai-to-config-fleet is the one-time #47
@@ -54,7 +54,7 @@
 
 set -euo pipefail
 
-repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$repo_root"
 
 # The oracle is only satisfiable if it postdates the overlay-factory refactor.
@@ -252,7 +252,7 @@ out = {
     "note": (
         "Stored evidence for the Fleet Configuration Programme parity gates. "
         "Package counts are derived from the lists in this file, never asserted "
-        "separately. Re-derive with bin/parity-baseline --check <this file>."
+        "separately. Re-derive with test/bin/parity-baseline --check <this file>."
     ),
     "commands": json.load(open(commands_path)),
     "targets": sorted(targets, key=lambda t: (t["kind"], t["target"])),
@@ -293,7 +293,7 @@ case ${1-} in
     # derive()'s output; a literal whole-file diff would call that "drift" and
     # every --check would fail permanently the moment the oracle first advanced.
     # Those two fields are not derived quantities and are validated separately by
-    # bin/oracle-currency-test.py, which is where they belong.
+    # test/bin/oracle-currency-test.py, which is where they belong.
     core() {
         python3 -c '
 import json, sys
@@ -507,7 +507,7 @@ PY
     # Cheap: print the derivation commands WITHOUT evaluating anything, so the
     # currency guard can assert the oracle's recorded command still matches this
     # tool. Until this mode existed, that assertion could only skip -- see
-    # bin/oracle-currency-test.py::test_recorded_command_matches_the_tool, which
+    # test/bin/oracle-currency-test.py::test_recorded_command_matches_the_tool, which
     # has always called `--commands` and skipped on its non-zero exit. A gate
     # that skips is a gate that reports success while covering nothing.
     commands_json

@@ -79,18 +79,28 @@ let
     npmInstallFlags = [ "--omit=dev" ];
     dontNpmBuild = true;
     postPatch = ''
-      # The pinned upstream lock omits integrity on three dev-only nested
-      # packages. Nix parses the whole lock before npm applies --omit=dev.
-      substituteInPlace package-lock.json \
-        --replace-fail \
-          '"resolved": "https://registry.npmjs.org/@earendil-works/pi-agent-core/-/pi-agent-core-0.79.10.tgz",' \
-          $'"resolved": "https://registry.npmjs.org/@earendil-works/pi-agent-core/-/pi-agent-core-0.79.10.tgz",\n      "integrity": "sha512-XKxgdjhcPuyjrthCOFSgfzT3xZ1uBrJ1IMVDxci1to6hIN6BIg9J5iY8q0pGXK1DLgATLP23da+1UyZLwA360Q==",' \
-        --replace-fail \
-          '"resolved": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.79.10.tgz",' \
-          $'"resolved": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.79.10.tgz",\n      "integrity": "sha512-9jR23tOl0BIUdQMn70Gr72xYBpM7Xgl9Lyv7gAnU1USfkNRuYG/f/edLl+n/Dp/RafDW3JI4DF7y/GhgkORuew==",' \
-        --replace-fail \
-          '"resolved": "https://registry.npmjs.org/@earendil-works/pi-tui/-/pi-tui-0.79.10.tgz",' \
-          $'"resolved": "https://registry.npmjs.org/@earendil-works/pi-tui/-/pi-tui-0.79.10.tgz",\n      "integrity": "sha512-FUVOjDn1DVwM1uHD5MNYboXQrXjIDbSt+BQ3py7nQWCY62tKfxgiM1OBMxTcwRWLfSdZHUPpV0hm1loIdUJnPw==",'
+      # Nix validates every lock entry before npm applies --omit=dev. Remove
+      # the unused development graph from both manifests instead of pinning
+      # repairs for whichever dev-package versions upstream currently locks.
+      ${python3}/bin/python3 - <<'PY'
+      import json
+      from pathlib import Path
+
+      package_path = Path("package.json")
+      package = json.loads(package_path.read_text())
+      package.pop("devDependencies", None)
+      package_path.write_text(json.dumps(package, indent=2) + "\n")
+
+      lock_path = Path("package-lock.json")
+      lock = json.loads(lock_path.read_text())
+      lock["packages"][""].pop("devDependencies", None)
+      lock["packages"] = {
+          path: metadata
+          for path, metadata in lock["packages"].items()
+          if not metadata.get("dev", False)
+      }
+      lock_path.write_text(json.dumps(lock, indent=2) + "\n")
+      PY
       ${python3}/bin/python3 ${./pi-mcp-adapter-normalize.py} init.ts
     '';
   };

@@ -10,7 +10,8 @@ import unittest
 from pathlib import Path
 
 
-WRAPPER = Path(__file__).with_name("codex-env")
+REPO = Path(__file__).resolve().parents[2]
+WRAPPER = REPO / "bin" / "codex-env"
 REF_SECRET = "synthetic-ref-secret"
 PERPLEXITY_SECRET = "synthetic-perplexity-secret"
 

@@ -5,7 +5,7 @@
 
 **Implementation boundary:** `fleet-coverage/1` implements structural denominators,
 tier ownership, Nix file-evaluation-start reach, pre-commit timing, a credential-safe
-artifact, and `bin/quality coverage`. Output, host, option-value, dynamic-Python,
+artifact, and `test/bin/quality coverage`. Output, host, option-value, dynamic-Python,
 shell-line, and negative-gate execution measurements remain explicit `unknown` in
 schema 1. Their inventories/contracts are present, but schema validity never promotes
 an unmeasured component to pass.
@@ -161,8 +161,8 @@ identity remains explicit `unknown` in schema 1.
 | `hostReach` | Registry-derived real machines, group rows, synthetic fixtures and unique evaluation roots, each with a stable kind/ID | Current eval/build gate named per evaluation root; aliases reference one result | Every denominator ID is assigned exactly one root or explicit unavailable state; skip never passes | Group proxies do not exercise member-host branches; eval is not activation/runtime proof |
 | `optionValueReach` | Static option declarations plus evaluated option-tree paths (union, never evaluated-only) | Per-target forced status/type/fingerprint under a default-deny safe-field policy | Every declared path is present in the union and forced on at least one fixture; inert/default-only options reported separately | Value forcing does not prove a consumer reads it; raw values are not persisted |
 | `pythonDynamic` | Coverage.py executable statements/branches for files in a tier | Runtime line/branch hits | Report exact tier, paths, tool version; regression-gated separately | Subprocess/custom interpreter and unimportable script caveats |
-| `pythonInventory` | `bin/quality --files python` | Paths assigned to fast/slow/manual tier | Every tracked path assigned exactly once | Assignment is not execution |
-| `shellBehavior` | `bin/quality --files shell` | Explicit script → behavioral test/check/tier ownership | Every production script classified tested or gap; test drivers classified separately | No shell line-hit backend is available in the locked cross-platform environment without a new dependency |
+| `pythonInventory` | `test/bin/quality --files python` | Paths assigned to fast/slow/manual tier | Every tracked path assigned exactly once | Assignment is not execution |
+| `shellBehavior` | `test/bin/quality --files shell` | Explicit script → behavioral tests/check/tier ownership | Every production script classified tested or gap; test drivers classified separately | No shell line-hit backend is available in the locked cross-platform environment without a new dependency |
 | `negativeGate` | Unique executable authorities: `quality:<suite>` plus system-qualified `checks.<system>.<attr>`; hook/CI entries are invocation surfaces, not duplicate gates | Committed perturbation + expected failing diagnostic | No gate may be `proven` without a replayable negative | A mutation can cover only the named failure mode |
 | `testCaseReach` | Test cases discovered independently from runtime | Structured runtime outcome: passed/failed/skipped/not-run | Every selected case reports one outcome; skipped/not-run is not pass | A test case may contain multiple assertions |
 | `assertionCallReach` | Statically enumerated Python assertion-call lines and explicitly named Nix assertion records | Coverage.py line hit or named Nix result | Reached/pass and unreached are distinct; languages without instrumentation report `unknown` | Line hits do not prove every expression inside a compound assertion |
@@ -202,7 +202,7 @@ versioned artifact; they do not require those bare numbers forever. In particula
   with nine lock-bearing npm records, so the then-current delta would be 23 → 14).
 - #43’s “inventory total stays 188” is replaced by **total is unchanged across the
   change**. The current total happens to be 199.
-- `bin/quality` prose saying 11 retired Emacs MCP backend MCP Python `*-test.py` files is stale; 12 are
+- `test/bin/quality` prose saying 11 retired Emacs MCP backend MCP Python `*-test.py` files is stale; 12 are
   tracked today (three additional Elisp `*-test.el` files are a separate inventory).
 
 ## Tiers and cost contract
@@ -211,14 +211,14 @@ versioned artifact; they do not require those bare numbers forever. In particula
 |---|---|---|---|
 | pre-commit | formatting/lint, bounded unit tests, and the essential updater parser/catalog/routing/negative plan | one supervised local quality tier | Hard wall-clock envelope: **120 seconds**, implemented as TERM at 105 seconds, five seconds of kill grace, and ten seconds reserved for supervisor startup, post-KILL verification, and reporting. Coverage-artifact freshness, the complete updater matrix, and portable all-system evaluation are excluded here but remain mandatory at issue closeout and in their broader tiers. |
 | pre-push | slow focused Python suites, live Nix-reach comparison, Darwin surface, consumers, signatures, system/agent checks | local hook | Initial planning ceiling: **900 seconds**; compliance is not yet claimed or enforced as one aggregate measurement. The live probes are explicitly assigned here; configuration probes allow 600 seconds of contention headroom, bounded metadata probes 120–240 seconds. |
-| expensive | Local authority: unfiltered tracked Python integration, portable all-system evaluation, consumer/signature gates, structural/live coverage, and Darwin value surface. Remote companion: portable evaluation plus three portable-native gallery builds. | `bin/quality --tier expensive` locally; the distinct remote-safe companion runs twice daily on GitHub plus manual dispatch | **1800-second** local quality ceiling; scheduled remote-safe checks run at most twice daily rather than per commit. Platform-specific native builds have a separate 60-minute workflow bound. LAN-only root tests remain local and are not presented as GitHub evidence. |
+| expensive | Local authority: unfiltered tracked Python integration, portable all-system evaluation, consumer/signature gates, structural/live coverage, and Darwin value surface. Remote companion: portable evaluation plus three portable-native gallery builds. | `test/bin/quality --tier expensive` locally; the distinct remote-safe companion runs twice daily on GitHub plus manual dispatch | **1800-second** local quality ceiling; scheduled remote-safe checks run at most twice daily rather than per commit. Platform-specific native builds have a separate 60-minute workflow bound. LAN-only root tests remain local and are not presented as GitHub evidence. |
 
-The limits are policy ceilings. The hook itself runs `bin/quality --tier pre-commit`
+The limits are policy ceilings. The hook itself runs `test/bin/quality --tier pre-commit`
 under the 120-second supervisor. Intermediate commits may carry stale consolidated
 coverage evidence; pre-push, `make test`, the expensive tier, and issue closeout retain
 the `coverage` authority. Artifact refresh independently executes and records the
 same core tier without a self-referential coverage check. Full updater
-integration and portable evaluation run through `bin/quality --tier expensive`, which
+integration and portable evaluation run through `test/bin/quality --tier expensive`, which
 selects every tracked `bin/*-test.py` suite unfiltered. A timing regression is a
 concern even when correctness remains green; tiering cannot silently delete a test
 because manifest ownership is exact and the expensive selector always loads all
@@ -284,7 +284,7 @@ Selected prior art is mapped explicitly:
 - **compose** Nix file-entry diagnostics and Determinate schema forcing into the
   expensive tier;
 - **adopt** coverage.py for Python line/branch data;
-- **extend** existing `bin/quality`, parity/baseline and consumer-inventory patterns;
+- **extend** existing `test/bin/quality`, parity/baseline and consumer-inventory patterns;
 - **defer** nix-unit, Nixtest, nix-tests and Namaka until a concrete
   pure-unit/snapshot/script migration needs them;
 - **defer** nix-eval-jobs until a bounded derivation projection and self-hosted runner
@@ -295,7 +295,7 @@ Selected prior art is mapped explicitly:
 1. Commit this research/design record. **Delivered.**
 2. Build a read-only collector plus schema-versioned artifact and negative tests.
    **Delivered in `fleet-coverage/1`.**
-3. Add `bin/quality coverage` as the only suite authority; hooks/CI delegate to it.
+3. Add `test/bin/quality coverage` as the only suite authority; hooks/CI delegate to it.
    **Delivered.**
 4. Measure and enforce tier timing, then split slow tests without deleting coverage.
    **Delivered for the pre-commit/pre-push split; dynamic Python remains explicit

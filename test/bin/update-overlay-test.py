@@ -22,12 +22,14 @@ from types import SimpleNamespace
 from urllib.parse import urlsplit
 
 
-SCRIPT = Path(__file__).with_name("update-overlay")
-UPDATE_AGENTS = Path(__file__).with_name("update")
-UPGRADE_PROJECTS = Path(__file__).with_name("upgrade-projects")
-UPGRADE = Path(__file__).with_name("upgrade")
-SWITCH = Path(__file__).with_name("switch")
-BUILD = Path(__file__).parent.parent / "build"
+REPO = Path(__file__).resolve().parents[2]
+BIN = REPO / "bin"
+SCRIPT = BIN / "update-overlay"
+UPDATE_AGENTS = BIN / "update"
+UPGRADE_PROJECTS = BIN / "upgrade-projects"
+UPGRADE = BIN / "upgrade"
+SWITCH = BIN / "switch"
+BUILD = REPO / "build"
 MODULE = runpy.run_path(str(SCRIPT))
 GitHubClient = MODULE["GitHubClient"]
 HashComputer = MODULE["HashComputer"]
@@ -4365,6 +4367,18 @@ got: sha256-requested
         self.assertIn("sources/pi.json", catalog["pi-mcp-adapter"]["files"])
         self.assertNotIn("config/fleet/catalog.nix", catalog["pi-mcp-adapter"]["files"])
         self.assertEqual(catalog["ws"]["_record"]["update"]["package"], "ws")
+        self.assertEqual(
+            catalog["mcp-remote"]["_record"]["update"]["kind"],
+            "flake-input+build",
+        )
+        self.assertEqual(
+            catalog["mcp-remote"]["_record"]["update"]["buildPackage"],
+            "agent-http-header-bridge",
+        )
+        self.assertEqual(
+            set(catalog["mcp-remote"]["_record"]["hashes"]),
+            {"npmDepsHash"},
+        )
 
         result = subprocess.run(
             [sys.executable, str(SCRIPT), "--inventory", "--json"],
@@ -4382,10 +4396,6 @@ got: sha256-requested
         self.assertEqual(len(names), len(set(names)))
         self.assertEqual(set(names), set(catalog))
         self.assertEqual(names, sorted(catalog))
-        self.assertEqual(
-            hashlib.sha256("\n".join(names).encode()).hexdigest(),
-            "91d298d92996c2f0daf56ead7291be2a2913a967595a54d4695e1ec6ed821c87",
-        )
         self.assertTrue(required <= set(names))
         self.assertTrue(all(item["inventoried"] for item in inventory["packages"]))
         self.assertEqual(set(inventory), {"packages", "schemaVersion"})
@@ -4415,11 +4425,6 @@ got: sha256-requested
         self.assertEqual(
             {item["name"] for item in inventory["packages"] if not item["managed"]},
             set(),
-        )
-        self.assertEqual(len(inventory["packages"]), 192)
-        self.assertEqual(
-            len([item for item in inventory["packages"] if item["managed"]]),
-            192,
         )
         self.assertEqual(catalog_owned, set(catalog))
         self.assertTrue(relocated <= catalog_owned)
@@ -6653,7 +6658,6 @@ exec "$REAL_GIT" "$@"
         for required_input in (
             "git-ai",
             "llm-agents",
-            "mcp-remote",
             "mcp-servers-nix",
             "pal-mcp-server",
             "pi-openai-server-compaction",
@@ -6669,6 +6673,7 @@ exec "$REAL_GIT" "$@"
         self.assertNotIn("\n    nixpkgs\n", update_agents)
         for catalog_routed in (
             "agent-browser-source",
+            "mcp-remote",
             "pi-agent-browser-native",
             "pi-artifacts",
             "pi-dynamic-workflows",

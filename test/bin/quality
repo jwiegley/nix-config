@@ -9,7 +9,7 @@
 #   * CI shell-checks named 9 files by hand; lefthook globbed the non-recursive
 #     bin/* plus build and found 18. CI was blind to 9 real scripts, including
 #     bin/switch, bin/update-remote and bin/upgrade-all. (An audit corrected this
-#     from "19 / blind to 10": the extra file was bin/quality itself, already in
+#     from "19 / blind to 10": the extra file was test/bin/quality itself, already in
 #     the working tree when the measurement was taken.)
 #   * Both hardcoded the same 4 Python files while the tree tracks 35. The other
 #     31 additional tracked Python files were never linted.
@@ -26,13 +26,13 @@
 #      non-zero. Never stop at the first failure, never lose one to $?.
 #
 # Usage:
-#   bin/quality                      # run every suite (same as `all`)
-#   bin/quality nix-format           # one suite
-#   bin/quality --python-tier pre-commit python-test
-#   bin/quality --tier expensive      # low-frequency exhaustive assurance
-#   bin/quality shell-format --fix   # rewrite instead of check, where meaningful
-#   bin/quality --list               # print every suite
-#   bin/quality --files shell        # print the discovered file set and exit
+#   test/bin/quality                      # run every suite (same as `all`)
+#   test/bin/quality nix-format           # one suite
+#   test/bin/quality --python-tier pre-commit python-test
+#   test/bin/quality --tier expensive      # low-frequency exhaustive assurance
+#   test/bin/quality shell-format --fix   # rewrite instead of check, where meaningful
+#   test/bin/quality --list               # print every suite
+#   test/bin/quality --files shell        # print the discovered file set and exit
 #
 # Suites: nix-format nix-lint nix-deadcode shell-lint shell-format
 #         python-lint python-test portable-eval immutable-subflake
@@ -46,7 +46,7 @@ repo_root=$(git rev-parse --show-toplevel) || {
     printf 'quality: not in a git repository\n' >&2
     exit 1
 }
-quality_program=$repo_root/bin/quality
+quality_program=$repo_root/test/bin/quality
 cd "$repo_root" || exit 1
 
 SUITES=(
@@ -129,22 +129,22 @@ files_python() {
     done < <(git ls-files)
 }
 
-# unittest suites, by the repo's bin/<name>-test.py convention.
+# unittest suites, by the repo's test/bin/<name>-test.py convention.
 #
 # Scope boundary, stated rather than left to be discovered: this is deliberately
-# narrower than files_python. The tree also tracks test/ai/statusline-command-test.py
+# narrower than files_python. Test suites live together under test/bin
 # and other non-bin suites. Those are LINTED by python-lint
 # but not EXECUTED here, because several drive a live Emacs or a long soak and are
 # not safe to run unattended in a pre-commit hook. They have their own flake
 # checks. Widening this glob without first tiering those suites would make every
 # commit wait on them.
-files_python_tests() { git ls-files -- 'bin/*-test.py'; }
+files_python_tests() { git ls-files -- 'test/bin/*-test.py'; }
 
 # Tier assignment is data, not another filename glob. The manifest owns the
 # assignment and this selector intersects it with the live tracked test set. A
 # missing, duplicate, non-test, or empty assignment is a refusal: otherwise a new
 # test could silently disappear from every invocation surface while the hook stays
-# green. `all` preserves the historical `bin/quality python-test` behavior.
+# green. `all` preserves the historical `test/bin/quality python-test` behavior.
 files_python_tests_for_tier() {
     local tier=$1
     python3 - "$repo_root" "$tier" <<'PY'
@@ -167,7 +167,7 @@ except (OSError, json.JSONDecodeError) as error:
     raise SystemExit(f"quality: cannot read Python tier manifest: {error}")
 
 tracked_run = subprocess.run(
-    ["git", "ls-files", "--", "bin/*-test.py"],
+    ["git", "ls-files", "--", "*-test.py"],
     cwd=repo,
     capture_output=True,
     text=True,
@@ -175,7 +175,13 @@ tracked_run = subprocess.run(
 )
 if tracked_run.returncode != 0:
     raise SystemExit("quality: could not discover tracked Python test suites")
-tracked = sorted(path for path in tracked_run.stdout.splitlines() if path)
+all_tracked = sorted(path for path in tracked_run.stdout.splitlines() if path)
+misplaced = [path for path in all_tracked if not path.startswith("test/bin/")]
+if misplaced:
+    raise SystemExit(
+        f"quality: Python test suites must live under test/bin: {misplaced}"
+    )
+tracked = all_tracked
 tracked_set = set(tracked)
 
 entries = [
@@ -393,8 +399,8 @@ PY
 run_python_test() {
     need python3 python-test || return
     need timeout python-test || return
-    [[ -x $repo_root/bin/unittest-strict.py ]] || {
-        fail "python-test: bin/unittest-strict.py is missing or not executable"
+    [[ -x $repo_root/test/bin/unittest-strict.py ]] || {
+        fail "python-test: test/bin/unittest-strict.py is missing or not executable"
         return
     }
     local selection budget start elapsed remaining status
@@ -433,7 +439,7 @@ run_python_test() {
             timeout_args+=(--foreground)
         fi
         timeout "${timeout_args[@]}" "$remaining" \
-            "$repo_root/bin/unittest-strict.py" "$f"
+            "$repo_root/test/bin/unittest-strict.py" "$f"
         status=$?
         ran=$((ran + 1))
         if [[ $status -eq 124 ]]; then
@@ -465,15 +471,15 @@ run_python_test() {
 # break a consumer fails at pre-push instead of at the consumer's next lock bump —
 # which is how vulcan's evaluation stayed broken for weeks.
 #
-# bin/cross-consumer-eval is the authority for what that means; it reports every
+# test/bin/cross-consumer-eval is the authority for what that means; it reports every
 # consumer before exiting non-zero, so this suite only records the verdict.
 # Targeted but expensive: wired into pre-push, deliberately NOT pre-commit.
 run_consumer_eval() {
     need nix consumer-eval || return
-    if bin/cross-consumer-eval; then
+    if test/bin/cross-consumer-eval; then
         note "consumer-eval: OK"
     else
-        fail "consumer-eval: bin/cross-consumer-eval reported a failing consumer"
+        fail "consumer-eval: test/bin/cross-consumer-eval reported a failing consumer"
     fi
 }
 
@@ -488,7 +494,7 @@ run_signatures() {
     #
     # Unlike every other suite this one operates on a COMMIT RANGE rather than a
     # `git ls-files` file set, so it has no --files arm.
-    if bin/verify-signatures; then
+    if test/bin/verify-signatures; then
         note "signatures: every commit in range carries a good signature"
     else
         fail "signatures: unsigned or bad-signature commit(s) in range"
@@ -510,11 +516,11 @@ run_portable_eval() {
 # checks the ?dir=config/fleet flake without allowing a lock write.  It is expensive
 # closeout evidence and therefore deliberately absent from pre-commit.
 run_immutable_subflake() {
-    if [[ ! -x bin/immutable-subflake-check ]]; then
-        fail "immutable-subflake: bin/immutable-subflake-check is missing or not executable"
+    if [[ ! -x test/bin/immutable-subflake-check ]]; then
+        fail "immutable-subflake: test/bin/immutable-subflake-check is missing or not executable"
         return
     fi
-    if bin/immutable-subflake-check; then
+    if test/bin/immutable-subflake-check; then
         note "immutable-subflake: immutable config/fleet archive is lock-stable"
     else
         fail "immutable-subflake: immutable archive verification failed"
@@ -543,23 +549,23 @@ run_darwin_surface() {
 # this verifies that the committed artifact still matches live structural
 # denominators and refuses missing, stale, malformed, or duplicate artifacts.
 run_coverage() {
-    if [[ ! -x bin/coverage-report ]]; then
-        fail "coverage: bin/coverage-report is missing or not executable"
+    if [[ ! -x test/bin/coverage-report ]]; then
+        fail "coverage: test/bin/coverage-report is missing or not executable"
         return
     fi
-    if bin/coverage-report --check; then
+    if test/bin/coverage-report --check; then
         note "coverage: committed artifact matches live structural inventories"
     else
-        fail "coverage: bin/coverage-report rejected the committed artifact"
+        fail "coverage: test/bin/coverage-report rejected the committed artifact"
     fi
 }
 
 run_coverage_live() {
-    if [[ ! -x bin/coverage-report ]]; then
-        fail "coverage-live: bin/coverage-report is missing or not executable"
+    if [[ ! -x test/bin/coverage-report ]]; then
+        fail "coverage-live: test/bin/coverage-report is missing or not executable"
         return
     fi
-    if bin/coverage-report --compare-live; then
+    if test/bin/coverage-report --compare-live; then
         note "coverage-live: current Nix reach does not regress from the artifact"
     else
         fail "coverage-live: current Nix reach regressed or collection failed"
@@ -651,9 +657,9 @@ if [[ -n $quality_tier ]]; then
         printf 'quality: --tier cannot be combined with suites or --fix\n' >&2
         exit 1
     fi
-    deadline_supervisor=$repo_root/bin/deadline-supervisor.py
+    deadline_supervisor=$repo_root/test/bin/deadline-supervisor.py
     [[ -x $deadline_supervisor ]] || {
-        printf 'quality: bin/deadline-supervisor.py is missing or not executable\n' >&2
+        printf 'quality: test/bin/deadline-supervisor.py is missing or not executable\n' >&2
         exit 1
     }
     case $quality_tier in

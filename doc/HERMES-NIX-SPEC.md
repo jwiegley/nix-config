@@ -495,7 +495,7 @@ Provider calls, microphone, camera, Accessibility, Input Monitoring, Full Disk A
 Run the repository’s established checks, correcting only failures attributable to this work:
 
 ```bash
-python3 -m unittest -v bin/update-overlay-test.py
+python3 -m unittest -v test/bin/update-overlay-test.py
 nix flake check ./config/fleet --all-systems --no-build
 make test
 ./build system

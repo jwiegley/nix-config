@@ -42,7 +42,7 @@ mutation appeared at 12:48. Both plausible internal causes were **eliminated**:
 
 - The unit test suite does **not** mutate the tree — verified by cloning HEAD
   (`8452497c`) into a scratch dir and running `python3 -m unittest
-  bin/update-overlay-test.py`: 20 tests pass, `git status` stays empty.
+  test/bin/update-overlay-test.py`: 20 tests pass, `git status` stays empty.
 - The analysis workflow's agent transcripts were created at 12:53, *after* the
   12:48 mutation, and contain no mutating commands. The two `web-searcher`
   agents have only Perplexity/WebFetch tools and cannot write files.
@@ -77,7 +77,7 @@ Read-only analysis and design work continues safely and is unaffected.
 - **DoD-7 baseline verification — PASSED, output shown.**
   `nix flake check ./config/ai --all-systems --no-build` exit 0, all checks green
   across `aarch64-darwin`, `aarch64-linux`, `x86_64-linux`; captured output is
-  reproduced under "DoD-7 evidence" in the plan. `bin/update-overlay-test.py`
+  reproduced under "DoD-7 evidence" in the plan. `test/bin/update-overlay-test.py`
   20/20, independently re-run by the `fess` audit with a clean tree before and
   after. `nix fmt` is not applicable — this branch modifies only Markdown.
 - External research complete (two `web-searcher` agents) — see
@@ -177,7 +177,7 @@ structural defect, not an outage.
 inputs = rootInputs // portableInputs;`. The subflake therefore owns the
 authoritative input set and re-exports it instead of the root duplicating those
 declarations, an invariant enforced by
-`bin/update-overlay-test.py:887` (`test_root_consumes_portable_input_authority_transitively`).
+`test/bin/update-overlay-test.py:887` (`test_root_consumes_portable_input_authority_transitively`).
 This "input authority" idea is the right shape and the target design should
 generalize it rather than discard it.
 
@@ -225,7 +225,7 @@ Neither blocker is architectural. This is the key feasibility precondition for
 retiring `flake = false`, and it holds.
 
 **F9 — The no-external-filesystem invariant test is one level too shallow.**
-`bin/update-overlay-test.py:872` (`test_root_inputs_do_not_reference_external_filesystems`)
+`test/bin/update-overlay-test.py:872` (`test_root_inputs_do_not_reference_external_filesystems`)
 iterates only `lock["nodes"]["root"]["inputs"]`, so it validates *root* inputs
 and never walks the transitive closure. The `obr` → `org2jsonl` →
 `file:///Users/johnw/src/org2jsonl` leak from F3 therefore passes the test today.

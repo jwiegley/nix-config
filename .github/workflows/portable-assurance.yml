@@ -3,7 +3,7 @@ name: Portable assurance
 # Remote-safe portable Nix checks intentionally do not run for every commit.
 # The ordinary commit gate is hard-capped at two minutes; this subset runs twice
 # daily and remains manually dispatchable.  LAN-only exhaustive integration
-# stays available through the local `bin/quality --tier expensive` authority.
+# stays available through the local `test/bin/quality --tier expensive` authority.
 on:
   schedule:
     - cron: "17 2,14 * * *"
@@ -29,7 +29,7 @@ jobs:
       # The full expensive tier includes LAN-only consumer checks and remains a
       # local/manual authority.  GitHub runs only its remote-safe portable part.
       - name: Evaluate every portable AI system
-        run: bin/quality portable-eval
+        run: test/bin/quality portable-eval
 
   portable-native:
     strategy:

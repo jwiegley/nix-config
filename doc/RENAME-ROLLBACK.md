@@ -88,7 +88,7 @@ of the nix-config input).** Nix treats a local path as *mutable* and silently re
 the consumer's lock to match your working tree — a false pass that hides whether the
 *published* revision is actually correct. This is recorded in
 `doc/FLEET-DESIGN-PLAN.md` §6.2 ("A trap that would have produced a false pass") and is
-enforced structurally: `bin/update-overlay-test.py::test_root_inputs_do_not_reference_external_filesystems`
+enforced structurally: `test/bin/update-overlay-test.py::test_root_inputs_do_not_reference_external_filesystems`
 fails the build if `git+file:`/`file:///`/`path:/` ever appears in the root flake or its
 lock closure. #47 forbids the scheme in this runbook for the same reason.
 
@@ -303,12 +303,12 @@ REVERT_REV=$(git rev-parse HEAD)
 # Verify the subflake is real again and the whole-tree up-import resolves:
 test -f config/ai/flake.lock && ! grep -q 'throw' config/ai/flake.nix && echo "config/ai restored"
 nix flake check ./config/ai --all-systems --no-build       # green = real subflake again
-bin/cross-consumer-eval                                     # eval-only, --no-write-lock-file;
+test/bin/cross-consumer-eval                                     # eval-only, --no-write-lock-file;
                                                             # proves the WORKING TREE still
                                                             # evaluates for all three consumers
 ```
 
-`bin/cross-consumer-eval` is working-tree evidence, not a lock check — it uses
+`test/bin/cross-consumer-eval` is working-tree evidence, not a lock check — it uses
 `--override-input` in memory and never writes a consumer lock. It is the fast local
 gate that the restored tree still evaluates. The *honest published* check is 7c.
 
@@ -564,7 +564,7 @@ generations` / `nixos-rebuild list-generations` shows the rollback generation li
   Vulcan's URL remains floating unless Q7 has separately authorized a pin.
 - `config/ai` is a real subflake again (`nix flake check ./config/ai --all-systems
   --no-build` green; no `throw`); `config/fleet` and the stub are gone.
-- `bin/cross-consumer-eval` green against the reverted working tree.
+- `test/bin/cross-consumer-eval` green against the reverted working tree.
 - The straggler tracker / stub-retirement gate (#63) is moot for the rolled-back path —
   there is no stub to retire once `config/ai` is real again.
 - Record `RENAME_BASE`, `RENAME_TIP`, and `REVERT_REV`, the remote-parity confirmation, and each
@@ -595,8 +595,8 @@ any activation.
   #18 (AG-DUALPUSH / `bin/publish`); consumer URL-move issues
   jwiegley/nixos-config#3 (vulcan), #57 (vps), #56 (shared-work).
 - Inventory: `test/inventory/consumer-inventory.json` (classification `stub-covered`).
-- Tools: `bin/publish`, `bin/cross-consumer-eval`,
-  `bin/update-overlay-test.py::test_root_inputs_do_not_reference_external_filesystems`.
+- Tools: `bin/publish`, `test/bin/cross-consumer-eval`,
+  `test/bin/update-overlay-test.py::test_root_inputs_do_not_reference_external_filesystems`.
 - Design: `doc/FLEET-DESIGN-PLAN.md` §6.2 (immutable-fetcher / false-pass), §7.8
   (group-level activation + `rollback-prev` gcroot pin), Q5a (rename decision);
   `doc/UNIFIED-CONFIG-RESEARCH.md` (2026-07-27).

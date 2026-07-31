@@ -2,14 +2,14 @@
 """Cheap currency and consistency guard for the fleet parity oracle.
 
 The oracle is ``test/baseline/parity-<rev>.json``, derived by
-``bin/parity-baseline`` (jwiegley/nix-config#19). Deriving it costs roughly five
+``test/bin/parity-baseline`` (jwiegley/nix-config#19). Deriving it costs roughly five
 minutes of cross-system ``nix eval``, so this guard NEVER re-derives. It reads
 the committed artifact plus git metadata only, and answers one question that a
 frozen oracle cannot answer about itself: *is this still a meaningful thing to
 compare against?*
 
 Determinism (byte-identity at the recorded rev) and multiset/drvPath
-equivalence remain ``bin/parity-baseline``'s job -- ``--check`` and
+equivalence remain ``test/bin/parity-baseline``'s job -- ``--check`` and
 ``--compare``. This file is strictly the currency/consistency half owned by
 jwiegley/nix-config#31, and it costs a few git calls, not a build.
 
@@ -26,7 +26,7 @@ What it asserts, all without a single nix evaluation:
   count can never drift from the list it summarises;
 * the recorded derivation command's KEYS and SHAPE are present
       (drift against the live tool is NOT asserted: that test skips until
-      bin/parity-baseline gains a --commands mode -- see the skip reason)
+      test/bin/parity-baseline gains a --commands mode -- see the skip reason)
   command that has drifted from the tool derives a different oracle than the one
   a later gate would;
 * provenance: any recorded history chain is well-formed and its tail is the
@@ -46,11 +46,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parents[2]
 BASELINE_DIR = REPO_ROOT / "test" / "baseline"
-PARITY_BASELINE = REPO_ROOT / "bin" / "parity-baseline"
+PARITY_BASELINE = REPO_ROOT / "test" / "bin" / "parity-baseline"
 
-# Must agree with bin/parity-baseline's ARMED_REFACTOR. a36d3f51 predates it, so
+# Must agree with test/bin/parity-baseline's ARMED_REFACTOR. a36d3f51 predates it, so
 # demanding byte-identity against a pre-a3cc3843 oracle can never be met.
 ARMED_REFACTOR = "a3cc3843"
 
@@ -333,7 +333,7 @@ def check_git_ancestry(oracle, armed_refactor, git):
 class OracleCurrencyTests(unittest.TestCase):
     """The guard proper: the committed oracle must be current and consistent.
 
-    Runs where bin/quality's python-test suite runs it -- the repo root, inside
+    Runs where test/bin/quality's python-test suite runs it -- the repo root, inside
     a git work tree -- and shells out to git the same way update-overlay-test.py
     shells out to bash. Every check reads the artifact and git metadata; none
     re-derives.
@@ -382,7 +382,7 @@ class OracleCurrencyTests(unittest.TestCase):
         if version == 1 and self.oracle.get("history") is None:
             self.skipTest(
                 "oracle is still at genesis schema /1; provenance activates at "
-                "/2, written by the first `bin/parity-baseline --refresh` "
+                "/2, written by the first `test/bin/parity-baseline --refresh` "
                 "(doc/PARITY-ORACLE-REFRESH.md, jw#31)"
             )
         self.assertGreaterEqual(
@@ -398,7 +398,7 @@ class OracleCurrencyTests(unittest.TestCase):
     def test_recorded_command_matches_the_tool(self):
         self._require_oracle()
         if not PARITY_BASELINE.exists():
-            self.skipTest("bin/parity-baseline is not present")
+            self.skipTest("test/bin/parity-baseline is not present")
         proc = subprocess.run(
             [str(PARITY_BASELINE), "--commands"],
             capture_output=True,
@@ -407,19 +407,19 @@ class OracleCurrencyTests(unittest.TestCase):
         )
         if proc.returncode != 0:
             self.skipTest(
-                "bin/parity-baseline has no cheap --commands mode yet; apply the "
+                "test/bin/parity-baseline has no cheap --commands mode yet; apply the "
                 "block in doc/PARITY-ORACLE-REFRESH.md so command drift is a hard "
                 "failure rather than a skip"
             )
         try:
             current = json.loads(proc.stdout)
         except json.JSONDecodeError as exc:
-            self.fail("bin/parity-baseline --commands did not emit JSON: %s" % exc)
+            self.fail("test/bin/parity-baseline --commands did not emit JSON: %s" % exc)
         self.assertEqual(
             self.oracle.get("commands"),
             current,
             "the oracle's recorded derivation command has drifted from "
-            "bin/parity-baseline; re-derive the oracle so the recorded command "
+            "test/bin/parity-baseline; re-derive the oracle so the recorded command "
             "matches the tool (jw#31)",
         )
 

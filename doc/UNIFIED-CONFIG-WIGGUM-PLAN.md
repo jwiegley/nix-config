@@ -67,7 +67,7 @@ Exit only when all hold, each with cited evidence rather than assertion:
    an explicit rollback for each stage, and a per-stage verification command.
    No stage may require a flag-day cutover across hosts.
 7. **DoD-7 — Baseline integrity.** `nix flake check ./config/ai
-   --all-systems --no-build` and `python3 -m unittest bin/update-overlay-test.py`
+   --all-systems --no-build` and `python3 -m unittest test/bin/update-overlay-test.py`
    pass, and `nix fmt` is clean. Passing output shown, not claimed.
 8. **DoD-8 — Audited.** The final commit passes an independent `fess` audit.
 9. **DoD-9 — Observations drained.** No actionable `doc/observations/` entry
@@ -92,7 +92,7 @@ Exit only when all hold, each with cited evidence rather than assertion:
 | Gate | Attempts | Status |
 |---|---|---|
 | `nix flake check ./config/ai` | 2 | **PASS** (both runs, exit 0) |
-| `bin/update-overlay-test.py` | 2 | **PASS** 20/20 (also re-run independently by the audit) |
+| `test/bin/update-overlay-test.py` | 2 | **PASS** 20/20 (also re-run independently by the audit) |
 | Flake laziness verification | 1 | **PASS** (empirical, see research doc) |
 | `nix fmt` clean | 0 | not run — no `.nix` file has been modified on this branch |
 | PAL consensus | 0 | not yet run |
@@ -117,7 +117,7 @@ across all three systems; representative tail:
 warning: The following flake outputs are unchecked: lib.
 ```
 
-`python3 -m unittest bin/update-overlay-test.py` → `Ran 20 tests ... OK`.
+`python3 -m unittest test/bin/update-overlay-test.py` → `Ran 20 tests ... OK`.
 
 `nix fmt` is listed as not run and that is correct rather than a gap: this branch
 has modified only Markdown under `doc/`, so there is no Nix formatting to check.

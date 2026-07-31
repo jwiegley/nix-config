@@ -7,7 +7,8 @@ import unittest
 from pathlib import Path
 
 
-WRAPPER = Path(__file__).with_name("agent-deck-env")
+REPO = Path(__file__).resolve().parents[2]
+WRAPPER = REPO / "bin" / "agent-deck-env"
 SYNTHETIC_REF_SECRET = "synthetic-ref-secret"
 SYNTHETIC_PERPLEXITY_SECRET = "synthetic-perplexity-secret"
 

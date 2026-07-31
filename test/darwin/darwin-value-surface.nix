@@ -41,7 +41,7 @@ let
   projection = {
     "test/darwin/darwin-surface.nix" = builtins.hashFile "sha256" ./darwin-surface.nix;
     "test/darwin/surface-helpers.nix" = builtins.hashFile "sha256" ./surface-helpers.nix;
-    "bin/darwin-surface-diff" = builtins.hashFile "sha256" ../../bin/darwin-surface-diff;
+    "test/bin/darwin-surface-diff" = builtins.hashFile "sha256" ../bin/darwin-surface-diff;
   };
   actualHosts = lib.genAttrs hosts (host: project darwinConfigurations.${host});
 
@@ -158,7 +158,7 @@ pkgs.runCommand "check-darwin-value-surface"
     nativeBuildInputs = [ pkgs.python3 ];
   }
   ''
-    ${pkgs.python3}/bin/python3 ${../../bin/darwin-surface-diff} \
+    ${pkgs.python3}/bin/python3 ${../bin/darwin-surface-diff} \
       --normalize-store \
       ${expectedFile} \
       ${actualFile}

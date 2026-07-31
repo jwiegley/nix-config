@@ -875,7 +875,7 @@ that discipline is preserved*.
   other; never both independently.
 - **A purity check** asserting the portable lock is 100% fetchable, walking the
   **whole** closure rather than only root inputs. **`READ`:**
-  `bin/update-overlay-test.py:872` currently iterates only
+  `test/bin/update-overlay-test.py:872` currently iterates only
   `lock["nodes"]["root"]["inputs"]`, which is precisely why the transitive `obr`
   leak passes today. Deepening it turns "consumable as a real flake" into an
   enforced invariant and is the natural migration gate.
@@ -1045,5 +1045,5 @@ services.
 Done), `doc/UNIFIED-CONFIG-WIGGUM-HANDOFF.md` (findings F1–F14 with `file:line`),
 `doc/UNIFIED-CONFIG-RESEARCH.md` (cited external research). Fifteen signed commits
 on `design/unified-fleet`. Baseline green throughout: `nix flake check ./config/ai
---all-systems --no-build` exit 0 on all three systems; `bin/update-overlay-test.py`
+--all-systems --no-build` exit 0 on all three systems; `test/bin/update-overlay-test.py`
 20/20.*

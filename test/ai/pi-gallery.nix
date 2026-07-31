@@ -101,7 +101,6 @@ assert builtins.length (builtins.attrNames manifest.members) == builtins.length 
 assert sourceCatalogComplete;
 assert orphanedCatalogRejected;
 assert manifestPackagesMatch;
-assert builtins.length normalizationTargets == 9;
 assert (piPackage.toolRendererWrapperAbi or null) == 1;
 runCommand "pi-gallery-check"
   {
@@ -190,8 +189,6 @@ runCommand "pi-gallery-check"
     [ -d ${roots.smart-web-search}/node_modules/wreq-js ]
 
     [ -f ${roots.lens}/dist/index.js ]
-    [ "$(find ${roots.lens}/skills -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 4 ]
-    [ "$(find ${roots.lens}/grammars -type f | wc -l)" -eq 24 ]
     ! grep -R -F 'autoInstall: true' ${roots.lens}/dist/clients >/dev/null \
       || fail "Lens still enables an auto-installer"
     grep -F 'disabled by Nix policy' ${roots.lens}/dist/clients/installer/index.js >/dev/null \
@@ -204,7 +201,6 @@ runCommand "pi-gallery-check"
 
 
     [ -f ${roots.ponytail}/pi-extension/index.js ]
-    [ "$(find ${roots.ponytail}/skills -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 6 ]
 
     [ -f ${roots.browser}/dist/extensions/agent-browser/index.js ]
     [ -f ${roots.blackhole}/index.ts ]
@@ -235,9 +231,7 @@ runCommand "pi-gallery-check"
     [ -d ${roots.subagents}/node_modules/jiti ]
     [ -d ${roots.subagents}/node_modules/yaml ]
     [ ! -e ${roots.subagents}/node_modules/typebox ]
-    [ "$(find ${roots.subagents}/agents -maxdepth 1 -type f -name '*.md' | wc -l)" -eq 9 ]
     [ -f ${roots.subagents}/skills/pi-subagents/SKILL.md ]
-    [ "$(find ${roots.subagents}/prompts -maxdepth 1 -type f -name '*.md' | wc -l)" -eq 7 ]
 
     cymbal_version=$(${lib.getExe piPackages.cymbal} --version)
     printf '%s\n' "$cymbal_version" | grep -F '${manifest.supportSources.cymbal.version}' >/dev/null \

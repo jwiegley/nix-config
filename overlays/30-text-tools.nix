@@ -93,7 +93,7 @@ in
     with prev;
     stdenv.mkDerivation rec {
       name = "org2tc-${version}";
-      version = "7d52a20";
+      version = builtins.substring 0 7 org2tc.rev;
 
       src = org2tc;
 

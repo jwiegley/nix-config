@@ -15,7 +15,7 @@ There are five worktrees on this repository. Therefore:
 - Before the terminal `merge --ff-only`, re-check that `main` has not moved and that
   the other writer has no uncommitted state. Abort rather than disturb it.
 
-**A hazard was hit and fixed here.** `bin/publish-test.py` built its git environment
+**A hazard was hit and fixed here.** `test/bin/publish-test.py` built its git environment
 from `os.environ`. Under a git hook that inherits `GIT_DIR`/`GIT_INDEX_FILE`, so
 `git init --bare <tmpdir>` wrote `core.bare = true` into the *real*
 `~/src/nix/.git/config` and broke **all five worktrees at once**
@@ -31,13 +31,13 @@ rather than `(bare)`.
 |---|---|
 | `nix-config#16` | vps unarmed **and** lock bumped `1b71b192 → e0ed94fa`, plus a consumer canary. Fix and bump had to be one commit: the corrected call is wrong at the old rev. |
 | `nix-config#18` | `bin/publish` — dual-remote guard, 15 tests, real ephemeral-GPG signing and a `pre-receive` fault injection for the partial-publish path |
-| `nix-config#19` | `bin/parity-baseline` + `test/baseline/parity-e0ed94fabbc0.json` |
+| `nix-config#19` | `test/bin/parity-baseline` + `test/baseline/parity-e0ed94fabbc0.json` |
 | `nix-config#21` | Four host facts confirmed live; two new findings (Nix skew, `id -un`) |
 | `nix-config#24` | Transitive lock leak closed via `follows` on the obr input; closure `file://` nodes 1 → 0 |
-| `nix-config#30` | Bare `nix fmt` fixed; delegates to `bin/quality`; unknown flags exit 2 instead of fake-passing |
+| `nix-config#30` | Bare `nix fmt` fixed; delegates to `test/bin/quality`; unknown flags exit 2 instead of fake-passing |
 | `nix-config#36` | Purity check walks the whole closure; empty allowlist compared as an exact set |
 | `nix-config#37` | All eight hosts route; `bin/switch` no longer activates via floating `home-manager/master` |
-| `nix-config#46` | `bin/quality` is the single authority for lefthook, CI and the Makefile |
+| `nix-config#46` | `test/bin/quality` is the single authority for lefthook, CI and the Makefile |
 | `nix-config#48` | Eleven false-evidence aliases deleted; contract unfrozen but still catching drift |
 
 ## Open with work landed — read the issue comment for the gate
@@ -60,7 +60,7 @@ rather than `(bare)`.
 | `6b7582fa` | Reverted the `~/.pi` symlink; hera builds again |
 
 **Parity across every commit so far: package multisets IDENTICAL on all seven targets**
-(`bin/parity-baseline --compare`, baseline `e0ed94fa` → `c5029775`). The four host
+(`test/bin/parity-baseline --compare`, baseline `e0ed94fa` → `c5029775`). The four host
 drvPaths moved, which is uninformative: `vulcan-crt`'s whole-tree hash moves them on
 every commit. The identical multisets are the result.
 
@@ -103,7 +103,7 @@ the way I had been flagging in other people's specs.
 ## Findings worth carrying forward
 
 **The parity oracle's two quantities answer different questions.** Measured: adding
-`bin/quality` and `bin/parity-baseline` moved **all four host drvPaths** and moved
+`test/bin/quality` and `test/bin/parity-baseline` moved **all four host drvPaths** and moved
 **no package multiset** (386/414/367/368 unchanged). The portable drvPaths did not
 move. A gate must treat *multiset drift* as a parity failure — that is the signal.
 *drvPath-only drift on a host target is not a signal here*: `vulcan-crt` is
@@ -120,7 +120,7 @@ now the oracle, which is exactly what #19 asked for.
 **Every gate in this repo needs its negative case run.** Four separate defects this
 session were checks that reported success while covering nothing: the shfmt loop that
 swallowed mid-loop failures, `nix fmt` reading stdin, eleven aliased checks, and my own
-`bin/quality` summary undercounting via a subshell. Each was found by asking "does this
+`test/bin/quality` summary undercounting via a subshell. Each was found by asking "does this
 fail when it should?" — never by reading the code.
 
 ## Not started
@@ -145,10 +145,10 @@ journal (`wf_eeaf009d-c1e`), extracted per-issue under the session scratchpad.
 
 | Gate | Attempts | Status |
 |---|---|---|
-| `bin/quality` (all fast suites) | 1 | **PASS** — 94 nix, 32 shell, 36 python, 4 suites |
+| `test/bin/quality` (all fast suites) | 1 | **PASS** — 94 nix, 32 shell, 36 python, 4 suites |
 | `nix flake check ./config/ai --all-systems --no-build` | 2 | **PASS** both |
-| `python3 -m unittest bin/update-overlay-test.py` | 3 | **PASS** 25 tests |
-| `python3 -m unittest bin/publish-test.py` | 5 | **PASS** 16 tests |
+| `python3 -m unittest test/bin/update-overlay-test.py` | 3 | **PASS** 25 tests |
+| `python3 -m unittest test/bin/publish-test.py` | 5 | **PASS** 16 tests |
 | Signed commit through lefthook | 4 | **PASS** after the `GIT_DIR` fix (3 aborts, all one root cause) |
 | vulcan cherry-pick eval | 2 | **PASS** — six packages resolve |
 | vps toplevel eval | 1 | **PASS** — `nixos-system-vps-…drv` |
@@ -164,7 +164,7 @@ journal (`wf_eeaf009d-c1e`), extracted per-issue under the session scratchpad.
 ## Audit corrections that could not be amended into their commits
 
 An independent audit of `601c7cf7`, `71805147` and `9d00d47e` found two numeric
-errors in the commit messages' own `bin/quality` evidence blocks. Both commits are
+errors in the commit messages' own `test/bin/quality` evidence blocks. Both commits are
 already merged into `main`, and rewriting merged history requires explicit
 authorization per `CLAUDE.md`, so the corrections are recorded here instead of
 amended away.
@@ -176,8 +176,8 @@ amended away.
 
 The cause is consistent and worth naming, because it will recur otherwise: in each
 commit the **one dimension that changed** is reported at its pre-change value while
-every unchanged dimension is correct. I ran `bin/quality` *before* `git add`, and
-`bin/quality` discovers scope via `git ls-files`, which cannot see untracked files.
+every unchanged dimension is correct. I ran `test/bin/quality` *before* `git add`, and
+`test/bin/quality` discovers scope via `git ls-files`, which cannot see untracked files.
 So the evidence block measured the parent tree and was then presented as proof of
 the commit's own state.
 
@@ -191,7 +191,7 @@ captured after `git add`, or it describes a tree that was never committed.
 Two smaller corrections from the same audit:
 
 - **"Fully offline" was wrong** in the #22 closing comment. `--offline` is opt-in
-  via `CONSUMER_EVAL_OFFLINE=1`; the wired `bin/quality consumer-eval` does not set
+  via `CONSUMER_EVAL_OFFLINE=1`; the wired `test/bin/quality consumer-eval` does not set
   it. Corrected on the issue.
 - **The vacuous-green tally is inconsistent** across messages — "four times" in one,
   "five times" in another. Five is right, and the count is now: the shfmt loop, the
@@ -240,9 +240,9 @@ per the bounded-recovery policy, and continued using its structured git queries.
 
 | Gate | Attempts | Status |
 |---|---|---|
-| `bin/quality` all fast suites | 9 | **PASS** |
+| `test/bin/quality` all fast suites | 9 | **PASS** |
 | `nix flake check ./config/ai --all-systems` | 6 | **PASS** |
-| `bin/gates-test.py` | 5 | **PASS** 11 tests, 1 conditional skip |
+| `test/bin/gates-test.py` | 5 | **PASS** 11 tests, 1 conditional skip |
 | ssh rendered-config parity | 2 | **PASS** byte-identical |
 | `home-manager-release-skew` | 2 | **PASS** positive + negative |
 | parity multiset vs `e0ed94fa` | 3 | **PASS** identical on all 7 targets |
@@ -351,7 +351,7 @@ as the commit message that prompted it.
 | Commit | Unit |
 |---|---|
 | `badb7173` | #31 — first oracle advance, provenance chain from birth |
-| `d6b3cf3d` | `bin/quality` skips tracked-but-absent paths |
+| `d6b3cf3d` | `test/bin/quality` skips tracked-but-absent paths |
 | `e139c62c` | `config/ai.nix` declares `johnw.host` (fixes a #50 stage 2 regression) |
 | `6d4fa399` | #65 — HM contract split into four cached checks |
 
@@ -397,14 +397,14 @@ a different failure, and the distinction matters for choosing what to fix:
   grepping `lib.` — which matched *my own comment* containing
   `${lib.optionalString ...}`. I was reading prose I had written about the code
   instead of the code. `deadnix` caught it.
-- **`bin/quality` crashed on tracked-but-absent paths.** `git ls-files` reports the
+- **`test/bin/quality` crashed on tracked-but-absent paths.** `git ls-files` reports the
   index; lefthook's stash plus a staged rename produces a path that is tracked and
   gone. Result: `openFile: does not exist` reported as `1 of 96 file(s) failed` — a
   formatting failure for a nonexistent file, which also hid whether anything real
   failed.
 - **Blank output misread as failure, twice.** `jwiegley@x86_64-linux` looked like it
   produced nothing; it had evaluated fine. Cause: `| sed` / `| tail` masking the
-  exit status and buffering — the identical trap documented inside `bin/quality`'s
+  exit status and buffering — the identical trap documented inside `test/bin/quality`'s
   own `each_file`. Reading the output file directly gave the answer immediately.
   **Rule: never judge a command's success from a piped, filtered view of it.**
 
@@ -441,7 +441,7 @@ lists, segment disjointness over 695 body lines — and every one of them examin
 thing being BUILT. None examined the world referencing the thing being REPLACED.
 Thoroughness in one direction reads exactly like thoroughness.
 
-### `bin/consumer-inventory` could not be regenerated reliably
+### `test/bin/consumer-inventory` could not be regenerated reliably
 
 It derived scope by `grep -r` over the working tree, so regenerating after the
 rename grew the committed artifact from 166 to 325 references, 83 of them prose in
@@ -499,7 +499,7 @@ Rewrite performed (authorized): `filter-branch --index-filter` stripped
 signatures. Verified: tree **identical** to the pre-rewrite backup, no key path in any
 commit, no PGP block at HEAD, **23/23 rewritten commits signed at that point**.
 `cd02efb6` was pruned as empty
-(README-only); its X/Y content survives in `bin/verify-signatures:18` and `2bec8f8a`'s
+(README-only); its X/Y content survives in `test/bin/verify-signatures:18` and `2bec8f8a`'s
 message. The maintainer's previously **unsigned** `model-registry` commit was re-signed
 as a side effect — `bin/publish` would have refused it.
 
@@ -517,7 +517,7 @@ from tracking refs.
 The local pre-push gate would reject the offending range:
 
 ```bash
-bin/verify-signatures --range 9226c781..origin/main  # REJECTED [N] e62867de
+test/bin/verify-signatures --range 9226c781..origin/main  # REJECTED [N] e62867de
 ```
 
 Its default invocation is nevertheless green now because `HEAD --not --remotes`
@@ -540,13 +540,13 @@ Not four unrelated slips. Each was **acting where the surrounding system had alr
 written down what to do**:
 
 1. Committed the key without reading Q8, which named the owner twice.
-2. Hand-rolled `gpg --import` into the runner's keyring when `bin/verify-signatures`
+2. Hand-rolled `gpg --import` into the runner's keyring when `test/bin/verify-signatures`
    builds an **ephemeral** one from `.github/signing-keys/` by default — documented in
    its own header, in the file I was editing.
 3. Passed no range to the CI job when the same header states the contract at lines
    52-53. The job would have gone **red on its first run** — fixed in `008f7bb0`.
 4. Documented the gate as rejecting `X` when a key expiry reports **`Y`**. The
-   distinction is at `bin/verify-signatures:18`. The file headed "read this before
+   distinction is at `test/bin/verify-signatures:18`. The file headed "read this before
    debugging a sudden CI failure" would have sent the reader after the wrong letter.
 
 Earlier in the session the shape was the mirror image — gates that verified what I
@@ -634,11 +634,11 @@ mismatch`. Every mutation was restored and its focused check returned green.
 
 Verification completed before staging the final candidate:
 
-- `python3 -m unittest -v bin/update-overlay-test.py`: **PASS**, 40 tests.
+- `python3 -m unittest -v test/bin/update-overlay-test.py`: **PASS**, 40 tests.
 - `nix flake check ./config/ai --all-systems --no-build`: **PASS**, including
   `input-projection-parity` on all three systems.
 - `nix flake check --no-build`: **PASS** on the current system.
-- Staged `bin/quality`: **PASS**, all suites; consumer evaluation 5 ran / 0 skipped.
+- Staged `test/bin/quality`: **PASS**, all suites; consumer evaluation 5 ran / 0 skipped.
 - Signed commit `6d045a73`; its unbypassed pre-commit hook passed all eight commands
   and all seven Python suites (`gates-test.py`: 18 tests in 673.567s;
   `update-overlay-test.py`: 40 tests).
@@ -653,7 +653,7 @@ linked worktree even with forged environment/Git markers, and the inventory gene
 scans tracked JSON, excludes its own artifact, and gates the committed internal rows
 against fresh derivation. Removing either guard was watched failing, then restored.
 
-The fess-fix staged `bin/quality` run passed every suite: 19 gate tests, 40 updater
+The fess-fix staged `test/bin/quality` run passed every suite: 19 gate tests, 40 updater
 tests, portable evaluation, consumer evaluation 5 ran / 0 skipped, and signatures.
 Its unbypassed pre-commit hook passed all affected suites. Both implementation commits
 verify `%G? = G`.
@@ -677,7 +677,7 @@ at any other revision remains a loud `PARTIAL PUBLISH` with the reconcile comman
 The ordinary fast-forward compare-and-swap push remains intact; no force behavior was
 added.
 
-`bin/publish-test.py` uses a Git wrapper over local bare repositories to inject the
+`test/bin/publish-test.py` uses a Git wrapper over local bare repositories to inject the
 race after pre-flight. It covers both mirror-at-target success and a third-revision
 failure. Watched-fail evidence was run separately: refusing target recovery made the
 mirror test fail with false `PARTIAL PUBLISH`; accepting any nonempty readback made
@@ -695,7 +695,7 @@ addition to the rejected-push races. Removing the readback guard and observed-st
 recording was watched failing, then restored. Focused verification: 22 publish tests;
 shell and Python lint pass.
 
-Signed fess-fix `22055e0f` landed with 22 publish tests. Its staged `bin/quality` run
+Signed fess-fix `22055e0f` landed with 22 publish tests. Its staged `test/bin/quality` run
 passed every suite, including consumer evaluation 5 ran / 0 skipped, and its
 unbypassed hook passed all affected suites. Both #88 commits verify `%G? = G`.
 
@@ -733,7 +733,7 @@ gate that dirties the checkout.
 
 Four watched-fail mutations were run and restored: removing the nonempty sentinel,
 the post-gate tree check, one real-push `--no-verify`, or the explicit gate made its
-paired regression fail. The restored full staged `bin/quality` passes every suite:
+paired regression fail. The restored full staged `test/bin/quality` passes every suite:
 30 publish tests, 19 gate tests, portable evaluation, consumer evaluation 5 ran / 0
 skipped, and signature verification for all nine local commits. Remaining: signed
 fess-fix commit, issue/project closeout, and observation cleanup at that pre-commit
@@ -774,7 +774,7 @@ nonvacuity facts remain: launchd user/daemon/legacy counts are Hera 12/6/0 and C
 host has one configured builder despite `nix.enable = false`.
 
 The check is exposed as `checks.<system>.darwin-value-surface` and delegated through
-`bin/quality darwin-surface` from pre-push, CI, and `make test`; it is deliberately not
+`test/bin/quality darwin-surface` from pre-push, CI, and `make test`; it is deliberately not
 pre-commit because the full value evaluation takes minutes. Twelve focused differ and
 artifact tests pass, and the live flake-backed quality suite matches both hosts.
 
@@ -786,9 +786,9 @@ masking derivation names failed two unit tests; and removing quality/CI wiring f
 registration tests.
 
 The first full gate correctly rejected the stale consumer inventory after the CI line
-moved. Regeneration through `bin/consumer-inventory` changed only its `repoHead`
+moved. Regeneration through `test/bin/consumer-inventory` changed only its `repoHead`
 (`6d045a73` to signed `72de730a`) and that reference's line (79 to 88); no consumer
-edge or classification changed. The restored full staged `bin/quality` passes every
+edge or classification changed. The restored full staged `test/bin/quality` passes every
 suite: 103 Nix files, 35 shell scripts, 41 Python files, eight Python suites (including
 20 gate and 12 Darwin tests), portable evaluation, the Darwin surface check, consumer
 evaluation 5 ran / 0 skipped, and signatures for all 11 local commits. Remaining:
@@ -816,7 +816,7 @@ The inventory refresh advances `repoHead` to signed `6e8a94d0` and moves the unc
 CI consumer reference from line 88 to 83; no edge or classification changed.
 The corrected projection replayed `IDENTICAL` for both hosts using configuration from
 `72de730a`, but the projector itself was still live-checkout state; that provenance
-overclaim is superseded below. Remaining at that boundary: full staged `bin/quality`,
+overclaim is superseded below. Remaining at that boundary: full staged `test/bin/quality`,
 signed fess-fix, and tracker closeout. The
 full fess-fix gate then passed every suite: 104 Nix files, 35 shell scripts, 41 Python
 files, eight Python suites (including 21 gate and 13 Darwin tests), portable evaluation,
@@ -845,10 +845,10 @@ Two A4 observations created before that closeout were also still queued, so the 
 singular wording was corrected by absorbing them rather than merely editing the count:
 
 - Both pre-commit Python globs now include the extensionless Darwin differ and baseline
-  generator. A gate derives every extensionless Python tool from `bin/quality --files
+  generator. A gate derives every extensionless Python tool from `test/bin/quality --files
   python` and requires each local Python hook block to name it, so the next such tool
   cannot silently skip lint/tests.
-- New executable `bin/darwin-surface-baseline` regenerates the schema-versioned artifact
+- New executable `test/bin/darwin-surface-baseline` regenerates the schema-versioned artifact
   in a temporary detached worktree, delegates normalization to the differ, validates the
   single existing artifact, and supports safe print or explicit write modes.
   `make darwin-surface-baseline` is the write entrypoint.
@@ -859,7 +859,7 @@ pinned the historical configuration, but not the projector/normalizer: the latte
 from the live checkout. The exact-revision wording above was therefore an overclaim,
 corrected by the clean-context audit below rather than preserved as evidence.
 
-The full staged `bin/quality` run passes every suite: 104 Nix files, 35 shell scripts,
+The full staged `test/bin/quality` run passes every suite: 104 Nix files, 35 shell scripts,
 42 Python files, eight Python suites (including 22 gate and 14 Darwin tests), portable
 evaluation, the Darwin surface check, consumer evaluation 5 ran / 0 skipped, and
 signatures for all 15 local commits. Remaining: signed cleanup commit and independent
@@ -916,7 +916,7 @@ at `#issuecomment-5118084069`; it is a diagnostic refinement, not silently claim
 current coverage. The observation Markdown is removed, leaving no unprocessed partner
 observation before final verification.
 
-The final staged `bin/quality` run passes every suite: 104 Nix files, 35 shell
+The final staged `test/bin/quality` run passes every suite: 104 Nix files, 35 shell
 scripts, 43 Python files, nine Python suites (including 20 generator, 22 gate, and
 14 Darwin-tool tests), portable evaluation, the exact v2 Darwin surface check,
 consumer evaluation 5 ran / 0 skipped, and signatures for all 17 local commits.
@@ -956,14 +956,14 @@ worktree and are not part of this unit.
 
 Implemented design:
 
-- `bin/update-overlay-essential-test.py` runs every parser/catalog unit plus 16
+- `test/bin/update-overlay-essential-test.py` runs every parser/catalog unit plus 16
   bounded routing, purity, and negative-gate integration cases.  It resolves 47
   tests at the current tree and ran in **5.4s**; it asserts it remains a strict
   subset of the unfiltered updater suite.
-- `bin/quality --tier pre-commit` keeps all static checks, the essential Python
+- `test/bin/quality --tier pre-commit` keeps all static checks, the essential Python
   tier, and structural coverage.  It removes portable all-system evaluation and
   the full temporary-Git updater workflow matrix from every commit.
-- `bin/quality --tier expensive` runs every tracked top-level Python suite
+- `test/bin/quality --tier expensive` runs every tracked top-level Python suite
   unfiltered, portable all-system evaluation, consumer/signature gates,
   structural/live coverage, and the Darwin value surface under the existing
   CI/on-demand ceiling.  Because some full Python cases intentionally
@@ -1007,7 +1007,7 @@ this programme lane.
 ## 2026-07-30 — coverage evidence cadence correction
 
 The maintainer narrowed the cadence after the implementation above: ordinary
-`bin/quality --tier pre-commit` runs the seven bounded static and essential-test
+`test/bin/quality --tier pre-commit` runs the seven bounded static and essential-test
 suites, but no longer requires the consolidated coverage artifact to match every
 intermediate commit. Coverage freshness remains mandatory in pre-push,
 `make test`, the expensive tier, and the single closeout evidence cycle for each
@@ -1048,7 +1048,7 @@ Verification at the pre-commit boundary:
 
 - Focused catalog, Home Manager integration, migration/preflight, and runtime probes:
   **PASS**.
-- `bin/quality --tier pre-commit`: **PASS**, 60 seconds under the 120-second ceiling.
+- `test/bin/quality --tier pre-commit`: **PASS**, 60 seconds under the 120-second ceiling.
 - `nix flake check ./config/ai --all-systems --no-build`: **PASS**.
 - `./build system`: **PASS**, build only; no activation.
 - Two independent final read-only reviews: **CLEAN** after their findings were fixed.

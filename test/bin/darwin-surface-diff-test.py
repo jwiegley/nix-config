@@ -12,10 +12,9 @@ import unittest
 from pathlib import Path
 
 
-HERE = Path(__file__).resolve().parent
-REPO = HERE.parent
-TOOL = HERE / "darwin-surface-diff"
-BASELINE_TOOL = HERE / "darwin-surface-baseline"
+REPO = Path(__file__).resolve().parents[2]
+TOOL = REPO / "test" / "bin" / "darwin-surface-diff"
+BASELINE_TOOL = REPO / "test" / "bin" / "darwin-surface-baseline"
 BASELINE_DIR = REPO / "test" / "baseline"
 HASH_A = "0123456789abcdfghijklmnpqrsvwxyz"
 HASH_B = "zyxwvsrqpnmlkjihgfdcba9876543210"
@@ -95,7 +94,7 @@ class DarwinSurfaceDiffTests(unittest.TestCase):
         base_key = "ssh-ed25519 AAAATEST principal"
         base_file = str(REPO / "test/darwin/surface-helpers.nix")
         other_file = str(REPO / "test/darwin/darwin-surface.nix")
-        second_file = str(REPO / "bin/darwin-surface-diff")
+        second_file = str(REPO / "test/bin/darwin-surface-diff")
         variants = {
             "base": {"keys": [base_key], "keyFiles": [base_file]},
             "added": {
@@ -362,13 +361,13 @@ class CommittedDarwinSurfaceTests(unittest.TestCase):
             self.assertEqual(set(surface), SURFACES)
         self.assertEqual(
             self.baseline["commands"].get("refresh"),
-            "bin/darwin-surface-baseline --rev <rev> --write",
+            "test/bin/darwin-surface-baseline --rev <rev> --write",
         )
         expected_projection = {}
         for relative in (
             "test/darwin/darwin-surface.nix",
             "test/darwin/surface-helpers.nix",
-            "bin/darwin-surface-diff",
+            "test/bin/darwin-surface-diff",
         ):
             expected_projection[relative] = hashlib.sha256(
                 (REPO / relative).read_bytes()

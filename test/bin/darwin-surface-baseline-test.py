@@ -19,14 +19,14 @@ from pathlib import Path
 from unittest import mock
 
 
-HERE = Path(__file__).resolve().parent
-TOOL = HERE / "darwin-surface-baseline"
+REPO = Path(__file__).resolve().parents[2]
+TOOL = REPO / "test" / "bin" / "darwin-surface-baseline"
 REVISION_A = "1" * 40
 REVISION_B = "2" * 40
 PROJECTION_PATHS = (
     "test/darwin/darwin-surface.nix",
     "test/darwin/surface-helpers.nix",
-    "bin/darwin-surface-diff",
+    "test/bin/darwin-surface-diff",
 )
 
 
@@ -203,7 +203,7 @@ class EvaluationTests(unittest.TestCase):
         ) as temporary_directory:
             worktree = Path(temporary_directory) / "source"
             projector = worktree / "test" / "darwin" / "darwin-surface.nix"
-            differ = worktree / "bin" / "darwin-surface-diff"
+            differ = worktree / "test" / "bin" / "darwin-surface-diff"
             helper = worktree / "test" / "darwin" / "surface-helpers.nix"
             projector.parent.mkdir(parents=True)
             differ.parent.mkdir(parents=True)
@@ -237,7 +237,7 @@ class EvaluationTests(unittest.TestCase):
         self.assertEqual(run.call_args.kwargs["cwd"], worktree)
         apply_expression = command[command.index("--apply") + 1]
         self.assertIn(str(projector), apply_expression)
-        self.assertNotIn(str(HERE.parent / "test" / "darwin"), apply_expression)
+        self.assertNotIn(str(REPO / "test" / "darwin"), apply_expression)
         normalizer.assert_called_once_with(differ)
         self.assertIsInstance(result["system"]["fractional"], float)
         self.assertEqual(result["system"]["fractional"], 7.625)
@@ -250,7 +250,7 @@ class EvaluationTests(unittest.TestCase):
             contents = {
                 "test/darwin/darwin-surface.nix": b"darwin: { value = 1; }\n",
                 "test/darwin/surface-helpers.nix": b"{ helper = true; }\n",
-                "bin/darwin-surface-diff": b"def normalize_store(value): return value\n",
+                "test/bin/darwin-surface-diff": b"def normalize_store(value): return value\n",
             }
             for relative, content in contents.items():
                 path = worktree / relative
@@ -685,7 +685,7 @@ class EnvironmentIsolationTests(unittest.TestCase):
         ):
             GENERATOR.run(
                 ["git", "rev-parse", "HEAD"],
-                cwd=HERE.parent,
+                cwd=REPO,
                 description="test git environment",
             )
 

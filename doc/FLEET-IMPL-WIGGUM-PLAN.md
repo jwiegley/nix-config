@@ -68,7 +68,7 @@ Exit only when all hold, each with cited evidence rather than assertion:
    landed, the verification performed, and the precise authorization or
    dependency that remains. No issue is left silent.
 4. **DoD-4 — Gates pass, output shown.** `nix flake check ./config/ai
-   --all-systems --no-build`; `python3 -m unittest bin/update-overlay-test.py`;
+   --all-systems --no-build`; `python3 -m unittest test/bin/update-overlay-test.py`;
    `make test`; `nix fmt` clean; `lefthook run pre-commit --all-files`.
 5. **DoD-5 — Parity preserved.** No refactor changes the realized package set for
    `hera`, `clio`, or the work group except where an issue explicitly intends it.
@@ -101,7 +101,7 @@ Exit only when all hold, each with cited evidence rather than assertion:
 | Gate | Attempts | Status |
 |---|---|---|
 | `nix flake check ./config/ai --all-systems --no-build` | 0 | not yet run this phase |
-| `python3 -m unittest bin/update-overlay-test.py` | 0 | not yet run this phase |
+| `python3 -m unittest test/bin/update-overlay-test.py` | 0 | not yet run this phase |
 | `make test` | 0 | not yet run this phase |
 | `nix fmt` clean | 0 | not yet run this phase |
 | `lefthook run pre-commit --all-files` | 0 | not yet run this phase |

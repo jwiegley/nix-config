@@ -599,7 +599,7 @@ in
         runHook preInstallCheck
         $out/bin/omlx --help > /dev/null
         PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
-          ${python.interpreter} ${../overlays/tests/omlx-host-vm-info64-count.py}
+          ${python.interpreter} ${../test/ai/overlays/omlx-host-vm-info64-count.py}
         runHook postInstallCheck
       '';
 

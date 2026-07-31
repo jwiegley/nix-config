@@ -155,7 +155,7 @@
   ],
   "pythonInventory": [
     {
-      "path": "bin/agent-deck-env-test.py",
+      "path": "test/bin/agent-deck-env-test.py",
       "kind": "test",
       "tier": "pre-commit",
       "evidence": [
@@ -164,7 +164,7 @@
       "gap": null
     },
     {
-      "path": "bin/codex-env-test.py",
+      "path": "test/bin/codex-env-test.py",
       "kind": "test",
       "tier": "pre-commit",
       "evidence": [
@@ -173,16 +173,16 @@
       "gap": null
     },
     {
-      "path": "bin/deadline-supervisor.py",
+      "path": "test/bin/deadline-supervisor.py",
       "kind": "product",
       "tier": "pre-commit",
       "evidence": [
-        "bin/deadline-supervisor-test.py executes success, TERM, KILL, owned process-group cleanup, and early-leader-exit behavior"
+        "test/bin/deadline-supervisor-test.py executes success, TERM, KILL, owned process-group cleanup, and early-leader-exit behavior"
       ],
       "gap": null
     },
     {
-      "path": "bin/deadline-supervisor-test.py",
+      "path": "test/bin/deadline-supervisor-test.py",
       "kind": "test",
       "tier": "pre-commit",
       "evidence": [
@@ -191,16 +191,16 @@
       "gap": null
     },
     {
-      "path": "bin/coverage-report",
+      "path": "test/bin/coverage-report",
       "kind": "product",
       "tier": "pre-commit",
       "evidence": [
-        "bin/coverage-report-test.py executes schema, collection, refusal, and atomic-write behavior"
+        "test/bin/coverage-report-test.py executes schema, collection, refusal, and atomic-write behavior"
       ],
       "gap": "Expensive Nix file-reach probes and dynamic language measurements are refreshed explicitly."
     },
     {
-      "path": "bin/coverage-report-test.py",
+      "path": "test/bin/coverage-report-test.py",
       "kind": "test",
       "tier": "pre-commit",
       "evidence": [
@@ -209,16 +209,16 @@
       "gap": null
     },
     {
-      "path": "bin/darwin-surface-baseline",
+      "path": "test/bin/darwin-surface-baseline",
       "kind": "product",
       "tier": "pre-commit",
       "evidence": [
-        "bin/darwin-surface-baseline-test.py executes its CLI and write/refusal paths"
+        "test/bin/darwin-surface-baseline-test.py executes its CLI and write/refusal paths"
       ],
       "gap": "Live Nix evaluation and the write path remain on-demand and are mocked in unit coverage."
     },
     {
-      "path": "bin/darwin-surface-baseline-test.py",
+      "path": "test/bin/darwin-surface-baseline-test.py",
       "kind": "test",
       "tier": "pre-commit",
       "evidence": [
@@ -227,16 +227,16 @@
       "gap": null
     },
     {
-      "path": "bin/darwin-surface-diff",
+      "path": "test/bin/darwin-surface-diff",
       "kind": "product",
       "tier": "pre-commit",
       "evidence": [
-        "bin/darwin-surface-diff-test.py executes comparison behavior"
+        "test/bin/darwin-surface-diff-test.py executes comparison behavior"
       ],
       "gap": "Nix-sandbox execution needs separate dynamic-coverage collection."
     },
     {
-      "path": "bin/darwin-surface-diff-test.py",
+      "path": "test/bin/darwin-surface-diff-test.py",
       "kind": "test",
       "tier": "pre-commit",
       "evidence": [
@@ -245,7 +245,7 @@
       "gap": null
     },
     {
-      "path": "bin/gates-test.py",
+      "path": "test/bin/gates-test.py",
       "kind": "test",
       "tier": "pre-push",
       "evidence": [
@@ -254,7 +254,7 @@
       "gap": "Measured at 522.331 seconds on Hera because two cases perform full shared-work evaluations; the pre-push and expensive selectors preserve invocation outside the 120-second pre-commit tier."
     },
     {
-      "path": "bin/oracle-currency-test.py",
+      "path": "test/bin/oracle-currency-test.py",
       "kind": "test",
       "tier": "pre-commit",
       "evidence": [
@@ -263,7 +263,7 @@
       "gap": "Expensive parity derivation is intentionally not part of this suite."
     },
     {
-      "path": "bin/pi-mcp-adapter-normalize-test.py",
+      "path": "test/bin/pi-mcp-adapter-normalize-test.py",
       "kind": "test",
       "tier": "pre-commit",
       "evidence": [
@@ -272,7 +272,7 @@
       "gap": null
     },
     {
-      "path": "bin/publish-test.py",
+      "path": "test/bin/publish-test.py",
       "kind": "test",
       "tier": "pre-push",
       "evidence": [
@@ -281,7 +281,7 @@
       "gap": "Measured at 23.274 seconds on Hera; unavailable GPG cases must report non-pass."
     },
     {
-      "path": "bin/quality-test.py",
+      "path": "test/bin/quality-test.py",
       "kind": "test",
       "tier": "pre-commit",
       "evidence": [
@@ -294,13 +294,13 @@
       "kind": "product",
       "tier": "pre-commit",
       "evidence": [
-        "bin/update-overlay-essential-test.py executes inventory, refusal, update, routing, and purity behavior on every commit",
-        "bin/update-overlay-test.py executes the unfiltered temporary-Git matrix in pre-push and expensive tiers"
+        "test/bin/update-overlay-essential-test.py executes inventory, refusal, update, routing, and purity behavior on every commit",
+        "test/bin/update-overlay-test.py executes the unfiltered temporary-Git matrix in pre-push and expensive tiers"
       ],
       "gap": "Network, hash, and update execution remains on-demand and is mocked in unit coverage."
     },
     {
-      "path": "bin/update-overlay-essential-test.py",
+      "path": "test/bin/update-overlay-essential-test.py",
       "kind": "test",
       "tier": "pre-commit",
       "evidence": [
@@ -309,25 +309,25 @@
       "gap": "The complete temporary-Git publication, signal, and rollback matrix remains in the expensive tier."
     },
     {
-      "path": "bin/update-overlay-test.py",
+      "path": "test/bin/update-overlay-test.py",
       "kind": "test",
       "tier": "pre-push",
       "evidence": [
         "quality:python-test executes the unfiltered suite in the pre-push and expensive tiers"
       ],
-      "gap": "Ordinary commits use bin/update-overlay-essential-test.py instead of the expensive temporary-Git workflow matrix."
+      "gap": "Ordinary commits use test/bin/update-overlay-essential-test.py instead of the expensive temporary-Git workflow matrix."
     },
     {
-      "path": "bin/unittest-strict.py",
+      "path": "test/bin/unittest-strict.py",
       "kind": "product",
       "tier": "pre-commit",
       "evidence": [
-        "bin/unittest-strict-test.py proves pass/fail and treats skipped tests as non-pass"
+        "test/bin/unittest-strict-test.py proves pass/fail and treats skipped tests as non-pass"
       ],
       "gap": null
     },
     {
-      "path": "bin/unittest-strict-test.py",
+      "path": "test/bin/unittest-strict-test.py",
       "kind": "test",
       "tier": "pre-commit",
       "evidence": [
@@ -340,7 +340,7 @@
       "kind": "product",
       "tier": "pre-commit",
       "evidence": [
-        "bin/pi-mcp-adapter-normalize-test.py executes both known upstream forms and rejects drift"
+        "test/bin/pi-mcp-adapter-normalize-test.py executes both known upstream forms and rejects drift"
       ],
       "gap": null
     },
@@ -417,7 +417,7 @@
       "gap": "No behavioral fixture is registered."
     },
     {
-      "path": "overlays/tests/omlx-host-vm-info64-count.py",
+      "path": "test/ai/overlays/omlx-host-vm-info64-count.py",
       "kind": "test",
       "tier": "pre-push",
       "evidence": [
@@ -435,7 +435,7 @@
       "gap": "Nix-sandbox subprocess execution needs dynamic-coverage collection."
     },
     {
-      "path": "bin/statusline-command-test.py",
+      "path": "test/bin/statusline-command-test.py",
       "kind": "test",
       "tier": "pre-commit",
       "evidence": [
@@ -450,7 +450,7 @@
       "kind": "production",
       "tier": "pre-commit",
       "evidence": [
-        "bin/agent-deck-env-test.py executes export, non-disclosure, and refusal behavior"
+        "test/bin/agent-deck-env-test.py executes export, non-disclosure, and refusal behavior"
       ],
       "gap": null
     },
@@ -459,25 +459,25 @@
       "kind": "production",
       "tier": "pre-commit",
       "evidence": [
-        "bin/codex-env-test.py executes argument forwarding, credential export, non-disclosure, and refusal behavior"
+        "test/bin/codex-env-test.py executes argument forwarding, credential export, non-disclosure, and refusal behavior"
       ],
       "gap": null
     },
     {
-      "path": "bin/consumer-inventory",
+      "path": "test/bin/consumer-inventory",
       "kind": "production",
       "tier": "pre-push",
       "evidence": [
-        "bin/gates-test.py executes --write refusal and --print parity"
+        "test/bin/gates-test.py executes --write refusal and --print parity"
       ],
       "gap": null
     },
     {
-      "path": "bin/cross-consumer-eval",
+      "path": "test/bin/cross-consumer-eval",
       "kind": "production",
       "tier": "pre-push",
       "evidence": [
-        "bin/gates-test.py executes refusal guards",
+        "test/bin/gates-test.py executes refusal guards",
         "quality:consumer-eval executes the live pre-push gate"
       ],
       "gap": "No synthetic successful-evaluation fixture."
@@ -501,11 +501,11 @@
       "gap": "No argument or mocked-prefetch behavioral test."
     },
     {
-      "path": "bin/immutable-subflake-check",
+      "path": "test/bin/immutable-subflake-check",
       "kind": "production",
       "tier": "ci-on-demand",
       "evidence": [
-        "bin/gates-test.py executes exact-revision archive, immutable metadata, lock-drift, and byte-stability fixtures",
+        "test/bin/gates-test.py executes exact-revision archive, immutable metadata, lock-drift, and byte-stability fixtures",
         "quality:immutable-subflake executes the live expensive gate"
       ],
       "gap": null
@@ -515,7 +515,7 @@
       "kind": "library",
       "tier": "pre-commit",
       "evidence": [
-        "bin/update-overlay-test.py sources it and exercises all fleet hosts, idempotence, and unknown-host refusal"
+        "test/bin/update-overlay-test.py sources it and exercises all fleet hosts, idempotence, and unknown-host refusal"
       ],
       "gap": null
     },
@@ -529,11 +529,11 @@
       "gap": "No mocked hostname or IP behavioral test."
     },
     {
-      "path": "bin/parity-baseline",
+      "path": "test/bin/parity-baseline",
       "kind": "production",
       "tier": "ci-on-demand",
       "evidence": [
-        "bin/oracle-currency-test.py executes --commands"
+        "test/bin/oracle-currency-test.py executes --commands"
       ],
       "gap": "Derive, write, check, compare, and refresh behavior is not exercised by that test."
     },
@@ -551,16 +551,16 @@
       "kind": "production",
       "tier": "pre-push",
       "evidence": [
-        "bin/publish-test.py executes refusal, gating, race, partial-publication, and no-op behavior"
+        "test/bin/publish-test.py executes refusal, gating, race, partial-publication, and no-op behavior"
       ],
       "gap": null
     },
     {
-      "path": "bin/quality",
+      "path": "test/bin/quality",
       "kind": "production",
       "tier": "pre-commit",
       "evidence": [
-        "bin/quality-test.py executes success, aggregation, missing-path, symlink, and unknown-suite behavior"
+        "test/bin/quality-test.py executes success, aggregation, missing-path, symlink, and unknown-suite behavior"
       ],
       "gap": null
     },
@@ -569,7 +569,7 @@
       "kind": "production",
       "tier": "pre-commit",
       "evidence": [
-        "bin/update-overlay-test.py executes the packaged-profile Darwin branch through a two-hop symlink chain",
+        "test/bin/update-overlay-test.py executes the packaged-profile Darwin branch through a two-hop symlink chain",
         "quality:shell-lint and quality:shell-format provide static evidence"
       ],
       "gap": "The NixOS and Home Manager fallback branches are not executed."
@@ -588,7 +588,7 @@
       "kind": "production",
       "tier": "pre-commit",
       "evidence": [
-        "bin/update-overlay-test.py executes rollback, exact-candidate build/switch ordering, failed build/switch non-publication, idempotence, failed-signing, no-push, and lock-refusal fixtures"
+        "test/bin/update-overlay-test.py executes rollback, exact-candidate build/switch ordering, failed build/switch non-publication, idempotence, failed-signing, no-push, and lock-refusal fixtures"
       ],
       "gap": null
     },
@@ -624,7 +624,7 @@
       "kind": "production",
       "tier": "ci-on-demand",
       "evidence": [
-        "bin/update-overlay-test.py executes the mutually-exclusive-option refusal"
+        "test/bin/update-overlay-test.py executes the mutually-exclusive-option refusal"
       ],
       "gap": "Host and project execution branches remain untested."
     },
@@ -642,16 +642,16 @@
       "kind": "production",
       "tier": "pre-commit",
       "evidence": [
-        "bin/update-overlay-test.py executes temporary-HOME and fake-tool aggregation fixtures"
+        "test/bin/update-overlay-test.py executes temporary-HOME and fake-tool aggregation fixtures"
       ],
       "gap": null
     },
     {
-      "path": "bin/verify-signatures",
+      "path": "test/bin/verify-signatures",
       "kind": "production",
       "tier": "pre-push",
       "evidence": [
-        "bin/gates-test.py executes unsigned, unverifiable, expired-key, empty-range, and strict fixtures",
+        "test/bin/gates-test.py executes unsigned, unverifiable, expired-key, empty-range, and strict fixtures",
         "quality:signatures executes the live pre-push gate"
       ],
       "gap": null
@@ -670,7 +670,7 @@
       "kind": "production",
       "tier": "pre-push",
       "evidence": [
-        "bin/update-overlay-test.py executes --help",
+        "test/bin/update-overlay-test.py executes --help",
         "lefthook:system-build executes ./build system"
       ],
       "gap": "Package and language modes and failure branches remain untested."

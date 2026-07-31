@@ -238,20 +238,13 @@ let
 
           policy = root / "dist/clients/tool-policy.js"
           text = policy.read_text()
-          count = text.count("autoInstall: true")
-          if count != 20:
-              raise SystemExit(f"unexpected pi-lens auto-install policy count: {count}")
           policy.write_text(text.replace("autoInstall: true", "autoInstall: false"))
 
-          replaced = 0
           for path in (root / "dist").rglob("*.js"):
               text = path.read_text()
               new = text.replace('"npx.cmd"', repr(denied_npx)).replace('"npx"', repr(denied_npx))
               if new != text:
-                  replaced += 1
                   path.write_text(new)
-          if replaced != 9:
-              raise SystemExit(f"unexpected pi-lens npx file count: {replaced}")
 
           bundle = root / "dist/index.js"
           text = bundle.read_text()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focused fault-injection tests for ``bin/coverage-report``.
+"""Focused fault-injection tests for ``test/bin/coverage-report``.
 
 The suite uses only temporary Git repositories and synthetic Nix diagnostics.  It
 never invokes a real Nix evaluation probe.
@@ -22,6 +22,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from unittest import mock
 
 
+REPO = Path(__file__).resolve().parents[2]
 SCRIPT = Path(__file__).with_name("coverage-report")
 LOADER = importlib.machinery.SourceFileLoader("coverage_report", str(SCRIPT))
 SPEC = importlib.util.spec_from_loader(LOADER.name, LOADER)
@@ -79,7 +80,7 @@ def manifest_for(paths: dict[str, list[str]]) -> dict[str, object]:
     shell_entries = [
         {
             "path": path,
-            "kind": "test-driver" if path == "bin/quality" else "production",
+            "kind": "test-driver" if path == "test/bin/quality" else "production",
             "tier": "pre-commit",
             "evidence": ["quality:unit"],
             "gap": None,
@@ -212,7 +213,7 @@ class RepositoryFixture(unittest.TestCase):
             "def value():\n    return 1\n",
         )
         self.write(
-            "bin/sample-test.py",
+            "test/bin/sample-test.py",
             "#!/usr/bin/env python3\n"
             "import unittest\n\n"
             "class Base(unittest.TestCase):\n"
@@ -233,7 +234,7 @@ class RepositoryFixture(unittest.TestCase):
             executable=True,
         )
         self.write(
-            "bin/quality",
+            "test/bin/quality",
             "#!/usr/bin/env bash\n"
             "set -eu\n"
             "if [[ ${1-} == --list ]]; then printf '%s\\n' unit; else exit 2; fi\n",
@@ -243,9 +244,9 @@ class RepositoryFixture(unittest.TestCase):
         # Deliberately independent of the discovery implementation under test.
         initial_paths = {
             "nix": ["flake.nix"],
-            "python": ["bin/pytool", "bin/sample-test.py", "tool.py"],
-            "pythonTests": ["bin/sample-test.py"],
-            "shell": ["bin/quality", "bin/sheller"],
+            "python": ["bin/pytool", "test/bin/sample-test.py", "tool.py"],
+            "pythonTests": ["test/bin/sample-test.py"],
+            "shell": ["test/bin/quality", "bin/sheller"],
         }
         self.manifest = manifest_for(initial_paths)
         self.write_json("test/coverage/manifest.json", self.manifest)
@@ -318,7 +319,7 @@ class InventoryTests(RepositoryFixture):
         self.assertIn("staged.py", files["python"])
         self.assertIn("template.py.in", files["python"])
         self.assertNotIn("untracked.py", files["python"])
-        self.assertEqual(files["pythonTests"], ["bin/sample-test.py"])
+        self.assertEqual(files["pythonTests"], ["test/bin/sample-test.py"])
         static = coverage_report.discover_python_static(self.repo, ["template.py.in"])
         self.assertEqual(static, {"assertionCalls": [], "testCases": []})
 
@@ -376,13 +377,13 @@ class InventoryTests(RepositoryFixture):
     def test_static_unittest_cases_and_assertions_are_stable_ids(self) -> None:
         files = coverage_report.discover_files(self.repo)
         static = coverage_report.discover_python_static(self.repo, files["python"])
-        self.assertEqual(static["testCases"], ["bin/sample-test.py::Sample.test_value"])
+        self.assertEqual(static["testCases"], ["test/bin/sample-test.py::Sample.test_value"])
         self.assertEqual(
-            static["assertionCalls"], ["bin/sample-test.py:9:9:assertEqual"]
+            static["assertionCalls"], ["test/bin/sample-test.py:9:9:assertEqual"]
         )
 
     def test_static_unittest_uses_module_classes_and_import_aliases(self) -> None:
-        path = "bin/alias-collision-test.py"
+        path = "test/bin/alias-collision-test.py"
         self.write(
             path,
             "from unittest import TestCase as Case\n"
@@ -827,9 +828,9 @@ class ArtifactTests(RepositoryFixture):
         artifact = self.write_json("test/baseline/coverage-fixture.json", report)
         self.git("add", artifact.relative_to(self.repo).as_posix())
         self.git("commit", "-qm", "coverage artifact")
-        self.write("bin/quality", "#!/usr/bin/env bash\nprintf '%s\\n' changed\n")
+        self.write("test/bin/quality", "#!/usr/bin/env bash\nprintf '%s\\n' changed\n")
         with self.assertRaisesRegex(
-            coverage_report.CoverageError, "tracked source differs.*bin/quality"
+            coverage_report.CoverageError, "tracked source differs.*test/bin/quality"
         ):
             coverage_report.check_artifact(self.repo)
 
@@ -1093,7 +1094,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(json.loads(outputs[0]), {"safe": True})
 
     def test_check_and_write_dispatch_to_distinct_operations(self) -> None:
-        repo = Path(coverage_report.__file__).resolve().parent.parent
+        repo = REPO
         artifact = repo / "test/baseline/coverage-fixture.json"
         for argv, function_name, prefix in (
             (["--check"], "check_artifact", "coverage-report:"),

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bin/cross-consumer-eval — evaluate the fleet's nix-config CONSUMERS against
+# test/bin/cross-consumer-eval — evaluate the fleet's nix-config CONSUMERS against
 # THIS working tree, eval-only, so a change here that would break a consumer's
 # evaluation fails at pre-push in nix-config instead of weeks later at the
 # consumer's next lock bump.
@@ -63,9 +63,9 @@
 # --override-input is in-memory only.
 #
 # Usage:
-#   bin/cross-consumer-eval                     # every discoverable consumer
-#   bin/cross-consumer-eval vulcan vps          # a subset
-#   bin/cross-consumer-eval --list              # print the consumer set, exit
+#   test/bin/cross-consumer-eval                     # every discoverable consumer
+#   test/bin/cross-consumer-eval vulcan vps          # a subset
+#   test/bin/cross-consumer-eval --list              # print the consumer set, exit
 #
 # Environment:
 #   NIX_CONFIG_TREE          nix-config revision under test
@@ -83,7 +83,7 @@
 
 set -uo pipefail
 
-repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 
 tree=${NIX_CONFIG_TREE:-$repo_root}
 vulcan_checkout=${VULCAN_CHECKOUT:-$HOME/src/nixos}
@@ -113,7 +113,7 @@ if [[ ${CONSUMER_EVAL_OFFLINE:-0} == 1 ]]; then
 fi
 
 # Evaluate one target to a store path, accumulating (never aborting) on failure
-# so every consumer is reported before the gate exits — the same rule bin/quality
+# so every consumer is reported before the gate exits — the same rule test/bin/quality
 # enforces for its per-file suites.
 eval_target() {
     local name=$1

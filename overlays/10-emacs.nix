@@ -993,6 +993,13 @@ in
   emacsHEAD =
     with prev;
     let
+      versionLine =
+        lib.findFirst (line: lib.hasPrefix "AC_INIT([GNU Emacs], [" line)
+          (throw "emacs-src configure.ac has no GNU Emacs version")
+          (lib.splitString "\n" (builtins.readFile "${emacsSrc}/configure.ac"));
+      emacsHeadVersion = lib.head (
+        lib.splitString "]" (lib.removePrefix "AC_INIT([GNU Emacs], [" versionLine)
+      );
       libGccJitLibraryPaths = [
         "${lib.getLib libgccjit}/lib/gcc"
         "${lib.getLib stdenv.cc.libc}/lib"
@@ -1004,7 +1011,7 @@ in
       withNativeCompilation = false;
     }).overrideAttrs
       (attrs: {
-        version = "31.0.50";
+        version = emacsHeadVersion;
         env = {
           NATIVE_FULL_AOT = "1";
           LIBRARY_PATH = lib.concatStringsSep ":" libGccJitLibraryPaths;

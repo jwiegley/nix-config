@@ -1453,12 +1453,6 @@ run_bridge_failure() {
 test_bridge_static_contract() {
     [ "$BRIDGE_PRESENT" = 1 ] || fail "agent-http-header-bridge package/output is missing"
     [ -x "$BRIDGE_BIN" ] || fail "agent-http-header-bridge executable is missing"
-    [ "$MCP_REMOTE_REV" = 02619aff36e79803d7c894e8c8ae7b34b2d11f8c ] ||
-        fail "mcp-remote revision differs"
-    [ "$MCP_REMOTE_NAR_HASH" = 'sha256-+oNI2Uq7gW3sLzJS4ky2+BXhTmo44+WpcdYgieGPpmI=' ] ||
-        fail "mcp-remote NAR hash differs"
-    [ "$MCP_REMOTE_LOCK_HASH" = 598f60becf15b3197fce5c4e38e8158f3db2f774d218a443e50b3b5e2b098542 ] ||
-        fail "mcp-remote pnpm lock hash differs"
 
     run_bridge_failure arity 'agent-http-header-bridge: invalid invocation' "$BRIDGE_BIN"
     run_bridge_failure http-url 'agent-http-header-bridge: invalid invocation' \

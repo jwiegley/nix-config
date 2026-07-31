@@ -1,6 +1,6 @@
 name: CI
 
-# Every lint/format/test job delegates to bin/quality, the single quality
+# Every lint/format/test job delegates to test/bin/quality, the single quality
 # authority. Do NOT inline a tool invocation or a hand-maintained file list here.
 #
 # This file used to name 9 shell scripts explicitly while lefthook globbed all of
@@ -9,9 +9,9 @@ name: CI
 # hook. Both also hardcoded the same 4 Python files while the tree tracks 35, and
 # neither propagated failure out of its per-file loop.
 #
-# Scope lives in one place now: `git ls-files`, inside bin/quality.
+# Scope lives in one place now: `git ls-files`, inside test/bin/quality.
 #
-# `bin/quality darwin-surface` is deliberately local/pre-push for now. The root
+# `test/bin/quality darwin-surface` is deliberately local/pre-push for now. The root
 # flake still consumes a LAN-only ssh://gitea stock-trader input, so a GitHub
 # runner cannot evaluate that check honestly until a remote-safe boundary exists.
 # Full Python integration remains available through the local/manual expensive
@@ -47,7 +47,7 @@ jobs:
           SIGVERIFY_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
           SIGVERIFY_DEFAULT_BRANCH: origin/${{ github.event.repository.default_branch }}
           SIGVERIFY_STRICT: "1"
-        run: bin/verify-signatures --base "$SIGVERIFY_BASE" --head "$SIGVERIFY_HEAD"
+        run: test/bin/verify-signatures --base "$SIGVERIFY_BASE" --head "$SIGVERIFY_HEAD"
 
   nix-checks:
     runs-on: ubuntu-latest
@@ -58,7 +58,7 @@ jobs:
       - name: Nix format, lint and dead code
         run: |
           nix shell nixpkgs#nixfmt nixpkgs#statix nixpkgs#deadnix \
-            -c bin/quality nix-format nix-lint nix-deadcode
+            -c test/bin/quality nix-format nix-lint nix-deadcode
 
   shell-checks:
     runs-on: ubuntu-latest
@@ -69,7 +69,7 @@ jobs:
       - name: Shell lint and format
         run: |
           nix shell nixpkgs#shellcheck nixpkgs#shfmt \
-            -c bin/quality shell-lint shell-format
+            -c test/bin/quality shell-lint shell-format
 
   python-checks:
     runs-on: ubuntu-latest
@@ -82,5 +82,5 @@ jobs:
       - name: Python lint, essential tests, and coverage regression
         run: >-
           nix shell nixpkgs#ruff nixpkgs#nixfmt nixpkgs#coreutils
-          -c bin/quality --python-tier pre-commit
+          -c test/bin/quality --python-tier pre-commit
           python-lint python-test coverage

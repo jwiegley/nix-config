@@ -209,13 +209,6 @@ pkgs.runCommand "agent-wrappers-check"
     BRIDGE_NODE_GUARD = ./node-runtime-guard.cjs;
     BRIDGE_ORACLE_PY = ./recording-https-bridge-oracle.py;
     BRIDGE_PRESENT = if haveBridge then "1" else "0";
-    MCP_REMOTE_REV = if mcpRemote == null then "" else mcpRemote.rev or "";
-    MCP_REMOTE_NAR_HASH = if mcpRemote == null then "" else mcpRemote.narHash or "";
-    MCP_REMOTE_LOCK_HASH =
-      if mcpRemote == null || !builtins.pathExists "${mcpRemote}/pnpm-lock.yaml" then
-        ""
-      else
-        builtins.hashFile "sha256" "${mcpRemote}/pnpm-lock.yaml";
     PYTHON_BIN = "${pkgs.python3}/bin/python3";
   }
   ''

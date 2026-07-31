@@ -580,9 +580,9 @@ own parity gate (details + exact commands in NOTES §"Parity"):
 1. **Stage 1 — plumbing, provably byte-neutral.** N1, N2, W1–W6. Introduces
    `config.johnw.host` and validates the registry, but rewrites NO compare, so
    nothing consumes the flags yet. Gate: `nix flake check`, `./build system`,
-   `bin/parity-baseline --compare` (multiset identical), and the loud-failure
+   `test/bin/parity-baseline --compare` (multiset identical), and the loud-failure
    demo (temporarily typo a row → eval error → revert).
-2. **Stage 2 — Home Manager sites.** S1–S11. Gate: `bin/parity-baseline
+2. **Stage 2 — Home Manager sites.** S1–S11. Gate: `test/bin/parity-baseline
    --compare` (multiset identical on hera/clio/aarch64-linux/x86_64-linux) PLUS
    the HM value snapshot (booleans/assertions/rendered `programs.ssh.settings` &
    `programs.zsh.initContent` & `home.file` names diffed pre/post).
@@ -653,7 +653,7 @@ registry file is exactly the sanctioned end state.
 
 ## Parity — the whole risk
 
-`bin/parity-baseline` records TWO quantities and only the **package multiset** is
+`test/bin/parity-baseline` records TWO quantities and only the **package multiset** is
 a parity invariant (host `drvPath`s move on every commit because `vulcan-crt` is
 `path:./config/certs`, carrying the whole-tree hash — do NOT use drvPath
 equality as evidence; the script itself says so). The multiset covers only
@@ -664,7 +664,7 @@ Two-layer gate:
 
 **A. Package multiset (necessary, not sufficient).** Must be byte-identical:
 ```
-bin/parity-baseline --compare test/baseline/parity-e0ed94fabbc0.json
+test/bin/parity-baseline --compare test/baseline/parity-e0ed94fabbc0.json
 ```
 Expect "package multisets: IDENTICAL on every target". A `drvPath moved`
 line is expected and uninformative. Only `PACKAGE MULTISET DRIFT` fails.
@@ -790,7 +790,7 @@ the work-identity wiring OUT; this spec does not touch git/email.
   to run. I proved the flags reproduce the prior booleans by construction and by
   isolated eval, not by diffing a live pre/post build.
 - **nixfmt/statix/deadnix on the EDITED existing files.** I linted the two NEW
-  files only. After applying S1–S29/C1–C2, run `bin/quality nix-format nix-lint
+  files only. After applying S1–S29/C1–C2, run `test/bin/quality nix-format nix-lint
   nix-deadcode` over the changed files. The one deadnix hazard I already
   accounted for is W2 (removing the now-dead `retired-emacs-mcpHosts` bindings).
 - **nix-darwin exposes `config.assertions` at the pinned rev.** Home Manager
@@ -831,7 +831,7 @@ the work-identity wiring OUT; this spec does not touch git/email.
 `config/fleet/`. The compares and the two new files live in the **core**
 `config/*.nix` layer, which #47 does not rename. So these anchors are stable
 regardless of #47 order; the only #47-sensitive line is the verification command
-`nix flake check ./config/ai` → `./config/fleet` (and `bin/parity-baseline`'s
+`nix flake check ./config/ai` → `./config/fleet` (and `test/bin/parity-baseline`'s
 `PORTABLE_DIR`, which already carries a comment noting that single edit). If #50
 lands first, use `./config/ai`; if after #47, `./config/fleet`.
 

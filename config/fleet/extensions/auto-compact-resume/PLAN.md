@@ -23,15 +23,15 @@
 ## File Structure
 
 - `config/fleet/extensions/auto-compact-resume/index.ts`: threshold policy and Pi lifecycle integration; the only installed runtime file.
-- `config/fleet/extensions/auto-compact-resume/index.test.ts`: executable behavior tests using Bun and a minimal fake Extension API.
+- `test/ai/extensions/auto-compact-resume/index.test.ts`: executable behavior tests using Bun and a minimal fake Extension API.
 - `config/fleet/extensions/auto-compact-resume/DESIGN.md`: approved behavioral specification.
 - `config/fleet/extensions/auto-compact-resume/PLAN.md`: this implementation plan.
 
 ### Task 1: Specify the lifecycle behavior with failing tests
 
 **Files:**
-- Create: `config/fleet/extensions/auto-compact-resume/index.test.ts`
-- Test: `config/fleet/extensions/auto-compact-resume/index.test.ts`
+- Create: `test/ai/extensions/auto-compact-resume/index.test.ts`
+- Test: `test/ai/extensions/auto-compact-resume/index.test.ts`
 
 **Interfaces:**
 - Consumes: Pi event names `session_start` and `turn_end`; context methods `getContextUsage()` and `compact()`.
@@ -46,8 +46,7 @@ Create a Bun test that dynamically imports `./index.ts`, converts a missing modu
 Run:
 
 ```bash
-cd config/fleet/extensions/auto-compact-resume
-bun test index.test.ts
+bun test test/ai/extensions/auto-compact-resume/index.test.ts
 ```
 
 Expected: failure because `index.ts` does not yet exist; the assertion reports that the imported module is `null`.
@@ -75,7 +74,7 @@ Run the same `bun test` command. Expected: failure remains attributable to the a
 
 **Files:**
 - Create: `config/fleet/extensions/auto-compact-resume/index.ts`
-- Test: `config/fleet/extensions/auto-compact-resume/index.test.ts`
+- Test: `test/ai/extensions/auto-compact-resume/index.test.ts`
 
 **Interfaces:**
 - Produces: `calculateThreshold(contextWindow: number, maxTokens: number): number` and a default Pi extension factory.
@@ -127,8 +126,7 @@ On `session_start`, compact an already-large context without resuming unless its
 Run:
 
 ```bash
-cd config/fleet/extensions/auto-compact-resume
-bun test index.test.ts
+bun test test/ai/extensions/auto-compact-resume/index.test.ts
 ```
 
 Expected: all 12 tests pass with no warnings or errors.

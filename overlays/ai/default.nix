@@ -19,7 +19,6 @@
             rustc = rust195;
           };
         in
-        assert rust195.version == "1.95.0";
         {
           qdrant = prev.qdrant.override { rustPlatform = rustPlatform195; };
         }

@@ -2,7 +2,7 @@
 """Build and validate the fleet's credential-safe structural coverage artifact.
 
 The default operation is intentionally cheap: it derives denominators from Git,
-Python syntax, ``bin/quality --list``, and the committed applicability manifest.
+Python syntax, ``test/bin/quality --list``, and the committed applicability manifest.
 Nix evaluation-start evidence is collected only with ``--collect-nix-reach``.
 
 The persisted format is ``fleet-coverage/1``.  Runtime output is never copied into
@@ -43,7 +43,7 @@ SAFE_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._@+/-]*\Z")
 EVALUATING_FILE_RE = re.compile(r"evaluating file '([^'\n]+)'\Z")
 TIERS = frozenset({"pre-commit", "pre-push", "ci-on-demand"})
 STATES = frozenset({"unknown", "observed", "failed", "skipped", "not-run"})
-PRE_COMMIT_CORE_ARGV = ["bin/quality", "--tier", "pre-commit-core"]
+PRE_COMMIT_CORE_ARGV = ["test/bin/quality", "--tier", "pre-commit-core"]
 
 PYTHON_KINDS = frozenset({"product", "test"})
 SHELL_KINDS = frozenset({"library", "production", "test-driver"})
@@ -1168,8 +1168,8 @@ def discover_files(
             ):
                 python_files.append(path)
         if (
-            path.startswith("bin/")
-            and "/" not in path[len("bin/") :]
+            path.startswith("test/bin/")
+            and "/" not in path[len("test/bin/") :]
             and path.endswith("-test.py")
         ):
             python_tests.append(path)
@@ -1334,12 +1334,12 @@ def discover_python_static(
 
 def discover_quality_suites(repo: Path, runner: RunCommand = run_command) -> list[str]:
     proc = _checked_command(
-        runner, ["bin/quality", "--list"], repo, description="quality suite discovery"
+        runner, ["test/bin/quality", "--list"], repo, description="quality suite discovery"
     )
     suites = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
     if not suites or len(suites) != len(set(suites)):
         raise CoverageError(
-            "bin/quality --list returned an empty or duplicate suite set"
+            "test/bin/quality --list returned an empty or duplicate suite set"
         )
     for index, suite in enumerate(suites):
         _safe_id(suite, f"quality suite[{index}]")
@@ -1821,7 +1821,7 @@ def derive_report(
     manifest_suites = sorted(manifest["gateDenominator"]["qualitySuites"])
     if quality_suites != manifest_suites:
         raise CoverageError(
-            "manifest quality suites differ from bin/quality --list; "
+            "manifest quality suites differ from test/bin/quality --list; "
             f"live={quality_suites}, manifest={manifest_suites}"
         )
     static_tests = discover_python_static(repo, files["python"], runner)
@@ -1876,7 +1876,7 @@ def derive_report(
     unknown = {"state": "unknown", "reason": "not measured by structural collection"}
     provenance_commands = [
         ["git", "ls-files", "--stage", "-z"],
-        ["bin/quality", "--list"],
+        ["test/bin/quality", "--list"],
         ["git", "rev-parse", "HEAD"],
         ["git", "--version"],
         ["nix", "--version"],
@@ -2232,7 +2232,7 @@ def validate_report(
         _validate_argv(argv, f"artifact.provenance.commands[{index}]")
     expected_commands = [
         ["git", "ls-files", "--stage", "-z"],
-        ["bin/quality", "--list"],
+        ["test/bin/quality", "--list"],
         ["git", "rev-parse", "HEAD"],
         ["git", "--version"],
         ["nix", "--version"],
@@ -2329,7 +2329,7 @@ def check_artifact(
 ) -> Path:
     manifest = validate_manifest(load_index_json(repo, MANIFEST_RELATIVE, runner))
     live = derive_report(
-        repo, runner=runner, worktree_dependencies=frozenset({"bin/quality"})
+        repo, runner=runner, worktree_dependencies=frozenset({"test/bin/quality"})
     )
     path = _resolve_artifact(repo, runner, explicit, for_write=False)
     artifact = _expect_object(
@@ -2714,7 +2714,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    repo = Path(__file__).resolve().parent.parent
+    repo = Path(__file__).resolve().parents[2]
     try:
         if args.check:
             if args.collect_nix_reach:

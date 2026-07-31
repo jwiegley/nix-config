@@ -4,7 +4,7 @@
 
 The ordinary commit gate runs every updater CLI and catalog/unit test plus the
 bounded integration checks below.  The low-frequency expensive tier runs the
-unfiltered ``bin/update-overlay-test.py`` suite, including its temporary-Git
+unfiltered ``test/bin/update-overlay-test.py`` suite, including its temporary-Git
 publication, signal, and rollback matrix.
 """
 

@@ -70,11 +70,11 @@
 #   3  a required tool (git, gpg) is missing
 #
 # Usage:
-#   bin/verify-signatures                       # local: check unpushed commits
-#   bin/verify-signatures --range A..B
-#   bin/verify-signatures --base <sha> --head <sha>
-#   bin/verify-signatures --keys-dir DIR        # public keyring source
-#   SIGVERIFY_BASE=.. SIGVERIFY_HEAD=.. bin/verify-signatures   # the CI contract
+#   test/bin/verify-signatures                       # local: check unpushed commits
+#   test/bin/verify-signatures --range A..B
+#   test/bin/verify-signatures --base <sha> --head <sha>
+#   test/bin/verify-signatures --keys-dir DIR        # public keyring source
+#   SIGVERIFY_BASE=.. SIGVERIFY_HEAD=.. test/bin/verify-signatures   # the CI contract
 #
 # Refs: jwiegley/nix-config#23 (GOV-10); sibling of bin/publish.
 

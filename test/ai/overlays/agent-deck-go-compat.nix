@@ -1,7 +1,8 @@
 { lib, runCommand }:
 
 let
-  overlay = import ../ai/30-agent-deck.nix;
+  overlay = import ../../../overlays/ai/30-agent-deck.nix;
+  source = (import ../../../packages/source-catalog.nix "ai").agent-deck;
 
   result =
     (overlay { } {
@@ -16,5 +17,5 @@ let
 in
 assert result.builder == "go-1.26";
 assert result.pname == "agent-deck";
-assert result.version == "1.10.11";
+assert result.version == source.version;
 runCommand "agent-deck-go-compat" { } "touch $out"

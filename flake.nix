@@ -95,7 +95,7 @@
       # reason this lock was not 100% fetchable by an external consumer.
       #
       # The literal URL is deliberately not written here: the purity gate in
-      # bin/update-overlay-test.py forbids that scheme appearing in flake.nix at
+      # test/bin/update-overlay-test.py forbids that scheme appearing in flake.nix at
       # all, and it is right to — a comment quoting it is indistinguishable from
       # a declaration using it.
       #
@@ -318,10 +318,10 @@
       # only ever passed because lefthook and CI called nixfmt directly with a
       # file list, never through `nix fmt`.
       #
-      # With no path arguments this delegates to bin/quality, so `nix fmt`,
+      # With no path arguments this delegates to test/bin/quality, so `nix fmt`,
       # `make format` and the pre-commit hook are the same operation over the
       # same discovered file set (jwiegley/nix-config#46). It deliberately runs
-      # the working tree's bin/quality rather than a store copy: a formatter
+      # the working tree's test/bin/quality rather than a store copy: a formatter
       # should use the tool as it currently exists in the tree it is formatting,
       # and a store copy would silently format with a stale version after an
       # edit. With explicit path arguments it dispatches by extension, matching
@@ -385,14 +385,14 @@
               exit 2
             }
             cd "$root"
-            [ -x bin/quality ] || {
-              echo "nix fmt: $root/bin/quality is missing or not executable." >&2
+            [ -x test/bin/quality ] || {
+              echo "nix fmt: $root/test/bin/quality is missing or not executable." >&2
               exit 2
             }
             if [ "$mode" = --fix ]; then
-              exec bin/quality --fix nix-format shell-format
+              exec test/bin/quality --fix nix-format shell-format
             fi
-            exec bin/quality nix-format shell-format
+            exec test/bin/quality nix-format shell-format
           '';
         }
       );
@@ -443,7 +443,7 @@
                     echo "Checking Nix formatting..."
                     find ${src} -name '*.nix' | xargs nixfmt --check
                     echo "Checking shell formatting..."
-                    for f in $(find ${src}/bin -maxdepth 1 -type f) ${src}/build; do
+                    for f in $(find ${src}/bin ${src}/test/bin -maxdepth 1 -type f) ${src}/build; do
                       if head -1 "$f" | grep -q bash; then
                         shfmt -i 4 -d "$f"
                       fi
@@ -478,16 +478,16 @@
                     done
                     echo "Running ruff..."
                     ruff check \
-                      ${src}/bin/agent-deck-env-test.py \
-                      ${src}/bin/codex-env-test.py \
+                      ${src}/test/bin/agent-deck-env-test.py \
+                      ${src}/test/bin/codex-env-test.py \
                       ${src}/bin/update-overlay \
-                      ${src}/bin/update-overlay-test.py
+                      ${src}/test/bin/update-overlay-test.py
                     echo "Running Agent Deck environment wrapper tests..."
-                    python3 ${src}/bin/agent-deck-env-test.py
+                    python3 ${src}/test/bin/agent-deck-env-test.py
                     echo "Running Codex environment wrapper tests..."
-                    python3 ${src}/bin/codex-env-test.py
+                    python3 ${src}/test/bin/codex-env-test.py
                     echo "Running update-overlay tests..."
-                    python3 ${src}/bin/update-overlay-test.py
+                    python3 ${src}/test/bin/update-overlay-test.py
                     touch $out
                   '';
 

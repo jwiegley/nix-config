@@ -22,8 +22,8 @@ for tool in git nix python3 cmp cp grep mktemp unlink rmdir; do
 done
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
-repo_root=$(git -C "$script_dir/.." rev-parse --show-toplevel 2>/dev/null) ||
-    die "bin/immutable-subflake-check is not inside a Git repository"
+repo_root=$(git -C "$script_dir/../.." rev-parse --show-toplevel 2>/dev/null) ||
+    die "test/bin/immutable-subflake-check is not inside a Git repository"
 
 revision=${1-HEAD}
 commit=$(

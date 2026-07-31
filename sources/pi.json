@@ -528,7 +528,7 @@
     },
     "pi-mcp-adapter": {
       "hashes": {
-        "npmDepsHash": "sha256-Mxt5yq4UGxwVSIIC9B+fG2SS4BUNseyAL806Eb1I9YM="
+        "npmDepsHash": "sha256-kInJTgp1UYRYHNCgtYxmkPtlErTPd2R/BpPEQAFmV8c="
       },
       "source": {
         "args": {

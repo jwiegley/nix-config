@@ -353,7 +353,6 @@ fi
 ai_inputs=(
     git-ai
     llm-agents
-    mcp-remote
     mcp-servers-nix
     pal-mcp-server
     pi-openai-server-compaction
@@ -626,6 +625,7 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
                 | select(
                     (
                         .kind == "fixed-flake-input"
+                        or .kind == "flake-input+build"
                         or .kind == "flake-input+copy"
                         or .kind == "npm-release+flake-input"
                     )

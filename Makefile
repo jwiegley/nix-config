@@ -45,7 +45,7 @@ help:
 	  'Mutating targets (explicit only):' \
 	  '  format           Rewrite tracked Nix and shell sources' \
 	  '  darwin-surface-baseline  Regenerate the exact-commit Darwin value baseline' \
-	  '  lint             Run every quality suite (bin/quality)' \
+	  '  lint             Run every quality suite (test/bin/quality)' \
 	  '  switch           Re-lock local inputs and switch nix-darwin' \
 	  '  update           Update all locks/pins, switch, commit, and push' \
 	  '  upgrade          Update, switch, and run upgrade tasks' \
@@ -53,17 +53,17 @@ help:
 
 test:
 	set -e
-	bin/quality --python-tier pre-push python-test coverage darwin-surface
+	test/bin/quality --python-tier pre-push python-test coverage darwin-surface
 	nix build --no-link \
 	  .#checks.$(SYSTEM).agent-resources \
 	  .#checks.$(SYSTEM).agent-wrappers \
 	  .#checks.$(SYSTEM).pi-gallery
 
 expensive:
-	bin/quality --tier expensive
+	test/bin/quality --tier expensive
 
 darwin-surface-baseline:
-	bin/darwin-surface-baseline --write
+	test/bin/darwin-surface-baseline --write
 
 tools:
 	@echo HOSTNAME=$(HOSTNAME)
@@ -284,17 +284,17 @@ sign:
 	$(call announce,nix store sign -k "<key>" --all)
 	@nix store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
 
-# Delegates to bin/quality, the single quality authority. Do not inline nixfmt or
+# Delegates to test/bin/quality, the single quality authority. Do not inline nixfmt or
 # a find/prune expression here: that duplication is what let this target's own
 # help text claim it rewrote "Nix and shell sources" while it only ever ran
 # nixfmt. See jwiegley/nix-config#46.
 format:
 	$(call announce,quality --fix)
-	bin/quality --fix nix-format shell-format
+	test/bin/quality --fix nix-format shell-format
 
 lint:
 	$(call announce,quality)
-	bin/quality
+	test/bin/quality
 
 travel-ready:
 	$(call announce,travel-ready)

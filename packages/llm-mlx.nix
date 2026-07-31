@@ -44,7 +44,7 @@ in
 
     pythonImportsCheck = [ "llm_mlx" ];
 
-    passthru.tests.llm-plugin = callPackage ../overlays/tests/llm-plugin.nix { };
+    passthru.tests.llm-plugin = callPackage ../test/ai/overlays/llm-plugin.nix { };
 
     meta = {
       description = "LLM access to models using MLX";

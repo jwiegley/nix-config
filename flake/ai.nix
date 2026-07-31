@@ -1870,15 +1870,6 @@ let
       assert package ? overrideAttrs;
       package.overrideAttrs (old: {
         preInstall = ''
-          cat > pi-tool-renderer-wrapper.sha256 <<'EOF'
-          9720d2a160540d9515ceb1ac4c4b4e73f4a215d703870c15b3c1863a2e37ff76  dist/core/agent-session.js
-          a4dafd2ea75625be11021365c9bb60f15ec9e133e20ad4a31cef5a3cfeec2dce  dist/core/http-dispatcher.js
-          5ebc2b2d8e13e0d90d6279d34e016b6f441208af9e73f3d4e75975376eb8987c  dist/core/extensions/loader.js
-          bf1257dd0c05af7b9887348e42e4a1a19653ca9edddcceac0fa2219897cc4704  dist/core/extensions/runner.js
-          0e7cdacbe1bc5fd0e29748c31de73cdcdabc144ce98c1b970d19ca03b4f8221f  dist/core/extensions/runner.d.ts
-          b27f2ee319ff784b35f83fb2a2276f32f3383e5e593b05bdfab566d6dd172318  dist/core/extensions/types.d.ts
-          EOF
-          sha256sum -c pi-tool-renderer-wrapper.sha256
           patch -p1 --fuzz=0 < ${../overlays/ai/patches/pi-system-prompt-no-docs.patch}
           substituteInPlace dist/core/system-prompt.js \
             --replace-fail '//# sourceMappingURL=system-prompt.js.map' ""
@@ -2070,7 +2061,6 @@ let
       ../flake
       ../flake-ai.nix
       ../overlays/ai
-      ../overlays/tests
       ../packages/agent-resources.nix
       ../packages/ai-package-policy.nix
       ../packages/ai-llm.nix
@@ -2088,6 +2078,7 @@ let
       ../test/ai/compatibility-check.nix
       ../test/ai/compatibility-contract.nix
       ../test/ai/input-projection-parity.nix
+      ../test/ai/overlays
       ../test/ai/node-runtime-guard.cjs
       ../test/ai/pi-gallery.nix
       ../test/ai/pi-tool-renderer-wrapper.test.mjs
@@ -2218,12 +2209,12 @@ in
     in
     rec {
       build = mkAiToolchain pkgs;
-      agent-deck-go-compat = pkgs.callPackage ../overlays/tests/agent-deck-go-compat.nix { };
-      fractal-smoke = pkgs.callPackage ../overlays/tests/plasma-fractal-smoke.nix { };
+      agent-deck-go-compat = pkgs.callPackage ../test/ai/overlays/agent-deck-go-compat.nix { };
+      fractal-smoke = pkgs.callPackage ../test/ai/overlays/plasma-fractal-smoke.nix { };
       input-projection-parity = pkgs.callPackage ../test/ai/input-projection-parity.nix {
         inherit inputs;
       };
-      llama-cpp-platform-compat = pkgs.callPackage ../overlays/tests/llama-cpp-platform-compat.nix { };
+      llama-cpp-platform-compat = pkgs.callPackage ../test/ai/overlays/llama-cpp-platform-compat.nix { };
       llm-agents-nixpkgs-independent =
         let
           portableLock = builtins.fromJSON (builtins.readFile ../config/fleet/flake.lock);

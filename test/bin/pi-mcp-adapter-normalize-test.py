@@ -5,7 +5,8 @@ from pathlib import Path
 import unittest
 
 
-SCRIPT = Path(__file__).parent.parent / "packages/pi-mcp-adapter-normalize.py"
+REPO = Path(__file__).resolve().parents[2]
+SCRIPT = REPO / "packages" / "pi-mcp-adapter-normalize.py"
 SPEC = importlib.util.spec_from_file_location("pi_mcp_adapter_normalize", SCRIPT)
 MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None

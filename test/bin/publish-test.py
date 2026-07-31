@@ -6,7 +6,7 @@ Every test builds a throwaway repository with two local bare remotes named
 required. The point of these tests is the refusal paths: bin/publish is a tool
 whose value is entirely in what it declines to do.
 
-Run: python3 -m unittest -v bin/publish-test.py
+Run: python3 -m unittest -v test/bin/publish-test.py
 """
 
 import os
@@ -15,8 +15,8 @@ import subprocess
 import tempfile
 import unittest
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-PUBLISH = os.path.join(HERE, "publish")
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PUBLISH = os.path.join(REPO, "bin", "publish")
 
 
 # Git environment variables that point git at a specific repository. These MUST
@@ -801,7 +801,7 @@ class TestDoesNotEscapeItsSandbox(unittest.TestCase):
                 "python3", "-m", "unittest",
                 "publish-test.TestNoop.test_both_already_current_is_a_noop_and_succeeds",
             ],
-            cwd=HERE, capture_output=True, text=True, env=with_hostile,
+            cwd=REPO, capture_output=True, text=True, env=with_hostile,
         )
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
@@ -851,7 +851,7 @@ class TestSelfConsistency(unittest.TestCase):
         self.assertIn("REMOTES=(origin github)", body)
 
     def test_pre_push_commands_use_tracked_tree_scope(self):
-        with open(os.path.join(os.path.dirname(HERE), "lefthook.yml")) as fh:
+        with open(os.path.join(REPO, "lefthook.yml")) as fh:
             config = fh.read()
         pre_push = config.split("\npre-push:\n", 1)[1]
         self.assertIn("git ls-files", pre_push)

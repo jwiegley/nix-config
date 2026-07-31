@@ -1,7 +1,8 @@
 { runCommand }:
 
 let
-  overlay = import ../ai/30-ai-llm.nix;
+  overlay = import ../../../overlays/ai/30-ai-llm.nix;
+  source = (import ../../../packages/source-catalog.nix "ai").llama-cpp;
 
   linuxResult =
     (overlay { } {
@@ -50,7 +51,7 @@ assert linuxResult.marker == "linux-upstream";
 assert legacyDarwinResult.marker == "legacy-darwin-upstream";
 assert darwinResult.marker == "darwin-override";
 assert darwinResult.args.nodejs_latest == "nodejs-22";
-assert darwinResult.attrs.version == "10107";
+assert darwinResult.attrs.version == source.version;
 assert darwinResult.attrs.npmRoot == "tools/ui";
 assert darwinResult.attrs.npmDeps.patches == [ "existing.patch" ];
 runCommand "llama-cpp-platform-compat" { } "touch $out"

@@ -13,7 +13,7 @@
 # consumer, kind, classification, file, line, and the exact source text.
 #
 # The output is stored evidence, not a Nix-generated leaf, so it is committed as
-# a tracked data file (bin/consumer-inventory --write).
+# a tracked data file (test/bin/consumer-inventory --write).
 #
 # CLASSIFICATION SCHEME (issue #17). Every reference is exactly one of:
 #
@@ -45,12 +45,12 @@
 # so the artifact reproduces offline.
 #
 # Usage:
-#   bin/consumer-inventory                 # derive, print JSON to stdout
-#   bin/consumer-inventory --print         # same
-#   bin/consumer-inventory --write [FILE]  # derive, write FILE
+#   test/bin/consumer-inventory                 # derive, print JSON to stdout
+#   test/bin/consumer-inventory --print         # same
+#   test/bin/consumer-inventory --write [FILE]  # derive, write FILE
 #                                          #   (default test/inventory/consumer-inventory.json)
 #
-# Environment overrides (all optional; defaults mirror bin/parity-baseline's
+# Environment overrides (all optional; defaults mirror test/bin/parity-baseline's
 # BASH_SOURCE-relative root detection and the ~/src sibling-checkout layout):
 #   CONSUMER_INVENTORY_REPO_ROOT      nix-config repo root
 #   CONSUMER_INVENTORY_CONSUMER_BASE  directory holding the sibling consumer checkouts
@@ -62,7 +62,7 @@
 
 set -euo pipefail
 
-repo_root=${CONSUMER_INVENTORY_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
+repo_root=${CONSUMER_INVENTORY_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}
 consumer_base=${CONSUMER_INVENTORY_CONSUMER_BASE:-$(cd "$repo_root/.." && pwd)}
 repo_head=${CONSUMER_INVENTORY_REPO_HEAD-__auto__}
 
@@ -120,14 +120,14 @@ CONFIG_FLEET = "config/fleet"
 INTENTIONAL_CONFIG_AI_FILES = {
     "CLAUDE.md",
     "README.md",
-    "bin/consumer-inventory",
-    "bin/coverage-report",
-    "bin/coverage-report-test.py",
-    "bin/cross-consumer-eval",
-    "bin/gates-test.py",
-    "bin/immutable-subflake-check",
-    "bin/oracle-currency-test.py",
-    "bin/parity-baseline",
+    "test/bin/consumer-inventory",
+    "test/bin/coverage-report",
+    "test/bin/coverage-report-test.py",
+    "test/bin/cross-consumer-eval",
+    "test/bin/gates-test.py",
+    "test/bin/immutable-subflake-check",
+    "test/bin/oracle-currency-test.py",
+    "test/bin/parity-baseline",
     "doc/AI-NIX-REINTEGRATION-WIGGUM-HANDOFF.md",
     "doc/AI-NIX-REINTEGRATION-WIGGUM-PLAN.md",
     "doc/AI-UPDATE-FOLLOWUPS-2026-07-24.md",
@@ -297,7 +297,7 @@ def tracked_files(root):
     directories happen to exist is not a baseline; it cannot be reproduced, and a
     real reference appearing or vanishing is invisible in the noise.
 
-    This is the rule bin/quality states in its own header -- "Scope lives in one
+    This is the rule test/bin/quality states in its own header -- "Scope lives in one
     place now: `git ls-files`" -- applied to the other inventory that had not
     adopted it.
     """
@@ -348,7 +348,7 @@ def grep(pattern, root, fixed=False):
         # into a RuntimeError for the ENTIRE run: one path mid-rename in any of the
         # four roots this walks would abort the whole inventory.
         #
-        # This is the guard bin/quality got in d6b3cf3d. Adopting that file's scope
+        # This is the guard test/bin/quality got in d6b3cf3d. Adopting that file's scope
         # rule without its companion guard was taking half the pattern.
         targets = [p for p in tracked if _matches_globs(p) and os.path.exists(p)]
         if not targets:
@@ -795,7 +795,7 @@ commands = {
 out = {
     "schemaVersion": SCHEMA_VERSION,
     "artifact": "consumer-inventory",
-    "generatedBy": "bin/consumer-inventory",
+    "generatedBy": "test/bin/consumer-inventory",
     "purpose": (
         "Merged, classified inventory of every reference from every consumer into "
         "nix-config, so the config/ai -> config/fleet rename (#47) and its straggler "
@@ -809,7 +809,7 @@ out = {
     "consumerLayout": (
         "nix-config at the repository root; consumer checkouts as siblings "
         "(nixos, vps, andoria). Absolute paths are intentionally omitted: see "
-        "the comment at this key in bin/consumer-inventory."),
+        "the comment at this key in test/bin/consumer-inventory."),
     "classificationScheme": {
         "rename-now": "Stale operational reference to the literal config/ai directory inside nix-config; #47 must leave none.",
         "stub-covered": "External consumer edge still resolving through stale ?dir=config/ai. #47's throwing stub makes this fail loudly; migrate the URL in the authorized coordinated transaction.",

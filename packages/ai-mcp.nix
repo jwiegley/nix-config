@@ -10,6 +10,7 @@
 
 let
   sources = import ./source-catalog.nix "ai";
+  palPackage = builtins.fromTOML (builtins.readFile "${palMcpServer}/pyproject.toml");
 in
 prev.lib.optionalAttrs (palMcpServer != null) {
 
@@ -21,7 +22,7 @@ prev.lib.optionalAttrs (palMcpServer != null) {
     with final.python3Packages;
     buildPythonApplication {
       pname = "pal-mcp-server";
-      version = "1.2.1";
+      version = palPackage.project.version;
       pyproject = true;
 
       src = palMcpServer;
@@ -40,7 +41,7 @@ prev.lib.optionalAttrs (palMcpServer != null) {
         python-dotenv
       ];
 
-      env.SETUPTOOLS_SCM_PRETEND_VERSION = "1.2.1";
+      env.SETUPTOOLS_SCM_PRETEND_VERSION = palPackage.project.version;
 
       doCheck = false;
 
@@ -59,59 +60,55 @@ prev.lib.optionalAttrs (palMcpServer != null) {
     let
       source = mcpRemote;
       sourcePackage = builtins.fromJSON (builtins.readFile "${source}/package.json");
-      lockHash = builtins.hashFile "sha256" "${source}/pnpm-lock.yaml";
       pnpm = prev.pnpm_10.override { nodejs-slim = prev.nodejs_22; };
-      proxy =
-        assert sourcePackage.version == "0.1.38";
-        assert lockHash == "598f60becf15b3197fce5c4e38e8158f3db2f774d218a443e50b3b5e2b098542";
-        prev.stdenv.mkDerivation (finalAttrs: {
-          pname = "agent-http-header-bridge-proxy";
-          inherit (sourcePackage) version;
-          inherit source;
-          src = source;
+      proxy = prev.stdenv.mkDerivation (finalAttrs: {
+        pname = "agent-http-header-bridge-proxy";
+        inherit (sourcePackage) version;
+        inherit source;
+        src = source;
 
-          patches = [ ../overlays/ai/patches/mcp-remote-header-only.patch ];
+        patches = [ ../overlays/ai/patches/mcp-remote-header-only.patch ];
 
-          nativeBuildInputs = [
-            prev.nodejs_22
-            pnpm
-            prev.pnpmConfigHook
-          ];
+        nativeBuildInputs = [
+          prev.nodejs_22
+          pnpm
+          prev.pnpmConfigHook
+        ];
 
-          pnpmDeps = prev.fetchPnpmDeps {
-            inherit (finalAttrs) pname version src;
-            inherit pnpm;
-            fetcherVersion = 3;
-            hash = "sha256-8aV/WRBrcezMb8HyRKW89v11MumgQnQwSBde5MZkzos=";
-          };
+        pnpmDeps = prev.fetchPnpmDeps {
+          inherit (finalAttrs) pname version src;
+          inherit pnpm;
+          fetcherVersion = 3;
+          hash = sources.mcp-remote.hashes.npmDepsHash;
+        };
 
-          buildPhase = ''
-            runHook preBuild
-            pnpm run check
-            pnpm run test:unit
-            pnpm run build
-            pnpm prune --prod --ignore-scripts
-            runHook postBuild
-          '';
+        buildPhase = ''
+          runHook preBuild
+          pnpm run check
+          pnpm run test:unit
+          pnpm run build
+          pnpm prune --prod --ignore-scripts
+          runHook postBuild
+        '';
 
-          installPhase = ''
-            runHook preInstall
-            bridge_lib="$out/libexec/agent-http-header-bridge"
-            install -d "$bridge_lib"
-            install -m0755 dist/proxy.js "$bridge_lib/proxy.js"
-            install -m0644 dist/chunk-*.js "$bridge_lib/"
-            install -m0644 package.json "$bridge_lib/package.json"
-            cp -R node_modules "$bridge_lib/node_modules"
-            install -Dm0644 LICENSE \
-              "$out/share/licenses/agent-http-header-bridge/LICENSE"
-            runHook postInstall
-          '';
-        });
+        installPhase = ''
+          runHook preInstall
+          bridge_lib="$out/libexec/agent-http-header-bridge"
+          install -d "$bridge_lib"
+          install -m0755 dist/proxy.js "$bridge_lib/proxy.js"
+          install -m0644 dist/chunk-*.js "$bridge_lib/"
+          install -m0644 package.json "$bridge_lib/package.json"
+          cp -R node_modules "$bridge_lib/node_modules"
+          install -Dm0644 LICENSE \
+            "$out/share/licenses/agent-http-header-bridge/LICENSE"
+          runHook postInstall
+        '';
+      });
     in
     prev.writeShellApplication {
       name = "agent-http-header-bridge";
       passthru = {
-        inherit lockHash proxy source;
+        inherit proxy source;
         inherit (source) narHash rev;
       };
       text = ''

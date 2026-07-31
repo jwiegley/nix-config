@@ -23,11 +23,11 @@ from typing import Any, Callable, Iterator, NoReturn, Sequence
 
 
 PROGRAM = "darwin-surface-baseline"
-REPOSITORY = Path(__file__).resolve().parent.parent
+REPOSITORY = Path(__file__).resolve().parents[2]
 BASELINE_DIRECTORY = REPOSITORY / "test" / "baseline"
 PROJECTOR_RELATIVE = Path("test/darwin/darwin-surface.nix")
 HELPER_RELATIVE = Path("test/darwin/surface-helpers.nix")
-DIFFER_RELATIVE = Path("bin/darwin-surface-diff")
+DIFFER_RELATIVE = Path("test/bin/darwin-surface-diff")
 PROJECTION_PATHS = (PROJECTOR_RELATIVE, HELPER_RELATIVE, DIFFER_RELATIVE)
 BACKUP_NAME = ".darwin-surface-baseline.backup.json"
 LOCK_NAME = ".darwin-surface-baseline.lock"
@@ -86,8 +86,8 @@ HOST_SURFACE_COMMAND = (
     "nix eval --impure --json '.#darwinConfigurations.<host>' "
     "--apply 'darwin: import ./test/darwin/darwin-surface.nix darwin'"
 )
-COMPARE_COMMAND = "bin/darwin-surface-diff --normalize-store <before.json> <after.json>"
-REFRESH_COMMAND = "bin/darwin-surface-baseline --rev <rev> --write"
+COMPARE_COMMAND = "test/bin/darwin-surface-diff --normalize-store <before.json> <after.json>"
+REFRESH_COMMAND = "test/bin/darwin-surface-baseline --rev <rev> --write"
 COMMANDS = {
     "hostSurface": HOST_SURFACE_COMMAND,
     "compare": COMPARE_COMMAND,

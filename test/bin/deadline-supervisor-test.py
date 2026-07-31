@@ -11,7 +11,8 @@ import unittest
 from pathlib import Path
 
 
-SUPERVISOR = Path(__file__).with_name("deadline-supervisor.py")
+REPO = Path(__file__).resolve().parents[2]
+SUPERVISOR = REPO / "test" / "bin" / "deadline-supervisor.py"
 SUPERVISOR_MODULE = runpy.run_path(str(SUPERVISOR))
 
 

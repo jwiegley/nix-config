@@ -1382,7 +1382,6 @@ let
     };
 
     adapterVersions = {
-      mcp-remote = "0.1.38";
       pi-mcp-adapter = piSources.pi-mcp-adapter.version;
       pi-model-router = piSources.pi-model-router.version;
     };

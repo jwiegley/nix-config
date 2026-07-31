@@ -887,6 +887,9 @@
       }
     },
     "mcp-remote": {
+      "hashes": {
+        "npmDepsHash": "sha256-8aV/WRBrcezMb8HyRKW89v11MumgQnQwSBde5MZkzos="
+      },
       "source": {
         "args": {
           "narHash": "sha256-+oNI2Uq7gW3sLzJS4ky2+BXhTmo44+WpcdYgieGPpmI=",
@@ -903,8 +906,9 @@
           "flake.lock",
           "config/fleet/flake.lock"
         ],
+        "buildPackage": "agent-http-header-bridge",
         "input": "mcp-remote",
-        "kind": "flake-input"
+        "kind": "flake-input+build"
       }
     },
     "mcp-servers-nix": {

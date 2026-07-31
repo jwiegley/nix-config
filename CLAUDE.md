@@ -12,7 +12,7 @@ This file provides guidance to coding agents working in this repository.
 
 ```bash
 # Baseline/focused tests
-python3 -m unittest -v bin/update-overlay-test.py
+python3 -m unittest -v test/bin/update-overlay-test.py
 nix flake check ./config/fleet --all-systems --no-build
 make test
 

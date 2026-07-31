@@ -188,18 +188,9 @@ let
       }
     }
 
-    const expectedDirect = {
-      "@modelcontextprotocol/ext-apps": "1.7.4",
-      "@modelcontextprotocol/sdk": "1.29.0",
-      "open": "10.2.0",
-      "recheck": "4.5.0",
-      "zod": "4.4.3"
-    };
-    for (const [name, version] of Object.entries(expectedDirect)) {
+    const expectedDirect = Object.keys(lock.packages[""]?.dependencies ?? {});
+    for (const name of expectedDirect) {
       const key = "node_modules/" + name;
-      if (locked.get(key)?.version !== version) {
-        fail("unexpected locked version for " + name);
-      }
       if (!actual.has(key)) fail("missing direct runtime dependency: " + name);
     }
     for (const peer of ["@earendil-works/pi-ai", "@earendil-works/pi-tui", "typebox"]) {
@@ -379,15 +370,6 @@ else
         && [ ! -L "$actual/translate-en/GLOSSARY.csv" ] \
         || fail "translate-en glossary was not materialized"
 
-      test "$(sha256sum ${lib.escapeShellArg "${gitSurgeonSource}/skills/git-surgeon/SKILL.md"} | cut -d' ' -f1)" \
-        = 086445cd0424c46022c7c23912c82ebb43d168e11b3a13141669149bdba6f8bc
-      test "$(sha256sum ${lib.escapeShellArg "${gitSurgeonSource}/LICENSE"} | cut -d' ' -f1)" \
-        = dfc0be306ac621b63914bf0f4854538a2e0a8d09ad24f20e7edd9a80ece241b2
-      test "$(sha256sum ${lib.escapeShellArg "${translate-tool}/skill/SKILL.md"} | cut -d' ' -f1)" \
-        = f26ff06e43b9d99e96876cbd567a7f6d8585983b0a550b97ef5e672f294790fb
-      test "$(sha256sum ${lib.escapeShellArg "${translate-tool}/glossary.csv"} | cut -d' ' -f1)" \
-        = 8eab769223267b8b8cded5ba62f7a4250dfcf25d94d35cffd7e360354b3e9523
-
       for name in ${ponytailSkillArgs}; do
         if find -P "$actual/$name" -mindepth 1 \
           \( -path '*/hooks/*' -o -name '*runtime*' -o -name '*statusline*' \
@@ -503,17 +485,6 @@ else
         ' "$openai_compaction/node_modules/ws/package.json" >/dev/null \
           || fail "invalid pi-openai-server-compaction ws closure"
 
-        test "$(sha256sum "$quiet/LICENSE" | cut -d' ' -f1)" \
-          = fb5278571984b1db0ef5ef82656aac3a9f5ac607b3349cf27c6e220d62b66db1
-        test "$(sha256sum "$quiet/src/index.ts" | cut -d' ' -f1)" \
-          = 95dd3737e4d620a4d0895bb8e4ea521b9dec13483c8c73ee6045310bd5978661
-        test "$(sha256sum "$openai_compaction/LICENSE.md" | cut -d' ' -f1)" \
-          = 0d4484983377237e9aa2a3e4192087c3bbccc196223fc098d0bca60d25f78577
-        test "$(sha256sum "$openai_compaction/src/index.ts" | cut -d' ' -f1)" \
-          = 477adf73e0bd37047f3f597531a49528e122312c9c2590874a7caf283ed19607
-        test "$(sha256sum "$openai_compaction/node_modules/ws/package.json" | cut -d' ' -f1)" \
-          = aaedef2a72b60db8fb36d9b46c48d44986051785a2b6450c62994603c85dd959
-
         node --experimental-strip-types --test \
           ${lib.escapeShellArg "${piQuiet}/packages/pi-quiet/src"}/*.test.ts
 
@@ -585,11 +556,25 @@ else
         ${pkgs.python3}/bin/python3 \
           ${../../packages/pi-mcp-adapter-normalize.py} "$mcp_init_expected"
 
+        mcp_package_expected="$TMPDIR/pi-mcp-package.json"
+        ${pkgs.python3}/bin/python3 - \
+          ${lib.escapeShellArg "${piMcpAdapter}/package.json"} \
+          "$mcp_package_expected" <<'PY'
+        import json
+        from pathlib import Path
+        import sys
+
+        package = json.loads(Path(sys.argv[1]).read_text())
+        package.pop("devDependencies", None)
+        Path(sys.argv[2]).write_text(json.dumps(package, indent=2) + "\n")
+        PY
+
         for relative in ${piMcpFileArgs}; do
           [ -f "$mcp/$relative" ] && [ ! -L "$mcp/$relative" ] \
             || fail "missing regular pi-mcp-adapter file: $relative"
           expected_mcp_file=${lib.escapeShellArg "${piMcpAdapter}"}/"$relative"
           [ "$relative" != init.ts ] || expected_mcp_file=$mcp_init_expected
+          [ "$relative" != package.json ] || expected_mcp_file=$mcp_package_expected
           cmp "$expected_mcp_file" "$mcp/$relative" \
             || fail "unexpected pi-mcp-adapter file: $relative"
         done

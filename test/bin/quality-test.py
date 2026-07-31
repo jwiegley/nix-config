@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Execution tests for bin/quality -- the first this repository has had.
+"""Execution tests for test/bin/quality -- the first this repository has had.
 
-Everything that referenced `bin/quality` from a test previously did so as TEXT:
-`bin/gates-test.py` greps its source for two dispatch arms. Nothing invoked it, and
+Everything that referenced `test/bin/quality` from a test previously did so as TEXT:
+`test/bin/gates-test.py` greps its source for two dispatch arms. Nothing invoked it, and
 nothing exercised `each_file`, the function every per-file suite runs through. So
 when `d6b3cf3d` fixed `each_file` to skip tracked-but-absent paths, both of its
 negative cases existed only in the commit message.
@@ -12,11 +12,11 @@ assumed broken, and a negative proof in a commit message cannot catch a regressi
 These tests make the two cases replayable, plus the exit-status propagation every
 hook depends on.
 
-SAFETY: every test runs `bin/quality` with the CWD inside a throwaway repository,
+SAFETY: every test runs `test/bin/quality` with the CWD inside a throwaway repository,
 and scrubs GIT_* from the environment first. That scrub is not decoration --
-`bin/publish-test.py` once inherited GIT_DIR under a git hook and its
+`test/bin/publish-test.py` once inherited GIT_DIR under a git hook and its
 `git init --bare <tmpdir>` retargeted the REAL repository, setting core.bare=true
-and breaking five worktrees at once. `bin/quality` resolves its scope with
+and breaking five worktrees at once. `test/bin/quality` resolves its scope with
 `git rev-parse --show-toplevel`, so a leaked GIT_DIR would point it at the real
 checkout and these tests would silently assert against the wrong tree.
 """
@@ -31,9 +31,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-QUALITY = Path(__file__).resolve().parent / "quality"
-REPO = QUALITY.parent.parent
-DEADLINE_SUPERVISOR = Path(__file__).resolve().parent / "deadline-supervisor.py"
+REPO = Path(__file__).resolve().parents[2]
+QUALITY = REPO / "test" / "bin" / "quality"
+DEADLINE_SUPERVISOR = REPO / "test" / "bin" / "deadline-supervisor.py"
 UNITTEST_STRICT = Path(__file__).resolve().parent / "unittest-strict.py"
 UPDATER_ESSENTIAL = (
     Path(__file__).resolve().parent / "update-overlay-essential-test.py"
@@ -315,9 +315,9 @@ class QualityPythonTierTests(unittest.TestCase):
             check=True,
         )
         self.tests = {
-            "bin/a-fast-test.py": "pre-commit",
-            "bin/b-push-test.py": "pre-push",
-            "bin/c-demand-test.py": "ci-on-demand",
+            "test/bin/a-fast-test.py": "pre-commit",
+            "test/bin/b-push-test.py": "pre-push",
+            "test/bin/c-demand-test.py": "ci-on-demand",
         }
         for path in self.tests:
             target = self.repo / path
@@ -328,9 +328,10 @@ class QualityPythonTierTests(unittest.TestCase):
                 "    def test_ok(self): self.assertTrue(True)\n",
                 encoding="utf-8",
             )
-        shutil.copy2(QUALITY, self.repo / "bin/quality")
-        shutil.copy2(DEADLINE_SUPERVISOR, self.repo / "bin/deadline-supervisor.py")
-        shutil.copy2(UNITTEST_STRICT, self.repo / "bin/unittest-strict.py")
+        (self.repo / "bin").mkdir()
+        shutil.copy2(QUALITY, self.repo / "test/bin/quality")
+        shutil.copy2(DEADLINE_SUPERVISOR, self.repo / "test/bin/deadline-supervisor.py")
+        shutil.copy2(UNITTEST_STRICT, self.repo / "test/bin/unittest-strict.py")
         self.write_manifest()
         subprocess.run(["git", "add", "."], cwd=self.repo, env=self.env, check=True)
 
@@ -377,9 +378,9 @@ class QualityPythonTierTests(unittest.TestCase):
         proc = self.quality("--python-tier", "pre-commit", "python-test")
         combined = proc.stdout + proc.stderr
         self.assertEqual(proc.returncode, 0, combined)
-        self.assertIn("bin/a-fast-test.py", combined)
-        self.assertNotIn("bin/b-push-test.py", combined)
-        self.assertNotIn("bin/c-demand-test.py", combined)
+        self.assertIn("test/bin/a-fast-test.py", combined)
+        self.assertNotIn("test/bin/b-push-test.py", combined)
+        self.assertNotIn("test/bin/c-demand-test.py", combined)
         self.assertIn("planned=1 ran=1", combined)
 
     @unittest.skipUnless(have("timeout"), "timeout is not on PATH")
@@ -392,10 +393,23 @@ class QualityPythonTierTests(unittest.TestCase):
         self.assertIn("tier=all planned=3 ran=3", combined)
 
     def test_missing_manifest_assignment_refuses(self):
-        self.write_manifest(omit={"bin/b-push-test.py"})
+        self.write_manifest(omit={"test/bin/b-push-test.py"})
         proc = self.quality("--python-tier", "pre-push", "python-test")
         self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("missing=['bin/b-push-test.py']", proc.stdout + proc.stderr)
+        self.assertIn("missing=['test/bin/b-push-test.py']", proc.stdout + proc.stderr)
+
+    def test_python_suite_outside_test_bin_refuses(self):
+        misplaced = self.repo / "bin" / "misplaced-test.py"
+        misplaced.write_text("import unittest\n", encoding="utf-8")
+        subprocess.run(
+            ["git", "add", str(misplaced)],
+            cwd=self.repo,
+            env=self.env,
+            check=True,
+        )
+        proc = self.quality("--python-tier", "pre-commit", "python-test")
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("must live under test/bin", proc.stdout + proc.stderr)
 
     def test_invalid_tier_refuses_before_execution(self):
         proc = self.quality("--python-tier", "fast", "python-test")
@@ -403,7 +417,7 @@ class QualityPythonTierTests(unittest.TestCase):
         self.assertIn("--python-tier needs one of", proc.stderr)
 
     def test_whole_tier_supervisor_reports_timeout_and_forced_kill(self):
-        supervisor = self.repo / "bin/deadline-supervisor.py"
+        supervisor = self.repo / "test/bin/deadline-supervisor.py"
         for status, expected in (
             (124, "exceeded its 105s work deadline inside the 120s envelope"),
             (137, "exited 137 (SIGKILL; deadline escalation, OOM, or external kill)"),
@@ -417,8 +431,8 @@ class QualityPythonTierTests(unittest.TestCase):
             self.assertIn(expected, proc.stderr)
 
     def test_tier_supervisor_recurses_through_repo_absolute_quality_path(self):
-        supervisor = self.repo / "bin/deadline-supervisor.py"
-        expected = (self.repo / "bin/quality").resolve()
+        supervisor = self.repo / "test/bin/deadline-supervisor.py"
+        expected = (self.repo / "test/bin/quality").resolve()
         supervisor.write_text(
             f"#!/usr/bin/env bash\n"
             "[[ $1 == --term-after ]] || exit 95\n"
@@ -437,14 +451,14 @@ class QualityPythonTierTests(unittest.TestCase):
         self.assertIn("exceeded its 105s work deadline", proc.stderr)
 
     def test_tier_membership_keeps_expensive_work_out_of_pre_commit(self):
-        supervisor = self.repo / "bin/deadline-supervisor.py"
+        supervisor = self.repo / "test/bin/deadline-supervisor.py"
         log = self.repo / "supervisor-args"
         supervisor.write_text(
             f"#!/usr/bin/env bash\nprintf '%s\\n' \"$@\" >{log!s}\nexit 124\n",
             encoding="utf-8",
         )
         supervisor.chmod(0o755)
-        quality = str((self.repo / "bin/quality").resolve())
+        quality = str((self.repo / "test/bin/quality").resolve())
 
         pre_commit = self.quality("--tier", "pre-commit")
         self.assertNotEqual(pre_commit.returncode, 0)
@@ -495,14 +509,14 @@ class QualityPythonTierTests(unittest.TestCase):
 
     @unittest.skipUnless(have("timeout"), "timeout is not on PATH")
     def test_budget_timeout_names_not_reached_suites(self):
-        (self.repo / "bin/a-fast-test.py").write_text(
+        (self.repo / "test/bin/a-fast-test.py").write_text(
             "import time, unittest\n"
             "class T(unittest.TestCase):\n"
             "    def test_slow(self): time.sleep(5)\n",
             encoding="utf-8",
         )
-        self.tests["bin/z-never-test.py"] = "pre-commit"
-        (self.repo / "bin/z-never-test.py").write_text(
+        self.tests["test/bin/z-never-test.py"] = "pre-commit"
+        (self.repo / "test/bin/z-never-test.py").write_text(
             "import unittest\n"
             "class T(unittest.TestCase):\n"
             "    def test_never(self): self.fail('must not run')\n",
@@ -541,7 +555,10 @@ class QualityPythonTierTests(unittest.TestCase):
         )
         self.assertEqual(
             supervised[-2:],
-            [str((self.repo / "bin/unittest-strict.py").resolve()), "bin/a-fast-test.py"],
+            [
+                str((self.repo / "test/bin/unittest-strict.py").resolve()),
+                "test/bin/a-fast-test.py",
+            ],
         )
 
         env.pop("QUALITY_TIER_SUPERVISED")
@@ -677,8 +694,8 @@ class GeneratedRevisionReachabilityTests(unittest.TestCase):
 class GitScrubRegressionTest(unittest.TestCase):
     """The scrub itself, asserted rather than trusted.
 
-    `bin/publish-test.py` inherited GIT_DIR under a git hook and its
-    `git init --bare` retargeted the real repository. `bin/quality` resolves scope
+    `test/bin/publish-test.py` inherited GIT_DIR under a git hook and its
+    `git init --bare` retargeted the real repository. `test/bin/quality` resolves scope
     via `git rev-parse --show-toplevel`, so a leaked GIT_DIR would silently point
     these tests at the real checkout.
     """

@@ -2,9 +2,9 @@
 """Replayable negative regressions for the fleet programme's shell gates.
 
 Why this file exists. An independent audit observed that of five gates added in
-this programme, only `bin/oracle-currency-test.py` shipped negative cases that
-could be REPLAYED from the repository. The others — `bin/verify-signatures`,
-`bin/cross-consumer-eval`, and `bin/consumer-inventory`'s null-`repoHead`
+this programme, only `test/bin/oracle-currency-test.py` shipped negative cases that
+could be REPLAYED from the repository. The others — `test/bin/verify-signatures`,
+`test/bin/cross-consumer-eval`, and `test/bin/consumer-inventory`'s null-`repoHead`
 refusal — had their negative proofs recorded only as prose in commit messages
 and issue comments.
 
@@ -17,7 +17,7 @@ the defect six months from now. "Proven negative" has to mean reproducible.
 Everything below runs against throwaway fixtures. Nothing touches a real
 repository, a real remote, or a real consumer checkout.
 
-Run: python3 -m unittest -v bin/gates-test.py
+Run: python3 -m unittest -v test/bin/gates-test.py
 """
 
 import json
@@ -29,10 +29,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-BIN = Path(__file__).parent
 # The real checkout. Used only to READ a genuine signature blob for the
 # unverifiable-signature test; never mutated.
-REPO = Path(__file__).resolve().parent.parent
+REPO = Path(__file__).resolve().parents[2]
+BIN = REPO / "test" / "bin"
 VERIFY_SIGNATURES = BIN / "verify-signatures"
 CROSS_CONSUMER_EVAL = BIN / "cross-consumer-eval"
 CONSUMER_INVENTORY = BIN / "consumer-inventory"
@@ -89,7 +89,7 @@ def git(*args, cwd, check=True, env=None):
 
 
 class TestVerifySignaturesRejects(unittest.TestCase):
-    """bin/verify-signatures must be fail-closed, and provably so.
+    """test/bin/verify-signatures must be fail-closed, and provably so.
 
     The audit's point: the tool IS fail-closed by construction — only G and U
     pass, so a keyring-less run yields E and rejects. But "by construction" is an
@@ -364,11 +364,11 @@ class TestVerifySignaturesRejects(unittest.TestCase):
 
     def test_base_owned_verifier_rejects_a_head_side_success_stub(self):
         self._commit("initial", "initial")
-        verifier = Path(self.repo) / "bin" / "verify-signatures"
-        verifier.parent.mkdir()
+        verifier = Path(self.repo) / "test" / "bin" / "verify-signatures"
+        verifier.parent.mkdir(parents=True)
         verifier.write_text(VERIFY_SIGNATURES.read_text())
         verifier.chmod(0o755)
-        git("add", "bin/verify-signatures", cwd=self.repo)
+        git("add", "test/bin/verify-signatures", cwd=self.repo)
         git(
             "commit",
             "-q",
@@ -380,7 +380,7 @@ class TestVerifySignaturesRejects(unittest.TestCase):
         base = git("rev-parse", "HEAD", cwd=self.repo).stdout.strip()
 
         verifier.write_text("#!/bin/sh\nexit 0\n")
-        git("add", "bin/verify-signatures", cwd=self.repo)
+        git("add", "test/bin/verify-signatures", cwd=self.repo)
         git(
             "commit",
             "-q",
@@ -394,7 +394,7 @@ class TestVerifySignaturesRejects(unittest.TestCase):
         trusted = Path(self.tmp) / "trusted" / "verify-signatures"
         trusted.parent.mkdir()
         trusted.write_text(
-            git("show", f"{base}:bin/verify-signatures", cwd=self.repo).stdout
+            git("show", f"{base}:test/bin/verify-signatures", cwd=self.repo).stdout
         )
         trusted.chmod(0o755)
         result = subprocess.run(
@@ -801,10 +801,10 @@ class TestImmutableSubflakeCheck(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.repo = self.root / "repo"
         self.repo.mkdir()
-        (self.repo / "bin").mkdir()
+        (self.repo / "test" / "bin").mkdir(parents=True)
         (self.repo / "config" / "fleet").mkdir(parents=True)
         (self.repo / "config" / "ai").mkdir(parents=True)
-        shutil.copy2(IMMUTABLE_SUBFLAKE_CHECK, self.repo / "bin")
+        shutil.copy2(IMMUTABLE_SUBFLAKE_CHECK, self.repo / "test" / "bin")
 
         self.committed_lock = {
             "nodes": {"root": {"inputs": {}}},
@@ -957,7 +957,7 @@ else:
             FAKE_WORKTREE_LOCK=str(self.worktree_lock),
         )
         env.update(overrides)
-        argv = [str(self.repo / "bin" / "immutable-subflake-check")]
+        argv = [str(self.repo / "test" / "bin" / "immutable-subflake-check")]
         if include_revision:
             argv.append(self.revision)
         return subprocess.run(
@@ -1080,6 +1080,28 @@ else:
 class TestGatesAreRegistered(unittest.TestCase):
     """A gate nothing invokes is not a gate."""
 
+    def test_test_sources_live_under_the_singular_test_root(self):
+        tracked = subprocess.run(
+            ["git", "ls-files"],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.splitlines()
+        test_sources = [
+            path
+            for path in tracked
+            if path.endswith("-test.py")
+            or ".test." in Path(path).name
+            or path == "test/bin/unittest-strict.py"
+        ]
+        self.assertTrue(test_sources)
+        self.assertEqual(
+            [path for path in test_sources if not path.startswith("test/")],
+            [],
+        )
+        self.assertEqual([path for path in tracked if path.startswith("tests/")], [])
+
     def test_every_gate_script_is_executable(self):
         for tool in (
             VERIFY_SIGNATURES,
@@ -1105,28 +1127,28 @@ class TestGatesAreRegistered(unittest.TestCase):
             self.assertIn(
                 "%s) run_%s ;;" % (suite, suite.replace("-", "_")),
                 body,
-                "bin/quality has no dispatch arm for %s" % suite,
+                "test/bin/quality has no dispatch arm for %s" % suite,
             )
 
     def test_coverage_gate_delegates_from_every_invocation_surface(self):
         hook = (REPO / "lefthook.yml").read_text()
         self.assertRegex(
             hook,
-            r"(?m)^    quality-tier:\n      run: bin/quality --tier pre-commit$",
+            r"(?m)^    quality-tier:\n      run: test/bin/quality --tier pre-commit$",
         )
         self.assertRegex(
             hook,
-            r'(?m)^      run: ": \{files\}; bin/quality --python-tier pre-push python-test coverage"$',
+            r'(?m)^      run: ": \{files\}; test/bin/quality --python-tier pre-push python-test coverage"$',
         )
         self.assertRegex(
             hook,
-            r'(?m)^      run: ": \{files\}; bin/quality coverage-live"$',
+            r'(?m)^      run: ": \{files\}; test/bin/quality coverage-live"$',
         )
 
         ci = (REPO / ".github/workflows/ci.yml").read_text()
         self.assertRegex(
             ci,
-            r"(?m)^          -c bin/quality --python-tier pre-commit$",
+            r"(?m)^          -c test/bin/quality --python-tier pre-commit$",
         )
         self.assertRegex(
             ci,
@@ -1136,14 +1158,14 @@ class TestGatesAreRegistered(unittest.TestCase):
         makefile = (REPO / "Makefile").read_text()
         self.assertRegex(
             makefile,
-            r"(?m)^\tbin/quality --python-tier pre-push python-test coverage darwin-surface$",
+            r"(?m)^\ttest/bin/quality --python-tier pre-push python-test coverage darwin-surface$",
         )
 
     def test_python_tiers_are_wired_without_a_second_quality_authority(self):
         hook = (REPO / "lefthook.yml").read_text()
         self.assertRegex(
             hook,
-            r"(?m)^      run: bin/quality --tier pre-commit$",
+            r"(?m)^      run: test/bin/quality --tier pre-commit$",
         )
         suites = subprocess.run(
             [str(BIN / "quality"), "--list"],
@@ -1158,17 +1180,17 @@ class TestGatesAreRegistered(unittest.TestCase):
     def test_darwin_surface_gate_is_wired_to_local_expensive_tier_entrypoints(self):
         self.assertRegex(
             (REPO / "lefthook.yml").read_text(),
-            r'(?m)^\s+run: ": \{files\}; bin/quality darwin-surface"$',
+            r'(?m)^\s+run: ": \{files\}; test/bin/quality darwin-surface"$',
         )
         self.assertRegex(
             (REPO / "Makefile").read_text(),
             r"(?m)^test:\n\tset -e\n"
-            r"\tbin/quality --python-tier pre-push python-test coverage darwin-surface$",
+            r"\ttest/bin/quality --python-tier pre-push python-test coverage darwin-surface$",
         )
 
     def test_darwin_surface_is_not_wired_to_remote_ci_until_root_is_portable(self):
         ci = (REPO / ".github/workflows/ci.yml").read_text()
-        self.assertNotRegex(ci, r"(?m)^\s+run: bin/quality darwin-surface$")
+        self.assertNotRegex(ci, r"(?m)^\s+run: test/bin/quality darwin-surface$")
         self.assertIn("LAN-only ssh://gitea stock-trader input", ci)
 
     def test_make_build_and_switch_propagate_darwin_rebuild_failure(self):
@@ -1345,7 +1367,7 @@ class TestGatesAreRegistered(unittest.TestCase):
         config = (REPO / "lefthook.yml").read_text()
         self.assertRegex(
             config,
-            r"(?m)^    quality-tier:\n      run: bin/quality --tier pre-commit$",
+            r"(?m)^    quality-tier:\n      run: test/bin/quality --tier pre-commit$",
         )
         self.assertNotRegex(config, r"(?m)^      glob:")
         quality = (BIN / "quality").read_text()
@@ -1407,7 +1429,7 @@ class TestGatesAreRegistered(unittest.TestCase):
         )
         self.assertIn('SIGVERIFY_STRICT: "1"', workflow)
         self.assertIn(
-            'run: bin/verify-signatures --base "$SIGVERIFY_BASE" --head "$SIGVERIFY_HEAD"',
+            'run: test/bin/verify-signatures --base "$SIGVERIFY_BASE" --head "$SIGVERIFY_HEAD"',
             workflow,
         )
 
@@ -1447,8 +1469,8 @@ class TestGatesAreRegistered(unittest.TestCase):
         self.assertIn('cron: "17 2,14 * * *"', workflow)
         self.assertIn("workflow_dispatch:", workflow)
         self.assertNotRegex(workflow, r"(?m)^  (push|pull_request):")
-        self.assertRegex(workflow, r"(?m)^        run: bin/quality portable-eval$")
-        self.assertNotRegex(workflow, r"(?m)^\s+run: bin/quality --tier expensive$")
+        self.assertRegex(workflow, r"(?m)^        run: test/bin/quality portable-eval$")
+        self.assertNotRegex(workflow, r"(?m)^\s+run: test/bin/quality --tier expensive$")
         self.assertIn("portable-native:", workflow)
         self.assertIn("runner: macos-15", workflow)
         self.assertRegex(
@@ -1461,7 +1483,7 @@ class TestGatesAreRegistered(unittest.TestCase):
         self.assertNotIn("  portable-native:", regular_ci)
 
         makefile = (REPO / "Makefile").read_text()
-        self.assertRegex(makefile, r"(?m)^expensive:\n\tbin/quality --tier expensive$")
+        self.assertRegex(makefile, r"(?m)^expensive:\n\ttest/bin/quality --tier expensive$")
 
     def test_no_gate_contains_common_credential_markers(self):
         for tool in (
@@ -1532,7 +1554,7 @@ class TestConsumerInventoryLoadBearingFacet(unittest.TestCase):
     def test_known_code_and_stub_traps_stay_load_bearing(self):
         """The module name, stale-path detector, and throwing stub remain code."""
         for needle in (
-            "bin/gates-test.py",
+            "test/bin/gates-test.py",
             "config/ai/flake.nix",
         ):
             hits = [r for r in self.faceted if needle in r["file"]]

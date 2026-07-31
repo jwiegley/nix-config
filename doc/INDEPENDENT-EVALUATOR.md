@@ -33,7 +33,7 @@ removed so far:
    be distinct evidence — a check whose name promised evidence it did not produce
    (#48).
 4. An accumulator that appended failures inside a **subshell**, so
-   `bin/quality`'s own summary discarded them and under-reported ("1 suite failed"
+   `test/bin/quality`'s own summary discarded them and under-reported ("1 suite failed"
    when two had) (#46).
 5. A routing test that called `nix_flake_output_for_host` with **raw hostnames**
    instead of the **normalized label the real caller passes**, so it exercised a
@@ -148,7 +148,7 @@ Issue #28's clean-context mechanism was exercised end to end on real commit
   provenance, credential-boundary, Git-environment, transaction and test gaps;
 - each finding was verified rather than obeyed blindly, then fixed in signed code
   commit `494feeeb` plus exact schema-v2 baseline follow-up `7f9b00f4`;
-- the final paired state passed every `bin/quality` suite with nine Python suites,
+- the final paired state passed every `test/bin/quality` suite with nine Python suites,
   live Darwin comparison and consumer evaluation 5 ran / 0 skipped.
 
 No PAL path or credential was used or needed. This is the acceptance example for
@@ -196,7 +196,7 @@ Commit messages and issue comments in this repository assert numbers: file
 counts, reference counts, package multisets, node counts, test counts. The
 evaluator must **re-derive each one from the source of truth**, not accept the
 asserted value. Package/parity counts are re-derived against the parity oracle
-(`bin/parity-baseline`, baseline under `test/baseline/`), not against prose; a
+(`test/bin/parity-baseline`, baseline under `test/baseline/`), not against prose; a
 count in a commit message is a claim, the oracle is the evidence. This is the
 check that found the 414-not-412 / 30-not-43 discrepancies (#19). A number the
 evaluator could not re-derive is a **verification gap**, reported as such.
