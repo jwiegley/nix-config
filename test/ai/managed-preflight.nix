@@ -683,6 +683,15 @@ pkgs.runCommand "ai-managed-preflight"
     run_checked fail pi-legacy-mcp-servers ".pi/agent/mcp.json" \
       "${task9PreflightScript}" absent
 
+    setup_empty_case aggregate-pi-both-roots-invalid
+    write_pi '{"imports":[]}'
+    write_legacy_pi '{"mcpServers":null}'
+    aggregate_output="$(printf '%s\n%s' \
+      '.config/pi/mcp.json: keep valid adapter JSON without top-level mcpServers or imports' \
+      '.pi/agent/mcp.json: keep valid adapter JSON without top-level mcpServers or imports')"
+    run_checked fail aggregate-pi-both-roots-invalid "$aggregate_output" \
+      "${task9PreflightScript}" absent
+
     setup_empty_case pi-benign-symlink
     make_leaf "$case_root" pi-settings '{}'
     mkdir -p "$case_home/.config/pi"
@@ -738,6 +747,18 @@ pkgs.runCommand "ai-managed-preflight"
     DRY_RUN=1 HOME="$migration_home" ${task9PiProfileMigrationScript}
     test ! -e "$migration_home/.config/pi"
 
+    migration_home="$migration_root/dry-run-inverse-link"
+    mkdir -p "$migration_home/.config" "$migration_home/.pi/agent"
+    printf '%s' auth > "$migration_home/.pi/agent/auth.json"
+    ln -s ../.pi "$migration_home/.config/pi"
+    migration_dry_run_before="$(python3 -I "$digest_script" "$migration_home")"
+    DRY_RUN=1 HOME="$migration_home" ${task9PiProfileMigrationScript}
+    migration_dry_run_after="$(python3 -I "$digest_script" "$migration_home")"
+    test "$migration_dry_run_before" = "$migration_dry_run_after"
+    test -L "$migration_home/.config/pi"
+    test ! -e "$migration_home/.config/.nix-pi-profile-migrated-v1"
+    test ! -e "$migration_home/.config/.pi-profile-destination-backup-v1"
+
     migration_home="$migration_root/fresh-copy"
     mkdir -p "$migration_home/.pi/agent/sessions"
     printf '%s' auth > "$migration_home/.pi/agent/auth.json"
@@ -752,14 +773,16 @@ pkgs.runCommand "ai-managed-preflight"
     migration_source_after="$(python3 -I "$digest_script" "$migration_home/.pi/agent")"
     test "$migration_source_before" = "$migration_source_after"
 
-    migration_home="$migration_root/no-clobber"
+    migration_home="$migration_root/no-overwrite"
     mkdir -p "$migration_home/.pi/agent/sessions" "$migration_home/.config/pi"
+    chmod 0750 "$migration_home/.config/pi"
     printf '%s' old > "$migration_home/.pi/agent/settings.json"
     printf '%s' copied > "$migration_home/.pi/agent/sessions/copied.jsonl"
     printf '%s' new > "$migration_home/.config/pi/settings.json"
     HOME="$migration_home" ${task9PiProfileMigrationScript}
     test "$(cat "$migration_home/.config/pi/settings.json")" = new
     test "$(cat "$migration_home/.config/pi/sessions/copied.jsonl")" = copied
+    test "$(stat -c %a "$migration_home/.config/pi")" = 750
     printf '%s' later > "$migration_home/.pi/agent/created-after-migration"
     HOME="$migration_home" ${task9PiProfileMigrationScript}
     test ! -e "$migration_home/.config/pi/created-after-migration"
@@ -801,7 +824,7 @@ pkgs.runCommand "ai-managed-preflight"
     HOME="$migration_home" ${task9PiProfileMigrationScript}
     test ! -L "$migration_home/.config/pi"
     test -d "$migration_home/.config/pi"
-    test ! -e "$migration_home/.config/.pi-profile-legacy-link-v1"
+    test ! -e "$migration_home/.config/.pi-profile-destination-backup-v1"
     test "$(cat "$migration_home/.config/pi/auth.json")" = destination
     test "$(cat "$migration_home/.config/pi/sessions/current.jsonl")" = session
     test "$(cat "$migration_home/.config/pi/destination-only/value")" = destination-only
@@ -827,20 +850,22 @@ pkgs.runCommand "ai-managed-preflight"
     printf '%s' legacy > "$migration_home/.pi/agent/auth.json"
     printf '%s' staged > "$migration_stage/auth.json"
     printf '%s' staged-session > "$migration_stage/sessions/current.jsonl"
+    chmod 0700 "$migration_stage"
     touch "$migration_stage.ready"
-    ln -s ../.pi "$migration_home/.config/.pi-profile-legacy-link-v1"
+    ln -s ../.pi "$migration_home/.config/.pi-profile-destination-backup-v1"
     HOME="$migration_home" ${task9PiProfileMigrationScript}
     test ! -L "$migration_home/.config/pi"
     test "$(cat "$migration_home/.config/pi/auth.json")" = staged
     test "$(cat "$migration_home/.config/pi/sessions/current.jsonl")" = staged-session
-    test ! -e "$migration_home/.config/.pi-profile-legacy-link-v1"
+    test "$(stat -c %a "$migration_home/.config/pi")" = 700
+    test ! -e "$migration_home/.config/.pi-profile-destination-backup-v1"
     test ! -e "$migration_stage.ready"
     test -f "$migration_home/.config/.nix-pi-profile-migrated-v1"
 
     migration_home="$migration_root/interrupted-incomplete-stage"
     migration_stage="$migration_home/.config/.pi-profile-migration.crash"
     mkdir -p "$migration_home/.config" "$migration_home/.pi/agent" "$migration_stage"
-    ln -s ../.pi "$migration_home/.config/.pi-profile-legacy-link-v1"
+    ln -s ../.pi "$migration_home/.config/.pi-profile-destination-backup-v1"
     set +e
     HOME="$migration_home" ${task9PiProfileMigrationScript} \
       >"$migration_root/interrupted-incomplete-stage.output" 2>&1
@@ -848,9 +873,44 @@ pkgs.runCommand "ai-managed-preflight"
     set -e
     test "$migration_status" -ne 0
     test -L "$migration_home/.config/pi"
-    test ! -e "$migration_home/.config/.pi-profile-legacy-link-v1"
-    grep -F "restored the legacy link after an incomplete migration" \
+    test ! -e "$migration_home/.config/.pi-profile-destination-backup-v1"
+    grep -F "restored the destination after an incomplete migration" \
       "$migration_root/interrupted-incomplete-stage.output" >/dev/null
+
+    migration_home="$migration_root/interrupted-real-destination"
+    migration_stage="$migration_home/.config/.pi-profile-migration.crash"
+    migration_backup="$migration_home/.config/.pi-profile-destination-backup-v1"
+    mkdir -p \
+      "$migration_home/.config" \
+      "$migration_home/.pi/agent" \
+      "$migration_stage/sessions" \
+      "$migration_backup"
+    chmod 0750 "$migration_stage" "$migration_backup"
+    printf '%s' legacy > "$migration_home/.pi/agent/settings.json"
+    printf '%s' destination > "$migration_backup/settings.json"
+    printf '%s' destination > "$migration_stage/settings.json"
+    printf '%s' staged > "$migration_stage/sessions/current.jsonl"
+    touch "$migration_stage.ready"
+    HOME="$migration_home" ${task9PiProfileMigrationScript}
+    test "$(cat "$migration_home/.config/pi/settings.json")" = destination
+    test "$(cat "$migration_home/.config/pi/sessions/current.jsonl")" = staged
+    test "$(stat -c %a "$migration_home/.config/pi")" = 750
+    test ! -e "$migration_backup"
+    test ! -e "$migration_stage.ready"
+    test -f "$migration_home/.config/.nix-pi-profile-migrated-v1"
+
+    migration_home="$migration_root/interrupted-absent-destination"
+    migration_stage="$migration_home/.config/.pi-profile-migration.crash"
+    mkdir -p "$migration_home/.config" "$migration_home/.pi/agent" "$migration_stage"
+    chmod 0700 "$migration_stage"
+    printf '%s' legacy > "$migration_home/.pi/agent/auth.json"
+    printf '%s' staged > "$migration_stage/auth.json"
+    touch "$migration_stage.ready"
+    HOME="$migration_home" ${task9PiProfileMigrationScript}
+    test "$(cat "$migration_home/.config/pi/auth.json")" = staged
+    test "$(stat -c %a "$migration_home/.config/pi")" = 700
+    test ! -e "$migration_stage.ready"
+    test -f "$migration_home/.config/.nix-pi-profile-migrated-v1"
 
     migration_home="$migration_root/interrupted-symlink-stage"
     migration_stage_target="$migration_home/stage-target"
