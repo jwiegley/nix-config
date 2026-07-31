@@ -141,7 +141,7 @@ class MainModeTests(TemporaryBaselineTestCase):
                 derive.assert_called_once_with(REVISION_A)
                 write.assert_not_called()
                 value = json.loads(stdout.getvalue())
-                self.assertEqual(value["schema"], "darwin-value-surface/2")
+                self.assertEqual(value["schema"], "darwin-value-surface/3")
                 self.assertEqual(value["baselineRev"], REVISION_A)
                 self.assertEqual(value["projection"], projection())
                 self.assertEqual(value["hosts"], expected_hosts)
@@ -317,6 +317,14 @@ class ExistingBaselineValidationTests(TemporaryBaselineTestCase):
         self.write_baseline(schema="darwin-value-surface/999")
         with self.assertRaisesRegex(GENERATOR.OperationalError, "has schema"):
             GENERATOR.validate_existing_baseline()
+
+    def test_previous_schema_is_accepted_only_for_transactional_replacement(self) -> None:
+        path, _ = self.write_baseline(schema=GENERATOR.PREVIOUS_SCHEMA)
+
+        with self.assertRaisesRegex(GENERATOR.OperationalError, "has schema"):
+            GENERATOR.read_baseline(path)
+
+        self.assertEqual(GENERATOR.validate_existing_baseline(), path)
 
     def test_write_rejects_missing_baseline_before_derivation(self) -> None:
         stderr = io.StringIO()

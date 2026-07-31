@@ -5,7 +5,7 @@
 
 let
   inherit (pkgs) lib;
-  schema = "darwin-value-surface/2";
+  schema = "darwin-value-surface/3";
   hosts = [
     "hera"
     "clio"
@@ -20,6 +20,22 @@ let
     "users"
   ];
   unreadable = "<unreadable: removed or throwing option>";
+  authorizedKeyFields = [
+    "keyFilesCount"
+    "keyFilesSha256"
+    "keysCount"
+    "keysSha256"
+  ];
+  isSha256 = value: builtins.isString value && builtins.match "[0-9a-f]{64}" value != null;
+  validCount = value: builtins.isInt value && value >= 0;
+  validAuthorizedKeys =
+    value:
+    builtins.isAttrs value
+    && builtins.attrNames value == authorizedKeyFields
+    && validCount value.keyFilesCount
+    && isSha256 value.keyFilesSha256
+    && validCount value.keysCount
+    && isSha256 value.keysSha256;
   helpers = import ./surface-helpers.nix;
   project = import ./darwin-surface.nix;
   projection = {
@@ -98,6 +114,29 @@ let
       {
         ok = surface.nix.maxJobs != null && surface.nix.buildMachines != [ ];
         message = "${host} disabled-Nix settings/builders projection is vacuous";
+      }
+      {
+        ok = builtins.all (user: validAuthorizedKeys (user.authorizedKeys or null)) (
+          builtins.attrValues surface.users.detail
+        );
+        message = "${host} users must expose only counted, hashed authorized-key values";
+      }
+      {
+        ok =
+          let
+            johnw = surface.users.detail.johnw.authorizedKeys or { };
+          in
+          (johnw.keysCount or 0) > 0 && (johnw.keyFilesCount or 0) > 0;
+        message = "${host} johnw authorized-key projection is vacuous";
+      }
+      {
+        ok = builtins.all (
+          machine:
+          !(machine ? sshKey)
+          && machine ? sshKeySha256
+          && (machine.sshKeySha256 == null || isSha256 machine.sshKeySha256)
+        ) surface.nix.buildMachines;
+        message = "${host} build-machine private-key paths must be hashed";
       }
     ]
   ) hosts;

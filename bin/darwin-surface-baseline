@@ -32,7 +32,8 @@ PROJECTION_PATHS = (PROJECTOR_RELATIVE, HELPER_RELATIVE, DIFFER_RELATIVE)
 BACKUP_NAME = ".darwin-surface-baseline.backup.json"
 LOCK_NAME = ".darwin-surface-baseline.lock"
 
-SCHEMA = "darwin-value-surface/2"
+SCHEMA = "darwin-value-surface/3"
+PREVIOUS_SCHEMA = "darwin-value-surface/2"
 HOSTS = ("clio", "hera")
 SURFACES = {
     "environment",
@@ -517,7 +518,10 @@ def artifact(
             "Seven nix-darwin value surfaces at the recorded revision. Only "
             "32-character /nix/store hash prefixes are masked; derivation names "
             "remain. Launchd scripts are hashed after that normalization, so their "
-            "text is not persisted; sensitive keys and assignments are refused."
+            "text is not persisted. Authorized-key lists, authorized-key file paths, "
+            "and build-machine private-key paths are persisted only as normalized "
+            "aggregate hashes plus non-sensitive counts; sensitive keys and "
+            "assignments are refused."
         ),
         "commands": dict(COMMANDS),
         "projection": dict(projection),
@@ -546,7 +550,12 @@ def baseline_candidates() -> list[Path]:
         ) from error
 
 
-def read_baseline(path: Path, *, require_candidate_name: bool = True) -> dict[str, Any]:
+def read_baseline(
+    path: Path,
+    *,
+    require_candidate_name: bool = True,
+    accepted_schemas: tuple[str, ...] = (SCHEMA,),
+) -> dict[str, Any]:
     """Read and validate one current artifact."""
     if path.is_symlink() or not path.is_file():
         invalid_baseline(f"unsafe path {path}")
@@ -563,8 +572,10 @@ def read_baseline(path: Path, *, require_candidate_name: bool = True) -> dict[st
         baseline_revision
     ):
         invalid_baseline(f"{path} has an invalid baselineRev")
-    if schema != SCHEMA:
-        invalid_baseline(f"{path} has schema {schema!r}; expected {SCHEMA!r}")
+    if schema not in accepted_schemas:
+        invalid_baseline(
+            f"{path} has schema {schema!r}; expected one of {accepted_schemas!r}"
+        )
     if set(existing) != ARTIFACT_KEYS:
         invalid_baseline(f"{path} does not have exactly {sorted(ARTIFACT_KEYS)}")
 
@@ -595,7 +606,9 @@ def validate_existing_baseline() -> Path:
             f"{BASELINE_DIRECTORY}/darwin-surface-*.json; found {len(matches)}"
         )
     path = matches[0]
-    read_baseline(path)
+    # One release-bound migration seam: accept v2 only as the old side of a
+    # transactional v3 replacement. The follow-up artifact commit removes it.
+    read_baseline(path, accepted_schemas=(PREVIOUS_SCHEMA, SCHEMA))
     return path
 
 

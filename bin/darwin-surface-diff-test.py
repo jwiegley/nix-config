@@ -91,6 +91,110 @@ class DarwinSurfaceDiffTests(unittest.TestCase):
         self.assertIn("aria2c-start", found[0])
         self.assertIn("EVIL-start", found[0])
 
+    def test_authorized_key_projection_hashes_values_and_watches_mutations(self):
+        base_key = "ssh-ed25519 AAAATEST principal"
+        base_file = f"/nix/store/{HASH_A}-keys/authorized_keys"
+        variants = {
+            "base": {"keys": [base_key], "keyFiles": [base_file]},
+            "added": {
+                "keys": [base_key, "ssh-ed25519 BBBBTEST second"],
+                "keyFiles": [base_file],
+            },
+            "comment": {
+                "keys": ["ssh-ed25519 AAAATEST renamed-principal"],
+                "keyFiles": [base_file],
+            },
+            "restriction": {
+                "keys": [f'from="192.0.2.1" {base_key}'],
+                "keyFiles": [base_file],
+            },
+            "forcedCommand": {
+                "keys": [f'command="restricted-command" {base_key}'],
+                "keyFiles": [base_file],
+            },
+            "fileAdded": {
+                "keys": [base_key],
+                "keyFiles": [base_file, "/etc/ssh/second_authorized_keys"],
+            },
+            "fileReplaced": {
+                "keys": [base_key],
+                "keyFiles": ["/etc/ssh/replacement_authorized_keys"],
+            },
+            "storeHashOnly": {
+                "keys": [base_key],
+                "keyFiles": [f"/nix/store/{HASH_B}-keys/authorized_keys"],
+            },
+            "storeNameChanged": {
+                "keys": [base_key],
+                "keyFiles": [f"/nix/store/{HASH_B}-other-keys/authorized_keys"],
+            },
+        }
+        encoded_variants = json.dumps(variants)
+        expression = f'''
+          let
+            variants = builtins.fromJSON {json.dumps(encoded_variants)};
+            project = import ./test/darwin/darwin-surface.nix;
+            projectVariant =
+              variant:
+              (project {{
+                config.users = {{
+                  knownUsers = [ "johnw" ];
+                  knownGroups = [ ];
+                  users.johnw.openssh.authorizedKeys = {{
+                    inherit (variant) keys keyFiles;
+                  }};
+                }};
+              }}).users.detail.johnw.authorizedKeys;
+          in
+          builtins.mapAttrs (_: projectVariant) variants
+        '''
+        process = subprocess.run(
+            ["nix", "eval", "--impure", "--json", "--expr", expression],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        projected = json.loads(process.stdout)
+
+        expected_fields = {
+            "keyFilesCount",
+            "keyFilesSha256",
+            "keysCount",
+            "keysSha256",
+        }
+        for value in projected.values():
+            self.assertEqual(set(value), expected_fields)
+            self.assertRegex(value["keyFilesSha256"], r"^[0-9a-f]{64}$")
+            self.assertRegex(value["keysSha256"], r"^[0-9a-f]{64}$")
+
+        def changed_fields(name):
+            return {
+                difference.split(":", 1)[0]
+                for difference in DIFF.differences(projected["base"], projected[name])
+            }
+
+        self.assertEqual(changed_fields("added"), {"keysCount", "keysSha256"})
+        for name in ("comment", "restriction", "forcedCommand"):
+            with self.subTest(name=name):
+                self.assertEqual(changed_fields(name), {"keysSha256"})
+        self.assertEqual(
+            changed_fields("fileAdded"),
+            {"keyFilesCount", "keyFilesSha256"},
+        )
+        self.assertEqual(changed_fields("fileReplaced"), {"keyFilesSha256"})
+        self.assertEqual(changed_fields("storeHashOnly"), set())
+        self.assertEqual(changed_fields("storeNameChanged"), {"keyFilesSha256"})
+
+        encoded_projection = json.dumps(projected, sort_keys=True)
+        for raw_value in (
+            "ssh-ed25519",
+            "restricted-command",
+            "authorized_keys",
+            "/etc/ssh/",
+        ):
+            self.assertNotIn(raw_value, encoded_projection)
+
     def test_tampered_value_and_list_element_report_leaf_paths(self):
         before = {"system": {"dock": {"orientation": "bottom"}}, "items": [1, 2]}
         after = {"system": {"dock": {"orientation": "left"}}, "items": [1, 3]}
@@ -156,7 +260,14 @@ class CommittedDarwinSurfaceTests(unittest.TestCase):
         baseline_rev = self.baseline.get("baselineRev", "")
         self.assertRegex(baseline_rev, r"^[0-9a-f]{40}$")
         self.assertEqual(self.path.stem, f"darwin-surface-{baseline_rev[:12]}")
-        self.assertEqual(self.baseline.get("schema"), "darwin-value-surface/2")
+        # Temporary v2 compatibility lets the signed v3 projector commit exist
+        # before its exact-revision artifact is generated. The artifact follow-up
+        # removes this branch and requires v3 exclusively.
+        schema = self.baseline.get("schema")
+        self.assertIn(
+            schema,
+            {"darwin-value-surface/2", "darwin-value-surface/3"},
+        )
         self.assertEqual(set(self.baseline.get("hosts", {})), {"hera", "clio"})
         for surface in self.baseline["hosts"].values():
             self.assertEqual(set(surface), SURFACES)
@@ -173,7 +284,8 @@ class CommittedDarwinSurfaceTests(unittest.TestCase):
             expected_projection[relative] = hashlib.sha256(
                 (REPO / relative).read_bytes()
             ).hexdigest()
-        self.assertEqual(self.baseline.get("projection"), expected_projection)
+        if schema == "darwin-value-surface/3":
+            self.assertEqual(self.baseline.get("projection"), expected_projection)
 
     def test_baseline_encodes_both_nonvacuity_traps_and_nix_builders(self):
         expected_counts = {"hera": (12, 6, 8), "clio": (5, 3, 4)}
