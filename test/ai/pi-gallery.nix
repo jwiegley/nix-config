@@ -92,6 +92,7 @@ in
 assert builtins.length (builtins.attrNames manifest.members) == builtins.length manifest.order;
 assert manifestPackagesMatch;
 assert builtins.length normalizationTargets == 9;
+assert (piPackage.profileRootWrapperAbi or null) == 1;
 assert (piPackage.toolRendererWrapperAbi or null) == 1;
 runCommand "pi-gallery-check"
   {
@@ -256,6 +257,87 @@ runCommand "pi-gallery-check"
     ! grep -F 'pi-provider-litellm' ${gallery}/index.ts >/dev/null \
       || fail "LiteLLM provider wrapper remains enabled"
     grep -F 'pi-model-router' ${gallery}/index.ts >/dev/null
+
+    profile_smoke="$TMPDIR/pi-profile-root-smoke"
+    mkdir -p \
+      "$profile_smoke/home/.config/pi" \
+      "$profile_smoke/home/.pi/agent" \
+      "$profile_smoke/tmp"
+    cat > "$profile_smoke/home/.config/pi/models.json" <<'JSON'
+    {
+      "providers": {
+        "xdg-proof": {
+          "api": "openai-completions",
+          "apiKey": "not-needed",
+          "baseUrl": "http://127.0.0.1:1/v1",
+          "models": [{
+            "id": "xdg-model",
+            "name": "XDG model",
+            "contextWindow": 4096,
+            "maxTokens": 1024
+          }]
+        }
+      }
+    }
+    JSON
+    cat > "$profile_smoke/home/.pi/agent/models.json" <<'JSON'
+    {
+      "providers": {
+        "legacy-proof": {
+          "api": "openai-completions",
+          "apiKey": "not-needed",
+          "baseUrl": "http://127.0.0.1:1/v1",
+          "models": [{
+            "id": "legacy-model",
+            "name": "Legacy model",
+            "contextWindow": 4096,
+            "maxTokens": 1024
+          }]
+        }
+      }
+    }
+    JSON
+    (
+      cd "$profile_smoke"
+      ${coreutils}/bin/env -i \
+        HOME="$profile_smoke/home" \
+        PATH=${lib.escapeShellArg (lib.makeBinPath [ coreutils ])} \
+        PI_OFFLINE=1 \
+        TMPDIR="$profile_smoke/tmp" \
+        ${coreutils}/bin/timeout 60 \
+          ${lib.getExe piPackage} \
+          --offline --no-session --no-context-files \
+          --no-extensions --no-skills --no-prompt-templates \
+          --list-models xdg-proof \
+          >"$profile_smoke/default.log" 2>"$profile_smoke/default-error.log"
+    ) || {
+      cat "$profile_smoke/default-error.log" >&2
+      fail "Pi did not default to the XDG profile root"
+    }
+    grep -F 'xdg-proof' "$profile_smoke/default.log" >/dev/null \
+      || fail "Pi default profile omitted the XDG model"
+    ! grep -F 'legacy-proof' "$profile_smoke/default.log" >/dev/null \
+      || fail "Pi default profile loaded the legacy model"
+    (
+      cd "$profile_smoke"
+      ${coreutils}/bin/env -i \
+        HOME="$profile_smoke/home" \
+        PATH=${lib.escapeShellArg (lib.makeBinPath [ coreutils ])} \
+        PI_CODING_AGENT_DIR="$profile_smoke/home/.pi/agent" \
+        PI_OFFLINE=1 \
+        TMPDIR="$profile_smoke/tmp" \
+        ${coreutils}/bin/timeout 60 \
+          ${lib.getExe piPackage} \
+          --offline --no-session --no-context-files \
+          --no-extensions --no-skills --no-prompt-templates \
+          --list-models legacy-proof \
+          >"$profile_smoke/override.log" 2>"$profile_smoke/override-error.log"
+    ) || {
+      cat "$profile_smoke/override-error.log" >&2
+      fail "Pi rejected an explicit profile-root override"
+    }
+    grep -F 'legacy-proof' "$profile_smoke/override.log" >/dev/null \
+      || fail "Pi ignored an explicit profile-root override"
 
     provider_smoke="$TMPDIR/pi-provider-router-smoke"
     mkdir -p "$provider_smoke/home" "$provider_smoke/agent" "$provider_smoke/project"
