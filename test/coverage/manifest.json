@@ -1127,6 +1127,7 @@
     "ci-on-demand": 1800
   },
   "blindSpots": [
+    "config/ai/flake.nix is an intentional throwing stub verified by immutable-subflake-check's negative probe; successful Nix evaluation cannot positively reach it.",
     "Nix evaluating-file diagnostics prove only that file evaluation started, not that parsing completed or lazy contents were forced.",
     "readFile, readDir, hashFile, pathExists, copied paths, and some scoped imports are invisible to file-reach diagnostics.",
     "The internal-json diagnostic wording is not a stable coverage API; parser drift must produce unknown or failure, never an empty passing numerator.",

@@ -33,6 +33,7 @@ from typing import Any
 
 
 REPORT_SCHEMA = "fleet-coverage/1"
+NIX_REACH_ROLE_CHANGE_EXEMPTIONS = frozenset({"config/ai/flake.nix"})
 MANIFEST_SCHEMA = "fleet-coverage-manifest/1"
 MANIFEST_RELATIVE = PurePosixPath("test/coverage/manifest.json")
 PYTHON_TEMPLATE_PLACEHOLDER_RE = re.compile(r"@[A-Z][A-Z0-9_]*@")
@@ -2432,6 +2433,16 @@ def validate_non_regression(
     previous_reached = set(
         _unique_strings(previous_reach.get("reached"), "parent reached", nonempty=False)
     )
+    # #47 deliberately replaced the normally evaluated portable flake at this
+    # path with a throwing compatibility stub. It remains in the denominator and
+    # is behaviorally exercised by immutable-subflake-check's expected-failure
+    # probe, but no successful evaluation can reach it. Ignore only this exact
+    # role change when comparing positive-reach continuity and ratios.
+    role_changes = NIX_REACH_ROLE_CHANGE_EXEMPTIONS & current_denominator
+    current_denominator -= role_changes
+    previous_denominator -= role_changes
+    current_reached -= role_changes
+    previous_reached -= role_changes
     lost = sorted((previous_reached & current_denominator) - current_reached)
     if lost:
         raise CoverageError(f"Nix file reach regressed for paths: {lost}")
