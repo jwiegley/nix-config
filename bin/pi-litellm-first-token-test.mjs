@@ -96,10 +96,12 @@ async function waitForReadyOrKill(child, stream, timeoutMs, graceMs) {
   throw new Error(`child did not become ready within ${timeoutMs}ms`);
 }
 
-async function runDisconnectCleanupCase(forceRequestFailure) {
+async function runDisconnectCleanupCase(forceRequestFailure, forceCloseFailure = false) {
   const started = performance.now();
   const sockets = new Set();
   let request;
+  let primaryError;
+  const cleanupErrors = [];
   let requestReceived;
   let requestFailed;
   const received = new Promise(resolve => {
@@ -144,12 +146,24 @@ async function runDisconnectCleanupCase(forceRequestFailure) {
       throw new Error(`disconnect self-test request failed: ${outcome.error}`);
     }
     if (forceRequestFailure) throw new Error("forced disconnect request unexpectedly succeeded");
+  } catch (error) {
+    primaryError = error;
   } finally {
     request?.destroy();
-    await closeServerBounded(server, sockets);
+    try {
+      await closeServerBounded(server, sockets);
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+    if (forceCloseFailure) cleanupErrors.push(new Error("injected server-close failure"));
   }
 
   const elapsedMs = performance.now() - started;
+  const failures = primaryError ? [primaryError, ...cleanupErrors] : cleanupErrors;
+  if (failures.length === 1) throw failures[0];
+  if (failures.length > 1) {
+    throw new AggregateError(failures, "disconnect self-test body and cleanup failed");
+  }
   if (elapsedMs > 1000) throw new Error(`disconnect cleanup took ${elapsedMs}ms`);
   return elapsedMs;
 }
@@ -205,12 +219,32 @@ async function runTimeoutSelfTest() {
     throw new Error(`request-failure cleanup took ${requestFailureCleanupMs}ms`);
   }
 
+  const dualFailureStarted = performance.now();
+  try {
+    await runDisconnectCleanupCase(true, true);
+    throw new Error("dual-failure self-test unexpectedly succeeded");
+  } catch (error) {
+    if (!(error instanceof AggregateError)) throw error;
+    const messages = error.errors.map(item => String(item));
+    if (!messages.some(message => message.includes("disconnect self-test request failed"))) {
+      throw new Error("dual-failure self-test lost the request failure");
+    }
+    if (!messages.some(message => message.includes("injected server-close failure"))) {
+      throw new Error("dual-failure self-test lost the cleanup failure");
+    }
+  }
+  const dualFailureCleanupMs = performance.now() - dualFailureStarted;
+  if (dualFailureCleanupMs > 1000) {
+    throw new Error(`dual-failure cleanup took ${dualFailureCleanupMs}ms`);
+  }
+
   process.stdout.write(
     `${JSON.stringify({
       timeoutSelfTestMs: Math.round(elapsedMs),
       readinessCleanupMs: Math.round(readinessCleanupMs),
       disconnectCleanupMs: Math.round(disconnectCleanupMs),
       requestFailureCleanupMs: Math.round(requestFailureCleanupMs),
+      dualFailureCleanupMs: Math.round(dualFailureCleanupMs),
     })}\n`,
   );
 }
@@ -226,6 +260,9 @@ const agent = join(root, "agent");
 const project = join(root, "project");
 let server;
 let child;
+let evidence;
+let primaryError;
+const cleanupErrors = [];
 const heartbeatTimers = new Set();
 const sockets = new Set();
 
@@ -360,9 +397,10 @@ try {
   if (elapsedMs < delayMs) throw new Error(`Pi exited before the ${delayMs}ms first-token delay`);
   if (!stdout.includes("delayed-ok")) throw new Error(`Pi output omitted delayed content: ${stdout}`);
 
-  process.stdout.write(`${JSON.stringify({ delayMs, elapsedMs: Math.round(elapsedMs), heartbeats })}\n`);
+  evidence = { delayMs, elapsedMs: Math.round(elapsedMs), heartbeats };
+} catch (error) {
+  primaryError = error;
 } finally {
-  const cleanupErrors = [];
   for (const timer of heartbeatTimers) clearInterval(timer);
   if (child && child.exitCode === null && child.signalCode === null) {
     try {
@@ -389,6 +427,9 @@ try {
   } catch (error) {
     cleanupErrors.push(error);
   }
-  if (cleanupErrors.length) throw new AggregateError(cleanupErrors, "probe cleanup failed");
 }
+const failures = primaryError ? [primaryError, ...cleanupErrors] : cleanupErrors;
+if (failures.length === 1) throw failures[0];
+if (failures.length > 1) throw new AggregateError(failures, "probe body and cleanup failed");
+process.stdout.write(`${JSON.stringify(evidence)}\n`);
 }
