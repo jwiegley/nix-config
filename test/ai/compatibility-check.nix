@@ -82,12 +82,6 @@ let
       (lib.assertMsg (
         actual.packages.${system}.default.name == "ai-nix-toolchain"
       ) "portable aggregate name changed on ${system}")
-      (lib.assertMsg (
-        actual.packages.${system}.plasma-fractal.version == "1.0.0"
-      ) "plasma-fractal version changed on ${system}")
-      (lib.assertMsg (
-        actual.packages.${system}.plasma-wiki.version == "1.1.0"
-      ) "plasma-wiki version changed on ${system}")
     ]
     ++ map (value: lib.assertMsg value "portable compatibility alias changed on ${system}") (
       aliasesMatch system

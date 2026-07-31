@@ -48,7 +48,7 @@ runCommand "plasma-fractal-smoke"
         ${plasma-wiki}/bin/wiki "$@"
     }
 
-    test "$(run_fractal --version)" = "1.0.0"
+    test "$(run_fractal --version)" = "${plasma-fractal.version}"
     run_fractal --help > "$TMPDIR/fractal-help.txt"
     run_wiki --help > "$TMPDIR/wiki-help.txt"
     test -s "$TMPDIR/fractal-help.txt"
