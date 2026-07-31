@@ -33,7 +33,6 @@ in
     "rewind"
     "scroll"
     "blackhole"
-    "retry"
     "markdown-preview"
     "caveman"
     "rtk-optimizer"
@@ -138,12 +137,6 @@ in
       package = packages.pi-blackhole or null;
       publicName = "pi-blackhole";
       extension = "index.ts";
-    };
-    retry = member "pi-retry" {
-      attrName = "pi-retry";
-      package = packages.pi-retry or null;
-      publicName = "@narumitw/pi-retry";
-      extension = "src/index.ts";
     };
     markdown-preview = member "pi-markdown-preview" {
       attrName = "pi-markdown-preview";

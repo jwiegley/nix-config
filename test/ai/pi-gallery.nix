@@ -227,28 +227,6 @@ runCommand "pi-gallery-check"
     grep -F 'return `''${prefix}: ''${statusLabel(goal)}''${usage}`;' \
       ${roots.goal}/extensions/goal-core.ts >/dev/null \
       || fail "Goal footer still repeats the objective"
-    [ -f ${roots.retry}/src/index.ts ]
-    [ ! -e ${roots.retry}/node_modules ]
-    PI_PACKAGE_DIR=${piPackage}/libexec/pi ${bun}/bin/bun -e '
-      import { defaultStallTimeoutForModel } from "${roots.retry}/src/retry.ts";
-      const cases = [
-        [{ provider: "litellm", id: "hera/GLM-5.2" }, 7_200_000],
-        [{ provider: "litellm", id: "hera/gpt-oss-120b" }, 7_200_000],
-        [{ provider: "litellm", id: "clio/omlx/Qwen3.6-35B-A3B-oQ4-mtp" }, 7_200_000],
-        [{ provider: "litellm", id: "hera/claude-sonnet-5" }, 90_000],
-        [{ provider: "litellm", id: "positron_openai/gpt-5.6-sol" }, 90_000],
-        [{ provider: "litellm", id: "factory/glm-5.2" }, 90_000],
-        [{ provider: "openai-codex", id: "gpt-5.6-sol" }, 90_000],
-      ];
-      for (const [model, expected] of cases) {
-        const actual = defaultStallTimeoutForModel(model);
-        if (actual !== expected) {
-          throw new Error(
-            model.provider + "/" + model.id + ": expected " + expected + ", got " + actual,
-          );
-        }
-      }
-    '
     [ -f ${roots.markdown-preview}/index.ts ]
     [ -d ${roots.markdown-preview}/node_modules/puppeteer-core ]
     [ -f ${roots.rtk-optimizer}/index.ts ]
