@@ -23,14 +23,14 @@ let
 
   sortedNames = set: lib.sort builtins.lessThan (builtins.attrNames set);
 
-  litellmSolId = "positron_openai/gpt-5.6-sol";
-  solModels = lib.filterAttrs (
-    _: model: model.provider == "positron-openai" && model.id == "gpt-5.6-sol"
+  localModelId = "GLM-5.2";
+  localModels = lib.filterAttrs (
+    _: model: model.provider == "llama-cpp-local" && model.id == localModelId
   ) modelData.models;
-  solModel =
-    assert builtins.length (builtins.attrValues solModels) == 1;
-    assert (builtins.head (builtins.attrValues solModels)).contextLimit == 1050000;
-    builtins.head (builtins.attrValues solModels);
+  localModel =
+    assert builtins.length (builtins.attrValues localModels) == 1;
+    assert (builtins.head (builtins.attrValues localModels)).contextLimit == 1048576;
+    builtins.head (builtins.attrValues localModels);
 
   system = pkgs.stdenv.hostPlatform.system;
   codexSourceCatalog = "${
@@ -43,11 +43,11 @@ let
       }
       ''
         ${lib.getExe pkgs.jq} \
-          --arg litellm_sol_id ${lib.escapeShellArg litellmSolId} \
-          --arg litellm_display_name ${lib.escapeShellArg "${solModel.displayName} via LiteLLM"} \
-          --argjson context_window ${toString solModel.contextLimit} \
+          --arg local_model_id ${lib.escapeShellArg localModelId} \
+          --arg local_display_name ${lib.escapeShellArg "${localModel.displayName} via llama-swap"} \
+          --argjson context_window ${toString localModel.contextLimit} \
           '
-            def patched_sol:
+            def patched_local:
               .context_window = $context_window
               | .max_context_window = $context_window
               | .effective_context_window_percent = 95;
@@ -59,15 +59,13 @@ let
               else
                 .models =
                   (
-                    ($models | map(if .slug == "gpt-5.6-sol" then patched_sol else . end))
-                    + [
-                      (
-                        $native_sol_models[0]
-                        | patched_sol
-                        | .slug = $litellm_sol_id
-                        | .display_name = $litellm_display_name
-                      )
-                    ]
+                    $models
+                    + [(
+                      $native_sol_models[0]
+                      | patched_local
+                      | .slug = $local_model_id
+                      | .display_name = $local_display_name
+                    )]
                   )
               end
           ' \
@@ -105,7 +103,7 @@ let
   hookItems = builtins.attrValues selected.hooks;
   managedConfig = {
     model_catalog_json = "${homeDirectory}/${profile.root}/nix-managed-model-catalog.json";
-    model_context_window = solModel.contextLimit;
+    model_context_window = localModel.contextLimit;
     model_auto_compact_token_limit = 900000;
     notify = lib.concatMap (item: item.codex.notify or [ ]) hookItems;
     mcp_servers = lib.mapAttrs (_: renderMcpServer) selected.mcpServers;

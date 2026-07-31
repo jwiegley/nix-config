@@ -13,10 +13,7 @@ let
   json = pkgs.formats.json { };
   mergeFiles = import ./merge-files.nix { inherit lib; };
 
-  expectedProviderNames = [
-    "litellm"
-    "llama-cpp-local"
-  ];
+  expectedProviderNames = [ "llama-cpp-local" ];
   expectedMcpNames = [
     "Ref"
     "anvil"
@@ -79,27 +76,14 @@ let
     // lib.optionalAttrs (model ? contextLimit) {
       contextWindow = model.contextLimit;
     }
-    // lib.optionalAttrs (model.provider == "litellm" && model.id == "positron_openai/gpt-5.6-sol") {
-      api = "openai-responses";
+    // lib.optionalAttrs (model.provider == "llama-cpp-local" && model.id == "GLM-5.2") {
       reasoning = true;
-      input = [
-        "text"
-        "image"
-      ];
+      input = [ "text" ];
       cost = {
-        input = 5;
-        output = 30;
-        cacheRead = 0.5;
-        cacheWrite = 6.25;
-        tiers = [
-          {
-            inputTokensAbove = 272000;
-            input = 10;
-            output = 45;
-            cacheRead = 1;
-            cacheWrite = 12.5;
-          }
-        ];
+        input = 0;
+        output = 0;
+        cacheRead = 0;
+        cacheWrite = 0;
       };
       thinkingLevelMap = {
         off = "none";
@@ -108,42 +92,21 @@ let
         max = null;
       };
     };
-  solModels = orderedValues (
-    lib.filterAttrs (
-      _: model: model.provider == "litellm" && model.id == "positron_openai/gpt-5.6-sol"
-    ) modelData.models
-  );
   directGlmModels = orderedValues (
     lib.filterAttrs (
       _: model: model.provider == "llama-cpp-local" && model.id == "GLM-5.2"
     ) modelData.models
   );
-  solModel = builtins.head solModels;
+  directGlmModel = builtins.head directGlmModels;
   renderProvider =
     providerName: provider:
-    if providerName == "litellm" then
-      {
-        apiKey = renderEnv provider.apiKey.env;
-        inherit (provider) baseUrl;
-        headers = {
-          "x-litellm-stream-timeout" = "7200";
-          "x-litellm-tags" = "pi";
-          "x-litellm-timeout" = "7200";
-        };
-        modelOverrides."openrouter/z-ai/glm-5.2".compat = {
-          sendSessionAffinityHeaders = true;
-          sessionAffinityFormat = "openrouter";
-        };
-        models = map renderModel solModels;
-      }
-    else
-      assert providerName == "llama-cpp-local";
-      {
-        api = "openai-completions";
-        apiKey = provider.apiKey.nonSecret;
-        inherit (provider) baseUrl;
-        models = map renderModel directGlmModels;
-      };
+    assert providerName == "llama-cpp-local";
+    {
+      api = "openai-completions";
+      apiKey = provider.apiKey.nonSecret;
+      inherit (provider) baseUrl;
+      models = map renderModel directGlmModels;
+    };
   routerProvider = {
     api = "router-local-api";
     apiKey = "pi-model-router";
@@ -163,25 +126,22 @@ let
           cacheRead = 0;
           cacheWrite = 0;
         };
-        contextWindow = solModel.contextLimit;
-        maxTokens = solModel.outputLimit;
+        contextWindow = directGlmModel.contextLimit;
+        maxTokens = directGlmModel.outputLimit;
         thinkingLevelMap.xhigh = "xhigh";
       }
     ];
   };
-  models = {
-    providers = lib.mapAttrs renderProvider modelData.providers // {
-      openai-codex.modelOverrides."gpt-5.6-sol".contextWindow = solModel.contextLimit;
-      router = routerProvider;
-    };
+  models.providers = lib.mapAttrs renderProvider modelData.providers // {
+    router = routerProvider;
   };
   modelRouter = {
     debug = false;
     phaseBias = 0.5;
     models.sol = {
-      model = "litellm/${solModel.id}";
-      contextWindow = solModel.contextLimit;
-      maxTokens = solModel.outputLimit;
+      model = "llama-cpp-local/${directGlmModel.id}";
+      contextWindow = directGlmModel.contextLimit;
+      maxTokens = directGlmModel.outputLimit;
       reasoning = true;
       thinkingLevels = [
         "low"
@@ -390,11 +350,9 @@ assert selected.marketplaces == { };
 assert selected.settings == { };
 assert builtins.attrNames selected.mcpServers == expectedMcpNames;
 assert builtins.attrNames modelData.providers == expectedProviderNames;
-assert builtins.length solModels == 1;
 assert builtins.length directGlmModels == 1;
 assert (builtins.head directGlmModels).contextLimit == 1048576;
-assert solModel.contextLimit == 1050000;
-assert solModel.outputLimit == 128000;
+assert directGlmModel.outputLimit == 65536;
 assert !(modelData ? default);
 assert builtins.all (model: builtins.hasAttr model.provider modelData.providers) (
   builtins.attrValues modelData.models
