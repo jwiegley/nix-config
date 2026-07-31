@@ -31,8 +31,8 @@ let
     ".config/opencode/agents"
     ".config/opencode/commands"
     ".config/opencode/skills"
-    ".config/pi/agents"
-    ".config/pi/prompts"
+    ".config/pi/agent/agents"
+    ".config/pi/agent/prompts"
   ];
   managedExactPaths = [
     ".claude/nix-managed-mcp.json"
@@ -55,13 +55,13 @@ let
     ".config/mcp/mcp.json"
     ".config/opencode/opencode.json"
     ".pi-lens/config.json"
-    ".config/pi/extensions/auto-compact-resume/index.ts"
-    ".config/pi/extensions/nix-gallery/index.ts"
-    ".config/pi/extensions/pi-mcp-adapter"
-    ".config/pi/extensions/pi-quiet"
-    ".config/pi/keybindings.json"
-    ".config/pi/model-router.json"
-    ".config/pi/models.json"
+    ".config/pi/agent/extensions/auto-compact-resume/index.ts"
+    ".config/pi/agent/extensions/nix-gallery/index.ts"
+    ".config/pi/agent/extensions/pi-mcp-adapter"
+    ".config/pi/agent/extensions/pi-quiet"
+    ".config/pi/agent/keybindings.json"
+    ".config/pi/agent/model-router.json"
+    ".config/pi/agent/models.json"
   ];
   validRelativePath =
     path:
@@ -100,7 +100,7 @@ let
             "forbiddenKeys"
             "path"
           ]
-        && piGuard.path == ".config/pi/mcp.json"
+        && piGuard.path == ".config/pi/agent/mcp.json"
         && (
           legacyPiGuardPath == null
           || (validRelativePath legacyPiGuardPath && legacyPiGuardPath != piGuard.path)

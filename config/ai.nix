@@ -100,6 +100,7 @@ let
   piGuard = if piGuards == [ ] then null else builtins.head piGuards;
   piProfileMigration = (import ./pi-profile-migration.nix { inherit lib pkgs; }) {
     root = catalog.profiles.hera-pi.root;
+    compatibilityRoot = ".config/pi";
   };
 
   validRelativePath =
@@ -232,18 +233,23 @@ in
   ];
 
   home = {
-    file = lib.mapAttrs (_: file: file // { force = true; }) mergedFiles;
+    file =
+      lib.mapAttrs (_: file: file // { force = true; }) mergedFiles
+      // lib.optionalAttrs piSelected {
+        ".pi" = {
+          source = config.lib.file.mkOutOfStoreSymlink "${config.xdg.configHome}/pi";
+          force = true;
+        };
+      };
     packages =
       lib.optional droidSelected pkgs.agent-http-header-bridge
       ++ lib.optionals piSelected piRuntimePackages;
-    sessionVariables = lib.optionalAttrs piSelected {
-      PI_CODING_AGENT_DIR = "${config.xdg.configHome}/pi";
-    };
     activation = {
       aiManagedPreflight = preflight.activation;
     }
     // lib.optionalAttrs piSelected {
       aiPiProfileMigration = piProfileMigration.activation;
+      aiPiLegacyRootLink = piProfileMigration.legacyRootActivation;
     }
     // lib.optionalAttrs (config.johnw.host.isHera && isDarwin) {
       aiManagedModelSync = modelSync.activation;

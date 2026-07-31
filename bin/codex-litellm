@@ -35,9 +35,11 @@ load_credential() {
 
 LITELLM_API_KEY=""
 REF_API_KEY=""
+PERPLEXITY_API_KEY=""
 load_credential litellm.vulcan.lan LiteLLM LITELLM_API_KEY
 load_credential api.ref.tools Ref REF_API_KEY
-export LITELLM_API_KEY REF_API_KEY
+load_credential api.perplexity.ai Perplexity PERPLEXITY_API_KEY
+export LITELLM_API_KEY REF_API_KEY PERPLEXITY_API_KEY
 
 routed_model=positron_openai/gpt-5.6-sol
 short_model=gpt-5.6-sol
@@ -92,7 +94,7 @@ litellm_args=(
     -c 'model_providers.litellm.env_key="LITELLM_API_KEY"'
     -c 'model_providers.litellm.wire_api="responses"'
     -c 'model_reasoning_effort="ultra"'
-    -c 'shell_environment_policy.exclude=["LITELLM_API_KEY","REF_API_KEY"]'
+    -c 'shell_environment_policy.exclude=["LITELLM_API_KEY","REF_API_KEY","PERPLEXITY_API_KEY"]'
 )
 
 if [[ ${forward_args[0]:-} == exec ]]; then

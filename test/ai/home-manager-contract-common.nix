@@ -191,7 +191,7 @@ let
     hera-codex = ".config/codex";
     hera-droid = ".config/factory";
     hera-opencode = ".config/opencode";
-    hera-pi = ".config/pi";
+    hera-pi = ".config/pi/agent";
     shared-work-claude-positron = ".claude";
     shared-work-codex = ".codex";
     shared-work-opencode-positron = ".config/opencode";
@@ -485,7 +485,13 @@ let
     perplexity = {
       transport = {
         command = "uvx";
-        args = [ "perplexity-mcp" ];
+        args = [
+          "--from"
+          "perplexity-mcp==0.1.7"
+          "--with"
+          "mcp==1.28.1"
+          "perplexity-mcp"
+        ];
         env.PERPLEXITY_API_KEY.env = "PERPLEXITY_API_KEY";
       };
       overrides = { };
@@ -2689,7 +2695,7 @@ let
         )
         (expectEqual "${profileId} semantic MCP oracle" (builtins.hashString "sha256" (
           builtins.toJSON expectedDroidMcp
-        )) "aec840738b1a86d59cea27f30c76da0c35aa747cfdcc69f33163fc7afa9284f4")
+        )) "e1fd373cf3d68afd3411bb23583027cefe77e83232aa9472141b2e9b8172c2b8")
         (expectEqual "${profileId} MCP set" (sortedNames expectedDroidMcp.mcpServers) claudePersonalMcp)
       ]
       ++ lib.mapAttrsToList (
@@ -2719,7 +2725,7 @@ let
         (expectEqual "${profileId} companions" render.companions [ ])
         (expectEqual "${profileId} required environment" render.requiredEnvNames piRequiredEnvNames)
         (expectEqual "${profileId} mutable MCP guard" render.mutableMcpGuard {
-          path = ".config/pi/mcp.json";
+          path = ".config/pi/agent/mcp.json";
           forbiddenKeys = [
             "mcpServers"
             "imports"
@@ -2730,7 +2736,7 @@ let
         )) [ ])
         (expectEqual "${profileId} owns no skill leaves" piOwnedSkillPaths [ ])
         (expectReject "Pi unknown agent tool accepted"
-          piUnknownAgentToolProbe.files.".config/pi/agents/bash-reviewer.md".text
+          piUnknownAgentToolProbe.files.".config/pi/agent/agents/bash-reviewer.md".text
         )
         (expectReject "Pi nonstandard XDG config home accepted" piNonstandardXdgProbe.companions)
         (expectReject "Pi non-Hera/non-Pi profile accepted" piWrongProfileProbe.companions)
@@ -2760,7 +2766,7 @@ let
         (expectEqual "${profileId} MCP set" (sortedNames expectedPiMcp.mcpServers) claudePersonalMcp)
         (expectEqual "${profileId} semantic MCP oracle" (builtins.hashString "sha256" (
           builtins.toJSON expectedPiMcp
-        )) "c74e7c84f094593ea2f3decec5f10093f8c13b466061eeabb849d7f4d6aa4c91")
+        )) "e1b2969a426ff2f737764063796e9dc214b01927e90bc6eb2c7a924add44a131")
         (expectEqual "${profileId} auto compact extension leaf"
           "${render.files."${profile.root}/extensions/auto-compact-resume/index.ts".source}"
           piExtensionSources.auto-compact-resume
@@ -3265,8 +3271,8 @@ let
     ".config/opencode/agents"
     ".config/opencode/commands"
     ".config/opencode/skills"
-    ".config/pi/agents"
-    ".config/pi/prompts"
+    ".config/pi/agent/agents"
+    ".config/pi/agent/prompts"
   ];
   task9ManagedExactPaths = [
     ".claude/nix-managed-mcp.json"
@@ -3289,13 +3295,13 @@ let
     ".config/mcp/mcp.json"
     ".config/opencode/opencode.json"
     ".pi-lens/config.json"
-    ".config/pi/extensions/auto-compact-resume/index.ts"
-    ".config/pi/extensions/nix-gallery/index.ts"
-    ".config/pi/extensions/pi-mcp-adapter"
-    ".config/pi/extensions/pi-quiet"
-    ".config/pi/keybindings.json"
-    ".config/pi/model-router.json"
-    ".config/pi/models.json"
+    ".config/pi/agent/extensions/auto-compact-resume/index.ts"
+    ".config/pi/agent/extensions/nix-gallery/index.ts"
+    ".config/pi/agent/extensions/pi-mcp-adapter"
+    ".config/pi/agent/extensions/pi-quiet"
+    ".config/pi/agent/keybindings.json"
+    ".config/pi/agent/model-router.json"
+    ".config/pi/agent/models.json"
   ];
   task9IsManagedHomePath =
     path:
@@ -3440,7 +3446,7 @@ let
         ];
         droid = [ ".config/factory/nix-managed-settings.json" ];
         opencode = [ ".config/opencode/opencode.json" ];
-        pi = [ ".config/pi/models.json" ];
+        pi = [ ".config/pi/agent/models.json" ];
       };
     in
     builtins.filter (client: lib.any (path: builtins.hasAttr path files) markers.${client}) (
@@ -3448,10 +3454,12 @@ let
     );
   task9HasPiGuard =
     evaluation:
-    lib.hasInfix ".config/pi/mcp.json" evaluation.config.home.activation.aiManagedPreflight.data
+    lib.hasInfix ".config/pi/agent/mcp.json" evaluation.config.home.activation.aiManagedPreflight.data
     && lib.hasInfix ".pi/agent/mcp.json" evaluation.config.home.activation.aiManagedPreflight.data;
   task9HasPiProfileMigration =
     evaluation: builtins.hasAttr "aiPiProfileMigration" evaluation.config.home.activation;
+  task9HasPiLegacyRootLink =
+    evaluation: builtins.hasAttr "aiPiLegacyRootLink" evaluation.config.home.activation;
   task9ActivationOrder =
     evaluation:
     map (entry: entry.name) (homeManagerLib.hm.dag.topoSort evaluation.config.home.activation).result;
@@ -3471,12 +3479,13 @@ let
       collision = task9IndexOf "checkLinkTargets" order;
       boundary = task9IndexOf "writeBoundary" order;
       migration = task9IndexOf "aiPiProfileMigration" order;
+      legacyRootLink = task9IndexOf "aiPiLegacyRootLink" order;
       links = task9IndexOf "linkGeneration" order;
       migrationOrderValid =
         if task9HasPiProfileMigration evaluation then
-          boundary < migration && migration < links
+          boundary < migration && migration < legacyRootLink && legacyRootLink < links
         else
-          migration == -1;
+          migration == -1 && legacyRootLink == -1;
     in
     preflight >= 0
     && preflight < collision
@@ -3512,6 +3521,9 @@ let
         (expectEqual "${name} Pi profile migration selection" (task9HasPiProfileMigration evaluation) (
           name == "hera"
         ))
+        (expectEqual "${name} Pi legacy-root link selection" (task9HasPiLegacyRootLink evaluation) (
+          name == "hera"
+        ))
         (expectEqual "${name} Pi profile migration DAG edges"
           (
             if task9HasPiProfileMigration evaluation then
@@ -3531,9 +3543,28 @@ let
               null
           )
         )
-        (expectEqual "${name} Pi profile-root environment"
+        (expectEqual "${name} Pi legacy-root link DAG edges"
+          (
+            if task9HasPiLegacyRootLink evaluation then
+              {
+                inherit (evaluation.config.home.activation.aiPiLegacyRootLink) before after;
+              }
+            else
+              null
+          )
+          (
+            if name == "hera" then
+              {
+                before = [ "linkGeneration" ];
+                after = [ "aiPiProfileMigration" ];
+              }
+            else
+              null
+          )
+        )
+        (expectEqual "${name} Pi profile-root environment is unnecessary"
           (evaluation.config.home.sessionVariables.PI_CODING_AGENT_DIR or null)
-          (if name == "hera" then "${evaluation.config.home.homeDirectory}/.config/pi" else null)
+          null
         )
         (expectEqual "${name} activation ordering" (task9OrderingIsExact evaluation) true)
       ]
@@ -3661,6 +3692,9 @@ let
       inherit inputs;
       pkgs = task9DarwinPkgs;
     }).package-list;
+  task9HeraCredentialCodex = lib.findFirst (
+    candidate: candidate.heraCredentialWrapper or false
+  ) null task9HeraPackages;
   task9HeraHasPackage =
     package: lib.any (candidate: toString candidate == toString package) task9HeraPackages;
   task9NoGitAiPackages =
@@ -3794,12 +3828,22 @@ let
       (task9HasBridge "aarch64-darwin" task9JohnwHera)
       true
     )
-    (expectEqual "Task 9 integrated Hera omits legacy Pi root writer"
+    (expectEqual "Task 9 integrated Hera owns the legacy Pi root link"
       (builtins.hasAttr ".pi" task9JohnwHera.config.home.file)
+      true
+    )
+    (expectEqual "Task 9 legacy Pi root link is forced" task9JohnwHera.config.home.file.".pi".force
+      true
+    )
+    (expectEqual "Task 9 obsolete local Codex wrapper is absent"
+      (builtins.hasAttr ".local/bin/codex" task9JohnwHera.config.home.file)
       false
     )
+    (expectEqual "Task 9 Hera installs the credential-loading Codex package" (
+      task9HeraCredentialCodex != null
+    ) true)
     (expectEqual "Task 9 integrated Hera owns Pi agent leaves" (lib.any (
-      path: lib.hasPrefix ".config/pi/" path
+      path: lib.hasPrefix ".config/pi/agent/" path
     ) (builtins.attrNames task9JohnwHera.config.home.file)) true)
     (expectEqual "Task 9 real Hera packages include persona provider"
       (task9HeraHasPackage task9DarwinPkgs.nix-scripts)
@@ -4737,6 +4781,7 @@ in
     task9Checks
     task10ActivationWiringChecks
     task9JohnwHera
+    task9HeraCredentialCodex
     task9WrappedClaude
     task9HeraBridge
     task9Evaluations

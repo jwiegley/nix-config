@@ -1014,3 +1014,47 @@ intermediate commit. Coverage freshness remains mandatory in pre-push,
 issue. This supersedes the earlier statement that structural coverage runs on
 every commit; it does not remove the coverage authority or its low-frequency
 collection.
+
+## 2026-07-31 — #77 reopened for agent-environment regression repair
+
+Live diagnosis showed that the earlier Pi XDG closeout was operationally incomplete:
+Pi 0.82 defaults to `~/.pi/agent`, while the deployed Nix leaves were flattened into
+`~/.config/pi` and depended on `PI_CODING_AGENT_DIR`. Long-lived tmux, launchd, and
+the current shell lacked that variable, so Pi read the legacy root. The corrected
+layout preserves Pi's native shape: managed and mutable agent state lives under
+`~/.config/pi/agent`, and Home Manager owns `~/.pi -> ~/.config/pi`. No Pi launch
+environment or package wrapper is required.
+
+Before linking, the existing migration merges `~/.pi/agent` into the canonical XDG
+agent directory without overwriting destination state. It then atomically moves the
+whole legacy root to `~/.pi-legacy-v1` and installs the compatibility link. Missing-
+marker identity state preserves the canonical directory inode; symlinked destination
+parents, wrong links, conflicting backups, and ambiguous recovery states fail before
+mutation. The live legacy and XDG session trees were compared without reading their
+contents and were identical (24 files each); the migration marker is newer than their
+latest session file.
+
+The Codex incident had two independent causes. Hera's intended credential-loading
+wrapper lived in `~/.local/bin` behind the Nix profile on `PATH`; the actual profile
+package now owns that wrapper and pins its underlying Codex and `pass` paths. It loads
+and shell-excludes the LiteLLM, Ref, and Perplexity credentials. Separately,
+`perplexity-mcp` 0.1.7 had resolved incompatible `mcp` 2.0.0 and crashed on the removed
+`Server.list_prompts` API; both packages are now pinned (`perplexity-mcp==0.1.7`,
+`mcp==1.28.1`). A fresh Codex probe reached the prompt with all seven MCP servers and
+the intended LiteLLM/ultra routing. `agent-deck codex-hooks status` reports the managed
+custom notify hook.
+
+Verification at the pre-commit boundary:
+
+- Focused catalog, Home Manager integration, migration/preflight, and runtime probes:
+  **PASS**.
+- `bin/quality --tier pre-commit`: **PASS**, 60 seconds under the 120-second ceiling.
+- `nix flake check ./config/ai --all-systems --no-build`: **PASS**.
+- `./build system`: **PASS**, build only; no activation.
+- Two independent final read-only reviews: **CLEAN** after their findings were fixed.
+
+GitHub issue #77 is reopened and its Fleet Configuration Programme card is In
+Progress. Remaining at this boundary: stage explicit files, run the single full
+issue-closeout test cycle, create the signed commit, run final exact-commit fess,
+update #77, and merge locally if the base is unchanged. No activation or push is
+authorized.

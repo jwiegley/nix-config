@@ -30,8 +30,34 @@ let
   localAi = inputs.nix-ai or (if inputs ? git-ai then import ../flake-ai.nix inputs else null);
   patchAgentPackage =
     if localAi == null then _name: package: package else localAi.lib.patchAgentPackage pkgs;
+  wrapHeraCodex =
+    package:
+    symlinkJoin {
+      name = "${package.name}-hera-credentials";
+      paths = [ package ];
+      nativeBuildInputs = [ makeWrapper ];
+      postBuild = ''
+        rm -f "$out/bin/codex"
+        makeWrapper ${../bin/codex-litellm} "$out/bin/codex" \
+          --set CODEX_LITELLM_REAL_CODEX ${package}/bin/codex \
+          --set CODEX_LITELLM_PASS_BIN ${pass}/bin/pass
+      '';
+      passthru = (package.passthru or { }) // {
+        heraCredentialWrapper = true;
+      };
+      meta = package.meta or { };
+    };
   optAgent =
-    name: if agentPackages ? ${name} then [ (patchAgentPackage name agentPackages.${name}) ] else [ ];
+    name:
+    if agentPackages ? ${name} then
+      let
+        package = patchAgentPackage name agentPackages.${name};
+      in
+      [
+        (if name == "codex" && caps.isHera then wrapHeraCodex package else package)
+      ]
+    else
+      [ ];
 
   # Only these source-project inputs are user applications. Adding a flake
   # input must never change a profile unless its name is added here. Missing

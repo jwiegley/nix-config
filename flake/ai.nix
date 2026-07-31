@@ -1874,16 +1874,6 @@ let
         (package.version or null) == "0.82.0"
       ) "Pi version changed: rebase the renderer patch, refresh source digests, and update its tests";
       assert package ? overrideAttrs;
-      let
-        piWrapper = pkgs.writeShellScript "pi" ''
-          set -euo pipefail
-
-          if [[ ! -v PI_CODING_AGENT_DIR ]]; then
-            export PI_CODING_AGENT_DIR="''${XDG_CONFIG_HOME:-''${HOME:?}/.config}/pi"
-          fi
-          exec -a pi @pi_unwrapped@ "$@"
-        '';
-      in
       package.overrideAttrs (old: {
         preInstall = ''
           cat > pi-tool-renderer-wrapper.sha256 <<'EOF'
@@ -1930,16 +1920,9 @@ let
                 --add-flags ${pkgs.lib.escapeShellArg "--argv0 pi"} \
                 --add-flags "$out/libexec/pi/pi.bin"
             ''
-          )
-          + ''
-            mv "$out/bin/pi" "$out/bin/pi-unwrapped"
-            install -m 0755 ${piWrapper} "$out/bin/pi"
-            substituteInPlace "$out/bin/pi" \
-              --replace-fail '@pi_unwrapped@' "$out/bin/pi-unwrapped"
-          '';
+          );
 
         passthru = (old.passthru or { }) // {
-          profileRootWrapperAbi = 1;
           toolRendererWrapperAbi = 1;
         };
       })
