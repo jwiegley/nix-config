@@ -24,7 +24,7 @@
 # error under `nix flake check`, `./build system`, and activation — not a
 # silently-skipped lazy option.
 #
-# Refs: jwiegley/nix-config#50; doc/FLEET-DESIGN-PLAN.md §6.3, §6.4;
+# Refs: doc/ARCHITECTURE.md "Host registry and shared-home policy";
 # config/git-options.nix (the separate-options-module precedent).
 
 args@{

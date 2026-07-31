@@ -11,8 +11,8 @@ is required to promote a candidate.
 
 ## 1. Establish the local taste profile
 
-Inspect the current `agents/`, `commands/`, `skills/`, `prompts/`, `bundles/`,
-`deploy.yaml`, and enabled marketplaces. Summarize:
+Inspect the current `config/fleet/{agents,commands,skills,prompts}`, catalog,
+renderers, packaged resources, and enabled marketplaces. Summarize:
 
 - recurring task families and tools;
 - the repository's preferred working style;
@@ -107,21 +107,17 @@ Classify candidates as:
 
 For each recommended candidate, show the smallest plausible promotion plan:
 
-1. a pinned non-flake input in `flake.nix`;
-2. one `deploymentSources.<name>` entry mapping it to `sources/<name>` inside
-   `packages.deployment`;
-3. the selected upstream paths and intended stable promptdeploy names;
-4. a small `bundles/<name>.yaml` adapter with revision, version, license, and
-   reviewed hashes;
-5. the honest target matrix: native skill trees where supported and only
-   truthful projections elsewhere;
-6. collision, provenance, and isolated `--target-root` checks;
-7. exact `bundle:<name>`, `skill:<name>`, and `prompt:<name>` selectors for
-   strict verification.
+1. one pinned source authority in `flake.lock` or `sources/*.json`;
+2. the smallest package or resource projection under `packages/`;
+3. the selected upstream paths and stable managed names;
+4. catalog selection and the honest per-client target matrix;
+5. native skill trees where supported and only truthful renderer projections
+   elsewhere; and
+6. collision, provenance, and focused renderer/resource checks.
 
-Keep the upstream payload out of this Git tree. Only the flake reference,
-lock-file pin, adapter manifest, and concise documentation belong here. Hooks,
-plugins, lifecycle state, and runtimes require a separate justification.
+Keep the upstream payload out of this Git tree. Only the source authority,
+minimal Nix projection, catalog mapping, and concise documentation belong here.
+Hooks, plugins, lifecycle state, and runtimes require a separate justification.
 
 ## 6. Report format
 

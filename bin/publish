@@ -57,7 +57,7 @@
 # Raw `git push` still runs the installed hook, whose tracked-tree file scope keeps
 # empty remote ranges from turning every command into a silent no-op.
 #
-# Refs: jwiegley/nix-config#18, #88, #89; FLEET-DESIGN-PLAN §4.5, §10 Q6.
+# Ref: doc/ARCHITECTURE.md "Publication and activation".
 
 set -euo pipefail
 

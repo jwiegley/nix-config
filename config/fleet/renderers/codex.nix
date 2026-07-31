@@ -118,7 +118,7 @@ let
   projectionText =
     kind: name: metadata: source:
     "---\n${builtins.toJSON metadata}\n---\n"
-    + "Use this skill for the promptdeploy ${kind} '${name}'.\n\n"
+    + "Use this skill for the managed ${kind} '${name}'.\n\n"
     + "Treat the user's current request as the arguments for the prompt below. "
     + "If the prompt contains `$ARGUMENTS`, interpret it as those arguments.\n\n"
     + "Prompt:\n\n"
@@ -160,7 +160,7 @@ let
     lib.nameValuePair ".agents/skills/command-${name}" {
       source = mkProjection "command" name {
         name = "command-${name}";
-        description = item.metadata.description or "Promptdeploy command '${name}'.";
+        description = item.metadata.description or "Managed command '${name}'.";
       } item.source;
     }
   ) selected.commands;
@@ -170,7 +170,7 @@ let
     lib.nameValuePair ".agents/skills/prompt-${name}" {
       source = mkProjection "prompt" name {
         name = "prompt-${name}";
-        description = "Promptdeploy rendered prompt '${name}'.";
+        description = "Managed prompt '${name}'.";
       } item.source;
     }
   ) selected.prompts;

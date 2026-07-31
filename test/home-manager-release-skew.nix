@@ -4,7 +4,7 @@
 # `checks.<system>` attribute (see flake.nix), alongside the lock-purity gate.
 # It is deliberately NOT a root-level `nix flake check`: Determinate forces
 # every host configuration when `nix flake check` runs, which the repo keeps
-# off the hot path (FLEET-DESIGN-PLAN §8.1). Build it explicitly:
+# off the hot path (see doc/ARCHITECTURE.md). Build it explicitly:
 #
 #     nix build .#checks.<system>.home-manager-release-skew
 #

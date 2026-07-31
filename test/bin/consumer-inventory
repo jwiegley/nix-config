@@ -128,25 +128,11 @@ INTENTIONAL_CONFIG_AI_FILES = {
     "test/bin/immutable-subflake-check",
     "test/bin/oracle-currency-test.py",
     "test/bin/parity-baseline",
-    "doc/AI-NIX-REINTEGRATION-WIGGUM-HANDOFF.md",
-    "doc/AI-NIX-REINTEGRATION-WIGGUM-PLAN.md",
-    "doc/AI-UPDATE-FOLLOWUPS-2026-07-24.md",
-    "doc/FLEET-DECISIONS.md",
-    "doc/FLEET-DESIGN-PLAN.md",
-    "doc/FLEET-IMPL-WIGGUM-HANDOFF.md",
-    "doc/FLEET-IMPL-WIGGUM-PLAN.md",
-    "doc/FLEET-PROGRAMME-CROSS-STREAM.md",
-    "doc/HM-CONTRACT-SPLIT-PLAN.md",
     "doc/PARITY-ORACLE-REFRESH.md",
     "doc/RENAME-ROLLBACK.md",
-    "doc/UNIFIED-CONFIG-RESEARCH.md",
-    "doc/UNIFIED-CONFIG-WIGGUM-HANDOFF.md",
-    "doc/UNIFIED-CONFIG-WIGGUM-PLAN.md",
-    "doc/designs/HOST-REGISTRY-PLAN.md",
-    "doc/migrations/nix-managed-agent-oracle.md",
     "test/coverage/manifest.json",
 }
-INTENTIONAL_CONFIG_AI_PREFIXES = ("doc/superpowers/plans/",)
+INTENTIONAL_CONFIG_AI_PREFIXES = ()
 FLAKE_AI_RE = re.compile(r"flake-ai\.nix")
 # A load-bearing flake-ai.nix import is a relative/interpolated path in a .nix
 # file that is not a comment; doc/lint mentions are counted but not classified.

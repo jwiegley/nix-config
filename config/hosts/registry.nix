@@ -19,7 +19,7 @@
 # (`options.johnw.hostRegistry`). Placing the schema there — not here — keeps
 # this file free of any module-system dependency.
 #
-# Refs: jwiegley/nix-config#50; doc/FLEET-DESIGN-PLAN.md §6.3, §6.4.
+# Ref: doc/ARCHITECTURE.md "Host registry and shared-home policy".
 
 let
   # Shared identity fragments. `personal` is John's own machines; `work` is the
@@ -35,7 +35,7 @@ let
   };
   work = {
     userName = "John Wiegley";
-    userEmail = "jwiegley@positron.ai"; # closes doc/FLEET-DESIGN-PLAN.md §4.4
+    userEmail = "jwiegley@positron.ai";
     signing = "none";
     signingKey = null;
   };
@@ -45,7 +45,7 @@ in
   # The canonical host/group table. Keyed by evalId: hera/clio/vulcan/vps are
   # machines; `andoria` is ONE GROUP ROW for FOUR machines. Its key is a group
   # label, never a machine name — that is what keeps the shared-work derivation
-  # byte-identical across all four NFS members (doc/FLEET-DESIGN-PLAN.md §5.1):
+  # byte-identical across all four NFS members (see doc/ARCHITECTURE.md):
   # nothing here injects a per-machine hostname or reads the build environment.
   #
   # Fields omitted from a row (evalId, hmRelease, sharedHome, …) fall back to

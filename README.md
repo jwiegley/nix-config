@@ -8,7 +8,7 @@ Personal, multi-host Nix configuration for Darwin, standalone Home Manager, NixO
 |---|---|---|---|
 | Hera | aarch64-darwin | `~/src/nix` | Direct `darwinConfigurations.hera` |
 | Clio | aarch64-darwin | `~/src/nix` on Clio | Direct `darwinConfigurations.clio` |
-| Andoria-08/T2, Delphi, GPU | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Paired `nix-config` source and legacy `nix-config?dir=config/ai` input pending #47's authorized move to `config/fleet` |
+| Andoria-08/T2, Delphi, GPU | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Paired root source and portable input; legacy `dir=config/ai` edges migrate atomically to `dir=config/fleet` |
 | Vulcan | aarch64 NixOS | `/etc/nixos` on Vulcan | Paired root/portable inputs plus shared Home Manager module |
 | VPS | x86_64 NixOS | `/etc/nixos` on the VPS | Root/portable inputs plus shared Home Manager module |
 
@@ -67,9 +67,9 @@ System and Home Manager switches are owned by each authoritative checkout. Build
 | `packages/` | Package implementations and immutable Pi gallery |
 | `test/` | Root, portable, wrapper, renderer, and activation contracts |
 | `bin/` | Operator and maintenance commands |
-| `doc/` | Durable architecture and historical evidence |
+| `doc/` | Current architecture, runbooks, and active work |
 
-See [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) for ownership and data flow. Fleet and architecture work is tracked issue-by-issue in the [Fleet Configuration Programme](https://github.com/users/jwiegley/projects/9); [GitHub issue #15](https://github.com/jwiegley/nix-config/issues/15) is the archived 2026-audit record, retained as historical evidence. The programme's design corpus is [`doc/FLEET-DESIGN-PLAN.md`](doc/FLEET-DESIGN-PLAN.md) and [`doc/FLEET-PROGRAMME-CROSS-STREAM.md`](doc/FLEET-PROGRAMME-CROSS-STREAM.md).
+See [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) for ownership and data flow and [`doc/CURRENT-WORK.md`](doc/CURRENT-WORK.md) for the active local work boundary. Git history is the archive for completed plans and handoffs.
 
 ## Safety
 

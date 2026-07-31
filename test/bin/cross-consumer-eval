@@ -56,7 +56,7 @@
 # reach-in target is IFD-free by construction (script-package derivations).
 #
 # Never a root-level `nix flake check`: that deeply forces every host config and
-# is forbidden in routine gates (GOV-16 / FLEET-DESIGN-PLAN §8.1). This forces
+# is forbidden in routine gates (see doc/ARCHITECTURE.md). This forces
 # exactly one attribute per consumer, respecting Nix's lazy flake outputs.
 #
 # Consumer locks are never written: --no-write-lock-file on every eval. The

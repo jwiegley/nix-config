@@ -4,9 +4,16 @@ This file provides guidance to coding agents working in this repository.
 
 ## Start here
 
-1. Read `README.md` and `doc/ARCHITECTURE.md`.
-2. Read the active work item named by the task. Fleet and architecture work is tracked issue-by-issue in the [Fleet Configuration Programme](https://github.com/users/jwiegley/projects/9); each issue carries its own evidence, acceptance criteria, verification commands, rollback, and authorization. [GitHub issue #15](https://github.com/jwiegley/nix-config/issues/15) is the archived 2026-audit record — historical evidence, not current authority. Issues concerning only vulcan's NixOS configuration live in [jwiegley/nixos-config](https://github.com/jwiegley/nixos-config/issues).
+1. Read `README.md`, `doc/ARCHITECTURE.md`, and `doc/CURRENT-WORK.md`.
+2. Read the active work item named by the task. Do not infer current work from old plans or handoffs; Git history preserves them.
 3. Confirm `git status` and load the current direnv environment.
+
+When GitHub work is explicitly authorized, select the `jwiegley` account for every
+`gh` invocation without changing the global active account:
+
+```bash
+GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh <command>
+```
 
 ## Commands
 
@@ -36,7 +43,7 @@ Never run `nix flake update` or `nix flake lock` under `sudo`; root and user fet
 ## Architecture invariants
 
 - Root implementation is owned here; portable AI is the `config/fleet` subflake from the same revision.
-- The root repository's portable core is `config/fleet`. Until #47's separately authorized consumer URL moves land, external consumers still declare paired root and legacy `?dir=config/ai` inputs; locking that legacy path at or beyond the rename must fail with the throwing-stub message. Move both paired lock nodes coherently in each authoritative checkout.
+- The root repository's portable core is `config/fleet`. Maintained legacy `?dir=config/ai` consumer edges must fail with the throwing-stub message at or beyond the rename. Move both paired lock nodes coherently in each authoritative checkout.
 - `config/fleet/catalog.nix` owns profiles/resources/selection; `config/fleet/renderers/` are concrete client adapters.
 - `packages/` owns package implementation. Overlays should expose or narrowly override packages, not hide unrelated package bodies.
 - Mutable agent state is not Nix-owned. Nix owns generated leaves only.
