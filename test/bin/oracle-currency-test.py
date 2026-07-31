@@ -415,6 +415,13 @@ class OracleCurrencyTests(unittest.TestCase):
             current = json.loads(proc.stdout)
         except json.JSONDecodeError as exc:
             self.fail("test/bin/parity-baseline --commands did not emit JSON: %s" % exc)
+        self.assertTrue(
+            all(
+                command.startswith("nix eval --no-write-lock-file ")
+                for command in current.values()
+            ),
+            "parity derivation commands must not rewrite the authoritative lock",
+        )
         self.assertEqual(
             self.oracle.get("commands"),
             current,

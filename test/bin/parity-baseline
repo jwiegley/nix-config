@@ -97,16 +97,21 @@ import json, sys
 names, attrs, portable = sys.argv[1], sys.argv[2], sys.argv[3]
 print(json.dumps({
     "darwinDrvPath":
-        'nix eval --raw ".#darwinConfigurations.<host>.config.system.build.toplevel.drvPath"',
+        'nix eval --no-write-lock-file --raw '
+        '".#darwinConfigurations.<host>.config.system.build.toplevel.drvPath"',
     "darwinPackages":
-        'nix eval --json ".#darwinConfigurations.<host>.config.home-manager.users.<user>'
+        'nix eval --no-write-lock-file --json '
+        '".#darwinConfigurations.<host>.config.home-manager.users.<user>'
         '.home.packages" --apply %r' % names,
     "hmDrvPath":
-        'nix eval --raw ".#homeConfigurations.\\"<attr>\\".activationPackage.drvPath"',
+        'nix eval --no-write-lock-file --raw '
+        '".#homeConfigurations.\\"<attr>\\".activationPackage.drvPath"',
     "hmPackages":
-        'nix eval --json ".#homeConfigurations.\\"<attr>\\".config.home.packages" --apply %r' % names,
+        'nix eval --no-write-lock-file --json '
+        '".#homeConfigurations.\\"<attr>\\".config.home.packages" --apply %r' % names,
     "portablePackages":
-        'nix eval --json "%s#packages.<system>" --apply %r' % (portable, attrs),
+        'nix eval --no-write-lock-file --json "%s#packages.<system>" --apply %r'
+        % (portable, attrs),
 }, indent=1))
 PY
 }
@@ -202,8 +207,9 @@ derive() {
         host=${spec%%:*}
         user=${spec##*:}
         printf 'parity-baseline: deriving darwin %s\n' "$host" >&2
-        drv=$(nix eval --raw ".#darwinConfigurations.$host.config.system.build.toplevel.drvPath")
-        pkgs=$(nix eval --json \
+        drv=$(nix eval --no-write-lock-file --raw \
+            ".#darwinConfigurations.$host.config.system.build.toplevel.drvPath")
+        pkgs=$(nix eval --no-write-lock-file --json \
             ".#darwinConfigurations.$host.config.home-manager.users.$user.home.packages" \
             --apply "$SORT_NAMES")
         python3 -c '
@@ -215,8 +221,10 @@ print(json.dumps({"kind": "darwin", "target": sys.argv[1], "user": sys.argv[2],
 
     for attr in "${HM_CONFIGS[@]}"; do
         printf 'parity-baseline: deriving home-manager %s\n' "$attr" >&2
-        drv=$(nix eval --raw ".#homeConfigurations.\"$attr\".activationPackage.drvPath")
-        pkgs=$(nix eval --json ".#homeConfigurations.\"$attr\".config.home.packages" \
+        drv=$(nix eval --no-write-lock-file --raw \
+            ".#homeConfigurations.\"$attr\".activationPackage.drvPath")
+        pkgs=$(nix eval --no-write-lock-file --json \
+            ".#homeConfigurations.\"$attr\".config.home.packages" \
             --apply "$SORT_NAMES")
         python3 -c '
 import json, sys
@@ -227,7 +235,8 @@ print(json.dumps({"kind": "home-manager", "target": sys.argv[1],
 
     for system in "${PORTABLE_SYSTEMS[@]}"; do
         printf 'parity-baseline: deriving portable %s\n' "$system" >&2
-        pkgs=$(nix eval --json "$PORTABLE_DIR#packages.$system" --apply "$SORT_ATTRS")
+        pkgs=$(nix eval --no-write-lock-file --json \
+            "$PORTABLE_DIR#packages.$system" --apply "$SORT_ATTRS")
         python3 -c '
 import json, sys
 print(json.dumps({"kind": "portable", "target": sys.argv[1],
