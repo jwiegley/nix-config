@@ -1702,38 +1702,42 @@ let
         max = null;
       };
     };
-  expectedPiProvider = providerName: provider: {
-    apiKey = renderPiCredential provider.apiKey;
-    inherit (provider) baseUrl;
-    headers = {
-      "x-litellm-stream-timeout" = "7200";
-      "x-litellm-tags" = "pi";
-      "x-litellm-timeout" = "7200";
-    };
-    modelOverrides = {
-      "hera/GLM-5.2" = {
-        contextWindow = 1048576;
-        headers."x-litellm-first-token-heartbeat" = "15";
-        headers."x-litellm-num-retries" = "0";
+  expectedPiProvider =
+    providerName: provider:
+    if providerName == "litellm" then
+      {
+        apiKey = renderPiCredential provider.apiKey;
+        inherit (provider) baseUrl;
+        headers = {
+          "x-litellm-stream-timeout" = "7200";
+          "x-litellm-tags" = "pi";
+          "x-litellm-timeout" = "7200";
+        };
+        modelOverrides."openrouter/z-ai/glm-5.2".compat = {
+          sendSessionAffinityHeaders = true;
+          sessionAffinityFormat = "openrouter";
+        };
+        models = map expectedPiModel (
+          orderedValues (
+            lib.filterAttrs (
+              _: model: model.provider == providerName && model.id == "positron_openai/gpt-5.6-sol"
+            ) (selectedModels "hera-pi")
+          )
+        );
+      }
+    else
+      assert providerName == "llama-cpp-local";
+      {
+        apiKey = renderPiCredential provider.apiKey;
+        inherit (provider) baseUrl;
+        models = map expectedPiModel (
+          orderedValues (
+            lib.filterAttrs (_: model: model.provider == providerName && model.id == "GLM-5.2") (
+              selectedModels "hera-pi"
+            )
+          )
+        );
       };
-      "openrouter/z-ai/glm-5.2".compat = {
-        sendSessionAffinityHeaders = true;
-        sessionAffinityFormat = "openrouter";
-      };
-    };
-    models = map expectedPiModel (
-      orderedValues (
-        lib.filterAttrs (
-          _: model:
-          model.provider == providerName
-          && builtins.elem model.id [
-            "positron_openai/gpt-5.6-sol"
-            "hera/GLM-5.2"
-          ]
-        ) (selectedModels "hera-pi")
-      )
-    );
-  };
   expectedPiModels = {
     providers = lib.mapAttrs expectedPiProvider (selectedProviders "hera-pi") // {
       openai-codex.modelOverrides."gpt-5.6-sol".contextWindow = 1050000;

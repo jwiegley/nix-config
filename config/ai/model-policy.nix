@@ -117,6 +117,7 @@
       selectors.clients = [
         "droid"
         "opencode"
+        "pi"
       ];
       droid = {
         providerType = "generic-chat-completion-api";

@@ -894,7 +894,7 @@
       "id": "GLM-5.2",
       "displayName": "GLM 5.2",
       "maxOutputTokens": 128000,
-      "contextLimit": 200000,
+      "contextLimit": 1048576,
       "outputLimit": 65536,
       "hosts": [
         "hera"

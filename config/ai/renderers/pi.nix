@@ -13,7 +13,10 @@ let
   json = pkgs.formats.json { };
   mergeFiles = import ./merge-files.nix { inherit lib; };
 
-  expectedProviderNames = [ "litellm" ];
+  expectedProviderNames = [
+    "litellm"
+    "llama-cpp-local"
+  ];
   expectedMcpNames = [
     "Ref"
     "anvil"
@@ -110,36 +113,36 @@ let
       _: model: model.provider == "litellm" && model.id == "positron_openai/gpt-5.6-sol"
     ) modelData.models
   );
-  glmModels = orderedValues (
+  directGlmModels = orderedValues (
     lib.filterAttrs (
-      _: model: model.provider == "litellm" && model.id == "hera/GLM-5.2"
+      _: model: model.provider == "llama-cpp-local" && model.id == "GLM-5.2"
     ) modelData.models
   );
   solModel = builtins.head solModels;
   renderProvider =
     providerName: provider:
-    assert providerName == "litellm";
-    {
-      apiKey = renderEnv provider.apiKey.env;
-      inherit (provider) baseUrl;
-      headers = {
-        "x-litellm-stream-timeout" = "7200";
-        "x-litellm-tags" = "pi";
-        "x-litellm-timeout" = "7200";
-      };
-      modelOverrides = {
-        "hera/GLM-5.2" = {
-          contextWindow = 1048576;
-          headers."x-litellm-first-token-heartbeat" = "15";
-          headers."x-litellm-num-retries" = "0";
+    if providerName == "litellm" then
+      {
+        apiKey = renderEnv provider.apiKey.env;
+        inherit (provider) baseUrl;
+        headers = {
+          "x-litellm-stream-timeout" = "7200";
+          "x-litellm-tags" = "pi";
+          "x-litellm-timeout" = "7200";
         };
-        "openrouter/z-ai/glm-5.2".compat = {
+        modelOverrides."openrouter/z-ai/glm-5.2".compat = {
           sendSessionAffinityHeaders = true;
           sessionAffinityFormat = "openrouter";
         };
+        models = map renderModel solModels;
+      }
+    else
+      assert providerName == "llama-cpp-local";
+      {
+        apiKey = provider.apiKey.nonSecret;
+        inherit (provider) baseUrl;
+        models = map renderModel directGlmModels;
       };
-      models = map renderModel (solModels ++ glmModels);
-    };
   routerProvider = {
     api = "router-local-api";
     apiKey = "pi-model-router";
@@ -387,7 +390,8 @@ assert selected.settings == { };
 assert builtins.attrNames selected.mcpServers == expectedMcpNames;
 assert builtins.attrNames modelData.providers == expectedProviderNames;
 assert builtins.length solModels == 1;
-assert builtins.length glmModels == 1;
+assert builtins.length directGlmModels == 1;
+assert (builtins.head directGlmModels).contextLimit == 1048576;
 assert solModel.contextLimit == 1050000;
 assert solModel.outputLimit == 128000;
 assert !(modelData ? default);
