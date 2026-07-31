@@ -2736,19 +2736,25 @@ let
         (expectReject "Pi non-Hera/non-Pi profile accepted" piWrongProfileProbe.companions)
         (expectEqual "${profileId} provider set" (sortedNames expectedPiModels.providers) [
           "litellm"
+          "llama-cpp-local"
           "openai-codex"
           "router"
         ])
-        (expectEqual "${profileId} static Pi LiteLLM model set"
-          (map (model: model.id) expectedPiModels.providers.litellm.models)
+        (expectEqual "${profileId} static Pi LiteLLM model set" (map (
+          model: model.id
+        ) expectedPiModels.providers.litellm.models) [ "positron_openai/gpt-5.6-sol" ])
+        (expectEqual "${profileId} static Pi direct GLM model set" (map (
+          model: model.id
+        ) expectedPiModels.providers.llama-cpp-local.models) [ "GLM-5.2" ])
+        (expectEqual "${profileId} selected model provider set"
+          (lib.sort builtins.lessThan (
+            lib.unique (map (model: model.provider) (builtins.attrValues (selectedModels profileId)))
+          ))
           [
-            "positron_openai/gpt-5.6-sol"
-            "hera/GLM-5.2"
+            "litellm"
+            "llama-cpp-local"
           ]
         )
-        (expectEqual "${profileId} selected models use only LiteLLM" (builtins.all (
-          model: model.provider == "litellm"
-        ) (builtins.attrValues (selectedModels profileId))) true)
         (expectEqual "${profileId} MCP set" (sortedNames expectedPiMcp.mcpServers) claudePersonalMcp)
         (expectEqual "${profileId} semantic MCP oracle" (builtins.hashString "sha256" (
           builtins.toJSON expectedPiMcp
