@@ -135,16 +135,30 @@ verify-inputs:
 
 lock-local: verify-inputs
 	$(call announce,Re-locking local git inputs)
-	@python3 -c '\
+	@if inputs=$$(python3 -c '\
 	import json; \
 	lock = json.load(open("flake.lock")); \
 	nodes = lock["nodes"]; \
 	[print(n) for n, k in nodes["root"]["inputs"].items() \
 	 if nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("type") == "git" \
-	 and "file://" in nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("url", "")]' \
-	| while IFS= read -r input; do \
-	    nix flake update "$$input" 2>&1 | grep -v '^warning:' || true; \
-	done
+	 and "file://" in nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("url", "")]'); then \
+	    :; \
+	else \
+	    exit $$?; \
+	fi; \
+	if [ -n "$$inputs" ]; then \
+	    printf '%s\n' "$$inputs" | while IFS= read -r input; do \
+	    if output=$$(nix flake update "$$input" 2>&1); then \
+	        if [ -n "$$output" ]; then \
+	            printf '%s\n' "$$output" | grep -v '^warning:' || true; \
+	        fi; \
+	    else \
+	        status=$$?; \
+	        printf '%s\n' "$$output" >&2; \
+	        exit "$$status"; \
+	    fi; \
+	    done; \
+	fi
 
 build:
 	set -e

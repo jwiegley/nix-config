@@ -1105,6 +1105,117 @@ class TestGatesAreRegistered(unittest.TestCase):
             self.assertEqual(len(sudo_calls), 1, sudo_calls)
             self.assertNotIn("--list-generations", sudo_calls[0])
 
+    def test_make_lock_local_propagates_update_failure(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            fake_bin = root / "bin"
+            fake_bin.mkdir()
+            nix = fake_bin / "nix"
+            nix.write_text(
+                '#!/bin/sh\n'
+                'printf "warning: filtered warning\\n"\n'
+                'if [ "${NIX_FAIL:-0}" = 1 ]; then\n'
+                '  printf "lock update failed\\n" >&2\n'
+                '  exit 73\n'
+                'fi\n'
+            )
+            nix.chmod(0o755)
+            sudo = fake_bin / "sudo"
+            sudo.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >>"$SUDO_LOG"\n')
+            sudo.chmod(0o755)
+            sudo_log = root / "sudo.log"
+
+            (root / "flake.lock").write_text(
+                json.dumps(
+                    {
+                        "nodes": {
+                            "root": {"inputs": {"local": "local-node"}},
+                            "local-node": {
+                                "locked": {"type": "git", "url": "file:///tmp/local"}
+                            },
+                        }
+                    }
+                )
+            )
+            fixture = root / "Makefile"
+            fixture.write_text(
+                f"include {REPO / 'Makefile'}\n"
+                "verify-inputs: ;\n"
+            )
+            env = clean_env(
+                PATH=f"{fake_bin}:{os.environ['PATH']}",
+                SUDO_LOG=str(sudo_log),
+            )
+
+            success = subprocess.run(
+                ["make", "--no-print-directory", "-f", str(fixture), "lock-local"],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(success.returncode, 0, success.stdout + success.stderr)
+            self.assertNotIn("filtered warning", success.stdout + success.stderr)
+
+            failing_env = {**env, "NIX_FAIL": "1"}
+            failure = subprocess.run(
+                ["make", "--no-print-directory", "-f", str(fixture), "lock-local"],
+                cwd=root,
+                env=failing_env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(failure.returncode, 0, failure.stdout + failure.stderr)
+            self.assertIn("lock update failed", failure.stderr)
+
+            (root / "flake.lock").write_text("{")
+            parse_failure = subprocess.run(
+                ["make", "--no-print-directory", "-f", str(fixture), "lock-local"],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(
+                parse_failure.returncode,
+                0,
+                parse_failure.stdout + parse_failure.stderr,
+            )
+
+            (root / "flake.lock").write_text(
+                json.dumps(
+                    {
+                        "nodes": {
+                            "root": {"inputs": {"local": "local-node"}},
+                            "local-node": {
+                                "locked": {"type": "git", "url": "file:///tmp/local"}
+                            },
+                        }
+                    }
+                )
+            )
+
+            switch = subprocess.run(
+                [
+                    "make",
+                    "--no-print-directory",
+                    "-f",
+                    str(fixture),
+                    "switch",
+                    "HOSTNAME=hera",
+                ],
+                cwd=root,
+                env=failing_env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(switch.returncode, 0, switch.stdout + switch.stderr)
+            self.assertFalse(sudo_log.exists(), "switch reached sudo after lock failure")
+
     def test_precommit_tier_always_runs_python_authorities(self):
         config = (REPO / "lefthook.yml").read_text()
         self.assertRegex(
