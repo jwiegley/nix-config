@@ -1893,7 +1893,7 @@ let
             substituteInPlace "$openai_api" \
               --replace-fail \
                 '        defaultHeaders: headers,' \
-                $'        defaultHeaders: headers,\n        timeout: model.provider === "litellm" &&\n            (model.id.startsWith("clio/omlx/") ||\n                (model.id.startsWith("hera/") && !model.id.startsWith("hera/claude-")))\n            ? 7_200_000\n            : undefined,'
+                $'        defaultHeaders: headers,\n        timeout:\n            (model.provider === "llama-cpp-local" && model.id === "GLM-5.2") ||\n            (model.provider === "litellm" &&\n                (model.id.startsWith("clio/omlx/") ||\n                    (model.id.startsWith("hera/") && !model.id.startsWith("hera/claude-"))))\n                ? 7_200_000\n                : undefined,'
           done
           substituteInPlace dist/core/http-dispatcher.js \
             --replace-fail \
