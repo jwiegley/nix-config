@@ -3,7 +3,7 @@
  "artifact": "consumer-inventory",
  "generatedBy": "bin/consumer-inventory",
  "purpose": "Merged, classified inventory of every reference from every consumer into nix-config, so the config/ai -> config/fleet rename (#47) and its straggler sweep (#63) know exactly who breaks. One record per reference.",
- "repoHead": "58d41ef493a014fcfb9d97a0ced6271b5e30e48e",
+ "repoHead": "9a6bdb77b0f17cb0c9fdb552c45df09ead5278a4",
  "consumerLayout": "nix-config at the repository root; consumer checkouts as siblings (nixos, vps, andoria). Absolute paths are intentionally omitted: see the comment at this key in bin/consumer-inventory.",
  "classificationScheme": {
   "rename-now": "Stale operational reference to the literal config/ai directory inside nix-config; #47 must leave none.",
@@ -44,8 +44,8 @@
   "note": "re-run the commands (needs network + gh auth) to refresh; not run inside derive() to keep the artifact reproducible offline."
  },
  "summary": {
-  "totalReferences": 257,
-  "internalConfigAiRefCount": 216,
+  "totalReferences": 258,
+  "internalConfigAiRefCount": 217,
   "internalConfigAiFileCount": 39,
   "internalConfigAiFiles": [
    "CLAUDE.md",
@@ -91,7 +91,7 @@
   "flakeAiInternalConsumerCount": 4,
   "flakeAiMentionCount": 28,
   "byClassification": {
-   "retain-with-owner": 229,
+   "retain-with-owner": 230,
    "retire": 18,
    "stub-covered": 10
   },
@@ -100,20 +100,20 @@
    "flake-ai-internal-consumer": 4,
    "flake-input": 6,
    "input-follows": 3,
-   "internal-config-ai-ref": 216,
+   "internal-config-ai-ref": 217,
    "reach-in-attr": 8,
    "reach-in-path": 10,
    "subflake-overlay-use": 4
   },
   "byLoadBearing": {
-   "false": 145,
+   "false": 146,
    "n/a": 41,
    "true": 71
   },
   "byRefKind": {
    "comment": 13,
    "data": 20,
-   "doc-prose": 132,
+   "doc-prose": 133,
    "import": 7,
    "n/a": 41,
    "path": 44
@@ -1804,12 +1804,13 @@
   {
    "consumer": "internal",
    "kind": "internal-config-ai-ref",
-   "classification": "rename-now",
+   "classification": "retain-with-owner",
    "file": "doc/FLEET-IMPL-WIGGUM-HANDOFF.md",
    "line": 1052,
    "text": "- `nix flake check ./config/ai --all-systems --no-build`: **PASS**.",
-   "owner": "jwiegley/nix-config#47 (E3-RENAME)",
-   "trigger": "rewritten in the config/ai -> config/fleet rename commit",
+   "owner": "jwiegley/nix-config#47 historical or detector evidence",
+   "trigger": "none; preserve recorded history or stale-path detection",
+   "note": "intentional old-path reference, not a live config/fleet consumer",
    "refKind": "doc-prose",
    "loadBearing": false
   },
@@ -3040,7 +3041,7 @@
    "kind": "internal-config-ai-ref",
    "classification": "retain-with-owner",
    "file": "test/ai/home-manager-contract-common.nix",
-   "line": 3162,
+   "line": 3164,
    "text": "task9AiModulePath = \"${src}/config/ai.nix\";",
    "owner": "config/ai.nix Home Manager module",
    "trigger": "none; the sibling module filename is not the renamed directory",
@@ -3053,7 +3054,7 @@
    "kind": "internal-config-ai-ref",
    "classification": "retain-with-owner",
    "file": "test/ai/home-manager-contract-common.nix",
-   "line": 3140,
+   "line": 3170,
    "text": "throw \"Task 9 RED: config/ai.nix and config/fleet/preflight.nix are missing\";",
    "owner": "config/ai.nix Home Manager module",
    "trigger": "none; the sibling module filename is not the renamed directory",
@@ -3066,7 +3067,7 @@
    "kind": "internal-config-ai-ref",
    "classification": "retain-with-owner",
    "file": "test/ai/home-manager-contract-common.nix",
-   "line": 3729,
+   "line": 3731,
    "text": "builtins.readFile \"${src}/config/ai.nix\" + builtins.readFile \"${src}/config/johnw.nix\";",
    "owner": "config/ai.nix Home Manager module",
    "trigger": "none; the sibling module filename is not the renamed directory",
@@ -3079,7 +3080,7 @@
    "kind": "internal-config-ai-ref",
    "classification": "retain-with-owner",
    "file": "test/coverage/manifest.json",
-   "line": 1129,
+   "line": 1128,
    "text": "\"config/ai/flake.nix is an intentional throwing stub verified by immutable-subflake-check's negative probe; successful Nix evaluation cannot positively reach it.\",",
    "owner": "jwiegley/nix-config#47 historical or detector evidence",
    "trigger": "none; preserve recorded history or stale-path detection",
