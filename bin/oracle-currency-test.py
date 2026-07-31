@@ -92,7 +92,7 @@ def schema_version(oracle):
     """Integer N from a ``fleet-parity-oracle/N`` schema string, else None."""
     schema = oracle.get("schema", "")
     if isinstance(schema, str) and schema.startswith(SCHEMA_PREFIX):
-        tail = schema[len(SCHEMA_PREFIX):]
+        tail = schema[len(SCHEMA_PREFIX) :]
         if tail.isdigit():
             return int(tail)
     return None
@@ -133,15 +133,11 @@ def check_single_baseline(baseline_dir):
     if len(found) == 1:
         return []
     if not found:
-        return [
-            "no committed oracle: expected exactly one "
-            "test/baseline/parity-*.json"
-        ]
+        return ["no committed oracle: expected exactly one test/baseline/parity-*.json"]
     names = ", ".join(p.name for p in found)
     return [
         "expected exactly one committed oracle, found %d (%s); a superseded "
-        "oracle belongs in git history, not a second tracked file"
-        % (len(found), names)
+        "oracle belongs in git history, not a second tracked file" % (len(found), names)
     ]
 
 
@@ -233,8 +229,7 @@ def check_provenance(oracle):
         if version is not None and version >= PROVENANCE_FROM_SCHEMA:
             return [
                 "schema /%d oracle has no history; provenance is mandatory once "
-                "the oracle has advanced past its genesis capture (jw#31)"
-                % version
+                "the oracle has advanced past its genesis capture (jw#31)" % version
             ]
         return []
 
@@ -262,8 +257,7 @@ def check_provenance(oracle):
             problems.append("%s new_rev %r is not a 40-char sha" % (where, new_rev))
         if old_rev is not None and not _is_rev40(old_rev):
             problems.append(
-                "%s old_rev %r is neither null nor a 40-char sha"
-                % (where, old_rev)
+                "%s old_rev %r is neither null nor a 40-char sha" % (where, old_rev)
             )
         if not (isinstance(reason, str) and reason.strip()):
             problems.append("%s reason is empty" % where)
@@ -280,8 +274,7 @@ def check_provenance(oracle):
     if tail != rev:
         problems.append(
             "history tail new_rev %s is not the current baselineRev %s; the "
-            "chain must end at the oracle it describes"
-            % (_short(tail), _short(rev))
+            "chain must end at the oracle it describes" % (_short(tail), _short(rev))
         )
     return problems
 
@@ -324,8 +317,7 @@ def check_git_ancestry(oracle, armed_refactor, git):
             continue  # shape already reported by check_provenance
         if git(["cat-file", "-t", new_rev]).stdout.strip() != "commit":
             problems.append(
-                "history[%d] new_rev %s is not a commit here"
-                % (index, _short(new_rev))
+                "history[%d] new_rev %s is not a commit here" % (index, _short(new_rev))
             )
         elif git(["merge-base", "--is-ancestor", new_rev, "HEAD"]).returncode != 0:
             problems.append(
@@ -401,9 +393,7 @@ class OracleCurrencyTests(unittest.TestCase):
 
     def test_baseline_rev_is_current_and_satisfiable(self):
         self._require_oracle()
-        self.assertEqual(
-            check_git_ancestry(self.oracle, ARMED_REFACTOR, self.git), []
-        )
+        self.assertEqual(check_git_ancestry(self.oracle, ARMED_REFACTOR, self.git), [])
 
     def test_recorded_command_matches_the_tool(self):
         self._require_oracle()
@@ -433,6 +423,47 @@ class OracleCurrencyTests(unittest.TestCase):
             "matches the tool (jw#31)",
         )
 
+    def test_config_ai_to_fleet_command_migration_is_exact(self):
+        self._require_oracle()
+        current = self.oracle["commands"]
+        old = json.loads(json.dumps(current))
+        old["portablePackages"] = old["portablePackages"].replace(
+            "./config/fleet#packages", "./config/ai#packages"
+        )
+
+        with tempfile.TemporaryDirectory(prefix="parity-command-migration-") as tmp:
+            old_path = Path(tmp) / "old.json"
+            new_path = Path(tmp) / "new.json"
+            old_path.write_text(json.dumps(old))
+            new_path.write_text(json.dumps(current))
+
+            def validate(candidate):
+                old_path.write_text(json.dumps(candidate))
+                return subprocess.run(
+                    [
+                        str(PARITY_BASELINE),
+                        "--validate-command-migration",
+                        str(old_path),
+                        str(new_path),
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+
+            self.assertEqual(validate(old).returncode, 0)
+
+            unrelated = json.loads(json.dumps(old))
+            unrelated["darwinPackages"] += " --impure"
+            self.assertNotEqual(validate(unrelated).returncode, 0)
+
+            no_migration = json.loads(json.dumps(current))
+            self.assertNotEqual(validate(no_migration).returncode, 0)
+
+            duplicate = json.loads(json.dumps(old))
+            duplicate["portablePackages"] += " ./config/ai#packages.extra"
+            self.assertNotEqual(validate(duplicate).returncode, 0)
+
 
 # --- self-tests: every assertion, watched failing on a mutation ----------
 
@@ -445,9 +476,7 @@ def _init_repo(root):
         ("user.email", "oracle-guard@example.invalid"),
         ("commit.gpgsign", "false"),
     ):
-        subprocess.run(
-            ["git", "-C", str(root), "config", key, value], check=True
-        )
+        subprocess.run(["git", "-C", str(root), "config", key, value], check=True)
 
 
 def _commit(root, name):
@@ -471,7 +500,9 @@ def _valid_oracle(base_rev, armed_rev, history=None):
         "schema": SCHEMA_PREFIX + ("2" if history is not None else "1"),
         "baselineRev": base_rev,
         "armedRefactorAncestor": armed_rev,
-        "commands": {key: "nix eval placeholder for %s" % key for key in EXPECTED_COMMAND_KEYS},
+        "commands": {
+            key: "nix eval placeholder for %s" % key for key in EXPECTED_COMMAND_KEYS
+        },
         "targets": [
             {
                 "kind": "portable",

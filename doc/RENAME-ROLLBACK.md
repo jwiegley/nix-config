@@ -18,7 +18,7 @@ any system or Home Manager activation; where a rollback reaches activation
 **A rename that has been published cannot be un-published.** Removing it from a
 remote would require rewriting published history — a force-push — which is forbidden
 by `CLAUDE.md` and refused outright by `bin/publish`. Therefore **every rollback here
-is forward**: a `git revert` of the rename, re-published to both remotes, plus a
+is forward**: a reverse-revert of the complete rename range, re-published to both remotes, plus a
 revert of each consumer's URL on its own remote. Nothing is ever rewound. Both remotes
 end carrying the rename **and** its revert in history; the *tree* they resolve is
 `config/ai` again, but the commit that introduced the stub is not deleted — it is
@@ -33,15 +33,16 @@ consumer has bumped or activated.
 
 ## 1. Vocabulary, remotes, consumers
 
-### The two revisions
+### The rename range and its forward revert
 
 | Name | What it is |
 |---|---|
-| `RENAME_REV` | The nix-config commit from #47 that `git mv`s `config/ai`→`config/fleet`, adds the throwing stub at `config/ai`, moves `config/ai/flake.lock`→`config/fleet/flake.lock`, and rewrites the internal references (`flake.nix`, `config/packages.nix`, the `flake-ai.nix` up-import path, `README.md`, `doc/ARCHITECTURE.md`). This is what you are rolling back. |
-| `REVERT_REV` | The **new** commit produced by `git revert RENAME_REV`. It restores `config/ai` as a real subflake, restores the committed `config/ai/flake.lock`, removes the stub, and restores the internal references — all in one commit, forward. This is what you publish. |
+| `RENAME_BASE` | The first implementation commit from #47: the commit that moves `config/ai`→`config/fleet`, adds the throwing stub, moves the committed lock, and rewrites the initial internal references. |
+| `RENAME_TIP` | The last signed #47 preparation/evidence commit that is published. The complete rollback range is `RENAME_BASE^..RENAME_TIP`, excluding commits that touch only this runbook. Remote/state ancestry tests key off this tip. |
+| `REVERT_REV` | The **new**, single signed commit produced by reverse-reverting every implementation/evidence commit in that range, newest first. It restores the pre-rename tree and authorities in one forward commit. This is what you publish. |
 
-Capture `RENAME_REV` the moment #47 lands and record it in the #26 / #47 issue thread.
-Everything downstream keys off it.
+Capture `RENAME_BASE` and `RENAME_TIP` the moment #47 lands and record both in the
+#26 / #47 issue thread. Everything downstream keys off that immutable range.
 
 ### The two remotes — not interchangeable
 
@@ -109,8 +110,10 @@ honest test of a rollback.
 > `config/ai` imports `../../flake-ai.nix` and `../../test/ai/compatibility-check.nix`
 > (`config/ai/flake.nix:79-80`). It is only ever consumable as `?dir=` **of the whole
 > repo**, never as a standalone fetch of the subtree. Restoring it therefore means
-> restoring the whole-tree relationship, which `git revert RENAME_REV` does by
-> construction. Verify the up-import still resolves (§7, "restore" verify).
+> restoring the whole-tree relationship, which reverting only `RENAME_TIP` does not
+> do once #47 has follow-up commits. Reverting the complete
+> `RENAME_BASE^..RENAME_TIP` range does. Verify the up-import still resolves (§7,
+> "restore" verify).
 
 ---
 
@@ -135,8 +138,9 @@ PY
 #    (bare) mutates NOTHING; it only reports.
 bin/publish                       # pre-flight only; safe; see §6 for how to read it
 
-# 3. Record RENAME_REV (from the #47 landing). Everything keys off it.
-RENAME_REV=<the config/ai->config/fleet commit sha>
+# 3. Record the complete published #47 range. Everything keys off it.
+RENAME_BASE=<first #47 implementation commit sha>
+RENAME_TIP=<last #47 preparation/evidence commit sha>
 ```
 
 If `bin/publish` reports a remote unreachable, **stop**: you are (probably) off the
@@ -163,7 +167,7 @@ fi
 # --- Which remotes carry the rename? ----------------------------------------
 git fetch --quiet --multiple origin github
 for r in origin github; do
-  if git merge-base --is-ancestor "$RENAME_REV" "refs/remotes/$r/main" 2>/dev/null; then
+  if git merge-base --is-ancestor "$RENAME_TIP" "refs/remotes/$r/main" 2>/dev/null; then
     echo "$r: HAS the rename"
   else
     echo "$r: does NOT have the rename"
@@ -199,24 +203,24 @@ Read the three blocks together:
 |---|---|---|---|---|
 | applied | does NOT have | does NOT have | (irrelevant) | **State A** — local only |
 | applied | exactly one HAS the rename, the other does not | | (irrelevant) | **State B** — asymmetric / partial |
-| applied | HAS | HAS | every consumer still `dir=config/ai` **and** `rev` ≤ `RENAME_REV` | **State C** — published, no consumer bumped |
-| applied | HAS | HAS | some consumer shows `dir=config/fleet`, or `dir=config/ai` with `rev` ≥ `RENAME_REV` (the stub is firing) | **State D** — some consumers bumped |
+| applied | HAS | HAS | every consumer still `dir=config/ai` **and** `rev` ≤ `RENAME_TIP` | **State C** — published, no consumer bumped |
+| applied | HAS | HAS | some consumer shows `dir=config/fleet`, or `dir=config/ai` with `rev` ≥ `RENAME_TIP` (the stub is firing) | **State D** — some consumers bumped |
 | applied | HAS | HAS | a consumer bumped **and its host switched** to that generation | **State E** — activated |
 
-"`rev` ≤/≥ `RENAME_REV`" means ancestry, not string order. To decide it precisely for
+"`rev` ≤/≥ `RENAME_TIP`" means ancestry, not string order. To decide it precisely for
 one consumer, fetch that consumer's remote and test:
 
 ```bash
 # example, vps (github): is its locked rev at-or-past the rename?
 ( cd ~/src/vps && git fetch --quiet )   # only if you keep a mirror; otherwise use the sha directly
-git merge-base --is-ancestor "$RENAME_REV" <consumer-locked-rev> 2>/dev/null \
+git merge-base --is-ancestor "$RENAME_TIP" <consumer-locked-rev> 2>/dev/null \
   && echo "at-or-past rename (stub territory)" \
   || echo "below rename (still resolves real config/ai)"
 ```
 
-A consumer that is **still `dir=config/ai` and below `RENAME_REV`** has not migrated
+A consumer that is **still `dir=config/ai` and below `RENAME_TIP`** has not migrated
 and never saw the stub — the easy case. A consumer that is **`dir=config/ai` and
-at-or-past `RENAME_REV`** is *already broken* (hitting the throwing stub); rollback is
+at-or-past `RENAME_TIP`** is *already broken* (hitting the throwing stub); rollback is
 what fixes it. A consumer at **`dir=config/fleet`** migrated cleanly and rollback must
 walk it back.
 
@@ -225,16 +229,20 @@ walk it back.
 ## 5. What the rollback does about the throwing stub
 
 The stub is a `config/ai/flake.nix` that `throw`s a message naming `config/fleet` and
-#47. It has **no inputs**, so it adds no lock. It was introduced *in* `RENAME_REV`.
+#47. It retains only the `llm-agents` input key used by known consumers' follows
+edges, so those consumers reach the actionable outputs throw instead of failing first
+on missing lock topology. The stub has no committed lock. It was introduced in
+`RENAME_BASE`.
 
-- **`git revert RENAME_REV` removes the stub automatically** — reverting the rename
-  commit deletes the stub and restores `config/ai` to the real subflake with its
-  committed lock, in the same commit. This is the supported path and why §7 uses it.
+- **Reverse-reverting the complete rename range removes the stub automatically** —
+  the accumulated revert deletes the stub and restores `config/ai` to the real
+  subflake with its committed lock in one new commit. This is the supported path and
+  why §7 uses a range rather than one `git revert`.
 - **If you instead move the directory by hand** (`git mv config/fleet config/ai`),
   git will refuse because `config/ai/` already exists (the stub lives there). You must
   first `git rm -r config/ai` (the stub) and only then `git mv config/fleet config/ai`.
   **Forgetting this is the second-way-to-break-it:** you would restore the rename but
-  leave the stub shadowing or colliding with the real subflake. Prefer `git revert`.
+  leave the stub shadowing or colliding with the real subflake. Prefer §7a.
 - **Do not leave the stub in place "just in case."** With `config/ai` restored as a
   real subflake, a stub at the same path is a contradiction (two `flake.nix` cannot
   occupy one directory). Rollback removes it; the straggler-tracking / stub-retirement
@@ -260,10 +268,10 @@ bin/publish --publish             # only after AG-DUALPUSH is granted for THIS a
 How to read it for rollback:
 
 - It **refuses to force** and **refuses a non-fast-forward** push. Because `REVERT_REV`
-  descends from `RENAME_REV`, publishing it is always a fast-forward on the remote that
-  has the rename, and a two-commit fast-forward on the remote that does not — so the
-  asymmetric State B is handled by the tool's own fast-forward logic; you do not push
-  the remotes differently.
+  descends from `RENAME_TIP`, publishing it is always a fast-forward on the remote that
+  has the full range, and a fast-forward across the complete range plus its revert on
+  the remote that does not. The asymmetric State B is handled by the tool's own
+  fast-forward logic; you do not push the remotes differently.
 - On a **partial publish** it exits non-zero and prints recovery instructions based on
   its readback state. Depending on which step failed, that can be a targeted push for
   the lagging remote or an instruction to inspect/re-run after remote state is known.
@@ -283,7 +291,13 @@ How to read it for rollback:
 
 ```bash
 cd ~/src/nix
-git revert --no-edit "$RENAME_REV"        # produces REVERT_REV; restores config/ai + lock, drops the stub
+# Accumulate published implementation/evidence commits newest-first. Commits
+# touching only this rollback runbook remain in force and are excluded.
+while IFS= read -r revision; do
+  git revert --no-commit "$revision"
+done < <(git rev-list "$RENAME_BASE^..$RENAME_TIP" -- \
+  . ':(exclude)doc/RENAME-ROLLBACK.md')
+git commit -S -m 'revert(fleet): restore config/ai after rename rollback'
 REVERT_REV=$(git rev-parse HEAD)
 
 # Verify the subflake is real again and the whole-tree up-import resolves:
@@ -389,9 +403,8 @@ is involved.
 
 ```bash
 cd ~/src/nix
-git revert --no-edit "$RENAME_REV"     # or, if RENAME_REV is the tip and unpushed,
-                                       # you MAY reset it away — but revert is the
-                                       # habit that stays correct once anything is pushed
+# Use §7a to reverse-revert the complete RENAME_BASE^..RENAME_TIP range.
+# If this is still an unmerged feature branch, abandoning that branch is simpler.
 ```
 
 No consumer touch, no publish. (If you have not yet published anything, you also have
@@ -406,7 +419,7 @@ both remotes at the pre-rename revision.
 
 This is the state `bin/publish` explicitly reports and the one most likely to actually
 occur: a network fault in the window between the two real pushes leaves, say, `github`
-at `RENAME_REV` while `origin` (gitea) is still pre-rename. The blast radius is
+at `RENAME_TIP` while `origin` (gitea) is still pre-rename. The blast radius is
 **lopsided**: the consumers on the remote that received the rename (vps + shared-work if
 `github`, or vulcan if `origin`) can now hit `config/fleet`/the stub on their next float
 or bump; the consumers on the other remote are entirely unaffected.
@@ -419,9 +432,10 @@ or bump; the consumers on the other remote are entirely unaffected.
   not back), just complete the publish: `bin/publish --publish` fast-forwards the
   lagging remote. That is not this runbook's job, but recognize the fork.
 - To **roll back**: build `REVERT_REV` (§7a) and dual-publish it (§6). `bin/publish`
-  fast-forwards the ahead remote by one commit and the lagging remote by two; both end
-  at `REVERT_REV`. You are **not** un-publishing the rename from the remote that got it
-  — that history stays; the tree it resolves is `config/ai` again.
+  fast-forwards each remote from its current point through the required remaining
+  range and the forward revert; both end at `REVERT_REV`. You are **not** un-publishing
+  the rename from the remote that got it — that history stays; the tree it resolves is
+  `config/ai` again.
 - Then handle any consumer on the remote that received the rename exactly as its state
   dictates (usually State C — nobody bumped in the fault window; occasionally D).
 
@@ -433,14 +447,14 @@ for every consumer whose remote carried the rename.
 ### State C — published to both, no consumer has bumped
 
 The rename is on both remotes, but every consumer still locks `dir=config/ai` at a rev
-**below** `RENAME_REV`, so every consumer still resolves the pre-rename tree and none
+**below** `RENAME_TIP`, so every consumer still resolves the pre-rename tree and none
 ever saw the stub. This is the clean forward revert.
 
 **Detect:** §4 shows both remotes HAVE the rename; every consumer block shows
-`dir=config/ai` with `rev` below `RENAME_REV` (ancestry check in §4).
+`dir=config/ai` with `rev` below `RENAME_TIP` (ancestry check in §4).
 
 **Act:**
-1. §7a — `git revert RENAME_REV` → `REVERT_REV`, then §6 dual-publish.
+1. §7a — reverse-revert `RENAME_BASE^..RENAME_TIP` into `REVERT_REV`, then §6 dual-publish.
 2. That is enough for the two `&ref=main` github consumers (vps, shared-work) and the
    floating gitea consumer (vulcan) to land back on `config/ai` at their **next**
    `nix flake update` — because their URLs still say `dir=config/ai` and the tree at
@@ -460,14 +474,14 @@ ever saw the stub. This is the clean forward revert.
 Now consumers diverge and must be handled **per consumer, on the correct remote**. A
 bumped consumer is in one of two sub-states:
 
-- **`dir=config/ai` at/past `RENAME_REV`** — it is *already failing* against the
+- **`dir=config/ai` at/past `RENAME_TIP`** — it is *already failing* against the
   throwing stub. Rollback is the fix.
 - **`dir=config/fleet`** — it migrated cleanly (its URL-move issue landed:
   vulcan=jwiegley/nixos-config#3, vps=#57, shared-work=#56). Rollback must walk both the
   URL and the lock back.
 
 **Detect:** §4 shows both remotes HAVE the rename; at least one consumer shows either
-`dir=config/fleet` or `dir=config/ai` at/past `RENAME_REV`.
+`dir=config/fleet` or `dir=config/ai` at/past `RENAME_TIP`.
 
 **Act:**
 1. §7a + §6 first — `config/ai` must be restored and `REVERT_REV` on both remotes
@@ -551,7 +565,7 @@ generations` / `nixos-rebuild list-generations` shows the rollback generation li
 - `bin/cross-consumer-eval` green against the reverted working tree.
 - The straggler tracker / stub-retirement gate (#63) is moot for the rolled-back path —
   there is no stub to retire once `config/ai` is real again.
-- Record `RENAME_REV` and `REVERT_REV`, the remote-parity confirmation, and each
+- Record `RENAME_BASE`, `RENAME_TIP`, and `REVERT_REV`, the remote-parity confirmation, and each
   consumer's post-rollback lock rev in the #26 / #47 issue thread. The rename can be
   re-attempted later only by re-running #47 from the top.
 

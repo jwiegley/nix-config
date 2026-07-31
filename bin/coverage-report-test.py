@@ -319,9 +319,7 @@ class InventoryTests(RepositoryFixture):
         self.assertIn("template.py.in", files["python"])
         self.assertNotIn("untracked.py", files["python"])
         self.assertEqual(files["pythonTests"], ["bin/sample-test.py"])
-        static = coverage_report.discover_python_static(
-            self.repo, ["template.py.in"]
-        )
+        static = coverage_report.discover_python_static(self.repo, ["template.py.in"])
         self.assertEqual(static, {"assertionCalls": [], "testCases": []})
 
     def test_python_template_without_placeholder_is_rejected(self) -> None:
@@ -858,7 +856,7 @@ class ArtifactTests(RepositoryFixture):
         with self.assertRaisesRegex(coverage_report.CoverageError, "reach regressed"):
             coverage_report.check_artifact(self.repo)
 
-    def test_throwing_stub_role_change_is_the_only_reach_exemption(self) -> None:
+    def test_throwing_stub_role_change_is_not_a_permanent_reach_exemption(self) -> None:
         previous = self.ready_report()
         previous_reach = previous["measurements"]["nixFileReach"]
         previous_reach["denominator"] = ["config/ai/flake.nix", "flake.nix"]
@@ -874,14 +872,9 @@ class ArtifactTests(RepositoryFixture):
         current_reach["reached"] = ["flake.nix"]
         current_reach["unreached"] = ["config/ai/flake.nix"]
         current_reach["probes"][0]["paths"] = ["flake.nix"]
-        coverage_report.validate_non_regression(current, previous)
-
-        current_reach["denominator"].append("other.nix")
-        previous_reach["denominator"].append("other.nix")
-        previous_reach["reached"].append("other.nix")
-        previous_reach["probes"][0]["paths"].append("other.nix")
-        current_reach["unreached"].append("other.nix")
-        with self.assertRaisesRegex(coverage_report.CoverageError, "other.nix"):
+        with self.assertRaisesRegex(
+            coverage_report.CoverageError, "config/ai/flake.nix"
+        ):
             coverage_report.validate_non_regression(current, previous)
 
     def test_ratio_regression_is_deletion_aware_but_rejects_new_unreached_file(

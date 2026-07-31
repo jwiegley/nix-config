@@ -118,11 +118,15 @@ EXCLUDED_INTERNAL_PREFIXES = ("test/baseline/",)
 CONFIG_AI = "config/ai"
 CONFIG_FLEET = "config/fleet"
 INTENTIONAL_CONFIG_AI_FILES = {
+    "CLAUDE.md",
+    "README.md",
     "bin/consumer-inventory",
     "bin/coverage-report",
     "bin/coverage-report-test.py",
+    "bin/cross-consumer-eval",
     "bin/gates-test.py",
     "bin/immutable-subflake-check",
+    "bin/oracle-currency-test.py",
     "bin/parity-baseline",
     "doc/AI-NIX-REINTEGRATION-WIGGUM-HANDOFF.md",
     "doc/AI-NIX-REINTEGRATION-WIGGUM-PLAN.md",

@@ -125,6 +125,25 @@ PY
 #      re-derive by hand) but nothing COMPARED them, so changing PORTABLE_DIR or
 #      a --apply expression would silently redefine what the numbers mean while
 #      the file still claimed to be the same oracle.
+validate_config_ai_to_fleet_command_migration() {
+    python3 - "$1" "$2" <<'PY'
+import copy
+import json
+import sys
+
+recorded = json.loads(sys.argv[1])
+current = json.loads(sys.argv[2])
+expected = copy.deepcopy(recorded)
+needle = "./config/ai#packages"
+replacement = "./config/fleet#packages"
+portable = expected.get("portablePackages")
+if not isinstance(portable, str) or portable.count(needle) != 1:
+    raise SystemExit(1)
+expected["portablePackages"] = portable.replace(needle, replacement)
+raise SystemExit(0 if expected == current else 1)
+PY
+}
+
 command_migration_observed=
 guard_oracle_compatible() {
     local file=$1 allowed_command_migration=${2-} want_rev
@@ -141,22 +160,7 @@ oracle rev ${want_rev:0:12} is NOT an ancestor of HEAD $(git rev-parse --short H
     current=$(commands_json | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin), sort_keys=True))')
     if [[ $recorded != "$current" ]]; then
         if [[ $allowed_command_migration == config-ai-to-config-fleet ]] &&
-            python3 - "$recorded" "$current" <<'PY'; then
-import copy
-import json
-import sys
-
-recorded = json.loads(sys.argv[1])
-current = json.loads(sys.argv[2])
-expected = copy.deepcopy(recorded)
-needle = "./config/ai#packages"
-replacement = "./config/fleet#packages"
-portable = expected.get("portablePackages")
-if not isinstance(portable, str) or portable.count(needle) != 1:
-    raise SystemExit(1)
-expected["portablePackages"] = portable.replace(needle, replacement)
-raise SystemExit(0 if expected == current else 1)
-PY
+            validate_config_ai_to_fleet_command_migration "$recorded" "$current"; then
             command_migration_observed='portablePackages: ./config/ai#packages -> ./config/fleet#packages'
             printf 'parity-baseline: accepted exact #47 command migration: %s\n' \
                 "$command_migration_observed" >&2
@@ -490,6 +494,15 @@ if observed:
 print(dest)
 PY
     ;;
+--validate-command-migration)
+    [[ -n ${2-} && -n ${3-} && -z ${4-} ]] ||
+        die "--validate-command-migration needs OLD_COMMANDS_JSON NEW_COMMANDS_JSON"
+    old_commands=$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])), sort_keys=True))' "$2")
+    new_commands=$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])), sort_keys=True))' "$3")
+    validate_config_ai_to_fleet_command_migration "$old_commands" "$new_commands" ||
+        die "command migration is not the exact config/ai to config/fleet portable-path rewrite"
+    printf '%s\n' 'parity-baseline: exact config/ai to config/fleet command migration'
+    ;;
 --commands)
     # Cheap: print the derivation commands WITHOUT evaluating anything, so the
     # currency guard can assert the oracle's recorded command still matches this
@@ -503,6 +516,6 @@ PY
     derive
     ;;
 *)
-    die "unknown argument: $1 (want --write, --check FILE, --compare FILE, --refresh FILE, --commands, or no argument)"
+    die "unknown argument: $1 (want --write, --check FILE, --compare FILE, --refresh FILE, --validate-command-migration OLD NEW, --commands, or no argument)"
     ;;
 esac

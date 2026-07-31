@@ -569,7 +569,7 @@ require repository-defined focused tests and explicit reporting when a check is
 unavailable, rather than delegating or forbidding testing.
 
 Model identities remain owned by `llm-setup.el` through
-`config/ai/model-registry.json`. Ten source-only Claude 4.6/4.7 tuples are
+`config/fleet/model-registry.json`. Ten source-only Claude 4.6/4.7 tuples are
 explicitly retired under `llm-setup.el` authority; current Nix routes use Claude
 Opus 5 and Sonnet 5. The frozen Promptdeploy default is recorded and currently
 matches the Nix default, but is not a live-default equality constraint. Promptdeploy's stale example

@@ -1,5 +1,8 @@
 {
   description = "Removed config/ai compatibility stub";
+  # Existing consumers follow this key before they force our outputs. Retain the
+  # key so they reach the actionable throw instead of failing at lock topology.
+  inputs.llm-agents.url = "github:numtide/llm-agents.nix";
   outputs =
     _:
     throw ''

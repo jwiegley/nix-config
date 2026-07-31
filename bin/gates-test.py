@@ -719,7 +719,10 @@ class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
             if record.get("kind") == "internal-config-ai-ref"
         ]
         self.assertEqual(
-            [(record["file"], record["line"], record["text"]) for record in aba_records],
+            [
+                (record["file"], record["line"], record["text"])
+                for record in aba_records
+            ],
             [
                 ("contract.py", 1, "OLD_PATH = 'config/ai'"),
                 ("inventory-tool", 2, "# config/ai"),
@@ -755,9 +758,9 @@ class TestImmutableSubflakeCheck(unittest.TestCase):
             "root": "root",
             "version": 7,
         }
-        self.committed_lock_bytes = json.dumps(
-            self.committed_lock, separators=(",", ":")
-        ) + "\n"
+        self.committed_lock_bytes = (
+            json.dumps(self.committed_lock, separators=(",", ":")) + "\n"
+        )
         self.committed_up_import = "# committed up-import authority\n"
         (self.repo / "config" / "fleet" / "flake.lock").write_text(
             self.committed_lock_bytes, encoding="utf-8"
@@ -766,7 +769,7 @@ class TestImmutableSubflakeCheck(unittest.TestCase):
             "{ outputs = _: {}; }\n", encoding="utf-8"
         )
         (self.repo / "config" / "ai" / "flake.nix").write_text(
-            "throw \"config/fleet #47\"\n", encoding="utf-8"
+            'throw "config/fleet #47"\n', encoding="utf-8"
         )
         (self.repo / "flake-ai.nix").write_text(
             self.committed_up_import, encoding="utf-8"
@@ -798,9 +801,7 @@ class TestImmutableSubflakeCheck(unittest.TestCase):
             self.committed_lock_bytes, encoding="utf-8"
         )
         self.expected_up_import = self.root / "expected-up-import"
-        self.expected_up_import.write_text(
-            self.committed_up_import, encoding="utf-8"
-        )
+        self.expected_up_import.write_text(self.committed_up_import, encoding="utf-8")
         self.scratch = self.root / "scratch"
         self.scratch.mkdir()
         self._write_fake_nix()
@@ -811,7 +812,7 @@ class TestImmutableSubflakeCheck(unittest.TestCase):
     def _write_fake_nix(self):
         fake = self.fakebin / "nix"
         fake.write_text(
-            r'''#!/usr/bin/env python3
+            r"""#!/usr/bin/env python3
 import json
 import os
 import sys
@@ -861,7 +862,7 @@ elif args[:2] == ["flake", "show"]:
         ),
         file=sys.stderr,
     )
-    raise SystemExit(1)
+    raise SystemExit(int(os.environ.get("FAKE_STUB_STATUS", "1")))
 elif args[:2] == ["flake", "metadata"]:
     locked = {
         "type": os.environ.get("FAKE_METADATA_TYPE", "tarball"),
@@ -885,7 +886,7 @@ elif args[:2] == ["flake", "check"]:
 else:
     record(row)
     raise SystemExit(93)
-''',
+""",
             encoding="utf-8",
         )
         fake.chmod(0o755)
@@ -975,6 +976,15 @@ else:
                 )
                 self.assertEqual(len(self.calls()), 4)
 
+    def test_stale_stub_unexpected_success_is_rejected(self):
+        result = self.run_gate(FAKE_STUB_STATUS="0")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
+            "stale config/ai reference unexpectedly resolved",
+            result.stdout + result.stderr,
+        )
+        self.assertEqual(len(self.calls()), 4)
+
     def test_metadata_requires_tarball_dir_and_prefetched_nar_hash(self):
         cases = (
             ({"FAKE_METADATA_TYPE": "git"}, "locked.type is not tarball"),
@@ -987,7 +997,9 @@ else:
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn(diagnostic, result.stdout + result.stderr)
                 self.assertEqual(len(self.calls()), 2)
-                self.assertEqual(self.worktree_lock.read_bytes(), self.worktree_lock_bytes)
+                self.assertEqual(
+                    self.worktree_lock.read_bytes(), self.worktree_lock_bytes
+                )
 
     def test_metadata_lock_graph_must_equal_selected_revision_semantically(self):
         drift = self.root / "drift-lock.json"
@@ -1119,9 +1131,7 @@ class TestGatesAreRegistered(unittest.TestCase):
         for suite in ("python-lint", "python-test"):
             self.assertRegex(core.group("body"), rf"(?m)^    {suite}$")
         self.assertNotRegex(core.group("body"), r"(?m)^    portable-eval$")
-        expensive = re.search(
-            r"(?ms)^EXPENSIVE_SUITES=\(\n(?P<body>.*?)^\)$", quality
-        )
+        expensive = re.search(r"(?ms)^EXPENSIVE_SUITES=\(\n(?P<body>.*?)^\)$", quality)
         self.assertIsNotNone(expensive)
         for suite in (
             "python-test",
@@ -1155,12 +1165,8 @@ class TestGatesAreRegistered(unittest.TestCase):
         self.assertIn('cron: "17 2,14 * * *"', workflow)
         self.assertIn("workflow_dispatch:", workflow)
         self.assertNotRegex(workflow, r"(?m)^  (push|pull_request):")
-        self.assertRegex(
-            workflow, r"(?m)^        run: bin/quality portable-eval$"
-        )
-        self.assertNotRegex(
-            workflow, r"(?m)^\s+run: bin/quality --tier expensive$"
-        )
+        self.assertRegex(workflow, r"(?m)^        run: bin/quality portable-eval$")
+        self.assertNotRegex(workflow, r"(?m)^\s+run: bin/quality --tier expensive$")
         self.assertIn("portable-native:", workflow)
         self.assertIn("runner: macos-15", workflow)
         self.assertRegex(

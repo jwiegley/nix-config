@@ -490,6 +490,11 @@ consumers **and both remotes**.
 - **Fail loudly, not obscurely.** Leave a `config/ai/flake.nix` that `throw`s a
   message pointing at `config/fleet`. A flake with no inputs adds no lock, so this
   costs nothing and turns a stale URL into a clear error instead of "not a flake".
+  **Implementation correction (#47):** all three known consumers resolve
+  `llm-agents.follows = "nix-config-ai/llm-agents"` before forcing the stub's
+  outputs. The stub therefore retains that one input key (with no committed stub
+  lock) so the real consumer route reaches the actionable throw instead of failing
+  first on a missing follows target.
 - **Constraint to respect.** The subflake imports `../../flake-ai.nix` and
   `../../test/ai/compatibility-check.nix`, so it can only ever be consumed as
   `?dir=` *of the whole repo*, never as a standalone fetch of the subtree. That is

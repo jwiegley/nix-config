@@ -8,7 +8,7 @@ Personal, multi-host Nix configuration for Darwin, standalone Home Manager, NixO
 |---|---|---|---|
 | Hera | aarch64-darwin | `~/src/nix` | Direct `darwinConfigurations.hera` |
 | Clio | aarch64-darwin | `~/src/nix` on Clio | Direct `darwinConfigurations.clio` |
-| Andoria-08/T2, Delphi, GPU | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Paired `nix-config` source and `nix-config?dir=config/fleet` inputs |
+| Andoria-08/T2, Delphi, GPU | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Paired `nix-config` source and legacy `nix-config?dir=config/ai` input pending #47's authorized move to `config/fleet` |
 | Vulcan | aarch64 NixOS | `/etc/nixos` on Vulcan | Paired root/portable inputs plus shared Home Manager module |
 | VPS | x86_64 NixOS | `/etc/nixos` on the VPS | Root/portable inputs plus shared Home Manager module |
 

@@ -135,6 +135,28 @@ eval_target() {
     fi
 }
 
+# Prove the compatibility stub fails through a real consumer graph, including
+# the consumer's llm-agents follows edge. An isolated `nix flake show` is not
+# enough: lock topology is resolved before outputs are forced.
+eval_expected_stale_stub_failure() {
+    local name=$1
+    shift
+    local -a cmd=(nix eval "${nix_common[@]}" "$@")
+    note "$name: ${cmd[*]}"
+    ran=$((ran + 1))
+    local out rc
+    out=$("${cmd[@]}" 2>&1)
+    rc=$?
+    if [[ $rc -eq 0 ]]; then
+        fail "$name: stale config/ai unexpectedly evaluated"
+    elif [[ $out == *config/fleet* && $out == *'#47'* ]]; then
+        note "$name: OK  stale route failed with the actionable #47 message"
+    else
+        fail "$name: stale route failed without naming config/fleet and #47"
+        printf '%s\n' "$out" | tail -40 | sed 's/^/      /' >&2
+    fi
+}
+
 # Skip a consumer whose checkout is absent — loudly, and as a failure under
 # CONSUMER_EVAL_STRICT. A skip is NEVER counted as a pass.
 skip_or_fail() {
@@ -219,6 +241,10 @@ run_vps() {
     eval_target "vps [ovh-vps toplevel]" \
         --raw --override-input nix-config "$tree" \
         --override-input nix-config-ai "$tree?dir=config/fleet" \
+        "$vps_checkout#nixosConfigurations.ovh-vps.config.system.build.toplevel.drvPath"
+    eval_expected_stale_stub_failure "vps [stale config/ai stub]" \
+        --raw --override-input nix-config "$tree" \
+        --override-input nix-config-ai "$tree?dir=config/ai" \
         "$vps_checkout#nixosConfigurations.ovh-vps.config.system.build.toplevel.drvPath"
 }
 
