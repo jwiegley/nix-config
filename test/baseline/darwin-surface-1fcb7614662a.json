@@ -1,14 +1,14 @@
 {
-  "schema": "darwin-value-surface/2",
-  "baselineRev": "3a3a79f2d151759eee025ee6cac0cced9c3fa7b6",
-  "note": "Seven nix-darwin value surfaces at the recorded revision. Only 32-character /nix/store hash prefixes are masked; derivation names remain. Launchd scripts are hashed after that normalization, so their text is not persisted; sensitive keys and assignments are refused.",
+  "schema": "darwin-value-surface/3",
+  "baselineRev": "1fcb7614662a4aa49b4f41bf13ca38999351a322",
+  "note": "Seven nix-darwin value surfaces at the recorded revision. Only 32-character /nix/store hash prefixes are masked; derivation names remain. Launchd scripts are hashed after that normalization, so their text is not persisted. Authorized-key lists, authorized-key file paths, and build-machine private-key paths are persisted only as normalized aggregate hashes plus non-sensitive counts; sensitive keys and assignments are refused.",
   "commands": {
     "hostSurface": "nix eval --impure --json '.#darwinConfigurations.<host>' --apply 'darwin: import ./test/darwin/darwin-surface.nix darwin'",
     "compare": "bin/darwin-surface-diff --normalize-store <before.json> <after.json>",
     "refresh": "bin/darwin-surface-baseline --rev <rev> --write"
   },
   "projection": {
-    "test/darwin/darwin-surface.nix": "93f0d8900a160f6d4d34658970c878ebe11427f93289ceaf741fccc0b8f309e0",
+    "test/darwin/darwin-surface.nix": "00162339a5134960f0528aa2c03adc52f67dfa5750e1dc10062681b7f8e1c1d4",
     "test/darwin/surface-helpers.nix": "dbf47403da79ac1670112c761163694c92b52dde8e5e530a969592510f49c4a3",
     "bin/darwin-surface-diff": "19fc0e40e02fae77ac954cf2ccc026dcc18910fae8b646ad12aa64ed0d5c3204"
   },
@@ -230,7 +230,7 @@
             "protocol": "ssh-ng",
             "publicHostKey": null,
             "speedFactor": 4,
-            "sshKey": null,
+            "sshKeySha256": null,
             "sshUser": "johnw",
             "supportedFeatures": [],
             "system": "aarch64-darwin",
@@ -602,6 +602,12 @@
       "users": {
         "detail": {
           "johnw": {
+            "authorizedKeys": {
+              "keyFilesCount": 1,
+              "keyFilesSha256": "3ca62b9b2f5e239369de9b22a283167954b69fc07fb723f2fd2a11f903b99539",
+              "keysCount": 4,
+              "keysSha256": "7eccc386d113e90430eddcd250a903514b4484c80eee8d527d56508c7ef1e627"
+            },
             "createHome": false,
             "description": null,
             "gid": 20,
@@ -890,7 +896,7 @@
             "protocol": "ssh-ng",
             "publicHostKey": null,
             "speedFactor": 2,
-            "sshKey": "/Users/johnw/hera/id_hera",
+            "sshKeySha256": "8f7e1b73c7393ae01e9b42cb53b3d28bed1a632f64cb59e8c5da2bc46c44eff6",
             "sshUser": "johnw",
             "supportedFeatures": [
               "nixos-test",
@@ -1269,6 +1275,12 @@
       "users": {
         "detail": {
           "_prometheus-node-exporter": {
+            "authorizedKeys": {
+              "keyFilesCount": 0,
+              "keyFilesSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "keysCount": 0,
+              "keysSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
             "createHome": true,
             "description": "System user for the Prometheus Node exporter",
             "gid": 534,
@@ -1277,6 +1289,12 @@
             "uid": 534
           },
           "johnw": {
+            "authorizedKeys": {
+              "keyFilesCount": 1,
+              "keyFilesSha256": "a601abb0a282b0d5b8d81791d2624cf7901db19829bda236dc203780bce98d10",
+              "keysCount": 4,
+              "keysSha256": "7eccc386d113e90430eddcd250a903514b4484c80eee8d527d56508c7ef1e627"
+            },
             "createHome": false,
             "description": null,
             "gid": 20,

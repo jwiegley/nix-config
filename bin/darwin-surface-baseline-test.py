@@ -318,14 +318,6 @@ class ExistingBaselineValidationTests(TemporaryBaselineTestCase):
         with self.assertRaisesRegex(GENERATOR.OperationalError, "has schema"):
             GENERATOR.validate_existing_baseline()
 
-    def test_previous_schema_is_accepted_only_for_transactional_replacement(self) -> None:
-        path, _ = self.write_baseline(schema=GENERATOR.PREVIOUS_SCHEMA)
-
-        with self.assertRaisesRegex(GENERATOR.OperationalError, "has schema"):
-            GENERATOR.read_baseline(path)
-
-        self.assertEqual(GENERATOR.validate_existing_baseline(), path)
-
     def test_write_rejects_missing_baseline_before_derivation(self) -> None:
         stderr = io.StringIO()
 

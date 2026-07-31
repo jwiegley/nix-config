@@ -33,7 +33,6 @@ BACKUP_NAME = ".darwin-surface-baseline.backup.json"
 LOCK_NAME = ".darwin-surface-baseline.lock"
 
 SCHEMA = "darwin-value-surface/3"
-PREVIOUS_SCHEMA = "darwin-value-surface/2"
 HOSTS = ("clio", "hera")
 SURFACES = {
     "environment",
@@ -554,7 +553,6 @@ def read_baseline(
     path: Path,
     *,
     require_candidate_name: bool = True,
-    accepted_schemas: tuple[str, ...] = (SCHEMA,),
 ) -> dict[str, Any]:
     """Read and validate one current artifact."""
     if path.is_symlink() or not path.is_file():
@@ -572,10 +570,8 @@ def read_baseline(
         baseline_revision
     ):
         invalid_baseline(f"{path} has an invalid baselineRev")
-    if schema not in accepted_schemas:
-        invalid_baseline(
-            f"{path} has schema {schema!r}; expected one of {accepted_schemas!r}"
-        )
+    if schema != SCHEMA:
+        invalid_baseline(f"{path} has schema {schema!r}; expected {SCHEMA!r}")
     if set(existing) != ARTIFACT_KEYS:
         invalid_baseline(f"{path} does not have exactly {sorted(ARTIFACT_KEYS)}")
 
@@ -606,9 +602,7 @@ def validate_existing_baseline() -> Path:
             f"{BASELINE_DIRECTORY}/darwin-surface-*.json; found {len(matches)}"
         )
     path = matches[0]
-    # One release-bound migration seam: accept v2 only as the old side of a
-    # transactional v3 replacement. The follow-up artifact commit removes it.
-    read_baseline(path, accepted_schemas=(PREVIOUS_SCHEMA, SCHEMA))
+    read_baseline(path)
     return path
 
 

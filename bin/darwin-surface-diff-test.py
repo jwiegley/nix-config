@@ -260,14 +260,7 @@ class CommittedDarwinSurfaceTests(unittest.TestCase):
         baseline_rev = self.baseline.get("baselineRev", "")
         self.assertRegex(baseline_rev, r"^[0-9a-f]{40}$")
         self.assertEqual(self.path.stem, f"darwin-surface-{baseline_rev[:12]}")
-        # Temporary v2 compatibility lets the signed v3 projector commit exist
-        # before its exact-revision artifact is generated. The artifact follow-up
-        # removes this branch and requires v3 exclusively.
-        schema = self.baseline.get("schema")
-        self.assertIn(
-            schema,
-            {"darwin-value-surface/2", "darwin-value-surface/3"},
-        )
+        self.assertEqual(self.baseline.get("schema"), "darwin-value-surface/3")
         self.assertEqual(set(self.baseline.get("hosts", {})), {"hera", "clio"})
         for surface in self.baseline["hosts"].values():
             self.assertEqual(set(surface), SURFACES)
@@ -284,8 +277,7 @@ class CommittedDarwinSurfaceTests(unittest.TestCase):
             expected_projection[relative] = hashlib.sha256(
                 (REPO / relative).read_bytes()
             ).hexdigest()
-        if schema == "darwin-value-surface/3":
-            self.assertEqual(self.baseline.get("projection"), expected_projection)
+        self.assertEqual(self.baseline.get("projection"), expected_projection)
 
     def test_baseline_encodes_both_nonvacuity_traps_and_nix_builders(self):
         expected_counts = {"hera": (12, 6, 8), "clio": (5, 3, 4)}
@@ -311,6 +303,41 @@ class CommittedDarwinSurfaceTests(unittest.TestCase):
         hera_users = self.baseline["hosts"]["hera"]["users"]
         self.assertEqual(hera_users["knownUsers"].count("_prometheus-node-exporter"), 1)
         self.assertEqual(hera_users["knownGroups"].count("_prometheus-node-exporter"), 1)
+
+    def test_authorized_keys_are_hashed_counted_and_private_paths_are_redacted(self):
+        expected_counts = {
+            "clio": {"johnw": (4, 1)},
+            "hera": {"_prometheus-node-exporter": (0, 0), "johnw": (4, 1)},
+        }
+        expected_fields = {
+            "keyFilesCount",
+            "keyFilesSha256",
+            "keysCount",
+            "keysSha256",
+        }
+        authorizations = {}
+
+        for host, users in expected_counts.items():
+            surface = self.baseline["hosts"][host]
+            authorizations[host] = {}
+            self.assertEqual(set(surface["users"]["detail"]), set(users))
+            for user, (keys_count, key_files_count) in users.items():
+                authorized = surface["users"]["detail"][user]["authorizedKeys"]
+                authorizations[host][user] = authorized
+                self.assertEqual(set(authorized), expected_fields)
+                self.assertEqual(authorized["keysCount"], keys_count)
+                self.assertEqual(authorized["keyFilesCount"], key_files_count)
+                self.assertRegex(authorized["keysSha256"], r"^[0-9a-f]{64}$")
+                self.assertRegex(authorized["keyFilesSha256"], r"^[0-9a-f]{64}$")
+
+            for machine in surface["nix"]["buildMachines"]:
+                self.assertNotIn("sshKey", machine)
+                if machine["sshKeySha256"] is not None:
+                    self.assertRegex(machine["sshKeySha256"], r"^[0-9a-f]{64}$")
+
+        encoded = json.dumps(authorizations, sort_keys=True)
+        for raw_marker in ("ssh-", "authorized_keys", "/etc/", "/nix/store/"):
+            self.assertNotIn(raw_marker, encoded)
 
     def test_committed_baseline_contains_no_raw_store_hashes(self):
         encoded = json.dumps(self.baseline, sort_keys=True)
