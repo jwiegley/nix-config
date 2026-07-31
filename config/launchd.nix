@@ -315,7 +315,7 @@ in
                 # Proxy /v1/ requests to llama-swap
                 location /v1/ {
                   client_max_body_size 20M;
-                  proxy_pass http://localhost:8080;
+                  proxy_pass http://localhost:8000;
 
                   proxy_set_header Host $host;
                   proxy_set_header X-Real-IP $remote_addr;
