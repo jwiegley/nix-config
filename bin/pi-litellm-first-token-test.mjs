@@ -61,6 +61,76 @@ async function waitForExit(child, timeoutMs, graceMs = 2000) {
   throw new Error(`child did not exit within ${timeoutMs}ms`);
 }
 
+async function closeServerBounded(server, sockets, timeoutMs = 1000) {
+  for (const socket of sockets) socket.destroy();
+  server.closeAllConnections?.();
+  if (!server.listening) return;
+  const deadline = Symbol("close-deadline");
+  const closed = await Promise.race([
+    new Promise(resolve => server.close(resolve)),
+    sleep(timeoutMs).then(() => deadline),
+  ]);
+  if (closed === deadline) throw new Error(`server did not close within ${timeoutMs}ms`);
+}
+
+async function runDisconnectCleanupCase(forceRequestFailure) {
+  const started = performance.now();
+  const sockets = new Set();
+  let request;
+  let requestReceived;
+  let requestFailed;
+  const received = new Promise(resolve => {
+    requestReceived = resolve;
+  });
+  const failed = new Promise(resolve => {
+    requestFailed = resolve;
+  });
+  const server = createServer(async (incoming, response) => {
+    for await (const _chunk of incoming) {
+      // Consume the request, then simulate a very long first-token delay.
+    }
+    requestReceived();
+    await sleep(600_000);
+    response.end("late");
+  });
+  server.on("connection", socket => {
+    sockets.add(socket);
+    socket.once("close", () => sockets.delete(socket));
+  });
+
+  try {
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("disconnect server has no address");
+    if (forceRequestFailure) await closeServerBounded(server, sockets);
+
+    request = httpRequest({ host: "127.0.0.1", port: address.port, method: "POST" });
+    request.once("error", requestFailed);
+    request.end("request complete");
+    const deadline = Symbol("request-deadline");
+    const outcome = await Promise.race([
+      received.then(() => "received"),
+      failed.then(error => ({ error })),
+      sleep(1000).then(() => deadline),
+    ]);
+    if (outcome === deadline) throw new Error("disconnect self-test request exceeded 1000ms");
+    if (typeof outcome === "object") {
+      throw new Error(`disconnect self-test request failed: ${outcome.error}`);
+    }
+    if (forceRequestFailure) throw new Error("forced disconnect request unexpectedly succeeded");
+  } finally {
+    request?.destroy();
+    await closeServerBounded(server, sockets);
+  }
+
+  const elapsedMs = performance.now() - started;
+  if (elapsedMs > 1000) throw new Error(`disconnect cleanup took ${elapsedMs}ms`);
+  return elapsedMs;
+}
+
 async function runTimeoutSelfTest() {
   const child = spawn(
     process.execPath,
@@ -93,55 +163,24 @@ async function runTimeoutSelfTest() {
   }
   if (elapsedMs > 1000) throw new Error(`timeout escalation took ${elapsedMs}ms`);
 
-  const disconnectStarted = performance.now();
-  const disconnectSockets = new Set();
-  let requestReceived;
-  const received = new Promise(resolve => {
-    requestReceived = resolve;
-  });
-  const disconnectServer = createServer(async (request, response) => {
-    for await (const _chunk of request) {
-      // Consume the request, then simulate a very long first-token delay.
-    }
-    requestReceived();
-    await sleep(600_000);
-    response.end("late");
-  });
-  disconnectServer.on("connection", socket => {
-    disconnectSockets.add(socket);
-    socket.once("close", () => disconnectSockets.delete(socket));
-  });
-  await new Promise((resolve, reject) => {
-    disconnectServer.once("error", reject);
-    disconnectServer.listen(0, "127.0.0.1", resolve);
-  });
-  const address = disconnectServer.address();
-  if (!address || typeof address === "string") throw new Error("disconnect server has no address");
-  const request = httpRequest({ host: "127.0.0.1", port: address.port, method: "POST" });
-  request.on("error", () => {});
-  request.end("request complete");
-  const requestDeadline = Symbol("request-deadline");
-  if (await Promise.race([received, sleep(1000).then(() => requestDeadline)]) === requestDeadline) {
-    throw new Error("disconnect self-test server did not receive the request");
+  const disconnectCleanupMs = await runDisconnectCleanupCase(false);
+  const failureStarted = performance.now();
+  try {
+    await runDisconnectCleanupCase(true);
+    throw new Error("forced disconnect request did not fail");
+  } catch (error) {
+    if (!String(error).includes("disconnect self-test request failed")) throw error;
   }
-  request.destroy();
-  for (const socket of disconnectSockets) socket.destroy();
-  disconnectServer.closeAllConnections?.();
-  const closeDeadline = Symbol("close-deadline");
-  const closed = await Promise.race([
-    new Promise(resolve => disconnectServer.close(resolve)),
-    sleep(1000).then(() => closeDeadline),
-  ]);
-  if (closed === closeDeadline) throw new Error("disconnect self-test server did not close");
-  const disconnectCleanupMs = performance.now() - disconnectStarted;
-  if (disconnectCleanupMs > 1000) {
-    throw new Error(`disconnect cleanup took ${disconnectCleanupMs}ms`);
+  const requestFailureCleanupMs = performance.now() - failureStarted;
+  if (requestFailureCleanupMs > 1000) {
+    throw new Error(`request-failure cleanup took ${requestFailureCleanupMs}ms`);
   }
 
   process.stdout.write(
     `${JSON.stringify({
       timeoutSelfTestMs: Math.round(elapsedMs),
       disconnectCleanupMs: Math.round(disconnectCleanupMs),
+      requestFailureCleanupMs: Math.round(requestFailureCleanupMs),
     })}\n`,
   );
 }
@@ -303,12 +342,8 @@ try {
     ]);
     if (reaped === reapDeadline) throw new Error("Pi child survived SIGKILL cleanup");
   }
-  for (const socket of sockets) socket.destroy();
   if (server) {
-    server.closeAllConnections?.();
-    if (server.listening) {
-      await Promise.race([new Promise(resolve => server.close(resolve)), sleep(2000)]);
-    }
+    await closeServerBounded(server, sockets, 2000);
   }
   await rm(root, { recursive: true, force: true });
 }
