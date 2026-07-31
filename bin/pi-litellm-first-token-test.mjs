@@ -73,6 +73,29 @@ async function closeServerBounded(server, sockets, timeoutMs = 1000) {
   if (closed === deadline) throw new Error(`server did not close within ${timeoutMs}ms`);
 }
 
+async function waitForReadyOrKill(child, stream, timeoutMs, graceMs) {
+  const deadline = Symbol("readiness-deadline");
+  const readiness = await Promise.race([
+    new Promise((resolve, reject) => {
+      child.once("error", reject);
+      stream.once("data", resolve);
+    }),
+    sleep(timeoutMs).then(() => deadline),
+  ]);
+  if (readiness !== deadline) return;
+
+  child.kill("SIGKILL");
+  const reapDeadline = Symbol("readiness-reap-deadline");
+  const reaped = await Promise.race([
+    childExit(child),
+    sleep(graceMs).then(() => reapDeadline),
+  ]);
+  if (reaped === reapDeadline) {
+    throw new Error(`unready child survived SIGKILL for ${graceMs}ms`);
+  }
+  throw new Error(`child did not become ready within ${timeoutMs}ms`);
+}
+
 async function runDisconnectCleanupCase(forceRequestFailure) {
   const started = performance.now();
   const sockets = new Set();
@@ -137,19 +160,7 @@ async function runTimeoutSelfTest() {
     ["-e", "process.on('SIGTERM', () => {}); console.log('ready'); setInterval(() => {}, 1000)"],
     { stdio: ["ignore", "pipe", "ignore"] },
   );
-  const readinessExpired = Symbol("readiness-expired");
-  const readiness = await Promise.race([
-    new Promise((resolve, reject) => {
-      child.once("error", reject);
-      child.stdout.once("data", resolve);
-    }),
-    sleep(1000).then(() => readinessExpired),
-  ]);
-  if (readiness === readinessExpired) {
-    child.kill("SIGKILL");
-    await childExit(child);
-    throw new Error("timeout self-test child did not become ready within 1000ms");
-  }
+  await waitForReadyOrKill(child, child.stdout, 1000, 1000);
   const started = performance.now();
   try {
     await waitForExit(child, 50, 100);
@@ -162,6 +173,24 @@ async function runTimeoutSelfTest() {
     throw new Error("timeout self-test left its child running");
   }
   if (elapsedMs > 1000) throw new Error(`timeout escalation took ${elapsedMs}ms`);
+
+  const readinessStarted = performance.now();
+  const unreadyChild = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  try {
+    await waitForReadyOrKill(unreadyChild, unreadyChild.stdout, 50, 100);
+    throw new Error("unready self-test child unexpectedly became ready");
+  } catch (error) {
+    if (!String(error).includes("did not become ready")) throw error;
+  }
+  const readinessCleanupMs = performance.now() - readinessStarted;
+  if (unreadyChild.exitCode === null && unreadyChild.signalCode === null) {
+    throw new Error("readiness self-test left its child running");
+  }
+  if (readinessCleanupMs > 1000) {
+    throw new Error(`readiness cleanup took ${readinessCleanupMs}ms`);
+  }
 
   const disconnectCleanupMs = await runDisconnectCleanupCase(false);
   const failureStarted = performance.now();
@@ -179,6 +208,7 @@ async function runTimeoutSelfTest() {
   process.stdout.write(
     `${JSON.stringify({
       timeoutSelfTestMs: Math.round(elapsedMs),
+      readinessCleanupMs: Math.round(readinessCleanupMs),
       disconnectCleanupMs: Math.round(disconnectCleanupMs),
       requestFailureCleanupMs: Math.round(requestFailureCleanupMs),
     })}\n`,
@@ -332,19 +362,33 @@ try {
 
   process.stdout.write(`${JSON.stringify({ delayMs, elapsedMs: Math.round(elapsedMs), heartbeats })}\n`);
 } finally {
+  const cleanupErrors = [];
   for (const timer of heartbeatTimers) clearInterval(timer);
   if (child && child.exitCode === null && child.signalCode === null) {
-    child.kill("SIGKILL");
-    const reapDeadline = Symbol("reap-deadline");
-    const reaped = await Promise.race([
-      childExit(child).catch(() => null),
-      sleep(2000).then(() => reapDeadline),
-    ]);
-    if (reaped === reapDeadline) throw new Error("Pi child survived SIGKILL cleanup");
+    try {
+      child.kill("SIGKILL");
+      const reapDeadline = Symbol("reap-deadline");
+      const reaped = await Promise.race([
+        childExit(child),
+        sleep(2000).then(() => reapDeadline),
+      ]);
+      if (reaped === reapDeadline) throw new Error("Pi child survived SIGKILL cleanup");
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
   }
   if (server) {
-    await closeServerBounded(server, sockets, 2000);
+    try {
+      await closeServerBounded(server, sockets, 2000);
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
   }
-  await rm(root, { recursive: true, force: true });
+  try {
+    await rm(root, { recursive: true, force: true });
+  } catch (error) {
+    cleanupErrors.push(error);
+  }
+  if (cleanupErrors.length) throw new AggregateError(cleanupErrors, "probe cleanup failed");
 }
 }
