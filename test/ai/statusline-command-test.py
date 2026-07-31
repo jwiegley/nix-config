@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-STATUSLINE = ROOT / "config/ai/statusline-command.sh"
+STATUSLINE = ROOT / "config/fleet/statusline-command.sh"
 
 
 def fixture(project_dir: Path) -> dict:

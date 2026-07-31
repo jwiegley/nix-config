@@ -10,7 +10,7 @@ let
     inherit (homeManagerLib) hm;
   };
 
-  preflightFactory = import "${src}/config/ai/preflight.nix" {
+  preflightFactory = import "${src}/config/fleet/preflight.nix" {
     lib = homeManagerAwareLib;
     inherit pkgs;
   };

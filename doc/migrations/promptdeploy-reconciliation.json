@@ -199,7 +199,7 @@
     },
     {
       "path": "models.yaml",
-      "disposition": "Compared provider-aware; current model ownership remains llm-setup.el and config/ai/model-registry.json."
+      "disposition": "Compared provider-aware; current model ownership remains llm-setup.el and config/fleet/model-registry.json."
     },
     {
       "path": "skills/add-uint-support/SKILL.md",
@@ -231,7 +231,7 @@
     }
   ],
   "models": {
-    "authority": "llm-setup.el through config/ai/model-registry.json",
+    "authority": "llm-setup.el through config/fleet/model-registry.json",
     "default": {
       "provider": "litellm",
       "model": "hera/omlx/Qwen3.6-27B-oQ4e-mtp"

@@ -398,7 +398,7 @@ class UpdateInventoryTests(unittest.TestCase):
     @staticmethod
     def _write_projection_fixture(root, mutate=None):
         (root / "sources").mkdir()
-        (root / "config/ai").mkdir(parents=True)
+        (root / "config/fleet").mkdir(parents=True)
         record = {
             "source": {
                 "args": {
@@ -436,8 +436,8 @@ class UpdateInventoryTests(unittest.TestCase):
         if mutate is not None:
             mutate(document, lock)
         (root / "sources/test.json").write_text(json.dumps(document, indent=2) + "\n")
-        (root / "config/ai/flake.lock").write_text(json.dumps(lock, indent=2) + "\n")
-        (root / "config/ai/flake.nix").write_text(
+        (root / "config/fleet/flake.lock").write_text(json.dumps(lock, indent=2) + "\n")
+        (root / "config/fleet/flake.nix").write_text(
             '{\n  inputs = {\n    example.url = "github:example/project";\n  };\n}\n'
         )
         return document, lock
@@ -466,7 +466,7 @@ class UpdateInventoryTests(unittest.TestCase):
         self.assertEqual(catalog["ws"]["_record"]["update"]["package"], "ws")
         self.assertEqual(catalog["ws"]["executor"], "update-overlay")
         self.assertNotIn("flake.nix", catalog["rust-overlay"]["files"])
-        self.assertIn("config/ai/flake.nix", catalog["rust-overlay"]["files"])
+        self.assertIn("config/fleet/flake.nix", catalog["rust-overlay"]["files"])
 
         ai_names = set(json.loads((root / "sources/ai.json").read_text())["sources"])
         pi_names = set(json.loads((root / "sources/pi.json").read_text())["sources"])
@@ -481,7 +481,7 @@ class UpdateInventoryTests(unittest.TestCase):
             (root / path).read_text()
             for path in (
                 "packages/agent-resources.nix",
-                "config/ai/catalog.nix",
+                "config/fleet/catalog.nix",
                 "test/ai/agent-resources.nix",
                 "test/ai/home-manager-contract-common.nix",
             )
@@ -496,7 +496,7 @@ class UpdateInventoryTests(unittest.TestCase):
     def test_issue34_projection_parity_uses_selected_lock_nodes(self):
         root = SCRIPT.parent.parent
         catalog = load_source_catalog(root)
-        lock = json.loads((root / "config/ai/flake.lock").read_text())
+        lock = json.loads((root / "config/fleet/flake.lock").read_text())
         root_inputs = lock["nodes"][lock["root"]]["inputs"]
         for name in ISSUE34_FLAKE_PROJECTIONS:
             record = catalog[name]["_record"]
@@ -546,7 +546,7 @@ class UpdateInventoryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_projection_fixture(root)
-            (root / "config/ai/flake.nix").write_text(
+            (root / "config/fleet/flake.nix").write_text(
                 '{\n  inputs = {\n    example.url = "github:other/project";\n  };\n}\n'
             )
             with self.assertRaisesRegex(RuntimeError, "owner does not match flake literal"):
@@ -1903,9 +1903,9 @@ got: sha256-requested
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             (root / "sources").mkdir()
-            (root / "config/ai").mkdir(parents=True)
+            (root / "config/fleet").mkdir(parents=True)
             catalog_path = root / "sources/test.json"
-            flake_path = root / "config/ai/flake.nix"
+            flake_path = root / "config/fleet/flake.nix"
             old_rev = "a" * 40
             new_rev = "b" * 40
             old_hash = "sha256-old"
@@ -1928,7 +1928,7 @@ got: sha256-requested
                                 },
                             },
                             "update": {
-                                "artifacts": ["config/ai/flake.nix"],
+                                "artifacts": ["config/fleet/flake.nix"],
                                 "input": "example",
                                 "kind": "fixed-flake-input",
                             },
@@ -2068,9 +2068,9 @@ got: sha256-requested
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             (root / "sources").mkdir()
-            (root / "config/ai").mkdir(parents=True)
+            (root / "config/fleet").mkdir(parents=True)
             catalog_path = root / "sources/test.json"
-            flake_path = root / "config/ai/flake.nix"
+            flake_path = root / "config/fleet/flake.nix"
             old_rev = "a" * 40
             new_rev = "b" * 40
 
@@ -2102,7 +2102,7 @@ got: sha256-requested
                                 }
                             },
                             "update": {
-                                "artifacts": ["config/ai/flake.nix"],
+                                "artifacts": ["config/fleet/flake.nix"],
                                 "input": "example",
                                 "kind": "npm-release+flake-input",
                                 "package": "example",
@@ -4164,7 +4164,7 @@ got: sha256-requested
             catalog["pi-smart-web-search"]["files"],
         )
         self.assertIn("sources/pi.json", catalog["pi-mcp-adapter"]["files"])
-        self.assertNotIn("config/ai/catalog.nix", catalog["pi-mcp-adapter"]["files"])
+        self.assertNotIn("config/fleet/catalog.nix", catalog["pi-mcp-adapter"]["files"])
         self.assertIn("packages/anvil-mcp/Cargo.lock", catalog["nelisp"]["files"])
         self.assertEqual(catalog["ws"]["_record"]["update"]["package"], "ws")
 
@@ -4450,7 +4450,7 @@ class IntegratedWorkflowTests(unittest.TestCase):
         root = Path(temporary) / "repo"
         fake_bin = Path(temporary) / "bin"
         (root / "bin").mkdir(parents=True)
-        (root / "config/ai").mkdir(parents=True)
+        (root / "config/fleet").mkdir(parents=True)
         (root / "overlays/ai").mkdir(parents=True)
         fake_bin.mkdir()
 
@@ -4458,7 +4458,7 @@ class IntegratedWorkflowTests(unittest.TestCase):
             {"nodes": {"root": {"inputs": {}}}, "root": "root", "version": 7}
         )
         (root / "flake.lock").write_text(empty_lock + "\n")
-        (root / "config/ai/flake.lock").write_text(empty_lock + "\n")
+        (root / "config/fleet/flake.lock").write_text(empty_lock + "\n")
         (root / ".gitignore").write_text("ignored.tmp\n")
         (root / "tracked.txt").write_text("before\n")
         (root / "tracked.txt").chmod(0o640)
@@ -4475,7 +4475,7 @@ class IntegratedWorkflowTests(unittest.TestCase):
         (root / "npm-lock-second.txt").write_text("npm lock second before\n")
         (root / "pypi.txt").write_text("pypi before\n")
         (root / "github.txt").write_text("github before\n")
-        (root / "config/ai/flake.nix").write_text("{ }\n")
+        (root / "config/fleet/flake.nix").write_text("{ }\n")
         (root / "target-old").write_text("old target\n")
         (root / "target-new").write_text("new target\n")
         (root / "link").symlink_to("target-old")
@@ -4532,7 +4532,7 @@ if "--inventory" in arguments:
     if os.environ.get("UPDATE_TEST_FIXED_TARGET") == "1":
         packages.append({
             "name": "fixed",
-            "files": ["fixed.txt", "projection.json", "config/ai/flake.nix"],
+            "files": ["fixed.txt", "projection.json", "config/fleet/flake.nix"],
             "input": "fixed-input",
             "inventoried": True,
             "kind": "fixed-flake-input",
@@ -4565,7 +4565,7 @@ if "--inventory" in arguments:
     if os.environ.get("UPDATE_TEST_NPM_FLAKE_TARGET") == "1":
         packages.append({
             "name": "npm-flake",
-            "files": ["fixed.txt", "projection.json", "config/ai/flake.nix"],
+            "files": ["fixed.txt", "projection.json", "config/fleet/flake.nix"],
             "input": "npm-flake-input",
             "inventoried": True,
             "kind": "npm-release+flake-input",
@@ -4730,7 +4730,7 @@ mutate_phase() {
 }
 if [[ $1 == flake && $2 == update ]]; then
   if [[ ${3:-} == --flake ]]; then
-    mutate_phase candidate-portable-lock config/ai/flake.lock
+    mutate_phase candidate-portable-lock config/fleet/flake.lock
     signal_phase candidate-portable-lock
     fail_phase candidate-portable-lock
   else
@@ -4742,7 +4742,7 @@ elif [[ $1 == flake && $2 == check ]]; then
   if [[ ${UPDATE_TEST_MUTATE_LIVE:-} == 1 ]]; then
     printf 'external\n' >>"$NIX_CONFIG_DIR/external.txt"
   fi
-  if [[ ${3:-} == ./config/ai ]]; then
+  if [[ ${3:-} == ./config/fleet ]]; then
     signal_phase candidate-portable-validation
     fail_phase candidate-portable-validation
   else
@@ -5085,9 +5085,9 @@ fi
             self.assertEqual(
                 commands,
                 [
-                    "flake update --flake ./config/ai fixed-input",
+                    "flake update --flake ./config/fleet fixed-input",
                     "flake update nix-config-ai",
-                    "flake check ./config/ai --all-systems --no-build",
+                    "flake check ./config/fleet --all-systems --no-build",
                     "flake check --no-build",
                 ],
             )
@@ -5136,9 +5136,9 @@ fi
             self.assertEqual(
                 command_log.read_text().splitlines(),
                 [
-                    "flake update --flake ./config/ai copy-input",
+                    "flake update --flake ./config/fleet copy-input",
                     "flake update nix-config-ai",
-                    "flake check ./config/ai --all-systems --no-build",
+                    "flake check ./config/fleet --all-systems --no-build",
                     "flake check --no-build",
                 ],
             )
@@ -5160,7 +5160,7 @@ fi
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(
                 command_log.read_text().splitlines()[0],
-                "flake update --flake ./config/ai git-ai llm-agents mcp-remote "
+                "flake update --flake ./config/fleet git-ai llm-agents mcp-remote "
                 "mcp-servers-nix pal-mcp-server pi-openai-server-compaction "
                 "pi-quiet translate-tool copy-input",
             )
@@ -5194,9 +5194,9 @@ fi
             self.assertEqual(
                 command_log.read_text().splitlines(),
                 [
-                    "flake update --flake ./config/ai build-input",
+                    "flake update --flake ./config/fleet build-input",
                     "flake update nix-config-ai",
-                    "flake check ./config/ai --all-systems --no-build",
+                    "flake check ./config/fleet --all-systems --no-build",
                     "flake check --no-build",
                 ],
             )
@@ -5244,9 +5244,9 @@ fi
             self.assertEqual(
                 command_log.read_text().splitlines(),
                 [
-                    "flake update --flake ./config/ai npm-flake-input",
+                    "flake update --flake ./config/fleet npm-flake-input",
                     "flake update nix-config-ai",
-                    "flake check ./config/ai --all-systems --no-build",
+                    "flake check ./config/fleet --all-systems --no-build",
                     "flake check --no-build",
                 ],
             )
@@ -5307,7 +5307,7 @@ fi
                 "overlay --prepare-github-projections github",
                 "overlay --prepare-npm-flake-inputs npm-flake",
                 "overlay --prepare-fixed-inputs fixed",
-                "nix flake update --flake ./config/ai "
+                "nix flake update --flake ./config/fleet "
                 "npm-flake-input fixed-input",
                 "overlay --sync-flake-projections",
             ]
@@ -5345,7 +5345,7 @@ fi
             self.assertEqual(
                 command_log.read_text().splitlines(),
                 [
-                    "flake check ./config/ai --all-systems --no-build",
+                    "flake check ./config/fleet --all-systems --no-build",
                     "flake check --no-build",
                 ],
             )
@@ -5393,7 +5393,7 @@ fi
             self.assertEqual(
                 command_log.read_text().splitlines(),
                 [
-                    "flake check ./config/ai --all-systems --no-build",
+                    "flake check ./config/fleet --all-systems --no-build",
                     "flake check --no-build",
                 ],
             )
@@ -5475,7 +5475,7 @@ fi
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             events = interleaving_log.read_text().splitlines()
-            portable_lock = events.index("nix flake update --flake ./config/ai")
+            portable_lock = events.index("nix flake update --flake ./config/fleet")
             root_lock = events.index("nix flake update")
             projection_sync = events.index("overlay --sync-flake-projections")
             npm_locks = events.index("overlay --prepare-npm-locks npm-lock")
@@ -5522,7 +5522,7 @@ fi
             self.assertEqual(
                 command_log.read_text().splitlines(),
                 [
-                    "flake check ./config/ai --all-systems --no-build",
+                    "flake check ./config/fleet --all-systems --no-build",
                     "flake check --no-build",
                 ],
             )
@@ -5971,14 +5971,14 @@ fi
             root = Path(temp_dir) / "repo"
             fake_bin = Path(temp_dir) / "bin"
             (root / "bin").mkdir(parents=True)
-            (root / "config/ai").mkdir(parents=True)
+            (root / "config/fleet").mkdir(parents=True)
             (root / "overlays/ai").mkdir(parents=True)
             fake_bin.mkdir()
             (root / "bin/update-overlay").write_text(SCRIPT.read_text())
             (root / "bin/update-overlay").chmod(0o700)
             empty_lock = json.dumps({"nodes": {"root": {"inputs": {}}}, "root": "root", "version": 7})
             (root / "flake.lock").write_text(empty_lock + "\n")
-            (root / "config/ai/flake.lock").write_text(empty_lock + "\n")
+            (root / "config/fleet/flake.lock").write_text(empty_lock + "\n")
             (root / "overlays/ai/package.nix").write_text("baseline\n")
             write_minimal_catalog(root)
 
@@ -6049,14 +6049,14 @@ echo catalog-change >> sources/test.json
             fake_bin = Path(temp_dir) / "bin"
             push_marker = Path(temp_dir) / "push-called"
             (root / "bin").mkdir(parents=True)
-            (root / "config/ai").mkdir(parents=True)
+            (root / "config/fleet").mkdir(parents=True)
             (root / "overlays/ai").mkdir(parents=True)
             fake_bin.mkdir()
             (root / "bin/update-overlay").write_text(SCRIPT.read_text())
             (root / "bin/update-overlay").chmod(0o700)
             empty_lock = json.dumps({"nodes": {"root": {"inputs": {}}}, "root": "root", "version": 7})
             (root / "flake.lock").write_text(empty_lock + "\n")
-            (root / "config/ai/flake.lock").write_text(empty_lock + "\n")
+            (root / "config/fleet/flake.lock").write_text(empty_lock + "\n")
             (root / "overlays/ai/package.nix").write_text("baseline\n")
             write_minimal_catalog(root)
 
@@ -6200,7 +6200,7 @@ exec "$REAL_GIT" "$@"
             with self.subTest(required_input=required_input):
                 self.assertIn(required_input, update_agents)
         self.assertIn(
-            'nix flake update --flake ./config/ai "${ai_inputs[@]}" "${lock_target_inputs[@]}"',
+            'nix flake update --flake ./config/fleet "${ai_inputs[@]}" "${lock_target_inputs[@]}"',
             update_agents,
         )
         self.assertNotIn("\n    nixpkgs\n", update_agents)
@@ -6233,7 +6233,7 @@ exec "$REAL_GIT" "$@"
         self.assertNotIn("commit_and_push_if_changed", update_agents)
         self.assertIn("bin/update-agents --all-inputs --brew", makefile)
         self.assertIn("if [[ $run_all_inputs == true ]]", update_agents)
-        self.assertIn("nix flake update --flake ./config/ai", update_agents)
+        self.assertIn("nix flake update --flake ./config/fleet", update_agents)
         catalog = load_source_catalog(root)
         expected_inputs = {
             name for name, target in catalog.items()
@@ -6526,7 +6526,7 @@ exec "$REAL_GIT" "$@"
 
     def test_portable_lock_closure_has_no_unfetchable_locators(self):
         root = SCRIPT.parent.parent
-        lock = json.loads((root / "config/ai/flake.lock").read_text())
+        lock = json.loads((root / "config/fleet/flake.lock").read_text())
         offenders = self._closure_impurities(lock)
         self.assertEqual(
             offenders,
@@ -6916,7 +6916,7 @@ exec "$REAL_GIT" "$@"
         """
         root = SCRIPT.parent.parent
         rejected = {}
-        for rel in ("flake.nix", "config/ai/flake.nix"):
+        for rel in ("flake.nix", "config/fleet/flake.nix"):
             text = (root / rel).read_text()
             for url in re.findall(r'\burl\s*=\s*"([^"]*)"', text):
                 kind = self._classify_flake_input_url(url)
@@ -6928,7 +6928,7 @@ exec "$REAL_GIT" "$@"
             "flake input coordinate classification changed: %s" % rejected,
         )
         classify = self._classify_flake_input_url
-        self.assertEqual(classify("path:./config/ai"), "repo-internal-path")
+        self.assertEqual(classify("path:./config/fleet"), "repo-internal-path")
         self.assertEqual(classify("path:./config/certs"), "repo-internal-path")
         self.assertEqual(
             classify("git+ssh://gitea/johnw/stock-trader.git?rev=51d789"),
@@ -6945,7 +6945,7 @@ exec "$REAL_GIT" "$@"
     def test_root_consumes_portable_input_authority_transitively(self):
         root = SCRIPT.parent.parent
         root_lock = json.loads((root / "flake.lock").read_text())
-        portable_lock = json.loads((root / "config/ai/flake.lock").read_text())
+        portable_lock = json.loads((root / "config/fleet/flake.lock").read_text())
         root_node = root_lock["nodes"]["root"]
         portable_root = portable_lock["nodes"]["root"]
         shared_names = set(portable_root["inputs"])
@@ -6993,7 +6993,7 @@ exec "$REAL_GIT" "$@"
         self.assertNotEqual(root_graph, canonical_inputs(drifted, drifted["nodes"]["root"]))
 
         root_flake = (root / "flake.nix").read_text()
-        self.assertIn('nix-config-ai.url = "path:./config/ai"', root_flake)
+        self.assertIn('nix-config-ai.url = "path:./config/fleet"', root_flake)
         self.assertNotIn("agent-browser-source = {", root_flake)
 
     def test_profile_symlinked_scripts_find_packaged_routing_library(self):

@@ -62,7 +62,7 @@ failed on a busy shared Nix SQLite database. This is useful measured evidence, n
 committed regression metric: `pythonDynamic` therefore remains `unknown` in schema 1
 instead of laundering a partial/flaky run into pass.
 
-The Nix probes deliberately use `.#...` and `./config/ai#...`, never explicit `path:`
+The Nix probes deliberately use `.#...` and `./config/fleet#...`, never explicit `path:`
 flake references. On installed Nix 2.34.8 an explicit `path:` source copies untracked
 files and `.git` into the world-readable store; the manifest validator carries a
 replayable negative that rejects that form.

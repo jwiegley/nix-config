@@ -869,7 +869,7 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/ai/flake.lock"
+          "config/fleet/flake.lock"
         ],
         "input": "git-ai",
         "kind": "flake-input"
@@ -890,7 +890,7 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/ai/flake.lock"
+          "config/fleet/flake.lock"
         ],
         "input": "llm-agents",
         "kind": "flake-input"
@@ -911,7 +911,7 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/ai/flake.lock"
+          "config/fleet/flake.lock"
         ],
         "input": "mcp-remote",
         "kind": "flake-input"
@@ -932,7 +932,7 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/ai/flake.lock"
+          "config/fleet/flake.lock"
         ],
         "input": "mcp-servers-nix",
         "kind": "flake-input"
@@ -953,7 +953,7 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/ai/flake.lock"
+          "config/fleet/flake.lock"
         ],
         "input": "pal-mcp-server",
         "kind": "flake-input"
@@ -974,8 +974,8 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/ai/flake.lock",
-          "config/ai/flake.nix"
+          "config/fleet/flake.lock",
+          "config/fleet/flake.nix"
         ],
         "input": "rust-overlay",
         "kind": "fixed-flake-input",
@@ -997,7 +997,7 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/ai/flake.lock"
+          "config/fleet/flake.lock"
         ],
         "input": "translate-tool",
         "kind": "flake-input"

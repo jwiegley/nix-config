@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prove that config/ai is a real immutable subflake at an exact Git revision.
+# Prove that config/fleet is a real immutable subflake at an exact Git revision.
 # A git+file reference is deliberately insufficient: Nix treats it as mutable
 # and may repair flake.lock in place, turning a missing or stale lock into a
 # false pass.  This gate instead evaluates a content-pinned Git archive.
@@ -17,7 +17,7 @@ if [[ ${1-} == -h || ${1-} == --help ]]; then
 fi
 [[ $# -le 1 ]] || die "expected at most one revision"
 
-for tool in git nix python3 cmp cp mktemp unlink rmdir; do
+for tool in git nix python3 cmp cp grep mktemp unlink rmdir; do
     command -v "$tool" >/dev/null 2>&1 || die "required command is missing: $tool"
 done
 
@@ -31,15 +31,16 @@ commit=$(
         2>/dev/null
 ) || die "revision is not a commit: $revision"
 
-worktree_lock=$repo_root/config/ai/flake.lock
+worktree_lock=$repo_root/config/fleet/flake.lock
 [[ -f $worktree_lock && ! -L $worktree_lock ]] ||
-    die "working-tree config/ai/flake.lock is missing or not a regular file"
+    die "working-tree config/fleet/flake.lock is missing or not a regular file"
 
 tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/immutable-subflake.XXXXXX") ||
     die "could not create a temporary directory"
 archive=$tmp_dir/source.tar
 prefetch_json=$tmp_dir/prefetch.json
 metadata_json=$tmp_dir/metadata.json
+stub_log=$tmp_dir/stub.log
 committed_lock=$tmp_dir/committed-flake.lock
 lock_snapshot=$tmp_dir/worktree-flake.lock
 lock_change_reported=0
@@ -57,13 +58,14 @@ cleanup() {
     if [[ -f $lock_snapshot ]] && ! lock_is_unchanged; then
         if [[ $lock_change_reported -eq 0 ]]; then
             printf '%s\n' \
-                'immutable-subflake-check: working-tree config/ai/flake.lock changed' >&2
+                'immutable-subflake-check: working-tree config/fleet/flake.lock changed' >&2
         fi
         status=1
     fi
 
     for path in \
         "$metadata_json" \
+        "$stub_log" \
         "$prefetch_json" \
         "$committed_lock" \
         "$lock_snapshot" \
@@ -85,8 +87,8 @@ cleanup() {
 trap cleanup EXIT
 
 cp "$worktree_lock" "$lock_snapshot" || die "could not snapshot the working-tree lock"
-git -C "$repo_root" show "$commit:config/ai/flake.lock" >"$committed_lock" ||
-    die "revision $commit has no config/ai/flake.lock"
+git -C "$repo_root" show "$commit:config/fleet/flake.lock" >"$committed_lock" ||
+    die "revision $commit has no config/fleet/flake.lock"
 git -C "$repo_root" archive --format=tar --output="$archive" "$commit" ||
     die "could not archive revision $commit"
 
@@ -120,7 +122,7 @@ print(quote(value, safe=""))
 PY
 )
 
-immutable_ref="tarball+${archive_uri}?dir=config/ai&narHash=${encoded_nar_hash}"
+immutable_ref="tarball+${archive_uri}?dir=config/fleet&narHash=${encoded_nar_hash}"
 if ! nix flake metadata --json --no-write-lock-file "$immutable_ref" \
     >"$metadata_json"; then
     die "nix flake metadata failed for the immutable subflake reference"
@@ -150,9 +152,9 @@ if locked.get("type") != "tarball":
         "immutable-subflake-check: metadata locked.type is not tarball: "
         + repr(locked.get("type"))
     )
-if locked.get("dir") != "config/ai":
+if locked.get("dir") != "config/fleet":
     raise SystemExit(
-        "immutable-subflake-check: metadata locked.dir is not config/ai: "
+        "immutable-subflake-check: metadata locked.dir is not config/fleet: "
         + repr(locked.get("dir"))
     )
 if locked.get("narHash") != prefetch.get("hash"):
@@ -169,7 +171,7 @@ fi
 
 if ! lock_is_unchanged; then
     lock_change_reported=1
-    die "working-tree config/ai/flake.lock changed during metadata resolution"
+    die "working-tree config/fleet/flake.lock changed during metadata resolution"
 fi
 
 if ! nix flake check "$immutable_ref" \
@@ -179,7 +181,21 @@ fi
 
 if ! lock_is_unchanged; then
     lock_change_reported=1
-    die "working-tree config/ai/flake.lock changed during flake check"
+    die "working-tree config/fleet/flake.lock changed during flake check"
+fi
+
+stale_ref="tarball+${archive_uri}?dir=config/ai&narHash=${encoded_nar_hash}"
+if nix flake show --no-write-lock-file "$stale_ref" \
+    >"$stub_log" 2>&1; then
+    die "stale config/ai reference unexpectedly resolved"
+fi
+if ! grep -Fq 'config/fleet' "$stub_log" || ! grep -Fq '#47' "$stub_log"; then
+    die "stale config/ai failure does not name config/fleet and #47"
+fi
+
+if ! lock_is_unchanged; then
+    lock_change_reported=1
+    die "working-tree config/fleet/flake.lock changed during stale-stub verification"
 fi
 
 printf 'immutable-subflake-check: revision %s passed\n' "${commit:0:12}"

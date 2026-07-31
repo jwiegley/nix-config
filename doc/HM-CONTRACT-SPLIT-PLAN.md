@@ -34,9 +34,9 @@ number the code actually supports:
    Manager host configurations (`task9Evaluations`, `task9JohnwEvaluations`,
    `task9AgentDeckEvaluation` — full `activationPackage`/`home.path` closures).
    This is by far the most expensive evaluation in the file.
-3. **model synchronization** — the `config/ai/model-sync.nix` factory and its
+3. **model synchronization** — the `config/fleet/model-sync.nix` factory and its
    generated shell script (`task10*`). Pure factory + script eval.
-4. **package selection** — `config/ai`/`config/packages.nix` input gating
+4. **package selection** — `config/fleet`/`config/packages.nix` input gating
    (`task11*`). Pure eval, no runtime harness.
 
 Why not three or five: groups 1/3/4 are each cheap pure evaluations that touch
@@ -86,7 +86,7 @@ caching: Nix evaluation is lazy, so `nix build .#checks.<sys>.<one-check>` force
 only the sub-lists and fixtures that check references — building the
 catalog-renderers, model-sync, or package-selection check never forces the Home
 Manager evaluations. The library is a support module, not a fifth check; it
-mirrors how `config/ai/renderers/` is already a directory of shared modules.
+mirrors how `config/fleet/renderers/` is already a directory of shared modules.
 
 ## 3. What happens to the monolith
 
@@ -210,7 +210,7 @@ Monolith line numbers refer to `/Users/johnw/src/nix-impl/test/ai/home-manager-c
   registry + policy accept/reject the right shapes, every MCP transport/header
   is exact, and each of the five renderers emits exactly the committed path set,
   companions, required-env, and secret-reference shape for every profile — plus
-  the committed on-disk `config/ai` asset layout (modes, symlink containment,
+  the committed on-disk `config/fleet` asset layout (modes, symlink containment,
   skill frontmatter, forbidden artifacts, deployment-field ban) and the
   statusline unit test.
 - **integration** (`home-manager-integration`): the Home Manager host
@@ -232,7 +232,7 @@ Monolith line numbers refer to `/Users/johnw/src/nix-impl/test/ai/home-manager-c
 
 ## 2. Negative test per check (the concrete change that makes it fail)
 
-- **catalog-renderers**: in `config/ai/agents/bash-reviewer.md`, change any field
+- **catalog-renderers**: in `config/fleet/agents/bash-reviewer.md`, change any field
   that feeds `expectedOpenCodeAgentMetadata` → the committed sha256 literal
   `27eaf3302a4ff6cd97d4a0f5a7027d57c121f362318c1b4d011b0fce691b3e1a`
   (monolith `:3779`) no longer matches and `deepSeq` throws. (Equivalent: add a
@@ -244,7 +244,7 @@ Monolith line numbers refer to `/Users/johnw/src/nix-impl/test/ai/home-manager-c
   fails. (Equivalent: reorder the aiManagedPreflight activation after
   linkGeneration → `preflight_line < collision_line` (`:4279`) fails.)
 - **model-sync**: add one more `defaults write` (e.g. a new iTerm2 key) in
-  `config/ai/model-sync.nix` → `task10_assert_exact_app_calls` reports
+  `config/fleet/model-sync.nix` → `task10_assert_exact_app_calls` reports
   `defaults allowlist mismatch` (python `:4716`) and the build exits 1.
   (Equivalent: echo the credential to stdout → `task10_assert_redacted`
   greps the `TASK10-CREDENTIAL-SENTINEL` and fails, `:4664`.)
@@ -282,7 +282,7 @@ routed to exactly one split check. Nothing is dropped or merely "redundant."
 | `:4204-4212` | pi-extension source existence (`auto-compact-resume`, gallery, mcp-adapter, quiet) | **catalog-renderers** |
 | `:4214-4282` | aarch64-darwin: wrapper exec bits, legacy-`claude` collision under login zsh, activation ordering | **integration** |
 | `:4284-4424` | `rendererDocumentManifest` python (JSON/TOML/text/frontmatter vs. committed `expected`) | **catalog-renderers** |
-| `:4426-4637` | `config/ai` asset walk python (modes, symlink containment, skill frontmatter, forbidden artifacts, deployment fields) | **catalog-renderers** |
+| `:4426-4637` | `config/fleet` asset walk python (modes, symlink containment, skill frontmatter, forbidden artifacts, deployment fields) | **catalog-renderers** |
 | `:4639-4901` | task10 model-sync shell harness (redaction, idempotence, rollback, process guard, atomic mv) | **model-sync** |
 
 ### Required behaviors (issue) mapped check-by-check
@@ -309,7 +309,7 @@ the aggregate.
 ## 4. Shared setup — why the checks' inputs differ (the caching claim)
 
 - **catalog-renderers** forces `catalog` + all five renderers + `pi-gallery`;
-  runtime reads `${src}` (statusline test + `config/ai` walk) and the
+  runtime reads `${src}` (statusline test + `config/fleet` walk) and the
   renderer-document / pi-extension store paths. It does **not** force any Home
   Manager configuration.
 - **integration** forces the Home Manager host evaluations — the
@@ -333,10 +333,10 @@ generated-script store hash) — it does not force renderers or Home Manager.
 **Honest residual coupling:** catalog-renderers keeps the monolith's whole-tree
 `${src}` dependency, because `statusline-command-test.py` resolves the repo root
 from `__file__.parents[2]` (it needs the tree layout, not a lone file) and the
-asset walk reads all of `config/ai`. So editing an unrelated file still rebuilds
+asset walk reads all of `config/fleet`. So editing an unrelated file still rebuilds
 catalog-renderers — no worse than today, and the other three are strictly
 better. A follow-up can narrow it with `lib.fileset.toSource` over
-`{config/ai, test/ai/statusline-command-test.py}` (config/ai has **zero**
+`{config/fleet, test/ai/statusline-command-test.py}` (config/fleet has **zero**
 symlinks — verified — so no dangling risk), **but** `src = self.outPath` is a
 *string*, not a path, so `lib.fileset` rejects it directly; the follow-up must
 first obtain a path-typed root (e.g. thread the flake's path input through, or

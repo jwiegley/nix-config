@@ -34,7 +34,7 @@ let
     "rust-overlay"
     "translate-tool"
   ];
-  lock = builtins.fromJSON (builtins.readFile ../../config/ai/flake.lock);
+  lock = builtins.fromJSON (builtins.readFile ../../config/fleet/flake.lock);
   root = lock.nodes.${lock.root};
   same =
     name: field: actual: expected:

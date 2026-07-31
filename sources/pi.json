@@ -31,8 +31,8 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/ai/flake.lock",
-          "config/ai/flake.nix"
+          "config/fleet/flake.lock",
+          "config/fleet/flake.nix"
         ],
         "input": "agent-browser-source",
         "kind": "fixed-flake-input"
@@ -157,8 +157,8 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/ai/flake.lock",
-          "config/ai/flake.nix"
+          "config/fleet/flake.lock",
+          "config/fleet/flake.nix"
         ],
         "input": "pi-btw",
         "kind": "npm-release+flake-input",
@@ -366,7 +366,7 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/ai/flake.lock"
+          "config/fleet/flake.lock"
         ],
         "input": "ponytail",
         "kind": "flake-input+copy"
@@ -574,7 +574,7 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/ai/flake.lock"
+          "config/fleet/flake.lock"
         ],
         "buildPackage": "agent-resources",
         "input": "pi-mcp-adapter",
@@ -598,7 +598,7 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/ai/flake.lock"
+          "config/fleet/flake.lock"
         ],
         "input": "pi-openai-server-compaction",
         "kind": "flake-input"
@@ -619,7 +619,7 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/ai/flake.lock"
+          "config/fleet/flake.lock"
         ],
         "input": "pi-quiet",
         "kind": "flake-input"

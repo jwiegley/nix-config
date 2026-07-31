@@ -23,7 +23,7 @@ let
       ;
   };
 
-  # Input gating for config/ai and config/packages.nix. Pure evaluation with
+  # Input gating for config/fleet and config/packages.nix. Pure evaluation with
   # no runtime harness, so this check asserts and then touches $out.
   checks = common.task11PackageChecks ++ common.task11AiperfChecks;
 in

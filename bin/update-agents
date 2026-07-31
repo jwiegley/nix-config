@@ -693,18 +693,18 @@ fi
                 | .files[]
             ' "$transaction_dir/inventory.json"
             if ((${#lock_target_inputs[@]})); then
-                printf '%s\n' flake.lock config/ai/flake.lock
+                printf '%s\n' flake.lock config/fleet/flake.lock
             fi
         } | sort -u >"$transaction_dir/allowed-paths"
     else
         {
             jq -r '.packages[].files[]' "$transaction_dir/inventory.json"
-            printf '%s\n' flake.lock config/ai/flake.lock
+            printf '%s\n' flake.lock config/fleet/flake.lock
         } | sort -u >"$transaction_dir/allowed-paths"
     fi
 
     # Resolve projections that need the currently locked package set before
-    # either flake.nix literal is moved ahead of config/ai/flake.lock.
+    # either flake.nix literal is moved ahead of config/fleet/flake.lock.
     if ((${#pypi_target_names[@]})); then
         prepare_args=(--prepare-pypi-artifacts)
         if [[ -n $requested_version ]]; then
@@ -740,15 +740,15 @@ fi
     fi
 
     if [[ $run_all_inputs == true ]]; then
-        nix flake update --flake ./config/ai
+        nix flake update --flake ./config/fleet
         nix flake update
     elif ((${#requested_targets[@]})); then
         if ((${#lock_target_inputs[@]})); then
-            nix flake update --flake ./config/ai "${lock_target_inputs[@]}"
+            nix flake update --flake ./config/fleet "${lock_target_inputs[@]}"
             nix flake update nix-config-ai
         fi
     else
-        nix flake update --flake ./config/ai "${ai_inputs[@]}" "${lock_target_inputs[@]}"
+        nix flake update --flake ./config/fleet "${ai_inputs[@]}" "${lock_target_inputs[@]}"
         # The root consumes the portable subflake transitively; refresh its nested
         # nodes only after the portable lock is complete.
         nix flake update nix-config-ai
@@ -777,7 +777,7 @@ fi
     if ((${#changed_nix[@]})); then
         nixfmt "${changed_nix[@]}"
     fi
-    nix flake check ./config/ai --all-systems --no-build
+    nix flake check ./config/fleet --all-systems --no-build
     nix flake check --no-build
 
     declare -A allowed=()

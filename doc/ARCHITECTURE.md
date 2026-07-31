@@ -22,7 +22,7 @@ Hera and Clio are direct root-flake outputs. Only their authoritative checkout m
 ### Portable AI
 
 ```text
-config/ai/flake.nix
+config/fleet/flake.nix
   -> flake-ai.nix
   -> flake/ai.nix
   -> overlays/ai/default.nix
@@ -36,7 +36,7 @@ The portable subflake has its own lock for remote-safe consumption. Root and por
 ```text
 consumer flake
   nix-config     = root source/module
-  nix-config-ai  = same revision, dir=config/ai
+  nix-config-ai  = same revision, dir=config/fleet
   -> consumer-owned overlays and Home Manager/NixOS activation
 ```
 
@@ -46,8 +46,8 @@ Andoria/Delphi/GPU own standalone Home Manager checkouts. Vulcan/VPS own NixOS c
 
 | Module | Owns | Must not own |
 |---|---|---|
-| `config/ai/catalog.nix` | Profiles, selectors, resources, validation | Client serialization or package builds |
-| `config/ai/renderers/*` | One client's generated documents | Global resource selection |
+| `config/fleet/catalog.nix` | Profiles, selectors, resources, validation | Client serialization or package builds |
+| `config/fleet/renderers/*` | One client's generated documents | Global resource selection |
 | `config/ai.nix` | Home Manager composition/ownership guards | Package implementation |
 | `flake/ai.nix` | Portable package/app/check composition | Host activation and root lock policy |
 | `packages/*` | Build/runtime implementation | Host selection |

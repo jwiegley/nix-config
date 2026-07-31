@@ -485,8 +485,21 @@ class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
         )
         self.sample = self.root / "sample.nix"
         self.sample.write_text("# config/ai\n")
+        self.python_contract = self.root / "contract.py"
+        self.python_contract.write_text("OLD_PATH = 'config/ai'\n")
+        self.extensionless_tool = self.root / "inventory-tool"
+        self.extensionless_tool.write_text("#!/bin/sh\n# config/ai\n")
         subprocess.run(
-            ["git", "-C", str(self.root), "add", "--", "sample.nix"],
+            [
+                "git",
+                "-C",
+                str(self.root),
+                "add",
+                "--",
+                "sample.nix",
+                "contract.py",
+                "inventory-tool",
+            ],
             check=True,
             capture_output=True,
             text=True,
@@ -609,7 +622,11 @@ class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
         ]
         self.assertEqual(
             [(record["file"], record["line"], record["text"]) for record in singleton],
-            [("sample.nix", 1, "# config/ai")],
+            [
+                ("contract.py", 1, "OLD_PATH = 'config/ai'"),
+                ("inventory-tool", 2, "# config/ai"),
+                ("sample.nix", 1, "# config/ai"),
+            ],
         )
 
         mismatch_dest = Path(self.temp.name) / "mismatch.json"
@@ -703,7 +720,11 @@ class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
         ]
         self.assertEqual(
             [(record["file"], record["line"], record["text"]) for record in aba_records],
-            [("sample.nix", 1, "# config/ai")],
+            [
+                ("contract.py", 1, "OLD_PATH = 'config/ai'"),
+                ("inventory-tool", 2, "# config/ai"),
+                ("sample.nix", 1, "# config/ai"),
+            ],
         )
         self.assert_no_temporary_inventory()
 
@@ -725,6 +746,7 @@ class TestImmutableSubflakeCheck(unittest.TestCase):
         self.repo = self.root / "repo"
         self.repo.mkdir()
         (self.repo / "bin").mkdir()
+        (self.repo / "config" / "fleet").mkdir(parents=True)
         (self.repo / "config" / "ai").mkdir(parents=True)
         shutil.copy2(IMMUTABLE_SUBFLAKE_CHECK, self.repo / "bin")
 
@@ -737,11 +759,14 @@ class TestImmutableSubflakeCheck(unittest.TestCase):
             self.committed_lock, separators=(",", ":")
         ) + "\n"
         self.committed_up_import = "# committed up-import authority\n"
-        (self.repo / "config" / "ai" / "flake.lock").write_text(
+        (self.repo / "config" / "fleet" / "flake.lock").write_text(
             self.committed_lock_bytes, encoding="utf-8"
         )
-        (self.repo / "config" / "ai" / "flake.nix").write_text(
+        (self.repo / "config" / "fleet" / "flake.nix").write_text(
             "{ outputs = _: {}; }\n", encoding="utf-8"
+        )
+        (self.repo / "config" / "ai" / "flake.nix").write_text(
+            "throw \"config/fleet #47\"\n", encoding="utf-8"
         )
         (self.repo / "flake-ai.nix").write_text(
             self.committed_up_import, encoding="utf-8"
@@ -757,7 +782,7 @@ class TestImmutableSubflakeCheck(unittest.TestCase):
         # Deliberately disagree with the selected commit.  The gate may inspect
         # the working lock only for byte stability; archive and lock semantics
         # must both come from the requested revision.
-        self.worktree_lock = self.repo / "config" / "ai" / "flake.lock"
+        self.worktree_lock = self.repo / "config" / "fleet" / "flake.lock"
         self.worktree_lock_bytes = b'{"dirty-working-tree":true}\n'
         self.worktree_lock.write_bytes(self.worktree_lock_bytes)
 
@@ -813,7 +838,7 @@ if args[:2] == ["flake", "prefetch"]:
     row["archivePath"] = str(archive_path)
     with tarfile.open(archive_path) as archive:
         row["archiveLock"] = archive.extractfile(
-            "config/ai/flake.lock"
+            "config/fleet/flake.lock"
         ).read().decode()
         row["archiveUpImport"] = archive.extractfile("flake-ai.nix").read().decode()
     record(row)
@@ -826,10 +851,21 @@ if args[:2] == ["flake", "prefetch"]:
     ).read_text():
         raise SystemExit(92)
     print(json.dumps({"hash": "sha256-/+fixture=", "storePath": "/nix/store/fake"}))
+elif args[:2] == ["flake", "show"]:
+    reference = args[-1]
+    record(row)
+    print(
+        os.environ.get(
+            "FAKE_STUB_MESSAGE",
+            "config/ai was renamed to config/fleet by #47",
+        ),
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
 elif args[:2] == ["flake", "metadata"]:
     locked = {
         "type": os.environ.get("FAKE_METADATA_TYPE", "tarball"),
-        "dir": os.environ.get("FAKE_METADATA_DIR", "config/ai"),
+        "dir": os.environ.get("FAKE_METADATA_DIR", "config/fleet"),
         "narHash": os.environ.get("FAKE_METADATA_HASH", "sha256-/+fixture="),
         "url": "file:///the/archive.tar",
     }
@@ -890,8 +926,8 @@ else:
         self.assertEqual(self.worktree_lock.read_bytes(), self.worktree_lock_bytes)
 
         calls = self.calls()
-        self.assertEqual(len(calls), 3, calls)
-        prefetch, metadata, check = calls
+        self.assertEqual(len(calls), 4, calls)
+        prefetch, metadata, check, stale = calls
         self.assertEqual(prefetch["args"][:3], ["flake", "prefetch", "--json"])
         self.assertEqual(prefetch["archiveLock"], self.committed_lock_bytes)
         self.assertEqual(prefetch["archiveUpImport"], self.committed_up_import)
@@ -900,7 +936,7 @@ else:
         immutable_ref = metadata["args"][-1]
         self.assertTrue(immutable_ref.startswith("tarball+file://"), immutable_ref)
         self.assertIn(
-            "?dir=config/ai&narHash=sha256-%2F%2Bfixture%3D", immutable_ref
+            "?dir=config/fleet&narHash=sha256-%2F%2Bfixture%3D", immutable_ref
         )
         self.assertNotIn("git+file", immutable_ref)
         self.assertEqual(
@@ -918,6 +954,8 @@ else:
                 "--no-write-lock-file",
             ],
         )
+        self.assertIn("?dir=config/ai&narHash=", stale["args"][-1])
+        self.assertEqual(stale["args"][:2], ["flake", "show"])
         self.assertEqual(list(self.scratch.iterdir()), [])
 
     def test_default_revision_is_head(self):
@@ -926,10 +964,21 @@ else:
         self.assertIn(self.revision[:12], result.stdout)
         self.assertEqual(self.worktree_lock.read_bytes(), self.worktree_lock_bytes)
 
+    def test_stale_stub_failure_must_name_target_and_issue(self):
+        for message in ("renamed by #47", "renamed to config/fleet"):
+            with self.subTest(message=message):
+                result = self.run_gate(FAKE_STUB_MESSAGE=message)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(
+                    "does not name config/fleet and #47",
+                    result.stdout + result.stderr,
+                )
+                self.assertEqual(len(self.calls()), 4)
+
     def test_metadata_requires_tarball_dir_and_prefetched_nar_hash(self):
         cases = (
             ({"FAKE_METADATA_TYPE": "git"}, "locked.type is not tarball"),
-            ({"FAKE_METADATA_DIR": "config/fleet"}, "locked.dir is not config/ai"),
+            ({"FAKE_METADATA_DIR": "config/ai"}, "locked.dir is not config/fleet"),
             ({"FAKE_METADATA_HASH": "sha256-other="}, "locked.narHash differs"),
         )
         for override, diagnostic in cases:
@@ -955,7 +1004,7 @@ else:
                 result = self.run_gate(FAKE_MUTATE_ON=phase)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn(
-                    "working-tree config/ai/flake.lock changed",
+                    "working-tree config/fleet/flake.lock changed",
                     result.stdout + result.stderr,
                 )
                 expected_calls = 2 if phase == "metadata" else 3
@@ -1192,25 +1241,19 @@ class TestConsumerInventoryLoadBearingFacet(unittest.TestCase):
         ]
         self.assertEqual(stray, [], "doc-prose applied outside a .md file")
 
-    def test_known_code_and_catalog_traps_stay_load_bearing(self):
-        """These look like prose or messages and are neither.
-
-        home-manager-contract-common.nix carries expected VALUES of assertions;
-        sources/{ai,pi}.json carry the update tooling's artifact LISTS. A
-        prose-detecting filter would wrongly drop them, which is why the rule is
-        conservative.
-        """
+    def test_known_code_and_stub_traps_stay_load_bearing(self):
+        """The module name, stale-path detector, and throwing stub remain code."""
         for needle in (
             "home-manager-contract-common.nix",
-            "sources/ai.json",
-            "sources/pi.json",
+            "bin/gates-test.py",
+            "config/ai/flake.nix",
         ):
             hits = [r for r in self.faceted if needle in r["file"]]
             self.assertTrue(hits, "no faceted records for %s" % needle)
-            bad = [
-                (r["file"], r["line"]) for r in hits if r.get("loadBearing") is not True
-            ]
-            self.assertEqual(bad, [], "%s references were demoted" % needle)
+            self.assertTrue(
+                any(r.get("loadBearing") is True for r in hits),
+                "%s has no load-bearing old-path record" % needle,
+            )
         self.assertFalse(
             [
                 r
@@ -1287,6 +1330,21 @@ class TestConsumerInventoryLoadBearingFacet(unittest.TestCase):
         self.assertEqual(by_lb.get("false", 0), false_n)
         self.assertEqual(
             true_n + false_n,
-            self.inv["summary"]["byClassification"].get("rename-now", 0),
-            "faceted records should account for exactly the rename-now class",
+            len(
+                [
+                    record
+                    for record in self.refs
+                    if record.get("kind") == "internal-config-ai-ref"
+                ]
+            ),
+            "faceted records should account for every internal old-path reference",
         )
+
+    def test_no_unclassified_stale_operational_reference_remains(self):
+        stale = [
+            (record["file"], record["line"], record["text"])
+            for record in self.refs
+            if record.get("kind") == "internal-config-ai-ref"
+            and record.get("classification") == "rename-now"
+        ]
+        self.assertEqual(stale, [], "#47 left stale operational config/ai references")

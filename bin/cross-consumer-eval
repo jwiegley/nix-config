@@ -218,7 +218,7 @@ run_vps() {
     fi
     eval_target "vps [ovh-vps toplevel]" \
         --raw --override-input nix-config "$tree" \
-        --override-input nix-config-ai "$tree?dir=config/ai" \
+        --override-input nix-config-ai "$tree?dir=config/fleet" \
         "$vps_checkout#nixosConfigurations.ovh-vps.config.system.build.toplevel.drvPath"
 }
 
@@ -230,7 +230,7 @@ run_vulcan() {
     fi
     eval_target "vulcan [reach-in canary]" \
         --raw --override-input nix-config "$tree" \
-        --override-input nix-config-ai "$tree?dir=config/ai" \
+        --override-input nix-config-ai "$tree?dir=config/fleet" \
         "$vulcan_checkout#checks.aarch64-linux.nix-config-reachin-compat.drvPath"
 }
 

@@ -200,7 +200,7 @@ pkgs.runCommand "ai-home-manager-catalog-renderers"
         raise SystemExit(1)
     PY
 
-    python3 -I - "${src}/config/ai" <<'PY'
+    python3 -I - "${src}/config/fleet" <<'PY'
     import os
     import re
     import stat
@@ -238,7 +238,7 @@ pkgs.runCommand "ai-home-manager-catalog-renderers"
 
     errors = []
     if root.is_symlink():
-        errors.append("config/ai must not be a symlink")
+        errors.append("config/fleet must not be a symlink")
 
     paths = []
     for directory, directories, files in os.walk(root, followlinks=False):

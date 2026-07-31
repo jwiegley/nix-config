@@ -250,56 +250,56 @@
       "gap": null
     },
     {
-      "path": "config/ai/skills/comment-audit/scripts/inventory_comments.py",
+      "path": "config/fleet/skills/comment-audit/scripts/inventory_comments.py",
       "kind": "product",
       "tier": "ci-on-demand",
       "evidence": ["The comment-audit skill invokes its inventory, pending, show, update, and stats commands"],
       "gap": "No behavioral fixture is registered."
     },
     {
-      "path": "config/ai/skills/node-red/scripts/create_flow_template.py",
+      "path": "config/fleet/skills/node-red/scripts/create_flow_template.py",
       "kind": "product",
       "tier": "ci-on-demand",
       "evidence": ["The node-red skill exposes the create_flow_template.py command"],
       "gap": "No behavioral fixture is registered."
     },
     {
-      "path": "config/ai/skills/node-red/scripts/generate_uuid.py",
+      "path": "config/fleet/skills/node-red/scripts/generate_uuid.py",
       "kind": "product",
       "tier": "ci-on-demand",
       "evidence": ["The node-red skill exposes the generate_uuid.py command"],
       "gap": "No behavioral fixture is registered."
     },
     {
-      "path": "config/ai/skills/node-red/scripts/validate_flow.py",
+      "path": "config/fleet/skills/node-red/scripts/validate_flow.py",
       "kind": "product",
       "tier": "ci-on-demand",
       "evidence": ["The node-red skill exposes the validate_flow.py command"],
       "gap": "No behavioral fixture is registered."
     },
     {
-      "path": "config/ai/skills/node-red/scripts/wire_nodes.py",
+      "path": "config/fleet/skills/node-red/scripts/wire_nodes.py",
       "kind": "product",
       "tier": "ci-on-demand",
       "evidence": ["The node-red skill exposes the wire_nodes.py command"],
       "gap": "No behavioral fixture is registered."
     },
     {
-      "path": "config/ai/skills/skill-creator/scripts/init_skill.py",
+      "path": "config/fleet/skills/skill-creator/scripts/init_skill.py",
       "kind": "product",
       "tier": "ci-on-demand",
       "evidence": ["The skill-creator workflow exposes the init_skill.py command"],
       "gap": "No behavioral fixture is registered."
     },
     {
-      "path": "config/ai/skills/skill-creator/scripts/package_skill.py",
+      "path": "config/fleet/skills/skill-creator/scripts/package_skill.py",
       "kind": "product",
       "tier": "ci-on-demand",
       "evidence": ["The skill-creator workflow exposes the package_skill.py command"],
       "gap": "No behavioral fixture is registered."
     },
     {
-      "path": "config/ai/skills/skill-creator/scripts/quick_validate.py",
+      "path": "config/fleet/skills/skill-creator/scripts/quick_validate.py",
       "kind": "product",
       "tier": "ci-on-demand",
       "evidence": ["The skill-creator workflow exposes the quick_validate.py command"],
@@ -665,7 +665,7 @@
       "gap": "Package and language modes and failure branches remain untested."
     },
     {
-      "path": "config/ai/statusline-command.sh",
+      "path": "config/fleet/statusline-command.sh",
       "kind": "production",
       "tier": "pre-push",
       "evidence": ["test/ai/statusline-command-test.py executes injection, jq-count, and malformed-input behavior"],

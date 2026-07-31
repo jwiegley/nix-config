@@ -14,7 +14,7 @@ This file provides guidance to coding agents working in this repository.
 ```bash
 # Baseline/focused tests
 python3 -m unittest -v bin/update-overlay-test.py
-nix flake check ./config/ai --all-systems --no-build
+nix flake check ./config/fleet --all-systems --no-build
 make test
 
 # Darwin build without activation
@@ -36,9 +36,9 @@ Never run `nix flake update` or `nix flake lock` under `sudo`; root and user fet
 
 ## Architecture invariants
 
-- Root implementation is owned here; portable AI is the `config/ai` subflake from the same revision.
-- External consumers use paired root and `?dir=config/ai` inputs. Their locks and switch commands remain authoritative in their own checkout.
-- `config/ai/catalog.nix` owns profiles/resources/selection; `config/ai/renderers/` are concrete client adapters.
+- Root implementation is owned here; portable AI is the `config/fleet` subflake from the same revision.
+- External consumers use paired root and `?dir=config/fleet` inputs. Their locks and switch commands remain authoritative in their own checkout.
+- `config/fleet/catalog.nix` owns profiles/resources/selection; `config/fleet/renderers/` are concrete client adapters.
 - `packages/` owns package implementation. Overlays should expose or narrowly override packages, not hide unrelated package bodies.
 - Mutable agent state is not Nix-owned. Nix owns generated leaves only.
 - Pi and Codex credentials stay environment-only. Never add request-time secret values to argv, config, logs, or generated files.

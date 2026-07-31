@@ -8,7 +8,7 @@ Personal, multi-host Nix configuration for Darwin, standalone Home Manager, NixO
 |---|---|---|---|
 | Hera | aarch64-darwin | `~/src/nix` | Direct `darwinConfigurations.hera` |
 | Clio | aarch64-darwin | `~/src/nix` on Clio | Direct `darwinConfigurations.clio` |
-| Andoria-08/T2, Delphi, GPU | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Paired `nix-config` source and `nix-config?dir=config/ai` inputs |
+| Andoria-08/T2, Delphi, GPU | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Paired `nix-config` source and `nix-config?dir=config/fleet` inputs |
 | Vulcan | aarch64 NixOS | `/etc/nixos` on Vulcan | Paired root/portable inputs plus shared Home Manager module |
 | VPS | x86_64 NixOS | `/etc/nixos` on the VPS | Root/portable inputs plus shared Home Manager module |
 
@@ -42,7 +42,7 @@ Run commands from this repository with its direnv loaded. Do not use `nix develo
 make test
 
 # Portable evaluation
-nix flake check ./config/ai --all-systems --no-build
+nix flake check ./config/fleet --all-systems --no-build
 
 # Format/lint through repository hooks
 lefthook run pre-commit --all-files
@@ -62,7 +62,7 @@ System and Home Manager switches are owned by each authoritative checkout. Build
 |---|---|
 | `flake.nix` | Root systems, packages, checks, and exported Home Manager module |
 | `config/` | Shared Home Manager/Darwin policy and AI catalog/renderers |
-| `config/ai/` | Portable AI subflake, models, profiles, resources, and client adapters |
+| `config/fleet/` | Portable AI subflake, models, profiles, resources, and client adapters |
 | `overlays/` | Root and AI package overrides/composition |
 | `packages/` | Package implementations, immutable Pi gallery, and Anvil runtime |
 | `test/` | Root, portable, wrapper, renderer, and activation contracts |

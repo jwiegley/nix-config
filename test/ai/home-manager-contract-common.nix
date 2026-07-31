@@ -13,20 +13,20 @@ let
   inherit (pkgs) lib;
 
   assetCheckPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
-  registryPath = "${src}/config/ai/model-registry.json";
+  registryPath = "${src}/config/fleet/model-registry.json";
   promptdeployReconciliationPath = "${src}/doc/migrations/promptdeploy-reconciliation.json";
   promptdeployReconciliation = builtins.fromJSON (builtins.readFile promptdeployReconciliationPath);
   codexSourceCatalogPath = "${
     inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.codex.src
   }/codex-rs/models-manager/models.json";
   rawModelRegistry = builtins.fromJSON (builtins.readFile registryPath);
-  modelPolicy = import "${src}/config/ai/model-policy.nix";
+  modelPolicy = import "${src}/config/fleet/model-policy.nix";
   piSources = import "${src}/packages/source-catalog.nix" "pi";
-  loadModelData = args: import "${src}/config/ai/models.nix" args;
+  loadModelData = args: import "${src}/config/fleet/models.nix" args;
   modelData = loadModelData { };
   catalogFor =
     data:
-    import "${src}/config/ai/catalog.nix" {
+    import "${src}/config/fleet/catalog.nix" {
       inherit lib;
       modelData = data;
       resources = agentResources;
@@ -1037,7 +1037,7 @@ let
       tuple: builtins.elem tuple currentModelTuples
     ) promptdeployReconciliation.models.sourceOnlyStaleTuples) [ ])
     (expectEqual "Promptdeploy model authority" promptdeployReconciliation.models.authority
-      "llm-setup.el through config/ai/model-registry.json"
+      "llm-setup.el through config/fleet/model-registry.json"
     )
     (expectEqual "Promptdeploy stale model disposition is recorded"
       (promptdeployNonBlank promptdeployReconciliation.models.sourceOnlyDisposition)
@@ -1103,11 +1103,11 @@ let
       default = modelData.profileDefaults.${profileId};
     };
 
-  claudeRendererPath = "${src}/config/ai/renderers/claude.nix";
-  codexRendererPath = "${src}/config/ai/renderers/codex.nix";
-  openCodeRendererPath = "${src}/config/ai/renderers/opencode.nix";
-  droidRendererPath = "${src}/config/ai/renderers/droid.nix";
-  piRendererPath = "${src}/config/ai/renderers/pi.nix";
+  claudeRendererPath = "${src}/config/fleet/renderers/claude.nix";
+  codexRendererPath = "${src}/config/fleet/renderers/codex.nix";
+  openCodeRendererPath = "${src}/config/fleet/renderers/opencode.nix";
+  droidRendererPath = "${src}/config/fleet/renderers/droid.nix";
+  piRendererPath = "${src}/config/fleet/renderers/pi.nix";
   piPkgs = pkgs // {
     agent-resources = agentResources;
     pi-gallery = piGallery;
@@ -1116,7 +1116,7 @@ let
     if builtins.pathExists claudeRendererPath then
       import claudeRendererPath { inherit lib pkgs; }
     else
-      throw "Task 6 RED: config/ai/renderers/claude.nix is missing";
+      throw "Task 6 RED: config/fleet/renderers/claude.nix is missing";
   codexRenderer =
     if builtins.pathExists codexRendererPath then
       import codexRendererPath {
@@ -1124,12 +1124,12 @@ let
         llmAgents = inputs.llm-agents;
       }
     else
-      throw "Task 6 RED: config/ai/renderers/codex.nix is missing";
+      throw "Task 6 RED: config/fleet/renderers/codex.nix is missing";
   openCodeRenderer =
     if builtins.pathExists openCodeRendererPath then
       import openCodeRendererPath { inherit lib pkgs; }
     else
-      throw "Task 7 RED: config/ai/renderers/opencode.nix is missing";
+      throw "Task 7 RED: config/fleet/renderers/opencode.nix is missing";
   hostFilterProbeRenderer = import openCodeRendererPath {
     inherit lib;
     pkgs = pkgs // {
@@ -1173,7 +1173,7 @@ let
     if builtins.pathExists droidRendererPath then
       import droidRendererPath { inherit lib pkgs; }
     else
-      throw "Task 7 RED: config/ai/renderers/droid.nix is missing";
+      throw "Task 7 RED: config/fleet/renderers/droid.nix is missing";
   piRenderer =
     if builtins.pathExists piRendererPath then
       import piRendererPath {
@@ -1181,7 +1181,7 @@ let
         pkgs = piPkgs;
       }
     else
-      throw "Task 8 RED: config/ai/renderers/pi.nix is missing";
+      throw "Task 8 RED: config/fleet/renderers/pi.nix is missing";
 
   renderClaude =
     profileId:
@@ -1969,7 +1969,7 @@ let
       ]
     );
   piExtensionSources = {
-    auto-compact-resume = "${../../config/ai/extensions/auto-compact-resume/index.ts}";
+    auto-compact-resume = "${../../config/fleet/extensions/auto-compact-resume/index.ts}";
     nix-gallery = "${piPkgs.pi-gallery}/share/pi-gallery/index.ts";
     pi-mcp-adapter = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-mcp-adapter";
     pi-quiet = "${piPkgs.agent-resources}/share/agent-resources/pi-extensions/pi-quiet";
@@ -2220,7 +2220,7 @@ let
         kind = "text";
         label = "${profileId} statusline";
         path = documentSource "${profileId}-statusline.sh" (file "${profile.root}/statusline-command.sh");
-        expectedText = builtins.readFile "${src}/config/ai/statusline-command.sh";
+        expectedText = builtins.readFile "${src}/config/fleet/statusline-command.sh";
       }
     ]
     ++ lib.mapAttrsToList (name: item: {
@@ -3142,12 +3142,12 @@ let
 
   # Managed Home contract: profile selection, path ownership, and Home Manager integration.
   task9AiModulePath = "${src}/config/ai.nix";
-  task9PreflightPath = "${src}/config/ai/preflight.nix";
+  task9PreflightPath = "${src}/config/fleet/preflight.nix";
   task9AiModule =
     if builtins.pathExists task9AiModulePath && builtins.pathExists task9PreflightPath then
       import task9AiModulePath
     else
-      throw "Task 9 RED: config/ai.nix and config/ai/preflight.nix are missing";
+      throw "Task 9 RED: config/ai.nix and config/fleet/preflight.nix are missing";
   task9RenderedByProfile =
     renderedClaude // renderedCodex // renderedOpenCode // renderedDroid // renderedPi;
   task9ExpectedProfileIds = {
@@ -3843,12 +3843,12 @@ let
   ++ task9FeaturePackageChecks;
 
   # Model synchronization contract: safe, idempotent DEVONthink and iTerm updates.
-  task10ModelSyncPath = "${src}/config/ai/model-sync.nix";
+  task10ModelSyncPath = "${src}/config/fleet/model-sync.nix";
   task10ModelSyncSource =
     if builtins.pathExists task10ModelSyncPath then
       builtins.readFile task10ModelSyncPath
     else
-      throw "Task 10 RED: config/ai/model-sync.nix is missing";
+      throw "Task 10 RED: config/fleet/model-sync.nix is missing";
   task10ModelSyncFactory = import task10ModelSyncPath {
     lib = lib // {
       inherit (homeManagerLib) hm;

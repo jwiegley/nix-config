@@ -17,16 +17,13 @@
 #
 # CLASSIFICATION SCHEME (issue #17). Every reference is exactly one of:
 #
-#   rename-now       A reference to the literal "config/ai" path inside
-#                    nix-config's own tree. #47 rewrites it in the rename commit.
+#   rename-now       A stale operational reference to the literal "config/ai"
+#                    path inside nix-config's own tree. #47 rewrites these.
 #
-#   stub-covered     An external consumer edge that resolves through the config/ai
-#                    subflake: the ?dir=config/ai input, its llm-agents follows,
-#                    and its overlays.default use. Recommended disposition ASSUMES
-#                    #47 leaves a transitional config/ai -> config/fleet stub so
-#                    these keep building until each consumer migrates its own URL.
-#                    If Q4/GAP-DECISIONS declines the stub, reclassify these as a
-#                    coordinated consumer-side URL rename. Owner + trigger recorded.
+#   stub-covered     An external consumer edge that still resolves through the
+#                    retired ?dir=config/ai URL. #47's throwing stub makes this
+#                    fail loudly; the consumer URL must move in the coordinated
+#                    publication transaction. Owner + trigger are recorded.
 #
 #   retire           A consumer reach-in into nix-config INTERNAL overlay files
 #                    (${inputs.nix-config}/overlays/*.nix) and the attributes
@@ -112,13 +109,36 @@ home = os.path.expanduser("~")
 
 SCHEMA_VERSION = 1
 
-# The include globs and patterns are recorded verbatim in the artifact so a later
-# consumer re-derives identically instead of inventing its own query. They match
-# issue #17's Verification block.
-INCLUDE_GLOBS = ["*.nix", "*.json", "*.yml", "*.yaml", "*.md", "*.sh"]
+# Scan every tracked path. grep -I rejects binary payloads; limiting this to a
+# hand-maintained extension list missed the extensionless production scripts and
+# Python contracts that execute the rename.
+INCLUDE_GLOBS = ["*"]
 EXCLUDED_INTERNAL_PATHS = {"test/inventory/consumer-inventory.json"}
 EXCLUDED_INTERNAL_PREFIXES = ("test/baseline/",)
 CONFIG_AI = "config/ai"
+CONFIG_FLEET = "config/fleet"
+INTENTIONAL_CONFIG_AI_FILES = {
+    "bin/consumer-inventory",
+    "bin/gates-test.py",
+    "bin/immutable-subflake-check",
+    "doc/AI-NIX-REINTEGRATION-WIGGUM-HANDOFF.md",
+    "doc/AI-NIX-REINTEGRATION-WIGGUM-PLAN.md",
+    "doc/AI-UPDATE-FOLLOWUPS-2026-07-24.md",
+    "doc/FLEET-DECISIONS.md",
+    "doc/FLEET-DESIGN-PLAN.md",
+    "doc/FLEET-IMPL-WIGGUM-HANDOFF.md",
+    "doc/FLEET-IMPL-WIGGUM-PLAN.md",
+    "doc/FLEET-PROGRAMME-CROSS-STREAM.md",
+    "doc/HM-CONTRACT-SPLIT-PLAN.md",
+    "doc/PARITY-ORACLE-REFRESH.md",
+    "doc/RENAME-ROLLBACK.md",
+    "doc/UNIFIED-CONFIG-RESEARCH.md",
+    "doc/UNIFIED-CONFIG-WIGGUM-HANDOFF.md",
+    "doc/UNIFIED-CONFIG-WIGGUM-PLAN.md",
+    "doc/designs/HOST-REGISTRY-PLAN.md",
+    "doc/migrations/nix-managed-agent-oracle.md",
+}
+INTENTIONAL_CONFIG_AI_PREFIXES = ("doc/superpowers/plans/",)
 FLAKE_AI_RE = re.compile(r"flake-ai\.nix")
 # A load-bearing flake-ai.nix import is a relative/interpolated path in a .nix
 # file that is not a comment; doc/lint mentions are counted but not classified.
@@ -173,6 +193,38 @@ def ref_kind(path, text):
 
 def load_bearing(kind):
     return kind not in ("doc-prose", "comment")
+
+
+def classify_internal_old_path(path, text):
+    if path == "config/ai/flake.nix":
+        return (
+            "retain-with-owner",
+            "jwiegley/nix-config#47",
+            "retire only after #63 proves every stale consumer URL is gone",
+            "throwing compatibility stub; stale consumers must fail loudly",
+        )
+    if path in INTENTIONAL_CONFIG_AI_FILES or path.startswith(
+        INTENTIONAL_CONFIG_AI_PREFIXES
+    ):
+        return (
+            "retain-with-owner",
+            "jwiegley/nix-config#47 historical or detector evidence",
+            "none; preserve recorded history or stale-path detection",
+            "intentional old-path reference, not a live config/fleet consumer",
+        )
+    if "config/ai.nix" in text and "config/ai/" not in text and "?dir=config/ai" not in text:
+        return (
+            "retain-with-owner",
+            "config/ai.nix Home Manager module",
+            "none; the sibling module filename is not the renamed directory",
+            "module filename, not a config/ai directory reference",
+        )
+    return (
+        "rename-now",
+        "jwiegley/nix-config#47 (E3-RENAME)",
+        "rewrite before #47 reaches its local verification boundary",
+        "stale operational reference to the renamed config/ai directory",
+    )
 
 
 def rel(path):
@@ -396,7 +448,8 @@ def scan_reachins(path, consumer_root):
 
 def load_lock_nc_nodes(root):
     """Map dir-key -> node info for every flake.lock node referencing nix-config.
-    Key is '' for the repo-root input and 'config/ai' for the subflake input."""
+    Key is '' for the repo-root input and the declared config/ai or config/fleet
+    directory for the subflake input."""
     lock_path = os.path.join(root, "flake.lock")
     if not os.path.isfile(lock_path):
         return {}
@@ -480,14 +533,18 @@ CONSUMERS = [
 ]
 
 STUB_TRIGGER = (
-    "config/ai compat stub retired at WU4c-1.8; the consumer must migrate its "
-    "?dir=config/ai input to config/fleet before then")
+    "#47 publishes a throwing config/ai stub; migrate this consumer URL to "
+    "?dir=config/fleet in the authorized coordinated transaction")
 
 
 def classify_input(consumer, dir_key):
     if dir_key == "config/ai":
         return ("stub-covered", consumer["ownerId"], STUB_TRIGGER,
-                "?dir=config/ai subflake input; breaks on rename unless #47 leaves a config/ai stub (feeds Q4/GAP-DECISIONS)")
+                "stale ?dir=config/ai input; #47's stub fails loudly and names config/fleet")
+    if dir_key == "config/fleet":
+        return ("retain-with-owner", consumer["ownerId"],
+                "none (canonical fleet subflake URL)",
+                "canonical ?dir=config/fleet subflake input")
     return ("retain-with-owner", consumer["ownerId"],
             "none (points at the repo root, not the config/ai path)",
             "repo-root input (flake=false); unaffected by the config/ai path rename")
@@ -515,9 +572,11 @@ def add(consumer_name, order, kind, classification, file, line, text, **extra):
 internal_config_ai = grep(CONFIG_AI, repo_root, fixed=True)
 for f, ln, tx in internal_config_ai:
     _kind = ref_kind(f, tx)
-    add("internal", 0, "internal-config-ai-ref", "rename-now", f, ln, tx.strip(),
-        owner="jwiegley/nix-config#47 (E3-RENAME)",
-        trigger="rewritten in the config/ai -> config/fleet rename commit",
+    classification, owner, trigger, note = classify_internal_old_path(f, tx)
+    add("internal", 0, "internal-config-ai-ref", classification, f, ln, tx.strip(),
+        owner=owner,
+        trigger=trigger,
+        note=note,
         refKind=_kind, loadBearing=load_bearing(_kind))
 internal_config_ai_files = sorted({f for f, _, _ in internal_config_ai})
 
@@ -588,13 +647,20 @@ for idx, c in enumerate(CONSUMERS, start=1):
 
     nc_nodes = load_lock_nc_nodes(root)
     locked_rev = None
-    if "config/ai" in nc_nodes:
+    if "config/fleet" in nc_nodes:
+        locked_rev = nc_nodes["config/fleet"]["rev"]
+    elif "config/ai" in nc_nodes:
         locked_rev = nc_nodes["config/ai"]["rev"]
     elif "" in nc_nodes:
         locked_rev = nc_nodes[""]["rev"]
 
     count_before = len(references)
     flake_nix = os.path.join(root, "flake.nix")
+    subflake_dir = (
+        "config/fleet" if "config/fleet" in nc_nodes
+        else "config/ai" if "config/ai" in nc_nodes
+        else ""
+    )
 
     # flake inputs pointing at nix-config (declared URL + ?dir + flake=false + rev)
     if os.path.isfile(flake_nix):
@@ -602,7 +668,11 @@ for idx, c in enumerate(CONSUMERS, start=1):
         for i, line in enumerate(ftext, start=1):
             for m in URL_RE.finditer(line):
                 url = m.group(1)
-                dir_key = "config/ai" if "config/ai" in url else ""
+                dir_key = (
+                    "config/fleet" if "config/fleet" in url
+                    else "config/ai" if "config/ai" in url
+                    else ""
+                )
                 node = nc_nodes.get(dir_key, {})
                 cls, owner, trig, note = classify_input(c, dir_key)
                 add(c["name"], idx, "flake-input", cls, "flake.nix", i, line.strip(),
@@ -614,10 +684,11 @@ for idx, c in enumerate(CONSUMERS, start=1):
                     lockedRef=node.get("ref"),
                     owner=owner, trigger=trig, note=note, source=row_source)
             for m in FOLLOWS_RE.finditer(line):
-                add(c["name"], idx, "input-follows", "stub-covered", "flake.nix", i, line.strip(),
+                cls, owner, trig, note = classify_input(c, subflake_dir)
+                add(c["name"], idx, "input-follows", cls, "flake.nix", i, line.strip(),
                     inputName=m.group(1), followsTarget=m.group(2),
-                    owner=c["ownerId"], trigger=STUB_TRIGGER,
-                    note="resolves through the nix-config-ai subflake input", source=row_source)
+                    owner=owner, trigger=trig,
+                    note=note + "; follows the nix-config-ai input", source=row_source)
 
     # every ${inputs.nix-config}/... interpolation and cherry-picked attr, plus
     # every inputs.nix-config-ai.overlays use, across all *.nix in the checkout.
@@ -651,9 +722,10 @@ for idx, c in enumerate(CONSUMERS, start=1):
         text = open(path).read().splitlines()
         for i, line in enumerate(text, start=1):
             if OVERLAY_USE_RE.search(line):
-                add(c["name"], idx, "subflake-overlay-use", "stub-covered", relf, i, line.strip(),
-                    owner=c["ownerId"], trigger=STUB_TRIGGER,
-                    note="consumes the config/ai subflake's exported overlay", source=row_source)
+                cls, owner, trig, note = classify_input(c, subflake_dir)
+                add(c["name"], idx, "subflake-overlay-use", cls, relf, i, line.strip(),
+                    owner=owner, trigger=trig,
+                    note=note + "; consumes its exported overlay", source=row_source)
 
     consumer_records.append({
         "name": c["name"],
@@ -689,7 +761,7 @@ commands = {
     "internalConfigAiRefs": (
         "git -C <repo_root> ls-files -z | select tracked "
         + ",".join(INCLUDE_GLOBS)
-        + " paths; grep -In -F -e 'config/ai' <existing-tracked-files>"),
+        + " paths; grep -I -n -F -e 'config/ai' <existing-tracked-files>"),
     "internalConfigAiFiles": (
         "derive unique file names from internalConfigAiRefs"),
     "internalConfigAiExcludedPaths": sorted(EXCLUDED_INTERNAL_PATHS),
@@ -702,7 +774,7 @@ commands = {
         "<existing-tracked-files>" % pat for _, pat in COMPAT_SURFACES],
     "consumerInputs": (
         "parse <consumer>/flake.lock for nodes referencing nix-config "
-        "(dir='' repo-root input, dir='config/ai' subflake input); locate each "
+        "(dir='' repo-root input, dir='config/ai' stale or dir='config/fleet' canonical subflake input); locate each "
         "url=\"...nix-config...\" line in <consumer>/flake.nix"),
     "consumerReachins": (
         "scan every tracked *.nix under <consumer>/ (filesystem fallback if non-Git) "
@@ -735,8 +807,8 @@ out = {
         "(nixos, vps, andoria). Absolute paths are intentionally omitted: see "
         "the comment at this key in bin/consumer-inventory."),
     "classificationScheme": {
-        "rename-now": "Reference to the literal config/ai path inside nix-config's own tree; #47 rewrites it in the rename commit.",
-        "stub-covered": "External consumer edge resolving through the config/ai subflake (?dir input, its llm-agents follows, its overlays.default use). Recommendation ASSUMES #47 leaves a transitional config/ai->config/fleet stub; if Q4/GAP-DECISIONS declines the stub, reclassify as a coordinated consumer-side URL rename.",
+        "rename-now": "Stale operational reference to the literal config/ai directory inside nix-config; #47 must leave none.",
+        "stub-covered": "External consumer edge still resolving through stale ?dir=config/ai. #47's throwing stub makes this fail loudly; migrate the URL in the authorized coordinated transaction.",
         "retire": "Consumer reach-in into nix-config internal overlay files (${inputs.nix-config}/overlays/*.nix) and the attributes cherry-picked from them; not a supported API (this class broke vulcan at a3cc3843). Delete once the consumer moves to typed config/fleet outputs.",
         "retain-with-owner": "Keep as-is with owner + retirement trigger: the four flake-ai.nix internal imports (GAP-FLAKEAI-INTERNAL), the supported config/*.nix portable surface, root flake=false nix-config inputs, and the ai-nix/node-red/global-Anvil compat surfaces (EPIC 7).",
     },

@@ -31,7 +31,7 @@ The following decisions are proposed as the working baseline. They remain review
 
 ### 3.1 Repository constraints
 
-This repository assigns package implementation to `packages/`, package exposure to overlays, profile and resource selection to `config/ai/catalog.nix`, client serialization to `config/ai/renderers/`, and Home Manager composition to `config/ai.nix` (`doc/ARCHITECTURE.md`, “Module ownership”). Nix owns generated leaves, not mutable roots; credentials remain environment-only; and activation remains consumer-owned.
+This repository assigns package implementation to `packages/`, package exposure to overlays, profile and resource selection to `config/fleet/catalog.nix`, client serialization to `config/fleet/renderers/`, and Home Manager composition to `config/ai.nix` (`doc/ARCHITECTURE.md`, “Module ownership”). Nix owns generated leaves, not mutable roots; credentials remain environment-only; and activation remains consumer-owned.
 
 Hermes follows these boundaries rather than creating a parallel configuration system.
 
@@ -87,15 +87,15 @@ the setup application.
 ## 5. Target architecture
 
 ```text
-config/ai/flake.nix
+config/fleet/flake.nix
   └── pinned NousResearch/hermes-agent input
         └── upstream default + desktop packages
               └── packages/hermes-agent.nix (thin local wrappers)
                     └── pkgs.hermes-agent / pkgs.hermes-desktop
 
-config/ai/hermes/default.nix
+config/fleet/hermes/default.nix
   └── secret-free Hermes policy
-        └── config/ai/renderers/hermes.nix
+        └── config/fleet/renderers/hermes.nix
               └── ~/.config/hermes/nix-managed/config.yaml
 
 local wrappers
@@ -114,8 +114,8 @@ No empty scaffolding is created. The first implementation introduces only files 
 
 | Path | Responsibility |
 | --- | --- |
-| `config/ai/hermes/default.nix` | Hermes-specific, secret-free semantic policy |
-| `config/ai/renderers/hermes.nix` | Deterministic Hermes configuration serialization |
+| `config/fleet/hermes/default.nix` | Hermes-specific, secret-free semantic policy |
+| `config/fleet/renderers/hermes.nix` | Deterministic Hermes configuration serialization |
 | `packages/hermes-agent.nix` | Thin selection and wrappers around upstream packages |
 | `overlays/ai/30-hermes-agent.nix` | Expose local package names; no package body |
 | `test/ai/hermes.nix` | Package, renderer, wrapper, and state-boundary contracts |
@@ -125,24 +125,24 @@ The following existing authorities require modification during implementation:
 
 | Path | Change |
 | --- | --- |
-| `config/ai/flake.nix` | Add the pinned upstream flake input |
-| `config/ai/flake.lock` and `flake.lock` | Record one coherent upstream revision |
+| `config/fleet/flake.nix` | Add the pinned upstream flake input |
+| `config/fleet/flake.lock` and `flake.lock` | Record one coherent upstream revision |
 | `sources/ai.json` and updater inventory | Record Hermes as a `flake-input` update authority with paired-lock artifacts |
 | `overlays/ai/default.nix` | Include the Hermes exposure overlay exactly once |
-| `config/ai/catalog.nix` | Add the Hermes client and a Hera-only profile |
+| `config/fleet/catalog.nix` | Add the Hermes client and a Hera-only profile |
 | `config/ai.nix` | Register the renderer, select packages from the profile, and extend ownership guards |
 | `flake/ai.nix` | Export the package where portable outputs require it |
 | `test/ai/*` | Extend compatibility, lock, renderer, package-selection, and projection contracts |
 | `config/darwin.nix` | Remove the committed interim `hermes-desktop` cask in Phase 5 after authorized cutover acceptance |
 | `bin/update-agents` | Include Hermes in the paired root/portable update transaction |
 
-Client-specific serialization remains in `config/ai/renderers/hermes.nix`, preserving the repository invariant. The `config/ai/hermes/` directory owns policy, not renderer mechanics or package builds.
+Client-specific serialization remains in `config/fleet/renderers/hermes.nix`, preserving the repository invariant. The `config/fleet/hermes/` directory owns policy, not renderer mechanics or package builds.
 
 ## 7. Source, package, and update requirements
 
 ### 7.1 Source authority
 
-**H-PKG-1.** `config/ai/flake.nix` contains one `hermes-agent` flake input pinned by `config/ai/flake.lock`. Root consumption uses the same revision through the existing portable-input projection; a second independent root input is not introduced.
+**H-PKG-1.** `config/fleet/flake.nix` contains one `hermes-agent` flake input pinned by `config/fleet/flake.lock`. Root consumption uses the same revision through the existing portable-input projection; a second independent root input is not introduced.
 
 **H-PKG-2.** Upstream inputs follow the repository `nixpkgs` authority where upstream compatibility permits. Divergence requires an explicit assertion and explanation rather than an implicit second package universe.
 
@@ -176,7 +176,7 @@ Client-specific serialization remains in `config/ai/renderers/hermes.nix`, prese
 
 ### 8.1 Composition
 
-`config/ai/hermes/default.nix` returns one secret-free attribute set representing stable operator policy. `config/ai/renderers/hermes.nix` serializes it to deterministic YAML or JSON-as-YAML at:
+`config/fleet/hermes/default.nix` returns one secret-free attribute set representing stable operator policy. `config/fleet/renderers/hermes.nix` serializes it to deterministic YAML or JSON-as-YAML at:
 
 ```text
 ~/.config/hermes/nix-managed/config.yaml
@@ -214,7 +214,7 @@ The `tccutil` deny rule governs terminal-tool commands and applies there before 
 
 ### 8.3 Existing configuration adoption
 
-The first cutover preserves the existing mutable configuration and lets the managed leaves override it. Stable non-secret settings are then migrated into `config/ai/hermes/default.nix` by category, after review.
+The first cutover preserves the existing mutable configuration and lets the managed leaves override it. Stable non-secret settings are then migrated into `config/fleet/hermes/default.nix` by category, after review.
 
 For each category:
 
@@ -417,7 +417,7 @@ After cleanup:
 - no Hermes cask or setup app remains;
 - immutable runtime paths resolve into the current Nix generation;
 - `~/.hermes` contains only classified mutable state and retained exceptions;
-- the managed configuration file is generated from `config/ai/hermes/default.nix`; and
+- the managed configuration file is generated from `config/fleet/hermes/default.nix`; and
 - a rebuild reproduces the same runtime without network installation at launch.
 
 ## 13. Verification contract
@@ -496,7 +496,7 @@ Run the repository’s established checks, correcting only failures attributable
 
 ```bash
 python3 -m unittest -v bin/update-overlay-test.py
-nix flake check ./config/ai --all-systems --no-build
+nix flake check ./config/fleet --all-systems --no-build
 make test
 ./build system
 nix fmt
@@ -549,7 +549,7 @@ Garbage collection and generation deletion do not occur during the rollback wind
 
 ### Phase 2 — Managed configuration
 
-- Add `config/ai/hermes/default.nix` and the Hermes renderer.
+- Add `config/fleet/hermes/default.nix` and the Hermes renderer.
 - Add the Hera profile and profile-driven package selection.
 - Generate the initial managed leaves and wrapper preflight.
 - Add renderer, collision, environment-reference, and incident-regression tests.
@@ -582,7 +582,7 @@ Garbage collection and generation deletion do not occur during the rollback wind
 
 ### Phase 6 — Incremental enrichment
 
-Add one feature category at a time to `config/ai/hermes/default.nix`, with a focused contract for each. Likely order:
+Add one feature category at a time to `config/fleet/hermes/default.nix`, with a focused contract for each. Likely order:
 
 1. shared model/provider rendering;
 2. MCP catalog rendering;

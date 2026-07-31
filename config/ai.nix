@@ -15,30 +15,30 @@ let
     agent-resources = resourcePackage;
   };
 
-  modelData = import ./ai/models.nix { };
-  catalog = import ./ai/catalog.nix {
+  modelData = import ./fleet/models.nix { };
+  catalog = import ./fleet/catalog.nix {
     inherit lib modelData;
     resources = resourcePackage;
   };
   renderers = {
-    claude = import ./ai/renderers/claude.nix {
+    claude = import ./fleet/renderers/claude.nix {
       inherit lib;
       pkgs = rendererPkgs;
     };
-    codex = import ./ai/renderers/codex.nix {
+    codex = import ./fleet/renderers/codex.nix {
       inherit lib;
       pkgs = rendererPkgs;
       llmAgents = args.inputs.llm-agents;
     };
-    droid = import ./ai/renderers/droid.nix {
+    droid = import ./fleet/renderers/droid.nix {
       inherit lib;
       pkgs = rendererPkgs;
     };
-    opencode = import ./ai/renderers/opencode.nix {
+    opencode = import ./fleet/renderers/opencode.nix {
       inherit lib;
       pkgs = rendererPkgs;
     };
-    pi = import ./ai/renderers/pi.nix {
+    pi = import ./fleet/renderers/pi.nix {
       inherit lib;
       pkgs = rendererPkgs;
     };
@@ -131,12 +131,12 @@ let
   ownsAncestor = path: lib.any (other: other != path && lib.hasPrefix "${path}/" other) paths;
   selectedPlatform = if isDarwin then "darwin" else "linux";
 
-  preflight = (import ./ai/preflight.nix { inherit lib pkgs; }) {
+  preflight = (import ./fleet/preflight.nix { inherit lib pkgs; }) {
     newPaths = paths;
     inherit piGuard;
     legacyPiGuardPath = if piSelected then ".pi/agent/mcp.json" else null;
   };
-  modelSync = (import ./ai/model-sync.nix { inherit lib pkgs; }) {
+  modelSync = (import ./fleet/model-sync.nix { inherit lib pkgs; }) {
     inherit (modelData) syncInputs;
   };
   piSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "pi") profileIds;
