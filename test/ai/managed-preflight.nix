@@ -774,8 +774,12 @@ pkgs.runCommand "ai-managed-preflight"
     test "$migration_source_before" = "$migration_source_after"
 
     migration_home="$migration_root/no-overwrite"
-    mkdir -p "$migration_home/.pi/agent/sessions" "$migration_home/.config/pi"
+    mkdir -p \
+      "$migration_home/.pi/agent/sessions" \
+      "$migration_home/.config/pi/sessions"
     chmod 0750 "$migration_home/.config/pi"
+    chmod 0700 "$migration_home/.pi/agent/sessions"
+    chmod 0751 "$migration_home/.config/pi/sessions"
     printf '%s' old > "$migration_home/.pi/agent/settings.json"
     printf '%s' copied > "$migration_home/.pi/agent/sessions/copied.jsonl"
     printf '%s' new > "$migration_home/.config/pi/settings.json"
@@ -783,6 +787,7 @@ pkgs.runCommand "ai-managed-preflight"
     test "$(cat "$migration_home/.config/pi/settings.json")" = new
     test "$(cat "$migration_home/.config/pi/sessions/copied.jsonl")" = copied
     test "$(stat -c %a "$migration_home/.config/pi")" = 750
+    test "$(stat -c %a "$migration_home/.config/pi/sessions")" = 751
     printf '%s' later > "$migration_home/.pi/agent/created-after-migration"
     HOME="$migration_home" ${task9PiProfileMigrationScript}
     test ! -e "$migration_home/.config/pi/created-after-migration"
@@ -898,6 +903,46 @@ pkgs.runCommand "ai-managed-preflight"
     test ! -e "$migration_backup"
     test ! -e "$migration_stage.ready"
     test -f "$migration_home/.config/.nix-pi-profile-migrated-v1"
+
+    migration_home="$migration_root/interrupted-post-swap-with-backup"
+    migration_ready="$migration_home/.config/.pi-profile-migration.crash.ready"
+    migration_backup="$migration_home/.config/.pi-profile-destination-backup-v1"
+    mkdir -p \
+      "$migration_home/.config/pi/sessions" \
+      "$migration_home/.pi/agent" \
+      "$migration_backup"
+    chmod 0750 "$migration_home/.config/pi"
+    printf '%s' installed > "$migration_home/.config/pi/settings.json"
+    printf '%s' installed-session > "$migration_home/.config/pi/sessions/current.jsonl"
+    printf '%s' previous > "$migration_backup/settings.json"
+    touch "$migration_ready"
+    HOME="$migration_home" ${task9PiProfileMigrationScript}
+    test "$(cat "$migration_home/.config/pi/settings.json")" = installed
+    test "$(cat "$migration_home/.config/pi/sessions/current.jsonl")" = installed-session
+    test "$(stat -c %a "$migration_home/.config/pi")" = 750
+    test ! -e "$migration_backup"
+    test ! -e "$migration_ready"
+    test -f "$migration_home/.config/.nix-pi-profile-migrated-v1"
+
+    migration_home="$migration_root/interrupted-post-swap-without-backup"
+    migration_ready="$migration_home/.config/.pi-profile-migration.crash.ready"
+    mkdir -p "$migration_home/.config/pi" "$migration_home/.pi/agent"
+    printf '%s' installed > "$migration_home/.config/pi/auth.json"
+    touch "$migration_ready"
+    HOME="$migration_home" ${task9PiProfileMigrationScript}
+    test "$(cat "$migration_home/.config/pi/auth.json")" = installed
+    test ! -e "$migration_ready"
+    test -f "$migration_home/.config/.nix-pi-profile-migrated-v1"
+
+    migration_home="$migration_root/interrupted-post-marker-backup"
+    migration_backup="$migration_home/.config/.pi-profile-destination-backup-v1"
+    mkdir -p "$migration_home/.config/pi" "$migration_home/.pi/agent" "$migration_backup"
+    printf '%s' installed > "$migration_home/.config/pi/auth.json"
+    printf '%s' previous > "$migration_backup/auth.json"
+    touch "$migration_home/.config/.nix-pi-profile-migrated-v1"
+    HOME="$migration_home" ${task9PiProfileMigrationScript}
+    test "$(cat "$migration_home/.config/pi/auth.json")" = installed
+    test ! -e "$migration_backup"
 
     migration_home="$migration_root/interrupted-absent-destination"
     migration_stage="$migration_home/.config/.pi-profile-migration.crash"

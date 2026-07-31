@@ -36,6 +36,14 @@ let
         "$pi_copy_source/." "$pi_copy_destination/"
     }
 
+    pi_restore_tree_metadata() {
+      pi_metadata_source=$1
+      pi_metadata_destination=$2
+      run ${pkgs.coreutils}/bin/cp \
+        --archive --attributes-only --no-preserve=links -- \
+        "$pi_metadata_source/." "$pi_metadata_destination/"
+    }
+
     pi_remove_destination_backup() {
       if [ -L "$pi_destination_backup" ]; then
         run ${pkgs.coreutils}/bin/rm -f -- "$pi_destination_backup"
@@ -238,6 +246,9 @@ let
           if [ -n "$pi_source_resolved" ] \
             && [ "$pi_source_resolved" != "$pi_destination_resolved" ]; then
             pi_copy_tree "$pi_source" "$pi_stage"
+          fi
+          if [ -n "$pi_destination_resolved" ]; then
+            pi_restore_tree_metadata "$pi_destination" "$pi_stage"
           fi
           if [ -d "$pi_destination" ] && [ ! -L "$pi_destination" ]; then
             run ${pkgs.coreutils}/bin/chmod --reference="$pi_destination" -- "$pi_stage"
