@@ -203,24 +203,24 @@ Read the three blocks together:
 |---|---|---|---|---|
 | applied | does NOT have | does NOT have | (irrelevant) | **State A** — local only |
 | applied | exactly one HAS the rename, the other does not | | (irrelevant) | **State B** — asymmetric / partial |
-| applied | HAS | HAS | every consumer still `dir=config/ai` **and** `rev` ≤ `RENAME_TIP` | **State C** — published, no consumer bumped |
-| applied | HAS | HAS | some consumer shows `dir=config/fleet`, or `dir=config/ai` with `rev` ≥ `RENAME_TIP` (the stub is firing) | **State D** — some consumers bumped |
+| applied | HAS | HAS | every consumer still `dir=config/ai` **and** locked below `RENAME_BASE` | **State C** — published, no consumer bumped |
+| applied | HAS | HAS | some consumer shows `dir=config/fleet`, or `dir=config/ai` at/after `RENAME_BASE` (the stub is firing) | **State D** — some consumers bumped |
 | applied | HAS | HAS | a consumer bumped **and its host switched** to that generation | **State E** — activated |
 
-"`rev` ≤/≥ `RENAME_TIP`" means ancestry, not string order. To decide it precisely for
+"below/at-or-after `RENAME_BASE`" means ancestry, not string order. To decide it precisely for
 one consumer, fetch that consumer's remote and test:
 
 ```bash
 # example, vps (github): is its locked rev at-or-past the rename?
 ( cd ~/src/vps && git fetch --quiet )   # only if you keep a mirror; otherwise use the sha directly
-git merge-base --is-ancestor "$RENAME_TIP" <consumer-locked-rev> 2>/dev/null \
+git merge-base --is-ancestor "$RENAME_BASE" <consumer-locked-rev> 2>/dev/null \
   && echo "at-or-past rename (stub territory)" \
   || echo "below rename (still resolves real config/ai)"
 ```
 
-A consumer that is **still `dir=config/ai` and below `RENAME_TIP`** has not migrated
+A consumer that is **still `dir=config/ai` and below `RENAME_BASE`** has not migrated
 and never saw the stub — the easy case. A consumer that is **`dir=config/ai` and
-at-or-past `RENAME_TIP`** is *already broken* (hitting the throwing stub); rollback is
+at-or-past `RENAME_BASE`** is *already broken* (hitting the throwing stub); rollback is
 what fixes it. A consumer at **`dir=config/fleet`** migrated cleanly and rollback must
 walk it back.
 
@@ -447,11 +447,11 @@ for every consumer whose remote carried the rename.
 ### State C — published to both, no consumer has bumped
 
 The rename is on both remotes, but every consumer still locks `dir=config/ai` at a rev
-**below** `RENAME_TIP`, so every consumer still resolves the pre-rename tree and none
+**below** `RENAME_BASE`, so every consumer still resolves the pre-rename tree and none
 ever saw the stub. This is the clean forward revert.
 
 **Detect:** §4 shows both remotes HAVE the rename; every consumer block shows
-`dir=config/ai` with `rev` below `RENAME_TIP` (ancestry check in §4).
+`dir=config/ai` with `rev` below `RENAME_BASE` (ancestry check in §4).
 
 **Act:**
 1. §7a — reverse-revert `RENAME_BASE^..RENAME_TIP` into `REVERT_REV`, then §6 dual-publish.
@@ -464,8 +464,10 @@ ever saw the stub. This is the clean forward revert.
    paired nodes advance coherently. Preserve Vulcan's current floating URL unless Q7
    has an explicit recorded decision to add a `rev` pin.
 
-**Verify:** §7c for all three consumers; each shows `dir=config/ai`, an immutable
-(`github`/`git`) lock, and a byte-stable rev.
+**Verify:** for an untouched consumer, parse its committed lock directly and require
+both paired nodes to remain equal at the same pre-`RENAME_BASE` revision. If step 3
+re-locked it, run §7c and require both nodes at `REVERT_REV`. In both cases the
+immutable restored-subflake checks at the start of §7c must pass.
 
 ---
 
@@ -474,14 +476,14 @@ ever saw the stub. This is the clean forward revert.
 Now consumers diverge and must be handled **per consumer, on the correct remote**. A
 bumped consumer is in one of two sub-states:
 
-- **`dir=config/ai` at/past `RENAME_TIP`** — it is *already failing* against the
+- **`dir=config/ai` at/past `RENAME_BASE`** — it is *already failing* against the
   throwing stub. Rollback is the fix.
 - **`dir=config/fleet`** — it migrated cleanly (its URL-move issue landed:
   vulcan=jwiegley/nixos-config#3, vps=#57, shared-work=#56). Rollback must walk both the
   URL and the lock back.
 
 **Detect:** §4 shows both remotes HAVE the rename; at least one consumer shows either
-`dir=config/fleet` or `dir=config/ai` at/past `RENAME_TIP`.
+`dir=config/fleet` or `dir=config/ai` at/past `RENAME_BASE`.
 
 **Act:**
 1. §7a + §6 first — `config/ai` must be restored and `REVERT_REV` on both remotes
