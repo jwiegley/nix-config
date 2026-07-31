@@ -139,6 +139,7 @@ let
     else
       assert providerName == "llama-cpp-local";
       {
+        api = "openai-completions";
         apiKey = provider.apiKey.nonSecret;
         inherit (provider) baseUrl;
         models = map renderModel directGlmModels;

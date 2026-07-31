@@ -1728,6 +1728,7 @@ let
     else
       assert providerName == "llama-cpp-local";
       {
+        api = "openai-completions";
         apiKey = renderPiCredential provider.apiKey;
         inherit (provider) baseUrl;
         models = map expectedPiModel (
