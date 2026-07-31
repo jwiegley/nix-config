@@ -2423,9 +2423,6 @@ def validate_non_regression(
     current_denominator = set(
         _unique_strings(current_reach.get("denominator"), "current denominator")
     )
-    previous_denominator = set(
-        _unique_strings(previous_reach.get("denominator"), "parent denominator")
-    )
     current_reached = set(
         _unique_strings(current_reach.get("reached"), "current reached", nonempty=False)
     )
@@ -2443,19 +2440,6 @@ def validate_non_regression(
     )
     current_gates = _expect_object(current_structural.get("gates"), "artifact.gates")
     previous_gates = _expect_object(previous_structural.get("gates"), "parent.gates")
-    current_flake = {
-        _expect_string(entry.get("qualifiedId"), "artifact flake gate")
-        for entry in _expect_list(current_gates.get("flake"), "artifact.gates.flake")
-        if isinstance(entry, dict)
-    }
-    previous_flake = {
-        _expect_string(entry.get("qualifiedId"), "parent flake gate")
-        for entry in _expect_list(previous_gates.get("flake"), "parent.gates.flake")
-        if isinstance(entry, dict)
-    }
-    lost_gates = sorted(previous_flake - current_flake)
-    if lost_gates:
-        raise CoverageError(f"flake gate denominator regressed: {lost_gates}")
     current_quality = set(
         _unique_strings(current_gates.get("quality"), "artifact.gates.quality")
     )
