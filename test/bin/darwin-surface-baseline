@@ -83,7 +83,8 @@ GIT_REPOSITORY_VARIABLES = {
 }
 
 HOST_SURFACE_COMMAND = (
-    "nix eval --impure --json '.#darwinConfigurations.<host>' "
+    "nix eval --option eval-cache false --no-write-lock-file --impure --json "
+    "'.#darwinConfigurations.<host>' "
     "--apply 'darwin: import ./test/darwin/darwin-surface.nix darwin'"
 )
 COMPARE_COMMAND = "test/bin/darwin-surface-diff --normalize-store <before.json> <after.json>"
@@ -296,6 +297,7 @@ def evaluate_host(worktree: Path, host: str) -> dict[str, Any]:
             "--option",
             "eval-cache",
             "false",
+            "--no-write-lock-file",
             "--impure",
             "--json",
             f".#darwinConfigurations.{host}",

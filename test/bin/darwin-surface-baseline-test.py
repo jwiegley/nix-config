@@ -235,6 +235,7 @@ class EvaluationTests(unittest.TestCase):
 
         command = run.call_args.args[0]
         self.assertEqual(run.call_args.kwargs["cwd"], worktree)
+        self.assertIn("--no-write-lock-file", command)
         apply_expression = command[command.index("--apply") + 1]
         self.assertIn(str(projector), apply_expression)
         self.assertNotIn(str(REPO / "test" / "darwin"), apply_expression)
