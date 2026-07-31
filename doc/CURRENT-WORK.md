@@ -7,14 +7,12 @@ handoffs belong in Git history, not beside active instructions.
 
 ## Active order
 
-1. Remove stale, duplicated, completed, and abandoned repository documentation;
-   retain only current architecture, runbooks, and this work ledger.
-2. Finish the all-lock and all-pin `make update` transaction and activate its exact
+1. Finish the all-lock and all-pin `make update` transaction and activate its exact
    candidate.
-3. Finish and integrate `feature/mcp-searxng`.
-4. Rebase or integrate owned completed worktrees, fast-forward their results into
+2. Finish and integrate `feature/mcp-searxng`.
+3. Rebase or integrate owned completed worktrees, fast-forward their results into
    `main`, and remove the worktrees and local branches that are no longer needed.
-5. Run one final verification and independent fess audit.
+4. Run one final verification and independent fess audit.
 
 ## Explicit boundaries
 
@@ -42,12 +40,20 @@ handoffs belong in Git history, not beside active instructions.
 - Documentation cleanup runs on `chore/dead-code-pass-1`.
 - GitHub state has not been queried during this cleanup.
 
+## Completed in this lane
+
+- Reduced 28 documentation artifacts to seven current documents and removed 10,370
+  stale lines.
+- Replaced retired deployment terminology in generated Codex projections and the
+  bundle-discovery command.
+- Corrected `make update` to publish through the dual-remote `bin/publish` path.
+- Required every stored GitHub inventory recipe to select the `jwiegley` account.
+- Regenerated and verified the consumer inventory.
+
 ## Resume point
 
-The cleanup reduces 28 documentation artifacts to seven current documents. The
-remaining step for this unit is to regenerate the consumer inventory, run the
-documentation and bounded repository checks, commit, and obtain an independent
-fess verdict.
+Begin the complete `make update` transaction. GitHub reconciliation remains
+deferred.
 
 Stop-and-escalate counters:
 

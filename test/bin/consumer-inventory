@@ -120,6 +120,7 @@ CONFIG_FLEET = "config/fleet"
 INTENTIONAL_CONFIG_AI_FILES = {
     "CLAUDE.md",
     "README.md",
+    "doc/ARCHITECTURE.md",
     "test/bin/consumer-inventory",
     "test/bin/coverage-report",
     "test/bin/coverage-report-test.py",
