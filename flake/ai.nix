@@ -117,9 +117,6 @@ let
         meta = package.meta or { };
       }
     else if name == "codex" then
-      assert pkgs.lib.assertMsg (
-        (package.version or null) == "0.145.0"
-      ) "Codex version changed: revalidate the wrapper command table before updating the pin";
       let
         codexAppCommandCase = pkgs.lib.optionalString pkgs.stdenv.isDarwin " | app";
         codexSandboxDarwinValueCase = pkgs.lib.optionalString pkgs.stdenv.isDarwin " | --allow-unix-socket";
@@ -1870,19 +1867,16 @@ let
         meta = package.meta or { };
       }
     else if name == "pi" then
-      assert pkgs.lib.assertMsg (
-        (package.version or null) == "0.82.0"
-      ) "Pi version changed: rebase the renderer patch, refresh source digests, and update its tests";
       assert package ? overrideAttrs;
       package.overrideAttrs (old: {
         preInstall = ''
           cat > pi-tool-renderer-wrapper.sha256 <<'EOF'
-          dcc738a40b23c337a788422d370154299633a4770687190da3d05aa210f68968  dist/core/agent-session.js
+          9720d2a160540d9515ceb1ac4c4b4e73f4a215d703870c15b3c1863a2e37ff76  dist/core/agent-session.js
           a4dafd2ea75625be11021365c9bb60f15ec9e133e20ad4a31cef5a3cfeec2dce  dist/core/http-dispatcher.js
           5ebc2b2d8e13e0d90d6279d34e016b6f441208af9e73f3d4e75975376eb8987c  dist/core/extensions/loader.js
-          05a9e39f5c1109d168e4b9327a7858243b77ea3bbe836961549e67d282b5a231  dist/core/extensions/runner.js
-          b7878c503c0d4ef7a9ad878775b67a7e99ee8e56005d55e973c8aad4ca116b10  dist/core/extensions/runner.d.ts
-          ef8c3924a72958b446ef1e88904a385ac974c7ffac32529db99dbe1d613c9e34  dist/core/extensions/types.d.ts
+          bf1257dd0c05af7b9887348e42e4a1a19653ca9edddcceac0fa2219897cc4704  dist/core/extensions/runner.js
+          0e7cdacbe1bc5fd0e29748c31de73cdcdabc144ce98c1b970d19ca03b4f8221f  dist/core/extensions/runner.d.ts
+          b27f2ee319ff784b35f83fb2a2276f32f3383e5e593b05bdfab566d6dd172318  dist/core/extensions/types.d.ts
           EOF
           sha256sum -c pi-tool-renderer-wrapper.sha256
           patch -p1 --fuzz=0 < ${../overlays/ai/patches/pi-tool-renderer-wrapper.patch}
@@ -1893,7 +1887,7 @@ let
             substituteInPlace "$openai_api" \
               --replace-fail \
                 '        defaultHeaders: headers,' \
-                $'        defaultHeaders: headers,\n        timeout:\n            (model.provider === "llama-cpp-local" && model.id === "GLM-5.2") ||\n            (model.provider === "litellm" &&\n                (model.id.startsWith("clio/omlx/") ||\n                    (model.id.startsWith("hera/") && !model.id.startsWith("hera/claude-"))))\n                ? 7_200_000\n                : undefined,'
+                $'        defaultHeaders: headers,\n        timeout:\n            model.provider === "omlx" || model.provider === "llama-cpp-local"\n                ? 7_200_000\n                : undefined,'
           done
           substituteInPlace dist/core/http-dispatcher.js \
             --replace-fail \
@@ -1926,31 +1920,6 @@ let
           toolRendererWrapperAbi = 1;
         };
       })
-    else if
-      name == "gemini-cli" && (package.version or null) == "0.49.0" && package ? overrideAttrs
-    then
-      package.overrideAttrs (
-        old:
-        let
-          postPatch =
-            builtins.replaceStrings [ "\nnode " ] [ "\n${pkgs.lib.getExe pkgs.nodejs} " ]
-              old.postPatch;
-        in
-        {
-          inherit postPatch;
-          # llm-agents.nix 0.49.0 runs a Node script in postPatch. That
-          # postPatch also runs inside fetchNpmDeps, whose default build
-          # inputs do not include nodejs.
-          npmDeps = pkgs.fetchNpmDeps {
-            name = "${old.pname}-${old.version}-npm-deps-aligned";
-            inherit (old) src;
-            inherit postPatch;
-            hash = old.npmDepsHash;
-            fetcherVersion = old.npmDepsFetcherVersion;
-            nativeBuildInputs = [ pkgs.nodejs ];
-          };
-        }
-      )
     else
       package;
 

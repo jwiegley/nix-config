@@ -141,6 +141,7 @@ let
     inherit (modelData) syncInputs;
   };
   piSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "pi") profileIds;
+  codexSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "codex") profileIds;
   droidSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "droid") profileIds;
   piRuntimePackages = with pkgs; [
     actionlint
@@ -244,6 +245,10 @@ in
     packages =
       lib.optional droidSelected pkgs.agent-http-header-bridge
       ++ lib.optionals piSelected piRuntimePackages;
+    sessionVariables = lib.optionalAttrs codexSelected {
+      OMLX_API_KEY = "dummy-key";
+      LLAMA_SWAP_API_KEY = "dummy-key";
+    };
     activation = {
       aiManagedPreflight = preflight.activation;
     }

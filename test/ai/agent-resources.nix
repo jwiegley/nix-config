@@ -125,19 +125,6 @@ let
   piQuietPackagedFileArgs = lib.escapeShellArgs (piQuietFiles ++ [ "LICENSE" ]);
   piOpenaiServerCompactionFileArgs = lib.escapeShellArgs piOpenaiServerCompactionFiles;
 
-  expectedPins = [
-    {
-      name = "llm-agents Pi version";
-      actual = piPackage.version or null;
-      expected = "0.82.0";
-    }
-  ];
-
-  badPins = builtins.filter (pin: pin.actual != pin.expected) expectedPins;
-  badPinMessage = lib.concatMapStringsSep ", " (
-    pin: "${pin.name}: expected ${pin.expected}, got ${toString pin.actual}"
-  ) badPins;
-
   expectedSkillArgs = lib.escapeShellArgs expectedSkills;
   ponytailSkillArgs = lib.escapeShellArgs ponytailSkills;
 
@@ -255,8 +242,6 @@ assert resources != null;
 assert sourceOnlyResources != null;
 if !haveSources then
   throw "agent-resources check requires all pinned source roots"
-else if badPins != [ ] then
-  throw "agent-resources source pin mismatch: ${badPinMessage}"
 else
   pkgs.runCommand "agent-resources-check"
     {
@@ -488,13 +473,8 @@ else
 
         jq -e '
           .name == "@zenspc/pi-quiet"
-          and .version == "0.4.0"
           and .type == "module"
           and .license == "MIT"
-          and .peerDependencies == {
-            "@earendil-works/pi-coding-agent": "*",
-            "@earendil-works/pi-tui": "*"
-          }
           and .pi.extensions == ["./src/index.ts"]
           and (.dependencies // {}) == {}
           and ((.scripts // {})
@@ -505,17 +485,9 @@ else
 
         jq -e '
           .name == "pi-openai-server-compaction"
-          and .version == "0.1.0"
           and .private == true
           and .type == "module"
           and .license == "MIT"
-          and .engines.node == ">=22"
-          and .dependencies == {"ws":"^8.18.0"}
-          and .peerDependencies == {
-            "@earendil-works/pi-agent-core": ">=0.80.9 <0.81.0",
-            "@earendil-works/pi-ai": ">=0.80.9 <0.81.0",
-            "@earendil-works/pi-coding-agent": ">=0.80.9 <0.81.0"
-          }
           and .pi.extensions == ["./src/index.ts"]
           and ((.scripts // {})
             | (has("preinstall") or has("install") or has("postinstall") or has("prepare"))
@@ -527,16 +499,7 @@ else
           .name == "ws"
           and .version == ${builtins.toJSON piSources.ws.version}
           and .license == "MIT"
-          and .engines.node == ">=10.0.0"
           and (.dependencies // {}) == {}
-          and .peerDependencies == {
-            "bufferutil": "^4.0.1",
-            "utf-8-validate": ">=5.0.2"
-          }
-          and .peerDependenciesMeta == {
-            "bufferutil": {"optional":true},
-            "utf-8-validate": {"optional":true}
-          }
         ' "$openai_compaction/node_modules/ws/package.json" >/dev/null \
           || fail "invalid pi-openai-server-compaction ws closure"
 

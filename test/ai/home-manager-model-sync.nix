@@ -206,8 +206,8 @@ pkgs.runCommand "ai-home-manager-model-sync"
 
     # A changed nonsecret selection updates once and replaces the digest.
     : > "$TASK10_LOG"
-    export TASK10_EXPECTED_MODEL='${common.alternateModelData.syncInputs.model}'
-    export TASK10_EXPECTED_URL='${common.alternateModelData.syncInputs.chatUrl}'
+    export TASK10_EXPECTED_MODEL='${common.task10ChangedSyncInputs.model}'
+    export TASK10_EXPECTED_URL='${common.task10ChangedSyncInputs.chatUrl}'
     task10_run_ok '${common.task10ChangedScript}'
     test "$(cat "$task10_stamp")" = '${common.task10ChangedDigest}'
     task10_assert_exact_app_calls
@@ -285,8 +285,8 @@ pkgs.runCommand "ai-home-manager-model-sync"
     task10_new_case rename-failure
     mkdir -p "$(dirname "$task10_stamp")"
     printf '%s' '${common.task10Digest}' > "$task10_stamp"
-    export TASK10_EXPECTED_MODEL='${common.alternateModelData.syncInputs.model}'
-    export TASK10_EXPECTED_URL='${common.alternateModelData.syncInputs.chatUrl}'
+    export TASK10_EXPECTED_MODEL='${common.task10ChangedSyncInputs.model}'
+    export TASK10_EXPECTED_URL='${common.task10ChangedSyncInputs.chatUrl}'
     export TASK10_FAIL_AT=rename
     task10_run_fail '${common.task10ChangedScript}'
     test "$(cat "$task10_stamp")" = '${common.task10Digest}'

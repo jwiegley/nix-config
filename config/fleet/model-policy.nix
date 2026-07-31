@@ -7,7 +7,7 @@
   allowedNonSecretCredentialsByProvider = {
     llama-cpp-local = "not-needed";
     omlx = "dummy-key";
-    omlx-remote = "dummy-api-key";
+    omlx-remote = "dummy-key";
   };
 
   allowedInsecureBaseUrlsByProvider = {
@@ -15,7 +15,11 @@
     omlx = "http://localhost:8000/v1";
   };
 
-  profileDefaultProfiles = [ "hera-opencode" ];
+  profileDefaultProfiles = [
+    "clio-opencode"
+    "hera-opencode"
+    "shared-work-opencode-positron"
+  ];
 
   syncChatPath = "chat/completions";
 
@@ -71,6 +75,7 @@
       selectors.clients = [
         "droid"
         "opencode"
+        "pi"
       ];
       droid = {
         providerType = "generic-chat-completion-api";

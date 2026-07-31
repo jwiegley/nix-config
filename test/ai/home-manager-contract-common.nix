@@ -19,6 +19,10 @@ let
   codexSourceCatalogPath = "${
     inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.codex.src
   }/codex-rs/models-manager/models.json";
+  codexSourceCatalog = builtins.fromJSON (builtins.readFile codexSourceCatalogPath);
+  codexNativeSol = builtins.head (
+    builtins.filter (model: model.slug == "gpt-5.6-sol") codexSourceCatalog.models
+  );
   rawModelRegistry = builtins.fromJSON (builtins.readFile registryPath);
   modelPolicy = import "${src}/config/fleet/model-policy.nix";
   piSources = import "${src}/packages/source-catalog.nix" "pi";
@@ -127,6 +131,13 @@ let
   hostFilterCatalog = catalogFor hostFilterModelData;
 
   sortedNames = set: lib.sort builtins.lessThan (builtins.attrNames set);
+  sortedModelIdsFor =
+    providerName:
+    lib.sort builtins.lessThan (
+      map (model: model.id) (
+        builtins.attrValues (lib.filterAttrs (_: model: model.provider == providerName) modelData.models)
+      )
+    );
   expectEqual =
     label: actual: expected:
     if actual == expected then
@@ -535,7 +546,7 @@ let
       mcpServers = personalOpenCodeMcp;
       hooks = [ ];
       marketplaces = [ ];
-      hasDefault = false;
+      hasDefault = true;
     };
     "hera-claude-personal" = {
       mcpServers = claudePersonalMcp;
@@ -589,7 +600,7 @@ let
       mcpServers = claudeMcp;
       hooks = [ ];
       marketplaces = [ ];
-      hasDefault = false;
+      hasDefault = true;
     };
     "vps-claude-personal" = {
       mcpServers = claudeMcp;
@@ -1233,6 +1244,7 @@ let
     modelData = {
       providers = renamedCredentialProviders;
       models = renamedCredentialModels;
+      default = renamedCredentialModelData.profileDefaults.${renamedCredentialProfileId};
     };
     homeDirectory = fixtureHomeDirectory;
     xdgConfigHome = fixtureXdgConfigHome;
@@ -1678,34 +1690,44 @@ let
     // lib.optionalAttrs (model ? contextLimit) {
       contextWindow = model.contextLimit;
     }
-    // lib.optionalAttrs (model.provider == "llama-cpp-local" && model.id == "GLM-5.2") {
-      reasoning = true;
-      input = [ "text" ];
-      cost = {
-        input = 0;
-        output = 0;
-        cacheRead = 0;
-        cacheWrite = 0;
-      };
-      thinkingLevelMap = {
-        off = "none";
-        minimal = null;
-        xhigh = "xhigh";
-        max = null;
-      };
-    };
+    //
+      lib.optionalAttrs
+        (
+          (model.provider == "omlx" && model.id == "Qwen3.6-27B-oQ4e-mtp")
+          || (model.provider == "llama-cpp-local" && model.id == "GLM-5.2")
+        )
+        {
+          reasoning = true;
+          input = [ "text" ];
+          cost = {
+            input = 0;
+            output = 0;
+            cacheRead = 0;
+            cacheWrite = 0;
+          };
+          thinkingLevelMap = {
+            off = "none";
+            minimal = null;
+            xhigh = "xhigh";
+            max = null;
+          };
+        };
+  expectedPiModelIds = {
+    llama-cpp-local = "GLM-5.2";
+    omlx = "Qwen3.6-27B-oQ4e-mtp";
+  };
   expectedPiProvider =
     providerName: provider:
-    assert providerName == "llama-cpp-local";
+    assert builtins.hasAttr providerName expectedPiModelIds;
     {
       api = "openai-completions";
       apiKey = renderPiCredential provider.apiKey;
       inherit (provider) baseUrl;
       models = map expectedPiModel (
         orderedValues (
-          lib.filterAttrs (_: model: model.provider == providerName && model.id == "GLM-5.2") (
-            selectedModels "hera-pi"
-          )
+          lib.filterAttrs (
+            _: model: model.provider == providerName && model.id == expectedPiModelIds.${providerName}
+          ) (selectedModels "hera-pi")
         )
       );
     };
@@ -1730,7 +1752,7 @@ let
               cacheRead = 0;
               cacheWrite = 0;
             };
-            contextWindow = 1048576;
+            contextWindow = 262144;
             maxTokens = 65536;
             thinkingLevelMap.xhigh = "xhigh";
           }
@@ -1742,8 +1764,8 @@ let
     debug = false;
     phaseBias = 0.5;
     models.sol = {
-      model = "llama-cpp-local/GLM-5.2";
-      contextWindow = 1048576;
+      model = "omlx/Qwen3.6-27B-oQ4e-mtp";
+      contextWindow = 262144;
       maxTokens = 65536;
       reasoning = true;
       thinkingLevels = [
@@ -1858,22 +1880,51 @@ let
       extraKnownMarketplaces = expectedExtraKnownMarketplaces;
       enabledPlugins = expectedEnabledPlugins;
     };
-  expectedCodexManaged = profileId: {
-    model_catalog_json = "${fixtureHomeDirectory}/${
-      catalog.profiles.${profileId}.root
-    }/nix-managed-model-catalog.json";
-    model_context_window = 1050000;
-    model_auto_compact_token_limit = 900000;
-    notify = [
-      "agent-deck"
-      "codex-notify"
-    ];
-    mcp_servers = expectedCodexMcp profileId;
-    shell_environment_policy = {
-      ignore_default_excludes = false;
-      exclude = [ "REF_API_KEY" ];
+  expectedCodexManaged =
+    profileId:
+    {
+      model = "gpt-5.6-sol";
+      model_auto_compact_token_limit = builtins.div (codexNativeSol.context_window * 4) 5;
+      model_catalog_json = "${fixtureHomeDirectory}/${
+        catalog.profiles.${profileId}.root
+      }/nix-managed-model-catalog.json";
+      model_reasoning_effort = "ultra";
+      notify = [
+        "agent-deck"
+        "codex-notify"
+      ];
+      mcp_servers = expectedCodexMcp profileId;
+      shell_environment_policy = {
+        ignore_default_excludes = false;
+        exclude = [ "REF_API_KEY" ];
+      };
+    }
+    // lib.optionalAttrs (catalog.profiles.${profileId}.host == "hera") {
+      model_providers = {
+        llama-swap = {
+          base_url = "http://localhost:8080/v1";
+          env_key = "LLAMA_SWAP_API_KEY";
+          name = "llama-swap";
+          wire_api = "responses";
+        };
+        omlx = {
+          base_url = "http://localhost:8000/v1";
+          env_key = "OMLX_API_KEY";
+          name = "oMLX";
+          wire_api = "responses";
+        };
+      };
+      profiles = {
+        llama-swap = {
+          model = "GLM-5.2";
+          model_provider = "llama-swap";
+        };
+        omlx = {
+          model = "Qwen3.6-27B-oQ4e-mtp";
+          model_provider = "omlx";
+        };
+      };
     };
-  };
   expectedCodexHookFile = {
     hooks = expectedCodexHooks;
   };
@@ -2246,25 +2297,7 @@ let
         path = documentSource "${profileId}-model-catalog.json" (
           file "${profile.root}/nix-managed-model-catalog.json"
         );
-        structuralOnly = true;
-        catalogContract = {
-          sourcePath = codexSourceCatalogPath;
-          nativeSlug = "gpt-5.6-sol";
-          expectedModels = [
-            {
-              slug = "gpt-5.6-sol";
-              context_window = 1050000;
-              max_context_window = 1050000;
-              effective_context_window_percent = 95;
-            }
-            {
-              slug = "positron_openai/gpt-5.6-sol";
-              context_window = 1050000;
-              max_context_window = 1050000;
-              effective_context_window_percent = 95;
-            }
-          ];
-        };
+        expected = codexSourceCatalog;
       }
     ]
     ++ lib.mapAttrsToList (name: item: {
@@ -2433,7 +2466,7 @@ let
         forbidden = [
           "{env:"
           "$env:"
-          "llama-cpp-remote"
+          "omlx-remote"
           "?apiKey="
         ];
       }
@@ -2702,6 +2735,7 @@ let
         (expectReject "Pi non-Hera/non-Pi profile accepted" piWrongProfileProbe.companions)
         (expectEqual "${profileId} provider set" (sortedNames expectedPiModels.providers) [
           "llama-cpp-local"
+          "omlx"
           "router"
         ])
         (expectEqual "${profileId} static Pi direct GLM model set" (map (
@@ -2711,12 +2745,20 @@ let
           (builtins.head expectedPiModels.providers.llama-cpp-local.models).contextWindow
           1048576
         )
+        (expectEqual "${profileId} static Pi direct oMLX model set" (map (
+          model: model.id
+        ) expectedPiModels.providers.omlx.models) [ "Qwen3.6-27B-oQ4e-mtp" ])
+        (expectEqual "${profileId} direct oMLX context"
+          (builtins.head expectedPiModels.providers.omlx.models).contextWindow
+          262144
+        )
         (expectEqual "${profileId} selected model provider set"
           (lib.sort builtins.lessThan (
             lib.unique (map (model: model.provider) (builtins.attrValues (selectedModels profileId)))
           ))
           [
             "llama-cpp-local"
+            "omlx"
           ]
         )
         (expectEqual "${profileId} MCP set" (sortedNames expectedPiMcp.mcpServers) claudePersonalMcp)
@@ -2941,7 +2983,10 @@ let
   };
   filteredDefaultModels = modelData // {
     profileDefaults = modelData.profileDefaults // {
-      vulcan-opencode = modelData.profileDefaults.hera-opencode;
+      vulcan-opencode = {
+        provider = "omlx";
+        model = "DeepSeek-V4-Flash-0731-oQ8-mtp";
+      };
     };
   };
   unknownPolicyField = modelPolicy // {
@@ -2985,7 +3030,7 @@ let
     llama-cpp-local.nonSecret = "not-needed";
     nvidia.env = "NVIDIA_API_KEY";
     omlx.nonSecret = "dummy-key";
-    omlx-remote.nonSecret = "dummy-api-key";
+    omlx-remote.nonSecret = "dummy-key";
     positron-anthropic.env = "ANTHROPIC_API_KEY";
     positron-google.env = "GEMINI_API_KEY";
     positron-openai.env = "OPENAI_API_KEY";
@@ -4018,8 +4063,13 @@ let
     inherit (modelData) syncInputs;
     tools = task10FakeTools;
   };
+  task10ChangedSyncInputs = {
+    provider = "omlx";
+    model = "Qwen3.6-27B-oQ4e-mtp";
+    chatUrl = "http://localhost:8000/v1/chat/completions";
+  };
   task10ChangedSync = task10ModelSyncFactory {
-    inherit (alternateModelData) syncInputs;
+    syncInputs = task10ChangedSyncInputs;
     tools = task10FakeTools;
   };
   task10EmptyModelProbe = task10ModelSyncFactory {
@@ -4039,7 +4089,7 @@ let
       }
     );
   task10Digest = task10DigestFor modelData.syncInputs;
-  task10ChangedDigest = task10DigestFor alternateModelData.syncInputs;
+  task10ChangedDigest = task10DigestFor task10ChangedSyncInputs;
   task10HasActivation =
     evaluation: builtins.hasAttr "aiManagedModelSync" evaluation.config.home.activation;
   task10HeraOrder = task9ActivationOrder task9Evaluations.hera;
@@ -4359,7 +4409,9 @@ let
       alternateRegistry.selections.claudeSubagent.model
     )
     (expectEqual "alternate OpenCode default fan-out" alternateModelData.profileDefaults {
+      clio-opencode = alternateRegistry.selections.default;
       hera-opencode = alternateRegistry.selections.default;
+      shared-work-opencode-positron = alternateRegistry.selections.default;
     })
     (expectEqual "alternate synchronization selection" alternateModelData.syncInputs {
       chatUrl = "https://integrate.api.nvidia.com/v1/chat/completions";
@@ -4574,6 +4626,12 @@ let
     (expectEqual "provider credentials" (lib.mapAttrs (
       _: provider: provider.apiKey
     ) modelData.providers) expectedProviderCredentials)
+    (expectEqual "oMLX local and remote share a credential" modelData.providers.omlx-remote.apiKey
+      modelData.providers.omlx.apiKey
+    )
+    (expectEqual "oMLX local and remote serve the same models" (sortedModelIdsFor "omlx-remote") (
+      sortedModelIdsFor "omlx"
+    ))
     (expectEqual "Clio-only remote provider selectors" modelData.providers.omlx-remote.selectors {
       clients = [
         "droid"
@@ -4738,6 +4796,7 @@ in
     task10FactoryChecks
     task10Script
     task10ChangedScript
+    task10ChangedSyncInputs
     task10Digest
     task10ChangedDigest
     modelData

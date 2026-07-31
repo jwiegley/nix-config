@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "selections": {
     "default": {
-      "provider": "llama-cpp-local",
-      "model": "GLM-5.2"
+      "provider": "nvidia",
+      "model": "qwen/qwen3-coder-480b-a35b-instruct"
     },
     "claudeDefault": {
       "provider": "positron-anthropic",
@@ -53,10 +53,10 @@
     },
     {
       "id": "omlx-remote",
-      "displayName": "Llama.cpp (Remote)",
+      "displayName": "oMLX (Remote)",
       "baseUrl": "https://hera.lan:8443/v1/",
       "apiKey": {
-        "nonSecret": "dummy-api-key"
+        "nonSecret": "dummy-key"
       },
       "hosts": [
         "clio"
@@ -68,7 +68,10 @@
       "baseUrl": "http://localhost:8000/v1",
       "apiKey": {
         "nonSecret": "dummy-key"
-      }
+      },
+      "hosts": [
+        "hera"
+      ]
     },
     {
       "id": "llama-cpp-local",
@@ -76,7 +79,10 @@
       "baseUrl": "http://localhost:8080/v1",
       "apiKey": {
         "nonSecret": "not-needed"
-      }
+      },
+      "hosts": [
+        "hera"
+      ]
     }
   ],
   "models": [
@@ -166,27 +172,27 @@
     },
     {
       "provider": "omlx-remote",
-      "id": "cohere-transcribe-03-2026",
-      "displayName": "Cohere Transcribe 03",
-      "maxOutputTokens": 128000
+      "id": "cohere-transcribe-03-2026-mlx-fp16",
+      "displayName": "Cohere Transcribe 03 2026 MLX Fp 16 (MLX)",
+      "maxOutputTokens": 128000,
+      "contextLimit": 262144,
+      "outputLimit": 65536
     },
     {
       "provider": "omlx-remote",
-      "id": "GLM-5.2",
-      "displayName": "GLM 5.2",
-      "maxOutputTokens": 128000
+      "id": "DeepSeek-V4-Flash-0731-oQ8-mtp",
+      "displayName": "Deepseek V 4 Flash 0731 Oq 8 Mtp (MLX)",
+      "maxOutputTokens": 128000,
+      "contextLimit": 262144,
+      "outputLimit": 65536
     },
     {
       "provider": "omlx-remote",
-      "id": "granite-speech-4.1-2b",
-      "displayName": "Granite Speech 4.1 2B",
-      "maxOutputTokens": 128000
-    },
-    {
-      "provider": "omlx-remote",
-      "id": "Meta-Llama-3.1-8B",
-      "displayName": "Meta Llama 3.1 8B",
-      "maxOutputTokens": 128000
+      "id": "Qwen3.6-27B-oQ4e-mtp",
+      "displayName": "Qwen 3.6 27B Oq 4E Mtp (MLX)",
+      "maxOutputTokens": 128000,
+      "contextLimit": 262144,
+      "outputLimit": 65536
     },
     {
       "provider": "omlx",

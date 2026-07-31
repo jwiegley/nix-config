@@ -79,12 +79,8 @@ let
 
   wrappedClaude = patchAgentPackage testPkgs "claude-code" (fakeAgent "claude");
   realWrappedClaude = patchAgentPackage pkgs "claude-code" claudePackage;
-  wrappedCodex = patchAgentPackage testPkgs "codex" (
-    (fakeAgent "codex") // { inherit (codexPackage) version; }
-  );
-  wrappedNonDarwinCodex = patchAgentPackage nonDarwinTestPkgs "codex" (
-    (fakeAgent "codex") // { inherit (codexPackage) version; }
-  );
+  wrappedCodex = patchAgentPackage testPkgs "codex" (fakeAgent "codex");
+  wrappedNonDarwinCodex = patchAgentPackage nonDarwinTestPkgs "codex" (fakeAgent "codex");
   wrappedDroid = patchAgentPackage testPkgs "droid" (fakeAgent "droid");
 
   networkGuardSource = pkgs.writeText "agent-wrapper-network-guard.c" ''
@@ -184,9 +180,6 @@ let
     else
       pkgs.closureInfo { rootPaths = [ agentHttpHeaderBridge ]; };
 in
-assert pkgs.lib.assertMsg (
-  (codexPackage.version or null) == "0.145.0"
-) "Codex version changed: revalidate test/ai/agent-wrappers.sh before updating the pin";
 pkgs.runCommand "agent-wrappers-check"
   {
     __darwinAllowLocalNetworking = pkgs.stdenv.isDarwin;

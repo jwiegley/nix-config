@@ -515,14 +515,14 @@
                     echo "Running ruff..."
                     ruff check \
                       ${src}/bin/agent-deck-litellm-env-test.py \
-                      ${src}/bin/codex-litellm-test.py \
+                      ${src}/bin/codex-env-test.py \
                       ${src}/bin/update-overlay \
                       ${src}/bin/update-overlay-test.py \
                       ${src}/packages/anvil-mcp
                     echo "Running Agent Deck LiteLLM environment wrapper tests..."
                     python3 ${src}/bin/agent-deck-litellm-env-test.py
-                    echo "Running codex-litellm tests..."
-                    python3 ${src}/bin/codex-litellm-test.py
+                    echo "Running Codex environment wrapper tests..."
+                    python3 ${src}/bin/codex-env-test.py
                     echo "Running update-overlay tests..."
                     python3 ${src}/bin/update-overlay-test.py
                     touch $out

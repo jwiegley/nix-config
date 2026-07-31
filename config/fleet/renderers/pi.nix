@@ -13,7 +13,10 @@ let
   json = pkgs.formats.json { };
   mergeFiles = import ./merge-files.nix { inherit lib; };
 
-  expectedProviderNames = [ "llama-cpp-local" ];
+  expectedProviderNames = [
+    "llama-cpp-local"
+    "omlx"
+  ];
   expectedMcpNames = [
     "Ref"
     "anvil"
@@ -76,36 +79,54 @@ let
     // lib.optionalAttrs (model ? contextLimit) {
       contextWindow = model.contextLimit;
     }
-    // lib.optionalAttrs (model.provider == "llama-cpp-local" && model.id == "GLM-5.2") {
-      reasoning = true;
-      input = [ "text" ];
-      cost = {
-        input = 0;
-        output = 0;
-        cacheRead = 0;
-        cacheWrite = 0;
-      };
-      thinkingLevelMap = {
-        off = "none";
-        minimal = null;
-        xhigh = "xhigh";
-        max = null;
-      };
-    };
-  directGlmModels = orderedValues (
+    //
+      lib.optionalAttrs
+        (
+          (model.provider == "omlx" && model.id == "Qwen3.6-27B-oQ4e-mtp")
+          || (model.provider == "llama-cpp-local" && model.id == "GLM-5.2")
+        )
+        {
+          reasoning = true;
+          input = [ "text" ];
+          cost = {
+            input = 0;
+            output = 0;
+            cacheRead = 0;
+            cacheWrite = 0;
+          };
+          thinkingLevelMap = {
+            off = "none";
+            minimal = null;
+            xhigh = "xhigh";
+            max = null;
+          };
+        };
+  localModelIds = {
+    llama-cpp-local = "GLM-5.2";
+    omlx = "Qwen3.6-27B-oQ4e-mtp";
+  };
+  routerModels = orderedValues (
     lib.filterAttrs (
-      _: model: model.provider == "llama-cpp-local" && model.id == "GLM-5.2"
+      _: model: model.provider == "omlx" && model.id == "Qwen3.6-27B-oQ4e-mtp"
     ) modelData.models
   );
-  directGlmModel = builtins.head directGlmModels;
+  routerModel = builtins.head routerModels;
   renderProvider =
     providerName: provider:
-    assert providerName == "llama-cpp-local";
+    let
+      providerModels = orderedValues (
+        lib.filterAttrs (
+          _: model: model.provider == providerName && model.id == localModelIds.${providerName}
+        ) modelData.models
+      );
+    in
+    assert builtins.hasAttr providerName localModelIds;
+    assert builtins.length providerModels == 1;
     {
       api = "openai-completions";
       apiKey = provider.apiKey.nonSecret;
       inherit (provider) baseUrl;
-      models = map renderModel directGlmModels;
+      models = map renderModel providerModels;
     };
   routerProvider = {
     api = "router-local-api";
@@ -126,8 +147,8 @@ let
           cacheRead = 0;
           cacheWrite = 0;
         };
-        contextWindow = directGlmModel.contextLimit;
-        maxTokens = directGlmModel.outputLimit;
+        contextWindow = routerModel.contextLimit;
+        maxTokens = routerModel.outputLimit;
         thinkingLevelMap.xhigh = "xhigh";
       }
     ];
@@ -139,9 +160,9 @@ let
     debug = false;
     phaseBias = 0.5;
     models.sol = {
-      model = "llama-cpp-local/${directGlmModel.id}";
-      contextWindow = directGlmModel.contextLimit;
-      maxTokens = directGlmModel.outputLimit;
+      model = "omlx/${routerModel.id}";
+      contextWindow = routerModel.contextLimit;
+      maxTokens = routerModel.outputLimit;
       reasoning = true;
       thinkingLevels = [
         "low"
@@ -350,9 +371,9 @@ assert selected.marketplaces == { };
 assert selected.settings == { };
 assert builtins.attrNames selected.mcpServers == expectedMcpNames;
 assert builtins.attrNames modelData.providers == expectedProviderNames;
-assert builtins.length directGlmModels == 1;
-assert (builtins.head directGlmModels).contextLimit == 1048576;
-assert directGlmModel.outputLimit == 65536;
+assert builtins.length routerModels == 1;
+assert routerModel.contextLimit == 262144;
+assert routerModel.outputLimit == 65536;
 assert !(modelData ? default);
 assert builtins.all (model: builtins.hasAttr model.provider modelData.providers) (
   builtins.attrValues modelData.models

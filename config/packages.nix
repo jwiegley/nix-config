@@ -38,9 +38,9 @@ let
       nativeBuildInputs = [ makeWrapper ];
       postBuild = ''
         rm -f "$out/bin/codex"
-        makeWrapper ${../bin/codex-litellm} "$out/bin/codex" \
-          --set CODEX_LITELLM_REAL_CODEX ${package}/bin/codex \
-          --set CODEX_LITELLM_PASS_BIN ${pass}/bin/pass
+        makeWrapper ${../bin/codex-env} "$out/bin/codex" \
+          --set CODEX_ENV_REAL_CODEX ${package}/bin/codex \
+          --set CODEX_ENV_PASS_BIN ${pass}/bin/pass
       '';
       passthru = (package.passthru or { }) // {
         heraCredentialWrapper = true;

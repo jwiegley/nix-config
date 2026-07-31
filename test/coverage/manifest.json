@@ -110,7 +110,7 @@
       "gap": null
     },
     {
-      "path": "bin/codex-litellm-test.py",
+      "path": "bin/codex-env-test.py",
       "kind": "test",
       "tier": "pre-commit",
       "evidence": ["quality:python-test executes routing and credential-failure behavior"],
@@ -497,10 +497,10 @@
       "gap": null
     },
     {
-      "path": "bin/codex-litellm",
+      "path": "bin/codex-env",
       "kind": "production",
       "tier": "pre-commit",
-      "evidence": ["bin/codex-litellm-test.py executes routing, filtering, and credential refusal"],
+      "evidence": ["bin/codex-env-test.py executes argument forwarding, credential export, non-disclosure, and refusal behavior"],
       "gap": null
     },
     {

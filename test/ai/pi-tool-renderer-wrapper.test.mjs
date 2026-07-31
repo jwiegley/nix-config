@@ -20,8 +20,8 @@ for (const relative of [
   const openAiApi = await readFile(join(source, relative), "utf8");
   assert.match(
     openAiApi,
-    /timeout:[\s\S]*model\.provider === "llama-cpp-local"[\s\S]*model\.id === "GLM-5\.2"[\s\S]*model\.provider === "litellm"[\s\S]*model\.id\.startsWith\("clio\/omlx\/"\)[\s\S]*model\.id\.startsWith\("hera\/"\)[\s\S]*!model\.id\.startsWith\("hera\/claude-"\)[\s\S]*\? 7_200_000/,
-    `${relative} must give direct GLM and local LiteLLM routes a two-hour OpenAI client timeout`,
+    /timeout:[\s\S]*model\.provider === "omlx"[\s\S]*\|\| model\.provider === "llama-cpp-local"[\s\S]*\? 7_200_000/,
+    `${relative} must give opt-in local providers a two-hour OpenAI client timeout`,
   );
 }
 

@@ -23,54 +23,21 @@ let
 
   sortedNames = set: lib.sort builtins.lessThan (builtins.attrNames set);
 
-  localModelId = "GLM-5.2";
-  localModels = lib.filterAttrs (
-    _: model: model.provider == "llama-cpp-local" && model.id == localModelId
-  ) modelData.models;
-  localModel =
-    assert builtins.length (builtins.attrValues localModels) == 1;
-    assert (builtins.head (builtins.attrValues localModels)).contextLimit == 1048576;
-    builtins.head (builtins.attrValues localModels);
-
   system = pkgs.stdenv.hostPlatform.system;
   codexSourceCatalog = "${
     llmAgents.packages.${system}.codex.src
   }/codex-rs/models-manager/models.json";
-  managedModelCatalog =
-    pkgs.runCommand "codex-nix-managed-model-catalog.json"
-      {
-        nativeBuildInputs = [ pkgs.jq ];
-      }
-      ''
-        ${lib.getExe pkgs.jq} \
-          --arg local_model_id ${lib.escapeShellArg localModelId} \
-          --arg local_display_name ${lib.escapeShellArg "${localModel.displayName} via llama-swap"} \
-          --argjson context_window ${toString localModel.contextLimit} \
-          '
-            def patched_local:
-              .context_window = $context_window
-              | .max_context_window = $context_window
-              | .effective_context_window_percent = 95;
-
-            .models as $models
-            | [ $models[] | select(.slug == "gpt-5.6-sol") ] as $native_sol_models
-            | if ($native_sol_models | length) != 1 then
-                error("Codex source catalog must contain exactly one native gpt-5.6-sol model")
-              else
-                .models =
-                  (
-                    $models
-                    + [(
-                      $native_sol_models[0]
-                      | patched_local
-                      | .slug = $local_model_id
-                      | .display_name = $local_display_name
-                    )]
-                  )
-              end
-          ' \
-          ${lib.escapeShellArg codexSourceCatalog} > "$out"
-      '';
+  codexSourceCatalogData = builtins.fromJSON (builtins.readFile codexSourceCatalog);
+  nativeSolModels = builtins.filter (
+    model: model.slug == "gpt-5.6-sol"
+  ) codexSourceCatalogData.models;
+  nativeSol =
+    assert builtins.length nativeSolModels == 1;
+    builtins.head nativeSolModels;
+  nativeSolAutoCompactTokenLimit =
+    assert builtins.isInt nativeSol.context_window;
+    builtins.div (nativeSol.context_window * 4) 5;
+  managedModelCatalog = codexSourceCatalog;
   isTypedEnv =
     value:
     builtins.isAttrs value && builtins.attrNames value == [ "env" ] && builtins.isString value.env;
@@ -101,17 +68,45 @@ let
     lib.recursiveUpdate native (server.overrides.codex or { });
 
   hookItems = builtins.attrValues selected.hooks;
+  localConfig = lib.optionalAttrs (profile.host == "hera") {
+    model_providers = {
+      omlx = {
+        name = "oMLX";
+        base_url = modelData.providers.omlx.baseUrl;
+        env_key = "OMLX_API_KEY";
+        wire_api = "responses";
+      };
+      llama-swap = {
+        name = "llama-swap";
+        base_url = modelData.providers.llama-cpp-local.baseUrl;
+        env_key = "LLAMA_SWAP_API_KEY";
+        wire_api = "responses";
+      };
+    };
+    profiles = {
+      omlx = {
+        model = "Qwen3.6-27B-oQ4e-mtp";
+        model_provider = "omlx";
+      };
+      llama-swap = {
+        model = "GLM-5.2";
+        model_provider = "llama-swap";
+      };
+    };
+  };
   managedConfig = {
+    model = "gpt-5.6-sol";
+    model_auto_compact_token_limit = nativeSolAutoCompactTokenLimit;
     model_catalog_json = "${homeDirectory}/${profile.root}/nix-managed-model-catalog.json";
-    model_context_window = localModel.contextLimit;
-    model_auto_compact_token_limit = 900000;
+    model_reasoning_effort = "ultra";
     notify = lib.concatMap (item: item.codex.notify or [ ]) hookItems;
     mcp_servers = lib.mapAttrs (_: renderMcpServer) selected.mcpServers;
     shell_environment_policy = {
       ignore_default_excludes = false;
       exclude = [ "REF_API_KEY" ];
     };
-  };
+  }
+  // localConfig;
   managedHooks = {
     hooks = lib.zipAttrsWith (_: bodies: lib.concatLists bodies) (
       map (item: item.hooks or { }) hookItems
