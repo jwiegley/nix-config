@@ -55,6 +55,19 @@ let
     builtins.hashString "sha256" (
       builtins.unsafeDiscardStringContext (builtins.toJSON (normalizeStoreValue value))
     );
+  # Authorization values need exact content identity inside their opaque digest.
+  # Normalizing a store prefix here would hide rebuilt key files or commands.
+  hashExactJsonValue =
+    value: builtins.hashString "sha256" (builtins.unsafeDiscardStringContext (builtins.toJSON value));
+  projectBuildMachine =
+    machine:
+    let
+      sshKey = machine.sshKey or null;
+    in
+    (builtins.removeAttrs machine [ "sshKey" ])
+    // {
+      sshKeySha256 = if sshKey == null then null else hashExactJsonValue (toString sshKey);
+    };
 in
 {
   # S12-S14
@@ -62,14 +75,33 @@ in
     knownUsers = c.users.knownUsers;
     knownGroups = c.users.knownGroups;
     names = sortNames (builtins.attrNames c.users.users);
-    detail = mapAttrs (_: user: {
-      home = stringOrNull (user.home or null);
-      shell = stringOrNull (user.shell or null);
-      uid = user.uid or null;
-      gid = user.gid or null;
-      createHome = user.createHome or null;
-      description = user.description or null;
-    }) c.users.users;
+    detail = mapAttrs (
+      _: user:
+      let
+        keys = user.openssh.authorizedKeys.keys or [ ];
+        keyFilePaths = user.openssh.authorizedKeys.keyFiles or [ ];
+        # Source paths inherit the whole flake's store prefix. Hash file content
+        # exactly, but normalize that incidental prefix before the aggregate hash.
+        keyFiles = map (path: {
+          contentSha256 = builtins.hashFile "sha256" path;
+          path = normalizeStoreString (toString path);
+        }) keyFilePaths;
+      in
+      {
+        home = stringOrNull (user.home or null);
+        shell = stringOrNull (user.shell or null);
+        uid = user.uid or null;
+        gid = user.gid or null;
+        createHome = user.createHome or null;
+        description = user.description or null;
+        authorizedKeys = {
+          keysCount = builtins.length keys;
+          keysSha256 = hashExactJsonValue keys;
+          keyFilesCount = builtins.length keyFilePaths;
+          keyFilesSha256 = hashExactJsonValue keyFiles;
+        };
+      }
+    ) c.users.users;
   };
 
   # S15-S16
@@ -115,7 +147,7 @@ in
     settings = jsonValue darwin.options.nix.settings.value;
     maxJobs = darwin.options.nix.settings.value.max-jobs;
     distributedBuilds = darwin.options.nix.distributedBuilds.value;
-    buildMachines = jsonValue darwin.options.nix.buildMachines.value;
+    buildMachines = map projectBuildMachine (jsonValue darwin.options.nix.buildMachines.value);
   };
 
   # S23-S25

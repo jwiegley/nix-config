@@ -141,7 +141,7 @@ class MainModeTests(TemporaryBaselineTestCase):
                 derive.assert_called_once_with(REVISION_A)
                 write.assert_not_called()
                 value = json.loads(stdout.getvalue())
-                self.assertEqual(value["schema"], "darwin-value-surface/2")
+                self.assertEqual(value["schema"], "darwin-value-surface/3")
                 self.assertEqual(value["baselineRev"], REVISION_A)
                 self.assertEqual(value["projection"], projection())
                 self.assertEqual(value["hosts"], expected_hosts)

@@ -32,7 +32,7 @@ PROJECTION_PATHS = (PROJECTOR_RELATIVE, HELPER_RELATIVE, DIFFER_RELATIVE)
 BACKUP_NAME = ".darwin-surface-baseline.backup.json"
 LOCK_NAME = ".darwin-surface-baseline.lock"
 
-SCHEMA = "darwin-value-surface/2"
+SCHEMA = "darwin-value-surface/3"
 HOSTS = ("clio", "hera")
 SURFACES = {
     "environment",
@@ -517,7 +517,10 @@ def artifact(
             "Seven nix-darwin value surfaces at the recorded revision. Only "
             "32-character /nix/store hash prefixes are masked; derivation names "
             "remain. Launchd scripts are hashed after that normalization, so their "
-            "text is not persisted; sensitive keys and assignments are refused."
+            "text is not persisted. Authorized-key lists, authorized-key file paths, "
+            "and build-machine private-key paths are persisted only as content-aware "
+            "opaque aggregate hashes plus non-sensitive counts; sensitive keys and "
+            "assignments are refused."
         ),
         "commands": dict(COMMANDS),
         "projection": dict(projection),
@@ -546,7 +549,11 @@ def baseline_candidates() -> list[Path]:
         ) from error
 
 
-def read_baseline(path: Path, *, require_candidate_name: bool = True) -> dict[str, Any]:
+def read_baseline(
+    path: Path,
+    *,
+    require_candidate_name: bool = True,
+) -> dict[str, Any]:
     """Read and validate one current artifact."""
     if path.is_symlink() or not path.is_file():
         invalid_baseline(f"unsafe path {path}")

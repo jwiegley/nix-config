@@ -362,6 +362,45 @@ class TestVerifySignaturesRejects(unittest.TestCase):
             % (strict.stdout + strict.stderr),
         )
 
+    def test_base_owned_verifier_rejects_a_head_side_success_stub(self):
+        self._commit("initial", "initial")
+        verifier = Path(self.repo) / "bin" / "verify-signatures"
+        verifier.parent.mkdir()
+        verifier.write_text(VERIFY_SIGNATURES.read_text())
+        verifier.chmod(0o755)
+        git("add", "bin/verify-signatures", cwd=self.repo)
+        git("commit", "-q", "--no-gpg-sign", "-m", "trusted base verifier", cwd=self.repo)
+        base = git("rev-parse", "HEAD", cwd=self.repo).stdout.strip()
+
+        verifier.write_text("#!/bin/sh\nexit 0\n")
+        git("add", "bin/verify-signatures", cwd=self.repo)
+        git("commit", "-q", "--no-gpg-sign", "-m", "malicious success stub", cwd=self.repo)
+        head = git("rev-parse", "HEAD", cwd=self.repo).stdout.strip()
+
+        trusted = Path(self.tmp) / "trusted" / "verify-signatures"
+        trusted.parent.mkdir()
+        trusted.write_text(
+            git("show", f"{base}:bin/verify-signatures", cwd=self.repo).stdout
+        )
+        trusted.chmod(0o755)
+        result = subprocess.run(
+            [
+                str(trusted),
+                "--base",
+                base,
+                "--head",
+                head,
+                "--keys-dir",
+                str(Path(self.tmp) / "trusted-keys"),
+            ],
+            cwd=self.repo,
+            capture_output=True,
+            text=True,
+            env=clean_env(),
+        )
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("REJECTED [N]", result.stdout + result.stderr)
+
 
 class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
     """The honesty guards must be able to FIRE, not merely exist.
@@ -1318,6 +1357,65 @@ class TestGatesAreRegistered(unittest.TestCase):
         self.assertIn("coverage", expensive_set)
         self.assertEqual(pre_commit | expensive_set, registered)
         self.assertEqual(pre_commit & expensive_set, {"python-test"})
+
+    def test_signature_ci_uses_the_real_event_range_and_public_key_only(self):
+        workflow = (REPO / ".github/workflows/ci.yml").read_text()
+        self.assertRegex(workflow, r"(?m)^  signatures:\n")
+        self.assertRegex(
+            workflow,
+            r"(?m)^          fetch-depth: 0\n"
+            r"(?:^          #.*\n)*"
+            r"^          ref: \$\{\{ github\.event\.pull_request\.base\.sha \|\| github\.sha \}\}$",
+        )
+        self.assertIn(
+            'run: git fetch --no-tags origin "pull/${{ github.event.pull_request.number }}/head"',
+            workflow,
+        )
+        self.assertNotIn("ref: ${{ github.event.pull_request.head.sha", workflow)
+        self.assertIn(
+            "SIGVERIFY_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}",
+            workflow,
+        )
+        self.assertIn(
+            "SIGVERIFY_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}",
+            workflow,
+        )
+        self.assertIn('SIGVERIFY_STRICT: "1"', workflow)
+        self.assertIn(
+            'run: bin/verify-signatures --base "$SIGVERIFY_BASE" --head "$SIGVERIFY_HEAD"',
+            workflow,
+        )
+
+        public_keys = sorted((REPO / ".github/signing-keys").glob("*"))
+        self.assertEqual(len(public_keys), 1)
+        key = public_keys[0].read_text()
+        self.assertIn("BEGIN PGP PUBLIC KEY BLOCK", key)
+        self.assertNotIn("PRIVATE KEY", key)
+        shown = subprocess.run(
+            ["gpg", "--batch", "--show-keys", "--with-colons", str(public_keys[0])],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.splitlines()
+        fingerprints = [line.split(":")[9] for line in shown if line.startswith("fpr:")]
+        self.assertEqual(
+            fingerprints,
+            [
+                "4710CF98AF9B327BB80F60E146C4BD1A7AC14BA2",
+                "76DBD4ED877F4C2ADC6A46A612D70076AB504679",
+            ],
+        )
+        self.assertEqual(sum(line.startswith("uid:") for line in shown), 1)
+        subkeys = [line.split(":") for line in shown if line.startswith("sub:")]
+        self.assertEqual(len(subkeys), 1)
+        self.assertEqual(subkeys[0][11], "s")
+        packets = subprocess.run(
+            ["gpg", "--batch", "--list-packets", str(public_keys[0])],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+        self.assertNotRegex(packets, r"(?m)^:secret (?:key|sub key) packet:")
 
     def test_expensive_assurance_is_low_frequency_and_manual(self):
         workflow = (REPO / ".github/workflows/portable-assurance.yml").read_text()

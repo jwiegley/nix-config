@@ -856,6 +856,13 @@ got: sha256-requested
         all_special_dependencies = set().union(*special.values())
         for target in sorted(ISSUE39_TARGETS):
             with self.subTest(target=target):
+                self.assertEqual(
+                    set(contract["targets"][target]["defensiveForbidDependencies"]),
+                    special.get(target, set()),
+                )
+                self.assertEqual(
+                    contract["targets"][target]["forbidDependencies"], []
+                )
                 normalized_text = normalize_pi_manifest(
                     root,
                     target,
@@ -899,7 +906,7 @@ got: sha256-requested
                 Path(jq),
             )
         )
-        self.assertIsNone(
+        with self.assertRaisesRegex(RuntimeError, "identity does not match"):
             normalize_pi_manifest(
                 root,
                 "pi-artifacts",
@@ -908,44 +915,79 @@ got: sha256-requested
                 json.dumps(manifest),
                 Path(jq),
             )
-        )
         with tempfile.TemporaryDirectory() as temp_dir:
             temporary_root = Path(temp_dir)
             gallery = temporary_root / "packages/pi-gallery"
             gallery.mkdir(parents=True)
             shutil.copy(root / "packages/pi-gallery/normalize-manifest.jq", gallery)
 
+            def run_policy(candidate, candidate_manifest=manifest):
+                policy = gallery / "normalization-policy.json"
+                policy.write_text(json.dumps(candidate))
+                return subprocess.run(
+                    [
+                        jq,
+                        "--arg",
+                        "target",
+                        "pi-artifacts",
+                        "--arg",
+                        "expectedName",
+                        "example",
+                        "--arg",
+                        "expectedVersion",
+                        "1.0.0",
+                        "--slurpfile",
+                        "policy",
+                        str(policy),
+                        "-f",
+                        str(gallery / "normalize-manifest.jq"),
+                    ],
+                    input=json.dumps(candidate_manifest),
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+
+            enforced = copy.deepcopy(contract)
+            enforced["targets"]["pi-artifacts"]["forbidDependencies"] = ["keep"]
+            enforced_result = run_policy(enforced)
+            self.assertEqual(
+                enforced_result.returncode,
+                0,
+                enforced_result.stdout + enforced_result.stderr,
+            )
+            self.assertNotIn("keep", json.loads(enforced_result.stdout)["dependencies"])
+
+            inert = copy.deepcopy(contract)
+            inert["targets"]["pi-artifacts"]["forbidDependencies"] = [
+                "missing-enforced-dependency"
+            ]
+            inert_result = run_policy(inert)
+            self.assertNotEqual(inert_result.returncode, 0)
+            self.assertIn("inert enforced Pi npm dependencies", inert_result.stderr)
+            self.assertIn("missing-enforced-dependency", inert_result.stderr)
+
+            defensive = copy.deepcopy(contract)
+            defensive["targets"]["pi-artifacts"][
+                "defensiveForbidDependencies"
+            ] = ["future-defensive-dependency"]
+            defensive_result = run_policy(defensive)
+            self.assertEqual(
+                defensive_result.returncode,
+                0,
+                defensive_result.stdout + defensive_result.stderr,
+            )
+
             def rejected_by_both(label, mutate):
                 malformed = copy.deepcopy(contract)
                 mutate(malformed)
-                policy = gallery / "normalization-policy.json"
-                policy.write_text(json.dumps(malformed))
+                (gallery / "normalization-policy.json").write_text(
+                    json.dumps(malformed)
+                )
                 with self.subTest(label=label):
                     with self.assertRaises(RuntimeError):
                         load_pi_normalization_contract(temporary_root)
-                    result = subprocess.run(
-                        [
-                            jq,
-                            "--arg",
-                            "target",
-                            "pi-artifacts",
-                            "--arg",
-                            "expectedName",
-                            "example",
-                            "--arg",
-                            "expectedVersion",
-                            "1.0.0",
-                            "--slurpfile",
-                            "policy",
-                            str(policy),
-                            "-f",
-                            str(gallery / "normalize-manifest.jq"),
-                        ],
-                        input=json.dumps(manifest),
-                        capture_output=True,
-                        text=True,
-                        check=False,
-                    )
+                    result = run_policy(malformed)
                     self.assertNotEqual(result.returncode, 0)
 
             rejected_by_both(
@@ -962,6 +1004,44 @@ got: sha256-requested
                 "duplicate removal",
                 lambda value: value["common"]["removeTopLevel"].append(
                     "devDependencies"
+                ),
+            )
+            rejected_by_both(
+                "dependency repeated across policies",
+                lambda value: (
+                    value["common"]["forbidDependencies"].append("duplicate"),
+                    value["common"]["defensiveForbidDependencies"].append(
+                        "duplicate"
+                    ),
+                ),
+            )
+            rejected_by_both(
+                "dependency repeated across common and target policies",
+                lambda value: (
+                    value["common"]["forbidDependencies"].append("duplicate"),
+                    value["targets"]["pi-artifacts"][
+                        "defensiveForbidDependencies"
+                    ].append("duplicate"),
+                ),
+            )
+            rejected_by_both(
+                "enforced dependency repeated across common and target",
+                lambda value: (
+                    value["common"]["forbidDependencies"].append("duplicate"),
+                    value["targets"]["pi-artifacts"]["forbidDependencies"].append(
+                        "duplicate"
+                    ),
+                ),
+            )
+            rejected_by_both(
+                "defensive dependency repeated across common and target",
+                lambda value: (
+                    value["common"]["defensiveForbidDependencies"].append(
+                        "duplicate"
+                    ),
+                    value["targets"]["pi-artifacts"][
+                        "defensiveForbidDependencies"
+                    ].append("duplicate"),
                 ),
             )
         default_nix = (root / "packages/pi-gallery/default.nix").read_text()
@@ -1420,7 +1500,7 @@ got: sha256-requested
             lock_dir.mkdir(parents=True)
             policy_path = root / "packages/pi-gallery/normalization-policy.json"
             policy_path.write_text(json.dumps({
-                "schemaVersion": 1,
+                "schemaVersion": 2,
                 "npmDependencyFlags": [
                     "--ignore-scripts",
                     "--omit=dev",
@@ -1430,11 +1510,13 @@ got: sha256-requested
                 "common": {
                     "removeTopLevel": [],
                     "forbidDependencies": [],
+                    "defensiveForbidDependencies": [],
                 },
                 "targets": {
                     "project": {
                         "removeTopLevel": [],
                         "forbidDependencies": [],
+                        "defensiveForbidDependencies": [],
                     }
                 },
             }))
@@ -1652,6 +1734,45 @@ got: sha256-requested
                     }
                 },
             }, indent=2) + "\n"
+
+            def reject_normalization(*_args):
+                raise RuntimeError(
+                    "inert enforced Pi npm dependencies: missing-enforced-dependency"
+                )
+
+            diagnostic_output = io.StringIO()
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(diagnostic_output):
+                status = update_npm_lock_target(
+                    "project",
+                    target,
+                    SimpleNamespace(version="2.0.0", dry_run=False),
+                    SimpleNamespace(
+                        get_version_metadata=lambda _package, requested: {
+                            "version": requested,
+                            "integrity": "sha512-integrity",
+                            "tarball": (
+                                "https://registry.npmjs.org/project/-/"
+                                f"project-{requested}.tgz"
+                            ),
+                        }
+                    ),
+                    FakeHashes(),
+                    transaction,
+                    manifest_reader=lambda _path: (
+                        '{"name":"project","version":"2.0.0"}',
+                        {"name": "project", "version": "2.0.0"},
+                    ),
+                    manifest_normalizer=reject_normalization,
+                    lock_generator=lambda *_args: self.fail(
+                        "lock generation ran after normalization rejection"
+                    ),
+                    integrity_verifier=lambda _path, _integrity: True,
+                )
+            self.assertEqual(status, "failed")
+            self.assertIn("missing-enforced-dependency", diagnostic_output.getvalue())
+            self.assertEqual(transaction.original, {})
+
             observed = []
 
             def fake_normalizer(
@@ -4186,7 +4307,7 @@ got: sha256-requested
         self.assertEqual(names, sorted(catalog))
         self.assertEqual(
             hashlib.sha256("\n".join(names).encode()).hexdigest(),
-            "4e5b6cdb25ccc7617dbdefe79afc06e31ee15392f70416f59b0529397ce49261",
+            "2e88ed859039e5450f9c55f5c125ad553ab994d0f59fc68b4b117fefb175ecf3",
         )
         self.assertTrue(required <= set(names))
         self.assertTrue(all(item["inventoried"] for item in inventory["packages"]))
@@ -4216,10 +4337,10 @@ got: sha256-requested
             {item["name"] for item in inventory["packages"] if not item["managed"]},
             set(),
         )
-        self.assertEqual(len(inventory["packages"]), 199)
+        self.assertEqual(len(inventory["packages"]), 197)
         self.assertEqual(
             len([item for item in inventory["packages"] if item["managed"]]),
-            199,
+            197,
         )
         self.assertEqual(catalog_owned, set(catalog))
         self.assertTrue(relocated <= catalog_owned)
@@ -4299,7 +4420,7 @@ got: sha256-requested
         self.assertEqual(human.returncode, 0, human.stderr)
         self.assertEqual(
             human.stdout.splitlines()[-1],
-            "199 inventoried targets; 199 executable; 0 pending executors",
+            "197 inventoried targets; 197 executable; 0 pending executors",
         )
 
     def test_source_transaction_rolls_back_and_commit_preserves(self):

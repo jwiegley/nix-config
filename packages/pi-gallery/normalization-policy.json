@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "npmDependencyFlags": [
     "--ignore-scripts",
     "--omit=dev",
@@ -12,54 +12,64 @@
       "peerDependencies",
       "peerDependenciesMeta"
     ],
-    "forbidDependencies": []
+    "forbidDependencies": [],
+    "defensiveForbidDependencies": []
   },
   "targets": {
     "pi-artifacts": {
       "removeTopLevel": [],
-      "forbidDependencies": []
+      "forbidDependencies": [],
+      "defensiveForbidDependencies": []
     },
     "pi-dynamic-workflows": {
       "removeTopLevel": [],
-      "forbidDependencies": []
+      "forbidDependencies": [],
+      "defensiveForbidDependencies": []
     },
     "pi-hashline-edit-pro": {
       "removeTopLevel": [
         "allowScripts"
       ],
-      "forbidDependencies": [
+      "forbidDependencies": [],
+      "defensiveForbidDependencies": [
         "better-sqlite3"
       ]
     },
     "pi-insights": {
       "removeTopLevel": [],
-      "forbidDependencies": []
+      "forbidDependencies": [],
+      "defensiveForbidDependencies": []
     },
     "pi-lens": {
       "removeTopLevel": [],
-      "forbidDependencies": [
+      "forbidDependencies": [],
+      "defensiveForbidDependencies": [
         "@earendil-works/pi-tui",
         "typebox"
       ]
     },
     "pi-markdown-preview": {
       "removeTopLevel": [],
-      "forbidDependencies": []
+      "forbidDependencies": [],
+      "defensiveForbidDependencies": []
     },
     "pi-smart-fetch": {
       "removeTopLevel": [],
-      "forbidDependencies": [
+      "forbidDependencies": [],
+      "defensiveForbidDependencies": [
         "@earendil-works/pi-tui",
         "@sinclair/typebox"
       ]
     },
     "pi-smart-web-search": {
       "removeTopLevel": [],
-      "forbidDependencies": []
+      "forbidDependencies": [],
+      "defensiveForbidDependencies": []
     },
     "pi-subagents": {
       "removeTopLevel": [],
-      "forbidDependencies": [
+      "forbidDependencies": [],
+      "defensiveForbidDependencies": [
         "typebox"
       ]
     }

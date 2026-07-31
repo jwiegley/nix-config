@@ -982,7 +982,7 @@ def load_pi_normalization_contract(nix_dir: Path) -> dict:
         "targets",
     }:
         raise RuntimeError("invalid Pi npm normalization contract fields")
-    if contract["schemaVersion"] != 1:
+    if contract["schemaVersion"] != 2:
         raise RuntimeError("unsupported Pi npm normalization contract schema")
     dependency_flags = _string_list(
         contract["npmDependencyFlags"], "Pi npm dependency flags"
@@ -994,10 +994,20 @@ def load_pi_normalization_contract(nix_dir: Path) -> dict:
         if not isinstance(value, dict) or set(value) != {
             "removeTopLevel",
             "forbidDependencies",
+            "defensiveForbidDependencies",
         }:
             raise RuntimeError(f"invalid {label} fields")
         _string_list(value["removeTopLevel"], f"{label}.removeTopLevel")
-        _string_list(value["forbidDependencies"], f"{label}.forbidDependencies")
+        enforced = _string_list(
+            value["forbidDependencies"], f"{label}.forbidDependencies"
+        )
+        defensive = _string_list(
+            value["defensiveForbidDependencies"],
+            f"{label}.defensiveForbidDependencies",
+        )
+        overlap = sorted(set(enforced) & set(defensive))
+        if overlap:
+            raise RuntimeError(f"{label} repeats dependencies across policies: {overlap}")
 
     validate_policy(contract["common"], "Pi npm common normalization policy")
     targets = contract["targets"]
@@ -1007,6 +1017,26 @@ def load_pi_normalization_contract(nix_dir: Path) -> dict:
         if not isinstance(name, str) or re.fullmatch(r"[a-z0-9][a-z0-9-]*", name) is None:
             raise RuntimeError("invalid Pi npm normalization target name")
         validate_policy(policy, f"Pi npm normalization target {name}")
+        enforced_entries = [
+            *contract["common"]["forbidDependencies"],
+            *policy["forbidDependencies"],
+        ]
+        defensive_entries = [
+            *contract["common"]["defensiveForbidDependencies"],
+            *policy["defensiveForbidDependencies"],
+        ]
+        if len(enforced_entries) != len(set(enforced_entries)) or len(
+            defensive_entries
+        ) != len(set(defensive_entries)):
+            raise RuntimeError(
+                f"Pi npm normalization target {name} repeats an inherited dependency"
+            )
+        overlap = sorted(set(enforced_entries) & set(defensive_entries))
+        if overlap:
+            raise RuntimeError(
+                f"Pi npm normalization target {name} repeats dependencies across "
+                f"combined policies: {overlap}"
+            )
         removed = set(contract["common"]["removeTopLevel"]) | set(
             policy["removeTopLevel"]
         )
@@ -1180,7 +1210,15 @@ def normalize_pi_manifest(
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
-    if result.returncode != 0 or not result.stdout:
+    if result.returncode != 0:
+        raise RuntimeError(
+            _bounded_actionable_error(
+                getattr(result, "stderr", ""),
+                result.stdout,
+                fallback=f"jq exited with status {result.returncode}",
+            )
+        )
+    if not result.stdout:
         return None
     try:
         normalized = json.loads(result.stdout, object_pairs_hook=_unique_object)
@@ -2453,14 +2491,22 @@ def update_npm_lock_target(
     except RuntimeError as error:
         print(f"catalog/{name} {Colors.RED}✗ {error}{Colors.RESET}")
         return "failed"
-    normalized_manifest = manifest_normalizer(
-        target["_path"].parent.parent,
-        name,
-        update["package"],
-        new_version,
-        raw_manifest,
-        jq,
-    )
+    try:
+        normalized_manifest = manifest_normalizer(
+            target["_path"].parent.parent,
+            name,
+            update["package"],
+            new_version,
+            raw_manifest,
+            jq,
+        )
+    except RuntimeError as error:
+        detail = _bounded_actionable_error(
+            error,
+            fallback="manifest normalizer rejected the candidate",
+        )
+        print(f"catalog/{name} {Colors.RED}✗ normalization failed: {detail}{Colors.RESET}")
+        return "failed"
     if normalized_manifest is None:
         print(f"catalog/{name} {Colors.RED}✗ normalization failed{Colors.RESET}")
         return "failed"

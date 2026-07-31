@@ -14,12 +14,13 @@
 #          web-of-trust-trusted. CI runners and fresh clones legitimately have no
 #          trust web, so a cryptographically valid signature lands on U, not G.
 #          Tolerating U is the entire reason this can work in CI at all.
+#       Y  good signature made by a key that has since expired. Git still verifies
+#          the historical signature; revoked keys remain rejected as R.
 #   Everything else is rejected:
-#       X expired signature   Y expired key   R revoked key
+#       X expired signature   R revoked key
 #       E cannot check (no public key available)   B bad   N none (unsigned)
-#   bin/publish once accepted G|U|X|Y and was tightened to G|U: a signature that no
-#   longer verifies does not satisfy "signed commits only". We start where that
-#   ended -- G|U and nothing else.
+#   X (an expired signature) remains rejected. Y describes the key's current
+#   expiration, not a failure to verify the historical signature.
 #
 # WHAT IT CANNOT PROVE
 #   * It cannot prove WHO signed a commit beyond "a key in the verifying keyring".
@@ -63,7 +64,7 @@
 #         makes a bare invocation a correct local pre-push guard.
 #
 # EXIT CODES
-#   0  every commit in range is G or U (or the range is empty)
+#   0  every commit in range is G, U or Y (or the range is empty outside strict mode)
 #   1  at least one commit is unsigned or otherwise not-good
 #   2  usage or range-resolution error (loud -- never silently green)
 #   3  a required tool (git, gpg) is missing
@@ -287,8 +288,8 @@ while read -r sig sha subject; do
     # historical commit starts failing at once, discovered live in CI rather than by
     # this suite. The signing key here expires 2026-11-25, which is what surfaced it.
     #
-    # X stays rejected and is a different condition -- the SIGNATURE itself carried an
-    # expiration (bin/verify-signatures:18: "X expired signature   Y expired key").
+    # X stays rejected and is a different condition: the signature itself expired;
+    # Y means the signature is good but its signing key has since expired.
     G | U | Y) : ;;
     *)
         warn "REJECTED [$sig] $sha $subject"
@@ -313,6 +314,6 @@ if [[ $checked -eq 0 ]]; then
     fi
     say "no commits in range; nothing to verify"
 else
-    say "all $checked commit(s) in range carry a good signature (G or U)"
+    say "all $checked commit(s) in range carry a good signature (G, U or Y)"
 fi
 exit 0

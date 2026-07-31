@@ -482,7 +482,7 @@ run_signatures() {
     need gpg signatures || return
     # verify-signatures owns the range logic and the %G? policy. It resolves the
     # CI push/PR range from SIGVERIFY_BASE/SIGVERIFY_HEAD, or when run bare the
-    # local "not yet on any remote" set, and requires %G? in {G,U} for every
+    # local "not yet on any remote" set, and requires %G? in {G,U,Y} for every
     # commit. It imports only PUBLIC keys from .github/signing-keys into a
     # throwaway keyring; no secret material is read or written.
     #
