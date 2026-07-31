@@ -3,6 +3,7 @@
 {
   newPaths,
   piGuard ? null,
+  legacyPiGuardPath ? null,
 }:
 
 let
@@ -30,8 +31,8 @@ let
     ".config/opencode/agents"
     ".config/opencode/commands"
     ".config/opencode/skills"
-    ".pi/agent/agents"
-    ".pi/agent/prompts"
+    ".config/pi/agents"
+    ".config/pi/prompts"
   ];
   managedExactPaths = [
     ".claude/nix-managed-mcp.json"
@@ -54,13 +55,13 @@ let
     ".config/mcp/mcp.json"
     ".config/opencode/opencode.json"
     ".pi-lens/config.json"
-    ".pi/agent/extensions/auto-compact-resume/index.ts"
-    ".pi/agent/extensions/nix-gallery/index.ts"
-    ".pi/agent/extensions/pi-mcp-adapter"
-    ".pi/agent/extensions/pi-quiet"
-    ".pi/agent/keybindings.json"
-    ".pi/agent/model-router.json"
-    ".pi/agent/models.json"
+    ".config/pi/extensions/auto-compact-resume/index.ts"
+    ".config/pi/extensions/nix-gallery/index.ts"
+    ".config/pi/extensions/pi-mcp-adapter"
+    ".config/pi/extensions/pi-quiet"
+    ".config/pi/keybindings.json"
+    ".config/pi/model-router.json"
+    ".config/pi/models.json"
   ];
   validRelativePath =
     path:
@@ -89,23 +90,32 @@ let
     in
     "Checking ${toString count} Nix-managed AI leaf ${noun} for blockers...";
   piGuardValid =
-    piGuard == null
-    || (
-      builtins.isAttrs piGuard
-      &&
-        builtins.attrNames piGuard == [
-          "forbiddenKeys"
-          "path"
-        ]
-      && piGuard.path == ".pi/agent/mcp.json"
-      &&
-        piGuard.forbiddenKeys == [
-          "mcpServers"
-          "imports"
-        ]
-    );
-  piGuardScript = lib.optionalString (piGuard != null) ''
-    pi_path="$HOME/${piGuard.path}"
+    if piGuard == null then
+      legacyPiGuardPath == null
+    else
+      (
+        builtins.isAttrs piGuard
+        &&
+          builtins.attrNames piGuard == [
+            "forbiddenKeys"
+            "path"
+          ]
+        && piGuard.path == ".config/pi/mcp.json"
+        && (
+          legacyPiGuardPath == null
+          || (validRelativePath legacyPiGuardPath && legacyPiGuardPath != piGuard.path)
+        )
+        &&
+          piGuard.forbiddenKeys == [
+            "mcpServers"
+            "imports"
+          ]
+      );
+  piGuardPaths =
+    lib.optional (piGuard != null) piGuard.path
+    ++ lib.optional (legacyPiGuardPath != null) legacyPiGuardPath;
+  renderPiGuard = path: ''
+    pi_path="$HOME/${path}"
     if [ -e "$pi_path" ] || [ -L "$pi_path" ]; then
       if [ ! -f "$pi_path" ] || ! ${pkgs.jq}/bin/jq -e \
         'if type == "object"
@@ -114,10 +124,11 @@ let
          end' \
         "$pi_path" >/dev/null 2>&1; then
         report_error \
-          '${piGuard.path}: keep valid adapter JSON without top-level mcpServers or imports'
+          '${path}: keep valid adapter JSON without top-level mcpServers or imports'
       fi
     fi
   '';
+  piGuardScript = lib.concatMapStringsSep "\n" renderPiGuard piGuardPaths;
 
   script = ''
     errors_file="$(${pkgs.coreutils}/bin/mktemp \

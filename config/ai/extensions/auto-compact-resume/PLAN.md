@@ -138,10 +138,10 @@ Expected: all 12 tests pass with no warnings or errors.
 **Files:**
 - Verify: `config/ai/extensions/auto-compact-resume/index.ts`
 - Verify: `config/ai/renderers/pi.nix`
-- Verify after activation: `~/.pi/agent/extensions/auto-compact-resume/index.ts`
+- Verify after activation: `$XDG_CONFIG_HOME/pi/extensions/auto-compact-resume/index.ts`
 
 **Interfaces:**
-- Consumes: Pi's global extension auto-discovery at `~/.pi/agent/extensions/*/index.ts`.
+- Consumes: Pi's global extension auto-discovery at `$XDG_CONFIG_HOME/pi/extensions/*/index.ts`.
 - Produces: a loadable extension active in new and reloaded sessions.
 
 - [ ] **Step 1: Run a loader smoke test**
@@ -163,8 +163,8 @@ Before the authorized Home Manager switch, verify the repository implementation 
 Run:
 
 ```bash
-find ~/.pi/agent/extensions/auto-compact-resume -maxdepth 1 -type f -print | sort
-python3 -m json.tool ~/.pi/agent/settings.json >/dev/null
+find "$XDG_CONFIG_HOME/pi/extensions/auto-compact-resume" -maxdepth 1 -type f -print | sort
+python3 -m json.tool "$XDG_CONFIG_HOME/pi/settings.json" >/dev/null
 git status --short --branch
 ```
 

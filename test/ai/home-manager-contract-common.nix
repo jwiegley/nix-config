@@ -191,7 +191,7 @@ let
     hera-codex = ".config/codex";
     hera-droid = ".config/factory";
     hera-opencode = ".config/opencode";
-    hera-pi = ".pi/agent";
+    hera-pi = ".config/pi";
     shared-work-claude-positron = ".claude";
     shared-work-codex = ".codex";
     shared-work-opencode-positron = ".config/opencode";
@@ -2709,7 +2709,7 @@ let
         (expectEqual "${profileId} companions" render.companions [ ])
         (expectEqual "${profileId} required environment" render.requiredEnvNames piRequiredEnvNames)
         (expectEqual "${profileId} mutable MCP guard" render.mutableMcpGuard {
-          path = ".pi/agent/mcp.json";
+          path = ".config/pi/mcp.json";
           forbiddenKeys = [
             "mcpServers"
             "imports"
@@ -2720,7 +2720,7 @@ let
         )) [ ])
         (expectEqual "${profileId} owns no skill leaves" piOwnedSkillPaths [ ])
         (expectReject "Pi unknown agent tool accepted"
-          piUnknownAgentToolProbe.files.".pi/agent/agents/bash-reviewer.md".text
+          piUnknownAgentToolProbe.files.".config/pi/agents/bash-reviewer.md".text
         )
         (expectReject "Pi nonstandard XDG config home accepted" piNonstandardXdgProbe.companions)
         (expectReject "Pi non-Hera/non-Pi profile accepted" piWrongProfileProbe.companions)
@@ -3212,6 +3212,7 @@ let
     ".config/mcp"
     ".config/opencode"
     ".factory"
+    ".config/pi"
     ".pi"
     ".pi/agent"
   ];
@@ -3242,8 +3243,8 @@ let
     ".config/opencode/agents"
     ".config/opencode/commands"
     ".config/opencode/skills"
-    ".pi/agent/agents"
-    ".pi/agent/prompts"
+    ".config/pi/agents"
+    ".config/pi/prompts"
   ];
   task9ManagedExactPaths = [
     ".claude/nix-managed-mcp.json"
@@ -3266,13 +3267,13 @@ let
     ".config/mcp/mcp.json"
     ".config/opencode/opencode.json"
     ".pi-lens/config.json"
-    ".pi/agent/extensions/auto-compact-resume/index.ts"
-    ".pi/agent/extensions/nix-gallery/index.ts"
-    ".pi/agent/extensions/pi-mcp-adapter"
-    ".pi/agent/extensions/pi-quiet"
-    ".pi/agent/keybindings.json"
-    ".pi/agent/model-router.json"
-    ".pi/agent/models.json"
+    ".config/pi/extensions/auto-compact-resume/index.ts"
+    ".config/pi/extensions/nix-gallery/index.ts"
+    ".config/pi/extensions/pi-mcp-adapter"
+    ".config/pi/extensions/pi-quiet"
+    ".config/pi/keybindings.json"
+    ".config/pi/model-router.json"
+    ".config/pi/models.json"
   ];
   task9IsManagedHomePath =
     path:
@@ -3417,7 +3418,7 @@ let
         ];
         droid = [ ".config/factory/nix-managed-settings.json" ];
         opencode = [ ".config/opencode/opencode.json" ];
-        pi = [ ".pi/agent/models.json" ];
+        pi = [ ".config/pi/models.json" ];
       };
     in
     builtins.filter (client: lib.any (path: builtins.hasAttr path files) markers.${client}) (
@@ -3425,7 +3426,10 @@ let
     );
   task9HasPiGuard =
     evaluation:
-    lib.hasInfix ".pi/agent/mcp.json" evaluation.config.home.activation.aiManagedPreflight.data;
+    lib.hasInfix ".config/pi/mcp.json" evaluation.config.home.activation.aiManagedPreflight.data
+    && lib.hasInfix ".pi/agent/mcp.json" evaluation.config.home.activation.aiManagedPreflight.data;
+  task9HasPiProfileMigration =
+    evaluation: builtins.hasAttr "aiPiProfileMigration" evaluation.config.home.activation;
   task9ActivationOrder =
     evaluation:
     map (entry: entry.name) (homeManagerLib.hm.dag.topoSort evaluation.config.home.activation).result;
@@ -3444,9 +3448,19 @@ let
       preflight = task9IndexOf "aiManagedPreflight" order;
       collision = task9IndexOf "checkLinkTargets" order;
       boundary = task9IndexOf "writeBoundary" order;
+      migration = task9IndexOf "aiPiProfileMigration" order;
       links = task9IndexOf "linkGeneration" order;
+      migrationOrderValid =
+        if task9HasPiProfileMigration evaluation then
+          boundary < migration && migration < links
+        else
+          migration == -1;
     in
-    preflight >= 0 && preflight < collision && collision < boundary && boundary < links;
+    preflight >= 0
+    && preflight < collision
+    && collision < boundary
+    && boundary < links
+    && migrationOrderValid;
 
   task9FixtureChecks = lib.concatLists (
     lib.mapAttrsToList (
@@ -3473,6 +3487,32 @@ let
           [ "checkLinkTargets" ]
         )
         (expectEqual "${name} Pi shadow guard selection" (task9HasPiGuard evaluation) (name == "hera"))
+        (expectEqual "${name} Pi profile migration selection" (task9HasPiProfileMigration evaluation) (
+          name == "hera"
+        ))
+        (expectEqual "${name} Pi profile migration DAG edges"
+          (
+            if task9HasPiProfileMigration evaluation then
+              {
+                inherit (evaluation.config.home.activation.aiPiProfileMigration) before after;
+              }
+            else
+              null
+          )
+          (
+            if name == "hera" then
+              {
+                before = [ "linkGeneration" ];
+                after = [ "writeBoundary" ];
+              }
+            else
+              null
+          )
+        )
+        (expectEqual "${name} Pi profile-root environment"
+          (evaluation.config.home.sessionVariables.PI_CODING_AGENT_DIR or null)
+          (if name == "hera" then "${evaluation.config.home.homeDirectory}/.config/pi" else null)
+        )
         (expectEqual "${name} activation ordering" (task9OrderingIsExact evaluation) true)
       ]
     ) task9FixtureSpecs
@@ -3737,7 +3777,7 @@ let
       false
     )
     (expectEqual "Task 9 integrated Hera owns Pi agent leaves" (lib.any (
-      path: lib.hasPrefix ".pi/agent/" path
+      path: lib.hasPrefix ".config/pi/" path
     ) (builtins.attrNames task9JohnwHera.config.home.file)) true)
     (expectEqual "Task 9 real Hera packages include persona provider"
       (task9HeraHasPackage task9DarwinPkgs.nix-scripts)

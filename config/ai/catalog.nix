@@ -48,7 +48,7 @@ let
     hera-codex = ".config/codex";
     hera-droid = ".config/factory";
     hera-opencode = ".config/opencode";
-    hera-pi = ".pi/agent";
+    hera-pi = ".config/pi";
     shared-work-claude-positron = ".claude";
     shared-work-codex = ".codex";
     shared-work-opencode-positron = ".config/opencode";

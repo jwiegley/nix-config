@@ -98,6 +98,9 @@ let
     builtins.filter (rendered: rendered ? mutableMcpGuard) renderedProfiles
   );
   piGuard = if piGuards == [ ] then null else builtins.head piGuards;
+  piProfileMigration = (import ./pi-profile-migration.nix { inherit lib pkgs; }) {
+    root = catalog.profiles.hera-pi.root;
+  };
 
   validRelativePath =
     path:
@@ -120,6 +123,7 @@ let
     ".config/factory"
     ".config/mcp"
     ".config/opencode"
+    ".config/pi"
     ".factory"
     ".pi"
     ".pi/agent"
@@ -130,6 +134,7 @@ let
   preflight = (import ./ai/preflight.nix { inherit lib pkgs; }) {
     newPaths = paths;
     inherit piGuard;
+    legacyPiGuardPath = if piSelected then ".pi/agent/mcp.json" else null;
   };
   modelSync = (import ./ai/model-sync.nix { inherit lib pkgs; }) {
     inherit (modelData) syncInputs;
@@ -231,8 +236,14 @@ in
     packages =
       lib.optional droidSelected pkgs.agent-http-header-bridge
       ++ lib.optionals piSelected piRuntimePackages;
+    sessionVariables = lib.optionalAttrs piSelected {
+      PI_CODING_AGENT_DIR = "${config.xdg.configHome}/pi";
+    };
     activation = {
       aiManagedPreflight = preflight.activation;
+    }
+    // lib.optionalAttrs piSelected {
+      aiPiProfileMigration = piProfileMigration.activation;
     }
     // lib.optionalAttrs (config.johnw.host.isHera && isDarwin) {
       aiManagedModelSync = modelSync.activation;
