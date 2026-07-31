@@ -2,7 +2,7 @@
 
 import { spawn } from "node:child_process";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
@@ -67,10 +67,19 @@ async function runTimeoutSelfTest() {
     ["-e", "process.on('SIGTERM', () => {}); console.log('ready'); setInterval(() => {}, 1000)"],
     { stdio: ["ignore", "pipe", "ignore"] },
   );
-  await new Promise((resolve, reject) => {
-    child.once("error", reject);
-    child.stdout.once("data", resolve);
-  });
+  const readinessExpired = Symbol("readiness-expired");
+  const readiness = await Promise.race([
+    new Promise((resolve, reject) => {
+      child.once("error", reject);
+      child.stdout.once("data", resolve);
+    }),
+    sleep(1000).then(() => readinessExpired),
+  ]);
+  if (readiness === readinessExpired) {
+    child.kill("SIGKILL");
+    await childExit(child);
+    throw new Error("timeout self-test child did not become ready within 1000ms");
+  }
   const started = performance.now();
   try {
     await waitForExit(child, 50, 100);
@@ -83,7 +92,58 @@ async function runTimeoutSelfTest() {
     throw new Error("timeout self-test left its child running");
   }
   if (elapsedMs > 1000) throw new Error(`timeout escalation took ${elapsedMs}ms`);
-  process.stdout.write(`${JSON.stringify({ timeoutSelfTestMs: Math.round(elapsedMs) })}\n`);
+
+  const disconnectStarted = performance.now();
+  const disconnectSockets = new Set();
+  let requestReceived;
+  const received = new Promise(resolve => {
+    requestReceived = resolve;
+  });
+  const disconnectServer = createServer(async (request, response) => {
+    for await (const _chunk of request) {
+      // Consume the request, then simulate a very long first-token delay.
+    }
+    requestReceived();
+    await sleep(600_000);
+    response.end("late");
+  });
+  disconnectServer.on("connection", socket => {
+    disconnectSockets.add(socket);
+    socket.once("close", () => disconnectSockets.delete(socket));
+  });
+  await new Promise((resolve, reject) => {
+    disconnectServer.once("error", reject);
+    disconnectServer.listen(0, "127.0.0.1", resolve);
+  });
+  const address = disconnectServer.address();
+  if (!address || typeof address === "string") throw new Error("disconnect server has no address");
+  const request = httpRequest({ host: "127.0.0.1", port: address.port, method: "POST" });
+  request.on("error", () => {});
+  request.end("request complete");
+  const requestDeadline = Symbol("request-deadline");
+  if (await Promise.race([received, sleep(1000).then(() => requestDeadline)]) === requestDeadline) {
+    throw new Error("disconnect self-test server did not receive the request");
+  }
+  request.destroy();
+  for (const socket of disconnectSockets) socket.destroy();
+  disconnectServer.closeAllConnections?.();
+  const closeDeadline = Symbol("close-deadline");
+  const closed = await Promise.race([
+    new Promise(resolve => disconnectServer.close(resolve)),
+    sleep(1000).then(() => closeDeadline),
+  ]);
+  if (closed === closeDeadline) throw new Error("disconnect self-test server did not close");
+  const disconnectCleanupMs = performance.now() - disconnectStarted;
+  if (disconnectCleanupMs > 1000) {
+    throw new Error(`disconnect cleanup took ${disconnectCleanupMs}ms`);
+  }
+
+  process.stdout.write(
+    `${JSON.stringify({
+      timeoutSelfTestMs: Math.round(elapsedMs),
+      disconnectCleanupMs: Math.round(disconnectCleanupMs),
+    })}\n`,
+  );
 }
 
 const options = parseArgs(process.argv.slice(2));
@@ -123,7 +183,7 @@ try {
         response.write(": litellm-heartbeat\n\n");
       }, heartbeatMs);
       heartbeatTimers.add(heartbeat);
-      await new Promise(resolve => setTimeout(resolve, delayMs));
+      await sleep(delayMs);
       response.write(
         'data: {"id":"proof","object":"chat.completion.chunk","created":1,"model":"delayed","choices":[{"index":0,"delta":{"role":"assistant","content":"delayed-ok"},"finish_reason":null}]}\n\n',
       );
@@ -236,7 +296,12 @@ try {
   for (const timer of heartbeatTimers) clearInterval(timer);
   if (child && child.exitCode === null && child.signalCode === null) {
     child.kill("SIGKILL");
-    await Promise.race([childExit(child).catch(() => null), sleep(2000)]);
+    const reapDeadline = Symbol("reap-deadline");
+    const reaped = await Promise.race([
+      childExit(child).catch(() => null),
+      sleep(2000).then(() => reapDeadline),
+    ]);
+    if (reaped === reapDeadline) throw new Error("Pi child survived SIGKILL cleanup");
   }
   for (const socket of sockets) socket.destroy();
   if (server) {

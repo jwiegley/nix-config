@@ -419,7 +419,8 @@ runCommand "pi-gallery-check"
 
     ${nodejs_22}/bin/node ${../../bin/pi-litellm-first-token-test.mjs} \
       --self-test-timeout >"$provider_smoke/timeout-cleanup-proof.json"
-    jq -e '.timeoutSelfTestMs < 1000' "$provider_smoke/timeout-cleanup-proof.json" >/dev/null \
+    jq -e '.timeoutSelfTestMs < 1000 and .disconnectCleanupMs < 1000' \
+      "$provider_smoke/timeout-cleanup-proof.json" >/dev/null \
       || fail "LiteLLM probe timeout cleanup failed"
     ${nodejs_22}/bin/node ${../../bin/pi-litellm-first-token-test.mjs} \
       --pi ${lib.getExe piPackage} --delay-ms 250 \
