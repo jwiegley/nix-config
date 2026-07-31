@@ -1,6 +1,6 @@
 {
  "schema": "fleet-parity-oracle/2",
- "baselineRev": "3f5f425f378859b3c43b2f26c1750d274b236965",
+ "baselineRev": "9de25d39f1dc05933558c9dc5db9c6ca5d2df507",
  "armedRefactorAncestor": "a3cc3843",
  "note": "Stored evidence for the Fleet Configuration Programme parity gates. Package counts are derived from the lists in this file, never asserted separately. Re-derive with bin/parity-baseline --check <this file>.",
  "history": [
@@ -25,6 +25,49 @@
     "gained portable/aarch64-linux: pi-dynamic-workflows",
     "gained portable/x86_64-linux: pi-dynamic-workflows"
    ]
+  },
+  {
+   "old_rev": "3f5f425f378859b3c43b2f26c1750d274b236965",
+   "new_rev": "9de25d39f1dc05933558c9dc5db9c6ca5d2df507",
+   "reason": "Reconcile stale oracle after signed Pi gallery replacements, Hera credential isolation, and orphan-source retirement (#95)",
+   "intentional_deltas": [
+    "darwin/hera: codex host-state renamed to host-state-hera-credentials by fa83400c",
+    "portable all systems: remove BetterWright by 14b96e8e and BigPowers by 5e605918",
+    "portable all systems: replace pi-web-access with pi-smart-fetch and pi-smart-web-search by 81d1ed41",
+    "portable all systems: add pi-goal-x by 54d0bc14 and pi-multi-pass by a4307521",
+    "portable all systems: remove disabled pi-provider-litellm and orphaned pi-retry under #95"
+   ],
+   "observed_deltas": [
+    "lost darwin/hera: codex-0.145.0-host-state",
+    "gained darwin/hera: codex-0.145.0-host-state-hera-credentials",
+    "lost portable/aarch64-darwin: betterwright",
+    "lost portable/aarch64-darwin: bigpowers",
+    "lost portable/aarch64-darwin: pi-provider-litellm",
+    "lost portable/aarch64-darwin: pi-retry",
+    "lost portable/aarch64-darwin: pi-web-access",
+    "gained portable/aarch64-darwin: pi-goal-x",
+    "gained portable/aarch64-darwin: pi-multi-pass",
+    "gained portable/aarch64-darwin: pi-smart-fetch",
+    "gained portable/aarch64-darwin: pi-smart-web-search",
+    "lost portable/aarch64-linux: betterwright",
+    "lost portable/aarch64-linux: bigpowers",
+    "lost portable/aarch64-linux: pi-provider-litellm",
+    "lost portable/aarch64-linux: pi-retry",
+    "lost portable/aarch64-linux: pi-web-access",
+    "gained portable/aarch64-linux: pi-goal-x",
+    "gained portable/aarch64-linux: pi-multi-pass",
+    "gained portable/aarch64-linux: pi-smart-fetch",
+    "gained portable/aarch64-linux: pi-smart-web-search",
+    "lost portable/x86_64-linux: betterwright",
+    "lost portable/x86_64-linux: bigpowers",
+    "lost portable/x86_64-linux: pi-provider-litellm",
+    "lost portable/x86_64-linux: pi-retry",
+    "lost portable/x86_64-linux: pi-web-access",
+    "gained portable/x86_64-linux: pi-goal-x",
+    "gained portable/x86_64-linux: pi-multi-pass",
+    "gained portable/x86_64-linux: pi-smart-fetch",
+    "gained portable/x86_64-linux: pi-smart-web-search"
+   ]
   }
  ],
  "commands": {
@@ -39,7 +82,7 @@
    "kind": "darwin",
    "target": "clio",
    "user": "johnw",
-   "drvPath": "/nix/store/3vfch4h798zbki35dw4kx2cyc52j2jcp-darwin-system-26.11.57a3171.drv",
+   "drvPath": "/nix/store/1a0c4kgacjfppfpx6b3mzppy5nsa0fpp-darwin-system-26.11.57a3171.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -434,7 +477,7 @@
    "kind": "darwin",
    "target": "hera",
    "user": "johnw",
-   "drvPath": "/nix/store/mwsrn5w4rb797g3qw8a5gj37dnd68ifz-darwin-system-26.11.57a3171.drv",
+   "drvPath": "/nix/store/mwqjcwakp18pi143rzz85rl047910la6-darwin-system-26.11.57a3171.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -481,7 +524,7 @@
     "claude-vault",
     "cmake",
     "cmdperf",
-    "codex-0.145.0-host-state",
+    "codex-0.145.0-host-state-hera-credentials",
     "contacts",
     "context-hub",
     "context7-mcp",
@@ -856,7 +899,7 @@
   {
    "kind": "home-manager",
    "target": "johnw@aarch64-linux",
-   "drvPath": "/nix/store/7zlwhnwr2rwlli5h1sk4bbs4d950fyi5-home-manager-generation.drv",
+   "drvPath": "/nix/store/95g42gynrrg1x7li1mnlha6s7ggndr3f-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1231,7 +1274,7 @@
   {
    "kind": "home-manager",
    "target": "jwiegley@x86_64-linux",
-   "drvPath": "/nix/store/r5g3ws7lq8r3mwvwki9vj6k0xr99q1h0-home-manager-generation.drv",
+   "drvPath": "/nix/store/k0y0w262x800g7cw4w75p04p0vvp3sa5-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1611,8 +1654,6 @@
     "agent-browser",
     "agent-http-header-bridge",
     "agent-resources",
-    "betterwright",
-    "bigpowers",
     "cymbal",
     "default",
     "pi-agent-browser-native",
@@ -1623,24 +1664,25 @@
     "pi-cymbal",
     "pi-dynamic-workflows",
     "pi-gallery",
+    "pi-goal-x",
     "pi-hashline-edit-pro",
     "pi-insights",
     "pi-lens",
     "pi-markdown-preview",
     "pi-model-router",
+    "pi-multi-pass",
     "pi-ponytail",
-    "pi-provider-litellm",
-    "pi-retry",
     "pi-rewind",
     "pi-rtk-optimizer",
     "pi-scroll",
+    "pi-smart-fetch",
+    "pi-smart-web-search",
     "pi-subagents",
-    "pi-web-access",
     "plasma-fractal",
     "plasma-wiki",
     "rtk"
    ],
-   "packageCount": 31
+   "packageCount": 30
   },
   {
    "kind": "portable",
@@ -1649,8 +1691,6 @@
     "agent-browser",
     "agent-http-header-bridge",
     "agent-resources",
-    "betterwright",
-    "bigpowers",
     "cymbal",
     "default",
     "pi-agent-browser-native",
@@ -1661,24 +1701,25 @@
     "pi-cymbal",
     "pi-dynamic-workflows",
     "pi-gallery",
+    "pi-goal-x",
     "pi-hashline-edit-pro",
     "pi-insights",
     "pi-lens",
     "pi-markdown-preview",
     "pi-model-router",
+    "pi-multi-pass",
     "pi-ponytail",
-    "pi-provider-litellm",
-    "pi-retry",
     "pi-rewind",
     "pi-rtk-optimizer",
     "pi-scroll",
+    "pi-smart-fetch",
+    "pi-smart-web-search",
     "pi-subagents",
-    "pi-web-access",
     "plasma-fractal",
     "plasma-wiki",
     "rtk"
    ],
-   "packageCount": 31
+   "packageCount": 30
   },
   {
    "kind": "portable",
@@ -1687,8 +1728,6 @@
     "agent-browser",
     "agent-http-header-bridge",
     "agent-resources",
-    "betterwright",
-    "bigpowers",
     "cymbal",
     "default",
     "pi-agent-browser-native",
@@ -1699,24 +1738,25 @@
     "pi-cymbal",
     "pi-dynamic-workflows",
     "pi-gallery",
+    "pi-goal-x",
     "pi-hashline-edit-pro",
     "pi-insights",
     "pi-lens",
     "pi-markdown-preview",
     "pi-model-router",
+    "pi-multi-pass",
     "pi-ponytail",
-    "pi-provider-litellm",
-    "pi-retry",
     "pi-rewind",
     "pi-rtk-optimizer",
     "pi-scroll",
+    "pi-smart-fetch",
+    "pi-smart-web-search",
     "pi-subagents",
-    "pi-web-access",
     "plasma-fractal",
     "plasma-wiki",
     "rtk"
    ],
-   "packageCount": 31
+   "packageCount": 30
   }
  ]
 }
