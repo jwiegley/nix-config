@@ -2736,14 +2736,26 @@ let
         (expectReject "Pi non-Hera/non-Pi profile accepted" piWrongProfileProbe.companions)
         (expectEqual "${profileId} provider set" (sortedNames expectedPiModels.providers) [
           "litellm"
+          "llama-cpp-local"
           "openai-codex"
           "router"
         ])
         (expectEqual "${profileId} static Pi LiteLLM model set" (map (
           model: model.id
         ) expectedPiModels.providers.litellm.models) [ "positron_openai/gpt-5.6-sol" ])
-        (expectEqual "${profileId} selected models use only LiteLLM" (builtins.all (
-          model: model.provider == "litellm"
+        (expectEqual "${profileId} direct llama-swap model set" (map (
+          model: model.id
+        ) expectedPiModels.providers.llama-cpp-local.models) [ "GLM-5.2" ])
+        (expectEqual "${profileId} direct GLM context"
+          (builtins.head expectedPiModels.providers.llama-cpp-local.models).contextWindow
+          1048576
+        )
+        (expectEqual "${profileId} selected model providers" (builtins.all (
+          model:
+          builtins.elem model.provider [
+            "litellm"
+            "llama-cpp-local"
+          ]
         ) (builtins.attrValues (selectedModels profileId))) true)
         (expectEqual "${profileId} MCP set" (sortedNames expectedPiMcp.mcpServers) claudePersonalMcp)
         (expectEqual "${profileId} semantic MCP oracle" (builtins.hashString "sha256" (
