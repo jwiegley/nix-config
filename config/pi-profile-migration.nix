@@ -40,7 +40,7 @@ let
       pi_metadata_source=$1
       pi_metadata_destination=$2
       run ${pkgs.coreutils}/bin/cp \
-        --archive --attributes-only --no-preserve=links -- \
+        --archive --attributes-only --force --no-preserve=links -- \
         "$pi_metadata_source/." "$pi_metadata_destination/"
     }
 

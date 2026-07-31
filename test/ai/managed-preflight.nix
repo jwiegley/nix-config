@@ -812,6 +812,7 @@ pkgs.runCommand "ai-managed-preflight"
     migration_home="$migration_root/live-inverse-link"
     mkdir -p \
       "$migration_home/.config" \
+      "$migration_home/.pi/agent/extensions/nix-gallery" \
       "$migration_home/.pi/agent/sessions" \
       "$migration_home/.pi/destination-only"
     chmod 0755 "$migration_home/.pi"
@@ -823,6 +824,8 @@ pkgs.runCommand "ai-managed-preflight"
     printf '%s' session > "$migration_home/.pi/agent/sessions/current.jsonl"
     printf '%s' old > "$migration_home/.pi/agent/a"
     ln "$migration_home/.pi/agent/a" "$migration_home/.pi/agent/b"
+    ln -s /nix/store/generated-gallery \
+      "$migration_home/.pi/agent/extensions/nix-gallery/index.ts"
     printf '%s' user-state > "$migration_home/.pi/agent/.nix-pi-profile-stage-ready-v1"
     printf '%s' new > "$migration_home/.pi/a"
     migration_legacy_before="$(python3 -I "$digest_script" "$migration_home/.pi")"
@@ -839,6 +842,8 @@ pkgs.runCommand "ai-managed-preflight"
     test "$(cat "$migration_home/.pi/agent/.nix-pi-profile-stage-ready-v1")" = user-state
     test ! "$migration_home/.config/pi/a" -ef "$migration_home/.config/pi/b"
     test ! -e "$migration_home/.config/pi/agent/agent"
+    test "$(readlink "$migration_home/.config/pi/agent/extensions/nix-gallery/index.ts")" = \
+      /nix/store/generated-gallery
     test "$(stat -c %a "$migration_home/.config/pi")" = 700
     test "$(stat -c %a "$migration_home/.config/pi/destination-only")" = 751
     test "$(stat -c %a "$migration_home/.pi")" = 755
