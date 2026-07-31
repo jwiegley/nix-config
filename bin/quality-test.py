@@ -69,6 +69,36 @@ def have(tool):
     return shutil.which(tool) is not None
 
 
+def revision_is_ancestor_of_prospective_merge(revision, repo):
+    """Accept evidence reachable through HEAD or a pending merge parent."""
+    heads = ["HEAD"]
+    merge_head_path = subprocess.run(
+        ["git", "rev-parse", "--git-path", "MERGE_HEAD"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=clean_env(),
+    )
+    if merge_head_path.returncode == 0:
+        path = Path(merge_head_path.stdout.strip())
+        if not path.is_absolute():
+            path = Path(repo) / path
+        if path.is_file():
+            heads.extend(line.strip() for line in path.read_text().splitlines() if line.strip())
+    return any(
+        subprocess.run(
+            ["git", "merge-base", "--is-ancestor", revision, head],
+            cwd=repo,
+            capture_output=True,
+            check=False,
+            env=clean_env(),
+        ).returncode
+        == 0
+        for head in heads
+    )
+
+
 class QualityEachFileTests(unittest.TestCase):
     """The per-file loop: what it checks, what it skips, and what it reports."""
 
@@ -599,13 +629,49 @@ class GeneratedRevisionReachabilityTests(unittest.TestCase):
                     check=False,
                 )
                 self.assertEqual(exists.returncode, 0, f"{label} is unavailable")
-                ancestor = subprocess.run(
-                    ["git", "merge-base", "--is-ancestor", revision, "HEAD"],
-                    cwd=REPO,
-                    capture_output=True,
-                    check=False,
+                self.assertTrue(
+                    revision_is_ancestor_of_prospective_merge(revision, REPO),
+                    f"{label} is not ancestral to HEAD or a pending merge parent",
                 )
-                self.assertEqual(ancestor.returncode, 0, f"{label} is not ancestral")
+
+    def test_pending_merge_parent_is_a_valid_prospective_ancestor(self):
+        with tempfile.TemporaryDirectory(prefix="quality-merge-parent-") as temp_dir:
+            repo = Path(temp_dir)
+            env = clean_env()
+
+            def git(*args):
+                result = subprocess.run(
+                    ["git", *args],
+                    cwd=repo,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    env=env,
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                return result.stdout.strip()
+
+            git("init", "-q", "--initial-branch=main", ".")
+            git("config", "user.name", "merge parent test")
+            git("config", "user.email", "merge-parent@example.invalid")
+            git("config", "commit.gpgsign", "false")
+            (repo / "base").write_text("base\n")
+            git("add", "base")
+            git("commit", "-q", "--no-gpg-sign", "-m", "base")
+            git("checkout", "-q", "-b", "incoming")
+            (repo / "incoming").write_text("incoming\n")
+            git("add", "incoming")
+            git("commit", "-q", "--no-gpg-sign", "-m", "incoming evidence")
+            incoming = git("rev-parse", "HEAD")
+            git("checkout", "-q", "main")
+            (repo / "main").write_text("main\n")
+            git("add", "main")
+            git("commit", "-q", "--no-gpg-sign", "-m", "main")
+            self.assertFalse(
+                revision_is_ancestor_of_prospective_merge(incoming, repo)
+            )
+            git("merge", "--no-ff", "--no-commit", "incoming")
+            self.assertTrue(revision_is_ancestor_of_prospective_merge(incoming, repo))
 
 
 class GitScrubRegressionTest(unittest.TestCase):
