@@ -1260,6 +1260,35 @@ class TestGatesAreRegistered(unittest.TestCase):
         self.assertEqual(pre_commit | expensive_set, registered)
         self.assertEqual(pre_commit & expensive_set, {"python-test"})
 
+    def test_signature_ci_uses_the_real_event_range_and_public_key_only(self):
+        workflow = (REPO / ".github/workflows/ci.yml").read_text()
+        self.assertRegex(workflow, r"(?m)^  signatures:\n")
+        self.assertRegex(
+            workflow,
+            r"(?m)^          fetch-depth: 0\n"
+            r"(?:^          #.*\n)*"
+            r"^          ref: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}$",
+        )
+        self.assertIn(
+            "SIGVERIFY_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}",
+            workflow,
+        )
+        self.assertIn(
+            "SIGVERIFY_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}",
+            workflow,
+        )
+        self.assertIn('SIGVERIFY_STRICT: "1"', workflow)
+        self.assertIn(
+            'run: bin/verify-signatures --base "$SIGVERIFY_BASE" --head "$SIGVERIFY_HEAD"',
+            workflow,
+        )
+
+        public_keys = sorted((REPO / ".github/signing-keys").glob("*"))
+        self.assertEqual(len(public_keys), 1)
+        key = public_keys[0].read_text()
+        self.assertIn("BEGIN PGP PUBLIC KEY BLOCK", key)
+        self.assertNotIn("PRIVATE KEY", key)
+
     def test_expensive_assurance_is_low_frequency_and_manual(self):
         workflow = (REPO / ".github/workflows/portable-assurance.yml").read_text()
         self.assertIn('cron: "17 2,14 * * *"', workflow)

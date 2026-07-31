@@ -27,6 +27,25 @@ on:
   pull_request:
 
 jobs:
+  signatures:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # A pull_request checkout normally creates an unsigned synthetic merge.
+          # Verify the actual contributor head instead.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify every introduced commit signature
+        env:
+          SIGVERIFY_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          SIGVERIFY_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          SIGVERIFY_DEFAULT_BRANCH: origin/${{ github.event.repository.default_branch }}
+          SIGVERIFY_STRICT: "1"
+        run: bin/verify-signatures --base "$SIGVERIFY_BASE" --head "$SIGVERIFY_HEAD"
+
   nix-checks:
     runs-on: ubuntu-latest
     steps:

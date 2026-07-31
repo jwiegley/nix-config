@@ -14,12 +14,13 @@
 #          web-of-trust-trusted. CI runners and fresh clones legitimately have no
 #          trust web, so a cryptographically valid signature lands on U, not G.
 #          Tolerating U is the entire reason this can work in CI at all.
+#       Y  good signature made by a key that has since expired. Git still verifies
+#          the historical signature; revoked keys remain rejected as R.
 #   Everything else is rejected:
 #       X expired signature   Y expired key   R revoked key
 #       E cannot check (no public key available)   B bad   N none (unsigned)
-#   bin/publish once accepted G|U|X|Y and was tightened to G|U: a signature that no
-#   longer verifies does not satisfy "signed commits only". We start where that
-#   ended -- G|U and nothing else.
+#   X (an expired signature) remains rejected. Y describes the key's current
+#   expiration, not a failure to verify the historical signature.
 #
 # WHAT IT CANNOT PROVE
 #   * It cannot prove WHO signed a commit beyond "a key in the verifying keyring".
@@ -313,6 +314,6 @@ if [[ $checked -eq 0 ]]; then
     fi
     say "no commits in range; nothing to verify"
 else
-    say "all $checked commit(s) in range carry a good signature (G or U)"
+    say "all $checked commit(s) in range carry a good signature (G, U or Y)"
 fi
 exit 0
