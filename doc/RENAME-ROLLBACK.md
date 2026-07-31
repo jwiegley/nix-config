@@ -58,7 +58,7 @@ whole reason a partial publish is a first-class state below (State B).
 ### The three consumer edges (from the committed inventory)
 
 Source of truth: `test/inventory/consumer-inventory.json`
-(`repoHead be4adf28…`), classification `stub-covered` — the exact set of ten external
+(`repoHead` is read from that generated artifact), classification `stub-covered` — the exact set of ten external
 edges the rename touches. There are three consumers behind those ten edges. **Only the
 `nix-config-ai` subflake input carries `?dir=config/ai`; the rollback changes no other
 URL.** The paired repo-root `nix-config` (`flake = false`) URL stays unchanged, but both
@@ -446,9 +446,9 @@ ever saw the stub. This is the clean forward revert.
    `nix flake update` — because their URLs still say `dir=config/ai` and the tree at
    `REVERT_REV` has `config/ai` again.
 3. **Optional, recommended:** proactively re-lock each consumer now (§7b's
-   `nix flake update nix-config-ai` in each authoritative tree) so no consumer floats
-   forward onto an interim rename revision later. **Re-pin floating vulcan** to
-   `rev=REVERT_REV` regardless — it is the one input that will otherwise drift.
+   `nix flake update nix-config nix-config-ai` in each authoritative tree) so the
+   paired nodes advance coherently. Preserve Vulcan's current floating URL unless Q7
+   has an explicit recorded decision to add a `rev` pin.
 
 **Verify:** §7c for all three consumers; each shows `dir=config/ai`, an immutable
 (`github`/`git`) lock, and a byte-stable rev.
@@ -473,20 +473,21 @@ bumped consumer is in one of two sub-states:
 1. §7a + §6 first — `config/ai` must be restored and `REVERT_REV` on both remotes
    before any consumer URL revert means anything.
 2. Then, **per consumer, on its own remote** (§7b):
-   - **vulcan (gitea):** revert `nixos/flake.nix:54` to `?dir=config/ai` **and pin
-     `&rev=REVERT_REV`** (it floats). `nix flake update nix-config-ai`. Push to gitea
-     under `/etc/nixos/.nixos-build` locking. This reverts jwiegley/nixos-config#3.
+   - **vulcan (gitea):** revert `nixos/flake.nix:54` to `?dir=config/ai`, preserving
+     the current floating URL policy unless Q7 explicitly says to pin.
+     `nix flake update nix-config nix-config-ai`. Push to gitea under
+     `/etc/nixos/.nixos-build` locking. This reverts jwiegley/nixos-config#3.
    - **vps (github):** revert `vps/flake.nix:20` to `?dir=config/ai&ref=main`.
-     `nix flake update nix-config-ai`. Push to github. Reverts #57.
+     `nix flake update nix-config nix-config-ai`. Push to github. Reverts #57.
    - **shared-work (github):** revert `andoria/flake.nix:31` to
      `?dir=config/ai&ref=main` **in the authoritative `~/.config/home-manager`**, not
-     the `~/src/andoria` proxy. `nix flake update nix-config-ai`. Push to github.
+     the `~/src/andoria` proxy. `nix flake update nix-config nix-config-ai`. Push to github.
      Reverts #56. Additionally confirm the `config/overlays.nix` stable-authority route
      still resolves (it imports `${inputs.nix-config}/config/overlays.nix` with
      `aiOverlay = inputs.nix-config-ai.overlays.default`; that path is not renamed, so
      it should — verify, do not assume).
-3. A consumer that had **not** bumped stays as in State C (its float/next-bump lands on
-   `config/ai` automatically; re-pin vulcan).
+3. A consumer that had **not** bumped stays as in State C (its next coherent paired
+   update lands on `config/ai`; preserve the recorded URL policy).
 
 **Verify:** §7c per consumer. For a consumer that was in stub-failure, additionally
 confirm its own `nix flake check` / eval now succeeds (it was erroring before).
@@ -543,7 +544,8 @@ generations` / `nixos-rebuild list-generations` shows the rollback generation li
 
 - `bin/publish` (bare) reports **both** remotes at `REVERT_REV`.
 - §7c passes for all three consumers: each locks `dir=config/ai`, via an immutable
-  (`github`/`git`) fetcher, byte-stable, and vulcan is `rev`-pinned rather than floating.
+  (`github`/`git`) fetcher, byte-stable, with both paired nodes at `REVERT_REV`.
+  Vulcan's URL remains floating unless Q7 has separately authorized a pin.
 - `config/ai` is a real subflake again (`nix flake check ./config/ai --all-systems
   --no-build` green; no `throw`); `config/fleet` and the stub are gone.
 - `bin/cross-consumer-eval` green against the reverted working tree.
