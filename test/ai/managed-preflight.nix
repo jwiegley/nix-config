@@ -81,7 +81,7 @@ let
   task9PiProfileMigrationScript = pkgs.writeShellScript "task9-ai-pi-profile-migration" ''
     set -euo pipefail
     run() {
-      if [ "''${DRY_RUN:-0}" != 1 ]; then
+      if [[ ! -v DRY_RUN ]]; then
         "$@"
       fi
     }
@@ -814,6 +814,40 @@ pkgs.runCommand "ai-managed-preflight"
     test -f "$migration_home/.config/.nix-pi-profile-migrated-v1"
     migration_legacy_after="$(python3 -I "$digest_script" "$migration_home/.pi")"
     test "$migration_legacy_before" = "$migration_legacy_after"
+
+    migration_home="$migration_root/interrupted-ready-stage"
+    migration_stage="$migration_home/.config/.pi-profile-migration.crash"
+    mkdir -p \
+      "$migration_home/.config" \
+      "$migration_home/.pi/agent" \
+      "$migration_stage/sessions"
+    printf '%s' legacy > "$migration_home/.pi/agent/auth.json"
+    printf '%s' staged > "$migration_stage/auth.json"
+    printf '%s' staged-session > "$migration_stage/sessions/current.jsonl"
+    touch "$migration_stage/.nix-pi-profile-stage-ready-v1"
+    ln -s ../.pi "$migration_home/.config/.pi-profile-legacy-link-v1"
+    HOME="$migration_home" ${task9PiProfileMigrationScript}
+    test ! -L "$migration_home/.config/pi"
+    test "$(cat "$migration_home/.config/pi/auth.json")" = staged
+    test "$(cat "$migration_home/.config/pi/sessions/current.jsonl")" = staged-session
+    test ! -e "$migration_home/.config/.pi-profile-legacy-link-v1"
+    test ! -e "$migration_home/.config/pi/.nix-pi-profile-stage-ready-v1"
+    test -f "$migration_home/.config/.nix-pi-profile-migrated-v1"
+
+    migration_home="$migration_root/interrupted-incomplete-stage"
+    migration_stage="$migration_home/.config/.pi-profile-migration.crash"
+    mkdir -p "$migration_home/.config" "$migration_home/.pi/agent" "$migration_stage"
+    ln -s ../.pi "$migration_home/.config/.pi-profile-legacy-link-v1"
+    set +e
+    HOME="$migration_home" ${task9PiProfileMigrationScript} \
+      >"$migration_root/interrupted-incomplete-stage.output" 2>&1
+    migration_status=$?
+    set -e
+    test "$migration_status" -ne 0
+    test -L "$migration_home/.config/pi"
+    test ! -e "$migration_home/.config/.pi-profile-legacy-link-v1"
+    grep -F "restored the legacy link after an incomplete migration" \
+      "$migration_root/interrupted-incomplete-stage.output" >/dev/null
 
     migration_home="$migration_root/invalid-source"
     mkdir -p "$migration_home/.pi"
