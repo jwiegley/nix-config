@@ -1057,6 +1057,54 @@ class TestGatesAreRegistered(unittest.TestCase):
         self.assertNotRegex(ci, r"(?m)^\s+run: bin/quality darwin-surface$")
         self.assertIn("LAN-only ssh://gitea stock-trader input", ci)
 
+    def test_make_build_and_switch_propagate_darwin_rebuild_failure(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            fake_bin = root / "bin"
+            fake_bin.mkdir()
+            sudo = fake_bin / "sudo"
+            sudo.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >>"$SUDO_LOG"\nexit 73\n')
+            sudo.chmod(0o755)
+            sudo_log = root / "sudo.log"
+
+            fixture = root / "Makefile"
+            fixture.write_text(
+                f"include {REPO / 'Makefile'}\n"
+                "verify-inputs: ;\n"
+                "lock-local: ;\n"
+            )
+            env = clean_env(
+                PATH=f"{fake_bin}:{os.environ['PATH']}",
+                SUDO_LOG=str(sudo_log),
+            )
+
+            result_file = root / "result"
+            result_file.touch()
+            build = subprocess.run(
+                ["make", "--no-print-directory", "-f", str(fixture), "build", "HOSTNAME=hera"],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(build.returncode, 0, build.stdout + build.stderr)
+            self.assertTrue(result_file.exists(), "cleanup ran after failed build")
+
+            sudo_log.write_text("")
+            switch = subprocess.run(
+                ["make", "--no-print-directory", "-f", str(fixture), "switch", "HOSTNAME=hera"],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(switch.returncode, 0, switch.stdout + switch.stderr)
+            sudo_calls = sudo_log.read_text().splitlines()
+            self.assertEqual(len(sudo_calls), 1, sudo_calls)
+            self.assertNotIn("--list-generations", sudo_calls[0])
+
     def test_precommit_tier_always_runs_python_authorities(self):
         config = (REPO / "lefthook.yml").read_text()
         self.assertRegex(
