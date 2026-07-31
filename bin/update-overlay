@@ -841,7 +841,16 @@ in
         self, package_name: str, build_mode: str = "pkg"
     ) -> bool:
         try:
-            return self._run_package_build(package_name, build_mode).returncode == 0
+            result = self._run_package_build(package_name, build_mode)
+            if result.returncode != 0:
+                detail = _bounded_actionable_error(
+                    result.stderr,
+                    result.stdout,
+                    fallback=f"{package_name} build failed",
+                )
+                print(f"  Error validating {package_name}: {detail}", file=sys.stderr)
+                return False
+            return True
         except (OSError, subprocess.TimeoutExpired) as error:
             print(f"  Error validating {package_name}: {error}", file=sys.stderr)
             return False

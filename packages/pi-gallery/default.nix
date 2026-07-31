@@ -191,10 +191,17 @@ let
         cp ${lockFile} "$out/package-lock.json"
 
         ${lib.optionalString hashline ''
-          substituteInPlace "$out/src/hash-store.ts" \
-            --replace-fail \
-              'async function tryLoadBetter(): Promise<boolean> {' \
-              $'async function tryLoadBetter(): Promise<boolean> {\n  // Bun standalone aborts before the native import can fall back.\n  return false;'
+          if grep -Fq 'async function tryLoadBetter(): Promise<boolean> {' \
+            "$out/src/hash-store.ts"
+          then
+            substituteInPlace "$out/src/hash-store.ts" \
+              --replace-fail \
+                'async function tryLoadBetter(): Promise<boolean> {' \
+                $'async function tryLoadBetter(): Promise<boolean> {\n  // Bun standalone aborts before the native import can fall back.\n  return false;'
+          elif ! grep -Fq 'from "node:sqlite"' "$out/src/hash-store.ts"; then
+            echo 'pi-hashline-edit-pro: unknown hash-store implementation' >&2
+            exit 1
+          fi
         ''}
 
 
