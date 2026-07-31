@@ -54,6 +54,11 @@ let
   inherit (manifest) members order supportSources;
   piCatalogRecords = manifest.sourceCatalog;
   sourceRecords = members // supportSources;
+  catalogSourceIds = builtins.attrNames piCatalogRecords;
+  gallerySourceIds = map (record: record.sourceName) (builtins.attrValues sourceRecords);
+  externalSourceIds = builtins.attrNames manifest.externalSourceConsumers;
+  sourceCatalogComplete =
+    lib.sort builtins.lessThan (gallerySourceIds ++ externalSourceIds) == catalogSourceIds;
   normalizationContract = builtins.fromJSON (builtins.readFile ./normalization-policy.json);
   normalizationTargets = lib.sort builtins.lessThan (
     builtins.attrNames normalizationContract.targets
@@ -802,6 +807,7 @@ let
       '';
 in
 assert normalizationContractValid;
+assert sourceCatalogComplete;
 assert normalizationTargets == lockBearingTargets;
 assert normalizationTargets == galleryLockBearingTargets;
 assert

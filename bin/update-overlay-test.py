@@ -4307,7 +4307,7 @@ got: sha256-requested
         self.assertEqual(names, sorted(catalog))
         self.assertEqual(
             hashlib.sha256("\n".join(names).encode()).hexdigest(),
-            "4e5b6cdb25ccc7617dbdefe79afc06e31ee15392f70416f59b0529397ce49261",
+            "2e88ed859039e5450f9c55f5c125ad553ab994d0f59fc68b4b117fefb175ecf3",
         )
         self.assertTrue(required <= set(names))
         self.assertTrue(all(item["inventoried"] for item in inventory["packages"]))
@@ -4337,10 +4337,10 @@ got: sha256-requested
             {item["name"] for item in inventory["packages"] if not item["managed"]},
             set(),
         )
-        self.assertEqual(len(inventory["packages"]), 199)
+        self.assertEqual(len(inventory["packages"]), 197)
         self.assertEqual(
             len([item for item in inventory["packages"] if item["managed"]]),
-            199,
+            197,
         )
         self.assertEqual(catalog_owned, set(catalog))
         self.assertTrue(relocated <= catalog_owned)
@@ -4420,7 +4420,7 @@ got: sha256-requested
         self.assertEqual(human.returncode, 0, human.stderr)
         self.assertEqual(
             human.stdout.splitlines()[-1],
-            "199 inventoried targets; 199 executable; 0 pending executors",
+            "197 inventoried targets; 197 executable; 0 pending executors",
         )
 
     def test_source_transaction_rolls_back_and_commit_preserves(self):

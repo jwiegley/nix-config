@@ -373,36 +373,6 @@
       },
       "version": "4.8.4"
     },
-    "pi-provider-litellm": {
-      "source": {
-        "args": {
-          "hash": "sha256-icmK1hCeZMU9ZINgg9fN0DZL8e/fS2Nbq6oJ4AKgVRU=",
-          "url": "https://registry.npmjs.org/pi-provider-litellm/-/pi-provider-litellm-2.0.0.tgz"
-        },
-        "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-provider-litellm/-/pi-provider-litellm-2.0.0.tgz"
-      },
-      "update": {
-        "kind": "npm-release",
-        "package": "pi-provider-litellm"
-      },
-      "version": "2.0.0"
-    },
-    "pi-retry": {
-      "source": {
-        "args": {
-          "hash": "sha256-lMNZpMGf1a11uTjoMQLYUp5aDK8mW0gBfPQJgesFPsY=",
-          "url": "https://registry.npmjs.org/@narumitw/pi-retry/-/pi-retry-0.31.0.tgz"
-        },
-        "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/@narumitw/pi-retry/-/pi-retry-0.31.0.tgz"
-      },
-      "update": {
-        "kind": "npm-release",
-        "package": "@narumitw/pi-retry"
-      },
-      "version": "0.31.0"
-    },
     "pi-rtk-optimizer": {
       "source": {
         "args": {

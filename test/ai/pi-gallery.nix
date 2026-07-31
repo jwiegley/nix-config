@@ -14,6 +14,14 @@
 let
   root = package: name: "${package}/share/pi-packages/${name}";
   manifest = piPackages.pi-gallery.manifest;
+  catalogSourceIds = builtins.attrNames manifest.sourceCatalog;
+  declaredSourceIds =
+    map (record: record.sourceName) (builtins.attrValues (manifest.members // manifest.supportSources))
+    ++ builtins.attrNames manifest.externalSourceConsumers;
+  sourceCatalogComplete = lib.sort builtins.lessThan declaredSourceIds == catalogSourceIds;
+  orphanedCatalogRejected =
+    lib.sort builtins.lessThan declaredSourceIds
+    != builtins.attrNames (manifest.sourceCatalog // { synthetic-orphan = { }; });
   roots = lib.mapAttrs (_: member: root member.package member.attrName) manifest.members;
   manifestPackagesMatch = builtins.all (
     id:
@@ -90,6 +98,8 @@ let
   );
 in
 assert builtins.length (builtins.attrNames manifest.members) == builtins.length manifest.order;
+assert sourceCatalogComplete;
+assert orphanedCatalogRejected;
 assert manifestPackagesMatch;
 assert builtins.length normalizationTargets == 9;
 assert (piPackage.toolRendererWrapperAbi or null) == 1;
@@ -406,6 +416,17 @@ runCommand "pi-gallery-check"
       || fail "LiteLLM command credential helper was not invoked"
     grep -Fx ok "$provider_smoke/auth-ok" >/dev/null \
       || fail "LiteLLM command credential did not reach the model registry"
+
+    ${nodejs_22}/bin/node ${../../bin/pi-litellm-first-token-test.mjs} \
+      --self-test-timeout >"$provider_smoke/timeout-cleanup-proof.json"
+    jq -e '.timeoutSelfTestMs < 1000' "$provider_smoke/timeout-cleanup-proof.json" >/dev/null \
+      || fail "LiteLLM probe timeout cleanup failed"
+    ${nodejs_22}/bin/node ${../../bin/pi-litellm-first-token-test.mjs} \
+      --pi ${lib.getExe piPackage} --delay-ms 250 \
+      >"$provider_smoke/first-token-proof.json"
+    jq -e '.delayMs == 250 and .heartbeats >= 1 and .elapsedMs >= .delayMs' \
+      "$provider_smoke/first-token-proof.json" >/dev/null \
+      || fail "LiteLLM delayed first-token proof failed"
 
     routing_smoke="$TMPDIR/pi-model-router-smoke"
     mkdir -p "$routing_smoke/home" "$routing_smoke/agent" "$routing_smoke/project"

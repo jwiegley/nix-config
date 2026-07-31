@@ -9,6 +9,7 @@ let
     in
     value
     // {
+      inherit sourceName;
       inherit (record) source update version;
       artifacts = record.artifacts or { };
       hashes = record.hashes or { };
@@ -194,5 +195,15 @@ in
       attrName = "cymbal";
       package = packages.cymbal or null;
     };
+  };
+
+  # Pi catalog records owned outside the gallery. Every source must be either a
+  # gallery/support member above or explicitly mapped to its external consumer.
+  externalSourceConsumers = {
+    agent-browser-source = "packages/pi-gallery/default.nix";
+    pi-mcp-adapter = "packages/agent-resources.nix";
+    pi-openai-server-compaction = "packages/agent-resources.nix";
+    pi-quiet = "packages/agent-resources.nix";
+    ws = "packages/agent-resources.nix";
   };
 }
