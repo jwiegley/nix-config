@@ -908,7 +908,7 @@
     "kind": "declared-command-recipe"
   },
   "schema": "fleet-coverage/1",
-  "sourceBaseRev": "4033e65451efa65727ac4d5787be5cbf9f6b3eaf",
+  "sourceBaseRev": "2ef586d43e0b28e519388a0fcc944162a4d06b9e",
   "sourceProjectionDigest": "f046462fb336ab56352d236ba6a56514b3930e72cea1391828bff653eddceb3e",
   "sourceTree": "43e3f1c428e91855f2c118a4e65b7e00f59b40bd",
   "structural": {

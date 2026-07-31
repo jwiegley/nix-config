@@ -2739,9 +2739,13 @@ let
           "openai-codex"
           "router"
         ])
-        (expectEqual "${profileId} static Pi LiteLLM model set" (map (
-          model: model.id
-        ) expectedPiModels.providers.litellm.models) [ "positron_openai/gpt-5.6-sol" ])
+        (expectEqual "${profileId} static Pi LiteLLM model set"
+          (map (model: model.id) expectedPiModels.providers.litellm.models)
+          [
+            "positron_openai/gpt-5.6-sol"
+            "hera/GLM-5.2"
+          ]
+        )
         (expectEqual "${profileId} selected models use only LiteLLM" (builtins.all (
           model: model.provider == "litellm"
         ) (builtins.attrValues (selectedModels profileId))) true)

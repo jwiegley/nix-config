@@ -1,6 +1,6 @@
 {
  "schema": "fleet-parity-oracle/2",
- "baselineRev": "955229c5f69026ca005d7b1a252ce00a28c3a83f",
+ "baselineRev": "3ee287a2fcc6011878f80f9bdbce7d99209ebb47",
  "armedRefactorAncestor": "a3cc3843",
  "note": "Stored evidence for the Fleet Configuration Programme parity gates. Package counts are derived from the lists in this file, never asserted separately. Re-derive with bin/parity-baseline --check <this file>.",
  "history": [
@@ -28,7 +28,7 @@
   },
   {
    "old_rev": "3f5f425f378859b3c43b2f26c1750d274b236965",
-   "new_rev": "f91e2c0afbc28c363f4978c49932721ec873030c",
+   "new_rev": "739a3275e2dd5a893c94c63c443cdbd2e4cadec5",
    "reason": "Issue #47 renamed the portable core from config/ai to config/fleet without changing package selection.",
    "intentional_deltas": [
     "All portable systems: removed betterwright in 14b96e8e and bigpowers in 5e605918.",
@@ -63,9 +63,9 @@
    "rebase_patch_id": "5a5ec3a1f434065ef5599b7737e9294828ec036a"
   },
   {
-   "old_rev": "f91e2c0afbc28c363f4978c49932721ec873030c",
-   "new_rev": "955229c5f69026ca005d7b1a252ce00a28c3a83f",
-   "reason": "Rebased unpublished #47 preparation onto live main, incorporating the approved Pi Retry removal without changing the rename patch.",
+   "old_rev": "739a3275e2dd5a893c94c63c443cdbd2e4cadec5",
+   "new_rev": "3ee287a2fcc6011878f80f9bdbce7d99209ebb47",
+   "reason": "Rebased unpublished #47 preparation onto live main, incorporating the approved Pi Retry removal and static LiteLLM provider change without changing the rename patch or selected-package multiset.",
    "intentional_deltas": [
     "All portable systems: removed pi-retry in signed main commit 4087db69."
    ],

@@ -3,7 +3,7 @@
  "artifact": "consumer-inventory",
  "generatedBy": "bin/consumer-inventory",
  "purpose": "Merged, classified inventory of every reference from every consumer into nix-config, so the config/ai -> config/fleet rename (#47) and its straggler sweep (#63) know exactly who breaks. One record per reference.",
- "repoHead": "e305d77ced2e7fcf5598438f9ef4957026269e97",
+ "repoHead": "a4b168928d52dca71b7e84382876c8d70ed2fc4f",
  "consumerLayout": "nix-config at the repository root; consumer checkouts as siblings (nixos, vps, andoria). Absolute paths are intentionally omitted: see the comment at this key in bin/consumer-inventory.",
  "classificationScheme": {
   "rename-now": "Stale operational reference to the literal config/ai directory inside nix-config; #47 must leave none.",
