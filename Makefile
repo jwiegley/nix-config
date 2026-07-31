@@ -147,11 +147,13 @@ lock-local: verify-inputs
 	done
 
 build:
+	set -e
 	$(call announce,darwin-rebuild build --flake .#$(HOSTNAME))
 	@sudo darwin-rebuild build --flake .#$(HOSTNAME) $(NIXOPTS)
 	@rm -f result
 
 switch: lock-local
+	set -e
 	$(call announce,darwin-rebuild switch --flake .#$(HOSTNAME))
 	@sudo darwin-rebuild switch --flake .#$(HOSTNAME) $(NIXOPTS)
 	@echo "Darwin generation: $$(sudo darwin-rebuild --list-generations | tail -1)"
