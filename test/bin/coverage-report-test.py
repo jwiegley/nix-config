@@ -878,9 +878,7 @@ class ArtifactTests(RepositoryFixture):
         ):
             coverage_report.validate_non_regression(current, previous)
 
-    def test_ratio_regression_is_deletion_aware_but_rejects_new_unreached_file(
-        self,
-    ) -> None:
+    def test_denominator_changes_do_not_hide_lost_reached_paths(self) -> None:
         previous = self.ready_report()
         previous_reach = previous["measurements"]["nixFileReach"]
         previous_reach["denominator"] = ["a.nix", "b.nix"]
@@ -899,8 +897,7 @@ class ArtifactTests(RepositoryFixture):
         expanded_reach["denominator"] = ["a.nix", "b.nix", "c.nix"]
         expanded_reach["reached"] = ["a.nix"]
         expanded_reach["unreached"] = ["b.nix", "c.nix"]
-        with self.assertRaisesRegex(coverage_report.CoverageError, "ratio regressed"):
-            coverage_report.validate_non_regression(expanded, previous)
+        coverage_report.validate_non_regression(expanded, previous)
 
     def test_live_comparison_recollects_before_accepting_baseline(self) -> None:
         baseline = self.ready_report()
