@@ -535,7 +535,7 @@ let
       mcpServers = personalOpenCodeMcp;
       hooks = [ ];
       marketplaces = [ ];
-      hasDefault = true;
+      hasDefault = false;
     };
     "hera-claude-personal" = {
       mcpServers = claudePersonalMcp;
@@ -589,7 +589,7 @@ let
       mcpServers = claudeMcp;
       hooks = [ ];
       marketplaces = [ ];
-      hasDefault = true;
+      hasDefault = false;
     };
     "vps-claude-personal" = {
       mcpServers = claudeMcp;
@@ -1233,7 +1233,6 @@ let
     modelData = {
       providers = renamedCredentialProviders;
       models = renamedCredentialModels;
-      default = renamedCredentialModelData.profileDefaults.${renamedCredentialProfileId};
     };
     homeDirectory = fixtureHomeDirectory;
     xdgConfigHome = fixtureXdgConfigHome;
@@ -1679,27 +1678,14 @@ let
     // lib.optionalAttrs (model ? contextLimit) {
       contextWindow = model.contextLimit;
     }
-    // lib.optionalAttrs (model.provider == "litellm" && model.id == "positron_openai/gpt-5.6-sol") {
-      api = "openai-responses";
+    // lib.optionalAttrs (model.provider == "llama-cpp-local" && model.id == "GLM-5.2") {
       reasoning = true;
-      input = [
-        "text"
-        "image"
-      ];
+      input = [ "text" ];
       cost = {
-        input = 5;
-        output = 30;
-        cacheRead = 0.5;
-        cacheWrite = 6.25;
-        tiers = [
-          {
-            inputTokensAbove = 272000;
-            input = 10;
-            output = 45;
-            cacheRead = 1;
-            cacheWrite = 12.5;
-          }
-        ];
+        input = 0;
+        output = 0;
+        cacheRead = 0;
+        cacheWrite = 0;
       };
       thinkingLevelMap = {
         off = "none";
@@ -1710,44 +1696,21 @@ let
     };
   expectedPiProvider =
     providerName: provider:
-    if providerName == "litellm" then
-      {
-        apiKey = renderPiCredential provider.apiKey;
-        inherit (provider) baseUrl;
-        headers = {
-          "x-litellm-stream-timeout" = "7200";
-          "x-litellm-tags" = "pi";
-          "x-litellm-timeout" = "7200";
-        };
-        modelOverrides."openrouter/z-ai/glm-5.2".compat = {
-          sendSessionAffinityHeaders = true;
-          sessionAffinityFormat = "openrouter";
-        };
-        models = map expectedPiModel (
-          orderedValues (
-            lib.filterAttrs (
-              _: model: model.provider == providerName && model.id == "positron_openai/gpt-5.6-sol"
-            ) (selectedModels "hera-pi")
+    assert providerName == "llama-cpp-local";
+    {
+      api = "openai-completions";
+      apiKey = renderPiCredential provider.apiKey;
+      inherit (provider) baseUrl;
+      models = map expectedPiModel (
+        orderedValues (
+          lib.filterAttrs (_: model: model.provider == providerName && model.id == "GLM-5.2") (
+            selectedModels "hera-pi"
           )
-        );
-      }
-    else
-      assert providerName == "llama-cpp-local";
-      {
-        api = "openai-completions";
-        apiKey = renderPiCredential provider.apiKey;
-        inherit (provider) baseUrl;
-        models = map expectedPiModel (
-          orderedValues (
-            lib.filterAttrs (_: model: model.provider == providerName && model.id == "GLM-5.2") (
-              selectedModels "hera-pi"
-            )
-          )
-        );
-      };
+        )
+      );
+    };
   expectedPiModels = {
     providers = lib.mapAttrs expectedPiProvider (selectedProviders "hera-pi") // {
-      openai-codex.modelOverrides."gpt-5.6-sol".contextWindow = 1050000;
       router = {
         api = "router-local-api";
         apiKey = "pi-model-router";
@@ -1767,8 +1730,8 @@ let
               cacheRead = 0;
               cacheWrite = 0;
             };
-            contextWindow = 1050000;
-            maxTokens = 128000;
+            contextWindow = 1048576;
+            maxTokens = 65536;
             thinkingLevelMap.xhigh = "xhigh";
           }
         ];
@@ -1779,9 +1742,9 @@ let
     debug = false;
     phaseBias = 0.5;
     models.sol = {
-      model = "litellm/positron_openai/gpt-5.6-sol";
-      contextWindow = 1050000;
-      maxTokens = 128000;
+      model = "llama-cpp-local/GLM-5.2";
+      contextWindow = 1048576;
+      maxTokens = 65536;
       reasoning = true;
       thinkingLevels = [
         "low"
@@ -2544,7 +2507,6 @@ let
       "ANTHROPIC_API_KEY"
       "CONTEXT7_API_KEY"
       "GEMINI_API_KEY"
-      "LITELLM_API_KEY"
       "NVIDIA_API_KEY"
       "OPENAI_API_KEY"
       "PERPLEXITY_API_KEY"
@@ -2566,7 +2528,6 @@ let
     "ANTHROPIC_API_KEY"
     "CONTEXT7_API_KEY"
     "GEMINI_API_KEY"
-    "LITELLM_API_KEY"
     "OPENAI_API_KEY"
     "PERPLEXITY_API_KEY"
     "REF_API_KEY"
@@ -2680,7 +2641,6 @@ let
           "ANTHROPIC_API_KEY"
           "CONTEXT7_API_KEY"
           "GEMINI_API_KEY"
-          "LITELLM_API_KEY"
           "NVIDIA_API_KEY"
           "OPENAI_API_KEY"
           "PERPLEXITY_API_KEY"
@@ -2741,14 +2701,9 @@ let
         (expectReject "Pi nonstandard XDG config home accepted" piNonstandardXdgProbe.companions)
         (expectReject "Pi non-Hera/non-Pi profile accepted" piWrongProfileProbe.companions)
         (expectEqual "${profileId} provider set" (sortedNames expectedPiModels.providers) [
-          "litellm"
           "llama-cpp-local"
-          "openai-codex"
           "router"
         ])
-        (expectEqual "${profileId} static Pi LiteLLM model set" (map (
-          model: model.id
-        ) expectedPiModels.providers.litellm.models) [ "positron_openai/gpt-5.6-sol" ])
         (expectEqual "${profileId} static Pi direct GLM model set" (map (
           model: model.id
         ) expectedPiModels.providers.llama-cpp-local.models) [ "GLM-5.2" ])
@@ -2761,7 +2716,6 @@ let
             lib.unique (map (model: model.provider) (builtins.attrValues (selectedModels profileId)))
           ))
           [
-            "litellm"
             "llama-cpp-local"
           ]
         )
@@ -2992,7 +2946,7 @@ let
   };
   unknownPolicyField = modelPolicy // {
     defaultModel = {
-      provider = "litellm";
+      provider = "unknown";
       model = "forbidden";
     };
   };
@@ -3003,38 +2957,35 @@ let
   };
   concreteProviderPolicy = modelPolicy // {
     providers = modelPolicy.providers // {
-      litellm = modelPolicy.providers.litellm // {
+      omlx = modelPolicy.providers.omlx // {
         baseUrl = "https://forbidden.invalid/v1";
       };
     };
   };
 
   expectedProviders = [
-    "litellm"
     "llama-cpp-local"
-    "llama-cpp-remote"
     "nvidia"
     "omlx"
+    "omlx-remote"
     "positron-anthropic"
     "positron-google"
     "positron-openai"
   ];
   expectedProviderBaseUrls = {
-    litellm = "https://litellm.vulcan.lan/v1/";
     llama-cpp-local = "http://localhost:8080/v1";
-    llama-cpp-remote = "https://10.6.0.1/v1/";
     nvidia = "https://integrate.api.nvidia.com/v1";
-    omlx = "http://hera.lan:8000/v1";
+    omlx = "http://localhost:8000/v1";
+    omlx-remote = "https://hera.lan:8443/v1/";
     positron-anthropic = "https://api.anthropic.com";
     positron-google = "https://generativelanguage.googleapis.com/v1beta/";
     positron-openai = "https://api.openai.com/v1";
   };
   expectedProviderCredentials = {
-    litellm.env = "LITELLM_API_KEY";
     llama-cpp-local.nonSecret = "not-needed";
-    llama-cpp-remote.nonSecret = "dummy-api-key";
     nvidia.env = "NVIDIA_API_KEY";
     omlx.nonSecret = "dummy-key";
+    omlx-remote.nonSecret = "dummy-api-key";
     positron-anthropic.env = "ANTHROPIC_API_KEY";
     positron-google.env = "GEMINI_API_KEY";
     positron-openai.env = "OPENAI_API_KEY";
@@ -3136,7 +3087,6 @@ let
     "ANTHROPIC_API_KEY"
     "CONTEXT7_API_KEY"
     "GEMINI_API_KEY"
-    "LITELLM_API_KEY"
     "NVIDIA_API_KEY"
     "OPENAI_API_KEY"
     "PERPLEXITY_API_KEY"
@@ -3152,7 +3102,6 @@ let
     "ANTHROPIC_API_KEY"
     "CONTEXT7_API_KEY"
     "GEMINI_API_KEY"
-    "LITELLM_API_KEY"
     "NVIDIA_API_KEY"
     "OPENAI_API_KEY"
     "PERPLEXITY_API_KEY"
@@ -4108,7 +4057,6 @@ let
     "ANTHROPIC_API_KEY"
     "CONTEXT7_API_KEY"
     "GEMINI_API_KEY"
-    "LITELLM_API_KEY"
     "NVIDIA_API_KEY"
     "OPENAI_API_KEY"
     "PERPLEXITY_API_KEY"
@@ -4429,7 +4377,6 @@ let
         "ANTHROPIC_API_KEY"
         "CONTEXT7_API_KEY"
         "GEMINI_API_KEY"
-        "LITELLM_API_KEY"
         "NVIDIA_RENAMED_API_KEY"
         "OPENAI_API_KEY"
         "PERPLEXITY_API_KEY"
@@ -4627,7 +4574,7 @@ let
     (expectEqual "provider credentials" (lib.mapAttrs (
       _: provider: provider.apiKey
     ) modelData.providers) expectedProviderCredentials)
-    (expectEqual "Clio-only remote provider selectors" modelData.providers.llama-cpp-remote.selectors {
+    (expectEqual "Clio-only remote provider selectors" modelData.providers.omlx-remote.selectors {
       clients = [
         "droid"
         "opencode"
