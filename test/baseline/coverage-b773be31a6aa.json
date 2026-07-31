@@ -67,6 +67,7 @@
         "config/launchd.nix",
         "config/overlays.nix",
         "config/packages.nix",
+        "config/pi-profile-migration.nix",
         "config/ssh.nix",
         "config/vars.nix",
         "config/xdg-symlinks.nix",
@@ -285,6 +286,7 @@
             "config/launchd.nix",
             "config/overlays.nix",
             "config/packages.nix",
+            "config/pi-profile-migration.nix",
             "config/ssh.nix",
             "config/vars.nix",
             "config/xdg-symlinks.nix",
@@ -662,6 +664,7 @@
         "config/launchd.nix",
         "config/overlays.nix",
         "config/packages.nix",
+        "config/pi-profile-migration.nix",
         "config/ssh.nix",
         "config/vars.nix",
         "config/xdg-symlinks.nix",
@@ -772,7 +775,7 @@
           "budgetSeconds": 120,
           "host": "hera",
           "platform": "darwin-arm64",
-          "seconds": 58.781,
+          "seconds": 62.864,
           "tier": "pre-commit-core"
         }
       ],
@@ -902,9 +905,9 @@
     "kind": "declared-command-recipe"
   },
   "schema": "fleet-coverage/1",
-  "sourceBaseRev": "48a126e884b574fe593ee805e3f1ec245108fc35",
-  "sourceProjectionDigest": "357a30b011bbbd59ecb56a3430a61c1ba8562059d37fdb45147710ea8a8a7580",
-  "sourceTree": "0784f2aeb7fa87b55045f1eceeab674532c921e4",
+  "sourceBaseRev": "1238ff895b740f2bf148212a18815d5132e2fade",
+  "sourceProjectionDigest": "5680afda6552b750af515e7147dabf2d2fd76c56a50f73ef664e04e4f144d298",
+  "sourceTree": "129d47dba04f8a93e4469cb3642115a4c376352a",
   "structural": {
     "budgetsSeconds": {
       "ci-on-demand": 1800,
@@ -943,6 +946,7 @@
         "config/launchd.nix",
         "config/overlays.nix",
         "config/packages.nix",
+        "config/pi-profile-migration.nix",
         "config/ssh.nix",
         "config/vars.nix",
         "config/xdg-symlinks.nix",
