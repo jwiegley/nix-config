@@ -1,8 +1,8 @@
 {
  "schema": "fleet-parity-oracle/2",
- "baselineRev": "a54ad16554bc2378b62cf5dd4fb1fde7526498ae",
+ "baselineRev": "4d326ae1c1bf5d853960a0c2de1b834f9818b87b",
  "armedRefactorAncestor": "a3cc3843",
- "note": "Stored evidence for the Fleet Configuration Programme parity gates. Package counts are derived from the lists in this file, never asserted separately. Re-derive with bin/parity-baseline --check <this file>.",
+ "note": "Stored evidence for the Fleet Configuration Programme parity gates. Package counts are derived from the lists in this file, never asserted separately. Re-derive with test/bin/parity-baseline --check <this file>.",
  "history": [
   {
    "old_rev": null,
@@ -81,30 +81,78 @@
    "reason": "Merge current main security, SSH-oracle, Pi-source, and history fixes into unpublished #47",
    "intentional_deltas": [
     "darwin/hera: codex host-state renamed to host-state-hera-credentials by fa83400c",
-    "portable all systems: remove disabled pi-provider-litellm source under #95"
+    "portable all systems: remove disabled retired local-provider source under #95"
    ],
    "observed_deltas": [
     "lost darwin/hera: codex-0.145.0-host-state",
     "gained darwin/hera: codex-0.145.0-host-state-hera-credentials",
-    "lost portable/aarch64-darwin: pi-provider-litellm",
-    "lost portable/aarch64-linux: pi-provider-litellm",
-    "lost portable/x86_64-linux: pi-provider-litellm"
+    "lost portable/aarch64-darwin: retired-local-provider",
+    "lost portable/aarch64-linux: retired-local-provider",
+    "lost portable/x86_64-linux: retired-local-provider"
+   ]
+  },
+  {
+   "old_rev": "a54ad16554bc2378b62cf5dd4fb1fde7526498ae",
+   "new_rev": "4d326ae1c1bf5d853960a0c2de1b834f9818b87b",
+   "reason": "Consolidate test infrastructure and refresh the exact-commit oracle",
+   "intentional_deltas": [
+    "Remove the retired MCP package from every managed profile.",
+    "Advance Claude Code 2.1.219 to 2.1.220, Codex 0.145.0 to 0.146.0, and Droid 0.179.0 to 0.185.0.",
+    "Derive org2tc from the current input revision, advancing 7d52a20 to 9d58d30."
+   ],
+   "observed_deltas": [
+    "lost darwin/clio: retired-mcp-package",
+    "lost darwin/clio: claude-code-2.1.219-managed-config",
+    "lost darwin/clio: codex-0.145.0-host-state",
+    "lost darwin/clio: droid-0.179.0-managed-config",
+    "lost darwin/clio: org2tc-7d52a20",
+    "gained darwin/clio: claude-code-2.1.220-managed-config",
+    "gained darwin/clio: codex-0.146.0-host-state",
+    "gained darwin/clio: droid-0.185.0-managed-config",
+    "gained darwin/clio: org2tc-9d58d30",
+    "lost darwin/hera: retired-mcp-package",
+    "lost darwin/hera: claude-code-2.1.219-managed-config",
+    "lost darwin/hera: codex-0.145.0-host-state-hera-credentials",
+    "lost darwin/hera: droid-0.179.0-managed-config",
+    "lost darwin/hera: org2tc-7d52a20",
+    "gained darwin/hera: claude-code-2.1.220-managed-config",
+    "gained darwin/hera: codex-0.146.0-host-state-hera-credentials",
+    "gained darwin/hera: droid-0.185.0-managed-config",
+    "gained darwin/hera: org2tc-9d58d30",
+    "lost home-manager/johnw@aarch64-linux: retired-mcp-package",
+    "lost home-manager/johnw@aarch64-linux: claude-code-2.1.219-managed-config",
+    "lost home-manager/johnw@aarch64-linux: codex-0.145.0-host-state",
+    "lost home-manager/johnw@aarch64-linux: droid-0.179.0-managed-config",
+    "lost home-manager/johnw@aarch64-linux: org2tc-7d52a20",
+    "gained home-manager/johnw@aarch64-linux: claude-code-2.1.220-managed-config",
+    "gained home-manager/johnw@aarch64-linux: codex-0.146.0-host-state",
+    "gained home-manager/johnw@aarch64-linux: droid-0.185.0-managed-config",
+    "gained home-manager/johnw@aarch64-linux: org2tc-9d58d30",
+    "lost home-manager/jwiegley@x86_64-linux: retired-mcp-package",
+    "lost home-manager/jwiegley@x86_64-linux: claude-code-2.1.219-managed-config",
+    "lost home-manager/jwiegley@x86_64-linux: codex-0.145.0-host-state",
+    "lost home-manager/jwiegley@x86_64-linux: droid-0.179.0-managed-config",
+    "lost home-manager/jwiegley@x86_64-linux: org2tc-7d52a20",
+    "gained home-manager/jwiegley@x86_64-linux: claude-code-2.1.220-managed-config",
+    "gained home-manager/jwiegley@x86_64-linux: codex-0.146.0-host-state",
+    "gained home-manager/jwiegley@x86_64-linux: droid-0.185.0-managed-config",
+    "gained home-manager/jwiegley@x86_64-linux: org2tc-9d58d30"
    ]
   }
  ],
  "commands": {
-  "darwinDrvPath": "nix eval --raw \".#darwinConfigurations.<host>.config.system.build.toplevel.drvPath\"",
-  "darwinPackages": "nix eval --json \".#darwinConfigurations.<host>.config.home-manager.users.<user>.home.packages\" --apply 'ps: builtins.sort builtins.lessThan (map (p: p.pname or p.name) ps)'",
-  "hmDrvPath": "nix eval --raw \".#homeConfigurations.\\\"<attr>\\\".activationPackage.drvPath\"",
-  "hmPackages": "nix eval --json \".#homeConfigurations.\\\"<attr>\\\".config.home.packages\" --apply 'ps: builtins.sort builtins.lessThan (map (p: p.pname or p.name) ps)'",
-  "portablePackages": "nix eval --json \"./config/fleet#packages.<system>\" --apply 'ps: builtins.sort builtins.lessThan (builtins.attrNames ps)'"
+  "darwinDrvPath": "nix eval --no-write-lock-file --raw \".#darwinConfigurations.<host>.config.system.build.toplevel.drvPath\"",
+  "darwinPackages": "nix eval --no-write-lock-file --json \".#darwinConfigurations.<host>.config.home-manager.users.<user>.home.packages\" --apply 'ps: builtins.sort builtins.lessThan (map (p: p.pname or p.name) ps)'",
+  "hmDrvPath": "nix eval --no-write-lock-file --raw \".#homeConfigurations.\\\"<attr>\\\".activationPackage.drvPath\"",
+  "hmPackages": "nix eval --no-write-lock-file --json \".#homeConfigurations.\\\"<attr>\\\".config.home.packages\" --apply 'ps: builtins.sort builtins.lessThan (map (p: p.pname or p.name) ps)'",
+  "portablePackages": "nix eval --no-write-lock-file --json \"./config/fleet#packages.<system>\" --apply 'ps: builtins.sort builtins.lessThan (builtins.attrNames ps)'"
  },
  "targets": [
   {
    "kind": "darwin",
    "target": "clio",
    "user": "johnw",
-   "drvPath": "/nix/store/86h4qsw0lc4ld7j27mpdi9zsy8cirhiv-darwin-system-26.11.57a3171.drv",
+   "drvPath": "/nix/store/6fjbrf947kd3c29y1m5xyhxcylb5yicq-darwin-system-26.11.15abb8c.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -113,7 +161,6 @@
     "agent-deck",
     "agnix",
     "aiperf",
-    "anvil-mcp",
     "apg",
     "aria2",
     "asciidoctor",
@@ -139,12 +186,12 @@
     "ccstatusline",
     "cctools",
     "ccusage",
-    "claude-code-2.1.219-managed-config",
+    "claude-code-2.1.220-managed-config",
     "claude-replay",
     "claude-vault",
     "cmake",
     "cmdperf",
-    "codex-0.145.0-host-state",
+    "codex-0.146.0-host-state",
     "contacts",
     "context-hub",
     "context7-mcp",
@@ -166,7 +213,7 @@
     "dot2tex",
     "doxygen",
     "drafts-mcp-server",
-    "droid-0.179.0-managed-config",
+    "droid-0.185.0-managed-config",
     "dstp",
     "du-dust",
     "dummy-info-dir1",
@@ -355,7 +402,7 @@
     "openvpn",
     "org-jw-exe-org",
     "org2jsonl",
-    "org2tc-7d52a20",
+    "org2tc-9d58d30",
     "ormolu",
     "p7zip",
     "pal-mcp-server",
@@ -493,13 +540,13 @@
     "zsh-syntax-highlighting",
     "zulu-ca-jdk"
    ],
-   "packageCount": 386
+   "packageCount": 385
   },
   {
    "kind": "darwin",
    "target": "hera",
    "user": "johnw",
-   "drvPath": "/nix/store/hy4wndb8x866czdjvp3dcnkvkprwddcf-darwin-system-26.11.57a3171.drv",
+   "drvPath": "/nix/store/cnzydcvplnssm0rgvyjjrsjm2nhgp7kw-darwin-system-26.11.15abb8c.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -512,7 +559,6 @@
     "agent-http-header-bridge",
     "agnix",
     "aiperf",
-    "anvil-mcp",
     "apg",
     "aria2",
     "asciidoctor",
@@ -541,12 +587,12 @@
     "ccstatusline",
     "cctools",
     "ccusage",
-    "claude-code-2.1.219-managed-config",
+    "claude-code-2.1.220-managed-config",
     "claude-replay",
     "claude-vault",
     "cmake",
     "cmdperf",
-    "codex-0.145.0-host-state-hera-credentials",
+    "codex-0.146.0-host-state-hera-credentials",
     "contacts",
     "context-hub",
     "context7-mcp",
@@ -569,7 +615,7 @@
     "dot2tex",
     "doxygen",
     "drafts-mcp-server",
-    "droid-0.179.0-managed-config",
+    "droid-0.185.0-managed-config",
     "dstp",
     "du-dust",
     "dummy-info-dir1",
@@ -764,7 +810,7 @@
     "openvpn",
     "org-jw-exe-org",
     "org2jsonl",
-    "org2tc-7d52a20",
+    "org2tc-9d58d30",
     "ormolu",
     "p7zip",
     "pal-mcp-server",
@@ -916,12 +962,12 @@
     "zsh-syntax-highlighting",
     "zulu-ca-jdk"
    ],
-   "packageCount": 414
+   "packageCount": 413
   },
   {
    "kind": "home-manager",
    "target": "johnw@aarch64-linux",
-   "drvPath": "/nix/store/9805iw7iivjkg0slbnizxmsrqr5wbw2h-home-manager-generation.drv",
+   "drvPath": "/nix/store/v6gv7v6lkadx41y211ky9x81bs4vm5nc-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -930,7 +976,6 @@
     "agent-deck",
     "agnix",
     "aiperf",
-    "anvil-mcp",
     "apg",
     "aria2",
     "asciidoctor",
@@ -954,12 +999,12 @@
     "cbor-diag",
     "ccstatusline",
     "ccusage",
-    "claude-code-2.1.219-managed-config",
+    "claude-code-2.1.220-managed-config",
     "claude-replay",
     "claude-vault",
     "cmake",
     "cmdperf",
-    "codex-0.145.0-host-state",
+    "codex-0.146.0-host-state",
     "context-hub",
     "context7-mcp",
     "coreutils",
@@ -979,7 +1024,7 @@
     "dnstracer",
     "dot2tex",
     "doxygen",
-    "droid-0.179.0-managed-config",
+    "droid-0.185.0-managed-config",
     "dstp",
     "du-dust",
     "dummy-info-dir1",
@@ -1164,7 +1209,7 @@
     "openssl",
     "openvpn",
     "org2jsonl",
-    "org2tc-7d52a20",
+    "org2tc-9d58d30",
     "ormolu",
     "p7zip",
     "pal-mcp-server",
@@ -1291,12 +1336,12 @@
     "zsh",
     "zsh-syntax-highlighting"
    ],
-   "packageCount": 367
+   "packageCount": 366
   },
   {
    "kind": "home-manager",
    "target": "jwiegley@x86_64-linux",
-   "drvPath": "/nix/store/v23qlga2cymgwwz1dzc2wlxvkxl5nr02-home-manager-generation.drv",
+   "drvPath": "/nix/store/afzi7h5z8jwi4yzawh2vmlqzw1dc4rii-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1305,7 +1350,6 @@
     "agent-deck",
     "agnix",
     "aiperf",
-    "anvil-mcp",
     "apg",
     "aria2",
     "asciidoctor",
@@ -1329,12 +1373,12 @@
     "cbor-diag",
     "ccstatusline",
     "ccusage",
-    "claude-code-2.1.219-managed-config",
+    "claude-code-2.1.220-managed-config",
     "claude-replay",
     "claude-vault",
     "cmake",
     "cmdperf",
-    "codex-0.145.0-host-state",
+    "codex-0.146.0-host-state",
     "context-hub",
     "context7-mcp",
     "coreutils",
@@ -1354,7 +1398,7 @@
     "dnstracer",
     "dot2tex",
     "doxygen",
-    "droid-0.179.0-managed-config",
+    "droid-0.185.0-managed-config",
     "dstp",
     "du-dust",
     "dummy-info-dir1",
@@ -1539,7 +1583,7 @@
     "openssl",
     "openvpn",
     "org2jsonl",
-    "org2tc-7d52a20",
+    "org2tc-9d58d30",
     "ormolu",
     "p7zip",
     "pal-mcp-server",
@@ -1667,7 +1711,7 @@
     "zsh",
     "zsh-syntax-highlighting"
    ],
-   "packageCount": 368
+   "packageCount": 367
   },
   {
    "kind": "portable",

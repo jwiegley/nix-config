@@ -1,16 +1,16 @@
 {
   "schema": "darwin-value-surface/3",
-  "baselineRev": "a5461d37a7849ffe3eaf832f436bd5fbb679dbed",
+  "baselineRev": "4d326ae1c1bf5d853960a0c2de1b834f9818b87b",
   "note": "Seven nix-darwin value surfaces at the recorded revision. Only 32-character /nix/store hash prefixes are masked; derivation names remain. Launchd scripts are hashed after that normalization, so their text is not persisted. Authorized-key lists, authorized-key file paths, and build-machine private-key paths are persisted only as content-aware opaque aggregate hashes plus non-sensitive counts; sensitive keys and assignments are refused.",
   "commands": {
-    "hostSurface": "nix eval --impure --json '.#darwinConfigurations.<host>' --apply 'darwin: import ./test/darwin/darwin-surface.nix darwin'",
-    "compare": "bin/darwin-surface-diff --normalize-store <before.json> <after.json>",
-    "refresh": "bin/darwin-surface-baseline --rev <rev> --write"
+    "hostSurface": "nix eval --option eval-cache false --no-write-lock-file --impure --json '.#darwinConfigurations.<host>' --apply 'darwin: import ./test/darwin/darwin-surface.nix darwin'",
+    "compare": "test/bin/darwin-surface-diff --normalize-store <before.json> <after.json>",
+    "refresh": "test/bin/darwin-surface-baseline --rev <rev> --write"
   },
   "projection": {
     "test/darwin/darwin-surface.nix": "e6ff44fd85dcbb985141ba7d2dc40aef253a965a1c6ae320361c42f8801f4f7a",
     "test/darwin/surface-helpers.nix": "dbf47403da79ac1670112c761163694c92b52dde8e5e530a969592510f49c4a3",
-    "bin/darwin-surface-diff": "19fc0e40e02fae77ac954cf2ccc026dcc18910fae8b646ad12aa64ed0d5c3204"
+    "test/bin/darwin-surface-diff": "19fc0e40e02fae77ac954cf2ccc026dcc18910fae8b646ad12aa64ed0d5c3204"
   },
   "hosts": {
     "clio": {
