@@ -795,6 +795,7 @@ pkgs.runCommand "ai-managed-preflight"
     printf '%s' session > "$migration_home/.pi/agent/sessions/current.jsonl"
     printf '%s' old > "$migration_home/.pi/agent/a"
     ln "$migration_home/.pi/agent/a" "$migration_home/.pi/agent/b"
+    printf '%s' user-state > "$migration_home/.pi/agent/.nix-pi-profile-stage-ready-v1"
     printf '%s' new > "$migration_home/.pi/a"
     migration_legacy_before="$(python3 -I "$digest_script" "$migration_home/.pi")"
     HOME="$migration_home" ${task9PiProfileMigrationScript}
@@ -806,6 +807,8 @@ pkgs.runCommand "ai-managed-preflight"
     test "$(cat "$migration_home/.config/pi/destination-only/value")" = destination-only
     test "$(cat "$migration_home/.config/pi/a")" = new
     test "$(cat "$migration_home/.config/pi/b")" = old
+    test "$(cat "$migration_home/.config/pi/.nix-pi-profile-stage-ready-v1")" = user-state
+    test "$(cat "$migration_home/.pi/agent/.nix-pi-profile-stage-ready-v1")" = user-state
     test ! "$migration_home/.config/pi/a" -ef "$migration_home/.config/pi/b"
     test ! -e "$migration_home/.config/pi/agent/agent"
     test "$(stat -c %a "$migration_home/.config/pi")" = 700
@@ -824,14 +827,14 @@ pkgs.runCommand "ai-managed-preflight"
     printf '%s' legacy > "$migration_home/.pi/agent/auth.json"
     printf '%s' staged > "$migration_stage/auth.json"
     printf '%s' staged-session > "$migration_stage/sessions/current.jsonl"
-    touch "$migration_stage/.nix-pi-profile-stage-ready-v1"
+    touch "$migration_stage.ready"
     ln -s ../.pi "$migration_home/.config/.pi-profile-legacy-link-v1"
     HOME="$migration_home" ${task9PiProfileMigrationScript}
     test ! -L "$migration_home/.config/pi"
     test "$(cat "$migration_home/.config/pi/auth.json")" = staged
     test "$(cat "$migration_home/.config/pi/sessions/current.jsonl")" = staged-session
     test ! -e "$migration_home/.config/.pi-profile-legacy-link-v1"
-    test ! -e "$migration_home/.config/pi/.nix-pi-profile-stage-ready-v1"
+    test ! -e "$migration_stage.ready"
     test -f "$migration_home/.config/.nix-pi-profile-migrated-v1"
 
     migration_home="$migration_root/interrupted-incomplete-stage"
@@ -848,6 +851,19 @@ pkgs.runCommand "ai-managed-preflight"
     test ! -e "$migration_home/.config/.pi-profile-legacy-link-v1"
     grep -F "restored the legacy link after an incomplete migration" \
       "$migration_root/interrupted-incomplete-stage.output" >/dev/null
+
+    migration_home="$migration_root/interrupted-symlink-stage"
+    migration_stage_target="$migration_home/stage-target"
+    mkdir -p "$migration_home/.config" "$migration_home/.pi/agent" "$migration_stage_target"
+    ln -s "$migration_stage_target" "$migration_home/.config/.pi-profile-migration.crash"
+    set +e
+    HOME="$migration_home" ${task9PiProfileMigrationScript} \
+      >"$migration_root/interrupted-symlink-stage.output" 2>&1
+    migration_status=$?
+    set -e
+    test "$migration_status" -ne 0
+    grep -F "staging path is a symlink" \
+      "$migration_root/interrupted-symlink-stage.output" >/dev/null
 
     migration_home="$migration_root/invalid-source"
     mkdir -p "$migration_home/.pi"

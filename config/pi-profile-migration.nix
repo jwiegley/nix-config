@@ -21,7 +21,6 @@ let
     pi_marker="$HOME"/${lib.escapeShellArg "${markerRoot}/${markerName}"}
     pi_destination_parent="''${pi_destination%/*}"
     pi_link_backup="$pi_destination_parent/.pi-profile-legacy-link-v1"
-    pi_stage_ready_name=.nix-pi-profile-stage-ready-v1
     pi_source_resolved=
 
     pi_copy_tree() {
@@ -36,13 +35,39 @@ let
     pi_recovery_stage=
     pi_recovery_stage_count=0
     for pi_stage_candidate in "$pi_destination_parent"/.pi-profile-migration.*; do
-      [ -d "$pi_stage_candidate" ] || continue
-      pi_recovery_stage_count=$((pi_recovery_stage_count + 1))
-      pi_recovery_stage=$pi_stage_candidate
+      if [ -L "$pi_stage_candidate" ]; then
+        printf '%s\n' \
+          "Pi profile migration: staging path is a symlink: $pi_stage_candidate" >&2
+        exit 1
+      elif [ -d "$pi_stage_candidate" ]; then
+        pi_recovery_stage_count=$((pi_recovery_stage_count + 1))
+        pi_recovery_stage=$pi_stage_candidate
+      fi
+    done
+    pi_recovery_ready=
+    pi_recovery_ready_count=0
+    for pi_ready_candidate in "$pi_destination_parent"/.pi-profile-migration.*.ready; do
+      if [ -L "$pi_ready_candidate" ]; then
+        printf '%s\n' \
+          "Pi profile migration: staging marker is a symlink: $pi_ready_candidate" >&2
+        exit 1
+      elif [ -f "$pi_ready_candidate" ]; then
+        pi_recovery_ready_count=$((pi_recovery_ready_count + 1))
+        pi_recovery_ready=$pi_ready_candidate
+      fi
     done
     if [ "$pi_recovery_stage_count" -gt 1 ]; then
       printf '%s\n' \
         "Pi profile migration: multiple interrupted staging directories require inspection" >&2
+      exit 1
+    elif [ "$pi_recovery_ready_count" -gt 1 ]; then
+      printf '%s\n' \
+        "Pi profile migration: multiple interrupted staging markers require inspection" >&2
+      exit 1
+    elif [ -n "$pi_recovery_stage" ] && [ -n "$pi_recovery_ready" ] \
+      && [ "$pi_recovery_ready" != "$pi_recovery_stage.ready" ]; then
+      printf '%s\n' \
+        "Pi profile migration: staging directory and marker do not match" >&2
       exit 1
     fi
 
@@ -62,11 +87,12 @@ let
         exit 1
       elif [ ! -e "$pi_destination" ] && [ ! -L "$pi_destination" ]; then
         if [ -n "$pi_recovery_stage" ] \
-          && [ -f "$pi_recovery_stage/$pi_stage_ready_name" ]; then
+          && [ "$pi_recovery_ready" = "$pi_recovery_stage.ready" ]; then
           run ${pkgs.coreutils}/bin/mv -T -- "$pi_recovery_stage" "$pi_destination"
           pi_recovery_stage=
           run ${pkgs.coreutils}/bin/rm -f -- "$pi_link_backup"
-          run ${pkgs.coreutils}/bin/rm -f -- "$pi_destination/$pi_stage_ready_name"
+          run ${pkgs.coreutils}/bin/rm -f -- "$pi_recovery_ready"
+          pi_recovery_ready=
           run ${pkgs.coreutils}/bin/touch -- "$pi_marker"
           pi_recovered=true
         else
@@ -75,10 +101,11 @@ let
             "Pi profile migration: restored the legacy link after an incomplete migration; inspect the staging directory" >&2
           exit 1
         fi
-      elif [ -d "$pi_destination" ] \
-        && [ -f "$pi_destination/$pi_stage_ready_name" ]; then
+      elif [ -d "$pi_destination" ] && [ -z "$pi_recovery_stage" ] \
+        && [ -n "$pi_recovery_ready" ]; then
         run ${pkgs.coreutils}/bin/rm -f -- "$pi_link_backup"
-        run ${pkgs.coreutils}/bin/rm -f -- "$pi_destination/$pi_stage_ready_name"
+        run ${pkgs.coreutils}/bin/rm -f -- "$pi_recovery_ready"
+        pi_recovery_ready=
         run ${pkgs.coreutils}/bin/touch -- "$pi_marker"
         pi_recovered=true
       else
@@ -86,13 +113,15 @@ let
           "Pi profile migration: ambiguous rollback state requires inspection: $pi_link_backup" >&2
         exit 1
       fi
-    elif [ -f "$pi_destination/$pi_stage_ready_name" ]; then
-      run ${pkgs.coreutils}/bin/rm -f -- "$pi_destination/$pi_stage_ready_name"
+    elif [ -d "$pi_destination" ] && [ -z "$pi_recovery_stage" ] \
+      && [ -n "$pi_recovery_ready" ]; then
+      run ${pkgs.coreutils}/bin/rm -f -- "$pi_recovery_ready"
+      pi_recovery_ready=
       run ${pkgs.coreutils}/bin/touch -- "$pi_marker"
       pi_recovered=true
-    elif [ -n "$pi_recovery_stage" ]; then
+    elif [ -n "$pi_recovery_stage" ] || [ -n "$pi_recovery_ready" ]; then
       printf '%s\n' \
-        "Pi profile migration: interrupted staging directory requires inspection: $pi_recovery_stage" >&2
+        "Pi profile migration: interrupted staging state requires inspection" >&2
       exit 1
     fi
 
@@ -115,6 +144,7 @@ let
       fi
 
       pi_stage=
+      pi_stage_ready=
       pi_link_moved=false
       if [ -e "$pi_link_backup" ] || [ -L "$pi_link_backup" ]; then
         printf '%s\n' \
@@ -136,6 +166,10 @@ let
               ;;
           esac
         fi
+        if [ -n "$pi_stage_ready" ] && [ -f "$pi_stage_ready" ] \
+          && [ ! -L "$pi_stage_ready" ]; then
+          run ${pkgs.coreutils}/bin/rm -f -- "$pi_stage_ready"
+        fi
       }
       trap pi_cleanup_stage EXIT
       trap 'exit 129' HUP
@@ -150,13 +184,15 @@ let
         pi_copy_tree "$pi_source" "$pi_stage"
       fi
       run ${pkgs.coreutils}/bin/chmod 0700 -- "$pi_stage"
-      run ${pkgs.coreutils}/bin/touch -- "$pi_stage/$pi_stage_ready_name"
+      pi_stage_ready="$pi_stage.ready"
+      run ${pkgs.coreutils}/bin/touch -- "$pi_stage_ready"
       run ${pkgs.coreutils}/bin/mv -T -- "$pi_destination" "$pi_link_backup"
       pi_link_moved=true
       run ${pkgs.coreutils}/bin/mv -T -- "$pi_stage" "$pi_destination"
       pi_stage=
       run ${pkgs.coreutils}/bin/rm -f -- "$pi_link_backup"
-      run ${pkgs.coreutils}/bin/rm -f -- "$pi_destination/$pi_stage_ready_name"
+      run ${pkgs.coreutils}/bin/rm -f -- "$pi_stage_ready"
+      pi_stage_ready=
       pi_link_moved=false
       trap - EXIT HUP INT TERM
     )
