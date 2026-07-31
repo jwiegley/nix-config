@@ -419,7 +419,7 @@ let
           'import * as katex from "katex";',
       )
       text = text.replace('\nconst require = createRequire(import.meta.url);\n', '\n')
-      old = """const MarkdownIt = require("markdown-it") as MarkdownItConstructor;
+      old_candidates = ["""const MarkdownIt = require("markdown-it") as MarkdownItConstructor;
       // `lib/common` bundles the ~40 common grammars instead of all ~190.
       const hljsModule = require("highlight.js/lib/common") as
         | HighlightJsLike
@@ -427,7 +427,14 @@ let
       const hljs = "default" in hljsModule ? hljsModule.default : hljsModule;
       const footnotePlugin = require("markdown-it-footnote") as (
         md: MarkdownItInstance,
-      ) => void;"""
+      ) => void;""", """const MarkdownIt = require("markdown-it") as MarkdownItConstructor;
+      // `lib/common` bundles the ~40 common grammars instead of all ~190.
+      const hljsModule = require("highlight.js/lib/common") as
+        HighlightJsLike | { default: HighlightJsLike };
+      const hljs = "default" in hljsModule ? hljsModule.default : hljsModule;
+      const footnotePlugin = require("markdown-it-footnote") as (
+        md: MarkdownItInstance,
+      ) => void;"""]
       new = """const MarkdownIt = MarkdownItImport as unknown as MarkdownItConstructor;
       // `lib/common` bundles the ~40 common grammars instead of all ~190.
       const hljsModule = hljsImport as unknown as
@@ -437,9 +444,10 @@ let
       const footnotePlugin = footnotePluginImport as unknown as (
         md: MarkdownItInstance,
       ) => void;"""
-      if old not in text:
+      matches = [candidate for candidate in old_candidates if candidate in text]
+      if len(matches) != 1:
           raise SystemExit("pi-artifacts markdown require block drifted")
-      markdown.write_text(text.replace(old, new))
+      markdown.write_text(text.replace(matches[0], new))
 
       validation = root / "extensions/validation/html.ts"
       text = validation.read_text()
