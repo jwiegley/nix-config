@@ -58,22 +58,23 @@ whole reason a partial publish is a first-class state below (State B).
 ### The three consumer edges (from the committed inventory)
 
 Source of truth: `test/inventory/consumer-inventory.json`
-(`repoHead 94a2724d…`), classification `stub-covered` — the exact set of ten external
+(`repoHead be4adf28…`), classification `stub-covered` — the exact set of ten external
 edges the rename touches. There are three consumers behind those ten edges. **Only the
-`nix-config-ai` subflake input carries `?dir=config/ai`; the rollback touches nothing
-else.** In particular the repo-root `nix-config` (`flake = false`) input and the
+`nix-config-ai` subflake input carries `?dir=config/ai`; the rollback changes no other
+URL.** The paired repo-root `nix-config` (`flake = false`) URL stays unchanged, but both
+lock nodes must be advanced to the same rollback revision. In particular the
 `overlays/*.nix` reach-ins point at the tree root, not at `config/ai`, and are
 `retain-with-owner` / `retire` class — untouched by this rollback.
 
 | Consumer | Remote | `nix-config-ai` URL (the line to revert) | Pre-rename locked rev | Checkout read here | Authoritative build tree |
 |---|---|---|---|---|---|
-| **vulcan** | **gitea** (`origin`) | `nixos/flake.nix:54` `git+ssh://gitea/johnw/nix-config?dir=config/ai` — **FLOATING** (no `?ref`, no `?rev`) | `03b5eecc…` | `~/src/nixos` | `/etc/nixos` on vulcan |
+| **vulcan** | **gitea** (`origin`) | `nixos/flake.nix:54` `git+ssh://gitea/johnw/nix-config?dir=config/ai` — **FLOATING** (no `?ref`, no `?rev`) | `77b2fc81…` | `~/src/nixos` | `/etc/nixos` on vulcan |
 | **vps** | **github** | `vps/flake.nix:20` `github:jwiegley/nix-config?dir=config/ai&ref=main` | `e0ed94fa…` | `~/src/vps` | `/etc/nixos` on ovh-vps |
 | **shared-work** | **github** | `andoria/flake.nix:31` `github:jwiegley/nix-config?dir=config/ai&ref=main` | `269b518e…` | `~/src/andoria` (**PROXY**) | `~/.config/home-manager` on andoria-08 / andoria-t2 / delphi-3bd4 / gpu-server — **one shared NFS `$HOME`, one profile symlink** |
 
 Three things about this table drive the rest of the runbook:
 
-- **vulcan is the only gitea consumer, and its input is floating.** It migrates (and un-migrates) on its *next* `nix flake update`, at an unpredictable time. A floating input cannot be trusted to be where its inventory rev says; re-pin it to a known-good `rev` as part of rollback.
+- **vulcan is the only gitea consumer, and its URL is floating while its committed lock is exact.** Preserve that URL policy during rollback. Adding a `?rev=` pin is the still-unanswered Q7 policy decision in `doc/FLEET-DECISIONS.md`, not an emergency-procedure side effect. Pin only if Q7 has been explicitly decided before execution.
 - **`~/src/andoria` is a proxy, not the live tree.** The live shared-work flake is `~/.config/home-manager` on four machines that share one NFS `$HOME` and **one** profile symlink. Any activation there is **group-wide** — you cannot roll back one work machine.
 - The `llm-agents.follows = "nix-config-ai/llm-agents"` lines (`nixos/flake.nix:58`, `vps/flake.nix:12`, `andoria/flake.nix:45`) and the `inputs.nix-config-ai.overlays.default` uses (`nixos/flake.nix:164,312`; `vps/flake.nix:76`; `andoria/flake.nix:78`) reference the input **by name**. They do **not** change during rollback — only the `?dir=` in the URL does. Reverting the URL fixes them all at once.
 
@@ -149,6 +150,7 @@ remote and leave the other renamed.
 Run this once. It tells you which of §7's states you are in. It is read-only.
 
 ```bash
+set -euo pipefail
 cd ~/src/nix
 
 # --- Is the rename even applied in THIS working tree? -----------------------
@@ -159,7 +161,7 @@ else
 fi
 
 # --- Which remotes carry the rename? ----------------------------------------
-git fetch --quiet origin github
+git fetch --quiet --multiple origin github
 for r in origin github; do
   if git merge-base --is-ancestor "$RENAME_REV" "refs/remotes/$r/main" 2>/dev/null; then
     echo "$r: HAS the rename"
@@ -168,14 +170,26 @@ for r in origin github; do
   fi
 done
 
-# --- Have consumers bumped past it? (per consumer, per remote) --------------
-for d in ~/src/nixos ~/src/vps ~/src/andoria; do
-  echo "== $d =="
-  nix flake metadata "$d" --json 2>/dev/null | python3 -c '
+# --- Have consumers bumped past it? Read authoritative locks without Nix. ---
+# The local andoria checkout is only a proxy. Read each host's authoritative
+# build tree; failure to reach one means state detection is incomplete, so stop.
+for spec in \
+  'vulcan:vulcan:/etc/nixos/flake.lock' \
+  'vps:ovh-vps:/etc/nixos/flake.lock' \
+  'shared-work:andoria-08:~/.config/home-manager/flake.lock'
+do
+  label=${spec%%:*}
+  rest=${spec#*:}
+  host=${rest%%:*}
+  path=${rest#*:}
+  echo "== $label ($host:$path) =="
+  ssh "$host" "cat $path" | python3 -c '
 import json,sys
-n = json.load(sys.stdin)["locks"]["nodes"]["nix-config-ai"]
-print("  dir =", n["original"].get("dir"))
-print("  rev =", n["locked"]["rev"])'
+nodes = json.load(sys.stdin)["nodes"]
+for name in ("nix-config", "nix-config-ai"):
+    node = nodes[name]
+    print("  %-13s dir=%-12s rev=%s" %
+          (name, node["original"].get("dir", "<root>"), node["locked"]["rev"]))'
 done
 ```
 
@@ -250,17 +264,13 @@ How to read it for rollback:
   has the rename, and a two-commit fast-forward on the remote that does not — so the
   asymmetric State B is handled by the tool's own fast-forward logic; you do not push
   the remotes differently.
-- On a **partial publish** it exits non-zero and prints, verbatim, the one command that
-  reconciles the lagging remote:
-
-  ```
-  git push <remote> <short>:refs/heads/main
-  ```
-
-  If you see that, run exactly it (with AG-DUALPUSH still in force), then re-run
-  `bin/publish` until it says **both remotes at `<REVERT_REV>`**. Do **not** "fix" a
-  partial publish by pointing a consumer at the remote that succeeded — that is how the
-  remotes drift for weeks (the tool says so in its own failure text).
+- On a **partial publish** it exits non-zero and prints recovery instructions based on
+  its readback state. Depending on which step failed, that can be a targeted push for
+  the lagging remote or an instruction to inspect/re-run after remote state is known.
+  Follow the emitted instructions exactly while AG-DUALPUSH remains in force, then
+  re-run `bin/publish` until it says **both remotes at `<REVERT_REV>`**. Do **not**
+  "fix" a partial publish by pointing a consumer at the remote that succeeded — that
+  is how the remotes drift for weeks.
 
 **Exit condition for the publish:** `bin/publish` (bare) reports both `origin` and
 `github` already at `REVERT_REV`.
@@ -302,19 +312,19 @@ cd ~/src/vps
 #   github:jwiegley/nix-config?dir=config/fleet&ref=main
 # → github:jwiegley/nix-config?dir=config/ai&ref=main
 $EDITOR flake.nix
-nix flake update nix-config-ai            # re-lock JUST this input from github (immutable remote)
-                                          # legacy Nix: nix flake lock --update-input nix-config-ai
+nix flake update nix-config nix-config-ai # advance both paired nodes coherently from github
+                                          # legacy Nix: update both inputs explicitly
 
 # shared-work (github) — andoria/flake.nix:31 — SAME edit, in the AUTHORITATIVE tree
 #   (~/.config/home-manager on a work machine), NOT the ~/src/andoria proxy.
 
-# vulcan (gitea) — nixos/flake.nix:54 — and RE-PIN the floating input
+# vulcan (gitea) — nixos/flake.nix:54 — preserve the existing URL policy
 cd ~/src/nixos
 #   git+ssh://gitea/johnw/nix-config?dir=config/fleet
-# → git+ssh://gitea/johnw/nix-config?dir=config/ai&rev=<REVERT_REV>
-#   (pin rev: vulcan floats, so without a rev it will drift off REVERT_REV again)
+# → git+ssh://gitea/johnw/nix-config?dir=config/ai
+# Add ?rev=<REVERT_REV> only if Q7 has an explicit recorded "pin" decision.
 $EDITOR flake.nix
-nix flake update nix-config-ai
+nix flake update nix-config nix-config-ai
 ```
 
 Push each consumer change to its **own** remote (vulcan→gitea, vps→github,
@@ -326,28 +336,45 @@ vps's authoritative trees are `/etc/nixos` under `.nixos-build` locking; obey it
 ```bash
 # Prove the RESTORED subflake resolves at the revert rev over the immutable fetcher.
 # github consumers:
-nix flake metadata "github:jwiegley/nix-config?dir=config/ai&rev=$REVERT_REV" --json \
+nix flake metadata --no-write-lock-file \
+  "github:jwiegley/nix-config?dir=config/ai&rev=$REVERT_REV" --json \
   | python3 -c 'import json,sys; d=json.load(sys.stdin); print("resolved rev:", d["locked"]["rev"])'
 # gitea consumer:
-nix flake metadata "git+ssh://gitea/johnw/nix-config?dir=config/ai&rev=$REVERT_REV" --json \
+nix flake metadata --no-write-lock-file \
+  "git+ssh://gitea/johnw/nix-config?dir=config/ai&rev=$REVERT_REV" --json \
   | python3 -c 'import json,sys; d=json.load(sys.stdin); print("resolved rev:", d["locked"]["rev"])'
 
-# Then confirm the CONSUMER's own lock is honest and byte-stable:
-for d in ~/src/vps ~/.config/home-manager ~/src/nixos; do   # authoritative trees
-  nix flake metadata "$d" --json | python3 -c '
-import json,sys
-n = json.load(sys.stdin)["locks"]["nodes"]["nix-config-ai"]
-loc = n["locked"]
-assert n["original"].get("dir") == "config/ai", "URL not reverted: "+str(n["original"])
-assert "file" not in loc.get("url","") and loc.get("type") in ("github","git"), "impure lock! "+str(loc)
-print("  OK  dir=config/ai  type="+loc["type"]+"  rev="+loc["rev"][:12])'
-done
+# Then, in EACH consumer's authoritative tree, prove both paired lock nodes are
+# coherent, at REVERT_REV, and byte-stable under a read-only Nix evaluation:
+lock_digest_before=$(nix hash file --type sha256 flake.lock)
+nix flake metadata --no-write-lock-file . --json >/dev/null
+lock_digest_after=$(nix hash file --type sha256 flake.lock)
+test "$lock_digest_before" = "$lock_digest_after" || {
+  echo "FAIL: read-only verification changed flake.lock" >&2
+  exit 1
+}
+python3 - "$REVERT_REV" <<'PY'
+import json, sys
+expected = sys.argv[1]
+nodes = json.load(open("flake.lock"))["nodes"]
+root = nodes["nix-config"]
+fleet = nodes["nix-config-ai"]
+assert fleet["original"].get("dir") == "config/ai", fleet["original"]
+for name, node in (("nix-config", root), ("nix-config-ai", fleet)):
+    locked = node["locked"]
+    assert locked.get("type") in ("github", "git"), (name, locked)
+    assert "file" not in locked.get("url", ""), (name, locked)
+    assert locked.get("rev") == expected, (name, locked.get("rev"), expected)
+assert root["locked"]["rev"] == fleet["locked"]["rev"]
+print("OK: paired lock nodes at", expected[:12], "and flake.lock is byte-stable")
+PY
 ```
 
-Byte-stability: run `nix flake metadata <consumer> --json` a second time and confirm
-the `nix-config-ai` `rev` is unchanged. A rev that moves on a second read means the
-input is still floating/mutable — re-pin it. **A lock whose `nix-config-ai` node is a
-`type` of `path` or carries a `file://` URL is a false pass; reject it.**
+Run that block in `/etc/nixos` on vulcan, `/etc/nixos` on ovh-vps, and
+`~/.config/home-manager` on a shared-work host. A URL may remain floating by policy;
+the committed lock must not move during verification. **A lock whose paired nodes
+disagree, whose `nix-config-ai` node is `type = path`, or which carries a `file://`
+URL is a false pass; reject it.**
 
 ---
 
