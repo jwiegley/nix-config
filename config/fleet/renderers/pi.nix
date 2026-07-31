@@ -153,6 +153,7 @@ let
     ];
   };
   models.providers = lib.mapAttrs renderProvider modelData.providers // {
+    openai-codex.modelOverrides."gpt-5.6-sol".contextWindow = 1050000;
     router = routerProvider;
   };
   modelRouter = {

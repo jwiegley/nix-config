@@ -127,8 +127,8 @@ in
     };
 
     sessionPath = [
-      "${config.home.profileDirectory}/bin"
       "${vars.home}/src/scripts"
+      "${config.home.profileDirectory}/bin"
       "${vars.home}/.local/bin"
     ]
     ++ lib.optionals isDarwin [
