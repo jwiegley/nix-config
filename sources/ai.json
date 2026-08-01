@@ -443,19 +443,21 @@
         "args": {
           "dist": "py3",
           "format": "wheel",
-          "hash": "sha256-J40Rj2P8dbnbEbZktDahuDzDDZV3EnhIukFCDmbrWkc=",
+          "hash": "sha256-6DLJY1q3AWz2JWXeKUJp9HCM2SIA0A2v3S5aGUNYfy4=",
           "pname": "culsans",
           "python": "py3",
-          "version": "0.11.0"
+          "version": "0.10.0"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/culsans"
       },
       "update": {
         "kind": "pypi-release",
-        "package": "culsans"
+        "package": "culsans",
+        "policy": "manual",
+        "reason": "GuideLLM 0.7.2 requires culsans~=0.10.0"
       },
-      "version": "0.11.0"
+      "version": "0.10.0"
     },
     "dflash-mlx": {
       "source": {
@@ -500,19 +502,21 @@
         "args": {
           "dist": "py3",
           "format": "wheel",
-          "hash": "sha256-UfKeAlCTxeub/9Pi7GCW2IaIWfnIazkfiNT80Wa9Np8=",
+          "hash": "sha256-wj0B4T59mAarIGmpU7E1pNugnW8dAvfDIZh5R3MEcOw=",
           "pname": "guidellm",
           "python": "py3",
-          "version": "0.7.3"
+          "version": "0.7.2"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/guidellm"
       },
       "update": {
         "kind": "pypi-release",
-        "package": "guidellm"
+        "package": "guidellm",
+        "policy": "manual",
+        "reason": "0.7.3 requires click~=8.4.0, while the current Nixpkgs package set provides Click 8.3"
       },
-      "version": "0.7.3"
+      "version": "0.7.2"
     },
     "hf-xet": {
       "hashes": {
