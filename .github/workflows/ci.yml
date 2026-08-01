@@ -81,6 +81,6 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Python lint, essential tests, and coverage regression
         run: >-
-          nix shell nixpkgs#ruff nixpkgs#nixfmt nixpkgs#coreutils
+          nix shell nixpkgs#python3 nixpkgs#ruff nixpkgs#nixfmt nixpkgs#coreutils
           -c test/bin/quality --python-tier pre-commit
           python-lint python-test coverage

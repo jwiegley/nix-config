@@ -574,11 +574,13 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
                     $target_kind != pypi-release &&
                     $target_kind != github-commit &&
                     $target_kind != github-release &&
+                    $target_kind != github-tag &&
                     $target_kind != github-release-asset ]] ||
                 [[ $target_kind != npm-release &&
                     $target_kind != pypi-release &&
                     $target_kind != github-commit &&
                     $target_kind != github-release &&
+                    $target_kind != github-tag &&
                     $target_kind != github-release-asset &&
                     -z $target_input ]]; then
                 echo "update: target is not owned by this transaction: $target_name" >&2
@@ -590,6 +592,7 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
                 $target_kind != pypi-release &&
                 $target_kind != github-commit &&
                 $target_kind != github-release &&
+                $target_kind != github-tag &&
                 $target_kind != github-release-asset ]]; then
                 echo "update: --version is unsupported for this target" >&2
                 exit 2
@@ -606,6 +609,7 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
             elif [[ $target_kind == pypi-release ]]; then
                 pypi_target_names+=("$target_name")
             elif [[ $target_kind == github-commit || $target_kind == github-release ||
+                $target_kind == github-tag ||
                 $target_kind == github-release-asset ]]; then
                 github_projection_target_names+=("$target_name")
             fi
@@ -664,6 +668,7 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
                     (
                         .kind == "github-commit"
                         or .kind == "github-release"
+                        or .kind == "github-tag"
                         or .kind == "github-release-asset"
                     )
                     and .executor == "update"

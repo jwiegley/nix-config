@@ -2479,6 +2479,7 @@ got: sha256-requested
         try:
             client = GitHubClient()
             self.assertIsNone(client.get_latest_release("example", "project"))
+            self.assertIsNone(client.get_latest_tag("example", "project", "v"))
             self.assertIsNone(client.get_default_branch("example", "project"))
             self.assertIsNone(client.get_latest_commit("example", "project", "topic"))
             self.assertIsNone(
@@ -2487,13 +2488,14 @@ got: sha256-requested
         finally:
             subprocess.run = real_run
 
-        self.assertEqual(len(calls), 5)
+        self.assertEqual(len(calls), 6)
         self.assertIn("releases/latest", calls[0][2])
-        self.assertEqual("repos/example/project", calls[1][2])
-        self.assertIn("commits/topic", calls[2][2])
-        self.assertEqual("repos/example/project", calls[3][2])
-        self.assertEqual(calls[4][:2], ["gh", "api"])
-        self.assertIn(f"contents/Cargo.lock?ref={'a' * 40}", calls[4][2])
+        self.assertIn("tags?per_page=100", calls[1][2])
+        self.assertEqual("repos/example/project", calls[2][2])
+        self.assertIn("commits/topic", calls[3][2])
+        self.assertEqual("repos/example/project", calls[4][2])
+        self.assertEqual(calls[5][:2], ["gh", "api"])
+        self.assertIn(f"contents/Cargo.lock?ref={'a' * 40}", calls[5][2])
 
         successful_calls = []
         responses = [
@@ -2534,6 +2536,33 @@ got: sha256-requested
         self.assertEqual(command[:2], ["gh", "api"])
         self.assertIn(f"contents/locks/Cargo%20lock?ref={'b' * 40}", command[2])
         self.assertEqual(kwargs["timeout"], 60)
+
+    def test_github_tag_lookup_selects_first_matching_prefix(self):
+        response = SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps(
+                [
+                    {"name": "nightly"},
+                    {"name": "v2.0.0"},
+                    {"name": "v1.0.0"},
+                ]
+            ),
+            stderr="",
+        )
+
+        def fake_run(_command, **_kwargs):
+            return response
+
+        real_run = subprocess.run
+        subprocess.run = fake_run
+        try:
+            client = GitHubClient()
+            self.assertEqual(
+                client.get_latest_tag("example", "project", "v"), "v2.0.0"
+            )
+            self.assertIsNone(client.last_error)
+        finally:
+            subprocess.run = real_run
 
     def test_github_commit_failure_reports_requested_and_default_branches(self):
         responses = [
@@ -3177,6 +3206,59 @@ got: sha256-requested
             target = load_source_catalog(root)["example"]
 
             github = SimpleNamespace(get_latest_release=lambda _owner, _repo: "v2.0.0")
+            hashes = SimpleNamespace(
+                compute_native_hash=lambda _source, _replacements: "sha256-new"
+            )
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_catalog_target(
+                    "example",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    github,
+                    SimpleNamespace(),
+                    SimpleNamespace(),
+                    hashes,
+                    transaction,
+                )
+            transaction.commit()
+            record = json.loads(path.read_text())["sources"]["example"]
+            self.assertEqual(status, "updated")
+            self.assertEqual(record["source"]["args"]["tag"], "v2.0.0")
+            self.assertNotIn("rev", record["source"]["args"])
+
+    def test_catalog_github_tag_preserves_native_tag_field(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            path = root / "sources/ai.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {
+                            "example": {
+                                "version": "1.0.0",
+                                "source": {
+                                    "fetcher": "fetchFromGitHub",
+                                    "url": "https://github.com/example/project",
+                                    "args": {
+                                        "owner": "example",
+                                        "repo": "project",
+                                        "tag": "v1.0.0",
+                                        "hash": "sha256-old",
+                                    },
+                                },
+                                "update": {"kind": "github-tag", "tagPrefix": "v"},
+                            }
+                        },
+                    }
+                )
+            )
+            target = load_source_catalog(root)["example"]
+            github = SimpleNamespace(
+                get_latest_tag=lambda _owner, _repo, prefix: f"{prefix}2.0.0"
+            )
             hashes = SimpleNamespace(
                 compute_native_hash=lambda _source, _replacements: "sha256-new"
             )

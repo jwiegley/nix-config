@@ -248,6 +248,50 @@ class GitHubClient:
             )
             return None
 
+    def get_latest_tag(
+        self, owner: str, repo: str, prefix: str = ""
+    ) -> Optional[str]:
+        """Get the first matching tag from GitHub's tag ordering."""
+        self.last_error = None
+        try:
+            result = subprocess.run(
+                ["gh", "api", f"repos/{owner}/{repo}/tags?per_page=100"],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0:
+                detail = _bounded_actionable_error(
+                    getattr(result, "stderr", ""),
+                    result.stdout,
+                    fallback=f"gh exited with status {result.returncode}",
+                )
+                self.last_error = _bounded_actionable_error(
+                    f"GitHub tag lookup failed for {owner}/{repo}: {detail}",
+                    fallback="GitHub tag lookup failed",
+                )
+                return None
+            payload = json.loads(result.stdout)
+            if isinstance(payload, list):
+                for item in payload:
+                    name = item.get("name") if isinstance(item, dict) else None
+                    if isinstance(name, str) and name.startswith(prefix):
+                        return name
+            self.last_error = _bounded_actionable_error(
+                f"GitHub tag lookup returned no {prefix!r} tag for {owner}/{repo}",
+                fallback="GitHub tag lookup returned no matching tag",
+            )
+            return None
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            detail = _bounded_actionable_error(
+                error,
+                fallback="GitHub tag lookup raised an exception",
+            )
+            self.last_error = _bounded_actionable_error(
+                f"GitHub tag lookup failed for {owner}/{repo}: {detail}",
+                fallback="GitHub tag lookup failed",
+            )
+            return None
+
     def get_default_branch(self, owner: str, repo: str) -> Optional[str]:
         """Get the repository's declared default branch."""
         self.last_error = None
@@ -1696,6 +1740,7 @@ def _catalog_executor(record: dict) -> Optional[str]:
         "explicit-rev": {"fetchgit", "fetchpatch", "fetchTree", "fetchurl"},
         "github-commit": {"fetchFromGitHub"},
         "github-release": {"fetchFromGitHub"},
+        "github-tag": {"fetchFromGitHub"},
         "npm-release": {"fetchurl", "fetchzip"},
         "pypi-release": {"fetchPypi", "fetchurl"},
         "url-release": {"fetchurl"},
@@ -1745,6 +1790,10 @@ def load_source_catalog(
             {"branch"},
         ),
         "github-release": (
+            common_update_fields | {"buildMode", "tagPrefix"},
+            set(),
+        ),
+        "github-tag": (
             common_update_fields | {"buildMode", "tagPrefix"},
             set(),
         ),
@@ -1821,7 +1870,7 @@ def load_source_catalog(
             source_args = record["source"]["args"]
             source_fetcher = record["source"]["fetcher"]
             tag_prefix = update.get("tagPrefix")
-            if kind == "github-release" and tag_prefix is not None and not isinstance(
+            if kind in {"github-release", "github-tag"} and tag_prefix is not None and not isinstance(
                 tag_prefix, str
             ):
                 raise RuntimeError(
@@ -1830,6 +1879,7 @@ def load_source_catalog(
             if build_mode is not None and kind in {
                 "github-commit",
                 "github-release",
+                "github-tag",
             } and source_fetcher != "fetchFromGitHub":
                 raise RuntimeError(
                     f"GitHub dependent-hash projection requires fetchFromGitHub: {name}"
@@ -2931,7 +2981,7 @@ def update_catalog_target(
                 if current_version and current_ref.startswith(current_version)
                 else current_version or new_ref
             )
-    elif kind == "github-release":
+    elif kind in {"github-release", "github-tag"}:
         prefix = update.get("tagPrefix")
         if prefix is None:
             prefix = (
@@ -2942,7 +2992,15 @@ def update_catalog_target(
         if args.version:
             new_ref = args.version if args.version.startswith(prefix) else f"{prefix}{args.version}"
         else:
-            new_ref = github_client.get_latest_release(source_args["owner"], source_args["repo"])
+            new_ref = (
+                github_client.get_latest_release(
+                    source_args["owner"], source_args["repo"]
+                )
+                if kind == "github-release"
+                else github_client.get_latest_tag(
+                    source_args["owner"], source_args["repo"], prefix
+                )
+            )
             if new_ref is None:
                 fetch_error = getattr(github_client, "last_error", None)
         if new_ref:
@@ -3477,7 +3535,7 @@ Examples:
         ) or (
             args.prepare_github_projections
             and target["kind"]
-            not in {"github-commit", "github-release", "github-release-asset"}
+            not in {"github-commit", "github-release", "github-release-asset", "github-tag"}
         ):
             if args.all:
                 if args.verbose:

@@ -136,7 +136,7 @@
         "url": "https://github.com/agiletortoise/drafts-mcp-server"
       },
       "update": {
-        "kind": "github-release",
+        "kind": "github-tag",
         "tagPrefix": "v"
       },
       "version": "1.0.12"
