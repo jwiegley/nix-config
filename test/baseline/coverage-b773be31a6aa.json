@@ -13,7 +13,7 @@
     "config/ai/flake.nix is an intentional throwing stub verified by immutable-subflake-check's negative probe; successful Nix evaluation cannot positively reach it.",
     "readFile, readDir, hashFile, pathExists, copied paths, and some scoped imports are invisible to file-reach diagnostics."
   ],
-  "manifestDigest": "ac468cf3bad51928bab5f5c7af2eebced751abc210d5d2b2797a43290869b965",
+  "manifestDigest": "1466fd0c29c2447e2b3c95e2842efe36089b35eccdb3cefd4ca2ed462021decf",
   "measurements": {
     "assertionCallReach": {
       "reason": "not measured by structural collection",
@@ -348,9 +348,9 @@
     "kind": "declared-command-recipe"
   },
   "schema": "fleet-coverage/1",
-  "sourceBaseRev": "1f896f2440191c899a286c12af8fb2fabb906bb4",
-  "sourceProjectionDigest": "2398309314ab7f95214dd0b84b1a590babc70b75774cff805c00670e0e2a414b",
-  "sourceTree": "04c6910651950b65268542d0808ee5a2deaba1a3",
+  "sourceBaseRev": "e28e516e4229f9f14c411205c66c47a1eadd76c4",
+  "sourceProjectionDigest": "e599b598c55d3e275811904158c8049372ed496bae373f3aca02f5ae89925ddc",
+  "sourceTree": "cb309638d61d51d77988ea5251b5f8b95c2e858a",
   "structural": {
     "budgetsSeconds": {
       "ci-on-demand": 1800,
@@ -481,6 +481,8 @@
         "test/bin/deadline-supervisor.py",
         "test/bin/gates-test.py",
         "test/bin/oracle-currency-test.py",
+        "test/bin/output-denominators",
+        "test/bin/output-denominators-test.py",
         "test/bin/pi-mcp-adapter-normalize-test.py",
         "test/bin/publish-test.py",
         "test/bin/quality-test.py",
@@ -499,6 +501,7 @@
         "test/bin/deadline-supervisor-test.py",
         "test/bin/gates-test.py",
         "test/bin/oracle-currency-test.py",
+        "test/bin/output-denominators-test.py",
         "test/bin/pi-mcp-adapter-normalize-test.py",
         "test/bin/publish-test.py",
         "test/bin/quality-test.py",
@@ -886,6 +889,7 @@
         "quality:nix-deadcode",
         "quality:nix-format",
         "quality:nix-lint",
+        "quality:output-denominators",
         "quality:portable-eval",
         "quality:python-lint",
         "quality:python-test",
@@ -1419,6 +1423,24 @@
           "gap": "Expensive parity derivation is intentionally not part of this suite.",
           "kind": "test",
           "path": "test/bin/oracle-currency-test.py",
+          "tier": "pre-commit"
+        },
+        {
+          "evidence": [
+            "test/bin/output-denominators-test.py executes match, unregistered, declared-absent, refusal, and single-evaluation behavior"
+          ],
+          "gap": "Live Nix evaluation is stubbed in unit coverage; the expensive tier runs it for real.",
+          "kind": "product",
+          "path": "test/bin/output-denominators",
+          "tier": "pre-commit"
+        },
+        {
+          "evidence": [
+            "Executed by test/bin/quality python-test in the pre-commit tier"
+          ],
+          "gap": "None; the suite is its own evidence.",
+          "kind": "test",
+          "path": "test/bin/output-denominators-test.py",
           "tier": "pre-commit"
         },
         {
@@ -2360,6 +2382,24 @@
         "test/bin/oracle-currency-test.py:750:9:assertTrue",
         "test/bin/oracle-currency-test.py:774:9:assertTrue",
         "test/bin/oracle-currency-test.py:775:9:assertTrue",
+        "test/bin/output-denominators-test.py:105:9:assertEqual",
+        "test/bin/output-denominators-test.py:106:9:assertIn",
+        "test/bin/output-denominators-test.py:110:9:assertEqual",
+        "test/bin/output-denominators-test.py:112:13:assertIn",
+        "test/bin/output-denominators-test.py:118:9:assertEqual",
+        "test/bin/output-denominators-test.py:119:9:assertIn",
+        "test/bin/output-denominators-test.py:123:9:assertEqual",
+        "test/bin/output-denominators-test.py:124:9:assertIn",
+        "test/bin/output-denominators-test.py:131:9:assertIn",
+        "test/bin/output-denominators-test.py:132:9:assertIn",
+        "test/bin/output-denominators-test.py:139:18:assertRaises",
+        "test/bin/output-denominators-test.py:141:9:assertIn",
+        "test/bin/output-denominators-test.py:142:9:assertNotIn",
+        "test/bin/output-denominators-test.py:150:18:assertRaises",
+        "test/bin/output-denominators-test.py:152:9:assertIn",
+        "test/bin/output-denominators-test.py:176:9:assertEqual",
+        "test/bin/output-denominators-test.py:98:9:assertEqual",
+        "test/bin/output-denominators-test.py:99:9:assertIn",
         "test/bin/pi-mcp-adapter-normalize-test.py:22:9:assertIn",
         "test/bin/pi-mcp-adapter-normalize-test.py:23:9:assertNotIn",
         "test/bin/pi-mcp-adapter-normalize-test.py:38:9:assertIn",
@@ -3617,6 +3657,15 @@
         "test/bin/oracle-currency-test.py::OracleGuardSelfTests.test_valid_advanced_oracle_with_history_is_clean",
         "test/bin/oracle-currency-test.py::OracleGuardSelfTests.test_valid_genesis_oracle_is_clean",
         "test/bin/oracle-currency-test.py::OracleGuardSelfTests.test_zero_baselines_rejected",
+        "test/bin/output-denominators-test.py::DenominatorGateTests.test_declared_but_absent_output_fails",
+        "test/bin/output-denominators-test.py::DenominatorGateTests.test_evaluation_failure_is_refused_without_echoing_values",
+        "test/bin/output-denominators-test.py::DenominatorGateTests.test_evaluation_timeout_is_refused",
+        "test/bin/output-denominators-test.py::DenominatorGateTests.test_failure_names_the_repair_including_the_artifact",
+        "test/bin/output-denominators-test.py::DenominatorGateTests.test_matching_denominators_pass",
+        "test/bin/output-denominators-test.py::DenominatorGateTests.test_single_evaluation_covers_every_system",
+        "test/bin/output-denominators-test.py::DenominatorGateTests.test_unregistered_check_fails",
+        "test/bin/output-denominators-test.py::DenominatorGateTests.test_unregistered_overlay_fails",
+        "test/bin/output-denominators-test.py::DenominatorGateTests.test_unregistered_package_fails_for_every_system",
         "test/bin/pi-mcp-adapter-normalize-test.py::NormalizeStatusTests.test_legacy_status_is_compacted",
         "test/bin/pi-mcp-adapter-normalize-test.py::NormalizeStatusTests.test_modern_status_is_compacted_without_dropping_disabled_count",
         "test/bin/pi-mcp-adapter-normalize-test.py::NormalizeStatusTests.test_native_compact_setting_needs_no_patch",

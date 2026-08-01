@@ -479,7 +479,7 @@ class QualityPythonTierTests(unittest.TestCase):
                 "--term-after", "1785", "--kill-after", "5", "--", quality,
                 "--python-tier", "all", "python-test", "portable-eval",
                 "immutable-subflake", "consumer-eval", "signatures", "coverage",
-                "coverage-live", "darwin-surface",
+                "coverage-live", "output-denominators", "darwin-surface",
             ],
         )
 

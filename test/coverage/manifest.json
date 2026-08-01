@@ -254,6 +254,24 @@
       "gap": "Measured at 522.331 seconds on Hera because two cases perform full shared-work evaluations; the pre-push and expensive selectors preserve invocation outside the 120-second pre-commit tier."
     },
     {
+      "path": "test/bin/output-denominators",
+      "kind": "product",
+      "tier": "pre-commit",
+      "evidence": [
+        "test/bin/output-denominators-test.py executes match, unregistered, declared-absent, refusal, and single-evaluation behavior"
+      ],
+      "gap": "Live Nix evaluation is stubbed in unit coverage; the expensive tier runs it for real."
+    },
+    {
+      "path": "test/bin/output-denominators-test.py",
+      "kind": "test",
+      "tier": "pre-commit",
+      "evidence": [
+        "Executed by test/bin/quality python-test in the pre-commit tier"
+      ],
+      "gap": "None; the suite is its own evidence."
+    },
+    {
       "path": "test/bin/oracle-currency-test.py",
       "kind": "test",
       "tier": "pre-commit",
@@ -803,7 +821,8 @@
       "consumer-eval",
       "signatures",
       "coverage",
-      "coverage-live"
+      "coverage-live",
+      "output-denominators"
     ],
     "topLevelChecks": [
       {

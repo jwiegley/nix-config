@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+"""Compare the coverage manifest's output denominators against live flake output.
+
+The manifest names which checks, packages, and overlays the repository is
+expected to publish. Two probes inside a full coverage refresh already make
+this comparison, but only for `.#checks` and `.#packages`, and only inside a
+collection that costs roughly an hour and is run rarely by design. `.#overlays`
+is never compared at all.
+
+The practical effect is that adding a flake output without registering it here
+is invisible: every gate stays green, and the omission surfaces only when
+someone attempts a refresh, five probes deep, far from the commit that caused
+it. That refresh is also the only path producing an observed artifact, so the
+break disables the mechanism used to repair it.
+
+This evaluates attribute names only. No derivation is built.
+"""
+
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+MANIFEST = Path("test/coverage/manifest.json")
+EVAL_TIMEOUT_SECONDS = 300
+
+
+def evaluate(target: str, apply_expression: str) -> object:
+    """Return the decoded attribute names for one flake output."""
+
+    try:
+        proc = subprocess.run(
+            [
+                "nix",
+                "eval",
+                "--no-write-lock-file",
+                "--json",
+                target,
+                "--apply",
+                apply_expression,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=EVAL_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        raise SystemExit(
+            f"output-denominators: evaluating {target} exceeded "
+            f"{EVAL_TIMEOUT_SECONDS}s"
+        ) from None
+    if proc.returncode != 0:
+        # Nix diagnostics can quote evaluated values; report the target only.
+        raise SystemExit(f"output-denominators: cannot evaluate {target}")
+    return json.loads(proc.stdout)
+
+
+def expected_denominators(manifest: dict) -> dict[str, dict[str, set[str]]]:
+    """Read every declared denominator, keyed by output kind then system."""
+
+    expected: dict[str, dict[str, set[str]]] = {}
+
+    checks: dict[str, set[str]] = {}
+    for entry in manifest["gateDenominator"]["topLevelChecks"]:
+        checks.setdefault(entry["system"], set()).add(entry["id"])
+    expected["checks"] = checks
+
+    for kind in ("packages", "overlays"):
+        record = next(
+            (
+                entry
+                for entry in manifest["outputApplicability"]["outputKinds"]
+                if entry["kind"] == kind
+            ),
+            None,
+        )
+        if record is None:
+            continue
+        if record["systems"]:
+            expected[kind] = {
+                system: set(record.get("commonAttrs", []))
+                | set(record.get("systemAdditions", {}).get(system, []))
+                for system in record["systems"]
+            }
+        else:
+            # System-independent output: one attribute set, not one per system.
+            expected[kind] = {"": set(record.get("expectedAttrs", []))}
+
+    return expected
+
+
+def live_denominators(kind: str, per_system: dict[str, set[str]]) -> dict[str, set[str]]:
+    """Evaluate one output kind, using a single evaluation for all systems."""
+
+    if list(per_system) == [""]:
+        return {"": set(evaluate(f".#{kind}", "builtins.attrNames"))}
+    observed = evaluate(
+        f".#{kind}", "output: builtins.mapAttrs (_: builtins.attrNames) output"
+    )
+    return {system: set(names) for system, names in observed.items()}
+
+
+def main() -> int:
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    drifted = False
+
+    for kind, per_system in sorted(expected_denominators(manifest).items()):
+        observed = live_denominators(kind, per_system)
+        for system in sorted(set(per_system) | set(observed)):
+            label = f".#{kind}.{system}" if system else f".#{kind}"
+            declared = per_system.get(system, set())
+            present = observed.get(system, set())
+            unregistered = sorted(present - declared)
+            stale = sorted(declared - present)
+            if unregistered or stale:
+                drifted = True
+                if unregistered:
+                    print(
+                        f"output-denominators: {label} publishes unregistered "
+                        f"{', '.join(unregistered)}",
+                        file=sys.stderr,
+                    )
+                if stale:
+                    print(
+                        f"output-denominators: {label} declares absent "
+                        f"{', '.join(stale)}",
+                        file=sys.stderr,
+                    )
+
+    if drifted:
+        print(
+            "output-denominators: update test/coverage/manifest.json, then "
+            "regenerate the artifact so its manifestDigest matches",
+            file=sys.stderr,
+        )
+        return 1
+
+    print("output-denominators: manifest denominators match live flake output")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

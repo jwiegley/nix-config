@@ -37,6 +37,7 @@
 # Suites: nix-format nix-lint nix-deadcode shell-lint shell-format
 #         python-lint python-test portable-eval immutable-subflake
 #         darwin-surface consumer-eval signatures coverage coverage-live
+#         output-denominators
 #
 # Refs: jwiegley/nix-config#46.
 
@@ -64,6 +65,7 @@ SUITES=(
     signatures
     coverage
     coverage-live
+    output-denominators
 )
 
 fix=0
@@ -91,6 +93,7 @@ EXPENSIVE_SUITES=(
     signatures
     coverage
     coverage-live
+    output-denominators
     darwin-surface
 )
 
@@ -561,6 +564,19 @@ run_coverage() {
     fi
 }
 
+run_output_denominators() {
+    need nix output-denominators || return
+    if [[ ! -x test/bin/output-denominators ]]; then
+        fail "output-denominators: test/bin/output-denominators is missing or not executable"
+        return
+    fi
+    if test/bin/output-denominators; then
+        note "output-denominators: manifest matches live flake output"
+    else
+        fail "output-denominators: manifest denominators drifted from live flake output"
+    fi
+}
+
 run_coverage_live() {
     if [[ ! -x test/bin/coverage-report ]]; then
         fail "coverage-live: test/bin/coverage-report is missing or not executable"
@@ -727,6 +743,7 @@ for suite in "${want[@]}"; do
     signatures) run_signatures ;;
     coverage) run_coverage ;;
     coverage-live) run_coverage_live ;;
+    output-denominators) run_output_denominators ;;
     esac
 done
 
