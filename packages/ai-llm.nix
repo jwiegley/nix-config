@@ -163,6 +163,33 @@ in
         };
       };
 
+      choreographer = ps.buildPythonPackage {
+        pname = "choreographer";
+        inherit (sources.choreographer) version;
+        format = "wheel";
+
+        src =
+          assert sources.choreographer.source.fetcher == "fetchurl";
+          prev.fetchurl sources.choreographer.source.args;
+
+        dependencies = [
+          ps.logistro
+          ps.platformdirs
+          ps.simplejson
+        ];
+
+        doCheck = false;
+        pythonImportsCheck = [ "choreographer" ];
+
+        meta = {
+          description = "DevTools Protocol implementation for Chrome";
+          homepage = "https://github.com/plotly/choreographer";
+          license = prev.lib.licenses.mit;
+        };
+      };
+
+      # AIPerf 0.11.0 declares kaleido~=1.2.0. Keep the catalog target manual
+      # until AIPerf accepts the 1.3 series.
       kaleido = ps.buildPythonPackage rec {
         pname = "kaleido";
         inherit (sources.kaleido) version;
@@ -173,7 +200,7 @@ in
           prev.fetchurl sources.kaleido.source.args;
 
         dependencies = [
-          ps.choreographer
+          choreographer
           ps.logistro
           ps.orjson
           ps.packaging

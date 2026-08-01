@@ -342,6 +342,21 @@
       },
       "version": "0.11.0"
     },
+    "choreographer": {
+      "source": {
+        "args": {
+          "hash": "sha256-zqTLc55PYWJeS1OIio0/odO/c5SLVnU+Rgq0TafY1E8=",
+          "url": "https://files.pythonhosted.org/packages/ba/6c/ff8bf52315064dbeb55cb5067e191120a5b2e58bb648d0d34cf7969dc2c2/choreographer-1.3.0-py3-none-any.whl"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://files.pythonhosted.org/packages/ba/6c/ff8bf52315064dbeb55cb5067e191120a5b2e58bb648d0d34cf7969dc2c2/choreographer-1.3.0-py3-none-any.whl"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "choreographer"
+      },
+      "version": "1.3.0"
+    },
     "cohere-melody": {
       "artifacts": {
         "cp311": {
@@ -540,17 +555,19 @@
     "kaleido": {
       "source": {
         "args": {
-          "hash": "sha256-UnFN/Tjo8qEUgxgmIAxAuxDQygwR1CcvP0itSZzY+Oo=",
-          "url": "https://files.pythonhosted.org/packages/9e/b9/a6d8bb7d228940f01885bd9f327ab7f9d366a9be775c4bf366bf9d9477ae/kaleido-1.3.0-py3-none-any.whl"
+          "hash": "sha256-wn7YK1Hfa5I9DmVv6sIhNDoNvNL7m8fmsduX9h6aFRM=",
+          "url": "https://files.pythonhosted.org/packages/4b/97/f6de8d4af54d6401d6581a686cce3e3e2371a79ba459a449104e026c08bc/kaleido-1.2.0-py3-none-any.whl"
         },
         "fetcher": "fetchurl",
-        "url": "https://files.pythonhosted.org/packages/9e/b9/a6d8bb7d228940f01885bd9f327ab7f9d366a9be775c4bf366bf9d9477ae/kaleido-1.3.0-py3-none-any.whl"
+        "url": "https://files.pythonhosted.org/packages/4b/97/f6de8d4af54d6401d6581a686cce3e3e2371a79ba459a449104e026c08bc/kaleido-1.2.0-py3-none-any.whl"
       },
       "update": {
         "kind": "pypi-release",
-        "package": "kaleido"
+        "package": "kaleido",
+        "policy": "manual",
+        "reason": "AIPerf 0.11.0 requires kaleido~=1.2.0"
       },
-      "version": "1.3.0"
+      "version": "1.2.0"
     },
     "mlx": {
       "artifacts": {
