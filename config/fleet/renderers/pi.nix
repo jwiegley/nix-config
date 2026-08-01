@@ -26,6 +26,7 @@ let
     "memory-vault"
     "pal"
     "perplexity"
+    "searxng"
     "sequential-thinking"
     "stock-trader"
   ];

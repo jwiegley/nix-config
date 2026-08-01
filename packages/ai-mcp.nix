@@ -272,6 +272,87 @@ prev.lib.optionalAttrs (palMcpServer != null) {
       };
     });
 
+  # Private web search through an operator-controlled SearXNG instance
+  mcp-searxng =
+    let
+      cleanLauncher = prev.writeShellScript "mcp-searxng-clean-launcher" ''
+        set -euo pipefail
+        searxng_url=''${SEARXNG_URL-}
+        if (( $# == 1 )); then
+          case $1 in
+          -h | --help | -v | --version)
+            searxng_url=''${searxng_url:-http://127.0.0.1}
+            ;;
+          esac
+        fi
+        : "''${searxng_url:?mcp-searxng requires SEARXNG_URL}"
+        environment=(
+          "HOME=''${TMPDIR:-/tmp}"
+          "PATH=${prev.lib.makeBinPath [ prev.nodejs_22 ]}"
+          "SEARXNG_URL=$searxng_url"
+        )
+        for name in LANG LC_ALL NIX_SSL_CERT_FILE NODE_EXTRA_CA_CERTS SSL_CERT_FILE TMPDIR; do
+          if [[ -n ''${!name:-} ]]; then
+            environment+=("$name=''${!name}")
+          fi
+        done
+        exec ${prev.coreutils}/bin/env -i "''${environment[@]}" @server@ "$@"
+      '';
+    in
+    with prev;
+    buildNpmPackage (_finalAttrs: {
+      pname = "mcp-searxng";
+      version = sources.mcp-searxng.version;
+
+      src =
+        assert sources.mcp-searxng.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub sources.mcp-searxng.source.args;
+
+      npmDepsHash = sources.mcp-searxng.hashes.npmDepsHash;
+
+      nodejs = nodejs_22;
+
+      env.SEARXNG_URL = "http://127.0.0.1";
+
+      postInstall = ''
+        install -d "$out/libexec"
+        mv "$out/bin/mcp-searxng" "$out/libexec/mcp-searxng"
+        install -m0755 ${cleanLauncher} "$out/bin/mcp-searxng"
+        substituteInPlace "$out/bin/mcp-searxng" \
+          --replace-fail @server@ "$out/libexec/mcp-searxng"
+      '';
+
+      nativeInstallCheckInputs = [
+        coreutils
+        jq
+      ];
+      doInstallCheck = true;
+      installCheckPhase = ''
+        runHook preInstallCheck
+        test "$("$out/bin/mcp-searxng" --version)" = ${lib.escapeShellArg sources.mcp-searxng.version}
+        responses="$(
+          cat <<'EOF' | timeout 10 "$out/bin/mcp-searxng"
+        {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"nix-check","version":"1"}}}
+        {"jsonrpc":"2.0","method":"notifications/initialized","params":{}}
+        {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
+        EOF
+        )"
+        jq -e -s '
+          any(.[]; .id == 1 and .result.protocolVersion == "2025-03-26")
+          and any(.[]; .id == 2 and any(.result.tools[]?; .name == "searxng_web_search"))
+        ' <<<"$responses" >/dev/null
+        runHook postInstallCheck
+      '';
+
+      meta = with lib; {
+        description = "Private web search for AI assistants through SearXNG";
+        homepage = "https://github.com/ihor-sokoliuk/mcp-searxng";
+        license = licenses.mit;
+        mainProgram = "mcp-searxng";
+        platforms = platforms.all;
+      };
+    });
+
   # drafts-mcp-server - MCP server that drives the Drafts app on macOS via
   # AppleScript (osascript). macOS-only by design (the upstream package.json
   # declares `"os": ["darwin"]`): it cannot run on Linux, so meta.platforms is

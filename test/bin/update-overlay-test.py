@@ -4396,6 +4396,7 @@ got: sha256-requested
             self.fail(f"catalog evaluation failed: {error}")
         required = {
             "agent-browser-source",
+            "mcp-searxng",
             "pi-artifacts",
             "pi-lens",
             "pi-mcp-adapter",
@@ -4470,6 +4471,7 @@ got: sha256-requested
             "llama-cpp",
             "llama-swap",
             "llm-mlx",
+            "mcp-searxng",
             "omlx",
             "rustdocs-mcp-server",
         }
@@ -4551,7 +4553,7 @@ got: sha256-requested
         self.assertEqual(human.returncode, 0, human.stderr)
         self.assertEqual(
             human.stdout.splitlines()[-1],
-            "192 inventoried targets; 192 executable; 0 pending executors",
+            f"{len(catalog)} inventoried targets; {len(catalog)} executable; 0 pending executors",
         )
 
     def test_source_transaction_rolls_back_and_commit_preserves(self):
@@ -7868,7 +7870,10 @@ exec "$REAL_GIT" "$@"
     def test_independent_ai_packages_are_owned_under_packages(self):
         root = SCRIPT.parent.parent
         ownership = {
-            "30-ai-mcp.nix": ("ai-mcp.nix", ["pal-mcp-server", "rustdocs-mcp-server"]),
+            "30-ai-mcp.nix": (
+                "ai-mcp.nix",
+                ["mcp-searxng", "pal-mcp-server", "rustdocs-mcp-server"],
+            ),
             "30-ai-python.nix": ("ai-python-extensions.nix", []),
             "30-ai-llm.nix": ("ai-llm.nix", ["aiperf", "guidellm", "omlx"]),
         }

@@ -23,6 +23,7 @@
       "guidellm"
       "lazycodex-ai"
       "llama-swap"
+      "mcp-searxng"
       "pal-mcp-server"
       "playwright-mcp"
       "qdrant-web-ui"

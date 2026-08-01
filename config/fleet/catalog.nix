@@ -111,8 +111,20 @@ let
     && matchesAny [ profile.id ] (selectors.profiles or null)
     && !(builtins.elem profile.id (selectors.excludeProfiles or [ ]));
 
+  resolveItem =
+    profile: item:
+    let
+      transportByHost = item.transportByHost or { };
+    in
+    builtins.removeAttrs item [ "transportByHost" ]
+    // lib.optionalAttrs (builtins.hasAttr profile.host transportByHost) {
+      transport = transportByHost.${profile.host};
+    };
   select =
-    profile: itemSet: lib.filterAttrs (_: item: matches profile (item.selectors or { })) itemSet;
+    profile: itemSet:
+    lib.mapAttrs (_: resolveItem profile) (
+      lib.filterAttrs (_: item: matches profile (item.selectors or { })) itemSet
+    );
 
   agentMetadata = {
     "bash-reviewer" = {
@@ -943,6 +955,29 @@ let
       env.PERPLEXITY_API_KEY = typedEnv "PERPLEXITY_API_KEY";
     } baseMcpSelectors;
 
+    searxng =
+      (mkMcp "searxng" "Private web search through an operator-controlled SearXNG instance"
+        {
+          command = "mcp-searxng";
+          args = [ ];
+          env.SEARXNG_URL = "https://searxng.vulcan.lan";
+        }
+        {
+          hosts = [
+            "clio"
+            "hera"
+            "vulcan"
+          ];
+        }
+      )
+      // {
+        transportByHost.vulcan = {
+          command = "mcp-searxng";
+          args = [ ];
+          env.SEARXNG_URL = "http://localhost:8890";
+        };
+      };
+
     sequential-thinking =
       (mkMcp "sequential-thinking" "Sequential thinking MCP server for structured reasoning" {
         command = "mcp-server-sequential-thinking";
@@ -1480,8 +1515,12 @@ let
     && !(containsRenderedReference value);
 
   approvedLiteralEnvironment = {
-    DISABLED_TOOLS = "testgen,secaudit,docgen,tracer";
-    DEFAULT_MODEL = "auto";
+    DISABLED_TOOLS = [ "testgen,secaudit,docgen,tracer" ];
+    DEFAULT_MODEL = [ "auto" ];
+    SEARXNG_URL = [
+      "http://localhost:8890"
+      "https://searxng.vulcan.lan"
+    ];
   };
 
   validEnvironmentValue =
@@ -1489,7 +1528,10 @@ let
     validEnvName name
     && (
       (isEnvReference value && value.env == name)
-      || (builtins.hasAttr name approvedLiteralEnvironment && value == approvedLiteralEnvironment.${name})
+      || (
+        builtins.hasAttr name approvedLiteralEnvironment
+        && builtins.elem value approvedLiteralEnvironment.${name}
+      )
     );
 
   validHeaderName = name: builtins.match "^[A-Za-z0-9_-]+$" name != null;
@@ -1641,10 +1683,47 @@ let
       ) profiles;
       mcpChecks = lib.mapAttrsToList (
         name: server:
+        let
+          hostTransports = server.transportByHost or { };
+          matchingProfiles = lib.filter (profile: matches profile (server.selectors or { })) (
+            builtins.attrValues profiles
+          );
+        in
         ensure (
-          validateTransport server.transport && validateOverrides (server.overrides or { })
+          validateTransport server.transport
+          && builtins.all (host: lib.any (profile: profile.host == host) matchingProfiles) (
+            builtins.attrNames hostTransports
+          )
+          && builtins.all (host: validateTransport hostTransports.${host}) (builtins.attrNames hostTransports)
+          && validateOverrides (server.overrides or { })
         ) "invalid MCP server ${name}"
       ) items.mcpServers;
+      mcpResolutionChecks = lib.concatMap (
+        profile:
+        lib.mapAttrsToList (
+          name: server:
+          let
+            selected = select profile (
+              builtins.listToAttrs [
+                {
+                  inherit name;
+                  value = server;
+                }
+              ]
+            );
+            shouldSelect = matches profile (server.selectors or { });
+            expectedTransport = (server.transportByHost or { }).${profile.host} or server.transport;
+          in
+          ensure (
+            if shouldSelect then
+              builtins.hasAttr name selected
+              && selected.${name}.transport == expectedTransport
+              && !(selected.${name} ? transportByHost)
+            else
+              !(builtins.hasAttr name selected)
+          ) "invalid resolved MCP server ${profile.id}/${name}"
+        ) items.mcpServers
+      ) (builtins.attrValues profiles);
       providerSelectorChecks = lib.mapAttrsToList (
         name: provider:
         ensure (validateSelectors (provider.selectors or { })) "invalid provider selector ${name}"
@@ -1711,6 +1790,7 @@ let
       ++ selectorChecks
       ++ profileChecks
       ++ mcpChecks
+      ++ mcpResolutionChecks
       ++ providerSelectorChecks
       ++ modelSelectorChecks
       ++ defaultChecks;

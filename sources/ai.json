@@ -251,6 +251,26 @@
       },
       "version": "0.4"
     },
+    "mcp-searxng": {
+      "hashes": {
+        "npmDepsHash": "sha256-dt7iRwmo0ojUVZY2komp+RaNswrWM2LVT6xDUPsT6oI="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-1Ccm8/8M3wY+PEVYTE0NNbEU2YreFfSsmmXKWMZfZ38=",
+          "owner": "ihor-sokoliuk",
+          "repo": "mcp-searxng",
+          "tag": "v1.12.1"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/ihor-sokoliuk/mcp-searxng"
+      },
+      "update": {
+        "kind": "github-release",
+        "tagPrefix": "v"
+      },
+      "version": "1.12.1"
+    },
     "omlx": {
       "source": {
         "args": {

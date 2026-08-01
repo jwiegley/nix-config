@@ -9,7 +9,6 @@
   piPackages,
   runCommand,
   sourceForChecks,
-  stdenv,
 }:
 
 let

@@ -89,16 +89,20 @@ assert
   == (pkgs.python3Packages.gradio.doInstallCheck or false)
   || throw "Darwin-only Gradio install-check suppression active on Linux";
 assert
-  !(optionalMcpPackages ? pal-mcp-server) && !(optionalMcpPackages ? agent-http-header-bridge)
-  || throw "optional MCP inputs must omit their packages when absent";
+  !(optionalMcpPackages ? pal-mcp-server)
+  && !(optionalMcpPackages ? agent-http-header-bridge)
+  && optionalMcpPackages ? mcp-searxng
+  || throw "optional MCP inputs must omit only their dependent packages";
 assert
   !(withoutPal ? pal-mcp-server)
   && withoutPal ? agent-http-header-bridge
+  && withoutPal ? mcp-searxng
   && withoutPal ? rustdocs-mcp-server
   || throw "missing PAL input removed unrelated AI MCP packages";
 assert
   withoutRemote ? pal-mcp-server
   && !(withoutRemote ? agent-http-header-bridge)
+  && withoutRemote ? mcp-searxng
   && withoutRemote ? rustdocs-mcp-server
   || throw "missing mcp-remote input removed unrelated AI MCP packages";
 assert
