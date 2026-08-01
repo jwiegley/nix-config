@@ -27,7 +27,6 @@ the target host may activate them.
 
 ```text
 config/fleet/flake.nix
-  -> flake-ai.nix
   -> flake/ai.nix
   -> overlays/ai/default.nix
   -> packages + checks + apps
@@ -36,6 +35,10 @@ config/fleet/flake.nix
 `config/fleet` is a separately lockable, remote-fetchable boundary over the same
 implementation tree. The root and portable locks must agree on shared inputs;
 host-only inputs stay outside the portable closure.
+
+The former root `flake-ai.nix` compatibility shim was retired after the
+maintained-consumer inventory and GitHub code search found no external imports.
+Portable consumers use `flake/ai.nix` through `config/fleet`.
 
 ### External consumers
 

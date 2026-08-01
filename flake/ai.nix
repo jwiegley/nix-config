@@ -2059,7 +2059,6 @@ let
     fileset = lib.fileset.unions [
       ../config/fleet
       ../flake
-      ../flake-ai.nix
       ../overlays/ai
       ../packages/agent-resources.nix
       ../packages/ai-package-policy.nix

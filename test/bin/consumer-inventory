@@ -7,7 +7,7 @@
 # is only complete if EVERY reference to the config/ai contract is known first,
 # yet no artifact owned the inventory (issue #17, critique H4). Four separate
 # inventory passes (narrow ?dir URLs, rename-verification, all compat surfaces,
-# flake-ai.nix compat) are the same read-only sweep under different lenses. This
+# retired flake-ai.nix references) are the same read-only sweep under different lenses. This
 # script IS that sweep. #47 (the rename) and #63 (post-rename stragglers) consume
 # its JSON mechanically, so the schema is stable and every record carries
 # consumer, kind, classification, file, line, and the exact source text.
@@ -32,9 +32,8 @@
 #                    Delete once the consumer moves to typed config/fleet outputs.
 #
 #   retain-with-owner  Keep as-is; owner + retirement trigger recorded. Covers the
-#                    flake-ai.nix compatibility test/source inclusion owned by #60,
-#                    the supported config/*.nix portable surface, the root
-#                    flake=false nix-config inputs, and the
+#                    supported config/*.nix portable surface, the root flake=false
+#                    nix-config inputs, and the
 #                    ai-nix/node-red compatibility surfaces routed to EPIC 7.
 #
 # Determinism contract: for a fixed tracked working tree and fixed consumer locks,
@@ -136,14 +135,9 @@ INTENTIONAL_CONFIG_AI_FILES = {
 INTENTIONAL_CONFIG_AI_PREFIXES = ()
 FLAKE_AI_RE = re.compile(r"flake-ai\.nix")
 # A load-bearing flake-ai.nix path is relative/interpolated in a .nix file that is
-# not a comment; doc/lint mentions are counted but not classified.
+# not a comment. The shim is retired, so every such path is a regression;
+# doc/lint mentions are counted but not classified.
 FLAKE_AI_IMPORT_RE = re.compile(r"(\.\.?/)+[\w./-]*flake-ai\.nix|\$\{inputs\.nix-config\}/flake-ai\.nix")
-FLAKE_AI_RETIREMENT_REFS = {
-    "flake/ai.nix": "include the shim in lint/format sources while #60 keeps it",
-    "test/ai/compatibility-check.nix": (
-        "exercise the external shim until #60 decides whether to retire it"
-    ),
-}
 COMPAT_SURFACES = [
     ("ai-nix", r"ai-nix"),
     ("node-red", r"node-red"),
@@ -577,9 +571,9 @@ for f, ln, tx in internal_config_ai:
         refKind=_kind, loadBearing=load_bearing(_kind))
 internal_config_ai_files = sorted({f for f, _, _ in internal_config_ai})
 
-# Load-bearing flake-ai.nix path references, separated from doc/lint mentions. #54
-# leaves exactly the #60-owned compatibility test and its source inclusion; any
-# other path reference is a production-import regression.
+# Load-bearing flake-ai.nix path references, separated from doc/lint mentions.
+# #60 retired the shim after proving zero maintained consumers, so this list must
+# remain empty.
 flake_ai_all = grep(r"flake-ai\.nix", repo_root)
 flake_ai_consumers = []
 flake_ai_mentions = []
@@ -590,15 +584,9 @@ for f, ln, tx in flake_ai_all:
     else:
         flake_ai_mentions.append((f, ln, stripped))
 for f, ln, tx in flake_ai_consumers:
-    if f in FLAKE_AI_RETIREMENT_REFS:
-        owner = "jwiegley/nix-config#60 (E7-FLAKEAI-RETIRE)"
-        trigger = FLAKE_AI_RETIREMENT_REFS[f]
-    else:
-        owner = "jwiegley/nix-config#54 (canonical internal definition)"
-        trigger = "regression: production imports must use flake/ai.nix"
-    add("internal", 0, "flake-ai-internal-consumer", "retain-with-owner", f, ln, tx,
-        owner=owner,
-        trigger=trigger)
+    add("internal", 0, "flake-ai-internal-consumer", "retire", f, ln, tx,
+        owner="jwiegley/nix-config#60 (E7-FLAKEAI-RETIRE)",
+        trigger="regression: the compatibility shim is retired; use flake/ai.nix")
 
 # Compat surfaces -> summarized (not one row per line): these are EPIC 7 inputs,
 # and most matches are the bare token in comments/catalog/doc prose.
@@ -813,8 +801,8 @@ out = {
     "classificationScheme": {
         "rename-now": "Stale operational reference to the literal config/ai directory inside nix-config; #47 must leave none.",
         "stub-covered": "External consumer edge still resolving through stale ?dir=config/ai. #47's throwing stub makes this fail loudly; migrate the URL in the authorized coordinated transaction.",
-        "retire": "Consumer reach-in into nix-config internal overlay files (${inputs.nix-config}/overlays/*.nix) and the attributes cherry-picked from them; not a supported API (this class broke vulcan at a3cc3843). Delete once the consumer moves to typed config/fleet outputs.",
-        "retain-with-owner": "Keep as-is with owner + retirement trigger: the #60-owned flake-ai.nix compatibility test/source inclusion, the supported config/*.nix portable surface, root flake=false nix-config inputs, and the ai-nix/node-red compatibility surfaces (EPIC 7).",
+        "retire": "Unsupported compatibility paths: consumer reach-ins into nix-config internal overlays, plus any reintroduced flake-ai.nix import. Delete reach-ins after typed config/fleet migration; flake-ai.nix references are immediate regressions.",
+        "retain-with-owner": "Keep as-is with owner + retirement trigger: the supported config/*.nix portable surface, root flake=false nix-config inputs, and the ai-nix/node-red compatibility surfaces (EPIC 7).",
     },
     "derivation": commands,
     "remoteChecks": {

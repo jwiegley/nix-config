@@ -6,13 +6,7 @@
 let
   contract = import ./compatibility-contract.nix;
   lib = inputs.nixpkgs.lib;
-  shim = import ../../flake-ai.nix inputs;
   sortedNames = value: lib.sort builtins.lessThan (builtins.attrNames value);
-  packageDrvPaths =
-    definition:
-    lib.mapAttrs (
-      _system: packages: lib.mapAttrs (_name: package: package.drvPath) packages
-    ) definition.packages;
   inputNames = sortedNames (builtins.removeAttrs inputs [ "self" ]);
   outputNames = [
     "apps"
@@ -94,12 +88,6 @@ let
     );
   assertions = [
     (lib.assertMsg (inputNames == contract.inputs) "portable AI input contract changed")
-    (lib.assertMsg (
-      sortedNames shim == sortedNames actual
-    ) "external flake-ai.nix shim output surface differs from canonical flake/ai.nix")
-    (lib.assertMsg (
-      packageDrvPaths shim == packageDrvPaths actual
-    ) "external flake-ai.nix shim package derivations differ from canonical flake/ai.nix")
     (lib.assertMsg (sortedNames actual == outputNames) "portable AI top-level output contract changed")
     (lib.assertMsg (
       sortedNames actual.lib == [
