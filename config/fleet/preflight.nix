@@ -56,12 +56,14 @@ let
     ".config/opencode/opencode.json"
     ".pi-lens/config.json"
     ".config/pi/agent/extensions/auto-compact-resume/index.ts"
+    ".config/pi/agent/extensions/fleet-theme/index.ts"
     ".config/pi/agent/extensions/nix-gallery/index.ts"
     ".config/pi/agent/extensions/pi-mcp-adapter"
     ".config/pi/agent/extensions/pi-quiet"
     ".config/pi/agent/keybindings.json"
     ".config/pi/agent/model-router.json"
     ".config/pi/agent/models.json"
+    ".config/pi/agent/themes/dark-tool-backgrounds.json"
   ];
   validRelativePath =
     path:

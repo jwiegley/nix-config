@@ -56,7 +56,8 @@ test:
 	nix build --no-link \
 	  .#checks.$(SYSTEM).agent-resources \
 	  .#checks.$(SYSTEM).agent-wrappers \
-	  .#checks.$(SYSTEM).pi-gallery
+	  .#checks.$(SYSTEM).pi-gallery \
+	  .#checks.$(SYSTEM).pi-fleet-theme
 
 expensive:
 	test/bin/quality --tier expensive

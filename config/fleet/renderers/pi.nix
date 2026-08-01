@@ -354,6 +354,8 @@ let
   globalMcpPath = "${xdgConfigRelative}/mcp/mcp.json";
   extensionRoot = "${pkgs.agent-resources}/share/agent-resources/pi-extensions";
   autoCompactResumeSource = ../extensions/auto-compact-resume/index.ts;
+  fleetThemeSource = ../extensions/fleet-theme/index.ts;
+  fleetTheme = ../themes/dark-tool-backgrounds.json;
 in
 assert profile.id == "hera-pi";
 assert profile.client == "pi";
@@ -391,12 +393,14 @@ assert builtins.hasAttr "pi-gallery" pkgs;
         widget.visible = false;
       };
       "${root}/extensions/auto-compact-resume/index.ts".source = autoCompactResumeSource;
+      "${root}/extensions/fleet-theme/index.ts".source = fleetThemeSource;
       "${root}/extensions/nix-gallery/index.ts".source = "${pkgs.pi-gallery}/share/pi-gallery/index.ts";
       "${root}/extensions/pi-mcp-adapter".source = "${extensionRoot}/pi-mcp-adapter";
       "${root}/extensions/pi-quiet".source = "${extensionRoot}/pi-quiet";
       "${root}/keybindings.json".source = json.generate "pi-${profile.id}-keybindings.json" keybindings;
       "${root}/model-router.json".source = json.generate "pi-${profile.id}-model-router.json" modelRouter;
       "${root}/models.json".source = json.generate "pi-${profile.id}-models.json" models;
+      "${root}/themes/dark-tool-backgrounds.json".source = fleetTheme;
       "${globalMcpPath}".source = json.generate "pi-${profile.id}-mcp.json" mcp;
     }
   ];

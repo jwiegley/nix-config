@@ -250,10 +250,12 @@ let
       ../test/ai/compatibility-check.nix
       ../test/ai/compatibility-contract.nix
       ../test/ai/extensions/auto-compact-resume
+      ../test/ai/extensions/fleet-theme
       ../test/ai/input-projection-parity.nix
       ../test/ai/overlays
       ../test/ai/node-runtime-guard.cjs
       ../test/ai/pi-gallery.nix
+      ../test/ai/pi-fleet-theme.nix
       ../test/ai/pi-tool-renderer-wrapper.test.mjs
       ../test/ai/recording-https-bridge-oracle.py
       ../test/ai/run-bridge-oracle.sh
@@ -427,6 +429,10 @@ in
         piPackages = pkgs.pi-gallery.packages // {
           inherit (pkgs) agent-resources pi-gallery;
         };
+      };
+      pi-fleet-theme = pkgs.callPackage ../test/ai/pi-fleet-theme.nix {
+        inherit sourceForChecks;
+        piPackage = patchAgentPackage pkgs "pi" inputs.llm-agents.packages.${system}.pi;
       };
       format = check "format" "format-check.sh" qualityDeps.format "";
       lint = check "lint" "lint.sh" qualityDeps.lint "";

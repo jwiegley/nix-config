@@ -75,6 +75,7 @@ in
     "lint"
     "llama-cpp-platform-compat"
     "llm-agents-nixpkgs-independent"
+    "pi-fleet-theme"
     "pi-gallery"
     "tests"
   ];
