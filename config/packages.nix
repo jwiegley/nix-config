@@ -27,7 +27,7 @@ let
   optPkgs = names: lib.concatMap optPkg names;
 
   agentPackages = inputs.llm-agents.packages.${sys} or { };
-  localAi = inputs.nix-ai or (if inputs ? git-ai then import ../flake-ai.nix inputs else null);
+  localAi = inputs.nix-ai or (if inputs ? git-ai then import ../flake/ai.nix inputs else null);
   patchAgentPackage =
     if localAi == null then _name: package: package else localAi.lib.patchAgentPackage pkgs;
   wrapHeraCodex =

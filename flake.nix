@@ -166,7 +166,7 @@
         "x86_64-linux"
       ];
       forAllSystems = nixpkgs.lib.genAttrs rootSystems;
-      portableAiDefinition = import ./flake-ai.nix portableInputs;
+      portableAiDefinition = import ./flake/ai.nix portableInputs;
       portableAi = import ./test/ai/compatibility-check.nix {
         inputs = portableInputs;
         actual = portableAiDefinition;

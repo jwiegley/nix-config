@@ -71,7 +71,7 @@
     inputs:
     let
       portableInputs = builtins.removeAttrs inputs [ "self" ];
-      actual = import ../../flake-ai.nix portableInputs;
+      actual = import ../../flake/ai.nix portableInputs;
       checked = import ../../test/ai/compatibility-check.nix {
         inputs = portableInputs;
         inherit actual;

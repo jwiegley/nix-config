@@ -1591,12 +1591,12 @@ class TestConsumerInventoryLoadBearingFacet(unittest.TestCase):
         expected_refs = [
             record
             for record in self.refs
-            if record.get("kind") == "internal-config-ai-ref"
+            if record.get("consumer") == "internal"
         ]
         actual_refs = [
             record
             for record in generated["references"]
-            if record.get("kind") == "internal-config-ai-ref"
+            if record.get("consumer") == "internal"
         ]
         self.assertEqual(actual_refs, expected_refs)
 
