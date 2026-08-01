@@ -9,6 +9,10 @@ set -euo pipefail
 : "${CODEX_APP_IS_COMMAND:?}"
 : "${CODEX_RAISES_OPEN_FILE_LIMIT:?}"
 : "${DROID_BIN:?}"
+: "${CLAUDE_IDENTITY_BIN:?}"
+: "${CLAUDE_REAL_IDENTITY_BIN:?}"
+: "${CODEX_IDENTITY_BIN:?}"
+: "${DROID_IDENTITY_BIN:?}"
 : "${REAL_CLAUDE_BIN:?}"
 : "${REAL_CODEX_BIN:?}"
 : "${BRIDGE_BIN:?}"
@@ -186,7 +190,12 @@ invoke_agent() {
     case "$client" in
     claude)
         binary=$CLAUDE_BIN
-        command_env+=("CLAUDE_CONFIG_DIR=$ROOT")
+        case "${AGENT_TEST_CLAUDE_CONFIG_MODE:-explicit}" in
+        explicit) command_env+=("CLAUDE_CONFIG_DIR=$ROOT") ;;
+        unset) ;;
+        empty) command_env+=("CLAUDE_CONFIG_DIR=") ;;
+        *) fail "unknown Claude config mode: $AGENT_TEST_CLAUDE_CONFIG_MODE" ;;
+        esac
         ;;
     codex)
         binary=$CODEX_BIN
@@ -316,7 +325,8 @@ test_state_matrix() {
         new_case "$client" "$state"
         configure_state "$state"
         invoke_agent "$client" 0 0 "${launch_args[@]}"
-        [ "$LAST_STATUS" -ne 0 ] || fail "$client accepted partial state $state"
+        [ "$LAST_STATUS" -eq 2 ] ||
+            fail "$client partial state $state returned $LAST_STATUS instead of 2"
         assert_upstream_not_invoked
         assert_bounded_redacted_error "$client" 1
         finish_case "$client"
@@ -367,6 +377,27 @@ test_unset_home_bypass() {
     assert_env AI_NIX_BYPASS_MANAGED_CONFIG=1
 }
 
+test_claude_default_root() {
+    local mode
+
+    for mode in unset empty; do
+        new_case claude "default-root-$mode"
+        ROOT="$HOME_DIR/.claude"
+        FIRST="$ROOT/nix-managed-settings.json"
+        SECOND="$ROOT/nix-managed-mcp.json"
+        mkdir -p "$ROOT"
+        configure_state complete
+
+        AGENT_TEST_CLAUDE_CONFIG_MODE=$mode
+        invoke_agent claude 0 0 alpha
+        unset AGENT_TEST_CLAUDE_CONFIG_MODE
+
+        [ "$LAST_STATUS" -eq 0 ] || fail "Claude $mode config-dir fallback failed"
+        assert_managed_argv claude alpha
+        finish_case claude
+    done
+}
+
 test_one_conflict() {
     local client=$1
     local label=$2
@@ -375,7 +406,8 @@ test_one_conflict() {
     new_case "$client" "conflict-$label"
     configure_state complete
     invoke_agent "$client" 0 0 "$@"
-    [ "$LAST_STATUS" -ne 0 ] || fail "$client accepted conflicting $label"
+    [ "$LAST_STATUS" -eq 2 ] ||
+        fail "$client conflicting $label returned $LAST_STATUS instead of 2"
     assert_upstream_not_invoked
     assert_bounded_redacted_error "$client" 0
     finish_case "$client"
@@ -405,6 +437,13 @@ test_conflicts() {
         test_one_conflict "$client" settings-equals "--settings=$caller_path" tail
         test_one_conflict "$client" mcp-separated --mcp-config "$caller_path" tail
         test_one_conflict "$client" mcp-equals "--mcp-config=$caller_path" tail
+
+        new_case "$client" conflict-delimiter
+        configure_state complete
+        invoke_agent "$client" 0 0 -- --settings "$caller_path" --mcp-config "$caller_path"
+        [ "$LAST_STATUS" -eq 0 ] || fail "$client scanned conflicts after --"
+        assert_managed_argv "$client" -- --settings "$caller_path" --mcp-config "$caller_path"
+        finish_case "$client"
         ;;
     codex)
         test_one_conflict "$client" profile-separated --profile caller tail
@@ -416,6 +455,13 @@ test_conflicts() {
     droid)
         test_one_conflict "$client" settings-separated --settings "$caller_path" tail
         test_one_conflict "$client" settings-equals "--settings=$caller_path" tail
+
+        new_case "$client" conflict-delimiter
+        configure_state complete
+        invoke_agent "$client" 0 0 -- --settings "$caller_path"
+        [ "$LAST_STATUS" -eq 0 ] || fail "$client scanned conflicts after --"
+        assert_managed_argv "$client" -- --settings "$caller_path"
+        finish_case "$client"
         ;;
     *) fail "unknown client: $client" ;;
     esac
@@ -452,7 +498,8 @@ test_codex_conflict_case() {
     new_case codex "$label"
     configure_state complete
     invoke_agent codex 0 0 "$@"
-    [ "$LAST_STATUS" -ne 0 ] || fail "Codex accepted conflicting profile case $label"
+    [ "$LAST_STATUS" -eq 2 ] ||
+        fail "Codex conflicting profile case $label returned $LAST_STATUS instead of 2"
     assert_upstream_not_invoked
     assert_bounded_redacted_error codex 0
     finish_case codex
@@ -1054,6 +1101,184 @@ test_exit_propagation() {
     finish_case "$client"
 }
 
+test_environment_contract() {
+    local client=$1
+    local credential_name=$2
+    local credential_value session_value thread_value path
+    local before_entries='' after_entries=''
+    local -a launch_args=(alpha 'two words')
+
+    if [ "$client" = codex ]; then
+        launch_args=('two words')
+    fi
+
+    new_case "$client" environment-contract
+    configure_state complete
+    credential_value="credential-${client}-${AGENT_TEST_UID}-must-not-leak"
+    session_value="session-${client}-${AGENT_TEST_UID}"
+    thread_value="thread-${client}-${AGENT_TEST_UID}"
+    export "$credential_name=$credential_value"
+    if [ "$client" = codex ]; then
+        export CODEX_SESSION_ID="$session_value"
+        export CODEX_THREAD_ID="$thread_value"
+    else
+        export AGENT_WRAPPER_SESSION_MARKER="$session_value"
+        before_entries="$CASE_DIR/before-credential.entries"
+        after_entries="$CASE_DIR/after-credential.entries"
+        find "$ROOT" -mindepth 1 -printf '%P|%y|%m|%l\n' | sort >"$before_entries"
+    fi
+
+    invoke_agent "$client" 0 0 "${launch_args[@]}"
+    unset "$credential_name" AGENT_WRAPPER_SESSION_MARKER CODEX_SESSION_ID CODEX_THREAD_ID
+
+    [ "$LAST_STATUS" -eq 0 ] || fail "$client environment contract launch failed"
+    assert_managed_argv "$client" "${launch_args[@]}"
+    assert_env "$credential_name=$credential_value"
+    if [ "$client" = codex ]; then
+        assert_env "CODEX_SESSION_ID=$session_value"
+        assert_env "CODEX_THREAD_ID=$thread_value"
+    else
+        assert_env "AGENT_WRAPPER_SESSION_MARKER=$session_value"
+    fi
+
+    for path in "$ARGV_FILE" "$STDOUT_FILE" "$STDERR_FILE" "$FIRST"; do
+        ! grep -aF -- "$credential_value" "$path" >/dev/null ||
+            fail "$client credential escaped its upstream environment"
+    done
+    if [ -n "$SECOND" ]; then
+        ! grep -aF -- "$credential_value" "$SECOND" >/dev/null ||
+            fail "$client credential entered a managed companion"
+    fi
+    if [ "$client" = codex ] && [ -e "$CODEX_RUNTIME_FILE" ]; then
+        ! grep -aF -- "$credential_value" "$CODEX_RUNTIME_FILE" >/dev/null ||
+            fail "Codex credential entered the runtime profile"
+    fi
+    ! grep -aR -F -- "$credential_value" "$ROOT" >/dev/null ||
+        fail "$client credential entered its managed root"
+    if [ "$client" = codex ]; then
+        ! grep -aR -F -- "$credential_value" "$CODEX_LOCAL_ROOT" >/dev/null ||
+            fail "Codex credential entered host-local state"
+    else
+        find "$ROOT" -mindepth 1 -printf '%P|%y|%m|%l\n' | sort >"$after_entries"
+        cmp "$before_entries" "$after_entries" ||
+            fail "$client created or removed state during credential handling"
+    fi
+    finish_case "$client"
+}
+
+test_managed_state_immutable() {
+    local client=$1
+    local before_entries before_hashes after_entries after_hashes
+
+    [ "$client" != codex ] || fail "Codex managed state is intentionally mutable"
+    new_case "$client" managed-state-immutable
+    configure_state complete
+    before_entries="$CASE_DIR/before.entries"
+    before_hashes="$CASE_DIR/before.hashes"
+    after_entries="$CASE_DIR/after.entries"
+    after_hashes="$CASE_DIR/after.hashes"
+
+    find "$ROOT" -mindepth 1 -maxdepth 1 -printf '%f|%y|%m|%l\n' | sort >"$before_entries"
+    sha256sum "$FIRST" "$SECOND" >"$before_hashes"
+
+    invoke_agent "$client" 0 0 alpha
+    [ "$LAST_STATUS" -eq 0 ] || fail "$client immutable-state launch failed"
+    assert_managed_argv "$client" alpha
+
+    find "$ROOT" -mindepth 1 -maxdepth 1 -printf '%f|%y|%m|%l\n' | sort >"$after_entries"
+    sha256sum "$FIRST" "$SECOND" >"$after_hashes"
+    cmp "$before_entries" "$after_entries" ||
+        fail "$client created or removed managed-root state"
+    cmp "$before_hashes" "$after_hashes" ||
+        fail "$client changed managed configuration content"
+    finish_case "$client"
+}
+
+test_process_identity() {
+    local client=$1
+    local binary expected_argv0 recorded_pid recorded_argv0 wrapper_pid status
+    local identity_file
+    local -a launch_args=(alpha 'two words')
+    local -a command_env
+
+    new_case "$client" process-identity
+    configure_state complete
+    identity_file="$CASE_DIR/identity"
+    if [ "$client" = codex ]; then
+        launch_args=('two words')
+    fi
+    case "$client" in
+    claude)
+        binary=$CLAUDE_IDENTITY_BIN
+        expected_argv0=claude
+        ;;
+    codex)
+        binary=$CODEX_IDENTITY_BIN
+        expected_argv0=codex
+        ;;
+    droid)
+        binary=$DROID_IDENTITY_BIN
+        expected_argv0=droid
+        ;;
+    *) fail "unknown identity client: $client" ;;
+    esac
+
+    command_env=(
+        env
+        -u AI_NIX_BYPASS_MANAGED_CONFIG
+        -u CLAUDE_CONFIG_DIR
+        -u CODEX_HOME
+        -u CODEX_SQLITE_HOME
+        "HOME=$HOME_DIR"
+        "AGENT_TEST_IDENTITY_FILE=$identity_file"
+        AGENT_TEST_EXIT=0
+        "AGENT_TEST_UID=$AGENT_TEST_UID"
+    )
+    case "$client" in
+    claude) command_env+=("CLAUDE_CONFIG_DIR=$ROOT") ;;
+    codex) command_env+=("CODEX_HOME=$ROOT") ;;
+    droid) ;;
+    esac
+
+    "${command_env[@]}" "$binary" "${launch_args[@]}" >"$STDOUT_FILE" 2>"$STDERR_FILE" &
+    wrapper_pid=$!
+    if wait "$wrapper_pid"; then
+        status=0
+    else
+        status=$?
+    fi
+    [ "$status" -eq 0 ] || fail "$client identity launch returned $status"
+    [ -f "$identity_file" ] || fail "$client identity recorder did not run"
+    recorded_pid=$(sed -n '1p' "$identity_file")
+    recorded_argv0=$(sed -n '2p' "$identity_file")
+    [ "$recorded_pid" = "$wrapper_pid" ] || fail "$client wrapper did not preserve its PID"
+    [ "$recorded_argv0" = "$expected_argv0" ] ||
+        fail "$client argv[0] is $recorded_argv0, expected $expected_argv0"
+    finish_case "$client"
+}
+
+test_claude_real_process_identity() {
+    local identity_file recorded_pid recorded_argv0 wrapper_pid status
+
+    new_case claude claude-real-process-identity
+    configure_state regular-directory
+    identity_file="$CASE_DIR/identity"
+    env -u HOME -u CLAUDE_CONFIG_DIR -u AI_NIX_BYPASS_MANAGED_CONFIG \
+        "AGENT_TEST_IDENTITY_FILE=$identity_file" AGENT_TEST_EXIT=0 \
+        "$CLAUDE_REAL_IDENTITY_BIN" alpha >"$STDOUT_FILE" 2>"$STDERR_FILE" &
+    wrapper_pid=$!
+    if wait "$wrapper_pid"; then
+        status=0
+    else
+        status=$?
+    fi
+    [ "$status" -eq 0 ] || fail "claude-real identity launch returned $status"
+    recorded_pid=$(sed -n '1p' "$identity_file")
+    recorded_argv0=$(sed -n '2p' "$identity_file")
+    [ "$recorded_pid" = "$wrapper_pid" ] || fail "claude-real did not preserve its PID"
+    [ "$recorded_argv0" = claude ] || fail "claude-real argv[0] is not claude"
+}
+
 test_claude_real() {
     new_case claude claude-real
     configure_state complete
@@ -1483,24 +1708,63 @@ test_bridge_static_contract() {
         https://example.invalid/mcp x-ref-api-key TASK3_BRIDGE_TOKEN
 }
 
-for client in claude codex droid; do
-    test_state_matrix "$client"
-    test_conflicts "$client"
-    test_exit_propagation "$client"
-done
+run_claude_contract() {
+    test_state_matrix claude
+    test_conflicts claude
+    test_environment_contract claude ANTHROPIC_API_KEY
+    test_managed_state_immutable claude
+    test_process_identity claude
+    test_exit_propagation claude
+    test_unset_home_bypass claude
+    test_claude_default_root
+    test_claude_real
+    test_claude_real_process_identity
+    test_real_claude_mcp_list_contract
+    printf '%s\n' 'agent-wrapper-contract: claude: PASS'
+}
 
-test_unset_home_bypass claude
-test_unset_home_bypass droid
+run_codex_contract() {
+    test_state_matrix codex
+    test_conflicts codex
+    test_environment_contract codex OPENAI_API_KEY
+    test_process_identity codex
+    test_exit_propagation codex
+    test_codex_host_state
+    test_codex_host_state_rejections
+    test_codex_runtime_profile
+    test_codex_legacy_ref_auth
+    test_codex_runtime_profile_rejections
+    test_codex_command_scope
+    test_codex_non_darwin_table
+    test_codex_open_file_limit
+    test_real_codex_profile_contract
+    printf '%s\n' 'agent-wrapper-contract: codex: PASS'
+}
 
-test_claude_real
-test_codex_host_state
-test_codex_host_state_rejections
-test_codex_runtime_profile
-test_codex_legacy_ref_auth
-test_codex_runtime_profile_rejections
-test_codex_command_scope
-test_codex_non_darwin_table
-test_codex_open_file_limit
-test_real_claude_mcp_list_contract
-test_real_codex_profile_contract
-test_bridge_static_contract
+run_droid_contract() {
+    test_state_matrix droid
+    test_conflicts droid
+    test_environment_contract droid OPENAI_API_KEY
+    test_managed_state_immutable droid
+    test_process_identity droid
+    test_exit_propagation droid
+    test_unset_home_bypass droid
+    printf '%s\n' 'agent-wrapper-contract: droid: PASS'
+}
+
+case "${1:-all}" in
+claude) run_claude_contract ;;
+codex) run_codex_contract ;;
+droid) run_droid_contract ;;
+bridge)
+    test_bridge_static_contract
+    printf '%s\n' 'agent-wrapper-contract: bridge: PASS'
+    ;;
+all)
+    run_claude_contract
+    run_codex_contract
+    run_droid_contract
+    test_bridge_static_contract
+    ;;
+*) fail "unknown contract mode: $1" ;;
+esac

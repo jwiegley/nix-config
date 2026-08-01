@@ -77,11 +77,52 @@ let
       '';
     };
 
+  identityRecorderSource = pkgs.writeText "agent-wrapper-identity-recorder.c" ''
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <unistd.h>
+
+    int main(int argc, char **argv) {
+      const char *path = getenv("AGENT_TEST_IDENTITY_FILE");
+      const char *exit_value = getenv("AGENT_TEST_EXIT");
+      FILE *output;
+
+      (void)argc;
+      if (path == NULL || argv[0] == NULL) {
+        return 97;
+      }
+      output = fopen(path, "w");
+      if (output == NULL) {
+        return 98;
+      }
+      if (fprintf(output, "%ld\n%s\n", (long)getpid(), argv[0]) < 0 || fclose(output) != 0) {
+        return 99;
+      }
+      return exit_value == NULL ? 0 : atoi(exit_value);
+    }
+  '';
+
+  identityAgent =
+    binary:
+    pkgs.stdenv.mkDerivation {
+      name = "agent-wrapper-identity-${binary}";
+      dontUnpack = true;
+      buildPhase = ''
+        $CC -Wall -Wextra -Werror ${identityRecorderSource} -o ${binary}
+      '';
+      installPhase = ''
+        install -Dm0755 ${binary} "$out/bin/${binary}"
+      '';
+    };
+
   wrappedClaude = patchAgentPackage testPkgs "claude-code" (fakeAgent "claude");
   realWrappedClaude = patchAgentPackage pkgs "claude-code" claudePackage;
   wrappedCodex = patchAgentPackage testPkgs "codex" (fakeAgent "codex");
   wrappedNonDarwinCodex = patchAgentPackage nonDarwinTestPkgs "codex" (fakeAgent "codex");
   wrappedDroid = patchAgentPackage testPkgs "droid" (fakeAgent "droid");
+  identityWrappedClaude = patchAgentPackage testPkgs "claude-code" (identityAgent "claude");
+  identityWrappedCodex = patchAgentPackage testPkgs "codex" (identityAgent "codex");
+  identityWrappedDroid = patchAgentPackage testPkgs "droid" (identityAgent "droid");
 
   networkGuardSource = pkgs.writeText "agent-wrapper-network-guard.c" ''
     #define _GNU_SOURCE
@@ -197,6 +238,10 @@ pkgs.runCommand "agent-wrappers-check"
     CODEX_BIN = "${wrappedCodex}/bin/codex";
     CODEX_NON_DARWIN_BIN = "${wrappedNonDarwinCodex}/bin/codex";
     DROID_BIN = "${wrappedDroid}/bin/droid";
+    CLAUDE_IDENTITY_BIN = "${identityWrappedClaude}/bin/claude";
+    CLAUDE_REAL_IDENTITY_BIN = "${identityWrappedClaude}/bin/claude-real";
+    CODEX_IDENTITY_BIN = "${identityWrappedCodex}/bin/codex";
+    DROID_IDENTITY_BIN = "${identityWrappedDroid}/bin/droid";
     REAL_CLAUDE_BIN = "${realWrappedClaude}/bin/claude";
     REAL_CODEX_BIN = "${codexPackage}/bin/codex";
     CODEX_APP_IS_COMMAND = if pkgs.stdenv.isDarwin then "1" else "0";
@@ -215,9 +260,16 @@ pkgs.runCommand "agent-wrappers-check"
     export HOME="$TMPDIR/home"
     mkdir -p "$HOME"
 
-    ${pkgs.bash}/bin/bash ${./agent-wrappers.sh}
+    mkdir -p "$out"
+
+    ${pkgs.bash}/bin/bash ${./agent-wrappers.sh} claude
+    touch "$out/claude-wrapper-contract.ok"
+    ${pkgs.bash}/bin/bash ${./agent-wrappers.sh} codex
+    touch "$out/codex-wrapper-contract.ok"
+    ${pkgs.bash}/bin/bash ${./agent-wrappers.sh} droid
+    touch "$out/droid-wrapper-contract.ok"
+    ${pkgs.bash}/bin/bash ${./agent-wrappers.sh} bridge
     ${pkgs.bash}/bin/bash ${./run-bridge-oracle.sh}
 
-    mkdir -p "$out"
     touch "$out/passed"
   ''
