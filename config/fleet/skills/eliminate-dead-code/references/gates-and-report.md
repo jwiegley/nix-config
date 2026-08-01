@@ -50,7 +50,7 @@ Produce a single Markdown report (print it; do not write to disk unless the user
 
 Then print the proposed next step:
 
-- If `Result: green` and cap not hit: "Branch ready for review -- open a PR with `gh pr create` when you have reviewed the diff."
+- If `Result: green` and cap not hit: "Branch ready for review -- open a PR with `GH_TOKEN=\"$(gh auth token --hostname github.com --user jwiegley)\" gh pr create` when you have reviewed the diff."
 - If `Result: green` and cap hit: "Re-invoke for another pass."
 - If `Result: red`: do not propose merging; describe the offending commit and the diagnostic step to take.
 

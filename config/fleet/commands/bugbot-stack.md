@@ -3,7 +3,7 @@ Process every PR in the current Graphite stack to address all bot comments. Foll
 ## Step 1: Enumerate the Stack
 
 1. Run `gt ls -s` to list all branches in the current stack.
-2. For each branch, get the PR number: `gh pr view BRANCH --json number -q .number`
+2. For each branch, get the PR number: `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh pr view BRANCH --json number -q .number`
 3. Record the ordered list of (branch, PR number) pairs from bottom (closest to main) to top.
 4. If there is no stack or no open PRs, report that and stop.
 
@@ -26,7 +26,7 @@ For each PR in order:
 
 After all PRs have been processed:
 
-1. For each PR in the stack, use `gh api graphql` to fetch the count of unresolved review threads where the original comment's `author.__typename` is `"Bot"` (or login matches bot heuristics as a fallback).
+1. For each PR in the stack, use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh api graphql` to fetch the count of unresolved review threads where the original comment's `author.__typename` is `"Bot"` (or login matches bot heuristics as a fallback).
 2. Output a summary table:
    - PR number and branch name
    - Total bot comments found

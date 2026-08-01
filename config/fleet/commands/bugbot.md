@@ -4,8 +4,8 @@ There are bot comments on this PR (from BugBot, Graphite, Cursor, Devin, or simi
 
 Before making any code changes, build a complete inventory of every unresolved bot comment.
 
-1. Determine the current PR number (`gh pr view --json number -q .number`).
-2. Use `gh api graphql` to fetch ALL review threads for this PR, including each thread's `id`, `isResolved`, `path`, `line`, and the `author.login`, `author.__typename`, and `body` of each comment in the thread.
+1. Determine the current PR number (`GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh pr view --json number -q .number`).
+2. Use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh api graphql` to fetch ALL review threads for this PR, including each thread's `id`, `isResolved`, `path`, `line`, and the `author.login`, `author.__typename`, and `body` of each comment in the thread.
 3. Also fetch all top-level PR comments (issue comments) with their `id`, `author.login`, `author.__typename`, `body`, and `isMinimized` status.
 4. Filter to only **unresolved** items from bot/automated authors. An author is a bot if `author.__typename` is `"Bot"` (this catches cursor, graphite-app, github-actions, etc. regardless of login naming). As a fallback for any API response missing `__typename`, also match logins containing "bot", "[bot]", or "app/". **Exclude all human authors** (`__typename: "User"`).
 5. Categorize each item:
@@ -41,7 +41,7 @@ After pushing, process EVERY item from the Phase 1 inventory. Check off each ite
 
 1. Reply to the thread explaining what you fixed (keep it brief — one or two sentences), or explain why no change was needed:
    ```
-   gh api graphql -f query='
+   GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh api graphql -f query='
      mutation($threadId: ID!, $body: String!) {
        addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $threadId, body: $body}) {
          comment { id }
@@ -50,7 +50,7 @@ After pushing, process EVERY item from the Phase 1 inventory. Check off each ite
    ```
 2. Then immediately resolve the thread:
    ```
-   gh api graphql -f query='
+   GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh api graphql -f query='
      mutation($threadId: ID!) {
        resolveReviewThread(input: {threadId: $threadId}) {
          thread { isResolved }
@@ -62,14 +62,14 @@ After pushing, process EVERY item from the Phase 1 inventory. Check off each ite
 **For each top-level comment:**
 
 1. Reply to the comment explaining what you fixed (substitute the actual PR
-   number from Phase 1 — `gh` expands `{owner}`/`{repo}` automatically, but
+   number from Phase 1 — the account-scoped `gh` command expands `{owner}`/`{repo}` automatically, but
    not the PR number):
    ```
-   gh api repos/{owner}/{repo}/issues/<pr-number>/comments -f body='Fixed: <brief explanation>'
+   GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh api repos/{owner}/{repo}/issues/<pr-number>/comments -f body='Fixed: <brief explanation>'
    ```
 2. Minimize the original bot comment as resolved:
    ```
-   gh api graphql -f query='
+   GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh api graphql -f query='
      mutation($id: ID!) {
        minimizeComment(input: {subjectId: $id, classifier: RESOLVED}) {
          minimizedComment { isMinimized }

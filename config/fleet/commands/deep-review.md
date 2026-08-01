@@ -42,9 +42,9 @@ Interpret `$ARGUMENTS` to determine what to review:
 - If it is **empty or `.`**, review all tracked files with uncommitted changes
   (`git diff HEAD --name-only`). If there are no uncommitted changes, review the
   most recent commit (`git diff HEAD~1 --name-only`).
-- If it looks like a **PR number** (e.g., `#42`), strip any leading `#` (gh
-  does not accept it) and run `gh pr diff <number> --name-only` and
-  `gh pr diff <number>`.
+- If it looks like a **PR number** (e.g., `#42`), strip any leading `#` and run
+  `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh pr diff <number> --name-only`
+  and the same account-scoped command without `--name-only`.
 
 Collect:
 1. The full list of files to review (with paths).

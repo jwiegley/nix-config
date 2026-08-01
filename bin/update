@@ -926,8 +926,10 @@ if [[ $run_push == true && $commit_created == true ]]; then
         echo "update: cannot publish a detached branch" >&2
         exit 1
     }
-    "$config_dir/bin/publish" --publish \
-        --rev "$committed_head" --branch "$publish_branch"
+    (
+        cd "$config_dir"
+        bin/publish --publish --rev "$committed_head" --branch "$publish_branch"
+    )
 fi
 
 if [[ $run_brew == true ]] && command -v brew >/dev/null 2>&1; then

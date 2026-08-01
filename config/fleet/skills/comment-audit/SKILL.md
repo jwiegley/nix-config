@@ -41,7 +41,7 @@ Ask (or infer from the request) which scope applies:
 
 - **Whole project** -- audit every comment in the repository.
 - **PR / stack** -- audit only the changes. Identify the base ref:
-  - For a checked-out branch, use `gh pr view --json baseRefName` or the merge
+  - For a checked-out branch, use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh pr view --json baseRefName` or the merge
     base: `git merge-base HEAD origin/main`.
   - For a stack, use the base of the bottom-most PR so the whole stack's
     changes are in range.

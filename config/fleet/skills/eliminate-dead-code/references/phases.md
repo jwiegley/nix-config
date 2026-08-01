@@ -166,7 +166,7 @@ Look for:
 1. **Symbol-anchored docs**. For each code candidate, search docs/, README*, comments, `*.md`, `*.rst`, `*.adoc`, `*.org` for the symbol's name. Record the locations on the candidate so a later `remove`/`modify` verdict updates both in one commit.
 2. **Outdated examples**. README/docs code examples that reference removed APIs or no-longer-valid commands. If you can run the example (compile, `--help`, doctest), do so; flag failures as candidates.
 3. **Completed migration guides**. `MIGRATION*` documents whose target version is now older than the codebase's current version (check `package.json`, `Cargo.toml`, `pyproject.toml`, etc.).
-4. **TODO/FIXME comments referencing completed work**. If a TODO refers to an issue tracker ID, check it (`gh issue view`); if closed, the TODO can be a candidate. Without an ID, leave it -- TODOs are often load-bearing reminders.
+4. **TODO/FIXME comments referencing completed work**. If a TODO refers to an issue tracker ID, check it with `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh issue view`; if closed, the TODO can be a candidate. Without an ID, leave it -- TODOs are often load-bearing reminders.
 5. **README sections for removed dependencies**. Record so a dependency removal can scrub the README's install/usage/troubleshooting sections.
 6. **Stale ADRs / runbooks / changelogs / API specs**. Treat as `needs-approval` -- these are often historical record and should be kept even when superseded.
 7. **Commented-out code blocks** older than ~6 months (per `git blame`). These are noise; class `safe`. Smaller/younger blocks -- leave.

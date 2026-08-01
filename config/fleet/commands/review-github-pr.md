@@ -26,8 +26,8 @@ The user will review your analysis and decide what (if anything) to post to GitH
 Follow these steps:
 
 1. Use `git worktree` to create a worktree and branch for the PR inside a `work` sub-directory. For example, if the PR number is 1024, then create a branch named `pr-1024` and a working tree that has checked out that branch in `work/pr-1024`. However, only do this if you are not already in a working tree under the `work` directory.
-2. Use `gh pr view` to get the PR details (read-only)
-3. Use `gh pr diff` to get the PR diff (read-only)
+2. Use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh pr view` to get the PR details (read-only)
+3. Use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh pr diff` to get the PR diff (read-only)
 4. Understand the problem described in the PR
 5. Search the codebase for relevant files
 6. Review any comments that have already been made to the PR (read-only)
@@ -54,7 +54,7 @@ If any review comments are particularly important, you may **suggest** submittin
 
 ## Tools and Resources
 
-- Use the GitHub CLI (`gh`) for all GitHub-related tasks (READ-ONLY operations only until user approves posting)
+- Use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh ...` for all GitHub-related tasks (READ-ONLY until the user approves posting)
 - Use cpp-pro, python-pro, emacs-lisp-pro, rust-pro or haskell-pro as needed for diagnosing and analyzing PRs, fixing code, and writing any new code.
 - If this worktree is anywhere under the "positron" or "pos" directories, then use pal to confer with gemini-3.1-pro-preview and gpt-5.5-pro to reach consensus on your deep analysis and review.
 - Use Web Search and Perplexity as needed for research and discovering resources.

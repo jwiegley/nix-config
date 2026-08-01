@@ -18,7 +18,7 @@ Sometime an issue will already have a “confirmation test” in the directory t
 
 # Follow these steps
 
-1. Use `gh issue view` to get the issue details
+1. Use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh issue view` to get the issue details
 2. Understand the problem described in the issue
 3. Search the codebase for relevant files
 4. Implement the necessary changes to fix the issue
@@ -26,7 +26,7 @@ Sometime an issue will already have a “confirmation test” in the directory t
 6. Ensure code passes linting and type checking
 
 Remember the following:
-- Use the GitHub CLI (`gh`) for all GitHub-related tasks
+- Use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh ...` for all GitHub-related tasks
 - Search the codebase for relevant files
 - Ensure code passes linting and type checking after doing any work
 - Use cpp-pro, python-pro, emacs-lisp-pro, rust-pro or haskell-pro as needed for diagnosing and analyzing PRs, fixing code, and writing any new code.
@@ -38,6 +38,6 @@ When the fix is verified, follow the `commit` command's atomic decomposition, se
 
 # Monitor your work after submitting the PR
 
-Use `gh` to monitor for CI test results and possible BugBot comments. If CI tests are failing for this PR, use the appropriate programming language agent to diagnose and resolve this issue, then push your fixes to the PR and monitor the CI test results using `gh` until you observe that everything passes correctly. If any further problems should be observed, repeat this diagnose, resolve, push and monitor process until everything is working with this PR.
+Use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh ...` to monitor CI results and possible BugBot comments. If CI is failing, diagnose and resolve it, push the fixes, and continue monitoring with the same account-scoped form until everything passes.
 
 Also, if there are any BugBot, Cursor or Devin comments on this PR, I want you to fix and address these comments from these bots, and then after you have pushed the fixes, I want you to reply to those comments and then mark them resolved.

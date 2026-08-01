@@ -6,7 +6,7 @@ Follow these steps:
    `work` sub-directory. for example, if the issue number is 1024, then create
    a branch named `fix-1024` and a working tree that has checked out that
    branch in `work/fix-1024`.
-2. Use `gh issue view` to get the issue details
+2. Use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh issue view` to get the issue details
 3. Understand the problem described in the issue
 4. Search the codebase for relevant files
 5. Implement the necessary changes to fix the issue
@@ -16,7 +16,7 @@ Follow these steps:
 
 Remember the following:
 
-- Use the GitHub CLI (`gh`) for all GitHub-related tasks.
+- Use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh ...` for all GitHub-related tasks.
 - Use cpp-pro or python-pro or emacs-lisp-pro or rust-pro as needed for
   diagnosing and analyzing issues, fixing code, and writing any new code.
 - Use Web Search and Perplexity as need for research and discovering resources.

@@ -81,14 +81,14 @@
    "reason": "Merge current main security, SSH-oracle, Pi-source, and history fixes into unpublished #47",
    "intentional_deltas": [
     "darwin/hera: codex host-state renamed to host-state-hera-credentials by fa83400c",
-    "portable all systems: remove disabled retired local-provider source under #95"
+    "portable all systems: remove disabled pi-provider-litellm source under #95"
    ],
    "observed_deltas": [
     "lost darwin/hera: codex-0.145.0-host-state",
     "gained darwin/hera: codex-0.145.0-host-state-hera-credentials",
-    "lost portable/aarch64-darwin: retired-local-provider",
-    "lost portable/aarch64-linux: retired-local-provider",
-    "lost portable/x86_64-linux: retired-local-provider"
+    "lost portable/aarch64-darwin: pi-provider-litellm",
+    "lost portable/aarch64-linux: pi-provider-litellm",
+    "lost portable/x86_64-linux: pi-provider-litellm"
    ]
   },
   {
@@ -96,12 +96,12 @@
    "new_rev": "4d326ae1c1bf5d853960a0c2de1b834f9818b87b",
    "reason": "Consolidate test infrastructure and refresh the exact-commit oracle",
    "intentional_deltas": [
-    "Remove the retired MCP package from every managed profile.",
+    "Remove Anvil MCP from every managed profile.",
     "Advance Claude Code 2.1.219 to 2.1.220, Codex 0.145.0 to 0.146.0, and Droid 0.179.0 to 0.185.0.",
     "Derive org2tc from the current input revision, advancing 7d52a20 to 9d58d30."
    ],
    "observed_deltas": [
-    "lost darwin/clio: retired-mcp-package",
+    "lost darwin/clio: anvil-mcp",
     "lost darwin/clio: claude-code-2.1.219-managed-config",
     "lost darwin/clio: codex-0.145.0-host-state",
     "lost darwin/clio: droid-0.179.0-managed-config",
@@ -110,7 +110,7 @@
     "gained darwin/clio: codex-0.146.0-host-state",
     "gained darwin/clio: droid-0.185.0-managed-config",
     "gained darwin/clio: org2tc-9d58d30",
-    "lost darwin/hera: retired-mcp-package",
+    "lost darwin/hera: anvil-mcp",
     "lost darwin/hera: claude-code-2.1.219-managed-config",
     "lost darwin/hera: codex-0.145.0-host-state-hera-credentials",
     "lost darwin/hera: droid-0.179.0-managed-config",
@@ -119,7 +119,7 @@
     "gained darwin/hera: codex-0.146.0-host-state-hera-credentials",
     "gained darwin/hera: droid-0.185.0-managed-config",
     "gained darwin/hera: org2tc-9d58d30",
-    "lost home-manager/johnw@aarch64-linux: retired-mcp-package",
+    "lost home-manager/johnw@aarch64-linux: anvil-mcp",
     "lost home-manager/johnw@aarch64-linux: claude-code-2.1.219-managed-config",
     "lost home-manager/johnw@aarch64-linux: codex-0.145.0-host-state",
     "lost home-manager/johnw@aarch64-linux: droid-0.179.0-managed-config",
@@ -128,7 +128,7 @@
     "gained home-manager/johnw@aarch64-linux: codex-0.146.0-host-state",
     "gained home-manager/johnw@aarch64-linux: droid-0.185.0-managed-config",
     "gained home-manager/johnw@aarch64-linux: org2tc-9d58d30",
-    "lost home-manager/jwiegley@x86_64-linux: retired-mcp-package",
+    "lost home-manager/jwiegley@x86_64-linux: anvil-mcp",
     "lost home-manager/jwiegley@x86_64-linux: claude-code-2.1.219-managed-config",
     "lost home-manager/jwiegley@x86_64-linux: codex-0.145.0-host-state",
     "lost home-manager/jwiegley@x86_64-linux: droid-0.179.0-managed-config",

@@ -1501,10 +1501,6 @@ class TestGatesAreRegistered(unittest.TestCase):
                 )
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class TestConsumerInventoryLoadBearingFacet(unittest.TestCase):
     """The facet must never demote a real reference.
 
@@ -1657,3 +1653,7 @@ class TestConsumerInventoryLoadBearingFacet(unittest.TestCase):
             and record.get("classification") == "rename-now"
         ]
         self.assertEqual(stale, [], "#47 left stale operational config/ai references")
+
+
+if __name__ == "__main__":
+    unittest.main()

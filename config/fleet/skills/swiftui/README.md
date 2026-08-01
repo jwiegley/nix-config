@@ -130,12 +130,8 @@ swiftui-expert-skill/
 
 ## Contributing
 
-Contributions are welcome! This repository follows the [Agent Skills open format](https://agentskills.io/home), which has specific structural requirements.
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for:
-- How to contribute improvements to `SKILL.md` and the reference files
-- Format requirements and quality standards
-- Pull request process
+Contributions should preserve the [Agent Skills open format](https://agentskills.io/home)
+and keep `SKILL.md`, references, and examples consistent.
 
 ## About the authors
 
