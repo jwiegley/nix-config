@@ -54,22 +54,19 @@ let
   preTocDepthRemoval = nixpkgs "nixpkgs-pre-toc-depth-removal";
 in
 {
-  # Meta/Facebook C++ libraries must be pinned together for closure
-  # consistency: fbthrift links against folly headers, watchman pulls in
-  # fizz/mvfst/wangle/edencommon, etc. Mixing old folly with new fizz makes
-  # every fizz test fail at runtime (ABI mismatch).
+  # Only ntp still fails to build against current nixpkgs (configure cannot
+  # find pthreads on the Darwin SDK). aprutil, libcdio-paranoia and the whole
+  # Meta/Facebook C++ set — folly, fizz, mvfst, wangle, fbthrift, fb303,
+  # edencommon, watchman — build unpinned again and were released here on
+  # 2026-08-01; `make pin-currency` reports when that changes.
+  #
+  # Those C++ libraries had to move together, since fbthrift links against
+  # folly headers and watchman pulls in fizz/mvfst/wangle/edencommon. Mixing
+  # old folly with new fizz makes every fizz test fail at runtime (ABI
+  # mismatch), so releasing the set as a unit is what keeps the closure
+  # self-consistent.
   inherit (lastGood)
     ntp
-    aprutil
-    libcdio-paranoia
-    folly
-    fizz
-    mvfst
-    wangle
-    fbthrift
-    fb303
-    edencommon
-    watchman
     ;
 
   inherit (preMesa26_1)
