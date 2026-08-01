@@ -688,17 +688,19 @@
     "mlx-lm": {
       "source": {
         "args": {
-          "hash": "sha256-Mf5Ivj4PEm1y+WM7W9iSWha+w+FaDJ5CBfGzwIGDc8Q=",
+          "hash": "sha256-C8KF9q/gxR+YTH8Pg9qmQ/mFnVHQ30vl4BBUQl8IPP4=",
           "owner": "ml-explore",
           "repo": "mlx-lm",
-          "rev": "e5baded8c1d286754edb479ffbde4655a68e2758"
+          "rev": "ab1806e8f5d6aa035973af194a1b9198ab4754dc"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/ml-explore/mlx-lm"
       },
       "update": {
         "branch": "main",
-        "kind": "github-commit"
+        "kind": "github-commit",
+        "policy": "manual",
+        "reason": "oMLX pins this exact revision and imports its SequenceStateMachine API"
       },
       "version": "0.31.3-unstable-2026-07-07"
     },

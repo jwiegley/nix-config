@@ -631,7 +631,10 @@ in
       # Python packages route doCheck through installCheckPhase; setting
       # doInstallCheck directly is ignored by mk-python-derivation.
       doCheck = true;
-      pythonImportsCheck = [ "omlx" ];
+      pythonImportsCheck = [
+        "omlx"
+        "omlx.scheduler"
+      ];
 
       # Smoke test that the wrapped entry point runs. omlx's CLI uses
       # subcommands (serve/launch/diagnose) and has no --version flag, so
