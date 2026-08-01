@@ -2416,24 +2416,40 @@ def validate_non_regression(
         ),
         "parent.measurements.nixFileReach",
     )
-    if current_reach.get("state") == "observed":
-        if previous_reach.get("state") == "observed":
-            current_denominator = set(
-                _unique_strings(current_reach.get("denominator"), "current denominator")
+    # A structural-only artifact carries no reach data, so the comparison below
+    # cannot run. That is intended -- it is what makes cheap refreshes possible
+    # -- but a declined guard must not be indistinguishable from a passing one,
+    # so say which side was unobserved and how to re-arm it.
+    unobserved = [
+        label
+        for label, reach in (("artifact", current_reach), ("parent", previous_reach))
+        if reach.get("state") != "observed"
+    ]
+    if unobserved:
+        print(
+            "coverage-report: Nix file reach comparison skipped "
+            f"({', '.join(unobserved)} unobserved); re-arm with "
+            "--write --collect-nix-reach --measure-pre-commit",
+            file=sys.stderr,
+            flush=True,
+        )
+    else:
+        current_denominator = set(
+            _unique_strings(current_reach.get("denominator"), "current denominator")
+        )
+        current_reached = set(
+            _unique_strings(
+                current_reach.get("reached"), "current reached", nonempty=False
             )
-            current_reached = set(
-                _unique_strings(
-                    current_reach.get("reached"), "current reached", nonempty=False
-                )
+        )
+        previous_reached = set(
+            _unique_strings(
+                previous_reach.get("reached"), "parent reached", nonempty=False
             )
-            previous_reached = set(
-                _unique_strings(
-                    previous_reach.get("reached"), "parent reached", nonempty=False
-                )
-            )
-            lost = sorted((previous_reached & current_denominator) - current_reached)
-            if lost:
-                raise CoverageError(f"Nix file reach regressed for paths: {lost}")
+        )
+        lost = sorted((previous_reached & current_denominator) - current_reached)
+        if lost:
+            raise CoverageError(f"Nix file reach regressed for paths: {lost}")
     current_structural = _expect_object(
         current.get("structural"), "artifact.structural"
     )

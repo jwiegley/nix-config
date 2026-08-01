@@ -921,7 +921,11 @@ class ArtifactTests(RepositoryFixture):
     def test_live_observation_can_follow_structural_only_baseline(self) -> None:
         previous = coverage_report.derive_report(self.repo)
         current = self.ready_report()
-        coverage_report.validate_non_regression(current, previous)
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            coverage_report.validate_non_regression(current, previous)
+        self.assertIn("Nix file reach comparison skipped", stderr.getvalue())
+        self.assertIn("parent unobserved", stderr.getvalue())
 
     def test_live_comparison_recollects_before_accepting_baseline(self) -> None:
         baseline = self.ready_report()
