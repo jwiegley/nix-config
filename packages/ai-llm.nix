@@ -231,8 +231,15 @@ in
       });
 
       # Cyclopts' interactive Zsh harness nondeterministically fails to reach
-      # its prompt in the Darwin sandbox. Remove only Zsh from that one
-      # cross-shell matrix; static Zsh tests and Bash/Fish behavior stay on.
+      # its prompt in the Darwin sandbox. Remove Zsh from the cross-shell
+      # matrix and drop the dedicated interactive-Zsh file; Bash/Fish behavior
+      # and the static Zsh completion snapshots stay on.
+      #
+      # The whole file goes rather than named tests because the failures do not
+      # converge: consecutive builds of the same derivation failed five then six
+      # tests, sharing only three, every one a pexpect TIMEOUT waiting on the
+      # `zsh -i` prompt. Naming them individually chases load-dependent noise,
+      # and each upstream release adds more.
       aiperfCyclopts =
         if prev.stdenv.hostPlatform.isDarwin then
           ps.cyclopts.overridePythonAttrs (old: {
@@ -241,9 +248,14 @@ in
                 --replace-fail 'params=["bash", "zsh", "fish"]' \
                 'params=["bash", "fish"]'
             '';
+            # --ignore-glob, so this hard-errors if upstream renames the file.
+            # That is deliberate: a rename should prompt a fresh look rather
+            # than silently re-enabling a flaky interactive suite.
+            disabledTestPaths = (old.disabledTestPaths or [ ]) ++ [
+              "tests/completion/test_zsh.py"
+            ];
             disabledTests = (old.disabledTests or [ ]) ++ [
               "test_choice_with_whitespace"
-              "test_choice_with_backtick"
             ];
           })
         else
