@@ -666,7 +666,7 @@
         "branch": "main",
         "kind": "github-commit"
       },
-      "version": "0.4.3"
+      "version": "0.4.7"
     },
     "mlx-embeddings": {
       "source": {
