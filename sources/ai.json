@@ -462,19 +462,21 @@
     "dflash-mlx": {
       "source": {
         "args": {
-          "hash": "sha256-qhbmkL0Ay9aF1tjZP5bLbqh33969hE6rA41XlaB2Vvs=",
-          "owner": "bstnxbt",
+          "hash": "sha256-5YK2lXxKagO0TwR2EmIUaTwouhJozrWmUVYg5J5hlSw=",
+          "owner": "jundot",
           "repo": "dflash-mlx",
-          "rev": "9ca002898b48e14c9727dec17299f497e8467870"
+          "rev": "474f8e1ba95864f5bb0759cd1b9a13c80abc5ce3"
         },
         "fetcher": "fetchFromGitHub",
-        "url": "https://github.com/bstnxbt/dflash-mlx"
+        "url": "https://github.com/jundot/dflash-mlx"
       },
       "update": {
         "branch": "main",
-        "kind": "github-commit"
+        "kind": "github-commit",
+        "policy": "manual",
+        "reason": "oMLX pins this exact fork and commit for its speculative-decoding kernels"
       },
-      "version": "0.1.10"
+      "version": "0.1.10+omlx.3"
     },
     "espeakng-loader": {
       "source": {

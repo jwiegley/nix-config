@@ -201,8 +201,8 @@ in
       };
 
       # dflash-mlx - lossless DFlash speculative decoding for MLX.
-      # Required by omlx; not in nixpkgs. Pin the exact commit omlx pins
-      # (9ca0028, version 0.1.10: Apple G17 NAX verify, prefix snapshot
+      # Required by omlx; not in nixpkgs. Pin the exact fork and commit omlx pins
+      # (474f8e1, version 0.1.10+omlx.3: Apple G17 NAX verify, prefix snapshot
       # metrics, CopySpec mode, full-context draft-layer cache checks) so
       # the speculative-decode kernels match what omlx was tested against.
       dflash-mlx = pfinal.buildPythonPackage rec {

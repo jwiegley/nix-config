@@ -64,6 +64,8 @@ in
         mcp
         jsonschema
         pytz
+        prometheus-client
+        lm-format-enforcer
       ];
 
       dontBuild = true;
