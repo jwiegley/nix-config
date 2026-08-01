@@ -3,7 +3,7 @@
  "artifact": "consumer-inventory",
  "generatedBy": "test/bin/consumer-inventory",
  "purpose": "Merged, classified inventory of every reference from every consumer into nix-config, so the config/ai -> config/fleet rename (#47) and its straggler sweep (#63) know exactly who breaks. One record per reference.",
- "repoHead": "d9578cde33072fdb9ac3c18f3210733da92fdb53",
+ "repoHead": "4e5670331e498208bf4f1e30f249a9d6949d4d6c",
  "consumerLayout": "nix-config at the repository root; consumer checkouts as siblings (nixos, vps, andoria). Absolute paths are intentionally omitted: see the comment at this key in test/bin/consumer-inventory.",
  "classificationScheme": {
   "rename-now": "Stale operational reference to the literal config/ai directory inside nix-config; #47 must leave none.",
@@ -210,7 +210,7 @@
    "kind": "internal-config-ai-ref",
    "classification": "retain-with-owner",
    "file": "config/ai.nix",
-   "line": 210,
+   "line": 224,
    "text": "#     at config/ai.nix:225:27",
    "owner": "config/ai.nix Home Manager module",
    "trigger": "none; the sibling module filename is not the renamed directory",
