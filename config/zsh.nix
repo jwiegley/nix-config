@@ -16,6 +16,12 @@ let
 
   dotDir = "${config.xdg.configHome}/zsh";
   itermSource = (import ../packages/source-catalog.nix "tools").iterm2-shell-integration;
+  scriptsPath = "${vars.home}/src/scripts";
+  scriptsFirst = ''
+    typeset -U path PATH
+    path=("${scriptsPath}" ''${path:#${scriptsPath}})
+    export PATH
+  '';
 in
 {
   # Declare the option this module READS (config.johnw.host). Relying on a
@@ -109,48 +115,53 @@ in
     # completers do not. carapace's bridge is sourced late in .zshrc, so
     # setting this in .zshenv (via envExtra) guarantees it is exported before
     # that bridge runs and decides which commands to claim.
-    envExtra = ''
-      export CARAPACE_EXCLUDES=ssh,scp,sftp,rsync
-    ''
-    + lib.optionalString isLinux ''
-      if [[ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then
-        . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-      elif [[ -f ~/.nix-profile/etc/profile.d/nix.sh ]]; then
-        . ~/.nix-profile/etc/profile.d/nix.sh
-      fi
-    '';
+    envExtra =
+      scriptsFirst
+      + ''
+        export CARAPACE_EXCLUDES=ssh,scp,sftp,rsync
+      ''
+      + lib.optionalString isLinux ''
+        if [[ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then
+          . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+        elif [[ -f ~/.nix-profile/etc/profile.d/nix.sh ]]; then
+          . ~/.nix-profile/etc/profile.d/nix.sh
+        fi
+      '';
 
-    profileExtra = ''
-      setopt extended_glob
-    ''
-    + lib.optionalString isLinux ''
-      . ${pkgs.zsh-z}/share/zsh-z/zsh-z.plugin.zsh
-    '';
+    profileExtra =
+      scriptsFirst
+      + ''
+        setopt extended_glob
+      ''
+      + lib.optionalString isLinux ''
+        . ${pkgs.zsh-z}/share/zsh-z/zsh-z.plugin.zsh
+      '';
 
-    initContent = ''
-      # Make sure that fzf does not override the meaning of ^T
-      bindkey '^T' transpose-chars
-      bindkey -e
+    initContent = lib.mkOrder 2000 (
+      ''
+        # Make sure that fzf does not override the meaning of ^T
+        bindkey '^T' transpose-chars
+        bindkey -e
 
-      if [[ $TERM == dumb || $TERM == emacs || ! -o interactive ]]; then
-          unsetopt zle
-          unset zle_bracketed_paste
-          export PROMPT='$ '
-          export RPROMPT=""
-          export PS1='$ '
-    ''
-    + lib.optionalString isDarwin ''
-      else
-          . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
-          . ${config.xdg.configHome}/shellfish/shellfishrc
+        if [[ $TERM == dumb || $TERM == emacs || ! -o interactive ]]; then
+            unsetopt zle
+            unset zle_bracketed_paste
+            export PROMPT='$ '
+            export RPROMPT=""
+            export PS1='$ '
+      ''
+      + lib.optionalString isDarwin ''
+        else
+            . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
+            . ${config.xdg.configHome}/shellfish/shellfishrc
 
-          fpath=("${config.xdg.configHome}/zsh/completions" $fpath)
+            fpath=("${config.xdg.configHome}/zsh/completions" $fpath)
 
-          ${lib.optionalString config.johnw.host.isHera ''
-            # OpenClaw Completion
-            [[ -f "${vars.home}/.openclaw/completions/openclaw.zsh" ]] && \
-              source "${vars.home}/.openclaw/completions/openclaw.zsh"
-          ''}
+            ${lib.optionalString config.johnw.host.isHera ''
+              # OpenClaw Completion
+              [[ -f "${vars.home}/.openclaw/completions/openclaw.zsh" ]] && \
+                source "${vars.home}/.openclaw/completions/openclaw.zsh"
+            ''}
 
           # Set terminal/tmux title to current directory
           __update_terminal_title() {
@@ -181,10 +192,10 @@ in
           # Native remote-path completion for ssh/scp/sftp/rsync is preserved
           # by keeping these commands out of carapace (see CARAPACE_EXCLUDES in
           # envExtra above); compinit then auto-registers _ssh/_rsync for them.
-      fi
-    ''
-    + lib.optionalString isLinux ''
-      else
+        fi
+      ''
+      + lib.optionalString isLinux ''
+        else
           autoload -Uz compinit
           compinit
 
@@ -199,8 +210,10 @@ in
             printf '\e[>0u\e[>4;0m' 2>/dev/null
           }
           add-zsh-hook precmd __reset_broken_terminal
-      fi
-    '';
+        fi
+      ''
+      + scriptsFirst
+    );
 
     plugins = lib.optionals isDarwin [
       {
