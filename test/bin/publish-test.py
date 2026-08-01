@@ -15,7 +15,8 @@ import subprocess
 import tempfile
 import unittest
 
-REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+HERE = os.path.dirname(os.path.abspath(__file__))
+REPO = os.path.dirname(os.path.dirname(HERE))
 PUBLISH = os.path.join(REPO, "bin", "publish")
 
 
@@ -801,7 +802,12 @@ class TestDoesNotEscapeItsSandbox(unittest.TestCase):
                 "python3", "-m", "unittest",
                 "publish-test.TestNoop.test_both_already_current_is_a_noop_and_succeeds",
             ],
-            cwd=REPO, capture_output=True, text=True, env=with_hostile,
+            # cwd must be this file's directory: `-m unittest publish-test...`
+            # resolves the module through cwd on sys.path, and there is no
+            # publish-test at the repository root. f93f232d moved this suite
+            # from bin/ to test/bin/ and changed HERE to REPO, which silently
+            # turned this guard into an unconditional failure.
+            cwd=HERE, capture_output=True, text=True, env=with_hostile,
         )
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
