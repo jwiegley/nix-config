@@ -91,6 +91,14 @@ let
     else
       package;
 
+  canonicalPiPackages = forAllSystems (
+    system:
+    let
+      pkgs = mkPkgs system;
+    in
+    patchAgentPackage pkgs "pi" inputs.llm-agents.packages.${system}.pi
+  );
+
   optAgent =
     pkgs: name:
     let
@@ -339,8 +347,10 @@ in
     let
       pkgs = mkPkgs system;
     in
-    {
+    pkgs.pi-gallery.packages
+    // {
       default = mkAiToolchain pkgs;
+      pi = canonicalPiPackages.${system};
       inherit (pkgs)
         agent-http-header-bridge
         agent-resources
@@ -349,7 +359,6 @@ in
         plasma-wiki
         ;
     }
-    // pkgs.pi-gallery.packages
   );
 
   apps = forAllSystems (
@@ -413,7 +422,7 @@ in
         piMcpAdapter = inputs.pi-mcp-adapter;
         piOpenaiServerCompaction = inputs.pi-openai-server-compaction;
         piQuiet = inputs.pi-quiet;
-        piPackage = patchAgentPackage pkgs "pi" inputs.llm-agents.packages.${system}.pi;
+        piPackage = canonicalPiPackages.${system};
       };
       agent-wrappers = pkgs.callPackage ../test/ai/agent-wrappers.nix {
         inherit patchAgentPackage;
@@ -425,14 +434,16 @@ in
       };
       pi-gallery = pkgs.callPackage ../test/ai/pi-gallery.nix {
         inherit sourceForChecks;
-        piPackage = patchAgentPackage pkgs "pi" inputs.llm-agents.packages.${system}.pi;
+        piPackage = canonicalPiPackages.${system};
+        upstreamPiPackage = inputs.llm-agents.packages.${system}.pi;
         piPackages = pkgs.pi-gallery.packages // {
           inherit (pkgs) agent-resources pi-gallery;
+          pi = canonicalPiPackages.${system};
         };
       };
       pi-fleet-theme = pkgs.callPackage ../test/ai/pi-fleet-theme.nix {
         inherit sourceForChecks;
-        piPackage = patchAgentPackage pkgs "pi" inputs.llm-agents.packages.${system}.pi;
+        piPackage = canonicalPiPackages.${system};
       };
       format = check "format" "format-check.sh" qualityDeps.format "";
       lint = check "lint" "lint.sh" qualityDeps.lint "";

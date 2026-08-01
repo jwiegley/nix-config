@@ -235,15 +235,15 @@
     },
     "pi-hashline-edit-pro": {
       "hashes": {
-        "npmDepsHash": "sha256-c3BVzLFNqNyIRgdouretwS2z0AQ2CIpdGaMsdvuqP50="
+        "npmDepsHash": "sha256-sk7mvBP3/SwAFt3GYN1OL2SwNk1s5nC47UUsT1cxB2Y="
       },
       "source": {
         "args": {
-          "hash": "sha256-QPBcSEh7z6+mXVDsfqCmMWznYi8KgHDX00BMq2cVmE8=",
-          "url": "https://registry.npmjs.org/pi-hashline-edit-pro/-/pi-hashline-edit-pro-0.18.4.tgz"
+          "hash": "sha256-WrPRKhBNUJc6l4u1v4k8dftGUQA2Pj754zE07h3QTxU=",
+          "url": "https://registry.npmjs.org/pi-hashline-edit-pro/-/pi-hashline-edit-pro-0.17.5.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-hashline-edit-pro/-/pi-hashline-edit-pro-0.18.4.tgz"
+        "url": "https://registry.npmjs.org/pi-hashline-edit-pro/-/pi-hashline-edit-pro-0.17.5.tgz"
       },
       "update": {
         "artifacts": [
@@ -251,9 +251,11 @@
         ],
         "kind": "npm-release",
         "normalizer": "pi-gallery-v1",
-        "package": "pi-hashline-edit-pro"
+        "package": "pi-hashline-edit-pro",
+        "policy": "manual",
+        "reason": "0.18.0 and newer import node:sqlite, which Pi's bundled Bun standalone runtime cannot resolve"
       },
-      "version": "0.18.4"
+      "version": "0.17.5"
     },
     "pi-insights": {
       "hashes": {

@@ -9,10 +9,12 @@
   piPackages,
   runCommand,
   sourceForChecks,
+  upstreamPiPackage,
 }:
 
 let
   root = package: name: "${package}/share/pi-packages/${name}";
+  canonicalPiPackage = piPackages.pi;
   manifest = piPackages.pi-gallery.manifest;
   catalogSourceIds = builtins.attrNames manifest.sourceCatalog;
   declaredSourceIds =
@@ -101,6 +103,9 @@ assert builtins.length (builtins.attrNames manifest.members) == builtins.length 
 assert sourceCatalogComplete;
 assert orphanedCatalogRejected;
 assert manifestPackagesMatch;
+assert piPackage.drvPath == canonicalPiPackage.drvPath;
+assert piPackage.outPath == canonicalPiPackage.outPath;
+assert (piPackage.src or null) == (upstreamPiPackage.src or null);
 assert (piPackage.toolRendererWrapperAbi or null) == 1;
 runCommand "pi-gallery-check"
   {
@@ -132,9 +137,13 @@ runCommand "pi-gallery-check"
       bun test index.test.ts
     )
 
+    echo "Pi gallery check: member versions"
     ${memberVersionChecks}
+    echo "Pi gallery check: support versions"
     ${supportVersionChecks}
+    echo "Pi gallery check: normalization parity"
     ${normalizationParityChecks}
+    echo "Pi gallery check: packaged roots"
 
     for package_root in ${packageRoots}; do
       [ -f "$package_root/package.json" ] || fail "missing package manifest: $package_root"
@@ -237,7 +246,6 @@ runCommand "pi-gallery-check"
     [ -d ${roots.subagents}/node_modules/yaml ]
     [ ! -e ${roots.subagents}/node_modules/typebox ]
     [ -f ${roots.subagents}/skills/pi-subagents/SKILL.md ]
-
     cymbal_version=$(${lib.getExe piPackages.cymbal} --version)
     printf '%s\n' "$cymbal_version" | grep -F '${manifest.supportSources.cymbal.version}' >/dev/null \
       || fail "Cymbal version drifted: $cymbal_version"
@@ -632,8 +640,9 @@ runCommand "pi-gallery-check"
         --extension "$routing_smoke/synthetic.ts" \
         --provider router --model sol "$prompt" \
         </dev/null >"$routing_smoke/output" 2>"$routing_smoke/error" || {
+          status=$?
           cat "$routing_smoke/error" >&2
-          fail "model router failed for expected $expected tier"
+          fail "model router failed for expected $expected tier with status $status"
         }
       [ "$(cat "$routing_smoke/output")" = "$expected" ] || {
         cat "$routing_smoke/output" >&2
