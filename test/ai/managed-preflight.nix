@@ -35,16 +35,27 @@ let
       "anvil-tools"
     ];
     retiredManifestSkillItems = [ "anvil" ];
-    codexRoots = [
-      ".config/codex"
-      ".config/codex-explicit"
-      ".config/codex-inline"
-      ".config/codex-sole"
-    ];
-    claudeRoots = [
-      ".config/claude/personal"
-      ".config/claude/positron"
-    ];
+    codexManagedServers = {
+      ".config/codex" = [
+        "Ref"
+        "perplexity"
+      ];
+      ".config/codex-explicit" = [ ];
+      ".config/codex-inline" = [ ];
+      ".config/codex-sole" = [ ];
+    };
+    claudeManagedServers = {
+      ".config/claude/personal" = [
+        "Ref"
+        "personal-managed"
+        "perplexity"
+      ];
+      ".config/claude/positron" = [
+        "positron-managed"
+        "Ref"
+        "perplexity"
+      ];
+    };
     piRoots = [ ".config/pi/agent" ];
     manifestRoots = [
       ".config/claude/personal"
@@ -1240,6 +1251,15 @@ pkgs.runCommand "ai-managed-preflight"
     [mcp_servers.keep]
     command = "/bin/keep"
 
+    [mcp_servers.Ref]
+    url = "https://example.invalid/mcp?apiKey=SYNTHETIC_SECRET"
+
+    [mcp_servers.perplexity]
+    command = "perplexity"
+
+    [mcp_servers.perplexity.env]
+    PERPLEXITY_API_KEY = "SYNTHETIC_SECRET"
+
     [mcp_servers.anvil]
     command = "anvil-mcp"
 
@@ -1264,6 +1284,10 @@ pkgs.runCommand "ai-managed-preflight"
     {
       "mcpServers": {
         "anvil": {"command": "anvil-mcp"},
+        "Ref": {"url": "https://example.invalid/mcp?apiKey=SYNTHETIC_SECRET"},
+        "perplexity": {"env": {"PERPLEXITY_API_KEY": "SYNTHETIC_SECRET"}},
+        "personal-managed": {"command": "/bin/personal"},
+        "positron-managed": {"command": "/bin/positron"},
         "keep": {"command": "/bin/keep"}
       },
       "cachedGrowthBookFeatures": {"tengu_anvil_flag": true},
@@ -1332,10 +1356,13 @@ pkgs.runCommand "ai-managed-preflight"
       "$retired_home/.config/codex/config.toml" \
       "$retired_home/.config/codex/config.toml.bak"; do
       tomlq -e '.mcp_servers.anvil == null' "$retired_toml" >/dev/null
+      tomlq -e '.mcp_servers.Ref == null' "$retired_toml" >/dev/null
+      tomlq -e '.mcp_servers.perplexity == null' "$retired_toml" >/dev/null
       tomlq -e '.mcp_servers.keep.command == "/bin/keep"' "$retired_toml" >/dev/null
       tomlq -e '.projects."/tmp/anvil".trusted == true' "$retired_toml" >/dev/null
       tomlq -e '.note | contains("[mcp_servers.anvil]")' "$retired_toml" >/dev/null
       test "$(stat -c %a "$retired_toml")" = 600
+      test "$(grep -F -c SYNTHETIC_SECRET "$retired_toml")" = 0
     done
     if [ "$retired_expect_xattr" -eq 1 ]; then
       test "$(xattr -p com.openai.synthetic \
@@ -1351,12 +1378,29 @@ pkgs.runCommand "ai-managed-preflight"
       "$retired_home/.config/claude/personal/.claude.json" \
       "$retired_home/.config/claude/positron/.claude.json"; do
       jq -e '.mcpServers.anvil == null' "$retired_claude" >/dev/null
+      jq -e '.mcpServers.Ref == null' "$retired_claude" >/dev/null
+      jq -e '.mcpServers.perplexity == null' "$retired_claude" >/dev/null
       jq -e '.mcpServers.keep.command == "/bin/keep"' "$retired_claude" >/dev/null
+      case "$retired_claude" in
+        */personal/*)
+          jq -e '
+            .mcpServers."personal-managed" == null
+            and .mcpServers."positron-managed".command == "/bin/positron"
+          ' "$retired_claude" >/dev/null
+          ;;
+        */positron/*)
+          jq -e '
+            .mcpServers."positron-managed" == null
+            and .mcpServers."personal-managed".command == "/bin/personal"
+          ' "$retired_claude" >/dev/null
+          ;;
+      esac
       jq -e '.cachedGrowthBookFeatures.tengu_anvil_flag == true' "$retired_claude" >/dev/null
       python3 -c \
         'import json,sys; assert json.load(open(sys.argv[1]))["largeInteger"] == 9007199254740993' \
         "$retired_claude"
       grep -F '0.123456789012345678901234567890' "$retired_claude" >/dev/null
+      test "$(grep -F -c SYNTHETIC_SECRET "$retired_claude")" = 0
       test "$(stat -c %a "$retired_claude")" = 600
     done
     jq -e '.servers.anvil == null and .servers.keep.tools[0].name == "keep"' \

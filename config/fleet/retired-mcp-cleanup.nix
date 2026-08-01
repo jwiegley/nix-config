@@ -5,8 +5,8 @@
   retiredServers,
   retiredManifestMcpItems,
   retiredManifestSkillItems,
-  codexRoots ? [ ],
-  claudeRoots ? [ ],
+  codexManagedServers ? { },
+  claudeManagedServers ? { },
   piRoots ? [ ],
   manifestRoots ? [ ],
 }:
@@ -19,10 +19,27 @@ let
     && path != ""
     && !(lib.hasPrefix "/" path)
     && builtins.all (part: part != "" && part != "." && part != "..") (lib.splitString "/" path);
-  roots = unique (codexRoots ++ claudeRoots ++ piRoots ++ manifestRoots);
+  validManagedServers =
+    value:
+    builtins.isAttrs value
+    && builtins.all validRelativePath (builtins.attrNames value)
+    && builtins.all (
+      names:
+      builtins.isList names
+      && names == unique names
+      && builtins.all (
+        name: builtins.isString name && builtins.match "^[A-Za-z0-9][A-Za-z0-9_-]*$" name != null
+      ) names
+    ) (builtins.attrValues value);
+  roots = unique (
+    builtins.attrNames codexManagedServers
+    ++ builtins.attrNames claudeManagedServers
+    ++ piRoots
+    ++ manifestRoots
+  );
   plan = {
-    claudeRoots = unique claudeRoots;
-    codexRoots = unique codexRoots;
+    claudeManagedServers = lib.mapAttrs (_: unique) claudeManagedServers;
+    codexManagedServers = lib.mapAttrs (_: unique) codexManagedServers;
     manifestRoots = unique manifestRoots;
     piRoots = unique piRoots;
     retiredManifestMcpItems = unique retiredManifestMcpItems;
@@ -52,6 +69,8 @@ assert plan.retiredServers != [ ];
 assert builtins.length plan.retiredServers == builtins.length retiredServers;
 assert builtins.length plan.retiredManifestMcpItems == builtins.length retiredManifestMcpItems;
 assert builtins.length plan.retiredManifestSkillItems == builtins.length retiredManifestSkillItems;
+assert validManagedServers plan.codexManagedServers;
+assert validManagedServers plan.claudeManagedServers;
 assert builtins.all (
   name: builtins.isString name && builtins.match "^[A-Za-z0-9][A-Za-z0-9_-]*$" name != null
 ) (plan.retiredServers ++ plan.retiredManifestMcpItems ++ plan.retiredManifestSkillItems);

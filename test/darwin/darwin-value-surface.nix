@@ -89,6 +89,7 @@ let
     host:
     let
       surface = actualHosts.${host};
+      homePackages = darwinConfigurations.${host}.config.home-manager.users.johnw.home.packages;
     in
     [
       {
@@ -98,6 +99,12 @@ let
       {
         ok = surface.launchd.userAgentNames != [ ];
         message = "${host} launchd.user.agents projection is empty (wrong launchd path?)";
+      }
+      {
+        ok = builtins.any (
+          package: (package.pname or null) == "pi" && (package.meta.mainProgram or null) == "pi"
+        ) homePackages;
+        message = "${host} home package set lost the canonical Pi package";
       }
       {
         ok = surface.launchd.daemonNames != [ ];

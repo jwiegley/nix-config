@@ -72,6 +72,19 @@ let
         )
       )
     );
+  managedMcpServersForClient =
+    client:
+    lib.listToAttrs (
+      map (
+        profileId:
+        let
+          profile = catalog.profiles.${profileId};
+        in
+        lib.nameValuePair profile.root (
+          lib.sort builtins.lessThan (builtins.attrNames (selectedFor profileId).mcpServers)
+        )
+      ) (builtins.filter (profileId: catalog.profiles.${profileId}.client == client) profileIds)
+    );
   allProfileRoots = lib.sort builtins.lessThan (
     lib.unique (map (profile: profile.root) (builtins.attrValues profilesForHome))
   );
@@ -133,8 +146,8 @@ let
     retiredServers = catalog.retiredMcpServers;
     retiredManifestMcpItems = catalog.retiredPromptdeployMcpItems;
     retiredManifestSkillItems = catalog.retiredPromptdeploySkillItems;
-    codexRoots = rootsForClient "codex";
-    claudeRoots = rootsForClient "claude";
+    codexManagedServers = managedMcpServersForClient "codex";
+    claudeManagedServers = managedMcpServersForClient "claude";
     piRoots = rootsForClient "pi";
     manifestRoots = allProfileRoots;
   };
@@ -301,15 +314,15 @@ in
       message = "nix-managed AI Pi selection must have exactly one mutable guard";
     }
     {
-      assertion = !piSelected || pairedAiInput != null;
-      message = "nix-managed AI Pi profile requires inputs.nix-config-ai";
+      assertion = pairedAiInput != null;
+      message = "nix-managed AI home requires inputs.nix-config-ai for the canonical Pi package";
     }
     {
-      assertion = !piSelected || pairedAiInput ? packages && pairedAiInput.packages ? ${system};
+      assertion = pairedAiInput ? packages && pairedAiInput.packages ? ${system};
       message = "inputs.nix-config-ai has no packages for ${system}";
     }
     {
-      assertion = !piSelected || pairedPiPackage != null;
+      assertion = pairedPiPackage != null;
       message = "inputs.nix-config-ai.packages.${system}.pi is missing";
     }
     {
@@ -333,7 +346,7 @@ in
       };
     packages =
       lib.optional droidSelected pkgs.agent-http-header-bridge
-      ++ lib.optional (piSelected && pairedPiPackage != null) pairedPiPackage
+      ++ lib.optional (pairedPiPackage != null) pairedPiPackage
       ++ lib.optionals piSelected piRuntimePackages;
     sessionVariables = lib.optionalAttrs codexSelected {
       OMLX_API_KEY = "dummy-key";

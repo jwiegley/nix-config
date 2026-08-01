@@ -22,8 +22,8 @@ import simplejson as json
 
 MAX_FILE_BYTES = 64 * 1024 * 1024
 PLAN_KEYS = {
-    "claudeRoots",
-    "codexRoots",
+    "claudeManagedServers",
+    "codexManagedServers",
     "manifestRoots",
     "piRoots",
     "retiredManifestMcpItems",
@@ -74,6 +74,15 @@ def string_list(value: Any, field: str) -> list[str]:
     return value
 
 
+def managed_server_map(value: Any, field: str) -> dict[str, list[str]]:
+    if not isinstance(value, dict):
+        raise CleanupError(f"invalid plan field: {field}")
+    result: dict[str, list[str]] = {}
+    for root, names in value.items():
+        result[relative_root(root)] = string_list(names, f"{field}.{root}")
+    return result
+
+
 def relative_root(value: str) -> str:
     path = PurePosixPath(value)
     if (
@@ -85,13 +94,24 @@ def relative_root(value: str) -> str:
     return value
 
 
-def load_plan(raw: str) -> dict[str, list[str]]:
+def load_plan(raw: str) -> dict[str, Any]:
     plan = load_json(raw)
     if set(plan) != PLAN_KEYS:
         raise CleanupError("invalid cleanup plan keys")
-    result = {key: string_list(plan[key], key) for key in PLAN_KEYS}
-    for key in ("claudeRoots", "codexRoots", "manifestRoots", "piRoots"):
+    result = {
+        key: string_list(plan[key], key)
+        for key in (
+            "manifestRoots",
+            "piRoots",
+            "retiredManifestMcpItems",
+            "retiredManifestSkillItems",
+            "retiredServers",
+        )
+    }
+    for key in ("manifestRoots", "piRoots"):
         result[key] = [relative_root(value) for value in result[key]]
+    for key in ("claudeManagedServers", "codexManagedServers"):
+        result[key] = managed_server_map(plan[key], key)
     if not result["retiredServers"]:
         raise CleanupError("retired server list is empty")
     return result
@@ -117,12 +137,22 @@ def remove_keys(table: dict[str, Any] | None, names: list[str]) -> bool:
     return changed
 
 
-def clean_json(text: str, kind: str, plan: dict[str, list[str]]) -> str:
+def managed_and_retired(plan: dict[str, Any], managed: list[str]) -> list[str]:
+    return list(dict.fromkeys([*managed, *plan["retiredServers"]]))
+
+
+def clean_json(
+    text: str,
+    kind: str,
+    plan: dict[str, Any],
+    managed: list[str] | None = None,
+) -> str:
     value = load_json(text)
     changed = False
     if kind == "claude":
         changed = remove_keys(
-            require_object(value, "mcpServers"), plan["retiredServers"]
+            require_object(value, "mcpServers"),
+            managed_and_retired(plan, managed or []),
         )
     elif kind == "pi-cache":
         changed = remove_keys(require_object(value, "servers"), plan["retiredServers"])
@@ -155,7 +185,7 @@ def clean_json(text: str, kind: str, plan: dict[str, list[str]]) -> str:
     return rendered
 
 
-def clean_toml(text: str, plan: dict[str, list[str]]) -> str:
+def clean_toml(text: str, plan: dict[str, Any], managed: list[str]) -> str:
     try:
         document = tomlkit.parse(text)
     except Exception as error:
@@ -173,7 +203,7 @@ def clean_toml(text: str, plan: dict[str, list[str]]) -> str:
         raise CleanupError("managed TOML container has the wrong type")
 
     changed = False
-    for name in plan["retiredServers"]:
+    for name in managed_and_retired(plan, managed):
         if name in mcp_servers:
             del mcp_servers[name]
             expected_mcp.pop(name, None)
@@ -393,7 +423,7 @@ def update_file(
         os.close(parent_fd)
 
 
-def process(home: Path, plan: dict[str, list[str]], dry_run: bool) -> None:
+def process(home: Path, plan: dict[str, Any], dry_run: bool) -> None:
     if not home.is_absolute():
         raise CleanupError("cleanup home must be absolute")
     try:
@@ -407,19 +437,19 @@ def process(home: Path, plan: dict[str, list[str]], dry_run: bool) -> None:
 
     home_fd = os.open(home, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC | os.O_NOFOLLOW)
     try:
-        for root in plan["codexRoots"]:
+        for root, managed in plan["codexManagedServers"].items():
             for filename in ("config.toml", "config.toml.bak"):
                 update_file(
                     home_fd,
                     f"{root}/{filename}",
-                    lambda text: clean_toml(text, plan),
+                    lambda text, names=managed: clean_toml(text, plan, names),
                     dry_run,
                 )
-        for root in plan["claudeRoots"]:
+        for root, managed in plan["claudeManagedServers"].items():
             update_file(
                 home_fd,
                 f"{root}/.claude.json",
-                lambda text: clean_json(text, "claude", plan),
+                lambda text, names=managed: clean_json(text, "claude", plan, names),
                 dry_run,
             )
         for root in plan["piRoots"]:
