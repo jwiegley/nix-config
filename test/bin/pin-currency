@@ -60,7 +60,7 @@ timeout_seconds=${PIN_CURRENCY_TIMEOUT:-1800}
 #           for human verification, never auto-flagged: a green build here would
 #           say nothing about whether the reason still holds.
 declare -a PIN_MAP=(
-    "nixpkgs-last-good:build:ntp aprutil libcdio-paranoia folly fizz mvfst wangle fbthrift fb303 edencommon watchman"
+    "nixpkgs-last-good:build:ntp"
     # mesa's condition is "Hydra is green on aarch64-darwin" — cache availability
     # and rebuild cost, not whether a local build can eventually succeed.
     "nixpkgs-pre-mesa-26-1:manual:mesa xorg-server xquartz"
@@ -77,16 +77,33 @@ if [[ ${1:-} == --list ]]; then
     exit 0
 fi
 
-# Refuse if the overlay declares a pin this map does not know about. Otherwise
-# adding a pin would silently shrink what this reports, which is the failure
-# mode the report exists to prevent.
-declared=$(grep -oE 'nixpkgs "nixpkgs-[a-z0-9-]+"' overlays/00-last-known-good.nix |
-    sed 's/.*"\(.*\)"/\1/' | sort -u)
-known=$(for entry in "${PIN_MAP[@]}"; do printf '%s\n' "${entry%%:*}"; done | sort -u)
-if [[ $declared != "$known" ]]; then
-    fail "pin map disagrees with overlays/00-last-known-good.nix"
-    fail "  declared: $(printf '%s ' $declared)"
-    fail "  known:    $(printf '%s ' $known)"
+# Refuse if this map and the overlay disagree, on pin names OR on the packages
+# each pin supplies. Names alone are not enough: releasing packages from a pin
+# while leaving them listed here would make the report build packages that are
+# no longer pinned and call them expired. That happened once, in 941c69e3.
+overlay=overlays/00-last-known-good.nix
+declared=$(
+    python3 - "$overlay" <<'PARSE'
+import re, sys
+text = open(sys.argv[1]).read()
+# `preMesa26_1 = nixpkgs "nixpkgs-pre-mesa-26-1";` -> variable to catalog name
+catalog = dict(re.findall(r'(\w+)\s*=\s*nixpkgs\s+"([a-z0-9-]+)"', text))
+for var, packages in re.findall(r'inherit\s+\((\w+)\)\s*(.*?);', text, re.S):
+    name = catalog.get(var)
+    if name:
+        print(name + ":" + " ".join(sorted(packages.split())))
+PARSE
+)
+known=$(for entry in "${PIN_MAP[@]}"; do
+    rest=${entry#*:}
+    printf '%s:%s\n' "${entry%%:*}" "$(printf '%s\n' ${rest#*:} | sort | tr '\n' ' ' | sed 's/ $//')"
+done)
+if [[ $(printf '%s\n' "$declared" | sort) != $(printf '%s\n' "$known" | sort) ]]; then
+    fail "pin map disagrees with $overlay"
+    fail "  overlay:"
+    printf '%s\n' "$declared" | sed 's/^/    /' >&2
+    fail "  map:"
+    printf '%s\n' "$known" | sed 's/^/    /' >&2
     exit 2
 fi
 
