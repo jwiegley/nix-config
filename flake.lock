@@ -6449,11 +6449,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1785554702,
-        "narHash": "sha256-6Bb/88Bm0MJAEFm+qcvCNM93vcdW1zx09ZbSwklBZ3A=",
+        "lastModified": 1785587135,
+        "narHash": "sha256-c54SY2tMFB5b25Gjfb9c9Ihk1aDfGDuht4wzh7jZtk4=",
         "owner": "jwiegley",
         "repo": "scripts",
-        "rev": "081688e77e158f5b662c0f935859e94da5ad9286",
+        "rev": "499f9fe06744b31c8c7bb68b9c0189e0ab66bbf5",
         "type": "github"
       },
       "original": {
