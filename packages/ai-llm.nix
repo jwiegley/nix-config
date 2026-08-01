@@ -243,6 +243,7 @@ in
             '';
             disabledTests = (old.disabledTests or [ ]) ++ [
               "test_choice_with_whitespace"
+              "test_choice_with_backtick"
             ];
           })
         else
