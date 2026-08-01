@@ -1158,7 +1158,7 @@ class TestGatesAreRegistered(unittest.TestCase):
         makefile = (REPO / "Makefile").read_text()
         self.assertRegex(
             makefile,
-            r"(?m)^\ttest/bin/quality --python-tier pre-push python-test coverage darwin-surface$",
+            r"(?m)^\ttest/bin/quality --python-tier pre-push python-test coverage output-denominators darwin-surface$",
         )
 
     def test_python_tiers_are_wired_without_a_second_quality_authority(self):
@@ -1182,7 +1182,7 @@ class TestGatesAreRegistered(unittest.TestCase):
         self.assertRegex(
             (REPO / "Makefile").read_text(),
             r"(?m)^test:\n"
-            r"\ttest/bin/quality --python-tier pre-push python-test coverage darwin-surface$",
+            r"\ttest/bin/quality --python-tier pre-push python-test coverage output-denominators darwin-surface$",
         )
 
     def test_darwin_surface_is_not_wired_to_remote_ci_until_root_is_portable(self):
