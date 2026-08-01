@@ -157,11 +157,7 @@ let
   ) selected.agents;
 
   skillFiles = lib.mapAttrs' (
-    name: item:
-    lib.nameValuePair ".agents/skills/${name}" {
-      inherit (item) source;
-      recursive = true;
-    }
+    name: item: lib.nameValuePair ".agents/skills/${name}" { inherit (item) source; }
   ) selected.skills;
 
   commandFiles = lib.mapAttrs' (
@@ -171,7 +167,6 @@ let
         name = "command-${name}";
         description = item.metadata.description or "Managed command '${name}'.";
       } item.source;
-      recursive = true;
     }
   ) selected.commands;
 
@@ -182,7 +177,6 @@ let
         name = "prompt-${name}";
         description = "Managed prompt '${name}'.";
       } item.source;
-      recursive = true;
     }
   ) selected.prompts;
 
