@@ -155,6 +155,15 @@
   ],
   "pythonInventory": [
     {
+      "path": "config/fleet/retired-mcp-cleanup.py",
+      "kind": "product",
+      "tier": "ci-on-demand",
+      "evidence": [
+        "checks.<system>.ai-managed-preflight executes exact retirement, preservation, refusal, dry-run, and idempotence cases"
+      ],
+      "gap": "Routine portable-eval uses --no-build; the focused Nix check and make test execute behavior."
+    },
+    {
       "path": "test/bin/agent-deck-env-test.py",
       "kind": "test",
       "tier": "pre-commit",

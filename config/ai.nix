@@ -63,6 +63,18 @@ let
   profilesForHome = lib.filterAttrs (_: profile: profile.host == profileHost) catalog.profiles;
   homeClassKnown = profilesForHome != { };
   profileIds = lib.sort builtins.lessThan (builtins.attrNames profilesForHome);
+  rootsForClient =
+    client:
+    lib.sort builtins.lessThan (
+      lib.unique (
+        map (profile: profile.root) (
+          builtins.attrValues (lib.filterAttrs (_: profile: profile.client == client) profilesForHome)
+        )
+      )
+    );
+  allProfileRoots = lib.sort builtins.lessThan (
+    lib.unique (map (profile: profile.root) (builtins.attrValues profilesForHome))
+  );
 
   selectedFor =
     profileId:
@@ -115,6 +127,16 @@ let
   piProfileMigration = (import ./pi-profile-migration.nix { inherit lib pkgs; }) {
     root = catalog.profiles.hera-pi.root;
     compatibilityRoot = ".config/pi";
+  };
+  retiredMcpCleanup = (import ./fleet/retired-mcp-cleanup.nix { inherit lib pkgs; }) {
+    homeDirectory = config.home.homeDirectory;
+    retiredServers = catalog.retiredMcpServers;
+    retiredManifestMcpItems = catalog.retiredPromptdeployMcpItems;
+    retiredManifestSkillItems = catalog.retiredPromptdeploySkillItems;
+    codexRoots = rootsForClient "codex";
+    claudeRoots = rootsForClient "claude";
+    piRoots = rootsForClient "pi";
+    manifestRoots = allProfileRoots;
   };
 
   validRelativePath =
@@ -319,6 +341,7 @@ in
     };
     activation = {
       aiManagedPreflight = preflight.activation;
+      aiRetiredMcpCleanup = retiredMcpCleanup.activation;
     }
     // lib.optionalAttrs piSelected {
       aiPiProfileMigration = piProfileMigration.activation;

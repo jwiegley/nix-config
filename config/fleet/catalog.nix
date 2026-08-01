@@ -37,6 +37,15 @@ let
     "darwin"
     "linux"
   ];
+  # Mutable agent configs merge managed MCP tables instead of treating omission
+  # as deletion. Keep explicit tombstones so retired managed servers are removed
+  # during Home Manager activation without touching unrelated user servers.
+  retiredMcpServers = [ "anvil" ];
+  retiredPromptdeployMcpItems = [
+    "anvil"
+    "anvil-tools"
+  ];
+  retiredPromptdeploySkillItems = [ "anvil" ];
 
   profileRoots = {
     clio-claude-personal = ".config/claude/personal";
@@ -1754,6 +1763,18 @@ let
       checks = [
         (ensure (profileIds == allowedProfileIds) "profile ID set differs")
         (ensure (
+          retiredMcpServers == lib.unique retiredMcpServers
+          && retiredPromptdeployMcpItems == lib.unique retiredPromptdeployMcpItems
+          && retiredPromptdeploySkillItems == lib.unique retiredPromptdeploySkillItems
+          && builtins.all validItemName retiredMcpServers
+          && builtins.all validItemName retiredPromptdeployMcpItems
+          && builtins.all validItemName retiredPromptdeploySkillItems
+          && builtins.all (name: builtins.elem name retiredPromptdeployMcpItems) retiredMcpServers
+          && lib.intersectLists retiredMcpServers (builtins.attrNames items.mcpServers) == [ ]
+          && lib.intersectLists retiredPromptdeployMcpItems (builtins.attrNames items.mcpServers) == [ ]
+          && lib.intersectLists retiredPromptdeploySkillItems (builtins.attrNames items.skills) == [ ]
+        ) "invalid retired MCP server registry")
+        (ensure (
           builtins.hasAttr "settings" items
           && builtins.attrNames items.settings == [ "settings" ]
           && (
@@ -1801,6 +1822,9 @@ in
   profiles = catalogProfiles;
   items = catalogItems;
   inherit
+    retiredMcpServers
+    retiredPromptdeployMcpItems
+    retiredPromptdeploySkillItems
     selectorCoverage
     matches
     select
