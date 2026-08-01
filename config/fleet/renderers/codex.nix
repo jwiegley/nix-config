@@ -117,7 +117,10 @@ let
 
   projectionText =
     kind: name: metadata: source:
-    "---\n${builtins.toJSON metadata}\n---\n"
+    "---\n"
+    + "name: ${builtins.toJSON metadata.name}\n"
+    + "description: ${builtins.toJSON metadata.description}\n"
+    + "---\n"
     + "Use this skill for the managed ${kind} '${name}'.\n\n"
     + "Treat the user's current request as the arguments for the prompt below. "
     + "If the prompt contains `$ARGUMENTS`, interpret it as those arguments.\n\n"
@@ -131,13 +134,15 @@ let
 
   mkProjection =
     kind: name: metadata: source:
-    pkgs.symlinkJoin {
-      name = "codex-${kind}-${name}";
-      paths = [
-        (pkgs.writeTextDir "SKILL.md" (projectionText kind name metadata source))
-        explicitOnlyPolicy
-      ];
-    };
+    let
+      manifest = pkgs.writeText "codex-${kind}-${name}-SKILL.md" (
+        projectionText kind name metadata source
+      );
+    in
+    pkgs.runCommandLocal "codex-${kind}-${name}" { } ''
+      install -Dm0444 ${manifest} "$out/SKILL.md"
+      install -Dm0444 ${explicitOnlyPolicy}/agents/openai.yaml "$out/agents/openai.yaml"
+    '';
 
   agentFiles = lib.mapAttrs' (
     name: item:
