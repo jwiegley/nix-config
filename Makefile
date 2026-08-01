@@ -300,8 +300,8 @@ lint:
 
 travel-ready:
 	$(call announce,travel-ready)
-	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)")
-	@for project in "$${projects[@]}"; do				\
+	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)"); \
+	for project in "$${projects[@]}"; do				\
 	    echo "Updating direnv on $(HOSTNAME) for ~/$$project";	\
 	    (cd ~/$$project &&						\
              rm -f .envrc .envrc.cache;					\
