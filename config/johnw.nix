@@ -209,34 +209,6 @@ in
       nix-direnv.enable = true;
     };
 
-    git-ai = lib.mkIf (inputs ? git-ai) {
-      enable = isHeavy && vars.gitAiEnabled;
-      installHooks = isHeavy && vars.gitAiEnabled;
-      settings = {
-        apiKeyFile = "${vars.home}/.git-ai/api-key";
-
-        promptStorage = "local";
-        includePromptsInRepositories = [
-          "ghpos:positron-ai/*"
-          "*positron-ai*"
-        ];
-        defaultPromptStorage = "notes";
-
-        featureFlags = {
-          # transcriptSweep is the only flag whose release default differs
-          # from the debug default — enable here if you want it on in release:
-          transcriptSweep = true;
-
-          # Uncomment to override other flags from their release defaults:
-          # rewriteStash = true;             # already true by default
-          # authKeyring = false;             # already false by default
-          # gitHooksEnabled = false;         # already false by default
-          # gitHooksExternallyManaged = false; # already false by default
-          # transcriptStreaming = true;      # already true by default
-        };
-      };
-    };
-
     carapace = lib.mkIf isDarwin {
       enable = true;
       enableZshIntegration = true;
@@ -380,6 +352,35 @@ in
           co = "pr checkout";
           pv = "pr view";
           prs = "pr list -A jwiegley";
+        };
+      };
+    };
+  }
+  // lib.optionalAttrs (inputs ? git-ai) {
+    git-ai = {
+      enable = isHeavy && vars.gitAiEnabled;
+      installHooks = isHeavy && vars.gitAiEnabled;
+      settings = {
+        apiKeyFile = "${vars.home}/.git-ai/api-key";
+
+        promptStorage = "local";
+        includePromptsInRepositories = [
+          "ghpos:positron-ai/*"
+          "*positron-ai*"
+        ];
+        defaultPromptStorage = "notes";
+
+        featureFlags = {
+          # transcriptSweep is the only flag whose release default differs
+          # from the debug default — enable here if you want it on in release:
+          transcriptSweep = true;
+
+          # Uncomment to override other flags from their release defaults:
+          # rewriteStash = true;             # already true by default
+          # authKeyring = false;             # already false by default
+          # gitHooksEnabled = false;         # already false by default
+          # gitHooksExternallyManaged = false; # already false by default
+          # transcriptStreaming = true;      # already true by default
         };
       };
     };
