@@ -1313,7 +1313,8 @@
         "systems": [],
         "expectation": "Custom overlay output must be present and its outer attribute-name set recorded without attempting to serialize functions.",
         "expectedAttrs": [
-          "default"
+          "default",
+          "tools"
         ]
       },
       {
