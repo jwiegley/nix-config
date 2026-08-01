@@ -2,10 +2,9 @@
 
 """Bounded, safety-critical subset of the complete updater test suite.
 
-The ordinary commit gate runs every updater CLI and catalog/unit test plus the
-bounded integration checks below.  The low-frequency expensive tier runs the
-unfiltered ``test/bin/update-overlay-test.py`` suite, including its temporary-Git
-publication, signal, and rollback matrix.
+The ordinary commit gate runs hermetic CLI, schema, transaction, and routing
+checks. The low-frequency expensive tier runs the unfiltered suite, including
+real Nix/hash work and the publication, signal, and rollback matrix.
 """
 
 import runpy
@@ -16,9 +15,28 @@ from pathlib import Path
 TARGET = Path(__file__).with_name("update-overlay-test.py")
 TARGET_MODULE = runpy.run_path(str(TARGET))
 
-COMPLETE_CLASSES = (
-    "UpdateCliTests",
-    "UpdateInventoryTests",
+CLI_METHODS = (
+    "test_catalog_selection_preserves_manual_direct_and_filtered_all",
+    "test_retired_ai_nix_flags_are_rejected",
+    "test_retired_overlay_options_and_unknown_ids_are_rejected",
+)
+
+INVENTORY_METHODS = (
+    "test_catalog_and_cli_inventory_cover_all_update_targets",
+    "test_catalog_github_release_preserves_native_tag_field",
+    "test_catalog_github_tag_preserves_native_tag_field",
+    "test_catalog_npm_update_rewrites_source_and_dependent_hash_atomically",
+    "test_catalog_pypi_update_preserves_fetchpypi_arguments",
+    "test_explicit_catalog_record_isolation_allows_selected_and_rolls_back_sibling",
+    "test_fod_hash_parser_requires_the_injected_dummy_pair",
+    "test_github_client_does_not_change_declared_selection_strategy",
+    "test_native_hash_records_exception_and_fetchtree_failures",
+    "test_native_hash_surfaces_sanitized_actionable_nix_failure",
+    "test_native_hash_uses_locked_fetcher_and_normalizes_to_sri",
+    "test_source_catalog_is_data_only_unique_and_consumed",
+    "test_source_catalog_rejects_ambiguous_native_fetcher_shapes",
+    "test_source_transaction_rolls_back_and_commit_preserves",
+    "test_update_callers_preserve_target_context_with_underlying_detail",
 )
 
 INTEGRATION_METHODS = (
@@ -54,25 +72,24 @@ def _test_ids(suite):
 
 def load_tests(loader, _standard_tests, _pattern):
     suite = unittest.TestSuite()
-    for class_name in COMPLETE_CLASSES:
+
+    def add_methods(class_name, method_names):
         test_class = TARGET_MODULE.get(class_name)
         if not isinstance(test_class, type) or not issubclass(
             test_class, unittest.TestCase
         ):
             raise RuntimeError(f"essential updater test class is missing: {class_name}")
-        suite.addTests(loader.loadTestsFromTestCase(test_class))
+        for method_name in method_names:
+            if not callable(getattr(test_class, method_name, None)):
+                raise RuntimeError(
+                    f"essential updater test is missing: {class_name}.{method_name}"
+                )
+            suite.addTest(test_class(method_name))
 
-    integration_class = TARGET_MODULE.get("IntegratedWorkflowTests")
-    if not isinstance(integration_class, type) or not issubclass(
-        integration_class, unittest.TestCase
-    ):
-        raise RuntimeError("essential updater integration class is missing")
-    for method_name in INTEGRATION_METHODS:
-        if not callable(getattr(integration_class, method_name, None)):
-            raise RuntimeError(
-                f"essential updater integration test is missing: {method_name}"
-            )
-        suite.addTest(integration_class(method_name))
+    add_methods("UpdateCliTests", CLI_METHODS)
+    add_methods("UpdateInventoryTests", INVENTORY_METHODS)
+
+    add_methods("IntegratedWorkflowTests", INTEGRATION_METHODS)
 
     ids = list(_test_ids(suite))
     if not ids or len(ids) != len(set(ids)):

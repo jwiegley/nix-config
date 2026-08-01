@@ -573,35 +573,29 @@ class QualityPythonTierTests(unittest.TestCase):
 class UpdaterEssentialPlanTests(unittest.TestCase):
     def test_safety_plan_declares_required_membership(self):
         plan = runpy.run_path(str(UPDATER_ESSENTIAL))
-        self.assertEqual(
-            plan["COMPLETE_CLASSES"],
-            ("UpdateCliTests", "UpdateInventoryTests"),
-        )
-        self.assertEqual(
+        groups = [
+            plan["CLI_METHODS"],
+            plan["INVENTORY_METHODS"],
             plan["INTEGRATION_METHODS"],
-            (
+        ]
+        for group in groups:
+            self.assertIsInstance(group, tuple)
+            self.assertTrue(group)
+            self.assertEqual(len(group), len(set(group)))
+        selected = set().union(*map(set, groups))
+        self.assertTrue(
+            {
+                "test_catalog_and_cli_inventory_cover_all_update_targets",
+                "test_source_transaction_rolls_back_and_commit_preserves",
                 "test_active_commands_have_one_repository_update_transaction",
-                "test_overlay_manifests_are_explicit_and_inputs_do_not_leak_through_pkgs",
-                "test_upgrade_projects_continues_and_returns_aggregate_failure",
-                "test_root_inputs_do_not_reference_external_filesystems",
-                "test_root_lock_closure_has_no_unfetchable_locators",
-                "test_portable_lock_closure_has_no_unfetchable_locators",
-                "test_closure_walk_descends_past_direct_inputs",
-                "test_closure_walk_follows_follows_edges",
-                "test_production_seams_have_no_undeclared_inline_source_coordinates",
-                "test_inline_source_gate_flags_each_fetcher_kind",
-                "test_inline_source_gate_exact_set_rejects_new_and_stale",
-                "test_flake_input_coordinates_are_internal_or_declared",
-                "test_root_consumes_portable_input_authority_transitively",
                 "test_profile_symlinked_scripts_find_packaged_routing_library",
-                "test_host_routing_table_covers_system_and_shared_consumers",
-                "test_independent_ai_packages_are_owned_under_packages",
-                "test_update_agents_routes_npm_lock_projection_without_lock_updates",
-                "test_all_inputs_prepares_npm_locks_after_lock_sync_before_generic_update",
-                "test_update_agents_routes_github_projection_without_lock_updates",
-            ),
+            }
+            <= selected
         )
-        plan["load_tests"](unittest.TestLoader(), unittest.TestSuite(), None)
+        self.assertNotIn("test_package_hash_build_never_creates_a_result_link", selected)
+        self.assertNotIn("test_pi_manifest_normalizer_is_shared_complete_and_fail_closed", selected)
+        suite = plan["load_tests"](unittest.TestLoader(), unittest.TestSuite(), None)
+        self.assertGreater(suite.countTestCases(), 0)
 
 
 class GeneratedRevisionReachabilityTests(unittest.TestCase):
