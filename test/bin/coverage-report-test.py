@@ -802,6 +802,25 @@ class ArtifactTests(RepositoryFixture):
         with self.assertRaisesRegex(coverage_report.CoverageError, "regress"):
             coverage_report.check_artifact(self.repo)
 
+    def test_check_derives_python_static_inventory_without_refresh(self) -> None:
+        report = self.ready_report()
+        artifact = self.write_json("test/baseline/coverage-fixture.json", report)
+        self.git("add", artifact.relative_to(self.repo).as_posix())
+        self.git("commit", "-qm", "coverage artifact")
+        self.write(
+            "test/bin/sample-test.py",
+            "#!/usr/bin/env python3\n"
+            "import unittest\n\n"
+            "class Sample(unittest.TestCase):\n"
+            "    def test_value(self):\n"
+            "        self.assertEqual(1, 1)\n\n"
+            "    def test_added(self):\n"
+            "        self.assertTrue(True)\n",
+            executable=True,
+        )
+        self.git("add", "test/bin/sample-test.py")
+        coverage_report.check_artifact(self.repo)
+
     def test_check_allows_content_only_drift_until_expensive_refresh(self) -> None:
         report = self.ready_report()
         artifact = self.write_json("test/baseline/coverage-fixture.json", report)

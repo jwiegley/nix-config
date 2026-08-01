@@ -2077,6 +2077,7 @@ let
       ../test/ai/agent-wrappers.sh
       ../test/ai/compatibility-check.nix
       ../test/ai/compatibility-contract.nix
+      ../test/ai/extensions/auto-compact-resume
       ../test/ai/input-projection-parity.nix
       ../test/ai/overlays
       ../test/ai/node-runtime-guard.cjs
@@ -2249,6 +2250,7 @@ in
         mcpRemote = inputs.mcp-remote or null;
       };
       pi-gallery = pkgs.callPackage ../test/ai/pi-gallery.nix {
+        inherit sourceForChecks;
         piPackage = patchAgentPackage pkgs "pi" inputs.llm-agents.packages.${system}.pi;
         piPackages = pkgs.pi-gallery.packages // {
           inherit (pkgs) agent-resources pi-gallery;

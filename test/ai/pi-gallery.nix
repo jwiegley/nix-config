@@ -8,6 +8,7 @@
   piPackage,
   piPackages,
   runCommand,
+  sourceForChecks,
   stdenv,
 }:
 
@@ -126,6 +127,11 @@ runCommand "pi-gallery-check"
       actual=$(jq -r .version "$manifest")
       [ "$actual" = "$expected" ] || fail "$manifest: expected $expected, got $actual"
     }
+
+    (
+      cd ${sourceForChecks}/test/ai/extensions/auto-compact-resume
+      bun test index.test.ts
+    )
 
     ${memberVersionChecks}
     ${supportVersionChecks}

@@ -98,7 +98,9 @@ class TestVerifySignaturesRejects(unittest.TestCase):
     """
 
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix="gates-sig-")
+        # Keep GnuPG's agent sockets below Darwin's AF_UNIX path ceiling; the
+        # per-user TMPDIR is already too long before the temporary suffix.
+        self.tmp = tempfile.mkdtemp(prefix="gates-sig-", dir="/tmp")
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.repo = os.path.join(self.tmp, "repo")
         git("init", "--quiet", "--initial-branch=main", self.repo, cwd=self.tmp)

@@ -2026,10 +2026,16 @@ def validate_report(
             "schema 1 has no independently pinned flake-schema identity"
         )
     structural = _expect_object(report["structural"], "artifact.structural")
-    if expected_structural is not None and structural != expected_structural:
-        raise CoverageError(
-            "artifact structural inventories regress from live derivation"
-        )
+    if expected_structural is not None:
+        # Python test and assertion locations are derived cheaply from the live
+        # index.  They are useful report data, but making their committed copy a
+        # validity oracle forces an artifact refresh after every test edit.
+        comparable_structural = dict(structural)
+        comparable_structural["pythonStatic"] = expected_structural["pythonStatic"]
+        if comparable_structural != expected_structural:
+            raise CoverageError(
+                "artifact structural inventories regress from live derivation"
+            )
 
     measurements = _expect_object(report["measurements"], "artifact.measurements")
     expected_measurement_keys = {
