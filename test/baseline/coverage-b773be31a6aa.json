@@ -13,7 +13,7 @@
     "config/ai/flake.nix is an intentional throwing stub verified by immutable-subflake-check's negative probe; successful Nix evaluation cannot positively reach it.",
     "readFile, readDir, hashFile, pathExists, copied paths, and some scoped imports are invisible to file-reach diagnostics."
   ],
-  "manifestDigest": "7058265ef4cc75a1c2f350e234e00f98c438c6ba45ee1b71cbdc5d03955bc4fc",
+  "manifestDigest": "5d99ed8ee431f5e96a43a4e72dc7ce73a5b8dae742bdcf15774e1019ab6d8249",
   "measurements": {
     "assertionCallReach": {
       "reason": "not measured by structural collection",
@@ -349,9 +349,9 @@
     "kind": "declared-command-recipe"
   },
   "schema": "fleet-coverage/1",
-  "sourceBaseRev": "d5b93db781c4807dfe54932598537a8be09ba9c2",
-  "sourceProjectionDigest": "b6a1b1927a5dba4cf8f39faf496832163fc8889d7e770e65d76bfcf6d017888b",
-  "sourceTree": "467ba23be06cb6c6448d937dd8af1732f71a7e31",
+  "sourceBaseRev": "332e60fe3e7341bc122444a5f7aff8aba6b32c87",
+  "sourceProjectionDigest": "ba8722a30005cb309ed0eb5be19a954984c0ef41e7e49ec94e136c55bfcf1a59",
+  "sourceTree": "d1705269ef8e67bde9828709055ec632ce9cff2e",
   "structural": {
     "budgetsSeconds": {
       "ci-on-demand": 1800,
@@ -547,6 +547,7 @@
         "test/bin/cross-consumer-eval",
         "test/bin/immutable-subflake-check",
         "test/bin/parity-baseline",
+        "test/bin/pin-currency",
         "test/bin/quality",
         "test/bin/verify-signatures"
       ]
@@ -1827,6 +1828,15 @@
           "gap": "Derive, write, check, compare, and refresh behavior is not exercised by that test.",
           "kind": "production",
           "path": "test/bin/parity-baseline",
+          "tier": "ci-on-demand"
+        },
+        {
+          "evidence": [
+            "make pin-currency builds each build-kind pinned package from unpinned nixpkgs and exits non-zero when a pin's condition is met"
+          ],
+          "gap": "Manual-kind pins are reported, not tested; their conditions are consumer or cache properties that a package build cannot decide.",
+          "kind": "production",
+          "path": "test/bin/pin-currency",
           "tier": "ci-on-demand"
         },
         {

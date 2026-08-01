@@ -14,7 +14,7 @@ NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
 endif
 
 .PHONY: help all verify-inputs lock-local build switch update update-projects upgrade-tasks upgrade \
-	changes copy check sizes clean purge sign travel-ready test expensive darwin-surface-baseline tools repl format lint
+	changes copy check sizes clean purge sign travel-ready test expensive pin-currency darwin-surface-baseline tools repl format lint
 
 all: switch
 
@@ -39,6 +39,7 @@ help:
 	  '  help             Show this help (default)' \
 	  '  build            Build the current Darwin system without switching' \
 	  '  expensive        Run the low-frequency exhaustive assurance tier' \
+	  '  pin-currency     Report last-known-good pins whose reason has expired' \
 	  '  test             Build the core repository contracts' \
 	  '  verify-inputs    Check local flake inputs for NAR hazards' \
 	  '' \
@@ -58,6 +59,12 @@ test:
 	  .#checks.$(SYSTEM).agent-wrappers \
 	  .#checks.$(SYSTEM).pi-gallery \
 	  .#checks.$(SYSTEM).pi-fleet-theme
+
+# Deliberately outside every tier: this builds each pinned package from
+# unpinned nixpkgs, which is the work the pins exist to avoid. Run it when
+# deciding whether a last-known-good pin has outlived its reason.
+pin-currency:
+	test/bin/pin-currency
 
 expensive:
 	test/bin/quality --tier expensive

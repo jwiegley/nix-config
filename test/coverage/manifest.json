@@ -574,6 +574,15 @@
       "gap": null
     },
     {
+      "path": "test/bin/pin-currency",
+      "kind": "production",
+      "tier": "ci-on-demand",
+      "evidence": [
+        "make pin-currency builds each build-kind pinned package from unpinned nixpkgs and exits non-zero when a pin's condition is met"
+      ],
+      "gap": "Manual-kind pins are reported, not tested; their conditions are consumer or cache properties that a package build cannot decide."
+    },
+    {
       "path": "test/bin/quality",
       "kind": "production",
       "tier": "pre-commit",

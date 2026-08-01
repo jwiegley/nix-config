@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# test/bin/pin-currency — report last-known-good pins whose reason has expired.
+#
+# overlays/00-last-known-good.nix holds packages at older nixpkgs revisions
+# because the current revision broke them. Each pin states its own release
+# condition in prose — "Drop this once nixpkgs restores the Darwin code path",
+# "Drop these once Hydra is green on aarch64-darwin" — and nothing checks
+# whether that condition has been met. A pin outlives its reason silently, and
+# the only symptom is packages sitting on old versions for a cause that no
+# longer exists.
+#
+# Two of the expiry conditions audited on 2026-08-01 had already come due. The
+# rclone fuse3 pin held 1.74.1 while unpinned nixpkgs built 1.74.4 cleanly on
+# aarch64-darwin.
+#
+# What this proves, and what it does not. Most pins exist because the unpinned
+# package FAILED TO BUILD — missing headers, K&R declarations rejected by a
+# newer clang, tests that OOM. Those are compile-time failures, so evaluating a
+# derivation path proves nothing; only building does. That is why this is a
+# deliberate low-frequency target and not a tier suite: it builds each such
+# package from unpinned nixpkgs, which is exactly the work the pins avoid.
+#
+# Not every pin has that shape, and conflating them would make this report
+# confidently wrong. nixos-render-docs builds fine unpinned — its break is in
+# nix-darwin, which still passes the flag the new version removed. mesa's
+# condition is Hydra coverage and rebuild cost, not whether a local build can
+# succeed. Those are marked `manual`: reported for a human, never auto-flagged,
+# because a green build would say nothing about whether the reason still holds.
+#
+# A `build` package that succeeds here has met its pin's condition. Removing the
+# pin is still a judgement call — it changes a shipped version — so this reports
+# and exits non-zero rather than editing anything.
+#
+# Usage:
+#   test/bin/pin-currency                 # every pinned package
+#   test/bin/pin-currency rclone mesa     # a subset, by package name
+#   test/bin/pin-currency --list          # print the pin map, exit
+#
+# Environment:
+#   PIN_CURRENCY_TIMEOUT   per-package build timeout in seconds (default 1800)
+
+set -uo pipefail
+
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+cd "$repo_root" || exit 1
+
+timeout_seconds=${PIN_CURRENCY_TIMEOUT:-1800}
+
+# Pin name -> packages it supplies, mirroring the inherit blocks in
+# overlays/00-last-known-good.nix. Kept beside them deliberately: a new pin
+# that is not listed here is invisible to this report, so the check below
+# refuses when the two disagree.
+# Each entry is pin:kind:packages.
+#
+#   build   The pin exists because the package itself failed to compile against
+#           current nixpkgs. Building it unpinned tests the condition directly.
+#   manual  The condition is not a property of the package building. Reported
+#           for human verification, never auto-flagged: a green build here would
+#           say nothing about whether the reason still holds.
+declare -a PIN_MAP=(
+    "nixpkgs-last-good:build:ntp aprutil libcdio-paranoia folly fizz mvfst wangle fbthrift fb303 edencommon watchman"
+    # mesa's condition is "Hydra is green on aarch64-darwin" — cache availability
+    # and rebuild cost, not whether a local build can eventually succeed.
+    "nixpkgs-pre-mesa-26-1:manual:mesa xorg-server xquartz"
+    "nixpkgs-pre-rclone-fuse3:build:rclone"
+    # nixos-render-docs builds fine either way. The break is in its CONSUMER:
+    # nix-darwin passes --toc-depth, which the new version removed. Check with
+    #   git grep -n -- --toc-depth <nix-darwin checkout>
+    # and drop the pin once nix-darwin uses --sidebar-depth.
+    "nixpkgs-pre-toc-depth-removal:manual:nixos-render-docs"
+)
+
+note() { printf 'pin-currency: %s\n' "$*"; }
+fail() { printf 'pin-currency: %s\n' "$*" >&2; }
+
+if [[ ${1:-} == --list ]]; then
+    for entry in "${PIN_MAP[@]}"; do
+        rest=${entry#*:}
+        printf '  %-32s [%-6s] %s\n' "${entry%%:*}" "${rest%%:*}" "${rest#*:}"
+    done
+    exit 0
+fi
+
+# Refuse if the overlay declares a pin this map does not know about. Otherwise
+# adding a pin would silently shrink what this reports, which is the failure
+# mode the report exists to prevent.
+declared=$(grep -oE 'nixpkgs "nixpkgs-[a-z0-9-]+"' overlays/00-last-known-good.nix |
+    sed 's/.*"\(.*\)"/\1/' | sort -u)
+known=$(for entry in "${PIN_MAP[@]}"; do printf '%s\n' "${entry%%:*}"; done | sort -u)
+if [[ $declared != "$known" ]]; then
+    fail "pin map disagrees with overlays/00-last-known-good.nix"
+    fail "  declared: $(printf '%s ' $declared)"
+    fail "  known:    $(printf '%s ' $known)"
+    exit 2
+fi
+
+want=("$@")
+system=$(nix eval --raw --impure --expr 'builtins.currentSystem' 2>/dev/null)
+[[ -n $system ]] || {
+    fail "cannot determine the current system"
+    exit 2
+}
+
+expired=()
+still_needed=()
+unchecked=()
+
+for entry in "${PIN_MAP[@]}"; do
+    pin=${entry%%:*}
+    rest=${entry#*:}
+    kind=${rest%%:*}
+    for package in ${rest#*:}; do
+        if [[ ${#want[@]} -gt 0 ]] && ! printf '%s\n' "${want[@]}" | grep -qx "$package"; then
+            continue
+        fi
+        if [[ $kind == manual ]]; then
+            unchecked+=("$package (pinned by $pin)")
+            note "$package: not mechanically checkable — verify $pin by hand"
+            continue
+        fi
+        note "building $package from unpinned nixpkgs ($system)"
+        if timeout "$timeout_seconds" nix build --no-write-lock-file --no-link --impure --expr "
+            let flake = builtins.getFlake (toString $repo_root);
+            in flake.inputs.nix-config-ai.inputs.nixpkgs.legacyPackages.${system}.${package}
+        " >/dev/null 2>&1; then
+            expired+=("$package (pinned by $pin)")
+            note "$package: BUILDS unpinned — $pin's condition is met"
+        else
+            still_needed+=("$package")
+            note "$package: still fails unpinned — $pin remains justified"
+        fi
+    done
+done
+
+printf '\n'
+note "still justified: ${#still_needed[@]}   awaiting manual check: ${#unchecked[@]}"
+for item in "${unchecked[@]}"; do note "  ? $item"; done
+if [[ ${#expired[@]} -eq 0 ]]; then
+    note "no pin has outlived its reason"
+    exit 0
+fi
+
+fail "${#expired[@]} pin(s) appear to have expired:"
+for item in "${expired[@]}"; do
+    fail "  - $item"
+done
+fail "Drop the pin, or record why it is still needed despite building."
+exit 1
