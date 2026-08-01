@@ -918,6 +918,11 @@ class ArtifactTests(RepositoryFixture):
         expanded_reach["unreached"] = ["b.nix", "c.nix"]
         coverage_report.validate_non_regression(expanded, previous)
 
+    def test_live_observation_can_follow_structural_only_baseline(self) -> None:
+        previous = coverage_report.derive_report(self.repo)
+        current = self.ready_report()
+        coverage_report.validate_non_regression(current, previous)
+
     def test_live_comparison_recollects_before_accepting_baseline(self) -> None:
         baseline = self.ready_report()
         path = self.write_json("test/baseline/coverage-fixture.json", baseline)

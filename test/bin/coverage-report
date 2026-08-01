@@ -2417,24 +2417,23 @@ def validate_non_regression(
         "parent.measurements.nixFileReach",
     )
     if current_reach.get("state") == "observed":
-        if previous_reach.get("state") != "observed":
-            raise CoverageError("parent Nix file reach is not an observed baseline")
-        current_denominator = set(
-            _unique_strings(current_reach.get("denominator"), "current denominator")
-        )
-        current_reached = set(
-            _unique_strings(
-                current_reach.get("reached"), "current reached", nonempty=False
+        if previous_reach.get("state") == "observed":
+            current_denominator = set(
+                _unique_strings(current_reach.get("denominator"), "current denominator")
             )
-        )
-        previous_reached = set(
-            _unique_strings(
-                previous_reach.get("reached"), "parent reached", nonempty=False
+            current_reached = set(
+                _unique_strings(
+                    current_reach.get("reached"), "current reached", nonempty=False
+                )
             )
-        )
-        lost = sorted((previous_reached & current_denominator) - current_reached)
-        if lost:
-            raise CoverageError(f"Nix file reach regressed for paths: {lost}")
+            previous_reached = set(
+                _unique_strings(
+                    previous_reach.get("reached"), "parent reached", nonempty=False
+                )
+            )
+            lost = sorted((previous_reached & current_denominator) - current_reached)
+            if lost:
+                raise CoverageError(f"Nix file reach regressed for paths: {lost}")
     current_structural = _expect_object(
         current.get("structural"), "artifact.structural"
     )
