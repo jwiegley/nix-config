@@ -6401,7 +6401,6 @@
       "original": {
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "6ef009bf4c4873cdc1a621826722bdea7c03e62c",
         "type": "github"
       }
     },
