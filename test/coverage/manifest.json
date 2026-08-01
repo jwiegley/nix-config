@@ -1332,6 +1332,7 @@
           "agent-resources",
           "cymbal",
           "default",
+          "nix-scripts",
           "pi",
           "pi-agent-browser-native",
           "pi-artifacts",

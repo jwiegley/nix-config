@@ -13,7 +13,7 @@
     "config/ai/flake.nix is an intentional throwing stub verified by immutable-subflake-check's negative probe; successful Nix evaluation cannot positively reach it.",
     "readFile, readDir, hashFile, pathExists, copied paths, and some scoped imports are invisible to file-reach diagnostics."
   ],
-  "manifestDigest": "37eebcc5824aa3faaa047092f24bf76e488eae60dedf7a3fb19979d141beaba5",
+  "manifestDigest": "ac468cf3bad51928bab5f5c7af2eebced751abc210d5d2b2797a43290869b965",
   "measurements": {
     "assertionCallReach": {
       "reason": "not measured by structural collection",
@@ -348,9 +348,9 @@
     "kind": "declared-command-recipe"
   },
   "schema": "fleet-coverage/1",
-  "sourceBaseRev": "6905c4317e27198796e3da7c050f50dcea313645",
-  "sourceProjectionDigest": "0f902c221465cb7feb2316b63ad73fc5a46d3eb9bee1144c07e385c5afa41cf2",
-  "sourceTree": "d53cca86cea5e72fc7dced8da720e6c3a94f160a",
+  "sourceBaseRev": "284b2ff0b32937aa697eb1815877fea4f07ca50a",
+  "sourceProjectionDigest": "51f8dcd92cde327357011eca8492987b2082ec6109a8986309b42083a359e4c9",
+  "sourceTree": "d371098313af1134f47834bec1913b98f7fc1c70",
   "structural": {
     "budgetsSeconds": {
       "ci-on-demand": 1800,
@@ -1158,6 +1158,7 @@
             "agent-resources",
             "cymbal",
             "default",
+            "nix-scripts",
             "pi",
             "pi-agent-browser-native",
             "pi-artifacts",
