@@ -89,6 +89,8 @@ let
     "ui-stream-types.ts"
     "config.ts"
     "server-manager.ts"
+    "unix-socket-transport.ts"
+    "json-schema-validator.ts"
     "session-recovery.ts"
     "sampling-handler.ts"
     "elicitation-handler.ts"
@@ -97,6 +99,7 @@ let
     "mcp-output-guard.ts"
     "resource-tools.ts"
     "lifecycle.ts"
+    "mcp-status.ts"
     "metadata-cache.ts"
     "host-html-template.ts"
     "ui-resource-handler.ts"
@@ -111,6 +114,7 @@ let
     "mcp-auth-flow.ts"
     "mcp-panel.ts"
     "panel-keys.ts"
+    "mcp-trace.ts"
     "logger.ts"
     "errors.ts"
     "app-bridge.bundle.js"
@@ -579,10 +583,9 @@ else
             || fail "unexpected pi-mcp-adapter file: $relative"
         done
 
-        grep -F 'let status = `🔌 MCP: ''${connectedCount}/''${enabledCount}`;' \
-          "$mcp/init.ts" >/dev/null \
-          || grep -F 'let status = `''${connectedCount}/''${enabledCount}`;' \
-            "$mcp/init.ts" >/dev/null \
+        grep -F 'footerStatus === "compact"' "$mcp/init.ts" >/dev/null \
+          && grep -F 'connectedCount' "$mcp/init.ts" >/dev/null \
+          && grep -F 'enabledCount' "$mcp/init.ts" >/dev/null \
           || fail "pi-mcp-adapter status renderer is not compact"
 
         jq -e '

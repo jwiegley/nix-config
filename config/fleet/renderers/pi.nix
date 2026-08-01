@@ -369,6 +369,7 @@ assert xdgConfigHome == "${homeDirectory}/.config";
 assert selected.hooks == { };
 assert selected.marketplaces == { };
 assert selected.settings == { };
+assert mcp.settings.mcpFooterStatus == "compact";
 assert builtins.attrNames selected.mcpServers == expectedMcpNames;
 assert builtins.attrNames modelData.providers == expectedProviderNames;
 assert builtins.length routerModels == 1;
