@@ -428,7 +428,7 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
     reported success having verified only a self-described moderate proxy.
 
     Both guards are exercised here through the tool's real surface: positional
-    target selection, and VPS_CHECKOUT / VULCAN_CHECKOUT.
+    target selection and VPS_CHECKOUT.
     """
 
     def setUp(self):
@@ -450,9 +450,7 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
         """ran == 0 must refuse. Reachable only via a named subset."""
         r = self.run_tool(
             "vps",
-            "vulcan",
             VPS_CHECKOUT=self.nowhere,
-            VULCAN_CHECKOUT=self.nowhere,
         )
         combined = r.stdout + r.stderr
         self.assertNotEqual(
@@ -466,9 +464,9 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
 
         shared-work still runs, so ran == 1 and the ran==0 guard cannot fire.
         Without the full-run guard this reported success while verifying nothing
-        about vulcan or vps.
+        about vps.
         """
-        r = self.run_tool(VPS_CHECKOUT=self.nowhere, VULCAN_CHECKOUT=self.nowhere)
+        r = self.run_tool(VPS_CHECKOUT=self.nowhere)
         combined = r.stdout + r.stderr
         self.assertNotEqual(
             r.returncode,
@@ -487,12 +485,10 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
               }
             }"""
             vps = Path(tmp) / "vps"
-            vulcan = Path(tmp) / "vulcan"
-            for checkout in (vps, vulcan):
-                checkout.mkdir()
-                (checkout / "flake.lock").write_text(lock)
+            vps.mkdir()
+            (vps / "flake.lock").write_text(lock)
 
-            r = self.run_tool(VPS_CHECKOUT=str(vps), VULCAN_CHECKOUT=str(vulcan))
+            r = self.run_tool(VPS_CHECKOUT=str(vps))
 
         combined = r.stdout + r.stderr
         self.assertNotEqual(

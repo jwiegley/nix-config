@@ -54,7 +54,7 @@ ROOT_ALIASES = {
     "linux-fixture": ["homeConfigurations.johnw@aarch64-linux"],
     "shared-work": ["andoria", "homeConfigurations.jwiegley@x86_64-linux"],
     "vps": ["vps:nixosConfigurations.ovh-vps"],
-    "vulcan": ["vulcan:checks.aarch64-linux.nix-config-reachin-compat"],
+    "vulcan": ["checks.aarch64-linux.compatibility-contract"],
 }
 ROOT_KINDS = {
     "hera": "darwin-configuration",

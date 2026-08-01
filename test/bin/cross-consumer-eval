@@ -4,11 +4,11 @@
 # evaluation fails at pre-push in nix-config instead of weeks later at the
 # consumer's next lock bump.
 #
-# Why this exists. nix-config is consumed, not just built: vulcan and vps pull
-# it in as a `flake = false` input and cherry-pick packages out of its INTERNAL
-# overlay files (overlays/00-lib.nix, overlays/30-*.nix); the four shared-work
-# machines import config/johnw.nix + config/packages.nix. None of that is a
-# supported API, and none of nix-config's own gates evaluate it. Commit a3cc3843
+# Why this exists. nix-config is consumed, not just built: vps pulls it in as a
+# `flake = false` input and cherry-picks packages out of its INTERNAL overlay
+# files (overlays/00-lib.nix, overlays/30-*.nix); the four shared-work machines
+# import config/johnw.nix + config/packages.nix. None of that is a supported API,
+# and none of nix-config's own gates evaluate it. Commit a3cc3843
 # converted several two-level `final: prev:` overlays into three-level factories
 # taking a strict argument set; the consumers still called them positionally, so
 # their entire evaluation began failing with
@@ -34,26 +34,22 @@
 #                toplevel and reaches the overlay cherry-pick AND vps's own
 #                home-manager import of config/johnw.nix.
 #
-#   vulcan       The full toplevel is NOT reachable from a non-vulcan host — it
-#                needs vulcan-local `git+file:///etc/nixos/{firmware,secrets,
-#                nagios}` inputs and pulls an un-cached import-from-derivation.
-#                So vulcan's target is its OWN nix-config-reachin-compat check,
-#                evaluated against the working tree. That reuses vulcan's
-#                authoritative reach-in set (no hand-maintained list here) and
-#                forces every cherry-picked package's derivation, which is
-#                exactly the a3cc3843 seam. It does NOT evaluate vulcan's
-#                modules/services. Named "reach-in", not "toplevel".
+# Vulcan was retired from this consumer set after nixos commit a5bb7be9 moved it
+# from internal overlay cherry-picks to the supported overlays.default and
+# overlays.tools interfaces. The old nix-config-reachin-compat check disappeared
+# with that reach-in. The producer-side compatibility contract now forces the
+# supported tools-overlay derivations on every portable system; pretending an
+# unrelated Vulcan check replaced the old canary would overstate coverage. This
+# gate never evaluated Vulcan's modules or services.
 #
-# What this ADDS over the consumers' in-repo canaries: those same canaries run
-# at each CONSUMER's own `nix flake check`, against the nix-config revision that
-# consumer has ALREADY locked. This runs them (and more, for vps) against
-# nix-config's WORKING TREE, before a push — the window a lock-time canary
-# structurally cannot cover.
+# What this ADDS over a consumer's in-repo canary: that canary runs at the
+# consumer's own `nix flake check`, against the nix-config revision it has
+# ALREADY locked. This runs it (and more, for vps) against nix-config's WORKING
+# TREE, before a push — the window a lock-time canary structurally cannot cover.
 #
 # Eval-only. Every target is forced to .drvPath: instantiation, never a build.
 # A NixOS toplevel can still trigger import-from-derivation, which builds; that
-# is inherent to the consumer's config, not a choice of this gate. The vulcan
-# reach-in target is IFD-free by construction (script-package derivations).
+# is inherent to the consumer's config, not a choice of this gate.
 #
 # Never a root-level `nix flake check`: that deeply forces every host config and
 # is forbidden in routine gates (see doc/ARCHITECTURE.md). This forces
@@ -64,14 +60,12 @@
 #
 # Usage:
 #   test/bin/cross-consumer-eval                     # every discoverable consumer
-#   test/bin/cross-consumer-eval vulcan vps          # a subset
+#   test/bin/cross-consumer-eval vps                 # a subset
 #   test/bin/cross-consumer-eval --list              # print the consumer set, exit
 #
 # Environment:
 #   NIX_CONFIG_TREE          nix-config revision under test
 #                            (default: this checkout, from the script's location)
-#   VULCAN_CHECKOUT          vulcan (jwiegley/nixos-config) checkout
-#                            (default: ~/src/nixos)
 #   VPS_CHECKOUT             vps checkout (default: ~/src/vps)
 #   CONSUMER_EVAL_OFFLINE=1  add --offline to every eval; use where the
 #                            consumers' inputs are already realized in the store
@@ -86,10 +80,9 @@ set -uo pipefail
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 
 tree=${NIX_CONFIG_TREE:-$repo_root}
-vulcan_checkout=${VULCAN_CHECKOUT:-$HOME/src/nixos}
 vps_checkout=${VPS_CHECKOUT:-$HOME/src/vps}
 
-CONSUMERS=(shared-work vps vulcan)
+CONSUMERS=(shared-work vps)
 
 # ---- reporting ----------------------------------------------------------
 
@@ -177,9 +170,8 @@ skip_or_fail() {
 # revisions, the consumer is split-brained: its modules come from one tree and
 # its fleet outputs from another, and nothing tells it so.
 #
-# That is not hypothetical. vulcan's evaluation broke because a single input
-# crossed a commit its call sites were not ready for; two inputs drifting apart
-# is the same class of failure with a harder-to-read symptom.
+# Two inputs drifting apart is the same class of failure as a consumer crossing
+# an incompatible revision, with a harder-to-read symptom.
 #
 # Checked from the consumer's own committed lock, read-only. Nothing here
 # depends on the rename (jwiegley/nix-config#47) having landed.
@@ -248,18 +240,6 @@ run_vps() {
         "$vps_checkout#nixosConfigurations.ovh-vps.config.system.build.toplevel.drvPath"
 }
 
-run_vulcan() {
-    check_lock_coherence "vulcan" "$vulcan_checkout"
-    if [[ ! -f $vulcan_checkout/flake.nix ]]; then
-        skip_or_fail "vulcan [reach-in canary]" "no flake.nix at $vulcan_checkout (set VULCAN_CHECKOUT)"
-        return
-    fi
-    eval_target "vulcan [reach-in canary]" \
-        --raw --override-input nix-config "$tree" \
-        --override-input nix-config-ai "$tree?dir=config/fleet" \
-        "$vulcan_checkout#checks.aarch64-linux.nix-config-reachin-compat.drvPath"
-}
-
 # ---- argument parsing ---------------------------------------------------
 
 want=()
@@ -306,7 +286,6 @@ for consumer in "${want[@]}"; do
     case $consumer in
     shared-work) run_shared_work ;;
     vps) run_vps ;;
-    vulcan) run_vulcan ;;
     esac
 done
 
@@ -334,17 +313,17 @@ fi
 #
 # That matters because shared-work is a MODERATE proxy by its own description --
 # pinned to hostname="linux", so it exercises the shared config files but not
-# hostname-gated behaviour. With both real consumer checkouts missing, a full run
-# would otherwise report "all evaluated consumers passed" having verified nothing
-# about vulcan or vps. An independent audit found exactly this hole.
+# hostname-gated behaviour. With the real consumer checkout missing, a full run
+# would otherwise report "all evaluated consumers passed" having verified
+# nothing about vps. An independent audit found exactly this hole.
 #
 # A named subset is exempt: asking for shared-work alone is a deliberate choice.
 if [[ ${#want[@]} -eq ${#CONSUMERS[@]} && $evaluated -eq 1 && $skipped -gt 0 ]]; then
     printf 'cross-consumer-eval: a full run evaluated ONLY shared-work (%d skipped).\n' \
         "$skipped" >&2
     printf '    shared-work is this repo own fixture and a moderate proxy; it says\n' >&2
-    printf '    nothing about vulcan or vps. Point VPS_CHECKOUT / VULCAN_CHECKOUT at\n' >&2
-    printf '    real checkouts, or name a subset to acknowledge the narrower scope.\n' >&2
+    printf '    nothing about vps. Point VPS_CHECKOUT at a real checkout, or name a\n' >&2
+    printf '    subset to acknowledge the narrower scope.\n' >&2
     exit 1
 fi
 

@@ -63,7 +63,9 @@ For each affected consumer, in its authoritative checkout:
 5. run the consumer's build without activation.
 
 Use `test/bin/cross-consumer-eval` from this repository to check the maintained
-consumer set against the candidate source.
+reach-in consumer set against the candidate source. Use the `portable-eval`
+quality suite for consumers such as Vulcan that use the supported flake
+interfaces.
 
 ### A consumer activated
 

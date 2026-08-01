@@ -469,11 +469,12 @@ run_python_test() {
 }
 
 # Unlike every other suite, this one does not read the local tree with a per-file
-# tool. It evaluates the fleet's CONSUMERS (vulcan, vps, shared-work) against THIS
-# working tree, eval-only, so an overlay or shared-config change here that would
-# break a consumer fails during low-frequency closeout instead of at the
+# tool. It evaluates the remaining reach-in consumers (vps and shared-work)
+# against THIS working tree, eval-only. An overlay or shared-config change here
+# that would break a consumer fails during low-frequency closeout instead of at the
 # consumer's next lock bump —
 # which is how vulcan's evaluation stayed broken for weeks.
+# Vulcan now uses supported portable interfaces; portable-eval owns that contract.
 #
 # test/bin/cross-consumer-eval is the authority for what that means; it reports every
 # consumer before exiting non-zero, so this suite only records the verdict.

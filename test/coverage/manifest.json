@@ -146,10 +146,10 @@
         "vulcan"
       ],
       "aliases": [
-        "vulcan:checks.aarch64-linux.nix-config-reachin-compat"
+        "checks.aarch64-linux.compatibility-contract"
       ],
       "qualityEvidence": [
-        "quality:consumer-eval"
+        "quality:portable-eval (supported-interface contract only; not Vulcan integration)"
       ]
     }
   ],
