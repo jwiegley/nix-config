@@ -148,17 +148,6 @@ in
     }
   );
 
-  # Fix squashfsTools build failure on macOS
-  # mksquashfs.c uses Linux st_atim but Darwin uses st_atimespec
-  squashfsTools = prev.squashfsTools.overrideAttrs (
-    oldAttrs:
-    prev.lib.optionalAttrs prev.stdenv.isDarwin {
-      postPatch = (oldAttrs.postPatch or "") + ''
-        sed -i.bak 's/st_atim\([^a-z]\)/st_atimespec\1/g' squashfs-tools/mksquashfs.c
-      '';
-    }
-  );
-
   # Fix z3 test failures on macOS
   # Tests fail with "Error: invalid argument" in api_polynomial test
   z3 = prev.z3.overrideAttrs (_oldAttrs: {
