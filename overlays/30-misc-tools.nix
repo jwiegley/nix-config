@@ -50,18 +50,6 @@ in
     };
   });
 
-  # Bump gogcli ahead of nixpkgs (still at 0.11.0 under steipete/gogcli).
-  # Upstream moved to openclaw/gogcli; Go module path is unchanged.
-  gogcli = (prev.gogcli.override { buildGoModule = buildGo1265Module; }).overrideAttrs (
-    finalAttrs: _oldAttrs: {
-      version = sources.gogcli.version;
-      src =
-        assert sources.gogcli.source.fetcher == "fetchFromGitHub";
-        prev.fetchFromGitHub sources.gogcli.source.args;
-      vendorHash = sources.gogcli.hashes.vendorHash;
-    }
-  );
-
   # highlight 4.20 (pulled in by the latest nixpkgs bump) already includes
   # the shellscript crash fix (gitlab commit 2c0e9529) upstream, but nixpkgs
   # still lists shellscript-crash-fix.patch in `patches`. Applying it now
@@ -136,4 +124,17 @@ in
       };
     };
 
+}
+// prev.lib.optionalAttrs (prev ? gogcli) {
+  # Bump gogcli ahead of nixpkgs when the consumer channel provides a base.
+  # Older stable channels simply omit this optional package.
+  gogcli = (prev.gogcli.override { buildGoModule = buildGo1265Module; }).overrideAttrs (
+    finalAttrs: _oldAttrs: {
+      version = sources.gogcli.version;
+      src =
+        assert sources.gogcli.source.fetcher == "fetchFromGitHub";
+        prev.fetchFromGitHub sources.gogcli.source.args;
+      vendorHash = sources.gogcli.hashes.vendorHash;
+    }
+  );
 }
