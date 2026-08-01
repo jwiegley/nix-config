@@ -40,24 +40,6 @@
         "reason": "Hold the last closure where the affected Darwin packages build and test"
       }
     },
-    "nixpkgs-pre-mesa-26-1": {
-      "source": {
-        "args": {
-          "type": "github",
-          "owner": "NixOS",
-          "repo": "nixpkgs",
-          "rev": "f77951fcf0348ac9a4a5fc6c44c104d1387042d4",
-          "narHash": "sha256-h+evAmhKoLk1hA7vUnuRq+AorRZXlv7u473XyW5yOhw="
-        },
-        "fetcher": "fetchTree",
-        "url": "https://github.com/NixOS/nixpkgs"
-      },
-      "update": {
-        "kind": "explicit-rev",
-        "policy": "manual",
-        "reason": "Hold mesa and its consumers before the uncached Darwin 26.1 closure"
-      }
-    },
     "poppler-darwin-mutex-patch": {
       "source": {
         "args": {

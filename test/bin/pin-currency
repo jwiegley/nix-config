@@ -58,12 +58,13 @@ timeout_seconds=${PIN_CURRENCY_TIMEOUT:-1800}
 #           current nixpkgs. Building it unpinned tests the condition directly.
 #   manual  The condition is not a property of the package building. Reported
 #           for human verification, never auto-flagged: a green build here would
-#           say nothing about whether the reason still holds.
+#           say nothing about whether the reason still holds. No pin needs this
+#           today; it is kept because the next one may. The retired mesa pin was
+#           the case in point -- its condition was Hydra coverage, settled with
+#           `nix path-info --store https://cache.nixos.org` and a --dry-run
+#           showing every path fetched rather than built.
 declare -a PIN_MAP=(
     "nixpkgs-last-good:build:ntp"
-    # mesa's condition is "Hydra is green on aarch64-darwin" — cache availability
-    # and rebuild cost, not whether a local build can eventually succeed.
-    "nixpkgs-pre-mesa-26-1:manual:mesa xorg-server xquartz"
 )
 
 note() { printf 'pin-currency: %s\n' "$*"; }

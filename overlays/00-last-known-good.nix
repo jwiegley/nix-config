@@ -25,15 +25,6 @@ let
   #     clang-21 + libc++ in SDK 14.4 (regression in folly 2026.01.19.00)
   lastGood = nixpkgs "nixpkgs-last-good";
 
-  # Last good nixpkgs rev before nixpkgs PR 517610 (merged 2026-05-07)
-  # bumped mesa 26.0.6 -> 26.1.0 without verifying Darwin builds. The new
-  # mesa.aarch64-darwin output has no Hydra build / no cache.nixos.org entry,
-  # and the new kosmickrisp Vulkan driver pulls in apple-sdk-26.0 + llvm-21
-  # + SPIRV-LLVM-Translator-21, making a local rebuild slow and fragile.
-  # Pin mesa together with its xorg-server/xquartz consumers so the closure
-  # stays self-consistent. Drop these once Hydra is green on aarch64-darwin.
-  preMesa26_1 = nixpkgs "nixpkgs-pre-mesa-26-1";
-
 in
 {
   # Only ntp still fails to build against current nixpkgs (configure cannot
@@ -49,12 +40,6 @@ in
   # self-consistent.
   inherit (lastGood)
     ntp
-    ;
-
-  inherit (preMesa26_1)
-    mesa
-    xorg-server
-    xquartz
     ;
 
   pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
