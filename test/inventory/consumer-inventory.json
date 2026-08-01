@@ -3,7 +3,7 @@
  "artifact": "consumer-inventory",
  "generatedBy": "test/bin/consumer-inventory",
  "purpose": "Merged, classified inventory of every reference from every consumer into nix-config, so the config/ai -> config/fleet rename (#47) and its straggler sweep (#63) know exactly who breaks. One record per reference.",
- "repoHead": "1029a6594e0a2cf863bc77a95173e4a2d507fe9c",
+ "repoHead": "50fd5b316233e0044fbdeeeb9515ac1239d93482",
  "consumerLayout": "nix-config at the repository root; consumer checkouts as siblings (nixos, vps, andoria). Absolute paths are intentionally omitted: see the comment at this key in test/bin/consumer-inventory.",
  "classificationScheme": {
   "rename-now": "Stale operational reference to the literal config/ai directory inside nix-config; #47 must leave none.",
@@ -43,7 +43,7 @@
   "note": "re-run the commands (needs network + gh auth) to refresh; not run inside derive() to keep the artifact reproducible offline."
  },
  "summary": {
-  "totalReferences": 126,
+  "totalReferences": 110,
   "internalConfigAiRefCount": 89,
   "internalConfigAiFileCount": 21,
   "internalConfigAiFiles": [
@@ -72,21 +72,18 @@
   "flakeAiInternalConsumerCount": 0,
   "flakeAiMentionCount": 7,
   "byClassification": {
-   "retain-with-owner": 108,
-   "retire": 18
+   "retain-with-owner": 110
   },
   "byKind": {
    "config-import": 6,
    "flake-input": 6,
    "input-follows": 3,
    "internal-config-ai-ref": 89,
-   "reach-in-attr": 8,
-   "reach-in-path": 10,
-   "subflake-overlay-use": 4
+   "subflake-overlay-use": 6
   },
   "byLoadBearing": {
    "false": 21,
-   "n/a": 37,
+   "n/a": 21,
    "true": 68
   },
   "byRefKind": {
@@ -94,7 +91,7 @@
    "data": 18,
    "doc-prose": 8,
    "import": 5,
-   "n/a": 37,
+   "n/a": 21,
    "path": 45
   }
  },
@@ -107,8 +104,8 @@
    "source": "local-checkout",
    "root": "/Users/johnw/src/nixos",
    "authoritativeHostPath": "/etc/nixos on vulcan",
-   "lockedRev": "1029a6594e0a2cf863bc77a95173e4a2d507fe9c",
-   "referenceCount": 22,
+   "lockedRev": "93b023c49d6fa647021f12e2c4d9ce02835ca3e4",
+   "referenceCount": 9,
    "verifyCommand": "on vulcan (read-only): grep -nE 'nix-config|config/ai|follows.*nix-config|\\$\\{inputs\\.nix-config\\}' /etc/nixos/flake.nix /etc/nixos/overlays/*.nix",
    "note": "rows derived from the local checkout; the live build tree is /etc/nixos on vulcan (its lock may differ)"
   },
@@ -120,8 +117,8 @@
    "source": "local-checkout",
    "root": "/Users/johnw/src/vps",
    "authoritativeHostPath": "/etc/nixos on ovh-vps",
-   "lockedRev": "1029a6594e0a2cf863bc77a95173e4a2d507fe9c",
-   "referenceCount": 8,
+   "lockedRev": "166ade2c2e25cf150333b084618fe788f4eb2b3c",
+   "referenceCount": 5,
    "verifyCommand": "on ovh-vps (read-only): grep -nE 'nix-config|config/ai|follows.*nix-config|\\$\\{inputs\\.nix-config\\}' /etc/nixos/flake.nix /etc/nixos/overlays/*.nix",
    "note": "rows derived from the local checkout; the live build tree is /etc/nixos on ovh-vps (its lock may differ)"
   },
@@ -287,7 +284,7 @@
    "kind": "internal-config-ai-ref",
    "classification": "retain-with-owner",
    "file": "config/hosts/registry.nix",
-   "line": 121,
+   "line": 122,
    "text": "# `nixManagedAiHomeClass` override that config/ai.nix already uses (see its",
    "owner": "config/ai.nix Home Manager module",
    "trigger": "none; the sibling module filename is not the renamed directory",
@@ -300,7 +297,7 @@
    "kind": "internal-config-ai-ref",
    "classification": "retain-with-owner",
    "file": "config/hosts/registry.nix",
-   "line": 146,
+   "line": 147,
    "text": "# Mirror config/ai.nix:47 exactly: the explicit class wins, else the name.",
    "owner": "config/ai.nix Home Manager module",
    "trigger": "none; the sibling module filename is not the renamed directory",
@@ -1327,7 +1324,7 @@
    "kind": "internal-config-ai-ref",
    "classification": "retain-with-owner",
    "file": "test/coverage/manifest.json",
-   "line": 1362,
+   "line": 1396,
    "text": "\"config/ai/flake.nix is an intentional throwing stub verified by immutable-subflake-check's negative probe; successful Nix evaluation cannot positively reach it.\",",
    "owner": "jwiegley/nix-config#47 historical or detector evidence",
    "trigger": "none; preserve recorded history or stale-path detection",
@@ -1340,7 +1337,7 @@
    "kind": "config-import",
    "classification": "retain-with-owner",
    "file": "modules/users/home-manager/johnw.nix",
-   "line": 26,
+   "line": 20,
    "text": "packages = import \"${inputs.nix-config}/config/packages.nix\" {",
    "targetPath": "config/packages.nix",
    "owner": "nix-config shared-config API (config/johnw.nix, config/packages.nix, config/overlays.nix)",
@@ -1356,8 +1353,8 @@
    "kind": "config-import",
    "classification": "retain-with-owner",
    "file": "modules/users/home-manager/johnw.nix",
-   "line": 33,
-   "text": "\"${inputs.nix-config}/config/johnw.nix\"",
+   "line": 26,
+   "text": "imports = [ \"${inputs.nix-config}/config/johnw.nix\" ];",
    "targetPath": "config/johnw.nix",
    "owner": "nix-config shared-config API (config/johnw.nix, config/packages.nix, config/overlays.nix)",
    "trigger": "none (stable portable API; not on the config/ai path)",
@@ -1378,7 +1375,7 @@
    "declaredUrl": "git+ssh://gitea/johnw/nix-config?dir=config/fleet",
    "dir": "config/fleet",
    "flakeFalse": false,
-   "lockedRev": "1029a6594e0a2cf863bc77a95173e4a2d507fe9c",
+   "lockedRev": "93b023c49d6fa647021f12e2c4d9ce02835ca3e4",
    "lockedRef": "refs/heads/main",
    "owner": "jwiegley/nixos-config (read from ~/src/nixos; live build tree /etc/nixos on vulcan)",
    "trigger": "none (canonical fleet subflake URL)",
@@ -1399,7 +1396,7 @@
    "declaredUrl": "git+ssh://gitea/johnw/nix-config",
    "dir": null,
    "flakeFalse": true,
-   "lockedRev": "1029a6594e0a2cf863bc77a95173e4a2d507fe9c",
+   "lockedRev": "93b023c49d6fa647021f12e2c4d9ce02835ca3e4",
    "lockedRef": "refs/heads/main",
    "owner": "jwiegley/nixos-config (read from ~/src/nixos; live build tree /etc/nixos on vulcan)",
    "trigger": "none (points at the repo root, not the config/ai path)",
@@ -1428,271 +1425,10 @@
   },
   {
    "consumer": "vulcan",
-   "kind": "reach-in-attr",
-   "classification": "retire",
-   "file": "overlays/default.nix",
-   "line": 300,
-   "text": "hammer",
-   "attr": "hammer",
-   "srcOverlays": [
-    "overlays/30-misc-tools.nix"
-   ],
-   "owner": "jwiegley/nixos-config#4",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this cherry-pick",
-   "note": "attribute cherry-picked out of a nix-config internal overlay",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/nixos"
-   }
-  },
-  {
-   "consumer": "vulcan",
-   "kind": "reach-in-attr",
-   "classification": "retire",
-   "file": "overlays/default.nix",
-   "line": 301,
-   "text": "linkdups",
-   "attr": "linkdups",
-   "srcOverlays": [
-    "overlays/30-misc-tools.nix"
-   ],
-   "owner": "jwiegley/nixos-config#4",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this cherry-pick",
-   "note": "attribute cherry-picked out of a nix-config internal overlay",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/nixos"
-   }
-  },
-  {
-   "consumer": "vulcan",
-   "kind": "reach-in-attr",
-   "classification": "retire",
-   "file": "overlays/default.nix",
-   "line": 302,
-   "text": "lipotell",
-   "attr": "lipotell",
-   "srcOverlays": [
-    "overlays/30-misc-tools.nix"
-   ],
-   "owner": "jwiegley/nixos-config#4",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this cherry-pick",
-   "note": "attribute cherry-picked out of a nix-config internal overlay",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/nixos"
-   }
-  },
-  {
-   "consumer": "vulcan",
-   "kind": "reach-in-attr",
-   "classification": "retire",
-   "file": "overlays/default.nix",
-   "line": 305,
-   "text": "markless",
-   "attr": "markless",
-   "srcOverlays": [
-    "overlays/30-markless.nix"
-   ],
-   "owner": "jwiegley/nixos-config#4",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this cherry-pick",
-   "note": "attribute cherry-picked out of a nix-config internal overlay",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/nixos"
-   }
-  },
-  {
-   "consumer": "vulcan",
-   "kind": "reach-in-attr",
-   "classification": "retire",
-   "file": "overlays/default.nix",
-   "line": 325,
-   "text": "tsvutils",
-   "attr": "tsvutils",
-   "srcOverlays": [
-    "overlays/30-data-tools.nix"
-   ],
-   "owner": "jwiegley/nixos-config#4",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this cherry-pick",
-   "note": "attribute cherry-picked out of a nix-config internal overlay",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/nixos"
-   }
-  },
-  {
-   "consumer": "vulcan",
-   "kind": "reach-in-attr",
-   "classification": "retire",
-   "file": "overlays/default.nix",
-   "line": 329,
-   "text": "filetags",
-   "attr": "filetags",
-   "srcOverlays": [
-    "overlays/30-text-tools.nix"
-   ],
-   "owner": "jwiegley/nixos-config#4",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this cherry-pick",
-   "note": "attribute cherry-picked out of a nix-config internal overlay",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/nixos"
-   }
-  },
-  {
-   "consumer": "vulcan",
-   "kind": "reach-in-attr",
-   "classification": "retire",
-   "file": "overlays/default.nix",
-   "line": 332,
-   "text": "nix-scripts",
-   "attr": "nix-scripts",
-   "srcOverlays": [
-    "overlays/30-user-scripts.nix"
-   ],
-   "owner": "jwiegley/nixos-config#4",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this cherry-pick",
-   "note": "attribute cherry-picked out of a nix-config internal overlay",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/nixos"
-   }
-  },
-  {
-   "consumer": "vulcan",
-   "kind": "reach-in-path",
-   "classification": "retire",
-   "file": "flake.nix",
-   "line": 322,
-   "text": "(import \"${inputs.nix-config}/overlays/00-lib.nix\")",
-   "targetPath": "overlays/00-lib.nix",
-   "owner": "jwiegley/nixos-config#4",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
-   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/nixos"
-   }
-  },
-  {
-   "consumer": "vulcan",
-   "kind": "reach-in-path",
-   "classification": "retire",
-   "file": "flake.nix",
-   "line": 336,
-   "text": "(import \"${inputs.nix-config}/overlays/30-misc-tools.nix\")",
-   "targetPath": "overlays/30-misc-tools.nix",
-   "owner": "jwiegley/nixos-config#4",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
-   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/nixos"
-   }
-  },
-  {
-   "consumer": "vulcan",
-   "kind": "reach-in-path",
-   "classification": "retire",
-   "file": "overlays/default.nix",
-   "line": 31,
-   "text": "myLibOverlay = import \"${inputs.nix-config}/overlays/00-lib.nix\";",
-   "targetPath": "overlays/00-lib.nix",
-   "owner": "jwiegley/nixos-config#4",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
-   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/nixos"
-   }
-  },
-  {
-   "consumer": "vulcan",
-   "kind": "reach-in-path",
-   "classification": "retire",
-   "file": "overlays/default.nix",
-   "line": 299,
-   "text": "inherit (import \"${inputs.nix-config}/overlays/30-misc-tools.nix\" final prevWithMyLib)",
-   "targetPath": "overlays/30-misc-tools.nix",
-   "owner": "jwiegley/nixos-config#4",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
-   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/nixos"
-   }
-  },
-  {
-   "consumer": "vulcan",
-   "kind": "reach-in-path",
-   "classification": "retire",
-   "file": "overlays/default.nix",
-   "line": 304,
-   "text": "inherit (import \"${inputs.nix-config}/overlays/30-markless.nix\" final (prev // { inherit inputs; }))",
-   "targetPath": "overlays/30-markless.nix",
-   "owner": "jwiegley/nixos-config#4",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
-   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/nixos"
-   }
-  },
-  {
-   "consumer": "vulcan",
-   "kind": "reach-in-path",
-   "classification": "retire",
-   "file": "overlays/default.nix",
-   "line": 324,
-   "text": "inherit (import \"${inputs.nix-config}/overlays/30-data-tools.nix\" { } final prevWithMyLib)",
-   "targetPath": "overlays/30-data-tools.nix",
-   "owner": "jwiegley/nixos-config#4",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
-   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/nixos"
-   }
-  },
-  {
-   "consumer": "vulcan",
-   "kind": "reach-in-path",
-   "classification": "retire",
-   "file": "overlays/default.nix",
-   "line": 328,
-   "text": "(import \"${inputs.nix-config}/overlays/30-text-tools.nix\" { } final (prev // { inherit inputs; }))",
-   "targetPath": "overlays/30-text-tools.nix",
-   "owner": "jwiegley/nixos-config#4",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
-   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/nixos"
-   }
-  },
-  {
-   "consumer": "vulcan",
-   "kind": "reach-in-path",
-   "classification": "retire",
-   "file": "overlays/default.nix",
-   "line": 331,
-   "text": "inherit (import \"${inputs.nix-config}/overlays/30-user-scripts.nix\" { } final prevWithMyLib)",
-   "targetPath": "overlays/30-user-scripts.nix",
-   "owner": "jwiegley/nixos-config#4",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
-   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/nixos"
-   }
-  },
-  {
-   "consumer": "vulcan",
    "kind": "subflake-overlay-use",
    "classification": "retain-with-owner",
    "file": "flake.nix",
-   "line": 164,
+   "line": 146,
    "text": "inputs.nix-config-ai.overlays.default",
    "owner": "jwiegley/nixos-config (read from ~/src/nixos; live build tree /etc/nixos on vulcan)",
    "trigger": "none (canonical fleet subflake URL)",
@@ -1707,8 +1443,38 @@
    "kind": "subflake-overlay-use",
    "classification": "retain-with-owner",
    "file": "flake.nix",
-   "line": 312,
+   "line": 150,
+   "text": "inputs.nix-config-ai.overlays.tools",
+   "owner": "jwiegley/nixos-config (read from ~/src/nixos; live build tree /etc/nixos on vulcan)",
+   "trigger": "none (canonical fleet subflake URL)",
+   "note": "canonical ?dir=config/fleet subflake input; consumes its exported overlay",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "subflake-overlay-use",
+   "classification": "retain-with-owner",
+   "file": "flake.nix",
+   "line": 298,
    "text": "inputs.nix-config-ai.overlays.default",
+   "owner": "jwiegley/nixos-config (read from ~/src/nixos; live build tree /etc/nixos on vulcan)",
+   "trigger": "none (canonical fleet subflake URL)",
+   "note": "canonical ?dir=config/fleet subflake input; consumes its exported overlay",
+   "source": {
+    "kind": "local-checkout",
+    "path": "/Users/johnw/src/nixos"
+   }
+  },
+  {
+   "consumer": "vulcan",
+   "kind": "subflake-overlay-use",
+   "classification": "retain-with-owner",
+   "file": "flake.nix",
+   "line": 304,
+   "text": "inputs.nix-config-ai.overlays.tools",
    "owner": "jwiegley/nixos-config (read from ~/src/nixos; live build tree /etc/nixos on vulcan)",
    "trigger": "none (canonical fleet subflake URL)",
    "note": "canonical ?dir=config/fleet subflake input; consumes its exported overlay",
@@ -1722,7 +1488,7 @@
    "kind": "config-import",
    "classification": "retain-with-owner",
    "file": "modules/users/home-manager/johnw.nix",
-   "line": 31,
+   "line": 23,
    "text": "imports = [ \"${inputs.nix-config}/config/johnw.nix\" ];",
    "targetPath": "config/johnw.nix",
    "owner": "nix-config shared-config API (config/johnw.nix, config/packages.nix, config/overlays.nix)",
@@ -1744,7 +1510,7 @@
    "declaredUrl": "github:jwiegley/nix-config?dir=config/fleet&ref=main",
    "dir": "config/fleet",
    "flakeFalse": false,
-   "lockedRev": "1029a6594e0a2cf863bc77a95173e4a2d507fe9c",
+   "lockedRev": "166ade2c2e25cf150333b084618fe788f4eb2b3c",
    "lockedRef": "main",
    "owner": "vps consumer (read from ~/src/vps; live build tree /etc/nixos on ovh-vps)",
    "trigger": "none (canonical fleet subflake URL)",
@@ -1765,7 +1531,7 @@
    "declaredUrl": "github:jwiegley/nix-config?ref=main",
    "dir": null,
    "flakeFalse": true,
-   "lockedRev": "1029a6594e0a2cf863bc77a95173e4a2d507fe9c",
+   "lockedRev": "166ade2c2e25cf150333b084618fe788f4eb2b3c",
    "lockedRef": "main",
    "owner": "vps consumer (read from ~/src/vps; live build tree /etc/nixos on ovh-vps)",
    "trigger": "none (points at the repo root, not the config/ai path)",
@@ -1794,62 +1560,10 @@
   },
   {
    "consumer": "vps",
-   "kind": "reach-in-attr",
-   "classification": "retire",
-   "file": "overlays/default.nix",
-   "line": 36,
-   "text": "nix-scripts;",
-   "attr": "nix-scripts",
-   "srcOverlays": [
-    "overlays/30-user-scripts.nix",
-    "overlays/00-lib.nix"
-   ],
-   "owner": "jwiegley/nix-config#69",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this cherry-pick",
-   "note": "attribute cherry-picked out of a nix-config internal overlay",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/vps"
-   }
-  },
-  {
-   "consumer": "vps",
-   "kind": "reach-in-path",
-   "classification": "retire",
-   "file": "overlays/default.nix",
-   "line": 32,
-   "text": "(import \"${inputs.nix-config}/overlays/30-user-scripts.nix\"",
-   "targetPath": "overlays/30-user-scripts.nix",
-   "owner": "jwiegley/nix-config#69",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
-   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/vps"
-   }
-  },
-  {
-   "consumer": "vps",
-   "kind": "reach-in-path",
-   "classification": "retire",
-   "file": "overlays/default.nix",
-   "line": 35,
-   "text": "(prev // { inherit inputs; } // (import \"${inputs.nix-config}/overlays/00-lib.nix\" final prev)))",
-   "targetPath": "overlays/00-lib.nix",
-   "owner": "jwiegley/nix-config#69",
-   "trigger": "consumer migrates to typed config/fleet outputs; delete this reach-in",
-   "note": "reach-in into a nix-config INTERNAL overlay file (not a supported API)",
-   "source": {
-    "kind": "local-checkout",
-    "path": "/Users/johnw/src/vps"
-   }
-  },
-  {
-   "consumer": "vps",
    "kind": "subflake-overlay-use",
    "classification": "retain-with-owner",
    "file": "flake.nix",
-   "line": 76,
+   "line": 69,
    "text": "inputs.nix-config-ai.overlays.default",
    "owner": "vps consumer (read from ~/src/vps; live build tree /etc/nixos on ovh-vps)",
    "trigger": "none (canonical fleet subflake URL)",
