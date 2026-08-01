@@ -42,6 +42,20 @@ let
           (_final: _prev: { agent-deck = "caller-override"; })
         ];
       };
+      toolPkgs = import inputs.nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+        overlays = [ actual.overlays.tools ];
+      };
+      consumerTools = [
+        "filetags"
+        "hammer"
+        "linkdups"
+        "lipotell"
+        "markless"
+        "nix-scripts"
+        "tsvutils"
+      ];
       sentinel = {
         passthrough = true;
       };
@@ -75,6 +89,9 @@ let
       (lib.assertMsg (
         overridden.agent-deck == "caller-override"
       ) "portable AI overlay prevents later caller overrides on ${system}")
+      (lib.assertMsg (builtins.all (
+        name: toolPkgs ? ${name}
+      ) consumerTools) "portable tools overlay lost a supported consumer package on ${system}")
       (lib.assertMsg (
         actual.lib.patchAgentPackage pkgs "unhandled" sentinel == sentinel
       ) "patchAgentPackage no longer passes unknown agents through on ${system}")
@@ -102,6 +119,7 @@ let
       ]
     ) "portable overlay contract changed")
     (lib.assertMsg (builtins.isFunction actual.overlays.default) "portable default overlay is not callable")
+    (lib.assertMsg (builtins.isFunction actual.overlays.tools) "portable tools overlay is not callable")
     (lib.assertMsg (builtins.isFunction actual.lib.aiPackagesFor) "aiPackagesFor is not callable")
     (lib.assertMsg (builtins.isFunction actual.lib.patchAgentPackage) "patchAgentPackage is not callable")
     (lib.assertMsg (sortedNames actual.packages == contract.systems) "portable package systems changed")
