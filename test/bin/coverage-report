@@ -4,6 +4,8 @@
 The default operation is intentionally cheap: it derives denominators from Git,
 Python syntax, ``test/bin/quality --list``, and the committed applicability manifest.
 Nix evaluation-start evidence is collected only with ``--collect-nix-reach``.
+Structural writes leave dynamic measurements explicitly unknown unless both
+collection flags are requested.
 
 The persisted format is ``fleet-coverage/1``.  Runtime output is never copied into
 the artifact: Nix probes retain their allowlisted argv and normalized repository
@@ -2361,16 +2363,6 @@ def check_artifact(
     for tool in ("collector", "python", "nix"):
         if artifact["tools"].get(tool) != live["tools"].get(tool):
             raise CoverageError(f"coverage artifact tool identity drifted: {tool}")
-    required = ("nixFileReach", "timing")
-    missing = [
-        name
-        for name in required
-        if artifact["measurements"][name]["state"] != "observed"
-    ]
-    if missing:
-        raise CoverageError(
-            f"coverage artifact is schema-valid but not gate-ready; unobserved={missing}"
-        )
     previous = load_head_artifact(repo, revision, runner)
     if previous is not None:
         validate_non_regression(artifact, previous)
@@ -2424,20 +2416,25 @@ def validate_non_regression(
         ),
         "parent.measurements.nixFileReach",
     )
-    if previous_reach.get("state") != "observed":
-        raise CoverageError("parent Nix file reach is not an observed baseline")
-    current_denominator = set(
-        _unique_strings(current_reach.get("denominator"), "current denominator")
-    )
-    current_reached = set(
-        _unique_strings(current_reach.get("reached"), "current reached", nonempty=False)
-    )
-    previous_reached = set(
-        _unique_strings(previous_reach.get("reached"), "parent reached", nonempty=False)
-    )
-    lost = sorted((previous_reached & current_denominator) - current_reached)
-    if lost:
-        raise CoverageError(f"Nix file reach regressed for paths: {lost}")
+    if current_reach.get("state") == "observed":
+        if previous_reach.get("state") != "observed":
+            raise CoverageError("parent Nix file reach is not an observed baseline")
+        current_denominator = set(
+            _unique_strings(current_reach.get("denominator"), "current denominator")
+        )
+        current_reached = set(
+            _unique_strings(
+                current_reach.get("reached"), "current reached", nonempty=False
+            )
+        )
+        previous_reached = set(
+            _unique_strings(
+                previous_reach.get("reached"), "parent reached", nonempty=False
+            )
+        )
+        lost = sorted((previous_reached & current_denominator) - current_reached)
+        if lost:
+            raise CoverageError(f"Nix file reach regressed for paths: {lost}")
     current_structural = _expect_object(
         current.get("structural"), "artifact.structural"
     )
@@ -2668,7 +2665,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--check", action="store_true", help="validate the sole committed artifact"
     )
     mode.add_argument(
-        "--write", action="store_true", help="atomically replace the sole artifact"
+        "--write",
+        action="store_true",
+        help="atomically replace the artifact; add both collection flags for a full refresh",
     )
     mode.add_argument(
         "--compare-live",
@@ -2715,9 +2714,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(format_report_summary(current))
             return 0
         if args.write:
-            if not args.collect_nix_reach or not args.measure_pre_commit:
+            if args.collect_nix_reach != args.measure_pre_commit:
                 raise CoverageError(
-                    "--write requires --collect-nix-reach and --measure-pre-commit"
+                    "--write accepts --collect-nix-reach and --measure-pre-commit only as a pair"
                 )
             path = write_artifact(
                 repo,

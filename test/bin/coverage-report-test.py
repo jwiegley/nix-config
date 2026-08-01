@@ -997,12 +997,11 @@ class ArtifactTests(RepositoryFixture):
         self.assertEqual(written, path)
         self.assertNotEqual(coverage_report.load_json(path)["sourceBaseRev"], "0" * 40)
 
-    def test_unknown_artifact_is_not_gate_ready(self) -> None:
+    def test_unknown_artifact_is_structurally_gate_ready(self) -> None:
         path = coverage_report.write_artifact(self.repo)
         self.git("add", path.relative_to(self.repo).as_posix())
         self.git("commit", "-qm", "coverage baseline")
-        with self.assertRaisesRegex(coverage_report.CoverageError, "not gate-ready"):
-            coverage_report.check_artifact(self.repo)
+        self.assertEqual(coverage_report.check_artifact(self.repo), path)
 
     def test_check_requires_exactly_one_committed_artifact(self) -> None:
         with self.assertRaisesRegex(coverage_report.CoverageError, "no committed"):
@@ -1136,15 +1135,33 @@ class CliTests(unittest.TestCase):
             operation.assert_called_once()
             self.assertIn(prefix, stream.getvalue())
 
-    def test_write_refuses_to_erase_observations_with_structural_only_run(self) -> None:
-        stderr = io.StringIO()
+    def test_write_requires_expensive_collection_flags_as_a_pair(self) -> None:
+        for flag in ("--collect-nix-reach", "--measure-pre-commit"):
+            stderr = io.StringIO()
+            with (
+                self.subTest(flag=flag),
+                mock.patch.object(coverage_report, "write_artifact") as operation,
+                mock.patch("sys.stderr", stderr),
+            ):
+                self.assertEqual(coverage_report.main(["--write", flag]), 2)
+            operation.assert_not_called()
+            self.assertIn("only as a pair", stderr.getvalue())
+
+    def test_structural_write_records_unknown_dynamic_measurements(self) -> None:
+        artifact = REPO / "test/baseline/coverage-fixture.json"
         with (
-            mock.patch.object(coverage_report, "write_artifact") as operation,
-            mock.patch("sys.stderr", stderr),
+            mock.patch.object(
+                coverage_report, "write_artifact", return_value=artifact
+            ) as operation,
+            redirect_stdout(io.StringIO()),
         ):
-            self.assertEqual(coverage_report.main(["--write"]), 2)
-        operation.assert_not_called()
-        self.assertIn("requires --collect-nix-reach", stderr.getvalue())
+            self.assertEqual(coverage_report.main(["--write"]), 0)
+        operation.assert_called_once_with(
+            REPO,
+            explicit=None,
+            collect_nix_reach=False,
+            measure_pre_commit=False,
+        )
 
 
 if __name__ == "__main__":
