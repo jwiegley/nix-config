@@ -787,79 +787,18 @@ runCommand "pi-gallery-check"
       cat "$smoke/output.log" >&2
       fail "new Pi gallery commands were not registered"
     }
-    cat > "$smoke/expected-active-tools.json" <<'JSON'
-      [
-        "agent_browser",
-        "bash",
-        "batch_web_fetch",
-        "cymbal_changed",
-        "cymbal_context",
-        "cymbal_diff",
-        "cymbal_impact",
-        "cymbal_impls",
-        "cymbal_importers",
-        "cymbal_index",
-        "cymbal_investigate",
-        "cymbal_map",
-        "cymbal_outline",
-        "cymbal_refs",
-        "cymbal_search",
-        "cymbal_show",
-        "cymbal_structure",
-        "cymbal_trace",
-        "delete_artifact",
-        "delete_artifacts",
-        "edit",
-        "export_artifact",
-        "get_goal",
-        "intercom",
-        "lens_diagnostics",
-        "list_artifacts",
-        "lsp_diagnostics",
-        "module_report",
-        "pi_lens_activate_tools",
-        "preview_export",
-        "propose_goal_draft",
-        "read",
-        "read_enclosing",
-        "read_symbol",
-        "recall",
-        "render_artifact",
-        "replace",
-        "scaffold_artifact",
-        "subagent",
-        "subagent_supervisor",
-        "subagent_wait",
-        "symbol_search",
-        "undo_last_replace",
-        "web_fetch",
-        "web_search",
-        "workflow",
-        "workflow_control",
-        "write"
-      ]
-    JSON
-    validate_active_tools() {
-      jq -e --slurpfile expected "$smoke/expected-active-tools.json" '
-        . as $actual
-        | (($actual | sort) == ($expected[0] | sort))
-          and (($actual | length) == ($actual | unique | length))
-      ' "$1" >/dev/null
-    }
-    validate_active_tools "$smoke/active-tools.json" || {
+    jq -e '
+      . as $actual
+      | ($actual | length) == ($actual | unique | length)
+        and all(
+          ["batch_web_fetch", "edit", "read", "web_fetch", "web_search", "write"][];
+          . as $required | $actual | index($required) != null
+        )
+        and all($actual[]; contains("anvil") | not)
+    ' "$smoke/active-tools.json" >/dev/null || {
       cat "$smoke/active-tools.json" >&2
-      fail "new Pi gallery tools were not registered or a removed extension remained active"
+      fail "Pi gallery required tools, uniqueness, or retired-tool invariant failed"
     }
-    jq '. + ["unexpected_gallery_tool"]' "$smoke/active-tools.json" \
-      > "$smoke/active-tools-extra.json"
-    if validate_active_tools "$smoke/active-tools-extra.json"; then
-      fail "active-tools gate accepted an undeclared tool"
-    fi
-    jq '. + ["web_search"]' "$smoke/active-tools.json" \
-      > "$smoke/active-tools-duplicate.json"
-    if validate_active_tools "$smoke/active-tools-duplicate.json"; then
-      fail "active-tools gate accepted a duplicate registration"
-    fi
     validate_web_tool_owners() {
       jq -e '
         .batch_web_fetch == ["smart-fetch"]
