@@ -1006,12 +1006,11 @@ test_codex_open_file_limit_case() {
     new_case codex "$label"
     configure_state zero
     (
-        CODEX_BIN=$binary
         ulimit -Sn 256
         if [ -n "$hard_limit" ]; then
             ulimit -Hn "$hard_limit"
         fi
-        invoke_agent codex "$bypass" 0 alpha
+        CODEX_BIN=$binary invoke_agent codex "$bypass" 0 alpha
         [ "$LAST_STATUS" -eq 0 ] || fail "Codex open-file limit case failed: $label"
         assert_argv "$ARGV_FILE" alpha
         assert_env "AGENT_TEST_OPEN_FILE_LIMIT=$expected"

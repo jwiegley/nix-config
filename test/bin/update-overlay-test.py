@@ -5475,7 +5475,7 @@ fi
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(
                 command_log.read_text().splitlines()[0],
-                "flake update --flake ./config/fleet git-ai llm-agents mcp-remote "
+                "flake update --flake ./config/fleet git-ai llm-agents "
                 "mcp-servers-nix pal-mcp-server pi-openai-server-compaction "
                 "pi-quiet rust-overlay translate-tool copy-input",
             )
@@ -7657,6 +7657,7 @@ exec "$REAL_GIT" "$@"
             for source in (SWITCH, UPGRADE, UPDATE_AGENTS):
                 target = closure_bin / source.name
                 shutil.copy2(source, target)
+                target.chmod(target.stat().st_mode | stat.S_IWUSR)
                 packaged = target.read_text()
                 self.assertEqual(packaged.count("installed_routing_path="), 1)
                 packaged = packaged.replace(

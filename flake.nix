@@ -461,6 +461,7 @@
                       ruff
                       findutils
                       git
+                      jq
                       nix
                       python3
                     ];
