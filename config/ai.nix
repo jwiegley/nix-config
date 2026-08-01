@@ -10,9 +10,23 @@ let
   nixManagedAiHomeClass = args.nixManagedAiHomeClass or null;
   inherit (pkgs.stdenv) isDarwin isLinux;
   system = pkgs.stdenv.hostPlatform.system;
+  moduleInputs = args.inputs or { };
+  pairedAiInput = moduleInputs.nix-config-ai or null;
+  pairedAiPackages =
+    if pairedAiInput != null && pairedAiInput ? packages && pairedAiInput.packages ? ${system} then
+      pairedAiInput.packages.${system}
+    else
+      { };
+  pairedPiPackage = pairedAiPackages.pi or null;
+  pairedAgentResources = pairedAiPackages.agent-resources or null;
+  pairedPiGallery = pairedAiPackages.pi-gallery or null;
   resourcePackage = pkgs.agent-resources;
   rendererPkgs = pkgs // {
     agent-resources = resourcePackage;
+  };
+  piRendererPkgs = rendererPkgs // {
+    agent-resources = if pairedAgentResources != null then pairedAgentResources else resourcePackage;
+    pi-gallery = if pairedPiGallery != null then pairedPiGallery else pkgs.pi-gallery;
   };
 
   modelData = import ./fleet/models.nix { };
@@ -28,7 +42,7 @@ let
     codex = import ./fleet/renderers/codex.nix {
       inherit lib;
       pkgs = rendererPkgs;
-      llmAgents = args.inputs.llm-agents;
+      llmAgents = moduleInputs.llm-agents;
     };
     droid = import ./fleet/renderers/droid.nix {
       inherit lib;
@@ -40,7 +54,7 @@ let
     };
     pi = import ./fleet/renderers/pi.nix {
       inherit lib;
-      pkgs = rendererPkgs;
+      pkgs = piRendererPkgs;
     };
   };
 
@@ -264,6 +278,26 @@ in
       assertion = builtins.length piGuards == (if piSelected then 1 else 0);
       message = "nix-managed AI Pi selection must have exactly one mutable guard";
     }
+    {
+      assertion = !piSelected || pairedAiInput != null;
+      message = "nix-managed AI Pi profile requires inputs.nix-config-ai";
+    }
+    {
+      assertion = !piSelected || pairedAiInput ? packages && pairedAiInput.packages ? ${system};
+      message = "inputs.nix-config-ai has no packages for ${system}";
+    }
+    {
+      assertion = !piSelected || pairedPiPackage != null;
+      message = "inputs.nix-config-ai.packages.${system}.pi is missing";
+    }
+    {
+      assertion = !piSelected || pairedAgentResources != null;
+      message = "inputs.nix-config-ai.packages.${system}.agent-resources is missing";
+    }
+    {
+      assertion = !piSelected || pairedPiGallery != null;
+      message = "inputs.nix-config-ai.packages.${system}.pi-gallery is missing";
+    }
   ];
 
   home = {
@@ -277,6 +311,7 @@ in
       };
     packages =
       lib.optional droidSelected pkgs.agent-http-header-bridge
+      ++ lib.optional (piSelected && pairedPiPackage != null) pairedPiPackage
       ++ lib.optionals piSelected piRuntimePackages;
     sessionVariables = lib.optionalAttrs codexSelected {
       OMLX_API_KEY = "dummy-key";

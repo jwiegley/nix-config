@@ -525,7 +525,6 @@ rec {
     ++ optAgent "droid"
     ++ optAgent "git-surgeon"
     ++ optAgent "opencode"
-    ++ optAgent "pi"
     # ++ optAgent "gemini-cli"
 
     # ── MCP Servers & Agent Tools ────────────────────────────────────
