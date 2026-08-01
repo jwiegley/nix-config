@@ -1024,7 +1024,8 @@ in
           })
         ];
         preConfigure = ''
-          sed -i -e 's/headerpad_extra=1000/headerpad_extra=2000/' configure.ac
+          substituteInPlace configure.ac \
+            --replace-fail 'headerpad_extra=1000' 'headerpad_extra=2000'
           autoreconf
         '';
         env.NIX_CFLAGS_COMPILE = "-g3 -O0";

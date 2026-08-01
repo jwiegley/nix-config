@@ -23,8 +23,9 @@ in
       chmod -R u+w vendor/github.com/go-git/go-git/v5
       substituteInPlace vendor/github.com/go-git/go-git/v5/repository_extensions.go \
         --replace-fail '"worktreeConfig":  {},' '"worktreeconfig":  {},'
-      sed -i 's|"noop-v1": {},|&\n\t\t"worktreeconfig": {},|' \
-        vendor/github.com/go-git/go-git/v5/repository_extensions.go
+      substituteInPlace vendor/github.com/go-git/go-git/v5/repository_extensions.go \
+        --replace-fail '"noop-v1": {},' \
+        $'"noop-v1": {},\n\t\t"worktreeconfig": {},'
     '';
   });
 

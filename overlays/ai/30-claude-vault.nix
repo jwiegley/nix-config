@@ -29,11 +29,14 @@ in
       # trip, the lockfile-consistency check.  Only this crate's version
       # line changes; the dependency graph is untouched, so cargoHash stays
       # valid.  Note: "version = \"0.1.0\"" is unique in Cargo.toml but not in
-      # Cargo.lock, hence the name-anchored sed for the lockfile.
+      # Cargo.lock, hence the name/version pair substitution for the lockfile.
       preBuild = ''
         substituteInPlace Cargo.toml \
           --replace-fail 'version = "0.1.0"' 'version = "${version}"'
-        sed -i '/^name = "claude-vault"$/{n;s/^version = "0.1.0"$/version = "${version}"/;}' Cargo.lock
+        substituteInPlace Cargo.lock \
+          --replace-fail \
+          $'name = "claude-vault"\nversion = "0.1.0"' \
+          $'name = "claude-vault"\nversion = "${version}"'
       '';
 
       meta = {

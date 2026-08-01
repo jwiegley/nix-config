@@ -116,7 +116,8 @@ in
     postPatch =
       (oldAttrs.postPatch or "")
       + prev.lib.optionalString prev.stdenv.isDarwin ''
-        sed -i.bak 's/discard_const(s)/(void *)(s)/g' lib/ldb/tests/test_ldb_comparison_fold.c
+        substituteInPlace lib/ldb/tests/test_ldb_comparison_fold.c \
+          --replace-fail 'discard_const(s)' '(void *)(s)'
       '';
   });
 
