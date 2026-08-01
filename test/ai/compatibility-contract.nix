@@ -23,6 +23,10 @@ in
       "default"
     ]
     [
+      "overlays"
+      "tools"
+    ]
+    [
       "lib"
       "aiPackagesFor"
     ]

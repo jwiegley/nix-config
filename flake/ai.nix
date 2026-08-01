@@ -16,6 +16,20 @@ let
   forAllSystems = lib.genAttrs systems;
 
   overlays = import ../overlays/ai { inherit inputs; };
+  toolingOverlays = [
+    (import ../overlays/00-lib.nix)
+    (
+      _final: prev:
+      lib.optionalAttrs (!(prev ? gogcli)) {
+        gogcli = inputs.nixpkgs.legacyPackages.${prev.stdenv.hostPlatform.system}.gogcli;
+      }
+    )
+    ((import ../overlays/30-data-tools.nix) { })
+    (import ../overlays/30-markless.nix)
+    (import ../overlays/30-misc-tools.nix)
+    ((import ../overlays/30-text-tools.nix) { })
+    ((import ../overlays/30-user-scripts.nix) { })
+  ];
 
   mkPkgs =
     system:
@@ -322,7 +336,10 @@ let
       '';
 in
 {
-  overlays.default = lib.composeManyExtensions overlays;
+  overlays = {
+    default = lib.composeManyExtensions overlays;
+    tools = lib.composeManyExtensions toolingOverlays;
+  };
 
   lib = {
     inherit aiPackagesFor patchAgentPackage;

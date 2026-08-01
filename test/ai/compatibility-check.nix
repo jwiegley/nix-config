@@ -95,7 +95,12 @@ let
         "patchAgentPackage"
       ]
     ) "portable AI library contract changed")
-    (lib.assertMsg (sortedNames actual.overlays == [ "default" ]) "portable overlay contract changed")
+    (lib.assertMsg (
+      sortedNames actual.overlays == [
+        "default"
+        "tools"
+      ]
+    ) "portable overlay contract changed")
     (lib.assertMsg (builtins.isFunction actual.overlays.default) "portable default overlay is not callable")
     (lib.assertMsg (builtins.isFunction actual.lib.aiPackagesFor) "aiPackagesFor is not callable")
     (lib.assertMsg (builtins.isFunction actual.lib.patchAgentPackage) "patchAgentPackage is not callable")

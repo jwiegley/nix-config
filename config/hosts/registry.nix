@@ -77,6 +77,7 @@ in
       username = "johnw";
       roles = [
         "server-headless"
+        "server-lean"
         "ai-client"
       ];
       hmRelease = "25.11"; # declares the known skew, §6.5 (inert; see NOTES)
