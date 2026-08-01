@@ -880,6 +880,10 @@
       },
       {
         "system": "aarch64-darwin",
+        "id": "pi-fleet-theme"
+      },
+      {
+        "system": "aarch64-darwin",
         "id": "pi-gallery"
       },
       {
@@ -960,6 +964,10 @@
       },
       {
         "system": "aarch64-linux",
+        "id": "pi-fleet-theme"
+      },
+      {
+        "system": "aarch64-linux",
         "id": "pi-gallery"
       },
       {
@@ -1037,6 +1045,10 @@
       {
         "system": "x86_64-linux",
         "id": "llm-agents-nixpkgs-independent"
+      },
+      {
+        "system": "x86_64-linux",
+        "id": "pi-fleet-theme"
       },
       {
         "system": "x86_64-linux",
@@ -1319,6 +1331,7 @@
           "agent-resources",
           "cymbal",
           "default",
+          "pi",
           "pi-agent-browser-native",
           "pi-artifacts",
           "pi-blackhole",
