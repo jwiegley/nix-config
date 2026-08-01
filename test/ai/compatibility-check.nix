@@ -92,11 +92,9 @@ let
       (lib.assertMsg (builtins.all (
         name: toolPkgs ? ${name}
       ) consumerTools) "portable tools overlay lost a supported consumer package on ${system}")
-      (lib.assertMsg (
-        builtins.isString toolPkgs.nix-scripts.drvPath
-      ) "portable tools overlay cannot instantiate nix-scripts on ${system}")
-      (lib.assertMsg (
-        builtins.isString actual.packages.${system}.nix-scripts.drvPath
+      (lib.assertMsg (builtins.isString toolPkgs.nix-scripts.drvPath) "portable tools overlay cannot instantiate nix-scripts on ${system}")
+      (lib.assertMsg (builtins.isString
+        actual.packages.${system}.nix-scripts.drvPath
       ) "portable package output cannot instantiate nix-scripts on ${system}")
       (lib.assertMsg (
         actual.lib.patchAgentPackage pkgs "unhandled" sentinel == sentinel
