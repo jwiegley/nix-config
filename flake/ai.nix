@@ -178,6 +178,13 @@ let
       ignoreCollisions = true;
     };
 
+  nixScriptsFor =
+    pkgs:
+    let
+      withLib = pkgs // (import ../overlays/00-lib.nix pkgs pkgs);
+    in
+    (import ../overlays/30-user-scripts.nix { } pkgs withLib).nix-scripts;
+
   devToolPackages =
     pkgs: with pkgs; [
       deadnix
@@ -350,6 +357,7 @@ in
     pkgs.pi-gallery.packages
     // {
       default = mkAiToolchain pkgs;
+      nix-scripts = nixScriptsFor pkgs;
       pi = canonicalPiPackages.${system};
       inherit (pkgs)
         agent-http-header-bridge

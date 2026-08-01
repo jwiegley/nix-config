@@ -37,6 +37,7 @@ in
       "agent-http-header-bridge"
       "agent-resources"
       "default"
+      "nix-scripts"
       "pi"
       "pi-gallery"
       "plasma-fractal"
