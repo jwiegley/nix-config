@@ -52,7 +52,6 @@ help:
 	  '  clean / purge    Delete old Nix generations and store paths'
 
 test:
-	set -e
 	test/bin/quality --python-tier pre-push python-test coverage darwin-surface
 	nix build --no-link \
 	  .#checks.$(SYSTEM).agent-resources \
@@ -157,13 +156,11 @@ lock-local: verify-inputs
 	fi
 
 build:
-	set -e
 	$(call announce,darwin-rebuild build --flake .#$(HOSTNAME))
 	@sudo darwin-rebuild build --flake .#$(HOSTNAME) $(NIXOPTS)
 	@rm -f result
 
 switch: lock-local
-	set -e
 	$(call announce,darwin-rebuild switch --flake .#$(HOSTNAME))
 	@sudo darwin-rebuild switch --flake .#$(HOSTNAME) $(NIXOPTS)
 	@echo "Darwin generation: $$(sudo darwin-rebuild --list-generations | tail -1)"
@@ -313,5 +310,3 @@ travel-ready:
 	         $(NIX_CONF)/bin/de;					\
 	     fi);							\
 	done
-
-.ONESHELL:
