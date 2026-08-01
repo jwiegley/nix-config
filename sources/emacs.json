@@ -38,8 +38,8 @@
         "args": {
           "owner": "emacsmirror",
           "repo": "bookmark-plus",
-          "rev": "892cc0a314ef353e800b6ff9da03b0bfd55e4763",
-          "sha256": "sha256-1Pd0e+FxYq1bORf+YS3lsrbA25CVH7zrqwPUPNnXVLE="
+          "rev": "9b49af47db1ae090deba622b1954d722add926e1",
+          "sha256": "sha256-28KWCFFFFY7+tmk1cjTC/pP0ztqBrOUI/3ScLkjswZE="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/emacsmirror/bookmark-plus"
@@ -262,8 +262,8 @@
         "args": {
           "owner": "karthink",
           "repo": "gptel",
-          "rev": "ebf0f3d8e9932e0ac6de82542220864cc17f6784",
-          "sha256": "sha256-GN9O9leU1CNbB27gVVzzCP8RtaPtZxspnirbxCk+/xU="
+          "rev": "9cafa41e7172a995e4eeadb5049a8c05bf7c30ba",
+          "sha256": "sha256-wFR4qFXzJcWMfVz2GSN15m93JSAkloBcBUijHigszHo="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/karthink/gptel"
@@ -422,8 +422,8 @@
         "args": {
           "owner": "ledger",
           "repo": "ledger-mode",
-          "rev": "b43c9d04e03048763cf37696a63ee2232ac88567",
-          "sha256": "sha256-obLSghymXakHNMz5RmCpHZhune1oYLU6ME3GzDpLwOA="
+          "rev": "b0e71b7e9ee612ccb0b0e5f8bfefcfddb69ae861",
+          "sha256": "sha256-eYo3DruXEJECHS4Mhl83Cfb+1fLr9XOpFPSRpyFe/sc="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/ledger/ledger-mode"
@@ -486,8 +486,8 @@
         "args": {
           "owner": "kmontag",
           "repo": "macher",
-          "rev": "b6e51cb9a01c87e36d8920d947ed171bf21c8287",
-          "sha256": "sha256-f3G4EmOpmHWakfGQC5eaCDtSmBmZB4OxgYglyec/qvM="
+          "rev": "fe3622449d73d5404cd34d3e5cdc3419c624b81e",
+          "sha256": "sha256-h86pDy+Va0X0VsQPaYulqmMFaCt6DqU5+hodgQ4MRHY="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/kmontag/macher"
@@ -598,8 +598,8 @@
         "args": {
           "owner": "jwiegley",
           "repo": "ob-gptel",
-          "rev": "71584eb30e8317cf36104cec78b6d53c4433cae7",
-          "sha256": "sha256-cSbhEeAOitGbbq5Ep8axypALc0ueuVKwk/uIfrXaG1g="
+          "rev": "4961120b7fc6bd2e2debd73f84cdef360188d3c7",
+          "sha256": "sha256-DiUFW0oh0rOEc0aUKUVh6i2tSYtuszCgqCJnDMV1XQQ="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jwiegley/ob-gptel"
@@ -902,8 +902,8 @@
         "args": {
           "owner": "jwiegley",
           "repo": "org-wiki",
-          "rev": "1c8f21ef5eed00c744199d225bb902f064b50a70",
-          "sha256": "sha256-yOss7m6a5Gbfot/4SzqhhuHMwbkbNAgHJ8r9xNM/Evk="
+          "rev": "5e225ccccbb087a1460f557178f2415308f96f1e",
+          "sha256": "sha256-EE4hXOaMaGR+QqPfsPDebu2kt3GpDMhIM028pq2nK0Q="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jwiegley/org-wiki"
@@ -966,8 +966,8 @@
         "args": {
           "owner": "emarsden",
           "repo": "pgmacs",
-          "rev": "fdc5a6f5c2e49c9316dde78185475ce8cdb66d67",
-          "sha256": "sha256-yjsjhsBx6CQVDBR9z1rnLoEgWxpOaLC/Rv0vZYw9ji0="
+          "rev": "72c98973e750c9a2a39780a4f43d3c9aaad8e06e",
+          "sha256": "sha256-Trf6QaUlgAcdfJDkJs8wR+KlsR1QQ3T2sMCOY2lZx2s="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/emarsden/pgmacs"

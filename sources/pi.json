@@ -4,25 +4,25 @@
     "agent-browser": {
       "source": {
         "args": {
-          "hash": "sha256-Zdcyp6DFLuT1kCXvBX7ztk2GqqdiYrpk9IrBF4iJz4M=",
-          "url": "https://registry.npmjs.org/agent-browser/-/agent-browser-0.33.0.tgz"
+          "hash": "sha256-p0MRvwNe0nkYwL7+STEWmSIVqTP1MjNEhf5LoeDLJYA=",
+          "url": "https://registry.npmjs.org/agent-browser/-/agent-browser-0.33.1.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/agent-browser/-/agent-browser-0.33.0.tgz"
+        "url": "https://registry.npmjs.org/agent-browser/-/agent-browser-0.33.1.tgz"
       },
       "update": {
         "kind": "npm-release",
         "package": "agent-browser"
       },
-      "version": "0.33.0"
+      "version": "0.33.1"
     },
     "agent-browser-source": {
       "source": {
         "args": {
-          "narHash": "sha256-praWvAgWoDmWqXzh/kxdfQAPGkVS4qkb0pPYtMWO/N8=",
+          "narHash": "sha256-IShC4VS1Z5ur0rp6QsM/ssHfhdMR9DEDRb7FeB4W3EY=",
           "owner": "vercel-labs",
           "repo": "agent-browser",
-          "rev": "1ed371f3af472cc0d6cd8fdaea75d1a085ff7534",
+          "rev": "da1237e2543de87119cfd48cb48284402bd4dc40",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -97,15 +97,15 @@
     },
     "pi-artifacts": {
       "hashes": {
-        "npmDepsHash": "sha256-uEXAE4Hy6mAFWsb8kckPMlksGgGB93pekjs5mqwlAGk="
+        "npmDepsHash": "sha256-uLiXHIt9XJ2IYcPLywSMzi8Ata1O0R1k0TzPbAkdOG0="
       },
       "source": {
         "args": {
-          "hash": "sha256-ONiw6EtStwrB6LESSyyKUOjGGWQDbFAvXlOsnKbcWaU=",
-          "url": "https://registry.npmjs.org/@jakeryderv/pi-artifacts/-/pi-artifacts-0.9.0.tgz"
+          "hash": "sha256-hpEfIEpWV6HhfTkrsGXQd4mupZUUITjpa948V5v5Y/w=",
+          "url": "https://registry.npmjs.org/@jakeryderv/pi-artifacts/-/pi-artifacts-0.9.1.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/@jakeryderv/pi-artifacts/-/pi-artifacts-0.9.0.tgz"
+        "url": "https://registry.npmjs.org/@jakeryderv/pi-artifacts/-/pi-artifacts-0.9.1.tgz"
       },
       "update": {
         "artifacts": [
@@ -115,7 +115,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "@jakeryderv/pi-artifacts"
       },
-      "version": "0.9.0"
+      "version": "0.9.1"
     },
     "pi-blackhole": {
       "source": {
@@ -198,15 +198,15 @@
     },
     "pi-dynamic-workflows": {
       "hashes": {
-        "npmDepsHash": "sha256-OMccbPF5tgix7nVn9BUUULr/WEKHpKxpUim9EgEIVt0="
+        "npmDepsHash": "sha256-Yl38yrngzOvvW55jFszYsWUY3OKPZhaUavm8f4kPnLc="
       },
       "source": {
         "args": {
-          "hash": "sha256-5bCDyn+yzRr3rUxDzHT+bGbGxYrv8gSl7S3YhN+pZ0U=",
-          "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.4.1.tgz"
+          "hash": "sha256-tsJIquWwncbXTNuENnAA2n4xTPoQHFgqZ7NfeBzdtCw=",
+          "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.5.0.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.4.1.tgz"
+        "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.5.0.tgz"
       },
       "update": {
         "artifacts": [
@@ -216,7 +216,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "@quintinshaw/pi-dynamic-workflows"
       },
-      "version": "3.4.1"
+      "version": "3.5.0"
     },
     "pi-goal-x": {
       "source": {
@@ -235,15 +235,15 @@
     },
     "pi-hashline-edit-pro": {
       "hashes": {
-        "npmDepsHash": "sha256-sk7mvBP3/SwAFt3GYN1OL2SwNk1s5nC47UUsT1cxB2Y="
+        "npmDepsHash": "sha256-c3BVzLFNqNyIRgdouretwS2z0AQ2CIpdGaMsdvuqP50="
       },
       "source": {
         "args": {
-          "hash": "sha256-WrPRKhBNUJc6l4u1v4k8dftGUQA2Pj754zE07h3QTxU=",
-          "url": "https://registry.npmjs.org/pi-hashline-edit-pro/-/pi-hashline-edit-pro-0.17.5.tgz"
+          "hash": "sha256-QPBcSEh7z6+mXVDsfqCmMWznYi8KgHDX00BMq2cVmE8=",
+          "url": "https://registry.npmjs.org/pi-hashline-edit-pro/-/pi-hashline-edit-pro-0.18.4.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-hashline-edit-pro/-/pi-hashline-edit-pro-0.17.5.tgz"
+        "url": "https://registry.npmjs.org/pi-hashline-edit-pro/-/pi-hashline-edit-pro-0.18.4.tgz"
       },
       "update": {
         "artifacts": [
@@ -253,7 +253,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "pi-hashline-edit-pro"
       },
-      "version": "0.17.5"
+      "version": "0.18.4"
     },
     "pi-insights": {
       "hashes": {
@@ -279,15 +279,15 @@
     },
     "pi-lens": {
       "hashes": {
-        "npmDepsHash": "sha256-QZClnuBwVYZ+h5lb4YqsJ6VzgWyQQdnTMa05UdzcB78="
+        "npmDepsHash": "sha256-6k/LetYDtSbvcfls0VFVi9McAZZOpofz0oUUMrRwDbY="
       },
       "source": {
         "args": {
-          "hash": "sha256-YoBaBtZx5dz3QOtGharxOyVG/qlcmOTbAFVrlJ4fhqw=",
-          "url": "https://registry.npmjs.org/pi-lens/-/pi-lens-3.8.71.tgz"
+          "hash": "sha256-MR69DINvHCKULUh0QBZ2WQ9glW5+F7dryyM7vg5WycM=",
+          "url": "https://registry.npmjs.org/pi-lens/-/pi-lens-3.8.73.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-lens/-/pi-lens-3.8.71.tgz"
+        "url": "https://registry.npmjs.org/pi-lens/-/pi-lens-3.8.73.tgz"
       },
       "update": {
         "artifacts": [
@@ -297,19 +297,19 @@
         "normalizer": "pi-gallery-v1",
         "package": "pi-lens"
       },
-      "version": "3.8.71"
+      "version": "3.8.73"
     },
     "pi-markdown-preview": {
       "hashes": {
-        "npmDepsHash": "sha256-OqMYNSceOnbr16g2/GDKUw2hYf+SpB/dwdRPXYg5h1A="
+        "npmDepsHash": "sha256-bRBnJLO9Nos7WfA++5TP7IgSoa4wwqNaygliTpzxq54="
       },
       "source": {
         "args": {
-          "hash": "sha256-oR+bCvYM7DlkYmiCDghhAgYayU94duEOBflXBa83pBs=",
-          "url": "https://registry.npmjs.org/pi-markdown-preview/-/pi-markdown-preview-0.10.1.tgz"
+          "hash": "sha256-m6pLHNnk1tlglCEek5w4fS6mzUjW9q3IbTeG4SlRQuk=",
+          "url": "https://registry.npmjs.org/pi-markdown-preview/-/pi-markdown-preview-0.11.1.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-markdown-preview/-/pi-markdown-preview-0.10.1.tgz"
+        "url": "https://registry.npmjs.org/pi-markdown-preview/-/pi-markdown-preview-0.11.1.tgz"
       },
       "update": {
         "artifacts": [
@@ -319,7 +319,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "pi-markdown-preview"
       },
-      "version": "0.10.1"
+      "version": "0.11.1"
     },
     "pi-model-router": {
       "source": {
@@ -464,15 +464,15 @@
     },
     "pi-subagents": {
       "hashes": {
-        "npmDepsHash": "sha256-otpHOnxdt0C5VWI1fADE2SrCbj6NOTbnwo7ElZcXI/c="
+        "npmDepsHash": "sha256-fQXBERxqncBurG02qudh9Tp/vm6zrj8lVLYtO8fZj2s="
       },
       "source": {
         "args": {
-          "hash": "sha256-/exbHMFxgZaiLQgm310/iXKS68ZbxnVpwAfvKqneQ1g=",
-          "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.37.1.tgz"
+          "hash": "sha256-tE2Hr8UZ+Wxif+VjIMfEBee0jNInkcdSZ1m2wQoGG08=",
+          "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.38.0.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.37.1.tgz"
+        "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.38.0.tgz"
       },
       "update": {
         "artifacts": [
@@ -482,7 +482,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "pi-subagents"
       },
-      "version": "0.37.1"
+      "version": "0.38.0"
     },
     "rtk": {
       "artifacts": {
@@ -528,14 +528,14 @@
     },
     "pi-mcp-adapter": {
       "hashes": {
-        "npmDepsHash": "sha256-kInJTgp1UYRYHNCgtYxmkPtlErTPd2R/BpPEQAFmV8c="
+        "npmDepsHash": "sha256-GjebD7wJwWvuwuNZgJ1CNn7y+e7RHNmGaOE9Dd5sjAk="
       },
       "source": {
         "args": {
-          "narHash": "sha256-OVgR2wHKhlFjkio8SlrL5g/VPs77vCWQO4oohlIZU1I=",
+          "narHash": "sha256-jP3bHSQO6toATLLE9pgoHMGUxZsoDDdEJARc5Ut0g8w=",
           "owner": "nicobailon",
           "repo": "pi-mcp-adapter",
-          "rev": "19d88da27ef82dc61b6e4041b3af7cd0669dbeb5",
+          "rev": "82c631dca1b9217701af0ccfe763ef3b79cd1ec0",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -550,7 +550,7 @@
         "input": "pi-mcp-adapter",
         "kind": "flake-input+build"
       },
-      "version": "2.12.1"
+      "version": "2.17.0"
     },
     "pi-openai-server-compaction": {
       "source": {
@@ -597,17 +597,17 @@
     "ws": {
       "source": {
         "args": {
-          "hash": "sha256-+o96RaViEX6JAoRI5JCLDJDcIXj+XbaH0+wSM9F2pBw=",
-          "url": "https://registry.npmjs.org/ws/-/ws-8.18.3.tgz"
+          "hash": "sha256-OE7z3w8GvhfcrrKQ+PPBr5gujYuLX7oFMPQA+U0K4lA=",
+          "url": "https://registry.npmjs.org/ws/-/ws-8.21.1.tgz"
         },
         "fetcher": "fetchzip",
-        "url": "https://registry.npmjs.org/ws/-/ws-8.18.3.tgz"
+        "url": "https://registry.npmjs.org/ws/-/ws-8.21.1.tgz"
       },
       "update": {
         "kind": "npm-release",
         "package": "ws"
       },
-      "version": "8.18.3"
+      "version": "8.21.1"
     }
   }
 }

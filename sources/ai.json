@@ -23,14 +23,14 @@
     },
     "agnix": {
       "hashes": {
-        "cargoHash": "sha256-/08DILiKWyTalA1Tg/tPcP/+Hm3aH6o9mEJH2BMzDEA="
+        "cargoHash": "sha256-Xuemx5CcqCrdOQZYNbM1dVxLJKPV/1lhxafiUGive+o="
       },
       "source": {
         "args": {
-          "hash": "sha256-klJ+xd7d7Lhi3pYfZg/x25ctsJOzngT/oCQl0nsifZ4=",
+          "hash": "sha256-sHq3u5zGkRu5Ksbm+5p5slpLLa6ZLuKN9THOQxveobc=",
           "owner": "avifenesh",
           "repo": "agnix",
-          "tag": "v0.40.0"
+          "tag": "v0.44.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/avifenesh/agnix"
@@ -39,7 +39,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.40.0"
+      "version": "0.44.0"
     },
     "browser-control-mcp": {
       "hashes": {
@@ -181,17 +181,17 @@
     "lazycodex-ai": {
       "source": {
         "args": {
-          "hash": "sha512-/dh+qUgK6EBhhwxoc0M/PFGRnBwSz1/UdNld1q2LHACwh6YxY1luEVmV4tbkDQ+SGPSvQH6du84O1JJuI456ww==",
-          "url": "https://registry.npmjs.org/lazycodex-ai/-/lazycodex-ai-4.19.1.tgz"
+          "hash": "sha256-RW4bBtb5JcjWrPH62YSMFCtLc0y2YTYxUWGjMRkvkaM=",
+          "url": "https://registry.npmjs.org/lazycodex-ai/-/lazycodex-ai-4.19.3.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/lazycodex-ai/-/lazycodex-ai-4.19.1.tgz"
+        "url": "https://registry.npmjs.org/lazycodex-ai/-/lazycodex-ai-4.19.3.tgz"
       },
       "update": {
         "kind": "npm-release",
         "package": "lazycodex-ai"
       },
-      "version": "4.19.1"
+      "version": "4.19.3"
     },
     "llama-cpp": {
       "hashes": {
@@ -199,10 +199,10 @@
       },
       "source": {
         "args": {
-          "hash": "sha256-79ENuzOpmyDam89LUksOf/acXEwwilGAvciN2OYtg30=",
+          "hash": "sha256-a+rmJmFRgkDc/ky3hHOVWwnMVrcZu97DwJt+phSVq04=",
           "owner": "ggml-org",
           "repo": "llama.cpp",
-          "tag": "b10107"
+          "tag": "b10216"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/ggml-org/llama.cpp"
@@ -211,7 +211,7 @@
         "kind": "github-release",
         "tagPrefix": "b"
       },
-      "version": "10107"
+      "version": "10216"
     },
     "llama-swap": {
       "hashes": {
@@ -220,10 +220,10 @@
       },
       "source": {
         "args": {
-          "hash": "sha256-n8npW8LXlnZZwKAx/WCZ3m+0cD3YCjwvUUXYT5VT4A4=",
+          "hash": "sha256-QqeWJaWUTaCrYiHAg/sKARurUy4YtFRnus6w86H1lHY=",
           "owner": "mostlygeek",
           "repo": "llama-swap",
-          "rev": "v241"
+          "rev": "v245"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/mostlygeek/llama-swap"
@@ -232,7 +232,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "241"
+      "version": "245"
     },
     "llm-mlx": {
       "source": {
@@ -253,14 +253,14 @@
     },
     "mcp-searxng": {
       "hashes": {
-        "npmDepsHash": "sha256-dt7iRwmo0ojUVZY2komp+RaNswrWM2LVT6xDUPsT6oI="
+        "npmDepsHash": "sha256-8R1DJ4S/q6ZLxPMVcBKTE0lJre5KAssWTreG4yNKZFw="
       },
       "source": {
         "args": {
-          "hash": "sha256-1Ccm8/8M3wY+PEVYTE0NNbEU2YreFfSsmmXKWMZfZ38=",
+          "hash": "sha256-M3VfUAxocp+Trj68WofTXwMAxBcD2j5bzb2mmNEPnAE=",
           "owner": "ihor-sokoliuk",
           "repo": "mcp-searxng",
-          "tag": "v1.12.1"
+          "tag": "v1.14.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/ihor-sokoliuk/mcp-searxng"
@@ -269,15 +269,15 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "1.12.1"
+      "version": "1.14.0"
     },
     "omlx": {
       "source": {
         "args": {
-          "hash": "sha256-Q5rPYuHZtcPrdBhoRnXLnWIMYSJDzTu+RuTIH+lTpNM=",
+          "hash": "sha256-pN4Sc10Vwk7cGR8geeo/Rg00q4BVD8XUHQAYAO29wus=",
           "owner": "jundot",
           "repo": "omlx",
-          "tag": "v0.5.3"
+          "tag": "v0.5.4rc1"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jundot/omlx"
@@ -286,7 +286,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.5.3"
+      "version": "0.5.4rc1"
     },
     "rustdocs-mcp-server": {
       "hashes": {
@@ -313,10 +313,10 @@
         "args": {
           "dist": "py3",
           "format": "wheel",
-          "hash": "sha256-4Azl9oxWB8hk0mrsmcCjOoO9+CN6pzEv+7loBa9n2LY=",
+          "hash": "sha256-xmsxmDD+23yj0rISX6b1tlP4lBjCon6nbyWexfAJQ8A=",
           "pname": "aiologic",
           "python": "py3",
-          "version": "0.16.0"
+          "version": "0.17.1"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/aiologic"
@@ -325,7 +325,7 @@
         "kind": "pypi-release",
         "package": "aiologic"
       },
-      "version": "0.16.0"
+      "version": "0.17.1"
     },
     "aiperf": {
       "source": {
@@ -349,11 +349,11 @@
             "abi": "cp311",
             "dist": "cp311",
             "format": "wheel",
-            "hash": "sha256-4J4083no3JSGfKd8vWOIWQoLmICaEwrXDKIfhqU3sxo=",
+            "hash": "sha256-ZP1d9K/omvBQZkKYV2B+kkgu0mvltzMSd7Hsm2TpORw=",
             "platform": "macosx_11_0_arm64",
             "pname": "cohere_melody",
             "python": "cp311",
-            "version": "0.9.0"
+            "version": "0.12.0"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/cohere-melody"
@@ -363,11 +363,11 @@
             "abi": "cp312",
             "dist": "cp312",
             "format": "wheel",
-            "hash": "sha256-82DpFigLhoT/KQTVZk4/AnlVqO7hwGCSMjlulsfQB6o=",
+            "hash": "sha256-hzj/kzhSocvrh2v4ZTOdlnrWHkog1k+z83exDqsAj80=",
             "platform": "macosx_11_0_arm64",
             "pname": "cohere_melody",
             "python": "cp312",
-            "version": "0.9.0"
+            "version": "0.12.0"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/cohere-melody"
@@ -377,11 +377,11 @@
             "abi": "cp314",
             "dist": "cp314",
             "format": "wheel",
-            "hash": "sha256-YHOU39HJ+Noyu7tbD0W0quP3ghXRzYHok4TER5V3Ggc=",
+            "hash": "sha256-8wvlaP7ZLNlk2QO6r/u/Yu2hUkWHbLNjXg+FHnrp4M4=",
             "platform": "macosx_11_0_arm64",
             "pname": "cohere_melody",
             "python": "cp314",
-            "version": "0.9.0"
+            "version": "0.12.0"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/cohere-melody"
@@ -392,11 +392,11 @@
           "abi": "cp313",
           "dist": "cp313",
           "format": "wheel",
-          "hash": "sha256-gU6PlYufxOy6AnmNlHsdIQrP8wnISRl2+AIR0wV5jac=",
+          "hash": "sha256-9ydwZw58CeSvnMjABcFxzg4Dv0nFF7BOjBa4gMZXwK8=",
           "platform": "macosx_11_0_arm64",
           "pname": "cohere_melody",
           "python": "cp313",
-          "version": "0.9.0"
+          "version": "0.12.0"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/cohere-melody"
@@ -405,7 +405,7 @@
         "kind": "pypi-release",
         "package": "cohere-melody"
       },
-      "version": "0.9.0"
+      "version": "0.12.0"
     },
     "crick": {
       "source": {
@@ -428,10 +428,10 @@
         "args": {
           "dist": "py3",
           "format": "wheel",
-          "hash": "sha256-6DLJY1q3AWz2JWXeKUJp9HCM2SIA0A2v3S5aGUNYfy4=",
+          "hash": "sha256-J40Rj2P8dbnbEbZktDahuDzDDZV3EnhIukFCDmbrWkc=",
           "pname": "culsans",
           "python": "py3",
-          "version": "0.10.0"
+          "version": "0.11.0"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/culsans"
@@ -440,7 +440,7 @@
         "kind": "pypi-release",
         "package": "culsans"
       },
-      "version": "0.10.0"
+      "version": "0.11.0"
     },
     "dflash-mlx": {
       "source": {
@@ -485,10 +485,10 @@
         "args": {
           "dist": "py3",
           "format": "wheel",
-          "hash": "sha256-yoS5xDPeDIu4Qn6BjM9FMypLt/IBgwjrs669WVYVNXo=",
+          "hash": "sha256-UfKeAlCTxeub/9Pi7GCW2IaIWfnIazkfiNT80Wa9Np8=",
           "pname": "guidellm",
           "python": "py3",
-          "version": "0.5.3"
+          "version": "0.7.3"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/guidellm"
@@ -497,18 +497,18 @@
         "kind": "pypi-release",
         "package": "guidellm"
       },
-      "version": "0.5.3"
+      "version": "0.7.3"
     },
     "hf-xet": {
       "hashes": {
-        "cargoDepsHash": "sha256-pwHUIkx+Dk8fGOVxRJKLswLjQB+sKzpyOOeqV6+Xyxo="
+        "cargoDepsHash": "sha256-roXmcXMsJtqRqUd1HcqiGwhjlSr/si3u4/IoDQ7zAeg="
       },
       "source": {
         "args": {
-          "hash": "sha256-TqSErydAOaHzCN7qglO/aqMF8BWYXvEv09adhxTwny0=",
+          "hash": "sha256-KXa5w1el80TiUtkqKQ+Ouxb5guQhSH73IXz0NSU85i8=",
           "owner": "huggingface",
           "repo": "xet-core",
-          "tag": "v1.5.1"
+          "tag": "v1.5.2"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/huggingface/xet-core"
@@ -518,15 +518,15 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "1.5.1"
+      "version": "1.5.2"
     },
     "huggingface-hub": {
       "source": {
         "args": {
-          "hash": "sha256-gFOeYwsZTlXSgnuYsUqLv2OB8rsiI5QIeZFY8mH+Ke8=",
+          "hash": "sha256-JF0hWsDO0ERiTwFJ9pu1ImuD+ggWySg/zeU/c++GEXE=",
           "owner": "huggingface",
           "repo": "huggingface_hub",
-          "tag": "v1.19.0"
+          "tag": "v1.26.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/huggingface/huggingface_hub"
@@ -535,22 +535,22 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "1.19.0"
+      "version": "1.26.0"
     },
     "kaleido": {
       "source": {
         "args": {
-          "hash": "sha256-wn7YK1Hfa5I9DmVv6sIhNDoNvNL7m8fmsduX9h6aFRM=",
-          "url": "https://files.pythonhosted.org/packages/4b/97/f6de8d4af54d6401d6581a686cce3e3e2371a79ba459a449104e026c08bc/kaleido-1.2.0-py3-none-any.whl"
+          "hash": "sha256-UnFN/Tjo8qEUgxgmIAxAuxDQygwR1CcvP0itSZzY+Oo=",
+          "url": "https://files.pythonhosted.org/packages/9e/b9/a6d8bb7d228940f01885bd9f327ab7f9d366a9be775c4bf366bf9d9477ae/kaleido-1.3.0-py3-none-any.whl"
         },
         "fetcher": "fetchurl",
-        "url": "https://files.pythonhosted.org/packages/4b/97/f6de8d4af54d6401d6581a686cce3e3e2371a79ba459a449104e026c08bc/kaleido-1.2.0-py3-none-any.whl"
+        "url": "https://files.pythonhosted.org/packages/9e/b9/a6d8bb7d228940f01885bd9f327ab7f9d366a9be775c4bf366bf9d9477ae/kaleido-1.3.0-py3-none-any.whl"
       },
       "update": {
         "kind": "pypi-release",
         "package": "kaleido"
       },
-      "version": "1.2.0"
+      "version": "1.3.0"
     },
     "mlx": {
       "artifacts": {
@@ -633,10 +633,10 @@
     "mlx-audio": {
       "source": {
         "args": {
-          "hash": "sha256-2MbcOFk/lx1UNqFlyxYl03cL8yFUprZdgcb6eo5SX6w=",
+          "hash": "sha256-7O9PnlHEc3wJa3Xc9UKzlVxxaotb1goXyG4DcMe1SqI=",
           "owner": "Blaizzy",
           "repo": "mlx-audio",
-          "rev": "51753266e0a4f766fd5e6fbc46652224efc23981"
+          "rev": "223afd602c6d583455bdb9f181b91fc090f4aff9"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/Blaizzy/mlx-audio"
@@ -665,10 +665,10 @@
     "mlx-lm": {
       "source": {
         "args": {
-          "hash": "sha256-C8KF9q/gxR+YTH8Pg9qmQ/mFnVHQ30vl4BBUQl8IPP4=",
+          "hash": "sha256-Mf5Ivj4PEm1y+WM7W9iSWha+w+FaDJ5CBfGzwIGDc8Q=",
           "owner": "ml-explore",
           "repo": "mlx-lm",
-          "rev": "ab1806e8f5d6aa035973af194a1b9198ab4754dc"
+          "rev": "e5baded8c1d286754edb479ffbde4655a68e2758"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/ml-explore/mlx-lm"
@@ -682,10 +682,10 @@
     "mlx-speech": {
       "source": {
         "args": {
-          "hash": "sha256-083qJM0aXQmc0Yu+MW8a9MuzCDiye9AZHghP0Pgmr2s=",
+          "hash": "sha256-qj3/fSBbvwJB6wyfNStYK8l2ADJTnWkYQy74SSeFWSc=",
           "owner": "appautomaton",
           "repo": "mlx-speech",
-          "rev": "d7bb3d79fe7b6cf545a79ca6ebfb0c22c221f6ad"
+          "rev": "401606f21fe60e19c963b6d1d8acc2664764c1c0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/appautomaton/mlx-speech"
@@ -699,10 +699,10 @@
     "mlx-vlm": {
       "source": {
         "args": {
-          "hash": "sha256-JEECMpjP7YK2Y59g54KVWtBKZsfB+rOK4dQlPabLjF8=",
+          "hash": "sha256-d0dkf/1Hvq8TG9F7CLOw76fmvSbt2sgMdKI7QGIj3X0=",
           "owner": "Blaizzy",
           "repo": "mlx-vlm",
-          "rev": "78b96eb5462141447b9a6b4943ef553891da56dd"
+          "rev": "609aa457711370564cccfd2c2ffd6d1c2e0bff08"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/Blaizzy/mlx-vlm"
@@ -718,10 +718,10 @@
         "args": {
           "dist": "py3",
           "format": "wheel",
-          "hash": "sha256-246JJhnR6ssBr1qPetgFXrjoMLW3BwR+Ud+f3c6LMzY=",
+          "hash": "sha256-3hXm6xfTM0icTN3aOWxVcQgQLVC4m0jBT1TeXntHQl0=",
           "pname": "mtplx",
           "python": "py3",
-          "version": "0.3.7"
+          "version": "2.4.0"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/mtplx"
@@ -730,7 +730,7 @@
         "kind": "pypi-release",
         "package": "mtplx"
       },
-      "version": "0.3.7"
+      "version": "2.4.0"
     },
     "phonemizer-fork": {
       "source": {
@@ -785,10 +785,10 @@
         "args": {
           "dist": "py3",
           "format": "wheel",
-          "hash": "sha256-ROekeFUmslh7y2h/cOMv7d2CCAc8PGxiJ7zNvr7pDoA=",
+          "hash": "sha256-YfJImZDx3s43osyFhl7BAXz+hvfVfnA9D+cNY+P4hrk=",
           "pname": "plasma_fractal",
           "python": "py3",
-          "version": "1.0.0"
+          "version": "1.1.0"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/plasma-fractal"
@@ -797,17 +797,17 @@
         "kind": "pypi-release",
         "package": "plasma-fractal"
       },
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     "plasma-wiki": {
       "source": {
         "args": {
           "dist": "py3",
           "format": "wheel",
-          "hash": "sha256-kZ5f3RrBoxK6GXs5xm+Ug7LcyS91XCY0CHkdkKssZys=",
+          "hash": "sha256-pEEYp4LEGloPWN1MlnYU5VtGcmguGhL7Bl/ZUa+HVSs=",
           "pname": "plasma_wiki",
           "python": "py3",
-          "version": "1.1.0"
+          "version": "1.2.0"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/plasma-wiki"
@@ -816,7 +816,7 @@
         "kind": "pypi-release",
         "package": "plasma-wiki"
       },
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     "sherlock-db": {
       "artifacts": {
@@ -852,25 +852,25 @@
     "vllm-mlx": {
       "source": {
         "args": {
-          "hash": "sha256-RTmXt4qKx8d2XOXdL7/JrgEEkuUCGuif8Lb8RK9VK/I=",
-          "url": "https://files.pythonhosted.org/packages/54/e5/04730159e337b288e26b0957ee6a8e5647b47fb5e14f98e6d229565c1daf/vllm_mlx-0.2.8-py3-none-any.whl"
+          "hash": "sha256-qSUwLyHeC688OoMlDDZGlWOKqmMf+9wuWBtpSISMZbo=",
+          "url": "https://files.pythonhosted.org/packages/bf/4e/1fb1768a77caeae55376d6e2f3cc053da9809bc6b19567473977ff74c132/vllm_mlx-0.4.0-py3-none-any.whl"
         },
         "fetcher": "fetchurl",
-        "url": "https://files.pythonhosted.org/packages/54/e5/04730159e337b288e26b0957ee6a8e5647b47fb5e14f98e6d229565c1daf/vllm_mlx-0.2.8-py3-none-any.whl"
+        "url": "https://files.pythonhosted.org/packages/bf/4e/1fb1768a77caeae55376d6e2f3cc053da9809bc6b19567473977ff74c132/vllm_mlx-0.4.0-py3-none-any.whl"
       },
       "update": {
         "kind": "pypi-release",
         "package": "vllm-mlx"
       },
-      "version": "0.2.8"
+      "version": "0.4.0"
     },
     "git-ai": {
       "source": {
         "args": {
-          "narHash": "sha256-DX6miCunjNnQ35IZgfe3gg2fvokIChhDq78CbSmPNk8=",
+          "narHash": "sha256-L5vPqZenw0r71U0OqCtbA1EI3xkUjMcy7kPZQoaJuZc=",
           "owner": "git-ai-project",
           "repo": "git-ai",
-          "rev": "16ebfc032814a1acb5286508c3fb3194d61d9983",
+          "rev": "6eef70e3a8f5f9509d66c3fc2a7364fea8c955d8",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -888,10 +888,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-ujzuafv52VH5LJkMINYcpjWG7xpMVHTZwwdiisJhZGY=",
+          "narHash": "sha256-L70szvZ7LrAX46BY43HHd0bf8rJgtXddsdQV/a/kfQg=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "a6dcbf72f6d61519cc12858176f0fdd189853b28",
+          "rev": "f99bb437fd6860f23ea6c67a5161578a3b89d856",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -929,15 +929,16 @@
         "buildPackage": "agent-http-header-bridge",
         "input": "mcp-remote",
         "kind": "flake-input+build"
-      }
+      },
+      "version": "0.1.38"
     },
     "mcp-servers-nix": {
       "source": {
         "args": {
-          "narHash": "sha256-p0Qo2hUtOeCqjLZ8pIDCW8P69LkQHQAgEV4StIRiCPQ=",
+          "narHash": "sha256-bkBKfxv/xOcDmBdzX8hGg+ksdXuCJW99FYdv8Y9Jy9s=",
           "owner": "natsukium",
           "repo": "mcp-servers-nix",
-          "rev": "f87c14091dccea78d4e3ee4c29af4184215cc28d",
+          "rev": "b0c29de3f36447dcccf307cefb1d523060557ef0",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -976,10 +977,10 @@
     "rust-overlay": {
       "source": {
         "args": {
-          "narHash": "sha256-DK+AmC9SQ9hmOFNIMu1l05gJtsmKyYsfJnuFtt1TnAU=",
+          "narHash": "sha256-/CXwCFPS41rb/JI2VitKCgVK6V5E6/sfw5ke3B9zyVQ=",
           "owner": "oxalica",
           "repo": "rust-overlay",
-          "rev": "47759faaddf38fadaf172151ca9df8adae9c0b2e",
+          "rev": "6ef009bf4c4873cdc1a621826722bdea7c03e62c",
           "type": "github"
         },
         "fetcher": "fetchTree",
