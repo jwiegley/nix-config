@@ -703,7 +703,6 @@ in
             args = copy.deepcopy(source["args"])
             args.update(replacements)
             hash_name = next(iter({"hash", "sha256", "narHash"} & args.keys()))
-            old_hash = args[hash_name]
             fetcher = source["fetcher"]
 
             if fetcher == "fetchTree":
@@ -768,29 +767,7 @@ in
                 )
                 return None
             value = match.group(1)
-            if old_hash.startswith("sha256-"):
-                return value
-            operation = "native source hash conversion"
-            converted = subprocess.run(
-                ["nix", "hash", "convert", "--hash-algo", "sha256", "--to", "nix32", value],
-                capture_output=True,
-                text=True,
-                timeout=60,
-                cwd=self.repo_dir,
-            )
-            converted_hash = converted.stdout.strip()
-            if converted.returncode == 0 and converted_hash:
-                return converted_hash
-            detail = _bounded_actionable_error(
-                converted.stderr,
-                converted.stdout,
-                fallback=f"nix hash convert exited with status {converted.returncode}",
-            )
-            self.last_error = _bounded_actionable_error(
-                f"native source hash conversion failed: {detail}",
-                fallback="native source hash conversion failed",
-            )
-            return None
+            return value
         except (
             KeyError,
             OSError,

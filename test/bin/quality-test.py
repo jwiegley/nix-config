@@ -571,7 +571,7 @@ class QualityPythonTierTests(unittest.TestCase):
 
 
 class UpdaterEssentialPlanTests(unittest.TestCase):
-    def test_safety_plan_cannot_silently_shrink(self):
+    def test_safety_plan_declares_required_membership(self):
         plan = runpy.run_path(str(UPDATER_ESSENTIAL))
         self.assertEqual(
             plan["COMPLETE_CLASSES"],

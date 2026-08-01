@@ -2795,13 +2795,11 @@ got: sha256-requested
                 )
             self.assertEqual(rejected, "failed")
 
-    def test_native_hash_uses_locked_fetcher_and_preserves_encoding(self):
+    def test_native_hash_uses_locked_fetcher_and_normalizes_to_sri(self):
         calls = []
 
         def fake_run(command, **_kwargs):
             calls.append(command)
-            if command[1:3] == ["hash", "convert"]:
-                return SimpleNamespace(returncode=0, stdout="nix32-new\n", stderr="")
             return SimpleNamespace(
                 returncode=1,
                 stdout="",
@@ -2836,15 +2834,16 @@ got: sha256-requested
         finally:
             subprocess.run = real_run
 
-        self.assertEqual(value, "nix32-new")
+        self.assertEqual(
+            value, "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        )
         self.assertIn("nix-config-ai.inputs.nixpkgs", calls[0][-1])
-        self.assertEqual(calls[1][1:3], ["hash", "convert"])
         self.assertEqual(
             zip_value, "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
         )
-        self.assertIn("pkgs.fetchzip", calls[2][-1])
-        self.assertIn("example-2.0.0.tgz", calls[2][-1])
-        self.assertNotIn("example-1.0.0.tgz", calls[2][-1])
+        self.assertIn("pkgs.fetchzip", calls[1][-1])
+        self.assertIn("example-2.0.0.tgz", calls[1][-1])
+        self.assertNotIn("example-1.0.0.tgz", calls[1][-1])
 
     def test_native_hash_surfaces_sanitized_actionable_nix_failure(self):
         real_shaped_stderr = (
@@ -2903,8 +2902,7 @@ got: sha256-requested
         finally:
             subprocess.run = real_run
 
-    def test_native_hash_records_exception_conversion_and_fetchtree_failures(self):
-        sri = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    def test_native_hash_records_exception_and_fetchtree_failures(self):
         source = {
             "fetcher": "fetchurl",
             "args": {
@@ -2925,30 +2923,6 @@ got: sha256-requested
             subprocess.run = real_run
         self.assertIn("native source hash computation failed", hashes.last_error)
         self.assertIn("nix executable unavailable", hashes.last_error)
-
-        responses = [
-            SimpleNamespace(
-                returncode=1,
-                stdout="",
-                stderr=f"got: {sri}\n",
-            ),
-            SimpleNamespace(
-                returncode=1,
-                stdout="",
-                stderr="error: invalid hash conversion\n",
-            ),
-        ]
-
-        def conversion_run(_command, **_kwargs):
-            return responses.pop(0)
-
-        subprocess.run = conversion_run
-        try:
-            self.assertIsNone(hashes.compute_native_hash(source, {}))
-        finally:
-            subprocess.run = real_run
-        self.assertIn("hash conversion failed", hashes.last_error)
-        self.assertIn("invalid hash conversion", hashes.last_error)
 
         fetch_tree = {
             "fetcher": "fetchTree",
