@@ -176,8 +176,8 @@ update:
 
 update-projects:
 	$(call announce,nix flake update (in projects))
-	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)")
-	@for project in "$${projects[@]}"; do	\
+	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)"); \
+	for project in "$${projects[@]}"; do	\
 	    ( cd $(HOME)/$$project ;		\
 	      echo "### $(HOME)/$$project" ;	\
 	      nix flake update			\
@@ -195,8 +195,8 @@ upgrade-tasks: travel-ready
 upgrade: update upgrade-tasks
 
 changes:
-	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)")
-	@for project in "$${projects[@]}"; do	\
+	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)"); \
+	for project in "$${projects[@]}"; do	\
 	    ( cd $(HOME)/$$project ;		\
 	      echo "### $(HOME)/$$project" ;	\
 	      changes				\
