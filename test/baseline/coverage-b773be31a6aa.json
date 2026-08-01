@@ -349,9 +349,9 @@
     "kind": "declared-command-recipe"
   },
   "schema": "fleet-coverage/1",
-  "sourceBaseRev": "fa3c156c17a9b5a6bf19299a34a7f6fbc91b7877",
-  "sourceProjectionDigest": "71d28d8fef7d220ad5c94c623ddcd3f411beb10d01daeb628dbcce4a5931febc",
-  "sourceTree": "740c69cfa391bd119e686a6ced001918384b5890",
+  "sourceBaseRev": "d5b93db781c4807dfe54932598537a8be09ba9c2",
+  "sourceProjectionDigest": "b6a1b1927a5dba4cf8f39faf496832163fc8889d7e770e65d76bfcf6d017888b",
+  "sourceTree": "467ba23be06cb6c6448d937dd8af1732f71a7e31",
   "structural": {
     "budgetsSeconds": {
       "ci-on-demand": 1800,
