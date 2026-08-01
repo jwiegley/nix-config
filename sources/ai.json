@@ -720,17 +720,19 @@
     "mlx-vlm": {
       "source": {
         "args": {
-          "hash": "sha256-d0dkf/1Hvq8TG9F7CLOw76fmvSbt2sgMdKI7QGIj3X0=",
+          "hash": "sha256-JEECMpjP7YK2Y59g54KVWtBKZsfB+rOK4dQlPabLjF8=",
           "owner": "Blaizzy",
           "repo": "mlx-vlm",
-          "rev": "609aa457711370564cccfd2c2ffd6d1c2e0bff08"
+          "rev": "78b96eb5462141447b9a6b4943ef553891da56dd"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/Blaizzy/mlx-vlm"
       },
       "update": {
         "branch": "main",
-        "kind": "github-commit"
+        "kind": "github-commit",
+        "policy": "manual",
+        "reason": "oMLX's compatibility patch targets this exact 0.6.3 commit; newer main requires Transformers 5.14"
       },
       "version": "0.6.3"
     },
