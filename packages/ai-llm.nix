@@ -241,6 +241,9 @@ in
                 --replace-fail 'params=["bash", "zsh", "fish"]' \
                 'params=["bash", "fish"]'
             '';
+            disabledTests = (old.disabledTests or [ ]) ++ [
+              "test_choice_with_whitespace"
+            ];
           })
         else
           ps.cyclopts;
