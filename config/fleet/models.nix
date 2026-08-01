@@ -314,7 +314,7 @@ let
       ) (builtins.attrNames allowedInsecureBaseUrlsByProvider)
     ) "invalid provider-bound insecure URL allowlist")
     (ensure (
-      policy ? profileDefaultProfiles && validStringList policy.profileDefaultProfiles
+      policy ? profileDefaultProfiles && validNonEmptyStringList policy.profileDefaultProfiles
     ) "invalid profile default fan-out")
     (ensure (policy ? syncChatPath && validSyncPath policy.syncChatPath) "invalid sync chat path")
     (ensure (policy ? providers && builtins.isAttrs policy.providers) "invalid provider policy set")
