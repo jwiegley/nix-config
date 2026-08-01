@@ -23,11 +23,12 @@ diff --git a/fractal/core/agent.py b/fractal/core/agent.py
 diff --git a/fractal/impl/codex.py b/fractal/impl/codex.py
 --- a/fractal/impl/codex.py
 +++ b/fractal/impl/codex.py
-@@ -293,5 +293,18 @@
-     @classmethod
-     def _seed(cls: type[CodexAgent], node_dir: pathlib.Path) -> None:
--        """Link the node's codex auth through to the global home."""
-+        """Link node skills and global auth into the private codex home."""
+@@ -298,7 +298,20 @@
+         *,
+         parent_dir: Optional[pathlib.Path] = None,
+     ) -> None:
+-        """Carry the parent's instructions file and link auth globally."""
++        """Link node skills, carry parent instructions, and link auth globally."""
 +        # Keep codex-owned system skills inside its ignored home while exposing
 +        # the node's immutable skill set through individual relative links.
 +        skills = node_dir / f'.{cls.name}' / 'skills'
@@ -41,5 +42,6 @@ diff --git a/fractal/impl/codex.py b/fractal/impl/codex.py
 +            link = skills / source.name
 +            if not link.exists() and not link.is_symlink():
 +                link.symlink_to(pathlib.Path('../..') / 'skills' / source.name)
-         # codex auth must stay global: CODEX_HOME points at this node dir, but
-         # the credential is shared via a symlink to the global codex home --
+         # carry the model instructions the inherited config names: codex
+         # resolves a relative model_instructions_file against CODEX_HOME and
+         # fails the run when the file is missing, so the file must travel
