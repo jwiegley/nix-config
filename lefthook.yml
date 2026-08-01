@@ -26,33 +26,9 @@ pre-push:
   # empty index. It is consumed by the leading `:` and is never read as an input.
   files: '{ git ls-files; printf "%s\n" lefthook.yml; }'
   commands:
-    # Evaluates vulcan, vps and the shared-work class against THIS tree, so a
-    # change here that would break a consumer fails before it is published rather
-    # than at the consumer's next lock bump. Deliberately pre-push and not
-    # pre-commit: it is targeted but still costs real nix eval time.
-    consumer-eval:
-      run: ": {files}; test/bin/quality consumer-eval"
-    # The local mirror of CI's signatures job (#23). Pre-push, because that is
-    # the last moment an unsigned commit can be caught before it becomes someone
-    # else's problem -- and it costs a few git calls, not a build.
-    #
-    # This does NOT bypass anything: it runs test/bin/quality signatures, the same
-    # authority CI invokes, and test/bin/verify-signatures refuses rather than guessing
-    # when it cannot determine what is unpublished.
+    # Keep the mandatory gate comfortably inside two minutes. Expensive Nix,
+    # consumer, dynamic coverage, and system checks live under `make expensive`.
     signatures:
       run: ": {files}; test/bin/quality signatures"
-    python-coverage:
-      run: ": {files}; test/bin/quality --python-tier pre-push python-test coverage"
-    coverage-live:
-      run: ": {files}; test/bin/quality coverage-live"
-    agent-checks:
-      run: >-
-        : {files};
-        nix build --no-link
-        .#checks.aarch64-darwin.agent-resources
-        .#checks.aarch64-darwin.agent-wrappers
-        .#checks.aarch64-darwin.pi-gallery
-    darwin-surface:
-      run: ": {files}; test/bin/quality darwin-surface"
-    system-build:
-      run: ": {files}; ./build system"
+    coverage:
+      run: ": {files}; test/bin/quality coverage"

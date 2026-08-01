@@ -60,6 +60,11 @@ test:
 
 expensive:
 	test/bin/quality --tier expensive
+	nix build --no-link \
+	  .#checks.$(SYSTEM).agent-resources \
+	  .#checks.$(SYSTEM).agent-wrappers \
+	  .#checks.$(SYSTEM).pi-gallery
+	./build system
 
 darwin-surface-baseline:
 	test/bin/darwin-surface-baseline --write

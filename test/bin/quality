@@ -468,12 +468,13 @@ run_python_test() {
 # Unlike every other suite, this one does not read the local tree with a per-file
 # tool. It evaluates the fleet's CONSUMERS (vulcan, vps, shared-work) against THIS
 # working tree, eval-only, so an overlay or shared-config change here that would
-# break a consumer fails at pre-push instead of at the consumer's next lock bump —
+# break a consumer fails during low-frequency closeout instead of at the
+# consumer's next lock bump —
 # which is how vulcan's evaluation stayed broken for weeks.
 #
 # test/bin/cross-consumer-eval is the authority for what that means; it reports every
 # consumer before exiting non-zero, so this suite only records the verdict.
-# Targeted but expensive: wired into pre-push, deliberately NOT pre-commit.
+# Targeted but expensive: wired into the expensive tier, not mandatory hooks.
 run_consumer_eval() {
     need nix consumer-eval || return
     if test/bin/cross-consumer-eval; then
@@ -530,7 +531,7 @@ run_immutable_subflake() {
 # The nix-darwin system layer has no useful drvPath parity signal: source-path
 # propagation changes several store hashes on every commit. This targeted check
 # compares seven evaluated value surfaces while masking only store hash prefixes.
-# It is intentionally expensive and belongs in pre-push/CI, not pre-commit.
+# It is intentionally expensive and belongs in low-frequency closeout, not hooks.
 run_darwin_surface() {
     need nix darwin-surface || return
     local system
@@ -675,8 +676,8 @@ if [[ -n $quality_tier ]]; then
         ;;
     esac
     # A source-changing work commit is allowed to carry stale consolidated
-    # evidence. Coverage freshness remains mandatory in pre-push, expensive,
-    # make test, and issue closeout; forcing it here would require an expensive
+    # evidence. Coverage freshness remains mandatory in expensive, make test,
+    # and issue closeout; forcing it here would require an expensive
     # artifact regeneration after every intermediate commit.
     term_after=$((budget - 15))
     if [[ $term_after -le 0 ]]; then

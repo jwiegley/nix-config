@@ -1140,12 +1140,10 @@ class TestGatesAreRegistered(unittest.TestCase):
         )
         self.assertRegex(
             hook,
-            r'(?m)^      run: ": \{files\}; test/bin/quality --python-tier pre-push python-test coverage"$',
+            r'(?m)^      run: ": \{files\}; test/bin/quality coverage"$',
         )
-        self.assertRegex(
-            hook,
-            r'(?m)^      run: ": \{files\}; test/bin/quality coverage-live"$',
-        )
+        self.assertNotIn("coverage-live", hook)
+        self.assertNotIn("consumer-eval", hook)
 
         ci = (REPO / ".github/workflows/ci.yml").read_text()
         self.assertRegex(
@@ -1179,14 +1177,11 @@ class TestGatesAreRegistered(unittest.TestCase):
         self.assertEqual(suites.count("python-test"), 1)
         self.assertNotIn("python-test-pre-push", suites)
 
-    def test_darwin_surface_gate_is_wired_to_local_expensive_tier_entrypoints(self):
-        self.assertRegex(
-            (REPO / "lefthook.yml").read_text(),
-            r'(?m)^\s+run: ": \{files\}; test/bin/quality darwin-surface"$',
-        )
+    def test_darwin_surface_gate_is_wired_to_local_expensive_entrypoints(self):
+        self.assertNotIn("darwin-surface", (REPO / "lefthook.yml").read_text())
         self.assertRegex(
             (REPO / "Makefile").read_text(),
-            r"(?m)^test:\n\tset -e\n"
+            r"(?m)^test:\n"
             r"\ttest/bin/quality --python-tier pre-push python-test coverage darwin-surface$",
         )
 
