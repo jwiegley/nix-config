@@ -44,6 +44,11 @@ let
   # Darwin HM (which never passes it) and nix-darwin fall back to the hostname.
   homeClass = args.nixManagedAiHomeClass or null;
 
+  resolvedRegistryId = if homeClass == "shared-work" then "andoria" else hostname;
+  resolvedRegistryRow = registry.hosts.${resolvedRegistryId} or null;
+  profileHeavyDefault =
+    resolvedRegistryRow == null || !(builtins.elem "server-lean" resolvedRegistryRow.roles);
+
   sharedHomeType = types.submodule {
     options = {
       members = mkOption {
@@ -130,59 +135,75 @@ let
   };
 in
 {
-  options.johnw.hostRegistry = mkOption {
-    type = types.attrsOf hostRow;
-    description = ''
-      The typed fleet host registry — the single source of truth for per-host
-      identity and capability. Populated from config/hosts/registry.nix.
-    '';
-  };
+  options.johnw = {
+    hostRegistry = mkOption {
+      type = types.attrsOf hostRow;
+      description = ''
+        The typed fleet host registry — the single source of truth for per-host
+        identity and capability. Populated from config/hosts/registry.nix.
+      '';
+    };
 
-  # The resolved capability flags for the host currently being evaluated. Every
-  # former hostname string-compare reads one of these. Booleans only: a flag
-  # names a PROPERTY of the host, so a new consumer keys off the property rather
-  # than re-hardcoding a hostname.
-  options.johnw.host = {
-    isHera = mkOption {
-      type = types.bool;
-      default = false;
-      description = "This evaluation is Hera.";
+    # The resolved capability flags for the host currently being evaluated.
+    # Every former hostname string-compare reads one of these. Booleans only: a
+    # flag names a PROPERTY of the host, so a new consumer keys off the property
+    # rather than re-hardcoding a hostname.
+    host = {
+      isHera = mkOption {
+        type = types.bool;
+        default = false;
+        description = "This evaluation is Hera.";
+      };
+      isClio = mkOption {
+        type = types.bool;
+        default = false;
+        description = "This evaluation is Clio.";
+      };
+      isVulcan = mkOption {
+        type = types.bool;
+        default = false;
+        description = "This evaluation is Vulcan.";
+      };
+      isVps = mkOption {
+        type = types.bool;
+        default = false;
+        description = "This evaluation is the VPS.";
+      };
+      isDarwinWorkstation = mkOption {
+        type = types.bool;
+        default = false;
+        description = "A Darwin GUI workstation (Hera or Clio).";
+      };
+      isSharedWork = mkOption {
+        type = types.bool;
+        default = false;
+        description = "A member of the shared-\$HOME Positron work group (home class \"shared-work\").";
+      };
+      isCiFixture = mkOption {
+        type = types.bool;
+        default = false;
+        description = "A synthetic CI evaluation fixture (hostname \"linux\"), not a real host.";
+      };
     };
-    isClio = mkOption {
+
+    profile.heavy = mkOption {
       type = types.bool;
-      default = false;
-      description = "This evaluation is Clio.";
-    };
-    isVulcan = mkOption {
-      type = types.bool;
-      default = false;
-      description = "This evaluation is Vulcan.";
-    };
-    isVps = mkOption {
-      type = types.bool;
-      default = false;
-      description = "This evaluation is the VPS.";
-    };
-    isDarwinWorkstation = mkOption {
-      type = types.bool;
-      default = false;
-      description = "A Darwin GUI workstation (Hera or Clio).";
-    };
-    isSharedWork = mkOption {
-      type = types.bool;
-      default = false;
-      description = "A member of the shared-\$HOME Positron work group (home class \"shared-work\").";
-    };
-    isCiFixture = mkOption {
-      type = types.bool;
-      default = false;
-      description = "A synthetic CI evaluation fixture (hostname \"linux\"), not a real host.";
+      default = true;
+      description = ''
+        Enable workstation-oriented programs and package-backed settings. Real
+        hosts tagged `server-lean` default this off; unknown and synthetic hosts
+        default on so existing consumers remain compatible. Consumers may still
+        override the value explicitly.
+      '';
     };
   };
 
   config = {
-    johnw.hostRegistry = registry.hosts;
-    johnw.host = registry.capabilitiesFor { inherit hostname homeClass; };
+    johnw = {
+      hostRegistry = registry.hosts;
+      host = registry.capabilitiesFor { inherit hostname homeClass; };
+      profile.heavy = lib.mkDefault profileHeavyDefault;
+    };
 
     # Force the whole typed table on every build so a malformed row (bad enum,
     # missing required field, wrong type) is a loud eval error rather than a

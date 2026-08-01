@@ -1,4 +1,6 @@
 {
+  config,
+  lib,
   pkgs,
   vars,
   ...
@@ -12,7 +14,9 @@ let
     ;
 in
 {
-  accounts.email = {
+  imports = [ ./host-options.nix ];
+
+  accounts.email = lib.mkIf config.johnw.profile.heavy {
     certificatesFile = ca-bundle_crt;
 
     accounts.fastmail = {

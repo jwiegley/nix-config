@@ -26,6 +26,7 @@ let
   # exactly the previous expression, so the realized values are unchanged until
   # someone deliberately sets the option.
   gitPkg = config.johnw.git.package;
+  isHeavy = config.johnw.profile.heavy;
 
   # Generate mergiraf attributes from a list
   mergirafExts = [
@@ -101,9 +102,9 @@ in
     package = gitPkg;
 
     signing = lib.mkDefault {
-      format = "openpgp";
-      key = signing_key;
-      signByDefault = true;
+      format = if isHeavy then "openpgp" else null;
+      key = if isHeavy then signing_key else null;
+      signByDefault = isHeavy;
     };
 
     includes = [
@@ -165,10 +166,12 @@ in
       };
 
       branch.autosetupmerge = true;
-      commit.gpgsign = lib.mkDefault true;
+      commit.gpgsign = lib.mkDefault isHeavy;
       commit.status = false;
       github.user = "jwiegley";
-      credential.helper = lib.mkDefault "${pkgs.pass-git-helper}/bin/pass-git-helper";
+      credential.helper = lib.mkDefault (
+        if isHeavy then "${pkgs.pass-git-helper}/bin/pass-git-helper" else ""
+      );
       hub.protocol = "${pkgs.openssh}/bin/ssh";
       mergetool.keepBackup = true;
       pull.rebase = true;

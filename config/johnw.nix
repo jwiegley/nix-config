@@ -21,6 +21,7 @@ let
   inherit (pkgs.stdenv) isDarwin isLinux;
   nixManagedAiHomeClass = args.nixManagedAiHomeClass or null;
   isPositronRemoteLinux = isLinux && nixManagedAiHomeClass == "shared-work";
+  isHeavy = config.johnw.profile.heavy;
 
   # Shared variables - also imported by sub-modules
   vars = import ./vars.nix {
@@ -74,7 +75,6 @@ in
       ET_NO_TELEMETRY = "1";
       FONTCONFIG_FILE = "${config.xdg.configHome}/fontconfig/fonts.conf";
       FONTCONFIG_PATH = "${config.xdg.configHome}/fontconfig";
-      GRAPHVIZ_DOT = "${pkgs.graphviz}/bin/dot";
       GTAGSLABEL = "pygments";
       HOSTNAME = hostname;
       JAVA_OPTS = "-Xverify:none";
@@ -94,11 +94,14 @@ in
       VAGRANT_HOME = "${config.xdg.dataHome}/vagrant";
       WWW_HOME = "${config.xdg.cacheHome}/w3m";
 
-      RCLONE_PASSWORD_COMMAND = "${pkgs.pass}/bin/pass show Passwords/rclone";
-      RESTIC_PASSWORD_COMMAND = "${pkgs.pass}/bin/pass show Passwords/restic";
       FILTER_BRANCH_SQUELCH_WARNING = "1";
       HF_XET_HIGH_PERFORMANCE = "1";
       LLAMA_INDEX_CACHE_DIR = "${config.xdg.cacheHome}/llama-index";
+    }
+    // lib.optionalAttrs isHeavy {
+      GRAPHVIZ_DOT = "${pkgs.graphviz}/bin/dot";
+      RCLONE_PASSWORD_COMMAND = "${pkgs.pass}/bin/pass show Passwords/rclone";
+      RESTIC_PASSWORD_COMMAND = "${pkgs.pass}/bin/pass show Passwords/restic";
     }
     // lib.optionalAttrs isDarwin {
       ASPELL_CONF = "conf ${config.xdg.configHome}/aspell/config;";
@@ -206,9 +209,9 @@ in
       nix-direnv.enable = true;
     };
 
-    git-ai = {
-      enable = vars.gitAiEnabled;
-      installHooks = vars.gitAiEnabled;
+    git-ai = lib.mkIf (inputs ? git-ai) {
+      enable = isHeavy && vars.gitAiEnabled;
+      installHooks = isHeavy && vars.gitAiEnabled;
       settings = {
         apiKeyFile = "${vars.home}/.git-ai/api-key";
 
@@ -240,10 +243,10 @@ in
     };
 
     htop.enable = true;
-    info.enable = true;
+    info.enable = isHeavy;
     jq.enable = true;
     man.enable = true;
-    vim.enable = true;
+    vim.enable = isHeavy;
 
     zoxide = lib.mkIf isDarwin {
       enable = true;
@@ -316,7 +319,7 @@ in
     };
 
     browserpass = {
-      enable = true;
+      enable = isHeavy;
       browsers = [ "firefox" ];
     };
 
@@ -341,7 +344,7 @@ in
     };
 
     password-store = {
-      enable = true;
+      enable = isHeavy;
       package = pkgs.pass.withExtensions (exts: [
         exts.pass-otp
         exts.pass-genphrase
@@ -350,7 +353,7 @@ in
     };
 
     gpg = {
-      enable = true;
+      enable = isHeavy;
       homedir = "${config.xdg.configHome}/gnupg";
       settings = {
         use-agent = true;
@@ -400,7 +403,7 @@ in
 
   xdg = {
     enable = true;
-    configFile = {
+    configFile = lib.optionalAttrs isHeavy {
       "nix/nix.conf" = lib.mkIf isPositronRemoteLinux {
         text = ''
           cores = 32

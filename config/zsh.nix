@@ -82,7 +82,7 @@ in
       b = "${gitPkg}/bin/git b";
       l = "${gitPkg}/bin/git l";
       w = "${gitPkg}/bin/git w";
-      ga = "${pkgs.git-annex}/bin/git-annex";
+      ga = if config.johnw.profile.heavy then "${pkgs.git-annex}/bin/git-annex" else "git annex";
       good = "${gitPkg}/bin/git bisect good";
       bad = "${gitPkg}/bin/git bisect bad";
       par = "${pkgs.parallel}/bin/parallel";
