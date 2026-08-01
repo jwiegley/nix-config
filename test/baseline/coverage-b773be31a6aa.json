@@ -13,7 +13,7 @@
     "config/ai/flake.nix is an intentional throwing stub verified by immutable-subflake-check's negative probe; successful Nix evaluation cannot positively reach it.",
     "readFile, readDir, hashFile, pathExists, copied paths, and some scoped imports are invisible to file-reach diagnostics."
   ],
-  "manifestDigest": "5d99ed8ee431f5e96a43a4e72dc7ce73a5b8dae742bdcf15774e1019ab6d8249",
+  "manifestDigest": "23ff930ec9b1b50b50026ca6feae556860cdc38b4c203a31def8a579401308aa",
   "measurements": {
     "assertionCallReach": {
       "reason": "not measured by structural collection",
@@ -55,6 +55,7 @@
         "config/fleet/renderers/merge-files.nix",
         "config/fleet/renderers/opencode.nix",
         "config/fleet/renderers/pi.nix",
+        "config/fleet/retired-mcp-cleanup.nix",
         "config/fractal.nix",
         "config/git-options.nix",
         "config/git.nix",
@@ -349,9 +350,9 @@
     "kind": "declared-command-recipe"
   },
   "schema": "fleet-coverage/1",
-  "sourceBaseRev": "332e60fe3e7341bc122444a5f7aff8aba6b32c87",
-  "sourceProjectionDigest": "ba8722a30005cb309ed0eb5be19a954984c0ef41e7e49ec94e136c55bfcf1a59",
-  "sourceTree": "d1705269ef8e67bde9828709055ec632ce9cff2e",
+  "sourceBaseRev": "4ada1ff9b1b175f371987047c3b7099134f497ee",
+  "sourceProjectionDigest": "9dcbfff22861b9044c700371bc0e5f7cbee43ae63453246d086b65890dde1885",
+  "sourceTree": "9ff51bc495f840aff0b7ec93403885911bd27d75",
   "structural": {
     "budgetsSeconds": {
       "ci-on-demand": 1800,
@@ -378,6 +379,7 @@
         "config/fleet/renderers/merge-files.nix",
         "config/fleet/renderers/opencode.nix",
         "config/fleet/renderers/pi.nix",
+        "config/fleet/retired-mcp-cleanup.nix",
         "config/fractal.nix",
         "config/git-options.nix",
         "config/git.nix",
@@ -460,6 +462,7 @@
       ],
       "python": [
         "bin/update-overlay",
+        "config/fleet/retired-mcp-cleanup.py",
         "config/fleet/skills/comment-audit/scripts/inventory_comments.py",
         "config/fleet/skills/node-red/scripts/create_flow_template.py",
         "config/fleet/skills/node-red/scripts/generate_uuid.py",
@@ -1220,6 +1223,15 @@
           "kind": "product",
           "path": "bin/update-overlay",
           "tier": "pre-commit"
+        },
+        {
+          "evidence": [
+            "checks.<system>.ai-managed-preflight executes exact retirement, preservation, refusal, dry-run, and idempotence cases"
+          ],
+          "gap": "Routine portable-eval uses --no-build; the focused Nix check and make test execute behavior.",
+          "kind": "product",
+          "path": "config/fleet/retired-mcp-cleanup.py",
+          "tier": "ci-on-demand"
         },
         {
           "evidence": [
