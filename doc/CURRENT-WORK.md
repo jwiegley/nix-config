@@ -9,10 +9,7 @@ handoffs belong in Git history, not beside active instructions.
 
 1. Finish the all-lock and all-pin `make update` transaction and activate its exact
    candidate.
-2. Finish and integrate `feature/mcp-searxng`.
-3. Rebase or integrate owned completed worktrees, fast-forward their results into
-   `main`, and remove the worktrees and local branches that are no longer needed.
-4. Run one final verification and independent fess audit.
+2. Run one final focused verification and independent fess audit.
 
 ## Explicit boundaries
 
@@ -28,16 +25,15 @@ handoffs belong in Git history, not beside active instructions.
 
 - Do not edit Vulcan's separate NixOS configuration while working in this
   repository.
-- Publication, activation, destructive cleanup, and history rewriting remain
-  separately authorized actions.
+- GitHub issue/project/wiki operations remain deferred; ordinary dual-remote
+  publication is still part of the update transaction.
 
 ## Current verified state
 
-- Base revision: `dd736e225b4c3a84bbaf696bfb6e630c8d1eb732`.
-- `main`, Gitea, and GitHub matched at that revision when this work began.
+- `main`, Gitea, and GitHub matched when this work began; the current local commits
+  remain unpublished until the final update succeeds.
 - Hera's active Nix-managed Pi configuration exposes
   `openai-codex/gpt-5.6-sol` with a 1.1M-token context.
-- Documentation cleanup runs on `chore/dead-code-pass-1`.
 - GitHub state has not been queried during this cleanup.
 
 ## Completed in this lane
@@ -49,11 +45,20 @@ handoffs belong in Git history, not beside active instructions.
 - Corrected `make update` to publish through the dual-remote `bin/publish` path.
 - Required every stored GitHub inventory recipe to select the `jwiegley` account.
 - Regenerated and verified the consumer inventory.
+- Integrated the SearXNG MCP package and host-specific Clio/Hera/Vulcan routing;
+  its launcher strips unrelated inherited credentials.
+- Repaired Codex command/prompt projections so their manifests are regular files
+  that Codex can discover.
+- Reduced the mandatory pre-push gate to fast signature and structural-coverage
+  checks; the broader checks remain under `make expensive`.
+- Removed completed and obsolete worktrees. The unfinished issue 54 and issue 58
+  branches remain as local refs without dedicated worktrees; the external Claude
+  scratchpad was left untouched.
 
 ## Resume point
 
-Begin the complete `make update` transaction. GitHub reconciliation remains
-deferred.
+Run the complete `make update` transaction, verify the active generation and agent
+surfaces, then perform the final audit. GitHub reconciliation remains deferred.
 
 Stop-and-escalate counters:
 
