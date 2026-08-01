@@ -58,42 +58,6 @@
         "reason": "Hold mesa and its consumers before the uncached Darwin 26.1 closure"
       }
     },
-    "nixpkgs-pre-rclone-fuse3": {
-      "source": {
-        "args": {
-          "type": "github",
-          "owner": "NixOS",
-          "repo": "nixpkgs",
-          "rev": "6dedf69f94d03cbe7bdde106f2d4c23ae2a853bf",
-          "narHash": "sha256-gOTcX/9MZVMUE0Xvb4IEcv+0TQJkZFNEnL757ljU360="
-        },
-        "fetcher": "fetchTree",
-        "url": "https://github.com/NixOS/nixpkgs"
-      },
-      "update": {
-        "kind": "explicit-rev",
-        "policy": "manual",
-        "reason": "Hold rclone before its Darwin FUSE support regression"
-      }
-    },
-    "nixpkgs-pre-toc-depth-removal": {
-      "source": {
-        "args": {
-          "type": "github",
-          "owner": "NixOS",
-          "repo": "nixpkgs",
-          "rev": "9e92285f211dad236540fd617d7e30e0b99bc0e1",
-          "narHash": "sha256-AXmz9ho4Lud5CsbrZsuSVwpQZ4o5FgZ1chxBn5cJ8+0="
-        },
-        "fetcher": "fetchTree",
-        "url": "https://github.com/NixOS/nixpkgs"
-      },
-      "update": {
-        "kind": "explicit-rev",
-        "policy": "manual",
-        "reason": "Hold nixos-render-docs until nix-darwin stops using --toc-depth"
-      }
-    },
     "poppler-darwin-mutex-patch": {
       "source": {
         "args": {

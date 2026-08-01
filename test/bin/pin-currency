@@ -21,11 +21,13 @@
 # package from unpinned nixpkgs, which is exactly the work the pins avoid.
 #
 # Not every pin has that shape, and conflating them would make this report
-# confidently wrong. nixos-render-docs builds fine unpinned — its break is in
-# nix-darwin, which still passes the flag the new version removed. mesa's
-# condition is Hydra coverage and rebuild cost, not whether a local build can
-# succeed. Those are marked `manual`: reported for a human, never auto-flagged,
-# because a green build would say nothing about whether the reason still holds.
+# confidently wrong. mesa's condition is Hydra coverage and rebuild cost, not
+# whether a local build can eventually succeed. The retired
+# nixos-render-docs pin was the same trap from the other direction: it built
+# fine unpinned, because its break was in nix-darwin, which passed a flag the
+# new version had removed. Such pins are marked `manual` — reported for a
+# human, never auto-flagged, because a green build says nothing about whether
+# the reason still holds.
 #
 # A `build` package that succeeds here has met its pin's condition. Removing the
 # pin is still a judgement call — it changes a shipped version — so this reports
@@ -62,12 +64,6 @@ declare -a PIN_MAP=(
     # mesa's condition is "Hydra is green on aarch64-darwin" — cache availability
     # and rebuild cost, not whether a local build can eventually succeed.
     "nixpkgs-pre-mesa-26-1:manual:mesa xorg-server xquartz"
-    "nixpkgs-pre-rclone-fuse3:build:rclone"
-    # nixos-render-docs builds fine either way. The break is in its CONSUMER:
-    # nix-darwin passes --toc-depth, which the new version removed. Check with
-    #   git grep -n -- --toc-depth <nix-darwin checkout>
-    # and drop the pin once nix-darwin uses --sidebar-depth.
-    "nixpkgs-pre-toc-depth-removal:manual:nixos-render-docs"
 )
 
 note() { printf 'pin-currency: %s\n' "$*"; }

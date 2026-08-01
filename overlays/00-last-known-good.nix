@@ -34,24 +34,6 @@ let
   # stays self-consistent. Drop these once Hydra is green on aarch64-darwin.
   preMesa26_1 = nixpkgs "nixpkgs-pre-mesa-26-1";
 
-  # Last good nixpkgs rev (== prior flake.lock pin, 2026-05-22) before the
-  # 2026-05-25 nixpkgs bump (rev f9d8b659...) shipped rclone 1.74.2, which
-  # unconditionally switched `buildInputs` from `macfuse-stubs` (Darwin) to
-  # `fuse3` (Linux-only). The new derivation does not provide `fuse.h` on
-  # Darwin, so cgofuse fails:
-  #     vendor/.../cgofuse/fuse/host_cgo.go:119:10:
-  #       fatal error: 'fuse.h' file not found
-  # 1.74.1 from this rev still uses macfuse-stubs and builds cleanly on
-  # aarch64-darwin. Drop this once nixpkgs restores the Darwin code path.
-  preRcloneFuse3Break = nixpkgs "nixpkgs-pre-rclone-fuse3";
-
-  # Last good nixpkgs rev (== prior flake.lock pin, 2026-07-02) before the
-  # 2026-07-05 bump (rev 19a8a1e6...) shipped a nixos-render-docs that
-  # removed the --toc-depth flag ("use --sidebar-depth instead"). nix-darwin
-  # (a1fa429, currently upstream HEAD) still passes --toc-depth when
-  # building darwin-manual-html, so the manual and darwin-help fail. Drop
-  # this once nix-darwin switches to --sidebar-depth.
-  preTocDepthRemoval = nixpkgs "nixpkgs-pre-toc-depth-removal";
 in
 {
   # Only ntp still fails to build against current nixpkgs (configure cannot
@@ -73,18 +55,6 @@ in
     mesa
     xorg-server
     xquartz
-    ;
-
-  # Pin rclone (and thus its consumers via the overlay) until nixpkgs
-  # restores Darwin fuse support. See `preRcloneFuse3Break` above.
-  inherit (preRcloneFuse3Break)
-    rclone
-    ;
-
-  # Pin nixos-render-docs until nix-darwin adapts to the removal of
-  # --toc-depth. See `preTocDepthRemoval` above.
-  inherit (preTocDepthRemoval)
-    nixos-render-docs
     ;
 
   pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
