@@ -11,17 +11,15 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 
 - `doc/CLEANUP-PLAN.md` is the accepted plan. John explicitly accepted decisions
   D1-D7 on 2026-08-03.
-- Local `main` contains John's signed flake-lock update `59ac2a88`, the signed
-  updater-fixture isolation fix `3ab97a35`, and the accepted-plan commit
-  `8d9fc158` atop C0. Fetched Gitea and GitHub `main` remain
+- Local `main` contains completed, audited Phase 1 through `aae7f379`, including
+  John's signed flake-lock update. Fetched Gitea and GitHub `main` remain
   `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
 - Active construction checkout:
-  `/private/tmp/wg-nix-cleanup/c1a-rewrite`, branch
-  `cleanup/c1a-rewrite`. Its signed Phase 1 range passed final independent audit
-  and is ready for a local fast-forward into `main`.
-- The signed exploratory recovery branch remains
-  `cleanup/c1a-python-tiers@65701d26ba30d410765bcb93713b35c7a19c8ecb`
-  and is also captured in the standalone recovery package.
+  `/private/tmp/wg-nix-cleanup/c4-catalog-dead-metadata`, branch
+  `cleanup/c4-catalog-dead-metadata`. Issue #107 is complete, signed, audited,
+  and ready for a local fast-forward into `main`.
+- Superseded Phase 1 branches/worktrees were removed after their refs and dirty
+  state were captured in the standalone recovery package.
 - The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
   concurrent dependency/Pi work. Cleanup must not stage, restore, rewrite, or
   absorb these visible paths:
@@ -92,19 +90,28 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   corrective commit `7daf8957`.
 - The complete Phase 1 range has eight good signatures, a clean worktree, and a
   net diff of 517 additions and 12,504 deletions across 35 files.
+- C4/#107 commit `60708a90` deletes 149 lines of unused selector-coverage
+  evidence and its private construction. Refreshed repository, live-consumer,
+  local-consumer, and explicit-GitHub searches found no named or dynamic external
+  consumer.
+- Pre/post catalog profiles, item shapes, validation, and per-profile selections
+  are byte-identical. All 702 Hera generated-home leaf hashes are identical
+  (311 unique content hashes); managed preflight and the fast tier pass. Final
+  independent audit verdict: PASS at
+  `/private/tmp/wg-nix-c4-fess.BU0yVL/report.md`.
 
 ## Active work unit
 
-Phase 2, first boundary: delete proven dead catalog metadata under cleanup issue
-#107. Begin only after the final Phase 1 range audit, local fast-forward, worktree
-cleanup, and truthful Project reconciliation.
+Phase 2, next boundary: delete the specifically audited dead commented-out
+implementation under cleanup issue #103. Begin after #107 is fast-forwarded,
+closed Done, and its worktree/branch is removed.
 
 ## Project state
 
-Cleanup epic #98 and issues #99/#100 remain In Progress. C9a issue #114 is closed
-Completed with its Project item Done. Phase 1 issues #100-#102 are ready for
-completion/supersession. The remaining cleanup issues stay Todo until their
-accepted work units begin.
+Cleanup epic #98 remains In Progress. Issues #99-#102 and #114 are closed with
+their Project items Done. Issue #107 is ready to close Done after local
+fast-forward. The remaining cleanup issues stay Todo until their accepted work
+units begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
 
@@ -137,13 +144,13 @@ Not authorized:
 ## Resume procedure
 
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
-2. Verify the Phase 1 worktree is clean and the recovery-package checksums pass.
+2. Verify the #107 worktree is clean and commit `60708a90` has a good signature.
 3. Preserve every user-owned dependency/Pi path named above and stage only
    explicit cleanup paths.
-4. Fast-forward local `main`, remove the completed Phase 1 worktree/branch, and
+4. Fast-forward local `main`, remove the completed #107 worktree/branch, and
    preserve John's dirty paths.
-5. Close or supersede #100-#102 truthfully, then move #107 In Progress using the
-   explicit `jwiegley` account.
-6. Start Phase 2 from a fresh short-lived branch/worktree based on current local
+5. Close #107 Done, then move #103 In Progress using the explicit `jwiegley`
+   account.
+6. Start #103 from a fresh short-lived branch/worktree based on current local
    `main`.
 7. Do not push or activate without separate authorization.

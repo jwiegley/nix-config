@@ -12,12 +12,13 @@ retains a small fail-closed `fast`/`full` quality driver while deleting structur
 coverage, root output-denominator bookkeeping, the committed consumer inventory,
 duplicate root/portable gates, and their regeneration cycle.
 
-The next unit is Phase 2's proven dead catalog metadata cleanup, issue #107, after
-Phase 1 is fast-forwarded and its worktree is removed.
+Issue #107's dead catalog metadata deletion is complete and independently audited.
+The next unit is Phase 2's mechanical dead-comment deletion, issue #103, after
+#107 is fast-forwarded and its worktree is removed.
 
 The construction checkout is
-`/private/tmp/wg-nix-cleanup/c1a-rewrite`. The signed exploratory branch remains
-preserved separately. The primary `/Users/johnw/src/nix` checkout is on local
+`/private/tmp/wg-nix-cleanup/c4-catalog-dead-metadata`. The primary
+`/Users/johnw/src/nix` checkout is on local
 `main` and contains John's concurrent lock, dependency, and Pi work. Do not stage
 or restore those user-owned paths.
 
