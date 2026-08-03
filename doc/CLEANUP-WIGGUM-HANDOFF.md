@@ -14,9 +14,11 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 - Local `main` contains completed, audited Phase 1 and issues #107 and #103
   through `4663fa94`, including John's signed flake-lock update. Fetched Gitea and
   GitHub `main` remain `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
-- There is no active construction checkout or cleanup branch. Issue #103 is
-  locally integrated and closed Done; its temporary worktree and branch were
-  removed.
+- Active construction checkout:
+  `/private/tmp/wg-nix-cleanup/c3a-formatter-dedup`, branch
+  `cleanup/c3a-formatter-dedup`. Issue #105 implementation commit `d56df05c` is
+  signed and independently audited; the signed closeout is at branch HEAD. The
+  work unit is ready for local fast-forward into `main`.
 - Superseded Phase 1 branches/worktrees were removed after their refs and dirty
   state were captured in the standalone recovery package.
 - The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
@@ -116,17 +118,24 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   `gpt-5.6-sol` under `openai-codex` at 1,050,000 tokens and local DeepSeek V4 at
   1,048,576. Codex defaults to native OpenAI; its oMLX and llama-swap profiles
   remain opt-in.
+- C3a/#105 commit `d56df05c` makes `format.sh` own both write and `--check`
+  modes while reducing `format-check.sh` to a four-line compatibility adapter.
+  Exact base/candidate Nix and shell fixtures match in write mode; each check
+  backend preserves status, output, and file bytes; unknown modes fail with
+  status 2. Both public apps, the portable format derivation, and the fast tier
+  pass. Final independent verdict: PASS at
+  `/private/tmp/wg-nix-c3a-commit-fess.iRqiiC/report.md`.
 
 ## Active work unit
 
-Begin issue #105 from current local `main` in a fresh short-lived worktree while
-preserving every concurrent path listed above.
+Fast-forward issue #105 locally. Then close it Done, remove its worktree/branch,
+and begin issue #106 from current local `main`.
 
 ## Project state
 
 Cleanup epic #98 remains In Progress. Issues #99-#103, #107, and #114 are closed
-with their Project items Done. The remaining cleanup issues stay Todo until their
-accepted work units begin.
+with their Project items Done. Issue #105 is In Progress. The remaining cleanup
+issues stay Todo until their accepted work units begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
 
@@ -159,9 +168,12 @@ Not authorized:
 ## Resume procedure
 
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
-2. Preserve every concurrent path named above and stage only explicit cleanup
+2. Verify issue #105 implementation commit `d56df05c` and its closeout commit
+   have good signatures and the worktree is clean.
+3. Preserve every concurrent path named above and stage only explicit cleanup
    paths.
-3. Move #105 In Progress using the explicit `jwiegley` account.
-4. Start #105 from a fresh short-lived branch/worktree based on current local
+4. Fast-forward local `main`, close #105 Done using the explicit `jwiegley`
+   account, and remove its worktree/branch.
+5. Start #106 from a fresh short-lived branch/worktree based on current local
    `main`.
-5. Do not push, activate, or restart sessions without separate authorization.
+6. Do not push, activate, or restart sessions without separate authorization.
