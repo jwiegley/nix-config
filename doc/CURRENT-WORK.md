@@ -13,12 +13,12 @@ coverage, root output-denominator bookkeeping, the committed consumer inventory,
 duplicate root/portable gates, and their regeneration cycle.
 
 Issues #107, #103, #105, #106, #111, #112, #113, and #115 are complete and
-closed Done. Issue #110 is verified as not planned under accepted decision D5:
-no defect or measured deletion justifies changing the transactional updater. It
-remains In Progress only until Project reconciliation.
+closed Done; #110 is closed Not Planned under accepted decision D5. Issue #120's
+Darwin gpg-agent handoff retirement is in read-only live-proof audit. No
+activation is authorized.
 
 The construction checkout is
-`/private/tmp/wg-nix-cleanup/c6-updater-audit`. The primary
+`/private/tmp/wg-nix-cleanup/c10e-gpg-handoff`. The primary
 `/Users/johnw/src/nix` checkout is on local `main` and contains the concurrent
 dependency, model, Pi, and oMLX 0.5.5 repair work that produced active Hera
 generation 986, expanded Pi/gallery work, untracked Pi provider work, and runtime
