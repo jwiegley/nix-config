@@ -12,9 +12,10 @@ Refresh only after a parity-affecting change has been accepted:
 - `--compare` reports no package-multiset change; or
 - every observed package addition/removal has a written explanation.
 
-Do not refresh merely to make a comparison green. Ordinary commits use the cheap
-currency guard in `test/bin/oracle-currency-slow-test.py`; deriving the oracle requires
-cross-system Nix evaluation and belongs at issue/work-unit closeout.
+Do not refresh merely to make a comparison green. The cheap currency guard in
+`test/bin/oracle-currency-slow-test.py` runs only in the full/issue-closeout tier;
+deriving the oracle requires cross-system Nix evaluation and belongs at relevant
+issue closeout.
 
 ## Procedure
 

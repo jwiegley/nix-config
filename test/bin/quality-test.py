@@ -119,6 +119,10 @@ class QualityEachFileTests(unittest.TestCase):
             encoding="utf-8",
         )
         git.chmod(0o755)
+        for name in ("nixfmt", "statix", "deadnix", "shellcheck", "shfmt", "ruff"):
+            tool = fakebin / name
+            tool.write_text("#!/bin/sh\nexit 99\n", encoding="utf-8")
+            tool.chmod(0o755)
         env = dict(self.env)
         env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
         return env
@@ -129,16 +133,14 @@ class QualityEachFileTests(unittest.TestCase):
             with self.subTest(interface="files", kind=kind):
                 proc = self.quality("--files", kind, env=env)
                 self.assertNotEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-        for suite, tool in (
-            ("nix-format", "nixfmt"),
-            ("nix-lint", "statix"),
-            ("nix-deadcode", "deadnix"),
-            ("shell-lint", "shellcheck"),
-            ("shell-format", "shfmt"),
-            ("python-lint", "ruff"),
+        for suite in (
+            "nix-format",
+            "nix-lint",
+            "nix-deadcode",
+            "shell-lint",
+            "shell-format",
+            "python-lint",
         ):
-            if not have(tool):
-                continue
             with self.subTest(interface="suite", suite=suite):
                 proc = self.quality(suite, env=env)
                 self.assertNotEqual(proc.returncode, 0, proc.stdout + proc.stderr)

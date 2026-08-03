@@ -224,21 +224,8 @@ each_file() {
     local suite=$1 desc=$2 producer=$3
     shift 3
     local -a cmd=("$@")
-    local f tool_path bad=0 count=0 out selection
-    # mktemp, not /tmp/quality.$$: a predictable path in a world-writable
-    # directory can be pre-created as a symlink by another user, which would
-    # redirect this write.
-    out=$(mktemp "${TMPDIR:-/tmp}/quality.XXXXXX") || {
-        fail "$suite: could not create a temporary file"
-        return
-    }
-    selection=$(mktemp "${TMPDIR:-/tmp}/quality-files.XXXXXX") || {
-        rm -f "$out"
-        fail "$suite: could not create a file-selection temporary file"
-        return
-    }
-    if ! "$producer" >"$selection"; then
-        rm -f "$out" "$selection"
+    local f tool_path output inventory bad=0 count=0
+    if ! inventory=$("$producer"); then
         fail "$suite: tracked-file discovery failed"
         return
     fi
@@ -266,17 +253,40 @@ each_file() {
         [[ -e $f || -L $f ]] || continue
         count=$((count + 1))
         tool_path=./$f
-        if ! "${cmd[@]}" "$tool_path" >"$out" 2>&1; then
+        if ! output=$("${cmd[@]}" "$tool_path" 2>&1); then
             bad=$((bad + 1))
             printf '  --- %s\n' "$f" >&2
-            sed 's/^/      /' "$out" >&2
+            printf '%s\n' "$output" | sed 's/^/      /' >&2
         fi
-    done <"$selection"
-    rm -f "$out" "$selection"
+    done <<<"$inventory"
     if [[ $bad -gt 0 ]]; then
         fail "$suite: $bad of $count file(s) failed ($desc)"
     else
         note "$suite: $count file(s) OK"
+    fi
+}
+
+rewrite_files() {
+    local suite=$1 producer=$2
+    shift 2
+    local f inventory bad=0 count=0
+    if ! inventory=$("$producer"); then
+        fail "$suite: tracked-file discovery failed"
+        return
+    fi
+    while IFS= read -r f; do
+        [[ -n $f ]] || continue
+        [[ -e $f || -L $f ]] || continue
+        if "$@" "./$f"; then
+            count=$((count + 1))
+        else
+            bad=$((bad + 1))
+        fi
+    done <<<"$inventory"
+    if [[ $bad -gt 0 ]]; then
+        fail "$suite: $bad file(s) could not be rewritten"
+    else
+        note "$suite: rewrote $count file(s)"
     fi
 }
 
@@ -285,30 +295,7 @@ each_file() {
 run_nix_format() {
     need nixfmt nix-format || return
     if [[ $fix -eq 1 ]]; then
-        local bad=0 f n=0 selection
-        selection=$(mktemp "${TMPDIR:-/tmp}/quality-nix-files.XXXXXX") || {
-            fail "nix-format: could not create a file-selection temporary file"
-            return
-        }
-        if ! files_nix >"$selection"; then
-            rm -f "$selection"
-            fail "nix-format: tracked-file discovery failed"
-            return
-        fi
-        while IFS= read -r f; do
-            [[ -n $f ]] || continue
-            if nixfmt "./$f"; then
-                n=$((n + 1))
-            else
-                bad=$((bad + 1))
-            fi
-        done <"$selection"
-        rm -f "$selection"
-        if [[ $bad -gt 0 ]]; then
-            fail "nix-format: $bad file(s) could not be rewritten"
-        else
-            note "nix-format: rewrote $n file(s)"
-        fi
+        rewrite_files nix-format files_nix nixfmt
     else
         each_file nix-format "nixfmt --check" files_nix nixfmt --check
     fi
@@ -334,30 +321,7 @@ run_shell_lint() {
 run_shell_format() {
     need shfmt shell-format || return
     if [[ $fix -eq 1 ]]; then
-        local bad=0 n=0 f selection
-        selection=$(mktemp "${TMPDIR:-/tmp}/quality-shell-files.XXXXXX") || {
-            fail "shell-format: could not create a file-selection temporary file"
-            return
-        }
-        if ! files_shell >"$selection"; then
-            rm -f "$selection"
-            fail "shell-format: tracked-file discovery failed"
-            return
-        fi
-        while IFS= read -r f; do
-            [[ -n $f ]] || continue
-            if shfmt -i 4 -w "./$f"; then
-                n=$((n + 1))
-            else
-                bad=$((bad + 1))
-            fi
-        done <"$selection"
-        rm -f "$selection"
-        if [[ $bad -gt 0 ]]; then
-            fail "shell-format: $bad file(s) could not be rewritten"
-        else
-            note "shell-format: rewrote $n file(s)"
-        fi
+        rewrite_files shell-format files_shell shfmt -i 4 -w
     else
         each_file shell-format "shfmt -i 4 -d" files_shell shfmt -i 4 -d
     fi
@@ -366,14 +330,9 @@ run_shell_format() {
 run_python_lint() {
     need ruff python-lint || return
     need python3 python-lint || return
-    local f bad=0 selection
+    local f inventory bad=0
     local -a py=() templates=()
-    selection=$(mktemp "${TMPDIR:-/tmp}/quality-python-files.XXXXXX") || {
-        fail "python-lint: could not create a file-selection temporary file"
-        return
-    }
-    if ! files_python >"$selection"; then
-        rm -f "$selection"
+    if ! inventory=$(files_python); then
         fail "python-lint: tracked-file discovery failed"
         return
     fi
@@ -383,8 +342,7 @@ run_python_lint() {
         else
             py+=("./$f")
         fi
-    done <"$selection"
-    rm -f "$selection"
+    done <<<"$inventory"
     if [[ ${#py[@]} -eq 0 && ${#templates[@]} -eq 0 ]]; then
         note "python-lint: no files"
         return

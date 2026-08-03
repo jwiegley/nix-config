@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Installed as part of the operator-facing nix-scripts package; human callers do
+# not appear as repository references.
+
 runHook setupCompilerEnvironmentPhase
 runHook jailbreakPhase
 runHook compileBuildDriverPhase
