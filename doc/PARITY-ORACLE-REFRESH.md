@@ -13,7 +13,7 @@ Refresh only after a parity-affecting change has been accepted:
 - every observed package addition/removal has a written explanation.
 
 Do not refresh merely to make a comparison green. Ordinary commits use the cheap
-currency guard in `test/bin/oracle-currency-test.py`; deriving the oracle requires
+currency guard in `test/bin/oracle-currency-slow-test.py`; deriving the oracle requires
 cross-system Nix evaluation and belongs at issue/work-unit closeout.
 
 ## Procedure
@@ -42,7 +42,7 @@ deltas, removes the superseded artifact, and leaves Git as the archive.
 
 ## Cheap enforcement
 
-`test/bin/oracle-currency-test.py` checks that:
+`test/bin/oracle-currency-slow-test.py` checks that:
 
 - exactly one oracle exists;
 - its filename, revision, schema, commands, counts, and history agree;

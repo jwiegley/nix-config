@@ -2,7 +2,7 @@
 """Replayable negative regressions for the fleet programme's shell gates.
 
 Why this file exists. An independent audit observed that of five gates added in
-this programme, only `test/bin/oracle-currency-test.py` shipped negative cases that
+this programme, only `test/bin/oracle-currency-slow-test.py` shipped negative cases that
 could be REPLAYED from the repository. The others — `test/bin/verify-signatures`,
 `test/bin/cross-consumer-eval`, and `test/bin/consumer-inventory`'s null-`repoHead`
 refusal — had their negative proofs recorded only as prose in commit messages
@@ -17,7 +17,7 @@ the defect six months from now. "Proven negative" has to mean reproducible.
 Everything below runs against throwaway fixtures. Nothing touches a real
 repository, a real remote, or a real consumer checkout.
 
-Run: python3 -m unittest -v test/bin/gates-test.py
+Run: python3 -m unittest -v test/bin/gates-slow-test.py
 """
 
 import json
@@ -1144,7 +1144,7 @@ class TestGatesAreRegistered(unittest.TestCase):
         ci = (REPO / ".github/workflows/ci.yml").read_text()
         self.assertRegex(
             ci,
-            r"(?m)^          -c test/bin/quality --python-tier pre-commit$",
+            r"(?m)^          -c test/bin/quality --python-tier fast$",
         )
         self.assertRegex(
             ci,
@@ -1154,7 +1154,7 @@ class TestGatesAreRegistered(unittest.TestCase):
         makefile = (REPO / "Makefile").read_text()
         self.assertRegex(
             makefile,
-            r"(?m)^\ttest/bin/quality --python-tier pre-push python-test coverage output-denominators darwin-surface$",
+            r"(?m)^\ttest/bin/quality --python-tier full python-test coverage output-denominators darwin-surface$",
         )
 
     def test_python_tiers_are_wired_without_a_second_quality_authority(self):
@@ -1178,7 +1178,7 @@ class TestGatesAreRegistered(unittest.TestCase):
         self.assertRegex(
             (REPO / "Makefile").read_text(),
             r"(?m)^test:\n"
-            r"\ttest/bin/quality --python-tier pre-push python-test coverage output-denominators darwin-surface$",
+            r"\ttest/bin/quality --python-tier full python-test coverage output-denominators darwin-surface$",
         )
 
     def test_darwin_surface_is_not_wired_to_remote_ci_until_root_is_portable(self):
@@ -1543,7 +1543,7 @@ class TestConsumerInventoryLoadBearingFacet(unittest.TestCase):
     def test_known_code_and_stub_traps_stay_load_bearing(self):
         """The module name, stale-path detector, and throwing stub remain code."""
         for needle in (
-            "test/bin/gates-test.py",
+            "test/bin/gates-slow-test.py",
             "config/ai/flake.nix",
         ):
             hits = [r for r in self.faceted if needle in r["file"]]

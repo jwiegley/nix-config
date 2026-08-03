@@ -302,7 +302,7 @@ case ${1-} in
     # derive()'s output; a literal whole-file diff would call that "drift" and
     # every --check would fail permanently the moment the oracle first advanced.
     # Those two fields are not derived quantities and are validated separately by
-    # test/bin/oracle-currency-test.py, which is where they belong.
+    # test/bin/oracle-currency-slow-test.py, which is where they belong.
     core() {
         python3 -c '
 import json, sys
@@ -516,7 +516,7 @@ PY
     # Cheap: print the derivation commands WITHOUT evaluating anything, so the
     # currency guard can assert the oracle's recorded command still matches this
     # tool. Until this mode existed, that assertion could only skip -- see
-    # test/bin/oracle-currency-test.py::test_recorded_command_matches_the_tool, which
+    # test/bin/oracle-currency-slow-test.py::test_recorded_command_matches_the_tool, which
     # has always called `--commands` and skipped on its non-zero exit. A gate
     # that skips is a gate that reports success while covering nothing.
     commands_json

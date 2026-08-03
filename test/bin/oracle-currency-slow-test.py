@@ -333,8 +333,8 @@ def check_git_ancestry(oracle, armed_refactor, git):
 class OracleCurrencyTests(unittest.TestCase):
     """The guard proper: the committed oracle must be current and consistent.
 
-    Runs where test/bin/quality's python-test suite runs it -- the repo root, inside
-    a git work tree -- and shells out to git the same way update-overlay-test.py
+    Runs in the full/issue-closeout Python tier from the repo root, inside
+    a git work tree -- and shells out to git the same way update-overlay-slow-test.py
     shells out to bash. Every check reads the artifact and git metadata; none
     re-derives.
     """

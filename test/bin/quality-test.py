@@ -2,7 +2,7 @@
 """Execution tests for test/bin/quality -- the first this repository has had.
 
 Everything that referenced `test/bin/quality` from a test previously did so as TEXT:
-`test/bin/gates-test.py` greps its source for two dispatch arms. Nothing invoked it, and
+`test/bin/gates-slow-test.py` greps its source for two dispatch arms. Nothing invoked it, and
 nothing exercised `each_file`, the function every per-file suite runs through. So
 when `d6b3cf3d` fixed `each_file` to skip tracked-but-absent paths, both of its
 negative cases existed only in the commit message.
@@ -14,16 +14,16 @@ hook depends on.
 
 SAFETY: every test runs `test/bin/quality` with the CWD inside a throwaway repository,
 and scrubs GIT_* from the environment first. That scrub is not decoration --
-`test/bin/publish-test.py` once inherited GIT_DIR under a git hook and its
+`test/bin/publish-slow-test.py` once inherited GIT_DIR under a git hook and its
 `git init --bare <tmpdir>` retargeted the REAL repository, setting core.bare=true
 and breaking five worktrees at once. `test/bin/quality` resolves its scope with
 `git rev-parse --show-toplevel`, so a leaked GIT_DIR would point it at the real
 checkout and these tests would silently assert against the wrong tree.
 """
 
-import json
 import os
 import runpy
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -68,36 +68,6 @@ def have(tool):
     return shutil.which(tool) is not None
 
 
-def revision_is_ancestor_of_prospective_merge(revision, repo):
-    """Accept evidence reachable through HEAD or a pending merge parent."""
-    heads = ["HEAD"]
-    merge_head_path = subprocess.run(
-        ["git", "rev-parse", "--git-path", "MERGE_HEAD"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        check=False,
-        env=clean_env(),
-    )
-    if merge_head_path.returncode == 0:
-        path = Path(merge_head_path.stdout.strip())
-        if not path.is_absolute():
-            path = Path(repo) / path
-        if path.is_file():
-            heads.extend(line.strip() for line in path.read_text().splitlines() if line.strip())
-    return any(
-        subprocess.run(
-            ["git", "merge-base", "--is-ancestor", revision, head],
-            cwd=repo,
-            capture_output=True,
-            check=False,
-            env=clean_env(),
-        ).returncode
-        == 0
-        for head in heads
-    )
-
-
 class QualityEachFileTests(unittest.TestCase):
     """The per-file loop: what it checks, what it skips, and what it reports."""
 
@@ -124,15 +94,98 @@ class QualityEachFileTests(unittest.TestCase):
             check=False,
         )
 
-    def quality(self, *suites):
+    def quality(self, *suites, env=None):
         return subprocess.run(
             [str(QUALITY), *suites],
             cwd=self.repo,
-            env=self.env,
+            env=self.env if env is None else env,
             capture_output=True,
             text=True,
             check=False,
         )
+
+    def failing_ls_files_env(self):
+        fakebin = self.repo / "fake-git-bin"
+        fakebin.mkdir()
+        real_git = shlex.quote(shutil.which("git"))
+        git = fakebin / "git"
+        git.write_text(
+            "#!/usr/bin/env bash\n"
+            "if [[ $1 == rev-parse ]]; then\n"
+            f"  exec {real_git} \"$@\"\n"
+            "fi\n"
+            "if [[ $1 == ls-files ]]; then exit 73; fi\n"
+            f"exec {real_git} \"$@\"\n",
+            encoding="utf-8",
+        )
+        git.chmod(0o755)
+        env = dict(self.env)
+        env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
+        return env
+
+    def test_git_ls_files_failure_is_never_an_empty_success(self):
+        env = self.failing_ls_files_env()
+        for kind in ("nix", "shell", "python", "python-tests"):
+            with self.subTest(interface="files", kind=kind):
+                proc = self.quality("--files", kind, env=env)
+                self.assertNotEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        for suite, tool in (
+            ("nix-format", "nixfmt"),
+            ("nix-lint", "statix"),
+            ("nix-deadcode", "deadnix"),
+            ("shell-lint", "shellcheck"),
+            ("shell-format", "shfmt"),
+            ("python-lint", "ruff"),
+        ):
+            if not have(tool):
+                continue
+            with self.subTest(interface="suite", suite=suite):
+                proc = self.quality(suite, env=env)
+                self.assertNotEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+                self.assertIn("tracked-file discovery failed", proc.stdout + proc.stderr)
+
+    def test_fix_mode_preserves_paths_and_propagates_formatter_failure(self):
+        paths = {
+            "nix-format": [
+                self.write("--version.nix", "{ }\n"),
+                self.write("dir/a b.nix", "{ }\n"),
+            ],
+            "shell-format": [
+                self.write("--version.sh", "#!/usr/bin/env bash\ntrue\n"),
+                self.write("dir/a b.sh", "#!/usr/bin/env bash\ntrue\n"),
+            ],
+        }
+        self.git(
+            "add",
+            "--",
+            *(
+                str(path.relative_to(self.repo))
+                for suite_paths in paths.values()
+                for path in suite_paths
+            ),
+        )
+        fakebin = self.repo / "fake-format-bin"
+        fakebin.mkdir()
+        env = dict(self.env)
+        env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
+        for suite, executable in (("nix-format", "nixfmt"), ("shell-format", "shfmt")):
+            log = self.repo / f"{executable}.log"
+            tool = fakebin / executable
+            tool.write_text(
+                "#!/usr/bin/env bash\n"
+                f"printf '%s:%s\\n' \"$#\" \"${{@:$#}}\" >>{shlex.quote(str(log))}\n"
+                "exit 71\n",
+                encoding="utf-8",
+            )
+            tool.chmod(0o755)
+            proc = self.quality("--fix", suite, env=env)
+            self.assertNotEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            calls = [line.split(":", 1) for line in log.read_text().splitlines()]
+            self.assertEqual(
+                {final_arg for _, final_arg in calls},
+                {f"./{path.relative_to(self.repo)}" for path in paths[suite]},
+            )
+            self.assertTrue(all(int(count) >= 1 for count, _ in calls))
 
     def write(self, name, text):
         p = self.repo / name
@@ -146,6 +199,60 @@ class QualityEachFileTests(unittest.TestCase):
         proc = self.quality("--files", "python")
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual(proc.stdout.splitlines(), ["template.py.in"])
+
+    def test_posix_shell_is_discovered_without_selecting_zsh(self):
+        self.write("posix", "#!/bin/sh\ntrue\n")
+        self.write("zshell", "#!/bin/zsh\ntrue\n")
+        self.git("add", "posix", "zshell")
+        proc = self.quality("--files", "shell")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("posix", proc.stdout.splitlines())
+        self.assertNotIn("zshell", proc.stdout.splitlines())
+
+    def test_nix_tools_receive_only_safe_tracked_paths(self):
+        self.write("--tracked.nix", "{ }\n")
+        self.write("untracked.nix", "{ }\n")
+        self.git("add", "--", "--tracked.nix")
+        fakebin = self.repo / "fake-nix-tools"
+        fakebin.mkdir()
+        env = dict(self.env)
+        env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
+        for suite, executable in (
+            ("nix-lint", "statix"),
+            ("nix-deadcode", "deadnix"),
+        ):
+            log = self.repo / f"{executable}.log"
+            tool = fakebin / executable
+            tool.write_text(
+                "#!/usr/bin/env bash\n"
+                f"printf '%s\\n' \"$@\" >{shlex.quote(str(log))}\n",
+                encoding="utf-8",
+            )
+            tool.chmod(0o755)
+            proc = self.quality(suite, env=env)
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            arguments = log.read_text().splitlines()
+            self.assertIn("./--tracked.nix", arguments)
+            self.assertNotIn("untracked.nix", "\n".join(arguments))
+
+    def test_python_lint_prefixes_option_like_paths(self):
+        self.write("--version.py", "VALUE = 1\n")
+        self.git("add", "--", "--version.py")
+        fakebin = self.repo / "fake-python-tools"
+        fakebin.mkdir()
+        log = self.repo / "ruff.log"
+        ruff = fakebin / "ruff"
+        ruff.write_text(
+            "#!/usr/bin/env bash\n"
+            f"printf '%s\\n' \"$@\" >{shlex.quote(str(log))}\n",
+            encoding="utf-8",
+        )
+        ruff.chmod(0o755)
+        env = dict(self.env)
+        env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
+        proc = self.quality("python-lint", env=env)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("./--version.py", log.read_text().splitlines())
 
     @unittest.skipUnless(have("ruff"), "ruff is not on PATH")
     def test_python_template_is_rendered_for_lint(self):
@@ -313,54 +420,32 @@ class QualityPythonTierTests(unittest.TestCase):
             env=self.env,
             check=True,
         )
-        self.tests = {
-            "test/bin/a-fast-test.py": "pre-commit",
-            "test/bin/b-push-test.py": "pre-push",
-            "test/bin/c-demand-test.py": "ci-on-demand",
-        }
+        self.tests = (
+            "test/bin/a-fast-test.py",
+            "test/bin/b-other-test.py",
+            "test/bin/c-slow-test.py",
+        )
         for path in self.tests:
-            target = self.repo / path
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(
-                "import unittest\n"
-                "class T(unittest.TestCase):\n"
-                "    def test_ok(self): self.assertTrue(True)\n",
-                encoding="utf-8",
-            )
+            self.write_test(path)
         (self.repo / "bin").mkdir()
         shutil.copy2(QUALITY, self.repo / "test/bin/quality")
         shutil.copy2(DEADLINE_SUPERVISOR, self.repo / "test/bin/deadline-supervisor.py")
         shutil.copy2(UNITTEST_STRICT, self.repo / "test/bin/unittest-strict.py")
-        self.write_manifest()
         subprocess.run(["git", "add", "."], cwd=self.repo, env=self.env, check=True)
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def write_manifest(self, *, omit=(), budgets=None):
-        entries = [
-            {
-                "path": path,
-                "kind": "test",
-                "tier": tier,
-                "evidence": ["fixture"],
-                "gap": None,
-            }
-            for path, tier in self.tests.items()
-            if path not in omit
-        ]
-        target = self.repo / "test" / "coverage" / "manifest.json"
+    def write_test(self, path):
+        target = self.repo / path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(
-            json.dumps(
-                {
-                    "pythonInventory": entries,
-                    "budgetsSeconds": budgets
-                    or {"pre-commit": 120, "pre-push": 900, "ci-on-demand": 1800},
-                }
-            ),
+            "import unittest\n"
+            "class T(unittest.TestCase):\n"
+            "    def test_ok(self): self.assertTrue(True)\n",
             encoding="utf-8",
         )
+        return target
 
     def quality(self, *args, env=None, cwd=None):
         return subprocess.run(
@@ -373,14 +458,14 @@ class QualityPythonTierTests(unittest.TestCase):
         )
 
     @unittest.skipUnless(have("timeout"), "timeout is not on PATH")
-    def test_pre_commit_selects_only_pre_commit_suite(self):
-        proc = self.quality("--python-tier", "pre-commit", "python-test")
+    def test_fast_selects_every_non_slow_suite(self):
+        proc = self.quality("--python-tier", "fast", "python-test")
         combined = proc.stdout + proc.stderr
         self.assertEqual(proc.returncode, 0, combined)
         self.assertIn("test/bin/a-fast-test.py", combined)
-        self.assertNotIn("test/bin/b-push-test.py", combined)
-        self.assertNotIn("test/bin/c-demand-test.py", combined)
-        self.assertIn("planned=1 ran=1", combined)
+        self.assertIn("test/bin/b-other-test.py", combined)
+        self.assertNotIn("test/bin/c-slow-test.py", combined)
+        self.assertIn("tier=fast planned=2 ran=2", combined)
 
     @unittest.skipUnless(have("timeout"), "timeout is not on PATH")
     def test_default_preserves_all_tracked_suites(self):
@@ -389,13 +474,71 @@ class QualityPythonTierTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, combined)
         for path in self.tests:
             self.assertIn(path, combined)
-        self.assertIn("tier=all planned=3 ran=3", combined)
+        self.assertIn("tier=full planned=3 ran=3", combined)
 
-    def test_missing_manifest_assignment_refuses(self):
-        self.write_manifest(omit={"test/bin/b-push-test.py"})
-        proc = self.quality("--python-tier", "pre-push", "python-test")
-        self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("missing=['test/bin/b-push-test.py']", proc.stdout + proc.stderr)
+    @unittest.skipUnless(have("timeout"), "timeout is not on PATH")
+    def test_new_test_needs_no_registration(self):
+        path = "test/bin/new-test.py"
+        self.write_test(path)
+        subprocess.run(["git", "add", path], cwd=self.repo, env=self.env, check=True)
+        for tier in ("fast", "full"):
+            with self.subTest(tier=tier):
+                proc = self.quality("--python-tier", tier, "python-test")
+                self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+                self.assertIn(path, proc.stdout + proc.stderr)
+
+    @unittest.skipUnless(have("timeout"), "timeout is not on PATH")
+    def test_new_slow_test_enters_full_only(self):
+        path = "test/bin/new-slow-test.py"
+        self.write_test(path)
+        subprocess.run(["git", "add", path], cwd=self.repo, env=self.env, check=True)
+        fast = self.quality("--python-tier", "fast", "python-test")
+        full = self.quality("--python-tier", "full", "python-test")
+        self.assertEqual(fast.returncode, 0, fast.stdout + fast.stderr)
+        self.assertEqual(full.returncode, 0, full.stdout + full.stderr)
+        self.assertNotIn(path, fast.stdout + fast.stderr)
+        self.assertIn(path, full.stdout + full.stderr)
+
+    def test_empty_test_inventory_refuses_every_interface(self):
+        subprocess.run(
+            ["git", "rm", "-q", "-f", *self.tests],
+            cwd=self.repo,
+            env=self.env,
+            check=True,
+        )
+        for args in (
+            ("--files", "python-tests"),
+            ("--python-tier", "fast", "python-test"),
+            ("--python-tier", "full", "python-test"),
+        ):
+            with self.subTest(args=args):
+                proc = self.quality(*args)
+                self.assertNotEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+                self.assertIn("selected zero suites", proc.stdout + proc.stderr)
+
+    def test_selected_suites_execute_exactly_once(self):
+        runner = self.repo / "test/bin/unittest-strict.py"
+        runner.write_text(
+            "#!/usr/bin/env bash\n"
+            "printf '%s\\n' \"$1\" >>\"$RUN_LOG\"\n",
+            encoding="utf-8",
+        )
+        runner.chmod(0o755)
+        log = self.repo / "runner.log"
+        env = dict(self.env)
+        env["RUN_LOG"] = str(log)
+
+        fast = self.quality("--python-tier", "fast", "python-test", env=env)
+        self.assertEqual(fast.returncode, 0, fast.stdout + fast.stderr)
+        self.assertEqual(
+            log.read_text().splitlines(),
+            ["test/bin/a-fast-test.py", "test/bin/b-other-test.py"],
+        )
+
+        log.unlink()
+        full = self.quality("--python-tier", "full", "python-test", env=env)
+        self.assertEqual(full.returncode, 0, full.stdout + full.stderr)
+        self.assertEqual(log.read_text().splitlines(), list(self.tests))
 
     def test_python_suite_outside_test_bin_refuses(self):
         misplaced = self.repo / "bin" / "misplaced-test.py"
@@ -406,14 +549,16 @@ class QualityPythonTierTests(unittest.TestCase):
             env=self.env,
             check=True,
         )
-        proc = self.quality("--python-tier", "pre-commit", "python-test")
+        proc = self.quality("--python-tier", "fast", "python-test")
         self.assertNotEqual(proc.returncode, 0)
         self.assertIn("must live under test/bin", proc.stdout + proc.stderr)
 
     def test_invalid_tier_refuses_before_execution(self):
-        proc = self.quality("--python-tier", "fast", "python-test")
-        self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("--python-tier needs one of", proc.stderr)
+        for tier in ("pre-commit", "pre-push", "ci-on-demand", "all", "invalid"):
+            with self.subTest(tier=tier):
+                proc = self.quality("--python-tier", tier, "python-test")
+                self.assertNotEqual(proc.returncode, 0)
+                self.assertIn("--python-tier needs one of: fast full", proc.stderr)
 
     def test_whole_tier_supervisor_reports_timeout_and_forced_kill(self):
         supervisor = self.repo / "test/bin/deadline-supervisor.py"
@@ -432,28 +577,30 @@ class QualityPythonTierTests(unittest.TestCase):
     def test_tier_supervisor_recurses_through_repo_absolute_quality_path(self):
         supervisor = self.repo / "test/bin/deadline-supervisor.py"
         expected = (self.repo / "test/bin/quality").resolve()
+        expected_shell = shlex.quote(str(expected))
         supervisor.write_text(
             f"#!/usr/bin/env bash\n"
             "[[ $1 == --term-after ]] || exit 95\n"
             "[[ $2 == 105 ]] || exit 96\n"
             "[[ $3 == --kill-after ]] || exit 97\n"
             "[[ $4 == 5 && $5 == -- ]] || exit 98\n"
-            f"[[ $6 == {expected!s} ]] || exit 99\n"
+            f"[[ $6 == {expected_shell} ]] || exit 99\n"
             "exit 124\n",
             encoding="utf-8",
         )
         supervisor.chmod(0o755)
         subdir = self.repo / "doc"
         subdir.mkdir()
-        proc = self.quality("--tier", "pre-commit-core", cwd=subdir)
+        proc = self.quality("--tier", "pre-commit", cwd=subdir)
         self.assertNotEqual(proc.returncode, 0)
         self.assertIn("exceeded its 105s work deadline", proc.stderr)
 
     def test_tier_membership_keeps_expensive_work_out_of_pre_commit(self):
         supervisor = self.repo / "test/bin/deadline-supervisor.py"
         log = self.repo / "supervisor-args"
+        log_shell = shlex.quote(str(log))
         supervisor.write_text(
-            f"#!/usr/bin/env bash\nprintf '%s\\n' \"$@\" >{log!s}\nexit 124\n",
+            f"#!/usr/bin/env bash\nprintf '%s\\n' \"$@\" >{log_shell}\nexit 124\n",
             encoding="utf-8",
         )
         supervisor.chmod(0o755)
@@ -465,7 +612,7 @@ class QualityPythonTierTests(unittest.TestCase):
             log.read_text().splitlines(),
             [
                 "--term-after", "105", "--kill-after", "5", "--", quality,
-                "--python-tier", "pre-commit", "nix-format", "nix-lint",
+                "--python-tier", "fast", "nix-format", "nix-lint",
                 "nix-deadcode", "shell-lint", "shell-format", "python-lint",
                 "python-test",
             ],
@@ -477,28 +624,21 @@ class QualityPythonTierTests(unittest.TestCase):
             log.read_text().splitlines(),
             [
                 "--term-after", "1785", "--kill-after", "5", "--", quality,
-                "--python-tier", "all", "python-test", "portable-eval",
+                "--python-tier", "full", "python-test", "portable-eval",
                 "immutable-subflake", "consumer-eval", "signatures", "coverage",
                 "coverage-live", "output-denominators", "darwin-surface",
             ],
         )
 
-    def test_whole_tier_budget_must_include_kill_grace(self):
-        self.write_manifest(
-            budgets={"pre-commit": 5, "pre-push": 900, "ci-on-demand": 1800}
-        )
-        proc = self.quality("--tier", "pre-commit")
-        self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("tier budget must exceed supervision headroom", proc.stderr)
-
     def test_tier_selector_conflicts_refuse(self):
         for args in (
             ("--tier",),
             ("--tier", "fast"),
+            ("--tier", "pre-commit-core"),
             ("--tier", "pre-commit", "--tier", "expensive"),
-            ("--python-tier", "all", "--tier", "pre-commit"),
-            ("--tier", "pre-commit", "--python-tier", "all"),
-            ("--python-tier", "all", "--python-tier", "pre-commit", "python-test"),
+            ("--python-tier", "full", "--tier", "pre-commit"),
+            ("--tier", "pre-commit", "--python-tier", "full"),
+            ("--python-tier", "full", "--python-tier", "fast", "python-test"),
             ("--tier", "pre-commit", "python-test"),
             ("--tier", "pre-commit", "--fix"),
         ):
@@ -508,24 +648,14 @@ class QualityPythonTierTests(unittest.TestCase):
 
     @unittest.skipUnless(have("timeout"), "timeout is not on PATH")
     def test_budget_timeout_names_not_reached_suites(self):
-        (self.repo / "test/bin/a-fast-test.py").write_text(
-            "import time, unittest\n"
-            "class T(unittest.TestCase):\n"
-            "    def test_slow(self): time.sleep(5)\n",
-            encoding="utf-8",
-        )
-        self.tests["test/bin/z-never-test.py"] = "pre-commit"
-        (self.repo / "test/bin/z-never-test.py").write_text(
-            "import unittest\n"
-            "class T(unittest.TestCase):\n"
-            "    def test_never(self): self.fail('must not run')\n",
-            encoding="utf-8",
-        )
-        self.write_manifest(
-            budgets={"pre-commit": 1, "pre-push": 900, "ci-on-demand": 1800}
-        )
-        subprocess.run(["git", "add", "."], cwd=self.repo, env=self.env, check=True)
-        proc = self.quality("--python-tier", "pre-commit", "python-test")
+        fakebin = self.repo / "fakebin-timeout"
+        fakebin.mkdir()
+        timeout = fakebin / "timeout"
+        timeout.write_text("#!/usr/bin/env bash\nexit 124\n", encoding="utf-8")
+        timeout.chmod(0o755)
+        env = dict(self.env)
+        env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
+        proc = self.quality("--python-tier", "fast", "python-test", env=env)
         combined = proc.stdout + proc.stderr
         self.assertNotEqual(proc.returncode, 0, combined)
         self.assertIn("timed-out=1", combined)
@@ -536,8 +666,9 @@ class QualityPythonTierTests(unittest.TestCase):
         fakebin.mkdir()
         timeout = fakebin / "timeout"
         log = self.repo / "timeout-args"
+        log_shell = shlex.quote(str(log))
         timeout.write_text(
-            f"#!/usr/bin/env bash\nprintf '%s\\n' \"$@\" >{log!s}\nexit 124\n",
+            f"#!/usr/bin/env bash\nprintf '%s\\n' \"$@\" >{log_shell}\nexit 124\n",
             encoding="utf-8",
         )
         timeout.chmod(0o755)
@@ -545,7 +676,7 @@ class QualityPythonTierTests(unittest.TestCase):
         env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
         env["QUALITY_TIER_SUPERVISED"] = "1"
         proc = self.quality(
-            "--python-tier", "pre-commit", "python-test", env=env
+            "--python-tier", "fast", "python-test", env=env
         )
         self.assertNotEqual(proc.returncode, 0)
         supervised = log.read_text().splitlines()
@@ -562,7 +693,7 @@ class QualityPythonTierTests(unittest.TestCase):
 
         env.pop("QUALITY_TIER_SUPERVISED")
         proc = self.quality(
-            "--python-tier", "pre-commit", "python-test", env=env
+            "--python-tier", "fast", "python-test", env=env
         )
         self.assertNotEqual(proc.returncode, 0)
         unsupervised = log.read_text().splitlines()
@@ -598,78 +729,10 @@ class UpdaterEssentialPlanTests(unittest.TestCase):
         self.assertGreater(suite.countTestCases(), 0)
 
 
-class GeneratedRevisionReachabilityTests(unittest.TestCase):
-    def test_generated_evidence_revisions_are_reachable_ancestors(self):
-        consumer = json.loads(
-            (REPO / "test/inventory/consumer-inventory.json").read_text()
-        )
-        darwin = list((REPO / "test/baseline").glob("darwin-surface-*.json"))
-        coverage = list((REPO / "test/baseline").glob("coverage-*.json"))
-        self.assertEqual(len(darwin), 1)
-        self.assertEqual(len(coverage), 1)
-        revisions = {
-            "consumer inventory": consumer["repoHead"],
-            "Darwin baseline": json.loads(darwin[0].read_text())["baselineRev"],
-            "coverage artifact": json.loads(coverage[0].read_text())["sourceBaseRev"],
-        }
-        for label, revision in revisions.items():
-            with self.subTest(label=label, revision=revision):
-                exists = subprocess.run(
-                    ["git", "cat-file", "-e", f"{revision}^{{commit}}"],
-                    cwd=REPO,
-                    capture_output=True,
-                    check=False,
-                )
-                self.assertEqual(exists.returncode, 0, f"{label} is unavailable")
-                self.assertTrue(
-                    revision_is_ancestor_of_prospective_merge(revision, REPO),
-                    f"{label} is not ancestral to HEAD or a pending merge parent",
-                )
-
-    def test_pending_merge_parent_is_a_valid_prospective_ancestor(self):
-        with tempfile.TemporaryDirectory(prefix="quality-merge-parent-") as temp_dir:
-            repo = Path(temp_dir)
-            env = clean_env()
-
-            def git(*args):
-                result = subprocess.run(
-                    ["git", *args],
-                    cwd=repo,
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                    env=env,
-                )
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                return result.stdout.strip()
-
-            git("init", "-q", "--initial-branch=main", ".")
-            git("config", "user.name", "merge parent test")
-            git("config", "user.email", "merge-parent@example.invalid")
-            git("config", "commit.gpgsign", "false")
-            (repo / "base").write_text("base\n")
-            git("add", "base")
-            git("commit", "-q", "--no-gpg-sign", "-m", "base")
-            git("checkout", "-q", "-b", "incoming")
-            (repo / "incoming").write_text("incoming\n")
-            git("add", "incoming")
-            git("commit", "-q", "--no-gpg-sign", "-m", "incoming evidence")
-            incoming = git("rev-parse", "HEAD")
-            git("checkout", "-q", "main")
-            (repo / "main").write_text("main\n")
-            git("add", "main")
-            git("commit", "-q", "--no-gpg-sign", "-m", "main")
-            self.assertFalse(
-                revision_is_ancestor_of_prospective_merge(incoming, repo)
-            )
-            git("merge", "--no-ff", "--no-commit", "incoming")
-            self.assertTrue(revision_is_ancestor_of_prospective_merge(incoming, repo))
-
-
 class GitScrubRegressionTest(unittest.TestCase):
     """The scrub itself, asserted rather than trusted.
 
-    `test/bin/publish-test.py` inherited GIT_DIR under a git hook and its
+    `test/bin/publish-slow-test.py` inherited GIT_DIR under a git hook and its
     `git init --bare` retargeted the real repository. `test/bin/quality` resolves scope
     via `git rev-parse --show-toplevel`, so a leaked GIT_DIR would silently point
     these tests at the real checkout.

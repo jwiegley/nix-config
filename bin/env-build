@@ -4,6 +4,10 @@ runHook setupCompilerEnvironmentPhase
 runHook jailbreakPhase
 runHook compileBuildDriverPhase
 
+# Nix stdenv injects these phase bodies into the builder environment.
+# shellcheck disable=SC2154
 eval "$configurePhase"
+# shellcheck disable=SC2154
 eval "$buildPhase"
+# shellcheck disable=SC2154
 eval "$checkPhase"

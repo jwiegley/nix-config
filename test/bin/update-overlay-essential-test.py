@@ -3,7 +3,7 @@
 """Bounded, safety-critical subset of the complete updater test suite.
 
 The ordinary commit gate runs hermetic CLI, schema, transaction, and routing
-checks. The low-frequency expensive tier runs the unfiltered suite, including
+checks. The low-frequency full tier runs the unfiltered suite, including
 real Nix/hash work and the publication, signal, and rollback matrix.
 """
 
@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 
-TARGET = Path(__file__).with_name("update-overlay-test.py")
+TARGET = Path(__file__).with_name("update-overlay-slow-test.py")
 TARGET_MODULE = runpy.run_path(str(TARGET))
 
 CLI_METHODS = (

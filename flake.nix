@@ -95,7 +95,7 @@
       # reason this lock was not 100% fetchable by an external consumer.
       #
       # The literal URL is deliberately not written here: the purity gate in
-      # test/bin/update-overlay-test.py forbids that scheme appearing in flake.nix at
+      # test/bin/update-overlay-slow-test.py forbids that scheme appearing in flake.nix at
       # all, and it is right to — a comment quoting it is indistinguishable from
       # a declaration using it.
       #
@@ -482,13 +482,13 @@
                       ${src}/test/bin/agent-deck-env-test.py \
                       ${src}/test/bin/codex-env-test.py \
                       ${src}/bin/update-overlay \
-                      ${src}/test/bin/update-overlay-test.py
+                      ${src}/test/bin/update-overlay-slow-test.py
                     echo "Running Agent Deck environment wrapper tests..."
                     python3 ${src}/test/bin/agent-deck-env-test.py
                     echo "Running Codex environment wrapper tests..."
                     python3 ${src}/test/bin/codex-env-test.py
                     echo "Running update-overlay tests..."
-                    python3 ${src}/test/bin/update-overlay-test.py
+                    python3 ${src}/test/bin/update-overlay-slow-test.py
                     touch $out
                   '';
 

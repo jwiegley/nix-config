@@ -19,7 +19,7 @@ GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh <command>
 
 ```bash
 # Baseline/focused tests
-python3 -m unittest -v test/bin/update-overlay-test.py
+test/bin/unittest-strict.py test/bin/update-overlay-slow-test.py
 nix flake check ./config/fleet --all-systems --no-build
 make test
 

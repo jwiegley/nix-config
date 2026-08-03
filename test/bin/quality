@@ -28,7 +28,7 @@
 # Usage:
 #   test/bin/quality                      # run every suite (same as `all`)
 #   test/bin/quality nix-format           # one suite
-#   test/bin/quality --python-tier pre-commit python-test
+#   test/bin/quality --python-tier fast python-test
 #   test/bin/quality --tier expensive      # low-frequency exhaustive assurance
 #   test/bin/quality shell-format --fix   # rewrite instead of check, where meaningful
 #   test/bin/quality --list               # print every suite
@@ -69,7 +69,7 @@ SUITES=(
 )
 
 fix=0
-python_tier=all
+python_tier=full
 python_tier_seen=0
 quality_tier=""
 quality_tier_seen=0
@@ -115,21 +115,27 @@ _shebang_is() {
 }
 
 files_shell() {
-    local f
+    local f inventory
+    inventory=$(git ls-files) || return 1
     while IFS= read -r f; do
-        _shebang_is bash "$f" && printf '%s\n' "$f"
-    done < <(git ls-files)
+        if _shebang_is bash "$f" || _shebang_is /sh "$f" || _shebang_is 'env sh' "$f"; then
+            printf '%s\n' "$f"
+        fi
+    done <<<"$inventory"
+    return 0
 }
 
 files_python() {
-    local f
+    local f inventory
+    inventory=$(git ls-files) || return 1
     while IFS= read -r f; do
         if [[ $f == *.py || $f == *.py.in ]]; then
             printf '%s\n' "$f"
         elif _shebang_is python "$f"; then
             printf '%s\n' "$f"
         fi
-    done < <(git ls-files)
+    done <<<"$inventory"
+    return 0
 }
 
 # unittest suites, by the repo's test/bin/<name>-test.py convention.
@@ -141,100 +147,55 @@ files_python() {
 # not safe to run unattended in a pre-commit hook. They have their own flake
 # checks. Widening this glob without first tiering those suites would make every
 # commit wait on them.
-files_python_tests() { git ls-files -- 'test/bin/*-test.py'; }
-
-# Tier assignment is data, not another filename glob. The manifest owns the
-# assignment and this selector intersects it with the live tracked test set. A
-# missing, duplicate, non-test, or empty assignment is a refusal: otherwise a new
-# test could silently disappear from every invocation surface while the hook stays
-# green. `all` preserves the historical `test/bin/quality python-test` behavior.
+# Discover the complete tracked test inventory once, then classify by filename.
+# Slow suites end in -slow-test.py; every other test/bin/*-test.py suite is fast.
+# A test outside test/bin is a hard error so no new suite can silently disappear
+# from both tiers.
 files_python_tests_for_tier() {
-    local tier=$1
-    python3 - "$repo_root" "$tier" <<'PY'
-import json
-import subprocess
-import sys
-from collections import Counter
-from pathlib import Path
-
-repo = Path(sys.argv[1])
-tier = sys.argv[2]
-allowed = {"pre-commit", "pre-push", "ci-on-demand", "all"}
-if tier not in allowed:
-    raise SystemExit(f"quality: invalid Python test tier: {tier}")
-
-manifest_path = repo / "test" / "coverage" / "manifest.json"
-try:
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-except (OSError, json.JSONDecodeError) as error:
-    raise SystemExit(f"quality: cannot read Python tier manifest: {error}")
-
-tracked_run = subprocess.run(
-    ["git", "ls-files", "--", "*-test.py"],
-    cwd=repo,
-    capture_output=True,
-    text=True,
-    check=False,
-)
-if tracked_run.returncode != 0:
-    raise SystemExit("quality: could not discover tracked Python test suites")
-all_tracked = sorted(path for path in tracked_run.stdout.splitlines() if path)
-misplaced = [path for path in all_tracked if not path.startswith("test/bin/")]
-if misplaced:
-    raise SystemExit(
-        f"quality: Python test suites must live under test/bin: {misplaced}"
-    )
-tracked = all_tracked
-tracked_set = set(tracked)
-
-entries = [
-    entry
-    for entry in manifest.get("pythonInventory", [])
-    if isinstance(entry, dict) and entry.get("path") in tracked_set
-]
-counts = Counter(entry.get("path") for entry in entries)
-missing = sorted(tracked_set - set(counts))
-duplicates = sorted(path for path, count in counts.items() if count != 1)
-invalid = sorted(
-    entry.get("path", "<missing-path>")
-    for entry in entries
-    if entry.get("kind") != "test"
-    or entry.get("tier") not in {"pre-commit", "pre-push", "ci-on-demand"}
-)
-if missing or duplicates or invalid:
-    raise SystemExit(
-        "quality: Python tier ownership is invalid; "
-        f"missing={missing}, duplicates={duplicates}, invalid={invalid}"
-    )
-
-by_path = {entry["path"]: entry for entry in entries}
-selected = tracked if tier == "all" else [
-    path for path in tracked if by_path[path]["tier"] == tier
-]
-if not selected:
-    raise SystemExit(f"quality: Python test tier {tier!r} selected zero suites")
-print("\n".join(selected))
-PY
+    local tier=$1 path inventory selected=0
+    case $tier in
+    fast | full) ;;
+    *)
+        printf 'quality: invalid Python test tier: %s\n' "$tier" >&2
+        return 1
+        ;;
+    esac
+    if ! inventory=$(git ls-files -- '*-test.py'); then
+        printf 'quality: could not discover tracked Python test suites\n' >&2
+        return 1
+    fi
+    while IFS= read -r path; do
+        [[ -n $path ]] || continue
+        case $path in
+        test/bin/*-test.py) ;;
+        *)
+            printf 'quality: Python test suite must live under test/bin: %s\n' "$path" >&2
+            return 1
+            ;;
+        esac
+        if [[ $tier == fast && $path == *-slow-test.py ]]; then
+            continue
+        fi
+        printf '%s\n' "$path"
+        selected=$((selected + 1))
+    done <<<"$inventory"
+    if [[ $selected -eq 0 ]]; then
+        printf 'quality: Python test tier %s selected zero suites\n' "$tier" >&2
+        return 1
+    fi
 }
 
-python_test_budget() {
-    local tier=$1
-    [[ $tier == all ]] && tier=ci-on-demand
-    python3 - "$repo_root/test/coverage/manifest.json" "$tier" <<'PY'
-import json
-import sys
-from pathlib import Path
+files_python_tests() { files_python_tests_for_tier full; }
 
-try:
-    value = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))[
-        "budgetsSeconds"
-    ][sys.argv[2]]
-except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
-    raise SystemExit(f"quality: cannot read Python tier budget: {error}")
-if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-    raise SystemExit("quality: Python tier budget must be a positive integer")
-print(value)
-PY
+python_test_budget() {
+    case $1 in
+    fast) printf '%s\n' 120 ;;
+    full) printf '%s\n' 900 ;;
+    *)
+        printf 'quality: invalid Python test tier: %s\n' "$1" >&2
+        return 1
+        ;;
+    esac
 }
 
 # ---- reporting ----------------------------------------------------------
@@ -256,15 +217,14 @@ need() {
 # Run a per-file check over every file, accumulating failures. This function is
 # the whole point of the script: it is the thing the old shell loops got wrong.
 #
-# MUST be fed by redirect — `each_file ... < <(files_x)` — never by a pipeline.
-# `files_x | each_file ...` puts this function in a subshell, so its appends to
-# `failures` are discarded and the final summary silently undercounts. That is
-# the same class of bug as the loops this script replaces, one level up.
+# The producer is named explicitly so its exit status is checked before any tool
+# runs. A pipeline or process substitution would hide discovery failure and put
+# `each_file` in a subshell, discarding its additions to `failures`.
 each_file() {
-    local suite=$1 desc=$2
-    shift 2
+    local suite=$1 desc=$2 producer=$3
+    shift 3
     local -a cmd=("$@")
-    local f bad=0 count=0 out
+    local f tool_path bad=0 count=0 out selection
     # mktemp, not /tmp/quality.$$: a predictable path in a world-writable
     # directory can be pre-created as a symlink by another user, which would
     # redirect this write.
@@ -272,6 +232,16 @@ each_file() {
         fail "$suite: could not create a temporary file"
         return
     }
+    selection=$(mktemp "${TMPDIR:-/tmp}/quality-files.XXXXXX") || {
+        rm -f "$out"
+        fail "$suite: could not create a file-selection temporary file"
+        return
+    }
+    if ! "$producer" >"$selection"; then
+        rm -f "$out" "$selection"
+        fail "$suite: tracked-file discovery failed"
+        return
+    fi
     while IFS= read -r f; do
         [[ -n $f ]] || continue
         # `git ls-files` lists what the INDEX tracks, which is not always what is
@@ -295,13 +265,14 @@ each_file() {
         # whichever behaviour `-e` happened to give.)
         [[ -e $f || -L $f ]] || continue
         count=$((count + 1))
-        if ! "${cmd[@]}" "$f" >"$out" 2>&1; then
+        tool_path=./$f
+        if ! "${cmd[@]}" "$tool_path" >"$out" 2>&1; then
             bad=$((bad + 1))
             printf '  --- %s\n' "$f" >&2
             sed 's/^/      /' "$out" >&2
         fi
-    done
-    rm -f "$out"
+    done <"$selection"
+    rm -f "$out" "$selection"
     if [[ $bad -gt 0 ]]; then
         fail "$suite: $bad of $count file(s) failed ($desc)"
     else
@@ -314,62 +285,106 @@ each_file() {
 run_nix_format() {
     need nixfmt nix-format || return
     if [[ $fix -eq 1 ]]; then
-        files_nix | xargs -r nixfmt
-        note "nix-format: rewrote $(files_nix | wc -l | tr -d ' ') file(s)"
+        local bad=0 f n=0 selection
+        selection=$(mktemp "${TMPDIR:-/tmp}/quality-nix-files.XXXXXX") || {
+            fail "nix-format: could not create a file-selection temporary file"
+            return
+        }
+        if ! files_nix >"$selection"; then
+            rm -f "$selection"
+            fail "nix-format: tracked-file discovery failed"
+            return
+        fi
+        while IFS= read -r f; do
+            [[ -n $f ]] || continue
+            if nixfmt "./$f"; then
+                n=$((n + 1))
+            else
+                bad=$((bad + 1))
+            fi
+        done <"$selection"
+        rm -f "$selection"
+        if [[ $bad -gt 0 ]]; then
+            fail "nix-format: $bad file(s) could not be rewritten"
+        else
+            note "nix-format: rewrote $n file(s)"
+        fi
     else
-        each_file nix-format "nixfmt --check" nixfmt --check < <(files_nix)
+        each_file nix-format "nixfmt --check" files_nix nixfmt --check
     fi
 }
 
 run_nix_lint() {
     need statix nix-lint || return
-    if statix check .; then
-        note "nix-lint: statix OK"
-    else
-        fail "nix-lint: statix reported findings"
-    fi
+    each_file nix-lint "statix check" files_nix statix check
 }
 
 run_nix_deadcode() {
     need deadnix nix-deadcode || return
-    if deadnix --no-lambda-arg --no-lambda-pattern-names --no-underscore --fail .; then
-        note "nix-deadcode: deadnix OK"
-    else
-        fail "nix-deadcode: deadnix reported findings"
-    fi
+    each_file nix-deadcode "deadnix" files_nix \
+        deadnix --no-lambda-arg --no-lambda-pattern-names --no-underscore --fail
 }
 
 run_shell_lint() {
     need shellcheck shell-lint || return
     each_file shell-lint "shellcheck --severity=warning" \
-        shellcheck --severity=warning < <(files_shell)
+        files_shell shellcheck --severity=warning
 }
 
 run_shell_format() {
     need shfmt shell-format || return
     if [[ $fix -eq 1 ]]; then
-        local n=0 f
+        local bad=0 n=0 f selection
+        selection=$(mktemp "${TMPDIR:-/tmp}/quality-shell-files.XXXXXX") || {
+            fail "shell-format: could not create a file-selection temporary file"
+            return
+        }
+        if ! files_shell >"$selection"; then
+            rm -f "$selection"
+            fail "shell-format: tracked-file discovery failed"
+            return
+        fi
         while IFS= read -r f; do
-            shfmt -i 4 -w "$f" && n=$((n + 1))
-        done < <(files_shell)
-        note "shell-format: rewrote $n file(s)"
+            [[ -n $f ]] || continue
+            if shfmt -i 4 -w "./$f"; then
+                n=$((n + 1))
+            else
+                bad=$((bad + 1))
+            fi
+        done <"$selection"
+        rm -f "$selection"
+        if [[ $bad -gt 0 ]]; then
+            fail "shell-format: $bad file(s) could not be rewritten"
+        else
+            note "shell-format: rewrote $n file(s)"
+        fi
     else
-        each_file shell-format "shfmt -i 4 -d" shfmt -i 4 -d < <(files_shell)
+        each_file shell-format "shfmt -i 4 -d" files_shell shfmt -i 4 -d
     fi
 }
 
 run_python_lint() {
     need ruff python-lint || return
     need python3 python-lint || return
-    local f bad=0
+    local f bad=0 selection
     local -a py=() templates=()
+    selection=$(mktemp "${TMPDIR:-/tmp}/quality-python-files.XXXXXX") || {
+        fail "python-lint: could not create a file-selection temporary file"
+        return
+    }
+    if ! files_python >"$selection"; then
+        rm -f "$selection"
+        fail "python-lint: tracked-file discovery failed"
+        return
+    fi
     while IFS= read -r f; do
         if [[ $f == *.py.in ]]; then
             templates+=("$f")
         else
-            py+=("$f")
+            py+=("./$f")
         fi
-    done < <(files_python)
+    done <"$selection"
+    rm -f "$selection"
     if [[ ${#py[@]} -eq 0 && ${#templates[@]} -eq 0 ]]; then
         note "python-lint: no files"
         return
@@ -604,9 +619,9 @@ while [[ $# -gt 0 ]]; do
         shift
         python_tier=${1-}
         case $python_tier in
-        pre-commit | pre-push | ci-on-demand | all) ;;
+        fast | full) ;;
         *)
-            printf 'quality: --python-tier needs one of: pre-commit pre-push ci-on-demand all\n' >&2
+            printf 'quality: --python-tier needs one of: fast full\n' >&2
             exit 1
             ;;
         esac
@@ -620,9 +635,9 @@ while [[ $# -gt 0 ]]; do
         shift
         quality_tier=${1-}
         case $quality_tier in
-        pre-commit | pre-commit-core | expensive) ;;
+        pre-commit | expensive) ;;
         *)
-            printf 'quality: --tier needs one of: pre-commit pre-commit-core expensive\n' >&2
+            printf 'quality: --tier needs one of: pre-commit expensive\n' >&2
             exit 1
             ;;
         esac
@@ -633,10 +648,10 @@ while [[ $# -gt 0 ]]; do
         ;;
     --files)
         case ${2-} in
-        nix) files_nix ;;
-        shell) files_shell ;;
-        python) files_python ;;
-        python-tests) files_python_tests ;;
+        nix) files_nix || exit 1 ;;
+        shell) files_shell || exit 1 ;;
+        python) files_python || exit 1 ;;
+        python-tests) files_python_tests || exit 1 ;;
         *)
             printf 'quality: --files needs one of: nix shell python python-tests\n' >&2
             exit 1
@@ -681,14 +696,14 @@ if [[ -n $quality_tier ]]; then
         exit 1
     }
     case $quality_tier in
-    pre-commit | pre-commit-core)
-        budget=$(python_test_budget pre-commit) || exit 1
-        python_tier=pre-commit
+    pre-commit)
+        budget=$(python_test_budget fast) || exit 1
+        python_tier=fast
         tier_suites=("${PRE_COMMIT_CORE_SUITES[@]}")
         ;;
     expensive)
-        budget=$(python_test_budget ci-on-demand) || exit 1
-        python_tier=all
+        budget=1800
+        python_tier=full
         tier_suites=("${EXPENSIVE_SUITES[@]}")
         ;;
     esac
