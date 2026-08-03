@@ -16,8 +16,9 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   Gitea and GitHub `main` remain `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
 - Active construction checkout:
   `/private/tmp/wg-nix-cleanup/c7-codex-grammar`, branch
-  `cleanup/c7-codex-grammar`. Issue #111 is In Progress; no implementation commit
-  exists yet.
+  `cleanup/c7-codex-grammar`. Issue #111 implementation commit `147a5681` is
+  signed and independently audited; the signed closeout is at branch HEAD. The
+  work unit is ready for local fast-forward into `main`.
 - Superseded Phase 1 branches/worktrees were removed after their refs and dirty
   state were captured in the standalone recovery package.
 - The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
@@ -28,11 +29,17 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   `config/fleet/models.nix`,
   `config/fleet/renderers/codex.nix`,
   `config/fleet/renderers/pi.nix`,
+  `flake/ai.nix`,
+  `overlays/ai/30-agent-resources.nix`,
   `overlays/ai/patches/omlx-host-vm-info64-count.patch`,
   `packages/pi-gallery/default.nix`,
+  `packages/pi-gallery/manifest.nix`,
+  `sources/pi.json`,
   `test/ai/overlays/omlx-host-vm-info64-count.py`,
-  `test/ai/pi-gallery.nix`, plus `sources/ai.json`. John's committed
-  `flake.lock` update is already part of local `main` and must remain intact.
+  `test/ai/pi-gallery.nix`,
+  `test/ai/pi-tool-renderer-wrapper.test.mjs`, plus `sources/ai.json`. John's
+  committed `flake.lock` update is already part of local `main` and must remain
+  intact.
 - Primary-only runtime state `.pi/goals` appeared during the active Wiggum goal.
   Treat it as mutable state: do not read its contents, stage it, or remove it.
 - Primary-only untracked `packages/pi-gallery/providers/` appeared concurrently.
@@ -137,17 +144,33 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   focused suite, actual packaged Hera Codex wrapper, native wrapper check, and
   fast tier pass. Final independent verdict: PASS at
   `/private/tmp/c3b-amended-fess-report.md`.
+- C7/#111 commit `147a5681` replaces the 1,438-line copied Codex grammar and its
+  537-line mirrored test matrix with the pinned parser's command/profile boundary
+  and packaged differential probes. The final wrapper delegates option values,
+  combinations, and positional counts upstream while retaining host-local state,
+  managed artifacts, atomic runtime profiles, caller-profile refusal, the
+  explicit bypass, and legacy Ref import. Counterexample audits established MCP
+  delimiter/payload, generated help, greedy image, prompt-before-command,
+  lone-dash, nested exec, platform sandbox, and SQLite/guard isolation behavior.
+  Final independent verdict: PASS at
+  `/private/tmp/wg-nix-c7-147a5681-final-fess-report.md`.
+- Implementation commit `147a5681` passed the full closeout unchanged: 13 Python
+  modules and 316 tests in 236 seconds, portable all-system evaluation, immutable
+  subflake, Darwin value surface, four consumer evaluations with zero skips, and
+  all 27 local signatures. The subsequent closeout documentation passed the fast
+  hook.
 
 ## Active work unit
 
-Delete the duplicate Codex CLI grammar parser under issue #111 while preserving
-only demonstrated managed state, profile, bypass, and credential boundaries.
+Fast-forward issue #111 locally. Then close it Done, remove its worktree/branch,
+and begin issue #112 from current local `main`.
 
 ## Project state
 
 Cleanup epic #98 remains In Progress. Issues #99-#103, #105-#107, and #114 are
-closed with their Project items Done. Issue #111 is In Progress. The remaining
-cleanup issues stay Todo until their accepted work units begin.
+closed with their Project items Done. Issue #111 is In Progress and ready for
+local integration. The remaining cleanup issues stay Todo until their accepted
+work units begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
 
@@ -180,10 +203,12 @@ Not authorized:
 ## Resume procedure
 
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
-2. Preserve every concurrent path, primary-only Pi provider subtree, and
+2. Verify issue #111 implementation commit `147a5681` and its closeout commit
+   have good signatures and the worktree is clean.
+3. Preserve every concurrent path, primary-only Pi provider subtree, and
    `.pi/goals` state named above; stage only explicit cleanup paths.
-3. Derive the minimum profile-injection behavior from pinned Codex source and
-   package probes before deleting local grammar knowledge.
-4. Preserve managed state/profile conflict refusal, the documented bypass, and
-   credential non-disclosure; delegate all other syntax upstream.
-5. Do not push, activate, or restart sessions without separate authorization.
+4. Fast-forward local `main`, close #111 Done using the explicit `jwiegley`
+   account, and remove its worktree/branch.
+5. Start #112 from a fresh short-lived branch/worktree based on current local
+   `main`.
+6. Do not push, activate, or restart sessions without separate authorization.
