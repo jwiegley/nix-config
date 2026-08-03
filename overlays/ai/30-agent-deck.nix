@@ -22,6 +22,7 @@ in
       patches = [
         ./patches/agent-deck-discord-typing-best-effort.patch
         ./patches/agent-deck-transition-daemon-churn.patch
+        ./patches/agent-deck-last-started-compat.patch
       ];
 
       # Only the user-facing TUI/CLI. cmd/agent-deck-test-server is a test helper

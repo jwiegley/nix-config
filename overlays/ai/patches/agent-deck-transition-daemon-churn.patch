@@ -209,7 +209,7 @@ index 5816114e..5b838879 100644
  	lastErrorCheck time.Time
  
  	// Tiered polling: skip expensive checks for idle sessions with no activity
-@@ -493,6 +499,176 @@ type Instance struct {
+@@ -555,6 +561,172 @@ type Instance struct {
  	hermesGatewayOK        bool
  }
  
@@ -297,10 +297,6 @@ index 5816114e..5b838879 100644
 +	}
 +}
 +
-+func (i *Instance) pollingState() instancePollingState {
-+	return i.pollingStateForIdentity(i.pollingIdentity())
-+}
-+
 +func (i *Instance) pollingStateForIdentity(identity instancePollingIdentity) instancePollingState {
 +	i.mu.RLock()
 +	defer i.mu.RUnlock()
@@ -383,9 +379,9 @@ index 5816114e..5b838879 100644
 +		current.LaunchAs == previous.LaunchAs
 +}
 +
- // SandboxConfig holds per-session Docker sandbox settings.
- type SandboxConfig struct {
- 	// Enabled indicates the session runs inside a container.
+ // newSpawnGenWatch bumps the generation and hands back both the new generation
+ // and the channel that the NEXT bump will close.
+ //
 @@ -2251,7 +2427,9 @@ func (i *Instance) detectCodexSessionAsync() {
  
  		sessionID, _ := i.queryCodexSessionFromProcessFiles()
@@ -701,52 +697,6 @@ index 00000000..6181d278
 +	var completed interface{ RestartCompleted() bool }
 +	return errors.As(err, &completed) && completed.RestartCompleted()
 +}
-diff --git a/internal/session/runtime_generation_persist.go b/internal/session/runtime_generation_persist.go
-new file mode 100644
-index 00000000..c110429f
---- /dev/null
-+++ b/internal/session/runtime_generation_persist.go
-@@ -0,0 +1,40 @@
-+package session
-+
-+import (
-+	"encoding/json"
-+	"time"
-+)
-+
-+const toolDataLastStartedAtKey = "last_started_at"
-+
-+// writeLastStartedAtToToolData keeps the durable runtime generation in the
-+// extensible tool_data blob, avoiding a schema migration for an additive field.
-+// A zero timestamp removes the key so legacy rows retain their old shape.
-+func writeLastStartedAtToToolData(td json.RawMessage, at time.Time) json.RawMessage {
-+	m := map[string]json.RawMessage{}
-+	if len(td) > 0 {
-+		_ = json.Unmarshal(td, &m)
-+	}
-+	if at.IsZero() {
-+		delete(m, toolDataLastStartedAtKey)
-+	} else {
-+		raw, _ := json.Marshal(at.UTC())
-+		m[toolDataLastStartedAtKey] = raw
-+	}
-+	out, _ := json.Marshal(m)
-+	return out
-+}
-+
-+// readLastStartedAtFromToolData returns zero for legacy or malformed rows.
-+func readLastStartedAtFromToolData(td json.RawMessage) time.Time {
-+	if len(td) == 0 {
-+		return time.Time{}
-+	}
-+	var blob struct {
-+		LastStartedAt time.Time `json:"last_started_at"`
-+	}
-+	if err := json.Unmarshal(td, &blob); err != nil {
-+		return time.Time{}
-+	}
-+	return blob.LastStartedAt
-+}
 diff --git a/internal/session/selfheal_pass.go b/internal/session/selfheal_pass.go
 index 4259bd30..09e864c6 100644
 --- a/internal/session/selfheal_pass.go
@@ -777,14 +727,6 @@ diff --git a/internal/session/storage.go b/internal/session/storage.go
 index 22bfd1f1..b2f74599 100644
 --- a/internal/session/storage.go
 +++ b/internal/session/storage.go
-@@ -53,6 +53,7 @@ type InstanceData struct {
- 	Tool                string    `json:"tool"`
- 	Status              Status    `json:"status"`
- 	CreatedAt           time.Time `json:"created_at"`
-+	LastStartedAt       time.Time `json:"last_started_at,omitempty"`
- 	LastAccessedAt      time.Time `json:"last_accessed_at,omitempty"`
- 	ArchivedAt          time.Time `json:"archived_at,omitempty"`
- 	TmuxSession         string    `json:"tmux_session"`
 @@ -325,6 +326,7 @@ func (s *Storage) SaveWithGroups(instances []*Instance, groupTree *GroupTree) er
  	// Convert instances to database rows
  	rows := make([]*statedb.InstanceRow, len(instances))
@@ -801,43 +743,19 @@ index 22bfd1f1..b2f74599 100644
  	row, err := instanceToRow(newInstance)
  	if err != nil {
  		return err
-@@ -923,6 +926,7 @@ func instanceToRow(inst *Instance) (*statedb.InstanceRow, error) {
- 	// the positional MarshalToolData signature so legacy binaries that don't
- 	// know the key preserve it via MergeToolDataExtras.
- 	toolData = WriteIdleTimeoutSecsToToolData(toolData, inst.IdleTimeoutSecs)
-+	toolData = writeLastStartedAtToToolData(toolData, inst.LastStartedAt)
- 
- 	return &statedb.InstanceRow{
- 		ID:                  inst.ID,
-@@ -1056,6 +1060,7 @@ func (s *Storage) LoadLite() ([]*InstanceData, []*GroupData, error) {
- 			Tool:                      r.Tool,
- 			Status:                    Status(r.Status),
- 			CreatedAt:                 r.CreatedAt,
-+			LastStartedAt:             readLastStartedAtFromToolData(r.ToolData),
- 			LastAccessedAt:            r.LastAccessed,
- 			ArchivedAt:                r.ArchivedAt,
- 			TmuxSession:               r.TmuxSession,
-@@ -1175,6 +1180,7 @@ func (s *Storage) LoadWithGroups() ([]*Instance, []*GroupData, error) {
- 			Tool:                      r.Tool,
- 			Status:                    Status(r.Status),
- 			CreatedAt:                 r.CreatedAt,
-+			LastStartedAt:             readLastStartedAtFromToolData(r.ToolData),
- 			LastAccessedAt:            r.LastAccessed,
- 			ArchivedAt:                r.ArchivedAt,
- 			TmuxSession:               r.TmuxSession,
-@@ -1430,6 +1436,7 @@ func (s *Storage) convertToInstances(data *StorageData) ([]*Instance, []*GroupDa
- 			Tool:                      instData.Tool,
- 			Status:                    instData.Status,
- 			CreatedAt:                 instData.CreatedAt,
-+			LastStartedAt:             instData.LastStartedAt,
- 			LastAccessedAt:            instData.LastAccessedAt,
- 			ArchivedAt:                instData.ArchivedAt,
- 			WorktreePath:              instData.WorktreePath,
-@@ -1467,6 +1474,7 @@ func (s *Storage) convertToInstances(data *StorageData) ([]*Instance, []*GroupDa
- 			AdditionalPaths:           instData.AdditionalPaths,
- 			MultiRepoTempDir:          instData.MultiRepoTempDir,
- 			tmuxSession:               tmuxSess,
-+			owningDB:                  s.db,
+@@ -859,6 +862,7 @@ func (s *Storage) PersistRecoveredInstances(instances []*Instance) error {
+ 		if inst == nil {
+ 			continue
+ 		}
++		inst.setOwningDB(s.db)
+ 		row, err := instanceToRow(inst)
+ 		if err != nil {
+ 			errs = append(errs, fmt.Errorf("convert %s: %w", inst.ID, err))
+@@ -1506,6 +1509,7 @@ func (s *Storage) convertToInstances(data *StorageData) ([]*Instance, []*GroupDa
+ 			AdditionalPaths:              instData.AdditionalPaths,
+ 			MultiRepoTempDir:             instData.MultiRepoTempDir,
+ 			tmuxSession:                  tmuxSess,
++			owningDB:                     s.db,
  		}
  		// Convert multi-repo worktree data
  		for _, wt := range instData.MultiRepoWorktrees {
@@ -1039,7 +957,7 @@ index f5b9439c..9e3d4d64 100644
 +// keeping this targeted prevents the transition daemon from reloading the old
 +// generation and reattaching pre-restart tmux/status/backoff caches.
 +func (s *StateDB) WriteLastStartedAt(id string, startedAt time.Time) error {
-+	value := startedAt.UTC().Format(time.RFC3339Nano)
++	value := startedAt.Unix()
 +	return withBusyRetry(func() error {
 +		result, err := s.db.Exec(
 +			`UPDATE instances
