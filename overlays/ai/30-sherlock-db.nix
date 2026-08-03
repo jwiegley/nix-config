@@ -1,4 +1,3 @@
-# overlays/30-sherlock-db.nix
 # Purpose: Sherlock - read-only database query tool for AI assistants
 # Dependencies: None (uses pre-built binaries from GitHub releases)
 # Packages: sherlock-db

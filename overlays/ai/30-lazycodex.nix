@@ -1,4 +1,3 @@
-# overlays/30-lazycodex.nix
 # Purpose: LazyCodex installer and Codex agent harness tooling
 # Packages: lazycodex-ai
 _final: prev:

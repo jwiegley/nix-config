@@ -67,19 +67,16 @@ let
 
       ascii = compileEmacsWikiFile {
         name = "ascii.el";
-        # date = 2025-10-02T08:31:55-0700;
       };
 
       col-highlight = compileEmacsWikiFile {
         name = "col-highlight.el";
-        # date = 2025-10-02T08:31:56-0700;
 
         buildInputs = with eself; [ vline ];
       };
 
       crosshairs = compileEmacsWikiFile {
         name = "crosshairs.el";
-        # date = 2025-10-02T08:31:57-0700;
 
         buildInputs = with eself; [
           hl-line-plus
@@ -90,47 +87,38 @@ let
 
       cursor-chg = compileEmacsWikiFile {
         name = "cursor-chg.el";
-        # date = 2025-10-02T08:31:58-0700;
       };
 
       erc-highlight-nicknames = compileEmacsWikiFile {
         name = "erc-highlight-nicknames.el";
-        # date = 2025-10-02T08:31:59-0700;
       };
 
       highlight-cl = compileEmacsWikiFile {
         name = "highlight-cl.el";
-        # date = 2025-10-02T08:31:59-0700;
       };
 
       hl-line-plus = compileEmacsWikiFile {
         name = "hl-line+.el";
-        # date = 2025-10-02T08:32:00-0700;
       };
 
       popup-ruler = compileEmacsWikiFile {
         name = "popup-ruler.el";
-        # date = 2025-10-02T08:32:01-0700;
       };
 
       pp-c-l = compileEmacsWikiFile {
         name = "pp-c-l.el";
-        # date = 2025-10-02T08:32:02-0700;
       };
 
       tidy = compileEmacsWikiFile {
         name = "tidy.el";
-        # date = 2025-10-02T08:32:03-0700;
       };
 
       xray = compileEmacsWikiFile {
         name = "xray.el";
-        # date = 2025-10-02T08:32:04-0700;
       };
 
       yaoddmuse = compileEmacsWikiFile {
         name = "yaoddmuse.el";
-        # date = 2025-10-02T08:32:05-0700;
       };
 
       jobhours =
@@ -231,17 +219,6 @@ let
         src = githubSource "indent-shift";
         patches = [ ./emacs/patches/indent-shift.patch ];
       };
-
-      # initsplit = compileEmacsFiles {
-      #   name = "initsplit";
-      #   src = fetchFromGitHub {
-      #     owner = "jwiegley";
-      #     repo = "initsplit";
-      #     rev = "e488e8f95661a8daf9c66241ce58bb6650d91751";
-      #     sha256 = "1qvkxpxdv0n9qlzigvi25iw485824pgbpb10lwhh8bs2074dvrgq";
-      #     # date = 2015-03-21T23:29:07-05:00;
-      #   };
-      # };
 
       lasgun = compileEmacsFiles {
         name = "lasgun";
@@ -501,75 +478,6 @@ let
         name = "ox-whatsapp";
         src = githubSource "ox-whatsapp";
       };
-
-      # ########################################################################
-
-      # pdf-tools = esuper.pdf-tools.overrideAttrs (old: {
-      #   nativeBuildInputs = [
-      #     self.autoconf
-      #     self.automake
-      #     self.pkg-config
-      #     self.removeReferencesTo
-      #   ];
-      #   buildInputs = old.buildInputs ++ [ self.libpng self.zlib self.poppler ];
-      #   preBuild = ''
-      #     make server/epdfinfo
-      #     remove-references-to \
-      #       -t ${self.stdenv.cc.libc} \
-      #       -t ${self.glib.dev} \
-      #       -t ${self.libpng.dev} \
-      #       -t ${self.poppler.dev} \
-      #       -t ${self.zlib.dev} \
-      #       -t ${self.cairo.dev} \
-      #       server/epdfinfo
-      #   '';
-      #   recipe = self.writeText "recipe" ''
-      #     (pdf-tools
-      #     :repo "politza/pdf-tools" :fetcher github
-      #     :files ("lisp/pdf-*.el" "server/epdfinfo"))
-      #   '';
-      # });
-
-      # proof-general =
-      #   let texinfo = pkgs.texinfo4 ;
-      #       texLive = pkgs.texlive.combine {
-      #         inherit (pkgs.texlive) scheme-basic cm-super ec;
-      #       }; in mkDerivation rec {
-      #   name = "emacs-proof-general-${version}";
-      #   version = "9cdff80f";
-
-      #   # This is the main branch
-      #   src = fetchFromGitHub {
-      #     owner = "ProofGeneral";
-      #     repo = "PG";
-      #     rev = "f33b478d1144d6828dfa0df7f0d7d48da704ea11";
-      #     sha256 = "0dfd4lpsdjhpp73812i4nb3vkphk4ixmnb9zychv7k2ad6cfhh6p";
-      #     # date = "2025-09-15T12:38:50+02:00";
-      #   };
-
-      #   # src = /Users/johnw/src/proof-general;
-
-      #   buildInputs = [ eself.emacs ] ++ (with pkgs; [ texinfo perl which ]);
-
-      #   prePatch =
-      #     '' sed -i "Makefile" \
-      #            -e "s|^\(\(DEST_\)\?PREFIX\)=.*$|\1=$out|g ; \
-      #                s|/sbin/install-info|install-info|g"
-      #        sed -i '94d' doc/PG-adapting.texi
-      #        sed -i '96d' doc/ProofGeneral.texi
-      #     '';
-
-      #   meta = {
-      #     description = "Proof General, an Emacs front-end for proof assistants";
-      #     longDescription = ''
-      #       Proof General is a generic front-end for proof assistants (also known as
-      #       interactive theorem provers), based on the customizable text editor Emacs.
-      #     '';
-      #     homepage = http://proofgeneral.inf.ed.ac.uk;
-      #     license = lib.licenses.gpl2Plus;
-      #     platforms = lib.platforms.unix;
-      #   };
-      # };
 
       ########################################################################
       # Former ~/.emacs.d/lisp git submodules, pinned to the exact revs that

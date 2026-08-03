@@ -8,7 +8,6 @@ final: prev:
 
   coqPackages = final.coqPackages_8_19;
 
-  # coqPackages_HEAD = final.mkCoqPackages final.coq_HEAD;
   coqPackages_9_1 = final.mkCoqPackages final.coq_9_1;
   coqPackages_9_0 = final.mkCoqPackages final.coq_9_0;
   coqPackages_8_20 = final.mkCoqPackages final.coq_8_20;
@@ -24,16 +23,6 @@ final: prev:
   coqPackages_8_10 = final.mkCoqPackages final.coq_8_10;
 
   coq = final.coq_8_19;
-
-  # coq_HEAD = (final.coq_8_19.override {
-  #     buildIde = false;
-  #     version = /Users/johnw/src/coq;
-  #   }).overrideAttrs (attrs: {
-  #     buildInputs = attrs.buildInputs
-  #       ++ (with prev; [
-  #         texlive.combined.scheme-full which hevea fig2dev imagemagick_light git
-  #       ]);
-  #   });
 
   coq_9_1 = prev.coq_9_1.override { buildIde = false; };
   coq_9_0 = prev.coq_9_0.override { buildIde = false; };

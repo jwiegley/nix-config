@@ -140,11 +140,6 @@ in
       ];
 
     etc = lib.mkIf config.johnw.host.isHera {
-      # ZFS configuration for OpenZFS on macOS (hera only)
-      # Sets ARC (Adaptive Replacement Cache) max to 32 GiB
-      # "zfs/zsysctl.conf".text = ''
-      #   kstat.zfs.darwin.tunable.zfs_arc.max=34359738368
-      # '';
       "nsmb.conf".text = ''
         [default]
         signing_required=no
@@ -199,16 +194,6 @@ in
       ];
     };
 
-    # postgresql = {
-    #   enable = true;
-    #   package = pkgs.postgresql.withPackages (p: with p; [ pgvector ]);
-    #   dataDir = "${home}/${hostname}/postgresql";
-    #   authentication = ''
-    #     local all all              trust
-    #     host  all all localhost    trust
-    #     host  all all 127.0.0.1/32 trust
-    #   '';
-    # };
   };
 
   homebrew = {
@@ -263,7 +248,6 @@ in
       "discord"
       "docker-desktop"
       "drivedx"
-      # "dropzone"
       "element"
       "factory"
       "fantastical"
@@ -282,8 +266,6 @@ in
       "launchbar"
       "lectrote"
       "ledger-wallet"
-      # "libreoffice"
-      # "macfuse"
       "mactracker"
       "mellel"
       "microsoft-excel"
@@ -317,16 +299,11 @@ in
       "xnviewmp"
       "zotero"
       # "datagraph"                 # Use DataGraph in App Store
-      # "expandrive"
       # "macwhisper"                # Use Whisper Transcription in App Store
       # "marked-app"                # Use Marked 2 in App Store
       # "omnigraffle"               # Stay at version 6
       # "screenflow"                # Stay at version 9
       # "soulver"                   # Use Soulver 3 in App Store
-      # "vagrant"
-      # "vagrant-manager"
-      # "vagrant-vmware-utility"
-      # "vmware-fusion"
       {
         name = "brave-browser";
         greedy = true;
@@ -352,7 +329,6 @@ in
       "elgato-stream-deck"
       "fujitsu-scansnap-home"
       "gzdoom"
-      # "logitune"
       "raspberry-pi-imager"
       "thunderbird"
       "utm"
@@ -374,30 +350,6 @@ in
     # "Photo Supreme"
     # "ABBYY FineReader for ScanSnap"
 
-    # masApps = {
-    #   "1Password for Safari"  = 1569813296;
-    #   "Apple Configurator"    = 1037126344;
-    #   "Bible Study"           = 472790630;
-    #   "DataGraph"             = 407412840;
-    #   "Drafts"                = 1435957248;
-    #   "Just Press Record"     = 1033342465;
-    #   "Keynote"               = 409183694;
-    #   "Kindle"                = 302584613;
-    #   "Marked 2"              = 890031187;
-    #   # "Microsoft Excel"       = 462058435;
-    #   # "Microsoft PowerPoint"  = 462062816;
-    #   # "Microsoft Word"        = 462054704;
-    #   "Ninox Database"        = 901110441;
-    #   "Paletter"              = 1494948845;
-    #   "Pixelmator Pro"        = 1289583905;
-    #   "Prime Video"           = 545519333;
-    #   "Soulver 3"             = 1508732804;
-    #   "Speedtest"             = 1153157709;
-    #   "Whisper Transcription" = 1668083311;
-    #   "WireGuard"             = 1451685025;
-    #   "Xcode"                 = 497799835;
-    #   "iMovie"                = 408981434;
-    # };
   };
 
   nixpkgs = {
@@ -448,13 +400,6 @@ in
 
       enable = false;
       package = pkgs.nix;
-
-      # This entry lets us to define a system registry entry so that
-      # `nixpkgs#foo` will use the nixpkgs that nix-darwin was last built with,
-      # rather than whatever is the current unstable version.
-      #
-      # See https://yusef.napora.org/blog/pinning-nixpkgs-flake
-      # registry = lib.mapAttrs (_: value: { flake = value; }) inputs;
 
       nixPath = lib.mkForce (
         lib.mapAttrsToList (key: value: "${key}=${value.to.path}") config.nix.registry

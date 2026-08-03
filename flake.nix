@@ -27,67 +27,54 @@
 
     ledger = {
       url = "github:ledger/ledger";
-      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     org-jw = {
       url = "github:jwiegley/org-jw";
-      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     rag-client = {
       url = "github:jwiegley/rag-client";
-      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     git-all = {
       url = "github:jwiegley/git-all";
-      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     gitlib = {
       url = "github:jwiegley/gitlib?submodules=0";
-      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     hours = {
       url = "github:jwiegley/hours";
-      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     pushme = {
       url = "github:jwiegley/pushme";
-      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     renamer = {
       url = "github:jwiegley/renamer";
-      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     sizes = {
       url = "github:jwiegley/sizes";
-      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     trade-journal = {
       url = "github:jwiegley/trade-journal";
-      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     una = {
       url = "github:jwiegley/una";
-      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     gh-to-org = {
       url = "github:jwiegley/gh-to-org";
-      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     obr = {
       url = "github:jwiegley/obr";
-      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
       #
       # obr's own committed flake.lock pins its org2jsonl input at a local
       # filesystem URL under this machine's home directory, and Nix folds that
@@ -108,7 +95,6 @@
 
     org2jsonl = {
       url = "github:jwiegley/org2jsonl";
-      # inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
     };
 
     scripts = {

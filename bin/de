@@ -127,9 +127,6 @@ EOF
 
 export CARGO_TARGET_DIR=$cargo_target_dir
 export CARGO_HOME=\$CARGO_TARGET_DIR/.cargo-home
-# export RUSTUP_HOME=\$CARGO_TARGET_DIR/.rustup-home
-# export RUSTUP_TOOLCHAIN=1.60.0-x86_64-apple-darwin
-# export RUSTC_WRAPPER=$(which sccache)
 export PATH=\$PATH:\$CARGO_HOME/bin
 export PATH=\$PATH:\$CARGO_TARGET_DIR/debug
 export PATH=\$PATH:\$CARGO_TARGET_DIR/release

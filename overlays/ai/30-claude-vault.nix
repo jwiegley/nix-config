@@ -1,4 +1,3 @@
-# overlays/30-claude-vault.nix
 # Purpose: claude-vault - Archive Claude Code conversations into searchable SQLite
 # Dependencies: Uses prev only
 # Packages: claude-vault

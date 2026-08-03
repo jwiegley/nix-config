@@ -1,4 +1,3 @@
-# overlays/30-vllm-mlx.nix
 # Purpose: vLLM-like inference for Apple Silicon via MLX
 # Dependencies: Uses final for python3Packages (needs mlx, mlx-embeddings from extensions)
 # Packages: vllm-mlx

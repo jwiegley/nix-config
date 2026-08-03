@@ -1,4 +1,3 @@
-# overlays/30-agnix.nix
 # Purpose: agnix - Linter and LSP for AI coding assistant config files
 # Dependencies: Uses prev only
 # Packages: agnix
