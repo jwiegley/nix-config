@@ -146,6 +146,11 @@ complete.
 - Generated agent leaves use collision preflight before Home Manager linking.
 - Mutable profile migration is atomic and preserves the last usable state on
   failure.
+- `AI_NIX_BYPASS_MANAGED_CONFIG=1` bypasses Codex managed-profile
+  classification and injection; host-local state safeguards still run.
+- When managed configuration is present, the wrapper refuses
+  `codex exec --ignore-user-config`; use the explicit bypass above when an
+  unmanaged launch is intentional.
 - Evaluation proves configuration construction, not deployment or runtime health.
 - Runtime acceptance must inspect the active generation and the actual client or
   service behavior.

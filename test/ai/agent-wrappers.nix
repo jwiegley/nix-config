@@ -118,6 +118,7 @@ let
   wrappedClaude = patchAgentPackage testPkgs "claude-code" (fakeAgent "claude");
   realWrappedClaude = patchAgentPackage pkgs "claude-code" claudePackage;
   wrappedCodex = patchAgentPackage testPkgs "codex" (fakeAgent "codex");
+  realWrappedCodex = patchAgentPackage testPkgs "codex" codexPackage;
   wrappedNonDarwinCodex = patchAgentPackage nonDarwinTestPkgs "codex" (fakeAgent "codex");
   wrappedDroid = patchAgentPackage testPkgs "droid" (fakeAgent "droid");
   identityWrappedClaude = patchAgentPackage testPkgs "claude-code" (identityAgent "claude");
@@ -129,6 +130,7 @@ let
     #include <dlfcn.h>
     #include <errno.h>
     #include <fcntl.h>
+    #include <stdio.h>
     #include <stdlib.h>
     #include <sys/socket.h>
     #include <unistd.h>
@@ -147,7 +149,22 @@ let
     }
 
     __attribute__((constructor)) static void record_loaded(void) {
-      record_event("TASK3_NETWORK_GUARD_LOADED_FILE", "loaded\n", 7);
+      char event[512];
+      const char *program;
+      int length;
+
+      #ifdef __APPLE__
+      program = getprogname();
+      #else
+      program = program_invocation_short_name;
+      #endif
+      if (program == NULL) {
+        program = "unknown";
+      }
+      length = snprintf(event, sizeof(event), "loaded:%ld:%s\n", (long)getpid(), program);
+      if (length > 0 && (size_t)length < sizeof(event)) {
+        record_event("TASK3_NETWORK_GUARD_LOADED_FILE", event, (size_t)length);
+      }
     }
 
     static int guarded_socket(int domain, int type, int protocol) {
@@ -244,6 +261,7 @@ pkgs.runCommand "agent-wrappers-check"
     DROID_IDENTITY_BIN = "${identityWrappedDroid}/bin/droid";
     REAL_CLAUDE_BIN = "${realWrappedClaude}/bin/claude";
     REAL_CODEX_BIN = "${codexPackage}/bin/codex";
+    REAL_WRAPPED_CODEX_BIN = "${realWrappedCodex}/bin/codex";
     CODEX_APP_IS_COMMAND = if pkgs.stdenv.isDarwin then "1" else "0";
     CODEX_RAISES_OPEN_FILE_LIMIT = if pkgs.stdenv.isDarwin then "1" else "0";
     NETWORK_GUARD_LIBRARY = "${networkGuard}/lib/libagent-wrapper-network-guard.${networkGuardExtension}";

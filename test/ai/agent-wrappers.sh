@@ -15,6 +15,7 @@ set -euo pipefail
 : "${DROID_IDENTITY_BIN:?}"
 : "${REAL_CLAUDE_BIN:?}"
 : "${REAL_CODEX_BIN:?}"
+: "${REAL_WRAPPED_CODEX_BIN:?}"
 : "${BRIDGE_BIN:?}"
 : "${NETWORK_GUARD_LIBRARY:?}"
 : "${NETWORK_GUARD_VARIABLE:?}"
@@ -241,6 +242,23 @@ assert_env() {
     [ -f "$ENV_FILE" ] || fail "upstream environment was not recorded"
     grep -zFx -- "$expected" "$ENV_FILE" >/dev/null ||
         fail "missing upstream environment entry: $expected"
+}
+
+assert_network_guard_loaded() {
+    local file=$1
+    local program=$2
+    local pid=${3:-'[0-9]+'}
+    local pattern
+
+    case "$program" in
+    claude) pattern='[^:]*claude[^:]*' ;;
+    codex) pattern='[^:]*codex[^:]*' ;;
+    *) fail "unknown guarded program: $program" ;;
+    esac
+    grep -E "^loaded:$pid:$pattern$" "$file" >/dev/null || {
+        sed 's/^/network-guard event: /' "$file" >&2 || true
+        fail "network guard did not load in final $program process"
+    }
 }
 
 assert_upstream_not_invoked() {
@@ -506,7 +524,8 @@ test_codex_conflict_case() {
 }
 
 test_codex_command_scope() {
-    local -a supported=(
+    local command
+    local -a managed=(
         exec
         e
         review
@@ -515,9 +534,10 @@ test_codex_command_scope() {
         delete
         unarchive
         fork
+        mcp
         sandbox
     )
-    local -a unsupported=(
+    local -a delegated=(
         features
         doctor
         completion
@@ -526,7 +546,6 @@ test_codex_command_scope() {
         remote-control
         login
         logout
-        mcp
         plugin
         update
         apply
@@ -534,513 +553,138 @@ test_codex_command_scope() {
         cloud
         cloud-tasks
         exec-server
-        help
         execpolicy
+        help
         responses-api-proxy
         stdio-to-uds
     )
-    local command
+
+    test_codex_managed_case interactive-empty
+    test_codex_managed_case interactive-prompt ordinary-prompt
+    test_codex_managed_case interactive-command-like-prompt import
+
+    for command in "${managed[@]}"; do
+        case "$command" in
+        exec | e | review) test_codex_managed_case "managed-$command" "$command" opaque ;;
+        resume | fork) test_codex_managed_case "managed-$command" "$command" --last ;;
+        archive | delete | unarchive)
+            test_codex_managed_case "managed-$command" "$command" target
+            ;;
+        mcp) test_codex_managed_case managed-mcp mcp list ;;
+        sandbox) test_codex_managed_case managed-sandbox sandbox /bin/true ;;
+        esac
+    done
+    test_codex_managed_case managed-debug-prompt-input debug prompt-input opaque
+    test_codex_managed_case root-option-before-command --model o3 exec opaque
+    test_codex_managed_case archive-lone-dash archive -
+    test_codex_managed_case resume-last-lone-dash resume --last -
+
+    for command in "${delegated[@]}"; do
+        test_codex_delegated_case "delegated-$command" "$command" opaque
+    done
+    test_codex_delegated_case delegated-debug-child debug models opaque
     if [ "$CODEX_APP_IS_COMMAND" = 1 ]; then
-        unsupported+=(app)
+        test_codex_delegated_case delegated-app app opaque
     else
-        test_codex_managed_case platform-app-prompt app
+        test_codex_managed_case interactive-app-prompt app
     fi
 
-    new_case codex supported-empty
-    configure_state complete
-    invoke_agent codex 0 0
-    [ "$LAST_STATUS" -eq 0 ] || fail "Codex rejected empty interactive invocation"
-    assert_managed_argv codex
-    finish_case codex
-
-    for command in ordinary-prompt import; do
-        new_case codex "supported-prompt-$command"
-        configure_state complete
-        invoke_agent codex 0 0 "$command"
-        [ "$LAST_STATUS" -eq 0 ] || fail "Codex rejected interactive prompt $command"
-        assert_managed_argv codex "$command"
-        finish_case codex
-    done
-
-    test_codex_managed_case lone-dash-prompt -
-    test_codex_managed_case review-lone-dash-prompt review -
-    test_codex_managed_case debug-lone-dash-prompt debug prompt-input -
-
-    for command in "${supported[@]}"; do
-        new_case codex "supported-$command"
-        configure_state complete
-        invoke_agent codex 0 0 "$command" tail
-        [ "$LAST_STATUS" -eq 0 ] || fail "Codex rejected supported command $command"
-        assert_managed_argv codex "$command" tail
-        finish_case codex
-    done
-
-    new_case codex supported-debug-prompt-input
-    configure_state complete
-    invoke_agent codex 0 0 debug prompt-input tail
-    [ "$LAST_STATUS" -eq 0 ] || fail "Codex rejected debug prompt-input"
-    assert_managed_argv codex debug prompt-input tail
-    finish_case codex
-
-    new_case codex unsupported-debug-models
-    configure_state complete
-    invoke_agent codex 0 0 debug models --bundled
-    [ "$LAST_STATUS" -eq 0 ] || fail "Codex wrapper rejected debug models"
-    assert_argv "$ARGV_FILE" debug models --bundled
-    finish_case codex
-
-    for command in "${unsupported[@]}"; do
-        new_case codex "unsupported-$command"
-        configure_state complete
-        invoke_agent codex 0 0 "$command" tail
-        [ "$LAST_STATUS" -eq 0 ] || fail "Codex wrapper rejected unsupported command $command"
-        assert_argv "$ARGV_FILE" "$command" tail
-        finish_case codex
-    done
-
-    new_case codex unsupported-app-server-prettier
-    configure_state complete
-    invoke_agent codex 0 0 app-server generate-ts -p "$CASE_DIR/out"
-    [ "$LAST_STATUS" -eq 0 ] || fail "Codex wrapper mistook app-server -p for a profile"
-    assert_argv "$ARGV_FILE" app-server generate-ts -p "$CASE_DIR/out"
-    finish_case codex
-
-    new_case codex separated-option-before-supported
-    configure_state complete
-    invoke_agent codex 0 0 --config model=probe debug prompt-input tail
-    [ "$LAST_STATUS" -eq 0 ] || fail "Codex wrapper misparsed a global option value"
-    assert_managed_argv codex --config model=probe debug prompt-input tail
-    finish_case codex
-
-    new_case codex attached-option-before-supported
-    configure_state complete
-    invoke_agent codex 0 0 --config=model=probe -mprobe exec tail
-    [ "$LAST_STATUS" -eq 0 ] || fail "Codex wrapper misparsed attached root options"
-    assert_managed_argv codex --config=model=probe -mprobe exec tail
-    finish_case codex
-
-    test_codex_managed_case empty-string-root-options \
-        --config '' --model= --local-provider= debug prompt-input tail
-    test_codex_managed_case comma-bearing-root-options \
-        --config=one, --model=gpt, --local-provider=probe, \
-        debug prompt-input tail
-    test_codex_managed_case lone-dash-root-values \
-        --model - --cd - --add-dir - debug prompt-input tail
-    test_codex_delegated_case empty-separated-root-paths \
-        --cd '' --add-dir '' --image '' debug prompt-input tail
-    test_codex_delegated_case malformed-root-value --config --help
-    test_codex_delegated_case empty-root-cd --cd= debug prompt-input tail
-    test_codex_delegated_case empty-root-image --image= debug prompt-input tail
-    test_codex_delegated_case invalid-root-image-list \
-        --image=a, debug prompt-input tail
-    test_codex_managed_case valid-root-enums \
-        --sandbox workspace-write --ask-for-approval=never debug prompt-input tail
-    test_codex_delegated_case invalid-root-sandbox-separated \
-        --sandbox bogus debug prompt-input tail
-    test_codex_delegated_case invalid-root-sandbox-attached \
-        --sandbox=bogus debug prompt-input tail
-    test_codex_delegated_case invalid-root-sandbox-short \
-        -sbogus debug prompt-input tail
-    test_codex_delegated_case invalid-root-approval-separated \
-        --ask-for-approval bogus debug prompt-input tail
-    test_codex_delegated_case invalid-root-approval-attached \
-        --ask-for-approval=bogus debug prompt-input tail
-    test_codex_delegated_case invalid-root-approval-short \
-        -abogus debug prompt-input tail
-    test_codex_delegated_case root-approval-bypass-conflict \
-        --ask-for-approval never --yolo debug prompt-input tail
-    test_codex_delegated_case root-bypass-approval-conflict-reversed \
-        --dangerously-bypass-approvals-and-sandbox \
-        --ask-for-approval=never debug prompt-input tail
-    test_codex_delegated_case duplicate-root-model \
-        --model one --model two debug prompt-input tail
-    test_codex_delegated_case duplicate-root-local-provider \
-        --local-provider one --local-provider two debug prompt-input tail
-    test_codex_delegated_case duplicate-root-sandbox \
-        --sandbox read-only --sandbox workspace-write debug prompt-input tail
-    test_codex_delegated_case duplicate-root-approval \
-        --ask-for-approval never --ask-for-approval never debug prompt-input tail
-    test_codex_delegated_case duplicate-root-cd \
-        --cd one --cd two debug prompt-input tail
-    test_codex_delegated_case duplicate-root-remote \
-        --remote one --remote two debug prompt-input tail
-    test_codex_delegated_case duplicate-root-remote-auth \
-        --remote-auth-token-env ONE --remote-auth-token-env TWO debug prompt-input tail
-    test_codex_delegated_case duplicate-root-oss \
-        --oss --oss debug prompt-input tail
-    test_codex_delegated_case duplicate-root-hook-trust \
-        --dangerously-bypass-hook-trust --dangerously-bypass-hook-trust \
-        debug prompt-input tail
-    test_codex_delegated_case duplicate-root-search \
-        --search --search debug prompt-input tail
-    test_codex_delegated_case duplicate-root-no-alt-screen \
-        --no-alt-screen --no-alt-screen debug prompt-input tail
-    test_codex_delegated_case duplicate-root-strict \
-        --strict-config --strict-config debug prompt-input tail
-    test_codex_delegated_case duplicate-root-bypass \
-        --yolo --dangerously-bypass-approvals-and-sandbox debug prompt-input tail
-    test_codex_delegated_case duplicate-root-profile \
-        --profile one --profile two exec tail
-    test_codex_managed_case root-strict-exec \
-        --strict-config exec tail
-    test_codex_managed_case root-strict-review \
-        --strict-config review --uncommitted
-    test_codex_delegated_case root-strict-sandbox \
-        --strict-config sandbox /bin/true
-    test_codex_delegated_case root-strict-debug \
-        --strict-config debug prompt-input tail
-    test_codex_managed_case root-remote-prompt \
-        --remote ws://127.0.0.1:1 ordinary-prompt
-    test_codex_managed_case root-remote-resume \
-        --remote ws://127.0.0.1:1 resume --last
-    test_codex_delegated_case root-remote-exec \
-        --remote ws://127.0.0.1:1 exec tail
-    test_codex_delegated_case root-remote-review \
-        --remote ws://127.0.0.1:1 review --uncommitted
-    test_codex_delegated_case root-remote-sandbox \
-        --remote ws://127.0.0.1:1 sandbox /bin/true
-    test_codex_delegated_case root-remote-debug \
-        --remote ws://127.0.0.1:1 debug prompt-input tail
-    test_codex_delegated_case unpaired-root-remote-auth \
-        --remote-auth-token-env TOKEN resume --last
-    test_codex_managed_case paired-root-remote-auth \
-        --remote ws://127.0.0.1:1 --remote-auth-token-env TOKEN resume --last
-    test_codex_managed_case repeated-root-options \
-        --config one=1 -ctwo=2 --enable alpha --enable beta \
-        --disable gamma --disable delta --image one --image two \
-        --add-dir one --add-dir two debug prompt-input tail
-
-    new_case codex variadic-images-before-supported
-    configure_state complete
-    invoke_agent codex 0 0 --image one.png two.png --oss exec tail
-    [ "$LAST_STATUS" -eq 0 ] || fail "Codex wrapper misparsed variadic images"
-    assert_managed_argv codex --image one.png two.png --oss exec tail
-    finish_case codex
-    test_codex_managed_case lone-dash-image-before-supported \
-        --image - --oss exec tail
-
-    new_case codex attached-image-before-supported
-    configure_state complete
-    invoke_agent codex 0 0 -ione.png --oss exec tail
-    [ "$LAST_STATUS" -eq 0 ] || fail "Codex wrapper misparsed attached image"
-    assert_managed_argv codex -ione.png --oss exec tail
-    finish_case codex
-
-    test_codex_delegated_case option-config-separated \
-        --config model=probe features list
-    test_codex_delegated_case option-config-attached \
-        --config=model=probe features list
-    test_codex_delegated_case option-config-short-attached \
-        -cmodel=probe features list
-    test_codex_delegated_case option-model-separated \
-        --model probe features list
-    test_codex_delegated_case option-model-attached \
-        --model=probe features list
-    test_codex_delegated_case option-model-short-attached \
-        -mprobe features list
-    test_codex_delegated_case option-local-provider \
-        --local-provider ollama features list
-    test_codex_delegated_case option-sandbox \
-        --sandbox read-only features list
-    test_codex_delegated_case option-cd \
-        --cd "$CASE_DIR/root" features list
-    test_codex_delegated_case option-add-dir \
-        --add-dir "$CASE_DIR/extra" features list
-    test_codex_delegated_case option-approval \
-        --ask-for-approval never features list
-    test_codex_delegated_case option-remote \
-        --remote ws://127.0.0.1:1 features list
-    test_codex_delegated_case option-remote-auth \
-        --remote-auth-token-env TOKEN features list
-    test_codex_delegated_case option-enable \
-        --enable alpha features list
-    test_codex_delegated_case option-disable-attached \
-        --disable=alpha features list
-    test_codex_managed_case option-image-separated-greedy \
-        --image one.png features list
-    test_codex_delegated_case option-image-attached-bounded \
-        --image=one.png features list
-    test_codex_delegated_case option-image-short-attached-bounded \
-        -ione.png features list
-
-    test_codex_managed_case nested-debug-config \
-        debug --config model=probe prompt-input tail
-    test_codex_managed_case nested-debug-enable \
-        debug --enable alpha --disable beta prompt-input tail
-    test_codex_delegated_case malformed-nested-debug-value \
-        debug --config --help prompt-input tail
-
-    new_case codex separator-prompt
-    configure_state complete
-    invoke_agent codex 0 0 -- features
-    [ "$LAST_STATUS" -eq 0 ] || fail "Codex wrapper misparsed a prompt after --"
-    assert_managed_argv codex -- features
-    finish_case codex
+    # These are the only syntax edges the classifier owns. Upstream still
+    # validates every option value, positional count, and command combination.
+    test_codex_managed_case greedy-image-remains-interactive --image one.png features list
+    test_codex_delegated_case attached-image-selects-command --image=one.png features list
+    test_codex_delegated_case prompt-before-command \
+        ordinary-prompt features list
+    test_codex_delegated_case dash-prompt-before-command - features list
+    test_codex_managed_case prompt-before-mcp ordinary-prompt mcp list
+    test_codex_delegated_case future-option --future-option exec tail
     test_codex_managed_case separator-profile-literal -- -p
-    test_codex_delegated_case separator-extra-positional -- -p caller
-    test_codex_managed_case option-after-prompt ordinary-prompt --model o3
-    test_codex_delegated_case second-root-prompt ordinary-prompt second-prompt
+    test_codex_managed_case exec-separator-profile-literal exec -- -p
+    test_codex_managed_case sandbox-profile-looking-payload sandbox /bin/echo -p child
+    test_codex_managed_case sandbox-separated-profile-looking-payload sandbox -- /bin/echo -p child
+    test_codex_managed_case mcp-profile-looking-payload mcp add probe -- /bin/echo -p child
+    test_codex_managed_case mcp-undelimited-help-payload \
+        mcp add probe /bin/echo --help
+    test_codex_managed_case mcp-separator-before-name \
+        mcp add -- probe /bin/echo
+    test_codex_managed_case mcp-list-trailing-separator mcp list --
+    test_codex_managed_case mcp-get-dash-name mcp get -- -name
+    test_codex_managed_case mcp-add-lone-dash-name mcp add - /bin/echo
+    test_codex_managed_case mcp-get-lone-dash-name mcp get -
+    test_codex_managed_case debug-profile-looking-argument debug prompt-input -p caller
+    test_codex_delegated_case nonprofile-short-p app-server generate-ts -p "$CASE_DIR/out"
 
-    for command in --help --version -h -V; do
-        new_case codex "root-pass-through-$command"
-        configure_state complete
-        invoke_agent codex 0 0 "$command"
-        [ "$LAST_STATUS" -eq 0 ] || fail "Codex wrapper rejected $command"
-        assert_argv "$ARGV_FILE" "$command"
-        finish_case codex
-    done
-
-    new_case codex unknown-option-pass-through
-    configure_state complete
-    invoke_agent codex 0 0 --future-option exec tail
-    [ "$LAST_STATUS" -eq 0 ] || fail "Codex wrapper rejected an unknown option"
-    assert_argv "$ARGV_FILE" --future-option exec tail
-    finish_case codex
-
-    for command in exec resume archive delete unarchive fork; do
-        new_case codex "unknown-$command-child-option-pass-through"
-        configure_state complete
-        invoke_agent codex 0 0 "$command" --future-option
-        [ "$LAST_STATUS" -eq 0 ] ||
-            fail "Codex wrapper rejected an unknown $command child option"
-        assert_argv "$ARGV_FILE" "$command" --future-option
-        finish_case codex
-    done
-    test_codex_delegated_case duplicate-exec-model \
-        exec --model one --model two tail
-    test_codex_delegated_case duplicate-resume-last \
-        resume --last --last tail
-    test_codex_delegated_case duplicate-archive-remote \
-        archive --remote one --remote two session
-    test_codex_delegated_case duplicate-delete-force \
-        delete --force --force 00000000-0000-0000-0000-000000000000
-    test_codex_delegated_case duplicate-fork-bypass-alias \
-        fork --yolo --dangerously-bypass-approvals-and-sandbox tail
-    test_codex_delegated_case duplicate-exec-profile \
-        exec -p one -p two tail
-    test_codex_delegated_case unpaired-command-remote-auth \
-        resume --remote-auth-token-env TOKEN --last
-    test_codex_managed_case paired-command-remote-auth \
-        resume --remote ws://127.0.0.1:1 --remote-auth-token-env TOKEN --last
-    test_codex_managed_case cross-scope-root-auth-command-remote \
-        --remote-auth-token-env TOKEN resume --remote ws://127.0.0.1:1 --last
-    test_codex_managed_case cross-scope-root-remote-command-auth \
-        --remote ws://127.0.0.1:1 resume --remote-auth-token-env TOKEN --last
-    test_codex_delegated_case exec-empty-separated-paths \
-        exec --cd '' --add-dir '' --image '' --json tail
-    test_codex_delegated_case exec-invalid-image-list \
-        exec --image a, --json tail
-    test_codex_managed_case nested-exec-resume \
-        exec resume session prompt
-    test_codex_managed_case nested-exec-resume-last \
-        exec resume --last prompt
-    test_codex_managed_case nested-exec-resume-image \
-        exec resume --image image.png session prompt
-    test_codex_managed_case nested-exec-review-prompt \
-        exec review prompt
-    test_codex_managed_case nested-exec-review-selector \
-        exec review --uncommitted
-    test_codex_managed_case nested-exec-review-title \
-        exec review --commit deadbeef --title title
-    test_codex_managed_case nested-exec-scope-local-model \
-        exec --model outer resume --model inner session
-    test_codex_managed_case nested-exec-scope-local-conflict \
-        exec --full-auto resume --yolo session
-    test_codex_delegated_case nested-exec-resume-profile \
-        exec resume --profile caller
-    test_codex_delegated_case nested-exec-review-profile \
-        exec review -pcaller
-    test_codex_delegated_case nested-exec-resume-outer-only-option \
-        exec resume --oss
-    test_codex_delegated_case nested-exec-review-outer-only-option \
-        exec review --image image.png
-    test_codex_delegated_case nested-exec-resume-extra-positionals \
-        exec resume -i image.png session prompt extra
-    test_codex_delegated_case nested-exec-review-selector-conflict \
-        exec review --uncommitted --base main
-    test_codex_delegated_case nested-exec-duplicate-model \
-        exec resume --model one --model two session
-    test_codex_delegated_case nested-exec-same-scope-conflict \
-        exec resume --full-auto --yolo session
-    test_codex_delegated_case nested-exec-help exec help resume
-    test_codex_conflict_case nested-exec-outer-profile \
-        exec --profile caller resume session
-    test_codex_conflict_case root-and-command-profile \
-        --profile root resume --profile child --last
-    test_codex_conflict_case root-and-sandbox-profile \
-        --profile root sandbox --profile child /bin/true
-
-    new_case codex malformed-option-pass-through
-    configure_state complete
-    invoke_agent codex 0 0 --config
-    [ "$LAST_STATUS" -eq 0 ] || fail "Codex wrapper rejected a malformed option"
-    assert_argv "$ARGV_FILE" --config
-    finish_case codex
-
-    new_case codex sandbox-child-profile-looking
-    configure_state complete
-    invoke_agent codex 0 0 sandbox /bin/echo -p child
-    [ "$LAST_STATUS" -eq 0 ] || fail "Codex wrapper rejected a sandbox child -p"
-    assert_managed_argv codex sandbox /bin/echo -p child
-    finish_case codex
-
-    new_case codex sandbox-separator-child-profile-looking
-    configure_state complete
-    invoke_agent codex 0 0 sandbox -- /bin/echo -p child
-    [ "$LAST_STATUS" -eq 0 ] || fail "Codex wrapper rejected a sandbox child -p after --"
-    assert_managed_argv codex sandbox -- /bin/echo -p child
-    finish_case codex
-
-    new_case codex mcp-child-profile-looking
-    configure_state complete
-    invoke_agent codex 0 0 mcp add probe -- /bin/echo -p child
-    [ "$LAST_STATUS" -eq 0 ] || fail "Codex wrapper rejected an MCP child -p"
-    assert_argv "$ARGV_FILE" mcp add probe -- /bin/echo -p child
-    finish_case codex
-
-    new_case codex mcp-explicit-profile-delegates
-    configure_state complete
-    invoke_agent codex 0 0 --profile caller mcp list
-    [ "$LAST_STATUS" -eq 0 ] || fail "Codex wrapper rejected an MCP explicit profile"
-    assert_argv "$ARGV_FILE" --profile caller mcp list
-    finish_case codex
-    test_codex_delegated_case mcp-root-profile-equals --profile=caller mcp list
-    test_codex_delegated_case mcp-root-profile-short -p caller mcp list
-    test_codex_delegated_case mcp-root-profile-short-attached -pcaller mcp list
-    test_codex_delegated_case mcp-root-profile-short-equals -p=caller mcp list
-    test_codex_delegated_case invalid-root-profile-name \
-        --profile ../bad exec tail
-    test_codex_delegated_case invalid-root-profile-attached \
-        --profile=bad.name exec tail
-    test_codex_delegated_case empty-root-profile \
-        --profile '' exec tail
-    test_codex_conflict_case valid-leading-hyphen-profile \
-        --profile=-foo exec tail
-    test_codex_conflict_case root-lone-dash-profile \
-        --profile - exec tail
-
-    test_codex_conflict_case exec-local-profile exec -pcaller tail
-    test_codex_conflict_case exec-lone-dash-profile exec --profile - tail
-    test_codex_conflict_case e-local-profile e -p=caller tail
-    test_codex_conflict_case resume-local-profile resume --profile caller
-    test_codex_conflict_case archive-local-profile archive session -pcaller
-    test_codex_conflict_case delete-local-profile delete session --profile=caller
-    test_codex_conflict_case unarchive-local-profile unarchive session -p=caller
-    test_codex_conflict_case fork-local-profile fork -p caller --last
-    test_codex_conflict_case interactive-profile-after-prompt ordinary-prompt -pcaller
+    test_codex_conflict_case mcp-root-profile --profile caller mcp list
+    test_codex_conflict_case mcp-root-profile-prompt-before-command \
+        --profile caller ordinary-prompt mcp list
+    test_codex_conflict_case mcp-root-profile-undelimited-payload \
+        --profile caller mcp add probe /bin/echo --help
+    test_codex_conflict_case mcp-root-profile-separator-before-name \
+        --profile caller mcp add -- probe /bin/echo
+    test_codex_conflict_case mcp-root-profile-trailing-separator \
+        --profile caller mcp list --
+    test_codex_conflict_case mcp-root-profile-dash-name \
+        --profile caller mcp get -- -name
+    test_codex_conflict_case mcp-root-profile-lone-dash-name \
+        --profile caller mcp get -
+    test_codex_conflict_case archive-root-profile-lone-dash \
+        --profile caller archive -
+    test_codex_conflict_case exec-local-profile exec --profile caller opaque
+    test_codex_conflict_case root-and-local-profile --profile root exec -p child opaque
+    test_codex_conflict_case attached-leading-hyphen-profile --profile=-foo exec opaque
+    test_codex_delegated_case invalid-profile-name --profile bad.name exec opaque
+    test_codex_delegated_case invalid-separated-profile --profile -foo exec opaque
+    test_codex_delegated_case duplicate-root-profile --profile one --profile two exec opaque
+    test_codex_delegated_case duplicate-local-profile exec -p one -p two opaque
+    test_codex_delegated_case nested-exec-profile exec resume -p caller
+    test_codex_delegated_case nested-exec-resume-help exec resume --help
+    test_codex_delegated_case nested-exec-review-help exec review --help
+    test_codex_delegated_case nested-exec-root-profile-help \
+        --profile caller exec resume --help
+    test_codex_delegated_case nested-exec-local-profile-help \
+        exec -p caller resume --help
+    test_codex_delegated_case exec-prompt-before-help exec foo help
+    test_codex_delegated_case exec-dash-before-help exec - help
+    test_codex_delegated_case exec-prompt-before-nested-help \
+        exec foo resume --help
+    test_codex_delegated_case exec-root-profile-prompt-before-help \
+        --profile caller exec foo help
+    test_codex_delegated_case resume-missing-remote \
+        resume --remote -p caller
+    test_codex_conflict_case resume-remote-profile \
+        resume --remote ws://example.invalid -p caller
     test_codex_conflict_case sandbox-local-profile \
-        sandbox --permission-profile standard -p caller /bin/true
-    test_codex_conflict_case sandbox-lone-dash-profile \
-        sandbox --permission-profile standard --profile - /bin/true
-    test_codex_conflict_case sandbox-global-enable-profile \
-        sandbox --enable unified_exec -p caller /bin/true
-    test_codex_conflict_case sandbox-global-disable-attached-profile \
-        sandbox --disable=unified_exec -pcaller /bin/true
-    test_codex_delegated_case sandbox-malformed-global-value \
-        sandbox --enable -p caller /bin/true
-    test_codex_delegated_case sandbox-invalid-profile-name \
-        sandbox --profile bad.name /bin/true
-    test_codex_delegated_case sandbox-malformed-profile-value \
-        sandbox --profile -- /bin/true
-    test_codex_delegated_case sandbox-profile-before-unknown \
-        sandbox --profile caller --future-option /bin/true
-    test_codex_delegated_case sandbox-duplicate-profile \
-        sandbox --profile one --profile two /bin/true
-    test_codex_delegated_case sandbox-empty-cd \
-        sandbox --cd= /bin/true
-    test_codex_delegated_case sandbox-cwd-requires-permission \
-        sandbox -C "$work_root" /bin/true
-    test_codex_delegated_case sandbox-include-requires-permission \
-        sandbox --include-managed-config /bin/true
-    test_codex_delegated_case sandbox-readable-requires-state \
-        sandbox --sandbox-state-readable-root "$work_root" /bin/true
-    test_codex_delegated_case sandbox-network-requires-state \
-        sandbox --sandbox-state-disable-network /bin/true
-    test_codex_delegated_case sandbox-state-conflicts-permission \
-        sandbox --sandbox-state-json '{}' --permission-profile standard /bin/true
-    test_codex_managed_case sandbox-valid-state \
-        sandbox --sandbox-state-json '{}' \
-        --sandbox-state-readable-root "$work_root" \
-        --sandbox-state-disable-network /bin/true
-    test_codex_managed_case sandbox-valid-permission \
-        sandbox --permission-profile standard -C "$work_root" \
-        --include-managed-config /bin/true
-    test_codex_managed_case sandbox-lone-dash-command sandbox -
-    test_codex_managed_case sandbox-lone-dash-values \
-        sandbox --sandbox-state-json '{}' \
-        --sandbox-state-readable-root - /bin/true
-    test_codex_managed_case sandbox-lone-dash-cd \
-        sandbox --permission-profile standard -C - /bin/true
-    test_codex_delegated_case sandbox-empty-separated-cd \
-        sandbox --permission-profile standard -C '' /bin/true
-    test_codex_managed_case sandbox-lone-dash-permission \
-        sandbox --permission-profile - /bin/true
-    test_codex_delegated_case sandbox-duplicate-state \
-        sandbox --sandbox-state-json '{}' --sandbox-state-json '{}' -- /bin/true
-    test_codex_delegated_case sandbox-duplicate-permission \
-        sandbox --permission-profile standard --permission-profile standard /bin/true
-    test_codex_delegated_case sandbox-duplicate-cd \
-        sandbox --permission-profile standard -C "$work_root" -C "$work_root" /bin/true
-    test_codex_delegated_case sandbox-duplicate-include \
-        sandbox --permission-profile standard \
-        --include-managed-config --include-managed-config /bin/true
-    test_codex_delegated_case sandbox-duplicate-network \
-        sandbox --sandbox-state-json '{}' \
-        --sandbox-state-disable-network --sandbox-state-disable-network /bin/true
+        sandbox -p caller /bin/true
+    test_codex_delegated_case exec-tui-only-option \
+        exec --search -p caller
     if [ "$CODEX_APP_IS_COMMAND" = 1 ]; then
-        test_codex_managed_case sandbox-darwin-socket \
-            sandbox --allow-unix-socket "$work_root/socket" /bin/true
-        test_codex_managed_case sandbox-darwin-lone-dash-socket \
-            sandbox --allow-unix-socket - /bin/true
-        test_codex_managed_case sandbox-darwin-repeated-socket \
-            sandbox --allow-unix-socket one --allow-unix-socket two /bin/true
-        test_codex_delegated_case sandbox-darwin-duplicate-log-denials \
-            sandbox --log-denials --log-denials /bin/true
+        test_codex_conflict_case sandbox-darwin-option-profile \
+            sandbox --allow-unix-socket "$work_root/socket" -p caller /bin/true
+    else
+        test_codex_delegated_case sandbox-darwin-option-profile \
+            sandbox --allow-unix-socket "$work_root/socket" -p caller /bin/true
     fi
+    test_codex_delegated_case missing-profile-value --profile
 
-    test_codex_managed_case review-child-profile-literal review -- -p
-    test_codex_delegated_case review-malformed-profile-looking review -p caller
-    test_codex_delegated_case review-selector-conflict \
-        review --uncommitted --base main
-    test_codex_delegated_case review-selector-conflict-reversed \
-        review --base main --uncommitted
-    test_codex_delegated_case review-title-without-commit \
-        review --title title
-    test_codex_managed_case review-lone-dash-base review --base -
-    test_codex_delegated_case review-prompt-selector-conflict \
-        review --uncommitted prompt
-    test_codex_delegated_case review-duplicate-uncommitted \
-        review --uncommitted --uncommitted
-    test_codex_delegated_case review-duplicate-base \
-        review --base main --base other
-    test_codex_delegated_case review-duplicate-commit \
-        review --commit one --commit two
-    test_codex_delegated_case review-duplicate-title \
-        review --commit deadbeef --title one --title two
-    test_codex_delegated_case review-duplicate-strict \
-        review --strict-config --strict-config
-    test_codex_managed_case review-valid-title \
-        review --commit deadbeef --title title
-    test_codex_managed_case debug-child-profile-literal \
-        debug prompt-input -- -p
-    test_codex_managed_case debug-lone-dash-image \
-        debug prompt-input --image -
-    test_codex_delegated_case debug-empty-separated-image \
-        debug prompt-input --image ''
-    test_codex_delegated_case debug-invalid-image-list \
-        debug prompt-input --image=a,
-    test_codex_delegated_case debug-malformed-profile-looking \
-        debug prompt-input -p caller
-}
-
-test_codex_non_darwin_table() {
-    local current_codex_bin=$CODEX_BIN
-
-    CODEX_BIN=$CODEX_NON_DARWIN_BIN
-    test_codex_managed_case non-darwin-app-prompt app
-    test_codex_delegated_case non-darwin-darwin-sandbox-option \
-        sandbox --allow-unix-socket "$work_root/socket" /bin/true
-    CODEX_BIN=$current_codex_bin
+    test_codex_delegated_case root-help --help
+    test_codex_delegated_case exec-help exec --help
+    test_codex_delegated_case exec-help-subcommand exec help
+    test_codex_delegated_case exec-root-profile-help-subcommand \
+        --profile caller exec help
+    test_codex_delegated_case mcp-help mcp --help
+    test_codex_delegated_case mcp-help-subcommand mcp help
+    test_codex_delegated_case mcp-root-profile-help-subcommand \
+        --profile caller mcp help
+    test_codex_delegated_case debug-prompt-input-help debug prompt-input --help
+    test_codex_delegated_case sandbox-help sandbox --help
+    test_codex_delegated_case ignore-user-config-help \
+        exec --ignore-user-config --help
+    test_one_conflict codex ignore-user-config \
+        exec --ignore-user-config opaque
+    test_one_conflict codex prompt-before-exec-ignore-user-config \
+        foo exec --ignore-user-config opaque
+    test_codex_conflict_case nested-ignore-user-config \
+        exec resume --ignore-user-config --last
 }
 
 test_codex_open_file_limit_case() {
@@ -1551,10 +1195,270 @@ test_real_claude_mcp_list_contract() {
         fail "pinned Claude listed a session-only managed MCP as persistent"
     ! grep -F 'MCP config file not found:' "$claude_home/stderr" >/dev/null ||
         fail "pinned Claude parsed mcp/list as managed config filenames"
-    grep -Fx loaded "$network_guard_loaded" >/dev/null ||
+    grep -E '^loaded:[0-9]+:' "$network_guard_loaded" >/dev/null ||
         fail "pinned Claude did not load the process-level network guard"
     [ ! -e "$network_hit" ] ||
         fail "pinned Claude attempted network access during mcp list"
+}
+
+run_real_wrapped_codex() {
+    local network_guard_loaded=$1
+    local network_hit=$2
+    local binary=${REAL_WRAPPED_CODEX_TEST_BIN:-$REAL_WRAPPED_CODEX_BIN}
+    local poison_sqlite="$CASE_DIR/poison-sqlite"
+    local wrapper_pid
+    shift 2
+
+    printf '%s\n' poison >"$poison_sqlite"
+    CODEX_SQLITE_HOME="$poison_sqlite" \
+        env -u AI_NIX_BYPASS_MANAGED_CONFIG -u CODEX_SQLITE_HOME -u REF_API_KEY \
+        HOME="$HOME_DIR" CODEX_HOME="$ROOT" \
+        AGENT_TEST_ARGV="$ARGV_FILE" AGENT_TEST_ENV="$ENV_FILE" AGENT_TEST_EXIT=0 \
+        AGENT_TEST_UID="$AGENT_TEST_UID" \
+        TASK3_NETWORK_GUARD_LOADED_FILE="$network_guard_loaded" \
+        TASK3_NETWORK_ATTEMPT_FILE="$network_hit" \
+        "$NETWORK_GUARD_VARIABLE=$NETWORK_GUARD_LIBRARY" \
+        "$binary" "$@" >"$STDOUT_FILE" 2>"$STDERR_FILE" &
+    wrapper_pid=$!
+    REAL_WRAPPED_CODEX_LAST_PID=$wrapper_pid
+    if wait "$wrapper_pid"; then
+        LAST_STATUS=0
+    else
+        LAST_STATUS=$?
+    fi
+    [ -d "$CODEX_LOCAL_ROOT/sqlite" ] ||
+        fail "real wrapped Codex did not use the synthetic SQLite root"
+    printf '%s\n' poison | cmp -s - "$poison_sqlite" ||
+        fail "real wrapped Codex touched the poison SQLite path"
+    if [ "$LAST_STATUS" -eq 0 ] && [ -z "${REAL_WRAPPED_CODEX_TEST_BIN:-}" ]; then
+        assert_network_guard_loaded "$network_guard_loaded" codex "$wrapper_pid"
+    fi
+}
+
+assert_real_codex_status_parity() {
+    local label=$1
+    local expected_route=$2
+    shift 2
+    local raw_home raw_status wrapped_status
+    local raw_network_guard_loaded raw_network_hit
+    local wrapped_network_guard_loaded wrapped_network_hit
+
+    new_case codex "real-status-$label"
+    printf '%s\n' 'developer_instructions = "managed"' >"$FIRST"
+    raw_home="$CASE_DIR/raw-home"
+    raw_network_guard_loaded="$CASE_DIR/raw-network-guard-loaded"
+    raw_network_hit="$CASE_DIR/raw-network-attempted"
+    wrapped_network_guard_loaded="$CASE_DIR/wrapped-network-guard-loaded"
+    wrapped_network_hit="$CASE_DIR/wrapped-network-attempted"
+    mkdir -p "$raw_home/sqlite"
+
+    if env -u AI_NIX_BYPASS_MANAGED_CONFIG -u REF_API_KEY \
+        HOME="$raw_home" CODEX_HOME="$raw_home" \
+        CODEX_SQLITE_HOME="$raw_home/sqlite" \
+        TASK3_NETWORK_GUARD_LOADED_FILE="$raw_network_guard_loaded" \
+        TASK3_NETWORK_ATTEMPT_FILE="$raw_network_hit" \
+        "$NETWORK_GUARD_VARIABLE=$NETWORK_GUARD_LIBRARY" \
+        "$REAL_CODEX_BIN" "$@" >"$CASE_DIR/raw.stdout" 2>"$CASE_DIR/raw.stderr"; then
+        raw_status=0
+    else
+        raw_status=$?
+    fi
+
+    run_real_wrapped_codex \
+        "$wrapped_network_guard_loaded" "$wrapped_network_hit" "$@"
+    wrapped_status=$LAST_STATUS
+    [ "$raw_status" -ne 0 ] || fail "real Codex parity case was not malformed: $label"
+    [ "$wrapped_status" -eq "$raw_status" ] ||
+        fail "wrapped/raw Codex status differs for $label: $wrapped_status/$raw_status"
+    case "$expected_route" in
+    delegate)
+        sed '/^WARNING: proceeding, even though we could not create PATH aliases:/d' \
+            "$CASE_DIR/raw.stderr" >"$CASE_DIR/raw-normalized.stderr"
+        sed '/^WARNING: proceeding, even though we could not create PATH aliases:/d' \
+            "$STDERR_FILE" >"$CASE_DIR/wrapped-normalized.stderr"
+        cmp "$CASE_DIR/raw-normalized.stderr" "$CASE_DIR/wrapped-normalized.stderr" || {
+            diff -u "$CASE_DIR/raw-normalized.stderr" \
+                "$CASE_DIR/wrapped-normalized.stderr" >&2 || true
+            fail "delegated Codex diagnostic differs for $label"
+        }
+        assert_codex_runtime_profile_absent
+        ;;
+    manage) assert_codex_runtime_profile ;;
+    *) fail "unknown real Codex route expectation: $expected_route" ;;
+    esac
+    assert_network_guard_loaded "$raw_network_guard_loaded" codex
+    assert_network_guard_loaded \
+        "$wrapped_network_guard_loaded" codex "$REAL_WRAPPED_CODEX_LAST_PID"
+    [ ! -e "$raw_network_hit" ] && [ ! -e "$wrapped_network_hit" ] ||
+        fail "Codex parity probe attempted network access"
+    [ ! -e "$ROOT/sessions" ] && [ ! -e "$raw_home/sessions" ] ||
+        fail "Codex parity probe created session state"
+    finish_case codex
+}
+
+test_real_wrapped_codex_status_parity() {
+    assert_real_codex_status_parity root-missing-config delegate --config
+    assert_real_codex_status_parity exec-missing-model delegate exec --model
+    assert_real_codex_status_parity exec-invalid-color delegate \
+        exec --color purple --help
+    assert_real_codex_status_parity review-selector-conflict manage \
+        review --uncommitted --base main
+    assert_real_codex_status_parity resume-positional-overflow manage \
+        resume --last session prompt
+    assert_real_codex_status_parity resume-missing-remote delegate \
+        resume --remote -p caller
+    assert_real_codex_status_parity mcp-missing-name manage mcp get
+    assert_real_codex_status_parity sandbox-state-conflict manage \
+        sandbox --permission-profile standard --sandbox-state-json '{}' /usr/bin/true
+    assert_real_codex_status_parity debug-empty-image manage \
+        debug prompt-input --image=
+}
+
+test_real_wrapped_codex_routing() {
+    local marker=NIX_WRAPPED_PROFILE_SENTINEL
+    local network_guard_loaded network_hit
+
+    new_case codex wrapped-helper-sqlite-isolation
+    printf '%s\n' 'developer_instructions = "managed"' >"$FIRST"
+    network_guard_loaded="$CASE_DIR/network-guard-loaded"
+    network_hit="$CASE_DIR/network-attempted"
+    REAL_WRAPPED_CODEX_TEST_BIN=$CODEX_BIN
+    run_real_wrapped_codex "$network_guard_loaded" "$network_hit" alpha
+    unset REAL_WRAPPED_CODEX_TEST_BIN
+    [ "$LAST_STATUS" -eq 0 ] || fail "isolated fake Codex wrapper failed"
+    assert_managed_argv codex alpha
+    assert_env "CODEX_SQLITE_HOME=$CODEX_LOCAL_ROOT/sqlite"
+    assert_codex_runtime_profile
+    finish_case codex
+
+    new_case codex real-wrapped-debug-prompt-input
+    printf 'developer_instructions = "%s"\n' "$marker" >"$FIRST"
+    network_guard_loaded="$CASE_DIR/network-guard-loaded"
+    network_hit="$CASE_DIR/network-attempted"
+    run_real_wrapped_codex "$network_guard_loaded" "$network_hit" \
+        debug prompt-input hello
+    [ "$LAST_STATUS" -eq 0 ] || fail "wrapped Codex rejected debug prompt-input"
+    assert_codex_developer_marker "$STDOUT_FILE" "$marker" present ||
+        fail "wrapped Codex did not load the managed profile"
+    assert_codex_runtime_profile
+    [ ! -e "$network_hit" ] || fail "wrapped debug probe attempted network access"
+    [ ! -e "$ROOT/sessions" ] || fail "wrapped debug probe created session state"
+    finish_case codex
+
+    new_case codex real-wrapped-mcp
+    printf '%s\n' 'developer_instructions = "managed"' >"$FIRST"
+    network_guard_loaded="$CASE_DIR/network-guard-loaded"
+    network_hit="$CASE_DIR/network-attempted"
+    run_real_wrapped_codex "$network_guard_loaded" "$network_hit" mcp list
+    [ "$LAST_STATUS" -eq 0 ] || fail "wrapped Codex did not manage mcp"
+    assert_codex_runtime_profile
+    [ ! -e "$network_hit" ] || fail "wrapped mcp probe attempted network access"
+    [ ! -e "$ROOT/sessions" ] || fail "wrapped mcp probe created session state"
+    finish_case codex
+
+    new_case codex real-wrapped-mcp-payload-help
+    printf '%s\n' 'developer_instructions = "managed"' >"$FIRST"
+    network_guard_loaded="$CASE_DIR/network-guard-loaded"
+    network_hit="$CASE_DIR/network-attempted"
+    run_real_wrapped_codex "$network_guard_loaded" "$network_hit" \
+        mcp add payload-help /bin/echo --help
+    [ "$LAST_STATUS" -eq 0 ] || fail "wrapped Codex rejected MCP help payload"
+    assert_codex_runtime_profile
+    [ ! -e "$network_hit" ] || fail "wrapped MCP payload probe attempted network access"
+    [ ! -e "$ROOT/sessions" ] || fail "wrapped MCP payload probe created session state"
+    finish_case codex
+
+    new_case codex real-wrapped-mcp-separator-before-name
+    printf '%s\n' 'developer_instructions = "managed"' >"$FIRST"
+    network_guard_loaded="$CASE_DIR/network-guard-loaded"
+    network_hit="$CASE_DIR/network-attempted"
+    run_real_wrapped_codex "$network_guard_loaded" "$network_hit" \
+        mcp add -- separator-name /bin/echo
+    [ "$LAST_STATUS" -eq 0 ] || fail "wrapped Codex rejected MCP separator before name"
+    assert_codex_runtime_profile
+    [ ! -e "$network_hit" ] || fail "wrapped MCP separator probe attempted network access"
+    [ ! -e "$ROOT/sessions" ] || fail "wrapped MCP separator probe created session state"
+    finish_case codex
+
+    new_case codex real-wrapped-mcp-lone-dash-name
+    printf '%s\n' 'developer_instructions = "managed"' >"$FIRST"
+    network_guard_loaded="$CASE_DIR/network-guard-loaded"
+    network_hit="$CASE_DIR/network-attempted"
+    run_real_wrapped_codex "$network_guard_loaded" "$network_hit" \
+        mcp add - /bin/echo
+    [ "$LAST_STATUS" -eq 0 ] || fail "wrapped Codex rejected MCP lone-dash name"
+    assert_codex_runtime_profile
+    [ ! -e "$network_hit" ] || fail "wrapped MCP dash probe attempted network access"
+    [ ! -e "$ROOT/sessions" ] || fail "wrapped MCP dash probe created session state"
+    finish_case codex
+
+    new_case codex real-wrapped-mcp-lone-dash-conflict
+    printf '%s\n' 'developer_instructions = "managed"' >"$FIRST"
+    network_guard_loaded="$CASE_DIR/network-guard-loaded"
+    network_hit="$CASE_DIR/network-attempted"
+    run_real_wrapped_codex "$network_guard_loaded" "$network_hit" \
+        --profile caller mcp get -
+    [ "$LAST_STATUS" -eq 2 ] || fail "wrapped Codex accepted MCP caller profile"
+    assert_codex_runtime_profile_absent
+    grep -F 'managed configuration conflicts with a caller profile' \
+        "$STDERR_FILE" >/dev/null || fail "wrapped MCP conflict diagnostic changed"
+    [ ! -e "$network_hit" ] || fail "wrapped MCP conflict probe attempted network access"
+    [ ! -e "$ROOT/sessions" ] || fail "wrapped MCP conflict probe created session state"
+    finish_case codex
+
+    new_case codex real-wrapped-nested-help
+    printf '%s\n' 'developer_instructions = "managed"' >"$FIRST"
+    network_guard_loaded="$CASE_DIR/network-guard-loaded"
+    network_hit="$CASE_DIR/network-attempted"
+    run_real_wrapped_codex "$network_guard_loaded" "$network_hit" \
+        --profile caller exec resume --help
+    [ "$LAST_STATUS" -eq 0 ] || fail "wrapped Codex intercepted nested exec help"
+    assert_codex_runtime_profile_absent
+    [ ! -e "$network_hit" ] || fail "wrapped nested-help probe attempted network access"
+    [ ! -e "$ROOT/sessions" ] || fail "wrapped nested-help probe created session state"
+    finish_case codex
+
+    new_case codex real-wrapped-help-subcommands
+    printf '%s\n' 'developer_instructions = "managed"' >"$FIRST"
+    network_guard_loaded="$CASE_DIR/network-guard-loaded"
+    network_hit="$CASE_DIR/network-attempted"
+    run_real_wrapped_codex "$network_guard_loaded" "$network_hit" \
+        --profile caller exec help
+    [ "$LAST_STATUS" -eq 0 ] || fail "wrapped Codex intercepted exec help subcommand"
+    assert_codex_runtime_profile_absent
+    run_real_wrapped_codex "$network_guard_loaded" "$network_hit" \
+        --profile caller mcp help
+    [ "$LAST_STATUS" -eq 0 ] || fail "wrapped Codex intercepted MCP help subcommand"
+    assert_codex_runtime_profile_absent
+    run_real_wrapped_codex "$network_guard_loaded" "$network_hit" \
+        --profile caller exec foo help
+    [ "$LAST_STATUS" -eq 0 ] || fail "wrapped Codex intercepted exec prompt-before-help"
+    assert_codex_runtime_profile_absent
+    run_real_wrapped_codex "$network_guard_loaded" "$network_hit" \
+        --profile caller exec foo resume --help
+    [ "$LAST_STATUS" -eq 0 ] || fail "wrapped Codex intercepted nested prompt-before-help"
+    assert_codex_runtime_profile_absent
+    [ ! -e "$network_hit" ] || fail "wrapped help probe attempted network access"
+    [ ! -e "$ROOT/sessions" ] || fail "wrapped help probe created session state"
+    finish_case codex
+
+    new_case codex real-wrapped-features
+    printf '%s\n' 'developer_instructions = "managed"' >"$FIRST"
+    network_guard_loaded="$CASE_DIR/network-guard-loaded"
+    network_hit="$CASE_DIR/network-attempted"
+    run_real_wrapped_codex "$network_guard_loaded" "$network_hit" features list
+    [ "$LAST_STATUS" -eq 0 ] || fail "wrapped Codex did not delegate features"
+    assert_codex_runtime_profile_absent
+    run_real_wrapped_codex "$network_guard_loaded" "$network_hit" \
+        ordinary-prompt features list
+    [ "$LAST_STATUS" -eq 0 ] || fail "wrapped Codex missed command after prompt"
+    assert_codex_runtime_profile_absent
+    run_real_wrapped_codex "$network_guard_loaded" "$network_hit" - features list
+    [ "$LAST_STATUS" -eq 0 ] || fail "wrapped Codex missed command after dash prompt"
+    assert_codex_runtime_profile_absent
+    [ ! -e "$network_hit" ] || fail "wrapped features probe attempted network access"
+    [ ! -e "$ROOT/sessions" ] || fail "wrapped features probe created session state"
+    finish_case codex
 }
 
 test_real_codex_profile_contract() {
@@ -1618,8 +1522,7 @@ test_real_codex_profile_contract() {
         >"$codex_home/valid-strict.stdout" 2>"$codex_home/valid-strict.stderr"; then
         fail "pinned Codex unexpectedly completed the strict network oracle"
     fi
-    grep -Fx loaded "$valid_network_guard_loaded" >/dev/null ||
-        fail "pinned Codex did not load the strict-profile network guard"
+    assert_network_guard_loaded "$valid_network_guard_loaded" codex
     grep -Fx network "$valid_network_hit" >/dev/null ||
         fail "pinned Codex did not accept the managed shell environment policy"
 
@@ -1646,8 +1549,7 @@ test_real_codex_profile_contract() {
     fi
     grep -F -- "$strict_marker" "$codex_home/strict.stderr" >/dev/null ||
         fail "pinned Codex strict profile failure did not identify the marker"
-    grep -Fx loaded "$network_guard_loaded" >/dev/null ||
-        fail "pinned Codex did not load the process-level network guard"
+    assert_network_guard_loaded "$network_guard_loaded" codex
     [ ! -e "$network_hit" ] ||
         fail "pinned Codex attempted network access before rejecting strict config"
 }
@@ -1735,8 +1637,9 @@ run_codex_contract() {
     test_codex_legacy_ref_auth
     test_codex_runtime_profile_rejections
     test_codex_command_scope
-    test_codex_non_darwin_table
     test_codex_open_file_limit
+    test_real_wrapped_codex_status_parity
+    test_real_wrapped_codex_routing
     test_real_codex_profile_contract
     printf '%s\n' 'agent-wrapper-contract: codex: PASS'
 }

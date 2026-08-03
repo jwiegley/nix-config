@@ -7,10 +7,10 @@
 let
   managedArtifactClassifier = import ./managed-artifact-classifier.nix;
 
+  # app is a command only on Darwin among supported outputs.
   codexAppCommandCase = pkgs.lib.optionalString pkgs.stdenv.isDarwin " | app";
   codexSandboxDarwinValueCase = pkgs.lib.optionalString pkgs.stdenv.isDarwin " | --allow-unix-socket";
   codexSandboxDarwinAttachedCase = pkgs.lib.optionalString pkgs.stdenv.isDarwin " | --allow-unix-socket=?*";
-  codexSandboxDarwinEmptyCase = pkgs.lib.optionalString pkgs.stdenv.isDarwin " | --allow-unix-socket=";
   codexSandboxDarwinFlagCase = pkgs.lib.optionalString pkgs.stdenv.isDarwin " | --log-denials";
   codexWrapper = pkgs.writeShellScript "codex" ''
     set -euo pipefail
@@ -136,241 +136,56 @@ let
 
     ${managedArtifactClassifier}
 
+    # This is intentionally not a Codex CLI validator. It mirrors only the
+    # profile-applicability boundary in pinned
+    # codex-rs/cli/src/main.rs::profile_v2_for_subcommand. The scanners retain
+    # only the option arity needed to locate command, profile, help, and payload
+    # boundaries; the packaged Clap parser owns values, combinations, and
+    # positional counts.
     codex_profile_name_is_valid() {
       [[ "$1" =~ ^[A-Za-z0-9_-]+$ ]]
     }
 
-    codex_sandbox_value_is_valid() {
-      case "$1" in
-        read-only | workspace-write | danger-full-access) return 0 ;;
+    codex_scan_profile_at() {
+      local codex_profile_value codex_profile_width
+
+      case "''${codex_arguments[$codex_index]}" in
+        -p | --profile)
+          if [ $((codex_index + 1)) -ge "''${#codex_arguments[@]}" ]; then
+            return 1
+          fi
+          codex_profile_value="''${codex_arguments[$((codex_index + 1))]}"
+          case "$codex_profile_value" in
+            -) ;;
+            -*) return 1 ;;
+          esac
+          codex_profile_width=2
+          ;;
+        --profile=*)
+          codex_profile_value="''${codex_arguments[$codex_index]#--profile=}"
+          codex_profile_width=1
+          ;;
+        -p=*)
+          codex_profile_value="''${codex_arguments[$codex_index]#-p=}"
+          codex_profile_width=1
+          ;;
+        -p?*)
+          codex_profile_value="''${codex_arguments[$codex_index]#-p}"
+          codex_profile_width=1
+          ;;
         *) return 1 ;;
       esac
-    }
 
-    codex_approval_value_is_valid() {
-      case "$1" in
-        untrusted | on-request | never) return 0 ;;
-        *) return 1 ;;
+      codex_profile_name_is_valid "$codex_profile_value" || return 1
+      case "$codex_profile_scope" in
+        root)
+          codex_root_profiles=$((codex_root_profiles + 1))
+          ;;
+        local)
+          codex_local_profiles=$((codex_local_profiles + 1))
+          ;;
       esac
-    }
-
-    codex_value_looks_like_option() {
-      [[ "$1" == -* && "$1" != - ]]
-    }
-
-    codex_image_value_is_valid() {
-      [ -n "$1" ] || return 1
-      case "$1" in
-        ,* | *, | *,,*) return 1 ;;
-        *) return 0 ;;
-      esac
-    }
-
-    codex_mark_option_once() {
-      local option_key=$1
-      case " $codex_seen_options " in
-        *" $option_key "*) return 1 ;;
-      esac
-      codex_seen_options="$codex_seen_options $option_key"
-    }
-
-    codex_exec_nested_is_valid() {
-      local nested_command=$1
-      local nested_index=$2
-      local nested_argument nested_image nested_option_key
-      local nested_positionals=0
-      local nested_bypass=0
-      local nested_full_auto=0
-      local nested_uncommitted=0
-      local nested_base=0
-      local nested_commit=0
-      local nested_title=0
-
-      codex_seen_options=
-      while [ "$nested_index" -lt "''${#codex_arguments[@]}" ]; do
-        nested_argument="''${codex_arguments[$nested_index]}"
-        nested_option_key=
-        case "$nested_argument" in
-          -m | --model | -m?* | --model=*) nested_option_key=model ;;
-          --dangerously-bypass-approvals-and-sandbox | --yolo)
-            nested_option_key=bypass
-            ;;
-          --dangerously-bypass-hook-trust) nested_option_key=hook-trust ;;
-          --strict-config) nested_option_key=strict ;;
-          --skip-git-repo-check) nested_option_key=skip-git ;;
-          --ephemeral) nested_option_key=ephemeral ;;
-          --ignore-user-config) nested_option_key=ignore-user-config ;;
-          --ignore-rules) nested_option_key=ignore-rules ;;
-          --full-auto) nested_option_key=full-auto ;;
-          --output-schema | --output-schema=*) nested_option_key=output-schema ;;
-          --json | --experimental-json) nested_option_key=json ;;
-          -o | --output-last-message | -o?* | --output-last-message=*)
-            nested_option_key=output-last
-            ;;
-          --last) nested_option_key=last ;;
-          --all) nested_option_key=all ;;
-          --uncommitted) nested_option_key=uncommitted ;;
-          --base | --base=*) nested_option_key=base ;;
-          --commit | --commit=*) nested_option_key=commit ;;
-          --title | --title=*) nested_option_key=title ;;
-        esac
-        if [ -n "$nested_option_key" ] \
-          && ! codex_mark_option_once "$nested_option_key"; then
-          return 1
-        fi
-
-        case "$nested_argument" in
-          --)
-            nested_positionals=$((
-              nested_positionals
-              + ''${#codex_arguments[@]}
-              - nested_index
-              - 1
-            ))
-            break
-            ;;
-          -h | --help)
-            return 1
-            ;;
-          -c | --config | --enable | --disable | -m | --model)
-            if [ $((nested_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-              || codex_value_looks_like_option \
-                "''${codex_arguments[$((nested_index + 1))]}"; then
-              return 1
-            fi
-            nested_index=$((nested_index + 2))
-            continue
-            ;;
-          --config=* | -c?* | --enable=* | --disable=* | --model=* | -m?*)
-            nested_index=$((nested_index + 1))
-            continue
-            ;;
-          --dangerously-bypass-approvals-and-sandbox | --yolo)
-            nested_bypass=1
-            nested_index=$((nested_index + 1))
-            continue
-            ;;
-          --dangerously-bypass-hook-trust | --strict-config | \
-          --skip-git-repo-check | --ephemeral | --ignore-user-config | \
-          --ignore-rules | --json | --experimental-json)
-            nested_index=$((nested_index + 1))
-            continue
-            ;;
-          --full-auto)
-            nested_full_auto=1
-            nested_index=$((nested_index + 1))
-            continue
-            ;;
-          --output-schema | -o | --output-last-message)
-            if [ $((nested_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-              || [ -z "''${codex_arguments[$((nested_index + 1))]}" ] \
-              || codex_value_looks_like_option \
-                "''${codex_arguments[$((nested_index + 1))]}"; then
-              return 1
-            fi
-            nested_index=$((nested_index + 2))
-            continue
-            ;;
-          --output-schema= | -o= | --output-last-message=)
-            return 1
-            ;;
-          --output-schema=?* | -o?* | --output-last-message=?*)
-            nested_index=$((nested_index + 1))
-            continue
-            ;;
-        esac
-
-        if [ "$nested_command" = resume ]; then
-          case "$nested_argument" in
-            --last | --all)
-              nested_index=$((nested_index + 1))
-              continue
-              ;;
-            -i | --image)
-              if [ $((nested_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                || [ -z "''${codex_arguments[$((nested_index + 1))]}" ] \
-                || codex_value_looks_like_option \
-                  "''${codex_arguments[$((nested_index + 1))]}" \
-                || ! codex_image_value_is_valid \
-                  "''${codex_arguments[$((nested_index + 1))]}"; then
-                return 1
-              fi
-              nested_index=$((nested_index + 2))
-              continue
-              ;;
-            --image= | -i=)
-              return 1
-              ;;
-            --image=?* | -i?*)
-              case "$nested_argument" in
-                --image=*) nested_image="''${nested_argument#--image=}" ;;
-                *)
-                  nested_image="''${nested_argument#-i}"
-                  nested_image="''${nested_image#=}"
-                  ;;
-              esac
-              codex_image_value_is_valid "$nested_image" || return 1
-              nested_index=$((nested_index + 1))
-              continue
-              ;;
-          esac
-        else
-          case "$nested_argument" in
-            --uncommitted)
-              nested_uncommitted=1
-              nested_index=$((nested_index + 1))
-              continue
-              ;;
-            --base | --commit | --title)
-              if [ $((nested_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                || codex_value_looks_like_option \
-                  "''${codex_arguments[$((nested_index + 1))]}"; then
-                return 1
-              fi
-              case "$nested_argument" in
-                --base) nested_base=1 ;;
-                --commit) nested_commit=1 ;;
-                --title) nested_title=1 ;;
-              esac
-              nested_index=$((nested_index + 2))
-              continue
-              ;;
-            --base=* | --commit=* | --title=*)
-              case "$nested_argument" in
-                --base=*) nested_base=1 ;;
-                --commit=*) nested_commit=1 ;;
-                --title=*) nested_title=1 ;;
-              esac
-              nested_index=$((nested_index + 1))
-              continue
-              ;;
-          esac
-        fi
-
-        case "$nested_argument" in
-          -?*) return 1 ;;
-          *)
-            nested_positionals=$((nested_positionals + 1))
-            nested_index=$((nested_index + 1))
-            ;;
-        esac
-      done
-
-      if [ "$nested_full_auto" -eq 1 ] && [ "$nested_bypass" -eq 1 ]; then
-        return 1
-      fi
-      if [ "$nested_command" = resume ]; then
-        [ "$nested_positionals" -le 2 ] || return 1
-      else
-        [ "$nested_positionals" -le 1 ] || return 1
-        if [ $((nested_uncommitted + nested_base + nested_commit + nested_positionals)) -gt 1 ]; then
-          return 1
-        fi
-        if [ "$nested_title" -eq 1 ] && [ "$nested_commit" -eq 0 ]; then
-          return 1
-        fi
-      fi
-      return 0
+      codex_index=$((codex_index + codex_profile_width))
     }
 
     codex_managed_config="$codex_shared_home/nix-managed.config.toml"
@@ -475,1216 +290,564 @@ let
           exit 2
           ;;
         complete)
-          codex_manage=0
-          codex_profile_conflict=0
-          codex_root_profile_seen=0
-          codex_root_approval_seen=0
-          codex_root_bypass_seen=0
-          codex_root_model_seen=0
-          codex_root_local_provider_seen=0
-          codex_root_sandbox_seen=0
-          codex_root_cd_seen=0
-          codex_root_remote_seen=0
-          codex_root_remote_auth_seen=0
-          codex_root_oss_seen=0
-          codex_root_hook_trust_seen=0
-          codex_root_search_seen=0
-          codex_root_no_alt_screen_seen=0
-          codex_root_strict_seen=0
-          codex_child_remote_seen=0
-          codex_child_remote_auth_seen=0
+          codex_arguments=("$@")
+          codex_root_profiles=0
+          codex_local_profiles=0
+          codex_ignore_user_config=0
+          codex_scan_ok=1
+          codex_route=delegate
           codex_command=
           codex_command_index=-1
-          codex_prompt_command=0
-          codex_recognized=1
-          codex_arguments=("$@")
           codex_index=0
 
+          # Locate only the root command boundary. A separated image option is
+          # greedy upstream, so every following non-option belongs to it.
           while [ "$codex_index" -lt "''${#codex_arguments[@]}" ]; do
             codex_argument="''${codex_arguments[$codex_index]}"
             case "$codex_argument" in
-              -a | --ask-for-approval | -a?* | --ask-for-approval=*)
-                codex_root_approval_seen=$((codex_root_approval_seen + 1))
-                ;;
-              --dangerously-bypass-approvals-and-sandbox | --yolo)
-                codex_root_bypass_seen=$((codex_root_bypass_seen + 1))
-                ;;
-              -m | --model | -m?* | --model=*)
-                codex_root_model_seen=$((codex_root_model_seen + 1))
-                ;;
-              --local-provider | --local-provider=*)
-                codex_root_local_provider_seen=$((codex_root_local_provider_seen + 1))
-                ;;
-              -s | --sandbox | -s?* | --sandbox=*)
-                codex_root_sandbox_seen=$((codex_root_sandbox_seen + 1))
-                ;;
-              -C | --cd | -C?* | --cd=*)
-                codex_root_cd_seen=$((codex_root_cd_seen + 1))
-                ;;
-              --remote | --remote=*)
-                codex_root_remote_seen=$((codex_root_remote_seen + 1))
-                ;;
-              --remote-auth-token-env | --remote-auth-token-env=*)
-                codex_root_remote_auth_seen=$((codex_root_remote_auth_seen + 1))
-                ;;
-              --oss) codex_root_oss_seen=$((codex_root_oss_seen + 1)) ;;
-              --dangerously-bypass-hook-trust)
-                codex_root_hook_trust_seen=$((codex_root_hook_trust_seen + 1))
-                ;;
-              --search) codex_root_search_seen=$((codex_root_search_seen + 1)) ;;
-              --no-alt-screen)
-                codex_root_no_alt_screen_seen=$((codex_root_no_alt_screen_seen + 1))
-                ;;
-              --strict-config)
-                codex_root_strict_seen=$((codex_root_strict_seen + 1))
-                ;;
-              -p | --profile | -p?* | --profile=*)
-                codex_root_profile_seen=$((codex_root_profile_seen + 1))
-                ;;
-            esac
-            if [ "$codex_root_approval_seen" -gt 1 ] \
-              || [ "$codex_root_bypass_seen" -gt 1 ] \
-              || [ "$codex_root_model_seen" -gt 1 ] \
-              || [ "$codex_root_local_provider_seen" -gt 1 ] \
-              || [ "$codex_root_sandbox_seen" -gt 1 ] \
-              || [ "$codex_root_cd_seen" -gt 1 ] \
-              || [ "$codex_root_remote_seen" -gt 1 ] \
-              || [ "$codex_root_remote_auth_seen" -gt 1 ] \
-              || [ "$codex_root_oss_seen" -gt 1 ] \
-              || [ "$codex_root_hook_trust_seen" -gt 1 ] \
-              || [ "$codex_root_search_seen" -gt 1 ] \
-              || [ "$codex_root_no_alt_screen_seen" -gt 1 ] \
-              || [ "$codex_root_strict_seen" -gt 1 ] \
-              || [ "$codex_root_profile_seen" -gt 1 ]; then
-              codex_recognized=0
-              break
-            fi
-            case "$codex_argument" in
               --)
-                codex_remaining_positionals=$((''${#codex_arguments[@]} - codex_index - 1))
-                if [ $((codex_prompt_command + codex_remaining_positionals)) -gt 1 ]; then
-                  codex_recognized=0
-                else
-                  codex_manage=1
-                fi
+                codex_index="''${#codex_arguments[@]}"
                 break
                 ;;
               -h | --help | -V | --version)
-                codex_recognized=0
+                codex_scan_ok=0
                 break
                 ;;
-              -c | --config | -m | --model | --local-provider | --remote | \
-              --remote-auth-token-env | --enable | --disable)
-                if [ $((codex_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                  || codex_value_looks_like_option \
-                    "''${codex_arguments[$((codex_index + 1))]}"; then
-                  codex_recognized=0
+              -p | --profile | --profile=* | -p=* | -p?*)
+                codex_profile_scope=root
+                if ! codex_scan_profile_at; then
+                  codex_scan_ok=0
                   break
                 fi
-                codex_index=$((codex_index + 2))
-                continue
-                ;;
-              -C | --cd | --add-dir)
-                if [ $((codex_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                  || [ -z "''${codex_arguments[$((codex_index + 1))]}" ] \
-                  || codex_value_looks_like_option \
-                    "''${codex_arguments[$((codex_index + 1))]}"; then
-                  codex_recognized=0
-                  break
-                fi
-                codex_index=$((codex_index + 2))
-                continue
-                ;;
-              -s | --sandbox)
-                if [ $((codex_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                  || codex_value_looks_like_option \
-                    "''${codex_arguments[$((codex_index + 1))]}" \
-                  || ! codex_sandbox_value_is_valid \
-                    "''${codex_arguments[$((codex_index + 1))]}"; then
-                  codex_recognized=0
-                  break
-                fi
-                codex_index=$((codex_index + 2))
-                continue
-                ;;
-              -a | --ask-for-approval)
-                if [ $((codex_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                  || codex_value_looks_like_option \
-                    "''${codex_arguments[$((codex_index + 1))]}" \
-                  || ! codex_approval_value_is_valid \
-                    "''${codex_arguments[$((codex_index + 1))]}"; then
-                  codex_recognized=0
-                  break
-                fi
-                codex_index=$((codex_index + 2))
-                continue
-                ;;
-              -p | --profile)
-                if [ $((codex_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                  || codex_value_looks_like_option \
-                    "''${codex_arguments[$((codex_index + 1))]}" \
-                  || ! codex_profile_name_is_valid \
-                    "''${codex_arguments[$((codex_index + 1))]}"; then
-                  codex_recognized=0
-                  break
-                fi
-                codex_profile_conflict=1
-                codex_index=$((codex_index + 2))
                 continue
                 ;;
               -i | --image)
                 codex_index=$((codex_index + 1))
-                if [ "$codex_index" -ge "''${#codex_arguments[@]}" ] \
-                  || [ -z "''${codex_arguments[$codex_index]}" ] \
-                  || codex_value_looks_like_option \
-                    "''${codex_arguments[$codex_index]}"; then
-                  codex_recognized=0
-                  break
-                fi
-                while [ "$codex_index" -lt "''${#codex_arguments[@]}" ] \
-                  && ! codex_value_looks_like_option \
-                    "''${codex_arguments[$codex_index]}"; do
-                  if ! codex_image_value_is_valid \
-                    "''${codex_arguments[$codex_index]}"; then
-                    codex_recognized=0
-                    break
-                  fi
+                codex_image_count=0
+                while [ "$codex_index" -lt "''${#codex_arguments[@]}" ]; do
+                  codex_option_value="''${codex_arguments[$codex_index]}"
+                  case "$codex_option_value" in
+                    -) ;;
+                    -*) break ;;
+                  esac
+                  codex_image_count=$((codex_image_count + 1))
                   codex_index=$((codex_index + 1))
                 done
-                [ "$codex_recognized" -eq 1 ] || break
-                continue
-                ;;
-              --config= | -c= | --model= | -m= | --local-provider= | \
-              --remote= | --remote-auth-token-env= | --enable= | --disable=)
-                codex_index=$((codex_index + 1))
-                continue
-                ;;
-              --sandbox= | -s= | --cd= | -C= | --add-dir= | \
-              --ask-for-approval= | -a= | --image= | -i=)
-                codex_recognized=0
-                break
-                ;;
-              --sandbox=*)
-                codex_option_value="''${codex_argument#--sandbox=}"
-                if ! codex_sandbox_value_is_valid "$codex_option_value"; then
-                  codex_recognized=0
+                if [ "$codex_image_count" -eq 0 ]; then
+                  codex_scan_ok=0
                   break
                 fi
-                codex_index=$((codex_index + 1))
                 continue
                 ;;
-              -s?*)
-                codex_option_value="''${codex_argument#-s}"
-                codex_option_value="''${codex_option_value#=}"
-                if ! codex_sandbox_value_is_valid "$codex_option_value"; then
-                  codex_recognized=0
+              -c | --config | --enable | --disable | --remote | \
+              --remote-auth-token-env | -m | --model | --local-provider | \
+              -s | --sandbox | -C | --cd | --add-dir | \
+              -a | --ask-for-approval)
+                if [ $((codex_index + 1)) -ge "''${#codex_arguments[@]}" ]; then
+                  codex_scan_ok=0
                   break
                 fi
-                codex_index=$((codex_index + 1))
-                continue
-                ;;
-              --ask-for-approval=*)
-                codex_option_value="''${codex_argument#--ask-for-approval=}"
-                if ! codex_approval_value_is_valid "$codex_option_value"; then
-                  codex_recognized=0
-                  break
-                fi
-                codex_index=$((codex_index + 1))
-                continue
-                ;;
-              -a?*)
-                codex_option_value="''${codex_argument#-a}"
-                codex_option_value="''${codex_option_value#=}"
-                if ! codex_approval_value_is_valid "$codex_option_value"; then
-                  codex_recognized=0
-                  break
-                fi
-                codex_index=$((codex_index + 1))
-                continue
-                ;;
-              --config=?* | -c?* | --model=?* | -m?* | --local-provider=?*)
-                codex_index=$((codex_index + 1))
-                continue
-                ;;
-              --image=?* | -i?*)
-                case "$codex_argument" in
-                  --image=*) codex_image_value="''${codex_argument#--image=}" ;;
-                  *)
-                    codex_image_value="''${codex_argument#-i}"
-                    codex_image_value="''${codex_image_value#=}"
+                codex_option_value="''${codex_arguments[$((codex_index + 1))]}"
+                case "$codex_option_value" in
+                  -) ;;
+                  -*)
+                    codex_scan_ok=0
+                    break
                     ;;
                 esac
-                if ! codex_image_value_is_valid "$codex_image_value"; then
-                  codex_recognized=0
-                  break
-                fi
-                codex_index=$((codex_index + 1))
+                [ "$codex_scan_ok" -eq 1 ] || break
+                codex_index=$((codex_index + 2))
                 continue
                 ;;
-              --cd=?* | -C?* | --add-dir=?* | --remote=?* | \
-              --remote-auth-token-env=?* | --enable=?* | --disable=?*)
-                codex_index=$((codex_index + 1))
-                continue
-                ;;
-              --profile=*)
-                codex_profile_value="''${codex_argument#--profile=}"
-                if ! codex_profile_name_is_valid "$codex_profile_value"; then
-                  codex_recognized=0
-                  break
-                fi
-                codex_profile_conflict=1
-                codex_index=$((codex_index + 1))
-                continue
-                ;;
-              -p=*)
-                codex_profile_value="''${codex_argument#-p=}"
-                if ! codex_profile_name_is_valid "$codex_profile_value"; then
-                  codex_recognized=0
-                  break
-                fi
-                codex_profile_conflict=1
-                codex_index=$((codex_index + 1))
-                continue
-                ;;
-              -p?*)
-                codex_profile_value="''${codex_argument#-p}"
-                if ! codex_profile_name_is_valid "$codex_profile_value"; then
-                  codex_recognized=0
-                  break
-                fi
-                codex_profile_conflict=1
-                codex_index=$((codex_index + 1))
-                continue
-                ;;
-              --oss | --dangerously-bypass-approvals-and-sandbox | --yolo | \
-              --dangerously-bypass-hook-trust | --search | --no-alt-screen | \
-              --strict-config)
+              --config=* | -c?* | --enable=* | --disable=* | \
+              --remote=* | --remote-auth-token-env=* | --model=* | -m?* | \
+              --local-provider=* | --sandbox=* | -s?* | --cd=* | -C?* | \
+              --add-dir=* | --ask-for-approval=* | -a?* | \
+              --image=* | -i?* | --strict-config | --oss | \
+              --dangerously-bypass-approvals-and-sandbox | --yolo | \
+              --dangerously-bypass-hook-trust | --search | --no-alt-screen)
                 codex_index=$((codex_index + 1))
                 continue
                 ;;
               -)
-                if [ "$codex_prompt_command" -eq 1 ]; then
-                  codex_recognized=0
-                  break
-                fi
-                codex_command="$codex_argument"
-                codex_command_index=$codex_index
-                codex_manage=1
-                codex_prompt_command=1
                 codex_index=$((codex_index + 1))
                 continue
                 ;;
               -*)
-                codex_recognized=0
+                codex_scan_ok=0
                 break
                 ;;
               *)
-                if [ "$codex_prompt_command" -eq 1 ]; then
-                  codex_recognized=0
-                  break
-                fi
-                codex_command="$codex_argument"
-                codex_command_index=$codex_index
-                case "$codex_command" in
-                  exec | e | review | resume | archive | delete | unarchive | fork | sandbox)
-                    codex_manage=1
-                    ;;
-                  debug)
-                    codex_debug_index=$((codex_index + 1))
-                    codex_debug_command_index=-1
-                    while [ "$codex_debug_index" -lt "''${#codex_arguments[@]}" ]; do
-                      codex_debug_argument="''${codex_arguments[$codex_debug_index]}"
-                      case "$codex_debug_argument" in
-                        -c | --config | --enable | --disable)
-                          if [ $((codex_debug_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                            || codex_value_looks_like_option \
-                              "''${codex_arguments[$((codex_debug_index + 1))]}"; then
-                            codex_recognized=0
-                            break
-                          fi
-                          codex_debug_index=$((codex_debug_index + 2))
-                          ;;
-                        --config=* | -c?* | --enable=* | --disable=*)
-                          codex_debug_index=$((codex_debug_index + 1))
-                          ;;
-                        prompt-input)
-                          codex_manage=1
-                          codex_debug_command_index=$codex_debug_index
-                          break
-                          ;;
-                        *) break ;;
-                      esac
-                    done
-                    ;;
-                  login | logout | mcp | plugin | mcp-server | app-server | \
-                  remote-control${codexAppCommandCase} | completion | update | doctor | execpolicy | \
-                  apply | a | cloud | cloud-tasks | responses-api-proxy | \
-                  stdio-to-uds | exec-server | features | help)
+                case "$codex_argument" in
+                  exec | e | review | login | logout | mcp | plugin | \
+                  mcp-server | app-server | remote-control | completion | \
+                  update | doctor | sandbox | debug | execpolicy | apply | a | \
+                  resume | archive | delete | unarchive | fork | cloud | \
+                  cloud-tasks | responses-api-proxy | stdio-to-uds | \
+                  exec-server | features | help${codexAppCommandCase})
+                    codex_command="$codex_argument"
+                    codex_command_index=$codex_index
+                    break
                     ;;
                   *)
-                    codex_manage=1
-                    codex_prompt_command=1
                     codex_index=$((codex_index + 1))
                     continue
                     ;;
                 esac
-                break
                 ;;
             esac
           done
 
-          if [ "$codex_root_approval_seen" -eq 1 ] \
-            && [ "$codex_root_bypass_seen" -eq 1 ]; then
-            codex_recognized=0
-          fi
-
-          case "$codex_command" in
-            sandbox | debug)
-              [ "$codex_root_strict_seen" -eq 0 ] || codex_recognized=0
-              ;;
-          esac
-          case "$codex_command" in
-            exec | e | review | sandbox | debug)
-              if [ "$codex_root_remote_seen" -eq 1 ] \
-                || [ "$codex_root_remote_auth_seen" -eq 1 ]; then
-                codex_recognized=0
-              fi
-              ;;
-          esac
-
-          if [ "$codex_recognized" -eq 1 ] && [ "$codex_command_index" -eq -1 ] \
-            && [ "$codex_index" -ge "''${#codex_arguments[@]}" ]; then
-            codex_manage=1
-          fi
-
-          if [ "$codex_recognized" -eq 1 ] && [ "$codex_manage" -eq 1 ]; then
-            codex_scan_profiles=1
-            codex_generic_command=0
-            codex_scan_index=$((codex_command_index + 1))
-            case "$codex_command" in
-              debug | review) codex_scan_profiles=0 ;;
-              exec | e | resume | archive | delete | unarchive | fork)
-                codex_generic_command=1
-                codex_generic_positionals=0
-                codex_generic_last=0
-                codex_generic_approval_seen=0
-                codex_generic_bypass_seen=0
-                codex_generic_full_auto_seen=0
-                codex_seen_options=
-                ;;
-            esac
-
-            if [ "$codex_command" = sandbox ]; then
-              codex_sandbox_state_json=0
-              codex_sandbox_readable_root=0
-              codex_sandbox_disable_network=0
-              codex_sandbox_permission_profile=0
-              codex_sandbox_cwd=0
-              codex_sandbox_include_managed=0
-              codex_sandbox_log_denials=0
-              codex_sandbox_profile=0
-            fi
-
-            if [ "$codex_scan_profiles" -eq 1 ]; then
-              while [ "$codex_scan_index" -lt "''${#codex_arguments[@]}" ]; do
-                codex_argument="''${codex_arguments[$codex_scan_index]}"
-
-                if [ "$codex_generic_command" -eq 1 ]; then
-                  codex_option_key=
-                  case "$codex_argument" in
-                    -m | --model | -m?* | --model=*) codex_option_key=model ;;
-                    --local-provider | --local-provider=*) codex_option_key=local-provider ;;
-                    -s | --sandbox | -s?* | --sandbox=*) codex_option_key=sandbox ;;
-                    -a | --ask-for-approval | -a?* | --ask-for-approval=*)
-                      codex_option_key=approval
-                      ;;
-                    -C | --cd | -C?* | --cd=*) codex_option_key=cd ;;
-                    --remote | --remote=*) codex_option_key=remote ;;
-                    --remote-auth-token-env | --remote-auth-token-env=*)
-                      codex_option_key=remote-auth
-                      ;;
-                    -p | --profile | -p?* | --profile=*) codex_option_key=profile ;;
-                    --oss) codex_option_key=oss ;;
-                    --dangerously-bypass-approvals-and-sandbox | --yolo)
-                      codex_option_key=bypass
-                      ;;
-                    --dangerously-bypass-hook-trust) codex_option_key=hook-trust ;;
-                    --strict-config) codex_option_key=strict ;;
-                    --color | --color=*) codex_option_key=color ;;
-                    --output-schema | --output-schema=*) codex_option_key=output-schema ;;
-                    -o | --output-last-message | -o?* | --output-last-message=*)
-                      codex_option_key=output-last
-                      ;;
-                    --last) codex_option_key=last ;;
-                    --all) codex_option_key=all ;;
-                    --include-non-interactive) codex_option_key=include-non-interactive ;;
-                    --search) codex_option_key=search ;;
-                    --no-alt-screen) codex_option_key=no-alt-screen ;;
-                    --force) codex_option_key=force ;;
-                    --skip-git-repo-check) codex_option_key=skip-git ;;
-                    --ephemeral) codex_option_key=ephemeral ;;
-                    --ignore-user-config) codex_option_key=ignore-user-config ;;
-                    --ignore-rules) codex_option_key=ignore-rules ;;
-                    --json | --experimental-json) codex_option_key=json ;;
-                    --full-auto) codex_option_key=full-auto ;;
-                  esac
-                  if [ -n "$codex_option_key" ] \
-                    && ! codex_mark_option_once "$codex_option_key"; then
-                    codex_recognized=0
-                    break
-                  fi
-                  case "$codex_option_key" in
-                    remote) codex_child_remote_seen=1 ;;
-                    remote-auth) codex_child_remote_auth_seen=1 ;;
-                  esac
-                  case "$codex_argument" in
-                    --)
-                      codex_generic_positionals=$((
-                        codex_generic_positionals
-                        + ''${#codex_arguments[@]}
-                        - codex_scan_index
-                        - 1
-                      ))
-                      break
-                      ;;
-                    -h | --help | -V | --version)
-                      codex_recognized=0
-                      break
-                      ;;
-                    -c | --config | --enable | --disable | -m | --model | \
-                    --local-provider)
-                      if [ $((codex_scan_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                        || codex_value_looks_like_option \
-                          "''${codex_arguments[$((codex_scan_index + 1))]}"; then
-                        codex_recognized=0
+          if [ "$codex_scan_ok" -eq 1 ]; then
+            if [ "$codex_command_index" -eq -1 ]; then
+              codex_route=manage
+            else
+              case "$codex_command" in
+                exec | e)
+                  codex_route=manage
+                  codex_index=$((codex_command_index + 1))
+                  while [ "$codex_index" -lt "''${#codex_arguments[@]}" ]; do
+                    codex_argument="''${codex_arguments[$codex_index]}"
+                    case "$codex_argument" in
+                      --)
                         break
-                      fi
-                      codex_scan_index=$((codex_scan_index + 2))
-                      continue
-                      ;;
-                    -C | --cd | --add-dir)
-                      if [ $((codex_scan_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                        || [ -z "''${codex_arguments[$((codex_scan_index + 1))]}" ] \
-                        || codex_value_looks_like_option \
-                          "''${codex_arguments[$((codex_scan_index + 1))]}"; then
-                        codex_recognized=0
+                        ;;
+                      -h | --help | -V | --version)
+                        codex_scan_ok=0
                         break
-                      fi
-                      codex_scan_index=$((codex_scan_index + 2))
-                      continue
-                      ;;
-                    --remote | --remote-auth-token-env)
-                      case "$codex_command" in
-                        exec | e)
-                          codex_recognized=0
-                          break
-                          ;;
-                      esac
-                      if [ $((codex_scan_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                        || codex_value_looks_like_option \
-                          "''${codex_arguments[$((codex_scan_index + 1))]}"; then
-                        codex_recognized=0
-                        break
-                      fi
-                      codex_scan_index=$((codex_scan_index + 2))
-                      continue
-                      ;;
-                    -s | --sandbox)
-                      if [ $((codex_scan_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                        || ! codex_sandbox_value_is_valid \
-                          "''${codex_arguments[$((codex_scan_index + 1))]}"; then
-                        codex_recognized=0
-                        break
-                      fi
-                      codex_scan_index=$((codex_scan_index + 2))
-                      continue
-                      ;;
-                    -a | --ask-for-approval)
-                      case "$codex_command" in
-                        resume | fork) ;;
-                        *)
-                          codex_recognized=0
-                          break
-                          ;;
-                      esac
-                      if [ $((codex_scan_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                        || ! codex_approval_value_is_valid \
-                          "''${codex_arguments[$((codex_scan_index + 1))]}"; then
-                        codex_recognized=0
-                        break
-                      fi
-                      codex_generic_approval_seen=1
-                      codex_scan_index=$((codex_scan_index + 2))
-                      continue
-                      ;;
-                    -p | --profile)
-                      if [ $((codex_scan_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                        || codex_value_looks_like_option \
-                          "''${codex_arguments[$((codex_scan_index + 1))]}" \
-                        || ! codex_profile_name_is_valid \
-                          "''${codex_arguments[$((codex_scan_index + 1))]}"; then
-                        codex_recognized=0
-                        break
-                      fi
-                      codex_profile_conflict=1
-                      codex_scan_index=$((codex_scan_index + 2))
-                      continue
-                      ;;
-                    -i | --image)
-                      codex_scan_index=$((codex_scan_index + 1))
-                      if [ "$codex_scan_index" -ge "''${#codex_arguments[@]}" ] \
-                        || [ -z "''${codex_arguments[$codex_scan_index]}" ] \
-                        || codex_value_looks_like_option \
-                          "''${codex_arguments[$codex_scan_index]}"; then
-                        codex_recognized=0
-                        break
-                      fi
-                      while [ "$codex_scan_index" -lt "''${#codex_arguments[@]}" ] \
-                        && ! codex_value_looks_like_option \
-                          "''${codex_arguments[$codex_scan_index]}"; do
-                        if ! codex_image_value_is_valid \
-                          "''${codex_arguments[$codex_scan_index]}"; then
-                          codex_recognized=0
+                        ;;
+                      -p | --profile | --profile=* | -p=* | -p?*)
+                        codex_profile_scope=local
+                        if ! codex_scan_profile_at; then
+                          codex_scan_ok=0
                           break
                         fi
-                        codex_scan_index=$((codex_scan_index + 1))
-                      done
-                      [ "$codex_recognized" -eq 1 ] || break
-                      continue
-                      ;;
-                    --color | --output-schema | -o | --output-last-message)
-                      case "$codex_command" in
-                        exec | e) ;;
-                        *)
-                          codex_recognized=0
+                        continue
+                        ;;
+                      --ignore-user-config)
+                        codex_ignore_user_config=1
+                        codex_index=$((codex_index + 1))
+                        continue
+                        ;;
+                      -i | --image)
+                        codex_index=$((codex_index + 1))
+                        codex_image_count=0
+                        while [ "$codex_index" -lt "''${#codex_arguments[@]}" ]; do
+                          codex_option_value="''${codex_arguments[$codex_index]}"
+                          case "$codex_option_value" in
+                            -) ;;
+                            -*) break ;;
+                          esac
+                          codex_image_count=$((codex_image_count + 1))
+                          codex_index=$((codex_index + 1))
+                        done
+                        if [ "$codex_image_count" -eq 0 ]; then
+                          codex_scan_ok=0
                           break
-                          ;;
-                      esac
-                      if [ $((codex_scan_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                        || [ -z "''${codex_arguments[$((codex_scan_index + 1))]}" ] \
-                        || codex_value_looks_like_option \
-                          "''${codex_arguments[$((codex_scan_index + 1))]}"; then
-                        codex_recognized=0
-                        break
-                      fi
-                      if [ "$codex_argument" = --color ]; then
-                        case "''${codex_arguments[$((codex_scan_index + 1))]}" in
-                          always | never | auto) ;;
-                          *)
-                            codex_recognized=0
+                        fi
+                        continue
+                        ;;
+                      -c | --config | --enable | --disable | -m | --model | \
+                      --local-provider | -s | --sandbox | -C | --cd | \
+                      --add-dir | --output-schema | --color | -o | \
+                      --output-last-message)
+                        if [ $((codex_index + 1)) -ge "''${#codex_arguments[@]}" ]; then
+                          codex_scan_ok=0
+                          break
+                        fi
+                        codex_option_value="''${codex_arguments[$((codex_index + 1))]}"
+                        case "$codex_option_value" in
+                          -) ;;
+                          -*)
+                            codex_scan_ok=0
                             break
                             ;;
                         esac
-                      fi
-                      codex_scan_index=$((codex_scan_index + 2))
-                      continue
-                      ;;
-                    --config=* | -c?* | --enable=* | --disable=* | \
-                    --model=* | -m?* | --local-provider=*)
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    --cd= | -C= | --add-dir= | --image= | -i=)
-                      codex_recognized=0
-                      break
-                      ;;
-                    --image=?* | -i?*)
-                      case "$codex_argument" in
-                        --image=*) codex_image_value="''${codex_argument#--image=}" ;;
-                        *)
-                          codex_image_value="''${codex_argument#-i}"
-                          codex_image_value="''${codex_image_value#=}"
-                          ;;
-                      esac
-                      if ! codex_image_value_is_valid "$codex_image_value"; then
-                        codex_recognized=0
+                        [ "$codex_scan_ok" -eq 1 ] || break
+                        codex_index=$((codex_index + 2))
+                        continue
+                        ;;
+                      --config=* | -c?* | --enable=* | --disable=* | \
+                      --image=* | -i?* | --model=* | -m?* | \
+                      --local-provider=* | --sandbox=* | -s?* | --cd=* | \
+                      -C?* | --add-dir=* | --output-schema=* | --color=* | \
+                      --output-last-message=* | -o?* | --oss | \
+                      --dangerously-bypass-approvals-and-sandbox | --yolo | \
+                      --dangerously-bypass-hook-trust | --strict-config | \
+                      --skip-git-repo-check | --ephemeral | \
+                      --ignore-rules | --json | \
+                      --experimental-json | --full-auto)
+                        codex_index=$((codex_index + 1))
+                        continue
+                        ;;
+                      -)
+                        codex_index=$((codex_index + 1))
+                        continue
+                        ;;
+                      -?*)
+                        codex_scan_ok=0
                         break
-                      fi
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    --cd=?* | -C?* | --add-dir=?*)
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    --remote=* | --remote-auth-token-env=*)
-                      case "$codex_command" in
-                        exec | e) codex_recognized=0 ;;
-                      esac
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    --sandbox=*)
-                      codex_option_value="''${codex_argument#--sandbox=}"
-                      if ! codex_sandbox_value_is_valid "$codex_option_value"; then
-                        codex_recognized=0
-                        break
-                      fi
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    -s?*)
-                      codex_option_value="''${codex_argument#-s}"
-                      codex_option_value="''${codex_option_value#=}"
-                      if ! codex_sandbox_value_is_valid "$codex_option_value"; then
-                        codex_recognized=0
-                        break
-                      fi
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    --ask-for-approval=* | -a?*)
-                      case "$codex_command" in
-                        resume | fork) ;;
-                        *)
-                          codex_recognized=0
-                          break
-                          ;;
-                      esac
-                      case "$codex_argument" in
-                        --ask-for-approval=*)
-                          codex_option_value="''${codex_argument#--ask-for-approval=}"
-                          ;;
-                        *)
-                          codex_option_value="''${codex_argument#-a}"
-                          codex_option_value="''${codex_option_value#=}"
-                          ;;
-                      esac
-                      if ! codex_approval_value_is_valid "$codex_option_value"; then
-                        codex_recognized=0
-                        break
-                      fi
-                      codex_generic_approval_seen=1
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    --profile=* | -p=* | -p?*)
-                      case "$codex_argument" in
-                        --profile=*) codex_profile_value="''${codex_argument#--profile=}" ;;
-                        -p=*) codex_profile_value="''${codex_argument#-p=}" ;;
-                        *) codex_profile_value="''${codex_argument#-p}" ;;
-                      esac
-                      if ! codex_profile_name_is_valid "$codex_profile_value"; then
-                        codex_recognized=0
-                        break
-                      fi
-                      codex_profile_conflict=1
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    --color=*)
-                      case "$codex_command:$codex_argument" in
-                        exec:--color=always | exec:--color=never | exec:--color=auto | \
-                        e:--color=always | e:--color=never | e:--color=auto) ;;
-                        *) codex_recognized=0 ;;
-                      esac
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    --output-schema= | -o= | --output-last-message=)
-                      codex_recognized=0
-                      break
-                      ;;
-                    --output-schema=?* | -o?* | --output-last-message=?*)
-                      case "$codex_command" in
-                        exec | e) ;;
-                        *) codex_recognized=0 ;;
-                      esac
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    --oss | --dangerously-bypass-hook-trust | --strict-config)
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    --dangerously-bypass-approvals-and-sandbox | --yolo)
-                      codex_generic_bypass_seen=1
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    --last | --all)
-                      case "$codex_command" in
-                        resume | fork)
-                          [ "$codex_argument" != --last ] || codex_generic_last=1
-                          ;;
-                        *) codex_recognized=0 ;;
-                      esac
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    --include-non-interactive)
-                      [ "$codex_command" = resume ] || codex_recognized=0
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    --search | --no-alt-screen)
-                      case "$codex_command" in
-                        resume | fork) ;;
-                        *) codex_recognized=0 ;;
-                      esac
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    --force)
-                      [ "$codex_command" = delete ] || codex_recognized=0
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    --skip-git-repo-check | --ephemeral | --ignore-user-config | \
-                    --ignore-rules | --json | --experimental-json)
-                      case "$codex_command" in
-                        exec | e) ;;
-                        *) codex_recognized=0 ;;
-                      esac
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    --full-auto)
-                      case "$codex_command" in
-                        exec | e) codex_generic_full_auto_seen=1 ;;
-                        *) codex_recognized=0 ;;
-                      esac
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    -)
-                      codex_generic_positionals=$((codex_generic_positionals + 1))
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    -*)
-                      codex_recognized=0
-                      break
-                      ;;
-                    *)
-                      if { [ "$codex_command" = exec ] \
-                        || [ "$codex_command" = e ]; } \
-                        && [ "$codex_generic_positionals" -eq 0 ]; then
+                        ;;
+                      *)
                         case "$codex_argument" in
                           help)
-                            codex_recognized=0
+                            codex_scan_ok=0
                             break
                             ;;
                           resume | review)
-                            if ! codex_exec_nested_is_valid "$codex_argument" \
-                              $((codex_scan_index + 1)); then
-                              codex_recognized=0
-                            fi
-                            codex_scan_index="''${#codex_arguments[@]}"
+                            codex_index=$((codex_index + 1))
+                            while [ "$codex_index" -lt "''${#codex_arguments[@]}" ]; do
+                              codex_argument="''${codex_arguments[$codex_index]}"
+                              case "$codex_argument" in
+                                --) break ;;
+                                -h | --help | -V | --version)
+                                  codex_scan_ok=0
+                                  break
+                                  ;;
+                                --ignore-user-config)
+                                  codex_ignore_user_config=1
+                                  codex_index=$((codex_index + 1))
+                                  continue
+                                  ;;
+                                -p | --profile | --profile=* | -p=* | -p?*)
+                                  codex_route=delegate
+                                  break
+                                  ;;
+                                *)
+                                  codex_index=$((codex_index + 1))
+                                  ;;
+                              esac
+                            done
                             break
                             ;;
                         esac
-                      fi
-                      codex_generic_positionals=$((codex_generic_positionals + 1))
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                  esac
-                fi
-
-                [ "$codex_argument" != -- ] || break
-
-                if [ "$codex_command" = sandbox ]; then
-                  if [ "$codex_argument" = --log-denials ]; then
-                    codex_sandbox_log_denials=$((codex_sandbox_log_denials + 1))
-                  fi
-                  case "$codex_argument" in
-                    --sandbox-state-json | --sandbox-state-json=*)
-                      codex_sandbox_state_json=$((codex_sandbox_state_json + 1))
-                      ;;
-                    --sandbox-state-readable-root | --sandbox-state-readable-root=*)
-                      codex_sandbox_readable_root=1
-                      ;;
-                    --sandbox-state-disable-network)
-                      codex_sandbox_disable_network=$((codex_sandbox_disable_network + 1))
-                      ;;
-                    --permission-profile | --permissions-profile | -P | \
-                    --permission-profile=* | --permissions-profile=* | -P?*)
-                      codex_sandbox_permission_profile=$((codex_sandbox_permission_profile + 1))
-                      ;;
-                    -C | --cd | -C?* | --cd=*)
-                      codex_sandbox_cwd=$((codex_sandbox_cwd + 1))
-                      ;;
-                    --include-managed-config)
-                      codex_sandbox_include_managed=$((codex_sandbox_include_managed + 1))
-                      ;;
-                  esac
-                fi
-
-                case "$codex_argument" in
-                  -p | --profile)
-                    if [ "$codex_command" = sandbox ]; then
-                      codex_sandbox_profile=$((codex_sandbox_profile + 1))
-                      if [ "$codex_sandbox_profile" -gt 1 ]; then
-                        codex_recognized=0
-                        break
-                      fi
-                    fi
-                    if [ $((codex_scan_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                      || codex_value_looks_like_option \
-                        "''${codex_arguments[$((codex_scan_index + 1))]}" \
-                      || ! codex_profile_name_is_valid \
-                        "''${codex_arguments[$((codex_scan_index + 1))]}"; then
-                      codex_recognized=0
-                      break
-                    fi
-                    codex_profile_conflict=1
-                    if [ "$codex_command" = sandbox ]; then
-                      codex_scan_index=$((codex_scan_index + 2))
-                      continue
-                    fi
-                    ;;
-                  --profile=*)
-                    if [ "$codex_command" = sandbox ]; then
-                      codex_sandbox_profile=$((codex_sandbox_profile + 1))
-                      if [ "$codex_sandbox_profile" -gt 1 ]; then
-                        codex_recognized=0
-                        break
-                      fi
-                    fi
-                    codex_profile_value="''${codex_argument#--profile=}"
-                    if ! codex_profile_name_is_valid "$codex_profile_value"; then
-                      codex_recognized=0
-                      break
-                    fi
-                    codex_profile_conflict=1
-                    if [ "$codex_command" = sandbox ]; then
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                    fi
-                    ;;
-                  -p=*)
-                    if [ "$codex_command" = sandbox ]; then
-                      codex_sandbox_profile=$((codex_sandbox_profile + 1))
-                      if [ "$codex_sandbox_profile" -gt 1 ]; then
-                        codex_recognized=0
-                        break
-                      fi
-                    fi
-                    codex_profile_value="''${codex_argument#-p=}"
-                    if ! codex_profile_name_is_valid "$codex_profile_value"; then
-                      codex_recognized=0
-                      break
-                    fi
-                    codex_profile_conflict=1
-                    if [ "$codex_command" = sandbox ]; then
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                    fi
-                    ;;
-                  -p?*)
-                    if [ "$codex_command" = sandbox ]; then
-                      codex_sandbox_profile=$((codex_sandbox_profile + 1))
-                      if [ "$codex_sandbox_profile" -gt 1 ]; then
-                        codex_recognized=0
-                        break
-                      fi
-                    fi
-                    codex_profile_value="''${codex_argument#-p}"
-                    if ! codex_profile_name_is_valid "$codex_profile_value"; then
-                      codex_recognized=0
-                      break
-                    fi
-                    codex_profile_conflict=1
-                    if [ "$codex_command" = sandbox ]; then
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                    fi
-                    ;;
-                esac
-
-                if [ "$codex_command" = sandbox ]; then
-                  case "$codex_argument" in
-                    -p | --profile | --profile=* | -p=* | -p?*) ;;
-                    --sandbox-state-json | --sandbox-state-readable-root | \
-                    --permission-profile | --permissions-profile | -P | \
-                    -c | --config | --enable | --disable${codexSandboxDarwinValueCase})
-                      if [ $((codex_scan_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                        || codex_value_looks_like_option \
-                          "''${codex_arguments[$((codex_scan_index + 1))]}"; then
-                        codex_recognized=0
-                        break
-                      fi
-                      codex_scan_index=$((codex_scan_index + 2))
-                      continue
-                      ;;
-                    -C | --cd)
-                      if [ $((codex_scan_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                        || [ -z "''${codex_arguments[$((codex_scan_index + 1))]}" ] \
-                        || codex_value_looks_like_option \
-                          "''${codex_arguments[$((codex_scan_index + 1))]}"; then
-                        codex_recognized=0
-                        break
-                      fi
-                      codex_scan_index=$((codex_scan_index + 2))
-                      continue
-                      ;;
-                    --sandbox-state-json= | --sandbox-state-readable-root= | \
-                    --permission-profile= | --permissions-profile= | -P= | \
-                    --config= | -c= | --enable= | --disable=${codexSandboxDarwinEmptyCase})
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    -C= | --cd=)
-                      codex_recognized=0
-                      break
-                      ;;
-                    --sandbox-state-json=?* | --sandbox-state-readable-root=?* | \
-                    --permission-profile=?* | --permissions-profile=?* | -P?* | \
-                    -C?* | --cd=?* | --config=?* | -c?* | \
-                    --enable=?* | --disable=?* | --sandbox-state-disable-network | \
-                    --include-managed-config${codexSandboxDarwinAttachedCase}${codexSandboxDarwinFlagCase})
-                      codex_scan_index=$((codex_scan_index + 1))
-                      continue
-                      ;;
-                    -) break ;;
-                    -*)
-                      codex_recognized=0
-                      break
-                      ;;
-                    *) break ;;
-                  esac
-                fi
-                codex_scan_index=$((codex_scan_index + 1))
-              done
-
-              if [ "$codex_generic_command" -eq 1 ] \
-                && [ "$codex_recognized" -eq 1 ]; then
-                case "$codex_command" in
-                  exec | e)
-                    [ "$codex_generic_positionals" -le 1 ] || codex_recognized=0
-                    ;;
-                  resume | fork)
-                    [ "$codex_generic_positionals" -le 2 ] || codex_recognized=0
-                    if [ "$codex_generic_last" -eq 1 ] \
-                      && [ "$codex_generic_positionals" -gt 1 ]; then
-                      codex_recognized=0
-                    fi
-                    ;;
-                  archive | delete | unarchive)
-                    [ "$codex_generic_positionals" -eq 1 ] || codex_recognized=0
-                    ;;
-                esac
-                if [ "$codex_generic_approval_seen" -eq 1 ] \
-                  && [ "$codex_generic_bypass_seen" -eq 1 ]; then
-                  codex_recognized=0
-                fi
-                if [ "$codex_generic_full_auto_seen" -eq 1 ] \
-                  && [ "$codex_generic_bypass_seen" -eq 1 ]; then
-                  codex_recognized=0
-                fi
-              elif [ "$codex_command" = sandbox ] \
-                && [ "$codex_recognized" -eq 1 ]; then
-                if [ "$codex_sandbox_state_json" -gt 1 ] \
-                  || [ "$codex_sandbox_disable_network" -gt 1 ] \
-                  || [ "$codex_sandbox_permission_profile" -gt 1 ] \
-                  || [ "$codex_sandbox_cwd" -gt 1 ] \
-                  || [ "$codex_sandbox_include_managed" -gt 1 ] \
-                  || [ "$codex_sandbox_log_denials" -gt 1 ]; then
-                  codex_recognized=0
-                elif { [ "$codex_sandbox_readable_root" -eq 1 ] \
-                  || [ "$codex_sandbox_disable_network" -eq 1 ]; } \
-                  && [ "$codex_sandbox_state_json" -eq 0 ]; then
-                  codex_recognized=0
-                elif { [ "$codex_sandbox_cwd" -eq 1 ] \
-                  || [ "$codex_sandbox_include_managed" -eq 1 ]; } \
-                  && [ "$codex_sandbox_permission_profile" -eq 0 ]; then
-                  codex_recognized=0
-                elif [ "$codex_sandbox_state_json" -eq 1 ] \
-                  && { [ "$codex_sandbox_permission_profile" -eq 1 ] \
-                    || [ "$codex_sandbox_cwd" -eq 1 ] \
-                    || [ "$codex_sandbox_include_managed" -eq 1 ]; }; then
-                  codex_recognized=0
-                fi
-              fi
-            else
-              case "$codex_command" in
-                debug) codex_child_index=$((codex_debug_command_index + 1)) ;;
-                review)
-                  codex_child_index=$((codex_command_index + 1))
-                  codex_review_uncommitted=0
-                  codex_review_base=0
-                  codex_review_commit=0
-                  codex_review_title=0
-                  codex_review_strict=0
+                        codex_index=$((codex_index + 1))
+                        continue
+                        ;;
+                    esac
+                  done
                   ;;
-              esac
-              codex_child_prompt_seen=0
-              while [ "$codex_child_index" -lt "''${#codex_arguments[@]}" ]; do
-                codex_argument="''${codex_arguments[$codex_child_index]}"
-                case "$codex_argument" in
-                  --)
-                    codex_child_remaining=$((''${#codex_arguments[@]} - codex_child_index - 1))
-                    if [ $((codex_child_prompt_seen + codex_child_remaining)) -gt 1 ]; then
-                      codex_recognized=0
-                    fi
-                    codex_child_prompt_seen=$((codex_child_prompt_seen + codex_child_remaining))
-                    break
-                    ;;
-                  -c | --config | --enable | --disable)
-                    if [ $((codex_child_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                      || codex_value_looks_like_option \
-                        "''${codex_arguments[$((codex_child_index + 1))]}"; then
-                      codex_recognized=0
-                      break
-                    fi
-                    codex_child_index=$((codex_child_index + 2))
-                    continue
-                    ;;
-                  --config=* | -c?* | --enable=* | --disable=*)
-                    codex_child_index=$((codex_child_index + 1))
-                    continue
-                    ;;
-                esac
-
-                if [ "$codex_command" = review ]; then
-                  case "$codex_argument" in
-                    --strict-config)
-                      codex_review_strict=$((codex_review_strict + 1))
-                      codex_child_index=$((codex_child_index + 1))
-                      continue
-                      ;;
-                    --uncommitted)
-                      codex_review_uncommitted=$((codex_review_uncommitted + 1))
-                      codex_child_index=$((codex_child_index + 1))
-                      continue
-                      ;;
-                    --base | --commit | --title)
-                      if [ $((codex_child_index + 1)) -ge "''${#codex_arguments[@]}" ] \
-                        || codex_value_looks_like_option \
-                          "''${codex_arguments[$((codex_child_index + 1))]}"; then
-                        codex_recognized=0
+                resume | fork | archive | delete | unarchive)
+                  codex_route=manage
+                  codex_index=$((codex_command_index + 1))
+                  while [ "$codex_index" -lt "''${#codex_arguments[@]}" ]; do
+                    codex_argument="''${codex_arguments[$codex_index]}"
+                    case "$codex_argument" in
+                      --) break ;;
+                      -h | --help | -V | --version)
+                        codex_scan_ok=0
                         break
-                      fi
-                      case "$codex_argument" in
-                        --base) codex_review_base=$((codex_review_base + 1)) ;;
-                        --commit) codex_review_commit=$((codex_review_commit + 1)) ;;
-                        --title) codex_review_title=$((codex_review_title + 1)) ;;
-                      esac
-                      codex_child_index=$((codex_child_index + 2))
-                      continue
-                      ;;
-                    --base=* | --commit=* | --title=*)
-                      case "$codex_argument" in
-                        --base=*) codex_review_base=$((codex_review_base + 1)) ;;
-                        --commit=*) codex_review_commit=$((codex_review_commit + 1)) ;;
-                        --title=*) codex_review_title=$((codex_review_title + 1)) ;;
-                      esac
-                      codex_child_index=$((codex_child_index + 1))
-                      continue
-                      ;;
-                  esac
-                else
-                  case "$codex_argument" in
-                    -i | --image)
-                      codex_child_index=$((codex_child_index + 1))
-                      if [ "$codex_child_index" -ge "''${#codex_arguments[@]}" ] \
-                        || [ -z "''${codex_arguments[$codex_child_index]}" ] \
-                        || codex_value_looks_like_option \
-                          "''${codex_arguments[$codex_child_index]}"; then
-                        codex_recognized=0
-                        break
-                      fi
-                      while [ "$codex_child_index" -lt "''${#codex_arguments[@]}" ] \
-                        && ! codex_value_looks_like_option \
-                          "''${codex_arguments[$codex_child_index]}"; do
-                        if ! codex_image_value_is_valid \
-                          "''${codex_arguments[$codex_child_index]}"; then
-                          codex_recognized=0
+                        ;;
+                      -p | --profile | --profile=* | -p=* | -p?*)
+                        codex_profile_scope=local
+                        if ! codex_scan_profile_at; then
+                          codex_scan_ok=0
                           break
                         fi
-                        codex_child_index=$((codex_child_index + 1))
-                      done
-                      [ "$codex_recognized" -eq 1 ] || break
-                      continue
-                      ;;
-                    --image= | -i=)
-                      codex_recognized=0
-                      break
-                      ;;
-                    --image=?* | -i?*)
-                      case "$codex_argument" in
-                        --image=*) codex_image_value="''${codex_argument#--image=}" ;;
-                        *)
-                          codex_image_value="''${codex_argument#-i}"
-                          codex_image_value="''${codex_image_value#=}"
-                          ;;
-                      esac
-                      if ! codex_image_value_is_valid "$codex_image_value"; then
-                        codex_recognized=0
+                        continue
+                        ;;
+                      -i | --image)
+                        codex_index=$((codex_index + 1))
+                        codex_image_count=0
+                        while [ "$codex_index" -lt "''${#codex_arguments[@]}" ]; do
+                          codex_option_value="''${codex_arguments[$codex_index]}"
+                          case "$codex_option_value" in
+                            -) ;;
+                            -*) break ;;
+                          esac
+                          codex_image_count=$((codex_image_count + 1))
+                          codex_index=$((codex_index + 1))
+                        done
+                        if [ "$codex_image_count" -eq 0 ]; then
+                          codex_scan_ok=0
+                          break
+                        fi
+                        continue
+                        ;;
+                      -c | --config | --enable | --disable | --remote | \
+                      --remote-auth-token-env | -m | --model | \
+                      --local-provider | -s | --sandbox | -C | --cd | \
+                      --add-dir | -a | --ask-for-approval)
+                        if [ $((codex_index + 1)) -ge "''${#codex_arguments[@]}" ]; then
+                          codex_scan_ok=0
+                          break
+                        fi
+                        codex_option_value="''${codex_arguments[$((codex_index + 1))]}"
+                        case "$codex_option_value" in
+                          -) ;;
+                          -*)
+                            codex_scan_ok=0
+                            break
+                            ;;
+                        esac
+                        [ "$codex_scan_ok" -eq 1 ] || break
+                        codex_index=$((codex_index + 2))
+                        continue
+                        ;;
+                      --config=* | -c?* | --enable=* | --disable=* | \
+                      --remote=* | --remote-auth-token-env=* | \
+                      --image=* | -i?* | --model=* | -m?* | \
+                      --local-provider=* | --sandbox=* | -s?* | --cd=* | \
+                      -C?* | --add-dir=* | --strict-config | --oss | \
+                      --dangerously-bypass-approvals-and-sandbox | --yolo | \
+                      --dangerously-bypass-hook-trust | \
+                      --ask-for-approval=* | -a?* | --search | --no-alt-screen | \
+                      --last | --all | --include-non-interactive | --force)
+                        codex_index=$((codex_index + 1))
+                        continue
+                        ;;
+                      -?*)
+                        codex_scan_ok=0
                         break
-                      fi
-                      codex_child_index=$((codex_child_index + 1))
-                      continue
-                      ;;
-                  esac
-                fi
-
-                case "$codex_argument" in
-                  -)
-                    if [ "$codex_child_prompt_seen" -eq 1 ]; then
-                      codex_recognized=0
-                      break
-                    fi
-                    codex_child_prompt_seen=1
-                    codex_child_index=$((codex_child_index + 1))
-                    ;;
-                  -*)
-                    codex_recognized=0
-                    break
-                    ;;
-                  *)
-                    if [ "$codex_child_prompt_seen" -eq 1 ]; then
-                      codex_recognized=0
-                      break
-                    fi
-                    codex_child_prompt_seen=1
-                    codex_child_index=$((codex_child_index + 1))
-                    ;;
-                esac
-              done
-
-              if [ "$codex_command" = review ] \
-                && [ "$codex_recognized" -eq 1 ]; then
-                codex_review_selectors=$((
-                  codex_review_uncommitted
-                  + codex_review_base
-                  + codex_review_commit
-                  + codex_child_prompt_seen
-                ))
-                if [ "$codex_review_selectors" -gt 1 ] \
-                  || [ "$codex_review_uncommitted" -gt 1 ] \
-                  || [ "$codex_review_base" -gt 1 ] \
-                  || [ "$codex_review_commit" -gt 1 ] \
-                  || [ "$codex_review_title" -gt 1 ] \
-                  || [ "$codex_review_strict" -gt 1 ] \
-                  || { [ "$codex_review_title" -eq 1 ] \
-                    && [ "$codex_review_commit" -eq 0 ]; }; then
-                  codex_recognized=0
-                fi
-              fi
+                        ;;
+                      *)
+                        codex_index=$((codex_index + 1))
+                        ;;
+                    esac
+                  done
+                  ;;
+                sandbox)
+                  codex_route=manage
+                  codex_index=$((codex_command_index + 1))
+                  while [ "$codex_index" -lt "''${#codex_arguments[@]}" ]; do
+                    codex_argument="''${codex_arguments[$codex_index]}"
+                    case "$codex_argument" in
+                      --) break ;;
+                      -h | --help | -V | --version)
+                        codex_scan_ok=0
+                        break
+                        ;;
+                      -p | --profile | --profile=* | -p=* | -p?*)
+                        codex_profile_scope=local
+                        if ! codex_scan_profile_at; then
+                          codex_scan_ok=0
+                          break
+                        fi
+                        continue
+                        ;;
+                      --sandbox-state-json | --sandbox-state-readable-root | \
+                      --permission-profile | --permissions-profile | -P | \
+                      -C | --cd | -c | --config | --enable | \
+                      --disable${codexSandboxDarwinValueCase})
+                        if [ $((codex_index + 1)) -ge "''${#codex_arguments[@]}" ]; then
+                          codex_scan_ok=0
+                          break
+                        fi
+                        codex_option_value="''${codex_arguments[$((codex_index + 1))]}"
+                        case "$codex_option_value" in
+                          -) ;;
+                          -*)
+                            codex_scan_ok=0
+                            break
+                            ;;
+                        esac
+                        [ "$codex_scan_ok" -eq 1 ] || break
+                        codex_index=$((codex_index + 2))
+                        continue
+                        ;;
+                      --sandbox-state-json=* | \
+                      --sandbox-state-readable-root=* | \
+                      --permission-profile=* | --permissions-profile=* | \
+                      -P?* | -C?* | --cd=* | --config=* | -c?* | \
+                      --enable=* | --disable=*${codexSandboxDarwinAttachedCase} | \
+                      --sandbox-state-disable-network | \
+                      --include-managed-config${codexSandboxDarwinFlagCase})
+                        codex_index=$((codex_index + 1))
+                        continue
+                        ;;
+                      -)
+                        break
+                        ;;
+                      -*)
+                        codex_scan_ok=0
+                        break
+                        ;;
+                      *)
+                        break
+                        ;;
+                    esac
+                  done
+                  ;;
+                review)
+                  codex_route=manage
+                  codex_index=$((codex_command_index + 1))
+                  while [ "$codex_index" -lt "''${#codex_arguments[@]}" ]; do
+                    codex_argument="''${codex_arguments[$codex_index]}"
+                    case "$codex_argument" in
+                      --) break ;;
+                      -h | --help | -V | --version)
+                        codex_scan_ok=0
+                        break
+                        ;;
+                      *)
+                        codex_index=$((codex_index + 1))
+                        ;;
+                    esac
+                  done
+                  ;;
+                mcp)
+                  codex_route=manage
+                  codex_mcp_command=
+                  codex_mcp_name_seen=0
+                  codex_index=$((codex_command_index + 1))
+                  while [ "$codex_index" -lt "''${#codex_arguments[@]}" ]; do
+                    codex_argument="''${codex_arguments[$codex_index]}"
+                    case "$codex_argument" in
+                      --)
+                        break
+                        ;;
+                      -h | --help | -V | --version)
+                        codex_scan_ok=0
+                        break
+                        ;;
+                      -c | --config | --enable | --disable | --env | --url | \
+                      --bearer-token-env-var | --oauth-client-id | \
+                      --oauth-resource | --scopes)
+                        if [ $((codex_index + 1)) -ge "''${#codex_arguments[@]}" ]; then
+                          codex_scan_ok=0
+                          break
+                        fi
+                        codex_option_value="''${codex_arguments[$((codex_index + 1))]}"
+                        case "$codex_option_value" in
+                          -) ;;
+                          -*)
+                            codex_scan_ok=0
+                            break
+                            ;;
+                        esac
+                        [ "$codex_scan_ok" -eq 1 ] || break
+                        codex_index=$((codex_index + 2))
+                        continue
+                        ;;
+                      --config=* | -c?* | --enable=* | --disable=* | \
+                      --env=* | --url=* | --bearer-token-env-var=* | \
+                      --oauth-client-id=* | --oauth-resource=* | --scopes=* | \
+                      --json)
+                        codex_index=$((codex_index + 1))
+                        continue
+                        ;;
+                      -?*)
+                        if [ "$codex_mcp_command" = add ] \
+                          && [ "$codex_mcp_name_seen" -eq 1 ]; then
+                          break
+                        fi
+                        codex_scan_ok=0
+                        break
+                        ;;
+                      *)
+                        if [ -z "$codex_mcp_command" ]; then
+                          if [ "$codex_argument" = help ]; then
+                            codex_scan_ok=0
+                            break
+                          fi
+                          codex_mcp_command="$codex_argument"
+                          codex_index=$((codex_index + 1))
+                          continue
+                        fi
+                        if [ "$codex_mcp_command" = add ]; then
+                          if [ "$codex_mcp_name_seen" -eq 0 ]; then
+                            codex_mcp_name_seen=1
+                            codex_index=$((codex_index + 1))
+                            continue
+                          fi
+                          # Add's first remaining positional starts the stdio
+                          # command payload; all later option-looking text belongs
+                          # to that command, including --help and -p.
+                          break
+                        fi
+                        codex_index=$((codex_index + 1))
+                        ;;
+                    esac
+                  done
+                  ;;
+                debug)
+                  codex_index=$((codex_command_index + 1))
+                  while [ "$codex_index" -lt "''${#codex_arguments[@]}" ]; do
+                    codex_argument="''${codex_arguments[$codex_index]}"
+                    case "$codex_argument" in
+                      -c | --config | --enable | --disable)
+                        if [ $((codex_index + 1)) -ge "''${#codex_arguments[@]}" ]; then
+                          codex_scan_ok=0
+                          break
+                        fi
+                        codex_option_value="''${codex_arguments[$((codex_index + 1))]}"
+                        case "$codex_option_value" in
+                          -) ;;
+                          -*)
+                            codex_scan_ok=0
+                            break
+                            ;;
+                        esac
+                        [ "$codex_scan_ok" -eq 1 ] || break
+                        codex_index=$((codex_index + 2))
+                        continue
+                        ;;
+                      --config=* | -c?* | --enable=* | --disable=*)
+                        codex_index=$((codex_index + 1))
+                        continue
+                        ;;
+                      prompt-input)
+                        codex_route=manage
+                        codex_index=$((codex_index + 1))
+                        while [ "$codex_index" -lt "''${#codex_arguments[@]}" ]; do
+                          codex_argument="''${codex_arguments[$codex_index]}"
+                          case "$codex_argument" in
+                            --) break ;;
+                            -h | --help | -V | --version)
+                              codex_scan_ok=0
+                              break
+                              ;;
+                            *)
+                              codex_index=$((codex_index + 1))
+                              ;;
+                          esac
+                        done
+                        break
+                        ;;
+                      *)
+                        codex_route=delegate
+                        break
+                        ;;
+                    esac
+                  done
+                  ;;
+                *)
+                  codex_route=delegate
+                  ;;
+              esac
             fi
+          fi
 
-            if [ "$codex_recognized" -eq 1 ] \
-              && { [ "$codex_root_remote_auth_seen" -eq 1 ] \
-                || [ "$codex_child_remote_auth_seen" -eq 1 ]; } \
-              && [ "$codex_root_remote_seen" -eq 0 ] \
-              && [ "$codex_child_remote_seen" -eq 0 ]; then
-              codex_recognized=0
+          if [ "$codex_scan_ok" -ne 1 ]; then
+            codex_route=delegate
+          fi
+          if [ "$codex_route" = manage ] \
+            && [ "$codex_ignore_user_config" -eq 1 ]; then
+            printf '%s\n' \
+              'codex: managed configuration conflicts with --ignore-user-config' >&2
+            exit 2
+          fi
+          if [ "$codex_route" = manage ]; then
+            if [ "$codex_root_profiles" -gt 1 ] \
+              || [ "$codex_local_profiles" -gt 1 ]; then
+              codex_route=delegate
+            elif [ $((codex_root_profiles + codex_local_profiles)) -gt 0 ]; then
+              codex_route=conflict
             fi
+          fi
 
-            if [ "$codex_recognized" -eq 1 ] \
-              && [ "$codex_profile_conflict" -eq 1 ]; then
+          case "$codex_route" in
+            conflict)
               printf '%s\n' \
                 'codex: managed configuration conflicts with a caller profile' >&2
               exit 2
-            fi
-            if [ "$codex_recognized" -eq 1 ]; then
+              ;;
+            manage)
               codex_prepare_runtime_profile
               codex_import_legacy_ref_api_key
               exec -a codex @codex_unwrapped@ --profile nix-runtime "$@"
-            fi
-          fi
+              ;;
+          esac
           ;;
       esac
     fi
