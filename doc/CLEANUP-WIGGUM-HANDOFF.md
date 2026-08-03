@@ -95,9 +95,11 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   local-consumer, and explicit-GitHub searches found no named or dynamic external
   consumer.
 - Pre/post catalog profiles, item shapes, validation, and per-profile selections
-  are byte-identical. All 702 Hera generated-home leaf hashes are identical
-  (311 unique content hashes); managed preflight and the fast tier pass. Final
-  independent audit verdict: PASS at
+  are byte-identical. All 702 Hera generated-home leaf comparison hashes are
+  identical (311 unique): store-backed regular/directory sources were hashed by
+  content, while mutable external/symlink sources were compared by path/type
+  identity. Managed preflight and the fast tier pass. Final independent audit
+  verdict: PASS at
   `/private/tmp/wg-nix-c4-fess.BU0yVL/report.md`.
 
 ## Active work unit
