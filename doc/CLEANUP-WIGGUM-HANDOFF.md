@@ -16,8 +16,9 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   GitHub `main` remain `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
 - Active construction checkout:
   `/private/tmp/wg-nix-cleanup/c3b-credential-launcher`, branch
-  `cleanup/c3b-credential-launcher`. Issue #106 is In Progress; no implementation
-  commit exists yet.
+  `cleanup/c3b-credential-launcher`. Issue #106 implementation commit `0f6b58b3`
+  is signed and independently audited; the signed closeout is at branch HEAD. The
+  work unit is ready for local fast-forward into `main`.
 - Superseded Phase 1 branches/worktrees were removed after their refs and dirty
   state were captured in the standalone recovery package.
 - The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
@@ -126,12 +127,20 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   status 2. Both public apps, the portable format derivation, and the fast tier
   pass. Final independent verdict: PASS at
   `/private/tmp/wg-nix-c3a-commit-fess.iRqiiC/report.md`.
+- C3b/#106 commit `0f6b58b3` makes `agent-deck-env` the sole fail-closed MCP
+  credential launcher, deletes `codex-env` and its duplicate test, and preserves
+  Codex diagnostics through one fixed wrapper label. The independent audit found
+  that an early export exposed Ref to the Perplexity helper; the amended launcher
+  now unsets both ambient keys, invokes both helpers without either exported, and
+  exports only after both succeed. Hostile-ambient regression coverage, the
+  focused suite, actual packaged Hera Codex wrapper, native wrapper check, and
+  fast tier pass. Final independent verdict: PASS at
+  `/private/tmp/c3b-amended-fess-report.md`.
 
 ## Active work unit
 
-Consolidate the two fail-closed MCP credential launchers under issue #106 while
-preserving both public interfaces, product-specific diagnostics, refusal
-behavior, and credential non-disclosure.
+Fast-forward issue #106 locally. Then close it Done, remove its worktree/branch,
+and begin issue #111 from current local `main`.
 
 ## Project state
 
@@ -170,10 +179,12 @@ Not authorized:
 ## Resume procedure
 
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
-2. Preserve every concurrent path and the primary-only `.pi/goals` state named
+2. Verify issue #106 implementation commit `0f6b58b3` and its closeout commit
+   have good signatures and the worktree is clean.
+3. Preserve every concurrent path and the primary-only `.pi/goals` state named
    above; stage only explicit cleanup paths.
-3. Trace `bin/agent-deck-env`, `bin/codex-env`, their package wiring, and focused
-   tests before consolidating them.
-4. Preserve non-disclosure and fail-closed behavior with product-specific
-   diagnostics; keep no duplicate implementation.
-5. Do not push, activate, or restart sessions without separate authorization.
+4. Fast-forward local `main`, close #106 Done using the explicit `jwiegley`
+   account, and remove its worktree/branch.
+5. Start #111 from a fresh short-lived branch/worktree based on current local
+   `main`.
+6. Do not push, activate, or restart sessions without separate authorization.

@@ -12,9 +12,10 @@ retains a small fail-closed `fast`/`full` quality driver while deleting structur
 coverage, root output-denominator bookkeeping, the committed consumer inventory,
 duplicate root/portable gates, and their regeneration cycle.
 
-Issues #107, #103, and #105 are complete and closed Done. Both portable formatter
-app names and their write/check behavior are preserved. Issue #106's credential
-launcher consolidation is now In Progress.
+Issues #107, #103, and #105 are complete and closed Done. Issue #106's credential
+launcher consolidation is complete and independently audited, but remains In
+Progress until local integration. The next cleanup unit after integration is
+issue #111.
 
 The construction checkout is
 `/private/tmp/wg-nix-cleanup/c3b-credential-launcher`. The primary
