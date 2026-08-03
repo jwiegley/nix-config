@@ -13,8 +13,9 @@ coverage, root output-denominator bookkeeping, the committed consumer inventory,
 duplicate root/portable gates, and their regeneration cycle.
 
 Issues #107, #103, #105, #106, #111, #112, and #113 are complete and closed
-Done. Parity currency remains full-only with its negative checks intact. Issue
-#115's config/ai compatibility retirement is In Progress.
+Done. Issue #115's config/ai compatibility retirement is complete and
+independently audited, but remains In Progress until local integration. The next
+cleanup unit is issue #116.
 
 The construction checkout is
 `/private/tmp/wg-nix-cleanup/c9b-config-ai-retirement`. The primary

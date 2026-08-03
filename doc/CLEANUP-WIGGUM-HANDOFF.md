@@ -17,8 +17,9 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
 - Active construction checkout:
   `/private/tmp/wg-nix-cleanup/c9b-config-ai-retirement`, branch
-  `cleanup/c9b-config-ai-retirement`. Issue #115 is In Progress; no implementation
-  commit exists yet.
+  `cleanup/c9b-config-ai-retirement`. Issue #115 implementation commit `2faa1af0`
+  is signed and independently audited; the signed closeout is at branch HEAD.
+  The work unit is ready for local fast-forward into `main`.
 - Superseded Phase 1 branches/worktrees were removed after their refs and dirty
   state were captured in the standalone recovery package.
 - The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
@@ -163,8 +164,8 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   parity command-migration environment, validator, refresh branch, CLI mode,
   private test, and two now-unused scanner exemptions. The committed parity JSON
   remains byte-identical historical evidence; `--commands`, strict command
-  equality, compare/refresh behavior, all 28 currency tests, and #115's scanner
-  remain.
+  equality, compare/refresh behavior, and all 28 currency tests remain. The
+  rename scanner reserved for #115 remained until `2faa1af0` retired it.
 - The historical artifact's direct current comparison remains non-green for
   known pre-#112 selection/version changes (agent-browser, Droid, mtplx,
   SearxNG, and portable Pi/nix-scripts). It was not regenerated to manufacture a
@@ -182,18 +183,29 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   #112's unchanged full-tier run executed all 28 currency tests without a skip
   or failure. Independent no-op verdict: PASS at
   `/private/tmp/wg-nix-c8b-noop-fess-report.md`.
+- C9b/#115 commit `2faa1af0` deletes the retired config/ai throwing subflake,
+  rename-only consumer scanner, rollback runbook, stale negative consumer and
+  immutable branches, and their fixtures/registrations. Positive config/fleet
+  portable, immutable, and consumer checks remain; the neutral immutable fixture
+  still proves exact archived bytes without naming retired machinery. The
+  operational old-path sweep is empty outside historical parity and cleanup-plan
+  prose. Final independent verdict: PASS at
+  `/private/tmp/wg-nix-c9b-2faa1af0-final-fess-report.md`.
+- Exact #115 closeout passed: immutable subflake, portable all-system evaluation,
+  strict supported consumers (3 ran, 0 skipped), 26 retained gate regressions,
+  fast gate, and full Python (13 modules, 312 tests, 280 seconds, zero failures).
 
 ## Active work unit
 
-Delete the completed config/ai rename programme under issue #115 while retaining
-positive config/fleet portable, immutable, and consumer checks.
+Fast-forward issue #115 locally. Then close it Done, remove its worktree/branch,
+and begin issue #116 from current local `main`.
 
 ## Project state
 
 Cleanup epic #98 remains In Progress. Issues #99-#103, #105-#107, #111, #112,
 #113, and #114 are closed with their Project items Done. Issue #115 is In
-Progress. The remaining cleanup issues stay Todo until their accepted work units
-begin.
+Progress and ready for local integration. The remaining cleanup issues stay Todo
+until their accepted work units begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
 
@@ -229,10 +241,13 @@ Not authorized:
 ## Resume procedure
 
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
-2. Preserve every concurrent path, primary-only Pi provider subtree, and
+2. Verify issue #115 implementation commit `2faa1af0` and its closeout commit
+   have good signatures and the worktree is clean.
+3. Preserve every concurrent path, primary-only Pi provider subtree, and
    `.pi/goals` state named above; stage only explicit cleanup paths.
-3. Delete only rename-era stub/scanner/negative branches/fixtures and rollback
-   prose; preserve every positive config/fleet evaluation.
-4. Do not edit or activate any consumer checkout.
-5. Do not push, perform another activation, or restart sessions without separate
-   authorization.
+4. Fast-forward local `main`, close #115 Done using the explicit `jwiegley`
+   account, and remove its worktree/branch.
+5. Start #116 only after deriving its exact supported-generation and live-host
+   proof boundary; do not infer migration retirement from source checks.
+6. Do not push, perform another activation, edit a consumer, or restart sessions
+   without separate authorization.
