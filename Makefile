@@ -71,7 +71,8 @@ expensive:
 	nix build --no-link \
 	  .#checks.$(SYSTEM).agent-resources \
 	  .#checks.$(SYSTEM).agent-wrappers \
-	  .#checks.$(SYSTEM).pi-gallery
+	  .#checks.$(SYSTEM).pi-gallery \
+	  .#checks.$(SYSTEM).pi-fleet-theme
 	./build system
 
 darwin-surface-baseline:
