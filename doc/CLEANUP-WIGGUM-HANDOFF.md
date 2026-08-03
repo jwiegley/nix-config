@@ -11,15 +11,14 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 
 - `doc/CLEANUP-PLAN.md` is the accepted plan. John explicitly accepted decisions
   D1-D7 on 2026-08-03.
-- Local `main` contains John's signed flake-lock update `59ac2a88` plus the
-  signed updater-fixture isolation fix `3ab97a35` atop C0; the accepted-plan
-  documentation commit is the next local-main change. Fetched Gitea and GitHub
-  `main` remain
+- Local `main` contains John's signed flake-lock update `59ac2a88`, the signed
+  updater-fixture isolation fix `3ab97a35`, and the accepted-plan commit
+  `8d9fc158` atop C0. Fetched Gitea and GitHub `main` remain
   `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
 - Active construction checkout:
   `/private/tmp/wg-nix-cleanup/c1a-rewrite`, branch
-  `cleanup/c1a-rewrite`. After the accepted-plan commit, rebase its preserved C1
-  net onto current local `main` before Phase 1 implementation.
+  `cleanup/c1a-rewrite`. Its signed Phase 1 range is ready for final audit and a
+  local fast-forward into `main`.
 - The signed exploratory recovery branch remains
   `cleanup/c1a-python-tiers@65701d26ba30d410765bcb93713b35c7a19c8ecb`
   and is also captured in the standalone recovery package.
@@ -36,8 +35,6 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   `/private/tmp/wg-nix-phase0.yr3oHd`. Its relative `SHA256SUMS`, complete Git
   bundle, patches, rewrite tar, Pi patch, runbook, signature/ref evidence, and
   fresh-clone restore smoke all pass.
-- The untracked review draft in the primary checkout is superseded by the
-  accepted plan and may be removed only after the accepted-plan commit exists.
 
 ## Completed and independently established
 
@@ -72,34 +69,37 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
     operational consumer.
 - Sanitized C9a evidence is
   `/private/tmp/wg-nix-c9a-evidence.md`.
+- Phase 1 is implemented as six signed commits from `5a22d898` through
+  `9afc639e`:
+  - fail-closed fast/full selection and four slow-suite renames;
+  - the audit-driven minimal-helper and prose corrections;
+  - deletion of structural coverage, root output denominators, committed
+    consumer inventory, and their writers/wiring;
+  - deletion of duplicate root/portable gates and unused helpers; and
+  - restoration of `make expensive` as a superset of native AI checks.
+- Phase 1 removed 11,980 net lines relative to local `main`. The final mandatory
+  hook passes in about 31 seconds.
+- Final Phase 1 evidence on one unchanged candidate:
+  - full Python: 14 modules, 319 raw cases, 0 failures, 275 seconds within the
+    900-second budget;
+  - portable all-system evaluation, immutable subflake, strict consumers
+    (4 evaluations, 0 skips), all 10 local signatures, and Darwin value surface
+    passed;
+  - native `agent-resources`, `agent-wrappers`, `pi-gallery`, and
+    `pi-fleet-theme` checks passed.
 
 ## Active work unit
 
-Phase 1: reset the quality gates and delete evidence bureaucracy.
-
-Accepted policy:
-
-1. Keep only `fast` and `full` Python tiers with 120/900-second budgets.
-2. Preserve fail-closed tracked discovery, exact module execution, strict
-   no-skip/no-empty behavior, path safety, process cleanup, signature trust,
-   consumer refusal, and updater rollback coverage.
-3. Delete structural coverage and the root output-denominator system together.
-4. Delete the committed consumer inventory and exact-source currency machinery;
-   retain the read-only scanner only until Phase 4.
-5. Remove coverage from pre-push/CI; pre-push verifies signatures only.
-6. Do not replay generated projection or exploratory checkpoint commits.
-7. Run full/independent audit only at issue closeout, not after every intermediate
-   commit.
-
-The next implementation boundary is to pare the existing rewrite worktree to that
-accepted minimum before any commit.
+Phase 2, first boundary: delete proven dead catalog metadata under cleanup issue
+#107. Begin only after the final Phase 1 range audit, local fast-forward, worktree
+cleanup, and truthful Project reconciliation.
 
 ## Project state
 
-Cleanup epic #98 and issues #99/#100 remain In Progress. C9a issue #114 passed its
-live and focused positive gates, was independently reviewed, and is now closed
-Completed with its Project item Done. The remaining cleanup issues stay Todo until
-their accepted work units begin.
+Cleanup epic #98 and issues #99/#100 remain In Progress. C9a issue #114 is closed
+Completed with its Project item Done. Phase 1 issues #100-#102 are ready for
+completion/supersession decisions after the final range audit. The remaining
+cleanup issues stay Todo until their accepted work units begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
 
@@ -123,7 +123,8 @@ Not authorized:
 ## Stop counters
 
 - repeated gate failure: 0/3
-- unusable subagent output: 0/2
+- unusable subagent output: 1/2; the first commit-1 audit attempt produced no
+  report, and its bounded retry succeeded
 - GPG signing cache locked: 0/3; John unlocked macOS pinentry and signed commit
   `3ab97a35` succeeded
 - unresolved destructive or intent-sensitive action: none
@@ -131,14 +132,15 @@ Not authorized:
 ## Resume procedure
 
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
-2. Verify both worktrees and the recovery-package checksums.
+2. Verify the Phase 1 worktree is clean and the recovery-package checksums pass.
 3. Preserve every user-owned dependency/Pi path named above and stage only
    explicit cleanup paths.
-4. Pare Phase 1 in the rewrite worktree according to the active-work-unit list.
-5. Run focused quality tests, the fast tier, then the full tier once at issue
-   closeout.
-6. Commit the accepted-plan/current-state documentation separately from Phase 1
-   implementation, signed and with explicit paths.
-7. Dispatch an independent audit after each completed issue, then reconcile its
-   GitHub state using the explicit `jwiegley` account.
+4. Run the final independent audit over `8d9fc158..HEAD` and fix only verified
+   findings.
+5. Fast-forward local `main`, remove the completed Phase 1 worktree/branch, and
+   preserve John's dirty paths.
+6. Close or supersede #100-#102 truthfully, then move #107 In Progress using the
+   explicit `jwiegley` account.
+7. Start Phase 2 from a fresh short-lived branch/worktree based on current local
+   `main`.
 8. Do not push or activate without separate authorization.

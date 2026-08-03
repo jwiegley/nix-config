@@ -7,9 +7,13 @@ The accepted Definition of Done is [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md), and
 [`CLEANUP-WIGGUM-HANDOFF.md`](CLEANUP-WIGGUM-HANDOFF.md) is the sole mutable
 resume authority.
 
-The active unit is Phase 1: retain a small fail-closed `fast`/`full` quality
-driver while deleting structural coverage, root output-denominator bookkeeping,
-the committed consumer inventory, and their exact-source regeneration cycle.
+Phase 1 is complete locally and awaiting its final independent range audit. It
+retains a small fail-closed `fast`/`full` quality driver while deleting structural
+coverage, root output-denominator bookkeeping, the committed consumer inventory,
+duplicate root/portable gates, and their regeneration cycle.
+
+The next unit is Phase 2's proven dead catalog metadata cleanup, issue #107, after
+Phase 1 is fast-forwarded and its worktree is removed.
 
 The construction checkout is
 `/private/tmp/wg-nix-cleanup/c1a-rewrite`. The signed exploratory branch remains
