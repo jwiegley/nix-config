@@ -12,13 +12,13 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 - `doc/CLEANUP-PLAN.md` is the accepted plan. John explicitly accepted decisions
   D1-D7 on 2026-08-03.
 - Local `main` contains completed, audited Phase 1 and issues #107, #103, #105,
-  and #106 through `e4c96004`, including John's signed flake-lock update. Fetched
-  Gitea and GitHub `main` remain `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
+  #106, and #111 through `b6b695e3`, including John's signed flake-lock update.
+  Fetched Gitea and GitHub `main` remain
+  `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
 - Active construction checkout:
-  `/private/tmp/wg-nix-cleanup/c7-codex-grammar`, branch
-  `cleanup/c7-codex-grammar`. Issue #111 implementation commit `147a5681` is
-  signed and independently audited; the signed closeout is at branch HEAD. The
-  work unit is ready for local fast-forward into `main`.
+  `/private/tmp/wg-nix-cleanup/c8a-parity-rename`, branch
+  `cleanup/c8a-parity-rename`. Issue #112 is In Progress; no implementation commit
+  exists yet.
 - Superseded Phase 1 branches/worktrees were removed after their refs and dirty
   state were captured in the standalone recovery package.
 - The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
@@ -162,15 +162,15 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 
 ## Active work unit
 
-Fast-forward issue #111 locally. Then close it Done, remove its worktree/branch,
-and begin issue #112 from current local `main`.
+Delete completed parity rename-migration mode and its private fixtures under
+issue #112 while retaining any boundary still consumed by #113 or #115.
 
 ## Project state
 
 Cleanup epic #98 remains In Progress. Issues #99-#103, #105-#107, and #114 are
-closed with their Project items Done. Issue #111 is In Progress and ready for
-local integration. The remaining cleanup issues stay Todo until their accepted
-work units begin.
+closed with their Project items Done; issue #111 is also closed Done. Issue #112
+is In Progress. The remaining cleanup issues stay Todo until their accepted work
+units begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
 
@@ -203,12 +203,9 @@ Not authorized:
 ## Resume procedure
 
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
-2. Verify issue #111 implementation commit `147a5681` and its closeout commit
-   have good signatures and the worktree is clean.
-3. Preserve every concurrent path, primary-only Pi provider subtree, and
+2. Preserve every concurrent path, primary-only Pi provider subtree, and
    `.pi/goals` state named above; stage only explicit cleanup paths.
-4. Fast-forward local `main`, close #111 Done using the explicit `jwiegley`
-   account, and remove its worktree/branch.
-5. Start #112 from a fresh short-lived branch/worktree based on current local
-   `main`.
-6. Do not push, activate, or restart sessions without separate authorization.
+3. Trace every caller of parity rename mode and its fixtures before deletion;
+   retain live parity/currency behavior required by #113 or #115.
+4. Stage only issue #112 paths and keep publication, activation, and session
+   restart outside this work unit.

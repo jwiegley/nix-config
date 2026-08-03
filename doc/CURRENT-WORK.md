@@ -12,12 +12,12 @@ retains a small fail-closed `fast`/`full` quality driver while deleting structur
 coverage, root output-denominator bookkeeping, the committed consumer inventory,
 duplicate root/portable gates, and their regeneration cycle.
 
-Issues #107, #103, #105, and #106 are complete and closed Done. Issue #111's
-Codex grammar-parser deletion is complete and independently audited, but remains
-In Progress until local integration. The next cleanup unit is issue #112.
+Issues #107, #103, #105, #106, and #111 are complete and closed Done. Codex now
+delegates changing CLI grammar to its pinned upstream parser. Issue #112's parity
+rename-migration retirement is In Progress.
 
 The construction checkout is
-`/private/tmp/wg-nix-cleanup/c7-codex-grammar`. The primary
+`/private/tmp/wg-nix-cleanup/c8a-parity-rename`. The primary
 `/Users/johnw/src/nix` checkout is on local `main` and contains the concurrent
 dependency, model, Pi, and oMLX 0.5.5 repair work that produced active Hera
 generation 986, expanded Pi/gallery work, untracked Pi provider work, and runtime
