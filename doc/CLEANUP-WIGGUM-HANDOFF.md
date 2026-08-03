@@ -12,13 +12,13 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 - `doc/CLEANUP-PLAN.md` is the accepted plan. John explicitly accepted decisions
   D1-D7 on 2026-08-03.
 - Local `main` contains completed, audited Phase 1 and issues #107, #103, #105,
-  #106, #111, and #112 through `a2ee478a`, including John's signed flake-lock
-  update. Fetched Gitea and GitHub `main` remain
+  #106, #111, #112, and #113 through `f46ab6de`, including John's signed
+  flake-lock update. Fetched Gitea and GitHub `main` remain
   `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
 - Active construction checkout:
-  `/private/tmp/wg-nix-cleanup/c8b-parity-currency`, branch
-  `cleanup/c8b-parity-currency`. Issue #113 needs no implementation source change;
-  the signed closeout is at branch HEAD and ready for local fast-forward.
+  `/private/tmp/wg-nix-cleanup/c9b-config-ai-retirement`, branch
+  `cleanup/c9b-config-ai-retirement`. Issue #115 is In Progress; no implementation
+  commit exists yet.
 - Superseded Phase 1 branches/worktrees were removed after their refs and dirty
   state were captured in the standalone recovery package.
 - The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
@@ -185,15 +185,15 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 
 ## Active work unit
 
-Fast-forward the #113 closeout locally. Then close it Done, remove its
-worktree/branch, and begin issue #115 from current local `main`.
+Delete the completed config/ai rename programme under issue #115 while retaining
+positive config/fleet portable, immutable, and consumer checks.
 
 ## Project state
 
 Cleanup epic #98 remains In Progress. Issues #99-#103, #105-#107, #111, #112,
-and #114 are closed with their Project items Done. Issue #113 is In Progress and
-ready to close as an already-satisfied no-op. The remaining cleanup issues stay
-Todo until their accepted work units begin.
+#113, and #114 are closed with their Project items Done. Issue #115 is In
+Progress. The remaining cleanup issues stay Todo until their accepted work units
+begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
 
@@ -229,13 +229,10 @@ Not authorized:
 ## Resume procedure
 
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
-2. Verify the #113 closeout commit has a good signature and the worktree is
-   clean.
-3. Preserve every concurrent path, primary-only Pi provider subtree, and
+2. Preserve every concurrent path, primary-only Pi provider subtree, and
    `.pi/goals` state named above; stage only explicit cleanup paths.
-4. Fast-forward local `main`, close #113 Done using the explicit `jwiegley`
-   account, and remove its worktree/branch.
-5. Start #115 from a fresh short-lived branch/worktree based on current local
-   `main`.
-6. Do not push, perform another activation, or restart sessions without separate
+3. Delete only rename-era stub/scanner/negative branches/fixtures and rollback
+   prose; preserve every positive config/fleet evaluation.
+4. Do not edit or activate any consumer checkout.
+5. Do not push, perform another activation, or restart sessions without separate
    authorization.
