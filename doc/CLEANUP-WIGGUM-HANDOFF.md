@@ -12,14 +12,13 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 - `doc/CLEANUP-PLAN.md` is the accepted plan. John explicitly accepted decisions
   D1-D7 on 2026-08-03.
 - Local `main` contains completed, audited Phase 1 and issues #107, #103, #105,
-  #106, and #111 through `b6b695e3`, including John's signed flake-lock update.
-  Fetched Gitea and GitHub `main` remain
+  #106, #111, and #112 through `a2ee478a`, including John's signed flake-lock
+  update. Fetched Gitea and GitHub `main` remain
   `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
 - Active construction checkout:
-  `/private/tmp/wg-nix-cleanup/c8a-parity-rename`, branch
-  `cleanup/c8a-parity-rename`. Issue #112 implementation commit `1d8551c0` is
-  signed and independently audited; the signed closeout is at branch HEAD. The
-  work unit is ready for local fast-forward into `main`.
+  `/private/tmp/wg-nix-cleanup/c8b-parity-currency`, branch
+  `cleanup/c8b-parity-currency`. Issue #113 needs no implementation source change;
+  the signed closeout is at branch HEAD and ready for local fast-forward.
 - Superseded Phase 1 branches/worktrees were removed after their refs and dirty
   state were captured in the standalone recovery package.
 - The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
@@ -175,17 +174,25 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   `/private/tmp/wg-nix-c8a-closeout-decision-fess-report.md`.
 - The unchanged implementation passed the fast gate and the 13-module full tier:
   315 tests, zero failures, 329 seconds within the 900-second budget.
+- C8b/#113 was already implemented by signed Phase 1 commit `5a22d898`:
+  tracked filename discovery excludes `*-slow-test.py` from fast and includes it
+  in full. Current proof selects 9 fast and 13 full modules, with
+  `oracle-currency-slow-test.py` present only in full; no lefthook, Make, or
+  GitHub Actions path invokes parity derivation. The fast tier passed 9/9, and
+  #112's unchanged full-tier run executed all 28 currency tests without a skip
+  or failure. Independent no-op verdict: PASS at
+  `/private/tmp/wg-nix-c8b-noop-fess-report.md`.
 
 ## Active work unit
 
-Fast-forward issue #112 locally. Then close it Done, remove its worktree/branch,
-and begin issue #113 from current local `main`.
+Fast-forward the #113 closeout locally. Then close it Done, remove its
+worktree/branch, and begin issue #115 from current local `main`.
 
 ## Project state
 
-Cleanup epic #98 remains In Progress. Issues #99-#103, #105-#107, and #114 are
-closed with their Project items Done; issue #111 is also closed Done. Issue #112
-is In Progress and ready for local integration. The remaining cleanup issues stay
+Cleanup epic #98 remains In Progress. Issues #99-#103, #105-#107, #111, #112,
+and #114 are closed with their Project items Done. Issue #113 is In Progress and
+ready to close as an already-satisfied no-op. The remaining cleanup issues stay
 Todo until their accepted work units begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
@@ -222,13 +229,13 @@ Not authorized:
 ## Resume procedure
 
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
-2. Verify issue #112 implementation commit `1d8551c0` and its closeout commit
-   have good signatures and the worktree is clean.
+2. Verify the #113 closeout commit has a good signature and the worktree is
+   clean.
 3. Preserve every concurrent path, primary-only Pi provider subtree, and
    `.pi/goals` state named above; stage only explicit cleanup paths.
-4. Fast-forward local `main`, close #112 Done using the explicit `jwiegley`
+4. Fast-forward local `main`, close #113 Done using the explicit `jwiegley`
    account, and remove its worktree/branch.
-5. Start #113 from a fresh short-lived branch/worktree based on current local
+5. Start #115 from a fresh short-lived branch/worktree based on current local
    `main`.
 6. Do not push, perform another activation, or restart sessions without separate
    authorization.

@@ -12,13 +12,13 @@ retains a small fail-closed `fast`/`full` quality driver while deleting structur
 coverage, root output-denominator bookkeeping, the committed consumer inventory,
 duplicate root/portable gates, and their regeneration cycle.
 
-Issues #107, #103, #105, #106, and #111 are complete and closed Done. Issue
-#112's parity rename-migration retirement is complete and independently audited,
-but remains In Progress until local integration. The next cleanup unit is issue
-#113.
+Issues #107, #103, #105, #106, #111, and #112 are complete and closed Done.
+Issue #113 is verified complete with no new source change: Phase 1 already made
+parity currency full-only while preserving its negative checks. It remains In
+Progress until Project reconciliation. The next cleanup unit is issue #115.
 
 The construction checkout is
-`/private/tmp/wg-nix-cleanup/c8a-parity-rename`. The primary
+`/private/tmp/wg-nix-cleanup/c8b-parity-currency`. The primary
 `/Users/johnw/src/nix` checkout is on local `main` and contains the concurrent
 dependency, model, Pi, and oMLX 0.5.5 repair work that produced active Hera
 generation 986, expanded Pi/gallery work, untracked Pi provider work, and runtime
