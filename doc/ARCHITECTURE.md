@@ -156,7 +156,7 @@ Verification tiers are intentionally distinct:
 | Tier | Purpose |
 |---|---|
 | Pre-commit | Formatting, lint, parsing, and bounded essential tests |
-| Pre-push | Commit signatures and current structural-artifact currency |
+| Pre-push | Commit signatures |
 | Work-unit closeout | Slow focused tests, consumers, and Darwin value surfaces |
 | Scheduled/expensive | Cross-system portable evaluation, native checks, and low-frequency evidence |
 | Runtime | Native activation and service/client acceptance |

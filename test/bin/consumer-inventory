@@ -221,12 +221,8 @@ def resolve_head():
         else:
             return None
         # A LINKED WORKTREE's gitdir legitimately lives outside repo_root — it
-        # points at <main>/.git/worktrees/<name>. Declining that case made this
-        # emit `repoHead: null` for every run in a worktree, which is how this
-        # programme normally works, and a committed inventory that cannot say
-        # which tree it describes is uninterpretable. The `gitdir:` pointer came
-        # from repo_root's own .git file, so it is by construction this repo's
-        # gitdir; there is nothing to protect against here.
+        # points at <main>/.git/worktrees/<name>. The `gitdir:` pointer came from
+        # repo_root's own .git file, so it is by construction this repo's gitdir.
         commondir = gitdir
         cdf = os.path.join(gitdir, "commondir")
         if os.path.exists(cdf):
@@ -766,11 +762,8 @@ out = {
         "Merged, classified inventory of every reference from every consumer into "
         "nix-config, so the config/ai -> config/fleet rename (#47) and its straggler "
         "sweep (#63) know exactly who breaks. One record per reference."),
-    # Deliberately NOT the absolute repo_root / consumer_base. This artifact is
-    # committed, so machine-specific paths in it are false for every other reader
-    # and would churn the file on any checkout with a different layout. The
-    # revision is what makes it interpretable; the paths are an input, not a
-    # finding. Per-reference `file` values are already repo-relative.
+    # Deliberately omit absolute repo_root / consumer_base paths: they are inputs,
+    # not findings, and per-reference `file` values are already repo-relative.
     "repoHead": resolve_head(),
     "consumerLayout": (
         "nix-config at the repository root; consumer checkouts as siblings "

@@ -618,10 +618,6 @@ if [[ -n $quality_tier ]]; then
         tier_suites=("${EXPENSIVE_SUITES[@]}")
         ;;
     esac
-    # A source-changing work commit is allowed to carry stale consolidated
-    # evidence. Coverage freshness remains mandatory in expensive, make test,
-    # and issue closeout; forcing it here would require an expensive
-    # artifact regeneration after every intermediate commit.
     term_after=$((budget - 15))
     if [[ $term_after -le 0 ]]; then
         printf 'quality: tier budget must exceed supervision headroom\n' >&2
