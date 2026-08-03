@@ -16,10 +16,13 @@ Issues #107, #103, #105, #106, #111, #112, #113, and #115 are complete and
 closed Done; #110 is closed Not Planned under accepted decision D5. Issue #120's
 read-only audit is on HOLD in Todo: no-producer and rollback-set proof pass, but
 two-cycle activation proof is absent. Issue #119's Codex log-migration retirement
-is in read-only fleet proof. No activation or session restart is authorized.
+is also on HOLD in Todo: all path/residue checks pass, but fresh sessions and a
+shared rollback closure are missing. No activation or session restart is
+authorized.
 
-The construction checkout is `/private/tmp/wg-nix-cleanup/c10d-codex-log`. The
-primary `/Users/johnw/src/nix` checkout is on local
+The proof-only #119 checkout was `/private/tmp/wg-nix-cleanup/c10d-codex-log`;
+closeout fast-forwards its signed record and removes it. The primary
+`/Users/johnw/src/nix` checkout is on local
 `main` and contains the concurrent
 dependency, model, Pi, and oMLX 0.5.5 repair work that produced active Hera
 generation 986, expanded Pi/gallery work, untracked Pi provider work, and runtime

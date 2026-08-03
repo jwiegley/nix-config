@@ -16,10 +16,11 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   flake-lock update and #120's proof-only HOLD record. Fetched Gitea and GitHub
   `main` remain
   `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
-- Active construction checkout:
+- Proof-only #119 checkout used for this audit:
   `/private/tmp/wg-nix-cleanup/c10d-codex-log`, branch
-  `cleanup/c10d-codex-log`. Issue #119 is In Progress in read-only fleet proof;
-  no retirement commit exists.
+  `cleanup/c10d-codex-log`. Its signed record is ready for integration and
+  removal; no construction checkout remains afterward. Issue #119 returns to
+  Todo on HOLD and has no retirement change.
 - Superseded Phase 1 branches/worktrees were removed after their refs and dirty
   state were captured in the standalone recovery package.
 - The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
@@ -211,20 +212,28 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   stays intact until durable evidence is found or one additional activation per
   host is separately authorized. Independent verdict: HOLD at
   `/private/tmp/wg-nix-c10e-predeletion-fess.md`.
+- C10d/#119 pre-deletion proof established exact canonical Codex log symlinks,
+  real local targets, and zero migration residue on Hera, Clio, and all four
+  shared-work hosts. Hera 985/986, Clio 240/241, and shared current HM196 contain
+  the migration. Retirement remains blocked: Clio and the four shared-work hosts
+  have no fresh Codex process, and prior HM195 is not resident on andoria-t2, so
+  it is not a fleet-valid rollback closure. The migration stays intact until
+  fresh sessions on those five hosts and a resident prior shared closure are
+  separately authorized/proven. Independent verdict: HOLD at
+  `/private/tmp/wg-nix-c10d-predeletion-fess.md`.
 
 ## Active work unit
 
-Establish #119's Hera, Clio, and four shared-work path/residue/rollback evidence
-without activation or session restart. Do not delete the old-directory migration
-unless fresh-session and rollback acceptance are already proven.
+Fast-forward this proof-only #119 record and remove its worktree/branch. Leave
+#119 Todo until its fresh-session and shared rollback evidence is supplied.
 
 ## Project state
 
 Cleanup epic #98 remains In Progress. Issues #99-#103, #105-#107, #111, #112,
 #110-#115 are closed with their Project items Done except optional #108/#109,
 which remain Todo behind concurrent Pi/model work. Issue #120 is Todo on HOLD.
-Issue #119 is In Progress. The remaining cleanup issues stay Todo until their
-accepted work units begin.
+Issue #119 is also Todo on HOLD. The remaining cleanup issues stay Todo until
+their accepted work units begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
 
@@ -262,9 +271,9 @@ Not authorized:
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
 2. Preserve every concurrent path, primary-only Pi provider subtree, and
    `.pi/goals` state named above; stage only explicit cleanup paths.
-3. Probe only sanitized path types, target equality, residue counts, and
-   generation/config identifiers on every Codex host.
-4. If fresh-session or rollback proof is absent, leave migration source intact
-   and record the exact external gate on #119.
+3. Fast-forward this documentation-only proof record and remove its temporary
+   worktree/branch.
+4. Do not resume #119 without authorized fresh sessions on Clio/shared-work and
+   a resident, migration-containing prior shared closure.
 5. Do not push, perform another activation, edit a consumer, or restart sessions
    without separate authorization.
