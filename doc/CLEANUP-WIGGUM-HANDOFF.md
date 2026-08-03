@@ -11,23 +11,25 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 
 - `doc/CLEANUP-PLAN.md` is the accepted plan. John explicitly accepted decisions
   D1-D7 on 2026-08-03.
-- Local `main` contains completed, audited Phase 1 and issue #107 through
-  `eda3ef61`, including John's signed flake-lock update. Fetched Gitea and GitHub
-  `main` remain `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
-- Active construction checkout:
-  `/private/tmp/wg-nix-cleanup/c2a-dead-comments`, branch
-  `cleanup/c2a-dead-comments`. Issue #103 implementation commit `9d9baf0a` is
-  signed and independently audited; the signed closeout is at branch HEAD. The
-  work unit is ready for local fast-forward into `main`.
+- Local `main` contains completed, audited Phase 1 and issues #107 and #103
+  through `4663fa94`, including John's signed flake-lock update. Fetched Gitea and
+  GitHub `main` remain `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
+- There is no active construction checkout or cleanup branch. Issue #103 is
+  locally integrated and closed Done; its temporary worktree and branch were
+  removed.
 - Superseded Phase 1 branches/worktrees were removed after their refs and dirty
   state were captured in the standalone recovery package.
 - The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
-  concurrent dependency/Pi work. Cleanup must not stage, restore, rewrite, or
-  absorb these visible paths:
+  concurrent dependency/model/Pi/oMLX work. Cleanup must not stage, restore,
+  rewrite, or absorb these visible paths:
   `config/fleet/model-policy.nix`,
   `config/fleet/model-registry.json`,
+  `config/fleet/models.nix`,
+  `config/fleet/renderers/codex.nix`,
   `config/fleet/renderers/pi.nix`,
-  `packages/pi-gallery/default.nix`, and
+  `overlays/ai/patches/omlx-host-vm-info64-count.patch`,
+  `packages/pi-gallery/default.nix`,
+  `test/ai/overlays/omlx-host-vm-info64-count.py`,
   `test/ai/pi-gallery.nix`, plus `sources/ai.json`. John's committed
   `flake.lock` update is already part of local `main` and must remain intact.
 - Standalone recovery package:
@@ -108,18 +110,22 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   manifest has no pending entries, the Darwin value surface and fast tier pass,
   and the final independent verdict is PASS at
   `/private/tmp/wg-nix-c2a-commit-fess.fMETux/report.md`.
+- Hera generation 986 is active after a full no-link system build and successful
+  switch. oMLX 0.5.5 is running; Pi 0.83.0, Claude Code 2.1.220, and Codex 0.146.0
+  match the candidate and their prior installed versions. The live Pi leaf keeps
+  `gpt-5.6-sol` under `openai-codex` at 1,050,000 tokens and local DeepSeek V4 at
+  1,048,576. Codex defaults to native OpenAI; its oMLX and llama-swap profiles
+  remain opt-in.
 
 ## Active work unit
 
-Fast-forward issue #103 locally. Then close it Done, remove its worktree/branch,
-and begin issue #105 from current local `main` after the separately authorized
-Hera dependency activation is verified.
+Begin issue #105 from current local `main` in a fresh short-lived worktree while
+preserving every concurrent path listed above.
 
 ## Project state
 
-Cleanup epic #98 remains In Progress. Issues #99-#102, #107, and #114 are closed
-with their Project items Done. Issue #103 is In Progress and ready to close Done
-after local fast-forward. The remaining cleanup issues stay Todo until their
+Cleanup epic #98 remains In Progress. Issues #99-#103, #107, and #114 are closed
+with their Project items Done. The remaining cleanup issues stay Todo until their
 accepted work units begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
@@ -131,13 +137,12 @@ Authorized:
 - accepted plan decisions D1-D7;
 - local source edits and signed cleanup commits;
 - the completed VPS checkout fast-forward and no-activation verification;
-- one Hera activation of the current dependency candidate after its build passes;
 - truthful GitHub issue/Project reconciliation after focused proof.
 
 Not authorized:
 
 - pushing or publishing nix-config cleanup commits;
-- activating Clio, VPS, Vulcan, or shared-work configurations;
+- activating Hera, Clio, VPS, Vulcan, or shared-work configurations;
 - restarting or terminating user sessions;
 - force-pushing or rewriting published history;
 - further external-checkout edits without a new need inside the accepted plan.
@@ -154,14 +159,9 @@ Not authorized:
 ## Resume procedure
 
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
-2. Verify issue #103 commit `9d9baf0a` and its closeout commit have good
-   signatures and the worktree is clean.
-3. Preserve every user-owned dependency/Pi path named above and stage only
-   explicit cleanup paths.
-4. Fast-forward local `main`, remove the completed #103 worktree/branch, and
-   preserve John's dirty paths.
-5. Close #103 Done using the explicit `jwiegley` account.
-6. Build and activate the current Hera dependency candidate, then verify oMLX,
-   Pi, Claude Code, and Codex from the active profile. Do not push.
-7. Start #105 from a fresh short-lived branch/worktree based on current local
+2. Preserve every concurrent path named above and stage only explicit cleanup
+   paths.
+3. Move #105 In Progress using the explicit `jwiegley` account.
+4. Start #105 from a fresh short-lived branch/worktree based on current local
    `main`.
+5. Do not push, activate, or restart sessions without separate authorization.
