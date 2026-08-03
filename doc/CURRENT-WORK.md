@@ -12,16 +12,16 @@ retains a small fail-closed `fast`/`full` quality driver while deleting structur
 coverage, root output-denominator bookkeeping, the committed consumer inventory,
 duplicate root/portable gates, and their regeneration cycle.
 
-Issues #107 and #103 are complete and closed Done. Issue #105's formatter
-consolidation is complete and independently audited, but remains In Progress
-until local integration. Both portable public app names and their write/check
-behavior are preserved. The next cleanup unit after integration is issue #106.
+Issues #107, #103, and #105 are complete and closed Done. Both portable formatter
+app names and their write/check behavior are preserved. Issue #106's credential
+launcher consolidation is now In Progress.
 
 The construction checkout is
-`/private/tmp/wg-nix-cleanup/c3a-formatter-dedup`. The primary
+`/private/tmp/wg-nix-cleanup/c3b-credential-launcher`. The primary
 `/Users/johnw/src/nix` checkout is on local `main` and contains the concurrent
 dependency, model, Pi, and oMLX 0.5.5 repair work that produced active Hera
-generation 986. Do not stage or restore those paths during cleanup.
+generation 986, plus runtime `.pi/goals` state. Do not stage or restore those
+paths during cleanup.
 
 Authoritative consumer proof now passes for Vulcan, VPS, and shared work. The VPS
 was fast-forwarded to its existing signed upstream `config/fleet` migration and

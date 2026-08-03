@@ -11,14 +11,13 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 
 - `doc/CLEANUP-PLAN.md` is the accepted plan. John explicitly accepted decisions
   D1-D7 on 2026-08-03.
-- Local `main` contains completed, audited Phase 1 and issues #107 and #103
-  through `4663fa94`, including John's signed flake-lock update. Fetched Gitea and
+- Local `main` contains completed, audited Phase 1 and issues #107, #103, and #105
+  through `eaad5669`, including John's signed flake-lock update. Fetched Gitea and
   GitHub `main` remain `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
 - Active construction checkout:
-  `/private/tmp/wg-nix-cleanup/c3a-formatter-dedup`, branch
-  `cleanup/c3a-formatter-dedup`. Issue #105 implementation commit `d56df05c` is
-  signed and independently audited; the signed closeout is at branch HEAD. The
-  work unit is ready for local fast-forward into `main`.
+  `/private/tmp/wg-nix-cleanup/c3b-credential-launcher`, branch
+  `cleanup/c3b-credential-launcher`. Issue #106 is In Progress; no implementation
+  commit exists yet.
 - Superseded Phase 1 branches/worktrees were removed after their refs and dirty
   state were captured in the standalone recovery package.
 - The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
@@ -34,6 +33,8 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   `test/ai/overlays/omlx-host-vm-info64-count.py`,
   `test/ai/pi-gallery.nix`, plus `sources/ai.json`. John's committed
   `flake.lock` update is already part of local `main` and must remain intact.
+- Primary-only runtime state `.pi/goals` appeared during the active Wiggum goal.
+  Treat it as mutable state: do not read its contents, stage it, or remove it.
 - Standalone recovery package:
   `/private/tmp/wg-nix-phase0.yr3oHd`. Its relative `SHA256SUMS`, complete Git
   bundle, patches, rewrite tar, Pi patch, runbook, signature/ref evidence, and
@@ -128,14 +129,15 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 
 ## Active work unit
 
-Fast-forward issue #105 locally. Then close it Done, remove its worktree/branch,
-and begin issue #106 from current local `main`.
+Consolidate the two fail-closed MCP credential launchers under issue #106 while
+preserving both public interfaces, product-specific diagnostics, refusal
+behavior, and credential non-disclosure.
 
 ## Project state
 
-Cleanup epic #98 remains In Progress. Issues #99-#103, #107, and #114 are closed
-with their Project items Done. Issue #105 is In Progress. The remaining cleanup
-issues stay Todo until their accepted work units begin.
+Cleanup epic #98 remains In Progress. Issues #99-#103, #105, #107, and #114 are
+closed with their Project items Done. Issue #106 is In Progress. The remaining
+cleanup issues stay Todo until their accepted work units begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
 
@@ -168,12 +170,10 @@ Not authorized:
 ## Resume procedure
 
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
-2. Verify issue #105 implementation commit `d56df05c` and its closeout commit
-   have good signatures and the worktree is clean.
-3. Preserve every concurrent path named above and stage only explicit cleanup
-   paths.
-4. Fast-forward local `main`, close #105 Done using the explicit `jwiegley`
-   account, and remove its worktree/branch.
-5. Start #106 from a fresh short-lived branch/worktree based on current local
-   `main`.
-6. Do not push, activate, or restart sessions without separate authorization.
+2. Preserve every concurrent path and the primary-only `.pi/goals` state named
+   above; stage only explicit cleanup paths.
+3. Trace `bin/agent-deck-env`, `bin/codex-env`, their package wiring, and focused
+   tests before consolidating them.
+4. Preserve non-disclosure and fail-closed behavior with product-specific
+   diagnostics; keep no duplicate implementation.
+5. Do not push, activate, or restart sessions without separate authorization.
