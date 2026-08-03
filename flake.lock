@@ -726,11 +726,11 @@
     "emacs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1785513733,
-        "narHash": "sha256-12o1Tx0X3loa31BbFuAOfSKzGGF7QM5MR3YkQ7iFNh0=",
+        "lastModified": 1785754454,
+        "narHash": "sha256-DpkFnn3/uyjkptBDIrutpsLEahP3O8jhlip+RcXq9QI=",
         "owner": "emacs-mirror",
         "repo": "emacs",
-        "rev": "96e2a7ff0d3501abf360157e830bf5817962922f",
+        "rev": "c7639dce3082de7f459ae234e630a97bd62c5e34",
         "type": "github"
       },
       "original": {
