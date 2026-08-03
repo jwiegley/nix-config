@@ -8,11 +8,15 @@ Personal, multi-host Nix configuration for Darwin, standalone Home Manager, NixO
 |---|---|---|---|
 | Hera | aarch64-darwin | `~/src/nix` | Direct `darwinConfigurations.hera` |
 | Clio | aarch64-darwin | `~/src/nix` on Clio | Direct `darwinConfigurations.clio` |
-| Andoria-08/T2, Delphi, GPU | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Paired root source and portable input; legacy `dir=config/ai` edges migrate atomically to `dir=config/fleet` |
-| Vulcan | aarch64 NixOS | `/etc/nixos` on Vulcan | Paired root/portable inputs plus shared Home Manager module |
-| VPS | x86_64 NixOS | `/etc/nixos` on the VPS | Root/portable inputs plus shared Home Manager module |
+| Andoria-08/T2, Delphi, GPU | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Paired root source and canonical `dir=config/fleet` input |
+| Vulcan | aarch64 NixOS | `/etc/nixos` on Vulcan | Paired root/`config/fleet` inputs plus shared Home Manager module |
+| VPS | x86_64 NixOS | `/etc/nixos` on the VPS | Paired root/`config/fleet` inputs plus shared Home Manager module |
 
-The external checkouts own their locks and activation. Do not overwrite them from a secondary local clone.
+The external checkouts own their locks and activation. The recorded local/proxy
+consumer inventory uses `config/fleet`, but that is not proof of the live
+authoritative checkouts. Cleanup issue #114 owns the read-only live verification
+required before the old compatibility stub can be retired. Do not overwrite an
+external checkout from a secondary local clone.
 
 Shared-work Home Manager consumers must declare their role explicitly when importing `config/johnw.nix`:
 
@@ -63,13 +67,16 @@ System and Home Manager switches are owned by each authoritative checkout. Build
 | `flake.nix` | Root systems, packages, checks, and exported Home Manager module |
 | `config/` | Shared Home Manager/Darwin policy and AI catalog/renderers |
 | `config/fleet/` | Portable AI subflake, models, profiles, resources, and client adapters |
-| `overlays/` | Root and AI package overrides/composition |
-| `packages/` | Package implementations and immutable Pi gallery |
+| `overlays/` | Ordered exposure, compatibility fixes, and cohesive integration-owned package definitions |
+| `packages/` | Reusable package sets/implementations and immutable Pi gallery |
 | `test/` | Root, portable, wrapper, renderer, and activation contracts |
 | `bin/` | Operator and maintenance commands |
 | `doc/` | Current architecture, runbooks, and active work |
 
-See [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) for ownership and data flow and [`doc/CURRENT-WORK.md`](doc/CURRENT-WORK.md) for the active local work boundary. Git history is the archive for completed plans and handoffs.
+See [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) for ownership and data flow,
+[`doc/CURRENT-WORK.md`](doc/CURRENT-WORK.md) for the active unit, and
+[`doc/CLEANUP-PLAN.md`](doc/CLEANUP-PLAN.md) for the frozen cleanup Definition of
+Done. Git history is the archive for completed plans and handoffs.
 
 ## Safety
 

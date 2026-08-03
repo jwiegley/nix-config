@@ -42,11 +42,12 @@ Portable consumers use `flake/ai.nix` through `config/fleet`.
 
 ### External consumers
 
-The target shape is a paired root source and `dir=config/fleet` input at one
-revision. Some maintained consumers still carry the legacy `dir=config/ai` edge.
-That path is an intentional throwing stub, so locking it at or beyond the rename
-fails loudly rather than yielding a partial configuration. Migrate both paired
-lock nodes together in each consumer's authoritative checkout.
+The supported shape is a paired root source and `dir=config/fleet` input at one
+revision. The recorded local/proxy inventory has that shape for every maintained
+consumer. Live authoritative shared-work, VPS, and Vulcan state still requires a
+read-only verification before compatibility retirement; a proxy checkout or source
+build is not deployment proof. `config/ai` remains an intentional throwing stub
+until that verification is complete.
 
 External Home Manager and NixOS checkouts own their locks and activation. This
 repository exports implementation and modules; it does not overwrite another
@@ -83,8 +84,8 @@ need them for rollback.
 | `config/fleet/renderers/*` | Generated documents for one client | Global resource selection |
 | `config/ai.nix` | Home Manager composition and ownership guards | Package implementation |
 | `flake/ai.nix` | Portable package, app, and check composition | Host activation or root lock policy |
-| `packages/*` | Build and runtime implementation | Host selection |
-| `overlays/*` | Ordered exposure and narrow compatibility overrides | Hidden configuration channels |
+| `packages/*` | Reusable package sets and multi-consumer build/runtime implementation | Host selection |
+| `overlays/*` | Ordered exposure, compatibility fixes, and cohesive integration-owned package definitions | Hidden host selection or unrelated configuration channels |
 | `test/*` | Interface and integration contracts | Duplicate production algorithms |
 | `bin/*` | Operator transactions | Implicit cross-repository mutation |
 
@@ -103,9 +104,11 @@ Nix owns generated leaves, not mutable roots. Credentials remain environment
 references; secret values never enter derivations, generated files, or argv. Auth,
 history, sessions, caches, reports, trust state, and user settings remain mutable.
 
-Package availability is separate from installation policy. Independent packages
-live under `packages/`; overlays expose them or apply one narrow compatibility
-override; owning host or feature modules select them explicitly.
+Package availability is separate from installation policy. Reusable package sets
+live under `packages/`. A cohesive package can be defined in its owning overlay
+when that is the narrowest integration boundary; overlays also expose packages and
+apply compatibility fixes. Owning host or feature modules select packages
+explicitly.
 
 Pi gallery normalization has one implementation:
 `packages/pi-gallery/normalization-policy.json` defines the closed policy and
@@ -153,8 +156,9 @@ Verification tiers are intentionally distinct:
 | Tier | Purpose |
 |---|---|
 | Pre-commit | Formatting, lint, parsing, and bounded essential tests |
-| Pre-push | Slow focused tests, consumers, signatures, and live structural checks |
-| Expensive | Cross-system evaluation and low-frequency evidence regeneration |
+| Pre-push | Commit signatures and current structural-artifact currency |
+| Work-unit closeout | Slow focused tests, consumers, and Darwin value surfaces |
+| Scheduled/expensive | Cross-system portable evaluation, native checks, and low-frequency evidence |
 | Runtime | Native activation and service/client acceptance |
 
 Names must represent real evidence. A coverage, soak, fuzz, or parity claim is valid

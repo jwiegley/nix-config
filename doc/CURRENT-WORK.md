@@ -1,67 +1,57 @@
 # Current Work
 
-Updated: 2026-07-31
+Updated: 2026-08-03
 
-This is the repository's current local work boundary. Completed plans and session
-handoffs belong in Git history, not beside active instructions.
+## Active programme
 
-## Active order
+Cleanup epic [#98](https://github.com/jwiegley/nix-config/issues/98) is active.
+The frozen Definition of Done is [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md), and
+[`CLEANUP-WIGGUM-HANDOFF.md`](CLEANUP-WIGGUM-HANDOFF.md) is the current resume
+authority.
 
-1. Finish the all-lock and all-pin `make update` transaction and activate its exact
-   candidate.
-2. Run one final focused verification and independent fess audit.
-
-## Explicit boundaries
-
-- The former cross-client deployment tool is retired and is not a task,
-  dependency, comparison oracle, or deployment mechanism.
-- GitHub issue, project, and wiki reconciliation is deferred until the user
-  explicitly resumes it.
-- When GitHub work resumes, every `gh` command must select the `jwiegley` account:
-
-  ```bash
-  GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh <command>
-  ```
-
-- Do not edit Vulcan's separate NixOS configuration while working in this
-  repository.
-- GitHub issue/project/wiki operations remain deferred; ordinary dual-remote
-  publication is still part of the update transaction.
+Active work unit: C0, [issue #99](https://github.com/jwiegley/nix-config/issues/99),
+truthful current documentation. Native blocked-by links in Project 9 determine the
+remaining order; do not skip them.
 
 ## Current verified state
 
-- `main`, Gitea, and GitHub matched when this work began; the current local commits
-  remain unpublished until the final update succeeds.
-- Hera's active Nix-managed Pi configuration exposes
-  `openai-codex/gpt-5.6-sol` with a 1.1M-token context.
-- GitHub state has not been queried during this cleanup.
+- Local `main`, fetched Gitea `origin/main`, and fetched GitHub `github/main` form
+  the baseline at `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`. The current signed
+  C0 work-unit branch is one documentation commit atop that unpublished baseline.
+- The baseline fast mandatory gate passed in 57.7 seconds and the C0 candidate
+  passed post-edit in 61.91 seconds. Every C0 commit/amend hook has remained below
+  the 120-second limit; commit output is the authority for individual hook times.
+- The full `make test` baseline passed on the same source.
+- Portable assurance run `30788387383` passed on aarch64 Darwin, aarch64 Linux,
+  and x86_64 Linux.
+- Normal CI run `30715313370` remains red because the structural coverage artifact
+  binds validity to the runner's Nix identity. C1a-C1c own the reviewed repair and
+  retirement sequence; do not refresh the artifact merely to obtain green.
+- Hera's active system profile is `system-984-link`.
+- `clio.lan` is currently DNS-unresolvable. Treat every Clio-dependent retirement
+  as incomplete until live evidence becomes available.
+- At `2026-08-03T07:15:18Z`, the repository had 24 open issues, exactly cleanup
+  #98-#121. Project 9 had 110 items: #98/#99 In Progress and #100-#121 Todo.
 
-## Completed in this lane
+## Boundaries
 
-- Reduced 28 documentation artifacts to seven current documents and removed 10,370
-  stale lines.
-- Replaced retired deployment terminology in generated Codex projections and the
-  bundle-discovery command.
-- Corrected `make update` to publish through the dual-remote `bin/publish` path.
-- Required every stored GitHub inventory recipe to select the `jwiegley` account.
-- Regenerated and verified the consumer inventory.
-- Integrated the SearXNG MCP package and host-specific Clio/Hera/Vulcan routing;
-  its launcher strips unrelated inherited credentials.
-- Repaired Codex command/prompt projections so their manifests are regular files
-  that Codex can discover.
-- Reduced the mandatory pre-push gate to fast signature and structural-coverage
-  checks; the broader checks remain under `make expensive`.
-- Removed completed and obsolete worktrees. The unfinished issue 54 and issue 58
-  branches remain as local refs without dedicated worktrees; the external Claude
-  scratchpad was left untouched.
+- Push, publication, activation, history rewrite, consumer edits, and session
+  restart/termination require separate explicit authorization.
+- External Vulcan, VPS, and shared-work checkouts are read-only verification
+  targets unless John separately authorizes an edit.
+- Never display secret values; host probes report only booleans, path types,
+  generation identifiers, and exact key-name presence/absence.
+- Ordinary commits run the fast tier. Slow/expensive verification runs at the
+  work-unit or unchanged-candidate boundary defined by the plan.
+- One short-lived work-unit branch and at most one extra worktree may exist at a
+  time. The coordinator alone mutates source and Git state.
 
 ## Resume point
 
-Run the complete `make update` transaction, verify the active generation and agent
-surfaces, then perform the final audit. GitHub reconciliation remains deferred.
+C0 source work is complete in the current local signed commit. Inspect the latest
+independent fess verdict: fix a real finding in the same unpublished unit, or, after
+a clean verdict, locally fast-forward `main`, remove the C0 branch, and begin only
+the newly unblocked units. Issue #99 remains open until publication is separately
+authorized.
 
-Stop-and-escalate counters:
-
-- repeated failing verification signature: 0/3;
-- unusable subagent output: 0/2;
-- unresolved destructive or intent-sensitive action: none.
+Stop counters are maintained in `CLEANUP-WIGGUM-HANDOFF.md`.
