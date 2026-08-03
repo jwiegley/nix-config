@@ -1,6 +1,6 @@
 {
   "schema": "darwin-value-surface/3",
-  "baselineRev": "68c224d86b97959dea9eab80e789684c342a17d9",
+  "baselineRev": "21ce50ee490dc748ab0b04ced536f1ce91bd8bc3",
   "note": "Seven nix-darwin value surfaces at the recorded revision. Only 32-character /nix/store hash prefixes are masked; derivation names remain. Launchd scripts are hashed after that normalization, so their text is not persisted. Authorized-key lists, authorized-key file paths, and build-machine private-key paths are persisted only as content-aware opaque aggregate hashes plus non-sensitive counts; sensitive keys and assignments are refused.",
   "commands": {
     "hostSurface": "nix eval --option eval-cache false --no-write-lock-file --impure --json '.#darwinConfigurations.<host>' --apply 'darwin: import ./test/darwin/darwin-surface.nix darwin'",
@@ -208,7 +208,7 @@
             "serviceConfigSha256": "0632e3ca30450c633947107ff4c8dc18d44f8bda515fca47c9a1380d901fb1f8"
           },
           "llama-swap": {
-            "scriptSha256": "bded729faba4f75e76e092e5700fc0d7e150ed20895ced7d199140344473ebee",
+            "scriptSha256": "5a011da7cdb19186b17f663c61ca0a058d9a27f6ce8b1109c8351e6fcf83e498",
             "serviceConfigSha256": "78651198109cfc1f0dc1ce52adeb62f6f165ee6241d5f73b46ad8b327c2ec456"
           },
           "llama-swap-https-proxy": {
@@ -216,7 +216,7 @@
             "serviceConfigSha256": "da8f4e193d888c39292cbf7f63661ce73681d5d4a6676191285d68736fea67d4"
           },
           "omlx": {
-            "scriptSha256": "9e48a1775517964b8e4d5412450c523259657b2509f42e320504b8f244072bd3",
+            "scriptSha256": "6b3f226a4b6371a974afd4ffb6c8dd26249d6a98fa2ac1ae9b22b549826e7bce",
             "serviceConfigSha256": "626ea5bec92b0c0ed296644e0fbbcef589c52cd0070868cd8ccae24c2d6dcbbe"
           }
         }
@@ -866,7 +866,7 @@
             "serviceConfigSha256": "0632e3ca30450c633947107ff4c8dc18d44f8bda515fca47c9a1380d901fb1f8"
           },
           "llama-swap": {
-            "scriptSha256": "bded729faba4f75e76e092e5700fc0d7e150ed20895ced7d199140344473ebee",
+            "scriptSha256": "5a011da7cdb19186b17f663c61ca0a058d9a27f6ce8b1109c8351e6fcf83e498",
             "serviceConfigSha256": "78651198109cfc1f0dc1ce52adeb62f6f165ee6241d5f73b46ad8b327c2ec456"
           },
           "llama-swap-https-proxy": {
@@ -874,7 +874,7 @@
             "serviceConfigSha256": "da8f4e193d888c39292cbf7f63661ce73681d5d4a6676191285d68736fea67d4"
           },
           "omlx": {
-            "scriptSha256": "9e48a1775517964b8e4d5412450c523259657b2509f42e320504b8f244072bd3",
+            "scriptSha256": "6b3f226a4b6371a974afd4ffb6c8dd26249d6a98fa2ac1ae9b22b549826e7bce",
             "serviceConfigSha256": "626ea5bec92b0c0ed296644e0fbbcef589c52cd0070868cd8ccae24c2d6dcbbe"
           },
           "spotlight-transient-exclusions": {
