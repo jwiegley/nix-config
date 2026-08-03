@@ -36,17 +36,16 @@ config/fleet/flake.nix
 implementation tree. The root and portable locks must agree on shared inputs;
 host-only inputs stay outside the portable closure.
 
-The former root `flake-ai.nix` compatibility shim was retired after the
-maintained-consumer inventory and GitHub code search found no external imports.
-Portable consumers use `flake/ai.nix` through `config/fleet`.
+The former root `flake-ai.nix` shim and later legacy subflake-path stub were
+retired after authoritative consumer evaluation and code search found no
+maintained import. Portable consumers use `flake/ai.nix` through `config/fleet`.
 
 ### External consumers
 
 The supported shape is a paired root source and `dir=config/fleet` input at one
 revision. Cleanup issue #114 verified that shape in the authoritative shared-work,
 VPS, and Vulcan checkouts on 2026-08-03, including positive no-activation
-evaluation. `config/ai` remains an intentional throwing stub until issue #115
-deletes the compatibility machinery.
+evaluation. The legacy subflake directory has no compatibility route.
 
 External Home Manager and NixOS checkouts own their locks and activation. This
 repository exports implementation and modules; it does not overwrite another

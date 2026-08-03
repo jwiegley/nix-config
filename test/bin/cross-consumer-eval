@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # test/bin/cross-consumer-eval — evaluate the fleet's nix-config CONSUMERS against
 # THIS working tree, eval-only, so a change here that would break a consumer's
-# evaluation fails at pre-push in nix-config instead of weeks later at the
+# evaluation fails during low-frequency closeout instead of weeks later at the
 # consumer's next lock bump.
 #
 # Why this exists. nix-config is consumed, not just built: vps pulls it in as a
@@ -45,7 +45,8 @@
 # What this ADDS over a consumer's in-repo canary: that canary runs at the
 # consumer's own `nix flake check`, against the nix-config revision it has
 # ALREADY locked. This runs it (and more, for vps) against nix-config's WORKING
-# TREE, before a push — the window a lock-time canary structurally cannot cover.
+# TREE, before publication — the window a lock-time canary structurally cannot
+# cover.
 #
 # Eval-only. Every target is forced to .drvPath: instantiation, never a build.
 # A NixOS toplevel can still trigger import-from-derivation, which builds; that
@@ -71,7 +72,7 @@
 #                            consumers' inputs are already realized in the store
 #   CONSUMER_EVAL_STRICT=1   a missing consumer checkout is a FAILURE, not a
 #                            skip (use where the checkouts are guaranteed, e.g.
-#                            a pre-push hook on hera/clio)
+#                            a local closeout on hera/clio)
 #
 # Refs: jwiegley/nix-config#22.
 
@@ -125,28 +126,6 @@ eval_target() {
     else
         fail "$name: evaluation failed against $tree"
         printf '%s\n' "$out" | sed 's/^/      /' >&2
-    fi
-}
-
-# Prove the compatibility stub fails through a real consumer graph, including
-# the consumer's llm-agents follows edge. An isolated `nix flake show` is not
-# enough: lock topology is resolved before outputs are forced.
-eval_expected_stale_stub_failure() {
-    local name=$1
-    shift
-    local -a cmd=(nix eval "${nix_common[@]}" "$@")
-    note "$name: ${cmd[*]}"
-    ran=$((ran + 1))
-    local out rc
-    out=$("${cmd[@]}" 2>&1)
-    rc=$?
-    if [[ $rc -eq 0 ]]; then
-        fail "$name: stale config/ai unexpectedly evaluated"
-    elif [[ $out == *config/fleet* && $out == *'#47'* ]]; then
-        note "$name: OK  stale route failed with the actionable #47 message"
-    else
-        fail "$name: stale route failed without naming config/fleet and #47"
-        printf '%s\n' "$out" | tail -40 | sed 's/^/      /' >&2
     fi
 }
 
@@ -233,10 +212,6 @@ run_vps() {
     eval_target "vps [ovh-vps toplevel]" \
         --raw --override-input nix-config "$tree" \
         --override-input nix-config-ai "$tree?dir=config/fleet" \
-        "$vps_checkout#nixosConfigurations.ovh-vps.config.system.build.toplevel.drvPath"
-    eval_expected_stale_stub_failure "vps [stale config/ai stub]" \
-        --raw --override-input nix-config "$tree" \
-        --override-input nix-config-ai "$tree?dir=config/ai" \
         "$vps_checkout#nixosConfigurations.ovh-vps.config.system.build.toplevel.drvPath"
 }
 

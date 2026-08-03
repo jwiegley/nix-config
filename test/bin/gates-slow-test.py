@@ -34,7 +34,6 @@ REPO = Path(__file__).resolve().parents[2]
 BIN = REPO / "test" / "bin"
 VERIFY_SIGNATURES = BIN / "verify-signatures"
 CROSS_CONSUMER_EVAL = BIN / "cross-consumer-eval"
-CONSUMER_INVENTORY = BIN / "consumer-inventory"
 DARWIN_SURFACE_DIFF = BIN / "darwin-surface-diff"
 DARWIN_SURFACE_BASELINE = BIN / "darwin-surface-baseline"
 IMMUTABLE_SUBFLAKE_CHECK = BIN / "immutable-subflake-check"
@@ -524,7 +523,6 @@ class TestImmutableSubflakeCheck(unittest.TestCase):
         self.repo.mkdir()
         (self.repo / "test" / "bin").mkdir(parents=True)
         (self.repo / "config" / "fleet").mkdir(parents=True)
-        (self.repo / "config" / "ai").mkdir(parents=True)
         shutil.copy2(IMMUTABLE_SUBFLAKE_CHECK, self.repo / "test" / "bin")
 
         self.committed_lock = {
@@ -535,18 +533,15 @@ class TestImmutableSubflakeCheck(unittest.TestCase):
         self.committed_lock_bytes = (
             json.dumps(self.committed_lock, separators=(",", ":")) + "\n"
         )
-        self.committed_up_import = "# committed up-import authority\n"
+        self.committed_source_marker = "committed source marker\n"
         (self.repo / "config" / "fleet" / "flake.lock").write_text(
             self.committed_lock_bytes, encoding="utf-8"
         )
         (self.repo / "config" / "fleet" / "flake.nix").write_text(
             "{ outputs = _: {}; }\n", encoding="utf-8"
         )
-        (self.repo / "config" / "ai" / "flake.nix").write_text(
-            'throw "config/fleet #47"\n', encoding="utf-8"
-        )
-        (self.repo / "flake-ai.nix").write_text(
-            self.committed_up_import, encoding="utf-8"
+        (self.repo / "source-marker").write_text(
+            self.committed_source_marker, encoding="utf-8"
         )
         git("init", "-q", ".", cwd=self.repo)
         git("config", "user.email", "test@example.invalid", cwd=self.repo)
@@ -574,8 +569,10 @@ class TestImmutableSubflakeCheck(unittest.TestCase):
         self.expected_archive_lock.write_text(
             self.committed_lock_bytes, encoding="utf-8"
         )
-        self.expected_up_import = self.root / "expected-up-import"
-        self.expected_up_import.write_text(self.committed_up_import, encoding="utf-8")
+        self.expected_source_marker = self.root / "expected-source-marker"
+        self.expected_source_marker.write_text(
+            self.committed_source_marker, encoding="utf-8"
+        )
         self.scratch = self.root / "scratch"
         self.scratch.mkdir()
         self._write_fake_nix()
@@ -615,28 +612,17 @@ if args[:2] == ["flake", "prefetch"]:
         row["archiveLock"] = archive.extractfile(
             "config/fleet/flake.lock"
         ).read().decode()
-        row["archiveUpImport"] = archive.extractfile("flake-ai.nix").read().decode()
+        row["archiveSourceMarker"] = archive.extractfile("source-marker").read().decode()
     record(row)
     if row["archiveLock"] != Path(
         os.environ["FAKE_EXPECTED_ARCHIVE_LOCK"]
     ).read_text():
         raise SystemExit(91)
-    if row["archiveUpImport"] != Path(
-        os.environ["FAKE_EXPECTED_UP_IMPORT"]
+    if row["archiveSourceMarker"] != Path(
+        os.environ["FAKE_EXPECTED_SOURCE_MARKER"]
     ).read_text():
         raise SystemExit(92)
     print(json.dumps({"hash": "sha256-/+fixture=", "storePath": "/nix/store/fake"}))
-elif args[:2] == ["flake", "show"]:
-    reference = args[-1]
-    record(row)
-    print(
-        os.environ.get(
-            "FAKE_STUB_MESSAGE",
-            "config/ai was renamed to config/fleet by #47",
-        ),
-        file=sys.stderr,
-    )
-    raise SystemExit(int(os.environ.get("FAKE_STUB_STATUS", "1")))
 elif args[:2] == ["flake", "metadata"]:
     locked = {
         "type": os.environ.get("FAKE_METADATA_TYPE", "tarball"),
@@ -674,7 +660,7 @@ else:
             FAKE_NIX_LOG=str(self.log),
             FAKE_METADATA_LOCK=str(self.metadata_lock),
             FAKE_EXPECTED_ARCHIVE_LOCK=str(self.expected_archive_lock),
-            FAKE_EXPECTED_UP_IMPORT=str(self.expected_up_import),
+            FAKE_EXPECTED_SOURCE_MARKER=str(self.expected_source_marker),
             FAKE_WORKTREE_LOCK=str(self.worktree_lock),
         )
         env.update(overrides)
@@ -701,11 +687,13 @@ else:
         self.assertEqual(self.worktree_lock.read_bytes(), self.worktree_lock_bytes)
 
         calls = self.calls()
-        self.assertEqual(len(calls), 4, calls)
-        prefetch, metadata, check, stale = calls
+        self.assertEqual(len(calls), 3, calls)
+        prefetch, metadata, check = calls
         self.assertEqual(prefetch["args"][:3], ["flake", "prefetch", "--json"])
         self.assertEqual(prefetch["archiveLock"], self.committed_lock_bytes)
-        self.assertEqual(prefetch["archiveUpImport"], self.committed_up_import)
+        self.assertEqual(
+            prefetch["archiveSourceMarker"], self.committed_source_marker
+        )
         self.assertFalse(Path(prefetch["archivePath"]).exists())
 
         immutable_ref = metadata["args"][-1]
@@ -729,8 +717,6 @@ else:
                 "--no-write-lock-file",
             ],
         )
-        self.assertIn("?dir=config/ai&narHash=", stale["args"][-1])
-        self.assertEqual(stale["args"][:2], ["flake", "show"])
         self.assertEqual(list(self.scratch.iterdir()), [])
 
     def test_default_revision_is_head(self):
@@ -739,30 +725,10 @@ else:
         self.assertIn(self.revision[:12], result.stdout)
         self.assertEqual(self.worktree_lock.read_bytes(), self.worktree_lock_bytes)
 
-    def test_stale_stub_failure_must_name_target_and_issue(self):
-        for message in ("renamed by #47", "renamed to config/fleet"):
-            with self.subTest(message=message):
-                result = self.run_gate(FAKE_STUB_MESSAGE=message)
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn(
-                    "does not name config/fleet and #47",
-                    result.stdout + result.stderr,
-                )
-                self.assertEqual(len(self.calls()), 4)
-
-    def test_stale_stub_unexpected_success_is_rejected(self):
-        result = self.run_gate(FAKE_STUB_STATUS="0")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn(
-            "stale config/ai reference unexpectedly resolved",
-            result.stdout + result.stderr,
-        )
-        self.assertEqual(len(self.calls()), 4)
-
     def test_metadata_requires_tarball_dir_and_prefetched_nar_hash(self):
         cases = (
             ({"FAKE_METADATA_TYPE": "git"}, "locked.type is not tarball"),
-            ({"FAKE_METADATA_DIR": "config/ai"}, "locked.dir is not config/fleet"),
+            ({"FAKE_METADATA_DIR": "wrong/subflake"}, "locked.dir is not config/fleet"),
             ({"FAKE_METADATA_HASH": "sha256-other="}, "locked.narHash differs"),
         )
         for override, diagnostic in cases:
@@ -827,24 +793,11 @@ class TestGatesAreRegistered(unittest.TestCase):
         for tool in (
             VERIFY_SIGNATURES,
             CROSS_CONSUMER_EVAL,
-            CONSUMER_INVENTORY,
             DARWIN_SURFACE_DIFF,
             DARWIN_SURFACE_BASELINE,
             IMMUTABLE_SUBFLAKE_CHECK,
         ):
             self.assertTrue(os.access(tool, os.X_OK), "%s is not executable" % tool)
-
-    def test_consumer_inventory_has_no_repository_writer(self):
-        result = subprocess.run(
-            [str(CONSUMER_INVENTORY), "--write"],
-            cwd=REPO,
-            capture_output=True,
-            text=True,
-            check=False,
-            env=clean_env(),
-        )
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("unknown argument", result.stdout + result.stderr)
 
     def test_python_tiers_are_wired_without_a_second_quality_authority(self):
         hook = (REPO / "lefthook.yml").read_text()
@@ -1167,7 +1120,6 @@ class TestGatesAreRegistered(unittest.TestCase):
         for tool in (
             VERIFY_SIGNATURES,
             CROSS_CONSUMER_EVAL,
-            CONSUMER_INVENTORY,
             DARWIN_SURFACE_DIFF,
             DARWIN_SURFACE_BASELINE,
             IMMUTABLE_SUBFLAKE_CHECK,

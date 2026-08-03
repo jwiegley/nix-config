@@ -17,7 +17,7 @@ if [[ ${1-} == -h || ${1-} == --help ]]; then
 fi
 [[ $# -le 1 ]] || die "expected at most one revision"
 
-for tool in git nix python3 cmp cp grep mktemp unlink rmdir; do
+for tool in git nix python3 cmp cp mktemp unlink rmdir; do
     command -v "$tool" >/dev/null 2>&1 || die "required command is missing: $tool"
 done
 
@@ -40,7 +40,6 @@ tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/immutable-subflake.XXXXXX") ||
 archive=$tmp_dir/source.tar
 prefetch_json=$tmp_dir/prefetch.json
 metadata_json=$tmp_dir/metadata.json
-stub_log=$tmp_dir/stub.log
 committed_lock=$tmp_dir/committed-flake.lock
 lock_snapshot=$tmp_dir/worktree-flake.lock
 lock_change_reported=0
@@ -65,7 +64,6 @@ cleanup() {
 
     for path in \
         "$metadata_json" \
-        "$stub_log" \
         "$prefetch_json" \
         "$committed_lock" \
         "$lock_snapshot" \
@@ -182,20 +180,6 @@ fi
 if ! lock_is_unchanged; then
     lock_change_reported=1
     die "working-tree config/fleet/flake.lock changed during flake check"
-fi
-
-stale_ref="tarball+${archive_uri}?dir=config/ai&narHash=${encoded_nar_hash}"
-if nix flake show --no-write-lock-file "$stale_ref" \
-    >"$stub_log" 2>&1; then
-    die "stale config/ai reference unexpectedly resolved"
-fi
-if ! grep -Fq 'config/fleet' "$stub_log" || ! grep -Fq '#47' "$stub_log"; then
-    die "stale config/ai failure does not name config/fleet and #47"
-fi
-
-if ! lock_is_unchanged; then
-    lock_change_reported=1
-    die "working-tree config/fleet/flake.lock changed during stale-stub verification"
 fi
 
 printf 'immutable-subflake-check: revision %s passed\n' "${commit:0:12}"

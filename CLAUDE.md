@@ -43,7 +43,7 @@ Never run `nix flake update` or `nix flake lock` under `sudo`; root and user fet
 ## Architecture invariants
 
 - Root implementation is owned here; portable AI is the `config/fleet` subflake from the same revision.
-- The root repository's portable core is `config/fleet`. Recorded consumer sources use it; `config/ai` remains only as a throwing stub until cleanup issue #114 verifies every authoritative live consumer and issue #115 retires the compatibility machinery.
+- The root repository's portable core is `config/fleet`; every supported consumer uses that path from the same revision.
 - `config/fleet/catalog.nix` owns profiles/resources/selection; `config/fleet/renderers/` are concrete client adapters.
 - `packages/` owns reusable package sets and multi-consumer implementations. Overlays own ordered exposure, narrow compatibility fixes, and cohesive integration-specific package definitions; they must not hide host selection or unrelated implementation channels.
 - Mutable agent state is not Nix-owned. Nix owns generated leaves only.
