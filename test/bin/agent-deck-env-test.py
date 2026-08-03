@@ -22,6 +22,8 @@ def clean_environment(**updates: str) -> dict[str, str]:
     environment = os.environ.copy()
     for variable in (
         "ANTHROPIC_API_KEY",
+        "AGENT_DECK_ENV_LABEL",
+        "AGENT_DECK_ENV_PASS_BIN",
         "FACTORY_API_KEY",
         "GEMINI_API_KEY",
         "OPENAI_API_KEY",
@@ -34,7 +36,7 @@ def clean_environment(**updates: str) -> dict[str, str]:
 
 
 class AgentDeckEnvTests(unittest.TestCase):
-    def test_exports_first_password_line_without_exposing_it(self):
+    def test_codex_label_forwards_arguments_without_recording_credentials(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             pass_bin = root / "pass"
@@ -47,6 +49,8 @@ class AgentDeckEnvTests(unittest.TestCase):
                 f"""#!/usr/bin/env bash
 set -euo pipefail
 [[ $# == 1 ]]
+[[ ! -v REF_API_KEY ]]
+[[ ! -v PERPLEXITY_API_KEY ]]
 case $1 in
   api.ref.tools) printf '%s\\n' '{SYNTHETIC_REF_SECRET}' 'ignored-line' ;;
   api.perplexity.ai) printf '%s\\n' '{SYNTHETIC_PERPLEXITY_SECRET}' ;;
@@ -56,21 +60,35 @@ esac
             )
             write_executable(
                 target_bin,
-                """#!/usr/bin/env bash
+                f"""#!/usr/bin/env bash
 set -euo pipefail
+[[ $REF_API_KEY == '{SYNTHETIC_REF_SECRET}' ]]
+[[ $PERPLEXITY_API_KEY == '{SYNTHETIC_PERPLEXITY_SECRET}' ]]
+[[ ! -v AGENT_DECK_ENV_LABEL ]]
+[[ ! -v AGENT_DECK_ENV_PASS_BIN ]]
 printf '%s\\0' "$@" >"$CAPTURE_ARGV"
-printf '%s\n%s' "$REF_API_KEY" "$PERPLEXITY_API_KEY" >"$CAPTURE_ENV"
+printf '%s\n' REF_API_KEY PERPLEXITY_API_KEY >"$CAPTURE_ENV"
 """,
             )
 
             result = subprocess.run(
-                [str(WRAPPER), str(target_bin), "first", "second value"],
+                [
+                    str(WRAPPER),
+                    str(target_bin),
+                    "exec",
+                    "--profile",
+                    "omlx",
+                    "hello",
+                ],
                 capture_output=True,
                 text=True,
                 env=clean_environment(
+                    AGENT_DECK_ENV_LABEL="codex",
                     AGENT_DECK_ENV_PASS_BIN=str(pass_bin),
                     CAPTURE_ARGV=str(argv_path),
                     CAPTURE_ENV=str(env_path),
+                    PERPLEXITY_API_KEY="ambient-perplexity",
+                    REF_API_KEY="ambient-ref",
                 ),
                 check=False,
             )
@@ -78,11 +96,11 @@ printf '%s\n%s' "$REF_API_KEY" "$PERPLEXITY_API_KEY" >"$CAPTURE_ENV"
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(
                 env_path.read_text().splitlines(),
-                [SYNTHETIC_REF_SECRET, SYNTHETIC_PERPLEXITY_SECRET],
+                ["REF_API_KEY", "PERPLEXITY_API_KEY"],
             )
             self.assertEqual(
                 [item.decode() for item in argv_path.read_bytes().split(b"\0") if item],
-                ["first", "second value"],
+                ["exec", "--profile", "omlx", "hello"],
             )
             for secret in (
                 SYNTHETIC_REF_SECRET,
@@ -91,6 +109,7 @@ printf '%s\n%s' "$REF_API_KEY" "$PERPLEXITY_API_KEY" >"$CAPTURE_ENV"
                 self.assertNotIn(secret, result.stdout)
                 self.assertNotIn(secret, result.stderr)
                 self.assertNotIn(secret, argv_path.read_text())
+                self.assertNotIn(secret, env_path.read_text())
 
     def test_each_unavailable_credential_fails_before_running_command(self):
         entries = (
@@ -111,6 +130,8 @@ printf '%s\n%s' "$REF_API_KEY" "$PERPLEXITY_API_KEY" >"$CAPTURE_ENV"
                             f"""#!/usr/bin/env bash
 set -euo pipefail
 [[ $# == 1 ]]
+[[ ! -v REF_API_KEY ]]
+[[ ! -v PERPLEXITY_API_KEY ]]
 [[ $FAILURE_MODE != helper-failure || $1 != $FAILING_ENTRY ]] || exit 1
 [[ $FAILURE_MODE != empty || $1 != $FAILING_ENTRY ]] || exit 0
 case $1 in
@@ -130,6 +151,7 @@ esac
                             capture_output=True,
                             text=True,
                             env=clean_environment(
+                                AGENT_DECK_ENV_LABEL="codex",
                                 AGENT_DECK_ENV_PASS_BIN=str(pass_bin),
                                 FAILURE_MODE=failure_mode,
                                 FAILING_ENTRY=failing_entry,
@@ -139,6 +161,7 @@ esac
 
                         self.assertNotEqual(result.returncode, 0)
                         self.assertFalse(invoked_path.exists())
+                        self.assertIn("codex: ", result.stderr)
                         self.assertIn(
                             "credential is unavailable or empty", result.stderr
                         )
@@ -159,7 +182,7 @@ esac
         )
 
         self.assertEqual(result.returncode, 2)
-        self.assertIn("command is required", result.stderr)
+        self.assertIn("agent-deck-env: command is required", result.stderr)
 
 
 if __name__ == "__main__":

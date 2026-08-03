@@ -2,8 +2,10 @@
 set -euo pipefail
 set +x
 
+diagnostic_label=${AGENT_DECK_ENV_LABEL:-agent-deck-env}
+
 if (($# == 0)); then
-    echo "agent-deck-env: command is required" >&2
+    echo "$diagnostic_label: command is required" >&2
     exit 2
 fi
 
@@ -11,7 +13,7 @@ user=${USER:-$(id -un)}
 pass_bin=${AGENT_DECK_ENV_PASS_BIN:-/etc/profiles/per-user/${user}/bin/pass}
 
 if [[ ! -x $pass_bin ]]; then
-    echo "agent-deck-env: credential helper is unavailable" >&2
+    echo "$diagnostic_label: credential helper is unavailable" >&2
     exit 1
 fi
 
@@ -20,20 +22,22 @@ load_credential() {
 
     credential=""
     if ! credential=$("$pass_bin" "$entry"); then
-        echo "agent-deck-env: $label credential is unavailable or empty" >&2
+        echo "$diagnostic_label: $label credential is unavailable or empty" >&2
         return 1
     fi
     value=${credential%%$'\n'*}
     unset credential
     if [[ -z $value ]]; then
-        echo "agent-deck-env: $label credential is unavailable or empty" >&2
+        echo "$diagnostic_label: $label credential is unavailable or empty" >&2
         return 1
     fi
     printf -v "$variable" '%s' "$value"
-    export "${variable?}"
 }
 
+unset REF_API_KEY PERPLEXITY_API_KEY
 load_credential api.ref.tools REF_API_KEY Ref
 load_credential api.perplexity.ai PERPLEXITY_API_KEY Perplexity
+export REF_API_KEY PERPLEXITY_API_KEY
 
+unset AGENT_DECK_ENV_LABEL AGENT_DECK_ENV_PASS_BIN
 exec "$@"

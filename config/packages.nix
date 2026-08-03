@@ -38,9 +38,10 @@ let
       nativeBuildInputs = [ makeWrapper ];
       postBuild = ''
         rm -f "$out/bin/codex"
-        makeWrapper ${../bin/codex-env} "$out/bin/codex" \
-          --set CODEX_ENV_REAL_CODEX ${package}/bin/codex \
-          --set CODEX_ENV_PASS_BIN ${pass}/bin/pass
+        makeWrapper ${../bin/agent-deck-env} "$out/bin/codex" \
+          --set AGENT_DECK_ENV_LABEL codex \
+          --set AGENT_DECK_ENV_PASS_BIN ${pass}/bin/pass \
+          --add-flag ${package}/bin/codex
       '';
       passthru = (package.passthru or { }) // {
         heraCredentialWrapper = true;
