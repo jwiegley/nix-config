@@ -17,8 +17,9 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
 - Active construction checkout:
   `/private/tmp/wg-nix-cleanup/c8a-parity-rename`, branch
-  `cleanup/c8a-parity-rename`. Issue #112 is In Progress; no implementation commit
-  exists yet.
+  `cleanup/c8a-parity-rename`. Issue #112 implementation commit `1d8551c0` is
+  signed and independently audited; the signed closeout is at branch HEAD. The
+  work unit is ready for local fast-forward into `main`.
 - Superseded Phase 1 branches/worktrees were removed after their refs and dirty
   state were captured in the standalone recovery package.
 - The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
@@ -159,18 +160,33 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   subflake, Darwin value surface, four consumer evaluations with zero skips, and
   all 27 local signatures. The subsequent closeout documentation passed the fast
   hook.
+- C8a/#112 commit `1d8551c0` deletes the one-time config/ai-to-config/fleet
+  parity command-migration environment, validator, refresh branch, CLI mode,
+  private test, and two now-unused scanner exemptions. The committed parity JSON
+  remains byte-identical historical evidence; `--commands`, strict command
+  equality, compare/refresh behavior, all 28 currency tests, and #115's scanner
+  remain.
+- The historical artifact's direct current comparison remains non-green for
+  known pre-#112 selection/version changes (agent-browser, Droid, mtplx,
+  SearxNG, and portable Pi/nix-scripts). It was not regenerated to manufacture a
+  green result. A temporary artifact derived at `1d8551c0` self-compared cleanly,
+  and a valid one-package mutation was rejected exactly. Independent closeout
+  ruling: PASS at
+  `/private/tmp/wg-nix-c8a-closeout-decision-fess-report.md`.
+- The unchanged implementation passed the fast gate and the 13-module full tier:
+  315 tests, zero failures, 329 seconds within the 900-second budget.
 
 ## Active work unit
 
-Delete completed parity rename-migration mode and its private fixtures under
-issue #112 while retaining any boundary still consumed by #113 or #115.
+Fast-forward issue #112 locally. Then close it Done, remove its worktree/branch,
+and begin issue #113 from current local `main`.
 
 ## Project state
 
 Cleanup epic #98 remains In Progress. Issues #99-#103, #105-#107, and #114 are
 closed with their Project items Done; issue #111 is also closed Done. Issue #112
-is In Progress. The remaining cleanup issues stay Todo until their accepted work
-units begin.
+is In Progress and ready for local integration. The remaining cleanup issues stay
+Todo until their accepted work units begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
 
@@ -181,12 +197,15 @@ Authorized:
 - accepted plan decisions D1-D7;
 - local source edits and signed cleanup commits;
 - the completed VPS checkout fast-forward and no-activation verification;
+- the completed one-time Hera generation 986 activation John requested in this
+  turn; this was consumed authorization, not standing activation authority;
 - truthful GitHub issue/Project reconciliation after focused proof.
 
 Not authorized:
 
 - pushing or publishing nix-config cleanup commits;
-- activating Hera, Clio, VPS, Vulcan, or shared-work configurations;
+- any further activation of Hera, Clio, VPS, Vulcan, or shared-work
+  configurations;
 - restarting or terminating user sessions;
 - force-pushing or rewriting published history;
 - further external-checkout edits without a new need inside the accepted plan.
@@ -203,9 +222,13 @@ Not authorized:
 ## Resume procedure
 
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
-2. Preserve every concurrent path, primary-only Pi provider subtree, and
+2. Verify issue #112 implementation commit `1d8551c0` and its closeout commit
+   have good signatures and the worktree is clean.
+3. Preserve every concurrent path, primary-only Pi provider subtree, and
    `.pi/goals` state named above; stage only explicit cleanup paths.
-3. Trace every caller of parity rename mode and its fixtures before deletion;
-   retain live parity/currency behavior required by #113 or #115.
-4. Stage only issue #112 paths and keep publication, activation, and session
-   restart outside this work unit.
+4. Fast-forward local `main`, close #112 Done using the explicit `jwiegley`
+   account, and remove its worktree/branch.
+5. Start #113 from a fresh short-lived branch/worktree based on current local
+   `main`.
+6. Do not push, perform another activation, or restart sessions without separate
+   authorization.

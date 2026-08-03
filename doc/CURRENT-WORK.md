@@ -12,9 +12,10 @@ retains a small fail-closed `fast`/`full` quality driver while deleting structur
 coverage, root output-denominator bookkeeping, the committed consumer inventory,
 duplicate root/portable gates, and their regeneration cycle.
 
-Issues #107, #103, #105, #106, and #111 are complete and closed Done. Codex now
-delegates changing CLI grammar to its pinned upstream parser. Issue #112's parity
-rename-migration retirement is In Progress.
+Issues #107, #103, #105, #106, and #111 are complete and closed Done. Issue
+#112's parity rename-migration retirement is complete and independently audited,
+but remains In Progress until local integration. The next cleanup unit is issue
+#113.
 
 The construction checkout is
 `/private/tmp/wg-nix-cleanup/c8a-parity-rename`. The primary
@@ -27,5 +28,6 @@ Authoritative consumer proof now passes for Vulcan, VPS, and shared work. The VP
 was fast-forwarded to its existing signed upstream `config/fleet` migration and
 passed a full no-link NixOS build without activation.
 
-Push, publication, further activation, session restart/termination, and
+The requested one-time Hera switch completed at generation 986. Push,
+publication, another activation, session restart/termination, and
 published-history rewrite are not authorized.
