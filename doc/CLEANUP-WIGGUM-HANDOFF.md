@@ -12,14 +12,14 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 - `doc/CLEANUP-PLAN.md` is the accepted plan. John explicitly accepted decisions
   D1-D7 on 2026-08-03.
 - Local `main` contains completed, audited Phase 1 and issues #107, #103, #105,
-  #106, #110-#113, and #115 through `4ce9e7a0`, including John's signed flake-lock
-  update. Fetched Gitea and GitHub `main` remain
+  #106, #110-#113, and #115 through `650252b9`, including John's signed
+  flake-lock update and #120's proof-only HOLD record. Fetched Gitea and GitHub
+  `main` remain
   `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
-- Proof-only #120 checkout used for this audit:
-  `/private/tmp/wg-nix-cleanup/c10e-gpg-handoff`, branch
-  `cleanup/c10e-gpg-handoff`. Its signed record is ready for integration and
-  removal; no construction checkout remains after the resume steps. Issue #120
-  remains Todo on HOLD and has no retirement change.
+- Active construction checkout:
+  `/private/tmp/wg-nix-cleanup/c10d-codex-log`, branch
+  `cleanup/c10d-codex-log`. Issue #119 is In Progress in read-only fleet proof;
+  no retirement commit exists.
 - Superseded Phase 1 branches/worktrees were removed after their refs and dirty
   state were captured in the standalone recovery package.
 - The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
@@ -214,15 +214,17 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 
 ## Active work unit
 
-Fast-forward this proof-only #120 record and remove its worktree/branch. Leave
-#120 Todo until the missing two-cycle activation evidence is supplied.
+Establish #119's Hera, Clio, and four shared-work path/residue/rollback evidence
+without activation or session restart. Do not delete the old-directory migration
+unless fresh-session and rollback acceptance are already proven.
 
 ## Project state
 
 Cleanup epic #98 remains In Progress. Issues #99-#103, #105-#107, #111, #112,
 #110-#115 are closed with their Project items Done except optional #108/#109,
 which remain Todo behind concurrent Pi/model work. Issue #120 is Todo on HOLD.
-The remaining cleanup issues stay Todo until their accepted work units begin.
+Issue #119 is In Progress. The remaining cleanup issues stay Todo until their
+accepted work units begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
 
@@ -260,9 +262,9 @@ Not authorized:
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
 2. Preserve every concurrent path, primary-only Pi provider subtree, and
    `.pi/goals` state named above; stage only explicit cleanup paths.
-3. Fast-forward this documentation-only proof record and remove its temporary
-   worktree/branch.
-4. Do not resume #120 without durable activation evidence or explicit authority
-   for one additional Hera and Clio activation.
+3. Probe only sanitized path types, target equality, residue counts, and
+   generation/config identifiers on every Codex host.
+4. If fresh-session or rollback proof is absent, leave migration source intact
+   and record the exact external gate on #119.
 5. Do not push, perform another activation, edit a consumer, or restart sessions
    without separate authorization.

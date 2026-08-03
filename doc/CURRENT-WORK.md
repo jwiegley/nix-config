@@ -15,11 +15,11 @@ duplicate root/portable gates, and their regeneration cycle.
 Issues #107, #103, #105, #106, #111, #112, #113, and #115 are complete and
 closed Done; #110 is closed Not Planned under accepted decision D5. Issue #120's
 read-only audit is on HOLD in Todo: no-producer and rollback-set proof pass, but
-two-cycle activation proof is absent. No activation is authorized.
+two-cycle activation proof is absent. Issue #119's Codex log-migration retirement
+is in read-only fleet proof. No activation or session restart is authorized.
 
-The proof-only #120 checkout was
-`/private/tmp/wg-nix-cleanup/c10e-gpg-handoff`; closeout fast-forwards its signed
-record and removes it. The primary `/Users/johnw/src/nix` checkout is on local
+The construction checkout is `/private/tmp/wg-nix-cleanup/c10d-codex-log`. The
+primary `/Users/johnw/src/nix` checkout is on local
 `main` and contains the concurrent
 dependency, model, Pi, and oMLX 0.5.5 repair work that produced active Hera
 generation 986, expanded Pi/gallery work, untracked Pi provider work, and runtime
