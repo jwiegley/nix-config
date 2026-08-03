@@ -7,7 +7,7 @@ The accepted Definition of Done is [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md), and
 [`CLEANUP-WIGGUM-HANDOFF.md`](CLEANUP-WIGGUM-HANDOFF.md) is the sole mutable
 resume authority.
 
-Phase 1 is complete locally and awaiting its final independent range audit. It
+Phase 1 is complete locally and its final independent range audit passed. It
 retains a small fail-closed `fast`/`full` quality driver while deleting structural
 coverage, root output-denominator bookkeeping, the committed consumer inventory,
 duplicate root/portable gates, and their regeneration cycle.

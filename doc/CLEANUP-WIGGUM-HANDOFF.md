@@ -17,8 +17,8 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
 - Active construction checkout:
   `/private/tmp/wg-nix-cleanup/c1a-rewrite`, branch
-  `cleanup/c1a-rewrite`. Its signed Phase 1 range is ready for final audit and a
-  local fast-forward into `main`.
+  `cleanup/c1a-rewrite`. Its signed Phase 1 range passed final independent audit
+  and is ready for a local fast-forward into `main`.
 - The signed exploratory recovery branch remains
   `cleanup/c1a-python-tiers@65701d26ba30d410765bcb93713b35c7a19c8ecb`
   and is also captured in the standalone recovery package.
@@ -87,6 +87,11 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
     passed;
   - native `agent-resources`, `agent-wrappers`, `pi-gallery`, and
     `pi-fleet-theme` checks passed.
+- Final audit report:
+  `/private/tmp/wg-nix-phase1-final-fess.QAfPMm/report.md`; verdict PASS after
+  corrective commit `7daf8957`.
+- The complete Phase 1 range has eight good signatures, a clean worktree, and a
+  net diff of 517 additions and 12,504 deletions across 35 files.
 
 ## Active work unit
 
@@ -98,8 +103,8 @@ cleanup, and truthful Project reconciliation.
 
 Cleanup epic #98 and issues #99/#100 remain In Progress. C9a issue #114 is closed
 Completed with its Project item Done. Phase 1 issues #100-#102 are ready for
-completion/supersession decisions after the final range audit. The remaining
-cleanup issues stay Todo until their accepted work units begin.
+completion/supersession. The remaining cleanup issues stay Todo until their
+accepted work units begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
 
@@ -135,12 +140,10 @@ Not authorized:
 2. Verify the Phase 1 worktree is clean and the recovery-package checksums pass.
 3. Preserve every user-owned dependency/Pi path named above and stage only
    explicit cleanup paths.
-4. Run the final independent audit over `8d9fc158..HEAD` and fix only verified
-   findings.
-5. Fast-forward local `main`, remove the completed Phase 1 worktree/branch, and
+4. Fast-forward local `main`, remove the completed Phase 1 worktree/branch, and
    preserve John's dirty paths.
-6. Close or supersede #100-#102 truthfully, then move #107 In Progress using the
+5. Close or supersede #100-#102 truthfully, then move #107 In Progress using the
    explicit `jwiegley` account.
-7. Start Phase 2 from a fresh short-lived branch/worktree based on current local
+6. Start Phase 2 from a fresh short-lived branch/worktree based on current local
    `main`.
-8. Do not push or activate without separate authorization.
+7. Do not push or activate without separate authorization.
