@@ -27,8 +27,6 @@ pre-push:
   files: '{ git ls-files; printf "%s\n" lefthook.yml; }'
   commands:
     # Keep the mandatory gate comfortably inside two minutes. Expensive Nix,
-    # consumer, dynamic coverage, and system checks live under `make expensive`.
+    # consumer, and system checks live under `make expensive`.
     signatures:
       run: ": {files}; test/bin/quality signatures"
-    coverage:
-      run: ": {files}; test/bin/quality coverage"

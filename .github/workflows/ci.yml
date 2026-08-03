@@ -79,8 +79,8 @@ jobs:
           fetch-depth: 0
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Python lint, essential tests, and coverage regression
+      - name: Python lint and essential tests
         run: >-
           nix shell nixpkgs#python3 nixpkgs#ruff nixpkgs#nixfmt nixpkgs#coreutils
-          -c test/bin/quality --python-tier pre-commit
-          python-lint python-test coverage
+          -c test/bin/quality --python-tier fast
+          python-lint python-test

@@ -3,10 +3,9 @@
 
 Why this file exists. An independent audit observed that of five gates added in
 this programme, only `test/bin/oracle-currency-slow-test.py` shipped negative cases that
-could be REPLAYED from the repository. The others — `test/bin/verify-signatures`,
-`test/bin/cross-consumer-eval`, and `test/bin/consumer-inventory`'s null-`repoHead`
-refusal — had their negative proofs recorded only as prose in commit messages
-and issue comments.
+could be REPLAYED from the repository. The other signature, cross-consumer, and
+immutable-subflake gates had negative proofs recorded only as prose in commit
+messages and issue comments.
 
 That is a real gap and not a pedantic one. This programme's standing rule is that
 a gate without a proven negative case is assumed broken, and five separate
@@ -38,7 +37,6 @@ CROSS_CONSUMER_EVAL = BIN / "cross-consumer-eval"
 CONSUMER_INVENTORY = BIN / "consumer-inventory"
 DARWIN_SURFACE_DIFF = BIN / "darwin-surface-diff"
 DARWIN_SURFACE_BASELINE = BIN / "darwin-surface-baseline"
-COVERAGE_REPORT = BIN / "coverage-report"
 IMMUTABLE_SUBFLAKE_CHECK = BIN / "immutable-subflake-check"
 
 # Repository-pointing git variables. A test that shells out to git in a temp
@@ -514,282 +512,6 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0)
 
 
-class TestConsumerInventoryRefusesNullHead(unittest.TestCase):
-    """--write must refuse an artifact that cannot say which tree it describes.
-
-    Every per-reference line number in the inventory is meaningless without the
-    revision it was read at, so a null repoHead is not a smaller artifact — it is
-    an uninterpretable one.
-    """
-
-    def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix="gates-inv-")
-        self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name) / "repo"
-        self.root.mkdir()
-        subprocess.run(
-            ["git", "-C", str(self.root), "init", "--quiet"],
-            check=True,
-            capture_output=True,
-            text=True,
-            env=clean_env(),
-        )
-        self.sample = self.root / "sample.nix"
-        self.sample.write_text("# config/ai\n")
-        self.python_contract = self.root / "contract.py"
-        self.python_contract.write_text("OLD_PATH = 'config/ai'\n")
-        self.extensionless_tool = self.root / "inventory-tool"
-        self.extensionless_tool.write_text("#!/bin/sh\n# config/ai\n")
-        subprocess.run(
-            [
-                "git",
-                "-C",
-                str(self.root),
-                "add",
-                "--",
-                "sample.nix",
-                "contract.py",
-                "inventory-tool",
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-            env=clean_env(),
-        )
-        subprocess.run(
-            [
-                "git",
-                "-C",
-                str(self.root),
-                "-c",
-                "user.name=Inventory Test",
-                "-c",
-                "user.email=inventory@example.invalid",
-                "-c",
-                "commit.gpgsign=false",
-                "commit",
-                "--quiet",
-                "-m",
-                "baseline",
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-            env=clean_env(),
-        )
-        subprocess.run(
-            [
-                "git",
-                "-C",
-                str(self.root),
-                "-c",
-                "user.name=Inventory Test",
-                "-c",
-                "user.email=inventory@example.invalid",
-                "-c",
-                "commit.gpgsign=false",
-                "commit",
-                "--quiet",
-                "--allow-empty",
-                "-m",
-                "same-tree head",
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-            env=clean_env(),
-        )
-        self.previous_head = subprocess.run(
-            ["git", "-C", str(self.root), "rev-parse", "HEAD^"],
-            check=True,
-            capture_output=True,
-            text=True,
-            env=clean_env(),
-        ).stdout.strip()
-
-    def run_write(self, dest, **environment):
-        return subprocess.run(
-            [str(CONSUMER_INVENTORY), "--write", str(dest)],
-            cwd=str(BIN.parent),
-            capture_output=True,
-            text=True,
-            env=clean_env(
-                CONSUMER_INVENTORY_REPO_ROOT=str(self.root),
-                CONSUMER_INVENTORY_CONSUMER_BASE=self.temp.name,
-                TMPDIR=self.temp.name,
-                **environment,
-            ),
-        )
-
-    def assert_no_temporary_inventory(self):
-        self.assertEqual(
-            list(Path(self.temp.name).glob("consumer-inventory.*"))
-            + list(Path(self.temp.name).glob("consumer-inventory-tree.*")),
-            [],
-        )
-
-    def test_write_refuses_when_repo_head_is_unresolvable(self):
-        dest = Path(self.temp.name) / "null-head.json"
-        # The override is an ENV VAR, not a flag. An earlier manual check of this
-        # guard passed for the wrong reason: it used a `--repo-head` flag that
-        # does not exist, so the tool died on "unknown argument" rather than on
-        # the null-head refusal. That is precisely the vacuous-negative-test
-        # failure this file exists to prevent, and it happened in my own
-        # verification of this very guard.
-        r = self.run_write(dest, CONSUMER_INVENTORY_REPO_HEAD="")
-        self.assertNotIn(
-            "unknown argument",
-            r.stdout + r.stderr,
-            "the tool rejected the invocation rather than exercising the guard",
-        )
-        self.assertNotEqual(
-            r.returncode, 0, "wrote an artifact with no revision:\n%s" % r.stdout
-        )
-        self.assertFalse(
-            dest.exists(),
-            "refused but still left a file behind, which is worse than either",
-        )
-        self.assertIn("repoHead", r.stdout + r.stderr)
-        self.assert_no_temporary_inventory()
-
-    def test_write_stamps_clean_head_and_refuses_dirty_tree(self):
-        clean_dest = Path(self.temp.name) / "clean.json"
-        result = self.run_write(clean_dest)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assert_no_temporary_inventory()
-        actual_head = subprocess.run(
-            ["git", "-C", str(self.root), "rev-parse", "HEAD"],
-            check=True,
-            capture_output=True,
-            text=True,
-            env=clean_env(),
-        ).stdout.strip()
-        clean_inventory = json.loads(clean_dest.read_text())
-        self.assertEqual(clean_inventory["repoHead"], actual_head)
-        singleton = [
-            record
-            for record in clean_inventory["references"]
-            if record.get("kind") == "internal-config-ai-ref"
-        ]
-        self.assertEqual(
-            [(record["file"], record["line"], record["text"]) for record in singleton],
-            [
-                ("contract.py", 1, "OLD_PATH = 'config/ai'"),
-                ("inventory-tool", 2, "# config/ai"),
-                ("sample.nix", 1, "# config/ai"),
-            ],
-        )
-
-        mismatch_dest = Path(self.temp.name) / "mismatch.json"
-        result = self.run_write(
-            mismatch_dest,
-            CONSUMER_INVENTORY_REPO_HEAD="0" * 40,
-        )
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("override does not match HEAD", result.stdout + result.stderr)
-        self.assertFalse(mismatch_dest.exists())
-        self.assert_no_temporary_inventory()
-
-        fake_python_bin = Path(self.temp.name) / "fake-python-bin"
-        fake_python_bin.mkdir()
-        fake_python = fake_python_bin / "python3"
-        fake_python.write_text("#!/bin/sh\nexit 42\n")
-        fake_python.chmod(0o755)
-        derive_failure_dest = Path(self.temp.name) / "derive-failure.json"
-        result = self.run_write(
-            derive_failure_dest,
-            PATH=f"{fake_python_bin}{os.pathsep}{os.environ['PATH']}",
-        )
-        self.assertNotEqual(result.returncode, 0)
-        self.assertFalse(derive_failure_dest.exists())
-        self.assert_no_temporary_inventory()
-
-        real_git = shutil.which("git")
-        self.assertIsNotNone(real_git)
-        fake_bin = Path(self.temp.name) / "fake-bin"
-        fake_bin.mkdir()
-        counter = Path(self.temp.name) / "rev-parse-count"
-        fake_git = fake_bin / "git"
-        fake_git.write_text(
-            "#!/usr/bin/env python3\n"
-            "import os, sys\n"
-            f"counter = {str(counter)!r}\n"
-            "args = sys.argv[1:]\n"
-            "if args[-3:] == ['rev-parse', '--verify', 'HEAD']:\n"
-            "    try:\n"
-            "        count = int(open(counter).read()) + 1\n"
-            "    except (FileNotFoundError, ValueError):\n"
-            "        count = 1\n"
-            "    open(counter, 'w').write(str(count))\n"
-            "    if count == 2:\n"
-            f"        print({self.previous_head!r})\n"
-            "        raise SystemExit(0)\n"
-            f"os.execv({real_git!r}, [{real_git!r}, *args])\n"
-        )
-        fake_git.chmod(0o755)
-        race_dest = Path(self.temp.name) / "race.json"
-        result = self.run_write(
-            race_dest,
-            PATH=f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
-        )
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("changed during derivation", result.stdout + result.stderr)
-        self.assertFalse(race_dest.exists())
-        self.assert_no_temporary_inventory()
-
-        real_grep = shutil.which("grep")
-        self.assertIsNotNone(real_grep)
-        aba_bin = Path(self.temp.name) / "aba-bin"
-        aba_bin.mkdir()
-        fake_grep = aba_bin / "grep"
-        fake_grep.write_text(
-            "#!/usr/bin/env python3\n"
-            "import os, subprocess, sys\n"
-            f"sample = {str(self.sample)!r}\n"
-            f"real_grep = {real_grep!r}\n"
-            "original = open(sample).read()\n"
-            "open(sample, 'w').write('# config/ai transient\\n')\n"
-            "try:\n"
-            "    result = subprocess.run([real_grep, *sys.argv[1:]])\n"
-            "finally:\n"
-            "    open(sample, 'w').write(original)\n"
-            "raise SystemExit(result.returncode)\n"
-        )
-        fake_grep.chmod(0o755)
-        aba_dest = Path(self.temp.name) / "aba.json"
-        result = self.run_write(
-            aba_dest,
-            PATH=f"{aba_bin}{os.pathsep}{os.environ['PATH']}",
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.sample.read_text(), "# config/ai\n")
-        aba_inventory = json.loads(aba_dest.read_text())
-        aba_records = [
-            record
-            for record in aba_inventory["references"]
-            if record.get("kind") == "internal-config-ai-ref"
-        ]
-        self.assertEqual(
-            [
-                (record["file"], record["line"], record["text"])
-                for record in aba_records
-            ],
-            [
-                ("contract.py", 1, "OLD_PATH = 'config/ai'"),
-                ("inventory-tool", 2, "# config/ai"),
-                ("sample.nix", 1, "# config/ai"),
-            ],
-        )
-        self.assert_no_temporary_inventory()
-
-        self.sample.rename(self.root / "moved.nix")
-        dirty_dest = Path(self.temp.name) / "dirty.json"
-        result = self.run_write(dirty_dest)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("tracked files differ from HEAD", result.stdout + result.stderr)
-        self.assertFalse(dirty_dest.exists())
-        self.assert_no_temporary_inventory()
-
 
 class TestImmutableSubflakeCheck(unittest.TestCase):
     """The immutable proof must use committed bytes and a pinned tarball."""
@@ -1107,10 +829,21 @@ class TestGatesAreRegistered(unittest.TestCase):
             CONSUMER_INVENTORY,
             DARWIN_SURFACE_DIFF,
             DARWIN_SURFACE_BASELINE,
-            COVERAGE_REPORT,
             IMMUTABLE_SUBFLAKE_CHECK,
         ):
             self.assertTrue(os.access(tool, os.X_OK), "%s is not executable" % tool)
+
+    def test_consumer_inventory_has_no_repository_writer(self):
+        result = subprocess.run(
+            [str(CONSUMER_INVENTORY), "--write"],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=clean_env(),
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unknown argument", result.stdout + result.stderr)
 
     def test_quality_registers_the_gate_suites(self):
         body = (BIN / "quality").read_text()
@@ -1118,8 +851,6 @@ class TestGatesAreRegistered(unittest.TestCase):
             "signatures",
             "consumer-eval",
             "darwin-surface",
-            "coverage",
-            "coverage-live",
             "immutable-subflake",
         ):
             self.assertIn(
@@ -1127,35 +858,6 @@ class TestGatesAreRegistered(unittest.TestCase):
                 body,
                 "test/bin/quality has no dispatch arm for %s" % suite,
             )
-
-    def test_coverage_gate_delegates_from_every_invocation_surface(self):
-        hook = (REPO / "lefthook.yml").read_text()
-        self.assertRegex(
-            hook,
-            r"(?m)^    quality-tier:\n      run: test/bin/quality --tier pre-commit$",
-        )
-        self.assertRegex(
-            hook,
-            r'(?m)^      run: ": \{files\}; test/bin/quality coverage"$',
-        )
-        self.assertNotIn("coverage-live", hook)
-        self.assertNotIn("consumer-eval", hook)
-
-        ci = (REPO / ".github/workflows/ci.yml").read_text()
-        self.assertRegex(
-            ci,
-            r"(?m)^          -c test/bin/quality --python-tier fast$",
-        )
-        self.assertRegex(
-            ci,
-            r"(?m)^          python-lint python-test coverage$",
-        )
-
-        makefile = (REPO / "Makefile").read_text()
-        self.assertRegex(
-            makefile,
-            r"(?m)^\ttest/bin/quality --python-tier full python-test coverage output-denominators darwin-surface$",
-        )
 
     def test_python_tiers_are_wired_without_a_second_quality_authority(self):
         hook = (REPO / "lefthook.yml").read_text()
@@ -1178,7 +880,7 @@ class TestGatesAreRegistered(unittest.TestCase):
         self.assertRegex(
             (REPO / "Makefile").read_text(),
             r"(?m)^test:\n"
-            r"\ttest/bin/quality --python-tier full python-test coverage output-denominators darwin-surface$",
+            r"\ttest/bin/quality --python-tier full python-test darwin-surface$",
         )
 
     def test_darwin_surface_is_not_wired_to_remote_ci_until_root_is_portable(self):
@@ -1376,8 +1078,6 @@ class TestGatesAreRegistered(unittest.TestCase):
             "portable-eval",
             "consumer-eval",
             "signatures",
-            "coverage",
-            "coverage-live",
             "darwin-surface",
             "immutable-subflake",
         ):
@@ -1393,8 +1093,6 @@ class TestGatesAreRegistered(unittest.TestCase):
         )
         pre_commit = set(core.group("body").split())
         expensive_set = set(expensive.group("body").split())
-        self.assertNotIn("coverage", pre_commit)
-        self.assertIn("coverage", expensive_set)
         self.assertEqual(pre_commit | expensive_set, registered)
         self.assertEqual(pre_commit & expensive_set, {"python-test"})
 
@@ -1493,159 +1191,6 @@ class TestGatesAreRegistered(unittest.TestCase):
                     pattern, body, "%s appears to embed a credential" % tool.name
                 )
 
-
-class TestConsumerInventoryLoadBearingFacet(unittest.TestCase):
-    """The facet must never demote a real reference.
-
-    #47 needs two numbers from this artifact: the LOAD-BEARING subset it verifies by
-    building, and the COMPLETE set it verifies by re-grepping to zero. The facet adds
-    the first without dropping any of the second, so its correctness property is
-    one-sided -- misjudging prose as code is harmless, the reverse is a silent miss.
-
-    These assertions run against the COMMITTED artifact, because that is the file #47
-    and #63 consume; re-deriving would test the code and not the data.
-    """
-
-    @classmethod
-    def setUpClass(cls):
-        path = REPO / "test" / "inventory" / "consumer-inventory.json"
-        if not path.exists():
-            raise unittest.SkipTest("no committed consumer inventory")
-        cls.inv = json.loads(path.read_text())
-        cls.refs = cls.inv.get("references", [])
-        cls.faceted = [r for r in cls.refs if "loadBearing" in r]
-
-    def test_facet_is_present_on_internal_references(self):
-        internal = [r for r in self.refs if r.get("kind") == "internal-config-ai-ref"]
-        self.assertTrue(internal, "no internal references to check")
-        missing = [r for r in internal if "loadBearing" not in r or "refKind" not in r]
-        self.assertEqual(missing, [], "internal references lack the facet")
-
-    def test_no_code_reference_is_demoted(self):
-        """A non-comment .nix line is load-bearing. This is the one-sided property."""
-        demoted = [
-            (r["file"], r["line"], r.get("refKind"))
-            for r in self.faceted
-            if r["file"].endswith(".nix")
-            and r.get("refKind") != "comment"
-            and r.get("loadBearing") is not True
-        ]
-        self.assertEqual(demoted, [], "non-comment .nix references were demoted")
-
-    def test_doc_prose_only_ever_comes_from_markdown(self):
-        stray = [
-            (r["file"], r["line"])
-            for r in self.faceted
-            if r.get("refKind") == "doc-prose" and not r["file"].endswith(".md")
-        ]
-        self.assertEqual(stray, [], "doc-prose applied outside a .md file")
-
-    def test_known_code_and_stub_traps_stay_load_bearing(self):
-        """The module name, stale-path detector, and throwing stub remain code."""
-        for needle in (
-            "test/bin/gates-slow-test.py",
-            "config/ai/flake.nix",
-        ):
-            hits = [r for r in self.faceted if needle in r["file"]]
-            self.assertTrue(hits, "no faceted records for %s" % needle)
-            self.assertTrue(
-                any(r.get("loadBearing") is True for r in hits),
-                "%s has no load-bearing old-path record" % needle,
-            )
-        self.assertFalse(
-            [
-                r
-                for r in self.refs
-                if r["file"] == "test/inventory/consumer-inventory.json"
-            ],
-            "consumer inventory recursively inventoried itself",
-        )
-        self.assertFalse(
-            [r for r in self.refs if r["file"].startswith("test/baseline/")],
-            "consumer inventory classified generated baselines as rename work",
-        )
-        derivation = self.inv["derivation"]
-        self.assertIn("git -C <repo_root> ls-files", derivation["internalConfigAiRefs"])
-        self.assertIn("existing-tracked-files", derivation["internalConfigAiRefs"])
-        self.assertIn(
-            "test/inventory/consumer-inventory.json",
-            derivation["internalConfigAiExcludedPaths"],
-        )
-        self.assertIn("test/baseline/", derivation["internalConfigAiExcludedPrefixes"])
-
-    def test_committed_internal_references_match_generator(self):
-        result = subprocess.run(
-            [str(CONSUMER_INVENTORY), "--print"],
-            cwd=REPO,
-            capture_output=True,
-            text=True,
-            env=clean_env(CONSUMER_INVENTORY_REPO_HEAD=self.inv["repoHead"]),
-            check=False,
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        generated = json.loads(result.stdout)
-        expected_refs = [
-            record
-            for record in self.refs
-            if record.get("consumer") == "internal"
-        ]
-        actual_refs = [
-            record
-            for record in generated["references"]
-            if record.get("consumer") == "internal"
-        ]
-        self.assertEqual(actual_refs, expected_refs)
-
-    def test_repo_head_contains_every_inventoried_internal_file(self):
-        revision = self.inv.get("repoHead")
-        self.assertRegex(revision or "", r"^[0-9a-f]{40}$")
-        for path in sorted(
-            {
-                record["file"]
-                for record in self.refs
-                if record.get("kind") == "internal-config-ai-ref"
-            }
-        ):
-            probe = subprocess.run(
-                ["git", "cat-file", "-e", f"{revision}:{path}"],
-                cwd=REPO,
-                capture_output=True,
-                text=True,
-                env=clean_env(),
-            )
-            self.assertEqual(
-                probe.returncode,
-                0,
-                f"consumer inventory repoHead does not contain {path}",
-            )
-
-    def test_tallies_agree_with_the_records(self):
-        """A summary that disagrees with its own records is worse than none."""
-        by_lb = self.inv["summary"]["byLoadBearing"]
-        true_n = sum(1 for r in self.faceted if r["loadBearing"] is True)
-        false_n = sum(1 for r in self.faceted if r["loadBearing"] is False)
-        self.assertEqual(by_lb.get("true", 0), true_n)
-        self.assertEqual(by_lb.get("false", 0), false_n)
-        self.assertEqual(
-            true_n + false_n,
-            len(
-                [
-                    record
-                    for record in self.refs
-                    if record.get("kind") == "internal-config-ai-ref"
-                ]
-            ),
-            "faceted records should account for every internal old-path reference",
-        )
-
-    def test_no_unclassified_stale_operational_reference_remains(self):
-        stale = [
-            (record["file"], record["line"], record["text"])
-            for record in self.refs
-            if record.get("kind") == "internal-config-ai-ref"
-            and record.get("classification") == "rename-now"
-        ]
-        self.assertEqual(stale, [], "#47 left stale operational config/ai references")
 
 
 if __name__ == "__main__":

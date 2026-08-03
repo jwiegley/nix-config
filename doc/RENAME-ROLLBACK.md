@@ -6,8 +6,9 @@ external consumers still carry a paired legacy `dir=config/ai` input.
 
 ## Rules
 
-- Treat `test/inventory/consumer-inventory.json` as the consumer-edge inventory;
-  regenerate it before relying on paths or line numbers.
+- Derive a fresh transient consumer report with
+  `test/bin/consumer-inventory --print`; never rely on a committed snapshot for
+  paths, line numbers, or live-host state.
 - Inspect both repository remotes. A recovery is incomplete if they disagree.
 - Preserve each consumer's existing URL and pin style unless a separate explicit
   action changes that policy.
@@ -81,7 +82,7 @@ candidate closure on every member before any member activates it; see
 - every maintained consumer has coherent paired lock nodes;
 - builds pass in every changed authoritative checkout;
 - any activation has an observed rollback path and runtime acceptance; and
-- the consumer inventory is regenerated with no unexplained legacy edge.
+- a fresh transient consumer report has no unexplained legacy edge.
 
 Once every maintained consumer uses `dir=config/fleet` and the compatibility stub is
 retired, delete this runbook.

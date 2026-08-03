@@ -12,8 +12,8 @@
 # its JSON mechanically, so the schema is stable and every record carries
 # consumer, kind, classification, file, line, and the exact source text.
 #
-# The output is stored evidence, not a Nix-generated leaf, so it is committed as
-# a tracked data file (test/bin/consumer-inventory --write).
+# The output is transient review evidence printed to stdout. Git history preserves
+# the retired committed snapshot; this scanner never rewrites repository state.
 #
 # CLASSIFICATION SCHEME (issue #17). Every reference is exactly one of:
 #
@@ -46,8 +46,6 @@
 # Usage:
 #   test/bin/consumer-inventory                 # derive, print JSON to stdout
 #   test/bin/consumer-inventory --print         # same
-#   test/bin/consumer-inventory --write [FILE]  # derive, write FILE
-#                                          #   (default test/inventory/consumer-inventory.json)
 #
 # Environment overrides (all optional; defaults mirror test/bin/parity-baseline's
 # BASH_SOURCE-relative root detection and the ~/src sibling-checkout layout):
@@ -68,23 +66,6 @@ repo_head=${CONSUMER_INVENTORY_REPO_HEAD-__auto__}
 die() {
     printf 'consumer-inventory: %s\n' "$*" >&2
     exit 1
-}
-
-verify_write_source() {
-    local actual_head
-    actual_head=$(git -C "$repo_root" rev-parse --verify HEAD 2>/dev/null) ||
-        die "refusing to write: repoHead cannot be verified from a Git checkout"
-    if [[ $repo_head != __auto__ && -n $repo_head && $repo_head != "$actual_head" ]]; then
-        die "refusing to write: repoHead override does not match HEAD $actual_head"
-    fi
-    git -C "$repo_root" diff --quiet "$actual_head" -- ||
-        die "refusing to write: tracked files differ from HEAD, so repoHead would not describe the scanned content"
-    printf '%s\n' "$actual_head"
-}
-
-cleanup_write_temps() {
-    [[ -z ${tmp:-} ]] || rm -f -- "$tmp"
-    [[ -z ${snapshot_root:-} ]] || rm -rf -- "$snapshot_root"
 }
 
 # All derivation lives in one Python program: it scopes repository scans through
@@ -112,7 +93,7 @@ SCHEMA_VERSION = 1
 # hand-maintained extension list missed the extensionless production scripts and
 # Python contracts that execute the rename.
 INCLUDE_GLOBS = ["*"]
-EXCLUDED_INTERNAL_PATHS = {"test/inventory/consumer-inventory.json"}
+EXCLUDED_INTERNAL_PATHS = set()
 EXCLUDED_INTERNAL_PREFIXES = ("test/baseline/",)
 CONFIG_AI = "config/ai"
 CONFIG_FLEET = "config/fleet"
@@ -121,8 +102,6 @@ INTENTIONAL_CONFIG_AI_FILES = {
     "README.md",
     "doc/ARCHITECTURE.md",
     "test/bin/consumer-inventory",
-    "test/bin/coverage-report",
-    "test/bin/coverage-report-test.py",
     "test/bin/cross-consumer-eval",
     "test/bin/gates-slow-test.py",
     "test/bin/immutable-subflake-check",
@@ -130,7 +109,6 @@ INTENTIONAL_CONFIG_AI_FILES = {
     "test/bin/parity-baseline",
     "doc/PARITY-ORACLE-REFRESH.md",
     "doc/RENAME-ROLLBACK.md",
-    "test/coverage/manifest.json",
 }
 INTENTIONAL_CONFIG_AI_PREFIXES = ()
 FLAKE_AI_RE = re.compile(r"flake-ai\.nix")
@@ -808,12 +786,11 @@ out = {
     "remoteChecks": {
         "commands": commands["remoteChecks"],
         "finding": (
-            "github (gh search code): no external config/ai consumer beyond the three "
-            "inventoried; the only owner:jwiegley hits are inside nix-config itself. "
-            "gitea is LAN-only and not code-searchable via gh; its sole consumer "
-            "(vulcan, ssh://gitea/johnw/nix-config?dir=config/ai) is inventoried from "
-            "the local checkout. nix-config default branch = main."),
-        "note": "re-run the commands (needs network + gh auth) to refresh; not run inside derive() to keep the artifact reproducible offline.",
+            "C9a verified on 2026-08-03 that authoritative Vulcan, VPS, and shared-work "
+            "consumers use paired config/fleet inputs and evaluate. Explicit-jwiegley "
+            "GitHub search found no external config/ai consumer; bounded Gitea/local "
+            "searches found no additional operational consumer."),
+        "note": "Refresh the recorded commands and authoritative hosts before compatibility retirement; derive() remains network-free.",
     },
     "summary": {
         "totalReferences": len(references),
@@ -859,49 +836,7 @@ case ${1-} in
 "" | --print)
     derive
     ;;
---write)
-    dest=${2:-"$repo_root/test/inventory/consumer-inventory.json"}
-    write_head=$(verify_write_source)
-    mkdir -p "$(dirname "$dest")"
-    tmp=
-    snapshot_root=
-    trap cleanup_write_temps EXIT
-    tmp=$(mktemp "${TMPDIR:-/tmp}/consumer-inventory.XXXXXX") || die "cannot create a temporary file"
-    snapshot_root=$(mktemp -d "${TMPDIR:-/tmp}/consumer-inventory-tree.XXXXXX") ||
-        die "cannot create an immutable inventory snapshot"
-    snapshot_repo=$snapshot_root/repo
-    git clone --quiet --no-hardlinks --no-checkout "$repo_root" "$snapshot_repo" ||
-        die "cannot clone the captured inventory source"
-    git -C "$snapshot_repo" checkout --quiet --detach "$write_head" ||
-        die "cannot check out the captured inventory source"
-    write_derive_head=$write_head
-    if [[ $repo_head != __auto__ ]]; then
-        write_derive_head=$repo_head
-    fi
-    derive "$snapshot_repo" "$write_derive_head" >"$tmp"
-    # Refuse to commit an artifact that cannot say which tree it describes. A
-    # null repoHead is not a smaller artifact, it is an uninterpretable one: every
-    # per-reference line number is meaningless without the revision it was read
-    # at. Fail loudly instead of writing a plausible-looking file.
-    if ! python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get("repoHead") else 1)' "$tmp"; then
-        rm -f "$tmp"
-        die "refusing to write: repoHead could not be resolved.
-    Set CONSUMER_INVENTORY_REPO_HEAD=<rev>, or run from a checkout whose HEAD is
-    readable. There is no --repo-head flag; the override is the environment
-variable."
-    fi
-    after_head=$(verify_write_source)
-    stamped_head=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["repoHead"])' "$tmp")
-    if [[ $after_head != "$write_head" || $stamped_head != "$write_head" ]]; then
-        rm -f "$tmp"
-        die "refusing to write: repoHead or tracked source changed during derivation"
-    fi
-    mv "$tmp" "$dest"
-    tmp=
-    printf 'consumer-inventory: wrote %s\n' "$dest" >&2
-    printf '%s\n' "$dest"
-    ;;
 *)
-    die "unknown argument: $1 (want --print, or --write [FILE])"
+    die "unknown argument: $1 (want --print)"
     ;;
 esac

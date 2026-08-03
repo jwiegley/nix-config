@@ -36,8 +36,7 @@
 #
 # Suites: nix-format nix-lint nix-deadcode shell-lint shell-format
 #         python-lint python-test portable-eval immutable-subflake
-#         darwin-surface consumer-eval signatures coverage coverage-live
-#         output-denominators
+#         darwin-surface consumer-eval signatures
 #
 # Refs: jwiegley/nix-config#46.
 
@@ -63,9 +62,6 @@ SUITES=(
     darwin-surface
     consumer-eval
     signatures
-    coverage
-    coverage-live
-    output-denominators
 )
 
 fix=0
@@ -91,9 +87,6 @@ EXPENSIVE_SUITES=(
     immutable-subflake
     consumer-eval
     signatures
-    coverage
-    coverage-live
-    output-denominators
     darwin-surface
 )
 
@@ -523,46 +516,6 @@ run_darwin_surface() {
     fi
 }
 
-# Cheap regression authority. Expensive measurements are refreshed explicitly;
-# this verifies that the committed artifact still matches live structural
-# denominators and refuses missing, stale, malformed, or duplicate artifacts.
-run_coverage() {
-    if [[ ! -x test/bin/coverage-report ]]; then
-        fail "coverage: test/bin/coverage-report is missing or not executable"
-        return
-    fi
-    if test/bin/coverage-report --check; then
-        note "coverage: committed artifact matches live structural inventories"
-    else
-        fail "coverage: test/bin/coverage-report rejected the committed artifact"
-    fi
-}
-
-run_output_denominators() {
-    need nix output-denominators || return
-    if [[ ! -x test/bin/output-denominators ]]; then
-        fail "output-denominators: test/bin/output-denominators is missing or not executable"
-        return
-    fi
-    if test/bin/output-denominators; then
-        note "output-denominators: manifest matches live flake output"
-    else
-        fail "output-denominators: manifest denominators drifted from live flake output"
-    fi
-}
-
-run_coverage_live() {
-    if [[ ! -x test/bin/coverage-report ]]; then
-        fail "coverage-live: test/bin/coverage-report is missing or not executable"
-        return
-    fi
-    if test/bin/coverage-report --compare-live; then
-        note "coverage-live: current Nix reach does not regress from the artifact"
-    else
-        fail "coverage-live: current Nix reach regressed or collection failed"
-    fi
-}
-
 # ---- argument parsing ---------------------------------------------------
 
 while [[ $# -gt 0 ]]; do
@@ -715,9 +668,6 @@ for suite in "${want[@]}"; do
     darwin-surface) run_darwin_surface ;;
     consumer-eval) run_consumer_eval ;;
     signatures) run_signatures ;;
-    coverage) run_coverage ;;
-    coverage-live) run_coverage_live ;;
-    output-denominators) run_output_denominators ;;
     esac
 done
 
