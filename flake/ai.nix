@@ -472,9 +472,6 @@ in
       };
       format = check "format" "format-check.sh" qualityDeps.format "";
       lint = check "lint" "lint.sh" qualityDeps.lint "";
-      tests = check "tests" "test.sh" qualityDeps.test ''
-        export AI_NIX_TEST_SOURCE_ONLY=1
-      '';
     }
   );
 

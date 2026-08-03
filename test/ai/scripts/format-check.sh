@@ -30,10 +30,5 @@ if [ "$#" -gt 0 ]; then
     exit 0
 fi
 
-if has_nix_files; then
-    find_nix_files0 | xargs -0 -r nixfmt --check
-fi
-
-if has_shell_files; then
-    find_shell_files0 | xargs -0 -r shfmt -i 4 -d
-fi
+find_nix_files0 | xargs -0 -r nixfmt --check
+find_shell_files0 | xargs -0 -r shfmt -i 4 -d

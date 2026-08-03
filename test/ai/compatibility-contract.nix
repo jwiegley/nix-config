@@ -70,6 +70,8 @@ in
   # The five removed entries (coverage, fuzz, memory, no-warnings, profile) were
   # aliases of tests/lint/build that produced no evidence of their own. Genuine
   # no-warnings evidence survives as the app. See #48.
+  # The later `tests` check only reparsed Nix files already parsed by the format
+  # check; the real `test` app and behavioral checks remain.
   checks = [
     "agent-deck-go-compat"
     "agent-resources"
@@ -83,6 +85,5 @@ in
     "llm-agents-nixpkgs-independent"
     "pi-fleet-theme"
     "pi-gallery"
-    "tests"
   ];
 }

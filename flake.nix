@@ -430,68 +430,6 @@
               src = self.outPath;
             in
             {
-              formatting =
-                pkgs.runCommand "check-formatting"
-                  {
-                    nativeBuildInputs = with pkgs; [
-                      nixfmt
-                      shfmt
-                      findutils
-                    ];
-                  }
-                  ''
-                    echo "Checking Nix formatting..."
-                    find ${src} -name '*.nix' | xargs nixfmt --check
-                    echo "Checking shell formatting..."
-                    for f in $(find ${src}/bin ${src}/test/bin -maxdepth 1 -type f) ${src}/build; do
-                      if head -1 "$f" | grep -q bash; then
-                        shfmt -i 4 -d "$f"
-                      fi
-                    done
-                    touch $out
-                  '';
-
-              linting =
-                pkgs.runCommand "check-linting"
-                  {
-                    nativeBuildInputs = with pkgs; [
-                      statix
-                      deadnix
-                      shellcheck
-                      ruff
-                      findutils
-                      git
-                      jq
-                      nix
-                      python3
-                    ];
-                  }
-                  ''
-                    echo "Running statix..."
-                    statix check ${src}
-                    echo "Running deadnix..."
-                    deadnix --no-lambda-arg --no-lambda-pattern-names --no-underscore --fail ${src}
-                    echo "Running shellcheck..."
-                    for f in $(find ${src}/bin -maxdepth 1 -type f) ${src}/build; do
-                      if head -1 "$f" | grep -q bash; then
-                        shellcheck --severity=warning "$f"
-                      fi
-                    done
-                    echo "Running ruff..."
-                    ruff check \
-                      ${src}/test/bin/agent-deck-env-test.py \
-                      ${src}/test/bin/codex-env-test.py \
-                      ${src}/bin/update-overlay \
-                      ${src}/test/bin/update-overlay-slow-test.py
-                    echo "Running Agent Deck environment wrapper tests..."
-                    python3 ${src}/test/bin/agent-deck-env-test.py
-                    echo "Running Codex environment wrapper tests..."
-                    python3 ${src}/test/bin/codex-env-test.py
-                    echo "Running update-overlay tests..."
-                    python3 ${src}/test/bin/update-overlay-slow-test.py
-                    touch $out
-                  '';
-
               ai-lock-coherence = pkgs.callPackage ./test/ai/lock-coherence.nix { inherit src; };
               home-manager-release-skew = pkgs.callPackage ./test/home-manager-release-skew.nix {
                 inherit src;
