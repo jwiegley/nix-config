@@ -4,61 +4,141 @@ Updated: 2026-08-03
 
 ## Objective
 
-Complete cleanup epic `jwiegley/nix-config#98` and all native sub-issues
-`#99`-`#121` under the frozen Definition of Done in `doc/CLEANUP-PLAN.md`.
+Complete cleanup epic `jwiegley/nix-config#98` and its cleanup issues under the
+accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 
 ## Current authoritative state
 
-- Source baseline: `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
-- Local `main`, fetched `origin/main`, and fetched `github/main` form the baseline
-  at that commit. The current signed C0 branch is one documentation commit atop it.
-- Checkout: `/Users/johnw/src/nix`; branch `cleanup/c0-doc-authority`; one worktree.
-- Intentional C0 files include the formerly untracked cleanup plan and this
-  handoff.
-- Epic #98 and C0 #99 are In Progress; #100-#121 are Todo.
-- GitHub snapshot observed at `2026-08-03T07:15:18Z`: 24 repository issues open,
-  exactly #98-#121; Project 9 contains 110 items.
-- Portable assurance run `30788387383` passed on the baseline on 2026-08-03.
-- Normal CI run `30715313370` remains red from structural-coverage Nix identity
-  drift.
-- Hera active system profile: `system-984-link`.
-- Clio remains DNS-unresolvable; this is a live blocker only for the issues whose
-  bodies require Clio evidence.
+- `doc/CLEANUP-PLAN.md` is the accepted plan. John explicitly accepted decisions
+  D1-D7 on 2026-08-03.
+- Local `main` contains John's signed flake-lock update `59ac2a88` plus the
+  signed updater-fixture isolation fix `3ab97a35` atop C0; the accepted-plan
+  documentation commit is the next local-main change. Fetched Gitea and GitHub
+  `main` remain
+  `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
+- Active construction checkout:
+  `/private/tmp/wg-nix-cleanup/c1a-rewrite`, branch
+  `cleanup/c1a-rewrite`. After the accepted-plan commit, rebase its preserved C1
+  net onto current local `main` before Phase 1 implementation.
+- The signed exploratory recovery branch remains
+  `cleanup/c1a-python-tiers@65701d26ba30d410765bcb93713b35c7a19c8ecb`
+  and is also captured in the standalone recovery package.
+- The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
+  concurrent dependency/Pi work. Cleanup must not stage, restore, rewrite, or
+  absorb these visible paths:
+  `config/fleet/model-policy.nix`,
+  `config/fleet/model-registry.json`,
+  `config/fleet/renderers/pi.nix`,
+  `packages/pi-gallery/default.nix`, and
+  `test/ai/pi-gallery.nix`, plus `sources/ai.json`. John's committed
+  `flake.lock` update is already part of local `main` and must remain intact.
+- Standalone recovery package:
+  `/private/tmp/wg-nix-phase0.yr3oHd`. Its relative `SHA256SUMS`, complete Git
+  bundle, patches, rewrite tar, Pi patch, runbook, signature/ref evidence, and
+  fresh-clone restore smoke all pass.
+- The untracked review draft in the primary checkout is superseded by the
+  accepted plan and may be removed only after the accepted-plan commit exists.
 
-## Work state
+## Completed and independently established
 
-- Active unit: C0 / issue #99, truthful current documentation.
-- The current local C0 commit is signed and changes exactly README, CLAUDE, the
-  architecture/current-work docs, this handoff, and the frozen plan.
-- Baseline fast gate passed in 57.7 seconds; full `make test` passed. The C0
-  candidate passed post-edit in 61.91 seconds, and every commit/amend hook has
-  remained below 120 seconds; links, references, typos, and `git diff --check`
-  also passed.
-- The first independent fess findings were corrected in the current amended
-  commit. C0 is at the audit/closeout boundary: inspect the latest fess report,
-  fix any real finding, or locally merge after a clean verdict.
+- C0 documentation commit `93845163` is signed and passed its final independent
+  audit.
+- John's `59ac2a88` lock update was observed and preserved as user-owned work.
+- Updater synthetic commits now explicitly disable GPG signing inside disposable
+  test repositories; the focused 37-test suite and the 64-second fast gate pass.
+- The cleanup plan received independent premise, architecture, gate, and
+  documentation review before John accepted it.
+- The signed C1 branch and uncommitted rewrite candidate are behaviorally
+  equivalent. Sixteen of eighteen logical path effects are byte-identical; the
+  two differences are only exact-source bindings in the coverage and consumer
+  inventory artifacts.
+- The minimal C1 analysis preserves fast/full discovery, failure propagation,
+  path/process safety, explicit budgets, and slow-suite naming while discarding
+  at least 84.9% of exploratory patch churn.
+- C9a authoritative consumer proof now passes:
+  - Vulcan uses paired `config/fleet` revision `93b023c49d6f` and evaluates.
+  - All four shared-work hosts expose one clean, byte-identical checkout using
+    paired `config/fleet` revision `1029a6594e0a`; evaluation passed on
+    `gpu-server`.
+  - John authorized the VPS consumer update. `/etc/nixos` was fast-forwarded,
+    without a new commit or push, from `0452c61f` to signed upstream
+    `9167ffad`. It now uses paired `config/fleet` revision
+    `166ade2c2e25`.
+  - VPS metadata, flake check, evaluation, and full no-link NixOS build passed.
+    Its lock, active system, and system profile remained unchanged; no activation
+    occurred.
+  - Explicit-`jwiegley` GitHub search found no external maintained
+    `dir=config/ai` consumer. Bounded Gitea/local searches found no additional
+    operational consumer.
+- Sanitized C9a evidence is
+  `/private/tmp/wg-nix-c9a-evidence.md`.
 
-## Issue/DAG invariants
+## Active work unit
 
-- 23 native sub-issues under #98.
-- 55 native blocked-by edges.
-- Each issue body owns its requirements, subtasks, acceptance, verification,
-  rollback, and authorization boundary.
-- Move an issue to Done and close it only after its focused gate and independent
-  fess audit pass.
+Phase 1: reset the quality gates and delete evidence bureaucracy.
+
+Accepted policy:
+
+1. Keep only `fast` and `full` Python tiers with 120/900-second budgets.
+2. Preserve fail-closed tracked discovery, exact module execution, strict
+   no-skip/no-empty behavior, path safety, process cleanup, signature trust,
+   consumer refusal, and updater rollback coverage.
+3. Delete structural coverage and the root output-denominator system together.
+4. Delete the committed consumer inventory and exact-source currency machinery;
+   retain the read-only scanner only until Phase 4.
+5. Remove coverage from pre-push/CI; pre-push verifies signatures only.
+6. Do not replay generated projection or exploratory checkpoint commits.
+7. Run full/independent audit only at issue closeout, not after every intermediate
+   commit.
+
+The next implementation boundary is to pare the existing rewrite worktree to that
+accepted minimum before any commit.
+
+## Project state
+
+Cleanup epic #98 and issues #99/#100 remain In Progress. C9a issue #114 passed its
+live and focused positive gates, was independently reviewed, and is now closed
+Completed with its Project item Done. The remaining cleanup issues stay Todo until
+their accepted work units begin.
+
+Every `gh` invocation must select account `jwiegley` explicitly.
+
+## Authorization boundary
+
+Authorized:
+
+- accepted plan decisions D1-D7;
+- local source edits and signed cleanup commits;
+- the completed VPS checkout fast-forward and no-activation verification;
+- truthful GitHub issue/Project reconciliation after focused proof.
+
+Not authorized:
+
+- pushing or publishing nix-config cleanup commits;
+- activating Hera, Clio, VPS, Vulcan, or shared-work configurations;
+- restarting or terminating user sessions;
+- force-pushing or rewriting published history;
+- further external-checkout edits without a new need inside the accepted plan.
 
 ## Stop counters
 
 - repeated gate failure: 0/3
 - unusable subagent output: 0/2
-- unresolved destructive/intent-sensitive action: none
+- GPG signing cache locked: 0/3; John unlocked macOS pinentry and signed commit
+  `3ab97a35` succeeded
+- unresolved destructive or intent-sensitive action: none
 
 ## Resume procedure
 
-1. Re-read `doc/CLEANUP-PLAN.md` and this handoff fully.
-2. Run `git status --short --branch` and compare fetched remote tips.
-3. Check Project 9 status for #98-#121 with the explicit `jwiegley` account.
-4. Resume the active issue named above; do not skip native blocked-by edges.
-5. Run focused verification, commit signed with explicit paths, dispatch fess, and
-   update the issue/project only after the audit is clean and publication state is
-   represented honestly.
+1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
+2. Verify both worktrees and the recovery-package checksums.
+3. Preserve every user-owned dependency/Pi path named above and stage only
+   explicit cleanup paths.
+4. Pare Phase 1 in the rewrite worktree according to the active-work-unit list.
+5. Run focused quality tests, the fast tier, then the full tier once at issue
+   closeout.
+6. Commit the accepted-plan/current-state documentation separately from Phase 1
+   implementation, signed and with explicit paths.
+7. Dispatch an independent audit after each completed issue, then reconcile its
+   GitHub state using the explicit `jwiegley` account.
+8. Do not push or activate without separate authorization.

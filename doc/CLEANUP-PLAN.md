@@ -1,730 +1,620 @@
 # Cleanup Phase Plan
 
-- Status: active frozen Definition of Done
-- Prepared: 2026-08-02
-- Activated: 2026-08-03
-
-Authority: John authorized implementation by directing completion of every cleanup
-issue in Project 9. That authorization covers source edits and local signed commits
-for these work units; it does not authorize push, publication, activation, history
-rewrite, external-checkout edits, or session restart/termination.
-
-## Objective
-
-Make this repository materially smaller and easier to change without altering its
-user-visible configuration, model routing, update behavior, or mutable agent state.
-The cleanup is complete only when current documentation is true, ordinary gates are
-green and remain below two minutes, obsolete migration machinery is retired on
-evidence, and no cleanup worktree or branch remains.
-
-The phase is deletion-led. Moving an expression to another directory without
-removing complexity is not progress.
-
-## Baseline
-
-These observations were refreshed on 2026-08-03. They remain checkpoint evidence,
-not enduring invariants; every work unit refreshes the state it relies upon.
-
-- The reviewed commit is `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
-- Before the C0 branch, local `main`, fetched Gitea `origin/main`, and fetched
-  GitHub `github/main` named that commit. The current signed C0 branch is one
-  documentation commit atop that baseline and adds this plan and the Wiggum
-  handoff.
-- `ulimit -n 65536 && lefthook run pre-commit --all-files` passed in 57.7 seconds.
-- `ulimit -n 65536 && make test` passed.
-- GitHub's scheduled portable run `30788387383` passed evaluation/native checks on
-  aarch64 Darwin, aarch64 Linux, and x86_64 Linux for the reviewed commit.
-- GitHub’s normal CI run `30715313370` is red for the reviewed commit. The failing
-  diagnostic is `coverage artifact tool identity drifted: nix`; this establishes
-  the immediate failure, not by itself the case for deleting the subsystem.
-- `/nix/var/nix/profiles/system` resolved to generation 984. `ssh clio` failed
-  because `clio.lan` did not resolve, so no plan may assume Clio’s mutable state has
-  converged.
-- At `2026-08-03T07:15:18Z`, explicit-`jwiegley` `gh` queries reported 24 open
-  repository issues, exactly cleanup #98-#121. Project 9 had 110 items: #98/#99
-  In Progress and #100-#121 Todo.
-
-Measured concentration:
-
-| Area | Tracked lines | Current disposition |
-|---|---:|---|
-| Structural coverage implementation/tests | 3,944 | Delete after preserving independent contracts |
-| Structural coverage generated/manifest data | 5,330 | Delete with its owner |
-| Output-denominator implementation/tests | 325 | Retain, decoupled from the coverage manifest |
-| Darwin value-surface machinery | 3,915 | Retain during cleanup; reassess only after the risky changes |
-| Parity oracle plus currency guard | 3,194 | Keep the manual oracle; remove completed rename logic and hot-path policing |
-| Consumer/rename group (including positive gates) | 3,243 | Prune rename-only parts after live verification; retain positive gates |
-| Pi and retired-MCP migration implementation | 995 production lines | Delete only after the host matrix converges |
-| Codex host-state wrapper | 1,705 | Preserve state handling; delete the duplicate CLI parser |
-
-## Hard boundaries
-
-- Do not add a framework, generator, service, dependency, or abstraction merely to
-  organize existing code.
-- Do not move package bodies from `overlays/` to `packages/` solely to satisfy the
-  current prose. Narrow package overlays are idiomatic and cohesive; correct the
-  ownership prose instead.
-- Do not edit `~/src/nixos`, the VPS checkout, or a shared-work Home Manager
-  checkout during source cleanup. Those checkouts are read-only verification
-  targets unless John separately authorizes a consumer change.
-- Do not switch any system, push, publish, rewrite history, revoke credentials,
-  restart an agent, or terminate a session without explicit authorization for that
-  action.
-- Never inspect or print credential values. Host convergence probes report only
-  booleans, path types, generations, and exact key-name presence/absence.
-- Do not regenerate an evidence artifact merely to turn a gate green. Either the
-  evidence remains independently useful, or it is deleted.
-- Preserve the Home Manager release-skew check, the pin-currency mechanism, signed
-  publication checks, transactional updater refusal paths, mutable-state safety,
-  and the direct portable compatibility contract.
-- Do not delete a test because it is large. Delete it only when its asserted
-  property is obsolete, self-referential, unobserved, or preserved by a smaller
-  independent authority.
-- For a retained golden/oracle failure, inspect the semantic diff first. An
-  unexpected diff blocks the unit; an intended diff needs a written explanation
-  at work-unit closeout before the golden may advance.
-- Run expensive assurance once per unchanged final candidate. A corrective source
-  edit invalidates the affected evidence and requires the relevant final check
-  again. Scheduled portable assurance remains twice daily; ordinary commits run
-  only the fast tier.
-
-## Review decisions
-
-These are deliberate choices, not deferred questions.
-
-1. **Delete structural “coverage” only after separating its real contracts.** It
-   records inventories and tool identities, currently observes zero of 98 Nix
-   files dynamically, and does not run Python coverage. The narrow CI fix -- stop
-   treating tool versions as artifact validity -- must be evaluated first, but it
-   would retain 9,274 lines and the evidence-only refresh cycle. Preserve the
-   independent output-denominator check and direct quality/test authorities, then
-   delete only the unobserved/self-referential machinery.
-2. **Do not relocate overlays wholesale.** That would change paths, tests, and
-   imports without reducing behavior or maintenance burden. The architecture docs
-   will describe the actual rule: reusable multi-package implementations may live
-   in `packages/`; a narrowly owned package or compatibility override may live in
-   its overlay. `overlays/10-emacs.nix`, `15-darwin-fixes.nix`, and grouped tool
-   overlays are explicit broad exceptions organized around one integration domain,
-   not examples of the “narrow package” rule. This phase deletes dead material and
-   obvious repetition inside them; it does not bless or relocate them without a
-   measured reuse/conflict benefit.
-3. **Keep the Darwin value-surface gate through the risky work.** Git history shows
-   that it caught authorization-identity and value-projection defects. Deleting it
-   before wrapper/renderer cleanup would silently remove meaningful coverage.
-4. **Keep parity manual, not mandatory.** Use it at package-selection or renderer
-   work-unit closeout. Remove completed `config/ai` migration code from the oracle
-   and stop running its currency bureaucracy on every ordinary commit.
-5. **Retire finite migrations only from live evidence.** Clio’s present
-   unreachability is a real blocker, not a reason to infer success.
-6. **Let upstream CLIs validate their own grammar.** The Codex wrapper owns managed
-   profile selection and state safety, not a second implementation of Codex’s
-   complete Clap grammar.
-
-## Execution discipline
-
-- Use one short-lived work-unit branch and at most one extra worktree at a time.
-  Read-only subagents may run in parallel; only the coordinator mutates the
-  checkout. Merge and remove that branch/worktree before starting the next unit.
-- One work unit equals one stated objective and normally one signed commit. A
-  behavior change and its tests remain together; evidence-only follow-up commits
-  are not allowed.
-- Before each unit, rebase or fast-forward from current `main`.
-- Every deletion begins with `rg` over tracked source, dynamic wiring, tests, docs,
-  and known external consumers. “No textual caller” is not enough for Nix exports,
-  plugin discovery, or generated paths.
-- A unit is not Done until its focused proof passes and the worktree is clean.
-- GitHub tracking uses one cleanup epic with native sub-issues at the atomic
-  work-unit/subunit boundaries below. Native blocked-by links encode the dependency
-  graph; bodies carry requirements, subtasks, verification, rollback, and
-  authorization boundaries. Every `gh` invocation must use the `jwiegley` account
-  explicitly. Update issue state at work-unit closeout, not after every commit.
-
-## Work units
-
-### C0. Establish truthful current authority
-
-Objective: make the repository’s entry-point documentation describe the state that
-actually exists before code cleanup begins.
-
-Changes:
-
-- Replace stale execution state in `doc/CURRENT-WORK.md` with the accepted cleanup
-  order and the live blockers.
-- Update `README.md`, `CLAUDE.md`, and `doc/ARCHITECTURE.md` to distinguish known
-  canonical `config/fleet` consumer sources from the still-unverified live
-  shared-work checkout.
-- Correct the overlay/package ownership rule; do not move code to preserve false
-  prose.
-- Keep `doc/RENAME-ROLLBACK.md` until C9 proves every authoritative consumer has
-  moved.
-- Remove fragile local line-number references and replace them with symbol/path
-  references.
-
-Proof:
-
-- Every local Markdown link resolves.
-- Every current-state claim is backed by the current tree, Git/GitHub state, or an
-  explicitly identified live-state gap.
-- Fast tier passes.
-
-Rollback: revert this documentation-only commit.
-
-### C1. Decouple real contracts, then retire structural coverage
-
-Objective: preserve independently meaningful contracts before deleting the
-unobserved/self-referential evidence system. CI becoming green is a consequence,
-not the premise.
-
-#### C1a. Decouple Python tiers
-
-- Replace the JSON-owned Python tier map with two conventions:
-  `*-slow-test.py` runs only in the full/closeout tier; every other
-  `test/bin/*-test.py` runs in the fast tier.
-- Rename the three current slow suites (`gates`, `publish`, `update-overlay`) to
-  the slow suffix. Keep `update-overlay-essential-test.py` fast.
-- Keep exactly two Python budgets in `test/bin/quality`: 120 seconds for fast and
-  900 seconds for full. Remove `pre-push`, `ci-on-demand`, and manifest parsing.
-
-Proof:
-
-- The quality self-test proves every tracked `test/bin/*-test.py` runs exactly once
-  in full and exactly the non-slow set runs in fast.
-- Fast and full tiers pass before any coverage file is deleted.
-
-Rollback: one tier-convention commit.
-
-#### C1b. Decouple output denominators
-
-Extract only the checks/packages/overlays public-output contract needed by
-`test/bin/output-denominators` into a small standalone contract. Keep the gate and
-its negative tests in the full/closeout tier.
-
-Proof: output-denominator tests still fail for an added, absent, or
-system-misplaced root check/package/overlay, and the live gate passes before the
-coverage manifest is touched.
-
-Rollback: one output-contract commit.
-
-#### C1c. Delete only structural coverage
-
-First evaluate the narrow repair at `coverage-report`’s tool-identity comparison:
-ignore tool-version drift and run the current check. Record whether that makes CI
-green and whether it changes any observed reach. Unless it discovers meaningful
-runtime evidence, proceed with deletion because the subsystem still observes no
-Python dynamic coverage and zero current Nix-file reach.
-
-Delete:
-
-- `test/bin/coverage-report`
-- `test/bin/coverage-report-test.py`
-- `test/baseline/coverage-*.json`
-- `test/coverage/manifest.json`
-- `test/coverage/host-denominator.nix`
-
-Then:
-
-- Remove `coverage` and `coverage-live` from `test/bin/quality`, `Makefile`,
-  Lefthook, CI, flake checks/dev dependencies, and gate wiring tests.
-- Keep `output-denominators`, now independent of the deleted manifest.
-- Reduce pre-push to signature verification. Full tests belong to work-unit
-  closeout, not the push hot path.
-- Regenerate the consumer inventory once, in this unit, only because it records
-  paths being deleted. Do not create a separate evidence commit.
-
-Complete property disposition:
-
-| Manifest property | Disposition |
-|---|---|
-| `schema` and artifact/tool/source provenance | Delete with the artifact; these prove artifact identity, not product behavior |
-| `budgetsSeconds` | Preserve as the two explicit fast/full quality budgets |
-| `pythonInventory` | Replace with tracked-file discovery and the slow suffix convention |
-| `shellOwnership` | Preserve actual lint/format/unit-test authorities; intentionally drop the manually curated gap ledger and make no behavioral-coverage claim |
-| `gateDenominator.qualitySuites` | `test/bin/quality --list` remains the executable authority |
-| `gateDenominator.topLevelChecks` | Preserve through the standalone output-denominator contract |
-| negative-gate recipes | Retain their executable negative tests; delete duplicate manifest narration |
-| `outputApplicability` checks/packages/overlays | Preserve through `output-denominators` |
-| app/top-level output narration not consumed by that gate | Intentionally drop; portable compatibility and direct flake evaluation remain |
-| `declaredSystems` | Flake system definitions and scheduled portable matrix remain the owners |
-| `hosts` | `config/hosts/registry.nix` remains the owner |
-| `evaluationRoots` | Direct Darwin, portable, immutable, and consumer gates remain; delete duplicate recipes |
-| `nixFileReach` | Delete the unobserved claim; no replacement coverage claim is made |
-| `blindSpots` | Delete the derived ledger; retained tools/tests state their own bounded evidence and the final report names remaining gaps |
-
-Proof:
-
-- `test/bin/quality --list` contains no coverage suite and still contains
-  `output-denominators`.
-- Fast tier passes within 120 seconds; full tier and output denominators pass.
-- The local equivalent of each GitHub CI job passes; after authorized publication,
-  normal CI is green on the same commit.
-- The consumer inventory is current without a separate evidence-only commit.
-
-Rollback: one coverage-deletion commit restores every removed artifact and gate;
-C1a/C1b remain independently useful.
-
-Expected reduction, reported rather than used as a quota: 3,944 implementation/test
-lines and 5,330 generated/manifest lines, with a small standalone output contract
-added and no dependency added.
-
-### C2. Remove dead prose and commented-out implementation
-
-Objective: comments describe what is; Git describes what used to be.
-
-#### C2a. Mechanical dead-comment deletion
-
-- Delete inert ZFS, PostgreSQL, MAS, registry, cask, Coq HEAD, Initsplit,
-  pdf-tools, Proof General, timestamp, and default-setting blocks already proven
-  to be commented-out code.
-
-Proof: Nix parsing/evaluation and the fast tier are unchanged; no semantic comment
-judgment is mixed into this commit.
-
-#### C2b. Semantic comment audit
-
-The tracker schedules this after C3-C8 so it audits the retained post-refactor
-source rather than producing immediately stale prose evidence.
-
-- Replace stale `homeClass`, portable-definition, and shared-work line-number
-  citations with stable symbol/path references.
-- Shorten historical incident narratives in `test/bin/quality`, Lefthook, CI,
-  publication tools, and retained tests to the current invariant and the reason it
-  is non-obvious.
-- Do not rewrite third-party or vendored Emacs comments blindly. First establish
-  provenance. Exclude a vendored file explicitly, or clean it only if this
-  repository owns the implementation.
-- Do not repair prose inside files scheduled for deletion in C9; delete the file
-  once its retirement gate passes.
-
-Audit denominator:
-
-- Every tracked `*.nix` file.
-- Every Python and shell source discovered by `test/bin/quality`, including
-  extensionless `bin/` and `test/bin/` programs.
-- Tracked first-party YAML, TypeScript, JavaScript, and Emacs Lisp source.
-- Exclude generated locks/JSON, patches, keys/certificates, and a third-party Emacs
-  file only after provenance is established and recorded in the audit result.
-- Agent/command/skill/prompt prose is reviewed as documentation in C0/C11 rather
-  than misclassified as source comments.
-
-Proof:
-
-- No retained first-party file contains unexplained dead commented-out
-  implementation; a deliberate example or disabled alternative names its live
-  purpose.
-- No retained comment refers to a mutable local line number.
-- `TODO`/`FIXME` markers are either removed or state a still-live condition and
-  owner; template examples and vendored source are reported separately.
-- A bounded comment audit over retained first-party source has no
-  STALE/INCORRECT/MISLEADING/ORPHANED verdict.
-- Fast tier passes.
-
-Rollback: C2a and C2b revert independently. No runtime value should change.
-
-### C3. Apply the small obvious deduplications
-
-Objective: remove duplicated code where the replacement already exists.
-
-Each subunit is an independent signed commit; they are grouped here only because
-they are low-risk and may share one review session.
-
-#### C3a. One formatter implementation
-
-- Make `test/ai/scripts/format.sh --check` own both formatting modes; delete the
-  duplicate `format-check.sh` body and pass `--check` from the app/check wrapper.
-
-Proof: both public app names produce the same writes/diffs as before, then the fast
-tier passes.
-
-#### C3b. One credential launcher
-
-- Use the generic command-executing credential launcher for Codex; delete
-  `bin/codex-env` and merge its non-disclosure/refusal cases into the surviving
-  launcher test. Preserve fail-closed behavior and first-line-only credential
-  loading.
-
-Proof: tests assert exact argv forwarding, environment-only secret transport,
-non-disclosure, and refusal before command execution.
-
-Retain `bin/update --no-switch`, `bin/update --no-brew`, and the explicit
-`bin/update-overlay --no-build` rejection. They are user-visible CLI compatibility,
-a repository search cannot prove the absence of human callers, and their few lines
-do not justify an unrequested break.
-
-Rollback: C3a and C3b revert independently.
-
-### C4. Delete unused catalog evidence
-
-Objective: remove data that has no consumer.
-
-Changes:
-
-- Delete `selectorCoverage` and its private `secretCapabilities` construction from
-  `config/fleet/catalog.nix`; current source has no consumer beyond the export.
-
-Proof:
-
-- Source search confirms no external or dynamic consumer.
-- `catalog.profiles`, `catalog.items`, selection, validation, and every generated
-  leaf are unchanged.
-- Focused catalog/preflight evaluation and the fast tier pass.
-
-Rollback: one deletion-only commit.
-
-### C5. Reduce renderer policy duplication
-
-Objective: keep client policy in one owner without creating a renderer framework.
-
-#### C5a. Move transport-selection invariants into catalog policy
-
-- Move Pi’s exact selected provider/MCP/header invariants to the catalog/model
-  policy that owns selection, with negative tests showing that an undeclared
-  expansion still fails. Keep the renderer’s exact Hera-profile assertion unless
-  this unit explicitly adds another supported Pi profile; broadening support is not
-  cleanup.
-- Replace Droid’s `Ref`/`context7` name restriction only after catalog validation
-  owns the allowed header-bearing transport set. Retain the one-header,
-  typed-environment, bridge-argv, and negative invalid-name/shape checks.
-
-Proof: transport leaves remain byte-identical and equivalent negative fixtures
-reject every previously rejected provider/MCP/header/profile state.
-
-#### C5b. Centralize Pi/Codex local-model choices
-
-- Put unavoidable Pi/Codex local model choices in the existing model policy rather
-  than duplicating model IDs in renderers. Do not introduce a generic renderer
-  framework.
-- Do not extract helpers unless at least two byte-identical implementations are
-  deleted and the resulting total line count falls.
-
-Proof:
-
-- Pre/post generated Pi, Codex, Droid, Claude, and OpenCode leaves are byte-identical.
-- Pre/post negative fixtures reject the same invalid provider, MCP, header, and
-  unsupported-profile states; moving an invariant must not broaden accepted input.
-- Pi still exposes the same local providers, router, context/output limits, MCP
-  set, commands, skills, and extensions.
-- Codex still defaults to native `gpt-5.6-sol`; oMLX and llama-swap remain opt-in.
-- No LiteLLM provider or `positron_openai/` model appears.
-- Focused wrapper, Pi gallery, preflight, and Darwin value-surface checks pass.
-
-Rollback: split transport generalization and model-policy moves into independently
-revertible commits. Catalog deletion is C4 and is not part of this work unit.
-
-### C6. Collapse updater preparation modes
-
-Objective: keep one transactional updater without five hidden boolean modes.
-
-Changes:
-
-- Replace `--prepare-fixed-inputs`, `--prepare-npm-flake-inputs`,
-  `--prepare-npm-locks`, `--prepare-pypi-artifacts`, and
-  `--prepare-github-projections` with `--prepare KIND` and `argparse` choices.
-- Replace the repeated shell invocations in `bin/update` with one small helper.
-- Use a data table for kind selection and dispatch instead of repeated boolean
-  expressions.
-- Delete tests for impossible boolean combinations. Retain one positive and one
-  candidate-only/refusal case per preparation kind, transaction rollback, target
-  isolation, and exact-path ownership.
-
-Proof:
-
-- Inventory JSON is byte-identical.
-- A dry run leaves the worktree byte-clean.
-- Every preparation kind retains positive, failure, and rollback coverage.
-- Essential and full updater suites pass.
-- No real update, lock rewrite, commit, publication, or activation is used as a
-  test.
-
-Rollback: one updater/test commit.
-
-### C7. Delete the duplicate Codex CLI parser
-
-Objective: retain managed profile/state behavior while delegating syntax validation
-to the packaged Codex CLI.
+- Status: active accepted Definition of Done
+- Prepared: 2026-08-03
+- Accepted: 2026-08-03
+- Scope: `jwiegley/nix-config` cleanup epic #98 and cleanup issues #99-#121.
+
+## Outcome sought
+
+Make the repository materially smaller, easier to understand, and cheaper to
+verify while preserving user-visible behavior and mutable agent state. Cleanup is
+deletion, not file movement, renamed abstractions, or more machinery for describing
+machinery.
+
+The repository's principal architecture is sound: root orchestration, shared Home
+Manager configuration, fleet selection, client renderers, packages, and overlays
+have distinct owners. The largest opportunities are dead metadata, duplicated CLI
+and gate implementations, generated evidence that proves little, and finite
+migrations that have not yet been retired.
+
+## Current checkpoint
+
+This is the state observed for the 2026-08-03 review. It is a frozen review
+baseline, not a permanent invariant, and this section is never updated with later
+resume state. After plan acceptance, subsequent mutable branch, revision,
+worktree, test, and Project facts belong only in the handoff.
+
+- Gitea `origin/main` and GitHub `github/main` both point to
+  `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
+- Local `main` points to signed C0 commit
+  `93845163d25c830a8e241c9c85d12dd648a00d09`.
+- The primary checkout is `cleanup/c1a-python-tiers` at `65701d26`, eight signed
+  exploratory C1a commits beyond local `main`.
+- The primary checkout has five unrelated, user-owned Pi edits. They must not be
+  staged, restored, rewritten, or absorbed into cleanup:
+  `config/fleet/model-policy.nix`, `config/fleet/model-registry.json`,
+  `config/fleet/renderers/pi.nix`, `packages/pi-gallery/default.nix`, and
+  `test/ai/pi-gallery.nix`.
+- `/private/tmp/wg-nix-cleanup/c1a-rewrite` is a second dirty worktree at local
+  `main`, containing an uncommitted alternative C1a reconstruction. It is recovery
+  material and must not be removed before its useful diff is preserved.
+- Normal GitHub CI is red because structural coverage compares the runner's Nix
+  tool identity. Scheduled portable assurance is green on the same remote commit.
+- Project 9 contains 24 open cleanup issues (#98-#121): #98-#100 are In Progress
+  and #101-#121 are Todo. The graph has 23 subissues and 55 blocked-by edges.
+- The repository has 411 tracked files. `test/` alone has 70 files and 41,384
+  lines. The existing plan has 735 lines, and the cleanup issue bodies add roughly
+  1,900 more lines of duplicated process.
+- In the read-only timing run on 2026-08-03, the fast Python tier ran 13 modules
+  and 232 cases in 61.95 seconds. Structural coverage consumed 27.23 seconds and
+  parity-currency validation 6.83 seconds. Removing those from the hot path leaves
+  about 28 seconds of Python work before format and lint time; remeasure at
+  implementation closeout rather than treating these values as constants.
+
+The current handoff and `CURRENT-WORK.md` are already stale about the branch,
+worktree count, and local-main revision. Until closeout, subsequent mutable
+checkpoint facts belong in one handoff only; `CURRENT-WORK.md` should be a short
+pointer.
+
+## Review verdict
+
+The existing plan is safe but not yet simple enough to approve unchanged.
+
+The blocking problems are:
+
+1. It repairs and regenerates evidence that it proposes to delete shortly
+   afterward.
+2. It preserves an output-denominator ledger whose constants duplicate the flake
+   outputs and the existing portable public-interface contract.
+3. It makes speculative renderer and updater refactors mandatory even though they
+   have weak deletion-to-risk ratios.
+4. It does not reassess the 3,000-plus-line parity system or the 3,000-plus-line
+   Darwin golden system after the risky work they temporarily protect.
+5. It under-specifies the final documentation denominator and cleanup of its own
+   plan and handoff.
+6. Its issue graph and repeated acceptance text are now another synchronization
+   burden.
+7. It treats the exploratory C1a history as momentum rather than asking whether a
+   smaller final change can replace it.
+
+The path to approval is concrete: accept the decisions below, establish a clean
+checkpoint, then execute the reduced phase graph one issue at a time.
+
+## Governing rules
+
+1. **Does it need to exist?** Delete obsolete code, data, tests, and prose before
+   designing a replacement.
+2. **One authority.** A generated inventory, baseline, or compatibility ledger is
+   justified only when it is independent of the implementation and catches a
+   user-visible regression that a smaller direct check cannot catch.
+3. **One objective per commit.** An issue may contain a short ordered series of
+   related commits, but each commit has one sentence of purpose and an explicit
+   rollback boundary. Dependencies between commits are stated rather than hidden.
+4. **Tests mechanize real expectations.** Preserve transaction rollback,
+   credential non-disclosure, state ownership, signature trust, negative
+   validation, and actual client behavior. Delete tests that only verify another
+   test's registration, repeat source text, or validate a generated artifact's
+   own bookkeeping.
+5. **Fail loudly.** Discovery errors, missing tools, failed formatters, invalid
+   state, and unsupported inputs remain failures rather than skips or fallbacks.
+6. **Comments describe the current system.** Git owns incident history. A
+   rationale stays only where a future maintainer needs it to avoid changing a
+   non-obvious invariant.
+7. **No speculative framework.** Do not create a renderer abstraction, audit
+   database, generator, new dependency, or general migration framework.
+8. **Live state gates state deletion.** A source search or successful build cannot
+   prove that mutable homes or external consumers have converged.
+9. **Verification is proportional.** Ordinary commits remain below 120 seconds.
+   Full and independent review happens when an issue is ready to close, not on
+   every intermediate commit.
+10. **Authorization boundaries remain explicit.** Push, publication, activation,
+    history rewrite, external-checkout edits, session restart, and deletion of
+    user backups require their own authorization.
+
+## Accepted decisions
+
+### D1. Pare C1 down in the existing rewrite worktree
+
+**Recommendation:** preserve the signed primary branch as recovery material and
+use the existing uncommitted rewrite worktree to construct the smaller
+quality/evidence candidate from local `main`. Strip interim projections and harness
+work that Phase 1 deletes rather than reconstructing both branches again.
+
+Alternative: finish and merge the eight-commit C1a branch, then perform C1b/C1c.
+That saves short-term rework but carries hundreds of lines of harness tests and an
+intermediate evidence lifecycle into history.
+
+Before any destructive branch/worktree action, compare exact file and line deltas
+for the pared candidate, the signed primary branch, and local `main`. Rebuild from
+scratch only if that comparison demonstrates a smaller final change than editing
+the rewrite worktree. Do not use sunk effort or an arbitrary line quota as the
+decision.
+
+Retiring or rewriting the current local branches is destructive Git work and waits
+for explicit approval. Until then, both worktrees are preserved.
+
+### D2. Delete structural coverage without repairing it
+
+**Recommendation:** delete it directly. Its artifact records no Python dynamic
+coverage and unknown Nix reach with zero reached files; its current CI failure is
+tool-version identity drift, not a behavioral regression. Do not spend a work unit
+proving that ignoring tool identity makes this self-referential artifact green.
+
+Delete the report, report tests, manifest, generated baseline, host denominator,
+and all hook/CI/flake wiring together.
+
+### D3. Delete the root output-denominator ledger
+
+**Recommendation:** delete `test/bin/output-denominators` and its tests with the
+coverage manifest. Root outputs are already explicit in `flake.nix`; the portable
+public interface has a separate compatibility contract. An added root output is
+not itself a defect, and a missing consumed output fails its direct consumer.
+
+This intentionally stops freezing the names and system placement of root-only
+checks that no consumer invokes. Root packages and overlays remain protected by
+the portable compatibility contract. This is a policy choice, not a claim that
+the existing denominator comparison is self-validating. John explicitly accepted
+this policy on 2026-08-03.
+
+Alternative: retain a small explicit public-interface contract only if John wants
+root output names frozen as an API. Do not create a new JSON schema or generated
+artifact to preserve it.
+
+### D4. Remove parity and Darwin currency bureaucracy after their risk window
+
+**Recommendation:**
+
+- Remove the completed `config/ai` rename mode from parity now.
+- Until the last planned package/profile-selection change, retain one baseline and
+  the existing compare path; use it only at the closeout of a selection-changing
+  issue. Delete refresh-history and ordinary currency bureaucracy, but do not
+  promise a baseline-free comparison the current tool cannot perform.
+- After `config/ai` compatibility retirement and the last Phase 6 selection
+  change, delete the parity tool, baseline, currency/history tests, and runbook.
+  No parity claim remains after its comparison authority is removed.
+- Keep Darwin value-surface comparison through the Codex-wrapper and host-policy
+  changes. Then replace the broad golden with direct assertions only where that
+  preserves the intended property. Before deleting the baseline writer, writer
+  tests, or broad snapshot, dispose of every existing projected surface:
+
+  | Surface | Required disposition before golden deletion |
+  |---|---|
+  | Users | Retain direct identity, home/shell/UID/GID, and authorized-key assertions, or explicitly abandon each |
+  | Environment | Retain or explicitly abandon package names, `/etc` entries, variables, shells, and link paths |
+  | Prometheus | Retain or explicitly abandon enablement, port, address, and collector assertions |
+  | Homebrew | Retain or explicitly abandon brew/cask/tap/MAS sets and activation policy |
+  | Nix | Retain or explicitly abandon settings, jobs, distributed builds, and builder/key identity |
+  | System | Retain or explicitly abandon primary user, state version, defaults, and activation scripts |
+  | Launchd | Retain or explicitly abandon agent/daemon names plus hashed service and script bodies |
+
+  Retain the golden as a manual closeout diagnostic until this table is complete.
+  John must explicitly accept every intentionally abandoned surface in the same
+  issue/range that removes the golden. No coverage may disappear silently.
+
+Alternative: keep either golden as a manual diagnostic, never as an ordinary
+commit or pre-push requirement. Every retained golden must have a written failure
+triage rule.
+
+### D5. Drop speculative refactors from the completion gate
+
+**Recommendation:** remove C5a and C6 from mandatory cleanup.
+
+- Moving Pi/Droid renderer assertions into the catalog risks turning an
+  independent negative check into self-validation. Revisit only if two genuinely
+  identical implementations can be deleted.
+- The five updater preparation flags are private to `bin/update`. Replacing them
+  with `--prepare KIND` is reasonable, but touching a transactional 3,600-line
+  updater and its 7,900-line test file is not justified by internal CLI aesthetics
+  alone. Revisit only with a measured deletion or a real defect.
+- Re-audit model policy after the concurrent Pi edits land. Preserve security
+  allowlists as independent constraints; centralize only duplicated choices that
+  actually drive output.
+
+### D6. Collapse the tracker after the plan is accepted
+
+**Recommendation:** retain issues as historical records but close superseded
+micro-issues and execute through a small phase set. Replace the 55 micro-level
+blocked-by edges with the smaller phase-level dependency graph; keep those
+phase-level edges and predecessor notes in GitHub so ordering remains durable after
+the cleanup plan leaves the working tree.
+
+Suggested active issue mapping:
+
+| Phase | Existing issues | Disposition |
+|---|---|---|
+| Checkpoint and quality/evidence reset | #99-#102 | One active implementation issue; others close as completed or superseded |
+| Proven dead data and duplication | #103, #105-#107 | One issue with independent commits |
+| Runtime simplification | #111 | Retain as its own high-risk issue |
+| Optional renderer/model follow-up | #108-#109 | Re-audit after Pi changes; close if no net simplification |
+| Optional updater follow-up | #110 | Defer or close unless a measured benefit appears |
+| Consumer/parity retirement | #112-#115 | One proof issue followed by one deletion issue |
+| Mutable migration retirement | #116-#120 | Keep separate because hosts, rollback, and reverts differ |
+| Documentation and closeout | #104, #121 | Retain; C2a mechanical deletion moves earlier |
+
+Reconcile GitHub issues and Project state after this accepted plan is activated.
+
+### D7. Define the supported rollback horizon
+
+Finite migrations cannot be retired while "an old generation" means every
+generation ever retained. **Recommendation:** record an exact supported set of
+generation IDs per host and prove that each contains the cleanup or independently
+cannot reintroduce the retired state. A generic "current and previous known-good"
+formula is insufficient when the previous generation predates the migration.
+Older retained generations may remain available for forensic recovery but are not
+supported activation targets after a migration is retired.
+
+John accepted this exact-generation policy on 2026-08-03; every retirement must
+still record the proven generation IDs for its own hosts.
+
+## Reduced execution plan
+
+### Phase 0. Stabilize the checkpoint
+
+Objective: start cleanup from one truthful branch and one worktree without losing
+the user's Pi changes or the useful C1a diff.
+
+1. Preserve the five Pi edits in their own user-approved commit/branch or a
+   checksum-verified patch.
+2. Preserve a binary-safe patch and file list for both C1a variants.
+3. Apply decision D1. Do not reset, rewrite, or remove either branch beforehand.
+4. Correct `CLEANUP-WIGGUM-HANDOFF.md`; make `CURRENT-WORK.md` a pointer rather
+   than a second mutable status record.
+5. Reconcile Project 9 only after the accepted issue map is known.
+
+Exit proof: one clean cleanup branch, at most one extra worktree, preserved Pi
+work, exact recovery material, and truthful handoff.
+
+### Phase 1. Reset gates and delete evidence bureaucracy
+
+Objective: make the fast gate fast and truthful, with no generated evidence
+maintenance.
+
+Use one GitHub issue and the following commit boundaries:
+
+1. tracked discovery and `fast`/`full` tiering;
+2. evidence retirement: delete output denominators and structural coverage
+   together because the former reads the latter's manifest;
+3. root/portable gate cleanup; and
+4. final hook/CI wiring.
+
+Each boundary has one objective. Coupled evidence deletion rolls back in reverse
+order; do not claim that a manifest consumer can be reverted independently of its
+manifest.
+
+Delete across those commits:
+
+- structural coverage implementation, tests, manifest, baseline, and host probe;
+- root output-denominator implementation and tests;
+- all coverage and output-denominator wiring;
+- duplicated root-flake formatting/linting checks that hand-list files;
+- the portable source-only test that merely reparses Nix already parsed by the
+  formatter, but only after a caller search and an explicit decision to change the
+  public `checks.tests` output; update the compatibility contract in the same
+  commit;
+- unused portable script helpers and duplicate text-level gate-registration
+  assertions. Retain Make build/switch/lock failure propagation and the policy
+  check that scheduled assurance is manual/twice-daily rather than push/PR;
+- the committed consumer-inventory artifact plus both of its exact-source currency
+  checks (current-tree generator parity and `repoHead` object/file availability),
+  and the quality tests for generated-revision bureaucracy. Git already archives
+  the snapshot; retain the read-only scanner for Phase 4's fresh proof.
+
+Simplify the retained `test/bin/quality` authority:
+
+- two Python tiers only: `--python-tier fast` and `--python-tier full`; “ordinary”
+  means `fast` everywhere else in this plan;
+- fast discovers every tracked non-slow Python module;
+- full discovers every tracked module exactly once (individual methods may
+  intentionally exercise nested integration paths more than once);
+- rename `oracle-currency-test.py` to `oracle-currency-slow-test.py` until Phase 4
+  removes or justifies it; the roughly 28-second target assumes it is absent from
+  fast;
+- keep the Python budgets explicit: 120 seconds for fast and 900 seconds for full;
+- delete the coverage-only `--tier pre-commit-core` alias and its test;
+- tracked files, not `.` or generated/untracked trees, feed Nix, shell, and Python
+  tools;
+- shell discovery includes both Bash and POSIX `sh` (`bin/env-build` and
+  `bin/runemacs` are currently missed); first determine whether `bin/env-build` is
+  live, then delete it or add a narrow, documented SC2154 exception for variables
+  injected by its calling environment -- never a blanket POSIX-shell exclusion;
+- pre-push verifies signatures only;
+- normal CI runs the same static/fast authority plus trusted-base signatures;
+- scheduled assurance is described truthfully as portable evaluation plus its
+  explicitly built smoke checks; it does not claim that `--no-build` executed
+  derivation bodies.
+
+Keep compact regression checks for fast/full selection; strict no-skip/no-empty
+execution; failing test/tool/discovery propagation; leading-dash and spaced path
+operands; tracked-but-absent staged renames; dangling tracked symlinks; POSIX-sh
+discovery; tracked-versus-untracked Nix scope; Git-environment scrubbing; deadline
+process cleanup; and trusted-base signature wiring. Use `--` or `./` operands in
+the implementation rather than building a broad path-spelling matrix.
+
+Exit proof:
+
+- fast gate passes below 120 seconds, with a target below 60 seconds;
+- full Python runs every module exactly once;
+- no live structural-coverage implementation, artifact, or wiring remains;
+- no output-denominator path remains;
+- pre-push contains signatures only;
+- normal CI is green after separately authorized publication;
+- Phase 1 creates no regeneration or binding commit.
+
+### Phase 2. Delete proven dead data and obvious duplication
+
+Objective: take high-confidence cuts that do not change generated client behavior.
+
+Independent commits, under one issue:
+
+1. Delete catalog `selectorCoverage` and its now-private dependencies
+   `secretCapabilities`, `secretServers`, `secretCarriers`, and `piSources` where
+   caller search confirms they become unused. In separate commits, delete the
+   `targetPaths` field/aggregate/self-check, item `name` mirrors, MCP `scope` and
+   `enabled` fields, top-level item descriptions that no renderer reads, and the
+   `profile.renderer` mirror after confirming no external export consumer. When
+   deleting an unused description field, preserve any genuine operational
+   rationale as a short present-tense comment at the decision it explains.
+2. Delete renderer result channels with no consumer: `requiredEnvNames`,
+   self-validated `companions`, and their private collectors/assertions. Retain
+   actual rendered `files` and Pi's live mutable-state guard.
+3. Make one portable formatter body serve rewrite/check modes. Keep Git-based
+   tracked discovery in root `quality`, and keep an explicit-path/store-projection
+   adapter for portable checks, whose immutable source has no `.git` directory.
+4. Generalize the fail-closed credential launcher only enough to give each caller
+   correct product diagnostics and environment overrides, or retain thin product
+   wrappers. Delete `bin/codex-env` only when the final representation is smaller
+   and both existing interfaces retain their non-disclosure/refusal behavior.
+5. Delete the specifically audited mechanical debris: disabled
+   `inputs.nixpkgs.follows` assignments in `flake.nix`; the disabled Rust
+   environment block in `bin/de`; duplicate disabled builder assignments in
+   `bin/u`; orphaned headers in `overlays/ai/30-agent-deck.nix`, `30-agnix.nix`,
+   `30-claude-vault.nix`, `30-fractal.nix`, `30-lazycodex.nix`,
+   `30-sherlock-db.nix`, and `30-vllm-mlx.nix`; and audited unused lambda bindings
+   in `config/fractal.nix`, `config/home.nix`, `config/launchd.nix`,
+   `config/xdg-symlinks.nix`, `config/zsh.nix`, and
+   `overlays/30-misc-tools.nix`. Semantic narratives and mutable citations belong
+   to Phase 7 rather than this mechanical commit.
+
+Do not move packages between `overlays/` and `packages/`. Do not extract renderer
+helpers unless at least two implementations disappear and total code falls.
+
+Exit proof: focused parses/tests, generated leaves byte-identical where relevant,
+fast gate green, and the named duplication/debris absent. Added regression tests
+may make an individual commit net-positive; report the net change, but do not use
+line count as a quota.
+
+### Phase 3. Simplify the Codex wrapper at the real boundary
+
+Objective: delete the repository's second implementation of Codex's changing CLI
+grammar while preserving managed state and profiles.
 
 Preserve:
 
-- Host-local SQLite/log separation and one-time state movement.
-- Managed-artifact classification.
-- Atomic, owner-checked runtime profile creation.
-- Explicit caller-profile conflict refusal.
-- The bypass escape hatch.
+- host-local SQLite/log separation and steady-state path validation;
+- atomic, owner-checked runtime profile creation;
+- managed-artifact classification;
+- caller-profile conflict refusal;
+- the documented bypass;
+- credential non-disclosure.
 
-Delete:
+Delete every command, option, positional count, enum, and invalid-combination
+check that upstream Clap already owns. Detect only whether the upstream command
+accepts a managed profile, reject an explicit conflicting caller profile, inject
+`--profile nix-runtime`, and delegate all remaining syntax.
 
-- The wrapper’s second implementation of every Codex command, option,
-  positional-argument count, and invalid-combination rule.
+Derive that minimal command classification from the pinned Codex source's
+`profile_v2_for_args` behavior, then probe the packaged binary's command/help
+matrix. Do not replace the large parser with a smaller hand-maintained command
+table whose authority is unexplained.
 
-Replacement:
+There is no arbitrary line target: remove all duplicate grammar not supported by
+a concrete counterexample. A retained exception names that counterexample beside
+the code.
 
-- Identify only whether the top-level command is one of the upstream commands to
-  which profiles apply (including `debug prompt-input`).
-- Detect an explicit caller profile and refuse the managed-profile conflict.
-- Refresh the runtime profile, prepend `--profile nix-runtime`, and let Codex’s
-  Clap parser accept or reject everything else.
-- Bypass profile injection for commands that upstream says do not accept it.
+Exit proof: wrapped and unwrapped malformed invocations have equivalent status;
+new valid upstream syntax is not rejected; state/profile/credential tests pass;
+real Codex homes and sessions are untouched.
 
-Proof:
+### Phase 4. Prove consumers early and retire rename machinery
 
-- Derive the supported-command set from the pinned Codex source’s
-  `profile_v2_for_args` behavior before editing.
-- Probe the actual packaged binary’s top-level command/help matrix.
-- Compare wrapped and unwrapped exit status for malformed invocations; the wrapper
-  may add only the documented managed-profile conflict.
-- Retain focused tests for `--`, prompt text that resembles an option, explicit
-  profiles, bypass, partial artifacts, runtime-profile path attacks, and state
-  migration failure.
-- Build the agent-wrapper check and run the focused wrapper suite without touching
-  the real Codex home or SQLite state.
+Objective: stop maintaining exact-source rename evidence as soon as the live world
+no longer needs it.
 
-Rollback: one isolated wrapper/test commit. Do not activate it until the focused
-proof and full closeout gate pass.
+Run read-only proof against authoritative Vulcan, VPS, and shared-work checkouts,
+plus fresh GitHub and Gitea searches. Require paired root/portable revisions and
+`dir=config/fleet`; evaluate without activation.
 
-Target: remove at least 700 wrapper lines. If upstream behavior makes that unsafe,
-stop and record the concrete counterexample; do not merely move the parser.
+If proof passes, delete together:
 
-### C8. Remove completed parity-rename bureaucracy
+- the throwing `config/ai/flake.nix` stub (not the unrelated Home Manager module
+  `config/ai.nix`);
+- the retained rename-only consumer scanner, stale negative probes, and rollback
+  instructions; the committed inventory was already removed in Phase 1 and must
+  not be recreated;
+- completed parity rename mode and fixtures;
+- the remaining parity tool, baseline, currency/history machinery, and
+  `doc/PARITY-ORACLE-REFRESH.md` after the final selection-changing issue no longer
+  needs them.
 
-Objective: retain parity as a deliberate manual comparison, not a per-commit
-artifact-maintenance programme.
+Retain the positive immutable-subflake archive/lock proof and the positive
+cross-consumer lock/evaluation checks. Delete only their stale `config/ai`
+branches; those checks protect the supported `config/fleet` interface
+independently of the rename inventory.
 
-#### C8a. Remove completed rename-migration logic
+If a host is unreachable or divergent, retain the minimum throwing stub and one
+explicit blocker. Do not recreate the deleted consumer artifact while waiting.
 
-- Delete the one-time `config/ai` to `config/fleet` command-migration mode from
-  `test/bin/parity-baseline` and its tests.
+Exit proof: authoritative consumers evaluate, no maintained `?dir=config/ai`
+reference remains, and no rename-only evidence machinery remains.
 
-Proof: the retained oracle passes, a synthetic multiset change fails, and no
-rename-migration mode/fixture remains.
+### Phase 5. Retire finite mutable-state migrations independently
 
-#### C8b. Move currency validation to closeout
+Objective: remove one-shot migration code only when its own fleet and rollback
+boundary is proven.
 
-- Move `oracle-currency-test.py` out of the fast tier, but retain it in full
-  closeout. `parity-baseline --check` requires `HEAD == baselineRev` and therefore
-  does not replace the cheap ancestor/filename/count/history/current-command guard.
-  Delete the guard only if those properties first move into a smaller cheap
-  current-HEAD mode with equivalent negative tests.
-- Keep one parity artifact and `doc/PARITY-ORACLE-REFRESH.md` while package/profile
-  selection remains a supported invariant.
-- Run parity only for a change capable of changing selection, and no more than once
-  at that work unit’s closeout.
+The 2026-08-03 read-only audit reported Hera observations against active system
+generation 984, but no durable sanitized evidence record is part of this draft.
+Treat every row as unverified for retirement until a fresh probe is recorded on
+its GitHub issue. Unverified hosts are never implied clean.
 
-Proof:
-
-- The retained oracle passes its direct check.
-- A synthetic changed package multiset still fails.
-- No ordinary hook or normal CI job derives the parity artifact; cheap currency
-  validation runs only at full/work-unit closeout.
-
-Rollback: restore the currency guard if the direct oracle cannot fail closed.
-
-### C9. Verify consumers, then retire rename machinery
-
-Objective: delete the finished `config/ai` rename programme after proving the live
-world no longer needs it.
-
-#### C9a. Prove every maintained consumer uses `config/fleet`
-
-Required evidence:
-
-- Vulcan authoritative `/etc/nixos`: paired root/portable inputs resolve to one
-  revision and portable `dir=config/fleet`.
-- VPS authoritative `/etc/nixos`: same.
-- Shared-work authoritative `~/.config/home-manager`: same; the local Andoria
-  checkout is only a proxy and is insufficient.
-- GitHub code search, using the explicit `jwiegley` account, finds no maintained
-  `?dir=config/ai` consumer.
-- Gitea/local consumer search finds no maintained `?dir=config/ai` consumer.
-- Each changed/verified consumer evaluates without activation.
-
-This is read-only evidence gathering; it edits or activates no consumer.
-
-#### C9b. Retire `config/ai` compatibility machinery
-
-After C8a and C9a pass, delete:
-
-- `config/ai/flake.nix`
-- Rename-only portions or the whole of `test/bin/consumer-inventory` and its
-  committed artifact, according to whether any non-rename consumer contract remains
-  independently useful.
-- The stale-stub negative branch in `test/bin/cross-consumer-eval`.
-- The stale-path branch in `test/bin/immutable-subflake-check`, retaining the
-  positive immutable `config/fleet` proof.
-- `doc/RENAME-ROLLBACK.md` and every instruction that tells current consumers to
-  migrate.
-
-Proof:
-
-- `rg` finds no operational `?dir=config/ai` reference; historical test fixtures
-  are gone with their owner.
-- Positive portable and consumer evaluations pass.
-- Full closeout tier passes.
-
-Rollback: revert the deletion. Do not delete or rewrite any consumer checkout as
-part of this unit.
-
-### C10. Verify mutable homes, then retire finite migrations
-
-Objective: remove one-shot state migration only after it has done its job everywhere.
-
-Host matrix:
-
-| Evidence | Hera | Clio | Andoria-08/T2, Delphi, GPU | VPS | Vulcan |
-|---|---:|---:|---:|---:|---:|
-| Active generation contains retired-MCP cleanup | required | required | each host | required | required |
-| No mutable Codex/Claude/Pi/manifest Anvil key remains | required | required | shared home plus each local root | required | required |
-| No URL-query credential remains in managed mutable MCP state | required | required | shared home plus each local root | required | required |
-| A second activation/client cycle does not reintroduce retired state | required | required | each host | required | required |
-| Codex legacy Ref import is no longer needed | required | required | each Codex host | n/a | n/a |
-| Codex log path is host-local and migration leftovers are absent | required | required | each Codex host | n/a | n/a |
-| Pi profile marker, final directory, and `.pi` symlink are correct | required | n/a | n/a | n/a | n/a |
-| Old generation capable of reintroducing retired layout is outside rollback horizon | required | required | each host | required | required |
-
-All probes print only pass/fail and path type. Existing sessions are not restarted or
-killed.
-
-Each retirement is a separate signed commit.
-
-#### C10a. Retire MCP convergence
-
-After the complete fleet matrix is green, delete
-`config/fleet/retired-mcp-cleanup.{nix,py}`, catalog tombstones, activation, and
-migration-only tests. Remove `simplejson` and `tomlkit` from this cleanup program’s
-closure if no other repository consumer remains.
-
-#### C10b. Retire the Codex legacy Ref importer
-
-After every Codex host launches normally using the environment/password-store path,
-has no native legacy `Ref` table, and connects without displaying a value, delete
-`codex_import_legacy_ref_api_key` and its fake legacy-output cases.
-
-#### C10c. Retire Pi XDG migration
-
-After Hera has two successful post-migration generations, the completion marker is
-regular, `.config/pi/agent` is real, `.pi` resolves to `.config/pi`, no staging or
-temporary destination-backup path remains, and a fresh Pi preserves sessions,
-delete
-`config/pi-profile-migration.nix` and its activation/test cases. Retain the
-declarative `~/.pi -> ~/.config/pi` link. `.pi-legacy-v1` is a preserved user
-backup, not transient staging; its presence neither blocks retirement nor
-authorizes deletion.
-
-#### C10d. Retire Codex log-directory migration
-
-After Hera, Clio, and every shared-work Codex host has the expected host-local log
-symlink, no `log.pre-host-state.*` residue, and a fresh session works, delete only
-the old-directory migration branch and its failure test. Keep symlink validation,
-SQLite isolation, and memory seeding.
-
-#### C10e. Retire Darwin gpg-agent handoff when both hosts permit it
-
-First prove no supported current module can emit the old label: every managed home
-must keep Home Manager `gpg-agent.enable = false`, source search must find no other
-producer, and every generation in the supported rollback horizon must postdate the
-handoff. Then require two Hera and Clio activations to report both old launchd
-labels absent before deleting the guard and its dedicated test. Absence observations
-alone are insufficient. Clio currently blocks this retirement.
-
-The Home Manager 25.11 SSH translation is not a finite cleanup candidate today.
-Keep it until both VPS and Vulcan use a Home Manager that exposes
-`programs.ssh.settings`, native builds/activations pass, and rendered SSH/Wi-Fi
-ordering remains equivalent.
-
-Proof:
-
-- The source contains no Anvil production, prompt, command, skill, manifest, cache,
-  or test fixture reference.
-- Generated agent leaves remain unchanged except for removal of migration-only
-  activation code.
-- Fast and full tiers pass; native Hera build passes without activation.
-- A fresh session/runtime check is requested from John if needed; the agent does not
-  restart it itself.
-
-Rollback: revert source deletion. Preserve user backups until John separately
-authorizes their removal.
-
-Blocker rule: if any host is unreachable or ambiguous, C9/C10 remain blocked and the
-cleanup phase is not reported complete.
-
-### C11. Close out and remove the plan
-
-Objective: prove the smaller repository, publish only with authorization, and leave
-no cleanup debris.
-
-Final verification, once per unchanged candidate. Any corrective source edit
-invalidates the affected evidence and requires the relevant step again:
-
-1. Fast tier, with elapsed time recorded and below 120 seconds.
-2. Full issue-closeout tier.
-3. Portable all-system no-build check.
-4. Native AI checks used by `make test`.
-5. `./build system` without activation.
-6. One final expensive assurance run; do not duplicate the twice-daily portable
-   workflow.
-7. Current-head normal CI and portable assurance green after authorized publication.
-8. Current documentation/comment audit and local-link check.
-9. Git status, signature, remotes, worktrees, and branches checked from live state.
-10. GitHub cleanup checklist reconciled and closed using the explicit `jwiegley`
-    account.
-
-Then:
-
-- Update `doc/CURRENT-WORK.md` for the next phase.
-- Delete this plan; Git history is its archive.
-- Rebase/fast-forward into `main` only with authorization.
-- Remove the cleanup branch/worktree and verify only `~/src/nix` remains.
-
-## Per-unit gate policy
-
-| Change type | Per-commit gate | Work-unit closeout |
+| Migration | Current status | Required before deletion |
 |---|---|---|
-| Documentation/comment only | Link/reference check plus fast tier | Comment audit of touched retained files |
-| Shell/Python utility | Focused unit test plus fast tier | Full tier if transaction/security behavior changed |
-| Nix catalog/renderer | Focused eval/build plus fast tier | Generated-leaf comparison and relevant native check |
-| Updater | Essential updater tests plus fast tier | Full updater suite and clean dry run |
-| Migration retirement | Source search plus fast tier | Complete live matrix, full tier, native build |
-| Package/profile selection | Focused eval plus fast tier | One parity comparison |
+| Retired Anvil/MCP cleanup | Prior Hera report only; all hosts and rollback horizon unverified | All managed hosts clean after a second activation/client cycle; no mutable Anvil/query credential key; supported generations cannot reintroduce it |
+| Pi XDG migration | Prior Hera shape report only; rollback policy undefined and retirement unverified | Accepted rollback horizon; two successful post-migration generations and session preservation; retain declarative `~/.pi -> ~/.config/pi` and `.pi-legacy-v1` backup |
+| Codex legacy Ref importer | Prior Hera report only; every Codex host unverified for retirement | No legacy table on every Codex host; environment/password-store path works; fresh launch without value exposure |
+| Codex log migration | Prior Hera report only; fleet unverified | Correct host-local link and no migration residue on Hera, Clio, and shared-work Codex hosts |
+| Darwin gpg-agent handoff | Prior Hera report only; Clio and rollback proof unverified | No producer, supported generations postdate handoff, and two Hera/Clio activations show old labels absent |
+| Home Manager 25.11 SSH shim | Active compatibility, not finite cleanup | Retain until VPS and Vulcan upgrade and rendered behavior is proven equivalent |
 
-No commit receives an evidence artifact refresh as its own follow-up commit.
+Each successful retirement is its own signed, revertible commit. Probes print only
+booleans, path types, key names, and generation identifiers. They never print
+credential values. No session is restarted or killed by the cleanup agent.
+
+Epic #98 remains open until every retained Phase 5 retirement issue passes. A
+represented blocker is still a blocker, not closeout. Moving a blocked retirement
+to a successor epic would be a separate scope decision by John; this plan does not
+do so implicitly.
+
+### Phase 6. Reassess remaining authorities
+
+Objective: keep only mechanisms with a demonstrated present consumer.
+
+After the Pi edits and prior deletions settle, perform bounded caller audits for:
+
+- model registry/policy/validator layering;
+- host registry and `host-options.nix` fields that do not drive runtime behavior;
+- Pi/Codex model choices still duplicated in renderers;
+- retained Darwin and parity goldens.
+
+This phase is not permission to redesign them. A change proceeds only when it
+removes an owner or duplicate representation, preserves an independent safety
+constraint, and has a smaller final representation. Otherwise record "retained"
+in the closeout and stop.
+
+### Phase 7. Audit comments and documentation once
+
+Objective: make retained prose true after the retained code shape is stable.
+
+Denominator:
+
+- primary docs means `README.md`, `CLAUDE.md`, and every retained `doc/*.md`;
+- every retained first-party Nix, Python, Bash/POSIX shell, TypeScript,
+  JavaScript, YAML, and owned Emacs Lisp file;
+- explanatory comments in `Makefile`, `.gitattributes`, and other retained
+  repository metadata;
+- repository-owned agent/command/skill/prompt prose;
+- provenance/equality verification, not rewriting, for imported agent assets and
+  vendored `edit-env.el`, `rs-gnus-summary.el`, and `supercite.el`;
+- `edit-var.el` remains in scope until provenance is established;
+- Node-RED boilerplate is reported as template material.
+
+At execution time, derive the candidate file list from `git ls-files`, record the
+file/entry/comment-line counts in the closeout report, and list every exclusion
+with its provenance. Do not add a tracked audit manifest or copy mutable counts
+into this plan.
+
+Prioritize safety-affecting rationales, dependency/version claims, cross-references,
+and historical narratives. Three current dependency comments require behavioral
+verification before prose edits: oMLX/Transformers compatibility in
+`packages/ai-llm.nix`, mlx-audio/oMLX revision compatibility in
+`packages/ai-python-extensions.nix`, and an ignored npm build failure in
+`overlays/ai/30-ai-llm.nix` attributed to a Node version different from the one
+actually supplied.
+
+Delete unverifiable prose rather than weakening it. If that prose is the sole
+justification for a behavior-changing exception such as `|| true`, a disabled
+check, or a dependency relaxation, inability to verify the rationale blocks
+retaining the exception: fix it or establish a truthful reason. Keep no mutable
+line numbers, file-length claims, unexplained dead commented-out implementation,
+or repeated incident history; live examples remain when they serve a current
+reader.
+
+At closeout, delete `doc/CLEANUP-PLAN.md` and
+`doc/CLEANUP-WIGGUM-HANDOFF.md`. The review draft was deleted when this accepted
+plan replaced it. Rewrite `doc/CURRENT-WORK.md` for the next active
+programme and repair every inbound link in the same commit. Git is the archive for
+the deleted cleanup documents.
+
+Exit proof: bounded audit has no known stale, incorrect, misleading, or orphaned
+first-party claim; all local Markdown links resolve; current architecture and
+operator commands match the tree.
+
+### Phase 8. Unchanged-candidate closeout
+
+Run broad evidence once, after the last source correction:
+
+1. Fast gate with elapsed time.
+2. Full Python tier.
+3. Only affected native/consumer/parity checks accumulated from issue closeouts.
+4. Portable all-system evaluation.
+5. Native system build without activation.
+6. One independent review of the complete cleanup range.
+7. After separately authorized publication, normal CI and scheduled portable
+   assurance on the same commit.
+8. Live Git status, signatures, remotes, worktrees, and branches.
+9. Reconcile and close or supersede cleanup issues using the explicit `jwiegley`
+   GitHub account.
+
+Do not rerun full evidence after every commit. Run the independent audit once when
+each issue is ready to close, and once over the unchanged final candidate.
+
+Exit proof: one checkout at `~/src/nix`, one main branch, clean worktree, signed
+history, remotes equal after authorized push, no cleanup documents, and no
+remaining cleanup blocker.
+
+## Per-unit verification
+
+| Change | Required before commit | Required before issue close |
+|---|---|---|
+| Pure deletion/docs | Parse/link check and fast gate | Review touched claims |
+| Shell/Python utility | Focused behavioral test and fast gate | Full tier only if transaction/security/state behavior changed |
+| Catalog/renderer | Focused evaluation and fast gate | Generated-leaf comparison only for affected clients |
+| Codex wrapper | Focused wrapper/security tests and fast gate | Packaged-binary differential probes and native wrapper check |
+| Consumer retirement | Read-only authoritative searches/evaluation | Full positive/refusal consumer proof |
+| Mutable migration retirement | Source search and focused migration tests | Complete live host matrix plus supported rollback proof |
+
+No per-commit parity refresh, coverage refresh, broad comment audit, Darwin golden
+refresh, or full expensive run is required.
 
 ## Definition of Done
 
-The cleanup phase is complete only when all of the following hold:
+The cleanup epic is complete only when:
 
-- Normal CI and scheduled portable assurance are green on the same current commit.
-- Fast mandatory verification is at most 120 seconds.
-- The structural coverage system is absent; the independent output-denominator
-  contract remains a full/closeout check.
-- Current docs contain no known false current-state or ownership claim.
-- Retained first-party comments contain no known stale, incorrect, misleading, or
-  orphaned claim, and no unexplained dead commented-out implementation remains.
-- The Codex wrapper delegates syntax validation upstream; if a concrete upstream
-  counterexample requires retained parsing, only the demonstrated minimum remains
-  and its reason is recorded.
-- Updater preparation has one mode selector, not five booleans.
-- Renderer output is unchanged while duplicated client policy has one owner.
-- No production LiteLLM reference or `positron_openai/` model exists.
-- No Anvil reference remains after the live migration matrix permits retirement.
-- No completed `config/ai` rename machinery remains after live consumer proof.
-- No new dependency or framework was added.
-- Every retained large mechanism has a current rationale and a named manual or
-  automated invocation boundary.
-- All commits are signed; the worktree is clean; both remotes agree; one branch and
-  one worktree remain.
-- No user session was killed or restarted by the cleanup agent.
+- normal CI and scheduled portable assurance are green on the same published
+  commit;
+- ordinary verification is below 120 seconds and contains no generated evidence
+  regeneration;
+- structural coverage and root output-denominator machinery are absent;
+- the Codex wrapper delegates CLI grammar upstream and retains only demonstrated
+  state/profile/security responsibilities;
+- no mandatory speculative renderer or updater refactor remains;
+- every removed compatibility path has authoritative consumer or fleet proof;
+- no production LiteLLM provider, `positron_openai/` model, or retired Anvil
+  integration remains; migration tombstones disappear when their fleet proof
+  passes;
+- the native Codex default remains `gpt-5.6-sol`; local oMLX and llama-swap remain
+  opt-in; Pi's managed context and declarative profile link remain correct;
+- current docs and retained first-party comments have no known false claim;
+- no new framework or dependency was added;
+- user Pi edits and mutable agent data were preserved;
+- all commits are signed, the tree is clean, issue states are truthful, and only
+  `~/src/nix` remains as the checkout after authorized publication and cleanup.
 
-The closeout report separates implementation, tests, generated data, and prose in
-its before/after counts. No line-deletion quota is a success criterion; useful code
-is not removed to improve the scoreboard. Successful migration retirement should
-also remove the cleanup program’s `simplejson`/`tomlkit` dependency.
+Line deletion is reported by category but is not a quota. A smaller system that
+loses a meaningful independent safety property is not a successful cleanup.
 
 ## Stop conditions
 
-Stop and ask John rather than widening scope when:
+Stop rather than widen scope when:
 
-- a deletion would require editing Vulcan, VPS, or shared-work source;
-- a generated leaf changes outside an explicitly intended policy move;
-- a test with demonstrated regression value has no smaller replacement;
-- Clio or another required host remains unreachable for C9/C10;
-- a credential-bearing check cannot be expressed without exposing values;
-- the fast tier exceeds 120 seconds twice with the same signature;
-- a real update, activation, push, or session restart appears necessary.
+- the accepted decision set is ambiguous;
+- preserving or retiring C1a requires destructive Git action without approval;
+- a deletion requires editing an external checkout;
+- a generated client leaf changes outside an explicitly accepted behavior change;
+- a meaningful regression/security/state test has no smaller replacement;
+- a required host or authoritative consumer is unreachable;
+- a probe risks printing a secret value;
+- the fast gate exceeds 120 seconds twice with the same cause;
+- activation, push, publication, history rewrite, backup deletion, or session
+  restart becomes necessary.
