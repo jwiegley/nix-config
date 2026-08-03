@@ -6,7 +6,6 @@
 
 let
   defaultModelData = modelData;
-  piSources = import ../../packages/source-catalog.nix "pi";
 
   clients = [
     "claude"
@@ -1322,153 +1321,6 @@ let
       ;
   };
 
-  secretServers = {
-    Ref = {
-      url = "https://api.ref.tools/mcp";
-      header = "x-ref-api-key";
-      envName = "REF_API_KEY";
-    };
-    context7 = {
-      url = "https://mcp.context7.com/mcp";
-      header = "CONTEXT7_API_KEY";
-      envName = "CONTEXT7_API_KEY";
-    };
-  };
-  secretCarriers = {
-    claude = "header-template";
-    codex = "env-http-header-name";
-    droid = "header-bridge-argv-name";
-    opencode = "header-env-reference";
-    pi = "header-template";
-  };
-  secretCapabilities = lib.listToAttrs (
-    lib.concatMap (
-      client:
-      map (server: {
-        name = "${client}/${server}";
-        value = secretServers.${server} // {
-          inherit client server;
-          carrier = secretCarriers.${client};
-          oauthDisabled = builtins.elem client [
-            "opencode"
-            "pi"
-          ];
-          missingEnv = if client == "droid" then "preflight-rejected" else "connection-rejected";
-          maxDiagnosticBytes = if client == "droid" then 512 else null;
-          redacted = true;
-          resolvedValueLocations = [ ];
-        };
-      }) (builtins.attrNames secretServers)
-    ) clients
-  );
-
-  selectorCoverage = {
-    dimensions = {
-      inherit
-        clients
-        audiences
-        hosts
-        platforms
-        ;
-      profiles = builtins.attrNames catalogProfiles;
-    };
-
-    legacySelectors = {
-      filenameTags = {
-        personalCommands = personalFilenameTagCommands;
-        inherit positronCommands;
-      };
-      onlyPersonal = onlyPersonalCommands;
-      inherit droidCommands;
-      forge = {
-        clients = [ "claude" ];
-      };
-      retest = {
-        audiences = [ "positron" ];
-      };
-    };
-
-    legacyTargets = {
-      clio-claude-personal = [ "claude-personal" ];
-      clio-claude-positron = [ "claude-positron" ];
-      clio-codex = [ "codex-clio" ];
-      clio-opencode = [ "opencode-clio" ];
-      hera-claude-personal = [ "claude-personal" ];
-      hera-claude-positron = [ "claude-positron" ];
-      hera-codex = [
-        "codex-local"
-        "codex-hera"
-      ];
-      hera-droid = [ "droid" ];
-      hera-opencode = [ "opencode-hera" ];
-      hera-pi = [ "pi-direct" ];
-      shared-work-claude-positron = [
-        "claude-andoria"
-        "claude-andoria-t2"
-        "claude-delphi-3bd4"
-        "claude-gpu-server"
-      ];
-      shared-work-codex = [ "codex-andoria" ];
-      shared-work-opencode-positron = [
-        "opencode-andoria-08"
-        "opencode-andoria-t2"
-        "opencode-delphi-3bd4"
-        "opencode-gpu-server"
-      ];
-      vps-claude-personal = [ "claude-vps" ];
-      vulcan-claude-personal = [ "claude-vulcan" ];
-      vulcan-opencode = [ "opencode-vulcan" ];
-    };
-
-    unmanagedExclusions = {
-      gptel = [ "gptel-emacs" ];
-      git-ai = [ "all git-ai personas and state" ];
-    };
-
-    adapterVersions = {
-      pi-mcp-adapter = piSources.pi-mcp-adapter.version;
-      pi-model-router = piSources.pi-model-router.version;
-    };
-
-    secretRouting = {
-      claude = {
-        transport = "native";
-        reference = "dollar-braced";
-        missingValue = "placeholder-warning";
-      };
-      codex = {
-        transport = "native";
-        reference = "env-http-headers";
-        missingValue = "omit-header";
-        isolatedState = true;
-      };
-      opencode = {
-        transport = "native";
-        reference = "brace-env";
-        missingValue = "empty-header";
-        oauthDisabled = true;
-      };
-      droid = {
-        transport = "bridge";
-        preflight = "fixed";
-        argvFields = [
-          "url"
-          "header"
-          "envName"
-        ];
-      };
-      pi = {
-        transport = "native";
-        reference = "dollar-braced";
-        missingValue = "empty-header";
-        customHeaderDisablesOauth = true;
-        oauthDisabled = true;
-      };
-    };
-
-    inherit secretCapabilities;
-  };
-
   allowedSelectorKeys = [
     "clients"
     "audiences"
@@ -1825,7 +1677,6 @@ in
     retiredMcpServers
     retiredPromptdeployMcpItems
     retiredPromptdeploySkillItems
-    selectorCoverage
     matches
     select
     validate
