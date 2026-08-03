@@ -12,14 +12,13 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 - `doc/CLEANUP-PLAN.md` is the accepted plan. John explicitly accepted decisions
   D1-D7 on 2026-08-03.
 - Local `main` contains completed, audited Phase 1 and issues #107, #103, #105,
-  #106, #111, #112, and #113 through `f46ab6de`, including John's signed
+  #106, #111, #112, #113, and #115 through `5b7bd01b`, including John's signed
   flake-lock update. Fetched Gitea and GitHub `main` remain
   `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
 - Active construction checkout:
-  `/private/tmp/wg-nix-cleanup/c9b-config-ai-retirement`, branch
-  `cleanup/c9b-config-ai-retirement`. Issue #115 implementation commit `2faa1af0`
-  is signed and independently audited; the signed closeout is at branch HEAD.
-  The work unit is ready for local fast-forward into `main`.
+  `/private/tmp/wg-nix-cleanup/c6-updater-audit`, branch
+  `cleanup/c6-updater-audit`. Issue #110 needs no implementation source change;
+  the signed closeout is at branch HEAD and ready for local fast-forward.
 - Superseded Phase 1 branches/worktrees were removed after their refs and dirty
   state were captured in the standalone recovery package.
 - The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
@@ -194,18 +193,27 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 - Exact #115 closeout passed: immutable subflake, portable all-system evaluation,
   strict supported consumers (3 ran, 0 skipped), 26 retained gate regressions,
   fast gate, and full Python (13 modules, 312 tests, 280 seconds, zero failures).
+- C6/#110 closes as not planned under accepted decision D5. All five hidden
+  preparation flags are private between `bin/update` and `bin/update-overlay`;
+  each has one production caller. The closeout audit exercised 10 flag pairs,
+  five candidate restrictions, and five version-arity refusals; the retained
+  suite covers routing, rollback, and isolation. No defect or measured net
+  deletion warrants replacing that private interface. Independent verdict: PASS
+  at
+  `/private/tmp/fess-c6-issue-110-5b7bd01b.md`.
 
 ## Active work unit
 
-Fast-forward issue #115 locally. Then close it Done, remove its worktree/branch,
-and begin issue #116 from current local `main`.
+Fast-forward the #110 no-op closeout locally. Then close it Not Planned and
+remove its worktree/branch. Do not begin #116 while #108/#109 remain blocked on
+the concurrent Pi/model work.
 
 ## Project state
 
 Cleanup epic #98 remains In Progress. Issues #99-#103, #105-#107, #111, #112,
-#113, and #114 are closed with their Project items Done. Issue #115 is In
-Progress and ready for local integration. The remaining cleanup issues stay Todo
-until their accepted work units begin.
+#113-#115 are closed with their Project items Done. Issue #110 is In Progress and
+ready to close Not Planned. The remaining cleanup issues stay Todo until their
+accepted work units begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
 
@@ -241,13 +249,12 @@ Not authorized:
 ## Resume procedure
 
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
-2. Verify issue #115 implementation commit `2faa1af0` and its closeout commit
-   have good signatures and the worktree is clean.
+2. Verify the #110 closeout commit has a good signature and the worktree is clean.
 3. Preserve every concurrent path, primary-only Pi provider subtree, and
    `.pi/goals` state named above; stage only explicit cleanup paths.
-4. Fast-forward local `main`, close #115 Done using the explicit `jwiegley`
-   account, and remove its worktree/branch.
-5. Start #116 only after deriving its exact supported-generation and live-host
-   proof boundary; do not infer migration retirement from source checks.
+4. Fast-forward local `main`, close #110 Not Planned using the explicit
+   `jwiegley` account, and remove its worktree/branch.
+5. Re-audit #108 only after the concurrent Pi/model work lands; #109 and #116
+   remain blocked behind it.
 6. Do not push, perform another activation, edit a consumer, or restart sessions
    without separate authorization.

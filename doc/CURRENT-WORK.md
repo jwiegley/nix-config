@@ -12,13 +12,13 @@ retains a small fail-closed `fast`/`full` quality driver while deleting structur
 coverage, root output-denominator bookkeeping, the committed consumer inventory,
 duplicate root/portable gates, and their regeneration cycle.
 
-Issues #107, #103, #105, #106, #111, #112, and #113 are complete and closed
-Done. Issue #115's config/ai compatibility retirement is complete and
-independently audited, but remains In Progress until local integration. The next
-cleanup unit is issue #116.
+Issues #107, #103, #105, #106, #111, #112, #113, and #115 are complete and
+closed Done. Issue #110 is verified as not planned under accepted decision D5:
+no defect or measured deletion justifies changing the transactional updater. It
+remains In Progress only until Project reconciliation.
 
 The construction checkout is
-`/private/tmp/wg-nix-cleanup/c9b-config-ai-retirement`. The primary
+`/private/tmp/wg-nix-cleanup/c6-updater-audit`. The primary
 `/Users/johnw/src/nix` checkout is on local `main` and contains the concurrent
 dependency, model, Pi, and oMLX 0.5.5 repair work that produced active Hera
 generation 986, expanded Pi/gallery work, untracked Pi provider work, and runtime
