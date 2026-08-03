@@ -11,13 +11,14 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
 
 - `doc/CLEANUP-PLAN.md` is the accepted plan. John explicitly accepted decisions
   D1-D7 on 2026-08-03.
-- Local `main` contains completed, audited Phase 1 through `aae7f379`, including
-  John's signed flake-lock update. Fetched Gitea and GitHub `main` remain
-  `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
+- Local `main` contains completed, audited Phase 1 and issue #107 through
+  `eda3ef61`, including John's signed flake-lock update. Fetched Gitea and GitHub
+  `main` remain `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
 - Active construction checkout:
-  `/private/tmp/wg-nix-cleanup/c4-catalog-dead-metadata`, branch
-  `cleanup/c4-catalog-dead-metadata`. Issue #107 is complete, signed, audited,
-  and ready for a local fast-forward into `main`.
+  `/private/tmp/wg-nix-cleanup/c2a-dead-comments`, branch
+  `cleanup/c2a-dead-comments`. Issue #103 implementation commit `9d9baf0a` is
+  signed and independently audited; the signed closeout is at branch HEAD. The
+  work unit is ready for local fast-forward into `main`.
 - Superseded Phase 1 branches/worktrees were removed after their refs and dirty
   state were captured in the standalone recovery package.
 - The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
@@ -101,19 +102,25 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   unrelated symlinks. Managed preflight and the fast tier pass. Final independent
   audit verdict: PASS at
   `/private/tmp/wg-nix-c4-fess.BU0yVL/report.md`.
+- C2a/#103 commit `9d9baf0a` deletes 191 lines of mechanically inert comments
+  across 14 files. Every removed nonblank line was a comment; six policy-bearing
+  cask rationales remain for the later semantic prose audit. The targeted comment
+  manifest has no pending entries, the Darwin value surface and fast tier pass,
+  and the final independent verdict is PASS at
+  `/private/tmp/wg-nix-c2a-commit-fess.fMETux/report.md`.
 
 ## Active work unit
 
-Phase 2, next boundary: delete the specifically audited dead commented-out
-implementation under cleanup issue #103. Begin after #107 is fast-forwarded,
-closed Done, and its worktree/branch is removed.
+Fast-forward issue #103 locally. Then close it Done, remove its worktree/branch,
+and begin issue #105 from current local `main` after the separately authorized
+Hera dependency activation is verified.
 
 ## Project state
 
-Cleanup epic #98 remains In Progress. Issues #99-#102 and #114 are closed with
-their Project items Done. Issue #107 is ready to close Done after local
-fast-forward. The remaining cleanup issues stay Todo until their accepted work
-units begin.
+Cleanup epic #98 remains In Progress. Issues #99-#102, #107, and #114 are closed
+with their Project items Done. Issue #103 is In Progress and ready to close Done
+after local fast-forward. The remaining cleanup issues stay Todo until their
+accepted work units begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
 
@@ -124,12 +131,13 @@ Authorized:
 - accepted plan decisions D1-D7;
 - local source edits and signed cleanup commits;
 - the completed VPS checkout fast-forward and no-activation verification;
+- one Hera activation of the current dependency candidate after its build passes;
 - truthful GitHub issue/Project reconciliation after focused proof.
 
 Not authorized:
 
 - pushing or publishing nix-config cleanup commits;
-- activating Hera, Clio, VPS, Vulcan, or shared-work configurations;
+- activating Clio, VPS, Vulcan, or shared-work configurations;
 - restarting or terminating user sessions;
 - force-pushing or rewriting published history;
 - further external-checkout edits without a new need inside the accepted plan.
@@ -146,13 +154,14 @@ Not authorized:
 ## Resume procedure
 
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
-2. Verify the #107 worktree is clean and commit `60708a90` has a good signature.
+2. Verify issue #103 commit `9d9baf0a` and its closeout commit have good
+   signatures and the worktree is clean.
 3. Preserve every user-owned dependency/Pi path named above and stage only
    explicit cleanup paths.
-4. Fast-forward local `main`, remove the completed #107 worktree/branch, and
+4. Fast-forward local `main`, remove the completed #103 worktree/branch, and
    preserve John's dirty paths.
-5. Close #107 Done, then move #103 In Progress using the explicit `jwiegley`
-   account.
-6. Start #103 from a fresh short-lived branch/worktree based on current local
+5. Close #103 Done using the explicit `jwiegley` account.
+6. Build and activate the current Hera dependency candidate, then verify oMLX,
+   Pi, Claude Code, and Codex from the active profile. Do not push.
+7. Start #105 from a fresh short-lived branch/worktree based on current local
    `main`.
-7. Do not push or activate without separate authorization.

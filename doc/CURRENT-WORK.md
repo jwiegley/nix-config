@@ -12,12 +12,15 @@ retains a small fail-closed `fast`/`full` quality driver while deleting structur
 coverage, root output-denominator bookkeeping, the committed consumer inventory,
 duplicate root/portable gates, and their regeneration cycle.
 
-Issue #107's dead catalog metadata deletion is complete and independently audited.
-The next unit is Phase 2's mechanical dead-comment deletion, issue #103, after
-#107 is fast-forwarded and its worktree is removed.
+Issue #107 is complete. Issue #103's implementation is complete and independently
+audited, and its closeout is recorded here; the issue remains In Progress until
+local integration. It deletes only mechanically inert commented-out
+implementation; its focused comment audit, Darwin value surface, fast gate, and
+final independent implementation review all pass. The next cleanup unit after
+integration is issue #105.
 
 The construction checkout is
-`/private/tmp/wg-nix-cleanup/c4-catalog-dead-metadata`. The primary
+`/private/tmp/wg-nix-cleanup/c2a-dead-comments`. The primary
 `/Users/johnw/src/nix` checkout is on local
 `main` and contains John's concurrent lock, dependency, and Pi work. Do not stage
 or restore those user-owned paths.
@@ -26,5 +29,6 @@ Authoritative consumer proof now passes for Vulcan, VPS, and shared work. The VP
 was fast-forwarded to its existing signed upstream `config/fleet` migration and
 passed a full no-link NixOS build without activation.
 
-Push, publication, activation, session restart/termination, and published-history
-rewrite remain separately authorized actions.
+Hera activation of the current dependency candidate is separately authorized;
+push, publication, other-host activation, session restart/termination, and
+published-history rewrite are not.
