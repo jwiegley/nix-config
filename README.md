@@ -12,11 +12,11 @@ Personal, multi-host Nix configuration for Darwin, standalone Home Manager, NixO
 | Vulcan | aarch64 NixOS | `/etc/nixos` on Vulcan | Paired root/`config/fleet` inputs plus shared Home Manager module |
 | VPS | x86_64 NixOS | `/etc/nixos` on the VPS | Paired root/`config/fleet` inputs plus shared Home Manager module |
 
-The external checkouts own their locks and activation. The recorded local/proxy
-consumer inventory uses `config/fleet`, but that is not proof of the live
-authoritative checkouts. Cleanup issue #114 owns the read-only live verification
-required before the old compatibility stub can be retired. Do not overwrite an
-external checkout from a secondary local clone.
+The external checkouts own their locks and activation. Cleanup issue #114
+completed read-only authoritative verification on 2026-08-03: Vulcan, VPS, and
+shared work all use coherent paired revisions with `dir=config/fleet` and evaluate
+without activation. Issue #115 owns deletion of the old throwing compatibility
+stub. Do not overwrite an external checkout from a secondary local clone.
 
 Shared-work Home Manager consumers must declare their role explicitly when importing `config/johnw.nix`:
 

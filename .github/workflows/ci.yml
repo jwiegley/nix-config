@@ -11,7 +11,7 @@ name: CI
 #
 # Scope lives in one place now: `git ls-files`, inside test/bin/quality.
 #
-# `test/bin/quality darwin-surface` is deliberately local/pre-push for now. The root
+# `test/bin/quality darwin-surface` is deliberately local/manual for now. The root
 # flake still consumes a LAN-only ssh://gitea stock-trader input, so a GitHub
 # runner cannot evaluate that check honestly until a remote-safe boundary exists.
 # Full Python integration remains available through the local/manual expensive

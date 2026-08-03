@@ -43,11 +43,10 @@ Portable consumers use `flake/ai.nix` through `config/fleet`.
 ### External consumers
 
 The supported shape is a paired root source and `dir=config/fleet` input at one
-revision. The recorded local/proxy inventory has that shape for every maintained
-consumer. Live authoritative shared-work, VPS, and Vulcan state still requires a
-read-only verification before compatibility retirement; a proxy checkout or source
-build is not deployment proof. `config/ai` remains an intentional throwing stub
-until that verification is complete.
+revision. Cleanup issue #114 verified that shape in the authoritative shared-work,
+VPS, and Vulcan checkouts on 2026-08-03, including positive no-activation
+evaluation. `config/ai` remains an intentional throwing stub until issue #115
+deletes the compatibility machinery.
 
 External Home Manager and NixOS checkouts own their locks and activation. This
 repository exports implementation and modules; it does not overwrite another

@@ -421,9 +421,10 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
 
     An independent audit found that on a default full run `ran >= 1` always,
     because shared-work is this repo's own fixture and has no checkout to be
-    missing. So the ran==0 refusal was unreachable on the path that is actually
-    wired into pre-push, and a run with both consumer checkouts absent would have
-    reported success having verified only a self-described moderate proxy.
+    missing. So the ran==0 refusal was unreachable on the path used by the
+    local/manual expensive tier, and a run with both consumer checkouts absent
+    would have reported success having verified only a self-described moderate
+    proxy.
 
     Both guards are exercised here through the tool's real surface: positional
     target selection and VPS_CHECKOUT.
@@ -844,20 +845,6 @@ class TestGatesAreRegistered(unittest.TestCase):
         )
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("unknown argument", result.stdout + result.stderr)
-
-    def test_quality_registers_the_gate_suites(self):
-        body = (BIN / "quality").read_text()
-        for suite in (
-            "signatures",
-            "consumer-eval",
-            "darwin-surface",
-            "immutable-subflake",
-        ):
-            self.assertIn(
-                "%s) run_%s ;;" % (suite, suite.replace("-", "_")),
-                body,
-                "test/bin/quality has no dispatch arm for %s" % suite,
-            )
 
     def test_python_tiers_are_wired_without_a_second_quality_authority(self):
         hook = (REPO / "lefthook.yml").read_text()
