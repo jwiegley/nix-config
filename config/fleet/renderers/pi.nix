@@ -52,9 +52,6 @@ let
       "$env:"
       "?apiKey="
     ];
-  providerRequiredEnvNames = lib.concatMap (
-    provider: lib.optional (isTypedEnv provider.apiKey) provider.apiKey.env
-  ) (builtins.attrValues modelData.providers);
   mcpRequiredEnvNames = lib.concatMap (
     server:
     lib.concatMap (value: lib.optional (isTypedEnv value) value.env) (
@@ -66,68 +63,12 @@ let
 
   orderedValues =
     set: lib.sort (left: right: left.sourceOrder < right.sourceOrder) (builtins.attrValues set);
-  renderModel =
-    model:
-    assert builtins.isString model.id;
-    assert builtins.isString model.displayName;
-    assert model ? outputLimit || model ? maxOutputTokens;
-    {
-      inherit (model) id;
-      name = model.displayName;
-      maxTokens = model.outputLimit or model.maxOutputTokens;
-    }
-    // lib.optionalAttrs (model ? contextLimit) {
-      contextWindow = model.contextLimit;
-    }
-    //
-      lib.optionalAttrs
-        (
-          (model.provider == "omlx" && model.id == "Qwen3.6-27B-oQ4e-mtp")
-          || (model.provider == "llama-cpp-local" && model.id == "GLM-5.2")
-        )
-        {
-          reasoning = true;
-          input = [ "text" ];
-          cost = {
-            input = 0;
-            output = 0;
-            cacheRead = 0;
-            cacheWrite = 0;
-          };
-          thinkingLevelMap = {
-            off = "none";
-            minimal = null;
-            xhigh = "xhigh";
-            max = null;
-          };
-        };
-  localModelIds = {
-    llama-cpp-local = "GLM-5.2";
-    omlx = "Qwen3.6-27B-oQ4e-mtp";
-  };
   routerModels = orderedValues (
     lib.filterAttrs (
-      _: model: model.provider == "omlx" && model.id == "Qwen3.6-27B-oQ4e-mtp"
+      _: model: model.provider == "omlx" && model.id == "Qwen3.6-27B-oQ6e-mtp"
     ) modelData.models
   );
   routerModel = builtins.head routerModels;
-  renderProvider =
-    providerName: provider:
-    let
-      providerModels = orderedValues (
-        lib.filterAttrs (
-          _: model: model.provider == providerName && model.id == localModelIds.${providerName}
-        ) modelData.models
-      );
-    in
-    assert builtins.hasAttr providerName localModelIds;
-    assert builtins.length providerModels == 1;
-    {
-      api = "openai-completions";
-      apiKey = provider.apiKey.nonSecret;
-      inherit (provider) baseUrl;
-      models = map renderModel providerModels;
-    };
   routerProvider = {
     api = "router-local-api";
     apiKey = "pi-model-router";
@@ -153,8 +94,11 @@ let
       }
     ];
   };
-  models.providers = lib.mapAttrs renderProvider modelData.providers // {
+  models.providers = {
+    llama-swap.modelOverrides."GLM-5.2".contextWindow = 262144;
+    omlx.modelOverrides."DeepSeek-V4-Flash-0731-oQ8e-mtp".contextWindow = 262144;
     openai-codex.modelOverrides."gpt-5.6-sol".contextWindow = 1050000;
+    openrouter.modelOverrides."z-ai/glm-5.2".contextWindow = 1048576;
     router = routerProvider;
   };
   modelRouter = {
@@ -372,6 +316,18 @@ assert selected.settings == { };
 assert mcp.settings.mcpFooterStatus == "compact";
 assert builtins.attrNames selected.mcpServers == expectedMcpNames;
 assert builtins.attrNames modelData.providers == expectedProviderNames;
+assert
+  builtins.attrNames models.providers == [
+    "llama-swap"
+    "omlx"
+    "openai-codex"
+    "openrouter"
+    "router"
+  ];
+assert models.providers.llama-swap.modelOverrides."GLM-5.2".contextWindow == 262144;
+assert
+  models.providers.omlx.modelOverrides."DeepSeek-V4-Flash-0731-oQ8e-mtp".contextWindow == 262144;
+assert models.providers.openrouter.modelOverrides."z-ai/glm-5.2".contextWindow == 1048576;
 assert builtins.length routerModels == 1;
 assert routerModel.contextLimit == 262144;
 assert routerModel.outputLimit == 65536;
@@ -416,7 +372,6 @@ assert builtins.hasAttr "pi-gallery" pkgs;
         "REF_API_KEY"
       ]
       ++ mcpRequiredEnvNames
-      ++ providerRequiredEnvNames
     )
   );
 

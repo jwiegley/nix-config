@@ -9,10 +9,9 @@ diff --git a/omlx/utils/psutil_compat.py b/omlx/utils/psutil_compat.py
  _HOST_INFO64_MAX_COUNT = 256
 +_MIG_ARRAY_TOO_LARGE = -307  # <mach/mig_errors.h>: array not large enough
  _VM_STATS_MIN_COUNT = 4
- _VM_PAGE_SIZE = 16384
- _SYSCTL = "/usr/sbin/sysctl"
-@@ -99,17 +101,26 @@
- def get_macos_vm_stats() -> dict[str, int] | None:
+ # Offsets into vm_statistics64_data_t past the stable first four. Cross-checked
+ # against `vm_stat` output on Apple Silicon.
+@@ -103,7 +105,8 @@ def get_macos_vm_stats() -> dict[str, int] | None:
      """Return macOS vm_statistics64 page counters in bytes.
  
 -    The first four counters are stable across SDK versions. The oversized
@@ -20,8 +19,10 @@ diff --git a/omlx/utils/psutil_compat.py b/omlx/utils/psutil_compat.py
 +    The first four counters are stable across SDK versions. Keep oversized
 +    storage for forward-compatible struct tails, but begin with the current
 +    HOST_VM_INFO64_COUNT and retry once if Mach reports a larger reply.
-     """
-     if _libc is None or _MACH_HOST is None:
+     "speculative" and "compressed" sit further into the struct and are only
+     reported when the kernel filled that far, so callers must treat them as
+     optional.
+@@ -113,10 +116,18 @@ def get_macos_vm_stats() -> dict[str, int] | None:
          return None
      try:
          stats = (ctypes.c_int * _HOST_INFO64_MAX_COUNT)()
@@ -41,122 +42,3 @@ diff --git a/omlx/utils/psutil_compat.py b/omlx/utils/psutil_compat.py
          if rc != 0 or count.value < _VM_STATS_MIN_COUNT:
              return None
          ps = _VM_PAGE_SIZE
-diff --git a/tests/test_process_memory_enforcer.py b/tests/test_process_memory_enforcer.py
---- a/tests/test_process_memory_enforcer.py
-+++ b/tests/test_process_memory_enforcer.py
-@@ -108,14 +108,53 @@
- class TestMacOSVMStats:
-     """Tests for the host_statistics64 telemetry adapter."""
- 
--    def test_uses_max_sized_host_info64_buffer(self):
--        """Newer macOS kernels can require a larger vm_statistics64 tail."""
-+    def test_passes_current_abi_count_with_max_sized_buffer(self):
-+        """The current ABI count avoids macOS kernel warnings."""
-+
-+        calls = []
- 
-         class FakeLibc:
-             def host_statistics64(self, host, flavor, stats, count):
-                 assert host == 123
-                 assert flavor == psutil_compat._HOST_VM_INFO64
--                assert count._obj.value == psutil_compat._HOST_INFO64_MAX_COUNT
-+                calls.append(count._obj.value)
-+                assert len(stats) == psutil_compat._HOST_INFO64_MAX_COUNT
-+                stats[0] = 10
-+                stats[1] = 20
-+                stats[2] = 30
-+                stats[3] = 40
-+                count._obj.value = psutil_compat._HOST_VM_INFO64_COUNT
-+                return 0
-+
-+        with (
-+            patch.object(psutil_compat, "_libc", FakeLibc()),
-+            patch.object(psutil_compat, "_MACH_HOST", 123),
-+            patch.object(psutil_compat, "_VM_PAGE_SIZE", 4096),
-+        ):
-+            stats = pme.get_macos_vm_stats()
-+
-+        assert calls == [psutil_compat._HOST_VM_INFO64_COUNT]
-+        assert stats == {
-+            "free": 10 * 4096,
-+            "active": 20 * 4096,
-+            "inactive": 30 * 4096,
-+            "wired": 40 * 4096,
-+        }
-+
-+    def test_retries_once_with_larger_required_count(self):
-+        """A future kernel reply can use the oversized backing storage."""
-+
-+        calls = []
-+
-+        class FakeLibc:
-+            def host_statistics64(self, host, flavor, stats, count):
-+                assert host == 123
-+                assert flavor == psutil_compat._HOST_VM_INFO64
-+                calls.append(count._obj.value)
-+                assert len(stats) == psutil_compat._HOST_INFO64_MAX_COUNT
-+                if len(calls) == 1:
-+                    count._obj.value = 104
-+                    return psutil_compat._MIG_ARRAY_TOO_LARGE
-                 stats[0] = 10
-                 stats[1] = 20
-                 stats[2] = 30
-@@ -130,6 +169,7 @@
-         ):
-             stats = pme.get_macos_vm_stats()
- 
-+        assert calls == [psutil_compat._HOST_VM_INFO64_COUNT, 104]
-         assert stats == {
-             "free": 10 * 4096,
-             "active": 20 * 4096,
-@@ -137,6 +177,50 @@
-             "wired": 40 * 4096,
-         }
- 
-+    @pytest.mark.parametrize(
-+        "required_count",
-+        [
-+            0,
-+            psutil_compat._HOST_VM_INFO64_COUNT,
-+            psutil_compat._HOST_INFO64_MAX_COUNT + 1,
-+        ],
-+    )
-+    def test_invalid_required_count_returns_none(self, required_count):
-+        """Never retry with a zero, unchanged, or oversized count."""
-+
-+        calls = []
-+
-+        class FakeLibc:
-+            def host_statistics64(self, host, flavor, stats, count):
-+                calls.append(count._obj.value)
-+                count._obj.value = required_count
-+                return psutil_compat._MIG_ARRAY_TOO_LARGE
-+
-+        with (
-+            patch.object(psutil_compat, "_libc", FakeLibc()),
-+            patch.object(psutil_compat, "_MACH_HOST", 123),
-+        ):
-+            assert pme.get_macos_vm_stats() is None
-+
-+        assert calls == [psutil_compat._HOST_VM_INFO64_COUNT]
-+
-+    def test_failed_retry_returns_none_without_third_call(self):
-+        calls = []
-+
-+        class FakeLibc:
-+            def host_statistics64(self, host, flavor, stats, count):
-+                calls.append(count._obj.value)
-+                count._obj.value = 104
-+                return psutil_compat._MIG_ARRAY_TOO_LARGE
-+
-+        with (
-+            patch.object(psutil_compat, "_libc", FakeLibc()),
-+            patch.object(psutil_compat, "_MACH_HOST", 123),
-+        ):
-+            assert pme.get_macos_vm_stats() is None
-+
-+        assert calls == [psutil_compat._HOST_VM_INFO64_COUNT, 104]
-+
-     def test_short_host_info64_response_returns_none(self):
-         class FakeLibc:
-             def host_statistics64(self, host, flavor, stats, count):

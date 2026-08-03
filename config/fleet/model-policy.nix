@@ -20,37 +20,6 @@
   syncChatPath = "chat/completions";
 
   providers = {
-    positron-anthropic = {
-      selectors.clients = [ "droid" ];
-      droid.providerType = "anthropic";
-    };
-
-    positron-google = {
-      selectors.clients = [ "droid" ];
-      droid = {
-        providerType = "generic-chat-completion-api";
-        noImageSupport = true;
-      };
-    };
-
-    positron-openai = {
-      selectors.clients = [ "droid" ];
-      droid.providerType = "openai";
-    };
-
-    nvidia = {
-      selectors.clients = [
-        "droid"
-        "opencode"
-      ];
-      droid.providerType = "openai";
-      opencode = {
-        npm = "@ai-sdk/openai-compatible";
-        name = "NVIDIA";
-        timeout = false;
-      };
-    };
-
     omlx-remote = {
       selectors.clients = [
         "droid"

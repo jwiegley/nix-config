@@ -274,10 +274,10 @@
     "omlx": {
       "source": {
         "args": {
-          "hash": "sha256-pN4Sc10Vwk7cGR8geeo/Rg00q4BVD8XUHQAYAO29wus=",
+          "hash": "sha256-EWe6fvUFUgAOeafNZygPmIMpXalGn4mtor9EU9BGhEs=",
           "owner": "jundot",
           "repo": "omlx",
-          "tag": "v0.5.4rc1"
+          "tag": "v0.5.5"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jundot/omlx"
@@ -286,7 +286,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.5.4rc1"
+      "version": "0.5.5"
     },
     "rustdocs-mcp-server": {
       "hashes": {

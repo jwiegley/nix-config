@@ -285,7 +285,7 @@ let
             selection.model
           ]) modelPairs
         ) "selection ${role} does not resolve"
-      ) selectionRoles
+      ) [ "default" ]
     else
       [ ];
 

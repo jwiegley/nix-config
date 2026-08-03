@@ -3,7 +3,7 @@
   "selections": {
     "default": {
       "provider": "omlx",
-      "model": "Qwen3.6-27B-oQ4e-mtp"
+      "model": "DeepSeek-V4-Flash-0731-oQ8e-mtp"
     },
     "claudeDefault": {
       "provider": "positron-anthropic",
@@ -19,38 +19,6 @@
     }
   },
   "providers": [
-    {
-      "id": "positron-anthropic",
-      "displayName": "Positron",
-      "baseUrl": "https://api.anthropic.com",
-      "apiKey": {
-        "env": "ANTHROPIC_API_KEY"
-      }
-    },
-    {
-      "id": "positron-google",
-      "displayName": "Positron",
-      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/",
-      "apiKey": {
-        "env": "GEMINI_API_KEY"
-      }
-    },
-    {
-      "id": "positron-openai",
-      "displayName": "Positron",
-      "baseUrl": "https://api.openai.com/v1",
-      "apiKey": {
-        "env": "OPENAI_API_KEY"
-      }
-    },
-    {
-      "id": "nvidia",
-      "displayName": "NVIDIA",
-      "baseUrl": "https://integrate.api.nvidia.com/v1",
-      "apiKey": {
-        "env": "NVIDIA_API_KEY"
-      }
-    },
     {
       "id": "omlx-remote",
       "displayName": "oMLX (Remote)",
@@ -87,90 +55,6 @@
   ],
   "models": [
     {
-      "provider": "positron-anthropic",
-      "id": "claude-fable-5",
-      "displayName": "Claude Fable 5",
-      "maxOutputTokens": 81920
-    },
-    {
-      "provider": "positron-anthropic",
-      "id": "claude-fable-5[1m]",
-      "displayName": "Claude Fable 5[1M]",
-      "maxOutputTokens": 81920
-    },
-    {
-      "provider": "positron-anthropic",
-      "id": "claude-haiku-4-5-20251001",
-      "displayName": "Claude Haiku 4.5",
-      "maxOutputTokens": 81920
-    },
-    {
-      "provider": "positron-anthropic",
-      "id": "claude-opus-5",
-      "displayName": "Claude Opus 5",
-      "maxOutputTokens": 81920
-    },
-    {
-      "provider": "positron-anthropic",
-      "id": "claude-opus-5[1m]",
-      "displayName": "Claude Opus 5[1M]",
-      "maxOutputTokens": 81920
-    },
-    {
-      "provider": "positron-anthropic",
-      "id": "claude-sonnet-5",
-      "displayName": "Claude Sonnet 5",
-      "maxOutputTokens": 81920
-    },
-    {
-      "provider": "positron-anthropic",
-      "id": "claude-sonnet-5[1m]",
-      "displayName": "Claude Sonnet 5[1M]",
-      "maxOutputTokens": 81920
-    },
-    {
-      "provider": "positron-google",
-      "id": "gemini-3-pro-preview",
-      "displayName": "Gemini 3 Pro Preview",
-      "maxOutputTokens": 81920
-    },
-    {
-      "provider": "positron-google",
-      "id": "gemini-3.1-pro-preview",
-      "displayName": "Gemini 3.1 Pro Preview",
-      "maxOutputTokens": 81920
-    },
-    {
-      "provider": "positron-openai",
-      "id": "gpt-5.5",
-      "displayName": "ChatGPT 5.5",
-      "maxOutputTokens": 81920
-    },
-    {
-      "provider": "positron-openai",
-      "id": "gpt-5.6-luna",
-      "displayName": "Gpt 5.6 Luna",
-      "maxOutputTokens": 81920
-    },
-    {
-      "provider": "positron-openai",
-      "id": "gpt-5.6-sol",
-      "displayName": "Gpt 5.6 Sol",
-      "maxOutputTokens": 128000
-    },
-    {
-      "provider": "positron-openai",
-      "id": "gpt-5.6-terra",
-      "displayName": "Gpt 5.6 Terra",
-      "maxOutputTokens": 81920
-    },
-    {
-      "provider": "nvidia",
-      "id": "qwen/qwen3-coder-480b-a35b-instruct",
-      "displayName": "Qwen3 Coder 480B A35B Instruct",
-      "maxOutputTokens": 81920
-    },
-    {
       "provider": "omlx-remote",
       "id": "cohere-transcribe-03-2026-mlx-fp16",
       "displayName": "Cohere Transcribe 03 2026 MLX Fp 16 (MLX)",
@@ -180,8 +64,8 @@
     },
     {
       "provider": "omlx-remote",
-      "id": "DeepSeek-V4-Flash-0731-oQ8-mtp",
-      "displayName": "Deepseek V 4 Flash 0731 Oq 8 Mtp (MLX)",
+      "id": "DeepSeek-V4-Flash-0731-oQ8e-mtp",
+      "displayName": "Deepseek V 4 Flash 0731 Oq 8E Mtp (MLX)",
       "maxOutputTokens": 128000,
       "contextLimit": 262144,
       "outputLimit": 65536
@@ -190,6 +74,14 @@
       "provider": "omlx-remote",
       "id": "Qwen3.6-27B-oQ4e-mtp",
       "displayName": "Qwen 3.6 27B Oq 4E Mtp (MLX)",
+      "maxOutputTokens": 128000,
+      "contextLimit": 262144,
+      "outputLimit": 65536
+    },
+    {
+      "provider": "omlx-remote",
+      "id": "Qwen3.6-27B-oQ6e-mtp",
+      "displayName": "Qwen 3.6 27B Oq 6E Mtp (MLX)",
       "maxOutputTokens": 128000,
       "contextLimit": 262144,
       "outputLimit": 65536
@@ -207,8 +99,8 @@
     },
     {
       "provider": "omlx",
-      "id": "DeepSeek-V4-Flash-0731-oQ8-mtp",
-      "displayName": "Deepseek V 4 Flash 0731 Oq 8 Mtp (MLX)",
+      "id": "DeepSeek-V4-Flash-0731-oQ8e-mtp",
+      "displayName": "Deepseek V 4 Flash 0731 Oq 8E Mtp (MLX)",
       "maxOutputTokens": 128000,
       "contextLimit": 262144,
       "outputLimit": 65536,
@@ -222,7 +114,21 @@
       "displayName": "Qwen 3.6 27B Oq 4E Mtp (MLX)",
       "maxOutputTokens": 128000,
       "contextLimit": 262144,
-      "outputLimit": 65536
+      "outputLimit": 65536,
+      "hosts": [
+        "clio"
+      ]
+    },
+    {
+      "provider": "omlx",
+      "id": "Qwen3.6-27B-oQ6e-mtp",
+      "displayName": "Qwen 3.6 27B Oq 6E Mtp (MLX)",
+      "maxOutputTokens": 128000,
+      "contextLimit": 262144,
+      "outputLimit": 65536,
+      "hosts": [
+        "hera"
+      ]
     },
     {
       "provider": "llama-cpp-local",
@@ -240,7 +146,7 @@
       "id": "GLM-5.2",
       "displayName": "GLM 5.2",
       "maxOutputTokens": 128000,
-      "contextLimit": 1048576,
+      "contextLimit": 262144,
       "outputLimit": 65536,
       "hosts": [
         "hera"

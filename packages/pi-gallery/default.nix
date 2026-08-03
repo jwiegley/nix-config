@@ -3,6 +3,7 @@
   buildPackages,
   chromium,
   esbuild,
+  fetchFromGitHub,
   fetchurl,
   findutils,
   inputs,
@@ -39,9 +40,12 @@ let
         pi-hashline-edit-pro
         pi-insights
         pi-lens
+        pi-loop
         pi-model-router
         pi-multi-pass
         pi-ponytail
+        pi-provider-llama-swap
+        pi-provider-omlx
         pi-rewind
         pi-scroll
         pi-smart-fetch
@@ -253,6 +257,15 @@ let
           if text.count(old) != 1:
               raise SystemExit("unexpected pi-lens status formatter")
           bundle.write_text(text.replace(old, new))
+
+          for relative in ["dist/index.js", "dist/clients/runtime-tool-result.js"]:
+              target = root / relative
+              text = target.read_text()
+              old = "const rawFilePath = event.input.path;"
+              new = 'const rawPath = event.input.path;\n  const rawFilePath = typeof rawPath === "string" ? rawPath : void 0;'
+              if text.count(old) != 1:
+                  raise SystemExit(f"unexpected pi-lens tool-result path handling in {relative}")
+              target.write_text(text.replace(old, new))
           PY
         ''}
       '';
@@ -490,6 +503,40 @@ let
       mkdir -p "$root"
       ${install "$root"}
     '';
+
+  pi-loop = mkCopyRoot {
+    pname = supportSources.loop.attrName;
+    version = supportSources.loop.version;
+    install = root: ''
+      cp -R -- ${fetchFromGitHub supportSources.loop.source.args}/. ${root}/
+    '';
+  };
+
+  mkLocalProvider =
+    member: extensionSource:
+    let
+      upstream = fetchFromGitHub member.source.args;
+      packageManifest = builtins.toJSON {
+        name = member.publicName;
+        inherit (member) version;
+        type = "module";
+        license = "Apache-2.0";
+        pi.extensions = [ "./index.ts" ];
+      };
+    in
+    mkCopyRoot {
+      pname = member.attrName;
+      inherit (member) version;
+      install = root: ''
+        cp -- ${extensionSource} ${root}/index.ts
+        cp -- ${./providers/local-openai-provider.ts} ${root}/local-openai-provider.ts
+        cp -- ${upstream}/LICENSE ${root}/LICENSE
+        printf '%s\n' ${lib.escapeShellArg packageManifest} > ${root}/package.json
+      '';
+    };
+
+  pi-provider-llama-swap = mkLocalProvider members.llama-swap-provider ./providers/pi-provider-llama-swap.ts;
+  pi-provider-omlx = mkLocalProvider members.omlx-provider ./providers/pi-provider-omlx.ts;
 
   pi-btw = mkCopyRoot {
     pname = members.btw.attrName;

@@ -69,7 +69,7 @@ let
             substituteInPlace "$openai_api" \
               --replace-fail \
                 '        defaultHeaders: headers,' \
-                $'        defaultHeaders: headers,\n        timeout:\n            model.provider === "omlx" || model.provider === "llama-cpp-local"\n                ? 7_200_000\n                : undefined,'
+                $'        defaultHeaders: headers,\n        timeout:\n            model.provider === "omlx" || model.provider === "llama-swap"\n                ? 7_200_000\n                : undefined,'
           done
           substituteInPlace dist/core/http-dispatcher.js \
             --replace-fail \

@@ -29,6 +29,8 @@ in
     "artifacts"
     "insights"
     "multi-pass"
+    "llama-swap-provider"
+    "omlx-provider"
     "router"
     "rewind"
     "scroll"
@@ -108,6 +110,18 @@ in
       publicName = "pi-multi-pass";
       extension = "extensions/multi-sub.ts";
     };
+    llama-swap-provider = member "pi-provider-llama-swap" {
+      attrName = "pi-provider-llama-swap";
+      package = packages.pi-provider-llama-swap or null;
+      publicName = "pi-provider-llama-swap";
+      extension = "index.ts";
+    };
+    omlx-provider = member "pi-provider-omlx" {
+      attrName = "pi-provider-omlx";
+      package = packages.pi-provider-omlx or null;
+      publicName = "pi-provider-omlx";
+      extension = "index.ts";
+    };
     router = member "pi-model-router" {
       attrName = "pi-model-router";
       package = packages.pi-model-router or null;
@@ -183,6 +197,11 @@ in
   };
 
   supportSources = {
+    loop = member "pi-loop" {
+      attrName = "pi-loop";
+      package = packages.pi-loop or null;
+      publicName = "@realvendex/pi-loop";
+    };
     agent-browser = member "agent-browser" {
       attrName = "agent-browser";
       package = packages.agent-browser or null;

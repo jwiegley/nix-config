@@ -282,7 +282,7 @@ in
       llama-swap = {
         script = ''
           ${pkgs.llama-swap}/bin/llama-swap       \
-          --listen "0.0.0.0:8080"           \
+          --listen "127.0.0.1:8080"         \
           --config ${home}/Models/llama-swap.yaml
         '';
         serviceConfig.RunAtLoad = true;
@@ -312,7 +312,7 @@ in
 
                 access_log ${logDir}/access.log;
 
-                # Proxy /v1/ requests to llama-swap
+                # Expose the loopback-only oMLX API through the TLS gateway.
                 location /v1/ {
                   client_max_body_size 20M;
                   proxy_pass http://localhost:8000;
@@ -326,11 +326,6 @@ in
                   proxy_send_timeout 600;
                   proxy_read_timeout 600;
                   send_timeout 600;
-
-                  add_header 'Access-Control-Allow-Origin' $http_origin;
-                  add_header 'Access-Control-Allow-Credentials' 'true';
-                  add_header 'Access-Control-Allow-Headers' 'Authorization,Accept,Origin,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range';
-                  add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS,PUT,DELETE,PATCH';
                 }
 
                 # Proxy all other requests to chat.vulcan.lan
@@ -372,7 +367,7 @@ in
         };
 
       omlx = {
-        script = "exec ${pkgs.omlx}/bin/omlx serve --base-path /Users/johnw/.config/omlx/.omlx";
+        script = "exec ${pkgs.omlx}/bin/omlx serve --host 127.0.0.1 --base-path /Users/johnw/.config/omlx/.omlx";
         serviceConfig = {
           RunAtLoad = true;
           # Restart on crash but not on clean exit, and throttle restarts so

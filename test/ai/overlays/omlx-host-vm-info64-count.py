@@ -12,6 +12,8 @@ _EXPECTED_STATS = {
     "active": 20 * _PAGE_SIZE,
     "inactive": 30 * _PAGE_SIZE,
     "wired": 40 * _PAGE_SIZE,
+    "speculative": 50 * _PAGE_SIZE,
+    "compressed": 60 * _PAGE_SIZE,
 }
 
 
@@ -20,6 +22,8 @@ def _fill_stats(stats):
     stats[1] = 20
     stats[2] = 30
     stats[3] = 40
+    stats[psutil_compat._VM_SPECULATIVE_INDEX] = 50
+    stats[psutil_compat._VM_COMPRESSOR_INDEX] = 60
 
 
 def _run(fake_libc):

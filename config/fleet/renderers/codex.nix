@@ -87,7 +87,7 @@ let
     };
     profiles = {
       omlx = {
-        model = "Qwen3.6-27B-oQ4e-mtp";
+        model = "Qwen3.6-27B-oQ6e-mtp";
         model_provider = "omlx";
       };
       llama-swap = {
@@ -98,6 +98,7 @@ let
   };
   managedConfig = {
     model = "gpt-5.6-sol";
+    model_provider = "openai";
     model_auto_compact_token_limit = nativeSolAutoCompactTokenLimit;
     model_catalog_json = "${homeDirectory}/${profile.root}/nix-managed-model-catalog.json";
     model_reasoning_effort = "ultra";

@@ -301,6 +301,23 @@
       },
       "version": "3.8.73"
     },
+    "pi-loop": {
+      "source": {
+        "args": {
+          "hash": "sha256-YQLvUX8MIb/dh7uAwq0vyNZjVQn3XhbHEOiFMgjefYE=",
+          "owner": "ZachDreamZ",
+          "repo": "pi-loop",
+          "tag": "v1.0.2"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/ZachDreamZ/pi-loop"
+      },
+      "update": {
+        "kind": "github-tag",
+        "tagPrefix": "v"
+      },
+      "version": "1.0.2"
+    },
     "pi-markdown-preview": {
       "hashes": {
         "npmDepsHash": "sha256-bRBnJLO9Nos7WfA++5TP7IgSoa4wwqNaygliTpzxq54="
@@ -374,6 +391,44 @@
         "kind": "flake-input+copy"
       },
       "version": "4.8.4"
+    },
+    "pi-provider-llama-swap": {
+      "source": {
+        "args": {
+          "hash": "sha256-JHhr19E/X3Z9sHcCSXLiv4cKJmq2QelbV4+XGWznbG0=",
+          "owner": "gaurav-321",
+          "repo": "pi-local-llm",
+          "rev": "57583beb3a1bd99c7ed31495f4a8e3b026242630"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/gaurav-321/pi-local-llm"
+      },
+      "update": {
+        "branch": "main",
+        "kind": "github-commit",
+        "policy": "manual",
+        "reason": "The packaged provider is a reviewed local derivative that must be rebased manually"
+      },
+      "version": "57583beb"
+    },
+    "pi-provider-omlx": {
+      "source": {
+        "args": {
+          "hash": "sha256-JHhr19E/X3Z9sHcCSXLiv4cKJmq2QelbV4+XGWznbG0=",
+          "owner": "gaurav-321",
+          "repo": "pi-local-llm",
+          "rev": "57583beb3a1bd99c7ed31495f4a8e3b026242630"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/gaurav-321/pi-local-llm"
+      },
+      "update": {
+        "branch": "main",
+        "kind": "github-commit",
+        "policy": "manual",
+        "reason": "The packaged provider is a reviewed local derivative that must be rebased manually"
+      },
+      "version": "57583beb"
     },
     "pi-rtk-optimizer": {
       "source": {
