@@ -15,10 +15,11 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   #106, #110-#113, and #115 through `4ce9e7a0`, including John's signed flake-lock
   update. Fetched Gitea and GitHub `main` remain
   `cf2056ec0a3681d9ef95ede54b4c5574ad33b008`.
-- Active construction checkout:
+- Proof-only #120 checkout used for this audit:
   `/private/tmp/wg-nix-cleanup/c10e-gpg-handoff`, branch
-  `cleanup/c10e-gpg-handoff`. Issue #120 is In Progress in read-only proof; no
-  retirement commit exists.
+  `cleanup/c10e-gpg-handoff`. Its signed record is ready for integration and
+  removal; no construction checkout remains after the resume steps. Issue #120
+  remains Todo on HOLD and has no retirement change.
 - Superseded Phase 1 branches/worktrees were removed after their refs and dirty
   state were captured in the standalone recovery package.
 - The primary `/Users/johnw/src/nix` checkout is on `main` and contains John's
@@ -201,18 +202,26 @@ accepted Definition of Done in `doc/CLEANUP-PLAN.md`.
   deletion warrants replacing that private interface. Independent verdict: PASS
   at
   `/private/tmp/fess-c6-issue-110-5b7bd01b.md`.
+- C10e/#120 pre-deletion proof established that Hera generations 985/986 and
+  Clio 239/240 each contain the handoff and no retired producer; the retired
+  launchd label is absent in both live user domains on both hosts. Those exact
+  generation sets satisfy the D7 rollback shape. Retirement remains blocked:
+  generation links do not prove Hera 985 or Clio 239 actually completed
+  activation, so the required two-cycle execution evidence is missing. The guard
+  stays intact until durable evidence is found or one additional activation per
+  host is separately authorized. Independent verdict: HOLD at
+  `/private/tmp/wg-nix-c10e-predeletion-fess.md`.
 
 ## Active work unit
 
-Establish #120's exact Hera/Clio generation, producer-absence, old-label, and
-rollback-horizon evidence without activation. Do not delete the handoff unless
-the accepted two-cycle live proof is already complete.
+Fast-forward this proof-only #120 record and remove its worktree/branch. Leave
+#120 Todo until the missing two-cycle activation evidence is supplied.
 
 ## Project state
 
 Cleanup epic #98 remains In Progress. Issues #99-#103, #105-#107, #111, #112,
 #110-#115 are closed with their Project items Done except optional #108/#109,
-which remain Todo behind concurrent Pi/model work. Issue #120 is In Progress.
+which remain Todo behind concurrent Pi/model work. Issue #120 is Todo on HOLD.
 The remaining cleanup issues stay Todo until their accepted work units begin.
 
 Every `gh` invocation must select account `jwiegley` explicitly.
@@ -251,8 +260,9 @@ Not authorized:
 1. Read `doc/CLEANUP-PLAN.md` and this handoff fully.
 2. Preserve every concurrent path, primary-only Pi provider subtree, and
    `.pi/goals` state named above; stage only explicit cleanup paths.
-3. Probe Hera and Clio using names, booleans, path types, and generation IDs only.
-4. If either two-cycle or supported-rollback proof is absent, leave source intact
-   and record the exact authorization/evidence blocker on #120.
-6. Do not push, perform another activation, edit a consumer, or restart sessions
+3. Fast-forward this documentation-only proof record and remove its temporary
+   worktree/branch.
+4. Do not resume #120 without durable activation evidence or explicit authority
+   for one additional Hera and Clio activation.
+5. Do not push, perform another activation, edit a consumer, or restart sessions
    without separate authorization.
