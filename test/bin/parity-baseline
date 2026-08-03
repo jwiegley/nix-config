@@ -47,8 +47,6 @@
 #     test/bin/parity-baseline --refresh FILE    # advance the oracle to HEAD, appending
 #                                           #   a provenance entry; refuses a moved
 #                                           #   multiset unless REFRESH_DELTAS names it
-#   PARITY_COMMAND_MIGRATION=config-ai-to-config-fleet is the one-time #47
-#     authorization for the exact portable-path command rewrite during refresh.
 #
 # Refs: jwiegley/nix-config#19 (capture), #31 (refresh as main advances).
 
@@ -130,28 +128,8 @@ PY
 #      re-derive by hand) but nothing COMPARED them, so changing PORTABLE_DIR or
 #      a --apply expression would silently redefine what the numbers mean while
 #      the file still claimed to be the same oracle.
-validate_config_ai_to_fleet_command_migration() {
-    python3 - "$1" "$2" <<'PY'
-import copy
-import json
-import sys
-
-recorded = json.loads(sys.argv[1])
-current = json.loads(sys.argv[2])
-expected = copy.deepcopy(recorded)
-needle = "./config/ai#packages"
-replacement = "./config/fleet#packages"
-portable = expected.get("portablePackages")
-if not isinstance(portable, str) or portable.count(needle) != 1:
-    raise SystemExit(1)
-expected["portablePackages"] = portable.replace(needle, replacement)
-raise SystemExit(0 if expected == current else 1)
-PY
-}
-
-command_migration_observed=
 guard_oracle_compatible() {
-    local file=$1 allowed_command_migration=${2-} want_rev
+    local file=$1 want_rev
     want_rev=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["baselineRev"])' "$file")
 
     git merge-base --is-ancestor "$want_rev" HEAD || die "\
@@ -164,13 +142,6 @@ oracle rev ${want_rev:0:12} is NOT an ancestor of HEAD $(git rev-parse --short H
     recorded=$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))["commands"], sort_keys=True))' "$file")
     current=$(commands_json | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin), sort_keys=True))')
     if [[ $recorded != "$current" ]]; then
-        if [[ $allowed_command_migration == config-ai-to-config-fleet ]] &&
-            validate_config_ai_to_fleet_command_migration "$recorded" "$current"; then
-            command_migration_observed='portablePackages: ./config/ai#packages -> ./config/fleet#packages'
-            printf 'parity-baseline: accepted exact #47 command migration: %s\n' \
-                "$command_migration_observed" >&2
-            return
-        fi
         printf 'parity-baseline: DERIVATION COMMAND DIVERGENCE against %s\n' "$file" >&2
         diff -u <(printf '%s\n' "$recorded" | python3 -m json.tool) \
             <(printf '%s\n' "$current" | python3 -m json.tool) >&2 || true
@@ -404,21 +375,16 @@ PY
     [[ -f $2 ]] || die "no such baseline file: $2"
     [[ -n ${REFRESH_REASON-} ]] ||
         die "REFRESH_REASON is mandatory (see doc/PARITY-ORACLE-REFRESH.md)"
-    command_migration_observed=
-    guard_oracle_compatible "$2" "${PARITY_COMMAND_MIGRATION-}"
-    if [[ -n ${PARITY_COMMAND_MIGRATION-} && -z $command_migration_observed ]]; then
-        die "PARITY_COMMAND_MIGRATION was requested but no exact command migration was needed"
-    fi
+    guard_oracle_compatible "$2"
 
     tmp_new=$(mktemp)
     trap 'rm -f "$tmp_new"' EXIT
     derive >"$tmp_new"
 
-    python3 - "$2" "$tmp_new" "${REFRESH_DELTAS-}" "$REFRESH_REASON" \
-        "$command_migration_observed" <<'PY'
+    python3 - "$2" "$tmp_new" "${REFRESH_DELTAS-}" "$REFRESH_REASON" <<'PY'
 import json, os, subprocess, sys
 
-old_path, new_path, deltas, reason, command_migration = sys.argv[1:6]
+old_path, new_path, deltas, reason = sys.argv[1:5]
 old = json.load(open(old_path))
 new = json.load(open(new_path))
 
@@ -463,8 +429,6 @@ entry = {
     "intentional_deltas": [d for d in deltas.splitlines() if d.strip()],
     "observed_deltas": observed,
 }
-if command_migration:
-    entry["derivation_command_change"] = command_migration
 
 # On the FIRST advance, synthesize the genesis link so the chain is auditable
 # from birth rather than from first advance -- the oracle's own capture is a link
@@ -503,28 +467,15 @@ if observed:
 print(dest)
 PY
     ;;
---validate-command-migration)
-    [[ -n ${2-} && -n ${3-} && -z ${4-} ]] ||
-        die "--validate-command-migration needs OLD_COMMANDS_JSON NEW_COMMANDS_JSON"
-    old_commands=$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])), sort_keys=True))' "$2")
-    new_commands=$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])), sort_keys=True))' "$3")
-    validate_config_ai_to_fleet_command_migration "$old_commands" "$new_commands" ||
-        die "command migration is not the exact config/ai to config/fleet portable-path rewrite"
-    printf '%s\n' 'parity-baseline: exact config/ai to config/fleet command migration'
-    ;;
 --commands)
-    # Cheap: print the derivation commands WITHOUT evaluating anything, so the
-    # currency guard can assert the oracle's recorded command still matches this
-    # tool. Until this mode existed, that assertion could only skip -- see
-    # test/bin/oracle-currency-slow-test.py::test_recorded_command_matches_the_tool, which
-    # has always called `--commands` and skipped on its non-zero exit. A gate
-    # that skips is a gate that reports success while covering nothing.
+    # Cheap: print the derivation commands without evaluating anything, so the
+    # currency guard can compare the artifact's command surface to this tool.
     commands_json
     ;;
 "" | --print)
     derive
     ;;
 *)
-    die "unknown argument: $1 (want --write, --check FILE, --compare FILE, --refresh FILE, --validate-command-migration OLD NEW, --commands, or no argument)"
+    die "unknown argument: $1 (want --write, --check FILE, --compare FILE, --refresh FILE, --commands, or no argument)"
     ;;
 esac

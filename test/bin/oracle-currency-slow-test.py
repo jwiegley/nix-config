@@ -24,11 +24,9 @@ What it asserts, all without a single nix evaluation:
   the ``--write`` double ``git rev-parse`` bug produced;
 * ``packageCount`` equals ``len(packages)`` on every target, so a hand-edited
   count can never drift from the list it summarises;
-* the recorded derivation command's KEYS and SHAPE are present
-      (drift against the live tool is NOT asserted: that test skips until
-      test/bin/parity-baseline gains a --commands mode -- see the skip reason)
-  command that has drifted from the tool derives a different oracle than the one
-  a later gate would;
+* the recorded derivation commands have the required keys and shape and exactly
+  match the tool's cheap ``--commands`` output, so a later gate cannot silently
+  derive a different oracle;
 * provenance: any recorded history chain is well-formed and its tail is the
   current ``baselineRev``; once the oracle advances past its genesis schema, the
   chain is mandatory.
@@ -429,48 +427,6 @@ class OracleCurrencyTests(unittest.TestCase):
             "test/bin/parity-baseline; re-derive the oracle so the recorded command "
             "matches the tool (jw#31)",
         )
-
-    def test_config_ai_to_fleet_command_migration_is_exact(self):
-        self._require_oracle()
-        current = self.oracle["commands"]
-        old = json.loads(json.dumps(current))
-        old["portablePackages"] = old["portablePackages"].replace(
-            "./config/fleet#packages", "./config/ai#packages"
-        )
-
-        with tempfile.TemporaryDirectory(prefix="parity-command-migration-") as tmp:
-            old_path = Path(tmp) / "old.json"
-            new_path = Path(tmp) / "new.json"
-            old_path.write_text(json.dumps(old))
-            new_path.write_text(json.dumps(current))
-
-            def validate(candidate):
-                old_path.write_text(json.dumps(candidate))
-                return subprocess.run(
-                    [
-                        str(PARITY_BASELINE),
-                        "--validate-command-migration",
-                        str(old_path),
-                        str(new_path),
-                    ],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-
-            self.assertEqual(validate(old).returncode, 0)
-
-            unrelated = json.loads(json.dumps(old))
-            unrelated["darwinPackages"] += " --impure"
-            self.assertNotEqual(validate(unrelated).returncode, 0)
-
-            no_migration = json.loads(json.dumps(current))
-            self.assertNotEqual(validate(no_migration).returncode, 0)
-
-            duplicate = json.loads(json.dumps(old))
-            duplicate["portablePackages"] += " ./config/ai#packages.extra"
-            self.assertNotEqual(validate(duplicate).returncode, 0)
-
 
 # --- self-tests: every assertion, watched failing on a mutation ----------
 

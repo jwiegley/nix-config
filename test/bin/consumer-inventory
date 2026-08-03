@@ -105,8 +105,6 @@ INTENTIONAL_CONFIG_AI_FILES = {
     "test/bin/cross-consumer-eval",
     "test/bin/gates-slow-test.py",
     "test/bin/immutable-subflake-check",
-    "test/bin/oracle-currency-slow-test.py",
-    "test/bin/parity-baseline",
     "doc/PARITY-ORACLE-REFRESH.md",
     "doc/RENAME-ROLLBACK.md",
 }
