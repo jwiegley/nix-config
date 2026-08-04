@@ -6,8 +6,7 @@ let
 in
 (import ../../packages/ai-llm.nix { inherit final prev; })
 // {
-  # Node 26.3.1 has two fs.cp socket tests that fail under the macOS Nix
-  # sandbox. Keep the override scoped to Darwin and to the specific tests.
+  # Skip two Node fs.cp socket tests on Darwin.
   nodejs-slim_26 = prev.nodejs-slim_26.overrideAttrs (
     attrs:
     prev.lib.optionalAttrs prev.stdenv.buildPlatform.isDarwin {
@@ -25,9 +24,7 @@ in
   nodejs-slim_latest = final.nodejs-slim_26;
   nodejs_latest = final.nodejs_26;
 
-  # llama.cpp - LLM inference with GGUF models
-  # NOTE: As of b9190+, the webui was relocated from tools/server/webui
-  # to tools/ui. See nixpkgs commit dea49413 (llama-cpp: 9080 -> 9190).
+  # llama.cpp's current web UI and npm project live under tools/ui.
   llama-cpp =
     if
       prev.stdenv.hostPlatform.isDarwin
@@ -43,12 +40,7 @@ in
         preConfigure = ''
           prependToVar cmakeFlags "-DLLAMA_BUILD_COMMIT:STRING=b${version}"
           pushd tools/ui
-          # node 24.15.0's libuv has a kqueue assertion bug that triggers
-          # SIGABRT on exit (`Assertion failed: (errno == EINTR), function
-          # uv__io_poll, file kqueue.c, line 279`). The vite plugin writes
-          # the final dist/index.html before the abort, so accept the
-          # non-zero exit only when the expected output actually exists.
-          npm run build || true
+          npm run build
           [[ -f dist/index.html ]] || {
             echo "ERROR: tools/ui/dist/index.html not produced — npm run build genuinely failed" >&2
             exit 1
@@ -69,24 +61,6 @@ in
     else
       prev.llama-cpp;
 
-  # pyarrow 22.0.0 has a broken test in the Nix sandbox.
-  pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
-    (_: pprev: {
-      pyarrow = pprev.pyarrow.overrideAttrs (_: {
-        doCheck = false;
-        doInstallCheck = false;
-      });
-    })
-    # nltk's chartparser test imports tkinter, absent from headless Python.
-    (_: pprev: {
-      nltk = pprev.nltk.overrideAttrs (old: {
-        disabledTests = (old.disabledTests or [ ]) ++ [
-          "test_chartparser_app_uses_pickle_load_not_pickle_load_standard"
-        ];
-      });
-    })
-  ];
-
-  # The Python package override is pinned to the revision required by omlx.
+  # Expose the catalog-pinned Python mlx-lm package at top level.
   mlx-lm = final.python3Packages.mlx-lm;
 }

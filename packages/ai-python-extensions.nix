@@ -3,33 +3,12 @@
 
 let
   sources = import ./source-catalog.nix "ai";
-  compatibilitySources = import ./source-catalog.nix "compatibility";
-  mitmproxyMacosWheel = compatibilitySources.mitmproxy-macos-wheel;
 in
 [
   (
     pfinal: pprev:
     prev.lib.optionalAttrs prev.stdenv.isDarwin {
-      # Fix hash mismatch for mitmproxy-macos wheel (PyPI republished the package)
-      mitmproxy-macos = pprev.mitmproxy-macos.overridePythonAttrs (_oldAttrs: {
-        inherit (mitmproxyMacosWheel) version;
-        src =
-          assert mitmproxyMacosWheel.source.fetcher == "fetchPypi";
-          pfinal.fetchPypi mitmproxyMacosWheel.source.args;
-      });
-
-      # accelerate 1.13.0 added test_env_var_device, which mocks
-      # torch.<device>.set_device. On Darwin <device> is "mps", but
-      # torch 2.11.0 lacks torch.mps.set_device, so the patch() call
-      # raises AttributeError before the mock can take effect.
-      accelerate = pprev.accelerate.overridePythonAttrs (oldAttrs: {
-        disabledTests = (oldAttrs.disabledTests or [ ]) ++ [
-          "test_env_var_device"
-        ];
-      });
-
-      # omlx 0.5.2 imports the Xet session-cancellation API added by this
-      # matching huggingface-hub/hf-xet release pair.
+      # Keep huggingface-hub and hf-xet on the catalog-pinned release pair.
       hf-xet = pprev.hf-xet.overridePythonAttrs (_oldAttrs: rec {
         inherit (sources.hf-xet) version;
         src =
@@ -75,15 +54,13 @@ in
               pfinal.fetchPypi sources.mlx.artifacts.metal.args;
           in
           {
-            # Use the pre-built wheel matching this package set's CPython
-            # ABI. Building from source fails in the Nix sandbox because the
-            # Metal toolchain is unavailable.
+            # Select the prebuilt wheel matching this package set's CPython ABI.
             inherit (sources.mlx) version;
             pyproject = null;
             format = "wheel";
-            patches = [ ]; # Wheel doesn't need patches
-            postPatch = ""; # No patching needed for pre-built wheel
-            doCheck = false; # Wheels don't include tests
+            patches = [ ];
+            postPatch = "";
+            doCheck = false;
             # Skip mlx-metal dep check — its contents are merged in postInstall
             pythonRemoveDeps = [ "mlx-metal" ];
             src =
@@ -93,8 +70,8 @@ in
               assert wheel.fetcher == "fetchPypi";
               pfinal.fetchPypi wheel.args;
             nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [ prev.unzip ];
-            # Merge mlx-metal (Metal GPU kernels, split out since 0.31.x) into
-            # this derivation to avoid namespace-package file collisions in buildEnv.
+            # Merge the separate mlx-metal wheel into this derivation to avoid
+            # namespace-package file collisions in buildEnv.
             postInstall = ''
               unzip -o ${mlxMetalWheel} -d $TMPDIR/mlx-metal
               siteDir=$out/${pfinal.python.sitePackages}/mlx
@@ -108,12 +85,7 @@ in
 
       inherit (pfinal.callPackage ./llm-mlx.nix { }) llm-mlx;
 
-      # mlx-lm: nixpkgs ships the v0.31.3 release tag; omlx pins ab1806e
-      # (tag + 15 commits), which adds the CVE-2026-5843 fix (model_file
-      # execution gated behind trust_remote_code), the DeepSeek/GLM DSA
-      # indexer RoPE fix, and Qwen 3.5 pipelining. Pin the exact commit
-      # omlx was tested against. Keep in sync with the top-level mlx-lm
-      # app in 30-ai-llm.nix.
+      # Share the catalog-pinned mlx-lm revision with the top-level application.
       mlx-lm = pprev.mlx-lm.overridePythonAttrs (_oldAttrs: {
         inherit (sources.mlx-lm) version;
         src =
@@ -121,13 +93,7 @@ in
           prev.fetchFromGitHub sources.mlx-lm.source.args;
       });
 
-      # omlx requires mlx_vlm.speculative (DDTree drafters), introduced
-      # after the 0.4.4 release in nixpkgs. Pin to the exact commit omlx
-      # 0.5.0 pins (78b96eb, upstream 0.6.3) — omlx vendors a MiniMax M3
-      # compat patch written against this rev. llguidance and mlx-audio
-      # are added below; mlx-audio is defined in this overlay.
-      # python-multipart/starlette joined requirements.txt after 0.5.0;
-      # starlette already propagates via fastapi.
+      # Use the catalog-pinned mlx-vlm revision and explicit optional dependencies.
       mlx-vlm = pprev.mlx-vlm.overridePythonAttrs (oldAttrs: {
         inherit (sources.mlx-vlm) version;
         src =
@@ -200,11 +166,7 @@ in
         };
       };
 
-      # dflash-mlx - lossless DFlash speculative decoding for MLX.
-      # Required by omlx; not in nixpkgs. Pin the exact fork and commit omlx pins
-      # (474f8e1, version 0.1.10+omlx.3: Apple G17 NAX verify, prefix snapshot
-      # metrics, CopySpec mode, full-context draft-layer cache checks) so
-      # the speculative-decode kernels match what omlx was tested against.
+      # Build the catalog-pinned dflash-mlx fork for speculative decoding.
       dflash-mlx = pfinal.buildPythonPackage rec {
         pname = "dflash-mlx";
         inherit (sources.dflash-mlx) version;
@@ -231,28 +193,18 @@ in
         };
       };
 
-      # ── mlx-audio and its missing dependencies ──────────────────────
-      # omlx's [audio] extra (tts/stt/sts) pulls mlx-audio, which in turn
-      # needs three packages absent from nixpkgs: pyloudnorm,
-      # phonemizer-fork, and espeakng-loader.
+      # ── mlx-audio dependency closure ─────────────────────────────────
 
-      # dlinfo (phonemizer / phonemizer-fork dep) is flagged broken on
-      # Darwin in nixpkgs. The package itself works on Mac (it uses
-      # dyld_find); only its glibc-specific test suite — which probes for
-      # libc.so/libdl.so by Linux soname — fails. Unbreak it and skip the
-      # inapplicable tests, keeping the import check.
+      # dlinfo's Linux-soname tests fail on Darwin; retain the macOS tests and
+      # import check while enabling the package for this closure.
       dlinfo = pprev.dlinfo.overridePythonAttrs (old: {
-        doCheck = false;
-        pythonImportsCheck = (old.pythonImportsCheck or [ ]) ++ [ "dlinfo" ];
+        disabledTestPaths = (old.disabledTestPaths or [ ]) ++ [ "tests/dlinfo_glibc_test.py" ];
         meta = old.meta // {
           broken = false;
         };
       });
 
-      # frictionless adds every optional extra to its check inputs, including
-      # the top-level visidata package built with the default Python. OMLX's
-      # Python 3.13 audio closure does not use that optional integration, so
-      # keep its install checks while removing only the cross-ABI check edge.
+      # Remove the cross-ABI visidata check input from the Python 3.13 closure.
       frictionless = pprev.frictionless.overridePythonAttrs (
         oldAttrs:
         prev.lib.optionalAttrs (pfinal.python.pythonVersion == "3.13") {
@@ -262,9 +214,7 @@ in
         }
       );
 
-      # pdfplumber lists pandas-stubs as a development dependency, but its Nix
-      # check phase only runs pytest (not mypy). Avoid building the outdated
-      # stubs against Pandas 3 for OMLX's Python 3.13 closure.
+      # Remove the unused pandas-stubs check input from the Python 3.13 closure.
       pdfplumber = pprev.pdfplumber.overridePythonAttrs (
         oldAttrs:
         prev.lib.optionalAttrs (pfinal.python.pythonVersion == "3.13") {
@@ -298,8 +248,7 @@ in
         };
       };
 
-      # phonemizer-fork is a maintained fork of phonemizer; it imports as
-      # the `phonemizer` namespace and locates espeak-ng via espeakng-loader.
+      # phonemizer-fork installs the `phonemizer` namespace.
       phonemizer-fork = pfinal.buildPythonPackage rec {
         pname = "phonemizer-fork";
         inherit (sources.phonemizer-fork) version;
@@ -379,10 +328,8 @@ in
           };
         };
 
-      # mlx-audio - TTS/STT/STS inference for Apple Silicon. Pinned to the
-      # exact commit omlx pins. mlx-lm is pinned ==0.31.1 upstream; relax
-      # it to use our 0.31.3. Runtime dep check is skipped because the
-      # [audio] extras resolve through optional namespaces.
+      # mlx-audio - TTS/STT/STS inference for Apple Silicon. The source catalog
+      # owns this pin independently of omlx's audio extra.
       mlx-audio = pfinal.buildPythonPackage rec {
         pname = "mlx-audio";
         inherit (sources.mlx-audio) version;
@@ -397,10 +344,11 @@ in
           pfinal.wheel
         ];
 
+        # Runtime metadata constraints do not match this package set, so provide
+        # explicit dependencies below and skip the generic metadata check.
         dontCheckRuntimeDeps = true;
 
         dependencies = with pfinal; [
-          # core
           mlx
           numpy
           huggingface-hub
@@ -413,7 +361,6 @@ in
           numba
           librosa
           protobuf
-          # tts + stt + sts extras
           tiktoken
           mistral-common
           sentencepiece
@@ -455,13 +402,7 @@ in
         };
       };
 
-      # sanic test_validate_group_sets_gid fails in Nix sandbox (no 'root' group)
-      sanic = pprev.sanic.overridePythonAttrs (_: {
-        doCheck = false;
-      });
-
-      # ibis-framework: DuckDB backend tests fail (SystemError) and pythonImportsCheck
-      # tries to import ibis.backends.duckdb which needs the optional duckdb module
+      # Disable ibis checks and optional-backend import checks for this closure.
       ibis-framework = pprev.ibis-framework.overrideAttrs (_old: {
         doCheck = false;
         doInstallCheck = false;
@@ -528,8 +469,7 @@ in
         };
       };
 
-      # Fix pymssql: upstream changed setuptools constraint from ">=54.0,<70.3" to ">80.0"
-      # and now requires standard-distutils for Python 3.12+
+      # Relax pymssql's setuptools constraint and supply standard-distutils.
       pymssql = pprev.pymssql.overridePythonAttrs (oldAttrs: {
         postPatch = ''
           substituteInPlace pyproject.toml \

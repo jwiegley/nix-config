@@ -35,7 +35,7 @@ in
       pname = "hfdownloader";
       version = sources.hfdownloader.version;
       vendorHash = sources.hfdownloader.hashes.vendorHash;
-      doCheck = false; # Tests include timing-sensitive server cancellation checks.
+      doCheck = false;
 
       src =
         assert sources.hfdownloader.source.fetcher == "fetchFromGitHub";
@@ -63,13 +63,8 @@ in
           pname = "llama-swap-ui";
           inherit version src;
 
-          # llama-swap 219 relocated the svelte build output from
-          # ../proxy/ui_dist to ../internal/server/ui_dist (see
-          # ui-svelte/vite.config.ts). Redirect it to this derivation's $out so
-          # vite writes into a writable path instead of the read-only source
-          # tree. --replace-fail aborts if the upstream literal ever changes
-          # again (the old silent --replace is what left this build broken on
-          # the 217->219 bump).
+          # Redirect Vite's in-tree output to this derivation's writable output.
+          # --replace-fail makes an upstream layout change fail explicitly.
           postPatch = ''
             substituteInPlace vite.config.ts \
             --replace-fail '"../internal/server/ui_dist"' '"${placeholder "out"}/ui_dist"'
@@ -95,18 +90,10 @@ in
       inherit version src;
       vendorHash = sources.llama-swap.hashes.vendorHash;
       preBuild = ''
-        # llama-swap 219 serves the web UI from internal/server/ui_dist
-        # (//go:embed in internal/server/ui.go, where the main binary reads
-        # it). The repo ships only a placeholder.txt there to keep the embed
-        # valid before a build, so replace it with the real vite output.
+        # The main binary embeds internal/server/ui_dist, which the source
+        # archive omits; populate it with the built Vite output.
         rm -rf internal/server/ui_dist
         cp -r ${ui}/ui_dist internal/server/
-
-        # cmd/legacy still imports the proxy package, whose ui_embed.go also
-        # has //go:embed ui_dist. That directory is not shipped in the source
-        # tarball, so create it too or the (default subPackages=null) build of
-        # cmd/legacy fails with "pattern ui_dist: no matching files found".
-        cp -r ${ui}/ui_dist proxy/
       '';
       ldflags = [
         "-X main.version=${version}"
@@ -146,13 +133,9 @@ in
           ps.versioneer
         ];
 
-        # The compiled extensions import NumPy at runtime even though crick's
-        # upstream wheel metadata does not declare that dependency.
         dependencies = [ ps.numpy ];
 
-        # Upstream tests import the source tree before the Cython extensions
-        # are installed and fail collection with a missing crick.numpy_version.
-        # Retain the installed-module check and exercise TDigest below.
+        # Retain the installed-module and TDigest checks below.
         doCheck = false;
         pythonImportsCheck = [ "crick" ];
 
@@ -207,9 +190,7 @@ in
           ps.pytest-timeout
         ];
 
-        # The wheel bundles a browser-bearing suite that needs Chrome and
-        # additional test-only dependencies. Keep the browser external while
-        # retaining the import check and AIPerf's plugin validation below.
+        # Retain the import check and AIPerf plugin validation below.
         doCheck = false;
         pythonImportsCheck = [ "kaleido" ];
 
@@ -220,26 +201,8 @@ in
         };
       };
 
-      # This rendering-sensitive assertion is the sole failure on Hera:
-      # 2274 passed, 59 skipped, 5 xfailed, 1 failed.
-      aiperfSeaborn = ps.seaborn.overridePythonAttrs (old: {
-        disabledTests =
-          (old.disabledTests or [ ])
-          ++ prev.lib.optionals prev.stdenv.isDarwin [
-            "test_ticklabels_overlap"
-          ];
-      });
-
-      # Cyclopts' interactive Zsh harness nondeterministically fails to reach
-      # its prompt in the Darwin sandbox. Remove Zsh from the cross-shell
-      # matrix and drop the dedicated interactive-Zsh file; Bash/Fish behavior
-      # and the static Zsh completion snapshots stay on.
-      #
-      # The whole file goes rather than named tests because the failures do not
-      # converge: consecutive builds of the same derivation failed five then six
-      # tests, sharing only three, every one a pexpect TIMEOUT waiting on the
-      # `zsh -i` prompt. Naming them individually chases load-dependent noise,
-      # and each upstream release adds more.
+      # Exclude Zsh completion coverage from the Darwin matrix; other shell tests
+      # remain except the separately disabled whitespace-choice case.
       aiperfCyclopts =
         if prev.stdenv.hostPlatform.isDarwin then
           ps.cyclopts.overridePythonAttrs (old: {
@@ -248,9 +211,7 @@ in
                 --replace-fail 'params=["bash", "zsh", "fish"]' \
                 'params=["bash", "fish"]'
             '';
-            # --ignore-glob, so this hard-errors if upstream renames the file.
-            # That is deliberate: a rename should prompt a fresh look rather
-            # than silently re-enabling a flaky interactive suite.
+            # A renamed path fails loudly instead of silently changing coverage.
             disabledTestPaths = (old.disabledTestPaths or [ ]) ++ [
               "tests/completion/test_zsh.py"
             ];
@@ -318,11 +279,10 @@ in
           crick
           aiperfCyclopts
           kaleido
-          aiperfSeaborn
+          ps.seaborn
         ];
 
-      # These pinned nixpkgs packages are newer than AIPerf's compatible-release
-      # constraints. Keep every other runtime constraint check active.
+      # Relax only these runtime constraints; all others remain checked.
       pythonRelaxDeps = [
         "aiofiles"
         "aiohttp"
@@ -346,8 +306,7 @@ in
         "--prefix PATH : ${prev.lib.makeBinPath [ prev.ffmpeg-headless ]}"
       ];
 
-      # The wheel contains no source test suite. Exercise the installed CLI
-      # and packaged resources in installCheckPhase instead.
+      # Exercise the installed CLI and packaged resources in installCheckPhase.
       pythonImportsCheck = [
         "aiperf"
         "aiperf.cli"
@@ -438,13 +397,12 @@ in
         uvloop
         torch
         more-itertools
-        # recommended extras
         orjson
         msgspec
       ];
 
       dontBuild = true;
-      doCheck = false; # Tests require running LLM servers
+      doCheck = false;
 
       pythonImportsCheck = [ "guidellm" ];
 
@@ -456,16 +414,8 @@ in
       };
     };
 
-  # mtplx - MTP speculative decoding runtime for Apple Silicon (MLX-native)
-  # Built as buildPythonPackage + python.withPackages (rather than
-  # buildPythonApplication) because mtplx spawns its server via
-  # `os.execvpe(sys.executable, ["-m", "mtplx.server.openai", ...])`
-  # (see mtplx/commands/public.py). buildPythonApplication's wrapper
-  # uses site.addsitedir at runtime — that mutates sys.path of the
-  # current interpreter only and does not propagate to subprocesses,
-  # so the spawned python cannot import mtplx. python.withPackages
-  # installs mtplx as a real site-package in the env, so subprocesses
-  # using sys.executable resolve mtplx via NIX_PYTHONPATH.
+  # Install mtplx in a Python environment so subprocesses launched through
+  # sys.executable resolve the package.
   mtplx =
     let
       pyPkg =
@@ -481,14 +431,10 @@ in
             assert sources.mtplx.source.fetcher == "fetchPypi";
             fetchPypi sources.mtplx.source.args;
 
-          # nixpkgs ships slightly older fastapi (0.128) and uvicorn (0.40);
-          # mtplx pins >=0.136 / >=0.46 but works fine with these versions.
-          # pythonRelaxDeps doesn't rewrite wheel METADATA, so skip the check.
-          dontCheckRuntimeDeps = true;
-
           propagatedBuildInputs = [
             fastapi
             huggingface-hub
+            pillow
             mlx
             mlx-lm
             nanobind
@@ -496,6 +442,7 @@ in
             pydantic
             rich
             safetensors
+            transformers
             uvicorn
           ];
 
@@ -524,12 +471,7 @@ in
         ln -s ${pyEnv}/bin/mtplx-tune $out/bin/mtplx-tune
       '';
 
-  # omlx - LLM inference server optimized for Apple Silicon
-  # NOTE: omlx requires Python >=3.11,<3.14. Keep the complete application on
-  # Python 3.13 so its native MLX and Cohere wheels share one ABI, while still
-  # resolving deps against our extended package set (mlx wheel override,
-  # mlx-embeddings, dflash-mlx). omlx itself is pure Python; the Homebrew
-  # formula's Rust dependency was only for transitive wheels.
+  # Build omlx on Python 3.13 with the extended MLX package set.
   omlx =
     with final;
     with final.python313Packages;
@@ -550,13 +492,9 @@ in
       # surfaces as a build error rather than a silent dependency mismatch)
       # so resolution lands on our overlay/nixpkgs versions.
       #
-      # v0.5.0 added cmake/nanobind to [build-system] requires for the
-      # optional custom Metal kernels (omlx.custom_kernels.*, gated behind
-      # OMLX_WITH_CUSTOM_KERNEL in setup.py, default off). We don't build
-      # them — the Metal toolchain is unavailable in the sandbox — but
-      # `python -m build --no-isolation` still validates build requires,
-      # so drop the two we don't supply. The mlx==0.32.0 build requirement
-      # stays: it's satisfied by our mlx wheel override.
+      # cmake and nanobind build only optional custom Metal kernels, which are
+      # disabled because the sandbox lacks that toolchain. Drop those two build
+      # requirements; the remaining MLX requirement is supplied by our wheel.
       postPatch = ''
         substituteInPlace pyproject.toml \
           --replace-fail '"cmake>=3.27",' "" \
@@ -572,10 +510,8 @@ in
         wheel
       ];
 
-      # v0.4.4's pyproject pins numpy<2.4 and transformers>=5.7.0, but the
-      # entire mlx stack in this overlay is built against nixpkgs' numpy 2.4.x
-      # and transformers 5.5.x. omlx itself only uses stable numpy array ops,
-      # and the import/CLI smoke checks pass with the local transformers.
+      # Use the numpy and transformers versions shared by this MLX package set.
+      # The checks below exercise imports and CLI startup with those versions.
       pythonRelaxDeps = [
         "numpy"
         "transformers"
@@ -614,17 +550,8 @@ in
         openai-harmony
         cohere-melody
         pillow
-        # v0.4.4 includes markitdown[pdf,docx,pptx]==0.1.6; server.py imports
-        # omlx.api.markitdown at module load. nixpkgs' markitdown 0.1.6 already
-        # propagates the pdf (pdfplumber/pdfminer-six), docx (mammoth), and
-        # pptx (python-pptx) backends omlx actually uses for file conversion.
-        #
-        # Drop the speechrecognition input: it is markitdown's audio backend
-        # (omlx never transcribes audio via markitdown) and currently drags in
-        # faster-whisper -> av, where nixpkgs builds av against a different
-        # python3 patch release than the rest of the set, which throws a
-        # "Python version mismatch" at eval. Nulling it keeps every document
-        # backend while sidestepping the broken audio subtree.
+        # File conversion uses MarkItDown's document backends, not its optional
+        # speech-recognition audio backend.
         (markitdown.override { speechrecognition = null; })
       ];
 
@@ -636,9 +563,7 @@ in
         "omlx.scheduler"
       ];
 
-      # Smoke test that the wrapped entry point runs. omlx's CLI uses
-      # subcommands (serve/launch/diagnose) and has no --version flag, so
-      # exercise --help, which builds the full argparse tree and exits 0.
+      # Smoke-test CLI startup and the installed Mach adapter.
       # Also exercise the installed Mach adapter with fake libc responses for
       # the current ABI count and a bounded future-kernel retry.
       installCheckPhase = ''

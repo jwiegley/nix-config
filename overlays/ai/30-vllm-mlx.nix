@@ -1,5 +1,5 @@
 # Purpose: vLLM-like inference for Apple Silicon via MLX
-# Dependencies: Uses final for python3Packages (needs mlx, mlx-embeddings from extensions)
+# Dependencies: final.python3Packages plus AI source catalog
 # Packages: vllm-mlx
 final: prev:
 let
@@ -13,16 +13,10 @@ in
       gradioForVllm =
         (python3Packages.gradio.override { inherit (python3Packages) gradio; }).overridePythonAttrs
           (oldAttrs: {
-            # huggingface_hub probes its online agent registry while building
-            # request headers. Keep Gradio's sandboxed test suite offline.
+            # Keep Gradio's sandboxed test suite offline.
             env = (oldAttrs.env or { }) // {
               HF_HUB_OFFLINE = "1";
             };
-
-            # Gradio allows Starlette 1.x at runtime, but its wheel
-            # metadata still says starlette<1.0. nixpkgs currently ships
-            # starlette 1.1.0.
-            dontCheckRuntimeDeps = true;
           });
     in
     with final;

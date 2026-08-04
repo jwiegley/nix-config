@@ -121,30 +121,11 @@ in
       '';
   });
 
-  # Fix direnv checkPhase on macOS (Determinate Nix, non-sandboxed builds).
-  # Two independent issues combine to hang `make test-zsh`:
-  #
-  #   1. nix-darwin's /etc/zshenv sources .../set-environment, whose line 14 is
-  #      `export GPG_TTY=$(tty)`. In the non-sandboxed build the builder's TTY
-  #      leaks into subprocess FDs, and `ttyname(0)` blocks under certain FD
-  #      configurations that the test harness reaches after spawning many zsh
-  #      subshells. Setting __NIX_DARWIN_SET_ENVIRONMENT_DONE=1 short-circuits
-  #      /etc/zshenv so set-environment (and its tty call) never runs.
-  #
-  #   2. direnv's default `disable_stdin = false` passes the parent's stdin FD
-  #      through to the bash subprocess that sources .envrc. When invoked from
-  #      zsh's $() command substitution in the builder process group, that FD
-  #      is a live pipe and the bash child blocks reading from it. Patching
-  #      direnv_eval in the test harness to feed direnv `</dev/null` closes
-  #      the leak. (bash $() does not expose the same FD, which is why
-  #      test-bash works without this patch.)
+  # Disable direnv checks on Darwin.
   direnv = prev.direnv.overrideAttrs (
-    oldAttrs:
+    _oldAttrs:
     prev.lib.optionalAttrs prev.stdenv.isDarwin {
       doCheck = false;
-      env = (oldAttrs.env or { }) // {
-        __NIX_DARWIN_SET_ENVIRONMENT_DONE = "1";
-      };
     }
   );
 

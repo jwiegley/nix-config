@@ -121,17 +121,6 @@ in
     liberation_ttf
   ];
 
-  documentation = {
-    # nix-darwin ≥ 320cbf5 (PR #1818) builds the HTML manual with
-    # `nixos-render-docs --sidebar-depth`, which requires a nixos-render-docs
-    # from nixpkgs ≥ 2026-07-03 (nixpkgs PR #537810). The manual derivation
-    # resolves nixos-render-docs from an older nixpkgs instantiation than the
-    # root flake input (root f205b557 already has the flag), so skip the HTML
-    # manual (and its darwin-help wrapper); man pages are unaffected. Remove
-    # once `nix build` of darwin-manual-html succeeds with docs enabled.
-    doc.enable = false;
-  };
-
   environment = {
     systemPackages =
       with pkgs;
@@ -358,11 +347,6 @@ in
       allowBroken = false;
       allowInsecure = false;
       allowUnsupportedSystem = false;
-
-      permittedInsecurePackages = [
-        # "python-2.7.18.7"
-        # "libressl-3.4.3"
-      ];
     };
 
     overlays = import ./overlays.nix { inherit inputs vulcan-crt; };
@@ -451,15 +435,6 @@ in
 
   system = {
     stateVersion = 4;
-
-    # darwin-uninstaller embeds a minimal darwinSystem eval that uses plain
-    # nixpkgs without our overlays, so the nixos-render-docs pin in
-    # overlays/00-last-known-good.nix cannot reach it and its bundled manual
-    # fails on the removed --toc-depth flag (see that overlay's comment).
-    # Nothing here needs the uninstaller; if it's ever wanted, run
-    # `nix run nix-darwin#darwin-uninstaller` instead. Re-enable once
-    # nix-darwin switches its manual to --sidebar-depth.
-    tools.darwin-uninstaller.enable = false;
 
     # Retire Home Manager's old gpg-agent job before nix-darwin installs or
     # reloads either system or user launchd jobs. This also runs before Home

@@ -1,27 +1,6 @@
 {
   "schemaVersion": 1,
   "sources": {
-    "mitmproxy-macos-wheel": {
-      "version": "0.12.8",
-      "source": {
-        "args": {
-          "pname": "mitmproxy_macos",
-          "version": "0.12.8",
-          "format": "wheel",
-          "dist": "py3",
-          "python": "py3",
-          "hash": "sha256-baAfEY4hEN3wOEicgE53gY71IX003JYFyyZaNJ7U8UA="
-        },
-        "fetcher": "fetchPypi",
-        "url": "https://pypi.org/project/mitmproxy-macos"
-      },
-      "update": {
-        "kind": "pypi-release",
-        "package": "mitmproxy_macos",
-        "policy": "manual",
-        "reason": "PyPI republished this Darwin wheel without changing its version"
-      }
-    },
     "nixpkgs-last-good": {
       "source": {
         "args": {
