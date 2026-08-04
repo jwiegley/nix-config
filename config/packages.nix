@@ -31,6 +31,8 @@ let
   localAi = inputs.nix-ai or (if inputs ? git-ai then import ../flake/ai.nix inputs else null);
   patchAgentPackage =
     if localAi == null then _name: package: package else localAi.lib.patchAgentPackage pkgs;
+  credentialedCodexHost =
+    caps.isDarwinWorkstation || (caps.isSharedWork && !caps.isVulcan && !caps.isVps);
   wrapCredentialedCodex =
     package:
     symlinkJoin {
@@ -56,12 +58,7 @@ let
         package = patchAgentPackage name agentPackages.${name};
       in
       [
-        (
-          if name == "codex" && (caps.isDarwinWorkstation || caps.isSharedWork) then
-            wrapCredentialedCodex package
-          else
-            package
-        )
+        (if name == "codex" && credentialedCodexHost then wrapCredentialedCodex package else package)
       ]
     else
       [ ];

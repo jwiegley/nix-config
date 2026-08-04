@@ -97,7 +97,8 @@ in
     let
       # Keep raw host-identity comparisons localized in this registry.
       id = hostname;
-      # An explicit home class wins; otherwise the hostname is the class.
+      # An explicit home class supplies group classification; physical
+      # shared-work membership is also recognized below.
       cls = if homeClass != null then homeClass else id;
     in
     {
