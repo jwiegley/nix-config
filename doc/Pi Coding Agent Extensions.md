@@ -14,7 +14,7 @@ pi-version: 0.83.0
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: twenty-four gallery packages, five separately deployed extensions, one generated loader, the rendered `hera-pi` configuration, and the immediate runtime companions. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: the full gallery on Darwin, the same gallery without its three loopback-only integrations on Linux, five separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope.
 
@@ -53,38 +53,41 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `@quintinshaw/pi-dynamic-workflows` | 3.5.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
 | `pi-goal-x` | 0.19.0 | Durable goals and Sisyphus continuation | `/goals`, `get_goal` |
 
-## Managed Hera configuration
+The llama-swap provider, oMLX provider, and Model Router rows are Darwin-only. Their package derivations remain available on Linux, but the Linux gallery does not import or register them because the Nix configuration does not provision those loopback services there.
 
-The `hera-pi` profile is rendered by `~/src/nix/config/ai/renderers/pi.nix` into the active XDG profile at `~/.config/pi/agent`. Nix owns individual generated entries rather than mutable parent directories, preserving authentication, histories, settings, caches, and extension state while keeping the declarative surface collision-checked.
+## Managed fleet configuration
+
+The Hera, Clio, shared-work, VPS, and Vulcan Pi profiles are rendered by `~/src/nix/config/ai/renderers/pi.nix` into the active XDG profile at `~/.config/pi/agent`. Nix owns individual generated entries rather than mutable parent directories, preserving authentication, histories, settings, caches, and extension state while keeping the declarative surface collision-checked. Home Manager also owns the compatibility link `~/.pi -> ~/.config/pi`; activation refuses to replace a real legacy `~/.pi` tree or a wrong link.
 
 ### Owned surface
 
 | Surface | Current projection |
 | --- | --- |
-| Generated ownership | 101 entries: 99 below `~/.config/pi/agent`, plus `~/.pi-lens/config.json` and `~/.config/mcp/mcp.json` |
-| Extension entries | Auto Compact Resume, Fleet Theme, Nix Gallery loader, Pi Loop, Pi MCP Adapter, and Quiet Display; the loader registers 24 gallery packages |
+| Generated ownership | Individual leaves below `~/.config/pi/agent`, plus `~/.pi-lens/config.json`, `~/.config/mcp/mcp.json`, and the `~/.pi` compatibility link |
+| Extension entries | Auto Compact Resume, Fleet Theme, Nix Gallery loader, Pi Loop, Pi MCP Adapter, and Quiet Display; Linux omits the two local providers and their router |
 | Agent resources | 26 Nix-managed agent definitions |
 | Prompt resources | 63 files: 61 command prompts and the `emacs` and `spanish` prompts |
-| Skill resources | 24 shared catalog skills selected for Pi; six gallery package skill paths and one gallery prompt path advertised at runtime |
-| Generated policy | `keybindings.json`, `model-router.json`, `models.json`, the managed theme, the hidden Lens widget setting, and the global MCP registry |
+| Skill resources | Shared catalog skills selected for Pi, plus six gallery package skill paths and one gallery prompt path advertised at runtime |
+| Generated policy | `keybindings.json`, `models.json`, the managed theme, the hidden Lens widget setting, and the global MCP registry; Darwin also receives `model-router.json` |
 | Deliberately absent | No Pi-specific Nix settings file, hooks, marketplaces, or companion leaves |
 
-The twenty-four shared skills remain in the common discovery estate rather than being copied into a private Pi skill tree. Package skills supplied by Lens, BTW, Artifacts, Subagents, and Dynamic Workflows enter through the gallery loader.
+Shared skills remain in the common discovery estate rather than being copied into a private Pi skill tree. Their ownership is independent of Codex, so Pi-only hosts receive them too. Package skills supplied by Lens, BTW, Artifacts, Subagents, and Dynamic Workflows enter through the gallery loader.
 
 ### Model and routing policy
 
-The generated model files expose local and native provider surfaces but deliberately emit no Pi default. Model selection remains mutable at session scope; the generated router is available when a task is to use the managed local route.
+The generated model files deliberately emit no Pi default. Model selection remains mutable at session scope. Darwin exposes the locally provisioned providers and router; Linux exposes only the native remote-provider context overrides.
 
 | Item | Current value |
 | --- | --- |
-| Provider surface | Gallery providers `llama-swap` and `omlx`; native `openai-codex` and `openrouter` overrides; and the synthetic `router` provider |
+| Darwin provider surface | Gallery providers `llama-swap` and `omlx`; native `openai-codex` and `openrouter` overrides; and the synthetic `router` provider |
+| Linux provider surface | Native `openai-codex` and `openrouter` overrides only; no localhost discovery adapters or generated router |
 | Sol router route | `omlx/Qwen3.6-27B-oQ6e-mtp` through the local OpenAI-compatible oMLX service; text and image input; reasoning enabled; 262,144-token context; 65,536-token output |
 | Router profile | One underlying `sol` model; low → `low`, medium → `medium`, high → `xhigh`; `phaseBias` 0.5; debug disabled |
 | Native overrides | `openai-codex/gpt-5.6-sol` receives a 1,050,000-token context; `openrouter/z-ai/glm-5.2` receives 1,048,576; selected local compatibility overrides receive 262,144 |
 | Local discovery | Each local provider queries its loopback `/models` endpoint once during registration, under a 2.5-second bound; non-chat models are filtered and missing metadata falls back to 262,144 context and 65,536 output |
 | Request policy | Local llama-swap and oMLX generation requests receive a 7,200-second client timeout; both providers use policy-approved non-secret loopback credentials |
 
-The generated `models.json` owns compatibility and context overrides together with the synthetic router model. The two local provider extensions own runtime model discovery. No generated model is Pi's default.
+The generated `models.json` owns compatibility and context overrides; on Darwin it also owns the synthetic router model. The two Darwin-only local provider extensions own runtime model discovery. No generated model is Pi's default.
 
 ### MCP registry
 
@@ -111,9 +114,9 @@ The generated keymap retains the ordinary keys and adds Emacs-style editing:
 
 ### Nix Gallery loader
 
-**Version:** local, activated in Darwin generation 991 · **Links:** Nix authority: `~/src/nix/packages/pi-gallery/` · deployed leaf: `~/.config/pi/agent/extensions/nix-gallery/index.ts`
+**Version:** local · **Links:** Nix authority: `~/src/nix/packages/pi-gallery/` · deployed leaf: `~/.config/pi/agent/extensions/nix-gallery/index.ts`
 
-The Nix Gallery loader composes the twenty-four managed packages listed below. It imports immutable Nix-store packages, registers extensions in deterministic order, and projects their skills and prompts. Before registration it suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
+The Nix Gallery loader composes the managed packages listed below. Darwin receives the full gallery; Linux omits the two local providers and their router. The loader imports immutable Nix-store packages, registers extensions in deterministic order, and projects their skills and prompts. Before registration it suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
 
 **Basic usage.** No direct command is required. Run `/reload` after activating a new Nix generation, or start a fresh Pi process, to load the current gallery. The loader itself owns no mutable state.
 
@@ -137,7 +140,7 @@ Fleet Theme advertises the immutable `dark-tool-backgrounds` theme during resour
 
 **Version:** 1.0.2 · **Links:** [Pi Packages](https://pi.dev/packages/@realvendex/pi-loop) · [Home](https://github.com/ZachDreamZ/pi-loop#readme) · [GitHub](https://github.com/ZachDreamZ/pi-loop)
 
-Pi Loop repeats a prompt under bounded iteration, timeout, convergence, text, regular-expression, command, and error stop conditions. It supports prompt templating, lifecycle hooks, run logs, named presets, a live TUI panel, and completion notifications. Nix deploys its entry directly from an immutable support package rather than loading it through the twenty-four-member gallery.
+Pi Loop repeats a prompt under bounded iteration, timeout, convergence, text, regular-expression, command, and error stop conditions. It supports prompt templating, lifecycle hooks, run logs, named presets, a live TUI panel, and completion notifications. Nix deploys its entry directly from an immutable support package rather than loading it through the managed gallery.
 
 **Basic usage.** Run `/loop "prompt" --max 5` for confirmed rounds, or add `--yes` only when unattended execution and automatic approval of confirmations are intended. Use `/loop stop` to cancel after the current iteration, `/loop preview` to inspect a resolved run without starting it, and `/loop list`, `/loop logs`, or `/loop show` for retained state under `~/.pi/loops/`.
 
@@ -331,7 +334,7 @@ Pi Copy Message opens a searchable, keyboard-driven picker over raw session mess
 
 **Version:** `57583beb` · **Links:** Nix adapter: `~/src/nix/packages/pi-gallery/providers/pi-provider-llama-swap.ts` · [upstream source](https://github.com/gaurav-321/pi-local-llm)
 
-The llama-swap provider is a reviewed Nix derivative of `pi-local-llm`. At registration it queries the loopback llama-swap service once, filters non-chat and non-text models, derives modality and reasoning support from model metadata, and registers the surviving models through Pi's OpenAI Completions interface. A failed discovery emits a warning and leaves the provider empty until Pi reloads or restarts.
+The Darwin-only llama-swap provider is a reviewed Nix derivative of `pi-local-llm`. At registration it queries the loopback llama-swap service once, filters non-chat and non-text models, derives modality and reasoning support from model metadata, and registers the surviving models through Pi's OpenAI Completions interface. A failed discovery emits a warning and leaves the provider empty until Pi reloads or restarts.
 
 **Basic usage.** Keep the Nix-managed `org.nixos.llama-swap` launch agent available, then select a discovered `llama-swap/*` model through `/model`. Reload Pi after the local model roster changes so that the one-time discovery runs again.
 
@@ -339,7 +342,7 @@ The llama-swap provider is a reviewed Nix derivative of `pi-local-llm`. At regis
 
 **Version:** `57583beb` · **Links:** Nix adapter: `~/src/nix/packages/pi-gallery/providers/pi-provider-omlx.ts` · [upstream source](https://github.com/gaurav-321/pi-local-llm)
 
-The oMLX provider uses the same bounded discovery adapter against the loopback oMLX service. It supplies the underlying model for the generated Sol router route, presently `Qwen3.6-27B-oQ6e-mtp`, while remaining available for direct `omlx/*` model selection.
+The Darwin-only oMLX provider uses the same bounded discovery adapter against the loopback oMLX service. It supplies the underlying model for the generated Sol router route, presently `Qwen3.6-27B-oQ6e-mtp`, while remaining available for direct `omlx/*` model selection.
 
 **Basic usage.** Keep the Nix-managed `org.nixos.omlx` launch agent available and select an `omlx/*` model through `/model`, or select `router/sol` and allow Model Router to choose the reasoning tier. Reload Pi after the oMLX model roster changes.
 
@@ -355,7 +358,7 @@ Pi Multi-Pass registers additional OAuth subscription accounts for supported pro
 
 **Version:** 0.4.4 · **Links:** [Pi Packages](https://pi.dev/packages/@yeliu84/pi-model-router) · [Home](https://github.com/yeliu84/pi-model-router#readme) · [GitHub](https://github.com/yeliu84/pi-model-router)
 
-Pi Model Router selects a configured route and reasoning level for each turn according to task complexity, phase, profile, budget, and explicit pins. Hera currently exposes one `sol` route backed by `omlx/Qwen3.6-27B-oQ6e-mtp`, so automatic routing changes thinking depth rather than the underlying provider or model. The local Nix configuration keeps this map authoritative, while the extension provides the per-turn decision and interactive control surface.
+Pi Model Router selects a configured route and reasoning level for each turn according to task complexity, phase, profile, budget, and explicit pins. The Darwin profiles expose one `sol` route backed by `omlx/Qwen3.6-27B-oQ6e-mtp`, so automatic routing changes thinking depth rather than the underlying provider or model. The local Nix configuration keeps this map authoritative, while the extension provides the per-turn decision and interactive control surface. Linux profiles do not activate this extension.
 
 **Basic usage.** Open `/router` to inspect or change router state. Select `router/sol` when the managed local route is intended; use direct `/model` selection when a task requires another provider or model. The generated configuration does not force a default.
 
@@ -370,7 +373,7 @@ These binaries are not additional Pi extensions. They are the immediate runtime 
 | RTK | 0.44.0 | Pi RTK Optimizer | [Home](https://www.rtk-ai.app) · [GitHub](https://github.com/rtk-ai/rtk) |
 | Cymbal | 0.14.0 | Pi Cymbal | [Home](https://chain.sh/cymbal/) · [GitHub](https://github.com/1broseidon/cymbal) |
 | llama-swap | v245 | llama-swap Provider | [GitHub](https://github.com/mostlygeek/llama-swap) |
-| oMLX | 0.5.5 | oMLX Provider and managed Sol route | [GitHub](https://github.com/jundot/omlx) |
+| oMLX | 0.5.7 | oMLX Provider and managed Sol route | [GitHub](https://github.com/jundot/omlx) |
 | Pandoc | 3.7.0.2 | Markdown Preview | [Home](https://pandoc.org) · [GitHub](https://github.com/jgm/pandoc) |
 
 The Pi profile also installs the support toolchain expected by Lens and the orchestration extensions: `actionlint`, ast-grep, Bash Language Server, Biome, `gopls`, `nil`, Node.js 22, Pyright, Ruff, Rust Analyzer, ShellCheck, shfmt, Taplo, Terraform Language Server, tmux, typos, TypeScript Language Server, and YAML Language Server. Agent Browser, Cymbal, RTK, llama-swap, and oMLX appear separately above.
@@ -379,7 +382,7 @@ The Pi profile also installs the support toolchain expected by Lens and the orch
 
 - The active profile root is `~/.config/pi/agent`; Nix owns only the generated leaves enumerated above.
 - Run `/reload` after a Nix activation when the current Pi process must adopt changed extension code.
-- Restart or reload Pi after the llama-swap or oMLX model roster changes, because local provider discovery runs once during registration.
+- On Hera and Clio, restart or reload Pi after the llama-swap or oMLX model roster changes, because local provider discovery runs once during registration.
 - Mutable extension state remains outside Nix ownership. Examples include Blackhole memory; Caveman, Quiet, and RTK preferences; Pi Loop presets and logs; MCP credentials and cache; Cymbal indexes; and Subagent, Workflow, and Goal run state.
 - Style extensions retain distinct purposes: Ponytail minimizes implementation; Caveman compresses prose; Quiet compresses tool presentation; Fleet Theme changes TUI color treatment.
 
@@ -436,4 +439,4 @@ Within a fresh Pi session, confirm the principal control surfaces:
 /model
 ```
 
-Last checked against the current `~/src/nix` Hera renderer, deployed Nix projections, live registration surfaces, and active Darwin generation 991 on 2026-08-04.
+Source policy last checked against the current `~/src/nix` fleet renderer on 2026-08-04. Activation evidence is recorded separately so this inventory does not imply that an unactivated source revision is already live.
