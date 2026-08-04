@@ -11,9 +11,8 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 
 - The authoritative checkout is `/Users/johnw/src/nix`, on `main`. It is the
   only worktree.
-- Published Gitea and GitHub `main` match `5aa9dd4f`; local `main` is signed
-  source-retirement commit `b5d31874`, pending publication and post-retirement
-  activation.
+- Published Gitea and GitHub `main` match `52037335`; local `main` carries the
+  active #118 source-retirement candidate.
 - Hera runs Darwin generation 988. Agent Deck 1.11.0, oMLX 0.5.5, Pi 0.83.0,
   Claude Code 2.1.220, and Codex 0.146.0 are active.
 - Codex defaults to native OpenAI `gpt-5.6-sol`; local oMLX and llama-swap
@@ -61,22 +60,20 @@ issues remain explicit exclusions.
 - #117 is superseded. #124 removes Ref, Perplexity, the legacy importer, and the
   temporary credential carrier. No shared password-store provisioning is needed.
 - #118: Hera generation 990, fresh no-session Pi, path shape, and existing-session
-  preservation all passed. Source retirement and its post-retirement activation
-  remain.
+  preservation all passed. The one-shot migration and its private fixtures are
+  removed in the current source candidate; focused checks, the fast gate, and a
+  native system build pass. Post-retirement activation remains.
 - #119: Hera 990 and Clio 245 passed fresh Codex and steady-state log probes.
   Shared-work sessions remain outstanding until the common activation cycle.
 - #120: both Darwin hosts completed the pre-retirement activation/absence proof.
-  The stale-label guard and its dedicated test are removed in the current source
-  candidate; both Darwin builds pass. Post-retirement activation is not yet
-  authorized.
+  Published commit `b5d31874` removes the stale-label guard and dedicated test;
+  both Darwin builds pass. Post-retirement activation is not yet authorized.
 
 ## Concurrent work boundary
 
-Five concurrent Pi Loop files remain user-owned and dirty: `config/fleet/preflight.nix`,
-`config/fleet/renderers/pi.nix`, `packages/pi-gallery/default.nix`,
-`test/ai/managed-preflight.nix`, and `test/ai/pi-gallery.nix`. Do not stage,
-rewrite, delete, or absorb them. The shared test file overlaps #116/#118 source
-deletions, so those edits must serialize after the Pi owner commits.
+The five Pi Loop edits landed as signed commit `dec54ed8`; the primary checkout
+had no unrelated dirty paths when #118 source retirement began. Continue to
+refresh ownership before every shared-file edit.
 
 ## Authorization boundary
 

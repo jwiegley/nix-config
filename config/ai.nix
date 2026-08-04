@@ -137,10 +137,6 @@ let
     builtins.filter (rendered: rendered ? mutableMcpGuard) renderedProfiles
   );
   piGuard = if piGuards == [ ] then null else builtins.head piGuards;
-  piProfileMigration = (import ./pi-profile-migration.nix { inherit lib pkgs; }) {
-    root = catalog.profiles.hera-pi.root;
-    compatibilityRoot = ".config/pi";
-  };
   retiredMcpCleanup = (import ./fleet/retired-mcp-cleanup.nix { inherit lib pkgs; }) {
     homeDirectory = config.home.homeDirectory;
     retiredServers = catalog.retiredMcpServers;
@@ -347,10 +343,6 @@ in
     activation = {
       aiManagedPreflight = preflight.activation;
       aiRetiredMcpCleanup = retiredMcpCleanup.activation;
-    }
-    // lib.optionalAttrs piSelected {
-      aiPiProfileMigration = piProfileMigration.activation;
-      aiPiLegacyRootLink = piProfileMigration.legacyRootActivation;
     }
     // lib.optionalAttrs droidSelected {
       aiDroidSettingsConvergence = droidSettingsConvergence;
