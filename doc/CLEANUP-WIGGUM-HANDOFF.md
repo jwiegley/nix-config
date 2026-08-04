@@ -77,7 +77,13 @@ issues remain explicit exclusions.
   profiles, renderer, preflight ownership, selectors, and OpenCode-only model
   default/schema plumbing. Focused catalog/preflight checks, generated-leaf and
   package absence probes, fast gate, a native system build, refreshed baselines,
-  and independent audit pass. Host activation remains open.
+  and independent audit pass. PromptDeploy `5dd6b34`/`d166509`/`6614a46`
+  remove its target adapter, seven targets, model/MCP mappings, and Ponytail
+  runtime with 2,782 tests and full coverage passing. Without reading contents,
+  the inactive Hera, Vulcan, and shared-work `~/.config/opencode` directories
+  were moved by same-filesystem rename to
+  `~/dl/promptdeploy-retired-opencode-20260804`. Clio is unreachable and
+  unproved; Nix host activation remains open.
 - #124: signed `1ad23d7c` removes both live catalog entries, renderer
   credentials, the legacy Ref importer, the password-store carrier, and the
   Perplexity-bound web-searcher content. PromptDeploy no longer produces either
