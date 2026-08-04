@@ -171,6 +171,12 @@ runCommand "pi-gallery-check"
     [ -f ${piPackages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts ]
     [ -f ${piPackages.pi-loop}/share/pi-packages/pi-loop/LICENSE ]
     [ ! -e ${piPackages.pi-loop}/share/pi-packages/pi-loop/node_modules ]
+    grep -F 'entries[index]?.message ?? entries[index]' \
+      ${piPackages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts >/dev/null \
+      || fail "pi-loop nested session-entry compatibility patch is missing"
+    ! grep -F 'if (entries[index]?.role === "assistant")' \
+      ${piPackages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts >/dev/null \
+      || fail "pi-loop still reads assistant role at the SessionEntry top level"
     for provider_root in ${roots.llama-swap-provider} ${roots.omlx-provider}; do
       [ -f "$provider_root/index.ts" ]
       [ -f "$provider_root/local-openai-provider.ts" ]
@@ -425,6 +431,39 @@ runCommand "pi-gallery-check"
     implement the change|medium
     think deeply about this architecture|xhigh
     CASES
+
+    loop_smoke="$TMPDIR/pi-loop-smoke"
+    mkdir -p "$loop_smoke/home" "$loop_smoke/agent"
+    env -u OMLX_API_KEY -u LLAMA_SWAP_API_KEY \
+      HOME="$loop_smoke/home" \
+      PI_CODING_AGENT_DIR="$loop_smoke/agent" \
+      PI_OFFLINE=1 \
+        ${coreutils}/bin/timeout 60 \
+        ${lib.getExe piPackage} \
+        --print --offline --session "$loop_smoke/session.jsonl" --no-context-files \
+        --no-extensions --no-skills --no-prompt-templates --no-approve \
+        --extension ${piPackages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts \
+        --extension "$routing_smoke/synthetic.ts" \
+        --provider synthetic --model target \
+        '/loop --yes --delay 0 --max 2 test' \
+        </dev/null >"$loop_smoke/output" 2>"$loop_smoke/error" || {
+      status=$?
+      cat "$loop_smoke/error" >&2
+      fail "pi-loop nested session-entry smoke failed with status $status"
+    }
+    jq -s -e '
+      ([.[] | select(.type == "message" and .message.role == "user")] | length) == 2
+      and ([.[] | select(.type == "message" and .message.role == "assistant")] | length) == 2
+    ' "$loop_smoke/session.jsonl" >/dev/null || {
+      cat "$loop_smoke/output" >&2
+      cat "$loop_smoke/error" >&2
+      fail "pi-loop did not complete two nested session-entry iterations"
+    }
+    loop_log=$(find "$loop_smoke/home/.pi/loops" -maxdepth 1 -type f -name 'loop-*.json' -print -quit)
+    if [ -z "$loop_log" ] || ! jq -e '.entries | length == 2' "$loop_log" >/dev/null; then
+      [ -z "$loop_log" ] || cat "$loop_log" >&2
+      fail "pi-loop did not record two completed iterations"
+    fi
 
     smoke="$TMPDIR/pi-gallery-smoke"
     mkdir -p "$smoke/home" "$smoke/agent" "$smoke/project" "$smoke/sentinels"

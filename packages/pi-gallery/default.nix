@@ -509,6 +509,13 @@ let
     version = supportSources.loop.version;
     install = root: ''
       cp -R -- ${fetchFromGitHub supportSources.loop.source.args}/. ${root}/
+      substituteInPlace ${root}/extensions/index.ts \
+        --replace-fail \
+          'if (entries[index]?.role === "assistant") {' \
+          'if ((entries[index]?.message ?? entries[index])?.role === "assistant") {' \
+        --replace-fail \
+          'return messageToText(entries[index]);' \
+          'return messageToText(entries[index]?.message ?? entries[index]);'
     '';
   };
 

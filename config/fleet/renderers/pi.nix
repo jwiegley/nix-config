@@ -309,6 +309,7 @@ assert
   == [ ];
 assert builtins.hasAttr "agent-resources" pkgs;
 assert builtins.hasAttr "pi-gallery" pkgs;
+assert builtins.hasAttr "pi-loop" pkgs.pi-gallery.packages;
 {
   files = mergeFiles [
     agentFiles
@@ -321,6 +322,8 @@ assert builtins.hasAttr "pi-gallery" pkgs;
       "${root}/extensions/auto-compact-resume/index.ts".source = autoCompactResumeSource;
       "${root}/extensions/fleet-theme/index.ts".source = fleetThemeSource;
       "${root}/extensions/nix-gallery/index.ts".source = "${pkgs.pi-gallery}/share/pi-gallery/index.ts";
+      "${root}/extensions/pi-loop/index.ts".source =
+        "${pkgs.pi-gallery.packages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts";
       "${root}/extensions/pi-mcp-adapter".source = "${extensionRoot}/pi-mcp-adapter";
       "${root}/extensions/pi-quiet".source = "${extensionRoot}/pi-quiet";
       "${root}/keybindings.json".source = json.generate "pi-${profile.id}-keybindings.json" keybindings;

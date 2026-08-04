@@ -92,6 +92,9 @@ let
   task9PiKeybindingsPreflight = preflightFactory {
     newPaths = [ ".config/pi/agent/keybindings.json" ];
   };
+  task9PiLoopPreflight = preflightFactory {
+    newPaths = [ ".config/pi/agent/extensions/pi-loop/index.ts" ];
+  };
   task9SharedLeafPreflight = preflightFactory {
     newPaths = [
       ".agents/skills/nix-managed/SKILL.md"
@@ -123,6 +126,7 @@ let
   task9PreflightNoPiScript = writePreflightScript "task9-ai-preflight-no-pi" task9PreflightWithoutPi;
   task9PiLeafPreflightScript = writePreflightScript "task9-ai-pi-leaf-preflight" task9PiLeafPreflight;
   task9PiKeybindingsPreflightScript = writePreflightScript "task9-ai-pi-keybindings-preflight" task9PiKeybindingsPreflight;
+  task9PiLoopPreflightScript = writePreflightScript "task9-ai-pi-loop-preflight" task9PiLoopPreflight;
   task9SharedLeafPreflightScript = writePreflightScript "task9-ai-shared-leaf-preflight" task9SharedLeafPreflight;
   task9PiProfileMigrationScript = pkgs.writeShellScript "task9-ai-pi-profile-migration" ''
     set -euo pipefail
@@ -269,6 +273,7 @@ pkgs.runCommand "ai-managed-preflight"
     removed_path=".config/claude/personal/agents/removed.md"
     pi_leaf_path=".config/pi/agent/agents/bash-reviewer.md"
     pi_keybindings_path=".config/pi/agent/keybindings.json"
+    pi_loop_path=".config/pi/agent/extensions/pi-loop/index.ts"
     legacy_claude=".local/bin/claude"
 
     make_leaf() {
@@ -371,7 +376,8 @@ pkgs.runCommand "ai-managed-preflight"
         return 1
       fi
       case "$script" in
-        *task9-ai-pi-leaf-preflight | *task9-ai-pi-keybindings-preflight)
+        *task9-ai-pi-leaf-preflight | *task9-ai-pi-keybindings-preflight | \
+          *task9-ai-pi-loop-preflight)
           expected_count=1
           expected_noun=path
           ;;
@@ -443,7 +449,7 @@ pkgs.runCommand "ai-managed-preflight"
             expected_output="$new_path: blocking parent is a symlink into the Nix store: $case_home/.config/claude
     $retained_path: blocking parent is a symlink into the Nix store: $case_home/.config/claude"
             ;;
-          shared-pi-leaf-collision | pi-keybindings-collision)
+          shared-pi-leaf-collision | pi-keybindings-collision | pi-loop-collision)
             expected_output="$fragment: blocking leaf is a regular file: $case_home/$fragment"
             ;;
           aggregate-*)
@@ -746,6 +752,11 @@ pkgs.runCommand "ai-managed-preflight"
     make_leaf "$case_home" "$pi_keybindings_path" unmanaged
     run_checked fail pi-keybindings-collision "$pi_keybindings_path" \
       "${task9PiKeybindingsPreflightScript}" absent
+
+    setup_empty_case pi-loop-collision
+    make_leaf "$case_home" "$pi_loop_path" unmanaged
+    run_checked fail pi-loop-collision "$pi_loop_path" \
+      "${task9PiLoopPreflightScript}" absent
 
     write_pi() {
       value=$1
