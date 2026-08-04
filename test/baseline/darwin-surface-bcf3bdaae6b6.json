@@ -1,16 +1,9 @@
 {
-  "schema": "darwin-value-surface/3",
-  "baselineRev": "21ce50ee490dc748ab0b04ced536f1ce91bd8bc3",
-  "note": "Seven nix-darwin value surfaces at the recorded revision. Only 32-character /nix/store hash prefixes are masked; derivation names remain. Launchd scripts are hashed after that normalization, so their text is not persisted. Authorized-key lists, authorized-key file paths, and build-machine private-key paths are persisted only as content-aware opaque aggregate hashes plus non-sensitive counts; sensitive keys and assignments are refused.",
+  "baselineRev": "bcf3bdaae6b6112f3d58f5ed5c4028937dc2df83",
   "commands": {
-    "hostSurface": "nix eval --option eval-cache false --no-write-lock-file --impure --json '.#darwinConfigurations.<host>' --apply 'darwin: import ./test/darwin/darwin-surface.nix darwin'",
     "compare": "test/bin/darwin-surface-diff --normalize-store <before.json> <after.json>",
+    "hostSurface": "nix eval --option eval-cache false --no-write-lock-file --impure --json '.#darwinConfigurations.<host>' --apply 'darwin: import ./test/darwin/darwin-surface.nix darwin'",
     "refresh": "test/bin/darwin-surface-baseline --rev <rev> --write"
-  },
-  "projection": {
-    "test/darwin/darwin-surface.nix": "e6ff44fd85dcbb985141ba7d2dc40aef253a965a1c6ae320361c42f8801f4f7a",
-    "test/darwin/surface-helpers.nix": "dbf47403da79ac1670112c761163694c92b52dde8e5e530a969592510f49c4a3",
-    "test/bin/darwin-surface-diff": "19fc0e40e02fae77ac954cf2ccc026dcc18910fae8b646ad12aa64ed0d5c3204"
   },
   "hosts": {
     "clio": {
@@ -44,9 +37,12 @@
         "shells": [],
         "systemPackages": [
           "bash-interactive-5.3p15",
+          "darwin-help",
           "darwin-manpages",
+          "darwin-manual-html",
           "darwin-option",
           "darwin-rebuild",
+          "darwin-uninstaller",
           "darwin-version",
           "eternal-terminal-6.2.11",
           "gnupg-2.4.9",
@@ -187,7 +183,7 @@
             "serviceConfigSha256": "ddf5f884912d8072a38feddd458386cacaec2f7df2488185cb3b5384d994b41c"
           },
           "mssql-server": {
-            "scriptSha256": "1f7ba9cc5110df45161a29e6b00aff18d782bc043b11a5ffc00879e3f6532937",
+            "scriptSha256": "5abad0ba5662c731e8c55b019f87131b82a4e8c3f9c317df9b131c4132bbc61c",
             "serviceConfigSha256": "ff9e82c83fdf593f841bce70c8f79d407920eb99c9fb0868a5ff4be257e79854"
           }
         },
@@ -657,9 +653,12 @@
         "shells": [],
         "systemPackages": [
           "bash-interactive-5.3p15",
+          "darwin-help",
           "darwin-manpages",
+          "darwin-manual-html",
           "darwin-option",
           "darwin-rebuild",
+          "darwin-uninstaller",
           "darwin-version",
           "eternal-terminal-6.2.11",
           "gnupg-2.4.9",
@@ -806,7 +805,7 @@
             "serviceConfigSha256": "ddf5f884912d8072a38feddd458386cacaec2f7df2488185cb3b5384d994b41c"
           },
           "mssql-server": {
-            "scriptSha256": "1f7ba9cc5110df45161a29e6b00aff18d782bc043b11a5ffc00879e3f6532937",
+            "scriptSha256": "5abad0ba5662c731e8c55b019f87131b82a4e8c3f9c317df9b131c4132bbc61c",
             "serviceConfigSha256": "ff9e82c83fdf593f841bce70c8f79d407920eb99c9fb0868a5ff4be257e79854"
           },
           "nix-temproots-cleanup": {
@@ -818,7 +817,7 @@
             "serviceConfigSha256": "fe1dd62ed99f6b6a99219208a5e39a9c455c29d258a507e617c8c883fc479917"
           },
           "sysctl-vram-limit": {
-            "scriptSha256": "d7c2b02b5055a696ea2b9329b0fdc64d0c276c1f5d661b1e3f4f3696a04f2db4",
+            "scriptSha256": "1a1904cfb5f3ea8eac3025116d0576373b43a180e1ab6024bf677a0df88164c0",
             "serviceConfigSha256": "48fc83e90c7402a5807f92a34c0b490fbe47c0efa24ba1d41dcf3c4be682856d"
           }
         },
@@ -854,7 +853,7 @@
             "serviceConfigSha256": "6b875f440b5dfd9a976209dbc87b0d1bdfa42a90bf502e6f5eec1eba932fc6e0"
           },
           "flatten-recordings": {
-            "scriptSha256": "f9df60369d21fc2533daad09dd6576ed4b2ec75acb5309ca8dd9dd96536275ff",
+            "scriptSha256": "a564734ced48955efa507895f5230862191e87f3e467dd4211c75a711b25d2e3",
             "serviceConfigSha256": "3198db89ba291cda6407f2de79a2ced77dce7ed07355e638c8f355697cdc482f"
           },
           "flatten-recordings-sweep": {
@@ -1316,5 +1315,12 @@
         ]
       }
     }
-  }
+  },
+  "note": "Seven nix-darwin value surfaces at the recorded revision. Only 32-character /nix/store hash prefixes are masked; derivation names remain. Launchd scripts are hashed after that normalization, so their text is not persisted. Authorized-key lists, authorized-key file paths, and build-machine private-key paths are persisted only as content-aware opaque aggregate hashes plus non-sensitive counts; sensitive keys and assignments are refused.",
+  "projection": {
+    "test/bin/darwin-surface-diff": "74588da40ae92f35f034e816703f74938f7ddc7325d26badc31bc9c1501c69b6",
+    "test/darwin/darwin-surface.nix": "5dcdb0f5e337209177cfb34df16cd9a9426d1305c60726362235c7c19244753a",
+    "test/darwin/surface-helpers.nix": "dbf47403da79ac1670112c761163694c92b52dde8e5e530a969592510f49c4a3"
+  },
+  "schema": "darwin-value-surface/3"
 }
