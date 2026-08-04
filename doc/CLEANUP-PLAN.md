@@ -165,12 +165,13 @@ artifact to preserve it.
 
 **Recommendation:**
 
-- Remove the completed `config/ai` rename mode from parity now.
+- After the #126 consumer cutover, remove the completed `config/fleet` to
+  `config/ai` command-migration mode from parity.
 - Until the last planned package/profile-selection change, retain one baseline and
   the existing compare path; use it only at the closeout of a selection-changing
   issue. Delete refresh-history and ordinary currency bureaucracy, but do not
   promise a baseline-free comparison the current tool cannot perform.
-- After `config/ai` compatibility retirement and the last Phase 6 selection
+- After retirement of the old `config/fleet` consumer path and the last Phase 6 selection
   change, delete the parity tool, baseline, currency/history tests, and runbook.
   No parity claim remains after its comparison authority is removed.
 - Keep Darwin value-surface comparison through the Codex-wrapper and host-policy
@@ -427,8 +428,6 @@ plus fresh GitHub and Gitea searches. Require paired root/portable revisions and
 
 If proof passes, delete together:
 
-- the throwing `config/ai/flake.nix` stub (not the unrelated Home Manager module
-  `config/ai.nix`);
 - the retained rename-only consumer scanner, stale negative probes, and rollback
   instructions; the committed inventory was already removed in Phase 1 and must
   not be recreated;
@@ -438,14 +437,15 @@ If proof passes, delete together:
   needs them.
 
 Retain the positive immutable-subflake archive/lock proof and the positive
-cross-consumer lock/evaluation checks. Delete only their stale `config/ai`
+cross-consumer lock/evaluation checks. Delete only their stale `config/fleet`
 branches; those checks protect the supported `config/ai` interface
 independently of the rename inventory.
 
-If a host is unreachable or divergent, retain the minimum throwing stub and one
-explicit blocker. Do not recreate the deleted consumer artifact while waiting.
+If a host is unreachable or divergent, leave it pinned to its coherent old
+revision and record one explicit blocker. Do not add a compatibility stub while
+waiting.
 
-Exit proof: authoritative consumers evaluate, no maintained `?dir=config/ai`
+Exit proof: authoritative consumers evaluate, no maintained `?dir=config/fleet`
 reference remains, and no rename-only evidence machinery remains.
 
 ### Phase 5. Retire finite mutable-state migrations independently

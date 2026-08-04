@@ -8,15 +8,15 @@ Personal, multi-host Nix configuration for Darwin, standalone Home Manager, NixO
 |---|---|---|---|
 | Hera | aarch64-darwin | `~/src/nix` | Direct `darwinConfigurations.hera` |
 | Clio | aarch64-darwin | `~/src/nix` on Clio | Direct `darwinConfigurations.clio` |
-| Andoria-08/T2, Delphi, GPU | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Paired root source and canonical `dir=config/ai` input |
-| Vulcan | aarch64 NixOS | `/etc/nixos` on Vulcan | Paired root/`config/ai` inputs plus shared Home Manager module |
-| VPS | x86_64 NixOS | `/etc/nixos` on the VPS | Paired root/`config/ai` inputs plus shared Home Manager module |
+| Andoria-08/T2, Delphi, GPU | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Paired root and portable-AI inputs; #126 cutover to `dir=config/ai` pending |
+| Vulcan | aarch64 NixOS | `/etc/nixos` on Vulcan | Paired root/portable-AI inputs plus shared Home Manager module; #126 cutover pending |
+| VPS | x86_64 NixOS | `/etc/nixos` on the VPS | Paired root/portable-AI inputs plus shared Home Manager module; #126 cutover pending |
 
-The external checkouts own their locks and activation. Authoritative verification
-confirmed that Vulcan, VPS, and shared work use coherent paired revisions with
-`dir=config/ai` and evaluate without activation. The old `config/ai`
-compatibility flake has been removed. Do not overwrite an external checkout from
-a secondary local clone.
+The external checkouts own their locks and activation. This source now exports
+the canonical `config/ai` subflake, but Vulcan, VPS, and shared work remain
+coherently pinned to the former `config/fleet` path until the atomic #126
+root-plus-directory lock cutover. Do not overwrite an external checkout from a
+secondary local clone.
 
 Shared-work Home Manager consumers must declare their role explicitly when importing `config/johnw.nix`:
 

@@ -310,7 +310,7 @@
    "kind": "darwin",
    "target": "clio",
    "user": "johnw",
-   "drvPath": "/nix/store/l8kcgw4703h3qrn7qdpas8sdsxzg5aqw-darwin-system-26.11.15abb8c.drv",
+   "drvPath": "/nix/store/c16li2z1p3x90gbrkb4r2cdv6mpahfz3-darwin-system-26.11.15abb8c.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -704,7 +704,7 @@
    "kind": "darwin",
    "target": "hera",
    "user": "johnw",
-   "drvPath": "/nix/store/5grgxxf47fm1xzcfjj4jzv0qnlcdprv7-darwin-system-26.11.15abb8c.drv",
+   "drvPath": "/nix/store/x9pcmhjwcymlq34qmzg06n9mmqk4p3q2-darwin-system-26.11.15abb8c.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1125,7 +1125,7 @@
   {
    "kind": "home-manager",
    "target": "johnw@aarch64-linux",
-   "drvPath": "/nix/store/ps8galr26npxsgzk81ws6w9xlxv7g0w9-home-manager-generation.drv",
+   "drvPath": "/nix/store/i5akyz1brz1z00m8200gjl39qa5kw64g-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1493,7 +1493,7 @@
   {
    "kind": "home-manager",
    "target": "jwiegley@x86_64-linux",
-   "drvPath": "/nix/store/srl0lzqzvziywyq42rdgrhgnhfiyl9m0-home-manager-generation.drv",
+   "drvPath": "/nix/store/m96dzvj0yyjjs08pqslwssbn67k9i44m-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",

@@ -43,9 +43,11 @@ maintained import. Portable consumers use `flake/ai.nix` through `config/ai`.
 ### External consumers
 
 The supported shape is a paired root source and `dir=config/ai` input at one
-revision. Cleanup issue #114 verified that shape in the authoritative shared-work,
-VPS, and Vulcan checkouts on 2026-08-03, including positive no-activation
-evaluation. The legacy subflake directory has no compatibility route.
+revision. Cleanup issue #114 verified the paired-revision mechanism on the
+then-canonical path in the authoritative shared-work, VPS, and Vulcan checkouts.
+Issue #126 moves that path to `config/ai`; the external lock cutover and
+no-activation evaluation remain pending. The new source has no compatibility
+route at `config/fleet`.
 
 External Home Manager and NixOS checkouts own their locks and activation. This
 repository exports implementation and modules; it does not overwrite another
