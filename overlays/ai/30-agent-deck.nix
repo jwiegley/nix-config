@@ -42,8 +42,20 @@ in
       # The web UI's styles.css and every other //go:embed target are committed
       # artifacts, so the build needs no tailwind, npm, or go-generate step.
 
-      # Use the installed-binary check below instead of the upstream test suite.
-      doCheck = false;
+      # Upstream's full suite needs a real tmux, the race detector, and network
+      # access, none of which the sandbox has. Run the subset that needs none of
+      # them: the last_started_at migration this package patches, and the codex
+      # subagent-rebind gate whose regression cost a live outage. The
+      # installed-binary check below still covers the built artifact.
+      doCheck = true;
+      # An explicit phase is required. subPackages confines the default check
+      # scope to cmd/agent-deck, so doCheck alone would run nothing and pass.
+      checkPhase = ''
+        runHook preCheck
+        go test ./internal/session/ \
+          -run 'TestLastStartedAt_|TestShouldRejectCodexSubagentRebind'
+        runHook postCheck
+      '';
 
       nativeBuildInputs = [ makeWrapper ];
 
