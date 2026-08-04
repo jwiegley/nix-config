@@ -44,14 +44,22 @@ in
     syntaxHighlighting.enable = true;
 
     history = {
-      size = 500000;
+      size = if config.johnw.host.isSharedWork then 600000 else 500000;
       save = 500000;
-      path = "${config.xdg.configHome}/zsh/history";
+      # The work hosts share one NFS home.  Give each NFS client one history
+      # file so a stale shell on one host cannot replace another host's data.
+      path = "${dotDir}/history${lib.optionalString config.johnw.host.isSharedWork "-\${HOST%%.*}"}";
       ignoreDups = true;
-      share = true;
+      share = !config.johnw.host.isSharedWork;
       append = true;
       extended = true;
     };
+
+    setOptions = lib.optionals config.johnw.host.isSharedWork [
+      "INC_APPEND_HISTORY"
+      "NO_INC_APPEND_HISTORY_TIME"
+      "HIST_SAVE_BY_COPY"
+    ];
 
     sessionVariables = {
       ALTERNATE_EDITOR = "${pkgs.vim}/bin/vi";
