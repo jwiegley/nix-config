@@ -1,6 +1,6 @@
 {
  "schema": "fleet-parity-oracle/2",
- "baselineRev": "eb0da1d40c42f07c4cb1dd0163ae7a94f4807070",
+ "baselineRev": "852bbc940c8fdd1394a7ef702ba7eeaed421dc14",
  "armedRefactorAncestor": "a3cc3843",
  "note": "Stored evidence for the Fleet Configuration Programme parity gates. Package counts are derived from the lists in this file, never asserted separately. Re-derive with test/bin/parity-baseline --check <this file>.",
  "history": [
@@ -247,6 +247,47 @@
     "lost home-manager/jwiegley@x86_64-linux: droid-0.186.0-managed-config",
     "gained home-manager/jwiegley@x86_64-linux: droid"
    ]
+  },
+  {
+   "old_rev": "eb0da1d40c42f07c4cb1dd0163ae7a94f4807070",
+   "new_rev": "852bbc940c8fdd1394a7ef702ba7eeaed421dc14",
+   "reason": "Confine Emacs, password-store, and OpenPGP runtime to Hera and Clio (#125)",
+   "intentional_deltas": [
+    "lost home-manager/johnw@aarch64-linux: eask-cli",
+    "lost home-manager/johnw@aarch64-linux: emacs-lsp-booster",
+    "lost home-manager/johnw@aarch64-linux: git-crypt",
+    "lost home-manager/johnw@aarch64-linux: git-secret",
+    "lost home-manager/johnw@aarch64-linux: gnupg",
+    "lost home-manager/johnw@aarch64-linux: paperkey",
+    "lost home-manager/johnw@aarch64-linux: pass-env",
+    "lost home-manager/johnw@aarch64-linux: pass-git-helper",
+    "lost home-manager/jwiegley@x86_64-linux: eask-cli",
+    "lost home-manager/jwiegley@x86_64-linux: emacs-lsp-booster",
+    "lost home-manager/jwiegley@x86_64-linux: git-crypt",
+    "lost home-manager/jwiegley@x86_64-linux: git-secret",
+    "lost home-manager/jwiegley@x86_64-linux: gnupg",
+    "lost home-manager/jwiegley@x86_64-linux: paperkey",
+    "lost home-manager/jwiegley@x86_64-linux: pass-env",
+    "lost home-manager/jwiegley@x86_64-linux: pass-git-helper"
+   ],
+   "observed_deltas": [
+    "lost home-manager/johnw@aarch64-linux: eask-cli",
+    "lost home-manager/johnw@aarch64-linux: emacs-lsp-booster",
+    "lost home-manager/johnw@aarch64-linux: git-crypt",
+    "lost home-manager/johnw@aarch64-linux: git-secret",
+    "lost home-manager/johnw@aarch64-linux: gnupg",
+    "lost home-manager/johnw@aarch64-linux: paperkey",
+    "lost home-manager/johnw@aarch64-linux: pass-env",
+    "lost home-manager/johnw@aarch64-linux: pass-git-helper",
+    "lost home-manager/jwiegley@x86_64-linux: eask-cli",
+    "lost home-manager/jwiegley@x86_64-linux: emacs-lsp-booster",
+    "lost home-manager/jwiegley@x86_64-linux: git-crypt",
+    "lost home-manager/jwiegley@x86_64-linux: git-secret",
+    "lost home-manager/jwiegley@x86_64-linux: gnupg",
+    "lost home-manager/jwiegley@x86_64-linux: paperkey",
+    "lost home-manager/jwiegley@x86_64-linux: pass-env",
+    "lost home-manager/jwiegley@x86_64-linux: pass-git-helper"
+   ]
   }
  ],
  "commands": {
@@ -261,7 +302,7 @@
    "kind": "darwin",
    "target": "clio",
    "user": "johnw",
-   "drvPath": "/nix/store/xbbx1kbxyky36wff717irhrd24bq25f6-darwin-system-26.11.15abb8c.drv",
+   "drvPath": "/nix/store/0vbmd2sg433nqh7ykl1hmgsx2sddwpgz-darwin-system-26.11.15abb8c.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -655,7 +696,7 @@
    "kind": "darwin",
    "target": "hera",
    "user": "johnw",
-   "drvPath": "/nix/store/wj09gvs59yhld3c3hwl5ad3w64sz4y8c-darwin-system-26.11.15abb8c.drv",
+   "drvPath": "/nix/store/kr65xyr01061mawvhzm59jfdhgldc0jk-darwin-system-26.11.15abb8c.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1076,7 +1117,7 @@
   {
    "kind": "home-manager",
    "target": "johnw@aarch64-linux",
-   "drvPath": "/nix/store/yzkfx8zm3jqmbfr119nnpxzf1ahwznz3-home-manager-generation.drv",
+   "drvPath": "/nix/store/fhxzfwq8g83c357xkyzal0xvzdrfymgi-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1140,8 +1181,6 @@
     "dummy-info-dir2",
     "dummy-xdg-mime-dirs1",
     "dummy-xdg-mime-dirs2",
-    "eask-cli",
-    "emacs-lsp-booster",
     "entr",
     "eternal-terminal",
     "exiv2",
@@ -1174,7 +1213,6 @@
     "git-annex-remote-rclone",
     "git-branchstack",
     "git-cliff",
-    "git-crypt",
     "git-delete-merged-branches",
     "git-filter-repo",
     "git-gone",
@@ -1192,7 +1230,6 @@
     "git-repo",
     "git-repo",
     "git-scripts",
-    "git-secret",
     "git-series",
     "git-sizer",
     "git-standup",
@@ -1210,7 +1247,6 @@
     "gnugrep",
     "gnum4",
     "gnumake",
-    "gnupg",
     "gnuplot",
     "gnused",
     "gnutar",
@@ -1324,10 +1360,7 @@
     "p7zip",
     "pal-mcp-server",
     "pandoc-cli",
-    "paperkey",
     "parallel",
-    "pass-env",
-    "pass-git-helper",
     "patch",
     "patchutils",
     "pcre",
@@ -1447,12 +1480,12 @@
     "zsh",
     "zsh-syntax-highlighting"
    ],
-   "packageCount": 368
+   "packageCount": 360
   },
   {
    "kind": "home-manager",
    "target": "jwiegley@x86_64-linux",
-   "drvPath": "/nix/store/zdjisfsa07y3rymfwggl300yb0a8pdf9-home-manager-generation.drv",
+   "drvPath": "/nix/store/dngwq1i7my298vcfx1p8cc03s1kzhvqa-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1516,8 +1549,6 @@
     "dummy-info-dir2",
     "dummy-xdg-mime-dirs1",
     "dummy-xdg-mime-dirs2",
-    "eask-cli",
-    "emacs-lsp-booster",
     "entr",
     "eternal-terminal",
     "exiv2",
@@ -1550,7 +1581,6 @@
     "git-annex-remote-rclone",
     "git-branchstack",
     "git-cliff",
-    "git-crypt",
     "git-delete-merged-branches",
     "git-filter-repo",
     "git-gone",
@@ -1568,7 +1598,6 @@
     "git-repo",
     "git-repo",
     "git-scripts",
-    "git-secret",
     "git-series",
     "git-sizer",
     "git-standup",
@@ -1586,7 +1615,6 @@
     "gnugrep",
     "gnum4",
     "gnumake",
-    "gnupg",
     "gnuplot",
     "gnused",
     "gnutar",
@@ -1700,10 +1728,7 @@
     "p7zip",
     "pal-mcp-server",
     "pandoc-cli",
-    "paperkey",
     "parallel",
-    "pass-env",
-    "pass-git-helper",
     "patch",
     "patchutils",
     "pcre",
@@ -1824,7 +1849,7 @@
     "zsh",
     "zsh-syntax-highlighting"
    ],
-   "packageCount": 369
+   "packageCount": 361
   },
   {
    "kind": "portable",

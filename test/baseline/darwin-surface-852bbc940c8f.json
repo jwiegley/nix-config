@@ -1,5 +1,5 @@
 {
-  "baselineRev": "eb0da1d40c42f07c4cb1dd0163ae7a94f4807070",
+  "baselineRev": "852bbc940c8fdd1394a7ef702ba7eeaed421dc14",
   "commands": {
     "compare": "test/bin/darwin-surface-diff --normalize-store <before.json> <after.json>",
     "hostSurface": "nix eval --option eval-cache false --no-write-lock-file --impure --json '.#darwinConfigurations.<host>' --apply 'darwin: import ./test/darwin/darwin-surface.nix darwin'",
