@@ -1,6 +1,6 @@
 {
  "schema": "fleet-parity-oracle/2",
- "baselineRev": "f9be4d2332a5e6b379c4d0e82cac875bbd4fd580",
+ "baselineRev": "1ad23d7c0eb75ab2c8c768b2e321f61bb8feab39",
  "armedRefactorAncestor": "a3cc3843",
  "note": "Stored evidence for the Fleet Configuration Programme parity gates. Package counts are derived from the lists in this file, never asserted separately. Re-derive with test/bin/parity-baseline --check <this file>.",
  "history": [
@@ -201,6 +201,27 @@
     "gained portable/x86_64-linux: pi-provider-llama-swap",
     "gained portable/x86_64-linux: pi-provider-omlx"
    ]
+  },
+  {
+   "old_rev": "f9be4d2332a5e6b379c4d0e82cac875bbd4fd580",
+   "new_rev": "1ad23d7c0eb75ab2c8c768b2e321f61bb8feab39",
+   "reason": "Retire Ref and Perplexity MCP integrations and their credential carrier (#124)",
+   "intentional_deltas": [
+    "lost darwin/clio: codex-0.146.0-host-state-credentials",
+    "gained darwin/clio: codex-0.146.0-host-state",
+    "lost darwin/hera: codex-0.146.0-host-state-credentials",
+    "gained darwin/hera: codex-0.146.0-host-state",
+    "lost home-manager/jwiegley@x86_64-linux: codex-0.146.0-host-state-credentials",
+    "gained home-manager/jwiegley@x86_64-linux: codex-0.146.0-host-state"
+   ],
+   "observed_deltas": [
+    "lost darwin/clio: codex-0.146.0-host-state-credentials",
+    "gained darwin/clio: codex-0.146.0-host-state",
+    "lost darwin/hera: codex-0.146.0-host-state-credentials",
+    "gained darwin/hera: codex-0.146.0-host-state",
+    "lost home-manager/jwiegley@x86_64-linux: codex-0.146.0-host-state-credentials",
+    "gained home-manager/jwiegley@x86_64-linux: codex-0.146.0-host-state"
+   ]
   }
  ],
  "commands": {
@@ -215,7 +236,7 @@
    "kind": "darwin",
    "target": "clio",
    "user": "johnw",
-   "drvPath": "/nix/store/kdgfhxgcssq3mgrs25dkbn7kbd6av0jd-darwin-system-26.11.15abb8c.drv",
+   "drvPath": "/nix/store/bidx947ai99b20rlfd340shg2si1hqy3-darwin-system-26.11.15abb8c.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -254,7 +275,7 @@
     "claude-vault",
     "cmake",
     "cmdperf",
-    "codex-0.146.0-host-state-credentials",
+    "codex-0.146.0-host-state",
     "contacts",
     "context-hub",
     "context7-mcp",
@@ -609,7 +630,7 @@
    "kind": "darwin",
    "target": "hera",
    "user": "johnw",
-   "drvPath": "/nix/store/9rf20czlz6pv6s4k2n5grq2jrpy2zxal-darwin-system-26.11.15abb8c.drv",
+   "drvPath": "/nix/store/gchixhl1sb3dccix51574nxzkhzhkkf1-darwin-system-26.11.15abb8c.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -655,7 +676,7 @@
     "claude-vault",
     "cmake",
     "cmdperf",
-    "codex-0.146.0-host-state-credentials",
+    "codex-0.146.0-host-state",
     "contacts",
     "context-hub",
     "context7-mcp",
@@ -1030,7 +1051,7 @@
   {
    "kind": "home-manager",
    "target": "johnw@aarch64-linux",
-   "drvPath": "/nix/store/iaflr94znx0mr523b93anq81g72dbyvi-home-manager-generation.drv",
+   "drvPath": "/nix/store/xs84fs92q676ffsbcf0clb2dgw80apwv-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1406,7 +1427,7 @@
   {
    "kind": "home-manager",
    "target": "jwiegley@x86_64-linux",
-   "drvPath": "/nix/store/krgmwghq5yw5wki7gwc53nczx85vrbnn-home-manager-generation.drv",
+   "drvPath": "/nix/store/hsbka3sqqvwa9lvw07b73dv9bkjp3ypy-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1443,7 +1464,7 @@
     "claude-vault",
     "cmake",
     "cmdperf",
-    "codex-0.146.0-host-state-credentials",
+    "codex-0.146.0-host-state",
     "context-hub",
     "context7-mcp",
     "coreutils",
