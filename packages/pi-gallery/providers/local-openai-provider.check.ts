@@ -138,6 +138,31 @@ try {
 		],
 		"failure warning",
 	);
+
+	// A hung server must abort rather than block registration forever, so the
+	// signal has to reach fetch. Asserting it is wired costs nothing; waiting for
+	// it to fire would add the whole timeout budget to every build.
+	globalThis.fetch = ((_input: RequestInfo | URL, init?: RequestInit) => {
+		if (!init?.signal) throw new Error("fetch called without an abort signal");
+		return Promise.reject(
+			new DOMException("The operation was aborted.", "AbortError"),
+		);
+	}) as typeof fetch;
+	warnings.length = 0;
+	let abortedProvider: ProviderConfig | undefined;
+	await omlx({
+		registerProvider: (_id: string, config: ProviderConfig) => {
+			abortedProvider = config;
+		},
+	});
+	expectEqual(abortedProvider?.models, [], "aborted provider catalog");
+	expectEqual(
+		warnings,
+		[
+			"[omlx] Cannot discover models from http://127.0.0.1:8000/v1/models: The operation was aborted.",
+		],
+		"abort warning",
+	);
 } finally {
 	globalThis.fetch = realFetch;
 	warningProcess.emitWarning = realEmitWarning;

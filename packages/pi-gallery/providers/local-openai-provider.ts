@@ -33,7 +33,11 @@ interface ModelEntry {
 
 const DEFAULT_CONTEXT_WINDOW = 262_144;
 const DEFAULT_MAX_TOKENS = 65_536;
-const FETCH_TIMEOUT_MS = 500;
+// Discovery runs once, at registration, so a timeout does not degrade to "slow"
+// — it leaves the provider with no models until Pi restarts. The budget covers
+// connect, response and JSON parse, and these hosts run jobs heavy enough to
+// stall a loopback round trip well past half a second.
+const FETCH_TIMEOUT_MS = 2_500;
 const NON_CHAT_ID =
 	/(?:^|[-_.:/])(asr|audio|bge|clip|embed(?:ding)?|rerank(?:er)?|speech|transcri(?:be|ption)|tts|whisper)(?:$|[-_.:/])/i;
 const runtimeProcess = (
