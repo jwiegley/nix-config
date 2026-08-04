@@ -11,10 +11,9 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 
 - The authoritative checkout is `/Users/johnw/src/nix`, on `main`. It is the
   only worktree.
-- The #125 source boundary is signed commits `f2bc2dbb`/`1b2539cf`, with its
-  focused proof simplified in `852bbc94` and accepted Darwin/package-parity
-  baselines in `5d4d2c06`. Publication and activation receipts are tracked
-  separately on the issue.
+- The #126 source boundary is signed commit `8120b84a`, with its command-migrated
+  Darwin/package-parity baselines in `2eb23dbf`. Publication and consumer
+  cutover receipts are tracked separately on the issue.
 - Hera runs Darwin generation 991. Agent Deck 1.11.0, oMLX 0.5.5, Pi 0.83.0,
   Claude Code 2.1.220, and Codex 0.146.0 are active.
 - Codex defaults to native OpenAI `gpt-5.6-sol`; local oMLX and llama-swap
@@ -39,8 +38,9 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
   and block #121.
 - #125 confines password-store, GnuPG, and Emacs to Hera/Clio after #120/#124.
   It is In Progress and blocks #121.
-- #126 renames the AI-only `config/ai/` tree back to `config/ai/` after
-  #123/#125; it is a deferred Todo subissue and blocks #121.
+- #126 renames the AI-only `config/fleet/` tree back to `config/ai/` after
+  #123/#125. Its source is In Progress pending consumer cutover and it blocks
+  #121.
 - #121 remains the final unchanged-candidate verification and cleanup closeout.
 
 ## Comment-audit boundary
@@ -116,6 +116,15 @@ issues remain explicit exclusions.
   and x86 Linux. Negative-host activation and fresh-login runtime proof remain
   open; no mutable password, key, Emacs, mail, or credential data was read or
   changed.
+- #126: signed `8120b84a` atomically moves all 182 tracked portable-tree files
+  to `config/ai/` and updates every live source, lock, updater, check, CI, and
+  current-documentation reference. `config/ai.nix` remains the distinct Home
+  Manager integration module. `2eb23dbf` records the reverse command migration
+  with zero package deltas and an otherwise byte-identical Darwin surface.
+  Root/portable all-system evaluation plus 26 gate and 95 updater workflow tests
+  pass. Vulcan, VPS, and the shared-work checkout are clean/paired on the old
+  path and await the atomic root-plus-`dir=config/ai` consumer lock cutover;
+  Clio remains unreachable.
 
 ## Concurrent work boundary
 
