@@ -534,7 +534,9 @@ rec {
       darwin.cctools
       m-cli
       macmon
-      pinentry_mac
+    ]
+    ++ lib.optionals caps.isDarwinWorkstation [ pinentry_mac ]
+    ++ lib.optionals isDarwin [
       pngpaste
       terminal-notifier
       xquartz
