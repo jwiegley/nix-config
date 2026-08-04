@@ -10,12 +10,11 @@ tags:
 created: 2026-07-27
 updated: 2026-08-04
 pi-version: 0.83.0
-darwin-generation: 991
 ---
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate activated on Hera: twenty-three gallery packages, five separately deployed extensions, one generated loader, the rendered `hera-pi` configuration, and the immediate runtime companions. Versions below are activated versions, not merely latest releases.
+This note records the Nix-managed Pi estate: twenty-four gallery packages, five separately deployed extensions, one generated loader, the rendered `hera-pi` configuration, and the immediate runtime companions. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope.
 
@@ -36,6 +35,7 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `@dietrichgebert/ponytail` | 4.8.4 | Minimal implementation discipline | `/ponytail` |
 | `pi-agent-browser-native` | 0.2.72 | Native Pi interface to `agent-browser` | `agent_browser` |
 | `pi-btw` | 0.4.1 | Side conversations without disturbing the main turn | `/btw` |
+| `pi-copy-message` | 1.0.11 | Search and copy raw session messages | `/copy-message`, `/copy-user` |
 | `@jakeryderv/pi-artifacts` | 0.9.1 | Portable Markdown and HTML artifacts | `scaffold_artifact`, `/viewer` |
 | `@ygncode/pi-insights` | 1.0.1 | Session analytics | `/insights` |
 | `pi-multi-pass` | 1.3.0 | Multiple OAuth accounts and failover pools | `/subs`, `/pool`, `/mp-preset` |
@@ -55,14 +55,14 @@ The inventory includes generated ownership, model routing, MCP registration, and
 
 ## Managed Hera configuration
 
-The `hera-pi` profile is rendered by `~/src/nix/config/fleet/renderers/pi.nix` into the active XDG profile at `~/.config/pi/agent`. Nix owns individual generated entries rather than mutable parent directories, preserving authentication, histories, settings, caches, and extension state while keeping the declarative surface collision-checked.
+The `hera-pi` profile is rendered by `~/src/nix/config/ai/renderers/pi.nix` into the active XDG profile at `~/.config/pi/agent`. Nix owns individual generated entries rather than mutable parent directories, preserving authentication, histories, settings, caches, and extension state while keeping the declarative surface collision-checked.
 
 ### Owned surface
 
 | Surface | Current projection |
 | --- | --- |
 | Generated ownership | 101 entries: 99 below `~/.config/pi/agent`, plus `~/.pi-lens/config.json` and `~/.config/mcp/mcp.json` |
-| Extension entries | Auto Compact Resume, Fleet Theme, Nix Gallery loader, Pi Loop, Pi MCP Adapter, and Quiet Display; the loader registers 23 gallery packages |
+| Extension entries | Auto Compact Resume, Fleet Theme, Nix Gallery loader, Pi Loop, Pi MCP Adapter, and Quiet Display; the loader registers 24 gallery packages |
 | Agent resources | 26 Nix-managed agent definitions |
 | Prompt resources | 63 files: 61 command prompts and the `emacs` and `spanish` prompts |
 | Skill resources | 24 shared catalog skills selected for Pi; six gallery package skill paths and one gallery prompt path advertised at runtime |
@@ -88,14 +88,14 @@ The generated `models.json` owns compatibility and context overrides together wi
 
 ### MCP registry
 
-Nix generates the eleven-server registry at `~/.config/mcp/mcp.json`; Pi MCP Adapter exposes it lazily and renders compact footer status. HTTP transports have OAuth disabled because authentication, where required, is carried by explicit environment-backed headers.
+Nix generates the nine-server registry at `~/.config/mcp/mcp.json`; Pi MCP Adapter exposes it lazily and renders compact footer status. HTTP transports have OAuth disabled because authentication, where required, is carried by explicit environment-backed headers.
 
 | Transport | Servers |
 | --- | --- |
-| HTTP | `Ref`, `context7`, `memory-vault` |
-| stdio | `context-hub`, `devonthink`, `drafts`, `pal`, `perplexity`, `searxng`, `sequential-thinking`, `stock-trader` |
+| HTTP | `context7`, `memory-vault` |
+| stdio | `context-hub`, `devonthink`, `drafts`, `pal`, `searxng`, `sequential-thinking`, `stock-trader` |
 
-The complete profile's credential references are environment-only: `ANTHROPIC_API_KEY`, `CONTEXT7_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`, `PERPLEXITY_API_KEY`, and `REF_API_KEY`. The mutable `~/.config/pi/agent/mcp.json` may retain adapter state, but Nix preflight forbids `mcpServers` and `imports` there so that it cannot shadow the generated registry.
+The MCP registry's only credential reference is the environment-only `CONTEXT7_API_KEY`. The mutable `~/.config/pi/agent/mcp.json` may retain adapter state, but Nix preflight forbids `mcpServers` and `imports` there so that it cannot shadow the generated registry.
 
 ### Keybindings
 
@@ -113,13 +113,13 @@ The generated keymap retains the ordinary keys and adds Emacs-style editing:
 
 **Version:** local, activated in Darwin generation 991 · **Links:** Nix authority: `~/src/nix/packages/pi-gallery/` · deployed leaf: `~/.config/pi/agent/extensions/nix-gallery/index.ts`
 
-The Nix Gallery loader composes the twenty-three managed packages listed below. It imports immutable Nix-store packages, registers extensions in deterministic order, and projects their skills and prompts. Before registration it suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
+The Nix Gallery loader composes the twenty-four managed packages listed below. It imports immutable Nix-store packages, registers extensions in deterministic order, and projects their skills and prompts. Before registration it suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
 
 **Basic usage.** No direct command is required. Run `/reload` after activating a new Nix generation, or start a fresh Pi process, to load the current gallery. The loader itself owns no mutable state.
 
 ### Auto Compact Resume
 
-**Version:** local · **Links:** local source: `~/src/nix/config/fleet/extensions/auto-compact-resume/index.ts` · design: `~/src/nix/config/fleet/extensions/auto-compact-resume/DESIGN.md`
+**Version:** local · **Links:** local source: `~/src/nix/config/ai/extensions/auto-compact-resume/index.ts` · design: `~/src/nix/config/ai/extensions/auto-compact-resume/DESIGN.md`
 
 Auto Compact Resume protects long-running work near the selected model's context limit. Its threshold is `floor(contextWindow × 0.90)`: 235,929 tokens for the managed local Sol route and 945,000 for the 1,050,000-token Codex override. It checks at session start and after each turn; threshold compaction queues an undisplayed continuation only when tool-driven or length-truncated work was interrupted, while a length-truncated response below the threshold also resumes without compaction.
 
@@ -127,7 +127,7 @@ Auto Compact Resume protects long-running work near the selected model's context
 
 ### Fleet Theme
 
-**Version:** local, activated in Darwin generation 991 · **Links:** extension: `~/src/nix/config/fleet/extensions/fleet-theme/index.ts` · theme: `~/src/nix/config/fleet/themes/dark-tool-backgrounds.json`
+**Version:** local · **Links:** extension: `~/src/nix/config/ai/extensions/fleet-theme/index.ts` · theme: `~/src/nix/config/ai/themes/dark-tool-backgrounds.json`
 
 Fleet Theme advertises the immutable `dark-tool-backgrounds` theme during resource discovery and selects it when an interactive TUI session begins. The palette gives pending, successful, and failed tool calls distinct dark backgrounds while leaving headless sessions unchanged.
 
@@ -137,7 +137,7 @@ Fleet Theme advertises the immutable `dark-tool-backgrounds` theme during resour
 
 **Version:** 1.0.2 · **Links:** [Pi Packages](https://pi.dev/packages/@realvendex/pi-loop) · [Home](https://github.com/ZachDreamZ/pi-loop#readme) · [GitHub](https://github.com/ZachDreamZ/pi-loop)
 
-Pi Loop repeats a prompt under bounded iteration, timeout, convergence, text, regular-expression, command, and error stop conditions. It supports prompt templating, lifecycle hooks, run logs, named presets, a live TUI panel, and completion notifications. Nix deploys its entry directly from an immutable support package rather than loading it through the twenty-three-member gallery.
+Pi Loop repeats a prompt under bounded iteration, timeout, convergence, text, regular-expression, command, and error stop conditions. It supports prompt templating, lifecycle hooks, run logs, named presets, a live TUI panel, and completion notifications. Nix deploys its entry directly from an immutable support package rather than loading it through the twenty-four-member gallery.
 
 **Basic usage.** Run `/loop "prompt" --max 5` for confirmed rounds, or add `--yes` only when unattended execution and automatic approval of confirmations are intended. Use `/loop stop` to cancel after the current iteration, `/loop preview` to inspect a resolved run without starting it, and `/loop list`, `/loop logs`, or `/loop show` for retained state under `~/.pi/loops/`.
 
@@ -318,6 +318,14 @@ Pi Dynamic Workflows builds JavaScript orchestration over Pi Subagents. A workfl
 Pi BTW creates a focused side conversation while the main session remains intact. A thread may inherit the main context or begin as a contextless tangent; its result may remain private, be saved as a visible note, or be injected into the main conversation in full or summarized form.
 
 **Basic usage.** Use `/btw <question>`, `/btw:new`, or `/btw:tangent`; use `/btw:inject` or `/btw:summarize` to return useful findings to the principal session. `/btw:model` and `/btw:thinking` control thread-specific inference settings.
+
+### Copy Message
+
+**Version:** 1.0.11 · **Links:** [Pi Packages](https://pi.dev/packages/pi-copy-message) · [Home](https://github.com/fitchmultz/pi-copy-message#readme) · [GitHub](https://github.com/fitchmultz/pi-copy-message)
+
+Pi Copy Message opens a searchable, keyboard-driven picker over raw session messages, avoiding terminal wrapping and rendered TUI artifacts. It can filter by role or text, include metadata, and copy user, assistant, tool, or bash messages.
+
+**Basic usage.** Use `/copy-message` for the interactive picker, `/copy-message latest` for the newest normally visible message, or `/copy-user` for the most recent user message. Add `--with-meta` when the copied text should include role and timestamp metadata.
 
 ### llama-swap Provider
 

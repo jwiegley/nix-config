@@ -181,6 +181,21 @@
       },
       "version": "1.0.7"
     },
+    "pi-copy-message": {
+      "source": {
+        "args": {
+          "hash": "sha256-YKmCQjz9qrsvAvxQwOMy3q48WVYUr3cPE9jf3DoEhNI=",
+          "url": "https://registry.npmjs.org/pi-copy-message/-/pi-copy-message-1.0.11.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-copy-message/-/pi-copy-message-1.0.11.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "pi-copy-message"
+      },
+      "version": "1.0.11"
+    },
     "pi-cymbal": {
       "source": {
         "args": {

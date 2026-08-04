@@ -252,6 +252,8 @@ runCommand "pi-gallery-check"
       || fail "Caveman footer status is not disabled"
     ! grep -F 'caveman level:' ${roots.caveman}/extensions/caveman.ts >/dev/null \
       || fail "Caveman footer still renders the level lighter"
+    [ -f ${roots.copy-message}/extensions/copy-message.ts ]
+    [ ! -e ${roots.copy-message}/node_modules ]
     [ -f ${roots.goal}/extensions/goal.ts ]
     [ ! -e ${roots.goal}/node_modules ]
     grep -F 'return `''${prefix}: ''${statusLabel(goal)}''${usage}`;' \
@@ -546,6 +548,8 @@ runCommand "pi-gallery-check"
           "btw:tangent",
           "caveman",
           "chain",
+          "copy-message",
+          "copy-user",
           "cymbal:remind",
           "gather-context-and-clarify",
           "goal",

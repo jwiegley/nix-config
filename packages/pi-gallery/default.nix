@@ -32,6 +32,7 @@ let
         pi-blackhole
         pi-btw
         pi-caveman
+        pi-copy-message
         pi-cymbal
         pi-dynamic-workflows
         pi-goal-x
@@ -609,6 +610,14 @@ let
       )
       source.write_text(text[:start] + replacement + text[end:])
       PY
+    '';
+  };
+
+  pi-copy-message = mkCopyRoot {
+    pname = members.copy-message.attrName;
+    version = members.copy-message.version;
+    install = root: ''
+      tar -xzf ${releaseTarballs.pi-copy-message} -C ${root} --strip-components=1
     '';
   };
 

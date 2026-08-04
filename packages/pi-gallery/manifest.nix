@@ -26,6 +26,7 @@ in
     "ponytail"
     "browser"
     "btw"
+    "copy-message"
     "artifacts"
     "insights"
     "multi-pass"
@@ -90,6 +91,12 @@ in
       publicName = "pi-btw";
       extension = "extensions/btw.ts";
       skills = [ "skills/btw" ];
+    };
+    copy-message = member "pi-copy-message" {
+      attrName = "pi-copy-message";
+      package = packages.pi-copy-message or null;
+      publicName = "pi-copy-message";
+      extension = "extensions/copy-message.ts";
     };
     artifacts = member "pi-artifacts" {
       attrName = "pi-artifacts";
