@@ -18,6 +18,12 @@ let
     signing = "none";
     signingKey = null;
   };
+  sharedWorkMembers = [
+    "andoria-08"
+    "andoria-t2"
+    "delphi-3bd4"
+    "gpu-server"
+  ];
 
 in
 {
@@ -74,12 +80,7 @@ in
       ];
       evalId = "andoria";
       sharedHome = {
-        members = [
-          "andoria-08"
-          "andoria-t2"
-          "delphi-3bd4"
-          "gpu-server"
-        ];
+        members = sharedWorkMembers;
         localStateRoot = "/var/lib/jwiegley";
       };
     };
@@ -108,9 +109,9 @@ in
       # The two Darwin GUI workstations (hera OR clio).
       isDarwinWorkstation = id == "hera" || id == "clio";
 
-      # Resolve the shared-work group by home class so every NFS member derives
-      # the same capability.
-      isSharedWork = cls == "shared-work";
+      # Resolve the shared-work group from either its explicit home class or a
+      # physical member hostname.
+      isSharedWork = cls == "shared-work" || builtins.elem id sharedWorkMembers;
 
       # The synthetic CI evaluation fixtures pin the name to "linux".
       isCiFixture = id == "linux";

@@ -2,6 +2,7 @@
   hostname,
   inputs,
   pkgs,
+  homeClass ? null,
   isClientMachine ? true,
   ...
 }:
@@ -11,7 +12,7 @@ let
   # of its two call sites passes it neither `config` nor `lib`. So it reads
   # capabilities from the PURE registry rather than from `config.johnw.host`.
   registry = import ./hosts/registry.nix;
-  caps = registry.capabilitiesFor { inherit hostname; };
+  caps = registry.capabilitiesFor { inherit hostname homeClass; };
   inherit (stdenv)
     isDarwin
     isLinux
@@ -30,10 +31,10 @@ let
   localAi = inputs.nix-ai or (if inputs ? git-ai then import ../flake/ai.nix inputs else null);
   patchAgentPackage =
     if localAi == null then _name: package: package else localAi.lib.patchAgentPackage pkgs;
-  wrapHeraCodex =
+  wrapCredentialedCodex =
     package:
     symlinkJoin {
-      name = "${package.name}-hera-credentials";
+      name = "${package.name}-credentials";
       paths = [ package ];
       nativeBuildInputs = [ makeWrapper ];
       postBuild = ''
@@ -44,7 +45,7 @@ let
           --add-flag ${package}/bin/codex
       '';
       passthru = (package.passthru or { }) // {
-        heraCredentialWrapper = true;
+        credentialWrapper = true;
       };
       meta = package.meta or { };
     };
@@ -55,7 +56,12 @@ let
         package = patchAgentPackage name agentPackages.${name};
       in
       [
-        (if name == "codex" && caps.isHera then wrapHeraCodex package else package)
+        (
+          if name == "codex" && (caps.isDarwinWorkstation || caps.isSharedWork) then
+            wrapCredentialedCodex package
+          else
+            package
+        )
       ]
     else
       [ ];
