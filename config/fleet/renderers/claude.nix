@@ -3,12 +3,10 @@
 {
   profile,
   selected,
-  modelData,
   homeDirectory,
   xdgConfigHome,
 }:
 
-assert builtins.isAttrs modelData;
 assert builtins.isString xdgConfigHome;
 
 let

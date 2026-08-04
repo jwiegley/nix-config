@@ -8,11 +8,9 @@ set -euo pipefail
 : "${CODEX_NON_DARWIN_BIN:?}"
 : "${CODEX_APP_IS_COMMAND:?}"
 : "${CODEX_RAISES_OPEN_FILE_LIMIT:?}"
-: "${DROID_BIN:?}"
 : "${CLAUDE_IDENTITY_BIN:?}"
 : "${CLAUDE_REAL_IDENTITY_BIN:?}"
 : "${CODEX_IDENTITY_BIN:?}"
-: "${DROID_IDENTITY_BIN:?}"
 : "${REAL_CLAUDE_BIN:?}"
 : "${REAL_CODEX_BIN:?}"
 : "${REAL_WRAPPED_CODEX_BIN:?}"
@@ -47,7 +45,6 @@ client_display_name() {
     case "$1" in
     claude) printf '%s\n' claude ;;
     codex) printf '%s\n' codex ;;
-    droid) printf '%s\n' droid ;;
     *) fail "unknown client: $1" ;;
     esac
 }
@@ -82,11 +79,6 @@ new_case() {
         [ ! -e "$CODEX_LOCAL_ROOT" ] && [ ! -L "$CODEX_LOCAL_ROOT" ] ||
             fail "Codex test root unexpectedly exists: $CODEX_LOCAL_ROOT"
         cleanup_roots+=("$CODEX_LOCAL_ROOT")
-        ;;
-    droid)
-        ROOT="$HOME_DIR/.factory"
-        FIRST="$ROOT/nix-managed-settings.json"
-        SECOND="$ROOT/mcp.json"
         ;;
     *) fail "unknown client: $client" ;;
     esac
@@ -195,7 +187,6 @@ invoke_agent() {
         binary=$CODEX_BIN
         command_env+=("CODEX_HOME=$ROOT")
         ;;
-    droid) binary=$DROID_BIN ;;
     *) fail "unknown client: $client" ;;
     esac
 
@@ -288,7 +279,6 @@ assert_managed_argv() {
     case "$client" in
     claude) assert_argv "$ARGV_FILE" --settings "$FIRST" "--mcp-config=$SECOND" "$@" ;;
     codex) assert_argv "$ARGV_FILE" --profile nix-runtime "$@" ;;
-    droid) assert_argv "$ARGV_FILE" --settings "$FIRST" "$@" ;;
     *) fail "unknown client: $client" ;;
     esac
 }
@@ -363,7 +353,6 @@ test_unset_home_bypass() {
     rm -f -- "$ARGV_FILE" "$ENV_FILE" "$STDOUT_FILE" "$STDERR_FILE"
     case "$client" in
     claude) binary=$CLAUDE_BIN ;;
-    droid) binary=$DROID_BIN ;;
     *) fail "unset-HOME bypass is unsupported for $client" ;;
     esac
 
@@ -462,17 +451,6 @@ test_conflicts() {
         test_one_conflict "$client" profile-short -p caller tail
         test_one_conflict "$client" profile-short-attached -pcaller tail
         test_one_conflict "$client" profile-short-equals -p=caller tail
-        ;;
-    droid)
-        test_one_conflict "$client" settings-separated --settings "$caller_path" tail
-        test_one_conflict "$client" settings-equals "--settings=$caller_path" tail
-
-        new_case "$client" conflict-delimiter
-        configure_state complete
-        invoke_agent "$client" 0 0 -- --settings "$caller_path"
-        [ "$LAST_STATUS" -eq 0 ] || fail "$client scanned conflicts after --"
-        assert_managed_argv "$client" -- --settings "$caller_path"
-        finish_case "$client"
         ;;
     *) fail "unknown client: $client" ;;
     esac
@@ -853,10 +831,6 @@ test_process_identity() {
         binary=$CODEX_IDENTITY_BIN
         expected_argv0=codex
         ;;
-    droid)
-        binary=$DROID_IDENTITY_BIN
-        expected_argv0=droid
-        ;;
     *) fail "unknown identity client: $client" ;;
     esac
 
@@ -874,7 +848,6 @@ test_process_identity() {
     case "$client" in
     claude) command_env+=("CLAUDE_CONFIG_DIR=$ROOT") ;;
     codex) command_env+=("CODEX_HOME=$ROOT") ;;
-    droid) ;;
     esac
 
     "${command_env[@]}" "$binary" "${launch_args[@]}" >"$STDOUT_FILE" 2>"$STDERR_FILE" &
@@ -1608,21 +1581,9 @@ run_codex_contract() {
     printf '%s\n' 'agent-wrapper-contract: codex: PASS'
 }
 
-run_droid_contract() {
-    test_state_matrix droid
-    test_conflicts droid
-    test_environment_contract droid OPENAI_API_KEY
-    test_managed_state_immutable droid
-    test_process_identity droid
-    test_exit_propagation droid
-    test_unset_home_bypass droid
-    printf '%s\n' 'agent-wrapper-contract: droid: PASS'
-}
-
 case "${1:-all}" in
 claude) run_claude_contract ;;
 codex) run_codex_contract ;;
-droid) run_droid_contract ;;
 bridge)
     test_bridge_static_contract
     printf '%s\n' 'agent-wrapper-contract: bridge: PASS'
@@ -1630,7 +1591,6 @@ bridge)
 all)
     run_claude_contract
     run_codex_contract
-    run_droid_contract
     test_bridge_static_contract
     ;;
 *) fail "unknown contract mode: $1" ;;

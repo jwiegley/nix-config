@@ -90,15 +90,21 @@ need them for rollback.
 ## AI configuration
 
 ```text
-model-registry.json + model-policy.nix
-  -> models.nix
-  -> catalog.nix selects per profile
+llm-setup-models-list -> llama-swap configuration and GPTel
+oMLX /v1/models -------\
+                         -> Pi startup discovery
+llama-swap /v1/models --/
+
+Nix client-local transport/default/override policy
   -> renderer adapters
   -> collision-checked generated leaves
   -> Home Manager preflight and activation
 ```
 
-Nix owns generated leaves, not mutable roots. Credentials remain environment
+Nix owns endpoint wiring and client-specific policy, not a cross-client model
+inventory. Codex retains its native catalog, Pi discovers local models at
+startup, and Droid receives no Nix-generated local-model list. Nix owns
+generated leaves, not mutable roots. Credentials remain environment
 references; secret values never enter derivations, generated files, or argv. Auth,
 history, sessions, caches, reports, trust state, and user settings remain mutable.
 

@@ -51,8 +51,6 @@ let
       import ./ai/wrappers/claude.nix { inherit pkgs name package; }
     else if name == "codex" then
       import ./ai/wrappers/codex.nix { inherit pkgs name package; }
-    else if name == "droid" then
-      import ./ai/wrappers/droid.nix { inherit pkgs name package; }
     else if name == "pi" then
       assert package ? overrideAttrs;
       package.overrideAttrs (old: {

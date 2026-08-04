@@ -5,13 +5,12 @@
 }:
 
 let
-  modelData = import "${src}/config/fleet/models.nix" { };
   rendererPkgs = pkgs // {
     agent-resources = "/catalog-agent-resources";
     pi-gallery = "/catalog-pi-gallery";
   };
   catalog = import "${src}/config/fleet/catalog.nix" {
-    inherit lib modelData;
+    inherit lib;
     resources = "/catalog-agent-resources";
   };
   reject = value: !(builtins.tryEval (builtins.deepSeq value true)).success;
@@ -55,12 +54,19 @@ let
   };
   piProfile = catalog.profiles.hera-pi;
   selected = lib.mapAttrs (_: itemSet: catalog.select piProfile itemSet) catalog.items;
-  selectedProviders = catalog.select piProfile modelData.providers;
-  selectedModels = lib.filterAttrs (
-    _: model:
-    builtins.hasAttr model.provider selectedProviders
-    && catalog.matches piProfile (model.selectors or { })
-  ) modelData.models;
+  droidProfile = catalog.profiles.hera-droid;
+  droidSelected = lib.mapAttrs (_: itemSet: catalog.select droidProfile itemSet) catalog.items;
+  droidRendered =
+    (import "${src}/config/fleet/renderers/droid.nix" {
+      inherit lib;
+      pkgs = rendererPkgs;
+    })
+      {
+        profile = droidProfile;
+        selected = droidSelected;
+        homeDirectory = "/Users/test";
+        xdgConfigHome = "/Users/test/.config";
+      };
   piRenderer = import "${src}/config/fleet/renderers/pi.nix" {
     inherit lib;
     pkgs = rendererPkgs;
@@ -69,24 +75,14 @@ in
 assert catalog.validate { };
 assert !(builtins.hasAttr "Ref" catalog.items.mcpServers);
 assert !(builtins.hasAttr "perplexity" catalog.items.mcpServers);
+assert droidRendered.companions == [ ".config/factory/mcp.json" ];
+assert !(builtins.hasAttr ".config/factory/nix-managed-settings.json" droidRendered.files);
 assert builtins.all reject [
   (catalog.validate {
     items = withMcpServers (catalog.items.mcpServers // { synthetic = extraPiMcp; });
   })
   (catalog.validate {
     items = withMcpServers (builtins.removeAttrs catalog.items.mcpServers [ "context7" ]);
-  })
-  (catalog.validate {
-    modelData = modelData // {
-      providers = modelData.providers // {
-        synthetic = modelData.providers.omlx;
-      };
-    };
-  })
-  (catalog.validate {
-    modelData = modelData // {
-      providers = builtins.removeAttrs modelData.providers [ "llama-swap" ];
-    };
   })
   (catalog.validate {
     items = withMcpServers (catalog.items.mcpServers // { context7 = wrongContext7Header; });
@@ -108,10 +104,6 @@ assert builtins.all reject [
       id = "unsupported-pi";
     };
     inherit selected;
-    modelData = {
-      providers = selectedProviders;
-      models = selectedModels;
-    };
     homeDirectory = "/Users/test";
     xdgConfigHome = "/Users/test/.config";
   })

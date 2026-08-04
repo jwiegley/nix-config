@@ -7,12 +7,10 @@
 {
   profile,
   selected,
-  modelData,
   homeDirectory,
   xdgConfigHome,
 }:
 
-assert builtins.isAttrs modelData;
 assert builtins.isString homeDirectory;
 assert builtins.isString xdgConfigHome;
 
@@ -74,13 +72,13 @@ let
     model_providers = {
       omlx = {
         name = "oMLX";
-        base_url = modelData.providers.omlx.baseUrl;
+        base_url = "http://localhost:8000/v1";
         env_key = "OMLX_API_KEY";
         wire_api = "responses";
       };
       llama-swap = {
         name = "llama-swap";
-        base_url = modelData.providers.llama-swap.baseUrl;
+        base_url = "http://localhost:8080/v1";
         env_key = "LLAMA_SWAP_API_KEY";
         wire_api = "responses";
       };

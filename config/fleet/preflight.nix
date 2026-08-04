@@ -48,7 +48,6 @@ let
     ".config/codex/nix-managed.config.toml"
     ".config/codex/nix-managed-model-catalog.json"
     ".config/factory/mcp.json"
-    ".config/factory/nix-managed-settings.json"
     ".config/mcp/mcp.json"
     ".pi-lens/config.json"
     ".config/pi/agent/extensions/auto-compact-resume/index.ts"

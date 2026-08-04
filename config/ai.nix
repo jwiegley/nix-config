@@ -29,9 +29,8 @@ let
     pi-gallery = if pairedPiGallery != null then pairedPiGallery else pkgs.pi-gallery;
   };
 
-  modelData = import ./fleet/models.nix { };
   catalog = import ./fleet/catalog.nix {
-    inherit lib modelData;
+    inherit lib;
     resources = resourcePackage;
   };
   renderers = {
@@ -65,30 +64,14 @@ let
       profile = catalog.profiles.${profileId};
     in
     lib.mapAttrs (_: itemSet: catalog.select profile itemSet) catalog.items;
-  selectedModelDataFor =
-    profileId:
-    let
-      profile = catalog.profiles.${profileId};
-      providers = catalog.select profile modelData.providers;
-      models = lib.filterAttrs (
-        _: model:
-        builtins.hasAttr model.provider providers && catalog.matches profile (model.selectors or { })
-      ) modelData.models;
-    in
-    {
-      inherit models providers;
-    };
   renderProfile =
     profileId:
     let
       profile = catalog.profiles.${profileId};
-      rendererModelData =
-        if profile.renderer == "codex" then modelData else selectedModelDataFor profileId;
     in
     renderers.${profile.renderer} {
       inherit profile;
       selected = selectedFor profileId;
-      modelData = rendererModelData;
       homeDirectory = config.home.homeDirectory;
       xdgConfigHome = config.xdg.configHome;
     };
@@ -137,45 +120,10 @@ let
     inherit piGuard;
     legacyPiGuardPath = if piSelected then ".pi/agent/mcp.json" else null;
   };
-  modelSync = (import ./fleet/model-sync.nix { inherit lib pkgs; }) {
-    inherit (modelData) syncInputs;
-  };
+  modelSync = import ./fleet/model-sync.nix { inherit lib pkgs; };
   piSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "pi") profileIds;
   codexSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "codex") profileIds;
   droidSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "droid") profileIds;
-  droidSettingsConvergence = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-    factory_root=${lib.escapeShellArg "${config.xdg.configHome}/factory"}
-    managed_settings="$factory_root/nix-managed-settings.json"
-    mutable_settings="$factory_root/settings.json"
-
-    if [ -e "$managed_settings" ]; then
-      if [ -e "$mutable_settings" ] && { [ ! -f "$mutable_settings" ] || [ -L "$mutable_settings" ]; }; then
-        printf 'nix-managed AI: refusing non-regular Factory settings path: %s\n' \
-          "$mutable_settings" >&2
-        exit 1
-      fi
-
-      ${pkgs.jq}/bin/jq -e '.customModels | type == "array"' \
-        "$managed_settings" >/dev/null
-      if [ -e "$mutable_settings" ]; then
-        ${pkgs.jq}/bin/jq -e 'type == "object"' "$mutable_settings" >/dev/null
-        settings_tmp="$(${pkgs.coreutils}/bin/mktemp \
-          "$factory_root/.settings.json.XXXXXX")"
-        trap '${pkgs.coreutils}/bin/rm -f -- "$settings_tmp"' EXIT
-        ${pkgs.jq}/bin/jq --slurpfile managed "$managed_settings" \
-          '.customModels = $managed[0].customModels' \
-          "$mutable_settings" >"$settings_tmp"
-        ${pkgs.coreutils}/bin/chmod --reference="$mutable_settings" "$settings_tmp"
-        if ! ${pkgs.diffutils}/bin/cmp -s "$mutable_settings" "$settings_tmp"; then
-          ${pkgs.coreutils}/bin/mv -f -- "$settings_tmp" "$mutable_settings"
-        fi
-        ${pkgs.coreutils}/bin/rm -f -- "$settings_tmp"
-        trap - EXIT
-      else
-        ${pkgs.coreutils}/bin/install -m 0600 "$managed_settings" "$mutable_settings"
-      fi
-    fi
-  '';
   piRuntimePackages = with pkgs; [
     actionlint
     agent-browser
@@ -297,9 +245,6 @@ in
     };
     activation = {
       aiManagedPreflight = preflight.activation;
-    }
-    // lib.optionalAttrs droidSelected {
-      aiDroidSettingsConvergence = droidSettingsConvergence;
     }
     // lib.optionalAttrs (config.johnw.host.isHera && isDarwin) {
       aiManagedModelSync = modelSync.activation;

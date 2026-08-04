@@ -1,12 +1,9 @@
 {
   lib,
   resources,
-  modelData,
 }:
 
 let
-  defaultModelData = modelData;
-
   clients = [
     "claude"
     "codex"
@@ -1197,13 +1194,13 @@ let
 
       base = {
         env = {
-          ANTHROPIC_DEFAULT_HAIKU_MODEL = modelData.selections.claudeHaiku.model;
+          ANTHROPIC_DEFAULT_HAIKU_MODEL = "claude-sonnet-5";
           CLAUDE_AUTOCOMPACT_PCT_OVERRIDE = "80";
           CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY = "1";
           CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
           CLAUDE_CODE_MAX_OUTPUT_TOKENS = "64000";
           CLAUDE_CODE_NO_FLICKER = "1";
-          CLAUDE_CODE_SUBAGENT_MODEL = modelData.selections.claudeSubagent.model;
+          CLAUDE_CODE_SUBAGENT_MODEL = "claude-opus-5";
           DISABLE_AUTOUPDATER = "1";
           ENABLE_LSP_TOOL = "1";
           ENABLE_TOOL_SEARCH = "1";
@@ -1235,7 +1232,7 @@ let
         preferredNotifChannel = "iterm2_with_bell";
         remoteControlAtStartup = true;
         agentPushNotifEnabled = true;
-        model = modelData.selections.claudeDefault.model;
+        model = "claude-opus-5[1m";
         theme = "dark";
       };
 
@@ -1447,7 +1444,6 @@ let
     {
       profiles ? catalogProfiles,
       items ? catalogItems,
-      modelData ? defaultModelData,
     }:
     let
       profileIds = builtins.attrNames profiles;
@@ -1528,16 +1524,8 @@ let
           ) "invalid resolved MCP server ${profile.id}/${name}"
         ) items.mcpServers
       ) (builtins.attrValues profiles);
-      providerSelectorChecks = lib.mapAttrsToList (
-        name: provider:
-        ensure (validateSelectors (provider.selectors or { })) "invalid provider selector ${name}"
-      ) modelData.providers;
-      modelSelectorChecks = lib.mapAttrsToList (
-        name: model: ensure (validateSelectors (model.selectors or { })) "invalid model selector ${name}"
-      ) modelData.models;
       piProfile = profiles.hera-pi;
       piMcpNames = builtins.attrNames (select piProfile items.mcpServers);
-      piProviderNames = builtins.attrNames (select piProfile modelData.providers);
       checks = [
         (ensure (profileIds == allowedProfileIds) "profile ID set differs")
         (ensure (
@@ -1551,6 +1539,9 @@ let
             settingsItem.selectors == {
               clients = [ "claude" ];
             }
+            && settingsItem.base.env.ANTHROPIC_DEFAULT_HAIKU_MODEL == "claude-sonnet-5"
+            && settingsItem.base.env.CLAUDE_CODE_SUBAGENT_MODEL == "claude-opus-5"
+            && settingsItem.base.model == "claude-opus-5[1m"
             &&
               settingsItem.statusLineCommand == {
                 executable = "bash";
@@ -1585,20 +1576,12 @@ let
             "stock-trader"
           ]
         ) "Pi MCP selection differs")
-        (ensure (
-          piProviderNames == [
-            "llama-swap"
-            "omlx"
-          ]
-        ) "Pi provider selection differs")
       ]
       ++ itemChecks
       ++ selectorChecks
       ++ profileChecks
       ++ mcpChecks
-      ++ mcpResolutionChecks
-      ++ providerSelectorChecks
-      ++ modelSelectorChecks;
+      ++ mcpResolutionChecks;
     in
     builtins.deepSeq checks true;
 in

@@ -183,8 +183,8 @@ runCommand "pi-gallery-check"
       [ -f "$provider_root/LICENSE" ]
       [ ! -e "$provider_root/node_modules" ]
     done
-    grep -F 'http://127.0.0.1:8080/v1' ${roots.llama-swap-provider}/index.ts >/dev/null
-    grep -F 'http://127.0.0.1:8000/v1' ${roots.omlx-provider}/index.ts >/dev/null
+    grep -F 'http://localhost:8080/v1' ${roots.llama-swap-provider}/index.ts >/dev/null
+    grep -F 'http://localhost:8000/v1' ${roots.omlx-provider}/index.ts >/dev/null
     [ -f ${roots.router}/extensions/index.ts ]
     [ -f ${roots.router}/extensions/routing.ts ]
     [ ! -e ${roots.router}/node_modules ]

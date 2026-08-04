@@ -71,11 +71,11 @@ try {
 		requests,
 		[
 			{
-				url: "http://127.0.0.1:8080/v1/models",
-				authorization: "Bearer local-no-auth",
+				url: "http://localhost:8080/v1/models",
+				authorization: "Bearer dummy-key",
 			},
 			{
-				url: "http://127.0.0.1:8000/v1/models",
+				url: "http://localhost:8000/v1/models",
 				authorization: "Bearer dummy-key",
 			},
 		],
@@ -134,7 +134,7 @@ try {
 	expectEqual(
 		warnings,
 		[
-			"[omlx] Cannot discover models from http://127.0.0.1:8000/v1/models: 503 Unavailable",
+			"[omlx] Cannot discover models from http://localhost:8000/v1/models: 503 Unavailable",
 		],
 		"failure warning",
 	);
@@ -159,7 +159,7 @@ try {
 	expectEqual(
 		warnings,
 		[
-			"[omlx] Cannot discover models from http://127.0.0.1:8000/v1/models: The operation was aborted.",
+			"[omlx] Cannot discover models from http://localhost:8000/v1/models: The operation was aborted.",
 		],
 		"abort warning",
 	);

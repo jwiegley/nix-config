@@ -111,10 +111,8 @@ let
   wrappedCodex = patchAgentPackage testPkgs "codex" (fakeAgent "codex");
   realWrappedCodex = patchAgentPackage testPkgs "codex" codexPackage;
   wrappedNonDarwinCodex = patchAgentPackage nonDarwinTestPkgs "codex" (fakeAgent "codex");
-  wrappedDroid = patchAgentPackage testPkgs "droid" (fakeAgent "droid");
   identityWrappedClaude = patchAgentPackage testPkgs "claude-code" (identityAgent "claude");
   identityWrappedCodex = patchAgentPackage testPkgs "codex" (identityAgent "codex");
-  identityWrappedDroid = patchAgentPackage testPkgs "droid" (identityAgent "droid");
 
   networkGuardSource = pkgs.writeText "agent-wrapper-network-guard.c" ''
     #define _GNU_SOURCE
@@ -245,11 +243,9 @@ pkgs.runCommand "agent-wrappers-check"
     CLAUDE_REAL_BIN = "${wrappedClaude}/bin/claude-real";
     CODEX_BIN = "${wrappedCodex}/bin/codex";
     CODEX_NON_DARWIN_BIN = "${wrappedNonDarwinCodex}/bin/codex";
-    DROID_BIN = "${wrappedDroid}/bin/droid";
     CLAUDE_IDENTITY_BIN = "${identityWrappedClaude}/bin/claude";
     CLAUDE_REAL_IDENTITY_BIN = "${identityWrappedClaude}/bin/claude-real";
     CODEX_IDENTITY_BIN = "${identityWrappedCodex}/bin/codex";
-    DROID_IDENTITY_BIN = "${identityWrappedDroid}/bin/droid";
     REAL_CLAUDE_BIN = "${realWrappedClaude}/bin/claude";
     REAL_CODEX_BIN = "${codexPackage}/bin/codex";
     REAL_WRAPPED_CODEX_BIN = "${realWrappedCodex}/bin/codex";
@@ -275,8 +271,6 @@ pkgs.runCommand "agent-wrappers-check"
     touch "$out/claude-wrapper-contract.ok"
     ${pkgs.bash}/bin/bash ${./agent-wrappers.sh} codex
     touch "$out/codex-wrapper-contract.ok"
-    ${pkgs.bash}/bin/bash ${./agent-wrappers.sh} droid
-    touch "$out/droid-wrapper-contract.ok"
     ${pkgs.bash}/bin/bash ${./agent-wrappers.sh} bridge
     ${pkgs.bash}/bin/bash ${./run-bridge-oracle.sh}
 

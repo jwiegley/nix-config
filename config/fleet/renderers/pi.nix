@@ -3,7 +3,6 @@
 {
   profile,
   selected,
-  modelData,
   homeDirectory,
   xdgConfigHome,
 }:
@@ -39,14 +38,11 @@ let
   ) (builtins.attrValues selected.mcpServers);
   renderEnv = name: "$" + "{" + name + "}";
 
-  orderedValues =
-    set: lib.sort (left: right: left.sourceOrder < right.sourceOrder) (builtins.attrValues set);
-  routerModels = orderedValues (
-    lib.filterAttrs (
-      _: model: model.provider == "omlx" && model.id == "Qwen3.6-27B-oQ6e-mtp"
-    ) modelData.models
-  );
-  routerModel = builtins.head routerModels;
+  routerTarget = {
+    id = "Qwen3.6-27B-oQ6e-mtp";
+    contextLimit = 262144;
+    outputLimit = 65536;
+  };
   routerProvider = {
     api = "router-local-api";
     apiKey = "pi-model-router";
@@ -66,8 +62,8 @@ let
           cacheRead = 0;
           cacheWrite = 0;
         };
-        contextWindow = routerModel.contextLimit;
-        maxTokens = routerModel.outputLimit;
+        contextWindow = routerTarget.contextLimit;
+        maxTokens = routerTarget.outputLimit;
         thinkingLevelMap.xhigh = "xhigh";
       }
     ];
@@ -83,9 +79,9 @@ let
     debug = false;
     phaseBias = 0.5;
     models.sol = {
-      model = "omlx/${routerModel.id}";
-      contextWindow = routerModel.contextLimit;
-      maxTokens = routerModel.outputLimit;
+      model = "omlx/${routerTarget.id}";
+      contextWindow = routerTarget.contextLimit;
+      maxTokens = routerTarget.outputLimit;
       reasoning = true;
       thinkingLevels = [
         "low"
@@ -289,14 +285,11 @@ assert
 assert models.providers.llama-swap.modelOverrides."GLM-5.2".contextWindow == 262144;
 assert
   models.providers.omlx.modelOverrides."DeepSeek-V4-Flash-0731-oQ8e-mtp".contextWindow == 262144;
+assert models.providers.openai-codex.modelOverrides."gpt-5.6-sol".contextWindow == 1050000;
 assert models.providers.openrouter.modelOverrides."z-ai/glm-5.2".contextWindow == 1048576;
-assert builtins.length routerModels == 1;
-assert routerModel.contextLimit == 262144;
-assert routerModel.outputLimit == 65536;
-assert !(modelData ? default);
-assert builtins.all (model: builtins.hasAttr model.provider modelData.providers) (
-  builtins.attrValues modelData.models
-);
+assert routerTarget.id == "Qwen3.6-27B-oQ6e-mtp";
+assert routerTarget.contextLimit == 262144;
+assert routerTarget.outputLimit == 65536;
 assert
   lib.intersectLists (builtins.attrNames selected.commands) (builtins.attrNames selected.prompts)
   == [ ];

@@ -19,7 +19,7 @@ let
     JXA
   '';
 
-  defaultTools = {
+  tools = {
     pgrep = "/usr/bin/pgrep";
     defaults = "/usr/bin/defaults";
     devonthinkKeyPresent = toString devonthinkKeyPresent;
@@ -30,40 +30,12 @@ let
     rm = "${pkgs.coreutils}/bin/rm";
   };
 
-  expectedToolNames = [
-    "defaults"
-    "devonthinkKeyPresent"
-    "mkdir"
-    "mktemp"
-    "mv"
-    "pgrep"
-    "rm"
-    "security"
-  ];
-in
-{
-  syncInputs,
-  tools ? defaultTools,
-}:
-
-assert builtins.isAttrs syncInputs;
-assert
-  builtins.attrNames syncInputs == [
-    "chatUrl"
-    "model"
-    "provider"
-  ];
-assert builtins.all builtins.isString (builtins.attrValues syncInputs);
-assert builtins.all (value: builtins.stringLength value > 0) (builtins.attrValues syncInputs);
-assert builtins.isAttrs tools;
-assert builtins.attrNames tools == expectedToolNames;
-assert builtins.all builtins.isString (builtins.attrValues tools);
-
-let
+  model = "DeepSeek-V4-Flash-0731-oQ8e-mtp";
+  chatUrl = "http://localhost:8000/v1/chat/completions";
   digest = builtins.hashString "sha256" (
     builtins.toJSON {
       schema = 1;
-      inherit (syncInputs) provider model chatUrl;
+      inherit model chatUrl;
     }
   );
   quote = lib.escapeShellArg;
@@ -101,8 +73,8 @@ let
       mv_tool=${quote tools.mv}
       rm_tool=${quote tools.rm}
 
-      model=${quote syncInputs.model}
-      chat_url=${quote syncInputs.chatUrl}
+      model=${quote model}
+      chat_url=${quote chatUrl}
 
       fail() {
         printf '%s\n' "nix-managed model sync: $1" >&2

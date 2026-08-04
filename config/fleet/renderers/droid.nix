@@ -3,15 +3,10 @@
 {
   profile,
   selected,
-  modelData,
   homeDirectory,
   xdgConfigHome,
 }:
 
-assert builtins.isAttrs modelData;
-assert builtins.all (provider: provider ? droid && provider.droid ? providerType) (
-  builtins.attrValues modelData.providers
-);
 assert builtins.isString homeDirectory;
 assert builtins.isString xdgConfigHome;
 
@@ -21,47 +16,6 @@ let
   mergeFiles = import ./merge-files.nix { inherit lib; };
 
   isTypedEnv = value: builtins.isAttrs value && builtins.attrNames value == [ "env" ];
-  providerRequiredEnvNames = lib.concatMap (
-    provider: lib.optional (isTypedEnv provider.apiKey) provider.apiKey.env
-  ) (builtins.attrValues modelData.providers);
-  renderCredential =
-    credential:
-    if isTypedEnv credential then
-      "$" + "{" + credential.env + "}"
-    else if builtins.isAttrs credential && builtins.attrNames credential == [ "nonSecret" ] then
-      credential.nonSecret
-    else
-      throw "unsupported Droid credential shape";
-
-  orderedValues =
-    set: lib.sort (left: right: left.sourceOrder < right.sourceOrder) (builtins.attrValues set);
-  renderModel =
-    index: model:
-    let
-      provider = modelData.providers.${model.provider};
-      displayName = "[${provider.displayName}] ${model.displayName}";
-    in
-    {
-      apiKey = renderCredential provider.apiKey;
-      inherit (provider) baseUrl;
-      inherit displayName index;
-      id = "custom:${lib.replaceStrings [ " " ] [ "-" ] displayName}-${toString index}";
-      model = model.id;
-      noImageSupport = provider.droid.noImageSupport or false;
-      provider = provider.droid.providerType;
-    }
-    // lib.optionalAttrs (model ? maxOutputTokens) {
-      inherit (model) maxOutputTokens;
-    }
-    // lib.optionalAttrs (provider.droid ? extraArgs) {
-      inherit (provider.droid) extraArgs;
-    }
-    // lib.optionalAttrs (provider.droid ? extraHeaders) {
-      inherit (provider.droid) extraHeaders;
-    };
-  settings = {
-    customModels = lib.imap0 renderModel (orderedValues modelData.models);
-  };
 
   renderMcpServer =
     _: server:
@@ -144,25 +98,15 @@ in
     commands
     prompts
     {
-      "${root}/nix-managed-settings.json".source =
-        json.generate "droid-${profile.id}-nix-managed-settings.json" settings;
       "${root}/mcp.json".source = json.generate "droid-${profile.id}-mcp.json" mcp;
     }
   ];
 
-  companions = [
-    "${root}/nix-managed-settings.json"
-    "${root}/mcp.json"
+  companions = [ "${root}/mcp.json" ];
+  requiredEnvNames = [
+    "ANTHROPIC_API_KEY"
+    "CONTEXT7_API_KEY"
+    "GEMINI_API_KEY"
+    "OPENAI_API_KEY"
   ];
-  requiredEnvNames = lib.unique (
-    lib.sort builtins.lessThan (
-      [
-        "ANTHROPIC_API_KEY"
-        "CONTEXT7_API_KEY"
-        "GEMINI_API_KEY"
-        "OPENAI_API_KEY"
-      ]
-      ++ providerRequiredEnvNames
-    )
-  );
 }

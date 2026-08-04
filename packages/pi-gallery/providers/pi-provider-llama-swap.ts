@@ -6,7 +6,7 @@ export default async function piProviderLlamaSwap(
 	await registerLocalProvider(pi, {
 		id: "llama-swap",
 		name: "llama-swap",
-		baseUrl: "http://127.0.0.1:8080/v1",
-		apiKey: "local-no-auth",
+		baseUrl: "http://localhost:8080/v1",
+		apiKey: "dummy-key",
 	});
 }
