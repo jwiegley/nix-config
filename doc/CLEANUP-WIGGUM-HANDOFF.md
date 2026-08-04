@@ -11,7 +11,9 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 
 - The authoritative checkout is `/Users/johnw/src/nix`, on `main`. It is the
   only worktree.
-- Published Gitea, GitHub, and local `main` match signed commit `c4c57b63`.
+- Published Gitea and GitHub `main` match `5aa9dd4f`; local `main` is signed
+  source-retirement commit `b5d31874`, pending publication and post-retirement
+  activation.
 - Hera runs Darwin generation 988. Agent Deck 1.11.0, oMLX 0.5.5, Pi 0.83.0,
   Claude Code 2.1.220, and Codex 0.146.0 are active.
 - Codex defaults to native OpenAI `gpt-5.6-sol`; local oMLX and llama-swap
