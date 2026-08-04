@@ -460,11 +460,11 @@ its GitHub issue. Unverified hosts are never implied clean.
 
 | Migration | Current status | Required before deletion |
 |---|---|---|
-| Retired Anvil/MCP cleanup | Prior Hera report only; all hosts and rollback horizon unverified | All managed hosts clean after a second activation/client cycle; no mutable Anvil/query credential key; supported generations cannot reintroduce it |
-| Pi XDG migration | Prior Hera shape report only; rollback policy undefined and retirement unverified | Accepted rollback horizon; two successful post-migration generations and session preservation; retain declarative `~/.pi -> ~/.config/pi` and `.pi-legacy-v1` backup |
-| Codex legacy Ref importer | Prior Hera report only; every Codex host unverified for retirement | No legacy table on every Codex host; environment/password-store path works; fresh launch without value exposure |
-| Codex log migration | Prior Hera report only; fleet unverified | Correct host-local link and no migration residue on Hera, Clio, and shared-work Codex hosts |
-| Darwin gpg-agent handoff | Prior Hera report only; Clio and rollback proof unverified | No producer, supported generations postdate handoff, and two Hera/Clio activations show old labels absent |
+| Retired Anvil/MCP cleanup | Eight-host cleanup-bearing proof complete; source retired at `cc0f6718` | Activate the no-producer candidate on every managed host and repeat structural probes |
+| Pi XDG migration | Source retired at `8c3d4431`; Hera 991 post-retirement path/session/Pi proof passed | Complete; retain declarative `~/.pi -> ~/.config/pi`, marker, and any `.pi-legacy-v1` backup |
+| Codex legacy Ref importer | Superseded by #124, which removes Ref and Perplexity entirely | Delete the importer with the two retired MCP integrations; no credential migration |
+| Codex log migration | Source retired at `302e8de8`; Hera 991 and Clio 247 post-retirement proof passed | Activate the no-migration candidate on all four shared-work Codex hosts and repeat log probes |
+| Darwin gpg-agent handoff | Source retired at `b5d31874`; Hera 991 and Clio 247 post-retirement absence proof passed | Complete; retain Home Manager producer-disable and nix-darwin startup owner |
 | Home Manager 25.11 SSH shim | Active compatibility, not finite cleanup | Retain until VPS and Vulcan upgrade and rendered behavior is proven equivalent |
 
 Each successful retirement is its own signed, revertible commit. Probes print only

@@ -1,6 +1,6 @@
 # Cleanup Wiggum Handoff
 
-Updated: 2026-08-03
+Updated: 2026-08-04
 
 ## Objective
 
@@ -83,7 +83,7 @@ Authorized: accepted decisions D1-D7, local cleanup edits, signed commits, norma
 dual-remote publication, cleanup-bearing lock updates/activations, and fresh
 disposable Codex/Pi processes. Existing sessions must remain untouched.
 
-Not implicitly authorized: post-retirement activation, password-store mutation,
-history rewriting, force pushes, or moving/deleting user backups/state. The two
-VPS Alexey artifacts require a specific archive decision. Every `gh` invocation
-must explicitly select account `jwiegley`.
+The authorized `302e8de8` post-retirement activation completed on Hera 991 and
+Clio 247. Not implicitly authorized: the later #116 no-producer fleet activation,
+password-store mutation, history rewriting, force pushes, or moving/deleting other
+user backups/state. Every `gh` invocation must explicitly select account `jwiegley`.

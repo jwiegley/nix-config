@@ -604,9 +604,10 @@ runCommand "pi-gallery-check"
           ["batch_web_fetch", "edit", "read", "web_fetch", "web_search", "write"][];
           . as $required | $actual | index($required) != null
         )
+        and all($actual[]; contains("anvil") | not)
     ' "$smoke/active-tools.json" >/dev/null || {
       cat "$smoke/active-tools.json" >&2
-      fail "Pi gallery required tools or uniqueness invariant failed"
+      fail "Pi gallery required tools, uniqueness, or retired-tool invariant failed"
     }
     validate_web_tool_owners() {
       jq -e '
