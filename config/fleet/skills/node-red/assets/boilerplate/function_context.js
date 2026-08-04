@@ -5,9 +5,9 @@
  * Context allows you to store data between message passes.
  *
  * Three levels of context:
- * - node.context() - Local to this node only
- * - flow.context() - Shared across all nodes in this flow/tab
- * - global.context() - Shared across all flows
+ * - context - Local to this node only
+ * - flow - Shared across all nodes in this flow/tab
+ * - global - Shared across all flows
  */
 
 // ========================================
@@ -111,7 +111,7 @@ let persistentValue = context.get('persistentData', 'file') || null;
 // CONTEXT MANAGEMENT PATTERNS
 // ========================================
 
-// Pattern 1: Atomic updates with callbacks
+// Pattern 1: Asynchronous context access with callbacks
 context.get('atomicCounter', (err, value) => {
     if (err) {
         node.error('Failed to get context', msg);
@@ -142,8 +142,8 @@ function getWithTTL(key) {
     if (!data) return null;
 
     if (Date.now() > data.expiry) {
-        // Expired, clean up
-        context.set(key, null);
+        // Expired, remove the stored entry
+        context.set(key, undefined);
         return null;
     }
 
@@ -180,7 +180,7 @@ const average = recentData.reduce((sum, item) => sum + item.value, 0) / recentDa
 // CLEANUP PATTERN
 // ========================================
 
-// Clean up old context data periodically
+// Purge temporary-prefix context keys periodically
 const lastCleanup = context.get('lastCleanup') || 0;
 const cleanupInterval = 3600000; // 1 hour
 

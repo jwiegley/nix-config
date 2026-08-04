@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
-"""Deterministic comment inventory for the comment-audit skill.
+"""Build a resumable working inventory for the comment-audit skill.
 
-Extracts every comment (and Python docstring) from a project or from the files
-changed in a PR/stack, and records each as an entry in a JSON manifest. The
-manifest is the source of truth for an exhaustive, resumable audit: the agent
-fills in a verdict for every entry, and the audit is only complete when no
-entry remains in the `pending` state.
+Records recognized comments and Python docstrings from a project or changed-file
+set in a resumable JSON manifest. A complete audit also reconciles the manifest
+against its declared file denominator; zero pending entries alone does not prove
+that every embedded-language or unusual quoting form was extracted.
 
-This script is pure standard-library Python (3.9+). It does NOT require
-tree-sitter, semgrep, or any third-party parser. Comment extraction uses
-Python's `tokenize`/`ast` for `.py` files and a state-machine tokenizer
-(string-literal aware, line- and block-comment aware) for other languages.
-Extension families that are not recognized are recorded under
-`files_skipped` so that "exhaustive" always means "exhaustive over a declared
-and visible policy" rather than a vague promise.
+This script is pure standard-library Python (3.11+). It does NOT require
+tree-sitter, semgrep, or any third-party parser. Python uses `tokenize`/`ast`;
+other languages use a heuristic state machine for ordinary string, line, and
+block-comment forms. Unrecognized extension families are recorded under
+`files_skipped`, and callers must supplement known embedded-language cases.
 
 Commands:
   inventory   Build/refresh the manifest (default).
@@ -54,7 +51,8 @@ VALID_VERDICTS = {
     "NEEDS_REVIEW",
 }
 
-# Directories that never contain first-party comments worth auditing.
+# Directories skipped by the filesystem fallback. Git-backed inventories use
+# the tracked file list instead and do not apply this prune set.
 DEFAULT_PRUNE_DIRS = {
     ".git",
     ".hg",
@@ -387,7 +385,7 @@ def scan_python(src: str) -> list[Comment]:
 
 
 def merge_consecutive_line_comments(comments: list[Comment]) -> list[Comment]:
-    """Merge runs of single-line comments on consecutive lines into one unit."""
+    """Merge consecutive standalone single-line comments into one unit."""
     comments = sorted(comments, key=lambda c: (c.start_line, c.end_line))
     merged: list[Comment] = []
     for c in comments:
@@ -470,6 +468,9 @@ def diff_changed_files(root: str, base: str) -> list[str]:
     out2 = _run_git(["diff", "--name-only"], root)
     if out2:
         files.extend(line for line in out2.splitlines() if line)
+    out3 = _run_git(["diff", "--name-only", "--cached"], root)
+    if out3:
+        files.extend(line for line in out3.splitlines() if line)
     return sorted(set(files))
 
 
@@ -568,6 +569,7 @@ def build_inventory(args: argparse.Namespace) -> int:
     manifest_path = os.path.join(root, args.manifest)
 
     scope = "diff" if args.diff_base else "project"
+    pruned_dirs: list[str] = []
 
     # Determine candidate files.
     if args.diff_base:
@@ -575,6 +577,8 @@ def build_inventory(args: argparse.Namespace) -> int:
     else:
         tracked = git_tracked_files(root) if is_git_repo(root) else None
         candidates = tracked if tracked is not None else list(walk_files(root))
+        if tracked is None:
+            pruned_dirs = sorted(DEFAULT_PRUNE_DIRS)
 
     files_scanned: list[str] = []
     files_skipped: list[dict] = []
@@ -643,7 +647,7 @@ def build_inventory(args: argparse.Namespace) -> int:
         "root": root,
         "scope": scope,
         "diff_base": args.diff_base,
-        "pruned_dirs": sorted(DEFAULT_PRUNE_DIRS),
+        "pruned_dirs": pruned_dirs,
         "files_scanned": sorted(files_scanned),
         "files_skipped": sorted(files_skipped, key=lambda f: f["path"]),
         "comments": comments,
@@ -773,7 +777,8 @@ def cmd_stats(args: argparse.Namespace) -> int:
     for v in sorted(by_verdict):
         print(f"  {v}: {by_verdict[v]}")
     if pending == 0 and total > 0:
-        print("\nAUDIT COMPLETE: every comment has a verdict.")
+        print("\nEXTRACTED INVENTORY COMPLETE: every extracted entry has a verdict.")
+        print("File/comment denominator reconciliation is still required.")
     else:
         print(f"\nAUDIT INCOMPLETE: {pending} comment(s) still pending.")
     return 0

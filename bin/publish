@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Publish one revision to BOTH core remotes, or to neither.
+# Publish one revision to both core remotes with preflight and loud partial-failure reporting.
 #
 # The core has two remotes and they are not interchangeable:
 #
@@ -21,16 +21,15 @@
 # On atomicity, stated honestly: two independent git pushes cannot be made a
 # single transaction. What this does instead is push nothing until BOTH remotes
 # have proven, via a real `git push --dry-run`, that they would accept the update.
-# That collapses the partial-failure window to a network fault between the two
-# real pushes — and if that happens, the failure is loud and names exactly which
-# remote diverged and the one command that reconciles it. A silent half-push is
-# the failure mode being engineered out; a reported half-push is acceptable.
+# A network fault, concurrent ref change, hook rejection, or remote failure can
+# still leave one real push accepted; that failure is loud and names the
+# divergent remote with recovery guidance.
 #
 # Never force-pushes. Never embeds a credential: authentication is whatever ssh
 # already provides, so this works only where the operator's keys already work.
 #
 # Usage:
-#   bin/publish                     # pre-flight only. Mutates NOTHING. The default.
+#   bin/publish                     # no push; refresh refs and pre-flight. The default.
 #   bin/publish --publish           # actually push HEAD's branch to both remotes
 #   bin/publish --rev REV           # assert the revision (must equal the checked-out
 #                                   # branch tip; refuses otherwise)
@@ -148,8 +147,8 @@ assert_publish_tree() {
 assert_publish_tree "pre-flight"
 
 # ---- Pre-flight ---------------------------------------------------------
-# Everything checkable without mutating anything. Each failure here is cheap;
-# a failure after the first real push is not.
+# Everything checkable before remote publication. This phase refreshes local Git
+# tracking state but does not push; a failure after the first real push is not.
 
 for r in "${REMOTES[@]}"; do
     git remote get-url "$r" >/dev/null 2>&1 ||
@@ -181,7 +180,7 @@ for r in "${REMOTES[@]}"; do
     or accept the divergence deliberately by pushing by hand."
     fi
     # Refresh tracking refs before any range computation depends on them.
-    git fetch --quiet "$r" 2>/dev/null || true
+    git fetch --quiet --prune "$r" 2>/dev/null || die "could not refresh local tracking refs for '$r'"
     remote_sha=$(git ls-remote "$r" "refs/heads/$branch" 2>/dev/null | awk '{print $1}')
     if [[ $remote_sha == "$rev" ]]; then
         say "  $r already at $short"
@@ -228,6 +227,8 @@ say "checking signatures on commits to be published"
 unsigned=0
 checked=0
 for r in "${need_push[@]}"; do
+    log_output=$(git log --pretty='%G? %h %s' "$rev" --not --remotes="$r" 2>/dev/null) ||
+        die "could not compute the unpublished commit range for '$r'"
     while read -r sig sha subject; do
         [[ -n $sha ]] || continue
         checked=$((checked + 1))
@@ -242,10 +243,8 @@ for r in "${need_push[@]}"; do
         # E (cannot check), B (bad), N (none). "Signed commits only" is not
         # satisfied by a signature that no longer verifies. Y (expired key) is the
         # one exception and is accepted -- see the note below.
-        # Y (expired key) is now ACCEPTED: it proves the commit was signed by the
-        # project's key, and `git verify-commit` exits 0 on it. Rejecting it made every
-        # historical commit fail the day a key expired. R (revoked) -- the actual
-        # compromise signal -- stays rejected, as do X, E, B and N.
+        # Y is accepted because the signature remains valid under a key in the
+        # active verification keyring even though that key has since expired.
         case $sig in
         G | U | Y) : ;;
         *)
@@ -253,13 +252,13 @@ for r in "${need_push[@]}"; do
             unsigned=1
             ;;
         esac
-    done < <(git log --pretty='%G? %h %s' "$rev" --not --remotes="$r" 2>/dev/null || true)
+    done <<<"$log_output"
 done
 [[ $unsigned -eq 0 ]] || die "refusing to publish unsigned commits (see above)"
 say "  all signed ($checked commit-remote pairs checked)"
 
-# Prove BOTH remotes would accept the update before mutating either one. This is
-# the step that makes a partial push unlikely rather than merely detectable.
+# Require dry-run ref negotiation on both remotes before mutating either one.
+# Real hooks, concurrent changes, or network faults can still reject a real push.
 say "pre-flight: dry-run push to every remote that needs it"
 for r in "${need_push[@]}"; do
     if git push --dry-run --no-verify "$r" "$rev:refs/heads/$branch" >/dev/null 2>&1; then

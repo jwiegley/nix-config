@@ -144,7 +144,7 @@ def command_error(description: str, result: subprocess.CompletedProcess[str]) ->
 
 
 def clean_environment() -> dict[str, str]:
-    """Return the process environment without Git repository selectors."""
+    """Remove the listed Git selectors and GIT_CONFIG_* variables."""
     return {
         name: value
         for name, value in os.environ.items()
@@ -232,7 +232,7 @@ def normalize_store(value: Any, differ: Path) -> Any:
 
 
 def validate_host_surface(host: str, value: Any) -> dict[str, Any]:
-    """Reject vacuous or schema-changing projector output."""
+    """Reject non-object or schema-changing projector output."""
     if not isinstance(value, dict):
         raise OperationalError(
             f"projector returned {type(value).__name__} for {host}, expected an object"
@@ -249,7 +249,7 @@ def validate_host_surface(host: str, value: Any) -> dict[str, Any]:
 
 
 def revision_tools(worktree: Path) -> tuple[Path, Path]:
-    """Validate and return executable projection tools from the revision."""
+    """Validate and return regular projection-tool files from the revision."""
     projector = worktree / PROJECTOR_RELATIVE
     helper = worktree / HELPER_RELATIVE
     differ = worktree / DIFFER_RELATIVE
@@ -270,7 +270,7 @@ def revision_tools(worktree: Path) -> tuple[Path, Path]:
 
 
 def projection_identity(worktree: Path) -> dict[str, str]:
-    """Hash every committed source that defines projection semantics."""
+    """Hash the committed projection sources listed in PROJECTION_PATHS."""
     revision_tools(worktree)
     identity = {}
     for relative in PROJECTION_PATHS:
@@ -286,7 +286,7 @@ def projection_identity(worktree: Path) -> dict[str, str]:
 
 
 def evaluate_host(worktree: Path, host: str) -> dict[str, Any]:
-    """Evaluate one host using only tools from its detached revision."""
+    """Evaluate one host with the projector and differ from the worktree."""
     projector, differ = revision_tools(worktree)
     projector_string = json.dumps(str(projector))
     apply_expression = f"darwin: import (builtins.toPath {projector_string}) darwin"
@@ -318,7 +318,7 @@ def evaluate_host(worktree: Path, host: str) -> dict[str, Any]:
 
 
 def _remove_worktree(path: Path) -> OperationalError | None:
-    """Run the actual worktree removal while termination is deferred."""
+    """Run the narrow worktree-removal operation."""
     try:
         result = subprocess.run(
             ["git", "worktree", "remove", str(path)],
@@ -356,7 +356,7 @@ def _remove_worktree(path: Path) -> OperationalError | None:
 
 
 def remove_worktree(path: Path) -> OperationalError | None:
-    """Remove a worktree before delivering any pending SIGTERM."""
+    """Remove a worktree while deferring SIGTERM when supported."""
     try:
         previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
     except (AttributeError, OSError, ValueError) as error:
@@ -393,7 +393,6 @@ def derive_hosts_in_temporary_directory(
             description=f"could not create detached worktree at {revision}",
         )
     except BaseException as failure:
-        # A checkout failure can occur after Git registered the worktree.
         # Attempt the same narrow cleanup even when `worktree add` failed.
         cleanup_error = remove_worktree(worktree)
         raise_after_cleanup(failure, cleanup_error)
@@ -420,7 +419,7 @@ def derive_hosts_in_temporary_directory(
 def derive_hosts(
     revision: str,
 ) -> tuple[dict[str, dict[str, Any]], dict[str, str]]:
-    """Evaluate both hosts in a detached worktree and always unregister it."""
+    """Evaluate both hosts and require detached-worktree cleanup to succeed."""
     try:
         with tempfile.TemporaryDirectory(prefix=f"{PROGRAM}-") as temporary_directory:
             return derive_hosts_in_temporary_directory(revision, temporary_directory)
@@ -533,7 +532,7 @@ def artifact(
 
 def encode(value: dict[str, Any]) -> str:
     """Encode artifacts deterministically, including one trailing newline."""
-    return json.dumps(value, indent=2, ensure_ascii=False) + "\n"
+    return json.dumps(value, indent=2, ensure_ascii=False, sort_keys=True) + "\n"
 
 
 def invalid_baseline(message: str) -> NoReturn:
@@ -609,7 +608,7 @@ def validate_existing_baseline() -> Path:
 
 
 def atomic_write(path: Path, contents: str) -> None:
-    """Replace PATH atomically with a fully flushed regular file."""
+    """Flush a regular temporary file and atomically replace PATH."""
     temporary_path: Path | None = None
     failure: BaseException | None = None
     try:
@@ -741,7 +740,7 @@ def baseline_backup_path() -> Path:
 
 
 def path_present(path: Path) -> bool:
-    """Detect regular entries and broken symlinks without following them."""
+    """Detect existing paths plus broken symlinks."""
     return path.exists() or path.is_symlink()
 
 

@@ -261,7 +261,6 @@ class UpdateInventoryTests(unittest.TestCase):
         for name in (
             "ascii",
             "gptel-got",
-            "mitmproxy-macos-wheel",
             "nixpkgs-last-good",
             "org",
             "poppler-darwin-mutex-patch",
@@ -7198,17 +7197,11 @@ exec "$REAL_GIT" "$@"
         offenders = self._closure_impurities(synthetic)
         self.assertIn("shared", offenders)
 
-    # ---- production source-coordinate completeness gate ----------------
+    # ---- heuristic production source-coordinate gate --------------------
     #
-    # Issue #25 (DoD item 3): every production Internet source coordinate must
-    # be catalog-owned (sources/*.json, resolved as `<fetcher> X.source.args`)
-    # or a validated flake-declaration projection -- never a bare fetch literal
-    # inlined into a package body. The catalog LOADER already validates records
-    # it is given (load_source_catalog / _validate_fetch_record); what it cannot
-    # see is a NEW inline literal that never became a record. This walks the
-    # production seams and rejects exactly that, with an EXACT-SET allowlist so a
-    # stale exception fails as loudly as a new leak (as with
-    # KNOWN_UNFETCHABLE_ROOT_NODES above).
+    # Scan common inline fetcher forms that bypass the source catalog. This is a
+    # lexical guard, not a complete Nix parser; the exact-set allowlist makes
+    # both newly detected and stale exceptions visible.
 
     # Production seams: flake.nix plus every .nix under these roots. `test`/
     # `tests` path components are excluded because fixtures are not production;
@@ -7216,17 +7209,9 @@ exec "$REAL_GIT" "$@"
     # catalog DATA, not a seam.
     _SEAM_ROOTS = ("overlays", "packages", "config", "flake")
 
-    # Fetchers whose inline argument attrset is a package-source coordinate.
-    # Bare and qualified (prev./final./pkgs./builtins.) call forms are both
-    # recognized, so a catalog bypass cannot hide behind a `prev.` prefix.
-    # builtins.fetchTree/fetchGit/fetchTarball are here because a pinned flake
-    # or tarball URL is a source coordinate too. Deliberately NOT covered, and
-    # why: fetchNpmDeps / npmDepsHash / cargoHash / vendorHash (dependency-hash
-    # mechanisms, not the `src` coordinate); bare filesystem `src = /path`
-    # literals and flake INPUT locators (owned by the external-filesystem and
-    # whole-closure purity checks above -- one mechanism, per cross-stream X4);
-    # and arbitrary URL strings that are not a fetcher argument (runtime/service
-    # endpoints, lockfile-patch strings) -- see the runtime-URL positive control.
+    # Fetchers recognized when directly applied to an inline attrset. Dependency
+    # hashes, bare filesystem src values, flake inputs, and standalone URL strings
+    # are outside this lexical scanner.
     _FETCHERS = (
         "fetchFromGitHub",
         "fetchFromGitLab",
@@ -7246,9 +7231,7 @@ exec "$REAL_GIT" "$@"
     _FETCH_TOKEN = re.compile(
         r"(?<![\w\"'])(?:[A-Za-z_][\w'-]*\.)?(" + "|".join(_FETCHERS) + r")\b"
     )
-    # A coordinate field bound to a string literal (also the first element of a
-    # `urls = [ "..." ]` list). Its presence in an inline `{ .. }` is what makes
-    # the attrset a literal source coordinate rather than a reference.
+    # Coordinate-like fields used by the lexical inline-fetcher heuristic.
     _COORD_FIELD = re.compile(
         r"\b(owner|repo|url|urls|rev|tag|hash|sha256|sha512|pname|domain)\s*=\s*"
         r'(?:"([^"]*)"|\[\s*"([^"]*)")'
@@ -7269,12 +7252,11 @@ exec "$REAL_GIT" "$@"
     def _mask_nix(text):
         """Blank comment and string bytes, preserving length and newlines.
 
-        Structural scans run on the mask so a fetcher name or brace inside a
-        comment or string literal is invisible. Line comments (#..), block
+        Structural scans run on the mask so ordinary fetcher names or braces in
+        comments and strings are ignored. Line comments (#..), block
         comments (/* */), double-quoted ("..") and Nix indented ('' .. '')
         strings are handled. Antiquotation (${..}) inside a string is blanked
-        whole rather than re-entered as code -- a conservative limitation;
-        fetchers are never invoked inside string antiquotation in this tree.
+        rather than re-entered as code, so that form is outside this heuristic.
         """
         out = list(text)
         i, n = 0, len(text)
@@ -7327,7 +7309,7 @@ exec "$REAL_GIT" "$@"
 
     @staticmethod
     def _match_brace(mask, open_idx):
-        """Index just past the '}' matching the '{' at open_idx, in the mask."""
+        """Index after the matching brace, or len(mask) if it is unclosed."""
         depth = 0
         for j in range(open_idx, len(mask)):
             if mask[j] == "{":
@@ -7342,8 +7324,8 @@ exec "$REAL_GIT" "$@"
     def _inline_fetcher_offenders(cls, text):
         """Inline fetcher-literal coordinates in one seam's text.
 
-        Returns [(line, fetcher, locator)]. A hit is a fetcher applied directly
-        to an inline `{ .. }` that binds a coordinate field to a string literal.
+        Returns lexical [(line, fetcher, locator)] candidates for a fetcher
+        applied directly to an inline `{ .. }` with a coordinate-like field.
         A fetcher applied to an expression (`prev.fetchFromGitHub
         source.source.args`) has no following `{` and is not a hit -- that is the
         sanctioned catalog-resolved form.
@@ -7357,14 +7339,30 @@ exec "$REAL_GIT" "$@"
                 j += 1
             if j >= len(mask) or mask[j] != "{":
                 continue
-            block = text[j : cls._match_brace(mask, j)]
-            coord = cls._COORD_FIELD.search(block)
-            if not coord:
+            end = cls._match_brace(mask, j)
+            block = text[j:end]
+            block_mask = mask[j:end]
+            coordinates = [
+                coordinate
+                for coordinate in cls._COORD_FIELD.finditer(block)
+                if block_mask[coordinate.start(1) : coordinate.end(1)]
+                == coordinate.group(1)
+            ]
+            if not coordinates:
                 continue
-            owner = re.search(r'\bowner\s*=\s*"([^"]*)"', block)
-            repo = re.search(r'\brepo\s*=\s*"([^"]*)"', block)
+            coord = coordinates[0]
+            owner = next(
+                (coordinate for coordinate in coordinates if coordinate.group(1) == "owner"),
+                None,
+            )
+            repo = next(
+                (coordinate for coordinate in coordinates if coordinate.group(1) == "repo"),
+                None,
+            )
             if owner and repo:
-                locator = f"{owner.group(1)}/{repo.group(1)}"
+                owner_value = owner.group(2) if owner.group(2) is not None else owner.group(3)
+                repo_value = repo.group(2) if repo.group(2) is not None else repo.group(3)
+                locator = f"{owner_value}/{repo_value}"
             else:
                 value = coord.group(2) if coord.group(2) is not None else coord.group(3)
                 locator = f"{coord.group(1)}={value}"
@@ -7396,11 +7394,11 @@ exec "$REAL_GIT" "$@"
 
     @staticmethod
     def _classify_flake_input_url(url):
-        """Classify a flake input coordinate.
+        """Classify a flake input coordinate syntactically.
 
-        repo-internal-path : path:./x or path:x (repo-local)      -> allowed
+        repo-internal-path : non-absolute path: syntax            -> allowed
         external-filesystem: path:/abs, file://, git+file://       -> reject
-        remote             : github:/git+ssh:/git+https:/https:... -> allowed
+        remote             : any URI-scheme syntax                 -> allowed
         unknown            : anything else                         -> reject
         """
         if url.startswith("git+file:") or url.startswith("file:"):
@@ -7410,16 +7408,15 @@ exec "$REAL_GIT" "$@"
             return (
                 "external-filesystem" if rest.startswith("/") else "repo-internal-path"
             )
-        if re.match(r"[a-z][a-z0-9+.-]*:", url):
+        if re.match(r"[a-z][a-z0-9+.-]*:", url, flags=re.IGNORECASE):
             return "remote"
         return "unknown"
 
     def test_production_seams_have_no_undeclared_inline_source_coordinates(self):
-        """No production .nix body inlines a fetch coordinate off-catalog.
+        """No detected production inline coordinate is off-catalog.
 
-        Named for what it proves: every fetcher in a production seam is either
-        applied to a catalog record (`<fetcher> X.source.args`) or listed, with a
-        reason and owning issue, in KNOWN_INLINE_SOURCE_LITERALS. It does NOT
+        Every candidate found by the lexical scanner is either catalog-resolved
+        or listed in KNOWN_INLINE_SOURCE_LITERALS. This does NOT
         prove those catalog records are themselves fetchable -- load_source_catalog
         validates their shape; the closure-purity tests cover locator hygiene.
         """
@@ -7433,9 +7430,9 @@ exec "$REAL_GIT" "$@"
         )
 
     def test_inline_source_gate_flags_each_fetcher_kind(self):
-        """Negative fixture per source kind + positive controls.
+        """Representative fetcher negatives plus positive controls.
 
-        Each undeclared inline literal is flagged; each sanctioned form
+        Each represented inline literal is flagged; each sanctioned form
         (catalog-resolved application, commented-out fetcher, a `fetcher ==
         "..."` string, and a runtime/service URL that is not a fetcher argument)
         is not -- the gate does not confuse runtime endpoints with sources.
@@ -7467,6 +7464,7 @@ exec "$REAL_GIT" "$@"
             "catalog-resolved-paren": 'src = prev.fetchFromGitHub (sourceArgs "fetchFromGitHub" n);',
             "commented-out": '# src = fetchFromGitHub { owner = "a"; repo = "b"; };',
             "block-commented": '/* src = fetchurl { url = "https://x"; hash = "y"; }; */',
+            "commented-coordinate": 'src = fetchurl { # url = "https://x";\n };',
             "fetcher-string-compare": 'assert source.source.fetcher == "fetchFromGitHub";',
             "runtime-service-url": 'services.x.endpoint = "https://api.example.com/v1";',
             "lockfile-patch-url": "substituteInPlace lock --replace-fail "
@@ -7505,7 +7503,7 @@ exec "$REAL_GIT" "$@"
             self.assertNotEqual(set(offenders), set(offenders) | {"stale/entry"})
 
     def test_flake_input_coordinates_are_internal_or_declared(self):
-        """Flake input coordinates are repo-internal paths or fetchable remotes.
+        """Flake input coordinates match accepted syntactic classes.
 
         Confirms the allowed classes the gate must tolerate (issue #25): the
         repo-internal path inputs and the stock-trader git+ssh remote. Synthetic
@@ -7533,6 +7531,7 @@ exec "$REAL_GIT" "$@"
             classify("git+ssh://gitea/johnw/stock-trader.git?rev=51d789"),
             "remote",
         )
+        self.assertEqual(classify("HTTPS://example.invalid/source"), "remote")
         self.assertEqual(classify("github:owner/repo/deadbeef"), "remote")
         for bad in (
             "git+file:///Users/johnw/src/x",

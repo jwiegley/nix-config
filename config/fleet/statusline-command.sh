@@ -49,7 +49,7 @@ TOTAL_INPUT=$(integer_or_zero "${FIELDS[10]-1}")
 CACHE_CREATION=$(integer_or_zero "${FIELDS[11]-0}")
 API_TIME_MS=$(integer_or_zero "${FIELDS[12]-0}")
 
-# Get the project basename (truncate to 12 chars)
+# Keep the first 12 basename characters and append an ellipsis when shortened.
 _BASENAME=$(basename "$PROJECT_DIR")
 if [ "${#_BASENAME}" -gt 12 ]; then
     SHORT_PROJECT="${_BASENAME:0:12}…"
@@ -57,7 +57,7 @@ else
     SHORT_PROJECT="$_BASENAME"
 fi
 
-# Check dirty status if in a git repo
+# Check tracked-file dirty status if in a git repo
 DIRTY=""
 if git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
     if ! git -C "$PROJECT_DIR" diff-index --quiet HEAD -- 2>/dev/null; then
@@ -65,7 +65,9 @@ if git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
     fi
 fi
 
-# Generate context bar (11 blocks total) - show used percentage
+# Clamp the percentage so the context bar always contains 11 blocks.
+if [ "$USED_PCT" -lt 0 ]; then USED_PCT=0; fi
+if [ "$USED_PCT" -gt 100 ]; then USED_PCT=100; fi
 FILLED=$(awk -v used_pct="$USED_PCT" 'BEGIN {printf "%.0f", (used_pct / 100) * 11}')
 EMPTY=$((11 - FILLED))
 CONTEXT_BAR=""

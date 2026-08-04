@@ -2,39 +2,23 @@
 # Derive the fleet parity oracle: per-host toplevel drvPath plus the sorted
 # selected-package multiset.
 #
-# Why this exists: nearly every parity gate in the Fleet Configuration Programme
-# says "byte-identical to baseline", but until this script there was no committed
-# baseline artifact and no single recorded way to derive one. Two gates comparing
-# against differently-derived numbers are not comparing anything.
-#
 # The output is stored evidence, not a Nix-generated leaf, so it is committed as
 # a tracked data file under test/baseline/.
 #
-# Determinism contract: for a fixed revision and a fixed nixpkgs lock, every
-# value below is a pure function of the flake. Re-running at the same revision
-# must reproduce the artifact byte-for-byte; that is the whole point, and
-# `--check` asserts it.
+# Determinism contract: a clean tree at a fixed revision and nixpkgs lock must
+# reproduce the artifact byte-for-byte. Dirty-tree derivation still records HEAD
+# as `baselineRev`; its warning marks that label as insufficient to identify the
+# evaluated inputs, so such output is diagnostic rather than exact evidence.
 #
-# The two recorded quantities answer DIFFERENT questions, and a gate that
-# conflates them will either cry wolf or miss a regression:
+# The two recorded quantities answer different questions:
 #
 #   packageCount + packages  — the parity invariant. A refactor must never add
 #       or drop a package. If this multiset moves, something real changed.
 #
-#   drvPath  — sensitive to derivation inputs, which includes source files. A
-#       pure refactor that leaves every derivation input identical leaves
-#       drvPath identical, which is what makes it a sharp refactor oracle. But
-#       in practice EVERY commit moves it: vulcan-crt is path:./config/certs,
-#       which resolves to <whole-flake-source>/config/certs and therefore carries
-#       the hash of the entire tree. Measured: adding one unrelated file moves it.
-#       Adding a file under bin/ additionally moves the nix-scripts source. So a
-#       moved host drvPath is uninformative here; the multiset is the signal.
-#       Measured: adding test/bin/quality and test/bin/parity-baseline moved all four host
-#       drvPaths and moved no multiset (386/414/367/368 unchanged). The portable
-#       drvPaths did not move, since config/fleet does not depend on bin/.
+#   drvPath  — records derivation-input identity and can move with source-path
+#       inputs even when the selected-package multiset is unchanged.
 #
-# So: "drvPath moved" is a question to answer, not automatically a failure.
-# "multiset moved" during a refactor is a failure. Use --compare to see which.
+# --compare reports drvPath and multiset changes separately.
 #
 # Usage:
 #   test/bin/parity-baseline                     # derive, print JSON to stdout
@@ -87,8 +71,7 @@ die() {
     exit 1
 }
 
-# Record every command verbatim in the artifact so a later "vs baseline" gate
-# re-derives identically instead of inventing its own query.
+# Record parameterized derivation-command templates in the artifact.
 commands_json() {
     python3 - "$SORT_NAMES" "$SORT_ATTRS" "$PORTABLE_DIR" <<'PY'
 import json, sys
@@ -161,8 +144,8 @@ derive() {
         die "capture rev $rev does not descend from $ARMED_REFACTOR; the oracle would be unsatisfiable"
 
     # A dirty tree means the artifact would describe something that is not the
-    # recorded revision. Refuse rather than silently mislabel it.
-    if [[ -n $(git status --porcelain -- . ':!test/baseline') ]]; then
+    # recorded revision. Warn rather than presenting it as exact evidence.
+    if [[ -n $(git status --porcelain) ]]; then
         printf 'parity-baseline: WARNING tree is dirty; values may not match rev %s\n' \
             "${rev:0:12}" >&2
     fi
@@ -268,12 +251,8 @@ case ${1-} in
     a mismatch here means the comparison is meaningless, not that parity broke.
     Re-point at the recorded rev, or refresh the oracle (see #31)."
     fi
-    # Compare the DERIVED CORE only. Provenance is inline in the artifact, so
-    # `schema` and `history` are present in a refreshed oracle and absent from
-    # derive()'s output; a literal whole-file diff would call that "drift" and
-    # every --check would fail permanently the moment the oracle first advanced.
-    # Those two fields are not derived quantities and are validated separately by
-    # test/bin/oracle-currency-slow-test.py, which is where they belong.
+    # Compare configuration-derived fields; schema/history are validated by the
+    # currency guard rather than treated as parity output.
     core() {
         python3 -c '
 import json, sys
@@ -298,10 +277,8 @@ print(json.dumps(d, indent=1, sort_keys=False))
     ;;
 --compare)
     # Cross-revision comparison. Unlike --check this does NOT require the same
-    # rev, because its job is to say WHICH kind of drift happened rather than
-    # to assert there was none. Multiset drift fails; drvPath-only drift is
-    # reported and exits 0, since an additive source change moves drvPath
-    # legitimately (see the header).
+    # rev. Target-set and multiset drift fail; drvPath-only drift is reported and
+    # exits 0 (see the header).
     [[ -n ${2-} ]] || die "--compare needs a baseline file"
     [[ -f $2 ]] || die "no such baseline file: $2"
     guard_oracle_compatible "$2"
@@ -357,7 +334,7 @@ if drv_drift:
     print("  So drvPath movement here is uninformative. The multiset above is the")
     print("  signal: investigate only if a MULTISET moved.")
 
-sys.exit(1 if (multiset_drift or missing) else 0)
+sys.exit(1 if (multiset_drift or missing or added) else 0)
 PY
     ;;
 --refresh)
@@ -457,7 +434,7 @@ dest = "test/baseline/parity-%s.json" % new["baselineRev"][:12]
 with open(dest, "w") as fh:
     fh.write(json.dumps(out, indent=1, sort_keys=False) + "\n")
 
-# Exactly one oracle is ever tracked; Git is the archive.
+# Supersede the named old oracle; Git retains its history.
 if os.path.abspath(dest) != os.path.abspath(old_path):
     os.unlink(old_path)
     sys.stderr.write("parity-baseline: superseded %s (removed; Git is the archive)\n" % old_path)
