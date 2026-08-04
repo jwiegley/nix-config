@@ -11,10 +11,10 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 
 - The authoritative checkout is `/Users/johnw/src/nix`, on `main`. It is the
   only worktree.
-- The #123 source boundary is signed Nix commit `eb0da1d4`, with accepted Darwin
-  and package-parity baselines in `f6c4d705`; its `llm-setup` producer retirement
-  is published at `0e8966b`. Publication and activation receipts are tracked
-  separately on the issue.
+- The #125 source boundary is signed commit `f2bc2dbb`, with its focused proof
+  simplified in `852bbc94` and accepted Darwin/package-parity baselines in
+  `5d4d2c06`. Publication and activation receipts are tracked separately on the
+  issue.
 - Hera runs Darwin generation 991. Agent Deck 1.11.0, oMLX 0.5.5, Pi 0.83.0,
   Claude Code 2.1.220, and Codex 0.146.0 are active.
 - Codex defaults to native OpenAI `gpt-5.6-sol`; local oMLX and llama-swap
@@ -38,7 +38,7 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
   (remove Ref and Perplexity) are In Progress. All three are subissues of #98
   and block #121.
 - #125 confines password-store, GnuPG, and Emacs to Hera/Clio after #120/#124.
-  It remains a Todo subissue and blocks #121.
+  It is In Progress and blocks #121.
 - #126 renames the AI-only `config/fleet/` tree back to `config/ai/` after
   #123/#125; it is a deferred Todo subissue and blocks #121.
 - #121 remains the final unchanged-candidate verification and cleanup closeout.
@@ -106,6 +106,15 @@ issues remain explicit exclusions.
   catalog/preflight/wrapper/Pi checks, the 22-second fast gate, generated-leaf
   probes, and a native Hera system build pass. Runtime activation and a fresh
   disposable Pi discovery probe remain open.
+- #125: signed `f2bc2dbb` makes the existing `isDarwinWorkstation` capability
+  the sole user-runtime gate for Emacs, password-store, GnuPG/OpenPGP, desktop
+  email/signing, and pass helpers. `852bbc94` reduces its named-host proof to a
+  direct 104-line contract; `5d4d2c06` records only the 16 intended Linux
+  package removals. Hera and Clio value surfaces are otherwise byte-identical,
+  both Darwin systems build, and the focused check passes on Darwin, ARM Linux,
+  and x86 Linux. Negative-host activation and fresh-login runtime proof remain
+  open; no mutable password, key, Emacs, mail, or credential data was read or
+  changed.
 
 ## Concurrent work boundary
 
