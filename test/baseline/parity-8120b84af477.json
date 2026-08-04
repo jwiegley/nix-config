@@ -1,6 +1,6 @@
 {
  "schema": "fleet-parity-oracle/2",
- "baselineRev": "852bbc940c8fdd1394a7ef702ba7eeaed421dc14",
+ "baselineRev": "8120b84af47751a732f4cdfee9e7d7f4db8c2f41",
  "armedRefactorAncestor": "a3cc3843",
  "note": "Stored evidence for the Fleet Configuration Programme parity gates. Package counts are derived from the lists in this file, never asserted separately. Re-derive with test/bin/parity-baseline --check <this file>.",
  "history": [
@@ -288,6 +288,14 @@
     "lost home-manager/jwiegley@x86_64-linux: pass-env",
     "lost home-manager/jwiegley@x86_64-linux: pass-git-helper"
    ]
+  },
+  {
+   "old_rev": "852bbc940c8fdd1394a7ef702ba7eeaed421dc14",
+   "new_rev": "8120b84af47751a732f4cdfee9e7d7f4db8c2f41",
+   "reason": "Rename the portable AI subflake from config/fleet back to config/ai (#126)",
+   "intentional_deltas": [],
+   "observed_deltas": [],
+   "derivation_command_change": "portablePackages: ./config/fleet#packages -> ./config/ai#packages"
   }
  ],
  "commands": {
@@ -295,14 +303,14 @@
   "darwinPackages": "nix eval --no-write-lock-file --json \".#darwinConfigurations.<host>.config.home-manager.users.<user>.home.packages\" --apply 'ps: builtins.sort builtins.lessThan (map (p: p.pname or p.name) ps)'",
   "hmDrvPath": "nix eval --no-write-lock-file --raw \".#homeConfigurations.\\\"<attr>\\\".activationPackage.drvPath\"",
   "hmPackages": "nix eval --no-write-lock-file --json \".#homeConfigurations.\\\"<attr>\\\".config.home.packages\" --apply 'ps: builtins.sort builtins.lessThan (map (p: p.pname or p.name) ps)'",
-  "portablePackages": "nix eval --no-write-lock-file --json \"./config/fleet#packages.<system>\" --apply 'ps: builtins.sort builtins.lessThan (builtins.attrNames ps)'"
+  "portablePackages": "nix eval --no-write-lock-file --json \"./config/ai#packages.<system>\" --apply 'ps: builtins.sort builtins.lessThan (builtins.attrNames ps)'"
  },
  "targets": [
   {
    "kind": "darwin",
    "target": "clio",
    "user": "johnw",
-   "drvPath": "/nix/store/0vbmd2sg433nqh7ykl1hmgsx2sddwpgz-darwin-system-26.11.15abb8c.drv",
+   "drvPath": "/nix/store/l8kcgw4703h3qrn7qdpas8sdsxzg5aqw-darwin-system-26.11.15abb8c.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -696,7 +704,7 @@
    "kind": "darwin",
    "target": "hera",
    "user": "johnw",
-   "drvPath": "/nix/store/kr65xyr01061mawvhzm59jfdhgldc0jk-darwin-system-26.11.15abb8c.drv",
+   "drvPath": "/nix/store/5grgxxf47fm1xzcfjj4jzv0qnlcdprv7-darwin-system-26.11.15abb8c.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1117,7 +1125,7 @@
   {
    "kind": "home-manager",
    "target": "johnw@aarch64-linux",
-   "drvPath": "/nix/store/fhxzfwq8g83c357xkyzal0xvzdrfymgi-home-manager-generation.drv",
+   "drvPath": "/nix/store/ps8galr26npxsgzk81ws6w9xlxv7g0w9-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1485,7 +1493,7 @@
   {
    "kind": "home-manager",
    "target": "jwiegley@x86_64-linux",
-   "drvPath": "/nix/store/dngwq1i7my298vcfx1p8cc03s1kzhvqa-home-manager-generation.drv",
+   "drvPath": "/nix/store/srl0lzqzvziywyq42rdgrhgnhfiyl9m0-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
