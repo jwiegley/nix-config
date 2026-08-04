@@ -10,9 +10,6 @@
 
 let
   home = "/Users/johnw";
-  primaryUser = config.system.primaryUser;
-  primaryUserUid = config.users.users.${primaryUser}.uid;
-
   xdg_configHome = "${home}/.config";
 
   homebrewTrustJson = pkgs.writeText "homebrew-trust.json" (
@@ -398,26 +395,11 @@ in
   system = {
     stateVersion = 4;
 
-    # Retire Home Manager's old gpg-agent job before nix-darwin installs or
-    # reloads either system or user launchd jobs. This also runs before Home
-    # Manager's post-activation, so the ownership handoff cannot race setup.
-    #
     # Homebrew enforces tap trust during nix-darwin's Homebrew activation
     # before Home Manager links files. It also rejects trust stores whose real
     # path lives under the root-owned Nix store, so this must be a real user-owned
     # file in ~/.homebrew rather than a home.file symlink.
     activationScripts.preActivation.text = ''
-      stale_hm_gpg_agent_label=org.nix-community.home.gpg-agent
-      for stale_hm_gpg_agent_domain in "gui/${toString primaryUserUid}" "user/${toString primaryUserUid}"; do
-        stale_hm_gpg_agent_target="$stale_hm_gpg_agent_domain/$stale_hm_gpg_agent_label"
-        /bin/launchctl bootout "$stale_hm_gpg_agent_target" >/dev/null 2>&1 || true
-        if /bin/launchctl print "$stale_hm_gpg_agent_target" >/dev/null 2>&1; then
-          echo "error: stale $stale_hm_gpg_agent_label survived in $stale_hm_gpg_agent_domain for ${primaryUser} (uid ${toString primaryUserUid})" >&2
-          exit 1
-        fi
-      done
-      unset stale_hm_gpg_agent_domain stale_hm_gpg_agent_label stale_hm_gpg_agent_target
-
       /usr/bin/install -d -o johnw -g staff -m 0755 ${home}/.homebrew
       /bin/rm -f ${home}/.homebrew/trust.json
       /usr/bin/install -o johnw -g staff -m 0644 ${homebrewTrustJson} ${home}/.homebrew/trust.json

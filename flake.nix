@@ -423,11 +423,6 @@
                 configured = agentTestPkgsFor.${system};
               };
             }
-            // pkgs.lib.optionalAttrs (system == "aarch64-darwin") {
-              gpg-agent-handoff = pkgs.callPackage ./test/darwin/gpg-agent-handoff.nix {
-                inherit darwinConfigurations;
-              };
-            }
           );
         in
         forAllSystems (
