@@ -11,8 +11,9 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 
 - The authoritative checkout is `/Users/johnw/src/nix`, on `main`. It is the
   only worktree.
-- Published Gitea and GitHub `main` match `e9ba2962`; local `main` carries the
-  active #124 Ref/Perplexity-retirement candidate.
+- The #124 source boundary is signed commit `1ad23d7c`, with accepted Darwin and
+  package-parity baselines in `9c476513`. Publication and activation receipts
+  are tracked separately on the issue.
 - Hera runs Darwin generation 991. Agent Deck 1.11.0, oMLX 0.5.5, Pi 0.83.0,
   Claude Code 2.1.220, and Codex 0.146.0 are active.
 - Codex defaults to native OpenAI `gpt-5.6-sol`; local oMLX and llama-swap
@@ -77,7 +78,7 @@ issues remain explicit exclusions.
   default/schema plumbing. Focused catalog/preflight checks, generated-leaf and
   package absence probes, fast gate, a native system build, refreshed baselines,
   and independent audit pass. Host activation remains open.
-- #124: the current source candidate removes both live catalog entries, renderer
+- #124: signed `1ad23d7c` removes both live catalog entries, renderer
   credentials, the legacy Ref importer, the password-store carrier, and the
   Perplexity-bound web-searcher content. PromptDeploy no longer produces either
   service. A proposed activation-time JSON writer was rejected before commit:
