@@ -63,32 +63,6 @@ let
   profilesForHome = lib.filterAttrs (_: profile: profile.host == profileHost) catalog.profiles;
   homeClassKnown = profilesForHome != { };
   profileIds = lib.sort builtins.lessThan (builtins.attrNames profilesForHome);
-  rootsForClient =
-    client:
-    lib.sort builtins.lessThan (
-      lib.unique (
-        map (profile: profile.root) (
-          builtins.attrValues (lib.filterAttrs (_: profile: profile.client == client) profilesForHome)
-        )
-      )
-    );
-  managedMcpServersForClient =
-    client:
-    lib.listToAttrs (
-      map (
-        profileId:
-        let
-          profile = catalog.profiles.${profileId};
-        in
-        lib.nameValuePair profile.root (
-          lib.sort builtins.lessThan (builtins.attrNames (selectedFor profileId).mcpServers)
-        )
-      ) (builtins.filter (profileId: catalog.profiles.${profileId}.client == client) profileIds)
-    );
-  allProfileRoots = lib.sort builtins.lessThan (
-    lib.unique (map (profile: profile.root) (builtins.attrValues profilesForHome))
-  );
-
   selectedFor =
     profileId:
     let
@@ -137,17 +111,6 @@ let
     builtins.filter (rendered: rendered ? mutableMcpGuard) renderedProfiles
   );
   piGuard = if piGuards == [ ] then null else builtins.head piGuards;
-  retiredMcpCleanup = (import ./fleet/retired-mcp-cleanup.nix { inherit lib pkgs; }) {
-    homeDirectory = config.home.homeDirectory;
-    retiredServers = catalog.retiredMcpServers;
-    retiredManifestMcpItems = catalog.retiredPromptdeployMcpItems;
-    retiredManifestSkillItems = catalog.retiredPromptdeploySkillItems;
-    codexManagedServers = managedMcpServersForClient "codex";
-    claudeManagedServers = managedMcpServersForClient "claude";
-    piRoots = rootsForClient "pi";
-    manifestRoots = allProfileRoots;
-  };
-
   validRelativePath =
     path:
     let
@@ -342,7 +305,6 @@ in
     };
     activation = {
       aiManagedPreflight = preflight.activation;
-      aiRetiredMcpCleanup = retiredMcpCleanup.activation;
     }
     // lib.optionalAttrs droidSelected {
       aiDroidSettingsConvergence = droidSettingsConvergence;

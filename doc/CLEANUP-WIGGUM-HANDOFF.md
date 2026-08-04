@@ -11,8 +11,8 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 
 - The authoritative checkout is `/Users/johnw/src/nix`, on `main`. It is the
   only worktree.
-- Published Gitea and GitHub `main` match `cb92afb4`; local `main` carries the
-  active #119 source-retirement candidate.
+- Published Gitea and GitHub `main` match `302e8de8`; local `main` carries the
+  active #116 source-retirement candidate.
 - Hera runs Darwin generation 990. Agent Deck 1.11.0, oMLX 0.5.5, Pi 0.83.0,
   Claude Code 2.1.220, and Codex 0.146.0 are active.
 - Codex defaults to native OpenAI `gpt-5.6-sol`; local oMLX and llama-swap
@@ -30,8 +30,8 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 - Done: #99-#108 and #110-#115, including #104's complete comment audit.
 - #109 was closed as not planned after its compliant prototype added far more
   policy and test code than the renderer literals it removed.
-- #116 is In Progress. #117 is closed not-planned, superseded by #124. #118-#120
-  remain Todo with current evidence recorded on their issues.
+- #116 and #118-#120 are In Progress. #117 is closed not-planned, superseded by
+  #124.
 - New user-requested cleanup issues #122 (remove OpenCode) and #123 (retire the
   Nix model registry) are Todo, are subissues of #98, and block #121. #123 is
   ordered after #122; #122 is ordered after #116.
@@ -51,21 +51,22 @@ issues remain explicit exclusions.
 
 ## Mutable-state holds
 
-- #116: Hera 990 and Clio 245 completed authorized cleanup-bearing activations,
-  fresh clients, and clean post-client probes. VPS published a paired lock update
-  and built successfully, but Home Manager preflight found two differing
-  user-owned Alexey artifacts; it was rolled back cleanly to generation 124.
-  Vulcan completed two `./build` switch cycles and a clean post-cycle probe.
-  Shared-work generation 198 is resident/rooted everywhere; all four activation,
-  fresh-Codex, cleanup, and log probes passed. VPS is the sole remaining host.
+- #116: all eight hosts completed cleanup-bearing activation and clean post-cycle
+  probes. Vulcan used two repository-owned `./build` cycles; shared-work generation
+  198 is resident/rooted everywhere and all four fresh Codex probes passed. VPS
+  archived two differing Alexey artifacts unchanged under
+  `/home/johnw/dl/nix-managed-preflight-vps-20260804-072726`, then completed two
+  clean switch cycles. The finite cleanup and tombstones are removed in the
+  current source candidate; focused/all-system checks, fast gate, and native build
+  pass. Post-retirement fleet activation remains a separate gate.
 - #117 is superseded. #124 removes Ref, Perplexity, the legacy importer, and the
   temporary credential carrier. No shared password-store provisioning is needed.
 - #118: published commit `8c3d4431` removes the one-shot migration and private
   fixtures after Hera's generation-990/fresh-Pi proof. Post-retirement activation
   remains.
 - #119: Hera 990, Clio 245, and all four shared-work hosts passed fresh Codex and
-  steady-state log probes. The old-directory migration is removed in the current
-  source candidate; focused wrapper checks, the fast gate, and a native build pass.
+  steady-state log probes. Published commit `302e8de8` removes the old-directory
+  migration after focused checks, fast gate, native build, and independent audit.
 - #120: both Darwin hosts completed the pre-retirement activation/absence proof.
   Published commit `b5d31874` removes the stale-label guard and dedicated test;
   both Darwin builds pass. Post-retirement activation is not yet authorized.
