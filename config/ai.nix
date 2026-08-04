@@ -48,10 +48,6 @@ let
       inherit lib;
       pkgs = rendererPkgs;
     };
-    opencode = import ./fleet/renderers/opencode.nix {
-      inherit lib;
-      pkgs = rendererPkgs;
-    };
     pi = import ./fleet/renderers/pi.nix {
       inherit lib;
       pkgs = piRendererPkgs;
@@ -81,9 +77,6 @@ let
     in
     {
       inherit models providers;
-    }
-    // lib.optionalAttrs (builtins.hasAttr profileId modelData.profileDefaults) {
-      default = modelData.profileDefaults.${profileId};
     };
   renderProfile =
     profileId:
@@ -131,7 +124,6 @@ let
     ".config/codex"
     ".config/factory"
     ".config/mcp"
-    ".config/opencode"
     ".config/pi"
     ".factory"
     ".pi"

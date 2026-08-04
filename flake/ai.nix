@@ -171,7 +171,6 @@ let
     ++ agent "gemini-cli"
     ++ agent "git-surgeon"
     ++ agent "mcporter"
-    ++ agent "opencode"
     ++ agent "pi"
     ++ lib.optionals (aiPackagePolicy.supportsAiperf pkgs.python313Packages) (opt "aiperf")
     ++ optMany (aiPackagePolicy.groups.common ++ aiPackagePolicy.groups.portableOnly)

@@ -28,9 +28,6 @@ let
     ".config/codex/agents"
     ".config/factory/droids"
     ".config/factory/skills"
-    ".config/opencode/agents"
-    ".config/opencode/commands"
-    ".config/opencode/skills"
     ".config/pi/agent/agents"
     ".config/pi/agent/prompts"
   ];
@@ -53,7 +50,6 @@ let
     ".config/factory/mcp.json"
     ".config/factory/nix-managed-settings.json"
     ".config/mcp/mcp.json"
-    ".config/opencode/opencode.json"
     ".pi-lens/config.json"
     ".config/pi/agent/extensions/auto-compact-resume/index.ts"
     ".config/pi/agent/extensions/fleet-theme/index.ts"

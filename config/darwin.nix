@@ -239,7 +239,6 @@ in
       "microsoft-word"
       "netdownloadhelpercoapp"
       "obsidian"
-      "opencode-desktop"
       "path-finder"
       "pdf-expert"
       "postman"

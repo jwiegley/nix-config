@@ -10,7 +10,6 @@ let
   clients = [
     "claude"
     "codex"
-    "opencode"
     "droid"
     "pi"
   ];
@@ -18,7 +17,6 @@ let
   commandClients = [
     "claude"
     "codex"
-    "opencode"
     "pi"
   ];
   audiences = [
@@ -40,19 +38,15 @@ let
     clio-claude-personal = ".config/claude/personal";
     clio-claude-positron = ".config/claude/positron";
     clio-codex = ".config/codex";
-    clio-opencode = ".config/opencode";
     hera-claude-personal = ".config/claude/personal";
     hera-claude-positron = ".config/claude/positron";
     hera-codex = ".config/codex";
     hera-droid = ".config/factory";
-    hera-opencode = ".config/opencode";
     hera-pi = ".config/pi/agent";
     shared-work-claude-positron = ".claude";
     shared-work-codex = ".codex";
-    shared-work-opencode-positron = ".config/opencode";
     vps-claude-personal = ".claude";
     vulcan-claude-personal = ".claude";
-    vulcan-opencode = ".config/opencode";
   };
 
   mkProfile = id: client: profileAudiences: host: platform: {
@@ -71,13 +65,11 @@ let
     clio-claude-personal = mkProfile "clio-claude-personal" "claude" [ "personal" ] "clio" "darwin";
     clio-claude-positron = mkProfile "clio-claude-positron" "claude" [ "positron" ] "clio" "darwin";
     clio-codex = mkProfile "clio-codex" "codex" [ "personal" ] "clio" "darwin";
-    clio-opencode = mkProfile "clio-opencode" "opencode" [ "personal" ] "clio" "darwin";
 
     hera-claude-personal = mkProfile "hera-claude-personal" "claude" [ "personal" ] "hera" "darwin";
     hera-claude-positron = mkProfile "hera-claude-positron" "claude" [ "positron" ] "hera" "darwin";
     hera-codex = mkProfile "hera-codex" "codex" [ "personal" ] "hera" "darwin";
     hera-droid = mkProfile "hera-droid" "droid" [ "personal" ] "hera" "darwin";
-    hera-opencode = mkProfile "hera-opencode" "opencode" [ "personal" ] "hera" "darwin";
     hera-pi = mkProfile "hera-pi" "pi" [ "personal" ] "hera" "darwin";
 
     shared-work-claude-positron = mkProfile "shared-work-claude-positron" "claude" [
@@ -87,15 +79,10 @@ let
       "personal"
       "positron"
     ] "shared-work" "linux";
-    shared-work-opencode-positron = mkProfile "shared-work-opencode-positron" "opencode" [
-      "positron"
-    ] "shared-work" "linux";
-
     vps-claude-personal = mkProfile "vps-claude-personal" "claude" [ "personal" ] "vps" "linux";
     vulcan-claude-personal = mkProfile "vulcan-claude-personal" "claude" [
       "personal"
     ] "vulcan" "linux";
-    vulcan-opencode = mkProfile "vulcan-opencode" "opencode" [ "personal" ] "vulcan" "linux";
   };
 
   matchesAny = actual: wanted: wanted == null || lib.any (value: builtins.elem value actual) wanted;
@@ -847,10 +834,8 @@ let
         {
           profiles = [
             "clio-claude-personal"
-            "clio-opencode"
             "hera-claude-personal"
             "hera-droid"
-            "hera-opencode"
             "hera-pi"
           ];
         };
@@ -865,10 +850,8 @@ let
         {
           profiles = [
             "clio-claude-personal"
-            "clio-opencode"
             "hera-claude-personal"
             "hera-droid"
-            "hera-opencode"
             "hera-pi"
           ];
         };
@@ -901,7 +884,6 @@ let
         {
           profiles = [
             "vulcan-claude-personal"
-            "vulcan-opencode"
           ];
         };
 
@@ -912,13 +894,10 @@ let
         {
           profiles = [
             "clio-claude-personal"
-            "clio-opencode"
             "hera-claude-personal"
             "hera-droid"
-            "hera-opencode"
             "hera-pi"
             "vulcan-claude-personal"
-            "vulcan-opencode"
           ];
         };
 
@@ -939,7 +918,6 @@ let
           clients = [
             "claude"
             "droid"
-            "opencode"
             "pi"
           ];
         };
@@ -999,12 +977,9 @@ let
         {
           profiles = [
             "clio-claude-personal"
-            "clio-opencode"
             "hera-claude-personal"
             "hera-droid"
-            "hera-opencode"
             "hera-pi"
-            "vulcan-opencode"
           ];
         };
   };
@@ -1434,7 +1409,6 @@ let
       "startup_timeout_sec"
       "tool_timeout_sec"
     ];
-    opencode = [ "timeout" ];
     droid = [ ];
     pi = [ ];
   };
@@ -1591,26 +1565,6 @@ let
       modelSelectorChecks = lib.mapAttrsToList (
         name: model: ensure (validateSelectors (model.selectors or { })) "invalid model selector ${name}"
       ) modelData.models;
-      defaultChecks = lib.mapAttrsToList (
-        profileId: default:
-        let
-          profile = profiles.${profileId};
-          selectedProviders = select profile modelData.providers;
-          selectedModels = lib.filterAttrs (
-            _name: model:
-            builtins.hasAttr model.provider selectedProviders && matches profile (model.selectors or { })
-          ) modelData.models;
-        in
-        ensure (
-          builtins.hasAttr profileId profiles
-          && builtins.isString default.provider
-          && builtins.isString default.model
-          && builtins.hasAttr default.provider selectedProviders
-          && lib.any (model: model.provider == default.provider && model.id == default.model) (
-            builtins.attrValues selectedModels
-          )
-        ) "default is filtered from profile ${profileId}"
-      ) modelData.profileDefaults;
       piProfile = profiles.hera-pi;
       piMcpNames = builtins.attrNames (select piProfile items.mcpServers);
       piProviderNames = builtins.attrNames (select piProfile modelData.providers);
@@ -1676,8 +1630,7 @@ let
       ++ mcpChecks
       ++ mcpResolutionChecks
       ++ providerSelectorChecks
-      ++ modelSelectorChecks
-      ++ defaultChecks;
+      ++ modelSelectorChecks;
     in
     builtins.deepSeq checks true;
 in

@@ -79,7 +79,7 @@ in
       '';
 
       meta = with lib; {
-        description = "Terminal session manager for AI coding agents (one tmux TUI for Claude, Codex, Gemini, OpenCode, and more)";
+        description = "Terminal session manager for AI coding agents";
         homepage = "https://github.com/asheshgoplani/agent-deck";
         license = licenses.mit;
         mainProgram = "agent-deck";

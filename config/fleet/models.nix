@@ -34,7 +34,6 @@ let
     "allowedHosts"
     "allowedInsecureBaseUrlsByProvider"
     "allowedNonSecretCredentialsByProvider"
-    "profileDefaultProfiles"
     "providers"
     "syncChatPath"
   ];
@@ -100,26 +99,10 @@ let
         )
       )
     );
-  validOpenCode =
-    value:
-    exactKeys [
-      "name"
-      "npm"
-      "timeout"
-    ] value
-    && hasKeys [
-      "name"
-      "npm"
-      "timeout"
-    ] value
-    && nonEmptyString value.name
-    && nonEmptyString value.npm
-    && builtins.isBool value.timeout;
   validProviderPolicy =
     value:
     allowedKeys [
       "droid"
-      "opencode"
       "selectors"
     ] value
     && hasKeys [
@@ -127,8 +110,7 @@ let
       "selectors"
     ] value
     && validSelectors value.selectors
-    && validDroid value.droid
-    && (!value ? opencode || validOpenCode value.opencode);
+    && validDroid value.droid;
   validSyncPath =
     value:
     nonEmptyString value
@@ -313,9 +295,6 @@ let
           allowedInsecureBaseUrlsByProvider.${name} != null
       ) (builtins.attrNames allowedInsecureBaseUrlsByProvider)
     ) "invalid provider-bound insecure URL allowlist")
-    (ensure (
-      policy ? profileDefaultProfiles && validNonEmptyStringList policy.profileDefaultProfiles
-    ) "invalid profile default fan-out")
     (ensure (policy ? syncChatPath && validSyncPath policy.syncChatPath) "invalid sync chat path")
     (ensure (policy ? providers && builtins.isAttrs policy.providers) "invalid provider policy set")
     (ensure (sortStrings providerPolicyNames == sortStrings providerIds) "provider policy set differs")
@@ -412,8 +391,7 @@ let
           selectors =
             providerPolicy.selectors // (if source ? hosts then { inherit (source) hosts; } else { });
         }
-        // (if providerPolicy ? droid then { inherit (providerPolicy) droid; } else { })
-        // (if providerPolicy ? opencode then { inherit (providerPolicy) opencode; } else { });
+        // (if providerPolicy ? droid then { inherit (providerPolicy) droid; } else { });
       }
     ) (builtins.length rawProviders)
   );
@@ -443,12 +421,6 @@ let
   );
 
   selections = rawSelections;
-  profileDefaults = builtins.listToAttrs (
-    map (profileId: {
-      name = profileId;
-      value = selections.default;
-    }) policy.profileDefaultProfiles
-  );
   selectedProvider = providers.${selections.default.provider};
   selectedBaseUrlLength = builtins.stringLength selectedProvider.baseUrl;
   selectedBaseUrl =
@@ -467,7 +439,6 @@ assert validated;
 {
   inherit
     models
-    profileDefaults
     providers
     selections
     syncInputs

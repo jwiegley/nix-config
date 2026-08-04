@@ -53,7 +53,6 @@ let
       ".config/claude/positron/agents/nix-managed.md"
       ".config/codex/agents/nix-managed.md"
       ".config/factory/droids/nix-managed.md"
-      ".config/opencode/agents/nix-managed.md"
       ".config/pi/agent/agents/nix-managed.md"
     ];
   };
@@ -273,7 +272,7 @@ pkgs.runCommand "ai-managed-preflight"
           expected_noun=path
           ;;
         *task9-ai-shared-leaf-preflight)
-          expected_count=9
+          expected_count=8
           expected_noun=paths
           ;;
         *)
@@ -620,7 +619,6 @@ pkgs.runCommand "ai-managed-preflight"
       ".config/claude/positron/agents/user-owned.md" \
       ".config/codex/agents/user-owned.md" \
       ".config/factory/droids/user-owned.md" \
-      ".config/opencode/agents/user-owned.md" \
       ".config/pi/agent/agents/user-owned.md"
     do
       make_leaf "$case_home" "$sibling" user-owned

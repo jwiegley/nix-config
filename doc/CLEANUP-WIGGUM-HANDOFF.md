@@ -11,8 +11,8 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 
 - The authoritative checkout is `/Users/johnw/src/nix`, on `main`. It is the
   only worktree.
-- Published Gitea and GitHub `main` match `302e8de8`; local `main` carries the
-  active #116 source-retirement candidate.
+- Published Gitea and GitHub `main` match `e5b7f905`; local `main` carries the
+  active #122 OpenCode-retirement candidate.
 - Hera runs Darwin generation 990. Agent Deck 1.11.0, oMLX 0.5.5, Pi 0.83.0,
   Claude Code 2.1.220, and Codex 0.146.0 are active.
 - Codex defaults to native OpenAI `gpt-5.6-sol`; local oMLX and llama-swap
@@ -30,14 +30,16 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 - Done: #99-#108 and #110-#115, including #104's complete comment audit.
 - #109 was closed as not planned after its compliant prototype added far more
   policy and test code than the renderer literals it removed.
-- #116 and #118-#120 are In Progress. #117 is closed not-planned, superseded by
-  #124.
+- #116 and #119 are In Progress. #118/#120 are Done. #117 is closed not-planned,
+  superseded by #124.
 - New user-requested cleanup issues #122 (remove OpenCode) and #123 (retire the
   Nix model registry) are Todo, are subissues of #98, and block #121. #123 is
   ordered after #122; #122 is ordered after #116.
 - #124 removes Ref and Perplexity from every client after #116/#122. #125 confines
   password-store, GnuPG, and Emacs to Hera/Clio after #120/#124. Both are Todo
   subissues and block #121.
+- #126 renames the AI-only `config/fleet/` tree back to `config/ai/` after
+  #123/#125; it is a deferred Todo subissue and blocks #121.
 - #121 remains the final unchanged-candidate verification and cleanup closeout.
 
 ## Comment-audit boundary
@@ -61,15 +63,17 @@ issues remain explicit exclusions.
   pass. Post-retirement fleet activation remains a separate gate.
 - #117 is superseded. #124 removes Ref, Perplexity, the legacy importer, and the
   temporary credential carrier. No shared password-store provisioning is needed.
-- #118: published commit `8c3d4431` removes the one-shot migration and private
-  fixtures after Hera's generation-990/fresh-Pi proof. Post-retirement activation
-  remains.
+- #118 is complete: published `8c3d4431` removed the one-shot migration; Hera
+  generation 991 passed post-retirement path/session/fresh-Pi proof.
 - #119: Hera 990, Clio 245, and all four shared-work hosts passed fresh Codex and
   steady-state log probes. Published commit `302e8de8` removes the old-directory
   migration after focused checks, fast gate, native build, and independent audit.
-- #120: both Darwin hosts completed the pre-retirement activation/absence proof.
-  Published commit `b5d31874` removes the stale-label guard and dedicated test;
-  both Darwin builds pass. Post-retirement activation is not yet authorized.
+- #120 is complete: published `b5d31874` removed the stale-label guard; Hera 991
+  and Clio 247 passed post-retirement old-label absence proof.
+- #122: the current candidate removes OpenCode package/cask selection, four
+  profiles, renderer, preflight ownership, selectors, and OpenCode-only model
+  default/schema plumbing. Focused catalog/preflight checks, generated-leaf and
+  package absence probes, fast gate, and a native system build pass.
 
 ## Concurrent work boundary
 

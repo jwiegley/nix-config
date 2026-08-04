@@ -519,7 +519,6 @@ rec {
     ++ optAgent "codex"
     ++ optAgent "droid"
     ++ optAgent "git-surgeon"
-    ++ optAgent "opencode"
 
     # ── MCP Servers & Agent Tools ────────────────────────────────────
     # drafts-mcp-server is macOS-only (drives Drafts.app via AppleScript)
