@@ -1103,17 +1103,14 @@ test_codex_host_state_rejections() {
         fail "Codex wrong-log-link failure was not reported at the host-state boundary"
     finish_case codex
 
-    new_case codex host-state-log-migration-failure
+    new_case codex host-state-plain-log-directory
     configure_state complete
     mkdir -p "$ROOT/log"
-    printf '%s\n' occupied >"$ROOT/log/entry"
-    chmod 500 "$ROOT"
     invoke_agent codex 0 0 alpha
-    chmod 700 "$ROOT"
-    [ "$LAST_STATUS" -ne 0 ] || fail "Codex ignored a host-state log migration failure"
+    [ "$LAST_STATUS" -ne 0 ] || fail "Codex accepted a plain host-state log directory"
     assert_upstream_not_invoked
-    grep -F 'codex: cannot migrate host-local log path' "$STDERR_FILE" >/dev/null ||
-        fail "Codex log migration failure was not reported at the host-state boundary"
+    grep -F 'codex: refusing host-local log path' "$STDERR_FILE" >/dev/null ||
+        fail "Codex plain-log-directory failure was not reported at the host-state boundary"
     finish_case codex
 }
 

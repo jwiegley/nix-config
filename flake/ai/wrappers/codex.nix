@@ -92,14 +92,6 @@ let
 
     # Point the shared log path at machine-local storage.
     codex_log_dir="$codex_shared_home/log"
-    if [ -d "$codex_log_dir" ] && [ ! -L "$codex_log_dir" ]; then
-      if ! ${pkgs.coreutils}/bin/rmdir "$codex_log_dir" 2>/dev/null \
-        && ! ${pkgs.coreutils}/bin/mv \
-          "$codex_log_dir" "$codex_log_dir.pre-host-state.$$" 2>/dev/null; then
-        echo "codex: cannot migrate host-local log path" >&2
-        exit 1
-      fi
-    fi
     if [ ! -e "$codex_log_dir" ] && [ ! -L "$codex_log_dir" ] \
       && ! ${pkgs.coreutils}/bin/ln -s \
         "$codex_local_root/log" "$codex_log_dir" 2>/dev/null; then
