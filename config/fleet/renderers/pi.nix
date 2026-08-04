@@ -13,28 +13,6 @@ let
   json = pkgs.formats.json { };
   mergeFiles = import ./merge-files.nix { inherit lib; };
 
-  expectedProviderNames = [
-    "llama-cpp-local"
-    "omlx"
-  ];
-  expectedMcpNames = [
-    "Ref"
-    "context-hub"
-    "context7"
-    "devonthink"
-    "drafts"
-    "memory-vault"
-    "pal"
-    "perplexity"
-    "searxng"
-    "sequential-thinking"
-    "stock-trader"
-  ];
-  expectedHttpHeaders = {
-    Ref = "x-ref-api-key";
-    context7 = "CONTEXT7_API_KEY";
-  };
-
   hasOnlyKeys =
     allowed: value: builtins.all (name: builtins.elem name allowed) (builtins.attrNames value);
   isTypedEnv =
@@ -141,7 +119,7 @@ let
     else
       throw "unsupported Pi MCP environment value";
   renderMcpServer =
-    name: server:
+    _: server:
     let
       inherit (server) transport;
     in
@@ -151,13 +129,7 @@ let
         "url"
       ] transport;
       assert isSafeUrl transport.url;
-      assert
-        if transport ? headers then
-          builtins.hasAttr name expectedHttpHeaders
-          && builtins.attrNames transport.headers == [ expectedHttpHeaders.${name} ]
-          && isTypedEnv transport.headers.${expectedHttpHeaders.${name}}
-        else
-          !(builtins.hasAttr name expectedHttpHeaders);
+      assert !(transport ? headers) || builtins.all isTypedEnv (builtins.attrValues transport.headers);
       {
         inherit (transport) url;
         oauth = false;
@@ -166,7 +138,6 @@ let
         headers = lib.mapAttrs (_: reference: renderEnv reference.env) transport.headers;
       }
     else
-      assert !(builtins.hasAttr name expectedHttpHeaders);
       assert hasOnlyKeys [
         "args"
         "command"
@@ -314,8 +285,6 @@ assert selected.hooks == { };
 assert selected.marketplaces == { };
 assert selected.settings == { };
 assert mcp.settings.mcpFooterStatus == "compact";
-assert builtins.attrNames selected.mcpServers == expectedMcpNames;
-assert builtins.attrNames modelData.providers == expectedProviderNames;
 assert
   builtins.attrNames models.providers == [
     "llama-swap"

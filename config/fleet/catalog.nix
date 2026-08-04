@@ -805,6 +805,10 @@ let
   prompts = builtInPrompts;
 
   typedEnv = env: { inherit env; };
+  mcpHttpHeaders = {
+    Ref.x-ref-api-key = typedEnv "REF_API_KEY";
+    context7.CONTEXT7_API_KEY = typedEnv "CONTEXT7_API_KEY";
+  };
   baseMcpSelectors = {
     clients = contentClients;
   };
@@ -823,7 +827,7 @@ let
   mcpServers = {
     Ref = mkMcp "Ref" "Ref documentation code reference" {
       url = "https://api.ref.tools/mcp";
-      headers.x-ref-api-key = typedEnv "REF_API_KEY";
+      headers = mcpHttpHeaders.Ref;
     } baseMcpSelectors;
 
     context-hub =
@@ -841,7 +845,7 @@ let
 
     context7 = mkMcp "context7" "Context7 documentation lookup for libraries and frameworks" {
       url = "https://mcp.context7.com/mcp";
-      headers.CONTEXT7_API_KEY = typedEnv "CONTEXT7_API_KEY";
+      headers = mcpHttpHeaders.context7;
     } baseMcpSelectors;
 
     devonthink =
@@ -1503,6 +1507,8 @@ let
         )
     );
 
+  validateMcpHeaders = name: transport: (transport.headers or { }) == (mcpHttpHeaders.${name} or { });
+
   validate =
     {
       profiles ? catalogProfiles,
@@ -1552,10 +1558,13 @@ let
         in
         ensure (
           validateTransport server.transport
+          && validateMcpHeaders name server.transport
           && builtins.all (host: lib.any (profile: profile.host == host) matchingProfiles) (
             builtins.attrNames hostTransports
           )
-          && builtins.all (host: validateTransport hostTransports.${host}) (builtins.attrNames hostTransports)
+          && builtins.all (
+            host: validateTransport hostTransports.${host} && validateMcpHeaders name hostTransports.${host}
+          ) (builtins.attrNames hostTransports)
           && validateOverrides (server.overrides or { })
         ) "invalid MCP server ${name}"
       ) items.mcpServers;
@@ -1612,6 +1621,9 @@ let
           )
         ) "default is filtered from profile ${profileId}"
       ) modelData.profileDefaults;
+      piProfile = profiles.hera-pi;
+      piMcpNames = builtins.attrNames (select piProfile items.mcpServers);
+      piProviderNames = builtins.attrNames (select piProfile modelData.providers);
       checks = [
         (ensure (profileIds == allowedProfileIds) "profile ID set differs")
         (ensure (
@@ -1658,6 +1670,27 @@ let
           in
           builtins.length names == builtins.length (lib.unique names)
         ) "duplicate skill name")
+        (ensure (
+          piMcpNames == [
+            "Ref"
+            "context-hub"
+            "context7"
+            "devonthink"
+            "drafts"
+            "memory-vault"
+            "pal"
+            "perplexity"
+            "searxng"
+            "sequential-thinking"
+            "stock-trader"
+          ]
+        ) "Pi MCP selection differs")
+        (ensure (
+          piProviderNames == [
+            "llama-cpp-local"
+            "omlx"
+          ]
+        ) "Pi provider selection differs")
       ]
       ++ itemChecks
       ++ selectorChecks

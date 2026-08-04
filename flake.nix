@@ -428,6 +428,9 @@
                 inherit src;
                 homeManagerLib = home-manager.lib;
               };
+              ai-catalog-transport = pkgs.callPackage ./test/ai/catalog-transport.nix {
+                inherit src;
+              };
             }
             // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
               darwin-overrides-inactive = pkgs.callPackage ./test/ai/overlay-isolation.nix {

@@ -64,16 +64,12 @@ let
   };
 
   renderMcpServer =
-    name: server:
+    _: server:
     let
       inherit (server) transport;
       literalEnv = lib.filterAttrs (_: value: !isTypedEnv value) (transport.env or { });
     in
     if transport ? url && transport ? headers then
-      assert builtins.elem name [
-        "Ref"
-        "context7"
-      ];
       assert builtins.length (builtins.attrNames transport.headers) == 1;
       let
         headerName = builtins.head (builtins.attrNames transport.headers);
