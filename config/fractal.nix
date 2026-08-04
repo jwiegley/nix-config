@@ -21,10 +21,7 @@ in
     ];
 
     home.file = lib.mkIf enabled (
-      {
-        ".local/bin/agent-deck-env".source = ../bin/agent-deck-env;
-      }
-      // lib.optionalAttrs (pkgs ? plasma-fractal && pkgs ? plasma-wiki) {
+      lib.optionalAttrs (pkgs ? plasma-fractal && pkgs ? plasma-wiki) {
         ".agents/skills/fractal".source = "${pkgs.plasma-fractal}/share/skills/fractal";
         ".agents/skills/wiki".source = "${pkgs.plasma-wiki}/share/skills/wiki";
       }

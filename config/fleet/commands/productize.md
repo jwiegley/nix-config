@@ -58,7 +58,7 @@ Here are some of the tools I prefer to use for each language:
 
 ## Haskell
 
-lint: use the web-searcher agent to find the best option
+lint: use available live web search to find the best option
 format: `fourmolu`
 
 ## Rust
@@ -78,15 +78,15 @@ format: `ruff`
 
 ## Bash
 
-lint: use the web-searcher agent to find the best option
+lint: use available live web search to find the best option
 format: `shfmt`
 
 ## Emacs Lisp
 
-lint: use the web-searcher agent to find the best option
-format: use the web-searcher agent to find the best option
+lint: use available live web search to find the best option
+format: use available live web search to find the best option
 
 ## Coq (and Rocq)
 
-lint: use the web-searcher agent to find the best option
-format: use the web-searcher agent to find the best option
+lint: use available live web search to find the best option
+format: use available live web search to find the best option

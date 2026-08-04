@@ -201,13 +201,6 @@ let
     tools:
     if tools == "Read, Grep, Glob, Bash" then
       "read,grep,find,bash"
-    else if
-      tools == [
-        "mcp__perplexity__perplexity_search_web"
-        "WebFetch"
-      ]
-    then
-      "mcp"
     else
       throw "unsupported Pi agent tools: ${builtins.toJSON tools}";
   renderAgentMetadata =
@@ -340,8 +333,6 @@ assert builtins.hasAttr "pi-loop" pkgs.pi-gallery.packages;
     lib.sort builtins.lessThan (
       [
         "CONTEXT7_API_KEY"
-        "PERPLEXITY_API_KEY"
-        "REF_API_KEY"
       ]
       ++ mcpRequiredEnvNames
     )

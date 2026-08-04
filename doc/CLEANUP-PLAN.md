@@ -462,7 +462,7 @@ its GitHub issue. Unverified hosts are never implied clean.
 |---|---|---|
 | Retired Anvil/MCP cleanup | Eight-host cleanup-bearing proof complete; source retired at `cc0f6718` | Activate the no-producer candidate on every managed host and repeat structural probes |
 | Pi XDG migration | Source retired at `8c3d4431`; Hera 991 post-retirement path/session/Pi proof passed | Complete; retain declarative `~/.pi -> ~/.config/pi`, marker, and any `.pi-legacy-v1` backup |
-| Codex legacy Ref importer | Superseded by #124, which removes Ref and Perplexity entirely | Delete the importer with the two retired MCP integrations; no credential migration |
+| Codex legacy Ref importer | Superseded by #124; Nix and PromptDeploy source retirement is in progress | Delete the importer and both integrations, then reconcile their existing manifest entries during a quiescent client window; no credential migration |
 | Codex log migration | Source retired at `302e8de8`; Hera 991 and Clio 247 post-retirement proof passed | Activate the no-migration candidate on all four shared-work Codex hosts and repeat log probes |
 | Darwin gpg-agent handoff | Source retired at `b5d31874`; Hera 991 and Clio 247 post-retirement absence proof passed | Complete; retain Home Manager producer-disable and nix-darwin startup owner |
 | Home Manager 25.11 SSH shim | Active compatibility, not finite cleanup | Retain until VPS and Vulcan upgrade and rendered behavior is proven equivalent |

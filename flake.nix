@@ -261,7 +261,6 @@
                   let
                     packages = import ./config/packages.nix {
                       inherit hostname inputs pkgs;
-                      homeClass = nixManagedAiHomeClass;
                     };
                   in
                   {

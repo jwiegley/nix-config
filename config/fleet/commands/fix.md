@@ -30,7 +30,7 @@ Remember the following:
 - Search the codebase for relevant files
 - Ensure code passes linting and type checking after doing any work
 - Use cpp-pro, python-pro, emacs-lisp-pro, rust-pro or haskell-pro as needed for diagnosing and analyzing PRs, fixing code, and writing any new code.
-- Use Web Search and Perplexity as needed for research and discovering resources.
+- Use available live web search as needed for research and discovering resources.
 - Use sequential-thinking when appropriate to break down tasks further.
 - Use context7 whenever code examples might help.
 

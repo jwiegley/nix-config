@@ -16,8 +16,8 @@ let
   };
   reject = value: !(builtins.tryEval (builtins.deepSeq value true)).success;
   withMcpServers = mcpServers: catalog.items // { inherit mcpServers; };
-  ref = catalog.items.mcpServers.Ref;
-  extraPiMcp = ref // {
+  context7 = catalog.items.mcpServers.context7;
+  extraPiMcp = context7 // {
     name = "synthetic";
     targetPaths = [ "mcp/synthetic" ];
     transport = {
@@ -26,31 +26,31 @@ let
     };
     selectors.profiles = [ "hera-pi" ];
   };
-  wrongRefHeader = ref // {
-    transport = ref.transport // {
+  wrongContext7Header = context7 // {
+    transport = context7.transport // {
       headers = {
-        Authorization.env = "REF_API_KEY";
+        Authorization.env = "CONTEXT7_API_KEY";
       };
     };
   };
-  wrongRefEnvironment = ref // {
-    transport = ref.transport // {
-      headers.x-ref-api-key.env = "CONTEXT7_API_KEY";
+  wrongContext7Environment = context7 // {
+    transport = context7.transport // {
+      headers.CONTEXT7_API_KEY.env = "CONTEXT7_TOKEN";
     };
   };
-  missingRefHeader = ref // {
-    transport = builtins.removeAttrs ref.transport [ "headers" ];
+  missingContext7Header = context7 // {
+    transport = builtins.removeAttrs context7.transport [ "headers" ];
   };
-  multipleRefHeaders = ref // {
-    transport = ref.transport // {
-      headers = ref.transport.headers // {
-        CONTEXT7_API_KEY.env = "CONTEXT7_API_KEY";
+  multipleContext7Headers = context7 // {
+    transport = context7.transport // {
+      headers = context7.transport.headers // {
+        Authorization.env = "CONTEXT7_API_KEY";
       };
     };
   };
   memoryWithHeader = catalog.items.mcpServers.memory-vault // {
     transport = catalog.items.mcpServers.memory-vault.transport // {
-      headers.x-ref-api-key.env = "REF_API_KEY";
+      headers.Authorization.env = "CONTEXT7_API_KEY";
     };
   };
   piProfile = catalog.profiles.hera-pi;
@@ -67,12 +67,14 @@ let
   };
 in
 assert catalog.validate { };
+assert !(builtins.hasAttr "Ref" catalog.items.mcpServers);
+assert !(builtins.hasAttr "perplexity" catalog.items.mcpServers);
 assert builtins.all reject [
   (catalog.validate {
     items = withMcpServers (catalog.items.mcpServers // { synthetic = extraPiMcp; });
   })
   (catalog.validate {
-    items = withMcpServers (builtins.removeAttrs catalog.items.mcpServers [ "Ref" ]);
+    items = withMcpServers (builtins.removeAttrs catalog.items.mcpServers [ "context7" ]);
   })
   (catalog.validate {
     modelData = modelData // {
@@ -87,16 +89,16 @@ assert builtins.all reject [
     };
   })
   (catalog.validate {
-    items = withMcpServers (catalog.items.mcpServers // { Ref = wrongRefHeader; });
+    items = withMcpServers (catalog.items.mcpServers // { context7 = wrongContext7Header; });
   })
   (catalog.validate {
-    items = withMcpServers (catalog.items.mcpServers // { Ref = wrongRefEnvironment; });
+    items = withMcpServers (catalog.items.mcpServers // { context7 = wrongContext7Environment; });
   })
   (catalog.validate {
-    items = withMcpServers (catalog.items.mcpServers // { Ref = missingRefHeader; });
+    items = withMcpServers (catalog.items.mcpServers // { context7 = missingContext7Header; });
   })
   (catalog.validate {
-    items = withMcpServers (catalog.items.mcpServers // { Ref = multipleRefHeaders; });
+    items = withMcpServers (catalog.items.mcpServers // { context7 = multipleContext7Headers; });
   })
   (catalog.validate {
     items = withMcpServers (catalog.items.mcpServers // { memory-vault = memoryWithHeader; });

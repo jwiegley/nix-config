@@ -104,10 +104,6 @@ let
     model_reasoning_effort = "ultra";
     notify = lib.concatMap (item: item.codex.notify or [ ]) hookItems;
     mcp_servers = lib.mapAttrs (_: renderMcpServer) selected.mcpServers;
-    shell_environment_policy = {
-      ignore_default_excludes = false;
-      exclude = [ "REF_API_KEY" ];
-    };
   }
   // localConfig;
   managedHooks = {
@@ -202,9 +198,5 @@ in
     managedPath
     "${profile.root}/nix-managed-model-catalog.json"
   ];
-  requiredEnvNames = [
-    "CONTEXT7_API_KEY"
-    "PERPLEXITY_API_KEY"
-    "REF_API_KEY"
-  ];
+  requiredEnvNames = [ "CONTEXT7_API_KEY" ];
 }

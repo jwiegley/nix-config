@@ -54,15 +54,6 @@ let
       runtimeInputs = [ pkgs.coreutils ];
       text = ''
         set -euo pipefail
-        if [ "''${1:-}" = mcp ] && [ "''${2:-}" = get ] && [ "''${3:-}" = Ref ]; then
-          case "''${AGENT_TEST_REF_MCP_SCENARIO:-none}" in
-            valid) printf '%s\n' 'Ref' '  enabled: true' '  url: https://api.ref.tools/mcp?apiKey=ref-synthetic-api-key' ;;
-            bad-url) printf '%s\n' 'Ref' '  url: https://example.invalid/mcp?apiKey=ref-synthetic-api-key' ;;
-            bad-token) printf '%s\n' 'Ref' '  url: https://api.ref.tools/mcp?apiKey=not-a-ref-token' ;;
-            *) exit 1 ;;
-          esac
-          exit 0
-        fi
         : "''${AGENT_TEST_ARGV:?}"
         : "''${AGENT_TEST_ENV:?}"
 

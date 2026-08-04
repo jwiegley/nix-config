@@ -2,7 +2,6 @@
   hostname,
   inputs,
   pkgs,
-  homeClass ? null,
   isClientMachine ? true,
   ...
 }:
@@ -12,7 +11,7 @@ let
   # of its two call sites passes it neither `config` nor `lib`. So it reads
   # capabilities from the PURE registry rather than from `config.johnw.host`.
   registry = import ./hosts/registry.nix;
-  caps = registry.capabilitiesFor { inherit hostname homeClass; };
+  caps = registry.capabilitiesFor { inherit hostname; };
   inherit (stdenv)
     isDarwin
     isLinux
@@ -31,37 +30,8 @@ let
   localAi = inputs.nix-ai or (if inputs ? git-ai then import ../flake/ai.nix inputs else null);
   patchAgentPackage =
     if localAi == null then _name: package: package else localAi.lib.patchAgentPackage pkgs;
-  credentialedCodexHost =
-    caps.isDarwinWorkstation || (caps.isSharedWork && !caps.isVulcan && !caps.isVps);
-  wrapCredentialedCodex =
-    package:
-    symlinkJoin {
-      name = "${package.name}-credentials";
-      paths = [ package ];
-      nativeBuildInputs = [ makeWrapper ];
-      postBuild = ''
-        rm -f "$out/bin/codex"
-        makeWrapper ${../bin/agent-deck-env} "$out/bin/codex" \
-          --set AGENT_DECK_ENV_LABEL codex \
-          --set AGENT_DECK_ENV_PASS_BIN ${pass}/bin/pass \
-          --add-flag ${package}/bin/codex
-      '';
-      passthru = (package.passthru or { }) // {
-        credentialWrapper = true;
-      };
-      meta = package.meta or { };
-    };
   optAgent =
-    name:
-    if agentPackages ? ${name} then
-      let
-        package = patchAgentPackage name agentPackages.${name};
-      in
-      [
-        (if name == "codex" && credentialedCodexHost then wrapCredentialedCodex package else package)
-      ]
-    else
-      [ ];
+    name: if agentPackages ? ${name} then [ (patchAgentPackage name agentPackages.${name}) ] else [ ];
 
   # Only these source-project inputs are user applications. Adding a flake
   # input must never change a profile unless its name is added here. Missing

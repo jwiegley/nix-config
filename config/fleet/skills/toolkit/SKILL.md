@@ -14,7 +14,7 @@ The standard tooling and working discipline for planning and executing a task. T
 - Use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh ...` for all GitHub-related tasks.
 - Search the codebase for the relevant files.
 - Use `cpp-pro`, `python-pro`, `emacs-lisp-pro`, `rust-pro`, or `haskell-pro` as needed to diagnose and analyze PRs, fix code, and write new code.
-- Use Web Search and Perplexity (via the `web-searcher` agent) for research and discovering resources.
+- Use available live web search for research and discovering resources.
 - Use `sequential-thinking` when appropriate to break a task down further.
 - Use `context7` whenever code examples might help.
 

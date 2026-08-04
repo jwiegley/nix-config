@@ -19,6 +19,6 @@ Remember the following:
 - Use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh ...` for all GitHub-related tasks.
 - Use cpp-pro or python-pro or emacs-lisp-pro or rust-pro as needed for
   diagnosing and analyzing issues, fixing code, and writing any new code.
-- Use Web Search and Perplexity as need for research and discovering resources.
+- Use available live web search as needed for research and discovering resources.
 - Use sequential-thinking when appropriate to break down tasks further.
 - Use context7 whenever code examples might help.

@@ -25,11 +25,9 @@ boundaries, mutation authority, stop conditions, outputs, and verification.
 Penalize thin personas, giant prompt dumps, model wrappers, generated mirrors,
 and bundles whose useful behavior depends on an always-on runtime.
 
-## 2. Use the web-searcher research procedure
+## 2. Use available live web search
 
-Delegate discovery to the installed `web-searcher` agent. If that agent is
-unavailable, say so and follow the same query architecture summarized below
-with the available live web-search tool.
+Follow the query architecture below with the available live web-search tool.
 
 Run three search waves:
 

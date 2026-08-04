@@ -11,9 +11,9 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 
 - The authoritative checkout is `/Users/johnw/src/nix`, on `main`. It is the
   only worktree.
-- Published Gitea and GitHub `main` match `e5b7f905`; local `main` carries the
-  active #122 OpenCode-retirement candidate.
-- Hera runs Darwin generation 990. Agent Deck 1.11.0, oMLX 0.5.5, Pi 0.83.0,
+- Published Gitea and GitHub `main` match `e9ba2962`; local `main` carries the
+  active #124 Ref/Perplexity-retirement candidate.
+- Hera runs Darwin generation 991. Agent Deck 1.11.0, oMLX 0.5.5, Pi 0.83.0,
   Claude Code 2.1.220, and Codex 0.146.0 are active.
 - Codex defaults to native OpenAI `gpt-5.6-sol`; local oMLX and llama-swap
   profiles remain opt-in.
@@ -32,12 +32,11 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
   policy and test code than the renderer literals it removed.
 - #116 and #119 are In Progress. #118/#120 are Done. #117 is closed not-planned,
   superseded by #124.
-- New user-requested cleanup issues #122 (remove OpenCode) and #123 (retire the
-  Nix model registry) are Todo, are subissues of #98, and block #121. #123 is
-  ordered after #122; #122 is ordered after #116.
-- #124 removes Ref and Perplexity from every client after #116/#122. #125 confines
-  password-store, GnuPG, and Emacs to Hera/Clio after #120/#124. Both are Todo
-  subissues and block #121.
+- #122 (remove OpenCode) and #124 (remove Ref and Perplexity) are In Progress.
+  #123 (retire the Nix model registry) remains Todo after #122. All three are
+  subissues of #98 and block #121.
+- #125 confines password-store, GnuPG, and Emacs to Hera/Clio after #120/#124.
+  It remains a Todo subissue and blocks #121.
 - #126 renames the AI-only `config/fleet/` tree back to `config/ai/` after
   #123/#125; it is a deferred Todo subissue and blocks #121.
 - #121 remains the final unchanged-candidate verification and cleanup closeout.
@@ -62,7 +61,10 @@ issues remain explicit exclusions.
   current source candidate; focused/all-system checks, fast gate, and native build
   pass. Post-retirement fleet activation remains a separate gate.
 - #117 is superseded. #124 removes Ref, Perplexity, the legacy importer, and the
-  temporary credential carrier. No shared password-store provisioning is needed.
+  temporary credential carrier. PromptDeploy source retirement is published at
+  `4ee0401`; no shared password-store provisioning or mutation is needed. Exact
+  manifest reconciliation must wait for a user-approved quiescent client window
+  because those clients do not share a mutation lock.
 - #118 is complete: published `8c3d4431` removed the one-shot migration; Hera
   generation 991 passed post-retirement path/session/fresh-Pi proof.
 - #119: Hera 990, Clio 245, and all four shared-work hosts passed fresh Codex and
@@ -70,10 +72,17 @@ issues remain explicit exclusions.
   migration after focused checks, fast gate, native build, and independent audit.
 - #120 is complete: published `b5d31874` removed the stale-label guard; Hera 991
   and Clio 247 passed post-retirement old-label absence proof.
-- #122: the current candidate removes OpenCode package/cask selection, four
+- #122: published `f9be4d23` removes OpenCode package/cask selection, four
   profiles, renderer, preflight ownership, selectors, and OpenCode-only model
   default/schema plumbing. Focused catalog/preflight checks, generated-leaf and
-  package absence probes, fast gate, and a native system build pass.
+  package absence probes, fast gate, a native system build, refreshed baselines,
+  and independent audit pass. Host activation remains open.
+- #124: the current source candidate removes both live catalog entries, renderer
+  credentials, the legacy Ref importer, the password-store carrier, and the
+  Perplexity-bound web-searcher content. PromptDeploy no longer produces either
+  service. A proposed activation-time JSON writer was rejected before commit:
+  without a lock shared by the clients it could overwrite concurrent updates or
+  discard the manifest evidence needed for declarative removal.
 
 ## Concurrent work boundary
 

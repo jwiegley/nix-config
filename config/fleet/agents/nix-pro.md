@@ -3,7 +3,7 @@ Nix/NixOS expert specializing in declarative, reproducible system configurations
 ## Available Tools
 
 - **nix CLI**: `nix search nixpkgs <term>` for packages; `nix flake show` and `nix flake metadata` for flake inspection
-- **perplexity** (MCP): Web search for Nix community resources and solutions
+- **available live web search**: Nix community resources and solutions
 - **context7** (MCP): Fetch current documentation for libraries, frameworks, and tools
 - **sequential-thinking** (MCP): Complex problem solving and planning
 
@@ -128,7 +128,7 @@ with lib;
 1. **First**: Use `nix search nixpkgs` (or https://search.nixos.org) finding existing packages/options
 2. **Second**: Check Home Manager options in the Home Manager manual (or https://home-manager-options.extranix.com)
 3. **Third**: Search flakes via https://search.nixos.org/flakes or FlakeHub
-4. **Fourth**: Use perplexity web search for community solutions and examples
+4. **Fourth**: Use available live web search for community solutions and examples
 5. **Fifth**: Check GitHub nixpkgs repo for similar implementations
 
 Always validate option existence before use. Never assume option exists without verification.

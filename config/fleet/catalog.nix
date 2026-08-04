@@ -247,15 +247,6 @@ let
       "name" = "typescript-reviewer";
       "tools" = "Read, Grep, Glob, Bash";
     };
-    "web-searcher" = {
-      "description" =
-        "Advanced web search specialist leveraging Perplexity.ai's AI-powered search capabilities for comprehensive research and information synthesis";
-      "name" = "web-searcher";
-      "tools" = [
-        "mcp__perplexity__perplexity_search_web"
-        "WebFetch"
-      ];
-    };
   };
   commandMetadata = {
     "alexey" = {
@@ -783,7 +774,6 @@ let
 
   typedEnv = env: { inherit env; };
   mcpHttpHeaders = {
-    Ref.x-ref-api-key = typedEnv "REF_API_KEY";
     context7.CONTEXT7_API_KEY = typedEnv "CONTEXT7_API_KEY";
   };
   baseMcpSelectors = {
@@ -802,11 +792,6 @@ let
   };
 
   mcpServers = {
-    Ref = mkMcp "Ref" "Ref documentation code reference" {
-      url = "https://api.ref.tools/mcp";
-      headers = mcpHttpHeaders.Ref;
-    } baseMcpSelectors;
-
     context-hub =
       (mkMcp "context-hub"
         "Context Hub - search and retrieve LLM-optimized API docs and skills for AI agents"
@@ -921,19 +906,6 @@ let
             "pi"
           ];
         };
-
-    perplexity = mkMcp "perplexity" "Perplexity AI web search via MCP" {
-      command = "uvx";
-      # 0.1.7 declares mcp>=1.0.2 but still calls the pre-2.0 Server API.
-      args = [
-        "--from"
-        "perplexity-mcp==0.1.7"
-        "--with"
-        "mcp==1.28.1"
-        "perplexity-mcp"
-      ];
-      env.PERPLEXITY_API_KEY = typedEnv "PERPLEXITY_API_KEY";
-    } baseMcpSelectors;
 
     searxng =
       (mkMcp "searxng" "Private web search through an operator-controlled SearXNG instance"
@@ -1308,8 +1280,6 @@ let
     "CONTEXT7_API_KEY"
     "GEMINI_API_KEY"
     "OPENAI_API_KEY"
-    "PERPLEXITY_API_KEY"
-    "REF_API_KEY"
   ];
 
   validEnvName = value: builtins.isString value && builtins.match "^[A-Z][A-Z0-9_]*$" value != null;
@@ -1604,14 +1574,12 @@ let
         ) "duplicate skill name")
         (ensure (
           piMcpNames == [
-            "Ref"
             "context-hub"
             "context7"
             "devonthink"
             "drafts"
             "memory-vault"
             "pal"
-            "perplexity"
             "searxng"
             "sequential-thinking"
             "stock-trader"

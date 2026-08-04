@@ -18,7 +18,7 @@ I want to accomplish the following:
 
 6. Setup Nagios monitoring to confirm the health of the service, in addition to Prometheus
 
-7. If this service presents a full set of new metrics, create a Grafana dashboard for visualizing those metrics. Use Perplexity MCP to search for possible existing dashboard for this service that may be used, if available.
+7. If this service presents a full set of new metrics, create a Grafana dashboard for visualizing those metrics. Use available live web search to find a suitable existing dashboard when possible.
 
 8. Setup a link under an appropriate section on my Glance dashboard
 
@@ -28,7 +28,7 @@ I want to accomplish the following:
 
 Everything you do should be coherent with the other services on this NixOS machine. Do not reveal ANY secrets during this chat, and always ask me if you need to create a new SOPS secret or you need to create a Web SSL certificate.
 
-Use Web Search and Perplexity MCP as needed to discover what is the best way to setup and configure the $ARGUMENTS service. Some further notes:
+Use available live web search as needed to discover the best way to set up and configure the $ARGUMENTS service. Some further notes:
 
 * If there is a choice of backing database, I prefer to use the PostgreSQL and Redis services already running on this server, even though you will likely need to create new users and databases within those services.
 

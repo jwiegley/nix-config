@@ -4,7 +4,7 @@ Pay close attention to the comments and restrictions in @CLAUDE.md
 
 When working on the provided project:
 
-- Use Web Search and Perplexity as needed for research and discovering resources.
+- Use available live web search as needed for research and discovering resources.
 - Use the task-breakdown agent and sequential-thinking when appropriate to break down tasks further.
 - Use context7 whenever code examples might help.
 - Before claiming anything is complete, save test results

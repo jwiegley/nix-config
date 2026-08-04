@@ -10,7 +10,7 @@ Use nix-pro and nixos MCP to resolve the following issues with the current NixOS
 - Do not, under any circumstances, decrypt the SOPS secrets.yaml file. See the
   @CLAUDE.md file for extensive notes on this important security consideration.
 
-- Use Web Search and Perplexity as needed for research and discovering resources.
+- Use available live web search as needed for research and discovering resources.
 
 - Use sequential-thinking when appropriate to break down tasks further.
 

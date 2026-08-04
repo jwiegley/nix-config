@@ -181,13 +181,6 @@ invoke_agent() {
         "AGENT_TEST_UID=$AGENT_TEST_UID"
     )
 
-    if [ -n "${AGENT_TEST_REF_MCP_SCENARIO:-}" ]; then
-        command_env+=("AGENT_TEST_REF_MCP_SCENARIO=$AGENT_TEST_REF_MCP_SCENARIO")
-    fi
-    if [ "${AGENT_TEST_INHERIT_XTRACE:-0}" = 1 ]; then
-        command_env+=("SHELLOPTS=xtrace")
-    fi
-
     case "$client" in
     claude)
         binary=$CLAUDE_BIN
@@ -1026,32 +1019,6 @@ test_codex_runtime_profile() {
     finish_case codex
 }
 
-test_codex_legacy_ref_auth() {
-    local secret=ref-synthetic-api-key
-    local scenario
-
-    new_case codex legacy-ref-auth
-    configure_state complete
-    AGENT_TEST_REF_MCP_SCENARIO=valid AGENT_TEST_INHERIT_XTRACE=1 invoke_agent codex 0 0 alpha
-    [ "$LAST_STATUS" -eq 0 ] || fail "managed Codex legacy Ref launch failed"
-    assert_managed_argv codex alpha
-    assert_env "REF_API_KEY=$secret"
-    ! grep -aF -- "$secret" \
-        "$ARGV_FILE" "$STDOUT_FILE" "$STDERR_FILE" "$CODEX_RUNTIME_FILE" >/dev/null ||
-        fail "Codex exposed the legacy Ref credential outside its environment"
-    finish_case codex
-
-    for scenario in bad-url bad-token; do
-        new_case codex "legacy-ref-$scenario"
-        configure_state complete
-        AGENT_TEST_REF_MCP_SCENARIO=$scenario invoke_agent codex 0 0 alpha
-        [ "$LAST_STATUS" -eq 0 ] || fail "managed Codex rejected malformed legacy Ref output safely"
-        ! grep -azF -- 'REF_API_KEY=' "$ENV_FILE" >/dev/null ||
-            fail "Codex imported a malformed legacy Ref credential"
-        finish_case codex
-    done
-}
-
 test_codex_runtime_profile_rejections() {
     new_case codex runtime-link-regular
     configure_state complete
@@ -1208,7 +1175,8 @@ run_real_wrapped_codex() {
 
     printf '%s\n' poison >"$poison_sqlite"
     CODEX_SQLITE_HOME="$poison_sqlite" \
-        env -u AI_NIX_BYPASS_MANAGED_CONFIG -u CODEX_SQLITE_HOME -u REF_API_KEY \
+        env -u AI_NIX_BYPASS_MANAGED_CONFIG -u CODEX_SQLITE_HOME \
+        -u TASK3_SHELL_POLICY_SENTINEL \
         HOME="$HOME_DIR" CODEX_HOME="$ROOT" \
         AGENT_TEST_ARGV="$ARGV_FILE" AGENT_TEST_ENV="$ENV_FILE" AGENT_TEST_EXIT=0 \
         AGENT_TEST_UID="$AGENT_TEST_UID" \
@@ -1249,7 +1217,7 @@ assert_real_codex_status_parity() {
     wrapped_network_hit="$CASE_DIR/wrapped-network-attempted"
     mkdir -p "$raw_home/sqlite"
 
-    if env -u AI_NIX_BYPASS_MANAGED_CONFIG -u REF_API_KEY \
+    if env -u AI_NIX_BYPASS_MANAGED_CONFIG -u TASK3_SHELL_POLICY_SENTINEL \
         HOME="$raw_home" CODEX_HOME="$raw_home" \
         CODEX_SQLITE_HOME="$raw_home/sqlite" \
         TASK3_NETWORK_GUARD_LOADED_FILE="$raw_network_guard_loaded" \
@@ -1499,7 +1467,7 @@ test_real_codex_profile_contract() {
         printf 'model_provider = "task3-oracle"\n'
         printf '[shell_environment_policy]\n'
         printf 'ignore_default_excludes = false\n'
-        printf 'exclude = ["REF_API_KEY"]\n'
+        printf 'exclude = ["TASK3_SHELL_POLICY_SENTINEL"]\n'
         printf '[model_providers.task3-oracle]\n'
         printf 'name = "Task 3 network oracle"\n'
         printf 'base_url = "http://127.0.0.1:9/v1"\n'
@@ -1509,7 +1477,7 @@ test_real_codex_profile_contract() {
     } >"$codex_home/nix-runtime.config.toml"
     if env HOME="$codex_home" CODEX_HOME="$codex_home" \
         CODEX_SQLITE_HOME="$codex_home/sqlite" \
-        REF_API_KEY=ref-synthetic-api-key \
+        TASK3_SHELL_POLICY_SENTINEL=synthetic-policy-value \
         TASK3_ORACLE_API_KEY=not-a-real-key \
         TASK3_NETWORK_GUARD_LOADED_FILE="$valid_network_guard_loaded" \
         TASK3_NETWORK_ATTEMPT_FILE="$valid_network_hit" \
@@ -1580,12 +1548,12 @@ test_bridge_static_contract() {
     run_bridge_failure arity 'agent-http-header-bridge: invalid invocation' "$BRIDGE_BIN"
     run_bridge_failure http-url 'agent-http-header-bridge: invalid invocation' \
         env TASK3_BRIDGE_TOKEN=BRIDGE-SECRET-MUST-NOT-LEAK "$BRIDGE_BIN" \
-        http://example.invalid/mcp x-ref-api-key TASK3_BRIDGE_TOKEN
+        http://example.invalid/mcp x-agent-test-token TASK3_BRIDGE_TOKEN
     run_bridge_failure malformed-url 'agent-http-header-bridge: invalid invocation' \
-        "$BRIDGE_BIN" https:// x-ref-api-key TASK3_BRIDGE_TOKEN
+        "$BRIDGE_BIN" https:// x-agent-test-token TASK3_BRIDGE_TOKEN
     run_bridge_failure credentialed-url 'agent-http-header-bridge: invalid invocation' \
         env TASK3_BRIDGE_TOKEN=BRIDGE-SECRET-MUST-NOT-LEAK "$BRIDGE_BIN" \
-        https://user:password@example.invalid/mcp x-ref-api-key TASK3_BRIDGE_TOKEN
+        https://user:password@example.invalid/mcp x-agent-test-token TASK3_BRIDGE_TOKEN
     run_bridge_failure header-name 'agent-http-header-bridge: invalid invocation' \
         "$BRIDGE_BIN" https://example.invalid/mcp 'bad header' TASK3_BRIDGE_TOKEN
     run_bridge_failure header-colon 'agent-http-header-bridge: invalid invocation' \
@@ -1593,18 +1561,18 @@ test_bridge_static_contract() {
     run_bridge_failure header-newline 'agent-http-header-bridge: invalid invocation' \
         "$BRIDGE_BIN" https://example.invalid/mcp $'bad\nheader' TASK3_BRIDGE_TOKEN
     run_bridge_failure environment-name 'agent-http-header-bridge: invalid invocation' \
-        "$BRIDGE_BIN" https://example.invalid/mcp x-ref-api-key 9INVALID
+        "$BRIDGE_BIN" https://example.invalid/mcp x-agent-test-token 9INVALID
     run_bridge_failure environment-hyphen 'agent-http-header-bridge: invalid invocation' \
-        "$BRIDGE_BIN" https://example.invalid/mcp x-ref-api-key INVALID-NAME
+        "$BRIDGE_BIN" https://example.invalid/mcp x-agent-test-token INVALID-NAME
     run_bridge_failure missing-environment 'agent-http-header-bridge: credential unavailable' \
         env -u TASK3_BRIDGE_TOKEN "$BRIDGE_BIN" \
-        https://example.invalid/mcp x-ref-api-key TASK3_BRIDGE_TOKEN
+        https://example.invalid/mcp x-agent-test-token TASK3_BRIDGE_TOKEN
     run_bridge_failure empty-environment 'agent-http-header-bridge: credential unavailable' \
         env TASK3_BRIDGE_TOKEN= "$BRIDGE_BIN" \
-        https://example.invalid/mcp x-ref-api-key TASK3_BRIDGE_TOKEN
+        https://example.invalid/mcp x-agent-test-token TASK3_BRIDGE_TOKEN
     run_bridge_failure control-environment 'agent-http-header-bridge: credential unavailable' \
         env TASK3_BRIDGE_TOKEN=$'BRIDGE-SECRET-MUST-NOT-LEAK\nbad' "$BRIDGE_BIN" \
-        https://example.invalid/mcp x-ref-api-key TASK3_BRIDGE_TOKEN
+        https://example.invalid/mcp x-agent-test-token TASK3_BRIDGE_TOKEN
 }
 
 run_claude_contract() {
@@ -1631,7 +1599,6 @@ run_codex_contract() {
     test_codex_host_state
     test_codex_host_state_rejections
     test_codex_runtime_profile
-    test_codex_legacy_ref_auth
     test_codex_runtime_profile_rejections
     test_codex_command_scope
     test_codex_open_file_limit
