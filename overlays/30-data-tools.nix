@@ -43,6 +43,7 @@ in
       build-system = [ python3Packages.setuptools ];
       dependencies = with python3Packages; [
         fastmcp
+        requests
         tiktoken
       ];
 
@@ -51,6 +52,15 @@ in
           --replace-fail \
           'unisessions-mcp = "unisessions.mcp_server:main"' \
           $'unisessions = "unisessions.cli:main"\nunisessions-mcp = "unisessions.mcp_server:main"'
+        # tiktoken fetches its vocabulary on first use. Preserve UniSessions'
+        # built-in estimate when that optional accuracy improvement is offline.
+        substituteInPlace session_sdk/converters.py \
+          --replace-fail \
+          'from typing import Protocol' \
+          $'from typing import Protocol\n\nimport requests' \
+          --replace-fail \
+          $'        except KeyError:\n            return tiktoken.get_encoding("cl100k_base")' \
+          $'        except KeyError:\n            try:\n                return tiktoken.get_encoding("cl100k_base")\n            except requests.exceptions.RequestException:\n                return None\n        except requests.exceptions.RequestException:\n            return None'
       '';
 
       pythonImportsCheck = [
