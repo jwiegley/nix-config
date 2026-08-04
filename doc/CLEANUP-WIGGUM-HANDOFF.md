@@ -11,10 +11,10 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 
 - The authoritative checkout is `/Users/johnw/src/nix`, on `main`. It is the
   only worktree.
-- The #125 source boundary is signed commit `f2bc2dbb`, with its focused proof
-  simplified in `852bbc94` and accepted Darwin/package-parity baselines in
-  `5d4d2c06`. Publication and activation receipts are tracked separately on the
-  issue.
+- The #125 source boundary is signed commits `f2bc2dbb`/`1b2539cf`, with its
+  focused proof simplified in `852bbc94` and accepted Darwin/package-parity
+  baselines in `5d4d2c06`. Publication and activation receipts are tracked
+  separately on the issue.
 - Hera runs Darwin generation 991. Agent Deck 1.11.0, oMLX 0.5.5, Pi 0.83.0,
   Claude Code 2.1.220, and Codex 0.146.0 are active.
 - Codex defaults to native OpenAI `gpt-5.6-sol`; local oMLX and llama-swap
@@ -107,10 +107,11 @@ issues remain explicit exclusions.
   probes, and a native Hera system build pass. Runtime activation and a fresh
   disposable Pi discovery probe remain open.
 - #125: signed `f2bc2dbb` makes the existing `isDarwinWorkstation` capability
-  the sole user-runtime gate for Emacs, password-store, GnuPG/OpenPGP, desktop
+  the sole host-eligibility gate for Emacs, password-store, GnuPG/OpenPGP, desktop
   email/signing, and pass helpers. `852bbc94` reduces its named-host proof to a
-  direct 104-line contract; `5d4d2c06` records only the 16 intended Linux
-  package removals. Hera and Clio value surfaces are otherwise byte-identical,
+  compact direct contract; `5d4d2c06` records only the 16 intended Linux
+  package removals; `1b2539cf` also gates Pinentry and restores broad runtime
+  reference checks without duplicating host policy. Hera and Clio value surfaces are otherwise byte-identical,
   both Darwin systems build, and the focused check passes on Darwin, ARM Linux,
   and x86 Linux. Negative-host activation and fresh-login runtime proof remain
   open; no mutable password, key, Emacs, mail, or credential data was read or
