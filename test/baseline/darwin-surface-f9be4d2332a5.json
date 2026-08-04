@@ -1,5 +1,5 @@
 {
-  "baselineRev": "bcf3bdaae6b6112f3d58f5ed5c4028937dc2df83",
+  "baselineRev": "f9be4d2332a5e6b379c4d0e82cac875bbd4fd580",
   "commands": {
     "compare": "test/bin/darwin-surface-diff --normalize-store <before.json> <after.json>",
     "hostSurface": "nix eval --option eval-cache false --no-write-lock-file --impure --json '.#darwinConfigurations.<host>' --apply 'darwin: import ./test/darwin/darwin-surface.nix darwin'",
@@ -119,7 +119,6 @@
           "microsoft-word",
           "netdownloadhelpercoapp",
           "obsidian",
-          "opencode-desktop",
           "path-finder",
           "pdf-expert",
           "postman",
@@ -735,7 +734,6 @@
           "microsoft-word",
           "netdownloadhelpercoapp",
           "obsidian",
-          "opencode-desktop",
           "path-finder",
           "pdf-expert",
           "postman",
