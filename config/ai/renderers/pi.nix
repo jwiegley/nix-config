@@ -261,11 +261,15 @@ let
   fleetThemeSource = ../extensions/fleet-theme/index.ts;
   fleetTheme = ../themes/dark-tool-backgrounds.json;
 in
-assert profile.id == "hera-pi";
+assert profile.id == "${profile.host}-pi";
 assert profile.client == "pi";
 assert profile.renderer == "pi";
-assert profile.host == "hera";
-assert profile.platform == "darwin";
+assert builtins.elem profile.host [
+  "clio"
+  "hera"
+  "shared-work"
+];
+assert profile.platform == (if profile.host == "shared-work" then "linux" else "darwin");
 assert profile.audiences == [ "personal" ];
 assert profile.root == root;
 assert builtins.isString homeDirectory;

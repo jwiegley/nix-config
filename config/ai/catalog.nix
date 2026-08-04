@@ -35,6 +35,7 @@ let
     clio-claude-personal = ".config/claude/personal";
     clio-claude-positron = ".config/claude/positron";
     clio-codex = ".config/codex";
+    clio-pi = ".config/pi/agent";
     hera-claude-personal = ".config/claude/personal";
     hera-claude-positron = ".config/claude/positron";
     hera-codex = ".config/codex";
@@ -42,6 +43,7 @@ let
     hera-pi = ".config/pi/agent";
     shared-work-claude-positron = ".claude";
     shared-work-codex = ".codex";
+    shared-work-pi = ".config/pi/agent";
     vps-claude-personal = ".claude";
     vulcan-claude-personal = ".claude";
   };
@@ -62,6 +64,7 @@ let
     clio-claude-personal = mkProfile "clio-claude-personal" "claude" [ "personal" ] "clio" "darwin";
     clio-claude-positron = mkProfile "clio-claude-positron" "claude" [ "positron" ] "clio" "darwin";
     clio-codex = mkProfile "clio-codex" "codex" [ "personal" ] "clio" "darwin";
+    clio-pi = mkProfile "clio-pi" "pi" [ "personal" ] "clio" "darwin";
 
     hera-claude-personal = mkProfile "hera-claude-personal" "claude" [ "personal" ] "hera" "darwin";
     hera-claude-positron = mkProfile "hera-claude-positron" "claude" [ "positron" ] "hera" "darwin";
@@ -76,6 +79,7 @@ let
       "personal"
       "positron"
     ] "shared-work" "linux";
+    shared-work-pi = mkProfile "shared-work-pi" "pi" [ "personal" ] "shared-work" "linux";
     vps-claude-personal = mkProfile "vps-claude-personal" "claude" [ "personal" ] "vps" "linux";
     vulcan-claude-personal = mkProfile "vulcan-claude-personal" "claude" [
       "personal"
@@ -816,6 +820,7 @@ let
         {
           profiles = [
             "clio-claude-personal"
+            "clio-pi"
             "hera-claude-personal"
             "hera-droid"
             "hera-pi"
@@ -832,6 +837,7 @@ let
         {
           profiles = [
             "clio-claude-personal"
+            "clio-pi"
             "hera-claude-personal"
             "hera-droid"
             "hera-pi"
@@ -876,6 +882,7 @@ let
         {
           profiles = [
             "clio-claude-personal"
+            "clio-pi"
             "hera-claude-personal"
             "hera-droid"
             "hera-pi"
@@ -946,6 +953,7 @@ let
         {
           profiles = [
             "clio-claude-personal"
+            "clio-pi"
             "hera-claude-personal"
             "hera-droid"
             "hera-pi"
@@ -1526,6 +1534,8 @@ let
       ) (builtins.attrValues profiles);
       piProfile = profiles.hera-pi;
       piMcpNames = builtins.attrNames (select piProfile items.mcpServers);
+      clioPiMcpNames = builtins.attrNames (select profiles.clio-pi items.mcpServers);
+      sharedWorkPiMcpNames = builtins.attrNames (select profiles.shared-work-pi items.mcpServers);
       checks = [
         (ensure (profileIds == allowedProfileIds) "profile ID set differs")
         (ensure (
@@ -1576,6 +1586,15 @@ let
             "stock-trader"
           ]
         ) "Pi MCP selection differs")
+        (ensure (clioPiMcpNames == piMcpNames) "Clio Pi MCP selection differs from Hera")
+        (ensure (
+          sharedWorkPiMcpNames == [
+            "context-hub"
+            "context7"
+            "pal"
+            "sequential-thinking"
+          ]
+        ) "shared-work Pi MCP selection differs")
       ]
       ++ itemChecks
       ++ selectorChecks

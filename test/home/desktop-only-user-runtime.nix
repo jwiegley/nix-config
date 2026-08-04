@@ -39,6 +39,7 @@ let
     homeConfigurations."johnw@aarch64-linux".config
   ];
   sharedWork = homeConfigurations."jwiegley@x86_64-linux".config;
+  piHomes = positive ++ [ sharedWork ];
   contains = needle: value: builtins.isString value && lib.hasInfix needle value;
   featureFlags =
     config:
@@ -114,6 +115,10 @@ assert
   sharedWork.programs.zsh.history.path == "${sharedWork.xdg.configHome}/zsh/history-\${HOST%%.*}";
 assert !sharedWork.programs.zsh.history.share;
 assert builtins.elem "INC_APPEND_HISTORY" sharedWork.programs.zsh.setOptions;
+assert builtins.all (config: builtins.hasAttr ".pi" config.home.file) piHomes;
+assert builtins.all (
+  config: builtins.hasAttr ".config/pi/agent/models.json" config.home.file
+) piHomes;
 assert builtins.all (config: allTrue (featureFlags config)) positive;
 assert builtins.all (config: allFalse (featureFlags config)) negative;
 assert builtins.all (
