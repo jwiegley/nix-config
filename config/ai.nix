@@ -29,25 +29,25 @@ let
     pi-gallery = if pairedPiGallery != null then pairedPiGallery else pkgs.pi-gallery;
   };
 
-  catalog = import ./fleet/catalog.nix {
+  catalog = import ./ai/catalog.nix {
     inherit lib;
     resources = resourcePackage;
   };
   renderers = {
-    claude = import ./fleet/renderers/claude.nix {
+    claude = import ./ai/renderers/claude.nix {
       inherit lib;
       pkgs = rendererPkgs;
     };
-    codex = import ./fleet/renderers/codex.nix {
+    codex = import ./ai/renderers/codex.nix {
       inherit lib;
       pkgs = rendererPkgs;
       llmAgents = moduleInputs.llm-agents;
     };
-    droid = import ./fleet/renderers/droid.nix {
+    droid = import ./ai/renderers/droid.nix {
       inherit lib;
       pkgs = rendererPkgs;
     };
-    pi = import ./fleet/renderers/pi.nix {
+    pi = import ./ai/renderers/pi.nix {
       inherit lib;
       pkgs = piRendererPkgs;
     };
@@ -115,12 +115,12 @@ let
   ownsAncestor = path: lib.any (other: other != path && lib.hasPrefix "${path}/" other) paths;
   selectedPlatform = if isDarwin then "darwin" else "linux";
 
-  preflight = (import ./fleet/preflight.nix { inherit lib pkgs; }) {
+  preflight = (import ./ai/preflight.nix { inherit lib pkgs; }) {
     newPaths = paths;
     inherit piGuard;
     legacyPiGuardPath = if piSelected then ".pi/agent/mcp.json" else null;
   };
-  modelSync = import ./fleet/model-sync.nix { inherit lib pkgs; };
+  modelSync = import ./ai/model-sync.nix { inherit lib pkgs; };
   piSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "pi") profileIds;
   codexSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "codex") profileIds;
   droidSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "droid") profileIds;

@@ -11,7 +11,7 @@ is required to promote a candidate.
 
 ## 1. Establish the local taste profile
 
-Inspect the current `config/fleet/{agents,commands,skills,prompts}`, catalog,
+Inspect the current `config/ai/{agents,commands,skills,prompts}`, catalog,
 renderers, packaged resources, and enabled marketplaces. Summarize:
 
 - recurring task families and tools;

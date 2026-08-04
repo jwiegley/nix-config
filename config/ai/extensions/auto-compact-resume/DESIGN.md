@@ -8,7 +8,7 @@ This extension compacts at a turn boundary before Pi issues the next model reque
 
 ## Scope
 
-The extension source and design records live under `config/fleet/extensions/auto-compact-resume`; its behavior test lives under `test/ai/extensions/auto-compact-resume`. Home Manager owns only the runtime leaf `$XDG_CONFIG_HOME/pi/extensions/auto-compact-resume/index.ts`; tests and documentation are not installed into Pi's profile. The extension uses only Pi's public API and has no external dependencies. Pi's other mutable profile state remains outside Nix ownership.
+The extension source and design records live under `config/ai/extensions/auto-compact-resume`; its behavior test lives under `test/ai/extensions/auto-compact-resume`. Home Manager owns only the runtime leaf `$XDG_CONFIG_HOME/pi/extensions/auto-compact-resume/index.ts`; tests and documentation are not installed into Pi's profile. The extension uses only Pi's public API and has no external dependencies. Pi's other mutable profile state remains outside Nix ownership.
 
 The policy derives its threshold from the active model rather than naming GPT-5.6 Sol explicitly, so model switches retain coherent behavior.
 

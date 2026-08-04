@@ -9,7 +9,7 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 enter_repo
 
 portable_nix_paths=(
-    config/fleet/flake.nix
+    config/ai/flake.nix
     overlays/ai
     test/ai/overlays/agent-deck-go-compat.nix
     test/ai/overlays/llama-cpp-platform-compat.nix

@@ -10,4 +10,4 @@ enter_repo
 
 nix_conf_dir=$(empty_nix_conf_dir)
 
-NIX_CONF_DIR="$nix_conf_dir" nix --option warn-dirty false build --no-link --print-build-logs ./config/fleet#default
+NIX_CONF_DIR="$nix_conf_dir" nix --option warn-dirty false build --no-link --print-build-logs ./config/ai#default

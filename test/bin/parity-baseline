@@ -57,7 +57,7 @@ HM_CONFIGS=(
 )
 
 # Portable fleet-core systems.
-PORTABLE_DIR=./config/fleet
+PORTABLE_DIR=./config/ai
 PORTABLE_SYSTEMS=(aarch64-darwin aarch64-linux x86_64-linux)
 
 # Sort package names rather than trusting attribute or list order: a reordering

@@ -254,7 +254,7 @@ let
   sourceForChecks = lib.fileset.toSource {
     root = ../.;
     fileset = lib.fileset.unions [
-      ../config/fleet
+      ../config/ai
       ../flake
       ../overlays/ai
       ../packages/agent-resources.nix
@@ -421,7 +421,7 @@ in
       llama-cpp-platform-compat = pkgs.callPackage ../test/ai/overlays/llama-cpp-platform-compat.nix { };
       llm-agents-nixpkgs-independent =
         let
-          portableLock = builtins.fromJSON (builtins.readFile ../config/fleet/flake.lock);
+          portableLock = builtins.fromJSON (builtins.readFile ../config/ai/flake.lock);
           llmAgentsNode = portableLock.nodes.${portableLock.nodes.root.inputs.llm-agents};
         in
         if builtins.isString llmAgentsNode.inputs.nixpkgs then

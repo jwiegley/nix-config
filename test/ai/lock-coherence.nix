@@ -2,7 +2,7 @@
 
 let
   rootLock = builtins.fromJSON (builtins.readFile "${src}/flake.lock");
-  portableLock = builtins.fromJSON (builtins.readFile "${src}/config/fleet/flake.lock");
+  portableLock = builtins.fromJSON (builtins.readFile "${src}/config/ai/flake.lock");
   rootAi = rootLock.nodes.${rootLock.nodes.root.inputs.nix-config-ai};
   portableRoot = portableLock.nodes.root;
   followNode =

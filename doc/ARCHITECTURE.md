@@ -26,23 +26,23 @@ the target host may activate them.
 ### Portable AI
 
 ```text
-config/fleet/flake.nix
+config/ai/flake.nix
   -> flake/ai.nix
   -> overlays/ai/default.nix
   -> packages + checks + apps
 ```
 
-`config/fleet` is a separately lockable, remote-fetchable boundary over the same
+`config/ai` is a separately lockable, remote-fetchable boundary over the same
 implementation tree. The root and portable locks must agree on shared inputs;
 host-only inputs stay outside the portable closure.
 
 The former root `flake-ai.nix` shim and later legacy subflake-path stub were
 retired after authoritative consumer evaluation and code search found no
-maintained import. Portable consumers use `flake/ai.nix` through `config/fleet`.
+maintained import. Portable consumers use `flake/ai.nix` through `config/ai`.
 
 ### External consumers
 
-The supported shape is a paired root source and `dir=config/fleet` input at one
+The supported shape is a paired root source and `dir=config/ai` input at one
 revision. Cleanup issue #114 verified that shape in the authoritative shared-work,
 VPS, and Vulcan checkouts on 2026-08-03, including positive no-activation
 evaluation. The legacy subflake directory has no compatibility route.
@@ -78,8 +78,8 @@ need them for rollback.
 | Path | Owns | Must not own |
 |---|---|---|
 | `config/hosts/registry.nix` | Host identity and capabilities | Module implementation |
-| `config/fleet/catalog.nix` | Profiles, selectors, resources, validation | Client serialization or package builds |
-| `config/fleet/renderers/*` | Generated documents for one client | Global resource selection |
+| `config/ai/catalog.nix` | Profiles, selectors, resources, validation | Client serialization or package builds |
+| `config/ai/renderers/*` | Generated documents for one client | Global resource selection |
 | `config/ai.nix` | Home Manager composition and ownership guards | Package implementation |
 | `flake/ai.nix` | Portable package, app, and check composition | Host activation or root lock policy |
 | `packages/*` | Reusable package sets and multi-consumer build/runtime implementation | Host selection |

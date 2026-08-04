@@ -4818,11 +4818,11 @@
         "translate-tool": "translate-tool"
       },
       "locked": {
-        "path": "./config/fleet",
+        "path": "./config/ai",
         "type": "path"
       },
       "original": {
-        "path": "./config/fleet",
+        "path": "./config/ai",
         "type": "path"
       },
       "parent": []

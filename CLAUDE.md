@@ -20,7 +20,7 @@ GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh <command>
 ```bash
 # Baseline/focused tests
 test/bin/unittest-strict.py test/bin/update-overlay-slow-test.py
-nix flake check ./config/fleet --all-systems --no-build
+nix flake check ./config/ai --all-systems --no-build
 make test
 
 # Darwin build without activation
@@ -42,9 +42,9 @@ Never run `nix flake update` or `nix flake lock` under `sudo`; root and user fet
 
 ## Architecture invariants
 
-- Root implementation is owned here; portable AI is the `config/fleet` subflake from the same revision.
-- The root repository's portable core is `config/fleet`; every supported consumer uses that path from the same revision.
-- `config/fleet/catalog.nix` owns profiles/resources/selection; `config/fleet/renderers/` are concrete client adapters.
+- Root implementation is owned here; portable AI is the `config/ai` subflake from the same revision.
+- The root repository's portable core is `config/ai`; every supported consumer uses that path from the same revision.
+- `config/ai/catalog.nix` owns profiles/resources/selection; `config/ai/renderers/` are concrete client adapters.
 - `packages/` owns reusable package sets and multi-consumer implementations. Overlays own ordered exposure, narrow compatibility fixes, and cohesive integration-specific package definitions; they must not hide host selection or unrelated implementation channels.
 - Mutable agent state is not Nix-owned. Nix owns generated leaves only.
 - Pi and Codex credentials stay environment-only. Never add request-time secret values to argv, config, logs, or generated files.

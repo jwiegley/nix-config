@@ -166,7 +166,7 @@ run_vps() {
     fi
     eval_target "vps [ovh-vps toplevel]" \
         --raw --override-input nix-config "$tree" \
-        --override-input nix-config-ai "$tree?dir=config/fleet" \
+        --override-input nix-config-ai "$tree?dir=config/ai" \
         "$vps_checkout#nixosConfigurations.ovh-vps.config.system.build.toplevel.drvPath"
 }
 

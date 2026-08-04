@@ -2,7 +2,7 @@
   description = "Darwin configuration";
 
   inputs = {
-    nix-config-ai.url = "path:./config/fleet";
+    nix-config-ai.url = "path:./config/ai";
 
     darwin = {
       url = "github:lnl7/nix-darwin";

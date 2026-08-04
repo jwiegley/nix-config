@@ -1567,9 +1567,9 @@ def _lock_input_node(lock: dict, input_name: str, catalog_name: str) -> dict:
 
 
 def _flake_input_literal(nix_dir: Path, input_name: str, catalog_name: str) -> dict[str, str]:
-    flake_path = nix_dir / "config" / "fleet" / "flake.nix"
+    flake_path = nix_dir / "config" / "ai" / "flake.nix"
     if not flake_path.is_file():
-        raise RuntimeError(f"flake input projection requires config/fleet/flake.nix: {catalog_name}")
+        raise RuntimeError(f"flake input projection requires config/ai/flake.nix: {catalog_name}")
     text = flake_path.read_text()
     escaped = re.escape(input_name)
     urls = re.findall(rf'(?m)^\s*{escaped}\.url\s*=\s*"([^"]+)"\s*;', text)
@@ -1594,7 +1594,7 @@ def _validate_flake_projection(
     if source["fetcher"] != "fetchTree" or "input" not in update:
         return
     if portable_lock is None:
-        raise RuntimeError(f"flake input projection requires config/fleet/flake.lock: {name}")
+        raise RuntimeError(f"flake input projection requires config/ai/flake.lock: {name}")
 
     node = _lock_input_node(portable_lock, update["input"], name)
     locked = node.get("locked")
@@ -1789,7 +1789,7 @@ def load_source_catalog(
         "pypi-release": (common_update_fields | {"package"}, {"package"}),
         "url-release": (common_update_fields, set()),
     }
-    portable_lock_path = nix_dir / "config" / "fleet" / "flake.lock"
+    portable_lock_path = nix_dir / "config" / "ai" / "flake.lock"
     portable_lock = None
     for path in sorted(catalog_dir.glob("*.json")):
         payload = json.loads(path.read_text(), object_pairs_hook=_unique_object)
@@ -1868,7 +1868,7 @@ def load_source_catalog(
                 ) and "input" in update and portable_lock is None:
                     if not portable_lock_path.is_file():
                         raise RuntimeError(
-                            f"flake input projection requires config/fleet/flake.lock: {name}"
+                            f"flake input projection requires config/ai/flake.lock: {name}"
                         )
                     portable_lock = json.loads(portable_lock_path.read_text())
                 _validate_flake_projection(nix_dir, name, record, portable_lock)
@@ -2136,9 +2136,9 @@ def sync_flake_projections(
     build_validator=validate_flake_input_build,
 ) -> int:
     """Refresh catalog fetchTree projections from the selected portable lock nodes."""
-    lock_path = nix_dir / "config" / "fleet" / "flake.lock"
+    lock_path = nix_dir / "config" / "ai" / "flake.lock"
     if not lock_path.is_file():
-        raise RuntimeError("flake projection sync requires config/fleet/flake.lock")
+        raise RuntimeError("flake projection sync requires config/ai/flake.lock")
     portable_lock = json.loads(lock_path.read_text())
     changed_records = 0
     for path in sorted((nix_dir / "sources").glob("*.json")):
@@ -2371,7 +2371,7 @@ def _write_catalog_target(target: dict) -> None:
 def _rewrite_fixed_flake_input(target: dict, old_rev: str, new_rev: str) -> Path:
     record = target["_record"]
     source_args = record["source"]["args"]
-    flake_path = target["_path"].parent.parent / "config" / "fleet" / "flake.nix"
+    flake_path = target["_path"].parent.parent / "config" / "ai" / "flake.nix"
     old_url = f"github:{source_args['owner']}/{source_args['repo']}/{old_rev}"
     new_url = f"github:{source_args['owner']}/{source_args['repo']}/{new_rev}"
     text = flake_path.read_text()
@@ -2387,7 +2387,7 @@ def _rewrite_npm_flake_input_literal(target: dict, new_rev: str) -> Path:
     record = target["_record"]
     update = record["update"]
     git_args = record["artifacts"]["flakeInput"]["args"]
-    flake_path = target["_path"].parent.parent / "config" / "fleet" / "flake.nix"
+    flake_path = target["_path"].parent.parent / "config" / "ai" / "flake.nix"
     base_url = f"github:{git_args['owner']}/{git_args['repo']}"
     pattern = re.compile(rf'{re.escape(base_url)}(?:/[0-9a-f]{{40}})?(?=")')
     text = flake_path.read_text()
@@ -2448,7 +2448,7 @@ def update_npm_flake_target(
         print(f"{Colors.RED}{name}: {message}{Colors.RESET}")
         return "failed"
 
-    flake_path = target["_path"].parent.parent / "config" / "fleet" / "flake.nix"
+    flake_path = target["_path"].parent.parent / "config" / "ai" / "flake.nix"
     exact_literal = f"github:{git_args['owner']}/{git_args['repo']}/{new_rev}"
     changed = (
         new_version != old_version
@@ -3048,7 +3048,7 @@ def update_catalog_target(
 
     transaction.watch(target["_path"])
     if kind == "fixed-flake-input":
-        flake_path = target["_path"].parent.parent / "config" / "fleet" / "flake.nix"
+        flake_path = target["_path"].parent.parent / "config" / "ai" / "flake.nix"
         transaction.watch(flake_path)
     if "version" in record:
         record["version"] = new_version
@@ -3204,7 +3204,7 @@ Examples:
     )
     parser.add_argument(
         "--sync-flake-projections", action="store_true",
-        help="Refresh catalog fetchTree projections from config/fleet/flake.lock"
+        help="Refresh catalog fetchTree projections from config/ai/flake.lock"
     )
     parser.add_argument(
         "--prepare-fixed-inputs", action="store_true", help=argparse.SUPPRESS

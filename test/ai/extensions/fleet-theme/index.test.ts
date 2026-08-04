@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, test } from "bun:test";
 
-const modulePath = "../../../../config/fleet/extensions/fleet-theme/index.ts";
+const modulePath = "../../../../config/ai/extensions/fleet-theme/index.ts";
 const expectedHash = "03ecec59f47f49b6562f95101d58ae6338377e0d9b84b6410e065f28e2c18d5a";
 
 type Handler = (event: unknown, context: any) => unknown;

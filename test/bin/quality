@@ -452,17 +452,17 @@ run_signatures() {
 
 run_portable_eval() {
     need nix portable-eval || return
-    if nix flake check ./config/fleet --all-systems --no-build --no-warn-dirty; then
+    if nix flake check ./config/ai --all-systems --no-build --no-warn-dirty; then
         note "portable-eval: OK"
     else
-        fail "portable-eval: nix flake check ./config/fleet failed"
+        fail "portable-eval: nix flake check ./config/ai failed"
     fi
 }
 
 # Unlike portable-eval, this reads no source from the working tree during Nix
 # evaluation.  The script archives an exact commit, content-pins that tarball,
 # proves Nix reports a tarball lock with the committed subflake lock graph, then
-# checks the ?dir=config/fleet flake without allowing a lock write.  It is expensive
+# checks the ?dir=config/ai flake without allowing a lock write.  It is expensive
 # closeout evidence and therefore deliberately absent from pre-commit.
 run_immutable_subflake() {
     if [[ ! -x test/bin/immutable-subflake-check ]]; then
@@ -470,7 +470,7 @@ run_immutable_subflake() {
         return
     fi
     if test/bin/immutable-subflake-check; then
-        note "immutable-subflake: immutable config/fleet archive is lock-stable"
+        note "immutable-subflake: immutable config/ai archive is lock-stable"
     else
         fail "immutable-subflake: immutable archive verification failed"
     fi

@@ -452,7 +452,7 @@ class TestImmutableSubflakeCheck(unittest.TestCase):
         self.repo = self.root / "repo"
         self.repo.mkdir()
         (self.repo / "test" / "bin").mkdir(parents=True)
-        (self.repo / "config" / "fleet").mkdir(parents=True)
+        (self.repo / "config" / "ai").mkdir(parents=True)
         shutil.copy2(IMMUTABLE_SUBFLAKE_CHECK, self.repo / "test" / "bin")
 
         self.committed_lock = {
@@ -464,10 +464,10 @@ class TestImmutableSubflakeCheck(unittest.TestCase):
             json.dumps(self.committed_lock, separators=(",", ":")) + "\n"
         )
         self.committed_source_marker = "committed source marker\n"
-        (self.repo / "config" / "fleet" / "flake.lock").write_text(
+        (self.repo / "config" / "ai" / "flake.lock").write_text(
             self.committed_lock_bytes, encoding="utf-8"
         )
-        (self.repo / "config" / "fleet" / "flake.nix").write_text(
+        (self.repo / "config" / "ai" / "flake.nix").write_text(
             "{ outputs = _: {}; }\n", encoding="utf-8"
         )
         (self.repo / "source-marker").write_text(
@@ -484,7 +484,7 @@ class TestImmutableSubflakeCheck(unittest.TestCase):
         # Deliberately disagree with the selected commit.  The gate may inspect
         # the working lock only for byte stability; archive and lock semantics
         # must both come from the requested revision.
-        self.worktree_lock = self.repo / "config" / "fleet" / "flake.lock"
+        self.worktree_lock = self.repo / "config" / "ai" / "flake.lock"
         self.worktree_lock_bytes = b'{"dirty-working-tree":true}\n'
         self.worktree_lock.write_bytes(self.worktree_lock_bytes)
 
@@ -540,7 +540,7 @@ if args[:2] == ["flake", "prefetch"]:
     row["archivePath"] = str(archive_path)
     with tarfile.open(archive_path) as archive:
         row["archiveLock"] = archive.extractfile(
-            "config/fleet/flake.lock"
+            "config/ai/flake.lock"
         ).read().decode()
         row["archiveSourceMarker"] = archive.extractfile("source-marker").read().decode()
     record(row)
@@ -556,7 +556,7 @@ if args[:2] == ["flake", "prefetch"]:
 elif args[:2] == ["flake", "metadata"]:
     locked = {
         "type": os.environ.get("FAKE_METADATA_TYPE", "tarball"),
-        "dir": os.environ.get("FAKE_METADATA_DIR", "config/fleet"),
+        "dir": os.environ.get("FAKE_METADATA_DIR", "config/ai"),
         "narHash": os.environ.get("FAKE_METADATA_HASH", "sha256-/+fixture="),
         "url": "file:///the/archive.tar",
     }
@@ -629,7 +629,7 @@ else:
         immutable_ref = metadata["args"][-1]
         self.assertTrue(immutable_ref.startswith("tarball+file://"), immutable_ref)
         self.assertIn(
-            "?dir=config/fleet&narHash=sha256-%2F%2Bfixture%3D", immutable_ref
+            "?dir=config/ai&narHash=sha256-%2F%2Bfixture%3D", immutable_ref
         )
         self.assertNotIn("git+file", immutable_ref)
         self.assertEqual(
@@ -658,7 +658,7 @@ else:
     def test_metadata_requires_tarball_dir_and_prefetched_nar_hash(self):
         cases = (
             ({"FAKE_METADATA_TYPE": "git"}, "locked.type is not tarball"),
-            ({"FAKE_METADATA_DIR": "wrong/subflake"}, "locked.dir is not config/fleet"),
+            ({"FAKE_METADATA_DIR": "wrong/subflake"}, "locked.dir is not config/ai"),
             ({"FAKE_METADATA_HASH": "sha256-other="}, "locked.narHash differs"),
         )
         for override, diagnostic in cases:
@@ -686,7 +686,7 @@ else:
                 result = self.run_gate(FAKE_MUTATE_ON=phase)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn(
-                    "working-tree config/fleet/flake.lock changed",
+                    "working-tree config/ai/flake.lock changed",
                     result.stdout + result.stderr,
                 )
                 expected_calls = 2 if phase == "metadata" else 3

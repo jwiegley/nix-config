@@ -9,7 +9,7 @@ let
     agent-resources = "/catalog-agent-resources";
     pi-gallery = "/catalog-pi-gallery";
   };
-  catalog = import "${src}/config/fleet/catalog.nix" {
+  catalog = import "${src}/config/ai/catalog.nix" {
     inherit lib;
     resources = "/catalog-agent-resources";
   };
@@ -57,7 +57,7 @@ let
   droidProfile = catalog.profiles.hera-droid;
   droidSelected = lib.mapAttrs (_: itemSet: catalog.select droidProfile itemSet) catalog.items;
   droidRendered =
-    (import "${src}/config/fleet/renderers/droid.nix" {
+    (import "${src}/config/ai/renderers/droid.nix" {
       inherit lib;
       pkgs = rendererPkgs;
     })
@@ -67,7 +67,7 @@ let
         homeDirectory = "/Users/test";
         xdgConfigHome = "/Users/test/.config";
       };
-  piRenderer = import "${src}/config/fleet/renderers/pi.nix" {
+  piRenderer = import "${src}/config/ai/renderers/pi.nix" {
     inherit lib;
     pkgs = rendererPkgs;
   };

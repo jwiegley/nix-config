@@ -8,13 +8,13 @@ Personal, multi-host Nix configuration for Darwin, standalone Home Manager, NixO
 |---|---|---|---|
 | Hera | aarch64-darwin | `~/src/nix` | Direct `darwinConfigurations.hera` |
 | Clio | aarch64-darwin | `~/src/nix` on Clio | Direct `darwinConfigurations.clio` |
-| Andoria-08/T2, Delphi, GPU | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Paired root source and canonical `dir=config/fleet` input |
-| Vulcan | aarch64 NixOS | `/etc/nixos` on Vulcan | Paired root/`config/fleet` inputs plus shared Home Manager module |
-| VPS | x86_64 NixOS | `/etc/nixos` on the VPS | Paired root/`config/fleet` inputs plus shared Home Manager module |
+| Andoria-08/T2, Delphi, GPU | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Paired root source and canonical `dir=config/ai` input |
+| Vulcan | aarch64 NixOS | `/etc/nixos` on Vulcan | Paired root/`config/ai` inputs plus shared Home Manager module |
+| VPS | x86_64 NixOS | `/etc/nixos` on the VPS | Paired root/`config/ai` inputs plus shared Home Manager module |
 
 The external checkouts own their locks and activation. Authoritative verification
 confirmed that Vulcan, VPS, and shared work use coherent paired revisions with
-`dir=config/fleet` and evaluate without activation. The old `config/ai`
+`dir=config/ai` and evaluate without activation. The old `config/ai`
 compatibility flake has been removed. Do not overwrite an external checkout from
 a secondary local clone.
 
@@ -46,7 +46,7 @@ Run commands from this repository with its direnv loaded. Do not use `nix develo
 make test
 
 # Portable evaluation
-nix flake check ./config/fleet --all-systems --no-build
+nix flake check ./config/ai --all-systems --no-build
 
 # Format/lint through repository hooks
 lefthook run pre-commit --all-files
@@ -66,7 +66,7 @@ System and Home Manager switches are owned by each authoritative checkout. Build
 |---|---|
 | `flake.nix` | Root systems, packages, checks, and exported Home Manager module |
 | `config/` | Shared Home Manager/Darwin policy and AI catalog/renderers |
-| `config/fleet/` | Portable AI subflake, models, profiles, resources, and client adapters |
+| `config/ai/` | Portable AI subflake, models, profiles, resources, and client adapters |
 | `overlays/` | Ordered exposure, compatibility fixes, and cohesive integration-owned package definitions |
 | `packages/` | Reusable package sets/implementations and immutable Pi gallery |
 | `test/` | Root, portable, wrapper, renderer, and activation contracts |

@@ -25,8 +25,8 @@ runCommand "pi-fleet-theme-check"
   ''
     set -euo pipefail
 
-    theme=${lib.escapeShellArg "${sourceForChecks}/config/fleet/themes/dark-tool-backgrounds.json"}
-    extension=${lib.escapeShellArg "${sourceForChecks}/config/fleet/extensions/fleet-theme/index.ts"}
+    theme=${lib.escapeShellArg "${sourceForChecks}/config/ai/themes/dark-tool-backgrounds.json"}
+    extension=${lib.escapeShellArg "${sourceForChecks}/config/ai/extensions/fleet-theme/index.ts"}
     expected=03ecec59f47f49b6562f95101d58ae6338377e0d9b84b6410e065f28e2c18d5a
 
     test "$(sha256sum "$theme" | cut -d ' ' -f 1)" = "$expected"

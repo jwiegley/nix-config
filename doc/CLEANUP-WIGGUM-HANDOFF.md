@@ -39,7 +39,7 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
   and block #121.
 - #125 confines password-store, GnuPG, and Emacs to Hera/Clio after #120/#124.
   It is In Progress and blocks #121.
-- #126 renames the AI-only `config/fleet/` tree back to `config/ai/` after
+- #126 renames the AI-only `config/ai/` tree back to `config/ai/` after
   #123/#125; it is a deferred Todo subissue and blocks #121.
 - #121 remains the final unchanged-candidate verification and cleanup closeout.
 

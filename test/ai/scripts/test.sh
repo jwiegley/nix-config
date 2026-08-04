@@ -13,8 +13,8 @@ nix_cmd=(env NIX_CONF_DIR="$nix_conf_dir" nix --option warn-dirty false)
 
 system=$("${nix_cmd[@]}" eval --impure --raw --expr 'builtins.currentSystem')
 
-"${nix_cmd[@]}" flake show ./config/fleet --no-write-lock-file >/dev/null
-"${nix_cmd[@]}" eval --raw "./config/fleet#packages.${system}.default.name" >/dev/null
-"${nix_cmd[@]}" eval --raw "./config/fleet#devShells.${system}.default.name" >/dev/null
-test -n "$("${nix_cmd[@]}" eval --raw "./config/fleet#packages.${system}.plasma-wiki.version")"
-test -n "$("${nix_cmd[@]}" eval --raw "./config/fleet#packages.${system}.plasma-fractal.version")"
+"${nix_cmd[@]}" flake show ./config/ai --no-write-lock-file >/dev/null
+"${nix_cmd[@]}" eval --raw "./config/ai#packages.${system}.default.name" >/dev/null
+"${nix_cmd[@]}" eval --raw "./config/ai#devShells.${system}.default.name" >/dev/null
+test -n "$("${nix_cmd[@]}" eval --raw "./config/ai#packages.${system}.plasma-wiki.version")"
+test -n "$("${nix_cmd[@]}" eval --raw "./config/ai#packages.${system}.plasma-fractal.version")"

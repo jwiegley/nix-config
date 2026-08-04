@@ -52,4 +52,4 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
         if: runner.os != 'macOS'
       - name: Build and load the Pi extension gallery
-        run: nix build --no-link "./config/fleet#checks.${{ matrix.system }}.pi-gallery"
+        run: nix build --no-link "./config/ai#checks.${{ matrix.system }}.pi-gallery"

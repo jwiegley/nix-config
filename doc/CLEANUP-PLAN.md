@@ -423,7 +423,7 @@ no longer needs it.
 
 Run read-only proof against authoritative Vulcan, VPS, and shared-work checkouts,
 plus fresh GitHub and Gitea searches. Require paired root/portable revisions and
-`dir=config/fleet`; evaluate without activation.
+`dir=config/ai`; evaluate without activation.
 
 If proof passes, delete together:
 
@@ -439,7 +439,7 @@ If proof passes, delete together:
 
 Retain the positive immutable-subflake archive/lock proof and the positive
 cross-consumer lock/evaluation checks. Delete only their stale `config/ai`
-branches; those checks protect the supported `config/fleet` interface
+branches; those checks protect the supported `config/ai` interface
 independently of the rename inventory.
 
 If a host is unreachable or divergent, retain the minimum throwing stub and one

@@ -6,7 +6,7 @@ let
   galleryPackages =
     map (id: gallery.members.${id}.attrName) gallery.order
     ++ map (source: source.attrName) (builtins.attrValues gallery.supportSources);
-  portableLock = builtins.fromJSON (builtins.readFile ../../config/fleet/flake.lock);
+  portableLock = builtins.fromJSON (builtins.readFile ../../config/ai/flake.lock);
 in
 {
   systems = [
