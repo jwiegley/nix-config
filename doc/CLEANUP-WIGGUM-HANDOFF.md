@@ -84,6 +84,13 @@ issues remain explicit exclusions.
   service. A proposed activation-time JSON writer was rejected before commit:
   without a lock shared by the clients it could overwrite concurrent updates or
   discard the manifest evidence needed for declarative removal.
+  Key-name-only probes found mutable Claude/Codex configs clean on Hera, VPS,
+  Vulcan, and all four shared-work hosts; their current managed leaves and
+  PromptDeploy manifests still reflect the pre-retirement generation, and
+  Hera's Pi cache is stale. Clio timed out. Reconciliation must not run until
+  John approves a quiescent window for Hera sessions `nix-review`, `ct`,
+  `ares-main-review`, `local`, and `llm-setup`; andoria-t2 Claude review
+  sessions; Vulcan session `nixos`; and any then-live Clio session.
 
 ## Concurrent work boundary
 
