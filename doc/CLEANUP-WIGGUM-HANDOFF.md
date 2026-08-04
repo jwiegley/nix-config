@@ -11,9 +11,10 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 
 - The authoritative checkout is `/Users/johnw/src/nix`, on `main`. It is the
   only worktree.
-- The #124 source boundary is signed commit `1ad23d7c`, with accepted Darwin and
-  package-parity baselines in `9c476513`. Publication and activation receipts
-  are tracked separately on the issue.
+- The #123 source boundary is signed Nix commit `eb0da1d4`, with accepted Darwin
+  and package-parity baselines in `f6c4d705`; its `llm-setup` producer retirement
+  is published at `0e8966b`. Publication and activation receipts are tracked
+  separately on the issue.
 - Hera runs Darwin generation 991. Agent Deck 1.11.0, oMLX 0.5.5, Pi 0.83.0,
   Claude Code 2.1.220, and Codex 0.146.0 are active.
 - Codex defaults to native OpenAI `gpt-5.6-sol`; local oMLX and llama-swap
@@ -33,9 +34,9 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
   policy and test code than the renderer literals it removed.
 - #116 and #119 are In Progress. #118/#120 are Done. #117 is closed not-planned,
   superseded by #124.
-- #122 (remove OpenCode) and #124 (remove Ref and Perplexity) are In Progress.
-  #123 (retire the Nix model registry) remains Todo after #122. All three are
-  subissues of #98 and block #121.
+- #122 (remove OpenCode), #123 (retire the Nix model registry), and #124
+  (remove Ref and Perplexity) are In Progress. All three are subissues of #98
+  and block #121.
 - #125 confines password-store, GnuPG, and Emacs to Hera/Clio after #120/#124.
   It remains a Todo subissue and blocks #121.
 - #126 renames the AI-only `config/fleet/` tree back to `config/ai/` after
@@ -97,6 +98,14 @@ issues remain explicit exclusions.
   John approves a quiescent window for Hera sessions `nix-review`, `ct`,
   `ares-main-review`, `local`, and `llm-setup`; andoria-t2 Claude review
   sessions; Vulcan session `nixos`; and any then-live Clio session.
+- #123: published `llm-setup` commit `0e8966b` removes the Nix registry writer
+  from reset. Signed Nix `eb0da1d4` deletes the three registry/policy files and
+  1,027 lines overall; `f6c4d705` records the exact baseline deltas. Pi now
+  discovers local models at startup, Codex keeps native OpenAI as its default,
+  and Droid intentionally receives no Nix-generated `customModels`. Focused
+  catalog/preflight/wrapper/Pi checks, the 22-second fast gate, generated-leaf
+  probes, and a native Hera system build pass. Runtime activation and a fresh
+  disposable Pi discovery probe remain open.
 
 ## Concurrent work boundary
 
