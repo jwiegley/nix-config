@@ -1,6 +1,6 @@
 {
  "schema": "fleet-parity-oracle/2",
- "baselineRev": "1ad23d7c0eb75ab2c8c768b2e321f61bb8feab39",
+ "baselineRev": "eb0da1d40c42f07c4cb1dd0163ae7a94f4807070",
  "armedRefactorAncestor": "a3cc3843",
  "note": "Stored evidence for the Fleet Configuration Programme parity gates. Package counts are derived from the lists in this file, never asserted separately. Re-derive with test/bin/parity-baseline --check <this file>.",
  "history": [
@@ -222,6 +222,31 @@
     "lost home-manager/jwiegley@x86_64-linux: codex-0.146.0-host-state-credentials",
     "gained home-manager/jwiegley@x86_64-linux: codex-0.146.0-host-state"
    ]
+  },
+  {
+   "old_rev": "1ad23d7c0eb75ab2c8c768b2e321f61bb8feab39",
+   "new_rev": "eb0da1d40c42f07c4cb1dd0163ae7a94f4807070",
+   "reason": "Retire the shared model registry and Droid managed-settings wrapper (#123)",
+   "intentional_deltas": [
+    "lost darwin/clio: droid-0.186.0-managed-config",
+    "gained darwin/clio: droid",
+    "lost darwin/hera: droid-0.186.0-managed-config",
+    "gained darwin/hera: droid",
+    "lost home-manager/johnw@aarch64-linux: droid-0.186.0-managed-config",
+    "gained home-manager/johnw@aarch64-linux: droid",
+    "lost home-manager/jwiegley@x86_64-linux: droid-0.186.0-managed-config",
+    "gained home-manager/jwiegley@x86_64-linux: droid"
+   ],
+   "observed_deltas": [
+    "lost darwin/clio: droid-0.186.0-managed-config",
+    "gained darwin/clio: droid",
+    "lost darwin/hera: droid-0.186.0-managed-config",
+    "gained darwin/hera: droid",
+    "lost home-manager/johnw@aarch64-linux: droid-0.186.0-managed-config",
+    "gained home-manager/johnw@aarch64-linux: droid",
+    "lost home-manager/jwiegley@x86_64-linux: droid-0.186.0-managed-config",
+    "gained home-manager/jwiegley@x86_64-linux: droid"
+   ]
   }
  ],
  "commands": {
@@ -236,7 +261,7 @@
    "kind": "darwin",
    "target": "clio",
    "user": "johnw",
-   "drvPath": "/nix/store/bidx947ai99b20rlfd340shg2si1hqy3-darwin-system-26.11.15abb8c.drv",
+   "drvPath": "/nix/store/xbbx1kbxyky36wff717irhrd24bq25f6-darwin-system-26.11.15abb8c.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -297,7 +322,7 @@
     "dot2tex",
     "doxygen",
     "drafts-mcp-server",
-    "droid-0.186.0-managed-config",
+    "droid",
     "dstp",
     "du-dust",
     "dummy-info-dir1",
@@ -630,7 +655,7 @@
    "kind": "darwin",
    "target": "hera",
    "user": "johnw",
-   "drvPath": "/nix/store/gchixhl1sb3dccix51574nxzkhzhkkf1-darwin-system-26.11.15abb8c.drv",
+   "drvPath": "/nix/store/wj09gvs59yhld3c3hwl5ad3w64sz4y8c-darwin-system-26.11.15abb8c.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -699,7 +724,7 @@
     "dot2tex",
     "doxygen",
     "drafts-mcp-server",
-    "droid-0.186.0-managed-config",
+    "droid",
     "dstp",
     "du-dust",
     "dummy-info-dir1",
@@ -1051,7 +1076,7 @@
   {
    "kind": "home-manager",
    "target": "johnw@aarch64-linux",
-   "drvPath": "/nix/store/xs84fs92q676ffsbcf0clb2dgw80apwv-home-manager-generation.drv",
+   "drvPath": "/nix/store/yzkfx8zm3jqmbfr119nnpxzf1ahwznz3-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1108,7 +1133,7 @@
     "dnstracer",
     "dot2tex",
     "doxygen",
-    "droid-0.186.0-managed-config",
+    "droid",
     "dstp",
     "du-dust",
     "dummy-info-dir1",
@@ -1427,7 +1452,7 @@
   {
    "kind": "home-manager",
    "target": "jwiegley@x86_64-linux",
-   "drvPath": "/nix/store/hsbka3sqqvwa9lvw07b73dv9bkjp3ypy-home-manager-generation.drv",
+   "drvPath": "/nix/store/zdjisfsa07y3rymfwggl300yb0a8pdf9-home-manager-generation.drv",
    "packages": [
     "App-Git-Autofixup",
     "ShellCheck",
@@ -1484,7 +1509,7 @@
     "dnstracer",
     "dot2tex",
     "doxygen",
-    "droid-0.186.0-managed-config",
+    "droid",
     "dstp",
     "du-dust",
     "dummy-info-dir1",
