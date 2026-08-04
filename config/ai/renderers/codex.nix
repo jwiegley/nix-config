@@ -151,10 +151,6 @@ let
     }
   ) selected.agents;
 
-  skillFiles = lib.mapAttrs' (
-    name: item: lib.nameValuePair ".agents/skills/${name}" { inherit (item) source; }
-  ) selected.skills;
-
   commandFiles = lib.mapAttrs' (
     name: item:
     lib.nameValuePair ".agents/skills/command-${name}" {
@@ -181,7 +177,6 @@ in
 {
   files = mergeFiles [
     agentFiles
-    skillFiles
     commandFiles
     promptFiles
     {

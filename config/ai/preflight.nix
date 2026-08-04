@@ -3,7 +3,7 @@
 {
   newPaths,
   piGuard ? null,
-  legacyPiGuardPath ? null,
+  piAliasTarget ? null,
 }:
 
 let
@@ -89,7 +89,7 @@ let
     "Checking ${toString count} Nix-managed AI leaf ${noun} for blockers...";
   piGuardValid =
     if piGuard == null then
-      legacyPiGuardPath == null
+      true
     else
       (
         builtins.isAttrs piGuard
@@ -99,19 +99,14 @@ let
             "path"
           ]
         && piGuard.path == ".config/pi/agent/mcp.json"
-        && (
-          legacyPiGuardPath == null
-          || (validRelativePath legacyPiGuardPath && legacyPiGuardPath != piGuard.path)
-        )
         &&
           piGuard.forbiddenKeys == [
             "mcpServers"
             "imports"
           ]
       );
-  piGuardPaths =
-    lib.optional (piGuard != null) piGuard.path
-    ++ lib.optional (legacyPiGuardPath != null) legacyPiGuardPath;
+  piAliasTargetValid = piAliasTarget == null || validRelativePath piAliasTarget;
+  piGuardPaths = lib.optional (piGuard != null) piGuard.path;
   renderPiGuard = path: ''
     pi_path="$HOME/${path}"
     if [ -e "$pi_path" ] || [ -L "$pi_path" ]; then
@@ -156,6 +151,21 @@ let
         printf '%s' 'special path'
       fi
     }
+
+    ${lib.optionalString (piAliasTarget != null) ''
+      pi_alias="$HOME/.pi"
+      pi_alias_expected="$HOME/${piAliasTarget}"
+      if [ -L "$pi_alias" ]; then
+        pi_alias_resolved="$(${pkgs.coreutils}/bin/readlink -e -- "$pi_alias" 2>/dev/null || true)"
+        pi_alias_expected_resolved="$(${pkgs.coreutils}/bin/readlink -m -- "$pi_alias_expected")"
+        if [ -z "$pi_alias_resolved" ] \
+          || [ "$pi_alias_resolved" != "$pi_alias_expected_resolved" ]; then
+          report_error ".pi: compatibility link must resolve to $pi_alias_expected"
+        fi
+      elif [ -e "$pi_alias" ]; then
+        report_error ".pi: preserve and reconcile the existing $(path_kind "$pi_alias") before activation"
+      fi
+    ''}
 
     report_leaf_collision() {
       path=$1
@@ -340,6 +350,7 @@ assert builtins.isList newPaths;
 assert newPaths == sortedPaths;
 assert builtins.all validManagedPath newPaths;
 assert piGuardValid;
+assert piAliasTargetValid;
 {
   inherit script;
   activation = lib.hm.dag.entryBefore [ "checkLinkTargets" ] script;

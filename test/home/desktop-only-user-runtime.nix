@@ -8,6 +8,10 @@
 let
   inherit (pkgs) lib;
   registry = import ../../config/hosts/registry.nix;
+  catalog = import ../../config/ai/catalog.nix {
+    inherit lib;
+    resources = "/catalog-agent-resources";
+  };
   desktopPackages = [
     "eask-cli"
     "emacs-lsp-booster"
@@ -32,15 +36,31 @@ let
     "hera"
     "clio"
   ];
+  vpsHome = nixosHomeEvaluationFixtures.vps.config;
   negative = [
     nixosHomeEvaluationFixtures.vulcan.config
-    nixosHomeEvaluationFixtures.vps.config
+    vpsHome
     homeConfigurations."jwiegley@x86_64-linux".config
     homeConfigurations."johnw@aarch64-linux".config
   ];
   sharedWork = homeConfigurations."jwiegley@x86_64-linux".config;
   allHomes = positive ++ negative;
   piHomes = allHomes;
+  piExtensionPaths = map (name: ".config/pi/agent/extensions/${name}") [
+    "auto-compact-resume/index.ts"
+    "fleet-theme/index.ts"
+    "nix-gallery/index.ts"
+    "pi-loop/index.ts"
+    "pi-mcp-adapter"
+    "pi-quiet"
+  ];
+  vpsPiSkills = catalog.select catalog.profiles.vps-pi catalog.items.skills;
+  vpsPiSkillNames = builtins.attrNames vpsPiSkills;
+  modelProviderNames =
+    config:
+    builtins.attrNames
+      (builtins.fromJSON (builtins.readFile config.home.file.".config/pi/agent/models.json".source))
+      .providers;
   packageNamesFor = config: map lib.getName config.home.packages;
   contains = needle: value: builtins.isString value && lib.hasInfix needle value;
   featureFlags =
@@ -121,6 +141,41 @@ assert builtins.all (config: builtins.hasAttr ".pi" config.home.file) piHomes;
 assert builtins.all (
   config: builtins.hasAttr ".config/pi/agent/models.json" config.home.file
 ) piHomes;
+assert builtins.all (
+  config: builtins.hasAttr ".config/pi/agent/model-router.json" config.home.file
+) positive;
+assert builtins.all (
+  config: !(builtins.hasAttr ".config/pi/agent/model-router.json" config.home.file)
+) negative;
+assert builtins.all (
+  config:
+  modelProviderNames config == [
+    "llama-swap"
+    "omlx"
+    "openai-codex"
+    "openrouter"
+    "router"
+  ]
+) positive;
+assert builtins.all (
+  config:
+  modelProviderNames config == [
+    "openai-codex"
+    "openrouter"
+  ]
+) negative;
+assert builtins.all (
+  config: builtins.all (path: builtins.hasAttr path config.home.file) piExtensionPaths
+) piHomes;
+assert builtins.all (
+  name:
+  let
+    path = ".agents/skills/${name}";
+    expectedSuffix = lib.removePrefix "/catalog-agent-resources/" (toString vpsPiSkills.${name}.source);
+  in
+  builtins.hasAttr path vpsHome.home.file
+  && lib.hasSuffix expectedSuffix (toString vpsHome.home.file.${path}.source)
+) vpsPiSkillNames;
 assert builtins.all (config: builtins.elem "unisessions" (packageNamesFor config)) allHomes;
 assert builtins.all (config: allTrue (featureFlags config)) positive;
 assert builtins.all (config: allFalse (featureFlags config)) negative;

@@ -37,6 +37,7 @@ let
     )
   ) (builtins.attrValues selected.mcpServers);
   renderEnv = name: "$" + "{" + name + "}";
+  localModelRoutes = profile.platform == "darwin";
 
   routerTarget = {
     id = "Qwen3.6-27B-oQ6e-mtp";
@@ -68,13 +69,16 @@ let
       }
     ];
   };
-  models.providers = {
-    llama-swap.modelOverrides."GLM-5.2".contextWindow = 262144;
-    omlx.modelOverrides."DeepSeek-V4-Flash-0731-oQ8e-mtp".contextWindow = 262144;
+  nativeProviders = {
     openai-codex.modelOverrides."gpt-5.6-sol".contextWindow = 1050000;
     openrouter.modelOverrides."z-ai/glm-5.2".contextWindow = 1048576;
+  };
+  localProviders = {
+    llama-swap.modelOverrides."GLM-5.2".contextWindow = 262144;
+    omlx.modelOverrides."DeepSeek-V4-Flash-0731-oQ8e-mtp".contextWindow = 262144;
     router = routerProvider;
   };
+  models.providers = nativeProviders // lib.optionalAttrs localModelRoutes localProviders;
   modelRouter = {
     debug = false;
     phaseBias = 0.5;
@@ -292,16 +296,26 @@ assert selected.marketplaces == { };
 assert selected.settings == { };
 assert mcp.settings.mcpFooterStatus == "compact";
 assert
-  builtins.attrNames models.providers == [
-    "llama-swap"
-    "omlx"
-    "openai-codex"
-    "openrouter"
-    "router"
-  ];
-assert models.providers.llama-swap.modelOverrides."GLM-5.2".contextWindow == 262144;
+  builtins.attrNames models.providers == (
+    if localModelRoutes then
+      [
+        "llama-swap"
+        "omlx"
+        "openai-codex"
+        "openrouter"
+        "router"
+      ]
+    else
+      [
+        "openai-codex"
+        "openrouter"
+      ]
+  );
 assert
-  models.providers.omlx.modelOverrides."DeepSeek-V4-Flash-0731-oQ8e-mtp".contextWindow == 262144;
+  !localModelRoutes || models.providers.llama-swap.modelOverrides."GLM-5.2".contextWindow == 262144;
+assert
+  !localModelRoutes
+  || models.providers.omlx.modelOverrides."DeepSeek-V4-Flash-0731-oQ8e-mtp".contextWindow == 262144;
 assert models.providers.openai-codex.modelOverrides."gpt-5.6-sol".contextWindow == 1050000;
 assert models.providers.openrouter.modelOverrides."z-ai/glm-5.2".contextWindow == 1048576;
 assert routerTarget.id == "Qwen3.6-27B-oQ6e-mtp";
@@ -330,11 +344,13 @@ assert builtins.hasAttr "pi-loop" pkgs.pi-gallery.packages;
       "${root}/extensions/pi-mcp-adapter".source = "${extensionRoot}/pi-mcp-adapter";
       "${root}/extensions/pi-quiet".source = "${extensionRoot}/pi-quiet";
       "${root}/keybindings.json".source = json.generate "pi-${profile.id}-keybindings.json" keybindings;
-      "${root}/model-router.json".source = json.generate "pi-${profile.id}-model-router.json" modelRouter;
       "${root}/models.json".source = json.generate "pi-${profile.id}-models.json" models;
       "${root}/themes/dark-tool-backgrounds.json".source = fleetTheme;
       "${globalMcpPath}".source = json.generate "pi-${profile.id}-mcp.json" mcp;
     }
+    (lib.optionalAttrs localModelRoutes {
+      "${root}/model-router.json".source = json.generate "pi-${profile.id}-model-router.json" modelRouter;
+    })
   ];
 
   companions = [ ];

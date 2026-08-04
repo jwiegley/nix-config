@@ -64,6 +64,24 @@ let
       profile = catalog.profiles.${profileId};
     in
     lib.mapAttrs (_: itemSet: catalog.select profile itemSet) catalog.items;
+  sharedSkillItems = lib.foldl' (
+    skills: profileId:
+    let
+      profile = catalog.profiles.${profileId};
+    in
+    if
+      builtins.elem profile.client [
+        "codex"
+        "pi"
+      ]
+    then
+      skills // (selectedFor profileId).skills
+    else
+      skills
+  ) { } profileIds;
+  sharedSkillFiles = lib.mapAttrs' (
+    name: item: lib.nameValuePair ".agents/skills/${name}" { inherit (item) source; }
+  ) sharedSkillItems;
   renderProfile =
     profileId:
     let
@@ -77,9 +95,13 @@ let
     };
 
   renderedProfiles = map renderProfile profileIds;
-  rawPaths = lib.concatMap (rendered: builtins.attrNames rendered.files) renderedProfiles;
+  rawPaths =
+    builtins.attrNames sharedSkillFiles
+    ++ lib.concatMap (rendered: builtins.attrNames rendered.files) renderedProfiles;
   paths = lib.sort builtins.lessThan (lib.unique rawPaths);
-  mergedFiles = lib.foldl' (files: rendered: files // rendered.files) { } renderedProfiles;
+  mergedFiles = lib.foldl' (
+    files: rendered: files // rendered.files
+  ) sharedSkillFiles renderedProfiles;
   companionsAreOwned = builtins.all (
     rendered: builtins.all (path: builtins.hasAttr path rendered.files) rendered.companions
   ) renderedProfiles;
@@ -118,7 +140,7 @@ let
   preflight = (import ./ai/preflight.nix { inherit lib pkgs; }) {
     newPaths = paths;
     inherit piGuard;
-    legacyPiGuardPath = if piSelected then ".pi/agent/mcp.json" else null;
+    piAliasTarget = if piSelected then ".config/pi" else null;
   };
   modelSync = import ./ai/model-sync.nix { inherit lib pkgs; };
   piSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "pi") profileIds;

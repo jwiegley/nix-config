@@ -127,6 +127,11 @@ let
         homeDirectory = "/home/test";
         xdgConfigHome = "/home/test/.config";
       };
+  linuxPiRenderings = [
+    sharedWorkPiRendered
+    vpsPiRendered
+    vulcanPiRendered
+  ];
 in
 assert catalog.validate { };
 assert !(builtins.hasAttr "Ref" catalog.items.mcpServers);
@@ -143,6 +148,9 @@ assert builtins.hasAttr ".config/pi/agent/models.json" vpsPiRendered.files;
 assert vpsPiRendered.mutableMcpGuard == heraPiRendered.mutableMcpGuard;
 assert builtins.hasAttr ".config/pi/agent/models.json" vulcanPiRendered.files;
 assert vulcanPiRendered.mutableMcpGuard == heraPiRendered.mutableMcpGuard;
+assert builtins.all (
+  rendered: !(builtins.hasAttr ".config/pi/agent/model-router.json" rendered.files)
+) linuxPiRenderings;
 assert builtins.all reject [
   (catalog.validate {
     items = withMcpServers (catalog.items.mcpServers // { synthetic = extraPiMcp; });
@@ -183,5 +191,19 @@ pkgs.runCommand "ai-catalog-transport" { } ''
     ${clioPiRendered.files.".config/pi/agent/models.json".source}
   cmp ${heraPiRendered.files.".config/mcp/mcp.json".source} \
     ${clioPiRendered.files.".config/mcp/mcp.json".source}
+  ${pkgs.jq}/bin/jq -e '
+    (.providers | keys) == ["llama-swap", "omlx", "openai-codex", "openrouter", "router"]
+    and .providers."llama-swap".modelOverrides."GLM-5.2".contextWindow == 262144
+    and .providers.omlx.modelOverrides."DeepSeek-V4-Flash-0731-oQ8e-mtp".contextWindow == 262144
+    and .providers."openai-codex".modelOverrides."gpt-5.6-sol".contextWindow == 1050000
+    and .providers.openrouter.modelOverrides."z-ai/glm-5.2".contextWindow == 1048576
+  ' ${heraPiRendered.files.".config/pi/agent/models.json".source} >/dev/null
+  ${lib.concatMapStringsSep "\n" (rendered: ''
+    ${pkgs.jq}/bin/jq -e '
+      (.providers | keys) == ["openai-codex", "openrouter"]
+      and .providers."openai-codex".modelOverrides."gpt-5.6-sol".contextWindow == 1050000
+      and .providers.openrouter.modelOverrides."z-ai/glm-5.2".contextWindow == 1048576
+    ' ${rendered.files.".config/pi/agent/models.json".source} >/dev/null
+  '') linuxPiRenderings}
   touch "$out"
 ''

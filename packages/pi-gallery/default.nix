@@ -57,6 +57,13 @@ let
     };
   };
   inherit (manifest) members order supportSources;
+  localModelMemberIds = [
+    "llama-swap-provider"
+    "omlx-provider"
+    "router"
+  ];
+  activeOrder =
+    if stdenv.hostPlatform.isDarwin then order else lib.subtractLists localModelMemberIds order;
   piCatalogRecords = manifest.sourceCatalog;
   sourceRecords = members // supportSources;
   catalogSourceIds = builtins.attrNames piCatalogRecords;
@@ -785,7 +792,7 @@ let
       // lib.optionalAttrs (member ? prompts) {
         prompts = map (path: "${roots.${id}}/${path}") member.prompts;
       }
-    ) order;
+    ) activeOrder;
   };
   memberPackages = lib.listToAttrs (
     map (id: lib.nameValuePair members.${id}.attrName members.${id}.package) order
@@ -798,10 +805,10 @@ let
   galleryImports = lib.concatMapStringsSep "\n" (
     id:
     "import ${galleryIdentifier id} from ${builtins.toJSON "${roots.${id}}/${members.${id}.extension}"};"
-  ) order;
+  ) activeOrder;
   galleryRegistrations = lib.concatMapStringsSep ",\n" (
     id: "            [${builtins.toJSON id}, ${galleryIdentifier id}]"
-  ) order;
+  ) activeOrder;
 
   pi-gallery =
     runCommand "pi-gallery"

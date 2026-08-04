@@ -27,7 +27,7 @@ let
         "imports"
       ];
     };
-    legacyPiGuardPath = ".pi/agent/mcp.json";
+    piAliasTarget = ".config/pi";
   };
   task9PreflightWithoutPi = preflightFactory {
     newPaths = [
@@ -91,9 +91,9 @@ assert
 assert task9PreflightWithPi.activation.before == [ "checkLinkTargets" ];
 assert task9PreflightWithPi.activation.after == [ ];
 assert lib.hasInfix ".config/pi/agent/mcp.json" task9PreflightWithPi.script;
-assert lib.hasInfix ".pi/agent/mcp.json" task9PreflightWithPi.script;
+assert lib.hasInfix ".pi: compatibility link must resolve" task9PreflightWithPi.script;
 assert !(lib.hasInfix ".config/pi/agent/mcp.json" task9PreflightWithoutPi.script);
-assert !(lib.hasInfix ".pi/agent/mcp.json" task9PreflightWithoutPi.script);
+assert !(lib.hasInfix ".pi: compatibility link must resolve" task9PreflightWithoutPi.script);
 assert
   !(lib.any (fragment: lib.hasInfix fragment task9PreflightWithPi.script) [
     "adoption-state"
@@ -351,6 +351,12 @@ pkgs.runCommand "ai-managed-preflight"
           pi-*)
             expected_output="$fragment: keep valid adapter JSON without top-level mcpServers or imports"
             ;;
+          legacy-pi-root)
+            expected_output='.pi: preserve and reconcile the existing directory before activation'
+            ;;
+          wrong-pi-alias | dangling-pi-alias)
+            expected_output=".pi: compatibility link must resolve to $case_home/.config/pi"
+            ;;
           *)
             echo "Task 9 preflight case has no expected diagnostic: $label" >&2
             return 1
@@ -367,6 +373,31 @@ pkgs.runCommand "ai-managed-preflight"
 
     setup_empty_case first-adoption
     run_checked pass first-adoption "" "${task9PreflightScript}" absent
+
+    setup_empty_case canonical-pi-alias
+    mkdir -p "$case_home/.config/pi"
+    ln -s "$case_home/.config/pi" "$case_home/.pi"
+    run_checked pass canonical-pi-alias "" "${task9PreflightScript}" absent
+
+    setup_empty_case home-manager-pi-alias
+    mkdir -p "$case_home/.config/pi" "$case_root/home-manager-files"
+    ln -s "$case_home/.config/pi" "$case_root/home-manager-files/.pi"
+    ln -s "$case_root/home-manager-files/.pi" "$case_home/.pi"
+    run_checked pass home-manager-pi-alias "" "${task9PreflightScript}" absent
+
+    setup_empty_case legacy-pi-root
+    mkdir -p "$case_home/.pi/agent"
+    make_leaf "$case_home/.pi" "agent/settings.json" preserved
+    run_checked fail legacy-pi-root ".pi" "${task9PreflightScript}" absent
+
+    setup_empty_case wrong-pi-alias
+    mkdir -p "$case_home/.config/pi" "$case_root/wrong-pi"
+    ln -s "$case_root/wrong-pi" "$case_home/.pi"
+    run_checked fail wrong-pi-alias ".pi" "${task9PreflightScript}" absent
+
+    setup_empty_case dangling-pi-alias
+    ln -s "$case_root/missing-pi" "$case_home/.pi"
+    run_checked fail dangling-pi-alias ".pi" "${task9PreflightScript}" absent
 
     setup_empty_case first-adoption-collision
     make_leaf "$case_home" "$new_path" collision
@@ -653,12 +684,6 @@ pkgs.runCommand "ai-managed-preflight"
       printf '%s' "$value" > "$case_home/.config/pi/agent/mcp.json"
     }
 
-    write_legacy_pi() {
-      value=$1
-      mkdir -p "$case_home/.pi/agent"
-      printf '%s' "$value" > "$case_home/.pi/agent/mcp.json"
-    }
-
     setup_empty_case pi-empty-object
     write_pi '{}'
     run_checked pass pi-empty-object "" "${task9PreflightScript}" absent
@@ -666,24 +691,6 @@ pkgs.runCommand "ai-managed-preflight"
     setup_empty_case pi-benign-nested
     write_pi '{"settings":{"mcpServers":{}},"unknown":{"imports":[]}}'
     run_checked pass pi-benign-nested "" "${task9PreflightScript}" absent
-
-    setup_empty_case pi-legacy-benign
-    write_legacy_pi '{}'
-    run_checked pass pi-legacy-benign "" "${task9PreflightScript}" absent
-
-    setup_empty_case pi-legacy-mcp-servers
-    write_legacy_pi '{"mcpServers":null}'
-    run_checked fail pi-legacy-mcp-servers ".pi/agent/mcp.json" \
-      "${task9PreflightScript}" absent
-
-    setup_empty_case aggregate-pi-both-roots-invalid
-    write_pi '{"imports":[]}'
-    write_legacy_pi '{"mcpServers":null}'
-    aggregate_output="$(printf '%s\n%s' \
-      '.config/pi/agent/mcp.json: keep valid adapter JSON without top-level mcpServers or imports' \
-      '.pi/agent/mcp.json: keep valid adapter JSON without top-level mcpServers or imports')"
-    run_checked fail aggregate-pi-both-roots-invalid "$aggregate_output" \
-      "${task9PreflightScript}" absent
 
     setup_empty_case pi-benign-symlink
     make_leaf "$case_root" pi-settings '{}'

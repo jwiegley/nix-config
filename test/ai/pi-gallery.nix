@@ -9,6 +9,7 @@
   piPackages,
   runCommand,
   sourceForChecks,
+  stdenv,
   upstreamPiPackage,
 }:
 
@@ -33,6 +34,16 @@ let
     piPackages.${member.attrName} == member.package && member.package.version == member.version
   ) manifest.order;
   gallery = "${piPackages.pi-gallery}/share/pi-gallery";
+  localModelMemberIds = [
+    "llama-swap-provider"
+    "omlx-provider"
+    "router"
+  ];
+  activeOrder =
+    if stdenv.hostPlatform.isDarwin then
+      manifest.order
+    else
+      lib.subtractLists localModelMemberIds manifest.order;
   quiet = "${piPackages.agent-resources}/share/agent-resources/pi-extensions/pi-quiet/src/index.ts";
   packageRoots = lib.escapeShellArgs (builtins.attrValues roots);
   skillPackageRoots = packageRoots;
@@ -91,13 +102,18 @@ let
         || fail "shared normalizer drifted for ${target}"
     ''
   ) normalizationTargets;
-  expectedPublicNames = map (id: manifest.members.${id}.publicName) manifest.order;
+  expectedPublicNames = map (id: manifest.members.${id}.publicName) activeOrder;
   expectedSkillCount = builtins.length (
-    lib.concatMap (id: manifest.members.${id}.skills or [ ]) manifest.order
+    lib.concatMap (id: manifest.members.${id}.skills or [ ]) activeOrder
   );
   expectedPromptCount = builtins.length (
-    lib.concatMap (id: manifest.members.${id}.prompts or [ ]) manifest.order
+    lib.concatMap (id: manifest.members.${id}.prompts or [ ]) activeOrder
   );
+  routingExtension =
+    if stdenv.hostPlatform.isDarwin then
+      "${gallery}/index.ts"
+    else
+      "${roots.router}/extensions/index.ts";
 in
 assert builtins.length (builtins.attrNames manifest.members) == builtins.length manifest.order;
 assert sourceCatalogComplete;
@@ -289,7 +305,7 @@ runCommand "pi-gallery-check"
 
     [ -f ${gallery}/index.ts ]
     [ -f ${gallery}/projection.json ]
-    [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq ${toString (builtins.length manifest.order)} ]
+    [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq ${toString (builtins.length activeOrder)} ]
     [ "$(jq '[.packages[].skills // [] | length] | add' ${gallery}/projection.json)" -eq ${toString expectedSkillCount} ]
     [ "$(jq '[.packages[].prompts // [] | length] | add' ${gallery}/projection.json)" -eq ${toString expectedPromptCount} ]
     jq --argjson expected '${builtins.toJSON expectedPublicNames}' -e '
@@ -298,7 +314,20 @@ runCommand "pi-gallery-check"
     ' ${gallery}/projection.json >/dev/null || fail "projection manifest differs"
     grep -F 'PONYTAIL_HIDE_STATUS = "1"' ${gallery}/index.ts >/dev/null
     grep -F 'PI_LENS_DISABLE_LSP_INSTALL = "1"' ${gallery}/index.ts >/dev/null
-    grep -F 'pi-model-router' ${gallery}/index.ts >/dev/null
+    ${
+      if stdenv.hostPlatform.isDarwin then
+        ''
+          grep -F 'pi-model-router' ${gallery}/index.ts >/dev/null
+          grep -F 'pi-provider-llama-swap' ${gallery}/index.ts >/dev/null
+          grep -F 'pi-provider-omlx' ${gallery}/index.ts >/dev/null
+        ''
+      else
+        ''
+          ! grep -F 'pi-model-router' ${gallery}/index.ts >/dev/null
+          ! grep -F 'pi-provider-llama-swap' ${gallery}/index.ts >/dev/null
+          ! grep -F 'pi-provider-omlx' ${gallery}/index.ts >/dev/null
+        ''
+    }
 
     echo "Pi gallery check: dynamic local providers"
     ${bun}/bin/bun ${sourceForChecks}/packages/pi-gallery/providers/local-openai-provider.check.ts
@@ -415,7 +444,7 @@ runCommand "pi-gallery-check"
         ${lib.getExe piPackage} \
         --print --offline --no-session --no-context-files \
         --no-extensions --no-skills --no-prompt-templates --no-approve \
-        --extension ${gallery}/index.ts \
+        --extension ${routingExtension} \
         --extension "$routing_smoke/synthetic.ts" \
         --provider router --model sol "$prompt" \
         </dev/null >"$routing_smoke/output" 2>"$routing_smoke/error" || {
@@ -468,7 +497,21 @@ runCommand "pi-gallery-check"
     fi
 
     smoke="$TMPDIR/pi-gallery-smoke"
-    mkdir -p "$smoke/home" "$smoke/agent" "$smoke/project" "$smoke/sentinels"
+    mkdir -p \
+      "$smoke/home/.config/pi/agent/extensions/nix-gallery" \
+      "$smoke/home/.agents/skills/shared-discovery" \
+      "$smoke/project" "$smoke/sentinels"
+    ln -s "$smoke/home/.config/pi" "$smoke/home/.pi"
+    ln -s ${gallery}/index.ts \
+      "$smoke/home/.config/pi/agent/extensions/nix-gallery/index.ts"
+    cat > "$smoke/home/.agents/skills/shared-discovery/SKILL.md" <<'MARKDOWN'
+    ---
+    name: shared-discovery
+    description: Verify default shared skill discovery.
+    ---
+
+    # Shared discovery sentinel
+    MARKDOWN
     printf '%s\n' '{"name":"lens-language-gate","private":true}' > "$smoke/project/package.json"
     printf '%s\n' 'const answer: number = 42;' > "$smoke/project/probe.ts"
     printf '%s\n' 'answer: int = 42' > "$smoke/project/probe.py"
@@ -506,8 +549,8 @@ runCommand "pi-gallery-check"
     EOF
     (
       cd "$smoke/project"
+      env -u PI_CODING_AGENT_DIR \
       HOME="$smoke/home" \
-      PI_CODING_AGENT_DIR="$smoke/agent" \
       PI_GALLERY_ACTIVE_TOOLS="$smoke/active-tools.json" \
       PI_GALLERY_TOOL_OWNERS_FILE="$smoke/tool-owners.json" \
       PI_GALLERY_INSTALLER_SENTINEL="$smoke/installer-invocations" \
@@ -522,9 +565,8 @@ runCommand "pi-gallery-check"
         ${coreutils}/bin/timeout 120 \
         ${lib.getExe piPackage} \
         --mode rpc --no-session --offline \
-        --no-extensions --no-prompt-templates \
+        --no-prompt-templates \
         --no-context-files --no-approve \
-        --extension ${gallery}/index.ts \
         --extension "$smoke/all-skills.ts" \
         --extension "$smoke/active-tools.ts" \
         <"$smoke/input.jsonl" >"$smoke/output.log" 2>"$smoke/error.log"
@@ -583,7 +625,7 @@ runCommand "pi-gallery-check"
           "preview-pdf",
           "review-loop",
           "rewind",
-          "router",
+          ${lib.optionalString stdenv.hostPlatform.isDarwin ''"router",''}
           "rtk",
           "run",
           "scroll",
@@ -600,6 +642,23 @@ runCommand "pi-gallery-check"
     ' "$smoke/output.log" >/dev/null || {
       cat "$smoke/output.log" >&2
       fail "new Pi gallery commands were not registered"
+    }
+    jq -s -e --arg skill "$smoke/home/.agents/skills/shared-discovery/SKILL.md" '
+      any(
+        .[];
+        .type == "response"
+        and .command == "get_commands"
+        and .success == true
+        and any(
+          .data.commands[];
+          .name == "skill:shared-discovery"
+          and .source == "skill"
+          and .sourceInfo.path == $skill
+        )
+      )
+    ' "$smoke/output.log" >/dev/null || {
+      cat "$smoke/output.log" >&2
+      fail "Pi did not discover the shared skill tree through HOME"
     }
     # The trailing anvil clause is a prohibition, not a leftover reference. It
     # survives the Anvil retirement deliberately: retiring the convergence that
@@ -663,7 +722,7 @@ runCommand "pi-gallery-check"
       ' "$smoke/output.log" >/dev/null \
         || fail "Pi did not parse packaged skill frontmatter: $skill"
     done < "$smoke/expected-skills"
-    [ ! -e "$smoke/agent/settings.json" ] || fail "gallery wrote Pi settings"
+    [ ! -e "$smoke/home/.config/pi/agent/settings.json" ] || fail "gallery wrote Pi settings"
     [ ! -e "$smoke/home/.npm" ] || fail "gallery invoked npm"
     [ ! -e "$smoke/installer-invocations" ] || {
       cat "$smoke/installer-invocations" >&2
