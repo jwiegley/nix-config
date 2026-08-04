@@ -1,20 +1,8 @@
 #!/usr/bin/env python3
-"""Replayable negative regressions for the fleet programme's shell gates.
+"""Replayable regression tests for the fleet programme's shell gates.
 
-Why this file exists. An independent audit observed that of five gates added in
-this programme, only `test/bin/oracle-currency-slow-test.py` shipped negative cases that
-could be REPLAYED from the repository. The other signature, cross-consumer, and
-immutable-subflake gates had negative proofs recorded only as prose in commit
-messages and issue comments.
-
-That is a real gap and not a pedantic one. This programme's standing rule is that
-a gate without a proven negative case is assumed broken, and five separate
-defects here were gates reporting success while covering nothing. A negative
-proof that lives in a commit message cannot catch the regression that reintroduces
-the defect six months from now. "Proven negative" has to mean reproducible.
-
-Everything below runs against throwaway fixtures. Nothing touches a real
-repository, a real remote, or a real consumer checkout.
+Tests use throwaway fixtures; the real checkout is read or executed but never
+mutated.
 
 Run: python3 -m unittest -v test/bin/gates-slow-test.py
 """
@@ -28,8 +16,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-# The real checkout. Used only to READ a genuine signature blob for the
-# unverifiable-signature test; never mutated.
+# The real checkout supplies gate definitions, commands, and a genuine
+# signature blob. Tests read or execute it but never mutate it.
 REPO = Path(__file__).resolve().parents[2]
 BIN = REPO / "test" / "bin"
 VERIFY_SIGNATURES = BIN / "verify-signatures"
@@ -38,10 +26,7 @@ DARWIN_SURFACE_DIFF = BIN / "darwin-surface-diff"
 DARWIN_SURFACE_BASELINE = BIN / "darwin-surface-baseline"
 IMMUTABLE_SUBFLAKE_CHECK = BIN / "immutable-subflake-check"
 
-# Repository-pointing git variables. A test that shells out to git in a temp
-# directory MUST scrub these: under a git hook they name the REAL repository and
-# beat `cwd`, which is how a sibling suite once set core.bare=true on the live
-# checkout and broke every linked worktree at once.
+# Repository/config selectors scrubbed from Git subprocess environments.
 _GIT_LOCATION_VARS = (
     "GIT_DIR",
     "GIT_WORK_TREE",
@@ -86,17 +71,10 @@ def git(*args, cwd, check=True, env=None):
 
 
 class TestVerifySignaturesRejects(unittest.TestCase):
-    """test/bin/verify-signatures must be fail-closed, and provably so.
-
-    The audit's point: the tool IS fail-closed by construction — only G and U
-    pass, so a keyring-less run yields E and rejects. But "by construction" is an
-    argument, and an argument does not fail when someone widens the accepted set.
-    These tests fail if it is widened.
-    """
+    """Verify that only G, U, and Y signature states pass."""
 
     def setUp(self):
-        # Keep GnuPG's agent sockets below Darwin's AF_UNIX path ceiling; the
-        # per-user TMPDIR is already too long before the temporary suffix.
+        # Keep GnuPG agent sockets under a short temporary path.
         self.tmp = tempfile.mkdtemp(prefix="gates-sig-", dir="/tmp")
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.repo = os.path.join(self.tmp, "repo")
@@ -131,38 +109,17 @@ class TestVerifySignaturesRejects(unittest.TestCase):
         self.assertIn("[N]", combined)
 
     def test_unverifiable_signature_is_rejected_not_ignored(self):
-        """A signature that cannot be checked must reject, never pass.
-
-        This is the CI shape: a runner with no keyring sees E for every signed
-        commit. Passing there would make the job permanently green while
-        verifying nothing — the exact defect class this programme keeps finding.
-        """
+        """An unverifiable or bad transplanted signature must reject."""
         base = self._commit("a", "base")
-        # Fabricate a commit carrying a gpgsig header that no keyring can verify,
-        # so %G? reports E rather than N. Done by rewriting the commit object
-        # directly: no key material and no signing capability required.
+        # Fabricate a commit carrying a gpgsig header that an empty keyring cannot verify.
         head = self._commit("b", "second")
         raw = git("cat-file", "commit", head, cwd=self.repo).stdout
         lines = raw.split("\n")
         insert_at = next(
             i for i, line in enumerate(lines) if line.startswith("committer")
         )
-        # A REAL signature blob, harvested from this repository's own HEAD, plus an
-        # empty keyring. Both halves are load-bearing and were measured:
-        #
-        #   fabricated garbage ("bm90YXNpZ25hdHVyZQ==")  -> git reports N (unsigned),
-        #       so this test skipped and the E path was never exercised at all.
-        #   a real signature blob + empty keyring        -> git reports E.
-        #
-        # E is the CI shape: a runner with no keyring sees E for every signed commit,
-        # and accepting E would make the job permanently green while verifying
-        # nothing. The signature will not match this fabricated commit's content, but
-        # that is irrelevant -- with no key present, git cannot get far enough to
-        # care, which is exactly the condition under test.
-        #
-        # Harvesting from HEAD is deterministic here because this repository's policy
-        # IS signed commits only. If HEAD carries no signature that is a policy
-        # violation, so the assertion below fails rather than skips.
+        # Transplant a real signature blob, then verify the rewritten commit with
+        # an empty keyring. Git may report E or B; both must reject.
         real = git("cat-file", "commit", "HEAD", cwd=REPO).stdout.split("\n")
         sig = []
         for line in real:
@@ -225,18 +182,7 @@ class TestVerifySignaturesRejects(unittest.TestCase):
         self.assertIn("REJECTED", out.stdout + out.stderr)
 
     def test_expired_key_signature_is_accepted_not_rejected(self):
-        """Y (good signature, expired key) must PASS; R/E/B/N must not.
-
-        Y proves the commit was signed by the project's key -- `git verify-commit`
-        exits 0 on it -- and compromise is signalled by R (revoked), which stays
-        rejected. Rejecting Y created a recurring cliff: on the day a key expired,
-        every historical commit failed at once. The signing key here expires
-        2026-11-25, which is what surfaced it.
-
-        Built with a REAL key that really expires: generate one with a few seconds of
-        life, sign while it is valid, wait past expiry, verify. No fabrication, so the
-        code path under test is the one git actually takes.
-        """
+        """Y passes for a valid signature under an expired generated key."""
         import time
 
         gnupg = os.path.join(self.tmp, "gnupg-expiring")
@@ -416,18 +362,7 @@ class TestVerifySignaturesRejects(unittest.TestCase):
 
 
 class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
-    """The honesty guards must be able to FIRE, not merely exist.
-
-    An independent audit found that on a default full run `ran >= 1` always,
-    because shared-work is this repo's own fixture and has no checkout to be
-    missing. So the ran==0 refusal was unreachable on the path used by the
-    local/manual expensive tier, and a run with both consumer checkouts absent
-    would have reported success having verified only a self-described moderate
-    proxy.
-
-    Both guards are exercised here through the tool's real surface: positional
-    target selection and VPS_CHECKOUT.
-    """
+    """Exercise zero-evaluation and proxy-only refusal paths."""
 
     def setUp(self):
         self.nowhere = os.path.join(tempfile.gettempdir(), "gates-no-such-checkout")
@@ -458,12 +393,7 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
         self.assertNotIn("all evaluated consumers passed", combined)
 
     def test_full_run_refuses_when_only_the_proxy_was_evaluated(self):
-        """The hole the audit found: a FULL run with both checkouts missing.
-
-        shared-work still runs, so ran == 1 and the ran==0 guard cannot fire.
-        Without the full-run guard this reported success while verifying nothing
-        about vps.
-        """
+        """A full run must not pass after evaluating only shared-work."""
         r = self.run_tool(VPS_CHECKOUT=self.nowhere)
         combined = r.stdout + r.stderr
         self.assertNotEqual(
@@ -765,7 +695,7 @@ else:
 
 
 class TestGatesAreRegistered(unittest.TestCase):
-    """A gate nothing invokes is not a gate."""
+    """Check gate registration and source-layout contracts."""
 
     def test_test_sources_live_under_the_singular_test_root(self):
         tracked = subprocess.run(

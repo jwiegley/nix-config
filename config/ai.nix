@@ -250,16 +250,8 @@ let
   ];
 in
 {
-  # This module READS config.johnw.host (see the isHera/isCiFixture uses below),
-  # so it must DECLARE it rather than assume a parent did. config/johnw.nix does
-  # import host-options.nix, which is why every live build worked -- but this file
-  # is also imported on its own, and there it evaluated to
-  #
-  #     error: attribute 'johnw' missing
-  #     at config/ai.nix:225:27
-  #
-  # Module imports are deduplicated by path, so declaring it here is a no-op
-  # wherever a parent already did (verified: hera and clio surfaces unchanged).
+  # Import the host capability option this module reads rather than relying on a
+  # parent module's import list.
   imports = [ ./host-options.nix ];
 
   assertions = [

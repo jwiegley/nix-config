@@ -8,8 +8,7 @@ tmux split-window "ssh vulcan 'cd /etc/nixos && nix flake update --commit-lock-f
 tmux split-window "ssh vps 'cd /etc/nixos && nix flake update --commit-lock-file && switch'; echo 'vps done — press Enter'; read"
 tmux select-layout even-vertical
 
-# Shared NFS Home Manager source is updated once, then each active host uses
-# the maintained switch wrapper from that authoritative checkout.
+# Update the shared source on andoria-08, then switch `shared_hosts`.
 shared_home=/home/jwiegley/.config/home-manager
 shared_hosts=(andoria-08)
 ssh andoria-08 "cd $shared_home && nix flake update --commit-lock-file"

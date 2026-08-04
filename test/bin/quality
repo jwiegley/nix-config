@@ -91,15 +91,13 @@ EXPENSIVE_SUITES=(
 )
 
 # ---- file discovery -----------------------------------------------------
-# Tracked files only. This is deliberate: it excludes result/ symlinks, build
-# artifacts and anything gitignored without needing a prune list, and it means
-# "in scope" and "in the repository" are the same statement.
+# Tracked files only. This excludes untracked result symlinks and build artifacts
+# without a prune list, so "in scope" matches the repository's tracked surface.
 
 files_nix() { git ls-files -- '*.nix'; }
 
-# Interpreter detection by shebang rather than by extension, because the repo's
-# operational scripts carry no extension (bin/u, bin/de, build) and one Python
-# program is likewise extensionless (bin/update-overlay).
+# Shell files and extensionless Python are detected by shebang. Python files
+# with .py or .py.in suffixes are also selected by extension.
 _shebang_is() {
     local pat=$1 f=$2
     [[ -f $f ]] || return 1
@@ -131,16 +129,7 @@ files_python() {
     return 0
 }
 
-# unittest suites, by the repo's test/bin/<name>-test.py convention.
-#
-# Scope boundary, stated rather than left to be discovered: this is deliberately
-# narrower than files_python. Test suites live together under test/bin
-# and other non-bin suites. Those are LINTED by python-lint
-# but not EXECUTED here, because several drive a live Emacs or a long soak and are
-# not safe to run unattended in a pre-commit hook. They have their own flake
-# checks. Widening this glob without first tiering those suites would make every
-# commit wait on them.
-# Discover the complete tracked test inventory once, then classify by filename.
+# Discover tracked test/bin suites, then classify them by filename.
 # Slow suites end in -slow-test.py; every other test/bin/*-test.py suite is fast.
 # A test outside test/bin is a hard error so no new suite can silently disappear
 # from both tiers.
@@ -211,8 +200,8 @@ need() {
 # the whole point of the script: it is the thing the old shell loops got wrong.
 #
 # The producer is named explicitly so its exit status is checked before any tool
-# runs. A pipeline or process substitution would hide discovery failure and put
-# `each_file` in a subshell, discarding its additions to `failures`.
+# runs. Pipelines and process substitution can obscure producer failure; a
+# pipeline can also run the consuming loop in a subshell and lose `failures`.
 each_file() {
     local suite=$1 desc=$2 producer=$3
     shift 3
@@ -434,17 +423,9 @@ run_python_test() {
     fi
 }
 
-# Unlike every other suite, this one does not read the local tree with a per-file
-# tool. It evaluates the remaining reach-in consumers (vps and shared-work)
-# against THIS working tree, eval-only. An overlay or shared-config change here
-# that would break a consumer fails during low-frequency closeout instead of at the
-# consumer's next lock bump —
-# which is how vulcan's evaluation stayed broken for weeks.
-# Vulcan now uses supported portable interfaces; portable-eval owns that contract.
-#
-# test/bin/cross-consumer-eval is the authority for what that means; it reports every
-# consumer before exiting non-zero, so this suite only records the verdict.
-# Targeted but expensive: wired into the expensive tier, not mandatory hooks.
+# Evaluate the vps and shared-work targets against this working tree. The helper
+# reports every selected consumer before failing; this expensive tier records its
+# aggregate verdict. portable-eval owns the separate portable-flake contract.
 run_consumer_eval() {
     need nix consumer-eval || return
     if test/bin/cross-consumer-eval; then
@@ -457,14 +438,11 @@ run_consumer_eval() {
 run_signatures() {
     need git signatures || return
     need gpg signatures || return
-    # verify-signatures owns the range logic and the %G? policy. It resolves the
-    # CI push/PR range from SIGVERIFY_BASE/SIGVERIFY_HEAD, or when run bare the
-    # local "not yet on any remote" set, and requires %G? in {G,U,Y} for every
-    # commit. It imports only PUBLIC keys from .github/signing-keys into a
-    # throwaway keyring; no secret material is read or written.
+    # verify-signatures owns range resolution and the G/U/Y policy. Bare mode
+    # uses the current local remote-tracking snapshot; CI passes an explicit
+    # base/head range. Public key files are imported into a throwaway keyring.
     #
-    # Unlike every other suite this one operates on a COMMIT RANGE rather than a
-    # `git ls-files` file set, so it has no --files arm.
+    # This suite operates on a commit range, so it has no --files arm.
     if test/bin/verify-signatures; then
         note "signatures: every commit in range carries a good signature"
     else

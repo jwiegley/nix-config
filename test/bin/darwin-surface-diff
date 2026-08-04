@@ -27,7 +27,7 @@ def _child(path, key):
 
 
 def differences(before, after, path=""):
-    """Return every leaf-level difference between two JSON-compatible values."""
+    """Return structural differences, using parent paths for aggregate changes."""
     found = []
     label = path or "<root>"
     if type(before) is not type(after):

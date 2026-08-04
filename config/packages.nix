@@ -248,7 +248,6 @@ rec {
       git-cliff
       git-crypt
       git-delete-merged-branches
-      # (lib.lowPrio git-extras)
       (lib.lowPrio git-fame)
       git-filter-repo
       git-gone
@@ -305,13 +304,7 @@ rec {
     # ── Programming Languages & Dev Tools ────────────────────────────
     ++ [
       act
-      # Agda with registered libraries. Version-aligned with agda2-mode
-      # (config/emacs.nix) by construction: both derive from the same
-      # haskellPackages.Agda. That Agda depends on top-level pkgs.emacs,
-      # which overlays/10-emacs.nix maps to emacs30-macport on Darwin
-      # (emacs30 on Linux), so Agda and its library set build locally
-      # instead of substituting, and rebuild when this overlay's emacs
-      # changes.
+      # Agda and agda2-mode derive from the same haskellPackages.Agda.
       (agda.withPackages (
         agda-pkgs: with agda-pkgs; [
           agda-categories
@@ -369,7 +362,6 @@ rec {
     ++ optPkg "yamale"
     ++ [
       yuicompressor
-      # sbcl  # Disabled: ECL bootstrap broken on Darwin/Apple Silicon
     ]
 
     # ── Text Processing & Documents ──────────────────────────────────
@@ -429,7 +421,6 @@ rec {
       lzip
       lzop
       rclone
-      # recoll-nox
       restic
       rmtrash
       rsync
@@ -526,7 +517,6 @@ rec {
     ++ optAgent "droid"
     ++ optAgent "git-surgeon"
     ++ optAgent "opencode"
-    # ++ optAgent "gemini-cli"
 
     # ── MCP Servers & Agent Tools ────────────────────────────────────
     # drafts-mcp-server is macOS-only (drives Drafts.app via AppleScript)
@@ -575,9 +565,8 @@ rec {
 
     # ── Linux-Only Packages ──────────────────────────────────────────
     ++ lib.optionals isLinux [
-      ratpoison # X11 WM; not usable on Darwin
+      ratpoison
     ]
-    # ++ lib.optionals isLinux (optPkg "cpx")
 
     # ── Host-Specific Packages (hera) ────────────────────────────────
     ++ lib.optionals caps.isHera (

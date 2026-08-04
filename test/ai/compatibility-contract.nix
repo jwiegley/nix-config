@@ -50,8 +50,8 @@ in
     ++ galleryPackages
   );
 
-  # Only names whose output executes what the name says. `no-warnings` stays: it
-  # is a real app running no-warnings.sh, not an alias. See #48.
+  # Truthful evidence-bearing app names plus the conventional `default` alias.
+  # `no-warnings` is a real app running no-warnings.sh.
   apps = [
     "build-check"
     "check"
@@ -63,15 +63,10 @@ in
     "test"
   ];
 
-  # `compatibility-contract` is deliberately absent: this list is compared against
-  # the flake DEFINITION (flake.nix:150 passes actual = portableAiDefinition),
-  # before that check is grafted on, so including it would never match.
-  #
-  # The five removed entries (coverage, fuzz, memory, no-warnings, profile) were
-  # aliases of tests/lint/build that produced no evidence of their own. Genuine
-  # no-warnings evidence survives as the app. See #48.
-  # The later `tests` check only reparsed Nix files already parsed by the format
-  # check; the real `test` app and behavioral checks remain.
+  # `compatibility-contract` is grafted onto the checked output after this list
+  # is compared with the portable definition, so it is deliberately absent.
+  # Retired check aliases produced no independent evidence; the real apps and
+  # behavioral checks remain.
   checks = [
     "agent-deck-go-compat"
     "agent-resources"

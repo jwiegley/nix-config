@@ -23,18 +23,7 @@ elif [[ -d /etc/nixos ]]; then
     cd /etc/nixos
     exec sudo nixos-rebuild switch --flake ".#$output"
 elif [[ -d $HOME/.config/home-manager ]]; then
-    # Use the flake's OWN pinned home-manager, not home-manager/master.
-    #
-    # `nix run home-manager/master -- switch` fetched a floating upstream every
-    # time, so the tool performing the activation was not the one the flake was
-    # locked against. On the four shared-work machines that is worse than
-    # untidy: they share one $HOME over NFS, so the home-manager release doing
-    # the writing must match the one the configuration was evaluated with, or
-    # the four can disagree about profile and state layout.
-    #
-    # Build the activation package from the local flake, then run its activate
-    # script — which is exactly what `home-manager switch` does internally,
-    # minus the floating fetch.
+    # Build and run the activation package from this flake's pinned Home Manager.
     output=$(nix_flake_output_for_host "$host") || {
         echo "switch: no flake output for host: $host" >&2
         exit 2

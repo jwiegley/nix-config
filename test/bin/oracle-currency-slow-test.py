@@ -2,11 +2,9 @@
 """Cheap currency and consistency guard for the fleet parity oracle.
 
 The oracle is ``test/baseline/parity-<rev>.json``, derived by
-``test/bin/parity-baseline`` (jwiegley/nix-config#19). Deriving it costs roughly five
-minutes of cross-system ``nix eval``, so this guard NEVER re-derives. It reads
-the committed artifact plus git metadata only, and answers one question that a
-frozen oracle cannot answer about itself: *is this still a meaningful thing to
-compare against?*
+``test/bin/parity-baseline``. This guard does not re-derive Nix output; it reads
+matching artifacts plus Git metadata and checks whether they remain meaningful
+comparison inputs.
 
 Determinism (byte-identity at the recorded rev) and multiset/drvPath
 equivalence remain ``test/bin/parity-baseline``'s job -- ``--check`` and
@@ -15,13 +13,11 @@ jwiegley/nix-config#31, and it costs a few git calls, not a build.
 
 What it asserts, all without a single nix evaluation:
 
-* exactly one committed oracle (the previous oracle belongs in git history, not
-  a second tracked file);
+* exactly one matching oracle path;
 * ``baselineRev`` is a real commit, an ancestor of HEAD (not a stranded
   baseline), and a descendant of the armed-overlay refactor ``a3cc3843`` -- an
   oracle predating it can never be satisfied by post-refactor work;
-* the filename encodes the same rev the file records -- the exact inconsistency
-  the ``--write`` double ``git rev-parse`` bug produced;
+* the filename encodes the same rev the file records;
 * ``packageCount`` equals ``len(packages)`` on every target, so a hand-edited
   count can never drift from the list it summarises;
 * the recorded derivation commands have the required keys and shape and exactly
@@ -31,9 +27,8 @@ What it asserts, all without a single nix evaluation:
   current ``baselineRev``; once the oracle advances past its genesis schema, the
   chain is mandatory.
 
-The negative side of every assertion lives in ``OracleGuardSelfTests`` below,
-which mutates synthetic copies in throwaway git repositories -- never the real
-artifact -- and proves each check actually fires.
+``OracleGuardSelfTests`` mutates representative synthetic copies in throwaway Git
+repositories; it never edits the real artifact.
 """
 
 import json
@@ -82,7 +77,7 @@ _FILENAME = re.compile(r"\Aparity-([0-9a-f]{12})\.json\Z")
 
 
 def find_baselines(baseline_dir):
-    """Every committed oracle artifact, sorted for a stable message."""
+    """Matching oracle artifacts, sorted for a stable message."""
     return sorted(Path(baseline_dir).glob("parity-*.json"))
 
 
@@ -123,7 +118,7 @@ def git_runner(repo_root):
     return run
 
 
-# --- the checks (pure; each returns a list of human-readable problems) ---
+# --- checks returning lists of human-readable problems -------------------
 
 
 def check_single_baseline(baseline_dir):
@@ -278,7 +273,7 @@ def check_provenance(oracle):
 
 
 def check_git_ancestry(oracle, armed_refactor, git):
-    """Currency: the recorded revs must sit on this line of history.
+    """Currency: selected recorded revisions must sit on this history line.
 
     ``git`` is any callable returning a CompletedProcess, so a synthetic
     repository can be substituted in the self-tests.
@@ -329,7 +324,7 @@ def check_git_ancestry(oracle, armed_refactor, git):
 
 
 class OracleCurrencyTests(unittest.TestCase):
-    """The guard proper: the committed oracle must be current and consistent.
+    """The guard proper: the selected oracle must be current and consistent.
 
     Runs in the full/issue-closeout Python tier from the repo root, inside
     a git work tree -- and shells out to git the same way update-overlay-slow-test.py
@@ -428,7 +423,7 @@ class OracleCurrencyTests(unittest.TestCase):
             "matches the tool (jw#31)",
         )
 
-# --- self-tests: every assertion, watched failing on a mutation ----------
+# --- representative mutation self-tests ----------------------------------
 
 
 def _init_repo(root):
@@ -481,12 +476,7 @@ def _valid_oracle(base_rev, armed_rev, history=None):
 
 
 class OracleGuardSelfTests(unittest.TestCase):
-    """Build a synthetic repo and mutate synthetic oracles; watch each fire.
-
-    A positive fixture that raised no problem would be no evidence at all, so a
-    valid oracle is asserted clean first, then each field is broken in isolation
-    and the specific problem is asserted to appear.
-    """
+    """Build a synthetic repo and exercise representative guard failures."""
 
     def setUp(self):
         local_env = subprocess.run(

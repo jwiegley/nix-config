@@ -1,63 +1,20 @@
 #!/usr/bin/env bash
-# test/bin/cross-consumer-eval — evaluate the fleet's nix-config CONSUMERS against
-# THIS working tree, eval-only, so a change here that would break a consumer's
-# evaluation fails during low-frequency closeout instead of weeks later at the
-# consumer's next lock bump.
+# Evaluate selected nix-config consumers against this working tree.
 #
-# Why this exists. nix-config is consumed, not just built: vps pulls it in as a
-# `flake = false` input and cherry-picks packages out of its INTERNAL overlay
-# files (overlays/00-lib.nix, overlays/30-*.nix); the four shared-work machines
-# import config/johnw.nix + config/packages.nix. None of that is a supported API,
-# and none of nix-config's own gates evaluate it. Commit a3cc3843
-# converted several two-level `final: prev:` overlays into three-level factories
-# taking a strict argument set; the consumers still called them positionally, so
-# their entire evaluation began failing with
-#
-#     error: function 'anonymous lambda' called with unexpected argument 'system'
-#
-# — and every gate in this repo stayed green. The break only surfaced weeks
-# later, when a consumer's lock crossed the offending commit. This gate closes
-# that window: it evaluates each consumer against the working tree BEFORE the
-# revision can become their next lock target.
-#
-# What it proves, precisely (see jwiegley/nix-config#22 and the NOTES for the
-# full honesty accounting — this is not the same depth for every consumer):
+# The targets have different depths:
 #
 #   shared-work  This repo's own homeConfigurations."jwiegley@x86_64-linux"
-#                activationPackage evaluates. That fixture imports the exact
-#                config/johnw.nix + config/packages.nix + config/overlays.nix
-#                surface the four work machines import, at hostname "linux".
-#                Proxy for that surface; NOT for their host-gated branches.
+#                activationPackage. This synthetic fixture imports
+#                config/johnw.nix, config/packages.nix, and config/overlays.nix
+#                at hostname "linux"; it does not cover named-host branches.
 #
-#   vps          ovh-vps's full system.build.toplevel evaluates against the
-#                working tree (nix-config overridden in). This is the real
-#                toplevel and reaches the overlay cherry-pick AND vps's own
-#                home-manager import of config/johnw.nix.
+#   vps          VPS_CHECKOUT's ovh-vps system.build.toplevel with its nix-config
+#                input overridden to this working tree.
 #
-# Vulcan was retired from this consumer set after nixos commit a5bb7be9 moved it
-# from internal overlay cherry-picks to the supported overlays.default and
-# overlays.tools interfaces. The old nix-config-reachin-compat check disappeared
-# with that reach-in. The producer-side compatibility contract now forces the
-# supported tools-overlay derivations on every portable system; pretending an
-# unrelated Vulcan check replaced the old canary would overstate coverage. This
-# gate never evaluated Vulcan's modules or services.
+# Each target is forced to drvPath. Evaluation can still realize
+# import-from-derivation dependencies from the consumer configuration.
 #
-# What this ADDS over a consumer's in-repo canary: that canary runs at the
-# consumer's own `nix flake check`, against the nix-config revision it has
-# ALREADY locked. This runs it (and more, for vps) against nix-config's WORKING
-# TREE, before publication — the window a lock-time canary structurally cannot
-# cover.
-#
-# Eval-only. Every target is forced to .drvPath: instantiation, never a build.
-# A NixOS toplevel can still trigger import-from-derivation, which builds; that
-# is inherent to the consumer's config, not a choice of this gate.
-#
-# Never a root-level `nix flake check`: that deeply forces every host config and
-# is forbidden in routine gates (see doc/ARCHITECTURE.md). This forces
-# exactly one attribute per consumer, respecting Nix's lazy flake outputs.
-#
-# Consumer locks are never written: --no-write-lock-file on every eval. The
-# --override-input is in-memory only.
+# Every eval uses --no-write-lock-file; the VPS input override is in-memory.
 #
 # Usage:
 #   test/bin/cross-consumer-eval                     # every discoverable consumer
@@ -143,11 +100,9 @@ skip_or_fail() {
 
 # ---- lock coherence ------------------------------------------------------
 #
-# Each consumer takes TWO inputs from this repository: `nix-config` (the whole
-# tree, flake = false, for path-imported modules) and `nix-config-ai` (the
-# portable subflake, for typed outputs). If those two resolve to DIFFERENT
-# revisions, the consumer is split-brained: its modules come from one tree and
-# its fleet outputs from another, and nothing tells it so.
+# VPS takes two inputs from this repository: `nix-config` for path-imported
+# modules and `nix-config-ai` for portable typed outputs. Require coherent
+# revisions so those two surfaces cannot drift apart.
 #
 # Two inputs drifting apart is the same class of failure as a consumer crossing
 # an incompatible revision, with a harder-to-read symptom.
@@ -282,17 +237,8 @@ if [[ $evaluated -eq 0 ]]; then
     exit 1
 fi
 
-# A FULL run that managed only shared-work is barely better than evaluating
-# nothing, and the evaluated==0 guard above cannot catch it: shared-work is this
-# repo's own fixture, so it always leaves evaluated >= 1.
-#
-# That matters because shared-work is a MODERATE proxy by its own description --
-# pinned to hostname="linux", so it exercises the shared config files but not
-# hostname-gated behaviour. With the real consumer checkout missing, a full run
-# would otherwise report "all evaluated consumers passed" having verified
-# nothing about vps. An independent audit found exactly this hole.
-#
-# A named subset is exempt: asking for shared-work alone is a deliberate choice.
+# A full run must reach VPS rather than succeeding on the shared-work proxy
+# alone. A named shared-work-only subset remains an explicit caller choice.
 if [[ ${#want[@]} -eq ${#CONSUMERS[@]} && $evaluated -eq 1 && $skipped -gt 0 ]]; then
     printf 'cross-consumer-eval: a full run evaluated ONLY shared-work (%d skipped).\n' \
         "$skipped" >&2

@@ -256,7 +256,7 @@ prev.lib.optionalAttrs (palMcpServer != null) {
 
       npmFlags = [ "--ignore-scripts" ];
 
-      # Remove dangling workspace symlinks left by npm workspace install
+      # Remove broken symlinks from the installed workspace tree.
       postInstall = ''
         find $out -xtype l -delete
       '';
@@ -272,7 +272,7 @@ prev.lib.optionalAttrs (palMcpServer != null) {
       };
     });
 
-  # Private web search through an operator-controlled SearXNG instance
+  # Private web search through the configured SearXNG instance.
   mcp-searxng =
     let
       cleanLauncher = prev.writeShellScript "mcp-searxng-clean-launcher" ''

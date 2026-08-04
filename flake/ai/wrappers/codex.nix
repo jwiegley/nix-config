@@ -16,11 +16,8 @@ let
     set -euo pipefail
     set +x
     ${pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
-      # Agent Deck sessions can inherit macOS's 256-descriptor soft
-      # limit from an older tmux daemon.  Raise Codex and every MCP
-      # descendant as far as the inherited hard limit permits, without
-      # rebuilding the upstream package or turning a constrained launch
-      # into a total failure.
+      # Raise the soft descriptor limit up to the inherited hard limit for Codex
+      # and its descendants.
       codex_open_file_hard_limit="$(ulimit -Hn)"
       codex_open_file_limit=65536
       if [ "$codex_open_file_hard_limit" != unlimited ] \
@@ -31,12 +28,8 @@ let
     ''}
     umask 077
 
-    # $HOME (and so ~/.codex) is shared over NFS across hosts.
-    # Concurrent cross-host writers corrupt SQLite databases, so
-    # keep CODEX_HOME shared and move only the conflict-prone
-    # state -- the SQLite databases and the fixed-name tui log --
-    # to machine-local disk.  Everything else (config, auth,
-    # sessions, history, prompts) stays shared.
+    # Keep CODEX_HOME shared while placing SQLite and log state on machine-local
+    # storage.
     codex_shared_home="''${CODEX_HOME:-''${HOME:?}/.codex}"
     codex_uid="$(${pkgs.coreutils}/bin/id -u)"
     codex_local_root="/var/tmp/codex-$codex_uid"
@@ -78,21 +71,8 @@ let
       fi
     done
 
-    # One-time seed per host: carry accumulated memories from the
-    # shared home into this host's local databases.  The mkdir is
-    # an atomic mutex so concurrent first runs seed at most once,
-    # and the temp-copy + no-clobber mv means no codex ever
-    # observes a partially copied file.  The mutex is released
-    # after every attempt: the file-existence guard prevents
-    # steady-state re-seeding, while a transiently failed copy
-    # (NFS stall) can retry on the next launch.  Only the main DB
-    # file is copied: it is self-consistent as of its last
-    # checkpoint, whereas a -wal/-shm trio copied from a live NFS
-    # database can be mutually inconsistent.  (A torn copy of a
-    # concurrently-written main file is possible during the
-    # transition window; codex detects and rebuilds a bad DB.)
-    # The state DB rebuilds itself from shared rollout files;
-    # logs and goals start fresh.
+    # Seed the host-local memory database once using a directory mutex and a
+    # same-directory temporary file; a failed attempt can retry next launch.
     if [ -f "$codex_shared_home/memories_1.sqlite" ] \
       && [ ! -e "$CODEX_SQLITE_HOME/memories_1.sqlite" ] \
       && ${pkgs.coreutils}/bin/mkdir "$CODEX_SQLITE_HOME/.memories-seed-lock" 2>/dev/null; then
@@ -110,9 +90,7 @@ let
       trap - EXIT INT TERM
     fi
 
-    # The tui appends to a fixed-name, lock-free log and unlinks it
-    # on startup; cross-host that tears lines and litters .nfs*
-    # files.  Point the shared log path at machine-local disk.
+    # Point the shared log path at machine-local storage.
     codex_log_dir="$codex_shared_home/log"
     if [ -d "$codex_log_dir" ] && [ ! -L "$codex_log_dir" ]; then
       if ! ${pkgs.coreutils}/bin/rmdir "$codex_log_dir" 2>/dev/null \

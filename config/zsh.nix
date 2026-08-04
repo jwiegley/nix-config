@@ -9,9 +9,8 @@
 let
   inherit (vars) isDarwin isLinux;
 
-  # Derived from the option, not from a `let` constant — see the rationale at
-  # options.johnw.git.package in config/git.nix. Setting that one option
-  # retargets these aliases too.
+  # Follow the shared option declared in config/git-options.nix so one override
+  # retargets the Git-backed aliases and Git configuration together.
   gitPkg = config.johnw.git.package;
 
   dotDir = "${config.xdg.configHome}/zsh";
@@ -24,11 +23,8 @@ let
   '';
 in
 {
-  # Declare the option this module READS (config.johnw.host). Relying on a
-  # parent to import it makes the module fail when imported on its own -- which
-  # is exactly what happened to config/ai.nix (#50 stage 2, fixed in e139c62c).
-  # Module imports are deduplicated by path, so this is a no-op wherever a
-  # parent already imported it.
+  # Import the host capability option this module reads rather than relying on a
+  # parent module's import list.
   imports = [ ./host-options.nix ];
 
   programs.bash = {
@@ -109,12 +105,8 @@ in
       proc = "ps axwwww | grep -i";
     };
 
-    # Keep ssh/scp/sftp/rsync out of carapace's hands so zsh's native
-    # completions stay in effect for them. The native _ssh/_rsync completers
-    # list remote paths over SSH (e.g. `scp host:<TAB>`); carapace's own
-    # completers do not. carapace's bridge is sourced late in .zshrc, so
-    # setting this in .zshenv (via envExtra) guarantees it is exported before
-    # that bridge runs and decides which commands to claim.
+    # Preserve zsh's native remote-path completion for these commands by
+    # excluding them before the carapace bridge loads.
     envExtra =
       scriptsFirst
       + ''
@@ -168,7 +160,7 @@ in
             # Use both OSC 0 (icon+title) and OSC 2 (title only)
             # %~ expands to current directory with ~ substitution
             print -Pn "\e]0;%~\a"
-            # Also set tmux pane title for native integration
+            # Set the OSC 2 title while inside tmux.
             if [[ -n "$TMUX" ]]; then
               print -Pn "\e]2;%~\a"
             fi
@@ -178,13 +170,10 @@ in
           add-zsh-hook chpwd __update_terminal_title
           add-zsh-hook precmd __update_terminal_title
 
-          # Reset terminal state before each prompt to prevent
-          # accumulated escape sequence corruption (especially
-          # over SSH with tmux -CC, and after Claude Code exits)
+          # Reset terminal state before each prompt.
           __reset_broken_terminal() {
             printf '%b' '\e[0m\e(B\e)0\017\e[?5l\e7\e[0;0r\e8'
-            # Reset Kitty keyboard protocol and modifyOtherKeys
-            # (Claude Code enables these and may not clean up on crash)
+            # Reset Kitty keyboard protocol and modifyOtherKeys.
             printf '\e[>0u\e[>4;0m' 2>/dev/null
           }
           add-zsh-hook precmd __reset_broken_terminal
@@ -199,14 +188,11 @@ in
           autoload -Uz compinit
           compinit
 
-          # Reset terminal state before each prompt to prevent
-          # accumulated escape sequence corruption (especially
-          # over SSH with tmux -CC, and after Claude Code exits)
+          # Reset terminal state before each prompt.
           autoload -Uz add-zsh-hook
           __reset_broken_terminal() {
             printf '%b' '\e[0m\e(B\e)0\017\e[?5l\e7\e[0;0r\e8'
-            # Reset Kitty keyboard protocol and modifyOtherKeys
-            # (Claude Code enables these and may not clean up on crash)
+            # Reset Kitty keyboard protocol and modifyOtherKeys.
             printf '\e[>0u\e[>4;0m' 2>/dev/null
           }
           add-zsh-hook precmd __reset_broken_terminal

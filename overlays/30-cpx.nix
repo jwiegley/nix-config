@@ -1,6 +1,6 @@
 # overlays/30-cpx.nix
 # Purpose: cpx - Modern, fast file copy tool with progress bars and resume support
-# Dependencies: Rust, Linux-specific (copy_file_range syscall)
+# Dependencies: prev plus tools source catalog; Linux only
 # Packages: cpx
 _final: prev:
 let

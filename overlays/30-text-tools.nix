@@ -1,6 +1,6 @@
 # overlays/30-text-tools.nix
 # Purpose: Text processing and org-mode related tools
-# Dependencies: None (uses only prev)
+# Dependencies: prev, tools source catalog, optional org2tc input
 # Packages: filetags, hyperorg, org2tc
 # Notes:
 #   - hyperorg uses ./emacs/patches/hyperorg.patch

@@ -1,7 +1,7 @@
 # Home Manager release-skew gate for the shared SSH core — jwiegley/nix-config#29.
 #
 # Installed at test/home-manager-release-skew.nix and wired as ONE targeted
-# `checks.<system>` attribute (see flake.nix), alongside the lock-purity gate.
+# `checks.<system>` attribute (see flake.nix), alongside the lock-coherence gate.
 # It is deliberately NOT a root-level `nix flake check`: Determinate forces
 # every host configuration when `nix flake check` runs, which the repo keeps
 # off the hot path (see doc/ARCHITECTURE.md). Build it explicitly:

@@ -295,10 +295,8 @@ sign:
 	$(call announce,nix store sign -k "<key>" --all)
 	@nix store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
 
-# Delegates to test/bin/quality, the single quality authority. Do not inline nixfmt or
-# a find/prune expression here: that duplication is what let this target's own
-# help text claim it rewrote "Nix and shell sources" while it only ever ran
-# nixfmt. See jwiegley/nix-config#46.
+# Delegate both rewrite suites to the single quality authority; do not duplicate
+# formatter discovery here.
 format:
 	$(call announce,quality --fix)
 	test/bin/quality --fix nix-format shell-format

@@ -1,31 +1,7 @@
-# config/host-options.nix
-#
-# The TYPED surface for the fleet host registry, and the resolved per-host
-# capability flags. This is a self-contained module: it DECLARES the schema and
-# POPULATES it from config/hosts/registry.nix using the `hostname` that the
-# surrounding module system is evaluating. A consumer only has to add it to its
-# `imports`; nothing else sets `johnw.host`.
-#
-# Two module systems import this file:
-#   - Home Manager, via config/johnw.nix `imports`
-#   - nix-darwin, via config/darwin.nix `imports`
-# It is deliberately free of any HM- or darwin-specific option reference, so the
-# same options-only-plus-config module evaluates identically in both. It is the
-# analogue of config/git-options.nix (jwiegley/nix-config#35): a small, separate
-# options module. It MUST stay separate — a module that declares top-level
-# `options` must move every other top-level attribute under an explicit
-# `config`, and folding this into the 346-line config/git.nix or the 471-line
-# config/johnw.nix would force a whole-file reindent (that is the documented
-# reason git-options.nix exists apart from git.nix).
-#
-# Loud failure: `config = { johnw.hostRegistry = registry.hosts; … }` runs every
-# row through the typed submodule below, and the `assertions` entry `deepSeq`s
-# the whole table so a bad enum (e.g. system = "x86-64-linux") is a hard eval
-# error under `nix flake check`, `./build system`, and activation — not a
-# silently-skipped lazy option.
-#
-# Refs: doc/ARCHITECTURE.md "Host registry and shared-home policy";
-# config/git-options.nix (the separate-options-module precedent).
+# Typed host-registry options and resolved capability flags shared by Home
+# Manager and nix-darwin. Given the required hostname special argument, this
+# module declares and populates `johnw.host`; its assertion forces the complete
+# registry through the typed schema so invalid rows fail evaluation.
 
 args@{
   config,
@@ -39,9 +15,8 @@ let
 
   registry = import ./hosts/registry.nix;
 
-  # config/ai.nix computes its home class from this same optional specialArg
-  # (ai.nix:47). Reuse it so the shared-work group resolves by class, and so the
-  # Darwin HM (which never passes it) and nix-darwin fall back to the hostname.
+  # Use the same optional home-class override as the AI module so shared-work
+  # resolves to the Andoria registry row; other evaluations use their hostname.
   homeClass = args.nixManagedAiHomeClass or null;
 
   resolvedRegistryId = if homeClass == "shared-work" then "andoria" else hostname;
@@ -117,8 +92,8 @@ let
         default = null;
         description = ''
           The home-manager release this host's authoritative checkout tracks,
-          when it is knowingly skewed from the root. Declarative documentation of
-          §6.5; the release-skew gate (#29) does NOT read this field. Inert.
+          when it is knowingly skewed from the root. This field is declarative;
+          the release-skew gate does not read it.
         '';
       };
       evalId = mkOption {
@@ -139,15 +114,13 @@ in
     hostRegistry = mkOption {
       type = types.attrsOf hostRow;
       description = ''
-        The typed fleet host registry — the single source of truth for per-host
-        identity and capability. Populated from config/hosts/registry.nix.
+        Typed fleet metadata and capability inputs populated from
+        config/hosts/registry.nix.
       '';
     };
 
-    # The resolved capability flags for the host currently being evaluated.
-    # Every former hostname string-compare reads one of these. Booleans only: a
-    # flag names a PROPERTY of the host, so a new consumer keys off the property
-    # rather than re-hardcoding a hostname.
+    # Capability booleans keep host-specific consumers keyed to properties
+    # rather than scattering hostname comparisons.
     host = {
       isHera = mkOption {
         type = types.bool;

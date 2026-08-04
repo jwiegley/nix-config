@@ -138,10 +138,8 @@ in
     };
   };
 
-  # S20-S22. These hosts deliberately set nix.enable=false because Determinate
-  # owns the daemon. Reading only config.nix behind an enable guard made the old
-  # snapshot vacuous: it emitted only { enable = false; } and missed both host
-  # predicates. Module option values retain the configured settings and builders.
+  # S20-S22. Read option values directly because nix.enable is false on these
+  # hosts while the configured settings and builders remain part of the surface.
   nix = {
     enable = c.nix.enable;
     settings = jsonValue darwin.options.nix.settings.value;
@@ -163,11 +161,9 @@ in
     defaults = mapAttrs (_: tryJsonValue) c.system.defaults;
   };
 
-  # S26-S29. launchd.agents is empty on both hosts. The real repository services
-  # are launchd.user.agents and launchd.daemons, so retain all three as a tripwire.
-  # Hash complete serviceConfig and script data after store-path normalization.
-  # This keeps every behavioral change visible without committing credentials
-  # that launchd command arguments or environment variables may contain.
+  # S26-S29. Record all three launchd agent sets. Hash serviceConfig and script
+  # data after store-path normalization so the artifact stores no command or
+  # environment values directly.
   launchd =
     let
       project = agent: {

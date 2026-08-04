@@ -14,17 +14,8 @@ let
     ca-bundle_crt
     ;
 
-  # Read the git package through the option rather than from a `let` constant.
-  #
-  # This used to be `inherit (vars) gitPkg`, interpolated directly into a dozen
-  # option VALUES below. That made "use a different git" impossible to express:
-  # a consumer could not flip a flag, it had to mkForce every interpolated
-  # string one at a time. vps carried 35 mkForce and vulcan carried shims
-  # largely because of this shape.
-  #
-  # Now every reference goes through config.johnw.git.package, whose default is
-  # exactly the previous expression, so the realized values are unchanged until
-  # someone deliberately sets the option.
+  # Route every Git-backed setting through the shared package option so a
+  # consumer can replace Git once without forcing each command separately.
   gitPkg = config.johnw.git.package;
   isHeavy = config.johnw.profile.heavy;
 

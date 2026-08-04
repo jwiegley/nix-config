@@ -1,14 +1,11 @@
 # overlays/30-misc-tools.nix
 # Purpose: Miscellaneous utility tools (file management, shell, security)
-# Dependencies: prev.myLib (from 00-lib.nix) for the single-binary jwiegley
-#               packages; everything else uses prev directly.
-# Packages: cmdperf, gogcli (bumped), hammer, linkdups, lipotell, sift, sshify, z
-# Note: pass-git-helper, yamale removed (now in nixpkgs)
+# Dependencies: prev.myLib plus tools source catalog
+# Packages: cmdperf, gogcli, hammer, linkdups, lipotell, sift, sshify, z
 _final: prev:
 let
   sources = import ../packages/source-catalog.nix "tools";
-  # gogcli 0.34.0 requires the Go 1.26.5 security release, one patch ahead
-  # of the Go compiler in the currently locked nixpkgs.
+  # Build gogcli with the catalog-pinned Go 1.26.5 toolchain.
   go_1_26_5 = prev.buildPackages.go_1_26.overrideAttrs {
     version = sources."go-1.26.5".version;
     src =
@@ -19,9 +16,7 @@ let
 in
 {
 
-  # cmdperf: command performance benchmarking (hyperfine-style). Not in
-  # nixpkgs. Pure Go, upstream builds with CGO disabled; goreleaser's
-  # default ldflags stamp main.version.
+  # Build cmdperf without CGO and stamp its version.
   cmdperf = prev.buildGoModule (finalAttrs: {
     pname = "cmdperf";
     version = sources.cmdperf.version;

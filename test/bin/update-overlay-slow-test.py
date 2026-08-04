@@ -7751,15 +7751,7 @@ exec "$REAL_GIT" "$@"
             result.stdout.splitlines(), ["shared-work", "ovh-vps", "vulcan"]
         )
 
-        # Every one of the eight fleet hosts must route to a switch target. The
-        # table used to normalize all eight but resolve an output for only four,
-        # so the shared-work group fell through to `return 1` and bin/switch
-        # silently used a floating `home-manager/master` instead.
-        #
-        # shared-work resolves to `jwiegley`, unqualified — the attribute the work
-        # machines' own ~/.config/home-manager flake exports (confirmed live on
-        # andoria-08). Not `jwiegley@x86_64-linux`, which is this repo's synthetic
-        # CI fixture pinned to hostname="linux".
+        # Every fleet hostname must resolve to its configured switch target.
         every_host = [
             "hera",
             "clio",
@@ -7803,12 +7795,7 @@ exec "$REAL_GIT" "$@"
             ],
         )
 
-        # Normalization must be IDEMPOTENT, because nix_flake_output_for_host
-        # normalizes its argument and bin/switch passes a value it already
-        # normalized. hera/clio/vulcan/vps survived a second pass only by
-        # accident of their glob patterns; shared-work did not, so bin/switch
-        # failed for every work machine. Testing the function with raw hostnames
-        # (above) cannot catch that — this exercises the real call path.
+        # The switch path may normalize an already normalized host name.
         idempotent = subprocess.run(
             [
                 "bash",

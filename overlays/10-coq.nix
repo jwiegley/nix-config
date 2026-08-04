@@ -1,7 +1,7 @@
 # overlays/10-coq.nix
 # Purpose: Coq theorem prover with IDE disabled (uses Emacs instead)
 # Dependencies: Uses final for coqPackages cross-references
-# Packages: coq, coq_8_10-coq_9_1, coqPackages, coqPackages_8_10-coqPackages_9_1
+# Packages: default and versioned coq/coqPackages aliases
 final: prev:
 
 {

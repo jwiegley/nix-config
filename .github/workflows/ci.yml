@@ -1,15 +1,6 @@
 name: CI
 
-# Every lint/format/test job delegates to test/bin/quality, the single quality
-# authority. Do NOT inline a tool invocation or a hand-maintained file list here.
-#
-# This file used to name 9 shell scripts explicitly while lefthook globbed all of
-# bin/* and found 19, so CI was blind to 10 real scripts including bin/switch,
-# bin/update-remote and bin/upgrade-all — CI was strictly weaker than the local
-# hook. Both also hardcoded the same 4 Python files while the tree tracks 35, and
-# neither propagated failure out of its per-file loop.
-#
-# Scope lives in one place now: `git ls-files`, inside test/bin/quality.
+# Lint/format/test jobs delegate scope and execution to test/bin/quality.
 #
 # `test/bin/quality darwin-surface` is deliberately local/manual for now. The root
 # flake still consumes a LAN-only ssh://gitea stock-trader input, so a GitHub
@@ -19,8 +10,6 @@ name: CI
 # portable-assurance.yml (twice daily plus manual dispatch), not on every push or pull
 # request.
 #
-# Refs: jwiegley/nix-config#46.
-
 on:
   push:
     branches: [main, master]

@@ -221,10 +221,9 @@
       homeManagerModules.johnw = import ./config/johnw.nix;
 
       # Generic standalone Home Manager configurations used for evaluation and
-      # smoke tests.  Their synthetic hostname is deliberately "linux", so
-      # host-gated features retain their defaults.  Real machines switch their
-      # own flakes: /etc/nixos on NixOS hosts such as Vulcan and VPS, and
-      # ~/.config/home-manager on the shared-home Andoria/Delphi/GPU hosts.
+      # smoke tests. Their synthetic hostname keeps concrete named-host gates
+      # false; explicit home classes select personal-linux or shared-work fixture
+      # behavior.
       homeConfigurations =
         let
           mkLinuxHome =
@@ -295,23 +294,8 @@
           };
         };
 
-      # `nix fmt` must format the tree, not read stdin.
-      #
-      # This was previously the raw `nixfmt` package. `nix fmt` execs the
-      # formatter verbatim without injecting any paths, so with no arguments
-      # nixfmt fell back to reading stdin: a bare `nix fmt` formatted nothing,
-      # and `nix fmt -- --check` died with "unexpected end of input". The gate
-      # only ever passed because lefthook and CI called nixfmt directly with a
-      # file list, never through `nix fmt`.
-      #
-      # With no path arguments this delegates to test/bin/quality, so `nix fmt`,
-      # `make format` and the pre-commit hook are the same operation over the
-      # same discovered file set (jwiegley/nix-config#46). It deliberately runs
-      # the working tree's test/bin/quality rather than a store copy: a formatter
-      # should use the tool as it currently exists in the tree it is formatting,
-      # and a store copy would silently format with a stale version after an
-      # edit. With explicit path arguments it dispatches by extension, matching
-      # the portable subflake's format.sh.
+      # Whole-tree rewrite/check modes delegate to the working tree's quality
+      # formatter. Explicit paths dispatch directly to nixfmt or shfmt.
       formatter = forAllSystems (
         system:
         let

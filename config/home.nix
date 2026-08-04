@@ -1,8 +1,7 @@
 # Darwin-specific home-manager wrapper for John Wiegley.
 #
-# This imports the shared cross-platform module (johnw.nix) and adds
-# Darwin-specific packages and overrides. The shared module contains
-# the full user environment with platform conditionals.
+# This imports the shared cross-platform module and adds Darwin-specific
+# packages and overrides.
 
 {
   pkgs,
@@ -25,18 +24,16 @@ in
     ./host-options.nix
   ];
 
-  # Run one Discord gateway client. Enabling this on Clio as well would
-  # make both hosts compete for the same bot connection.
+  # Give the Discord gateway one declarative host owner.
   johnw.agentDeck.enableConductorDiscordBridge = config.johnw.host.isHera;
 
   home = {
-    # Darwin has been on 23.11 longer than NixOS
     stateVersion = "23.11";
 
     # Darwin-specific timezone representation
     sessionVariables.TZ = "PST8PDT";
 
-    # Darwin-specific packages from the extensive packages.nix
+    # packages.nix applies its own platform and host gates.
     packages = packages.package-list;
   };
 }

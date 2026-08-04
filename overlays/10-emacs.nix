@@ -308,8 +308,7 @@ let
       wikipedia = compileEmacsFiles {
         name = "wikipedia";
         src = githubSource "wikipedia";
-        # transient, gptel, and llama are loaded at byte-compile time; the
-        # builder runs `emacs -Q` so transitive deps must be listed explicitly.
+        # The `emacs -Q` builder needs compile-time dependencies listed explicitly.
         buildInputs = with eself; [
           mediawiki
           transient
@@ -627,10 +626,8 @@ let
         (compileEmacsFiles {
           name = "machines";
           src = githubSource "machines";
-          # m-gptel.el (require 'gptel-curl) no longer compiles: gptel dropped
-          # gptel-curl.el, so this optional integration is dead in the source
-          # checkout too (nothing loads it — m.el is the only feature). Ship it
-          # as source only, matching the submodule's stale-.elc behaviour.
+          # m-gptel.el requires the removed gptel-curl feature; ship that optional
+          # integration as source without compiling it.
           preBuild = ''
             rm -f m-gptel.el
           '';

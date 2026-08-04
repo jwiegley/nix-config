@@ -29,7 +29,6 @@ NIXOPTS_MORE=()
 
 if [[ -f flake.nix ]]; then
     echo "Using the package set for <darwin>"
-    # NIXOPTS_MORE+=(--override-input nixpkgs nixpkgs --inputs-from ~/src/nix)
 else
     echo "Using the package set for <darwin>"
     NIXOPTS_MORE+=(--arg pkgs '(import<darwin>{}).pkgs')
@@ -140,8 +139,7 @@ fi
 export NIXPKGS_ALLOW_UNFREE=1
 export NIXPKGS_ALLOW_BROKEN=1
 
-# Keep prompt/session state out of the cache; the generated .envrc preserves
-# each caller's live values across both load and unload.
+# Restore selected caller variables around the cached environment.
 SCRIPT="unset         \
     ALTERNATE_EDITOR  \
     COLORTERM         \

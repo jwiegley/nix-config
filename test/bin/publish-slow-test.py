@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""Tests for bin/publish — the dual-remote publish guard.
+"""Tests for bin/publish and its dual-remote refusal paths.
 
-Every test builds a throwaway repository with two local bare remotes named
-`origin` and `github`, so nothing touches the real remotes and no network is
-required. The point of these tests is the refusal paths: bin/publish is a tool
-whose value is entirely in what it declines to do.
+Remote-mutation tests use throwaway local repositories; self-consistency tests
+read the real script without mutating its repository.
 
 Run: python3 -m unittest -v test/bin/publish-slow-test.py
 """
@@ -20,17 +18,7 @@ REPO = os.path.dirname(os.path.dirname(HERE))
 PUBLISH = os.path.join(REPO, "bin", "publish")
 
 
-# Git environment variables that point git at a specific repository. These MUST
-# be scrubbed before running git in a throwaway directory.
-#
-# This is not hypothetical tidiness. When this suite runs from inside a git hook —
-# which is exactly what lefthook's pre-commit does — the hook environment carries
-# GIT_DIR and GIT_INDEX_FILE for the REAL repository. Inheriting them makes every
-# git call below operate on the real repo regardless of `cwd`, so
-# `git init --bare` set `core.bare = true` on the actual nix-config repository and
-# broke every linked worktree in it, including a concurrent session's.
-#
-# `cwd=` is not protection: an explicit GIT_DIR beats the working directory.
+# Repository/config selector variables scrubbed from Git subprocesses.
 _GIT_LOCATION_VARS = (
     "GIT_DIR",
     "GIT_WORK_TREE",
@@ -49,12 +37,7 @@ _GIT_LOCATION_VARS = (
 
 
 def clean_env(**extra):
-    """os.environ with every repository-pointing git variable removed.
-
-    Use this for ANY subprocess that may invoke git, including bin/publish
-    itself - not just the git() helper. Under a git hook the inherited GIT_DIR
-    would otherwise redirect the child at the real repository.
-    """
+    """Return os.environ without the repository selectors listed above."""
     e = dict(os.environ)
     for var in _GIT_LOCATION_VARS:
         e.pop(var, None)
@@ -64,8 +47,8 @@ def clean_env(**extra):
 
 def git(*args, cwd, check=True, env=None):
     e = clean_env()
-    # Deterministic, signature-free commits by default; individual tests opt in
-    # to signing behaviour by rewriting %G? expectations instead.
+    # Deterministic unsigned commits by default; signing tests install their own
+    # fixture behavior.
     e.update(
         {
             "GIT_AUTHOR_NAME": "Test",
@@ -326,19 +309,7 @@ class TestSignatureGate(PublishHarness):
         self.assertIn("refusing to publish unsigned commits", r.stderr)
 
     def test_new_branch_absent_from_both_remotes_does_not_drag_in_old_history(self):
-        """Regression: publishing a new branch must not be gated on old history.
-
-        `feature` exists on neither remote, so both are in need_push and the
-        signature gate runs — but its tip is already published as an ancestor of
-        main, so the set of newly published commits is empty.
-
-        This is the shape that caught the original bug, and it discriminates
-        against BOTH ways of getting the range wrong: a `<r>/<b>..<rev>` form whose
-        absent-ref fallback is plain `$rev` (the whole repository), and a
-        `--not --remotes` computed before fetching (also the whole repository,
-        since it reads local tracking refs). Either way the unsigned base commit
-        would be flagged and this test fails.
-        """
+        """A new branch whose tip is published elsewhere has no new history."""
         git("checkout", "-q", "-b", "feature", cwd=self.work)
         r = self.publish("--dry-run")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
@@ -536,16 +507,7 @@ exec "$REAL_GIT" "$@"
         return third
 
     def test_default_does_not_push_but_reports_what_it_would_do(self):
-        """The bare invocation must reach the push decision and decline it.
-
-        This replaces an earlier version of this test that lived in the
-        unsigned harness, where both remotes were already current so publish
-        short-circuited at "nothing to do" before the push gate was ever
-        consulted — it passed whether or not --publish was required, which is
-        exactly the vacuous-negative-test problem this suite exists to avoid.
-        Here there IS something to publish and the signature gate is satisfied,
-        so declining to push is a real observation.
-        """
+        """A bare invocation with publishable work reports but does not push."""
         head = self._signed_commit("s\n", "a signed commit")
         before = (self.remote_sha(self.origin), self.remote_sha(self.github))
         r = subprocess.run(
@@ -765,15 +727,7 @@ exec "$REAL_GIT" "$@"
 
 
 class TestDoesNotEscapeItsSandbox(unittest.TestCase):
-    """Regression: the suite must never touch the repository it is run from.
-
-    Running these tests under lefthook's pre-commit hook once set
-    `core.bare = true` on the real nix-config repository, because the hook
-    environment exports GIT_DIR and the harness inherited it — so
-    `git init --bare` in a temp dir reconfigured the real repo and broke every
-    linked worktree in it. `cwd=` does not protect against that; an explicit
-    GIT_DIR wins. This test simulates the hook environment and proves the scrub.
-    """
+    """Hostile inherited Git selectors must not escape the temporary sandbox."""
 
     def test_inherited_git_dir_does_not_reach_the_outer_repository(self):
         outer = tempfile.mkdtemp(prefix="publish-test-outer-")
@@ -786,7 +740,7 @@ class TestDoesNotEscapeItsSandbox(unittest.TestCase):
         with open(outer_config) as fh:
             before = fh.read()
 
-        # Exactly what a git hook hands its children.
+        # Representative hostile Git selector variables.
         hostile = {
             "GIT_DIR": os.path.join(outer, ".git"),
             "GIT_INDEX_FILE": os.path.join(outer, ".git", "index"),
@@ -843,7 +797,7 @@ class TestSelfConsistency(unittest.TestCase):
         self.assertNotIn("branch other than the current one", r.stdout)
 
     def test_never_embeds_a_credential(self):
-        """Acceptance criterion: never embeds a credential or token."""
+        """Scan the script for common embedded credential markers."""
         with open(PUBLISH) as fh:
             body = fh.read()
         for pattern in ("ghp_", "github_pat_", "PRIVATE KEY", "password=", "token="):

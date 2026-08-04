@@ -1,24 +1,8 @@
 #!/usr/bin/env python3
-"""Execution tests for test/bin/quality -- the first this repository has had.
+"""Execution tests for quality helpers and registered fast-suite plans.
 
-Everything that referenced `test/bin/quality` from a test previously did so as TEXT:
-`test/bin/gates-slow-test.py` greps its source for two dispatch arms. Nothing invoked it, and
-nothing exercised `each_file`, the function every per-file suite runs through. So
-when `d6b3cf3d` fixed `each_file` to skip tracked-but-absent paths, both of its
-negative cases existed only in the commit message.
-
-This programme's standing rule is that a gate without a proven negative case is
-assumed broken, and a negative proof in a commit message cannot catch a regression.
-These tests make the two cases replayable, plus the exit-status propagation every
-hook depends on.
-
-SAFETY: every test runs `test/bin/quality` with the CWD inside a throwaway repository,
-and scrubs GIT_* from the environment first. That scrub is not decoration --
-`test/bin/publish-slow-test.py` once inherited GIT_DIR under a git hook and its
-`git init --bare <tmpdir>` retargeted the REAL repository, setting core.bare=true
-and breaking five worktrees at once. `test/bin/quality` resolves its scope with
-`git rev-parse --show-toplevel`, so a leaked GIT_DIR would point it at the real
-checkout and these tests would silently assert against the wrong tree.
+Tests that invoke `test/bin/quality` use throwaway repositories and scrub the Git
+repository selectors listed below. Plan-only tests inspect helper modules directly.
 """
 
 import os
@@ -38,8 +22,7 @@ UPDATER_ESSENTIAL = (
     Path(__file__).resolve().parent / "update-overlay-essential-test.py"
 )
 
-# Every variable git consults for location or identity. A test that shells out to
-# git must start from a known-empty set of these, not from whatever the caller had.
+# Git repository/config selector variables scrubbed from test subprocesses.
 GIT_VARS = (
     "GIT_DIR",
     "GIT_WORK_TREE",
@@ -732,13 +715,7 @@ class UpdaterEssentialPlanTests(unittest.TestCase):
 
 
 class GitScrubRegressionTest(unittest.TestCase):
-    """The scrub itself, asserted rather than trusted.
-
-    `test/bin/publish-slow-test.py` inherited GIT_DIR under a git hook and its
-    `git init --bare` retargeted the real repository. `test/bin/quality` resolves scope
-    via `git rev-parse --show-toplevel`, so a leaked GIT_DIR would silently point
-    these tests at the real checkout.
-    """
+    """Repository selectors must not escape into test subprocesses."""
 
     def test_clean_env_removes_every_git_var(self):
         os.environ["GIT_DIR"] = "/somewhere/else/.git"

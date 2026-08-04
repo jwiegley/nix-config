@@ -1,6 +1,6 @@
 # overlays/30-markless.nix
 # Purpose: markless - Terminal markdown viewer with image support
-# Dependencies: Uses prev only
+# Dependencies: prev plus tools source catalog
 # Packages: markless
 _final: prev:
 let

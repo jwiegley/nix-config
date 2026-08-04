@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# Prove that config/fleet is a real immutable subflake at an exact Git revision.
-# A git+file reference is deliberately insufficient: Nix treats it as mutable
-# and may repair flake.lock in place, turning a missing or stale lock into a
-# false pass.  This gate instead evaluates a content-pinned Git archive.
+# Evaluate config/fleet from a content-pinned Git archive and its committed lock.
 
 set -euo pipefail
 

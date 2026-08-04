@@ -1,17 +1,8 @@
 # Shell helper shared by every client wrapper.
 #
-# Classifies a set of Nix-managed artifacts as `zero`, `complete`, or
-# `partial`, which is what each wrapper uses to decide whether generating
-# over the set is safe. The `-L` arm is load-bearing: `-e` follows symlinks
-# and reports false for a dangling one, so without it a dangling symlink
-# would classify as `zero` and be silently replaced.
-#
-# This lives in one file because `6094451a` split the wrappers out of
-# flake/ai.nix and left three byte-identical copies behind. A correction to
-# the symlink handling applied to whichever copy the reader happened to open
-# would leave the other two clients on the old behaviour, and the divergence
-# would be invisible -- nothing fails, and the stale copies keep working for
-# every case except the one the fix addressed.
+# Classifies Nix-managed artifact sets as `zero`, `complete`, or `partial` so
+# wrappers can inject, pass through, or reject them consistently. `-L` keeps a
+# dangling symlink from being mistaken for an absent artifact.
 ''
   classify_managed_artifacts() {
     local artifact

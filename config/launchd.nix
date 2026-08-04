@@ -151,11 +151,8 @@ let
 
 in
 {
-  # Declare the option this module READS (config.johnw.host). Relying on a
-  # parent to import it makes the module fail when imported on its own -- which
-  # is exactly what happened to config/ai.nix (#50 stage 2, fixed in e139c62c).
-  # Module imports are deduplicated by path, so this is a no-op wherever a
-  # parent already imported it.
+  # Import the host capability option this module reads rather than relying on a
+  # parent module's import list.
   imports = [ ./host-options.nix ];
 
   launchd = {
@@ -169,8 +166,7 @@ in
             sleep 5
           done
 
-          # Create data directory if it doesn't exist and set proper ownership
-          # On macOS, Docker Desktop handles permission mapping internally
+          # Create and own the persistent data directory.
           mkdir -p ${home}/mssql
           chown -R johnw:staff ${home}/mssql
 
@@ -178,7 +174,7 @@ in
           mkdir -p ${xdg_configHome}/mssql
           chown johnw:staff ${xdg_configHome}/mssql
 
-          # Read password from secure file (must be created manually)
+          # Read the required password file (created manually).
           # Create this file with: pass mssql.vulcan.lan > ~/.config/mssql/passwd && chmod 600 ~/.config/mssql/passwd
           if [ ! -f ${xdg_configHome}/mssql/passwd ]; then
             echo "ERROR: Password file ${xdg_configHome}/mssql/passwd not found"
@@ -187,13 +183,13 @@ in
           fi
           MSSQL_SA_PASSWORD=$(cat ${xdg_configHome}/mssql/passwd | tr -d '\n')
 
-          # Validate password meets SQL Server requirements
+          # Validate the minimum password length before invoking SQL Server.
           if [ ''${#MSSQL_SA_PASSWORD} -lt 8 ]; then
             echo "ERROR: Password must be at least 8 characters"
             exit 1
           fi
 
-          # Pull the latest image if not present
+          # Refresh the mutable 2022-latest image before replacing the container.
           /usr/local/bin/docker pull mcr.microsoft.com/mssql/server:2022-latest
 
           # Stop and remove any existing container with the same name
@@ -257,9 +253,7 @@ in
           # This leaves 64 GB of working memory remaining
           # /usr/sbin/sysctl iogpu.wired_limit_mb=458752
 
-          # This leaves 32 GB of working memory remaining, and is best for
-          # when the machine will only be used headless as a server from
-          # remote, during longer trips.
+          # This leaves 32 GiB outside the wired GPU allocation.
           /usr/sbin/sysctl iogpu.wired_limit_mb=491520
         '';
         serviceConfig.RunAtLoad = true;
@@ -400,7 +394,7 @@ in
         script = "/usr/bin/open -a /Applications/Docker.app";
         serviceConfig = {
           RunAtLoad = true;
-          KeepAlive = false; # Don't restart - Docker manages itself
+          KeepAlive = false;
           ProcessType = "Interactive"; # GUI application
         };
       };
@@ -467,13 +461,7 @@ in
           # Sweep anything that accumulated while we were not running.
           ${pkgs.my-scripts}/bin/flatten-recordings || true
 
-          # Then react to filesystem changes under ~/Recordings for low
-          # latency. --latency 5 coalesces bursts; the script is idempotent
-          # and re-sweeps the whole directory on each invocation, so an
-          # occasional duplicate event is harmless. A long-lived fswatch can
-          # silently stop delivering events (its FSEvents stream is severed
-          # but the process stays alive, so KeepAlive never restarts it); the
-          # flatten-recordings-sweep timer below is the safety net for that.
+          # Coalesce recursive events before running the serialized worker.
           ${pkgs.fswatch}/bin/fswatch --recursive --latency 5 \
                 --event=Created --event=Updated \
                 --event=MovedTo --event=Renamed \
@@ -485,9 +473,8 @@ in
         serviceConfig = {
           RunAtLoad = true; # Initial sweep at login.
           KeepAlive = true; # Relaunch the fswatch loop if it ever exits.
-          # Without these two, launchd classifies the agent as background
-          # work and throttles its I/O when the display is off — the cause
-          # of the 2.4h stall on a 105 KB archive mv on 2026-05-22.
+          # Prevent launchd from throttling the watcher's I/O while the display
+          # is off.
           LowPriorityIO = false;
           LowPriorityBackgroundIO = false;
           ProcessType = "Standard";
@@ -496,16 +483,8 @@ in
         };
       };
 
-      # Periodic safety-net sweep. The fswatch agent above is a single
-      # long-lived watcher; if its event stream is severed (e.g. by the
-      # filesystem churn of a `darwin-rebuild switch` activation) the process
-      # stays alive but stops delivering events, and KeepAlive cannot detect
-      # a silent-but-alive watcher — so recordings pile up unnoticed (this
-      # happened 2026-06-30: a watcher went mute at ~15:50 and five
-      # recordings sat unprocessed for hours). This timer guarantees a sweep
-      # every 15 minutes regardless. flatten-recordings holds a
-      # single-instance lock, so overlap with an fswatch-triggered run is
-      # harmless — the loser logs already_running and exits.
+      # Periodically cover watcher misses; the worker lock handles overlap with
+      # event-triggered runs.
       flatten-recordings-sweep = {
         script = ''
           export PATH="${pkgs.my-scripts}/bin:/etc/profiles/per-user/johnw/bin:/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
@@ -515,8 +494,7 @@ in
         serviceConfig = {
           RunAtLoad = true; # Sweep once at login/activation.
           StartInterval = 900; # And every 15 minutes thereafter.
-          # Match the fswatch agent: don't let launchd throttle this agent's
-          # I/O when the display is off (the 2026-05-22 archive-stall cause).
+          # Match the fswatch agent's unthrottled I/O policy.
           LowPriorityIO = false;
           LowPriorityBackgroundIO = false;
           ProcessType = "Standard";

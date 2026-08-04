@@ -29,7 +29,6 @@ in
         "agnix-mcp"
       ];
 
-      # Tests require fixtures that may not work in sandbox
       doCheck = false;
 
       meta = with lib; {

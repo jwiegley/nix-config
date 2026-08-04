@@ -2625,7 +2625,7 @@ def update_pypi_artifact_target(
     pypi_client: PypiClient,
     transaction,
 ) -> str:
-    """Resolve and write one compound PyPI record as an indivisible projection."""
+    """Resolve a compound PyPI record and write it under transaction rollback."""
     record = target["_record"]
     old_version = record["version"]
     resolved = pypi_client.get_release_artifacts(
@@ -2796,7 +2796,7 @@ def update_github_commit_artifact_target(
     hash_computer: HashComputer,
     transaction,
 ) -> str:
-    """Update a source commit and exact-revision repository files atomically."""
+    """Update a source commit and repository files under transaction rollback."""
     record = target["_record"]
     source = record["source"]
     source_args = source["args"]
@@ -3148,7 +3148,7 @@ def update_github_projection_target(
 
 
 def extract_version_number(tag: str, prefix: str = "") -> str:
-    """Extract a version number using the declared prefix exactly."""
+    """Strip a matching declared prefix, otherwise a conventional prefix."""
     if prefix and tag.startswith(prefix):
         return tag[len(prefix):]
 

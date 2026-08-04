@@ -330,11 +330,8 @@ let
   hasSettings = options.programs.ssh ? settings;
 in
 {
-  # Declare the option this module READS (config.johnw.host). Relying on a
-  # parent to import it makes the module fail when imported on its own -- which
-  # is exactly what happened to config/ai.nix (#50 stage 2, fixed in e139c62c).
-  # Module imports are deduplicated by path, so this is a no-op wherever a
-  # parent already imported it.
+  # Import the host capability option this module reads rather than relying on a
+  # parent module's import list.
   imports = [ ./host-options.nix ];
 
   home.activation.createSshSocketDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''

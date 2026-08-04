@@ -1,5 +1,5 @@
 # Purpose: Sherlock - read-only database query tool for AI assistants
-# Dependencies: None (uses pre-built binaries from GitHub releases)
+# Dependencies: AI source catalog and prebuilt release archives
 # Packages: sherlock-db
 _final: prev:
 
@@ -44,30 +44,20 @@ let
 
     **When to use `--url` vs `-c`:** Use `--url` for quick one-off access, especially when the project already has a `DATABASE_URL`. Use `-c` for repeated access to the same database with config-managed credentials.
 
-    ## SSL Connections with Keychain Passwords
+    ## SSL Connections
 
-    When a PostgreSQL server requires SSL (e.g., `pg_hba.conf` rejects unencrypted connections) and the config uses `$keychain` for the password, the `-c` flag may fail because sherlock does not yet pass SSL options from the config file. Work around this by constructing the URL with the password retrieved from macOS Keychain:
-
-    ```bash
-    PW=$(security find-generic-password -a <keychain-account> -w) && \
-    sherlock -u "postgres://user:''${PW}@host:5432/db?sslmode=require" <command>
-    ```
-
-    The `<keychain-account>` corresponds to the key name in the `"$keychain"` field of the connection config. For example, for a connection configured with `"password": { "$keychain": "org" }`:
-
-    ```bash
-    PW=$(security find-generic-password -a my-db-password -w) && \
-    sherlock -u "postgres://dbuser:''${PW}@db.example.com:5432/app?sslmode=require" query "SELECT ..." -f markdown
-    ```
+    Sherlock 1.4.0 does not pass configured SSL options through `-c`. For a
+    server that requires encryption, use `-u` with the database driver's SSL
+    query parameters and take care not to log the credential-bearing URL.
 
     Always use `-f markdown` for human-readable output in conversation.
 
     ## SQL Commands
 
-    All SQL commands require `-c <connection>` or `-u <url>`. Output is JSON by default, use `-f markdown` for tables.
+    All SQL commands require `-c <connection>` or `-u <url>`. Output is JSON by default; use `-f markdown` for tables.
 
     ```bash
-    sherlock connections                    # List available connections
+    sherlock connections                    # List configured connection names
     sherlock -c <conn> tables               # List tables
     sherlock -c <conn> describe <table>     # Table schema
     sherlock -c <conn> introspect           # Full schema (cached)
@@ -99,13 +89,13 @@ let
     ## Constraints
 
     - **Read-only**: SQL allows SELECT, SHOW, DESCRIBE, EXPLAIN, WITH only. Redis allows read commands only (GET, HGETALL, SCAN, etc.) — mutations (SET, DEL, HSET, etc.) are blocked.
-    - **Connection required**: Always specify `-c <connection>` or `-u <url>` (no default)
+    - **Connection required**: Specify `-c <connection>` or `-u <url>`; there is no default
     - **Type-aware**: SQL commands only work with SQL connections, Redis commands only work with Redis connections
     - **Quoting**: PostgreSQL/SQLite use `"identifier"`, MySQL uses `` `identifier` ``
 
     ## SQL Workflow
 
-    1. Try `sherlock -c <conn> tables` first. If it fails with an SSL/encryption error, switch to the URL+Keychain approach described above
+    1. Run `sherlock -c <conn> tables`; if configured SSL is insufficient, use an explicit URL with the required SSL parameters
     2. Use `tables` or `introspect` to understand schema (introspect is cached per-connection)
     3. Use `fk` to understand table relationships before writing JOINs
     4. Use `sample` to see real data examples before writing queries

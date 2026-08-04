@@ -1,17 +1,4 @@
-# Every command here delegates to test/bin/quality, the single quality authority.
-#
-# Do NOT inline a tool invocation or a file list in this file. That is how these
-# hooks and .github/workflows/ci.yml drifted apart badly enough that CI checked 9
-# shell scripts while this file checked 19, and how a 45-line shfmt diff in
-# bin/update passed every gate: the old loops here did not propagate
-# failure, so the loop exited with the status of its last iteration and a bad file
-# in the middle was invisible.
-#
-# Scope now lives in exactly one place — `git ls-files`, inside test/bin/quality. The
-# globs below only decide *when* a suite runs; what it covers is test/bin/quality's
-# business, so a newly tracked file is in scope without editing anything here.
-#
-# Refs: jwiegley/nix-config#46.
+# Hook commands delegate scope and execution to test/bin/quality.
 
 pre-commit:
   commands:
@@ -19,11 +6,8 @@ pre-commit:
       run: test/bin/quality --tier pre-commit
 
 pre-push:
-  # Pre-push gates validate the revision's complete tree, not the diff that happens
-  # to remain against one remote. A push-mirror can make {push_files} empty before
-  # this hook runs; using the tracked tree keeps the gate non-vacuous in that case.
-  # The existing config path keeps the custom-file command non-empty even for an
-  # empty index. It is consumed by the leading `:` and is never read as an input.
+  # Force dispatch even when a push mirror leaves {push_files} empty; the command
+  # itself verifies the resolved commit-signature range.
   files: '{ git ls-files; printf "%s\n" lefthook.yml; }'
   commands:
     # Keep the mandatory gate comfortably inside two minutes. Expensive Nix,

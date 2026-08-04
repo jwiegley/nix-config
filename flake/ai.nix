@@ -80,9 +80,7 @@ let
         ''
         + (old.preInstall or "");
 
-        # Bun's compiled Linux executable names the dynamic loader as a
-        # shared dependency. Invoking it normally mixes the Nix loader with
-        # the host libc and segfaults; retain the matching loader wrapper.
+        # Run the compiled Linux executable through the matching Nix loader.
         postInstall =
           (old.postInstall or "")
           + pkgs.lib.optionalString pkgs.stdenv.isLinux (

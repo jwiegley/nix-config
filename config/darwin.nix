@@ -35,22 +35,8 @@ in
   ];
 
   users = {
-    # List of users and groups that nix-darwin is allowed to create/manage
-    # CRITICAL: Users/groups must be in these lists for nix-darwin to create them
-    # Only johnw. `_prometheus-node-exporter` is registered by nix-darwin itself --
-    # modules/services/monitoring/prometheus-node-exporter.nix:95-96 sets both
-    # users.knownUsers and users.knownGroups, gated on `mkIf cfg.enable` (:80).
-    #
-    # Our exporter's enable is `!config.johnw.host.isClio` (see services below), which
-    # is the SAME condition the removed guard used, so the two registrations were
-    # provably coextensive and ours was pure duplication: hera's merged lists read
-    # ['_prometheus-node-exporter', 'johnw', '_prometheus-node-exporter'] and
-    # ['_prometheus-node-exporter', '_prometheus-node-exporter'].
-    #
-    # knownUsers is what authorizes nix-darwin to CREATE and DELETE accounts, so this
-    # was verified rather than assumed: clio, where the exporter is disabled, carried
-    # neither copy (knownUsers ['johnw'], knownGroups []), confirming the module's
-    # registration is gated on exactly what ours was.
+    # nix-darwin's Prometheus module registers its own service account when the
+    # exporter is enabled; only the login user belongs in this local declaration.
     knownUsers = [ "johnw" ];
 
     users = {
@@ -82,11 +68,9 @@ in
               '';
             in
             [
-              # GnuPG auth key stored on Yubikeys
               "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJAj2IzkXyXEl+ReCg9H+t55oa6GIiumPWeufcYCWy3F cardno:31_768_527"
               "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb cardno:14_476_831"
 
-              # Vulcan data server
               ''restrict,command="${modelMetadataExtract}" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFZYNrQfHWNV09OQz7uMhjQKflCWKwLG4pp1tJb2QRRq vulcan-model-metadata''
 
               # drafts-mcp bridge (vulcan drafts-mcp.service) — pinned to exec
@@ -190,12 +174,8 @@ in
     onActivation = {
       autoUpdate = false;
       upgrade = false;
-      # The locked nix-darwin emits `--force-cleanup` for "uninstall", which
-      # makes cleanup non-interactive without forcing package installation.
-      # Do not add Homebrew Bundle's generic `--force`: it is forwarded to
-      # installs as `--force/--overwrite`, replacing cask app bundles while
-      # retaining their user state (which can corrupt in-app updater state).
-      cleanup = "uninstall"; # Remove uninstalled pkgs and dependencies
+      # Remove packages without Homebrew Bundle's generic force-install flag.
+      cleanup = "uninstall"; # Remove packages absent from the Brewfile.
     };
 
     taps = [
@@ -287,12 +267,6 @@ in
       "wispr-flow"
       "xnviewmp"
       "zotero"
-      # "datagraph"                 # Use DataGraph in App Store
-      # "macwhisper"                # Use Whisper Transcription in App Store
-      # "marked-app"                # Use Marked 2 in App Store
-      # "omnigraffle"               # Stay at version 6
-      # "screenflow"                # Stay at version 9
-      # "soulver"                   # Use Soulver 3 in App Store
       {
         name = "brave-browser";
         greedy = true;
@@ -327,18 +301,6 @@ in
       "betterdisplay"
       "wifi-explorer"
     ];
-
-    ## The following software, or versions of software, are not available
-    ## via Homebrew or the App Store:
-
-    # "Bookmap"
-    # "Digital Photo Professional"
-    # "EOS Utility"
-    # "MotiveWave"
-    # "ScanSnap Online Update"
-    # "Photo Supreme"
-    # "ABBYY FineReader for ScanSnap"
-
   };
 
   nixpkgs = {
@@ -440,7 +402,7 @@ in
     # reloads either system or user launchd jobs. This also runs before Home
     # Manager's post-activation, so the ownership handoff cannot race setup.
     #
-    # Homebrew 5.1.x enforces tap trust during nix-darwin's Homebrew activation
+    # Homebrew enforces tap trust during nix-darwin's Homebrew activation
     # before Home Manager links files. It also rejects trust stores whose real
     # path lives under the root-owned Nix store, so this must be a real user-owned
     # file in ~/.homebrew rather than a home.file symlink.
@@ -461,11 +423,8 @@ in
       /usr/bin/install -o johnw -g staff -m 0644 ${homebrewTrustJson} ${home}/.homebrew/trust.json
     '';
 
-    # Hera is a desktop and hosts LLM services that need to stay reachable
-    # at any hour. Force the configured value so it can't drift back via
-    # System Settings or `pmset` from another shell. disksleep/displaysleep
-    # are intentionally left unmanaged so they can still be tuned via the
-    # Settings app.
+    # Hera hosts LLM services continuously. Reapply sleep=0 on each activation;
+    # disksleep and displaysleep remain user-managed.
     activationScripts.postActivation.text = lib.mkIf config.johnw.host.isHera ''
       /usr/bin/pmset -a sleep 0
     '';
@@ -500,11 +459,11 @@ in
         };
 
         "com.apple.spaces" = {
-          "spans-displays" = 0; # Display have seperate spaces
+          "spans-displays" = 0; # Displays have separate spaces
         };
 
         "com.apple.WindowManager" = {
-          EnableStandardClickToShowDesktop = 0; # Click wallpaper to reveal desktop
+          EnableStandardClickToShowDesktop = 0; # Disable click-wallpaper-to-reveal-desktop
           StandardHideDesktopIcons = 0; # Show items on desktop
           HideDesktop = 0; # Do not hide items on desktop & stage manager
           StageManagerHideWidgets = 0;

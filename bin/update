@@ -922,8 +922,8 @@ if [[ $commit_created == true ]]; then
     fi
 fi
 
-# A push failure must retain the locally published, already-activated commit so
-# that the operator can retry it explicitly. Earlier failures still roll back.
+# A push failure retains the local commit for an explicit retry; earlier
+# transaction failures still roll back.
 transaction_complete=true
 
 if [[ $run_push == true && $commit_created == true ]]; then

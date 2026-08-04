@@ -1,7 +1,7 @@
 # overlays/30-git-tools.nix
 # Purpose: Git-related tools and extensions
-# Dependencies: prev.myLib (from 00-lib.nix) for git-scripts
-# Packages: tea (patched), git-scripts (local source)
+# Dependencies: prev.myLib, tools source catalog, optional gitScripts input
+# Packages: tea, git-branchstack, git-scripts
 # Note: git-scripts requires gitScripts
 {
   gitScripts ? null,
@@ -29,14 +29,8 @@ in
     '';
   });
 
-  # git-branchstack 0.2.0 (PyPI, Jan 2022 -- upstream's last release) pins
-  # git-revise==0.7.0, which the 2026-07-05 nixpkgs bump broke by moving
-  # python3Packages.git-revise to 0.8.0 (pythonRuntimeDepsCheckHook rejects
-  # the wheel). The 0.2.0 release also lacks upstream's bec4034 fix for a
-  # runtime ValueError with any git-revise carrying the editor-cwd change
-  # (git-revise#118), which 0.8.0 does. Build from upstream master (has the
-  # fix, still pins ==0.7.0 in setup.py) and relax the pin. Drop this if
-  # upstream ever cuts a release and nixpkgs picks it up.
+  # Build the catalog-pinned git-branchstack source and relax its git-revise
+  # metadata constraint.
   git-branchstack = prev.git-branchstack.overrideAttrs (old: {
     inherit (sources.git-branchstack) version;
     src =

@@ -45,10 +45,9 @@ in
         };
       };
 
-    # Fetch a single-binary (typically interpreted script) from GitHub and
-    # copy it to $out/bin. Defaults `owner` to "jwiegley" and `repo`/`binName`
-    # to `pname`. For source trees that need a build step, use mkDerivation
-    # directly; for directories of scripts use mkScriptPackage.
+    # Copy one binary or interpreted script from a catalog-owned GitHub source
+    # to $out/bin. `binName` defaults to `pname`; source trees needing a build
+    # step use mkDerivation, while script directories use mkScriptPackage.
     mkSimpleGitHubBinary =
       args@{
         pname,

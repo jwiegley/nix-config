@@ -1,11 +1,9 @@
-# Shared cross-platform home-manager module for John Wiegley.
-#
-# This is the single source of truth for johnw's user environment.
+# Shared cross-platform Home Manager settings for John Wiegley.
 # It is imported by:
 #   - Darwin hosts (hera, clio) via config/home.nix
 #   - NixOS/Linux hosts (vulcan, vps, andoria) via their own thin wrappers
 #
-# Platform-specific settings use lib.mkIf pkgs.stdenv.isDarwin / isLinux.
+# Platform-specific settings use Home Manager/Nixpkgs conditional combinators.
 # Host-specific settings key off typed capability flags (config.johnw.host.*).
 # Values that may need per-host override use lib.mkDefault.
 
@@ -36,24 +34,22 @@ in
 {
   _module.args.vars = vars;
 
-  imports =
-    # Extracted sub-modules for better organization
-    [
-      ./agent-deck.nix
-      ./ai.nix
-      ./fractal.nix
-      ./git-options.nix
-      ./host-options.nix
-      ./git.nix
-      ./ssh.nix
-      ./zsh.nix
-      ./xdg-symlinks.nix
-      ./email.nix
-    ]
-    # Conditional flake input modules
-    ++ lib.optionals (inputs ? git-ai) [
-      inputs.git-ai.homeManagerModules.default
-    ];
+  imports = [
+    ./agent-deck.nix
+    ./ai.nix
+    ./fractal.nix
+    ./git-options.nix
+    ./host-options.nix
+    ./git.nix
+    ./ssh.nix
+    ./zsh.nix
+    ./xdg-symlinks.nix
+    ./email.nix
+  ]
+  # Conditional flake input modules
+  ++ lib.optionals (inputs ? git-ai) [
+    inputs.git-ai.homeManagerModules.default
+  ];
 
   home = {
     stateVersion = lib.mkDefault "24.11"; # overridden by wrappers; fallback only
@@ -365,11 +361,8 @@ in
         ];
         defaultPromptStorage = "notes";
 
-        featureFlags = {
-          # transcriptSweep is the only flag whose release default differs
-          # from the debug default — enable here if you want it on in release:
-          transcriptSweep = true;
-        };
+        # Keep periodic transcript sweeping enabled in release builds.
+        featureFlags.transcriptSweep = true;
       };
     };
   };
@@ -383,7 +376,7 @@ in
     gpg-agent = {
       enable = true;
       enableSshSupport = true;
-      # Keep approved PINs until gpg-agent is explicitly killed.
+      # Use the maximum supported cache TTLs.
       defaultCacheTtl = 2147483647;
       maxCacheTtl = 2147483647;
       pinentry.package = pkgs.pinentry_mac;
