@@ -597,6 +597,12 @@ runCommand "pi-gallery-check"
       cat "$smoke/output.log" >&2
       fail "new Pi gallery commands were not registered"
     }
+    # The trailing anvil clause is a prohibition, not a leftover reference. It
+    # survives the Anvil retirement deliberately: retiring the convergence that
+    # removed existing Anvil state is not the same as allowing the gallery to
+    # advertise an Anvil tool again. It was deleted with that machinery in
+    # cc0f6718 and restored in e5b7f905; a source search for "anvil" will find
+    # this line, and it is the one that should stay.
     jq -e '
       . as $actual
       | ($actual | length) == ($actual | unique | length)
