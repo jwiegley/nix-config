@@ -16,7 +16,7 @@ in
 {
   imports = [ ./host-options.nix ];
 
-  accounts.email = lib.mkIf config.johnw.profile.heavy {
+  accounts.email = lib.mkIf config.johnw.host.isDarwinWorkstation {
     certificatesFile = ca-bundle_crt;
 
     accounts.fastmail = {

@@ -9,6 +9,10 @@ let
   personal = {
     userName = "John Wiegley";
     userEmail = "johnw@newartisans.com";
+    signing = "none";
+    signingKey = null;
+  };
+  desktop = {
     signing = "openpgp";
     signingKey = "12D70076AB504679";
   };
@@ -30,26 +34,32 @@ in
   # Host rows plus one shared-work group row. The typed module supplies defaults
   # for fields omitted here.
   hosts = {
-    hera = personal // {
-      system = "aarch64-darwin";
-      activation = "darwin";
-      username = "johnw";
-      roles = [
-        "workstation-full"
-        "darwin-full"
-        "ai-heavy"
-      ];
-    };
-    clio = personal // {
-      system = "aarch64-darwin";
-      activation = "darwin";
-      username = "johnw";
-      roles = [
-        "workstation-lite"
-        "darwin-core"
-        "ai-client"
-      ];
-    };
+    hera =
+      personal
+      // desktop
+      // {
+        system = "aarch64-darwin";
+        activation = "darwin";
+        username = "johnw";
+        roles = [
+          "workstation-full"
+          "darwin-full"
+          "ai-heavy"
+        ];
+      };
+    clio =
+      personal
+      // desktop
+      // {
+        system = "aarch64-darwin";
+        activation = "darwin";
+        username = "johnw";
+        roles = [
+          "workstation-lite"
+          "darwin-core"
+          "ai-client"
+        ];
+      };
     vulcan = personal // {
       system = "aarch64-linux";
       activation = "nixos-module";

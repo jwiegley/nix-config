@@ -82,8 +82,8 @@ rec {
 
   package-list =
 
-    # ── Emacs (client machines only) ────────────────────────────────
-    lib.optionals isClientMachine (
+    # ── Emacs (Darwin workstation clients only) ──────────────────────
+    lib.optionals (isClientMachine && caps.isDarwinWorkstation) (
       lib.optional (emacs30MacPortEnv != null) emacs30MacPortEnv
       ++ [
         eask-cli
@@ -219,7 +219,9 @@ rec {
       git-autofixup
       git-branchstack
       git-cliff
-      git-crypt
+    ]
+    ++ lib.optionals caps.isDarwinWorkstation [ git-crypt ]
+    ++ [
       git-delete-merged-branches
       (lib.lowPrio git-fame)
       git-filter-repo
@@ -237,7 +239,9 @@ rec {
       git-recent
       git-reparent
       git-repo
-      git-secret
+    ]
+    ++ lib.optionals caps.isDarwinWorkstation [ git-secret ]
+    ++ [
       git-series
       git-sizer
       (lib.hiPrio git-standup)
@@ -430,8 +434,12 @@ rec {
       nss
       opensc
       openssl
+    ]
+    ++ lib.optionals caps.isDarwinWorkstation [
       paperkey
       pass-git-helper
+    ]
+    ++ [
       sshfs
     ]
     ++ optPkg "sshify"

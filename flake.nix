@@ -172,6 +172,67 @@
           overlays = import ./config/overlays.nix { inherit inputs; };
         }
       );
+      hostRegistry = import ./config/hosts/registry.nix;
+      mkLinuxHome =
+        {
+          username,
+          hostname,
+          system,
+          nixManagedAiHomeClass ? null,
+        }:
+        home-manager.lib.homeManagerConfiguration {
+          pkgs = import nixpkgs {
+            inherit system;
+            # Match nixpkgs.config.allowUnfree in config/darwin.nix; without
+            # it the package-list (graphite-cli et al.) cannot evaluate.
+            config.allowUnfree = true;
+            overlays = import ./config/overlays.nix {
+              inherit vulcan-crt inputs;
+            };
+          };
+          extraSpecialArgs = {
+            inherit hostname inputs;
+          }
+          // nixpkgs.lib.optionalAttrs (nixManagedAiHomeClass != null) {
+            inherit nixManagedAiHomeClass;
+          };
+          modules = [
+            (
+              {
+                pkgs,
+                hostname,
+                inputs,
+                ...
+              }:
+              let
+                packages = import ./config/packages.nix {
+                  inherit hostname inputs pkgs;
+                };
+              in
+              {
+                imports = [ ./config/johnw.nix ];
+                targets.genericLinux.enable = true;
+                home = {
+                  inherit username;
+                  homeDirectory = "/home/${username}";
+                  stateVersion = "23.11";
+                  packages = packages.package-list;
+                };
+              }
+            )
+          ];
+        };
+
+      # Private, evaluation-only fixtures for registry hosts whose real Home
+      # Manager modules live in external NixOS repositories. Keeping them out
+      # of `homeConfigurations` makes them unavailable as activation targets.
+      nixosHomeEvaluationFixtures = nixpkgs.lib.mapAttrs (
+        hostname: host:
+        mkLinuxHome {
+          inherit hostname;
+          inherit (host) username system;
+        }
+      ) (nixpkgs.lib.filterAttrs (_: host: host.activation == "nixos-module") hostRegistry.hosts);
     in
     rec {
       darwinConfigurations =
@@ -224,75 +285,22 @@
       # smoke tests. Their synthetic hostname keeps concrete named-host gates
       # false; explicit home classes select personal-linux or shared-work fixture
       # behavior.
-      homeConfigurations =
-        let
-          mkLinuxHome =
-            {
-              username,
-              hostname,
-              system,
-              nixManagedAiHomeClass ? null,
-            }:
-            home-manager.lib.homeManagerConfiguration {
-              pkgs = import nixpkgs {
-                inherit system;
-                # Match nixpkgs.config.allowUnfree in config/darwin.nix;
-                # without it the package-list (graphite-cli et al.) refuses
-                # to evaluate on the standalone Linux surface.
-                config.allowUnfree = true;
-                overlays = import ./config/overlays.nix {
-                  inherit vulcan-crt inputs;
-                };
-              };
-              extraSpecialArgs = {
-                inherit hostname inputs;
-              }
-              // nixpkgs.lib.optionalAttrs (nixManagedAiHomeClass != null) {
-                inherit nixManagedAiHomeClass;
-              };
-              modules = [
-                (
-                  {
-                    pkgs,
-                    hostname,
-                    inputs,
-                    ...
-                  }:
-                  let
-                    packages = import ./config/packages.nix {
-                      inherit hostname inputs pkgs;
-                    };
-                  in
-                  {
-                    imports = [ ./config/johnw.nix ];
-                    targets.genericLinux.enable = true;
-                    home = {
-                      inherit username;
-                      homeDirectory = "/home/${username}";
-                      stateVersion = "23.11";
-                      packages = packages.package-list;
-                    };
-                  }
-                )
-              ];
-            };
-        in
-        {
-          # Generic ARM64 Linux evaluation surface (not a host switch target).
-          "johnw@aarch64-linux" = mkLinuxHome {
-            username = "johnw";
-            hostname = "linux";
-            system = "aarch64-linux";
-            nixManagedAiHomeClass = "personal-linux";
-          };
-          # Generic AMD64 Linux evaluation surface (not a host switch target).
-          "jwiegley@x86_64-linux" = mkLinuxHome {
-            username = "jwiegley";
-            hostname = "linux";
-            system = "x86_64-linux";
-            nixManagedAiHomeClass = "shared-work";
-          };
+      homeConfigurations = {
+        # Generic ARM64 Linux evaluation surface (not a host switch target).
+        "johnw@aarch64-linux" = mkLinuxHome {
+          username = "johnw";
+          hostname = "linux";
+          system = "aarch64-linux";
+          nixManagedAiHomeClass = "personal-linux";
         };
+        # Generic AMD64 Linux evaluation surface (not a host switch target).
+        "jwiegley@x86_64-linux" = mkLinuxHome {
+          username = "jwiegley";
+          hostname = "linux";
+          system = "x86_64-linux";
+          nixManagedAiHomeClass = "shared-work";
+        };
+      };
 
       # Whole-tree rewrite/check modes delegate to the working tree's quality
       # formatter. Explicit paths dispatch directly to nixfmt or shfmt.
@@ -407,6 +415,13 @@
               };
               darwin-value-surface = pkgs.callPackage ./test/darwin/darwin-value-surface.nix {
                 inherit darwinConfigurations;
+              };
+              desktop-only-user-runtime = pkgs.callPackage ./test/home/desktop-only-user-runtime.nix {
+                inherit
+                  darwinConfigurations
+                  homeConfigurations
+                  nixosHomeEvaluationFixtures
+                  ;
               };
               ai-managed-preflight = pkgs.callPackage ./test/ai/managed-preflight.nix {
                 inherit src;

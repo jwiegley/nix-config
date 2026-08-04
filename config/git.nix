@@ -17,7 +17,6 @@ let
   # Route every Git-backed setting through the shared package option so a
   # consumer can replace Git once without forcing each command separately.
   gitPkg = config.johnw.git.package;
-  isHeavy = config.johnw.profile.heavy;
 
   # Generate mergiraf attributes from a list
   mergirafExts = [
@@ -92,11 +91,19 @@ in
     enable = true;
     package = gitPkg;
 
-    signing = lib.mkDefault {
-      format = if isHeavy then "openpgp" else null;
-      key = if isHeavy then signing_key else null;
-      signByDefault = isHeavy;
-    };
+    signing = lib.mkMerge [
+      (lib.mkIf config.johnw.host.isDarwinWorkstation (
+        lib.mkDefault {
+          format = "openpgp";
+          key = signing_key;
+          signByDefault = true;
+        }
+      ))
+      # Home Manager defaults this to OpenPGP even without a signing key.
+      (lib.mkIf (!config.johnw.host.isDarwinWorkstation) {
+        format = lib.mkDefault null;
+      })
+    ];
 
     includes = [
       { path = "~/.config/git/persona.gitconfig"; }
@@ -148,21 +155,24 @@ in
       };
 
       core = {
-        editor = lib.mkDefault vars.emacsclient;
         trustctime = false;
         pager = "${pkgs.less}/bin/less --tabs=4 -RFX";
         logAllRefUpdates = true;
         precomposeunicode = false;
         whitespace = "trailing-space,space-before-tab";
+      }
+      // lib.optionalAttrs config.johnw.host.isDarwinWorkstation {
+        editor = lib.mkDefault vars.emacsclient;
       };
 
       branch.autosetupmerge = true;
-      commit.gpgsign = lib.mkDefault isHeavy;
-      commit.status = false;
+      commit = {
+        status = false;
+      }
+      // lib.optionalAttrs config.johnw.host.isDarwinWorkstation {
+        gpgsign = lib.mkDefault true;
+      };
       github.user = "jwiegley";
-      credential.helper = lib.mkDefault (
-        if isHeavy then "${pkgs.pass-git-helper}/bin/pass-git-helper" else ""
-      );
       hub.protocol = "${pkgs.openssh}/bin/ssh";
       mergetool.keepBackup = true;
       pull.rebase = true;
@@ -247,6 +257,9 @@ in
       "url \"https://github.com/ghc/packages-\"".insteadOf = "https://github.com/ghc/packages/";
       "url \"ssh://git@github.com/ghc/packages-\"".insteadOf = "ssh://git@github.com/ghc/packages/";
       "url \"git@github.com:/ghc/packages-\"".insteadOf = "git@github.com:/ghc/packages/";
+    }
+    // lib.optionalAttrs config.johnw.host.isDarwinWorkstation {
+      credential.helper = lib.mkDefault "${pkgs.pass-git-helper}/bin/pass-git-helper";
     }
     // lib.optionalAttrs gitAiEnabled {
       trace2 = {

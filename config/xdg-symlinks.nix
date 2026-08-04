@@ -26,7 +26,6 @@ in
       ".factory".source = mkLink "${config.xdg.configHome}/factory";
       ".gemini".source = mkLink "${config.xdg.configHome}/gemini";
       ".gist".source = mkLink "${config.xdg.configHome}/gist/api_key";
-      ".gnupg".source = mkLink "${config.xdg.configHome}/gnupg";
       ".jq".source = mkLink "${config.xdg.configHome}/jq/config";
       ".jupyter".source = mkLink "${config.xdg.configHome}/jupyter";
       ".kube".source = mkLink "${config.xdg.configHome}/kube";
@@ -47,7 +46,6 @@ in
       ".swiftpm".source = mkLink "${config.xdg.cacheHome}/swiftpm";
       ".thinkorswim".source = mkLink "${config.xdg.cacheHome}/thinkorswim";
 
-      ".emacs.d".source = mkLink "${home}/src/dot-emacs";
       "dl".source = mkLink "${home}/Downloads";
       "db".source = mkLink "${home}/Databases";
       "Recordings".source =
@@ -59,6 +57,10 @@ in
       "git-ai".source = mkLink "${home}/work/git-ai/git-ai";
 
       "News".source = mkLink "${config.xdg.dataHome}/gnus/News";
+    }
+    // lib.optionalAttrs config.johnw.host.isDarwinWorkstation {
+      ".gnupg".source = mkLink "${config.xdg.configHome}/gnupg";
+      ".emacs.d".source = mkLink "${home}/src/dot-emacs";
     }
     // lib.optionalAttrs (isDarwin && config.johnw.host.isHera) {
       "Archives".source = mkLink "/Volumes/ext/Archives";

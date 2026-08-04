@@ -60,8 +60,6 @@ in
       CABAL_CONFIG = "${config.xdg.configHome}/cabal/config";
       CARGO_HOME = "${config.xdg.dataHome}/cargo";
       CLICOLOR = "yes";
-      EDITOR = lib.mkDefault vars.emacsclient;
-      EMACS_SERVER_FILE = "${vars.emacs-server}";
       EMAIL = vars.userEmail;
       ET_NO_TELEMETRY = "1";
       FONTCONFIG_FILE = "${config.xdg.configHome}/fontconfig/fonts.conf";
@@ -89,18 +87,26 @@ in
       HF_XET_HIGH_PERFORMANCE = "1";
       LLAMA_INDEX_CACHE_DIR = "${config.xdg.cacheHome}/llama-index";
     }
+    // lib.optionalAttrs config.johnw.host.isDarwinWorkstation {
+      EDITOR = lib.mkDefault vars.emacsclient;
+      EMACS_SERVER_FILE = "${vars.emacs-server}";
+    }
     // lib.optionalAttrs isHeavy {
       GRAPHVIZ_DOT = "${pkgs.graphviz}/bin/dot";
+    }
+    // lib.optionalAttrs config.johnw.host.isDarwinWorkstation {
       RCLONE_PASSWORD_COMMAND = "${pkgs.pass}/bin/pass show Passwords/rclone";
       RESTIC_PASSWORD_COMMAND = "${pkgs.pass}/bin/pass show Passwords/restic";
     }
     // lib.optionalAttrs isDarwin {
       ASPELL_CONF = "conf ${config.xdg.configHome}/aspell/config;";
-      EMACSVER = "30MacPort";
       GTAGSCONF = "${pkgs.global}/share/gtags/gtags.conf";
       NODE_EXTRA_CA_CERTS = "${config.xdg.configHome}/ragflow/root_ca.crt";
       VAGRANT_DEFAULT_PROVIDER = "vmware_desktop";
       VAGRANT_VMWARE_CLONE_DIRECTORY = "${vars.home}/Machines/vagrant";
+    }
+    // lib.optionalAttrs config.johnw.host.isDarwinWorkstation {
+      EMACSVER = "30MacPort";
       SSH_AUTH_SOCK = "${config.xdg.configHome}/gnupg/S.gpg-agent.ssh";
     }
     // lib.optionalAttrs isLinux {
@@ -281,8 +287,8 @@ in
       path = lib.mkIf isDarwin "${vars.home}/src/nix/home-manager";
     };
 
-    browserpass = {
-      enable = isHeavy;
+    browserpass = lib.mkIf config.johnw.host.isDarwinWorkstation {
+      enable = true;
       browsers = [ "firefox" ];
     };
 
@@ -306,8 +312,8 @@ in
       ];
     };
 
-    password-store = {
-      enable = isHeavy;
+    password-store = lib.mkIf config.johnw.host.isDarwinWorkstation {
+      enable = true;
       package = pkgs.pass.withExtensions (exts: [
         exts.pass-otp
         exts.pass-genphrase
@@ -315,8 +321,8 @@ in
       settings.PASSWORD_STORE_DIR = "${vars.home}/doc/.password-store";
     };
 
-    gpg = {
-      enable = isHeavy;
+    gpg = lib.mkIf config.johnw.host.isDarwinWorkstation {
+      enable = true;
       homedir = "${config.xdg.configHome}/gnupg";
       settings = {
         use-agent = true;
@@ -337,13 +343,15 @@ in
     gh = {
       enable = true;
       settings = {
-        editor = lib.mkDefault vars.emacsclient;
         git_protocol = "ssh";
         aliases = {
           co = "pr checkout";
           pv = "pr view";
           prs = "pr list -A jwiegley";
         };
+      }
+      // lib.optionalAttrs config.johnw.host.isDarwinWorkstation {
+        editor = lib.mkDefault vars.emacsclient;
       };
     };
   }
@@ -367,12 +375,12 @@ in
     };
   };
 
-  launchd.agents = lib.mkIf isDarwin {
+  launchd.agents = lib.mkIf config.johnw.host.isDarwinWorkstation {
     # Preserve Home Manager's GPG configuration while nix-darwin owns startup.
     gpg-agent.enable = lib.mkForce false;
   };
 
-  services = lib.mkIf isDarwin {
+  services = lib.mkIf config.johnw.host.isDarwinWorkstation {
     gpg-agent = {
       enable = true;
       enableSshSupport = true;
