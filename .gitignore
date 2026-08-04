@@ -2,4 +2,5 @@
 .metadata_never_index
 /result*
 /.claude
+/.pi
 __pycache__/
