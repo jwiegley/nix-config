@@ -278,6 +278,7 @@ let
       ../test/ai/input-projection-parity.nix
       ../test/ai/overlays
       ../test/ai/node-runtime-guard.cjs
+      ../test/ai/pi-copy-message.check.ts
       ../test/ai/pi-gallery.nix
       ../test/ai/pi-fleet-theme.nix
       ../test/ai/pi-tool-renderer-wrapper.test.mjs

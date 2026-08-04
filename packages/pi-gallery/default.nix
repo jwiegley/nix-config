@@ -625,6 +625,50 @@ let
     version = members.copy-message.version;
     install = root: ''
       tar -xzf ${releaseTarballs.pi-copy-message} -C ${root} --strip-components=1
+      ${python3}/bin/python3 - ${root}/extensions/copy-message.ts <<'PY'
+      from pathlib import Path
+      import sys
+
+      source = Path(sys.argv[1])
+      text = source.read_text()
+
+      old_import = 'import { spawnSync } from "node:child_process";'
+      new_import = 'import { copyToClipboard } from "@earendil-works/pi-coding-agent";'
+      if text.count(old_import) != 1:
+          raise SystemExit("unexpected pi-copy-message clipboard import")
+      text = text.replace(old_import, new_import)
+
+      start_marker = "type ClipboardCommand = {"
+      end_marker = "function isToolMessage(message: CopyableMessage): boolean {"
+      if text.count(start_marker) != 1 or text.count(end_marker) != 1:
+          raise SystemExit("unexpected pi-copy-message clipboard implementation")
+      start = text.index(start_marker)
+      end = text.index(end_marker, start)
+      text = text[:start] + text[end:]
+
+      replacements = {
+          'function copySelectedMessage(ctx: Pick<ExtensionCommandContext, "ui">, selected: CopyableMessage, text = selected.text) {\n\tconst error = copyToClipboard(text);\n\tif (error) {\n\t\tctx.ui.notify(error, "error");\n\t\treturn;\n\t}\n\n\tctx.ui.notify(copyNotificationText(selected), "info");\n}':
+              'async function copySelectedMessage(ctx: Pick<ExtensionCommandContext, "ui">, selected: CopyableMessage, text = selected.text) {\n\ttry {\n\t\tawait copyToClipboard(text);\n\t} catch (error) {\n\t\tctx.ui.notify(error instanceof Error ? error.message : "Failed to copy to clipboard", "error");\n\t\treturn;\n\t}\n\n\tctx.ui.notify(copyNotificationText(selected), "info");\n}',
+          'function copyMostRecentUserMessage(ctx: Pick<ExtensionCommandContext, "sessionManager" | "ui">, format: CopyFormat) {':
+              'async function copyMostRecentUserMessage(ctx: Pick<ExtensionCommandContext, "sessionManager" | "ui">, format: CopyFormat) {',
+          '\tcopySelectedMessage(ctx, result.message, formatMessageForCopy(result.message, format));':
+              '\tawait copySelectedMessage(ctx, result.message, formatMessageForCopy(result.message, format));',
+          '\t\t\t\tif (latestVisible) copySelectedMessage(ctx, latestVisible, formatMessageForCopy(latestVisible, parsedArgs.format));':
+              '\t\t\t\tif (latestVisible) await copySelectedMessage(ctx, latestVisible, formatMessageForCopy(latestVisible, parsedArgs.format));',
+          '\t\t\t\tcopySelectedMessage(ctx, selected, formatMessageForCopy(selected, parsedArgs.format));':
+              '\t\t\t\tawait copySelectedMessage(ctx, selected, formatMessageForCopy(selected, parsedArgs.format));',
+          '\t\t\tcopySelectedMessage(ctx, selected.message, selected.text);':
+              '\t\t\tawait copySelectedMessage(ctx, selected.message, selected.text);',
+          '\t\t\tcopyMostRecentUserMessage(ctx, parseCopyArgs(args).format);':
+              '\t\t\tawait copyMostRecentUserMessage(ctx, parseCopyArgs(args).format);',
+      }
+      for old, new in replacements.items():
+          if text.count(old) != 1:
+              raise SystemExit(f"unexpected pi-copy-message async seam: {old.splitlines()[0]}")
+          text = text.replace(old, new)
+
+      source.write_text(text)
+      PY
     '';
   };
 

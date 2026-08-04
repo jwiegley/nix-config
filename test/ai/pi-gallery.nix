@@ -270,6 +270,16 @@ runCommand "pi-gallery-check"
       || fail "Caveman footer still renders the level lighter"
     [ -f ${roots.copy-message}/extensions/copy-message.ts ]
     [ ! -e ${roots.copy-message}/node_modules ]
+    ! grep -F 'spawnSync' ${roots.copy-message}/extensions/copy-message.ts >/dev/null \
+      || fail "Copy Message still carries a platform-specific clipboard implementation"
+    grep -F 'import { copyToClipboard } from "@earendil-works/pi-coding-agent";' \
+      ${roots.copy-message}/extensions/copy-message.ts >/dev/null \
+      || fail "Copy Message does not use Pi's portable clipboard helper"
+    (
+      cd ${sourceForChecks}
+      PI_COPY_MESSAGE_EXTENSION=${roots.copy-message}/extensions/copy-message.ts \
+        bun test ./test/ai/pi-copy-message.check.ts
+    )
     [ -f ${roots.goal}/extensions/goal.ts ]
     [ ! -e ${roots.goal}/node_modules ]
     grep -F 'return `''${prefix}: ''${statusLabel(goal)}''${usage}`;' \

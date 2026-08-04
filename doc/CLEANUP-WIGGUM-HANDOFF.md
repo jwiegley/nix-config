@@ -14,9 +14,12 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 - The last fully activated fleet boundary is `e7dc846c`. GitHub and Gitea
   published that exact revision; Hera, Clio, Vulcan, VPS, and the shared-work
   profile evaluated to their active closure at the completed #126 cutover.
-- The newer local candidate restores Pi profile contracts and refreshes the Pi
-  inventory. Treat it as source-only until publication and activation receipts
-  are recorded.
+- Published candidate `c7d48838` restores Pi profile contracts and refreshes
+  the Pi inventory. The current source-only follow-up replaces Copy Message's
+  platform-specific clipboard subprocesses with Pi's portable clipboard API;
+  it also corrects the inventory's agent totals and platform-specific
+  verification recipe. Do not treat the clipboard repair as live until
+  publication and activation receipts are recorded.
 - Codex defaults to native OpenAI `gpt-5.6-sol`; local oMLX and llama-swap
   profiles remain opt-in.
 - Pi advertises `openai-codex/gpt-5.6-sol` at 1,050,000 tokens and OpenRouter
@@ -123,15 +126,20 @@ after the audit rather than pretending the old denominator is current.
   closure; Hera and Clio likewise evaluate to their active system closure.
 
 - Copy Message is restored in signed commit `b21590fd`, included in the gallery
-  on every Pi profile, and active on all seven reachable hosts. `andoria-t2` was
-  down, so shared-profile evaluation covers its source projection but not a
-  direct runtime probe.
+  on every Pi profile, and registered on all seven reachable hosts. That probe
+  exposed a real headless-Linux failure in upstream's private clipboard-command
+  list; the current source candidate delegates to Pi's OSC-52-capable portable
+  clipboard helper and adds handler-level success and failure tests.
+  `andoria-t2` was down, so shared-profile evaluation covers its source
+  projection but not a direct runtime probe.
 
 ## Concurrent work boundary
 
-The Copy Message restoration and Pi fleet-contract repair are a signed logical
-series. Continue to refresh checkout ownership before every shared-file edit and
-do not infer live activation from the source candidate.
+The Copy Message restoration and Pi fleet-contract repair are published as a
+signed logical series through `c7d48838`; the portable-clipboard and inventory
+follow-up is the only current source candidate. Continue to refresh checkout
+ownership before every shared-file edit and do not infer live activation from
+source state.
 
 ## Authorization boundary
 

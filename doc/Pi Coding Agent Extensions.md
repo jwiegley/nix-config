@@ -65,7 +65,7 @@ The Hera, Clio, shared-work, VPS, and Vulcan Pi profiles are rendered by `~/src/
 | --- | --- |
 | Generated ownership | Individual leaves below `~/.config/pi/agent`, plus `~/.pi-lens/config.json`, `~/.config/mcp/mcp.json`, and the `~/.pi` compatibility link |
 | Extension entries | Auto Compact Resume, Fleet Theme, Nix Gallery loader, Pi Loop, Pi MCP Adapter, and Quiet Display; Linux omits the two local providers and their router |
-| Agent resources | 26 Nix-managed agent definitions |
+| Agent resources | 25 Nix-managed agent definitions |
 | Prompt resources | 63 files: 61 command prompts and the `emacs` and `spanish` prompts |
 | Skill resources | Shared catalog skills selected for Pi, plus six gallery package skill paths and one gallery prompt path advertised at runtime |
 | Generated policy | `keybindings.json`, `models.json`, the managed theme, the hidden Lens widget setting, and the global MCP registry; Darwin also receives `model-router.json` |
@@ -302,7 +302,7 @@ Pi Goal X persists explicit objectives, lifecycle state, usage, and ordered Sisy
 
 Pi Subagents delegates focused work to child Pi sessions without replacing the parent as orchestrator. It supports single, parallel, chained, forked-context, foreground, and background runs, with fleet status and supervisor communication.
 
-Nine builtin roles—advisor, context-builder, delegate, oracle, planner, researcher, reviewer, scout, and worker—ship with the extension. The Nix-managed baseline adds twenty-six user definitions without collisions, accounting for thirty-five roles before mutable package, user, or project definitions are considered. Live discovery may therefore report a larger total without changing Nix ownership.
+Nine builtin roles—advisor, context-builder, delegate, oracle, planner, researcher, reviewer, scout, and worker—ship with the extension. The Nix-managed baseline adds twenty-five user definitions without collisions, accounting for thirty-four roles before mutable package, user, or project definitions are considered. Live discovery may therefore report a larger total without changing Nix ownership.
 
 **Basic usage.** Ask naturally for `reviewer`, `oracle`, `scout`, or `worker`, or use `/run`, `/parallel`, and `/chain`. Use `/subagents-doctor` to check setup, `/subagents-fleet` for active work, and `subagent` for programmatic delegation. The watchdog remains opt-in.
 
@@ -326,9 +326,9 @@ Pi BTW creates a focused side conversation while the main session remains intact
 
 **Version:** 1.0.11 · **Links:** [Pi Packages](https://pi.dev/packages/pi-copy-message) · [Home](https://github.com/fitchmultz/pi-copy-message#readme) · [GitHub](https://github.com/fitchmultz/pi-copy-message)
 
-Pi Copy Message opens a searchable, keyboard-driven picker over raw session messages, avoiding terminal wrapping and rendered TUI artifacts. It can filter by role or text, include metadata, and copy user, assistant, tool, or bash messages.
+Pi Copy Message opens a searchable, keyboard-driven picker over raw session messages, avoiding terminal wrapping and rendered TUI artifacts. It can filter by role or text, include metadata, and copy user, assistant, tool, or bash messages. The Nix package delegates copying to Pi's portable clipboard layer, including its terminal fallback for remote sessions.
 
-**Basic usage.** Use `/copy-message` for the interactive picker, `/copy-message latest` for the newest normally visible message, or `/copy-user` for the most recent user message. Add `--with-meta` when the copied text should include role and timestamp metadata.
+**Basic usage.** Use `/copy-message` for the interactive picker, `/copy-message latest` for the newest message visible under the default filters (falling back to the newest copyable message), or `/copy-user` for the most recent user message containing text. Add `--with-meta` to prefix the copied text with its role and displayed local time.
 
 ### llama-swap Provider
 
@@ -411,16 +411,19 @@ jq -r '.packages[] | "\(.name)\t\(.version)"' "$gallery/projection.json"
 find "$profile/agents" -mindepth 1 -maxdepth 1 \( -type f -o -type l \) | wc -l
 find "$profile/prompts" -mindepth 1 -maxdepth 1 \( -type f -o -type l \) | wc -l
 jq '{providers: (.providers | keys)}' "$profile/models.json"
-jq '{models: .models, profiles: .profiles, debug, phaseBias}' "$profile/model-router.json"
 jq '{settings, servers: (.mcpServers | to_entries | map({name: .key, transport: (if .value.url then "http" else "stdio" end)}))}' ~/.config/mcp/mcp.json
 jq 'keys' "$profile/keybindings.json"
+
+if [ "$(uname -s)" = Darwin ]; then
+  jq '{models: .models, profiles: .profiles, debug, phaseBias}' "$profile/model-router.json"
+  omlx --version
+fi
 
 pi --version
 agent-browser --version
 rtk --version
 cymbal --version
 llama-swap --version
-omlx --version
 pandoc --version | head -1
 ```
 
