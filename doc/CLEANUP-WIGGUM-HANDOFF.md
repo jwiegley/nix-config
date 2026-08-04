@@ -13,7 +13,7 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
   only worktree.
 - Published Gitea and GitHub `main` match `52037335`; local `main` carries the
   active #118 source-retirement candidate.
-- Hera runs Darwin generation 988. Agent Deck 1.11.0, oMLX 0.5.5, Pi 0.83.0,
+- Hera runs Darwin generation 990. Agent Deck 1.11.0, oMLX 0.5.5, Pi 0.83.0,
   Claude Code 2.1.220, and Codex 0.146.0 are active.
 - Codex defaults to native OpenAI `gpt-5.6-sol`; local oMLX and llama-swap
   profiles remain opt-in.

@@ -143,8 +143,6 @@ complete.
 
 - Agent Deck and tmux use `/tmp` as the persistent fleet socket parent.
 - Generated agent leaves use collision preflight before Home Manager linking.
-- Mutable profile migration is atomic and preserves the last usable state on
-  failure.
 - `AI_NIX_BYPASS_MANAGED_CONFIG=1` bypasses Codex managed-profile
   classification and injection; host-local state safeguards still run.
 - When managed configuration is present, the wrapper refuses
