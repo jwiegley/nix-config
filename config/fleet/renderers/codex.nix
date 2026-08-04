@@ -80,7 +80,7 @@ let
       };
       llama-swap = {
         name = "llama-swap";
-        base_url = modelData.providers.llama-cpp-local.baseUrl;
+        base_url = modelData.providers.llama-swap.baseUrl;
         env_key = "LLAMA_SWAP_API_KEY";
         wire_api = "responses";
       };

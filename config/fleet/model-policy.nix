@@ -5,13 +5,13 @@
   ];
 
   allowedNonSecretCredentialsByProvider = {
-    llama-cpp-local = "not-needed";
+    llama-swap = "not-needed";
     omlx = "dummy-key";
     omlx-remote = "dummy-key";
   };
 
   allowedInsecureBaseUrlsByProvider = {
-    llama-cpp-local = "http://localhost:8080/v1";
+    llama-swap = "http://localhost:8080/v1";
     omlx = "http://localhost:8000/v1";
   };
 
@@ -53,7 +53,7 @@
       };
     };
 
-    llama-cpp-local = {
+    llama-swap = {
       selectors.clients = [
         "droid"
         "opencode"

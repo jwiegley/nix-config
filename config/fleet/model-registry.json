@@ -42,7 +42,7 @@
       ]
     },
     {
-      "id": "llama-cpp-local",
+      "id": "llama-swap",
       "displayName": "Llama.cpp",
       "baseUrl": "http://localhost:8080/v1",
       "apiKey": {
@@ -131,7 +131,7 @@
       ]
     },
     {
-      "provider": "llama-cpp-local",
+      "provider": "llama-swap",
       "id": "cohere-transcribe-03-2026",
       "displayName": "Cohere Transcribe 03",
       "maxOutputTokens": 128000,
@@ -142,7 +142,7 @@
       ]
     },
     {
-      "provider": "llama-cpp-local",
+      "provider": "llama-swap",
       "id": "GLM-5.2",
       "displayName": "GLM 5.2",
       "maxOutputTokens": 128000,
@@ -153,7 +153,7 @@
       ]
     },
     {
-      "provider": "llama-cpp-local",
+      "provider": "llama-swap",
       "id": "granite-speech-4.1-2b",
       "displayName": "Granite Speech 4.1 2B",
       "maxOutputTokens": 128000,
@@ -164,7 +164,7 @@
       ]
     },
     {
-      "provider": "llama-cpp-local",
+      "provider": "llama-swap",
       "id": "Meta-Llama-3.1-8B",
       "displayName": "Meta Llama 3.1 8B",
       "maxOutputTokens": 128000,

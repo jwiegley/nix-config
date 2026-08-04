@@ -83,7 +83,7 @@ assert builtins.all reject [
   })
   (catalog.validate {
     modelData = modelData // {
-      providers = builtins.removeAttrs modelData.providers [ "llama-cpp-local" ];
+      providers = builtins.removeAttrs modelData.providers [ "llama-swap" ];
     };
   })
   (catalog.validate {

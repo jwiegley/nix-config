@@ -1687,7 +1687,7 @@ let
         ) "Pi MCP selection differs")
         (ensure (
           piProviderNames == [
-            "llama-cpp-local"
+            "llama-swap"
             "omlx"
           ]
         ) "Pi provider selection differs")
