@@ -302,6 +302,22 @@
       },
       "version": "a286c817"
     },
+    "unisessions": {
+      "source": {
+        "args": {
+          "hash": "sha256-SX20+bYgYJdbyfNxkXONmiMxSMDAMUBrchVClnfutFI=",
+          "pname": "unisessions",
+          "version": "0.1.0"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/unisessions"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "package": "unisessions"
+      },
+      "version": "0.1.0"
+    },
     "z": {
       "source": {
         "args": {

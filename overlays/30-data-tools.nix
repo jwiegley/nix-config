@@ -29,6 +29,56 @@ in
       };
     };
 
+  unisessions =
+    with prev;
+    python3Packages.buildPythonApplication {
+      pname = "unisessions";
+      inherit (sources.unisessions) version;
+
+      src =
+        assert sources.unisessions.source.fetcher == "fetchPypi";
+        python3Packages.fetchPypi sources.unisessions.source.args;
+
+      pyproject = true;
+      build-system = [ python3Packages.setuptools ];
+      dependencies = with python3Packages; [
+        fastmcp
+        tiktoken
+      ];
+
+      postPatch = ''
+        substituteInPlace pyproject.toml \
+          --replace-fail \
+          'unisessions-mcp = "unisessions.mcp_server:main"' \
+          $'unisessions = "unisessions.cli:main"\nunisessions-mcp = "unisessions.mcp_server:main"'
+      '';
+
+      pythonImportsCheck = [
+        "session_sdk"
+        "unisessions"
+      ];
+      checkPhase = ''
+        runHook preCheck
+        python -m unittest discover -s tests
+        runHook postCheck
+      '';
+      doInstallCheck = true;
+      installCheckPhase = ''
+        runHook preInstallCheck
+        "$out/bin/unisessions" --help >/dev/null
+        "$out/bin/unisessions-mcp" --help >/dev/null
+        runHook postInstallCheck
+      '';
+
+      meta = {
+        homepage = "https://github.com/vibheksoni/session-export";
+        description = "Convert sessions between AI coding agents";
+        license = lib.licenses.mit;
+        mainProgram = "unisessions";
+        platforms = lib.platforms.unix;
+      };
+    };
+
   tsvutils = prev.myLib.mkScriptPackage {
     name = "tsvutils-${sources.tsvutils.version}";
     src =

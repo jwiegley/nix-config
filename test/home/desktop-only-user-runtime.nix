@@ -40,11 +40,13 @@ let
   ];
   sharedWork = homeConfigurations."jwiegley@x86_64-linux".config;
   piHomes = positive ++ [ sharedWork ];
+  allHomes = positive ++ negative;
+  packageNamesFor = config: map lib.getName config.home.packages;
   contains = needle: value: builtins.isString value && lib.hasInfix needle value;
   featureFlags =
     config:
     let
-      packageNames = map lib.getName config.home.packages;
+      packageNames = packageNamesFor config;
       variables = config.home.sessionVariables or { };
       files = config.home.file or { };
       git = config.programs.git;
@@ -119,6 +121,7 @@ assert builtins.all (config: builtins.hasAttr ".pi" config.home.file) piHomes;
 assert builtins.all (
   config: builtins.hasAttr ".config/pi/agent/models.json" config.home.file
 ) piHomes;
+assert builtins.all (config: builtins.elem "unisessions" (packageNamesFor config)) allHomes;
 assert builtins.all (config: allTrue (featureFlags config)) positive;
 assert builtins.all (config: allFalse (featureFlags config)) negative;
 assert builtins.all (
