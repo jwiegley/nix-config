@@ -16,8 +16,6 @@
       "agnix"
       "claude-replay"
       "claude-vault"
-      "context-hub"
-      "context7-mcp"
       "gguf-tools"
       "github-mcp-server"
       "guidellm"

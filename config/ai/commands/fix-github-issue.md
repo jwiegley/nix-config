@@ -21,4 +21,3 @@ Remember the following:
   diagnosing and analyzing issues, fixing code, and writing any new code.
 - Use available live web search as needed for research and discovering resources.
 - Use sequential-thinking when appropriate to break down tasks further.
-- Use context7 whenever code examples might help.

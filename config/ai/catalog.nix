@@ -648,7 +648,7 @@ let
     };
     "toolkit" = {
       "description" =
-        "The standard tooling and working discipline for planning and executing a coding task -- GitHub CLI, codebase search, the language -pro agents, web research, sequential thinking, context7, and lint/type-check gating. The /medium and /heavy effort-tier commands build on it; load it when told to apply the standard toolkit.";
+        "The standard tooling and working discipline for planning and executing a coding task -- GitHub CLI, codebase search, the language -pro agents, web research, sequential thinking, and lint/type-check gating. The /medium and /heavy effort-tier commands build on it; load it when told to apply the standard toolkit.";
       "name" = "toolkit";
     };
     "wiggum" = {
@@ -778,9 +778,7 @@ let
   prompts = builtInPrompts;
 
   typedEnv = env: { inherit env; };
-  mcpHttpHeaders = {
-    context7.CONTEXT7_API_KEY = typedEnv "CONTEXT7_API_KEY";
-  };
+  mcpHttpHeaders = { };
   baseMcpSelectors = {
     clients = contentClients;
   };
@@ -797,24 +795,6 @@ let
   };
 
   mcpServers = {
-    context-hub =
-      (mkMcp "context-hub"
-        "Context Hub - search and retrieve LLM-optimized API docs and skills for AI agents"
-        {
-          command = "chub-mcp";
-          args = [ ];
-        }
-        baseMcpSelectors
-      )
-      // {
-        overrides.codex.command = "chub-mcp";
-      };
-
-    context7 = mkMcp "context7" "Context7 documentation lookup for libraries and frameworks" {
-      url = "https://mcp.context7.com/mcp";
-      headers = mcpHttpHeaders.context7;
-    } baseMcpSelectors;
-
     devonthink =
       mkMcp "devonthink" "Personal DEVONthink database access through DEVONthink's bundled MCP helper."
         {
@@ -876,22 +856,6 @@ let
         {
           profiles = [
             "vulcan-claude-personal"
-          ];
-        };
-
-    memory-vault =
-      mkMcp "memory-vault"
-        "Long-term memory (Memory Vault on vulcan) — hybrid semantic + keyword recall over saved notes, decisions, and project context, and store new memories across sessions. Tools — recall(query), remember(text), forget(chunk_id), memory_status(). Served over Streamable HTTP at memory-mcp.vulcan.lan."
-        { url = "https://memory-mcp.vulcan.lan/mcp"; }
-        {
-          profiles = [
-            "clio-claude-personal"
-            "clio-pi"
-            "hera-claude-personal"
-            "hera-droid"
-            "hera-pi"
-            "vulcan-claude-personal"
-            "vulcan-pi"
           ];
         };
 
@@ -1287,7 +1251,6 @@ let
 
   declaredEnvNames = [
     "ANTHROPIC_API_KEY"
-    "CONTEXT7_API_KEY"
     "GEMINI_API_KEY"
     "OPENAI_API_KEY"
   ];
@@ -1582,11 +1545,8 @@ let
         ) "duplicate skill name")
         (ensure (
           piMcpNames == [
-            "context-hub"
-            "context7"
             "devonthink"
             "drafts"
-            "memory-vault"
             "pal"
             "searxng"
             "sequential-thinking"
@@ -1596,8 +1556,6 @@ let
         (ensure (clioPiMcpNames == piMcpNames) "Clio Pi MCP selection differs from Hera")
         (ensure (
           sharedWorkPiMcpNames == [
-            "context-hub"
-            "context7"
             "pal"
             "sequential-thinking"
           ]
@@ -1605,9 +1563,6 @@ let
         (ensure (vpsPiMcpNames == sharedWorkPiMcpNames) "VPS Pi MCP selection differs")
         (ensure (
           vulcanPiMcpNames == [
-            "context-hub"
-            "context7"
-            "memory-vault"
             "pal"
             "searxng"
             "sequential-thinking"

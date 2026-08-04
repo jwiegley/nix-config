@@ -91,14 +91,15 @@ The generated `models.json` owns compatibility and context overrides; on Darwin 
 
 ### MCP registry
 
-Nix generates the nine-server registry at `~/.config/mcp/mcp.json`; Pi MCP Adapter exposes it lazily and renders compact footer status. HTTP transports have OAuth disabled because authentication, where required, is carried by explicit environment-backed headers.
+Nix generates a profile-specific, stdio-only registry at `~/.config/mcp/mcp.json`; Pi MCP Adapter exposes it lazily and renders compact footer status.
 
-| Transport | Servers |
+| Profiles | Servers |
 | --- | --- |
-| HTTP | `context7`, `memory-vault` |
-| stdio | `context-hub`, `devonthink`, `drafts`, `pal`, `searxng`, `sequential-thinking`, `stock-trader` |
+| Hera and Clio | `devonthink`, `drafts`, `pal`, `searxng`, `sequential-thinking`, `stock-trader` |
+| shared-work and VPS | `pal`, `sequential-thinking` |
+| Vulcan | `pal`, `searxng`, `sequential-thinking` |
 
-The MCP registry's only credential reference is the environment-only `CONTEXT7_API_KEY`. The mutable `~/.config/pi/agent/mcp.json` may retain adapter state, but Nix preflight forbids `mcpServers` and `imports` there so that it cannot shadow the generated registry.
+Credential-bearing values are environment references rather than literal secrets. The mutable `~/.config/pi/agent/mcp.json` may retain adapter state, but Nix preflight forbids `mcpServers` and `imports` there so that it cannot shadow the generated registry.
 
 ### Keybindings
 

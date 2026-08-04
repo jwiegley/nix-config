@@ -18,8 +18,8 @@ let
   };
   reject = value: !(builtins.tryEval (builtins.deepSeq value true)).success;
   withMcpServers = mcpServers: catalog.items // { inherit mcpServers; };
-  context7 = catalog.items.mcpServers.context7;
-  extraPiMcp = context7 // {
+  stdioMcp = catalog.items.mcpServers.sequential-thinking;
+  extraPiMcp = stdioMcp // {
     name = "synthetic";
     targetPaths = [ "mcp/synthetic" ];
     transport = {
@@ -28,31 +28,37 @@ let
     };
     selectors.profiles = [ "hera-pi" ];
   };
-  wrongContext7Header = context7 // {
-    transport = context7.transport // {
+  syntheticHttpMcp = stdioMcp // {
+    name = "synthetic-http";
+    targetPaths = [ "mcp/synthetic-http" ];
+    transport = {
+      url = "https://example.invalid/mcp";
+    };
+    selectors.profiles = [ ];
+  };
+  unauthorizedHttpHeader = syntheticHttpMcp // {
+    transport = syntheticHttpMcp.transport // {
       headers = {
-        Authorization.env = "CONTEXT7_API_KEY";
+        Authorization.env = "OPENAI_API_KEY";
       };
     };
   };
-  wrongContext7Environment = context7 // {
-    transport = context7.transport // {
-      headers.CONTEXT7_API_KEY.env = "CONTEXT7_TOKEN";
+  mismatchedStdioEnvironment = stdioMcp // {
+    transport = stdioMcp.transport // {
+      env.SYNTHETIC_TOKEN.env = "OPENAI_API_KEY";
     };
   };
-  missingContext7Header = context7 // {
-    transport = builtins.removeAttrs context7.transport [ "headers" ];
+  missingHttpUrl = syntheticHttpMcp // {
+    transport = {
+      headers = { };
+    };
   };
-  multipleContext7Headers = context7 // {
-    transport = context7.transport // {
-      headers = context7.transport.headers // {
-        Authorization.env = "CONTEXT7_API_KEY";
+  multipleUnauthorizedHttpHeaders = syntheticHttpMcp // {
+    transport = syntheticHttpMcp.transport // {
+      headers = {
+        Authorization.env = "OPENAI_API_KEY";
+        X-Synthetic-Token.env = "OPENAI_API_KEY";
       };
-    };
-  };
-  memoryWithHeader = catalog.items.mcpServers.memory-vault // {
-    transport = catalog.items.mcpServers.memory-vault.transport // {
-      headers.Authorization.env = "CONTEXT7_API_KEY";
     };
   };
   piProfile = catalog.profiles.hera-pi;
@@ -134,6 +140,9 @@ let
   ];
 in
 assert catalog.validate { };
+assert catalog.validate {
+  items = withMcpServers (catalog.items.mcpServers // { synthetic-http = syntheticHttpMcp; });
+};
 assert !(builtins.hasAttr "Ref" catalog.items.mcpServers);
 assert !(builtins.hasAttr "perplexity" catalog.items.mcpServers);
 assert droidRendered.companions == [ ".config/factory/mcp.json" ];
@@ -156,22 +165,23 @@ assert builtins.all reject [
     items = withMcpServers (catalog.items.mcpServers // { synthetic = extraPiMcp; });
   })
   (catalog.validate {
-    items = withMcpServers (builtins.removeAttrs catalog.items.mcpServers [ "context7" ]);
+    items = withMcpServers (builtins.removeAttrs catalog.items.mcpServers [ "sequential-thinking" ]);
   })
   (catalog.validate {
-    items = withMcpServers (catalog.items.mcpServers // { context7 = wrongContext7Header; });
+    items = withMcpServers (catalog.items.mcpServers // { synthetic-http = unauthorizedHttpHeader; });
   })
   (catalog.validate {
-    items = withMcpServers (catalog.items.mcpServers // { context7 = wrongContext7Environment; });
+    items = withMcpServers (
+      catalog.items.mcpServers // { sequential-thinking = mismatchedStdioEnvironment; }
+    );
   })
   (catalog.validate {
-    items = withMcpServers (catalog.items.mcpServers // { context7 = missingContext7Header; });
+    items = withMcpServers (catalog.items.mcpServers // { synthetic-http = missingHttpUrl; });
   })
   (catalog.validate {
-    items = withMcpServers (catalog.items.mcpServers // { context7 = multipleContext7Headers; });
-  })
-  (catalog.validate {
-    items = withMcpServers (catalog.items.mcpServers // { memory-vault = memoryWithHeader; });
+    items = withMcpServers (
+      catalog.items.mcpServers // { synthetic-http = multipleUnauthorizedHttpHeaders; }
+    );
   })
   (piRenderer {
     profile = piProfile // {

@@ -101,26 +101,6 @@
       },
       "version": "0.1.3"
     },
-    "context-hub": {
-      "hashes": {
-        "npmDepsHash": "sha256-AIjQTnfeXt8ROhHcS2vuYQ2HbXdI/MFa4/wnuQknjKA="
-      },
-      "source": {
-        "args": {
-          "hash": "sha256-iUibrCUVgO3U41x6NEchJRsST++PE92Hz3J0gbGt7p0=",
-          "owner": "andrewyng",
-          "repo": "context-hub",
-          "rev": "67dcbeb2eb42c808549f08397920ad58be7c2206"
-        },
-        "fetcher": "fetchFromGitHub",
-        "url": "https://github.com/andrewyng/context-hub"
-      },
-      "update": {
-        "branch": "main",
-        "kind": "github-commit"
-      },
-      "version": "67dcbeb2"
-    },
     "drafts-mcp-server": {
       "hashes": {
         "npmDepsHash": "sha256-nypoTffI8WIF9Et2GWLe/3odNJka9MSYuaP7xtLIoyg="

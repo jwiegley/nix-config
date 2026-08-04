@@ -4462,7 +4462,6 @@ got: sha256-requested
             "browser-control-mcp",
             "claude-replay",
             "claude-vault",
-            "context-hub",
             "drafts-mcp-server",
             "gguf-tools",
             "hfdownloader",

@@ -191,5 +191,5 @@ in
     managedPath
     "${profile.root}/nix-managed-model-catalog.json"
   ];
-  requiredEnvNames = [ "CONTEXT7_API_KEY" ];
+  requiredEnvNames = [ ];
 }

@@ -2,7 +2,7 @@
 name: toolkit
 description: The standard tooling and working discipline for planning and executing
   a coding task -- GitHub CLI, codebase search, the language -pro agents, web research,
-  sequential thinking, context7, and lint/type-check gating. The /medium and /heavy
+  sequential thinking, and lint/type-check gating. The /medium and /heavy
   effort-tier commands build on it; load it when told to apply the standard toolkit.
 ---
 # Toolkit
@@ -16,7 +16,6 @@ The standard tooling and working discipline for planning and executing a task. T
 - Use `cpp-pro`, `python-pro`, `emacs-lisp-pro`, `rust-pro`, or `haskell-pro` as needed to diagnose and analyze PRs, fix code, and write new code.
 - Use available live web search for research and discovering resources.
 - Use `sequential-thinking` when appropriate to break a task down further.
-- Use `context7` whenever code examples might help.
 
 ## Working discipline
 

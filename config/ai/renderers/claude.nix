@@ -137,7 +137,6 @@ in
   ];
   requiredEnvNames = [
     "ANTHROPIC_API_KEY"
-    "CONTEXT7_API_KEY"
     "GEMINI_API_KEY"
     "OPENAI_API_KEY"
   ];

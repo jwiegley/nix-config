@@ -32,7 +32,6 @@ Remember the following:
 - Use cpp-pro, python-pro, emacs-lisp-pro, rust-pro or haskell-pro as needed for diagnosing and analyzing PRs, fixing code, and writing any new code.
 - Use available live web search as needed for research and discovering resources.
 - Use sequential-thinking when appropriate to break down tasks further.
-- Use context7 whenever code examples might help.
 
 When the fix is verified, follow the `commit` command's atomic decomposition, sequencing, message, staging, and per-commit verification rules.
 

@@ -14,8 +14,6 @@ Use nix-pro and nixos MCP to resolve the following issues with the current NixOS
 
 - Use sequential-thinking when appropriate to break down tasks further.
 
-- Use context7 whenever code examples might help.
-
 - Each time before you intend to build or switch to a new configuration, use
   `touch` to create a file named `/etc/nixos/.nixos-build` (this typically
   requires `sudo`, since `/etc/nixos` is root-owned). Remove this file when

@@ -355,14 +355,7 @@ assert builtins.hasAttr "pi-loop" pkgs.pi-gallery.packages;
 
   companions = [ ];
 
-  requiredEnvNames = lib.unique (
-    lib.sort builtins.lessThan (
-      [
-        "CONTEXT7_API_KEY"
-      ]
-      ++ mcpRequiredEnvNames
-    )
-  );
+  requiredEnvNames = lib.unique (lib.sort builtins.lessThan mcpRequiredEnvNames);
 
   mutableMcpGuard = {
     path = ".config/pi/agent/mcp.json";

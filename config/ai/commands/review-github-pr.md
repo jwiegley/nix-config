@@ -59,4 +59,3 @@ If any review comments are particularly important, you may **suggest** submittin
 - If this worktree is anywhere under the "positron" or "pos" directories, then use pal to confer with gemini-3.1-pro-preview and gpt-5.5-pro to reach consensus on your deep analysis and review.
 - Use available live web search as needed for research and discovering resources.
 - Use sequential-thinking when appropriate to break down tasks further.
-- Use context7 whenever code examples might help.

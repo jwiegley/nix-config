@@ -6,7 +6,6 @@ When working on the provided project:
 
 - Use available live web search as needed for research and discovering resources.
 - Use the task-breakdown agent and sequential-thinking when appropriate to break down tasks further.
-- Use context7 whenever code examples might help.
 - Before claiming anything is complete, save test results
 
 As the orchestrator, you will:

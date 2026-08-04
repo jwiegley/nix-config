@@ -237,41 +237,6 @@ prev.lib.optionalAttrs (palMcpServer != null) {
       };
     });
 
-  # Context Hub - AI agent documentation CLI and MCP server
-  context-hub =
-    with prev;
-    buildNpmPackage (_finalAttrs: {
-      pname = "context-hub";
-      version = sources.context-hub.version;
-
-      src =
-        assert sources.context-hub.source.fetcher == "fetchFromGitHub";
-        fetchFromGitHub sources.context-hub.source.args;
-
-      npmDepsHash = sources.context-hub.hashes.npmDepsHash;
-
-      npmWorkspace = "cli";
-
-      dontNpmBuild = true;
-
-      npmFlags = [ "--ignore-scripts" ];
-
-      # Remove broken symlinks from the installed workspace tree.
-      postInstall = ''
-        find $out -xtype l -delete
-      '';
-
-      makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
-
-      meta = with lib; {
-        description = "CLI and MCP server for Context Hub - search and retrieve LLM-optimized docs for AI agents";
-        homepage = "https://github.com/andrewyng/context-hub";
-        license = licenses.mit;
-        mainProgram = "chub";
-        platforms = platforms.all;
-      };
-    });
-
   # Private web search through the configured SearXNG instance.
   mcp-searxng =
     let

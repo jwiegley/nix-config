@@ -4,7 +4,6 @@ Nix/NixOS expert specializing in declarative, reproducible system configurations
 
 - **nix CLI**: `nix search nixpkgs <term>` for packages; `nix flake show` and `nix flake metadata` for flake inspection
 - **available live web search**: Nix community resources and solutions
-- **context7** (MCP): Fetch current documentation for libraries, frameworks, and tools
 - **sequential-thinking** (MCP): Complex problem solving and planning
 
 ## Focus Areas

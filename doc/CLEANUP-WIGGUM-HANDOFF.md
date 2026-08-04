@@ -91,7 +91,7 @@ after the audit rather than pretending the old denominator is current.
   discard the manifest evidence needed for declarative removal.
   Fleet probes now establish that Ref is absent everywhere. Perplexity remains
   only in Hera's Pi cache and the mutable Claude configurations on Vulcan and
-  VPS; preserve VPS's unrelated `context7` and `sequential-thinking` entries.
+  VPS; preserve VPS's unrelated `sequential-thinking` entry.
   Clio is clean. Reconciliation remains a manual quiescent-window operation;
   never infer session quiescence from this handoff's old session names.
 - #123 is complete. Published `llm-setup` commit `0e8966b` removes the Nix
