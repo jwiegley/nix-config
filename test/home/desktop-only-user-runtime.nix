@@ -39,8 +39,8 @@ let
     homeConfigurations."johnw@aarch64-linux".config
   ];
   sharedWork = homeConfigurations."jwiegley@x86_64-linux".config;
-  piHomes = positive ++ [ sharedWork ];
   allHomes = positive ++ negative;
+  piHomes = allHomes;
   packageNamesFor = config: map lib.getName config.home.packages;
   contains = needle: value: builtins.isString value && lib.hasInfix needle value;
   featureFlags =

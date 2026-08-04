@@ -268,8 +268,21 @@ assert builtins.elem profile.host [
   "clio"
   "hera"
   "shared-work"
+  "vps"
+  "vulcan"
 ];
-assert profile.platform == (if profile.host == "shared-work" then "linux" else "darwin");
+assert
+  profile.platform == (
+    if
+      builtins.elem profile.host [
+        "clio"
+        "hera"
+      ]
+    then
+      "darwin"
+    else
+      "linux"
+  );
 assert profile.audiences == [ "personal" ];
 assert profile.root == root;
 assert builtins.isString homeDirectory;

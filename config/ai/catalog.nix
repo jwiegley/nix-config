@@ -45,7 +45,9 @@ let
     shared-work-codex = ".codex";
     shared-work-pi = ".config/pi/agent";
     vps-claude-personal = ".claude";
+    vps-pi = ".config/pi/agent";
     vulcan-claude-personal = ".claude";
+    vulcan-pi = ".config/pi/agent";
   };
 
   mkProfile = id: client: profileAudiences: host: platform: {
@@ -81,9 +83,11 @@ let
     ] "shared-work" "linux";
     shared-work-pi = mkProfile "shared-work-pi" "pi" [ "personal" ] "shared-work" "linux";
     vps-claude-personal = mkProfile "vps-claude-personal" "claude" [ "personal" ] "vps" "linux";
+    vps-pi = mkProfile "vps-pi" "pi" [ "personal" ] "vps" "linux";
     vulcan-claude-personal = mkProfile "vulcan-claude-personal" "claude" [
       "personal"
     ] "vulcan" "linux";
+    vulcan-pi = mkProfile "vulcan-pi" "pi" [ "personal" ] "vulcan" "linux";
   };
 
   matchesAny = actual: wanted: wanted == null || lib.any (value: builtins.elem value actual) wanted;
@@ -887,6 +891,7 @@ let
             "hera-droid"
             "hera-pi"
             "vulcan-claude-personal"
+            "vulcan-pi"
           ];
         };
 
@@ -1536,6 +1541,8 @@ let
       piMcpNames = builtins.attrNames (select piProfile items.mcpServers);
       clioPiMcpNames = builtins.attrNames (select profiles.clio-pi items.mcpServers);
       sharedWorkPiMcpNames = builtins.attrNames (select profiles.shared-work-pi items.mcpServers);
+      vpsPiMcpNames = builtins.attrNames (select profiles.vps-pi items.mcpServers);
+      vulcanPiMcpNames = builtins.attrNames (select profiles.vulcan-pi items.mcpServers);
       checks = [
         (ensure (profileIds == allowedProfileIds) "profile ID set differs")
         (ensure (
@@ -1595,6 +1602,17 @@ let
             "sequential-thinking"
           ]
         ) "shared-work Pi MCP selection differs")
+        (ensure (vpsPiMcpNames == sharedWorkPiMcpNames) "VPS Pi MCP selection differs")
+        (ensure (
+          vulcanPiMcpNames == [
+            "context-hub"
+            "context7"
+            "memory-vault"
+            "pal"
+            "searxng"
+            "sequential-thinking"
+          ]
+        ) "Vulcan Pi MCP selection differs")
       ]
       ++ itemChecks
       ++ selectorChecks

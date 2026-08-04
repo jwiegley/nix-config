@@ -63,6 +63,10 @@ let
   sharedWorkPiSelected = lib.mapAttrs (
     _: itemSet: catalog.select sharedWorkPiProfile itemSet
   ) catalog.items;
+  vpsPiProfile = catalog.profiles.vps-pi;
+  vpsPiSelected = lib.mapAttrs (_: itemSet: catalog.select vpsPiProfile itemSet) catalog.items;
+  vulcanPiProfile = catalog.profiles.vulcan-pi;
+  vulcanPiSelected = lib.mapAttrs (_: itemSet: catalog.select vulcanPiProfile itemSet) catalog.items;
   droidProfile = catalog.profiles.hera-droid;
   droidSelected = lib.mapAttrs (_: itemSet: catalog.select droidProfile itemSet) catalog.items;
   droidRendered =
@@ -101,6 +105,28 @@ let
         homeDirectory = "/home/test";
         xdgConfigHome = "/home/test/.config";
       };
+  vpsPiRendered =
+    (import "${src}/config/ai/renderers/pi.nix" {
+      inherit lib;
+      pkgs = rendererPkgs;
+    })
+      {
+        profile = vpsPiProfile;
+        selected = vpsPiSelected;
+        homeDirectory = "/home/test";
+        xdgConfigHome = "/home/test/.config";
+      };
+  vulcanPiRendered =
+    (import "${src}/config/ai/renderers/pi.nix" {
+      inherit lib;
+      pkgs = rendererPkgs;
+    })
+      {
+        profile = vulcanPiProfile;
+        selected = vulcanPiSelected;
+        homeDirectory = "/home/test";
+        xdgConfigHome = "/home/test/.config";
+      };
 in
 assert catalog.validate { };
 assert !(builtins.hasAttr "Ref" catalog.items.mcpServers);
@@ -113,6 +139,10 @@ assert clioPiRendered.requiredEnvNames == heraPiRendered.requiredEnvNames;
 assert clioPiRendered.mutableMcpGuard == heraPiRendered.mutableMcpGuard;
 assert builtins.hasAttr ".config/pi/agent/models.json" sharedWorkPiRendered.files;
 assert sharedWorkPiRendered.mutableMcpGuard == heraPiRendered.mutableMcpGuard;
+assert builtins.hasAttr ".config/pi/agent/models.json" vpsPiRendered.files;
+assert vpsPiRendered.mutableMcpGuard == heraPiRendered.mutableMcpGuard;
+assert builtins.hasAttr ".config/pi/agent/models.json" vulcanPiRendered.files;
+assert vulcanPiRendered.mutableMcpGuard == heraPiRendered.mutableMcpGuard;
 assert builtins.all reject [
   (catalog.validate {
     items = withMcpServers (catalog.items.mcpServers // { synthetic = extraPiMcp; });
