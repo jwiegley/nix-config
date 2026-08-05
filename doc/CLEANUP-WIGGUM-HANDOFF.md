@@ -9,11 +9,12 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 
 ## Authoritative state
 
-- The authoritative checkout is `/Users/johnw/src/nix`, on clean `main`, and it
-  is the only worktree. Local `main`, GitHub, and Gitea all point to signed
-  `bbe6de74`. The last complete fleet activation proof remains the #126 boundary
-  at `e7dc846c`; later commits must not be described as fleet-active without
-  host receipts.
+- Immediately before this handoff-only checkpoint, the authoritative checkout
+  was `/Users/johnw/src/nix`, on clean `main`, and was the only worktree. Local
+  `main`, GitHub, and Gitea all pointed to signed `ad057bca`. The checkpoint
+  changes no generated configuration or live state. The last complete fleet
+  activation proof remains the #126 boundary at `e7dc846c`; later commits must
+  not be described as fleet-active without host receipts.
 - Signed `bf873fdf` replaces Copy Message's platform-specific clipboard
   subprocesses with Pi's portable clipboard API. The subsequent Pi provider,
   extension, catalog-refresh, and Hermes credential fixes are published through
@@ -111,17 +112,38 @@ after the audit rather than pretending the old denominator is current.
   mutable config members, whole-object archival for exact PromptDeploy state and
   manifest-proven stale Anvil payloads, idempotent physical-state recovery,
   explicit NFS error reconciliation, and reverse fleet rollback on failure.
-  The first small executor passed 10 fixtures but is frozen NO-GO after two
-  independent reviews reproduced incomplete path containment and directory-tree
-  binding, NFS error-after-success classification, durable marker/sync handling,
-  ACL/privacy and visible-metadata preservation, and interrupted-stage recovery.
-  These are bounded user-home transaction defects, not a reason to revive the
-  privileged/systemd lane. A corrected candidate still needs review, harmless
-  exact-export primitive qualification, owner acceptance of the
-  executing-user-visible metadata boundary, current stale-payload confirmation,
-  and a freshly confirmed all-client-quiescent window. Private R6 recovery archive
-  `~/dl/wg-project9-promptdeploy-r6-qualified-20260805.tar.gz` remains retained;
-  remove it only with explicit approval after #127 closes.
+
+  The corrected one-use candidate below is independently GO under the mandatory
+  continuous all-client-quiescence and one-runner contract. Its exact
+  qualification identity is:
+
+  - config editor `555f846c4149605c7cd07eb40c05bffa3da8da9719a511a1172749621b14d78f`;
+  - config transaction `f828694dafe02267aa5a06e2017ba2430ec882bdeca667e3a791f11e71afafe1`;
+  - config tests `1fb1da8592b04f5af2566d8e9e97af3ff03930734d832e5045bb432a14706ce3`;
+  - whole-object manifest `e481cc48e67e7ff2adb9b6a51d6e97a82d6faeb04b9a6efa30f157a33102a406`;
+  - whole-object transaction `7c60462457b34d1767f606d1a2d3e4cf4a2f7e5a3d0595f5e2e93f3c7f467a93`;
+  - whole-object tests `d371e64f72f329ee3fbf12eb9940b68cb289b45c91a9d66a970cae1ec36324e1`;
+  - coordinator `f53978839beec4f228d8279ecf3af5fe0fee7a5a39c1273f239ff7315347d9d2`;
+  - coordinator tests `361182bab54d09d748eca96890d440d8aca4a5eabe151c65282651d7f1cbbffa`.
+
+  Normal and optimized suites pass 47 config, 106 whole-object, and 15
+  coordinator tests. Three independent final reviews found no actionable defect.
+  The exact bits pass both `077` and `027` qualification on Hera APFS, shared NFS
+  through andoria-08, Vulcan ext4, and VPS ext4. A post-run check found no
+  scratch residue from any of the four shared-work views. Clio remains
+  unreachable, so its exact-home APFS qualification is still missing. No live
+  configuration or retired payload has been changed.
+
+  Live execution still requires Clio's exact-home qualification, exactly one
+  coordinator/runner, owner acceptance of the executing-user-visible metadata
+  boundary, current confirmation that every manifest-claimed Anvil payload on
+  Vulcan, VPS, and the shared home is stale, and a freshly confirmed
+  all-client-quiescent window. The final candidate is preserved as mode-`0600`
+  `~/dl/wg-project9-minimal-reconcile-qualified-20260805.tar.gz`, SHA-256
+  `f6bc9a09357ad91f14eb7dc8913dbf96bd2532d6c53f3902b895af0c6fb53304`.
+  Private R6 recovery archive
+  `~/dl/wg-project9-promptdeploy-r6-qualified-20260805.tar.gz` also remains
+  retained; remove either archive only with explicit approval after #127 closes.
 - #123 is complete. Published `llm-setup` commit `0e8966b` removes the Nix
   registry writer from reset. Signed Nix `eb0da1d4` deletes the three
   registry/policy files and 1,027 lines overall; `f6c4d705` records the exact
@@ -160,11 +182,12 @@ after the audit rather than pretending the old denominator is current.
 
 ## Concurrent work boundary
 
-The handoff correction is the only repository candidate. Frozen R6 and the
-rejected privileged qualification designs live only below
-`/private/tmp/wg-project9`; a smaller one-use transaction is being implemented
-and reviewed there; its first candidate is frozen NO-GO. None is repository code
-and none has touched a live home.
+The handoff correction is the only repository candidate. Frozen R6, rejected
+privileged designs, and the final reviewed one-use transaction working sources
+remain below `/private/tmp/wg-project9`; the final candidate archive is retained
+under `~/dl` as recorded above. Qualification created and then removed restricted
+scratch directories below the tested homes. None is repository code, and no live
+configuration or retired payload has changed.
 Continue to refresh checkout ownership before every shared-file edit and do not
 infer live activation from source state.
 
@@ -187,3 +210,9 @@ snapshot/mutation, password-store mutation, history rewriting, force pushes, or
 moving/deleting other user backups/state. Live reconciliation also requires the
 owner's explicit acceptance of the narrower observable-metadata contract.
 Every `gh` invocation must explicitly select account `jwiegley`.
+
+The latest read-only snapshot at `2026-08-05T15:29:32Z` is not quiescent. Hera
+has live or waiting Codex, Claude, and Pi clients; Vulcan has one waiting Claude
+client; andoria-08 has live or waiting Claude and Pi clients; and Clio is
+unreachable and therefore unknown. The other reachable managed hosts report no
+clients. No session may be stopped or restarted to manufacture the window.
