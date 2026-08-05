@@ -462,25 +462,6 @@ cleanup_transaction() {
     exit "$status"
 }
 
-with_nixos_build_lock() {
-    local lock=/etc/nixos/.nixos-build
-
-    for _ in {1..60}; do
-        if [[ ! -e $lock ]]; then
-            sudo touch "$lock"
-            trap 'sudo rm -f /etc/nixos/.nixos-build' RETURN
-            "$@"
-            sudo rm -f "$lock"
-            trap - RETURN
-            return
-        fi
-        sleep 10
-    done
-
-    echo "update: $lock still exists after 10 minutes" >&2
-    exit 1
-}
-
 if [[ $run_all_inputs == true && ${#requested_targets[@]} -ne 0 ]]; then
     echo "update: --all-inputs cannot be combined with --target" >&2
     exit 2
@@ -880,13 +861,18 @@ if [[ $run_switch == true ]]; then
         exit 2
     }
     if [[ -d /etc/nixos || -d /etc/srp-next ]]; then
-        nix build --no-link \
+        build_driver="$config_dir/build"
+        if [[ ! -x $build_driver ]]; then
+            echo "update: NixOS build driver is missing or not executable: $build_driver" >&2
+            exit 1
+        fi
+        "$build_driver" -- nix build --no-link \
             "$candidate_dir#nixosConfigurations.$output.config.system.build.toplevel"
         if ! live_repository_matches_baseline; then
             echo "update: live repository changed before candidate switch" >&2
             exit 1
         fi
-        with_nixos_build_lock sudo nixos-rebuild switch --flake "$candidate_dir#$output"
+        "$build_driver" -- nixos-rebuild switch --flake "$candidate_dir#$output"
     else
         nix build --no-link "$candidate_dir#darwinConfigurations.$output.system"
         if ! live_repository_matches_baseline; then

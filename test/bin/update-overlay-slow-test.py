@@ -6815,6 +6815,21 @@ exec "$REAL_GIT" "$@"
         self.assertIn("run_switch=false", update_agents)
         self.assertIn("run_push=false", update_agents)
         self.assertIn("run_brew=false", update_agents)
+        self.assertNotIn("with_nixos_build_lock", update_agents)
+        self.assertNotIn('sudo touch "$lock"', update_agents)
+        self.assertIn('build_driver="$config_dir/build"', update_agents)
+        self.assertIn(
+            '"$build_driver" -- nix build --no-link',
+            update_agents,
+        )
+        self.assertNotRegex(
+            update_agents,
+            r'(?m)^\s*nix build --no-link \\\n\s*"\$candidate_dir#nixosConfigurations',
+        )
+        self.assertIn(
+            '"$build_driver" -- nixos-rebuild switch --flake "$candidate_dir#$output"',
+            update_agents,
+        )
         self.assertIn('commit -S -m "Update project pins"', update_agents)
         self.assertIn("--switch/--push require --commit", update_agents)
         self.assertNotIn('git -C "$repo" add -A', update_agents)
