@@ -688,17 +688,13 @@ let
   baseMcpSelectors = {
     clients = contentClients;
   };
-  mkMcp = description: transport: selectors: {
-    inherit
-      description
-      transport
-      selectors
-      ;
+  mkMcp = transport: selectors: {
+    inherit transport selectors;
   };
 
   mcpServers = {
     devonthink =
-      mkMcp "Personal DEVONthink database access through DEVONthink's bundled MCP helper."
+      mkMcp
         {
           command = "/Applications/DEVONthink.app/Contents/Library/LoginItems/DEVONthink MCP.app/Contents/MacOS/DEVONthink MCP";
           args = [ "--stdio" ];
@@ -715,7 +711,6 @@ let
 
     drafts =
       mkMcp
-        "Drive the Drafts app (macOS) — create, read, update, search, tag, flag, archive/trash drafts, list workspaces/actions, and run Drafts actions, all via AppleScript"
         {
           command = "/etc/profiles/per-user/johnw/bin/drafts-mcp-server";
           args = [ ];
@@ -730,9 +725,10 @@ let
           ];
         };
 
+    # The operator path uses SSH stdio because it exposes drafts_run_action;
+    # the autonomous Hermes/OpenClaw SSE route intentionally does not.
     drafts-hera =
       mkMcp
-        "Drafts.app on hera (macOS) via SSH-stdio to drafts-mcp-server — host Claude Code (claude-vulcan, operator context, FULL toolset incl. drafts_run_action). Bypasses the SSE bridge; the autonomous OpenClaw/Hermes microVMs use the SSE bridge endpoint instead (full read/write draft surface since 2026-06-10, gated only against drafts_run_action)."
         {
           command = "ssh";
           args = [
@@ -762,7 +758,7 @@ let
         };
 
     pal =
-      mkMcp "PAL MCP - Provider Abstraction Layer for multi-model AI collaboration"
+      mkMcp
         {
           command = "pal-mcp-server";
           args = [ ];
@@ -783,7 +779,7 @@ let
         };
 
     searxng =
-      (mkMcp "Private web search through an operator-controlled SearXNG instance"
+      (mkMcp
         {
           command = "mcp-searxng";
           args = [ ];
@@ -806,7 +802,7 @@ let
       };
 
     sequential-thinking =
-      (mkMcp "Sequential thinking MCP server for structured reasoning" {
+      (mkMcp {
         command = "mcp-server-sequential-thinking";
         args = [ ];
       } baseMcpSelectors)
@@ -816,7 +812,6 @@ let
 
     stock-trader =
       mkMcp
-        "Live stock-trader research tools (quotes, technical analysis, options, scans, news/sentiment, risk, Alpha Vantage) via the vulcan REST service — the same 18 tools OpenClaw uses"
         {
           command = "/etc/profiles/per-user/johnw/bin/stock-trader-mcp";
           args = [ ];
@@ -834,7 +829,6 @@ let
 
   hooks = {
     agent-deck-claude = {
-      description = "Agent Deck lifecycle hooks for Claude Code status tracking.";
       selectors.clients = [ "claude" ];
       hooks = {
         SessionStart = [
@@ -916,7 +910,6 @@ let
     };
 
     agent-deck-codex = {
-      description = "Agent Deck lifecycle hooks for Codex status tracking.";
       selectors.clients = [ "codex" ];
       codex.notify = [
         "agent-deck"
@@ -980,8 +973,8 @@ let
     };
 
     claude-code = {
-      description = "Show activity icon in iTerm 2 tab bar (see https://github.com/anthropics/claude-code/issues/30199)";
       selectors.clients = [ "claude" ];
+      # The Stop bell makes iTerm mark the Claude tab as active.
       hooks.Stop = [
         {
           matcher = ".*";
@@ -996,7 +989,6 @@ let
     };
 
     claude-vault = {
-      description = "Archive conversations before compact and on session end";
       selectors.clients = [ "claude" ];
       hooks = {
         PreCompact = [
@@ -1025,7 +1017,6 @@ let
 
   marketplaces = {
     claude-code-plugins = {
-      description = "Plugin marketplace in the anthropics/claude-code repository (frontend-design and more)";
       selectors.clients = [ "claude" ];
       source = {
         source = "github";
@@ -1034,8 +1025,8 @@ let
       plugins.frontend-design = true;
     };
 
+    # Claude Code bundles this marketplace, so it needs no extra source registration.
     claude-plugins-official = {
-      description = "Plugins from the marketplace bundled with Claude Code";
       selectors.clients = [ "claude" ];
       plugins = {
         clangd-lsp = true;
