@@ -97,6 +97,8 @@ let
       selected = selectedForProfile;
       homeDirectory = "/Users/test";
       xdgConfigHome = "/Users/test/.config";
+      passwordStoreDir = "/Users/test/doc/.password-store";
+      gnupgHome = "/Users/test/.config/gnupg";
     };
   heraPiRendered = renderPi piProfile selected;
   clioPiRendered = renderPi clioPiProfile clioPiSelected;
@@ -110,6 +112,8 @@ let
         selected = sharedWorkPiSelected;
         homeDirectory = "/home/test";
         xdgConfigHome = "/home/test/.config";
+        passwordStoreDir = null;
+        gnupgHome = null;
       };
   vpsPiRendered =
     (import "${src}/config/ai/renderers/pi.nix" {
@@ -121,6 +125,8 @@ let
         selected = vpsPiSelected;
         homeDirectory = "/home/test";
         xdgConfigHome = "/home/test/.config";
+        passwordStoreDir = null;
+        gnupgHome = null;
       };
   vulcanPiRendered =
     (import "${src}/config/ai/renderers/pi.nix" {
@@ -132,13 +138,23 @@ let
         selected = vulcanPiSelected;
         homeDirectory = "/home/test";
         xdgConfigHome = "/home/test/.config";
+        passwordStoreDir = null;
+        gnupgHome = null;
       };
   linuxPiRenderings = [
     sharedWorkPiRendered
     vpsPiRendered
     vulcanPiRendered
   ];
-  hermesApiKeyCommand = "!${pkgs.bash}/bin/bash -c 'secret=\"$(${pkgs.pass}/bin/pass api.hermes.com)\" || exit; ${pkgs.coreutils}/bin/printf \"%s\\n\" \"$secret\" | ${pkgs.coreutils}/bin/head -n 1'";
+  hermesPassCommand = lib.escapeShellArgs [
+    "${pkgs.coreutils}/bin/env"
+    "PASSWORD_STORE_DIR=/Users/test/doc/.password-store"
+    "GNUPGHOME=/Users/test/.config/gnupg"
+    "${pkgs.pass}/bin/pass"
+    "api.hermes.com"
+  ];
+  hermesApiKeyScript = "secret=\"$(${hermesPassCommand})\" || exit; ${pkgs.coreutils}/bin/printf \"%s\\n\" \"$secret\" | ${pkgs.coreutils}/bin/head -n 1";
+  hermesApiKeyCommand = "!${pkgs.bash}/bin/bash -c ${lib.escapeShellArg hermesApiKeyScript}";
 in
 assert catalog.validate { };
 assert catalog.validate {
@@ -191,6 +207,8 @@ assert builtins.all reject [
     inherit selected;
     homeDirectory = "/Users/test";
     xdgConfigHome = "/Users/test/.config";
+    passwordStoreDir = "/Users/test/doc/.password-store";
+    gnupgHome = "/Users/test/.config/gnupg";
   })
 ];
 pkgs.runCommand "ai-catalog-transport" { } ''

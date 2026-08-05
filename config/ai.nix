@@ -92,6 +92,8 @@ let
       selected = selectedFor profileId;
       homeDirectory = config.home.homeDirectory;
       xdgConfigHome = config.xdg.configHome;
+      passwordStoreDir = config.programs.password-store.settings.PASSWORD_STORE_DIR or null;
+      gnupgHome = config.programs.gpg.homedir or null;
     };
 
   renderedProfiles = map renderProfile profileIds;

@@ -5,6 +5,8 @@
   selected,
   homeDirectory,
   xdgConfigHome,
+  passwordStoreDir,
+  gnupgHome,
 }:
 
 let
@@ -38,7 +40,15 @@ let
   ) (builtins.attrValues selected.mcpServers);
   renderEnv = name: "$" + "{" + name + "}";
   localModelRoutes = profile.platform == "darwin";
-  hermesApiKeyCommand = "!${pkgs.bash}/bin/bash -c 'secret=\"$(${pkgs.pass}/bin/pass api.hermes.com)\" || exit; ${pkgs.coreutils}/bin/printf \"%s\\n\" \"$secret\" | ${pkgs.coreutils}/bin/head -n 1'";
+  hermesPassCommand = lib.escapeShellArgs [
+    "${pkgs.coreutils}/bin/env"
+    "PASSWORD_STORE_DIR=${passwordStoreDir}"
+    "GNUPGHOME=${gnupgHome}"
+    "${pkgs.pass}/bin/pass"
+    "api.hermes.com"
+  ];
+  hermesApiKeyScript = "secret=\"$(${hermesPassCommand})\" || exit; ${pkgs.coreutils}/bin/printf \"%s\\n\" \"$secret\" | ${pkgs.coreutils}/bin/head -n 1";
+  hermesApiKeyCommand = "!${pkgs.bash}/bin/bash -c ${lib.escapeShellArg hermesApiKeyScript}";
 
   routerTarget = {
     id = "Qwen3.6-27B-oQ6e-mtp";
@@ -298,6 +308,7 @@ assert profile.audiences == [ "personal" ];
 assert profile.root == root;
 assert builtins.isString homeDirectory;
 assert xdgConfigHome == "${homeDirectory}/.config";
+assert !localModelRoutes || (builtins.isString passwordStoreDir && builtins.isString gnupgHome);
 assert selected.hooks == { };
 assert selected.marketplaces == { };
 assert selected.settings == { };
