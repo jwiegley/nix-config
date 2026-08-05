@@ -11,15 +11,15 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 
 - The authoritative checkout is `/Users/johnw/src/nix`, on `main`. It is the
   only worktree.
-- The last fully activated fleet boundary is `e7dc846c`. GitHub and Gitea
-  published that exact revision; Hera, Clio, Vulcan, VPS, and the shared-work
-  profile evaluated to their active closure at the completed #126 cutover.
-- Published candidate `c7d48838` restores Pi profile contracts and refreshes
-  the Pi inventory. The current source-only follow-up replaces Copy Message's
-  platform-specific clipboard subprocesses with Pi's portable clipboard API;
-  it also corrects the inventory's agent totals and platform-specific
-  verification recipe. Do not treat the clipboard repair as live until
-  publication and activation receipts are recorded.
+- GitHub, Gitea, and local `main` are equal at signed `b058721d`; the worktree
+  is clean and is the only worktree. The last complete fleet activation proof
+  remains the #126 boundary at `e7dc846c`; later commits must not be described
+  as fleet-active without host receipts.
+- Signed `bf873fdf` replaces Copy Message's platform-specific clipboard
+  subprocesses with Pi's portable clipboard API. The subsequent Pi provider,
+  extension, catalog-refresh, and Hermes credential fixes are published through
+  `b058721d`. Hera generation 1000 passed a fresh clean-environment
+  `hermes/hermes-agent` request; this is not all-host activation evidence.
 - Codex defaults to native OpenAI `gpt-5.6-sol`; local oMLX and llama-swap
   profiles remain opt-in.
 - Pi advertises `openai-codex/gpt-5.6-sol` at 1,050,000 tokens and OpenRouter
@@ -35,10 +35,12 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 - Done: #99-#108 and #110-#115, including #104's complete comment audit.
 - #109 was closed as not planned after its compliant prototype added far more
   policy and test code than the renderer literals it removed.
-- #116 and #124 are In Progress. #117 is closed not-planned, superseded by
-  #124. #118-#120 and #122-#126 are Done.
+- #116, #124, and #127 are In Progress. #117 is closed not-planned,
+  superseded by #124. #118-#120 and #122-#126 are Done.
 - #121 remains the final unchanged-candidate verification and cleanup closeout;
-  it stays blocked on #116 and #124.
+  it stays blocked on #116, #124, and #127. Together with epic #98, these are
+  the only five non-Done Project 9 items as of the latest explicit-`jwiegley`
+  account readback.
 
 ## Comment-audit boundary
 
@@ -52,11 +54,14 @@ after the audit rather than pretending the old denominator is current.
 
 ## Mutable-state holds
 
-- #116: source and current-state probes are clean across the reachable fleet;
-  the retained `anvil` string in the Pi gallery test is a negative prohibition,
-  not a producer. The remaining gate is the required two-cycle runtime horizon
-  after the convergence machinery was retired. Do not close the issue from a
-  source grep or one clean probe.
+- #116: source producers are retired, but a newer eight-host structural probe
+  found mutable Anvil residue: Hera has one Claude `skillUsage.anvil`; Vulcan
+  has one Codex table and one manifest-owned Factory payload; VPS has two
+  Claude entries, one Codex table, and three owned payloads; the shared NFS home
+  has two Claude entries and three owned payloads. Clio's manifest names retired
+  skills but its payload is absent. After reconciliation, two complete
+  activation/fresh-client/structural-probe cycles and exact supported-generation
+  IDs remain mandatory.
 - #117 is superseded. #124 removes Ref, Perplexity, the legacy importer, and the
   temporary credential carrier. PromptDeploy source retirement is published at
   `4ee0401`; no shared password-store provisioning or mutation is needed. Exact
@@ -86,14 +91,25 @@ after the audit rather than pretending the old denominator is current.
 - #124: signed `1ad23d7c` removes both live catalog entries, renderer
   credentials, the legacy Ref importer, the password-store carrier, and the
   Perplexity-bound web-searcher content. PromptDeploy no longer produces either
-  service. A proposed activation-time JSON writer was rejected before commit:
-  without a lock shared by the clients it could overwrite concurrent updates or
-  discard the manifest evidence needed for declarative removal.
-  Fleet probes now establish that Ref is absent everywhere. Perplexity remains
-  only in Hera's Pi cache and the mutable Claude configurations on Vulcan and
-  VPS; preserve VPS's unrelated `sequential-thinking` entry.
-  Clio is clean. Reconciliation remains a manual quiescent-window operation;
-  never infer session quiescence from this handoff's old session names.
+  service. The newest exact structural probe found Hera Pi cache entries for
+  `Ref` and `perplexity`, plus three distinct project-scoped Ref entries in
+  Clio's personal Claude state. No other live Ref/Perplexity member was found.
+  Preserve every unrelated entry, including VPS `sequential-thinking`.
+  Reconciliation remains a manual quiescent-window operation; never infer
+  session quiescence from old session names.
+- #127: the five unique homes currently contain 10/10/4/6/7 PromptDeploy
+  artifacts (Hera/Clio/Vulcan/VPS/shared), 2/1/1/3/2 mutable configs, and
+  0/0/1/3/3 manifest-owned Anvil payloads. Frozen transaction v5 passed 20
+  disposable tests but received independent correctness and security NO-GO
+  verdicts before exact-mount qualification. Confirmed defects include the real
+  Clio three-project shape, recovery parent drift, incomplete Linux metadata
+  observability, ambiguous post-mutation failure, conflicting prepared IDs, and
+  over-broad plan provenance. No live mutation occurred. V6 is being built only
+  under `/private/tmp/wg-project9`; GitHub issue #127 records the review result.
+  Shared-NFS apply remains refused. A sanitized mount observation identifies its
+  server as `filer.positron.internal:/mnt/flash_pool/homes`; server-local snapshot
+  or mutation is a potentially backend-exact alternative but has no current
+  access or mutation authorization.
 - #123 is complete. Published `llm-setup` commit `0e8966b` removes the Nix
   registry writer from reset. Signed Nix `eb0da1d4` deletes the three
   registry/policy files and 1,027 lines overall; `f6c4d705` records the exact
@@ -125,21 +141,17 @@ after the audit rather than pretending the old denominator is current.
   `dir=config/ai` inputs at the same revision and evaluate to their active
   closure; Hera and Clio likewise evaluate to their active system closure.
 
-- Copy Message is restored in signed commit `b21590fd`, included in the gallery
-  on every Pi profile, and registered on all seven reachable hosts. That probe
-  exposed a real headless-Linux failure in upstream's private clipboard-command
-  list; the current source candidate delegates to Pi's OSC-52-capable portable
-  clipboard helper and adds handler-level success and failure tests.
-  `andoria-t2` was down, so shared-profile evaluation covers its source
-  projection but not a direct runtime probe.
+- Copy Message is restored in signed `b21590fd`, and the portable clipboard
+  correction is published in `bf873fdf`. The older direct probe covered seven
+  reachable hosts while `andoria-t2` was down; do not convert that historical
+  result into a claim that every later source revision is active everywhere.
 
 ## Concurrent work boundary
 
-The Copy Message restoration and Pi fleet-contract repair are published as a
-signed logical series through `c7d48838`; the portable-clipboard and inventory
-follow-up is the only current source candidate. Continue to refresh checkout
-ownership before every shared-file edit and do not infer live activation from
-source state.
+There is no uncommitted source candidate. Transaction prototypes and reviews
+live only below `/private/tmp/wg-project9`; they are not repository code and have
+not touched a live home. Continue to refresh checkout ownership before every
+shared-file edit and do not infer live activation from source state.
 
 ## Authorization boundary
 
