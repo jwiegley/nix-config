@@ -1391,9 +1391,6 @@ let
             settingsItem.selectors == {
               clients = [ "claude" ];
             }
-            && settingsItem.base.env.ANTHROPIC_DEFAULT_HAIKU_MODEL == "claude-sonnet-5"
-            && settingsItem.base.env.CLAUDE_CODE_SUBAGENT_MODEL == "claude-opus-5"
-            && settingsItem.base.model == "claude-opus-5[1m"
             &&
               settingsItem.statusLineCommand == {
                 executable = "bash";

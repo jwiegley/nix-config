@@ -95,7 +95,7 @@ let
     };
   };
   managedConfig = {
-    model = "gpt-5.6-sol";
+    model = nativeSol.slug;
     model_provider = "openai";
     model_auto_compact_token_limit = nativeSolAutoCompactTokenLimit;
     model_catalog_json = "${homeDirectory}/${profile.root}/nix-managed-model-catalog.json";

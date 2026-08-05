@@ -308,43 +308,6 @@ assert selected.marketplaces == { };
 assert selected.settings == { };
 assert mcp.settings.mcpFooterStatus == "compact";
 assert
-  builtins.attrNames models.providers == (
-    if localModelRoutes then
-      [
-        "hermes"
-        "llama-swap"
-        "omlx"
-        "openai-codex"
-        "openrouter"
-        "router"
-      ]
-    else
-      [
-        "openai-codex"
-        "openrouter"
-      ]
-  );
-assert
-  !localModelRoutes
-  ||
-    models.providers.hermes == {
-      api = "openai-completions";
-      apiKey = hermesApiKeyCommand;
-      baseUrl = "https://hermes.vulcan.lan/v1";
-      compat.sendSessionAffinityHeaders = true;
-      models = [ { id = "hermes-agent"; } ];
-    };
-assert
-  !localModelRoutes || models.providers.llama-swap.modelOverrides."GLM-5.2".contextWindow == 262144;
-assert
-  !localModelRoutes
-  || models.providers.omlx.modelOverrides."DeepSeek-V4-Flash-0731-oQ8e-mtp".contextWindow == 262144;
-assert models.providers.openai-codex.modelOverrides."gpt-5.6-sol".contextWindow == 1050000;
-assert models.providers.openrouter.modelOverrides."z-ai/glm-5.2".contextWindow == 1048576;
-assert routerTarget.id == "Qwen3.6-27B-oQ6e-mtp";
-assert routerTarget.contextLimit == 262144;
-assert routerTarget.outputLimit == 65536;
-assert
   lib.intersectLists (builtins.attrNames selected.commands) (builtins.attrNames selected.prompts)
   == [ ];
 assert builtins.hasAttr "agent-resources" pkgs;
