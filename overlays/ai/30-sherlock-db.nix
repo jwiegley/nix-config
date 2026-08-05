@@ -1,6 +1,3 @@
-# Purpose: Sherlock - read-only database query tool for AI assistants
-# Dependencies: AI source catalog and prebuilt release archives
-# Packages: sherlock-db
 _final: prev:
 
 let

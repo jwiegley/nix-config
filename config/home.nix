@@ -4,11 +4,10 @@
 # packages and overrides.
 
 {
-  pkgs,
-  lib,
   config,
   hostname,
   inputs,
+  pkgs,
   ...
 }@args:
 

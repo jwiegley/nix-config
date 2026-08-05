@@ -1,6 +1,3 @@
-# Purpose: vLLM-like inference for Apple Silicon via MLX
-# Dependencies: final.python3Packages plus AI source catalog
-# Packages: vllm-mlx
 final: prev:
 let
   source = (import ../../packages/source-catalog.nix "ai").vllm-mlx;

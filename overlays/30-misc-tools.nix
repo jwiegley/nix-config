@@ -109,13 +109,11 @@ in
 // prev.lib.optionalAttrs (prev ? gogcli) {
   # Bump gogcli ahead of nixpkgs when the consumer channel provides a base.
   # Older stable channels simply omit this optional package.
-  gogcli = (prev.gogcli.override { buildGoModule = buildGo1265Module; }).overrideAttrs (
-    finalAttrs: _oldAttrs: {
-      version = sources.gogcli.version;
-      src =
-        assert sources.gogcli.source.fetcher == "fetchFromGitHub";
-        prev.fetchFromGitHub sources.gogcli.source.args;
-      vendorHash = sources.gogcli.hashes.vendorHash;
-    }
-  );
+  gogcli = (prev.gogcli.override { buildGoModule = buildGo1265Module; }).overrideAttrs (_: {
+    version = sources.gogcli.version;
+    src =
+      assert sources.gogcli.source.fetcher == "fetchFromGitHub";
+      prev.fetchFromGitHub sources.gogcli.source.args;
+    vendorHash = sources.gogcli.hashes.vendorHash;
+  });
 }

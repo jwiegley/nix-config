@@ -1,6 +1,3 @@
-# Purpose: Plasma Fractal agent orchestration and its Wiki companion
-# Dependencies: Python package set plus standard Unix runtime tools
-# Packages: plasma-fractal, plasma-wiki
 final: prev:
 
 let

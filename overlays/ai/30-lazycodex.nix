@@ -1,5 +1,3 @@
-# Purpose: LazyCodex installer and Codex agent harness tooling
-# Packages: lazycodex-ai
 _final: prev:
 let
   source = (import ../../packages/source-catalog.nix "ai").lazycodex-ai;

@@ -1,6 +1,3 @@
-# Purpose: agnix - Linter and LSP for AI coding assistant config files
-# Dependencies: Uses prev only
-# Packages: agnix
 _final: prev:
 let
   source = (import ../../packages/source-catalog.nix "ai").agnix;

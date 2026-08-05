@@ -1,6 +1,3 @@
-# Purpose: agent-deck - Terminal (tmux) session manager for AI coding agents
-# Dependencies: Uses prev only; Go 1.26 satisfies the upstream module floor
-# Packages: agent-deck
 _final: prev:
 let
   source = (import ../../packages/source-catalog.nix "ai").agent-deck;
@@ -9,6 +6,7 @@ in
 
   agent-deck =
     with prev;
+    # Upstream's module requires Go 1.26.
     buildGo126Module rec {
       pname = "agent-deck";
       inherit (source) version;

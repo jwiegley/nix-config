@@ -1,6 +1,3 @@
-# Purpose: claude-vault - Archive Claude Code conversations into searchable SQLite
-# Dependencies: Uses prev only
-# Packages: claude-vault
 _final: prev:
 let
   source = (import ../../packages/source-catalog.nix "ai").claude-vault;
