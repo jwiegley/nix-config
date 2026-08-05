@@ -14,7 +14,7 @@ pi-version: 0.83.0
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: 27 gallery packages on Darwin, the same gallery without its three loopback-only integrations on Linux, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: 26 gallery packages on Darwin, the same gallery without its three loopback-only integrations on Linux, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope.
 
@@ -37,6 +37,7 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `pi-copy-message` | 1.0.11 | Search and copy raw session messages | `/copy-message`, `/copy-user` |
 | `@jakeryderv/pi-artifacts` | 0.9.1 | Portable Markdown and HTML artifacts | `scaffold_artifact`, `/viewer` |
 | `@ygncode/pi-insights` | 1.0.1 | Session analytics | `/insights` |
+| `@tmustier/pi-usage-extension` | 0.9.4 | Local usage, cost, and token statistics | `/usage` |
 | `pi-multi-pass` | 1.3.0 | Multiple OAuth accounts and failover pools | `/subs`, `/pool`, `/mp-preset` |
 | `pi-provider-llama-swap` | `57583beb` | Discover chat models from local llama-swap | `/model`, `llama-swap/*` |
 | `pi-provider-omlx` | `57583beb` | Discover chat models from local oMLX | `/model`, `omlx/*` |
@@ -44,8 +45,6 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `pi-rewind` | 0.5.0 | Conversation and file checkpoints | `/rewind` |
 | `pi-blackhole` | 0.4.2 | Context compaction and observational memory | `/blackhole`, `recall` |
 | `pi-trace-extension` | 0.1.12 | Local execution traces and HTML reports | `/trace` |
-| `pi-session-search` | 1.4.3 | Search, list, and read prior Pi sessions | `session_search`, `/session-sync` |
-| `pi-knowledge-search` | 1.3.5 | FTS5 search with optional vector and Bedrock retrieval | `knowledge_search`, `kb_read` |
 | `pi-markdown-preview` | 0.11.1 | Terminal, browser, PDF, and artifact previews | `/preview`, `preview_export` |
 | `pi-caveman` | 1.0.7 | Compressed response style | `/caveman` |
 | `pi-rtk-optimizer` | 0.9.0 | RTK command rewriting and output compaction | `/rtk` |
@@ -69,11 +68,11 @@ The Hera, Clio, shared-work, VPS, and Vulcan Pi profiles are rendered by `~/src/
 | Extension entries | Fleet Theme, Nix Gallery loader, Pi Loop, Pi MCP Adapter, and Quiet Display; Linux omits the two local providers and their router |
 | Agent resources | 25 Nix-managed agent definitions |
 | Prompt resources | 63 files: 61 command prompts and the `emacs` and `spanish` prompts |
-| Skill resources | Shared catalog skills selected for Pi, plus seven gallery package skill paths and one gallery prompt path advertised at runtime |
+| Skill resources | Shared catalog skills selected for Pi, plus six gallery package skill paths and one gallery prompt path advertised at runtime |
 | Generated policy | `keybindings.json`, `models.json`, the managed theme, the hidden Lens widget setting, and the global MCP registry; Darwin also receives `model-router.json` |
 | Deliberately absent | No Pi-specific Nix settings file, hooks, marketplaces, or companion leaves |
 
-Shared skills remain in the common discovery estate rather than being copied into a private Pi skill tree. Their ownership is independent of Codex, so Pi-only hosts receive them too. Package skills supplied by Lens, BTW, Artifacts, Session Search, Subagents, and Dynamic Workflows enter through the gallery loader.
+Shared skills remain in the common discovery estate rather than being copied into a private Pi skill tree. Their ownership is independent of Codex, so Pi-only hosts receive them too. Package skills supplied by Lens, BTW, Artifacts, Subagents, and Dynamic Workflows enter through the gallery loader.
 
 ### Model and routing policy
 
@@ -200,22 +199,6 @@ Pi Trace records the execution structure of each session—model requests, steps
 
 **Basic usage.** Tracing starts automatically. Run `/trace` for the current session or `/trace all` for the cross-session dashboard. Files live below `~/.pi/agent/traces/`. They still contain prompts, tool inputs and results, file paths, and model data; treat them as sensitive. The extension has no retention or rotation policy.
 
-### Session Search
-
-**Version:** 1.4.3 · **Links:** [Home](https://github.com/samfoy/pi-session-search) · [GitHub](https://github.com/samfoy/pi-session-search)
-
-Pi Session Search incrementally indexes ordinary and archived Pi JSONL sessions into local SQLite FTS5. Keyword search works without configuration; optional embeddings add semantic retrieval. At session start it also injects a hidden, bounded Recent Sessions primer into model context unless `primer.enabled` is false; this can include prior session titles or first-message fragments, working directories, model names, and message counts. The Nix package adapts the published Node SQLite entrypoint to Pi's Bun runtime while retaining the package's optional embedding-provider dependencies. It creates or reconciles state directories to mode 0700 and configuration, index, and database files to mode 0600, and it closes the previous database and cancels its timers when Pi replaces a session.
-
-**Basic usage.** Use `session_search`, `session_list`, and `session_read`. The index syncs immediately after session start and then at five-minute intervals; run `/session-sync` for an explicit incremental refresh or `/session-reindex` for a full rebuild. `/session-embeddings-setup` enables hybrid search and may send session text or queries to the selected embedding provider. Its setup flow can write a literal API key to `~/.pi/session-search/config.json`; prefer an environment variable or a manually managed secret reference instead of entering a key. All index and configuration state is stored below `~/.pi/session-search/`.
-
-### Knowledge Search
-
-**Version:** 1.3.5 · **Links:** [Home](https://github.com/samfoy/pi-knowledge-search) · [GitHub](https://github.com/samfoy/pi-knowledge-search)
-
-Pi Knowledge Search indexes selected Markdown and text trees for local FTS5 retrieval, with optional vector fusion, injects a bounded overview, and exposes exact note reads. Optional Bedrock knowledge bases add remote retrieval. Nix uses Bun SQLite in the Pi process and a pinned Node 24 runtime for the package's existing background synchronization worker. The packaged extension requires an explicit provider selection; an unrelated `OPENAI_API_KEY` never enables embeddings implicitly. It creates or reconciles state directories to mode 0700 and configuration, index, and database files to mode 0600, stops the prior worker when Pi replaces a session, and reports malformed worker results instead of treating a stale index as synchronized.
-
-**Basic usage.** Start with `/knowledge-search-setup`, choose `none` for local FTS5-only operation, then run `/reload`. Use `knowledge_search` for retrieval and `kb_read` for a known note or wikilink. `/knowledge-add-kb` adds an AWS Bedrock knowledge base and sends its searches to AWS; `/knowledge-overview` rebuilds the injected overview and `/knowledge-reindex` rebuilds local indexes. The setup flow can write a literal API key to `~/.pi/knowledge-search.json`; prefer an environment variable or a manually managed secret reference instead of entering a key. That file stores settings; indexed note text, chunks, and embeddings are mutable state below `~/.pi/knowledge-search/`. An explicitly configured embedding provider may receive note content and queries.
-
 ### Cache Optimizer
 
 **Version:** 2.8.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-cache-optimizer) · [Home](https://github.com/jiangge/pi-cache-optimizer) · [GitHub](https://github.com/jiangge/pi-cache-optimizer)
@@ -239,6 +222,14 @@ Pi Caveman appends a response-style instruction that reduces output prose while 
 Pi Insights derives an interactive analytics report from Pi session history. It is suited to reviewing model usage, tool activity, costs, and conversation patterns after substantive work rather than instrumenting the live turn.
 
 **Basic usage.** Run `/insights` and open the generated report. Treat the output as a retrospective view of recorded sessions, not as an execution trace or billing authority.
+
+### Usage Dashboard
+
+**Version:** 0.9.4 · **Links:** [Pi Packages](https://pi.dev/packages/@tmustier/pi-usage-extension) · [Home](https://github.com/tmustier/pi-extensions/tree/main/usage-extension) · [GitHub](https://github.com/tmustier/pi-extensions)
+
+The Usage Dashboard aggregates locally persisted Pi session usage by provider, model, time period, cost, token type, and thinking level. It reads the session ledger only when `/usage` opens and maintains an incremental cache at `~/.pi/agent/usage-extension-cache.json`; the first scan can be substantial, while subsequent scans normally parse only changed files.
+
+**Basic usage.** Run `/usage`, use `Tab` or Left/Right to change time periods, `v` to change views, and `e` to export the current view. Exports default to the system temporary directory unless `usage-extension.exportDir` is set in mutable Pi settings. Reported costs and tokens are only as complete as the usage metadata persisted by each provider and Pi version.
 
 ## Research, code intelligence, and browsers
 
@@ -405,8 +396,7 @@ The Pi profile also installs the support toolchain expected by Lens and the orch
 - The active profile root is `~/.config/pi/agent`; Nix owns only the generated leaves enumerated above.
 - Run `/reload` after a Nix activation when the current Pi process must adopt changed extension code.
 - On Hera and Clio, restart or reload Pi after the llama-swap or oMLX model roster changes, because local provider discovery runs once during registration.
-- Mutable extension state remains outside Nix ownership. Examples include Blackhole configuration and memory state; trace files; Session and Knowledge Search indexes; Cache Optimizer, Caveman, Quiet, and RTK preferences; Pi Loop presets and logs; MCP credentials and cache; Cymbal indexes; and Subagent, Workflow, and Goal run state. Nix reconciles Blackhole's four enabled-policy fields and removes its three retired aliases.
-- Session Search and Knowledge Search harden the permissions of their mutable configuration and index state whenever they load; those files remain user-owned and writable.
+- Mutable extension state remains outside Nix ownership. Examples include Blackhole configuration and memory state; trace files; the Usage Dashboard cache; Cache Optimizer, Caveman, Quiet, and RTK preferences; Pi Loop presets and logs; MCP credentials and cache; Cymbal indexes; and Subagent, Workflow, and Goal run state. Nix reconciles Blackhole's four enabled-policy fields and removes its three retired aliases.
 - Style extensions retain distinct purposes: Ponytail minimizes implementation; Caveman compresses prose; Quiet compresses tool presentation; Fleet Theme changes TUI color treatment.
 
 ## Verification
@@ -468,9 +458,8 @@ Within a fresh Pi session, confirm the principal control surfaces:
 /loop list
 /blackhole-memory
 /trace
+/usage
 /cache-optimizer doctor
-/session-sync
-/knowledge-search-setup
 /lens-health
 /rtk verify
 /subagents-doctor

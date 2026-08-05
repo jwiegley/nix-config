@@ -5,7 +5,6 @@
   jq,
   lib,
   nodejs_22,
-  nodejs_24,
   piPackage,
   piPackages,
   python3,
@@ -227,6 +226,8 @@ runCommand "pi-gallery-check"
     [ -f ${roots.insights}/dist/index.html ]
     [ -d ${roots.insights}/node_modules/react ]
     [ -d ${roots.insights}/node_modules/recharts ]
+    [ -f ${roots.usage}/index.ts ]
+    [ ! -e ${roots.usage}/node_modules ]
     [ -f ${roots.multi-pass}/extensions/multi-sub.ts ]
     [ ! -e ${roots.multi-pass}/node_modules ]
     [ -f ${piPackages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts ]
@@ -428,264 +429,12 @@ runCommand "pi-gallery-check"
         raise SystemExit("Trace renderer misclassified an ordinary step")
     PY
 
-    [ -f ${roots.session-search}/dist/index.js ]
-    [ -f ${roots.session-search}/skills/session-history/SKILL.md ]
-    [ -d ${roots.session-search}/node_modules/@aws-sdk ]
-    [ "$(grep -Fc 'from "bun:sqlite"' ${roots.session-search}/dist/index.js)" -eq 3 ]
-    ! grep -F 'from "node:sqlite"' ${roots.session-search}/dist/index.js >/dev/null \
-      || fail "Session Search still imports node:sqlite in Pi's Bun process"
-    ${python3}/bin/python3 - ${roots.session-search}/dist/index.js <<'PY'
-    from pathlib import Path
-    import sys
-
-    text = Path(sys.argv[1]).read_text()
-    guarded = "\n".join((
-        "    } catch (err) {",
-        "      if (!isCurrent()) return;",
-        "      sessionIndex = null;",
-        "      ctx.ui.notify(`session-search init failed: ''${err.message}`, \"error\");",
-        "    }",
-    ))
-    if text.count(guarded) != 1:
-        raise SystemExit("Session Search lacks its stale-initialization guard")
-    PY
-    session_lifecycle="$TMPDIR/pi-session-search-lifecycle"
-    mkdir -p "$session_lifecycle/home/.pi/session-search"
-    cat > "$session_lifecycle/home/.pi/session-search/config.json" <<'JSON'
-    {"primer":{"enabled":false},"sync":{"initialDelay":-1,"interval":0}}
-    JSON
-    printf '%s\n' \
-      '{"id":"commands-before","type":"get_commands"}' \
-      '{"id":"replace-one","type":"new_session"}' \
-      '{"id":"replace-two","type":"new_session"}' \
-      '{"id":"commands-after","type":"get_commands"}' \
-      > "$session_lifecycle/input.jsonl"
-    HOME="$session_lifecycle/home" \
-      ${coreutils}/bin/timeout 30 \
-      ${python3}/bin/python3 "$rpc_sequence" \
-        "$session_lifecycle/input.jsonl" \
-        "$session_lifecycle/output.jsonl" \
-        "$session_lifecycle/error.log" \
-        ${lib.getExe piPackage} \
-        --mode rpc --no-session --offline \
-        --no-extensions --no-skills --no-prompt-templates \
-        --no-context-files --no-approve \
-        --extension ${roots.session-search}/dist/index.js || {
-      cat "$session_lifecycle/error.log" >&2
-      fail "Session Search did not survive session replacement"
-    }
-    ${jq}/bin/jq -s -e '
-      ([.[] | select(.command == "new_session" and .success == true)] | length) == 2
-      and any(
-        .[];
-        .command == "get_commands"
-        and any(.data.commands[]; .name == "session-sync")
-      )
-    ' "$session_lifecycle/output.jsonl" >/dev/null \
-      || fail "Session Search lifecycle responses were incomplete"
-
-    [ -f ${roots.knowledge-search}/dist/index.js ]
-    [ -f ${roots.knowledge-search}/dist/sync-worker.mjs ]
-    [ -d ${roots.knowledge-search}/node_modules/unified ]
-    (
-      cd ${roots.knowledge-search}
-      ${nodejs_24}/bin/node --input-type=module --eval '
-        await Promise.all([
-          import("@aws-sdk/client-bedrock-runtime"),
-          import("@aws-sdk/client-bedrock-agent-runtime"),
-          import("@aws-sdk/credential-providers"),
-        ]);
-      '
-    ) || fail "Knowledge Search Bedrock dependencies are not importable"
-    [ "$(grep -Fc 'from "bun:sqlite"' ${roots.knowledge-search}/dist/index.js)" -eq 2 ]
-    ! grep -F 'from "node:sqlite"' ${roots.knowledge-search}/dist/index.js >/dev/null \
-      || fail "Knowledge Search still imports node:sqlite in Pi's Bun process"
-    ! grep -F 'process.env.OPENAI_API_KEY ? "openai"' \
-      ${roots.knowledge-search}/dist/index.js \
-      ${roots.knowledge-search}/dist/sync-worker.mjs >/dev/null \
-      || fail "Knowledge Search still enables OpenAI implicitly"
-    grep -E 'execPath: "/nix/store/[^\"]+-nodejs-24[^\"]*/bin/node"' \
-      ${roots.knowledge-search}/dist/index.js >/dev/null \
-      || fail "Knowledge Search worker does not select a Nix Node runtime"
-    grep -F 'async function stopWorker() {' \
-      ${roots.knowledge-search}/dist/index.js >/dev/null \
-      || fail "Knowledge Search worker shutdown is not awaitable"
-    [ "$(grep -Fc 'await stopWorker();' ${roots.knowledge-search}/dist/index.js)" -eq 2 ] \
-      || fail "Knowledge Search does not await both worker shutdown paths"
-    grep -F 'const workerIndex = index;' \
-      ${roots.knowledge-search}/dist/index.js >/dev/null \
-      || fail "Knowledge Search does not bind worker results to their index"
-    grep -F 'await workerIndex.load();' \
-      ${roots.knowledge-search}/dist/index.js >/dev/null \
-      || fail "Knowledge Search reloads mutable global index state"
-    [ "$(grep -Fc 'if (index !== workerIndex || workerExitExpected) return;' \
-      ${roots.knowledge-search}/dist/index.js)" -eq 2 ] \
-      || fail "Knowledge Search does not reject stale worker completion"
     for package_root in \
       ${roots.trace} \
-      ${roots.cache-optimizer} \
-      ${roots.session-search} \
-      ${roots.knowledge-search}; do
+      ${roots.cache-optimizer}; do
       ! grep -R -i 'litellm' "$package_root" >/dev/null \
         || fail "Pi extension package reintroduced a retired LiteLLM reference: $package_root"
     done
-    knowledge_worker="$TMPDIR/pi-knowledge-worker"
-    mkdir -p "$knowledge_worker/home" "$knowledge_worker/notes"
-    printf '%s\n' '# Searchable note' 'worker FTS5 sentinel' > "$knowledge_worker/notes/note.md"
-    ${jq}/bin/jq -n --arg dir "$knowledge_worker/notes" '{
-      dirs: [$dir],
-      fileExtensions: [".md"],
-      excludeDirs: [],
-      provider: null
-    }' > "$knowledge_worker/config.json"
-    chmod 0755 "$knowledge_worker"
-    chmod 0644 "$knowledge_worker/config.json"
-    (
-      umask 0022
-      HOME="$knowledge_worker/home" \
-        OPENAI_API_KEY="sentinel-must-not-enable-embeddings" \
-        KNOWLEDGE_SEARCH_CONFIG="$knowledge_worker/config.json" \
-        KNOWLEDGE_SEARCH_INDEX_DIR="$knowledge_worker/index" \
-        ${nodejs_24}/bin/node --no-warnings=ExperimentalWarning \
-          ${roots.knowledge-search}/dist/sync-worker.mjs \
-          > "$knowledge_worker/result.json"
-    )
-    ${jq}/bin/jq -e '.added == 1 and .size == 1 and .chunks >= 1' \
-      "$knowledge_worker/result.json" >/dev/null \
-      || fail "Knowledge Search Node worker did not index the FTS5 fixture"
-    [ -f "$knowledge_worker/index/kb-fts.db" ] \
-      || fail "Knowledge Search worker did not create its FTS5 database"
-    [ -f "$knowledge_worker/index/index.json" ] \
-      || fail "Knowledge Search worker did not persist its local index"
-    [ "$(${coreutils}/bin/stat -c '%a' "$knowledge_worker")" = 700 ] \
-      || fail "Knowledge Search config directory is not private"
-    [ "$(${coreutils}/bin/stat -c '%a' "$knowledge_worker/config.json")" = 600 ] \
-      || fail "Knowledge Search config is not private"
-    [ "$(${coreutils}/bin/stat -c '%a' "$knowledge_worker/index")" = 700 ] \
-      || fail "Knowledge Search index directory is not private"
-    for private_file in \
-      "$knowledge_worker/index/kb-fts.db" \
-      "$knowledge_worker/index/index.json"; do
-      [ "$(${coreutils}/bin/stat -c '%a' "$private_file")" = 600 ] \
-        || fail "Knowledge Search index file is not private: $private_file"
-    done
-
-    knowledge_shutdown="$TMPDIR/pi-knowledge-lifecycle"
-    mkdir -p \
-      "$knowledge_shutdown/home" \
-      "$knowledge_shutdown/extension/dist" \
-      "$knowledge_shutdown/notes"
-    cp ${roots.knowledge-search}/dist/index.js \
-      "$knowledge_shutdown/extension/dist/index.js"
-    ln -s ${roots.knowledge-search}/node_modules \
-      "$knowledge_shutdown/extension/node_modules"
-    cat > "$knowledge_shutdown/extension/dist/sync-worker.mjs" <<'EOF'
-    import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-
-    const counterPath = process.env.KNOWLEDGE_WORKER_COUNTER;
-    const lifecyclePath = process.env.KNOWLEDGE_WORKER_LIFECYCLE;
-    const previous = existsSync(counterPath) ? Number(readFileSync(counterPath, "utf8")) : 0;
-    const sequence = previous + 1;
-    writeFileSync(counterPath, String(sequence));
-    appendFileSync(lifecyclePath, `start ''${sequence}\n`);
-    if (sequence === 2) {
-      process.stdout.write("{malformed", () => process.exit(0));
-    } else {
-      process.on("SIGTERM", () => {
-        setTimeout(() => {
-          appendFileSync(lifecyclePath, `stop ''${sequence}\n`);
-          process.exit(0);
-        }, 200);
-      });
-      setInterval(() => {}, 1000);
-    }
-    EOF
-    cat > "$knowledge_shutdown/wait-for-worker.ts" <<'EOF'
-    export default function waitForWorker(pi: any) {
-      pi.on("session_start", async () => {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      });
-    }
-    EOF
-    ${jq}/bin/jq -n --arg dir "$knowledge_shutdown/notes" '{
-      dirs: [$dir],
-      fileExtensions: [".md"],
-      excludeDirs: [],
-      provider: null
-    }' > "$knowledge_shutdown/config.json"
-    printf '%s\n' \
-      '{"id":"commands-before","type":"get_commands"}' \
-      '{"id":"replace-one","type":"new_session"}' \
-      '{"id":"replace-two","type":"new_session"}' \
-      '{"id":"commands-after","type":"get_commands"}' \
-      > "$knowledge_shutdown/input.jsonl"
-    HOME="$knowledge_shutdown/home" \
-      KNOWLEDGE_SEARCH_CONFIG="$knowledge_shutdown/config.json" \
-      KNOWLEDGE_SEARCH_INDEX_DIR="$knowledge_shutdown/index" \
-      KNOWLEDGE_WORKER_COUNTER="$knowledge_shutdown/worker-counter" \
-      KNOWLEDGE_WORKER_LIFECYCLE="$knowledge_shutdown/worker-lifecycle" \
-      ${coreutils}/bin/timeout 30 \
-      ${python3}/bin/python3 "$rpc_sequence" \
-        "$knowledge_shutdown/input.jsonl" \
-        "$knowledge_shutdown/output.jsonl" \
-        "$knowledge_shutdown/error.log" \
-        ${lib.getExe piPackage} \
-        --mode rpc --no-session --offline \
-        --no-extensions --no-skills --no-prompt-templates \
-        --no-context-files --no-approve \
-        --extension "$knowledge_shutdown/extension/dist/index.js" \
-        --extension "$knowledge_shutdown/wait-for-worker.ts" || {
-      cat "$knowledge_shutdown/error.log" >&2
-      fail "Knowledge Search kept Pi alive after session shutdown"
-    }
-    ${jq}/bin/jq -s -e '
-      any(
-        .[];
-        .type == "response"
-        and .command == "get_commands"
-        and .success == true
-        and any(.data.commands[]; .name == "knowledge-search-setup")
-      )
-    ' "$knowledge_shutdown/output.jsonl" >/dev/null \
-      || fail "Knowledge Search lifecycle smoke did not load the extension"
-    ${python3}/bin/python3 - "$knowledge_shutdown/worker-lifecycle" <<'PY' || {
-    from pathlib import Path
-    import sys
-
-    events = [line.split() for line in Path(sys.argv[1]).read_text().splitlines()]
-    starts = [int(sequence) for event, sequence in events if event == "start"]
-    if starts != list(range(1, len(starts) + 1)) or len(starts) < 3:
-        raise SystemExit("unexpected Knowledge Search worker sequence")
-
-    active = None
-    for event, raw_sequence in events:
-        sequence = int(raw_sequence)
-        if event == "start":
-            if active is not None:
-                raise SystemExit(f"worker {sequence} overlapped worker {active}")
-            # The fixture makes worker 2 exit after returning malformed output.
-            active = None if sequence == 2 else sequence
-        elif event == "stop":
-            if active != sequence:
-                raise SystemExit(f"unexpected stop for worker {sequence}")
-            active = None
-        else:
-            raise SystemExit(f"unexpected lifecycle event: {event}")
-    if active is not None:
-        raise SystemExit(f"worker {active} survived session shutdown")
-    PY
-      cat "$knowledge_shutdown/worker-lifecycle" >&2
-      cat "$knowledge_shutdown/error.log" >&2
-      cat "$knowledge_shutdown/output.jsonl" >&2
-      fail "Knowledge Search overlapped or failed to stop session workers"
-    }
-    grep -F 'knowledge-search: worker result rejected:' \
-      "$knowledge_shutdown/error.log" >/dev/null \
-      || fail "Knowledge Search silently accepted a malformed worker result"
-    [ "$(${jq}/bin/jq -s '[.[] | select(.command == "new_session" and .success == true)] | length' \
-      "$knowledge_shutdown/output.jsonl")" = 2 ] \
-      || fail "Knowledge Search did not survive two session replacements"
-
     [ -f ${roots.hashline}/index.ts ]
     [ ! -e ${roots.hashline}/node_modules/better-sqlite3 ]
     [ -d ${roots.hashline}/node_modules/sql.js ]
@@ -993,21 +742,8 @@ runCommand "pi-gallery-check"
       "$smoke/home/.agents/skills/shared-discovery" \
       "$smoke/project" "$smoke/sentinels"
     ln -s "$smoke/home/.config/pi" "$smoke/home/.pi"
-    mkdir -p \
-      "$smoke/home/.config/pi/agent/sessions/--fixture-project--" \
-      "$smoke/home/.pi/session-search"
     ln -s ${gallery}/index.ts \
       "$smoke/home/.config/pi/agent/extensions/nix-gallery/index.ts"
-    cat > "$smoke/home/.config/pi/agent/sessions/--fixture-project--/retrieval.jsonl" <<'JSONL'
-    {"type":"session","version":3,"id":"gallery-retrieval-fixture","timestamp":"2026-08-04T12:00:00.000Z","cwd":"/fixture/project"}
-    {"type":"message","id":"user-1","parentId":null,"timestamp":"2026-08-04T12:00:01.000Z","message":{"role":"user","content":"sessionretrievalsentinel verifies actual FTS ingestion"}}
-    {"type":"message","id":"assistant-1","parentId":"user-1","timestamp":"2026-08-04T12:00:02.000Z","message":{"role":"assistant","content":[{"type":"text","text":"The retrieval fixture was indexed."}],"provider":"openai-codex","model":"gpt-5.6-sol","stopReason":"stop"}}
-    JSONL
-    cat > "$smoke/home/.pi/session-search/config.json" <<'JSON'
-    {"primer":{"enabled":false},"sync":{"initialDelay":0,"interval":0}}
-    JSON
-    chmod 0755 "$smoke/home/.pi/session-search"
-    chmod 0644 "$smoke/home/.pi/session-search/config.json"
     printf '%s\n' '{"providers":{"sentinel":{"apiKey":"unchanged"}}}' \
       > "$smoke/home/.config/pi/agent/models.json"
     cp "$smoke/home/.config/pi/agent/models.json" "$smoke/models-before.json"
@@ -1048,13 +784,6 @@ runCommand "pi-gallery-check"
       });
     }
     EOF
-    cat > "$smoke/wait-for-index.ts" <<'EOF'
-    export default function waitForIndex(pi: any) {
-      pi.on("session_start", async () => {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      });
-    }
-    EOF
     (
       cd "$smoke/project"
       env -u PI_CODING_AGENT_DIR \
@@ -1079,8 +808,7 @@ runCommand "pi-gallery-check"
         --mode rpc --no-session --offline \
         --no-prompt-templates \
         --no-context-files --no-approve \
-        --extension "$smoke/active-tools.ts" \
-        --extension "$smoke/wait-for-index.ts"
+        --extension "$smoke/active-tools.ts"
     ) || {
       cat "$smoke/output.log" >&2
       cat "$smoke/error.log" >&2
@@ -1121,10 +849,6 @@ runCommand "pi-gallery-check"
           "sisyphus",
           "sisyphus-set",
           "insights",
-          "knowledge-add-kb",
-          "knowledge-overview",
-          "knowledge-reindex",
-          "knowledge-search-setup",
           "mp-preset",
           "pool",
           "subs",
@@ -1144,15 +868,13 @@ runCommand "pi-gallery-check"
           ${lib.optionalString stdenv.hostPlatform.isDarwin ''"router",''}
           "rtk",
           "run",
-          "session-embeddings-setup",
-          "session-reindex",
-          "session-sync",
           "subagents",
           "subagents-doctor",
           "subagents-fleet",
           "subagents-models",
           "subagents-watchdog",
           "trace",
+          "usage",
           "viewer",
           "workflows"
         ] - [.data.commands[].name] | length) == 0
@@ -1192,13 +914,8 @@ runCommand "pi-gallery-check"
           [
             "batch_web_fetch",
             "edit",
-            "kb_read",
-            "knowledge_search",
             "read",
             "recall",
-            "session_list",
-            "session_read",
-            "session_search",
             "web_fetch",
             "web_search",
             "write"
@@ -1221,16 +938,9 @@ runCommand "pi-gallery-check"
       cat "$smoke/tool-owners.json" >&2
       fail "Pi gallery web tools do not have exactly one declared owner"
     }
-    jq -e '
-      .session_search == ["session-search"]
-      and .session_list == ["session-search"]
-      and .session_read == ["session-search"]
-      and .knowledge_search == ["knowledge-search"]
-      and .kb_read == ["knowledge-search"]
-      and .recall == ["blackhole"]
-    ' "$smoke/tool-owners.json" >/dev/null || {
+    jq -e '.recall == ["blackhole"]' "$smoke/tool-owners.json" >/dev/null || {
       cat "$smoke/tool-owners.json" >&2
-      fail "Pi search tools do not have exactly one declared owner"
+      fail "Pi memory tool does not have exactly one declared owner"
     }
     jq '.web_search += ["smart-fetch"]' "$smoke/tool-owners.json" \
       > "$smoke/tool-owners-duplicate.json"
@@ -1280,27 +990,6 @@ runCommand "pi-gallery-check"
     [ ! -e "$smoke/home/.config/pi/agent/settings.json" ] || fail "gallery wrote Pi settings"
     cmp -s "$smoke/models-before.json" "$smoke/home/.config/pi/agent/models.json" \
       || fail "Cache Optimizer changed Nix-managed models.json"
-    [ -f "$smoke/home/.pi/session-search/index/sessions-fts.db" ] \
-      || fail "Session Search did not initialize its Bun FTS5 database"
-    [ "$(${coreutils}/bin/stat -c '%a' "$smoke/home/.pi/session-search")" = 700 ] \
-      || fail "Session Search state directory is not private"
-    [ "$(${coreutils}/bin/stat -c '%a' "$smoke/home/.pi/session-search/config.json")" = 600 ] \
-      || fail "Session Search config is not private"
-    [ "$(${coreutils}/bin/stat -c '%a' "$smoke/home/.pi/session-search/index")" = 700 ] \
-      || fail "Session Search index directory is not private"
-    [ "$(${coreutils}/bin/stat -c '%a' "$smoke/home/.pi/session-search/index/sessions-fts.db")" = 600 ] \
-      || fail "Session Search database is not private"
-    SESSION_SEARCH_DB="$smoke/home/.pi/session-search/index/sessions-fts.db" \
-      ${bun}/bin/bun --eval '
-        import { Database } from "bun:sqlite";
-        const db = new Database(process.env.SESSION_SEARCH_DB, { readonly: true });
-        const row = db.query("SELECT content FROM sessions WHERE sessions MATCH ? LIMIT 1")
-          .get("sessionretrievalsentinel");
-        if (!String(row?.content ?? "").includes("sessionretrievalsentinel")) {
-          throw new Error("Session Search did not retrieve the indexed fixture");
-        }
-        db.close();
-      '
     [ ! -e "$smoke/home/.npm" ] || fail "gallery invoked npm"
     [ ! -e "$smoke/installer-invocations" ] || {
       cat "$smoke/installer-invocations" >&2

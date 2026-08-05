@@ -29,6 +29,7 @@ in
     "copy-message"
     "artifacts"
     "insights"
+    "usage"
     "multi-pass"
     "llama-swap-provider"
     "omlx-provider"
@@ -36,8 +37,6 @@ in
     "rewind"
     "blackhole"
     "trace"
-    "session-search"
-    "knowledge-search"
     "markdown-preview"
     "caveman"
     "rtk-optimizer"
@@ -114,6 +113,12 @@ in
       publicName = "@ygncode/pi-insights";
       extension = "index.ts";
     };
+    usage = member "pi-usage-extension" {
+      attrName = "pi-usage-extension";
+      package = packages.pi-usage-extension or null;
+      publicName = "@tmustier/pi-usage-extension";
+      extension = "index.ts";
+    };
     multi-pass = member "pi-multi-pass" {
       attrName = "pi-multi-pass";
       package = packages.pi-multi-pass or null;
@@ -155,19 +160,6 @@ in
       package = packages.pi-trace-extension or null;
       publicName = "pi-trace-extension";
       extension = "extensions/trace/index.ts";
-    };
-    session-search = member "pi-session-search" {
-      attrName = "pi-session-search";
-      package = packages.pi-session-search or null;
-      publicName = "pi-session-search";
-      extension = "dist/index.js";
-      skills = [ "skills" ];
-    };
-    knowledge-search = member "pi-knowledge-search" {
-      attrName = "pi-knowledge-search";
-      package = packages.pi-knowledge-search or null;
-      publicName = "pi-knowledge-search";
-      extension = "dist/index.js";
     };
     markdown-preview = member "pi-markdown-preview" {
       attrName = "pi-markdown-preview";

@@ -45,19 +45,6 @@
       "defensiveForbidDependencies": [],
       "overrideDependencies": {}
     },
-    "pi-knowledge-search": {
-      "removeTopLevel": [],
-      "forbidDependencies": [],
-      "defensiveForbidDependencies": [
-        "@earendil-works/pi-coding-agent",
-        "@sinclair/typebox"
-      ],
-      "overrideDependencies": {
-        "@aws-sdk/client-bedrock-agent-runtime": "3.1103.0",
-        "@aws-sdk/client-bedrock-runtime": "3.1103.0",
-        "@aws-sdk/credential-providers": "3.1103.0"
-      }
-    },
     "pi-lens": {
       "removeTopLevel": [],
       "forbidDependencies": [],
@@ -71,15 +58,6 @@
       "removeTopLevel": [],
       "forbidDependencies": [],
       "defensiveForbidDependencies": [],
-      "overrideDependencies": {}
-    },
-    "pi-session-search": {
-      "removeTopLevel": [],
-      "forbidDependencies": [],
-      "defensiveForbidDependencies": [
-        "@earendil-works/pi-coding-agent",
-        "@sinclair/typebox"
-      ],
       "overrideDependencies": {}
     },
     "pi-smart-fetch": {

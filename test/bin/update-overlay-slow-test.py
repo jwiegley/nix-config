@@ -794,18 +794,13 @@ got: sha256-requested
             "dependencies": {
                 "keep": "1",
                 "better-sqlite3": "1",
-                "@earendil-works/pi-coding-agent": "1",
                 "@earendil-works/pi-tui": "1",
                 "@sinclair/typebox": "1",
                 "typebox": "1",
             },
             "optionalDependencies": {
                 "optional-keep": "1",
-                "@aws-sdk/client-bedrock-agent-runtime": "3.750.0",
-                "@aws-sdk/client-bedrock-runtime": "3.750.0",
-                "@aws-sdk/credential-providers": "3.750.0",
                 "better-sqlite3": "1",
-                "@earendil-works/pi-coding-agent": "1",
                 "@earendil-works/pi-tui": "1",
                 "@sinclair/typebox": "1",
                 "typebox": "1",
@@ -823,14 +818,6 @@ got: sha256-requested
                 "@earendil-works/pi-tui",
                 "typebox",
             },
-            "pi-knowledge-search": {
-                "@earendil-works/pi-coding-agent",
-                "@sinclair/typebox",
-            },
-            "pi-session-search": {
-                "@earendil-works/pi-coding-agent",
-                "@sinclair/typebox",
-            },
             "pi-smart-fetch": {
                 "@earendil-works/pi-tui",
                 "@sinclair/typebox",
@@ -838,11 +825,6 @@ got: sha256-requested
             "pi-subagents": {"typebox"},
         }
         all_special_dependencies = set().union(*special.values())
-        aws_overrides = {
-            "@aws-sdk/client-bedrock-agent-runtime": "3.1103.0",
-            "@aws-sdk/client-bedrock-runtime": "3.1103.0",
-            "@aws-sdk/credential-providers": "3.1103.0",
-        }
         for target in sorted(ISSUE39_TARGETS):
             with self.subTest(target=target):
                 self.assertEqual(
@@ -852,7 +834,7 @@ got: sha256-requested
                 self.assertEqual(contract["targets"][target]["forbidDependencies"], [])
                 self.assertEqual(
                     contract["targets"][target]["overrideDependencies"],
-                    aws_overrides if target == "pi-knowledge-search" else {},
+                    {},
                 )
                 normalized_text = normalize_pi_manifest(
                     root,
@@ -871,11 +853,6 @@ got: sha256-requested
                 self.assertEqual(
                     normalized["optionalDependencies"]["optional-keep"], "1"
                 )
-                for dependency, version in aws_overrides.items():
-                    self.assertEqual(
-                        normalized["optionalDependencies"][dependency],
-                        version if target == "pi-knowledge-search" else "3.750.0",
-                    )
                 for dependency in special.get(target, set()):
                     self.assertNotIn(dependency, normalized["dependencies"])
                     self.assertNotIn(dependency, normalized["optionalDependencies"])
