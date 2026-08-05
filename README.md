@@ -1,23 +1,65 @@
 # nix-config
 
-Personal, multi-host Nix configuration for Darwin, standalone Home Manager, NixOS consumers, and portable AI tooling.
+This repository is the configuration and package authority for John's Darwin
+systems, external Home Manager and NixOS consumers, and portable AI tooling. It
+defines shared policy once, exposes a separately lockable AI boundary, and leaves
+each host in control of its own lock, activation, rollback, and mutable state.
+
+## Architecture
+
+The repository is arranged as a sequence of explicit authorities:
+
+```text
+sources/*.json
+    -> packages/source-catalog.nix
+    -> packages/* and overlays/*
+    -> flake/ai.nix
+       |-> config/ai/flake.nix        portable package boundary
+       `-> flake.nix                  root systems, modules, checks, and apps
+             |-> Hera and Clio        direct nix-darwin consumers
+             `-> exported modules     external NixOS and Home Manager consumers
+
+config/ai/catalog.nix and renderers
+    -> config/ai.nix                  Home Manager AI policy and generated leaves
+    -> direct and external consumers
+```
+
+The layers have distinct responsibilities:
+
+| Layer | Authority |
+|---|---|
+| Source catalogs | Updateable source coordinates, versions, and dependent hashes |
+| Packages and overlays | Reusable derivations, package sets, compatibility corrections, and package exposure |
+| Portable AI implementation | AI packages, applications, checks, overlays, and wrappers shared by both flakes |
+| AI Home Manager policy | Profiles, resource selection, client renderers, generated leaves, and activation safeguards |
+| Root flake and modules | Darwin systems, shared Home Manager policy, host capabilities, and repository checks |
+| Consumer checkouts | Lock selection, build, activation, rollback, and host-local state |
+
+Package availability is separate from installation policy. The portable flake may
+export a package without assigning it to a host; the owning host or feature module
+makes that selection explicitly. Nix owns generated configuration leaves, while
+authentication, history, sessions, caches, reports, trust, and other mutable state
+remain outside the generated tree.
+
+The complete ownership and data-flow contract is maintained in
+[`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md).
 
 ## Configuration owners
 
-| Consumer | Platform | Authoritative checkout | How this repository is used |
+| Consumer | Platform | Authoritative checkout | Consumption model |
 |---|---|---|---|
-| Hera | aarch64-darwin | `~/src/nix` | Direct `darwinConfigurations.hera` |
-| Clio | aarch64-darwin | `~/src/nix` on Clio | Direct `darwinConfigurations.clio` |
-| Andoria-08/T2, Delphi, GPU | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Paired root and `dir=config/ai` inputs |
-| Vulcan | aarch64 NixOS | `/etc/nixos` on Vulcan | Paired root and `dir=config/ai` inputs plus shared Home Manager module |
-| VPS | x86_64 NixOS | `/etc/nixos` on the VPS | Paired root and `dir=config/ai` inputs plus shared Home Manager module |
+| Hera | aarch64-darwin | `~/src/nix` | Direct `darwinConfigurations.hera` output |
+| Clio | aarch64-darwin | `~/src/nix` on Clio | Direct `darwinConfigurations.clio` output |
+| Andoria-08, Andoria-T2, Delphi-3BD4, GPU Server | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Shared standalone Home Manager consumer |
+| Vulcan | aarch64 NixOS | `/etc/nixos` on Vulcan | External NixOS consumer plus the shared Home Manager module |
+| VPS | x86_64 NixOS | `/etc/nixos` on VPS | External NixOS consumer plus the shared Home Manager module |
 
-The external checkouts own their locks and activation. This source exports the
-canonical `config/ai` subflake, and every maintained external consumer pins its
-paired root and `dir=config/ai` inputs to the same revision. Do not overwrite an
-external checkout from a secondary local clone.
+An external consumer pins the root input and its `dir=config/ai` input at the
+same repository revision. The consumer owns both lock entries and must update
+them together. A secondary clone must never overwrite an authoritative checkout.
 
-Shared-work Home Manager consumers must declare their role explicitly when importing `config/johnw.nix`:
+Shared-work consumers identify their policy class explicitly when importing
+`config/johnw.nix`:
 
 ```nix
 extraSpecialArgs = {
@@ -26,63 +68,101 @@ extraSpecialArgs = {
 };
 ```
 
-Accepted classes are `clio`, `hera`, `shared-work`, `vps`, `vulcan`, and the synthetic `personal-linux` fixture. Ordinary named hosts fall back to their hostname; shared-work checkouts must pass the class because their machine hostnames are intentionally not profile identities.
+Accepted classes are `clio`, `hera`, `shared-work`, `vps`, `vulcan`, and the
+synthetic `personal-linux` evaluation fixture. Shared-work machine names are not
+profile identities and therefore must not be allowed to fall through to hostname
+selection.
 
-## Common commands
+## Operations
 
-Run commands from this repository with its direnv loaded. Do not use `nix develop` as an ad-hoc command wrapper.
+The full operator reference is [`bin/README.md`](bin/README.md). It records every
+command under `bin/`, every public Make target, the flake applications, their
+intended use, and their material cautions.
 
-```bash
-# Build Hera/Clio without switching
+The principal local commands are:
+
+```sh
+# Build the complete current Darwin system without activating it.
 ./build system
 
-# Focused package builds
-./build pkg PACKAGE
-./build python PACKAGE
-./build haskell PACKAGE
+# Run the bounded essential commit gate.
+lefthook run pre-commit --all-files
 
-# Core AI contracts
+# Run the principal repository contracts.
 make test
 
-# Portable evaluation
+# Evaluate the portable AI boundary on all declared systems.
 nix flake check ./config/ai --all-systems --no-build
 
-# Format/lint through repository hooks
-lefthook run pre-commit --all-files
+# Update all flake inputs and automatic catalog targets; validate, sign, switch, and publish.
+make update
 ```
 
-System and Home Manager switches are owned by each authoritative checkout. Build first. NixOS hosts use their `.nixos-build` lock protocol.
+`make update` is a repository transaction, not a whole-fleet deployment. External
+consumers must adopt the published revision in their own locks and activate it
+from their authoritative checkouts. Vulcan and VPS must use their local `./build`
+driver so that the consumer build lock remains authoritative.
 
-## Updates
-
-- `bin/update` owns the isolated update transaction for both lock files and every automatic catalog pin; targeted and dry-run modes remain available for review.
-- `make update` runs the complete sequence: fast-forward, update, validate, signed candidate commit, exact-candidate build and switch, then fast-forward and push. Homebrew runs separately after the repository transaction.
-- `bin/update-overlay --inventory --json` validates and lists every catalog-owned update target. Inventory and execution derive exclusively from `sources/*.json`; every inventoried target is executable, with no Nix-overlay discovery or secondary update manifest.
-
-## Structure
+## Repository layout
 
 | Path | Purpose |
 |---|---|
-| `flake.nix` | Root systems, packages, checks, and exported Home Manager module |
-| `config/` | Shared Home Manager/Darwin policy and AI catalog/renderers |
-| `config/ai/` | Portable AI subflake, models, profiles, resources, and client adapters |
-| `overlays/` | Ordered exposure, compatibility fixes, and cohesive integration-owned package definitions |
-| `packages/` | Reusable package sets/implementations and immutable Pi gallery |
-| `test/` | Root, portable, wrapper, renderer, and activation contracts |
-| `bin/` | Operator and maintenance commands |
-| `doc/` | Current architecture, runbooks, and active work |
+| `flake.nix` | Root systems, packages, applications, checks, and exported Home Manager module |
+| `flake/` | Reusable flake implementation, including portable AI composition |
+| `config/` | Shared Home Manager, Darwin, host, package-selection, and AI policy |
+| `config/ai/` | Separately lockable portable AI flake, profiles, resources, renderers, prompts, commands, skills, and themes |
+| `overlays/` | Ordered package exposure, compatibility corrections, and narrow integration-owned definitions |
+| `packages/` | Reusable derivations, package policy, source loading, and the Pi extension gallery |
+| `sources/` | Machine-readable update authority for manually tracked sources and versions |
+| `test/` | Nix contracts, portable checks, command tests, Darwin surfaces, and Home Manager checks |
+| `bin/` | Operator transactions, activation helpers, publication, and maintenance commands |
+| `doc/` | Architecture, runbooks, active plans, security records, and focused operational documentation |
 
-See [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) for ownership and data flow,
-[`doc/CURRENT-WORK.md`](doc/CURRENT-WORK.md) for the active unit, and
-[`doc/CLEANUP-PLAN.md`](doc/CLEANUP-PLAN.md) for the frozen cleanup Definition of
-Done. Git history is the archive for completed plans and handoffs.
+The root [`flake.nix`](flake.nix) composes the consumers. Shared cross-platform
+policy begins in [`config/johnw.nix`](config/johnw.nix); Darwin adds
+[`config/home.nix`](config/home.nix) and [`config/darwin.nix`](config/darwin.nix).
+The portable AI boundary enters through [`config/ai/flake.nix`](config/ai/flake.nix)
+and is implemented by [`flake/ai.nix`](flake/ai.nix).
+
+## Verification model
+
+Verification is intentionally layered:
+
+| Evidence | Establishes | Does not establish |
+|---|---|---|
+| Evaluation | The configuration can be constructed | Derivation success or runtime behavior |
+| Build | The selected closure can be realized | Activation on any host |
+| Activation | A host selected the new generation | Client or service health |
+| Publication | Both Git remotes contain the signed revision | Consumer adoption |
+| Runtime acceptance | The affected executable or service works on the active generation | Health on another host |
+
+The ordinary pre-commit gate is bounded to two minutes. Broader portable,
+cross-consumer, Darwin-surface, and native build assurance belongs at issue
+closeout or on the scheduled cadence. No single local check constitutes
+whole-fleet runtime proof.
+
+## Documentation
+
+- [`bin/README.md`](bin/README.md) — complete command and operational reference
+- [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) — ownership, data flow, rollout, and state boundaries
+- [`doc/CURRENT-WORK.md`](doc/CURRENT-WORK.md) — current work-unit pointer
+- [`doc/CLEANUP-PLAN.md`](doc/CLEANUP-PLAN.md) — frozen cleanup Definition of Done
+- [`doc/Pi Coding Agent Extensions.md`](<doc/Pi Coding Agent Extensions.md>) — managed Pi extension inventory
+
+Git history is the archive for completed plans and handoffs. Current documents
+describe the present architecture and active work rather than preserving obsolete
+execution narratives.
 
 ## Safety
 
-- Never print or commit credentials, private keys, decrypted SOPS content, request payloads, or session transcripts.
-- Never edit generated store paths or generated symlinks directly.
-- Preserve mutable agent state, tmux sessions, caches, auth, trust, reports, and workflows.
-- Review Git status and exact staged paths before every commit.
+- Never print or commit credentials, private keys, decrypted secret material,
+  request payloads, or session transcripts.
+- Never edit Nix store paths or generated symlinks directly.
+- Preserve mutable agent state, tmux sessions, caches, authentication, trust,
+  reports, and workflows.
+- Keep publication, activation, and destructive maintenance independently
+  authorized.
+- Inspect `git status` and the exact staged paths before every commit.
 
 ## License
 
