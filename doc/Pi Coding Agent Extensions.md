@@ -271,7 +271,7 @@ Pi Agent Browser Native presents `agent-browser` as the `agent_browser` Pi tool.
 
 Pi RTK Optimizer delegates shell-command rewrites to RTK—Rust Token Killer—and compacts selected tool output before it enters the model context. Test, build, Git, lint, and search output receive specialized treatment; lossy source-read compaction remains disabled by default so anchored edits retain exact source lines.
 
-**Basic usage.** Use `/rtk` for the settings panel, `/rtk verify` to confirm the executable, `/rtk show` for current policy, and `/rtk stats` for session savings. The Nix profile supplies RTK 0.44.0 at `/etc/profiles/per-user/johnw/bin/rtk`.
+**Basic usage.** Use `/rtk` for the settings panel, `/rtk verify` to confirm the executable, `/rtk show` for current policy, and `/rtk stats` for session savings. The Nix profile supplies RTK 0.44.0 as `rtk` on `PATH`.
 
 ### Cymbal
 

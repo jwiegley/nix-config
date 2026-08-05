@@ -49,7 +49,12 @@ The packaged Pi applies its configured retry policy to compaction requests befor
 
 Pi itself emits the visible `Compaction failed: …` event. The extension does not emit a second notification.
 
-Cancellation, abort, missing model selection, authentication, credential, API-key, authorization, billing, or quota errors do not auto-resume because progress requires user action or would create a retry loop. Completed answers likewise never manufacture another turn.
+Cancellation or abort, missing/invalid/unknown/unsupported models,
+authentication or credential failures, API-key errors, unauthorized/forbidden
+responses, billing or payment-required failures, the explicit `insufficient
+quota` form, and HTTP 401/403 errors do not auto-resume because progress
+requires user action or would create a retry loop. Completed answers likewise
+never manufacture another turn.
 
 No local extension can continue through process termination or an unavailable provider indefinitely. Within a live process with usable credentials and provider service, a failed or refused compaction cannot strand an unfinished tool-driven or length-truncated turn.
 
@@ -69,4 +74,7 @@ Bun tests exercise the extension through a small fake Extension API and establis
 - sessions below the threshold remain untouched; and
 - a session ending at a compaction boundary is not immediately compacted again.
 
-An explicit packaged-Pi loader smoke test confirms that the repository extension source loads with extension auto-discovery disabled. Home Manager evaluation separately proves that the managed runtime directory contains only `index.ts`; repository tests and JSON checks confirm that unrelated mutable configuration remains untouched.
+Each Bun behavior test imports the dormant repository source through a small
+fake Extension API. Home Manager evaluation separately proves that the retired
+managed runtime file is absent; repository tests and JSON checks confirm that
+unrelated mutable configuration remains untouched.

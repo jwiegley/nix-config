@@ -25,9 +25,9 @@ The user will review your analysis and decide what (if anything) to post to GitH
 
 Follow these steps:
 
-1. Use `git worktree` to create a worktree and branch for the PR inside a `work` sub-directory. For example, if the PR number is 1024, then create a branch named `pr-1024` and a working tree that has checked out that branch in `work/pr-1024`. However, only do this if you are not already in a working tree under the `work` directory.
-2. Use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh pr view` to get the PR details (read-only)
-3. Use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh pr diff` to get the PR diff (read-only)
+1. Use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh pr view --json number,title,body,headRefOid,headRefName,baseRefName,url` to obtain the PR's exact head commit and details (read-only).
+2. Fetch that PR head from the repository's GitHub remote, create a detached worktree at the exact head commit under `work/pr-NUMBER`, and verify that the worktree's `HEAD` equals `headRefOid`. If already inside a `work` worktree, reuse it only when that equality holds; otherwise stop rather than reviewing or testing another revision.
+3. Use `GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh pr diff` to get the PR diff (read-only).
 4. Understand the problem described in the PR
 5. Search the codebase for relevant files
 6. Review any comments that have already been made to the PR (read-only)
