@@ -1,15 +1,38 @@
 diff --git a/dist/modes/interactive/components/model-selector.js b/dist/modes/interactive/components/model-selector.js
 --- a/dist/modes/interactive/components/model-selector.js
 +++ b/dist/modes/interactive/components/model-selector.js
-@@ -116,7 +116,7 @@
+@@ -116,18 +116,24 @@
              currentIndex >= 0 ? currentIndex : Math.min(this.selectedIndex, Math.max(0, this.filteredModels.length - 1));
      }
      async refreshModels() {
 -        const timeoutMs = 15_000;
 +        const timeoutMs = 2_500;
          let timedOut = false;
-         this.refreshTimeout = setTimeout(() => {
-             timedOut = true;
+-        this.refreshTimeout = setTimeout(() => {
+-            timedOut = true;
+-            this.refreshAbortController.abort();
+-        }, timeoutMs);
++        const timeoutResult = new Promise((resolve) => {
++            this.refreshTimeout = setTimeout(() => {
++                timedOut = true;
++                this.refreshAbortController.abort();
++                resolve(undefined);
++            }, timeoutMs);
++        });
+         try {
+-            const result = await this.modelRuntime.refresh({ signal: this.refreshAbortController.signal });
++            const result = await Promise.race([
++                this.modelRuntime.refresh({ signal: this.refreshAbortController.signal }),
++                timeoutResult,
++            ]);
+             if (this.closed)
+                 return;
+             this.refreshStatusMessage = "";
+-            if (result.aborted && timedOut) {
++            if (timedOut) {
+                 this.errorMessage = "Model refresh timed out; showing cached models.";
+             }
+             else if (result.errors.size === 1) {
 diff --git a/dist/modes/interactive/interactive-mode.js b/dist/modes/interactive/interactive-mode.js
 --- a/dist/modes/interactive/interactive-mode.js
 +++ b/dist/modes/interactive/interactive-mode.js

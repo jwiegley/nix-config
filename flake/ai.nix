@@ -79,6 +79,8 @@ let
               'DEFAULT_HTTP_IDLE_TIMEOUT_MS = 7_200_000'
           ${pkgs.nodejs_22}/bin/node \
             ${../test/ai/pi-tool-renderer-wrapper.test.mjs} "$PWD"
+          ${pkgs.nodejs_22}/bin/node \
+            ${../test/ai/pi-model-catalog-refresh.test.mjs} "$PWD"
         ''
         + (old.preInstall or "");
 
@@ -284,6 +286,7 @@ let
       ../test/ai/node-runtime-guard.cjs
       ../test/ai/pi-copy-message.check.ts
       ../test/ai/pi-gallery.nix
+      ../test/ai/pi-model-catalog-refresh.test.mjs
       ../test/ai/pi-fleet-theme.nix
       ../test/ai/pi-tool-renderer-wrapper.test.mjs
       ../test/ai/recording-https-bridge-oracle.py
