@@ -130,14 +130,4 @@ in
         json.generate "claude-${profile.id}-nix-managed-mcp.json" mcp;
     }
   ];
-
-  companions = [
-    "${root}/nix-managed-settings.json"
-    "${root}/nix-managed-mcp.json"
-  ];
-  requiredEnvNames = [
-    "ANTHROPIC_API_KEY"
-    "GEMINI_API_KEY"
-    "OPENAI_API_KEY"
-  ];
 }

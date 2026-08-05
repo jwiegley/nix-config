@@ -31,13 +31,6 @@ let
       "$env:"
       "?apiKey="
     ];
-  mcpRequiredEnvNames = lib.concatMap (
-    server:
-    lib.concatMap (value: lib.optional (isTypedEnv value) value.env) (
-      builtins.attrValues (server.transport.env or { })
-      ++ builtins.attrValues (server.transport.headers or { })
-    )
-  ) (builtins.attrValues selected.mcpServers);
   renderEnv = name: "$" + "{" + name + "}";
   localModelRoutes = profile.platform == "darwin";
   hermesPassCommand = lib.escapeShellArgs [
@@ -381,10 +374,6 @@ assert builtins.hasAttr "pi-loop" pkgs.pi-gallery.packages;
       "${root}/model-router.json".source = json.generate "pi-${profile.id}-model-router.json" modelRouter;
     })
   ];
-
-  companions = [ ];
-
-  requiredEnvNames = lib.unique (lib.sort builtins.lessThan mcpRequiredEnvNames);
 
   mutableMcpGuard = {
     path = ".config/pi/agent/mcp.json";

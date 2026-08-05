@@ -160,11 +160,10 @@ assert catalog.validate {
 };
 assert !(builtins.hasAttr "Ref" catalog.items.mcpServers);
 assert !(builtins.hasAttr "perplexity" catalog.items.mcpServers);
-assert droidRendered.companions == [ ".config/factory/mcp.json" ];
+assert builtins.hasAttr ".config/factory/mcp.json" droidRendered.files;
 assert !(builtins.hasAttr ".config/factory/nix-managed-settings.json" droidRendered.files);
 assert clioPiSelected == selected;
 assert builtins.attrNames clioPiRendered.files == builtins.attrNames heraPiRendered.files;
-assert clioPiRendered.requiredEnvNames == heraPiRendered.requiredEnvNames;
 assert clioPiRendered.mutableMcpGuard == heraPiRendered.mutableMcpGuard;
 assert builtins.hasAttr ".config/pi/agent/models.json" sharedWorkPiRendered.files;
 assert sharedWorkPiRendered.mutableMcpGuard == heraPiRendered.mutableMcpGuard;

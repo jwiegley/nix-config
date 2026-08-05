@@ -101,11 +101,4 @@ in
       "${root}/mcp.json".source = json.generate "droid-${profile.id}-mcp.json" mcp;
     }
   ];
-
-  companions = [ "${root}/mcp.json" ];
-  requiredEnvNames = [
-    "ANTHROPIC_API_KEY"
-    "GEMINI_API_KEY"
-    "OPENAI_API_KEY"
-  ];
 }

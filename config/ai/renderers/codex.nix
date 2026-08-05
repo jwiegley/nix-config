@@ -185,11 +185,4 @@ in
       "${profile.root}/nix-managed-model-catalog.json".source = managedModelCatalog;
     }
   ];
-
-  companions = [
-    hooksPath
-    managedPath
-    "${profile.root}/nix-managed-model-catalog.json"
-  ];
-  requiredEnvNames = [ ];
 }

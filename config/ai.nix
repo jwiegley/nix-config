@@ -108,9 +108,6 @@ let
   mergedFiles = lib.foldl' (
     files: rendered: files // rendered.files
   ) sharedSkillFiles renderedProfiles;
-  companionsAreOwned = builtins.all (
-    rendered: builtins.all (path: builtins.hasAttr path rendered.files) rendered.companions
-  ) renderedProfiles;
   piGuards = map (rendered: rendered.mutableMcpGuard) (
     builtins.filter (rendered: rendered ? mutableMcpGuard) renderedProfiles
   );
@@ -305,10 +302,6 @@ in
     {
       assertion = !(builtins.any ownsAncestor paths);
       message = "nix-managed AI attempted recursive parent ownership";
-    }
-    {
-      assertion = companionsAreOwned;
-      message = "nix-managed AI companion metadata names an unowned path";
     }
     {
       assertion = builtins.length piGuards == (if piSelected then 1 else 0);
