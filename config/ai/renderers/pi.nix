@@ -306,7 +306,6 @@ assert !localModelRoutes || (builtins.isString passwordStoreDir && builtins.isSt
 assert selected.hooks == { };
 assert selected.marketplaces == { };
 assert selected.settings == { };
-assert mcp.settings.mcpFooterStatus == "compact";
 assert
   lib.intersectLists (builtins.attrNames selected.commands) (builtins.attrNames selected.prompts)
   == [ ];

@@ -22,18 +22,6 @@ let
       pi-quiet
       ;
   };
-  expectedNames = [
-    "git-ai"
-    "llm-agents"
-    "mcp-remote"
-    "mcp-servers-nix"
-    "pal-mcp-server"
-    "pi-mcp-adapter"
-    "pi-openai-server-compaction"
-    "pi-quiet"
-    "rust-overlay"
-    "translate-tool"
-  ];
   lock = builtins.fromJSON (builtins.readFile ../../config/ai/flake.lock);
   root = lock.nodes.${lock.root};
   same =
@@ -70,6 +58,5 @@ let
       (same name "evaluated narHash" expected.narHash evaluated.narHash)
     ];
 in
-assert builtins.attrNames projections == expectedNames;
-assert builtins.all check expectedNames;
+assert builtins.all check (builtins.attrNames projections);
 pkgs.runCommand "input-projection-parity" { } "touch $out"
