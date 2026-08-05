@@ -21,7 +21,6 @@ let
   stdioMcp = catalog.items.mcpServers.sequential-thinking;
   extraPiMcp = stdioMcp // {
     name = "synthetic";
-    targetPaths = [ "mcp/synthetic" ];
     transport = {
       command = "true";
       args = [ ];
@@ -30,7 +29,6 @@ let
   };
   syntheticHttpMcp = stdioMcp // {
     name = "synthetic-http";
-    targetPaths = [ "mcp/synthetic-http" ];
     transport = {
       url = "https://example.invalid/mcp";
     };

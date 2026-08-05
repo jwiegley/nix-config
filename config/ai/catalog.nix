@@ -696,18 +696,17 @@ let
     };
 
   mkDocumentItems =
-    sourceRoot: targetRoot: suffix: metadataSet: selectorsFor:
+    sourceRoot: suffix: metadataSet: selectorsFor:
     lib.mapAttrs (name: metadata: {
       inherit name metadata;
       source = sourceRoot + "/${name}${suffix}";
-      targetPaths = [ "${targetRoot}/${name}${suffix}" ];
       selectors = selectorsFor name;
     }) metadataSet;
 
-  agents = mkDocumentItems ./agents "agents" ".md" agentMetadata (_name: {
+  agents = mkDocumentItems ./agents ".md" agentMetadata (_name: {
     clients = contentClients;
   });
-  commands = mkDocumentItems ./commands "commands" ".md" commandMetadata commandSelectors;
+  commands = mkDocumentItems ./commands ".md" commandMetadata commandSelectors;
 
   localBroadSkills = [
     "alexey-review"
@@ -747,7 +746,6 @@ let
   mkSkill = sourceRoot: name: selectors: {
     inherit name selectors;
     source = sourceRoot + "/${name}";
-    targetPaths = [ "skills/${name}" ];
     metadata = discoveredSkillMetadata.${name} or { inherit name; };
   };
 
@@ -772,7 +770,6 @@ let
   builtInPrompts = lib.genAttrs [ "emacs" "spanish" ] (name: {
     inherit name;
     source = ./prompts + "/${name}.md";
-    targetPaths = [ "prompts/${name}.md" ];
     selectors.clients = contentClients;
   });
   prompts = builtInPrompts;
@@ -791,7 +788,6 @@ let
       ;
     scope = "user";
     enabled = true;
-    targetPaths = [ "mcp/${name}" ];
   };
 
   mcpServers = {
@@ -935,7 +931,6 @@ let
       name = "agent-deck-claude";
       description = "Agent Deck lifecycle hooks for Claude Code status tracking.";
       selectors.clients = [ "claude" ];
-      targetPaths = [ "hooks/agent-deck-claude" ];
       hooks = {
         SessionStart = [
           {
@@ -1019,7 +1014,6 @@ let
       name = "agent-deck-codex";
       description = "Agent Deck lifecycle hooks for Codex status tracking.";
       selectors.clients = [ "codex" ];
-      targetPaths = [ "hooks/agent-deck-codex" ];
       codex.notify = [
         "agent-deck"
         "codex-notify"
@@ -1085,7 +1079,6 @@ let
       name = "claude-code";
       description = "Show activity icon in iTerm 2 tab bar (see https://github.com/anthropics/claude-code/issues/30199)";
       selectors.clients = [ "claude" ];
-      targetPaths = [ "hooks/claude-code" ];
       hooks.Stop = [
         {
           matcher = ".*";
@@ -1103,7 +1096,6 @@ let
       name = "claude-vault";
       description = "Archive conversations before compact and on session end";
       selectors.clients = [ "claude" ];
-      targetPaths = [ "hooks/claude-vault" ];
       hooks = {
         PreCompact = [
           {
@@ -1134,7 +1126,6 @@ let
       name = "claude-code-plugins";
       description = "Plugin marketplace in the anthropics/claude-code repository (frontend-design and more)";
       selectors.clients = [ "claude" ];
-      targetPaths = [ "marketplaces/claude-code-plugins" ];
       source = {
         source = "github";
         repo = "anthropics/claude-code";
@@ -1146,7 +1137,6 @@ let
       name = "claude-plugins-official";
       description = "Plugins from the marketplace bundled with Claude Code";
       selectors.clients = [ "claude" ];
-      targetPaths = [ "marketplaces/claude-plugins-official" ];
       plugins = {
         clangd-lsp = true;
         pyright-lsp = true;
@@ -1167,7 +1157,6 @@ let
     settings = {
       name = "settings";
       selectors.clients = [ "claude" ];
-      targetPaths = [ "settings/settings" ];
 
       base = {
         env = {
@@ -1425,7 +1414,6 @@ let
       profileIds = builtins.attrNames profiles;
       itemSets = builtins.attrValues items;
       allItems = lib.concatMap builtins.attrValues itemSets;
-      targetPaths = lib.concatMap (item: item.targetPaths or [ ]) allItems;
       itemChecks = lib.concatLists (
         lib.mapAttrsToList (
           category: itemSet:
@@ -1534,9 +1522,6 @@ let
             ) deletionProfiles
           )
         ) "invalid settings item")
-        (ensure (
-          builtins.length targetPaths == builtins.length (lib.unique targetPaths)
-        ) "duplicate target path")
         (ensure (
           let
             names = map (item: item.name) (builtins.attrValues items.skills);
