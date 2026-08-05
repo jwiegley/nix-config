@@ -569,95 +569,6 @@ let
       "disable-model-invocation" = true;
     };
   };
-  discoveredSkillMetadata = {
-    "caveman" = {
-      "description" =
-        "Compress and simplify prompts to preserve meaning while reducing use of context. Use when asked to compress, shorten, or \"caveman\" a prompt or other text, or when text must fit a smaller context budget without losing meaning.";
-      "name" = "caveman";
-    };
-    "comment-audit" = {
-      "description" =
-        "Exhaustively verify code comments against the current state of a project. Use when asked to audit, fact-check, or validate comments/docstrings -- to confirm that every claim a comment makes is true, that any code shown in a comment actually works, and that everything a comment references still exists. Supports auditing an entire project or only the changes in a PR or stack of PRs. Triggers: \"check the comments\", \"are these comments still accurate\", \"audit comments in this PR\", \"verify the docstrings\".";
-      "name" = "comment-audit";
-    };
-    "eliminate-dead-code" = {
-      "description" =
-        "Methodology for finding and removing dead code and stale documentation with evidence-based safety, using a mark / debate / act / verify workflow. Use when asked to remove dead code, unused symbols, unreachable branches, stale docs, unused imports, or dead feature flags -- gathering independent evidence before each removal and re-verifying build and tests after. The `/eliminate-dead-code` command turns it on.";
-      "name" = "eliminate-dead-code";
-    };
-    "fix-all" = {
-      "description" =
-        "Fix all issues — no exceptions, no excuses. Fix every finding uncovered during the work, here and now. \"Out of scope,\" \"pre-existing,\" and \"follow-up ticket\" are not acceptable framings. Fixes go upstream, everything changed gets a real test, and no reward hacking.";
-      "name" = "fix-all";
-    };
-    "fix-transcript" = {
-      "description" =
-        "Methodology for cleaning up a transcript file in place -- paragraphs, punctuation, capitalization -- without changing wording or meaning. Use when asked to clean, format, or fix a speech-to-text transcript, correcting technical vocabulary and spoken punctuation while preserving the speaker's words. The `/fix-transcript` command turns it on with the target file as its argument.";
-      "name" = "fix-transcript";
-    };
-    "forge" = {
-      "description" =
-        "Multi-phase, multi-model deep analysis workflow for complex problems. This skill should be used when the user wants rigorous, multi-model collaborative analysis: deep research with Fable/Opus and PAL MCP consensus (GPT-5.5-Pro + Gemini 3 Pro), strategic planning, Fable/Opus execution with tests, comprehensive review, and adversarial devil's advocate critique. Invoke explicitly with /forge.\n";
-      "name" = "forge";
-    };
-    "it-voice" = {
-      "description" =
-        "Guides writing and editing of technical documentation in an elevated, sedate, institutionally grounded register — measured, authoritative, and formal rather than casual or promotional. Applies when drafting or revising manuals, plans, runbooks, specifications, or policy documents, or when lifting an existing flat draft into this register.";
-      "name" = "it-voice";
-    };
-    "johnw" = {
-      "description" =
-        "Write in John Wiegley's authentic voice. Use when drafting technical articles,\nblog posts, essays, or any written material that should read as if John wrote\nit himself. Captures patterns from 1,100+ posts spanning 1992-2026 across\nboth technical (newartisans) and personal (johnwiegley) blogs. Focuses on\ntechnical writing but incorporates cross-cutting voice patterns from the\nfull corpus.";
-      "name" = "johnw";
-    };
-    "nixos" = {
-      "description" =
-        "Resolve NixOS issues using research and sequential thinking. Use when diagnosing or fixing problems on a NixOS host -- failed builds or switches, broken services or modules, configuration errors -- or whenever the user mentions NixOS, nixos-rebuild, or /etc/nixos.";
-      "name" = "nixos";
-    };
-    "node-red" = {
-      "description" =
-        "Build, edit, and debug Node-RED flows on John's NixOS host (vulcan). Tuned to his actual plugin set, wiring conventions, naming style, and to the nodered_events PostgreSQL log + Grafana dashboard for chain tracing. Use whenever the user mentions Node-RED, flows.json, a flow tab name (Office, Schedule, Schedules, Pool Time, Away, Bedroom, TV Room, Institute Night, Debug), a Node-RED plugin or node type (chronos, api-call-service, api-current-state, server-state-changed, join-wait, actionflows, etc.), the Node-RED Events Grafana dashboard, or asks why a flow fired or didn't fire.";
-      "name" = "node-red";
-    };
-    "parallelize" = {
-      "description" =
-        "Offload safe, independent subtasks to concurrent subagents while continuing your own work as the coordinator, then integrate what they return. Use when mid-task and some work could run in parallel without conflicting -- research, generating a standalone new file, tests for a stable interface, docs, or isolated analysis -- to accelerate without races. The coordinator alone runs git and mutates shared state; subagents read freely but write only to isolated namespaces and hand back artifacts. Triggers include \"parallelize this\", \"spin up subagents to help\", \"do these in parallel\", \"fan this out\".";
-      "name" = "parallelize";
-    };
-    "persian" = {
-      "description" =
-        "Translate English language text into high quality, accurate Persian (Farsi) text using a team of specialist reviewers";
-      "name" = "persian";
-    };
-    "retest" = {
-      "description" =
-        "Full model-support battery on any branch -- rebuild, unit tests, FPGA correctness vs the HuggingFace transformers source of truth, code review, comment-check, and a perf pass. Derives the target model set from the branch diff. Use when retesting a stack of PRs that adds or fixes support for one model or arch family on the FPGA pipeline.";
-      "name" = "retest";
-    };
-    "skill-creator" = {
-      "description" =
-        "Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Claude's capabilities with specialized knowledge, workflows, or tool integrations.";
-      "license" = "Complete terms in LICENSE.txt";
-      "name" = "skill-creator";
-    };
-    "swiftui" = {
-      "description" =
-        "Write, review, or improve SwiftUI code following best practices for state management, view composition, performance, modern APIs, Swift concurrency, and iOS 26+ Liquid Glass adoption. Use when building new SwiftUI features, refactoring existing views, reviewing code quality, or adopting modern SwiftUI patterns.";
-      "name" = "swiftui";
-    };
-    "toolkit" = {
-      "description" =
-        "The standard tooling and working discipline for planning and executing a coding task -- GitHub CLI, codebase search, the language -pro agents, web research, sequential thinking, and lint/type-check gating. The /medium and /heavy effort-tier commands build on it; load it when told to apply the standard toolkit.";
-      "name" = "toolkit";
-    };
-    "wiggum" = {
-      "description" =
-        "Methodology for the user-triggered /wiggum command (do not self-invoke). An autonomous-continuation loop for long-running work -- run, checkpoint, and verify until a defined Definition of Done holds or a stop-and-escalate condition fires. Covers durable handoff state, baseline re-verification after context compaction, per-commit self-audit, work-unit commit and restack cadence, subagent fan-out limits, and escalation.";
-      "name" = "wiggum";
-    };
-  };
-
   personalFilenameTagCommands = [
     "capture"
     "fix-alert"
@@ -698,7 +609,7 @@ let
   mkDocumentItems =
     sourceRoot: suffix: metadataSet: selectorsFor:
     lib.mapAttrs (name: metadata: {
-      inherit name metadata;
+      inherit metadata;
       source = sourceRoot + "/${name}${suffix}";
       selectors = selectorsFor name;
     }) metadataSet;
@@ -744,9 +655,8 @@ let
   resourceSkills = resources + "/share/agent-resources/skills";
 
   mkSkill = sourceRoot: name: selectors: {
-    inherit name selectors;
+    inherit selectors;
     source = sourceRoot + "/${name}";
-    metadata = discoveredSkillMetadata.${name} or { inherit name; };
   };
 
   broadLocalSkillItems = lib.genAttrs localBroadSkills (
@@ -768,7 +678,6 @@ let
     };
 
   builtInPrompts = lib.genAttrs [ "emacs" "spanish" ] (name: {
-    inherit name;
     source = ./prompts + "/${name}.md";
     selectors.clients = contentClients;
   });
@@ -779,9 +688,8 @@ let
   baseMcpSelectors = {
     clients = contentClients;
   };
-  mkMcp = name: description: transport: selectors: {
+  mkMcp = description: transport: selectors: {
     inherit
-      name
       description
       transport
       selectors
@@ -792,7 +700,7 @@ let
 
   mcpServers = {
     devonthink =
-      mkMcp "devonthink" "Personal DEVONthink database access through DEVONthink's bundled MCP helper."
+      mkMcp "Personal DEVONthink database access through DEVONthink's bundled MCP helper."
         {
           command = "/Applications/DEVONthink.app/Contents/Library/LoginItems/DEVONthink MCP.app/Contents/MacOS/DEVONthink MCP";
           args = [ "--stdio" ];
@@ -808,7 +716,7 @@ let
         };
 
     drafts =
-      mkMcp "drafts"
+      mkMcp
         "Drive the Drafts app (macOS) — create, read, update, search, tag, flag, archive/trash drafts, list workspaces/actions, and run Drafts actions, all via AppleScript"
         {
           command = "/etc/profiles/per-user/johnw/bin/drafts-mcp-server";
@@ -825,7 +733,7 @@ let
         };
 
     drafts-hera =
-      mkMcp "drafts-hera"
+      mkMcp
         "Drafts.app on hera (macOS) via SSH-stdio to drafts-mcp-server — host Claude Code (claude-vulcan, operator context, FULL toolset incl. drafts_run_action). Bypasses the SSE bridge; the autonomous OpenClaw/Hermes microVMs use the SSE bridge endpoint instead (full read/write draft surface since 2026-06-10, gated only against drafts_run_action)."
         {
           command = "ssh";
@@ -856,7 +764,7 @@ let
         };
 
     pal =
-      mkMcp "pal" "PAL MCP - Provider Abstraction Layer for multi-model AI collaboration"
+      mkMcp "PAL MCP - Provider Abstraction Layer for multi-model AI collaboration"
         {
           command = "pal-mcp-server";
           args = [ ];
@@ -877,7 +785,7 @@ let
         };
 
     searxng =
-      (mkMcp "searxng" "Private web search through an operator-controlled SearXNG instance"
+      (mkMcp "Private web search through an operator-controlled SearXNG instance"
         {
           command = "mcp-searxng";
           args = [ ];
@@ -900,7 +808,7 @@ let
       };
 
     sequential-thinking =
-      (mkMcp "sequential-thinking" "Sequential thinking MCP server for structured reasoning" {
+      (mkMcp "Sequential thinking MCP server for structured reasoning" {
         command = "mcp-server-sequential-thinking";
         args = [ ];
       } baseMcpSelectors)
@@ -909,7 +817,7 @@ let
       };
 
     stock-trader =
-      mkMcp "stock-trader"
+      mkMcp
         "Live stock-trader research tools (quotes, technical analysis, options, scans, news/sentiment, risk, Alpha Vantage) via the vulcan REST service — the same 18 tools OpenClaw uses"
         {
           command = "/etc/profiles/per-user/johnw/bin/stock-trader-mcp";
@@ -928,7 +836,6 @@ let
 
   hooks = {
     agent-deck-claude = {
-      name = "agent-deck-claude";
       description = "Agent Deck lifecycle hooks for Claude Code status tracking.";
       selectors.clients = [ "claude" ];
       hooks = {
@@ -1011,7 +918,6 @@ let
     };
 
     agent-deck-codex = {
-      name = "agent-deck-codex";
       description = "Agent Deck lifecycle hooks for Codex status tracking.";
       selectors.clients = [ "codex" ];
       codex.notify = [
@@ -1076,7 +982,6 @@ let
     };
 
     claude-code = {
-      name = "claude-code";
       description = "Show activity icon in iTerm 2 tab bar (see https://github.com/anthropics/claude-code/issues/30199)";
       selectors.clients = [ "claude" ];
       hooks.Stop = [
@@ -1093,7 +998,6 @@ let
     };
 
     claude-vault = {
-      name = "claude-vault";
       description = "Archive conversations before compact and on session end";
       selectors.clients = [ "claude" ];
       hooks = {
@@ -1123,7 +1027,6 @@ let
 
   marketplaces = {
     claude-code-plugins = {
-      name = "claude-code-plugins";
       description = "Plugin marketplace in the anthropics/claude-code repository (frontend-design and more)";
       selectors.clients = [ "claude" ];
       source = {
@@ -1134,7 +1037,6 @@ let
     };
 
     claude-plugins-official = {
-      name = "claude-plugins-official";
       description = "Plugins from the marketplace bundled with Claude Code";
       selectors.clients = [ "claude" ];
       plugins = {
@@ -1155,7 +1057,6 @@ let
 
   settings = {
     settings = {
-      name = "settings";
       selectors.clients = [ "claude" ];
 
       base = {
@@ -1418,10 +1319,7 @@ let
         lib.mapAttrsToList (
           category: itemSet:
           lib.mapAttrsToList (
-            key: item:
-            ensure (
-              validItemName key && item.name == key
-            ) "unsafe item name or key/name mismatch in ${category}/${key}"
+            key: _item: ensure (validItemName key) "unsafe item name in ${category}/${key}"
           ) itemSet
         ) items
       );
@@ -1522,12 +1420,6 @@ let
             ) deletionProfiles
           )
         ) "invalid settings item")
-        (ensure (
-          let
-            names = map (item: item.name) (builtins.attrValues items.skills);
-          in
-          builtins.length names == builtins.length (lib.unique names)
-        ) "duplicate skill name")
         (ensure (
           piMcpNames == [
             "devonthink"

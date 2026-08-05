@@ -20,7 +20,6 @@ let
   withMcpServers = mcpServers: catalog.items // { inherit mcpServers; };
   stdioMcp = catalog.items.mcpServers.sequential-thinking;
   extraPiMcp = stdioMcp // {
-    name = "synthetic";
     transport = {
       command = "true";
       args = [ ];
@@ -28,7 +27,6 @@ let
     selectors.profiles = [ "hera-pi" ];
   };
   syntheticHttpMcp = stdioMcp // {
-    name = "synthetic-http";
     transport = {
       url = "https://example.invalid/mcp";
     };
@@ -178,6 +176,9 @@ assert builtins.all (
   rendered: !(builtins.hasAttr ".config/pi/agent/model-router.json" rendered.files)
 ) linuxPiRenderings;
 assert builtins.all reject [
+  (catalog.validate {
+    items = withMcpServers (catalog.items.mcpServers // { "../synthetic-http" = syntheticHttpMcp; });
+  })
   (catalog.validate {
     items = withMcpServers (catalog.items.mcpServers // { synthetic = extraPiMcp; });
   })
