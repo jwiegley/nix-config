@@ -1,6 +1,6 @@
 # Cleanup Wiggum Handoff
 
-Updated: 2026-08-04
+Updated: 2026-08-05
 
 ## Objective
 
@@ -9,13 +9,13 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 
 ## Authoritative state
 
-- The authoritative checkout is `/Users/johnw/src/nix`, on `main`. It is the
-  only worktree.
-- The latest source/runtime change before the handoff-only checkpoint commits is
-  signed `b058721d` and is present in local history, GitHub, and Gitea. The
-  worktree is clean and is the only worktree. The last complete fleet activation
-  proof remains the #126 boundary at `e7dc846c`; later commits must not be
-  described as fleet-active without host receipts.
+- The authoritative checkout is `/Users/johnw/src/nix`, on `main`, and it is the
+  only worktree. The worktree is clean. Signed local `80e194fc` is one commit
+  ahead of both GitHub and Gitea at `9c5cd2a9`; it makes Hermes credential
+  lookup ignore a stale inherited `GPG_TTY`, but it is not yet published or
+  activated. The last complete fleet activation proof remains the #126 boundary
+  at `e7dc846c`; later commits must not be described as fleet-active without host
+  receipts.
 - Signed `bf873fdf` replaces Copy Message's platform-specific clipboard
   subprocesses with Pi's portable clipboard API. The subsequent Pi provider,
   extension, catalog-refresh, and Hermes credential fixes are published through
@@ -100,22 +100,31 @@ after the audit rather than pretending the old denominator is current.
   session quiescence from old session names.
 - #127: the five unique homes currently contain 10/10/4/6/7 PromptDeploy
   artifacts (Hera/Clio/Vulcan/VPS/shared), 2/1/1/3/2 mutable configs, and
-  0/0/1/3/3 manifest-owned Anvil payloads. Frozen transaction v5 passed 20
-  disposable tests but received independent correctness and security NO-GO
-  verdicts before exact-mount qualification. Confirmed defects include the real
-  Clio three-project shape; missing live/archive/stage parent identity checks;
-  incomplete Linux metadata observability; ambiguous post-mutation failure;
-  conflicting prepared IDs; over-broad move provenance; a missing explicit TOML
-  parent-table requirement; root-only rather than all-surface NFS refusal;
-  over-broad Nix-store/Codex-log symlink exceptions; and incomplete durable-state,
-  ACL, flag, hidden-xattr, exact-Linux, and interrupted-recovery coverage. V6 must
-  correct every item, mechanize the distinct physical states in fresh processes,
-  freeze new hashes, and receive fresh correctness and security GO verdicts before
-  exact-mount qualification. No live mutation occurred. V6 is being built only
-  under `/private/tmp/wg-project9`; GitHub issue #127 records the review result.
-  Shared-NFS apply remains refused. A sanitized mount-source observation suggests
-  a server-local snapshot or transaction may be a backend-exact alternative, but
-  no access, filesystem, snapshot, or mutation authority has been established.
+  0/0/1/3/3 manifest-owned Anvil payloads. Exact transaction R6 is frozen below
+  `/private/tmp/wg-project9` at production/test/driver/C/C-test/contract hashes
+  `14689fdf`, `8cd870a2`, `9c879024`, `2fcaafd4`, `bcc38188`, and `daad050c`.
+  Its warning-strict Darwin run passed all 77 methods with the seven expected
+  Linux-only skips. Vulcan and VPS independently passed all 67 transaction and
+  all 10 C-attestor methods with zero skips, failures, or errors; each real ext4
+  probe issued exactly `0x00080040` to set NODUMP and `0x00080000` to clear it
+  while preserving EXTENT and exact metadata equality. Hardened C compilation,
+  silent empty-input refusal, source-only test-driver exclusion, stable hashes,
+  and exact scratch cleanup passed on both hosts. Fresh independent correctness
+  and security reviews are GO only for the next separately authorized controlled
+  privileged qualification. That matrix must begin with an out-of-band root
+  watchdog proving bounded timeout/interruption cleanup and zero surviving
+  sudo/helper descendants, then cover exact sudo policy, hidden `trusted.*`
+  refusal, namespace/LSM and mount assumptions, protected-descriptor syscall
+  traces, receipt/drift cases, and end-to-end recovery. No production package or
+  closure exists for this one-off candidate, no privileged invocation or live
+  mutation occurred, and source-tree exclusion is not closure proof. Shared-NFS
+  apply remains refused. Private recovery archive
+  `~/dl/wg-project9-promptdeploy-r6-qualified-20260805.tar.gz` is mode 0600 with
+  SHA-256 `b9ee0f0a7c167a67dbe5eb64dc252dd05f74e7d7034e8785a6d8348235e4d8a6`;
+  retain it until #127 closes, then remove it only with explicit approval. A
+  sanitized mount-source observation suggests a server-local snapshot or
+  transaction may be a backend-exact alternative, but no access, filesystem,
+  snapshot, or mutation authority has been established.
 - #123 is complete. Published `llm-setup` commit `0e8966b` removes the Nix
   registry writer from reset. Signed Nix `eb0da1d4` deletes the three
   registry/policy files and 1,027 lines overall; `f6c4d705` records the exact
@@ -154,10 +163,11 @@ after the audit rather than pretending the old denominator is current.
 
 ## Concurrent work boundary
 
-There is no uncommitted source candidate. Transaction prototypes and reviews
-live only below `/private/tmp/wg-project9`; they are not repository code and have
-not touched a live home. Continue to refresh checkout ownership before every
-shared-file edit and do not infer live activation from source state.
+There is no uncommitted source candidate. Frozen transaction R6 and its native
+qualification/review evidence live only below `/private/tmp/wg-project9`; they
+are not repository code and have not touched a live home. Continue to refresh
+checkout ownership before every shared-file edit and do not infer live
+activation from source state.
 
 ## Authorization boundary
 
