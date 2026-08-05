@@ -148,6 +148,8 @@ let
   ];
   hermesPassCommand = lib.escapeShellArgs [
     "${pkgs.coreutils}/bin/env"
+    "-u"
+    "GPG_TTY"
     "PASSWORD_STORE_DIR=/Users/test/doc/.password-store"
     "GNUPGHOME=/Users/test/.config/gnupg"
     "${pkgs.pass}/bin/pass"

@@ -82,7 +82,7 @@ The generated model files deliberately emit no Pi default. Model selection remai
 | --- | --- |
 | Darwin provider surface | Gallery providers `llama-swap` and `omlx`; the `hermes` OpenAI-compatible provider; native `openai-codex` and `openrouter` overrides; and the synthetic `router` provider |
 | Linux provider surface | Native `openai-codex` and `openrouter` overrides only; no localhost discovery adapters or generated router |
-| Hermes route | `hermes/hermes-agent` at `https://hermes.vulcan.lan/v1`; opt-in, with its bearer credential resolved from the Home Manager-configured password store and GnuPG home only when a request uses the provider, independent of the launcher's inherited environment; Pi session-affinity headers are enabled for stable upstream routing |
+| Hermes route | `hermes/hermes-agent` at `https://hermes.vulcan.lan/v1`; opt-in, with its bearer credential resolved from the Home Manager-configured password store and GnuPG home only when a request uses the provider; stale inherited `GPG_TTY` state is discarded before lookup, isolating credential resolution from Agent Deck/tmux terminal state; Pi session-affinity headers are enabled for stable upstream routing |
 | Sol router route | `omlx/Qwen3.6-27B-oQ6e-mtp` through the local OpenAI-compatible oMLX service; text and image input; reasoning enabled; 262,144-token context; 65,536-token output |
 | Router profile | One underlying `sol` model; low → `low`, medium → `medium`, high → `xhigh`; `phaseBias` 0.5; debug disabled |
 | Native overrides | `openai-codex/gpt-5.6-sol` receives a 1,050,000-token context; `openrouter/z-ai/glm-5.2` receives 1,048,576; selected local compatibility overrides receive 262,144 |

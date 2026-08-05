@@ -42,6 +42,8 @@ let
   localModelRoutes = profile.platform == "darwin";
   hermesPassCommand = lib.escapeShellArgs [
     "${pkgs.coreutils}/bin/env"
+    "-u"
+    "GPG_TTY"
     "PASSWORD_STORE_DIR=${passwordStoreDir}"
     "GNUPGHOME=${gnupgHome}"
     "${pkgs.pass}/bin/pass"
