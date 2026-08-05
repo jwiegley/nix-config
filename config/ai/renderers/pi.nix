@@ -286,7 +286,6 @@ let
 in
 assert profile.id == "${profile.host}-pi";
 assert profile.client == "pi";
-assert profile.renderer == "pi";
 assert builtins.elem profile.host [
   "clio"
   "hera"

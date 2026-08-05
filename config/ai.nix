@@ -87,14 +87,14 @@ let
     let
       profile = catalog.profiles.${profileId};
     in
-    renderers.${profile.renderer} (
+    renderers.${profile.client} (
       {
         inherit profile;
         selected = selectedFor profileId;
         homeDirectory = config.home.homeDirectory;
         xdgConfigHome = config.xdg.configHome;
       }
-      // lib.optionalAttrs (profile.renderer == "pi") {
+      // lib.optionalAttrs (profile.client == "pi") {
         passwordStoreDir = config.programs.password-store.settings.PASSWORD_STORE_DIR or null;
         gnupgHome = config.programs.gpg.homedir or null;
       }

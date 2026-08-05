@@ -58,7 +58,6 @@ let
       platform
       ;
     audiences = profileAudiences;
-    renderer = client;
     root = profileRoots.${id};
   };
 
@@ -1324,8 +1323,6 @@ let
           && builtins.all (audience: builtins.elem audience audiences) profile.audiences
           && builtins.elem profile.host hosts
           && builtins.elem profile.platform platforms
-          && builtins.isString profile.renderer
-          && profile.renderer == profile.client
           && profile.root == profileRoots.${id}
         ) "invalid profile ${id}"
       ) profiles;
