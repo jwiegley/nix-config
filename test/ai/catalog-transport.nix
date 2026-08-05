@@ -202,7 +202,13 @@ pkgs.runCommand "ai-catalog-transport" { } ''
   cmp ${heraPiRendered.files.".config/mcp/mcp.json".source} \
     ${clioPiRendered.files.".config/mcp/mcp.json".source}
   ${pkgs.jq}/bin/jq -e '
-    (.providers | keys) == ["llama-swap", "omlx", "openai-codex", "openrouter", "router"]
+    (.providers | keys) == ["hermes", "llama-swap", "omlx", "openai-codex", "openrouter", "router"]
+    and .providers.hermes == {
+      api: "openai-completions",
+      apiKey: "!${pkgs.pass}/bin/pass show api.hermes.com | ${pkgs.coreutils}/bin/head -n 1",
+      baseUrl: "https://hermes.vulcan.lan/v1",
+      models: [{id: "hermes-agent"}]
+    }
     and .providers."llama-swap".modelOverrides."GLM-5.2".contextWindow == 262144
     and .providers.omlx.modelOverrides."DeepSeek-V4-Flash-0731-oQ8e-mtp".contextWindow == 262144
     and .providers."openai-codex".modelOverrides."gpt-5.6-sol".contextWindow == 1050000
@@ -211,6 +217,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
   ${lib.concatMapStringsSep "\n" (rendered: ''
     ${pkgs.jq}/bin/jq -e '
       (.providers | keys) == ["openai-codex", "openrouter"]
+      and (.providers | has("hermes") | not)
       and .providers."openai-codex".modelOverrides."gpt-5.6-sol".contextWindow == 1050000
       and .providers.openrouter.modelOverrides."z-ai/glm-5.2".contextWindow == 1048576
     ' ${rendered.files.".config/pi/agent/models.json".source} >/dev/null

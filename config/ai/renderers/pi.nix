@@ -74,6 +74,12 @@ let
     openrouter.modelOverrides."z-ai/glm-5.2".contextWindow = 1048576;
   };
   localProviders = {
+    hermes = {
+      api = "openai-completions";
+      apiKey = "!${pkgs.pass}/bin/pass show api.hermes.com | ${pkgs.coreutils}/bin/head -n 1";
+      baseUrl = "https://hermes.vulcan.lan/v1";
+      models = [ { id = "hermes-agent"; } ];
+    };
     llama-swap.modelOverrides."GLM-5.2".contextWindow = 262144;
     omlx.modelOverrides."DeepSeek-V4-Flash-0731-oQ8e-mtp".contextWindow = 262144;
     router = routerProvider;
@@ -298,6 +304,7 @@ assert
   builtins.attrNames models.providers == (
     if localModelRoutes then
       [
+        "hermes"
         "llama-swap"
         "omlx"
         "openai-codex"
@@ -310,6 +317,15 @@ assert
         "openrouter"
       ]
   );
+assert
+  !localModelRoutes
+  ||
+    models.providers.hermes == {
+      api = "openai-completions";
+      apiKey = "!${pkgs.pass}/bin/pass show api.hermes.com | ${pkgs.coreutils}/bin/head -n 1";
+      baseUrl = "https://hermes.vulcan.lan/v1";
+      models = [ { id = "hermes-agent"; } ];
+    };
 assert
   !localModelRoutes || models.providers.llama-swap.modelOverrides."GLM-5.2".contextWindow == 262144;
 assert

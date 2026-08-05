@@ -66,8 +66,11 @@ let
   modelProviderNames =
     config:
     builtins.attrNames
-      (builtins.fromJSON (builtins.readFile config.home.file.".config/pi/agent/models.json".source))
-      .providers;
+      (builtins.fromJSON (
+        builtins.unsafeDiscardStringContext (
+          builtins.readFile config.home.file.".config/pi/agent/models.json".source
+        )
+      )).providers;
   packageNamesFor = config: map lib.getName config.home.packages;
   contains = needle: value: builtins.isString value && lib.hasInfix needle value;
   featureFlags =
@@ -170,6 +173,7 @@ assert builtins.all (
 assert builtins.all (
   config:
   modelProviderNames config == [
+    "hermes"
     "llama-swap"
     "omlx"
     "openai-codex"
