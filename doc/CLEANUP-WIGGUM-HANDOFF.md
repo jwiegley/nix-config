@@ -10,12 +10,13 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 ## Authoritative state
 
 - The authoritative checkout is `/Users/johnw/src/nix`, on `main`, and it is the
-  only worktree. The worktree is clean. Signed local `80e194fc` is one commit
-  ahead of both GitHub and Gitea at `9c5cd2a9`; it makes Hermes credential
-  lookup ignore a stale inherited `GPG_TTY`, but it is not yet published or
-  activated. The last complete fleet activation proof remains the #126 boundary
-  at `e7dc846c`; later commits must not be described as fleet-active without host
-  receipts.
+  only worktree. Both GitHub and Gitea remain at `9c5cd2a9`. The unpublished
+  local suffix consists of signed Hermes fix `80e194fc`, signed R6 checkpoint
+  `f6e18e3c`, and the signed handoff correction that contains this sentence, so
+  `main` is three commits ahead of both remotes. The source-bearing `80e194fc`
+  change is not activated. The last complete fleet activation proof remains the
+  #126 boundary at `e7dc846c`; later commits must not be described as
+  fleet-active without host receipts.
 - Signed `bf873fdf` replaces Copy Message's platform-specific clipboard
   subprocesses with Pi's portable clipboard API. The subsequent Pi provider,
   extension, catalog-refresh, and Hermes credential fixes are published through
@@ -103,8 +104,8 @@ after the audit rather than pretending the old denominator is current.
   0/0/1/3/3 manifest-owned Anvil payloads. Exact transaction R6 is frozen below
   `/private/tmp/wg-project9` at production/test/driver/C/C-test/contract hashes
   `14689fdf`, `8cd870a2`, `9c879024`, `2fcaafd4`, `bcc38188`, and `daad050c`.
-  Its warning-strict Darwin run passed all 77 methods with the seven expected
-  Linux-only skips. Vulcan and VPS independently passed all 67 transaction and
+  Its warning-strict Darwin run ran 77 methods: 70 passed and the seven expected
+  Linux-only methods skipped. Vulcan and VPS independently passed all 67 transaction and
   all 10 C-attestor methods with zero skips, failures, or errors; each real ext4
   probe issued exactly `0x00080040` to set NODUMP and `0x00080000` to clear it
   while preserving EXTENT and exact metadata equality. Hardened C compilation,
@@ -121,10 +122,7 @@ after the audit rather than pretending the old denominator is current.
   apply remains refused. Private recovery archive
   `~/dl/wg-project9-promptdeploy-r6-qualified-20260805.tar.gz` is mode 0600 with
   SHA-256 `b9ee0f0a7c167a67dbe5eb64dc252dd05f74e7d7034e8785a6d8348235e4d8a6`;
-  retain it until #127 closes, then remove it only with explicit approval. A
-  sanitized mount-source observation suggests a server-local snapshot or
-  transaction may be a backend-exact alternative, but no access, filesystem,
-  snapshot, or mutation authority has been established.
+  retain it until #127 closes, then remove it only with explicit approval.
 - #123 is complete. Published `llm-setup` commit `0e8966b` removes the Nix
   registry writer from reset. Signed Nix `eb0da1d4` deletes the three
   registry/policy files and 1,027 lines overall; `f6c4d705` records the exact
