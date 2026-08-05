@@ -227,6 +227,12 @@ let
         User = "git";
       };
     }
+    // lib.optionalAttrs config.johnw.host.isDarwinWorkstation {
+      "github.com" = {
+        User = "git";
+        IdentityAgent = "${config.xdg.configHome}/gnupg/S.gpg-agent.ssh";
+      };
+    }
     // lib.optionalAttrs (pkgs ? my-scripts) {
       vulcan_wifi = lib.hm.dag.entryBefore [ "vulcan" ] {
         header = ''Match host vulcan exec "${pkgs.bash}/bin/bash -c '[[ $(${pkgs.my-scripts}/bin/ipaddr bridge0) == 192.168.1.5 ]]'"'';
