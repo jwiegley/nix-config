@@ -105,9 +105,10 @@ Nix client-local transport/default/override policy
 Nix owns endpoint wiring and client-specific policy, not a cross-client model
 inventory. Codex retains its native catalog, Pi discovers local models at
 startup, and Droid receives no Nix-generated local-model list. Nix owns
-generated leaves, not mutable roots. Credentials remain environment
-references; secret values never enter derivations, generated files, or argv. Auth,
-history, sessions, caches, reports, trust state, and user settings remain mutable.
+generated leaves, not mutable roots. Credentials remain environment references or
+runtime secret-command references; secret values never enter derivations,
+generated files, or argv. Auth, history, sessions, caches, reports, trust state,
+and user settings remain mutable.
 
 Package availability is separate from installation policy. Reusable package sets
 live under `packages/`. A cohesive package can be defined in its owning overlay
