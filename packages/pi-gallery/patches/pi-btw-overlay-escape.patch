@@ -1,0 +1,55 @@
+--- a/extensions/btw.ts
++++ b/extensions/btw.ts
+@@ -1321,6 +1321,7 @@ export default function (pi: ExtensionAPI) {
+   let overlayStatus: string | null = null;
+   let overlayDraft = "";
+   let overlayRuntime: OverlayRuntime | null = null;
++  let terminalInputUnsubscribe: (() => void) | null = null;
+   let lastUiContext: ExtensionContext | ExtensionCommandContext | null = null;
+   let activeBtwSession: BtwSessionRuntime | null = null;
+ 
+@@ -1462,6 +1463,25 @@ export default function (pi: ExtensionAPI) {
+     await disposeBtwSession();
+   }
+ 
++  function syncOverlayEscapeListener(ctx: ExtensionContext): void {
++    terminalInputUnsubscribe?.();
++    terminalInputUnsubscribe = null;
++    if (!ctx.hasUI) {
++      return;
++    }
++
++    // Pi dispatches raw terminal listeners before focused components, so a
++    // focused BTW overlay must claim Escape before Input.onEscape can see it.
++    terminalInputUnsubscribe = ctx.ui.onTerminalInput((data) => {
++      if (!matchesKey(data, Key.escape) || !overlayRuntime?.handle?.isFocused()) {
++        return undefined;
++      }
++
++      void dismissOverlaySession();
++      return { consume: true };
++    });
++  }
++
+   async function resolveBtwModel(
+     ctx: ExtensionCommandContext,
+     notifyOnFallback = false,
+@@ -2230,14 +2250,18 @@ export default function (pi: ExtensionAPI) {
+   });
+ 
+   pi.on("session_start", async (_event, ctx) => {
++    syncOverlayEscapeListener(ctx);
+     await restoreThread(ctx);
+   });
+ 
+   pi.on("session_tree", async (_event, ctx) => {
++    syncOverlayEscapeListener(ctx);
+     await restoreThread(ctx);
+   });
+ 
+   pi.on("session_shutdown", async () => {
++    terminalInputUnsubscribe?.();
++    terminalInputUnsubscribe = null;
+     await disposeBtwSession();
+     dismissOverlay();
+   });

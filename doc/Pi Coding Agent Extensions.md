@@ -187,7 +187,7 @@ Pi Rewind records per-tool checkpoints so conversation state, file changes, or b
 
 Pi Blackhole combines deterministic structured compaction with observational memory. Compaction preserves the active goal, completed and pending work, errors, modified files, and next action without an LLM summarization call. Background observer, reflector, and dropper workers use the active session model by default, so memory processing can consume that provider's quota and send it session content. Their observations and durable reflections remain associated with the Pi session ledger and survive compaction.
 
-The fleet activation policy enables memory, automatic Blackhole compaction, and mid-run resume. It preflights path and JSON blockers before Home Manager changes managed links, then atomically updates the user-owned `~/.config/pi/agent/pi-blackhole/pi-blackhole-config.json`. It preserves user-selected models and thresholds while reconciling `memory=true`, `compaction=auto`, `compactionEngine=blackhole`, and `midRunCompaction=resume` and removing the retired aliases `overrideDefaultCompaction`, `noAutoCompact`, and `passive`; it also keeps that directory and file at modes 0700 and 0600. The observer, reflector, and compaction thresholds default to 15,000, 25,000, and 81,000 tokens respectively, so the default compaction point remains 81,000 even for a model with a larger context window. Process-level `PI_BLACKHOLE_*`, `PI_VCC_OM_PASSIVE`, or `PI_OBSERVATIONAL_MEMORY_PASSIVE` settings can override the file. This replaces the separately deployed Auto Compact Resume extension; its dormant source remains available for a possible later switch back, but Pi does not load it.
+The fleet activation policy enables memory, automatic Blackhole compaction, and mid-run resume. It preflights path and JSON blockers before Home Manager changes managed links, then atomically updates the user-owned `~/.config/pi/agent/pi-blackhole/pi-blackhole-config.json`. It preserves user-selected models and thresholds while reconciling `memory=true`, `compaction=auto`, `compactionEngine=blackhole`, and `midRunCompaction=resume` and removing the retired aliases `overrideDefaultCompaction`, `noAutoCompact`, and `passive`; it also keeps that directory and file at modes 0700 and 0600. The packaged extension uses Pi's live context accounting and starts proactive compaction at 70 percent of the active model's context window: 735,000 tokens for the 1,050,000-token Sol model and 183,500 for a 262,144-token local model. Blackhole's `compactAfterTokens` remains the fallback only when Pi cannot report usable context data. Process-level `PI_BLACKHOLE_*`, `PI_VCC_OM_PASSIVE`, or `PI_OBSERVATIONAL_MEMORY_PASSIVE` settings can override the file. This replaces the separately deployed Auto Compact Resume extension; its dormant source remains available for a possible later switch back, but Pi does not load it.
 
 **Basic usage.** Use `/blackhole` for immediate compaction, `/blackhole configure` for other mutable settings, `/blackhole-memory` for pipeline status, and `/blackhole-recall <query>` for manual searches. The `recall` tool supports entry expansion, file drill-down, regular expressions, lineage or all-session scope, and file/touched modes. `/blackhole om-off` is temporary: the next Nix activation restores the requested memory policy. Run `/reload` or start a new Pi process after activating a policy change because Blackhole caches its configuration.
 
@@ -333,7 +333,7 @@ Pi Dynamic Workflows builds JavaScript orchestration over Pi Subagents. A workfl
 
 Pi BTW creates a focused side conversation while the main session remains intact. A thread may inherit the main context or begin as a contextless tangent; its result may remain private, be saved as a visible note, or be injected into the main conversation in full or summarized form.
 
-**Basic usage.** Use `/btw <question>`, `/btw:new`, or `/btw:tangent`; use `/btw:inject` or `/btw:summarize` to return useful findings to the principal session. `/btw:model` and `/btw:thinking` control thread-specific inference settings.
+**Basic usage.** Use `/btw <question>`, `/btw:new`, or `/btw:tangent`; use `/btw:inject` or `/btw:summarize` to return useful findings to the principal session. `/btw:model` and `/btw:thinking` control thread-specific inference settings. While the BTW overlay is focused, the first Escape closes it without pausing an active Goal X goal; a subsequent Escape retains Goal X's normal pause behavior.
 
 ### Copy Message
 
@@ -425,7 +425,7 @@ find "$profile/prompts" -mindepth 1 -maxdepth 1 \( -type f -o -type l \) | wc -l
 jq '{providers: (.providers | keys)}' "$profile/models.json"
 jq '{settings, servers: (.mcpServers | to_entries | map({name: .key, transport: (if .value.url then "http" else "stdio" end)}))}' ~/.config/mcp/mcp.json
 jq 'keys' "$profile/keybindings.json"
-jq '{memory, compaction, compactionEngine, midRunCompaction}' \
+jq '{memory, compaction, compactionEngine, midRunCompaction, compactAfterTokens}' \
   "$profile/pi-blackhole/pi-blackhole-config.json"
 for name in \
   PI_BLACKHOLE_PASSIVE \

@@ -285,6 +285,8 @@ let
       ../test/ai/input-projection-parity.nix
       ../test/ai/overlays
       ../test/ai/node-runtime-guard.cjs
+      ../test/ai/pi-blackhole-compaction.check.ts
+      ../test/ai/pi-btw-escape.check.ts
       ../test/ai/pi-copy-message.check.ts
       ../test/ai/pi-gallery.nix
       ../test/ai/pi-model-catalog-refresh.test.mjs

@@ -217,6 +217,14 @@ runCommand "pi-gallery-check"
 
     [ -f ${roots.btw}/extensions/btw.ts ]
     [ -f ${roots.btw}/skills/btw/SKILL.md ]
+    grep -F 'overlayRuntime?.handle?.isFocused()' \
+      ${roots.btw}/extensions/btw.ts >/dev/null \
+      || fail "BTW does not give its focused overlay first refusal on Escape"
+    (
+      cd ${sourceForChecks}
+      PI_BTW_EXTENSION=${roots.btw}/extensions/btw.ts \
+        bun test ./test/ai/pi-btw-escape.check.ts
+    )
     [ -f ${roots.artifacts}/extensions/index.ts ]
     [ -f ${roots.artifacts}/extensions/nix-bundle.js ]
     [ -f ${roots.artifacts}/skills/artifacts-authoring/SKILL.md ]
@@ -498,6 +506,18 @@ runCommand "pi-gallery-check"
     [ -f ${roots.browser}/dist/extensions/agent-browser/index.js ]
     [ -f ${roots.blackhole}/index.ts ]
     [ ! -e ${roots.blackhole}/node_modules ]
+    [ -f ${roots.blackhole}/src/om/compaction-threshold.ts ]
+    [ "$(grep -Fc 'resolveCompactionPressure(' \
+      ${roots.blackhole}/src/om/compaction-trigger.ts)" -eq 3 ] \
+      || fail "Blackhole does not use active context pressure at every proactive trigger"
+    grep -F 'Fallback auto-compact threshold' \
+      ${roots.blackhole}/src/om/configure-overlay.ts >/dev/null \
+      || fail "Blackhole configuration still presents its fallback as the active threshold"
+    (
+      cd ${sourceForChecks}
+      PI_BLACKHOLE_THRESHOLD_HELPER=${roots.blackhole}/src/om/compaction-threshold.ts \
+        bun test ./test/ai/pi-blackhole-compaction.check.ts
+    )
     ${jq}/bin/jq -e '
       .memory == true
       and .compaction == "auto"
@@ -570,6 +590,12 @@ runCommand "pi-gallery-check"
       [.packages[].name] == $expected
       and (.packages[] | select(.name == "@dietrichgebert/ponytail") | .skills == [])
     ' ${gallery}/projection.json >/dev/null || fail "projection manifest differs"
+    jq -e '
+      ([.packages[].name] | index("pi-btw")) as $btw
+      | ([.packages[].name] | index("pi-goal-x")) as $goal
+      | $btw != null and $goal != null and $btw < $goal
+    ' ${gallery}/projection.json >/dev/null \
+      || fail "BTW must register before Goal X so its focused overlay owns the first Escape"
     grep -F 'PONYTAIL_HIDE_STATUS = "1"' ${gallery}/index.ts >/dev/null
     grep -F 'PI_LENS_DISABLE_LSP_INSTALL = "1"' ${gallery}/index.ts >/dev/null
     ${
