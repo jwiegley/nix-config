@@ -132,6 +132,21 @@
       },
       "version": "0.4.2"
     },
+    "pi-cache-optimizer": {
+      "source": {
+        "args": {
+          "hash": "sha256-H535HD13Oah/DWthhH3lgZASMaFrMviwKDR9JapCBvo=",
+          "url": "https://registry.npmjs.org/pi-cache-optimizer/-/pi-cache-optimizer-2.8.0.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-cache-optimizer/-/pi-cache-optimizer-2.8.0.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "pi-cache-optimizer"
+      },
+      "version": "2.8.0"
+    },
     "pi-btw": {
       "artifacts": {
         "flakeInput": {
@@ -293,6 +308,28 @@
         "package": "@ygncode/pi-insights"
       },
       "version": "1.0.1"
+    },
+    "pi-knowledge-search": {
+      "hashes": {
+        "npmDepsHash": "sha256-2iwjTOjU74yKag1PmpqzGn7Vch1EpDvRAzxHPSTolls="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-E0p7yS2YcNx7/Gn/ly9JHdLjZV/YMsifIcq1xvyah2o=",
+          "url": "https://registry.npmjs.org/pi-knowledge-search/-/pi-knowledge-search-1.3.5.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-knowledge-search/-/pi-knowledge-search-1.3.5.tgz"
+      },
+      "update": {
+        "artifacts": [
+          "packages/pi-gallery/locks/pi-knowledge-search-package-lock.json"
+        ],
+        "kind": "npm-release",
+        "normalizer": "pi-gallery-v1",
+        "package": "pi-knowledge-search"
+      },
+      "version": "1.3.5"
     },
     "pi-lens": {
       "hashes": {
@@ -475,20 +512,27 @@
       },
       "version": "0.5.0"
     },
-    "pi-scroll": {
+    "pi-session-search": {
+      "hashes": {
+        "npmDepsHash": "sha256-Lxx33BsZdyUH+LuLzAxUKaE0n7VwFMer+TBGShyQhYI="
+      },
       "source": {
         "args": {
-          "hash": "sha256-LfiA6Wz3888uO7ATZ4oiVS8p4+LqUccxfSxQT7tmt3Q=",
-          "url": "https://registry.npmjs.org/pi-scroll/-/pi-scroll-0.1.2.tgz"
+          "hash": "sha256-8eDln3v9+EZmi1mfHSplDWCDU1MRbw7pE9LSn7Hathk=",
+          "url": "https://registry.npmjs.org/pi-session-search/-/pi-session-search-1.4.3.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-scroll/-/pi-scroll-0.1.2.tgz"
+        "url": "https://registry.npmjs.org/pi-session-search/-/pi-session-search-1.4.3.tgz"
       },
       "update": {
+        "artifacts": [
+          "packages/pi-gallery/locks/pi-session-search-package-lock.json"
+        ],
         "kind": "npm-release",
-        "package": "pi-scroll"
+        "normalizer": "pi-gallery-v1",
+        "package": "pi-session-search"
       },
-      "version": "0.1.2"
+      "version": "1.4.3"
     },
     "pi-smart-fetch": {
       "hashes": {
@@ -555,6 +599,21 @@
         "package": "pi-subagents"
       },
       "version": "0.38.0"
+    },
+    "pi-trace-extension": {
+      "source": {
+        "args": {
+          "hash": "sha256-hAaaSFj9TRqSvqG2TuFo6rUg1muXbWMTwwwky+v27t0=",
+          "url": "https://registry.npmjs.org/pi-trace-extension/-/pi-trace-extension-0.1.12.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-trace-extension/-/pi-trace-extension-0.1.12.tgz"
+      },
+      "update": {
+        "kind": "npm-release",
+        "package": "pi-trace-extension"
+      },
+      "version": "0.1.12"
     },
     "rtk": {
       "artifacts": {

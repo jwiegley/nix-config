@@ -261,7 +261,6 @@ let
   xdgConfigRelative = lib.removePrefix "${homeDirectory}/" xdgConfigHome;
   globalMcpPath = "${xdgConfigRelative}/mcp/mcp.json";
   extensionRoot = "${pkgs.agent-resources}/share/agent-resources/pi-extensions";
-  autoCompactResumeSource = ../extensions/auto-compact-resume/index.ts;
   fleetThemeSource = ../extensions/fleet-theme/index.ts;
   fleetTheme = ../themes/dark-tool-backgrounds.json;
 in
@@ -336,7 +335,6 @@ assert builtins.hasAttr "pi-loop" pkgs.pi-gallery.packages;
       ".pi-lens/config.json".source = json.generate "pi-${profile.id}-lens.json" {
         widget.visible = false;
       };
-      "${root}/extensions/auto-compact-resume/index.ts".source = autoCompactResumeSource;
       "${root}/extensions/fleet-theme/index.ts".source = fleetThemeSource;
       "${root}/extensions/nix-gallery/index.ts".source = "${pkgs.pi-gallery}/share/pi-gallery/index.ts";
       "${root}/extensions/pi-loop/index.ts".source =

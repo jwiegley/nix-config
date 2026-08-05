@@ -1000,6 +1000,18 @@ def _string_list(value: object, label: str) -> list[str]:
     return value
 
 
+def _string_map(value: object, label: str) -> dict[str, str]:
+    if not isinstance(value, dict) or not all(
+        isinstance(key, str)
+        and bool(key)
+        and isinstance(item, str)
+        and bool(item)
+        for key, item in value.items()
+    ):
+        raise RuntimeError(f"{label} must map nonempty strings to nonempty strings")
+    return value
+
+
 def load_pi_normalization_contract(nix_dir: Path) -> dict:
     path = nix_dir / PI_NORMALIZATION_POLICY
     normalizer = nix_dir / PI_NORMALIZER
@@ -1021,7 +1033,7 @@ def load_pi_normalization_contract(nix_dir: Path) -> dict:
         "targets",
     }:
         raise RuntimeError("invalid Pi npm normalization contract fields")
-    if contract["schemaVersion"] != 2:
+    if contract["schemaVersion"] != 3:
         raise RuntimeError("unsupported Pi npm normalization contract schema")
     dependency_flags = _string_list(
         contract["npmDependencyFlags"], "Pi npm dependency flags"
@@ -1034,6 +1046,7 @@ def load_pi_normalization_contract(nix_dir: Path) -> dict:
             "removeTopLevel",
             "forbidDependencies",
             "defensiveForbidDependencies",
+            "overrideDependencies",
         }:
             raise RuntimeError(f"invalid {label} fields")
         _string_list(value["removeTopLevel"], f"{label}.removeTopLevel")
@@ -1044,6 +1057,7 @@ def load_pi_normalization_contract(nix_dir: Path) -> dict:
             value["defensiveForbidDependencies"],
             f"{label}.defensiveForbidDependencies",
         )
+        _string_map(value["overrideDependencies"], f"{label}.overrideDependencies")
         overlap = sorted(set(enforced) & set(defensive))
         if overlap:
             raise RuntimeError(f"{label} repeats dependencies across policies: {overlap}")
@@ -1075,6 +1089,23 @@ def load_pi_normalization_contract(nix_dir: Path) -> dict:
             raise RuntimeError(
                 f"Pi npm normalization target {name} repeats dependencies across "
                 f"combined policies: {overlap}"
+            )
+        common_overrides = contract["common"]["overrideDependencies"]
+        target_overrides = policy["overrideDependencies"]
+        repeated_overrides = sorted(set(common_overrides) & set(target_overrides))
+        if repeated_overrides:
+            raise RuntimeError(
+                f"Pi npm normalization target {name} repeats inherited overrides: "
+                f"{repeated_overrides}"
+            )
+        override_names = set(common_overrides) | set(target_overrides)
+        override_overlap = sorted(
+            override_names & (set(enforced_entries) | set(defensive_entries))
+        )
+        if override_overlap:
+            raise RuntimeError(
+                f"Pi npm normalization target {name} both overrides and forbids "
+                f"dependencies: {override_overlap}"
             )
         removed = set(contract["common"]["removeTopLevel"]) | set(
             policy["removeTopLevel"]

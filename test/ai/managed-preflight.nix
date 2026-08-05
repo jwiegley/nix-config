@@ -16,6 +16,7 @@ let
   };
   # Managed-file preflight contract: collision, permission, and symlink safety.
   task9PreflightWithPi = preflightFactory {
+    blackholeConfigPath = ".config/pi/agent/pi-blackhole/pi-blackhole-config.json";
     newPaths = [
       ".config/claude/personal/agents/new.md"
       ".config/claude/personal/agents/retained.md"
@@ -28,6 +29,7 @@ let
       ];
     };
     piAliasTarget = ".config/pi";
+    retiredPaths = [ ".config/pi/agent/extensions/auto-compact-resume/index.ts" ];
   };
   task9PreflightWithoutPi = preflightFactory {
     newPaths = [
@@ -61,6 +63,11 @@ let
     ln -s /tmp/task9-ai-preflight-store-escape "$out/personal"
   '';
   task9RetainedStoreLeaf = pkgs.writeText "task9-retained-leaf" "retained";
+  task9RetiredHomeManagerFiles = pkgs.runCommand "task9-home-manager-files" { } ''
+    path="$out/.config/pi/agent/extensions/auto-compact-resume/index.ts"
+    mkdir -p "$(dirname "$path")"
+    touch "$path"
+  '';
   writePreflightScript =
     name: preflight:
     pkgs.writeShellScript name ''
@@ -92,6 +99,8 @@ assert task9PreflightWithPi.activation.before == [ "checkLinkTargets" ];
 assert task9PreflightWithPi.activation.after == [ ];
 assert lib.hasInfix ".config/pi/agent/mcp.json" task9PreflightWithPi.script;
 assert lib.hasInfix ".pi: compatibility link must resolve" task9PreflightWithPi.script;
+assert lib.hasInfix "configuration must be a valid JSON object" task9PreflightWithPi.script;
+assert lib.hasInfix "retired extension must be absent" task9PreflightWithPi.script;
 assert !(lib.hasInfix ".config/pi/agent/mcp.json" task9PreflightWithoutPi.script);
 assert !(lib.hasInfix ".pi: compatibility link must resolve" task9PreflightWithoutPi.script);
 assert
@@ -164,6 +173,8 @@ pkgs.runCommand "ai-managed-preflight"
     pi_leaf_path=".config/pi/agent/agents/bash-reviewer.md"
     pi_keybindings_path=".config/pi/agent/keybindings.json"
     pi_loop_path=".config/pi/agent/extensions/pi-loop/index.ts"
+    retired_pi_path=".config/pi/agent/extensions/auto-compact-resume/index.ts"
+    blackhole_path=".config/pi/agent/pi-blackhole/pi-blackhole-config.json"
     legacy_claude=".local/bin/claude"
 
     make_leaf() {
@@ -347,6 +358,24 @@ pkgs.runCommand "ai-managed-preflight"
             ;;
           retained-file)
             expected_output="$fragment: blocking leaf is a regular file: $case_home/$fragment"
+            ;;
+          retired-pi-*)
+            expected_output="$fragment: retired extension must be absent or linked from a prior Home Manager generation"
+            ;;
+          blackhole-invalid-json)
+            expected_output="$fragment: configuration must be a valid JSON object"
+            ;;
+          blackhole-non-object)
+            expected_output="$fragment: configuration must be a valid JSON object"
+            ;;
+          blackhole-config-symlink)
+            expected_output="$fragment: configuration must be a regular file"
+            ;;
+          blackhole-directory-symlink)
+            expected_output="$fragment: parent must be a directory, not symlink"
+            ;;
+          blackhole-parent-file)
+            expected_output="$fragment: parent must be a directory, not regular file"
             ;;
           pi-*)
             expected_output="$fragment: keep valid adapter JSON without top-level mcpServers or imports"
@@ -677,6 +706,70 @@ pkgs.runCommand "ai-managed-preflight"
     make_leaf "$case_home" "$pi_loop_path" unmanaged
     run_checked fail pi-loop-collision "$pi_loop_path" \
       "${task9PiLoopPreflightScript}" absent
+
+    setup_empty_case retired-pi-home-manager-link
+    mkdir -p "$case_home/$(dirname "$retired_pi_path")"
+    ln -s "${task9RetiredHomeManagerFiles}/$retired_pi_path" \
+      "$case_home/$retired_pi_path"
+    run_checked pass retired-pi-home-manager-link "" "${task9PreflightScript}" absent
+
+    setup_empty_case retired-pi-regular-file
+    make_leaf "$case_home" "$retired_pi_path" unmanaged
+    run_checked fail retired-pi-regular-file "$retired_pi_path" \
+      "${task9PreflightScript}" absent
+
+    setup_empty_case retired-pi-external-link
+    make_leaf "$case_root" retired-extension unmanaged
+    mkdir -p "$case_home/$(dirname "$retired_pi_path")"
+    ln -s "$case_root/retired-extension" "$case_home/$retired_pi_path"
+    run_checked fail retired-pi-external-link "$retired_pi_path" \
+      "${task9PreflightScript}" absent
+
+    setup_empty_case retired-pi-unrelated-store-link
+    mkdir -p "$case_home/$(dirname "$retired_pi_path")"
+    ln -s ${pkgs.coreutils}/bin/true "$case_home/$retired_pi_path"
+    run_checked fail retired-pi-unrelated-store-link "$retired_pi_path" \
+      "${task9PreflightScript}" absent
+
+    setup_empty_case retired-pi-relative-home-manager-link
+    mkdir -p "$case_home/$(dirname "$retired_pi_path")"
+    relative_target="$(realpath --relative-to="$(dirname "$case_home/$retired_pi_path")" \
+      "${task9RetiredHomeManagerFiles}/$retired_pi_path")"
+    ln -s "$relative_target" "$case_home/$retired_pi_path"
+    run_checked fail retired-pi-relative-home-manager-link "$retired_pi_path" \
+      "${task9PreflightScript}" absent
+
+    setup_empty_case blackhole-valid-object
+    make_leaf "$case_home" "$blackhole_path" '{"memory":true}'
+    run_checked pass blackhole-valid-object "" "${task9PreflightScript}" absent
+
+    setup_empty_case blackhole-invalid-json
+    make_leaf "$case_home" "$blackhole_path" '{invalid'
+    run_checked fail blackhole-invalid-json "$blackhole_path" \
+      "${task9PreflightScript}" absent
+
+    setup_empty_case blackhole-non-object
+    make_leaf "$case_home" "$blackhole_path" '[]'
+    run_checked fail blackhole-non-object "$blackhole_path" \
+      "${task9PreflightScript}" absent
+
+    setup_empty_case blackhole-config-symlink
+    make_leaf "$case_root" blackhole-config '{}'
+    mkdir -p "$case_home/$(dirname "$blackhole_path")"
+    ln -s "$case_root/blackhole-config" "$case_home/$blackhole_path"
+    run_checked fail blackhole-config-symlink "$blackhole_path" \
+      "${task9PreflightScript}" absent
+
+    setup_empty_case blackhole-directory-symlink
+    mkdir -p "$case_root/blackhole-dir" "$case_home/.config/pi/agent"
+    ln -s "$case_root/blackhole-dir" "$case_home/.config/pi/agent/pi-blackhole"
+    run_checked fail blackhole-directory-symlink "$blackhole_path" \
+      "${task9PreflightScript}" absent
+
+    setup_empty_case blackhole-parent-file
+    make_leaf "$case_home" ".config/pi/agent/pi-blackhole" not-a-directory
+    run_checked fail blackhole-parent-file "$blackhole_path" \
+      "${task9PreflightScript}" absent
 
     write_pi() {
       value=$1

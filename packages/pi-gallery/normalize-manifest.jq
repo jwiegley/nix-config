@@ -6,6 +6,10 @@ def string_array:
   and all(.[]; type == "string" and length > 0)
   and length == (unique | length);
 
+def string_object:
+  type == "object"
+  and all(to_entries[]; (.key | length > 0) and (.value | type == "string" and length > 0));
+
 def dependency_sections:
   ["dependencies", "optionalDependencies", "peerDependencies", "devDependencies"];
 
@@ -26,7 +30,7 @@ else
       "targets"
     ]) | not) then
       error("invalid Pi npm normalization contract fields")
-    elif $contract.schemaVersion != 2 then
+    elif $contract.schemaVersion != 3 then
       error("unsupported Pi npm normalization contract schema")
     elif $contract.npmDependencyFlags != [
       "--ignore-scripts",
@@ -38,12 +42,14 @@ else
     elif ($contract.common | exact_keys([
       "removeTopLevel",
       "forbidDependencies",
-      "defensiveForbidDependencies"
+      "defensiveForbidDependencies",
+      "overrideDependencies"
     ]) | not) then
       error("invalid Pi npm common normalization policy")
     elif ($contract.common.removeTopLevel | string_array | not) or
          ($contract.common.forbidDependencies | string_array | not) or
          ($contract.common.defensiveForbidDependencies | string_array | not) or
+         ($contract.common.overrideDependencies | string_object | not) or
          (($contract.common.forbidDependencies +
            $contract.common.defensiveForbidDependencies) | length != (unique | length)) then
       error("invalid Pi npm common normalization policy arrays")
@@ -54,11 +60,13 @@ else
            exact_keys([
              "removeTopLevel",
              "forbidDependencies",
-             "defensiveForbidDependencies"
+             "defensiveForbidDependencies",
+             "overrideDependencies"
            ])
            and (.removeTopLevel | string_array)
            and (.forbidDependencies | string_array)
            and (.defensiveForbidDependencies | string_array)
+           and (.overrideDependencies | string_object)
            and ((.forbidDependencies + .defensiveForbidDependencies) |
              length == (unique | length))
          ) | not) then
@@ -73,8 +81,16 @@ else
       | ($contract.common.defensiveForbidDependencies +
          $targetPolicy.defensiveForbidDependencies) as $defensive
       | ($enforced + $defensive) as $forbidden
+      | (($contract.common.overrideDependencies | keys) +
+         ($targetPolicy.overrideDependencies | keys)) as $overrideNames
+      | ($contract.common.overrideDependencies +
+         $targetPolicy.overrideDependencies) as $overrides
       | if ($forbidden | length) != ($forbidden | unique | length) then
           error("Pi npm dependency repeats across combined normalization policies")
+        elif ($overrideNames | length) != ($overrideNames | unique | length) then
+          error("Pi npm dependency repeats across combined override policies")
+        elif any($overrideNames[]; . as $dependency | $forbidden | index($dependency) != null) then
+          error("Pi npm dependency repeats across override and forbidden policies")
         elif any($removed[]; . == "name" or . == "version" or
             . == "dependencies" or . == "optionalDependencies") then
           error("Pi npm normalization policy removes a protected manifest field")
@@ -87,8 +103,17 @@ else
                   | (($manifest[$section] // {}) | has($dependency))) | not)
               | $dependency
             ] as $inert
+          | [
+              $overrideNames[] as $dependency
+              | select(any(["dependencies", "optionalDependencies"][];
+                  . as $section
+                  | (($manifest[$section] // {}) | has($dependency))) | not)
+              | $dependency
+            ] as $inertOverrides
           | if ($inert | length) > 0 then
               error("inert enforced Pi npm dependencies: \($inert | join(", "))")
+            elif ($inertOverrides | length) > 0 then
+              error("inert Pi npm dependency overrides: \($inertOverrides | join(", "))")
             else
               reduce $removed[] as $field ($manifest; del(.[$field]))
               | reduce $forbidden[] as $dependency (
@@ -98,6 +123,17 @@ else
                   del(.[$section][$dependency])
                 )
               )
+              | reduce ($overrides | to_entries[]) as $override (
+                  .;
+                  reduce ["dependencies", "optionalDependencies"][] as $section (
+                    .;
+                    if ((.[$section] // {}) | has($override.key)) then
+                      .[$section][$override.key] = $override.value
+                    else
+                      .
+                    end
+                  )
+                )
               | . as $normalized
               | if any($forbidden[];
                   . as $dependency

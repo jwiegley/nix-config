@@ -1,9 +1,11 @@
 { lib, pkgs }:
 
 {
+  blackholeConfigPath ? null,
   newPaths,
   piGuard ? null,
   piAliasTarget ? null,
+  retiredPaths ? [ ],
 }:
 
 let
@@ -50,7 +52,6 @@ let
     ".config/factory/mcp.json"
     ".config/mcp/mcp.json"
     ".pi-lens/config.json"
-    ".config/pi/agent/extensions/auto-compact-resume/index.ts"
     ".config/pi/agent/extensions/fleet-theme/index.ts"
     ".config/pi/agent/extensions/nix-gallery/index.ts"
     ".config/pi/agent/extensions/pi-loop/index.ts"
@@ -106,6 +107,18 @@ let
           ]
       );
   piAliasTargetValid = piAliasTarget == null || validRelativePath piAliasTarget;
+  blackholeConfigPathValid =
+    blackholeConfigPath == null
+    || (
+      validRelativePath blackholeConfigPath
+      && lib.hasSuffix "/pi/agent/pi-blackhole/pi-blackhole-config.json" blackholeConfigPath
+    );
+  retiredPathsValid =
+    retiredPaths == lib.sort builtins.lessThan (lib.unique retiredPaths)
+    && builtins.all (
+      path:
+      validRelativePath path && lib.hasSuffix "/pi/agent/extensions/auto-compact-resume/index.ts" path
+    ) retiredPaths;
   piGuardPaths = lib.optional (piGuard != null) piGuard.path;
   renderPiGuard = path: ''
     pi_path="$HOME/${path}"
@@ -336,6 +349,39 @@ let
       check_existing_managed_leaf "$path"
     done < ${lib.escapeShellArg newPathsFile}
 
+    ${lib.concatMapStringsSep "\n" (path: ''
+      retired_path=${lib.escapeShellArg path}
+      retired_current="$HOME/$retired_path"
+      if [ -e "$retired_current" ] || [ -L "$retired_current" ]; then
+        retired_target="$(${pkgs.coreutils}/bin/readlink -- "$retired_current" 2>/dev/null || true)"
+        case "$retired_target" in
+          ${builtins.storeDir}/*-home-manager-files/"$retired_path") ;;
+          *)
+            report_error \
+              "$retired_path: retired extension must be absent or linked from a prior Home Manager generation"
+            ;;
+        esac
+      fi
+    '') retiredPaths}
+
+    ${lib.optionalString (blackholeConfigPath != null) ''
+      blackhole_path="$HOME/${blackholeConfigPath}"
+      blackhole_dir="''${blackhole_path%/*}"
+      if [ -L "$blackhole_dir" ] \
+        || { [ -e "$blackhole_dir" ] && [ ! -d "$blackhole_dir" ]; }; then
+        report_error \
+          "${blackholeConfigPath}: parent must be a directory, not $(path_kind "$blackhole_dir")"
+      elif [ -L "$blackhole_path" ] \
+        || { [ -e "$blackhole_path" ] && [ ! -f "$blackhole_path" ]; }; then
+        report_error \
+          "${blackholeConfigPath}: configuration must be a regular file"
+      elif [ -f "$blackhole_path" ] \
+        && ! ${pkgs.jq}/bin/jq -e 'type == "object"' "$blackhole_path" >/dev/null 2>&1; then
+        report_error \
+          "${blackholeConfigPath}: configuration must be a valid JSON object"
+      fi
+    ''}
+
     ${piGuardScript}
 
     if [ -s "$errors_file" ]; then
@@ -351,6 +397,8 @@ assert newPaths == sortedPaths;
 assert builtins.all validManagedPath newPaths;
 assert piGuardValid;
 assert piAliasTargetValid;
+assert blackholeConfigPathValid;
+assert retiredPathsValid;
 {
   inherit script;
   activation = lib.hm.dag.entryBefore [ "checkLinkTargets" ] script;

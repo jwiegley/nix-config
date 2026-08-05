@@ -34,8 +34,10 @@ in
     "omlx-provider"
     "router"
     "rewind"
-    "scroll"
     "blackhole"
+    "trace"
+    "session-search"
+    "knowledge-search"
     "markdown-preview"
     "caveman"
     "rtk-optimizer"
@@ -43,6 +45,7 @@ in
     "subagents"
     "dynamic-workflows"
     "goal"
+    "cache-optimizer"
   ];
 
   members = {
@@ -141,17 +144,30 @@ in
       publicName = "pi-rewind";
       extension = "src/index.ts";
     };
-    scroll = member "pi-scroll" {
-      attrName = "pi-scroll";
-      package = packages.pi-scroll or null;
-      publicName = "pi-scroll";
-      extension = "extensions/scroll.ts";
-    };
     blackhole = member "pi-blackhole" {
       attrName = "pi-blackhole";
       package = packages.pi-blackhole or null;
       publicName = "pi-blackhole";
       extension = "index.ts";
+    };
+    trace = member "pi-trace-extension" {
+      attrName = "pi-trace-extension";
+      package = packages.pi-trace-extension or null;
+      publicName = "pi-trace-extension";
+      extension = "extensions/trace/index.ts";
+    };
+    session-search = member "pi-session-search" {
+      attrName = "pi-session-search";
+      package = packages.pi-session-search or null;
+      publicName = "pi-session-search";
+      extension = "dist/index.js";
+      skills = [ "skills" ];
+    };
+    knowledge-search = member "pi-knowledge-search" {
+      attrName = "pi-knowledge-search";
+      package = packages.pi-knowledge-search or null;
+      publicName = "pi-knowledge-search";
+      extension = "dist/index.js";
     };
     markdown-preview = member "pi-markdown-preview" {
       attrName = "pi-markdown-preview";
@@ -200,6 +216,12 @@ in
       package = packages.pi-goal-x or null;
       publicName = "pi-goal-x";
       extension = "extensions/goal.ts";
+    };
+    cache-optimizer = member "pi-cache-optimizer" {
+      attrName = "pi-cache-optimizer";
+      package = packages.pi-cache-optimizer or null;
+      publicName = "pi-cache-optimizer";
+      extension = "index.ts";
     };
   };
 

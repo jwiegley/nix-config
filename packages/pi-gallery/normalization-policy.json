@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "npmDependencyFlags": [
     "--ignore-scripts",
     "--omit=dev",
@@ -13,18 +13,21 @@
       "peerDependenciesMeta"
     ],
     "forbidDependencies": [],
-    "defensiveForbidDependencies": []
+    "defensiveForbidDependencies": [],
+    "overrideDependencies": {}
   },
   "targets": {
     "pi-artifacts": {
       "removeTopLevel": [],
       "forbidDependencies": [],
-      "defensiveForbidDependencies": []
+      "defensiveForbidDependencies": [],
+      "overrideDependencies": {}
     },
     "pi-dynamic-workflows": {
       "removeTopLevel": [],
       "forbidDependencies": [],
-      "defensiveForbidDependencies": []
+      "defensiveForbidDependencies": [],
+      "overrideDependencies": {}
     },
     "pi-hashline-edit-pro": {
       "removeTopLevel": [
@@ -33,12 +36,27 @@
       "forbidDependencies": [],
       "defensiveForbidDependencies": [
         "better-sqlite3"
-      ]
+      ],
+      "overrideDependencies": {}
     },
     "pi-insights": {
       "removeTopLevel": [],
       "forbidDependencies": [],
-      "defensiveForbidDependencies": []
+      "defensiveForbidDependencies": [],
+      "overrideDependencies": {}
+    },
+    "pi-knowledge-search": {
+      "removeTopLevel": [],
+      "forbidDependencies": [],
+      "defensiveForbidDependencies": [
+        "@earendil-works/pi-coding-agent",
+        "@sinclair/typebox"
+      ],
+      "overrideDependencies": {
+        "@aws-sdk/client-bedrock-agent-runtime": "3.1103.0",
+        "@aws-sdk/client-bedrock-runtime": "3.1103.0",
+        "@aws-sdk/credential-providers": "3.1103.0"
+      }
     },
     "pi-lens": {
       "removeTopLevel": [],
@@ -46,12 +64,23 @@
       "defensiveForbidDependencies": [
         "@earendil-works/pi-tui",
         "typebox"
-      ]
+      ],
+      "overrideDependencies": {}
     },
     "pi-markdown-preview": {
       "removeTopLevel": [],
       "forbidDependencies": [],
-      "defensiveForbidDependencies": []
+      "defensiveForbidDependencies": [],
+      "overrideDependencies": {}
+    },
+    "pi-session-search": {
+      "removeTopLevel": [],
+      "forbidDependencies": [],
+      "defensiveForbidDependencies": [
+        "@earendil-works/pi-coding-agent",
+        "@sinclair/typebox"
+      ],
+      "overrideDependencies": {}
     },
     "pi-smart-fetch": {
       "removeTopLevel": [],
@@ -59,19 +88,22 @@
       "defensiveForbidDependencies": [
         "@earendil-works/pi-tui",
         "@sinclair/typebox"
-      ]
+      ],
+      "overrideDependencies": {}
     },
     "pi-smart-web-search": {
       "removeTopLevel": [],
       "forbidDependencies": [],
-      "defensiveForbidDependencies": []
+      "defensiveForbidDependencies": [],
+      "overrideDependencies": {}
     },
     "pi-subagents": {
       "removeTopLevel": [],
       "forbidDependencies": [],
       "defensiveForbidDependencies": [
         "typebox"
-      ]
+      ],
+      "overrideDependencies": {}
     }
   }
 }

@@ -46,8 +46,15 @@ let
   sharedWork = homeConfigurations."jwiegley@x86_64-linux".config;
   allHomes = positive ++ negative;
   piHomes = allHomes;
+  blackholeActivations = map (config: config.home.activation.aiManagedPiBlackholePolicy) piHomes;
+  blackholeActivation =
+    if pkgs.stdenv.hostPlatform.isDarwin then
+      builtins.head blackholeActivations
+    else if pkgs.stdenv.hostPlatform.system == "aarch64-linux" then
+      nixosHomeEvaluationFixtures.vulcan.config.home.activation.aiManagedPiBlackholePolicy
+    else
+      sharedWork.home.activation.aiManagedPiBlackholePolicy;
   piExtensionPaths = map (name: ".config/pi/agent/extensions/${name}") [
-    "auto-compact-resume/index.ts"
     "fleet-theme/index.ts"
     "nix-gallery/index.ts"
     "pi-loop/index.ts"
@@ -142,6 +149,19 @@ assert builtins.all (
   config: builtins.hasAttr ".config/pi/agent/models.json" config.home.file
 ) piHomes;
 assert builtins.all (
+  activation: activation.before == [ ] && activation.after == [ "linkGeneration" ]
+) blackholeActivations;
+assert builtins.all (
+  config:
+  builtins.all (name: !(builtins.hasAttr name (config.home.sessionVariables or { }))) [
+    "PI_BLACKHOLE_PASSIVE"
+    "PI_BLACKHOLE_COMPACTION"
+    "PI_BLACKHOLE_COMPACTION_ENGINE"
+    "PI_VCC_OM_PASSIVE"
+    "PI_OBSERVATIONAL_MEMORY_PASSIVE"
+  ]
+) piHomes;
+assert builtins.all (
   config: builtins.hasAttr ".config/pi/agent/model-router.json" config.home.file
 ) positive;
 assert builtins.all (
@@ -166,6 +186,10 @@ assert builtins.all (
 ) negative;
 assert builtins.all (
   config: builtins.all (path: builtins.hasAttr path config.home.file) piExtensionPaths
+) piHomes;
+assert builtins.all (
+  config:
+  !(builtins.hasAttr ".config/pi/agent/extensions/auto-compact-resume/index.ts" config.home.file)
 ) piHomes;
 assert builtins.all (
   name:
@@ -193,5 +217,93 @@ assert builtins.all
     "clio"
   ];
 pkgs.runCommand "desktop-only-user-runtime" { } ''
+  export HOME="$TMPDIR/home"
+  config_dir="$HOME/.config/pi/agent/pi-blackhole"
+  config_path="$config_dir/pi-blackhole-config.json"
+
+  export DRY_RUN=1
+  ${blackholeActivation.data}
+  [ ! -e "$config_dir" ]
+  unset DRY_RUN
+
+  ${blackholeActivation.data}
+  ${pkgs.jq}/bin/jq -e '
+    . == {
+      compaction: "auto",
+      compactionEngine: "blackhole",
+      memory: true,
+      midRunCompaction: "resume"
+    }
+  ' "$config_path" >/dev/null
+  [ "$(${pkgs.coreutils}/bin/stat -c %a "$config_dir")" = 700 ]
+  [ "$(${pkgs.coreutils}/bin/stat -c %a "$config_path")" = 600 ]
+
+  ${pkgs.jq}/bin/jq '. + {
+    compactionEngine: "pi-default",
+    memory: false,
+    midRunCompaction: "off",
+    noAutoCompact: true,
+    passive: true,
+    overrideDefaultCompaction: false,
+    compactAfterTokens: 123456,
+    model: { provider: "openai-codex", id: "fixture" }
+  }' "$config_path" > "$config_path.stale"
+  ${pkgs.coreutils}/bin/mv "$config_path.stale" "$config_path"
+  ${blackholeActivation.data}
+  ${pkgs.jq}/bin/jq -e '
+    .memory == true
+    and .compaction == "auto"
+    and .compactionEngine == "blackhole"
+    and .midRunCompaction == "resume"
+    and .compactAfterTokens == 123456
+    and .model == { provider: "openai-codex", id: "fixture" }
+    and (has("noAutoCompact") | not)
+    and (has("passive") | not)
+    and (has("overrideDefaultCompaction") | not)
+  ' "$config_path" >/dev/null
+
+  ${pkgs.coreutils}/bin/chmod 0644 "$config_path"
+  inode_before="$(${pkgs.coreutils}/bin/stat -c %i "$config_path")"
+  ${blackholeActivation.data}
+  inode_after="$(${pkgs.coreutils}/bin/stat -c %i "$config_path")"
+  [ "$inode_before" = "$inode_after" ]
+  [ "$(${pkgs.coreutils}/bin/stat -c %a "$config_path")" = 600 ]
+
+  printf '%s\n' '{invalid' > "$config_path.invalid"
+  ${pkgs.coreutils}/bin/mv "$config_path.invalid" "$config_path"
+  if ${blackholeActivation.data}
+  then
+    echo "Blackhole policy accepted invalid JSON" >&2
+    exit 1
+  fi
+  [ "$(cat "$config_path")" = '{invalid' ]
+
+  export HOME="$TMPDIR/symlink-home"
+  config_dir="$HOME/.config/pi/agent/pi-blackhole"
+  ${pkgs.coreutils}/bin/mkdir -p "$HOME/.config/pi/agent"
+  ${pkgs.coreutils}/bin/mkdir -p "$HOME/redirected-blackhole"
+  ${pkgs.coreutils}/bin/ln -s "$HOME/redirected-blackhole" "$config_dir"
+  if ${blackholeActivation.data}
+  then
+    echo "Blackhole policy followed a redirected configuration directory" >&2
+    exit 1
+  fi
+  [ -z "$(${pkgs.findutils}/bin/find "$HOME/redirected-blackhole" -mindepth 1 -print -quit)" ]
+
+  export HOME="$TMPDIR/config-symlink-home"
+  config_dir="$HOME/.config/pi/agent/pi-blackhole"
+  config_path="$config_dir/pi-blackhole-config.json"
+  sentinel="$HOME/blackhole-sentinel.json"
+  ${pkgs.coreutils}/bin/mkdir -p "$config_dir"
+  printf '%s\n' '{"sentinel":true}' > "$sentinel"
+  ${pkgs.coreutils}/bin/ln -s "$sentinel" "$config_path"
+  if ${blackholeActivation.data}
+  then
+    echo "Blackhole policy followed a redirected configuration file" >&2
+    exit 1
+  fi
+  [ -L "$config_path" ]
+  [ "$(cat "$sentinel")" = '{"sentinel":true}' ]
+
   touch "$out"
 ''

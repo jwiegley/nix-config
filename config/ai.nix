@@ -136,11 +136,17 @@ let
   ];
   ownsAncestor = path: lib.any (other: other != path && lib.hasPrefix "${path}/" other) paths;
   selectedPlatform = if isDarwin then "darwin" else "linux";
+  xdgConfigRelative = lib.removePrefix "${config.home.homeDirectory}/" config.xdg.configHome;
+  piAgentRelative = "${xdgConfigRelative}/pi/agent";
+  piBlackholeConfigPath = "${piAgentRelative}/pi-blackhole/pi-blackhole-config.json";
+  retiredAutoCompactPath = "${piAgentRelative}/extensions/auto-compact-resume/index.ts";
 
   preflight = (import ./ai/preflight.nix { inherit lib pkgs; }) {
     newPaths = paths;
     inherit piGuard;
-    piAliasTarget = if piSelected then ".config/pi" else null;
+    piAliasTarget = if piSelected then "${xdgConfigRelative}/pi" else null;
+    blackholeConfigPath = if piSelected then piBlackholeConfigPath else null;
+    retiredPaths = lib.optional piSelected retiredAutoCompactPath;
   };
   modelSync = import ./ai/model-sync.nix { inherit lib pkgs; };
   piSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "pi") profileIds;
@@ -169,6 +175,78 @@ let
     typescript-language-server
     yaml-language-server
   ];
+  blackholePolicy = {
+    memory = true;
+    compaction = "auto";
+    compactionEngine = "blackhole";
+    midRunCompaction = "resume";
+  };
+  blackholePolicyActivation = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+    (
+      set -euo pipefail
+      umask 077
+
+      config_path="$HOME/${piBlackholeConfigPath}"
+      config_dir="''${config_path%/*}"
+
+      if [[ -v DRY_RUN ]]; then
+        printf '%s\n' \
+          "Would reconcile Pi Blackhole memory and compaction policy in $config_path"
+        exit 0
+      fi
+
+      if [ -L "$config_dir" ] || { [ -e "$config_dir" ] && [ ! -d "$config_dir" ]; }; then
+        printf '%s\n' \
+          "nix-managed AI: $config_dir must be a directory" >&2
+        exit 1
+      fi
+      if [ -L "$config_path" ] || { [ -e "$config_path" ] && [ ! -f "$config_path" ]; }; then
+        printf '%s\n' \
+          "nix-managed AI: $config_path must be a regular file" >&2
+        exit 1
+      fi
+      if [ -f "$config_path" ] \
+        && ! ${pkgs.jq}/bin/jq -e 'type == "object"' "$config_path" >/dev/null 2>&1
+      then
+        printf '%s\n' \
+          "nix-managed AI: refusing to replace invalid Pi Blackhole configuration" >&2
+        exit 1
+      fi
+
+      ${pkgs.coreutils}/bin/mkdir -p -- "$config_dir"
+      ${pkgs.coreutils}/bin/chmod 0700 "$config_dir"
+      temporary_config="$(${pkgs.coreutils}/bin/mktemp \
+        "$config_dir/.pi-blackhole-config.XXXXXX")"
+      cleanup_blackhole_config() {
+        ${pkgs.coreutils}/bin/rm -f -- "$temporary_config"
+      }
+      trap cleanup_blackhole_config EXIT
+      trap 'exit 129' HUP
+      trap 'exit 130' INT
+      trap 'exit 143' TERM
+
+      if [ -f "$config_path" ]; then
+        ${pkgs.jq}/bin/jq -S --argjson policy ${lib.escapeShellArg (builtins.toJSON blackholePolicy)} '
+          del(.overrideDefaultCompaction, .noAutoCompact, .passive) + $policy
+        ' "$config_path" > "$temporary_config"
+      else
+        ${pkgs.jq}/bin/jq -S -n \
+          --argjson policy ${lib.escapeShellArg (builtins.toJSON blackholePolicy)} \
+          '$policy' > "$temporary_config"
+      fi
+      ${pkgs.coreutils}/bin/chmod 0600 "$temporary_config"
+
+      if [ -f "$config_path" ] \
+        && ${pkgs.diffutils}/bin/cmp -s "$temporary_config" "$config_path"
+      then
+        ${pkgs.coreutils}/bin/rm -f -- "$temporary_config"
+        ${pkgs.coreutils}/bin/chmod 0600 "$config_path"
+      else
+        ${pkgs.coreutils}/bin/mv -fT -- "$temporary_config" "$config_path"
+      fi
+      trap - EXIT HUP INT TERM
+    )
+  '';
 in
 {
   # Import the host capability option this module reads rather than relying on a
@@ -209,6 +287,10 @@ in
     {
       assertion = builtins.all validRelativePath paths;
       message = "nix-managed AI rendered an unsafe relative path";
+    }
+    {
+      assertion = validRelativePath xdgConfigRelative;
+      message = "xdg.configHome must be a directory below home.homeDirectory";
     }
     {
       assertion = lib.intersectLists paths forbiddenParentPaths == [ ];
@@ -267,6 +349,9 @@ in
     };
     activation = {
       aiManagedPreflight = preflight.activation;
+    }
+    // lib.optionalAttrs piSelected {
+      aiManagedPiBlackholePolicy = blackholePolicyActivation;
     }
     // lib.optionalAttrs (config.johnw.host.isHera && isDarwin) {
       aiManagedModelSync = modelSync.activation;
