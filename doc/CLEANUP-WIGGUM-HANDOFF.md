@@ -11,7 +11,7 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 
 - The authoritative checkout is `/Users/johnw/src/nix`, on clean `main`, and it
   is the only worktree. Local `main`, GitHub, and Gitea all point to signed
-  `fb04fad4`. The last complete fleet activation proof remains the #126 boundary
+  `bbe6de74`. The last complete fleet activation proof remains the #126 boundary
   at `e7dc846c`; later commits must not be described as fleet-active without
   host receipts.
 - Signed `bf873fdf` replaces Copy Message's platform-specific clipboard
@@ -98,41 +98,30 @@ after the audit rather than pretending the old denominator is current.
   session quiescence from old session names.
 - #127: the five unique homes currently contain 10/10/4/6/7 PromptDeploy
   artifacts (Hera/Clio/Vulcan/VPS/shared), 2/1/1/3/2 mutable configs, and
-  0/0/1/3/3 manifest-owned Anvil payloads. Exact transaction R6 is frozen below
-  `/private/tmp/wg-project9` at production/test/driver/C/C-test/contract hashes
-  `14689fdf`, `8cd870a2`, `9c879024`, `2fcaafd4`, `bcc38188`, and `daad050c`.
-  Its warning-strict Darwin run ran 77 methods: 70 passed and the seven expected
-  Linux-only methods skipped. Vulcan and VPS independently passed all 67 transaction and
-  all 10 C-attestor methods with zero skips, failures, or errors; each real ext4
-  probe issued exactly `0x00080040` to set NODUMP and `0x00080000` to clear it
-  while preserving EXTENT and exact metadata equality. Hardened C compilation,
-  silent empty-input refusal, source-only test-driver exclusion, stable hashes,
-  and exact scratch cleanup passed on both hosts. Fresh independent correctness
-  and security reviews are GO only for the next separately authorized controlled
-  privileged qualification. The attempted custom R3 lifecycle/watchdog design
-  is frozen NO-GO: it reimplemented PID 1, still had unit-name and provenance
-  races, and did not own a crash-safe rollback boundary. A smaller reviewed
-  design instead uses one transient `Type=notify`, `RemainAfterExit=no`,
-  `ExitType=cgroup` service, a baseline-only sibling restorer, and a narrow
-  pidfd-bound signal probe. `RuntimeMaxSec` remains armed only while the main
-  wrapper is alive or the cgroup remains populated; the earlier
-  `RemainAfterExit=yes` sketch was rejected because systemd disarms that timer
-  in `SERVICE_EXITED`.
+  0/0/1/3/3 manifest-owned Anvil payloads. No live mutation has occurred. The
+  large R6 transaction and its later custom/native-systemd qualification work
+  are frozen research, not a Project acceptance gate. Independent premise
+  review found that privileged hidden-metadata attestation is neither required
+  by #116/#124/#127 nor sufficient for the shared NFS home; continuing that lane
+  would be scope creep.
 
-  Privileged execution remains NO-GO. Source review shows a transient service
-  should survive NixOS `test` activation, but the authoritative host build
-  wrappers cannot preserve their `.nixos-build` serialization after transaction
-  coordinator/owner death: they may release or seize a still-needed marker.
-  Running each wrapper inside a manager-owned transaction covers operator/SSH
-  disconnect only. The stronger accepted recovery boundary needs a non-stealing,
-  ownership-checked manager lock holder or an explicitly reduced safety
-  contract before implementation and harmless host qualification. No production
-  package or closure exists for this one-off candidate, no privileged invocation
-  or live mutation occurred, and source-tree exclusion is not closure proof.
-  Shared-NFS apply remains refused. Private recovery archive
-  `~/dl/wg-project9-promptdeploy-r6-qualified-20260805.tar.gz` is mode 0600 with
-  SHA-256 `b9ee0f0a7c167a67dbe5eb64dc252dd05f74e7d7034e8785a6d8348235e4d8a6`;
-  retain it until #127 closes, then remove it only with explicit approval.
+  The accepted path is the bounded manual transaction already recorded on the
+  issue: one canonical per-home authority, a private restricted archive,
+  original-inode checkpoints and atomic replacement/restoration for exact
+  mutable config members, whole-object archival for exact PromptDeploy state and
+  manifest-proven stale Anvil payloads, idempotent physical-state recovery,
+  explicit NFS error reconciliation, and reverse fleet rollback on failure.
+  The first small executor passed 10 fixtures but is frozen NO-GO after two
+  independent reviews reproduced incomplete path containment and directory-tree
+  binding, NFS error-after-success classification, durable marker/sync handling,
+  ACL/privacy and visible-metadata preservation, and interrupted-stage recovery.
+  These are bounded user-home transaction defects, not a reason to revive the
+  privileged/systemd lane. A corrected candidate still needs review, harmless
+  exact-export primitive qualification, owner acceptance of the
+  executing-user-visible metadata boundary, current stale-payload confirmation,
+  and a freshly confirmed all-client-quiescent window. Private R6 recovery archive
+  `~/dl/wg-project9-promptdeploy-r6-qualified-20260805.tar.gz` remains retained;
+  remove it only with explicit approval after #127 closes.
 - #123 is complete. Published `llm-setup` commit `0e8966b` removes the Nix
   registry writer from reset. Signed Nix `eb0da1d4` deletes the three
   registry/policy files and 1,027 lines overall; `f6c4d705` records the exact
@@ -171,11 +160,13 @@ after the audit rather than pretending the old denominator is current.
 
 ## Concurrent work boundary
 
-There is no uncommitted source candidate. Frozen transaction R6, the rejected
-R3 implementation, and the native-systemd design/security/NixOS-switch/build-lock
-reviews live only below `/private/tmp/wg-project9`; they are not repository code
-and have not touched a live home. Continue to refresh checkout ownership before
-every shared-file edit and do not infer live activation from source state.
+The handoff correction is the only repository candidate. Frozen R6 and the
+rejected privileged qualification designs live only below
+`/private/tmp/wg-project9`; a smaller one-use transaction is being implemented
+and reviewed there; its first candidate is frozen NO-GO. None is repository code
+and none has touched a live home.
+Continue to refresh checkout ownership before every shared-file edit and do not
+infer live activation from source state.
 
 ## Authorization boundary
 
@@ -193,5 +184,6 @@ Never infer either fact from old session names, and do not stop a session to mak
 it true. The #116 runtime horizon does not authorize stopping sessions. Not
 implicitly authorized: privileged Linux attestor invocation, filer access or
 snapshot/mutation, password-store mutation, history rewriting, force pushes, or
-moving/deleting other user backups/state. Every `gh` invocation must explicitly
-select account `jwiegley`.
+moving/deleting other user backups/state. Live reconciliation also requires the
+owner's explicit acceptance of the narrower observable-metadata contract.
+Every `gh` invocation must explicitly select account `jwiegley`.
