@@ -1,27 +1,9 @@
-# Declarative host identity and capability data shared by the module schema in
+# Declarative host and capability data shared by the module schema in
 # config/host-options.nix and the plain package selector in config/packages.nix.
 # Keeping this file free of module arguments lets both consumers import the same
 # table and pure capability function.
 
 let
-  # Typed identity metadata for personal machines and the shared work fleet.
-  # Active Git and mail identity still comes from config/vars.nix.
-  personal = {
-    userName = "John Wiegley";
-    userEmail = "johnw@newartisans.com";
-    signing = "none";
-    signingKey = null;
-  };
-  desktop = {
-    signing = "openpgp";
-    signingKey = "12D70076AB504679";
-  };
-  work = {
-    userName = "John Wiegley";
-    userEmail = "jwiegley@positron.ai";
-    signing = "none";
-    signingKey = null;
-  };
   sharedWorkMembers = [
     "andoria-08"
     "andoria-t2"
@@ -31,68 +13,39 @@ let
 
 in
 {
-  # Host rows plus one shared-work group row. The typed module supplies defaults
-  # for fields omitted here.
+  # Host rows plus one shared-work group row.
   hosts = {
-    hera =
-      personal
-      // desktop
-      // {
-        system = "aarch64-darwin";
-        activation = "darwin";
-        username = "johnw";
-        roles = [
-          "workstation-full"
-          "darwin-full"
-          "ai-heavy"
-        ];
-      };
-    clio =
-      personal
-      // desktop
-      // {
-        system = "aarch64-darwin";
-        activation = "darwin";
-        username = "johnw";
-        roles = [
-          "workstation-lite"
-          "darwin-core"
-          "ai-client"
-        ];
-      };
-    vulcan = personal // {
+    hera = {
+      system = "aarch64-darwin";
+      activation = "darwin";
+      username = "johnw";
+      roles = [ ];
+    };
+    clio = {
+      system = "aarch64-darwin";
+      activation = "darwin";
+      username = "johnw";
+      roles = [ ];
+    };
+    vulcan = {
       system = "aarch64-linux";
       activation = "nixos-module";
       username = "johnw";
-      roles = [
-        "server-headless"
-        "server-lean"
-        "ai-client"
-      ];
-      hmRelease = "25.11"; # Intentional Home Manager release skew.
+      roles = [ "server-lean" ];
     };
-    vps = personal // {
+    vps = {
       system = "x86_64-linux";
       activation = "nixos-module";
       username = "johnw";
       roles = [ "server-lean" ];
-      hmRelease = "25.11";
     };
 
     # Group four shared-work hostnames under one profile identity.
-    andoria = work // {
+    andoria = {
       system = "x86_64-linux";
       activation = "home-standalone";
       username = "jwiegley";
-      roles = [
-        "shared-work"
-        "ai-client"
-      ];
-      evalId = "andoria";
-      sharedHome = {
-        members = sharedWorkMembers;
-        localStateRoot = "/var/lib/jwiegley";
-      };
+      roles = [ ];
     };
   };
 
@@ -115,7 +68,6 @@ in
       isHera = id == "hera";
       isClio = id == "clio";
       isVulcan = id == "vulcan";
-      isVps = id == "vps";
 
       # The two Darwin GUI workstations (hera OR clio).
       isDarwinWorkstation = id == "hera" || id == "clio";

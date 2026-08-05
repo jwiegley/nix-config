@@ -54,15 +54,14 @@ consumer's checkout or deployment state.
 
 ## Host registry and shared-home policy
 
-`config/hosts/registry.nix` is the data authority for host identity, system,
-Home Manager class, and capabilities. `config/host-options.nix` gives that table a
-typed module surface. Modules consume resolved capability flags instead of
-repeating hostname comparisons.
+`config/hosts/registry.nix` is the data authority for host system, activation,
+login, and the lean-server role. `config/host-options.nix` gives that table a
+typed module surface and derives the capability flags consumed by modules.
 
 The four shared-work machines use one generated Home Manager configuration. Their
-Nix-owned leaves must therefore remain byte-identical. Mutable runtime state is
-host-local under the registry's `localStateRoot`; it must not be embedded in shared
-generated leaves.
+Nix-owned leaves must therefore remain byte-identical. The registry classifies
+the shared home; each owning module remains responsible for separating any
+per-machine mutable state from shared generated leaves.
 
 For shared-work rollouts:
 

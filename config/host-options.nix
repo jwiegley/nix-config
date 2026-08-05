@@ -24,19 +24,6 @@ let
   profileHeavyDefault =
     resolvedRegistryRow == null || !(builtins.elem "server-lean" resolvedRegistryRow.roles);
 
-  sharedHomeType = types.submodule {
-    options = {
-      members = mkOption {
-        type = types.listOf types.str;
-        description = "Real machine hostnames that share one NFS \$HOME under this group.";
-      };
-      localStateRoot = mkOption {
-        type = types.str;
-        description = "Per-machine local (non-shared) state root for the group.";
-      };
-    };
-  };
-
   # The typed row. Enums throw loudly on an unknown value.
   hostRow = types.submodule {
     options = {
@@ -60,51 +47,9 @@ let
         type = types.str;
         description = "Login user this host's configuration is built for.";
       };
-      userName = mkOption {
-        type = types.str;
-        description = "Human name (git/email identity). Carried as data; not wired by #50.";
-      };
-      userEmail = mkOption {
-        type = types.str;
-        description = "Commit/email identity. Carried as data; wired by CON-CORE-WORKID, not #50.";
-      };
-      signing = mkOption {
-        type = types.enum [
-          "openpgp"
-          "ssh"
-          "none"
-        ];
-        default = "none";
-        description = "Commit-signing scheme. Carried as data; not wired by #50.";
-      };
-      signingKey = mkOption {
-        type = types.nullOr types.str;
-        default = null;
-        description = "Signing key id, when `signing != \"none\"`.";
-      };
       roles = mkOption {
         type = types.listOf types.str;
-        default = [ ];
         description = "Coarse role tags consumed by the lean/full profile seam (#42).";
-      };
-      hmRelease = mkOption {
-        type = types.nullOr types.str;
-        default = null;
-        description = ''
-          The home-manager release this host's authoritative checkout tracks,
-          when it is knowingly skewed from the root. This field is declarative;
-          the release-skew gate does not read it.
-        '';
-      };
-      evalId = mkOption {
-        type = types.nullOr types.str;
-        default = null;
-        description = "Group label for shared-home fleets. Never a machine name.";
-      };
-      sharedHome = mkOption {
-        type = types.nullOr sharedHomeType;
-        default = null;
-        description = "Present only on shared-\$HOME group rows (the Andoria fleet).";
       };
     };
   };
@@ -124,49 +69,36 @@ in
     host = {
       isHera = mkOption {
         type = types.bool;
-        default = false;
         description = "This evaluation is Hera.";
       };
       isClio = mkOption {
         type = types.bool;
-        default = false;
         description = "This evaluation is Clio.";
       };
       isVulcan = mkOption {
         type = types.bool;
-        default = false;
         description = "This evaluation is Vulcan.";
-      };
-      isVps = mkOption {
-        type = types.bool;
-        default = false;
-        description = "This evaluation is the VPS.";
       };
       isDarwinWorkstation = mkOption {
         type = types.bool;
-        default = false;
         description = "A Darwin GUI workstation (Hera or Clio).";
       };
       isSharedWork = mkOption {
         type = types.bool;
-        default = false;
         description = "A member of the shared-\$HOME Positron work group (home class \"shared-work\").";
       };
       isCiFixture = mkOption {
         type = types.bool;
-        default = false;
         description = "A synthetic CI evaluation fixture (hostname \"linux\"), not a real host.";
       };
     };
 
     profile.heavy = mkOption {
       type = types.bool;
-      default = true;
       description = ''
-        Enable workstation-oriented programs and package-backed settings. Real
-        hosts tagged `server-lean` default this off; unknown and synthetic hosts
-        default on so existing consumers remain compatible. Consumers may still
-        override the value explicitly.
+        Enable workstation-oriented programs and package-backed settings.
+        Real hosts tagged `server-lean` default this off; other hosts default
+        on. Consumers may still override the value explicitly.
       '';
     };
   };
