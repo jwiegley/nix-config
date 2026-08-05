@@ -285,6 +285,7 @@ in
       }
     ]
     ++ lib.optionals config.johnw.host.isHera [
+      "chronoagent"
       "elgato-stream-deck"
       "fujitsu-scansnap-home"
       "gzdoom"
@@ -295,6 +296,7 @@ in
     ++ lib.optionals config.johnw.host.isClio [
       "aldente"
       "betterdisplay"
+      "chronosync"
       "wifi-explorer"
     ];
   };
