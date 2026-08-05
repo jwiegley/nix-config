@@ -11,10 +11,11 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 
 - The authoritative checkout is `/Users/johnw/src/nix`, on `main`. It is the
   only worktree.
-- GitHub, Gitea, and local `main` are equal at signed `b058721d`; the worktree
-  is clean and is the only worktree. The last complete fleet activation proof
-  remains the #126 boundary at `e7dc846c`; later commits must not be described
-  as fleet-active without host receipts.
+- The latest source/runtime change before the handoff-only checkpoint commits is
+  signed `b058721d` and is present in local history, GitHub, and Gitea. The
+  worktree is clean and is the only worktree. The last complete fleet activation
+  proof remains the #126 boundary at `e7dc846c`; later commits must not be
+  described as fleet-active without host receipts.
 - Signed `bf873fdf` replaces Copy Message's platform-specific clipboard
   subprocesses with Pi's portable clipboard API. The subsequent Pi provider,
   extension, catalog-refresh, and Hermes credential fixes are published through
@@ -102,14 +103,19 @@ after the audit rather than pretending the old denominator is current.
   0/0/1/3/3 manifest-owned Anvil payloads. Frozen transaction v5 passed 20
   disposable tests but received independent correctness and security NO-GO
   verdicts before exact-mount qualification. Confirmed defects include the real
-  Clio three-project shape, recovery parent drift, incomplete Linux metadata
-  observability, ambiguous post-mutation failure, conflicting prepared IDs, and
-  over-broad plan provenance. No live mutation occurred. V6 is being built only
+  Clio three-project shape; missing live/archive/stage parent identity checks;
+  incomplete Linux metadata observability; ambiguous post-mutation failure;
+  conflicting prepared IDs; over-broad move provenance; a missing explicit TOML
+  parent-table requirement; root-only rather than all-surface NFS refusal;
+  over-broad Nix-store/Codex-log symlink exceptions; and incomplete durable-state,
+  ACL, flag, hidden-xattr, exact-Linux, and interrupted-recovery coverage. V6 must
+  correct every item, mechanize the distinct physical states in fresh processes,
+  freeze new hashes, and receive fresh correctness and security GO verdicts before
+  exact-mount qualification. No live mutation occurred. V6 is being built only
   under `/private/tmp/wg-project9`; GitHub issue #127 records the review result.
-  Shared-NFS apply remains refused. A sanitized mount observation identifies its
-  server as `filer.positron.internal:/mnt/flash_pool/homes`; server-local snapshot
-  or mutation is a potentially backend-exact alternative but has no current
-  access or mutation authorization.
+  Shared-NFS apply remains refused. A sanitized mount-source observation suggests
+  a server-local snapshot or transaction may be a backend-exact alternative, but
+  no access, filesystem, snapshot, or mutation authority has been established.
 - #123 is complete. Published `llm-setup` commit `0e8966b` removes the Nix
   registry writer from reset. Signed Nix `eb0da1d4` deletes the three
   registry/policy files and 1,027 lines overall; `f6c4d705` records the exact
@@ -159,8 +165,15 @@ Authorized: accepted decisions D1-D7, local cleanup edits, signed commits, norma
 dual-remote publication, cleanup-bearing lock updates/activations, and fresh
 disposable Codex/Pi processes. Existing sessions must remain untouched.
 
-Mutable #124 reconciliation still requires a freshly confirmed quiescent window;
-the #116 runtime horizon does not authorize stopping sessions. Not implicitly
-authorized: password-store mutation, history rewriting, force pushes, or
+The combined #116/#124/#127 reconciliation requires a freshly confirmed window
+in which every Claude, Codex, Pi, Factory/Droid, and OpenCode client is quiescent
+on Hera, Clio, Vulcan, VPS, and all four shared-work hosts for the complete
+preflight, prepare, apply, verification, and possible recovery interval. It also
+requires separate current confirmation that each manifest-claimed Anvil payload
+on Vulcan, VPS, and the shared home is owned stale state that may be archived.
+Never infer either fact from old session names, and do not stop a session to make
+it true. The #116 runtime horizon does not authorize stopping sessions. Not
+implicitly authorized: privileged Linux attestor invocation, filer access or
+snapshot/mutation, password-store mutation, history rewriting, force pushes, or
 moving/deleting other user backups/state. Every `gh` invocation must explicitly
 select account `jwiegley`.
