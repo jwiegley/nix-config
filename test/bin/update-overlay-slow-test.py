@@ -4741,7 +4741,9 @@ class IntegratedWorkflowTests(unittest.TestCase):
     def tearDown(self):
         os.environ.update(self._git_local_env)
 
-    def _create_update_agents_fixture(self, temporary: str):
+    def _create_update_agents_fixture(
+        self, temporary: str, *, nixos_driver: str | None = None
+    ):
         root = Path(temporary) / "repo"
         fake_bin = Path(temporary) / "bin"
         (root / "bin").mkdir(parents=True)
@@ -5197,7 +5199,42 @@ fi
 exec "$REAL_GIT" "$@"
             """,
         )
-        executable("hostname", "#!/bin/sh\nprintf 'hera\\n'\n")
+        if nixos_driver is None:
+            executable("hostname", "#!/bin/sh\nprintf 'hera\\n'\n")
+        else:
+            if nixos_driver not in {"executable", "missing", "nonexecutable"}:
+                raise ValueError(f"unknown NixOS driver fixture: {nixos_driver}")
+            executable("hostname", "#!/bin/sh\nprintf 'vps\\n'\n")
+            executable(
+                "nixos-rebuild",
+                """#!/usr/bin/env bash
+set -euo pipefail
+if [[ -n ${UPDATE_TEST_EXTERNAL_LOG:-} ]]; then
+  printf 'switch\n' >>"$UPDATE_TEST_EXTERNAL_LOG"
+fi
+if [[ ${UPDATE_TEST_FAILURE_PHASE:-} == candidate-switch ]]; then
+  exit 71
+fi
+""",
+            )
+            if nixos_driver != "missing":
+                (root / "build").write_text(
+                    """#!/usr/bin/env bash
+set -euo pipefail
+[[ $# -ge 2 && $1 == -- ]] || {
+  printf 'invalid driver delimiter\n' >&2
+  exit 72
+}
+if [[ -n ${UPDATE_TEST_DRIVER_LOG:-} ]]; then
+  printf '%s' "$PWD" >>"$UPDATE_TEST_DRIVER_LOG"
+  printf '\t%s' "$@" >>"$UPDATE_TEST_DRIVER_LOG"
+  printf '\n' >>"$UPDATE_TEST_DRIVER_LOG"
+fi
+shift
+exec "$@"
+"""
+                )
+                (root / "build").chmod(0o700 if nixos_driver == "executable" else 0o600)
         executable("sudo", '#!/bin/sh\nexec "$@"\n')
         executable(
             "darwin-rebuild",
@@ -6570,6 +6607,99 @@ exec "$REAL_GIT" "$@"
                 "",
             )
 
+    def test_update_nixos_build_driver_contract_and_failures(self):
+        cases = (
+            ("success", "executable", None, ["build", "switch", "publish", "push"], 2),
+            ("build-fails", "executable", "candidate-build", ["build"], 1),
+            (
+                "switch-fails",
+                "executable",
+                "candidate-switch",
+                ["build", "switch"],
+                2,
+            ),
+            ("missing", "missing", None, [], 0),
+            ("nonexecutable", "nonexecutable", None, [], 0),
+        )
+        for (
+            name,
+            driver_mode,
+            failure_phase,
+            expected_external,
+            expected_count,
+        ) in cases:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temp_dir:
+                root, environment, baseline = self._create_update_agents_fixture(
+                    temp_dir, nixos_driver=driver_mode
+                )
+                before = self._update_agents_projection(root)
+                external_log = Path(temp_dir) / "external.log"
+                driver_log = Path(temp_dir) / "driver.log"
+                push_marker = Path(temp_dir) / "push-called"
+                environment.update(
+                    {
+                        "UPDATE_TEST_DRIVER_LOG": str(driver_log),
+                        "UPDATE_TEST_EXTERNAL_LOG": str(external_log),
+                        "UPDATE_TEST_PUSH_MARKER": str(push_marker),
+                    }
+                )
+                if failure_phase is not None:
+                    environment["UPDATE_TEST_FAILURE_PHASE"] = failure_phase
+
+                result = subprocess.run(
+                    [str(UPDATE_AGENTS), "--commit", "--switch", "--push"],
+                    capture_output=True,
+                    text=True,
+                    env=environment,
+                    check=False,
+                )
+
+                observed_external = (
+                    external_log.read_text().splitlines()
+                    if external_log.exists()
+                    else []
+                )
+                self.assertEqual(observed_external, expected_external)
+                invocations = (
+                    [line.split("\t") for line in driver_log.read_text().splitlines()]
+                    if driver_log.exists()
+                    else []
+                )
+                self.assertEqual(len(invocations), expected_count)
+                if invocations:
+                    self.assertEqual(
+                        invocations[0][:5],
+                        [str(root), "--", "nix", "build", "--no-link"],
+                    )
+                    candidate, attribute = invocations[0][5].split("#", 1)
+                    self.assertEqual(
+                        attribute,
+                        "nixosConfigurations.ovh-vps.config.system.build.toplevel",
+                    )
+                    if len(invocations) == 2:
+                        self.assertEqual(
+                            invocations[1],
+                            [
+                                str(root),
+                                "--",
+                                "nixos-rebuild",
+                                "switch",
+                                "--flake",
+                                f"{candidate}#ovh-vps",
+                            ],
+                        )
+                if name == "success":
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertTrue(push_marker.is_file())
+                else:
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertFalse(push_marker.exists())
+                    self._assert_update_agents_unchanged(root, baseline, before)
+                if driver_mode != "executable":
+                    self.assertIn(
+                        "NixOS build driver is missing or not executable", result.stderr
+                    )
+
     def test_update_build_failure_never_switches_publishes_or_pushes(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, baseline = self._create_update_agents_fixture(temp_dir)
@@ -6815,21 +6945,6 @@ exec "$REAL_GIT" "$@"
         self.assertIn("run_switch=false", update_agents)
         self.assertIn("run_push=false", update_agents)
         self.assertIn("run_brew=false", update_agents)
-        self.assertNotIn("with_nixos_build_lock", update_agents)
-        self.assertNotIn('sudo touch "$lock"', update_agents)
-        self.assertIn('build_driver="$config_dir/build"', update_agents)
-        self.assertIn(
-            '"$build_driver" -- nix build --no-link',
-            update_agents,
-        )
-        self.assertNotRegex(
-            update_agents,
-            r'(?m)^\s*nix build --no-link \\\n\s*"\$candidate_dir#nixosConfigurations',
-        )
-        self.assertIn(
-            '"$build_driver" -- nixos-rebuild switch --flake "$candidate_dir#$output"',
-            update_agents,
-        )
         self.assertIn('commit -S -m "Update project pins"', update_agents)
         self.assertIn("--switch/--push require --commit", update_agents)
         self.assertNotIn('git -C "$repo" add -A', update_agents)

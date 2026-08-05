@@ -860,27 +860,36 @@ if [[ $run_switch == true ]]; then
         echo "update: no flake output for host: $raw_host" >&2
         exit 2
     }
-    if [[ -d /etc/nixos || -d /etc/srp-next ]]; then
+    case $output in
+    vulcan | ovh-vps)
         build_driver="$config_dir/build"
         if [[ ! -x $build_driver ]]; then
             echo "update: NixOS build driver is missing or not executable: $build_driver" >&2
             exit 1
         fi
-        "$build_driver" -- nix build --no-link \
-            "$candidate_dir#nixosConfigurations.$output.config.system.build.toplevel"
+        (
+            cd "$config_dir"
+            ./build -- nix build --no-link \
+                "$candidate_dir#nixosConfigurations.$output.config.system.build.toplevel"
+        )
         if ! live_repository_matches_baseline; then
             echo "update: live repository changed before candidate switch" >&2
             exit 1
         fi
-        "$build_driver" -- nixos-rebuild switch --flake "$candidate_dir#$output"
-    else
+        (
+            cd "$config_dir"
+            ./build -- nixos-rebuild switch --flake "$candidate_dir#$output"
+        )
+        ;;
+    *)
         nix build --no-link "$candidate_dir#darwinConfigurations.$output.system"
         if ! live_repository_matches_baseline; then
             echo "update: live repository changed before candidate switch" >&2
             exit 1
         fi
         sudo darwin-rebuild switch --flake "$candidate_dir#$output"
-    fi
+        ;;
+    esac
     if ! live_repository_matches_baseline; then
         echo "update: live repository changed during candidate switch" >&2
         exit 1
