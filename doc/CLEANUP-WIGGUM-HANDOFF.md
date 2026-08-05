@@ -9,14 +9,11 @@ Done in [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md).
 
 ## Authoritative state
 
-- The authoritative checkout is `/Users/johnw/src/nix`, on `main`, and it is the
-  only worktree. Both GitHub and Gitea remain at `9c5cd2a9`. The unpublished
-  local suffix consists of signed Hermes fix `80e194fc`, signed R6 checkpoint
-  `f6e18e3c`, and the signed handoff correction that contains this sentence, so
-  `main` is three commits ahead of both remotes. The source-bearing `80e194fc`
-  change is not activated. The last complete fleet activation proof remains the
-  #126 boundary at `e7dc846c`; later commits must not be described as
-  fleet-active without host receipts.
+- The authoritative checkout is `/Users/johnw/src/nix`, on clean `main`, and it
+  is the only worktree. Local `main`, GitHub, and Gitea all point to signed
+  `fb04fad4`. The last complete fleet activation proof remains the #126 boundary
+  at `e7dc846c`; later commits must not be described as fleet-active without
+  host receipts.
 - Signed `bf873fdf` replaces Copy Message's platform-specific clipboard
   subprocesses with Pi's portable clipboard API. The subsequent Pi provider,
   extension, catalog-refresh, and Hermes credential fixes are published through
@@ -112,14 +109,27 @@ after the audit rather than pretending the old denominator is current.
   silent empty-input refusal, source-only test-driver exclusion, stable hashes,
   and exact scratch cleanup passed on both hosts. Fresh independent correctness
   and security reviews are GO only for the next separately authorized controlled
-  privileged qualification. That matrix must begin with an out-of-band root
-  watchdog proving bounded timeout/interruption cleanup and zero surviving
-  sudo/helper descendants, then cover exact sudo policy, hidden `trusted.*`
-  refusal, namespace/LSM and mount assumptions, protected-descriptor syscall
-  traces, receipt/drift cases, and end-to-end recovery. No production package or
-  closure exists for this one-off candidate, no privileged invocation or live
-  mutation occurred, and source-tree exclusion is not closure proof. Shared-NFS
-  apply remains refused. Private recovery archive
+  privileged qualification. The attempted custom R3 lifecycle/watchdog design
+  is frozen NO-GO: it reimplemented PID 1, still had unit-name and provenance
+  races, and did not own a crash-safe rollback boundary. A smaller reviewed
+  design instead uses one transient `Type=notify`, `RemainAfterExit=no`,
+  `ExitType=cgroup` service, a baseline-only sibling restorer, and a narrow
+  pidfd-bound signal probe. `RuntimeMaxSec` remains armed only while the main
+  wrapper is alive or the cgroup remains populated; the earlier
+  `RemainAfterExit=yes` sketch was rejected because systemd disarms that timer
+  in `SERVICE_EXITED`.
+
+  Privileged execution remains NO-GO. Source review shows a transient service
+  should survive NixOS `test` activation, but the authoritative host build
+  wrappers cannot preserve their `.nixos-build` serialization after transaction
+  coordinator/owner death: they may release or seize a still-needed marker.
+  Running each wrapper inside a manager-owned transaction covers operator/SSH
+  disconnect only. The stronger accepted recovery boundary needs a non-stealing,
+  ownership-checked manager lock holder or an explicitly reduced safety
+  contract before implementation and harmless host qualification. No production
+  package or closure exists for this one-off candidate, no privileged invocation
+  or live mutation occurred, and source-tree exclusion is not closure proof.
+  Shared-NFS apply remains refused. Private recovery archive
   `~/dl/wg-project9-promptdeploy-r6-qualified-20260805.tar.gz` is mode 0600 with
   SHA-256 `b9ee0f0a7c167a67dbe5eb64dc252dd05f74e7d7034e8785a6d8348235e4d8a6`;
   retain it until #127 closes, then remove it only with explicit approval.
@@ -161,11 +171,11 @@ after the audit rather than pretending the old denominator is current.
 
 ## Concurrent work boundary
 
-There is no uncommitted source candidate. Frozen transaction R6 and its native
-qualification/review evidence live only below `/private/tmp/wg-project9`; they
-are not repository code and have not touched a live home. Continue to refresh
-checkout ownership before every shared-file edit and do not infer live
-activation from source state.
+There is no uncommitted source candidate. Frozen transaction R6, the rejected
+R3 implementation, and the native-systemd design/security/NixOS-switch/build-lock
+reviews live only below `/private/tmp/wg-project9`; they are not repository code
+and have not touched a live home. Continue to refresh checkout ownership before
+every shared-file edit and do not infer live activation from source state.
 
 ## Authorization boundary
 
