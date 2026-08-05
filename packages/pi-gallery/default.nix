@@ -607,6 +607,14 @@ let
     version = members.usage.version;
     install = root: ''
       tar -xzf ${releaseTarballs.pi-usage-extension} -C ${root} --strip-components=1
+      substituteInPlace ${root}/data.ts \
+        --replace-fail \
+          'await writeFile(tmpPath, payload, "utf8");' \
+          'await writeFile(tmpPath, payload, { encoding: "utf8", mode: 0o600 });'
+      substituteInPlace ${root}/index.ts \
+        --replace-fail \
+          'writeFileSync(path, content);' \
+          'writeFileSync(path, content, { encoding: "utf8", mode: 0o600, flag: "wx" });'
     '';
   };
 

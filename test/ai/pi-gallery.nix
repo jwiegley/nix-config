@@ -228,6 +228,24 @@ runCommand "pi-gallery-check"
     [ -d ${roots.insights}/node_modules/recharts ]
     [ -f ${roots.usage}/index.ts ]
     [ ! -e ${roots.usage}/node_modules ]
+    grep -F 'await writeFile(tmpPath, payload, { encoding: "utf8", mode: 0o600 });' \
+      ${roots.usage}/data.ts >/dev/null \
+      || fail "Usage Dashboard cache is not private"
+    grep -F 'writeFileSync(path, content, { encoding: "utf8", mode: 0o600, flag: "wx" });' \
+      ${roots.usage}/index.ts >/dev/null \
+      || fail "Usage Dashboard exports are not private and exclusive"
+
+    usage_runtime="$TMPDIR/pi-usage-runtime"
+    mkdir -p "$usage_runtime"
+    cat > "$usage_runtime/probe.ts" <<EOF
+    import { saveUsageCache } from "${roots.usage}/data.ts";
+
+    await saveUsageCache(process.env.PI_USAGE_CACHE!, new Map());
+    EOF
+    PI_USAGE_CACHE="$usage_runtime/usage-extension-cache.json" \
+      ${bun}/bin/bun "$usage_runtime/probe.ts"
+    [ "$(stat -c '%a' "$usage_runtime/usage-extension-cache.json")" = 600 ] \
+      || fail "Usage Dashboard cache mode is not 0600"
     [ -f ${roots.multi-pass}/extensions/multi-sub.ts ]
     [ ! -e ${roots.multi-pass}/node_modules ]
     [ -f ${piPackages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts ]

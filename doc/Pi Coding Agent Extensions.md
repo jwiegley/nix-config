@@ -227,9 +227,9 @@ Pi Insights derives an interactive analytics report from Pi session history. It 
 
 **Version:** 0.9.4 · **Links:** [Pi Packages](https://pi.dev/packages/@tmustier/pi-usage-extension) · [Home](https://github.com/tmustier/pi-extensions/tree/main/usage-extension) · [GitHub](https://github.com/tmustier/pi-extensions)
 
-The Usage Dashboard aggregates locally persisted Pi session usage by provider, model, time period, cost, token type, and thinking level. It reads the session ledger only when `/usage` opens and maintains an incremental cache at `~/.pi/agent/usage-extension-cache.json`; the first scan can be substantial, while subsequent scans normally parse only changed files.
+The Usage Dashboard aggregates locally persisted Pi session usage by provider, model, time period, cost, token type, and thinking level. It reads the session ledger only when `/usage` opens and maintains an incremental cache at `~/.pi/agent/usage-extension-cache.json`; the first scan can be substantial, while subsequent scans normally parse only changed files. The cache includes session identifiers, working-directory paths, models, costs, and token counts, so the Nix package forces it to mode `0600` and it should be treated as sensitive.
 
-**Basic usage.** Run `/usage`, use `Tab` or Left/Right to change time periods, `v` to change views, and `e` to export the current view. Exports default to the system temporary directory unless `usage-extension.exportDir` is set in mutable Pi settings. Reported costs and tokens are only as complete as the usage metadata persisted by each provider and Pi version.
+**Basic usage.** Run `/usage`, use `Tab` or Left/Right to change time periods, `v` to change views, and `e` to export the current view. Exports default to the system temporary directory unless `usage-extension.exportDir` is set in mutable Pi settings. Nix patches exports to use exclusive creation at mode `0600`; they still contain sensitive usage details and should be handled accordingly. Reported costs and tokens are only as complete as the usage metadata persisted by each provider and Pi version.
 
 ## Research, code intelligence, and browsers
 
