@@ -1,5 +1,5 @@
-import llamaSwap from "./pi-provider-llama-swap.js";
-import omlx from "./pi-provider-omlx.js";
+import llamaSwap from "../../packages/pi-gallery/providers/pi-provider-llama-swap.js";
+import omlx from "../../packages/pi-gallery/providers/pi-provider-omlx.js";
 
 function expectEqual(actual: unknown, expected: unknown, label: string): void {
 	if (JSON.stringify(actual) !== JSON.stringify(expected)) {

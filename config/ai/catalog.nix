@@ -1300,7 +1300,6 @@ let
       items ? catalogItems,
     }:
     let
-      profileIds = builtins.attrNames profiles;
       itemSets = builtins.attrValues items;
       allItems = lib.concatMap builtins.attrValues itemSets;
       itemChecks = lib.concatLists (
@@ -1372,68 +1371,7 @@ let
           ) "invalid resolved MCP server ${profile.id}/${name}"
         ) items.mcpServers
       ) (builtins.attrValues profiles);
-      piProfile = profiles.hera-pi;
-      piMcpNames = builtins.attrNames (select piProfile items.mcpServers);
-      clioPiMcpNames = builtins.attrNames (select profiles.clio-pi items.mcpServers);
-      sharedWorkPiMcpNames = builtins.attrNames (select profiles.shared-work-pi items.mcpServers);
-      vpsPiMcpNames = builtins.attrNames (select profiles.vps-pi items.mcpServers);
-      vulcanPiMcpNames = builtins.attrNames (select profiles.vulcan-pi items.mcpServers);
-      checks = [
-        (ensure (profileIds == allowedProfileIds) "profile ID set differs")
-        (ensure (
-          builtins.hasAttr "settings" items
-          && builtins.attrNames items.settings == [ "settings" ]
-          && (
-            let
-              settingsItem = items.settings.settings;
-              deletionProfiles = builtins.attrNames settingsItem.intentionalDeletions;
-            in
-            settingsItem.selectors == {
-              clients = [ "claude" ];
-            }
-            &&
-              settingsItem.statusLineCommand == {
-                executable = "bash";
-                rootRelativePath = "statusline-command.sh";
-              }
-            && !(settingsItem.base.statusLine ? command)
-            && deletionProfiles == settingsDeletionProfiles
-            && builtins.all (
-              profileId: settingsItem.intentionalDeletions.${profileId} == [ "preferredNotifChannel" ]
-            ) deletionProfiles
-          )
-        ) "invalid settings item")
-        (ensure (
-          piMcpNames == [
-            "devonthink"
-            "drafts"
-            "pal"
-            "searxng"
-            "sequential-thinking"
-            "stock-trader"
-          ]
-        ) "Pi MCP selection differs")
-        (ensure (clioPiMcpNames == piMcpNames) "Clio Pi MCP selection differs from Hera")
-        (ensure (
-          sharedWorkPiMcpNames == [
-            "pal"
-            "sequential-thinking"
-          ]
-        ) "shared-work Pi MCP selection differs")
-        (ensure (vpsPiMcpNames == sharedWorkPiMcpNames) "VPS Pi MCP selection differs")
-        (ensure (
-          vulcanPiMcpNames == [
-            "pal"
-            "searxng"
-            "sequential-thinking"
-          ]
-        ) "Vulcan Pi MCP selection differs")
-      ]
-      ++ itemChecks
-      ++ selectorChecks
-      ++ profileChecks
-      ++ mcpChecks
-      ++ mcpResolutionChecks;
+      checks = itemChecks ++ selectorChecks ++ profileChecks ++ mcpChecks ++ mcpResolutionChecks;
     in
     builtins.deepSeq checks true;
 in

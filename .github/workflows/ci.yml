@@ -2,10 +2,8 @@ name: CI
 
 # Lint/format/test jobs delegate scope and execution to test/bin/quality.
 #
-# `test/bin/quality darwin-surface` is deliberately local/manual for now. The root
-# flake still consumes a LAN-only ssh://gitea stock-trader input, so a GitHub
-# runner cannot evaluate that check honestly until a remote-safe boundary exists.
-# Full Python integration remains available through the local/manual expensive
+# Root-host evaluation remains local because the flake still consumes LAN-only
+# inputs. Full Python integration remains available through the local/manual expensive
 # tier.  Its remote-safe portable evaluation and native builds live in
 # portable-assurance.yml (twice daily plus manual dispatch), not on every push or pull
 # request.

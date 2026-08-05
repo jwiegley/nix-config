@@ -3,7 +3,6 @@
   coreutils,
   diffutils,
   findutils,
-  jq,
   lib,
   nodejs_22,
   piPackage,
@@ -18,23 +17,13 @@ runCommand "pi-fleet-theme-check"
       coreutils
       diffutils
       findutils
-      jq
       nodejs_22
     ];
   }
   ''
     set -euo pipefail
 
-    theme=${lib.escapeShellArg "${sourceForChecks}/config/ai/themes/dark-tool-backgrounds.json"}
     extension=${lib.escapeShellArg "${sourceForChecks}/config/ai/extensions/fleet-theme/index.ts"}
-    expected=03ecec59f47f49b6562f95101d58ae6338377e0d9b84b6410e065f28e2c18d5a
-
-    test "$(sha256sum "$theme" | cut -d ' ' -f 1)" = "$expected"
-    jq -e '
-      (keys | sort) == ["$schema", "colors", "export", "name", "vars"]
-      and .name == "dark-tool-backgrounds"
-      and (.colors | length) == 52
-    ' "$theme" >/dev/null
 
     (
       cd ${sourceForChecks}/test/ai/extensions/fleet-theme

@@ -165,7 +165,7 @@ Verification tiers are intentionally distinct:
 |---|---|
 | Pre-commit | Formatting, lint, parsing, and bounded essential tests |
 | Pre-push | Commit signatures |
-| Work-unit closeout | Slow focused tests, consumers, and Darwin value surfaces |
+| Work-unit closeout | Slow focused tests, consumer evaluation, and affected builds |
 | Scheduled/expensive | Cross-system portable evaluation, native checks, and low-frequency evidence |
 | Runtime | Native activation and service/client acceptance |
 

@@ -174,28 +174,16 @@ artifact to preserve it.
 - After retirement of the old `config/fleet` consumer path and the last Phase 6 selection
   change, delete the parity tool, baseline, currency/history tests, and runbook.
   No parity claim remains after its comparison authority is removed.
-- Keep Darwin value-surface comparison through the Codex-wrapper and host-policy
-  changes. Then replace the broad golden with direct assertions only where that
-  preserves the intended property. Before deleting the baseline writer, writer
-  tests, or broad snapshot, dispose of every existing projected surface:
+- The Darwin value-surface golden, writer, differ, and their self-tests were
+  retired on 2026-08-05 after John explicitly chose ordinary manual
+  maintainability over a serialized inventory of current host values. Direct
+  evaluation, build, security, and runtime-behavior checks remain. Exact users,
+  package rosters, service rosters, Homebrew selections, Nix settings, system
+  defaults, and launchd bodies are no longer frozen independently of their
+  configuration authorities.
 
-  | Surface | Required disposition before golden deletion |
-  |---|---|
-  | Users | Retain direct identity, home/shell/UID/GID, and authorized-key assertions, or explicitly abandon each |
-  | Environment | Retain or explicitly abandon package names, `/etc` entries, variables, shells, and link paths |
-  | Prometheus | Retain or explicitly abandon enablement, port, address, and collector assertions |
-  | Homebrew | Retain or explicitly abandon brew/cask/tap/MAS sets and activation policy |
-  | Nix | Retain or explicitly abandon settings, jobs, distributed builds, and builder/key identity |
-  | System | Retain or explicitly abandon primary user, state version, defaults, and activation scripts |
-  | Launchd | Retain or explicitly abandon agent/daemon names plus hashed service and script bodies |
-
-  Retain the golden as a manual closeout diagnostic until this table is complete.
-  John must explicitly accept every intentionally abandoned surface in the same
-  issue/range that removes the golden. No coverage may disappear silently.
-
-Alternative: keep either golden as a manual diagnostic, never as an ordinary
-commit or pre-push requirement. Every retained golden must have a written failure
-triage rule.
+Do not introduce a replacement golden or denominator ledger. A new direct check
+must identify a durable behavior, schema, safety boundary, or public interface.
 
 ### D5. Drop speculative refactors from the completion gate
 
@@ -294,8 +282,9 @@ Delete across those commits:
   public `checks.tests` output; update the compatibility contract in the same
   commit;
 - unused portable script helpers and duplicate text-level gate-registration
-  assertions. Retain Make build/switch/lock failure propagation and the policy
-  check that scheduled assurance is manual/twice-daily rather than push/PR;
+  assertions. Retain Make build/switch/lock failure propagation. Keep scheduled
+  assurance manual/twice-daily in the workflow itself, but do not mirror its
+  exact cron, runner, action formatting, or Make recipe in a source-text test;
 - the committed consumer-inventory artifact plus both of its exact-source currency
   checks (current-tree generator parity and `repoHead` object/file availability),
   and the quality tests for generated-revision bureaucracy. Git already archives

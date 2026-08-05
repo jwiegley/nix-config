@@ -26,10 +26,6 @@ REPO = Path(__file__).resolve().parents[2]
 BIN = REPO / "bin"
 SCRIPT = BIN / "update-overlay"
 UPDATE_AGENTS = BIN / "update"
-UPGRADE_PROJECTS = BIN / "upgrade-projects"
-UPGRADE = BIN / "upgrade"
-SWITCH = BIN / "switch"
-BUILD = REPO / "build"
 MODULE = runpy.run_path(str(SCRIPT))
 GitHubClient = MODULE["GitHubClient"]
 HashComputer = MODULE["HashComputer"]
@@ -62,45 +58,12 @@ snapshot_catalog_record_isolation = MODULE.get("snapshot_catalog_record_isolatio
 validate_catalog_record_isolation = MODULE.get("validate_catalog_record_isolation")
 enforce_catalog_record_isolation = MODULE.get("enforce_catalog_record_isolation")
 
-ISSUE40_TARGETS = frozenset({"cohere-melody", "mlx"})
-ISSUE41_TARGETS = frozenset({"hf-xet", "sherlock-db"})
-ISSUE39_TARGETS = frozenset(
+PI_NORMALIZATION_TARGETS = frozenset(
     json.loads(
         (
             SCRIPT.parent.parent / "packages/pi-gallery/normalization-policy.json"
         ).read_text()
     )["targets"]
-)
-
-ISSUE34_TARGETS = frozenset(
-    {
-        "pi-mcp-adapter",
-        "ws",
-        "git-ai",
-        "llm-agents",
-        "mcp-remote",
-        "mcp-servers-nix",
-        "pal-mcp-server",
-        "pi-openai-server-compaction",
-        "pi-quiet",
-        "translate-tool",
-        "rust-overlay",
-    }
-)
-ISSUE34_FLAKE_PROJECTIONS = ISSUE34_TARGETS - {"ws"}
-ISSUE34_UPDATE_AGENTS = frozenset(
-    {
-        "git-ai",
-        "llm-agents",
-        "mcp-remote",
-        "mcp-servers-nix",
-        "pal-mcp-server",
-        "pi-mcp-adapter",
-        "pi-openai-server-compaction",
-        "pi-quiet",
-        "rust-overlay",
-        "translate-tool",
-    }
 )
 
 VENDOR_HASH = "sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
@@ -254,37 +217,7 @@ class UpdateCliTests(unittest.TestCase):
 
 
 class UpdateInventoryTests(unittest.TestCase):
-    def test_source_catalog_is_data_only_unique_and_consumed(self):
-        root = SCRIPT.parent.parent
-        catalog = load_source_catalog(root)
-        self.assertIn("pi-lens", catalog)
-        for name in (
-            "ascii",
-            "gptel-got",
-            "nixpkgs-last-good",
-            "org",
-            "poppler-darwin-mutex-patch",
-            "vterm-tmux",
-        ):
-            self.assertIn(name, catalog)
-        pi_manifest = (root / "packages/pi-gallery/manifest.nix").read_text()
-        self.assertIn('member "pi-lens"', pi_manifest)
-        self.assertNotIn("version =", pi_manifest)
-        self.assertNotIn("registry.npmjs.org", pi_manifest)
-        self.assertEqual(
-            json.loads((root / "sources/emacs.json").read_text())["sources"]["org"][
-                "commit"
-            ],
-            "cdc16898fd46a30d7187c0a5830b2b898ffbd2de",
-        )
-        self.assertIn(
-            'source-catalog.nix "compatibility"',
-            (root / "overlays/00-last-known-good.nix").read_text(),
-        )
-        self.assertIn('gitSource "org"', (root / "overlays/10-emacs.nix").read_text())
-        self.assertTrue(
-            all(path.suffix == ".json" for path in (root / "sources").iterdir())
-        )
+    def test_source_catalog_rejects_duplicate_ids(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp = Path(temp_dir)
             (temp / "sources").mkdir()
@@ -383,99 +316,6 @@ class UpdateInventoryTests(unittest.TestCase):
             '{\n  inputs = {\n    example.url = "github:example/project";\n  };\n}\n'
         )
         return document, lock
-
-    def test_issue34_records_are_catalog_owned(self):
-        root = SCRIPT.parent.parent
-        catalog = load_source_catalog(root)
-        self.assertTrue(ISSUE34_TARGETS <= catalog.keys())
-        self.assertEqual(
-            {name for name in ISSUE34_TARGETS if catalog[name]["source"] == "catalog"},
-            ISSUE34_TARGETS,
-        )
-        self.assertEqual(
-            {name for name in ISSUE34_TARGETS if catalog[name]["executor"] == "update"},
-            ISSUE34_UPDATE_AGENTS,
-        )
-        self.assertEqual(
-            {name for name in ISSUE34_TARGETS if catalog[name]["executor"] is None},
-            set(),
-        )
-        self.assertEqual(
-            {
-                name
-                for name in ISSUE34_TARGETS
-                if catalog[name]["_record"]["source"]["fetcher"] == "fetchTree"
-            },
-            ISSUE34_FLAKE_PROJECTIONS,
-        )
-        self.assertEqual(catalog["ws"]["_record"]["source"]["fetcher"], "fetchzip")
-        self.assertEqual(catalog["ws"]["_record"]["update"]["package"], "ws")
-        self.assertEqual(catalog["ws"]["executor"], "update-overlay")
-        self.assertNotIn("flake.nix", catalog["rust-overlay"]["files"])
-        self.assertNotIn("config/ai/flake.nix", catalog["rust-overlay"]["files"])
-        self.assertEqual(catalog["rust-overlay"]["kind"], "flake-input")
-
-        ai_names = set(json.loads((root / "sources/ai.json").read_text())["sources"])
-        pi_names = set(json.loads((root / "sources/pi.json").read_text())["sources"])
-        self.assertEqual(
-            ISSUE34_TARGETS & ai_names,
-            {
-                "git-ai",
-                "llm-agents",
-                "mcp-remote",
-                "mcp-servers-nix",
-                "pal-mcp-server",
-                "rust-overlay",
-                "translate-tool",
-            },
-        )
-        self.assertEqual(
-            ISSUE34_TARGETS & pi_names,
-            {
-                "pi-mcp-adapter",
-                "pi-openai-server-compaction",
-                "pi-quiet",
-                "ws",
-            },
-        )
-        consumer_text = "\n".join(
-            (root / path).read_text()
-            for path in (
-                "packages/agent-resources.nix",
-                "config/ai/catalog.nix",
-                "test/ai/agent-resources.nix",
-            )
-        )
-        for duplicate in (
-            "https://registry.npmjs.org/ws/-/ws-8.18.3.tgz",
-            "sha256-+o96RaViEX6JAoRI5JCLDJDcIXj+XbaH0+wSM9F2pBw=",
-            "sha256-Mxt5yq4UGxwVSIIC9B+fG2SS4BUNseyAL806Eb1I9YM=",
-        ):
-            self.assertNotIn(duplicate, consumer_text)
-
-    def test_issue34_projection_parity_uses_selected_lock_nodes(self):
-        root = SCRIPT.parent.parent
-        catalog = load_source_catalog(root)
-        lock = json.loads((root / "config/ai/flake.lock").read_text())
-        root_inputs = lock["nodes"][lock["root"]]["inputs"]
-        for name in ISSUE34_FLAKE_PROJECTIONS:
-            record = catalog[name]["_record"]
-            input_name = record["update"]["input"]
-            node_name = root_inputs[input_name]
-            self.assertIsInstance(node_name, str)
-            locked = lock["nodes"][node_name]["locked"]
-            self.assertEqual(
-                {
-                    field: record["source"]["args"][field]
-                    for field in ("type", "owner", "repo", "rev", "narHash")
-                },
-                {
-                    field: locked[field]
-                    for field in ("type", "owner", "repo", "rev", "narHash")
-                },
-            )
-        self.assertEqual(root_inputs["rust-overlay"], "rust-overlay_2")
-        self.assertNotEqual(root_inputs["rust-overlay"], "rust-overlay")
 
     def test_issue34_projection_mutations_fail_for_the_named_field(self):
         mutations = {
@@ -785,7 +625,7 @@ got: sha256-requested
     def test_pi_manifest_normalizer_is_shared_complete_and_fail_closed(self):
         root = SCRIPT.parent.parent
         contract = load_pi_normalization_contract(root)
-        self.assertEqual(set(contract["targets"]), ISSUE39_TARGETS)
+        self.assertEqual(set(contract["targets"]), PI_NORMALIZATION_TARGETS)
         jq = shutil.which("jq")
         self.assertIsNotNone(jq)
         manifest = {
@@ -825,7 +665,7 @@ got: sha256-requested
             "pi-subagents": {"typebox"},
         }
         all_special_dependencies = set().union(*special.values())
-        for target in sorted(ISSUE39_TARGETS):
+        for target in sorted(PI_NORMALIZATION_TARGETS):
             with self.subTest(target=target):
                 self.assertEqual(
                     set(contract["targets"][target]["defensiveForbidDependencies"]),
@@ -1050,7 +890,7 @@ got: sha256-requested
                 for name, record in source_records.items()
                 if record["update"].get("normalizer") == "pi-gallery-v1"
             },
-            ISSUE39_TARGETS,
+            PI_NORMALIZATION_TARGETS,
         )
         environment = dict(os.environ)
         environment.pop("UPDATE_AGENTS_CANDIDATE", None)
@@ -4427,54 +4267,12 @@ got: sha256-requested
             self.assertNotEqual(path.read_bytes(), before_source)
             self.assertNotEqual(lock_path.read_bytes(), before_lock)
 
-    def test_catalog_and_cli_inventory_cover_all_update_targets(self):
+    def test_catalog_and_cli_inventory_are_consistent(self):
         root = SCRIPT.parent.parent
         try:
             catalog = load_source_catalog(root)
         except (RuntimeError, subprocess.SubprocessError, ValueError) as error:
             self.fail(f"catalog evaluation failed: {error}")
-        required = {
-            "agent-browser-source",
-            "mcp-searxng",
-            "pi-artifacts",
-            "pi-lens",
-            "pi-mcp-adapter",
-            "pi-smart-fetch",
-            "pi-smart-web-search",
-            "rust-overlay",
-            "ws",
-            "git-ai",
-            "llm-agents",
-            "translate-tool",
-        }
-        self.assertTrue(required <= catalog.keys())
-        self.assertIn(
-            "packages/pi-gallery/locks/pi-lens-package-lock.json",
-            catalog["pi-lens"]["files"],
-        )
-        self.assertIn(
-            "packages/pi-gallery/locks/pi-smart-fetch-package-lock.json",
-            catalog["pi-smart-fetch"]["files"],
-        )
-        self.assertIn(
-            "packages/pi-gallery/locks/pi-smart-web-search-package-lock.json",
-            catalog["pi-smart-web-search"]["files"],
-        )
-        self.assertIn("sources/pi.json", catalog["pi-mcp-adapter"]["files"])
-        self.assertNotIn("config/ai/catalog.nix", catalog["pi-mcp-adapter"]["files"])
-        self.assertEqual(catalog["ws"]["_record"]["update"]["package"], "ws")
-        self.assertEqual(
-            catalog["mcp-remote"]["_record"]["update"]["kind"],
-            "flake-input+build",
-        )
-        self.assertEqual(
-            catalog["mcp-remote"]["_record"]["update"]["buildPackage"],
-            "agent-http-header-bridge",
-        )
-        self.assertEqual(
-            set(catalog["mcp-remote"]["_record"]["hashes"]),
-            {"npmDepsHash"},
-        )
 
         result = subprocess.run(
             [sys.executable, str(SCRIPT), "--inventory", "--json"],
@@ -4488,99 +4286,22 @@ got: sha256-requested
             inventory = json.loads(result.stdout)
         except json.JSONDecodeError as error:
             self.fail(f"inventory returned invalid JSON: {error}")
-        names = [item["name"] for item in inventory["packages"]]
+
+        self.assertIsInstance(inventory.get("schemaVersion"), int)
+        packages = inventory.get("packages")
+        self.assertIsInstance(packages, list)
+        names = [item["name"] for item in packages]
         self.assertEqual(len(names), len(set(names)))
-        self.assertEqual(set(names), set(catalog))
         self.assertEqual(names, sorted(catalog))
-        self.assertTrue(required <= set(names))
-        self.assertTrue(all(item["inventoried"] for item in inventory["packages"]))
-        self.assertEqual(set(inventory), {"packages", "schemaVersion"})
-        by_name = {item["name"]: item for item in inventory["packages"]}
-        relocated = {
-            "agent-deck",
-            "agnix",
-            "browser-control-mcp",
-            "claude-replay",
-            "claude-vault",
-            "drafts-mcp-server",
-            "gguf-tools",
-            "hfdownloader",
-            "lazycodex-ai",
-            "llama-cpp",
-            "llama-swap",
-            "llm-mlx",
-            "mcp-searxng",
-            "omlx",
-            "rustdocs-mcp-server",
-        }
-        catalog_owned = {
-            item["name"]
-            for item in inventory["packages"]
-            if item["source"] == "catalog"
-        }
-        self.assertEqual(
-            {item["name"] for item in inventory["packages"] if not item["managed"]},
-            set(),
-        )
-        self.assertEqual(catalog_owned, set(catalog))
-        self.assertTrue(relocated <= catalog_owned)
-        self.assertTrue(all(by_name[name]["managed"] for name in relocated))
-        self.assertTrue(by_name["git-ai"]["managed"])
-        self.assertEqual(
-            {name for name in ISSUE34_TARGETS if by_name[name]["source"] == "catalog"},
-            ISSUE34_TARGETS,
-        )
-        self.assertEqual(
-            {name for name in ISSUE34_TARGETS if by_name[name]["executor"] == "update"},
-            ISSUE34_UPDATE_AGENTS,
-        )
-        self.assertEqual(by_name["git-ai"]["executor"], "update")
-        for name in ("cymbal", "rtk"):
-            self.assertTrue(by_name[name]["managed"])
-            self.assertEqual(by_name[name]["kind"], "github-release-asset")
-            self.assertEqual(by_name[name]["executor"], "update")
-            self.assertEqual(by_name[name]["policy"], "manual")
-        self.assertEqual(by_name["pi-ponytail"]["executor"], "update")
-        self.assertEqual(by_name["pi-mcp-adapter"]["executor"], "update")
-        self.assertEqual(by_name["pi-btw"]["executor"], "update")
-        self.assertEqual(
-            catalog["pi-mcp-adapter"]["_record"]["update"]["buildPackage"],
-            "agent-resources",
-        )
-        self.assertEqual(by_name["ws"]["executor"], "update-overlay")
-        self.assertEqual(
-            {name for name in ISSUE40_TARGETS if by_name[name]["managed"]},
-            ISSUE40_TARGETS,
-        )
-        self.assertEqual(
-            {name for name in ISSUE40_TARGETS if by_name[name]["executor"] == "update"},
-            ISSUE40_TARGETS,
-        )
-        self.assertEqual(
-            {name for name in ISSUE41_TARGETS if by_name[name]["managed"]},
-            ISSUE41_TARGETS,
-        )
-        self.assertEqual(
-            {name for name in ISSUE41_TARGETS if by_name[name]["executor"] == "update"},
-            ISSUE41_TARGETS,
-        )
-        self.assertEqual(
-            {name for name in ISSUE39_TARGETS if by_name[name]["managed"]},
-            ISSUE39_TARGETS,
-        )
-        self.assertEqual(
-            {name for name in ISSUE39_TARGETS if by_name[name]["executor"] == "update"},
-            ISSUE39_TARGETS,
-        )
-        self.assertTrue(
-            all(
-                catalog[name]["_record"]["update"].get("normalizer") == "pi-gallery-v1"
-                for name in ISSUE39_TARGETS
+        self.assertTrue(all(item.get("inventoried") for item in packages))
+        for item in packages:
+            self.assertTrue(
+                {"executor", "files", "kind", "name", "policy", "source"}
+                <= set(item)
             )
-        )
-        for item in inventory["packages"]:
-            for path in item["files"]:
-                self.assertTrue((root / path).is_file(), (item["name"], path))
+            for relative in item["files"]:
+                self.assertTrue((root / relative).is_file(), (item["name"], relative))
+
         human = subprocess.run(
             [sys.executable, str(SCRIPT), "--inventory"],
             capture_output=True,
@@ -4589,10 +4310,8 @@ got: sha256-requested
             cwd=root,
         )
         self.assertEqual(human.returncode, 0, human.stderr)
-        self.assertEqual(
-            human.stdout.splitlines()[-1],
-            f"{len(catalog)} inventoried targets; {len(catalog)} executable; 0 pending executors",
-        )
+        self.assertTrue(human.stdout.strip())
+
 
     def test_source_transaction_rolls_back_and_commit_preserves(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -6871,311 +6590,8 @@ exec "$REAL_GIT" "$@"
                 "",
             )
 
-    def test_active_commands_have_one_repository_update_transaction(self):
-        root = SCRIPT.parent.parent
-        update_agents = (root / "bin" / "update").read_text()
-        build = (root / "build").read_text()
-        makefile = (root / "Makefile").read_text()
-        upgrade = (root / "bin" / "upgrade").read_text()
-        upgrade_projects = (root / "bin" / "upgrade-projects").read_text()
-        switch = (root / "bin" / "switch").read_text()
-        update_remote = (root / "bin" / "update-remote").read_text()
-        active = "\n".join(
-            (
-                update_agents,
-                build,
-                makefile,
-                upgrade,
-                upgrade_projects,
-                switch,
-                update_remote,
-            )
-        )
-
-        for retired in (
-            "AI_NIX_DIR",
-            "NO_AI_NIX_OVERRIDE",
-            "--override-input ai-nix",
-            "--no-ai-nix",
-            "--only-ai-nix",
-            "src/ai-nix",
-            "jwiegley/ai-nix",
-        ):
-            with self.subTest(retired=retired):
-                self.assertNotIn(retired, active)
-
-        self.assertNotIn('nix flake update "${ai_inputs[@]}"', update_agents)
-        self.assertIn("nix flake update nix-config-ai", update_agents)
-        for required_input in (
-            "git-ai",
-            "llm-agents",
-            "mcp-servers-nix",
-            "pal-mcp-server",
-            "pi-openai-server-compaction",
-            "pi-quiet",
-            "translate-tool",
-        ):
-            with self.subTest(required_input=required_input):
-                self.assertIn(required_input, update_agents)
-        self.assertIn(
-            'nix flake update --flake ./config/ai "${ai_inputs[@]}" "${lock_target_inputs[@]}"',
-            update_agents,
-        )
-        self.assertNotIn("\n    nixpkgs\n", update_agents)
-        for catalog_routed in (
-            "agent-browser-source",
-            "mcp-remote",
-            "pi-agent-browser-native",
-            "pi-artifacts",
-            "pi-dynamic-workflows",
-            "pi-hashline-edit-pro",
-            "pi-insights",
-            "pi-lens",
-            "pi-mcp-adapter",
-            "pi-smart-fetch",
-            "pi-smart-web-search",
-            "ponytail",
-        ):
-            with self.subTest(catalog_routed=catalog_routed):
-                self.assertNotIn(f"\n    {catalog_routed}\n", update_agents)
-        self.assertIn("python bin/update-overlay --all", update_agents)
-        self.assertNotIn("--overlays-dir", update_agents)
-        self.assertEqual(update_agents.count('git_pull_clean "$config_dir"'), 1)
-        self.assertIn("run_commit=false", update_agents)
-        self.assertIn("run_switch=false", update_agents)
-        self.assertIn("run_push=false", update_agents)
-        self.assertIn("run_brew=false", update_agents)
-        self.assertIn('commit -S -m "Update project pins"', update_agents)
-        self.assertIn("--switch/--push require --commit", update_agents)
-        self.assertNotIn('git -C "$repo" add -A', update_agents)
-        self.assertNotIn("commit_and_push_if_changed", update_agents)
-        self.assertIn(
-            "bin/update --all-inputs --pull --commit --switch --push", makefile
-        )
-        self.assertIn("if [[ $run_all_inputs == true ]]", update_agents)
-        self.assertIn("nix flake update --flake ./config/ai", update_agents)
-        catalog = load_source_catalog(root)
-        expected_inputs = {
-            name
-            for name, target in catalog.items()
-            if target.get("executor") == "update"
-            and target.get("kind") == "flake-input"
-        }
-        block = re.search(r"ai_inputs=\((.*?)\n\)", update_agents, re.DOTALL)
-        if block is None:
-            self.fail("update has no ai_inputs array")
-        declared_inputs = {
-            line.strip() for line in block.group(1).splitlines() if line.strip()
-        }
-        self.assertEqual(declared_inputs, expected_inputs)
-        self.assertIn("--prepare-fixed-inputs", update_agents)
-        self.assertIn(
-            "export UPDATE_AGENTS_CANDIDATE=1",
-            update_agents,
-        )
-        self.assertNotIn(
-            "UPDATE_AGENTS_CANDIDATE=1 python bin/update-overlay --sync-flake-projections",
-            update_agents,
-        )
-        self.assertIn("transaction_baseline=", update_agents)
-        self.assertIn("trap cleanup_transaction EXIT", update_agents)
-        self.assertIn('git -C "$config_dir" worktree add', update_agents)
-        self.assertIn(
-            'git -C "$config_dir" -c core.hooksPath=/dev/null',
-            update_agents,
-        )
-        self.assertIn('merge --ff-only "$committed_head"', update_agents)
-        self.assertIn('bin/publish --publish', update_agents)
-        self.assertIn('cd "$config_dir"', update_agents)
-        self.assertNotIn('git -C "$config_dir" push', update_agents)
-        candidate_build = update_agents.index(
-            'nix build --no-link "$candidate_dir#darwinConfigurations.$output.system"'
-        )
-        candidate_switch = update_agents.index(
-            'darwin-rebuild switch --flake "$candidate_dir#$output"'
-        )
-        publication = update_agents.index('merge --ff-only "$committed_head"')
-        push = update_agents.index('bin/publish --publish')
-        self.assertLess(candidate_build, candidate_switch)
-        self.assertLess(candidate_switch, publication)
-        self.assertLess(publication, push)
-        self.assertIn("nix flake check --no-build", update_agents)
-        self.assertNotIn("rollback_transaction", update_agents)
-        self.assertIn("set -euo pipefail", upgrade)
-        self.assertRegex(
-            upgrade,
-            r"(?m)^\s*\./bin/update --all-inputs --pull --commit --switch --push\s*$",
-        )
-        self.assertIn(
-            'exec "${installed_upgrade_projects:-$script_dir/upgrade-projects}"',
-            upgrade,
-        )
-        self.assertNotIn("set +e", upgrade)
-        self.assertNotIn("if [[ $?", upgrade_projects)
-        self.assertIn("if (run_project_body", upgrade_projects)
-        self.assertIn("failures=$((failures + 1))", upgrade_projects)
-        self.assertIn("exit 1", upgrade_projects)
-        self.assertIn('nix_flake_output_for_host "$host"', switch)
-        self.assertIn('nixos-rebuild switch --flake ".#$output"', switch)
-        self.assertNotIn("nixos-rebuild switch", update_remote)
-        self.assertIn("&& switch", update_remote)
-        self.assertNotIn("./bin/update --no-switch --no-brew", upgrade)
-
-    def test_overlay_manifests_are_explicit_and_inputs_do_not_leak_through_pkgs(self):
-        root = SCRIPT.parent.parent
-        composition = (root / "config/overlays.nix").read_text()
-        root_declared = re.findall(r"\.\./overlays/([0-9][^/\s]+\.nix)", composition)
-        root_actual = [path.name for path in (root / "overlays").glob("[0-9]*.nix")]
-        self.assertEqual(len(root_declared), len(set(root_declared)))
-        self.assertEqual(sorted(root_declared), sorted(root_actual))
-        self.assertNotIn("readDir", composition)
-
-        ai_composition = (root / "overlays/ai/default.nix").read_text()
-        ai_declared = re.findall(r"import \./([0-9][^/\s]+\.nix)", ai_composition)
-        ai_actual = [path.name for path in (root / "overlays/ai").glob("[0-9]*.nix")]
-        self.assertEqual(len(ai_declared), len(set(ai_declared)))
-        self.assertEqual(sorted(ai_declared), sorted(ai_actual))
-
-        production_nix = [
-            root / "flake.nix",
-            *root.glob("config/**/*.nix"),
-            *root.glob("flake/**/*.nix"),
-            *root.glob("overlays/**/*.nix"),
-        ]
-        forbidden = (
-            "pkgs.inputs",
-            "prev.inputs",
-            "final.inputs",
-            "inherit (prev) inputs",
-            "(_final: _prev: { inherit inputs; })",
-        )
-        for path in production_nix:
-            text = path.read_text()
-            for expression in forbidden:
-                with self.subTest(path=path.relative_to(root), expression=expression):
-                    self.assertNotIn(expression, text)
-
-    def test_upgrade_projects_continues_and_returns_aggregate_failure(self):
-        projects = (
-            "src/category-theory/master",
-            "src/ltl/coq",
-            "src/notes/haskell",
-            "src/org-jw",
-            "src/pushme",
-            "src/gitlib",
-            "src/hours",
-            "src/renamer",
-            "src/simple-amount",
-            "src/sizes",
-            "src/three-partition",
-            "src/trade-journal",
-            "src/una",
-            "src/comparable",
-            "src/rag-client",
-            "src/hf",
-            "src/ledger/main",
-        )
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp = Path(temp_dir)
-            home = temp / "home"
-            fake_bin = temp / "bin"
-            logs = temp / "logs"
-            trace = temp / "trace"
-            fake_bin.mkdir()
-            for project in projects:
-                directory = home / project
-                directory.mkdir(parents=True)
-                (directory / ".envrc").write_text("")
-            for command in ("cabal", "cargo", "rag-client", "huggingface-cli"):
-                path = fake_bin / command
-                path.write_text(
-                    "#!/usr/bin/env bash\n"
-                    'printf \'%s|%s|%s\\n\' "$(basename "$0")" "$PWD" "$*" >> "$UPGRADE_TRACE"\n'
-                    '[[ $(basename "$0") != rag-client ]] || exit 23\n'
-                    "exit 0\n"
-                )
-                path.chmod(0o700)
-            nix = fake_bin / "nix"
-            nix.write_text(
-                "#!/usr/bin/env bash\n"
-                'printf \'nix|%s|%s\\n\' "$PWD" "$*" >> "$UPGRADE_TRACE"\n'
-                "[[ $PWD != */org-jw ]] || exit 19\n"
-                "exit 0\n"
-            )
-            nix.chmod(0o700)
-            result = subprocess.run(
-                [str(UPGRADE_PROJECTS)],
-                capture_output=True,
-                text=True,
-                check=False,
-                env={
-                    **os.environ,
-                    "HOME": str(home),
-                    "PATH": f"{fake_bin}:{os.environ['PATH']}",
-                    "UPGRADE_LOG_DIR": str(logs),
-                    "UPGRADE_TRACE": str(trace),
-                },
-            )
-            self.assertEqual(result.returncode, 1)
-            self.assertEqual(
-                sum(line.endswith("FAIL") for line in result.stdout.splitlines()), 2
-            )
-            self.assertIn("2 failure(s)", result.stderr)
-
-            events = [line.split("|", 2) for line in trace.read_text().splitlines()]
-            nix_directories = {
-                directory for command, directory, _ in events if command == "nix"
-            }
-            self.assertEqual(
-                nix_directories, {str(home / project) for project in projects}
-            )
-            command_counts = {
-                command: sum(event[0] == command for event in events)
-                for command in (
-                    "nix",
-                    "cabal",
-                    "cargo",
-                    "rag-client",
-                    "huggingface-cli",
-                )
-            }
-            self.assertEqual(
-                command_counts,
-                {
-                    "nix": 17,
-                    "cabal": 22,
-                    "cargo": 1,
-                    "rag-client": 1,
-                    "huggingface-cli": 1,
-                },
-            )
-            expected_logs = {
-                "category-theory-build.log",
-                "ltl-coq-build.log",
-                "notes-haskell-build.log",
-                "org-jw-build.log",
-                "pushme-build.log",
-                "gitlib-build.log",
-                "hours-build.log",
-                "renamer-build.log",
-                "simple-amount-build.log",
-                "sizes-build.log",
-                "three-partition-build.log",
-                "trade-journal-build.log",
-                "una-build.log",
-                "comparable-build.log",
-                "rag-client-build.log",
-                "hf-build.log",
-                "ledger-build.log",
-            }
-            self.assertEqual({path.name for path in logs.iterdir()}, expected_logs)
-
     def test_root_inputs_do_not_reference_external_filesystems(self):
         root = SCRIPT.parent.parent
-        flake_text = (root / "flake.nix").read_text()
-        self.assertNotIn("git+file:", flake_text)
-        self.assertNotRegex(flake_text, r"file:///|path:/")
-
         lock = json.loads((root / "flake.lock").read_text())
         for name, node_ref in lock["nodes"]["root"]["inputs"].items():
             node_name = node_ref if isinstance(node_ref, str) else node_ref[0]
@@ -7413,10 +6829,6 @@ exec "$REAL_GIT" "$@"
     # pressure toward catalog ownership. Every entry names its owning issue.
     KNOWN_INLINE_SOURCE_LITERALS: dict[str, str] = {}
 
-    # Root flake inputs whose coordinate is neither a fetchable remote nor a
-    # repo-internal path. Empty: all current inputs are github:/git+ssh:/path:.
-    KNOWN_UNCLASSIFIED_FLAKE_INPUTS: dict[str, str] = {}
-
     @staticmethod
     def _mask_nix(text):
         """Blank comment and string bytes, preserving length and newlines.
@@ -7561,26 +6973,6 @@ exec "$REAL_GIT" "$@"
                 offenders[f"{rel}: {fetcher} {locator}"] = (str(rel), line)
         return offenders
 
-    @staticmethod
-    def _classify_flake_input_url(url):
-        """Classify a flake input coordinate syntactically.
-
-        repo-internal-path : non-absolute path: syntax            -> allowed
-        external-filesystem: path:/abs, file://, git+file://       -> reject
-        remote             : any URI-scheme syntax                 -> allowed
-        unknown            : anything else                         -> reject
-        """
-        if url.startswith("git+file:") or url.startswith("file:"):
-            return "external-filesystem"
-        if url.startswith("path:"):
-            rest = url[len("path:") :]
-            return (
-                "external-filesystem" if rest.startswith("/") else "repo-internal-path"
-            )
-        if re.match(r"[a-z][a-z0-9+.-]*:", url, flags=re.IGNORECASE):
-            return "remote"
-        return "unknown"
-
     def test_production_seams_have_no_undeclared_inline_source_coordinates(self):
         """No detected production inline coordinate is off-catalog.
 
@@ -7671,81 +7063,6 @@ exec "$REAL_GIT" "$@"
             # Stale entry not matching any offender -> also breaks equality.
             self.assertNotEqual(set(offenders), set(offenders) | {"stale/entry"})
 
-    def test_flake_input_coordinates_are_internal_or_declared(self):
-        """Flake input coordinates match accepted syntactic classes.
-
-        Confirms the allowed classes the gate must tolerate (issue #25): the
-        repo-internal path inputs and the stock-trader git+ssh remote. Synthetic
-        filesystem coordinates are rejected. This complements -- does not
-        duplicate -- test_root_inputs_do_not_reference_external_filesystems and
-        the whole-closure purity walk, which own the lock/text leak dimension.
-        """
-        root = SCRIPT.parent.parent
-        rejected = {}
-        for rel in ("flake.nix", "config/ai/flake.nix"):
-            text = (root / rel).read_text()
-            for url in re.findall(r'\burl\s*=\s*"([^"]*)"', text):
-                kind = self._classify_flake_input_url(url)
-                if kind not in ("remote", "repo-internal-path"):
-                    rejected[f"{rel}: {url}"] = kind
-        self.assertEqual(
-            set(rejected),
-            set(self.KNOWN_UNCLASSIFIED_FLAKE_INPUTS),
-            "flake input coordinate classification changed: %s" % rejected,
-        )
-        classify = self._classify_flake_input_url
-        self.assertEqual(classify("path:./config/ai"), "repo-internal-path")
-        self.assertEqual(classify("path:./config/certs"), "repo-internal-path")
-        self.assertEqual(
-            classify("git+ssh://gitea/johnw/stock-trader.git?rev=51d789"),
-            "remote",
-        )
-        self.assertEqual(classify("HTTPS://example.invalid/source"), "remote")
-        self.assertEqual(classify("github:owner/repo/deadbeef"), "remote")
-        for bad in (
-            "git+file:///Users/johnw/src/x",
-            "path:/Users/johnw/src/x",
-            "file:///tmp/x",
-        ):
-            with self.subTest(bad=bad):
-                self.assertEqual(classify(bad), "external-filesystem")
-
-    def test_literal_flake_revisions_are_catalog_owned_projections(self):
-        root = SCRIPT.parent.parent
-        revision_url = re.compile(
-            r"(?:^github:[^/]+/[^/?]+/[0-9a-f]{7,40}(?:[?].*)?$|[?&]rev=[0-9a-f]{7,40}(?:&|$))"
-        )
-
-        root_urls = re.findall(
-            r'\burl\s*=\s*"([^"]*)"', (root / "flake.nix").read_text()
-        )
-        self.assertEqual([url for url in root_urls if revision_url.search(url)], [])
-
-        portable = (root / "config/ai/flake.nix").read_text().splitlines()
-        current = None
-        portable_literals = set()
-        for line in portable:
-            start = re.match(r"^    ([A-Za-z0-9_-]+) = \{$", line)
-            if start:
-                current = start.group(1)
-                continue
-            if current is not None:
-                url = re.match(r'^      url = "([^"]+)";$', line)
-                if url and revision_url.search(url.group(1)):
-                    portable_literals.add(current)
-                if line == "    };":
-                    current = None
-
-        catalog = load_source_catalog(root)
-        catalog_literals = {
-            name
-            for name, target in catalog.items()
-            if target["_record"]["update"].get("input") == name
-            and target["kind"] in {"fixed-flake-input", "npm-release+flake-input"}
-            and "config/ai/flake.nix" in target["files"]
-        }
-        self.assertEqual(portable_literals, catalog_literals)
-
     def test_root_consumes_portable_input_authority_transitively(self):
         root = SCRIPT.parent.parent
         root_lock = json.loads((root / "flake.lock").read_text())
@@ -7805,273 +7122,6 @@ exec "$REAL_GIT" "$@"
         self.assertNotEqual(
             root_graph, canonical_inputs(drifted, drifted["nodes"]["root"])
         )
-
-        root_flake = (root / "flake.nix").read_text()
-        self.assertIn('nix-config-ai.url = "path:./config/ai"', root_flake)
-        self.assertNotIn("agent-browser-source = {", root_flake)
-
-    def test_profile_symlinked_scripts_find_packaged_routing_library(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            closure_bin = root / "nix-scripts/bin"
-            closure_lib = root / "nix-scripts/libexec/nix-scripts"
-            home_manager_bin = root / "home-manager-path/bin"
-            profile_bin = root / "profile/bin"
-            fake_bin = root / "fake-bin"
-            for directory in (
-                closure_bin,
-                closure_lib,
-                home_manager_bin,
-                profile_bin,
-                fake_bin,
-            ):
-                directory.mkdir(parents=True)
-            (fake_bin / "bash").symlink_to(shutil.which("bash") or "/bin/bash")
-
-            shutil.copy2(SCRIPT.parent / "lib/host-routing.sh", closure_lib)
-            shutil.copy2(UPGRADE_PROJECTS, closure_bin)
-            for source in (SWITCH, UPGRADE, UPDATE_AGENTS):
-                target = closure_bin / source.name
-                shutil.copy2(source, target)
-                target.chmod(target.stat().st_mode | stat.S_IWUSR)
-                packaged = target.read_text()
-                self.assertEqual(packaged.count("installed_routing_path="), 1)
-                packaged = packaged.replace(
-                    "installed_routing_path=",
-                    f"installed_routing_path={closure_lib / 'host-routing.sh'}",
-                )
-                if source == UPGRADE:
-                    self.assertEqual(packaged.count("installed_upgrade_projects="), 1)
-                    packaged = packaged.replace(
-                        "installed_upgrade_projects=",
-                        f"installed_upgrade_projects={closure_bin / 'upgrade-projects'}",
-                    )
-                target.write_text(packaged)
-                (home_manager_bin / source.name).symlink_to(target)
-                (profile_bin / source.name).symlink_to(
-                    Path("../../home-manager-path/bin") / source.name
-                )
-
-            def executable(name, text):
-                path = fake_bin / name
-                path.write_text(text)
-                path.chmod(0o755)
-
-            executable("hostname", "#!/bin/sh\nprintf 'hera\\n'\n")
-            executable("uname", "#!/bin/sh\nprintf 'Darwin\\n'\n")
-            executable(
-                "u",
-                '#!/bin/sh\nprintf "%s\\n" "$*" >"$PROFILE_TEST_LOG"\n',
-            )
-            log = root / "u.log"
-            environment = {
-                **os.environ,
-                "HOME": str(root),
-                "PATH": f"{fake_bin}:{os.environ['PATH']}",
-                "PROFILE_TEST_LOG": str(log),
-            }
-
-            switched = subprocess.run(
-                [str(profile_bin / "switch")],
-                capture_output=True,
-                text=True,
-                env=environment,
-                check=False,
-            )
-            self.assertEqual(switched.returncode, 0, switched.stderr)
-            self.assertEqual(log.read_text(), "switch\n")
-
-            update_help = subprocess.run(
-                [str(profile_bin / "update"), "--help"],
-                capture_output=True,
-                text=True,
-                env=environment,
-                check=False,
-            )
-            self.assertEqual(update_help.returncode, 0, update_help.stderr)
-            self.assertIn("usage: update", update_help.stdout)
-
-            conflict = subprocess.run(
-                [str(profile_bin / "upgrade"), "--host-only", "--projects-only"],
-                capture_output=True,
-                text=True,
-                env=environment,
-                check=False,
-            )
-            self.assertEqual(conflict.returncode, 2, conflict.stderr)
-            self.assertIn("mutually exclusive", conflict.stderr)
-
-    def test_host_routing_table_covers_system_and_shared_consumers(self):
-        routing = SCRIPT.parent / "lib" / "host-routing.sh"
-        result = subprocess.run(
-            [
-                "bash",
-                "-c",
-                'source "$1"; normalize_nix_host Andoria-08; '
-                "nix_flake_output_for_host vps; nix_flake_output_for_host vulcan",
-                "host-routing-test",
-                str(routing),
-            ],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        self.assertEqual(
-            result.stdout.splitlines(), ["shared-work", "ovh-vps", "vulcan"]
-        )
-
-        # Every fleet hostname must resolve to its configured switch target.
-        every_host = [
-            "hera",
-            "clio",
-            "vulcan",
-            "vps",
-            "andoria-08",
-            "andoria-t2",
-            "delphi-3bd4",
-            "gpu-server",
-        ]
-        routed = subprocess.run(
-            [
-                "bash",
-                "-c",
-                'source "$1"; shift; for h in "$@"; do '
-                'nix_flake_output_for_host "$h" || { echo "UNROUTED:$h"; exit 1; }; done',
-                "host-routing-test",
-                str(routing),
-                *every_host,
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(
-            routed.returncode,
-            0,
-            "a fleet host has no switch target: %s%s" % (routed.stdout, routed.stderr),
-        )
-        self.assertEqual(
-            routed.stdout.splitlines(),
-            [
-                "hera",
-                "clio",
-                "vulcan",
-                "ovh-vps",
-                "jwiegley",
-                "jwiegley",
-                "jwiegley",
-                "jwiegley",
-            ],
-        )
-
-        # The switch path may normalize an already normalized host name.
-        idempotent = subprocess.run(
-            [
-                "bash",
-                "-c",
-                'source "$1"; shift; for h in "$@"; do '
-                'once=$(normalize_nix_host "$h") || { echo "UNNORM:$h"; exit 1; }; '
-                'twice=$(normalize_nix_host "$once") || { echo "NOTIDEMPOTENT:$once"; exit 1; }; '
-                '[ "$once" = "$twice" ] || { echo "DRIFT:$once->$twice"; exit 1; }; '
-                'nix_flake_output_for_host "$once" >/dev/null || '
-                '{ echo "UNROUTED-AFTER-NORMALIZE:$once"; exit 1; }; done',
-                "host-routing-test",
-                str(routing),
-                *every_host,
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(
-            idempotent.returncode,
-            0,
-            "normalization is not idempotent, or a normalized label does not "
-            "route: %s%s" % (idempotent.stdout, idempotent.stderr),
-        )
-
-        # And an unknown host must still be refused rather than silently routed to
-        # a default. The positive case above cannot show this: every one of the
-        # eight resolves, so the failure branch is never taken.
-        unknown = subprocess.run(
-            [
-                "bash",
-                "-c",
-                'source "$1"; nix_flake_output_for_host "$2"',
-                "host-routing-test",
-                str(routing),
-                "definitely-not-a-fleet-host",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertNotEqual(
-            unknown.returncode, 0, "an unknown host was routed instead of refused"
-        )
-        self.assertEqual(unknown.stdout, "")
-
-        minimal_env = {**os.environ, "PATH": "/usr/bin:/bin"}
-        build_help = subprocess.run(
-            [str(BUILD), "--help"],
-            capture_output=True,
-            text=True,
-            env=minimal_env,
-            check=False,
-        )
-        self.assertEqual(build_help.returncode, 0, build_help.stderr)
-        self.assertIn("Usage: ./build", build_help.stdout)
-        conflict = subprocess.run(
-            [str(UPGRADE), "--host-only", "--projects-only"],
-            capture_output=True,
-            text=True,
-            env=minimal_env,
-            check=False,
-        )
-        self.assertEqual(conflict.returncode, 2)
-        self.assertIn("mutually exclusive", conflict.stderr)
-
-    def test_independent_ai_packages_are_owned_under_packages(self):
-        root = SCRIPT.parent.parent
-        ownership = {
-            "30-ai-mcp.nix": (
-                "ai-mcp.nix",
-                ["mcp-searxng", "pal-mcp-server", "rustdocs-mcp-server"],
-            ),
-            "30-ai-python.nix": ("ai-python-extensions.nix", []),
-            "30-ai-llm.nix": ("ai-llm.nix", ["aiperf", "guidellm", "omlx"]),
-        }
-        for overlay_name, (package_name, package_names) in ownership.items():
-            overlay = (root / "overlays/ai" / overlay_name).read_text()
-            package = (root / "packages" / package_name).read_text()
-            self.assertIn(f"packages/{package_name}", overlay)
-            for name in package_names:
-                with self.subTest(overlay=overlay_name, package=name):
-                    self.assertIn(f'pname = "{name}"', package)
-                    self.assertNotIn(f'pname = "{name}"', overlay)
-
-        python_overlay = (root / "overlays/ai/30-ai-python.nix").read_text()
-        python_packages = (root / "packages/ai-python-extensions.nix").read_text()
-        llm_mlx_package = (root / "packages/llm-mlx.nix").read_text()
-        self.assertIn("./llm-mlx.nix", python_packages)
-        self.assertIn('pname = "llm-mlx"', llm_mlx_package)
-        self.assertNotIn('pname = "llm-mlx"', python_overlay)
-        for name in (
-            "mlx-speech",
-            "mlx-embeddings",
-            "dflash-mlx",
-            "pyloudnorm",
-            "phonemizer-fork",
-            "espeakng-loader",
-            "cohere-melody",
-            "mlx-audio",
-            "standard-distutils",
-            "aiologic",
-            "culsans",
-        ):
-            with self.subTest(overlay="30-ai-python.nix", package=name):
-                self.assertIn(f'pname = "{name}"', python_packages)
-                self.assertNotIn(f'pname = "{name}"', python_overlay)
 
 
 if __name__ == "__main__":

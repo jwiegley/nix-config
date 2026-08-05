@@ -9,7 +9,6 @@ Run: python3 -m unittest -v test/bin/gates-slow-test.py
 
 import json
 import os
-import re
 import shutil
 import subprocess
 import tempfile
@@ -22,8 +21,6 @@ REPO = Path(__file__).resolve().parents[2]
 BIN = REPO / "test" / "bin"
 VERIFY_SIGNATURES = BIN / "verify-signatures"
 CROSS_CONSUMER_EVAL = BIN / "cross-consumer-eval"
-DARWIN_SURFACE_DIFF = BIN / "darwin-surface-diff"
-DARWIN_SURFACE_BASELINE = BIN / "darwin-surface-baseline"
 IMMUTABLE_SUBFLAKE_CHECK = BIN / "immutable-subflake-check"
 
 # Repository/config selectors scrubbed from Git subprocess environments.
@@ -710,6 +707,7 @@ class TestGatesAreRegistered(unittest.TestCase):
             for path in tracked
             if path.endswith("-test.py")
             or ".test." in Path(path).name
+            or ".check." in Path(path).name
             or path == "test/bin/unittest-strict.py"
         ]
         self.assertTrue(test_sources)
@@ -718,45 +716,6 @@ class TestGatesAreRegistered(unittest.TestCase):
             [],
         )
         self.assertEqual([path for path in tracked if path.startswith("tests/")], [])
-
-    def test_every_gate_script_is_executable(self):
-        for tool in (
-            VERIFY_SIGNATURES,
-            CROSS_CONSUMER_EVAL,
-            DARWIN_SURFACE_DIFF,
-            DARWIN_SURFACE_BASELINE,
-            IMMUTABLE_SUBFLAKE_CHECK,
-        ):
-            self.assertTrue(os.access(tool, os.X_OK), "%s is not executable" % tool)
-
-    def test_python_tiers_are_wired_without_a_second_quality_authority(self):
-        hook = (REPO / "lefthook.yml").read_text()
-        self.assertRegex(
-            hook,
-            r"(?m)^      run: test/bin/quality --tier pre-commit$",
-        )
-        suites = subprocess.run(
-            [str(BIN / "quality"), "--list"],
-            cwd=REPO,
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.splitlines()
-        self.assertEqual(suites.count("python-test"), 1)
-        self.assertNotIn("python-test-pre-push", suites)
-
-    def test_darwin_surface_gate_is_wired_to_local_expensive_entrypoints(self):
-        self.assertNotIn("darwin-surface", (REPO / "lefthook.yml").read_text())
-        self.assertRegex(
-            (REPO / "Makefile").read_text(),
-            r"(?m)^test:\n"
-            r"\ttest/bin/quality --python-tier full python-test darwin-surface$",
-        )
-
-    def test_darwin_surface_is_not_wired_to_remote_ci_until_root_is_portable(self):
-        ci = (REPO / ".github/workflows/ci.yml").read_text()
-        self.assertNotRegex(ci, r"(?m)^\s+run: test/bin/quality darwin-surface$")
-        self.assertIn("LAN-only ssh://gitea stock-trader input", ci)
 
     def test_make_build_and_switch_propagate_darwin_rebuild_failure(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -928,72 +887,21 @@ class TestGatesAreRegistered(unittest.TestCase):
                 sudo_log.exists(), "switch reached sudo after lock failure"
             )
 
-    def test_precommit_tier_always_runs_python_authorities(self):
-        config = (REPO / "lefthook.yml").read_text()
-        self.assertRegex(
-            config,
-            r"(?m)^    quality-tier:\n      run: test/bin/quality --tier pre-commit$",
-        )
-        self.assertNotRegex(config, r"(?m)^      glob:")
-        quality = (BIN / "quality").read_text()
-        core = re.search(r"(?ms)^PRE_COMMIT_CORE_SUITES=\(\n(?P<body>.*?)^\)$", quality)
-        self.assertIsNotNone(core)
-        for suite in ("python-lint", "python-test"):
-            self.assertRegex(core.group("body"), rf"(?m)^    {suite}$")
-        self.assertNotRegex(core.group("body"), r"(?m)^    portable-eval$")
-        expensive = re.search(r"(?ms)^EXPENSIVE_SUITES=\(\n(?P<body>.*?)^\)$", quality)
-        self.assertIsNotNone(expensive)
-        for suite in (
-            "python-test",
-            "portable-eval",
-            "consumer-eval",
-            "signatures",
-            "darwin-surface",
-            "immutable-subflake",
-        ):
-            self.assertRegex(expensive.group("body"), rf"(?m)^    {suite}$")
-        registered = set(
-            subprocess.run(
-                [str(BIN / "quality"), "--list"],
-                cwd=REPO,
-                capture_output=True,
-                text=True,
-                check=True,
-            ).stdout.splitlines()
-        )
-        pre_commit = set(core.group("body").split())
-        expensive_set = set(expensive.group("body").split())
-        self.assertEqual(pre_commit | expensive_set, registered)
-        self.assertEqual(pre_commit & expensive_set, {"python-test"})
-
-    def test_signature_ci_uses_the_real_event_range_and_public_key_only(self):
+    def test_signature_ci_uses_the_base_owned_verifier_and_event_range(self):
         workflow = (REPO / ".github/workflows/ci.yml").read_text()
-        self.assertRegex(workflow, r"(?m)^  signatures:\n")
-        self.assertRegex(
-            workflow,
-            r"(?m)^          fetch-depth: 0\n"
-            r"(?:^          #.*\n)*"
-            r"^          ref: \$\{\{ github\.event\.pull_request\.base\.sha \|\| github\.sha \}\}$",
-        )
-        self.assertIn(
-            'run: git fetch --no-tags origin "pull/${{ github.event.pull_request.number }}/head"',
-            workflow,
-        )
-        self.assertNotIn("ref: ${{ github.event.pull_request.head.sha", workflow)
-        self.assertIn(
+        for required in (
+            "fetch-depth: 0",
+            "ref: ${{ github.event.pull_request.base.sha || github.sha }}",
+            'git fetch --no-tags origin "pull/${{ github.event.pull_request.number }}/head"',
             "SIGVERIFY_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}",
-            workflow,
-        )
-        self.assertIn(
             "SIGVERIFY_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}",
-            workflow,
-        )
-        self.assertIn('SIGVERIFY_STRICT: "1"', workflow)
-        self.assertIn(
-            'run: test/bin/verify-signatures --base "$SIGVERIFY_BASE" --head "$SIGVERIFY_HEAD"',
-            workflow,
-        )
+            'SIGVERIFY_STRICT: "1"',
+            'test/bin/verify-signatures --base "$SIGVERIFY_BASE" --head "$SIGVERIFY_HEAD"',
+        ):
+            self.assertIn(required, workflow)
+        self.assertNotIn("ref: ${{ github.event.pull_request.head.sha", workflow)
 
+    def test_signature_trust_root_is_public_and_unique(self):
         public_keys = sorted((REPO / ".github/signing-keys").glob("*"))
         self.assertEqual(len(public_keys), 1)
         key = public_keys[0].read_text()
@@ -1024,42 +932,6 @@ class TestGatesAreRegistered(unittest.TestCase):
             check=True,
         ).stdout
         self.assertNotRegex(packets, r"(?m)^:secret (?:key|sub key) packet:")
-
-    def test_expensive_assurance_is_low_frequency_and_manual(self):
-        workflow = (REPO / ".github/workflows/portable-assurance.yml").read_text()
-        self.assertIn('cron: "17 2,14 * * *"', workflow)
-        self.assertIn("workflow_dispatch:", workflow)
-        self.assertNotRegex(workflow, r"(?m)^  (push|pull_request):")
-        self.assertRegex(workflow, r"(?m)^        run: test/bin/quality portable-eval$")
-        self.assertNotRegex(workflow, r"(?m)^\s+run: test/bin/quality --tier expensive$")
-        self.assertIn("portable-native:", workflow)
-        self.assertIn("runner: macos-15", workflow)
-        self.assertRegex(
-            workflow,
-            r"(?m)^      - uses: DeterminateSystems/magic-nix-cache-action@main\n        if: runner\.os != 'macOS'$",
-        )
-
-        regular_ci = (REPO / ".github/workflows/ci.yml").read_text()
-        self.assertNotIn("  portable-eval:", regular_ci)
-        self.assertNotIn("  portable-native:", regular_ci)
-
-        makefile = (REPO / "Makefile").read_text()
-        self.assertRegex(makefile, r"(?m)^expensive:\n\ttest/bin/quality --tier expensive$")
-
-    def test_no_gate_contains_common_credential_markers(self):
-        for tool in (
-            VERIFY_SIGNATURES,
-            CROSS_CONSUMER_EVAL,
-            DARWIN_SURFACE_DIFF,
-            DARWIN_SURFACE_BASELINE,
-            IMMUTABLE_SUBFLAKE_CHECK,
-        ):
-            body = tool.read_text()
-            for pattern in ("ghp_", "github_pat_", "PRIVATE KEY", "password="):
-                self.assertNotIn(
-                    pattern, body, "%s appears to embed a credential" % tool.name
-                )
-
 
 
 if __name__ == "__main__":

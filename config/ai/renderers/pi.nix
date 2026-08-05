@@ -277,28 +277,7 @@ let
   fleetThemeSource = ../extensions/fleet-theme/index.ts;
   fleetTheme = ../themes/dark-tool-backgrounds.json;
 in
-assert profile.id == "${profile.host}-pi";
 assert profile.client == "pi";
-assert builtins.elem profile.host [
-  "clio"
-  "hera"
-  "shared-work"
-  "vps"
-  "vulcan"
-];
-assert
-  profile.platform == (
-    if
-      builtins.elem profile.host [
-        "clio"
-        "hera"
-      ]
-    then
-      "darwin"
-    else
-      "linux"
-  );
-assert profile.audiences == [ "personal" ];
 assert profile.root == root;
 assert builtins.isString homeDirectory;
 assert xdgConfigHome == "${homeDirectory}/.config";

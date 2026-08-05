@@ -114,7 +114,7 @@ driver so that the consumer build lock remains authoritative.
 | `overlays/` | Ordered package exposure, compatibility corrections, and narrow integration-owned definitions |
 | `packages/` | Reusable derivations, package policy, source loading, and the Pi extension gallery |
 | `sources/` | Machine-readable update authority for manually tracked sources and versions |
-| `test/` | Nix contracts, portable checks, command tests, Darwin surfaces, and Home Manager checks |
+| `test/` | Evaluation, build, security, command, and runtime-behavior checks; see [`test/README.md`](test/README.md) |
 | `bin/` | Operator transactions, activation helpers, publication, and maintenance commands |
 | `doc/` | Architecture, runbooks, active plans, security records, and focused operational documentation |
 
@@ -137,13 +137,14 @@ Verification is intentionally layered:
 | Runtime acceptance | The affected executable or service works on the active generation | Health on another host |
 
 The ordinary pre-commit gate is bounded to two minutes. Broader portable,
-cross-consumer, Darwin-surface, and native build assurance belongs at issue
+cross-consumer, and native build assurance belongs at issue
 closeout or on the scheduled cadence. No single local check constitutes
 whole-fleet runtime proof.
 
 ## Documentation
 
 - [`bin/README.md`](bin/README.md) — complete command and operational reference
+- [`test/README.md`](test/README.md) — verification scope and maintainability policy
 - [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) — ownership, data flow, rollout, and state boundaries
 - [`doc/CURRENT-WORK.md`](doc/CURRENT-WORK.md) — current work-unit pointer
 - [`doc/CLEANUP-PLAN.md`](doc/CLEANUP-PLAN.md) — frozen cleanup Definition of Done

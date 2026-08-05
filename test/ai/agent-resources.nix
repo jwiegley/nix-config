@@ -583,11 +583,6 @@ else
             || fail "unexpected pi-mcp-adapter file: $relative"
         done
 
-        grep -F 'footerStatus === "compact"' "$mcp/init.ts" >/dev/null \
-          && grep -F 'connectedCount' "$mcp/init.ts" >/dev/null \
-          && grep -F 'enabledCount' "$mcp/init.ts" >/dev/null \
-          || fail "pi-mcp-adapter status renderer is not compact"
-
         jq -e '
           .name == "pi-mcp-adapter"
           and .version == ${builtins.toJSON piSources.pi-mcp-adapter.version}

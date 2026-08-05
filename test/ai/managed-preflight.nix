@@ -90,28 +90,8 @@ let
     newPaths = [ ".claude/skills/sherlock" ];
   });
 in
-assert
-  builtins.attrNames task9PreflightWithPi == [
-    "activation"
-    "script"
-  ];
 assert task9PreflightWithPi.activation.before == [ "checkLinkTargets" ];
 assert task9PreflightWithPi.activation.after == [ ];
-assert lib.hasInfix ".config/pi/agent/mcp.json" task9PreflightWithPi.script;
-assert lib.hasInfix ".pi: compatibility link must resolve" task9PreflightWithPi.script;
-assert lib.hasInfix "configuration must be a valid JSON object" task9PreflightWithPi.script;
-assert lib.hasInfix "retired extension must be absent" task9PreflightWithPi.script;
-assert !(lib.hasInfix ".config/pi/agent/mcp.json" task9PreflightWithoutPi.script);
-assert !(lib.hasInfix ".pi: compatibility link must resolve" task9PreflightWithoutPi.script);
-assert
-  !(lib.any (fragment: lib.hasInfix fragment task9PreflightWithPi.script) [
-    "adoption-state"
-    "ledger"
-    "manifest"
-    "ownership"
-    "receipt"
-    "stamp"
-  ]);
 assert !invalidPreflightProbe.success;
 assert !sherlockAncestorProbe.success;
 

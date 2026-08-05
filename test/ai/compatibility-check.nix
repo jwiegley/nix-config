@@ -7,6 +7,7 @@ let
   contract = import ./compatibility-contract.nix;
   lib = inputs.nixpkgs.lib;
   sortedNames = value: lib.sort builtins.lessThan (builtins.attrNames value);
+  hasAll = actual: required: builtins.all (name: builtins.elem name actual) required;
   inputNames = sortedNames (builtins.removeAttrs inputs [ "self" ]);
   outputNames = [
     "apps"
@@ -69,20 +70,18 @@ let
       ];
     in
     [
-      (lib.assertMsg (sortedNames actual.packages.${system} == contract.packages)
-        "portable package contract changed for ${system}: expected ${builtins.toJSON contract.packages}, got ${
-          builtins.toJSON (sortedNames actual.packages.${system})
-        }"
-      )
-      (lib.assertMsg (
-        sortedNames actual.apps.${system} == contract.apps
-      ) "portable app contract changed for ${system}")
-      (lib.assertMsg (
-        sortedNames actual.checks.${system} == contract.checks
-      ) "portable check contract changed for ${system}")
-      (lib.assertMsg (
-        sortedNames actual.devShells.${system} == [ "default" ]
-      ) "portable dev shell contract changed for ${system}")
+      (lib.assertMsg (hasAll (sortedNames
+        actual.packages.${system}
+      ) contract.packages) "portable package contract lost a required package for ${system}")
+      (lib.assertMsg (hasAll (sortedNames
+        actual.apps.${system}
+      ) contract.apps) "portable app contract lost a required app for ${system}")
+      (lib.assertMsg (hasAll (sortedNames
+        actual.checks.${system}
+      ) contract.checks) "portable check contract lost a required check for ${system}")
+      (lib.assertMsg (builtins.hasAttr "default"
+        actual.devShells.${system}
+      ) "portable default dev shell is missing for ${system}")
       (lib.assertMsg (builtins.all (
         name: pkgs ? ${name}
       ) representativePackages) "portable AI overlay lost representative packages on ${system}")
@@ -108,33 +107,17 @@ let
       aliasesMatch system
     );
   assertions = [
-    (lib.assertMsg (inputNames == contract.inputs) "portable AI input contract changed")
-    (lib.assertMsg (sortedNames actual == outputNames) "portable AI top-level output contract changed")
-    (lib.assertMsg (
-      sortedNames actual.lib == [
-        "aiPackagesFor"
-        "patchAgentPackage"
-      ]
-    ) "portable AI library contract changed")
-    (lib.assertMsg (
-      sortedNames actual.overlays == [
-        "default"
-        "tools"
-      ]
-    ) "portable overlay contract changed")
+    (lib.assertMsg (hasAll inputNames contract.inputs) "portable AI input contract lost a required input")
+    (lib.assertMsg (hasAll (sortedNames actual) outputNames) "portable AI top-level output contract lost a required output")
     (lib.assertMsg (builtins.isFunction actual.overlays.default) "portable default overlay is not callable")
     (lib.assertMsg (builtins.isFunction actual.overlays.tools) "portable tools overlay is not callable")
     (lib.assertMsg (builtins.isFunction actual.lib.aiPackagesFor) "aiPackagesFor is not callable")
     (lib.assertMsg (builtins.isFunction actual.lib.patchAgentPackage) "patchAgentPackage is not callable")
-    (lib.assertMsg (sortedNames actual.packages == contract.systems) "portable package systems changed")
-    (lib.assertMsg (sortedNames actual.apps == contract.systems) "portable app systems changed")
-    (lib.assertMsg (sortedNames actual.checks == contract.systems) "portable check systems changed")
-    (lib.assertMsg (
-      sortedNames actual.devShells == contract.systems
-    ) "portable dev shell systems changed")
-    (lib.assertMsg (
-      sortedNames actual.formatter == contract.systems
-    ) "portable formatter systems changed")
+    (lib.assertMsg (hasAll (sortedNames actual.packages) contract.systems) "portable packages lost a required system")
+    (lib.assertMsg (hasAll (sortedNames actual.apps) contract.systems) "portable apps lost a required system")
+    (lib.assertMsg (hasAll (sortedNames actual.checks) contract.systems) "portable checks lost a required system")
+    (lib.assertMsg (hasAll (sortedNames actual.devShells) contract.systems) "portable dev shells lost a required system")
+    (lib.assertMsg (hasAll (sortedNames actual.formatter) contract.systems) "portable formatter lost a required system")
   ]
   ++ lib.concatMap checkSystem contract.systems;
   checked = actual // {

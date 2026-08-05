@@ -274,45 +274,27 @@ let
       ../packages/source-catalog.nix
       ../sources/ai.json
       ../sources/pi.json
-      ../test/ai/scripts
-      ../test/ai/agent-resources.nix
-      ../test/ai/agent-wrappers.nix
-      ../test/ai/agent-wrappers.sh
-      ../test/ai/compatibility-check.nix
-      ../test/ai/compatibility-contract.nix
-      ../test/ai/extensions/auto-compact-resume
-      ../test/ai/extensions/fleet-theme
-      ../test/ai/input-projection-parity.nix
-      ../test/ai/overlays
-      ../test/ai/node-runtime-guard.cjs
-      ../test/ai/pi-blackhole-compaction.check.ts
-      ../test/ai/pi-btw-escape.check.ts
-      ../test/ai/pi-copy-message.check.ts
-      ../test/ai/pi-gallery.nix
-      ../test/ai/pi-model-catalog-refresh.test.mjs
-      ../test/ai/pi-fleet-theme.nix
-      ../test/ai/pi-tool-renderer-wrapper.test.mjs
-      ../test/ai/recording-https-bridge-oracle.py
-      ../test/ai/run-bridge-oracle.sh
+      ../test/ai
     ];
   };
 
   scriptRoot = ../test/ai/scripts;
 
   mkScriptPackage =
-    pkgs: name: scriptName: runtimeInputs:
+    pkgs: name: scriptName: runtimeInputs: extraEnv:
     pkgs.writeShellApplication {
       name = "ai-nix-${name}";
       inherit runtimeInputs;
       text = ''
+        ${extraEnv}
         exec ${pkgs.bash}/bin/bash ${scriptRoot}/${scriptName} "$@"
       '';
     };
 
   mkScriptApp =
-    pkgs: name: scriptName: runtimeInputs:
+    pkgs: name: scriptName: runtimeInputs: extraEnv:
     let
-      package = mkScriptPackage pkgs name scriptName runtimeInputs;
+      package = mkScriptPackage pkgs name scriptName runtimeInputs extraEnv;
     in
     {
       type = "app";
@@ -398,17 +380,18 @@ in
       pkgs = mkPkgs system;
       qualityDeps = qualityInputs pkgs;
       app =
-        name: scriptName: runtimeInputs:
-        mkScriptApp pkgs name scriptName runtimeInputs;
+        name: scriptName: runtimeInputs: extraEnv:
+        mkScriptApp pkgs name scriptName runtimeInputs extraEnv;
+      lintRoot = "export AI_NIX_LINT_ROOT=${sourceForChecks}";
     in
     rec {
-      format = app "format" "format.sh" qualityDeps.format;
-      format-check = app "format-check" "format-check.sh" qualityDeps.format;
-      lint = app "lint" "lint.sh" qualityDeps.lint;
-      test = app "test" "test.sh" qualityDeps.test;
-      build-check = app "build-check" "build-check.sh" qualityDeps.build;
-      no-warnings = app "no-warnings" "no-warnings.sh" qualityDeps.build;
-      check = app "check" "check.sh" qualityDeps.all;
+      format = app "format" "format.sh" qualityDeps.format "";
+      format-check = app "format-check" "format-check.sh" qualityDeps.format "";
+      lint = app "lint" "lint.sh" qualityDeps.lint lintRoot;
+      test = app "test" "test.sh" qualityDeps.test "";
+      build-check = app "build-check" "build-check.sh" qualityDeps.build "";
+      no-warnings = app "no-warnings" "no-warnings.sh" qualityDeps.build "";
+      check = app "check" "check.sh" qualityDeps.all lintRoot;
       default = check;
     }
   );
@@ -426,9 +409,6 @@ in
       build = mkAiToolchain pkgs;
       agent-deck-go-compat = pkgs.callPackage ../test/ai/overlays/agent-deck-go-compat.nix { };
       fractal-smoke = pkgs.callPackage ../test/ai/overlays/plasma-fractal-smoke.nix { };
-      input-projection-parity = pkgs.callPackage ../test/ai/input-projection-parity.nix {
-        inherit inputs;
-      };
       llama-cpp-platform-compat = pkgs.callPackage ../test/ai/overlays/llama-cpp-platform-compat.nix { };
       llm-agents-nixpkgs-independent =
         let

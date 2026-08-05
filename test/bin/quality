@@ -36,7 +36,7 @@
 #
 # Suites: nix-format nix-lint nix-deadcode shell-lint shell-format
 #         python-lint python-test portable-eval immutable-subflake
-#         darwin-surface consumer-eval signatures
+#         consumer-eval signatures
 #
 # Refs: jwiegley/nix-config#46.
 
@@ -59,7 +59,6 @@ SUITES=(
     python-test
     portable-eval
     immutable-subflake
-    darwin-surface
     consumer-eval
     signatures
 )
@@ -87,7 +86,6 @@ EXPENSIVE_SUITES=(
     immutable-subflake
     consumer-eval
     signatures
-    darwin-surface
 )
 
 # ---- file discovery -----------------------------------------------------
@@ -476,24 +474,6 @@ run_immutable_subflake() {
     fi
 }
 
-# The nix-darwin system layer has no useful drvPath parity signal: source-path
-# propagation changes several store hashes on every commit. This targeted check
-# compares seven evaluated value surfaces while masking only store hash prefixes.
-# It is intentionally expensive and belongs in low-frequency closeout, not hooks.
-run_darwin_surface() {
-    need nix darwin-surface || return
-    local system
-    if ! system=$(nix eval --impure --raw --expr builtins.currentSystem); then
-        fail "darwin-surface: could not determine the current Nix system"
-        return
-    fi
-    if nix build --no-link ".#checks.${system}.darwin-value-surface"; then
-        note "darwin-surface: hera and clio match the committed value baseline"
-    else
-        fail "darwin-surface: evaluated Darwin values drifted from the baseline"
-    fi
-}
-
 # ---- argument parsing ---------------------------------------------------
 
 while [[ $# -gt 0 ]]; do
@@ -639,7 +619,6 @@ for suite in "${want[@]}"; do
     python-test) run_python_test ;;
     portable-eval) run_portable_eval ;;
     immutable-subflake) run_immutable_subflake ;;
-    darwin-surface) run_darwin_surface ;;
     consumer-eval) run_consumer_eval ;;
     signatures) run_signatures ;;
     esac

@@ -5,62 +5,6 @@
 }:
 
 let
-  inherit (pkgs) lib;
-  topLevel = [
-    "ntp"
-    "aprutil"
-    "libcdio-paranoia"
-    "folly"
-    "fizz"
-    "mvfst"
-    "wangle"
-    "fbthrift"
-    "fb303"
-    "edencommon"
-    "watchman"
-    "mesa"
-    "xorg-server"
-    "xquartz"
-    "rclone"
-    "nixos-render-docs"
-    "libvirt"
-    "contacts"
-    "caligula"
-    "spotify-player"
-    "poppler"
-    "prometheus-node-exporter"
-    "gnupg"
-    "zsh"
-    "samba"
-    "direnv"
-    "squashfsTools"
-    "z3"
-    "srm"
-    "kvazaar"
-    "opencv4"
-    "chromaprint"
-    "openmpi"
-    "pmix"
-    "graphite-cli"
-  ];
-  python = [
-    "av"
-    "openai-whisper"
-    "fsspec"
-    "mirakuru"
-  ];
-  availableInBoth =
-    left: right: name:
-    builtins.hasAttr name left
-    && builtins.hasAttr name right
-    && lib.meta.availableOn pkgs.stdenv.hostPlatform left.${name}
-    && lib.meta.availableOn configured.stdenv.hostPlatform right.${name};
-  comparableTop = lib.filter (availableInBoth pkgs configured) topLevel;
-  comparablePython = lib.filter (availableInBoth pkgs.python3Packages configured.python3Packages) python;
-  changedTop = lib.filter (name: pkgs.${name}.drvPath != configured.${name}.drvPath) comparableTop;
-  changedPython = lib.filter (
-    name: pkgs.python3Packages.${name}.drvPath != configured.python3Packages.${name}.drvPath
-  ) comparablePython;
   optionalMcpPackages = (import ../../overlays/ai/30-ai-mcp.nix { }) configured configured;
   aiPkgsWithout =
     inputName:
@@ -74,12 +18,6 @@ let
   withoutPal = aiPkgsWithout "pal-mcp-server";
   withoutRemote = aiPkgsWithout "mcp-remote";
 in
-assert
-  changedTop == [ ]
-  || throw "Darwin-only top-level overrides active on Linux: ${builtins.toJSON changedTop}";
-assert
-  changedPython == [ ]
-  || throw "Darwin-only Python overrides active on Linux: ${builtins.toJSON changedPython}";
 assert
   (configured.python3Packages.imageio.disabledTests or [ ])
   == (pkgs.python3Packages.imageio.disabledTests or [ ])

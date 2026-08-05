@@ -17,25 +17,6 @@ in
 
   inputs = builtins.attrNames portableLock.nodes.root.inputs;
 
-  topLevel = [
-    [
-      "overlays"
-      "default"
-    ]
-    [
-      "overlays"
-      "tools"
-    ]
-    [
-      "lib"
-      "aiPackagesFor"
-    ]
-    [
-      "lib"
-      "patchAgentPackage"
-    ]
-  ];
-
   packages = builtins.sort builtins.lessThan (
     [
       "agent-http-header-bridge"
@@ -74,7 +55,6 @@ in
     "build"
     "format"
     "fractal-smoke"
-    "input-projection-parity"
     "lint"
     "llama-cpp-platform-compat"
     "llm-agents-nixpkgs-independent"

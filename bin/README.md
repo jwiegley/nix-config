@@ -117,9 +117,6 @@ operator interfaces. Direct target mode updates the owning catalog record;
 update-owned targets delegate back to `bin/update`. `--all` covers automatic
 targets owned by the lower-level executor, not every catalog record.
 
-`make pin-currency` does not update a pin. It performs the deliberately infrequent
-test of whether a last-known-good package pin remains necessary.
-
 ## Determining package versions
 
 Questions about a tool's version have three distinct answers: the source revision,
@@ -202,8 +199,6 @@ nix run ./config/ai#check
 # Run the expensive repository tier and build the current Darwin system.
 make expensive
 
-# Test whether exceptional package pins are still required.
-make pin-currency
 ```
 
 The expensive quality tier has a 30-minute envelope, but `make expensive` then
@@ -328,10 +323,8 @@ standalone command.
 | `help` | Print the short operator summary; this README is the complete reference. |
 | `all` | Alias for `switch`; it activates the current Darwin configuration. |
 | `TARGET-all` | Run `TARGET` locally and then through `u` on every host in `REMOTES`; remote source synchronization is not implied. The pattern accepts destructive targets, so inspect `TARGET` and `REMOTES` before use. |
-| `test` | Run full Python/Darwin contract tests and build four principal package checks. |
-| `pin-currency` | Test whether exceptional last-known-good pins remain necessary. |
+| `test` | Run the full Python suite and build four principal package checks. |
 | `expensive` | Run expensive assurance and build the current Darwin system. |
-| `darwin-surface-baseline` | Rewrite the committed Darwin value baseline; use only for an intentional reviewed policy change. |
 | `tools` | Print selected environment values and tool resolution. |
 | `repl` | Open a Nix REPL for the current Darwin package set. |
 | `verify-inputs` | Detect local Git input states that can produce divergent NAR hashes. |
@@ -354,7 +347,7 @@ standalone command.
 | `lint` | Run the entire default quality suite, including full Python tests; it is broader than its name suggests. |
 | `travel-ready` | Delete both `.envrc` and `.envrc.cache`, invoke an external `clean`, and regenerate configured project environments. A failed `cd` can run later commands in the wrong directory and earlier loop failures may be masked. |
 
-`clean`, `scour`, `purge`, `sign`, `darwin-surface-baseline`, `travel-ready`, and
+`clean`, `scour`, `purge`, `sign`, `travel-ready`, and
 all activation targets require deliberate operator review. Their names do not
 reduce their effects.
 

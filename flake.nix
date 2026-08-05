@@ -413,10 +413,14 @@
                 inherit src;
                 homeManagerReleaseLib = home-manager-release.lib;
               };
-              darwin-value-surface = pkgs.callPackage ./test/darwin/darwin-value-surface.nix {
-                inherit darwinConfigurations;
+              host-behavior = pkgs.callPackage ./test/home/host-behavior.nix {
+                inherit
+                  darwinConfigurations
+                  homeConfigurations
+                  nixosHomeEvaluationFixtures
+                  ;
               };
-              desktop-only-user-runtime = pkgs.callPackage ./test/home/desktop-only-user-runtime.nix {
+              pi-blackhole-policy = pkgs.callPackage ./test/home/pi-blackhole-policy.nix {
                 inherit
                   darwinConfigurations
                   homeConfigurations

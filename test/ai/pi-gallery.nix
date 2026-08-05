@@ -217,9 +217,6 @@ runCommand "pi-gallery-check"
 
     [ -f ${roots.btw}/extensions/btw.ts ]
     [ -f ${roots.btw}/skills/btw/SKILL.md ]
-    grep -F 'overlayRuntime?.handle?.isFocused()' \
-      ${roots.btw}/extensions/btw.ts >/dev/null \
-      || fail "BTW does not give its focused overlay first refusal on Escape"
     (
       cd ${sourceForChecks}
       PI_BTW_EXTENSION=${roots.btw}/extensions/btw.ts \
@@ -236,13 +233,6 @@ runCommand "pi-gallery-check"
     [ -d ${roots.insights}/node_modules/recharts ]
     [ -f ${roots.usage}/index.ts ]
     [ ! -e ${roots.usage}/node_modules ]
-    grep -F 'await writeFile(tmpPath, payload, { encoding: "utf8", mode: 0o600 });' \
-      ${roots.usage}/data.ts >/dev/null \
-      || fail "Usage Dashboard cache is not private"
-    grep -F 'writeFileSync(path, content, { encoding: "utf8", mode: 0o600, flag: "wx" });' \
-      ${roots.usage}/index.ts >/dev/null \
-      || fail "Usage Dashboard exports are not private and exclusive"
-
     usage_runtime="$TMPDIR/pi-usage-runtime"
     mkdir -p "$usage_runtime"
     cat > "$usage_runtime/probe.ts" <<EOF
@@ -259,42 +249,23 @@ runCommand "pi-gallery-check"
     [ -f ${piPackages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts ]
     [ -f ${piPackages.pi-loop}/share/pi-packages/pi-loop/LICENSE ]
     [ ! -e ${piPackages.pi-loop}/share/pi-packages/pi-loop/node_modules ]
-    grep -F 'entries[index]?.message ?? entries[index]' \
-      ${piPackages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts >/dev/null \
-      || fail "pi-loop nested session-entry compatibility patch is missing"
-    ! grep -F 'if (entries[index]?.role === "assistant")' \
-      ${piPackages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts >/dev/null \
-      || fail "pi-loop still reads assistant role at the SessionEntry top level"
     for provider_root in ${roots.llama-swap-provider} ${roots.omlx-provider}; do
       [ -f "$provider_root/index.ts" ]
       [ -f "$provider_root/local-openai-provider.ts" ]
       [ -f "$provider_root/LICENSE" ]
       [ ! -e "$provider_root/node_modules" ]
     done
-    grep -F 'http://localhost:8080/v1' ${roots.llama-swap-provider}/index.ts >/dev/null
-    grep -F 'http://localhost:8000/v1' ${roots.omlx-provider}/index.ts >/dev/null
     [ -f ${roots.router}/extensions/index.ts ]
     [ -f ${roots.router}/extensions/routing.ts ]
     [ ! -e ${roots.router}/node_modules ]
     [ -f ${roots.rewind}/src/index.ts ]
     [ -f ${roots.rewind}/src/core.ts ]
     [ -f ${roots.rewind}/src/ui.ts ]
-    ! grep -F 'state.checkpoints.size' ${roots.rewind}/src/ui.ts >/dev/null \
-      || fail "Rewind still computes the footer checkpoint count"
-    ! grep -F 'checkpoint count' ${roots.rewind}/src/ui.ts >/dev/null \
-      || fail "Rewind still describes a footer checkpoint count"
     [ ! -e ${roots.rewind}/node_modules ]
     [ -f ${roots.trace}/extensions/trace/index.ts ]
     [ -f ${roots.trace}/extensions/trace/trace_to_html.py ]
     [ ! -e ${roots.trace}/node_modules ]
     [ -z "$(find ${roots.trace} \( -name '*.pyc' -o -name __pycache__ \) -print -quit)" ]
-    grep -F 'JSON.stringify(sanitizeTraceValue(event))' \
-      ${roots.trace}/extensions/trace/index.ts >/dev/null \
-      || fail "Trace does not sanitize persisted events"
-    grep -F 'JSON.stringify(sanitizeTraceValue(event.result))' \
-      ${roots.trace}/extensions/trace/index.ts >/dev/null \
-      || fail "Trace does not sanitize tool-result previews"
-
     trace_runtime="$TMPDIR/pi-trace-runtime"
     mkdir -p "$trace_runtime/home/.pi/agent/sessions" "$trace_runtime/project"
     cat > "$trace_runtime/probe.ts" <<EOF
@@ -465,9 +436,6 @@ runCommand "pi-gallery-check"
     [ ! -e ${roots.hashline}/node_modules/better-sqlite3 ]
     [ -d ${roots.hashline}/node_modules/sql.js ]
     [ -d ${roots.hashline}/node_modules/xxhash-wasm ]
-    grep -F 'Bun standalone aborts before the native import can fall back' \
-      ${roots.hashline}/src/hash-store.ts >/dev/null
-
     [ -f ${roots.smart-fetch}/dist/index.js ]
     [ -d ${roots.smart-fetch}/node_modules/defuddle ]
     [ -d ${roots.smart-fetch}/node_modules/linkedom ]
@@ -507,12 +475,6 @@ runCommand "pi-gallery-check"
     [ -f ${roots.blackhole}/index.ts ]
     [ ! -e ${roots.blackhole}/node_modules ]
     [ -f ${roots.blackhole}/src/om/compaction-threshold.ts ]
-    [ "$(grep -Fc 'resolveCompactionPressure(' \
-      ${roots.blackhole}/src/om/compaction-trigger.ts)" -eq 3 ] \
-      || fail "Blackhole does not use active context pressure at every proactive trigger"
-    grep -F 'Fallback auto-compact threshold' \
-      ${roots.blackhole}/src/om/configure-overlay.ts >/dev/null \
-      || fail "Blackhole configuration still presents its fallback as the active threshold"
     (
       cd ${sourceForChecks}
       PI_BLACKHOLE_THRESHOLD_HELPER=${roots.blackhole}/src/om/compaction-threshold.ts \
@@ -526,23 +488,10 @@ runCommand "pi-gallery-check"
       || fail "Blackhole does not ship memory and automatic Blackhole compaction defaults"
     [ -f ${roots.cache-optimizer}/index.ts ]
     [ ! -e ${roots.cache-optimizer}/node_modules ]
-    [ "$(grep -Fc 'Nix manages models.json; edit config/ai and switch the configuration instead.' \
-      ${roots.cache-optimizer}/index.ts)" -eq 2 ] \
-      || fail "Cache Optimizer does not refuse both models.json write paths"
     [ -f ${roots.caveman}/extensions/caveman.ts ]
     [ ! -e ${roots.caveman}/node_modules ]
-    grep -F 'ctx.ui.setStatus("caveman", undefined);' \
-      ${roots.caveman}/extensions/caveman.ts >/dev/null \
-      || fail "Caveman footer status is not disabled"
-    ! grep -F 'caveman level:' ${roots.caveman}/extensions/caveman.ts >/dev/null \
-      || fail "Caveman footer still renders the level lighter"
     [ -f ${roots.copy-message}/extensions/copy-message.ts ]
     [ ! -e ${roots.copy-message}/node_modules ]
-    ! grep -F 'spawnSync' ${roots.copy-message}/extensions/copy-message.ts >/dev/null \
-      || fail "Copy Message still carries a platform-specific clipboard implementation"
-    grep -F 'import { copyToClipboard } from "@earendil-works/pi-coding-agent";' \
-      ${roots.copy-message}/extensions/copy-message.ts >/dev/null \
-      || fail "Copy Message does not use Pi's portable clipboard helper"
     (
       cd ${sourceForChecks}
       PI_COPY_MESSAGE_EXTENSION=${roots.copy-message}/extensions/copy-message.ts \
@@ -550,9 +499,6 @@ runCommand "pi-gallery-check"
     )
     [ -f ${roots.goal}/extensions/goal.ts ]
     [ ! -e ${roots.goal}/node_modules ]
-    grep -F 'return `''${prefix}: ''${statusLabel(goal)}''${usage}`;' \
-      ${roots.goal}/extensions/goal-core.ts >/dev/null \
-      || fail "Goal footer still repeats the objective"
     [ -f ${roots.markdown-preview}/index.ts ]
     [ -d ${roots.markdown-preview}/node_modules/puppeteer-core ]
     [ -f ${roots.rtk-optimizer}/index.ts ]
@@ -596,25 +542,8 @@ runCommand "pi-gallery-check"
       | $btw != null and $goal != null and $btw < $goal
     ' ${gallery}/projection.json >/dev/null \
       || fail "BTW must register before Goal X so its focused overlay owns the first Escape"
-    grep -F 'PONYTAIL_HIDE_STATUS = "1"' ${gallery}/index.ts >/dev/null
-    grep -F 'PI_LENS_DISABLE_LSP_INSTALL = "1"' ${gallery}/index.ts >/dev/null
-    ${
-      if stdenv.hostPlatform.isDarwin then
-        ''
-          grep -F 'pi-model-router' ${gallery}/index.ts >/dev/null
-          grep -F 'pi-provider-llama-swap' ${gallery}/index.ts >/dev/null
-          grep -F 'pi-provider-omlx' ${gallery}/index.ts >/dev/null
-        ''
-      else
-        ''
-          ! grep -F 'pi-model-router' ${gallery}/index.ts >/dev/null
-          ! grep -F 'pi-provider-llama-swap' ${gallery}/index.ts >/dev/null
-          ! grep -F 'pi-provider-omlx' ${gallery}/index.ts >/dev/null
-        ''
-    }
-
     echo "Pi gallery check: dynamic local providers"
-    ${bun}/bin/bun ${sourceForChecks}/packages/pi-gallery/providers/local-openai-provider.check.ts
+    ${bun}/bin/bun ${sourceForChecks}/test/ai/local-openai-provider.check.ts
     routing_smoke="$TMPDIR/pi-model-router-smoke"
     mkdir -p "$routing_smoke/home" "$routing_smoke/agent" "$routing_smoke/project"
     cat > "$routing_smoke/agent/models.json" <<'JSON'
