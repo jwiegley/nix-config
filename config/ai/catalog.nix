@@ -694,8 +694,6 @@ let
       transport
       selectors
       ;
-    scope = "user";
-    enabled = true;
   };
 
   mcpServers = {
