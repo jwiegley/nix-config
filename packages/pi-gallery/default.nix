@@ -624,6 +624,7 @@ let
     install = root: ''
       tar -xzf ${releaseTarballs.pi-cache-optimizer} -C ${root} --strip-components=1
       ${python3}/bin/python3 - ${root}/index.ts <<'PY'
+      import hashlib
       from pathlib import Path
       import sys
 
@@ -664,22 +665,21 @@ let
               raise SystemExit(f"unexpected pi-cache-optimizer seam: {old.splitlines()[0]}")
           text = text.replace(old, new)
 
-      profile_docs = """ *   3. LiteLLM / OneAPI / NewAPI / VoAPI — baseUrl or provider matching litellm,
-       *      oneapi, one-api, newapi, new-api, voapi, vo-api (self-hosted aggregation)
-       *   4. Generic third-party OpenAI-compatible proxy — any openai-completions model
+      generic_docs = """ *   4. Generic third-party OpenAI-compatible proxy — any openai-completions model
        *      with a non-official base URL that does not match a higher-profile above."""
-      generic_docs = """ *   3. Generic third-party OpenAI-compatible proxy — any openai-completions model
-       *      with a non-official base URL that does not match a higher-profile above."""
-      aggregation_start = "  // ── 3. LiteLLM / OneAPI / NewAPI / VoAPI (self-hosted aggregation) ──"
       generic_start = "  // ── 4. Generic third-party OpenAI-compatible proxy ─────────────────"
-      if text.count(profile_docs) != 1:
-          raise SystemExit("unexpected cache-optimizer router profile documentation")
-      if text.count(aggregation_start) != 1 or text.count(generic_start) != 1:
-          raise SystemExit("unexpected cache-optimizer aggregation diagnostic")
-      text = text.replace(profile_docs, generic_docs)
-      start = text.index(aggregation_start)
-      end = text.index(generic_start, start)
-      text = text[:start] + generic_start.replace("4.", "3.") + text[end + len(generic_start):]
+      for marker, prior, expected in (
+          (generic_docs, " *   3. ", "0845a84222d192546c93b37b7cf92acfd08805c517cd79b950d0d449f123fb80"),
+          (generic_start, "  // ── 3. ", "ba6cd49840abce00beda5f8f1515ca28e8dc9284903061abadc65bdf50e9d8cb"),
+      ):
+          if text.count(marker) != 1:
+              raise SystemExit("unexpected cache-optimizer aggregation seam")
+          end = text.index(marker)
+          start = text.rfind(prior, 0, end)
+          block = text[start:end].encode() if start >= 0 else b""
+          if hashlib.sha256(block).hexdigest() != expected:
+              raise SystemExit("unexpected cache-optimizer aggregation ordering")
+          text = text[:start] + marker.replace("4.", "3.", 1) + text[end + len(marker):]
 
       text = text.replace("Edit $" + "{modelsJsonPath}", "Update config/ai")
       text = text.replace(
