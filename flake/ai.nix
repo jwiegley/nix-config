@@ -60,6 +60,10 @@ let
             --replace-fail '//# sourceMappingURL=system-prompt.js.map' ""
           rm -f dist/core/system-prompt.js.map
           patch -p1 --fuzz=0 < ${../overlays/ai/patches/pi-tool-renderer-wrapper.patch}
+          # Keep the model picker responsive when pi.dev's optional remote
+          # catalogs are unavailable. The picker still refreshes on demand,
+          # but it starts from the cached catalog and owns its short timeout.
+          patch -p1 --fuzz=0 < ${../overlays/ai/patches/pi-model-catalog-refresh.patch}
           for openai_api in \
             node_modules/@earendil-works/pi-ai/dist/api/openai-completions.js \
             node_modules/@earendil-works/pi-ai/dist/api/openai-responses.js

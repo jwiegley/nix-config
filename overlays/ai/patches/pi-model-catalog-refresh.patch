@@ -1,0 +1,28 @@
+diff --git a/dist/modes/interactive/components/model-selector.js b/dist/modes/interactive/components/model-selector.js
+--- a/dist/modes/interactive/components/model-selector.js
++++ b/dist/modes/interactive/components/model-selector.js
+@@ -116,7 +116,7 @@
+             currentIndex >= 0 ? currentIndex : Math.min(this.selectedIndex, Math.max(0, this.filteredModels.length - 1));
+     }
+     async refreshModels() {
+-        const timeoutMs = 15_000;
++        const timeoutMs = 2_500;
+         let timedOut = false;
+         this.refreshTimeout = setTimeout(() => {
+             timedOut = true;
+diff --git a/dist/modes/interactive/interactive-mode.js b/dist/modes/interactive/interactive-mode.js
+--- a/dist/modes/interactive/interactive-mode.js
++++ b/dist/modes/interactive/interactive-mode.js
+@@ -581,12 +581,6 @@
+      */
+     async run() {
+         await this.init();
+-        if (!process.env.PI_OFFLINE) {
+-            void this.session.modelRuntime
+-                .refresh()
+-                .then(() => this.updateAvailableProviderCount())
+-                .catch(() => { });
+-        }
+         // Start version check asynchronously
+         checkForNewPiVersion(this.version).then((newRelease) => {
+             if (newRelease) {
