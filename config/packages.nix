@@ -497,6 +497,7 @@ rec {
     ++ optAgent "codex"
     ++ optAgent "droid"
     ++ optAgent "git-surgeon"
+    ++ optAgent "opencode"
     ++ optPkg "unisessions"
 
     # ── MCP Servers & Agent Tools ────────────────────────────────────
