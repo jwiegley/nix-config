@@ -38,6 +38,7 @@ let
   ) (builtins.attrValues selected.mcpServers);
   renderEnv = name: "$" + "{" + name + "}";
   localModelRoutes = profile.platform == "darwin";
+  hermesApiKeyCommand = "!${pkgs.bash}/bin/bash -c 'secret=\"$(${pkgs.pass}/bin/pass api.hermes.com)\" || exit; ${pkgs.coreutils}/bin/printf \"%s\\n\" \"$secret\" | ${pkgs.coreutils}/bin/head -n 1'";
 
   routerTarget = {
     id = "Qwen3.6-27B-oQ6e-mtp";
@@ -76,8 +77,9 @@ let
   localProviders = {
     hermes = {
       api = "openai-completions";
-      apiKey = "!${pkgs.pass}/bin/pass show api.hermes.com | ${pkgs.coreutils}/bin/head -n 1";
+      apiKey = hermesApiKeyCommand;
       baseUrl = "https://hermes.vulcan.lan/v1";
+      compat.sendSessionAffinityHeaders = true;
       models = [ { id = "hermes-agent"; } ];
     };
     llama-swap.modelOverrides."GLM-5.2".contextWindow = 262144;
@@ -322,8 +324,9 @@ assert
   ||
     models.providers.hermes == {
       api = "openai-completions";
-      apiKey = "!${pkgs.pass}/bin/pass show api.hermes.com | ${pkgs.coreutils}/bin/head -n 1";
+      apiKey = hermesApiKeyCommand;
       baseUrl = "https://hermes.vulcan.lan/v1";
+      compat.sendSessionAffinityHeaders = true;
       models = [ { id = "hermes-agent"; } ];
     };
 assert

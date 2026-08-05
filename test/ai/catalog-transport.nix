@@ -138,6 +138,7 @@ let
     vpsPiRendered
     vulcanPiRendered
   ];
+  hermesApiKeyCommand = "!${pkgs.bash}/bin/bash -c 'secret=\"$(${pkgs.pass}/bin/pass api.hermes.com)\" || exit; ${pkgs.coreutils}/bin/printf \"%s\\n\" \"$secret\" | ${pkgs.coreutils}/bin/head -n 1'";
 in
 assert catalog.validate { };
 assert catalog.validate {
@@ -201,12 +202,15 @@ pkgs.runCommand "ai-catalog-transport" { } ''
     ${clioPiRendered.files.".config/pi/agent/models.json".source}
   cmp ${heraPiRendered.files.".config/mcp/mcp.json".source} \
     ${clioPiRendered.files.".config/mcp/mcp.json".source}
-  ${pkgs.jq}/bin/jq -e '
+  ${pkgs.jq}/bin/jq \
+    --arg hermesApiKey ${lib.escapeShellArg hermesApiKeyCommand} \
+    -e '
     (.providers | keys) == ["hermes", "llama-swap", "omlx", "openai-codex", "openrouter", "router"]
     and .providers.hermes == {
       api: "openai-completions",
-      apiKey: "!${pkgs.pass}/bin/pass show api.hermes.com | ${pkgs.coreutils}/bin/head -n 1",
+      apiKey: $hermesApiKey,
       baseUrl: "https://hermes.vulcan.lan/v1",
+      compat: {sendSessionAffinityHeaders: true},
       models: [{id: "hermes-agent"}]
     }
     and .providers."llama-swap".modelOverrides."GLM-5.2".contextWindow == 262144
