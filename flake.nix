@@ -427,6 +427,13 @@
                   nixosHomeEvaluationFixtures
                   ;
               };
+              syncthing = pkgs.callPackage ./test/home/syncthing.nix {
+                inherit
+                  darwinConfigurations
+                  homeConfigurations
+                  nixosHomeEvaluationFixtures
+                  ;
+              };
               ai-managed-preflight = pkgs.callPackage ./test/ai/managed-preflight.nix {
                 inherit src;
                 homeManagerLib = home-manager.lib;

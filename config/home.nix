@@ -21,6 +21,7 @@ in
   imports = [
     ./johnw.nix
     ./host-options.nix
+    ./syncthing.nix
   ];
 
   # Give the Discord gateway one declarative host owner.

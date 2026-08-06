@@ -247,6 +247,9 @@ in
       "slack"
       "steam"
       "suspicious-package"
+      # Installed by request; Home Manager remains the sole runtime owner.
+      # Syncthing.app must remain closed while that daemon is enabled.
+      "syncthing-app"
       "swiftdefaultappsprefpane"
       "tailscale-app"
       "telegram"
@@ -439,6 +442,14 @@ in
           _FXSortFoldersFirst = true;
           # When performing a search, search the current folder by default
           FXDefaultSearchScope = "SCcf";
+        };
+
+        # The cask is installed by request, but its bundled daemon must not race
+        # the Home Manager service or self-update outside the Nix rollout.
+        "com.github.xor-gate.syncthing-macosx" = {
+          StartAtLogin = false;
+          SUEnableAutomaticChecks = false;
+          SUAutomaticallyUpdate = false;
         };
 
         "com.apple.spaces" = {
