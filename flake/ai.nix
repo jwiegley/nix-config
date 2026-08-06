@@ -466,6 +466,6 @@ in
     let
       pkgs = mkPkgs system;
     in
-    mkScriptPackage pkgs "format" "format.sh" (qualityInputs pkgs).format
+    mkScriptPackage pkgs "format" "format.sh" (qualityInputs pkgs).format ""
   );
 }
