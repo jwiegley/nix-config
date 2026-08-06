@@ -156,7 +156,7 @@ let
     && preflight.after == [ "linkGeneration" ]
     && lib.hasInfix "syncthing-bootstrap" preflight.data
     && lib.hasInfix "SessionLoginItems" preflight.data
-    && lib.hasInfix "unmanaged or duplicate Syncthing daemon" preflight.data
+    && lib.hasInfix "managed monitor child" preflight.data
     && !ownsMutableState home;
 in
 assert hasSyncthingApp heraSystem;

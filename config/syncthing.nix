@@ -235,13 +235,28 @@ in
           *) syncthing_fail "could not safely inspect legacy login items" ;;
         esac
 
-        daemon_pids="$(/usr/bin/pgrep -x syncthing 2>/dev/null || true)"
+        daemon_pids=( )
+        for ((attempt = 0; attempt < 20; attempt++)); do
+          mapfile -t daemon_pids < <(/usr/bin/pgrep -x syncthing 2>/dev/null || true)
+          (( ''${#daemon_pids[@]} != 1 )) && break
+          /bin/sleep 0.1
+        done
         daemon_running=0
-        if [[ -n "$daemon_pids" ]]; then
+        if (( ''${#daemon_pids[@]} > 0 )); then
           managed_pid="$(/bin/launchctl print gui/$(/usr/bin/id -u)/org.nix-community.home.syncthing 2>/dev/null \
             | /usr/bin/awk '/^[[:space:]]*pid = / { print $3; exit }')"
-          [[ -n "$managed_pid" && "$daemon_pids" == "$managed_pid" ]] \
-            || syncthing_fail "an unmanaged or duplicate Syncthing daemon is running"
+          [[ -n "$managed_pid" && ''${#daemon_pids[@]} == 2 ]] \
+            || syncthing_fail "an unmanaged, duplicate, or unhealthy Syncthing instance is running"
+          if [[ "''${daemon_pids[0]}" == "$managed_pid" ]]; then
+            child_pid="''${daemon_pids[1]}"
+          elif [[ "''${daemon_pids[1]}" == "$managed_pid" ]]; then
+            child_pid="''${daemon_pids[0]}"
+          else
+            syncthing_fail "the Syncthing monitor is not owned by the managed launchd job"
+          fi
+          child_parent="$(/bin/ps -p "$child_pid" -o ppid= | /usr/bin/tr -d ' ')"
+          [[ "$child_parent" == "$managed_pid" ]] \
+            || syncthing_fail "the second Syncthing process is not the managed monitor child"
           daemon_running=1
         fi
 
