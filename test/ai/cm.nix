@@ -143,6 +143,31 @@ runCommand "cm-integration-check"
     cat "$results/guard.out" "$results/guard.err" >"$results/guard.combined"
     grep -F 'apiKey configuration field is disabled' "$results/guard.combined" >/dev/null
 
+    # Repository-local credentials are rejected, not silently filtered, and their
+    # values must never appear in diagnostics.
+    ${pkgs.git}/bin/git -C "$project" init --quiet
+    mkdir -m 700 "$project/.cass"
+    repo_guard_sentinel=repo-credential-value-must-not-appear
+    printf '%s\n' '{"apiKey":"repo-credential-value-must-not-appear"}' \
+      >"$project/.cass/config.json"
+    chmod 600 "$project/.cass/config.json"
+    if (
+      cd "$project"
+      $cm context rejected --json
+    ) >"$results/repo-guard.out" 2>"$results/repo-guard.err"
+    then
+      echo "cm accepted a repository-local apiKey field" >&2
+      exit 1
+    fi
+    cat "$results/repo-guard.out" "$results/repo-guard.err" \
+      >"$results/repo-guard.combined"
+    grep -F 'apiKey configuration field is disabled' \
+      "$results/repo-guard.combined" >/dev/null
+    if grep -F "$repo_guard_sentinel" "$results/repo-guard.combined" >/dev/null; then
+      echo "cm leaked a repository-local apiKey value" >&2
+      exit 1
+    fi
+
     for dir in "$home" "$xdg_config" "$xdg_data" "$xdg_cache"; do
       test -z "$(find "$dir" -mindepth 1 -print -quit)"
     done
