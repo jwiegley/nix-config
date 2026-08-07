@@ -89,11 +89,15 @@ let
   sherlockAncestorProbe = builtins.tryEval (preflightFactory {
     newPaths = [ ".claude/skills/sherlock" ];
   });
+  primeManagedSettingsProbe = builtins.tryEval (preflightFactory {
+    newPaths = [ ".prime/agent/managed-settings.json" ];
+  });
 in
 assert task9PreflightWithPi.activation.before == [ "checkLinkTargets" ];
 assert task9PreflightWithPi.activation.after == [ ];
 assert !invalidPreflightProbe.success;
 assert !sherlockAncestorProbe.success;
+assert primeManagedSettingsProbe.success;
 
 pkgs.runCommand "ai-managed-preflight"
   {

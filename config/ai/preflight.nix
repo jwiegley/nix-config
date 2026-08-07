@@ -65,6 +65,7 @@ let
     ".config/pi/agent/themes/dark-tool-backgrounds.json"
     ".prime/agent/COMPATIBILITY.md"
     ".prime/agent/keybindings.json"
+    ".prime/agent/managed-settings.json"
     ".prime/agent/models.json"
     ".prime/agent/settings.json"
   ];
