@@ -41,12 +41,13 @@ makes that selection explicitly. Prime Agent is initially selected only for Hera
 its source-built package, managed-settings overlay, model/provider overrides, prompt
 commands, RLM specialist adapters, skills, theme, keybindings, and MCP adapter are
 managed. Its writable preference/onboarding settings, daemon, kernel, authentication,
-continual harness, history, sessions, caches, logs, and refinements remain mutable. `cass` is exported for Apple Silicon Darwin and x86_64/aarch64
-Linux but initially selected only for Hera; Nix owns its executable, while its
-configuration, SQLite archive, indexes, models, caches, backups, and reports remain
-mutable. `cm` is source-built for the same three systems from a reviewed commit
-one change beyond v0.2.13 and is likewise selected only for Hera. Nix owns its
-executable and exact license rider, not initialization, provider selection,
+continual harness, history, sessions, caches, logs, and refinements remain mutable.
+`cass` is exported for Apple Silicon Darwin and x86_64/aarch64 Linux and selected
+for every managed AI home; Nix owns its executable, while its configuration,
+SQLite archive, indexes, models, caches, backups, and reports remain mutable. `cm`
+is source-built for the same three systems from a reviewed commit one change beyond
+v0.2.13 and is likewise selected for every managed AI home. Nix owns its executable
+and exact license rider, not initialization, provider selection,
 playbooks, feedback, reflections, indexes, models, caches, or other mutable state.
 Managed `cm` accepts provider credentials only from environment variables; network
 providers, Bedrock credential discovery, CLI-provider authentication, remote Cass,
@@ -54,6 +55,10 @@ and scheduled reflection remain unqualified user-run surfaces. Both upstream
 licenses add an OpenAI/Anthropic restriction, so the packages are marked unfree
 and install the exact rider. Nix owns generated configuration leaves, not mutable
 roots.
+
+The managed Pi profile makes the same complete 26-member extension gallery
+available on every host. Automatic registration of the two loopback providers
+and their router remains capability-specific.
 
 The complete ownership and data-flow contract is maintained in
 [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md).

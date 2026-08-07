@@ -8,13 +8,13 @@ tags:
   - ai-agents
   - developer-tools
 created: 2026-07-27
-updated: 2026-08-04
+updated: 2026-08-07
 pi-version: 0.83.0
 ---
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: 26 gallery packages on Darwin, the same gallery without its three loopback-only integrations on Linux, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: 26 gallery packages available on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope.
 
@@ -54,7 +54,7 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `pi-goal-x` | 0.19.0 | Durable goals and Sisyphus continuation | `/goals`, `get_goal` |
 | `pi-cache-optimizer` | 2.8.0 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
 
-The llama-swap provider, oMLX provider, and Model Router rows are Darwin-only. Their package derivations remain available on Linux, but the Linux gallery does not import or register them because the Nix configuration does not provision those loopback services there.
+The llama-swap provider, oMLX provider, and Model Router packages are available on every host. The generated loader registers them automatically only on Darwin, where Nix also provisions their local-service and routing configuration.
 
 ## Managed fleet configuration
 
@@ -65,7 +65,7 @@ The Hera, Clio, shared-work, VPS, and Vulcan Pi profiles are rendered by `~/src/
 | Surface | Current projection |
 | --- | --- |
 | Generated ownership | Individual leaves below `~/.config/pi/agent`, plus `~/.pi-lens/config.json`, `~/.config/mcp/mcp.json`, and the `~/.pi` compatibility link |
-| Extension entries | Fleet Theme, Nix Gallery loader, Pi Loop, Pi MCP Adapter, and Quiet Display; Linux omits the two local providers and their router |
+| Extension entries | Fleet Theme, Nix Gallery loader, Pi Loop, Pi MCP Adapter, and Quiet Display on every managed host; Linux keeps the two loopback providers and router available without registering them automatically |
 | Agent resources | 25 Nix-managed agent definitions |
 | Prompt resources | 63 files: 61 command prompts and the `emacs` and `spanish` prompts |
 | Skill resources | Shared catalog skills selected for Pi, plus six gallery package skill paths and one gallery prompt path advertised at runtime |
@@ -76,12 +76,12 @@ Shared skills remain in the common discovery estate rather than being copied int
 
 ### Model and routing policy
 
-The generated model files deliberately emit no Pi default. Model selection remains mutable at session scope. Darwin exposes the locally provisioned providers, opt-in Hermes route, and router; Linux exposes only the native remote-provider context overrides.
+The generated model files deliberately emit no Pi default. Model selection remains mutable at session scope. Darwin configures the locally provisioned providers, opt-in Hermes route, and router; Linux generates only the native remote-provider context overrides even though the complete extension package projection is present.
 
 | Item | Current value |
 | --- | --- |
 | Darwin provider surface | Gallery providers `llama-swap` and `omlx`; the `hermes` OpenAI-compatible provider; native `openai-codex` and `openrouter` overrides; and the synthetic `router` provider |
-| Linux provider surface | Native `openai-codex` and `openrouter` overrides only; no localhost discovery adapters or generated router |
+| Linux provider surface | Native `openai-codex` and `openrouter` overrides only; the loopback discovery adapters and router are packaged but not registered automatically |
 | Hermes route | `hermes/hermes-agent` at `https://hermes.vulcan.lan/v1`; opt-in, with its bearer credential resolved from the Home Manager-configured password store and GnuPG home only when a request uses the provider; stale inherited `GPG_TTY` state is discarded before lookup, isolating credential resolution from Agent Deck/tmux terminal state; Pi session-affinity headers are enabled for stable upstream routing |
 | Sol router route | `omlx/Qwen3.6-27B-oQ6e-mtp` through the local OpenAI-compatible oMLX service; text and image input; reasoning enabled; 262,144-token context; 65,536-token output |
 | Router profile | One underlying `sol` model; low → `low`, medium → `medium`, high → `xhigh`; `phaseBias` 0.5; debug disabled |
@@ -89,7 +89,7 @@ The generated model files deliberately emit no Pi default. Model selection remai
 | Local discovery | Each local provider queries its loopback `/models` endpoint once during registration, under a 2.5-second bound; non-chat models are filtered and missing metadata falls back to 262,144 context and 65,536 output |
 | Request policy | Local llama-swap and oMLX generation requests receive a 7,200-second client timeout; both providers use policy-approved non-secret loopback credentials |
 
-The generated `models.json` owns compatibility and context overrides; on Darwin it also owns the synthetic router model and Hermes route. The Hermes credential is a runtime command reference, not a secret copied into the Nix store. The two Darwin-only local provider extensions own runtime model discovery. No generated model is Pi's default.
+The generated `models.json` owns compatibility and context overrides; on Darwin it also owns the synthetic router model and Hermes route. The Hermes credential is a runtime command reference, not a secret copied into the Nix store. The Darwin-registered local provider extensions own runtime model discovery. No generated model is Pi's default.
 
 ### MCP registry
 
@@ -119,7 +119,7 @@ The generated keymap retains the ordinary keys and adds Emacs-style editing:
 
 **Version:** local · **Links:** Nix authority: `~/src/nix/packages/pi-gallery/` · deployed leaf: `~/.config/pi/agent/extensions/nix-gallery/index.ts`
 
-The Nix Gallery loader composes the managed packages listed below. Darwin receives the full gallery; Linux omits the two local providers and their router. The loader imports immutable Nix-store packages, registers extensions in deterministic order, and projects their skills and prompts. Before registration it suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
+The Nix Gallery loader projects the complete managed package set on every host. It imports and registers extensions in deterministic order, except that Linux does not automatically import the two loopback providers or their router. All 26 immutable package paths remain in the projection. Before registration the loader suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
 
 **Basic usage.** No direct command is required. Run `/reload` after activating a new Nix generation, or start a fresh Pi process, to load the current gallery. The loader itself owns no mutable state.
 
@@ -347,17 +347,17 @@ Pi Copy Message opens a searchable, keyboard-driven picker over raw session mess
 
 **Version:** `57583beb` · **Links:** Nix adapter: `~/src/nix/packages/pi-gallery/providers/pi-provider-llama-swap.ts` · [upstream source](https://github.com/gaurav-321/pi-local-llm)
 
-The Darwin-only llama-swap provider is a reviewed Nix derivative of `pi-local-llm`. At registration it queries the loopback llama-swap service once, filters non-chat and non-text models, derives modality and reasoning support from model metadata, and registers the surviving models through Pi's OpenAI Completions interface. A failed discovery emits a warning and leaves the provider empty until Pi reloads or restarts.
+The fleet-packaged llama-swap provider is a reviewed Nix derivative of `pi-local-llm`. Darwin registers it automatically; Linux retains the package without doing so. At registration it queries the loopback llama-swap service once, filters non-chat and non-text models, derives modality and reasoning support from model metadata, and registers the surviving models through Pi's OpenAI Completions interface. A failed discovery emits a warning and leaves the provider empty until Pi reloads or restarts.
 
-**Basic usage.** Keep the Nix-managed `org.nixos.llama-swap` launch agent available, then select a discovered `llama-swap/*` model through `/model`. Reload Pi after the local model roster changes so that the one-time discovery runs again.
+**Basic usage.** On Darwin, keep the Nix-managed `org.nixos.llama-swap` launch agent available, then select a discovered `llama-swap/*` model through `/model`. Reload Pi after the local model roster changes so that the one-time discovery runs again. Linux requires an independently provisioned trusted service and explicit extension loading.
 
 ### oMLX Provider
 
 **Version:** `57583beb` · **Links:** Nix adapter: `~/src/nix/packages/pi-gallery/providers/pi-provider-omlx.ts` · [upstream source](https://github.com/gaurav-321/pi-local-llm)
 
-The Darwin-only oMLX provider uses the same bounded discovery adapter against the loopback oMLX service. It supplies the underlying model for the generated Sol router route, presently `Qwen3.6-27B-oQ6e-mtp`, while remaining available for direct `omlx/*` model selection.
+The fleet-packaged oMLX provider uses the same bounded discovery adapter against the loopback oMLX service. Darwin registers it automatically and uses it for the generated Sol router route, presently `Qwen3.6-27B-oQ6e-mtp`. Linux retains the package without automatic registration.
 
-**Basic usage.** Keep the Nix-managed `org.nixos.omlx` launch agent available and select an `omlx/*` model through `/model`, or select `router/sol` and allow Model Router to choose the reasoning tier. Reload Pi after the oMLX model roster changes.
+**Basic usage.** On Darwin, keep the Nix-managed `org.nixos.omlx` launch agent available and select an `omlx/*` model through `/model`, or select `router/sol` and allow Model Router to choose the reasoning tier. Reload Pi after the oMLX model roster changes. Linux requires an independently provisioned trusted service and explicit extension loading.
 
 ### Multi-Pass
 
@@ -371,9 +371,9 @@ Pi Multi-Pass registers additional OAuth subscription accounts for supported pro
 
 **Version:** 0.4.4 · **Links:** [Pi Packages](https://pi.dev/packages/@yeliu84/pi-model-router) · [Home](https://github.com/yeliu84/pi-model-router#readme) · [GitHub](https://github.com/yeliu84/pi-model-router)
 
-Pi Model Router selects a configured route and reasoning level for each turn according to task complexity, phase, profile, budget, and explicit pins. The Darwin profiles expose one `sol` route backed by `omlx/Qwen3.6-27B-oQ6e-mtp`, so automatic routing changes thinking depth rather than the underlying provider or model. The local Nix configuration keeps this map authoritative, while the extension provides the per-turn decision and interactive control surface. Linux profiles do not activate this extension.
+Pi Model Router selects a configured route and reasoning level for each turn according to task complexity, phase, profile, budget, and explicit pins. The Darwin profiles expose one `sol` route backed by `omlx/Qwen3.6-27B-oQ6e-mtp`, so automatic routing changes thinking depth rather than the underlying provider or model. The local Nix configuration keeps this map authoritative, while the extension provides the per-turn decision and interactive control surface. Linux retains the package without automatically loading it or generating a route.
 
-**Basic usage.** Open `/router` to inspect or change router state. Select `router/sol` when the managed local route is intended; use direct `/model` selection when a task requires another provider or model. The generated configuration does not force a default.
+**Basic usage.** On Darwin, open `/router` to inspect or change router state. Select `router/sol` when the managed local route is intended; use direct `/model` selection when a task requires another provider or model. The generated configuration does not force a default. Linux requires an independently reviewed router configuration and explicit extension loading.
 
 ## Companion runtimes
 

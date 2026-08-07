@@ -128,7 +128,7 @@ apply compatibility fixes. Owning host or feature modules select packages
 explicitly.
 
 `cass` uses pinned upstream release binaries through this same package boundary and
-is selected only by the Hera home class. The portable package supports
+is selected by every managed AI home class. The portable package supports
 `aarch64-darwin`, `aarch64-linux`, and `x86_64-linux`; Intel macOS and Windows are
 not exported. Nix owns no `cass` configuration or data leaf: configuration, the
 canonical SQLite archive, derived lexical and semantic indexes, opt-in model files,
@@ -137,7 +137,7 @@ exercise its structured robot API rather than launching the interactive TUI.
 Upstream's nominal MIT license includes an OpenAI/Anthropic restriction, so the
 package is classified unfree and carries the exact tag-bound rider in its output.
 
-`cm` is a separate Hera-only package built from the reviewed upstream commit one
+`cm` is a separate fleet-wide package built from the reviewed upstream commit one
 change beyond v0.2.13, retaining the inline-feedback identifier fix uniformly on
 `aarch64-darwin`, `aarch64-linux`, and `x86_64-linux`. The build uses the pinned Bun
 lock; x86_64 uses the hash-pinned baseline Bun template so the executable does not

@@ -1290,7 +1290,7 @@ let
       // lib.optionalAttrs (member ? prompts) {
         prompts = map (path: "${roots.${id}}/${path}") member.prompts;
       }
-    ) activeOrder;
+    ) order;
   };
   memberPackages = lib.listToAttrs (
     map (id: lib.nameValuePair members.${id}.attrName members.${id}.package) order

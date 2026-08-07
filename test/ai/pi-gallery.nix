@@ -102,13 +102,16 @@ let
         || fail "shared normalizer drifted for ${target}"
     ''
   ) normalizationTargets;
-  expectedPublicNames = map (id: manifest.members.${id}.publicName) activeOrder;
+  expectedPublicNames = map (id: manifest.members.${id}.publicName) manifest.order;
   expectedSkillCount = builtins.length (
-    lib.concatMap (id: manifest.members.${id}.skills or [ ]) activeOrder
+    lib.concatMap (id: manifest.members.${id}.skills or [ ]) manifest.order
   );
   expectedPromptCount = builtins.length (
-    lib.concatMap (id: manifest.members.${id}.prompts or [ ]) activeOrder
+    lib.concatMap (id: manifest.members.${id}.prompts or [ ]) manifest.order
   );
+  expectedActiveImportPaths = map (
+    id: "${roots.${id}}/${manifest.members.${id}.extension}"
+  ) activeOrder;
   routingExtension =
     if stdenv.hostPlatform.isDarwin then
       "${gallery}/index.ts"
@@ -573,7 +576,7 @@ runCommand "pi-gallery-check"
 
     [ -f ${gallery}/index.ts ]
     [ -f ${gallery}/projection.json ]
-    [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq ${toString (builtins.length activeOrder)} ]
+    [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq ${toString (builtins.length manifest.order)} ]
     [ "$(jq '[.packages[].skills // [] | length] | add' ${gallery}/projection.json)" -eq ${toString expectedSkillCount} ]
     [ "$(jq '[.packages[].prompts // [] | length] | add' ${gallery}/projection.json)" -eq ${toString expectedPromptCount} ]
     jq --argjson expected '${builtins.toJSON expectedPublicNames}' -e '
@@ -586,6 +589,23 @@ runCommand "pi-gallery-check"
       | $btw != null and $goal != null and $btw < $goal
     ' ${gallery}/projection.json >/dev/null \
       || fail "BTW must register before Goal X so its focused overlay owns the first Escape"
+    cat > "$TMPDIR/expected-gallery-imports" <<'EOF'
+    ${lib.concatStringsSep "\n" expectedActiveImportPaths}
+    EOF
+    sed -nE \
+      's|^[[:space:]]*import[[:space:]]+[A-Za-z0-9_]+[[:space:]]+from[[:space:]]+"([^"]+)";$|\1|p' \
+      ${gallery}/index.ts > "$TMPDIR/actual-gallery-imports"
+    cmp "$TMPDIR/expected-gallery-imports" "$TMPDIR/actual-gallery-imports" \
+      || fail "gallery import order or membership differs from the platform contract"
+
+    cat > "$TMPDIR/expected-gallery-registrations" <<'EOF'
+    ${lib.concatStringsSep "\n" activeOrder}
+    EOF
+    sed -nE \
+      's/^[[:space:]]*\["([^"]+)",[[:space:]]+[A-Za-z0-9_]+\],?$/\1/p' \
+      ${gallery}/index.ts > "$TMPDIR/actual-gallery-registrations"
+    cmp "$TMPDIR/expected-gallery-registrations" "$TMPDIR/actual-gallery-registrations" \
+      || fail "gallery registration order or membership differs from the platform contract"
     echo "Pi gallery check: dynamic local providers"
     ${bun}/bin/bun ${sourceForChecks}/test/ai/local-openai-provider.check.ts
     PI_GOAL_X_ROOT=${roots.goal} \

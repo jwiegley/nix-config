@@ -166,8 +166,6 @@ let
   codexSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "codex") profileIds;
   droidSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "droid") profileIds;
   primeSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "prime") profileIds;
-  cassSelected = homeClass == "hera";
-  cmSelected = homeClass == "hera";
   piRuntimePackages = with pkgs; [
     actionlint
     agent-browser
@@ -337,11 +335,11 @@ in
       message = "inputs.nix-config-ai.packages.${system}.prime-agent is missing";
     }
     {
-      assertion = !cassSelected || pairedCassPackage != null;
+      assertion = pairedCassPackage != null;
       message = "inputs.nix-config-ai.packages.${system}.cass is missing";
     }
     {
-      assertion = !cmSelected || pairedCmPackage != null;
+      assertion = pairedCmPackage != null;
       message = "inputs.nix-config-ai.packages.${system}.cm is missing";
     }
     {
@@ -367,8 +365,8 @@ in
       lib.optional droidSelected pkgs.agent-http-header-bridge
       ++ lib.optional (pairedPiPackage != null) pairedPiPackage
       ++ lib.optional (primeSelected && pairedPrimePackage != null) pairedPrimePackage
-      ++ lib.optional (cassSelected && pairedCassPackage != null) pairedCassPackage
-      ++ lib.optional (cmSelected && pairedCmPackage != null) pairedCmPackage
+      ++ lib.optional (pairedCassPackage != null) pairedCassPackage
+      ++ lib.optional (pairedCmPackage != null) pairedCmPackage
       ++ lib.optionals piSelected piRuntimePackages;
     sessionVariables = lib.optionalAttrs codexSelected {
       OMLX_API_KEY = "dummy-key";

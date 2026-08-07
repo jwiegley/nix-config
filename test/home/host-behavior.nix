@@ -22,15 +22,19 @@ let
   desktopHomes = map (configuration: configuration.config.home-manager.users.johnw) (
     builtins.attrValues darwinConfigurations
   );
-  heraHome = darwinConfigurations.hera.config.home-manager.users.johnw;
-  clioHome = darwinConfigurations.clio.config.home-manager.users.johnw;
   sharedWork = homeConfigurations."jwiegley@x86_64-linux".config;
   nonDesktopHomes =
     map (fixture: fixture.config) (builtins.attrValues nixosHomeEvaluationFixtures)
     ++ map (configuration: configuration.config) (builtins.attrValues homeConfigurations);
   allHomes = desktopHomes ++ nonDesktopHomes;
-  nonHeraHomes = [ clioHome ] ++ nonDesktopHomes;
   hasPackage = name: config: builtins.elem name (map lib.getName config.home.packages);
+  managedPiExtensions = [
+    ".config/pi/agent/extensions/fleet-theme/index.ts"
+    ".config/pi/agent/extensions/nix-gallery/index.ts"
+    ".config/pi/agent/extensions/pi-loop/index.ts"
+    ".config/pi/agent/extensions/pi-mcp-adapter"
+    ".config/pi/agent/extensions/pi-quiet"
+  ];
   ownsCmState =
     config:
     let
@@ -139,13 +143,14 @@ assert builtins.all (
   config: builtins.hasAttr ".config/pi/agent/models.json" config.home.file
 ) allHomes;
 assert builtins.all (
+  config: builtins.all (path: builtins.hasAttr path config.home.file) managedPiExtensions
+) allHomes;
+assert builtins.all (
   config: config.home.activation.aiManagedPiBlackholePolicy.after == [ "linkGeneration" ]
 ) allHomes;
 assert builtins.all (hasPackage "unisessions") allHomes;
-assert hasPackage "cass" heraHome;
-assert hasPackage "cm" heraHome;
-assert builtins.all (config: !(hasPackage "cass" config)) nonHeraHomes;
-assert builtins.all (config: !(hasPackage "cm" config)) nonHeraHomes;
+assert builtins.all (hasPackage "cass") allHomes;
+assert builtins.all (hasPackage "cm") allHomes;
 assert builtins.all (config: !(ownsCmState config)) allHomes;
 assert builtins.all (
   config:
