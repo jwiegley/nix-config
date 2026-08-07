@@ -144,13 +144,14 @@ runCommand "cm-integration-check"
     grep -F 'apiKey configuration field is disabled' "$results/guard.combined" >/dev/null
 
     # Repository-local credentials are rejected, not silently filtered, and their
-    # values must never appear in diagnostics or persisted state.
+    # values must never appear in diagnostics, paths, links, or persisted files.
     ${pkgs.git}/bin/git -C "$project" init --quiet
-    mkdir -m 700 "$project/.cass" "$project/nested"
+    mkdir -m 700 "$sandbox/.cass" "$project/.cass" "$project/nested"
     repo_guard_sentinel=repo-credential-value-must-not-appear
     printf '%s\n' '{"apiKey":"repo-credential-value-must-not-appear"}' \
       >"$project/.cass/config.json"
-    chmod 600 "$project/.cass/config.json"
+    cp "$project/.cass/config.json" "$sandbox/.cass/config.json"
+    chmod 600 "$sandbox/.cass/config.json" "$project/.cass/config.json"
     if (
       cd "$project/nested"
       $cm context rejected --json
@@ -160,17 +161,62 @@ runCommand "cm-integration-check"
       exit 1
     fi
     test ! -s "$results/repo-guard.err"
-    jq -e \
-      '.success == false
-       and .command == "context"
-       and (.error.message | contains("apiKey configuration field is disabled"))' \
+    jq -s -e \
+      'length == 1
+       and (.[0]
+         | .success == false
+         and .command == "context"
+         and (.error.message | contains("apiKey configuration field is disabled")))' \
       "$results/repo-guard.out" >/dev/null
     test "$(jq -r .apiKey "$project/.cass/config.json")" = "$repo_guard_sentinel"
     rm "$project/.cass/config.json"
-    if grep -R -F "$repo_guard_sentinel" "$sandbox" >/dev/null; then
-      echo "cm persisted or emitted a repository-local apiKey value" >&2
-      exit 1
-    fi
+    rmdir "$project/.cass"
+
+    # Discovery stops at the Git root rather than walking into an outer decoy.
+    (
+      cd "$project/nested"
+      $cm context cmnixfixturetoken --history 5 --days 30 --json
+    ) >"$results/repo-boundary.out" 2>"$results/repo-boundary.err"
+    test ! -s "$results/repo-boundary.err"
+    jq -s -e \
+      'length == 1
+       and (.[0] | .success == true and .command == "context")' \
+      "$results/repo-boundary.out" >/dev/null
+    test "$(jq -r .apiKey "$sandbox/.cass/config.json")" = "$repo_guard_sentinel"
+    rm "$sandbox/.cass/config.json"
+    rmdir "$sandbox/.cass"
+
+    scan_paths=$results/repo-guard-scan-paths
+    : >"$scan_paths"
+    find "$sandbox" -print0 >"$scan_paths"
+    while IFS= read -r -d $'\0' scan_path; do
+      case "$scan_path" in
+        *"$repo_guard_sentinel"*)
+          echo "cm persisted a repository-local apiKey value in a path" >&2
+          exit 1
+          ;;
+      esac
+      if test -L "$scan_path"; then
+        scan_target=$(readlink "$scan_path")
+        case "$scan_target" in
+          *"$repo_guard_sentinel"*)
+            echo "cm persisted a repository-local apiKey value in a link" >&2
+            exit 1
+            ;;
+        esac
+      elif test -f "$scan_path"; then
+        if grep -F -q -- "$repo_guard_sentinel" "$scan_path"; then
+          echo "cm emitted or persisted a repository-local apiKey value" >&2
+          exit 1
+        else
+          scan_status=$?
+          if test "$scan_status" -ne 1; then
+            echo "failed to scan CM state for a repository-local apiKey value" >&2
+            exit 1
+          fi
+        fi
+      fi
+    done <"$scan_paths"
 
     for dir in "$home" "$xdg_config" "$xdg_data" "$xdg_cache"; do
       test -z "$(find "$dir" -mindepth 1 -print -quit)"
