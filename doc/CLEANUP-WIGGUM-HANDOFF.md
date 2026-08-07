@@ -22,21 +22,22 @@ acting on the work described here.
 
 ## Executive status
 
-The project is substantially reduced, but it is not complete. There are three
-real implementation boundaries, one deferred Project item, and one final
-closeout boundary:
+The project is substantially reduced, but it is not complete. There are two
+qualification and operation boundaries, one tracker-reconciliation boundary,
+one deferred Project item, and one final closeout boundary:
 
 1. Finish, freeze, qualify, authorize, and run the bounded mutable-state
    reconciliation for #127; then prove in two complete fleet cycles that Anvil,
    Ref, Perplexity, and PromptDeploy state is not recreated before closing
    #116, #124, and #127.
-2. Publish and reconcile the signed Codex policy-probe correction. Issue #111
-   is closed in the tracker, but the corrective commit has not yet been
-   published or reconciled there.
+2. Reconcile the published signed Codex policy-probe correction with issue
+   #111. The issue is closed in the tracker, but its closeout still omits the
+   later corrective work.
 3. Finish #128's permanent bounded-memory Pi-session qualification. The
    implementation, exact fixture, 1 GiB scale, managed package, and downstream
-   consumer gates pass; a fresh eight-hour soak remains in progress. #128 can
-   proceed independently of the fleet spine but explicitly blocks #121.
+   consumer gates passed on the base candidate; published follow-ups have
+   narrower targeted evidence, and a fresh eight-hour soak remains in progress.
+   #128 can proceed independently of the fleet spine but explicitly blocks #121.
 4. Keep #130's deferred PAL-restoration Todo visible; it is open but does not
    currently block the cleanup spine.
 5. Run #121 once on one unchanged final candidate: reconcile documentation and
@@ -45,14 +46,15 @@ closeout boundary:
    assurance, and close #98 last.
 
 At this 2026-08-07 checkpoint, the formerly mixed working tree has been
-separated with the Git surgeon workflow and rebased onto the refreshed
-`origin/main`. Ten logical commits are ahead of that remote, including the
-earlier desktop-confinement coverage plus the Codex policy probe, Cass, CM,
-Prime Agent, bounded Pi history, host-fixture coverage, and ownership and
-handoff documentation. Every rebased commit has a good signature. Post-rebase
-verification and two-remote publication have not yet occurred; refresh both
-remotes before relying on any recorded remote tip. Same-commit normal CI and
-Portable Assurance remain outstanding.
+separated with the Git surgeon workflow, rebased, and published as an
+eighteen-commit signed series after `5593f2c7`. Commit `2543b5cc` is the last
+published implementation checkpoint. Immediately after publication the single
+worktree was clean, network reads found both `origin/main` and `github/main` at
+that commit, and every commit in the series had a good signature. This
+handoff-only delta records the subsequent evidence refresh and introduces no
+implementation change. The exact published implementation checkpoint passed
+normal CI and a fresh pre-commit gate. Same-commit Portable Assurance remains
+outstanding.
 
 The last complete fleet activation proof remains the #126 boundary at
 `e7dc846c`. Later successful builds, evaluations, and single-host checks must
@@ -79,8 +81,8 @@ baselines only. Refresh every volatile fact at the boundary where it matters.
 ## Current Project 9 state
 
 Project 9 was refreshed through the explicitly selected `jwiegley` GitHub
-account at 2026-08-07T03:08:11Z. It contained 124 unarchived issue items: 117
-Done, six In Progress, and one Todo:
+account on 2026-08-07 after publication. It contained 124 unarchived issue
+items: 117 Done, six In Progress, and one Todo:
 
 | Issue | Remaining purpose |
 |---|---|
@@ -144,9 +146,9 @@ boundaries:
   denominators, parity/currency evidence machinery, dead selector metadata,
   mechanical Nix debris, and the `config/fleet` compatibility surface have
   been removed or reduced according to the accepted plan.
-- #111 is tracker-closed and its corrective source is now committed locally as
-  signed commit `ea0327cf`. Publication and truthful tracker reconciliation are
-  still required before #121.
+- #111 is tracker-closed and its corrective source is published to both remotes
+  as signed commit `ea0327cf`. Truthful tracker reconciliation is still required
+  before #121.
 - #109 was closed as not planned after its compliant implementation proved
   larger and more complex than the duplication it would replace.
 - #104 completed the prior comment audit. Its denominator is not the final
@@ -197,20 +199,24 @@ authority.
 | Owner/live gates | Missing | Fresh metadata, payload, Clio-link, quiescence, reachability, and one-runner authority are required. |
 | Live reconciliation | Not run | No live mutable state was changed by the halted lane. |
 | Two-cycle fleet proof | Not run | Required before #116/#124/#127 close. |
-| Codex wrapper correction | Signed local commit | Commit `ea0327cf` passes the Darwin wrapper and pre-commit gates; publish it and reconcile #111. The Linux wrapper lane remains capability-blocked before wrapper execution. |
-| #128 bounded-memory Pi sessions | Qualification in progress | Signed local commit `e2c002e0`; exact 90 MB fixture, full suites, 1 GiB scale, managed Pi, gallery, agent-resources, and wrapper checks pass. The fresh eight-hour soak and publication remain open. |
+| Codex wrapper correction | Published signed commit | Commit `ea0327cf` passes the Darwin wrapper and pre-commit gates and is on both remotes; reconcile #111. The Linux wrapper lane remains capability-blocked before wrapper execution. |
+| #128 bounded-memory Pi sessions | Qualification in progress | Base implementation commit `e2c002e0` plus published follow-ups `11f8de49`, `32489eb8`, and `adda9631`; historical exact-fixture, full-suite, 1 GiB-scale, managed-package, and consumer gates passed on the base candidate. The fresh eight-hour soak remains open. |
 | #130 PAL restoration | Deferred Todo | Open Project item with no cleanup dependency edge; retain as explicit deferred work rather than miscounting it as Done. |
 | #121/#98 closeout | Blocked | Begins only after the preceding boundaries are complete. |
 
 ## #128 bounded-memory Pi checkpoint
 
-Signed commit `e2c002e0` replaces eager active-session materialization with a
-disposable SQLite index and deferred message source while retaining the JSONL
-file as the durable authority. It also migrates automatic Pi extensions to
-bounded pages, iterators, or targeted lookups; bounded tree previews do not
-hydrate full records, and explicit export/legacy APIs retain exact recall.
+Base implementation commit `e2c002e0` replaces eager active-session
+materialization with a disposable SQLite index and deferred message source
+while retaining the JSONL file as the durable authority. It also migrates
+automatic Pi extensions to bounded pages, iterators, or targeted lookups;
+bounded tree previews do not hydrate full records, and explicit export/legacy
+APIs retain exact recall. Published follow-ups `11f8de49`, `32489eb8`, and
+`adda9631` make the RSS gate portable, refresh the bounded-history patch for
+the current pi-subagents source, and update pi-subagents to 0.42.1.
 
-Current verification for the unchanged candidate before its clean rebase is:
+Historical verification for the `e2c002e0` candidate before its clean rebase
+is:
 
 - coding-agent: 191 files passed, 1,864 tests passed, 48 skipped;
 - agent core: 18 files passed, 246 tests passed, one skipped;
@@ -223,6 +229,16 @@ Current verification for the unchanged candidate before its clean rebase is:
 - `aarch64-darwin` Pi, Pi gallery, agent-resources, and agent-wrapper builds
   passed, including the packaged deferred-agent-core contract; and
 - the full repository pre-commit tier passed all seven suites.
+
+At published HEAD `2543b5cc`, the targeted pi-subagents package build, Pi
+gallery check, and pre-commit tier passed before publication. A fresh
+post-publication pre-commit run passed all seven suites, and same-commit normal
+CI run `31164351260` passed all four jobs. Portable Assurance has not run on
+this exact commit. Run `31161435108` at ancestor `77e13163` passed its other
+three jobs but failed the ARM RSS gate at 29,884,416 bytes against the former
+29,360,128-byte ceiling. Published commit `11f8de49` raises the portable ceiling
+to 32,505,856 bytes, but that correction remains unverified by Portable
+Assurance.
 
 The fresh eight-hour soak started on 2026-08-07 with 32 KiB messages, a
 16-message compaction cadence, and retained output. Its first checkpoint passed;
@@ -606,7 +622,8 @@ copy, print, provision, rotate, or delete them.
 
 ## Codex wrapper correction checkpoint
 
-The working tree now contains the isolated design's tracked Nix integration.
+Published commit `ea0327cf` contains the isolated design's tracked Nix
+integration.
 `flake/ai/wrappers/codex.nix` is 267 lines rather than 819 and no longer owns a
 copy of Codex's CLI grammar. The tracked upstream patch asks the Clap graph for
 one of four policy tokens before Codex initialization:
@@ -642,7 +659,8 @@ The final independent fess audit is GO for this exact Darwin/offline boundary;
 its report is
 `/private/tmp/wg-project9-resume/audit/codex-wrapper-fess-v2.md`, SHA-256
 `3c840b50627caf8add34ffa6e07597c3711886762b4b8231c82b535b7eb0226f`.
-It does not close the Linux, commit/publication, or same-commit gates.
+It does not close the Linux capability, activation, tracker-reconciliation, or
+same-commit Portable Assurance gates.
 
 The `x86_64-linux.agent-wrappers` check did not reach wrapper execution. The
 configured native `root@nix-builder` SSH master was unavailable; the fallback
@@ -653,9 +671,9 @@ and all five Python-test lanes. The earlier
 `config/ai/renderers/pi.nix:79` assignment-style warning was corrected with
 `inherit` before the series was committed.
 
-The correction is committed but not yet published or activated. It must remain
-part of the unchanged candidate tested by #121, and the misleading #111
-closeout must be reconciled truthfully.
+The correction is committed and published but has not been established as
+active on the fleet. It must remain part of the unchanged candidate tested by
+#121, and the misleading #111 closeout must be reconciled truthfully.
 
 ## #121 unchanged-candidate closeout
 
@@ -797,8 +815,9 @@ Report the exact boundary rather than softening it into success.
 - [ ] Perform two authorized activation/fresh-client/probe cycles on all hosts.
 - [ ] Close #127, then #116, then #124 with distinct evidence.
 - [x] Integrate the upstream Codex policy probe and delete duplicate wrapper
-      grammar in a signed local commit.
-- [ ] Publish the Codex correction and reconcile the misleading #111 closure.
+      grammar in a signed commit.
+- [x] Publish the Codex correction to both remotes.
+- [ ] Reconcile the misleading #111 closure.
 - [ ] Complete and close #128's bounded-memory Pi-session work.
 - [ ] Run #121 once on an unchanged candidate, remove cleanup documents, and
       publish only with separate authority.
