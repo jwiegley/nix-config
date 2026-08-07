@@ -33,8 +33,11 @@ final closeout boundary. The tracker-reconciliation boundary is complete:
 2. Finish #128's permanent bounded-memory Pi-session qualification. The
    implementation, exact fixture, 1 GiB scale, managed package, and downstream
    consumer gates passed on the base candidate; published follow-ups have
-   narrower targeted evidence, and a fresh eight-hour soak remains in progress.
-   #128 can proceed independently of the fleet spine but explicitly blocks #121.
+   narrower targeted evidence. The fresh eight-hour process/computation gate
+   passed, but its sealed final checker failed a lexical `/var` versus
+   `/private/var` retained-path predicate, so the eight-hour evidence remains
+   incomplete and requires a corrected rerun. #128 can proceed independently
+   of the fleet spine but explicitly blocks #121.
 3. Keep #130's deferred PAL-restoration Todo visible; it is open but does not
    currently block the cleanup spine.
 4. Run #121 once on one unchanged final candidate: reconcile documentation and
@@ -44,18 +47,16 @@ final closeout boundary. The tracker-reconciliation boundary is complete:
 
 At this 2026-08-07 checkpoint, the formerly mixed working tree has been
 separated with the Git surgeon workflow, rebased, and published as a
-twenty-four-commit signed series after `5593f2c7`. Commit `e3b191c4` is the last
-published implementation checkpoint. Immediately after publication the single
-worktree was clean, network reads found both `origin/main` and `github/main` at
-that commit, and the two new Prime commits had good signatures. This
-handoff-only delta records the subsequent evidence refresh and introduces no
-implementation change. The exact published implementation checkpoint passed
-the Prime package and both integration selectors, managed-policy preflight,
-host-behavior check, pre-commit gate, and a non-activating Hera system build.
-At evidence checkpoint `686a7334`, normal CI run `31178896021` and Portable
-Assurance run `31179553744` passed all four jobs each. The portable native
-matrix includes the corrected Pi RSS gate but not the capability-blocked Linux
-Codex-wrapper lane.
+twenty-eight-commit signed series after `5593f2c7`. Commit `bad199f5` is the
+published implementation and package-integrity tip before this evidence-only
+handoff update. The single worktree was clean, network reads found both
+`origin/main` and `github/main` at that commit, and its signature was good.
+Normal CI run `31182626550` passed all four jobs on exact commit `bad199f5`.
+Neither that CI result nor the soak evidence below establishes activation or
+live-session continuity. At evidence checkpoint `686a7334`, normal CI run
+`31178896021` and Portable Assurance run `31179553744` passed all four jobs
+each. The portable native matrix includes the corrected Pi RSS gate but not
+the capability-blocked Linux Codex-wrapper lane.
 
 The last complete fleet activation proof remains the #126 boundary at
 `e7dc846c`. Later successful builds, evaluations, and single-host checks must
@@ -213,7 +214,7 @@ authority.
 | Live reconciliation | Not run | No live mutable state was changed by the halted lane. |
 | Two-cycle fleet proof | Not run | Required before #116/#124/#127 close. |
 | Codex wrapper correction | Published and tracker-reconciled | Commit `ea0327cf` passes the Darwin wrapper and pre-commit gates and is on both remotes; comments `5217376659` and `5217377344` correct #111 and carry its evidence ceiling into #121. The Linux wrapper lane remains capability-blocked before wrapper execution. |
-| #128 bounded-memory Pi sessions | Qualification in progress | Base implementation commit `e2c002e0` plus published follow-ups `11f8de49`, `32489eb8`, and `adda9631`; historical exact-fixture, full-suite, 1 GiB-scale, managed-package, and consumer gates passed on the base candidate. The fresh eight-hour soak remains open. |
+| #128 bounded-memory Pi sessions | Qualification in progress; corrected soak rerun required | Base implementation `e2c002e0`, published follow-ups `11f8de49`, `32489eb8`, `adda9631`, and package-integrity tip `bad199f5`; historical exact-fixture, full-suite, 1 GiB-scale, managed-package, and consumer gates passed at their recorded candidates. The eight-hour process gate exited zero and met the growth ceiling, but its sealed retained-path predicate failed, so that evidence is incomplete. Linux profiling, current-candidate gates, activation, and direct existing-session resumption also remain open. |
 | Prime Agent managed settings | Published and locally qualified | Commits `096de97e` and `e3b191c4` pass 199 selected package tests, both Prime integration selectors, managed preflight, host behavior, pre-commit, a Hera system build without activation, and normal CI. Portable Assurance run `31179553744` also passes at evidence checkpoint `686a7334`; neither build nor CI establishes activation. |
 | #130 PAL restoration | Deferred Todo | Open Project item with no cleanup dependency edge; retain as explicit deferred work rather than miscounting it as Done. |
 | #121/#98 closeout | Blocked | Begins only after the preceding boundaries are complete. |
@@ -271,22 +272,61 @@ gallery check passes, including all seven pi-subagents bounded-history tests.
 These are package/source checks, not soak, activation, direct-resumption, or
 promotion evidence.
 
-The fresh eight-hour soak started on 2026-08-07 with 32 KiB messages, a
-16-message compaction cadence, and retained output. The monitor report records
-the coordinator's recovered 19,592,131 ms stdout checkpoint with 18,240
-messages, 1,140 compactions, 602,460,595 history bytes, and 94,338,634 adjusted
-RSS bytes. At the independent monitor's 05:35:33 elapsed checkpoint, PID 55672
-was still alive with an unchanged command; its latest artifact check recorded
-609,297,796 JSONL bytes and 77,606,912 SQLite bytes. The detached monitor can
-establish only process identity and artifact growth, not new stdout checkpoints
-or the final result. Its report is
-`/private/tmp/wg-pi128/soak-monitor/report.md`. Do not call the soak, #128,
-hardware/activation, or promotion boundary complete until the final process
-result and remaining authority-specific evidence are recorded. The source
-scratch remains
-`/private/tmp/pi128-upstream.qhiEdH` at upstream v0.83.0 commit
-`845d6ff1f6643aba440341cce877ce1c43ebbc39`; never push that downstream scratch
-to its upstream remote.
+The fresh eight-hour process/computation gate reported `durationMs` 28,800,471
+and subsequently exited zero. Its final object reported 26,893 messages, 1,681
+compactions,
+32,768-byte payloads, 888,276,251 history bytes, first- and last-quarter
+adjusted-RSS medians of 92,307,020 and 94,355,018 bytes, 2,047,998 bytes of
+adjusted growth against the strict 134,217,728-byte ceiling, 94,470,144 bytes
+maximum RSS, and 94,470,144 bytes final process RSS. This establishes only the
+narrow computational gate: the final envelope had no remaining unified-tool
+`session_id` field, recorded exit status zero, and byte-bound the final
+`mode: "soak"` object.
+
+The pre-outcome final checker, sealed before final completion, nevertheless
+failed. The process emitted its retained path with macOS's `/var` spelling,
+while the sealed checklist required literal equality with the equivalent
+`/private/var` spelling. `realpath` and exact device/inode/size/mode/mtime
+receipts prove that both spellings identify the same JSONL and sidecar, so no
+artifact substitution or corruption occurred. Changing the locked
+string-equality predicate after seeing the result would be invalid. Both
+independent adjudications agree that the raw process assertions passed, the
+sealed Section-2 checker failed, and the eight-hour evidence is incomplete.
+The final evidence record uses **SCRIPT GATE: PASS** only for the narrow
+computational gate, then records **SEALED SECTION-2 CHECKER: FAIL**,
+**EIGHT-HOUR EVIDENCE: INCOMPLETE**, and **ISSUE #128: OPEN**. A corrected,
+independently reviewed rerun is required.
+
+The private evidence bundle `pi128-soak-20260807.SEMrTR` preserves same-device,
+distinct-inode APFS clones and 24 hash-bound evidence files. Its manifest
+SHA-256 is
+`c30f01808c30701d3d66195c72ee7e821d934c4ca00f615cefd7ab0f75cc3aca`.
+The 888,276,251-byte JSONL has SHA-256
+`0abe5058da30c740889b63e374a0ba30c2bb58a482e1c7add76deb65eaae95af`
+and exactly 28,577 complete records; the 113,143,808-byte SQLite sidecar has
+SHA-256
+`51d3f3299659c303c3b4bc6f254ae3e0372a20f4baa287a6f459299a965fae05`
+and 28,576 indexed entries. The cloned sidecar passed immutable `quick_check`,
+schema version 7, exact source offset/identity/parent/type/count checks, and the
+whole-JSONL prefix-chain verifier; no journal, WAL, or shared-memory sidecar was
+present. These successful checks preserve useful evidence but do not override
+the sealed predicate failure.
+
+Session 32017 launched from then-unstaged #128 worktree bytes based on
+downstream `56c8412e` and upstream Pi v0.83.0 commit
+`845d6ff1f6643aba440341cce877ce1c43ebbc39`. The unchanged bytes were staged
+and serialized seven seconds later as patch SHA-256
+`4bdb9524839764bf9639740be782e0719168d885332e5cf2b70da16c95f7494a`,
+then captured as `d42c6a08` and rebased/published as `e2c002e0`. Rechecks match
+the launched Node, source, loaded module, two dist NARs, check-script, and patch
+identities, with no post-launch files in either dist tree. Current repository
+tip `bad199f5` is a separate package-integrity identity, not the launch tree.
+The source scratch remains `/private/tmp/pi128-upstream.qhiEdH`; never push it
+to its upstream remote. The run did not activate a generation, profile Linux,
+or open or resume the existing large GLM-5.2 session. Linux profiling,
+current-candidate gates, the corrected soak rerun, reviewed upstream/pin work,
+authorized deployment, and direct live-session continuity remain open; #128
+continues to block #121.
 
 ## Prime Agent managed-settings checkpoint
 
@@ -827,6 +867,12 @@ The older packaging report is architecture-only and contains obsolete scope and
 test literals; it is not current authority. Before wrapper work, refresh the
 five current in-tree artifact hashes listed above rather than the old isolated
 prototype.
+Before reusing #128's final process result, require private manifest SHA-256
+`c30f01808c30701d3d66195c72ee7e821d934c4ca00f615cefd7ab0f75cc3aca`
+and revalidate its final envelope, final object, cloned JSONL/index, validator
+output, lineage receipt, and two path-adjudication reports. Preserve the
+incomplete verdict. Use a separately reviewed corrected protocol for the rerun;
+do not normalize the old final object or relabel it accepted.
 Before any GitHub mutation, refresh #98, #111, #116, #121, #124, #127, and
 Project 9 through the explicit account. Before any host operation, refresh
 reachability, routes, authoritative checkout revision, paired consumer inputs,
@@ -892,6 +938,11 @@ Report the exact boundary rather than softening it into success.
       grammar in a signed commit.
 - [x] Publish the Codex correction to both remotes.
 - [x] Reconcile the misleading #111 closure.
+- [x] Preserve and independently adjudicate the first completed eight-hour
+      #128 run as evidence-incomplete after its sealed retained-path predicate
+      failed.
+- [ ] Run and accept the corrected, independently reviewed eight-hour #128
+      protocol on one exact launch lineage.
 - [ ] Complete and close #128's bounded-memory Pi-session work.
 - [ ] Run #121 once on an unchanged candidate, remove cleanup documents, and
       publish only with separate authority.
