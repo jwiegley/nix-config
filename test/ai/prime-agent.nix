@@ -97,18 +97,63 @@ runCommand "prime-agent-integration-check"
     ${lib.concatMapStringsSep "\n" (
       path: "test -f ${lib.escapeShellArg "${path}/package.json"}"
     ) packageRoots}
-    test "$(${pkgs.prime-agent}/bin/prime-agent --version 2>&1)" = 0.7.0
+    set +e
+    prime_version=$(${pkgs.coreutils}/bin/timeout --signal=KILL 30s \
+      ${pkgs.prime-agent}/bin/prime-agent --version 2>&1)
+    prime_version_status=$?
+    set -e
+    test "$prime_version_status" -eq 0
+    test "$prime_version" = 0.7.0
     test "$(jq -r .version ${pkgs.prime-agent}/lib/prime-agent/package.json)" = 0.7.0
     for package in pi-agent-core pi-ai pi-tui; do
       test "$(jq -r .version ${pkgs.prime-agent}/lib/prime-agent/node_modules/@earendil-works/$package/package.json)" = 0.7.0
     done
-    ${pkgs.prime-agent}/bin/prime-agent --help >help.out 2>&1
+    ${pkgs.coreutils}/bin/timeout --signal=KILL 30s \
+      ${pkgs.prime-agent}/bin/prime-agent --help >help.out 2>&1
     grep -F 'prime-agent - AI coding assistant' help.out >/dev/null
     grep -F 'prime-agent <command>' help.out >/dev/null
 
+    unmanaged_home=$TMPDIR/unmanaged-home
+    mkdir -m 700 -p "$unmanaged_home"
+    env -u PRIME_AGENT_MANAGED_SETTINGS \
+      HOME="$unmanaged_home" XDG_CONFIG_HOME="$unmanaged_home/.config" \
+      ${pkgs.coreutils}/bin/timeout --signal=KILL 30s \
+      ${pkgs.prime-agent}/bin/prime-agent package list >unmanaged-list.out 2>&1
+    grep -F 'No packages installed.' unmanaged-list.out >/dev/null
+    set +e
+    PRIME_AGENT_MANAGED_SETTINGS="$unmanaged_home/missing-managed-settings.json" \
+      HOME="$unmanaged_home" XDG_CONFIG_HOME="$unmanaged_home/.config" \
+      ${pkgs.coreutils}/bin/timeout --signal=KILL 30s \
+      ${pkgs.prime-agent}/bin/prime-agent package list >missing-managed.out 2>&1
+    missing_managed_status=$?
+    set -e
+    if [ "$missing_managed_status" -ne 1 ]; then
+      echo "prime-agent missing managed-settings probe exited $missing_managed_status, expected 1" >&2
+      cat missing-managed.out >&2
+      exit 1
+    fi
+    grep -F 'Managed settings file does not exist' missing-managed.out >/dev/null
+    broken_home=$TMPDIR/broken-managed-home
+    mkdir -m 700 -p "$broken_home/.prime/agent"
+    ln -s "$broken_home/missing-target.json" "$broken_home/.prime/agent/managed-settings.json"
+    set +e
+    env -u PRIME_AGENT_MANAGED_SETTINGS \
+      HOME="$broken_home" XDG_CONFIG_HOME="$broken_home/.config" \
+      ${pkgs.coreutils}/bin/timeout --signal=KILL 30s \
+      ${pkgs.prime-agent}/bin/prime-agent package list >broken-managed.out 2>&1
+    broken_managed_status=$?
+    set -e
+    if [ "$broken_managed_status" -ne 1 ]; then
+      echo "prime-agent broken managed-settings probe exited $broken_managed_status, expected 1" >&2
+      cat broken-managed.out >&2
+      exit 1
+    fi
+    grep -F 'Managed settings file does not exist' broken-managed.out >/dev/null
+
     (
       cd ${pkgs.prime-agent}/lib/prime-agent
-      ${pkgs.nodejs_24}/bin/node --input-type=module <<'JS'
+      ${pkgs.coreutils}/bin/timeout --signal=KILL 30s \
+        ${pkgs.nodejs_24}/bin/node --input-type=module <<'JS'
     for (const [name, key] of [["undici", "fetch"], ["@silvia-odwyer/photon-node", "PhotonImage"], ["zeromq", "Request"], ["@earendil-works/pi-ai", "getModel"]]) {
       const module = await import(name);
       if (!(key in module)) throw new Error("invalid runtime module: " + name);
@@ -132,6 +177,12 @@ runCommand "prime-agent-integration-check"
     install -m 600 ${commandSource} "$home/.prime/agent/prompts/${commandName}.md"
     printf '%s\n' ${lib.escapeShellArg (builtins.head agentPrompts)} > "$home/.prime/agent/prompts/agent-${builtins.head agentNames}.md"
     cp -R ${skillRoot} "$home/.agents/skills/${skillName}"
+    env -u PRIME_AGENT_MANAGED_SETTINGS \
+      HOME="$home" XDG_CONFIG_HOME="$home/.config" \
+      PRIME_AGENT_CODING_AGENT_DIR="$home/.prime/agent" \
+      ${pkgs.coreutils}/bin/timeout --signal=KILL 30s \
+      ${pkgs.prime-agent}/bin/prime-agent package list >managed-list.out 2>&1
+    test "$(grep -c 'managed, read-only' managed-list.out)" -eq 3
     cat >synthetic-mcp.mjs <<'JS'
     import { Server } from "file://${mcpExtensionRoot}/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js";
     import { StdioServerTransport } from "file://${mcpExtensionRoot}/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js";
@@ -177,6 +228,7 @@ runCommand "prime-agent-integration-check"
     cat >resource-check.mjs <<'JS'
     import { existsSync, readFileSync } from "node:fs";
     import {
+      AuthStorage,
       DefaultResourceLoader,
       SessionManager,
       SettingsManager,
@@ -223,7 +275,10 @@ runCommand "prime-agent-integration-check"
       "Prime's built-in skill-creator displaced the shared managed skill",
     );
     check(skills.has("rlm-heartbeat"), "Prime Agent's built-in RLM skill was not discovered");
-    check(loader.getSkills().diagnostics.length === 0, "skill diagnostics were not empty");
+    check(
+      loader.getSkills().diagnostics.length === 0,
+      "skill diagnostics were not empty: " + JSON.stringify(loader.getSkills().diagnostics),
+    );
 
     const extensions = loader.getExtensions();
     check(extensions.errors.length === 0, "extension loader reported an error");
@@ -290,10 +345,13 @@ runCommand "prime-agent-integration-check"
       stream: syntheticStream,
       streamSimple: syntheticStream,
     }, "nix-prime-integration-check");
+    const authStorage = AuthStorage.inMemory();
+    authStorage.setRuntimeApiKey(syntheticModel.provider, "nix-synthetic-key");
 
     const { session } = await createAgentSession({
       cwd: home,
       agentDir,
+      authStorage,
       model: syntheticModel,
       thinkingLevel: "off",
       resourceLoader: loader,
@@ -301,6 +359,8 @@ runCommand "prime-agent-integration-check"
       sessionManager: SessionManager.inMemory(home),
       prewarmIpythonKernel: false,
     });
+    try {
+      await session.bindExtensions({});
     const tools = session.getAllTools();
     const ipython = tools.find((tool) => tool.name === "ipython");
     check(ipython, "native IPython tool is unavailable");
@@ -311,6 +371,23 @@ runCommand "prime-agent-integration-check"
       "native IPython-to-RLM bridge is unavailable",
     );
     check(tools.some((tool) => tool.name === "mcp"), "MCP tool is unavailable in the session");
+    const mcp = session.getToolDefinition("mcp");
+    check(mcp, "MCP tool definition is unavailable");
+    const mcpResult = await mcp.execute(
+      "nix-synthetic-mcp-call",
+      { tool: "synthetic_echo", server: "synthetic", args: { value: "round-trip" } },
+      undefined,
+      undefined,
+      {},
+    );
+    const mcpText = mcpResult.content
+      .filter((item) => item.type === "text")
+      .map((item) => item.text)
+      .join("\n");
+    check(
+      mcpText.includes("synthetic-mcp:round-trip"),
+      "synthetic MCP invocation did not round-trip: " + JSON.stringify(mcpResult),
+    );
     await session.promptAndWait("provider-round-trip");
     const providerReply = session.state.messages.findLast((message) => message.role === "assistant");
     const providerText = providerReply?.content
@@ -324,37 +401,41 @@ runCommand "prime-agent-integration-check"
     const child = await session.runRlmChild("rlm-round-trip", { name: "nix-prime-rlm-check" });
     check(child.rlm_child_id.startsWith("sub-"), "native RLM did not admit a child");
     const rlmDeadline = Date.now() + 10000;
-    while (["queued", "running"].includes(session.getRlmChildRunStatus(child.rlm_child_id))) {
-      if (Date.now() >= rlmDeadline) throw new Error("native RLM child did not reach a terminal state");
+    let subagents;
+    while (true) {
+      subagents = await session.listRlmSubagents();
+      const childRecord = subagents.subagents.find((subagent) => subagent.rlm_child_id === child.rlm_child_id);
+      if (childRecord?.status === "completed") break;
+      if (childRecord?.status === "error" || Date.now() >= rlmDeadline) {
+        throw new Error("native RLM child did not finish: " + JSON.stringify(subagents));
+      }
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
-    check(session.getRlmChildRunStatus(child.rlm_child_id) === "done", "native RLM child did not finish");
-    const subagents = await session.listRlmSubagents();
     check(
       subagents.subagents.some((subagent) => subagent.rlm_child_id === child.rlm_child_id),
       "native RLM child was absent from the parent registry",
     );
     const deletedChild = await session.deleteRlmSubagent(child.rlm_child_id);
-    check(deletedChild.outcome === "deleted", "native RLM child cleanup did not complete");
-    const mcp = session.getToolDefinition("mcp");
-    check(mcp, "MCP tool definition is unavailable");
-    const mcpResult = await mcp.execute(
-      "nix-synthetic-mcp-call",
-      { tool: "echo", server: "synthetic", args: { value: "round-trip" } },
-      undefined,
-      undefined,
-      {},
+    check(
+      deletedChild.subagent.rlm_child_id === child.rlm_child_id,
+      "native RLM child cleanup targeted a different child",
     );
-    const mcpText = mcpResult.content
-      .filter((item) => item.type === "text")
-      .map((item) => item.text)
-      .join("\n");
-    check(mcpText.includes("synthetic-mcp:round-trip"), "synthetic MCP invocation did not round-trip");
+    const remainingSubagents = await session.listRlmSubagents();
+    check(
+      !remainingSubagents.subagents.some((subagent) => subagent.rlm_child_id === child.rlm_child_id),
+      "native RLM child remained registered after cleanup",
+    );
     check(
       existsSync("${pkgs.prime-agent}/lib/prime-agent/dist/prime-agent-runtime/src/rlm/__init__.py"),
       "bundled native RLM runtime is missing",
     );
-    await session.dispose();
+    } finally {
+      try {
+        await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" });
+      } finally {
+        await session.disposeAsync();
+      }
+    }
     JS
     HOME="$home" XDG_CONFIG_HOME="$home/.config" \
       PRIME_AGENT_CODING_AGENT_DIR="$home/.prime/agent" \
@@ -362,22 +443,47 @@ runCommand "prime-agent-integration-check"
       PI_CODING_AGENT_DIR="$home/.prime/agent" \
       PI_PACKAGE_DIR="${pkgs.prime-agent}/lib/prime-agent" \
       PRIME_AGENT_INSTALL_UV=0 \
+      ${pkgs.coreutils}/bin/timeout --signal=KILL 120s \
       ${pkgs.nodejs_24}/bin/node resource-check.mjs
     daemon_tmp="$TMPDIR/prime-daemon"
-    daemon_socket="$daemon_tmp/daemon.sock"
-    mkdir -m 700 "$daemon_tmp"
+    daemon_socket_dir="$daemon_tmp/prime-agent-$(id -u)"
+    daemon_socket="$daemon_socket_dir/daemon.sock"
+    mkdir -m 700 "$daemon_tmp" "$daemon_socket_dir"
+    cat >daemon-shutdown.mjs <<'JS'
+    import { shutdownDaemonAndWait } from "file://${pkgs.prime-agent}/lib/prime-agent/dist/cli/daemon-launch.js";
+
+    const socketPath = process.argv[2];
+    if (!socketPath) throw new Error("daemon socket path is required");
+    const stopped = await shutdownDaemonAndWait(socketPath, 5000);
+    if (!stopped) throw new Error("socket-scoped daemon shutdown did not complete: " + socketPath);
+    process.stdout.write(JSON.stringify({ socketPath, stopped }) + "\n");
+    JS
     daemon_pid=
+    daemon_status=0
     cleanup_daemon() {
-      if [ -n "$daemon_pid" ] && kill -0 "$daemon_pid" 2>/dev/null; then
-        kill "$daemon_pid" 2>/dev/null || true
+      if [ -n "$daemon_pid" ]; then
+        ${pkgs.coreutils}/bin/timeout --signal=KILL 15s \
+          ${pkgs.nodejs_24}/bin/node daemon-shutdown.mjs "$daemon_socket" \
+          >/dev/null 2>&1 || true
         wait "$daemon_pid" 2>/dev/null || true
+        daemon_pid=
       fi
     }
-    trap cleanup_daemon EXIT HUP INT TERM
+    handle_daemon_signal() {
+      local signal=$1
+      trap - EXIT HUP INT TERM
+      cleanup_daemon
+      kill -s "$signal" "$$"
+    }
+    trap cleanup_daemon EXIT
+    trap 'handle_daemon_signal HUP' HUP
+    trap 'handle_daemon_signal INT' INT
+    trap 'handle_daemon_signal TERM' TERM
     HOME="$home" XDG_CONFIG_HOME="$home/.config" TMPDIR="$daemon_tmp" PI_OFFLINE=1 \
       PRIME_AGENT_CODING_AGENT_DIR="$home/.prime/agent" \
       PRIME_AGENT_MANAGED_SETTINGS="$home/.prime/agent/managed-settings.json" \
       PI_CODING_AGENT_DIR="$home/.prime/agent" \
+      ${pkgs.coreutils}/bin/timeout --signal=TERM --kill-after=10s 60s \
       ${pkgs.prime-agent}/bin/prime-agent \
         --mode daemon --offline --daemon-socket "$daemon_socket" --no-session \
         --no-extensions --no-skills --no-prompt-templates --no-context-files \
@@ -396,16 +502,20 @@ runCommand "prime-agent-integration-check"
       PRIME_AGENT_CODING_AGENT_DIR="$home/.prime/agent" \
       PRIME_AGENT_MANAGED_SETTINGS="$home/.prime/agent/managed-settings.json" \
       PI_CODING_AGENT_DIR="$home/.prime/agent" \
-      ${pkgs.prime-agent}/bin/prime-agent --daemon-socket "$daemon_socket" status --json \
+      ${pkgs.coreutils}/bin/timeout --signal=KILL 30s \
+      ${pkgs.prime-agent}/bin/prime-agent status --json \
       >daemon-status.json
-    jq -e '.daemon.running == true or .running == true' daemon-status.json >/dev/null
-    HOME="$home" XDG_CONFIG_HOME="$home/.config" TMPDIR="$daemon_tmp" \
-      PRIME_AGENT_CODING_AGENT_DIR="$home/.prime/agent" \
-      PRIME_AGENT_MANAGED_SETTINGS="$home/.prime/agent/managed-settings.json" \
-      PI_CODING_AGENT_DIR="$home/.prime/agent" \
-      ${pkgs.prime-agent}/bin/prime-agent --daemon-socket "$daemon_socket" shutdown --force --json \
+    jq -e --arg socket "$daemon_socket" \
+      'any(.[]; .socketPath == $socket and .status == "current" and .sessionCount == 0)' \
+      daemon-status.json >/dev/null
+    ${pkgs.coreutils}/bin/timeout --signal=KILL 15s \
+      ${pkgs.nodejs_24}/bin/node daemon-shutdown.mjs "$daemon_socket" \
       >daemon-shutdown.json
-    wait "$daemon_pid"
+    jq -e --arg socket "$daemon_socket" \
+      '.stopped == true and .socketPath == $socket' \
+      daemon-shutdown.json >/dev/null
+    wait "$daemon_pid" || daemon_status=$?
+    test "$daemon_status" -eq 0
     daemon_pid=
     test ! -S "$daemon_socket"
     trap - EXIT HUP INT TERM
@@ -413,11 +523,17 @@ runCommand "prime-agent-integration-check"
     HOME="$home" XDG_CONFIG_HOME="$home/.config" PI_OFFLINE=1 \
       PI_CODING_AGENT_DIR="$home/poison-pi-root" \
       PRIME_AGENT_CODING_AGENT_DIR="$home/.prime/agent" \
+      ${pkgs.coreutils}/bin/timeout --signal=KILL 60s \
       ${pkgs.prime-agent}/bin/prime-agent model list --offline >model-list.out 2>model-list.err
     ! grep -E '(Failed to load extension|Cannot find package|Invalid theme|Invalid skill|TypeError|ReferenceError)' \
       model-list.out model-list.err
     test ! -e "$home/poison-pi-root"
-    test ! -e "$home/.prime/agent/daemon-workers"
+    daemon_workers="$home/.prime/agent/daemon-workers"
+    if [ -e "$daemon_workers" ] || [ -L "$daemon_workers" ]; then
+      test -d "$daemon_workers"
+      daemon_worker_descriptor=$(find "$daemon_workers" -type f -name '*.json' -print -quit)
+      test -z "$daemon_worker_descriptor"
+    fi
     test ! -e "$home/.prime/agent/kernel-venv"
 
     mkdir -p "$out"
