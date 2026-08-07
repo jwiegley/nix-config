@@ -18,6 +18,9 @@ let
     else
       { };
   pairedPiPackage = pairedAiPackages.pi or null;
+  pairedPrimePackage = pairedAiPackages.prime-agent or null;
+  pairedCassPackage = pairedAiPackages.cass or null;
+  pairedCmPackage = pairedAiPackages.cm or null;
   pairedAgentResources = pairedAiPackages.agent-resources or null;
   pairedPiGallery = pairedAiPackages.pi-gallery or null;
   resourcePackage = pkgs.agent-resources;
@@ -51,6 +54,10 @@ let
       inherit lib;
       pkgs = piRendererPkgs;
     };
+    prime = import ./ai/renderers/prime.nix {
+      inherit lib;
+      pkgs = piRendererPkgs;
+    };
   };
 
   homeClass = if nixManagedAiHomeClass != null then nixManagedAiHomeClass else hostname;
@@ -73,6 +80,7 @@ let
       builtins.elem profile.client [
         "codex"
         "pi"
+        "prime"
       ]
     then
       skills // (selectedFor profileId).skills
@@ -136,6 +144,8 @@ let
     ".factory"
     ".pi"
     ".pi/agent"
+    ".prime"
+    ".prime/agent"
   ];
   ownsAncestor = path: lib.any (other: other != path && lib.hasPrefix "${path}/" other) paths;
   selectedPlatform = if isDarwin then "darwin" else "linux";
@@ -155,6 +165,9 @@ let
   piSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "pi") profileIds;
   codexSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "codex") profileIds;
   droidSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "droid") profileIds;
+  primeSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "prime") profileIds;
+  cassSelected = homeClass == "hera";
+  cmSelected = homeClass == "hera";
   piRuntimePackages = with pkgs; [
     actionlint
     agent-browser
@@ -320,11 +333,23 @@ in
       message = "inputs.nix-config-ai.packages.${system}.pi is missing";
     }
     {
-      assertion = !piSelected || pairedAgentResources != null;
+      assertion = !primeSelected || pairedPrimePackage != null;
+      message = "inputs.nix-config-ai.packages.${system}.prime-agent is missing";
+    }
+    {
+      assertion = !cassSelected || pairedCassPackage != null;
+      message = "inputs.nix-config-ai.packages.${system}.cass is missing";
+    }
+    {
+      assertion = !cmSelected || pairedCmPackage != null;
+      message = "inputs.nix-config-ai.packages.${system}.cm is missing";
+    }
+    {
+      assertion = !(piSelected || primeSelected) || pairedAgentResources != null;
       message = "inputs.nix-config-ai.packages.${system}.agent-resources is missing";
     }
     {
-      assertion = !piSelected || pairedPiGallery != null;
+      assertion = !(piSelected || primeSelected) || pairedPiGallery != null;
       message = "inputs.nix-config-ai.packages.${system}.pi-gallery is missing";
     }
   ];
@@ -341,6 +366,9 @@ in
     packages =
       lib.optional droidSelected pkgs.agent-http-header-bridge
       ++ lib.optional (pairedPiPackage != null) pairedPiPackage
+      ++ lib.optional (primeSelected && pairedPrimePackage != null) pairedPrimePackage
+      ++ lib.optional (cassSelected && pairedCassPackage != null) pairedCassPackage
+      ++ lib.optional (cmSelected && pairedCmPackage != null) pairedCmPackage
       ++ lib.optionals piSelected piRuntimePackages;
     sessionVariables = lib.optionalAttrs codexSelected {
       OMLX_API_KEY = "dummy-key";

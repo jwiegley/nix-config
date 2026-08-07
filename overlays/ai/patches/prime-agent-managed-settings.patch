@@ -1,0 +1,170 @@
+--- a/packages/coding-agent/src/core/settings-manager.ts
++++ b/packages/coding-agent/src/core/settings-manager.ts
+@@ -1,7 +1,7 @@
+ import type { ServiceTier, Transport } from "@earendil-works/pi-ai";
+ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+ import { homedir } from "os";
+-import { dirname, join } from "path";
++import { dirname, join, resolve } from "path";
+ import lockfile from "proper-lockfile";
+ import { CONFIG_DIR_NAME, getAgentDir } from "../config.js";
+ 
+@@ -299,6 +299,8 @@
+ 	private storage: SettingsStorage;
+ 	private globalSettings: Settings;
+ 	private projectSettings: Settings;
++	private managedSettings: Settings = {};
++	private managedSettingsPath: string | undefined;
+ 	private settings: Settings;
+ 	private modifiedFields = new Set<keyof Settings>(); // Track global fields modified during session
+ 	private modifiedNestedFields = new Map<keyof Settings, Set<string>>(); // Track global nested field modifications
+@@ -323,13 +325,37 @@
+ 		this.globalSettingsLoadError = globalLoadError;
+ 		this.projectSettingsLoadError = projectLoadError;
+ 		this.errors = [...initialErrors];
+-		this.settings = deepMergeSettings(this.globalSettings, this.projectSettings);
++		this.settings = {};
++		this.refreshEffectiveSettings();
++	}
++
++	private refreshEffectiveSettings(): void {
++		this.settings = deepMergeSettings(
++			deepMergeSettings(this.globalSettings, this.projectSettings),
++			this.managedSettings,
++		);
++	}
++
++	private static loadManagedSettings(path: string): Settings {
++		if (!existsSync(path)) return {};
++		const parsed: unknown = JSON.parse(readFileSync(path, "utf-8"));
++		if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
++			throw new Error("Managed settings must be a JSON object");
++		}
++		return SettingsManager.migrateSettings(parsed as Record<string, unknown>);
+ 	}
+ 
+ 	/** Create a SettingsManager that loads from files */
+ 	static create(cwd: string, agentDir: string = getAgentDir()): SettingsManager {
+ 		const storage = new FileSettingsStorage(cwd, agentDir);
+-		return SettingsManager.fromStorage(storage);
++		const manager = SettingsManager.fromStorage(storage);
++		const managedSettingsPath = process.env.PRIME_AGENT_MANAGED_SETTINGS?.trim();
++		if (managedSettingsPath) {
++			manager.managedSettingsPath = resolve(managedSettingsPath);
++			manager.managedSettings = SettingsManager.loadManagedSettings(manager.managedSettingsPath);
++			manager.refreshEffectiveSettings();
++		}
++		return manager;
+ 	}
+ 
+ 	/** Create a SettingsManager from an arbitrary storage backend */
+@@ -482,7 +508,10 @@
+ 			this.recordError("project", projectLoad.error);
+ 		}
+ 
+-		this.settings = deepMergeSettings(this.globalSettings, this.projectSettings);
++		if (this.managedSettingsPath) {
++			this.managedSettings = SettingsManager.loadManagedSettings(this.managedSettingsPath);
++		}
++		this.refreshEffectiveSettings();
+ 	}
+ 
+ 	/** Apply additional overrides on top of current settings */
+@@ -579,7 +608,7 @@
+ 	}
+ 
+ 	private save(): void {
+-		this.settings = deepMergeSettings(this.globalSettings, this.projectSettings);
++		this.refreshEffectiveSettings();
+ 
+ 		if (this.globalSettingsLoadError) {
+ 			this.recordError(
+@@ -602,7 +631,7 @@
+ 
+ 	private saveProjectSettings(settings: Settings): void {
+ 		this.projectSettings = structuredClone(settings);
+-		this.settings = deepMergeSettings(this.globalSettings, this.projectSettings);
++		this.refreshEffectiveSettings();
+ 
+ 		if (this.projectSettingsLoadError) {
+ 			this.recordError(
+--- /dev/null
++++ b/packages/coding-agent/test/managed-settings.test.ts
+@@ -0,0 +1,79 @@
++import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
++import { tmpdir } from "os";
++import { join } from "path";
++import { afterEach, beforeEach, describe, expect, it } from "vitest";
++import { SettingsManager } from "../src/core/settings-manager.js";
++
++describe("managed settings overlay", () => {
++	let root: string;
++	let agentDir: string;
++	let projectDir: string;
++	let managedPath: string;
++	let originalManagedPath: string | undefined;
++
++	beforeEach(() => {
++		root = mkdtempSync(join(tmpdir(), "prime-managed-settings-"));
++		agentDir = join(root, "agent");
++		projectDir = join(root, "project");
++		managedPath = join(root, "managed-settings.json");
++		mkdirSync(agentDir, { recursive: true });
++		mkdirSync(join(projectDir, ".prime", "agent"), { recursive: true });
++		originalManagedPath = process.env.PRIME_AGENT_MANAGED_SETTINGS;
++		delete process.env.PRIME_AGENT_MANAGED_SETTINGS;
++	});
++
++	afterEach(() => {
++		if (originalManagedPath === undefined) delete process.env.PRIME_AGENT_MANAGED_SETTINGS;
++		else process.env.PRIME_AGENT_MANAGED_SETTINGS = originalManagedPath;
++		rmSync(root, { recursive: true, force: true });
++	});
++
++	it("keeps managed resource policy effective while user preferences remain writable", async () => {
++		const globalPath = join(agentDir, "settings.json");
++		const managed = { packages: ["managed-package"], theme: "managed-theme" };
++		writeFileSync(globalPath, JSON.stringify({ packages: ["user-package"], theme: "user-theme" }));
++		writeFileSync(
++			join(projectDir, ".prime", "agent", "settings.json"),
++			JSON.stringify({ packages: ["project-package"], theme: "project-theme" }),
++		);
++		writeFileSync(managedPath, JSON.stringify(managed));
++		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
++
++		const manager = SettingsManager.create(projectDir, agentDir);
++		expect(manager.getPackages()).toEqual(["managed-package"]);
++		expect(manager.getTheme()).toBe("managed-theme");
++
++		manager.setOnboardingShown(true);
++		manager.setDefaultModelAndProvider("provider", "model");
++		manager.setTheme("user-attempt");
++		await manager.flush();
++
++		const saved = JSON.parse(readFileSync(globalPath, "utf-8"));
++		expect(saved.onboardingShown).toBe(true);
++		expect(saved.defaultProvider).toBe("provider");
++		expect(saved.defaultModel).toBe("model");
++		expect(saved.theme).toBe("user-attempt");
++		expect(manager.getTheme()).toBe("managed-theme");
++		expect(JSON.parse(readFileSync(managedPath, "utf-8"))).toEqual(managed);
++	});
++
++	it("reloads a replaced managed leaf without copying it into mutable settings", async () => {
++		writeFileSync(managedPath, JSON.stringify({ theme: "first" }));
++		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
++		const manager = SettingsManager.create(projectDir, agentDir);
++		expect(manager.getTheme()).toBe("first");
++
++		writeFileSync(managedPath, JSON.stringify({ theme: "second" }));
++		await manager.reload();
++		expect(manager.getTheme()).toBe("second");
++		expect(() => readFileSync(join(agentDir, "settings.json"), "utf-8")).toThrow();
++	});
++
++	it("fails closed when the managed leaf is not a valid JSON object", () => {
++		writeFileSync(managedPath, "[]");
++		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
++		expect(() => SettingsManager.create(projectDir, agentDir)).toThrow("Managed settings must be a JSON object");
++	});
++});

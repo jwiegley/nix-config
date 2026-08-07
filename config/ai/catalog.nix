@@ -9,12 +9,14 @@ let
     "codex"
     "droid"
     "pi"
+    "prime"
   ];
   contentClients = clients;
   commandClients = [
     "claude"
     "codex"
     "pi"
+    "prime"
   ];
   audiences = [
     "personal"
@@ -41,6 +43,7 @@ let
     hera-codex = ".config/codex";
     hera-droid = ".config/factory";
     hera-pi = ".config/pi/agent";
+    hera-prime = ".prime/agent";
     shared-work-claude-positron = ".claude";
     shared-work-codex = ".codex";
     shared-work-pi = ".config/pi/agent";
@@ -72,6 +75,7 @@ let
     hera-codex = mkProfile "hera-codex" "codex" [ "personal" ] "hera" "darwin";
     hera-droid = mkProfile "hera-droid" "droid" [ "personal" ] "hera" "darwin";
     hera-pi = mkProfile "hera-pi" "pi" [ "personal" ] "hera" "darwin";
+    hera-prime = mkProfile "hera-prime" "prime" [ "personal" ] "hera" "darwin";
 
     shared-work-claude-positron = mkProfile "shared-work-claude-positron" "claude" [
       "positron"
@@ -705,6 +709,7 @@ let
             "hera-claude-personal"
             "hera-droid"
             "hera-pi"
+            "hera-prime"
           ];
         };
 
@@ -721,6 +726,7 @@ let
             "hera-claude-personal"
             "hera-droid"
             "hera-pi"
+            "hera-prime"
           ];
         };
 
@@ -774,6 +780,7 @@ let
             "claude"
             "droid"
             "pi"
+            "prime"
           ];
         };
 
@@ -822,6 +829,7 @@ let
             "hera-claude-personal"
             "hera-droid"
             "hera-pi"
+            "hera-prime"
           ];
         };
   };

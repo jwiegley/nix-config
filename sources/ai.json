@@ -61,6 +61,87 @@
       },
       "version": "1.5.1"
     },
+    "bun-linux-x64-baseline": {
+      "source": {
+        "args": {
+          "hash": "sha256-nYokKSpwaAkCBdqsCloiP19pc29Sh+N7+I07QDHtx1A=",
+          "url": "https://github.com/oven-sh/bun/releases/download/bun-v1.3.13/bun-linux-x64-baseline.zip"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://github.com/oven-sh/bun/releases/download/bun-v1.3.13/bun-linux-x64-baseline.zip"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual",
+        "reason": "tracks the pinned Nixpkgs Bun runtime used for portable cm compilation"
+      },
+      "version": "1.3.13"
+    },
+    "cass": {
+      "artifacts": {
+        "aarch64-linux": {
+          "args": {
+            "hash": "sha256-7bC1CMKugkGDkYv53nWlNC1TXAS/F9WUFb8v1OPgXSY=",
+            "url": "https://github.com/Dicklesworthstone/coding_agent_session_search/releases/download/v0.6.23/cass-linux-arm64.tar.gz"
+          },
+          "fetcher": "fetchurl",
+          "url": "https://github.com/Dicklesworthstone/coding_agent_session_search/releases/download/v0.6.23/cass-linux-arm64.tar.gz"
+        },
+        "x86_64-linux": {
+          "args": {
+            "hash": "sha256-UioJBR5TdvsbpkPFs6jDh9z3moNP0j52n2nMeH7eNkY=",
+            "url": "https://github.com/Dicklesworthstone/coding_agent_session_search/releases/download/v0.6.23/cass-linux-amd64.tar.gz"
+          },
+          "fetcher": "fetchurl",
+          "url": "https://github.com/Dicklesworthstone/coding_agent_session_search/releases/download/v0.6.23/cass-linux-amd64.tar.gz"
+        }
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-xMuSLC4/8bdsJlWlCYXw6xdjjJP7nVIvvgXlzKq2hpg=",
+          "url": "https://github.com/Dicklesworthstone/coding_agent_session_search/releases/download/v0.6.23/cass-darwin-arm64.tar.gz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://github.com/Dicklesworthstone/coding_agent_session_search/releases/download/v0.6.23/cass-darwin-arm64.tar.gz"
+      },
+      "update": {
+        "assets": {
+          "aarch64-linux": "cass-linux-arm64.tar.gz",
+          "source": "cass-darwin-arm64.tar.gz",
+          "x86_64-linux": "cass-linux-amd64.tar.gz"
+        },
+        "kind": "github-release-asset",
+        "owner": "Dicklesworthstone",
+        "policy": "manual",
+        "reason": "release updates require review of the tag-bound license rider before refreshing all platform assets",
+        "repo": "coding_agent_session_search",
+        "tagPrefix": "v"
+      },
+      "version": "0.6.23"
+    },
+    "cm": {
+      "hashes": {
+        "bunDepsHash": "sha256-KIJcXsLLuKxiOsCTbcCEhhCuxPK1YZA5u5OhVzpQBTA="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-uw1/FyddyurllkYTmYlWxqPIOXaXtrgrfQjTMsclI5A=",
+          "owner": "Dicklesworthstone",
+          "repo": "cass_memory_system",
+          "rev": "89977c582a8cb17b190af2b039fb844e665237be"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/Dicklesworthstone/cass_memory_system"
+      },
+      "update": {
+        "branch": "main",
+        "buildMode": "pkg",
+        "kind": "github-commit",
+        "policy": "manual",
+        "reason": "updates require review of the license rider, the release/main boundary, credential confinement, and the Bun dependency graph"
+      },
+      "version": "0.2.13-unstable-2026-08-04"
+    },
     "claude-replay": {
       "hashes": {
         "npmDepsHash": "sha256-sZ0/4cx6MvDX+D85hpdL0QdNfLJ2QuQmVPWoG14C1wc="
@@ -267,6 +348,35 @@
         "tagPrefix": "v"
       },
       "version": "0.5.7"
+    },
+    "prime-agent": {
+      "commit": "be9e2fa0714e7cd1c6bd9bdb1b554d2cc6550387",
+      "date": "2026-08-05",
+      "hashes": {
+        "npmDepsHash": "sha256-mgWEaXSzkSAuJq6FjDy3cHlaBcfuv8b+LEwb9GAelfs="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-byn8Est+Jrr/C52nUyJOQmiegCzaEVXeCOHnGsfZB+k=",
+          "owner": "PrimeIntellect-ai",
+          "repo": "prime-agent",
+          "tag": "v0.7.0"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/PrimeIntellect-ai/prime-agent"
+      },
+      "update": {
+        "buildMode": "pkg",
+        "kind": "github-release",
+        "policy": "manual",
+        "reason": "release updates require reviewed regeneration of release assets and the normalized dependency lock",
+        "tagPrefix": "v",
+        "artifacts": [
+          "packages/prime-agent/package-lock.json"
+        ],
+        "normalizer": "prime-agent-lock-v1"
+      },
+      "version": "0.7.0"
     },
     "rustdocs-mcp-server": {
       "hashes": {

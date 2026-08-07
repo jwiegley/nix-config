@@ -337,11 +337,16 @@ let
       ../flake
       ../overlays/ai
       ../packages/agent-resources.nix
+      ../packages/cass
+      ../packages/cass.nix
+      ../packages/cm.nix
       ../packages/ai-package-policy.nix
       ../packages/ai-llm.nix
       ../packages/ai-mcp.nix
       ../packages/ai-python-extensions.nix
       ../packages/llm-mlx.nix
+      ../packages/prime-agent
+      ../packages/prime-agent.nix
       ../packages/pi-gallery
       ../packages/source-catalog.nix
       ../sources/ai.json
@@ -438,8 +443,11 @@ in
       pi = canonicalPiPackages.${system};
       inherit (pkgs)
         agent-http-header-bridge
+        cass
+        cm
         agent-resources
         pi-gallery
+        prime-agent
         plasma-fractal
         plasma-wiki
         ;
@@ -524,6 +532,9 @@ in
           pi = canonicalPiPackages.${system};
         };
       };
+      cass = pkgs.callPackage ../test/ai/cass.nix { inherit pkgs; };
+      cm = pkgs.callPackage ../test/ai/cm.nix { inherit pkgs; };
+      prime-agent = pkgs.callPackage ../test/ai/prime-agent.nix { inherit pkgs; };
       pi-fleet-theme = pkgs.callPackage ../test/ai/pi-fleet-theme.nix {
         inherit sourceForChecks;
         piPackage = canonicalPiPackages.${system};

@@ -21,10 +21,13 @@ in
     [
       "agent-http-header-bridge"
       "agent-resources"
+      "cass"
+      "cm"
       "default"
       "nix-scripts"
       "pi"
       "pi-gallery"
+      "prime-agent"
       "plasma-fractal"
       "plasma-wiki"
     ]
@@ -51,6 +54,8 @@ in
   checks = [
     "agent-deck-go-compat"
     "agent-resources"
+    "cass"
+    "cm"
     "agent-wrappers"
     "build"
     "format"
@@ -60,5 +65,6 @@ in
     "llm-agents-nixpkgs-independent"
     "pi-fleet-theme"
     "pi-gallery"
+    "prime-agent"
   ];
 }

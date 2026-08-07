@@ -32,6 +32,8 @@ let
     ".config/factory/skills"
     ".config/pi/agent/agents"
     ".config/pi/agent/prompts"
+    ".prime/agent/prompts"
+    ".prime/agent/themes"
   ];
   managedExactPaths = [
     ".claude/nix-managed-mcp.json"
@@ -61,6 +63,10 @@ let
     ".config/pi/agent/model-router.json"
     ".config/pi/agent/models.json"
     ".config/pi/agent/themes/dark-tool-backgrounds.json"
+    ".prime/agent/COMPATIBILITY.md"
+    ".prime/agent/keybindings.json"
+    ".prime/agent/models.json"
+    ".prime/agent/settings.json"
   ];
   validRelativePath =
     path:

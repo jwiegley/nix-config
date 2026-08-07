@@ -33,6 +33,7 @@ let
     ];
   renderEnv = name: "$" + "{" + name + "}";
   localModelRoutes = profile.platform == "darwin";
+  modelOverrides = import ../model-overrides.nix;
   hermesPassCommand = lib.escapeShellArgs [
     "${pkgs.coreutils}/bin/env"
     "-u"
@@ -75,11 +76,8 @@ let
       }
     ];
   };
-  nativeProviders = {
-    openai-codex.modelOverrides."gpt-5.6-sol".contextWindow = 1050000;
-    openrouter.modelOverrides."z-ai/glm-5.2".contextWindow = 1048576;
-  };
-  localProviders = {
+  inherit (modelOverrides) nativeProviders;
+  localProviders = modelOverrides.localProviderOverrides // {
     hermes = {
       api = "openai-completions";
       apiKey = hermesApiKeyCommand;
@@ -87,8 +85,6 @@ let
       compat.sendSessionAffinityHeaders = true;
       models = [ { id = "hermes-agent"; } ];
     };
-    llama-swap.modelOverrides."GLM-5.2".contextWindow = 262144;
-    omlx.modelOverrides."DeepSeek-V4-Flash-0731-oQ8e-mtp".contextWindow = 262144;
     router = routerProvider;
   };
   models.providers = nativeProviders // lib.optionalAttrs localModelRoutes localProviders;
