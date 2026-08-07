@@ -433,8 +433,17 @@ let
     src = subagentsSource;
     npmDepsHash = members.subagents.hashes.npmDepsHash;
     prepareBundle = root: ''
-      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+      ${buildPackages.patch}/bin/patch --batch --fuzz=0 --backup-if-mismatch \
+        --directory=${root} --strip=1 \
         < ${./patches/pi-subagents-bounded-history.patch}
+      patch_artifact="$(
+        find ${root}/src -type f \( -name '*.orig' -o -name '*.rej' \) \
+          -print -quit
+      )"
+      if [ -n "$patch_artifact" ]; then
+        echo "pi-subagents patch did not apply exactly: $patch_artifact" >&2
+        exit 1
+      fi
     '';
   };
   pi-artifacts = mkNpmPackageRoot {
@@ -954,12 +963,21 @@ let
         --replace-fail \
           'return `''${prefix}: ''${statusLabel(goal)}''${usage} - ''${truncateText(goal.objective, 60)}`;' \
           'return `''${prefix}: ''${statusLabel(goal)}''${usage}`;'
+      ${buildPackages.patch}/bin/patch --batch --fuzz=0 --backup-if-mismatch \
+        --directory=${root} --strip=1 \
+        < ${./patches/pi-goal-x-bounded-history.patch}
+      patch_artifact="$(
+        find ${root} -path '*/node_modules' -prune -o \
+          -type f \( -name '*.orig' -o -name '*.rej' \) -print -quit
+      )"
+      if [ -n "$patch_artifact" ]; then
+        echo "pi-goal-x patch did not apply exactly: $patch_artifact" >&2
+        exit 1
+      fi
       substituteInPlace ${root}/extensions/goal.ts \
         --replace-fail \
           'export default function goalExtension(pi: ExtensionAPI): void {' \
           $'export default function goalExtension(pi: ExtensionAPI): void {\n\tif (process.env.PI_SUBAGENT_CHILD === "1") return;'
-      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
-        < ${./patches/pi-goal-x-bounded-history.patch}
     '';
   };
 

@@ -207,6 +207,12 @@ runCommand "pi-gallery-check"
 
     for package_root in ${packageRoots}; do
       [ -f "$package_root/package.json" ] || fail "missing package manifest: $package_root"
+      patch_artifacts=$(
+        find "$package_root" -path '*/node_modules' -prune -o \
+          -type f \( -name '*.orig' -o -name '*.rej' \) -print
+      )
+      [ -z "$patch_artifacts" ] \
+        || fail "package contains patch backup or reject artifacts: $patch_artifacts"
       if [ -d "$package_root/node_modules" ]; then
         if find "$package_root/node_modules" -type d \
           \( -path '*/@earendil-works/*' -o -path '*/typebox' \) -print -quit | grep -q .; then

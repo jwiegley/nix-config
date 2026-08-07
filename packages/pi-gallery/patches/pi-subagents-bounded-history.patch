@@ -1,75 +1,21 @@
+diff --git a/src/extension/index.ts b/src/extension/index.ts
+index 747d9ea..14e5ee4 100644
 --- a/src/extension/index.ts
 +++ b/src/extension/index.ts
-@@ -566,1 +566,4 @@
+@@ -705,7 +705,10 @@ export default function registerSubagentExtension(pi: ExtensionAPI): void {
+ 		resetJobs(ctx);
+ 		restoreActiveJobs(ctx);
+ 		scheduledRunManager.bindSession(ctx);
 -		restoreSlashFinalSnapshots(ctx.sessionManager.getEntries());
 +		restoreSlashFinalSnapshots(ctx.sessionManager.getRecentActiveEntries({
 +			customType: SLASH_RESULT_TYPE,
 +			limit: 256,
 +		}));
---- a/src/slash/slash-commands.ts
-+++ b/src/slash/slash-commands.ts
-@@ -452,23 +452,27 @@
-	const childTotal = emptyUsage();
-	const total = emptyUsage();
-	const children: Array<{ label: string; usage: Usage; sessionFile?: string }> = [];
--	for (const entry of ctx.sessionManager.getBranch()) {
-+	let childCount = 0;
-+	ctx.sessionManager.iterateBranchEntries((entry) => {
- 		const message = entry.type === "message" ? (entry as { message?: unknown }).message : undefined;
- 		const parentUsage = assistantUsageFromMessage(message);
- 		if (parentUsage) addUsage(parent, parentUsage);
- 		const details = detailsFromSessionEntry(entry);
--		if (!details) continue;
-+		if (!details) return;
- 		for (const result of details.results) {
- 			if (!usageHasValue(result.usage)) continue;
- 			const usage = { ...result.usage };
--			children.push({
--				label: `Child ${children.length + 1} (${result.agent})`,
--				usage,
--				...(result.sessionFile ? { sessionFile: result.sessionFile } : {}),
--			});
-+			childCount++;
-+			if (children.length < 100) {
-+				children.push({
-+					label: `Child ${childCount} (${result.agent})`,
-+					usage,
-+					...(result.sessionFile ? { sessionFile: result.sessionFile } : {}),
-+				});
-+			}
- 			addUsage(childTotal, usage);
- 		}
--	}
-+	});
- 	addUsage(total, parent);
- 	addUsage(total, childTotal);
- 	const lines = [
-@@ -483,6 +487,7 @@ function buildSubagentCostReport(ctx: ExtensionContext): string {
- 			lines.push(formatCostUsage(child.label, child.usage));
- 			if (child.sessionFile) lines.push(`  Session: ${child.sessionFile}`);
- 		}
-+		if (childCount > children.length) lines.push(`... ${childCount - children.length} additional child runs included in totals`);
- 	}
- 	lines.push("────────────────────────────", formatCostUsage("Children", childTotal), formatCostUsage("Total", total));
- 	return lines.join("\n");
-@@ -670,14 +675,12 @@ function persistSlashSessionSnapshot(ctx: ExtensionContext): void {
-	try {
-		if (!ctx.sessionManager) return;
-		const sessionManager = ctx.sessionManager as typeof ctx.sessionManager & {
--			_rewriteFile?: () => void;
--			flushed?: boolean;
-+			flush?: () => void;
-		};
-		const sessionFile = sessionManager.getSessionFile();
--		if (!sessionFile || typeof sessionManager._rewriteFile !== "function") return;
-+		if (!sessionFile || typeof sessionManager.flush !== "function") return;
-		fs.mkdirSync(path.dirname(sessionFile), { recursive: true });
--		sessionManager._rewriteFile();
--		sessionManager.flushed = true;
-+		sessionManager.flush();
-	} catch (error) {
-		console.error("Failed to persist slash session snapshot for export:", error);
-	}
+ 		waitSubscriptionManager.restore();
+ 		startResultWatcher();
+ 		primeExistingResults({ triggerTurn: !recovering });
+diff --git a/src/shared/fork-context.ts b/src/shared/fork-context.ts
+index 6c0c293..b87f754 100644
 --- a/src/shared/fork-context.ts
 +++ b/src/shared/fork-context.ts
 @@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
@@ -91,7 +37,10 @@
  }
  
  interface ForkableSessionManager {
-@@ -84,47 +85,104 @@
+@@ -82,50 +83,107 @@ function isUnsafeAnthropicThinkingBlock(message: BranchSessionEntry["message"],
+ 	return record.redacted === true || (typeof signature === "string" && signature.length > 0);
+ }
+ 
 -function createEntryId(entries: BranchSessionEntry[]): string {
 -	const ids = new Set(entries.map((entry) => entry.id).filter((id): id is string => typeof id === "string"));
 -	for (let attempt = 0; attempt < 100; attempt++) {
@@ -234,7 +183,7 @@
  }
  
  export function createForkContextResolver(
-@@ -163,35 +221,22 @@ export function createForkContextResolver(
+@@ -164,35 +222,22 @@ export function createForkContextResolver(
  				throw new Error(`Parent session file does not exist: ${parentSessionFile}. Pi has not persisted enough history to fork yet.`);
  			}
  			const sourceManager = openSession(parentSessionFile, sessionDir);
@@ -284,6 +233,9 @@
  			const resolution = { sessionFile, ...(thinkingOverride ? { thinkingOverride } : {}) };
  			cachedResolutions.set(index, resolution);
  			return resolution;
+diff --git b/src/shared/jsonl-lines.ts b/src/shared/jsonl-lines.ts
+new file mode 100644
+index 0000000..db8b37a
 --- /dev/null
 +++ b/src/shared/jsonl-lines.ts
 @@ -0,0 +1,73 @@
@@ -360,6 +312,8 @@
 +		offset += written;
 +	}
 +}
+diff --git a/src/shared/session-tokens.ts b/src/shared/session-tokens.ts
+index 3825268..5f2718c 100644
 --- a/src/shared/session-tokens.ts
 +++ b/src/shared/session-tokens.ts
 @@ -1,5 +1,6 @@
@@ -393,3 +347,69 @@
  		return { input, output, total: input + output };
  	} catch {
  		// Usage extraction should not fail the run.
+diff --git a/src/slash/slash-commands.ts b/src/slash/slash-commands.ts
+index bb98322..7620224 100644
+--- a/src/slash/slash-commands.ts
++++ b/src/slash/slash-commands.ts
+@@ -380,23 +380,27 @@ function buildSubagentCostReport(ctx: ExtensionContext): string {
+ 	const childTotal = emptyUsage();
+ 	const total = emptyUsage();
+ 	const children: Array<{ label: string; usage: Usage; sessionFile?: string }> = [];
+-	for (const entry of ctx.sessionManager.getBranch()) {
++	let childCount = 0;
++	ctx.sessionManager.iterateBranchEntries((entry) => {
+ 		const message = entry.type === "message" ? (entry as { message?: unknown }).message : undefined;
+ 		const parentUsage = assistantUsageFromMessage(message);
+ 		if (parentUsage) addUsage(parent, parentUsage);
+ 		const details = detailsFromSessionEntry(entry);
+-		if (!details) continue;
++		if (!details) return;
+ 		for (const result of details.results) {
+ 			if (!usageHasValue(result.usage)) continue;
+ 			const usage = { ...result.usage };
+-			children.push({
+-				label: `Child ${children.length + 1} (${result.agent})`,
+-				usage,
+-				...(result.sessionFile ? { sessionFile: result.sessionFile } : {}),
+-			});
++			childCount++;
++			if (children.length < 100) {
++				children.push({
++					label: `Child ${childCount} (${result.agent})`,
++					usage,
++					...(result.sessionFile ? { sessionFile: result.sessionFile } : {}),
++				});
++			}
+ 			addUsage(childTotal, usage);
+ 		}
+-	}
++	});
+ 	addUsage(total, parent);
+ 	addUsage(total, childTotal);
+ 	const lines = [
+@@ -411,6 +415,7 @@ function buildSubagentCostReport(ctx: ExtensionContext): string {
+ 			lines.push(formatCostUsage(child.label, child.usage));
+ 			if (child.sessionFile) lines.push(`  Session: ${child.sessionFile}`);
+ 		}
++		if (childCount > children.length) lines.push(`... ${childCount - children.length} additional child runs included in totals`);
+ 	}
+ 	lines.push("────────────────────────────", formatCostUsage("Children", childTotal), formatCostUsage("Total", total));
+ 	return lines.join("\n");
+@@ -546,14 +551,12 @@ function persistSlashSessionSnapshot(ctx: ExtensionContext): void {
+ 	try {
+ 		if (!ctx.sessionManager) return;
+ 		const sessionManager = ctx.sessionManager as typeof ctx.sessionManager & {
+-			_rewriteFile?: () => void;
+-			flushed?: boolean;
++			flush?: () => void;
+ 		};
+ 		const sessionFile = sessionManager.getSessionFile();
+-		if (!sessionFile || typeof sessionManager._rewriteFile !== "function") return;
++		if (!sessionFile || typeof sessionManager.flush !== "function") return;
+ 		fs.mkdirSync(path.dirname(sessionFile), { recursive: true });
+-		sessionManager._rewriteFile();
+-		sessionManager.flushed = true;
++		sessionManager.flush();
+ 	} catch (error) {
+ 		console.error("Failed to persist slash session snapshot for export:", error);
+ 	}

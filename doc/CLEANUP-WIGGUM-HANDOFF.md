@@ -256,15 +256,30 @@ against the former 29,360,128-byte ceiling. These source/build checks do not
 substitute for the open soak, direct large-session resumption, activation, or
 promotion evidence.
 
+The current package-integrity candidate regenerates the pi-subagents patch
+against the exact normalized 0.42.1 release source instead of relying on
+header-only hunk adjustments. Package construction now uses
+`--backup-if-mismatch` and fails if patch backup or reject artifacts remain;
+the Pi gallery check independently rejects those artifacts across every
+packaged root outside `node_modules`. That invariant exposed the same issue in
+pi-goal-x, whose bounded-history patch now runs before the child-process guard
+substitution and has the same fail-closed artifact check. Focused pi-subagents
+and pi-goal-x builds applied without offset or fuzz diagnostics, their realized
+roots contain no `.orig` or `.rej` files, and both package trees are otherwise
+byte-identical to their prior effective outputs. The full `aarch64-darwin` Pi
+gallery check passes, including all seven pi-subagents bounded-history tests.
+These are package/source checks, not soak, activation, direct-resumption, or
+promotion evidence.
+
 The fresh eight-hour soak started on 2026-08-07 with 32 KiB messages, a
 16-message compaction cadence, and retained output. The monitor report records
-the coordinator's recovered 17,509,249 ms stdout checkpoint with 16,320
-messages, 1,020 compactions, and 94,338,634 adjusted RSS bytes. At the
-independent monitor's 05:15:22 elapsed checkpoint, PID 55672 was still alive
-with an unchanged command; its JSONL and SQLite artifacts had grown to
-582,311,634 and 74,182,656 bytes. The detached monitor can establish only
-process identity and artifact growth, not new stdout checkpoints or the final
-result. Its report is
+the coordinator's recovered 19,592,131 ms stdout checkpoint with 18,240
+messages, 1,140 compactions, 602,460,595 history bytes, and 94,338,634 adjusted
+RSS bytes. At the independent monitor's 05:35:33 elapsed checkpoint, PID 55672
+was still alive with an unchanged command; its latest artifact check recorded
+609,297,796 JSONL bytes and 77,606,912 SQLite bytes. The detached monitor can
+establish only process identity and artifact growth, not new stdout checkpoints
+or the final result. Its report is
 `/private/tmp/wg-pi128/soak-monitor/report.md`. Do not call the soak, #128,
 hardware/activation, or promotion boundary complete until the final process
 result and remaining authority-specific evidence are recorded. The source
