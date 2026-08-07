@@ -551,15 +551,15 @@
     },
     "pi-subagents": {
       "hashes": {
-        "npmDepsHash": "sha256-fQXBERxqncBurG02qudh9Tp/vm6zrj8lVLYtO8fZj2s="
+        "npmDepsHash": "sha256-lYqlYi1PUYvFzJ9jmof0kahv4XOs62uokshXs+KGKHo="
       },
       "source": {
         "args": {
-          "hash": "sha256-tE2Hr8UZ+Wxif+VjIMfEBee0jNInkcdSZ1m2wQoGG08=",
-          "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.38.0.tgz"
+          "hash": "sha256-jk0bUDkxEw+I30TifEjpSOnm8b4zXFHJ5v8UCiBE2yc=",
+          "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.42.1.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.38.0.tgz"
+        "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.42.1.tgz"
       },
       "update": {
         "artifacts": [
@@ -569,7 +569,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "pi-subagents"
       },
-      "version": "0.38.0"
+      "version": "0.42.1"
     },
     "pi-trace-extension": {
       "source": {
