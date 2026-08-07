@@ -6,13 +6,14 @@ set -euo pipefail
 : "${CLAUDE_REAL_BIN:?}"
 : "${CODEX_BIN:?}"
 : "${CODEX_NON_DARWIN_BIN:?}"
-: "${CODEX_APP_IS_COMMAND:?}"
 : "${CODEX_RAISES_OPEN_FILE_LIMIT:?}"
 : "${CLAUDE_IDENTITY_BIN:?}"
 : "${CLAUDE_REAL_IDENTITY_BIN:?}"
 : "${CODEX_IDENTITY_BIN:?}"
+: "${CODEX_POLICY_RESPONSE_CHECKER:?}"
 : "${REAL_CLAUDE_BIN:?}"
 : "${REAL_CODEX_BIN:?}"
+: "${REAL_PROBED_CODEX_BIN:?}"
 : "${REAL_WRAPPED_CODEX_BIN:?}"
 : "${BRIDGE_BIN:?}"
 : "${NETWORK_GUARD_LIBRARY:?}"
@@ -185,7 +186,22 @@ invoke_agent() {
         ;;
     codex)
         binary=$CODEX_BIN
-        command_env+=("CODEX_HOME=$ROOT")
+        command_env+=(
+            "CODEX_HOME=$ROOT"
+            "AGENT_TEST_CODEX_POLICY=${AGENT_TEST_CODEX_POLICY:-manage}"
+        )
+        if [ -n "${AGENT_TEST_CODEX_PROBE_EXIT:-}" ]; then
+            command_env+=("AGENT_TEST_CODEX_PROBE_EXIT=$AGENT_TEST_CODEX_PROBE_EXIT")
+        fi
+        if [ "${AGENT_TEST_CODEX_PROBE_NO_OUTPUT:-}" = 1 ]; then
+            command_env+=(AGENT_TEST_CODEX_PROBE_NO_OUTPUT=1)
+        fi
+        if [ "${AGENT_TEST_CODEX_PROBE_NO_NEWLINE:-}" = 1 ]; then
+            command_env+=(AGENT_TEST_CODEX_PROBE_NO_NEWLINE=1)
+        fi
+        if [ "${AGENT_TEST_CODEX_PROBE_NUL:-}" = 1 ]; then
+            command_env+=(AGENT_TEST_CODEX_PROBE_NUL=1)
+        fi
         ;;
     *) fail "unknown client: $client" ;;
     esac
@@ -226,6 +242,14 @@ assert_env() {
     [ -f "$ENV_FILE" ] || fail "upstream environment was not recorded"
     grep -zFx -- "$expected" "$ENV_FILE" >/dev/null ||
         fail "missing upstream environment entry: $expected"
+}
+
+assert_env_name_absent() {
+    local name=$1
+    [ -f "$ENV_FILE" ] || fail "upstream environment was not recorded"
+    if tr '\0' '\n' <"$ENV_FILE" | grep -E "^${name}=" >/dev/null; then
+        fail "unexpected upstream environment entry: $name"
+    fi
 }
 
 assert_network_guard_loaded() {
@@ -401,7 +425,15 @@ test_claude_default_root() {
 test_one_conflict() {
     local client=$1
     local label=$2
+    local AGENT_TEST_CODEX_POLICY=manage
     shift 2
+
+    if [ "$client" = codex ]; then
+        case "$label" in
+        ignore-user-config*) AGENT_TEST_CODEX_POLICY=conflict-ignore-user-config ;;
+        *) AGENT_TEST_CODEX_POLICY=conflict-profile ;;
+        esac
+    fi
 
     new_case "$client" "conflict-$label"
     configure_state complete
@@ -446,11 +478,11 @@ test_conflicts() {
         finish_case "$client"
         ;;
     codex)
-        test_one_conflict "$client" profile-separated --profile caller tail
-        test_one_conflict "$client" profile-equals --profile=caller tail
-        test_one_conflict "$client" profile-short -p caller tail
-        test_one_conflict "$client" profile-short-attached -pcaller tail
-        test_one_conflict "$client" profile-short-equals -p=caller tail
+        # Codex's own Clap graph recognizes spellings and payload boundaries.
+        # This fake-package contract only verifies the wrapper's responses.
+        test_one_conflict "$client" profile --profile caller tail
+        test_one_conflict "$client" ignore-user-config \
+            exec --ignore-user-config tail
         ;;
     *) fail "unknown client: $client" ;;
     esac
@@ -470,6 +502,7 @@ test_codex_managed_case() {
 
 test_codex_delegated_case() {
     local label=$1
+    local AGENT_TEST_CODEX_POLICY=delegate
     shift
 
     new_case codex "$label"
@@ -482,6 +515,7 @@ test_codex_delegated_case() {
 
 test_codex_conflict_case() {
     local label=$1
+    local AGENT_TEST_CODEX_POLICY=conflict-profile
     shift
 
     new_case codex "$label"
@@ -494,168 +528,121 @@ test_codex_conflict_case() {
     finish_case codex
 }
 
-test_codex_command_scope() {
-    local command
-    local -a managed=(
-        exec
-        e
-        review
-        resume
-        archive
-        delete
-        unarchive
-        fork
-        mcp
-        sandbox
-    )
-    local -a delegated=(
-        features
-        doctor
-        completion
-        mcp-server
-        app-server
-        remote-control
-        login
-        logout
-        plugin
-        update
-        apply
-        a
-        cloud
-        cloud-tasks
-        exec-server
-        execpolicy
-        help
-        responses-api-proxy
-        stdio-to-uds
-    )
+test_codex_probe_rejection_case() {
+    local label=$1
+    local AGENT_TEST_CODEX_POLICY=$2
+    local AGENT_TEST_CODEX_PROBE_EXIT=$3
+    local AGENT_TEST_CODEX_PROBE_NO_OUTPUT=$4
+    local AGENT_TEST_CODEX_PROBE_NO_NEWLINE=$5
+    local AGENT_TEST_CODEX_PROBE_NUL=${6:-0}
 
-    test_codex_managed_case interactive-empty
-    test_codex_managed_case interactive-prompt ordinary-prompt
-    test_codex_managed_case interactive-command-like-prompt import
+    new_case codex "probe-rejection-$label"
+    configure_state complete
+    invoke_agent codex 0 0 opaque --future-payload
+    [ "$LAST_STATUS" -eq 2 ] ||
+        fail "Codex unsafe probe response $label returned $LAST_STATUS instead of 2"
+    assert_upstream_not_invoked
+    assert_bounded_redacted_error codex 0
+    finish_case codex
+}
 
-    for command in "${managed[@]}"; do
-        case "$command" in
-        exec | e | review) test_codex_managed_case "managed-$command" "$command" opaque ;;
-        resume | fork) test_codex_managed_case "managed-$command" "$command" --last ;;
-        archive | delete | unarchive)
-            test_codex_managed_case "managed-$command" "$command" target
-            ;;
-        mcp) test_codex_managed_case managed-mcp mcp list ;;
-        sandbox) test_codex_managed_case managed-sandbox sandbox /bin/true ;;
-        esac
-    done
-    test_codex_managed_case managed-debug-prompt-input debug prompt-input opaque
-    test_codex_managed_case root-option-before-command --model o3 exec opaque
-    test_codex_managed_case archive-lone-dash archive -
-    test_codex_managed_case resume-last-lone-dash resume --last -
+test_codex_policy_protocol() {
+    test_codex_managed_case protocol-manage opaque --future-payload
+    assert_env_name_absent CODEX_INTERNAL_WRAPPER_POLICY_PROBE
 
-    for command in "${delegated[@]}"; do
-        test_codex_delegated_case "delegated-$command" "$command" opaque
-    done
-    test_codex_delegated_case delegated-debug-child debug models opaque
-    if [ "$CODEX_APP_IS_COMMAND" = 1 ]; then
-        test_codex_delegated_case delegated-app app opaque
-    else
-        test_codex_managed_case interactive-app-prompt app
+    test_codex_delegated_case protocol-delegate features future-subcommand
+    assert_env_name_absent CODEX_INTERNAL_WRAPPER_POLICY_PROBE
+
+    test_codex_conflict_case protocol-profile-conflict --profile caller opaque
+
+    test_codex_probe_rejection_case unknown future-policy 0 0 0
+    test_codex_probe_rejection_case multiline $'manage\nextra' 0 0 0
+    test_codex_probe_rejection_case missing-newline manage 0 0 1
+    test_codex_probe_rejection_case missing-output manage 0 1 0
+    test_codex_probe_rejection_case embedded-nul manage 0 0 0 1
+    test_codex_probe_rejection_case nonzero manage 74 0 0
+
+    new_case codex inherited-private-probe-variable
+    configure_state complete
+    local AGENT_TEST_CODEX_POLICY=delegate
+    CODEX_INTERNAL_WRAPPER_POLICY_PROBE=caller-controlled
+    export CODEX_INTERNAL_WRAPPER_POLICY_PROBE
+    invoke_agent codex 0 0 --version
+    unset CODEX_INTERNAL_WRAPPER_POLICY_PROBE
+    [ "$LAST_STATUS" -eq 0 ] || fail "Codex rejected delegated inherited-probe case"
+    assert_argv "$ARGV_FILE" --version
+    assert_env_name_absent CODEX_INTERNAL_WRAPPER_POLICY_PROBE
+    finish_case codex
+}
+
+test_codex_policy_response_checker() {
+    local response_file="$work_root/policy-response"
+
+    printf '%s\n' manage >"$response_file"
+    "$CODEX_POLICY_RESPONSE_CHECKER" manage "$response_file" ||
+        fail "packaging response checker rejected an exact response"
+
+    printf %s manage >"$response_file"
+    if "$CODEX_POLICY_RESPONSE_CHECKER" manage "$response_file"; then
+        fail "packaging response checker accepted a missing newline"
     fi
-
-    # These are the only syntax edges the classifier owns. Upstream still
-    # validates every option value, positional count, and command combination.
-    test_codex_managed_case greedy-image-remains-interactive --image one.png features list
-    test_codex_delegated_case attached-image-selects-command --image=one.png features list
-    test_codex_delegated_case prompt-before-command \
-        ordinary-prompt features list
-    test_codex_delegated_case dash-prompt-before-command - features list
-    test_codex_managed_case prompt-before-mcp ordinary-prompt mcp list
-    test_codex_delegated_case future-option --future-option exec tail
-    test_codex_managed_case separator-profile-literal -- -p
-    test_codex_managed_case exec-separator-profile-literal exec -- -p
-    test_codex_managed_case sandbox-profile-looking-payload sandbox /bin/echo -p child
-    test_codex_managed_case sandbox-separated-profile-looking-payload sandbox -- /bin/echo -p child
-    test_codex_managed_case mcp-profile-looking-payload mcp add probe -- /bin/echo -p child
-    test_codex_managed_case mcp-undelimited-help-payload \
-        mcp add probe /bin/echo --help
-    test_codex_managed_case mcp-separator-before-name \
-        mcp add -- probe /bin/echo
-    test_codex_managed_case mcp-list-trailing-separator mcp list --
-    test_codex_managed_case mcp-get-dash-name mcp get -- -name
-    test_codex_managed_case mcp-add-lone-dash-name mcp add - /bin/echo
-    test_codex_managed_case mcp-get-lone-dash-name mcp get -
-    test_codex_managed_case debug-profile-looking-argument debug prompt-input -p caller
-    test_codex_delegated_case nonprofile-short-p app-server generate-ts -p "$CASE_DIR/out"
-
-    test_codex_conflict_case mcp-root-profile --profile caller mcp list
-    test_codex_conflict_case mcp-root-profile-prompt-before-command \
-        --profile caller ordinary-prompt mcp list
-    test_codex_conflict_case mcp-root-profile-undelimited-payload \
-        --profile caller mcp add probe /bin/echo --help
-    test_codex_conflict_case mcp-root-profile-separator-before-name \
-        --profile caller mcp add -- probe /bin/echo
-    test_codex_conflict_case mcp-root-profile-trailing-separator \
-        --profile caller mcp list --
-    test_codex_conflict_case mcp-root-profile-dash-name \
-        --profile caller mcp get -- -name
-    test_codex_conflict_case mcp-root-profile-lone-dash-name \
-        --profile caller mcp get -
-    test_codex_conflict_case archive-root-profile-lone-dash \
-        --profile caller archive -
-    test_codex_conflict_case exec-local-profile exec --profile caller opaque
-    test_codex_conflict_case root-and-local-profile --profile root exec -p child opaque
-    test_codex_conflict_case attached-leading-hyphen-profile --profile=-foo exec opaque
-    test_codex_delegated_case invalid-profile-name --profile bad.name exec opaque
-    test_codex_delegated_case invalid-separated-profile --profile -foo exec opaque
-    test_codex_delegated_case duplicate-root-profile --profile one --profile two exec opaque
-    test_codex_delegated_case duplicate-local-profile exec -p one -p two opaque
-    test_codex_delegated_case nested-exec-profile exec resume -p caller
-    test_codex_delegated_case nested-exec-resume-help exec resume --help
-    test_codex_delegated_case nested-exec-review-help exec review --help
-    test_codex_delegated_case nested-exec-root-profile-help \
-        --profile caller exec resume --help
-    test_codex_delegated_case nested-exec-local-profile-help \
-        exec -p caller resume --help
-    test_codex_delegated_case exec-prompt-before-help exec foo help
-    test_codex_delegated_case exec-dash-before-help exec - help
-    test_codex_delegated_case exec-prompt-before-nested-help \
-        exec foo resume --help
-    test_codex_delegated_case exec-root-profile-prompt-before-help \
-        --profile caller exec foo help
-    test_codex_delegated_case resume-missing-remote \
-        resume --remote -p caller
-    test_codex_conflict_case resume-remote-profile \
-        resume --remote ws://example.invalid -p caller
-    test_codex_conflict_case sandbox-local-profile \
-        sandbox -p caller /bin/true
-    test_codex_delegated_case exec-tui-only-option \
-        exec --search -p caller
-    if [ "$CODEX_APP_IS_COMMAND" = 1 ]; then
-        test_codex_conflict_case sandbox-darwin-option-profile \
-            sandbox --allow-unix-socket "$work_root/socket" -p caller /bin/true
-    else
-        test_codex_delegated_case sandbox-darwin-option-profile \
-            sandbox --allow-unix-socket "$work_root/socket" -p caller /bin/true
+    printf 'manage\nextra\n' >"$response_file"
+    if "$CODEX_POLICY_RESPONSE_CHECKER" manage "$response_file"; then
+        fail "packaging response checker accepted extra output"
     fi
-    test_codex_delegated_case missing-profile-value --profile
+    printf 'man\0age\n' >"$response_file"
+    if "$CODEX_POLICY_RESPONSE_CHECKER" manage "$response_file"; then
+        fail "packaging response checker accepted an embedded NUL"
+    fi
+    : >"$response_file"
+    if "$CODEX_POLICY_RESPONSE_CHECKER" manage "$response_file"; then
+        fail "packaging response checker accepted empty output"
+    fi
+}
 
-    test_codex_delegated_case root-help --help
-    test_codex_delegated_case exec-help exec --help
-    test_codex_delegated_case exec-help-subcommand exec help
-    test_codex_delegated_case exec-root-profile-help-subcommand \
-        --profile caller exec help
-    test_codex_delegated_case mcp-help mcp --help
-    test_codex_delegated_case mcp-help-subcommand mcp help
-    test_codex_delegated_case mcp-root-profile-help-subcommand \
-        --profile caller mcp help
-    test_codex_delegated_case debug-prompt-input-help debug prompt-input --help
-    test_codex_delegated_case sandbox-help sandbox --help
-    test_codex_delegated_case ignore-user-config-help \
-        exec --ignore-user-config --help
-    test_one_conflict codex ignore-user-config \
-        exec --ignore-user-config opaque
-    test_one_conflict codex prompt-before-exec-ignore-user-config \
-        foo exec --ignore-user-config opaque
-    test_codex_conflict_case nested-ignore-user-config \
-        exec resume --ignore-user-config --last
+test_codex_interrupted_policy_probe() {
+    local ready release wrapper_pid status=0
+
+    new_case codex interrupted-policy-probe
+    configure_state complete
+    ready="$CASE_DIR/probe.ready"
+    release="$CASE_DIR/probe.release"
+
+    env \
+        -u AI_NIX_BYPASS_MANAGED_CONFIG \
+        -u CODEX_HOME \
+        -u CODEX_SQLITE_HOME \
+        "HOME=$HOME_DIR" \
+        "CODEX_HOME=$ROOT" \
+        "AGENT_TEST_ARGV=$ARGV_FILE" \
+        "AGENT_TEST_ENV=$ENV_FILE" \
+        AGENT_TEST_EXIT=0 \
+        "AGENT_TEST_UID=$AGENT_TEST_UID" \
+        AGENT_TEST_CODEX_POLICY=manage \
+        "AGENT_TEST_CODEX_PROBE_READY=$ready" \
+        "AGENT_TEST_CODEX_PROBE_RELEASE=$release" \
+        "$CODEX_BIN" opaque >"$STDOUT_FILE" 2>"$STDERR_FILE" &
+    wrapper_pid=$!
+
+    for _ in {1..500}; do
+        [ ! -e "$ready" ] || break
+        kill -0 "$wrapper_pid" 2>/dev/null || break
+        sleep 0.01
+    done
+    [ -e "$ready" ] || fail "Codex probe did not reach its interrupt point"
+
+    kill -TERM "$wrapper_pid"
+    touch "$release"
+    wait "$wrapper_pid" || status=$?
+
+    [ "$status" -eq 143 ] ||
+        fail "Codex interrupted probe returned $status instead of 143"
+    assert_upstream_not_invoked
+    if find "$CODEX_LOCAL_ROOT" -maxdepth 1 -name '.wrapper-policy.*' \
+        -print -quit | grep . >/dev/null; then
+        fail "Codex interrupted probe retained a policy response file"
+    fi
+    finish_case codex
 }
 
 test_codex_open_file_limit_case() {
@@ -959,6 +946,8 @@ assert_codex_runtime_profile_absent() {
 }
 
 test_codex_runtime_profile() {
+    local AGENT_TEST_CODEX_POLICY=manage
+
     new_case codex runtime-profile-refresh
     configure_state complete
     invoke_agent codex 0 0 alpha
@@ -985,6 +974,7 @@ test_codex_runtime_profile() {
 
     new_case codex runtime-profile-delegated
     configure_state complete
+    AGENT_TEST_CODEX_POLICY=delegate
     invoke_agent codex 0 0 --version
     [ "$LAST_STATUS" -eq 0 ] || fail "Codex delegated launch failed"
     assert_argv "$ARGV_FILE" --version
@@ -1138,6 +1128,97 @@ test_real_claude_mcp_list_contract() {
         fail "pinned Claude attempted network access during mcp list"
 }
 
+assert_real_probe_policy() {
+    local label=$1
+    local expected=$2
+    shift 2
+    local probe_dir="$work_root/real probe matrix/$label"
+    local probe_home="$probe_dir/home"
+
+    mkdir -p "$probe_home"
+    if ! env -u AI_NIX_BYPASS_MANAGED_CONFIG \
+        HOME="$probe_home" CODEX_HOME="$probe_home/codex" \
+        CODEX_SQLITE_HOME="$probe_home/sqlite" \
+        CODEX_INTERNAL_WRAPPER_POLICY_PROBE=v1 \
+        "$REAL_PROBED_CODEX_BIN" "$@" \
+        >"$probe_dir/actual" 2>"$probe_dir/stderr"; then
+        fail "real Codex policy probe failed: $label"
+    fi
+    printf '%s\n' "$expected" >"$probe_dir/expected"
+    cmp -s "$probe_dir/expected" "$probe_dir/actual" || {
+        od -An -tx1 "$probe_dir/actual" >&2 || true
+        fail "real Codex policy probe differs: $label"
+    }
+    [ ! -s "$probe_dir/stderr" ] ||
+        fail "real Codex policy probe wrote diagnostics: $label"
+    test -z "$(find "$probe_home" -mindepth 1 -print -quit)" ||
+        fail "real Codex policy probe touched state: $label"
+}
+
+test_real_codex_probe_matrix() {
+    assert_real_probe_policy manage-root manage
+    assert_real_probe_policy manage-prompt manage prompt
+    assert_real_probe_policy manage-exec manage exec prompt
+    assert_real_probe_policy manage-exec-short manage e prompt
+    assert_real_probe_policy manage-review manage review --uncommitted
+    assert_real_probe_policy manage-resume manage resume --last
+    assert_real_probe_policy manage-archive manage archive thread
+    assert_real_probe_policy manage-delete manage delete thread
+    assert_real_probe_policy manage-unarchive manage unarchive thread
+    assert_real_probe_policy manage-fork manage fork --last
+    assert_real_probe_policy manage-mcp manage mcp list
+    assert_real_probe_policy manage-sandbox manage sandbox -- echo
+    assert_real_probe_policy manage-debug-prompt manage debug prompt-input
+
+    assert_real_probe_policy delegate-completion delegate completion bash
+    assert_real_probe_policy delegate-features delegate features list
+    assert_real_probe_policy delegate-debug-models delegate debug models --bundled
+    assert_real_probe_policy delegate-root-help delegate --help
+    assert_real_probe_policy delegate-root-version delegate --version
+    assert_real_probe_policy delegate-exec-help delegate exec --help
+    assert_real_probe_policy delegate-exec-version delegate exec --version
+    assert_real_probe_policy delegate-unknown delegate --unknown-option
+    assert_real_probe_policy delegate-profile-missing delegate --profile
+    assert_real_probe_policy delegate-profile-invalid delegate --profile nested/work
+    assert_real_probe_policy delegate-profile-inapplicable delegate \
+        --profile work features list
+    assert_real_probe_policy delegate-ignore-root delegate --ignore-user-config
+    assert_real_probe_policy delegate-ignore-inapplicable delegate \
+        mcp list --ignore-user-config
+    assert_real_probe_policy delegate-mcp-add-incomplete delegate mcp add
+
+    assert_real_probe_policy conflict-root-profile conflict-profile \
+        --profile work
+    assert_real_probe_policy conflict-short-profile conflict-profile \
+        -pwork exec prompt
+    assert_real_probe_policy conflict-exec-profile conflict-profile \
+        exec --profile=work prompt
+    assert_real_probe_policy conflict-resume-profile conflict-profile \
+        resume --profile work --last
+    assert_real_probe_policy conflict-sandbox-profile conflict-profile \
+        sandbox --profile work -- echo
+
+    assert_real_probe_policy conflict-ignore-exec conflict-ignore-user-config \
+        exec --ignore-user-config prompt
+    assert_real_probe_policy conflict-ignore-resume conflict-ignore-user-config \
+        exec resume --ignore-user-config --last
+    assert_real_probe_policy conflict-ignore-wins conflict-ignore-user-config \
+        exec --profile work --ignore-user-config prompt
+    assert_real_probe_policy manage-ignore-payload manage \
+        exec -- --ignore-user-config
+
+    assert_real_probe_policy manage-root-profile-payload manage -- --profile
+    assert_real_probe_policy manage-exec-profile-payload manage exec -- --profile
+    assert_real_probe_policy manage-exec-help-payload manage exec -- --help
+    assert_real_probe_policy manage-mcp-payload manage \
+        mcp add server -- command --profile work --help
+    assert_real_probe_policy manage-sandbox-payload manage \
+        sandbox -- command --profile work --help
+    assert_real_probe_policy manage-debug-profile-payload manage \
+        debug prompt-input -- --profile
+    assert_real_probe_policy delegate-apply-payload delegate apply -- -p
+}
+
 run_real_wrapped_codex() {
     local network_guard_loaded=$1
     local network_hit=$2
@@ -1205,11 +1286,14 @@ assert_real_codex_status_parity() {
     run_real_wrapped_codex \
         "$wrapped_network_guard_loaded" "$wrapped_network_hit" "$@"
     wrapped_status=$LAST_STATUS
-    [ "$raw_status" -ne 0 ] || fail "real Codex parity case was not malformed: $label"
     [ "$wrapped_status" -eq "$raw_status" ] ||
         fail "wrapped/raw Codex status differs for $label: $wrapped_status/$raw_status"
     case "$expected_route" in
     delegate)
+        cmp "$CASE_DIR/raw.stdout" "$STDOUT_FILE" || {
+            diff -u "$CASE_DIR/raw.stdout" "$STDOUT_FILE" >&2 || true
+            fail "delegated Codex output differs for $label"
+        }
         sed '/^WARNING: proceeding, even though we could not create PATH aliases:/d' \
             "$CASE_DIR/raw.stderr" >"$CASE_DIR/raw-normalized.stderr"
         sed '/^WARNING: proceeding, even though we could not create PATH aliases:/d' \
@@ -1235,20 +1319,24 @@ assert_real_codex_status_parity() {
 }
 
 test_real_wrapped_codex_status_parity() {
+    assert_real_codex_status_parity root-help delegate --help
+    assert_real_codex_status_parity root-version delegate --version
+    assert_real_codex_status_parity exec-help delegate exec --help
+    assert_real_codex_status_parity exec-version delegate exec --version
     assert_real_codex_status_parity root-missing-config delegate --config
     assert_real_codex_status_parity exec-missing-model delegate exec --model
     assert_real_codex_status_parity exec-invalid-color delegate \
         exec --color purple --help
-    assert_real_codex_status_parity review-selector-conflict manage \
+    assert_real_codex_status_parity review-selector-conflict delegate \
         review --uncommitted --base main
-    assert_real_codex_status_parity resume-positional-overflow manage \
+    assert_real_codex_status_parity resume-positional-overflow delegate \
         resume --last session prompt
     assert_real_codex_status_parity resume-missing-remote delegate \
         resume --remote -p caller
-    assert_real_codex_status_parity mcp-missing-name manage mcp get
-    assert_real_codex_status_parity sandbox-state-conflict manage \
+    assert_real_codex_status_parity mcp-missing-name delegate mcp get
+    assert_real_codex_status_parity sandbox-state-conflict delegate \
         sandbox --permission-profile standard --sandbox-state-json '{}' /usr/bin/true
-    assert_real_codex_status_parity debug-empty-image manage \
+    assert_real_codex_status_parity debug-empty-image delegate \
         debug prompt-input --image=
 }
 
@@ -1573,8 +1661,11 @@ run_codex_contract() {
     test_codex_host_state_rejections
     test_codex_runtime_profile
     test_codex_runtime_profile_rejections
-    test_codex_command_scope
+    test_codex_policy_protocol
+    test_codex_policy_response_checker
+    test_codex_interrupted_policy_probe
     test_codex_open_file_limit
+    test_real_codex_probe_matrix
     test_real_wrapped_codex_status_parity
     test_real_wrapped_codex_routing
     test_real_codex_profile_contract

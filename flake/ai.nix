@@ -50,11 +50,83 @@ let
     if name == "claude-code" then
       import ./ai/wrappers/claude.nix { inherit pkgs name package; }
     else if name == "codex" then
-      import ./ai/wrappers/codex.nix { inherit pkgs name package; }
+      let
+        policyResponseChecker = pkgs.writeShellScript "codex-wrapper-policy-response-check" ''
+          set -euo pipefail
+
+          if [ "$#" -ne 2 ]; then
+            exit 64
+          fi
+          ${pkgs.coreutils}/bin/printf '%s\n' "$1" \
+            | ${pkgs.diffutils}/bin/cmp -s - "$2"
+        '';
+
+        probedPackage = package.overrideAttrs (old: {
+          preBuild = ''
+            if [ -f cli/src/main.rs ]; then
+              patch -p1 --fuzz=0 < ${../overlays/ai/patches/codex-argv-policy-probe.patch}
+            fi
+          ''
+          + (old.preBuild or "");
+
+          postInstall =
+            (old.postInstall or "")
+            + pkgs.lib.optionalString (!((old.passthru or { }).wrapperPolicyProbeTestDouble or false)) ''
+              codex_policy_probe_handshake() {
+                local expected=$1
+                local actual_file
+                shift
+
+                actual_file=$(mktemp)
+                trap 'rm -f "$actual_file"' EXIT
+                trap 'exit 129' HUP
+                trap 'exit 130' INT
+                trap 'exit 143' TERM
+                if ! CODEX_INTERNAL_WRAPPER_POLICY_PROBE=v1 \
+                    "$out/bin/codex" "$@" >"$actual_file" 2>/dev/null; then
+                  printf '%s\n' 'codex: build-time wrapper-policy probe failed' >&2
+                  exit 1
+                fi
+
+                if ! ${policyResponseChecker} "$expected" "$actual_file"; then
+                  printf '%s\n' 'codex: build-time wrapper-policy probe returned an invalid response' >&2
+                  exit 1
+                fi
+                rm -f "$actual_file"
+                trap - EXIT HUP INT TERM
+              }
+
+              codex_policy_probe_handshake delegate --version
+              codex_policy_probe_handshake manage
+              codex_policy_probe_handshake conflict-profile --profile build-probe
+              codex_policy_probe_handshake conflict-ignore-user-config \
+                exec --ignore-user-config task
+            '';
+
+          passthru = (old.passthru or { }) // {
+            wrapperPolicyProbeAbi = 1;
+            wrapperPolicyResponseChecker = policyResponseChecker;
+          };
+        });
+      in
+      import ./ai/wrappers/codex.nix {
+        inherit pkgs name;
+        package = probedPackage;
+      }
     else if name == "pi" then
-      assert package ? overrideAttrs;
-      package.overrideAttrs (old: {
+      let
+        nodePackage = package.override { useBun = false; };
+        piSourceBuild = pkgs.callPackage ../packages/pi-source-build.nix { };
+      in
+      assert nodePackage ? overrideAttrs;
+      nodePackage.overrideAttrs (old: {
         preInstall = ''
+          rm -rf dist
+          cp -R ${piSourceBuild}/coding-agent/dist ./dist
+          chmod -R u+w dist
+          rm -rf node_modules/@earendil-works/pi-agent-core/dist
+          cp -R ${piSourceBuild}/agent/dist node_modules/@earendil-works/pi-agent-core/dist
+          chmod -R u+w node_modules/@earendil-works/pi-agent-core/dist
           patch -p1 --fuzz=0 < ${../overlays/ai/patches/pi-system-prompt-no-docs.patch}
           substituteInPlace dist/core/system-prompt.js \
             --replace-fail '//# sourceMappingURL=system-prompt.js.map' ""

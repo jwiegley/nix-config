@@ -1,0 +1,298 @@
+--- a/cli/src/main.rs
++++ b/cli/src/main.rs
+@@ -56,6 +56,7 @@
+ #[cfg(target_os = "windows")]
+ mod sandbox_setup;
+ mod state_db_recovery;
++mod wrapper_policy_probe;
+ #[cfg(not(windows))]
+ mod wsl_paths;
+ 
+@@ -956,6 +957,10 @@
+ }
+ 
+ fn main() -> anyhow::Result<()> {
++    if wrapper_policy_probe::run_if_requested()? {
++        return Ok(());
++    }
++
+     let remote_control_disabled = codex_app_server::take_remote_control_disabled_env();
+     arg0_dispatch_or_else(move |arg0_paths: Arg0DispatchPaths| async move {
+         cli_main(arg0_paths, remote_control_disabled).await?;
+@@ -1672,25 +1677,33 @@
+         return Ok(None);
+     };
+ 
+-    match subcommand {
+-        Subcommand::Exec(_)
+-        | Subcommand::Review(_)
+-        | Subcommand::Resume(_)
+-        | Subcommand::Archive(_)
+-        | Subcommand::Delete(_)
+-        | Subcommand::Unarchive(_)
+-        | Subcommand::Fork(_)
+-        | Subcommand::Mcp(_)
+-        | Subcommand::Sandbox(_)
+-        | Subcommand::Debug(DebugCommand {
+-            subcommand: DebugSubcommand::PromptInput(_),
+-        }) => Ok(Some(profile_v2)),
+-        _ => anyhow::bail!(
++    if profile_v2_applies_to_subcommand(subcommand) {
++        Ok(Some(profile_v2))
++    } else {
++        anyhow::bail!(
+             "--profile only applies to runtime commands and `codex mcp`: `codex`, `codex exec`, `codex review`, `codex resume`, `codex archive`, `codex delete`, `codex unarchive`, `codex fork`, `codex mcp`, `codex sandbox`, and `codex debug prompt-input`."
+-        ),
++        )
+     }
+ }
+ 
++fn profile_v2_applies_to_subcommand(subcommand: &Subcommand) -> bool {
++    matches!(
++        subcommand,
++        Subcommand::Exec(_)
++            | Subcommand::Review(_)
++            | Subcommand::Resume(_)
++            | Subcommand::Archive(_)
++            | Subcommand::Delete(_)
++            | Subcommand::Unarchive(_)
++            | Subcommand::Fork(_)
++            | Subcommand::Mcp(_)
++            | Subcommand::Sandbox(_)
++            | Subcommand::Debug(DebugCommand {
++                subcommand: DebugSubcommand::PromptInput(_),
++            })
++    )
++}
++
+ async fn run_exec_server_command(
+     cmd: ExecServerCommand,
+     arg0_paths: &Arg0DispatchPaths,
+--- /dev/null
++++ b/cli/src/wrapper_policy_probe.rs
+@@ -0,0 +1,93 @@
++use super::MultitoolCli;
++use super::profile_v2_applies_to_subcommand;
++use clap::ArgMatches;
++use clap::Command;
++use clap::CommandFactory;
++use clap::FromArgMatches;
++use clap::parser::ValueSource;
++use std::ffi::OsString;
++use std::io;
++use std::io::Write;
++
++const WRAPPER_POLICY_PROBE_ENV_VAR: &str = "CODEX_INTERNAL_WRAPPER_POLICY_PROBE";
++
++#[derive(Clone, Copy, Debug, Eq, PartialEq)]
++enum Policy {
++    Manage,
++    Delegate,
++    ConflictProfile,
++    ConflictIgnoreUserConfig,
++}
++
++impl Policy {
++    fn as_str(self) -> &'static str {
++        match self {
++            Self::Manage => "manage",
++            Self::Delegate => "delegate",
++            Self::ConflictProfile => "conflict-profile",
++            Self::ConflictIgnoreUserConfig => "conflict-ignore-user-config",
++        }
++    }
++}
++
++pub(super) fn run_if_requested() -> io::Result<bool> {
++    if std::env::var_os(WRAPPER_POLICY_PROBE_ENV_VAR).is_none_or(|value| value != "v1") {
++        return Ok(false);
++    }
++
++    let policy = policy_for_args(std::env::args_os());
++    writeln!(io::stdout().lock(), "{}", policy.as_str())?;
++    Ok(true)
++}
++
++fn policy_for_args<I, T>(args: I) -> Policy
++where
++    I: IntoIterator<Item = T>,
++    T: Into<OsString> + Clone,
++{
++    let mut command = MultitoolCli::command();
++    let matches = match command.try_get_matches_from_mut(args) {
++        Ok(matches) => matches,
++        Err(_) => return Policy::Delegate,
++    };
++    let cli = match MultitoolCli::from_arg_matches(&matches) {
++        Ok(cli) => cli,
++        Err(_) => return Policy::Delegate,
++    };
++    if !cli
++        .subcommand
++        .as_ref()
++        .is_none_or(profile_v2_applies_to_subcommand)
++    {
++        return Policy::Delegate;
++    }
++    if has_explicit_long_arg(&command, &matches, "ignore-user-config") {
++        return Policy::ConflictIgnoreUserConfig;
++    }
++    if has_explicit_long_arg(&command, &matches, "profile") {
++        return Policy::ConflictProfile;
++    }
++
++    Policy::Manage
++}
++
++fn has_explicit_long_arg(command: &Command, matches: &ArgMatches, long: &str) -> bool {
++    if command.get_arguments().any(|arg| {
++        arg.get_long() == Some(long)
++            && matches.ids().any(|id| id == arg.get_id())
++            && matches.value_source(arg.get_id().as_str()) == Some(ValueSource::CommandLine)
++    }) {
++        return true;
++    }
++
++    let Some((name, subcommand_matches)) = matches.subcommand() else {
++        return false;
++    };
++    command
++        .find_subcommand(name)
++        .is_some_and(|subcommand| has_explicit_long_arg(subcommand, subcommand_matches, long))
++}
++
++#[cfg(test)]
++#[path = "wrapper_policy_probe_tests.rs"]
++mod tests;
+--- /dev/null
++++ b/cli/src/wrapper_policy_probe_tests.rs
+@@ -0,0 +1,129 @@
++use super::Policy;
++use super::policy_for_args;
++use pretty_assertions::assert_eq;
++
++fn policy(args: &[&str]) -> Policy {
++    policy_for_args(args.iter().copied())
++}
++
++#[test]
++fn manages_exactly_the_existing_profile_applicability_set() {
++    for args in [
++        &["codex"][..],
++        &["codex", "prompt"][..],
++        &["codex", "exec", "prompt"][..],
++        &["codex", "e", "prompt"][..],
++        &["codex", "review", "--uncommitted"][..],
++        &["codex", "resume", "--last"][..],
++        &["codex", "archive", "thread"][..],
++        &["codex", "delete", "thread"][..],
++        &["codex", "unarchive", "thread"][..],
++        &["codex", "fork", "--last"][..],
++        &["codex", "mcp", "list"][..],
++        &["codex", "sandbox", "--", "echo"][..],
++        &["codex", "debug", "prompt-input"][..],
++    ] {
++        assert_eq!(policy(args), Policy::Manage, "argv: {args:?}");
++    }
++
++    for args in [
++        &["codex", "completion", "bash"][..],
++        &["codex", "features", "list"][..],
++        &["codex", "debug", "models", "--bundled"][..],
++    ] {
++        assert_eq!(policy(args), Policy::Delegate, "argv: {args:?}");
++    }
++}
++
++#[test]
++fn delegates_help_version_and_every_parse_error() {
++    for args in [
++        &["codex", "--help"][..],
++        &["codex", "--version"][..],
++        &["codex", "exec", "--help"][..],
++        &["codex", "exec", "--version"][..],
++        &["codex", "--unknown-option"][..],
++        &["codex", "--profile"][..],
++        &["codex", "--profile", "nested/work"][..],
++        &["codex", "--profile", "work", "features", "list"][..],
++        &["codex", "--ignore-user-config"][..],
++        &["codex", "mcp", "list", "--ignore-user-config"][..],
++        &["codex", "mcp", "add"][..],
++    ] {
++        assert_eq!(policy(args), Policy::Delegate, "argv: {args:?}");
++    }
++}
++
++#[test]
++fn finds_explicit_profiles_at_root_and_subcommand_scopes() {
++    for args in [
++        &["codex", "--profile", "work"][..],
++        &["codex", "-pwork", "exec", "prompt"][..],
++        &["codex", "exec", "--profile=work", "prompt"][..],
++        &["codex", "resume", "--profile", "work", "--last"][..],
++        &["codex", "sandbox", "--profile", "work", "--", "echo"][..],
++    ] {
++        assert_eq!(policy(args), Policy::ConflictProfile, "argv: {args:?}");
++    }
++}
++
++#[test]
++fn ignore_user_config_wins_only_when_clap_parses_it_as_an_option() {
++    assert_eq!(
++        policy(&["codex", "exec", "--ignore-user-config", "prompt"]),
++        Policy::ConflictIgnoreUserConfig
++    );
++    assert_eq!(
++        policy(&["codex", "exec", "resume", "--ignore-user-config", "--last",]),
++        Policy::ConflictIgnoreUserConfig
++    );
++    assert_eq!(
++        policy(&[
++            "codex",
++            "exec",
++            "--profile",
++            "work",
++            "--ignore-user-config",
++            "prompt",
++        ]),
++        Policy::ConflictIgnoreUserConfig
++    );
++    assert_eq!(
++        policy(&["codex", "exec", "--", "--ignore-user-config"]),
++        Policy::Manage
++    );
++}
++
++#[test]
++fn profile_looking_payloads_are_not_conflicts() {
++    for args in [
++        &["codex", "--", "--profile"][..],
++        &["codex", "exec", "--", "--profile"][..],
++        &["codex", "exec", "--", "--help"][..],
++        &[
++            "codex",
++            "mcp",
++            "add",
++            "server",
++            "--",
++            "command",
++            "--profile",
++            "work",
++            "--help",
++        ][..],
++        &[
++            "codex",
++            "sandbox",
++            "--",
++            "command",
++            "--profile",
++            "work",
++            "--help",
++        ][..],
++        &["codex", "debug", "prompt-input", "--", "--profile"][..],
++    ] {
++        assert_eq!(policy(args), Policy::Manage, "argv: {args:?}");
++    }
++
++    assert_eq!(policy(&["codex", "apply", "--", "-p"]), Policy::Delegate);
++}

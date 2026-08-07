@@ -54,6 +54,27 @@ let
       runtimeInputs = [ pkgs.coreutils ];
       text = ''
         set -euo pipefail
+
+        if [ "''${CODEX_INTERNAL_WRAPPER_POLICY_PROBE:-}" = v1 ]; then
+          if [ -n "''${AGENT_TEST_CODEX_PROBE_READY:-}" ]; then
+            : "''${AGENT_TEST_CODEX_PROBE_RELEASE:?}"
+            touch "$AGENT_TEST_CODEX_PROBE_READY"
+            while [ ! -e "$AGENT_TEST_CODEX_PROBE_RELEASE" ]; do
+              sleep 0.01
+            done
+          fi
+          if [ "''${AGENT_TEST_CODEX_PROBE_NO_OUTPUT:-}" = 1 ]; then
+            :
+          elif [ "''${AGENT_TEST_CODEX_PROBE_NUL:-}" = 1 ]; then
+            printf 'man\0age\n'
+          elif [ "''${AGENT_TEST_CODEX_PROBE_NO_NEWLINE:-}" = 1 ]; then
+            printf %s "''${AGENT_TEST_CODEX_POLICY:-manage}"
+          else
+            printf '%s\n' "''${AGENT_TEST_CODEX_POLICY:-manage}"
+          fi
+          exit "''${AGENT_TEST_CODEX_PROBE_EXIT:-0}"
+        fi
+
         : "''${AGENT_TEST_ARGV:?}"
         : "''${AGENT_TEST_ENV:?}"
 
@@ -71,14 +92,24 @@ let
   identityRecorderSource = pkgs.writeText "agent-wrapper-identity-recorder.c" ''
     #include <stdio.h>
     #include <stdlib.h>
+    #include <string.h>
     #include <unistd.h>
 
     int main(int argc, char **argv) {
       const char *path = getenv("AGENT_TEST_IDENTITY_FILE");
       const char *exit_value = getenv("AGENT_TEST_EXIT");
+      const char *probe = getenv("CODEX_INTERNAL_WRAPPER_POLICY_PROBE");
+      const char *probe_policy = getenv("AGENT_TEST_CODEX_POLICY");
+      const char *probe_exit = getenv("AGENT_TEST_CODEX_PROBE_EXIT");
       FILE *output;
 
       (void)argc;
+      if (probe != NULL && strcmp(probe, "v1") == 0) {
+        if (getenv("AGENT_TEST_CODEX_PROBE_NO_OUTPUT") == NULL) {
+          puts(probe_policy == NULL ? "manage" : probe_policy);
+        }
+        return probe_exit == NULL ? 0 : atoi(probe_exit);
+      }
       if (path == NULL || argv[0] == NULL) {
         return 97;
       }
@@ -106,13 +137,25 @@ let
       '';
     };
 
+  codexProbeTestDouble =
+    package:
+    package.overrideAttrs (old: {
+      passthru = (old.passthru or { }) // {
+        wrapperPolicyProbeTestDouble = true;
+      };
+    });
+
   wrappedClaude = patchAgentPackage testPkgs "claude-code" (fakeAgent "claude");
   realWrappedClaude = patchAgentPackage pkgs "claude-code" claudePackage;
-  wrappedCodex = patchAgentPackage testPkgs "codex" (fakeAgent "codex");
+  wrappedCodex = patchAgentPackage testPkgs "codex" (codexProbeTestDouble (fakeAgent "codex"));
   realWrappedCodex = patchAgentPackage testPkgs "codex" codexPackage;
-  wrappedNonDarwinCodex = patchAgentPackage nonDarwinTestPkgs "codex" (fakeAgent "codex");
+  wrappedNonDarwinCodex = patchAgentPackage nonDarwinTestPkgs "codex" (
+    codexProbeTestDouble (fakeAgent "codex")
+  );
   identityWrappedClaude = patchAgentPackage testPkgs "claude-code" (identityAgent "claude");
-  identityWrappedCodex = patchAgentPackage testPkgs "codex" (identityAgent "codex");
+  identityWrappedCodex = patchAgentPackage testPkgs "codex" (
+    codexProbeTestDouble (identityAgent "codex")
+  );
 
   networkGuardSource = pkgs.writeText "agent-wrapper-network-guard.c" ''
     #define _GNU_SOURCE
@@ -233,6 +276,7 @@ pkgs.runCommand "agent-wrappers-check"
     nativeBuildInputs = [
       pkgs.bash
       pkgs.coreutils
+      pkgs.diffutils
       pkgs.findutils
       pkgs.gnugrep
       pkgs.openssl
@@ -248,8 +292,10 @@ pkgs.runCommand "agent-wrappers-check"
     CODEX_IDENTITY_BIN = "${identityWrappedCodex}/bin/codex";
     REAL_CLAUDE_BIN = "${realWrappedClaude}/bin/claude";
     REAL_CODEX_BIN = "${codexPackage}/bin/codex";
+    REAL_PROBED_CODEX_BIN = "${realWrappedCodex.unwrappedPackage}/bin/codex";
     REAL_WRAPPED_CODEX_BIN = "${realWrappedCodex}/bin/codex";
-    CODEX_APP_IS_COMMAND = if pkgs.stdenv.isDarwin then "1" else "0";
+    CODEX_POLICY_RESPONSE_CHECKER =
+      realWrappedCodex.unwrappedPackage.passthru.wrapperPolicyResponseChecker;
     CODEX_RAISES_OPEN_FILE_LIMIT = if pkgs.stdenv.isDarwin then "1" else "0";
     NETWORK_GUARD_LIBRARY = "${networkGuard}/lib/libagent-wrapper-network-guard.${networkGuardExtension}";
     NETWORK_GUARD_VARIABLE = if pkgs.stdenv.isDarwin then "DYLD_INSERT_LIBRARIES" else "LD_PRELOAD";
