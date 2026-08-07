@@ -7,16 +7,29 @@
 }:
 
 let
+  # DNS and normal routing select Clio's WireGuard address while away and its
+  # direct LAN address at home. The peer networks exclude Tailscale entirely.
   nodes = {
     hera = {
       deviceID = "MDOPNSZ-WLGJBFD-4YUV4S3-QEUZGWP-TLIRRVK-ZXFJ7Q2-IJ3FRBO-ZQVRPAD";
-      endpoint = "tcp://100.120.206.121:22000";
-      network = "100.120.206.121/32";
+      addresses = [ "tcp://hera.lan:22000" ];
+      listenAddress = "tcp://192.168.1.4:22000";
+      networks = [ "192.168.1.4/32" ];
     };
     clio = {
       deviceID = "G3JLOH6-Y5SBVLA-RYANNWG-OXRNO6H-V2FDOSJ-NYYCVF2-UHLDQIU-IMV45A3";
-      endpoint = "tcp://100.113.64.49:22000";
-      network = "100.113.64.49/32";
+      # The mDNS address is direct on the home LAN; clio.lan is WireGuard
+      # while away. Syncthing tries the reachable address from this list.
+      addresses = [
+        "tcp://clio.local:22000"
+        "tcp://clio.lan:22000"
+      ];
+      # Clio changes interfaces; peer source restrictions provide the boundary.
+      listenAddress = "tcp://0.0.0.0:22000";
+      networks = [
+        "10.6.0.2/32"
+        "192.168.1.0/24"
+      ];
     };
   };
 
@@ -29,7 +42,7 @@ let
   logDirectory = "${config.home.homeDirectory}/Library/Logs/Syncthing";
   runtimeDirectory = "${config.home.homeDirectory}/.local/state/syncthing";
   guiSocket = "${runtimeDirectory}/gui.sock";
-  vaultDirectory = "${config.home.homeDirectory}/.obsidian";
+  vaultDirectory = "${config.home.homeDirectory}/doc/obsidian";
   bootstrapProgram = pkgs.writeScript "syncthing-bootstrap" (
     lib.replaceStrings [ "#!/usr/bin/env python3" ] [ "#!${lib.getExe pkgs.python3}" ] (
       builtins.readFile ./syncthing-bootstrap.py
@@ -37,28 +50,37 @@ let
   );
   bootstrapCommand =
     mode:
-    lib.escapeShellArgs [
-      "${bootstrapProgram}"
-      mode
-      "--config"
-      "${stateDirectory}/config.xml"
-      "--local-device-id"
-      localNode.deviceID
-      "--peer-device-id"
-      peerNode.deviceID
-      "--peer-address"
-      peerNode.endpoint
-      "--listen-address"
-      localNode.endpoint
-      "--peer-network"
-      peerNode.network
-      "--gui-socket"
-      guiSocket
-      "--vault"
-      vaultDirectory
-    ];
+    lib.escapeShellArgs (
+      [
+        "${bootstrapProgram}"
+        mode
+        "--config"
+        "${stateDirectory}/config.xml"
+        "--local-device-id"
+        localNode.deviceID
+        "--peer-device-id"
+        peerNode.deviceID
+        "--listen-address"
+        localNode.listenAddress
+      ]
+      ++ lib.concatMap (address: [
+        "--peer-address"
+        address
+      ]) peerNode.addresses
+      ++ lib.concatMap (network: [
+        "--peer-network"
+        network
+      ]) peerNode.networks
+      ++ [
+        "--gui-socket"
+        guiSocket
+        "--vault"
+        vaultDirectory
+      ]
+    );
   ignoreFile = pkgs.writeText "obsidian-syncthing-ignore" ''
     (?d).DS_Store
+    /.git
   '';
 in
 {
@@ -73,8 +95,8 @@ in
     cert = null;
     key = null;
 
-    # A private Unix socket avoids both a loopback-wide unauthenticated GUI and
-    # Home Manager's password-through-jq-argv credential path.
+    # Syncthing itself retains a private Unix socket. The launchd bridge below
+    # deliberately publishes its unauthenticated GUI on IPv4 loopback.
     guiAddress = guiSocket;
     guiCredentials = null;
     extraOptions = [ "--no-port-probing" ];
@@ -85,8 +107,8 @@ in
     settings = {
       devices.${peerName} = {
         id = peerNode.deviceID;
-        addresses = [ peerNode.endpoint ];
-        allowedNetworks = [ peerNode.network ];
+        inherit (peerNode) addresses;
+        allowedNetworks = peerNode.networks;
         autoAcceptFolders = false;
         introducer = false;
         untrusted = false;
@@ -98,7 +120,7 @@ in
         enable = true;
         id = "obsidian";
         label = "Obsidian";
-        path = "${config.home.homeDirectory}/.obsidian";
+        path = vaultDirectory;
         filesystemType = "basic";
         type = "sendreceive";
         devices = [ peerName ];
@@ -116,7 +138,10 @@ in
           params.maxAge = "31536000";
         };
 
-        ignorePatterns = [ "(?d).DS_Store" ];
+        ignorePatterns = [
+          "(?d).DS_Store"
+          "/.git"
+        ];
         maxConflicts = 10;
         ignorePerms = false;
         autoNormalize = true;
@@ -135,8 +160,8 @@ in
       };
 
       options = {
-        listenAddresses = [ localNode.endpoint ];
-        alwaysLocalNets = [ peerNode.network ];
+        listenAddresses = [ localNode.listenAddress ];
+        alwaysLocalNets = peerNode.networks;
         reconnectionIntervalS = 5;
 
         globalAnnounceEnabled = false;
@@ -155,7 +180,7 @@ in
     };
   };
 
-  # launchd opens log files before running either job. The same preflight also
+  # launchd opens log files before running the managed jobs. The same preflight also
   # validates the mutable identity and hardens config.xml before first start, so
   # the daemon never exposes Syncthing's default discovery/listener policy.
   home.activation.prepareSyncthing = lib.mkIf enabled (
@@ -188,7 +213,7 @@ in
         syncthing_require_directory ${lib.escapeShellArg stateDirectory} 700
         syncthing_require_directory ${lib.escapeShellArg logDirectory} 700
         syncthing_require_directory ${lib.escapeShellArg runtimeDirectory} 700
-        syncthing_require_directory ${lib.escapeShellArg vaultDirectory} 700
+        syncthing_require_directory ${lib.escapeShellArg vaultDirectory} 755
         syncthing_require_file ${lib.escapeShellArg "${stateDirectory}/cert.pem"}
         syncthing_require_file ${lib.escapeShellArg "${stateDirectory}/key.pem"}
         syncthing_require_file ${lib.escapeShellArg "${stateDirectory}/config.xml"}
@@ -301,6 +326,22 @@ in
   );
 
   launchd.agents = lib.mkIf enabled {
+    syncthing-gui-bridge = {
+      enable = true;
+      domain = "gui";
+      config = {
+        ProgramArguments = [
+          (lib.getExe pkgs.socat)
+          "TCP4-LISTEN:8384,bind=127.0.0.1,reuseaddr,fork"
+          "UNIX-CONNECT:${guiSocket}"
+        ];
+        RunAtLoad = true;
+        KeepAlive = true;
+        StandardOutPath = "${logDirectory}/syncthing-gui-bridge.log";
+        StandardErrorPath = "${logDirectory}/syncthing-gui-bridge.log";
+      };
+    };
+
     syncthing = {
       domain = lib.mkForce "gui";
       config = {

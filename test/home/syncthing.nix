@@ -11,19 +11,37 @@ let
   clioSystem = darwinConfigurations.clio.config;
   hera = heraSystem.home-manager.users.johnw;
   clio = clioSystem.home-manager.users.johnw;
+  expectedNodes = {
+    hera = {
+      addresses = [ "tcp://hera.lan:22000" ];
+      listen = "tcp://192.168.1.4:22000";
+      networks = [ "192.168.1.4/32" ];
+    };
+    clio = {
+      addresses = [
+        "tcp://clio.local:22000"
+        "tcp://clio.lan:22000"
+      ];
+      listen = "tcp://0.0.0.0:22000";
+      networks = [
+        "10.6.0.2/32"
+        "192.168.1.0/24"
+      ];
+    };
+  };
   topologyFile = pkgs.writeText "syncthing-topology.json" (
     builtins.toJSON {
       hera = {
         id = clio.services.syncthing.settings.devices.hera.id;
+        addresses = clio.services.syncthing.settings.devices.hera.addresses;
         listen = builtins.head hera.services.syncthing.settings.options.listenAddresses;
-        peer = builtins.head hera.services.syncthing.settings.devices.clio.addresses;
-        network = builtins.head hera.services.syncthing.settings.devices.clio.allowedNetworks;
+        networks = clio.services.syncthing.settings.devices.hera.allowedNetworks;
       };
       clio = {
         id = hera.services.syncthing.settings.devices.clio.id;
+        addresses = hera.services.syncthing.settings.devices.clio.addresses;
         listen = builtins.head clio.services.syncthing.settings.options.listenAddresses;
-        peer = builtins.head clio.services.syncthing.settings.devices.hera.addresses;
-        network = builtins.head clio.services.syncthing.settings.devices.hera.allowedNetworks;
+        networks = hera.services.syncthing.settings.devices.clio.allowedNetworks;
       };
     }
   );
@@ -33,7 +51,6 @@ let
     map (fixture: fixture.config) (builtins.attrValues nixosHomeEvaluationFixtures)
     ++ map (configuration: configuration.config) (builtins.attrValues homeConfigurations);
   validDeviceId = id: builtins.match "[A-Z2-7]{7}(-[A-Z2-7]{7}){7}" id != null;
-  endpointIP = endpoint: lib.removeSuffix ":22000" (lib.removePrefix "tcp://" endpoint);
   hasSyncthingApp =
     system:
     lib.any (
@@ -51,20 +68,23 @@ let
     home:
     lib.any (
       path:
-      path == ".obsidian"
-      || lib.hasPrefix ".obsidian/" path
+      path == "doc/obsidian"
+      || lib.hasPrefix "doc/obsidian/" path
       || lib.hasPrefix "Library/Application Support/Syncthing/" path
     ) (builtins.attrNames home.home.file);
   validDarwinHome =
     home: peerName:
     let
+      localName = if peerName == "hera" then "clio" else "hera";
+      localPolicy = expectedNodes.${localName};
+      peerPolicy = expectedNodes.${peerName};
       service = home.services.syncthing;
       peer = service.settings.devices.${peerName};
       folder = service.settings.folders.obsidian;
       options = service.settings.options;
       localAddress = builtins.head options.listenAddresses;
-      peerAddress = builtins.head peer.addresses;
       agent = home.launchd.agents.syncthing;
+      bridgeAgent = home.launchd.agents.syncthing-gui-bridge;
       initAgent = home.launchd.agents.syncthing-init;
       preflight = home.home.activation.prepareSyncthing;
       syncthingAgents = lib.filterAttrs (name: _: lib.hasInfix "syncthing" name) home.launchd.agents;
@@ -74,6 +94,7 @@ let
     &&
       builtins.attrNames syncthingAgents == [
         "syncthing"
+        "syncthing-gui-bridge"
         "syncthing-init"
       ]
     && service.package.version == "2.1.2"
@@ -87,10 +108,8 @@ let
     && builtins.attrNames service.settings.devices == [ peerName ]
     && builtins.attrNames service.settings.folders == [ "obsidian" ]
     && validDeviceId peer.id
-    && builtins.length peer.addresses == 1
-    && lib.hasPrefix "tcp://100." peerAddress
-    && lib.hasSuffix ":22000" peerAddress
-    && peer.allowedNetworks == [ "${endpointIP peerAddress}/32" ]
+    && peer.addresses == peerPolicy.addresses
+    && peer.allowedNetworks == peerPolicy.networks
     && !(builtins.elem "dynamic" peer.addresses)
     && !peer.autoAcceptFolders
     && !peer.introducer
@@ -99,7 +118,7 @@ let
     && peer.compression == "metadata"
     && folder.enable
     && folder.id == "obsidian"
-    && folder.path == "${home.home.homeDirectory}/.obsidian"
+    && folder.path == "${home.home.homeDirectory}/doc/obsidian"
     && folder.label == "Obsidian"
     && folder.filesystemType == "basic"
     && folder.type == "sendreceive"
@@ -113,7 +132,11 @@ let
     && folder.xattrFilter.entries == [ ]
     && folder.xattrFilter.maxSingleEntrySize == 16777216
     && folder.xattrFilter.maxTotalSize == 67108864
-    && folder.ignorePatterns == [ "(?d).DS_Store" ]
+    &&
+      folder.ignorePatterns == [
+        "(?d).DS_Store"
+        "/.git"
+      ]
     && folder.maxConflicts == 10
     && !folder.ignorePerms
     && folder.autoNormalize
@@ -127,9 +150,7 @@ let
     && folder.versioning.fsType == "basic"
     && folder.versioning.params.maxAge == "31536000"
     && builtins.length options.listenAddresses == 1
-    && lib.hasPrefix "tcp://100." localAddress
-    && lib.hasSuffix ":22000" localAddress
-    && localAddress != peerAddress
+    && localAddress == localPolicy.listen
     && options.alwaysLocalNets == peer.allowedNetworks
     && !options.globalAnnounceEnabled
     && options.globalAnnounceServers == [ ]
@@ -147,6 +168,16 @@ let
     && agent.domain == "gui"
     && agent.config.KeepAlive == true
     && agent.config.RunAtLoad
+    && bridgeAgent.enable
+    && bridgeAgent.domain == "gui"
+    &&
+      bridgeAgent.config.ProgramArguments == [
+        (lib.getExe pkgs.socat)
+        "TCP4-LISTEN:8384,bind=127.0.0.1,reuseaddr,fork"
+        "UNIX-CONNECT:${home.home.homeDirectory}/.local/state/syncthing/gui.sock"
+      ]
+    && bridgeAgent.config.RunAtLoad
+    && bridgeAgent.config.KeepAlive == true
     && initAgent.enable
     && initAgent.domain == "gui"
     && initAgent.config.RunAtLoad
@@ -225,11 +256,13 @@ pkgs.runCommand "syncthing-home-contract"
     common_args="--config config.xml \
       --local-device-id ${clio.services.syncthing.settings.devices.hera.id} \
       --peer-device-id ${hera.services.syncthing.settings.devices.clio.id} \
-      --peer-address tcp://100.64.0.2:22000 \
-      --listen-address tcp://100.64.0.1:22000 \
-      --peer-network 100.64.0.2/32 \
+      --peer-address tcp://10.7.0.2:22000 \
+      --peer-address tcp://192.168.7.2:22000 \
+      --listen-address tcp://10.7.0.1:22000 \
+      --peer-network 10.7.0.2/32 \
+      --peer-network 192.168.7.0/24 \
       --gui-socket /Users/test/.local/state/syncthing/gui.sock \
-      --vault /Users/test/.obsidian"
+      --vault /Users/test/doc/obsidian"
 
     if python3 bootstrap.py --check $common_args; then
       echo "unhardened synthetic configuration passed validation" >&2
@@ -244,11 +277,12 @@ pkgs.runCommand "syncthing-home-contract"
       --config config.xml \
       --local-device-id ABSENT-LOCAL-DEVICE \
       --peer-device-id ${hera.services.syncthing.settings.devices.clio.id} \
-      --peer-address tcp://100.64.0.2:22000 \
-      --listen-address tcp://100.64.0.1:22000 \
-      --peer-network 100.64.0.2/32 \
+      --peer-address tcp://10.7.0.2:22000 \
+      --listen-address tcp://10.7.0.1:22000 \
+      --peer-network 10.7.0.2/32 \
+      --peer-network 192.168.7.0/24 \
       --gui-socket /Users/test/.local/state/syncthing/gui.sock \
-      --vault /Users/test/.obsidian; then
+      --vault /Users/test/doc/obsidian; then
       echo "mismatched synthetic identity passed validation" >&2
       exit 1
     else
@@ -291,7 +325,7 @@ pkgs.runCommand "syncthing-home-contract"
         {
             "id": "obsidian",
             "label": "Obsidian",
-            "path": "/Users/test/.obsidian",
+            "path": "/Users/test/doc/obsidian",
             "type": "sendreceive",
         },
     )
@@ -303,21 +337,25 @@ pkgs.runCommand "syncthing-home-contract"
       --config roundtrip/config.xml \
       --local-device-id "$roundtrip_id" \
       --peer-device-id ${hera.services.syncthing.settings.devices.clio.id} \
-      --peer-address tcp://100.64.0.2:22000 \
-      --listen-address tcp://100.64.0.1:22000 \
-      --peer-network 100.64.0.2/32 \
+      --peer-address tcp://10.7.0.2:22000 \
+      --peer-address tcp://192.168.7.2:22000 \
+      --listen-address tcp://10.7.0.1:22000 \
+      --peer-network 10.7.0.2/32 \
+      --peer-network 192.168.7.0/24 \
       --gui-socket /Users/test/.local/state/syncthing/gui.sock \
-      --vault /Users/test/.obsidian
+      --vault /Users/test/doc/obsidian
     syncthing generate --home roundtrip --no-port-probing >/dev/null 2>&1
     python3 bootstrap.py --check \
       --config roundtrip/config.xml \
       --local-device-id "$roundtrip_id" \
       --peer-device-id ${hera.services.syncthing.settings.devices.clio.id} \
-      --peer-address tcp://100.64.0.2:22000 \
-      --listen-address tcp://100.64.0.1:22000 \
-      --peer-network 100.64.0.2/32 \
+      --peer-address tcp://10.7.0.2:22000 \
+      --peer-address tcp://192.168.7.2:22000 \
+      --listen-address tcp://10.7.0.1:22000 \
+      --peer-network 10.7.0.2/32 \
+      --peer-network 192.168.7.0/24 \
       --gui-socket /Users/test/.local/state/syncthing/gui.sock \
-      --vault /Users/test/.obsidian
+      --vault /Users/test/doc/obsidian
 
     ROUNDTRIP=roundtrip/config.xml ROUNDTRIP_LOCAL="$roundtrip_id" \
       TOPOLOGY=${topologyFile} python3 - <<'PY'
@@ -325,7 +363,6 @@ pkgs.runCommand "syncthing-home-contract"
     import ipaddress
     import json
     import os
-    import urllib.parse
     import xml.etree.ElementTree as ET
 
     alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
@@ -350,26 +387,28 @@ pkgs.runCommand "syncthing-home-contract"
             payload += group[:13]
         assert len(base64.b32decode(payload + "====")) == 32
 
-    def endpoint_ip(endpoint):
-        parsed = urllib.parse.urlparse(endpoint)
-        assert parsed.scheme == "tcp" and parsed.port == 22000
-        return ipaddress.ip_address(parsed.hostname)
-
     with open(os.environ["TOPOLOGY"], encoding="utf-8") as source:
         topology = json.load(source)
-    shared = ipaddress.ip_network("100.64.0.0/10")
+    expected = {
+        "hera": {
+            "addresses": ["tcp://hera.lan:22000"],
+            "listen": "tcp://192.168.1.4:22000",
+            "networks": ["192.168.1.4/32"],
+        },
+        "clio": {
+            "addresses": ["tcp://clio.local:22000", "tcp://clio.lan:22000"],
+            "listen": "tcp://0.0.0.0:22000",
+            "networks": ["10.6.0.2/32", "192.168.1.0/24"],
+        },
+    }
+    tailscale_network = ipaddress.ip_network("100.64.0.0/10")
     assert set(topology) == {"hera", "clio"}
     assert topology["hera"]["id"] != topology["clio"]["id"]
-    for local_name, peer_name in (("hera", "clio"), ("clio", "hera")):
-        local = topology[local_name]
-        peer = topology[peer_name]
-        validate_device_id(local["id"])
-        local_ip = endpoint_ip(local["listen"])
-        peer_ip = endpoint_ip(local["peer"])
-        network = ipaddress.ip_network(local["network"], strict=True)
-        assert local_ip in shared and peer_ip in shared
-        assert local["peer"] == peer["listen"]
-        assert network.prefixlen == 32 and network.network_address == peer_ip
+    for name, node in topology.items():
+        validate_device_id(node["id"])
+        assert {key: value for key, value in node.items() if key != "id"} == expected[name]
+        for network in node["networks"]:
+            assert not ipaddress.ip_network(network, strict=True).overlaps(tailscale_network)
 
     root = ET.parse("config.xml").getroot()
     options = root.find("options")
@@ -380,15 +419,24 @@ pkgs.runCommand "syncthing-home-contract"
         topology["clio"]["id"],
     }
     peer = devices[topology["clio"]["id"]]
-    assert [node.text for node in peer.findall("address")] == ["tcp://100.64.0.2:22000"]
-    assert [node.text for node in peer.findall("allowedNetwork")] == ["100.64.0.2/32"]
+    assert [node.text for node in peer.findall("address")] == [
+        "tcp://10.7.0.2:22000",
+        "tcp://192.168.7.2:22000",
+    ]
+    assert [node.text for node in peer.findall("allowedNetwork")] == [
+        "10.7.0.2/32",
+        "192.168.7.0/24",
+    ]
     assert peer.get("introducer") == "false"
     assert peer.findtext("paused") == "false"
     assert peer.findtext("autoAcceptFolders") == "false"
     assert peer.findtext("untrusted") == "false"
     assert root.findall("folder") == []
-    assert [node.text for node in options.findall("listenAddress")] == ["tcp://100.64.0.1:22000"]
-    assert [node.text for node in options.findall("alwaysLocalNet")] == ["100.64.0.2/32"]
+    assert [node.text for node in options.findall("listenAddress")] == ["tcp://10.7.0.1:22000"]
+    assert [node.text for node in options.findall("alwaysLocalNet")] == [
+        "10.7.0.2/32",
+        "192.168.7.0/24",
+    ]
     assert [node.text for node in options.findall("globalAnnounceServer")] == ["default"]
     assert [node.text for node in options.findall("stunServer")] == ["default"]
     for tag in (
@@ -418,8 +466,18 @@ pkgs.runCommand "syncthing-home-contract"
         topology["clio"]["id"],
     }
     roundtrip_peer = roundtrip_devices[topology["clio"]["id"]]
-    assert [node.text for node in roundtrip_peer.findall("address")] == ["tcp://100.64.0.2:22000"]
-    assert [node.text for node in roundtrip_peer.findall("allowedNetwork")] == ["100.64.0.2/32"]
+    assert [node.text for node in roundtrip_peer.findall("address")] == [
+        "tcp://10.7.0.2:22000",
+        "tcp://192.168.7.2:22000",
+    ]
+    assert [node.text for node in roundtrip_peer.findall("allowedNetwork")] == [
+        "10.7.0.2/32",
+        "192.168.7.0/24",
+    ]
+    assert [node.text for node in roundtrip_options.findall("alwaysLocalNet")] == [
+        "10.7.0.2/32",
+        "192.168.7.0/24",
+    ]
     roundtrip_folder = roundtrip_root.find("folder[@id='obsidian']")
     assert roundtrip_folder is not None
     assert {
@@ -452,11 +510,13 @@ pkgs.runCommand "syncthing-home-contract"
       --config roundtrip/config.xml \
       --local-device-id "$roundtrip_id" \
       --peer-device-id ${hera.services.syncthing.settings.devices.clio.id} \
-      --peer-address tcp://100.64.0.2:22000 \
-      --listen-address tcp://100.64.0.1:22000 \
-      --peer-network 100.64.0.2/32 \
+      --peer-address tcp://10.7.0.2:22000 \
+      --peer-address tcp://192.168.7.2:22000 \
+      --listen-address tcp://10.7.0.1:22000 \
+      --peer-network 10.7.0.2/32 \
+      --peer-network 192.168.7.0/24 \
       --gui-socket /Users/test/.local/state/syncthing/gui.sock \
-      --vault /Users/test/.obsidian
+      --vault /Users/test/doc/obsidian
 
     touch "$out"
   ''

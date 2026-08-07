@@ -27,9 +27,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--local-device-id", required=True)
     parser.add_argument("--peer-device-id", required=True)
-    parser.add_argument("--peer-address", required=True)
+    parser.add_argument("--peer-address", dest="peer_addresses", action="append", required=True)
     parser.add_argument("--listen-address", required=True)
-    parser.add_argument("--peer-network", required=True)
+    parser.add_argument("--peer-network", dest="peer_networks", action="append", required=True)
     parser.add_argument("--gui-socket", required=True)
     parser.add_argument("--vault", type=Path, required=True)
     return parser.parse_args()
@@ -93,8 +93,8 @@ def harden(root: ET.Element, args: argparse.Namespace) -> bool:
             continue
         if device_id != args.peer_device_id:
             continue
-        changed |= replace_values(device, "address", [args.peer_address])
-        changed |= replace_values(device, "allowedNetwork", [args.peer_network])
+        changed |= replace_values(device, "address", args.peer_addresses)
+        changed |= replace_values(device, "allowedNetwork", args.peer_networks)
         for tag in ("paused", "autoAcceptFolders", "untrusted"):
             changed |= replace_values(device, tag, ["false"])
         peer_attributes = {
@@ -128,7 +128,6 @@ def harden(root: ET.Element, args: argparse.Namespace) -> bool:
 
     singleton_options = {
         "listenAddress": args.listen_address,
-        "alwaysLocalNet": args.peer_network,
         "globalAnnounceEnabled": "false",
         "localAnnounceEnabled": "false",
         "announceLANAddresses": "false",
@@ -142,6 +141,7 @@ def harden(root: ET.Element, args: argparse.Namespace) -> bool:
     }
     for tag, value in singleton_options.items():
         changed |= replace_values(options, tag, [value])
+    changed |= replace_values(options, "alwaysLocalNet", args.peer_networks)
     # Home Manager persists [] as absent XML nodes, while Syncthing 2.1.2
     # rehydrates those nodes as "default" in memory. Both encodings are safe
     # only because the false booleans above are authoritative; reject anything
