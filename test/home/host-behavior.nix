@@ -7,15 +7,41 @@
 
 let
   inherit (pkgs) lib;
+  requiredDarwinHosts = [
+    "clio"
+    "hera"
+  ];
+  requiredNixosHosts = [
+    "vps"
+    "vulcan"
+  ];
+  requiredStandaloneHomes = [
+    "johnw@aarch64-linux"
+    "jwiegley@x86_64-linux"
+  ];
   desktopHomes = map (configuration: configuration.config.home-manager.users.johnw) (
     builtins.attrValues darwinConfigurations
   );
+  heraHome = darwinConfigurations.hera.config.home-manager.users.johnw;
+  clioHome = darwinConfigurations.clio.config.home-manager.users.johnw;
   sharedWork = homeConfigurations."jwiegley@x86_64-linux".config;
   nonDesktopHomes =
     map (fixture: fixture.config) (builtins.attrValues nixosHomeEvaluationFixtures)
     ++ map (configuration: configuration.config) (builtins.attrValues homeConfigurations);
   allHomes = desktopHomes ++ nonDesktopHomes;
+  nonHeraHomes = [ clioHome ] ++ nonDesktopHomes;
   hasPackage = name: config: builtins.elem name (map lib.getName config.home.packages);
+  ownsCmState =
+    config:
+    let
+      paths = builtins.attrNames config.home.file;
+      roots = [
+        ".cass-memory"
+        ".cache/cass-memory"
+        ".local/share/cass-memory"
+      ];
+    in
+    builtins.any (path: builtins.any (root: path == root || lib.hasPrefix "${root}/" path) roots) paths;
   desktopPackages = [
     "eask-cli"
     "emacs-lsp-booster"
@@ -24,6 +50,7 @@ let
     "git-secret"
     "gnupg"
     "paperkey"
+    "pinentry-mac"
     "pass-env"
     "pass-git-helper"
   ];
@@ -36,6 +63,24 @@ let
     "SSH_AUTH_SOCK"
   ];
   contains = needle: value: builtins.isString value && lib.hasInfix needle value;
+  desktopRuntimeRoots = [
+    "emacs"
+    "gnupg"
+    "pass"
+    "password-store"
+  ];
+  contextPackageName =
+    path:
+    let
+      base = builtins.baseNameOf (lib.removeSuffix ".drv" path);
+      match = builtins.match "^[^-]+-(.+)$" base;
+    in
+    if match == null then base else builtins.head match;
+  contextPackageNames =
+    value: map contextPackageName (builtins.attrNames (builtins.getContext value));
+  isDesktopRuntimeReference =
+    name: builtins.any (root: name == root || lib.hasPrefix "${root}-" name) desktopRuntimeRoots;
+  runtimeContextProbe = builtins.toJSON { executable = "${pkgs.gnupg}/bin/gpg"; };
   desktopOnlyFlags =
     config:
     let
@@ -51,15 +96,7 @@ let
         gh = config.programs.gh.settings or { };
       };
       runtimeText = builtins.unsafeDiscardStringContext runtimeOptions;
-      runtimeReferences = map lib.getName (builtins.attrNames (builtins.getContext runtimeOptions));
-      isDesktopRuntimeReference =
-        name:
-        builtins.any (root: name == root || lib.hasPrefix "${root}-" name) [
-          "emacs"
-          "gnupg"
-          "pass"
-          "password-store"
-        ];
+      runtimeReferences = contextPackageNames runtimeOptions;
     in
     map (name: hasPackage name config) desktopPackages
     ++ map (name: builtins.hasAttr name variables) desktopVariables
@@ -89,6 +126,10 @@ let
   allTrue = values: builtins.all lib.id values;
   allFalse = values: builtins.all (value: !value) values;
 in
+assert builtins.all (host: builtins.hasAttr host darwinConfigurations) requiredDarwinHosts;
+assert builtins.all (host: builtins.hasAttr host nixosHomeEvaluationFixtures) requiredNixosHosts;
+assert builtins.all (home: builtins.hasAttr home homeConfigurations) requiredStandaloneHomes;
+assert builtins.any isDesktopRuntimeReference (contextPackageNames runtimeContextProbe);
 assert
   sharedWork.programs.zsh.history.path == "${sharedWork.xdg.configHome}/zsh/history-\${HOST%%.*}";
 assert !sharedWork.programs.zsh.history.share;
@@ -101,6 +142,11 @@ assert builtins.all (
   config: config.home.activation.aiManagedPiBlackholePolicy.after == [ "linkGeneration" ]
 ) allHomes;
 assert builtins.all (hasPackage "unisessions") allHomes;
+assert hasPackage "cass" heraHome;
+assert hasPackage "cm" heraHome;
+assert builtins.all (config: !(hasPackage "cass" config)) nonHeraHomes;
+assert builtins.all (config: !(hasPackage "cm" config)) nonHeraHomes;
+assert builtins.all (config: !(ownsCmState config)) allHomes;
 assert builtins.all (
   config:
   config.programs.gpg.enable
