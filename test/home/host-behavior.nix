@@ -149,6 +149,17 @@ assert builtins.all (config: !(hasPackage "cm" config)) nonHeraHomes;
 assert builtins.all (config: !(ownsCmState config)) allHomes;
 assert builtins.all (
   config:
+  config.programs.starship.settings.add_newline == false
+  && config.programs.starship.settings.format == "$hostname$directory$character"
+  && config.programs.starship.settings.hostname.ssh_only == false
+  && config.programs.starship.settings.hostname.trim_at == "."
+  && config.programs.starship.settings.hostname.format == "[$hostname]($style) "
+  && config.programs.starship.settings.directory.format == "[$path]($style) "
+  && config.programs.starship.settings.directory.truncation_length == 1
+  && config.programs.starship.settings.directory.truncate_to_repo == false
+) allHomes;
+assert builtins.all (
+  config:
   config.programs.gpg.enable
   && config.programs.password-store.enable
   && builtins.hasAttr ".emacs.d" config.home.file

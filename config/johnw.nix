@@ -229,22 +229,26 @@ in
           builtins.readFile "${pkgs.starship}/share/starship/presets/nerd-font-symbols.toml"
         ))
         {
-          add_newline = true;
+          add_newline = false;
           scan_timeout = lib.mkDefault 50;
           follow_symlinks = false;
           command_timeout = lib.mkDefault 1000;
 
-          format = lib.concatStrings [
-            ''
-              ($all
-              )''
-            "$directory"
-            "$character"
-          ];
+          format = "$hostname$directory$character";
+
+          hostname = {
+            ssh_only = false;
+            trim_at = ".";
+            format = "[$hostname]($style) ";
+          };
+
+          directory = {
+            format = "[$path]($style) ";
+            truncation_length = 1;
+            truncate_to_repo = false;
+          };
 
           line_break.disabled = true;
-
-          git_status.disabled = true;
         }
       ];
 
