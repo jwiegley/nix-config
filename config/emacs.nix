@@ -362,6 +362,7 @@ with epkgs;
   pgmacs
   (exclude phi-search)
   (exclude phi-search-mc)
+  pi-coding-agent
   plantuml-mode
   plz
   (exclude po-mode)
