@@ -112,10 +112,23 @@ buildNpmPackage {
   checkPhase = ''
     runHook preCheck
 
+    export npm_config_prefix="$TMPDIR/npm-prefix"
+    export npm_config_registry="http://127.0.0.1:9"
+    export npm_config_fetch_retries=0
+    export npm_config_fetch_timeout=1000
+    mkdir -p "$npm_config_prefix"
+
     node_modules/.bin/biome check \
+      packages/coding-agent/src/package-manager-cli.ts \
+      packages/coding-agent/src/core/package-manager.ts \
       packages/coding-agent/src/core/settings-manager.ts \
+      packages/coding-agent/src/modes/interactive/components/config-selector.ts \
       packages/coding-agent/test/managed-settings.test.ts
-    node_modules/.bin/vitest --run packages/coding-agent/test/managed-settings.test.ts
+    node_modules/.bin/vitest --run \
+      packages/coding-agent/test/managed-settings.test.ts \
+      packages/coding-agent/test/package-manager.test.ts \
+      packages/coding-agent/test/settings-manager.test.ts \
+      packages/coding-agent/test/builtin-skills.test.ts
 
     runHook postCheck
   '';
@@ -199,7 +212,7 @@ buildNpmPackage {
       --set PRIME_AGENT_INSTALL_UV 0 \
       --run 'export PRIME_AGENT_CODING_AGENT_DIR="''${PRIME_AGENT_CODING_AGENT_DIR:-$HOME/.prime/agent}"' \
       --run 'export PI_CODING_AGENT_DIR="$PRIME_AGENT_CODING_AGENT_DIR"' \
-      --run 'export PRIME_AGENT_MANAGED_SETTINGS="''${PRIME_AGENT_MANAGED_SETTINGS:-$PRIME_AGENT_CODING_AGENT_DIR/managed-settings.json}"'
+      --run 'if [ -z "''${PRIME_AGENT_MANAGED_SETTINGS+x}" ] && { [ -e "$PRIME_AGENT_CODING_AGENT_DIR/managed-settings.json" ] || [ -L "$PRIME_AGENT_CODING_AGENT_DIR/managed-settings.json" ]; }; then export PRIME_AGENT_MANAGED_SETTINGS="$PRIME_AGENT_CODING_AGENT_DIR/managed-settings.json"; fi'
 
     runHook postInstall
   '';

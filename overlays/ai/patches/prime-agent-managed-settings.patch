@@ -1,6 +1,250 @@
---- a/packages/coding-agent/src/core/settings-manager.ts
-+++ b/packages/coding-agent/src/core/settings-manager.ts
-@@ -1,7 +1,7 @@
+diff --git c/packages/coding-agent/src/core/package-manager.ts w/packages/coding-agent/src/core/package-manager.ts
+index fd81859..b3a9610 100644
+--- c/packages/coding-agent/src/core/package-manager.ts
++++ w/packages/coding-agent/src/core/package-manager.ts
+@@ -88,6 +88,7 @@ export interface ConfiguredPackage {
+ 	source: string;
+ 	scope: "user" | "project";
+ 	filtered: boolean;
++	managed: boolean;
+ 	installedPath?: string;
+ }
+ 
+@@ -787,7 +788,36 @@ export class DefaultPackageManager implements PackageManager {
+ 		this.progressCallback = callback;
+ 	}
+ 
++	private getConfiguredPackageSources(order: "project-first" | "user-first"): Array<{
++		pkg: PackageSource;
++		scope: Exclude<SourceScope, "temporary">;
++		managed: boolean;
++	}> {
++		const managedPackages = this.settingsManager.getManagedSettings().packages;
++		if (managedPackages !== undefined) {
++			return managedPackages.map((pkg) => ({ pkg, scope: "user", managed: true }));
++		}
++		const projectPackages = (this.settingsManager.getProjectSettings().packages ?? []).map((pkg) => ({
++			pkg,
++			scope: "project" as const,
++			managed: false,
++		}));
++		const userPackages = (this.settingsManager.getGlobalSettings().packages ?? []).map((pkg) => ({
++			pkg,
++			scope: "user" as const,
++			managed: false,
++		}));
++		return order === "project-first" ? [...projectPackages, ...userPackages] : [...userPackages, ...projectPackages];
++	}
++
++	private assertPackageSettingsMutable(): void {
++		if (this.settingsManager.getManagedSettings().packages !== undefined) {
++			throw new Error("Package settings are managed and read-only");
++		}
++	}
++
+ 	addSourceToSettings(source: string, options?: { local?: boolean }): boolean {
++		this.assertPackageSettingsMutable();
+ 		const scope: SourceScope = options?.local ? "project" : "user";
+ 		const currentSettings =
+ 			scope === "project" ? this.settingsManager.getProjectSettings() : this.settingsManager.getGlobalSettings();
+@@ -807,6 +837,7 @@ export class DefaultPackageManager implements PackageManager {
+ 	}
+ 
+ 	removeSourceFromSettings(source: string, options?: { local?: boolean }): boolean {
++		this.assertPackageSettingsMutable();
+ 		const scope: SourceScope = options?.local ? "project" : "user";
+ 		const currentSettings =
+ 			scope === "project" ? this.settingsManager.getProjectSettings() : this.settingsManager.getGlobalSettings();
+@@ -867,18 +898,10 @@ export class DefaultPackageManager implements PackageManager {
+ 		const accumulator = this.createAccumulator();
+ 		const globalSettings = this.settingsManager.getGlobalSettings();
+ 		const projectSettings = this.settingsManager.getProjectSettings();
+-
+-		// Collect all packages with scope (project first so cwd resources win collisions)
+-		const allPackages: Array<{ pkg: PackageSource; scope: SourceScope }> = [];
+-		for (const pkg of projectSettings.packages ?? []) {
+-			allPackages.push({ pkg, scope: "project" });
+-		}
+-		for (const pkg of globalSettings.packages ?? []) {
+-			allPackages.push({ pkg, scope: "user" });
+-		}
++		const managedSettings = this.settingsManager.getManagedSettings();
+ 
+ 		// Dedupe: project scope wins over global for same package identity
+-		const packageSources = this.dedupePackages(allPackages);
++		const packageSources = this.dedupePackages(this.getConfiguredPackageSources("project-first"));
+ 		await this.resolvePackageSources(packageSources, accumulator, onMissing);
+ 
+ 		const globalBaseDir = this.agentDir;
+@@ -886,8 +909,9 @@ export class DefaultPackageManager implements PackageManager {
+ 
+ 		for (const resourceType of RESOURCE_TYPES) {
+ 			const target = this.getTargetMap(accumulator, resourceType);
+-			const globalEntries = (globalSettings[resourceType] ?? []) as string[];
+-			const projectEntries = (projectSettings[resourceType] ?? []) as string[];
++			const managedEntries = managedSettings[resourceType] as string[] | undefined;
++			const globalEntries = managedEntries ?? ((globalSettings[resourceType] ?? []) as string[]);
++			const projectEntries = managedEntries === undefined ? ((projectSettings[resourceType] ?? []) as string[]) : [];
+ 			this.resolveLocalEntries(
+ 				projectEntries,
+ 				resourceType,
+@@ -912,7 +936,14 @@ export class DefaultPackageManager implements PackageManager {
+ 			);
+ 		}
+ 
+-		this.addAutoDiscoveredResources(accumulator, globalSettings, projectSettings, globalBaseDir, projectBaseDir);
++		this.addAutoDiscoveredResources(
++			accumulator,
++			globalSettings,
++			projectSettings,
++			managedSettings,
++			globalBaseDir,
++			projectBaseDir,
++		);
+ 
+ 		return this.toResolvedPaths(accumulator);
+ 	}
+@@ -929,27 +960,16 @@ export class DefaultPackageManager implements PackageManager {
+ 	}
+ 
+ 	listConfiguredPackages(): ConfiguredPackage[] {
+-		const globalSettings = this.settingsManager.getGlobalSettings();
+-		const projectSettings = this.settingsManager.getProjectSettings();
+ 		const configuredPackages: ConfiguredPackage[] = [];
+ 
+-		for (const pkg of globalSettings.packages ?? []) {
++		for (const { pkg, scope, managed } of this.getConfiguredPackageSources("user-first")) {
+ 			const source = typeof pkg === "string" ? pkg : pkg.source;
+ 			configuredPackages.push({
+ 				source,
+-				scope: "user",
++				scope,
+ 				filtered: typeof pkg === "object",
+-				installedPath: this.getInstalledPath(source, "user"),
+-			});
+-		}
+-
+-		for (const pkg of projectSettings.packages ?? []) {
+-			const source = typeof pkg === "string" ? pkg : pkg.source;
+-			configuredPackages.push({
+-				source,
+-				scope: "project",
+-				filtered: typeof pkg === "object",
+-				installedPath: this.getInstalledPath(source, "project"),
++				managed,
++				installedPath: this.getInstalledPath(source, scope),
+ 			});
+ 		}
+ 
+@@ -980,6 +1000,7 @@ export class DefaultPackageManager implements PackageManager {
+ 	}
+ 
+ 	async installAndPersist(source: string, options?: { local?: boolean }): Promise<void> {
++		this.assertPackageSettingsMutable();
+ 		await this.install(source, options);
+ 		this.addSourceToSettings(source, options);
+ 	}
+@@ -1004,36 +1025,30 @@ export class DefaultPackageManager implements PackageManager {
+ 	}
+ 
+ 	async removeAndPersist(source: string, options?: { local?: boolean }): Promise<boolean> {
++		this.assertPackageSettingsMutable();
+ 		await this.remove(source, options);
+ 		return this.removeSourceFromSettings(source, options);
+ 	}
+ 
+ 	async update(source?: string): Promise<void> {
+-		const globalSettings = this.settingsManager.getGlobalSettings();
+-		const projectSettings = this.settingsManager.getProjectSettings();
++		const configuredPackages = this.getConfiguredPackageSources("user-first");
+ 		const identity = source ? this.getPackageIdentity(source) : undefined;
+ 		let matched = false;
+ 		const updateSources: ConfiguredUpdateSource[] = [];
+ 
+-		for (const pkg of globalSettings.packages ?? []) {
++		for (const { pkg, scope } of configuredPackages) {
+ 			const sourceStr = typeof pkg === "string" ? pkg : pkg.source;
+-			if (identity && this.getPackageIdentity(sourceStr, "user") !== identity) continue;
++			if (identity && this.getPackageIdentity(sourceStr, scope) !== identity) continue;
+ 			matched = true;
+-			updateSources.push({ source: sourceStr, scope: "user" });
+-		}
+-		for (const pkg of projectSettings.packages ?? []) {
+-			const sourceStr = typeof pkg === "string" ? pkg : pkg.source;
+-			if (identity && this.getPackageIdentity(sourceStr, "project") !== identity) continue;
+-			matched = true;
+-			updateSources.push({ source: sourceStr, scope: "project" });
++			updateSources.push({ source: sourceStr, scope });
+ 		}
+ 
+ 		if (source && !matched) {
+ 			throw new Error(
+-				this.buildNoMatchingPackageMessage(source, [
+-					...(globalSettings.packages ?? []),
+-					...(projectSettings.packages ?? []),
+-				]),
++				this.buildNoMatchingPackageMessage(
++					source,
++					configuredPackages.map(({ pkg }) => pkg),
++				),
+ 			);
+ 		}
+ 
+@@ -1143,15 +1158,7 @@ export class DefaultPackageManager implements PackageManager {
+ 			return [];
+ 		}
+ 
+-		const globalSettings = this.settingsManager.getGlobalSettings();
+-		const projectSettings = this.settingsManager.getProjectSettings();
+-		const allPackages: Array<{ pkg: PackageSource; scope: SourceScope }> = [];
+-		for (const pkg of projectSettings.packages ?? []) {
+-			allPackages.push({ pkg, scope: "project" });
+-		}
+-		for (const pkg of globalSettings.packages ?? []) {
+-			allPackages.push({ pkg, scope: "user" });
+-		}
++		const allPackages = this.getConfiguredPackageSources("project-first");
+ 
+ 		const packageSources = this.dedupePackages(allPackages);
+ 		const checks = packageSources
+@@ -2137,6 +2144,7 @@ export class DefaultPackageManager implements PackageManager {
+ 		accumulator: ResourceAccumulator,
+ 		globalSettings: ReturnType<SettingsManager["getGlobalSettings"]>,
+ 		projectSettings: ReturnType<SettingsManager["getProjectSettings"]>,
++		managedSettings: ReturnType<SettingsManager["getManagedSettings"]>,
+ 		globalBaseDir: string,
+ 		projectBaseDir: string,
+ 	): void {
+@@ -2154,16 +2162,16 @@ export class DefaultPackageManager implements PackageManager {
+ 		};
+ 
+ 		const userOverrides = {
+-			extensions: (globalSettings.extensions ?? []) as string[],
+-			skills: (globalSettings.skills ?? []) as string[],
+-			prompts: (globalSettings.prompts ?? []) as string[],
+-			themes: (globalSettings.themes ?? []) as string[],
++			extensions: (managedSettings.extensions ?? globalSettings.extensions ?? []) as string[],
++			skills: (managedSettings.skills ?? globalSettings.skills ?? []) as string[],
++			prompts: (managedSettings.prompts ?? globalSettings.prompts ?? []) as string[],
++			themes: (managedSettings.themes ?? globalSettings.themes ?? []) as string[],
+ 		};
+ 		const projectOverrides = {
+-			extensions: (projectSettings.extensions ?? []) as string[],
+-			skills: (projectSettings.skills ?? []) as string[],
+-			prompts: (projectSettings.prompts ?? []) as string[],
+-			themes: (projectSettings.themes ?? []) as string[],
++			extensions: (managedSettings.extensions ?? projectSettings.extensions ?? []) as string[],
++			skills: (managedSettings.skills ?? projectSettings.skills ?? []) as string[],
++			prompts: (managedSettings.prompts ?? projectSettings.prompts ?? []) as string[],
++			themes: (managedSettings.themes ?? projectSettings.themes ?? []) as string[],
+ 		};
+ 
+ 		const userDirs = {
+diff --git c/packages/coding-agent/src/core/settings-manager.ts w/packages/coding-agent/src/core/settings-manager.ts
+index 0647fc3..67940a6 100644
+--- c/packages/coding-agent/src/core/settings-manager.ts
++++ w/packages/coding-agent/src/core/settings-manager.ts
+@@ -1,11 +1,12 @@
  import type { ServiceTier, Transport } from "@earendil-works/pi-ai";
  import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
  import { homedir } from "os";
@@ -9,7 +253,38 @@
  import lockfile from "proper-lockfile";
  import { CONFIG_DIR_NAME, getAgentDir } from "../config.js";
  
-@@ -299,6 +299,8 @@
+ const RECENT_MODELS_LIMIT = 20;
++const MAX_TIMER_DELAY_MS = 2_147_483_647;
+ export const DEFAULT_IDLE_EVICTION_MINUTES = 90;
+ 
+ export interface CompactionSettings {
+@@ -181,7 +182,7 @@ function deepMergeSettings(base: Settings, overrides: Settings): Settings {
+ 			continue;
+ 		}
+ 
+-		// For nested objects, merge recursively
++		// Merge nested fields, including the one deeper settings object at retry.provider.
+ 		if (
+ 			typeof overrideValue === "object" &&
+ 			overrideValue !== null &&
+@@ -190,7 +191,15 @@ function deepMergeSettings(base: Settings, overrides: Settings): Settings {
+ 			baseValue !== null &&
+ 			!Array.isArray(baseValue)
+ 		) {
+-			(result as Record<string, unknown>)[key] = { ...baseValue, ...overrideValue };
++			const mergedValue: Record<string, unknown> = { ...baseValue, ...overrideValue };
++			if (key === "retry") {
++				const baseProvider = (baseValue as RetrySettings).provider;
++				const overrideProvider = (overrideValue as RetrySettings).provider;
++				if (baseProvider !== undefined && overrideProvider !== undefined) {
++					mergedValue.provider = { ...baseProvider, ...overrideProvider };
++				}
++			}
++			(result as Record<string, unknown>)[key] = mergedValue;
+ 		} else {
+ 			// For primitives and arrays, override value wins
+ 			(result as Record<string, unknown>)[key] = overrideValue;
+@@ -299,6 +308,8 @@ export class SettingsManager {
  	private storage: SettingsStorage;
  	private globalSettings: Settings;
  	private projectSettings: Settings;
@@ -18,7 +293,7 @@
  	private settings: Settings;
  	private modifiedFields = new Set<keyof Settings>(); // Track global fields modified during session
  	private modifiedNestedFields = new Map<keyof Settings, Set<string>>(); // Track global nested field modifications
-@@ -323,13 +325,37 @@
+@@ -323,13 +334,253 @@ export class SettingsManager {
  		this.globalSettingsLoadError = globalLoadError;
  		this.projectSettingsLoadError = projectLoadError;
  		this.errors = [...initialErrors];
@@ -28,19 +303,228 @@
 +	}
 +
 +	private refreshEffectiveSettings(): void {
-+		this.settings = deepMergeSettings(
-+			deepMergeSettings(this.globalSettings, this.projectSettings),
++		this.settings = SettingsManager.buildEffectiveSettings(
++			this.globalSettings,
++			this.projectSettings,
 +			this.managedSettings,
 +		);
 +	}
 +
++	private static buildEffectiveSettings(
++		globalSettings: Settings,
++		projectSettings: Settings,
++		managedSettings: Settings,
++	): Settings {
++		const settings = deepMergeSettings(deepMergeSettings(globalSettings, projectSettings), managedSettings);
++		if (managedSettings.retry !== undefined) {
++			const maxRetries = settings.retry?.maxRetries ?? 3;
++			const baseDelayMs = settings.retry?.baseDelayMs ?? 2000;
++			const lastDelayMs = maxRetries > 0 ? baseDelayMs * 2 ** (maxRetries - 1) : 0;
++			const validBackoff =
++				Number.isSafeInteger(maxRetries) &&
++				maxRetries >= 0 &&
++				Number.isSafeInteger(baseDelayMs) &&
++				baseDelayMs >= 0 &&
++				baseDelayMs <= MAX_TIMER_DELAY_MS &&
++				Number.isFinite(lastDelayMs) &&
++				lastDelayMs <= MAX_TIMER_DELAY_MS;
++			if (!validBackoff) {
++				throw new Error("Managed retry settings produce an invalid or unsupported backoff");
++			}
++		}
++		const effectiveManagedSettings: Record<string, unknown> = {};
++		for (const field of Object.keys(managedSettings) as (keyof Settings)[]) {
++			effectiveManagedSettings[field] = settings[field];
++		}
++		SettingsManager.validateManagedSettings(effectiveManagedSettings);
++		return settings;
++	}
++
 +	private static loadManagedSettings(path: string): Settings {
-+		if (!existsSync(path)) return {};
++		if (!existsSync(path)) {
++			throw new Error(`Managed settings file does not exist: ${path}`);
++		}
 +		const parsed: unknown = JSON.parse(readFileSync(path, "utf-8"));
 +		if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
 +			throw new Error("Managed settings must be a JSON object");
 +		}
-+		return SettingsManager.migrateSettings(parsed as Record<string, unknown>);
++		const settings = parsed as Record<string, unknown>;
++		SettingsManager.validateManagedSettings(settings);
++		return settings as Settings;
++	}
++
++	private static validateManagedSettings(settings: Record<string, unknown>): void {
++		const isRecord = (value: unknown): value is Record<string, unknown> =>
++			typeof value === "object" && value !== null && !Array.isArray(value);
++		const isBoolean = (value: unknown): boolean => typeof value === "boolean";
++		const isNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
++		const isNonEmptyString = (value: unknown): value is string =>
++			typeof value === "string" && value.trim().length > 0;
++		const isNonNegativeSafeInteger = (value: unknown): boolean =>
++			typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
++		const isTimerDelay = (value: unknown): boolean =>
++			isNonNegativeSafeInteger(value) && (value as number) <= MAX_TIMER_DELAY_MS;
++		const isPositiveSafeInteger = (value: unknown): value is number =>
++			typeof value === "number" && Number.isSafeInteger(value) && value > 0;
++		const isThinkingBudget = (value: unknown): boolean => value === -1 || isNonNegativeSafeInteger(value);
++		const isSafeIntegerInRange =
++			(minimum: number, maximum: number) =>
++			(value: unknown): boolean =>
++				typeof value === "number" && Number.isSafeInteger(value) && value >= minimum && value <= maximum;
++		const isSafeIntegerAtLeast =
++			(minimum: number) =>
++			(value: unknown): boolean =>
++				typeof value === "number" && Number.isSafeInteger(value) && value >= minimum;
++		const isPositiveNumber = (value: unknown): boolean => isNumber(value) && value > 0;
++		const isString = (value: unknown): boolean => typeof value === "string";
++		const isStringArray = (value: unknown): value is string[] =>
++			Array.isArray(value) && value.every((entry) => typeof entry === "string");
++		const isNonEmptyStringArray = (value: unknown): boolean =>
++			isStringArray(value) && value.every((entry) => isNonEmptyString(entry));
++		const isNpmCommand = (value: unknown): boolean =>
++			isStringArray(value) && (value.length === 0 || isNonEmptyString(value[0]));
++		const isStringRecord = (value: unknown): boolean =>
++			isRecord(value) &&
++			Object.entries(value).every(([key, entry]) => isNonEmptyString(key) && typeof entry === "string");
++		const isShape = (value: unknown, fields: Record<string, (entry: unknown) => boolean>): boolean =>
++			isRecord(value) &&
++			Object.entries(value).every(([key, entry]) => {
++				const validator = Object.hasOwn(fields, key) ? fields[key] : undefined;
++				return validator?.(entry) === true;
++			});
++		const isEnum =
++			(...values: readonly unknown[]) =>
++			(value: unknown): boolean =>
++				values.includes(value);
++		const resourceFields = {
++			extensions: isNonEmptyStringArray,
++			skills: isNonEmptyStringArray,
++			prompts: isNonEmptyStringArray,
++			themes: isNonEmptyStringArray,
++		};
++		const isPackageSource = (value: unknown): boolean =>
++			isNonEmptyString(value) ||
++			(isShape(value, { source: isNonEmptyString, ...resourceFields }) &&
++				isRecord(value) &&
++				isNonEmptyString(value.source));
++		const isMcpServer = (value: unknown): boolean => {
++			if (!isRecord(value)) return false;
++			const commonFields = {
++				enabled: isBoolean,
++				enabledTools: isNonEmptyStringArray,
++				disabledTools: isNonEmptyStringArray,
++			};
++			if (value.type === "http") {
++				return (
++					isNonEmptyString(value.url) &&
++					isShape(value, {
++						type: isEnum("http"),
++						url: isNonEmptyString,
++						headers: isStringRecord,
++						bearerTokenEnvVar: isNonEmptyString,
++						oauth: isBoolean,
++						...commonFields,
++					})
++				);
++			}
++			return (
++				value.type === "stdio" &&
++				isNonEmptyString(value.command) &&
++				isShape(value, {
++					type: isEnum("stdio"),
++					command: isNonEmptyString,
++					args: isStringArray,
++					env: isStringRecord,
++					...commonFields,
++				})
++			);
++		};
++		const validators: Record<string, (value: unknown) => boolean> = {
++			onboardingShown: isBoolean,
++			onboardingCompleted: isBoolean,
++			defaultProvider: isNonEmptyString,
++			defaultModel: isNonEmptyString,
++			recentModels: isNonEmptyStringArray,
++			defaultThinkingLevel: isEnum("off", "minimal", "low", "medium", "high", "xhigh", "max"),
++			defaultServiceTier: isEnum("auto", "default", "flex", "scale", "priority", null),
++			rlmMaxDepth: isNonNegativeSafeInteger,
++			idleEvictionMinutes: (value) => isPositiveNumber(value) || value === "off",
++			transport: isEnum("sse", "websocket", "websocket-cached", "auto"),
++			steeringMode: isEnum("all", "one-at-a-time"),
++			followUpMode: isEnum("all", "one-at-a-time"),
++			theme: isNonEmptyString,
++			compaction: (value) =>
++				isShape(value, {
++					enabled: isBoolean,
++					reserveTokens: isSafeIntegerAtLeast(2),
++					keepRecentTokens: isNonNegativeSafeInteger,
++					agentCallable: isBoolean,
++				}),
++			autoRefine: (value) =>
++				isShape(value, {
++					enabled: isBoolean,
++					turnInterval: isPositiveSafeInteger,
++					compact: isBoolean,
++					cooldownMs: isNonNegativeSafeInteger,
++				}),
++			agentTraces: (value) => isShape(value, { enabled: isBoolean }),
++			branchSummary: (value) => isShape(value, { reserveTokens: isSafeIntegerAtLeast(2049), skipPrompt: isBoolean }),
++			retry: (value) =>
++				isShape(value, {
++					enabled: isBoolean,
++					maxRetries: isNonNegativeSafeInteger,
++					baseDelayMs: isTimerDelay,
++					provider: (provider) =>
++						isShape(provider, {
++							timeoutMs: isTimerDelay,
++							maxRetries: isNonNegativeSafeInteger,
++							maxRetryDelayMs: isTimerDelay,
++						}),
++				}),
++			hideThinkingBlock: isBoolean,
++			shellPath: isNonEmptyString,
++			quietStartup: isBoolean,
++			shellCommandPrefix: isString,
++			npmCommand: isNpmCommand,
++			mcpServers: (value) =>
++				isRecord(value) &&
++				Object.entries(value).every(([name, server]) => isNonEmptyString(name) && isMcpServer(server)),
++			packages: (value) => Array.isArray(value) && value.every(isPackageSource),
++			...resourceFields,
++			enableSkillCommands: isBoolean,
++			bundledSkills: (value) => isShape(value, { websearch: isBoolean }),
++			enableBuiltinSkills: isBoolean,
++			terminal: (value) =>
++				isShape(value, {
++					showImages: isBoolean,
++					clearOnShrink: isBoolean,
++					showTerminalProgress: isBoolean,
++					fullscreen: isBoolean,
++					fullscreenMouse: isBoolean,
++				}),
++			images: (value) => isShape(value, { autoResize: isBoolean, blockImages: isBoolean }),
++			enabledModels: isNonEmptyStringArray,
++			treeFilterMode: isEnum("default", "no-tools", "user-only", "labeled-only", "all"),
++			thinkingBudgets: (value) =>
++				isShape(value, {
++					minimal: isThinkingBudget,
++					low: isThinkingBudget,
++					medium: isThinkingBudget,
++					high: isThinkingBudget,
++				}),
++			editorPaddingX: isSafeIntegerInRange(0, 3),
++			autocompleteMaxVisible: isSafeIntegerInRange(3, 20),
++			showHardwareCursor: isBoolean,
++			markdown: (value) => isShape(value, { codeBlockIndent: isString }),
++			warnings: (value) => isShape(value, { anthropicExtraUsage: isBoolean }),
++			sessionDir: isNonEmptyString,
++		};
++		for (const [field, value] of Object.entries(settings)) {
++			const validator = Object.hasOwn(validators, field) ? validators[field] : undefined;
++			if (validator?.(value) !== true) {
++				throw new Error(`Managed setting "${field}" has an invalid or unsupported value`);
++			}
++		}
  	}
  
  	/** Create a SettingsManager that loads from files */
@@ -50,27 +534,92 @@
 +		const manager = SettingsManager.fromStorage(storage);
 +		const managedSettingsPath = process.env.PRIME_AGENT_MANAGED_SETTINGS?.trim();
 +		if (managedSettingsPath) {
-+			manager.managedSettingsPath = resolve(managedSettingsPath);
-+			manager.managedSettings = SettingsManager.loadManagedSettings(manager.managedSettingsPath);
-+			manager.refreshEffectiveSettings();
++			const path = resolve(managedSettingsPath);
++			const managedSettings = SettingsManager.loadManagedSettings(path);
++			const settings = SettingsManager.buildEffectiveSettings(
++				manager.globalSettings,
++				manager.projectSettings,
++				managedSettings,
++			);
++			manager.managedSettingsPath = path;
++			manager.managedSettings = managedSettings;
++			manager.settings = settings;
 +		}
 +		return manager;
  	}
  
  	/** Create a SettingsManager from an arbitrary storage backend */
-@@ -482,7 +508,10 @@
+@@ -453,15 +704,30 @@ export class SettingsManager {
+ 		return structuredClone(this.globalSettings);
+ 	}
+ 
++	getManagedSettings(): Settings {
++		return structuredClone(this.managedSettings);
++	}
++
+ 	getProjectSettings(): Settings {
+ 		return structuredClone(this.projectSettings);
+ 	}
+ 
+ 	async reload(): Promise<void> {
+ 		await this.writeQueue;
++		const nextManagedSettings = this.managedSettingsPath
++			? SettingsManager.loadManagedSettings(this.managedSettingsPath)
++			: this.managedSettings;
+ 		const globalLoad = SettingsManager.tryLoadFromStorage(this.storage, "global");
++		const projectLoad = SettingsManager.tryLoadFromStorage(this.storage, "project");
++		const nextGlobalSettings = globalLoad.error ? this.globalSettings : globalLoad.settings;
++		const nextProjectSettings = projectLoad.error ? this.projectSettings : projectLoad.settings;
++		const nextSettings = SettingsManager.buildEffectiveSettings(
++			nextGlobalSettings,
++			nextProjectSettings,
++			nextManagedSettings,
++		);
+ 		if (!globalLoad.error) {
+-			this.globalSettings = globalLoad.settings;
++			this.globalSettings = nextGlobalSettings;
+ 			this.globalSettingsLoadError = null;
+ 		} else {
+ 			this.globalSettingsLoadError = globalLoad.error;
+@@ -473,21 +739,21 @@ export class SettingsManager {
+ 		this.modifiedProjectFields.clear();
+ 		this.modifiedProjectNestedFields.clear();
+ 
+-		const projectLoad = SettingsManager.tryLoadFromStorage(this.storage, "project");
+ 		if (!projectLoad.error) {
+-			this.projectSettings = projectLoad.settings;
++			this.projectSettings = nextProjectSettings;
+ 			this.projectSettingsLoadError = null;
+ 		} else {
+ 			this.projectSettingsLoadError = projectLoad.error;
  			this.recordError("project", projectLoad.error);
  		}
  
 -		this.settings = deepMergeSettings(this.globalSettings, this.projectSettings);
-+		if (this.managedSettingsPath) {
-+			this.managedSettings = SettingsManager.loadManagedSettings(this.managedSettingsPath);
-+		}
-+		this.refreshEffectiveSettings();
++		this.managedSettings = nextManagedSettings;
++		this.settings = nextSettings;
  	}
  
- 	/** Apply additional overrides on top of current settings */
-@@ -579,7 +608,7 @@
+-	/** Apply additional overrides on top of current settings */
++	/** Apply runtime overrides while retaining managed policy as the highest-precedence layer. */
+ 	applyOverrides(overrides: Partial<Settings>): void {
+-		this.settings = deepMergeSettings(this.settings, overrides);
++		this.settings = SettingsManager.buildEffectiveSettings(this.settings, overrides, this.managedSettings);
+ 	}
+ 
+ 	/** Mark a global field as modified during this session */
+@@ -573,13 +839,18 @@ export class SettingsManager {
+ 					(mergedSettings as Record<string, unknown>)[field] = value;
+ 				}
+ 			}
++			if (scope === "global") {
++				SettingsManager.buildEffectiveSettings(mergedSettings, this.projectSettings, this.managedSettings);
++			} else {
++				SettingsManager.buildEffectiveSettings(this.globalSettings, mergedSettings, this.managedSettings);
++			}
+ 
+ 			return JSON.stringify(mergedSettings, null, 2);
+ 		});
  	}
  
  	private save(): void {
@@ -79,7 +628,7 @@
  
  		if (this.globalSettingsLoadError) {
  			this.recordError(
-@@ -602,7 +631,7 @@
+@@ -602,7 +873,7 @@ export class SettingsManager {
  
  	private saveProjectSettings(settings: Settings): void {
  		this.projectSettings = structuredClone(settings);
@@ -88,20 +637,117 @@
  
  		if (this.projectSettingsLoadError) {
  			this.recordError(
+@@ -752,7 +1023,7 @@ export class SettingsManager {
+ 	}
+ 
+ 	getRlmMaxDepth(): number | undefined {
+-		return this.globalSettings.rlmMaxDepth;
++		return this.managedSettings.rlmMaxDepth ?? this.globalSettings.rlmMaxDepth;
+ 	}
+ 
+ 	setRlmMaxDepth(maxDepth: number): void {
+@@ -762,7 +1033,7 @@ export class SettingsManager {
+ 	}
+ 
+ 	getIdleEvictionMinutes(): number | "off" {
+-		const value: unknown = this.globalSettings.idleEvictionMinutes;
++		const value: unknown = this.managedSettings.idleEvictionMinutes ?? this.globalSettings.idleEvictionMinutes;
+ 		if (value === "off" || value === "none") return "off";
+ 		return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : DEFAULT_IDLE_EVICTION_MINUTES;
+ 	}
+diff --git c/packages/coding-agent/src/modes/interactive/components/config-selector.ts w/packages/coding-agent/src/modes/interactive/components/config-selector.ts
+index 208456f..18017e7 100644
+--- c/packages/coding-agent/src/modes/interactive/components/config-selector.ts
++++ w/packages/coding-agent/src/modes/interactive/components/config-selector.ts
+@@ -342,9 +342,16 @@ class ResourceList implements Component, Focusable {
+ 			} else {
+ 				// Resource item (cursor only on items)
+ 				const item = entry.item;
++				const managed = this.isManagedResource(item);
+ 				const cursor = isSelected ? "> " : "  ";
+-				const checkbox = item.enabled ? theme.fg("success", "[x]") : theme.fg("dim", "[ ]");
+-				const name = isSelected ? theme.bold(item.displayName) : item.displayName;
++				const checkbox = managed
++					? theme.fg("muted", item.enabled ? "[x]" : "[ ]")
++					: item.enabled
++						? theme.fg("success", "[x]")
++						: theme.fg("dim", "[ ]");
++				const displayName = managed ? `[managed, read-only] ${item.displayName}` : item.displayName;
++				const styledName = managed ? theme.fg("muted", displayName) : displayName;
++				const name = isSelected ? theme.bold(styledName) : styledName;
+ 				lines.push(truncateToWidth(`${cursor}    ${checkbox} ${name}`, width, "..."));
+ 			}
+ 		}
+@@ -404,6 +411,7 @@ class ResourceList implements Component, Focusable {
+ 		if (data === " " || kb.matches(data, "tui.select.confirm")) {
+ 			const entry = this.filteredItems[this.selectedIndex];
+ 			if (entry?.type === "item") {
++				if (this.isManagedResource(entry.item)) return;
+ 				const newEnabled = !entry.item.enabled;
+ 				this.toggleResource(entry.item, newEnabled);
+ 				this.updateItem(entry.item, newEnabled);
+@@ -417,6 +425,14 @@ class ResourceList implements Component, Focusable {
+ 		this.filterItems(this.searchInput.getValue());
+ 	}
+ 
++	private isManagedResource(item: ResourceItem): boolean {
++		const managedSettings = this.settingsManager.getManagedSettings();
++		if (item.metadata.origin === "package") {
++			return managedSettings.packages !== undefined;
++		}
++		return managedSettings[item.resourceType] !== undefined;
++	}
++
+ 	private toggleResource(item: ResourceItem, enabled: boolean): void {
+ 		if (item.metadata.origin === "top-level") {
+ 			this.toggleTopLevelResource(item, enabled);
+diff --git c/packages/coding-agent/src/package-manager-cli.ts w/packages/coding-agent/src/package-manager-cli.ts
+index a9f4bd6..43c47e5 100644
+--- c/packages/coding-agent/src/package-manager-cli.ts
++++ w/packages/coding-agent/src/package-manager-cli.ts
+@@ -1491,7 +1491,8 @@ export async function handlePackageCommand(args: string[]): Promise<boolean> {
+ 	const agentDir = getAgentDir();
+ 	const settingsManager = SettingsManager.create(cwd, agentDir);
+ 	reportSettingsErrors(settingsManager, "package command");
+-	const selfUpdateNpmCommand = settingsManager.getGlobalSettings().npmCommand;
++	const selfUpdateNpmCommand =
++		settingsManager.getManagedSettings().npmCommand ?? settingsManager.getGlobalSettings().npmCommand;
+ 
+ 	const packageManager = new DefaultPackageManager({ cwd, agentDir, settingsManager });
+ 
+@@ -1530,7 +1531,8 @@ export async function handlePackageCommand(args: string[]): Promise<boolean> {
+ 				}
+ 
+ 				const formatPackage = (pkg: (typeof configuredPackages)[number]) => {
+-					const display = pkg.filtered ? `${pkg.source} (filtered)` : pkg.source;
++					const labels = [...(pkg.filtered ? ["filtered"] : []), ...(pkg.managed ? ["managed, read-only"] : [])];
++					const display = labels.length > 0 ? `${pkg.source} (${labels.join(", ")})` : pkg.source;
+ 					console.log(`  ${display}`);
+ 					if (pkg.installedPath) {
+ 						console.log(chalk.dim(`    ${pkg.installedPath}`));
+diff --git c/packages/coding-agent/test/managed-settings.test.ts w/packages/coding-agent/test/managed-settings.test.ts
+new file mode 100644
+index 0000000..a8d4940
 --- /dev/null
-+++ b/packages/coding-agent/test/managed-settings.test.ts
-@@ -0,0 +1,77 @@
++++ w/packages/coding-agent/test/managed-settings.test.ts
+@@ -0,0 +1,456 @@
 +import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
 +import { tmpdir } from "os";
 +import { join } from "path";
-+import { afterEach, beforeEach, describe, expect, it } from "vitest";
++import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
++import { DefaultPackageManager } from "../src/core/package-manager.js";
 +import { SettingsManager } from "../src/core/settings-manager.js";
++import { ConfigSelectorComponent } from "../src/modes/interactive/components/config-selector.js";
++import { initTheme } from "../src/modes/interactive/theme/theme.js";
++
++beforeAll(() => initTheme("dark"));
 +
 +describe("managed settings overlay", () => {
 +	let root: string;
 +	let agentDir: string;
 +	let projectDir: string;
 +	let managedPath: string;
++	let originalHome: string | undefined;
 +	let originalManagedPath: string | undefined;
 +
 +	beforeEach(() => {
@@ -111,11 +757,15 @@
 +		managedPath = join(root, "managed-settings.json");
 +		mkdirSync(agentDir, { recursive: true });
 +		mkdirSync(join(projectDir, ".prime", "agent"), { recursive: true });
++		originalHome = process.env.HOME;
++		process.env.HOME = root;
 +		originalManagedPath = process.env.PRIME_AGENT_MANAGED_SETTINGS;
 +		delete process.env.PRIME_AGENT_MANAGED_SETTINGS;
 +	});
 +
 +	afterEach(() => {
++		if (originalHome === undefined) delete process.env.HOME;
++		else process.env.HOME = originalHome;
 +		if (originalManagedPath === undefined) delete process.env.PRIME_AGENT_MANAGED_SETTINGS;
 +		else process.env.PRIME_AGENT_MANAGED_SETTINGS = originalManagedPath;
 +		rmSync(root, { recursive: true, force: true });
@@ -123,8 +773,34 @@
 +
 +	it("keeps managed resource policy effective while user preferences remain writable", async () => {
 +		const globalPath = join(agentDir, "settings.json");
-+		const managed = { packages: ["managed-package"], theme: "managed-theme" };
-+		writeFileSync(globalPath, JSON.stringify({ packages: ["user-package"], theme: "user-theme" }));
++		const managedExtension = join(root, "managed-extension.ts");
++		const bundledSkillsDir = join(root, "bundled-skills");
++		const bundledSkillPath = join(bundledSkillsDir, "skill-creator", "SKILL.md");
++		const bundledControlPath = join(bundledSkillsDir, "control", "SKILL.md");
++		mkdirSync(join(bundledSkillsDir, "skill-creator"), { recursive: true });
++		mkdirSync(join(bundledSkillsDir, "control"), { recursive: true });
++		writeFileSync(managedExtension, "export default function() {}");
++		writeFileSync(bundledSkillPath, "# Skill creator");
++		writeFileSync(bundledControlPath, "# Control");
++		const managed = {
++			packages: [managedExtension],
++			skills: ["-skill-creator/SKILL.md"],
++			theme: "managed-theme",
++			npmCommand: ["managed-npm"],
++			thinkingBudgets: { minimal: -1, low: 0, medium: 1024 },
++			rlmMaxDepth: 4,
++			idleEvictionMinutes: "off",
++		};
++		writeFileSync(
++			globalPath,
++			JSON.stringify({
++				packages: ["user-package"],
++				theme: "user-theme",
++				npmCommand: ["mutable-npm"],
++				rlmMaxDepth: 1,
++				idleEvictionMinutes: 30,
++			}),
++		);
 +		writeFileSync(
 +			join(projectDir, ".prime", "agent", "settings.json"),
 +			JSON.stringify({ packages: ["project-package"], theme: "project-theme" }),
@@ -133,8 +809,65 @@
 +		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
 +
 +		const manager = SettingsManager.create(projectDir, agentDir);
-+		expect(manager.getPackages()).toEqual(["managed-package"]);
++		expect(manager.getPackages()).toEqual([managedExtension]);
 +		expect(manager.getTheme()).toBe("managed-theme");
++		expect(manager.getNpmCommand()).toEqual(["managed-npm"]);
++		expect(manager.getThinkingBudgets()).toEqual({ minimal: -1, low: 0, medium: 1024 });
++		expect(manager.getRlmMaxDepth()).toBe(4);
++		expect(manager.getIdleEvictionMinutes()).toBe("off");
++		expect(manager.getGlobalSettings()).toMatchObject({ packages: ["user-package"] });
++		expect(manager.getManagedSettings()).toMatchObject({
++			packages: [managedExtension],
++			skills: ["-skill-creator/SKILL.md"],
++		});
++		manager.applyOverrides({ packages: ["runtime-package"], theme: "runtime-theme", quietStartup: true });
++		expect(manager.getPackages()).toEqual([managedExtension]);
++		expect(manager.getTheme()).toBe("managed-theme");
++		expect(manager.getQuietStartup()).toBe(true);
++
++		const packageManager = new DefaultPackageManager({
++			cwd: projectDir,
++			agentDir,
++			settingsManager: manager,
++			bundledSkillsDir,
++		});
++		const resolved = await packageManager.resolve();
++		expect(resolved.extensions.some((resource) => resource.path === managedExtension && resource.enabled)).toBe(true);
++		expect(resolved.skills.find((resource) => resource.path === bundledSkillPath)?.enabled).toBe(false);
++		expect(resolved.skills.find((resource) => resource.path === bundledControlPath)?.enabled).toBe(true);
++		expect(packageManager.listConfiguredPackages()).toEqual([
++			{
++				source: managedExtension,
++				scope: "user",
++				filtered: false,
++				managed: true,
++				installedPath: managedExtension,
++			},
++		]);
++		let managedToggleCount = 0;
++		const selector = new ConfigSelectorComponent(
++			resolved,
++			manager,
++			projectDir,
++			agentDir,
++			() => {},
++			() => {},
++			() => managedToggleCount++,
++		);
++		const resourceList = selector.getResourceList();
++		const managedRenderBeforeToggle = resourceList.render(120).join("\n");
++		expect(managedRenderBeforeToggle).toContain("[managed, read-only]");
++		const globalSettingsBeforeToggle = manager.getGlobalSettings();
++		resourceList.handleInput(" ");
++		expect(resourceList.render(120).join("\n")).toBe(managedRenderBeforeToggle);
++		expect(managedToggleCount).toBe(0);
++		expect(manager.getGlobalSettings()).toEqual(globalSettingsBeforeToggle);
++		await expect(packageManager.installAndPersist(managedExtension)).rejects.toThrow(
++			"Package settings are managed and read-only",
++		);
++		await expect(packageManager.removeAndPersist(managedExtension)).rejects.toThrow(
++			"Package settings are managed and read-only",
++		);
 +
 +		manager.setOnboardingShown(true);
 +		manager.setDefaultModelAndProvider("provider", "model");
@@ -148,6 +881,76 @@
 +		expect(saved.theme).toBe("user-attempt");
 +		expect(manager.getTheme()).toBe("managed-theme");
 +		expect(JSON.parse(readFileSync(managedPath, "utf-8"))).toEqual(managed);
++	});
++
++	it("treats an empty managed package list as authoritative", async () => {
++		const mutableExtension = join(root, "mutable-extension.ts");
++		writeFileSync(mutableExtension, "export default function() {}");
++		writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ packages: [mutableExtension] }));
++		writeFileSync(managedPath, JSON.stringify({ packages: [] }));
++		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
++
++		const manager = SettingsManager.create(projectDir, agentDir);
++		const packageManager = new DefaultPackageManager({
++			cwd: projectDir,
++			agentDir,
++			settingsManager: manager,
++			bundledSkillsDir: null,
++		});
++		const resolved = await packageManager.resolve();
++		expect(resolved.extensions.some((resource) => resource.path === mutableExtension)).toBe(false);
++		expect(manager.getGlobalSettings()).toMatchObject({ packages: [mutableExtension] });
++		expect(packageManager.listConfiguredPackages()).toEqual([]);
++	});
++
++	it("preserves mutable global and project packages without a managed package policy", async () => {
++		const globalExtension = join(root, "global-extension.ts");
++		const projectExtension = join(root, "project-extension.ts");
++		const addedExtension = join(root, "added-extension.ts");
++		for (const path of [globalExtension, projectExtension, addedExtension]) {
++			writeFileSync(path, "export default function() {}");
++		}
++		writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ packages: [globalExtension] }));
++		writeFileSync(
++			join(projectDir, ".prime", "agent", "settings.json"),
++			JSON.stringify({ packages: [projectExtension] }),
++		);
++
++		const manager = SettingsManager.create(projectDir, agentDir);
++		const packageManager = new DefaultPackageManager({
++			cwd: projectDir,
++			agentDir,
++			settingsManager: manager,
++			bundledSkillsDir: null,
++		});
++		const resolved = await packageManager.resolve();
++		expect(resolved.extensions.map((resource) => resource.path)).toEqual(
++			expect.arrayContaining([globalExtension, projectExtension]),
++		);
++		expect(packageManager.listConfiguredPackages()).toEqual([
++			expect.objectContaining({ source: globalExtension, scope: "user", managed: false }),
++			expect.objectContaining({ source: projectExtension, scope: "project", managed: false }),
++		]);
++		let mutableToggleCount = 0;
++		const selector = new ConfigSelectorComponent(
++			resolved,
++			manager,
++			projectDir,
++			agentDir,
++			() => {},
++			() => {},
++			() => mutableToggleCount++,
++		);
++		const resourceList = selector.getResourceList();
++		const mutableRenderBeforeToggle = resourceList.render(120).join("\n");
++		expect(mutableRenderBeforeToggle).not.toContain("[managed, read-only]");
++		const globalSettingsBeforeToggle = manager.getGlobalSettings();
++		resourceList.handleInput(" ");
++		expect(resourceList.render(120).join("\n")).not.toBe(mutableRenderBeforeToggle);
++		expect(mutableToggleCount).toBe(1);
++		expect(manager.getGlobalSettings()).not.toEqual(globalSettingsBeforeToggle);
++		await packageManager.installAndPersist(addedExtension);
++		expect(manager.getGlobalSettings().packages).toHaveLength(2);
 +	});
 +
 +	it("reloads a replaced managed leaf without copying it into mutable settings", async () => {
@@ -166,5 +969,221 @@
 +		writeFileSync(managedPath, "[]");
 +		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
 +		expect(() => SettingsManager.create(projectDir, agentDir)).toThrow("Managed settings must be a JSON object");
++	});
++
++	it("fails closed when the configured managed leaf does not exist", () => {
++		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
++		expect(() => SettingsManager.create(projectDir, agentDir)).toThrow("Managed settings file does not exist");
++	});
++
++	it("keeps the active managed policy when its leaf disappears before reload", async () => {
++		const mutableExtension = join(root, "mutable-extension.ts");
++		const changedExtension = join(root, "changed-extension.ts");
++		writeFileSync(mutableExtension, "export default function() {}");
++		writeFileSync(changedExtension, "export default function() {}");
++		writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ packages: [mutableExtension] }));
++		writeFileSync(managedPath, JSON.stringify({ packages: [] }));
++		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
++
++		const manager = SettingsManager.create(projectDir, agentDir);
++		writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ packages: [changedExtension] }));
++		rmSync(managedPath);
++		await expect(manager.reload()).rejects.toThrow("Managed settings file does not exist");
++		expect(manager.getPackages()).toEqual([]);
++		expect(manager.getGlobalSettings().packages).toEqual([mutableExtension]);
++	});
++
++	it("validates retry timer capacity after merging mutable and managed settings", () => {
++		writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ retry: { baseDelayMs: 1_073_741_823 } }));
++		writeFileSync(managedPath, JSON.stringify({ retry: { maxRetries: 2 } }));
++		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
++
++		const manager = SettingsManager.create(projectDir, agentDir);
++		expect(manager.getRetrySettings()).toMatchObject({ maxRetries: 2, baseDelayMs: 1_073_741_823 });
++		expect(() => manager.applyOverrides({ retry: { baseDelayMs: 1_073_741_824 } })).toThrow(
++			"Managed retry settings produce an invalid or unsupported backoff",
++		);
++		expect(manager.getRetrySettings()).toMatchObject({ maxRetries: 2, baseDelayMs: 1_073_741_823 });
++	});
++
++	it("rejects a mutable retry delay that overflows a managed retry count", () => {
++		writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ retry: { baseDelayMs: 1_073_741_824 } }));
++		writeFileSync(managedPath, JSON.stringify({ retry: { maxRetries: 2 } }));
++		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
++
++		expect(() => SettingsManager.create(projectDir, agentDir)).toThrow(
++			"Managed retry settings produce an invalid or unsupported backoff",
++		);
++	});
++
++	it("keeps active retry settings when reload would overflow a managed retry count", async () => {
++		const globalPath = join(agentDir, "settings.json");
++		writeFileSync(globalPath, JSON.stringify({ retry: { baseDelayMs: 1_073_741_823 } }));
++		writeFileSync(managedPath, JSON.stringify({ retry: { maxRetries: 2 } }));
++		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
++
++		const manager = SettingsManager.create(projectDir, agentDir);
++		writeFileSync(globalPath, JSON.stringify({ retry: { baseDelayMs: 1_073_741_824 } }));
++		await expect(manager.reload()).rejects.toThrow(
++			"Managed retry settings produce an invalid or unsupported backoff",
++		);
++		expect(manager.getGlobalSettings().retry?.baseDelayMs).toBe(1_073_741_823);
++		expect(manager.getRetrySettings()).toMatchObject({ maxRetries: 2, baseDelayMs: 1_073_741_823 });
++	});
++
++	it("validates mutable backoff whenever managed settings enable retries", async () => {
++		const globalPath = join(agentDir, "settings.json");
++		writeFileSync(globalPath, JSON.stringify({ retry: { enabled: false, maxRetries: 1, baseDelayMs: 1000 } }));
++		writeFileSync(managedPath, JSON.stringify({ retry: { enabled: true } }));
++		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
++
++		const manager = SettingsManager.create(projectDir, agentDir);
++		expect(manager.getRetrySettings()).toMatchObject({ enabled: true, maxRetries: 1, baseDelayMs: 1000 });
++		expect(() => manager.applyOverrides({ retry: { baseDelayMs: 2_147_483_648 } })).toThrow(
++			"Managed retry settings produce an invalid or unsupported backoff",
++		);
++		expect(manager.getRetrySettings()).toMatchObject({ enabled: true, maxRetries: 1, baseDelayMs: 1000 });
++
++		writeFileSync(
++			globalPath,
++			JSON.stringify({ retry: { enabled: false, maxRetries: 1, baseDelayMs: 2_147_483_648 } }),
++		);
++		await expect(manager.reload()).rejects.toThrow(
++			"Managed retry settings produce an invalid or unsupported backoff",
++		);
++		expect(manager.getGlobalSettings().retry?.baseDelayMs).toBe(1000);
++		expect(() => SettingsManager.create(projectDir, agentDir)).toThrow(
++			"Managed retry settings produce an invalid or unsupported backoff",
++		);
++	});
++
++	it("preserves lower-precedence provider retry leaves under managed overlays", async () => {
++		const globalPath = join(agentDir, "settings.json");
++		writeFileSync(globalPath, JSON.stringify({ retry: { provider: { timeoutMs: 1000, maxRetries: 3 } } }));
++		writeFileSync(managedPath, JSON.stringify({ retry: { provider: { maxRetryDelayMs: 5000 } } }));
++		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
++
++		const manager = SettingsManager.create(projectDir, agentDir);
++		expect(manager.getProviderRetrySettings()).toEqual({
++			timeoutMs: 1000,
++			maxRetries: 3,
++			maxRetryDelayMs: 5000,
++		});
++		manager.applyOverrides({ retry: { provider: { timeoutMs: 2000 } } });
++		expect(manager.getProviderRetrySettings()).toEqual({
++			timeoutMs: 2000,
++			maxRetries: 3,
++			maxRetryDelayMs: 5000,
++		});
++
++		writeFileSync(globalPath, JSON.stringify({ retry: { provider: { timeoutMs: 3000, maxRetries: 4 } } }));
++		await manager.reload();
++		expect(manager.getProviderRetrySettings()).toEqual({
++			timeoutMs: 3000,
++			maxRetries: 4,
++			maxRetryDelayMs: 5000,
++		});
++	});
++
++	it("validates the effective provider retry object when a managed leaf is present", async () => {
++		const globalPath = join(agentDir, "settings.json");
++		writeFileSync(globalPath, JSON.stringify({ retry: { provider: { timeoutMs: 1000 } } }));
++		writeFileSync(managedPath, JSON.stringify({ retry: { provider: { maxRetryDelayMs: 5000 } } }));
++		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
++
++		const manager = SettingsManager.create(projectDir, agentDir);
++		expect(() => manager.applyOverrides({ retry: { provider: { timeoutMs: 2_147_483_648 } } })).toThrow(
++			'Managed setting "retry"',
++		);
++		expect(manager.getProviderRetrySettings()).toMatchObject({ timeoutMs: 1000, maxRetryDelayMs: 5000 });
++
++		writeFileSync(globalPath, JSON.stringify({ retry: { provider: { timeoutMs: 2_147_483_648 } } }));
++		await expect(manager.reload()).rejects.toThrow('Managed setting "retry"');
++		expect(manager.getGlobalSettings().retry?.provider?.timeoutMs).toBe(1000);
++		expect(manager.getProviderRetrySettings()).toMatchObject({ timeoutMs: 1000, maxRetryDelayMs: 5000 });
++		expect(() => SettingsManager.create(projectDir, agentDir)).toThrow('Managed setting "retry"');
++	});
++
++	it("validates the locked write candidate after merging an external edit", async () => {
++		const globalPath = join(agentDir, "settings.json");
++		writeFileSync(globalPath, JSON.stringify({ retry: { provider: { timeoutMs: 1000 } } }));
++		writeFileSync(managedPath, JSON.stringify({ retry: { provider: { maxRetryDelayMs: 5000 } } }));
++		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
++
++		const manager = SettingsManager.create(projectDir, agentDir);
++		writeFileSync(globalPath, JSON.stringify({ retry: { provider: { timeoutMs: 2_147_483_648 } } }));
++		manager.setRetryEnabled(false);
++		await manager.flush();
++
++		const onDisk = JSON.parse(readFileSync(globalPath, "utf-8"));
++		expect(onDisk.retry).toEqual({ provider: { timeoutMs: 2_147_483_648 } });
++		expect(manager.getRetrySettings().enabled).toBe(false);
++		expect(manager.getProviderRetrySettings()).toMatchObject({ timeoutMs: 1000, maxRetryDelayMs: 5000 });
++		const [writeError] = manager.drainErrors("global");
++		expect(writeError?.error.message).toContain('Managed setting "retry"');
++	});
++
++	it("validates the effective compaction object when managed policy activates it", async () => {
++		const globalPath = join(agentDir, "settings.json");
++		writeFileSync(globalPath, JSON.stringify({ compaction: { enabled: false, reserveTokens: 2 } }));
++		writeFileSync(managedPath, JSON.stringify({ compaction: { enabled: true } }));
++		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
++
++		const manager = SettingsManager.create(projectDir, agentDir);
++		expect(() => manager.applyOverrides({ compaction: { reserveTokens: 1 } })).toThrow(
++			'Managed setting "compaction"',
++		);
++		expect(manager.getCompactionSettings()).toMatchObject({ enabled: true, reserveTokens: 2 });
++
++		writeFileSync(globalPath, JSON.stringify({ compaction: { enabled: false, reserveTokens: 1 } }));
++		await expect(manager.reload()).rejects.toThrow('Managed setting "compaction"');
++		expect(manager.getGlobalSettings().compaction?.reserveTokens).toBe(2);
++		expect(manager.getCompactionSettings()).toMatchObject({ enabled: true, reserveTokens: 2 });
++		expect(() => SettingsManager.create(projectDir, agentDir)).toThrow('Managed setting "compaction"');
++	});
++
++	it.each([
++		["null packages", { packages: null }],
++		["object extensions", { extensions: {} }],
++		["null skills", { skills: null }],
++		["invalid package source", { packages: [{ source: 42 }] }],
++		["invalid package filter", { packages: [{ source: "package", skills: [42] }] }],
++		["invalid scalar", { enableBuiltinSkills: "yes" }],
++		["negative RLM depth", { rlmMaxDepth: -1 }],
++		["fractional RLM depth", { rlmMaxDepth: 1.5 }],
++		["nonpositive idle eviction", { idleEvictionMinutes: 0 }],
++		["negative compaction token count", { compaction: { reserveTokens: -1 } }],
++		["zero compaction reserve", { compaction: { reserveTokens: 0 } }],
++		["one-token compaction reserve", { compaction: { reserveTokens: 1 } }],
++		["zero auto-refine turn interval", { autoRefine: { turnInterval: 0 } }],
++		["fractional branch token count", { branchSummary: { reserveTokens: 1.5 } }],
++		["zero branch reserve", { branchSummary: { reserveTokens: 0 } }],
++		["branch reserve below response ceiling", { branchSummary: { reserveTokens: 2048 } }],
++		["negative retry count", { retry: { maxRetries: -1 } }],
++		["retry base delay above timer limit", { retry: { baseDelayMs: 2_147_483_648 } }],
++		["retry backoff above timer limit", { retry: { maxRetries: 2, baseDelayMs: 1_073_741_824 } }],
++		["retry backoff with an infinite multiplier", { retry: { maxRetries: 1025, baseDelayMs: 0 } }],
++		["fractional provider timeout", { retry: { provider: { timeoutMs: 1.5 } } }],
++		["provider timeout above timer limit", { retry: { provider: { timeoutMs: 2_147_483_648 } } }],
++		["provider retry delay above timer limit", { retry: { provider: { maxRetryDelayMs: 2_147_483_648 } } }],
++		["invalid negative thinking budget", { thinkingBudgets: { low: -2 } }],
++		["out-of-range editor padding", { editorPaddingX: 4 }],
++		["fractional autocomplete size", { autocompleteMaxVisible: 4.5 }],
++		["empty npm command", { npmCommand: [""] }],
++		["empty package source", { packages: [""] }],
++		["empty MCP command", { mcpServers: { synthetic: { type: "stdio", command: "" } } }],
++		["empty MCP URL", { mcpServers: { synthetic: { type: "http", url: "" } } }],
++		["invalid nested setting", { retry: { provider: { timeoutMs: "forever" } } }],
++		["malformed legacy retry setting", { retry: { maxDelayMs: "forever" } }],
++		["malformed legacy skills setting", { skills: { customDirectories: 42 } }],
++		["invalid MCP server", { mcpServers: { synthetic: { type: "stdio", command: 42 } } }],
++		["unsupported setting", { inventedPolicy: true }],
++	])("fails closed for %s", (_name, invalidSettings) => {
++		const mutableExtension = join(root, "mutable-extension.ts");
++		writeFileSync(mutableExtension, "export default function() {}");
++		writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ packages: [mutableExtension] }));
++		writeFileSync(managedPath, JSON.stringify(invalidSettings));
++		process.env.PRIME_AGENT_MANAGED_SETTINGS = managedPath;
++		expect(() => SettingsManager.create(projectDir, agentDir)).toThrow(/Managed/);
 +	});
 +});
