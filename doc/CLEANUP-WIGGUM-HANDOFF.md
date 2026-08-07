@@ -23,8 +23,9 @@ acting on the work described here.
 ## Executive status
 
 The project is substantially reduced, but it is not complete. There are two
-qualification and operation boundaries, one deferred Project item, and one
-final closeout boundary. The tracker-reconciliation boundary is complete:
+qualification and operation boundaries, one active independent Project item,
+and one final closeout boundary. The tracker-reconciliation boundary is
+complete:
 
 1. Finish, freeze, qualify, authorize, and run the bounded mutable-state
    reconciliation for #127; then prove in two complete fleet cycles that Anvil,
@@ -40,8 +41,8 @@ final closeout boundary. The tracker-reconciliation boundary is complete:
    eight-hour runs; resume them only on his explicit request by following
    `doc/PI-EIGHT-HOUR-SOAK.md`. #128 can proceed independently of the fleet
    spine but explicitly blocks #121.
-3. Keep #130's deferred PAL-restoration Todo visible; it is open but does not
-   currently block the cleanup spine.
+3. Continue #130's active PAL-restoration work independently; it is not a
+   prerequisite for item 4 or any other cleanup-spine boundary.
 4. Run #121 once on one unchanged final candidate: reconcile documentation and
    comments, remove cleanup documents, run the final verification matrix,
    publish with separate authority, require same-commit CI and portable
@@ -86,7 +87,7 @@ baselines only. Refresh every volatile fact at the boundary where it matters.
 
 Project 9 was refreshed through the explicitly selected `jwiegley` GitHub
 account on 2026-08-07 after publication. It contained 124 unarchived issue
-items: 117 Done, six In Progress, and one Todo:
+items: 117 Done and seven In Progress:
 
 | Issue | Remaining purpose |
 |---|---|
@@ -96,7 +97,7 @@ items: 117 Done, six In Progress, and one Todo:
 | [#124](https://github.com/jwiegley/nix-config/issues/124) | Prove Ref and Perplexity removal from every client and mutable home. |
 | [#127](https://github.com/jwiegley/nix-config/issues/127) | Reconcile retired PromptDeploy state and uniquely owned stale payloads. |
 | [#128](https://github.com/jwiegley/nix-config/issues/128) | Implement permanent bounded-memory Pi sessions; an independent explicit blocker for #121. |
-| [#130](https://github.com/jwiegley/nix-config/issues/130) | Todo: restore PAL MCP; explicitly deferred and not a blocker for current work. |
+| [#130](https://github.com/jwiegley/nix-config/issues/130) | In Progress: restore PAL MCP independently without making it a blocker for the cleanup spine. |
 
 The effective dependency order is:
 
@@ -110,7 +111,7 @@ The effective dependency order is:
 #128 bounded-memory Pi sessions
   -> #121 unchanged-candidate closeout
 
-#130 restore PAL MCP (deferred Todo; no dependency edge into this closeout)
+#130 restore PAL MCP (active independent work; no closeout dependency edge)
 ```
 
 The #116 and #124 runtime probes and activation cycles should be combined where
@@ -123,9 +124,9 @@ is recorded in
 [#111 comment 5217376659](https://github.com/jwiegley/nix-config/issues/111#issuecomment-5217376659),
 and [#121 comment 5217377344](https://github.com/jwiegley/nix-config/issues/121#issuecomment-5217377344)
 carries the correction and its unproved Linux/activation boundaries forward.
-#130 is a real open Project item but its body explicitly defers it and says not
-to block current work on a live PAL dependency; do not silently count it Done
-or invent a cleanup dependency.
+#130 is a real open Project item now marked In Progress. Its body still says not
+to block the cleanup spine on a live PAL dependency; complete it independently
+without silently counting it Done or inventing a cleanup dependency.
 
 Every future `gh` command must explicitly select the `jwiegley` account. A safe
 read pattern is:
@@ -218,8 +219,8 @@ authority.
 | Codex wrapper correction | Published and tracker-reconciled | Commit `ea0327cf` passes the Darwin wrapper and pre-commit gates and is on both remotes; comments `5217376659` and `5217377344` correct #111 and carry its evidence ceiling into #121. The Linux wrapper lane remains capability-blocked before wrapper execution. |
 | #128 bounded-memory Pi sessions | Qualification in progress; further soaks owner-deferred | Base implementation `e2c002e0`, published follow-ups `11f8de49`, `32489eb8`, `adda9631`, and package-integrity tip `bad199f5`; historical exact-fixture, full-suite, 1 GiB-scale, managed-package, and consumer gates passed at their recorded candidates. The eight-hour process gate exited zero and met the issue's growth ceiling; its stricter auxiliary retained-path checker remains incomplete. Resume soak testing only by explicit owner request. Linux profiling, current-candidate gates, activation, and direct existing-session resumption remain open. |
 | Prime Agent managed settings | Published and locally qualified | Commits `096de97e` and `e3b191c4` pass 199 selected package tests, both Prime integration selectors, managed preflight, host behavior, pre-commit, a Hera system build without activation, and normal CI. Portable Assurance run `31179553744` also passes at evidence checkpoint `686a7334`; neither build nor CI establishes activation. |
-| #130 PAL restoration | Deferred Todo | Open Project item with no cleanup dependency edge; retain as explicit deferred work rather than miscounting it as Done. |
-| #121/#98 closeout | Blocked | Begins only after the preceding boundaries are complete. |
+| #130 PAL restoration | In Progress | Independent implementation and security review are active; no cleanup dependency edge or live PAL result is claimed. |
+| #121/#98 closeout | Blocked | Begins after the cleanup-spine predecessors and independent #128 blocker are complete; #130 is not a predecessor. |
 
 ## #128 bounded-memory Pi checkpoint
 
@@ -954,7 +955,14 @@ Report the exact boundary rather than softening it into success.
       publish only with separate authority.
 - [ ] Require same-commit CI and Portable Assurance, reconcile Git and Project
       state, close #121, and close #98 last.
-- [ ] Keep deferred #130 explicit on the Project until its separate PAL
-      dependency and completion authority are available; do not count it Done.
+Until every cleanup-spine box above is satisfied, the cleanup programme remains
+in progress.
 
-Until every box is satisfied, the cleanup programme remains in progress.
+The active #130 PAL restoration remains a separate Project 9 item, not a
+cleanup-spine gate:
+
+- [ ] Complete #130 under its own acceptance criteria; do not count it Done
+      before those gates pass.
+
+Project 9 remains in progress until both the cleanup programme and this
+independent item are complete.
