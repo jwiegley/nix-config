@@ -23,24 +23,21 @@ acting on the work described here.
 ## Executive status
 
 The project is substantially reduced, but it is not complete. There are two
-qualification and operation boundaries, one tracker-reconciliation boundary,
-one deferred Project item, and one final closeout boundary:
+qualification and operation boundaries, one deferred Project item, and one
+final closeout boundary. The tracker-reconciliation boundary is complete:
 
 1. Finish, freeze, qualify, authorize, and run the bounded mutable-state
    reconciliation for #127; then prove in two complete fleet cycles that Anvil,
    Ref, Perplexity, and PromptDeploy state is not recreated before closing
    #116, #124, and #127.
-2. Reconcile the published signed Codex policy-probe correction with issue
-   #111. The issue is closed in the tracker, but its closeout still omits the
-   later corrective work.
-3. Finish #128's permanent bounded-memory Pi-session qualification. The
+2. Finish #128's permanent bounded-memory Pi-session qualification. The
    implementation, exact fixture, 1 GiB scale, managed package, and downstream
    consumer gates passed on the base candidate; published follow-ups have
    narrower targeted evidence, and a fresh eight-hour soak remains in progress.
    #128 can proceed independently of the fleet spine but explicitly blocks #121.
-4. Keep #130's deferred PAL-restoration Todo visible; it is open but does not
+3. Keep #130's deferred PAL-restoration Todo visible; it is open but does not
    currently block the cleanup spine.
-5. Run #121 once on one unchanged final candidate: reconcile documentation and
+4. Run #121 once on one unchanged final candidate: reconcile documentation and
    comments, remove cleanup documents, run the final verification matrix,
    publish with separate authority, require same-commit CI and portable
    assurance, and close #98 last.
@@ -55,8 +52,10 @@ handoff-only delta records the subsequent evidence refresh and introduces no
 implementation change. The exact published implementation checkpoint passed
 the Prime package and both integration selectors, managed-policy preflight,
 host-behavior check, pre-commit gate, and a non-activating Hera system build.
-Same-commit normal CI run `31178499155` passed all four jobs; Portable
-Assurance remains outstanding.
+At evidence checkpoint `686a7334`, normal CI run `31178896021` and Portable
+Assurance run `31179553744` passed all four jobs each. The portable native
+matrix includes the corrected Pi RSS gate but not the capability-blocked Linux
+Codex-wrapper lane.
 
 The last complete fleet activation proof remains the #126 boundary at
 `e7dc846c`. Later successful builds, evaluations, and single-host checks must
@@ -116,11 +115,14 @@ their evidence boundaries agree, but their issue-specific acceptance results
 must remain explicit. #128 can proceed independently of that spine but must land
 before #121 under its current issue-body authority; GitHub's native dependency
 API does not encode that prose edge. The Codex-wrapper correction associated
-with closed #111 must also land before #121 starts. Reopen #111 or record the
-corrective work as an explicit #121 blocker; do not allow the closed tracker
-state to erase an accepted requirement. #130 is a real open Project item but its
-body explicitly defers it and says not to block current work on a live PAL
-dependency; do not silently count it Done or invent a cleanup dependency.
+with closed #111 must remain in the unchanged candidate. Its corrected closeout
+is recorded in
+[#111 comment 5217376659](https://github.com/jwiegley/nix-config/issues/111#issuecomment-5217376659),
+and [#121 comment 5217377344](https://github.com/jwiegley/nix-config/issues/121#issuecomment-5217377344)
+carries the correction and its unproved Linux/activation boundaries forward.
+#130 is a real open Project item but its body explicitly defers it and says not
+to block current work on a live PAL dependency; do not silently count it Done
+or invent a cleanup dependency.
 
 Every future `gh` command must explicitly select the `jwiegley` account. A safe
 read pattern is:
@@ -132,12 +134,12 @@ GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" \
 
 Do not use an ambient or ambiguous GitHub account.
 
-The most recent saved #127 commentary still presents a superseded eight-file,
-47/106/15-test candidate as ready. Before requesting live approval, and only
-with separate GitHub-mutation authority, post a correction identifying the
-frozen thirteen-member R3 archive below and its still-unrun eight-view host
-qualification. Do not leave the tracker presenting the old archive as
-executable.
+[#127 comment 5217378220](https://github.com/jwiegley/nix-config/issues/127#issuecomment-5217378220)
+now supersedes the earlier eight-file, 47/106/15-test checkpoint. It identifies
+the frozen thirteen-member R3 archive, preserves the exact eight qualification
+plus twelve observation receipt taxonomy, and explicitly states that the
+status correction does not authorize running the operator or any later live
+action.
 
 ## Completed repository work
 
@@ -149,8 +151,8 @@ boundaries:
   mechanical Nix debris, and the `config/fleet` compatibility surface have
   been removed or reduced according to the accepted plan.
 - #111 is tracker-closed and its corrective source is published to both remotes
-  as signed commit `ea0327cf`. Truthful tracker reconciliation is still required
-  before #121.
+  as signed commit `ea0327cf`. Its corrected closeout and #121 carry-forward are
+  posted in comments `5217376659` and `5217377344`.
 - #109 was closed as not planned after its compliant implementation proved
   larger and more complex than the duplication it would replace.
 - #104 completed the prior comment audit. Its denominator is not the final
@@ -210,9 +212,9 @@ authority.
 | Owner/live gates | Missing | Fresh metadata, payload, Clio-link, quiescence, reachability, and one-runner authority are required. |
 | Live reconciliation | Not run | No live mutable state was changed by the halted lane. |
 | Two-cycle fleet proof | Not run | Required before #116/#124/#127 close. |
-| Codex wrapper correction | Published signed commit | Commit `ea0327cf` passes the Darwin wrapper and pre-commit gates and is on both remotes; reconcile #111. The Linux wrapper lane remains capability-blocked before wrapper execution. |
+| Codex wrapper correction | Published and tracker-reconciled | Commit `ea0327cf` passes the Darwin wrapper and pre-commit gates and is on both remotes; comments `5217376659` and `5217377344` correct #111 and carry its evidence ceiling into #121. The Linux wrapper lane remains capability-blocked before wrapper execution. |
 | #128 bounded-memory Pi sessions | Qualification in progress | Base implementation commit `e2c002e0` plus published follow-ups `11f8de49`, `32489eb8`, and `adda9631`; historical exact-fixture, full-suite, 1 GiB-scale, managed-package, and consumer gates passed on the base candidate. The fresh eight-hour soak remains open. |
-| Prime Agent managed settings | Published and locally qualified | Commits `096de97e` and `e3b191c4` pass 199 selected package tests, both Prime integration selectors, managed preflight, host behavior, pre-commit, a Hera system build without activation, and same-commit normal CI. Portable Assurance remains outstanding. |
+| Prime Agent managed settings | Published and locally qualified | Commits `096de97e` and `e3b191c4` pass 199 selected package tests, both Prime integration selectors, managed preflight, host behavior, pre-commit, a Hera system build without activation, and normal CI. Portable Assurance run `31179553744` also passes at evidence checkpoint `686a7334`; neither build nor CI establishes activation. |
 | #130 PAL restoration | Deferred Todo | Open Project item with no cleanup dependency edge; retain as explicit deferred work rather than miscounting it as Done. |
 | #121/#98 closeout | Blocked | Begins only after the preceding boundaries are complete. |
 
@@ -244,20 +246,25 @@ is:
 
 At the earlier published checkpoint `2543b5cc`, the targeted pi-subagents
 package build, Pi gallery check, and pre-commit tier passed before publication.
-A fresh post-publication pre-commit run passed all seven suites, and same-commit
-normal CI run `31164351260` passed all four jobs. Portable Assurance has not run
-on this exact commit. Run `31161435108` at ancestor `77e13163` passed its other
-three jobs but failed the ARM RSS gate at 29,884,416 bytes against the former
-29,360,128-byte ceiling. Published commit `11f8de49` raises the portable ceiling
-to 32,505,856 bytes, but that correction remains unverified by Portable
-Assurance.
+At published evidence checkpoint `686a7334`, the focused pi-subagents updater,
+package, Pi gallery check, all seven pre-commit suites, normal CI run
+`31178896021`, and Portable Assurance run `31179553744` pass. All four Portable
+Assurance jobs are green, including the `aarch64-linux` native Pi gallery/RSS
+lane. This verifies the `11f8de49` 32,505,856-byte portable ceiling at that
+checkpoint; ancestor run `31161435108` failed the lane at 29,884,416 bytes
+against the former 29,360,128-byte ceiling. These source/build checks do not
+substitute for the open soak, direct large-session resumption, activation, or
+promotion evidence.
 
 The fresh eight-hour soak started on 2026-08-07 with 32 KiB messages, a
-16-message compaction cadence, and retained output. At the 04:45:06 elapsed
-checkpoint, PID 55672 was still alive with an unchanged command; its JSONL and
-SQLite artifacts had grown to 527,381,381 and 67,174,400 bytes. The detached
-monitor can establish only process identity and artifact growth, not stdout
-checkpoints or the final result. Its report is
+16-message compaction cadence, and retained output. The retained stdout session
+most recently emitted an 18,553,569 ms checkpoint with 17,280 messages, 1,080
+compactions, 570,751,015 history bytes, and 94,338,634 adjusted RSS bytes. At
+the independent monitor's 05:15:22 elapsed checkpoint, PID 55672 was still alive
+with an unchanged command; its JSONL and SQLite artifacts had grown to
+582,311,634 and 74,182,656 bytes. The detached monitor can establish only process
+identity and artifact growth, not stdout checkpoints or the final result. Its
+report is
 `/private/tmp/wg-pi128/soak-monitor/report.md`. Do not call the soak, #128,
 hardware/activation, or promotion boundary complete until the final process
 result and remaining authority-specific evidence are recorded. The source
@@ -709,8 +716,9 @@ The final independent fess audit is GO for this exact Darwin/offline boundary;
 its report is
 `/private/tmp/wg-project9-resume/audit/codex-wrapper-fess-v2.md`, SHA-256
 `3c840b50627caf8add34ffa6e07597c3711886762b4b8231c82b535b7eb0226f`.
-It does not close the Linux capability, activation, tracker-reconciliation, or
-same-commit Portable Assurance gates.
+It does not close the Linux capability or activation gates. Portable Assurance
+is green at later evidence checkpoint `686a7334`, but it is not the future
+unchanged-final-candidate #121 run and does not execute the Linux wrapper lane.
 
 The `x86_64-linux.agent-wrappers` check did not reach wrapper execution. The
 configured native `root@nix-builder` SSH master was unavailable; the fallback
@@ -723,7 +731,8 @@ and all five Python-test lanes. The earlier
 
 The correction is committed and published but has not been established as
 active on the fleet. It must remain part of the unchanged candidate tested by
-#121, and the misleading #111 closeout must be reconciled truthfully.
+#121. Comments `5217376659` and `5217377344` now reconcile the #111 closeout and
+carry this evidence ceiling forward.
 
 ## #121 unchanged-candidate closeout
 
@@ -867,7 +876,7 @@ Report the exact boundary rather than softening it into success.
 - [x] Integrate the upstream Codex policy probe and delete duplicate wrapper
       grammar in a signed commit.
 - [x] Publish the Codex correction to both remotes.
-- [ ] Reconcile the misleading #111 closure.
+- [x] Reconcile the misleading #111 closure.
 - [ ] Complete and close #128's bounded-memory Pi-session work.
 - [ ] Run #121 once on an unchanged candidate, remove cleanup documents, and
       publish only with separate authority.
