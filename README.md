@@ -27,7 +27,7 @@ config/ai/catalog.nix and renderers
 The layers have distinct responsibilities:
 
 | Layer | Authority |
-|---|---|
+| --- | --- |
 | Source catalogs | Updateable source coordinates, versions, and dependent hashes |
 | Packages and overlays | Reusable derivations, package sets, compatibility corrections, and package exposure |
 | Portable AI implementation | AI packages, applications, checks, overlays, and wrappers shared by both flakes |
@@ -37,9 +37,23 @@ The layers have distinct responsibilities:
 
 Package availability is separate from installation policy. The portable flake may
 export a package without assigning it to a host; the owning host or feature module
-makes that selection explicitly. Nix owns generated configuration leaves, while
-authentication, history, sessions, caches, reports, trust, and other mutable state
-remain outside the generated tree.
+makes that selection explicitly. Prime Agent is initially selected only for Hera:
+its source-built package, managed-settings overlay, model/provider overrides, prompt
+commands, RLM specialist adapters, skills, theme, keybindings, and MCP adapter are
+managed. Its writable preference/onboarding settings, daemon, kernel, authentication,
+continual harness, history, sessions, caches, logs, and refinements remain mutable. `cass` is exported for Apple Silicon Darwin and x86_64/aarch64
+Linux but initially selected only for Hera; Nix owns its executable, while its
+configuration, SQLite archive, indexes, models, caches, backups, and reports remain
+mutable. `cm` is source-built for the same three systems from a reviewed commit
+one change beyond v0.2.13 and is likewise selected only for Hera. Nix owns its
+executable and exact license rider, not initialization, provider selection,
+playbooks, feedback, reflections, indexes, models, caches, or other mutable state.
+Managed `cm` accepts provider credentials only from environment variables; network
+providers, Bedrock credential discovery, CLI-provider authentication, remote Cass,
+and scheduled reflection remain unqualified user-run surfaces. Both upstream
+licenses add an OpenAI/Anthropic restriction, so the packages are marked unfree
+and install the exact rider. Nix owns generated configuration leaves, not mutable
+roots.
 
 The complete ownership and data-flow contract is maintained in
 [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md).
@@ -47,7 +61,7 @@ The complete ownership and data-flow contract is maintained in
 ## Configuration owners
 
 | Consumer | Platform | Authoritative checkout | Consumption model |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Hera | aarch64-darwin | `~/src/nix` | Direct `darwinConfigurations.hera` output |
 | Clio | aarch64-darwin | `~/src/nix` on Clio | Direct `darwinConfigurations.clio` output |
 | Andoria-08, Andoria-T2, Delphi-3BD4, GPU Server | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Shared standalone Home Manager consumer |
@@ -106,7 +120,7 @@ driver so that the consumer build lock remains authoritative.
 ## Repository layout
 
 | Path | Purpose |
-|---|---|
+| --- | --- |
 | `flake.nix` | Root systems, packages, applications, checks, and exported Home Manager module |
 | `flake/` | Reusable flake implementation, including portable AI composition |
 | `config/` | Shared Home Manager, Darwin, host, package-selection, and AI policy |
@@ -129,7 +143,7 @@ and is implemented by [`flake/ai.nix`](flake/ai.nix).
 Verification is intentionally layered:
 
 | Evidence | Establishes | Does not establish |
-|---|---|---|
+| --- | --- | --- |
 | Evaluation | The configuration can be constructed | Derivation success or runtime behavior |
 | Build | The selected closure can be realized | Activation on any host |
 | Activation | A host selected the new generation | Client or service health |

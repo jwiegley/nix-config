@@ -76,7 +76,7 @@ need them for rollback.
 ## Ownership
 
 | Path | Owns | Must not own |
-|---|---|---|
+| --- | --- | --- |
 | `config/hosts/registry.nix` | Host identity and capabilities | Module implementation |
 | `config/ai/catalog.nix` | Profiles, selectors, resources, validation | Client serialization or package builds |
 | `config/ai/renderers/*` | Generated documents for one client | Global resource selection |
@@ -102,18 +102,56 @@ Nix client-local transport/default/override policy
 ```
 
 Nix owns endpoint wiring and client-specific policy, not a cross-client model
-inventory. Codex retains its native catalog, Pi discovers local models at
-startup, and Droid receives no Nix-generated local-model list. Nix owns
-generated leaves, not mutable roots. Credentials remain environment references or
-runtime secret-command references; secret values never enter derivations,
-generated files, or argv. Auth, history, sessions, caches, reports, trust state,
-and user settings remain mutable.
+inventory. Codex retains its native catalog, Pi discovers local models at startup,
+Droid receives no Nix-generated local-model list, and Prime Agent reuses the safe
+Pi-compatible model overrides plus the shared local-provider discovery packages.
+The initial Prime Agent profile is Hera-only. Its prompt commands and Agent Skills
+are direct catalog projections; static specialist definitions become native RLM
+prompt adapters; stdio MCP remains available through the shared `pi-mcp-adapter`
+because Prime Agent's native MCP integration accepts HTTP transports only.
+
+Prime Agent is built from the reviewed source revision and normalized dependency
+lock. Nix owns a separate, highest-precedence `managed-settings.json` leaf binding
+the package, theme, and extension roots. Upstream's ordinary `settings.json` remains
+a mutable regular file for onboarding, default/recent models, and user preferences;
+preference writes cannot alter or displace the managed overlay. The wrapper binds
+Prime Agent and inherited Pi-compatible adapters to one Prime-private root and
+propagates it to daemon/RLM children. Credentials remain environment references;
+secret values never enter derivations, generated files, or argv. Auth, history,
+sessions, daemon and kernel state, continual-harness refinements, caches, reports,
+and trust state remain mutable.
 
 Package availability is separate from installation policy. Reusable package sets
 live under `packages/`. A cohesive package can be defined in its owning overlay
 when that is the narrowest integration boundary; overlays also expose packages and
 apply compatibility fixes. Owning host or feature modules select packages
 explicitly.
+
+`cass` uses pinned upstream release binaries through this same package boundary and
+is selected only by the Hera home class. The portable package supports
+`aarch64-darwin`, `aarch64-linux`, and `x86_64-linux`; Intel macOS and Windows are
+not exported. Nix owns no `cass` configuration or data leaf: configuration, the
+canonical SQLite archive, derived lexical and semantic indexes, opt-in model files,
+caches, mirrors, backups, reports, and daemon state remain mutable. Automated checks
+exercise its structured robot API rather than launching the interactive TUI.
+Upstream's nominal MIT license includes an OpenAI/Anthropic restriction, so the
+package is classified unfree and carries the exact tag-bound rider in its output.
+
+`cm` is a separate Hera-only package built from the reviewed upstream commit one
+change beyond v0.2.13, retaining the inline-feedback identifier fix uniformly on
+`aarch64-darwin`, `aarch64-linux`, and `x86_64-linux`. The build uses the pinned Bun
+lock; x86_64 uses the hash-pinned baseline Bun template so the executable does not
+inherit an AVX2-only runtime. It disables compiled dotenv autoload and rejects
+file-backed or CLI `apiKey`
+fields; the supported credential path is provider environment variables only.
+Bedrock credential discovery, CLI-provider authentication, network-backed model
+calls, remote Cass, model downloads, MCP service mode, guard installation, and
+scheduled reflection are not automated or qualified. No activation initializes a
+live user home; hermetic checks qualify only non-interactive initialization in an
+isolated synthetic root, including the created files and modes. Nix owns the
+executable and exact unfree rider only. Global and repository playbooks,
+diaries, feedback, reflections, embeddings, indexes, models, usage records,
+backups, locks, caches, and Cass's independent data root remain mutable.
 
 Pi gallery normalization has one implementation:
 `packages/pi-gallery/normalization-policy.json` defines the closed policy and
@@ -162,7 +200,7 @@ complete.
 Verification tiers are intentionally distinct:
 
 | Tier | Purpose |
-|---|---|
+| --- | --- |
 | Pre-commit | Formatting, lint, parsing, and bounded essential tests |
 | Pre-push | Commit signatures |
 | Work-unit closeout | Slow focused tests, consumer evaluation, and affected builds |
