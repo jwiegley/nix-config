@@ -257,14 +257,14 @@ substitute for the open soak, direct large-session resumption, activation, or
 promotion evidence.
 
 The fresh eight-hour soak started on 2026-08-07 with 32 KiB messages, a
-16-message compaction cadence, and retained output. The retained stdout session
-most recently emitted an 18,553,569 ms checkpoint with 17,280 messages, 1,080
-compactions, 570,751,015 history bytes, and 94,338,634 adjusted RSS bytes. At
-the independent monitor's 05:15:22 elapsed checkpoint, PID 55672 was still alive
+16-message compaction cadence, and retained output. The monitor report records
+the coordinator's recovered 17,509,249 ms stdout checkpoint with 16,320
+messages, 1,020 compactions, and 94,338,634 adjusted RSS bytes. At the
+independent monitor's 05:15:22 elapsed checkpoint, PID 55672 was still alive
 with an unchanged command; its JSONL and SQLite artifacts had grown to
-582,311,634 and 74,182,656 bytes. The detached monitor can establish only process
-identity and artifact growth, not stdout checkpoints or the final result. Its
-report is
+582,311,634 and 74,182,656 bytes. The detached monitor can establish only
+process identity and artifact growth, not new stdout checkpoints or the final
+result. Its report is
 `/private/tmp/wg-pi128/soak-monitor/report.md`. Do not call the soak, #128,
 hardware/activation, or promotion boundary complete until the final process
 result and remaining authority-specific evidence are recorded. The source
