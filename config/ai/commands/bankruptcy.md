@@ -7,6 +7,6 @@ Stash any current work first, to be unstashed after this is done.
 - =git reset --soft main=
 - =git reset HEAD=
 
-Now the work of the entire branch is uncommitted in the working tree. At this point, use the `command` skill or $command-commit to re-commit all the work that has happened here, this time in a series of orderly commits that express the logical sequence of the work that has happened thus far.
+Now the work of the entire branch is uncommitted in the working tree. At this point, use the `commit` skill or $command-commit to re-commit all the work that has happened here, this time in a series of orderly commits that express the logical sequence of the work that has happened thus far.
 
 The end result should be an unchanged working tree, but a new Git commit history that is much more compact and will be much quicker to rebase in the future.
