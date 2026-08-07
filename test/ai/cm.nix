@@ -144,27 +144,31 @@ runCommand "cm-integration-check"
     grep -F 'apiKey configuration field is disabled' "$results/guard.combined" >/dev/null
 
     # Repository-local credentials are rejected, not silently filtered, and their
-    # values must never appear in diagnostics.
+    # values must never appear in diagnostics or persisted state.
     ${pkgs.git}/bin/git -C "$project" init --quiet
-    mkdir -m 700 "$project/.cass"
+    mkdir -m 700 "$project/.cass" "$project/nested"
     repo_guard_sentinel=repo-credential-value-must-not-appear
     printf '%s\n' '{"apiKey":"repo-credential-value-must-not-appear"}' \
       >"$project/.cass/config.json"
     chmod 600 "$project/.cass/config.json"
     if (
-      cd "$project"
+      cd "$project/nested"
       $cm context rejected --json
     ) >"$results/repo-guard.out" 2>"$results/repo-guard.err"
     then
       echo "cm accepted a repository-local apiKey field" >&2
       exit 1
     fi
-    cat "$results/repo-guard.out" "$results/repo-guard.err" \
-      >"$results/repo-guard.combined"
-    grep -F 'apiKey configuration field is disabled' \
-      "$results/repo-guard.combined" >/dev/null
-    if grep -F "$repo_guard_sentinel" "$results/repo-guard.combined" >/dev/null; then
-      echo "cm leaked a repository-local apiKey value" >&2
+    test ! -s "$results/repo-guard.err"
+    jq -e \
+      '.success == false
+       and .command == "context"
+       and (.error.message | contains("apiKey configuration field is disabled"))' \
+      "$results/repo-guard.out" >/dev/null
+    test "$(jq -r .apiKey "$project/.cass/config.json")" = "$repo_guard_sentinel"
+    rm "$project/.cass/config.json"
+    if grep -R -F "$repo_guard_sentinel" "$sandbox" >/dev/null; then
+      echo "cm persisted or emitted a repository-local apiKey value" >&2
       exit 1
     fi
 
