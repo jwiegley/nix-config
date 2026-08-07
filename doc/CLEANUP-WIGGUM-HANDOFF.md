@@ -46,15 +46,17 @@ one deferred Project item, and one final closeout boundary:
    assurance, and close #98 last.
 
 At this 2026-08-07 checkpoint, the formerly mixed working tree has been
-separated with the Git surgeon workflow, rebased, and published as an
-eighteen-commit signed series after `5593f2c7`. Commit `2543b5cc` is the last
+separated with the Git surgeon workflow, rebased, and published as a
+twenty-four-commit signed series after `5593f2c7`. Commit `e3b191c4` is the last
 published implementation checkpoint. Immediately after publication the single
 worktree was clean, network reads found both `origin/main` and `github/main` at
-that commit, and every commit in the series had a good signature. This
+that commit, and the two new Prime commits had good signatures. This
 handoff-only delta records the subsequent evidence refresh and introduces no
 implementation change. The exact published implementation checkpoint passed
-normal CI and a fresh pre-commit gate. Same-commit Portable Assurance remains
-outstanding.
+the Prime package and both integration selectors, managed-policy preflight,
+host-behavior check, pre-commit gate, and a non-activating Hera system build.
+Same-commit normal CI run `31178499155` passed all four jobs; Portable
+Assurance remains outstanding.
 
 The last complete fleet activation proof remains the #126 boundary at
 `e7dc846c`. Later successful builds, evaluations, and single-host checks must
@@ -168,6 +170,15 @@ boundaries:
   a model metric, not the retired service.
 - Native OpenAI Codex remains the default. Local oMLX and llama-swap routes are
   opt-in. Pi obtains `gpt-5.6-sol` through `openai-codex`.
+- Starship now renders the simple hostname on every machine followed by the
+  current directory and prompt character; commit `77e13163` removed the user,
+  cloud, Git, duration, and remote-only hostname distinctions.
+- CM repository configuration can no longer persist provider credentials.
+  Signed commits `16a90c8d`, `0a682e44`, `13fe2a90`, and `a1067f19` restore the
+  environment-only guard and exercise its portable failure behavior.
+- Prime Agent managed settings are authoritative for package and resource
+  resolution. Signed commits `096de97e` and `e3b191c4` fix the built-in
+  `skill-creator` collision and add bounded end-to-end runtime coverage.
 - The repository's anti-snapshot testing policy is documented in
   [`test/README.md`](../test/README.md): configuration rosters, source-spelling
   mirrors, and completed-migration inventories are not desired tests.
@@ -201,6 +212,7 @@ authority.
 | Two-cycle fleet proof | Not run | Required before #116/#124/#127 close. |
 | Codex wrapper correction | Published signed commit | Commit `ea0327cf` passes the Darwin wrapper and pre-commit gates and is on both remotes; reconcile #111. The Linux wrapper lane remains capability-blocked before wrapper execution. |
 | #128 bounded-memory Pi sessions | Qualification in progress | Base implementation commit `e2c002e0` plus published follow-ups `11f8de49`, `32489eb8`, and `adda9631`; historical exact-fixture, full-suite, 1 GiB-scale, managed-package, and consumer gates passed on the base candidate. The fresh eight-hour soak remains open. |
+| Prime Agent managed settings | Published and locally qualified | Commits `096de97e` and `e3b191c4` pass 199 selected package tests, both Prime integration selectors, managed preflight, host behavior, pre-commit, a Hera system build without activation, and same-commit normal CI. Portable Assurance remains outstanding. |
 | #130 PAL restoration | Deferred Todo | Open Project item with no cleanup dependency edge; retain as explicit deferred work rather than miscounting it as Done. |
 | #121/#98 closeout | Blocked | Begins only after the preceding boundaries are complete. |
 
@@ -230,24 +242,62 @@ is:
   passed, including the packaged deferred-agent-core contract; and
 - the full repository pre-commit tier passed all seven suites.
 
-At published HEAD `2543b5cc`, the targeted pi-subagents package build, Pi
-gallery check, and pre-commit tier passed before publication. A fresh
-post-publication pre-commit run passed all seven suites, and same-commit normal
-CI run `31164351260` passed all four jobs. Portable Assurance has not run on
-this exact commit. Run `31161435108` at ancestor `77e13163` passed its other
+At the earlier published checkpoint `2543b5cc`, the targeted pi-subagents
+package build, Pi gallery check, and pre-commit tier passed before publication.
+A fresh post-publication pre-commit run passed all seven suites, and same-commit
+normal CI run `31164351260` passed all four jobs. Portable Assurance has not run
+on this exact commit. Run `31161435108` at ancestor `77e13163` passed its other
 three jobs but failed the ARM RSS gate at 29,884,416 bytes against the former
 29,360,128-byte ceiling. Published commit `11f8de49` raises the portable ceiling
 to 32,505,856 bytes, but that correction remains unverified by Portable
 Assurance.
 
 The fresh eight-hour soak started on 2026-08-07 with 32 KiB messages, a
-16-message compaction cadence, and retained output. Its first checkpoint passed;
-do not call the soak, #128, hardware/activation, or promotion boundary complete
-until the final process result and remaining authority-specific evidence are
-recorded. The source scratch remains
+16-message compaction cadence, and retained output. At the 04:45:06 elapsed
+checkpoint, PID 55672 was still alive with an unchanged command; its JSONL and
+SQLite artifacts had grown to 527,381,381 and 67,174,400 bytes. The detached
+monitor can establish only process identity and artifact growth, not stdout
+checkpoints or the final result. Its report is
+`/private/tmp/wg-pi128/soak-monitor/report.md`. Do not call the soak, #128,
+hardware/activation, or promotion boundary complete until the final process
+result and remaining authority-specific evidence are recorded. The source
+scratch remains
 `/private/tmp/pi128-upstream.qhiEdH` at upstream v0.83.0 commit
 `845d6ff1f6643aba440341cce877ce1c43ebbc39`; never push that downstream scratch
 to its upstream remote.
+
+## Prime Agent managed-settings checkpoint
+
+The `make switch` failure was a package-manager precedence bug rather than a
+Nix module collision. Prime's scalar getters used effective managed settings,
+but `DefaultPackageManager.resolve()` still read raw global and project files.
+The renderer's managed exclusion of bundled `skill-creator` was therefore
+ignored, and Prime tried to load the bundled and shared resources together.
+
+Signed commit `096de97e` makes managed package and resource policy
+authoritative, reapplies it after runtime overrides, validates the current
+schema fail closed, keeps reloads transactional, deep-merges target-owned
+nested settings, and rejects persistence through managed read-only entries.
+It also bounds retry-timer arithmetic and defaults the managed-settings
+environment only when a real file or symlink exists. Signed commit `e3b191c4`
+repairs and bounds the existing full-turn synthetic provider, MCP, RLM
+lifecycle, and daemon coverage, then extends it with exact-socket shutdown,
+missing/dangling policy, and managed-package-list probes while retaining the
+existing package-collision check.
+
+The exact `e3b191c4` implementation passed:
+
+- the Prime package build with four selected test files and 199/199 tests;
+- both `config/ai` and repository-root Prime integration selectors;
+- `ai-managed-preflight` and `host-behavior`;
+- all seven pre-commit lanes, including 49 fast Python tests; and
+- `darwinConfigurations.hera.system` without activation.
+
+Independent partner and fess reviews were GO with no P1-P3 findings. Preserve
+the evidence ceiling: this is not the complete upstream suite; the IPython
+check proves bridge wiring but does not invoke a kernel; and the RLM check
+proves completion, registry retention, and deletion but not child response
+content. Build success does not establish activation on Hera or any fleet host.
 
 ## #127 current offline source checkpoint
 
