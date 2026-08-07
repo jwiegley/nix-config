@@ -51,5 +51,8 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
         if: runner.os != 'macOS'
-      - name: Build and load the Pi extension gallery
-        run: nix build --no-link "./config/ai#checks.${{ matrix.system }}.pi-gallery"
+      - name: Build portable native integration checks
+        run: |
+          nix build --no-link \
+            "./config/ai#checks.${{ matrix.system }}.pi-gallery" \
+            "./config/ai#checks.${{ matrix.system }}.cm"
