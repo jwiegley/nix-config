@@ -1,0 +1,150 @@
+// validated-code-review — stage pipeline
+// One simulated run of the model-assignment rules:
+//   * Focused reviewers drawn uniformly at random from MODELS
+//     (this run: 3x gpt-5.6-sol, 2x claude-fable-5)
+//   * Every review verified by a DIFFERENT model — with two models in the
+//     list the verifier is always the opposite one, shown in the opposing
+//     color of its reviewer.
+// Render (from the skill root):
+//   dot -Tsvg assets/validated-code-review-stages.dot -o assets/validated-code-review-stages.svg
+
+digraph validated_code_review {
+    rankdir=TB;
+    compound=true;
+    ranksep=0.65;
+    nodesep=0.32;
+    fontname="Helvetica";
+    bgcolor="white";
+    labelloc="t";
+    label=<<font point-size="17" color="#1F2937"><b>validated-code-review</b></font><br/><font point-size="11" color="#64748B">multi-model review pipeline — one simulated run</font>>;
+    node  [fontname="Helvetica", fontsize=11, shape=box, style="filled,rounded",
+           margin="0.16,0.11", color="#C9D3DE", fillcolor="#F6F8FA", fontcolor="#334155"];
+    edge  [fontname="Helvetica", fontsize=8, color="#A3B0BF", fontcolor="#64748B", arrowsize=0.7];
+
+    // palette --------------------------------------------------------------
+    //   gpt-5.6-sol     fill #FBF0E5  border #DCA36A  accent #B15D0E
+    //   claude-fable-5  fill #EAF1FA  border #93B4DF  accent #2563AE
+    //   your model      fill #E4F2EF  border #82BBAE  (legend placeholder only)
+    //   neutral steps   fill #F6F8FA  border #C9D3DE
+    //   subagent stages fill #F2F6FA  (stage-level tint = context isolation)
+    //   PAL forum       fill #F1EEFB  border #7C6FCF  accent #4F3FB5
+    //   deliverable     fill #E9F6EF  border #5FAE87  accent #1C7A50
+
+    // ---- Legend ------------------------------------------------------------
+    legend [shape=plaintext, style="", fillcolor="none", label=<
+        <table border="1" cellborder="0" cellspacing="6" cellpadding="3" color="#D3DAE3" style="rounded">
+            <tr><td colspan="2" align="left"><font point-size="11" color="#64748B"><b>Legend</b></font></td></tr>
+            <tr>
+                <td border="1" bgcolor="#FBF0E5" color="#DCA36A" fixedsize="true" width="30" height="16"></td>
+                <td align="left"><font color="#334155">gpt-5.6-sol</font></td>
+            </tr>
+            <tr>
+                <td border="1" bgcolor="#EAF1FA" color="#93B4DF" fixedsize="true" width="30" height="16"></td>
+                <td align="left"><font color="#334155">claude-fable-5</font></td>
+            </tr>
+            <tr>
+                <td border="1" bgcolor="#E4F2EF" color="#82BBAE" style="dashed" fixedsize="true" width="30" height="16"></td>
+                <td align="left"><font color="#64748B"><i>your model here — MODELS accepts more<br align="left"/>equivalent-strength models</i></font></td>
+            </tr>
+            <tr>
+                <td border="1" bgcolor="#F2F6FA" color="#C9D5E3" fixedsize="true" width="30" height="16"></td>
+                <td align="left"><font color="#334155">tinted stage = isolated subagents</font><br align="left"/><font point-size="9" color="#64748B">each runs in its own context window; only report<br align="left"/>files flow back, so the orchestrator stays clean</font></td>
+            </tr>
+            <tr><td colspan="2" align="left"><font point-size="9" color="#64748B">“drawn” = model picked at random.<br align="left"/>Reviewer/verifier pairs show opposing colors —<br align="left"/>no review is verified by its own model.</font></td></tr>
+        </table>>];
+
+    // ---- Stage 0 -----------------------------------------------------------
+    subgraph cluster_s0 {
+        label=<<font point-size="12" color="#64748B"><b>Stage 0 · Setup</b></font>>;
+        style="rounded"; color="#D3DAE3";
+        setup [label=<<b>Prepare review inputs</b><br/><font point-size="9" color="#64748B">git fetch origin · diff $BASE_REF...HEAD → diff.patch<br/>commit log → commits.txt · all artifacts in $REVIEW_DIR</font>>];
+    }
+
+    // ---- Stage 1 — independent reviews (parallel) ---------------------------
+    subgraph cluster_s1 {
+        label=<<font point-size="12" color="#64748B"><b>Stage 1 · Independent reviews</b>&nbsp;&nbsp;<i>all parallel · read-only: no builds, no tests</i></font><br/><font point-size="9" color="#7E93AB">isolated subagents — one fresh context window each</font>>;
+        style="rounded,filled"; color="#C9D5E3"; fillcolor="#F2F6FA";
+
+        subgraph cluster_s1_focused {
+            label=<<font point-size="10" color="#64748B">Focused reviewers — model drawn at random&nbsp;&nbsp;<i>(this draw: 3 sol / 2 fable)</i></font>>;
+            style="dashed,rounded,filled"; color="#C9D5E3"; fillcolor="#F2F6FA";
+            r_correct  [label=<<b>Code correctness</b><br/><font point-size="9" color="#B15D0E">drawn · gpt-5.6-sol</font>>,        fillcolor="#FBF0E5", color="#DCA36A"];
+            r_memory   [label=<<b>Memory safety</b><br/><font point-size="9" color="#2563AE">drawn · claude-fable-5</font>>,       fillcolor="#EAF1FA", color="#93B4DF"];
+            r_comments [label=<<b>Comment quality</b><br/><font point-size="9" color="#B15D0E">drawn · gpt-5.6-sol</font>>,         fillcolor="#FBF0E5", color="#DCA36A"];
+            r_tests    [label=<<b>Missing test coverage</b><br/><font point-size="9" color="#2563AE">drawn · claude-fable-5</font>>,fillcolor="#EAF1FA", color="#93B4DF"];
+            r_extra    [label=<<b><i>User extra category</i></b><br/><font point-size="9" color="#B15D0E">drawn · gpt-5.6-sol</font>>, fillcolor="#FBF0E5", color="#DCA36A"];
+        }
+
+        subgraph cluster_s1_broad {
+            label=<<font point-size="10" color="#64748B">Broad reviewers — one per model, full diff</font>>;
+            style="dashed,rounded,filled"; color="#C9D5E3"; fillcolor="#F2F6FA";
+            r_broad_fable [label=<<b>Broad review</b><br/><font point-size="9" color="#2563AE">claude-fable-5</font>>, fillcolor="#EAF1FA", color="#93B4DF"];
+            r_broad_sol   [label=<<b>Broad review</b><br/><font point-size="9" color="#B15D0E">gpt-5.6-sol</font>>,    fillcolor="#FBF0E5", color="#DCA36A"];
+        }
+    }
+
+    // ---- Stage 2 — different-model verification ------------------------------
+    subgraph cluster_s2 {
+        label=<<font point-size="12" color="#64748B"><b>Stage 2 · Verification by a different model</b>&nbsp;&nbsp;<i>each claim checked against the code: valid / invalid, graded P0–P2</i></font><br/><font point-size="9" color="#7E93AB">isolated subagents — one fresh context window each</font>>;
+        style="rounded,filled"; color="#C9D5E3"; fillcolor="#F2F6FA";
+        v_correct  [label=<<b>Verify correctness</b><br/><font point-size="9" color="#2563AE">claude-fable-5</font>>,    fillcolor="#EAF1FA", color="#93B4DF"];
+        v_memory   [label=<<b>Verify memory safety</b><br/><font point-size="9" color="#B15D0E">gpt-5.6-sol</font>>,     fillcolor="#FBF0E5", color="#DCA36A"];
+        v_comments [label=<<b>Verify comments</b><br/><font point-size="9" color="#2563AE">claude-fable-5</font>>,       fillcolor="#EAF1FA", color="#93B4DF"];
+        v_tests    [label=<<b>Verify test coverage</b><br/><font point-size="9" color="#B15D0E">gpt-5.6-sol</font>>,     fillcolor="#FBF0E5", color="#DCA36A"];
+        v_extra    [label=<<b>Verify extra category</b><br/><font point-size="9" color="#2563AE">claude-fable-5</font>>, fillcolor="#EAF1FA", color="#93B4DF"];
+        v_broad_fable [label=<<b>Verify broad (fable)</b><br/><font point-size="9" color="#B15D0E">gpt-5.6-sol</font>>,  fillcolor="#FBF0E5", color="#DCA36A"];
+        v_broad_sol   [label=<<b>Verify broad (sol)</b><br/><font point-size="9" color="#2563AE">claude-fable-5</font>>, fillcolor="#EAF1FA", color="#93B4DF"];
+    }
+
+    // ---- Stage 3 -------------------------------------------------------------
+    subgraph cluster_s3 {
+        label=<<font point-size="12" color="#64748B"><b>Stage 3 · Consolidation</b></font>>;
+        style="rounded"; color="#D3DAE3";
+        consolidate [label=<<b>consolidated-review.md</b><br/><font point-size="9" color="#64748B">drop invalid claims · dedupe, keeping highest severity<br/>annotate category, reviewer, verifier, severity<br/>label broad-review claims as the cross-model stream</font>>];
+    }
+
+    // ---- Stage 4 — PAL consensus forum (the arbiter) ---------------------------
+    subgraph cluster_s4 {
+        label=<<font point-size="13" color="#4F3FB5"><b>Stage 4 · Consensus forum — the arbiter of ambiguities</b></font>>;
+        style="rounded,filled"; color="#B9AFE8"; fillcolor="#FAF9FE";
+        pal [label=<<font point-size="14"><b>PAL consensus forum</b></font><br/><font point-size="10" color="#4F3FB5">every model in the list deliberates together</font><br/><font point-size="9" color="#64748B">reads the diff, source context, and Stage-3 annotations<br/>settles disputed claims — confirms or rejects each P0/P1<br/>as a genuine merge blocker</font><br/><font point-size="8" color="#8B84A8">also context-isolated: deliberation happens out-of-process, only verdicts return</font>>,
+             penwidth=2.2, fillcolor="#F1EEFB", color="#7C6FCF", margin="0.35,0.22"];
+    }
+
+    // ---- Stage 5 ----------------------------------------------------------------
+    subgraph cluster_s5 {
+        label=<<font point-size="12" color="#64748B"><b>Stage 5 · Synthesis &amp; delivery</b></font>>;
+        style="rounded"; color="#D3DAE3";
+        final [label=<<b>Distilled list of verified issues</b><br/><font point-size="9" color="#1C7A50">P0 merge blockers lead · P1 follow-ups · vetted P2 nits</font><br/><font point-size="9" color="#64748B">each with file:line, evidence, suggested fix<br/>→ &lt;branch&gt;-code-review.md (never committed)</font>>,
+               fillcolor="#E9F6EF", color="#5FAE87", penwidth=1.6];
+    }
+
+    // ---- flow ---------------------------------------------------------------
+    setup -> r_correct;
+    setup -> r_memory;
+    setup -> r_comments;
+    setup -> r_tests;
+    setup -> r_extra;
+    setup -> r_broad_fable;
+    setup -> r_broad_sol;
+
+    // reviewer → its opposite-model verifier (color flips within each pair)
+    r_correct     -> v_correct     [label="review-correctness.md"];
+    r_memory      -> v_memory      [label="review-memory-safety.md"];
+    r_comments    -> v_comments    [label="review-comments.md"];
+    r_tests       -> v_tests       [label="review-test-coverage.md"];
+    r_extra       -> v_extra       [label="review-<extra>.md"];
+    r_broad_fable -> v_broad_fable [label="review-broad-fable.md"];
+    r_broad_sol   -> v_broad_sol   [label="review-broad-sol.md"];
+
+    v_correct     -> consolidate [label="verified-*.md"];
+    v_memory      -> consolidate;
+    v_comments    -> consolidate;
+    v_tests       -> consolidate;
+    v_extra       -> consolidate;
+    v_broad_fable -> consolidate;
+    v_broad_sol   -> consolidate;
+
+    consolidate -> pal   [label="claims + annotations + source context", penwidth=1.6, color="#7C6FCF"];
+    pal         -> final [label="confirmed blockers only",               penwidth=1.6, color="#5FAE87"];
+}

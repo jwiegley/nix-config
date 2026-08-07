@@ -307,10 +307,10 @@ let
     };
     "heavy-review" = {
       "allowed-tools" =
-        "Read, Grep, Glob, Bash(git:*), Bash(find:*), Bash(wc:*), Bash(gh pr diff:*), Task";
+        "Read, Grep, Glob, Bash(git:*), Bash(find:*), Bash(wc:*), Bash(gh pr diff:*), Task, Skill, Workflow";
       "argument-hint" = "repository | working-tree | pr [N] | path | revision range";
       "description" =
-        "Coordinate deep, Alexey-discipline, abstraction-alignment, Ponytail, dead-code, and comment audits into one deduplicated report";
+        "Coordinate deep, Alexey-discipline, abstraction-alignment, validated multi-model, Ponytail, dead-code, and comment audits concurrently, one subagent per pass, into one deduplicated report";
     };
     "discover-bundles" = {
       "description" =
@@ -639,6 +639,7 @@ let
     "skill-creator"
     "swiftui"
     "toolkit"
+    "validated-code-review"
     "wiggum"
   ];
   externalBroadSkills = [
