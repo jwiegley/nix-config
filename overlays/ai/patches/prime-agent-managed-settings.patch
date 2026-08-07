@@ -90,7 +90,7 @@
  			this.recordError(
 --- /dev/null
 +++ b/packages/coding-agent/test/managed-settings.test.ts
-@@ -0,0 +1,79 @@
+@@ -0,0 +1,77 @@
 +import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
 +import { tmpdir } from "os";
 +import { join } from "path";
