@@ -9,13 +9,14 @@ Interpret the scope as follows:
 
 Freeze one scope snapshot before reviewing so every pass examines the same code. Do not edit files, stage changes, post comments, or invoke mutating dead-code phases.
 
-Run five independent passes:
+Run six independent passes:
 
 1. **Deep review** — correctness, security, performance, structure, tests, and documentation.
 2. **Alexey-discipline review** — challenge the premise first; verify correctness by construction, benchmark and prose claims, test meaning, and scope discipline.
-3. **Ponytail review** — identify over-engineering, duplicate machinery, unnecessary dependencies, and code that should be deleted or replaced by existing/native facilities.
-4. **Dead-code audit** — report only evidence-backed unreachable, unused, stale, or superseded code and documentation; require two independent signals for dynamic references.
-5. **Comment audit** — verify comments and docstrings against current code, commands, paths, versions, and behavior.
+3. **Abstraction review** (use the `abstraction-review` skill) — determine whether the change extends the existing abstractions or evades them: parallel mechanisms beside existing ones, identity dispatch, name-carried semantics, runtime rediscovery of static facts, guard workarounds, contract shoehorning, and mocks or tests that validate a workaround instead of the requirement.
+4. **Ponytail review** — identify over-engineering, duplicate machinery, unnecessary dependencies, and code that should be deleted or replaced by existing/native facilities.
+5. **Dead-code audit** — report only evidence-backed unreachable, unused, stale, or superseded code and documentation; require two independent signals for dynamic references.
+6. **Comment audit** — verify comments and docstrings against current code, commands, paths, versions, and behavior.
 
 Consolidate the results into one report:
 
