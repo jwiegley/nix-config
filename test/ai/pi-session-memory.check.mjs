@@ -13,6 +13,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { performance } from "node:perf_hooks";
 import { createInterface } from "node:readline";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -463,7 +464,8 @@ async function growth(workload) {
 	assert(createdPath, "synthetic session was not persisted");
 	const manager = SessionManager.open(createdPath);
 	const samples = [];
-	const started = Date.now();
+	const started = performance.now();
+	const elapsedMs = () => Math.floor(performance.now() - started);
 	let messages = 0;
 	let lastId;
 	try {
@@ -471,7 +473,7 @@ async function growth(workload) {
 			workload === "scale"
 				? (manager.getHistoryMetrics()?.session_history_bytes ?? 0) <
 					targetBytes
-				: Date.now() - started < durationMs
+				: elapsedMs() < durationMs
 		) {
 			lastId = manager.appendMessage({
 				role: "toolResult",
@@ -501,7 +503,7 @@ async function growth(workload) {
 				if (samples.length === 1 || samples.length % checkpointEvery === 0) {
 					report({
 						mode: `${workload}-checkpoint`,
-						durationMs: Date.now() - started,
+						durationMs: elapsedMs(),
 						messages,
 						compactions: samples.length,
 						...samples.at(-1),
@@ -552,7 +554,7 @@ async function growth(workload) {
 		);
 		report({
 			mode: workload,
-			durationMs: Date.now() - started,
+			durationMs: elapsedMs(),
 			messages,
 			compactions: samples.length,
 			payloadBytes,
