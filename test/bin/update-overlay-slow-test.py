@@ -43,6 +43,8 @@ read_npm_tarball_manifest = MODULE.get("read_npm_tarball_manifest")
 verify_npm_integrity = MODULE.get("verify_npm_integrity")
 registry_only_proxy = MODULE.get("registry_only_proxy")
 update_npm_lock_target = MODULE.get("update_npm_lock_target")
+normalize_prime_agent_lock = MODULE.get("normalize_prime_agent_lock")
+prime_agent_lock_is_normalized = MODULE.get("_prime_agent_lock_is_normalized")
 require_detached_linked_worktree = MODULE["require_detached_linked_worktree"]
 sync_flake_projections = MODULE["sync_flake_projections"]
 resolve_flake_input_version = MODULE.get("resolve_flake_input_version")
@@ -4443,6 +4445,89 @@ got: sha256-requested
             self.assertEqual(status, 1)
             self.assertIn("changed unselected data", stderr.getvalue())
             self.assertEqual(path.read_text(), before)
+
+
+    def test_prime_agent_lock_normalizer_adds_only_registry_metadata(self):
+        self.assertIsNotNone(normalize_prime_agent_lock)
+        self.assertIsNotNone(prime_agent_lock_is_normalized)
+        upstream = {
+            "name": "prime-agent",
+            "version": "1.0.0",
+            "lockfileVersion": 3,
+            "requires": True,
+            "packages": {
+                "": {"name": "prime-agent", "workspaces": ["packages/*"]},
+                "packages/agent": {"name": "agent", "version": "1.0.0"},
+                "node_modules/@scope/tool": {
+                    "version": "2.3.4",
+                    "license": "MIT",
+                },
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            (source / "package-lock.json").write_text(
+                json.dumps(upstream, indent=2) + "\n"
+            )
+            calls = []
+
+            class Registry:
+                def get_version_metadata(self, package, version):
+                    calls.append((package, version))
+                    return {
+                        "version": version,
+                        "integrity": "sha512-YWJjZA==",
+                        "tarball": (
+                            "https://registry.npmjs.org/@scope/tool/-/tool-2.3.4.tgz"
+                        ),
+                    }
+
+            normalized_text = normalize_prime_agent_lock(
+                source,
+                json.dumps(upstream, indent=2) + "\n",
+                Registry(),
+            )
+            normalized = json.loads(normalized_text)
+            package = normalized["packages"]["node_modules/@scope/tool"]
+            self.assertEqual(
+                package["resolved"],
+                "https://registry.npmjs.org/@scope/tool/-/tool-2.3.4.tgz",
+            )
+            self.assertEqual(package["integrity"], "sha512-YWJjZA==")
+            self.assertEqual(calls, [("@scope/tool", "2.3.4")])
+            self.assertTrue(prime_agent_lock_is_normalized(upstream, normalized))
+
+            class NoRegistry:
+                def get_version_metadata(self, _package, _version):
+                    raise AssertionError("already-normalized lock queried the registry")
+
+            self.assertEqual(
+                normalize_prime_agent_lock(source, normalized_text, NoRegistry()),
+                normalized_text,
+            )
+            stripped = copy.deepcopy(normalized)
+            del stripped["packages"]["node_modules/@scope/tool"]["integrity"]
+            self.assertFalse(prime_agent_lock_is_normalized(upstream, stripped))
+
+    def test_prime_agent_lock_normalizer_rejects_non_registry_tarball(self):
+        upstream = {
+            "lockfileVersion": 3,
+            "packages": {"node_modules/tool": {"version": "1.2.3"}},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            (source / "package-lock.json").write_text(json.dumps(upstream))
+
+            class Registry:
+                def get_version_metadata(self, _package, version):
+                    return {
+                        "version": version,
+                        "integrity": "sha512-YWJjZA==",
+                        "tarball": "https://cdn.invalid/tool-1.2.3.tgz",
+                    }
+
+            with self.assertRaisesRegex(RuntimeError, "registry coordinate mismatch"):
+                normalize_prime_agent_lock(source, json.dumps(upstream), Registry())
 
 
 class IntegratedWorkflowTests(unittest.TestCase):

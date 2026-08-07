@@ -63,6 +63,8 @@ if not sys.stdout.isatty():
 DUMMY_SRI_HASH = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 PI_NORMALIZATION_POLICY = Path("packages/pi-gallery/normalization-policy.json")
 PI_NORMALIZER = Path("packages/pi-gallery/normalize-manifest.jq")
+PRIME_AGENT_LOCK = Path("packages/prime-agent/package-lock.json")
+PRIME_AGENT_NORMALIZER = "prime-agent-lock-v1"
 PI_NPM_REQUIRED_DEPENDENCY_FLAGS = (
     "--ignore-scripts",
     "--omit=dev",
@@ -1798,7 +1800,7 @@ def load_source_catalog(
             {"branch"},
         ),
         "github-release": (
-            common_update_fields | {"buildMode", "tagPrefix"},
+            common_update_fields | {"buildMode", "normalizer", "tagPrefix"},
             set(),
         ),
         "github-tag": (
@@ -2042,7 +2044,21 @@ def load_source_catalog(
             if pi_lock_shape:
                 pi_lock_shape_targets.add(name)
             normalizer = update.get("normalizer")
-            if normalizer is not None:
+            prime_normalization = normalizer == PRIME_AGENT_NORMALIZER
+            if prime_normalization:
+                if (
+                    name != "prime-agent"
+                    or kind != "github-release"
+                    or source_fetcher != "fetchFromGitHub"
+                    or artifacts
+                    or update_artifacts != [str(PRIME_AGENT_LOCK)]
+                    or set(hashes) != {"npmDepsHash"}
+                    or build_mode != "pkg"
+                ):
+                    raise RuntimeError(
+                        f"invalid Prime Agent lock normalization projection: {name}"
+                    )
+            elif normalizer is not None:
                 canonical_lock = (
                     f"packages/pi-gallery/locks/{name}-package-lock.json"
                 )
@@ -2061,7 +2077,7 @@ def load_source_catalog(
                         f"invalid Pi npm normalization projection: {name}"
                     )
                 pi_npm_targets.add(name)
-            if build_mode is not None and (artifacts or update_artifacts):
+            if build_mode is not None and (artifacts or update_artifacts) and not prime_normalization:
                 raise RuntimeError(
                     f"dependent-hash projection cannot also declare artifacts: {name}"
                 )
@@ -2905,6 +2921,89 @@ def update_github_commit_artifact_target(
     return "updated"
 
 
+def _prime_agent_registry_tarball(package: str, version: str) -> str:
+    encoded = quote(package, safe="@/")
+    basename = package.rsplit("/", 1)[-1]
+    return f"https://registry.npmjs.org/{encoded}/-/{basename}-{version}.tgz"
+
+
+def _prime_agent_lock_is_normalized(upstream: dict, candidate: dict) -> bool:
+    """Check that candidate is exactly upstream plus closed registry metadata."""
+    if not isinstance(candidate, dict) or not isinstance(candidate.get("packages"), dict):
+        return False
+    stripped = copy.deepcopy(candidate)
+    upstream_packages = upstream.get("packages")
+    if not isinstance(upstream_packages, dict):
+        return False
+    for lock_path, package in stripped["packages"].items():
+        if not isinstance(package, dict):
+            return False
+        if "node_modules/" not in lock_path or package.get("link"):
+            continue
+        upstream_package = upstream_packages.get(lock_path)
+        if not isinstance(upstream_package, dict):
+            return False
+        if "resolved" in upstream_package or "integrity" in upstream_package:
+            continue
+        resolved = package.pop("resolved", None)
+        integrity = package.pop("integrity", None)
+        name = lock_path.rsplit("node_modules/", 1)[1]
+        version = package.get("version")
+        if (
+            not isinstance(version, str)
+            or not version
+            or resolved != _prime_agent_registry_tarball(name, version)
+            or not isinstance(integrity, str)
+            or re.fullmatch(r"sha(?:1|256|384|512)-[A-Za-z0-9+/=]+", integrity) is None
+        ):
+            return False
+    return stripped == upstream
+
+
+def normalize_prime_agent_lock(
+    source_path: Path,
+    previous_lock: str,
+    npm_client: NpmRegistryClient,
+) -> str:
+    """Project upstream's omitted registry metadata into a Nix-fetchable lock."""
+    try:
+        upstream = json.loads((source_path / "package-lock.json").read_text(), object_pairs_hook=_unique_object)
+        previous = json.loads(previous_lock, object_pairs_hook=_unique_object)
+    except (OSError, ValueError) as error:
+        raise RuntimeError("Prime Agent lock input is not valid JSON") from error
+    if _prime_agent_lock_is_normalized(upstream, previous):
+        return previous_lock
+    packages = upstream.get("packages")
+    if not isinstance(packages, dict):
+        raise RuntimeError("Prime Agent upstream lock has no packages object")
+    normalized = copy.deepcopy(upstream)
+    metadata_cache: dict[tuple[str, str], dict[str, str]] = {}
+    for lock_path, package in normalized["packages"].items():
+        if "node_modules/" not in lock_path or package.get("link"):
+            continue
+        if "resolved" in package and "integrity" in package:
+            continue
+        name = lock_path.rsplit("node_modules/", 1)[1]
+        version = package.get("version")
+        if not isinstance(version, str) or not version:
+            raise RuntimeError(f"Prime Agent lock entry has no version: {lock_path}")
+        key = (name, version)
+        if key not in metadata_cache:
+            metadata = npm_client.get_version_metadata(name, version)
+            if metadata is None:
+                raise RuntimeError(f"npm metadata lookup failed for Prime Agent dependency: {name}@{version}")
+            metadata_cache[key] = metadata
+        metadata = metadata_cache[key]
+        expected_url = _prime_agent_registry_tarball(name, version)
+        if metadata["version"] != version or metadata["tarball"] != expected_url:
+            raise RuntimeError(f"npm registry coordinate mismatch for Prime Agent dependency: {name}@{version}")
+        package["resolved"] = expected_url
+        package["integrity"] = metadata["integrity"]
+    if not _prime_agent_lock_is_normalized(upstream, normalized):
+        raise RuntimeError("Prime Agent lock normalization produced an invalid projection")
+    return json.dumps(normalized, indent=2) + "\n"
+
+
 def update_catalog_target(
     name: str,
     target: dict,
@@ -3065,10 +3164,45 @@ def update_catalog_target(
         print(f"{Colors.RED}✗ {message}{Colors.RESET}")
         return "failed"
 
+    normalized_artifact_path = None
+    normalized_artifact = None
+    normalizer = update.get("normalizer")
+    if normalizer == PRIME_AGENT_NORMALIZER:
+        normalized_artifact_path = target["_path"].parent.parent / update["artifacts"][0]
+        source_path = hash_computer.realize_native_source(
+            source,
+            {**replacements, hash_name: new_hash},
+        )
+        if source_path is None:
+            print(f"{Colors.RED}✗ Prime Agent source realization failed{Colors.RESET}")
+            return "failed"
+        try:
+            normalized_artifact = normalize_prime_agent_lock(
+                source_path,
+                normalized_artifact_path.read_text(),
+                npm_client,
+            )
+        except (OSError, RuntimeError) as error:
+            detail = _bounded_actionable_error(
+                error,
+                fallback="Prime Agent lock normalization failed",
+            )
+            print(f"{Colors.RED}✗ {detail}{Colors.RESET}")
+            return "failed"
+
     same_location = (new_ref is None or new_ref == current_ref) and (
         new_url is None or new_url == current_url
     )
-    if new_version == old_version and same_location and new_hash == old_hash:
+    normalized_artifact_changed = (
+        normalized_artifact_path is not None
+        and normalized_artifact != normalized_artifact_path.read_text()
+    )
+    if (
+        new_version == old_version
+        and same_location
+        and new_hash == old_hash
+        and not normalized_artifact_changed
+    ):
         print(f"{Colors.GREEN}✓ up-to-date{Colors.RESET}")
         return "skipped"
 
@@ -3078,6 +3212,8 @@ def update_catalog_target(
         return "updated"
 
     transaction.watch(target["_path"])
+    if normalized_artifact_path is not None:
+        transaction.watch(normalized_artifact_path)
     if kind == "fixed-flake-input":
         flake_path = target["_path"].parent.parent / "config" / "ai" / "flake.nix"
         transaction.watch(flake_path)
@@ -3106,6 +3242,8 @@ def update_catalog_target(
             return "failed"
         record["commit"] = commits[-1]
     _write_catalog_target(target)
+    if normalized_artifact_path is not None:
+        normalized_artifact_path.write_text(normalized_artifact)
 
     computed = []
     build_mode = update.get("buildMode")
