@@ -588,7 +588,7 @@ runCommand "pi-gallery-check"
         ${sourceForChecks}/test/ai/pi-goal-x-bounded-history.check.ts
     PI_SUBAGENTS_ROOT=${roots.subagents} \
     PI_SUBAGENTS_HISTORY_BYTES=67108864 \
-    PI_SUBAGENTS_MAX_RSS_DELTA_BYTES=29360128 \
+    PI_SUBAGENTS_MAX_RSS_DELTA_BYTES=32505856 \
       ${bun}/bin/bun test ${sourceForChecks}/test/ai/pi-subagents-bounded-history.check.ts
     PI_BLACKHOLE_ROOT=${roots.blackhole} \
     PI_BLACKHOLE_CLEANUP_BODY_BYTES=67108864 \

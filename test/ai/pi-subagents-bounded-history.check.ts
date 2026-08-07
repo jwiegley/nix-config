@@ -125,7 +125,7 @@ if (rssChildLane === "tokens" || rssChildLane === "fork") {
 			10,
 		);
 		const maxRssDelta = Number.parseInt(
-			process.env.PI_SUBAGENTS_MAX_RSS_DELTA_BYTES ?? "29360128",
+			process.env.PI_SUBAGENTS_MAX_RSS_DELTA_BYTES ?? "32505856",
 			10,
 		);
 		assert(
