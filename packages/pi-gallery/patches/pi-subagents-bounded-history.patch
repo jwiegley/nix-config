@@ -1,17 +1,11 @@
 --- a/src/extension/index.ts
 +++ b/src/extension/index.ts
-@@ -563,7 +563,10 @@
- 		resetJobs(ctx);
- 		restoreActiveJobs(ctx);
- 		scheduledRunManager.bindSession(ctx);
+@@ -566,1 +566,4 @@
 -		restoreSlashFinalSnapshots(ctx.sessionManager.getEntries());
 +		restoreSlashFinalSnapshots(ctx.sessionManager.getRecentActiveEntries({
 +			customType: SLASH_RESULT_TYPE,
 +			limit: 256,
 +		}));
- 		startResultWatcher();
- 		primeExistingResults({ triggerTurn: !recovering });
- 		fleetStatus?.setContext(ctx);
 --- a/src/slash/slash-commands.ts
 +++ b/src/slash/slash-commands.ts
 @@ -452,23 +452,27 @@
@@ -97,10 +91,7 @@
  }
  
  interface ForkableSessionManager {
-@@ -81,50 +82,107 @@ function isUnsafeAnthropicThinkingBlock(message: BranchSessionEntry["message"],
- 	return block.redacted === true || (typeof signature === "string" && signature.length > 0);
- }
- 
+@@ -84,47 +85,104 @@
 -function createEntryId(entries: BranchSessionEntry[]): string {
 -	const ids = new Set(entries.map((entry) => entry.id).filter((id): id is string => typeof id === "string"));
 -	for (let attempt = 0; attempt < 100; attempt++) {
