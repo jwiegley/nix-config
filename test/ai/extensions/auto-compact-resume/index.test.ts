@@ -37,7 +37,7 @@ async function setup() {
 
 function makeContext(
   tokens: number | null,
-  branch: any[] = [{ type: "message", id: "entry-1" }],
+  leaf: any = { type: "message", id: "entry-1" },
 ) {
   const compactions: any[] = [];
   const notifications: Array<{ message: string; level: string }> = [];
@@ -51,7 +51,7 @@ function makeContext(
     },
     context: {
       model: { maxTokens: 128_000 },
-      sessionManager: { getBranch: () => branch },
+      sessionManager: { getLeafEntry: () => leaf },
       getContextUsage: () => ({
         tokens: currentTokens,
         contextWindow: CONTEXT_WINDOW,
@@ -253,9 +253,10 @@ describe("auto compact and resume", () => {
 
   test("does not immediately recompact a session whose leaf is a compaction", async () => {
     const harness = await setup();
-    const { context, compactions } = makeContext(COMPACTION_THRESHOLD, [
-      { type: "compaction", id: "compaction-1" },
-    ]);
+    const { context, compactions } = makeContext(COMPACTION_THRESHOLD, {
+      type: "compaction",
+      id: "compaction-1",
+    });
 
     await harness.emit("session_start", { reason: "resume" }, context);
 

@@ -1,0 +1,14 @@
+diff --git a/extensions/caveman.ts b/extensions/caveman.ts
+--- a/extensions/caveman.ts
++++ b/extensions/caveman.ts
+@@ -220,6 +220,4 @@
+-		let sessionLevel: Level | null = null;
+-		for (const entry of ctx.sessionManager.getEntries()) {
+-			if (entry.type === "custom" && entry.customType === "caveman-level") {
+-				sessionLevel = (entry.data as { level: Level })?.level ?? null;
+-			}
+-		}
++		const savedLevel = ctx.sessionManager.getLatestCustomEntry("caveman-level", {
++			scope: "active",
++		});
++		const sessionLevel = (savedLevel?.data as { level: Level } | undefined)?.level ?? null;

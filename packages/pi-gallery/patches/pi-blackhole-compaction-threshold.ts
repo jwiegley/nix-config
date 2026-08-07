@@ -17,7 +17,7 @@ function isFiniteNumber(value: unknown): value is number {
 
 export function resolveCompactionPressure(
 	usage: ContextUsage | null | undefined,
-	estimatedTokens: number,
+	estimatedTokens: number | (() => number),
 	fallbackThreshold: number,
 ): CompactionPressure {
 	if (
@@ -36,6 +36,6 @@ export function resolveCompactionPressure(
 	return {
 		source: "fallback",
 		threshold: fallbackThreshold,
-		tokens: estimatedTokens,
+		tokens: typeof estimatedTokens === "function" ? estimatedTokens() : estimatedTokens,
 	};
 }

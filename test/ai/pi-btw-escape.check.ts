@@ -118,7 +118,12 @@ function createHarness() {
 		isIdle: () => true,
 		model: null,
 		modelRegistry: { find: () => undefined },
-		sessionManager: { getBranch: () => [] },
+		sessionManager: {
+			getActiveContextEntries: () => [],
+			getLatestCustomEntry: () => undefined,
+			getLeafId: () => undefined,
+			getRecentActiveEntries: () => [],
+		},
 		ui,
 	};
 

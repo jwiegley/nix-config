@@ -1,0 +1,12 @@
+--- a/src/commands.ts
++++ b/src/commands.ts
+@@ -141,7 +141,7 @@
+   if (mode === "conversation" || mode === "all") {
+     // Navigate conversation tree to the checkpoint's point
+     // Find the entry closest to the checkpoint timestamp
+-    const branch = ctx.sessionManager.getBranch();
++    const branch = ctx.sessionManager.getRecentActiveEntries({ limit: 4096 });
+     const targetEntry = branch.reduce((best: any, entry: any) => {
+       if (!entry.timestamp) return best;
+       const entryTs = new Date(entry.timestamp).getTime();
+

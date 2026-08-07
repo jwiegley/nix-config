@@ -1,0 +1,32 @@
+--- a/dist/extensions/agent-browser/index.js
++++ b/dist/extensions/agent-browser/index.js
+@@ -523,7 +523,7 @@
+         const previousManagedSessionName = managedSessionName;
+         const previousFreshSessionOrdinal = freshSessionOrdinal;
+         managedSessionBaseName = createImplicitSessionName(ctx.sessionManager.getSessionId(), ctx.cwd, ephemeralSessionSeed);
+-        const branch = ctx.sessionManager.getBranch();
++        const branch = ctx.sessionManager.getRecentActiveEntries({ type: "message", limit: 4096 });
+         const branchResourceEvents = collectBranchManagedResourceEvents(branch);
+         const restoredState = restoreManagedSessionStateFromBranch(branch, managedSessionBaseName);
+         managedSessionActive = restoredState.active;
+@@ -666,7 +666,8 @@
+         };
+     });
+     pi.on("tool_call", async (event, ctx) => {
+-        const promptPolicy = buildPromptPolicy(getLatestUserPrompt(ctx.sessionManager.getBranch()));
++        const latestUserEntry = ctx.sessionManager.getLatestMessage("user", { scope: "active" });
++        const promptPolicy = buildPromptPolicy(getLatestUserPrompt(latestUserEntry ? [latestUserEntry] : []));
+         if (isBashToolCallEvent(event) &&
+             !promptPolicy.allowLegacyAgentBrowserBash &&
+             looksLikeDirectAgentBrowserBash(event.input.command) &&
+@@ -699,7 +700,8 @@
+             return component;
+         },
+         async execute(_toolCallId, params, signal, onUpdate, ctx) {
+-            const promptPolicy = buildPromptPolicy(getLatestUserPrompt(ctx.sessionManager.getBranch()));
++            const latestUserEntry = ctx.sessionManager.getLatestMessage("user", { scope: "active" });
++            const promptPolicy = buildPromptPolicy(getLatestUserPrompt(latestUserEntry ? [latestUserEntry] : []));
+             const outputPath = isRecord(params) && typeof params.outputPath === "string" ? params.outputPath : undefined;
+             const resolvedInput = resolveAgentBrowserInput({
+                 getBatchPreflightValidationError,
+

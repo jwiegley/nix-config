@@ -1,0 +1,16 @@
+--- a/index.ts
++++ b/index.ts
+@@ -846,7 +846,11 @@
+ }
+ 
+ function getAssistantMessages(ctx: ExtensionContext): AssistantMessage[] {
+-	const branch = ctx.sessionManager.getBranch();
++	const branch = ctx.sessionManager.getRecentActiveEntries({
++		type: "message",
++		messageRole: "assistant",
++		limit: 512,
++	});
+ 	const messages: AssistantMessage[] = [];
+ 	let messageIndex = 0;
+ 
+

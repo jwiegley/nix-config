@@ -1,0 +1,19 @@
+diff --git a/extensions/index.ts b/extensions/index.ts
+--- a/extensions/index.ts
++++ b/extensions/index.ts
+@@ -605,13 +605,8 @@ function messageToText(message: any): string {
+ }
+ 
+ function getLastAssistantText(ctx: any): string {
+-	const entries = ctx?.sessionManager?.getEntries?.() ?? [];
+-	for (let index = entries.length - 1; index >= 0; index--) {
+-		if ((entries[index]?.message ?? entries[index])?.role === "assistant") {
+-			return messageToText(entries[index]?.message ?? entries[index]);
+-		}
+-	}
+-	return "";
++	const entry = ctx?.sessionManager?.getLatestMessage?.("assistant", { scope: "active" });
++	return messageToText(entry?.message ?? entry);
+ }
+ 
+ 

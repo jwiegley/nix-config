@@ -4,7 +4,7 @@
   fetchurl,
   jq,
   lib,
-  nodejs_22,
+  nodejs_24,
   piPackage,
   piPackages,
   python3,
@@ -130,7 +130,7 @@ runCommand "pi-gallery-check"
       bun
       coreutils
       jq
-      nodejs_22
+      nodejs_24
     ];
   }
   ''
@@ -215,6 +215,19 @@ runCommand "pi-gallery-check"
       fi
     done
 
+    echo "Pi gallery check: bounded session-history consumers"
+    for package_root in ${packageRoots} ${piPackages.pi-loop}/share/pi-packages/pi-loop; do
+      offenders=$(
+        find "$package_root" -path '*/node_modules' -prune -o \
+          -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.mjs' \) \
+          -exec grep -l -E 'sessionManager\.get(Entries|Branch)\(' {} + || true
+      )
+      [ -z "$offenders" ] \
+        || fail "automatic full-history API remains in $package_root: $offenders"
+    done
+    ! grep -E 'sessionManager\.get(Entries|Branch)\(' ${quiet} >/dev/null \
+      || fail "Pi Quiet still consumes full session history"
+
     [ -f ${roots.btw}/extensions/btw.ts ]
     [ -f ${roots.btw}/skills/btw/SKILL.md ]
     (
@@ -236,14 +249,27 @@ runCommand "pi-gallery-check"
     usage_runtime="$TMPDIR/pi-usage-runtime"
     mkdir -p "$usage_runtime"
     cat > "$usage_runtime/probe.ts" <<EOF
-    import { saveUsageCache } from "${roots.usage}/data.ts";
+    import { Database } from "bun:sqlite";
+    import { mkdirSync } from "node:fs";
+    import { collectUsageData } from "${roots.usage}/data.ts";
 
-    await saveUsageCache(process.env.PI_USAGE_CACHE!, new Map());
+    mkdirSync(process.env.PI_USAGE_SESSIONS!, { recursive: true });
+    const legacy = new Database(process.env.PI_USAGE_CACHE!);
+    legacy.exec("PRAGMA user_version = 0");
+    legacy.close();
+    await collectUsageData({
+      sessionsDir: process.env.PI_USAGE_SESSIONS!,
+      cachePath: process.env.PI_USAGE_CACHE!,
+    });
     EOF
     PI_USAGE_CACHE="$usage_runtime/usage-extension-cache.json" \
+      PI_USAGE_SESSIONS="$usage_runtime/sessions" \
       ${bun}/bin/bun "$usage_runtime/probe.ts"
     [ "$(stat -c '%a' "$usage_runtime/usage-extension-cache.json")" = 600 ] \
       || fail "Usage Dashboard cache mode is not 0600"
+    PI_USAGE_ROOT=${roots.usage} \
+      NODE_NO_WARNINGS=1 ${nodejs_24}/bin/node --experimental-strip-types \
+        ${sourceForChecks}/test/ai/pi-usage-bounded-history.check.ts
     [ -f ${roots.multi-pass}/extensions/multi-sub.ts ]
     [ ! -e ${roots.multi-pass}/node_modules ]
     [ -f ${piPackages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts ]
@@ -498,6 +524,18 @@ runCommand "pi-gallery-check"
         bun test ./test/ai/pi-copy-message.check.ts
     )
     [ -f ${roots.goal}/extensions/goal.ts ]
+    ${python3}/bin/python3 - ${roots.goal}/extensions/goal.ts <<'PY'
+    import pathlib
+    import sys
+
+    source = pathlib.Path(sys.argv[1]).read_text()
+    guarded_entry = (
+        'export default function goalExtension(pi: ExtensionAPI): void {\n'
+        '\tif (process.env.PI_SUBAGENT_CHILD === "1") return;'
+    )
+    if source.count(guarded_entry) != 1:
+        raise SystemExit("Goal X child guard is not the first extension statement")
+    PY
     [ ! -e ${roots.goal}/node_modules ]
     [ -f ${roots.markdown-preview}/index.ts ]
     [ -d ${roots.markdown-preview}/node_modules/puppeteer-core ]
@@ -544,6 +582,60 @@ runCommand "pi-gallery-check"
       || fail "BTW must register before Goal X so its focused overlay owns the first Escape"
     echo "Pi gallery check: dynamic local providers"
     ${bun}/bin/bun ${sourceForChecks}/test/ai/local-openai-provider.check.ts
+    PI_GOAL_X_ROOT=${roots.goal} \
+    PI_CODING_AGENT_ROOT=${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent \
+      ${nodejs_24}/bin/node --experimental-strip-types \
+        ${sourceForChecks}/test/ai/pi-goal-x-bounded-history.check.ts
+    PI_SUBAGENTS_ROOT=${roots.subagents} \
+    PI_SUBAGENTS_HISTORY_BYTES=67108864 \
+    PI_SUBAGENTS_MAX_RSS_DELTA_BYTES=29360128 \
+      ${bun}/bin/bun test ${sourceForChecks}/test/ai/pi-subagents-bounded-history.check.ts
+    PI_BLACKHOLE_ROOT=${roots.blackhole} \
+    PI_BLACKHOLE_CLEANUP_BODY_BYTES=67108864 \
+    PI_BLACKHOLE_CLEANUP_MAX_RSS_DELTA_BYTES=16777216 \
+      ${bun}/bin/bun ${sourceForChecks}/test/ai/pi-blackhole-bounded-history.check.ts
+    PI_BLACKHOLE_ROOT=${roots.blackhole} \
+      ${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/.bin/jiti \
+        ${sourceForChecks}/test/ai/pi-blackhole-exact-history.check.mts
+    echo "Pi gallery check: patched agent-core history source"
+    ${nodejs_24}/bin/node --input-type=module <<'EOF'
+    import { Agent } from "${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core/dist/index.js";
+
+    const agent = new Agent({
+      streamFn: () => {
+        throw new Error("package contract must not dispatch");
+      },
+    });
+    let materializations = 0;
+    agent.setMessageSource({
+      length: 1,
+      materialize: () => {
+        materializations++;
+        return [{ role: "user", content: "persisted", timestamp: 1 }];
+      },
+      last: () => ({ role: "user", content: "persisted", timestamp: 1 }),
+      *iterateReverse() {
+        yield { role: "user", content: "persisted", timestamp: 1 };
+      },
+    });
+    if (agent.messageCount !== 1 || agent.lastMessage?.role !== "user") {
+      throw new Error("packaged agent-core omitted deferred history support");
+    }
+    agent.appendMessage({ role: "user", content: "tail", timestamp: 2 });
+    if (agent.messageCount !== 2 || materializations !== 0) {
+      throw new Error("packaged agent-core eagerly materialized deferred history");
+    }
+    if (agent.getMessagesSnapshot().length !== 2 || materializations !== 1) {
+      throw new Error("packaged agent-core snapshot semantics drifted");
+    }
+    EOF
+    echo "Pi gallery check: bounded core session growth"
+    PI_CODING_AGENT_ROOT=${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent \
+    PI_SESSION_SCALE_BYTES=16777216 \
+    PI_SESSION_PAYLOAD_BYTES=262144 \
+    PI_SESSION_COMPACTION_EVERY=4 \
+    PI_SESSION_MIN_COMPACTIONS=4 \
+      ${nodejs_24}/bin/node ${sourceForChecks}/test/ai/pi-session-memory.check.mjs scale
     routing_smoke="$TMPDIR/pi-model-router-smoke"
     mkdir -p "$routing_smoke/home" "$routing_smoke/agent" "$routing_smoke/project"
     cat > "$routing_smoke/agent/models.json" <<'JSON'

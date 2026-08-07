@@ -149,28 +149,17 @@ let
             --replace-fail \
               'DEFAULT_HTTP_IDLE_TIMEOUT_MS = 300_000' \
               'DEFAULT_HTTP_IDLE_TIMEOUT_MS = 7_200_000'
-          ${pkgs.nodejs_22}/bin/node \
+          ${pkgs.nodejs_24}/bin/node \
             ${../test/ai/pi-tool-renderer-wrapper.test.mjs} "$PWD"
-          ${pkgs.nodejs_22}/bin/node \
+          ${pkgs.nodejs_24}/bin/node \
             ${../test/ai/pi-model-catalog-refresh.test.mjs} "$PWD"
         ''
         + (old.preInstall or "");
 
-        # Run the compiled Linux executable through the matching Nix loader.
-        postInstall =
-          (old.postInstall or "")
-          + pkgs.lib.optionalString pkgs.stdenv.isLinux (
-            let
-              dynamicLinker = pkgs.stdenv.cc.bintools.dynamicLinker;
-            in
-            ''
-              mv "$out/libexec/pi/pi" "$out/libexec/pi/pi.bin"
-              makeWrapper ${pkgs.lib.escapeShellArg dynamicLinker} "$out/libexec/pi/pi" \
-                --add-flags ${pkgs.lib.escapeShellArg "--library-path ${builtins.dirOf dynamicLinker}"} \
-                --add-flags ${pkgs.lib.escapeShellArg "--argv0 pi"} \
-                --add-flags "$out/libexec/pi/pi.bin"
-            ''
-          );
+        postInstall = (old.postInstall or "") + ''
+          wrapProgram "$out/bin/pi" \
+            --set PI_PACKAGE_DIR "$out/lib/node_modules/@earendil-works/pi-coding-agent"
+        '';
 
         passthru = (old.passthru or { }) // {
           toolRendererWrapperAbi = 1;

@@ -1,0 +1,516 @@
+--- a/extensions/goal.ts
++++ b/extensions/goal.ts
+@@ -77,6 +77,7 @@
+ 	appendGoalEvent,
+ 	latestAuditorResultForGoal,
+ 	readGoalLedger,
++	readGoalLedgerForGoal,
+ 	type GoalLedgerEvent,
+ } from "./goal-ledger.ts";
+ import { buildCompactionSummary } from "./goal-compaction.ts";
+@@ -148,6 +149,7 @@
+ const COMPLETE_STATUS = "complete";
+ const CONTINUATION_IDLE_RETRY_MS = 50;
+ const STATUS_REFRESH_MS = 1000;
++const ACCOUNTING_PERSIST_INTERVAL_MS = 5 * 60 * 1000;
+ /**
+  * Tools that count as "real work" toward the active goal. If a non-tool-use
+  * turn ends without any of these having been called, we DO NOT queue the next
+@@ -420,6 +422,9 @@
+ 	let debugMode = false;
+ 	let debugGoalCounter = 0;
+ 	let debugMockAuditTimer: ReturnType<typeof setInterval> | null = null;
++	let accountingPersistTimer: ReturnType<typeof setTimeout> | null = null;
++	let accountingPersistCtx: ExtensionContext | null = null;
++	let lastAccountingPersistAt = Date.now();
+ 	const DEBUG_GOALS_DIR = ".pi/goals/debug";
+ 
+ 
+@@ -607,6 +612,7 @@
+ 	}
+ 
+ 	function clearStoppedRuntimeState(): void {
++		cancelScheduledAccountingPersist();
+ 		clearContinuationState();
+ 		clearActiveAccounting();
+ 	}
+@@ -765,7 +771,7 @@
+ 		next.usage.activeSeconds += elapsedSeconds;
+ 		next.updatedAt = nowIso();
+ 		state.goal = next;
+-		persist(ctx);
++		persist(ctx, { mode: "coalesce" });
+ 	}
+ 
+ 	function syncGoalPromptFromDisk(ctx: ExtensionContext): boolean {
+@@ -775,7 +781,76 @@
+ 		return state.goal.objective !== previousObjective;
+ 	}
+ 
+-	function persist(ctx?: ExtensionContext): void {
++	function cancelScheduledAccountingPersist(): void {
++		if (accountingPersistTimer) clearTimeout(accountingPersistTimer);
++		accountingPersistTimer = null;
++		accountingPersistCtx = null;
++	}
++
++	function appendStateCheckpoint(): void {
++		cancelScheduledAccountingPersist();
++		pi.appendEntry(STATE_ENTRY, goalDetails(state.goal));
++		lastAccountingPersistAt = Date.now();
++	}
++
++	function reportScheduledAccountingPersistFailure(
++		ctx: ExtensionContext,
++		error: unknown,
++	): void {
++		const reason = error instanceof Error ? error.message : String(error);
++		const message = `Goal accounting persistence failed; retrying in five minutes: ${reason}`;
++		console.error(`[pi-goal] ${message}`);
++		if (!ctx.hasUI) return;
++		try {
++			ctx.ui.notify(message, "error");
++		} catch (notifyError) {
++			console.error(
++				"[pi-goal] Could not display accounting persistence failure:",
++				notifyError instanceof Error
++					? notifyError.message
++					: String(notifyError),
++			);
++		}
++	}
++
++	function scheduleAccountingPersist(
++		ctx: ExtensionContext,
++		options: { delayMs?: number } = {},
++	): void {
++		accountingPersistCtx = ctx;
++		if (accountingPersistTimer) return;
++		const elapsed = Math.max(0, Date.now() - lastAccountingPersistAt);
++		accountingPersistTimer = setTimeout(
++			() => {
++				const scheduledCtx = accountingPersistCtx;
++				accountingPersistTimer = null;
++				accountingPersistCtx = null;
++				if (!scheduledCtx) return;
++				try {
++					persist(scheduledCtx);
++				} catch (error) {
++					reportScheduledAccountingPersistFailure(scheduledCtx, error);
++					scheduleAccountingPersist(scheduledCtx, {
++						delayMs: ACCOUNTING_PERSIST_INTERVAL_MS,
++					});
++				}
++			},
++			options.delayMs ?? Math.max(0, ACCOUNTING_PERSIST_INTERVAL_MS - elapsed),
++		);
++		accountingPersistTimer.unref?.();
++	}
++
++	function persist(
++		ctx?: ExtensionContext,
++		options: { mode?: "force" | "coalesce" } = {},
++	): void {
++		if (options.mode === "coalesce" && ctx) {
++			scheduleAccountingPersist(ctx);
++			syncGoalTools();
++			updateUI(ctx);
++			return;
++		}
++		cancelScheduledAccountingPersist();
+ 		const current = state.goal;
+ 		if (current) {
+ 			state.goal = { ...current, updatedAt: nowIso() };
+@@ -785,16 +860,20 @@
+ 				if (next) state.goal = next.status === "complete" ? archiveGoalFile(ctx, next) : writeActiveGoalFile(ctx, next);
+ 			}
+ 		}
+-		pi.appendEntry(STATE_ENTRY, goalDetails(state.goal));
++		appendStateCheckpoint();
+ 		syncGoalTools();
+ 		if (ctx) updateUI(ctx);
+ 	}
+ 
++	function flushScheduledAccountingPersist(ctx: ExtensionContext): void {
++		if (accountingPersistTimer) persist(ctx);
++	}
++
+ 	function refreshGoalDisplayFromDisk(ctx: ExtensionContext): void {
+ 		if (!state.goal || state.goal.status === "complete") return;
+ 		if (syncGoalPromptFromDisk(ctx)) {
+ 			state.goal = { ...state.goal, updatedAt: nowIso() };
+-			pi.appendEntry(STATE_ENTRY, goalDetails(state.goal));
++			appendStateCheckpoint();
+ 		}
+ 		syncGoalTools();
+ 		updateUI(ctx);
+@@ -898,29 +977,26 @@
+ 		}
+ 	}
+ 
+-	function loadState(ctx: ExtensionContext): void {
++	function loadState(ctx: ExtensionContext, options: { preserveMemoryUsage?: boolean } = {}): void {
++		const memoryGoal = options.preserveMemoryUsage ? state.goal : null;
+ 		goalsById = readActiveGoalPool(ctx);
+ 		focusedGoalId = null;
+ 		let focusEntry: GoalFocusEntry | null = null;
+ 		let legacyGoal: GoalRecord | null = null;
+-		let legacyStateSeen = false;
+-		const entries = ctx.sessionManager.getBranch();
+-		for (let i = entries.length - 1; i >= 0; i--) {
+-			const entry = entries[i] as { type?: string; customType?: string; data?: unknown };
+-			if (entry.type !== "custom") continue;
+-			if (!focusEntry && entry.customType === FOCUS_ENTRY) {
+-				focusEntry = normalizeGoalFocusEntry(entry.data);
+-			}
+-			if (!legacyStateSeen && entry.customType === STATE_ENTRY) {
+-				legacyGoal = normalizeGoalRecord(asRecord(entry.data)?.goal);
+-				legacyStateSeen = true;
+-			}
+-			if (focusEntry && legacyStateSeen) break;
++		const focusState = ctx.sessionManager.getLatestCustomEntry(FOCUS_ENTRY, { scope: "active" });
++		if (focusState?.type === "custom") focusEntry = normalizeGoalFocusEntry(focusState.data);
++		const legacyState = ctx.sessionManager.getLatestCustomEntry(STATE_ENTRY, { scope: "active" });
++		if (legacyState?.type === "custom") {
++			legacyGoal = normalizeGoalRecord(asRecord(legacyState.data)?.goal);
+ 		}
+ 		if (legacyGoal && legacyGoal.status !== "complete") {
+ 			legacyGoal = sanitizeGoalPaths(ctx, mergeGoalPromptFromDisk(ctx, legacyGoal));
+ 		}
+ 		focusedGoalId = resolveSessionFocus({ pool: goalsById, focusEntry, legacyGoal });
++		if (memoryGoal && focusedGoalId === memoryGoal.id) {
++			const diskGoal = goalsById.get(focusedGoalId);
++			if (diskGoal) goalsById.set(focusedGoalId, mergeFocusedGoalWithDisk({ memoryGoal, diskGoal }));
++		}
+ 		if (!focusEntry && focusedGoalId) {
+ 			try {
+ 				appendFocusEntry(focusedGoalId, legacyGoal?.id === focusedGoalId ? "migrated" : "selected");
+@@ -2319,7 +2395,7 @@
+ 				//   3) append the state entry and re-sync tools
+ 				//   4) clear the tweak drafting gate so propose_goal_tweak can't be re-used
+ 				state.goal = writeActiveGoalFile(ctx, next);
+-				pi.appendEntry(STATE_ENTRY, goalDetails(state.goal));
++				appendStateCheckpoint();
+ 				tweakDraftingFor = null;
+ 				// Reset autoContinue counter — plan changed, agent gets a fresh chain.
+ 				resetGetGoalNudgeState(state.goal.id);
+@@ -2497,7 +2573,7 @@
+ 					updatedAt: nowIso(),
+ 				};
+ 				state.goal = writeActiveGoalFile(ctx, state.goal);
+-				pi.appendEntry(STATE_ENTRY, goalDetails(state.goal));
++				appendStateCheckpoint();
+ 				turnStoppedFor = state.goal?.id ?? null;
+ 				resetGetGoalNudgeState(state.goal?.id);
+ 				syncGoalTools();
+@@ -2564,7 +2640,7 @@
+ 					updatedAt: nowIso(),
+ 				};
+ 				state.goal = writeActiveGoalFile(ctx, state.goal);
+-				pi.appendEntry(STATE_ENTRY, goalDetails(state.goal));
++				appendStateCheckpoint();
+ 				turnStoppedFor = state.goal?.id ?? null;
+ 				resetGetGoalNudgeState(state.goal?.id);
+ 				syncGoalTools();
+@@ -2694,7 +2770,7 @@
+ 						updatedAt: nowIso(),
+ 					};
+ 					state.goal = writeActiveGoalFile(ctx, state.goal);
+-					pi.appendEntry(STATE_ENTRY, goalDetails(state.goal));
++					appendStateCheckpoint();
+ 					turnStoppedFor = state.goal?.id ?? null;
+ 					resetGetGoalNudgeState(state.goal?.id);
+ 					syncGoalTools();
+@@ -2795,7 +2871,7 @@
+ 				updatedAt: nowIso(),
+ 			};
+ 			state.goal = writeActiveGoalFile(ctx, state.goal);
+-			pi.appendEntry(STATE_ENTRY, goalDetails(state.goal));
++			appendStateCheckpoint();
+ 			turnStoppedFor = state.goal?.id ?? null;
+ 			resetGetGoalNudgeState(state.goal?.id);
+ 			syncGoalTools();
+@@ -3525,7 +3601,7 @@
+ 
+ 	pi.on("session_compact", async (_event, ctx) => {
+ 		if (confirmationIntent !== null || tweakDraftingFor !== null) return;
+-		if (state.goal) persist(ctx);
++		if (state.goal) persist(ctx, { mode: "coalesce" });
+ 		beginAccounting();
+ 		// Arm a deterministic compaction summary for the next agent turn.
+ 		// This replaces the generic reminder with artifact-backed state.
+@@ -3536,7 +3612,9 @@
+ 	});
+ 
+ 	pi.on("session_tree", async (_event, ctx) => {
+-		loadState(ctx);
++		accountProgress(ctx);
++		loadState(ctx, { preserveMemoryUsage: true });
++		if (state.goal) persist(ctx, { mode: "coalesce" });
+ 		syncTerminalInputPause(ctx);
+ 		beginAccounting();
+ 		queueContinuation(ctx, true);
+@@ -3620,7 +3698,7 @@
+ 			// Inject durable auditor feedback if available
+ 			let auditorExtra = "";
+ 			try {
+-				const ledger = readGoalLedger(ctx);
++				const ledger = readGoalLedgerForGoal(ctx, current.id);
+ 				const auditorResult = latestAuditorResultForGoal(ledger.events, current.id);
+ 				if (auditorResult && auditorResult.verdict === "disapproved") {
+ 					auditorExtra = `\n\n[AUDITOR REJECTION] An independent auditor previously rejected a completion request for this goal. Reason: ${auditorResult.report.slice(0, 300)}\nAddress the auditor's objections before requesting completion again.`;
+@@ -3637,9 +3715,9 @@
+ 		let prompt = goalPrompt(activeGoal, settings);
+ 		// Inject durable auditor feedback if the latest result was a rejection
+ 		try {
+-			const ledger = readGoalLedger(ctx);
++			const ledger = readGoalLedgerForGoal(ctx, activeGoal.id);
+ 			const auditorResult = latestAuditorResultForGoal(ledger.events, activeGoal.id);
+-			if (auditorResult && auditorResult.verdict === "disapproved" && ledger.events.some((e) => e.type === "completion_requested" && e.goalId === activeGoal.id)) {
++			if (auditorResult && auditorResult.verdict === "disapproved" && ledger.hasCompletionRequested) {
+ 				prompt = `${prompt}\n\n[AUDITOR REJECTION goalId=${activeGoal.id}]\nAn independent auditor previously rejected a completion request for this goal. Reason: ${auditorResult.report.slice(0, 300)}\nAddress the auditor's objections before requesting completion again.`;
+ 			}
+ 		} catch {
+@@ -3681,7 +3759,7 @@
+ 			pauseActiveGoal(ctx);
+ 			return;
+ 		}
+-		persist(ctx);
++		persist(ctx, { mode: "coalesce" });
+ 		updateUI(ctx);
+ 		queueContinuation(ctx);
+ 	});
+@@ -3692,6 +3770,6 @@
+ 		stopStatusRefresh();
+ 		terminalInputUnsubscribe?.();
+ 		terminalInputUnsubscribe = null;
+-		if (state.goal) persist(ctx);
++		flushScheduledAccountingPersist(ctx);
+ 	});
+ }
+--- a/extensions/goal-ledger.ts
++++ b/extensions/goal-ledger.ts
+@@ -1,5 +1,6 @@
+ import * as fs from "node:fs";
+ import * as path from "node:path";
++import { StringDecoder } from "node:string_decoder";
+ import { normalizeRelPath, nowIso, safeIdPart, type GoalRecord } from "./goal-record.ts";
+ 
+ export const GOAL_LEDGER_FILE = ".pi/goals/goal_events.jsonl";
+@@ -28,8 +29,18 @@
+ export interface GoalLedgerReadResult {
+   events: GoalLedgerEvent[];
+   malformed: number;
++  truncated: boolean;
++  validEvents: number;
+ }
+ 
++export interface GoalLedgerGoalReadResult extends GoalLedgerReadResult {
++  hasCompletionRequested: boolean;
++}
++
++const LEDGER_READ_CHUNK_BYTES = 64 * 1024;
++const MAX_LEDGER_LINE_CHARS = 1024 * 1024;
++const DEFAULT_LEDGER_EVENT_LIMIT = 4096;
++
+ export interface ReconstructedGoalState {
+   goalId: string;
+   latestStatus: "active" | "paused" | "complete" | "aborted" | "unknown";
+@@ -91,32 +102,138 @@
+   }
+ }
+ 
+-export function readGoalLedger(ctx: GoalLedgerContext): GoalLedgerReadResult {
++function scanGoalLedger(
++  ctx: GoalLedgerContext,
++  visit: (event: GoalLedgerEvent) => void,
++): { malformed: number; validEvents: number } {
+   const filePath = goalLedgerPath(ctx);
+-  let content: string;
++  let fd: number;
+   try {
+-    content = fs.readFileSync(filePath, "utf8");
+-  } catch {
+-    return { events: [], malformed: 0 };
++    fd = fs.openSync(filePath, "r");
++  } catch (error) {
++    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
++      return { malformed: 0, validEvents: 0 };
++    }
++    throw error;
+   }
+ 
+-  const events: GoalLedgerEvent[] = [];
++  const decoder = new StringDecoder("utf8");
++  const buffer = Buffer.allocUnsafe(LEDGER_READ_CHUNK_BYTES);
++  let pending = "";
++  let discardingOversizedLine = false;
+   let malformed = 0;
+-  for (const line of content.split("\n")) {
++  let validEvents = 0;
++
++  const parseLine = (line: string): void => {
+     const trimmed = line.trim();
+-    if (!trimmed) continue;
++    if (!trimmed) return;
+     try {
+       const parsed = JSON.parse(trimmed) as unknown;
+       if (isValidLedgerEvent(parsed)) {
+-        events.push(sanitizeEvent(parsed));
++        visit(sanitizeEvent(parsed));
++        validEvents++;
+       } else {
+         malformed++;
+       }
+     } catch {
+       malformed++;
+     }
++  };
++
++  const consume = (text: string): void => {
++    let cursor = 0;
++    while (cursor < text.length) {
++      if (discardingOversizedLine) {
++        const newline = text.indexOf("\n", cursor);
++        if (newline < 0) return;
++        discardingOversizedLine = false;
++        malformed++;
++        cursor = newline + 1;
++        continue;
++      }
++
++      const newline = text.indexOf("\n", cursor);
++      if (newline < 0) {
++        pending += text.slice(cursor);
++        if (pending.length > MAX_LEDGER_LINE_CHARS) {
++          pending = "";
++          discardingOversizedLine = true;
++        }
++        return;
++      }
++
++      pending += text.slice(cursor, newline);
++      if (pending.length > MAX_LEDGER_LINE_CHARS) malformed++;
++      else parseLine(pending);
++      pending = "";
++      cursor = newline + 1;
++    }
++  };
++
++  try {
++    while (true) {
++      const bytesRead = fs.readSync(fd, buffer, 0, buffer.length, null);
++      if (bytesRead === 0) break;
++      consume(decoder.write(buffer.subarray(0, bytesRead)));
++    }
++    consume(decoder.end());
++    if (discardingOversizedLine) malformed++;
++    else if (pending.length > 0) parseLine(pending);
++  } finally {
++    fs.closeSync(fd);
+   }
+-  return { events, malformed };
++
++  return { malformed, validEvents };
++}
++
++export function readGoalLedger(
++  ctx: GoalLedgerContext,
++  options: { maxEvents?: number } = {},
++): GoalLedgerReadResult {
++  const maxEvents = Math.max(1, Math.trunc(options.maxEvents ?? DEFAULT_LEDGER_EVENT_LIMIT));
++  const ring = new Array<GoalLedgerEvent>(maxEvents);
++  let ringLength = 0;
++  let nextIndex = 0;
++  const stats = scanGoalLedger(ctx, (event) => {
++    ring[nextIndex] = event;
++    nextIndex = (nextIndex + 1) % maxEvents;
++    ringLength = Math.min(ringLength + 1, maxEvents);
++  });
++  const events = ringLength < maxEvents
++    ? ring.slice(0, ringLength)
++    : [...ring.slice(nextIndex), ...ring.slice(0, nextIndex)];
++  return { events, ...stats, truncated: stats.validEvents > events.length };
++}
++
++export function readGoalLedgerForGoal(
++  ctx: GoalLedgerContext,
++  goalId: string,
++  options: { maxEvents?: number } = {},
++): GoalLedgerGoalReadResult {
++  const safeId = safeGoalId(goalId);
++  const maxEvents = Math.max(1, Math.trunc(options.maxEvents ?? 64));
++  const ring = new Array<GoalLedgerEvent>(maxEvents);
++  let ringLength = 0;
++  let nextIndex = 0;
++  let matchingEvents = 0;
++  let hasCompletionRequested = false;
++  const stats = scanGoalLedger(ctx, (event) => {
++    if (!("goalId" in event) || event.goalId !== safeId) return;
++    matchingEvents++;
++    if (event.type === "completion_requested") hasCompletionRequested = true;
++    ring[nextIndex] = event;
++    nextIndex = (nextIndex + 1) % maxEvents;
++    ringLength = Math.min(ringLength + 1, maxEvents);
++  });
++  const events = ringLength < maxEvents
++    ? ring.slice(0, ringLength)
++    : [...ring.slice(nextIndex), ...ring.slice(0, nextIndex)];
++  return {
++    events,
++    ...stats,
++    truncated: matchingEvents > events.length,
++    hasCompletionRequested,
++  };
+ }
+ 
+ function isValidLedgerEvent(value: unknown): value is GoalLedgerEvent {
+--- a/extensions/goal-compaction.ts
++++ b/extensions/goal-compaction.ts
+@@ -85,8 +85,9 @@
+   ledgerEvents: GoalLedgerEvent[];
+   capOpenGoals?: number;
+   capEventsPerGoal?: number;
++  capTerminalGoals?: number;
+ }): string {
+-  const { goalsById, focusedGoalId, ledgerEvents, capOpenGoals = 20, capEventsPerGoal = 5 } = args;
++  const { goalsById, focusedGoalId, ledgerEvents, capOpenGoals = 20, capEventsPerGoal = 5, capTerminalGoals = 20 } = args;
+ 
+   const lines: string[] = [];
+   const openGoals = Array.from(goalsById.values()).filter((g) => g.status !== "complete");
+@@ -113,10 +114,14 @@
+ 
+   if (reconstructed.terminalGoals.size > 0) {
+     lines.push(`[TERMINAL GOALS — ${reconstructed.terminalGoals.size} completed or aborted]`);
+-    for (const [goalId, state] of reconstructed.terminalGoals) {
++    const terminalGoals = Array.from(reconstructed.terminalGoals.entries()).slice(-capTerminalGoals);
++    for (const [goalId, state] of terminalGoals) {
+       const label = state.latestStatus === "complete" ? "completed" : "aborted";
+       lines.push(`- ${goalId} — ${label}${state.completedAt ? ` at ${state.completedAt}` : ""}${state.abortedAt ? ` at ${state.abortedAt}` : ""}`);
+     }
++    if (reconstructed.terminalGoals.size > terminalGoals.length) {
++      lines.push(`... and ${reconstructed.terminalGoals.size - terminalGoals.length} earlier terminal goals`);
++    }
+     lines.push("");
+   }
+ 
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -93,7 +93,7 @@
+ }
+ ```
+ 
+-Because this is stored with `pi.appendEntry("pi-goal-focus", ...)`, it is session/branch-local and is not sent to the LLM. On `session_start` and `session_tree`, `loadState(ctx)` scans `ctx.sessionManager.getBranch()` for the latest focus entry, scans active goal files, and resolves focus as follows:
++Because this is stored with `pi.appendEntry("pi-goal-focus", ...)`, it is session/branch-local and is not sent to the LLM. On `session_start` and `session_tree`, `loadState(ctx)` queries the latest active `pi-goal-focus` and legacy `pi-goal-state` entries, scans active goal files, and resolves focus as follows:
+ 
+ 1. Use a valid focused id from the latest focus entry.
+ 2. If the latest focus entry explicitly has `focusedGoalId: null`, or points at a missing/stale goal, remain unfocused.
+@@ -172,6 +172,8 @@
+ .pi/goals/archived/goal_<timestamp>_<id>.md
+ ```
+ 
++Usage accounting is coalesced by a five-minute scheduler. Each scheduled flush writes the active goal file before appending its `pi-goal-state` recovery checkpoint; lifecycle and objective transitions force the same ordered pair immediately. Scheduled I/O failures are reported and keep the state dirty for a retry after one full interval, while forced transitions and shutdown drains surface failures synchronously.
++
+ Each file has extension-owned metadata and a user-editable `# Goal Prompt` section. Before focused commands, tools, and lifecycle hooks act, the runtime re-reads the focused active file and reconciles lifecycle state from disk. External pause/archive/delete/status changes therefore win over stale memory and deleted active files are not resurrected. Prompt-body edits are still picked up from `# Goal Prompt`; session focus is never written to these files.
+ 
+ Path safety checks reject absolute paths, traversal, NUL bytes, symlinks, and paths outside the goal directories.

@@ -1,5 +1,6 @@
 {
   buildNpmPackage,
+  buildPackages,
   callPackage,
   fetchzip,
   inputs,
@@ -150,6 +151,11 @@ runCommand "agent-resources" { } ''
   mkdir "$pi_openai_server_compaction/src"
   mkdir -p "$pi_openai_server_compaction/node_modules/ws"
   ${copyPiOpenaiServerCompactionFiles}
+  cp -- ${./agent-resources/pi-openai-server-compaction-active-history.ts} \
+    "$pi_openai_server_compaction/src/active-history.ts"
+  ${buildPackages.patch}/bin/patch --fuzz=0 \
+    --directory="$pi_openai_server_compaction" --strip=1 \
+    < ${./agent-resources/pi-openai-server-compaction-bounded-history.patch}
   cp -R -- ${lib.escapeShellArg "${wsSource}"}/. \
     "$pi_openai_server_compaction/node_modules/ws"/
 
@@ -158,6 +164,9 @@ runCommand "agent-resources" { } ''
   mkdir "$pi_quiet/src"
   ${copyPiQuietFiles}
   cp -- ${lib.escapeShellArg "${inputs.pi-quiet}/LICENSE"} "$pi_quiet/LICENSE"
+  ${buildPackages.patch}/bin/patch --fuzz=0 \
+    --directory="$pi_quiet" --strip=1 \
+    < ${./agent-resources/pi-quiet-bounded-history.patch}
 
   pi_mcp="$extensions/pi-mcp-adapter"
   pi_mcp_source=${lib.escapeShellArg "${piMcpAdapter}/lib/node_modules/pi-mcp-adapter"}

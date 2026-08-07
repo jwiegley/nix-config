@@ -1,0 +1,29 @@
+--- a/extensions/copy-message.ts
++++ b/extensions/copy-message.ts
+@@ -137,8 +137,12 @@
+ 	};
+ }
+ 
+-export function collectCopyableMessages(ctx: { sessionManager: { getBranch(): unknown[] } }): CopyableMessage[] {
+-	return ctx.sessionManager.getBranch().flatMap((entry) => {
++type BoundedSessionReader = {
++	getRecentActiveEntries(options: { type?: string; messageRole?: string; limit: number }): unknown[];
++};
++
++export function collectCopyableMessages(ctx: { sessionManager: BoundedSessionReader }): CopyableMessage[] {
++	return ctx.sessionManager.getRecentActiveEntries({ limit: 512 }).flatMap((entry) => {
+ 		const message = entryToCopyableMessage(entry);
+ 		return message ? [message] : [];
+ 	});
+@@ -149,8 +153,8 @@
+ 	| { kind: "no-user-message" }
+ 	| { kind: "no-text" };
+ 
+-export function getMostRecentUserMessage(ctx: { sessionManager: { getBranch(): unknown[] } }): MostRecentUserMessageResult {
+-	const branch = ctx.sessionManager.getBranch();
++export function getMostRecentUserMessage(ctx: { sessionManager: BoundedSessionReader }): MostRecentUserMessageResult {
++	const branch = ctx.sessionManager.getRecentActiveEntries({ type: "message", messageRole: "user", limit: 32 });
+ 	let sawUserMessage = false;
+ 
+ 	for (let i = branch.length - 1; i >= 0; i--) {
+

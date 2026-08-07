@@ -1,0 +1,230 @@
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -48,7 +48,7 @@
+ |-----------------------|-----------------------------|-----------------------------------|----------------------------------|-------------|
+ | `openai/*`            | Yes                         | Yes                               | Yes                              | Yes         |
+ | `openai-codex/*`      | Yes                         | No (built-in transport retained)  | No (built-in transport retained) | Yes         |
+-| Azure                 | Partial (opt-in via config) | Partial                           | No                               | No          |
++| Azure                 | Partial (opt-in via config) | No (exact baseline unavailable)   | No                               | No          |
+ 
+ ## Install
+ 
+@@ -93,6 +93,10 @@ For direct `openai/*` models between compactions, the extension also:
+ - Provides a WebSocket-backed transport path with HTTP fallback
+ 
+ For `openai-codex/*` models, the extension preserves the built-in Codex transport and only injects reconstructed remote compaction history after compaction boundaries.
++
++For opt-in Azure models, this bounded-history package still applies compatible request features, but omits
++`previous_response_id` because Pi does not expose an exact provider-context baseline on that path. Sending the
++identifier with a full input would duplicate history.
+ 
+ ## How compaction works
+ 
+diff --git a/src/custom-stream.ts b/src/custom-stream.ts
+--- a/src/custom-stream.ts
++++ b/src/custom-stream.ts
+@@ -15,5 +15,6 @@ import { createOpenAIWebSocketStreamFn } from "./openai-ws-stream.ts";
+ import { loadConfig } from "./config.ts";
+ import { isDirectOpenAIResponsesModel } from "./openai.ts";
++import { setRequestContextLength } from "./state.ts";
+ 
+ const websocketStream = createOpenAIWebSocketStreamFn();
+ 
+@@ -22,6 +23,9 @@ export const streamOpenAIResponsesWithPhase2B: StreamFunction = (
+   context,
+   options,
+ ) => {
++  if (options?.sessionId) {
++    setRequestContextLength(options.sessionId, context.messages.length);
++  }
+   const cfg = loadConfig(process.cwd());
+   if (!cfg.enabled || !isDirectOpenAIResponsesModel(model)) {
+     return streamSimpleOpenAIResponses(
+diff --git a/src/index.ts b/src/index.ts
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -7,7 +7,8 @@
+-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
++import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+ import type { AgentMessage } from "@earendil-works/pi-agent-core";
+ import { isRecord, loadConfig } from "./config.ts";
+ import { streamOpenAIResponsesWithPhase2B } from "./custom-stream.ts";
++import { completedContextLength, selectCompactionLineage } from "./active-history.ts";
+ import {
+   applyPayloadPatch,
+   applyRemoteHistoryPayloadPatch,
+@@ -43,6 +44,7 @@ import {
+   getRemoteCompactionState,
+   getResponsesRequestShapeState,
+   setContinuationState,
++  takeRequestContextLength,
+   setRemoteCompactionState,
+   setResponsesRequestShapeState,
+ } from "./state.ts";
+@@ -50,17 +52,19 @@
+-type TargetModel = Parameters<typeof modelKey>[0];
++type TargetModel = NonNullable<ExtensionContext["model"]>;
+ 
+ type BranchEntry = {
+   type: string;
+   id: string;
++  parentId?: string | null;
+   details?: unknown;
+-  message?: unknown;
++  message?: AgentMessage;
+   thinkingLevel?: unknown;
+ };
+ 
+ type SessionContextLike = {
+   sessionManager: {
+     getSessionId(): string;
+-    getBranch(): BranchEntry[];
++    getActiveContextEntries(): BranchEntry[];
++    getLatestActiveCompaction(): BranchEntry | undefined;
+   };
+ };
+ 
+@@ -73,10 +77,6 @@ function getBranchMessages(branchEntries: BranchEntry[]): AgentMessage[] {
+   );
+ }
+ 
+-function getBranchMessageCount(branchEntries: BranchEntry[]): number {
+-  return branchEntries.filter((entry) => entry.type === "message" && Boolean(entry.message)).length;
+-}
+-
+ function getBranchThinkingLevel(branchEntries: BranchEntry[]): string | undefined {
+   for (let index = branchEntries.length - 1; index >= 0; index--) {
+     const entry = branchEntries[index];
+@@ -100,12 +100,10 @@ function clearSessionRuntimeState(sessionId: string | undefined): void {
+ 
+ function syncRemoteState(ctx: SessionContextLike): void {
+   const sessionId = getSessionId(ctx);
+-  const branchEntries = ctx.sessionManager.getBranch() as Array<{
+-    type: string;
+-    id: string;
+-    details?: unknown;
+-    message?: AgentMessage;
+-  }>;
++  const branchEntries = selectCompactionLineage(
++    ctx.sessionManager.getActiveContextEntries(),
++    ctx.sessionManager.getLatestActiveCompaction(),
++  );
+   const state = reconstructRemoteCompactionStateFromBranch({ branchEntries });
+   if (state) {
+     setRemoteCompactionState(sessionId, state);
+@@ -201,8 +199,9 @@ export default function openaiServerCompactionExtension(pi: ExtensionAPI) {
+ 
+   pi.on("session_before_compact", async (event, ctx) => {
+     const cfg = loadConfig(ctx.cwd);
+-    const model = ctx.model;
+-    if (!cfg.enabled || !model || !supportsRemoteCompactionModel(model)) return undefined;
++    const selectedModel = ctx.model;
++    if (!cfg.enabled || !selectedModel || !supportsRemoteCompactionModel(selectedModel)) return undefined;
++    const model = selectedModel as TargetModel;
+ 
+     const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
+     if (!auth.ok || !auth.apiKey) return undefined;
+@@ -305,13 +304,19 @@ export default function openaiServerCompactionExtension(pi: ExtensionAPI) {
+     if (!messageMatchesModel(event.message, model)) return;
+ 
++    const requestContextLength = takeRequestContextLength(sessionId);
+     const responseId = extractAssistantResponseId(event.message);
++    const contextLength = completedContextLength(requestContextLength);
+     if (!responseId) return;
++    if (contextLength === undefined) {
++      clearContinuationState(sessionId);
++      return;
++    }
+ 
+     setContinuationState(sessionId, {
+       responseId,
+       modelKey: modelKey(model),
+       updatedAt: Date.now(),
+-      contextLength: getBranchMessageCount(ctx.sessionManager.getBranch() as BranchEntry[]),
++      contextLength,
+     });
+   });
+ 
+diff --git a/src/openai-ws-stream.ts b/src/openai-ws-stream.ts
+--- a/src/openai-ws-stream.ts
++++ b/src/openai-ws-stream.ts
+@@ -733,9 +733,10 @@ async function fallbackToHttp(
+   const mergedOptions = {
+     ...(signal ? { ...options, signal } : options),
+     onPayload: async (payload: unknown, payloadModel: Model<any>) => {
+-      let nextPayload = payload;
+-      if (payload && typeof payload === "object") {
+-        const payloadObj = { ...(payload as Record<string, unknown>) };
++      const chained = await originalOnPayload?.(payload, payloadModel);
++      let nextPayload = chained ?? payload;
++      if (nextPayload && typeof nextPayload === "object") {
++        const payloadObj = { ...(nextPayload as Record<string, unknown>) };
+         if (remoteCompactionState && remoteCompactionState.modelKey === modelKey(model)) {
+           payloadObj.input = normalizeResponseItemsForPrompt(remoteCompactionState.explicitHistory, model) as unknown[];
+           delete payloadObj.previous_response_id;
+@@ -753,8 +754,7 @@ async function fallbackToHttp(
+           }
+         }
+       }
+-      const chained = await originalOnPayload?.(nextPayload, payloadModel);
+-      return chained ?? nextPayload;
++      return nextPayload;
+     },
+   } satisfies SimpleStreamOptions | undefined;
+   const httpStream = streamSimpleOpenAIResponses(model, context, mergedOptions);
+@@ -949,7 +949,7 @@ export function createOpenAIWebSocketStreamFn(
+                 return;
+               }
+               cleanup();
+-              session.lastContextLength = capturedContextLength;
++              session.lastContextLength = capturedContextLength + 1;
+               const assistantMsg = buildAssistantMessageFromResponse(
+                 response,
+                 model,
+@@ -959,7 +959,7 @@ export function createOpenAIWebSocketStreamFn(
+                 responseId: response.id,
+                 modelKey: currentModelKey,
+                 updatedAt: Date.now(),
+-                contextLength: capturedContextLength,
++                contextLength: capturedContextLength + 1,
+               });
+               const reason: Extract<StopReason, "stop" | "length" | "toolUse"> =
+                 assistantMsg.stopReason === "toolUse" ? "toolUse" : "stop";
+diff --git a/src/state.ts b/src/state.ts
+--- a/src/state.ts
++++ b/src/state.ts
+@@ -27,6 +27,7 @@ export type ResponsesRequestShapeState = {
+ const continuationBySessionId = new Map<string, ContinuationState>();
+ const remoteCompactionBySessionId = new Map<string, RemoteCompactionSessionState>();
+ const requestShapeBySessionId = new Map<string, ResponsesRequestShapeState>();
++const requestContextLengthBySessionId = new Map<string, number>();
+ 
+ export function getContinuationState(sessionId: string): ContinuationState | undefined {
+   return continuationBySessionId.get(sessionId);
+@@ -39,6 +40,17 @@ export function setContinuationState(sessionId: string, state: ContinuationState): void {
+ export function clearContinuationState(sessionId: string | undefined): void {
+   if (!sessionId) return;
+   continuationBySessionId.delete(sessionId);
++  requestContextLengthBySessionId.delete(sessionId);
++}
++
++export function setRequestContextLength(sessionId: string, contextLength: number): void {
++  requestContextLengthBySessionId.set(sessionId, contextLength);
++}
++
++export function takeRequestContextLength(sessionId: string): number | undefined {
++  const contextLength = requestContextLengthBySessionId.get(sessionId);
++  requestContextLengthBySessionId.delete(sessionId);
++  return contextLength;
+ }
+ 
+ export function getRemoteCompactionState(
+@@ -79,6 +91,7 @@ export function clearResponsesRequestShapeState(sessionId: string | undefined): void {
+ 
+ export function clearAllContinuationState(): void {
+   continuationBySessionId.clear();
++  requestContextLengthBySessionId.clear();
+   remoteCompactionBySessionId.clear();
+   requestShapeBySessionId.clear();
+ }

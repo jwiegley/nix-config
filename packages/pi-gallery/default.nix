@@ -416,6 +416,10 @@ let
     version = members.markdown-preview.version;
     src = markdownPreviewSource;
     npmDepsHash = members.markdown-preview.hashes.npmDepsHash;
+    prepareBundle = root: ''
+      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+        < ${./patches/pi-markdown-preview-bounded-history.patch}
+    '';
   };
   pi-dynamic-workflows = mkNpmPackageRoot {
     pname = members.dynamic-workflows.attrName;
@@ -428,6 +432,10 @@ let
     version = members.subagents.version;
     src = subagentsSource;
     npmDepsHash = members.subagents.hashes.npmDepsHash;
+    prepareBundle = root: ''
+      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+        < ${./patches/pi-subagents-bounded-history.patch}
+    '';
   };
   pi-artifacts = mkNpmPackageRoot {
     pname = members.artifacts.attrName;
@@ -535,6 +543,7 @@ let
     version = supportSources.loop.version;
     install = root: ''
       cp -R -- ${fetchFromGitHub supportSources.loop.source.args}/. ${root}/
+      chmod -R u+w ${root}
       substituteInPlace ${root}/extensions/index.ts \
         --replace-fail \
           'if (entries[index]?.role === "assistant") {' \
@@ -542,6 +551,8 @@ let
         --replace-fail \
           'return messageToText(entries[index]);' \
           'return messageToText(entries[index]?.message ?? entries[index]);'
+      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+        < ${./patches/pi-loop-bounded-history.patch}
     '';
   };
 
@@ -581,6 +592,8 @@ let
       cmp ${inputs.pi-btw}/extensions/btw.ts ${root}/extensions/btw.ts
       ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
         < ${./patches/pi-btw-overlay-escape.patch}
+      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+        < ${./patches/pi-btw-bounded-history.patch}
     '';
   };
 
@@ -592,6 +605,9 @@ let
         ${inputs.ponytail}/skills ${root}/
       cp -- ${inputs.ponytail}/package.json ${inputs.ponytail}/LICENSE \
         ${inputs.ponytail}/README.md ${root}/
+      chmod -R u+w ${root}/pi-extension
+      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+        < ${./patches/pi-ponytail-bounded-history.patch}
     '';
   };
 
@@ -601,6 +617,8 @@ let
     install = root: ''
       tar -xzf ${releaseTarballs.pi-agent-browser-native} -C ${root} \
         --strip-components=1
+      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+        < ${./patches/pi-agent-browser-bounded-history.patch}
     '';
   };
 
@@ -609,14 +627,14 @@ let
     version = members.usage.version;
     install = root: ''
       tar -xzf ${releaseTarballs.pi-usage-extension} -C ${root} --strip-components=1
-      substituteInPlace ${root}/data.ts \
-        --replace-fail \
-          'await writeFile(tmpPath, payload, "utf8");' \
-          'await writeFile(tmpPath, payload, { encoding: "utf8", mode: 0o600 });'
       substituteInPlace ${root}/index.ts \
         --replace-fail \
           'writeFileSync(path, content);' \
           'writeFileSync(path, content, { encoding: "utf8", mode: 0o600, flag: "wx" });'
+      cp -- ${./patches/pi-usage-stream-json.ts} ${root}/stream-json.ts
+      cp -- ${./patches/pi-usage-bounded-store.ts} ${root}/bounded-store.ts
+      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+        < ${./patches/pi-usage-bounded-history.patch}
     '';
   };
 
@@ -745,10 +763,9 @@ let
       \t\truntime.midRunCompactionSuspended = false;
       \t\treturn;
       \t}""":
-              """\tconst entries = ctx.sessionManager.getBranch() as Entry[];
-      \tconst { tokens, threshold } = resolveCompactionPressure(
+              """\tconst { tokens, threshold } = resolveCompactionPressure(
       \t\tctx.getContextUsage?.(),
-      \t\trawTokensSinceLastCompaction(entries),
+      \t\t() => rawTokensSinceLastCompaction(ctx.sessionManager.getBranch() as Entry[]),
       \t\truntime.config.compactAfterTokens,
       \t);
       \tif (tokens < threshold) {
@@ -758,7 +775,10 @@ let
       \t}""",
           'dbg("compaction_trigger.turn_end.threshold_reached", { tokens, threshold: runtime.config.compactAfterTokens, mode });':
               'dbg("compaction_trigger.turn_end.threshold_reached", { tokens, threshold, mode });',
-          """\t\tconst tokens = rawTokensSinceLastCompaction(entries);
+          """\t\tconst entries = ctx.sessionManager.getBranch() as Entry[];
+      \t\tdbg("compaction_trigger.branch_check", { branchLength: entries.length, hasLastEntry: entries.length > 0, lastEntryType: entries.length > 0 ? entries[entries.length - 1].type : "none" });
+
+      \t\tconst tokens = rawTokensSinceLastCompaction(entries);
       \t\tdbg("compaction_trigger.tokens", { tokens, compactAfterTokens: runtime.config.compactAfterTokens, branchLength: entries.length });
       \t\tif (tokens < runtime.config.compactAfterTokens) {
       \t\t\tdbg("compaction_trigger.skip", { reason: "below_threshold", tokens, threshold: runtime.config.compactAfterTokens });
@@ -766,10 +786,10 @@ let
       \t\t}""":
               """\t\tconst { tokens, threshold, source } = resolveCompactionPressure(
       \t\t\tctx.getContextUsage?.(),
-      \t\t\trawTokensSinceLastCompaction(entries),
+      \t\t\t() => rawTokensSinceLastCompaction(ctx.sessionManager.getBranch() as Entry[]),
       \t\t\truntime.config.compactAfterTokens,
       \t\t);
-      \t\tdbg("compaction_trigger.tokens", { tokens, threshold, source, branchLength: entries.length });
+      \t\tdbg("compaction_trigger.tokens", { tokens, threshold, source });
       \t\tif (tokens < threshold) {
       \t\t\tdbg("compaction_trigger.skip", { reason: "below_threshold", tokens, threshold });
       \t\t\treturn;
@@ -781,10 +801,9 @@ let
       \t\t\t\truntime.compactInFlight = false;
       \t\t\t\truntime.autoCompactionController = null;
       \t\t\t\tdbg("compaction_trigger.microtask.bail", { reason: "pressure_relieved", currentTokens, threshold: runtime.config.compactAfterTokens });""":
-              """\t\t\tconst currentEntries = ctx.sessionManager.getBranch() as Entry[];
-      \t\t\tconst currentPressure = resolveCompactionPressure(
+              """\t\t\tconst currentPressure = resolveCompactionPressure(
       \t\t\t\tctx.getContextUsage?.(),
-      \t\t\t\trawTokensSinceLastCompaction(currentEntries),
+      \t\t\t\t() => rawTokensSinceLastCompaction(ctx.sessionManager.getBranch() as Entry[]),
       \t\t\t\truntime.config.compactAfterTokens,
       \t\t\t);
       \t\t\tconst currentTokens = currentPressure.tokens;
@@ -829,6 +848,16 @@ let
           raise SystemExit("unexpected pi-blackhole compaction threshold field")
       overlay.write_text(overlay_text.replace(old_field, new_field))
       PY
+      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+        < ${./patches/pi-blackhole-bounded-history.patch}
+      cp -- ${./patches/pi-blackhole-streaming-history.ts} \
+        ${root}/src/core/streaming-history.ts
+      cp -- ${./patches/pi-blackhole-streaming-memory.ts} \
+        ${root}/src/core/streaming-memory.ts
+      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+        < ${./patches/pi-blackhole-exact-recall.patch}
+      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+        < ${./patches/pi-blackhole-exact-memory.patch}
     '';
   };
 
@@ -857,6 +886,8 @@ let
       )
       source.write_text(text[:start] + replacement + text[end:])
       PY
+      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+        < ${./patches/pi-caveman-bounded-history.patch}
     '';
   };
 
@@ -909,6 +940,8 @@ let
 
       source.write_text(text)
       PY
+      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+        < ${./patches/pi-copy-message-bounded-history.patch}
     '';
   };
 
@@ -921,6 +954,12 @@ let
         --replace-fail \
           'return `''${prefix}: ''${statusLabel(goal)}''${usage} - ''${truncateText(goal.objective, 60)}`;' \
           'return `''${prefix}: ''${statusLabel(goal)}''${usage}`;'
+      substituteInPlace ${root}/extensions/goal.ts \
+        --replace-fail \
+          'export default function goalExtension(pi: ExtensionAPI): void {' \
+          $'export default function goalExtension(pi: ExtensionAPI): void {\n\tif (process.env.PI_SUBAGENT_CHILD === "1") return;'
+      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+        < ${./patches/pi-goal-x-bounded-history.patch}
     '';
   };
 
@@ -938,6 +977,8 @@ let
     install = root: ''
       tar -xzf ${releaseTarballs.pi-model-router} -C ${root} \
         --strip-components=1
+      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+        < ${./patches/pi-model-router-bounded-history.patch}
     '';
   };
 
@@ -953,6 +994,8 @@ let
         --replace-fail \
           $'  const theme = ctx.ui.theme;\n  const count = state.checkpoints.size;\n  ctx.ui.setStatus(\n    STATUS_KEY,\n    theme.fg("dim", "◆ ") + theme.fg("muted", `''${count} checkpoint''${count === 1 ? "" : "s"}`),\n  );' \
           '  ctx.ui.setStatus(STATUS_KEY, undefined);'
+      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+        < ${./patches/pi-rewind-bounded-history.patch}
     '';
   };
 

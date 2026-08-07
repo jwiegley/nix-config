@@ -1,0 +1,199 @@
+diff --git a/src/index.ts b/src/index.ts
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -54,6 +54,6 @@ export default function quietExtension(pi: ExtensionAPI) {
+ 	const rebuildFromSession = (ctx: ExtensionContext) => {
+ 		try {
+-			const branch = ctx.sessionManager.getBranch();
++			const branch = ctx.sessionManager.getActiveContextEntries();
+ 			const messages = messagesFromBranch(branch as { type?: string; message?: unknown }[]);
+ 			index.rebuild(rowsFromMessages(messages));
+ 		} catch {
+@@ -67,6 +67,18 @@ export default function quietExtension(pi: ExtensionAPI) {
+ 		rebuildFromSession(ctx);
+ 	});
+ 
++	pi.on("session_compact", async (_event, ctx) => {
++		rebuildFromSession(ctx);
++	});
++
++	pi.on("session_tree", async (_event, ctx) => {
++		rebuildFromSession(ctx);
++	});
++
++	pi.on("session_shutdown", async () => {
++		index.clear();
++	});
++
+ 	// Strict transcript neighbors: user/assistant prose splits Compaction Groups.
+	pi.on("message_start", async (event) => {
+		const role = (event.message as { role?: string } | undefined)?.role;
+diff --git a/src/compaction.ts b/src/compaction.ts
+--- a/src/compaction.ts
++++ b/src/compaction.ts
+@@ -173,6 +173,7 @@ export class CompactionIndex {
+ 	private rows: CompactionRow[] = [];
+ 	/** O(1) lookup for non-splitter tool rows. */
+ 	private byId = new Map<string, CompactionRow>();
++	private rowIndexById = new Map<string, number>();
+ 	private plan: CompactionPlan = new Map();
+ 	private invalidators = new Map<string, () => void>();
+ 	private splitterSeq = 0;
+@@ -180,6 +181,7 @@ export class CompactionIndex {
+ 	clear(): void {
+ 		this.rows = [];
+ 		this.byId.clear();
++		this.rowIndexById.clear();
+ 		this.plan = new Map();
+ 		this.invalidators.clear();
+ 		this.splitterSeq = 0;
+@@ -219,14 +221,15 @@ export class CompactionIndex {
+ 	/** Insert a transcript boundary so later tools are not adjacent to earlier ones. */
+ 	addSplitter(): void {
+ 		this.splitterSeq += 1;
+-		this.rows.push({
++		const splitter: CompactionRow = {
+ 			toolCallId: `split-${this.splitterSeq}`,
+ 			toolName: "",
+ 			quiet: false,
+ 			status: "settled",
+ 			splitter: true,
+-		});
+-		this.replan();
++		};
++		this.rows.push(splitter);
++		this.setSingleton(splitter.toolCallId);
+ 	}
+ 
+ 	onStart(input: {
+@@ -254,7 +257,8 @@ export class CompactionIndex {
+ 				status: "pending",
+ 				args: input.args ?? prev.args,
+ 			};
+-			this.replaceRow(prev, next);
++			const index = this.replaceRow(prev, next);
++			this.replanAround(index);
+ 		} else {
+ 			const next: CompactionRow = {
+ 				toolCallId: input.toolCallId,
+@@ -265,8 +269,9 @@ export class CompactionIndex {
+ 			};
+ 			this.rows.push(next);
+ 			this.byId.set(input.toolCallId, next);
++			this.rowIndexById.set(input.toolCallId, this.rows.length - 1);
++			this.setSingleton(input.toolCallId);
+ 		}
+-		this.replan();
+ 	}
+ 
+ 	onEnd(input: {
+@@ -292,33 +297,103 @@ export class CompactionIndex {
+ 			isError: input.isError,
+ 		};
+ 		if (prev) {
+-			this.replaceRow(prev, base);
++			const index = this.replaceRow(prev, base);
++			this.replanAround(index);
+ 		} else {
+ 			this.rows.push(base);
+ 			this.byId.set(input.toolCallId, base);
++			const index = this.rows.length - 1;
++			this.rowIndexById.set(input.toolCallId, index);
++			this.replanAround(index);
+ 		}
+-		this.replan();
+ 	}
+ 
+ 	/** Replace index contents (session reload). Does not keep invalidators. */
+ 	rebuild(rows: CompactionRow[]): void {
+ 		this.rows = rows.map((r) => ({ ...r }));
+ 		this.byId.clear();
+-		for (const row of this.rows) {
+-			if (!row.splitter) this.byId.set(row.toolCallId, row);
++		this.rowIndexById.clear();
++		for (let index = 0; index < this.rows.length; index++) {
++			const row = this.rows[index]!;
++			if (!row.splitter) {
++				this.byId.set(row.toolCallId, row);
++				this.rowIndexById.set(row.toolCallId, index);
++			}
+ 		}
+ 		this.invalidators.clear();
+ 		this.replan(false);
+ 	}
+ 
+-	private replaceRow(prev: CompactionRow, next: CompactionRow): void {
+-		const idx = this.rows.indexOf(prev);
++	private replaceRow(prev: CompactionRow, next: CompactionRow): number {
++		const idx = this.rowIndexById.get(prev.toolCallId) ?? -1;
+ 		if (idx >= 0) {
+ 			this.rows[idx] = next;
+ 		} else {
+ 			this.rows.push(next);
+ 		}
+ 		this.byId.set(next.toolCallId, next);
++		const nextIndex = idx >= 0 ? idx : this.rows.length - 1;
++		this.rowIndexById.set(next.toolCallId, nextIndex);
++		return nextIndex;
++	}
++
++	private setSingleton(id: string): void {
++		this.plan.set(id, {
++			role: "singleton",
++			groupId: id,
++			carrierId: id,
++			memberIds: [id],
++		});
++	}
++
++	/** Recompute only the old and new groups touched by one changed row. */
++	private replanAround(changedIndex: number): void {
++		const changed = this.rows[changedIndex];
++		if (!changed) return;
++
++		let start = changedIndex;
++		let end = changedIndex;
++		const oldRole = this.plan.get(changed.toolCallId);
++		for (const id of oldRole?.memberIds ?? []) {
++			const index = this.rowIndexById.get(id);
++			if (index === undefined) continue;
++			start = Math.min(start, index);
++			end = Math.max(end, index);
++		}
++
++		if (canJoinGroup(changed)) {
++			const kind = rowVerbKind(changed);
++			while (start > 0) {
++				const previous = this.rows[start - 1]!;
++				if (!canJoinGroup(previous) || rowVerbKind(previous) !== kind) break;
++				start -= 1;
++			}
++			while (end + 1 < this.rows.length) {
++				const next = this.rows[end + 1]!;
++				if (!canJoinGroup(next) || rowVerbKind(next) !== kind) break;
++				end += 1;
++			}
++		}
++
++		const before = new Map<string, CompactionRole>();
++		for (let index = start; index <= end; index++) {
++			const id = this.rows[index]!.toolCallId;
++			before.set(id, roleOf(this.plan, id));
++			this.plan.delete(id);
++		}
++		for (const [id, role] of planCompaction(this.rows.slice(start, end + 1))) {
++			this.plan.set(id, role);
++		}
++
++		for (let index = start; index <= end; index++) {
++			const row = this.rows[index]!;
++			if (row.splitter) continue;
++			const previous = before.get(row.toolCallId)!;
++			const next = roleOf(this.plan, row.toolCallId);
++			if (paintRoleChanged(previous, next)) {
++				this.invalidators.get(row.toolCallId)?.();
++			}
++		}
+ 	}
+ 
+ 	private replan(notify = true): void {

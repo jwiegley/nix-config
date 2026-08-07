@@ -39,7 +39,7 @@ function context(notifications: Array<[string, string]>) {
 	return {
 		mode: "rpc",
 		sessionManager: {
-			getBranch: () => [
+			getRecentActiveEntries: () => [
 				{
 					type: "message",
 					id: "user-1",

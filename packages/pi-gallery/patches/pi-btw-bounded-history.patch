@@ -1,0 +1,101 @@
+--- a/extensions/btw.ts
++++ b/extensions/btw.ts
+@@ -32,6 +32,7 @@
+ const BTW_RESET_TYPE = "btw-thread-reset";
+ const BTW_MODEL_OVERRIDE_TYPE = "btw-model-override";
+ const BTW_THINKING_OVERRIDE_TYPE = "btw-thinking-override";
++const MAX_RESTORED_BTW_TURNS = 64;
+ const BTW_FOCUS_SHORTCUTS = [Key.alt("/"), Key.ctrlAlt("w")] as const;
+ 
+ function matchesBtwFocusShortcut(data: string): boolean {
+@@ -271,13 +272,13 @@
+   if (mode === "contextual") {
+     try {
+       messages.push(
+-        ...(buildSessionContext(ctx.sessionManager.getEntries(), ctx.sessionManager.getLeafId()).messages as Message[]).filter(
++        ...(buildSessionContext(ctx.sessionManager.getActiveContextEntries(), ctx.sessionManager.getLeafId()).messages as Message[]).filter(
+           (message) => !isVisibleBtwMessage(message),
+         ),
+       );
+     } catch {
+       messages.push(
+-        ...ctx.sessionManager.getEntries().flatMap((entry) => {
++        ...ctx.sessionManager.getActiveContextEntries().flatMap((entry) => {
+           if (!entry || typeof entry !== "object") {
+             return [];
+           }
+@@ -1987,46 +1988,26 @@
+     lastUiContext = ctx;
+     overlayStatus = null;
+ 
+-    const branch = ctx.sessionManager.getBranch();
+-    let lastResetIndex = -1;
+-
+-    for (let i = 0; i < branch.length; i++) {
+-      if (isCustomEntry(branch[i], BTW_MODEL_OVERRIDE_TYPE)) {
+-        const details = (branch[i] as unknown as { data?: BtwModelOverrideDetails }).data;
+-        if (details?.action === "set") {
+-          const resolved = ctx.modelRegistry.find(details.provider, details.id);
+-          if (resolved) {
+-            btwModelOverride = resolved;
+-          } else {
+-            // Configured override is no longer in the registry; drop it on restore.
+-            btwModelOverride = null;
+-          }
+-        } else if (details?.action === "clear") {
+-          btwModelOverride = null;
+-        }
+-      }
+-
+-      if (isCustomEntry(branch[i], BTW_THINKING_OVERRIDE_TYPE)) {
+-        const details = (branch[i] as unknown as { data?: BtwThinkingOverrideDetails }).data;
+-        btwThinkingOverride =
+-          details?.action === "set"
+-            ? details.thinkingLevel
+-            : details?.action === "clear"
+-              ? null
+-              : btwThinkingOverride;
+-      }
+-
+-      if (isCustomEntry(branch[i], BTW_RESET_TYPE)) {
+-        lastResetIndex = i;
+-        const details = (branch[i] as unknown as { data?: BtwResetDetails }).data;
+-        pendingMode = details?.mode ?? "contextual";
+-      }
+-    }
++    const modelEntry = ctx.sessionManager.getLatestCustomEntry(BTW_MODEL_OVERRIDE_TYPE, { scope: "active" });
++    const modelDetails = (modelEntry as unknown as { data?: BtwModelOverrideDetails } | undefined)?.data;
++    if (modelDetails?.action === "set") {
++      btwModelOverride = ctx.modelRegistry.find(modelDetails.provider, modelDetails.id) ?? null;
++    }
++
++    const thinkingEntry = ctx.sessionManager.getLatestCustomEntry(BTW_THINKING_OVERRIDE_TYPE, { scope: "active" });
++    const thinkingDetails = (thinkingEntry as unknown as { data?: BtwThinkingOverrideDetails } | undefined)?.data;
++    if (thinkingDetails?.action === "set") btwThinkingOverride = thinkingDetails.thinkingLevel;
++
++    const resetEntry = ctx.sessionManager.getLatestCustomEntry(BTW_RESET_TYPE, { scope: "active" });
++    const resetDetails = (resetEntry as unknown as { data?: BtwResetDetails } | undefined)?.data;
++    pendingMode = resetDetails?.mode ?? "contextual";
++    const entries = ctx.sessionManager.getRecentActiveEntries({
++      customType: BTW_ENTRY_TYPE,
++      stopBeforeId: resetEntry?.id,
++      limit: MAX_RESTORED_BTW_TURNS,
++    });
+ 
+-    for (const entry of branch.slice(lastResetIndex + 1)) {
+-      if (!isCustomEntry(entry, BTW_ENTRY_TYPE)) {
+-        continue;
+-      }
++    for (const entry of entries) {
+ 
+       const details = (entry as unknown as { data?: BtwDetails }).data;
+       if (!details?.question || !details.answer) {
+@@ -2120,6 +2101,7 @@
+       };
+ 
+       pendingThread.push(details);
++      if (pendingThread.length > MAX_RESTORED_BTW_TURNS) pendingThread.shift();
+       pi.appendEntry(BTW_ENTRY_TYPE, details);
+ 
+       const saveState = saveVisibleBtwNote(pi, details, saveRequested, wasBusy);
+

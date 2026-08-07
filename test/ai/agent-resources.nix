@@ -66,6 +66,10 @@ let
   ];
 
   wsSource = pkgs.fetchzip piSources.ws.source.args;
+  wsTypes = pkgs.fetchzip {
+    url = "https://registry.npmjs.org/@types/ws/-/ws-8.18.1.tgz";
+    hash = "sha256-b3zpflsUAU9KpAT1uQb4QLZMbPn7faYlDdm8vNRWNzY=";
+  };
 
   piMcpFiles = [
     "cli.js"
@@ -246,6 +250,7 @@ else
         pkgs.gnugrep
         pkgs.jq
         pkgs.nodejs
+        pkgs.typescript
       ];
     }
     ''
@@ -425,6 +430,9 @@ else
             "$quiet_expected/$relative"
         done
         cp -a -- ${lib.escapeShellArg "${piQuiet}/LICENSE"} "$quiet_expected/LICENSE"
+        ${pkgs.buildPackages.patch}/bin/patch --fuzz=0 \
+          --directory="$quiet_expected" --strip=1 \
+          < ${../../packages/agent-resources/pi-quiet-bounded-history.patch}
 
         openai_compaction_expected="$TMPDIR/pi-openai-server-compaction-expected"
         mkdir -p "$openai_compaction_expected/src" \
@@ -433,8 +441,14 @@ else
           cp -a -- ${lib.escapeShellArg "${piOpenaiServerCompaction}"}/"$relative" \
             "$openai_compaction_expected/$relative"
         done
+        cp -a -- \
+          ${../../packages/agent-resources/pi-openai-server-compaction-active-history.ts} \
+          "$openai_compaction_expected/src/active-history.ts"
         cp -a -- ${lib.escapeShellArg "${wsSource}"}/. \
           "$openai_compaction_expected/node_modules/ws"/
+        ${pkgs.buildPackages.patch}/bin/patch --fuzz=0 \
+          --directory="$openai_compaction_expected" --strip=1 \
+          < ${../../packages/agent-resources/pi-openai-server-compaction-bounded-history.patch}
 
         find "$quiet_expected" "$openai_compaction_expected" -type d \
           -exec chmod 0555 {} +
@@ -451,6 +465,60 @@ else
         cmp "$TMPDIR/expected-openai-compaction.manifest" \
           "$TMPDIR/actual-openai-compaction.manifest" \
           || fail "pi-openai-server-compaction framed manifest differs"
+
+        runtime_root="$TMPDIR/pi-extension-runtime"
+        runtime_quiet="$runtime_root/pi-quiet"
+        runtime_openai="$runtime_root/pi-openai-server-compaction"
+        mkdir -p "$runtime_quiet" "$runtime_openai"
+        cp -R -- "$quiet"/. "$runtime_quiet"/
+        cp -R -- "$openai_compaction"/. "$runtime_openai"/
+        chmod -R u+w "$runtime_root"
+
+        pi_runtime=${lib.escapeShellArg "${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent"}
+        link_pi_runtime() {
+          root=$1
+          mkdir -p "$root/node_modules/@earendil-works"
+          ln -s "$pi_runtime" \
+            "$root/node_modules/@earendil-works/pi-coding-agent"
+          for peer in pi-agent-core pi-ai pi-tui; do
+            ln -s "$pi_runtime/node_modules/@earendil-works/$peer" \
+              "$root/node_modules/@earendil-works/$peer"
+          done
+        }
+        link_pi_runtime "$runtime_quiet"
+        link_pi_runtime "$runtime_openai"
+
+        mkdir -p "$runtime_openai/node_modules/@types"
+        ln -s "$pi_runtime/node_modules/@types/node" \
+          "$runtime_openai/node_modules/@types/node"
+        ln -s ${lib.escapeShellArg wsTypes} \
+          "$runtime_openai/node_modules/@types/ws"
+
+        mkdir -p "$TMPDIR/runtime-home" "$TMPDIR/runtime-agent"
+        HOME="$TMPDIR/runtime-home" PI_CODING_AGENT_DIR="$TMPDIR/runtime-agent" \
+          node --experimental-strip-types \
+          ${./pi-agent-resources-bounded-history.check.mjs} \
+          "$runtime_quiet/src/index.ts" "$runtime_quiet/src/compaction.ts" \
+          "$runtime_openai/src/index.ts" \
+          "$runtime_openai/src/active-history.ts" \
+          "$runtime_openai/src/custom-stream.ts" \
+          "$runtime_openai/src/openai-ws-stream.ts" \
+          "$runtime_openai/src/state.ts"
+
+        (
+          cd "$runtime_openai"
+          tsc \
+            --allowImportingTsExtensions \
+            --module NodeNext \
+            --moduleResolution NodeNext \
+            --noEmit \
+            --pretty false \
+            --skipLibCheck \
+            --strict \
+            --target ES2022 \
+            --types node \
+            src/*.ts
+        )
 
         for relative in ${piQuietPackagedFileArgs}; do
           [ -f "$quiet/$relative" ] && [ ! -L "$quiet/$relative" ] \
@@ -489,8 +557,16 @@ else
         ' "$openai_compaction/node_modules/ws/package.json" >/dev/null \
           || fail "invalid pi-openai-server-compaction ws closure"
 
+        quiet_test_root="$TMPDIR/pi-quiet-tests"
+        mkdir "$quiet_test_root"
+        cp -R -- ${lib.escapeShellArg "${piQuiet}/packages/pi-quiet"}/. \
+          "$quiet_test_root"/
+        chmod -R u+w "$quiet_test_root"
+        ${pkgs.buildPackages.patch}/bin/patch --fuzz=0 \
+          --directory="$quiet_test_root" --strip=1 \
+          < ${../../packages/agent-resources/pi-quiet-bounded-history.patch}
         node --experimental-strip-types --test \
-          ${lib.escapeShellArg "${piQuiet}/packages/pi-quiet/src"}/*.test.ts
+          "$quiet_test_root"/src/*.test.ts
 
         # This proves only that both entrypoints load under the packaged Pi.
         # It does not override the compaction extension's incompatible peer range.

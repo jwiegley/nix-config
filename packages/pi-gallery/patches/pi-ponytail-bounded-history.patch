@@ -1,0 +1,9 @@
+diff --git a/pi-extension/index.js b/pi-extension/index.js
+--- a/pi-extension/index.js
++++ b/pi-extension/index.js
+@@ -184 +184 @@
+-    const entries = ctx?.sessionManager?.getBranch?.() || ctx?.sessionManager?.getEntries?.() || [];
++    const savedMode = ctx?.sessionManager?.getLatestCustomEntry?.("ponytail-mode", { scope: "active" });
+@@ -187 +187 @@
+-    currentMode = resolveSessionMode(entries, configuredDefaultMode);
++    currentMode = resolveSessionMode(savedMode ? [savedMode] : [], configuredDefaultMode);

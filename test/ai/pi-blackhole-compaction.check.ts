@@ -29,4 +29,24 @@ describe("Pi Blackhole compaction pressure", () => {
 			tokens: 80_999,
 		});
 	});
+
+	test("does not hydrate branch history when live context usage is available", () => {
+		let fallbackCalls = 0;
+		const estimate = () => {
+			fallbackCalls++;
+			return 81_000;
+		};
+		expect(resolveCompactionPressure({ contextWindow: 200_000, tokens: 25_000 }, estimate, 81_000)).toEqual({
+			source: "context",
+			threshold: 140_000,
+			tokens: 25_000,
+		});
+		expect(fallbackCalls).toBe(0);
+		expect(resolveCompactionPressure(undefined, estimate, 81_000)).toEqual({
+			source: "fallback",
+			threshold: 81_000,
+			tokens: 81_000,
+		});
+		expect(fallbackCalls).toBe(1);
+	});
 });

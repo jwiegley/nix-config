@@ -41,8 +41,7 @@ function isTerminalCompactionError(error: unknown): boolean {
 }
 
 function sessionEndsAtCompaction(ctx: ExtensionContext): boolean {
-  const branch = ctx.sessionManager.getBranch();
-  return branch.length > 0 && branch[branch.length - 1]?.type === "compaction";
+  return ctx.sessionManager.getLeafEntry()?.type === "compaction";
 }
 
 export default function autoCompactResume(pi: ExtensionAPI) {

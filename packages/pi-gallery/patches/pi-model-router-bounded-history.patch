@@ -1,0 +1,17 @@
+diff --git a/extensions/index.ts b/extensions/index.ts
+--- a/extensions/index.ts
++++ b/extensions/index.ts
+@@ -316,8 +316,5 @@
+-    const entries = ctx.sessionManager.getBranch() as CustomSessionEntry[];
+-    const savedState = entries
+-      .filter(
+-        (entry) =>
+-          entry.type === 'custom' && entry.customType === 'router-state',
+-      )
+-      .map((entry) => entry.data)
+-      .findLast((data) => isRouterPersistedState(data));
++    const savedEntry = ctx.sessionManager.getLatestCustomEntry(
++      'router-state',
++      { scope: 'active' },
++    ) as CustomSessionEntry | undefined;
++    const savedState = savedEntry?.data;
