@@ -9,6 +9,11 @@
 
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
+    # cm's compiled output is coupled to Bun's executable template. Keep its
+    # build Bun independent of consumer channels so all fleet hosts use the
+    # exact runtime version recorded in sources/ai.json.
+    cm-bun-nixpkgs.url = "github:NixOS/nixpkgs/a5e9f2fd9ef6011c6886d6935f3ef678c81385fa";
+
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";

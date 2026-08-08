@@ -139,9 +139,11 @@ package is classified unfree and carries the exact tag-bound rider in its output
 
 `cm` is a separate fleet-wide package built from the reviewed upstream commit one
 change beyond v0.2.13, retaining the inline-feedback identifier fix uniformly on
-`aarch64-darwin`, `aarch64-linux`, and `x86_64-linux`. The build uses the pinned Bun
-lock; x86_64 uses the hash-pinned baseline Bun template so the executable does not
-inherit an AVX2-only runtime. It disables compiled dotenv autoload and rejects
+`aarch64-darwin`, `aarch64-linux`, and `x86_64-linux`. The build uses Bun 1.3.13
+from an exact Nixpkgs revision independent of consumer channels; x86_64 uses the
+matching hash-pinned baseline template so the executable does not inherit an
+AVX2-only runtime. Fleet outputs are native; cross compilation is rejected. It
+disables compiled dotenv autoload and rejects
 file-backed or CLI `apiKey`
 fields; the supported credential path is provider environment variables only.
 Bedrock credential discovery, CLI-provider authentication, network-backed model

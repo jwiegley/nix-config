@@ -43,6 +43,19 @@ let
           (_final: _prev: { agent-deck = "caller-override"; })
         ];
       };
+      consumerBunSentinel = import inputs.nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+        overlays = [
+          (_final: _prev: {
+            bun = pinnedCmBun.overrideAttrs (_old: {
+              CM_CONSUMER_SENTINEL = "1";
+            });
+          })
+          actual.overlays.default
+        ];
+      };
+      pinnedCmBun = inputs.cm-bun-nixpkgs.legacyPackages.${system}.bun;
       toolPkgs = import inputs.nixpkgs {
         inherit system;
         config.allowUnfree = true;
@@ -102,11 +115,22 @@ let
       (lib.assertMsg (
         actual.packages.${system}.default.name == "ai-nix-toolchain"
       ) "portable aggregate name changed on ${system}")
+      (lib.assertMsg (
+        actual.packages.${system}.cm.passthru.buildBun.version == "1.3.13"
+      ) "portable cm lost its pinned Bun 1.3.13 build tool on ${system}")
+      (lib.assertMsg (
+        consumerBunSentinel.bun.version == pinnedCmBun.version
+        && consumerBunSentinel.bun.drvPath != pinnedCmBun.drvPath
+        && consumerBunSentinel.cm.passthru.buildBun.drvPath == pinnedCmBun.drvPath
+      ) "portable cm no longer isolates its Bun from the consumer package set on ${system}")
     ]
     ++ map (value: lib.assertMsg value "portable compatibility alias changed on ${system}") (
       aliasesMatch system
     );
   assertions = [
+    (lib.assertMsg (
+      inputs.cm-bun-nixpkgs.rev == "a5e9f2fd9ef6011c6886d6935f3ef678c81385fa"
+    ) "portable cm Bun input moved from its reviewed Nixpkgs revision")
     (lib.assertMsg (hasAll inputNames contract.inputs) "portable AI input contract lost a required input")
     (lib.assertMsg (hasAll (sortedNames actual) outputNames) "portable AI top-level output contract lost a required output")
     (lib.assertMsg (builtins.isFunction actual.overlays.default) "portable default overlay is not callable")

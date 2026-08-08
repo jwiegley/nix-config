@@ -1,7 +1,7 @@
 {
   autoPatchelfHook,
-  bun,
   cass,
+  cmBun,
   darwin,
   fetchFromGitHub,
   fetchurl,
@@ -25,12 +25,7 @@ let
   licenseSha256 = "32a82e0a5754e72e51fae44b65a936c831c07376f21c90f5fb9e76897fcc3509";
   x86Linux = stdenvNoCC.hostPlatform.isx86_64 && stdenvNoCC.hostPlatform.isLinux;
   compileTarget = if x86Linux then "bun-linux-x64-baseline" else "bun";
-  baselineRuntime =
-    if x86Linux then
-      assert bun.version == bunBaselineSource.version;
-      fetchurl bunBaselineSource.source.args
-    else
-      null;
+  baselineRuntime = if x86Linux then fetchurl bunBaselineSource.source.args else null;
 
   node_modules = stdenvNoCC.mkDerivation {
     pname = "cm-node-modules";
@@ -44,7 +39,7 @@ let
       "SOCKS_SERVER"
     ];
     nativeBuildInputs = [
-      bun
+      cmBun
       writableTmpDirAsHomeHook
     ];
 
@@ -77,6 +72,10 @@ let
     outputHashMode = "recursive";
   };
 in
+assert lib.assertMsg (
+  stdenvNoCC.buildPlatform == stdenvNoCC.hostPlatform
+) "cm does not support cross compilation";
+assert cmBun.version == bunBaselineSource.version;
 stdenvNoCC.mkDerivation {
   pname = "cm";
   inherit (source) version;
@@ -87,7 +86,7 @@ stdenvNoCC.mkDerivation {
   patches = [ ../overlays/ai/patches/cm-environment-only-credentials.patch ];
 
   nativeBuildInputs = [
-    bun
+    cmBun
     git
     makeWrapper
     writableTmpDirAsHomeHook
@@ -150,8 +149,8 @@ stdenvNoCC.mkDerivation {
       compile_cache="$HOME/.bun/install/cache"
       mkdir -p "$compile_cache"
       unzip -p ${baselineRuntime} bun-linux-x64-baseline/bun \
-        > "$compile_cache/bun-linux-x64-baseline-v${bun.version}"
-      chmod 700 "$compile_cache/bun-linux-x64-baseline-v${bun.version}"
+        > "$compile_cache/bun-linux-x64-baseline-v${cmBun.version}"
+      chmod 700 "$compile_cache/bun-linux-x64-baseline-v${cmBun.version}"
     ''}
     bun build src/cm.ts \
       --compile \
@@ -204,6 +203,7 @@ stdenvNoCC.mkDerivation {
 
   passthru = {
     inherit baselineRuntime compileTarget node_modules;
+    buildBun = cmBun;
     upstreamVersion = "0.2.13";
   };
 
