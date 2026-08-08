@@ -1,6 +1,8 @@
 # Current Work
 
-Cleanup epic [#98](https://github.com/jwiegley/nix-config/issues/98) is active.
-The accepted Definition of Done is [`CLEANUP-PLAN.md`](CLEANUP-PLAN.md), and the
-current resume state and authorization boundary are maintained in
-[`CLEANUP-WIGGUM-HANDOFF.md`](CLEANUP-WIGGUM-HANDOFF.md).
+No repository cleanup programme is active. Project 9's source cleanup is
+complete; operational host state remains user-owned and is not part of the
+repository refactoring.
+
+The deferred Pi soak procedure remains available in
+[`PI-EIGHT-HOUR-SOAK.md`](PI-EIGHT-HOUR-SOAK.md) for manual use when requested.

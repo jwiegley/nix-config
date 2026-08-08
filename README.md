@@ -166,7 +166,6 @@ whole-fleet runtime proof.
 - [`test/README.md`](test/README.md) — verification scope and maintainability policy
 - [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) — ownership, data flow, rollout, and state boundaries
 - [`doc/CURRENT-WORK.md`](doc/CURRENT-WORK.md) — current work-unit pointer
-- [`doc/CLEANUP-PLAN.md`](doc/CLEANUP-PLAN.md) — frozen cleanup Definition of Done
 - [`doc/Pi Coding Agent Extensions.md`](<doc/Pi Coding Agent Extensions.md>) — managed Pi extension inventory
 
 Git history is the archive for completed plans and handoffs. Current documents
