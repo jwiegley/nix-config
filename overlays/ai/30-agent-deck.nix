@@ -55,6 +55,7 @@ in
       checkPhase = ''
         runHook preCheck
         CGO_ENABLED=1 make GOTOOLCHAIN=local test-runtime-lifecycle
+        go test ./internal/session/ -run '^TestShouldRejectCodexSubagentRebind$'
         runHook postCheck
       '';
 
