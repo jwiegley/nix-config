@@ -252,12 +252,14 @@ let
     && agent.config.LowPriorityIO
     && bridgeAgent.enable
     && bridgeAgent.domain == "gui"
+    && builtins.length bridgeAgent.config.ProgramArguments == 3
+    && lib.hasSuffix "/bin/socat" (builtins.elemAt bridgeAgent.config.ProgramArguments 0)
     &&
-      bridgeAgent.config.ProgramArguments == [
-        (lib.getExe pkgs.socat)
-        "TCP4-LISTEN:8384,bind=127.0.0.1,reuseaddr,fork"
-        "UNIX-CONNECT:${home.home.homeDirectory}/.local/state/syncthing/gui.sock"
-      ]
+      builtins.elemAt bridgeAgent.config.ProgramArguments 1
+      == "TCP4-LISTEN:8384,bind=127.0.0.1,reuseaddr,fork"
+    &&
+      builtins.elemAt bridgeAgent.config.ProgramArguments 2
+      == "UNIX-CONNECT:${home.home.homeDirectory}/.local/state/syncthing/gui.sock"
     && bridgeAgent.config.RunAtLoad
     && bridgeAgent.config.KeepAlive == true
     && initAgent.enable
