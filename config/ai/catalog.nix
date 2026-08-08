@@ -780,6 +780,7 @@ let
         {
           clients = [
             "claude"
+            "codex"
             "droid"
             "pi"
             "prime"
