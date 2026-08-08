@@ -75,22 +75,6 @@
 
     obr = {
       url = "github:jwiegley/obr";
-      #
-      # obr's own committed flake.lock pins its org2jsonl input at a local
-      # filesystem URL under this machine's home directory, and Nix folds that
-      # transitive lock into this repo's closure. That single node was the only
-      # reason this lock was not 100% fetchable by an external consumer.
-      #
-      # The literal URL is deliberately not written here: the purity gate in
-      # test/bin/update-overlay-slow-test.py forbids that scheme appearing in flake.nix at
-      # all, and it is right to — a comment quoting it is indistinguishable from
-      # a declaration using it.
-      #
-      # Point it at the org2jsonl this repo already declares. A `follows` is used
-      # rather than pinning obr to a newer revision whose lock happens to be
-      # clean, because `follows` keeps the property true regardless of obr's
-      # future lock hygiene — the leak cannot come back through an obr bump.
-      inputs.org2jsonl.follows = "org2jsonl";
     };
 
     org2jsonl = {
