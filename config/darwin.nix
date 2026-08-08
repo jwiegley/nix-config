@@ -31,6 +31,9 @@ in
     ./host-options.nix
   ];
 
+  # Prevent macOS from falling back to the case-preserving LocalHostName.
+  networking.hostName = hostname;
+
   users = {
     # nix-darwin's Prometheus module registers its own service account when the
     # exporter is enabled; only the login user belongs in this local declaration.

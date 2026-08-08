@@ -131,6 +131,11 @@ let
   allFalse = values: builtins.all (value: !value) values;
 in
 assert builtins.all (host: builtins.hasAttr host darwinConfigurations) requiredDarwinHosts;
+assert builtins.all (
+  host:
+  darwinConfigurations.${host}.config.networking.hostName == host
+  && darwinConfigurations.${host}.config.networking.localHostName == host
+) requiredDarwinHosts;
 assert builtins.all (host: builtins.hasAttr host nixosHomeEvaluationFixtures) requiredNixosHosts;
 assert builtins.all (home: builtins.hasAttr home homeConfigurations) requiredStandaloneHomes;
 assert builtins.any isDesktopRuntimeReference (contextPackageNames runtimeContextProbe);
