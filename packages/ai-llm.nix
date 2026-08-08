@@ -35,7 +35,7 @@ in
       pname = "hfdownloader";
       version = sources.hfdownloader.version;
       vendorHash = sources.hfdownloader.hashes.vendorHash;
-      doCheck = false;
+      doCheck = false; # Upstream has timing-sensitive server cancellation tests.
 
       src =
         assert sources.hfdownloader.source.fetcher == "fetchFromGitHub";
@@ -402,7 +402,7 @@ in
       ];
 
       dontBuild = true;
-      doCheck = false;
+      doCheck = false; # Upstream tests require running LLM servers.
 
       pythonImportsCheck = [ "guidellm" ];
 
