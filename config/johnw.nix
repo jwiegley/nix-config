@@ -54,6 +54,13 @@ in
   home = {
     stateVersion = lib.mkDefault "24.11"; # overridden by wrappers; fallback only
 
+    packages = lib.optionals isDarwin [
+      (pkgs.texliveFull.withPackages (tex: [
+        tex.texdoc
+        tex.latex2e-help-texinfo.info
+      ]))
+    ];
+
     sessionVariables = {
       DISABLE_AUTOUPDATER = "1";
       B2_ACCOUNT_INFO = "${config.xdg.configHome}/backblaze-b2/account_info";
@@ -294,14 +301,6 @@ in
     browserpass = lib.mkIf config.johnw.host.isDarwinWorkstation {
       enable = true;
       browsers = [ "firefox" ];
-    };
-
-    texlive = lib.mkIf isDarwin {
-      enable = true;
-      extraPackages = tpkgs: {
-        inherit (tpkgs) scheme-full texdoc latex2e-help-texinfo;
-        pkgFilter = pkg: pkg.tlType == "run" || pkg.tlType == "bin" || pkg.pname == "latex2e-help-texinfo";
-      };
     };
 
     fzf = {
