@@ -108,6 +108,9 @@ let
       (lib.assertMsg (
         overridden.agent-deck == "caller-override"
       ) "portable AI overlay prevents later caller overrides on ${system}")
+      (lib.assertMsg (
+        pkgs.agent-deck.passthru.runtimeLifecycleRaceEnabled == (system != "aarch64-linux")
+      ) "agent-deck lifecycle race policy changed on ${system}")
       (lib.assertMsg (builtins.all (
         name: toolPkgs ? ${name}
       ) consumerTools) "portable tools overlay lost a supported consumer package on ${system}")

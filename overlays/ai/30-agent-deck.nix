@@ -27,6 +27,18 @@ in
         "--fuzz=0"
       ];
 
+      # Go 1.26's arm64 race runtime only supports a 48-bit VMA. Vulcan's
+      # 16 KiB-page kernel exposes a different layout, so race binaries abort
+      # before any test executes. Keep the complete lifecycle suite and every
+      # fail/skip gate there; the Darwin and x86_64-linux builds retain the
+      # race-instrumented lane.
+      postPatch = lib.optionalString (stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isAarch64) ''
+        substituteInPlace Makefile \
+          --replace-fail \
+            "go test -race -json -count=1 -run '^TestRuntimeLifecycle_'" \
+            "go test -json -count=1 -run '^TestRuntimeLifecycle_'"
+      '';
+
       # Only the user-facing TUI/CLI. cmd/agent-deck-test-server is a test helper
       # and is not shipped by upstream (goreleaser builds cmd/agent-deck alone).
       subPackages = [ "cmd/agent-deck" ];
@@ -84,6 +96,9 @@ in
         $out/bin/agent-deck version | grep -F "${version}"
         runHook postInstallCheck
       '';
+
+      passthru.runtimeLifecycleRaceEnabled =
+        !(stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isAarch64);
 
       meta = with lib; {
         description = "Terminal session manager for AI coding agents";
