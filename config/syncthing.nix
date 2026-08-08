@@ -239,28 +239,8 @@ let
       copyOwnershipFromParent = false;
       disableFsync = false;
 
-      syncXattrs = true;
-      sendXattrs = true;
-      xattrFilter = {
-        # Time Machine's sticky exclusion is local policy, not shared data.
-        entries = [
-          {
-            match = "com.apple.metadata:com_apple_backup_excludeItem";
-            permit = false;
-          }
-          {
-            # Linux system xattrs include POSIX ACLs and are host-local policy.
-            match = "system.*";
-            permit = false;
-          }
-          {
-            match = "*";
-            permit = true;
-          }
-        ];
-        maxSingleEntrySize = 16777216;
-        maxTotalSize = 67108864;
-      };
+      syncXattrs = false;
+      sendXattrs = false;
     };
   bootstrapProgram = pkgs.writeScript "syncthing-bootstrap" (
     lib.replaceStrings [ "#!/usr/bin/env python3" ] [ "#!${lib.getExe pkgs.python3}" ] (

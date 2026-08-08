@@ -157,25 +157,8 @@ let
         && folder.fsWatcherTimeoutS == 5
         && folder.scanProgressIntervalS == -1
         && folder.maxConcurrentWrites == 4
-        && folder.sendXattrs
-        && folder.syncXattrs
-        &&
-          folder.xattrFilter.entries == [
-            {
-              match = "com.apple.metadata:com_apple_backup_excludeItem";
-              permit = false;
-            }
-            {
-              match = "system.*";
-              permit = false;
-            }
-            {
-              match = "*";
-              permit = true;
-            }
-          ]
-        && folder.xattrFilter.maxSingleEntrySize == 16777216
-        && folder.xattrFilter.maxTotalSize == 67108864
+        && !folder.sendXattrs
+        && !folder.syncXattrs
         && folder.ignorePatterns == ignorePatterns
         && folder.maxConflicts == 10
         && !folder.ignorePerms
