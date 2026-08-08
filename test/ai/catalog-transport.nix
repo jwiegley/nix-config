@@ -87,6 +87,7 @@ let
       };
 in
 assert catalog.validate { };
+assert builtins.all (profile: (selectFor profile).mcpServers ? pal) profiles;
 assert catalog.validate {
   items = withMcpServers (catalog.items.mcpServers // { synthetic-http = syntheticHttpMcp; });
 };
