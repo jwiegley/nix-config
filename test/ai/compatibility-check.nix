@@ -78,6 +78,7 @@ let
         "agent-http-header-bridge"
         "agent-resources"
         "claude-vault"
+        "pal-mcp-server"
         "plasma-fractal"
         "plasma-wiki"
       ];
@@ -98,6 +99,12 @@ let
       (lib.assertMsg (builtins.all (
         name: pkgs ? ${name}
       ) representativePackages) "portable AI overlay lost representative packages on ${system}")
+      (lib.assertMsg (
+        pkgs ? pal-mcp-server
+        && builtins.any (package: package.drvPath == pkgs.pal-mcp-server.drvPath) (
+          actual.lib.aiPackagesFor pkgs
+        )
+      ) "portable AI package policy lost PAL on ${system}")
       (lib.assertMsg (
         overridden.agent-deck == "caller-override"
       ) "portable AI overlay prevents later caller overrides on ${system}")
