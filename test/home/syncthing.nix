@@ -632,8 +632,13 @@ pkgs.runCommand "syncthing-home-contract"
     def assert_default_policy(root, policy):
         folder = root.find("defaults/folder")
         expected_folder = policy["folder"]
+        assert folder.get("path") == expected_folder["path"]
+        assert_folder_policy(folder, expected_folder)
+        ignores = root.find("defaults/ignores")
+        assert [line.text for line in ignores.findall("line")] == policy["ignores"]
+
+    def assert_folder_policy(folder, expected_folder):
         for attribute in (
-            "path",
             "rescanIntervalS",
             "fsWatcherEnabled",
             "fsWatcherDelayS",
@@ -642,8 +647,6 @@ pkgs.runCommand "syncthing-home-contract"
             assert folder.get(attribute) == xml_scalar(expected_folder[attribute])
         for tag in ("scanProgressIntervalS", "maxConcurrentWrites", "disableFsync"):
             assert folder.findtext(tag) == xml_scalar(expected_folder[tag])
-        ignores = root.find("defaults/ignores")
-        assert [line.text for line in ignores.findall("line")] == policy["ignores"]
 
     with open(os.environ["TOPOLOGY"], encoding="utf-8") as source:
         topology = json.load(source)
@@ -718,6 +721,8 @@ pkgs.runCommand "syncthing-home-contract"
             topology["vulcan"]["id"],
         }
         assert folder.findtext("paused") == "false"
+    for folder in folders.values():
+        assert_folder_policy(folder, default_policy["folder"])
     assert [node.text for node in options.findall("listenAddress")] == ["tcp://10.7.0.1:22000"]
     assert [node.text for node in options.findall("alwaysLocalNet")] == [
         "10.7.0.2/32",
@@ -788,6 +793,7 @@ pkgs.runCommand "syncthing-home-contract"
             topology["clio"]["id"],
             topology["vulcan"]["id"],
         }
+        assert_folder_policy(folder, default_policy["folder"])
     assert_default_policy(roundtrip_root, default_policy)
     assert [node.text for node in roundtrip_options.findall("globalAnnounceServer")] == ["default"]
     assert [node.text for node in roundtrip_options.findall("stunServer")] == ["default"]

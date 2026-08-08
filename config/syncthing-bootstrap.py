@@ -162,6 +162,23 @@ def xml_scalar(value: object) -> str:
     return str(value)
 
 
+def apply_folder_policy(folder: ET.Element, policy: dict[str, object]) -> bool:
+    changed = False
+    for name in (
+        "rescanIntervalS",
+        "fsWatcherEnabled",
+        "fsWatcherDelayS",
+        "fsWatcherTimeoutS",
+    ):
+        value = xml_scalar(policy[name])
+        if folder.get(name) != value:
+            folder.set(name, value)
+            changed = True
+    for tag in ("scanProgressIntervalS", "maxConcurrentWrites", "disableFsync"):
+        changed |= replace_values(folder, tag, [xml_scalar(policy[tag])])
+    return changed
+
+
 def harden(root: ET.Element, args: argparse.Namespace) -> bool:
     if root.tag != "configuration" or root.get("version") != CONFIG_VERSION:
         raise BootstrapError("config.xml is not the reviewed Syncthing 2.1.3 schema")
@@ -258,6 +275,13 @@ def harden(root: ET.Element, args: argparse.Namespace) -> bool:
             changed = True
         changed |= replace_values(folder, "paused", ["false"])
 
+    # New autoaccepted folders clone the defaults below. Reapply the same
+    # operational policy to retained folders so older shares cannot keep stale
+    # watcher latency or concurrency settings across an activation.
+    default_folder_policy = args.default_policy["folder"]
+    for folder in root.findall("folder"):
+        changed |= apply_folder_policy(folder, default_folder_policy)
+
     options_sections = root.findall("options")
     gui_sections = root.findall("gui")
     defaults_sections = root.findall("defaults")
@@ -276,24 +300,10 @@ def harden(root: ET.Element, args: argparse.Namespace) -> bool:
     gui = gui_sections[0]
     defaults = defaults_sections[0]
     default_folder = defaults.findall("folder")[0]
-    default_folder_policy = args.default_policy["folder"]
-    for name in (
-        "path",
-        "rescanIntervalS",
-        "fsWatcherEnabled",
-        "fsWatcherDelayS",
-        "fsWatcherTimeoutS",
-    ):
-        value = xml_scalar(default_folder_policy[name])
-        if default_folder.get(name) != value:
-            default_folder.set(name, value)
-            changed = True
-    for tag in ("scanProgressIntervalS", "maxConcurrentWrites", "disableFsync"):
-        changed |= replace_values(
-            default_folder,
-            tag,
-            [xml_scalar(default_folder_policy[tag])],
-        )
+    if default_folder.get("path") != default_folder_policy["path"]:
+        default_folder.set("path", str(default_folder_policy["path"]))
+        changed = True
+    changed |= apply_folder_policy(default_folder, default_folder_policy)
     if default_ignore_sections:
         default_ignores = default_ignore_sections[0]
     else:
