@@ -1073,10 +1073,10 @@
     "pal-mcp-server": {
       "source": {
         "args": {
-          "narHash": "sha256-atrpDdkikaq+A8akggcWCGagfejBrq9OVkyY6CQB6EY=",
+          "narHash": "sha256-luHcXlltLWYXoG0TwHYSp7uWBL/oGoA/Mvv6d8L9rho=",
           "owner": "jwiegley",
           "repo": "pal-mcp-server",
-          "rev": "89f05d7cc5ecacaf527d2d6fbacc68a6b6a7534d",
+          "rev": "592fe07ce66329c3b8bc9d39b986eee523528feb",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1090,6 +1090,37 @@
         "input": "pal-mcp-server",
         "kind": "flake-input"
       }
+    },
+    "pi-coding-agent-source-build": {
+      "artifacts": {
+        "piAiRelease": {
+          "args": {
+            "hash": "sha256-OpiG7u0hptGZRnwhSlB6jbA1iNHd71zBXrDEERrpQTg=",
+            "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.83.0.tgz"
+          },
+          "fetcher": "fetchzip",
+          "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.83.0.tgz"
+        }
+      },
+      "hashes": {
+        "npmDepsHash": "sha256-AbSfP1Ion8bN309NUBQb1QSn2cIIUjNONmZgls9vnYE="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-+XRJua2TSXkZMnWtxtLMskSzEHrGEFFyvYcPATi7An4=",
+          "owner": "earendil-works",
+          "repo": "pi",
+          "rev": "845d6ff1f6643aba440341cce877ce1c43ebbc39"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/earendil-works/pi"
+      },
+      "update": {
+        "kind": "explicit-rev",
+        "policy": "manual",
+        "reason": "Keep the patched source build and its packaged provider data on one reviewed Pi release"
+      },
+      "version": "0.83.0"
     },
     "rust-overlay": {
       "source": {

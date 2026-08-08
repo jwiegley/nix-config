@@ -33,6 +33,28 @@
         "policy": "manual",
         "reason": "Apply the unreleased constructor fix for Poppler mutexes on Darwin"
       }
+    },
+    "syncthing-next": {
+      "hashes": {
+        "vendorHash": "sha256-ueUf9YEa5z7mG6MofIJ3Xco+PxVPi/85Rdi+1aean6c="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-uTjmOAjis2eBm2SnZbyvDDiQXKN8De+DhjNHbFLLbn0=",
+          "owner": "syncthing",
+          "repo": "syncthing",
+          "tag": "v2.1.3"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/syncthing/syncthing"
+      },
+      "update": {
+        "kind": "github-release",
+        "policy": "manual",
+        "reason": "Hold the Darwin fixes needed until the pinned nixpkgs provides this Syncthing release",
+        "tagPrefix": "v"
+      },
+      "version": "2.1.3"
     }
   }
 }

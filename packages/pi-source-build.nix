@@ -6,24 +6,22 @@
 }:
 
 let
+  sources = import ./source-catalog.nix "ai";
+  source = sources.pi-coding-agent-source-build;
   buildNpmPackageWithNode24 = buildNpmPackage.override { nodejs = nodejs_24; };
-  piAiRelease = fetchzip {
-    url = "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.83.0.tgz";
-    hash = "sha256-OpiG7u0hptGZRnwhSlB6jbA1iNHd71zBXrDEERrpQTg=";
-  };
+  piAiRelease =
+    assert source.artifacts.piAiRelease.fetcher == "fetchzip";
+    fetchzip source.artifacts.piAiRelease.args;
 in
 buildNpmPackageWithNode24 {
   pname = "pi-coding-agent-source-build";
-  version = "0.83.0";
+  inherit (source) version;
 
-  src = fetchFromGitHub {
-    owner = "earendil-works";
-    repo = "pi";
-    rev = "845d6ff1f6643aba440341cce877ce1c43ebbc39";
-    hash = "sha256-+XRJua2TSXkZMnWtxtLMskSzEHrGEFFyvYcPATi7An4=";
-  };
+  src =
+    assert source.source.fetcher == "fetchFromGitHub";
+    fetchFromGitHub source.source.args;
 
-  # Temporary downstream patches against the exact v0.83.0 source pin above.
+  # Temporary downstream patches against the exact v0.83.0 catalog pin.
   # Remove them once the bounded-history and replacement fixes are upstreamed.
   patches = [
     ../overlays/ai/patches/pi-bounded-session-history.patch
@@ -39,7 +37,7 @@ buildNpmPackageWithNode24 {
     cp -R ${piAiRelease}/dist/providers/data/. packages/ai/src/providers/data/
   '';
 
-  npmDepsHash = "sha256-AbSfP1Ion8bN309NUBQb1QSn2cIIUjNONmZgls9vnYE=";
+  npmDepsHash = source.hashes.npmDepsHash;
   npmInstallFlags = [ "--ignore-scripts" ];
   npmRebuildFlags = [ "--ignore-scripts" ];
   npmBuildScript = "build:offline";

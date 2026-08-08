@@ -7,6 +7,8 @@
 }:
 
 let
+  sources = import ../packages/source-catalog.nix "compatibility";
+  syncthingSource = sources.syncthing-next;
   # Syncthing never binds Tailscale. Clio's route-aware launchd bridges below
   # expose its loopback listener either on the home LAN or through SSH over
   # WireGuard; Hera listens only on its home-LAN address.
@@ -63,14 +65,11 @@ let
   # optimizations, but this repository's pinned nixpkgs still carries 2.1.2.
   syncthingPackage = pkgs.syncthing.overrideAttrs (
     _finalAttrs: _previousAttrs: {
-      version = "2.1.3";
-      src = pkgs.fetchFromGitHub {
-        owner = "syncthing";
-        repo = "syncthing";
-        tag = "v2.1.3";
-        hash = "sha256-uTjmOAjis2eBm2SnZbyvDDiQXKN8De+DhjNHbFLLbn0=";
-      };
-      vendorHash = "sha256-ueUf9YEa5z7mG6MofIJ3Xco+PxVPi/85Rdi+1aean6c=";
+      inherit (syncthingSource) version;
+      src =
+        assert syncthingSource.source.fetcher == "fetchFromGitHub";
+        pkgs.fetchFromGitHub syncthingSource.source.args;
+      vendorHash = syncthingSource.hashes.vendorHash;
     }
   );
   regenerableIgnorePatterns = [
