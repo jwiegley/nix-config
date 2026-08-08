@@ -915,12 +915,42 @@ got: sha256-requested
             primary = fixture / "primary"
             attached = fixture / "attached"
             detached = fixture / "detached"
+            empty_templates = fixture / "empty-templates"
+            empty_templates.mkdir()
+
+            git_environment = dict(os.environ)
+            for key in tuple(git_environment):
+                if key.startswith("GIT_CONFIG_") or key in {
+                    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+                    "GIT_COMMON_DIR",
+                    "GIT_DIR",
+                    "GIT_INDEX_FILE",
+                    "GIT_OBJECT_DIRECTORY",
+                    "GIT_WORK_TREE",
+                }:
+                    git_environment.pop(key)
+            git_environment.update(
+                {
+                    "GIT_CONFIG_GLOBAL": os.devnull,
+                    "GIT_CONFIG_NOSYSTEM": "1",
+                }
+            )
 
             def run_git(*arguments):
                 result = subprocess.run(
-                    ["git", *map(str, arguments)],
+                    [
+                        "git",
+                        "-c",
+                        "commit.gpgsign=false",
+                        "-c",
+                        f"core.hooksPath={os.devnull}",
+                        "-c",
+                        f"init.templateDir={empty_templates}",
+                        *map(str, arguments),
+                    ],
                     capture_output=True,
                     text=True,
+                    env=git_environment,
                     check=False,
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
