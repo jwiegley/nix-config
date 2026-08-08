@@ -54,7 +54,12 @@ in
       # scope to cmd/agent-deck, so doCheck alone would run nothing and pass.
       checkPhase = ''
         runHook preCheck
-        CGO_ENABLED=1 make GOTOOLCHAIN=local test-runtime-lifecycle
+        # Linux Nix builders report /build as their passwd home. Seeding the
+        # test sandbox beneath the default TMPDIR would therefore trip Agent
+        # Deck's real-home data-loss guard even though the Nix sandbox cannot
+        # reach user state. Keep the hermetic test tree at the conventional
+        # sandbox-private /tmp path instead.
+        TMPDIR=/tmp CGO_ENABLED=1 make GOTOOLCHAIN=local test-runtime-lifecycle
         go test ./internal/session/ -run '^TestShouldRejectCodexSubagentRebind$'
         runHook postCheck
       '';
