@@ -1,0 +1,223 @@
+diff --git i/packages/coding-agent/src/modes/interactive/components/footer.ts w/packages/coding-agent/src/modes/interactive/components/footer.ts
+index c039d19..43cbd88 100644
+--- i/packages/coding-agent/src/modes/interactive/components/footer.ts
++++ w/packages/coding-agent/src/modes/interactive/components/footer.ts
+@@ -48,7 +48,7 @@ export function formatCwdForFooter(cwd: string, home: string | undefined): strin
+  */
+ export class FooterComponent implements Component {
+ 	private autoCompactEnabled = true;
+-	private session: AgentSession;
++	private session: AgentSession | undefined;
+ 	private footerData: ReadonlyFooterDataProvider;
+ 
+ 	constructor(session: AgentSession, footerData: ReadonlyFooterDataProvider) {
+@@ -56,10 +56,18 @@ export class FooterComponent implements Component {
+ 		this.footerData = footerData;
+ 	}
+ 
+-	setSession(session: AgentSession): void {
++	bindSession(session: AgentSession): void {
+ 		this.session = session;
+ 	}
+ 
++	setSession(session: AgentSession): void {
++		this.bindSession(session);
++	}
++
++	detachSession(): void {
++		this.session = undefined;
++	}
++
+ 	setAutoCompactEnabled(enabled: boolean): void {
+ 		this.autoCompactEnabled = enabled;
+ 	}
+@@ -81,22 +89,28 @@ export class FooterComponent implements Component {
+ 	}
+ 
+ 	render(width: number): string[] {
+-		const state = this.session.state;
++		// Session replacement closes the outgoing indexed history store. Capture
++		// the binding exactly once so a deferred render can neither observe a
++		// detached footer nor mix two sessions if a replacement binds mid-render.
++		const session = this.session;
++		if (!session) return [];
++
++		const state = session.state;
+ 
+ 		// Calculate cumulative usage from ALL session entries (not just post-compaction messages)
+-		const historySummary = this.session.sessionManager.getHistorySummary();
++		const historySummary = session.sessionManager.getHistorySummary();
+ 		const usageTotals = historySummary.usage;
+ 		const latestCacheHitRate = historySummary.latestCacheHitRate;
+ 
+ 		// Calculate context usage from session (handles compaction correctly).
+ 		// After compaction, tokens are unknown until the next LLM response.
+-		const contextUsage = this.session.getContextUsage();
++		const contextUsage = session.getContextUsage();
+ 		const contextWindow = contextUsage?.contextWindow ?? state.model?.contextWindow ?? 0;
+ 		const contextPercentValue = contextUsage?.percent ?? 0;
+ 		const contextPercent = contextUsage?.percent !== null ? contextPercentValue.toFixed(1) : "?";
+ 
+ 		// Replace home directory with ~
+-		let pwd = formatCwdForFooter(this.session.sessionManager.getCwd(), process.env.HOME || process.env.USERPROFILE);
++		let pwd = formatCwdForFooter(session.sessionManager.getCwd(), process.env.HOME || process.env.USERPROFILE);
+ 
+ 		// Add git branch if available
+ 		const branch = this.footerData.getGitBranch();
+@@ -105,7 +119,7 @@ export class FooterComponent implements Component {
+ 		}
+ 
+ 		// Add session name if set
+-		const sessionName = this.session.sessionManager.getSessionName();
++		const sessionName = session.sessionManager.getSessionName();
+ 		if (sessionName) {
+ 			pwd = `${pwd} • ${sessionName}`;
+ 		}
+@@ -122,7 +136,7 @@ export class FooterComponent implements Component {
+ 
+ 		// Kimi Coding is subscription-backed despite using API-key authentication.
+ 		const usingSubscription = state.model
+-			? state.model.provider === "kimi-coding" || this.session.modelRuntime.isUsingOAuth(state.model.provider)
++			? state.model.provider === "kimi-coding" || session.modelRuntime.isUsingOAuth(state.model.provider)
+ 			: false;
+ 		if (usageTotals.cost || usingSubscription) {
+ 			const costStr = `$${usageTotals.cost.toFixed(3)}${usingSubscription ? " (sub)" : ""}`;
+diff --git i/packages/coding-agent/src/modes/interactive/interactive-mode.ts w/packages/coding-agent/src/modes/interactive/interactive-mode.ts
+index b9ebd62..e9cef11 100644
+--- i/packages/coding-agent/src/modes/interactive/interactive-mode.ts
++++ w/packages/coding-agent/src/modes/interactive/interactive-mode.ts
+@@ -459,7 +459,11 @@ export class InteractiveMode {
+ 		this.options = options;
+ 		this.autoTrustOnReloadCwd = options.autoTrustOnReloadCwd;
+ 		this.runtimeHost.setBeforeSessionInvalidate(() => {
+-			this.resetExtensionUI();
++			try {
++				this.resetExtensionUI();
++			} finally {
++				this.footer.detachSession();
++			}
+ 		});
+ 		this.runtimeHost.setRebindSession(async () => {
+ 			await this.rebindCurrentSession({ renderBeforeBind: true });
+@@ -1722,7 +1726,7 @@ export class InteractiveMode {
+ 
+ 	private applyRuntimeSettings(): void {
+ 		configureHttpDispatcher(this.settingsManager.getHttpIdleTimeoutMs());
+-		this.footer.setSession(this.session);
++		this.footer.bindSession(this.session);
+ 		this.footer.setAutoCompactEnabled(this.session.autoCompactionEnabled);
+ 		this.footerDataProvider.setCwd(this.sessionManager.getCwd());
+ 		this.hideThinkingBlock = this.settingsManager.getHideThinkingBlock();
+diff --git i/packages/coding-agent/test/agent-session-runtime-events.test.ts w/packages/coding-agent/test/agent-session-runtime-events.test.ts
+index 32bb828..c51dae9 100644
+--- i/packages/coding-agent/test/agent-session-runtime-events.test.ts
++++ w/packages/coding-agent/test/agent-session-runtime-events.test.ts
+@@ -1,4 +1,4 @@
+-import { existsSync, mkdirSync, rmSync } from "node:fs";
++import { copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
+ import { tmpdir } from "node:os";
+ import { join } from "node:path";
+ import { fauxAssistantMessage, registerFauxProvider } from "@earendil-works/pi-ai/compat";
+@@ -11,7 +11,10 @@ import {
+ } from "../src/core/agent-session-runtime.ts";
+ import { AuthStorage } from "../src/core/auth-storage.ts";
+ import { ModelRuntime } from "../src/core/model-runtime.ts";
++import type { ReadonlyFooterDataProvider } from "../src/core/footer-data-provider.ts";
+ import { SessionManager } from "../src/core/session-manager.ts";
++import { FooterComponent } from "../src/modes/interactive/components/footer.ts";
++import { initTheme } from "../src/modes/interactive/theme/theme.ts";
+ import type {
+ 	ExtensionFactory,
+ 	SessionBeforeForkEvent,
+@@ -109,7 +112,7 @@ describe("AgentSessionRuntime session lifecycle events", () => {
+ 			}
+ 		});
+ 
+-		return { runtimeHost, faux };
++		return { runtimeHost, faux, tempDir };
+ 	}
+ 
+ 	it("emits session_before_switch and session_start for new and resume flows", async () => {
+@@ -206,6 +209,47 @@ describe("AgentSessionRuntime session lifecycle events", () => {
+ 		runtimeHost.setRebindSession(undefined);
+ 	});
+ 
++	it("detaches deferred footer renders across every persisted replacement", async () => {
++		initTheme(undefined, false);
++		const { runtimeHost, tempDir } = await createRuntimeHost(() => {});
++		await runtimeHost.session.prompt("seed");
++		const originalSessionFile = runtimeHost.session.sessionFile!;
++		const forkEntryId = runtimeHost.session.getUserMessagesForForking()[0]!.entryId;
++		const importPath = join(tempDir, "external-import.jsonl");
++		copyFileSync(originalSessionFile, importPath);
++
++		const footerData = {
++			getGitBranch: () => undefined,
++			getExtensionStatuses: () => new Map<string, string>(),
++			getAvailableProviderCount: () => 1,
++			onBranchChange: () => () => {},
++		} as ReadonlyFooterDataProvider;
++		const footer = new FooterComponent(runtimeHost.session, footerData);
++		let deferredRender: Promise<string[]> | undefined;
++
++		runtimeHost.setBeforeSessionInvalidate(() => {
++			footer.detachSession();
++			deferredRender = Promise.resolve().then(() => footer.render(80));
++		});
++		runtimeHost.setRebindSession(async (session) => {
++			footer.bindSession(session);
++		});
++
++		const expectSafeReplacement = async (replace: () => Promise<unknown>): Promise<void> => {
++			deferredRender = undefined;
++			await replace();
++			const render = deferredRender;
++			expect(render).toBeDefined();
++			await expect(render!).resolves.toEqual([]);
++			expect(footer.render(80).length).toBeGreaterThan(0);
++		};
++
++		await expectSafeReplacement(() => runtimeHost.newSession());
++		await expectSafeReplacement(() => runtimeHost.switchSession(originalSessionFile));
++		await expectSafeReplacement(() => runtimeHost.fork(forkEntryId, { position: "at" }));
++		await expectSafeReplacement(() => runtimeHost.importFromJsonl(importPath));
++	});
++
+ 	it("emits session_before_fork and session_start and honors cancellation", async () => {
+ 		const events: RecordedSessionEvent[] = [];
+ 		let cancelNextFork = false;
+diff --git i/packages/coding-agent/test/footer-width.test.ts w/packages/coding-agent/test/footer-width.test.ts
+index 1c4ae29..ee3221c 100644
+--- i/packages/coding-agent/test/footer-width.test.ts
++++ w/packages/coding-agent/test/footer-width.test.ts
+@@ -140,6 +140,30 @@ describe("FooterComponent width handling", () => {
+ 		}
+ 	});
+ 
++	it("renders nothing while detached", () => {
++		const footer = new FooterComponent(createSession({ sessionName: "old" }), createFooterData(1));
++		footer.detachSession();
++
++		expect(footer.render(80)).toEqual([]);
++	});
++
++	it("uses one captured session for an entire render", () => {
++		const replacement = createSession({ sessionName: "replacement", modelId: "replacement-model" });
++		const original = createSession({ sessionName: "original", modelId: "original-model" });
++		const footer = new FooterComponent(original, createFooterData(1));
++		const originalManager = original.sessionManager as unknown as { getHistorySummary: () => unknown };
++		const getHistorySummary = originalManager.getHistorySummary;
++		originalManager.getHistorySummary = () => {
++			footer.bindSession(replacement);
++			return getHistorySummary();
++		};
++
++		const lines = footer.render(120).map(stripAnsi);
++		expect(lines[0]).toContain("original");
++		expect(lines[1]).toContain("original-model");
++		expect(lines.join("\n")).not.toContain("replacement");
++	});
++
+ 	it("keeps stats line within width for wide model and provider names", () => {
+ 		const width = 60;
+ 		const session = createSession({

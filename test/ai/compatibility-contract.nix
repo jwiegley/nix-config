@@ -53,6 +53,7 @@ in
   # behavioral checks remain.
   checks = [
     "agent-deck-go-compat"
+    "agent-deck-runtime-lifecycle"
     "agent-resources"
     "cass"
     "cm"
@@ -65,6 +66,7 @@ in
     "llm-agents-nixpkgs-independent"
     "pi-fleet-theme"
     "pi-gallery"
+    "pi-session-replacement"
     "prime-agent"
   ];
 }

@@ -119,6 +119,7 @@ let
         piSourceBuild = pkgs.callPackage ../packages/pi-source-build.nix { };
       in
       assert nodePackage ? overrideAttrs;
+      assert nodePackage.version == piSourceBuild.version;
       nodePackage.overrideAttrs (old: {
         preInstall = ''
           rm -rf dist
@@ -149,6 +150,23 @@ let
             --replace-fail \
               'DEFAULT_HTTP_IDLE_TIMEOUT_MS = 300_000' \
               'DEFAULT_HTTP_IDLE_TIMEOUT_MS = 7_200_000'
+          for patched_js in \
+            dist/core/agent-session.js \
+            dist/core/extensions/loader.js \
+            dist/core/extensions/runner.js \
+            dist/core/http-dispatcher.js \
+            dist/modes/interactive/components/model-selector.js \
+            dist/modes/interactive/interactive-mode.js \
+            node_modules/@earendil-works/pi-ai/dist/api/openai-completions.js \
+            node_modules/@earendil-works/pi-ai/dist/api/openai-responses.js
+          do
+            map_file="$patched_js.map"
+            map_name="''${map_file##*/}"
+            substituteInPlace "$patched_js" \
+              --replace-fail "//# sourceMappingURL=$map_name" ""
+            rm -f "$map_file"
+          done
+          rm -f dist/core/extensions/tool-renderers.js.map
           ${pkgs.nodejs_24}/bin/node \
             ${../test/ai/pi-tool-renderer-wrapper.test.mjs} "$PWD"
           ${pkgs.nodejs_24}/bin/node \
@@ -477,6 +495,7 @@ in
     rec {
       build = mkAiToolchain pkgs;
       agent-deck-go-compat = pkgs.callPackage ../test/ai/overlays/agent-deck-go-compat.nix { };
+      agent-deck-runtime-lifecycle = pkgs.agent-deck;
       fractal-smoke = pkgs.callPackage ../test/ai/overlays/plasma-fractal-smoke.nix { };
       llama-cpp-platform-compat = pkgs.callPackage ../test/ai/overlays/llama-cpp-platform-compat.nix { };
       llm-agents-nixpkgs-independent =
@@ -526,6 +545,10 @@ in
       prime-agent = pkgs.callPackage ../test/ai/prime-agent.nix { inherit pkgs; };
       pi-fleet-theme = pkgs.callPackage ../test/ai/pi-fleet-theme.nix {
         inherit sourceForChecks;
+        piPackage = canonicalPiPackages.${system};
+      };
+      pi-session-replacement = pkgs.callPackage ../test/ai/pi-session-replacement.nix {
+        src = sourceForChecks;
         piPackage = canonicalPiPackages.${system};
       };
       format = check "format" "format-check.sh" qualityDeps.format "";

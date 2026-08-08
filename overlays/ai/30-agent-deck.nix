@@ -20,14 +20,19 @@ in
       patches = [
         ./patches/agent-deck-discord-typing-best-effort.patch
         ./patches/agent-deck-transition-daemon-churn.patch
-        ./patches/agent-deck-last-started-compat.patch
+        ./patches/agent-deck-runtime-lifecycle.patch
+      ];
+      patchFlags = [
+        "-p1"
+        "--fuzz=0"
       ];
 
       # Only the user-facing TUI/CLI. cmd/agent-deck-test-server is a test helper
       # and is not shipped by upstream (goreleaser builds cmd/agent-deck alone).
       subPackages = [ "cmd/agent-deck" ];
 
-      # SQLite is pure Go, so CGO stays disabled and no C toolchain is required.
+      # The shipped binary remains pure Go. The race-enabled check below
+      # overrides this locally because Go's race detector requires CGO.
       env.CGO_ENABLED = "0";
 
       ldflags = [
@@ -40,18 +45,16 @@ in
       # The web UI's styles.css and every other //go:embed target are committed
       # artifacts, so the build needs no tailwind, npm, or go-generate step.
 
-      # Upstream's full suite needs a real tmux, the race detector, and network
-      # access, none of which the sandbox has. Run the subset that needs none of
-      # them: the last_started_at migration this package patches, and the codex
-      # subagent-rebind gate whose regression cost a live outage. The
-      # installed-binary check below still covers the built artifact.
+      # Run the source-owned, deterministic runtime lifecycle gate. It covers
+      # the patched SQLite/CAS boundary and fake runtime seams without using the
+      # user's tmux socket, database, or network. The installed-binary check
+      # below still covers the built artifact.
       doCheck = true;
       # An explicit phase is required. subPackages confines the default check
       # scope to cmd/agent-deck, so doCheck alone would run nothing and pass.
       checkPhase = ''
         runHook preCheck
-        go test ./internal/session/ \
-          -run 'TestLastStartedAt_|TestShouldRejectCodexSubagentRebind'
+        CGO_ENABLED=1 make GOTOOLCHAIN=local test-runtime-lifecycle
         runHook postCheck
       '';
 
