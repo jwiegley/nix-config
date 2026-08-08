@@ -56,7 +56,7 @@ interface ArrayFrame {
 type Frame = ObjectFrame | ArrayFrame;
 
 // Oversized records fail closed beyond these schema ceilings. They bound the
-// selector even for adversarial JSON without constraining ignored content.
+// selector even for adversarial JSON without retaining ignored scalar bodies.
 const MAX_SELECTED_VALUE_BYTES = 64 * 1024;
 const MAX_JSON_DEPTH = 128;
 const MAX_CHILD_RESULTS = 4096;
