@@ -910,21 +910,41 @@ got: sha256-requested
         )
         self.assertNotEqual(refused.returncode, 0)
         self.assertIn("restricted to the update candidate", refused.stderr)
-        environment["UPDATE_AGENTS_CANDIDATE"] = "1"
-        attached = subprocess.run(
-            [
-                sys.executable,
-                str(SCRIPT),
-                "--prepare-npm-locks",
-                "pi-artifacts",
-            ],
-            capture_output=True,
-            text=True,
-            env=environment,
-            check=False,
-        )
-        self.assertNotEqual(attached.returncode, 0)
-        self.assertIn("detached linked worktree", attached.stderr)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            fixture = Path(temp_dir)
+            primary = fixture / "primary"
+            attached = fixture / "attached"
+            detached = fixture / "detached"
+
+            def run_git(*arguments):
+                result = subprocess.run(
+                    ["git", *map(str, arguments)],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+            run_git("init", primary)
+            (primary / "tracked").write_text("fixture\n")
+            run_git("-C", primary, "add", "tracked")
+            run_git(
+                "-C",
+                primary,
+                "-c",
+                "user.name=Update Overlay Test",
+                "-c",
+                "user.email=update-overlay-test@example.invalid",
+                "commit",
+                "-m",
+                "fixture",
+            )
+            run_git("-C", primary, "worktree", "add", "-b", "attached", attached)
+            run_git("-C", primary, "worktree", "add", "--detach", detached)
+
+            with self.assertRaisesRegex(RuntimeError, "detached linked worktree"):
+                require_detached_linked_worktree(attached)
+            require_detached_linked_worktree(detached)
 
     def test_npm_lock_generation_and_pairing_are_frozen(self):
         manifest = {
