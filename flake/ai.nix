@@ -343,6 +343,7 @@ let
       ../config/ai
       ../flake
       ../overlays/ai
+      ../packages/agent-resources/pi-mcp-adapter-xdg-config-home.patch
       ../packages/agent-resources.nix
       ../packages/cass
       ../packages/cass.nix

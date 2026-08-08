@@ -636,6 +636,16 @@ else
         ${pkgs.python3}/bin/python3 \
           ${../../packages/pi-mcp-adapter-normalize.py} "$mcp_init_expected"
 
+        mcp_config_expected_root="$TMPDIR/pi-mcp-adapter-expected"
+        mkdir "$mcp_config_expected_root"
+        cp ${lib.escapeShellArg "${piMcpAdapter}/config.ts"} \
+          "$mcp_config_expected_root/config.ts"
+        chmod u+w "$mcp_config_expected_root/config.ts"
+        ${pkgs.buildPackages.patch}/bin/patch --fuzz=0 \
+          --directory="$mcp_config_expected_root" --strip=1 \
+          < ${../../packages/agent-resources/pi-mcp-adapter-xdg-config-home.patch}
+        mcp_config_expected="$mcp_config_expected_root/config.ts"
+
         mcp_package_expected="$TMPDIR/pi-mcp-package.json"
         ${pkgs.python3}/bin/python3 - \
           ${lib.escapeShellArg "${piMcpAdapter}/package.json"} \
@@ -654,6 +664,7 @@ else
             || fail "missing regular pi-mcp-adapter file: $relative"
           expected_mcp_file=${lib.escapeShellArg "${piMcpAdapter}"}/"$relative"
           [ "$relative" != init.ts ] || expected_mcp_file=$mcp_init_expected
+          [ "$relative" != config.ts ] || expected_mcp_file=$mcp_config_expected
           [ "$relative" != package.json ] || expected_mcp_file=$mcp_package_expected
           cmp "$expected_mcp_file" "$mcp/$relative" \
             || fail "unexpected pi-mcp-adapter file: $relative"

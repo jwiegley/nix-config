@@ -242,8 +242,10 @@ runCommand "prime-agent-integration-check"
     const check = (condition, message) => {
       if (!condition) throw new Error(message);
     };
-    const home = process.env.HOME;
-    const agentDir = home + "/.prime/agent";
+    const home = process.env.NIX_MANAGED_AI_HOME;
+    const agentDir = process.env.PRIME_AGENT_CODING_AGENT_DIR;
+    check(typeof home === "string", "managed home is unavailable");
+    check(typeof agentDir === "string", "Prime agent root is unavailable");
     const settingsManager = SettingsManager.create(home, agentDir);
     const managedBefore = readFileSync(agentDir + "/managed-settings.json", "utf8");
     check(settingsManager.getTheme() === "dark-tool-backgrounds", "managed theme was not effective");
@@ -437,7 +439,10 @@ runCommand "prime-agent-integration-check"
       }
     }
     JS
-    HOME="$home" XDG_CONFIG_HOME="$home/.config" \
+    poison_home="$TMPDIR/poison-home"
+    mkdir -m 700 "$poison_home"
+    HOME="$poison_home" XDG_CONFIG_HOME="$home/.config" \
+      NIX_MANAGED_AI_HOME="$home" \
       PRIME_AGENT_CODING_AGENT_DIR="$home/.prime/agent" \
       PRIME_AGENT_MANAGED_SETTINGS="$home/.prime/agent/managed-settings.json" \
       PI_CODING_AGENT_DIR="$home/.prime/agent" \

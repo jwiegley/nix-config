@@ -149,7 +149,8 @@ let
     provider and the Pi model router are intentionally omitted.
 
     Prime Agent's native MCP layer does not support local stdio servers. The managed
-    `pi-mcp-adapter` package supplies those servers from the standard Nix-generated MCP file.
+    `pi-mcp-adapter` package supplies those servers from the standard Nix-generated MCP file
+    beneath `XDG_CONFIG_HOME`; Prime's private agent root remains `.prime/agent`.
     Pi-specific session, goal, compaction, gallery, and subagent extensions are intentionally
     excluded because Prime Agent owns those lifecycles natively. Prime Agent's built-in
     `skill-creator` is disabled in favor of the shared managed skill with the same name.

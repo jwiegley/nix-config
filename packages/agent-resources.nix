@@ -76,6 +76,7 @@ let
     pname = "pi-mcp-adapter";
     version = piSources.pi-mcp-adapter.version;
     src = inputs.pi-mcp-adapter;
+    patches = [ ./agent-resources/pi-mcp-adapter-xdg-config-home.patch ];
     npmDepsHash = piSources.pi-mcp-adapter.hashes.npmDepsHash;
     npmInstallFlags = [ "--omit=dev" ];
     dontNpmBuild = true;
