@@ -34,6 +34,12 @@ in
 {
   _module.args.vars = vars;
 
+  # Determinate Nix warns because Home Manager's generated option manpage
+  # serializes Nixpkgs declaration paths without their store-path context.
+  # Keep the manpage on Linux, where the fleet uses upstream Nix, until
+  # https://github.com/nix-community/home-manager/pull/8942 is merged.
+  manual.manpages.enable = !isDarwin;
+
   imports = [
     ./agent-deck.nix
     ./ai.nix
