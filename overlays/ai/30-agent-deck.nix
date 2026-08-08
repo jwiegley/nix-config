@@ -43,8 +43,10 @@ in
       # and is not shipped by upstream (goreleaser builds cmd/agent-deck alone).
       subPackages = [ "cmd/agent-deck" ];
 
-      # The shipped binary remains pure Go. The race-enabled check below
-      # overrides this locally because Go's race detector requires CGO.
+      # The shipped binary remains pure Go. Lifecycle checks use CGO because
+      # the Darwin and x86_64-linux lanes run Go's race detector; aarch64-linux
+      # keeps the same check environment while omitting only that unsupported
+      # instrumentation.
       env.CGO_ENABLED = "0";
 
       ldflags = [
