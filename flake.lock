@@ -6185,11 +6185,11 @@
     "pal-mcp-server": {
       "flake": false,
       "locked": {
-        "lastModified": 1785528224,
-        "narHash": "sha256-LBtYyf6eS2mP7AtmFwIYRJmbf628yCWoBHX9skX3nzs=",
+        "lastModified": 1786182173,
+        "narHash": "sha256-luHcXlltLWYXoG0TwHYSp7uWBL/oGoA/Mvv6d8L9rho=",
         "owner": "jwiegley",
         "repo": "pal-mcp-server",
-        "rev": "f9170d4ac8e20f66e4622615024d0dd071cd3418",
+        "rev": "592fe07ce66329c3b8bc9d39b986eee523528feb",
         "type": "github"
       },
       "original": {
