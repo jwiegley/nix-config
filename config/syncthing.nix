@@ -56,7 +56,7 @@ let
   logDirectory = "${config.home.homeDirectory}/Library/Logs/Syncthing";
   runtimeDirectory = "${config.home.homeDirectory}/.local/state/syncthing";
   guiSocket = "${runtimeDirectory}/gui.sock";
-  vaultDirectory = "${config.home.homeDirectory}/doc/obsidian";
+  documentsDirectory = "${config.home.homeDirectory}/Documents";
   desktopDirectory = "${config.home.homeDirectory}/Desktop";
   defaultFolderPath = "~/doc";
   # 2.1.3 includes the Darwin-relevant fsync and case-filesystem cache
@@ -273,13 +273,13 @@ let
         guiSocket
         "--default-policy"
         (builtins.toJSON defaultPolicy)
-        "--vault"
-        vaultDirectory
+        "--documents"
+        documentsDirectory
         "--desktop"
         desktopDirectory
       ]
     );
-  vaultIgnoreFile = pkgs.writeText "obsidian-syncthing-ignore" ''
+  documentsIgnoreFile = pkgs.writeText "documents-syncthing-ignore" ''
     ${lib.concatStringsSep "\n" defaultIgnorePatterns}
     /.git
   '';
@@ -290,7 +290,7 @@ in
 {
   assertions = lib.optional enabled {
     assertion = syncthingPackage.version == "2.1.3";
-    message = "The managed Obsidian sync policy must be reviewed for Syncthing ${syncthingPackage.version}";
+    message = "The managed Documents sync policy must be reviewed for Syncthing ${syncthingPackage.version}";
   };
 
   services.syncthing = lib.mkIf enabled {
@@ -325,10 +325,10 @@ in
       });
 
       folders = {
-        obsidian = managedFolder {
-          id = "obsidian";
-          label = "Obsidian";
-          path = vaultDirectory;
+        documents = managedFolder {
+          id = "documents";
+          label = "Documents";
+          path = documentsDirectory;
           ignorePatterns = defaultIgnorePatterns ++ [ "/.git" ];
         };
         desktop = managedFolder {
@@ -339,9 +339,9 @@ in
         };
       };
 
-      # Auto-accepted folders use ~/doc/<remote label or folder ID>. Existing
-      # Obsidian and Desktop trees are explicit above so neither is rejected as
-      # a path collision.
+      # Auto-accepted folders use ~/doc/<remote label or folder ID>. Documents
+      # and Desktop follow peerNames: Clio-Hera and Hera-Vulcan, never
+      # Clio-Vulcan.
       "defaults/folder" = defaultFolderPolicy;
       "defaults/ignores" = {
         lines = defaultIgnorePatterns;
@@ -384,19 +384,21 @@ in
         }
         syncthing_require_directory() {
           local path="$1" expected_mode="$2"
-          [[ -d "$path" && ! -L "$path" ]] || syncthing_fail "required private directory is missing or unsafe"
+          [[ -d "$path" && ! -L "$path" ]] \
+            || syncthing_fail "required private directory is missing or unsafe: $path"
           [[ "$(/usr/bin/stat -f '%Su' "$path")" == ${lib.escapeShellArg config.home.username} ]] \
-            || syncthing_fail "private directory has the wrong owner"
+            || syncthing_fail "private directory has the wrong owner: $path"
           [[ "$(/usr/bin/stat -f '%Lp' "$path")" == "$expected_mode" ]] \
-            || syncthing_fail "private directory has the wrong mode"
+            || syncthing_fail "private directory has the wrong mode: $path"
         }
         syncthing_require_file() {
           local path="$1"
-          [[ -f "$path" && ! -L "$path" ]] || syncthing_fail "required private file is missing or unsafe"
+          [[ -f "$path" && ! -L "$path" ]] \
+            || syncthing_fail "required private file is missing or unsafe: $path"
           [[ "$(/usr/bin/stat -f '%Su' "$path")" == ${lib.escapeShellArg config.home.username} ]] \
-            || syncthing_fail "private file has the wrong owner"
+            || syncthing_fail "private file has the wrong owner: $path"
           [[ "$(/usr/bin/stat -f '%Lp' "$path")" == "600" ]] \
-            || syncthing_fail "private file has the wrong mode"
+            || syncthing_fail "private file has the wrong mode: $path"
         }
 
         ${pkgs.coreutils}/bin/install -d -m 0700 \
@@ -405,7 +407,7 @@ in
         syncthing_require_directory ${lib.escapeShellArg stateDirectory} 700
         syncthing_require_directory ${lib.escapeShellArg logDirectory} 700
         syncthing_require_directory ${lib.escapeShellArg runtimeDirectory} 700
-        syncthing_require_directory ${lib.escapeShellArg vaultDirectory} 700
+        syncthing_require_directory ${lib.escapeShellArg documentsDirectory} 700
         syncthing_require_directory ${lib.escapeShellArg desktopDirectory} 700
         syncthing_require_file ${lib.escapeShellArg "${stateDirectory}/cert.pem"}
         syncthing_require_file ${lib.escapeShellArg "${stateDirectory}/key.pem"}
@@ -478,19 +480,19 @@ in
           daemon_running=1
         fi
 
-        if [[ -L ${lib.escapeShellArg "${vaultDirectory}/.stignore"} ]] \
-          || { [[ -e ${lib.escapeShellArg "${vaultDirectory}/.stignore"} ]] \
-            && [[ ! -f ${lib.escapeShellArg "${vaultDirectory}/.stignore"} ]]; }; then
-          syncthing_fail ".stignore is not a safe regular file"
+        if [[ -L ${lib.escapeShellArg "${documentsDirectory}/.stignore"} ]] \
+          || { [[ -e ${lib.escapeShellArg "${documentsDirectory}/.stignore"} ]] \
+            && [[ ! -f ${lib.escapeShellArg "${documentsDirectory}/.stignore"} ]]; }; then
+          syncthing_fail "Documents .stignore is not a safe regular file"
         fi
-        if ! ${pkgs.diffutils}/bin/cmp -s ${vaultIgnoreFile} ${lib.escapeShellArg "${vaultDirectory}/.stignore"}; then
+        if ! ${pkgs.diffutils}/bin/cmp -s ${documentsIgnoreFile} ${lib.escapeShellArg "${documentsDirectory}/.stignore"}; then
           (
             set -e
-            ignore_tmp=${lib.escapeShellArg "${vaultDirectory}/.stignore.tmp"}.$$
+            ignore_tmp=${lib.escapeShellArg "${documentsDirectory}/.stignore.tmp"}.$$
             trap '${pkgs.coreutils}/bin/rm -f "$ignore_tmp"' EXIT
-            ${pkgs.coreutils}/bin/install -m 0600 ${vaultIgnoreFile} "$ignore_tmp"
-            ${pkgs.coreutils}/bin/mv -f "$ignore_tmp" ${lib.escapeShellArg "${vaultDirectory}/.stignore"}
-          ) || syncthing_fail "could not install the managed Obsidian .stignore"
+            ${pkgs.coreutils}/bin/install -m 0600 ${documentsIgnoreFile} "$ignore_tmp"
+            ${pkgs.coreutils}/bin/mv -f "$ignore_tmp" ${lib.escapeShellArg "${documentsDirectory}/.stignore"}
+          ) || syncthing_fail "could not install the managed Documents .stignore"
         fi
 
         if [[ -L ${lib.escapeShellArg "${desktopDirectory}/.stignore"} ]] \
@@ -519,7 +521,7 @@ in
               || syncthing_fail "could not add Time Machine exclusion"
           fi
         }
-        syncthing_exclude_from_time_machine ${lib.escapeShellArg vaultDirectory}
+        syncthing_exclude_from_time_machine ${lib.escapeShellArg documentsDirectory}
         syncthing_exclude_from_time_machine ${lib.escapeShellArg desktopDirectory}
 
         if [[ -e ${lib.escapeShellArg guiSocket} || -L ${lib.escapeShellArg guiSocket} ]]; then

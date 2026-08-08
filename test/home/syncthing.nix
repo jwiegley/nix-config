@@ -95,8 +95,8 @@ let
     home:
     lib.any (
       path:
-      path == "doc/obsidian"
-      || lib.hasPrefix "doc/obsidian/" path
+      path == "Documents"
+      || lib.hasPrefix "Documents/" path
       || path == "Desktop"
       || lib.hasPrefix "Desktop/" path
       || lib.hasPrefix "Library/Application Support/Syncthing/" path
@@ -116,7 +116,7 @@ let
       peerNetworks = lib.unique (lib.concatMap (name: expectedNodes.${name}.networks) peerNames);
       service = home.services.syncthing;
       folders = service.settings.folders;
-      inherit (folders) desktop obsidian;
+      inherit (folders) desktop documents;
       defaultFolder = service.settings."defaults/folder";
       defaultIgnores = service.settings."defaults/ignores";
       options = service.settings.options;
@@ -203,13 +203,13 @@ let
     &&
       builtins.attrNames folders == [
         "desktop"
-        "obsidian"
+        "documents"
       ]
     && lib.all validPeer peerNames
-    && validFolder obsidian {
-      id = "obsidian";
-      label = "Obsidian";
-      path = "${home.home.homeDirectory}/doc/obsidian";
+    && validFolder documents {
+      id = "documents";
+      label = "Documents";
+      path = "${home.home.homeDirectory}/Documents";
       ignorePatterns = defaultIgnorePatterns ++ [ "/.git" ];
     }
     && validFolder desktop {
@@ -291,6 +291,9 @@ let
     && preflight.before == [ "setupLaunchAgents" ]
     && preflight.after == [ "linkGeneration" ]
     && lib.hasInfix "syncthing-bootstrap" preflight.data
+    && lib.hasInfix "required private directory is missing or unsafe: $path" preflight.data
+    && lib.hasInfix "${home.home.homeDirectory}/Documents" preflight.data
+    && !lib.hasInfix "${home.home.homeDirectory}/doc/obsidian" preflight.data
     && lib.hasInfix "SessionLoginItems" preflight.data
     && lib.hasInfix "managed monitor child" preflight.data
     && lib.hasInfix "tmutil addexclusion" preflight.data
@@ -398,6 +401,11 @@ pkgs.runCommand "syncthing-home-contract"
         <device id="${clio.services.syncthing.settings.devices.hera.id}" />
         <device id="${hera.services.syncthing.settings.devices.clio.id}" />
       </folder>
+      <folder id="obsidian" label="Obsidian" path="/Users/test/doc/obsidian">
+        <device id="${clio.services.syncthing.settings.devices.hera.id}" />
+        <device id="${hera.services.syncthing.settings.devices.clio.id}" />
+        <device id="${hera.services.syncthing.settings.devices.vulcan.id}" />
+      </folder>
       <folder id="desktop" path="/tmp/wrong-desktop">
         <device id="${clio.services.syncthing.settings.devices.hera.id}" />
         <device id="${hera.services.syncthing.settings.devices.clio.id}" />
@@ -437,7 +445,7 @@ pkgs.runCommand "syncthing-home-contract"
       --listen-address tcp://10.7.0.1:22000
       --gui-socket /Users/test/.local/state/syncthing/gui.sock
       --default-policy "$default_policy"
-      --vault /Users/test/doc/obsidian
+      --documents /Users/test/Documents
       --desktop /Users/test/Desktop
     )
 
@@ -449,6 +457,49 @@ pkgs.runCommand "syncthing-home-contract"
     fi
     python3 bootstrap.py --apply "''${common_args[@]}"
     python3 bootstrap.py --check "''${common_args[@]}"
+
+    policy_args=( "''${common_args[@]:2}" )
+    BASE_CONFIG=config.xml \
+      LOCAL_ID=${clio.services.syncthing.settings.devices.hera.id} \
+      PEER_ID=${hera.services.syncthing.settings.devices.clio.id} \
+      SECOND_PEER_ID=${hera.services.syncthing.settings.devices.vulcan.id} \
+      python3 - <<'PY'
+    import os
+    import xml.etree.ElementTree as ET
+
+    base = ET.parse(os.environ["BASE_CONFIG"])
+    for path, device_ids in (
+        (
+            "/Users/test/not-the-managed-path",
+            (os.environ["LOCAL_ID"], os.environ["PEER_ID"], os.environ["SECOND_PEER_ID"]),
+        ),
+        (
+            "/Users/test/doc/obsidian",
+            (os.environ["LOCAL_ID"], os.environ["PEER_ID"]),
+        ),
+    ):
+        root = ET.fromstring(ET.tostring(base.getroot()))
+        folder = ET.SubElement(root, "folder", {"id": "obsidian", "path": path})
+        for device_id in device_ids:
+            ET.SubElement(folder, "device", {"id": device_id})
+        suffix = "path" if "not-the-managed" in path else "topology"
+        ET.ElementTree(root).write(
+            f"retained-obsidian-{suffix}.xml",
+            encoding="utf-8",
+            xml_declaration=True,
+        )
+    PY
+    for retained_config in retained-obsidian-path.xml retained-obsidian-topology.xml; do
+      python3 bootstrap.py --apply --config "$retained_config" "''${policy_args[@]}"
+      python3 bootstrap.py --check --config "$retained_config" "''${policy_args[@]}"
+      RETAINED_CONFIG="$retained_config" python3 - <<'PY'
+    import os
+    import xml.etree.ElementTree as ET
+
+    root = ET.parse(os.environ["RETAINED_CONFIG"]).getroot()
+    assert sum(folder.get("id") == "obsidian" for folder in root.findall("folder")) == 1
+    PY
+    done
 
     cp config.xml duplicate-sections.xml
     DUPLICATE_CONFIG=duplicate-sections.xml python3 - <<'PY'
@@ -476,7 +527,7 @@ pkgs.runCommand "syncthing-home-contract"
       --listen-address tcp://10.7.0.1:22000 \
       --gui-socket /Users/test/.local/state/syncthing/gui.sock \
       --default-policy "$default_policy" \
-      --vault /Users/test/doc/obsidian \
+      --documents /Users/test/Documents \
       --desktop /Users/test/Desktop; then
       echo "duplicate policy sections passed validation" >&2
       exit 1
@@ -494,7 +545,7 @@ pkgs.runCommand "syncthing-home-contract"
       --listen-address tcp://10.7.0.1:22000 \
       --gui-socket /Users/test/.local/state/syncthing/gui.sock \
       --default-policy "$default_policy" \
-      --vault /Users/test/doc/obsidian \
+      --documents /Users/test/Documents \
       --desktop /Users/test/Desktop; then
       echo "mismatched synthetic identity passed validation" >&2
       exit 1
@@ -535,6 +586,7 @@ pkgs.runCommand "syncthing-home-contract"
         ET.SubElement(peer, "autoAcceptFolders").text = "false"
         ET.SubElement(peer, "untrusted").text = "false"
     for folder_id, label, folder_path in (
+        ("obsidian", "Obsidian", "/Users/test/doc/obsidian"),
         ("desktop", "Desktop", "/Users/test/Desktop"),
         ("future-folder", "Future", "/Users/test/doc/Future"),
     ):
@@ -561,7 +613,7 @@ pkgs.runCommand "syncthing-home-contract"
       --listen-address tcp://10.7.0.1:22000 \
       --gui-socket /Users/test/.local/state/syncthing/gui.sock \
       --default-policy "$default_policy" \
-      --vault /Users/test/doc/obsidian \
+      --documents /Users/test/Documents \
       --desktop /Users/test/Desktop
     syncthing generate --home roundtrip --no-port-probing >/dev/null 2>&1
     python3 bootstrap.py --check \
@@ -572,7 +624,7 @@ pkgs.runCommand "syncthing-home-contract"
       --listen-address tcp://10.7.0.1:22000 \
       --gui-socket /Users/test/.local/state/syncthing/gui.sock \
       --default-policy "$default_policy" \
-      --vault /Users/test/doc/obsidian \
+      --documents /Users/test/Documents \
       --desktop /Users/test/Desktop
 
     ROUNDTRIP=roundtrip/config.xml ROUNDTRIP_LOCAL="$roundtrip_id" \
@@ -691,11 +743,11 @@ pkgs.runCommand "syncthing-home-contract"
     ]
     assert second_peer.findtext("autoAcceptFolders") == "false"
     folders = {folder.get("id"): folder for folder in root.findall("folder")}
-    assert set(folders) == {"obsidian", "desktop", "future-folder"}
-    assert folders["obsidian"].get("path") == "/Users/test/doc/obsidian"
+    assert set(folders) == {"documents", "desktop", "future-folder"}
+    assert folders["documents"].get("path") == "/Users/test/Documents"
     assert folders["desktop"].get("path") == "/Users/test/Desktop"
     assert folders["future-folder"].get("path") == "/Users/test/doc/Future"
-    for folder_id in ("obsidian", "desktop"):
+    for folder_id in ("documents", "desktop"):
         folder = folders[folder_id]
         assert folder.get("type") == "sendreceive"
         assert {device.get("id") for device in folder.findall("device")} == {
@@ -766,8 +818,8 @@ pkgs.runCommand "syncthing-home-contract"
     roundtrip_folders = {
         folder.get("id"): folder for folder in roundtrip_root.findall("folder")
     }
-    assert set(roundtrip_folders) == {"obsidian", "desktop", "future-folder"}
-    assert roundtrip_folders["obsidian"].get("path") == "/Users/test/doc/obsidian"
+    assert set(roundtrip_folders) == {"documents", "desktop", "future-folder"}
+    assert roundtrip_folders["documents"].get("path") == "/Users/test/Documents"
     assert roundtrip_folders["desktop"].get("path") == "/Users/test/Desktop"
     assert roundtrip_folders["future-folder"].get("path") == "/Users/test/doc/Future"
     for folder in roundtrip_folders.values():
@@ -806,7 +858,7 @@ pkgs.runCommand "syncthing-home-contract"
       --listen-address tcp://10.7.0.1:22000 \
       --gui-socket /Users/test/.local/state/syncthing/gui.sock \
       --default-policy "$default_policy" \
-      --vault /Users/test/doc/obsidian \
+      --documents /Users/test/Documents \
       --desktop /Users/test/Desktop
 
     touch "$out"

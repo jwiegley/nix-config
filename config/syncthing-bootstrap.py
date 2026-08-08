@@ -112,7 +112,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--listen-address", required=True)
     parser.add_argument("--gui-socket", required=True)
     parser.add_argument("--default-policy", type=parse_default_policy, required=True)
-    parser.add_argument("--vault", type=Path, required=True)
+    parser.add_argument("--documents", type=Path, required=True)
     parser.add_argument("--desktop", type=Path, required=True)
     return parser.parse_args()
 
@@ -240,8 +240,21 @@ def harden(root: ET.Element, args: argparse.Namespace) -> bool:
                 changed = True
 
     expected_folder_devices = [args.local_device_id, *peer_ids]
+    legacy_obsidian_path = str(args.documents.parent / "doc" / "obsidian")
+    for folder in list(root.findall("folder")):
+        folder_devices = [device.get("id") for device in folder.findall("device")]
+        if (
+            folder.get("id") == "obsidian"
+            and folder.get("path") == legacy_obsidian_path
+            and len(folder_devices) == len(expected_folder_devices)
+            and set(folder_devices) == set(expected_folder_devices)
+        ):
+            # Retire only the former repository-owned share; its files remain untouched.
+            root.remove(folder)
+            changed = True
+
     managed_folders = {
-        "obsidian": {"label": "Obsidian", "path": str(args.vault)},
+        "documents": {"label": "Documents", "path": str(args.documents)},
         "desktop": {"label": "Desktop", "path": str(args.desktop)},
     }
     for folder_id, folder_policy in managed_folders.items():
