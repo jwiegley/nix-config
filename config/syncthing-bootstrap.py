@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Fail-closed offline hardening for a bootstrapped Syncthing 2.1.2 config."""
+"""Fail-closed offline hardening for a bootstrapped Syncthing 2.1.3 config."""
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import stat
 import sys
@@ -19,6 +20,81 @@ class BootstrapError(RuntimeError):
     pass
 
 
+def parse_peer_policy(value: str) -> dict[str, object]:
+    try:
+        policy = json.loads(value)
+    except json.JSONDecodeError as error:
+        raise argparse.ArgumentTypeError("peer policy is not valid JSON") from error
+    required = {"deviceID", "addresses", "networks", "autoAcceptFolders"}
+    if not isinstance(policy, dict) or set(policy) != required:
+        raise argparse.ArgumentTypeError("peer policy has unexpected fields")
+    if not isinstance(policy["deviceID"], str) or not policy["deviceID"]:
+        raise argparse.ArgumentTypeError("peer policy has no device ID")
+    for field in ("addresses", "networks"):
+        values = policy[field]
+        if (
+            not isinstance(values, list)
+            or not values
+            or not all(isinstance(item, str) and item for item in values)
+        ):
+            raise argparse.ArgumentTypeError(f"peer policy has invalid {field}")
+    if not isinstance(policy["autoAcceptFolders"], bool):
+        raise argparse.ArgumentTypeError("peer policy has invalid auto-accept setting")
+    return policy
+
+
+def parse_default_policy(value: str) -> dict[str, object]:
+    try:
+        policy = json.loads(value)
+    except json.JSONDecodeError as error:
+        raise argparse.ArgumentTypeError("default policy is not valid JSON") from error
+    if not isinstance(policy, dict) or set(policy) != {"folder", "ignores"}:
+        raise argparse.ArgumentTypeError("default policy has unexpected fields")
+
+    folder = policy["folder"]
+    expected_folder_fields = {
+        "disableFsync",
+        "fsWatcherDelayS",
+        "fsWatcherEnabled",
+        "fsWatcherTimeoutS",
+        "maxConcurrentWrites",
+        "path",
+        "rescanIntervalS",
+        "scanProgressIntervalS",
+    }
+    if not isinstance(folder, dict) or set(folder) != expected_folder_fields:
+        raise argparse.ArgumentTypeError("default folder policy has unexpected fields")
+    if not isinstance(folder["path"], str) or not folder["path"]:
+        raise argparse.ArgumentTypeError("default folder policy has no path")
+    if type(folder["fsWatcherEnabled"]) is not bool:
+        raise argparse.ArgumentTypeError("default folder watcher setting is invalid")
+    if (
+        type(folder["fsWatcherDelayS"]) not in (int, float)
+        or folder["fsWatcherDelayS"] < 0
+    ):
+        raise argparse.ArgumentTypeError("default folder watcher delay is invalid")
+    if (
+        type(folder["fsWatcherTimeoutS"]) not in (int, float)
+        or folder["fsWatcherTimeoutS"] < 0
+    ):
+        raise argparse.ArgumentTypeError("default folder watcher timeout is invalid")
+    for field in ("rescanIntervalS", "scanProgressIntervalS", "maxConcurrentWrites"):
+        if type(folder[field]) is not int:
+            raise argparse.ArgumentTypeError(f"default folder {field} is invalid")
+    if type(folder["disableFsync"]) is not bool:
+        raise argparse.ArgumentTypeError("default folder fsync setting is invalid")
+
+    ignores = policy["ignores"]
+    if (
+        not isinstance(ignores, list)
+        or not ignores
+        or not all(isinstance(pattern, str) and pattern for pattern in ignores)
+        or len(ignores) != len(set(ignores))
+    ):
+        raise argparse.ArgumentTypeError("default ignore policy is invalid")
+    return policy
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -26,12 +102,18 @@ def parse_args() -> argparse.Namespace:
     mode.add_argument("--apply", action="store_true")
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--local-device-id", required=True)
-    parser.add_argument("--peer-device-id", required=True)
-    parser.add_argument("--peer-address", dest="peer_addresses", action="append", required=True)
+    parser.add_argument(
+        "--peer-policy",
+        dest="peer_policies",
+        action="append",
+        type=parse_peer_policy,
+        required=True,
+    )
     parser.add_argument("--listen-address", required=True)
-    parser.add_argument("--peer-network", dest="peer_networks", action="append", required=True)
     parser.add_argument("--gui-socket", required=True)
+    parser.add_argument("--default-policy", type=parse_default_policy, required=True)
     parser.add_argument("--vault", type=Path, required=True)
+    parser.add_argument("--desktop", type=Path, required=True)
     return parser.parse_args()
 
 
@@ -72,59 +154,152 @@ def normalize_inactive_default(parent: ET.Element, tag: str) -> bool:
     return replace_values(parent, tag, ["default"])
 
 
+def xml_scalar(value: object) -> str:
+    if type(value) is bool:
+        return str(value).lower()
+    if type(value) is float and value.is_integer():
+        return str(int(value))
+    return str(value)
+
+
 def harden(root: ET.Element, args: argparse.Namespace) -> bool:
     if root.tag != "configuration" or root.get("version") != CONFIG_VERSION:
-        raise BootstrapError("config.xml is not the reviewed Syncthing 2.1.2 schema")
+        raise BootstrapError("config.xml is not the reviewed Syncthing 2.1.3 schema")
 
     devices = root.findall("device")
-    if args.local_device_id == args.peer_device_id:
+    peer_ids = [policy["deviceID"] for policy in args.peer_policies]
+    if args.local_device_id in peer_ids or len(peer_ids) != len(set(peer_ids)):
         raise BootstrapError("the local and peer identities must be distinct")
     if sum(device.get("id") == args.local_device_id for device in devices) != 1:
-        raise BootstrapError("the bootstrapped local identity is absent from config.xml")
-    if sum(device.get("id") == args.peer_device_id for device in devices) > 1:
+        raise BootstrapError(
+            "the bootstrapped local identity is absent from config.xml"
+        )
+    if any(
+        sum(device.get("id") == peer_id for device in devices) > 1
+        for peer_id in peer_ids
+    ):
         raise BootstrapError("config.xml contains duplicate peer identities")
 
     changed = False
+    policies_by_id = {policy["deviceID"]: policy for policy in args.peer_policies}
     for device in list(devices):
         device_id = device.get("id")
-        if device_id not in (args.local_device_id, args.peer_device_id):
-            root.remove(device)
+        if device_id == args.local_device_id or device_id in policies_by_id:
+            continue
+        root.remove(device)
+        changed = True
+
+    peer_attributes = {
+        "compression": "metadata",
+        "introducer": "false",
+        "skipIntroductionRemovals": "false",
+        "introducedBy": "",
+    }
+    for policy in args.peer_policies:
+        peer_id = policy["deviceID"]
+        device = next(
+            (
+                candidate
+                for candidate in root.findall("device")
+                if candidate.get("id") == peer_id
+            ),
+            None,
+        )
+        if device is None:
+            device = ET.SubElement(root, "device", {"id": peer_id})
             changed = True
-            continue
-        if device_id != args.peer_device_id:
-            continue
-        changed |= replace_values(device, "address", args.peer_addresses)
-        changed |= replace_values(device, "allowedNetwork", args.peer_networks)
-        for tag in ("paused", "autoAcceptFolders", "untrusted"):
-            changed |= replace_values(device, tag, ["false"])
-        peer_attributes = {
-            "compression": "metadata",
-            "introducer": "false",
-            "skipIntroductionRemovals": "false",
-            "introducedBy": "",
-        }
+        changed |= replace_values(device, "address", policy["addresses"])
+        changed |= replace_values(device, "allowedNetwork", policy["networks"])
+        changed |= replace_values(device, "paused", ["false"])
+        changed |= replace_values(
+            device,
+            "autoAcceptFolders",
+            [str(policy["autoAcceptFolders"]).lower()],
+        )
+        changed |= replace_values(device, "untrusted", ["false"])
         for name, value in peer_attributes.items():
             if device.get(name) != value:
                 device.set(name, value)
                 changed = True
 
-    peer_present = any(device.get("id") == args.peer_device_id for device in root.findall("device"))
-    for folder in list(root.findall("folder")):
-        folder_devices = [device.get("id") for device in folder.findall("device")]
-        if (
-            folder.get("id") != "obsidian"
-            or folder.get("path") != str(args.vault)
-            or len(folder_devices) != 2
-            or set(folder_devices) != {args.local_device_id, args.peer_device_id}
-            or not peer_present
-        ):
-            root.remove(folder)
+    expected_folder_devices = [args.local_device_id, *peer_ids]
+    managed_folders = {
+        "obsidian": {"label": "Obsidian", "path": str(args.vault)},
+        "desktop": {"label": "Desktop", "path": str(args.desktop)},
+    }
+    for folder_id, folder_policy in managed_folders.items():
+        matches = [
+            folder for folder in root.findall("folder") if folder.get("id") == folder_id
+        ]
+        if len(matches) > 1:
+            raise BootstrapError("config.xml contains duplicate managed folders")
+        if matches:
+            folder = matches[0]
+        else:
+            folder = ET.SubElement(root, "folder", {"id": folder_id})
             changed = True
+        folder_attributes = {
+            "label": folder_policy["label"],
+            "path": folder_policy["path"],
+            "type": "sendreceive",
+        }
+        for name, value in folder_attributes.items():
+            if folder.get(name) != value:
+                folder.set(name, value)
+                changed = True
+        folder_devices = [device.get("id") for device in folder.findall("device")]
+        if len(folder_devices) != len(expected_folder_devices) or set(
+            folder_devices
+        ) != set(expected_folder_devices):
+            for device in list(folder.findall("device")):
+                folder.remove(device)
+            for device_id in expected_folder_devices:
+                ET.SubElement(folder, "device", {"id": device_id})
+            changed = True
+        changed |= replace_values(folder, "paused", ["false"])
 
-    options = root.find("options")
-    gui = root.find("gui")
-    if options is None or gui is None:
-        raise BootstrapError("config.xml is missing required policy sections")
+    options_sections = root.findall("options")
+    gui_sections = root.findall("gui")
+    defaults_sections = root.findall("defaults")
+    default_ignore_sections = (
+        defaults_sections[0].findall("ignores") if defaults_sections else []
+    )
+    if (
+        len(options_sections) != 1
+        or len(gui_sections) != 1
+        or len(defaults_sections) != 1
+        or len(defaults_sections[0].findall("folder")) != 1
+        or len(default_ignore_sections) > 1
+    ):
+        raise BootstrapError("config.xml has missing or duplicate policy sections")
+    options = options_sections[0]
+    gui = gui_sections[0]
+    defaults = defaults_sections[0]
+    default_folder = defaults.findall("folder")[0]
+    default_folder_policy = args.default_policy["folder"]
+    for name in (
+        "path",
+        "rescanIntervalS",
+        "fsWatcherEnabled",
+        "fsWatcherDelayS",
+        "fsWatcherTimeoutS",
+    ):
+        value = xml_scalar(default_folder_policy[name])
+        if default_folder.get(name) != value:
+            default_folder.set(name, value)
+            changed = True
+    for tag in ("scanProgressIntervalS", "maxConcurrentWrites", "disableFsync"):
+        changed |= replace_values(
+            default_folder,
+            tag,
+            [xml_scalar(default_folder_policy[tag])],
+        )
+    if default_ignore_sections:
+        default_ignores = default_ignore_sections[0]
+    else:
+        default_ignores = ET.SubElement(defaults, "ignores")
+        changed = True
+    changed |= replace_values(default_ignores, "line", args.default_policy["ignores"])
 
     singleton_options = {
         "listenAddress": args.listen_address,
@@ -141,8 +316,13 @@ def harden(root: ET.Element, args: argparse.Namespace) -> bool:
     }
     for tag, value in singleton_options.items():
         changed |= replace_values(options, tag, [value])
-    changed |= replace_values(options, "alwaysLocalNet", args.peer_networks)
-    # Home Manager persists [] as absent XML nodes, while Syncthing 2.1.2
+    peer_networks = list(
+        dict.fromkeys(
+            network for policy in args.peer_policies for network in policy["networks"]
+        )
+    )
+    changed |= replace_values(options, "alwaysLocalNet", peer_networks)
+    # Home Manager persists [] as absent XML nodes, while Syncthing 2.1.3
     # rehydrates those nodes as "default" in memory. Both encodings are safe
     # only because the false booleans above are authoritative; reject anything
     # else without creating reactivation drift between the two encodings.

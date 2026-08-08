@@ -7,42 +7,261 @@
 }:
 
 let
-  # DNS and normal routing select Clio's WireGuard address while away and its
-  # direct LAN address at home. The peer networks exclude Tailscale entirely.
+  # Syncthing never binds Tailscale. Clio's route-aware launchd bridges below
+  # expose its loopback listener either on the home LAN or through SSH over
+  # WireGuard; Hera listens only on its home-LAN address.
   nodes = {
     hera = {
       deviceID = "MDOPNSZ-WLGJBFD-4YUV4S3-QEUZGWP-TLIRRVK-ZXFJ7Q2-IJ3FRBO-ZQVRPAD";
-      addresses = [ "tcp://hera.lan:22000" ];
+      # Clio reaches Hera only through the route-gated WireGuard SSH tunnel.
+      # At home Hera initiates the direct LAN connection to Clio instead.
+      addresses = [ "tcp://127.0.0.1:22001" ];
       listenAddress = "tcp://192.168.1.4:22000";
-      networks = [ "192.168.1.4/32" ];
+      networks = [
+        "192.168.1.4/32"
+        "127.0.0.1/32"
+      ];
     };
     clio = {
       deviceID = "G3JLOH6-Y5SBVLA-RYANNWG-OXRNO6H-V2FDOSJ-NYYCVF2-UHLDQIU-IMV45A3";
-      # The mDNS address is direct on the home LAN; clio.lan is WireGuard
-      # while away. Syncthing tries the reachable address from this list.
-      addresses = [
-        "tcp://clio.local:22000"
-        "tcp://clio.lan:22000"
-      ];
-      # Clio changes interfaces; peer source restrictions provide the boundary.
-      listenAddress = "tcp://0.0.0.0:22000";
+      addresses = [ "tcp://clio.local:22000" ];
+      listenAddress = "tcp://127.0.0.1:22000";
       networks = [
-        "10.6.0.2/32"
-        "192.168.1.0/24"
+        "192.168.1.5/32"
+        "192.168.1.4/32"
       ];
+    };
+    vulcan = {
+      deviceID = "IPWC66H-N6RPNOM-HSX6NKH-Y7MEFTP-GNM75K7-5L6BRIW-OILLNGQ-VQK4ZA2";
+      addresses = [ "tcp://192.168.1.2:22000" ];
+      listenAddress = "tcp://192.168.1.2:22000";
+      networks = [ "192.168.1.2/32" ];
     };
   };
 
   enabled = config.johnw.host.isDarwinWorkstation;
   localNode = nodes.${hostname};
-  peerName = if config.johnw.host.isHera then "clio" else "hera";
-  peerNode = nodes.${peerName};
+  peerNames =
+    if config.johnw.host.isHera then
+      [
+        "clio"
+        "vulcan"
+      ]
+    else
+      [ "hera" ];
+  peerNetworks = lib.unique (lib.concatMap (name: nodes.${name}.networks) peerNames);
+  peerAutoAcceptFolders = name: config.johnw.host.isClio && name == "hera";
 
   stateDirectory = "${config.home.homeDirectory}/Library/Application Support/Syncthing";
   logDirectory = "${config.home.homeDirectory}/Library/Logs/Syncthing";
   runtimeDirectory = "${config.home.homeDirectory}/.local/state/syncthing";
   guiSocket = "${runtimeDirectory}/gui.sock";
   vaultDirectory = "${config.home.homeDirectory}/doc/obsidian";
+  desktopDirectory = "${config.home.homeDirectory}/Desktop";
+  defaultFolderPath = "~/doc";
+  # 2.1.3 includes the Darwin-relevant fsync and case-filesystem cache
+  # optimizations, but this repository's pinned nixpkgs still carries 2.1.2.
+  syncthingPackage = pkgs.syncthing.overrideAttrs (
+    _finalAttrs: _previousAttrs: {
+      version = "2.1.3";
+      src = pkgs.fetchFromGitHub {
+        owner = "syncthing";
+        repo = "syncthing";
+        tag = "v2.1.3";
+        hash = "sha256-uTjmOAjis2eBm2SnZbyvDDiQXKN8De+DhjNHbFLLbn0=";
+      };
+      vendorHash = "sha256-ueUf9YEa5z7mG6MofIJ3Xco+PxVPi/85Rdi+1aean6c=";
+    }
+  );
+  regenerableIgnorePatterns = [
+    "(?d).direnv"
+    "(?d).mypy_cache"
+    "(?d).pytest_cache"
+    "(?d).ruff_cache"
+    "(?d).venv"
+    "(?d)__pycache__"
+    "(?d)node_modules"
+  ];
+  defaultIgnorePatterns = [ "(?d).DS_Store" ] ++ regenerableIgnorePatterns;
+  defaultFolderPolicy = {
+    path = defaultFolderPath;
+    fsWatcherEnabled = true;
+    fsWatcherDelayS = 1.0;
+    fsWatcherTimeoutS = 5.0;
+    rescanIntervalS = 3600;
+    scanProgressIntervalS = -1;
+    maxConcurrentWrites = 4;
+    disableFsync = false;
+  };
+  defaultPolicy = {
+    folder = defaultFolderPolicy;
+    ignores = defaultIgnorePatterns;
+  };
+  wireGuardTunnel = pkgs.writeShellScript "syncthing-wireguard-tunnel" ''
+    set -euo pipefail
+
+    wireguard_route_active() {
+      route_interface="$(
+        /sbin/route -n get 192.168.1.4 2>/dev/null \
+          | /usr/bin/awk '/^[[:space:]]*interface: / { print $2; exit }'
+      )" || return 1
+      [ -n "$route_interface" ] \
+        && /sbin/ifconfig "$route_interface" 2>/dev/null \
+          | /usr/bin/awk '$1 == "inet" && $2 == "10.6.0.2" { found = 1 } END { exit !found }'
+    }
+    wireguard_route_active || exit 0
+
+    /usr/bin/ssh \
+      -N -T \
+      -B "$route_interface" \
+      -b 10.6.0.2 \
+      -o BatchMode=yes \
+      -o ConnectTimeout=10 \
+      -o ConnectionAttempts=1 \
+      -o ControlMaster=no \
+      -o ControlPath=none \
+      -o ExitOnForwardFailure=yes \
+      -o ForwardAgent=no \
+      -o HostName=192.168.1.4 \
+      -o PermitLocalCommand=no \
+      -o ProxyCommand=none \
+      -o ProxyJump=none \
+      -o ServerAliveCountMax=3 \
+      -o ServerAliveInterval=15 \
+      -o StrictHostKeyChecking=yes \
+      -L 127.0.0.1:22001:192.168.1.4:22000 \
+      hera &
+    child_pid=$!
+    cleanup() {
+      kill -TERM "$child_pid" 2>/dev/null || true
+      wait "$child_pid" 2>/dev/null || true
+    }
+    trap cleanup EXIT HUP INT TERM
+    while kill -0 "$child_pid" 2>/dev/null; do
+      /bin/sleep 30
+      wireguard_route_active || exit 0
+    done
+    child_status=0
+    wait "$child_pid" || child_status=$?
+    trap - EXIT HUP INT TERM
+    exit "$child_status"
+  '';
+  homeLanBridge = pkgs.writeShellScript "syncthing-home-lan-bridge" ''
+    set -euo pipefail
+
+    home_route_active() {
+      route_interface="$(
+        /sbin/route -n get 192.168.1.4 2>/dev/null \
+          | /usr/bin/awk '/^[[:space:]]*interface: / { print $2; exit }'
+      )" || return 1
+      case "$route_interface" in
+        "" | utun*) return 1 ;;
+      esac
+      /sbin/ifconfig "$route_interface" 2>/dev/null \
+        | /usr/bin/awk '$1 == "inet" && $2 == "192.168.1.5" { found = 1 } END { exit !found }'
+    }
+    home_route_active || exit 0
+
+    /usr/bin/ssh \
+      -T \
+      -b 192.168.1.5 \
+      -o BatchMode=yes \
+      -o ClearAllForwardings=yes \
+      -o ConnectTimeout=3 \
+      -o ConnectionAttempts=1 \
+      -o ControlMaster=no \
+      -o ControlPath=none \
+      -o ForwardAgent=no \
+      -o HostName=192.168.1.4 \
+      -o PermitLocalCommand=no \
+      -o ProxyCommand=none \
+      -o ProxyJump=none \
+      -o StrictHostKeyChecking=yes \
+      hera /usr/bin/true </dev/null
+
+    ${lib.getExe pkgs.socat} \
+      "TCP4-LISTEN:22000,bind=192.168.1.5,range=192.168.1.4/32,reuseaddr" \
+      "TCP4:127.0.0.1:22000" &
+    child_pid=$!
+    cleanup() {
+      kill -TERM "$child_pid" 2>/dev/null || true
+      wait "$child_pid" 2>/dev/null || true
+    }
+    trap cleanup EXIT HUP INT TERM
+    while kill -0 "$child_pid" 2>/dev/null; do
+      /bin/sleep 30
+      home_route_active || exit 0
+    done
+    child_status=0
+    wait "$child_pid" || child_status=$?
+    trap - EXIT HUP INT TERM
+    exit "$child_status"
+  '';
+  managedFolder =
+    {
+      id,
+      label,
+      path,
+      ignorePatterns,
+    }:
+    {
+      enable = true;
+      inherit
+        id
+        label
+        path
+        ignorePatterns
+        ;
+      filesystemType = "basic";
+      type = "sendreceive";
+      devices = peerNames;
+
+      fsWatcherEnabled = true;
+      fsWatcherDelayS = 1.0;
+      fsWatcherTimeoutS = 5.0;
+      rescanIntervalS = 3600;
+      scanProgressIntervalS = -1;
+      maxConcurrentWrites = 4;
+
+      versioning = {
+        type = "staggered";
+        cleanupIntervalS = 3600;
+        fsPath = "";
+        fsType = "basic";
+        params.maxAge = "31536000";
+      };
+
+      maxConflicts = 10;
+      ignorePerms = false;
+      autoNormalize = true;
+      syncOwnership = false;
+      sendOwnership = false;
+      copyOwnershipFromParent = false;
+      disableFsync = false;
+
+      syncXattrs = true;
+      sendXattrs = true;
+      xattrFilter = {
+        # Time Machine's sticky exclusion is local policy, not shared data.
+        entries = [
+          {
+            match = "com.apple.metadata:com_apple_backup_excludeItem";
+            permit = false;
+          }
+          {
+            # Linux system xattrs include POSIX ACLs and are host-local policy.
+            match = "system.*";
+            permit = false;
+          }
+          {
+            match = "*";
+            permit = true;
+          }
+        ];
+        maxSingleEntrySize = 16777216;
+        maxTotalSize = 67108864;
+      };
+    };
   bootstrapProgram = pkgs.writeScript "syncthing-bootstrap" (
     lib.replaceStrings [ "#!/usr/bin/env python3" ] [ "#!${lib.getExe pkgs.python3}" ] (
       builtins.readFile ./syncthing-bootstrap.py
@@ -58,40 +277,45 @@ let
         "${stateDirectory}/config.xml"
         "--local-device-id"
         localNode.deviceID
-        "--peer-device-id"
-        peerNode.deviceID
         "--listen-address"
         localNode.listenAddress
       ]
-      ++ lib.concatMap (address: [
-        "--peer-address"
-        address
-      ]) peerNode.addresses
-      ++ lib.concatMap (network: [
-        "--peer-network"
-        network
-      ]) peerNode.networks
+      ++ lib.concatMap (name: [
+        "--peer-policy"
+        (builtins.toJSON {
+          deviceID = nodes.${name}.deviceID;
+          inherit (nodes.${name}) addresses networks;
+          autoAcceptFolders = peerAutoAcceptFolders name;
+        })
+      ]) peerNames
       ++ [
         "--gui-socket"
         guiSocket
+        "--default-policy"
+        (builtins.toJSON defaultPolicy)
         "--vault"
         vaultDirectory
+        "--desktop"
+        desktopDirectory
       ]
     );
-  ignoreFile = pkgs.writeText "obsidian-syncthing-ignore" ''
-    (?d).DS_Store
+  vaultIgnoreFile = pkgs.writeText "obsidian-syncthing-ignore" ''
+    ${lib.concatStringsSep "\n" defaultIgnorePatterns}
     /.git
+  '';
+  desktopIgnoreFile = pkgs.writeText "desktop-syncthing-ignore" ''
+    ${lib.concatStringsSep "\n" defaultIgnorePatterns}
   '';
 in
 {
   assertions = lib.optional enabled {
-    assertion = pkgs.syncthing.version == "2.1.2";
-    message = "The managed Obsidian sync policy must be reviewed for Syncthing ${pkgs.syncthing.version}";
+    assertion = syncthingPackage.version == "2.1.3";
+    message = "The managed Obsidian sync policy must be reviewed for Syncthing ${syncthingPackage.version}";
   };
 
   services.syncthing = lib.mkIf enabled {
     enable = true;
-    package = pkgs.syncthing;
+    package = syncthingPackage;
     cert = null;
     key = null;
 
@@ -101,68 +325,56 @@ in
     guiCredentials = null;
     extraOptions = [ "--no-port-probing" ];
 
-    overrideDevices = true;
-    overrideFolders = true;
+    # The offline bootstrap owns stale-device removal. The Home Manager live
+    # deletion pass would also target Syncthing's required local device entry.
+    overrideDevices = false;
+    # Explicit folders remain authoritative, while preserving folders that
+    # Clio auto-accepts from Hera in the future.
+    overrideFolders = false;
 
     settings = {
-      devices.${peerName} = {
-        id = peerNode.deviceID;
-        inherit (peerNode) addresses;
-        allowedNetworks = peerNode.networks;
-        autoAcceptFolders = false;
+      devices = lib.genAttrs peerNames (name: {
+        id = nodes.${name}.deviceID;
+        inherit (nodes.${name}) addresses;
+        allowedNetworks = nodes.${name}.networks;
+        autoAcceptFolders = peerAutoAcceptFolders name;
         introducer = false;
         untrusted = false;
         paused = false;
         compression = "metadata";
+      });
+
+      folders = {
+        obsidian = managedFolder {
+          id = "obsidian";
+          label = "Obsidian";
+          path = vaultDirectory;
+          ignorePatterns = defaultIgnorePatterns ++ [ "/.git" ];
+        };
+        desktop = managedFolder {
+          id = "desktop";
+          label = "Desktop";
+          path = desktopDirectory;
+          ignorePatterns = defaultIgnorePatterns;
+        };
       };
 
-      folders.obsidian = {
-        enable = true;
-        id = "obsidian";
-        label = "Obsidian";
-        path = vaultDirectory;
-        filesystemType = "basic";
-        type = "sendreceive";
-        devices = [ peerName ];
-
-        fsWatcherEnabled = true;
-        fsWatcherDelayS = 1.0;
-        fsWatcherTimeoutS = 0.0;
-        rescanIntervalS = 300;
-
-        versioning = {
-          type = "staggered";
-          cleanupIntervalS = 3600;
-          fsPath = "";
-          fsType = "basic";
-          params.maxAge = "31536000";
-        };
-
-        ignorePatterns = [
-          "(?d).DS_Store"
-          "/.git"
-        ];
-        maxConflicts = 10;
-        ignorePerms = false;
-        autoNormalize = true;
-        syncOwnership = false;
-        sendOwnership = false;
-        copyOwnershipFromParent = false;
-        disableFsync = false;
-
-        syncXattrs = true;
-        sendXattrs = true;
-        xattrFilter = {
-          entries = [ ];
-          maxSingleEntrySize = 16777216;
-          maxTotalSize = 67108864;
-        };
+      # Auto-accepted folders use ~/doc/<remote label or folder ID>. Existing
+      # Obsidian and Desktop trees are explicit above so neither is rejected as
+      # a path collision.
+      "defaults/folder" = defaultFolderPolicy;
+      "defaults/ignores" = {
+        lines = defaultIgnorePatterns;
       };
 
       options = {
         listenAddresses = [ localNode.listenAddress ];
-        alwaysLocalNets = peerNode.networks;
+        alwaysLocalNets = peerNetworks;
         reconnectionIntervalS = 5;
+        maxFolderConcurrency = 1;
+        # launchd applies disk-only throttling below; avoid an additional CPU
+        # niceness penalty inside Syncthing itself.
+        setLowPriority = false;
 
         globalAnnounceEnabled = false;
         globalAnnounceServers = [ ];
@@ -213,12 +425,13 @@ in
         syncthing_require_directory ${lib.escapeShellArg stateDirectory} 700
         syncthing_require_directory ${lib.escapeShellArg logDirectory} 700
         syncthing_require_directory ${lib.escapeShellArg runtimeDirectory} 700
-        syncthing_require_directory ${lib.escapeShellArg vaultDirectory} 755
+        syncthing_require_directory ${lib.escapeShellArg vaultDirectory} 700
+        syncthing_require_directory ${lib.escapeShellArg desktopDirectory} 700
         syncthing_require_file ${lib.escapeShellArg "${stateDirectory}/cert.pem"}
         syncthing_require_file ${lib.escapeShellArg "${stateDirectory}/key.pem"}
         syncthing_require_file ${lib.escapeShellArg "${stateDirectory}/config.xml"}
 
-        actual_device_id="$(${lib.getExe pkgs.syncthing} device-id --home ${lib.escapeShellArg stateDirectory} 2>/dev/null)" \
+        actual_device_id="$(${lib.getExe syncthingPackage} device-id --home ${lib.escapeShellArg stateDirectory} 2>/dev/null)" \
           || syncthing_fail "could not derive the bootstrapped device identity"
         [[ "$actual_device_id" == ${lib.escapeShellArg localNode.deviceID} ]] \
           || syncthing_fail "bootstrapped device identity does not match this host"
@@ -290,15 +503,44 @@ in
             && [[ ! -f ${lib.escapeShellArg "${vaultDirectory}/.stignore"} ]]; }; then
           syncthing_fail ".stignore is not a safe regular file"
         fi
-        if ! ${pkgs.diffutils}/bin/cmp -s ${ignoreFile} ${lib.escapeShellArg "${vaultDirectory}/.stignore"}; then
+        if ! ${pkgs.diffutils}/bin/cmp -s ${vaultIgnoreFile} ${lib.escapeShellArg "${vaultDirectory}/.stignore"}; then
           (
             set -e
             ignore_tmp=${lib.escapeShellArg "${vaultDirectory}/.stignore.tmp"}.$$
             trap '${pkgs.coreutils}/bin/rm -f "$ignore_tmp"' EXIT
-            ${pkgs.coreutils}/bin/install -m 0600 ${ignoreFile} "$ignore_tmp"
+            ${pkgs.coreutils}/bin/install -m 0600 ${vaultIgnoreFile} "$ignore_tmp"
             ${pkgs.coreutils}/bin/mv -f "$ignore_tmp" ${lib.escapeShellArg "${vaultDirectory}/.stignore"}
-          ) || syncthing_fail "could not install the managed .stignore"
+          ) || syncthing_fail "could not install the managed Obsidian .stignore"
         fi
+
+        if [[ -L ${lib.escapeShellArg "${desktopDirectory}/.stignore"} ]] \
+          || { [[ -e ${lib.escapeShellArg "${desktopDirectory}/.stignore"} ]] \
+            && [[ ! -f ${lib.escapeShellArg "${desktopDirectory}/.stignore"} ]]; }; then
+          syncthing_fail "Desktop .stignore is not a safe regular file"
+        fi
+        if ! ${pkgs.diffutils}/bin/cmp -s ${desktopIgnoreFile} ${lib.escapeShellArg "${desktopDirectory}/.stignore"}; then
+          (
+            set -e
+            ignore_tmp=${lib.escapeShellArg "${desktopDirectory}/.stignore.tmp"}.$$
+            trap '${pkgs.coreutils}/bin/rm -f "$ignore_tmp"' EXIT
+            ${pkgs.coreutils}/bin/install -m 0600 ${desktopIgnoreFile} "$ignore_tmp"
+            ${pkgs.coreutils}/bin/mv -f "$ignore_tmp" ${lib.escapeShellArg "${desktopDirectory}/.stignore"}
+          ) || syncthing_fail "could not install the managed Desktop .stignore"
+        fi
+
+        syncthing_exclude_from_time_machine() {
+          local path="$1" excluded
+          excluded="$(
+            /usr/bin/tmutil isexcluded -X "$path" \
+              | /usr/bin/plutil -extract 0.IsExcluded raw -o - -- -
+          )" || syncthing_fail "could not inspect Time Machine exclusion"
+          if [[ "$excluded" != 1 ]]; then
+            /usr/bin/tmutil addexclusion "$path" \
+              || syncthing_fail "could not add Time Machine exclusion"
+          fi
+        }
+        syncthing_exclude_from_time_machine ${lib.escapeShellArg vaultDirectory}
+        syncthing_exclude_from_time_machine ${lib.escapeShellArg desktopDirectory}
 
         if [[ -e ${lib.escapeShellArg guiSocket} || -L ${lib.escapeShellArg guiSocket} ]]; then
           [[ -S ${lib.escapeShellArg guiSocket} && ! -L ${lib.escapeShellArg guiSocket} ]] \
@@ -325,38 +567,69 @@ in
     ''
   );
 
-  launchd.agents = lib.mkIf enabled {
-    syncthing-gui-bridge = {
-      enable = true;
-      domain = "gui";
-      config = {
-        ProgramArguments = [
-          (lib.getExe pkgs.socat)
-          "TCP4-LISTEN:8384,bind=127.0.0.1,reuseaddr,fork"
-          "UNIX-CONNECT:${guiSocket}"
-        ];
-        RunAtLoad = true;
-        KeepAlive = true;
-        StandardOutPath = "${logDirectory}/syncthing-gui-bridge.log";
-        StandardErrorPath = "${logDirectory}/syncthing-gui-bridge.log";
+  launchd.agents = lib.mkIf enabled (
+    {
+      syncthing-gui-bridge = {
+        enable = true;
+        domain = "gui";
+        config = {
+          ProgramArguments = [
+            (lib.getExe pkgs.socat)
+            "TCP4-LISTEN:8384,bind=127.0.0.1,reuseaddr,fork"
+            "UNIX-CONNECT:${guiSocket}"
+          ];
+          RunAtLoad = true;
+          KeepAlive = true;
+          StandardOutPath = "${logDirectory}/syncthing-gui-bridge.log";
+          StandardErrorPath = "${logDirectory}/syncthing-gui-bridge.log";
+        };
       };
-    };
 
-    syncthing = {
-      domain = lib.mkForce "gui";
-      config = {
-        KeepAlive = lib.mkForce true;
-        RunAtLoad = lib.mkForce true;
+      syncthing = {
+        domain = lib.mkForce "gui";
+        config = {
+          KeepAlive = lib.mkForce true;
+          RunAtLoad = lib.mkForce true;
+          # Interactive removes launchd's implicit CPU limits; LowPriorityIO
+          # then applies only the disk policy requested for this daemon.
+          ProcessType = lib.mkForce "Interactive";
+          LowPriorityIO = true;
+        };
       };
-    };
 
-    syncthing-init = {
-      domain = lib.mkForce "gui";
-      config = {
-        RunAtLoad = lib.mkForce true;
-        KeepAlive = lib.mkForce { SuccessfulExit = false; };
-        ThrottleInterval = lib.mkForce 5;
+      syncthing-init = {
+        domain = lib.mkForce "gui";
+        config = {
+          RunAtLoad = lib.mkForce true;
+          KeepAlive = lib.mkForce { SuccessfulExit = false; };
+          ThrottleInterval = lib.mkForce 5;
+        };
       };
-    };
-  };
+    }
+    // lib.optionalAttrs config.johnw.host.isClio {
+      syncthing-home-lan-bridge = {
+        enable = true;
+        domain = "gui";
+        config = {
+          ProgramArguments = [ "${homeLanBridge}" ];
+          RunAtLoad = true;
+          StartInterval = 30;
+          StandardOutPath = "${logDirectory}/syncthing-home-lan-bridge.log";
+          StandardErrorPath = "${logDirectory}/syncthing-home-lan-bridge.log";
+        };
+      };
+
+      syncthing-wireguard-tunnel = {
+        enable = true;
+        domain = "gui";
+        config = {
+          ProgramArguments = [ "${wireGuardTunnel}" ];
+          RunAtLoad = true;
+          StartInterval = 30;
+          StandardOutPath = "${logDirectory}/syncthing-wireguard-tunnel.log";
+          StandardErrorPath = "${logDirectory}/syncthing-wireguard-tunnel.log";
+        };
+      };
+    }
+  );
 }
