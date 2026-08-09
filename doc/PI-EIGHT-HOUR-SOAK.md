@@ -1,10 +1,9 @@
 # Pi eight-hour soak: manual resumption
 
-This procedure resumes the synthetic eight-hour memory gate for GitHub issue
-`#128`. The gate is deferred until John explicitly requests it; no agent or
-background automation is to begin it merely because other Project 9 work has
-finished. It exercises a disposable synthetic session and never opens, copies,
-or modifies the live GLM session.
+This procedure reruns the optional synthetic eight-hour memory gate for GitHub
+issue `#128`. The issue-level gate has already passed; no agent or background
+automation is to begin another run unless John explicitly requests it. The
+procedure exercises only a disposable synthetic session.
 
 The 2026-08-07 run already passed the issue-level duration and adjusted-RSS
 criterion. Its stricter auxiliary checker remained incomplete because macOS
@@ -161,8 +160,9 @@ shasum -a 256 \
 Before reporting the result, record the commit, package and Node store paths,
 start and finish times, exit status, final JSON, and SHA-256 digests of the log,
 retained JSONL, and SQLite sidecar. Preserve the distinction between this
-synthetic soak and the separate Linux, large-fixture, activation, and direct
-GLM-session continuity gates. The soak proves only bounded synthetic growth.
+synthetic soak and any separately requested package or platform qualification.
+The soak proves only bounded synthetic growth and is not pending Project 9
+work.
 
 Retain the evidence until review is complete. Its removal is a separate,
 explicit cleanup action.

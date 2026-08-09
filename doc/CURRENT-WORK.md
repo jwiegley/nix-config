@@ -1,12 +1,9 @@
 # Current Work
 
-The Project 9 refactoring implementation is complete. Its closeout record
-distinguishes exact-tip and scheduled assurance from reconciliation of the
-preserved detached worktrees and the portable CM Bun pin. Fleet activation
-evidence remains separate from source completion.
+Project 9 is complete. Its source, fleet deployment, Pi qualification, and
+closeout evidence are recorded in GitHub Project 9 and issue `#98`. No Project
+9 work remains active.
 
-Issue #128 is the final Project 9 phase and begins only after the other
-closeout work is complete. It must not start a new soak automatically.
-
-The deferred Pi soak procedure remains available in
-[`PI-EIGHT-HOUR-SOAK.md`](PI-EIGHT-HOUR-SOAK.md) for manual use when requested.
+The optional Pi soak procedure remains available in
+[`PI-EIGHT-HOUR-SOAK.md`](PI-EIGHT-HOUR-SOAK.md) for manual use when requested;
+another soak is not a pending acceptance gate.
