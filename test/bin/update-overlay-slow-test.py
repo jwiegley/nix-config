@@ -690,6 +690,62 @@ got: sha256-requested
             evaluated.stdout.strip(), r"^/nix/store/[a-z0-9]+-agent-resources\.drv$"
         )
 
+    def test_pi_mcp_adapter_patch_ignores_unrelated_imports(self):
+        patch_file = (
+            REPO / "packages/agent-resources/pi-mcp-adapter-xdg-config-home.patch"
+        )
+        base_source = """// config.ts - Config loading with import support
+import { existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { parse as parseToml } from "smol-toml";
+import { getAgentPath } from "./agent-dir.ts";
+import { isServerDisabled } from "./types.ts";
+import { toStringRecord } from "./utils.ts";
+
+const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json");
+"""
+        source_shapes = {
+            "original": base_source,
+            "unrelated import added": base_source.replace(
+                'import { getAgentPath } from "./agent-dir.ts";\n',
+                'import { getAgentPath } from "./agent-dir.ts";\n'
+                'import { getAgentPluginSummaries } from "./agent-plugin-loader.ts";\n',
+            ),
+        }
+        for label, source in source_shapes.items():
+            with (
+                self.subTest(source_shape=label),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
+                root = Path(temp_dir)
+                config = root / "config.ts"
+                config.write_text(source)
+                applied = subprocess.run(
+                    [
+                        "patch",
+                        "--batch",
+                        "--fuzz=0",
+                        "--strip=1",
+                        "--input",
+                        str(patch_file),
+                    ],
+                    cwd=root,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertEqual(applied.returncode, 0, applied.stdout + applied.stderr)
+                updated = config.read_text()
+                self.assertIn(
+                    'import { dirname, isAbsolute, join, resolve } from "node:path";',
+                    updated,
+                )
+                self.assertIn("process.env.XDG_CONFIG_HOME?.trim()", updated)
+                self.assertEqual(
+                    "getAgentPluginSummaries" in updated,
+                    "getAgentPluginSummaries" in source,
+                )
+
     def test_pi_manifest_normalizer_is_shared_complete_and_fail_closed(self):
         root = SCRIPT.parent.parent
         contract = load_pi_normalization_contract(root)

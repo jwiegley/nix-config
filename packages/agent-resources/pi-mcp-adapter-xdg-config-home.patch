@@ -2,24 +2,13 @@ diff --git a/config.ts b/config.ts
 index 01651be..d8907d7 100644
 --- a/config.ts
 +++ b/config.ts
-@@ -1,14 +1,18 @@
- // config.ts - Config loading with import support
- import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from "node:fs";
- import { homedir } from "node:os";
+@@ -3 +3 @@
 -import { dirname, join, resolve } from "node:path";
 +import { dirname, isAbsolute, join, resolve } from "node:path";
- import { parse as parseToml } from "smol-toml";
- import stripJsonComments from "strip-json-comments";
- import { getAgentPath } from "./agent-dir.ts";
- import { isServerDisabled, type HostConfigDiscovery, type McpConfig, type ServerEntry, type McpSettings, type ImportKind, type ServerProvenance } from "./types.ts";
- import { toStringRecord } from "./utils.ts";
- 
+@@ -10 +10,5 @@
 -const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json");
 +const configuredXdgHome = process.env.XDG_CONFIG_HOME?.trim();
 +const genericConfigHome = configuredXdgHome && isAbsolute(configuredXdgHome)
 +  ? configuredXdgHome
 +  : join(homedir(), ".config");
 +const GENERIC_GLOBAL_CONFIG_PATH = join(genericConfigHome, "mcp", "mcp.json");
- const AGENTS_GLOBAL_CONFIG_PATHS = [
-   join(homedir(), ".agents", "mcp.json"),
-   join(homedir(), ".agents", "mcp", "mcp.json"),
