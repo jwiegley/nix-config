@@ -404,6 +404,10 @@
                   nixosHomeEvaluationFixtures
                   ;
               };
+              managed-agent-package-selection = pkgs.callPackage ./test/home/managed-agent-package-selection.nix {
+                inherit inputs src;
+                configured = agentTestPkgsFor.${system};
+              };
               pi-blackhole-policy = pkgs.callPackage ./test/home/pi-blackhole-policy.nix {
                 inherit
                   darwinConfigurations
