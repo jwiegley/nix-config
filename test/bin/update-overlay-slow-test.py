@@ -19,6 +19,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest import mock
 from urllib.parse import urlsplit
 
 
@@ -531,23 +532,63 @@ got: sha256-requested
         self.assertEqual(parse(unrelated + requested), "sha256-requested")
         self.assertIsNone(parse(requested + requested.replace("requested", "second")))
 
-    def test_package_hash_build_never_creates_a_result_link(self):
+    def test_package_hash_build_uses_portable_overlay_without_host_routing(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
+            root = Path(temp_dir) / 'repo "quoted" ${notNixSource}'
+            root.mkdir()
             build = root / "build"
-            build.write_text("#!/bin/sh\nexit 0\n")
+            build.write_text("#!/bin/sh\nexit 99\n")
             build.chmod(0o755)
-            command = MODULE["HashComputer"](root)._package_build_command(
-                "agent-resources"
+            computer = MODULE["HashComputer"](root)
+            commands = (
+                (
+                    computer._package_build_command("agent-resources"),
+                    'builtins.getAttr "agent-resources" pkgs',
+                ),
+                (
+                    computer._package_build_command("hf-xet", "python"),
+                    'builtins.getAttr "hf-xet" pkgs.python3Packages',
+                ),
             )
+            for command, package_expression in commands:
+                self.assertEqual(
+                    command[:5],
+                    ["nix", "build", "--impure", "--no-link", "--expr"],
+                )
+                self.assertEqual(len(command), 6)
+                expression = command[-1]
+                self.assertNotIn("./build", command)
+                self.assertNotIn(str(root), expression)
+                self.assertIn(
+                    'repoPath = builtins.getEnv "UPDATE_OVERLAY_REPO_DIR"',
+                    expression,
+                )
+                self.assertIn(
+                    "builtins.getFlake repoPath", expression
+                )
+                self.assertIn(
+                    'inputs = builtins.removeAttrs '
+                    'flake.inputs.nix-config-ai.inputs [ "self" ]',
+                    expression,
+                )
+                self.assertIn(
+                    'overlays = import (repo + "/overlays/ai")', expression
+                )
+                self.assertIn(package_expression, expression)
+                self.assertNotIn("flake.overlays.default", expression)
+                self.assertNotIn("darwinConfigurations", expression)
+                self.assertNotIn("nixosConfigurations", expression)
+
+            with mock.patch.object(
+                MODULE["subprocess"],
+                "run",
+                return_value=SimpleNamespace(returncode=0, stdout="", stderr=""),
+            ) as run:
+                computer._run_package_build("agent-resources")
             self.assertEqual(
-                command,
-                ["./build", "pkg", "agent-resources", "--no-link"],
+                run.call_args.kwargs["env"]["UPDATE_OVERLAY_REPO_DIR"], str(root)
             )
-            self.assertEqual(
-                MODULE["HashComputer"](root)._package_build_command("hf-xet", "python"),
-                ["./build", "python", "hf-xet", "--no-link"],
-            )
+
             computer = HashComputer(root)
             build_calls = []
 
@@ -623,6 +664,31 @@ got: sha256-requested
                     "jq; builtins.abort", "jq", runner=resolved_tool
                 )
             )
+
+    def test_package_hash_expression_evaluates_portable_overlay(self):
+        command = HashComputer(REPO)._package_build_command("agent-resources")
+        expression = command[-1]
+        environment = dict(os.environ)
+        environment["UPDATE_OVERLAY_REPO_DIR"] = str(REPO)
+        evaluated = subprocess.run(
+            [
+                "nix",
+                "eval",
+                "--impure",
+                "--raw",
+                "--expr",
+                f"({expression}).drvPath",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+            env=environment,
+        )
+        self.assertEqual(evaluated.returncode, 0, evaluated.stderr)
+        self.assertRegex(
+            evaluated.stdout.strip(), r"^/nix/store/[a-z0-9]+-agent-resources\.drv$"
+        )
 
     def test_pi_manifest_normalizer_is_shared_complete_and_fail_closed(self):
         root = SCRIPT.parent.parent

@@ -796,9 +796,6 @@ in
     ) -> list[str]:
         if build_mode not in {"pkg", "python"}:
             raise ValueError(f"unsupported package build mode: {build_mode}")
-        build_script = self.repo_dir / "build"
-        if build_script.is_file() and os.access(build_script, os.X_OK):
-            return ["./build", build_mode, package_name, "--no-link"]
         package_expression = (
             f"builtins.getAttr {json.dumps(package_name)} pkgs.python3Packages"
             if build_mode == "python"
@@ -806,11 +803,14 @@ in
         )
         expression = f"""
 let
-  flake = builtins.getFlake "path:{self.repo_dir}";
+  repoPath = builtins.getEnv "UPDATE_OVERLAY_REPO_DIR";
+  flake = builtins.getFlake repoPath;
+  repo = flake.outPath;
+  inputs = builtins.removeAttrs flake.inputs.nix-config-ai.inputs [ "self" ];
   system = builtins.currentSystem;
-  pkgs = import flake.inputs.nix-config-ai.inputs.nixpkgs {{
-    inherit system;
-    overlays = [ flake.overlays.default ];
+  overlays = import (repo + "/overlays/ai") {{ inherit inputs; }};
+  pkgs = import inputs.nixpkgs {{
+    inherit system overlays;
     config.allowUnfree = true;
   }};
 in
@@ -819,12 +819,15 @@ in
         return ["nix", "build", "--impure", "--no-link", "--expr", expression]
 
     def _run_package_build(self, package_name: str, build_mode: str = "pkg"):
+        environment = dict(os.environ)
+        environment["UPDATE_OVERLAY_REPO_DIR"] = str(self.repo_dir)
         return subprocess.run(
             self._package_build_command(package_name, build_mode),
             capture_output=True,
             text=True,
             timeout=600,
             cwd=self.repo_dir,
+            env=environment,
         )
 
     @staticmethod
