@@ -26,6 +26,11 @@
 
     llm-agents.url = "github:numtide/llm-agents.nix";
 
+    # Pi combines llm-agents packaging with the reviewed patched source in
+    # packages/pi-source-build.nix. Keep that packaging substrate at the exact
+    # compatible revision while the general llm-agents feed advances.
+    pi-llm-agents.url = "github:numtide/llm-agents.nix/f99bb437fd6860f23ea6c67a5161578a3b89d856";
+
     ponytail = {
       url = "github:DietrichGebert/ponytail";
       flake = false;

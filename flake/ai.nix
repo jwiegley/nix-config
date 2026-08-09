@@ -191,7 +191,7 @@ let
     let
       pkgs = mkPkgs system;
     in
-    patchAgentPackage pkgs "pi" inputs.llm-agents.packages.${system}.pi
+    patchAgentPackage pkgs "pi" inputs.pi-llm-agents.packages.${system}.pi
   );
 
   optAgent =
@@ -255,7 +255,7 @@ let
     ++ agent "git-surgeon"
     ++ agent "mcporter"
     ++ agent "opencode"
-    ++ agent "pi"
+    ++ [ canonicalPiPackages.${system} ]
     ++ lib.optionals (aiPackagePolicy.supportsAiperf pkgs.python313Packages) (opt "aiperf")
     ++ optMany (aiPackagePolicy.groups.common ++ aiPackagePolicy.groups.portableOnly)
     ++ lib.optionals (pkgs ? mcp-server-sequential-thinking) [
@@ -535,7 +535,7 @@ in
       pi-gallery = pkgs.callPackage ../test/ai/pi-gallery.nix {
         inherit sourceForChecks;
         piPackage = canonicalPiPackages.${system};
-        upstreamPiPackage = inputs.llm-agents.packages.${system}.pi;
+        upstreamPiPackage = inputs.pi-llm-agents.packages.${system}.pi;
         piPackages = pkgs.pi-gallery.packages // {
           inherit (pkgs) agent-resources pi-gallery;
           pi = canonicalPiPackages.${system};

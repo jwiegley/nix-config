@@ -56,6 +56,7 @@ let
         ];
       };
       pinnedCmBun = inputs.cm-bun-nixpkgs.legacyPackages.${system}.bun;
+      pinnedPiPackage = inputs.pi-llm-agents.packages.${system}.pi;
       toolPkgs = import inputs.nixpkgs {
         inherit system;
         config.allowUnfree = true;
@@ -129,6 +130,13 @@ let
         actual.packages.${system}.cm.passthru.buildBun.version == "1.3.13"
       ) "portable cm lost its pinned Bun 1.3.13 build tool on ${system}")
       (lib.assertMsg (
+        actual.packages.${system}.pi.version == pinnedPiPackage.version
+        && (actual.packages.${system}.pi.src or null) == (pinnedPiPackage.src or null)
+      ) "portable Pi moved away from its pinned packaging substrate on ${system}")
+      (lib.assertMsg (builtins.any (package: package.drvPath == actual.packages.${system}.pi.drvPath) (
+        actual.lib.aiPackagesFor pkgs
+      )) "portable AI package policy lost the canonical pinned Pi on ${system}")
+      (lib.assertMsg (
         consumerBunSentinel.bun.version == pinnedCmBun.version
         && consumerBunSentinel.bun.drvPath != pinnedCmBun.drvPath
         && consumerBunSentinel.cm.passthru.buildBun.drvPath == pinnedCmBun.drvPath
@@ -141,6 +149,9 @@ let
     (lib.assertMsg (
       inputs.cm-bun-nixpkgs.rev == "a5e9f2fd9ef6011c6886d6935f3ef678c81385fa"
     ) "portable cm Bun input moved from its reviewed Nixpkgs revision")
+    (lib.assertMsg (
+      inputs.pi-llm-agents.rev == "f99bb437fd6860f23ea6c67a5161578a3b89d856"
+    ) "portable Pi packaging input moved from its reviewed llm-agents revision")
     (lib.assertMsg (hasAll inputNames contract.inputs) "portable AI input contract lost a required input")
     (lib.assertMsg (hasAll (sortedNames actual) outputNames) "portable AI top-level output contract lost a required output")
     (lib.assertMsg (builtins.isFunction actual.overlays.default) "portable default overlay is not callable")
