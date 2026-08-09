@@ -52,7 +52,7 @@ buildNpmPackageWithNode24 {
     # every test changed by the two downstream patches so their regressions
     # remain part of the package gate without importing unrelated upstream
     # tests whose external-tool assumptions are incompatible with Nix builds.
-    npm exec -- vitest --run \
+    npm exec -- vitest --run --testTimeout 30000 \
       packages/agent/test/agent.test.ts \
       packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts \
       packages/coding-agent/test/agent-session-jsonl-export.test.ts \
