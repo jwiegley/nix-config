@@ -433,7 +433,7 @@ let
     src = subagentsSource;
     npmDepsHash = members.subagents.hashes.npmDepsHash;
     prepareBundle = root: ''
-      ${buildPackages.patch}/bin/patch --batch --fuzz=0 --backup-if-mismatch \
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
         --directory=${root} --strip=1 \
         < ${./patches/pi-subagents-bounded-history.patch}
       patch_artifact="$(
@@ -963,7 +963,7 @@ let
         --replace-fail \
           'return `''${prefix}: ''${statusLabel(goal)}''${usage} - ''${truncateText(goal.objective, 60)}`;' \
           'return `''${prefix}: ''${statusLabel(goal)}''${usage}`;'
-      ${buildPackages.patch}/bin/patch --batch --fuzz=0 --backup-if-mismatch \
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
         --directory=${root} --strip=1 \
         < ${./patches/pi-goal-x-bounded-history.patch}
       patch_artifact="$(
