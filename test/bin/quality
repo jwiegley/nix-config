@@ -211,25 +211,15 @@ each_file() {
     fi
     while IFS= read -r f; do
         [[ -n $f ]] || continue
-        # `git ls-files` lists what the INDEX tracks, which is not always what is
-        # on disk. A staged rename or deletion leaves the old path tracked and
-        # absent, and lefthook's pre-commit stash creates exactly that state
-        # during a partial commit (`git commit -- <path>` while a rename is
-        # staged). Running a formatter on it produced
-        #     nixfmt: <path>: openFile: does not exist
-        # reported as "1 of 96 file(s) failed" -- a formatting failure that does
-        # not exist, which also hides whether anything real failed. A path that is
-        # gone cannot be checked, so skip it rather than manufacture a failure.
+        # `git ls-files` can report an index entry whose worktree path is absent.
+        # A path that is gone cannot be checked, so skip it rather than hand a
+        # formatter a nonexistent file and manufacture a failure.
         #
         # `-L` is deliberate, not redundant: `-e` follows symlinks, so a tracked
         # DANGLING symlink would also be skipped by `-e` alone. Those two cases
-        # deserve opposite treatment. A staged rename is benign bookkeeping; a
-        # tracked symlink whose target is missing is a real repository defect that
-        # nothing else in this tool would catch, so it must reach the checker and
-        # fail loudly rather than vanish into a silent skip. (This repository
-        # currently tracks zero symlinks, so the choice is free today -- which is
-        # exactly why it is worth fixing the semantics now rather than inheriting
-        # whichever behaviour `-e` happened to give.)
+        # deserve opposite treatment. A tracked symlink whose target is missing
+        # is a real repository defect, so it must reach the checker and fail
+        # loudly rather than vanish into a silent skip.
         [[ -e $f || -L $f ]] || continue
         count=$((count + 1))
         tool_path=./$f

@@ -2024,15 +2024,17 @@ plasma-wiki-writable-obsidian.patch:12-31 claims not to follow symlinks but enum
 ]
 #+end_src
 
-* TODO [#C] Correct quality guard rationale and symlink inventory comments    :comments:quality:
+* DONE [#C] Correct quality guard rationale and symlink inventory comments    :comments:quality:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.64
 :LABELS: ["comments","heavy-review","quality"]
 :ISSUE_TYPE: docs
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 15:25]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 15:25]
+:CLOSE_REASON: Corrected the quality guard and fixture comments to describe only the tested absent-index-entry and dangling-symlink behavior; all 28 focused quality tests pass.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

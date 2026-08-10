@@ -275,9 +275,8 @@ class QualityEachFileTests(unittest.TestCase):
     def test_absent_tracked_path_is_skipped_not_failed(self):
         """A tracked path that is gone from disk must be skipped.
 
-        Reproduces what lefthook's pre-commit stash does during a partial commit:
-        the index still tracks a path the worktree no longer has. Before the fix,
-        nixfmt was handed the missing path and reported
+        The index still tracks a path the worktree no longer has. Before the fix,
+        nixfmt was handed that missing path and reported
         `openFile: does not exist`, surfaced as "1 of N file(s) failed" -- a
         formatting failure for a file that does not exist.
         """
@@ -307,9 +306,9 @@ class QualityEachFileTests(unittest.TestCase):
     def test_dangling_tracked_symlink_is_reported_not_skipped(self):
         """`-e` follows symlinks, so `-e` alone would skip a broken one.
 
-        A staged rename is benign bookkeeping; a tracked symlink whose target is
-        missing is a real repository defect. The guard is `-e || -L` so the second
-        reaches the checker and fails instead of vanishing.
+        A tracked symlink whose target is missing is a real repository defect.
+        The guard is `-e || -L` so it reaches the checker and fails instead of
+        vanishing.
         """
         os.symlink("nowhere-at-all.nix", self.repo / "link.nix")
         self.git("add", "link.nix")
