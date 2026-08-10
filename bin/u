@@ -5,37 +5,40 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
     ulimit -n 65536
 fi
 
-if [[ "$1" =~ [Vv]ulcan ]]; then
-    HOSTNAME=vulcan
-    REMOTES=clio
+# Host identity comes from the shared routing library, not a fourth
+# hand-maintained pattern table.
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+installed_routing_path=
+routing=${installed_routing_path:-$script_dir/lib/host-routing.sh}
+[[ -r $routing ]] || routing=$script_dir/../libexec/nix-scripts/host-routing.sh
+# shellcheck source=bin/lib/host-routing.sh
+source "$routing"
+
+if host=$(normalize_nix_host "${1:-}"); then
     shift 1
-
-elif [[ "$1" =~ [Hh]era ]]; then
-    HOSTNAME=hera
-    REMOTES=clio
-    shift 1
-
-elif [[ "$1" =~ [Cc]lio ]]; then
-    HOSTNAME=clio
-    REMOTES=hera
-    shift 1
-
-elif [[ $(hostname) =~ [Vv]ulcan ]]; then
-    HOSTNAME=vulcan
-    REMOTES=clio
-
-elif [[ $(hostname) =~ [Hh]era ]]; then
-    HOSTNAME=hera
-    REMOTES=clio
-
-elif [[ $(hostname) =~ [Cc]lio ]]; then
-    HOSTNAME=clio
-    REMOTES=hera
-
-else
-    echo "Script does not recognize hostname '$HOSTNAME'"
+elif ! host=$(normalize_nix_host "$(hostname)"); then
+    echo "u: unrecognized host '$(hostname)'" >&2
     exit 1
 fi
+
+case $host in
+hera)
+    HOSTNAME=hera
+    REMOTES=clio
+    ;;
+clio)
+    HOSTNAME=clio
+    REMOTES=hera
+    ;;
+vulcan)
+    HOSTNAME=vulcan
+    REMOTES=clio
+    ;;
+*)
+    echo "u: unsupported host class '$host'" >&2
+    exit 1
+    ;;
+esac
 
 MAKEARGS=(-C "$NIX_CONF" -f Makefile)
 

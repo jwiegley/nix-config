@@ -13,7 +13,7 @@ ifneq ($(BUILDER),)
 NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
 endif
 
-.PHONY: help all verify-inputs lock-local build switch update update-projects upgrade-tasks upgrade \
+.PHONY: help all verify-inputs lock-local require-darwin-host build switch update update-projects upgrade-tasks upgrade \
 	changes copy check sizes clean purge sign travel-ready test expensive tools repl format lint
 
 all: switch
@@ -89,7 +89,17 @@ tools:
 		sort				\
 		uniq
 
-repl:
+# Validate HOSTNAME only where a Darwin configuration consumes it, so
+# host-independent targets (test, lint, help) stay runnable on any machine.
+require-darwin-host:
+	@case "$(HOSTNAME)" in \
+	hera | clio) ;; \
+	*) \
+	    echo "Makefile: HOSTNAME '$(HOSTNAME)' is not a Darwin configuration; invoke as \`make HOSTNAME=hera|clio ...\`" >&2; \
+	    exit 1 ;; \
+	esac
+
+repl: require-darwin-host
 	nix --extra-experimental-features repl-flake \
 	    repl .#darwinConfigurations.$(HOSTNAME).pkgs
 
@@ -162,12 +172,12 @@ lock-local: verify-inputs
 	    done; \
 	fi
 
-build:
+build: require-darwin-host
 	$(call announce,darwin-rebuild build --flake .#$(HOSTNAME))
 	@sudo darwin-rebuild build --flake .#$(HOSTNAME) $(NIXOPTS)
 	@rm -f result
 
-switch: lock-local
+switch: require-darwin-host lock-local
 	$(call announce,darwin-rebuild switch --flake .#$(HOSTNAME))
 	@sudo darwin-rebuild switch --flake .#$(HOSTNAME) $(NIXOPTS)
 	@echo "Darwin generation: $$(sudo darwin-rebuild --list-generations | tail -1)"

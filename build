@@ -23,7 +23,16 @@ EOF
 
 resolve_host_output() {
     local host_name
-    host_name=$(command -v myhost >/dev/null 2>&1 && myhost || hostname -s)
+    # Distinguish "myhost absent" (fall back to the raw hostname) from
+    # "myhost failed" (deliberate loud identification failure — propagate).
+    if command -v myhost >/dev/null 2>&1; then
+        host_name=$(myhost) || {
+            echo "build: myhost failed to identify this host" >&2
+            return 2
+        }
+    else
+        host_name=$(hostname -s)
+    fi
     nix_flake_output_for_host "$host_name" || {
         echo "build: no flake output for host: $host_name" >&2
         return 2

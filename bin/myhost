@@ -1,13 +1,29 @@
 #!/usr/bin/env bash
 
-if [[ $(hostname) =~ [Vv]ulcan ]]; then
-    echo vulcan
-elif [[ $(hostname) =~ [Hh]era ||
-$(ipaddr en0 2>/dev/null) == 192.168.1.4 ]]; then
-    echo hera
-elif [[ $(hostname) =~ [Cc]lio ||
-$(ipaddr en0 2>/dev/null) == 192.168.3.9 ]]; then
-    echo clio
-else
-    echo clio # Fallback for unrecognized hosts.
+set -euo pipefail
+
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+installed_routing_path=
+routing=${installed_routing_path:-$script_dir/lib/host-routing.sh}
+[[ -r $routing ]] || routing=$script_dir/../libexec/nix-scripts/host-routing.sh
+# shellcheck source=bin/lib/host-routing.sh
+source "$routing"
+
+if host=$(normalize_nix_host "$(hostname)"); then
+    printf '%s\n' "$host"
+    exit 0
 fi
+
+# LAN IP disambiguation for the workstations, whose hostnames can be
+# transient under DHCP or hotspot renames.
+ip=$(ipaddr en0 2>/dev/null || true)
+case $ip in
+192.168.1.4) printf '%s\n' hera ;;
+192.168.3.9) printf '%s\n' clio ;;
+*)
+    # A silent fallback here once routed `make` on unrecognized machines at
+    # clio; identification must fail loudly instead.
+    echo "myhost: unrecognized host '$(hostname)'" >&2
+    exit 1
+    ;;
+esac
