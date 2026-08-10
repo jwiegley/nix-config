@@ -9,6 +9,7 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 enter_repo
 
 nix_conf_dir=$(empty_nix_conf_dir)
+trap 'rm -rf "$nix_conf_dir"' EXIT
 nix_cmd=(env NIX_CONF_DIR="$nix_conf_dir" nix --option warn-dirty false)
 
 system=$("${nix_cmd[@]}" eval --impure --raw --expr 'builtins.currentSystem')

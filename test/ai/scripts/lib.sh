@@ -11,12 +11,10 @@ repo_root() {
     git rev-parse --show-toplevel 2>/dev/null || pwd
 }
 
+# A fixed path under /tmp could be pre-created by another user on a shared
+# host with a nix.conf inside; mktemp makes that state unreachable.
 empty_nix_conf_dir() {
-    local dir
-
-    dir="${TMPDIR:-/tmp}/ai-nix-empty-nix-conf"
-    mkdir -p "$dir"
-    printf '%s\n' "$dir"
+    mktemp -d "${TMPDIR:-/tmp}/ai-nix-empty-nix-conf.XXXXXX"
 }
 
 enter_repo() {
