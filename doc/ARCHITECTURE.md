@@ -127,9 +127,13 @@ when that is the narrowest integration boundary; overlays also expose packages a
 apply compatibility fixes. Owning host or feature modules select packages
 explicitly.
 
-`obr` is exported and selected through this same paired portable boundary for every
-managed home. Nix owns its executable, while each machine owns its ignored `.obr/`
-cache and each repository owns its tracked `PLAN.org` issue surface.
+`obr` is not part of the portable AI boundary. The root flake owns its input and
+package export, and `config/obr.nix` selects it for every managed home. Nix owns
+the executable, while each machine owns its ignored `.obr/` cache and each
+repository owns its tracked `PLAN.org` issue surface. A consumer that imports
+this repository as a non-flake source must declare `obr` directly and pass it in
+the Home Manager module arguments. That explicit consumer lock is part of the
+separately authorized adoption step; the module fails closed when it is absent.
 
 Pi's packaging substrate is pinned through a dedicated `pi-llm-agents` input at
 the exact revision whose Pi packaging matches the reviewed source build in

@@ -19,7 +19,6 @@ let
       { };
   pairedPiPackage = pairedAiPackages.pi or null;
   pairedPrimePackage = pairedAiPackages.prime-agent or null;
-  pairedObrPackage = pairedAiPackages.obr or null;
   pairedAgentResources = pairedAiPackages.agent-resources or null;
   pairedPiGallery = pairedAiPackages.pi-gallery or null;
   resourcePackage = pkgs.agent-resources;
@@ -345,10 +344,6 @@ in
       message = "Prime Agent reads the Nix-generated MCP file that only the Pi renderer emits; a Prime profile requires a co-selected Pi profile";
     }
     {
-      assertion = pairedObrPackage != null;
-      message = "inputs.nix-config-ai.packages.${system}.obr is missing";
-    }
-    {
       assertion = !(piSelected || primeSelected) || pairedAgentResources != null;
       message = "inputs.nix-config-ai.packages.${system}.agent-resources is missing";
     }
@@ -371,7 +366,6 @@ in
       lib.optional droidSelected pkgs.agent-http-header-bridge
       ++ lib.optional (pairedPiPackage != null) pairedPiPackage
       ++ lib.optional (primeSelected && pairedPrimePackage != null) pairedPrimePackage
-      ++ lib.optional (pairedObrPackage != null) pairedObrPackage
       ++ lib.optionals piSelected piRuntimePackages;
     # The dummy keys satisfy codex's env_key lookups for the local providers;
     # they are only meaningful where a codex profile declares local model

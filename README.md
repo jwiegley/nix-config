@@ -42,9 +42,12 @@ its source-built package, managed-settings overlay, model/provider overrides, pr
 commands, RLM specialist adapters, skills, theme, keybindings, and MCP adapter are
 managed. Its writable preference/onboarding settings, daemon, kernel, authentication,
 continual harness, history, sessions, caches, logs, and refinements remain mutable.
-`obr` is exported through the same portable boundary and selected for every managed
-AI home. Nix owns the executable; each machine's ignored `.obr/` cache and each
-repository's tracked `PLAN.org` remain mutable project state.
+The root flake exports `obr`, and the dedicated root module selects it for every
+managed home. Nix owns the executable; each machine's ignored `.obr/` cache and
+each repository's tracked `PLAN.org` remain mutable project state. Consumers
+that import this repository with `flake = false` declare `obr` as a direct input
+and pass it through their Home Manager module arguments; their lock adoption
+remains consumer-owned.
 
 The managed Pi profile makes the same complete 26-member extension gallery
 available on every host. Automatic registration of the two loopback providers

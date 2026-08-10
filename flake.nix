@@ -4,6 +4,8 @@
   inputs = {
     nix-config-ai.url = "path:./config/ai";
 
+    obr.url = "github:jwiegley/obr";
+
     darwin = {
       url = "github:lnl7/nix-darwin";
       inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
@@ -247,7 +249,13 @@
           clio = configure "clio" "aarch64-darwin";
         };
 
-      packages = forAllSystems (system: portableAi.packages.${system});
+      packages = forAllSystems (
+        system:
+        portableAi.packages.${system}
+        // {
+          obr = rootInputs.obr.packages.${system}.default;
+        }
+      );
 
       inherit (portableAi) apps overlays;
 
@@ -398,6 +406,10 @@
               managed-agent-package-selection = pkgs.callPackage ./test/home/managed-agent-package-selection.nix {
                 inherit inputs src;
                 configured = agentTestPkgsFor.${system};
+              };
+              obr-ownership = pkgs.callPackage ./test/home/obr-ownership.nix {
+                inherit inputs src;
+                rootObr = packages.${system}.obr;
               };
               pi-blackhole-policy = pkgs.callPackage ./test/home/pi-blackhole-policy.nix {
                 inherit

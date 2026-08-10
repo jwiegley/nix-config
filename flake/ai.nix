@@ -383,7 +383,6 @@ in
     // {
       default = mkAiToolchain pkgs;
       inherit (toolPkgs) nix-scripts;
-      obr = inputs.obr.packages.${system}.default;
       pi = canonicalPiPackages.${system};
       inherit (pkgs)
         agent-http-header-bridge

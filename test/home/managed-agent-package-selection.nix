@@ -6,10 +6,10 @@
 }:
 
 let
-  # External NixOS consumers receive the portable flake as `nix-config-ai`;
-  # they do not inherit this repository's flattened `git-ai` input set. Keep
-  # this fixture shaped like those consumers so the managed wrappers cannot
-  # silently degrade to the upstream packages there.
+  # External NixOS consumers receive the portable flake as `nix-config-ai` and
+  # declare `obr` separately for the root module; they do not inherit this
+  # repository's flattened `git-ai` input set. Keep this fixture shaped like
+  # those consumers so managed wrappers cannot silently degrade upstream.
   downstreamInputs = builtins.removeAttrs inputs [ "git-ai" ];
   packages = import "${src}/config/packages.nix" {
     hostname = "vulcan";

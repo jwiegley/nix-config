@@ -46,6 +46,7 @@ in
     ./fractal.nix
     ./git-options.nix
     ./host-options.nix
+    ./obr.nix
     ./git.nix
     ./ssh.nix
     ./zsh.nix

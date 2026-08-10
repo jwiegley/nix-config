@@ -2,6 +2,36 @@
 #+SEQ_TODO: TODO DOING DRAFT WAIT DEFER NOTE | DONE CANCELED
 #+ISSUE_PREFIX: nix
 
+* DOING [#B] Restore the balanced Claude Opus 5 1M model identifier
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-41h
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 16:30]
+:MODIFIED: [2026-08-10 Mon 16:31]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Partner observation .445Z: the malformed claude-opus-5[1m value came from a truncated balanced claude-opus-5[1m] registry identifier, not terminal residue. Restore the closing bracket, preserve the main-vs-subagent model split, and pin the rendered catalog behavior while still rejecting the unbalanced form.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-41h",
+    "depends_on_id": "nix-tcz",
+    "type": "discovered-from",
+    "created_at": "2026-08-10T23:30:56.048220Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
 * DOING [#B] Make obr available across the managed fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -9,14 +39,14 @@
 :LABELS: []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:02]
-:MODIFIED: [2026-08-10 Mon 13:52]
+:MODIFIED: [2026-08-10 Mon 16:19]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Make the managed `obr` executable available on Hera, Clio, VPS, Vulcan, and the shared-work home spanning Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server. Verify the portable/root package contracts and affected consumer builds. Publication, paired consumer-lock adoption, and every activation remain separately authorized; any authorized shared-work rollout must realize the candidate once, prove its closure resident on all four shared-work hosts, retain the previous GC root, and activate each from its authoritative checkout before runtime acceptance.
+Make the root-managed `obr` executable available on Hera, Clio, VPS, Vulcan, and the shared-work home spanning Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server. Verify the root input/package contract and affected consumer builds. Publication, paired consumer-lock adoption, and every activation remain separately authorized; any authorized shared-work rollout must realize the candidate once, prove its closure resident on all four shared-work hosts, retain the previous GC root, and activate each from its authoritative checkout before runtime acceptance.
 
 * DOING [#B] Keep Plasma Wiki destination no-follow through copy    :filesystem:plasma:security:
 :PROPERTIES:
@@ -48,6 +78,7 @@ Discovered while implementing nix-tcz.63. The hardened _make_writable walk close
   }
 ]
 #+end_src
+
 * CANCELED [#C] This is a test issue
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -65,6 +96,99 @@ Discovered while implementing nix-tcz.63. The hardened _make_writable walk close
 :ORIGINAL_TYPE: task
 :ORIGINAL_SIZE: 0
 :END:
+
+* DOING [#C] Refuse stale YubiKey transaction directories
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-fk6
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 16:30]
+:MODIFIED: [2026-08-10 Mon 16:31]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Partner observation .443Z: plaintext stage/backup copies can survive SIGKILL or pre-trap failures. Install cleanup traps immediately after mktemp and refuse a new run when stale .yubikey-switch.* directories exist, with a focused no-side-effect test.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-fk6",
+    "depends_on_id": "nix-tcz.9",
+    "type": "discovered-from",
+    "created_at": "2026-08-10T23:30:55.810976Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DOING [#B] Strip ACLs and force 0600 on staged YubiKey keys
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-k9k
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 16:30]
+:MODIFIED: [2026-08-10 Mon 16:31]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Partner observation .440Z: cp -p preserves Darwin ACLs and source owner bits, so chmod go-rwx can leave staged private keys readable through an ACE or at mode 0400. Stage without preserved metadata, clear inherited ACLs on Darwin, force 0600, and test both POSIX mode and ACL absence before side effects.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-k9k",
+    "depends_on_id": "nix-tcz.9",
+    "type": "discovered-from",
+    "created_at": "2026-08-10T23:30:55.483711Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DOING [#B] Allow YubiKey restore when active key files are absent
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-mn6
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 16:30]
+:MODIFIED: [2026-08-10 Mon 16:31]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Partner observation .441Z: restore is a recovery path but the transaction now requires every destination to exist solely for backup/rollback. Track per-key absence, skip nonexistent backups, remove newly created destinations on rollback, and test successful plus failed restore from an empty active set.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-mn6",
+    "depends_on_id": "nix-tcz.9",
+    "type": "discovered-from",
+    "created_at": "2026-08-10T23:30:55.689309Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
 
 * DONE [#D] Restore the Syncthing.app runtime-ownership warning
 :PROPERTIES:
@@ -2364,6 +2488,101 @@ bin/yubikey-switch:3-24 checks /Volumes/File but copies from /Volumes/Files, and
     "depends_on_id": "nix-tcz",
     "type": "parent-child",
     "created_at": "2026-08-10T20:25:06.797121Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DOING [#C] Aggregate make changes failures across every repository
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tio
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 16:30]
+:MODIFIED: [2026-08-10 Mon 16:31]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Partner observation .444Z: changes now aggregates configured projects but Make aborts before or within the six fixed repositories. Run both sets under one status accumulator so every repository is visited and the target exits nonzero after reporting all failures; add a hermetic behavioral test.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tio",
+    "depends_on_id": "nix-tcz.19",
+    "type": "discovered-from",
+    "created_at": "2026-08-10T23:30:56.170279Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DOING [#C] Test the YubiKey restore source-root contract
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-u5b
+:LABELS: []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 16:30]
+:MODIFIED: [2026-08-10 Mon 16:31]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Partner observation .442Z: restore source_root is hardcoded and every current test uses suffix mode. Add a test-only environment override for the restore volume/root and cover missing and successful restore behavior without touching real key media.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-u5b",
+    "depends_on_id": "nix-tcz.9",
+    "type": "discovered-from",
+    "created_at": "2026-08-10T23:30:55.927269Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#B] Move obr from portable AI to root package authority
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-wzj
+:LABELS: []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 16:18]
+:MODIFIED: [2026-08-10 Mon 16:31]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:31]
+:CLOSE_REASON: Moved obr input, package export, and Home Manager selection to the root flake; removed it from portable AI; added fail-closed ownership checks and documented external consumer adoption separately under nix-aln.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+obr is a general repository/fleet issue tracker, not an AI tool. Move its flake input, package export, installation selection, documentation, lock ownership, and compatibility contracts from config/ai to the root flake. Preserve fleet installation while making `nix flake update obr` work from the repository root.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-wzj",
+    "depends_on_id": "nix-tcz",
+    "type": "discovered-from",
+    "created_at": "2026-08-10T23:18:58.199108Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""

@@ -21,8 +21,6 @@
 
     llm-agents.url = "github:numtide/llm-agents.nix";
 
-    obr.url = "github:jwiegley/obr";
-
     # Pi combines llm-agents packaging with the reviewed patched source in
     # packages/pi-source-build.nix. Keep that packaging substrate at the exact
     # compatible revision while the general llm-agents feed advances.
