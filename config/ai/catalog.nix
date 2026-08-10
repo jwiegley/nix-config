@@ -1383,6 +1383,27 @@ let
       checks = itemChecks ++ selectorChecks ++ profileChecks ++ mcpChecks ++ mcpResolutionChecks;
     in
     builtins.deepSeq checks true;
+  # Clients that read the shared `.agents/skills` root. That root is one
+  # directory on disk, so the effective skill set for these clients is the
+  # union of their profiles' selections — a per-home rule this catalog owns.
+  # Consequence, by physical necessity: an audience-scoped skill selected by
+  # ANY of a home's shared-root profiles is visible to ALL of that home's
+  # shared-root clients.
+  sharedSkillClients = [
+    "codex"
+    "pi"
+    "prime"
+  ];
+
+  sharedSkillsFor =
+    profiles:
+    lib.foldl' (
+      acc: profile:
+      if builtins.elem profile.client sharedSkillClients then
+        acc // select profile catalogItems.skills
+      else
+        acc
+    ) { } profiles;
 in
 {
   profiles = catalogProfiles;
@@ -1390,6 +1411,8 @@ in
   inherit
     matches
     select
+    sharedSkillClients
+    sharedSkillsFor
     validate
     ;
 }

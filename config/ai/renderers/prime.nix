@@ -100,7 +100,9 @@ let
     Selected resources: ${toString (builtins.length (builtins.attrNames selected.commands))}
     commands, ${toString (builtins.length (builtins.attrNames selected.prompts))} prompts,
     ${toString (builtins.length (builtins.attrNames selected.agents))} specialist adapters,
-    ${toString (builtins.length (builtins.attrNames selected.skills))} skills, and
+    ${toString (builtins.length (builtins.attrNames selected.skills))} skills selected for
+    this profile (the shared `.agents/skills` root carries the union across the
+    Pi-compatible clients), and
     ${toString (builtins.length (builtins.attrNames selected.mcpServers))} MCP servers.
   '';
 in

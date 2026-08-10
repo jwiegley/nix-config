@@ -71,22 +71,11 @@ let
       profile = catalog.profiles.${profileId};
     in
     lib.mapAttrs (_: itemSet: catalog.select profile itemSet) catalog.items;
-  sharedSkillItems = lib.foldl' (
-    skills: profileId:
-    let
-      profile = catalog.profiles.${profileId};
-    in
-    if
-      builtins.elem profile.client [
-        "codex"
-        "pi"
-        "prime"
-      ]
-    then
-      skills // (selectedFor profileId).skills
-    else
-      skills
-  ) { } profileIds;
+  # Selection lives in the catalog; the composer only projects the selected
+  # items onto the shared root's paths.
+  sharedSkillItems = catalog.sharedSkillsFor (
+    map (profileId: catalog.profiles.${profileId}) profileIds
+  );
   sharedSkillFiles = lib.mapAttrs' (
     name: item: lib.nameValuePair ".agents/skills/${name}" { inherit (item) source; }
   ) sharedSkillItems;
