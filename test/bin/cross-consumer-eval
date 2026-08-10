@@ -39,8 +39,9 @@ repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 
 tree=${NIX_CONFIG_TREE:-$repo_root}
 vps_checkout=${VPS_CHECKOUT:-$HOME/src/vps}
+andoria_checkout=${ANDORIA_CHECKOUT:-$HOME/src/andoria}
 
-CONSUMERS=(shared-work vps)
+CONSUMERS=(shared-work vps andoria)
 
 # ---- reporting ----------------------------------------------------------
 
@@ -170,6 +171,23 @@ run_vps() {
         "$vps_checkout#nixosConfigurations.ovh-vps.config.system.build.toplevel.drvPath"
 }
 
+run_andoria() {
+    # The shared-work standalone Home Manager consumer. It is the only
+    # external caller of config/overlays.nix (it injects its pinned
+    # nix-config-ai overlay through the aiOverlay parameter), so the
+    # synthetic shared-work fixture above cannot stand in for it.
+    check_lock_coherence "andoria" "$andoria_checkout"
+    if [[ ! -f $andoria_checkout/flake.nix ]]; then
+        skip_or_fail "andoria [jwiegley activation]" \
+            "no flake.nix at $andoria_checkout (set ANDORIA_CHECKOUT)"
+        return
+    fi
+    eval_target "andoria [jwiegley activation]" \
+        --raw --override-input nix-config "$tree" \
+        --override-input nix-config-ai "$tree?dir=config/ai" \
+        "$andoria_checkout#homeConfigurations.jwiegley.activationPackage.drvPath"
+}
+
 # ---- argument parsing ---------------------------------------------------
 
 want=()
@@ -216,6 +234,7 @@ for consumer in "${want[@]}"; do
     case $consumer in
     shared-work) run_shared_work ;;
     vps) run_vps ;;
+    andoria) run_andoria ;;
     esac
 done
 

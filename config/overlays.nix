@@ -1,6 +1,10 @@
 # Explicit overlay authority for Darwin and standalone Home Manager consumers.
 {
   inputs,
+  # No caller in this repository passes aiOverlay, but the andoria-08
+  # shared-work consumer (~/src/andoria flake.nix) injects its own pinned
+  # nix-config-ai overlay through it; removing the parameter hard-breaks
+  # that fleet host's evaluation.
   aiOverlay ? null,
   vulcan-crt ? null,
 }:

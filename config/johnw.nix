@@ -37,7 +37,8 @@ in
   # serializes Nixpkgs declaration paths without their store-path context.
   # Keep the manpage on Linux, where the fleet uses upstream Nix, until
   # https://github.com/nix-community/home-manager/pull/8942 is merged.
-  manual.manpages.enable = !isDarwin;
+  # mkDefault: the andoria-08 consumer disables manpages in its own flake.
+  manual.manpages.enable = lib.mkDefault (!isDarwin);
 
   imports = [
     ./agent-deck.nix
