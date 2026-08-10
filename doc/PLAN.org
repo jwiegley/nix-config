@@ -305,15 +305,17 @@ Critical. config/ai/skills/node-red/SKILL.md:39-74,143 and references/api_refere
 ]
 #+end_src
 
-* DOING [#B] Make verify-inputs fail closed and test the real prerequisite    :git:nix:validated:
+* DONE [#B] Make verify-inputs fail closed and test the real prerequisite    :git:nix:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.10
 :LABELS: ["git","heavy-review","nix","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 15:50]
+:MODIFIED: [2026-08-10 Mon 16:46]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:46]
+:CLOSE_REASON: Materialized and validated local-input inventories, propagated every Git probe failure, resolved follows to canonical update paths, checked recursive submodules, and exercised the real Make prerequisite with generated locks.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -493,15 +495,17 @@ bin/de:49-103,142-162 sources .env under set -a and serializes the resulting env
 ]
 #+end_src
 
-* DOING [#B] Remove eval from cached Nix store-path copying    :make:security:validated:
+* DONE [#B] Remove eval from cached Nix store-path copying    :make:security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.16
 :LABELS: ["heavy-review","make","security","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 15:50]
+:MODIFIED: [2026-08-10 Mon 16:46]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:46]
+:CLOSE_REASON: Replaced eval-based cached buildInputs handling with an exact Nix store-path argv contract, aggregated direnv and copy failures, and added hostile-input behavioral coverage.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -524,14 +528,14 @@ Makefile:218-235 reparses cached buildInputs through eval nix copy, allowing she
 ]
 #+end_src
 
-* TODO [#B] Route NixOS switching through the host-owned build lock    :nixos:operations:
+* DOING [#B] Route NixOS switching through the host-owned build lock    :nixos:operations:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.17
 :LABELS: ["heavy-review","nixos","operations"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:38]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -555,14 +559,14 @@ bin/switch:19-24 and bin/update:897-916 call raw nixos-rebuild and bypass the re
 ]
 #+end_src
 
-* TODO [#B] Give remote rollout jobs an identity and completion barrier    :concurrency:operations:
+* DOING [#B] Give remote rollout jobs an identity and completion barrier    :concurrency:operations:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.18
 :LABELS: ["concurrency","heavy-review","operations"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:38]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -745,14 +749,14 @@ packages/pi-gallery/providers/local-openai-provider.ts:178-231 buffers an unboun
 ]
 #+end_src
 
-* TODO [#B] Realize every declared behavioral check in a closeout manifest    :nix:tests:
+* DOING [#B] Realize every declared behavioral check in a closeout manifest    :nix:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.23
 :LABELS: ["heavy-review","nix","tests"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:38]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -807,14 +811,14 @@ config/ai/model-sync.nix:48-205 mutates live defaults and stamp state during Hom
 ]
 #+end_src
 
-* TODO [#B] Execute Syncthing activation safety branches in tests    :syncthing:tests:
+* DOING [#B] Execute Syncthing activation safety branches in tests    :syncthing:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.25
 :LABELS: ["heavy-review","syncthing","tests"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:38]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -838,14 +842,14 @@ config/syncthing.nix:377-549 owns identity, ownership, login-item, PID, ignore-f
 ]
 #+end_src
 
-* TODO [#B] Test the Syncthing monitor process lifecycle    :syncthing:tests:
+* DOING [#B] Test the Syncthing monitor process lifecycle    :syncthing:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.26
 :LABELS: ["heavy-review","syncthing","tests"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:38]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -900,14 +904,14 @@ config/syncthing-bootstrap.py:120-135,371-394 defends against unsafe files and r
 ]
 #+end_src
 
-* TODO [#B] Test Agent Deck Home Manager lifecycle ownership    :tests:
+* DOING [#B] Test Agent Deck Home Manager lifecycle ownership    :tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.28
 :LABELS: ["agent-deck","heavy-review","tests"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:38]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1303,14 +1307,14 @@ Makefile:239-281 deletes user generations before an unprivileged system-profile 
 ]
 #+end_src
 
-* TODO [#B] Fail closed for shared-work in bin/update --switch    :routing:validated:
+* DOING [#B] Fail closed for shared-work in bin/update --switch    :routing:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.4
 :LABELS: ["heavy-review","routing","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:38]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2433,14 +2437,14 @@ bin/de:51-97 interpolates decoded environment values into literal single quotes 
 ]
 #+end_src
 
-* TODO [#B] Delete or repair the unpinned update-home-manager path    :validated:
+* DOING [#B] Delete or repair the unpinned update-home-manager path    :validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.8
 :LABELS: ["heavy-review","home-manager","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:38]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2497,15 +2501,17 @@ bin/yubikey-switch:3-24 checks /Volumes/File but copies from /Volumes/Files, and
 ]
 #+end_src
 
-* DOING [#C] Aggregate make changes failures across every repository
+* DONE [#C] Aggregate make changes failures across every repository
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tio
 :LABELS: []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 16:30]
-:MODIFIED: [2026-08-10 Mon 16:31]
+:MODIFIED: [2026-08-10 Mon 16:46]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:46]
+:CLOSE_REASON: Aggregated configured and fixed-repository changes failures without disabling strict cd handling, rejected absent HOME before path construction, and proved every repository is still visited.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

@@ -696,6 +696,689 @@ else:
                 self.assertEqual(list(self.scratch.iterdir()), [])
 
 
+class TestMakeVerifyInputs(unittest.TestCase):
+    """Exercise local-input safety through the real Make prerequisite."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="gates-verify-inputs-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.bin = self.root / "bin"
+        (self.bin / "lib").mkdir(parents=True)
+        shutil.copy2(
+            REPO / "bin/lib/local-git-inputs.py",
+            self.bin / "lib/local-git-inputs.py",
+        )
+        self.makefile = self.root / "Makefile"
+        self.makefile.write_text(f"include {REPO / 'Makefile'}\n")
+        self.git_log = self.root / "git.log"
+        self.nix_log = self.root / "nix.jsonl"
+        self.real_git = shutil.which("git")
+        self.real_nix = shutil.which("nix")
+        self.assertIsNotNone(self.real_git)
+        self.assertIsNotNone(self.real_nix)
+
+        fake_git = self.bin / "git"
+        fake_git.write_text(
+            "#!/bin/sh\n"
+            'case "$*" in\n'
+            "  *' ls-files -v') probe=ls-files-v ;;\n"
+            "  *' submodule status --recursive') probe=submodule-status ;;\n"
+            "  *' ls-files --stage') probe=ls-files-stage ;;\n"
+            "  *) probe=other ;;\n"
+            "esac\n"
+            'printf "%s\\n" "$probe" >>"$GIT_LOG"\n'
+            'if [ "$FAKE_GIT_FAIL" = "$probe" ]; then\n'
+            '  printf "stub failing %s\\n" "$probe" >&2\n'
+            "  exit 73\n"
+            "fi\n"
+            'exec "$REAL_GIT" "$@"\n'
+        )
+        fake_git.chmod(0o755)
+        nix = self.bin / "nix"
+        nix.write_text(
+            "#!/usr/bin/env python3\n"
+            "import json, os, sys\n"
+            "with open(os.environ['NIX_LOG'], 'a', encoding='utf-8') as stream:\n"
+            "    stream.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+            "if os.environ.get('NIX_FAIL'):\n"
+            "    print('lock update failed', file=sys.stderr)\n"
+            "    raise SystemExit(73)\n"
+        )
+        nix.chmod(0o755)
+
+    def init_repo(self, name):
+        repo = self.root / name
+        repo.mkdir()
+        git("init", "-q", ".", cwd=repo)
+        git("config", "user.email", "test@example.invalid", cwd=repo)
+        git("config", "user.name", "Test", cwd=repo)
+        git("config", "commit.gpgsign", "false", cwd=repo)
+        (repo / "tracked").write_text("tracked\n")
+        git("add", "tracked", cwd=repo)
+        git("commit", "-qm", "fixture", cwd=repo)
+        return repo
+
+    @staticmethod
+    def lock(url, *, name="local", ref="local-node", submodules=None):
+        locked = {
+            "lastModified": 1767225600,
+            "narHash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            "rev": "0123456789abcdef0123456789abcdef01234567",
+            "revCount": 1,
+            "type": "git",
+            "url": url,
+        }
+        original = {"type": "git", "url": url}
+        if submodules is not None:
+            locked["submodules"] = submodules
+            original["submodules"] = submodules
+        return {
+            "version": 7,
+            "root": "root",
+            "nodes": {
+                "root": {"inputs": {name: ref}},
+                ref: {
+                    "locked": locked,
+                    "original": original,
+                },
+            },
+        }
+
+    def write_lock(self, lock):
+        if isinstance(lock, str):
+            (self.root / "flake.lock").write_text(lock)
+        else:
+            (self.root / "flake.lock").write_text(json.dumps(lock))
+
+    def run_make(self, target="lock-local", **extra_env):
+        for log in (self.git_log, self.nix_log):
+            log.unlink(missing_ok=True)
+        env = clean_env(
+            PATH=f"{self.bin}:{os.environ['PATH']}",
+            REAL_GIT=self.real_git,
+            GIT_LOG=str(self.git_log),
+            NIX_LOG=str(self.nix_log),
+            FAKE_GIT_FAIL="",
+        )
+        env.update(extra_env)
+        return subprocess.run(
+            [
+                "make",
+                "--no-print-directory",
+                "-f",
+                str(self.makefile),
+                target,
+                "SYSTEM=fixture-system",
+            ],
+            cwd=self.root,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    def git_calls(self):
+        if not self.git_log.exists():
+            return []
+        return self.git_log.read_text().splitlines()
+
+    def nix_calls(self):
+        if not self.nix_log.exists():
+            return []
+        return [json.loads(line) for line in self.nix_log.read_text().splitlines()]
+
+    def test_nix_generated_local_git_lock_is_accepted(self):
+        repo = self.init_repo("nix generated repo")
+        (self.root / "flake.nix").write_text(
+            "{\n"
+            f"  inputs.local = {{ url = {json.dumps('git+' + repo.as_uri())}; "
+            "flake = false; };\n"
+            "  outputs = _: {};\n"
+            "}\n"
+        )
+        generated = subprocess.run(
+            [
+                self.real_nix,
+                "--extra-experimental-features",
+                "nix-command flakes",
+                "flake",
+                "lock",
+            ],
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(generated.returncode, 0, generated.stdout + generated.stderr)
+        lock = json.loads((self.root / "flake.lock").read_text())
+        node_ref = lock["nodes"][lock["root"]]["inputs"]["local"]
+        self.assertIsInstance(lock["nodes"][node_ref]["original"], dict)
+
+        result = self.run_make()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.nix_calls(), [["flake", "update", "local"]])
+
+    def test_real_lock_local_updates_followed_target_revision(self):
+        target = self.init_repo("real target repo")
+        bridge = self.root / "bridge"
+        bridge.mkdir()
+        (bridge / "flake.nix").write_text(
+            "{\n"
+            f"  inputs.source = {{ url = {json.dumps('git+' + target.as_uri())}; "
+            "flake = false; };\n"
+            "  outputs = _: {};\n"
+            "}\n"
+        )
+        (self.root / "flake.nix").write_text(
+            "{\n"
+            f"  inputs.bridge.url = {json.dumps(f'path:{bridge}')};\n"
+            '  inputs.local.follows = "bridge/source";\n'
+            "  outputs = _: {};\n"
+            "}\n"
+        )
+        generated = subprocess.run(
+            [
+                self.real_nix,
+                "--extra-experimental-features",
+                "nix-command flakes",
+                "flake",
+                "lock",
+            ],
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(generated.returncode, 0, generated.stdout + generated.stderr)
+
+        def target_revision():
+            lock = json.loads((self.root / "flake.lock").read_text())
+            root = lock["nodes"][lock["root"]]
+            self.assertEqual(root["inputs"]["local"], ["bridge", "source"])
+            bridge_ref = root["inputs"]["bridge"]
+            source_ref = lock["nodes"][bridge_ref]["inputs"]["source"]
+            return lock["nodes"][source_ref]["locked"]["rev"]
+
+        initial_revision = git("rev-parse", "HEAD", cwd=target).stdout.strip()
+        self.assertEqual(target_revision(), initial_revision)
+        (target / "tracked").write_text("changed\n")
+        git("add", "tracked", cwd=target)
+        git("commit", "-qm", "changed target", cwd=target)
+        changed_revision = git("rev-parse", "HEAD", cwd=target).stdout.strip()
+
+        result = subprocess.run(
+            [
+                "make",
+                "--no-print-directory",
+                "-f",
+                str(self.makefile),
+                "lock-local",
+                "SYSTEM=fixture-system",
+            ],
+            cwd=self.root,
+            env=clean_env(
+                PATH=os.environ["PATH"],
+                NIX_CONFIG=(
+                    os.environ.get("NIX_CONFIG", "")
+                    + "\nexperimental-features = nix-command flakes\n"
+                ),
+            ),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(target_revision(), changed_revision)
+
+    def test_absent_root_inputs_is_an_empty_inventory(self):
+        self.write_lock({"version": 7, "root": "root", "nodes": {"root": {}}})
+
+        result = self.run_make()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.git_calls(), [])
+        self.assertEqual(self.nix_calls(), [])
+
+    def test_empty_follows_path_to_root_is_skipped(self):
+        self.write_lock(
+            {
+                "version": 7,
+                "root": "root",
+                "nodes": {"root": {"inputs": {"self": []}}},
+            }
+        )
+
+        result = self.run_make()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.git_calls(), [])
+        self.assertEqual(self.nix_calls(), [])
+
+    def test_root_anchored_follows_path_resolves_local_input(self):
+        repo = self.init_repo("followed repo")
+        lock = self.lock(repo.as_uri())
+        lock["nodes"]["root"]["inputs"] = {
+            "bridge": "bridge-node",
+            "local": ["bridge", "source"],
+        }
+        lock["nodes"]["bridge-node"] = {
+            "inputs": {"source": "local-node"},
+            "locked": {
+                "narHash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+                "type": "github",
+            },
+            "original": {"owner": "example", "repo": "bridge", "type": "github"},
+        }
+        self.write_lock(lock)
+
+        result = self.run_make()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(
+            self.git_calls(),
+            ["ls-files-v", "submodule-status", "ls-files-stage"],
+        )
+        self.assertEqual(self.nix_calls(), [["flake", "update", "bridge/source"]])
+
+    def test_malformed_lock_shapes_and_unsafe_text_fail_before_commands(self):
+        repo = self.init_repo("valid repo")
+        valid = self.lock(repo.as_uri())
+
+        missing_node = self.lock(repo.as_uri())
+        missing_node["nodes"].pop("local-node")
+        nonobject_node = self.lock(repo.as_uri())
+        nonobject_node["nodes"]["local-node"] = []
+        nonobject_inputs = self.lock(repo.as_uri())
+        nonobject_inputs["nodes"]["root"]["inputs"] = []
+        missing_locked = self.lock(repo.as_uri())
+        missing_locked["nodes"]["local-node"].pop("locked")
+        nonobject_locked = self.lock(repo.as_uri())
+        nonobject_locked["nodes"]["local-node"]["locked"] = []
+        missing_original = self.lock(repo.as_uri())
+        missing_original["nodes"]["local-node"].pop("original")
+        nonobject_original = self.lock(repo.as_uri())
+        nonobject_original["nodes"]["local-node"]["original"] = []
+        missing_url = self.lock(repo.as_uri())
+        missing_url["nodes"]["local-node"]["locked"].pop("url")
+        nonstring_url = self.lock(repo.as_uri())
+        nonstring_url["nodes"]["local-node"]["locked"]["url"] = 42
+        nonboolean_submodules = self.lock(repo.as_uri())
+        nonboolean_submodules["nodes"]["local-node"]["locked"]["submodules"] = 1
+        unsupported_ref = self.lock(repo.as_uri())
+        unsupported_ref["nodes"]["root"]["inputs"]["local"] = 42
+        bad_follows_step = self.lock(repo.as_uri())
+        bad_follows_step["nodes"]["root"]["inputs"]["local"] = [42]
+        missing_follows_step = self.lock(repo.as_uri())
+        missing_follows_step["nodes"]["root"]["inputs"]["local"] = ["missing"]
+        follows_cycle = self.lock(repo.as_uri())
+        follows_cycle["nodes"]["root"]["inputs"]["local"] = ["local"]
+
+        cases = (
+            ("invalid JSON", "{"),
+            ("missing version", {"root": "root", "nodes": valid["nodes"]}),
+            ("unsupported version", {**valid, "version": 8}),
+            ("non-integer version", {**valid, "version": 7.0}),
+            ("missing nodes", {"version": 7, "root": "root"}),
+            ("non-object nodes", {"version": 7, "root": "root", "nodes": []}),
+            ("unsupported root ref", {**valid, "root": ["root"]}),
+            (
+                "non-object root node",
+                {**valid, "nodes": {**valid["nodes"], "root": []}},
+            ),
+            ("unsupported input ref", unsupported_ref),
+            ("non-object inputs", nonobject_inputs),
+            ("non-string follows step", bad_follows_step),
+            ("missing follows step", missing_follows_step),
+            ("follows cycle", follows_cycle),
+            ("missing referenced node", missing_node),
+            ("non-object referenced node", nonobject_node),
+            ("missing locked node", missing_locked),
+            ("non-object locked node", nonobject_locked),
+            ("missing original node", missing_original),
+            ("non-object original node", nonobject_original),
+            ("missing git URL", missing_url),
+            ("non-string git URL", nonstring_url),
+            ("non-boolean submodules", nonboolean_submodules),
+            ("control in name", self.lock(repo.as_uri(), name="bad\nname")),
+            ("format control in name", self.lock(repo.as_uri(), name="bad\u202ename")),
+            ("option-like name", self.lock(repo.as_uri(), name="--override")),
+            ("relative path", self.lock("file:relative/repo")),
+            ("encoded control", self.lock(repo.as_uri() + "%0Aescape")),
+            ("encoded C1 control", self.lock(repo.as_uri() + "%C2%9Bescape")),
+            ("invalid escaping", self.lock(repo.as_uri() + "%ZZ")),
+        )
+        for label, lock in cases:
+            with self.subTest(label=label):
+                self.write_lock(lock)
+                result = self.run_make()
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(self.git_calls(), [], result.stdout + result.stderr)
+                self.assertEqual(self.nix_calls(), [], result.stdout + result.stderr)
+
+    def test_partial_producers_and_invalid_inventory_fail_before_commands(self):
+        repo = self.init_repo("producer repo")
+        helper = self.bin / "lib/local-git-inputs.py"
+        scripts = (
+            (
+                "partial repos",
+                f"import sys\nprint('0\\t{repo}')\nraise SystemExit(73)\n",
+            ),
+            (
+                "partial names",
+                "import sys\n"
+                "if sys.argv[1] == 'repos': raise SystemExit(0)\n"
+                "print('local')\n"
+                "raise SystemExit(73)\n",
+            ),
+            (
+                "NUL in inventory",
+                "import sys\n"
+                f"sys.stdout.buffer.write(('0\\t' + {str(repo)!r} + "
+                "'\\0trailing\\n').encode())\n",
+            ),
+            (
+                "missing final delimiter",
+                f"import sys\nsys.stdout.write('0\\t' + {str(repo)!r})\n",
+            ),
+            (
+                "invalid inventory",
+                "import sys\n"
+                "if sys.argv[1] == 'repos':\n"
+                f"    print('0\\t{repo}')\n"
+                "    print('2\\t/not/valid')\n"
+                "else:\n"
+                "    print('local')\n",
+            ),
+        )
+        self.write_lock(self.lock(repo.as_uri()))
+        for label, script in scripts:
+            with self.subTest(label=label):
+                helper.write_text(script)
+                result = self.run_make()
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(self.git_calls(), [], result.stdout + result.stderr)
+                self.assertEqual(self.nix_calls(), [], result.stdout + result.stderr)
+
+    def test_skip_worktree_and_assume_unchanged_block_nix(self):
+        repo = self.init_repo("flags repo")
+        for name in ("skip-worktree", "assume-unchanged"):
+            (repo / name).write_text(name + "\n")
+        git("add", "skip-worktree", "assume-unchanged", cwd=repo)
+        git("commit", "-qm", "indexed files", cwd=repo)
+        git("update-index", "--skip-worktree", "skip-worktree", cwd=repo)
+        git("update-index", "--assume-unchanged", "assume-unchanged", cwd=repo)
+        self.write_lock(self.lock("git+" + repo.as_uri()))
+
+        result = self.run_make()
+        combined = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, combined)
+        self.assertIn("skip-worktree", combined)
+        self.assertIn("assume-unchanged", combined)
+        self.assertEqual(self.nix_calls(), [], combined)
+
+    def test_gitlink_contract_and_nested_uninitialized_submodule(self):
+        grandchild = self.init_repo("grandchild repo")
+        child = self.init_repo("child repo")
+        git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            "-q",
+            str(grandchild),
+            "grandchild",
+            cwd=child,
+        )
+        git("commit", "-qam", "add grandchild", cwd=child)
+        parent = self.init_repo("parent repo")
+        git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            "-q",
+            str(child),
+            "nested",
+            cwd=parent,
+        )
+        git("commit", "-qam", "add submodule", cwd=parent)
+        git(
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "update",
+            "--init",
+            "--recursive",
+            cwd=parent,
+        )
+
+        self.write_lock(self.lock(parent.as_uri(), submodules=False))
+        mismatch = self.run_make()
+        self.assertNotEqual(mismatch.returncode, 0, mismatch.stdout + mismatch.stderr)
+        self.assertIn("lock omits submodules=true", mismatch.stdout + mismatch.stderr)
+        self.assertEqual(self.nix_calls(), [])
+
+        self.write_lock(self.lock(parent.as_uri(), submodules=True))
+        initialized = self.run_make()
+        self.assertEqual(
+            initialized.returncode, 0, initialized.stdout + initialized.stderr
+        )
+        self.assertEqual(self.nix_calls(), [["flake", "update", "local"]])
+
+        git("submodule", "deinit", "-q", "-f", "grandchild", cwd=parent / "nested")
+        uninitialized = self.run_make()
+        self.assertNotEqual(
+            uninitialized.returncode,
+            0,
+            uninitialized.stdout + uninitialized.stderr,
+        )
+        self.assertIn("uninitialized submodules", uninitialized.stdout)
+        self.assertIn("nested/grandchild", uninitialized.stdout)
+        self.assertIn("--init --recursive", uninitialized.stdout)
+        self.assertEqual(self.nix_calls(), [])
+
+    def test_each_git_probe_failure_blocks_nix(self):
+        repo = self.init_repo("probe repo")
+        self.write_lock(self.lock(repo.as_uri()))
+        for probe, diagnostic in (
+            ("ls-files-v", "git ls-files -v failed"),
+            ("submodule-status", "git submodule status failed"),
+            ("ls-files-stage", "git ls-files --stage failed"),
+        ):
+            with self.subTest(probe=probe):
+                result = self.run_make(FAKE_GIT_FAIL=probe)
+                combined = result.stdout + result.stderr
+                self.assertNotEqual(result.returncode, 0, combined)
+                self.assertIn(f"stub failing {probe}", combined)
+                self.assertIn(diagnostic, combined)
+                self.assertEqual(self.nix_calls(), [], combined)
+
+
+class TestMakeCopyBuildInputs(unittest.TestCase):
+    """Validate cached build inputs without bypassing project aggregation."""
+
+    HASH_A = "0123456789abcdfghijklmnpqrsvwxyz"
+    HASH_B = "zyxwvsrqpnmlkjihgfdcba9876543210"
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="gates-copy-inputs-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.home = self.root / "home with spaces"
+        self.home.mkdir()
+        self.projects_file = self.root / "project list"
+        self.makefile = self.root / "Makefile"
+        self.makefile.write_text(f"include {REPO / 'Makefile'}\n")
+        self.fake_bin = self.root / "fake-bin"
+        self.fake_bin.mkdir()
+        self.nix_log = self.root / "nix.jsonl"
+
+        direnv = self.fake_bin / "direnv"
+        direnv.write_text(
+            "#!/usr/bin/env python3\n"
+            "import json, os, shlex\n"
+            "from pathlib import Path\n"
+            "item = json.loads(os.environ['DIRENV_FIXTURE'])[Path.cwd().name]\n"
+            "if 'partial' in item:\n"
+            "    print(item['partial'])\n"
+            "    raise SystemExit(item['status'])\n"
+            "if item.get('status'):\n"
+            "    raise SystemExit(item['status'])\n"
+            "if 'dump' in item:\n"
+            "    print(item['dump'])\n"
+            "else:\n"
+            "    print('export buildInputs=' + shlex.quote(item.get('value', '')))\n"
+        )
+        direnv.chmod(0o755)
+        nix = self.fake_bin / "nix"
+        nix.write_text(
+            "#!/usr/bin/env python3\n"
+            "import json, os, sys\n"
+            "with open(os.environ['NIX_LOG'], 'a', encoding='utf-8') as stream:\n"
+            "    stream.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+            "if os.environ.get('NIX_FAIL_ARG') in sys.argv[1:]:\n"
+            "    raise SystemExit(73)\n"
+        )
+        nix.chmod(0o755)
+
+    def run_copy(self, fixture, *, fail_arg=""):
+        self.nix_log.unlink(missing_ok=True)
+        projects = list(fixture)
+        self.projects_file.write_text(
+            "\n".join(f"projects/{name}" for name in projects)
+        )
+        for name in projects:
+            project = self.home / "projects" / name
+            project.mkdir(parents=True, exist_ok=True)
+            (project / ".envrc.cache").touch()
+        return subprocess.run(
+            [
+                "make",
+                "--no-print-directory",
+                "-f",
+                str(self.makefile),
+                "copy",
+                "REMOTES=fixture-host",
+                f"PROJECTS={self.projects_file}",
+                "SYSTEM=fixture-system",
+            ],
+            cwd=self.root,
+            env=clean_env(
+                HOME=str(self.home),
+                PATH=f"{self.fake_bin}:{os.environ['PATH']}",
+                DIRENV_FIXTURE=json.dumps(fixture),
+                NIX_LOG=str(self.nix_log),
+                NIX_FAIL_ARG=fail_arg,
+            ),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    def nix_calls(self):
+        if not self.nix_log.exists():
+            return []
+        return [json.loads(line) for line in self.nix_log.read_text().splitlines()]
+
+    def test_exact_store_paths_are_passed_as_distinct_arguments(self):
+        paths = [
+            f"/nix/store/{self.HASH_A}-alpha",
+            f"/nix/store/{self.HASH_B}-beta+dev",
+            f"/nix/store/{self.HASH_A}-.hidden",
+            f"/nix/store/{self.HASH_B}-..hidden",
+            f"/nix/store/{self.HASH_A}-{'n' * 211}",
+        ]
+        result = self.run_copy({"first project": {"value": " \n".join(paths)}})
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        calls = self.nix_calls()
+        self.assertEqual(len(calls), 2, calls)
+        self.assertEqual(calls[1], ["copy", "--to", "ssh-ng://fixture-host", *paths])
+
+    def test_empty_build_inputs_do_not_invoke_project_copy(self):
+        result = self.run_copy(
+            {
+                "empty": {"value": ""},
+                "whitespace": {"value": " \n\t "},
+            }
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(len(self.nix_calls()), 1, self.nix_calls())
+
+    def test_malformed_and_hostile_store_paths_are_rejected_before_copy(self):
+        valid = f"/nix/store/{self.HASH_A}-alpha"
+        marker = self.root / "injected"
+        invalid = (
+            f"/nix/store/{self.HASH_A[:-1]}-short-hash",
+            f"/nix/store/e{self.HASH_A[1:]}-invalid-hash-character",
+            f"/nix/store/{self.HASH_A.upper()}-uppercase-hash",
+            f"/nix/store/{self.HASH_A}-",
+            f"/nix/store/{self.HASH_A}-.",
+            f"/nix/store/{self.HASH_A}-..",
+            f"/nix/store/{self.HASH_A}-.-suffix",
+            f"/nix/store/{self.HASH_A}-..-suffix",
+            f"/nix/store/{self.HASH_A}-{'n' * 212}",
+            valid + "/bin",
+            valid + ";touch",
+            "/tmp/not-in-the-store",
+            f"{valid} $(touch {marker})",
+        )
+        for value in invalid:
+            with self.subTest(value=value):
+                marker.unlink(missing_ok=True)
+                result = self.run_copy({"invalid": {"value": value}})
+                combined = result.stdout + result.stderr
+                self.assertNotEqual(result.returncode, 0, combined)
+                self.assertIn("invalid cached build input", combined)
+                self.assertFalse(marker.exists(), combined)
+                self.assertEqual(len(self.nix_calls()), 1, self.nix_calls())
+
+    def test_direnv_failure_is_captured_and_later_projects_continue(self):
+        good = f"/nix/store/{self.HASH_A}-good"
+        marker = self.root / "partial-dump-ran"
+        result = self.run_copy(
+            {
+                "bad producer": {"partial": f"touch {marker}", "status": 24},
+                "good producer": {"value": good},
+            }
+        )
+        combined = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, combined)
+        self.assertIn("direnv apply_dump failed", combined)
+        self.assertIn("bad producer", combined)
+        self.assertFalse(marker.exists(), combined)
+        self.assertEqual(
+            self.nix_calls()[1],
+            ["copy", "--to", "ssh-ng://fixture-host", good],
+        )
+
+    def test_invalid_env_dump_and_nix_failure_are_aggregated(self):
+        first = f"/nix/store/{self.HASH_A}-first"
+        second = f"/nix/store/{self.HASH_B}-second"
+        invalid_dump = self.run_copy(
+            {
+                "invalid dump": {"dump": "export buildInputs='"},
+                "good dump": {"value": second},
+            }
+        )
+        self.assertNotEqual(
+            invalid_dump.returncode,
+            0,
+            invalid_dump.stdout + invalid_dump.stderr,
+        )
+        self.assertIn("invalid direnv environment dump", invalid_dump.stderr)
+        self.assertEqual(self.nix_calls()[-1][-1], second)
+
+        failed_copy = self.run_copy(
+            {
+                "failing copy": {"value": first},
+                "successful copy": {"value": second},
+            },
+            fail_arg=first,
+        )
+        combined = failed_copy.stdout + failed_copy.stderr
+        self.assertNotEqual(failed_copy.returncode, 0, combined)
+        self.assertIn("nix copy failed", combined)
+        self.assertEqual([call[-1] for call in self.nix_calls()[1:]], [first, second])
+
+
 class TestGatesAreRegistered(unittest.TestCase):
     """Check gate registration and source-layout contracts."""
 
@@ -828,6 +1511,126 @@ class TestGatesAreRegistered(unittest.TestCase):
                 ],
             )
 
+    def test_make_changes_visits_every_repo_after_project_and_fixed_failures(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            home = root / "home"
+            projects = (
+                home / "projects/missing",
+                home / "projects/inaccessible",
+                home / "projects/first",
+                home / "projects/last",
+            )
+            fixed = tuple(
+                home / path
+                for path in (
+                    ".config/pushme",
+                    ".emacs.d",
+                    "src/nix",
+                    "src/scripts",
+                    "doc",
+                    "org",
+                )
+            )
+            visited = (*projects[2:], fixed[0], *fixed[2:])
+            for repo in (*projects[1:], fixed[0], *fixed[2:]):
+                repo.mkdir(parents=True, exist_ok=True)
+
+            project_list = root / "projects"
+            project_list.write_text(
+                "projects/missing\n"
+                "projects/inaccessible\n"
+                "projects/first\n"
+                "projects/last\n"
+            )
+            changes_log = root / "changes.log"
+            fake_bin = root / "bin"
+            fake_bin.mkdir()
+            changes = fake_bin / "changes"
+            changes.write_text('#!/bin/sh\nprintf "%s\\n" "$PWD" >>"$CHANGES_LOG"\n')
+            changes.chmod(0o755)
+            bash_env = root / "bash-env"
+            bash_env.write_text(
+                "cd() {\n"
+                '    if [[ "$1" == "$INACCESSIBLE_PROJECT" ]]; then\n'
+                "        return 73\n"
+                "    fi\n"
+                '    builtin cd "$@"\n'
+                "}\n"
+            )
+
+            fixture = root / "Makefile"
+            fixture.write_text(f"include {REPO / 'Makefile'}\n")
+            result = subprocess.run(
+                [
+                    "make",
+                    "--no-print-directory",
+                    "-f",
+                    str(fixture),
+                    "changes",
+                    f"PROJECTS={project_list}",
+                ],
+                cwd=root,
+                env=clean_env(
+                    HOME=str(home),
+                    PATH=f"{fake_bin}:{os.defpath}",
+                    CHANGES_LOG=str(changes_log),
+                    BASH_ENV=str(bash_env),
+                    INACCESSIBLE_PROJECT=str(projects[1]),
+                ),
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn(str(projects[0]), result.stderr)
+            self.assertIn(f"project command failed (73): {projects[1]}", result.stderr)
+            self.assertIn(str(fixed[1]), result.stderr)
+            self.assertEqual(
+                changes_log.read_text().splitlines(),
+                [str(repo) for repo in visited],
+            )
+
+    def test_make_changes_rejects_unset_home_before_visiting_fixed_paths(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            projects = root / "projects"
+            projects.write_text("")
+            fixture = root / "Makefile"
+            fixture.write_text(f"include {REPO / 'Makefile'}\n")
+            fake_bin = root / "bin"
+            fake_bin.mkdir()
+            changes_log = root / "changes.log"
+            changes = fake_bin / "changes"
+            changes.write_text('#!/bin/sh\nprintf "reached\\n" >>"$CHANGES_LOG"\n')
+            changes.chmod(0o755)
+            env = clean_env(
+                PATH=f"{fake_bin}:{os.defpath}", CHANGES_LOG=str(changes_log)
+            )
+            env.pop("HOME", None)
+
+            result = subprocess.run(
+                [
+                    "make",
+                    "--no-print-directory",
+                    "-f",
+                    str(fixture),
+                    "changes",
+                    f"PROJECTS={projects}",
+                ],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("Makefile: HOME is not set", result.stderr)
+            self.assertNotIn("###", result.stdout)
+            self.assertFalse(changes_log.exists())
+
     def test_make_build_and_switch_propagate_darwin_rebuild_failure(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -913,20 +1716,39 @@ class TestGatesAreRegistered(unittest.TestCase):
             sudo.chmod(0o755)
             sudo_log = root / "sudo.log"
 
+            local_repo = root / "local"
+            local_repo.mkdir()
+            git("init", "-q", ".", cwd=local_repo)
+            git("config", "user.email", "test@example.invalid", cwd=local_repo)
+            git("config", "user.name", "Test", cwd=local_repo)
+            git("config", "commit.gpgsign", "false", cwd=local_repo)
+            (local_repo / "tracked").write_text("tracked\n")
+            git("add", "tracked", cwd=local_repo)
+            git("commit", "-qm", "fixture", cwd=local_repo)
+
             (root / "flake.lock").write_text(
                 json.dumps(
                     {
+                        "version": 7,
+                        "root": "root",
                         "nodes": {
                             "root": {"inputs": {"local": "local-node"}},
                             "local-node": {
-                                "locked": {"type": "git", "url": "file:///tmp/local"}
+                                "locked": {
+                                    "type": "git",
+                                    "url": local_repo.as_uri(),
+                                },
+                                "original": {
+                                    "type": "git",
+                                    "url": local_repo.as_uri(),
+                                },
                             },
-                        }
+                        },
                     }
                 )
             )
             fixture = root / "Makefile"
-            fixture.write_text(f"include {REPO / 'Makefile'}\nverify-inputs: ;\n")
+            fixture.write_text(f"include {REPO / 'Makefile'}\n")
             env = clean_env(
                 PATH=f"{fake_bin}:{os.environ['PATH']}",
                 SUDO_LOG=str(sudo_log),
@@ -973,12 +1795,21 @@ class TestGatesAreRegistered(unittest.TestCase):
             (root / "flake.lock").write_text(
                 json.dumps(
                     {
+                        "version": 7,
+                        "root": "root",
                         "nodes": {
                             "root": {"inputs": {"local": "local-node"}},
                             "local-node": {
-                                "locked": {"type": "git", "url": "file:///tmp/local"}
+                                "locked": {
+                                    "type": "git",
+                                    "url": local_repo.as_uri(),
+                                },
+                                "original": {
+                                    "type": "git",
+                                    "url": local_repo.as_uri(),
+                                },
                             },
-                        }
+                        },
                     }
                 )
             )

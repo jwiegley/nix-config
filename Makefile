@@ -24,7 +24,7 @@ endif
 	changes copy check sizes clean purge sign travel-ready test expensive tools repl format lint
 
 # These maintenance recipes use Bash functions, strict mode, and arrays.
-update-projects upgrade-tasks changes copy travel-ready: SHELL := bash
+verify-inputs update-projects upgrade-tasks changes copy travel-ready: SHELL := bash
 
 all: switch
 
@@ -143,37 +143,76 @@ repl: require-darwin-host
 
 verify-inputs:
 	$(call announce,Verifying local git inputs for NAR hash safety)
-	@errfile=$$(mktemp); \
-	python3 bin/lib/local-git-inputs.py repos \
-	| while IFS=$$'\t' read -r has_submodules repo; do \
-	    bad=$$(git -C "$$repo" ls-files -v 2>/dev/null | grep -E '^[shS] '); \
+	@inventory=$$(mktemp) || exit; \
+	errfile=$$(mktemp) || { status=$$?; rm -f "$$inventory"; exit "$$status"; }; \
+	trap 'rm -f "$$inventory" "$$errfile"' EXIT; \
+	if python3 bin/lib/local-git-inputs.py repos >"$$inventory"; then \
+	    :; \
+	else \
+	    exit $$?; \
+	fi; \
+	if ! python3 -c 'import sys; data = open(sys.argv[1], "rb").read(); sys.exit(b"\0" in data or bool(data and not data.endswith(b"\n")))' "$$inventory"; then \
+	    echo "ERROR: invalid local git input inventory framing" >&2; \
+	    exit 2; \
+	fi; \
+	records=(); \
+	inventory_pattern=$$'^[01]\t/[^[:cntrl:]]+$$'; \
+	while IFS= read -r row; do \
+	    if [[ ! "$$row" =~ $$inventory_pattern ]]; then \
+	        echo "ERROR: invalid local git input inventory" >&2; \
+	        exit 2; \
+	    fi; \
+	    records+=( "$$row" ); \
+	done <"$$inventory"; \
+	for row in "$${records[@]}"; do \
+	    IFS=$$'\t' read -r has_submodules repo <<<"$$row"; \
+	    if files=$$(git -C "$$repo" ls-files -v); then \
+	        :; \
+	    else \
+	        status=$$?; \
+	        echo "ERROR: git ls-files -v failed for $$repo" >&2; \
+	        exit "$$status"; \
+	    fi; \
+	    bad=$$(printf '%s\n' "$$files" | grep -E '^[shS] ' || true); \
 	    if [ -n "$$bad" ]; then \
 	        echo "ERROR: $$repo has skip-worktree/assume-unchanged files:" | tee -a "$$errfile"; \
 	        echo "$$bad" | tee -a "$$errfile"; \
 	        echo "Fix: git -C $$repo update-index --no-skip-worktree --no-assume-unchanged <files>" | tee -a "$$errfile"; \
 	        echo "Then: git -C $$repo checkout -- <files>" | tee -a "$$errfile"; \
 	    fi; \
-	    uninit=$$(git -C "$$repo" submodule status 2>/dev/null | grep '^-'); \
+	    if submodules=$$(git -C "$$repo" submodule status --recursive); then \
+	        :; \
+	    else \
+	        status=$$?; \
+	        echo "ERROR: git submodule status failed for $$repo" >&2; \
+	        exit "$$status"; \
+	    fi; \
+	    uninit=$$(printf '%s\n' "$$submodules" | grep '^-' || true); \
 	    if [ -n "$$uninit" ]; then \
 	        echo "ERROR: $$repo has uninitialized submodules:" | tee -a "$$errfile"; \
 	        echo "$$uninit" | tee -a "$$errfile"; \
-	        echo "Fix: cd $$repo && git submodule update --init" | tee -a "$$errfile"; \
+	        echo "Fix: cd $$repo && git submodule update --init --recursive" | tee -a "$$errfile"; \
 	    fi; \
-	    gitlinks=$$(git -C "$$repo" ls-files --stage 2>/dev/null | grep '^160000'); \
+	    if staged=$$(git -C "$$repo" ls-files --stage); then \
+	        :; \
+	    else \
+	        status=$$?; \
+	        echo "ERROR: git ls-files --stage failed for $$repo" >&2; \
+	        exit "$$status"; \
+	    fi; \
+	    gitlinks=$$(printf '%s\n' "$$staged" | grep '^160000' || true); \
 	    if [ -n "$$gitlinks" ] && [ "$$has_submodules" != "1" ]; then \
-	        echo "WARNING: $$repo has submodules (gitlinks) that may cause NAR hash divergence:"; \
-	        echo "$$gitlinks"; \
-	        echo "Consider: remove submodules or add ?submodules=1 to the flake input URL"; \
+	        echo "ERROR: $$repo has gitlinks but its lock omits submodules=true:" | tee -a "$$errfile"; \
+	        echo "$$gitlinks" | tee -a "$$errfile"; \
+	        echo "Fix: remove the gitlinks or lock the input with submodules=true" | tee -a "$$errfile"; \
 	    fi; \
 	done; \
 	if [ -s "$$errfile" ]; then \
 	    echo ""; \
 	    echo "NAR hash mismatches will occur until the above are fixed."; \
 	    echo "See: nix flake update uses filesystem, darwin-rebuild uses git archive."; \
-	    rm -f "$$errfile"; \
 	    exit 1; \
-	fi; \
-	rm -f "$$errfile"
+	fi
 
 lock-local: verify-inputs
 	$(call announce,Re-locking local git inputs)
@@ -229,23 +268,23 @@ upgrade-tasks: travel-ready
 upgrade: update upgrade-tasks
 
 changes:
-	@changes_project() { \
+	@if [[ -z "$${HOME:-}" ]]; then \
+	    printf 'Makefile: HOME is not set\n' >&2; \
+	    exit 1; \
+	fi; \
+	changes_project() { \
 	    printf '### %s\n' "$$1"; \
 	    changes; \
 	}; \
-	$(call for-each-project,changes_project)
-	echo "### ~/.config/pushme"
-	(cd "$$HOME/.config/pushme" && changes)
-	echo "### ~/.emacs.d"
-	(cd "$$HOME/.emacs.d" && changes)
-	echo "### ~/src/nix"
-	(cd "$$HOME/src/nix" && changes)
-	echo "### ~/src/scripts"
-	(cd "$$HOME/src/scripts" && changes)
-	echo "### ~/doc"
-	(cd "$$HOME/doc" && changes)
-	echo "### ~/org"
-	(cd "$$HOME/org" && changes)
+	status=0; \
+	$(call for-each-project,changes_project); \
+	command_status=$$?; \
+	((command_status == 0)) || status=1; \
+	for repo in .config/pushme .emacs.d src/nix src/scripts doc org; do \
+	    printf '### ~/%s\n' "$$repo"; \
+	    (cd "$$HOME/$$repo" && changes) || status=1; \
+	done; \
+	exit "$$status"
 
 ########################################################################
 
@@ -253,14 +292,39 @@ copy:
 	$(call announce,copy)
 	@copy_project() { \
 	    local env_dump; \
-	    local -a build_inputs; \
+	    local build_input store_name; \
+	    local store_pattern='^/nix/store/[0-9abcdfghijklmnpqrsvwxyz]{32}-([A-Za-z0-9+._?=-]{1,211})$$'; \
+	    local -a build_inputs=() input_line=(); \
 	    printf '%s\n' "$$2"; \
 	    if [[ -f .envrc.cache ]]; then \
-	        env_dump=$$(direnv apply_dump .envrc.cache); \
-	        source /dev/stdin <<<"$$env_dump"; \
-	        if [[ -n "$${buildInputs:-}" ]]; then \
-	            read -r -a build_inputs <<<"$$buildInputs"; \
-	            nix copy --to "ssh-ng://$$host" "$${build_inputs[@]}"; \
+	        if ! env_dump=$$(direnv apply_dump .envrc.cache); then \
+	            printf 'Makefile: direnv apply_dump failed: %s\n' "$$1" >&2; \
+	            return 1; \
+	        fi; \
+	        if ! source /dev/stdin <<<"$$env_dump"; then \
+	            printf 'Makefile: invalid direnv environment dump: %s\n' "$$1" >&2; \
+	            return 1; \
+	        fi; \
+	        while read -r -a input_line; do \
+	            build_inputs+=( "$${input_line[@]}" ); \
+	        done <<<"$${buildInputs:-}"; \
+	        if (($${#build_inputs[@]} > 0)); then \
+	            for build_input in "$${build_inputs[@]}"; do \
+	                if [[ ! "$$build_input" =~ $$store_pattern ]]; then \
+	                    printf 'Makefile: invalid cached build input: %s\n' "$$1" >&2; \
+	                    return 1; \
+	                fi; \
+	                store_name=$${BASH_REMATCH[1]}; \
+	                case "$$store_name" in \
+	                . | .. | .-* | ..-*) \
+	                    printf 'Makefile: invalid cached build input: %s\n' "$$1" >&2; \
+	                    return 1 ;; \
+	                esac; \
+	            done; \
+	            if ! nix copy --to "ssh-ng://$$host" "$${build_inputs[@]}"; then \
+	                printf 'Makefile: nix copy failed: %s\n' "$$1" >&2; \
+	                return 1; \
+	            fi; \
 	        fi; \
 	    fi; \
 	}; \
