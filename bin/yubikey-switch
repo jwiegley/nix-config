@@ -1,25 +1,108 @@
-#!/bin/bash -e
+#!/bin/bash
 
-cd ~/.config/gnupg/private-keys-v1.d
+set -euo pipefail
 
-for i in \
-    4975B4558FC5A7699D4E6DFD940DF0A5633B661F.key \
-    99C79A2052C3B513DF26BB5B03519C83328F13E1.key \
-    A8ADF3692CFDEA476DD3EF8191DF7C5806C0C825.key; do
-    if [[ "$1" == "restore" ]]; then
-        if [[ ! -d /Volumes/File ]]; then
-            echo Please mount /Volumes/Files
-            exit 1
-        fi
-        cp -pv /Volumes/Files/Keys/GnuPG/private-keys-v1.d/$i $i
-    else
-        if [[ ! -f ${i}.$1 ]]; then
-            echo "Could not find key file $PWD/${i}.$1!"
-            exit 1
-        fi
-        cp -pv ${i}.$1 $i
+umask 077
+
+readonly key_dir="$HOME/.config/gnupg/private-keys-v1.d"
+readonly keys=(
+    4975B4558FC5A7699D4E6DFD940DF0A5633B661F.key
+    99C79A2052C3B513DF26BB5B03519C83328F13E1.key
+    A8ADF3692CFDEA476DD3EF8191DF7C5806C0C825.key
+)
+
+mode=${1:-}
+if [[ -z $mode ]]; then
+    echo "Usage: yubikey-switch MODE" >&2
+    exit 2
+fi
+
+cd "$key_dir"
+
+if [[ $mode == restore ]]; then
+    source_root=/Volumes/Files/Keys/GnuPG/private-keys-v1.d
+    source_suffix=
+else
+    source_root=$key_dir
+    source_suffix=.$mode
+fi
+
+for key in "${keys[@]}"; do
+    source_file=$source_root/$key$source_suffix
+    if [[ ! -f $source_file ]]; then
+        echo "Could not find key file $source_file!" >&2
+        exit 1
+    fi
+    if [[ ! -f $key_dir/$key ]]; then
+        echo "Could not find active key file $key_dir/$key!" >&2
+        exit 1
     fi
 done
+
+transaction_dir=$(mktemp -d "$key_dir/.yubikey-switch.XXXXXX")
+stage_dir=$transaction_dir/stage
+backup_dir=$transaction_dir/backup
+mkdir "$stage_dir" "$backup_dir"
+
+transaction_active=0
+replaced_count=0
+
+cleanup() {
+    cleanup_status=$?
+    trap '' HUP INT QUIT TERM
+    trap - EXIT
+    rollback_failed=0
+
+    if ((transaction_active)); then
+        for ((index = 0; index < replaced_count; index++)); do
+            key=${keys[$index]}
+            if ! mv -f "$backup_dir/$key" "$key_dir/$key"; then
+                echo "Could not roll back key file $key_dir/$key!" >&2
+                rollback_failed=1
+            fi
+        done
+        if ((rollback_failed)); then
+            cleanup_status=1
+            echo "Transaction files retained in $transaction_dir for recovery." >&2
+        fi
+    fi
+
+    if ((!rollback_failed)) && [[ -d $transaction_dir ]] && ! rm -rf "$transaction_dir"; then
+        echo "Could not remove transaction directory $transaction_dir!" >&2
+        cleanup_status=1
+    fi
+
+    exit "$cleanup_status"
+}
+
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 131' QUIT
+trap 'exit 143' TERM
+
+for key in "${keys[@]}"; do
+    cp -p "$source_root/$key$source_suffix" "$stage_dir/$key"
+    chmod go-rwx "$stage_dir/$key"
+done
+
+for key in "${keys[@]}"; do
+    cp -p "$key_dir/$key" "$backup_dir/$key"
+done
+
+transaction_active=1
+for key in "${keys[@]}"; do
+    replaced_count=$((replaced_count + 1))
+    if ! mv -f "$stage_dir/$key" "$key_dir/$key"; then
+        echo "Could not replace key file $key_dir/$key; rolling back." >&2
+        exit 1
+    fi
+done
+transaction_active=0
+
+rm -rf "$transaction_dir"
+transaction_dir=
+trap - EXIT HUP INT QUIT TERM
 
 (sudo killall gpg-agent 2>/dev/null || exit 0)
 sleep 2
@@ -28,10 +111,10 @@ sleep 2
 gpg --card-status
 
 (
-    cd ~/src/category-theory
+    cd "$HOME/src/category-theory"
     git remote update
 )
 
-if [[ ! -f ~/.yubico/challenge-$1 && -x $(which ykpamcfg 2>/dev/null) ]]; then
+if [[ ! -f $HOME/.yubico/challenge-$mode ]] && command -v ykpamcfg >/dev/null 2>&1; then
     ykpamcfg -2
 fi

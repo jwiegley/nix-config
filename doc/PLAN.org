@@ -2288,15 +2288,17 @@ bin/update-home-manager:1-4 activates even after update failure and then uses mu
 ]
 #+end_src
 
-* TODO [#B] Make YubiKey key switching preflighted and atomic    :security:yubikey:
+* DONE [#B] Make YubiKey key switching preflighted and atomic    :security:yubikey:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.9
 :LABELS: ["heavy-review","security","yubikey"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 15:48]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 15:48]
+:CLOSE_REASON: Preflighted and privately staged the complete key set, restricted staged modes, added signal-resistant rollback before external effects, and covered failure and ordering behavior with six hermetic tests.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
