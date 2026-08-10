@@ -461,15 +461,17 @@ Makefile:175-235,297-310 repeats four loops that continue after failed cd and le
 ]
 #+end_src
 
-* TODO [#B] Reject malformed model identifiers in the AI catalog    :ai:validated:
+* DONE [#B] Reject malformed model identifiers in the AI catalog    :ai:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.2
 :LABELS: ["ai","heavy-review","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:01]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:01]
+:CLOSE_REASON: Corrected the malformed Claude model ID and added catalog validation for ASCII/C1 controls and terminal-sequence residue without restricting printable provider-defined identifiers; focused and portable all-system checks pass.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

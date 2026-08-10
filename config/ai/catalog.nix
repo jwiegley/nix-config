@@ -1126,7 +1126,7 @@ let
         preferredNotifChannel = "iterm2_with_bell";
         remoteControlAtStartup = true;
         agentPushNotifEnabled = true;
-        model = "claude-opus-5[1m";
+        model = "claude-opus-5";
         theme = "dark";
       };
 
@@ -1225,6 +1225,51 @@ let
   validHeaderName = name: builtins.match "^[A-Za-z0-9_-]+$" name != null;
   validItemName =
     name: builtins.isString name && builtins.match "^[A-Za-z0-9][A-Za-z0-9._-]*$" name != null;
+  # Providers own model syntax; reject only control bytes and an unterminated
+  # CSI-like suffix.
+  c1Controls = builtins.fromJSON ''
+    [
+      "\u0080",
+      "\u0081",
+      "\u0082",
+      "\u0083",
+      "\u0084",
+      "\u0085",
+      "\u0086",
+      "\u0087",
+      "\u0088",
+      "\u0089",
+      "\u008a",
+      "\u008b",
+      "\u008c",
+      "\u008d",
+      "\u008e",
+      "\u008f",
+      "\u0090",
+      "\u0091",
+      "\u0092",
+      "\u0093",
+      "\u0094",
+      "\u0095",
+      "\u0096",
+      "\u0097",
+      "\u0098",
+      "\u0099",
+      "\u009a",
+      "\u009b",
+      "\u009c",
+      "\u009d",
+      "\u009e",
+      "\u009f"
+    ]
+  '';
+  validModelIdentifier =
+    value:
+    builtins.isString value
+    && value != ""
+    && builtins.match "^[^[:cntrl:]]+$" value != null
+    && !(lib.any (control: lib.hasInfix control value) c1Controls)
+    && builtins.match ".*\\[[0-9:;<=>?]*[ -/]*[@-~]$" value == null;
 
   validArgument =
     value:
@@ -1350,6 +1395,24 @@ let
       selectorChecks = map (
         item: ensure (validateSelectors (item.selectors or { })) "invalid item selector"
       ) allItems;
+      settingsChecks = lib.concatLists (
+        lib.mapAttrsToList (
+          name: item:
+          let
+            base = item.base or { };
+            environmentModels = lib.filterAttrs (environmentName: _: lib.hasSuffix "_MODEL" environmentName) (
+              base.env or { }
+            );
+          in
+          lib.optional (base ? model) (
+            ensure (validModelIdentifier base.model) "invalid model identifier in settings/${name}/base/model"
+          )
+          ++ lib.mapAttrsToList (
+            environmentName: value:
+            ensure (validModelIdentifier value) "invalid model identifier in settings/${name}/base/env/${environmentName}"
+          ) environmentModels
+        ) items.settings
+      );
       profileChecks = lib.mapAttrsToList (
         id: profile:
         ensure (
@@ -1422,7 +1485,8 @@ let
           ) "invalid resolved MCP server ${profile.id}/${name}"
         ) items.mcpServers
       ) (builtins.attrValues profiles);
-      checks = itemChecks ++ selectorChecks ++ profileChecks ++ mcpChecks ++ mcpResolutionChecks;
+      checks =
+        itemChecks ++ selectorChecks ++ settingsChecks ++ profileChecks ++ mcpChecks ++ mcpResolutionChecks;
     in
     builtins.deepSeq checks true;
   # Clients that read the shared `.agents/skills` root. That root is one

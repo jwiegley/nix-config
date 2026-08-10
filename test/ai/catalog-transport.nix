@@ -18,6 +18,18 @@ let
   };
   reject = value: !(builtins.tryEval (builtins.deepSeq value true)).success;
   withMcpServers = mcpServers: catalog.items // { inherit mcpServers; };
+  claudeSettings = catalog.items.settings.settings;
+  withClaudeSettingsBase =
+    base:
+    catalog.items
+    // {
+      settings.settings = claudeSettings // {
+        inherit base;
+      };
+    };
+  escapedModelIdentifier = builtins.fromJSON "\"claude-opus-5\\u001b[1m\"";
+  c1CsiModelIdentifier = builtins.fromJSON "\"model\\u009b1m\"";
+  c1OscModelIdentifier = builtins.fromJSON "\"model\\u009dtitle\"";
   profiles = builtins.attrValues catalog.profiles;
   piProfiles = lib.filter (profile: profile.client == "pi") profiles;
   piProfile = lib.findFirst (profile: profile.client == "pi") (throw "Pi profile missing") profiles;
@@ -87,6 +99,22 @@ let
       };
 in
 assert catalog.validate { };
+assert claudeSettings.base.model == "claude-opus-5";
+assert catalog.validate {
+  items = withClaudeSettingsBase (
+    claudeSettings.base
+    // {
+      model = "provider/model@revision";
+      env = claudeSettings.base.env // {
+        ANTHROPIC_DEFAULT_HAIKU_MODEL = "opus[1m]";
+        CLAUDE_CODE_SUBAGENT_MODEL = "sonnet[1m]";
+      };
+    }
+  );
+};
+assert catalog.validate {
+  items = withClaudeSettingsBase (claudeSettings.base // { model = "café/模型@版本"; });
+};
 assert builtins.all (profile: (selectFor profile).mcpServers ? pal) profiles;
 # The endpoint-bearing profile set drives generated codex TOML, pi local
 # provider wiring, prime model overrides, and the dummy-key session
@@ -119,6 +147,44 @@ assert builtins.all (
   && entry.rendered.mutableMcpGuard.path == ".config/pi/agent/mcp.json"
 ) piRenderings;
 assert builtins.all reject [
+  (catalog.validate {
+    items = withClaudeSettingsBase (claudeSettings.base // { model = "claude-opus-5[1m"; });
+  })
+  (catalog.validate {
+    items = withClaudeSettingsBase (claudeSettings.base // { model = escapedModelIdentifier; });
+  })
+  (catalog.validate {
+    items = withClaudeSettingsBase (claudeSettings.base // { model = "model[1~"; });
+  })
+  (catalog.validate {
+    items = withClaudeSettingsBase (claudeSettings.base // { model = "model[1 q"; });
+  })
+  (catalog.validate {
+    items = withClaudeSettingsBase (claudeSettings.base // { model = c1CsiModelIdentifier; });
+  })
+  (catalog.validate {
+    items = withClaudeSettingsBase (claudeSettings.base // { model = c1OscModelIdentifier; });
+  })
+  (catalog.validate {
+    items = withClaudeSettingsBase (
+      claudeSettings.base
+      // {
+        env = claudeSettings.base.env // {
+          CLAUDE_CODE_SUBAGENT_MODEL = "claude-opus-5[1m";
+        };
+      }
+    );
+  })
+  (catalog.validate {
+    items = withClaudeSettingsBase (
+      claudeSettings.base
+      // {
+        env = claudeSettings.base.env // {
+          CLAUDE_CODE_SUBAGENT_MODEL = "claude-opus-5\n";
+        };
+      }
+    );
+  })
   (catalog.validate {
     items = withMcpServers (catalog.items.mcpServers // { "../synthetic-http" = syntheticHttpMcp; });
   })
