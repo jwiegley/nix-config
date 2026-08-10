@@ -1836,15 +1836,17 @@ config/ai/statusline-command.sh:5-50 launches eleven awk processes solely to coe
 ]
 #+end_src
 
-* TODO [#D] Inline the one-use last-known-good importer    :nix:simplification:
+* DONE [#D] Inline the one-use last-known-good importer    :nix:simplification:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.59
 :LABELS: ["heavy-review","nix","simplification"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 15:24]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 15:24]
+:CLOSE_REASON: Inlined the sole nixpkgs-last-good import while retaining the source-catalog fetchTree assertion; NTP 4.2.8p18 evaluated and built through the supported driver.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

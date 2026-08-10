@@ -3,18 +3,13 @@
 _final: prev:
 
 let
-  sources = import ../packages/source-catalog.nix "compatibility";
-  nixpkgs =
-    name:
-    let
-      source = sources.${name}.source;
-    in
+  source = (import ../packages/source-catalog.nix "compatibility").nixpkgs-last-good.source;
+  # Compatibility snapshot for the Darwin packages still pinned below.
+  lastGood =
     assert source.fetcher == "fetchTree";
     import (builtins.fetchTree source.args).outPath {
       localSystem = prev.stdenv.hostPlatform.system;
     };
-  # Compatibility snapshot for the Darwin packages still pinned below.
-  lastGood = nixpkgs "nixpkgs-last-good";
 
 in
 {
