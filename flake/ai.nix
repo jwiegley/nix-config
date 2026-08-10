@@ -186,19 +186,26 @@ let
     else
       package;
 
+  # Per-agent packaging feeds. Every agent comes from the floating llm-agents
+  # feed unless a reviewed pin names another substrate for it.
+  agentFeeds = {
+    pi = inputs.pi-llm-agents;
+  };
+
   canonicalPiPackages = forAllSystems (
     system:
     let
       pkgs = mkPkgs system;
     in
-    patchAgentPackage pkgs "pi" inputs.pi-llm-agents.packages.${system}.pi
+    patchAgentPackage pkgs "pi" agentFeeds.pi.packages.${system}.pi
   );
 
   optAgent =
     pkgs: name:
     let
       system = pkgs.stdenv.hostPlatform.system;
-      agentPackages = llm-agents.packages.${system} or { };
+      feed = agentFeeds.${name} or llm-agents;
+      agentPackages = feed.packages.${system} or { };
     in
     if agentPackages ? ${name} then [ (patchAgentPackage pkgs name agentPackages.${name}) ] else [ ];
 
@@ -255,7 +262,7 @@ let
     ++ agent "git-surgeon"
     ++ agent "mcporter"
     ++ agent "opencode"
-    ++ [ canonicalPiPackages.${system} ]
+    ++ agent "pi"
     ++ lib.optionals (aiPackagePolicy.supportsAiperf pkgs.python313Packages) (opt "aiperf")
     ++ optMany (aiPackagePolicy.groups.common ++ aiPackagePolicy.groups.portableOnly)
     ++ lib.optionals (pkgs ? mcp-server-sequential-thinking) [
@@ -502,12 +509,18 @@ in
       llm-agents-nixpkgs-independent =
         let
           portableLock = builtins.fromJSON (builtins.readFile ../config/ai/flake.lock);
-          llmAgentsNode = portableLock.nodes.${portableLock.nodes.root.inputs.llm-agents};
+          independentNixpkgs =
+            name: builtins.isString portableLock.nodes.${portableLock.nodes.root.inputs.${name}}.inputs.nixpkgs;
         in
-        if builtins.isString llmAgentsNode.inputs.nixpkgs then
+        if
+          builtins.all independentNixpkgs [
+            "llm-agents"
+            "pi-llm-agents"
+          ]
+        then
           pkgs.runCommand "llm-agents-nixpkgs-independent" { } "touch $out"
         else
-          throw "llm-agents must retain its independent nixpkgs input";
+          throw "every llm-agents feed must retain its independent nixpkgs input";
       agent-resources = pkgs.callPackage ../test/ai/agent-resources.nix {
         inherit (inputs)
           ponytail
@@ -535,7 +548,7 @@ in
       pi-gallery = pkgs.callPackage ../test/ai/pi-gallery.nix {
         inherit sourceForChecks;
         piPackage = canonicalPiPackages.${system};
-        upstreamPiPackage = inputs.pi-llm-agents.packages.${system}.pi;
+        upstreamPiPackage = agentFeeds.pi.packages.${system}.pi;
         piPackages = pkgs.pi-gallery.packages // {
           inherit (pkgs) agent-resources pi-gallery;
           pi = canonicalPiPackages.${system};

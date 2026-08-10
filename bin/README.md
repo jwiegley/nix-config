@@ -119,13 +119,20 @@ targets owned by the lower-level executor, not every catalog record.
 
 ## Determining package versions
 
-Questions about a tool's version have three distinct answers: the source revision,
-the package built by this checkout, and the binary active in the current profile.
-For Pi, inspect all three as follows:
+Questions about a tool's version have four distinct answers: the packaging
+substrate revision, the reviewed source revision, the package built by this
+checkout, and the binary active in the current profile. For Pi, inspect all
+four as follows:
 
 ```sh
-# Upstream llm-agents source revision pinned by the root lock.
-jq -r '.nodes["llm-agents"].locked.rev' flake.lock
+# Packaging substrate revision pinned for Pi by the root lock. Pi builds from
+# the dedicated pi-llm-agents feed; the floating llm-agents input packages the
+# other agents and does not build Pi.
+jq -r '.nodes["pi-llm-agents"].locked.rev' flake.lock
+
+# Reviewed Pi source revision; flake/ai.nix asserts the packaged version
+# agrees with this record.
+jq -r '.sources["pi-coding-agent-source-build"].source.args.rev' sources/ai.json
 
 # Version and store output selected by this checkout.
 system=$(nix eval --impure --raw --expr builtins.currentSystem)

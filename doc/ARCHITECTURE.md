@@ -155,6 +155,25 @@ executable and exact unfree rider only. Global and repository playbooks,
 diaries, feedback, reflections, embeddings, indexes, models, usage records,
 backups, locks, caches, and Cass's independent data root remain mutable.
 
+Pi's packaging substrate is pinned the same way `cm`'s Bun is: the portable
+flake carries a second llm-agents input, `pi-llm-agents`, at the exact
+revision whose Pi packaging matches the reviewed source build in
+`packages/pi-source-build.nix` (record `pi-coding-agent-source-build` in
+`sources/ai.json`). The floating `llm-agents` feed packages the other agents
+and advances past that revision; because `flake/ai.nix` asserts the packaged
+Pi version agrees with the reviewed source build, packaging Pi from the
+floating feed fails at evaluation once the feed ships a newer Pi. The pin
+costs an independent nixpkgs closure in `config/ai/flake.lock`; the
+`llm-agents-nixpkgs-independent` check verifies both feeds keep their own
+nixpkgs rather than following the consumer channel. Exit condition: when the
+reviewed Pi source advances to the version the floating feed packages, retire
+the pin as one unit — drop the `pi` entry from `agentFeeds` and rewrite
+`canonicalPiPackages` and `upstreamPiPackage` in `flake/ai.nix` to read
+`llm-agents`, remove `pi-llm-agents` from the `llm-agents-nixpkgs-independent`
+feed list, drop the `pinnedPiPackage` assertions in
+`test/ai/compatibility-check.nix`, and delete the input from
+`config/ai/flake.nix`.
+
 Pi gallery normalization has one implementation:
 `packages/pi-gallery/normalization-policy.json` defines the closed policy and
 `packages/pi-gallery/normalize-manifest.jq` executes it for both builds and updates.

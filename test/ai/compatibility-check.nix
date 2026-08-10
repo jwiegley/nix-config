@@ -130,8 +130,8 @@ let
         actual.packages.${system}.cm.passthru.buildBun.version == "1.3.13"
       ) "portable cm lost its pinned Bun 1.3.13 build tool on ${system}")
       (lib.assertMsg (
-        actual.packages.${system}.pi.version == pinnedPiPackage.version
-        && (actual.packages.${system}.pi.src or null) == (pinnedPiPackage.src or null)
+        actual.packages.${system}.pi.drvPath == (actual.lib.patchAgentPackage pkgs "pi" pinnedPiPackage)
+        .drvPath
       ) "portable Pi moved away from its pinned packaging substrate on ${system}")
       (lib.assertMsg (builtins.any (package: package.drvPath == actual.packages.${system}.pi.drvPath) (
         actual.lib.aiPackagesFor pkgs
@@ -145,6 +145,14 @@ let
     ++ map (value: lib.assertMsg value "portable compatibility alias changed on ${system}") (
       aliasesMatch system
     );
+  # The two pins are guarded by a division of labor. The `.rev` literals below
+  # are test-owned tripwires: an exact-rev flake URL cannot drift on its own,
+  # but editing it moves the input AND both locks together, so only a literal
+  # held here forces a pin change to be a deliberate two-place edit. What the
+  # literals cannot see, construction-level checks cover: the per-system Pi
+  # drvPath assertion catches Pi being packaged from any feed other than
+  # `pi-llm-agents` or bypassing `patchAgentPackage`, and the cm sentinel
+  # assertions catch its pinned Bun leaking to or from the consumer channel.
   assertions = [
     (lib.assertMsg (
       inputs.cm-bun-nixpkgs.rev == "a5e9f2fd9ef6011c6886d6935f3ef678c81385fa"
