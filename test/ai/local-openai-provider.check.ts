@@ -9,19 +9,32 @@ function expectEqual(actual: unknown, expected: unknown, label: string): void {
 	}
 }
 
+function expect(condition: boolean, label: string): void {
+	if (!condition) throw new Error(label);
+}
+
 type ProviderConfig = Record<string, unknown>;
 type ProviderModel = Record<string, unknown>;
 type WarningProcess = { emitWarning(warning: string | Error): void };
 const warningProcess = (globalThis as unknown as { process: WarningProcess })
 	.process;
+const MAX_DISCOVERY_RESPONSE_BYTES = 1024 * 1024;
+const MAX_DISCOVERY_MODEL_ENTRIES = 4096;
 
 function modelsFor(
 	providers: Map<string, ProviderConfig>,
 	id: string,
 ): ProviderModel[] {
-	const models = providers.get(id)?.models;
+	return registeredModels(providers.get(id), id);
+}
+
+function registeredModels(
+	provider: ProviderConfig | undefined,
+	label: string,
+): ProviderModel[] {
+	const models = provider?.models;
 	if (!Array.isArray(models))
-		throw new Error(`${id} did not register a model array`);
+		throw new Error(`${label} did not register a model array`);
 	return models as ProviderModel[];
 }
 
@@ -116,10 +129,24 @@ try {
 	);
 	expectEqual(omlxModels[0].contextWindow, 262144, "oMLX server context");
 
-	globalThis.fetch = (() =>
-		Promise.resolve(
-			new Response("down", { status: 503, statusText: "Unavailable" }),
-		)) as typeof fetch;
+	let failedBodyCancelled = false;
+	let failedSignal: AbortSignal | null = null;
+	globalThis.fetch = ((_input: RequestInfo | URL, init?: RequestInit) => {
+		failedSignal = init?.signal ?? null;
+		return Promise.resolve(
+			new Response(
+				new ReadableStream<Uint8Array>({
+					start(stream) {
+						stream.enqueue(new TextEncoder().encode("down"));
+					},
+					cancel() {
+						failedBodyCancelled = true;
+					},
+				}),
+				{ status: 503, statusText: "Unavailable" },
+			),
+		);
+	}) as typeof fetch;
 	const warnings: string[] = [];
 	warningProcess.emitWarning = (warning: string | Error) => {
 		warnings.push(typeof warning === "string" ? warning : warning.message);
@@ -137,6 +164,201 @@ try {
 			"[omlx] Cannot discover models from http://localhost:8000/v1/models: 503 Unavailable",
 		],
 		"failure warning",
+	);
+	expect(failedBodyCancelled, "failed response body was not cancelled");
+	expect(failedSignal?.aborted === true, "failed fetch was not aborted");
+
+	const boundaryPrefix = '{"data":[{"id":"boundary-model"}],"padding":"';
+	const boundarySuffix = '"}';
+	const boundaryBody = `${boundaryPrefix}${"x".repeat(
+		MAX_DISCOVERY_RESPONSE_BYTES -
+			boundaryPrefix.length -
+			boundarySuffix.length,
+	)}${boundarySuffix}`;
+	expectEqual(
+		new TextEncoder().encode(boundaryBody).byteLength,
+		MAX_DISCOVERY_RESPONSE_BYTES,
+		"response byte boundary fixture",
+	);
+	globalThis.fetch = (() =>
+		Promise.resolve(
+			new Response(boundaryBody, {
+				headers: {
+					"content-length": String(MAX_DISCOVERY_RESPONSE_BYTES),
+				},
+			}),
+		)) as typeof fetch;
+	warnings.length = 0;
+	let boundaryProvider: ProviderConfig | undefined;
+	await omlx({
+		registerProvider: (_id: string, config: ProviderConfig) => {
+			boundaryProvider = config;
+		},
+	});
+	expectEqual(
+		registeredModels(boundaryProvider, "response byte boundary").map(
+			(model) => model.id,
+		),
+		["boundary-model"],
+		"response byte boundary catalog",
+	);
+	expectEqual(warnings, [], "response byte boundary warnings");
+
+	let declaredBodyCancelled = false;
+	let declaredReaderRequested = false;
+	let declaredSignal: AbortSignal | null = null;
+	globalThis.fetch = ((_input: RequestInfo | URL, init?: RequestInit) => {
+		declaredSignal = init?.signal ?? null;
+		return Promise.resolve({
+			ok: true,
+			headers: new Headers({
+				"content-length": String(MAX_DISCOVERY_RESPONSE_BYTES + 1),
+			}),
+			body: {
+				cancel: () => {
+					declaredBodyCancelled = true;
+					return Promise.resolve();
+				},
+				getReader: () => {
+					declaredReaderRequested = true;
+					throw new Error("oversized declared body was read");
+				},
+			},
+		} as unknown as Response);
+	}) as typeof fetch;
+	warnings.length = 0;
+	let declaredProvider: ProviderConfig | undefined;
+	await omlx({
+		registerProvider: (_id: string, config: ProviderConfig) => {
+			declaredProvider = config;
+		},
+	});
+	expectEqual(declaredProvider?.models, [], "declared oversized catalog");
+	expectEqual(
+		warnings,
+		[
+			"[omlx] Cannot discover models from http://localhost:8000/v1/models: response exceeds 1048576 bytes",
+		],
+		"declared oversized warning",
+	);
+	expect(
+		!declaredReaderRequested,
+		"declared oversized body reader was requested",
+	);
+	expect(declaredBodyCancelled, "declared oversized body was not cancelled");
+	expect(
+		declaredSignal?.aborted === true,
+		"declared oversized fetch was not aborted",
+	);
+
+	const boundaryBytes = new TextEncoder().encode(boundaryBody);
+	let streamedBodyCancelled = false;
+	let streamedSignal: AbortSignal | null = null;
+	globalThis.fetch = ((_input: RequestInfo | URL, init?: RequestInit) => {
+		streamedSignal = init?.signal ?? null;
+		return Promise.resolve(
+			new Response(
+				new ReadableStream<Uint8Array>({
+					start(stream) {
+						const middle = Math.floor(boundaryBytes.byteLength / 2);
+						stream.enqueue(boundaryBytes.subarray(0, middle));
+						stream.enqueue(boundaryBytes.subarray(middle));
+						stream.enqueue(Uint8Array.of(0x20));
+					},
+					cancel() {
+						streamedBodyCancelled = true;
+					},
+				}),
+				{ headers: { "content-length": "128" } },
+			),
+		);
+	}) as typeof fetch;
+	warnings.length = 0;
+	let streamedProvider: ProviderConfig | undefined;
+	await omlx({
+		registerProvider: (_id: string, config: ProviderConfig) => {
+			streamedProvider = config;
+		},
+	});
+	expectEqual(streamedProvider?.models, [], "streamed oversized catalog");
+	expectEqual(
+		warnings,
+		[
+			"[omlx] Cannot discover models from http://localhost:8000/v1/models: response exceeds 1048576 bytes",
+		],
+		"streamed oversized warning",
+	);
+	expect(streamedBodyCancelled, "streamed oversized body was not cancelled");
+	expect(
+		streamedSignal?.aborted === true,
+		"streamed oversized fetch was not aborted",
+	);
+
+	const boundaryEntries = Array.from(
+		{ length: MAX_DISCOVERY_MODEL_ENTRIES },
+		(_value, index) => ({ id: `model-${index}` }),
+	);
+	globalThis.fetch = (() =>
+		Promise.resolve(Response.json({ data: boundaryEntries }))) as typeof fetch;
+	warnings.length = 0;
+	let entryBoundaryProvider: ProviderConfig | undefined;
+	await omlx({
+		registerProvider: (_id: string, config: ProviderConfig) => {
+			entryBoundaryProvider = config;
+		},
+	});
+	expectEqual(
+		registeredModels(entryBoundaryProvider, "model entry boundary").length,
+		MAX_DISCOVERY_MODEL_ENTRIES,
+		"model entry boundary catalog",
+	);
+	expectEqual(warnings, [], "model entry boundary warnings");
+
+	const oversizedEntries = [...boundaryEntries, { id: "one-too-many" }];
+	const oversizedEntriesBody = JSON.stringify({ data: oversizedEntries });
+	expect(
+		new TextEncoder().encode(oversizedEntriesBody).byteLength <
+			MAX_DISCOVERY_RESPONSE_BYTES,
+		"oversized entry fixture exceeded the response byte limit",
+	);
+	globalThis.fetch = (() =>
+		Promise.resolve(new Response(oversizedEntriesBody))) as typeof fetch;
+	warnings.length = 0;
+	let oversizedEntriesProvider: ProviderConfig | undefined;
+	await omlx({
+		registerProvider: (_id: string, config: ProviderConfig) => {
+			oversizedEntriesProvider = config;
+		},
+	});
+	expectEqual(oversizedEntriesProvider?.models, [], "oversized entry catalog");
+	expectEqual(
+		warnings,
+		[
+			"[omlx] Cannot discover models from http://localhost:8000/v1/models: response has 4097 model entries; limit is 4096",
+		],
+		"oversized entry warning",
+	);
+
+	globalThis.fetch = (() =>
+		Promise.resolve(
+			new Response('{"data":[', {
+				headers: { "content-type": "application/json" },
+			}),
+		)) as typeof fetch;
+	warnings.length = 0;
+	let malformedProvider: ProviderConfig | undefined;
+	await omlx({
+		registerProvider: (_id: string, config: ProviderConfig) => {
+			malformedProvider = config;
+		},
+	});
+	expectEqual(malformedProvider?.models, [], "malformed response catalog");
+	expect(
+		warnings.length === 1 &&
+			warnings[0].startsWith(
+				"[omlx] Cannot discover models from http://localhost:8000/v1/models:",
+			),
+		"malformed response warning",
 	);
 
 	// A hung server must abort rather than block registration forever, so the

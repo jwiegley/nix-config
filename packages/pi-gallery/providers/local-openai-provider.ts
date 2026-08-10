@@ -33,6 +33,8 @@ interface ModelEntry {
 
 const DEFAULT_CONTEXT_WINDOW = 262_144;
 const DEFAULT_MAX_TOKENS = 65_536;
+const MAX_DISCOVERY_RESPONSE_BYTES = 1024 * 1024;
+const MAX_DISCOVERY_MODEL_ENTRIES = 4096;
 // Discovery runs once, at registration, so a timeout does not degrade to "slow"
 // — it leaves the provider with no models until Pi restarts. The budget covers
 // connect, response and JSON parse, and these hosts run jobs heavy enough to
@@ -175,6 +177,55 @@ function toPiModel(model: ModelEntry & { id: string }): ProviderModelConfig {
 	};
 }
 
+async function abortDiscovery(
+	controller: AbortController,
+	body: { cancel(): Promise<void> } | null,
+): Promise<void> {
+	controller.abort();
+	try {
+		await body?.cancel();
+	} catch {
+		// Aborting fetch may already have errored the body.
+	}
+}
+
+async function readDiscoveryPayload(
+	response: Response,
+	controller: AbortController,
+): Promise<unknown> {
+	const contentLength = response.headers.get("content-length");
+	if (
+		contentLength !== null &&
+		/^\d+$/.test(contentLength) &&
+		Number(contentLength) > MAX_DISCOVERY_RESPONSE_BYTES
+	) {
+		await abortDiscovery(controller, response.body);
+		throw new Error(`response exceeds ${MAX_DISCOVERY_RESPONSE_BYTES} bytes`);
+	}
+
+	const reader = response.body?.getReader();
+	if (!reader) throw new Error("response has no body");
+	const bytes = new Uint8Array(MAX_DISCOVERY_RESPONSE_BYTES);
+	let length = 0;
+	try {
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			if (value.byteLength > MAX_DISCOVERY_RESPONSE_BYTES - length) {
+				await abortDiscovery(controller, reader);
+				throw new Error(
+					`response exceeds ${MAX_DISCOVERY_RESPONSE_BYTES} bytes`,
+				);
+			}
+			bytes.set(value, length);
+			length += value.byteLength;
+		}
+	} finally {
+		reader.releaseLock();
+	}
+	return JSON.parse(new TextDecoder().decode(bytes.subarray(0, length)));
+}
+
 async function discoverModels(
 	config: LocalProviderConfig,
 ): Promise<ProviderModelConfig[]> {
@@ -189,20 +240,29 @@ async function discoverModels(
 			},
 			signal: controller.signal,
 		});
-		if (!response.ok)
+		if (!response.ok) {
+			await abortDiscovery(controller, response.body);
 			throw new Error(`${response.status} ${response.statusText}`);
-		const payload = (await response.json()) as {
+		}
+		const payload = await readDiscoveryPayload(response, controller);
+		if (!payload || typeof payload !== "object" || Array.isArray(payload))
+			throw new Error("response is not an object");
+		const catalog = payload as {
 			data?: unknown;
 			models?: unknown;
 		};
 		let entries: unknown[];
-		if (Array.isArray(payload.data)) {
-			entries = payload.data;
-		} else if (Array.isArray(payload.models)) {
-			entries = payload.models;
+		if (Array.isArray(catalog.data)) {
+			entries = catalog.data;
+		} else if (Array.isArray(catalog.models)) {
+			entries = catalog.models;
 		} else {
 			throw new Error("response has no data/models array");
 		}
+		if (entries.length > MAX_DISCOVERY_MODEL_ENTRIES)
+			throw new Error(
+				`response has ${entries.length} model entries; limit is ${MAX_DISCOVERY_MODEL_ENTRIES}`,
+			);
 		return entries.flatMap((entry) =>
 			isChatModel(entry) ? [toPiModel(entry)] : [],
 		);

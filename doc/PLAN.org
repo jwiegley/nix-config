@@ -724,15 +724,17 @@ flake/ai/wrappers/codex.nix:30-90 validates its default local root but preserves
 ]
 #+end_src
 
-* DOING [#C] Bound local OpenAI model discovery responses    :ai:
+* DONE [#C] Bound local OpenAI model discovery responses    :ai:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.22
 :LABELS: ["ai","heavy-review","resource-safety"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 16:07]
+:MODIFIED: [2026-08-10 Mon 16:54]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:54]
+:CLOSE_REASON: Bound discovery response bytes and model counts across header and streaming paths, aborted/cancelled oversized and non-OK bodies, and covered exact, underreported, and never-ending responses in the packaged provider check.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
