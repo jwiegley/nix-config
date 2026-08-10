@@ -11,8 +11,8 @@
 #     bin/switch, bin/update-remote and bin/upgrade-all. (An audit corrected this
 #     from "19 / blind to 10": the extra file was test/bin/quality itself, already in
 #     the working tree when the measurement was taken.)
-#   * Both hardcoded the same 4 Python files while the tree tracks 35. The other
-#     31 additional tracked Python files were never linted.
+#   * Both hardcoded the same 4 Python files while the tree tracked 35 at the
+#     time. The other 31 then-tracked Python files were never linted.
 #   * Worse, both looped over files WITHOUT propagating failure: no `set -e`, no
 #     accumulation, so the loop exited with the status of its last iteration. A
 #     misformatted file in the middle passed silently. bin/update had a
