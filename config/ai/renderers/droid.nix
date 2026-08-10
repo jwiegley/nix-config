@@ -7,6 +7,10 @@
   xdgConfigHome,
 }:
 
+# The renderer contract supplies these uniformly; assert them even though
+# this client's documents do not embed them, both to validate the interface
+# and because the portable lint gate (bare `deadnix --fail`) rejects unused
+# lambda patterns.
 assert builtins.isString homeDirectory;
 assert builtins.isString xdgConfigHome;
 

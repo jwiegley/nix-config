@@ -7,6 +7,7 @@
   xdgConfigHome,
 }:
 
+assert builtins.isString homeDirectory;
 assert builtins.isString xdgConfigHome;
 
 let
