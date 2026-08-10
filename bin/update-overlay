@@ -806,9 +806,10 @@ let
   repoPath = builtins.getEnv "UPDATE_OVERLAY_REPO_DIR";
   flake = builtins.getFlake repoPath;
   repo = flake.outPath;
-  inputs = builtins.removeAttrs flake.inputs.nix-config-ai.inputs [ "self" ];
+  portableInputs = builtins.removeAttrs flake.inputs.nix-config-ai.inputs [ "self" ];
+  inputs = flake.inputs // portableInputs;
   system = builtins.currentSystem;
-  overlays = import (repo + "/overlays/ai") {{ inherit inputs; }};
+  overlays = import (repo + "/config/overlays.nix") {{ inherit inputs; }};
   pkgs = import inputs.nixpkgs {{
     inherit system overlays;
     config.allowUnfree = true;
