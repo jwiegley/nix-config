@@ -94,7 +94,8 @@ bin/update --target hf-xet --version VERSION
 `--switch` and `--push` require `--commit`. `--version` applies only to target
 kinds that possess an explicit version or revision projection; plain flake-input
 targets do not accept it. The remaining public flags are `--brew`, `--help`, and
-the compatibility spellings `--no-switch` and `--no-brew`; switching and Homebrew
+the negations `--no-switch` and `--no-brew`, which disable a previously
+requested `--switch`/`--brew` (the later flag wins); switching and Homebrew
 are already disabled unless requested.
 
 `bin/update-overlay` is the lower-level catalog engine. Its inventory is the

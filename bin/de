@@ -21,7 +21,7 @@ fi
 
 if [[ "$1" == "--no-cache" ]]; then
     shift 1
-    echo "Disabling use of the Nix cache"
+    echo "de: --no-cache is accepted for compatibility and currently has no effect" >&2
 fi
 
 NIXOPTS=(--cores 2 -j4)

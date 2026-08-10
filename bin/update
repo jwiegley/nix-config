@@ -64,8 +64,8 @@ Options:
   --switch     Switch the host after a successful signed commit
   --push       Push after a successful signed commit
   --brew       Update/upgrade Homebrew after the repository transaction
-  --no-switch  Compatibility spelling; switching is already off by default
-  --no-brew    Compatibility spelling; Homebrew is already off by default
+  --no-switch  Disable a previously requested --switch (later flag wins; off by default)
+  --no-brew    Disable a previously requested --brew (later flag wins; off by default)
 EOF
 }
 
