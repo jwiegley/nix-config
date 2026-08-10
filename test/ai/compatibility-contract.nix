@@ -11,7 +11,6 @@
 
   inputs = [
     "agent-browser-source"
-    "cm-bun-nixpkgs"
     "git-ai"
     "llm-agents"
     "mcp-remote"
@@ -33,8 +32,6 @@
     "agent-browser"
     "agent-http-header-bridge"
     "agent-resources"
-    "cass"
-    "cm"
     "cymbal"
     "default"
     "nix-scripts"
@@ -95,8 +92,6 @@
     "agent-deck-go-compat"
     "agent-deck-runtime-lifecycle"
     "agent-resources"
-    "cass"
-    "cm"
     "agent-wrappers"
     "build"
     "format"

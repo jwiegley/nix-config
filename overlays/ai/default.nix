@@ -33,8 +33,6 @@
   })
   ((import ./30-agent-resources.nix) { inherit inputs; })
   (import ./30-prime-agent.nix)
-  (import ./30-cass.nix)
-  ((import ./30-cm.nix) { bunNixpkgs = inputs.cm-bun-nixpkgs; })
   (import ./30-agent-deck.nix)
   (import ./30-fractal.nix)
   (import ./30-ai-python.nix)

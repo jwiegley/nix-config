@@ -702,22 +702,6 @@
         "type": "github"
       }
     },
-    "cm-bun-nixpkgs": {
-      "locked": {
-        "lastModified": 1785452004,
-        "narHash": "sha256-k94ksv7XmaLeK5sE1ST/TTdu2aDEO9sfbcgEaNJPTXA=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "a5e9f2fd9ef6011c6886d6935f3ef678c81385fa",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "a5e9f2fd9ef6011c6886d6935f3ef678c81385fa",
-        "type": "github"
-      }
-    },
     "crane": {
       "locked": {
         "lastModified": 1773189535,
@@ -4878,7 +4862,6 @@
     "nix-config-ai": {
       "inputs": {
         "agent-browser-source": "agent-browser-source",
-        "cm-bun-nixpkgs": "cm-bun-nixpkgs",
         "git-ai": "git-ai",
         "llm-agents": "llm-agents",
         "mcp-remote": "mcp-remote",

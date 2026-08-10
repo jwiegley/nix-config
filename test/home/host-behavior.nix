@@ -68,17 +68,6 @@ let
     ".config/pi/agent/extensions/pi-mcp-adapter"
     ".config/pi/agent/extensions/pi-quiet"
   ];
-  ownsCmState =
-    config:
-    let
-      paths = builtins.attrNames config.home.file;
-      roots = [
-        ".cass-memory"
-        ".cache/cass-memory"
-        ".local/share/cass-memory"
-      ];
-    in
-    builtins.any (path: builtins.any (root: path == root || lib.hasPrefix "${root}/" path) roots) paths;
   ownsObrState =
     config:
     builtins.any (
@@ -233,10 +222,8 @@ assert builtins.all (
   config: config.home.activation.aiManagedPiBlackholePolicy.after == [ "linkGeneration" ]
 ) allHomes;
 assert builtins.all (hasPackage "unisessions") allHomes;
-assert builtins.all (hasPackage "cass") allHomes;
-assert builtins.all (hasPackage "cm") allHomes;
+assert builtins.all (config: !(hasPackage "cass" config) && !(hasPackage "cm" config)) allHomes;
 assert builtins.all (hasPackage "obr") allHomes;
-assert builtins.all (config: !(ownsCmState config)) allHomes;
 assert builtins.all (config: !(ownsObrState config)) allHomes;
 assert builtins.all (
   config:

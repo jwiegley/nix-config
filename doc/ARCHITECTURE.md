@@ -127,41 +127,12 @@ when that is the narrowest integration boundary; overlays also expose packages a
 apply compatibility fixes. Owning host or feature modules select packages
 explicitly.
 
-`cass` uses pinned upstream release binaries through this same package boundary and
-is selected by every managed AI home class. The portable package supports
-`aarch64-darwin`, `aarch64-linux`, and `x86_64-linux`; Intel macOS and Windows are
-not exported. Nix owns no `cass` configuration or data leaf: configuration, the
-canonical SQLite archive, derived lexical and semantic indexes, opt-in model files,
-caches, mirrors, backups, reports, and daemon state remain mutable. Automated checks
-exercise its structured robot API rather than launching the interactive TUI.
-Upstream's nominal MIT license includes an OpenAI/Anthropic restriction, so the
-package is classified unfree and carries the exact tag-bound rider in its output.
-
-`cm` is a separate fleet-wide package built from the reviewed upstream commit one
-change beyond v0.2.13, retaining the inline-feedback identifier fix uniformly on
-`aarch64-darwin`, `aarch64-linux`, and `x86_64-linux`. The build uses Bun 1.3.13
-from an exact Nixpkgs revision independent of consumer channels; x86_64 uses the
-matching hash-pinned baseline template so the executable does not inherit an
-AVX2-only runtime. Fleet outputs are native; cross compilation is rejected. It
-disables compiled dotenv autoload and rejects
-file-backed or CLI `apiKey`
-fields; the supported credential path is provider environment variables only.
-Bedrock credential discovery, CLI-provider authentication, network-backed model
-calls, remote Cass, model downloads, MCP service mode, guard installation, and
-scheduled reflection are not automated or qualified. No activation initializes a
-live user home; hermetic checks qualify only non-interactive initialization in an
-isolated synthetic root, including the created files and modes. Nix owns the
-executable and exact unfree rider only. Global and repository playbooks,
-diaries, feedback, reflections, embeddings, indexes, models, usage records,
-backups, locks, caches, and Cass's independent data root remain mutable.
-
 `obr` is exported and selected through this same paired portable boundary for every
 managed home. Nix owns its executable, while each machine owns its ignored `.obr/`
 cache and each repository owns its tracked `PLAN.org` issue surface.
 
-Pi's packaging substrate is pinned the same way `cm`'s Bun is: the portable
-flake carries a second llm-agents input, `pi-llm-agents`, at the exact
-revision whose Pi packaging matches the reviewed source build in
+Pi's packaging substrate is pinned through a dedicated `pi-llm-agents` input at
+the exact revision whose Pi packaging matches the reviewed source build in
 `packages/pi-source-build.nix` (record `pi-coding-agent-source-build` in
 `sources/ai.json`). The floating `llm-agents` feed packages the other agents
 and advances past that revision; because `flake/ai.nix` asserts the packaged

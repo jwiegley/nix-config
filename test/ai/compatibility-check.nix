@@ -43,19 +43,6 @@ let
           (_final: _prev: { agent-deck = "caller-override"; })
         ];
       };
-      consumerBunSentinel = import inputs.nixpkgs {
-        inherit system;
-        config.allowUnfree = true;
-        overlays = [
-          (_final: _prev: {
-            bun = pinnedCmBun.overrideAttrs (_old: {
-              CM_CONSUMER_SENTINEL = "1";
-            });
-          })
-          actual.overlays.default
-        ];
-      };
-      pinnedCmBun = inputs.cm-bun-nixpkgs.legacyPackages.${system}.bun;
       pinnedPiPackage = inputs.pi-llm-agents.packages.${system}.pi;
       toolPkgs = import inputs.nixpkgs {
         inherit system;
@@ -126,36 +113,22 @@ let
         actual.packages.${system}.default.name == "ai-nix-toolchain"
       ) "portable aggregate name changed on ${system}")
       (lib.assertMsg (
-        actual.packages.${system}.cm.passthru.buildBun.version == "1.3.13"
-      ) "portable cm lost its pinned Bun 1.3.13 build tool on ${system}")
-      (lib.assertMsg (
         actual.packages.${system}.pi.drvPath == (actual.lib.patchAgentPackage pkgs "pi" pinnedPiPackage)
         .drvPath
       ) "portable Pi moved away from its pinned packaging substrate on ${system}")
       (lib.assertMsg (builtins.any (package: package.drvPath == actual.packages.${system}.pi.drvPath) (
         actual.lib.aiPackagesFor pkgs
       )) "portable AI package policy lost the canonical pinned Pi on ${system}")
-      (lib.assertMsg (
-        consumerBunSentinel.bun.version == pinnedCmBun.version
-        && consumerBunSentinel.bun.drvPath != pinnedCmBun.drvPath
-        && consumerBunSentinel.cm.passthru.buildBun.drvPath == pinnedCmBun.drvPath
-      ) "portable cm no longer isolates its Bun from the consumer package set on ${system}")
     ]
     ++ map (value: lib.assertMsg value "portable compatibility alias changed on ${system}") (
       aliasesMatch system
     );
-  # The two pins are guarded by a division of labor. The `.rev` literals below
-  # are test-owned tripwires: an exact-rev flake URL cannot drift on its own,
-  # but editing it moves the input AND both locks together, so only a literal
-  # held here forces a pin change to be a deliberate two-place edit. What the
-  # literals cannot see, construction-level checks cover: the per-system Pi
-  # drvPath assertion catches Pi being packaged from any feed other than
-  # `pi-llm-agents` or bypassing `patchAgentPackage`, and the cm sentinel
-  # assertions catch its pinned Bun leaking to or from the consumer channel.
+  # The `.rev` literal below is a test-owned tripwire: an exact-rev flake URL
+  # cannot drift on its own, but editing it moves the input and both locks
+  # together, so the literal forces a pin change to be a deliberate two-place
+  # edit. The per-system drvPath assertion catches Pi being packaged from any
+  # feed other than `pi-llm-agents` or bypassing `patchAgentPackage`.
   assertions = [
-    (lib.assertMsg (
-      inputs.cm-bun-nixpkgs.rev == "a5e9f2fd9ef6011c6886d6935f3ef678c81385fa"
-    ) "portable cm Bun input moved from its reviewed Nixpkgs revision")
     (lib.assertMsg (
       inputs.pi-llm-agents.rev == "f99bb437fd6860f23ea6c67a5161578a3b89d856"
     ) "portable Pi packaging input moved from its reviewed llm-agents revision")
