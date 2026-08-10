@@ -1,13 +1,7 @@
-let
-  gallery = import ../../packages/pi-gallery/manifest.nix {
-    inputs.ponytail.rev = "0000000";
-    packages = { };
-  };
-  galleryPackages =
-    map (id: gallery.members.${id}.attrName) gallery.order
-    ++ map (source: source.attrName) (builtins.attrValues gallery.supportSources);
-  portableLock = builtins.fromJSON (builtins.readFile ../../config/ai/flake.lock);
-in
+# Every expectation below is a LITERAL. A contract that derives its required
+# names from the lock or the gallery manifest moves "expected" and "actual"
+# together, so deleting an input or a gallery member could never fail it;
+# with literals, every removal is a visible, deliberate edit to this file.
 {
   systems = [
     "aarch64-darwin"
@@ -15,24 +9,68 @@ in
     "x86_64-linux"
   ];
 
-  inputs = builtins.attrNames portableLock.nodes.root.inputs;
+  inputs = [
+    "agent-browser-source"
+    "cm-bun-nixpkgs"
+    "git-ai"
+    "llm-agents"
+    "mcp-remote"
+    "mcp-servers-nix"
+    "nixpkgs"
+    "pal-mcp-server"
+    "pi-btw"
+    "pi-llm-agents"
+    "pi-mcp-adapter"
+    "pi-openai-server-compaction"
+    "pi-quiet"
+    "ponytail"
+    "rust-overlay"
+    "translate-tool"
+  ];
 
-  packages = builtins.sort builtins.lessThan (
-    [
-      "agent-http-header-bridge"
-      "agent-resources"
-      "cass"
-      "cm"
-      "default"
-      "nix-scripts"
-      "pi"
-      "pi-gallery"
-      "prime-agent"
-      "plasma-fractal"
-      "plasma-wiki"
-    ]
-    ++ galleryPackages
-  );
+  packages = builtins.sort builtins.lessThan [
+    "agent-browser"
+    "agent-http-header-bridge"
+    "agent-resources"
+    "cass"
+    "cm"
+    "cymbal"
+    "default"
+    "nix-scripts"
+    "pi"
+    "pi-agent-browser-native"
+    "pi-artifacts"
+    "pi-blackhole"
+    "pi-btw"
+    "pi-cache-optimizer"
+    "pi-caveman"
+    "pi-copy-message"
+    "pi-cymbal"
+    "pi-dynamic-workflows"
+    "pi-gallery"
+    "pi-goal-x"
+    "pi-hashline-edit-pro"
+    "pi-insights"
+    "pi-lens"
+    "pi-loop"
+    "pi-markdown-preview"
+    "pi-model-router"
+    "pi-multi-pass"
+    "pi-ponytail"
+    "pi-provider-llama-swap"
+    "pi-provider-omlx"
+    "pi-rewind"
+    "pi-rtk-optimizer"
+    "pi-smart-fetch"
+    "pi-smart-web-search"
+    "pi-subagents"
+    "pi-trace-extension"
+    "pi-usage-extension"
+    "plasma-fractal"
+    "plasma-wiki"
+    "prime-agent"
+    "rtk"
+  ];
 
   # Truthful evidence-bearing app names plus the conventional `default` alias.
   # `no-warnings` is a real app running no-warnings.sh.
