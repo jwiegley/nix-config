@@ -25,11 +25,13 @@ let
     else
       pkgs.git;
 
-  # Use the merged bundle (system + Vulcan CA) when our overlay is loaded;
-  # otherwise fall back to the stock cacert. NixOS hosts that don't import
-  # config/overlays.nix should add the Vulcan CA via security.pki.certificateFiles.
+  # Prefer the merged store bundle wherever config/overlays.nix provides it.
+  # External NixOS consumers do not import that overlay; their security.pki
+  # certificates live in the generated runtime bundle instead. Standalone
+  # shared-work homes retain the portable pkgs.cacert fallback.
+  useSystemCaBundle = isLinux && !config.johnw.host.isSharedWork && !(pkgs ? ca-bundle-with-vulcan);
   ca-bundle_pkg = pkgs.ca-bundle-with-vulcan or pkgs.cacert;
-  ca-bundle_path = "${ca-bundle_pkg}/etc/ssl/certs/";
+  ca-bundle_path = if useSystemCaBundle then "/etc/ssl/certs" else "${ca-bundle_pkg}/etc/ssl/certs";
   ca-bundle_crt = "${ca-bundle_path}/ca-bundle.crt";
   emacs-server = "${tmpdir}/johnw-emacs/server";
   emacsclient = "${pkgs.emacs}/bin/emacsclient -s ${emacs-server}";

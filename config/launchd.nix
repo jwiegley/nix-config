@@ -308,7 +308,7 @@ in
                 # Expose the loopback-only oMLX API through the TLS gateway.
                 location /v1/ {
                   client_max_body_size 20M;
-                  proxy_pass http://localhost:8000;
+                  proxy_pass http://127.0.0.1:8000;
 
                   proxy_set_header Host $host;
                   proxy_set_header X-Real-IP $remote_addr;
@@ -360,7 +360,7 @@ in
         };
 
       omlx = {
-        script = "exec ${pkgs.omlx}/bin/omlx serve --host 127.0.0.1 --base-path /Users/johnw/.config/omlx/.omlx";
+        script = "exec ${pkgs.omlx}/bin/omlx serve --host 127.0.0.1 --port 8000 --base-path /Users/johnw/.config/omlx/.omlx";
         serviceConfig = {
           RunAtLoad = true;
           # Restart on crash but not on clean exit, and throttle restarts so
