@@ -292,7 +292,7 @@ let
     )
     && preflight.before == [ "setupLaunchAgents" ]
     && preflight.after == [ "linkGeneration" ]
-    && lib.hasInfix "syncthing-bootstrap" preflight.data
+    && lib.hasInfix "/bin/syncthing-bootstrap" preflight.data
     && lib.hasInfix "required private directory is missing or unsafe: $path" preflight.data
     && lib.hasInfix "${home.home.homeDirectory}/Documents" preflight.data
     && !lib.hasInfix "${home.home.homeDirectory}/doc/obsidian" preflight.data

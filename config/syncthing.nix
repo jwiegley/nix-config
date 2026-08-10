@@ -241,16 +241,19 @@ let
       syncXattrs = false;
       sendXattrs = false;
     };
-  bootstrapProgram = pkgs.writeScript "syncthing-bootstrap" (
-    lib.replaceStrings [ "#!/usr/bin/env python3" ] [ "#!${lib.getExe pkgs.python3}" ] (
+  bootstrapProgram = pkgs.writeTextFile {
+    name = "syncthing-bootstrap";
+    destination = "/bin/syncthing-bootstrap";
+    executable = true;
+    text = lib.replaceStrings [ "#!/usr/bin/env python3" ] [ "#!${lib.getExe pkgs.python3}" ] (
       builtins.readFile ./syncthing-bootstrap.py
-    )
-  );
+    );
+  };
   bootstrapCommand =
     mode:
     lib.escapeShellArgs (
       [
-        "${bootstrapProgram}"
+        "${bootstrapProgram}/bin/syncthing-bootstrap"
         mode
         "--config"
         "${stateDirectory}/config.xml"
