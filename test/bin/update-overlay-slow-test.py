@@ -921,39 +921,50 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 "inert Pi npm dependency overrides", inert_override_result.stderr
             )
 
-            def rejected_by_both(label, mutate):
+            def rejected(label, mutate, python_rejects=False):
+                # The jq normalizer is the single policy validator: every
+                # malformed contract must fail it. The Python loader
+                # re-checks only the shape its own consumers index and the
+                # npm argv flag tripwire, so it rejects just those cases —
+                # and must ACCEPT the deep-policy mutations, documenting
+                # that the duplication was deliberately removed.
                 malformed = copy.deepcopy(contract)
                 mutate(malformed)
                 (gallery / "normalization-policy.json").write_text(
                     json.dumps(malformed)
                 )
                 with self.subTest(label=label):
-                    with self.assertRaises(RuntimeError):
+                    if python_rejects:
+                        with self.assertRaises(RuntimeError):
+                            load_pi_normalization_contract(temporary_root)
+                    else:
                         load_pi_normalization_contract(temporary_root)
                     result = run_policy(malformed)
                     self.assertNotEqual(result.returncode, 0)
 
-            rejected_by_both(
+            rejected(
                 "scripts enabled",
                 lambda value: value["npmDependencyFlags"].remove("--ignore-scripts"),
+                python_rejects=True,
             )
-            rejected_by_both(
+            rejected(
                 "unknown contract field",
                 lambda value: value.update(unexpected=True),
+                python_rejects=True,
             )
-            rejected_by_both(
+            rejected(
                 "duplicate removal",
                 lambda value: value["common"]["removeTopLevel"].append(
                     "devDependencies"
                 ),
             )
-            rejected_by_both(
+            rejected(
                 "invalid override value",
                 lambda value: value["targets"]["pi-artifacts"][
                     "overrideDependencies"
                 ].update(keep=""),
             )
-            rejected_by_both(
+            rejected(
                 "override repeated across common and target",
                 lambda value: (
                     value["common"]["overrideDependencies"].update(keep="1"),
@@ -962,7 +973,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     ].update(keep="2"),
                 ),
             )
-            rejected_by_both(
+            rejected(
                 "dependency repeated across override and forbid policies",
                 lambda value: (
                     value["common"]["overrideDependencies"].update(keep="2"),
@@ -971,14 +982,14 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     ].append("keep"),
                 ),
             )
-            rejected_by_both(
+            rejected(
                 "dependency repeated across policies",
                 lambda value: (
                     value["common"]["forbidDependencies"].append("duplicate"),
                     value["common"]["defensiveForbidDependencies"].append("duplicate"),
                 ),
             )
-            rejected_by_both(
+            rejected(
                 "dependency repeated across common and target policies",
                 lambda value: (
                     value["common"]["forbidDependencies"].append("duplicate"),
@@ -987,7 +998,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     ].append("duplicate"),
                 ),
             )
-            rejected_by_both(
+            rejected(
                 "enforced dependency repeated across common and target",
                 lambda value: (
                     value["common"]["forbidDependencies"].append("duplicate"),
@@ -996,7 +1007,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     ),
                 ),
             )
-            rejected_by_both(
+            rejected(
                 "defensive dependency repeated across common and target",
                 lambda value: (
                     value["common"]["defensiveForbidDependencies"].append("duplicate"),

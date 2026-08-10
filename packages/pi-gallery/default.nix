@@ -95,6 +95,16 @@ let
       )
     )
   );
+  # This eval-time validator deliberately duplicates the policy rules that
+  # normalize-manifest.jq enforces at build time — the two have distinct,
+  # load-bearing roles. The jq is the executor: it validates and applies the
+  # policy whenever a target is normalized, but only for the target at hand,
+  # and only when a derivation is actually built. This assert is the
+  # whole-contract gate: it runs on every evaluation, including
+  # `nix flake check --no-build` — bin/update's pre-sign validation — so a
+  # policy corruption can never be captured in a signed commit. A 2026-08
+  # attempt to delete it in favor of the jq alone was adversarially
+  # rejected on exactly those two gaps.
   stringList =
     value:
     builtins.isList value
