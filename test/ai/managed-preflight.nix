@@ -92,12 +92,28 @@ let
   primeManagedSettingsProbe = builtins.tryEval (preflightFactory {
     newPaths = [ ".prime/agent/managed-settings.json" ];
   });
+  # The documented mutable boundary: these sit inside directories renderers
+  # legitimately own, yet a renderer claiming them must fail evaluation —
+  # with `force = true` on rendered files, a claim would otherwise delete
+  # the user's file at activation.
+  primeUserSettingsProbe = builtins.tryEval (preflightFactory {
+    newPaths = [ ".prime/agent/settings.json" ];
+  });
+  piMutableMcpProbe = builtins.tryEval (preflightFactory {
+    newPaths = [ ".config/pi/agent/mcp.json" ];
+  });
+  codexAuthProbe = builtins.tryEval (preflightFactory {
+    newPaths = [ ".config/codex/auth.json" ];
+  });
 in
 assert task9PreflightWithPi.activation.before == [ "checkLinkTargets" ];
 assert task9PreflightWithPi.activation.after == [ ];
 assert !invalidPreflightProbe.success;
 assert !sherlockAncestorProbe.success;
 assert primeManagedSettingsProbe.success;
+assert !primeUserSettingsProbe.success;
+assert !piMutableMcpProbe.success;
+assert !codexAuthProbe.success;
 
 pkgs.runCommand "ai-managed-preflight"
   {

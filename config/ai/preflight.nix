@@ -15,6 +15,16 @@ let
     ".claude/skills/sherlock/SKILL.md"
     ".claude/skills/sherlock/sherlock"
   ];
+  # These two inventories are DELIBERATELY leaf-granular allowlists, not a
+  # derived containment property. A 2026-08 attempt to replace them with
+  # "path sits under a catalog profile root" was adversarially rejected:
+  # containment is self-satisfying (renderers interpolate the same
+  # profile.root the roots derive from) and materially looser on the mutable
+  # boundary — auth.json, sessions, history, credentials, settings.local.json
+  # all sit inside managed roots, and with `force = true` on rendered files a
+  # renderer claiming one would DELETE the user's file at activation, not
+  # refuse. Deny-by-default at leaf granularity is the safety property; the
+  # lockstep edit for a new generated leaf is its price.
   managedPrefixes = [
     ".agents/skills"
     ".claude/agents"
