@@ -26,7 +26,7 @@ let
     };
     clio = {
       deviceID = "G3JLOH6-Y5SBVLA-RYANNWG-OXRNO6H-V2FDOSJ-NYYCVF2-UHLDQIU-IMV45A3";
-      addresses = [ "tcp://clio.local:22000" ];
+      addresses = [ "tcp://clio.lan:22000" ];
       listenAddress = "tcp://127.0.0.1:22000";
       networks = [
         "192.168.1.5/32"
@@ -179,7 +179,7 @@ let
       hera /usr/bin/true </dev/null
 
     ${lib.getExe pkgs.socat} \
-      "TCP4-LISTEN:22000,bind=192.168.1.5,range=192.168.1.4/32,reuseaddr" \
+      "TCP4-LISTEN:22000,bind=192.168.1.5,range=192.168.1.4/32,reuseaddr,fork" \
       "TCP4:127.0.0.1:22000" &
     child_pid=$!
     cleanup() {

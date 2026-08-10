@@ -31,7 +31,7 @@ let
       ];
     };
     clio = {
-      addresses = [ "tcp://clio.local:22000" ];
+      addresses = [ "tcp://clio.lan:22000" ];
       listen = "tcp://127.0.0.1:22000";
       networks = [
         "192.168.1.5/32"
@@ -377,7 +377,7 @@ pkgs.runCommand "syncthing-home-contract"
     grep -F -- '-b 10.6.0.2' ${clioWireGuardTunnel} >/dev/null
     grep -F -- '/bin/sleep 30' ${clioWireGuardTunnel} >/dev/null
     grep -F -- '/bin/sleep 30' ${clioHomeLanBridge} >/dev/null
-    grep -F -- 'range=192.168.1.4/32' ${clioHomeLanBridge} >/dev/null
+    grep -F -- 'range=192.168.1.4/32,reuseaddr,fork' ${clioHomeLanBridge} >/dev/null
     cp ${../../config/syncthing-bootstrap.py} bootstrap.py
     cat > config.xml <<'XML'
     <configuration version="52">
@@ -695,7 +695,7 @@ pkgs.runCommand "syncthing-home-contract"
             "networks": ["192.168.1.4/32", "127.0.0.1/32"],
         },
         "clio": {
-            "addresses": ["tcp://clio.local:22000"],
+            "addresses": ["tcp://clio.lan:22000"],
             "listen": "tcp://127.0.0.1:22000",
             "networks": ["192.168.1.5/32", "192.168.1.4/32"],
         },
