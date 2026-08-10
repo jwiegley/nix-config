@@ -4,6 +4,13 @@ GIT_REMOTE = jwiegley
 MAX_AGE	   = 28
 NIX_CONF   = $(HOME)/src/nix
 SYSTEM     ?= $(shell nix eval --impure --raw --expr builtins.currentSystem)
+CORE_CHECKS = \
+	.\#checks.$(SYSTEM).agent-resources \
+	.\#checks.$(SYSTEM).agent-wrappers \
+	.\#checks.$(SYSTEM).ai-catalog-transport \
+	.\#checks.$(SYSTEM).pi-extension-tests \
+	.\#checks.$(SYSTEM).pi-gallery \
+	.\#checks.$(SYSTEM).pi-fleet-theme
 
 .DEFAULT_GOAL := help
 NIXOPTS	   =
@@ -52,23 +59,11 @@ help:
 
 test:
 	test/bin/quality --python-tier full python-test
-	nix build --no-link \
-	  .#checks.$(SYSTEM).agent-resources \
-	  .#checks.$(SYSTEM).agent-wrappers \
-	  .#checks.$(SYSTEM).ai-catalog-transport \
-	  .#checks.$(SYSTEM).pi-extension-tests \
-	  .#checks.$(SYSTEM).pi-gallery \
-	  .#checks.$(SYSTEM).pi-fleet-theme
+	nix build --no-link $(CORE_CHECKS)
 
 expensive:
 	test/bin/quality --tier expensive
-	nix build --no-link \
-	  .#checks.$(SYSTEM).agent-resources \
-	  .#checks.$(SYSTEM).agent-wrappers \
-	  .#checks.$(SYSTEM).ai-catalog-transport \
-	  .#checks.$(SYSTEM).pi-extension-tests \
-	  .#checks.$(SYSTEM).pi-gallery \
-	  .#checks.$(SYSTEM).pi-fleet-theme
+	nix build --no-link $(CORE_CHECKS)
 	./build system
 
 tools:
