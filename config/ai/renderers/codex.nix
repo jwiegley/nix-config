@@ -38,9 +38,7 @@ let
   managedModelCatalog = pkgs.runCommand "codex-nix-managed-model-catalog.json" { } ''
     cp ${codexSourceCatalog} "$out"
   '';
-  isTypedEnv =
-    value:
-    builtins.isAttrs value && builtins.attrNames value == [ "env" ] && builtins.isString value.env;
+  inherit (import ./render-lib.nix { inherit lib; }) isTypedEnv;
 
   renderMcpServer =
     server:
@@ -50,6 +48,7 @@ let
       literalEnv = lib.filterAttrs (_: value: !isTypedEnv value) (transport.env or { });
       native =
         if transport ? url then
+          assert builtins.all isTypedEnv (builtins.attrValues (transport.headers or { }));
           {
             inherit (transport) url;
           }

@@ -14,14 +14,12 @@ let
   json = pkgs.formats.json { };
   mergeFiles = import ./merge-files.nix { inherit lib; };
 
+  renderLib = import ./render-lib.nix { inherit lib; };
+  inherit (renderLib) isTypedEnv renderCommandMetadata;
+  renderMarkdown = renderLib.renderMarkdownFile;
+
   hasOnlyKeys =
     allowed: value: builtins.all (name: builtins.elem name allowed) (builtins.attrNames value);
-  isTypedEnv =
-    value:
-    builtins.isAttrs value
-    && builtins.attrNames value == [ "env" ]
-    && builtins.isString value.env
-    && builtins.match "^[A-Z][A-Z0-9_]*$" value.env != null;
   isSafeUrl =
     value:
     builtins.isString value
@@ -164,44 +162,8 @@ let
     mcpServers = lib.mapAttrs renderMcpServer selected.mcpServers;
     settings.mcpFooterStatus = "compact";
   };
-  keybindings = {
-    "tui.editor.cursorUp" = [
-      "up"
-      "ctrl+p"
-    ];
-    "tui.editor.cursorDown" = [
-      "down"
-      "ctrl+n"
-    ];
-    "tui.editor.cursorLeft" = [
-      "left"
-      "ctrl+b"
-    ];
-    "tui.editor.cursorRight" = [
-      "right"
-      "ctrl+f"
-    ];
-    "tui.editor.cursorWordLeft" = [
-      "alt+left"
-      "alt+b"
-    ];
-    "tui.editor.cursorWordRight" = [
-      "alt+right"
-      "alt+f"
-    ];
-    "tui.editor.deleteCharForward" = [
-      "delete"
-      "ctrl+d"
-    ];
-    "tui.editor.deleteCharBackward" = [
-      "backspace"
-      "ctrl+h"
-    ];
-    "tui.input.newLine" = [
-      "shift+enter"
-      "ctrl+j"
-    ];
-    "app.model.select" = [ "ctrl+l" ];
+  keybindings = import ../keybindings.nix // {
+    # Pi-specific: model cycling is disabled in favor of explicit selection.
     "app.model.cycleForward" = [ ];
     "app.model.cycleBackward" = [ ];
   };
@@ -223,30 +185,6 @@ let
     // lib.optionalAttrs (item.metadata ? tools) {
       tools = renderAgentTools item.metadata.tools;
     };
-  renderCommandMetadata =
-    item:
-    assert hasOnlyKeys [
-      "allowed-tools"
-      "argument-hint"
-      "description"
-      "disable-model-invocation"
-    ] item.metadata;
-    assert !(item.metadata ? description) || builtins.isString item.metadata.description;
-    lib.optionalAttrs (item.metadata ? description) {
-      inherit (item.metadata) description;
-    }
-    //
-      lib.optionalAttrs
-        (builtins.hasAttr "argument-hint" item.metadata && builtins.isString item.metadata."argument-hint")
-        {
-          "argument-hint" = item.metadata."argument-hint";
-        };
-  renderMarkdown =
-    metadata: source:
-    if metadata == { } then
-      builtins.readFile source
-    else
-      "---\n${builtins.toJSON metadata}\n---\n${builtins.readFile source}";
 
   agentFiles = lib.mapAttrs' (
     name: item:

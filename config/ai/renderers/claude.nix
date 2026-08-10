@@ -14,12 +14,8 @@ let
   json = pkgs.formats.json { };
   mergeFiles = import ./merge-files.nix { inherit lib; };
 
-  renderMarkdown =
-    item:
-    if item.metadata == { } then
-      builtins.readFile item.source
-    else
-      "---\n${builtins.toJSON item.metadata}\n---\n${builtins.readFile item.source}";
+  renderLib = import ./render-lib.nix { inherit lib; };
+  renderMarkdown = item: renderLib.renderMarkdownFile item.metadata item.source;
 
   stripSource =
     value:
@@ -61,8 +57,10 @@ let
 
   renderSecretReferences =
     value:
-    if builtins.isAttrs value && builtins.attrNames value == [ "env" ] then
+    if renderLib.isTypedEnv value then
       "$" + "{" + value.env + "}"
+    else if builtins.isAttrs value && builtins.attrNames value == [ "env" ] then
+      throw "claude renderer: malformed environment reference (single `env` attribute that is not an uppercase variable name)"
     else if builtins.isAttrs value then
       lib.mapAttrs (_: renderSecretReferences) value
     else if builtins.isList value then

@@ -1146,12 +1146,10 @@ let
 
   validEnvName = value: builtins.isString value && builtins.match "^[A-Z][A-Z0-9_]*$" value != null;
 
+  # Structural recognition is shared with the renderers (env-reference.nix);
+  # the catalog additionally requires the name to be on the declared roster.
   isEnvReference =
-    value:
-    builtins.isAttrs value
-    && builtins.attrNames value == [ "env" ]
-    && validEnvName value.env
-    && builtins.elem value.env declaredEnvNames;
+    value: (import ./env-reference.nix).isTypedEnv value && builtins.elem value.env declaredEnvNames;
 
   containsRenderedReference =
     value:

@@ -13,29 +13,9 @@ let
   mergeFiles = import ./merge-files.nix { inherit lib; };
   modelOverrides = import ../model-overrides.nix;
 
-  renderCommandMetadata =
-    item:
-    assert builtins.all (
-      name:
-      builtins.elem name [
-        "allowed-tools"
-        "argument-hint"
-        "description"
-        "disable-model-invocation"
-      ]
-    ) (builtins.attrNames item.metadata);
-    lib.optionalAttrs (item.metadata ? description) {
-      inherit (item.metadata) description;
-    }
-    //
-      lib.optionalAttrs
-        (item.metadata ? "argument-hint" && builtins.isString item.metadata."argument-hint")
-        {
-          "argument-hint" = item.metadata."argument-hint";
-        };
-  renderMarkdown =
-    metadata: source:
-    if metadata == { } then source else "---\n${builtins.toJSON metadata}\n---\n${source}";
+  renderLib = import ./render-lib.nix { inherit lib; };
+  inherit (renderLib) renderCommandMetadata;
+  renderMarkdown = renderLib.renderMarkdownText;
 
   commandFiles = lib.mapAttrs' (
     name: item:
@@ -83,45 +63,7 @@ let
     packages = packageRoots;
     theme = "dark-tool-backgrounds";
   };
-  keybindings = {
-    "tui.editor.cursorUp" = [
-      "up"
-      "ctrl+p"
-    ];
-    "tui.editor.cursorDown" = [
-      "down"
-      "ctrl+n"
-    ];
-    "tui.editor.cursorLeft" = [
-      "left"
-      "ctrl+b"
-    ];
-    "tui.editor.cursorRight" = [
-      "right"
-      "ctrl+f"
-    ];
-    "tui.editor.cursorWordLeft" = [
-      "alt+left"
-      "alt+b"
-    ];
-    "tui.editor.cursorWordRight" = [
-      "alt+right"
-      "alt+f"
-    ];
-    "tui.editor.deleteCharForward" = [
-      "delete"
-      "ctrl+d"
-    ];
-    "tui.editor.deleteCharBackward" = [
-      "backspace"
-      "ctrl+h"
-    ];
-    "tui.input.newLine" = [
-      "shift+enter"
-      "ctrl+j"
-    ];
-    "app.model.select" = [ "ctrl+l" ];
-  };
+  keybindings = import ../keybindings.nix;
   baseTheme = builtins.fromJSON (builtins.readFile ../themes/dark-tool-backgrounds.json);
   primeTheme = baseTheme // {
     vars = baseTheme.vars // {

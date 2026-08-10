@@ -15,7 +15,8 @@ let
   json = pkgs.formats.json { };
   mergeFiles = import ./merge-files.nix { inherit lib; };
 
-  isTypedEnv = value: builtins.isAttrs value && builtins.attrNames value == [ "env" ];
+  renderLib = import ./render-lib.nix { inherit lib; };
+  inherit (renderLib) isTypedEnv;
 
   renderMcpServer =
     _: server:
@@ -58,12 +59,7 @@ let
     mcpServers = lib.mapAttrs renderMcpServer selected.mcpServers;
   };
 
-  renderMarkdown =
-    item:
-    if item.metadata == { } then
-      builtins.readFile item.source
-    else
-      "---\n${builtins.toJSON item.metadata}\n---\n${builtins.readFile item.source}";
+  renderMarkdown = item: renderLib.renderMarkdownFile item.metadata item.source;
   skillDirectory = item: pkgs.writeTextDir "SKILL.md" (renderMarkdown item);
 
   agents = lib.mapAttrs' (
