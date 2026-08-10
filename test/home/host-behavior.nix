@@ -37,6 +37,22 @@ let
     builtins.attrValues darwinConfigurations
   );
   registry = import ../../config/hosts/registry.nix;
+  classOverridesHostname =
+    (lib.evalModules {
+      specialArgs = {
+        hostname = "hera";
+        nixManagedAiHomeClass = "vps";
+      };
+      modules = [
+        ../../config/host-options.nix
+        {
+          options.assertions = lib.mkOption {
+            type = lib.types.listOf lib.types.unspecified;
+            default = [ ];
+          };
+        }
+      ];
+    }).config;
   personalLinux = homeConfigurations."johnw@aarch64-linux".config;
   sharedWork = homeConfigurations."jwiegley@x86_64-linux".config;
   unknownHomeClassContract = registry.homeClassContractFor "unknown";
@@ -179,6 +195,9 @@ assert personalLinux.johnw.profile.heavy;
 assert sharedWork.johnw.host.isCiFixture;
 assert sharedWork.johnw.host.isSharedWork;
 assert sharedWork.johnw.profile.heavy;
+assert !classOverridesHostname.johnw.host.isHera;
+assert !classOverridesHostname.johnw.host.isDarwinWorkstation;
+assert !classOverridesHostname.johnw.profile.heavy;
 assert (registry.capabilitiesFor { hostname = "andoria-08"; }).isSharedWork;
 assert !(registry.capabilitiesFor { hostname = "unknown"; }).isSharedWork;
 assert registry.homeClasses.unknown or null == null;

@@ -15,15 +15,12 @@ let
 
   registry = import ./hosts/registry.nix;
 
-  # Resolve the registry projection only. In particular, personal-linux keeps
-  # its synthetic hostname and does not inherit the VPS server-lean role.
+  # personal-linux selects VPS AI profiles but has no concrete registry row,
+  # so it cannot inherit the VPS server-lean role.
   homeClass = args.nixManagedAiHomeClass or null;
-  homeClassRow = if homeClass == null then null else (registry.homeClassContractFor homeClass).row;
-  resolvedRegistryId = if homeClassRow == null then hostname else homeClassRow.registryId;
-  resolvedRegistryRow =
-    if resolvedRegistryId == null then null else registry.hosts.${resolvedRegistryId} or null;
+  resolved = registry.resolveFor { inherit hostname homeClass; };
   profileHeavyDefault =
-    resolvedRegistryRow == null || !(builtins.elem "server-lean" resolvedRegistryRow.roles);
+    resolved.registryRow == null || !(builtins.elem "server-lean" resolved.registryRow.roles);
 
   # The typed row. Enums throw loudly on an unknown value.
   hostRow = types.submodule {

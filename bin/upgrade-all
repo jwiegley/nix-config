@@ -2,12 +2,22 @@
 
 set -euo pipefail
 
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+pids=()
+
 update-and-pull &
+pids+=("$!")
 
 pushme andoria hera &
+pids+=("$!")
 pushme git-ai hera &
+pids+=("$!")
 
-wait
+initial_status=0
+for pid in "${pids[@]}"; do
+    wait "$pid" || initial_status=1
+done
+((initial_status == 0)) || exit 1
 
 # A failed Hera host upgrade must stop the rollout: everything below publishes
 # or activates state derived from it. Project maintenance is diagnostic and
@@ -15,12 +25,12 @@ wait
 upgrade hera --host-only
 
 (
-    cd $NIX_CONF
+    cd "$NIX_CONF"
     changes
 )
 
 pushme hera@6 clio@6 tank@1
 
-update-remote
+"$script_dir/update-remote"
 
 upgrade hera --projects-only || echo "upgrade-projects reported failures; inspect its build logs" >&2

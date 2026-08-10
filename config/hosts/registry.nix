@@ -41,22 +41,6 @@ let
     };
   };
 
-  homeClassNames = builtins.attrNames homeClasses;
-  homeClassContractFor =
-    name:
-    let
-      row = homeClasses.${name} or null;
-    in
-    {
-      inherit row;
-      assertion = row != null;
-      message = "set nixManagedAiHomeClass to one of ${builtins.concatStringsSep ", " homeClassNames}";
-    };
-
-in
-{
-  inherit homeClasses homeClassContractFor;
-
   # Host rows plus one shared-work group row.
   hosts = {
     hera = {
@@ -93,6 +77,44 @@ in
     };
   };
 
+  homeClassNames = builtins.attrNames homeClasses;
+  homeClassContractFor =
+    name:
+    let
+      row = homeClasses.${name} or null;
+    in
+    {
+      inherit row;
+      assertion = row != null;
+      message = "set nixManagedAiHomeClass to one of ${builtins.concatStringsSep ", " homeClassNames}";
+    };
+
+  resolveFor =
+    {
+      hostname,
+      homeClass ? null,
+    }:
+    let
+      homeClassRow = if homeClass == null then null else (homeClassContractFor homeClass).row;
+      registryId = if homeClassRow == null then hostname else homeClassRow.registryId;
+    in
+    {
+      inherit homeClassRow registryId;
+      registryRow = if registryId == null then null else hosts.${registryId} or null;
+    };
+
+in
+assert builtins.all (row: row.registryId == null || builtins.hasAttr row.registryId hosts) (
+  builtins.attrValues homeClasses
+);
+{
+  inherit
+    homeClasses
+    homeClassContractFor
+    hosts
+    resolveFor
+    ;
+
   # Pure, total capability derivation. Unknown names never throw: concrete-host
   # flags remain false, while CI-fixture and shared-work flags follow their
   # explicit inputs.
@@ -102,12 +124,8 @@ in
       homeClass ? null,
     }:
     let
-      # Keep raw host-identity comparisons localized in this registry.
-      id = hostname;
-      # An explicit home class supplies group classification; physical
-      # shared-work membership is also recognized below.
-      cls = if homeClass != null then homeClass else id;
-      homeClassRow = homeClasses.${cls} or null;
+      resolved = resolveFor { inherit hostname homeClass; };
+      id = resolved.registryId;
     in
     {
       isHera = id == "hera";
@@ -119,11 +137,9 @@ in
 
       # Resolve the shared-work group from either its explicit home class or a
       # physical member hostname.
-      isSharedWork =
-        (homeClassRow != null && homeClassRow.registryId == "andoria")
-        || builtins.elem id sharedWorkMembers;
+      isSharedWork = id == "andoria" || builtins.elem hostname sharedWorkMembers;
 
       # The synthetic CI evaluation fixtures pin the name to "linux".
-      isCiFixture = id == "linux";
+      isCiFixture = hostname == "linux";
     };
 }
