@@ -304,15 +304,17 @@ config/ai/agents/fess-auditor.md:6-10 hard-codes commands/fess.md, but renderer 
 ]
 #+end_src
 
-* TODO [#B] Keep .env secrets out of the direnv cache    :direnv:security:validated:
+* DONE [#B] Keep .env secrets out of the direnv cache    :direnv:security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.15
 :LABELS: ["direnv","heavy-review","security","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:02]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:02]
+:CLOSE_REASON: Unload active direnv state before cache generation, load .env only after cache decode, replace cache atomically at mode 0600, reject unsafe paths, and cover steady-state secrets and failure cases.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2232,15 +2234,17 @@ Authority resolved by the owner: delete. The live flake.nix still contains the o
 ]
 #+end_src
 
-* TODO [#B] Stop sourcing unescaped preserved values in bin/de    :security:shell:validated:
+* DONE [#B] Stop sourcing unescaped preserved values in bin/de    :security:shell:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.7
 :LABELS: ["heavy-review","security","shell","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:02]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:02]
+:CLOSE_REASON: Replaced generated-shell interpolation with direct fixed-name Bash array restoration, migrated the exact legacy template, and added injection-shaped value coverage.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

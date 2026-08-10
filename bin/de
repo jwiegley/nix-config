@@ -2,6 +2,20 @@
 
 set -e
 
+if [[ -n ${DIRENV_DIFF-} ]]; then
+    if ! direnv_unload=$(cd / && DIRENV_LOG_FORMAT='' direnv export bash); then
+        echo "de: could not restore the pre-direnv environment" >&2
+        exit 1
+    fi
+    # This is the same shell-escaped export consumed by direnv's Bash hook.
+    eval "$direnv_unload"
+    unset direnv_unload
+    if [[ -n ${DIRENV_DIFF-} ]]; then
+        echo "de: direnv did not restore the pre-direnv environment" >&2
+        exit 1
+    fi
+fi
+
 # I use this to keep build products in a separate directory tree.
 PRODUCTS=""
 if [[ -d $HOME/Products ]]; then
@@ -46,24 +60,27 @@ if [[ -n "$PRODUCTS" && (-f Cargo.toml || -f ../Cargo.toml) ]]; then
         : >"$cargo_target_dir/.metadata_never_index"
 fi
 
-if [[ ! -f .envrc ]]; then
-    cat >.envrc <<'EOF'
+write_current_envrc() {
+    cat >"$1" <<'EOF'
+# shellcheck shell=bash
 keep_vars() {
-    local k v
-    DIRENV_kept=
+    local k
+    DIRENV_kept_names=()
+    DIRENV_kept_values=()
     for k in "$@"; do
-        [[ -v $k ]] || continue
-        v=${!k}
-        DIRENV_kept="$DIRENV_kept"$(printf "%s=%s\000" "$k" "$v" | base64)
+        [[ ${!k+x} ]] || continue
+        DIRENV_kept_names+=("$k")
+        DIRENV_kept_values+=("${!k}")
     done
 }
 
 reset_kept() {
-    : ${DIRENV_kept?No environment stored. Missing keep_except()?}
-    echo "$DIRENV_kept" | base64 -d | while IFS= read -r -d '' V; do
-        echo "export ${V%%=*}='${V#*=}'"
+    local i k
+    for i in "${!DIRENV_kept_names[@]}"; do
+        k=${DIRENV_kept_names[$i]}
+        export "$k=${DIRENV_kept_values[$i]}"
     done
-    unset DIRENV_kept
+    unset DIRENV_kept_names DIRENV_kept_values
 }
 
 keep_vars                                       \
@@ -93,6 +110,61 @@ keep_vars                                       \
     XDG_DATA_DIRS                               \
     __GIT_PROMPT_DIR
 
+# apply_dump is direnv's cache decoder and emits Bash-escaped assignments.
+if ! direnv_cache=$(direnv apply_dump .envrc.cache); then
+    unset direnv_cache
+    echo "de: could not decode .envrc.cache" >&2
+    return 1
+fi
+eval "$direnv_cache"
+unset direnv_cache
+reset_kept
+
+watch_file .envrc
+watch_file .envrc.cache
+watch_file default.nix
+watch_file .env
+if [[ -f .env ]]; then
+    set -a
+    # shellcheck disable=SC1091  # Project-local environment, watched above.
+    source .env
+    set +a
+fi
+[[ ! ${TMPDIR+x} || -d $TMPDIR ]] || unset TMPDIR
+EOF
+}
+
+write_legacy_envrc() {
+    local current=$1 legacy=$2
+
+    # Recognition-only fixture for the exact previous generator; never install it.
+    cat >"$legacy" <<'EOF'
+keep_vars() {
+    local k v
+    DIRENV_kept=
+    for k in "$@"; do
+        [[ -v $k ]] || continue
+        v=${!k}
+        DIRENV_kept="$DIRENV_kept"$(printf "%s=%s\000" "$k" "$v" | base64)
+    done
+}
+
+reset_kept() {
+    : ${DIRENV_kept?No environment stored. Missing keep_except()?}
+    echo "$DIRENV_kept" | base64 -d | while IFS= read -r -d '' V; do
+        echo "export ${V%%=*}='${V#*=}'"
+    done
+    unset DIRENV_kept
+}
+
+EOF
+    awk '
+        /^keep_vars[[:space:]]/ { copying = 1 }
+        copying { print }
+        $0 == "    __GIT_PROMPT_DIR" { exit }
+    ' "$current" >>"$legacy"
+    cat >>"$legacy" <<'EOF'
+
 source <(direnv apply_dump .envrc.cache)
 source <(reset_kept)
 [[ ! -v TMPDIR || -d $TMPDIR ]] || unset TMPDIR
@@ -101,14 +173,18 @@ watch_file .envrc
 watch_file .envrc.cache
 watch_file default.nix
 EOF
+}
 
-    [[ -f package.nix ]] && echo "watch_file package.nix" >>.envrc
-    [[ -f shell.nix ]] && echo "watch_file shell.nix" >>.envrc
+append_envrc_project_settings() {
+    local envrc=$1
+
+    [[ -f package.nix ]] && echo "watch_file package.nix" >>"$envrc"
+    [[ -f shell.nix ]] && echo "watch_file shell.nix" >>"$envrc"
 
     if [[ -n "$PRODUCTS" ]]; then
         if [[ -f package.yaml ||
             -n "$(find . -maxdepth 1 -name '*.cabal')" ]]; then
-            cat >>.envrc <<EOF
+            cat >>"$envrc" <<EOF
 
 export CABAL_BUILDDIR=$PRODUCTS/dist
 EOF
@@ -122,7 +198,7 @@ EOF
             if [[ "$arch_triple" == "arm64-apple-darwin" ]]; then
                 arch_triple="aarch64-apple-darwin"
             fi
-            cat >>.envrc <<EOF
+            cat >>"$envrc" <<EOF
 
 export CARGO_TARGET_DIR=$cargo_target_dir
 export CARGO_HOME=\$CARGO_TARGET_DIR/.cargo-home
@@ -134,32 +210,116 @@ export PATH=\$PATH:\$CARGO_TARGET_DIR/${arch_triple}/release
 EOF
         fi
     fi
+}
+
+ensure_current_envrc() (
+    set -e
+    current_envrc=
+    legacy_envrc=
+    # shellcheck disable=SC2329  # Invoked by the EXIT trap.
+    cleanup_envrc_candidates() {
+        [[ -z $current_envrc ]] || rm -f "$current_envrc"
+        [[ -z $legacy_envrc ]] || rm -f "$legacy_envrc"
+    }
+    trap cleanup_envrc_candidates EXIT
+    trap 'exit 1' HUP INT TERM
+
+    current_envrc=$(mktemp ./.envrc.current.XXXXXX)
+    legacy_envrc=$(mktemp ./.envrc.legacy.XXXXXX)
+    write_current_envrc "$current_envrc"
+    write_legacy_envrc "$current_envrc" "$legacy_envrc"
+    append_envrc_project_settings "$current_envrc"
+    append_envrc_project_settings "$legacy_envrc"
+    chmod 644 "$current_envrc" "$legacy_envrc"
+
+    if [[ ! -e .envrc && ! -L .envrc ]]; then
+        mv -f "$current_envrc" .envrc
+        current_envrc=
+    elif [[ -f .envrc && ! -L .envrc ]] && cmp -s .envrc "$current_envrc"; then
+        :
+    elif [[ -f .envrc && ! -L .envrc ]] && cmp -s .envrc "$legacy_envrc"; then
+        mv -f "$current_envrc" .envrc
+        current_envrc=
+        echo "de: migrated the legacy generated .envrc" >&2
+    else
+        echo "de: refusing to use an unrecognized .envrc" >&2
+        echo "de: remove .envrc and rerun de to regenerate it, or update it to load .env after .envrc.cache" >&2
+        exit 1
+    fi
+)
+
+if [[ -L .envrc.cache ]]; then
+    echo "de: refusing to replace symlink .envrc.cache" >&2
+    exit 1
 fi
+if [[ -e .envrc.cache && ! -f .envrc.cache ]]; then
+    echo "de: refusing to replace non-regular .envrc.cache" >&2
+    exit 1
+fi
+
+ensure_current_envrc
 
 export NIXPKGS_ALLOW_UNFREE=1
 export NIXPKGS_ALLOW_BROKEN=1
 
-# Restore selected caller variables around the cached environment.
-SCRIPT="unset         \
-    ALTERNATE_EDITOR  \
-    COLORTERM         \
-    EDITOR            \
+# Restore selected caller variables around the cached environment. The cache is
+# deliberately populated before .env is loaded by the generated .envrc.
+SCRIPT=$(
+    cat <<'EOF'
+set -e
+umask 077
+unset \
+    ALTERNATE_EDITOR \
+    COLORTERM \
+    EDITOR \
     EMACS_SERVER_FILE \
-    ITERM_SESSION_ID  \
-    NIX_PATH          \
-    PROMPT            \
-    RPROMPT           \
+    GIT_PROMPT_EXECUTABLE \
+    GH_ACCOUNT \
+    GIT_PAGER \
+    ITERM_SESSION_ID \
+    NIX_PATH \
+    NO_COLOR \
+    PAGER \
+    PERSONA \
+    PROMPT \
+    RPROMPT \
     SECURITYSESSIONID \
-    SSH_AUTH_SOCK     \
-    SSL_CERT_FILE     \
-    STARSHIP_CONFIG   \
+    SSH_AUTH_SOCK \
+    SSL_CERT_FILE \
+    STARSHIP_CONFIG \
     STARSHIP_SESSION_KEY \
-    STARSHIP_SHELL    \
-    TERM              \
-    TERM_SESSION_ID   \
-    TMPDIR;           \
-if [[ -f .env ]]; then set -a; source .env; set +a; fi; \
-direnv dump > .envrc.cache"
+    STARSHIP_SHELL \
+    TERM \
+    TERM_SESSION_ID \
+    TMPDIR \
+    XDG_DATA_DIRS \
+    __GIT_PROMPT_DIR
+
+cache_tmp=
+cleanup_cache() {
+    [[ -z $cache_tmp ]] || rm -f "$cache_tmp"
+}
+trap cleanup_cache EXIT
+trap 'exit 1' HUP INT TERM
+
+cache_tmp=$(mktemp ./.envrc.cache.XXXXXX)
+direnv dump >"$cache_tmp"
+chmod 600 "$cache_tmp"
+
+if [[ -L .envrc.cache ]]; then
+    echo "de: refusing to replace symlink .envrc.cache" >&2
+    exit 1
+fi
+if [[ -e .envrc.cache && ! -f .envrc.cache ]]; then
+    echo "de: refusing to replace non-regular .envrc.cache" >&2
+    exit 1
+fi
+
+mv -f "$cache_tmp" .envrc.cache
+cache_tmp=
+trap - EXIT HUP INT TERM
+EOF
+)
 
 if [[ -f flake.nix ]]; then
     nix develop "${NIXOPTS[@]}" "$@" "${NIXOPTS_MORE[@]}" -c bash -c "$SCRIPT"
