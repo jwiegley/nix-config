@@ -33,26 +33,16 @@ separately below:
 
 ### Open questions blocking the remaining items
 
-1. Is `git-ai` genuinely shared-work? Routing says yes, the registry's
-   `sharedWorkMembers` says no; the answer gates unifying the shell host
-   tables with `config/hosts/registry.nix`.
-2. `config/ai/skills/node-red/SKILL.md` instructs reading
+Owner-decided review work is tracked in [`PLAN.org`](PLAN.org); only these
+authority questions remain unresolved:
+
+1. `config/ai/skills/node-red/SKILL.md` instructs reading
    `/run/secrets/node-red-admin-token`, contradicting the binding security
    rule: host-side helper, or documented exception?
-3. HTTP-header MCP transport: retained capability or fossil? The bridge
-   package, `mcp-remote` input, renderer branches, and 655-line oracle all
-   ship while the `mcpHttpHeaders` allowlist has been empty since
-   `1b9ffb9c`.
-4. Does anything downstream run the portable lint stack
+2. Does anything downstream run the portable lint stack
    (`config/ai#apps.{format,lint,check}`)? Nothing in this repository does,
    and it has drifted weaker than `test/bin/quality`.
-5. `overlays/10-coq.nix` defines 26 attributes no host or check selects:
-   kept for interactive `./build pkg` use, or removable?
-6. Does an external consumer use either public-but-repo-unused output:
-   portable `lib.inputNames` or root `darwinPackages`? Nothing in-repo or
-   documented selects either one; removal requires current downstream-consumer
-   evidence.
-7. Do clio's `~/Models/llama-swap.yaml` and omlx state serve the model IDs
+3. Do clio's `~/Models/llama-swap.yaml` and omlx state serve the model IDs
    its codex profiles now advertise (`GLM-5.2`,
    `Qwen3.6-27B-oQ6e-mtp`)? The catalog asserts the services exist on both
    workstations; model inventory is unmanaged host state.

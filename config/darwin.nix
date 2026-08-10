@@ -255,6 +255,8 @@ in
       "steam"
       "suspicious-package"
       "swiftdefaultappsprefpane"
+      # Installed by request; Home Manager remains the sole runtime owner.
+      # Syncthing.app must remain closed while that daemon is enabled.
       "syncthing-app"
       "tailscale-app"
       "telegram"
