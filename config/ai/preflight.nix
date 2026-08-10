@@ -67,7 +67,6 @@ let
     ".prime/agent/keybindings.json"
     ".prime/agent/managed-settings.json"
     ".prime/agent/models.json"
-    ".prime/agent/settings.json"
   ];
   validRelativePath =
     path:
