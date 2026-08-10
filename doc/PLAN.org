@@ -1465,15 +1465,17 @@ Authority resolved by the owner: delete. When closing, retain the recovery ancho
 ]
 #+end_src
 
-* TODO [#D] Make Emacs HEAD an explicit experimental build surface    :emacs:
+* DONE [#D] Make Emacs HEAD an explicit experimental build surface    :emacs:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.49
 :LABELS: ["dead-code","emacs","heavy-review"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 14:46]
+:MODIFIED: [2026-08-10 Mon 16:01]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:01]
+:CLOSE_REASON: Documented raw and configured Emacs HEAD selectors, retained the active Emacs 30 MacPort installation, removed only unused private projections, and added an aarch64-darwin evaluation check. Parse and format pass; the check build remains in the final Nix gate after evaluator stalls.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

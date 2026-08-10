@@ -82,18 +82,11 @@ rec {
 
   myEmacsPackages = import ./emacs.nix pkgs;
 
-  emacs30Env =
-    if pkgs ? emacs30Env then
-      pkgs.emacs30Env (epkgs: (builtins.filter (x: !x.excluded or false) (myEmacsPackages epkgs)))
-    else
-      null;
   emacs30MacPortEnv =
     if pkgs ? emacs30MacPortEnv then
       pkgs.emacs30MacPortEnv (epkgs: (builtins.filter (x: !x.excluded or false) (myEmacsPackages epkgs)))
     else
       null;
-  emacsHEADEnv = if pkgs ? emacsHEADEnv then pkgs.emacsHEADEnv myEmacsPackages else null;
-
   package-list =
 
     # ── Emacs (Darwin workstation clients only) ──────────────────────

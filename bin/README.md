@@ -247,7 +247,38 @@ The supported interactive Coq selectors are `coq` (currently Coq 9.1),
 expressions, with unversioned `coqPackages` selecting 9.1. CoqIDE remains
 disabled because Emacs is the supported editor.
 
-It operates on the current Darwin package set and normally creates a `result`
+Emacs HEAD is an experimental manual build surface; the active Darwin Home
+Manager package remains `emacs30MacPortEnv`. Build the raw HEAD package and
+evaluate its two package-set selectors with:
+
+```sh
+./build pkg emacsHEAD
+nix eval --json --apply builtins.attrNames \
+  .#darwinConfigurations.hera.pkgs.emacsHEADPackages
+nix eval --json --apply builtins.attrNames \
+  .#darwinConfigurations.hera.pkgs.emacsHEADPackagesNg
+```
+
+To build the configured HEAD environment, apply `pkgs.emacsHEADEnv` directly
+to the repository package selection, retaining the same exclusion policy as
+the active environment:
+
+```sh
+nix build --impure --expr '
+  let
+    flake = builtins.getFlake (toString ./.);
+    pkgs = flake.darwinConfigurations.hera.pkgs;
+    packageSet = import ./config/emacs.nix pkgs;
+  in
+  pkgs.emacsHEADEnv (epkgs:
+    builtins.filter (package: !(package.excluded or false)) (packageSet epkgs))
+'
+```
+
+Replace `hera` with `clio` to select Clio's Darwin package set. These commands
+are opt-in and do not change the package installed by Home Manager.
+
+`./build` operates on the current Darwin package set and normally creates a `result`
 link. Additional arguments after the mode and optional package are passed to
 `nix build`. NixOS consumers use their own `/etc/nixos/build` driver instead.
 

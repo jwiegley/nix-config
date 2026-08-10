@@ -426,6 +426,12 @@
                 configured = agentTestPkgsFor.${system};
               };
             }
+            // pkgs.lib.optionalAttrs (system == "aarch64-darwin") {
+              emacs-head = pkgs.callPackage ./test/overlays/emacs-head.nix {
+                inherit darwinConfigurations;
+                configured = agentTestPkgsFor.${system};
+              };
+            }
             // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
               darwin-overrides-inactive = pkgs.callPackage ./test/ai/overlay-isolation.nix {
                 inherit inputs;
