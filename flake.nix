@@ -422,6 +422,9 @@
               ai-catalog-transport = pkgs.callPackage ./test/ai/catalog-transport.nix {
                 inherit src;
               };
+              coq-overlay = pkgs.callPackage ./test/coq-overlay.nix {
+                configured = agentTestPkgsFor.${system};
+              };
             }
             // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
               darwin-overrides-inactive = pkgs.callPackage ./test/ai/overlay-isolation.nix {

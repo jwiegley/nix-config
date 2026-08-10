@@ -241,6 +241,12 @@ The root [`build`](../build) command builds but does not activate:
 ./build haskell PACKAGE
 ```
 
+The supported interactive Coq selectors are `coq` (currently Coq 9.1),
+`coq_8_19`, `coq_8_20`, `coq_9_0`, and `coq_9_1`; build one with
+`./build pkg SELECTOR`. Matching `coqPackages` aliases are available to Nix
+expressions, with unversioned `coqPackages` selecting 9.1. CoqIDE remains
+disabled because Emacs is the supported editor.
+
 It operates on the current Darwin package set and normally creates a `result`
 link. Additional arguments after the mode and optional package are passed to
 `nix build`. NixOS consumers use their own `/etc/nixos/build` driver instead.
