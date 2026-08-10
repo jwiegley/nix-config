@@ -1652,15 +1652,17 @@ Authority resolved by the owner: retain a four-version development matrix and ma
 ]
 #+end_src
 
-* TODO [#C] Replace host registry snapshot tests with behavioral assertions    :architecture:tests:
+* DONE [#C] Replace host registry snapshot tests with behavioral assertions    :architecture:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.53
 :LABELS: ["architecture","heavy-review","tests"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 15:46]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 15:46]
+:CLOSE_REASON: Replaced duplicated home-class roster snapshots with resolver, override, capability, and unknown-class behavioral assertions; parse and formatting checks pass.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

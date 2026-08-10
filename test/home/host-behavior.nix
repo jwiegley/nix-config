@@ -19,24 +19,26 @@ let
     "johnw@aarch64-linux"
     "jwiegley@x86_64-linux"
   ];
-  ordinaryHomeClasses = [
-    "clio"
-    "hera"
-    "vps"
-    "vulcan"
-  ];
-  expectedHomeClassNames = [
-    "clio"
-    "hera"
-    "personal-linux"
-    "shared-work"
-    "vps"
-    "vulcan"
-  ];
   desktopHomes = map (configuration: configuration.config.home-manager.users.johnw) (
     builtins.attrValues darwinConfigurations
   );
   registry = import ../../config/hosts/registry.nix;
+  personalLinuxResolution = registry.resolveFor {
+    hostname = "linux";
+    homeClass = "personal-linux";
+  };
+  sharedWorkResolution = registry.resolveFor {
+    hostname = "linux";
+    homeClass = "shared-work";
+  };
+  physicalHostResolution = registry.resolveFor { hostname = "hera"; };
+  physicalSharedWorkResolution = registry.resolveFor { hostname = "andoria-08"; };
+  unknownHostResolution = registry.resolveFor { hostname = "unknown"; };
+  unknownHostCapabilities = registry.capabilitiesFor { hostname = "unknown"; };
+  classOverrideResolution = registry.resolveFor {
+    hostname = "hera";
+    homeClass = "vps";
+  };
   classOverridesHostname =
     (lib.evalModules {
       specialArgs = {
@@ -56,6 +58,7 @@ let
   personalLinux = homeConfigurations."johnw@aarch64-linux".config;
   sharedWork = homeConfigurations."jwiegley@x86_64-linux".config;
   unknownHomeClassContract = registry.homeClassContractFor "unknown";
+  unknownHomeClassMessagePrefix = "set nixManagedAiHomeClass to one of ";
   nonDesktopHomes =
     map (fixture: fixture.config) (builtins.attrValues nixosHomeEvaluationFixtures)
     ++ map (configuration: configuration.config) (builtins.attrValues homeConfigurations);
@@ -171,24 +174,25 @@ assert builtins.all (
 ) requiredDarwinHosts;
 assert builtins.all (host: builtins.hasAttr host nixosHomeEvaluationFixtures) requiredNixosHosts;
 assert builtins.all (home: builtins.hasAttr home homeConfigurations) requiredStandaloneHomes;
-assert builtins.attrNames registry.homeClasses == expectedHomeClassNames;
-assert builtins.all (
-  name:
-  registry.homeClasses.${name} == {
-    registryId = name;
-    catalogHost = name;
-  }
-) ordinaryHomeClasses;
-assert
-  registry.homeClasses.personal-linux == {
-    registryId = null;
-    catalogHost = "vps";
-  };
-assert
-  registry.homeClasses.shared-work == {
-    registryId = "andoria";
-    catalogHost = "shared-work";
-  };
+assert personalLinuxResolution.homeClassRow.catalogHost == "vps";
+assert personalLinuxResolution.registryId == null;
+assert personalLinuxResolution.registryRow == null;
+assert sharedWorkResolution.homeClassRow.catalogHost == "shared-work";
+assert sharedWorkResolution.registryId == "andoria";
+assert sharedWorkResolution.registryRow != null;
+assert (registry.capabilitiesFor { hostname = "hera"; }).isHera;
+assert physicalHostResolution.homeClassRow == null;
+assert physicalHostResolution.registryId == "hera";
+assert physicalHostResolution.registryRow == registry.hosts.hera;
+assert physicalSharedWorkResolution.homeClassRow == null;
+assert physicalSharedWorkResolution.registryId == "andoria-08";
+assert physicalSharedWorkResolution.registryRow == null;
+assert unknownHostResolution.homeClassRow == null;
+assert unknownHostResolution.registryId == "unknown";
+assert unknownHostResolution.registryRow == null;
+assert allFalse (builtins.attrValues unknownHostCapabilities);
+assert classOverrideResolution.registryId == "vps";
+assert classOverrideResolution.registryRow == registry.hosts.vps;
 assert personalLinux.johnw.host.isCiFixture;
 assert !personalLinux.johnw.host.isSharedWork;
 assert personalLinux.johnw.profile.heavy;
@@ -199,13 +203,12 @@ assert !classOverridesHostname.johnw.host.isHera;
 assert !classOverridesHostname.johnw.host.isDarwinWorkstation;
 assert !classOverridesHostname.johnw.profile.heavy;
 assert (registry.capabilitiesFor { hostname = "andoria-08"; }).isSharedWork;
-assert !(registry.capabilitiesFor { hostname = "unknown"; }).isSharedWork;
-assert registry.homeClasses.unknown or null == null;
 assert unknownHomeClassContract.row == null;
 assert !unknownHomeClassContract.assertion;
+assert lib.hasPrefix unknownHomeClassMessagePrefix unknownHomeClassContract.message;
 assert
-  unknownHomeClassContract.message
-  == "set nixManagedAiHomeClass to one of ${lib.concatStringsSep ", " expectedHomeClassNames}";
+  builtins.stringLength unknownHomeClassContract.message
+  > builtins.stringLength unknownHomeClassMessagePrefix;
 assert builtins.any isDesktopRuntimeReference (contextPackageNames runtimeContextProbe);
 assert
   sharedWork.programs.zsh.history.path == "${sharedWork.xdg.configHome}/zsh/history-\${HOST%%.*}";
