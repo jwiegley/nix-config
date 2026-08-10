@@ -428,15 +428,17 @@ bin/update-remote:5-20 and bin/upgrade-all:22-36 launch tmux panes without waiti
 ]
 #+end_src
 
-* TODO [#B] Replace duplicated Make project loops with one fail-closed iterator    :make:safety:
+* DONE [#B] Replace duplicated Make project loops with one fail-closed iterator    :make:safety:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.19
 :LABELS: ["heavy-review","make","safety"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 15:53]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 15:53]
+:CLOSE_REASON: Replaced four fail-open project loops with one Bash iterator that validates directories, isolates callback stdin and cwd, aggregates failures, and is covered by missing-path and strict callback regressions.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

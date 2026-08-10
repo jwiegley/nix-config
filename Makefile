@@ -23,6 +23,9 @@ endif
 .PHONY: help all verify-inputs lock-local require-darwin-host build switch update update-projects upgrade-tasks upgrade \
 	changes copy check sizes clean purge sign travel-ready test expensive tools repl format lint
 
+# These maintenance recipes use Bash functions, strict mode, and arrays.
+update-projects upgrade-tasks changes copy travel-ready: SHELL := bash
+
 all: switch
 
 %-all: %
@@ -36,6 +39,46 @@ define announce
 	@echo -n '│ >>> $(1)'
 	@printf "%$$((72 - $(shell echo '$(1)' | wc -c)))s│\n"
 	@echo '└────────────────────────────────────────────────────────────────────────────┘'
+endef
+
+# Keep list input off stdin, and close its descriptor before invoking a callback.
+define for-each-project
+for_each_project() { \
+	local callback="$$1" projects_file="$$2"; \
+	local project project_dir command_status status=0; \
+	if [[ ! -f "$$projects_file" || ! -r "$$projects_file" ]]; then \
+	    printf 'Makefile: project list is not a readable file: %s\n' \
+	        "$$projects_file" >&2; \
+	    return 1; \
+	fi; \
+	if [[ -z "$${HOME:-}" ]]; then \
+	    printf 'Makefile: HOME is not set\n' >&2; \
+	    return 1; \
+	fi; \
+	if ! exec 9< "$$projects_file"; then \
+	    printf 'Makefile: could not open project list: %s\n' "$$projects_file" >&2; \
+	    return 1; \
+	fi; \
+	while IFS= read -r project <&9 || [[ -n "$$project" ]]; do \
+	    [[ -n "$$project" && "$$project" != \#* ]] || continue; \
+	    project_dir="$$HOME/$$project"; \
+	    if [[ ! -d "$$project_dir" ]]; then \
+	        printf 'Makefile: project directory not found: %s\n' "$$project_dir" >&2; \
+	        status=1; \
+	        continue; \
+	    fi; \
+	    (set -euo pipefail; cd "$$project_dir"; "$${callback}" "$$project_dir" "$$project") 9<&-; \
+	    command_status=$$?; \
+	    if ((command_status != 0)); then \
+	        printf 'Makefile: project command failed (%s): %s\n' \
+	            "$$command_status" "$$project_dir" >&2; \
+	        status=1; \
+	    fi; \
+	done; \
+	exec 9<&-; \
+	return "$$status"; \
+}; \
+for_each_project "$(1)" "$(PROJECTS)"
 endef
 
 help:
@@ -169,13 +212,11 @@ update:
 
 update-projects:
 	$(call announce,nix flake update (in projects))
-	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)"); \
-	for project in "$${projects[@]}"; do	\
-	    ( cd $(HOME)/$$project ;		\
-	      echo "### $(HOME)/$$project" ;	\
-	      nix flake update			\
-	    );					\
-	done
+	@update_project() { \
+	    printf '### %s\n' "$$1"; \
+	    nix flake update; \
+	}; \
+	$(call for-each-project,update_project)
 
 upgrade-tasks: travel-ready
 	@brew=$$(command -v brew || true);				\
@@ -188,46 +229,52 @@ upgrade-tasks: travel-ready
 upgrade: update upgrade-tasks
 
 changes:
-	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)"); \
-	for project in "$${projects[@]}"; do	\
-	    ( cd $(HOME)/$$project ;		\
-	      echo "### $(HOME)/$$project" ;	\
-	      changes				\
-	    );					\
-	done
+	@changes_project() { \
+	    printf '### %s\n' "$$1"; \
+	    changes; \
+	}; \
+	$(call for-each-project,changes_project)
 	echo "### ~/.config/pushme"
-	(cd ~/.config/pushme ; changes)
+	(cd "$$HOME/.config/pushme" && changes)
 	echo "### ~/.emacs.d"
-	(cd ~/.emacs.d ; changes)
+	(cd "$$HOME/.emacs.d" && changes)
 	echo "### ~/src/nix"
-	(cd ~/src/nix ; changes)
+	(cd "$$HOME/src/nix" && changes)
 	echo "### ~/src/scripts"
-	(cd ~/src/scripts ; changes)
+	(cd "$$HOME/src/scripts" && changes)
 	echo "### ~/doc"
-	(cd ~/doc ; changes)
+	(cd "$$HOME/doc" && changes)
 	echo "### ~/org"
-	(cd ~/org ; changes)
+	(cd "$$HOME/org" && changes)
 
 ########################################################################
 
 copy:
 	$(call announce,copy)
-	@for host in $(REMOTES); do						\
-	    nix copy --to "ssh-ng://$$host"					\
-	        $(HOME)/.local/state/nix/profiles/profile;			\
-	    readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)");	\
-	    for project in "$${projects[@]}"; do				\
-	        echo $$project;							\
-	        ( cd $(HOME)/$$project ;					\
-	          if [[ -f .envrc.cache ]]; then				\
-	              source <(direnv apply_dump .envrc.cache) ;		\
-	              if [[ -n "$$buildInputs" ]]; then				\
-	                  eval nix copy --to ssh-ng://$$host $$buildInputs;	\
-	              fi;							\
-	          fi								\
-	        );								\
-	    done;								\
-	done
+	@copy_project() { \
+	    local env_dump; \
+	    local -a build_inputs; \
+	    printf '%s\n' "$$2"; \
+	    if [[ -f .envrc.cache ]]; then \
+	        env_dump=$$(direnv apply_dump .envrc.cache); \
+	        source /dev/stdin <<<"$$env_dump"; \
+	        if [[ -n "$${buildInputs:-}" ]]; then \
+	            read -r -a build_inputs <<<"$$buildInputs"; \
+	            nix copy --to "ssh-ng://$$host" "$${build_inputs[@]}"; \
+	        fi; \
+	    fi; \
+	}; \
+	status=0; \
+	for host in $(REMOTES); do \
+	    nix copy --to "ssh-ng://$$host" \
+	        "$$HOME/.local/state/nix/profiles/profile"; \
+	    command_status=$$?; \
+	    ((command_status == 0)) || status=1; \
+	    $(call for-each-project,copy_project); \
+	    command_status=$$?; \
+	    ((command_status == 0)) || status=1; \
+	done; \
+	exit "$$status"
 
 ########################################################################
 
@@ -291,15 +338,14 @@ lint:
 
 travel-ready:
 	$(call announce,travel-ready)
-	@readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)"); \
-	for project in "$${projects[@]}"; do				\
-	    echo "Updating direnv on $(HOSTNAME) for ~/$$project";	\
-	    (cd ~/$$project &&						\
-             rm -f .envrc .envrc.cache;					\
-             clean;							\
-             case "$(HOSTNAME)" in					\
-             hera | clio) ;;						\
-             *) unset BUILDER ;;					\
-             esac;							\
-	     $(NIX_CONF)/bin/de);					\
-	done
+	@travel_project() { \
+	    printf 'Updating direnv on %s for ~/%s\n' "$(HOSTNAME)" "$$2"; \
+	    rm -f .envrc .envrc.cache; \
+	    clean; \
+	    case "$(HOSTNAME)" in \
+	    hera | clio) ;; \
+	    *) unset BUILDER ;; \
+	    esac; \
+	    "$(NIX_CONF)/bin/de"; \
+	}; \
+	$(call for-each-project,travel_project)

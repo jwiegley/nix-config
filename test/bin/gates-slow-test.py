@@ -722,6 +722,112 @@ class TestGatesAreRegistered(unittest.TestCase):
         )
         self.assertEqual([path for path in tracked if path.startswith("tests/")], [])
 
+    def _run_make_project_iterator(
+        self, root, *, listed_projects, existing_projects, failing_project=""
+    ):
+        home = root / "home with spaces"
+        caller = root / "caller"
+        home.mkdir()
+        caller.mkdir()
+        for project in existing_projects:
+            (home / project).mkdir()
+
+        projects = root / "project list"
+        projects.write_text("# ignored\n\n" + "\n".join(listed_projects))
+        project_log = root / "project.log"
+        fixture = root / "Makefile"
+        fixture.write_text(
+            f"include {REPO / 'Makefile'}\n"
+            ".PHONY: project-loop-probe\n"
+            "project-loop-probe: SHELL := bash\n"
+            "project-loop-probe:\n"
+            "\t@probe_project() { \\\n"
+            "\t    local input stdin_state; \\\n"
+            "\t    if IFS= read -r input; then \\\n"
+            "\t        stdin_state=\"data:$$input\"; \\\n"
+            "\t    else \\\n"
+            "\t        stdin_state=eof; \\\n"
+            "\t    fi; \\\n"
+            '\t    printf \'start:%s|arg1:%s|pwd:%s|stdin:%s\\n\' '
+            '"$$2" "$$1" "$$PWD" "$$stdin_state" >>"$$PROJECT_LOG"; \\\n'
+            "\t    if [[ \"$$2\" == \"$${FAIL_PROJECT:-}\" ]]; then false; fi; \\\n"
+            '\t    printf \'done:%s\\n\' "$$2" >>"$$PROJECT_LOG"; \\\n'
+            "\t}; \\\n"
+            "\t$(call for-each-project,probe_project); \\\n"
+            "\tstatus=$$?; \\\n"
+            "\texit \"$$status\"\n"
+        )
+        result = subprocess.run(
+            [
+                "make",
+                "--no-print-directory",
+                "-f",
+                str(fixture),
+                "project-loop-probe",
+                f"PROJECTS={projects}",
+            ],
+            cwd=caller,
+            env=clean_env(
+                HOME=str(home),
+                PROJECT_LOG=str(project_log),
+                FAIL_PROJECT=failing_project,
+            ),
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return result, home, project_log.read_text().splitlines()
+
+    def test_make_project_iterator_reports_missing_paths_without_consuming_input(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result, home, project_log = self._run_make_project_iterator(
+                Path(temp_dir),
+                listed_projects=("first project", "missing project", "last project"),
+                existing_projects=("first project", "last project"),
+            )
+
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn(str(home / "missing project"), result.stderr)
+            self.assertNotIn("project command failed", result.stderr)
+            self.assertEqual(
+                project_log,
+                [
+                    f"start:first project|arg1:{home / 'first project'}|"
+                    f"pwd:{home / 'first project'}|stdin:eof",
+                    "done:first project",
+                    f"start:last project|arg1:{home / 'last project'}|"
+                    f"pwd:{home / 'last project'}|stdin:eof",
+                    "done:last project",
+                ],
+            )
+
+    def test_make_project_iterator_aggregates_strict_callback_failures(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result, home, project_log = self._run_make_project_iterator(
+                Path(temp_dir),
+                listed_projects=("first project", "failing project", "last project"),
+                existing_projects=("first project", "failing project", "last project"),
+                failing_project="failing project",
+            )
+
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn(str(home / "failing project"), result.stderr)
+            self.assertNotIn("project directory not found", result.stderr)
+            self.assertEqual(
+                project_log,
+                [
+                    f"start:first project|arg1:{home / 'first project'}|"
+                    f"pwd:{home / 'first project'}|stdin:eof",
+                    "done:first project",
+                    f"start:failing project|arg1:{home / 'failing project'}|"
+                    f"pwd:{home / 'failing project'}|stdin:eof",
+                    f"start:last project|arg1:{home / 'last project'}|"
+                    f"pwd:{home / 'last project'}|stdin:eof",
+                    "done:last project",
+                ],
+            )
+
     def test_make_build_and_switch_propagate_darwin_rebuild_failure(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
