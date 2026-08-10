@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-cd ~/.config/home-manager || exit
-nix flake update --commit-lock-file
-exec nix run home-manager/master -- switch

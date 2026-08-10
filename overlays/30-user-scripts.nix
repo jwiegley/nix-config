@@ -44,6 +44,7 @@ in
         fi
       done
       test ! -e $out/bin/update-remote
+      test ! -e $out/bin/update-home-manager
       test ! -e $out/bin/upgrade-all
       test -x $out/bin/update-overlay
       substituteInPlace $out/bin/upgrade \

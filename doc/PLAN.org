@@ -2445,15 +2445,17 @@ bin/de:51-97 interpolates decoded environment values into literal single quotes 
 ]
 #+end_src
 
-* DOING [#B] Delete or repair the unpinned update-home-manager path    :validated:
+* DONE [#B] Delete or repair the unpinned update-home-manager path    :validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.8
 :LABELS: ["heavy-review","home-manager","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 16:38]
+:MODIFIED: [2026-08-10 Mon 16:55]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:55]
+:CLOSE_REASON: Deleted the unused unpinned update-home-manager helper, removed its inventory entry, and added a package-build assertion that it cannot return while the pinned switch path remains installed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
