@@ -86,6 +86,9 @@ class DeTests(unittest.TestCase):
             """#!/bin/bash
 set -e
 while (( $# )); do
+    if [[ $1 == --no-cache ]]; then
+        exit 66
+    fi
     if [[ $1 == --run ]]; then
         exec bash -c "$2"
     fi
@@ -142,7 +145,7 @@ esac
         path.write_text(contents, encoding="utf-8")
         path.chmod(0o755)
 
-    def run_de(self, additions=None, expected_returncode=0):
+    def run_de(self, additions=None, expected_returncode=0, args=()):
         env = {
             "CACHE_SENTINEL": "cache-visible",
             "DIRENV_DIFF": "active-direnv-diff",
@@ -155,7 +158,7 @@ esac
             **(additions or {}),
         }
         result = subprocess.run(
-            [str(DE)],
+            [str(DE), *args],
             cwd=self.project,
             env=env,
             capture_output=True,
@@ -168,6 +171,12 @@ esac
             result.stdout + result.stderr,
         )
         return result
+
+    def test_retired_no_cache_option_is_not_silently_discarded(self):
+        result = self.run_de(expected_returncode=66, args=("--no-cache",))
+
+        self.assertNotIn("accepted for compatibility", result.stderr)
+        self.assertFalse((self.project / ".envrc.cache").exists())
 
     def test_env_secret_is_loaded_after_private_cache_is_written(self):
         secret = "sentinel-secret-must-not-be-cached"

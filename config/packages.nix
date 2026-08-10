@@ -7,10 +7,9 @@
 }:
 with pkgs;
 let
-  # packages.nix is NOT a module -- it is `import`ed as a plain function and
-  # two of its three call sites (flake.nix and the downstream-consumer test
-  # fixture) pass it neither `config` nor `lib`. So it reads capabilities from
-  # the PURE registry rather than from `config.johnw.host`.
+  # packages.nix is NOT a module -- consumers `import` it as a plain function,
+  # sometimes without `config` or `lib`. So it reads capabilities from the PURE
+  # registry rather than from `config.johnw.host`.
   registry = import ./hosts/registry.nix;
   caps = registry.capabilitiesFor { inherit hostname; };
   inherit (stdenv)

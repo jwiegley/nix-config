@@ -33,11 +33,6 @@ if [[ -d $HOME/Products ]]; then
     echo "There is a ~/Products directory"
 fi
 
-if [[ "$1" == "--no-cache" ]]; then
-    shift 1
-    echo "de: --no-cache is accepted for compatibility and currently has no effect" >&2
-fi
-
 NIXOPTS=(--cores 2 -j4)
 NIXOPTS_MORE=()
 

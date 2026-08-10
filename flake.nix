@@ -247,8 +247,6 @@
           clio = configure "clio" "aarch64-darwin";
         };
 
-      darwinPackages = darwinConfigurations."hera".pkgs;
-
       packages = forAllSystems (system: portableAi.packages.${system});
 
       inherit (portableAi) apps overlays;

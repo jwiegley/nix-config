@@ -347,7 +347,7 @@ new generation and the affected executable or service passes a runtime check.
 
 | Command | Purpose | Material effects and cautions |
 |---|---|---|
-| `de [--no-cache] [NIX_ARGS...]` | Create and cache a project direnv development environment | May create `.envrc`, `.envrc.cache`, and product directories; sources `.env` as shell code. `--no-cache` is presently a no-op beyond argument removal. |
+| `de [NIX_ARGS...]` | Create and cache a project direnv development environment | May create `.envrc`, `.envrc.cache`, and product directories; sources `.env` as shell code. |
 | `env-build` | Run injected stdenv configure, build, and check phases | Internal builder exposed by packaging; do not invoke in an ordinary shell. |
 | `git-sha OWNER/REPO REV` | Prefetch a Git revision and print its Nix SHA-256 | Invokes `nix-prefetch-git`; intended for source maintenance. |
 | `myhost` | Print the locally inferred host class | Resolves through the shared routing library (hera/clio/vulcan/shared-work/vps), using `ipaddr en0` only to disambiguate the two workstations; exits 1 loudly on an unrecognized host. Do not use it as security or deployment authorization. |
@@ -377,7 +377,7 @@ standalone command.
 | `help` | Print the short operator summary; this README is the complete reference. |
 | `all` | Alias for `switch`; it activates the current Darwin configuration. |
 | `TARGET-all` | Run `TARGET` locally and then through `u` on every host in `REMOTES`; remote source synchronization is not implied. The pattern accepts destructive targets, so inspect `TARGET` and `REMOTES` before use. |
-| `test` | Run the full Python suite and build four principal package checks. |
+| `test` | Run the full Python suite and build the recipe-owned core package checks. |
 | `expensive` | Run expensive assurance and build the current Darwin system. |
 | `tools` | Print selected environment values and tool resolution. |
 | `repl` | Open a Nix REPL for the current Darwin package set. |

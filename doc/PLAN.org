@@ -18,6 +18,36 @@
 
 Make the managed `obr` executable available on Hera, Clio, VPS, Vulcan, and the shared-work home spanning Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server. Verify the portable/root package contracts and affected consumer builds. Publication, paired consumer-lock adoption, and every activation remain separately authorized; any authorized shared-work rollout must realize the candidate once, prove its closure resident on all four shared-work hosts, retain the previous GC root, and activate each from its authoritative checkout before runtime acceptance.
 
+* DOING [#B] Keep Plasma Wiki destination no-follow through copy    :filesystem:plasma:security:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-as0
+:LABELS: ["filesystem","heavy-review","plasma","security"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 15:40]
+:MODIFIED: [2026-08-10 Mon 16:06]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Discovered while implementing nix-tcz.63. The hardened _make_writable walk closes its safe directory descriptor before shutil.copytree reopens the destination by pathname, and ancestor components are not pinned. Traverse from a trusted root with no-follow semantics and keep the destination identity pinned through copy/copy-stat; add deterministic ancestor-symlink and check-to-copy swap regressions.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-as0",
+    "depends_on_id": "nix-tcz.63",
+    "type": "discovered-from",
+    "created_at": "2026-08-10T22:40:53.504640Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
 * CANCELED [#C] This is a test issue
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -118,14 +148,14 @@ Partner observation 2026-08-10T21:51:54.606Z: remove already-resolved questions 
 
 Parent for the 2026-08-10 seven-pass whole-repository review frozen at commit c8b37be06d054e16b865192cefffce6203a7d64c and tree d2641871fc5dc028682a4f88d8621f051af9df7b. Children preserve verified defects, test gaps, simplifications, documentation defects, and authority questions after cross-pass deduplication. Review evidence is static unless each child says otherwise.
 
-* TODO [#A] Remove agent-visible Node-RED runtime-secret access    :security:validated:
+* DOING [#A] Remove agent-visible Node-RED runtime-secret access    :security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.1
 :LABELS: ["heavy-review","security","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 15:19]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -149,14 +179,14 @@ Critical. config/ai/skills/node-red/SKILL.md:39-74,143 and references/api_refere
 ]
 #+end_src
 
-* TODO [#B] Make verify-inputs fail closed and test the real prerequisite    :git:nix:validated:
+* DOING [#B] Make verify-inputs fail closed and test the real prerequisite    :git:nix:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.10
 :LABELS: ["git","heavy-review","nix","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 15:50]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -180,14 +210,14 @@ Makefile:106-159 pipelines local-git-inputs.py output without checking the produ
 ]
 #+end_src
 
-* TODO [#C] Derive model-sync writes, checks, and digest from one desired state    :activation:ai:
+* DOING [#C] Derive model-sync writes, checks, and digest from one desired state    :activation:ai:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.11
 :LABELS: ["activation","ai","heavy-review"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 15:50]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -211,14 +241,14 @@ config/ai/model-sync.nix:39-71,126-176 maintains a partial digest separately fro
 ]
 #+end_src
 
-* TODO [#B] Pin all third-party CI actions to full revisions    :ci:security:validated:
+* DOING [#B] Pin all third-party CI actions to full revisions    :ci:security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.12
 :LABELS: ["ci","heavy-review","security","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 15:50]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -273,14 +303,14 @@ config/launchd.nix:285-322,362-363 exposes nginx on 8443 and proxies /v1 to loop
 ]
 #+end_src
 
-* TODO [#C] Make the Fess fallback portable across renderers    :ai:docs:validated:
+* DOING [#C] Make the Fess fallback portable across renderers    :ai:docs:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.14
 :LABELS: ["ai","docs","heavy-review","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:07]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -337,14 +367,14 @@ bin/de:49-103,142-162 sources .env under set -a and serializes the resulting env
 ]
 #+end_src
 
-* TODO [#B] Remove eval from cached Nix store-path copying    :make:security:validated:
+* DOING [#B] Remove eval from cached Nix store-path copying    :make:security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.16
 :LABELS: ["heavy-review","make","security","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 15:50]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -496,14 +526,14 @@ config/ai/catalog.nix:124-148,1085-1129 contains claude-opus-5[1m, and config/ai
 ]
 #+end_src
 
-* TODO [#B] Move upgrade-projects logs out of shared fixed /tmp paths    :security:shell:validated:
+* DOING [#B] Move upgrade-projects logs out of shared fixed /tmp paths    :security:shell:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.20
 :LABELS: ["heavy-review","security","shell","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 15:31]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -527,14 +557,14 @@ bin/upgrade-projects:3-99 opens predictable shared /tmp logs without private uma
 ]
 #+end_src
 
-* TODO [#B] Validate or replace inherited CODEX_SQLITE_HOME    :codex:security:
+* DOING [#B] Validate or replace inherited CODEX_SQLITE_HOME    :codex:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.21
 :LABELS: ["codex","heavy-review","security"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 15:31]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -558,14 +588,14 @@ flake/ai/wrappers/codex.nix:30-90 validates its default local root but preserves
 ]
 #+end_src
 
-* TODO [#C] Bound local OpenAI model discovery responses    :ai:
+* DOING [#C] Bound local OpenAI model discovery responses    :ai:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.22
 :LABELS: ["ai","heavy-review","resource-safety"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:07]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -713,14 +743,14 @@ config/syncthing.nix:99-198 has unexecuted child launch, route-loss, trap, termi
 ]
 #+end_src
 
-* TODO [#B] Add negative fixtures for Syncthing bootstrap file safety    :syncthing:tests:
+* DOING [#B] Add negative fixtures for Syncthing bootstrap file safety    :syncthing:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.27
 :LABELS: ["heavy-review","syncthing","tests"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:07]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -775,14 +805,14 @@ config/agent-deck.nix:34-108 has Hera-only assertions, DAG setup, private direct
 ]
 #+end_src
 
-* TODO [#B] Assert the SSH security baseline across both Home Manager APIs    :ssh:tests:
+* DOING [#B] Assert the SSH security baseline across both Home Manager APIs    :ssh:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.29
 :LABELS: ["heavy-review","ssh","tests"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:07]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1271,15 +1301,17 @@ overlays/00-lib.nix:12-39 and overlays/30-user-scripts.nix:18-25 install every t
 ]
 #+end_src
 
-* TODO [#D] Remove inert de --no-cache option    :shell:
+* DONE [#D] Remove inert de --no-cache option    :shell:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.43
 :LABELS: ["dead-code","heavy-review","shell"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 14:45]
+:MODIFIED: [2026-08-10 Mon 16:17]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:17]
+:CLOSE_REASON: Removed the inert --no-cache compatibility token and added a regression proving it is not silently discarded.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1308,15 +1340,17 @@ Authority resolved by the owner: delete the no-op option.
 ]
 #+end_src
 
-* TODO [#D] Correct the documented make test check inventory    :docs:make:
+* DONE [#D] Correct the documented make test check inventory    :docs:make:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.44
 :LABELS: ["docs","heavy-review","make"]
 :ISSUE_TYPE: docs
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:17]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:17]
+:CLOSE_REASON: Replaced the stale check count with the recipe-owned core-check contract.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1508,14 +1542,14 @@ Authority resolved by the owner: Emacs HEAD is a supported, intentionally non-ho
 ]
 #+end_src
 
-* TODO [#C] Unify host identity and shell routing authority    :architecture:routing:
+* DOING [#C] Unify host identity and shell routing authority    :architecture:routing:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.5
 :LABELS: ["architecture","heavy-review","routing"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:58]
+:MODIFIED: [2026-08-10 Mon 15:50]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1584,15 +1618,17 @@ Authority resolved by the owner: delete. The deletion commit body must state tha
 ]
 #+end_src
 
-* TODO [#D] Delete unused portable lib.inputNames output    :nix:
+* DONE [#D] Delete unused portable lib.inputNames output    :nix:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.51
 :LABELS: ["dead-code","heavy-review","nix"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 14:46]
+:MODIFIED: [2026-08-10 Mon 16:17]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:17]
+:CLOSE_REASON: Removed the unused portable lib.inputNames output; lib.inputSet remains canonical.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1916,14 +1952,14 @@ test/ai/scripts/format.sh:34-61 silently accepts unsupported paths and omits bas
 ]
 #+end_src
 
-* TODO [#B] Enforce skill names before constructing output paths    :comments:security:
+* DOING [#B] Enforce skill names before constructing output paths    :comments:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.60
 :LABELS: ["comments","heavy-review","security"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:12]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1947,14 +1983,14 @@ config/ai/skills/skill-creator/scripts/init_skill.py:217-239,299-320 prints a lo
 ]
 #+end_src
 
-* TODO [#C] Generate and parse genuinely valid skill frontmatter    :comments:
+* DOING [#C] Generate and parse genuinely valid skill frontmatter    :comments:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.61
 :LABELS: ["comments","heavy-review","skill-creator"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:12]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2009,14 +2045,14 @@ overlays/emacs/edit-env.el:44-51,84-95,114-165 splits VAR=VALUE on every equals 
 ]
 #+end_src
 
-* TODO [#B] Reject symlink roots before making Plasma Wiki writable    :filesystem:security:
+* DOING [#B] Reject symlink roots before making Plasma Wiki writable    :filesystem:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.63
 :LABELS: ["filesystem","heavy-review","security"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 15:23]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2073,15 +2109,17 @@ test/bin/quality:214-232 says staged rename or deletion leaves the old path in g
 ]
 #+end_src
 
-* TODO [#D] Remove the stale packages.nix call-site count    :comments:docs:
+* DONE [#D] Remove the stale packages.nix call-site count    :comments:docs:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.65
 :LABELS: ["comments","docs","heavy-review"]
 :ISSUE_TYPE: docs
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 16:17]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:17]
+:CLOSE_REASON: Replaced the drifting call-site count with the plain-import architectural contract.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2197,15 +2235,17 @@ config/ai/renderers/render-lib.nix:1-15 claims one frontmatter implementation, b
 ]
 #+end_src
 
-* TODO [#D] Delete unused root darwinPackages output    :nix:
+* DONE [#D] Delete unused root darwinPackages output    :nix:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.69
 :LABELS: ["dead-code","heavy-review","nix"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 14:46]
-:MODIFIED: [2026-08-10 Mon 14:47]
+:MODIFIED: [2026-08-10 Mon 16:17]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:17]
+:CLOSE_REASON: Removed the unused root darwinPackages alias while preserving named configurations and portable packages.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2217,7 +2257,7 @@ Owner decision 2026-08-10: remove the root darwinPackages alias. It exposes the 
 flake.nix no longer exports darwinPackages; named Darwin configurations, portable package outputs, root evaluation, and supported build commands remain green; no documentation claims the retired output exists.
 
 ** Notes
-Authority resolved by the owner: delete. The live flake.nix still contains the output; this issue records implementation work rather than claiming it is already applied.
+Authority resolved by the owner: delete.
 
 ** Dependencies
 #+begin_src json

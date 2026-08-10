@@ -88,7 +88,6 @@
     // {
       lib = checked.lib // {
         inputSet = portableInputs;
-        inputNames = builtins.attrNames portableInputs;
       };
     };
 }
