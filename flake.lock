@@ -6031,11 +6031,11 @@
         "rust-overlay": "rust-overlay_3"
       },
       "locked": {
-        "lastModified": 1786348042,
-        "narHash": "sha256-9aA3CXyTwSuewTP1kvJ5cvV4YLuzezP2iMF84Et7WL4=",
+        "lastModified": 1786390861,
+        "narHash": "sha256-D+6zUsRwDokKiaNwBnIUlttCIcOXb3rMP+7vUYARmrE=",
         "owner": "jwiegley",
         "repo": "obr",
-        "rev": "884fb1e6991acd608eaf3e6ab02253bb4b5ff9da",
+        "rev": "f9710ac5c63b6dc9d6a9b5e26b9c2fce7dba20fc",
         "type": "github"
       },
       "original": {
