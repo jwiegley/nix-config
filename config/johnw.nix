@@ -7,7 +7,7 @@
 # Host-specific settings key off typed capability flags (config.johnw.host.*).
 # Values that may need per-host override use lib.mkDefault.
 
-args@{
+{
   pkgs,
   lib,
   config,
@@ -17,8 +17,7 @@ args@{
 }:
 let
   inherit (pkgs.stdenv) isDarwin isLinux;
-  nixManagedAiHomeClass = args.nixManagedAiHomeClass or null;
-  isPositronRemoteLinux = isLinux && nixManagedAiHomeClass == "shared-work";
+  isPositronRemoteLinux = isLinux && config.johnw.host.isSharedWork;
   isHeavy = config.johnw.profile.heavy;
 
   # Shared variables - also imported by sub-modules
