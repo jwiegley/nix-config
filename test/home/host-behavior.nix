@@ -79,6 +79,17 @@ let
       ];
     in
     builtins.any (path: builtins.any (root: path == root || lib.hasPrefix "${root}/" path) roots) paths;
+  ownsObrState =
+    config:
+    builtins.any (
+      path:
+      path == ".obr"
+      || lib.hasPrefix ".obr/" path
+      || lib.hasInfix "/.obr/" path
+      || lib.hasSuffix "/.obr" path
+      || path == "PLAN.org"
+      || lib.hasSuffix "/PLAN.org" path
+    ) (builtins.attrNames config.home.file);
   desktopPackages = [
     "eask-cli"
     "emacs-lsp-booster"
@@ -224,7 +235,9 @@ assert builtins.all (
 assert builtins.all (hasPackage "unisessions") allHomes;
 assert builtins.all (hasPackage "cass") allHomes;
 assert builtins.all (hasPackage "cm") allHomes;
+assert builtins.all (hasPackage "obr") allHomes;
 assert builtins.all (config: !(ownsCmState config)) allHomes;
+assert builtins.all (config: !(ownsObrState config)) allHomes;
 assert builtins.all (
   config:
   config.programs.starship.settings.add_newline == false

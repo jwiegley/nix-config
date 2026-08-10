@@ -56,6 +56,10 @@ licenses add an OpenAI/Anthropic restriction, so the packages are marked unfree
 and install the exact rider. Nix owns generated configuration leaves, not mutable
 roots.
 
+`obr` is exported through the same portable boundary and selected for every managed
+AI home. Nix owns the executable; each machine's ignored `.obr/` cache and each
+repository's tracked `PLAN.org` remain mutable project state.
+
 The managed Pi profile makes the same complete 26-member extension gallery
 available on every host. Automatic registration of the two loopback providers
 and their router remains capability-specific.

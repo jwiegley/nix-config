@@ -2,6 +2,22 @@
 #+SEQ_TODO: TODO DOING DRAFT WAIT DEFER NOTE | DONE CANCELED
 #+ISSUE_PREFIX: nix
 
+* DOING [#B] Make obr available across the managed fleet
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-aln
+:LABELS: []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:02]
+:MODIFIED: [2026-08-10 Mon 13:52]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Make the managed `obr` executable available on Hera, Clio, VPS, Vulcan, and the shared-work home spanning Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server. Verify the portable/root package contracts and affected consumer builds. Publication, paired consumer-lock adoption, and every activation remain separately authorized; any authorized shared-work rollout must realize the candidate once, prove its closure resident on all four shared-work hosts, retain the previous GC root, and activate each from its authoritative checkout before runtime acceptance.
+
 * CANCELED [#C] This is a test issue
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

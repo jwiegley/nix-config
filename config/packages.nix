@@ -54,7 +54,6 @@ let
   userPackageInputAllowlist = [
     "gh-to-org"
     "git-all"
-    "obr"
     "org2jsonl"
     "rag-client"
     "rust-overlay"

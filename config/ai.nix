@@ -21,6 +21,7 @@ let
   pairedPrimePackage = pairedAiPackages.prime-agent or null;
   pairedCassPackage = pairedAiPackages.cass or null;
   pairedCmPackage = pairedAiPackages.cm or null;
+  pairedObrPackage = pairedAiPackages.obr or null;
   pairedAgentResources = pairedAiPackages.agent-resources or null;
   pairedPiGallery = pairedAiPackages.pi-gallery or null;
   resourcePackage = pkgs.agent-resources;
@@ -354,6 +355,10 @@ in
       message = "inputs.nix-config-ai.packages.${system}.cm is missing";
     }
     {
+      assertion = pairedObrPackage != null;
+      message = "inputs.nix-config-ai.packages.${system}.obr is missing";
+    }
+    {
       assertion = !(piSelected || primeSelected) || pairedAgentResources != null;
       message = "inputs.nix-config-ai.packages.${system}.agent-resources is missing";
     }
@@ -378,6 +383,7 @@ in
       ++ lib.optional (primeSelected && pairedPrimePackage != null) pairedPrimePackage
       ++ lib.optional (pairedCassPackage != null) pairedCassPackage
       ++ lib.optional (pairedCmPackage != null) pairedCmPackage
+      ++ lib.optional (pairedObrPackage != null) pairedObrPackage
       ++ lib.optionals piSelected piRuntimePackages;
     # The dummy keys satisfy codex's env_key lookups for the local providers;
     # they are only meaningful where a codex profile declares local model

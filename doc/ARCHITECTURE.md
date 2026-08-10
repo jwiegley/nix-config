@@ -155,6 +155,10 @@ executable and exact unfree rider only. Global and repository playbooks,
 diaries, feedback, reflections, embeddings, indexes, models, usage records,
 backups, locks, caches, and Cass's independent data root remain mutable.
 
+`obr` is exported and selected through this same paired portable boundary for every
+managed home. Nix owns its executable, while each machine owns its ignored `.obr/`
+cache and each repository owns its tracked `PLAN.org` issue surface.
+
 Pi's packaging substrate is pinned the same way `cm`'s Bun is: the portable
 flake carries a second llm-agents input, `pi-llm-agents`, at the exact
 revision whose Pi packaging matches the reviewed source build in

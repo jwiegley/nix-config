@@ -73,10 +73,6 @@
       url = "github:jwiegley/gh-to-org";
     };
 
-    obr = {
-      url = "github:jwiegley/obr";
-    };
-
     org2jsonl = {
       url = "github:jwiegley/org2jsonl";
     };
