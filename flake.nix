@@ -130,11 +130,6 @@
         "aarch64-linux"
         "x86_64-linux"
       ];
-      aiSystems = [
-        "aarch64-darwin"
-        "aarch64-linux"
-        "x86_64-linux"
-      ];
       forAllSystems = nixpkgs.lib.genAttrs rootSystems;
       # The subflake input already evaluates flake/ai.nix through
       # test/ai/compatibility-check.nix, whose per-system guard fail-closes
@@ -258,7 +253,7 @@
 
       darwinPackages = darwinConfigurations."hera".pkgs;
 
-      packages = nixpkgs.lib.genAttrs aiSystems (system: portableAi.packages.${system});
+      packages = forAllSystems (system: portableAi.packages.${system});
 
       inherit (portableAi) apps overlays;
 
@@ -380,7 +375,7 @@
             ];
           };
         }
-        // nixpkgs.lib.optionalAttrs (builtins.elem system aiSystems) {
+        // {
           ai = portableAi.devShells.${system}.default;
         }
       );
@@ -440,10 +435,6 @@
             }
           );
         in
-        forAllSystems (
-          system:
-          nixpkgs.lib.optionalAttrs (builtins.elem system aiSystems) portableAi.checks.${system}
-          // rootChecks.${system}
-        );
+        forAllSystems (system: portableAi.checks.${system} // rootChecks.${system});
     };
 }
