@@ -7,9 +7,10 @@
 }:
 with pkgs;
 let
-  # packages.nix is NOT a module -- it is `import`ed as a plain function and one
-  # of its two call sites passes it neither `config` nor `lib`. So it reads
-  # capabilities from the PURE registry rather than from `config.johnw.host`.
+  # packages.nix is NOT a module -- it is `import`ed as a plain function and
+  # two of its three call sites (flake.nix and the downstream-consumer test
+  # fixture) pass it neither `config` nor `lib`. So it reads capabilities from
+  # the PURE registry rather than from `config.johnw.host`.
   registry = import ./hosts/registry.nix;
   caps = registry.capabilitiesFor { inherit hostname; };
   inherit (stdenv)
@@ -22,16 +23,28 @@ let
   inherit (aiPackagePolicy) supportsAiperf supportsGradio6;
 
   # Helper to conditionally include a package that may come from an overlay.
-  # Returns a singleton list if the package exists in pkgs, empty list otherwise.
-  optPkg = name: if pkgs ? ${name} then [ pkgs.${name} ] else [ ];
+  # Returns a singleton list if the package exists in pkgs and is available on
+  # this platform, empty list otherwise -- the same semantics as the portable
+  # flake's optPkg, so the home and portable selections cannot disagree.
+  optPkg =
+    name:
+    if pkgs ? ${name} && lib.meta.availableOn pkgs.stdenv.hostPlatform pkgs.${name} then
+      [ pkgs.${name} ]
+    else
+      [ ];
   optPkgs = names: lib.concatMap optPkg names;
 
   agentPackages = inputs.llm-agents.packages.${sys} or { };
-  localAi =
-    inputs.nix-config-ai or inputs.nix-ai
-      or (if inputs ? git-ai then import ../flake/ai.nix inputs else null);
+  localAi = inputs.nix-config-ai or (if inputs ? git-ai then import ../flake/ai.nix inputs else null);
+  # config/ai.nix hard-asserts this same input; a consumer that installs agent
+  # packages without the portable flake must fail loudly rather than silently
+  # receive unwrapped upstream binaries.
   patchAgentPackage =
-    if localAi == null then _name: package: package else localAi.lib.patchAgentPackage pkgs;
+    if localAi == null then
+      _name: _package:
+      throw "config/packages.nix requires inputs.nix-config-ai (or the in-repo flake/ai.nix route) to wrap managed agent packages"
+    else
+      localAi.lib.patchAgentPackage pkgs;
   optAgent =
     name: if agentPackages ? ${name} then [ (patchAgentPackage name agentPackages.${name}) ] else [ ];
 
