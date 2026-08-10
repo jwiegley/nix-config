@@ -121,10 +121,12 @@ def read_regular_file(path: Path) -> tuple[bytes, os.stat_result]:
     before = path.lstat()
     if not stat.S_ISREG(before.st_mode):
         raise BootstrapError("config.xml must be a regular file")
-    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    flags = os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0)
     fd = os.open(path, flags)
     try:
         opened = os.fstat(fd)
+        if not stat.S_ISREG(opened.st_mode):
+            raise BootstrapError("config.xml must remain a regular file")
         if (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino):
             raise BootstrapError("config.xml changed during validation")
         chunks: list[bytes] = []
@@ -376,11 +378,17 @@ def atomic_write(path: Path, root: ET.Element, original: os.stat_result) -> None
     fd, temporary_name = tempfile.mkstemp(prefix=".config.xml.", dir=path.parent)
     temporary = Path(temporary_name)
     try:
-        os.fchmod(fd, stat.S_IMODE(original.st_mode))
         with os.fdopen(fd, "wb", closefd=True) as output:
+            os.fchmod(output.fileno(), stat.S_IMODE(original.st_mode))
             ET.ElementTree(root).write(output, encoding="utf-8", xml_declaration=True)
             output.flush()
             os.fsync(output.fileno())
+        # os.replace has no compare-and-swap form. Callers must coordinate
+        # exclusive access; this repeat check rejects changes observed during
+        # serialization but not a swap between this lstat and os.replace.
+        current = path.lstat()
+        if (current.st_dev, current.st_ino) != (original.st_dev, original.st_ino):
+            raise BootstrapError("config.xml changed before replacement")
         os.replace(temporary, path)
         directory_fd = os.open(path.parent, os.O_RDONLY)
         try:

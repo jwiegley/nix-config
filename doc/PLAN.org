@@ -881,15 +881,17 @@ config/syncthing.nix:99-198 has unexecuted child launch, route-loss, trap, termi
 ]
 #+end_src
 
-* DOING [#B] Add negative fixtures for Syncthing bootstrap file safety    :syncthing:tests:
+* DONE [#B] Add negative fixtures for Syncthing bootstrap file safety    :syncthing:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.27
 :LABELS: ["heavy-review","syncthing","tests"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 16:07]
+:MODIFIED: [2026-08-10 Mon 16:57]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:57]
+:CLOSE_REASON: Added hermetic fault-injection coverage for Syncthing bootstrap file races, descriptor and temp cleanup, metadata, replacement, and exact fsync targets; fixed the exposed descriptor leak and added post-serialization identity validation.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
