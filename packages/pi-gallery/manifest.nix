@@ -7,7 +7,14 @@ let
     let
       record = sources.${sourceName};
     in
-    value
+    {
+      # The gallery attribute and the package lookup always follow the source
+      # name; publicName stays explicit because the npm registry identity is
+      # independent data (several members are scoped).
+      attrName = sourceName;
+      package = packages.${sourceName} or null;
+    }
+    // value
     // {
       inherit sourceName;
       inherit (record) source update version;
@@ -49,153 +56,105 @@ in
 
   members = {
     hashline = member "pi-hashline-edit-pro" {
-      attrName = "pi-hashline-edit-pro";
-      package = packages.pi-hashline-edit-pro or null;
       publicName = "pi-hashline-edit-pro";
       extension = "index.ts";
     };
     smart-fetch = member "pi-smart-fetch" {
-      attrName = "pi-smart-fetch";
-      package = packages.pi-smart-fetch or null;
       publicName = "pi-smart-fetch";
       extension = "dist/index.js";
     };
     smart-web-search = member "pi-smart-web-search" {
-      attrName = "pi-smart-web-search";
-      package = packages.pi-smart-web-search or null;
       publicName = "pi-smart-web-search";
       extension = "index.ts";
     };
     lens = member "pi-lens" {
-      attrName = "pi-lens";
-      package = packages.pi-lens or null;
       publicName = "pi-lens";
       extension = "dist/index.js";
       skills = [ "skills" ];
     };
     ponytail = member "pi-ponytail" {
-      attrName = "pi-ponytail";
-      package = packages.pi-ponytail or null;
       projectionVersion = "${sources.pi-ponytail.version}+${builtins.substring 0 7 inputs.ponytail.rev}";
       publicName = "@dietrichgebert/ponytail";
       extension = "pi-extension/index.js";
       skills = [ ];
     };
     browser = member "pi-agent-browser-native" {
-      attrName = "pi-agent-browser-native";
-      package = packages.pi-agent-browser-native or null;
       publicName = "pi-agent-browser-native";
       extension = "dist/extensions/agent-browser/index.js";
     };
     btw = member "pi-btw" {
-      attrName = "pi-btw";
-      package = packages.pi-btw or null;
       publicName = "pi-btw";
       extension = "extensions/btw.ts";
       skills = [ "skills/btw" ];
     };
     copy-message = member "pi-copy-message" {
-      attrName = "pi-copy-message";
-      package = packages.pi-copy-message or null;
       publicName = "pi-copy-message";
       extension = "extensions/copy-message.ts";
     };
     artifacts = member "pi-artifacts" {
-      attrName = "pi-artifacts";
-      package = packages.pi-artifacts or null;
       publicName = "@jakeryderv/pi-artifacts";
       extension = "extensions/nix-bundle.js";
       skills = [ "skills/artifacts-authoring" ];
     };
     insights = member "pi-insights" {
-      attrName = "pi-insights";
-      package = packages.pi-insights or null;
       publicName = "@ygncode/pi-insights";
       extension = "index.ts";
     };
     usage = member "pi-usage-extension" {
-      attrName = "pi-usage-extension";
-      package = packages.pi-usage-extension or null;
       publicName = "@tmustier/pi-usage-extension";
       extension = "index.ts";
     };
     multi-pass = member "pi-multi-pass" {
-      attrName = "pi-multi-pass";
-      package = packages.pi-multi-pass or null;
       publicName = "pi-multi-pass";
       extension = "extensions/multi-sub.ts";
     };
     llama-swap-provider = member "pi-provider-llama-swap" {
-      attrName = "pi-provider-llama-swap";
-      package = packages.pi-provider-llama-swap or null;
       publicName = "pi-provider-llama-swap";
       extension = "index.ts";
     };
     omlx-provider = member "pi-provider-omlx" {
-      attrName = "pi-provider-omlx";
-      package = packages.pi-provider-omlx or null;
       publicName = "pi-provider-omlx";
       extension = "index.ts";
     };
     router = member "pi-model-router" {
-      attrName = "pi-model-router";
-      package = packages.pi-model-router or null;
       publicName = "@yeliu84/pi-model-router";
       extension = "extensions/index.ts";
     };
     rewind = member "pi-rewind" {
-      attrName = "pi-rewind";
-      package = packages.pi-rewind or null;
       publicName = "pi-rewind";
       extension = "src/index.ts";
     };
     blackhole = member "pi-blackhole" {
-      attrName = "pi-blackhole";
-      package = packages.pi-blackhole or null;
       publicName = "pi-blackhole";
       extension = "index.ts";
     };
     trace = member "pi-trace-extension" {
-      attrName = "pi-trace-extension";
-      package = packages.pi-trace-extension or null;
       publicName = "pi-trace-extension";
       extension = "extensions/trace/index.ts";
     };
     markdown-preview = member "pi-markdown-preview" {
-      attrName = "pi-markdown-preview";
-      package = packages.pi-markdown-preview or null;
       publicName = "pi-markdown-preview";
       extension = "index.ts";
     };
     caveman = member "pi-caveman" {
-      attrName = "pi-caveman";
-      package = packages.pi-caveman or null;
       publicName = "pi-caveman";
       extension = "extensions/caveman.ts";
     };
     rtk-optimizer = member "pi-rtk-optimizer" {
-      attrName = "pi-rtk-optimizer";
-      package = packages.pi-rtk-optimizer or null;
       publicName = "pi-rtk-optimizer";
       extension = "index.ts";
     };
     cymbal-extension = member "pi-cymbal" {
-      attrName = "pi-cymbal";
-      package = packages.pi-cymbal or null;
       publicName = "pi-cymbal";
       extension = "dist/index.ts";
     };
     subagents = member "pi-subagents" {
-      attrName = "pi-subagents";
-      package = packages.pi-subagents or null;
       publicName = "pi-subagents";
       extension = "index.ts";
       skills = [ "skills" ];
       prompts = [ "prompts" ];
     };
     dynamic-workflows = member "pi-dynamic-workflows" {
-      attrName = "pi-dynamic-workflows";
-      package = packages.pi-dynamic-workflows or null;
       publicName = "@quintinshaw/pi-dynamic-workflows";
       extension = "extensions/workflow.ts";
       skills = [
@@ -204,14 +163,10 @@ in
       ];
     };
     goal = member "pi-goal-x" {
-      attrName = "pi-goal-x";
-      package = packages.pi-goal-x or null;
       publicName = "pi-goal-x";
       extension = "extensions/goal.ts";
     };
     cache-optimizer = member "pi-cache-optimizer" {
-      attrName = "pi-cache-optimizer";
-      package = packages.pi-cache-optimizer or null;
       publicName = "pi-cache-optimizer";
       extension = "index.ts";
     };
@@ -219,21 +174,13 @@ in
 
   supportSources = {
     loop = member "pi-loop" {
-      attrName = "pi-loop";
-      package = packages.pi-loop or null;
       publicName = "@realvendex/pi-loop";
     };
     agent-browser = member "agent-browser" {
-      attrName = "agent-browser";
-      package = packages.agent-browser or null;
     };
     rtk = member "rtk" {
-      attrName = "rtk";
-      package = packages.rtk or null;
     };
     cymbal = member "cymbal" {
-      attrName = "cymbal";
-      package = packages.cymbal or null;
     };
   };
 
