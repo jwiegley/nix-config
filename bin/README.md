@@ -343,7 +343,7 @@ standalone command.
 | `upgrade-tasks` | Run `travel-ready`, then upgrade Homebrew packages; inherits the `travel-ready` path-safety limitation. |
 | `upgrade` | Under serial Make, run `update` and then `upgrade-tasks`; the prerequisites are not explicitly ordered and may run concurrently under `make -j` or inherited parallel `MAKEFLAGS`. Do not invoke this target in parallel. |
 | `changes` | Run an external `changes` command across configured and fixed repositories. A failed `cd` may run it in the wrong directory, and loop failures may be masked. |
-| `copy` | Intended to copy profile and build inputs to `REMOTES`; the current recipe is syntactically malformed and must not be used. |
+| `copy` | Copy the current profile closure and per-project direnv build inputs to each host in `REMOTES` via `nix copy`. Loop failures may be masked, matching the other legacy loops above. |
 | `check` | Run `nix store verify --no-trust --repair --all`; it disables trust verification and may repair, and therefore mutate, store paths. |
 | `sizes` | Report the filesystem containing `/nix`. |
 | `clean` | Intended to retain `MAX_AGE` user/system generations and collect paths older than `MAX_AGE` days. The system-profile deletion is unsudoed and can fail after partially deleting user generations but before garbage collection; do not use until repaired. |

@@ -183,11 +183,11 @@ update-projects:
 	done
 
 upgrade-tasks: travel-ready
-	@if [[ -f /opt/homebrew/bin/brew ]]; then	\
-	    eval "$(/opt/homebrew/bin/brew shellenv)";	\
-	elif [[ -f /usr/local/bin/brew ]]; then		\
-	    eval "$(/usr/local/bin/brew shellenv)";	\
-	fi
+	@brew=$$(command -v brew || true);				\
+	[[ -x $$brew ]] || brew=/opt/homebrew/bin/brew;			\
+	[[ -x $$brew ]] || brew=/usr/local/bin/brew;			\
+	[[ -x $$brew ]] || { echo 'upgrade-tasks: no brew found' >&2; exit 1; }; \
+	eval "$$("$$brew" shellenv)";					\
 	brew upgrade --greedy --yes
 
 upgrade: update upgrade-tasks
@@ -220,7 +220,7 @@ copy:
 	@for host in $(REMOTES); do						\
 	    nix copy --to "ssh-ng://$$host"					\
 	        $(HOME)/.local/state/nix/profiles/profile;			\
-	    readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)")	\
+	    readarray -t projects < <(egrep -v '^(#.+)?$$' "$(PROJECTS)");	\
 	    for project in "$${projects[@]}"; do				\
 	        echo $$project;							\
 	        ( cd $(HOME)/$$project ;					\
