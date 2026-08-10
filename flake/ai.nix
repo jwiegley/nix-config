@@ -557,6 +557,9 @@ in
       cass = pkgs.callPackage ../test/ai/cass.nix { inherit pkgs; };
       cm = pkgs.callPackage ../test/ai/cm.nix { inherit pkgs; };
       prime-agent = pkgs.callPackage ../test/ai/prime-agent.nix { inherit pkgs; };
+      pi-extension-tests = pkgs.callPackage ../test/ai/pi-extension-tests.nix {
+        inherit sourceForChecks;
+      };
       pi-fleet-theme = pkgs.callPackage ../test/ai/pi-fleet-theme.nix {
         inherit sourceForChecks;
         piPackage = canonicalPiPackages.${system};

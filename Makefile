@@ -55,6 +55,8 @@ test:
 	nix build --no-link \
 	  .#checks.$(SYSTEM).agent-resources \
 	  .#checks.$(SYSTEM).agent-wrappers \
+	  .#checks.$(SYSTEM).ai-catalog-transport \
+	  .#checks.$(SYSTEM).pi-extension-tests \
 	  .#checks.$(SYSTEM).pi-gallery \
 	  .#checks.$(SYSTEM).pi-fleet-theme
 
@@ -63,6 +65,8 @@ expensive:
 	nix build --no-link \
 	  .#checks.$(SYSTEM).agent-resources \
 	  .#checks.$(SYSTEM).agent-wrappers \
+	  .#checks.$(SYSTEM).ai-catalog-transport \
+	  .#checks.$(SYSTEM).pi-extension-tests \
 	  .#checks.$(SYSTEM).pi-gallery \
 	  .#checks.$(SYSTEM).pi-fleet-theme
 	./build system

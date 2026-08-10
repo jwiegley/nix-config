@@ -1,5 +1,4 @@
 {
-  bun,
   coreutils,
   diffutils,
   findutils,
@@ -13,7 +12,6 @@
 runCommand "pi-fleet-theme-check"
   {
     nativeBuildInputs = [
-      bun
       coreutils
       diffutils
       findutils
@@ -24,11 +22,6 @@ runCommand "pi-fleet-theme-check"
     set -euo pipefail
 
     extension=${lib.escapeShellArg "${sourceForChecks}/config/ai/extensions/fleet-theme/index.ts"}
-
-    (
-      cd ${sourceForChecks}/test/ai/extensions/fleet-theme
-      bun test index.test.ts
-    )
 
     scratch="$TMPDIR/rpc-negative"
     mkdir -p "$scratch/home" "$scratch/agent" "$scratch/project"

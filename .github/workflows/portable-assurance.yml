@@ -54,5 +54,6 @@ jobs:
       - name: Build portable native integration checks
         run: |
           nix build --no-link \
+            "./config/ai#checks.${{ matrix.system }}.pi-extension-tests" \
             "./config/ai#checks.${{ matrix.system }}.pi-gallery" \
             "./config/ai#checks.${{ matrix.system }}.cm"
