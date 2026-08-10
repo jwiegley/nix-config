@@ -9,7 +9,10 @@ pushme git-ai hera &
 
 wait
 
-upgrade hera || echo "upgrade hera exited with $?"
+# A failed Hera host upgrade must stop the rollout: everything below publishes
+# or activates state derived from it. Project maintenance is diagnostic and
+# must not gate the rollout, so it runs separately at the end.
+upgrade hera --host-only
 
 (
     cd $NIX_CONF
@@ -19,3 +22,5 @@ upgrade hera || echo "upgrade hera exited with $?"
 pushme hera@6 clio@6 tank@1
 
 update-remote
+
+upgrade hera --projects-only || echo "upgrade-projects reported failures; inspect its build logs" >&2
