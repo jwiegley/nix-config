@@ -99,15 +99,17 @@ Discovered while implementing nix-tcz.63. The hardened _make_writable walk close
 :ORIGINAL_SIZE: 0
 :END:
 
-* DOING [#C] Refuse stale YubiKey transaction directories
+* DONE [#C] Refuse stale YubiKey transaction directories
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-fk6
 :LABELS: []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 16:30]
-:MODIFIED: [2026-08-10 Mon 16:31]
+:MODIFIED: [2026-08-10 Mon 16:50]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:50]
+:CLOSE_REASON: Serialized switches with an atomic fixed lock, refused stale transaction paths, scrubbed plaintext staging and backups at commit, and covered concurrent invocations.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -130,15 +132,17 @@ Partner observation .443Z: plaintext stage/backup copies can survive SIGKILL or 
 ]
 #+end_src
 
-* DOING [#B] Strip ACLs and force 0600 on staged YubiKey keys
+* DONE [#B] Strip ACLs and force 0600 on staged YubiKey keys
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-k9k
 :LABELS: []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 16:30]
-:MODIFIED: [2026-08-10 Mon 16:31]
+:MODIFIED: [2026-08-10 Mon 16:50]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:50]
+:CLOSE_REASON: Staged keys with mode 0600 without preserving source metadata, stripped Darwin ACLs before publication, and asserted hardened metadata before every external side effect.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -161,15 +165,17 @@ Partner observation .440Z: cp -p preserves Darwin ACLs and source owner bits, so
 ]
 #+end_src
 
-* DOING [#B] Allow YubiKey restore when active key files are absent
+* DONE [#B] Allow YubiKey restore when active key files are absent
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-mn6
 :LABELS: []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 16:30]
-:MODIFIED: [2026-08-10 Mon 16:31]
+:MODIFIED: [2026-08-10 Mon 16:50]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:50]
+:CLOSE_REASON: Allowed restore into absent active destinations and made rollback restore prior files while removing newly created ones.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2534,15 +2540,17 @@ Partner observation .444Z: changes now aggregates configured projects but Make a
 ]
 #+end_src
 
-* DOING [#C] Test the YubiKey restore source-root contract
+* DONE [#C] Test the YubiKey restore source-root contract
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-u5b
 :LABELS: []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 16:30]
-:MODIFIED: [2026-08-10 Mon 16:31]
+:MODIFIED: [2026-08-10 Mon 16:50]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:50]
+:CLOSE_REASON: Added a hermetic restore-root seam with fixed production default and behavioral coverage for missing roots, empty destinations, rollback, modes, and Darwin ACLs.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

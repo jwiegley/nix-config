@@ -19,33 +19,13 @@ fi
 
 cd "$key_dir"
 
-if [[ $mode == restore ]]; then
-    source_root=/Volumes/Files/Keys/GnuPG/private-keys-v1.d
-    source_suffix=
-else
-    source_root=$key_dir
-    source_suffix=.$mode
-fi
-
-for key in "${keys[@]}"; do
-    source_file=$source_root/$key$source_suffix
-    if [[ ! -f $source_file ]]; then
-        echo "Could not find key file $source_file!" >&2
-        exit 1
-    fi
-    if [[ ! -f $key_dir/$key ]]; then
-        echo "Could not find active key file $key_dir/$key!" >&2
-        exit 1
-    fi
-done
-
-transaction_dir=$(mktemp -d "$key_dir/.yubikey-switch.XXXXXX")
-stage_dir=$transaction_dir/stage
-backup_dir=$transaction_dir/backup
-mkdir "$stage_dir" "$backup_dir"
-
+transaction_dir=$key_dir/.yubikey-switch.lock
+stage_dir=
+backup_dir=
+transaction_owned=0
 transaction_active=0
 replaced_count=0
+destination_existed=()
 
 cleanup() {
     cleanup_status=$?
@@ -56,7 +36,12 @@ cleanup() {
     if ((transaction_active)); then
         for ((index = 0; index < replaced_count; index++)); do
             key=${keys[$index]}
-            if ! mv -f "$backup_dir/$key" "$key_dir/$key"; then
+            if ((destination_existed[index])); then
+                rollback_command=(mv -f "$backup_dir/$key" "$key_dir/$key")
+            else
+                rollback_command=(rm -f "$key_dir/$key")
+            fi
+            if ! "${rollback_command[@]}"; then
                 echo "Could not roll back key file $key_dir/$key!" >&2
                 rollback_failed=1
             fi
@@ -67,7 +52,7 @@ cleanup() {
         fi
     fi
 
-    if ((!rollback_failed)) && [[ -d $transaction_dir ]] && ! rm -rf "$transaction_dir"; then
+    if ((!rollback_failed && transaction_owned)) && [[ -d $transaction_dir ]] && ! rm -rf "$transaction_dir"; then
         echo "Could not remove transaction directory $transaction_dir!" >&2
         cleanup_status=1
     fi
@@ -81,13 +66,63 @@ trap 'exit 130' INT
 trap 'exit 131' QUIT
 trap 'exit 143' TERM
 
-for key in "${keys[@]}"; do
-    cp -p "$source_root/$key$source_suffix" "$stage_dir/$key"
-    chmod go-rwx "$stage_dir/$key"
+if ! mkdir "$transaction_dir"; then
+    echo "Refusing to continue while transaction lock exists: $transaction_dir" >&2
+    exit 1
+fi
+transaction_owned=1
+
+for stale_transaction_path in "$key_dir"/.yubikey-switch.*; do
+    if [[ $stale_transaction_path != "$transaction_dir" ]] &&
+        [[ -e $stale_transaction_path || -L $stale_transaction_path ]]; then
+        echo "Refusing to continue while stale transaction path exists: $stale_transaction_path" >&2
+        exit 1
+    fi
 done
 
+if [[ $mode == restore ]]; then
+    source_root=${YUBIKEY_SWITCH_TEST_RESTORE_ROOT:-/Volumes/Files/Keys/GnuPG/private-keys-v1.d}
+    source_suffix=
+else
+    source_root=$key_dir
+    source_suffix=.$mode
+fi
+
+for index in "${!keys[@]}"; do
+    key=${keys[$index]}
+    source_file=$source_root/$key$source_suffix
+    if [[ ! -f $source_file ]]; then
+        echo "Could not find key file $source_file!" >&2
+        exit 1
+    fi
+    if [[ -f $key_dir/$key ]]; then
+        destination_existed[$index]=1
+    elif [[ $mode == restore && ! -e $key_dir/$key && ! -L $key_dir/$key ]]; then
+        destination_existed[$index]=0
+    else
+        echo "Could not find active key file $key_dir/$key!" >&2
+        exit 1
+    fi
+done
+
+stage_dir=$transaction_dir/stage
+backup_dir=$transaction_dir/backup
+mkdir "$stage_dir" "$backup_dir"
+
 for key in "${keys[@]}"; do
-    cp -p "$key_dir/$key" "$backup_dir/$key"
+    stage_file=$stage_dir/$key
+    install -m 600 "$source_root/$key$source_suffix" "$stage_file"
+    if [[ $(uname -s) == Darwin ]]; then
+        /bin/chmod -N "$stage_file"
+    fi
+    chmod 600 "$stage_file"
+done
+
+for index in "${!keys[@]}"; do
+    if ((destination_existed[index])); then
+        key=${keys[$index]}
+        cp -p "$key_dir/$key" "$backup_dir/$key"
+    fi
 done
 
 transaction_active=1
@@ -99,10 +134,7 @@ for key in "${keys[@]}"; do
     fi
 done
 transaction_active=0
-
-rm -rf "$transaction_dir"
-transaction_dir=
-trap - EXIT HUP INT QUIT TERM
+rm -rf "$stage_dir" "$backup_dir"
 
 (sudo killall gpg-agent 2>/dev/null || exit 0)
 sleep 2
