@@ -335,6 +335,10 @@ in
       message = "inputs.nix-config-ai.packages.${system}.prime-agent is missing";
     }
     {
+      assertion = !primeSelected || piSelected;
+      message = "Prime Agent reads the Nix-generated MCP file that only the Pi renderer emits; a Prime profile requires a co-selected Pi profile";
+    }
+    {
       assertion = pairedCassPackage != null;
       message = "inputs.nix-config-ai.packages.${system}.cass is missing";
     }
