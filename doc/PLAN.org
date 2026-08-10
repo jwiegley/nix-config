@@ -1199,21 +1199,27 @@ overlays/00-lib.nix:12-39 and overlays/30-user-scripts.nix:18-25 install every t
 ]
 #+end_src
 
-* TODO [#D] Decide and remove or implement de --no-cache    :shell:
+* TODO [#D] Remove inert de --no-cache option    :shell:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.43
 :LABELS: ["dead-code","heavy-review","shell"]
-:ISSUE_TYPE: question
+:ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 14:45]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-bin/de:22-25 accepts --no-cache but discards it, and no in-tree consumer exists. Search maintained external automation; if absent, remove the token and documentation, otherwise define and test an observable cache-bypass contract. Sources: Alexey-13, dead-code DC-04, ponytail.
+Owner decision 2026-08-10: remove the inert public de --no-cache compatibility token and its documentation. The option has no observable cache behavior, no tracked caller, and retaining it falsely promises cache control. After removal, stale callers must fail visibly rather than silently taking the ordinary cached path. Historical context: commit 0bf3c637 removed the already-unused NOCACHE variable; signed commit 21048e822dcfd68e52a8f750735540c91b8b6433 still contains the compatibility branch.
+
+** Acceptance Criteria
+bin/de no longer recognizes --no-cache; bin/README.md no longer advertises it; a focused test proves the retired option does not silently run the normal cached path; ordinary environment creation remains unchanged.
+
+** Notes
+Authority resolved by the owner: delete the no-op option.
 
 ** Dependencies
 #+begin_src json
@@ -1354,21 +1360,27 @@ overlays/00-lib.nix:16-43 defaults every script package to MIT, causing nix-scri
 ]
 #+end_src
 
-* TODO [#C] Decide the fate of unreachable HTTP-header MCP support    :ai:
+* TODO [#C] Delete unreachable HTTP-header MCP support    :ai:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.48
 :LABELS: ["ai","dead-code","heavy-review"]
-:ISSUE_TYPE: question
+:ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 14:42]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-config/ai/catalog.nix has an empty mcpHttpHeaders allowlist that rejects every header-bearing managed transport, yet four renderer branches, a patched bridge package and input, Droid wiring, compatibility exports, and a 655-line oracle remain. Find current downstream authority; delete the whole slice if unused, or add a real owned consumer and contract if retained. Sources: deep Q-02, dead-code DC-03, ponytail.
+Owner decision 2026-08-10: retire the unreachable HTTP-header MCP capability. Remove the empty mcpHttpHeaders schema and renderer branches, agent-http-header-bridge package and Droid installation, flake export and input, source-catalog record, mcp-remote patch, compatibility names, wrapper fixtures, and recording HTTPS oracle as one atomic slice. Preserve ordinary headerless HTTP and stdio MCP transports. Recovery anchor: signed commit 21048e822dcfd68e52a8f750735540c91b8b6433 contains the complete retained implementation; commit 1b9ffb9c records removal of its last managed consumer, Context7.
+
+** Acceptance Criteria
+No retired bridge, header schema, package, source, input, renderer, compatibility, or exclusive-test reference remains; headerless HTTP and stdio MCP still pass their checks; PLAN.org or the close reason names the last-containing and deletion commits so restoration is discoverable through Git history.
+
+** Notes
+Authority resolved by the owner: delete. When closing, retain the recovery anchors and record the actual deletion commit in the close reason.
 
 ** Dependencies
 #+begin_src json
@@ -1385,21 +1397,27 @@ config/ai/catalog.nix has an empty mcpHttpHeaders allowlist that rejects every h
 ]
 #+end_src
 
-* TODO [#D] Adjudicate unused Emacs projections, HEAD input, and aliases    :emacs:
+* TODO [#D] Make Emacs HEAD an explicit experimental build surface    :emacs:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.49
 :LABELS: ["dead-code","emacs","heavy-review"]
-:ISSUE_TYPE: question
+:ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 14:46]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-config/packages.nix:86-96 exports emacs30Env and emacsHEADEnv without tracked selection; overlays/10-emacs.nix:823-953 plus the emacs-src input expose unused generic aliases and a dormant HEAD family. Inventory external and interactive consumers, then remove only unsupported projections, aliases, branch, and input while preserving active MacPort packages. Sources: dead-code DC-01 and DC-07.
+Owner decision 2026-08-10: retain the emacs-src input and Emacs HEAD overlay family because it is used occasionally for development. Keep active host selection on emacs30MacPortEnv. Document the exact manual selectors, including raw HEAD and the configured HEAD environment where supported, and add a narrow evaluation or smoke check so upstream input drift is visible. Do not delete emacsHEAD, emacsHEADPackages, emacsHEADPackagesNg, or emacsHEADEnv as repo-unused. Separately remove only private config/packages.nix projections or generic aliases that are proven unrelated to this operator surface.
+
+** Acceptance Criteria
+The supported Emacs HEAD selectors and build command are documented; a cheap check proves the input and overlay attributes evaluate; active host installation remains Emacs 30 MacPort; cleanup does not remove the retained HEAD family and only prunes aliases shown not to serve the manual development workflow.
+
+** Notes
+Authority resolved by the owner: Emacs HEAD is a supported, intentionally non-host-selected development surface.
 
 ** Dependencies
 #+begin_src json
@@ -1421,16 +1439,22 @@ config/packages.nix:86-96 exports emacs30Env and emacsHEADEnv without tracked se
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.5
 :LABELS: ["architecture","heavy-review","routing"]
-:ISSUE_TYPE: question
+:ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:58]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-config/hosts/registry.nix:7-144 is the declared host authority, while bin/lib/host-routing.sh:1-32 maintains a second table and calls git-ai shared-work even though the registry does not. Decide git-ai membership, then project aliases and output names from one authority and add table-driven parity, FQDN, idempotence, refusal, build, and switch dispatch tests. Sources: validated VCR-005 and VCR-028; abstraction finding 10.
+Owner decision 2026-08-10: git-ai is a genuine shared-work host, but it is currently offline and has not been used recently. Represent it in the typed host authority without treating membership as evidence of present availability or including it implicitly in the active four-host rollout. Then project shell normalization and flake-output routing from that authority, retain explicit active-rollout data, and add parity, FQDN, idempotence, refusal, build, and switch-dispatch tests. Sources: validated VCR-005 and VCR-028; abstraction finding 10.
+
+** Acceptance Criteria
+git-ai is present in canonical shared-work membership; active rollout membership remains separately explicit and excludes dormant git-ai until deliberately reactivated; shell routing no longer maintains an independent identity table; tests and documentation distinguish known membership from current rollout availability.
+
+** Notes
+Authority resolved by the owner: supported shared-work identity, presently dormant.
 
 ** Dependencies
 #+begin_src json
@@ -1447,21 +1471,27 @@ config/hosts/registry.nix:7-144 is the declared host authority, while bin/lib/ho
 ]
 #+end_src
 
-* TODO [#C] Delete or explicitly own dormant Auto Compact Resume    :pi:
+* TODO [#C] Delete dormant Auto Compact Resume implementation    :pi:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.50
 :LABELS: ["dead-code","heavy-review","pi"]
-:ISSUE_TYPE: question
+:ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 14:44]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-config/ai/extensions/auto-compact-resume, its design, and 266-line test are not installed; Blackhole replaced the 117-line runtime, while only the self-test consumes it. If no maintained fallback owner exists, delete implementation, design, test, and fallback prose while preserving the retired-path migration guard. Sources: dead-code DC-02, ponytail.
+Owner decision 2026-08-10: delete the dormant Auto Compact Resume implementation now that Blackhole owns fleet compaction. Remove config/ai/extensions/auto-compact-resume, its behavior suite, the discovered-suite floor that exists only for it, and fallback-retention prose. Preserve retiredAutoCompactPath and managed-preflight coverage until live fleet evidence shows the old mutable path no longer needs a migration guard. Recovery anchor: signed commit 21048e822dcfd68e52a8f750735540c91b8b6433 contains the complete retained implementation; original implementation history includes 69d5fd21 and 030645d3.
+
+** Acceptance Criteria
+Dormant source, design, self-test, suite-floor accommodation, and fallback prose are gone; retired-path preflight and its tests remain; Pi extension and managed-preflight checks pass; the deletion commit body records recovery commit 21048e82 and original commits 69d5fd21 and 030645d3.
+
+** Notes
+Authority resolved by the owner: delete. The deletion commit body must state that the dormant source can be restored from 21048e82 and name the original implementation commits.
 
 ** Dependencies
 #+begin_src json
@@ -1478,21 +1508,27 @@ config/ai/extensions/auto-compact-resume, its design, and 266-line test are not 
 ]
 #+end_src
 
-* TODO [#D] Adjudicate repo-unused public flake outputs    :nix:
+* TODO [#D] Delete unused portable lib.inputNames output    :nix:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.51
 :LABELS: ["dead-code","heavy-review","nix"]
-:ISSUE_TYPE: question
+:ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 14:46]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-config/ai/flake.nix:91-95 exports lib.inputNames and flake.nix:249-258 exports darwinPackages without tracked consumers. Inventory maintained downstream flakes and interactive contracts; remove only outputs with no authority, preserving inputSet and named configurations. Source: dead-code DC-05.
+Owner decision 2026-08-10: remove config/ai.lib.inputNames. It was introduced alongside inputSet in commit 0a90f201, has no tracked consumer, and duplicates a list that compatibility checks derive locally from actual inputs. Preserve lib.inputSet, which the root flake consumes as the portable input authority.
+
+** Acceptance Criteria
+config/ai no longer exports lib.inputNames; lib.inputSet remains canonical and root composition still consumes it; portable compatibility and all-system no-build checks pass.
+
+** Notes
+Authority resolved by the owner: delete lib.inputNames. The separate root darwinPackages decision was split into its own question.
 
 ** Dependencies
 #+begin_src json
@@ -1509,21 +1545,27 @@ config/ai/flake.nix:91-95 exports lib.inputNames and flake.nix:249-258 exports d
 ]
 #+end_src
 
-* TODO [#D] Adjudicate the unselected Coq overlay matrix    :coq:
+* TODO [#D] Trim the Coq matrix to 8.19 through 9.1 and default 9.1    :coq:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.52
 :LABELS: ["coq","dead-code","heavy-review"]
-:ISSUE_TYPE: question
+:ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 14:49]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-overlays/10-coq.nix:1-41 exposes 13 versioned overrides and 13 package-set aliases but no tracked host, package, or check selects them. Determine interactive or downstream build users; remove the full overlay if absent, or record and smoke-evaluate the supported selectors. Sources: dead-code DC-06, ponytail.
+Owner decision 2026-08-10: retain the interactive Coq/Rocq package surface only for versions 8.19, 8.20, 9.0, and 9.1. Remove coq_8_10 through coq_8_18 and their coqPackages aliases. Change the unversioned coq and coqPackages aliases from 8.19 to 9.1. Continue disabling CoqIDE because Emacs is the intended editor.
+
+** Acceptance Criteria
+Only coq and coqPackages variants for 8.19, 8.20, 9.0, and 9.1 remain; unversioned aliases resolve to 9.1; the supported interactive selectors are documented; a narrow evaluation or package smoke check covers the default and all four versioned names.
+
+** Notes
+Authority resolved by the owner: retain a four-version development matrix and make 9.1 the default.
 
 ** Dependencies
 #+begin_src json
@@ -2060,6 +2102,43 @@ config/ai/renderers/render-lib.nix:1-15 claims one frontmatter implementation, b
     "depends_on_id": "nix-tcz",
     "type": "parent-child",
     "created_at": "2026-08-10T20:25:18.245203Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Delete unused root darwinPackages output    :nix:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.69
+:LABELS: ["dead-code","heavy-review","nix"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 14:46]
+:MODIFIED: [2026-08-10 Mon 14:47]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Owner decision 2026-08-10: remove the root darwinPackages alias. It exposes the complete Hera package set, has no tracked or documented consumer, and is superseded by named darwinConfigurations plus portable packages outputs. Preserve both Darwin configurations and all supported build commands.
+
+** Acceptance Criteria
+flake.nix no longer exports darwinPackages; named Darwin configurations, portable package outputs, root evaluation, and supported build commands remain green; no documentation claims the retired output exists.
+
+** Notes
+Authority resolved by the owner: delete. The live flake.nix still contains the output; this issue records implementation work rather than claiming it is already applied.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.69",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T21:46:41.533451Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
