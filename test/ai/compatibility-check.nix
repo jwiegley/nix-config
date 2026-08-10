@@ -171,19 +171,38 @@ let
     (lib.assertMsg (hasAll (sortedNames actual.checks) contract.systems) "portable checks lost a required system")
     (lib.assertMsg (hasAll (sortedNames actual.devShells) contract.systems) "portable dev shells lost a required system")
     (lib.assertMsg (hasAll (sortedNames actual.formatter) contract.systems) "portable formatter lost a required system")
-  ]
-  ++ lib.concatMap checkSystem contract.systems;
+  ];
+  # Fail-closed, scoped to the system being consumed: reading any system's
+  # packages, apps, devShells, or checks forces the global assertions plus
+  # that ONE system's contract sweep. Activation paths (`darwin-rebuild
+  # switch`, `./build system`, remote consumer switches) therefore cannot
+  # consume a contract-violating output, while no consumer pays the other
+  # systems' sweeps. Cross-system coverage is owned by
+  # `nix flake check --all-systems` — run by test/bin/quality's portable-eval
+  # suite (expensive tier) and .github/workflows/portable-assurance.yml; a
+  # bare `nix flake check` covers only the host system. `overlays` and `lib`
+  # are system-agnostic and stay unguarded; every supported consumer reads
+  # `packages.<system>` and so passes through the guard.
+  contractFor = lib.genAttrs contract.systems (system: assertions ++ checkSystem system);
+  guard =
+    system: outputs:
+    assert builtins.deepSeq (contractFor.${system} or [ ]) true;
+    outputs;
   checked = actual // {
+    packages = lib.mapAttrs guard actual.packages;
+    apps = lib.mapAttrs guard actual.apps;
+    devShells = lib.mapAttrs guard actual.devShells;
     checks = lib.mapAttrs (
       system: checks:
-      checks
-      // {
-        compatibility-contract =
-          (import inputs.nixpkgs { inherit system; }).runCommand "ai-compatibility-contract" { }
-            "touch $out";
-      }
+      guard system (
+        checks
+        // {
+          compatibility-contract =
+            (import inputs.nixpkgs { inherit system; }).runCommand "ai-compatibility-contract" { }
+              "touch $out";
+        }
+      )
     ) actual.checks;
   };
 in
-assert builtins.deepSeq assertions true;
 checked

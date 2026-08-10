@@ -136,11 +136,13 @@
         "x86_64-linux"
       ];
       forAllSystems = nixpkgs.lib.genAttrs rootSystems;
-      portableAiDefinition = import ./flake/ai.nix portableInputs;
-      portableAi = import ./test/ai/compatibility-check.nix {
-        inputs = portableInputs;
-        actual = portableAiDefinition;
-      };
+      # The subflake input already evaluates flake/ai.nix through
+      # test/ai/compatibility-check.nix, whose per-system guard fail-closes
+      # any read of a system's outputs and installs
+      # `checks.<system>.compatibility-contract`. Re-importing flake/ai.nix
+      # here would evaluate the whole portable flake a second time for
+      # identical results.
+      portableAi = rootInputs.nix-config-ai;
       stockPkgsFor = forAllSystems (
         system:
         import nixpkgs {
