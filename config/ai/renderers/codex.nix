@@ -67,17 +67,17 @@ let
     lib.recursiveUpdate native (server.overrides.codex or { });
 
   hookItems = builtins.attrValues selected.hooks;
-  localConfig = lib.optionalAttrs (profile.host == "hera") {
+  localConfig = lib.optionalAttrs (profile.localModelEndpoints != null) {
     model_providers = {
       omlx = {
         name = "oMLX";
-        base_url = "http://localhost:8000/v1";
+        base_url = profile.localModelEndpoints.omlx;
         env_key = "OMLX_API_KEY";
         wire_api = "responses";
       };
       llama-swap = {
         name = "llama-swap";
-        base_url = "http://localhost:8080/v1";
+        base_url = profile.localModelEndpoints.llama-swap;
         env_key = "LLAMA_SWAP_API_KEY";
         wire_api = "responses";
       };

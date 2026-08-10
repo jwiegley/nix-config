@@ -49,7 +49,9 @@ let
     }
   ) selected.agents;
 
-  models.providers = modelOverrides.nativeProviders // modelOverrides.localProviderOverrides;
+  models.providers =
+    modelOverrides.nativeProviders
+    // lib.optionalAttrs (profile.localModelEndpoints != null) modelOverrides.localProviderOverrides;
   packageRoots = [
     "${pkgs.pi-gallery.packages.pi-provider-llama-swap}/share/pi-packages/pi-provider-llama-swap"
     "${pkgs.pi-gallery.packages.pi-provider-omlx}/share/pi-packages/pi-provider-omlx"

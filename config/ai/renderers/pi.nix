@@ -30,7 +30,7 @@ let
       "?apiKey="
     ];
   renderEnv = name: "$" + "{" + name + "}";
-  localModelRoutes = profile.platform == "darwin";
+  localModelRoutes = profile.localModelEndpoints != null;
   modelOverrides = import ../model-overrides.nix;
   hermesPassCommand = lib.escapeShellArgs [
     "${pkgs.coreutils}/bin/env"

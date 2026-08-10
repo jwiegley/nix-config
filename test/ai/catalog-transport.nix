@@ -88,6 +88,21 @@ let
 in
 assert catalog.validate { };
 assert builtins.all (profile: (selectFor profile).mcpServers ? pal) profiles;
+# The endpoint-bearing profile set drives generated codex TOML, pi local
+# provider wiring, prime model overrides, and the dummy-key session
+# variables; pin it so a gained or lost declaration is a visible test edit.
+assert
+  lib.sort builtins.lessThan (
+    builtins.attrNames (
+      lib.filterAttrs (_: profile: profile.localModelEndpoints != null) catalog.profiles
+    )
+  ) == [
+    "clio-codex"
+    "clio-pi"
+    "hera-codex"
+    "hera-pi"
+    "hera-prime"
+  ];
 assert catalog.validate {
   items = withMcpServers (catalog.items.mcpServers // { synthetic-http = syntheticHttpMcp; });
 };

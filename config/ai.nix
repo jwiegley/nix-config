@@ -150,9 +150,18 @@ let
     blackholeConfigPath = if piSelected then piBlackholeConfigPath else null;
     retiredPaths = lib.optional piSelected retiredAutoCompactPath;
   };
-  modelSync = import ./ai/model-sync.nix { inherit lib pkgs; };
+  modelSync = import ./ai/model-sync.nix {
+    inherit lib pkgs;
+    # Lazily resolved: only forced where the model-sync activation is gated
+    # in (hera), so homes without endpoint-bearing profiles never evaluate
+    # the throw.
+    omlxBaseUrl =
+      (lib.findFirst (endpoints: endpoints != null)
+        (throw "model-sync requires a profile that declares localModelEndpoints")
+        (map (profileId: catalog.profiles.${profileId}.localModelEndpoints) profileIds)
+      ).omlx;
+  };
   piSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "pi") profileIds;
-  codexSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "codex") profileIds;
   droidSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "droid") profileIds;
   primeSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "prime") profileIds;
   piRuntimePackages = with pkgs; [
@@ -361,10 +370,22 @@ in
       ++ lib.optional (pairedCassPackage != null) pairedCassPackage
       ++ lib.optional (pairedCmPackage != null) pairedCmPackage
       ++ lib.optionals piSelected piRuntimePackages;
-    sessionVariables = lib.optionalAttrs codexSelected {
-      OMLX_API_KEY = "dummy-key";
-      LLAMA_SWAP_API_KEY = "dummy-key";
-    };
+    # The dummy keys satisfy codex's env_key lookups for the local providers;
+    # they are only meaningful where a codex profile declares local model
+    # endpoints.
+    sessionVariables =
+      lib.optionalAttrs
+        (lib.any (
+          profileId:
+          let
+            profile = catalog.profiles.${profileId};
+          in
+          profile.client == "codex" && profile.localModelEndpoints != null
+        ) profileIds)
+        {
+          OMLX_API_KEY = "dummy-key";
+          LLAMA_SWAP_API_KEY = "dummy-key";
+        };
     activation = {
       aiManagedPreflight = preflight.activation;
     }

@@ -1,4 +1,10 @@
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  # Base URL of the omlx endpoint, supplied from the catalog's profile
+  # declaration so this file cannot drift from the one endpoint authority.
+  omlxBaseUrl,
+}:
 
 let
   devonthinkKeyPresent = pkgs.writeShellScript "devonthink-compatible-key-present" ''
@@ -31,7 +37,7 @@ let
   };
 
   model = "DeepSeek-V4-Flash-0731-oQ8e-mtp";
-  chatUrl = "http://localhost:8000/v1/chat/completions";
+  chatUrl = "${omlxBaseUrl}/chat/completions";
   digest = builtins.hashString "sha256" (
     builtins.toJSON {
       schema = 1;
