@@ -114,6 +114,41 @@ class StatuslineCommandTest(unittest.TestCase):
             self.assertIn("| ↓0 ↑0 |", completed.stdout)
             self.assertTrue(completed.stdout.rstrip().endswith("| 0s"))
 
+    def test_fractional_numeric_fields_are_rounded_in_jq(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            payload = fixture(Path(temporary_directory))
+            payload["context_window"].update(
+                {
+                    "used_percentage": 2.5,
+                    "total_input_tokens": 2.5,
+                    "total_output_tokens": 4.5,
+                }
+            )
+            payload["context_window"]["current_usage"] = {
+                "cache_read_input_tokens": 2.5,
+                "input_tokens": 4.5,
+                "cache_creation_input_tokens": 6.5,
+            }
+            payload["rate_limits"]["five_hour"]["used_percentage"] = 4.5
+            payload["rate_limits"]["seven_day"]["used_percentage"] = 6.5
+            payload["cost"].update(
+                {
+                    "total_lines_added": 6.5,
+                    "total_lines_removed": 8.5,
+                    "total_api_duration_ms": 500.5,
+                }
+            )
+
+            completed = run_statusline(payload)
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(completed.stderr, "")
+            self.assertIn(
+                "| Test | ░░░░░░░░░░░ ctx:3% 5h:5% 7d:7% "
+                "| ↓3 ↑5 | +7/-9 | cache:20% | 1s",
+                completed.stdout,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

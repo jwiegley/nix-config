@@ -1805,15 +1805,17 @@ Makefile:53-71 repeats the same six Nix checks in test and expensive. Hoist only
 ]
 #+end_src
 
-* TODO [#D] Normalize statusline numbers in the existing jq pass    :performance:simplification:
+* DONE [#D] Normalize statusline numbers in the existing jq pass    :performance:simplification:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.58
 :LABELS: ["heavy-review","performance","simplification"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 15:26]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 15:26]
+:CLOSE_REASON: Moved all statusline numeric coercion and rounding into the existing jq pass, removed eleven awk conversions, and added a fractional regression; all four focused tests pass.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

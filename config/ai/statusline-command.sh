@@ -5,49 +5,46 @@ set -uo pipefail
 # Read JSON input from stdin
 JSON=$(cat)
 
-integer_or_zero() {
-    awk -v value="${1-}" 'BEGIN {printf "%.0f", value + 0}'
-}
-
-# Debug: save JSON to file for inspection (optional)
-# echo "$JSON" > /tmp/statusline-debug.json 2>/dev/null || true
-
-# Extract every field in one jq process. NUL delimiters preserve empty values.
+# Extract and normalize every field in one jq process. NUL delimiters preserve
+# empty values.
 FIELDS=()
 while IFS= read -r -d '' FIELD; do
     FIELDS+=("$FIELD")
 done < <(
     printf '%s' "$JSON" |
-        jq -j '[
+        jq -j '
+        def rounded($default):
+            (if . == null then $default else try tonumber catch 0 end) | round;
+        [
             .workspace.project_dir // .cwd // "unknown",
             .model.display_name // "Opus",
-            .context_window.used_percentage // 0,
-            .rate_limits.five_hour.used_percentage // 0,
-            .rate_limits.seven_day.used_percentage // 0,
-            .context_window.total_input_tokens // 0,
-            .context_window.total_output_tokens // 0,
-            .cost.total_lines_added // 0,
-            .cost.total_lines_removed // 0,
-            .context_window.current_usage.cache_read_input_tokens // 0,
-            .context_window.current_usage.input_tokens // 1,
-            .context_window.current_usage.cache_creation_input_tokens // 0,
-            .cost.total_api_duration_ms // 0
+            (.context_window.used_percentage | rounded(0)),
+            (.rate_limits.five_hour.used_percentage | rounded(0)),
+            (.rate_limits.seven_day.used_percentage | rounded(0)),
+            (.context_window.total_input_tokens | rounded(0)),
+            (.context_window.total_output_tokens | rounded(0)),
+            (.cost.total_lines_added | rounded(0)),
+            (.cost.total_lines_removed | rounded(0)),
+            (.context_window.current_usage.cache_read_input_tokens | rounded(0)),
+            (.context_window.current_usage.input_tokens | rounded(1)),
+            (.context_window.current_usage.cache_creation_input_tokens | rounded(0)),
+            (.cost.total_api_duration_ms | rounded(0))
         ] | .[] | "\(.)\u0000"'
 )
 
 PROJECT_DIR=${FIELDS[0]-unknown}
 MODEL=${FIELDS[1]-Opus}
-USED_PCT=$(integer_or_zero "${FIELDS[2]-0}")
-FIVE_HOUR_PCT=$(integer_or_zero "${FIELDS[3]-0}")
-SEVEN_DAY_PCT=$(integer_or_zero "${FIELDS[4]-0}")
-INPUT_TOKENS=$(integer_or_zero "${FIELDS[5]-0}")
-OUTPUT_TOKENS=$(integer_or_zero "${FIELDS[6]-0}")
-LINES_ADDED=$(integer_or_zero "${FIELDS[7]-0}")
-LINES_REMOVED=$(integer_or_zero "${FIELDS[8]-0}")
-CACHE_READ=$(integer_or_zero "${FIELDS[9]-0}")
-TOTAL_INPUT=$(integer_or_zero "${FIELDS[10]-1}")
-CACHE_CREATION=$(integer_or_zero "${FIELDS[11]-0}")
-API_TIME_MS=$(integer_or_zero "${FIELDS[12]-0}")
+USED_PCT=${FIELDS[2]-0}
+FIVE_HOUR_PCT=${FIELDS[3]-0}
+SEVEN_DAY_PCT=${FIELDS[4]-0}
+INPUT_TOKENS=${FIELDS[5]-0}
+OUTPUT_TOKENS=${FIELDS[6]-0}
+LINES_ADDED=${FIELDS[7]-0}
+LINES_REMOVED=${FIELDS[8]-0}
+CACHE_READ=${FIELDS[9]-0}
+TOTAL_INPUT=${FIELDS[10]-1}
+CACHE_CREATION=${FIELDS[11]-0}
+API_TIME_MS=${FIELDS[12]-0}
 
 # Keep the first 12 basename characters and append an ellipsis when shortened.
 _BASENAME=$(basename "$PROJECT_DIR")
