@@ -106,15 +106,7 @@ repl: require-darwin-host
 verify-inputs:
 	$(call announce,Verifying local git inputs for NAR hash safety)
 	@errfile=$$(mktemp); \
-	python3 -c '\
-	import json; \
-	lock = json.load(open("flake.lock")); \
-	nodes = lock["nodes"]; \
-	[print(str(int(bool(nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("submodules", False)))) + "\t" + nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("url", "")) \
-	 for n, k in nodes["root"]["inputs"].items() \
-	 if nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("type") == "git" \
-	 and "file://" in nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("url", "")]' \
-	| sed 's|file://||' \
+	python3 bin/lib/local-git-inputs.py repos \
 	| while IFS=$$'\t' read -r has_submodules repo; do \
 	    bad=$$(git -C "$$repo" ls-files -v 2>/dev/null | grep -E '^[shS] '); \
 	    if [ -n "$$bad" ]; then \
@@ -147,13 +139,7 @@ verify-inputs:
 
 lock-local: verify-inputs
 	$(call announce,Re-locking local git inputs)
-	@if inputs=$$(python3 -c '\
-	import json; \
-	lock = json.load(open("flake.lock")); \
-	nodes = lock["nodes"]; \
-	[print(n) for n, k in nodes["root"]["inputs"].items() \
-	 if nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("type") == "git" \
-	 and "file://" in nodes.get(k if isinstance(k, str) else n, {}).get("locked", {}).get("url", "")]'); then \
+	@if inputs=$$(python3 bin/lib/local-git-inputs.py names); then \
 	    :; \
 	else \
 	    exit $$?; \
@@ -316,12 +302,9 @@ travel-ready:
 	    (cd ~/$$project &&						\
              rm -f .envrc .envrc.cache;					\
              clean;							\
-             if [[ $(HOSTNAME) == hera ]]; then				\
-	         $(NIX_CONF)/bin/de;					\
-             elif [[ $(HOSTNAME) == clio ]]; then			\
-	         $(NIX_CONF)/bin/de;					\
-             else							\
-	         unset BUILDER;						\
-	         $(NIX_CONF)/bin/de;					\
-	     fi);							\
+             case "$(HOSTNAME)" in					\
+             hera | clio) ;;						\
+             *) unset BUILDER ;;					\
+             esac;							\
+	     $(NIX_CONF)/bin/de);					\
 	done
