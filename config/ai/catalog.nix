@@ -1126,7 +1126,7 @@ let
         preferredNotifChannel = "iterm2_with_bell";
         remoteControlAtStartup = true;
         agentPushNotifEnabled = true;
-        model = "claude-opus-5";
+        model = "claude-opus-5[1m]";
         theme = "dark";
       };
 

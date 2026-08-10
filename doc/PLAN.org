@@ -2,15 +2,17 @@
 #+SEQ_TODO: TODO DOING DRAFT WAIT DEFER NOTE | DONE CANCELED
 #+ISSUE_PREFIX: nix
 
-* DOING [#B] Restore the balanced Claude Opus 5 1M model identifier
+* DONE [#B] Restore the balanced Claude Opus 5 1M model identifier
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-41h
 :LABELS: []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 16:30]
-:MODIFIED: [2026-08-10 Mon 16:31]
+:MODIFIED: [2026-08-10 Mon 16:36]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:36]
+:CLOSE_REASON: Restored the balanced claude-opus-5[1m] main model, preserved the plain claude-opus-5 subagent split, and asserted both values in every rendered Claude settings file.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

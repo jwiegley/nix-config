@@ -31,6 +31,7 @@ let
   c1CsiModelIdentifier = builtins.fromJSON "\"model\\u009b1m\"";
   c1OscModelIdentifier = builtins.fromJSON "\"model\\u009dtitle\"";
   profiles = builtins.attrValues catalog.profiles;
+  claudeProfiles = lib.filter (profile: profile.client == "claude") profiles;
   piProfiles = lib.filter (profile: profile.client == "pi") profiles;
   piProfile = lib.findFirst (profile: profile.client == "pi") (throw "Pi profile missing") profiles;
   droidProfile = lib.findFirst (
@@ -65,6 +66,24 @@ let
     };
   };
   selectFor = profile: lib.mapAttrs (_: itemSet: catalog.select profile itemSet) catalog.items;
+  claudeRenderer = import "${src}/config/ai/renderers/claude.nix" {
+    inherit lib;
+    pkgs = rendererPkgs;
+  };
+  renderClaude =
+    profile:
+    let
+      homeDirectory = if profile.platform == "darwin" then "/Users/test" else "/home/test";
+    in
+    {
+      inherit profile;
+      rendered = claudeRenderer {
+        inherit profile homeDirectory;
+        selected = selectFor profile;
+        xdgConfigHome = "${homeDirectory}/.config";
+      };
+    };
+  claudeRenderings = map renderClaude claudeProfiles;
   piRenderer = import "${src}/config/ai/renderers/pi.nix" {
     inherit lib;
     pkgs = rendererPkgs;
@@ -99,7 +118,7 @@ let
       };
 in
 assert catalog.validate { };
-assert claudeSettings.base.model == "claude-opus-5";
+assert claudeSettings.base.model == "claude-opus-5[1m]";
 assert catalog.validate {
   items = withClaudeSettingsBase (
     claudeSettings.base
@@ -112,6 +131,7 @@ assert catalog.validate {
     }
   );
 };
+assert claudeRenderings != [ ];
 assert catalog.validate {
   items = withClaudeSettingsBase (claudeSettings.base // { model = "café/模型@版本"; });
 };
@@ -216,6 +236,13 @@ assert builtins.all reject [
   })
 ];
 pkgs.runCommand "ai-catalog-transport" { } ''
+  ${lib.concatMapStringsSep "\n" (entry: ''
+    ${pkgs.jq}/bin/jq -e '
+      .model == "claude-opus-5[1m]"
+      and .env.CLAUDE_CODE_SUBAGENT_MODEL == "claude-opus-5"
+    ' ${entry.rendered.files."${entry.profile.root}/nix-managed-settings.json".source} >/dev/null
+  '') claudeRenderings}
+
   ${lib.concatMapStringsSep "\n" (entry: ''
     ${pkgs.jq}/bin/jq -e \
       --argjson localModelRoutes ${
