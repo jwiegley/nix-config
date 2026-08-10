@@ -20,3 +20,2126 @@
 :ORIGINAL_SIZE: 0
 :END:
 
+* TODO [#A] Resolve whole-repository heavy review findings at c8b37be0
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz
+:LABELS: ["heavy-review","snapshot-c8b37be0"]
+:ISSUE_TYPE: epic
+:CREATED:  [2026-08-10 Mon 13:23]
+:MODIFIED: [2026-08-10 Mon 13:23]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Parent for the 2026-08-10 seven-pass whole-repository review frozen at commit c8b37be06d054e16b865192cefffce6203a7d64c and tree d2641871fc5dc028682a4f88d8621f051af9df7b. Children preserve verified defects, test gaps, simplifications, documentation defects, and authority questions after cross-pass deduplication. Review evidence is static unless each child says otherwise.
+
+* TODO [#A] Remove agent-visible Node-RED runtime-secret access    :security:validated:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.1
+:LABELS: ["heavy-review","security","validated"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Critical. config/ai/skills/node-red/SKILL.md:39-74,143 and references/api_reference.md:403-422 direct agents to read /run/secrets/node-red-admin-token and place it in curl argv, contradicting AGENTS.md:71-73. Replace these recipes with one host-owned helper that reads the token internally and returns bounded non-secret data. Verify no skill command, argv, output, log, or generated file can carry the token. Sources: validated VCR-001, deep Q-01.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.1",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:05.480747Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Make verify-inputs fail closed and test the real prerequisite    :git:nix:validated:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.10
+:LABELS: ["git","heavy-review","nix","validated"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Makefile:106-159 pipelines local-git-inputs.py output without checking the producer, discards some Git probe failures, and test/bin/gates-slow-test.py:735-865 replaces the real prerequisite. Materialize and validate inventory before iteration, propagate every Git error, and exercise malformed locks, gitlinks, skip-worktree, assume-unchanged, paths, and failing Git stubs through the real targets. Sources: validated VCR-010 and VCR-029, deep D-08.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.10",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:06.957399Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Derive model-sync writes, checks, and digest from one desired state    :activation:ai:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.11
+:LABELS: ["activation","ai","heavy-review"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ai/model-sync.nix:39-71,126-176 maintains a partial digest separately from ten write calls and ten verify calls, so a matching stamp can hide changed preferences. Represent the complete desired state once and derive digest, writes, and checks from it. Test that every desired entry affects the digest and has exactly one write and verification. Sources: validated VCR-011, Alexey-11.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.11",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:07.116818Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Pin all third-party CI actions to full revisions    :ci:security:validated:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.12
+:LABELS: ["ci","heavy-review","security","validated"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+.github/workflows/ci.yml:39-72 and portable-assurance.yml:19-59 execute Determinate Systems actions from mutable main branches before repository checks. Replace every third-party main or master ref with a reviewed full commit SHA and add a static workflow assertion. Source: validated VCR-012.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.12",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:07.274101Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Add an explicit client boundary to the oMLX proxy    :network:security:validated:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.13
+:LABELS: ["heavy-review","network","security","validated"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/launchd.nix:285-322,362-363 exposes nginx on 8443 and proxies /v1 to loopback without client auth or an allowlist. Bind only the intended interface and require mTLS or protected authorization plus source policy. Add a configuration assertion whenever this route is exposed. Source: validated VCR-013.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.13",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:07.427689Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Make the Fess fallback portable across renderers    :ai:docs:validated:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.14
+:LABELS: ["ai","docs","heavy-review","validated"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ai/agents/fess-auditor.md:6-10 hard-codes commands/fess.md, but renderer projections differ and Droid receives the agent without that command. Make the rubric self-contained or generated and document direct invocation per client. Extend renderer assertions. Source: validated VCR-014.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.14",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:07.581854Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Keep .env secrets out of the direnv cache    :direnv:security:validated:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.15
+:LABELS: ["direnv","heavy-review","security","validated"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+bin/de:49-103,142-162 sources .env under set -a and serializes the resulting environment to .envrc.cache without private mode enforcement. Cache only non-secret state under umask 077 and load .env afterward without serialization. Add a sentinel-secret and mode regression. Source: validated VCR-015.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.15",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:07.732261Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Remove eval from cached Nix store-path copying    :make:security:validated:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.16
+:LABELS: ["heavy-review","make","security","validated"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Makefile:218-235 reparses cached buildInputs through eval nix copy, allowing shell metacharacters to become commands. Parse into an argv array, require absolute /nix/store paths, and pass quoted arguments. Add hostile and non-store-path rejection fixtures. Source: validated VCR-016.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.16",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:07.924455Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Route NixOS switching through the host-owned build lock    :nixos:operations:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.17
+:LABELS: ["heavy-review","nixos","operations"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+bin/switch:19-24 and bin/update:897-916 call raw nixos-rebuild and bypass the required /etc/nixos build driver and .nixos-build lock. Delegate the NixOS branch to /etc/nixos/build and propagate lock refusal. Add command-spy coverage for switch, upgrade vulcan, and upgrade vps. Sources: validated VCR-017, Alexey-01, deep D-02.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.17",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:08.104055Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Give remote rollout jobs an identity and completion barrier    :concurrency:operations:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.18
+:LABELS: ["concurrency","heavy-review","operations"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+bin/update-remote:5-20 and bin/upgrade-all:22-36 launch tmux panes without waiting for exact jobs or aggregating status before later rollout mutations; current tests stub away the orchestration. Run phases sequentially or track, wait, and aggregate exact jobs. Test completion, failure, ordering, and checkout paths. Source: validated VCR-018.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.18",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:08.333360Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Replace duplicated Make project loops with one fail-closed iterator    :make:safety:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.19
+:LABELS: ["heavy-review","make","safety"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Makefile:175-235,297-310 repeats four loops that continue after failed cd and let later iterations mask earlier failures, potentially mutating the caller repository. Build one quoted strict iterator with explicit status aggregation and no eval, then reuse it. Test missing and spaced paths plus per-command failures. Sources: validated VCR-019, Alexey-03, deep D-03.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.19",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:08.527878Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Reject malformed model identifiers in the AI catalog    :ai:validated:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.2
+:LABELS: ["ai","heavy-review","validated"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ai/catalog.nix:124-148,1085-1129 contains claude-opus-5[1m, and config/ai/renderers/claude.nix:46-55,126-129 renders it. Correct the identifier and add catalog validation rejecting terminal escape residue. Verify with catalog searches and nix flake check ./config/ai --all-systems --no-build. Source: validated VCR-002.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.2",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:05.637823Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Move upgrade-projects logs out of shared fixed /tmp paths    :security:shell:validated:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.20
+:LABELS: ["heavy-review","security","shell","validated"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+bin/upgrade-projects:3-99 opens predictable shared /tmp logs without private umask, safe ownership, mode checks, or symlink rejection. Use a private mode-0700 directory under umask 077 and safe regular-file handling. Add symlink, ownership, mode, and concurrency fixtures. Source: validated VCR-020.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.20",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:08.715035Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Validate or replace inherited CODEX_SQLITE_HOME    :codex:security:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.21
+:LABELS: ["codex","heavy-review","security"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+flake/ai/wrappers/codex.nix:30-90 validates its default local root but preserves an inherited CODEX_SQLITE_HOME and then performs lock, temp, copy, and rename operations there. Always use the validated path or validate the selected override identically. Test external, symlinked, wrong-owner, and permissive paths. Sources: validated VCR-021, deep D-01.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.21",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:08.905516Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Bound local OpenAI model discovery responses    :ai:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.22
+:LABELS: ["ai","heavy-review","resource-safety"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+packages/pi-gallery/providers/local-openai-provider.ts:178-231 buffers an unbounded JSON body and maps an unbounded model array. Enforce response byte and entry-count limits, then add oversized-body and oversized-array tests. Source: validated VCR-022.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.22",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:09.120247Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Realize every declared behavioral check in a closeout manifest    :nix:tests:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.23
+:LABELS: ["heavy-review","nix","tests"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Behavior-bearing derivations declared in flake.nix:392-426 and flake/ai.nix:435-500 are omitted from native build manifests, while no-build checks only evaluate them. Create one supported-system manifest that builds every behavioral check and separately names evaluation-only gates. Mechanically map each declared check to a realizing gate. Source: validated VCR-023.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.23",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:09.321573Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Make model-sync dry-run safe and behaviorally executable    :activation:tests:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.24
+:LABELS: ["activation","heavy-review","tests"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ai/model-sync.nix:48-205 mutates live defaults and stamp state during Home Manager dry-run, while its deferral, probes, preference operations, failures, cleanup, and idempotence have no executable fixture. Add an early reporting-only dry-run branch and injectable tools, then table-test all state and failure transitions. Sources: validated VCR-024, Alexey-08.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.24",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:09.507068Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Execute Syncthing activation safety branches in tests    :syncthing:tests:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.25
+:LABELS: ["heavy-review","syncthing","tests"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/syncthing.nix:377-549 owns identity, ownership, login-item, PID, ignore-file, Time Machine, socket, and running-daemon safety branches, but test/home/syncthing.nix only token and syntax checks them. Parameterize probes and table-test every branch. Source: validated VCR-025.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.25",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:09.692304Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Test the Syncthing monitor process lifecycle    :syncthing:tests:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.26
+:LABELS: ["heavy-review","syncthing","tests"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/syncthing.nix:99-198 has unexecuted child launch, route-loss, trap, termination, reap, and status-propagation behavior. Inject route and process tools and add inactive, active, loss, signal, and child-failure fixtures. Source: validated VCR-026.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.26",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:09.910188Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Add negative fixtures for Syncthing bootstrap file safety    :syncthing:tests:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.27
+:LABELS: ["heavy-review","syncthing","tests"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/syncthing-bootstrap.py:120-135,371-394 defends against unsafe files and replacement failures, but tests omit symlink, FIFO, inode swap, fsync, replace, mode, cleanup, and unchanged-on-rejection cases. Add focused negative Python fixtures for every boundary. Source: validated VCR-027.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.27",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:10.152140Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Test Agent Deck Home Manager lifecycle ownership    :tests:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.28
+:LABELS: ["agent-deck","heavy-review","tests"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/agent-deck.nix:34-108 has Hera-only assertions, DAG setup, private directories, environment, and launchd lifecycle fields not covered by existing package and overlay checks. Add supported and rejected Home Manager module evaluations covering every owned lifecycle field. Source: validated VCR-030.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.28",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:10.366878Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Assert the SSH security baseline across both Home Manager APIs    :ssh:tests:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.29
+:LABELS: ["heavy-review","ssh","tests"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ssh.nix:13-19,55-64,243-360 supports settings and matchBlocks paths, but tests do not pin all five Host-star directives plus enableDefaultConfig=false on both. Render both API paths and compare the security subset while allowing additive host blocks. Source: validated VCR-031.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.29",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:10.583273Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Remove credential exposure from managed MSSQL and VLC services    :launchd:security:validated:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.3
+:LABELS: ["heavy-review","launchd","security","validated"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/launchd.nix:157-208,425-433 reads MSSQL credentials from a user-owned path and passes them through Docker -e argv; VLC embeds --telnet-password. Remove obsolete services or establish protected root-owned file or FD boundaries plus explicit network restrictions. Verify no credential values enter argv or generated configuration. Source: validated VCR-003.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.3",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:05.800762Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#A] Make RuntimeBindings the sole Agent Deck runtime state model    :architecture:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.30
+:LABELS: ["agent-deck","architecture","heavy-review"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+overlays/ai/patches/agent-deck-runtime-lifecycle.patch keeps a generic RuntimeBindings map beside five scalar per-tool fields across domain, storage, transitions, and tests, with repeated switches. Make the map canonical, confine legacy scalar projection to a versioned migration boundary, and use one binding descriptor table. Prove a synthetic sixth binding requires no core struct field or switch. Source: abstraction finding 1.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.30",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:10.796461Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Extract the shared MCP registry from the Pi renderer    :ai:architecture:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.31
+:LABELS: ["ai","architecture","heavy-review"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ai/renderers/pi.nix:218-272 solely owns .config/mcp/mcp.json even though Prime uses the same adapter, forcing Prime to imply Pi and causing tests to fabricate the registry. Add one shared registry projection emitted once for any consuming client and move its mutable guard there. Test Prime-only, Pi-only, and combined rendering. Source: abstraction finding 2.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.31",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:11.051032Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Replace model-name capability inference with typed metadata    :ai:architecture:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.32
+:LABELS: ["ai","architecture","heavy-review"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+packages/pi-gallery/providers/local-openai-provider.ts:18-175 derives chat, vision, and reasoning behavior from substrings in model IDs, and tests pin those regexes. Normalize explicit type and modalities at the provider boundary, with conservative unknown defaults or explicit override data. Add misleading-name negatives. Source: abstraction finding 3.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.32",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:11.354649Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Move Pi timeout policy into provider transport data    :architecture:pi:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.33
+:LABELS: ["architecture","heavy-review","pi"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+flake/ai/wrappers/pi.nix:25-41 dispatches long timeouts on provider IDs omlx and llama-swap and widens a global dispatcher default. Add per-provider or per-model request and idle timeout fields, flow them through the clients, and restore the ordinary global default. Test capability behavior independent of provider spelling. Source: abstraction finding 4.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.33",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:11.618487Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Select Claude notification settings by dimensions, not profile IDs    :architecture:claude:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.34
+:LABELS: ["architecture","claude","heavy-review"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ai/catalog.nix:1077-1261 encodes notification exclusions as five exact profile IDs, so new profiles silently inherit workstation behavior. Split settings into selector-driven fragments for client, host, and audience and remove the negative identity map. Test matching and nonmatching synthetic profiles. Source: abstraction finding 5.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.34",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:11.846181Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Give local model endpoints one home-level authority    :ai:architecture:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.35
+:LABELS: ["ai","architecture","heavy-review"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ai/catalog.nix:56-105,1353-1377 duplicates endpoint records across profiles, and config/ai.nix:161-170 selects the first non-null profile without equality validation. Declare endpoints once per host or home capability and let profiles opt in; at minimum reject divergent selected copies. Source: abstraction finding 6.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.35",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:12.052076Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Represent agent tool policy as typed capabilities    :ai:architecture:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.36
+:LABELS: ["ai","architecture","heavy-review"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ai/catalog.nix:150-216 stores the Claude-formatted string Read, Grep, Glob, Bash; Pi decodes only exact equality and Prime embeds it as prose. Use a validated abstract capability list and map elements in each renderer. Test multiple subsets and reordered source data semantically. Source: abstraction finding 7.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.36",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:12.254500Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Move product-scale Agent Deck and Pi deltas out of Nix patches    :architecture:packaging:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37
+:LABELS: ["architecture","heavy-review","packaging"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+agent-deck-runtime-lifecycle.patch is about 45,582 lines and pi-bounded-session-history.patch about 13,831, far beyond the documented narrow compatibility-patch boundary. Upstream them or pin reviewed fork commits in sources/ai.json, retaining only Nix-specific patches. Compare old and new trees byte-for-byte before removal and run complete product checks. Source: abstraction finding 8.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:12.432470Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Encode make upgrade ordering in the dependency graph    :concurrency:make:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.38
+:LABELS: ["concurrency","heavy-review","make"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Makefile:171-193 declares update and upgrade-tasks as unordered prerequisites, so make -j can race publication and activation with destructive cleanup and Homebrew mutation. Run upgrade-tasks only after successful update in an explicitly ordered recipe. Add a MAKEFLAGS=-j8 sentinel fixture. Sources: Alexey-04, deep D-07.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.38",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:12.611297Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Remove or preflight partial clean and purge workflows    :make:safety:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.39
+:LABELS: ["heavy-review","make","safety"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Makefile:239-281 deletes user generations before an unprivileged system-profile deletion can fail, and scour is missing from PHONY. Either remove these unsafe aggregate targets or preflight exact privilege before any mutation, apply correct authority, and mark scour phony. Add call-order and file-named-scour fixtures. Sources: Alexey-05, deep D-06.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.39",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:12.790178Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Fail closed for shared-work in bin/update --switch    :routing:validated:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.4
+:LABELS: ["heavy-review","routing","validated"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+bin/lib/host-routing.sh:10-31 maps shared-work to jwiegley, but bin/update:499-525,846-950 routes every non-NixOS output through darwinConfigurations, where jwiegley does not exist. Reject this mode during preflight and direct operators to the authoritative external Home Manager rollout. Add a shared-work command-spy regression. Source: validated VCR-004.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.4",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:05.960154Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Make Claude-memory pinning strict and dry-run safe    :activation:security:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.40
+:LABELS: ["activation","heavy-review","security"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/johnw.nix:190-210 converts required read, parse, and mktemp failures into success; dry-run still creates and edits temporary state and can leak it while claiming success. Extract a strict helper with early dry-run, same-directory temp, trap cleanup, and failure propagation. Test malformed, unwritable, tool-failure, move-failure, current, stale, and dry-run cases. Source: Alexey-07.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.40",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:12.975131Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Enforce the environment-only credential argument contract    :ai:security:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.41
+:LABELS: ["ai","heavy-review","security"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ai/catalog.nix:1182-1323 uses a prefix heuristic that accepts embedded credential arguments such as joined Authorization headers, then renderers copy them into client configuration. Introduce typed credential-bearing arguments or reject credential markers anywhere, and test joined, split, case, wrapper, and name-value forms across renderer output. Source: Alexey-09.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.41",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:13.145460Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Package supported nix-scripts from an explicit allowlist    :architecture:packaging:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.42
+:LABELS: ["architecture","heavy-review","packaging"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+overlays/00-lib.nix:12-39 and overlays/30-user-scripts.nix:18-25 install every top-level executable except two names, so legacy or experimental commands become public by default. Declare the exact maintained executable set or split coherent packages, and assert both installed and source-only inventories. Source: Alexey-12.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.42",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:13.294459Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Decide and remove or implement de --no-cache    :shell:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.43
+:LABELS: ["dead-code","heavy-review","shell"]
+:ISSUE_TYPE: question
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+bin/de:22-25 accepts --no-cache but discards it, and no in-tree consumer exists. Search maintained external automation; if absent, remove the token and documentation, otherwise define and test an observable cache-bypass contract. Sources: Alexey-13, dead-code DC-04, ponytail.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.43",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:13.444571Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Correct the documented make test check inventory    :docs:make:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.44
+:LABELS: ["docs","heavy-review","make"]
+:ISSUE_TYPE: docs
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+bin/README.md:343 says make test builds four principal checks, while Makefile:53-61 lists six. Remove the brittle count or list the recipe-owned set accurately. Source: Alexey-14.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.44",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:13.596430Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Separate read-only make check from store repair    :make:nix:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.45
+:LABELS: ["heavy-review","make","nix"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Makefile:250-252 names nix store verify --repair --all as the conventional check target, making a diagnostic-looking command mutate the whole store. Make check read-only and move repair to an explicit deliberate target. Add an argv-recorder fixture. Source: deep D-09.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.45",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:13.743218Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Remove stale-lock suppression from Codex memory seeding    :codex:concurrency:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.46
+:LABELS: ["codex","concurrency","heavy-review"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+flake/ai/wrappers/codex.nix:73-90 uses a directory mutex that survives SIGKILL or host crash and permanently suppresses future seeding. Remove the mutex in favor of unique temporary files plus no-clobber final move, or implement stale recovery. Test stale and concurrent launches. Source: deep D-10.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.46",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:13.891115Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Require explicit licenses in mkScriptPackage    :metadata:packaging:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.47
+:LABELS: ["heavy-review","metadata","packaging"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+overlays/00-lib.nix:16-43 defaults every script package to MIT, causing nix-scripts to advertise MIT even though LICENSE.txt is BSD-3-Clause. Make license required and set each caller from its source authority; assert nix-scripts SPDX metadata. Source: deep D-11.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.47",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:14.049453Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Decide the fate of unreachable HTTP-header MCP support    :ai:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.48
+:LABELS: ["ai","dead-code","heavy-review"]
+:ISSUE_TYPE: question
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ai/catalog.nix has an empty mcpHttpHeaders allowlist that rejects every header-bearing managed transport, yet four renderer branches, a patched bridge package and input, Droid wiring, compatibility exports, and a 655-line oracle remain. Find current downstream authority; delete the whole slice if unused, or add a real owned consumer and contract if retained. Sources: deep Q-02, dead-code DC-03, ponytail.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.48",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:14.211764Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Adjudicate unused Emacs projections, HEAD input, and aliases    :emacs:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.49
+:LABELS: ["dead-code","emacs","heavy-review"]
+:ISSUE_TYPE: question
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/packages.nix:86-96 exports emacs30Env and emacsHEADEnv without tracked selection; overlays/10-emacs.nix:823-953 plus the emacs-src input expose unused generic aliases and a dormant HEAD family. Inventory external and interactive consumers, then remove only unsupported projections, aliases, branch, and input while preserving active MacPort packages. Sources: dead-code DC-01 and DC-07.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.49",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:14.367260Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Unify host identity and shell routing authority    :architecture:routing:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.5
+:LABELS: ["architecture","heavy-review","routing"]
+:ISSUE_TYPE: question
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/hosts/registry.nix:7-144 is the declared host authority, while bin/lib/host-routing.sh:1-32 maintains a second table and calls git-ai shared-work even though the registry does not. Decide git-ai membership, then project aliases and output names from one authority and add table-driven parity, FQDN, idempotence, refusal, build, and switch dispatch tests. Sources: validated VCR-005 and VCR-028; abstraction finding 10.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.5",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:06.124375Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Delete or explicitly own dormant Auto Compact Resume    :pi:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.50
+:LABELS: ["dead-code","heavy-review","pi"]
+:ISSUE_TYPE: question
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ai/extensions/auto-compact-resume, its design, and 266-line test are not installed; Blackhole replaced the 117-line runtime, while only the self-test consumes it. If no maintained fallback owner exists, delete implementation, design, test, and fallback prose while preserving the retired-path migration guard. Sources: dead-code DC-02, ponytail.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.50",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:14.534902Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Adjudicate repo-unused public flake outputs    :nix:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.51
+:LABELS: ["dead-code","heavy-review","nix"]
+:ISSUE_TYPE: question
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ai/flake.nix:91-95 exports lib.inputNames and flake.nix:249-258 exports darwinPackages without tracked consumers. Inventory maintained downstream flakes and interactive contracts; remove only outputs with no authority, preserving inputSet and named configurations. Source: dead-code DC-05.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.51",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:14.684812Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Adjudicate the unselected Coq overlay matrix    :coq:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.52
+:LABELS: ["coq","dead-code","heavy-review"]
+:ISSUE_TYPE: question
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+overlays/10-coq.nix:1-41 exposes 13 versioned overrides and 13 package-set aliases but no tracked host, package, or check selects them. Determine interactive or downstream build users; remove the full overlay if absent, or record and smoke-evaluate the supported selectors. Sources: dead-code DC-06, ponytail.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.52",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:14.834432Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Replace host registry snapshot tests with behavioral assertions    :architecture:tests:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.53
+:LABELS: ["architecture","heavy-review","tests"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+test/home/host-behavior.nix:22-35,174-208 duplicates the full home-class roster and mapping from config/hosts/registry.nix, so synchronized mistakes pass and every registry edit requires two changes. Delete exact snapshots and keep resolved personal-linux, shared-work, override, and unknown behavior assertions. Source: ponytail.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.53",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:14.987292Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Share one hermetic Git fixture helper    :git:tests:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.54
+:LABELS: ["git","heavy-review","tests"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+test/bin/publish-slow-test.py:21-71 and gates-slow-test.py:26-67 duplicate clean Git environment and subprocess helpers and already disagree on GIT_INTERNAL_SUPER_PREFIX. Move only clean_env and git into one helper using the union of selector variables. Run both suites. Source: ponytail.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.54",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:15.145276Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Derive catalog IDs, roots, and agent names from keys    :ai:simplification:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.55
+:LABELS: ["ai","heavy-review","simplification"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ai/catalog.nix repeats profile IDs as keys, arguments, and a roots table, and repeats 25 agent names in keys and metadata. Normalize keyed specs once, place root with profile data, derive profile.id and metadata.name from attribute keys, and keep renderer output unchanged. Source: ponytail.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.55",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:15.298390Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Compute key-files directly without a host attrset    :nix:simplification:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.56
+:LABELS: ["heavy-review","nix","simplification"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/key-files.nix:1-18 builds and filters an attrset for all hosts only to select the current host result, and accepts unused _home. Replace it with the direct filtered list of other-host key paths and update the single caller. Source: ponytail.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.56",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:15.458544Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Deduplicate the core Nix check installable list    :make:simplification:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.57
+:LABELS: ["heavy-review","make","simplification"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Makefile:53-71 repeats the same six Nix checks in test and expensive. Hoist only those installables into one CORE_CHECKS variable while leaving tier-specific quality and system build steps distinct. Verify make -n and execute both on normal cadence. Source: ponytail.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.57",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:15.612868Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Normalize statusline numbers in the existing jq pass    :performance:simplification:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.58
+:LABELS: ["heavy-review","performance","simplification"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ai/statusline-command.sh:5-50 launches eleven awk processes solely to coerce fields already extracted by one jq invocation. Move tonumber, fallback, and round into jq, remove integer_or_zero and stale debug code, and add a fractional-number test. Source: ponytail.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.58",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:15.762972Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Inline the one-use last-known-good importer    :nix:simplification:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.59
+:LABELS: ["heavy-review","nix","simplification"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+overlays/00-last-known-good.nix:5-24 defines a generic name-parameterized importer with one call and exports one pinned ntp package. Inline the source assertion and import, then expose ntp directly. Source: ponytail.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.59",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:15.911510Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Converge portable formatting and linting on one quality authority    :architecture:quality:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.6
+:LABELS: ["architecture","heavy-review","quality"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+test/ai/scripts/format.sh:34-61 silently accepts unsupported paths and omits bash; lint.sh:9-17 shellchecks only test/ai. flake/ai.nix:299-342,403-423 duplicates the root quality implementation. Decide whether public portable apps remain; if retained, share a scoped runner and reject unsupported input, otherwise remove the unused surface. Add inventory and failure-policy fixtures. Sources: validated VCR-006, abstraction finding 9, Alexey-10.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.6",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:06.325541Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Enforce skill names before constructing output paths    :comments:security:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.60
+:LABELS: ["comments","heavy-review","security"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ai/skills/skill-creator/scripts/init_skill.py:217-239,299-320 prints a lowercase hyphen-case contract but accepts absolute and traversal names that escape the requested root. Centralize full name validation, require a direct child destination, and reuse it in quick_validate.py. Add valid, traversal, absolute, uppercase, repeated-hyphen, and length tests. Source: comment audit CMT-01.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.60",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:16.067216Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Generate and parse genuinely valid skill frontmatter    :comments:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.61
+:LABELS: ["comments","heavy-review","skill-creator"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+skill-creator init emits description: [TODO: ...], which parses as a YAML sequence, while quick_validate.py uses regex and accepts malformed YAML before packaging. Serialize scalars safely, parse frontmatter once, require exact scalar types and name-directory agreement, and reject malformed or unchanged templates. Source: comment audit CMT-02.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.61",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:16.218115Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Split edit-env entries at the first equals sign    :comments:emacs:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.62
+:LABELS: ["comments","emacs","heavy-review"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+overlays/emacs/edit-env.el:44-51,84-95,114-165 splits VAR=VALUE on every equals sign, rejecting new values and truncating existing values containing equals. Use one helper that separates at the first equals and preserves the remainder. Add ERT coverage for FOO=a=b. Source: comment audit CMT-03.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.62",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:16.371111Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Reject symlink roots before making Plasma Wiki writable    :filesystem:security:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.63
+:LABELS: ["filesystem","heavy-review","security"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+plasma-wiki-writable-obsidian.patch:12-31 claims not to follow symlinks but enumerates path.rglob before checking entries, so a symlink root can traverse and chmod an external tree. Reject a symlink root before traversal and use no-follow operations where available. Add an external target mode-preservation test. Source: comment audit CMT-04.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.63",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:16.522230Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Correct quality guard rationale and symlink inventory comments    :comments:quality:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.64
+:LABELS: ["comments","heavy-review","quality"]
+:ISSUE_TYPE: docs
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+test/bin/quality:214-232 says staged rename or deletion leaves the old path in git ls-files, but its fixture only reproduces an unstaged worktree deletion; the same comment falsely says the repository tracks zero symlinks although CLAUDE.md is one. Describe the state actually tested or add a faithful partial-commit fixture, and remove the brittle count. Sources: comment audit CMT-05 and CMT-06.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.64",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:16.669344Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Remove the stale packages.nix call-site count    :comments:docs:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.65
+:LABELS: ["comments","docs","heavy-review"]
+:ISSUE_TYPE: docs
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/packages.nix:10-13 says two of three call sites omit config and lib, but the tree has four import expressions and three omit them. State the architectural distinction without a drifting numeric inventory. Source: comment audit CMT-07.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.65",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:16.970621Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Require explicit fresh-context dispatch where independence matters    :agents:comments:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.66
+:LABELS: ["agents","comments","heavy-review"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+parallelize, Wiggum fess, and validated-review documentation says subagents start with no parent context, but current Codex spawn defaults to full-history inheritance and heavy-review does not specify isolation. Make generic guidance runner-dependent and require verified no-history dispatch for independent review and audit roles. Add a parent-history sentinel contract probe. Source: comment audit CMT-08.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.66",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:17.748056Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Attest exact model identities in validated review    :agents:validation:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.67
+:LABELS: ["agents","heavy-review","validation"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+validated-code-review promises named and different models, but its non-Claude clink route accepts only a CLI name, not an exact model, while unavailable models can be labeled without attestation. Preflight every roster entry, dispatch through exact model selectors, record returned identity, require difference, and abort rather than substitute. Source: comment audit CMT-09.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.67",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:18.051556Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Use the shared frontmatter renderer for Codex resources    :architecture:comments:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.68
+:LABELS: ["architecture","comments","heavy-review"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+config/ai/renderers/render-lib.nix:1-15 claims one frontmatter implementation, but codex.nix:112-122 manually maintains another. Route Codex through renderMarkdownText or narrow and document the exception. Parse adversarial metadata across every renderer. Source: comment audit CMT-10.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.68",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:18.245203Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Stop sourcing unescaped preserved values in bin/de    :security:shell:validated:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.7
+:LABELS: ["heavy-review","security","shell","validated"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+bin/de:51-97 interpolates decoded environment values into literal single quotes and sources them, so a quote can turn data into shell code. Emit fixed names with shell-safe value escaping instead. Add regressions for quotes, newlines, and metacharacters; run bash syntax, shellcheck, and make test. Source: validated VCR-007.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.7",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:06.480046Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Delete or repair the unpinned update-home-manager path    :validated:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.8
+:LABELS: ["heavy-review","home-manager","validated"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+bin/update-home-manager:1-4 activates even after update failure and then uses mutable home-manager/master rather than the authoritative checkout. Prefer deleting or excluding this unsupported installed command; otherwise fail fast and execute the local pinned activation package. Add failed and successful command-spy tests. Sources: validated VCR-008, Alexey-02, deep D-04.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.8",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:06.646206Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Make YubiKey key switching preflighted and atomic    :security:yubikey:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.9
+:LABELS: ["heavy-review","security","yubikey"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 13:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+bin/yubikey-switch:3-24 checks /Volumes/File but copies from /Volumes/Files, and it overwrites keys incrementally before all sources are validated. Use one source root, preflight all files, stage the full set, and replace with rollback before later side effects. Add missing-source and copy-failure fixtures proving destinations stay unchanged. Sources: validated VCR-009, Alexey-06, deep D-05.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.9",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-10T20:25:06.797121Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
