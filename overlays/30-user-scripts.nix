@@ -3,7 +3,7 @@
 # Dependencies: prev.myLib (from 00-lib.nix); final for perl/haskellPackages
 # Packages: nix-scripts, my-scripts
 # Notes:
-#   - nix-scripts from this repository's bin/ directory
+#   - supported nix-scripts from this repository's bin/ directory
 #   - my-scripts requires scripts
 {
   scripts ? null,
@@ -19,6 +19,10 @@ in
     name = "nix-scripts";
     src = ../bin;
     description = "Nix configuration scripts";
+    excludeFiles = [
+      "update-remote"
+      "upgrade-all"
+    ];
     extraInstall = ''
       mkdir -p $out/libexec/nix-scripts
       cp -R ${../bin/lib}/. $out/libexec/nix-scripts/
@@ -39,6 +43,9 @@ in
           exit 1
         fi
       done
+      test ! -e $out/bin/update-remote
+      test ! -e $out/bin/upgrade-all
+      test -x $out/bin/update-overlay
       substituteInPlace $out/bin/upgrade \
         --replace-fail 'installed_upgrade_projects=' \
         "installed_upgrade_projects=$out/bin/upgrade-projects"

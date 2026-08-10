@@ -1005,10 +1005,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-B43/S2NVWQ3CJslyQPkvKQzkEgZLzYpyZr3iGiQZHEo=",
+          "narHash": "sha256-UG8v0D6MCJs7TCpdpAOLKus+IHktnt4MlV19kFLZQ2w=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "2c27c5fcb51edf0ac740e944c2c357016d9ea2d9",
+          "rev": "33656317a15ef8171dc2efbbdefd5f7b092b57b9",
           "type": "github"
         },
         "fetcher": "fetchTree",

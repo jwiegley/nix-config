@@ -4,7 +4,6 @@
   claudePackage,
   codexPackage,
   agentHttpHeaderBridge ? null,
-  agentHttpHeaderBridgeOutput ? null,
   mcpRemote ? null,
 }:
 
@@ -254,11 +253,7 @@ let
     exit 127
   '';
 
-  haveBridge =
-    agentHttpHeaderBridge != null
-    && agentHttpHeaderBridgeOutput != null
-    && agentHttpHeaderBridge == agentHttpHeaderBridgeOutput
-    && mcpRemote != null;
+  haveBridge = agentHttpHeaderBridge != null && mcpRemote != null;
   bridgeBin =
     if agentHttpHeaderBridge == null then
       missingBridge

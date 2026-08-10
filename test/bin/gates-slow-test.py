@@ -368,6 +368,11 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
         )
 
     def run_tool(self, *args, **env):
+        env = {
+            "VPS_CHECKOUT": self.nowhere,
+            "ANDORIA_CHECKOUT": self.nowhere,
+            **env,
+        }
         return subprocess.run(
             [str(CROSS_CONSUMER_EVAL), *args],
             cwd=str(BIN.parent),
@@ -782,6 +787,11 @@ class TestGatesAreRegistered(unittest.TestCase):
             root = Path(temp_dir)
             fake_bin = root / "bin"
             fake_bin.mkdir()
+            (fake_bin / "lib").mkdir()
+            shutil.copy2(
+                REPO / "bin/lib/local-git-inputs.py",
+                fake_bin / "lib/local-git-inputs.py",
+            )
             nix = fake_bin / "nix"
             nix.write_text(
                 "#!/bin/sh\n"

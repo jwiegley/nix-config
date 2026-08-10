@@ -11,8 +11,52 @@ let
     "gpu-server"
   ];
 
+  # Home classes are logical evaluation identities. Keep their catalog and
+  # concrete-registry projections separate: the personal-linux fixture selects
+  # VPS AI profiles but must not inherit the VPS host row or server-lean role.
+  homeClasses = {
+    clio = {
+      registryId = "clio";
+      catalogHost = "clio";
+    };
+    hera = {
+      registryId = "hera";
+      catalogHost = "hera";
+    };
+    personal-linux = {
+      registryId = null;
+      catalogHost = "vps";
+    };
+    shared-work = {
+      registryId = "andoria";
+      catalogHost = "shared-work";
+    };
+    vps = {
+      registryId = "vps";
+      catalogHost = "vps";
+    };
+    vulcan = {
+      registryId = "vulcan";
+      catalogHost = "vulcan";
+    };
+  };
+
+  homeClassNames = builtins.attrNames homeClasses;
+  homeClassContractFor =
+    name:
+    let
+      row = homeClasses.${name} or null;
+    in
+    {
+      inherit row;
+      assertion = row != null;
+      message = "set nixManagedAiHomeClass to one of ${builtins.concatStringsSep ", " homeClassNames}";
+    };
+
 in
 {
+  inherit homeClasses homeClassContractFor;
+
   # Host rows plus one shared-work group row.
   hosts = {
     hera = {
@@ -63,6 +107,7 @@ in
       # An explicit home class supplies group classification; physical
       # shared-work membership is also recognized below.
       cls = if homeClass != null then homeClass else id;
+      homeClassRow = homeClasses.${cls} or null;
     in
     {
       isHera = id == "hera";
@@ -74,7 +119,9 @@ in
 
       # Resolve the shared-work group from either its explicit home class or a
       # physical member hostname.
-      isSharedWork = cls == "shared-work" || builtins.elem id sharedWorkMembers;
+      isSharedWork =
+        (homeClassRow != null && homeClassRow.registryId == "andoria")
+        || builtins.elem id sharedWorkMembers;
 
       # The synthetic CI evaluation fixtures pin the name to "linux".
       isCiFixture = id == "linux";

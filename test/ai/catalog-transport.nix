@@ -151,9 +151,35 @@ assert builtins.all reject [
 ];
 pkgs.runCommand "ai-catalog-transport" { } ''
   ${lib.concatMapStringsSep "\n" (entry: ''
-    ${pkgs.jq}/bin/jq -e '
+    ${pkgs.jq}/bin/jq -e \
+      --argjson localModelRoutes ${
+        if entry.profile.localModelEndpoints != null then "true" else "false"
+      } '
       type == "object"
       and (.providers | type == "object")
+      and (
+        (
+          [
+            .providers
+            | to_entries[]
+            | select(.value | has("apiKey"))
+            | .key
+          ]
+          | sort
+        )
+        == (if $localModelRoutes then ["hermes", "router"] else [] end)
+      )
+      and (
+        if $localModelRoutes then
+          .providers.router.apiKey == "pi-model-router"
+          and ((.providers.hermes.apiKey | type) == "string")
+          and (.providers.hermes.apiKey | startswith("!/nix/store/"))
+          and (.providers.hermes.apiKey | contains("/bin/bash -c "))
+          and (.providers.hermes.apiKey | contains("/bin/pass"))
+        else
+          true
+        end
+      )
     ' ${entry.rendered.files.".config/pi/agent/models.json".source} >/dev/null
     ${pkgs.jq}/bin/jq -e '
       type == "object"

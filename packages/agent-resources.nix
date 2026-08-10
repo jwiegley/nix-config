@@ -154,7 +154,7 @@ runCommand "agent-resources" { } ''
   ${copyPiOpenaiServerCompactionFiles}
   cp -- ${./agent-resources/pi-openai-server-compaction-active-history.ts} \
     "$pi_openai_server_compaction/src/active-history.ts"
-  ${buildPackages.patch}/bin/patch --fuzz=0 \
+  ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
     --directory="$pi_openai_server_compaction" --strip=1 \
     < ${./agent-resources/pi-openai-server-compaction-bounded-history.patch}
   cp -R -- ${lib.escapeShellArg "${wsSource}"}/. \
@@ -165,7 +165,7 @@ runCommand "agent-resources" { } ''
   mkdir "$pi_quiet/src"
   ${copyPiQuietFiles}
   cp -- ${lib.escapeShellArg "${inputs.pi-quiet}/LICENSE"} "$pi_quiet/LICENSE"
-  ${buildPackages.patch}/bin/patch --fuzz=0 \
+  ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
     --directory="$pi_quiet" --strip=1 \
     < ${./agent-resources/pi-quiet-bounded-history.patch}
 

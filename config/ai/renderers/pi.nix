@@ -86,6 +86,16 @@ let
     router = routerProvider;
   };
   models.providers = nativeProviders // lib.optionalAttrs localModelRoutes localProviders;
+  providerApiKeyForms = lib.mapAttrs (_: provider: provider.apiKey) (
+    lib.filterAttrs (_: provider: provider ? apiKey) models.providers
+  );
+  # Closed security boundary: adding or changing any apiKey-bearing provider
+  # requires an explicit policy edit here. Profiles without local routes must
+  # remain apiKey-free.
+  approvedProviderApiKeyForms = lib.optionalAttrs localModelRoutes {
+    hermes = hermesApiKeyCommand;
+    router = "pi-model-router";
+  };
   modelRouter = {
     debug = false;
     phaseBias = 0.5;
@@ -216,6 +226,9 @@ assert profile.root == root;
 assert builtins.isString homeDirectory;
 assert xdgConfigHome == "${homeDirectory}/.config";
 assert !localModelRoutes || (builtins.isString passwordStoreDir && builtins.isString gnupgHome);
+assert lib.assertMsg (
+  providerApiKeyForms == approvedProviderApiKeyForms
+) "Pi model-provider apiKey fields escaped the closed Hermes-command/router-sentinel set";
 assert selected.hooks == { };
 assert selected.marketplaces == { };
 assert selected.settings == { };

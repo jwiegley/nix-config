@@ -427,7 +427,8 @@ let
     src = markdownPreviewSource;
     npmDepsHash = members.markdown-preview.hashes.npmDepsHash;
     prepareBundle = root: ''
-      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
         < ${./patches/pi-markdown-preview-bounded-history.patch}
     '';
   };
@@ -570,7 +571,8 @@ let
         --replace-fail \
           'return messageToText(entries[index]);' \
           'return messageToText(entries[index]?.message ?? entries[index]);'
-      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
         < ${./patches/pi-loop-bounded-history.patch}
     '';
   };
@@ -609,9 +611,11 @@ let
       mkdir -p ${root}/skills/btw
       cp -- ${inputs.pi-btw}/skills/btw/SKILL.md ${root}/skills/btw/SKILL.md
       cmp ${inputs.pi-btw}/extensions/btw.ts ${root}/extensions/btw.ts
-      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
         < ${./patches/pi-btw-overlay-escape.patch}
-      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
         < ${./patches/pi-btw-bounded-history.patch}
     '';
   };
@@ -625,7 +629,8 @@ let
       cp -- ${inputs.ponytail}/package.json ${inputs.ponytail}/LICENSE \
         ${inputs.ponytail}/README.md ${root}/
       chmod -R u+w ${root}/pi-extension
-      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
         < ${./patches/pi-ponytail-bounded-history.patch}
     '';
   };
@@ -636,7 +641,8 @@ let
     install = root: ''
       tar -xzf ${releaseTarballs.pi-agent-browser-native} -C ${root} \
         --strip-components=1
-      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
         < ${./patches/pi-agent-browser-bounded-history.patch}
     '';
   };
@@ -652,7 +658,8 @@ let
           'writeFileSync(path, content, { encoding: "utf8", mode: 0o600, flag: "wx" });'
       cp -- ${./patches/pi-usage-stream-json.ts} ${root}/stream-json.ts
       cp -- ${./patches/pi-usage-bounded-store.ts} ${root}/bounded-store.ts
-      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
         < ${./patches/pi-usage-bounded-history.patch}
     '';
   };
@@ -867,15 +874,18 @@ let
           raise SystemExit("unexpected pi-blackhole compaction threshold field")
       overlay.write_text(overlay_text.replace(old_field, new_field))
       PY
-      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
         < ${./patches/pi-blackhole-bounded-history.patch}
       cp -- ${./patches/pi-blackhole-streaming-history.ts} \
         ${root}/src/core/streaming-history.ts
       cp -- ${./patches/pi-blackhole-streaming-memory.ts} \
         ${root}/src/core/streaming-memory.ts
-      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
         < ${./patches/pi-blackhole-exact-recall.patch}
-      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
         < ${./patches/pi-blackhole-exact-memory.patch}
     '';
   };
@@ -905,7 +915,8 @@ let
       )
       source.write_text(text[:start] + replacement + text[end:])
       PY
-      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
         < ${./patches/pi-caveman-bounded-history.patch}
     '';
   };
@@ -959,7 +970,8 @@ let
 
       source.write_text(text)
       PY
-      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
         < ${./patches/pi-copy-message-bounded-history.patch}
     '';
   };
@@ -1005,7 +1017,8 @@ let
     install = root: ''
       tar -xzf ${releaseTarballs.pi-model-router} -C ${root} \
         --strip-components=1
-      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
         < ${./patches/pi-model-router-bounded-history.patch}
     '';
   };
@@ -1022,7 +1035,8 @@ let
         --replace-fail \
           $'  const theme = ctx.ui.theme;\n  const count = state.checkpoints.size;\n  ctx.ui.setStatus(\n    STATUS_KEY,\n    theme.fg("dim", "◆ ") + theme.fg("muted", `''${count} checkpoint''${count === 1 ? "" : "s"}`),\n  );' \
           '  ctx.ui.setStatus(STATUS_KEY, undefined);'
-      ${buildPackages.patch}/bin/patch --fuzz=0 --directory=${root} --strip=1 \
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
         < ${./patches/pi-rewind-bounded-history.patch}
     '';
   };

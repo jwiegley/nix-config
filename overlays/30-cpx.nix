@@ -6,8 +6,7 @@ _final: prev:
 let
   source = (import ../packages/source-catalog.nix "tools").cpx;
 in
-prev.lib.optionalAttrs prev.stdenv.isLinux {
-
+{
   cpx =
     with prev;
     rustPlatform.buildRustPackage rec {
@@ -20,8 +19,8 @@ prev.lib.optionalAttrs prev.stdenv.isLinux {
 
       cargoHash = source.hashes.cargoHash;
 
-      # cpx is currently Linux-only (uses copy_file_range syscall)
-      # Skip build on Darwin
+      # Keep the attribute reachable on Darwin for dependent-hash updates;
+      # normal package selection remains Linux-only.
       meta = with lib; {
         description = "A modern, fast file copy tool for Linux with progress bars, resume capability, and more";
         homepage = "https://github.com/11happy/cpx";

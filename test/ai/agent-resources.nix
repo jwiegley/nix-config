@@ -430,7 +430,7 @@ else
             "$quiet_expected/$relative"
         done
         cp -a -- ${lib.escapeShellArg "${piQuiet}/LICENSE"} "$quiet_expected/LICENSE"
-        ${pkgs.buildPackages.patch}/bin/patch --fuzz=0 \
+        ${pkgs.buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
           --directory="$quiet_expected" --strip=1 \
           < ${../../packages/agent-resources/pi-quiet-bounded-history.patch}
 
@@ -446,7 +446,7 @@ else
           "$openai_compaction_expected/src/active-history.ts"
         cp -a -- ${lib.escapeShellArg "${wsSource}"}/. \
           "$openai_compaction_expected/node_modules/ws"/
-        ${pkgs.buildPackages.patch}/bin/patch --fuzz=0 \
+        ${pkgs.buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
           --directory="$openai_compaction_expected" --strip=1 \
           < ${../../packages/agent-resources/pi-openai-server-compaction-bounded-history.patch}
 
@@ -562,7 +562,7 @@ else
         cp -R -- ${lib.escapeShellArg "${piQuiet}/packages/pi-quiet"}/. \
           "$quiet_test_root"/
         chmod -R u+w "$quiet_test_root"
-        ${pkgs.buildPackages.patch}/bin/patch --fuzz=0 \
+        ${pkgs.buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
           --directory="$quiet_test_root" --strip=1 \
           < ${../../packages/agent-resources/pi-quiet-bounded-history.patch}
         node --experimental-strip-types --test \
@@ -641,7 +641,7 @@ else
         cp ${lib.escapeShellArg "${piMcpAdapter}/config.ts"} \
           "$mcp_config_expected_root/config.ts"
         chmod u+w "$mcp_config_expected_root/config.ts"
-        ${pkgs.buildPackages.patch}/bin/patch --fuzz=0 \
+        ${pkgs.buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
           --directory="$mcp_config_expected_root" --strip=1 \
           < ${../../packages/agent-resources/pi-mcp-adapter-xdg-config-home.patch}
         mcp_config_expected="$mcp_config_expected_root/config.ts"

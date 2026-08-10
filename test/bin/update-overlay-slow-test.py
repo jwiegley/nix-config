@@ -557,9 +557,6 @@ got: sha256-requested
                 self.assertNotIn(str(root), expression)
                 self.assertIn("UPDATE_OVERLAY_REPO_DIR", expression)
                 self.assertIn(package_expression, expression)
-                # The one load-bearing token: hash builds must compose the
-                # host-independent overlay authority, not a subset.
-                self.assertIn('import (repo + "/config/overlays.nix")', expression)
                 self.assertNotIn("darwinConfigurations", expression)
                 self.assertNotIn("nixosConfigurations", expression)
                 parsed = subprocess.run(
@@ -659,30 +656,48 @@ got: sha256-requested
 
     def test_package_hash_expression_evaluates_repo_overlay_authority(self):
         # agent-resources proves the portable AI overlays are composed;
-        # markless (overlays/30-markless.nix) is a non-AI dependent-hash
-        # package from sources/tools.json; linkdups exists ONLY in the repo
-        # overlays -- bare nixpkgs has no such attribute -- so it fails
-        # loudly if the expression stops composing the full overlay
-        # authority (e.g. reverts to overlays/ai only).
-        for package, drv_pattern in (
-            ("agent-resources", r"^/nix/store/[a-z0-9]+-agent-resources\.drv$"),
-            ("markless", r"^/nix/store/[a-z0-9]+-markless-[0-9][^/]*\.drv$"),
-            ("linkdups", r"^/nix/store/[a-z0-9]+-linkdups-[^/]+\.drv$"),
+        # markless and linkdups prove the root repository overlays are composed;
+        # cpx must remain reachable on Darwin for cargoHash computation even
+        # though normal package selection remains Linux-only.
+        for package, evaluation_system, drv_pattern in (
+            (
+                "agent-resources",
+                None,
+                r"^/nix/store/[a-z0-9]+-agent-resources\.drv$",
+            ),
+            (
+                "markless",
+                None,
+                r"^/nix/store/[a-z0-9]+-markless-[0-9][^/]*\.drv$",
+            ),
+            (
+                "linkdups",
+                None,
+                r"^/nix/store/[a-z0-9]+-linkdups-[^/]+\.drv$",
+            ),
+            (
+                "cpx",
+                "aarch64-darwin",
+                r"^/nix/store/[a-z0-9]+-cpx-[0-9][^/]*\.drv$",
+            ),
         ):
-            with self.subTest(package=package):
-                command = HashComputer(REPO)._package_build_command(package)
-                expression = command[-1]
+            with self.subTest(package=package, system=evaluation_system):
+                expression = HashComputer(REPO)._package_build_command(package)[-1]
                 environment = dict(os.environ)
                 environment["UPDATE_OVERLAY_REPO_DIR"] = str(REPO)
-                evaluated = subprocess.run(
+                command = ["nix", "eval"]
+                if evaluation_system is not None:
+                    command.extend(["--system", evaluation_system])
+                command.extend(
                     [
-                        "nix",
-                        "eval",
                         "--impure",
                         "--raw",
                         "--expr",
                         f"({expression}).drvPath",
-                    ],
+                    ]
+                )
+                evaluated = subprocess.run(
+                    command,
                     capture_output=True,
                     text=True,
                     timeout=240,
@@ -691,6 +706,32 @@ got: sha256-requested
                 )
                 self.assertEqual(evaluated.returncode, 0, evaluated.stderr)
                 self.assertRegex(evaluated.stdout.strip(), drv_pattern)
+
+    def test_cpx_hash_build_reaches_injected_dummy_on_current_system(self):
+        # The Darwin drvPath subcase above proves that the Linux-only package is
+        # reachable there. This real build proves the generated updater command
+        # reaches cpx's fixed-output cargo dependency and reports exactly one
+        # injected-hash mismatch instead of failing at package selection.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "repo"
+            shutil.copytree(
+                REPO,
+                root,
+                ignore=shutil.ignore_patterns(
+                    ".*", "__pycache__", "result", "result-*"
+                ),
+            )
+            catalog_path = root / "sources/tools.json"
+            catalog = json.loads(catalog_path.read_text())
+            catalog["sources"]["cpx"]["hashes"]["cargoHash"] = MODULE[
+                "DUMMY_SRI_HASH"
+            ]
+            catalog_path.write_text(json.dumps(catalog, indent=2) + "\n")
+
+            computed = HashComputer(root)._compute_fod_hash("cpx", "cargoHash")
+            self.assertIsNotNone(computed)
+            self.assertNotEqual(computed, MODULE["DUMMY_SRI_HASH"])
+            self.assertRegex(computed, r"^sha256-[A-Za-z0-9+/=]+$")
 
     def test_pi_mcp_adapter_patch_ignores_unrelated_imports(self):
         patch_file = (

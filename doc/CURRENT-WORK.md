@@ -12,14 +12,24 @@ another soak is not a pending acceptance gate.
 
 A seven-pass heavy review (94 findings, consolidated to 41 clusters) was
 fixed across eight adversarially verified batches, commits
-`3278f5fc..842ce675`. Per-finding evidence lives in `doc/observations/`
-(untracked by design); two findings were adjudicated rather than applied,
-with the rationale committed beside the code they concern:
+`3278f5fc..842ce675`, followed by a partner-observation cleanup. The signed
+commits and current tests are the durable evidence; the transient untracked
+observation queue has been consumed. Five findings were adjudicated rather than
+applied, with the rationale recorded below or beside the code they concern;
+unresolved authority questions requiring live or downstream evidence are listed
+separately below:
 
 - the preflight allowlist stays leaf-granular (comment at its declaration
   in `config/ai/preflight.nix`);
 - the Pi normalization policy keeps two validators with distinct roles
-  (comments in `packages/pi-gallery/default.nix` and `bin/update-overlay`).
+  (comments in `packages/pi-gallery/default.nix` and `bin/update-overlay`);
+- signature acceptance remains independently enforced at its trust and
+  packaging boundaries (comment in `test/bin/quality`);
+- replacing the large update-overlay dispatcher remains a separately scoped
+  parity spike, not a speculative cleanup refactor;
+- Pi's mutable-state guard, runtime packages, and activation remain
+  composer-owned lifecycle policy; a generic renderer channel waits for a
+  second concrete client requirement rather than moving ownership speculatively.
 
 ### Open questions blocking the remaining items
 
@@ -38,7 +48,11 @@ with the rationale committed beside the code they concern:
    and it has drifted weaker than `test/bin/quality`.
 5. `overlays/10-coq.nix` defines 26 attributes no host or check selects:
    kept for interactive `./build pkg` use, or removable?
-6. Do clio's `~/Models/llama-swap.yaml` and omlx state serve the model IDs
+6. Does an external consumer use either public-but-repo-unused output:
+   portable `lib.inputNames` or root `darwinPackages`? Nothing in-repo or
+   documented selects either one; removal requires current downstream-consumer
+   evidence.
+7. Do clio's `~/Models/llama-swap.yaml` and omlx state serve the model IDs
    its codex profiles now advertise (`GLM-5.2`,
    `Qwen3.6-27B-oQ6e-mtp`)? The catalog asserts the services exist on both
    workstations; model inventory is unmanaged host state.

@@ -15,12 +15,13 @@ let
 
   registry = import ./hosts/registry.nix;
 
-  # Use the same optional home-class override as the AI module so shared-work
-  # resolves to the Andoria registry row; other evaluations use their hostname.
+  # Resolve the registry projection only. In particular, personal-linux keeps
+  # its synthetic hostname and does not inherit the VPS server-lean role.
   homeClass = args.nixManagedAiHomeClass or null;
-
-  resolvedRegistryId = if homeClass == "shared-work" then "andoria" else hostname;
-  resolvedRegistryRow = registry.hosts.${resolvedRegistryId} or null;
+  homeClassRow = if homeClass == null then null else (registry.homeClassContractFor homeClass).row;
+  resolvedRegistryId = if homeClassRow == null then hostname else homeClassRow.registryId;
+  resolvedRegistryRow =
+    if resolvedRegistryId == null then null else registry.hosts.${resolvedRegistryId} or null;
   profileHeavyDefault =
     resolvedRegistryRow == null || !(builtins.elem "server-lean" resolvedRegistryRow.roles);
 

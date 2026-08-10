@@ -438,9 +438,11 @@ run_consumer_eval() {
 run_signatures() {
     need git signatures || return
     need gpg signatures || return
-    # verify-signatures owns range resolution and the G/U/Y policy. Bare mode
-    # uses the current local remote-tracking snapshot; CI passes an explicit
-    # base/head range. Public key files are imported into a throwaway keyring.
+    # verify-signatures owns range resolution. It and bin/publish intentionally
+    # enforce the same three-status policy at separate trust and packaging
+    # boundaries. Bare mode uses the current local remote-tracking snapshot; CI
+    # passes an explicit base/head range. Public key files are imported into a
+    # throwaway keyring.
     #
     # This suite operates on a commit range, so it has no --files arm.
     if test/bin/verify-signatures; then

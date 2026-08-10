@@ -36,6 +36,7 @@ let
     inherit lib;
     resources = resourcePackage;
   };
+  registry = import ./hosts/registry.nix;
   renderers = {
     claude = import ./ai/renderers/claude.nix {
       inherit lib;
@@ -61,9 +62,16 @@ let
   };
 
   homeClass = if nixManagedAiHomeClass != null then nixManagedAiHomeClass else hostname;
-  profileHost = if homeClass == "personal-linux" then "vps" else homeClass;
-  profilesForHome = lib.filterAttrs (_: profile: profile.host == profileHost) catalog.profiles;
-  homeClassKnown = profilesForHome != { };
+  homeClassContract = registry.homeClassContractFor homeClass;
+  homeClassRow = homeClassContract.row;
+  profileHost = if homeClassRow == null then null else homeClassRow.catalogHost;
+  profilesForHome =
+    if profileHost == null then
+      { }
+    else
+      lib.filterAttrs (_: profile: profile.host == profileHost) catalog.profiles;
+  homeClassDeclared = homeClassContract.assertion;
+  profileHostPopulated = profilesForHome != { };
   profileIds = lib.sort builtins.lessThan (builtins.attrNames profilesForHome);
   selectedFor =
     profileId:
@@ -270,9 +278,10 @@ in
       assertion = catalog.validate { };
       message = "nix-managed AI catalog validation failed";
     }
+    (builtins.removeAttrs homeClassContract [ "row" ])
     {
-      assertion = homeClassKnown;
-      message = "set nixManagedAiHomeClass to one of clio, hera, shared-work, vps, vulcan, or personal-linux";
+      assertion = !homeClassDeclared || profileHostPopulated;
+      message = "nix-managed AI home class ${homeClass} maps to a catalog host with no profiles";
     }
     {
       assertion =

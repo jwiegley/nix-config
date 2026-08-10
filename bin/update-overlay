@@ -813,6 +813,7 @@ let
   pkgs = import inputs.nixpkgs {{
     inherit system overlays;
     config.allowUnfree = true;
+    config.allowUnsupportedSystem = true;
   }};
 in
   {package_expression}
