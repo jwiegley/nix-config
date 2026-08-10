@@ -943,15 +943,17 @@ config/agent-deck.nix:34-108 has Hera-only assertions, DAG setup, private direct
 ]
 #+end_src
 
-* DOING [#B] Assert the SSH security baseline across both Home Manager APIs    :ssh:tests:
+* DONE [#B] Assert the SSH security baseline across both Home Manager APIs    :ssh:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.29
 :LABELS: ["heavy-review","ssh","tests"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 16:07]
+:MODIFIED: [2026-08-10 Mon 16:56]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 16:56]
+:CLOSE_REASON: Disabled Home Manager SSH default configuration on both supported APIs and added a dual-release behavioral check that pins the shared Host * security baseline and rendered ordering.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

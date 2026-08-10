@@ -394,6 +394,7 @@
               ai-lock-coherence = pkgs.callPackage ./test/ai/lock-coherence.nix { inherit src; };
               home-manager-release-skew = pkgs.callPackage ./test/home-manager-release-skew.nix {
                 inherit src;
+                homeManagerLib = home-manager.lib;
                 homeManagerReleaseLib = home-manager-release.lib;
               };
               host-behavior = pkgs.callPackage ./test/home/host-behavior.nix {

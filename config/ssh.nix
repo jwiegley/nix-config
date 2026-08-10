@@ -347,11 +347,11 @@ in
 
   programs.ssh = {
     enable = true;
+    enableDefaultConfig = false;
   }
   // (
     if hasSettings then
       {
-        enableDefaultConfig = false;
         settings = sshSettings;
       }
     else
