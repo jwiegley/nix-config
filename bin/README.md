@@ -51,10 +51,19 @@ the required validation, creates a signed commit, activates the exact candidate,
 fast-forwards the checked-out branch, and publishes through `bin/publish`.
 Homebrew is intentionally outside this transaction.
 
-The target checkout is selected in this order: `NIX_CONFIG_DIR`, `/etc/nixos`
-when that directory exists, and otherwise `~/src/nix`. This rule is independent
-of the caller's working directory. Set `NIX_CONFIG_DIR` when the implicit choice
-would be ambiguous.
+The target checkout is selected in this order: `NIX_CONFIG_DIR`; the system
+checkout (`UPDATE_AGENTS_SYSTEM_CONFIG_DIR`, default `/etc/nixos`) when that
+directory exists — on NixOS hosts it is authoritative and owns the build
+lock, and invoking `update` from inside a *different* nix-config checkout on
+such a host refuses loudly rather than silently retargeting; the invoking
+Git work tree when it is a primary nix-config checkout (it contains
+`flake.nix` and `config/ai`, and is not a linked worktree — so `update` run
+from an agent worktree cannot pull, activate, and publish a feature branch;
+a separate full clone parked on a feature branch is treated as a deliberate
+operator context and is honored); and otherwise `~/src/nix`. The resolved
+target is printed to stderr before the transaction starts. Set
+`NIX_CONFIG_DIR` when the implicit choice would be ambiguous; it overrides
+the working directory.
 
 A failure prevents later phases but does not undo completed external effects.
 Activation precedes publication. If publication fails, the signed local commit

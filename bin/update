@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-unset GIT_INDEX_FILE
+# Scrub ambient git plumbing wholesale: a leaked GIT_DIR (from a hook or a
+# parent git process) would redirect every `git -C` below — and the work-tree
+# detection — at a different repository than the one named on the command.
+unset GIT_INDEX_FILE GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR \
+    GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 installed_routing_path=
@@ -341,14 +345,44 @@ while (($#)); do
     shift
 done
 
+# Target selection. Explicit NIX_CONFIG_DIR wins. The system checkout wins
+# next: on NixOS hosts /etc/nixos is the authoritative checkout and owns the
+# build lock, so no work tree may displace it. Otherwise the invoking work
+# tree is honored when it is a PRIMARY nix-config checkout — flake.nix plus
+# the config/ai portable core, and not a linked worktree, so `update` run
+# from an agent worktree on a feature branch cannot pull, activate, and
+# publish that branch. Invocations from outside any nix-config work tree
+# fall back to ~/src/nix as before.
+is_primary_nix_config_work_tree() {
+    local tree=$1 git_dir git_common_dir
+    [[ -n $tree && -f $tree/flake.nix && -d $tree/config/ai ]] || return 1
+    git_dir=$(git -C "$tree" rev-parse --path-format=absolute --git-dir 2>/dev/null) || return 1
+    git_common_dir=$(git -C "$tree" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) ||
+        return 1
+    [[ $git_dir == "$git_common_dir" ]]
+}
+
+invoking_work_tree=$(git rev-parse --show-toplevel 2>/dev/null || true)
 system_config_dir=${UPDATE_AGENTS_SYSTEM_CONFIG_DIR:-/etc/nixos}
 if [[ -n ${NIX_CONFIG_DIR:-} ]]; then
     config_dir=$NIX_CONFIG_DIR
 elif [[ -d $system_config_dir ]]; then
     config_dir=$system_config_dir
+    # Implicit cross-repository mutation is forbidden: when the operator is
+    # standing in a different nix-config checkout, refuse instead of silently
+    # transacting against the system checkout.
+    if is_primary_nix_config_work_tree "$invoking_work_tree" &&
+        [[ $(cd "$invoking_work_tree" && pwd -P) != "$(cd "$config_dir" && pwd -P)" ]]; then
+        echo "update: refusing implicit retarget: invoked inside $invoking_work_tree" >&2
+        echo "update: the system checkout $config_dir owns this host; cd there or set NIX_CONFIG_DIR" >&2
+        exit 2
+    fi
+elif is_primary_nix_config_work_tree "$invoking_work_tree"; then
+    config_dir=$invoking_work_tree
 else
     config_dir=$HOME/src/nix
 fi
+echo "update: target checkout: $config_dir" >&2
 
 ai_inputs=(
     git-ai

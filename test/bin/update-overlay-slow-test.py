@@ -5477,6 +5477,189 @@ fi
             self.assertIn("authoritative tree unchanged", result.stdout)
             self._assert_update_agents_unchanged(root, baseline, before)
 
+    def test_update_agents_config_dir_resolution_precedence(self):
+        # Every other test in this suite pins NIX_CONFIG_DIR, which has the
+        # highest precedence, so this test exercises the remaining order: the
+        # system config dir, then a PRIMARY nix-config work tree at the
+        # invocation (flake.nix plus config/ai, not a linked worktree), then
+        # ~/src/nix.
+        real_git = shutil.which("git") or "/usr/bin/git"
+
+        def commit_flake_marker(root):
+            (root / "flake.nix").write_text("{ }\n")
+            subprocess.run(
+                [real_git, "-C", str(root), "add", "flake.nix"], check=True
+            )
+            subprocess.run(
+                [
+                    real_git,
+                    "-C",
+                    str(root),
+                    "-c",
+                    "user.name=Test",
+                    "-c",
+                    "user.email=test@example.invalid",
+                    "-c",
+                    "commit.gpgsign=false",
+                    "commit",
+                    "-qm",
+                    "flake marker",
+                ],
+                check=True,
+            )
+            return subprocess.run(
+                [real_git, "-C", str(root), "rev-parse", "HEAD"],
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, _ = self._create_update_agents_fixture(temp_dir)
+            baseline = commit_flake_marker(root)
+            before = self._update_agents_projection(root)
+            environment.pop("NIX_CONFIG_DIR")
+            # A wrong resolution must not be able to reach a real checkout.
+            environment["HOME"] = temp_dir
+            environment["UPDATE_AGENTS_SYSTEM_CONFIG_DIR"] = str(
+                Path(temp_dir) / "absent"
+            )
+            environment["UPDATE_TEST_FIXED_TARGET"] = "1"
+
+            with self.subTest(resolution="invoking primary work tree"):
+                result = subprocess.run(
+                    [str(UPDATE_AGENTS), "--target", "fixed", "--dry-run"],
+                    capture_output=True,
+                    text=True,
+                    env=environment,
+                    cwd=str(root / "config"),
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("authoritative tree unchanged", result.stdout)
+                self._assert_update_agents_unchanged(root, baseline, before)
+
+            with self.subTest(resolution="linked worktree refused"):
+                worktree = Path(temp_dir) / "linked-worktree"
+                subprocess.run(
+                    [
+                        real_git,
+                        "-C",
+                        str(root),
+                        "worktree",
+                        "add",
+                        "-q",
+                        "--detach",
+                        str(worktree),
+                    ],
+                    check=True,
+                )
+                result = subprocess.run(
+                    [str(UPDATE_AGENTS), "--target", "fixed", "--dry-run"],
+                    capture_output=True,
+                    text=True,
+                    env=environment,
+                    cwd=str(worktree),
+                    check=False,
+                )
+                # The linked worktree must not be targeted: resolution falls
+                # through to $HOME/src/nix, which does not exist here, so the
+                # run fails instead of pulling and publishing a worktree.
+                self.assertNotEqual(result.returncode, 0)
+                subprocess.run(
+                    [
+                        real_git,
+                        "-C",
+                        str(root),
+                        "worktree",
+                        "remove",
+                        "--force",
+                        str(worktree),
+                    ],
+                    check=True,
+                )
+                self._assert_update_agents_unchanged(root, baseline, before)
+
+            decoy = Path(temp_dir) / "decoy"
+            (decoy / "config/ai").mkdir(parents=True)
+            (decoy / "flake.nix").write_text("{ }\n")
+            subprocess.run([real_git, "init", "-q", str(decoy)], check=True)
+            subprocess.run([real_git, "-C", str(decoy), "add", "."], check=True)
+            subprocess.run(
+                [
+                    real_git,
+                    "-C",
+                    str(decoy),
+                    "-c",
+                    "user.name=Test",
+                    "-c",
+                    "user.email=test@example.invalid",
+                    "-c",
+                    "commit.gpgsign=false",
+                    "commit",
+                    "-qm",
+                    "decoy",
+                ],
+                check=True,
+            )
+            neutral = Path(temp_dir) / "neutral"
+            neutral.mkdir()
+
+            with self.subTest(resolution="system config dir wins from a neutral cwd"):
+                environment["UPDATE_AGENTS_SYSTEM_CONFIG_DIR"] = str(root)
+                result = subprocess.run(
+                    [str(UPDATE_AGENTS), "--target", "fixed", "--dry-run"],
+                    capture_output=True,
+                    text=True,
+                    env=environment,
+                    cwd=str(neutral),
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("authoritative tree unchanged", result.stdout)
+                self.assertIn(f"target checkout: {root}", result.stderr)
+                self._assert_update_agents_unchanged(root, baseline, before)
+
+            with self.subTest(resolution="implicit retarget refused"):
+                # Standing in a DIFFERENT nix-config checkout while the
+                # system checkout owns the host must fail loudly, naming
+                # both candidates, instead of silently transacting.
+                result = subprocess.run(
+                    [str(UPDATE_AGENTS), "--target", "fixed", "--dry-run"],
+                    capture_output=True,
+                    text=True,
+                    env=environment,
+                    cwd=str(decoy),
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertIn("refusing implicit retarget", result.stderr)
+                self.assertIn(str(decoy), result.stderr)
+                self.assertIn(str(root), result.stderr)
+                self._assert_update_agents_unchanged(root, baseline, before)
+
+            with self.subTest(resolution="hostile git selectors are scrubbed"):
+                # A leaked GIT_DIR/GIT_WORK_TREE must not redirect target
+                # selection or the transaction at another repository.
+                hostile = dict(environment)
+                hostile["GIT_DIR"] = str(decoy / ".git")
+                hostile["GIT_WORK_TREE"] = str(decoy)
+                hostile["GIT_INDEX_FILE"] = str(decoy / ".git/index")
+                result = subprocess.run(
+                    [str(UPDATE_AGENTS), "--target", "fixed", "--dry-run"],
+                    capture_output=True,
+                    text=True,
+                    env=hostile,
+                    cwd=str(neutral),
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("authoritative tree unchanged", result.stdout)
+                self.assertIn(f"target checkout: {root}", result.stderr)
+                self.assertFalse((decoy / ".git/update-agents.lock").exists())
+                self.assertFalse((decoy / ".git/worktrees").exists())
+                self._assert_update_agents_unchanged(root, baseline, before)
+
     def test_update_agents_routes_flake_input_copy_through_named_locks(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, baseline = self._create_update_agents_fixture(temp_dir)
