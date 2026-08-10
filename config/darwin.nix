@@ -505,7 +505,7 @@ in
 
       dock = {
         autohide = true;
-        orientation = if config.johnw.host.isClio then "left" else "right";
+        orientation = if config.johnw.host.isClio then "right" else "left";
         launchanim = false;
         show-process-indicators = true;
         show-recents = false;
