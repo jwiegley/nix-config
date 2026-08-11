@@ -1977,15 +1977,17 @@ config/ai/catalog.nix repeats profile IDs as keys, arguments, and a roots table,
 ]
 #+end_src
 
-* DOING [#D] Compute key-files directly without a host attrset    :nix:simplification:
+* DONE [#D] Compute key-files directly without a host attrset    :nix:simplification:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.56
 :LABELS: ["heavy-review","nix","simplification"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 17:47]
+:MODIFIED: [2026-08-10 Mon 18:13]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 18:13]
+:CLOSE_REASON: Replaced the all-host attrset and unused home argument with direct derivation of other-host key paths; focused eval, all-system evaluation, static checks, and independent review passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

@@ -82,7 +82,7 @@ in
             ];
           keyFiles =
             # Each machine accepts SSH key authentication from the rest
-            import ./key-files.nix { inherit (pkgs) lib; } [ "hera" "clio" ] home hostname;
+            import ./key-files.nix { inherit (pkgs) lib; } [ "hera" "clio" ] hostname;
         };
       };
 
