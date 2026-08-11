@@ -765,15 +765,17 @@ packages/pi-gallery/providers/local-openai-provider.ts:178-231 buffers an unboun
 ]
 #+end_src
 
-* DOING [#B] Realize every declared behavioral check in a closeout manifest    :nix:tests:
+* DONE [#B] Realize every declared behavioral check in a closeout manifest    :nix:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.23
 :LABELS: ["heavy-review","nix","tests"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 16:38]
+:MODIFIED: [2026-08-10 Mon 17:31]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 17:31]
+:CLOSE_REASON: Added one exact supported-system check manifest, fail-closed root/portable validation, shared baseline/closeout driver and CI matrix, and a reusable native Syncthing package so every behavioral check can realize on its declared system.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

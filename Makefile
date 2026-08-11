@@ -4,14 +4,6 @@ GIT_REMOTE = jwiegley
 MAX_AGE	   = 28
 NIX_CONF   = $(HOME)/src/nix
 SYSTEM     ?= $(shell nix eval --impure --raw --expr builtins.currentSystem)
-CORE_CHECKS = \
-	.\#checks.$(SYSTEM).agent-resources \
-	.\#checks.$(SYSTEM).agent-wrappers \
-	.\#checks.$(SYSTEM).ai-catalog-transport \
-	.\#checks.$(SYSTEM).pi-extension-tests \
-	.\#checks.$(SYSTEM).pi-gallery \
-	.\#checks.$(SYSTEM).pi-fleet-theme
-
 .DEFAULT_GOAL := help
 NIXOPTS	   =
 PROJECTS   = $(HOME)/.config/projects
@@ -102,11 +94,11 @@ help:
 
 test:
 	test/bin/quality --python-tier full python-test
-	nix build --no-link $(CORE_CHECKS)
+	test/bin/check-manifest baseline root "$(SYSTEM)"
 
 expensive:
 	test/bin/quality --tier expensive
-	nix build --no-link $(CORE_CHECKS)
+	test/bin/check-manifest closeout root "$(SYSTEM)"
 	./build system
 
 tools:

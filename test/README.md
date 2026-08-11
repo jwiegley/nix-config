@@ -24,3 +24,10 @@ change; additive configuration should not force their revision.
 The ordinary gate remains bounded. Full integration, cross-consumer evaluation,
 native builds, and affected-host runtime acceptance belong at issue closeout or
 on the scheduled assurance cadence.
+
+`check-manifest.nix` is the single supported-system roster for Nix checks. It
+classifies each declared check as behavioral or evaluation-only and marks the
+bounded `make test` subset. Flake evaluation rejects declarations that are
+missing from the manifest or stale manifest entries. `test/bin/check-manifest`
+evaluates the evaluation-only set and realizes every behavioral derivation at
+closeout; the scheduled portable workflow uses the same driver.

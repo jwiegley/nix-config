@@ -5,11 +5,8 @@ inputs@{
   ...
 }:
 let
-  systems = [
-    "aarch64-darwin"
-    "aarch64-linux"
-    "x86_64-linux"
-  ];
+  checkManifest = import ../test/check-manifest.nix;
+  inherit (checkManifest) systems;
 
   inherit (nixpkgs) lib;
 

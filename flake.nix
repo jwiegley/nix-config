@@ -123,11 +123,8 @@
     in
     with inputs;
     let
-      rootSystems = [
-        "aarch64-darwin"
-        "aarch64-linux"
-        "x86_64-linux"
-      ];
+      checkManifest = import ./test/check-manifest.nix;
+      rootSystems = checkManifest.systems;
       forAllSystems = nixpkgs.lib.genAttrs rootSystems;
       # The subflake input already evaluates flake/ai.nix through
       # test/ai/compatibility-check.nix, whose per-system guard fail-closes
@@ -467,6 +464,16 @@
             }
           );
         in
-        forAllSystems (system: portableAi.checks.${system} // rootChecks.${system});
+        forAllSystems (
+          system:
+          let
+            declared = portableAi.checks.${system} // rootChecks.${system};
+          in
+          assert checkManifest.validateDeclared {
+            flake = "root";
+            inherit declared system;
+          };
+          declared
+        );
     };
 }

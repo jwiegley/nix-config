@@ -21,6 +21,7 @@ let
   clioSystem = darwinConfigurations.clio.config;
   hera = heraSystem.home-manager.users.johnw;
   clio = clioSystem.home-manager.users.johnw;
+  managedSyncthing = pkgs.callPackage ../../packages/syncthing-next.nix { };
   expectedNodes = {
     hera = {
       addresses = [ "tcp://127.0.0.1:22001" ];
@@ -303,6 +304,7 @@ let
 in
 assert hasSyncthingApp heraSystem;
 assert hasSyncthingApp clioSystem;
+assert managedSyncthing.version == clio.services.syncthing.package.version;
 assert hasDormantSyncthingApp heraSystem;
 assert hasDormantSyncthingApp clioSystem;
 assert validDarwinHome hera "hera";
@@ -322,7 +324,7 @@ pkgs.runCommand "syncthing-home-contract"
       pkgs.bash
       pkgs.gnugrep
       pkgs.python3
-      clio.services.syncthing.package
+      managedSyncthing
     ];
   }
   ''

@@ -20,28 +20,31 @@ jobs:
   portable-evaluation:
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    outputs:
+      closeout_matrix: ${{ steps.closeout_matrix.outputs.value }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
       - uses: DeterminateSystems/nix-installer-action@33c9ab3ef95cd57c164d9d6eb1f9a46338538d41 # main
       - uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
+      - name: Load the supported-system matrix
+        id: closeout_matrix
+        run: |
+          printf 'value=%s\n' \
+            "$(nix eval --json --file test/check-manifest.nix --apply 'manifest: manifest.ciMatrix')" \
+            >> "$GITHUB_OUTPUT"
       # The full expensive tier includes LAN-only consumer checks and remains a
       # local/manual authority.  GitHub runs only its remote-safe portable part.
       - name: Evaluate every portable AI system
         run: test/bin/quality portable-eval
 
   portable-native:
+    needs: portable-evaluation
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - runner: macos-15
-            system: aarch64-darwin
-          - runner: ubuntu-24.04-arm
-            system: aarch64-linux
-          - runner: ubuntu-latest
-            system: x86_64-linux
+        include: ${{ fromJSON(needs.portable-evaluation.outputs.closeout_matrix) }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:
@@ -51,8 +54,5 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@33c9ab3ef95cd57c164d9d6eb1f9a46338538d41 # main
       - uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
         if: runner.os != 'macOS'
-      - name: Build portable native integration checks
-        run: |
-          nix build --no-link \
-            "./config/ai#checks.${{ matrix.system }}.pi-extension-tests" \
-            "./config/ai#checks.${{ matrix.system }}.pi-gallery"
+      - name: Realize the portable closeout manifest
+        run: test/bin/check-manifest closeout portable "${{ matrix.system }}"

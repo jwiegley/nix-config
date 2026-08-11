@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Realize the checks classified by test/check-manifest.nix. The manifest is the
+# only hand-maintained check roster; flake evaluation rejects any drift from it.
+
+set -euo pipefail
+
+usage() {
+    cat >&2 <<'EOF'
+usage: test/bin/check-manifest baseline|closeout root|portable SYSTEM
+
+baseline  Build the bounded check subset used by make test.
+closeout  Evaluate evaluation-only gates, then build every behavioral check.
+EOF
+    exit 64
+}
+
+[[ $# -eq 3 ]] || usage
+mode=$1
+flake=$2
+system=$3
+
+case $mode in
+baseline | closeout) ;;
+*) usage ;;
+esac
+
+case $flake in
+root) flake_ref=. ;;
+portable) flake_ref=./config/ai ;;
+*) usage ;;
+esac
+
+case $system in
+*[!A-Za-z0-9_-]* | "") usage ;;
+esac
+
+repo_root=$(git rev-parse --show-toplevel) || exit 1
+cd "$repo_root" || exit 1
+manifest=$repo_root/test/check-manifest.nix
+selection=$(mktemp "${TMPDIR:-/tmp}/check-manifest.XXXXXX")
+trap 'rm -f "$selection"' EXIT
+
+select_names() {
+    local kind=$1 baseline_only=$2
+    nix eval --raw --file "$manifest" --apply "manifest: builtins.concatStringsSep \"\\n\" (manifest.namesFor { flake = \"$flake\"; system = \"$system\"; kind = \"$kind\"; baselineOnly = $baseline_only; }) + \"\\n\"" </dev/null
+}
+
+if [[ $mode == closeout ]]; then
+    select_names evaluation-only false >"$selection"
+    evaluation_checks=()
+    while IFS= read -r name; do
+        [[ -n $name ]] || continue
+        evaluation_checks+=("$name")
+    done <"$selection"
+    for name in "${evaluation_checks[@]}"; do
+        printf 'check-manifest: evaluate %s\n' "$name"
+        nix eval --raw --no-warn-dirty \
+            "$flake_ref#checks.$system.$name.drvPath" </dev/null >/dev/null
+    done
+fi
+
+if [[ $mode == baseline ]]; then
+    select_names behavioral true >"$selection"
+else
+    select_names behavioral false >"$selection"
+fi
+
+targets=()
+while IFS= read -r name; do
+    [[ -n $name ]] || continue
+    targets+=("$flake_ref#checks.$system.$name")
+done <"$selection"
+
+[[ ${#targets[@]} -gt 0 ]] || {
+    printf 'check-manifest: no behavioral checks selected for %s on %s\n' "$flake" "$system" >&2
+    exit 1
+}
+
+printf 'check-manifest: build %d behavioral checks for %s on %s\n' \
+    "${#targets[@]}" "$flake" "$system"
+nix build --no-link --no-warn-dirty "${targets[@]}" </dev/null

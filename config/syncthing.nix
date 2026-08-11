@@ -7,8 +7,6 @@
 }:
 
 let
-  sources = import ../packages/source-catalog.nix "compatibility";
-  syncthingSource = sources.syncthing-next;
   # Syncthing never binds Tailscale. Clio's route-aware launchd bridges below
   # expose its loopback listener either on the home LAN or through SSH over
   # WireGuard; Hera listens only on its home-LAN address.
@@ -63,15 +61,7 @@ let
   defaultFolderPath = "~/doc";
   # 2.1.3 includes the Darwin-relevant fsync and case-filesystem cache
   # optimizations, but this repository's pinned nixpkgs still carries 2.1.2.
-  syncthingPackage = pkgs.syncthing.overrideAttrs (
-    _finalAttrs: _previousAttrs: {
-      inherit (syncthingSource) version;
-      src =
-        assert syncthingSource.source.fetcher == "fetchFromGitHub";
-        pkgs.fetchFromGitHub syncthingSource.source.args;
-      vendorHash = syncthingSource.hashes.vendorHash;
-    }
-  );
+  syncthingPackage = pkgs.callPackage ../packages/syncthing-next.nix { };
   regenerableIgnorePatterns = [
     "(?d).direnv"
     "(?d).mypy_cache"

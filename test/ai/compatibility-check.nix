@@ -4,6 +4,7 @@
 }:
 
 let
+  checkManifest = import ../check-manifest.nix;
   contract = import ./compatibility-contract.nix;
   lib = inputs.nixpkgs.lib;
   sortedNames = value: lib.sort builtins.lessThan (builtins.attrNames value);
@@ -70,17 +71,25 @@ let
         "plasma-fractal"
         "plasma-wiki"
       ];
+      declaredChecks = actual.checks.${system} // {
+        # The wrapper below adds this evaluation-only gate after checking the
+        # implementation. A placeholder lets every guarded output validate the
+        # final public check surface without constructing the derivation twice.
+        compatibility-contract = null;
+      };
     in
     [
+      (checkManifest.validateDeclared {
+        flake = "portable";
+        declared = declaredChecks;
+        inherit system;
+      })
       (lib.assertMsg (hasAll (sortedNames
         actual.packages.${system}
       ) contract.packages) "portable package contract lost a required package for ${system}")
       (lib.assertMsg (hasAll (sortedNames
         actual.apps.${system}
       ) contract.apps) "portable app contract lost a required app for ${system}")
-      (lib.assertMsg (hasAll (sortedNames
-        actual.checks.${system}
-      ) contract.checks) "portable check contract lost a required check for ${system}")
       (lib.assertMsg (builtins.hasAttr "default"
         actual.devShells.${system}
       ) "portable default dev shell is missing for ${system}")
@@ -166,14 +175,14 @@ let
     devShells = lib.mapAttrs guard actual.devShells;
     checks = lib.mapAttrs (
       system: checks:
-      guard system (
-        checks
-        // {
+      let
+        declared = checks // {
           compatibility-contract =
             (import inputs.nixpkgs { inherit system; }).runCommand "ai-compatibility-contract" { }
               "touch $out";
-        }
-      )
+        };
+      in
+      guard system declared
     ) actual.checks;
   };
 in

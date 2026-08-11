@@ -17,7 +17,7 @@ consumer's authoritative checkout.
 | Update all flake inputs and automatic catalog targets | `make update` | Pulls, validates, signs, switches the current host, and publishes only after validation and activation succeed |
 | Inspect every managed source and its executor | `bin/update-overlay --inventory --json` | Read-only catalog validation and machine-readable command routing |
 | Run the ordinary commit gate | `lefthook run pre-commit --all-files` | Essential formatting, lint, and fast tests; bounded to two minutes |
-| Run low-frequency expensive assurance | `make expensive` | Consumer and native assurance followed by a Darwin build; run the pre-commit gate separately for formatting and static lint |
+| Run low-frequency expensive assurance | `make expensive` | Consumer assurance, every current-system behavioral check, evaluation-only gates, and a Darwin build; run the pre-commit gate separately for formatting and static lint |
 | Build the complete current Darwin system | `./build system` | Builds without activating; Hera and Clio only |
 | Inspect the Pi package version | `nix eval --raw .#packages.$(nix eval --impure --raw --expr builtins.currentSystem).pi.version` | Reports the package selected by this checkout, not necessarily the active binary |
 | Preflight publication | `bin/publish` | Performs no push |
@@ -221,7 +221,8 @@ make expensive
 ```
 
 The expensive quality tier has a 30-minute envelope, but `make expensive` then
-runs additional Nix builds outside that envelope. It is intended for issue
+evaluates the current-system evaluation-only check set and realizes every
+behavioral check outside that envelope. It is intended for issue
 closeout and periodic assurance, not for every commit. It does not include the
 ordinary formatting and static-lint suites, so it complements rather than
 replaces the pre-commit gate.
@@ -383,8 +384,8 @@ evaluate Nix. It is not a standalone command.
 | `help` | Print the short operator summary; this README is the complete reference. |
 | `all` | Alias for `switch`; it activates the current Darwin configuration. |
 | `TARGET-all` | Run `TARGET` locally and then through `u` on every host in `REMOTES`; remote source synchronization is not implied. The pattern accepts destructive targets, so inspect `TARGET` and `REMOTES` before use. |
-| `test` | Run the full Python suite and build the recipe-owned core package checks. |
-| `expensive` | Run expensive assurance and build the current Darwin system. |
+| `test` | Run the full Python suite and realize the bounded check-manifest subset. |
+| `expensive` | Run expensive assurance, realize the current-system closeout check manifest, and build the current Darwin system. |
 | `tools` | Print selected environment values and tool resolution. |
 | `repl` | Open a Nix REPL for the current Darwin package set. |
 | `verify-inputs` | Detect local Git input states that can produce divergent NAR hashes. |

@@ -221,6 +221,11 @@ Verification tiers are intentionally distinct:
 Names must represent real evidence. A coverage, soak, fuzz, or parity claim is valid
 only when that behavior actually ran.
 
+`test/check-manifest.nix` classifies every root and portable check on each
+supported system. Closeout evaluates the gates classified as evaluation-only and
+builds every behavioral check; `make test` selects its bounded subset from that
+same manifest rather than maintaining another roster.
+
 ## Change rules
 
 - Change one authority and derive every projection.

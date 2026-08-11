@@ -1,13 +1,12 @@
-# Every expectation below is a LITERAL. A contract that derives its required
-# names from the lock or the gallery manifest moves "expected" and "actual"
-# together, so deleting an input or a gallery member could never fail it;
-# with literals, every removal is a visible, deliberate edit to this file.
+# Package, input, and app expectations below are literals. A contract that
+# derives those names from the implementation moves "expected" and "actual"
+# together, so deleting an input or gallery member could never fail it. Systems
+# and checks belong to the separately validated closeout manifest.
+let
+  checkManifest = import ../check-manifest.nix;
+in
 {
-  systems = [
-    "aarch64-darwin"
-    "aarch64-linux"
-    "x86_64-linux"
-  ];
+  inherit (checkManifest) systems;
 
   inputs = [
     "agent-browser-source"
@@ -82,25 +81,4 @@
     "test"
   ];
 
-  # `compatibility-contract` is grafted onto the checked output after this list
-  # is compared with the portable definition, so it is deliberately absent.
-  # Retired check aliases produced no independent evidence; the real apps and
-  # behavioral checks remain.
-  checks = [
-    "agent-deck-go-compat"
-    "agent-deck-runtime-lifecycle"
-    "agent-resources"
-    "agent-wrappers"
-    "build"
-    "format"
-    "fractal-smoke"
-    "lint"
-    "llama-cpp-platform-compat"
-    "llm-agents-nixpkgs-independent"
-    "pi-extension-tests"
-    "pi-fleet-theme"
-    "pi-gallery"
-    "pi-session-replacement"
-    "prime-agent"
-  ];
 }
