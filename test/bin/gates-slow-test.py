@@ -28,11 +28,26 @@ IMMUTABLE_SUBFLAKE_CHECK = BIN / "immutable-subflake-check"
 
 
 class TestGitFixture(unittest.TestCase):
-    def test_internal_super_prefix_is_not_inherited(self):
+    def test_inherited_selectors_are_scrubbed(self):
         with mock.patch.dict(
-            os.environ, {"GIT_INTERNAL_SUPER_PREFIX": "hostile-prefix"}
+            os.environ,
+            {
+                "GIT_CONFIG_PARAMETERS": "'user.name'='HookInjected'",
+                "GIT_NAMESPACE": "hostile-namespace",
+                "GIT_INTERNAL_SUPER_PREFIX": "hostile-prefix",
+            },
         ):
-            self.assertNotIn("GIT_INTERNAL_SUPER_PREFIX", clean_env())
+            env = clean_env()
+            self.assertNotIn("GIT_CONFIG_PARAMETERS", env)
+            self.assertNotIn("GIT_NAMESPACE", env)
+            self.assertNotIn("GIT_INTERNAL_SUPER_PREFIX", env)
+
+            with tempfile.TemporaryDirectory() as tmp:
+                git("init", "--quiet", tmp, cwd=tmp, env={"HOME": tmp})
+                result = git(
+                    "config", "user.name", cwd=tmp, check=False, env={"HOME": tmp}
+                )
+                self.assertNotEqual(result.stdout.strip(), "HookInjected")
 
 
 class TestVerifySignaturesRejects(unittest.TestCase):
