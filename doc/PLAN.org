@@ -1452,15 +1452,17 @@ config/ai/catalog.nix:1182-1323 uses a prefix heuristic that accepts embedded cr
 ]
 #+end_src
 
-* DOING [#C] Package supported nix-scripts from an explicit allowlist    :architecture:packaging:
+* DONE [#C] Package supported nix-scripts from an explicit allowlist    :architecture:packaging:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.42
 :LABELS: ["architecture","heavy-review","packaging"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 17:47]
+:MODIFIED: [2026-08-10 Mon 18:18]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 18:18]
+:CLOSE_REASON: Replaced exclusion-based script packaging with an exact installed allowlist and source inventory, retaining two orchestration scripts as source-only; package builds, portable evaluation, hooks, and independent review passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1617,15 +1619,17 @@ flake/ai/wrappers/codex.nix:73-90 uses a directory mutex that survives SIGKILL o
 ]
 #+end_src
 
-* DOING [#D] Require explicit licenses in mkScriptPackage    :metadata:packaging:
+* DONE [#D] Require explicit licenses in mkScriptPackage    :metadata:packaging:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.47
 :LABELS: ["heavy-review","metadata","packaging"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 17:47]
+:MODIFIED: [2026-08-10 Mon 18:18]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 18:18]
+:CLOSE_REASON: Made script-package license metadata mandatory and declared the reviewed BSD-3-Clause, MIT, or unfree metadata at each caller; package builds, portable assertion, hooks, and independent review passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

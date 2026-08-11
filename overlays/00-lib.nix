@@ -11,21 +11,24 @@ in
 
     # Package a directory of executable scripts (or symlinks) into $out/bin.
     # `src` may be a local path or a fetched tarball — anything unpackPhase
-    # can handle. Files listed in `excludeFiles` are skipped. `extraInstall`
-    # runs after the copy (e.g. to rewrite shebangs).
+    # can handle. `includeFiles` selects an exact public surface; otherwise,
+    # `excludeFiles` removes known non-public files. `extraInstall` runs after
+    # the copy (e.g. to rewrite shebangs).
     mkScriptPackage =
       {
         name,
         src,
         description,
+        license,
         homepage ? "https://github.com/jwiegley",
-        license ? lib.licenses.mit,
+        includeFiles ? null,
         excludeFiles ? [ ],
         extraInstall ? "",
       }:
       let
         excludeArgs = lib.concatMapStringsSep " " (f: "! -name ${lib.escapeShellArg f}") excludeFiles;
       in
+      assert includeFiles == null || excludeFiles == [ ];
       stdenv.mkDerivation {
         inherit name src;
         phases = [
@@ -34,8 +37,20 @@ in
         ];
         installPhase = ''
           mkdir -p $out/bin
-          find . -maxdepth 1 \( -type f -o -type l \) -executable ${excludeArgs} \
-              -exec cp -pL {} $out/bin \;
+          ${
+            if includeFiles == null then
+              ''
+                find . -maxdepth 1 \( -type f -o -type l \) -executable ${excludeArgs} \
+                    -exec cp -pL {} $out/bin \;
+              ''
+            else
+              ''
+                for file in ${lib.escapeShellArgs includeFiles}; do
+                  test -x "$file"
+                  cp -pL -- "$file" $out/bin/
+                done
+              ''
+          }
           ${extraInstall}
         '';
         meta = {

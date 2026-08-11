@@ -13,6 +13,28 @@ final: prev:
 
 let
   inherit (prev.myLib) mkScriptPackage;
+  supportedNixScripts = [
+    "de"
+    "env-build"
+    "git-sha"
+    "myhost"
+    "persona"
+    "publish"
+    "runemacs"
+    "switch"
+    "u"
+    "update"
+    "update-and-pull"
+    "update-overlay"
+    "upgrade"
+    "upgrade-projects"
+    "yubikey-switch"
+  ];
+  sourceOnlyNixScripts = [
+    "update-remote"
+    "upgrade-all"
+  ];
+  expectedNixScripts = prev.lib.escapeShellArgs (supportedNixScripts ++ sourceOnlyNixScripts);
   hostRouting = final.writeText "host-routing.sh" (
     import ../config/hosts/shell-routing.nix {
       inherit (final) lib;
@@ -25,11 +47,21 @@ in
     name = "nix-scripts";
     src = ../bin;
     description = "Nix configuration scripts";
-    excludeFiles = [
-      "update-remote"
-      "upgrade-all"
-    ];
+    homepage = "https://github.com/jwiegley/nix-config";
+    license = prev.lib.licenses.bsd3;
+    includeFiles = supportedNixScripts;
     extraInstall = ''
+      printf '%s\n' ${prev.lib.escapeShellArgs supportedNixScripts} | LC_ALL=C sort > expected-installed
+      for script in $out/bin/*; do
+        basename "$script"
+      done | LC_ALL=C sort > actual-installed
+      cmp expected-installed actual-installed
+
+      printf '%s\n' ${expectedNixScripts} | LC_ALL=C sort > expected-source
+      find ${../bin} -maxdepth 1 \( -type f -o -type l \) -executable \
+          -exec basename {} \; | LC_ALL=C sort > actual-source
+      cmp expected-source actual-source
+
       cmp ${../bin/lib/host-routing.sh} ${hostRouting} || {
         echo "nix-scripts: bin/lib/host-routing.sh is stale; regenerate it from config/hosts/registry.nix" >&2
         exit 1
@@ -54,9 +86,6 @@ in
           exit 1
         fi
       done
-      test ! -e $out/bin/update-remote
-      test ! -e $out/bin/update-home-manager
-      test ! -e $out/bin/upgrade-all
       test -x $out/bin/update-overlay
       substituteInPlace $out/bin/upgrade \
         --replace-fail 'installed_upgrade_projects=' \
@@ -75,6 +104,9 @@ in
     name = "my-scripts";
     src = scripts;
     description = "John Wiegley's various scripts";
+    homepage = "https://github.com/jwiegley/scripts";
+    # The locked source declares no repository-wide license.
+    license = prev.lib.licenses.unfree;
     extraInstall = ''
       ${final.perl}/bin/perl -i -pe \
           's^#!/usr/bin/env runhaskell^#!${final.haskellPackages.ghc}/bin/runhaskell^;' $out/bin/*

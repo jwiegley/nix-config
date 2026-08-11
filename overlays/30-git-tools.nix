@@ -47,6 +47,8 @@ in
     src = gitScripts;
     description = "John Wiegley's git scripts";
     homepage = "https://github.com/jwiegley/git-scripts";
+    # The locked source declares no repository-wide license.
+    license = prev.lib.licenses.unfree;
     excludeFiles = [ "git-merge-changelog" ];
   };
 

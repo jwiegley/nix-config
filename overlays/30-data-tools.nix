@@ -96,6 +96,7 @@ in
       prev.fetchFromGitHub sources.tsvutils.source.args;
     description = "Utilities for processing tab-separated files";
     homepage = "https://github.com/brendano/tsvutils";
+    license = prev.lib.licenses.mit;
   };
 }
 // prev.lib.optionalAttrs (dirscan != null) {
