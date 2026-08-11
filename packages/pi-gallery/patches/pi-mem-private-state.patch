@@ -1,0 +1,2678 @@
+diff --git a/README.md b/README.md
+index ca7fde7968c2f9824e74441a078457db15e19a77..c2229ba779882d144f3eb5554a1e1174df706a73 100644
+--- a/README.md
++++ b/README.md
+@@ -26,8 +26,9 @@ Memory files live under `~/.pi/agent/memory/` (override with `PI_MEMORY_DIR`):
+ |------|---------|
+ | `MEMORY.md` | Curated long-term memory (decisions, preferences, durable facts) |
+ | `SCRATCHPAD.md` | Checklist of things to keep in mind / fix later |
+-| `daily/YYYY-MM-DD.md` | Daily append-only log (today + yesterday loaded at session start) |
+-| `notes/*.md` | LLM-created files (lessons, self-review, reference material, etc.) |
++| `daily/YYYY-MM-DD.md` | Daily append-only log (today + yesterday included in turn context) |
++| `catchup/YYYY-MM-DD/INDEX.md` | Recent catchup indexes loaded into context (two days normally, up to seven after low activity) |
++| `notes/*.md` | Named topic files (lessons, self-review, reference material, etc.) |
+ 
+ Identity and behavioral files (e.g. `SOUL.md`, `AGENTS.md`, `HEARTBEAT.md`) can also live in the memory directory and be injected into context via `PI_CONTEXT_FILES`.
+ 
+@@ -40,16 +41,18 @@ Identity and behavioral files (e.g. `SOUL.md`, `AGENTS.md`, `HEARTBEAT.md`) can
+ | `memory_search` | Search across all files — filenames and content. Case-insensitive keyword search across root, notes/, and daily/. |
+ | `scratchpad` | Manage a checklist: `add`, `done`, `undo`, `clear_done`, `list`. |
+ 
++Writes and mutating scratchpad actions are performed only when the user explicitly asks to remember or update memory. Read and search operations remain available on demand.
++
+ ## Context Injection
+ 
+-The following are automatically injected into the system prompt before every agent turn:
++The following are injected as a synthetic user message immediately before the newest real user request on every agent turn:
+ 
+ - Files listed in `PI_CONTEXT_FILES` (e.g. `SOUL.md,AGENTS.md,HEARTBEAT.md`)
+ - `MEMORY.md`
+-- `SCRATCHPAD.md` (open items only)
+ - Today's and yesterday's daily logs
++- Recent `catchup/YYYY-MM-DD/INDEX.md` files (two days normally, up to seven after low activity)
+ 
+-Files in `notes/` and older daily logs are **not** injected — they're accessible on-demand via `memory_search` and `memory_read`.
++`SCRATCHPAD.md`, files in `notes/`, older daily logs, and catchup detail files are **not** injected — they're accessible on-demand via `memory_search` and `memory_read`.
+ 
+ ## Configuration
+ 
+@@ -62,8 +65,7 @@ Place a `.pi-mem.json` in your memory directory (default `~/.pi/agent/memory/.pi
+ ```json
+ {
+   "searchDirs": ["catchup", "projects"],
+-  "contextFiles": ["SOUL.md", "AGENTS.md"],
+-  "autocommit": true
++  "contextFiles": ["SOUL.md", "AGENTS.md"]
+ }
+ ```
+ 
+@@ -77,14 +79,21 @@ Environment variables override `.pi-mem.json` values when set.
+ | `PI_DAILY_DIR` | `$PI_MEMORY_DIR/daily/` | Directory for daily logs |
+ | `PI_CONTEXT_FILES` | *(empty)* | Comma-separated list of extra files to inject into context (e.g. `SOUL.md,AGENTS.md,HEARTBEAT.md`) |
+ | `PI_SEARCH_DIRS` | *(empty)* | Comma-separated list of subdirectories (relative to `PI_MEMORY_DIR`) to include in `memory_search`. Searched recursively one level deep. (e.g. `catchup,projects`) |
+-| `PI_AUTOCOMMIT` | `false` | When `1` or `true`, auto-commit to git after every write |
+ | `PI_TIMEZONE` | `TZ`, then `UTC` | IANA timezone used for daily log filenames and today/yesterday context windows. Invalid values fall back to `UTC`. |
+ 
++Stale file locks are reclaimed only when a same-host owner is proven to have
++exited; foreign-host, live-owner, malformed, and in-progress-recovery locks
++remain in place, and writes fail closed. The managed package deliberately
++removes upstream Git autocommit: `PI_AUTOCOMMIT` and the legacy `.pi-mem.json`
++`autocommit` field are inert. Memory history therefore requires an explicit
++private Git workflow outside Pi Mem, operated manually or by a separate
++external tool.
++
+ ## Dashboard Widget
+ 
+ An auto-generated "Last 24h" summary is shown on session start and switch:
+ - Scans recent session files for titles, costs, and sub-agent counts
+-- Groups by topic using an LLM call (falls back to flat list)
++- Formats a local chronological list without a secondary model request
+ - Rebuilt every 15 minutes in the background
+ - Also shows open scratchpad items
+ 
+diff --git a/index.ts b/index.ts
+index 64a6826c470599cc2efc44f6afdf0bcafb9c9962..cba30a6027e85526e3699e5d03c624db8903189d 100644
+--- a/index.ts
++++ b/index.ts
+@@ -7,7 +7,7 @@
+  * Layout (under ~/.pi/agent/memory/):
+  *   MEMORY.md              — curated long-term memory (decisions, preferences, durable facts)
+  *   SCRATCHPAD.md           — checklist of things to keep in mind / fix later
+- *   daily/YYYY-MM-DD.md    — daily append-only log (today + yesterday loaded at session start)
++ *   daily/YYYY-MM-DD.md    — daily append-only log (today + yesterday included in turn context)
+  *
+  * Tools:
+  *   memory_write  — write to MEMORY.md or daily log
+@@ -15,7 +15,9 @@
+  *   scratchpad    — add/check/uncheck/clear items on the scratchpad checklist
+  *
+  * Context injection:
+- *   - MEMORY.md + SCRATCHPAD.md + today's + yesterday's daily logs injected into every turn
++ *   - Configured context files, MEMORY.md, today's and yesterday's daily logs,
++ *     and recent catchup indexes are injected into every turn. SCRATCHPAD.md
++ *     remains available only through the read/search tools.
+  *
+  * Dashboard widget:
+  *   - Auto-generated "Last 24h" summary from session metadata (titles, timestamps, costs)
+@@ -27,15 +29,11 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+ import { getMarkdownTheme, keyHint } from "@mariozechner/pi-coding-agent";
+ import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
+ import { Type } from "@sinclair/typebox";
+-import { StringEnum, completeSimple, getModel } from "@mariozechner/pi-ai";
+-import * as fs from "node:fs";
++import { StringEnum } from "@mariozechner/pi-ai";
+ import * as path from "node:path";
+-import { execFileSync } from "node:child_process";
+ 
+ import {
+ 	type MemoryConfig,
+-	type ScratchpadItem,
+-	type SessionInfo,
+ 	buildConfig,
+ 	todayStr,
+ 	yesterdayStr,
+@@ -44,140 +42,29 @@ import {
+ 	readFileSafe,
+ 	dailyPath,
+ 	ensureDirs,
++	writePrivateFile,
++	updatePrivateFile,
+ 	parseScratchpad,
+ 	serializeScratchpad,
+ 	buildMemoryContext,
+ 	readMemoryFile,
+-	scanSession,
+ 	isHousekeeping,
+ 	searchMemory,
+ 	resolveSessionsDir,
++	collectSessions,
++	listMemoryFiles,
+ } from "./lib.ts";
+ 
+ const config = buildConfig();
+ 
+-function gitCommit(message: string) {
+-	if (!config.autocommit) return;
+-	try {
+-		execFileSync("git", ["add", "-A"], { cwd: config.memoryDir, stdio: "ignore", timeout: 5000 });
+-		execFileSync("git", ["commit", "-m", message, "--allow-empty-message", "--no-verify"], { cwd: config.memoryDir, stdio: "ignore", timeout: 5000 });
+-	} catch {
+-		// git not available or not a repo — silently skip
+-	}
+-}
+-
+ // --- Session scanner for "Last 24h" dashboard ---
+ 
+ const SESSIONS_DIR = resolveSessionsDir();
+ const SUMMARY_CACHE = path.join(config.dailyDir, "cache.json");
+ const REBUILD_INTERVAL_MS = 15 * 60 * 1000;
+-const LOOKBACK_MS = 24 * 60 * 60 * 1000;
+-
+-let modelRegistryRef: any = null;
+-
+-async function collectSessions(): Promise<{ roots: SessionInfo[]; childCountMap: Map<string, number>; totalCost: number }> {
+-	const cutoff = new Date(Date.now() - LOOKBACK_MS);
+-	const sessionDirs: string[] = [];
+-
+-	try {
+-		for (const dir of fs.readdirSync(SESSIONS_DIR)) {
+-			if (dir.startsWith("--Users-") && !dir.includes("-T-pi-")) {
+-				sessionDirs.push(path.join(SESSIONS_DIR, dir));
+-			}
+-		}
+-	} catch { return { roots: [], childCountMap: new Map(), totalCost: 0 }; }
+-
+-	const recentFiles: string[] = [];
+-	for (const dir of sessionDirs) {
+-		try {
+-			for (const file of fs.readdirSync(dir)) {
+-				if (!file.endsWith(".jsonl")) continue;
+-				const filePath = path.join(dir, file);
+-				try {
+-					if (fs.statSync(filePath).mtime >= cutoff) recentFiles.push(filePath);
+-				} catch { continue; }
+-			}
+-		} catch { continue; }
+-	}
+-
+-	if (recentFiles.length === 0) return { roots: [], childCountMap: new Map(), totalCost: 0 };
+-
+-	const results = await Promise.all(recentFiles.map(scanSession));
+-	const sessions = results.filter((s): s is SessionInfo => s !== null);
+-
+-	const roots = sessions.filter(s => !s.isChild);
+-	const children = sessions.filter(s => s.isChild);
+-
+-	const childCountMap = new Map<string, number>();
+-	for (const child of children) {
+-		if (child.parentSession) {
+-			childCountMap.set(child.parentSession, (childCountMap.get(child.parentSession) || 0) + 1);
+-		}
+-	}
+-
+-	const totalCost = sessions.reduce((sum, s) => sum + s.cost, 0);
+-	return { roots, childCountMap, totalCost };
+-}
+-
+-async function summarizeWithLLM(sessions: SessionInfo[], childCountMap: Map<string, number>, totalCost: number): Promise<string> {
+-	if (!modelRegistryRef) return "";
+-
+-	const candidates = [
+-		getModel("openai", "gpt-4.1-mini"),
+-		getModel("openai", "gpt-4o-mini"),
+-		modelRegistryRef.find("jo-proxy", "jo-gpt-4.1-mini"),
+-	];
+-
+-	let model: any = null;
+-	let auth: { ok: true; apiKey?: string; headers?: Record<string, string> } | undefined;
+-	for (const candidate of candidates) {
+-		if (!candidate) continue;
+-		const result = await modelRegistryRef.getApiKeyAndHeaders(candidate);
+-		if (result.ok) { model = candidate; auth = result; break; }
+-	}
+-	if (!model || !auth) return "";
+-
+-	const listing = sessions.map((s, _i) => {
+-		const childCount = childCountMap.get(s.file) || 0;
+-		const parts = [`${s.title}`];
+-		if (childCount > 0) parts.push(`[${childCount} sub-agents]`);
+-		if (s.cost > 0.05) parts.push(`[$${s.cost.toFixed(2)}]`);
+-		return parts.join(" ");
+-	}).join("\n");
+-
+-	const response = await completeSimple(model, {
+-		systemPrompt: [
+-			"You are summarizing a developer's last 24 hours of coding sessions for a dashboard.",
+-			"Write a concise grouped summary in markdown. Rules:",
+-			"",
+-			"- Group by TOPIC (not time). 3-7 groups. Short bold header per group (2-4 words).",
+-			"- Under each header, write 1-3 bullet points summarizing WHAT WAS ACCOMPLISHED.",
+-			"  Synthesize multiple related sessions into a single clear statement.",
+-			"  e.g. 10 sessions about 'Run eval suite X' → '**Eval suite runs**: ran all 10 suites in sprite mode across weather, routing, memory, calendar, email, browser, and security'",
+-			"- Be specific about outcomes: fixes applied, features built, bugs found, tools created.",
+-			"- Collapse repetitive runs (eval runs, debugging attempts) into one line with the count.",
+-			"- Mention sub-agent counts where relevant — it shows parallel work.",
+-			"- Keep total output under 25 lines. Dense and useful, not a laundry list.",
+-			"- Order: oldest topic first, most recent topic last.",
+-			"- Do NOT include a header line — the caller adds that.",
+-			"- Do NOT repeat session titles verbatim. Summarize.",
+-		].join("\n"),
+-		messages: [{
+-			role: "user" as const,
+-			content: [{ type: "text" as const, text: `${sessions.length} sessions, $${totalCost.toFixed(2)} total cost:\n\n${listing}` }],
+-			timestamp: Date.now(),
+-		}],
+-	}, { apiKey: auth.apiKey, headers: auth.headers });
+-
+-	return response.content
+-		.filter((c: any) => c.type === "text")
+-		.map((c: any) => c.text)
+-		.join("")
+-		.trim();
+-}
+ 
+ async function buildSessionSummary(): Promise<string> {
+-	const { roots, childCountMap, totalCost } = await collectSessions();
++	const { roots, childCountMap, totalCost } = await collectSessions(SESSIONS_DIR);
+ 	if (roots.length === 0) return "";
+ 
+ 	const sorted = [...roots]
+@@ -188,11 +75,6 @@ async function buildSessionSummary(): Promise<string> {
+ 
+ 	const header = `## Last 24h — ${sorted.length} sessions, $${totalCost.toFixed(2)}`;
+ 
+-	try {
+-		const summary = await summarizeWithLLM(sorted, childCountMap, totalCost);
+-		if (summary) return `${header}\n\n${summary}`;
+-	} catch {}
+-
+ 	const lines = [header, ""];
+ 	for (const s of sorted) {
+ 		const childCount = childCountMap.get(s.file) || 0;
+@@ -213,7 +95,8 @@ async function getOrRebuildSummary(): Promise<string> {
+ 
+ 	if (!cachedSummary) {
+ 		try {
+-			const cache = JSON.parse(fs.readFileSync(SUMMARY_CACHE, "utf-8"));
++			ensureDirs(config);
++			const cache = JSON.parse(readFileSafe(SUMMARY_CACHE, config.dailyDir) ?? "");
+ 			if (cache.summary && now - cache.timestamp < REBUILD_INTERVAL_MS) {
+ 				cachedSummary = cache.summary;
+ 				lastRebuildTime = cache.timestamp;
+@@ -227,7 +110,7 @@ async function getOrRebuildSummary(): Promise<string> {
+ 
+ 	try {
+ 		ensureDirs(config);
+-		fs.writeFileSync(SUMMARY_CACHE, JSON.stringify({ summary: cachedSummary, timestamp: now }), "utf-8");
++		writePrivateFile(SUMMARY_CACHE, JSON.stringify({ summary: cachedSummary, timestamp: now }));
+ 	} catch {}
+ 
+ 	return cachedSummary;
+@@ -240,7 +123,7 @@ export default function (pi: ExtensionAPI) {
+ 		if (!ctx.hasUI) return;
+ 
+ 		const summary = await getOrRebuildSummary();
+-		const scratchContent = readFileSafe(config.scratchpadFile);
++		const scratchContent = readFileSafe(config.scratchpadFile, config.memoryDir);
+ 
+ 		// Parse scratchpad items
+ 		const openItems: string[] = [];
+@@ -317,7 +200,6 @@ export default function (pi: ExtensionAPI) {
+ 	}
+ 
+ 	pi.on("session_start", async (_event, ctx) => {
+-		modelRegistryRef = ctx.modelRegistry;
+ 		await showDashboard(ctx);
+ 
+ 		if (!rebuildTimer) {
+@@ -326,14 +208,13 @@ export default function (pi: ExtensionAPI) {
+ 				lastRebuildTime = Date.now();
+ 				try {
+ 					ensureDirs(config);
+-					fs.writeFileSync(SUMMARY_CACHE, JSON.stringify({ summary: cachedSummary, timestamp: lastRebuildTime }), "utf-8");
++					writePrivateFile(SUMMARY_CACHE, JSON.stringify({ summary: cachedSummary, timestamp: lastRebuildTime }));
+ 				} catch {}
+ 			}, REBUILD_INTERVAL_MS);
+ 		}
+ 	});
+ 
+ 	pi.on("session_switch", async (_event, ctx) => {
+-		modelRegistryRef = ctx.modelRegistry;
+ 		await showDashboard(ctx);
+ 	});
+ 
+@@ -345,39 +226,34 @@ export default function (pi: ExtensionAPI) {
+ 		if (rebuildTimer) { clearInterval(rebuildTimer); rebuildTimer = null; }
+ 	});
+ 
+-	// Inject memory as a trailing user message, leaving the stable system prompt
+-	// untouched for prompt caching. Pi 0.81 drops unsupported system-role entries.
++	// Inject memory immediately before the newest user request so routing and
++	// other request classifiers continue to see the actual request as the latest.
++	// The stable system prompt remains untouched for prompt caching.
+ 	pi.on("context", async (event) => {
+ 		const memoryContext = buildMemoryContext(config);
+ 
+ 		const memoryInstructions = [
+ 			"## Memory",
+-			"The following memory files have been loaded. Use the memory_write tool to persist important information.",
++			"The following memory files have been loaded for reference.",
++			"Only call memory_write or a mutating scratchpad action when the user explicitly asks you to remember or update memory.",
+ 			"- Decisions, preferences, and durable facts \u2192 MEMORY.md",
+ 			"- Day-to-day notes and running context \u2192 daily/<YYYY-MM-DD>.md",
+ 			"- Things to fix later or keep in mind \u2192 scratchpad tool",
+ 			"- Scratchpad is NOT auto-loaded. Use memory_read(target='scratchpad') to fetch it when needed.",
+-			'- If someone says "remember this," write it immediately.',
+-			"",
+-			"### Daily Log Rule",
+-			"After meaningful interactions, call memory_write(target='daily') with a brief 1-2 sentence summary.",
+-			"**Log when:** task completed, decision made, bug fixed, new info discovered, config changed.",
+-			"**Skip when:** greetings, goodbyes, chitchat, simple acks, trivial factual questions.",
+-			"Log the outcome, not the question (e.g. \"Debugged import error \u2014 missing __init__.py\" not \"User asked about imports\").",
++			"- If the current user explicitly asks you to remember or update something, write it immediately.",
+ 			"",
+ 			memoryContext,
+ 		].join("\n");
+ 
+-		return {
+-			messages: [
+-				...event.messages,
+-				{
+-					role: "user" as const,
+-					content: `<pi-mem-injected>\n${memoryInstructions}\n</pi-mem-injected>`,
+-					timestamp: Date.now(),
+-				},
+-			],
++		const injected = {
++			role: "user" as const,
++			content: `<pi-mem-injected>\n${memoryInstructions}\n</pi-mem-injected>`,
++			timestamp: Date.now(),
+ 		};
++		const messages = [...event.messages];
++		const insertionIndex = messages.findLastIndex((message) => message.role === "user");
++		messages.splice(insertionIndex < 0 ? messages.length : insertionIndex, 0, injected);
++		return { messages };
+ 	});
+ 
+ 	pi.on("session_before_compact", async (_event, ctx) => {
+@@ -398,7 +274,7 @@ export default function (pi: ExtensionAPI) {
+ 			"- 'long_term': Write to MEMORY.md (curated durable facts, decisions, preferences). Mode: 'append' or 'overwrite'.",
+ 			"- 'daily': Append to today's daily log (daily/<YYYY-MM-DD>.md). Always appends.",
+ 			"- 'note': Create or update a file in notes/ (e.g. lessons.md, self-review.md). Pass filename. Mode: 'append' or 'overwrite'.",
+-			"Use this when the user asks you to remember something, or when you learn important preferences/decisions.",
++			"Use this only when the user explicitly asks you to remember or update memory.",
+ 		].join("\n"),
+ 		parameters: Type.Object({
+ 			target: StringEnum(["long_term", "daily", "note"] as const, {
+@@ -426,22 +302,20 @@ export default function (pi: ExtensionAPI) {
+ 				}
+ 				const safe = path.basename(filename);
+ 				const filePath = path.join(config.notesDir, safe);
+-				const existing = readFileSafe(filePath) ?? "";
+ 
+ 				if (mode === "overwrite") {
+ 					const stamped = `<!-- last updated: ${ts} [${sid}] -->\n${content}`;
+-					fs.writeFileSync(filePath, stamped, "utf-8");
+-					gitCommit(`note: ${safe}`);
++					writePrivateFile(filePath, stamped);
+ 					return {
+ 						content: [{ type: "text", text: `Wrote notes/${safe}` }],
+ 						details: { path: filePath, target, mode: "overwrite", sessionId: sid, timestamp: ts },
+ 					};
+ 				}
+ 
+-				const separator = existing.trim() ? "\n\n" : "";
+ 				const stamped = `<!-- ${ts} [${sid}] -->\n${content}`;
+-				fs.writeFileSync(filePath, existing + separator + stamped, "utf-8");
+-				gitCommit(`note: ${safe}`);
++				updatePrivateFile(filePath, (existing) =>
++					existing + (existing.trim() ? "\n\n" : "") + stamped
++				);
+ 				return {
+ 					content: [{ type: "text", text: `Appended to notes/${safe}` }],
+ 					details: { path: filePath, target, mode: "append", sessionId: sid, timestamp: ts },
+@@ -451,12 +325,11 @@ export default function (pi: ExtensionAPI) {
+ 			if (target === "daily") {
+ 				const date = todayStr(config.timezone);
+ 				const filePath = dailyPath(config.dailyDir, date);
+-				const existing = readFileSafe(filePath) ?? "";
+ 
+-				const separator = existing.trim() ? "\n\n" : "";
+ 				const stamped = `<!-- ${ts} [${sid}] -->\n${content}`;
+-				fs.writeFileSync(filePath, existing + separator + stamped, "utf-8");
+-				gitCommit(`daily: ${date}`);
++				updatePrivateFile(filePath, (existing) =>
++					existing + (existing.trim() ? "\n\n" : "") + stamped
++				);
+ 				return {
+ 					content: [{ type: "text", text: `Appended to daily/${date}.md` }],
+ 					details: { path: filePath, target, mode: "append", sessionId: sid, timestamp: ts },
+@@ -464,22 +337,19 @@ export default function (pi: ExtensionAPI) {
+ 			}
+ 
+ 			// long_term
+-			const existing = readFileSafe(config.memoryFile) ?? "";
+-
+ 			if (mode === "overwrite") {
+ 				const stamped = `<!-- last updated: ${ts} [${sid}] -->\n${content}`;
+-				fs.writeFileSync(config.memoryFile, stamped, "utf-8");
+-				gitCommit("memory: overwrite");
++				writePrivateFile(config.memoryFile, stamped);
+ 				return {
+ 					content: [{ type: "text", text: `Overwrote MEMORY.md` }],
+ 					details: { path: config.memoryFile, target, mode: "overwrite", sessionId: sid, timestamp: ts },
+ 				};
+ 			}
+ 
+-			const separator = existing.trim() ? "\n\n" : "";
+ 			const stamped = `<!-- ${ts} [${sid}] -->\n${content}`;
+-			fs.writeFileSync(config.memoryFile, existing + separator + stamped, "utf-8");
+-			gitCommit("memory: append");
++			updatePrivateFile(config.memoryFile, (existing) =>
++				existing + (existing.trim() ? "\n\n" : "") + stamped
++			);
+ 			return {
+ 				content: [{ type: "text", text: `Appended to MEMORY.md` }],
+ 				details: { path: config.memoryFile, target, mode: "append", sessionId: sid, timestamp: ts },
+@@ -498,6 +368,7 @@ export default function (pi: ExtensionAPI) {
+ 			"- 'undo': Uncheck a done item back to open. Match by substring.",
+ 			"- 'clear_done': Remove all checked items from the list.",
+ 			"- 'list': Show all items.",
++			"Use mutating actions only when the user explicitly asks; list is read-only.",
+ 		].join("\n"),
+ 		parameters: Type.Object({
+ 			action: StringEnum(["add", "done", "undo", "clear_done", "list"] as const, {
+@@ -513,10 +384,8 @@ export default function (pi: ExtensionAPI) {
+ 			const sid = shortSessionId(ctx.sessionManager.getSessionId());
+ 			const ts = nowTimestamp();
+ 
+-			const existing = readFileSafe(config.scratchpadFile) ?? "";
+-			let items = parseScratchpad(existing);
+-
+ 			if (action === "list") {
++				const items = parseScratchpad(readFileSafe(config.scratchpadFile, config.memoryDir) ?? "");
+ 				if (items.length === 0) {
+ 					return { content: [{ type: "text", text: "Scratchpad is empty." }], details: {} };
+ 				}
+@@ -530,11 +399,13 @@ export default function (pi: ExtensionAPI) {
+ 				if (!text) {
+ 					return { content: [{ type: "text", text: "Error: 'text' is required for add." }], details: {} };
+ 				}
+-				items.push({ done: false, text, meta: `<!-- ${ts} [${sid}] -->` });
+-				fs.writeFileSync(config.scratchpadFile, serializeScratchpad(items), "utf-8");
+-				gitCommit(`scratchpad: add`);
++				const updated = updatePrivateFile(config.scratchpadFile, (existing) => {
++					const items = parseScratchpad(existing);
++					items.push({ done: false, text, meta: `<!-- ${ts} [${sid}] -->` });
++					return serializeScratchpad(items);
++				});
+ 				return {
+-					content: [{ type: "text", text: `Added: - [ ] ${text}\n\n${serializeScratchpad(items)}` }],
++					content: [{ type: "text", text: `Added: - [ ] ${text}\n\n${updated}` }],
+ 					details: { action, sessionId: sid, timestamp: ts },
+ 				};
+ 			}
+@@ -545,36 +416,38 @@ export default function (pi: ExtensionAPI) {
+ 				}
+ 				const needle = text.toLowerCase();
+ 				const targetDone = action === "done";
+-				let matched = false;
+-				for (const item of items) {
+-					if (item.done !== targetDone && item.text.toLowerCase().includes(needle)) {
+-						item.done = targetDone;
+-						matched = true;
+-						break;
++				const updated = updatePrivateFile(config.scratchpadFile, (existing) => {
++					const items = parseScratchpad(existing);
++					for (const item of items) {
++						if (item.done !== targetDone && item.text.toLowerCase().includes(needle)) {
++							item.done = targetDone;
++							return serializeScratchpad(items);
++						}
+ 					}
+-				}
+-				if (!matched) {
++					return undefined;
++				});
++				if (updated === undefined) {
+ 					return {
+ 						content: [{ type: "text", text: `No matching ${targetDone ? "open" : "done"} item found for: "${text}"` }],
+ 						details: {},
+ 					};
+ 				}
+-				fs.writeFileSync(config.scratchpadFile, serializeScratchpad(items), "utf-8");
+-				gitCommit(`scratchpad: ${action}`);
+ 				return {
+-					content: [{ type: "text", text: `Updated.\n\n${serializeScratchpad(items)}` }],
++					content: [{ type: "text", text: `Updated.\n\n${updated}` }],
+ 					details: { action, sessionId: sid, timestamp: ts },
+ 				};
+ 			}
+ 
+ 			if (action === "clear_done") {
+-				const before = items.length;
+-				items = items.filter((i) => !i.done);
+-				const removed = before - items.length;
+-				fs.writeFileSync(config.scratchpadFile, serializeScratchpad(items), "utf-8");
+-				gitCommit("scratchpad: clear_done");
++				let removed = 0;
++				const updated = updatePrivateFile(config.scratchpadFile, (existing) => {
++					const items = parseScratchpad(existing);
++					const remaining = items.filter((item) => !item.done);
++					removed = items.length - remaining.length;
++					return serializeScratchpad(remaining);
++				});
+ 				return {
+-					content: [{ type: "text", text: `Cleared ${removed} done item(s).\n\n${serializeScratchpad(items)}` }],
++					content: [{ type: "text", text: `Cleared ${removed} done item(s).\n\n${updated}` }],
+ 					details: { action, removed },
+ 				};
+ 			}
+@@ -613,30 +486,7 @@ export default function (pi: ExtensionAPI) {
+ 			const { target, date, filename } = params;
+ 
+ 			if (target === "list") {
+-				const sections: string[] = [];
+-				try {
+-					const rootFiles = fs.readdirSync(config.memoryDir).filter(f => f.endsWith(".md") || f.endsWith(".json")).sort();
+-					if (rootFiles.length > 0) sections.push(`Files:\n${rootFiles.map(f => `- ${f}`).join("\n")}`);
+-				} catch {}
+-				try {
+-					const noteFiles = fs.readdirSync(config.notesDir).filter(f => f.endsWith(".md")).sort();
+-					if (noteFiles.length > 0) sections.push(`Notes:\n${noteFiles.map(f => `- notes/${f}`).join("\n")}`);
+-				} catch {}
+-				try {
+-					const dailyFiles = fs.readdirSync(config.dailyDir).filter(f => f.endsWith(".md")).sort().reverse();
+-					if (dailyFiles.length > 0) sections.push(`Daily logs (${dailyFiles.length}):\n${dailyFiles.slice(0, 10).map(f => `- daily/${f}`).join("\n")}${dailyFiles.length > 10 ? `\n  ... and ${dailyFiles.length - 10} more` : ""}`);
+-				} catch {}
+-				try {
+-					const catchupDir = path.join(config.memoryDir, "catchup");
+-					const catchupDates = fs.readdirSync(catchupDir).filter(f => {
+-						try { return fs.statSync(path.join(catchupDir, f)).isDirectory(); } catch { return false; }
+-					}).sort().reverse();
+-					if (catchupDates.length > 0) sections.push(`Catchup (${catchupDates.length} dates):\n${catchupDates.slice(0, 10).map(d => `- catchup/${d}/`).join("\n")}${catchupDates.length > 10 ? `\n  ... and ${catchupDates.length - 10} more` : ""}`);
+-				} catch {}
+-				if (sections.length === 0) {
+-					return { content: [{ type: "text", text: "Memory directory is empty." }], details: {} };
+-				}
+-				return { content: [{ type: "text", text: sections.join("\n\n") }], details: {} };
++				return { content: [{ type: "text", text: listMemoryFiles(config) }], details: {} };
+ 			}
+ 
+ 			if (target === "file") {
+@@ -653,7 +503,7 @@ export default function (pi: ExtensionAPI) {
+ 				}
+ 				const safe = path.basename(filename);
+ 				const filePath = path.join(config.notesDir, safe);
+-				const content = readFileSafe(filePath);
++				const content = readFileSafe(filePath, config.memoryDir);
+ 				if (!content) {
+ 					return { content: [{ type: "text", text: `Note not found: notes/${safe}` }], details: {} };
+ 				}
+@@ -662,8 +512,11 @@ export default function (pi: ExtensionAPI) {
+ 
+ 			if (target === "daily") {
+ 				const d = date ?? todayStr(config.timezone);
++				if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
++					return { content: [{ type: "text", text: "Error: 'date' must use YYYY-MM-DD." }], details: {} };
++				}
+ 				const filePath = dailyPath(config.dailyDir, d);
+-				const content = readFileSafe(filePath);
++				const content = readFileSafe(filePath, config.dailyDir);
+ 				if (!content) {
+ 					return { content: [{ type: "text", text: `No daily log for ${d}.` }], details: {} };
+ 				}
+@@ -674,7 +527,7 @@ export default function (pi: ExtensionAPI) {
+ 			}
+ 
+ 			if (target === "scratchpad") {
+-				const content = readFileSafe(config.scratchpadFile);
++				const content = readFileSafe(config.scratchpadFile, config.memoryDir);
+ 				if (!content?.trim()) {
+ 					return { content: [{ type: "text", text: "SCRATCHPAD.md is empty or does not exist." }], details: {} };
+ 				}
+@@ -685,7 +538,7 @@ export default function (pi: ExtensionAPI) {
+ 			}
+ 
+ 			// long_term
+-			const content = readFileSafe(config.memoryFile);
++			const content = readFileSafe(config.memoryFile, config.memoryDir);
+ 			if (!content) {
+ 				return { content: [{ type: "text", text: "MEMORY.md is empty or does not exist." }], details: {} };
+ 			}
+diff --git a/lib.ts b/lib.ts
+index d87e303723198e0d3ed68f7a08b7d02f76808d6e..e1c6632affac1517a730f87165265fd609961ccb 100644
+--- a/lib.ts
++++ b/lib.ts
+@@ -6,7 +6,7 @@
+ import * as fs from "node:fs";
+ import * as path from "node:path";
+ import * as os from "node:os";
+-import { createReadStream } from "node:fs";
++import { randomUUID } from "node:crypto";
+ import { createInterface } from "node:readline";
+ 
+ // --- Config ---
+@@ -19,7 +19,6 @@ export interface MemoryConfig {
+ 	notesDir: string;
+ 	contextFiles: string[];
+ 	searchDirs: string[];
+-	autocommit: boolean;
+ 	timezone: string;
+ }
+ 
+@@ -27,19 +26,18 @@ export interface FileConfig {
+ 	dailyDir?: string;
+ 	contextFiles?: string[];
+ 	searchDirs?: string[];
+-	autocommit?: boolean;
+ }
+ 
+ export function loadConfigFile(memoryDir: string): FileConfig {
+ 	try {
+-		const raw = fs.readFileSync(path.join(memoryDir, ".pi-mem.json"), "utf-8");
++		const raw = readFileSafe(path.join(memoryDir, ".pi-mem.json"), memoryDir);
++		if (raw === null) return {};
+ 		const parsed = JSON.parse(raw);
+ 		if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
+ 		const result: FileConfig = {};
+ 		if (typeof parsed.dailyDir === "string") result.dailyDir = parsed.dailyDir;
+ 		if (Array.isArray(parsed.contextFiles)) result.contextFiles = parsed.contextFiles.filter((s: unknown) => typeof s === "string");
+ 		if (Array.isArray(parsed.searchDirs)) result.searchDirs = parsed.searchDirs.filter((s: unknown) => typeof s === "string");
+-		if (typeof parsed.autocommit === "boolean") result.autocommit = parsed.autocommit;
+ 		return result;
+ 	} catch {
+ 		return {};
+@@ -85,9 +83,6 @@ export function buildConfig(env: Record<string, string | undefined> = process.en
+ 	const dailyDir = env.PI_DAILY_DIR ?? fileConfig.dailyDir ?? path.join(memoryDir, "daily");
+ 	const contextFiles = parseCommaSeparated(env.PI_CONTEXT_FILES) ?? fileConfig.contextFiles ?? [];
+ 	const searchDirs = parseCommaSeparated(env.PI_SEARCH_DIRS) ?? fileConfig.searchDirs ?? [];
+-	const autocommit = env.PI_AUTOCOMMIT !== undefined
+-		? (env.PI_AUTOCOMMIT === "1" || env.PI_AUTOCOMMIT === "true")
+-		: (fileConfig.autocommit ?? false);
+ 	const timezone = normalizeTimeZone(env.PI_TIMEZONE ?? env.TZ ?? "UTC");
+ 
+ 	return {
+@@ -98,7 +93,6 @@ export function buildConfig(env: Record<string, string | undefined> = process.en
+ 		notesDir: path.join(memoryDir, "notes"),
+ 		contextFiles,
+ 		searchDirs,
+-		autocommit,
+ 		timezone,
+ 	};
+ }
+@@ -155,14 +149,135 @@ export function shortSessionId(sessionId: string): string {
+ 
+ // --- File helpers ---
+ 
+-export function readFileSafe(filePath: string): string | null {
++function isWithinCanonicalRoot(rootDir: string, filePath: string): boolean | undefined {
+ 	try {
+-		return fs.readFileSync(filePath, "utf-8");
++		const root = fs.realpathSync(rootDir);
++		const candidate = fs.realpathSync(filePath);
++		const relative = path.relative(root, candidate);
++		return relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
++	} catch {
++		return undefined;
++	}
++}
++
++export function readFileSafe(filePath: string, rootDir?: string): string | null {
++	const descriptor = openRegularFileSafe(filePath, rootDir);
++	if (descriptor === null) return null;
++	try {
++		return fs.readFileSync(descriptor, "utf-8");
+ 	} catch {
+ 		return null;
++	} finally {
++		fs.closeSync(descriptor);
+ 	}
+ }
+ 
++function openRegularFileSafe(filePath: string, rootDir?: string): number | null {
++	let descriptor: number | undefined;
++	try {
++		descriptor = fs.openSync(
++			filePath,
++			fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK,
++		);
++		const opened = fs.fstatSync(descriptor);
++		if (!opened.isFile()) throw new Error("not a regular file");
++		if (rootDir !== undefined) {
++			if (isWithinCanonicalRoot(rootDir, filePath) !== true) throw new Error("outside root");
++			const resolved = fs.statSync(fs.realpathSync(filePath));
++			if (resolved.dev !== opened.dev || resolved.ino !== opened.ino) throw new Error("file changed");
++		}
++		return descriptor;
++	} catch {
++		if (descriptor !== undefined) fs.closeSync(descriptor);
++		return null;
++	}
++}
++
++function createLineReaderSafe(filePath: string, rootDir: string) {
++	const descriptor = openRegularFileSafe(filePath, rootDir);
++	if (descriptor === null) return null;
++	let input: fs.ReadStream | undefined;
++	try {
++		const stream = fs.createReadStream(filePath, { fd: descriptor, autoClose: true });
++		input = stream;
++		const lines = createInterface({ input: stream, crlfDelay: Infinity });
++		let closed = false;
++		return {
++			lines,
++			close() {
++				if (closed) return;
++				closed = true;
++				lines.close();
++				stream.destroy();
++			},
++		};
++	} catch {
++		if (input) input.destroy();
++		else try { fs.closeSync(descriptor); } catch {}
++		return null;
++	}
++}
++
++export function readDirectorySafe(directoryPath: string, rootDir: string): fs.Dirent[] | null {
++	let descriptor: number | undefined;
++	try {
++		descriptor = fs.openSync(
++			directoryPath,
++			fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | fs.constants.O_NOFOLLOW,
++		);
++		const opened = fs.fstatSync(descriptor);
++		if (!opened.isDirectory() || isWithinCanonicalRoot(rootDir, directoryPath) !== true) return null;
++
++		const canonical = fs.realpathSync(directoryPath);
++		const resolved = fs.statSync(canonical);
++		if (resolved.dev !== opened.dev || resolved.ino !== opened.ino) return null;
++		const entries = fs.readdirSync(canonical, { withFileTypes: true });
++		const after = fs.statSync(canonical);
++		return after.dev === opened.dev && after.ino === opened.ino ? entries : null;
++	} catch {
++		return null;
++	} finally {
++		if (descriptor !== undefined) fs.closeSync(descriptor);
++	}
++}
++
++export function listMemoryFiles(config: MemoryConfig): string {
++	const sections: string[] = [];
++	const rootEntries = readDirectorySafe(config.memoryDir, config.memoryDir);
++	if (rootEntries === null) return "Memory directory is empty.";
++	const rootFiles = rootEntries
++		.filter(entry => entry.isFile() && (entry.name.endsWith(".md") || entry.name.endsWith(".json")))
++		.map(entry => entry.name)
++		.sort();
++	if (rootFiles.length > 0) sections.push(`Files:\n${rootFiles.map(file => `- ${file}`).join("\n")}`);
++
++	const noteFiles = (readDirectorySafe(config.notesDir, config.memoryDir) ?? [])
++		.filter(entry => entry.isFile() && entry.name.endsWith(".md"))
++		.map(entry => entry.name)
++		.sort();
++	if (noteFiles.length > 0) sections.push(`Notes:\n${noteFiles.map(file => `- notes/${file}`).join("\n")}`);
++
++	const dailyFiles = (readDirectorySafe(config.dailyDir, config.dailyDir) ?? [])
++		.filter(entry => entry.isFile() && entry.name.endsWith(".md"))
++		.map(entry => entry.name)
++		.sort()
++		.reverse();
++	if (dailyFiles.length > 0) {
++		sections.push(`Daily logs (${dailyFiles.length}):\n${dailyFiles.slice(0, 10).map(file => `- daily/${file}`).join("\n")}${dailyFiles.length > 10 ? `\n  ... and ${dailyFiles.length - 10} more` : ""}`);
++	}
++
++	const catchupDates = (readDirectorySafe(path.join(config.memoryDir, "catchup"), config.memoryDir) ?? [])
++		.filter(entry => entry.isDirectory())
++		.map(entry => entry.name)
++		.sort()
++		.reverse();
++	if (catchupDates.length > 0) {
++		sections.push(`Catchup (${catchupDates.length} dates):\n${catchupDates.slice(0, 10).map(date => `- catchup/${date}/`).join("\n")}${catchupDates.length > 10 ? `\n  ... and ${catchupDates.length - 10} more` : ""}`);
++	}
++
++	return sections.length > 0 ? sections.join("\n\n") : "Memory directory is empty.";
++}
++
+ export function dailyPath(dailyDir: string, date: string): string {
+ 	return path.join(dailyDir, `${date}.md`);
+ }
+@@ -242,25 +357,19 @@ function formatIndexCandidates(directory: string, entries: IndexEntry[], heading
+ 
+ function listSiblingIndexedDirectories(config: MemoryConfig, directory: string): string[] {
+ 	const parent = path.dirname(directory);
+-	try {
+-		const parentPath = path.join(config.memoryDir, parent);
+-		return fs.readdirSync(parentPath)
+-			.map(name => parent === "." ? name : `${parent}/${name}`)
+-			.filter(candidate => {
+-				try { return fs.statSync(path.join(config.memoryDir, candidate)).isDirectory(); } catch { return false; }
+-			})
+-			.filter(candidate => readFileSafe(path.join(config.memoryDir, candidate, "INDEX.md")))
+-			.sort()
+-			.reverse()
+-			.slice(0, 10);
+-	} catch {
+-		return [];
+-	}
++	const parentPath = path.join(config.memoryDir, parent);
++	return (readDirectorySafe(parentPath, config.memoryDir) ?? [])
++		.filter(entry => entry.isDirectory())
++		.map(entry => parent === "." ? entry.name : `${parent}/${entry.name}`)
++		.filter(candidate => readFileSafe(path.join(config.memoryDir, candidate, "INDEX.md"), config.memoryDir))
++		.sort()
++		.reverse()
++		.slice(0, 10);
+ }
+ 
+ export function resolveIndexedFile(config: MemoryConfig, directory: string, query: string): MemoryReadResult {
+ 	const indexPath = path.join(config.memoryDir, directory, "INDEX.md");
+-	const indexContent = readFileSafe(indexPath);
++	const indexContent = readFileSafe(indexPath, config.memoryDir);
+ 	if (!indexContent) {
+ 		const alternatives = listSiblingIndexedDirectories(config, directory);
+ 		const suffix = alternatives.length > 0 ? ` Indexed directories nearby: ${alternatives.map(d => `${d}/`).join(", ")}` : "";
+@@ -297,7 +406,7 @@ export function resolveIndexedFile(config: MemoryConfig, directory: string, quer
+ 
+ 	const match = scored[0].entry;
+ 	const filePath = path.join(config.memoryDir, directory, match.filename);
+-	const content = readFileSafe(filePath);
++	const content = readFileSafe(filePath, config.memoryDir);
+ 	if (!content) {
+ 		return {
+ 			text: `INDEX.md points to missing file: ${directory}/${match.filename}`,
+@@ -312,7 +421,10 @@ export function readMemoryFile(config: MemoryConfig, filename: string): MemoryRe
+ 	if (!result) {
+ 		return { text: `Invalid path: ${filename}`, details: { found: false, reason: "invalid_path" } };
+ 	}
+-	const content = readFileSafe(result.resolved);
++	if (isWithinCanonicalRoot(config.memoryDir, result.resolved) === false) {
++		return { text: `Invalid path: ${filename}`, details: { found: false, reason: "invalid_path" } };
++	}
++	const content = readFileSafe(result.resolved, config.memoryDir);
+ 	if (content) {
+ 		return { text: content, details: { path: result.resolved, filename: result.normalized } };
+ 	}
+@@ -326,10 +438,400 @@ export function readMemoryFile(config: MemoryConfig, filename: string): MemoryRe
+ 	return { text: `File not found: ${result.normalized}`, details: { found: false, reason: "missing_file", filename: result.normalized } };
+ }
+ 
++function hasErrorCode(error: unknown, code: string): boolean {
++	return typeof error === "object" && error !== null && "code" in error && error.code === code;
++}
++
++function ensurePrivateDirectory(directory: string): void {
++	fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
++	const leaf = fs.lstatSync(directory);
++	if (leaf.isSymbolicLink() || !leaf.isDirectory()) {
++		throw new Error(`Refusing non-directory memory path: ${directory}`);
++	}
++
++	const descriptor = fs.openSync(
++		directory,
++		fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | fs.constants.O_NOFOLLOW,
++	);
++	try {
++		if (!fs.fstatSync(descriptor).isDirectory()) {
++			throw new Error(`Refusing non-directory memory path: ${directory}`);
++		}
++		fs.fchmodSync(descriptor, 0o700);
++	} finally {
++		fs.closeSync(descriptor);
++	}
++}
++
+ export function ensureDirs(config: MemoryConfig): void {
+-	fs.mkdirSync(config.memoryDir, { recursive: true });
+-	fs.mkdirSync(config.dailyDir, { recursive: true });
+-	fs.mkdirSync(config.notesDir, { recursive: true });
++	for (const directory of [config.memoryDir, config.dailyDir, config.notesDir]) {
++		ensurePrivateDirectory(directory);
++	}
++}
++
++interface LockOwner {
++	token: string;
++	pid: number;
++	hostname: string;
++}
++
++const LOCK_RETRY_MS = 25;
++const LOCK_TIMEOUT_MS = 5_000;
++// A lock must be far older than any synchronous memory update before takeover.
++const LOCK_STALE_MS = 5 * 60_000;
++const RECOVERY_TOKEN_PATTERN =
++	/^\.reaping\.([1-9]\d*)\.([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/;
++const lockWaiter = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
++
++function isLockOwner(value: unknown): value is LockOwner {
++	return typeof value === "object" && value !== null
++		&& "token" in value && typeof value.token === "string"
++		&& "pid" in value && typeof value.pid === "number" && Number.isSafeInteger(value.pid) && value.pid > 0
++		&& "hostname" in value && typeof value.hostname === "string";
++}
++
++function writeLockOwner(lockPath: string, owner: LockOwner): void {
++	const ownerPath = path.join(lockPath, owner.token);
++	const descriptor = fs.openSync(ownerPath, "wx", 0o600);
++	let complete = false;
++	try {
++		fs.writeFileSync(descriptor, JSON.stringify(owner), { encoding: "utf-8" });
++		fs.fchmodSync(descriptor, 0o600);
++		fs.fsyncSync(descriptor);
++		complete = true;
++	} finally {
++		fs.closeSync(descriptor);
++		if (!complete) {
++			try { fs.unlinkSync(ownerPath); } catch {}
++		}
++	}
++}
++
++interface LockMarker {
++	owner: LockOwner;
++	persistedOwner: LockOwner;
++}
++
++function readLockMarker(lockPath: string): LockMarker | undefined {
++	let entries: string[];
++	try {
++		entries = fs.readdirSync(lockPath);
++	} catch (error) {
++		if (hasErrorCode(error, "ENOENT")) return undefined;
++		throw error;
++	}
++	if (entries.length !== 1) return undefined;
++
++	let descriptor: number;
++	try {
++		descriptor = fs.openSync(
++			path.join(lockPath, entries[0]),
++			fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK,
++		);
++	} catch {
++		return undefined;
++	}
++	try {
++		if (!fs.fstatSync(descriptor).isFile()) return undefined;
++		const parsed: unknown = JSON.parse(fs.readFileSync(descriptor, "utf-8"));
++		if (!isLockOwner(parsed)) return undefined;
++		if (parsed.token === entries[0]) return { owner: parsed, persistedOwner: parsed };
++		const recovery = entries[0].match(RECOVERY_TOKEN_PATTERN);
++		if (!recovery) return undefined;
++		const pid = Number(recovery[1]);
++		return Number.isSafeInteger(pid)
++			? {
++				owner: { token: entries[0], pid, hostname: parsed.hostname },
++				persistedOwner: parsed,
++			}
++			: undefined;
++	} catch {
++		return undefined;
++	} finally {
++		fs.closeSync(descriptor);
++	}
++}
++
++function readLockOwner(lockPath: string): LockOwner | undefined {
++	return readLockMarker(lockPath)?.owner;
++}
++
++function sameLockOwner(left: LockOwner, right: LockOwner): boolean {
++	return left.token === right.token
++		&& left.pid === right.pid
++		&& left.hostname === right.hostname;
++}
++
++function processIsAlive(pid: number): boolean {
++	try {
++		process.kill(pid, 0);
++		return true;
++	} catch (error) {
++		if (hasErrorCode(error, "ESRCH")) return false;
++		if (hasErrorCode(error, "EPERM")) return true;
++		throw error;
++	}
++}
++
++function recoverStaleLock(lockPath: string): boolean {
++	let leaf: fs.Stats;
++	try {
++		leaf = fs.lstatSync(lockPath);
++	} catch (error) {
++		if (hasErrorCode(error, "ENOENT")) return true;
++		throw error;
++	}
++	if (leaf.isSymbolicLink() || !leaf.isDirectory()) {
++		throw new Error(`Refusing invalid memory file lock: ${lockPath}`);
++	}
++	if (Date.now() - leaf.mtimeMs < LOCK_STALE_MS) return false;
++	const observedMarker = readLockMarker(lockPath);
++	if (!observedMarker) throw new Error(`Refusing invalid memory file lock: ${lockPath}`);
++	const owner = observedMarker.owner;
++	// A shared home does not provide a reliable remote liveness or clock-fencing
++	// primitive. Recover only when this host can prove that its own owner exited.
++	if (owner.hostname !== os.hostname() || processIsAlive(owner.pid)) return false;
++
++	// Claim this exact lock before moving its directory. The unique marker is a
++	// compare-and-swap token: another stale observer cannot claim a replacement
++	// lock because its marker has a different name.
++	const recoveryOwner: LockOwner = {
++		token: `.reaping.${process.pid}.${randomUUID()}`,
++		pid: process.pid,
++		hostname: owner.hostname,
++	};
++	try {
++		fs.renameSync(
++			path.join(lockPath, owner.token),
++			path.join(lockPath, recoveryOwner.token),
++		);
++	} catch (error) {
++		if (hasErrorCode(error, "ENOENT")) return true;
++		throw error;
++	}
++
++	let claimed: fs.Stats;
++	try {
++		claimed = fs.lstatSync(lockPath);
++	} catch (error) {
++		if (hasErrorCode(error, "ENOENT")) return true;
++		throw error;
++	}
++	const claimedMarker = readLockMarker(lockPath);
++	if (
++		!claimedMarker
++		|| claimed.dev !== leaf.dev
++		|| claimed.ino !== leaf.ino
++		|| claimedMarker.owner.token !== recoveryOwner.token
++		|| !sameLockOwner(claimedMarker.persistedOwner, observedMarker.persistedOwner)
++	) {
++		throw new Error(`Refusing invalid memory file lock: ${lockPath}`);
++	}
++
++	const quarantine = `${lockPath}.stale.${process.pid}.${randomUUID()}`;
++	try {
++		fs.renameSync(lockPath, quarantine);
++	} catch (error) {
++		if (hasErrorCode(error, "ENOENT")) return true;
++		throw error;
++	}
++	const quarantined = fs.lstatSync(quarantine);
++	const quarantinedMarker = readLockMarker(quarantine);
++	if (
++		!quarantinedMarker
++		|| quarantined.dev !== leaf.dev
++		|| quarantined.ino !== leaf.ino
++		|| quarantinedMarker.owner.token !== recoveryOwner.token
++		|| !sameLockOwner(quarantinedMarker.persistedOwner, observedMarker.persistedOwner)
++	) {
++		throw new Error(`Refusing invalid memory file lock: ${lockPath}`);
++	}
++	fs.unlinkSync(path.join(quarantine, recoveryOwner.token));
++	fs.rmdirSync(quarantine);
++	return true;
++}
++
++function acquireFileLock(filePath: string): LockOwner & { lockPath: string } {
++	const lockPath = `${filePath}.lock`;
++	const owner = { token: randomUUID(), pid: process.pid, hostname: os.hostname() };
++	const deadline = Date.now() + LOCK_TIMEOUT_MS;
++
++	while (true) {
++		try {
++			fs.mkdirSync(lockPath, { mode: 0o700 });
++			try {
++				ensurePrivateDirectory(lockPath);
++				writeLockOwner(lockPath, owner);
++			} catch (error) {
++				try { fs.rmdirSync(lockPath); } catch {}
++				throw error;
++			}
++			return { ...owner, lockPath };
++		} catch (error) {
++			if (!hasErrorCode(error, "EEXIST")) throw error;
++			if (recoverStaleLock(lockPath)) continue;
++			if (Date.now() >= deadline) {
++				throw new Error(`Timed out waiting for memory file lock: ${lockPath}`);
++			}
++			Atomics.wait(lockWaiter, 0, 0, LOCK_RETRY_MS);
++		}
++	}
++}
++
++function releaseFileLock(owner: LockOwner & { lockPath: string }): void {
++	// The token is the marker filename, so a stale owner cannot unlink a successor's marker.
++	if (readLockOwner(owner.lockPath)?.token !== owner.token) return;
++	try {
++		fs.unlinkSync(path.join(owner.lockPath, owner.token));
++	} catch (error) {
++		if (hasErrorCode(error, "ENOENT")) return;
++		throw error;
++	}
++	try {
++		fs.rmdirSync(owner.lockPath);
++	} catch (error) {
++		if (hasErrorCode(error, "ENOENT") || hasErrorCode(error, "ENOTEMPTY")) return;
++		throw error;
++	}
++}
++
++function withFileLock<Result>(filePath: string, action: () => Result): Result {
++	const owner = acquireFileLock(filePath);
++	try {
++		return action();
++	} finally {
++		releaseFileLock(owner);
++	}
++}
++
++function privateFileExists(filePath: string): boolean {
++	let leaf: fs.Stats;
++	try {
++		leaf = fs.lstatSync(filePath);
++	} catch (error) {
++		if (hasErrorCode(error, "ENOENT")) return false;
++		throw error;
++	}
++	if (leaf.isSymbolicLink() || !leaf.isFile()) {
++		throw new Error(`Refusing non-file memory path: ${filePath}`);
++	}
++	return true;
++}
++
++function readPrivateFileForUpdate(filePath: string): string {
++	if (!privateFileExists(filePath)) return "";
++	let descriptor: number;
++	try {
++		descriptor = fs.openSync(
++			filePath,
++			fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK,
++		);
++	} catch (error) {
++		if (hasErrorCode(error, "ENOENT")) return "";
++		if (hasErrorCode(error, "ELOOP")) {
++			throw new Error(`Refusing symbolic-link memory path: ${filePath}`);
++		}
++		throw error;
++	}
++
++	try {
++		if (!fs.fstatSync(descriptor).isFile()) {
++			throw new Error(`Refusing non-file memory path: ${filePath}`);
++		}
++		return fs.readFileSync(descriptor, "utf-8");
++	} finally {
++		fs.closeSync(descriptor);
++	}
++}
++
++interface AtomicReplaceOps {
++	supportsDirectoryFsync: boolean;
++	openSync(filePath: string, flags: number): number;
++	renameSync(oldPath: string, newPath: string): void;
++	fsyncSync(descriptor: number): void;
++	closeSync(descriptor: number): void;
++}
++
++const defaultAtomicReplaceOps: AtomicReplaceOps = {
++	supportsDirectoryFsync: process.platform !== "win32",
++	openSync: fs.openSync,
++	renameSync: fs.renameSync,
++	fsyncSync: fs.fsyncSync,
++	closeSync: fs.closeSync,
++};
++
++function replacePrivateFile(
++	filePath: string,
++	content: string,
++	operations: AtomicReplaceOps = defaultAtomicReplaceOps,
++): void {
++	const tempPath = path.join(
++		path.dirname(filePath),
++		`.${path.basename(filePath)}.${process.pid}.${randomUUID()}.tmp`,
++	);
++	let created = false;
++	let renamed = false;
++
++	try {
++		const descriptor = fs.openSync(tempPath, "wx", 0o600);
++		created = true;
++		try {
++			fs.writeFileSync(descriptor, content, { encoding: "utf-8" });
++			fs.fchmodSync(descriptor, 0o600);
++			fs.fsyncSync(descriptor);
++		} finally {
++			fs.closeSync(descriptor);
++		}
++		privateFileExists(filePath);
++		if (!operations.supportsDirectoryFsync) {
++			operations.renameSync(tempPath, filePath);
++			renamed = true;
++		} else {
++			const parent = operations.openSync(
++				path.dirname(filePath),
++				fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | fs.constants.O_NOFOLLOW,
++			);
++			try {
++				operations.renameSync(tempPath, filePath);
++				renamed = true;
++				operations.fsyncSync(parent);
++			} finally {
++				operations.closeSync(parent);
++			}
++		}
++	} finally {
++		if (created && !renamed) {
++			try {
++				fs.unlinkSync(tempPath);
++			} catch (error) {
++				if (!hasErrorCode(error, "ENOENT")) throw error;
++			}
++		}
++	}
++}
++
++export function writePrivateFile(
++	filePath: string,
++	content: string,
++	operations: AtomicReplaceOps = defaultAtomicReplaceOps,
++): void {
++	withFileLock(filePath, () => replacePrivateFile(filePath, content, operations));
++}
++
++export function updatePrivateFile(filePath: string, update: (current: string) => string): string;
++export function updatePrivateFile(
++	filePath: string,
++	update: (current: string) => string | undefined,
++): string | undefined;
++export function updatePrivateFile(
++	filePath: string,
++	update: (current: string) => string | undefined,
++): string | undefined {
++	return withFileLock(filePath, () => {
++		const content = update(readPrivateFileForUpdate(filePath));
++		if (content !== undefined) replacePrivateFile(filePath, content);
++		return content;
++	});
+ }
+ 
+ // --- Scratchpad ---
+@@ -398,7 +900,7 @@ export function isLowActivity(config: MemoryConfig): boolean {
+ 	let activeDays = 0;
+ 	for (let i = 0; i < ACTIVITY_LOOKBACK_DAYS; i++) {
+ 		const date = daysAgoStr(i, config.timezone);
+-		const content = readFileSafe(dailyPath(config.dailyDir, date));
++		const content = readFileSafe(dailyPath(config.dailyDir, date), config.dailyDir);
+ 		if (content && content.trim().length >= ACTIVITY_THRESHOLD_BYTES) {
+ 			activeDays++;
+ 		}
+@@ -414,13 +916,13 @@ export function buildMemoryContext(config: MemoryConfig): string {
+ 
+ 	for (const fileName of config.contextFiles) {
+ 		const filePath = path.join(config.memoryDir, fileName);
+-		const content = readFileSafe(filePath);
++		const content = readFileSafe(filePath, config.memoryDir);
+ 		if (content?.trim()) {
+ 			sections.push(`## ${fileName}\n\n${content.trim()}`);
+ 		}
+ 	}
+ 
+-	const longTerm = readFileSafe(config.memoryFile);
++	const longTerm = readFileSafe(config.memoryFile, config.memoryDir);
+ 	if (longTerm?.trim()) {
+ 		sections.push(`## MEMORY.md (long-term)\n\n${longTerm.trim()}`);
+ 	}
+@@ -428,12 +930,12 @@ export function buildMemoryContext(config: MemoryConfig): string {
+ 	const today = todayStr(config.timezone);
+ 	const yesterday = yesterdayStr(config.timezone);
+ 
+-	const todayContent = readFileSafe(dailyPath(config.dailyDir, today));
++	const todayContent = readFileSafe(dailyPath(config.dailyDir, today), config.dailyDir);
+ 	if (todayContent?.trim()) {
+ 		sections.push(`## Daily log: ${today} (today)\n\n${todayContent.trim()}`);
+ 	}
+ 
+-	const yesterdayContent = readFileSafe(dailyPath(config.dailyDir, yesterday));
++	const yesterdayContent = readFileSafe(dailyPath(config.dailyDir, yesterday), config.dailyDir);
+ 	if (yesterdayContent?.trim()) {
+ 		sections.push(`## Daily log: ${yesterday} (yesterday)\n\n${yesterdayContent.trim()}`);
+ 	}
+@@ -457,7 +959,7 @@ export function buildMemoryContext(config: MemoryConfig): string {
+ 		const date = daysAgoStr(i, config.timezone);
+ 		const label = i === 0 ? "today" : i === 1 ? "yesterday" : `${i} days ago`;
+ 		const indexPath = path.join(catchupDir, date, "INDEX.md");
+-		let catchupContent = readFileSafe(indexPath)?.trim();
++		let catchupContent = readFileSafe(indexPath, config.memoryDir)?.trim();
+ 		if (catchupContent) {
+ 			if (catchupContent.length > MAX_CATCHUP_BYTES_PER_DAY) {
+ 				const lines = catchupContent.split("\n");
+@@ -515,56 +1017,64 @@ export interface SessionInfo {
+ 	cost: number;
+ }
+ 
+-export async function scanSession(filePath: string): Promise<SessionInfo | null> {
++export async function scanSession(filePath: string, rootDir = path.dirname(filePath)): Promise<SessionInfo | null> {
+ 	try {
+ 		const cutoffTime = Date.now() - LOOKBACK_MS;
+-		const rl = createInterface({ input: createReadStream(filePath), crlfDelay: Infinity });
++		const reader = createLineReaderSafe(filePath, rootDir);
++		if (reader === null) return null;
+ 		let lineNum = 0;
+ 		let header: any = null;
+ 		let title = "";
+ 		let totalCost = 0;
+ 
+-		for await (const line of rl) {
+-			lineNum++;
+-			if (lineNum === 1) {
++		try {
++			for await (const line of reader.lines) {
++				lineNum++;
++				if (lineNum === 1) {
++					try {
++						header = JSON.parse(line);
++					} catch { return null; }
++					if (header.timestamp && new Date(header.timestamp).getTime() < cutoffTime) {
++						return null;
++					}
++					continue;
++				}
+ 				try {
+-					header = JSON.parse(line);
+-				} catch { return null; }
+-				if (header.timestamp && new Date(header.timestamp).getTime() < cutoffTime) {
+-					rl.close();
+-					return null;
+-				}
+-				continue;
++					const entry = JSON.parse(line);
++					if (entry.type === "session_info" && entry.name) {
++						title = entry.name;
++					}
++					if (entry.type === "message" && entry.message?.role === "assistant" && entry.message?.usage?.cost?.total) {
++						totalCost += entry.message.usage.cost.total;
++					}
++				} catch { continue; }
+ 			}
+-			try {
+-				const entry = JSON.parse(line);
+-				if (entry.type === "session_info" && entry.name) {
+-					title = entry.name;
+-				}
+-				if (entry.type === "message" && entry.message?.role === "assistant" && entry.message?.usage?.cost?.total) {
+-					totalCost += entry.message.usage.cost.total;
+-				}
+-			} catch { continue; }
++		} finally {
++			reader.close();
+ 		}
+ 
+ 		if (!header?.timestamp) return null;
+-
+ 		if (!title) {
+-			const rl2 = createInterface({ input: createReadStream(filePath), crlfDelay: Infinity });
+-			for await (const line of rl2) {
+-				try {
+-					const entry = JSON.parse(line);
+-					if (entry.type === "message" && entry.message?.role === "user") {
+-						const content = entry.message.content;
+-						if (typeof content === "string") {
+-							title = content.slice(0, 80);
+-						} else if (Array.isArray(content)) {
+-							const textPart = content.find((c: any) => c.type === "text");
+-							if (textPart) title = textPart.text.slice(0, 80);
++			const fallback = createLineReaderSafe(filePath, rootDir);
++			if (fallback === null) return null;
++			try {
++				for await (const line of fallback.lines) {
++					try {
++						const entry = JSON.parse(line);
++						if (entry.type === "message" && entry.message?.role === "user") {
++							const content = entry.message.content;
++							if (typeof content === "string") {
++								title = content.slice(0, 80);
++							} else if (Array.isArray(content)) {
++								const textPart = content.find((part: any) => part.type === "text");
++								if (textPart) title = textPart.text.slice(0, 80);
++							}
++							break;
+ 						}
+-						break;
+-					}
+-				} catch { continue; }
++					} catch { continue; }
++				}
++			} finally {
++				fallback.close();
+ 			}
+ 		}
+ 
+@@ -580,6 +1090,40 @@ export async function scanSession(filePath: string): Promise<SessionInfo | null>
+ 	} catch { return null; }
+ }
+ 
++export async function collectSessions(sessionsDir: string): Promise<{
++	roots: SessionInfo[];
++	childCountMap: Map<string, number>;
++	totalCost: number;
++}> {
++	const cutoff = new Date(Date.now() - LOOKBACK_MS);
++	const sessionDirs = (readDirectorySafe(sessionsDir, sessionsDir) ?? [])
++		.filter(entry => entry.isDirectory() && entry.name.startsWith("--") && entry.name.endsWith("--") && !entry.name.includes("-T-pi-"))
++		.map(entry => path.join(sessionsDir, entry.name));
++	const recentFiles: string[] = [];
++	for (const directory of sessionDirs) {
++		for (const entry of readDirectorySafe(directory, sessionsDir) ?? []) {
++			if (!entry.isFile() || !entry.name.endsWith(".jsonl")) continue;
++			const filePath = path.join(directory, entry.name);
++			try {
++				const metadata = fs.lstatSync(filePath);
++				if (metadata.isFile() && metadata.mtime >= cutoff) recentFiles.push(filePath);
++			} catch { continue; }
++		}
++	}
++
++	const results = await Promise.all(recentFiles.map(file => scanSession(file, sessionsDir)));
++	const sessions = results.filter((session): session is SessionInfo => session !== null);
++	const roots = sessions.filter(session => !session.isChild);
++	const childCountMap = new Map<string, number>();
++	for (const child of sessions.filter(session => session.isChild)) {
++		if (child.parentSession) {
++			childCountMap.set(child.parentSession, (childCountMap.get(child.parentSession) || 0) + 1);
++		}
++	}
++	const totalCost = sessions.reduce((sum, session) => sum + session.cost, 0);
++	return { roots, childCountMap, totalCost };
++}
++
+ export function isHousekeeping(title: string): boolean {
+ 	const lower = title.toLowerCase();
+ 	const patterns = [
+@@ -605,11 +1149,11 @@ export function searchMemory(config: MemoryConfig, query: string, maxResults: nu
+ 	const fileMatches: string[] = [];
+ 	const lineResults: { file: string; line: number; text: string }[] = [];
+ 
+-	function searchFile(filePath: string, displayName: string) {
++	function searchFile(filePath: string, displayName: string, rootDir: string) {
+ 		if (displayName.toLowerCase().includes(needle) && !fileMatches.includes(displayName)) {
+ 			fileMatches.push(displayName);
+ 		}
+-		const content = readFileSafe(filePath);
++		const content = readFileSafe(filePath, rootDir);
+ 		if (!content) return;
+ 		const lines = content.split("\n");
+ 		for (let i = 0; i < lines.length && lineResults.length < maxResults; i++) {
+@@ -619,39 +1163,41 @@ export function searchMemory(config: MemoryConfig, query: string, maxResults: nu
+ 		}
+ 	}
+ 
+-	function searchDir(dir: string, prefix: string) {
+-		try {
+-			const files = fs.readdirSync(dir).filter(f => f.endsWith(".md")).sort();
+-			for (const f of files) {
+-				if (lineResults.length >= maxResults) break;
+-				searchFile(path.join(dir, f), prefix ? `${prefix}/${f}` : f);
+-			}
+-		} catch {}
++	function searchDir(dir: string, prefix: string, rootDir: string): boolean {
++		const entries = readDirectorySafe(dir, rootDir);
++		if (entries === null) return false;
++		const files = entries
++			.filter(entry => entry.isFile() && entry.name.endsWith(".md"))
++			.map(entry => entry.name)
++			.sort();
++		for (const file of files) {
++			if (lineResults.length >= maxResults) break;
++			searchFile(path.join(dir, file), prefix ? `${prefix}/${file}` : file, rootDir);
++		}
++		return true;
+ 	}
+ 
+-	searchDir(config.memoryDir, "");
+-	searchDir(config.dailyDir, "daily");
+-	searchDir(config.notesDir, "notes");
++	if (!searchDir(config.memoryDir, "", config.memoryDir)) return { fileMatches, lineResults };
++	searchDir(config.dailyDir, "daily", config.dailyDir);
++	searchDir(config.notesDir, "notes", config.memoryDir);
+ 
+ 	// Search extra dirs configured via PI_SEARCH_DIRS
+ 	for (const dirName of config.searchDirs) {
+ 		if (lineResults.length >= maxResults) break;
+ 		const dirPath = path.join(config.memoryDir, dirName);
+-		try {
+-			const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+-			// Search .md files directly in the dir
+-			const mdFiles = entries.filter(e => e.isFile() && e.name.endsWith(".md"));
+-			for (const f of mdFiles) {
+-				if (lineResults.length >= maxResults) break;
+-				searchFile(path.join(dirPath, f.name), `${dirName}/${f.name}`);
+-			}
+-			// Search one level of subdirectories (e.g. catchup/2026-04-20/*.md)
+-			const subDirs = entries.filter(e => e.isDirectory());
+-			for (const sub of subDirs) {
+-				if (lineResults.length >= maxResults) break;
+-				searchDir(path.join(dirPath, sub.name), `${dirName}/${sub.name}`);
+-			}
+-		} catch {}
++		const entries = readDirectorySafe(dirPath, config.memoryDir) ?? [];
++		// Search .md files directly in the dir
++		const mdFiles = entries.filter(entry => entry.isFile() && entry.name.endsWith(".md"));
++		for (const file of mdFiles) {
++			if (lineResults.length >= maxResults) break;
++			searchFile(path.join(dirPath, file.name), `${dirName}/${file.name}`, config.memoryDir);
++		}
++		// Search one level of subdirectories (e.g. catchup/2026-04-20/*.md)
++		const subDirs = entries.filter(entry => entry.isDirectory());
++		for (const subDir of subDirs) {
++			if (lineResults.length >= maxResults) break;
++			searchDir(path.join(dirPath, subDir.name), `${dirName}/${subDir.name}`, config.memoryDir);
++		}
+ 	}
+ 
+ 	return { fileMatches, lineResults };
+diff --git a/tests/config.test.ts b/tests/config.test.ts
+index df4ae834abe102929f5516b825de9f76c02bb063..c723e9ea576181f82872e67e16cf092fa5811f36 100644
+--- a/tests/config.test.ts
++++ b/tests/config.test.ts
+@@ -13,7 +13,6 @@ describe("buildConfig", () => {
+ 		assert.strictEqual(config.dailyDir, "/home/testuser/.pi/agent/memory/daily");
+ 		assert.strictEqual(config.notesDir, "/home/testuser/.pi/agent/memory/notes");
+ 		assert.deepStrictEqual(config.contextFiles, []);
+-		assert.strictEqual(config.autocommit, false);
+ 		assert.strictEqual(config.timezone, "UTC");
+ 	});
+ 
+@@ -46,26 +45,6 @@ describe("buildConfig", () => {
+ 		assert.deepStrictEqual(config.contextFiles, ["A.md", "B.md"]);
+ 	});
+ 
+-	it("enables autocommit with PI_AUTOCOMMIT=1", () => {
+-		const config = buildConfig({ HOME: "/home/x", PI_AUTOCOMMIT: "1" });
+-		assert.strictEqual(config.autocommit, true);
+-	});
+-
+-	it("enables autocommit with PI_AUTOCOMMIT=true", () => {
+-		const config = buildConfig({ HOME: "/home/x", PI_AUTOCOMMIT: "true" });
+-		assert.strictEqual(config.autocommit, true);
+-	});
+-
+-	it("does not enable autocommit with PI_AUTOCOMMIT=0", () => {
+-		const config = buildConfig({ HOME: "/home/x", PI_AUTOCOMMIT: "0" });
+-		assert.strictEqual(config.autocommit, false);
+-	});
+-
+-	it("does not enable autocommit with PI_AUTOCOMMIT=yes", () => {
+-		const config = buildConfig({ HOME: "/home/x", PI_AUTOCOMMIT: "yes" });
+-		assert.strictEqual(config.autocommit, false);
+-	});
+-
+ 	it("parses PI_SEARCH_DIRS as comma-separated list", () => {
+ 		const config = buildConfig({ HOME: "/home/x", PI_SEARCH_DIRS: "catchup, projects" });
+ 		assert.deepStrictEqual(config.searchDirs, ["catchup", "projects"]);
+@@ -101,12 +80,10 @@ describe("buildConfig", () => {
+ 		writeFile(path.join(memDir, ".pi-mem.json"), JSON.stringify({
+ 			searchDirs: ["catchup", "projects"],
+ 			contextFiles: ["SOUL.md"],
+-			autocommit: true,
+ 		}));
+ 		const config = buildConfig({ HOME: "/home/x", PI_MEMORY_DIR: memDir });
+ 		assert.deepStrictEqual(config.searchDirs, ["catchup", "projects"]);
+ 		assert.deepStrictEqual(config.contextFiles, ["SOUL.md"]);
+-		assert.strictEqual(config.autocommit, true);
+ 		cleanup(memDir);
+ 	});
+ 
+@@ -115,18 +92,27 @@ describe("buildConfig", () => {
+ 		writeFile(path.join(memDir, ".pi-mem.json"), JSON.stringify({
+ 			searchDirs: ["catchup"],
+ 			contextFiles: ["SOUL.md"],
+-			autocommit: true,
+ 		}));
+ 		const config = buildConfig({
+ 			HOME: "/home/x",
+ 			PI_MEMORY_DIR: memDir,
+ 			PI_SEARCH_DIRS: "projects,other",
+ 			PI_CONTEXT_FILES: "AGENTS.md",
+-			PI_AUTOCOMMIT: "0",
+ 		});
+ 		assert.deepStrictEqual(config.searchDirs, ["projects", "other"]);
+ 		assert.deepStrictEqual(config.contextFiles, ["AGENTS.md"]);
+-		assert.strictEqual(config.autocommit, false);
++		cleanup(memDir);
++	});
++
++	it("ignores removed autocommit settings", () => {
++		const memDir = makeTempDir();
++		writeFile(path.join(memDir, ".pi-mem.json"), JSON.stringify({ autocommit: true }));
++		const config = buildConfig({
++			HOME: "/home/x",
++			PI_MEMORY_DIR: memDir,
++			PI_AUTOCOMMIT: "true",
++		});
++		assert.strictEqual("autocommit" in config, false);
+ 		cleanup(memDir);
+ 	});
+ 
+@@ -144,12 +130,10 @@ describe("buildConfig", () => {
+ 		writeFile(path.join(memDir, ".pi-mem.json"), JSON.stringify({
+ 			searchDirs: "not-an-array",
+ 			contextFiles: 42,
+-			autocommit: "yes",
+ 		}));
+ 		const config = buildConfig({ HOME: "/home/x", PI_MEMORY_DIR: memDir });
+ 		assert.deepStrictEqual(config.searchDirs, []);
+ 		assert.deepStrictEqual(config.contextFiles, []);
+-		assert.strictEqual(config.autocommit, false);
+ 		cleanup(memDir);
+ 	});
+ 
+diff --git a/tests/file-helpers.test.ts b/tests/file-helpers.test.ts
+index 273755660d4b2682bcd81abcac28af0a56422a8d..af0d5cae3dfaac38f8716d4e825f3ae34f87ad03 100644
+--- a/tests/file-helpers.test.ts
++++ b/tests/file-helpers.test.ts
+@@ -2,7 +2,7 @@ import { describe, it, beforeEach, afterEach } from "node:test";
+ import assert from "node:assert";
+ import * as fs from "node:fs";
+ import * as path from "node:path";
+-import { readFileSafe, ensureDirs, safeResolvePath } from "../lib.ts";
++import { buildMemoryContext, readDirectorySafe, readFileSafe, readMemoryFile, ensureDirs, safeResolvePath } from "../lib.ts";
+ import { makeTempDir, cleanup, makeConfig, writeFile } from "./helpers.ts";
+ 
+ let tmpDir: string;
+@@ -36,6 +36,89 @@ describe("readFileSafe", () => {
+ 		fs.writeFileSync(filePath, "Hello \u2192 World \ud83d\ude80", "utf-8");
+ 		assert.strictEqual(readFileSafe(filePath), "Hello \u2192 World \ud83d\ude80");
+ 	});
++
++	it("does not follow a final symlink", () => {
++		const target = path.join(tmpDir, "target.md");
++		const link = path.join(tmpDir, "link.md");
++		fs.writeFileSync(target, "secret", "utf-8");
++		fs.symlinkSync(target, link);
++		assert.strictEqual(readFileSafe(link), null);
++	});
++});
++
++describe("readDirectorySafe", () => {
++	it("enumerates a real directory within its canonical root", () => {
++		const directory = path.join(tmpDir, "root", "inside");
++		writeFile(path.join(directory, "visible.md"), "visible");
++
++		assert.deepStrictEqual(readDirectorySafe(directory, path.join(tmpDir, "root"))?.map(entry => entry.name), ["visible.md"]);
++	});
++
++	it("rejects symlinked and outside directories without exposing names", () => {
++		const root = path.join(tmpDir, "root");
++		const outside = path.join(tmpDir, "outside");
++		const sentinel = "OUTSIDE_DIRECTORY_NAME_SENTINEL.md";
++		fs.mkdirSync(root);
++		writeFile(path.join(outside, sentinel), "outside");
++		fs.symlinkSync(outside, path.join(root, "linked"));
++
++		assert.strictEqual(readDirectorySafe(path.join(root, "linked"), root), null);
++		assert.strictEqual(readDirectorySafe(outside, root), null);
++	});
++
++	it("allows a real directory beneath a symlinked ancestor", () => {
++		const realRoot = path.join(tmpDir, "real-root");
++		const linkedRoot = path.join(tmpDir, "linked-root");
++		writeFile(path.join(realRoot, "inside", "visible.md"), "visible");
++		fs.symlinkSync(realRoot, linkedRoot);
++
++		assert.deepStrictEqual(readDirectorySafe(path.join(linkedRoot, "inside"), linkedRoot)?.map(entry => entry.name), ["visible.md"]);
++	});
++});
++
++describe("canonical memory reads", () => {
++	it("rejects an intermediate symlink that escapes the memory root", () => {
++		const config = makeConfig(tmpDir);
++		const external = path.join(tmpDir, "external");
++		fs.mkdirSync(config.memoryDir, { recursive: true });
++		fs.mkdirSync(external);
++		fs.writeFileSync(path.join(external, "secret.md"), "external secret", "utf-8");
++		fs.symlinkSync(external, path.join(config.memoryDir, "escape"));
++
++		const result = readMemoryFile(config, "escape/secret.md");
++		assert.strictEqual(result.details.reason, "invalid_path");
++		assert.doesNotMatch(result.text, /external secret/);
++	});
++
++	it("allows the configured root beneath a symlinked ancestor", () => {
++		const realPi = path.join(tmpDir, "real-pi");
++		const linkedPi = path.join(tmpDir, "linked-pi");
++		fs.mkdirSync(path.join(realPi, "agent", "memory"), { recursive: true });
++		fs.symlinkSync(realPi, linkedPi);
++		const memoryDir = path.join(linkedPi, "agent", "memory");
++		const config = makeConfig(tmpDir, {
++			memoryDir,
++			memoryFile: path.join(memoryDir, "MEMORY.md"),
++			scratchpadFile: path.join(memoryDir, "SCRATCHPAD.md"),
++			dailyDir: path.join(memoryDir, "daily"),
++			notesDir: path.join(memoryDir, "notes"),
++		});
++		ensureDirs(config);
++		fs.writeFileSync(path.join(memoryDir, "inside.md"), "inside", "utf-8");
++
++		assert.strictEqual(readMemoryFile(config, "inside.md").text, "inside");
++	});
++
++	it("does not inject context through an escaping intermediate symlink", () => {
++		const config = makeConfig(tmpDir, { contextFiles: ["escape/secret.md"] });
++		const external = path.join(tmpDir, "external-context");
++		fs.mkdirSync(config.memoryDir, { recursive: true });
++		fs.mkdirSync(external);
++		fs.writeFileSync(path.join(external, "secret.md"), "must not be injected", "utf-8");
++		fs.symlinkSync(external, path.join(config.memoryDir, "escape"));
++
++		assert.doesNotMatch(buildMemoryContext(config), /must not be injected/);
++	});
+ });
+ 
+ describe("ensureDirs", () => {
+diff --git a/tests/helpers.ts b/tests/helpers.ts
+index 0b6666f83eccd1e1d02b39295eb1744aa124a395..cbb675aa46c7be944f0dc934d5d030d23d9fff64 100644
+--- a/tests/helpers.ts
++++ b/tests/helpers.ts
+@@ -21,7 +21,6 @@ export function makeConfig(baseDir: string, overrides: Partial<MemoryConfig> = {
+ 		notesDir: path.join(memoryDir, "notes"),
+ 		contextFiles: [],
+ 		searchDirs: [],
+-		autocommit: false,
+ 		timezone: "UTC",
+ 		...overrides,
+ 	};
+diff --git a/tests/memory-read.test.ts b/tests/memory-read.test.ts
+index 2167b7ab7aaeaf686f0b6a3e6067b443c161135a..c266ae6f894182fd02ddae6441d4f99cc89e145b 100644
+--- a/tests/memory-read.test.ts
++++ b/tests/memory-read.test.ts
+@@ -1,8 +1,9 @@
+ import { describe, it, beforeEach, afterEach } from "node:test";
+ import assert from "node:assert/strict";
++import * as fs from "node:fs";
+ import * as path from "node:path";
+ import { cleanup, makeConfig, makeTempDir, writeFile } from "./helpers.ts";
+-import { ensureDirs, resolveIndexedFile, readMemoryFile } from "../lib.ts";
++import { ensureDirs, listMemoryFiles, resolveIndexedFile, readMemoryFile } from "../lib.ts";
+ 
+ let tmpDir: string;
+ 
+@@ -81,4 +82,61 @@ describe("memory_read indexed directory resolution", () => {
+ 		assert.match(result.text, /No INDEX\.md for activity\/2026-05-21/);
+ 		assert.match(result.text, /Indexed directories nearby: activity\/2026-05-23\//);
+ 	});
++
++	it("does not name symlinked indexed sibling directories", () => {
++		const config = seedIndexedDirectory();
++		const outside = path.join(tmpDir, "outside-index");
++		writeFile(path.join(outside, "INDEX.md"), "outside index");
++		fs.symlinkSync(outside, path.join(config.memoryDir, "activity", "OUTSIDE_INDEX_NAME_SENTINEL"));
++
++		const result = resolveIndexedFile(config, "activity/2026-05-21", "missing");
++		assert.match(result.text, /activity\/2026-05-23\//);
++		assert.doesNotMatch(result.text, /OUTSIDE_INDEX_NAME_SENTINEL|outside index/);
++	});
++});
++
++describe("memory_read list enumeration", () => {
++	beforeEach(() => { tmpDir = makeTempDir(); });
++	afterEach(() => { cleanup(tmpDir); });
++
++	it("keeps real entries while hiding symlinked directory and file names", () => {
++		const config = makeConfig(tmpDir);
++		ensureDirs(config);
++		writeFile(path.join(config.memoryDir, "inside.md"), "inside");
++
++		const outside = path.join(tmpDir, "outside-list");
++		writeFile(path.join(outside, "notes", "OUTSIDE_NOTE_NAME_SENTINEL.md"), "outside");
++		writeFile(path.join(outside, "daily", "OUTSIDE_DAILY_NAME_SENTINEL.md"), "outside");
++		fs.mkdirSync(path.join(outside, "catchup", "OUTSIDE_CATCHUP_NAME_SENTINEL"), { recursive: true });
++		writeFile(path.join(outside, "OUTSIDE_FILE_TARGET.md"), "outside");
++
++		fs.rmSync(config.notesDir, { recursive: true });
++		fs.rmSync(config.dailyDir, { recursive: true });
++		fs.symlinkSync(path.join(outside, "notes"), config.notesDir);
++		fs.symlinkSync(path.join(outside, "daily"), config.dailyDir);
++		fs.symlinkSync(path.join(outside, "catchup"), path.join(config.memoryDir, "catchup"));
++		fs.symlinkSync(path.join(outside, "OUTSIDE_FILE_TARGET.md"), path.join(config.memoryDir, "OUTSIDE_FILE_NAME_SENTINEL.md"));
++
++		const result = listMemoryFiles(config);
++		assert.match(result, /inside\.md/);
++		assert.doesNotMatch(result, /OUTSIDE_/);
++	});
++
++	it("does not enumerate children through a symlinked memory root", () => {
++		const realRoot = path.join(tmpDir, "outside-root");
++		writeFile(path.join(realRoot, "OUTSIDE_ROOT_NAME_SENTINEL.md"), "outside");
++		fs.mkdirSync(path.join(realRoot, "daily"));
++		fs.mkdirSync(path.join(realRoot, "notes"));
++		const linkedRoot = path.join(tmpDir, "linked-memory");
++		fs.symlinkSync(realRoot, linkedRoot);
++		const config = makeConfig(tmpDir, {
++			memoryDir: linkedRoot,
++			memoryFile: path.join(linkedRoot, "MEMORY.md"),
++			scratchpadFile: path.join(linkedRoot, "SCRATCHPAD.md"),
++			dailyDir: path.join(linkedRoot, "daily"),
++			notesDir: path.join(linkedRoot, "notes"),
++		});
++
++		assert.strictEqual(listMemoryFiles(config), "Memory directory is empty.");
++	});
+ });
+diff --git a/tests/private-file-recovery-race-worker.mjs b/tests/private-file-recovery-race-worker.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..d0c554cad5b80af4c3e66b857c600b9c647ca641
+--- /dev/null
++++ b/tests/private-file-recovery-race-worker.mjs
+@@ -0,0 +1,87 @@
++import fs from "node:fs";
++import { syncBuiltinESMExports } from "node:module";
++import * as path from "node:path";
++
++const [filePath, role, gateDir, staleToken] = process.argv.slice(2);
++if (!filePath || !role || !gateDir || !staleToken)
++	throw new Error("missing worker arguments");
++
++const lockPath = `${filePath}.lock`;
++const sleepBuffer = new Int32Array(
++	new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT),
++);
++const gate = (name) => path.join(gateDir, name);
++
++function mark(name, content = "") {
++	const finalPath = gate(name);
++	const temporaryPath = gate("." + name + "." + process.pid + ".tmp");
++	fs.writeFileSync(temporaryPath, content, { flag: "wx" });
++	fs.renameSync(temporaryPath, finalPath);
++}
++
++function waitFor(name) {
++	const deadline = Date.now() + 30_000;
++	while (!fs.existsSync(gate(name))) {
++		if (Date.now() >= deadline)
++			throw new Error(`timed out waiting for ${name}`);
++		Atomics.wait(sleepBuffer, 0, 0, 10);
++	}
++}
++
++if (role === "first" || role === "second") {
++	const renameSync = fs.renameSync.bind(fs);
++	let recoveryGated = false;
++	fs.renameSync = (oldPath, newPath) => {
++		const recoveryRename =
++			oldPath === lockPath || oldPath === path.join(lockPath, staleToken);
++		if (recoveryGated || !recoveryRename) return renameSync(oldPath, newPath);
++
++		recoveryGated = true;
++		mark(`${role}-recovery-ready`);
++		waitFor(`release-${role}-recovery`);
++		try {
++			const result = renameSync(oldPath, newPath);
++			if (role === "second") {
++				mark("second-recovery-result", "moved");
++				waitFor("release-second-after-rename");
++			}
++			return result;
++		} catch (error) {
++			if (role === "second") mark("second-recovery-result", "rejected");
++			throw error;
++		}
++	};
++} else if (role === "third") {
++	const mkdirSync = fs.mkdirSync.bind(fs);
++	let acquisitionObserved = false;
++	fs.mkdirSync = (directory, options) => {
++		if (acquisitionObserved || directory !== lockPath)
++			return mkdirSync(directory, options);
++		acquisitionObserved = true;
++		try {
++			const result = mkdirSync(directory, options);
++			mark("third-acquisition-result", "acquired");
++			return result;
++		} catch (error) {
++			mark("third-acquisition-result", "blocked");
++			throw error;
++		}
++	};
++} else {
++	throw new Error(`unknown worker role: ${role}`);
++}
++
++syncBuiltinESMExports();
++const { updatePrivateFile } = await import("../lib.ts");
++
++try {
++	updatePrivateFile(filePath, (current) => {
++		mark(`${role}-entered`);
++		if (role === "first") waitFor("release-first-action");
++		if (role === "third") waitFor("release-third-action");
++		return `${current}${role}\n`;
++	});
++} catch (error) {
++	console.error(`race worker ${role} failed`);
++	throw error;
++}
+diff --git a/tests/private-file-worker.mjs b/tests/private-file-worker.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..b76c9a939291f53f9647348eff5fa566d35118ca
+--- /dev/null
++++ b/tests/private-file-worker.mjs
+@@ -0,0 +1,34 @@
++import * as fs from "node:fs";
++
++import { updatePrivateFile } from "../lib.ts";
++
++const [filePath, role, gateDir] = process.argv.slice(2);
++if (!filePath || !role || !gateDir) throw new Error("missing worker arguments");
++
++const sleepBuffer = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
++const gate = (name) => `${gateDir}/${name}`;
++
++function waitFor(name) {
++	const deadline = Date.now() + 30_000;
++	while (!fs.existsSync(gate(name))) {
++		if (Date.now() >= deadline) throw new Error(`timed out waiting for ${name}`);
++		Atomics.wait(sleepBuffer, 0, 0, 10);
++	}
++}
++
++if (role === "first") {
++	updatePrivateFile(filePath, (current) => {
++		fs.writeFileSync(gate("first-entered"), "", { flag: "wx" });
++		waitFor("release-first");
++		return `${current}first\n`;
++	});
++} else if (role === "second") {
++	waitFor("first-entered");
++	fs.writeFileSync(gate("second-attempting"), "", { flag: "wx" });
++	updatePrivateFile(filePath, (current) => {
++		fs.writeFileSync(gate("second-entered"), "", { flag: "wx" });
++		return `${current}second\n`;
++	});
++} else {
++	throw new Error(`unknown worker role: ${role}`);
++}
+diff --git a/tests/private-file.test.ts b/tests/private-file.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..e789fc95fbdcec4eea2be8a4738febec65892284
+--- /dev/null
++++ b/tests/private-file.test.ts
+@@ -0,0 +1,529 @@
++import { afterEach, beforeEach, describe, it } from "node:test";
++import assert from "node:assert/strict";
++import { spawn } from "node:child_process";
++import { once } from "node:events";
++import * as fs from "node:fs";
++import * as os from "node:os";
++import * as path from "node:path";
++import { fileURLToPath } from "node:url";
++
++import { ensureDirs, updatePrivateFile, writePrivateFile } from "../lib.ts";
++import { cleanup, makeConfig, makeTempDir } from "./helpers.ts";
++
++let tmpDir: string;
++
++beforeEach(() => { tmpDir = makeTempDir(); });
++afterEach(() => { cleanup(tmpDir); });
++
++function mode(filePath: string): number {
++	return fs.statSync(filePath).mode & 0o777;
++}
++
++async function waitForPath(filePath: string): Promise<void> {
++	const deadline = Date.now() + 30_000;
++	while (!fs.existsSync(filePath)) {
++		if (Date.now() >= deadline) throw new Error(`timed out waiting for ${filePath}`);
++		await new Promise((resolve) => setTimeout(resolve, 10));
++	}
++}
++
++function waitForExit(child: ReturnType<typeof spawn>): Promise<void> {
++	let stderr = "";
++	child.stderr?.setEncoding("utf-8");
++	child.stderr?.on("data", (chunk: string) => { stderr += chunk; });
++	return new Promise((resolve, reject) => {
++		child.once("error", reject);
++		child.once("exit", (code, signal) => {
++			if (code === 0) resolve();
++			else reject(new Error(`worker exited with code ${code}, signal ${signal}: ${stderr}`));
++		});
++	});
++}
++
++async function exitedChildPid(): Promise<number> {
++	const child = spawn(process.execPath, ["-e", ""], { stdio: "ignore" });
++	const exited = once(child, "exit");
++	await once(child, "spawn");
++	if (child.pid === undefined) throw new Error("owner child has no pid");
++	const ownerPid = child.pid;
++	await exited;
++	assert.throws(
++		() => process.kill(ownerPid, 0),
++		(error: NodeJS.ErrnoException) => error.code === "ESRCH",
++	);
++	return ownerPid;
++}
++
++function releaseGate(gateDir: string, name: string): void {
++	const gatePath = path.join(gateDir, name);
++	if (!fs.existsSync(gatePath)) fs.writeFileSync(gatePath, "", { flag: "wx" });
++}
++
++describe("private file persistence", () => {
++	it("rejects directory leaf symlinks without changing their targets", () => {
++		const config = makeConfig(tmpDir);
++		const external = path.join(tmpDir, "external-directory");
++		fs.mkdirSync(external, { mode: 0o755 });
++		fs.chmodSync(external, 0o755);
++		fs.symlinkSync(external, config.memoryDir);
++
++		assert.throws(() => ensureDirs(config), /non-directory memory path/);
++		assert.equal(fs.lstatSync(config.memoryDir).isSymbolicLink(), true);
++		assert.equal(mode(external), 0o755);
++	});
++
++	it("rejects file leaf symlinks without reading or changing their targets", () => {
++		const config = makeConfig(tmpDir);
++		ensureDirs(config);
++		const external = path.join(tmpDir, "external.md");
++		fs.writeFileSync(external, "external secret", { mode: 0o644 });
++		fs.chmodSync(external, 0o644);
++		fs.symlinkSync(external, config.memoryFile);
++
++		assert.throws(
++			() => updatePrivateFile(config.memoryFile, (current) => `${current}local memory`),
++			/non-file memory path/,
++		);
++		assert.throws(() => writePrivateFile(config.memoryFile, "replacement"), /non-file memory path/);
++
++		assert.equal(fs.readFileSync(external, "utf-8"), "external secret");
++		assert.equal(mode(external), 0o644);
++		assert.equal(fs.lstatSync(config.memoryFile).isSymbolicLink(), true);
++		assert.deepEqual(
++			fs.readdirSync(config.memoryDir).filter((name) => name.endsWith(".tmp") || name.includes(".stale.")),
++			[],
++		);
++	});
++
++	it("rejects non-regular file leaves without changing them", () => {
++		const config = makeConfig(tmpDir);
++		ensureDirs(config);
++		fs.mkdirSync(config.memoryFile);
++		fs.writeFileSync(path.join(config.memoryFile, "sentinel"), "unchanged");
++
++		assert.throws(() => writePrivateFile(config.memoryFile, "replacement"), /non-file memory path/);
++		assert.equal(fs.readFileSync(path.join(config.memoryFile, "sentinel"), "utf-8"), "unchanged");
++	});
++
++	it("times out on a fresh lock without changing the target", { timeout: 10_000 }, () => {
++		const config = makeConfig(tmpDir);
++		ensureDirs(config);
++		writePrivateFile(config.memoryFile, "unchanged");
++		const original = fs.readFileSync(config.memoryFile);
++		const originalMode = mode(config.memoryFile);
++		const lockPath = `${config.memoryFile}.lock`;
++		const token = "fresh-owner-token";
++		fs.mkdirSync(lockPath, { mode: 0o700 });
++		fs.writeFileSync(
++			path.join(lockPath, token),
++			JSON.stringify({ token, pid: process.pid, hostname: os.hostname() }),
++			{ mode: 0o600 },
++		);
++
++		assert.throws(() => writePrivateFile(config.memoryFile, "replacement"), /Timed out waiting/);
++		assert.deepEqual(fs.readFileSync(config.memoryFile), original);
++		assert.equal(mode(config.memoryFile), originalMode);
++		assert.deepEqual(fs.readdirSync(lockPath), [token]);
++	});
++
++	it("preserves a malformed stale lock without changing the target", () => {
++		const config = makeConfig(tmpDir);
++		ensureDirs(config);
++		writePrivateFile(config.memoryFile, "unchanged");
++		const original = fs.readFileSync(config.memoryFile);
++		const lockPath = `${config.memoryFile}.lock`;
++		const markerPath = path.join(lockPath, "malformed-owner");
++		fs.mkdirSync(lockPath, { mode: 0o700 });
++		fs.writeFileSync(markerPath, "not json", { mode: 0o600 });
++		const staleTime = new Date(Date.now() - 10 * 60_000);
++		fs.utimesSync(lockPath, staleTime, staleTime);
++
++		assert.throws(() => writePrivateFile(config.memoryFile, "replacement"), /Refusing invalid memory file lock/);
++		assert.deepEqual(fs.readFileSync(config.memoryFile), original);
++		assert.deepEqual(fs.readdirSync(lockPath), ["malformed-owner"]);
++		assert.equal(fs.readFileSync(markerPath, "utf-8"), "not json");
++		assert.equal(mode(lockPath), 0o700);
++		assert.equal(mode(markerPath), 0o600);
++		assert.deepEqual(fs.readdirSync(config.memoryDir).filter((name) => name.includes(".stale.")), []);
++	});
++
++	it("preserves an unexpected entry in a stale lock without changing the target", () => {
++		const config = makeConfig(tmpDir);
++		ensureDirs(config);
++		writePrivateFile(config.memoryFile, "unchanged");
++		const original = fs.readFileSync(config.memoryFile);
++		const lockPath = `${config.memoryFile}.lock`;
++		const token = "stale-owner-token";
++		fs.mkdirSync(lockPath, { mode: 0o700 });
++		fs.writeFileSync(
++			path.join(lockPath, token),
++			JSON.stringify({ token, pid: process.pid, hostname: os.hostname() }),
++			{ mode: 0o600 },
++		);
++		fs.writeFileSync(path.join(lockPath, "unexpected"), "preserve me", { mode: 0o600 });
++		const staleTime = new Date(Date.now() - 10 * 60_000);
++		fs.utimesSync(lockPath, staleTime, staleTime);
++
++		assert.throws(() => writePrivateFile(config.memoryFile, "replacement"), /Refusing invalid memory file lock/);
++		assert.deepEqual(fs.readFileSync(config.memoryFile), original);
++		assert.deepEqual(fs.readdirSync(lockPath).sort(), [token, "unexpected"].sort());
++		assert.equal(fs.readFileSync(path.join(lockPath, "unexpected"), "utf-8"), "preserve me");
++		assert.deepEqual(fs.readdirSync(config.memoryDir).filter((name) => name.includes(".stale.")), []);
++	});
++
++	it("does not recover a stale same-host lock while its owner child is alive", { timeout: 15_000 }, async () => {
++		const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1_000)"], { stdio: "ignore" });
++		const exited = once(child, "exit");
++		await once(child, "spawn");
++		if (child.pid === undefined) throw new Error("owner child has no pid");
++
++		try {
++			const config = makeConfig(tmpDir);
++			ensureDirs(config);
++			writePrivateFile(config.memoryFile, "unchanged");
++			const original = fs.readFileSync(config.memoryFile);
++			const lockPath = `${config.memoryFile}.lock`;
++			const token = "live-owner-token";
++			fs.mkdirSync(lockPath, { mode: 0o700 });
++			fs.writeFileSync(
++				path.join(lockPath, token),
++				JSON.stringify({ token, pid: child.pid, hostname: os.hostname() }),
++				{ mode: 0o600 },
++			);
++			const staleTime = new Date(Date.now() - 10 * 60_000);
++			fs.utimesSync(lockPath, staleTime, staleTime);
++
++			assert.throws(() => writePrivateFile(config.memoryFile, "replacement"), /Timed out waiting/);
++			assert.deepEqual(fs.readFileSync(config.memoryFile), original);
++			assert.deepEqual(fs.readdirSync(lockPath), [token]);
++		} finally {
++			child.kill();
++			await exited;
++		}
++	});
++
++	it("does not recover a stale foreign-host lock", { timeout: 10_000 }, async () => {
++		const config = makeConfig(tmpDir);
++		ensureDirs(config);
++		writePrivateFile(config.memoryFile, "unchanged");
++		const ownerPid = await exitedChildPid();
++		const original = fs.readFileSync(config.memoryFile);
++		const lockPath = `${config.memoryFile}.lock`;
++		const token = "foreign-owner-token";
++		fs.mkdirSync(lockPath, { mode: 0o700 });
++		fs.writeFileSync(
++			path.join(lockPath, token),
++			JSON.stringify({ token, pid: ownerPid, hostname: "remote-pi-fixture" }),
++			{ mode: 0o600 },
++		);
++		const staleTime = new Date(Date.now() - 10 * 60_000);
++		fs.utimesSync(lockPath, staleTime, staleTime);
++
++		assert.throws(() => writePrivateFile(config.memoryFile, "replacement"), /Timed out waiting/);
++		assert.deepEqual(fs.readFileSync(config.memoryFile), original);
++		assert.deepEqual(fs.readdirSync(lockPath), [token]);
++	});
++
++	it("quarantines a stale same-host lock after its owner child exits", async () => {
++		const config = makeConfig(tmpDir);
++		ensureDirs(config);
++		writePrivateFile(config.memoryFile, "initial\n");
++		const ownerPid = await exitedChildPid();
++
++		const lockPath = `${config.memoryFile}.lock`;
++		const token = "stale-owner-token";
++		fs.mkdirSync(lockPath, { mode: 0o700 });
++		fs.writeFileSync(
++			path.join(lockPath, token),
++			JSON.stringify({ token, pid: ownerPid, hostname: os.hostname() }),
++			{ mode: 0o600 },
++		);
++		const staleTime = new Date(Date.now() - 10 * 60_000);
++		fs.utimesSync(lockPath, staleTime, staleTime);
++
++		updatePrivateFile(config.memoryFile, (current) => `${current}updated\n`);
++
++		assert.equal(fs.readFileSync(config.memoryFile, "utf-8"), "initial\nupdated\n");
++		assert.deepEqual(
++			fs.readdirSync(config.memoryDir).filter((name) => name.includes(".lock")),
++			[],
++		);
++	});
++
++	it("does not recover an interrupted claim while its reaper is alive", { timeout: 10_000 }, async () => {
++		const config = makeConfig(tmpDir);
++		ensureDirs(config);
++		writePrivateFile(config.memoryFile, "unchanged");
++		const child = spawn(process.execPath, ["-e", ""], { stdio: "ignore" });
++		const exited = once(child, "exit");
++		await once(child, "spawn");
++		if (child.pid === undefined) throw new Error("owner child has no pid");
++		const ownerPid = child.pid;
++		await exited;
++		assert.throws(
++			() => process.kill(ownerPid, 0),
++			(error: NodeJS.ErrnoException) => error.code === "ESRCH",
++		);
++		const original = fs.readFileSync(config.memoryFile);
++		const lockPath = `${config.memoryFile}.lock`;
++		const originalToken = "original-owner-token";
++		const recoveryToken = `.reaping.${process.pid}.00000000-0000-4000-8000-000000000001`;
++		fs.mkdirSync(lockPath, { mode: 0o700 });
++		fs.writeFileSync(
++			path.join(lockPath, recoveryToken),
++			JSON.stringify({ token: originalToken, pid: ownerPid, hostname: os.hostname() }),
++			{ mode: 0o600 },
++		);
++		const staleTime = new Date(Date.now() - 10 * 60_000);
++		fs.utimesSync(lockPath, staleTime, staleTime);
++
++		assert.throws(() => writePrivateFile(config.memoryFile, "replacement"), /Timed out waiting/);
++		assert.deepEqual(fs.readFileSync(config.memoryFile), original);
++		assert.deepEqual(fs.readdirSync(lockPath), [recoveryToken]);
++	});
++
++	it("recovers an interrupted claim after its same-host reaper exits", async () => {
++		const config = makeConfig(tmpDir);
++		ensureDirs(config);
++		writePrivateFile(config.memoryFile, "initial\n");
++		const child = spawn(process.execPath, ["-e", ""], { stdio: "ignore" });
++		const exited = once(child, "exit");
++		await once(child, "spawn");
++		if (child.pid === undefined) throw new Error("reaper child has no pid");
++		const reaperPid = child.pid;
++		await exited;
++
++		const lockPath = `${config.memoryFile}.lock`;
++		const originalToken = "original-owner-token";
++		const recoveryToken = `.reaping.${reaperPid}.00000000-0000-4000-8000-000000000002`;
++		fs.mkdirSync(lockPath, { mode: 0o700 });
++		fs.writeFileSync(
++			path.join(lockPath, recoveryToken),
++			JSON.stringify({ token: originalToken, pid: process.pid, hostname: os.hostname() }),
++			{ mode: 0o600 },
++		);
++		const staleTime = new Date(Date.now() - 10 * 60_000);
++		fs.utimesSync(lockPath, staleTime, staleTime);
++
++		updatePrivateFile(config.memoryFile, (current) => `${current}updated\n`);
++
++		assert.equal(fs.readFileSync(config.memoryFile, "utf-8"), "initial\nupdated\n");
++		assert.equal(fs.existsSync(lockPath), false);
++		assert.deepEqual(
++			fs.readdirSync(config.memoryDir).filter((name) => name.includes(".stale.")),
++			[],
++		);
++	});
++
++	it("prevents a stale observer from moving a successor lock", { timeout: 45_000 }, async () => {
++		const config = makeConfig(tmpDir);
++		ensureDirs(config);
++		writePrivateFile(config.memoryFile, "initial\n");
++		const child = spawn(process.execPath, ["-e", ""], { stdio: "ignore" });
++		const exited = once(child, "exit");
++		await once(child, "spawn");
++		if (child.pid === undefined) throw new Error("owner child has no pid");
++		const ownerPid = child.pid;
++		await exited;
++
++		const lockPath = `${config.memoryFile}.lock`;
++		const staleToken = "stale-race-owner-token";
++		fs.mkdirSync(lockPath, { mode: 0o700 });
++		fs.writeFileSync(
++			path.join(lockPath, staleToken),
++			JSON.stringify({ token: staleToken, pid: ownerPid, hostname: os.hostname() }),
++			{ mode: 0o600 },
++		);
++		const staleTime = new Date(Date.now() - 10 * 60_000);
++		fs.utimesSync(lockPath, staleTime, staleTime);
++
++		const gateDir = path.join(tmpDir, "recovery-race-gates");
++		fs.mkdirSync(gateDir);
++		const worker = fileURLToPath(new URL("./private-file-recovery-race-worker.mjs", import.meta.url));
++		// Node exposes syncBuiltinESMExports(), which lets the workers place exact
++		// barriers around the fs operations used by lib.ts. Bun still exercises the
++		// resulting protocol through the parent test.
++		const workerRuntime = process.versions.bun ? "node" : process.execPath;
++		const runtimeArgs = ["--experimental-strip-types"];
++		const start = (role: string) => spawn(
++			workerRuntime,
++			[...runtimeArgs, worker, config.memoryFile, role, gateDir, staleToken],
++			{ stdio: ["ignore", "ignore", "pipe"] },
++		);
++
++		const first = start("first");
++		const second = start("second");
++		const exits: Promise<void>[] = [waitForExit(first), waitForExit(second)];
++		let failure: unknown;
++		try {
++			await Promise.all([
++				waitForPath(path.join(gateDir, "first-recovery-ready")),
++				waitForPath(path.join(gateDir, "second-recovery-ready")),
++			]);
++			releaseGate(gateDir, "release-first-recovery");
++			await waitForPath(path.join(gateDir, "first-entered"));
++			const activeLeaf = fs.lstatSync(lockPath);
++			const activeMarkers = fs.readdirSync(lockPath);
++
++			releaseGate(gateDir, "release-second-recovery");
++			await waitForPath(path.join(gateDir, "second-recovery-result"));
++			const third = start("third");
++			exits.push(waitForExit(third));
++			await waitForPath(path.join(gateDir, "third-acquisition-result"));
++
++			assert.equal(
++				fs.readFileSync(path.join(gateDir, "third-acquisition-result"), "utf-8"),
++				"blocked",
++				"the successor lock must remain held while its writer is active",
++			);
++			assert.equal(
++				fs.readFileSync(path.join(gateDir, "second-recovery-result"), "utf-8"),
++				"rejected",
++				"a stale observation must not move the successor lock",
++			);
++			const afterLeaf = fs.lstatSync(lockPath);
++			assert.equal(afterLeaf.dev, activeLeaf.dev);
++			assert.equal(afterLeaf.ino, activeLeaf.ino);
++			assert.deepEqual(fs.readdirSync(lockPath), activeMarkers);
++		} catch (error) {
++			failure = error;
++		} finally {
++			for (const gateName of [
++				"release-first-recovery",
++				"release-second-recovery",
++				"release-second-after-rename",
++				"release-first-action",
++				"release-third-action",
++			]) releaseGate(gateDir, gateName);
++		}
++
++		const results = await Promise.allSettled(exits);
++		if (failure !== undefined) throw failure;
++		for (const result of results) {
++			if (result.status === "rejected") throw result.reason;
++		}
++		assert.deepEqual(
++			fs.readFileSync(config.memoryFile, "utf-8").trim().split("\n").sort(),
++			["first", "initial", "second", "third"],
++		);
++		assert.equal(fs.existsSync(lockPath), false);
++	});
++
++	it("orders the atomic rename before parent sync and propagates sync errors", () => {
++		const config = makeConfig(tmpDir);
++		ensureDirs(config);
++		writePrivateFile(config.memoryFile, "initial");
++		const calls: string[] = [];
++		const parentDescriptor = 1234;
++		const syncError = Object.assign(new Error("directory fsync failed"), { code: "EINVAL" });
++		const operations = {
++			supportsDirectoryFsync: true,
++			openSync(directory: string, flags: number): number {
++				calls.push("open");
++				assert.equal(directory, config.memoryDir);
++				assert.equal(
++					flags,
++					fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | fs.constants.O_NOFOLLOW,
++				);
++				assert.equal(fs.readFileSync(config.memoryFile, "utf-8"), "initial");
++				return parentDescriptor;
++			},
++			renameSync(oldPath: string, newPath: string): void {
++				calls.push("rename");
++				fs.renameSync(oldPath, newPath);
++			},
++			fsyncSync(descriptor: number): void {
++				calls.push("fsync");
++				assert.equal(descriptor, parentDescriptor);
++				assert.equal(fs.readFileSync(config.memoryFile, "utf-8"), "replacement");
++				throw syncError;
++			},
++			closeSync(descriptor: number): void {
++				calls.push("close");
++				assert.equal(descriptor, parentDescriptor);
++			},
++		};
++
++		assert.throws(
++			() => writePrivateFile(config.memoryFile, "replacement", operations),
++			(error: unknown) => error === syncError,
++		);
++
++		assert.deepEqual(calls, ["open", "rename", "fsync", "close"]);
++		assert.equal(fs.readFileSync(config.memoryFile, "utf-8"), "replacement");
++		assert.deepEqual(
++			fs.readdirSync(config.memoryDir).filter((name) => name.endsWith(".tmp") || name.endsWith(".lock")),
++			[],
++		);
++	});
++
++	it("keeps atomic replacement when Windows directory fsync is unsupported", () => {
++		const config = makeConfig(tmpDir);
++		ensureDirs(config);
++		writePrivateFile(config.memoryFile, "initial");
++		const calls: string[] = [];
++		const unsupported = (): never => { throw new Error("directory fsync operation was called"); };
++		const operations = {
++			supportsDirectoryFsync: false,
++			openSync: unsupported,
++			renameSync(oldPath: string, newPath: string): void {
++				calls.push("rename");
++				fs.renameSync(oldPath, newPath);
++			},
++			fsyncSync: unsupported,
++			closeSync: unsupported,
++		};
++
++		writePrivateFile(config.memoryFile, "replacement", operations);
++
++		assert.deepEqual(calls, ["rename"]);
++		assert.equal(fs.readFileSync(config.memoryFile, "utf-8"), "replacement");
++		assert.deepEqual(
++			fs.readdirSync(config.memoryDir).filter((name) => name.endsWith(".tmp") || name.endsWith(".lock")),
++			[],
++		);
++	});
++
++	it("serializes two process writers and leaves complete private state", { timeout: 45_000 }, async () => {
++		const config = makeConfig(tmpDir);
++		ensureDirs(config);
++		writePrivateFile(config.memoryFile, "initial\n");
++		const gateDir = path.join(tmpDir, "gates");
++		fs.mkdirSync(gateDir);
++		const worker = fileURLToPath(new URL("./private-file-worker.mjs", import.meta.url));
++		const runtimeArgs = process.versions.bun ? [] : ["--experimental-strip-types"];
++		const start = (role: string) => spawn(
++			process.execPath,
++			[...runtimeArgs, worker, config.memoryFile, role, gateDir],
++			{ stdio: ["ignore", "ignore", "pipe"] },
++		);
++
++		const first = start("first");
++		const firstExit = waitForExit(first);
++		await waitForPath(path.join(gateDir, "first-entered"));
++		const lockPath = `${config.memoryFile}.lock`;
++		assert.equal(mode(lockPath), 0o700);
++		const ownerMarkers = fs.readdirSync(lockPath);
++		assert.equal(ownerMarkers.length, 1);
++		assert.equal(mode(path.join(lockPath, ownerMarkers[0])), 0o600);
++		const second = start("second");
++		const secondExit = waitForExit(second);
++		try {
++			await waitForPath(path.join(gateDir, "second-attempting"));
++			await new Promise((resolve) => setTimeout(resolve, 250));
++			assert.equal(fs.existsSync(path.join(gateDir, "second-entered")), false);
++			assert.equal(fs.readFileSync(config.memoryFile, "utf-8"), "initial\n");
++		} finally {
++			fs.writeFileSync(path.join(gateDir, "release-first"), "");
++		}
++
++		await Promise.all([firstExit, secondExit]);
++		assert.equal(fs.readFileSync(config.memoryFile, "utf-8"), "initial\nfirst\nsecond\n");
++		assert.equal(mode(config.memoryFile), 0o600);
++		assert.equal(fs.existsSync(`${config.memoryFile}.lock`), false);
++		assert.deepEqual(
++			fs.readdirSync(config.memoryDir).filter((name) => name.endsWith(".tmp")),
++			[],
++		);
++	});
++});
+diff --git a/tests/search.test.ts b/tests/search.test.ts
+index 8c21c201e03bd4061230af172a28a622a525c9f0..10abf55521ead50b1e3064c5c6eb31f6c5153e89 100644
+--- a/tests/search.test.ts
++++ b/tests/search.test.ts
+@@ -180,4 +180,36 @@ describe("searchMemory", () => {
+ 		const result = searchMemory(config, "INDEX");
+ 		assert.ok(result.fileMatches.includes("catchup/2026-04-20/INDEX.md"));
+ 	});
++
++	it("keeps real results while hiding symlinked directory and file names", () => {
++		const config = makeConfig(tmpDir, { searchDirs: ["linked-extra"] });
++		ensureDirs(config);
++		writeFile(config.memoryFile, "shared needle in memory");
++		const outside = `${tmpDir}/outside-search`;
++		writeFile(`${outside}/OUTSIDE_DIRECTORY_NAME_SENTINEL.md`, "shared needle outside");
++		fs.symlinkSync(outside, `${config.memoryDir}/linked-extra`);
++		fs.symlinkSync(`${outside}/OUTSIDE_DIRECTORY_NAME_SENTINEL.md`, `${config.memoryDir}/OUTSIDE_FILE_NAME_SENTINEL.md`);
++
++		const result = searchMemory(config, "shared needle");
++		assert.deepStrictEqual(result.lineResults.map(match => match.file), ["MEMORY.md"]);
++		assert.doesNotMatch(JSON.stringify(result), /OUTSIDE_/);
++	});
++
++	it("does not search child directories through a symlinked memory root", () => {
++		const realRoot = `${tmpDir}/outside-root`;
++		writeFile(`${realRoot}/OUTSIDE_ROOT_NAME_SENTINEL.md`, "shared needle");
++		fs.mkdirSync(`${realRoot}/daily`);
++		fs.mkdirSync(`${realRoot}/notes`);
++		const linkedRoot = `${tmpDir}/linked-memory`;
++		fs.symlinkSync(realRoot, linkedRoot);
++		const config = makeConfig(tmpDir, {
++			memoryDir: linkedRoot,
++			memoryFile: `${linkedRoot}/MEMORY.md`,
++			scratchpadFile: `${linkedRoot}/SCRATCHPAD.md`,
++			dailyDir: `${linkedRoot}/daily`,
++			notesDir: `${linkedRoot}/notes`,
++		});
++
++		assert.deepStrictEqual(searchMemory(config, "shared needle"), { fileMatches: [], lineResults: [] });
++	});
+ });
+diff --git a/tests/session-scanner.test.ts b/tests/session-scanner.test.ts
+index b31832e70917768bb0482c58e3c99052eab652d5..c49e89f56ef5c156e89eaf78c6ce642a4e40f3b9 100644
+--- a/tests/session-scanner.test.ts
++++ b/tests/session-scanner.test.ts
+@@ -2,7 +2,7 @@ import { describe, it, beforeEach, afterEach } from "node:test";
+ import assert from "node:assert";
+ import * as fs from "node:fs";
+ import * as path from "node:path";
+-import { scanSession, isHousekeeping } from "../lib.ts";
++import { collectSessions, scanSession, isHousekeeping } from "../lib.ts";
+ import { makeTempDir, cleanup } from "./helpers.ts";
+ 
+ let tmpDir: string;
+@@ -134,6 +134,17 @@ describe("scanSession", () => {
+ 		assert.strictEqual(result, null);
+ 	});
+ 
++	it("does not follow a final session-file symlink", async () => {
++		const target = writeSessionFile(tmpDir, "target.jsonl", [
++			{ timestamp: new Date().toISOString() },
++			{ type: "session_info", name: "OUTSIDE_SESSION_TITLE_SENTINEL" },
++		]);
++		const linked = path.join(tmpDir, "OUTSIDE_SESSION_FILE_NAME_SENTINEL.jsonl");
++		fs.symlinkSync(target, linked);
++
++		assert.strictEqual(await scanSession(linked), null);
++	});
++
+ 	it("handles lines with invalid JSON gracefully (skips them)", async () => {
+ 		const filePath = path.join(tmpDir, "mixed.jsonl");
+ 		const header = JSON.stringify({ timestamp: new Date().toISOString() });
+@@ -155,6 +166,46 @@ describe("scanSession", () => {
+ 	});
+ });
+ 
++describe("collectSessions", () => {
++	it("keeps real sessions while hiding symlinked directory and file names", async () => {
++		const sessionsDir = path.join(tmpDir, "sessions");
++		const insideDir = path.join(sessionsDir, "--inside--");
++		const outsideDir = path.join(tmpDir, "--outside--");
++		fs.mkdirSync(insideDir, { recursive: true });
++		fs.mkdirSync(outsideDir);
++		writeSessionFile(insideDir, "inside.jsonl", [
++			{ timestamp: new Date().toISOString() },
++			{ type: "session_info", name: "NORMAL_SESSION_TITLE" },
++		]);
++		const outsideFile = writeSessionFile(outsideDir, "OUTSIDE_SESSION_NAME_SENTINEL.jsonl", [
++			{ timestamp: new Date().toISOString() },
++			{ type: "session_info", name: "OUTSIDE_SESSION_TITLE_SENTINEL" },
++		]);
++		fs.symlinkSync(outsideDir, path.join(sessionsDir, "--OUTSIDE_DIRECTORY_NAME_SENTINEL--"));
++		fs.symlinkSync(outsideFile, path.join(insideDir, "OUTSIDE_FILE_NAME_SENTINEL.jsonl"));
++
++		const result = await collectSessions(sessionsDir);
++		assert.deepStrictEqual(result.roots.map(session => session.title), ["NORMAL_SESSION_TITLE"]);
++		assert.doesNotMatch(JSON.stringify(result.roots), /OUTSIDE_/);
++	});
++
++	it("does not enumerate a symlinked sessions root", async () => {
++		const realRoot = path.join(tmpDir, "outside-sessions");
++		const sessionDir = path.join(realRoot, "--outside--");
++		fs.mkdirSync(sessionDir, { recursive: true });
++		writeSessionFile(sessionDir, "OUTSIDE_ROOT_NAME_SENTINEL.jsonl", [
++			{ timestamp: new Date().toISOString() },
++			{ type: "session_info", name: "OUTSIDE_ROOT_TITLE_SENTINEL" },
++		]);
++		const linkedRoot = path.join(tmpDir, "linked-sessions");
++		fs.symlinkSync(realRoot, linkedRoot);
++
++		const result = await collectSessions(linkedRoot);
++		assert.deepStrictEqual(result.roots, []);
++		assert.strictEqual(result.totalCost, 0);
++	});
++});
++
+ describe("isHousekeeping", () => {
+ 	it("detects 'clear done' titles", () => {
+ 		assert.ok(isHousekeeping("Clear done items"));
+diff --git a/tests/source-security.test.ts b/tests/source-security.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..dd005fe8a88e3374dc03e32fcda6e93d61fb357c
+--- /dev/null
++++ b/tests/source-security.test.ts
+@@ -0,0 +1,43 @@
++import { describe, it } from "node:test";
++import assert from "node:assert/strict";
++import * as fs from "node:fs";
++
++const indexSource = fs.readFileSync(new URL("../index.ts", import.meta.url), "utf-8");
++const libSource = fs.readFileSync(new URL("../lib.ts", import.meta.url), "utf-8");
++const readmeSource = fs.readFileSync(new URL("../README.md", import.meta.url), "utf-8");
++
++describe("source security ordering", () => {
++	it("validates private directories before reading the summary cache", () => {
++		const start = indexSource.indexOf("async function getOrRebuildSummary");
++		const end = indexSource.indexOf("export default function", start);
++		const body = indexSource.slice(start, end);
++		const ensurePosition = body.indexOf("ensureDirs(config);");
++		const readPosition = body.indexOf("readFileSafe(SUMMARY_CACHE, config.dailyDir)");
++
++		assert.ok(ensurePosition >= 0, "getOrRebuildSummary must validate directories");
++		assert.ok(readPosition > ensurePosition, "summary cache must be read only after directory validation");
++		assert.doesNotMatch(body, /readFileSafe\(SUMMARY_CACHE\)(?!,)/);
++	});
++
++	it("streams session JSONL through the safe no-follow open seam", () => {
++		const start = libSource.indexOf("export async function scanSession");
++		const end = libSource.indexOf("export async function collectSessions", start);
++		const body = libSource.slice(start, end);
++
++		assert.match(body, /createLineReaderSafe\(filePath, rootDir\)/);
++		assert.match(body, /for await \(const line of/);
++		assert.doesNotMatch(body, /readFileSafe|split\(\/\\r\?\\n/);
++	});
++
++	it("keeps managed Git autocommit removed", () => {
++		for (const source of [indexSource, libSource]) {
++			assert.doesNotMatch(source, /\bPI_AUTOCOMMIT\b|\bgitCommit\b/);
++		}
++		assert.doesNotMatch(libSource, /node:child_process/);
++		assert.match(readmeSource, /deliberately\s+removes upstream Git autocommit/);
++		assert.match(readmeSource, /PI_AUTOCOMMIT.*field are inert/s);
++		assert.match(readmeSource, /private Git workflow outside Pi Mem/);
++		assert.match(readmeSource, /same-host owner is proven to have\s+exited/);
++		assert.match(readmeSource, /in-progress-recovery locks\s+remain in place/);
++	});
++});

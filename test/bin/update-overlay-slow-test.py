@@ -802,6 +802,9 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 "keep": "1",
                 "better-sqlite3": "1",
                 "@earendil-works/pi-tui": "1",
+                "@mariozechner/pi-ai": "1",
+                "@mariozechner/pi-coding-agent": "1",
+                "@mariozechner/pi-tui": "1",
                 "@sinclair/typebox": "1",
                 "typebox": "1",
             },
@@ -809,6 +812,9 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 "optional-keep": "1",
                 "better-sqlite3": "1",
                 "@earendil-works/pi-tui": "1",
+                "@mariozechner/pi-ai": "1",
+                "@mariozechner/pi-coding-agent": "1",
+                "@mariozechner/pi-tui": "1",
                 "@sinclair/typebox": "1",
                 "typebox": "1",
             },
@@ -824,6 +830,12 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             "pi-lens": {
                 "@earendil-works/pi-tui",
                 "typebox",
+            },
+            "pi-mem": {
+                "@mariozechner/pi-ai",
+                "@mariozechner/pi-coding-agent",
+                "@mariozechner/pi-tui",
+                "@sinclair/typebox",
             },
             "pi-smart-fetch": {
                 "@earendil-works/pi-tui",

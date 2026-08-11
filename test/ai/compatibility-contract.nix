@@ -48,6 +48,7 @@ in
     "pi-lens"
     "pi-loop"
     "pi-markdown-preview"
+    "pi-mem"
     "pi-model-router"
     "pi-multi-pass"
     "pi-ponytail"

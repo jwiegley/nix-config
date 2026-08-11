@@ -43,6 +43,7 @@ let
         pi-insights
         pi-lens
         pi-loop
+        pi-mem
         pi-model-router
         pi-multi-pass
         pi-ponytail
@@ -325,12 +326,14 @@ let
       src,
       npmDepsHash,
       bundleEntry ? null,
+      forceEmptyCache ? false,
       testBundleEntry ? null,
       prepareBundle ? (_root: ""),
       nodejs ? buildPackages.nodejs_22,
     }:
     buildNpmPackage {
       inherit
+        forceEmptyCache
         pname
         version
         src
@@ -394,6 +397,7 @@ let
   markdownPreviewSource = mkMemberReleaseSource members.markdown-preview { };
   artifactsSource = mkMemberReleaseSource members.artifacts { };
   insightsSource = mkMemberReleaseSource members.insights { };
+  memSource = mkMemberReleaseSource members.mem { };
   dynamicWorkflowsSource = mkMemberReleaseSource members.dynamic-workflows { };
   subagentsSource = mkMemberReleaseSource members.subagents { };
 
@@ -544,6 +548,18 @@ let
     version = members.insights.version;
     src = insightsSource;
     npmDepsHash = members.insights.hashes.npmDepsHash;
+  };
+  pi-mem = mkNpmPackageRoot {
+    pname = members.mem.attrName;
+    version = members.mem.version;
+    src = memSource;
+    npmDepsHash = members.mem.hashes.npmDepsHash;
+    forceEmptyCache = true;
+    prepareBundle = root: ''
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
+        < ${./patches/pi-mem-private-state.patch}
+    '';
   };
 
   mkCopyRoot =

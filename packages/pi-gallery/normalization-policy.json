@@ -60,6 +60,17 @@
       "defensiveForbidDependencies": [],
       "overrideDependencies": {}
     },
+    "pi-mem": {
+      "removeTopLevel": [],
+      "forbidDependencies": [],
+      "defensiveForbidDependencies": [
+        "@mariozechner/pi-ai",
+        "@mariozechner/pi-coding-agent",
+        "@mariozechner/pi-tui",
+        "@sinclair/typebox"
+      ],
+      "overrideDependencies": {}
+    },
     "pi-smart-fetch": {
       "removeTopLevel": [],
       "forbidDependencies": [],

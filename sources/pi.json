@@ -385,6 +385,28 @@
       },
       "version": "0.11.1"
     },
+    "pi-mem": {
+      "hashes": {
+        "npmDepsHash": "sha256-6UWrDdJ+EiREQrfaFh12iI8MVfkPdY83MXtsccFgOuw="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-+b1jIjNBNtTBbvaBUHveOQmSezxX4sDSnNDYlLpTaLc=",
+          "url": "https://registry.npmjs.org/@askjo/pi-mem/-/pi-mem-1.2.0.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/@askjo/pi-mem/-/pi-mem-1.2.0.tgz"
+      },
+      "update": {
+        "artifacts": [
+          "packages/pi-gallery/locks/pi-mem-package-lock.json"
+        ],
+        "kind": "npm-release",
+        "normalizer": "pi-gallery-v1",
+        "package": "@askjo/pi-mem"
+      },
+      "version": "1.2.0"
+    },
     "pi-model-router": {
       "source": {
         "args": {

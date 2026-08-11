@@ -118,6 +118,24 @@ Clio currently serves neither catalog-advertised local route. Choose and impleme
 ]
 #+end_src
 
+* DONE [#C] Package and install pi-mem for Pi
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-8og
+:LABELS: []
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-11 Tue 13:11]
+:MODIFIED: [2026-08-11 Tue 15:32]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-11 Tue 15:32]
+:CLOSE_REASON: Pinned @askjo/pi-mem 1.2.0 through the shared gallery source, normalized lock, package, and projection pipeline; hardened private memory state and removed managed Git autocommit; package and gallery builds, Bun/Node 181-test suites, strict updater suite, root/portable all-system evaluations, and independent architecture/security reviews are green. No host activation performed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension using the existing source/package/catalog installation pattern. Verify the real package and managed Pi projection without activating hosts.
+
 * DOING [#B] Make obr available across the managed fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

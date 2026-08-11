@@ -43,6 +43,7 @@ in
     "router"
     "rewind"
     "blackhole"
+    "mem"
     "trace"
     "markdown-preview"
     "caveman"
@@ -126,6 +127,10 @@ in
     };
     blackhole = member "pi-blackhole" {
       publicName = "pi-blackhole";
+      extension = "index.ts";
+    };
+    mem = member "pi-mem" {
+      publicName = "@askjo/pi-mem";
       extension = "index.ts";
     };
     trace = member "pi-trace-extension" {

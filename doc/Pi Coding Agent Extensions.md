@@ -8,13 +8,13 @@ tags:
   - ai-agents
   - developer-tools
 created: 2026-07-27
-updated: 2026-08-07
+updated: 2026-08-11
 pi-version: 0.83.0
 ---
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: 26 gallery packages available on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: 27 gallery packages available on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope.
 
@@ -44,6 +44,7 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `@yeliu84/pi-model-router` | 0.4.4 | Per-turn route and reasoning-tier selection | `/router` |
 | `pi-rewind` | 0.5.0 | Conversation and file checkpoints | `/rewind` |
 | `pi-blackhole` | 0.4.2 | Context compaction and observational memory | `/blackhole`, `recall` |
+| `@askjo/pi-mem` | 1.2.0 | Explicit plain-Markdown memory and scratchpad | `memory_write`, `memory_read`, `memory_search`, `scratchpad` |
 | `pi-trace-extension` | 0.1.12 | Local execution traces and HTML reports | `/trace` |
 | `pi-markdown-preview` | 0.11.1 | Terminal, browser, PDF, and artifact previews | `/preview`, `preview_export` |
 | `pi-caveman` | 1.0.7 | Compressed response style | `/caveman` |
@@ -119,7 +120,7 @@ The generated keymap retains the ordinary keys and adds Emacs-style editing:
 
 **Version:** local · **Links:** Nix authority: `~/src/nix/packages/pi-gallery/` · deployed leaf: `~/.config/pi/agent/extensions/nix-gallery/index.ts`
 
-The Nix Gallery loader projects the complete managed package set on every host. It imports and registers extensions in deterministic order, except that Linux does not automatically import the two loopback providers or their router. All 26 immutable package paths remain in the projection. Before registration the loader suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
+The Nix Gallery loader projects the complete managed package set on every host. It imports and registers extensions in deterministic order, except that Linux does not automatically import the two loopback providers or their router. All 27 immutable package paths remain in the projection. Before registration the loader suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
 
 **Basic usage.** No direct command is required. Run `/reload` after activating a new Nix generation, or start a fresh Pi process, to load the current gallery. The loader itself owns no mutable state.
 
@@ -190,6 +191,16 @@ Pi Blackhole combines deterministic structured compaction with observational mem
 The fleet activation policy enables memory, automatic Blackhole compaction, and mid-run resume. It preflights path and JSON blockers before Home Manager changes managed links, then atomically updates the user-owned `~/.config/pi/agent/pi-blackhole/pi-blackhole-config.json`. It preserves user-selected models and thresholds while reconciling `memory=true`, `compaction=auto`, `compactionEngine=blackhole`, and `midRunCompaction=resume` and removing the retired aliases `overrideDefaultCompaction`, `noAutoCompact`, and `passive`; it also keeps that directory and file at modes 0700 and 0600. The packaged extension uses Pi's live context accounting and starts proactive compaction at 70 percent of the active model's context window: 735,000 tokens for the 1,050,000-token Sol model and 183,500 for a 262,144-token local model. Blackhole's `compactAfterTokens` remains the fallback only when Pi cannot report usable context data. Process-level `PI_BLACKHOLE_*`, `PI_VCC_OM_PASSIVE`, or `PI_OBSERVATIONAL_MEMORY_PASSIVE` settings can override the file.
 
 **Basic usage.** Use `/blackhole` for immediate compaction, `/blackhole configure` for other mutable settings, `/blackhole-memory` for pipeline status, and `/blackhole-recall <query>` for manual searches. The `recall` tool supports entry expansion, file drill-down, regular expressions, lineage or all-session scope, and file/touched modes. `/blackhole om-off` is temporary: the next Nix activation restores the requested memory policy. Run `/reload` or start a new Pi process after activating a policy change because Blackhole caches its configuration.
+
+### Pi Mem
+
+**Version:** 1.2.0 · **Links:** [Pi Packages](https://pi.dev/packages/@askjo/pi-mem) · [Home](https://github.com/jo-inc/pi-mem#readme) · [GitHub](https://github.com/jo-inc/pi-mem)
+
+Pi Mem maintains explicit, user-directed memory as plain Markdown. `MEMORY.md` holds durable facts and decisions, dated files hold daily notes, `notes/` holds named topics, and `SCRATCHPAD.md` holds a checklist. Writes and mutating scratchpad actions require an explicit user request. It injects selected memory, recent daily logs, and recent catchup indexes into each agent turn, so the chosen model provider receives that content along with the rest of the prompt. This is distinct from Blackhole's session-derived observational memory and compaction pipeline; Pi Mem does not own Blackhole's `recall` tool.
+
+The managed package keeps its dashboard summary local instead of making upstream's automatic secondary model request. It reads recent Pi session titles and costs for the local dashboard, but does not send that inventory to a separate summarizer. Its mutable root is logically `~/.pi/agent/memory` and therefore resolves through the managed compatibility link to `~/.config/pi/agent/memory`; `PI_MEMORY_DIR` may select another root. Configured state directories are created or tightened to mode 0700, and files Pi Mem creates or replaces use mode 0600. File updates reject symbolic-link leaves, replace whole files atomically, and serialize read-modify-write operations across Pi processes. Stale file locks are reclaimed only when a same-host owner is proven to have exited; foreign-host, live-owner, malformed, and in-progress-recovery locks remain in place, and writes fail closed. Nix does not own or delete this state. The managed package deliberately removes upstream Git autocommit: `PI_AUTOCOMMIT` and the legacy `.pi-mem.json` `autocommit` field are inert. Memory history therefore requires an explicit private Git workflow outside Pi Mem, operated manually or by a separate external tool.
+
+**Basic usage.** Use `memory_write` for durable, daily, or named notes; `memory_read` for exact files and indexed notes; `memory_search` for case-insensitive local search; and `scratchpad` to add, complete, reopen, list, or clear checklist items. Start a fresh Pi process or run `/reload` after activation to register the tools.
 
 ### Trace
 
@@ -396,7 +407,7 @@ The Pi profile also installs the support toolchain expected by Lens and the orch
 - The active profile root is `~/.config/pi/agent`; Nix owns only the generated leaves enumerated above.
 - Run `/reload` after a Nix activation when the current Pi process must adopt changed extension code.
 - On Hera and Clio, restart or reload Pi after the llama-swap or oMLX model roster changes, because local provider discovery runs once during registration.
-- Mutable extension state remains outside Nix ownership. Examples include Blackhole configuration and memory state; trace files; the Usage Dashboard cache; Cache Optimizer, Caveman, Quiet, and RTK preferences; Pi Loop presets and logs; MCP credentials and cache; Cymbal indexes; and Subagent, Workflow, and Goal run state. Nix reconciles Blackhole's four enabled-policy fields and removes its three retired aliases.
+- Mutable extension state remains outside Nix ownership. Examples include Blackhole configuration and observational memory; Pi Mem Markdown, scratchpad, and dashboard cache; trace files; the Usage Dashboard cache; Cache Optimizer, Caveman, Quiet, and RTK preferences; Pi Loop presets and logs; MCP credentials and cache; Cymbal indexes; and Subagent, Workflow, and Goal run state. Nix reconciles Blackhole's four enabled-policy fields and removes its three retired aliases.
 - Style extensions retain distinct purposes: Ponytail minimizes implementation; Caveman compresses prose; Quiet compresses tool presentation; Fleet Theme changes TUI color treatment.
 
 ## Verification

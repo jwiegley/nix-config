@@ -2,6 +2,7 @@
   bun,
   coreutils,
   fetchurl,
+  git,
   jq,
   lib,
   nodejs_24,
@@ -132,6 +133,7 @@ runCommand "pi-gallery-check"
     nativeBuildInputs = [
       bun
       coreutils
+      git
       jq
       nodejs_24
     ];
@@ -218,7 +220,10 @@ runCommand "pi-gallery-check"
         || fail "package contains patch backup or reject artifacts: $patch_artifacts"
       if [ -d "$package_root/node_modules" ]; then
         if find "$package_root/node_modules" -type d \
-          \( -path '*/@earendil-works/*' -o -path '*/typebox' \) -print -quit | grep -q .; then
+          \( -path '*/@earendil-works/*' \
+            -o -path '*/@mariozechner/pi-*' \
+            -o -path '*/@sinclair/typebox' \
+            -o -path '*/typebox' \) -print -quit | grep -q .; then
           fail "package bundles a Pi-provided peer runtime: $package_root"
         fi
       fi
@@ -253,6 +258,697 @@ runCommand "pi-gallery-check"
     [ -f ${roots.insights}/dist/index.html ]
     [ -d ${roots.insights}/node_modules/react ]
     [ -d ${roots.insights}/node_modules/recharts ]
+    [ -f ${roots.mem}/index.ts ]
+    [ -f ${roots.mem}/lib.ts ]
+    [ -f ${roots.mem}/README.md ]
+    [ ! -e ${roots.mem}/node_modules ]
+    ! grep -E 'completeSimple|\bgetModel\(' ${roots.mem}/index.ts >/dev/null \
+      || fail "pi-mem retains automatic remote dashboard summarization"
+    ! grep -E 'Groups by topic using an LLM call|automatically injected into the system prompt|SCRATCHPAD.md \(open items only\)' \
+      ${roots.mem}/README.md >/dev/null \
+      || fail "pi-mem packaged README contradicts the managed runtime"
+    grep -F 'synthetic user message immediately before the newest real user request' \
+      ${roots.mem}/README.md >/dev/null \
+      || fail "pi-mem packaged README omits the managed injection boundary"
+    [ "$(grep -c 'writePrivateFile(' ${roots.mem}/index.ts)" -eq 4 ] \
+      || fail "pi-mem atomic replacement sites changed unexpectedly"
+    [ "$(grep -c 'updatePrivateFile(' ${roots.mem}/index.ts)" -eq 6 ] \
+      || fail "pi-mem read-modify-write sites changed unexpectedly"
+    ! grep -F 'fs.writeFileSync' ${roots.mem}/index.ts >/dev/null \
+      || fail "pi-mem persistent writes bypass the private-state helpers"
+    ! grep -E 'PI_AUTOCOMMIT|gitCommit|execFileSync' \
+      ${roots.mem}/index.ts ${roots.mem}/lib.ts >/dev/null \
+      || fail "managed pi-mem retains Git autocommit code"
+    [ ! -e ${roots.mem}/tests/autocommit.test.ts ] \
+      || fail "managed pi-mem retains upstream autocommit tests"
+    for required_pi_mem_policy in \
+      'removes upstream Git autocommit' \
+      'field are inert' \
+      'private Git workflow outside Pi Mem' \
+      'same-host owner is proven to have' \
+      'in-progress-recovery locks'
+    do
+      grep -F "$required_pi_mem_policy" ${roots.mem}/README.md >/dev/null \
+        || fail "pi-mem packaged README omits policy: $required_pi_mem_policy"
+    done
+    [ -f ${roots.mem}/tests/private-file.test.ts ]
+    [ -f ${roots.mem}/tests/private-file-worker.mjs ]
+    (
+      cd ${roots.mem}
+      ${bun}/bin/bun test tests/*.test.ts
+    )
+    pi_mem_runtime="$TMPDIR/pi-mem-runtime"
+    mkdir -p "$pi_mem_runtime/home" "$pi_mem_runtime/project"
+    cat > "$pi_mem_runtime/probe.mjs" <<'EOF'
+    import assert from "node:assert/strict";
+    import {
+      chmodSync,
+      existsSync,
+      lstatSync,
+      mkdirSync,
+      readFileSync,
+      readdirSync,
+      rmdirSync,
+      statSync,
+      symlinkSync,
+      unlinkSync,
+      utimesSync,
+      writeFileSync,
+    } from "node:fs";
+    import { execFile } from "node:child_process";
+    import { hostname } from "node:os";
+    import { join } from "node:path";
+    import { promisify } from "node:util";
+
+    const runtime = process.env.PI_MEM_RUNTIME;
+    const memory = process.env.PI_MEMORY_DIR;
+    const daily = process.env.PI_DAILY_DIR;
+    const agent = process.env.PI_CODING_AGENT_DIR;
+    const extensionRoot = process.env.PI_MEM_ROOT;
+    const piRoot = process.env.PI_CODING_AGENT_ROOT;
+    const gitSentinel = process.env.PI_MEM_GIT_SENTINEL;
+    assert.ok(runtime && memory && daily && agent && extensionRoot && piRoot && gitSentinel);
+
+    mkdirSync(memory, { recursive: true });
+    writeFileSync(
+      join(memory, ".pi-mem.json"),
+      JSON.stringify({ autocommit: true }) + "\n",
+      { mode: 0o600 },
+    );
+
+    const writeSession = (directory, title) => {
+      const sessionDir = join(agent, "sessions", directory);
+      mkdirSync(sessionDir, { recursive: true });
+      writeFileSync(join(sessionDir, "fixture.jsonl"), [
+        JSON.stringify({ timestamp: new Date().toISOString(), cwd: runtime }),
+        JSON.stringify({ type: "session_info", name: title }),
+      ].join("\n") + "\n");
+    };
+    writeSession("--Users-pi-mem-fixture--", "macOS session sentinel");
+    writeSession("--home-pi-mem-fixture--", "Linux session sentinel");
+    const outsideSession = join(runtime, "outside-session.jsonl");
+    writeFileSync(outsideSession, [
+      JSON.stringify({ timestamp: new Date().toISOString(), cwd: runtime }),
+      JSON.stringify({ type: "session_info", name: "outside session sentinel" }),
+    ].join("\n") + "\n");
+    symlinkSync(
+      outsideSession,
+      join(agent, "sessions", "--home-pi-mem-fixture--", "outside-link.jsonl"),
+    );
+    process.umask(0o000);
+
+    const { loadExtensions } = await import(
+      piRoot + "/dist/core/extensions/loader.js"
+    );
+    const loaded = await loadExtensions([join(extensionRoot, "index.ts")], runtime);
+    assert.deepEqual(loaded.errors, []);
+    assert.equal(loaded.extensions.length, 1);
+    const extension = loaded.extensions[0];
+    assert.deepEqual(
+      [...extension.tools.keys()].sort(),
+      ["memory_read", "memory_search", "memory_write", "scratchpad"],
+    );
+
+    let modelRegistryAccesses = 0;
+    const ctx = {
+      hasUI: true,
+      modelRegistry: new Proxy({}, {
+        get(_target, property) {
+          modelRegistryAccesses++;
+          if (property === "find") return () => undefined;
+          if (property === "getApiKeyAndHeaders") return async () => ({ ok: false });
+          throw new Error(
+            "unexpected model-registry access: " + String(property)
+          );
+        },
+      }),
+      sessionManager: { getSessionId: () => "pi-mem-runtime-session" },
+      ui: { setWidget() {} },
+    };
+    const emit = async (name, event = {}) => {
+      let result;
+      for (const handler of extension.handlers.get(name) ?? []) {
+        result = await handler(event, ctx);
+      }
+      return result;
+    };
+    const execute = async (name, params) => {
+      const tool = extension.tools.get(name)?.definition;
+      assert.ok(tool, "missing tool: " + name);
+      return tool.execute("pi-mem-runtime-call", params, undefined, undefined, ctx);
+    };
+    const mode = (path) => statSync(path).mode & 0o777;
+    const assertMode = (path, expected) => assert.equal(mode(path), expected, path);
+    const execFileAsync = promisify(execFile);
+    const runWorker = (kind, id) => execFileAsync(
+      process.env.PI_MEM_NODE,
+      [process.env.PI_MEM_WORKER, kind, String(id)],
+      {
+        env: { ...process.env },
+        maxBuffer: 1024 * 1024,
+      },
+    );
+    const occurrences = (text, needle) => text.split(needle).length - 1;
+    const createLock = (
+      filePath,
+      token,
+      ageMs = 0,
+      ownerPid = process.pid,
+      ownerHostname = hostname(),
+    ) => {
+      const lockPath = filePath + ".lock";
+      mkdirSync(lockPath, { mode: 0o700 });
+      writeFileSync(
+        join(lockPath, token),
+        JSON.stringify({ token, pid: ownerPid, hostname: ownerHostname }),
+        { mode: 0o600 },
+      );
+      if (ageMs > 0) {
+        const stale = new Date(Date.now() - ageMs);
+        utimesSync(lockPath, stale, stale);
+      }
+      return lockPath;
+    };
+    const privateDebris = (root) => {
+      const found = [];
+      const visit = (directory) => {
+        for (const entry of readdirSync(directory, { withFileTypes: true })) {
+          const entryPath = join(directory, entry.name);
+          if (/\.lock(?:\.|$)|\.stale\.|\.tmp$/.test(entry.name)) {
+            found.push(entryPath);
+          }
+          if (entry.isDirectory()) visit(entryPath);
+        }
+      };
+      visit(root);
+      return found;
+    };
+
+    const currentRequest = {
+      role: "user",
+      content: "actual user request",
+      timestamp: 0,
+    };
+    const initialContext = await emit("context", { messages: [currentRequest] });
+    assert.equal(initialContext.messages.at(-1).content, currentRequest.content);
+    assert.match(initialContext.messages.at(-2).content, /<pi-mem-injected>/);
+    assert.match(
+      initialContext.messages.at(-2).content,
+      /current user explicitly asks you to remember or update something/,
+    );
+    assert.doesNotMatch(initialContext.messages.at(-2).content, /If someone says/);
+    assert.doesNotMatch(initialContext.messages.at(-2).content, /Daily Log Rule/);
+    assert.match(
+      extension.tools.get("memory_write").definition.description,
+      /only when the user explicitly asks/,
+    );
+    assert.match(
+      extension.tools.get("scratchpad").definition.description,
+      /mutating actions only when the user explicitly asks/,
+    );
+    const notes = join(memory, "notes");
+    for (const path of [memory, daily, notes]) assertMode(path, 0o700);
+    for (const path of [memory, daily, notes]) chmodSync(path, 0o777);
+
+    await execute("memory_write", { target: "long_term", content: "first durable fact" });
+    const memoryFile = join(memory, "MEMORY.md");
+    assertMode(memoryFile, 0o600);
+    chmodSync(memoryFile, 0o666);
+    await execute("memory_write", {
+      target: "long_term",
+      content: "final durable fact",
+      mode: "overwrite",
+    });
+    assertMode(memoryFile, 0o600);
+    assert.match(readFileSync(memoryFile, "utf8"), /final durable fact/);
+    assert.doesNotMatch(readFileSync(memoryFile, "utf8"), /first durable fact/);
+    for (const path of [memory, daily, notes]) assertMode(path, 0o700);
+
+    await execute("memory_write", { target: "daily", content: "daily outcome" });
+    const dailyName = readdirSync(daily).find((name) => name.endsWith(".md"));
+    assert.ok(dailyName);
+    const dailyFile = join(daily, dailyName);
+    assertMode(dailyFile, 0o600);
+    chmodSync(dailyFile, 0o666);
+    await execute("memory_write", { target: "daily", content: "daily append outcome" });
+    assertMode(dailyFile, 0o600);
+    assert.match(readFileSync(dailyFile, "utf8"), /daily outcome/);
+    assert.match(readFileSync(dailyFile, "utf8"), /daily append outcome/);
+
+    const noteFile = join(notes, "topic.md");
+    await execute("memory_write", { target: "note", filename: "topic.md", content: "first note" });
+    chmodSync(noteFile, 0o666);
+    await execute("memory_write", {
+      target: "note",
+      filename: "topic.md",
+      content: "final note",
+      mode: "overwrite",
+    });
+    assertMode(noteFile, 0o600);
+    assert.match(readFileSync(noteFile, "utf8"), /final note/);
+    assert.doesNotMatch(readFileSync(noteFile, "utf8"), /first note/);
+
+    const scratchpad = join(memory, "SCRATCHPAD.md");
+    await execute("scratchpad", { action: "add", text: "follow up" });
+    assert.match(readFileSync(scratchpad, "utf8"), /- \[ \] follow up/);
+    chmodSync(scratchpad, 0o666);
+    await execute("scratchpad", { action: "done", text: "follow up" });
+    assert.match(readFileSync(scratchpad, "utf8"), /- \[x\] follow up/);
+    await execute("scratchpad", { action: "clear_done" });
+    assertMode(scratchpad, 0o600);
+    assert.doesNotMatch(readFileSync(scratchpad, "utf8"), /follow up/);
+
+    const workerCount = 4;
+    await Promise.all(
+      ["memory", "daily", "note", "scratchpad"].flatMap((kind) =>
+        Array.from({ length: workerCount }, (_, id) => runWorker(kind, id))
+      ),
+    );
+    const concurrentTargets = [
+      [memoryFile, "memory worker "],
+      [dailyFile, "daily worker "],
+      [join(notes, "concurrent.md"), "note worker "],
+      [scratchpad, "scratchpad worker "],
+    ];
+    for (const [path, prefix] of concurrentTargets) {
+      const content = readFileSync(path, "utf8");
+      for (let id = 0; id < workerCount; id++) {
+        assert.equal(occurrences(content, prefix + id), 1, path + ":" + id);
+      }
+      assertMode(path, 0o600);
+    }
+
+    await Promise.all(
+      Array.from({ length: workerCount }, (_, id) => runWorker("overwrite", id)),
+    );
+    const atomicFile = join(notes, "atomic.md");
+    const atomicContent = readFileSync(atomicFile, "utf8");
+    const atomicMatch = atomicContent.match(/overwrite worker (\d):\n([\s\S]*)$/);
+    assert.ok(atomicMatch);
+    assert.equal(
+      atomicMatch[2],
+      ("whole payload " + atomicMatch[1] + "\n").repeat(4096),
+    );
+
+    await Promise.all(
+      Array.from({ length: workerCount }, (_, id) => runWorker("cache", id)),
+    );
+    JSON.parse(readFileSync(join(daily, "cache.json"), "utf8"));
+
+    const beforeFreshLock = readFileSync(memoryFile, "utf8");
+    const freshLock = createLock(memoryFile, "fresh-owner-token");
+    await assert.rejects(
+      execute("memory_write", {
+        target: "long_term",
+        content: "must not pass a fresh lock",
+      }),
+      /Timed out waiting for memory file lock/,
+    );
+    assert.equal(readFileSync(memoryFile, "utf8"), beforeFreshLock);
+    unlinkSync(join(freshLock, "fresh-owner-token"));
+    rmdirSync(freshLock);
+
+    const beforeLiveStaleLock = readFileSync(memoryFile, "utf8");
+    const liveStaleLock = createLock(
+      memoryFile,
+      "live-stale-owner-token",
+      10 * 60 * 1000,
+    );
+    await assert.rejects(
+      execute("memory_write", {
+        target: "long_term",
+        content: "must not replace a stale lock with a live owner",
+      }),
+      /Timed out waiting for memory file lock/,
+    );
+    assert.equal(readFileSync(memoryFile, "utf8"), beforeLiveStaleLock);
+    unlinkSync(join(liveStaleLock, "live-stale-owner-token"));
+    rmdirSync(liveStaleLock);
+
+    const exitedOwnerPid = await new Promise((resolve, reject) => {
+      const child = execFile(process.env.PI_MEM_NODE, ["-e", ""], (error) => {
+        if (error) reject(error);
+        else resolve(child.pid);
+      });
+      assert.ok(child.pid);
+    });
+    assert.throws(
+      () => process.kill(exitedOwnerPid, 0),
+      (error) => error?.code === "ESRCH",
+    );
+
+    const beforeForeignStaleLock = readFileSync(memoryFile, "utf8");
+    const foreignStaleLock = createLock(
+      memoryFile,
+      "foreign-stale-owner-token",
+      10 * 60 * 1000,
+      exitedOwnerPid,
+      "remote-pi-fixture",
+    );
+    await assert.rejects(
+      execute("memory_write", {
+        target: "long_term",
+        content: "must not replace a stale lock from another host",
+      }),
+      /Timed out waiting for memory file lock/,
+    );
+    assert.equal(readFileSync(memoryFile, "utf8"), beforeForeignStaleLock);
+    unlinkSync(join(foreignStaleLock, "foreign-stale-owner-token"));
+    rmdirSync(foreignStaleLock);
+
+    createLock(
+      memoryFile,
+      "stale-owner-token",
+      10 * 60 * 1000,
+      exitedOwnerPid,
+    );
+    await execute("memory_write", {
+      target: "long_term",
+      content: "stale lock recovered",
+    });
+    assert.match(readFileSync(memoryFile, "utf8"), /stale lock recovered/);
+    assert.equal(lstatSync(memoryFile).isFile(), true);
+
+    const invalidLocks = [
+      {
+        token: "malformed-owner-token",
+        marker: "not json",
+        extras: [],
+      },
+      {
+        token: "extra-entry-owner-token",
+        marker: JSON.stringify({
+          token: "extra-entry-owner-token",
+          pid: process.pid,
+          hostname: hostname(),
+        }),
+        extras: [["preserve-me", "must survive"]],
+      },
+    ];
+    for (const invalid of invalidLocks) {
+      const beforeInvalidLock = readFileSync(memoryFile, "utf8");
+      const lockPath = memoryFile + ".lock";
+      mkdirSync(lockPath, { mode: 0o700 });
+      writeFileSync(join(lockPath, invalid.token), invalid.marker, { mode: 0o600 });
+      for (const [name, content] of invalid.extras) {
+        writeFileSync(join(lockPath, name), content, { mode: 0o600 });
+      }
+      const stale = new Date(Date.now() - 10 * 60 * 1000);
+      utimesSync(lockPath, stale, stale);
+      await assert.rejects(
+        execute("memory_write", {
+          target: "long_term",
+          content: "must not replace an invalid lock",
+        }),
+        /invalid memory file lock/i,
+      );
+      assert.equal(readFileSync(memoryFile, "utf8"), beforeInvalidLock);
+      assert.equal(readFileSync(join(lockPath, invalid.token), "utf8"), invalid.marker);
+      for (const [name, content] of invalid.extras) {
+        assert.equal(readFileSync(join(lockPath, name), "utf8"), content);
+        unlinkSync(join(lockPath, name));
+      }
+      assert.deepEqual(
+        readdirSync(memory).filter((name) => name.includes(".stale.")),
+        [],
+      );
+      unlinkSync(join(lockPath, invalid.token));
+      rmdirSync(lockPath);
+    }
+    assert.deepEqual(privateDebris(memory), []);
+
+    const read = await execute("memory_read", { target: "long_term" });
+    assert.match(read.content[0].text, /final durable fact/);
+    const outsideDaily = join(runtime, "outside.md");
+    writeFileSync(outsideDaily, "outside daily sentinel");
+    const escapedDaily = await execute("memory_read", {
+      target: "daily",
+      date: "../../outside",
+    });
+    assert.match(escapedDaily.content[0].text, /must use YYYY-MM-DD/);
+    assert.doesNotMatch(escapedDaily.content[0].text, /outside daily sentinel/);
+    const search = await execute("memory_search", { query: "final durable" });
+    assert.match(search.content[0].text, /MEMORY\.md/);
+    const context = await emit("context", { messages: [currentRequest] });
+    assert.equal(context.messages.at(-1).content, currentRequest.content);
+    assert.match(context.messages.at(-2).content, /final durable fact/);
+
+    const realSetInterval = globalThis.setInterval;
+    const realClearInterval = globalThis.clearInterval;
+    const timer = {};
+    let intervalCallback;
+    let timerCleared = false;
+    globalThis.setInterval = (callback, delay) => {
+      assert.equal(delay, 15 * 60 * 1000);
+      intervalCallback = callback;
+      return timer;
+    };
+    globalThis.clearInterval = (value) => {
+      assert.equal(value, timer);
+      timerCleared = true;
+    };
+    try {
+      await emit("session_start");
+      assert.equal(modelRegistryAccesses, 0, "dashboard consulted a remote model registry");
+      const cache = join(daily, "cache.json");
+      assertMode(cache, 0o600);
+      const summary = JSON.parse(readFileSync(cache, "utf8")).summary;
+      assert.match(summary, /macOS session sentinel/);
+      assert.match(summary, /Linux session sentinel/);
+      assert.doesNotMatch(summary, /outside session sentinel/);
+      chmodSync(cache, 0o666);
+      assert.ok(intervalCallback);
+      await intervalCallback();
+      assertMode(cache, 0o600);
+      const outsideCache = join(runtime, "outside-cache.json");
+      writeFileSync(outsideCache, "outside cache sentinel", { mode: 0o644 });
+      unlinkSync(cache);
+      symlinkSync(outsideCache, cache);
+      await intervalCallback();
+      assert.equal(readFileSync(outsideCache, "utf8"), "outside cache sentinel");
+      assert.equal(lstatSync(cache).isSymbolicLink(), true);
+      await emit("session_shutdown");
+      assert.equal(timerCleared, true);
+    } finally {
+      globalThis.setInterval = realSetInterval;
+      globalThis.clearInterval = realClearInterval;
+    }
+
+    const outsideWrite = join(runtime, "outside-write.md");
+    writeFileSync(outsideWrite, "outside write sentinel", { mode: 0o644 });
+    const linkedNote = join(notes, "linked.md");
+    symlinkSync(outsideWrite, linkedNote);
+    await assert.rejects(
+      execute("memory_write", {
+        target: "note",
+        filename: "linked.md",
+        content: "must not append through a symlink",
+      }),
+      /Refusing non-file memory path/,
+    );
+    await assert.rejects(
+      execute("memory_write", {
+        target: "note",
+        filename: "linked.md",
+        mode: "overwrite",
+        content: "must not replace a symlink",
+      }),
+      /Refusing non-file memory path/,
+    );
+    assert.equal(readFileSync(outsideWrite, "utf8"), "outside write sentinel");
+    assert.equal(lstatSync(linkedNote).isSymbolicLink(), true);
+    const linkedNoteRead = await execute("memory_read", {
+      target: "note",
+      filename: "linked.md",
+    });
+    assert.doesNotMatch(linkedNoteRead.content[0].text, /outside write sentinel/);
+
+    const nonregularNote = join(notes, "nonregular.md");
+    mkdirSync(nonregularNote);
+    writeFileSync(join(nonregularNote, "sentinel"), "unchanged");
+    await assert.rejects(
+      execute("memory_write", {
+        target: "note",
+        filename: "nonregular.md",
+        mode: "overwrite",
+        content: "must not replace a directory",
+      }),
+      /Refusing non-file memory path/,
+    );
+    assert.equal(readFileSync(join(nonregularNote, "sentinel"), "utf8"), "unchanged");
+
+    const outsideRead = join(runtime, "outside-read");
+    mkdirSync(outsideRead);
+    writeFileSync(join(outsideRead, "secret.md"), "outside read sentinel");
+    symlinkSync(outsideRead, join(memory, "linked-read"));
+    const escapedFile = await execute("memory_read", {
+      target: "file",
+      filename: "linked-read/secret.md",
+    });
+    assert.doesNotMatch(escapedFile.content[0].text, /outside read sentinel/);
+
+    const contextTarget = join(runtime, "outside-context.md");
+    writeFileSync(contextTarget, "outside context sentinel");
+    symlinkSync(contextTarget, join(memory, "context-link.md"));
+    const catchupTarget = join(runtime, "outside-catchup");
+    const catchupDate = new Date().toISOString().slice(0, 10);
+    mkdirSync(join(catchupTarget, catchupDate), { recursive: true });
+    writeFileSync(
+      join(catchupTarget, catchupDate, "INDEX.md"),
+      "outside catchup sentinel",
+    );
+    mkdirSync(join(catchupTarget, "outside-list-sentinel"));
+    writeFileSync(
+      join(catchupTarget, catchupDate, "outside-name-sentinel.md"),
+      "ordinary outside content",
+    );
+    symlinkSync(catchupTarget, join(memory, "catchup"));
+    const privateContext = await emit("context", { messages: [currentRequest] });
+    assert.doesNotMatch(
+      privateContext.messages.at(-2).content,
+      /outside (context|catchup) sentinel/,
+    );
+    const privateList = await execute("memory_read", { target: "list" });
+    assert.doesNotMatch(privateList.content[0].text, /outside-list-sentinel/);
+    const privateSearch = await execute("memory_search", {
+      query: "outside-name-sentinel",
+    });
+    assert.equal(
+      privateSearch.content[0].text,
+      'No results for "outside-name-sentinel".',
+    );
+    assert.deepEqual(privateDebris(memory), []);
+    assert.deepEqual(privateDebris(daily), []);
+    assert.equal(existsSync(gitSentinel), false, "managed pi-mem invoked Git");
+    EOF
+    cat > "$pi_mem_runtime/worker.mjs" <<'EOF'
+    import assert from "node:assert/strict";
+    import { join } from "node:path";
+
+    const [kind, id] = process.argv.slice(2);
+    const piRoot = process.env.PI_CODING_AGENT_ROOT;
+    const extensionRoot = process.env.PI_MEM_ROOT;
+    assert.ok(kind && id && piRoot && extensionRoot);
+    const { loadExtensions } = await import(
+      piRoot + "/dist/core/extensions/loader.js"
+    );
+    const loaded = await loadExtensions(
+      [join(extensionRoot, "index.ts")],
+      process.env.PI_MEM_RUNTIME,
+    );
+    assert.deepEqual(loaded.errors, []);
+    const extension = loaded.extensions[0];
+    const ctx = {
+      hasUI: true,
+      modelRegistry: new Proxy({}, {
+        get() { throw new Error("worker consulted model registry"); },
+      }),
+      sessionManager: { getSessionId: () => "pi-mem-worker-" + id },
+      ui: { setWidget() {} },
+    };
+    const execute = async (name, params) => {
+      const tool = extension.tools.get(name)?.definition;
+      assert.ok(tool, "missing tool: " + name);
+      return tool.execute("pi-mem-worker-call", params, undefined, undefined, ctx);
+    };
+    const emit = async (name) => {
+      for (const handler of extension.handlers.get(name) ?? []) {
+        await handler({}, ctx);
+      }
+    };
+
+    if (kind === "memory") {
+      await execute("memory_write", {
+        target: "long_term",
+        content: "memory worker " + id,
+      });
+    } else if (kind === "daily") {
+      await execute("memory_write", {
+        target: "daily",
+        content: "daily worker " + id,
+      });
+    } else if (kind === "note") {
+      await execute("memory_write", {
+        target: "note",
+        filename: "concurrent.md",
+        content: "note worker " + id,
+      });
+    } else if (kind === "scratchpad") {
+      await execute("scratchpad", {
+        action: "add",
+        text: "scratchpad worker " + id,
+      });
+    } else if (kind === "overwrite") {
+      await execute("memory_write", {
+        target: "note",
+        filename: "atomic.md",
+        mode: "overwrite",
+        content:
+          "overwrite worker " + id + ":\n" +
+          ("whole payload " + id + "\n").repeat(4096),
+      });
+    } else if (kind === "cache") {
+      await emit("session_start");
+      await emit("session_shutdown");
+    } else {
+      throw new Error("unknown worker kind: " + kind);
+    }
+    EOF
+    pi_mem_fake_bin="$pi_mem_runtime/fake-bin"
+    pi_mem_git_sentinel="$pi_mem_runtime/git-invoked"
+    mkdir -p "$pi_mem_fake_bin"
+    cat > "$pi_mem_fake_bin/git" <<'EOF'
+    #!/bin/sh
+    : > "$PI_MEM_GIT_SENTINEL"
+    exit 97
+    EOF
+    chmod +x "$pi_mem_fake_bin/git"
+    pi_mem_repo="$pi_mem_runtime/memory"
+    mkdir -p "$pi_mem_repo"
+    printf '%s\n' 'repository baseline' > "$pi_mem_repo/repository-sentinel.txt"
+    ${git}/bin/git -C "$pi_mem_repo" init -q
+    ${git}/bin/git -C "$pi_mem_repo" config user.name 'pi-mem fixture'
+    ${git}/bin/git -C "$pi_mem_repo" config user.email 'pi-mem@example.invalid'
+    ${git}/bin/git -C "$pi_mem_repo" add -- repository-sentinel.txt
+    ${git}/bin/git -C "$pi_mem_repo" -c commit.gpgsign=false commit -qm baseline
+    printf '%s\n' 'repository staged sentinel' > "$pi_mem_repo/repository-sentinel.txt"
+    ${git}/bin/git -C "$pi_mem_repo" add -- repository-sentinel.txt
+    printf '%s\n' 'repository worktree sentinel' > "$pi_mem_repo/repository-sentinel.txt"
+    pi_mem_head_before=$(${git}/bin/git -C "$pi_mem_repo" rev-parse HEAD)
+    pi_mem_status_before=$(${git}/bin/git -C "$pi_mem_repo" status --porcelain=v1 -- repository-sentinel.txt)
+    pi_mem_index_before=$(sha256sum "$pi_mem_repo/.git/index" | cut -d ' ' -f 1)
+    pi_mem_worktree_before=$(sha256sum "$pi_mem_repo/repository-sentinel.txt" | cut -d ' ' -f 1)
+    (
+      cd "$pi_mem_runtime/project"
+      umask 000
+      PATH="$pi_mem_fake_bin:$PATH" \
+      HOME="$pi_mem_runtime/home" \
+      PI_MEM_RUNTIME="$pi_mem_runtime" \
+      PI_CODING_AGENT_DIR="$pi_mem_runtime/agent" \
+      PI_MEMORY_DIR="$pi_mem_runtime/memory" \
+      PI_DAILY_DIR="$pi_mem_runtime/external-daily" \
+      PI_CONTEXT_FILES=context-link.md \
+      PI_SEARCH_DIRS=catchup \
+      PI_AUTOCOMMIT=1 \
+      PI_MEM_GIT_SENTINEL="$pi_mem_git_sentinel" \
+      PI_TIMEZONE=UTC \
+      PI_OFFLINE=1 \
+      PI_MEM_ROOT=${roots.mem} \
+      PI_CODING_AGENT_ROOT=${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent \
+      PI_MEM_NODE=${nodejs_24}/bin/node \
+      PI_MEM_WORKER="$pi_mem_runtime/worker.mjs" \
+        ${nodejs_24}/bin/node "$pi_mem_runtime/probe.mjs"
+    )
+    [ ! -e "$pi_mem_git_sentinel" ] \
+      || fail "managed pi-mem invoked Git"
+    [ "$(sha256sum "$pi_mem_repo/.git/index" | cut -d ' ' -f 1)" = "$pi_mem_index_before" ] \
+      || fail "managed pi-mem changed the Git index"
+    [ "$(sha256sum "$pi_mem_repo/repository-sentinel.txt" | cut -d ' ' -f 1)" = "$pi_mem_worktree_before" ] \
+      || fail "managed pi-mem changed unrelated worktree state"
+    [ "$(${git}/bin/git -C "$pi_mem_repo" rev-parse HEAD)" = "$pi_mem_head_before" ] \
+      || fail "managed pi-mem changed Git HEAD"
+    [ "$(${git}/bin/git -C "$pi_mem_repo" status --porcelain=v1 -- repository-sentinel.txt)" = "$pi_mem_status_before" ] \
+      || fail "managed pi-mem changed unrelated Git state"
     [ -f ${roots.usage}/index.ts ]
     [ ! -e ${roots.usage}/node_modules ]
     usage_runtime="$TMPDIR/pi-usage-runtime"
@@ -1003,8 +1699,12 @@ runCommand "pi-gallery-check"
           [
             "batch_web_fetch",
             "edit",
+            "memory_read",
+            "memory_search",
+            "memory_write",
             "read",
             "recall",
+            "scratchpad",
             "web_fetch",
             "web_search",
             "write"
@@ -1027,10 +1727,29 @@ runCommand "pi-gallery-check"
       cat "$smoke/tool-owners.json" >&2
       fail "Pi gallery web tools do not have exactly one declared owner"
     }
-    jq -e '.recall == ["blackhole"]' "$smoke/tool-owners.json" >/dev/null || {
-      cat "$smoke/tool-owners.json" >&2
-      fail "Pi memory tool does not have exactly one declared owner"
+    validate_memory_tool_owners() {
+      jq -e '
+        .memory_read == ["mem"]
+        and .memory_search == ["mem"]
+        and .memory_write == ["mem"]
+        and .scratchpad == ["mem"]
+        and .recall == ["blackhole"]
+      ' "$1" >/dev/null
     }
+    validate_memory_tool_owners "$smoke/tool-owners.json" || {
+      cat "$smoke/tool-owners.json" >&2
+      fail "Pi memory tools do not have exactly one declared owner"
+    }
+    jq '.memory_write += ["blackhole"]' "$smoke/tool-owners.json" \
+      > "$smoke/tool-owners-memory-duplicate.json"
+    if validate_memory_tool_owners "$smoke/tool-owners-memory-duplicate.json"; then
+      fail "tool-ownership gate accepted a second memory_write owner"
+    fi
+    jq '.memory_read = ["blackhole"]' "$smoke/tool-owners.json" \
+      > "$smoke/tool-owners-memory-wrong.json"
+    if validate_memory_tool_owners "$smoke/tool-owners-memory-wrong.json"; then
+      fail "tool-ownership gate accepted the wrong memory_read owner"
+    fi
     jq '.web_search += ["smart-fetch"]' "$smoke/tool-owners.json" \
       > "$smoke/tool-owners-duplicate.json"
     if validate_web_tool_owners "$smoke/tool-owners-duplicate.json"; then
