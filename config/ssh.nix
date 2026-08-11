@@ -125,13 +125,17 @@ let
         ControlPath = "none";
       };
 
-      positron = controlMastered {
-        header = "Host andoria-* delphi-* sw-dev-* agentsrv labmgr";
-        User = "jwiegley";
-        IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
-        IdentitiesOnly = true;
-        ForwardAgent = true;
-      };
+      positron =
+        controlMastered {
+          header = "Host andoria-* delphi-* sw-dev-* agentsrv labmgr";
+          User = "jwiegley";
+          IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
+          IdentitiesOnly = true;
+          ForwardAgent = true;
+        }
+        // lib.optionalAttrs config.johnw.host.isClio {
+          ProxyJump = "johnw@hera";
+        };
 
       positron-api = controlMastered {
         User = "positron";
