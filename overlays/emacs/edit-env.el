@@ -150,14 +150,14 @@
 
     (mapcar
      (lambda (x)
-       (let* ((pair (edit-env--split-entry x))
+       (let* ((pair (or (edit-env--split-entry x) (list x nil)))
 	      (var (car pair))
 	      (val (cadr pair)))
 	 (setq longest-var (max longest-var (length var)))))
      edit-env-ls)
     (mapcar
      (lambda (x)
-       (let* ((pair (edit-env--split-entry x))
+       (let* ((pair (or (edit-env--split-entry x) (list x nil)))
 	      (var (car pair))
 	      (val (or (cadr pair) "")))
 	 (widget-insert "\n")

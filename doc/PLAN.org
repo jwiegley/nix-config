@@ -2571,6 +2571,24 @@ bin/yubikey-switch:3-24 checks /Volumes/File but copies from /Volumes/Files, and
 ]
 #+end_src
 
+* DONE [#D] Preserve bare process-environment markers in edit-env
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tib
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 18:21]
+:MODIFIED: [2026-08-10 Mon 18:22]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 18:22]
+:CLOSE_REASON: Kept added-row parsing strict while mapping bare process-environment markers to their original variable names in both display passes; the actual mark-changed/update path and all three ERT checks pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Close observation 2026-08-11T01:18:55.701Z by keeping strict added-row parsing while displaying Emacs bare unset-marker entries with their original variable name, with an update-path regression.
+
 * DONE [#C] Aggregate make changes failures across every repository
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

@@ -27,4 +27,31 @@
         (when (get-buffer "*Environment Variable Editor*")
           (kill-buffer "*Environment Variable Editor*"))))))
 
+(ert-deftest edit-env-display-and-update-preserve-bare-entry ()
+  (let ((process-environment '("BARE" "FOO=a=b")))
+    (save-window-excursion
+      (unwind-protect
+          (progn
+            (edit-env)
+            (with-current-buffer "*Environment Variable Editor*"
+              (should (string-match-p "BARE[[:space:]]+" (buffer-string)))
+              (let ((bare-widget
+                     (cl-find-if
+                      (lambda (widget)
+                        (equal
+                         (widget-get widget 'environment-variable-name)
+                         "BARE"))
+                      widget-field-list)))
+                (should bare-widget)
+                (edit-env-mark-changed bare-widget)
+                (cl-letf (((symbol-function 'widget-value)
+                           (lambda (widget)
+                             (and (eq widget bare-widget) "restored")))
+                          ((symbol-function 'edit-env) #'ignore)
+                          ((symbol-function 'bury-buffer) #'ignore))
+                  (edit-env-update))
+                (should (equal (getenv "BARE") "restored")))))
+        (when (get-buffer "*Environment Variable Editor*")
+          (kill-buffer "*Environment Variable Editor*"))))))
+
 ;;; edit-env-test.el ends here
