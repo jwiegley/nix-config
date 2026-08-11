@@ -465,6 +465,32 @@ let
   hasFessRubric = text: lib.hasInfix "**Fallback smuggling**" text;
   parallelizeSource = catalog.items.skills.parallelize.source;
   validatedReviewSource = catalog.items.skills.validated-code-review.source;
+  nodeRedSource = catalog.items.skills.node-red.source;
+  nodeRedSkillText = builtins.readFile "${nodeRedSource}/SKILL.md";
+  nodeRedApiReferenceText = builtins.readFile "${nodeRedSource}/references/api_reference.md";
+  nodeRedContractTexts = [
+    nodeRedSkillText
+    nodeRedApiReferenceText
+  ];
+  nodeRedAdminCommands = [
+    "node-red-admin flows get"
+    "node-red-admin flow get FLOW_ID"
+    "node-red-admin flow put FLOW_ID < flow.json"
+  ];
+  nodeRedForbiddenHelperForms = [
+    "node-red-admin list"
+    "node-red-admin get"
+    "node-red-admin put"
+    "node-red-admin create"
+    "node-red-admin delete"
+    "node-red-admin flows put"
+    "node-red-admin flow create"
+    "node-red-admin flow delete"
+    "sudo node-red-admin"
+    "sudo -u node-red-admin"
+  ];
+  hasNodeRedAdminContract =
+    text: builtins.all (command: lib.hasInfix command text) nodeRedAdminCommands;
   parallelizeText = builtins.readFile "${parallelizeSource}/SKILL.md";
   validatedReviewText = builtins.readFile "${validatedReviewSource}/SKILL.md";
   noHistoryContractTexts = map builtins.readFile [
@@ -719,6 +745,11 @@ assert builtins.hasAttr fessPaths.codex.agent codexRendered.files;
 assert builtins.hasAttr fessPaths.codex.command codexRendered.files;
 assert hasFessRubric droidRendered.files.${fessPaths.droid.agent}.text;
 assert builtins.hasAttr fessPaths.droid.command droidRendered.files;
+assert builtins.all hasNodeRedAdminContract nodeRedContractTexts;
+assert builtins.all (
+  text: builtins.all (form: !(lib.hasInfix form text)) nodeRedForbiddenHelperForms
+) nodeRedContractTexts;
+assert droidRendered.files."${droidProfile.root}/skills/node-red".source == nodeRedSource;
 assert piRenderings != [ ];
 assert builtins.hasAttr "${droidProfile.root}/mcp.json" droidRendered.files;
 assert builtins.all (
@@ -875,6 +906,104 @@ pkgs.runCommand "ai-catalog-transport" { } ''
   test -x "$model_contract"
   ${pkgs.python3}/bin/python3 ${./review-dispatch-contract.py} \
     "$history_contract" "$model_contract"
+
+  ${pkgs.python3}/bin/python3 - ${nodeRedSource} <<'PY'
+  import re
+  import sys
+  from pathlib import Path
+
+  root = Path(sys.argv[1])
+  documents = [
+      root / "SKILL.md",
+      root / "references" / "api_reference.md",
+  ]
+  commands = {
+      "node-red-admin flows get",
+      "node-red-admin flow get FLOW_ID",
+      "node-red-admin flow put FLOW_ID < flow.json",
+  }
+  contract_markers = (
+      "trusted, authorized Node-RED flow author",
+      "authorized but sensitive output",
+      "operating-system sandbox",
+      "fixed loopback",
+      "direct flow-file access",
+      "nodered.vulcan.lan",
+      r"[0-9a-f]{1,32}(?:\.[0-9a-f]{1,32})?\Z",
+      '"flows":[{"id":',
+      '"ok":true,"id":"FLOW_ID"',
+      "normalized without field loss",
+      "1 MiB",
+      "8 MiB",
+      "10-second",
+      "15-second",
+      "`-h` and `--help`",
+  )
+  allowed_invocations = commands | {
+      'node-red-admin flows get > "$workdir/flows.json"',
+      'node-red-admin flow get "$flow_id" > "$workdir/before.json"',
+      'node-red-admin flow put "$flow_id" < "$workdir/updated.json" > "$workdir/ack.json"',
+      'node-red-admin flow get "$flow_id" > "$workdir/after.json"',
+  }
+
+  for document in documents:
+      text = document.read_text(encoding="utf-8")
+      missing = sorted(
+          marker for marker in commands | set(contract_markers) if marker not in text
+      )
+      if missing:
+          raise SystemExit(f"{document.relative_to(root)}: missing contract markers: {missing}")
+      for line_number, line in enumerate(text.splitlines(), 1):
+          invocation = line.strip()
+          if invocation.startswith("node-red-admin ") and invocation not in allowed_invocations:
+              raise SystemExit(
+                  f"{document.relative_to(root)}:{line_number}: "
+                  f"undocumented helper invocation {invocation!r}"
+              )
+
+  literal_forbidden = {
+      "runtime credential path": b"/run/secrets/node-red-admin-token",
+      "raw admin header": b"Authorization:",
+      "raw bearer scheme": b"Bearer",
+      "internal runtime port": b":1880",
+  }
+  regex_forbidden = {
+      "raw admin header spelling": re.compile(rb"\bauthorization\s*:", re.IGNORECASE),
+      "command-line HTTP client": re.compile(rb"\bcurl\b", re.IGNORECASE),
+      "direct credential read": re.compile(
+          rb"(?:\bcat\b|\bopen\s*\(|\bread_(?:text|bytes)\s*\(|"
+          rb"\bbuiltins\.readFile\b)[^\r\n]{0,256}(?:token|/run/secrets/)",
+          re.IGNORECASE,
+      ),
+      "Python HTTP client": re.compile(
+          rb"(?:\b(?:requests|httpx)\s*\.\s*(?:get|post|put|delete|patch|request)\s*\("
+          rb"|\burllib\.request\s*\.\s*(?:urlopen|Request)\s*\("
+          rb"|\bhttp\.client\s*\.\s*HTTPS?Connection\s*\("
+          rb"|\baiohttp\s*\.\s*ClientSession\s*\("
+          rb"|\burllib3\s*\."
+          rb"|\bfrom\s+(?:requests|httpx|urllib\.request|http\.client|aiohttp|urllib3)\s+import\b"
+          rb"|\bimport\s+(?:requests|httpx|urllib\.request|http\.client|aiohttp|urllib3)\b)",
+          re.IGNORECASE,
+      ),
+      "direct admin URL": re.compile(
+          rb"https?://(?:localhost|127\.0\.0\.1|node-?red\.vulcan\.lan|"
+          rb"nodered\.vulcan\.lan)(?::[0-9]+)?/"
+          rb"(?:flows?|auth|nodes|context|settings|projects|inject|diagnostics)(?:[/\s\"']|$)",
+          re.IGNORECASE,
+      ),
+  }
+
+  for path in sorted(root.rglob("*")):
+      if not path.is_file():
+          continue
+      data = path.read_bytes()
+      for label, fragment in literal_forbidden.items():
+          if fragment in data:
+              raise SystemExit(f"{path.relative_to(root)}: contains {label}")
+      for label, pattern in regex_forbidden.items():
+          if pattern.search(data):
+              raise SystemExit(f"{path.relative_to(root)}: contains {label}")
+  PY
 
   ${pkgs.diffutils}/bin/cmp ${primaryRendering.codex} ${reorderedRendering.codex}
   if ${pkgs.gnugrep}/bin/grep -Eq '^(capabilities|tools) = ' ${primaryRendering.codex}; then

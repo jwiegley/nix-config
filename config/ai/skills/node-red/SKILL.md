@@ -11,74 +11,79 @@ description: Build, edit, and debug Node-RED flows on John's NixOS host (vulcan)
 ---
 # Node-RED on vulcan
 
+## Supported admin boundary
+
+The caller is a trusted, authorized Node-RED flow author. The helper keeps the
+runtime admin transport credential out of routine agent handling; it is not an
+operating-system sandbox or a defense against intentionally malicious flow
+code. A selected flow is authorized but sensitive output and may contain
+private configuration. Never print it into the conversation, logs, command
+arguments, or a shared file.
+
+All programmatic flow reads and updates go through `node-red-admin`. The helper
+owns the fixed loopback routing and verified TLS identity for
+`nodered.vulcan.lan`; callers cannot supply a method, path, URL, or transport
+option. A network client, language HTTP library, direct flow-file access, or
+credential read would bypass it. A helper failure is a blocker to report, not
+permission to fall back to a lower-level interface.
+
+Before admin work, read `references/api_reference.md` in full. The complete
+caller interface is exactly these three signatures:
+
+```text
+node-red-admin flows get
+node-red-admin flow get FLOW_ID
+node-red-admin flow put FLOW_ID < flow.json
+```
+
+Do not prefix these commands with privilege escalation. There are no options,
+create/delete verbs, arbitrary endpoints, or whole-configuration replacement.
+The `-h` and `--help` spellings are invalid and exit 2.
+`FLOW_ID` must entirely match
+`[0-9a-f]{1,32}(?:\.[0-9a-f]{1,32})?\Z`.
+
+- `flows get` emits tab metadata only as compact ASCII JSON:
+  `{"flows":[{"id":"a1b2c3d4","label":"Office"}]}`.
+- `flow get` emits one complete selected-flow object as compact ASCII JSON,
+  normalized without field loss. Treat the complete object as sensitive.
+- `flow put` reads JSON only from standard input. Its object ID must match the
+  command ID. Success is exactly `{"ok":true,"id":"FLOW_ID"}`.
+- Every successful response is one compact ASCII JSON line ending in LF.
+
+The helper rejects raw or normalized input above 1 MiB, an upstream response
+above 8 MiB, or final stdout above 1 MiB including LF. Each I/O operation has a
+10-second timeout and the entire valid operation has a 15-second wall deadline.
+Exit status is 0 for success, 2 for invocation/ID/input errors, and 1 for
+credential, transport, upstream, timeout, or other operational failures.
+Ordinary diagnostics are fixed and bounded; they never echo request data,
+upstream bodies, or exception text. Usage is appended only to exit-2 errors.
+A wall-deadline expiry may be silent so a blocked diagnostic stream cannot
+extend the operation.
+
+Use a private mode-0700 temporary directory with a cleanup trap for every
+returned document and acknowledgement. The reference contains the canonical
+fetch-edit-put-refetch procedure. Preserve node IDs, coordinates, wires, and
+unrelated fields; update only the requested fields on the selected tab.
+
 ## Where things live
 
 | Thing | Path / value |
 |---|---|
-| Flows | `/var/lib/node-red/flows.json` (Read/Edit as root via `sudo`) |
-| Credentials | `/var/lib/node-red/flows_cred.json` (encrypted; back up with flows) |
+| Flow administration | `node-red-admin` only |
+| Admin transport | Helper-owned, fixed verified TLS vhost at `nodered.vulcan.lan` |
 | Settings.js source | `/etc/nixos/config/node-red-settings.js` |
 | Settings.js runtime | `/nix/store/.../node-red-settings.js` (read-only — never edit in store) |
 | Plugins via npm | `/var/lib/node-red/node_modules/` (Palette manager) |
 | Plugins via Nix | NixOS overlay (template: `modules/services/node-red-event-logger.nix`) |
 | Backup module | `/etc/nixos/modules/services/node-red-backup.nix` (30-day retention) |
-| Service | `node-red.service`, user `node-red`, port `1880` |
+| Service | `node-red.service`, user `node-red` |
 | Restart | `sudo systemctl restart node-red` |
 | Editor | `https://node-red.vulcan.lan/` |
 | Running version | 4.1.10 (overlay-pinned: `/etc/nixos/overlays/node-red.nix`) |
 | Event-log DB | Postgres `nodered_events` (peer auth via unix socket) |
 | Event-log Grafana | `https://grafana.vulcan.lan/d/node-red-events` |
 | Config-node IDs | HA server `86b277e82b069e9b`; chronos-config `f1c80506d19d3de2` |
-| Admin API token | `/run/secrets/node-red-admin-token` (mode 0400 johnw:users; declared in `modules/services/node-red.nix` as `sops.secrets."node-red-admin-token"`) |
 | Context persistence | **Enabled by default** via `contextStorage.default = {module:"localfilesystem"}` in settings.js. All `flow.set/get`, `global.set/get`, `context.set/get` calls persist to `/var/lib/node-red/context/`. No `'file'` arg needed. Cache + 30s flush. |
-
-## How to edit flows — Admin API first, always
-
-**Preferred: Admin API (`PUT /flow/<tab-id>`).** Live reload, no restart, no editor disconnect, surgical (only the named tab changes). This is the default path for any edit John asks for.
-
-```bash
-# Always read the token via shell substitution; never echo it.
-TOKEN=$(cat /run/secrets/node-red-admin-token)
-NR=http://localhost:1880
-
-# Read all flows (returns array of nodes including tab/subflow definitions)
-curl -sS -H "Authorization: Bearer $TOKEN" $NR/flows
-
-# Read one tab (returns {id, label, nodes:[...], configs:[...], info, env})
-curl -sS -H "Authorization: Bearer $TOKEN" $NR/flow/<tab-id>
-
-# Replace one tab — surgical, leaves all other tabs untouched
-curl -sS -X PUT -H "Authorization: Bearer $TOKEN" \
-     -H "Content-Type: application/json" \
-     -d @updated-tab.json $NR/flow/<tab-id>
-
-# Create a new tab (returns the new id)
-curl -sS -X POST -H "Authorization: Bearer $TOKEN" \
-     -H "Content-Type: application/json" \
-     -d @new-tab.json $NR/flow
-
-# Delete a tab
-curl -sS -X DELETE -H "Authorization: Bearer $TOKEN" $NR/flow/<tab-id>
-
-# Replace the entire flows array (DESTRUCTIVE — use only when unavoidable)
-curl -sS -X POST -H "Authorization: Bearer $TOKEN" \
-     -H "Content-Type: application/json" \
-     -H "Node-RED-Deployment-Type: full" \
-     -d @flows.json $NR/flows
-```
-
-**Layout-preserving edits:** `GET /flow/<id>` → modify only the field that's wrong on the specific node(s) by `id` → `PUT /flow/<id>` with the same node array. Node coordinates, wires, and IDs are preserved because you sent them back unchanged.
-
-**Token rules:**
-- Always read via `$(cat /run/secrets/node-red-admin-token)` or assign to a shell variable. **Never** echo, log, or pass the token to a tool that surfaces output in this conversation. If a curl command would dump headers, redirect them to a tempfile.
-- The token is owned by `johnw:users` mode `0400` — no `sudo` needed.
-
-**Fallback paths (in order, only when the API can't help):**
-
-1. **Editor UI** — for one-off edits John wants to make himself, or when a generated flow benefits from human review before publish. Output the JSON to `~/*.json`, suggest **Menu → Import → Select a file → Deploy**.
-2. **Direct `flows.json` edit + restart** — only if Node-RED is down or auth is broken. Procedure: backup → `sudo` read/edit → `validate_flow.py` → `sudo chown node-red:node-red` → `sudo systemctl restart node-red`. ~6 s editor disconnect.
-
-Don't write to `/var/lib/node-red/flows.json` directly when the API is reachable. Don't ask the user to re-import a tab when a `PUT /flow/<id>` would do the same job without losing the layout.
 
 ## House style — match this
 
@@ -140,7 +145,9 @@ The runtime `TZ` is local, so no offset to hardcode. Pattern in production: subf
 10. **`server-state-changed` v6 uses `entities: {entity: [...], substring: [...], regex: [...]}`**, NOT the flat `entityId`/`entityIdType` from older versions. Wrong schema → `TypeError: Cannot read properties of undefined (reading 'entity')` on startup, six errors for six nodes, etc. Always use the nested form when emitting JSON for v6.
 11. **`api-call-service` v7 needs `action: "<domain>.<service>"`** in addition to the legacy `domain`/`service` fields, plus `floorId: []`, `labelId: []`, and `blockInputOverrides`. Omitting any of these makes the editor flag the node as invalid (red triangle) even though the runtime might still execute it. Reference example: the user's working `09238a6ff00540ec` node.
 12. **`api-current-state` `outputProperties` valueTypes** that are actually valid: `entityState`, `entityId`, `jsonata`, `str`, `num`, `bool`, `flow`, `global`, `msg`, `env`, `date`, `bin`, `eventData`. The string `entity` is NOT a valid valueType — use `jsonata` with `$entity().attributes.<key>` to get attributes. Also include `override_topic: false` (working nodes always have it).
-13. **Never echo or log the Admin API token.** When using `/run/secrets/node-red-admin-token`, wrap it in `$(cat …)` or assign to a shell variable that's only consumed by curl. If you need to see whether the token works, check the curl HTTP code (`-w "%{http_code}"`) and response length — never the request headers.
+13. **Keep the admin transport credential outside the workflow.** Use only the
+    three `node-red-admin` signatures above. Never request, read, expose, or
+    bypass the helper-owned credential.
 14. **Palette/API installs need `bash` in the service PATH.** Many npm packages (e.g. `core-js`) have postinstall scripts that spawn `sh`. The default `node-red.service` PATH on this host (`nodejs, gcc-wrapper, coreutils, findutils, grep, sed, systemd`) has no shell — installs ENOENT with `npm error syscall spawn sh`. Fixed by `systemd.services.node-red.path = [ pkgs.bash ];` in `modules/services/node-red.nix`. Anytime an install fails with "spawn sh ENOENT", verify the service path still has bash.
 
 ## Debugging workflow
@@ -193,7 +200,7 @@ Quick recall list — full catalog and tab UUIDs are in `references/patterns.md`
 - Event-log query or Grafana panel → `references/event_logging.md`
 - Reproducing John's wiring style on a new tab → `references/patterns.md`
 - Function node code patterns → `references/function_snippets.md`
-- Admin API or generic node schema lookup → `references/api_reference.md`, `references/node_schemas.md`
+- Admin helper contract or generic node schema lookup → `references/api_reference.md`, `references/node_schemas.md`
 
 ## Available scripts
 
@@ -206,7 +213,9 @@ Quick recall list — full catalog and tab UUIDs are in `references/patterns.md`
 
 - Don't use Manage Palette to install a new plugin permanently — Nix overlay is the right vehicle.
 - Don't suggest `~/.node-red/` paths; those don't exist on this host.
-- Don't write to `flows.json` directly when the API is reachable — use `PUT /flow/<id>` for surgical, layout-preserving updates.
-- Don't ask the user to re-import a tab to apply a small fix — fetch with `GET /flow/<id>`, patch, `PUT /flow/<id>`. Same end state, no manual work.
+- Don't bypass `node-red-admin` with direct flow-file or network access.
+- Don't ask the user to re-import a tab for a small edit. Fetch the selected tab,
+  patch only the requested fields, put that same tab, and verify it through the
+  helper.
 - Don't propose mocking the event-logger DB in tests — use real Postgres (CLAUDE.md rule).
 - Don't fabricate entity IDs — verify against `/var/lib/hass/.storage/core.entity_registry` (jq filtered by platform).

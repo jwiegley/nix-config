@@ -52,6 +52,7 @@ Partner observation .445Z: the malformed claude-opus-5[1m value came from a trun
   }
 ]
 #+end_src
+
 * DOING [#B] Make obr available across the managed fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -382,15 +383,17 @@ Partner observations 2026-08-11T03:29:03.210Z and .211Z found an invalid placeho
 
 Parent for the 2026-08-10 seven-pass whole-repository review frozen at commit c8b37be06d054e16b865192cefffce6203a7d64c and tree d2641871fc5dc028682a4f88d8621f051af9df7b. Children preserve verified defects, test gaps, simplifications, documentation defects, and authority questions after cross-pass deduplication. Review evidence is static unless each child says otherwise.
 
-* DOING [#A] Remove agent-visible Node-RED runtime-secret access    :security:validated:
+* DONE [#A] Remove agent-visible Node-RED runtime-secret access    :security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.1
 :LABELS: ["heavy-review","security","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 15:19]
+:MODIFIED: [2026-08-10 Mon 21:16]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 21:16]
+:CLOSE_REASON: Implemented the reviewed host-owned Node-RED admin boundary in Vulcan commit 7a808a186b521299916679a66428299b0698dcfb and rewrote the managed skill to expose only the bounded three-command helper. Vulcan focused 105-test derivation, all-system evaluation, static checks, root ai-catalog-transport build, and root/portable all-system evaluations passed; no activation or push performed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

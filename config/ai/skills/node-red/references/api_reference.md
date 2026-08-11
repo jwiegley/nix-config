@@ -1,445 +1,99 @@
-# Node-RED Admin API Reference
+# Node-RED admin helper reference
 
-## Authentication
+## Trust boundary
 
-If `httpAdminAuth` is configured in settings.js, include authentication headers:
+`node-red-admin` is for a trusted, authorized Node-RED flow author. It keeps
+the runtime admin transport credential out of routine agent handling. It is not
+an operating-system sandbox, a privilege boundary against an already privileged
+user, or a defense against intentionally malicious flow code.
+
+A selected flow is authorized but sensitive output. It may contain private
+configuration even though the helper never fetches the separate credential
+store. Keep returned JSON out of the conversation, logs, command arguments,
+shared directories, and long-lived files.
+
+The helper owns a fixed loopback route and verifies the TLS identity of
+`nodered.vulcan.lan`. Callers cannot choose a method, path, URL, host, or
+transport option. Never bypass the helper with a network client, language HTTP
+library, direct flow-file access, or a credential read.
+
+## Complete command allowlist
+
+These three signatures are the entire caller interface:
+
+```text
+node-red-admin flows get
+node-red-admin flow get FLOW_ID
+node-red-admin flow put FLOW_ID < flow.json
+```
+
+Do not add privilege escalation, options, extra arguments, create/delete verbs,
+or whole-configuration operations. `-h` and `--help` are invalid and exit 2.
+`flow put` accepts JSON only on standard input; a filename is not an argument.
+
+`FLOW_ID` must entirely match
+`[0-9a-f]{1,32}(?:\.[0-9a-f]{1,32})?\Z`: one or two lowercase hexadecimal
+segments of 1-32 characters, separated by at most one dot.
+
+## Output contract
+
+All successful output is compact ASCII JSON followed by one LF, with no headers
+or commentary.
+
+- `flows get` returns tab metadata only:
+  `{"flows":[{"id":"a1b2c3d4","label":"Office"}]}`.
+- `flow get` returns the complete selected-flow object, normalized without field loss.
+  The returned ID must equal `FLOW_ID`. The helper refuses output that contains
+  its own transport credential.
+- `flow put` requires a JSON object whose `id` equals `FLOW_ID`. Only upstream
+  success status 200 or 204 is accepted. Its acknowledgement has exact key
+  order: `{"ok":true,"id":"FLOW_ID"}`.
+
+The raw input and its normalized JSON form must each be at most 1 MiB. An
+upstream response may be at most 8 MiB. Final stdout, including LF, may be at
+most 1 MiB.
+
+Each I/O operation has a 10-second timeout. A 15-second wall deadline covers
+parsing, standard input, network work, and stdout/stderr flushing for the whole
+valid operation.
+
+## Exit and error contract
+
+- 0: success.
+- 2: invalid command, ID, input shape, ID mismatch, or input size.
+- 1: credential, transport, upstream, response, timeout, or other operational
+  failure.
+
+Ordinary failures write only fixed, bounded diagnostics prefixed with
+`node-red-admin:`. They do not echo request data, upstream bodies, exception
+text, or the transport credential. Usage is appended only for exit-2 failures.
+If the wall deadline expires while reporting, the helper may exit silently; it
+uses status 1 for an operation timeout and preserves status 2 for an already
+classified caller error.
+
+## Private fetch-edit-put workflow
+
+Use a fresh mode-0700 directory, restrictive umask, and cleanup trap. Redirect
+every response to that directory; do not inspect flow JSON through a tool that
+will surface it in the conversation.
 
 ```bash
-# Basic Auth
-curl -u admin:password http://localhost:1880/flows
+umask 077
+workdir="$(mktemp -d "${TMPDIR:-/tmp}/node-red-admin.XXXXXX")"
+chmod 700 -- "$workdir"
+cleanup() { rm -rf -- "$workdir"; }
+trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
 
-# Bearer Token
-curl -H "Authorization: Bearer <access_token>" http://localhost:1880/flows
+flow_id=a1b2c3d4
+node-red-admin flows get > "$workdir/flows.json"
+node-red-admin flow get "$flow_id" > "$workdir/before.json"
+cp -- "$workdir/before.json" "$workdir/updated.json"
+# Edit only the requested fields in updated.json, preserving every other field.
+node-red-admin flow put "$flow_id" < "$workdir/updated.json" > "$workdir/ack.json"
+node-red-admin flow get "$flow_id" > "$workdir/after.json"
 ```
 
-## Flow Management
-
-The Flows API has two versions. **v1 (the default)** works with a bare JSON
-array of nodes — this is what the recipes in SKILL.md use. **v2** wraps the
-array in an envelope with a revision id for optimistic locking, and only
-applies when the request carries the header `Node-RED-API-Version: v2`.
-
-### GET /flows
-Retrieve the active flow configuration.
-
-**Response (v1, default):** a JSON array of all nodes, including tab and
-subflow definitions:
-```json
-[
-  { "id": "tab-id", "type": "tab", "label": "Flow 1" },
-  { "id": "node-id", "type": "inject", "z": "tab-id", "wires": [[]] }
-]
-```
-
-**Response (v2, requires `Node-RED-API-Version: v2` header):**
-```json
-{
-  "flows": [...],      // Array of flow nodes
-  "rev": "abc123"      // Revision ID for update operations
-}
-```
-
-### POST /flows
-Deploy complete flow configuration.
-
-**Request (v1, default):** the body is the complete flow array itself:
-```json
-[...]
-```
-
-**Request (v2, requires `Node-RED-API-Version: v2` header):**
-```json
-{
-  "flows": [...],      // Complete flow array
-  "rev": "abc123"      // Optional: revision for conflict detection
-}
-```
-With v2, a stale `rev` is rejected with a `conflict` error unless the
-deployment type is `reload`.
-
-**Headers:**
-- `Node-RED-Deployment-Type`: full|nodes|flows|reload
-- `Node-RED-API-Version`: v2 (only when using the v2 envelope)
-
-### POST /flow
-Add a new flow/tab.
-
-**Request:**
-```json
-{
-  "id": "optional-id",
-  "label": "Flow Name",
-  "nodes": [...],       // Nodes in this flow
-  "configs": [...]      // Config nodes used by this flow
-}
-```
-
-### GET /flow/:id
-Get a specific flow configuration.
-
-**Response:**
-```json
-{
-  "id": "flow-id",
-  "label": "Flow Name",
-  "nodes": [...],
-  "configs": [...]
-}
-```
-
-### PUT /flow/:id
-Update a specific flow.
-
-**Request:**
-```json
-{
-  "id": "flow-id",
-  "label": "Updated Name",
-  "nodes": [...],
-  "configs": [...]
-}
-```
-
-### DELETE /flow/:id
-Delete a flow.
-
-**Response:**
-```json
-{
-  "removed": ["node-id-1", "node-id-2"]
-}
-```
-
-## Node Management
-
-### POST /nodes
-Install a new node module.
-
-**Request:**
-```json
-{
-  "module": "node-red-contrib-example",
-  "version": "1.0.0"    // Optional
-}
-```
-
-### GET /nodes
-List all installed nodes.
-
-**Response:**
-```json
-[
-  {
-    "id": "node-red/inject",
-    "name": "inject",
-    "types": ["inject"],
-    "enabled": true,
-    "module": "node-red",
-    "version": "3.0.0"
-  }
-]
-```
-
-### GET /nodes/:module
-Get specific node module info.
-
-### DELETE /nodes/:module
-Uninstall a node module.
-
-### PUT /nodes/:module
-Enable/disable a node module.
-
-**Request:**
-```json
-{
-  "enabled": true
-}
-```
-
-## Context Store
-
-### GET /context/:scope
-Get context data.
-
-**Scopes:**
-- `global`: Global context
-- `flow/:flowId`: Flow context
-- `node/:nodeId`: Node context
-
-**Query Parameters:**
-- `store`: Context store name (default: "default")
-
-### GET /context/:scope/:key
-Get specific context value.
-
-### DELETE /context/:scope/:key
-Delete context value.
-
-## Settings
-
-### GET /settings
-Get runtime settings (publicly accessible).
-
-**Response:**
-```json
-{
-  "httpNodeRoot": "/",
-  "version": "3.0.0",
-  "context": {
-    "default": "memory",
-    "stores": ["memory", "file"]
-  },
-  "flowEncryptionType": "system",
-  "user": {
-    "username": "admin"
-  }
-}
-```
-
-## Authentication Endpoints
-
-### POST /auth/token
-Get access token.
-
-**Request:**
-```json
-{
-  "client_id": "node-red-editor",
-  "grant_type": "password",
-  "username": "admin",
-  "password": "password",
-  "scope": "read write"
-}
-```
-
-**Response:**
-```json
-{
-  "access_token": "token-string",
-  "expires_in": 604800,
-  "token_type": "Bearer"
-}
-```
-
-### POST /auth/revoke
-Revoke access token.
-
-**Request:**
-```json
-{
-  "token": "access-token"
-}
-```
-
-## Library
-
-### GET /library/flows
-List saved flows in library.
-
-### GET /library/flows/:path
-Get specific library flow.
-
-### POST /library/flows/:path
-Save flow to library.
-
-**Request:**
-```json
-{
-  "flows": [...],
-  "description": "Flow description"
-}
-```
-
-## Debug
-
-### GET /debug/view
-Get debug messages (WebSocket endpoint also available).
-
-### POST /debug/:nodeId/:state
-Enable/disable debug node.
-
-**State:** enable|disable
-
-## UI Editor
-
-### GET /red/*
-Serve the Node-RED editor UI.
-
-### GET /
-Redirect to editor (if httpAdminRoot is set).
-
-## Projects API (if enabled)
-
-### GET /projects
-List all projects.
-
-### POST /projects
-Create new project.
-
-**Request:**
-```json
-{
-  "name": "my-project",
-  "summary": "Project description",
-  "files": {
-    "flow": "flows.json",
-    "credentials": "flows_cred.json"
-  },
-  "git": {
-    "remotes": {
-      "origin": {
-        "url": "https://github.com/user/repo.git"
-      }
-    }
-  }
-}
-```
-
-### GET /projects/:name
-Get project details.
-
-### PUT /projects/:name
-Update project.
-
-### DELETE /projects/:name
-Delete project.
-
-### PUT /projects/:name/stage
-Stage files for commit.
-
-**Request:**
-```json
-{
-  "files": ["flows.json", "package.json"]
-}
-```
-
-### POST /projects/:name/commit
-Commit staged changes.
-
-**Request:**
-```json
-{
-  "message": "Commit message"
-}
-```
-
-## Execution Control
-
-### POST /inject/:nodeId
-Trigger inject node programmatically.
-
-**Response:**
-```json
-{
-  "status": "ok"
-}
-```
-
-## Health Check
-
-### GET /diagnostics
-Get system diagnostics (if enabled).
-
-**Response:**
-```json
-{
-  "version": "3.0.0",
-  "nodejs": "18.0.0",
-  "os": {
-    "platform": "linux",
-    "release": "5.10.0"
-  },
-  "runtime": {
-    "modules": [...],
-    "settings": {...}
-  }
-}
-```
-
-## Error Responses
-
-### Error Format
-```json
-{
-  "code": "error_code",
-  "message": "Human readable message",
-  "details": {}
-}
-```
-
-### Common Error Codes
-- `invalid_api_version`: API version mismatch
-- `invalid_flow`: Flow validation failed
-- `module_not_found`: Node module not found
-- `not_found`: Resource not found
-- `permission_denied`: Insufficient permissions
-- `conflict`: Revision conflict
-- `unexpected_error`: Internal server error
-
-## WebSocket Endpoints
-
-### /comms
-Real-time communication for editor.
-
-**Events:**
-- `status`: Node status updates
-- `debug`: Debug messages
-- `notification`: System notifications
-
-## CORS Configuration
-
-Configure in settings.js:
-```javascript
-httpNodeCors: {
-  origin: "*",
-  methods: "GET,PUT,POST,DELETE"
-}
-```
-
-## Example Usage
-
-### Deploy Flow via cURL
-```bash
-# Get current flows (v1: the body is a bare JSON array)
-TOKEN=$(cat /run/secrets/node-red-admin-token)
-FLOWS=$(curl -s -H "Authorization: Bearer $TOKEN" http://localhost:1880/flows)
-
-# Modify and deploy (the body is the array itself)
-curl -X POST http://localhost:1880/flows \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -H "Node-RED-Deployment-Type: full" \
-  -d "$FLOWS"
-```
-
-### Python Example
-```python
-import requests
-
-with open('/run/secrets/node-red-admin-token') as f:
-    token = f.read().strip()
-headers = {'Authorization': f'Bearer {token}'}
-
-# Get flows (v1: the response body is the flow array itself)
-resp = requests.get('http://localhost:1880/flows', headers=headers)
-flows = resp.json()  # a list of node objects
-
-# Add a new node
-flows.append({
-    "id": "a1b2c3d4e5f60718",  # 16 hex chars (scripts/generate_uuid.py)
-    "type": "debug",
-    "z": "flow-tab-id",
-    "name": "New Debug",
-    "x": 300,
-    "y": 200,
-    "wires": []
-})
-
-# Deploy
-requests.post(
-    'http://localhost:1880/flows',
-    json=flows,
-    headers={**headers, 'Node-RED-Deployment-Type': 'nodes'}
-)
-```
+Validate the edit locally, confirm the fixed acknowledgement, and compare the
+before/after documents without emitting their contents. Stop and report a
+helper error; never switch to a lower-level transport or direct runtime file.
