@@ -120,11 +120,12 @@ The catalog declares local inference endpoints once per catalog host. Profiles o
 opt into those routes; the composer resolves the home's record once and passes it
 to the renderers and activation logic that consume it.
 
-oMLX itself is loopback-only. Its TLS gateway route is absent by default; remote
-access is an explicit host policy requiring a concrete listener address, a
-restricted client-source allowlist, and a mutable owner-only htpasswd file. The
-gateway requires both source authorization and Basic authentication, then removes
-the client credential before forwarding to oMLX.
+oMLX itself is loopback-only. Its TLS gateway route is absent by default; Hera
+enables it only on its LAN address and admits Vulcan's gateway address. Vulcan
+injects the bearer credential from its protected runtime configuration, nginx
+forwards that header, and oMLX validates it. This keeps one authentication
+authority instead of consuming the OpenAI `Authorization` header in a second
+Basic-auth layer.
 
 The initial Prime Agent profile is Hera-only. Its prompt commands and Agent Skills
 are direct catalog projections; static specialist definitions become native RLM

@@ -12,8 +12,6 @@ let
   recordingCaBundle = "${pkgs.ca-bundle-with-vulcan or pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
   runsEternalTerminal = config.johnw.host.isDarwinWorkstation;
   omlxProxy = config.johnw.omlxProxy;
-  omlxProxyAuthFile =
-    if omlxProxy.authBasicPasswordFile == null then "/dev/null" else omlxProxy.authBasicPasswordFile;
   eternalTerminalConfig = pkgs.writeText "et.cfg" ''
     ; et.cfg : Config file for Eternal Terminal
     ;
@@ -312,21 +310,19 @@ in
                 access_log ${logDir}/access.log;
 
                 ${lib.optionalString omlxProxy.enable ''
-                  # Expose the loopback-only oMLX API only to authenticated,
-                  # explicitly allowed clients.
+                  # Expose the loopback-only oMLX API only to explicitly
+                  # allowed clients. oMLX validates the forwarded bearer
+                  # credential itself.
                   location /v1/ {
-                    satisfy all;
                     ${lib.concatMapStringsSep "\n                  " (
                       source: "allow ${source};"
                     ) omlxProxy.allowedSources}
                     deny all;
-                    auth_basic "oMLX";
-                    auth_basic_user_file ${omlxProxyAuthFile};
 
                     client_max_body_size 20M;
                     proxy_pass http://127.0.0.1:8000;
 
-                    proxy_set_header Authorization "";
+                    proxy_set_header Authorization $http_authorization;
                     proxy_set_header Host $host;
                     proxy_set_header X-Real-IP $remote_addr;
                     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -367,26 +363,6 @@ in
         in
         {
           script = ''
-            ${lib.optionalString omlxProxy.enable ''
-              auth_file=${lib.escapeShellArg omlxProxyAuthFile}
-              if [ -L "$auth_file" ] || [ ! -f "$auth_file" ]; then
-                echo "oMLX proxy authorization file must be a regular, non-symlink file" >&2
-                exit 1
-              fi
-              auth_owner=$(/usr/bin/stat -f '%u' "$auth_file")
-              auth_mode=$(/usr/bin/stat -f '%Lp' "$auth_file")
-              if [ "$auth_owner" != "$(/usr/bin/id -u)" ]; then
-                echo "oMLX proxy authorization file must be owned by the launch-agent user" >&2
-                exit 1
-              fi
-              case "$auth_mode" in
-                400|600) ;;
-                *)
-                  echo "oMLX proxy authorization file must have mode 0400 or 0600" >&2
-                  exit 1
-                  ;;
-              esac
-            ''}
             mkdir -p ${logDir} ${logDir}/client_body
             ${pkgs.nginx}/bin/nginx -c ${config} -g "daemon off;" -e ${logDir}/error.log
           '';

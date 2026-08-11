@@ -2807,6 +2807,39 @@ Partner observation .442Z: restore source_root is hardcoded and every current te
 ]
 #+end_src
 
+* DONE [#B] Restore Hera oMLX gateway route
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-w7y
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 20:48]
+:MODIFIED: [2026-08-10 Mon 20:59]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 20:59]
+:CLOSE_REASON: Restored the Hera-only oMLX /v1/ route with a Vulcan-only source allowlist and one forwarded bearer-auth authority. Pinned actual Hera/Clio behavior; focused proxy check, full Hera system build, generated nginx syntax, root all-system evaluation, pre-commit, and independent review passed. Activation and live acceptance remain separately authorized.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Commit 096b4e45 made the nginx /v1/ route conditional but never enabled johnw.omlxProxy for Hera, so 8443 falls through to chat.vulcan.lan and Hermes receives generic FastAPI GET/POST behavior. Restore the Hera-only route without adding a second Authorization scheme: restrict the listener to Hera and the source to Vulcan, forward Vulcan's bearer Authorization to oMLX, and pin real Hera/Clio behavior in the existing proxy check.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-w7y",
+    "depends_on_id": "nix-tcz.13",
+    "type": "discovered-from",
+    "created_at": "2026-08-11T03:48:21.151815Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Move obr from portable AI to root package authority
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

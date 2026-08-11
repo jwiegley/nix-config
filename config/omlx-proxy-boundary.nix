@@ -34,15 +34,6 @@ in
       description = "Client addresses or CIDR ranges permitted to use the oMLX route.";
     };
 
-    authBasicPasswordFile = lib.mkOption {
-      type = lib.types.nullOr (lib.types.strMatching "/[A-Za-z0-9._/+@%=-]+");
-      default = null;
-      example = "/Users/johnw/.config/omlx/proxy.htpasswd";
-      description = ''
-        Mutable htpasswd file for the oMLX route. The launch agent requires a
-        regular, owner-only file before starting nginx.
-      '';
-    };
   };
 
   config.assertions = [
@@ -53,10 +44,6 @@ in
     {
       assertion = !cfg.enable || sourcesAreRestricted;
       message = "oMLX proxy exposure requires a non-empty, restricted source allowlist";
-    }
-    {
-      assertion = !cfg.enable || cfg.authBasicPasswordFile != null;
-      message = "oMLX proxy exposure requires a protected Basic-auth password file";
     }
   ];
 }

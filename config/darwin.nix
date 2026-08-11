@@ -34,6 +34,14 @@ in
   # Prevent macOS from falling back to the case-preserving LocalHostName.
   networking.hostName = hostname;
 
+  # Hera is the only remote inference host. Vulcan terminates client traffic,
+  # injects the oMLX bearer credential, and reaches this listener over the LAN.
+  johnw.omlxProxy = lib.mkIf config.johnw.host.isHera {
+    enable = true;
+    listenAddress = "192.168.1.4";
+    allowedSources = [ "192.168.1.2/32" ];
+  };
+
   users = {
     # nix-darwin's Prometheus module registers its own service account when the
     # exporter is enabled; only the login user belongs in this local declaration.
