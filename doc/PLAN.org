@@ -185,6 +185,24 @@ Discovered while implementing nix-tcz.63. The hardened _make_writable walk close
 :ORIGINAL_SIZE: 0
 :END:
 
+* DONE [#B] Repair Samba 4.23.8 Darwin client linkage
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-fjy
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-11 Tue 09:40]
+:MODIFIED: [2026-08-11 Tue 11:19]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-11 Tue 11:19]
+:CLOSE_REASON: Repaired Samba 4.23.8 Darwin install names across bin, libexec, and Python bundles; verified 342 Mach-O files have no build-root references, client/helper/import runtime checks pass, credential-free SMB3 reaches Vulcan, Darwin system build and focused repository gates pass. Path Finder native SMB reproduction remains tracked separately as nix-xrm.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The Nix-packaged smbclient on Clio aborts before startup because a Mach-O load command references a vanished /nix/var/nix/builds path. Diagnose the native Path Finder failure separately, fix the narrow shared packaging seam, and verify the package build and runtime without activation.
+
 * DONE [#C] Refuse stale YubiKey transaction directories
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -3099,6 +3117,68 @@ obr is a general repository/fleet issue tracker, not an AI tool. Move its flake 
     "depends_on_id": "nix-tcz",
     "type": "discovered-from",
     "created_at": "2026-08-10T23:18:58.199108Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Reproduce Clio Path Finder SMB mount failure
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-xrm
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-11 Tue 10:15]
+:MODIFIED: [2026-08-11 Tue 10:15]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Path Finder 26.1.7 is independent of Nix Samba. During the reported attempt it produced no NetAuth, NetFS, mount_smbfs, or SMB negotiation evidence; a nearby private URL was routed to Jump Desktop. DNS, TCP 445, and Vulcan Samba are healthy. Reproduce the exact Path Finder server/share action on Clio without exposing credentials, identify whether URL routing, authentication, or native mounting fails, and explain any local mount-point placeholder behavior.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-xrm",
+    "depends_on_id": "nix-fjy",
+    "type": "discovered-from",
+    "created_at": "2026-08-11T17:15:25.512348Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Batch Samba Darwin install-name rewrites
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-zk6
+:LABELS: []
+:ISSUE_TYPE: chore
+:CREATED:  [2026-08-11 Tue 11:19]
+:MODIFIED: [2026-08-11 Tue 11:19]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The correctness fix expands upstream Samba's Darwin SCRIPT to 96 additional Mach-O consumers. Upstream invokes install_name_tool once per stale load command, causing roughly 7,465 extra writes and a long package rebuild. Preserve the verified coverage and residual guard while batching all -change arguments into one install_name_tool invocation per Mach-O file.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-zk6",
+    "depends_on_id": "nix-fjy",
+    "type": "discovered-from",
+    "created_at": "2026-08-11T18:19:11.031972Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""

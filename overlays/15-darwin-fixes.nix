@@ -75,13 +75,52 @@ in
     }
   );
 
-  # Replace discard_const with a cast in Samba's comparison-fold test on Darwin.
+  # Fix Samba's comparison-fold test and Nix 2.30 build-root dylib references.
   samba = prev.samba.overrideAttrs (oldAttrs: {
     postPatch =
       (oldAttrs.postPatch or "")
       + prev.lib.optionalString prev.stdenv.isDarwin ''
         substituteInPlace lib/ldb/tests/test_ldb_comparison_fold.c \
           --replace-fail 'discard_const(s)' '(void *)(s)'
+      '';
+    postFixup =
+      let
+        upstream = oldAttrs.postFixup or "";
+        needles = [
+          ''otool -L \$BIN | grep /private/tmp/''
+          ''install_name_tool -id \$BIN \$BIN''
+          ''find $out/bin -type f -exec $SHELL -c "$SCRIPT" \;''
+        ];
+        replacements = [
+          ''otool -L "\$BIN" | grep -F -- "$NIX_BUILD_TOP/"''
+          ''
+            if otool -l "\$BIN" 2>/dev/null \
+              | grep '^[[:space:]]*cmd LC_ID_DYLIB$' >/dev/null; then
+              install_name_tool -id "\$BIN" "\$BIN"
+            fi
+          ''
+          ''
+            find $out/bin -type f -exec $SHELL -c "$SCRIPT" \;
+            find "$out" -type f \
+              \( -path "$out/libexec/*" -o -name '*.so' -o -name '*.so.*' \) \
+              -exec "$SHELL" -c "$SCRIPT" \;
+          ''
+        ];
+      in
+      assert prev.lib.assertMsg (prev.lib.all (
+        needle: prev.lib.hasInfix needle upstream
+      ) needles) "samba: expected upstream Darwin dylib fixup";
+      builtins.replaceStrings needles replacements upstream
+      + ''
+        residual=0
+        while IFS= read -r -d "" bin; do
+          if otool -L "$bin" 2>/dev/null \
+            | grep -F -- "$NIX_BUILD_TOP/" >/dev/null; then
+            echo "samba: build-root reference remains in $bin" >&2
+            residual=1
+          fi
+        done < <(find "$out" -type f -print0)
+        [ "$residual" -eq 0 ]
       '';
   });
 
