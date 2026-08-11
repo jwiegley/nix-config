@@ -48,6 +48,7 @@ let
       ai-catalog-transport = behavioral systems true;
       ai-lock-coherence = evaluationOnly systems;
       ai-managed-preflight = behavioral systems false;
+      ai-mcp-registry = behavioral systems true;
       claude-mem-pin = behavioral systems false;
       coq-overlay = evaluationOnly systems;
       darwin-overrides-inactive = evaluationOnly linuxSystems;

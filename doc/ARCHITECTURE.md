@@ -122,7 +122,9 @@ to the renderers and activation logic that consume it.
 The initial Prime Agent profile is Hera-only. Its prompt commands and Agent Skills
 are direct catalog projections; static specialist definitions become native RLM
 prompt adapters; stdio MCP remains available through the shared `pi-mcp-adapter`
-because Prime Agent's native MCP integration accepts HTTP transports only.
+because Prime Agent's native MCP integration accepts HTTP transports only. Pi and
+Prime consume one catalog-selected registry below `XDG_CONFIG_HOME`; its shared
+projection emits that leaf once and guards each mutable adapter root from shadowing it.
 
 Pi's managed local providers carry their long request and stream-idle budgets as
 typed `transport` data in `models.json`. The runtime turns that capability into

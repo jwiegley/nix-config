@@ -15,23 +15,29 @@ let
     inherit pkgs;
   };
   # Managed-file preflight contract: collision, permission, and symlink safety.
-  task9PreflightWithPi = preflightFactory {
+  task9PreflightWithMcp = preflightFactory {
     blackholeConfigPath = ".config/pi/agent/pi-blackhole/pi-blackhole-config.json";
     newPaths = [
       ".config/claude/personal/agents/new.md"
       ".config/claude/personal/agents/retained.md"
     ];
-    piGuard = {
-      path = ".config/pi/agent/mcp.json";
-      forbiddenKeys = [
-        "mcpServers"
-        "imports"
-      ];
-    };
+    mcpGuards =
+      map
+        (path: {
+          inherit path;
+          forbiddenKeys = [
+            "mcpServers"
+            "imports"
+          ];
+        })
+        [
+          ".config/pi/agent/mcp.json"
+          ".prime/agent/mcp.json"
+        ];
     piAliasTarget = ".config/pi";
     retiredPaths = [ ".config/pi/agent/extensions/auto-compact-resume/index.ts" ];
   };
-  task9PreflightWithoutPi = preflightFactory {
+  task9PreflightWithoutMcp = preflightFactory {
     newPaths = [
       ".config/claude/personal/agents/new.md"
       ".config/claude/personal/agents/retained.md"
@@ -74,11 +80,11 @@ let
       set -euo pipefail
       ${preflight.script}
     '';
-  task9PreflightScript = writePreflightScript "task9-ai-preflight" task9PreflightWithPi;
+  task9PreflightScript = writePreflightScript "task9-ai-preflight" task9PreflightWithMcp;
   task9PreflightBoundedScript = pkgs.writeShellScript "task9-ai-preflight-bounded" ''
     exec ${pkgs.coreutils}/bin/timeout --kill-after=1 30 ${task9PreflightScript}
   '';
-  task9PreflightNoPiScript = writePreflightScript "task9-ai-preflight-no-pi" task9PreflightWithoutPi;
+  task9PreflightNoMcpScript = writePreflightScript "task9-ai-preflight-no-mcp" task9PreflightWithoutMcp;
   task9PiLeafPreflightScript = writePreflightScript "task9-ai-pi-leaf-preflight" task9PiLeafPreflight;
   task9PiKeybindingsPreflightScript = writePreflightScript "task9-ai-pi-keybindings-preflight" task9PiKeybindingsPreflight;
   task9PiLoopPreflightScript = writePreflightScript "task9-ai-pi-loop-preflight" task9PiLoopPreflight;
@@ -106,8 +112,8 @@ let
     newPaths = [ ".config/codex/auth.json" ];
   });
 in
-assert task9PreflightWithPi.activation.before == [ "checkLinkTargets" ];
-assert task9PreflightWithPi.activation.after == [ ];
+assert task9PreflightWithMcp.activation.before == [ "checkLinkTargets" ];
+assert task9PreflightWithMcp.activation.after == [ ];
 assert !invalidPreflightProbe.success;
 assert !sherlockAncestorProbe.success;
 assert primeManagedSettingsProbe.success;
@@ -377,7 +383,7 @@ pkgs.runCommand "ai-managed-preflight"
           blackhole-parent-file)
             expected_output="$fragment: parent must be a directory, not regular file"
             ;;
-          pi-*)
+          pi-* | prime-*)
             expected_output="$fragment: keep valid adapter JSON without top-level mcpServers or imports"
             ;;
           legacy-pi-root)
@@ -822,9 +828,16 @@ pkgs.runCommand "ai-managed-preflight"
         "${task9PreflightScript}" absent
     done
 
-    setup_empty_case non-pi-ignores-adapter
+    setup_empty_case prime-mcp-servers
+    make_leaf "$case_home" ".prime/agent/mcp.json" '{"mcpServers":null}'
+    run_checked fail prime-mcp-servers ".prime/agent/mcp.json" \
+      "${task9PreflightScript}" absent
+
+    setup_empty_case no-mcp-consumer-ignores-adapter
     write_pi '{"mcpServers":null}'
-    run_checked pass non-pi-ignores-adapter "" "${task9PreflightNoPiScript}" absent
+    make_leaf "$case_home" ".prime/agent/mcp.json" '{"imports":[]}'
+    run_checked pass no-mcp-consumer-ignores-adapter "" \
+      "${task9PreflightNoMcpScript}" absent
 
     touch "$out"
   ''

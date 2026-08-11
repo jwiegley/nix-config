@@ -58,6 +58,10 @@ let
       pkgs = piRendererPkgs;
     };
   };
+  mcpRegistryRenderer = import ./ai/renderers/mcp-registry.nix {
+    inherit lib;
+    pkgs = rendererPkgs;
+  };
 
   homeClass = if nixManagedAiHomeClass != null then nixManagedAiHomeClass else hostname;
   homeClassContract = registry.homeClassContractFor homeClass;
@@ -73,6 +77,7 @@ let
   homeClassDeclared = homeClassContract.assertion;
   profileHostPopulated = profilesForHome != { };
   profileIds = lib.sort builtins.lessThan (builtins.attrNames profilesForHome);
+  selectedProfiles = map (profileId: catalog.profiles.${profileId}) profileIds;
   selectedFor =
     profileId:
     let
@@ -81,9 +86,7 @@ let
     lib.mapAttrs (_: itemSet: catalog.select profile itemSet) catalog.items;
   # Selection lives in the catalog; the composer only projects the selected
   # items onto the shared root's paths.
-  sharedSkillItems = catalog.sharedSkillsFor (
-    map (profileId: catalog.profiles.${profileId}) profileIds
-  );
+  sharedSkillItems = catalog.sharedSkillsFor selectedProfiles;
   sharedSkillFiles = lib.mapAttrs' (
     name: item: lib.nameValuePair ".agents/skills/${name}" { inherit (item) source; }
   ) sharedSkillItems;
@@ -124,17 +127,26 @@ let
     );
 
   renderedProfiles = map renderProfile profileIds;
+  mcpRegistryProjection = catalog.sharedMcpRegistryFor { profiles = selectedProfiles; };
+  mcpRegistrySelected = mcpRegistryProjection.mutableMcpPaths != [ ];
+  mcpRegistryRendering =
+    if mcpRegistrySelected then
+      mcpRegistryRenderer {
+        projection = mcpRegistryProjection;
+        homeDirectory = config.home.homeDirectory;
+        xdgConfigHome = config.xdg.configHome;
+      }
+    else
+      null;
+  renderedSurfaces = renderedProfiles ++ lib.optional mcpRegistrySelected mcpRegistryRendering;
   rawPaths =
     builtins.attrNames sharedSkillFiles
-    ++ lib.concatMap (rendered: builtins.attrNames rendered.files) renderedProfiles;
+    ++ lib.concatMap (rendered: builtins.attrNames rendered.files) renderedSurfaces;
   paths = lib.sort builtins.lessThan (lib.unique rawPaths);
   mergedFiles = lib.foldl' (
     files: rendered: files // rendered.files
-  ) sharedSkillFiles renderedProfiles;
-  piGuards = map (rendered: rendered.mutableMcpGuard) (
-    builtins.filter (rendered: rendered ? mutableMcpGuard) renderedProfiles
-  );
-  piGuard = if piGuards == [ ] then null else builtins.head piGuards;
+  ) sharedSkillFiles renderedSurfaces;
+  mcpGuards = if mcpRegistrySelected then mcpRegistryRendering.mutableMcpGuards else [ ];
   validRelativePath =
     path:
     let
@@ -171,7 +183,7 @@ let
 
   preflight = (import ./ai/preflight.nix { inherit lib pkgs; }) {
     newPaths = paths;
-    inherit piGuard;
+    inherit mcpGuards;
     piAliasTarget = if piSelected then "${xdgConfigRelative}/pi" else null;
     blackholeConfigPath = if piSelected then piBlackholeConfigPath else null;
     retiredPaths = lib.optional piSelected retiredAutoCompactPath;
@@ -344,8 +356,8 @@ in
       message = "nix-managed AI attempted recursive parent ownership";
     }
     {
-      assertion = builtins.length piGuards == (if piSelected then 1 else 0);
-      message = "nix-managed AI Pi selection must have exactly one mutable guard";
+      assertion = map (guard: guard.path) mcpGuards == mcpRegistryProjection.mutableMcpPaths;
+      message = "nix-managed AI MCP registry guards do not match its consuming clients";
     }
     {
       assertion = pairedAiInput != null;
@@ -362,10 +374,6 @@ in
     {
       assertion = !primeSelected || pairedPrimePackage != null;
       message = "inputs.nix-config-ai.packages.${system}.prime-agent is missing";
-    }
-    {
-      assertion = !primeSelected || piSelected;
-      message = "Prime Agent reads the Nix-generated MCP file that only the Pi renderer emits; a Prime profile requires a co-selected Pi profile";
     }
     {
       assertion = !(piSelected || primeSelected) || pairedAgentResources != null;

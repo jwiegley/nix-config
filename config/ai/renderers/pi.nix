@@ -16,21 +16,11 @@ let
   mergeFiles = import ./merge-files.nix { inherit lib; };
 
   renderLib = import ./render-lib.nix { inherit lib; };
-  inherit (renderLib) isTypedEnv renderCommandMetadata;
+  inherit (renderLib) renderCommandMetadata;
   renderMarkdown = renderLib.renderMarkdownFile;
 
   hasOnlyKeys =
     allowed: value: builtins.all (name: builtins.elem name allowed) (builtins.attrNames value);
-  isSafeUrl =
-    value:
-    builtins.isString value
-    && builtins.all (fragment: !(lib.hasInfix fragment value)) [
-      "$"
-      "{env:"
-      "$env:"
-      "?apiKey="
-    ];
-  renderEnv = name: "$" + "{" + name + "}";
   localModelRoutes = localModelEndpoints != null;
   modelOverrides = import ../model-overrides.nix;
   hermesPassCommand = lib.escapeShellArgs [
@@ -137,44 +127,6 @@ let
     };
   };
 
-  renderMcpEnvValue =
-    value:
-    if isTypedEnv value then
-      renderEnv value.env
-    else if builtins.isString value then
-      value
-    else
-      throw "unsupported Pi MCP environment value";
-  renderMcpServer =
-    _: server:
-    let
-      inherit (server) transport;
-    in
-    if transport ? url then
-      assert hasOnlyKeys [ "url" ] transport;
-      assert isSafeUrl transport.url;
-      {
-        inherit (transport) url;
-        oauth = false;
-      }
-    else
-      assert hasOnlyKeys [
-        "args"
-        "command"
-        "env"
-      ] transport;
-      assert builtins.isString transport.command;
-      assert builtins.isList transport.args && builtins.all builtins.isString transport.args;
-      {
-        inherit (transport) command args;
-      }
-      // lib.optionalAttrs (transport ? env) {
-        env = lib.mapAttrs (_: renderMcpEnvValue) transport.env;
-      };
-  mcp = {
-    mcpServers = lib.mapAttrs renderMcpServer selected.mcpServers;
-    settings.mcpFooterStatus = "compact";
-  };
   keybindings = import ../keybindings.nix // {
     # Pi-specific: model cycling is disabled in favor of explicit selection.
     "app.model.cycleForward" = [ ];
@@ -218,8 +170,6 @@ let
     }
   ) selected.prompts;
 
-  xdgConfigRelative = lib.removePrefix "${homeDirectory}/" xdgConfigHome;
-  globalMcpPath = "${xdgConfigRelative}/mcp/mcp.json";
   extensionRoot = "${pkgs.agent-resources}/share/agent-resources/pi-extensions";
   fleetThemeSource = ../extensions/fleet-theme/index.ts;
   fleetTheme = ../themes/dark-tool-backgrounds.json;
@@ -260,18 +210,9 @@ assert builtins.hasAttr "pi-loop" pkgs.pi-gallery.packages;
       "${root}/keybindings.json".source = json.generate "pi-${profile.id}-keybindings.json" keybindings;
       "${root}/models.json".source = json.generate "pi-${profile.id}-models.json" models;
       "${root}/themes/dark-tool-backgrounds.json".source = fleetTheme;
-      "${globalMcpPath}".source = json.generate "pi-${profile.id}-mcp.json" mcp;
     }
     (lib.optionalAttrs localModelRoutes {
       "${root}/model-router.json".source = json.generate "pi-${profile.id}-model-router.json" modelRouter;
     })
   ];
-
-  mutableMcpGuard = {
-    path = ".config/pi/agent/mcp.json";
-    forbiddenKeys = [
-      "mcpServers"
-      "imports"
-    ];
-  };
 }

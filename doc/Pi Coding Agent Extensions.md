@@ -64,7 +64,7 @@ The Hera, Clio, shared-work, VPS, and Vulcan Pi profiles are rendered by `~/src/
 
 | Surface | Current projection |
 | --- | --- |
-| Generated ownership | Individual leaves below `~/.config/pi/agent`, plus `~/.pi-lens/config.json`, `~/.config/mcp/mcp.json`, and the `~/.pi` compatibility link |
+| Generated ownership | Individual leaves below `~/.config/pi/agent`, plus `~/.pi-lens/config.json` and the `~/.pi` compatibility link; Pi shares `~/.config/mcp/mcp.json` with Prime Agent |
 | Extension entries | Fleet Theme, Nix Gallery loader, Pi Loop, Pi MCP Adapter, and Quiet Display on every managed host; Linux keeps the two loopback providers and router available without registering them automatically |
 | Agent resources | 25 Nix-managed agent definitions |
 | Prompt resources | 63 files: 61 command prompts and the `emacs` and `spanish` prompts |
@@ -93,7 +93,7 @@ The generated `models.json` owns compatibility and context overrides; on Darwin 
 
 ### MCP registry
 
-Nix generates a profile-specific, stdio-only registry at `~/.config/mcp/mcp.json`; Pi MCP Adapter exposes it lazily and renders compact footer status.
+Nix generates the shared, catalog-selected registry at `~/.config/mcp/mcp.json`; Pi MCP Adapter exposes it lazily and renders compact footer status.
 
 | Profiles | Servers |
 | --- | --- |

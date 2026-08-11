@@ -33,6 +33,53 @@ let
   skillRoot =
     if builtins.baseNameOf skillSource == "SKILL.md" then builtins.dirOf skillSource else skillSource;
   mcpExtensionRoot = "${pkgs.agent-resources}/share/agent-resources/pi-extensions/pi-mcp-adapter";
+  syntheticMcpServer = pkgs.writeText "prime-synthetic-mcp.mjs" ''
+    import { Server } from "file://${mcpExtensionRoot}/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js";
+    import { StdioServerTransport } from "file://${mcpExtensionRoot}/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js";
+    import { CallToolRequestSchema, ListToolsRequestSchema } from "file://${mcpExtensionRoot}/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js";
+
+    const server = new Server(
+      { name: "nix-prime-synthetic", version: "1.0.0" },
+      { capabilities: { tools: {} } },
+    );
+    server.setRequestHandler(ListToolsRequestSchema, async () => ({
+      tools: [{
+        name: "echo",
+        description: "Return the supplied synthetic value",
+        inputSchema: {
+          type: "object",
+          properties: { value: { type: "string" } },
+          required: ["value"],
+          additionalProperties: false,
+        },
+      }],
+    }));
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      if (request.params.name !== "echo") throw new Error("unexpected synthetic tool");
+      const value = request.params.arguments?.value;
+      if (typeof value !== "string") throw new Error("synthetic value must be a string");
+      return { content: [{ type: "text", text: "synthetic-mcp:" + value }] };
+    });
+    await server.connect(new StdioServerTransport());
+  '';
+  mcpRegistryItems = catalog.items // {
+    mcpServers.synthetic = {
+      selectors.clients = [ "prime" ];
+      transport = {
+        command = "${pkgs.nodejs_24}/bin/node";
+        args = [ { public = toString syntheticMcpServer; } ];
+      };
+    };
+  };
+  mcpRegistry = (import ../../config/ai/renderers/mcp-registry.nix { inherit lib pkgs; }) {
+    projection = catalog.sharedMcpRegistryFor {
+      profiles = [ profile ];
+      items = mcpRegistryItems;
+    };
+    homeDirectory = "/Users/johnw";
+    xdgConfigHome = "/Users/johnw/.config";
+  };
+  mcpRegistryFile = mcpRegistry.files.".config/mcp/mcp.json".source;
   packageRoots = [
     "${pkgs.pi-gallery.packages.pi-provider-llama-swap}/share/pi-packages/pi-provider-llama-swap"
     "${pkgs.pi-gallery.packages.pi-provider-omlx}/share/pi-packages/pi-provider-omlx"
@@ -194,40 +241,7 @@ runCommand "prime-agent-integration-check"
       ${pkgs.coreutils}/bin/timeout --signal=KILL 30s \
       ${pkgs.prime-agent}/bin/prime-agent package list >managed-list.out 2>&1
     test "$(grep -c 'managed, read-only' managed-list.out)" -eq 3
-    cat >synthetic-mcp.mjs <<'JS'
-    import { Server } from "file://${mcpExtensionRoot}/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js";
-    import { StdioServerTransport } from "file://${mcpExtensionRoot}/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js";
-    import { CallToolRequestSchema, ListToolsRequestSchema } from "file://${mcpExtensionRoot}/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js";
-
-    const server = new Server(
-      { name: "nix-prime-synthetic", version: "1.0.0" },
-      { capabilities: { tools: {} } },
-    );
-    server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [{
-        name: "echo",
-        description: "Return the supplied synthetic value",
-        inputSchema: {
-          type: "object",
-          properties: { value: { type: "string" } },
-          required: ["value"],
-          additionalProperties: false,
-        },
-      }],
-    }));
-    server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      if (request.params.name !== "echo") throw new Error("unexpected synthetic tool");
-      const value = request.params.arguments?.value;
-      if (typeof value !== "string") throw new Error("synthetic value must be a string");
-      return { content: [{ type: "text", text: "synthetic-mcp:" + value }] };
-    });
-    await server.connect(new StdioServerTransport());
-    JS
-    chmod 600 synthetic-mcp.mjs
-    cat > "$home/.config/mcp/mcp.json" <<JSON
-    {"mcpServers":{"synthetic":{"command":"${pkgs.nodejs_24}/bin/node","args":["$TMPDIR/synthetic-mcp.mjs"]}},"settings":{"mcpFooterStatus":"compact"}}
-    JSON
-    chmod 600 "$home/.config/mcp/mcp.json"
+    install -m 600 ${mcpRegistryFile} "$home/.config/mcp/mcp.json"
     cat >"$home/.prime/agent/extensions/root-contract.ts" <<'TS'
     export default function rootContract() {
       if (process.env.PI_CODING_AGENT_DIR !== process.env.PRIME_AGENT_CODING_AGENT_DIR) {

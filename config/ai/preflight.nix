@@ -3,7 +3,7 @@
 {
   blackholeConfigPath ? null,
   newPaths,
-  piGuard ? null,
+  mcpGuards ? [ ],
   piAliasTarget ? null,
   retiredPaths ? [ ],
 }:
@@ -104,24 +104,28 @@ let
       noun = if count == 1 then "path" else "paths";
     in
     "Checking ${toString count} Nix-managed AI leaf ${noun} for blockers...";
-  piGuardValid =
-    if piGuard == null then
-      true
-    else
-      (
-        builtins.isAttrs piGuard
-        &&
-          builtins.attrNames piGuard == [
-            "forbiddenKeys"
-            "path"
-          ]
-        && piGuard.path == ".config/pi/agent/mcp.json"
-        &&
-          piGuard.forbiddenKeys == [
-            "mcpServers"
-            "imports"
-          ]
-      );
+  mcpGuardPaths = map (guard: guard.path) mcpGuards;
+  mcpGuardsValid =
+    builtins.isList mcpGuards
+    && mcpGuardPaths == lib.sort builtins.lessThan (lib.unique mcpGuardPaths)
+    && builtins.all (
+      guard:
+      builtins.isAttrs guard
+      &&
+        builtins.attrNames guard == [
+          "forbiddenKeys"
+          "path"
+        ]
+      && builtins.elem guard.path [
+        ".config/pi/agent/mcp.json"
+        ".prime/agent/mcp.json"
+      ]
+      &&
+        guard.forbiddenKeys == [
+          "mcpServers"
+          "imports"
+        ]
+    ) mcpGuards;
   piAliasTargetValid = piAliasTarget == null || validRelativePath piAliasTarget;
   blackholeConfigPathValid =
     blackholeConfigPath == null
@@ -135,22 +139,21 @@ let
       path:
       validRelativePath path && lib.hasSuffix "/pi/agent/extensions/auto-compact-resume/index.ts" path
     ) retiredPaths;
-  piGuardPaths = lib.optional (piGuard != null) piGuard.path;
-  renderPiGuard = path: ''
-    pi_path="$HOME/${path}"
-    if [ -e "$pi_path" ] || [ -L "$pi_path" ]; then
-      if [ ! -f "$pi_path" ] || ! ${pkgs.jq}/bin/jq -e \
+  renderMcpGuard = path: ''
+    mcp_path="$HOME/${path}"
+    if [ -e "$mcp_path" ] || [ -L "$mcp_path" ]; then
+      if [ ! -f "$mcp_path" ] || ! ${pkgs.jq}/bin/jq -e \
         'if type == "object"
          then ((has("mcpServers") or has("imports")) | not)
          else false
          end' \
-        "$pi_path" >/dev/null 2>&1; then
+        "$mcp_path" >/dev/null 2>&1; then
         report_error \
           '${path}: keep valid adapter JSON without top-level mcpServers or imports'
       fi
     fi
   '';
-  piGuardScript = lib.concatMapStringsSep "\n" renderPiGuard piGuardPaths;
+  mcpGuardScript = lib.concatMapStringsSep "\n" renderMcpGuard mcpGuardPaths;
 
   script = ''
     errors_file="$(${pkgs.coreutils}/bin/mktemp \
@@ -398,7 +401,7 @@ let
       fi
     ''}
 
-    ${piGuardScript}
+    ${mcpGuardScript}
 
     if [ -s "$errors_file" ]; then
       LC_ALL=C ${pkgs.coreutils}/bin/sort -u "$errors_file" >&2
@@ -411,7 +414,7 @@ in
 assert builtins.isList newPaths;
 assert newPaths == sortedPaths;
 assert builtins.all validManagedPath newPaths;
-assert piGuardValid;
+assert mcpGuardsValid;
 assert piAliasTargetValid;
 assert blackholeConfigPathValid;
 assert retiredPathsValid;

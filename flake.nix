@@ -381,6 +381,9 @@
                 inherit src;
                 llmAgents = inputs.llm-agents;
               };
+              ai-mcp-registry = pkgs.callPackage ./test/ai/mcp-registry.nix {
+                inherit src;
+              };
               coq-overlay = pkgs.callPackage ./test/coq-overlay.nix {
                 configured = agentTestPkgsFor.${system};
               };

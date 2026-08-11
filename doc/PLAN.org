@@ -1080,15 +1080,17 @@ overlays/ai/patches/agent-deck-runtime-lifecycle.patch keeps a generic RuntimeBi
 ]
 #+end_src
 
-* TODO [#B] Extract the shared MCP registry from the Pi renderer    :ai:architecture:
+* DONE [#B] Extract the shared MCP registry from the Pi renderer    :ai:architecture:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.31
 :LABELS: ["ai","architecture","heavy-review"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 19:47]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 19:47]
+:CLOSE_REASON: Implemented one catalog-owned shared MCP registry projection and renderer for Pi and Prime, moved mutable guards to the shared seam, added Pi-only/Prime-only/combined/cross-home behavioral coverage, and passed focused builds plus root and portable all-system evaluation.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

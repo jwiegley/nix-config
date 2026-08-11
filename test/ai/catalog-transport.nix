@@ -279,6 +279,20 @@ let
     inherit lib;
     pkgs = rendererPkgs;
   };
+  mcpRegistryRenderer = import "${src}/config/ai/renderers/mcp-registry.nix" {
+    inherit lib;
+    pkgs = rendererPkgs;
+  };
+  renderMcpRegistryFor =
+    profile: items:
+    mcpRegistryRenderer {
+      projection = catalog.sharedMcpRegistryFor {
+        profiles = [ profile ];
+        inherit items;
+      };
+      homeDirectory = "/Users/test";
+      xdgConfigHome = "/Users/test/.config";
+    };
   renderPi =
     profile:
     let
@@ -342,15 +356,7 @@ let
         .files."${droidProfile.root}/mcp.json".source
       )
       (builtins.toString
-        (piRenderer {
-          profile = piProfile;
-          selected = selectedFor piProfile;
-          homeDirectory = "/Users/test";
-          xdgConfigHome = "/Users/test/.config";
-          passwordStoreDir = "/Users/test/doc/.password-store";
-          gnupgHome = "/Users/test/.config/gnupg";
-          localModelEndpoints = localModelEndpointsFor piProfile;
-        }).files.".config/mcp/mcp.json".source
+        (renderMcpRegistryFor piProfile (withSyntheticArguments args)).files.".config/mcp/mcp.json".source
       )
     ];
   safeClaudeRendered = renderSelectedFor claudeRenderer claudeProfile "/Users/test" (
@@ -362,15 +368,17 @@ let
   safeDroidRendered = renderSelectedFor droidRenderer droidProfile "/Users/test" (
     safeSelectedFor droidProfile
   );
-  safePiRendered = piRenderer {
-    profile = piProfile;
-    selected = safeSelectedFor piProfile;
-    homeDirectory = "/Users/test";
-    xdgConfigHome = "/Users/test/.config";
-    passwordStoreDir = "/Users/test/doc/.password-store";
-    gnupgHome = "/Users/test/.config/gnupg";
-    localModelEndpoints = localModelEndpointsFor piProfile;
-  };
+  safeMcpRegistryRendered = renderMcpRegistryFor piProfile safeArgumentItems;
+  httpMcpRegistryRendered = renderMcpRegistryFor piProfile (
+    withMcpServers (
+      catalog.items.mcpServers
+      // {
+        synthetic-http = syntheticHttpMcp // {
+          selectors.clients = [ "pi" ];
+        };
+      }
+    )
+  );
   fessSource = catalog.items.agents.fess-auditor.source;
   fessText = builtins.readFile fessSource;
   hasFessRubric = text: lib.hasInfix "**Fallback smuggling**" text;
@@ -583,11 +591,11 @@ assert builtins.all (
     files = entry.rendered.files;
   in
   builtins.hasAttr ".config/pi/agent/models.json" files
-  && builtins.hasAttr ".config/mcp/mcp.json" files
+  && !(builtins.hasAttr ".config/mcp/mcp.json" files)
   && hasFessRubric files.${fessPaths.pi.agent}.text
   && hasFessRubric files.${fessPaths.pi.command}.text
   && (builtins.hasAttr ".config/pi/agent/model-router.json" files) == entry.darwin
-  && entry.rendered.mutableMcpGuard.path == ".config/pi/agent/mcp.json"
+  && !(entry.rendered ? mutableMcpGuard)
 ) piRenderings;
 assert
   let
@@ -596,6 +604,8 @@ assert
   lib.hasInfix "Read the immutable specialist role at `" prompt
   && lib.hasInfix "-fess-auditor.md` in full" prompt;
 assert hasFessRubric primeRendered.files.${fessPaths.prime.command}.text;
+assert !(builtins.hasAttr ".config/mcp/mcp.json" primeRendered.files);
+assert !(primeRendered ? mutableMcpGuard);
 assert builtins.all reject [
   (catalog.validate { items = withoutFessCommand; })
   (catalog.validate {
@@ -745,7 +755,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
     ${safeClaudeRendered.files."${claudeProfile.root}/nix-managed-mcp.json".source} \
     ${safeCodexRendered.files."${codexProfile.root}/nix-managed.config.toml".source} \
     ${safeDroidRendered.files."${droidProfile.root}/mcp.json".source} \
-    ${safePiRendered.files.".config/mcp/mcp.json".source} <<'PY'
+    ${safeMcpRegistryRendered.files.".config/mcp/mcp.json".source} <<'PY'
   import json
   import sys
   import tomllib
@@ -848,15 +858,16 @@ pkgs.runCommand "ai-catalog-transport" { } ''
         )
       )
     ' ${entry.rendered.files.".config/pi/agent/models.json".source} >/dev/null
-    ${pkgs.jq}/bin/jq -e '
-      type == "object"
-      and (.mcpServers | type == "object")
-      and .mcpServers["synthetic-http"]
-        == {"oauth": false, "url": "https://example.invalid/mcp"}
-      and (.mcpServers.pal.command | type == "string")
-      and (.mcpServers.pal.args | type == "array")
-    ' ${entry.rendered.files.".config/mcp/mcp.json".source} >/dev/null
   '') piRenderings}
+
+  ${pkgs.jq}/bin/jq -e '
+    type == "object"
+    and (.mcpServers | type == "object")
+    and .mcpServers["synthetic-http"]
+      == {"oauth": false, "url": "https://example.invalid/mcp"}
+    and (.mcpServers.pal.command | type == "string")
+    and (.mcpServers.pal.args | type == "array")
+  ' ${httpMcpRegistryRendered.files.".config/mcp/mcp.json".source} >/dev/null
 
   ${pkgs.jq}/bin/jq -e '
     .mcpServers["synthetic-http"]

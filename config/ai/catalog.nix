@@ -1522,6 +1522,34 @@ let
       else
         acc
     ) { } profiles;
+
+  # Pi and Prime read one physical MCP registry. Select and resolve that
+  # registry once for the home, while retaining a mutable local override guard
+  # for every adapter root that can shadow it.
+  sharedMcpClients = [
+    "pi"
+    "prime"
+  ];
+  sharedMcpRegistryFor =
+    {
+      profiles,
+      items ? catalogItems,
+    }:
+    let
+      consumers = lib.filter (profile: builtins.elem profile.client sharedMcpClients) profiles;
+      consumerHosts = lib.unique (map (profile: profile.host) consumers);
+    in
+    assert lib.assertMsg (
+      builtins.length consumerHosts <= 1
+    ) "a shared MCP registry cannot combine profiles from different homes";
+    {
+      mcpServers = lib.foldl' (
+        accumulated: profile: accumulated // select profile items.mcpServers
+      ) { } consumers;
+      mutableMcpPaths = lib.sort builtins.lessThan (
+        lib.unique (map (profile: "${profile.root}/mcp.json") consumers)
+      );
+    };
 in
 {
   profiles = catalogProfiles;
@@ -1530,6 +1558,8 @@ in
   inherit
     matches
     select
+    sharedMcpClients
+    sharedMcpRegistryFor
     sharedSkillClients
     sharedSkillsFor
     validate
