@@ -53,10 +53,79 @@ try {
 					data: [
 						{
 							id: "GLM-5.2",
+							type: "chat",
+							architecture: {
+								input_modalities: ["text"],
+								output_modalities: ["text"],
+							},
+							capabilities: ["thinking"],
 							meta: { llamaswap: { context_length: "9007199254740992" } },
 						},
-						{ id: "bge-m3" },
-						{ id: "granite-speech-4.1-2b" },
+						{
+							id: "bge-m3",
+							type: "chat",
+							architecture: {
+								input_modalities: ["text"],
+								output_modalities: ["text"],
+							},
+						},
+						{
+							id: "vision-reasoning-model",
+							capabilities: { vision: false, reasoning: false },
+						},
+						{
+							id: "plain-vision-capability",
+							capabilities: { vision: true },
+						},
+						{
+							id: "embedding-rerank-transcribe-chat",
+							type: "chat",
+							architecture: {
+								input_modalities: ["text"],
+								output_modalities: ["text"],
+							},
+						},
+						{
+							id: "unknown-metadata-model",
+							type: "future-chat-kind",
+							architecture: {
+								input_modalities: ["future-input"],
+								output_modalities: ["future-output"],
+							},
+							capabilities: ["future-capability"],
+						},
+						{
+							id: "malformed-metadata-model",
+							type: 42,
+							architecture: {
+								input_modalities: [42],
+								output_modalities: [],
+							},
+							capabilities: { vision: 1, reasoning: "yes" },
+						},
+						{ id: "plain-embedding", type: "embedding" },
+						{
+							id: "plain-transcriber",
+							architecture: {
+								input_modalities: ["audio"],
+								output_modalities: ["text"],
+							},
+						},
+						{
+							id: "plain-image-generator",
+							architecture: {
+								input_modalities: ["text"],
+								output_modalities: ["image"],
+							},
+						},
+						{
+							id: "plain-reranker",
+							capabilities: { reranker: true },
+						},
+						{
+							id: "plain-speech-endpoint",
+							capabilities: { audio_speech: true },
+						},
 					],
 				}),
 			);
@@ -65,8 +134,20 @@ try {
 			Response.json({
 				data: [
 					{ id: "DeepSeek-V4-Flash-0731-oQ8e-mtp", max_model_len: 262144 },
-					{ id: "Qwen3.6-27B-oQ6e-mtp", max_model_len: 262144 },
-					{ id: "cohere-transcribe-03-2026-mlx-fp16", max_model_len: 1024 },
+					{
+						id: "Qwen3.6-27B-oQ6e-mtp",
+						max_model_len: 262144,
+						architecture: {
+							input_modalities: ["text", "image"],
+							output_modalities: ["text"],
+						},
+						capabilities: { reasoning: true },
+					},
+					{
+						id: "cohere-transcribe-03-2026-mlx-fp16",
+						type: "transcription",
+						max_model_len: 1024,
+					},
 				],
 			}),
 		);
@@ -99,7 +180,15 @@ try {
 	const omlxModels = modelsFor(providers, "omlx");
 	expectEqual(
 		llamaModels.map((model) => model.id),
-		["GLM-5.2"],
+		[
+			"GLM-5.2",
+			"bge-m3",
+			"vision-reasoning-model",
+			"plain-vision-capability",
+			"embedding-rerank-transcribe-chat",
+			"unknown-metadata-model",
+			"malformed-metadata-model",
+		],
 		"llama-swap filtering",
 	);
 	expectEqual(
@@ -123,11 +212,60 @@ try {
 		"llama-swap metadata",
 	);
 	expectEqual(
+		llamaModels.slice(1).map((model) => ({
+			id: model.id,
+			reasoning: model.reasoning,
+			input: model.input,
+		})),
+		[
+			{ id: "bge-m3", reasoning: false, input: ["text"] },
+			{
+				id: "vision-reasoning-model",
+				reasoning: false,
+				input: ["text"],
+			},
+			{
+				id: "plain-vision-capability",
+				reasoning: false,
+				input: ["text", "image"],
+			},
+			{
+				id: "embedding-rerank-transcribe-chat",
+				reasoning: false,
+				input: ["text"],
+			},
+			{
+				id: "unknown-metadata-model",
+				reasoning: false,
+				input: ["text"],
+			},
+			{
+				id: "malformed-metadata-model",
+				reasoning: false,
+				input: ["text"],
+			},
+		],
+		"misleading llama-swap names",
+	);
+	expectEqual(
 		omlxModels.map((model) => model.id),
 		["DeepSeek-V4-Flash-0731-oQ8e-mtp", "Qwen3.6-27B-oQ6e-mtp"],
 		"oMLX filtering",
 	);
-	expectEqual(omlxModels[0].contextWindow, 262144, "oMLX server context");
+	expectEqual(
+		{
+			contextWindow: omlxModels[0].contextWindow,
+			reasoning: omlxModels[0].reasoning,
+			input: omlxModels[0].input,
+		},
+		{ contextWindow: 262144, reasoning: false, input: ["text"] },
+		"oMLX conservative metadata defaults",
+	);
+	expectEqual(
+		{ reasoning: omlxModels[1].reasoning, input: omlxModels[1].input },
+		{ reasoning: true, input: ["text", "image"] },
+		"oMLX explicit capability metadata",
+	);
 
 	let failedBodyCancelled = false;
 	let failedSignal: AbortSignal | null = null;

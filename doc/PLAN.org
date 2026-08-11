@@ -1113,15 +1113,17 @@ config/ai/renderers/pi.nix:218-272 solely owns .config/mcp/mcp.json even though 
 ]
 #+end_src
 
-* TODO [#B] Replace model-name capability inference with typed metadata    :ai:architecture:
+* DONE [#B] Replace model-name capability inference with typed metadata    :ai:architecture:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.32
 :LABELS: ["ai","architecture","heavy-review"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 19:26]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 19:26]
+:CLOSE_REASON: Replaced all model-ID/name capability inference with normalized upstream type, modality, and capability metadata; unknown or malformed metadata now falls back conservatively, non-chat entries are filtered explicitly, and misleading-name/typed-metadata mutants are covered. Bun/Biome, Pi gallery, root/portable all-system checks, and independent review passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

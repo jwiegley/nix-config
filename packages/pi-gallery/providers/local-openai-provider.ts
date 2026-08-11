@@ -19,7 +19,7 @@ interface ModelEntry {
 	id?: unknown;
 	name?: unknown;
 	type?: unknown;
-	architecture?: { input_modalities?: unknown };
+	architecture?: unknown;
 	capabilities?: unknown;
 	context_length?: unknown;
 	max_context_length?: unknown;
@@ -31,6 +31,19 @@ interface ModelEntry {
 	metadata?: unknown;
 }
 
+type ModelModality = "text" | "image" | "audio";
+type InputModality = Exclude<ModelModality, "audio">;
+interface ModelCapabilities {
+	type: "chat" | "non-chat";
+	inputModalities: InputModality[];
+	reasoning: boolean;
+}
+
+interface CatalogModel {
+	entry: ModelEntry & { id: string };
+	capabilities: ModelCapabilities;
+}
+
 const DEFAULT_CONTEXT_WINDOW = 262_144;
 const DEFAULT_MAX_TOKENS = 65_536;
 const MAX_DISCOVERY_RESPONSE_BYTES = 1024 * 1024;
@@ -40,8 +53,34 @@ const MAX_DISCOVERY_MODEL_ENTRIES = 4096;
 // connect, response and JSON parse, and these hosts run jobs heavy enough to
 // stall a loopback round trip well past half a second.
 const FETCH_TIMEOUT_MS = 2_500;
-const NON_CHAT_ID =
-	/(?:^|[-_.:/])(asr|audio|bge|clip|embed(?:ding)?|rerank(?:er)?|speech|transcri(?:be|ption)|tts|whisper)(?:$|[-_.:/])/i;
+const NON_CHAT_TYPES = new Set([
+	"asr",
+	"audio",
+	"audio-sts",
+	"audio-stt",
+	"audio-tts",
+	"audio_sts",
+	"audio_stt",
+	"audio_tts",
+	"clip",
+	"embedding",
+	"image",
+	"image-generation",
+	"image_generation",
+	"rerank",
+	"reranker",
+	"speech",
+	"transcription",
+	"tts",
+	"whisper",
+]);
+const NON_CHAT_CAPABILITIES = new Set(["embedding", "reranker"]);
+const NON_CHAT_ENDPOINT_CAPABILITIES = new Set([
+	"audio_speech",
+	"audio_transcriptions",
+	"image_generation",
+	"image_to_image",
+]);
 const runtimeProcess = (
 	globalThis as unknown as { process: { emitWarning(message: string): void } }
 ).process;
@@ -68,6 +107,31 @@ function nestedRecord(
 	return nested && typeof nested === "object" && !Array.isArray(nested)
 		? (nested as Record<string, unknown>)
 		: undefined;
+}
+
+function stringList(value: unknown): string[] | undefined {
+	if (!Array.isArray(value)) return undefined;
+	return value
+		.filter((item): item is string => typeof item === "string")
+		.map((item) => item.trim().toLowerCase());
+}
+
+function modalities(value: unknown): ModelModality[] | undefined {
+	const normalized = stringList(value)?.filter(
+		(item): item is ModelModality =>
+			item === "text" || item === "image" || item === "audio",
+	);
+	return normalized && normalized.length > 0 ? normalized : undefined;
+}
+
+function capabilityNames(value: unknown): Set<string> {
+	if (Array.isArray(value)) return new Set(stringList(value) ?? []);
+	if (!value || typeof value !== "object") return new Set();
+	return new Set(
+		Object.entries(value as Record<string, unknown>).flatMap(
+			([name, enabled]) => (enabled === true ? [name.toLowerCase()] : []),
+		),
+	);
 }
 
 function contextWindow(model: ModelEntry): number {
@@ -105,63 +169,54 @@ function outputLimit(model: ModelEntry, context: number): number {
 	);
 }
 
-function isChatModel(model: unknown): model is ModelEntry & { id: string } {
-	if (!model || typeof model !== "object" || Array.isArray(model)) return false;
+function normalizeModel(model: unknown): CatalogModel | undefined {
+	if (!model || typeof model !== "object" || Array.isArray(model)) return;
 	const entry = model as ModelEntry;
-	if (
-		typeof entry.id !== "string" ||
-		entry.id.length === 0 ||
-		NON_CHAT_ID.test(entry.id)
-	)
-		return false;
-	if (
-		typeof entry.type === "string" &&
-		/embedding|rerank|audio|speech|transcri/i.test(entry.type)
-	)
-		return false;
-	const modalities = entry.architecture?.input_modalities;
-	return !Array.isArray(modalities) || modalities.includes("text");
-}
+	if (typeof entry.id !== "string" || entry.id.length === 0) return;
 
-function imageCapable(model: ModelEntry): boolean {
-	if (Array.isArray(model.architecture?.input_modalities)) {
-		return model.architecture.input_modalities.includes("image");
-	}
-	if (
-		model.capabilities &&
-		typeof model.capabilities === "object" &&
-		!Array.isArray(model.capabilities)
-	) {
-		return (model.capabilities as Record<string, unknown>).vision === true;
-	}
-	return /(?:^|[-_.:/])(vision|vl|multimodal)(?:$|[-_.:/])/i.test(
-		String(model.id),
-	);
-}
+	const architecture =
+		entry.architecture &&
+		typeof entry.architecture === "object" &&
+		!Array.isArray(entry.architecture)
+			? (entry.architecture as Record<string, unknown>)
+			: undefined;
+	const input = modalities(architecture?.input_modalities);
+	const output = modalities(architecture?.output_modalities);
+	const names = capabilityNames(entry.capabilities);
+	const type =
+		typeof entry.type === "string"
+			? entry.type.trim().toLowerCase()
+			: undefined;
+	const explicitChatModalities =
+		input?.includes("text") === true && output?.includes("text") === true;
+	const nonChat =
+		(type !== undefined && NON_CHAT_TYPES.has(type)) ||
+		(input !== undefined && !input.includes("text")) ||
+		(output !== undefined && !output.includes("text")) ||
+		[...names].some((name) => NON_CHAT_CAPABILITIES.has(name)) ||
+		(!explicitChatModalities &&
+			[...names].some((name) => NON_CHAT_ENDPOINT_CAPABILITIES.has(name)));
+	const image =
+		input === undefined ? names.has("vision") : input.includes("image");
 
-function reasoningCapable(model: ModelEntry): boolean {
-	if (Array.isArray(model.capabilities)) {
-		return model.capabilities.some(
-			(item) => typeof item === "string" && /reason|thinking/i.test(item),
-		);
-	}
-	if (model.capabilities && typeof model.capabilities === "object") {
-		const reasoning = (model.capabilities as Record<string, unknown>).reasoning;
-		if (reasoning === true) return true;
-	}
-	return /(?:deepseek|glm|gpt-oss|magistral|qwen3|qwq|reasoning|thinking)/i.test(
-		String(model.id),
-	);
-}
-
-function toPiModel(model: ModelEntry & { id: string }): ProviderModelConfig {
-	const context = contextWindow(model);
 	return {
-		id: model.id,
+		entry: entry as ModelEntry & { id: string },
+		capabilities: {
+			type: nonChat ? "non-chat" : "chat",
+			inputModalities: image ? ["text", "image"] : ["text"],
+			reasoning: names.has("reasoning") || names.has("thinking"),
+		},
+	};
+}
+
+function toPiModel(model: CatalogModel): ProviderModelConfig {
+	const context = contextWindow(model.entry);
+	return {
+		id: model.entry.id,
 		name:
-			typeof model.name === "string" && model.name.length > 0
-				? model.name
-				: model.id,
+			typeof model.entry.name === "string" && model.entry.name.length > 0
+				? model.entry.name
+				: model.entry.id,
 		compat: {
 			supportsStore: false,
 			supportsDeveloperRole: false,
@@ -169,11 +224,11 @@ function toPiModel(model: ModelEntry & { id: string }): ProviderModelConfig {
 			maxTokensField: "max_tokens",
 			supportsStrictMode: false,
 		},
-		reasoning: reasoningCapable(model),
-		input: imageCapable(model) ? ["text", "image"] : ["text"],
+		reasoning: model.capabilities.reasoning,
+		input: model.capabilities.inputModalities,
 		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 		contextWindow: context,
-		maxTokens: outputLimit(model, context),
+		maxTokens: outputLimit(model.entry, context),
 	};
 }
 
@@ -263,9 +318,10 @@ async function discoverModels(
 			throw new Error(
 				`response has ${entries.length} model entries; limit is ${MAX_DISCOVERY_MODEL_ENTRIES}`,
 			);
-		return entries.flatMap((entry) =>
-			isChatModel(entry) ? [toPiModel(entry)] : [],
-		);
+		return entries.flatMap((entry) => {
+			const model = normalizeModel(entry);
+			return model?.capabilities.type === "chat" ? [toPiModel(model)] : [];
+		});
 	} catch (error) {
 		const detail = error instanceof Error ? error.message : String(error);
 		runtimeProcess.emitWarning(
