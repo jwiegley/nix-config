@@ -802,14 +802,14 @@ Behavior-bearing derivations declared in flake.nix:392-426 and flake/ai.nix:435-
 ]
 #+end_src
 
-* TODO [#B] Make model-sync dry-run safe and behaviorally executable    :activation:tests:
+* DOING [#B] Make model-sync dry-run safe and behaviorally executable    :activation:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.24
 :LABELS: ["activation","heavy-review","tests"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 17:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1277,14 +1277,14 @@ agent-deck-runtime-lifecycle.patch is about 45,582 lines and pi-bounded-session-
 ]
 #+end_src
 
-* TODO [#B] Encode make upgrade ordering in the dependency graph    :concurrency:make:
+* DOING [#B] Encode make upgrade ordering in the dependency graph    :concurrency:make:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.38
 :LABELS: ["concurrency","heavy-review","make"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 17:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1308,14 +1308,14 @@ Makefile:171-193 declares update and upgrade-tasks as unordered prerequisites, s
 ]
 #+end_src
 
-* TODO [#C] Remove or preflight partial clean and purge workflows    :make:safety:
+* DOING [#C] Remove or preflight partial clean and purge workflows    :make:safety:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.39
 :LABELS: ["heavy-review","make","safety"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 17:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1372,14 +1372,14 @@ bin/lib/host-routing.sh:10-31 maps shared-work to jwiegley, but bin/update:499-5
 ]
 #+end_src
 
-* TODO [#B] Make Claude-memory pinning strict and dry-run safe    :activation:security:
+* DOING [#B] Make Claude-memory pinning strict and dry-run safe    :activation:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.40
 :LABELS: ["activation","heavy-review","security"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 17:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1403,14 +1403,14 @@ config/johnw.nix:190-210 converts required read, parse, and mktemp failures into
 ]
 #+end_src
 
-* TODO [#C] Enforce the environment-only credential argument contract    :ai:security:
+* DOING [#C] Enforce the environment-only credential argument contract    :ai:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.41
 :LABELS: ["ai","heavy-review","security"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 17:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1434,14 +1434,14 @@ config/ai/catalog.nix:1182-1323 uses a prefix heuristic that accepts embedded cr
 ]
 #+end_src
 
-* TODO [#C] Package supported nix-scripts from an explicit allowlist    :architecture:packaging:
+* DOING [#C] Package supported nix-scripts from an explicit allowlist    :architecture:packaging:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.42
 :LABELS: ["architecture","heavy-review","packaging"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 17:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1537,14 +1537,14 @@ bin/README.md:343 says make test builds four principal checks, while Makefile:53
 ]
 #+end_src
 
-* TODO [#C] Separate read-only make check from store repair    :make:nix:
+* DOING [#C] Separate read-only make check from store repair    :make:nix:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.45
 :LABELS: ["heavy-review","make","nix"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 17:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1599,14 +1599,14 @@ flake/ai/wrappers/codex.nix:73-90 uses a directory mutex that survives SIGKILL o
 ]
 #+end_src
 
-* TODO [#D] Require explicit licenses in mkScriptPackage    :metadata:packaging:
+* DOING [#D] Require explicit licenses in mkScriptPackage    :metadata:packaging:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.47
 :LABELS: ["heavy-review","metadata","packaging"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 17:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1630,14 +1630,14 @@ overlays/00-lib.nix:16-43 defaults every script package to MIT, causing nix-scri
 ]
 #+end_src
 
-* TODO [#C] Delete unreachable HTTP-header MCP support    :ai:
+* DOING [#C] Delete unreachable HTTP-header MCP support    :ai:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.48
 :LABELS: ["ai","dead-code","heavy-review"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 14:42]
+:MODIFIED: [2026-08-10 Mon 17:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1895,14 +1895,14 @@ test/home/host-behavior.nix:22-35,174-208 duplicates the full home-class roster 
 ]
 #+end_src
 
-* TODO [#C] Share one hermetic Git fixture helper    :git:tests:
+* DOING [#C] Share one hermetic Git fixture helper    :git:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.54
 :LABELS: ["git","heavy-review","tests"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 17:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1926,14 +1926,14 @@ test/bin/publish-slow-test.py:21-71 and gates-slow-test.py:26-67 duplicate clean
 ]
 #+end_src
 
-* TODO [#D] Derive catalog IDs, roots, and agent names from keys    :ai:simplification:
+* DOING [#D] Derive catalog IDs, roots, and agent names from keys    :ai:simplification:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.55
 :LABELS: ["ai","heavy-review","simplification"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 17:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1957,14 +1957,14 @@ config/ai/catalog.nix repeats profile IDs as keys, arguments, and a roots table,
 ]
 #+end_src
 
-* TODO [#D] Compute key-files directly without a host attrset    :nix:simplification:
+* DOING [#D] Compute key-files directly without a host attrset    :nix:simplification:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.56
 :LABELS: ["heavy-review","nix","simplification"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 17:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2184,14 +2184,14 @@ skill-creator init emits description: [TODO: ...], which parses as a YAML sequen
 ]
 #+end_src
 
-* TODO [#C] Split edit-env entries at the first equals sign    :comments:emacs:
+* DOING [#C] Split edit-env entries at the first equals sign    :comments:emacs:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.62
 :LABELS: ["comments","emacs","heavy-review"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 17:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2312,14 +2312,14 @@ config/packages.nix:10-13 says two of three call sites omit config and lib, but 
 ]
 #+end_src
 
-* TODO [#B] Require explicit fresh-context dispatch where independence matters    :agents:comments:
+* DOING [#B] Require explicit fresh-context dispatch where independence matters    :agents:comments:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.66
 :LABELS: ["agents","comments","heavy-review"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 17:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2343,14 +2343,14 @@ parallelize, Wiggum fess, and validated-review documentation says subagents star
 ]
 #+end_src
 
-* TODO [#B] Attest exact model identities in validated review    :agents:validation:
+* DOING [#B] Attest exact model identities in validated review    :agents:validation:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.67
 :LABELS: ["agents","heavy-review","validation"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 17:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2374,14 +2374,14 @@ validated-code-review promises named and different models, but its non-Claude cl
 ]
 #+end_src
 
-* TODO [#D] Use the shared frontmatter renderer for Codex resources    :architecture:comments:
+* DOING [#D] Use the shared frontmatter renderer for Codex resources    :architecture:comments:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.68
 :LABELS: ["architecture","comments","heavy-review"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 17:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
