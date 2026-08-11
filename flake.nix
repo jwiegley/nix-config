@@ -258,7 +258,11 @@
         }
       );
 
-      inherit (portableAi) apps overlays;
+      inherit (portableAi)
+        apps
+        formatter
+        overlays
+        ;
 
       # Shared home-manager module for cross-platform use.
       # NixOS hosts import this via: inputs.nix-config (flake = false)
@@ -285,79 +289,6 @@
           nixManagedAiHomeClass = "shared-work";
         };
       };
-
-      # Whole-tree rewrite/check modes delegate to the working tree's quality
-      # formatter. Explicit paths dispatch directly to nixfmt or shfmt.
-      formatter = forAllSystems (
-        system:
-        let
-          pkgs = stockPkgsFor.${system};
-        in
-        pkgs.writeShellApplication {
-          name = "nix-config-format";
-          runtimeInputs = with pkgs; [
-            nixfmt
-            shfmt
-            git
-          ];
-          text = ''
-            # Whole-tree modes, both delegated so there is one discovery.
-            #   nix fmt              → rewrite
-            #   nix fmt -- --check   → check only, rewrite nothing
-            mode=--fix
-            if [ "$#" -eq 1 ] && [ "$1" = "--check" ]; then
-              mode=--check-only
-              shift
-            fi
-
-            if [ "$#" -gt 0 ]; then
-              nix_files=()
-              shell_files=()
-              for path in "$@"; do
-                case "$path" in
-                # An unrecognized flag must NOT be silently ignored. Exiting 0
-                # having formatted nothing is a fake pass, and a formatter that
-                # lies about success is worse than one that is merely broken.
-                -*)
-                  echo "nix fmt: unrecognized option: $path" >&2
-                  echo "         Supported: no arguments (format the tree)," >&2
-                  echo "         --check (check the tree), or explicit paths." >&2
-                  exit 2
-                  ;;
-                *.nix) nix_files+=("$path") ;;
-                *.sh | *.bash) shell_files+=("$path") ;;
-                *)
-                  echo "nix fmt: no formatter for: $path" >&2
-                  exit 2
-                  ;;
-                esac
-              done
-              if [ "''${#nix_files[@]}" -gt 0 ]; then
-                nixfmt "''${nix_files[@]}"
-              fi
-              if [ "''${#shell_files[@]}" -gt 0 ]; then
-                shfmt -i 4 -w "''${shell_files[@]}"
-              fi
-              exit 0
-            fi
-
-            root=$(git rev-parse --show-toplevel 2>/dev/null) || {
-              echo "nix fmt: not inside a git work tree, and no paths were given." >&2
-              echo "         Pass explicit paths, or run from the repository." >&2
-              exit 2
-            }
-            cd "$root"
-            [ -x test/bin/quality ] || {
-              echo "nix fmt: $root/test/bin/quality is missing or not executable." >&2
-              exit 2
-            }
-            if [ "$mode" = --fix ]; then
-              exec test/bin/quality --fix nix-format shell-format
-            fi
-            exec test/bin/quality nix-format shell-format
-          '';
-        }
-      );
 
       devShells = forAllSystems (
         system:

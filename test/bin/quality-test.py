@@ -15,6 +15,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 QUALITY = REPO / "test" / "bin" / "quality"
+AI_SCRIPTS = REPO / "test" / "ai" / "scripts"
 DEADLINE_SUPERVISOR = REPO / "test" / "bin" / "deadline-supervisor.py"
 UNITTEST_STRICT = Path(__file__).resolve().parent / "unittest-strict.py"
 # Git repository/config selector variables scrubbed from test subprocesses.
@@ -39,6 +40,9 @@ def clean_env():
     env = dict(os.environ)
     for var in GIT_VARS:
         env.pop(var, None)
+    env.pop("AI_NIX_ROOT", None)
+    env.pop("AI_NIX_LINT_ROOT", None)
+    env.pop("AI_NIX_QUALITY", None)
     return env
 
 
@@ -72,10 +76,10 @@ class QualityEachFileTests(unittest.TestCase):
             check=False,
         )
 
-    def quality(self, *suites, env=None):
+    def quality(self, *suites, env=None, cwd=None):
         return subprocess.run(
             [str(QUALITY), *suites],
-            cwd=self.repo,
+            cwd=self.repo if cwd is None else cwd,
             env=self.env if env is None else env,
             capture_output=True,
             text=True,
@@ -90,10 +94,10 @@ class QualityEachFileTests(unittest.TestCase):
         git.write_text(
             "#!/usr/bin/env bash\n"
             "if [[ $1 == rev-parse ]]; then\n"
-            f"  exec {real_git} \"$@\"\n"
+            f'  exec {real_git} "$@"\n'
             "fi\n"
             "if [[ $1 == ls-files ]]; then exit 73; fi\n"
-            f"exec {real_git} \"$@\"\n",
+            f'exec {real_git} "$@"\n',
             encoding="utf-8",
         )
         git.chmod(0o755)
@@ -122,7 +126,9 @@ class QualityEachFileTests(unittest.TestCase):
             with self.subTest(interface="suite", suite=suite):
                 proc = self.quality(suite, env=env)
                 self.assertNotEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-                self.assertIn("tracked-file discovery failed", proc.stdout + proc.stderr)
+                self.assertIn(
+                    "tracked-file discovery failed", proc.stdout + proc.stderr
+                )
 
     def test_fix_mode_preserves_paths_and_propagates_formatter_failure(self):
         paths = {
@@ -153,7 +159,7 @@ class QualityEachFileTests(unittest.TestCase):
             tool = fakebin / executable
             tool.write_text(
                 "#!/usr/bin/env bash\n"
-                f"printf '%s:%s\\n' \"$#\" \"${{@:$#}}\" >>{shlex.quote(str(log))}\n"
+                f'printf \'%s:%s\\n\' "$#" "${{@:$#}}" >>{shlex.quote(str(log))}\n'
                 "exit 71\n",
                 encoding="utf-8",
             )
@@ -189,6 +195,187 @@ class QualityEachFileTests(unittest.TestCase):
         self.assertIn("posix", proc.stdout.splitlines())
         self.assertNotIn("zshell", proc.stdout.splitlines())
 
+    def test_tree_inventory_covers_extensions_and_shebangs_without_git(self):
+        source = Path(self.tmp) / "source"
+        source.mkdir()
+        (source / "plain.bash").write_text("true\n")
+        (source / "script").write_text("#!/usr/bin/env bash\ntrue\n")
+        (source / "eof-script").write_text("#!/usr/bin/env -S bash")
+        (source / "not-bash").write_text("#!/usr/bin/notbash\ntrue\n")
+        (source / "foo-bash").write_text("#!/usr/bin/env foobash\ntrue\n")
+        (source / "ignored.zsh").write_text("#!/bin/zsh\ntrue\n")
+        env = dict(self.env)
+        env["AI_NIX_ROOT"] = str(source)
+        proc = self.quality("--files", "shell", env=env)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertCountEqual(
+            proc.stdout.splitlines(), ["plain.bash", "script", "eof-script"]
+        )
+
+    @unittest.skipUnless(have("timeout"), "timeout is not on PATH")
+    def test_relative_tree_root_is_canonicalized_once(self):
+        source = Path(self.tmp) / "relative-source"
+        test_bin = source / "test/bin"
+        test_bin.mkdir(parents=True)
+        (test_bin / "smoke-test.py").write_text("import unittest\n")
+        runner = test_bin / "unittest-strict.py"
+        runner.write_text("#!/usr/bin/env bash\nexit 0\n")
+        runner.chmod(0o755)
+        env = dict(self.env)
+        env["AI_NIX_ROOT"] = source.name
+        proc = self.quality(
+            "--python-tier",
+            "full",
+            "python-test",
+            env=env,
+            cwd=source.parent,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("planned=1 ran=1", proc.stdout + proc.stderr)
+
+    def test_tree_inventory_preserves_newline_bearing_paths(self):
+        source = Path(self.tmp) / "newline-source"
+        source.mkdir()
+        shell_path = source / "first\nsecond.bash"
+        shell_path.write_text("true\n")
+        fakebin = self.repo / "fake-tree-format-bin"
+        fakebin.mkdir()
+        log = self.repo / "tree-shfmt.log"
+        shfmt = fakebin / "shfmt"
+        shfmt.write_text(
+            f"#!/usr/bin/env bash\nprintf '%s\\0' \"$@\" >{shlex.quote(str(log))}\n",
+            encoding="utf-8",
+        )
+        shfmt.chmod(0o755)
+        env = dict(self.env)
+        env["AI_NIX_ROOT"] = str(source)
+        env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
+        proc = self.quality("--fix", "shell-format", env=env)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn(
+            "./first\nsecond.bash",
+            log.read_bytes().rstrip(b"\0").decode().split("\0"),
+        )
+
+    def test_git_inventory_preserves_newline_bearing_paths(self):
+        nix_path = self.write("first\nsecond.nix", "{ }\n")
+        self.git("add", str(nix_path.relative_to(self.repo)))
+        fakebin = self.repo / "fake-git-format-bin"
+        fakebin.mkdir()
+        log = self.repo / "git-nixfmt.log"
+        nixfmt = fakebin / "nixfmt"
+        nixfmt.write_text(
+            f"#!/usr/bin/env bash\nprintf '%s\\0' \"$@\" >{shlex.quote(str(log))}\n",
+            encoding="utf-8",
+        )
+        nixfmt.chmod(0o755)
+        env = dict(self.env)
+        env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
+        proc = self.quality("--fix", "nix-format", env=env)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn(
+            "./first\nsecond.nix",
+            log.read_bytes().rstrip(b"\0").decode().split("\0"),
+        )
+
+    def test_explicit_paths_reject_unsupported_input_before_rewrite(self):
+        good = self.write("good.nix", "{ }\n")
+        unsupported = self.write("README", "not source\n")
+        fakebin = self.repo / "fake-explicit-format-bin"
+        fakebin.mkdir()
+        log = self.repo / "formatter.log"
+        for executable in ("nixfmt", "shfmt"):
+            tool = fakebin / executable
+            tool.write_text(
+                "#!/usr/bin/env bash\n"
+                f"printf '%s\\n' {executable} >>{shlex.quote(str(log))}\n",
+                encoding="utf-8",
+            )
+            tool.chmod(0o755)
+        env = dict(self.env)
+        env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
+        proc = self.quality(
+            "--fix",
+            "nix-format",
+            "shell-format",
+            "--paths",
+            str(good),
+            str(unsupported),
+            env=env,
+        )
+        self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+        self.assertIn("no formatter for", proc.stderr)
+        self.assertFalse(log.exists(), "validation must precede every rewrite")
+
+        proc = self.quality(
+            "--fix",
+            "nix-format",
+            "shell-format",
+            "--paths",
+            str(good),
+            str(self.repo / "missing.nix"),
+            env=env,
+        )
+        self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+        self.assertIn("not a regular file", proc.stderr)
+        self.assertFalse(log.exists(), "missing paths must fail before every rewrite")
+
+        proc = self.quality("--fix", "shell-format", "--paths", str(good), env=env)
+        self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+        self.assertIn("nix-format was not requested", proc.stderr)
+        self.assertFalse(log.exists(), "suite coverage must precede every rewrite")
+
+        shell_source = self.write("good.bash", "true\n")
+        proc = self.quality(
+            "--fix", "nix-format", "--paths", str(shell_source), env=env
+        )
+        self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+        self.assertIn("shell-format was not requested", proc.stderr)
+        self.assertFalse(log.exists(), "suite coverage must precede every rewrite")
+
+        newline_path = self.write("first\nsecond.nix", "{ }\n")
+        proc = self.quality(
+            "--fix",
+            "nix-format",
+            "shell-format",
+            "--paths",
+            str(newline_path),
+            env=env,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(log.read_text().splitlines(), ["nixfmt"])
+
+    def test_explicit_bash_path_propagates_formatter_failure(self):
+        bash_source = Path(self.tmp) / "non-git/nested/script.bash"
+        bash_source.parent.mkdir(parents=True)
+        bash_source.write_text("true\n")
+        fakebin = self.repo / "fake-bash-format-bin"
+        fakebin.mkdir()
+        log = self.repo / "shfmt.log"
+        for executable, status in (("nixfmt", 0), ("shfmt", 71)):
+            tool = fakebin / executable
+            tool.write_text(
+                "#!/usr/bin/env bash\n"
+                f"printf '%s\\n' \"$@\" >>{shlex.quote(str(log))}\n"
+                f"exit {status}\n",
+                encoding="utf-8",
+            )
+            tool.chmod(0o755)
+        env = dict(self.env)
+        env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
+        proc = self.quality(
+            "--fix",
+            "nix-format",
+            "shell-format",
+            "--paths",
+            bash_source.name,
+            env=env,
+            cwd=bash_source.parent,
+        )
+        self.assertNotEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn(str(bash_source.resolve()), log.read_text().splitlines())
+        self.assertIn("shell-format", proc.stderr)
+
     def test_nix_tools_receive_only_safe_tracked_paths(self):
         self.write("--tracked.nix", "{ }\n")
         self.write("untracked.nix", "{ }\n")
@@ -223,8 +410,7 @@ class QualityEachFileTests(unittest.TestCase):
         log = self.repo / "ruff.log"
         ruff = fakebin / "ruff"
         ruff.write_text(
-            "#!/usr/bin/env bash\n"
-            f"printf '%s\\n' \"$@\" >{shlex.quote(str(log))}\n",
+            f"#!/usr/bin/env bash\nprintf '%s\\n' \"$@\" >{shlex.quote(str(log))}\n",
             encoding="utf-8",
         )
         ruff.chmod(0o755)
@@ -323,6 +509,64 @@ class QualityEachFileTests(unittest.TestCase):
             "a tracked dangling symlink must be reported, not silently skipped",
         )
         self.assertIn("link.nix", proc.stderr)
+
+
+class PortableQualityDelegationTests(unittest.TestCase):
+    """Portable entry points preserve their names but delegate policy."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="portable-quality-test-")
+        self.root = Path(self.tmp)
+        self.log = self.root / "quality.args"
+        self.quality = self.root / "quality"
+        self.quality.write_text(
+            "#!/usr/bin/env bash\n"
+            f"printf '%s\\0' \"$@\" >{shlex.quote(str(self.log))}\n"
+            'exit "${QUALITY_STATUS:-0}"\n',
+            encoding="utf-8",
+        )
+        self.quality.chmod(0o755)
+        self.env = clean_env()
+        self.env["AI_NIX_QUALITY"] = str(self.quality)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def run_script(self, name, *args, env=None):
+        return subprocess.run(
+            [str(AI_SCRIPTS / name), *args],
+            cwd=self.root,
+            env=self.env if env is None else env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    def logged_args(self):
+        return self.log.read_bytes().rstrip(b"\0").decode().split("\0")
+
+    def test_format_modes_delegate_exact_suites_and_paths(self):
+        proc = self.run_script("format.sh")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(self.logged_args(), ["--fix", "nix-format", "shell-format"])
+
+        proc = self.run_script("format.sh", "--check", "source.bash")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(
+            self.logged_args(),
+            ["nix-format", "shell-format", "--paths", "source.bash"],
+        )
+
+    def test_lint_delegates_every_static_suite(self):
+        proc = self.run_script("lint.sh")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(self.logged_args(), ["nix-lint", "nix-deadcode", "shell-lint"])
+
+    def test_delegate_failure_reaches_the_caller(self):
+        env = dict(self.env)
+        env["QUALITY_STATUS"] = "73"
+        proc = self.run_script("lint.sh", env=env)
+        self.assertEqual(proc.returncode, 73, proc.stdout + proc.stderr)
 
 
 class QualityExitPropagationTests(unittest.TestCase):
@@ -498,8 +742,7 @@ class QualityPythonTierTests(unittest.TestCase):
     def test_selected_suites_execute_exactly_once(self):
         runner = self.repo / "test/bin/unittest-strict.py"
         runner.write_text(
-            "#!/usr/bin/env bash\n"
-            "printf '%s\\n' \"$1\" >>\"$RUN_LOG\"\n",
+            '#!/usr/bin/env bash\nprintf \'%s\\n\' "$1" >>"$RUN_LOG"\n',
             encoding="utf-8",
         )
         runner.chmod(0o755)
@@ -596,8 +839,12 @@ class QualityPythonTierTests(unittest.TestCase):
             <= pre_suites
         )
         self.assertTrue(
-            {"portable-eval", "immutable-subflake", "consumer-eval", "signatures"}
-            .isdisjoint(pre_suites)
+            {
+                "portable-eval",
+                "immutable-subflake",
+                "consumer-eval",
+                "signatures",
+            }.isdisjoint(pre_suites)
         )
 
         expensive = self.quality("--tier", "expensive")
@@ -607,7 +854,13 @@ class QualityPythonTierTests(unittest.TestCase):
         self.assertEqual(expensive_args[expensive_python + 1], "full")
         expensive_suites = set(expensive_args[expensive_python + 2 :])
         self.assertTrue(
-            {"python-test", "portable-eval", "immutable-subflake", "consumer-eval", "signatures"}
+            {
+                "python-test",
+                "portable-eval",
+                "immutable-subflake",
+                "consumer-eval",
+                "signatures",
+            }
             <= expensive_suites
         )
 
@@ -656,9 +909,7 @@ class QualityPythonTierTests(unittest.TestCase):
         env = dict(self.env)
         env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
         env["QUALITY_TIER_SUPERVISED"] = "1"
-        proc = self.quality(
-            "--python-tier", "fast", "python-test", env=env
-        )
+        proc = self.quality("--python-tier", "fast", "python-test", env=env)
         self.assertNotEqual(proc.returncode, 0)
         supervised = log.read_text().splitlines()
         self.assertEqual(
@@ -673,9 +924,7 @@ class QualityPythonTierTests(unittest.TestCase):
         )
 
         env.pop("QUALITY_TIER_SUPERVISED")
-        proc = self.quality(
-            "--python-tier", "fast", "python-test", env=env
-        )
+        proc = self.quality("--python-tier", "fast", "python-test", env=env)
         self.assertNotEqual(proc.returncode, 0)
         unsupervised = log.read_text().splitlines()
         self.assertEqual(unsupervised[:2], ["--signal=TERM", "--kill-after=5"])

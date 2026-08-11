@@ -291,6 +291,7 @@ let
   };
 
   scriptRoot = ../test/ai/scripts;
+  qualityProgram = ../test/bin/quality;
 
   mkScriptPackage =
     pkgs: name: scriptName: runtimeInputs: extraEnv:
@@ -299,6 +300,7 @@ let
       inherit runtimeInputs;
       text = ''
         ${extraEnv}
+        export AI_NIX_QUALITY=${qualityProgram}
         exec ${pkgs.bash}/bin/bash ${scriptRoot}/${scriptName} "$@"
       '';
     };
@@ -323,6 +325,7 @@ let
       ''
         export HOME=$TMPDIR
         export AI_NIX_ROOT=${sourceForChecks}
+        export AI_NIX_QUALITY=${qualityProgram}
         export AI_NIX_OUTPUT_ROOT=$TMPDIR/build
         ${extraEnv}
 

@@ -214,7 +214,6 @@ Partner observation .441Z: restore is a recovery path but the transaction now re
   }
 ]
 #+end_src
-
 * DONE [#D] Restore the Syncthing.app runtime-ownership warning
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -2140,15 +2139,17 @@ overlays/00-last-known-good.nix:5-24 defines a generic name-parameterized import
 ]
 #+end_src
 
-* TODO [#C] Converge portable formatting and linting on one quality authority    :architecture:quality:
+* DONE [#C] Converge portable formatting and linting on one quality authority    :architecture:quality:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.6
 :LABELS: ["architecture","heavy-review","quality"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 19:43]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 19:43]
+:CLOSE_REASON: Made test/bin/quality the single root and portable format/lint authority, retained public portable apps as delegates, unified formatter derivations, and added atomic explicit-path validation plus NUL-safe Git/tree inventories for Nix, .sh, .bash, and supported shebang files. Focused 37-test, realized portable format/lint, static, root/portable all-system, and independent refresh gates passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

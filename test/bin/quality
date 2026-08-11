@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# The single quality authority. lefthook, GitHub Actions and the Makefile all
-# delegate here rather than each keeping their own copy of "which files, which
-# tool, which flags".
+# The single quality authority. lefthook, GitHub Actions, the Makefile, and the
+# root and portable formatter/linter entry points all delegate here rather than
+# each keeping a copy of "which files, which tool, which flags".
 #
 # Why this exists. Before it, the same checks were defined in four places and had
 # already drifted apart in ways that made CI strictly weaker than the local hook:
@@ -31,6 +31,7 @@
 #   test/bin/quality --python-tier fast python-test
 #   test/bin/quality --tier expensive      # low-frequency exhaustive assurance
 #   test/bin/quality shell-format --fix   # rewrite instead of check, where meaningful
+#   test/bin/quality --fix nix-format shell-format --paths FILE...
 #   test/bin/quality --list               # print every suite
 #   test/bin/quality --files shell        # print the discovered file set and exit
 #
@@ -42,12 +43,21 @@
 
 set -uo pipefail
 
-repo_root=$(git rev-parse --show-toplevel) || {
-    printf 'quality: not in a git repository\n' >&2
-    exit 1
-}
+invocation_dir=$(pwd -P) || exit 1
+if [[ -n ${AI_NIX_ROOT:-} ]]; then
+    repo_root=$(cd -- "$AI_NIX_ROOT" 2>/dev/null && pwd -P) || {
+        printf 'quality: AI_NIX_ROOT is not a readable directory: %s\n' "$AI_NIX_ROOT" >&2
+        exit 1
+    }
+    inventory_source=tree
+elif repo_root=$(git rev-parse --show-toplevel 2>/dev/null); then
+    inventory_source=git
+else
+    repo_root=$invocation_dir
+    inventory_source=none
+fi
 quality_program=$repo_root/test/bin/quality
-cd "$repo_root" || exit 1
+cd -- "$repo_root" || exit 1
 
 SUITES=(
     nix-format
@@ -69,6 +79,9 @@ python_tier_seen=0
 quality_tier=""
 quality_tier_seen=0
 want=()
+explicit_paths=()
+explicit_nix_paths=()
+explicit_shell_paths=()
 
 PRE_COMMIT_CORE_SUITES=(
     nix-format
@@ -89,83 +102,154 @@ EXPENSIVE_SUITES=(
 )
 
 # ---- file discovery -----------------------------------------------------
-# Tracked files only. This excludes untracked result symlinks and build artifacts
-# without a prune list, so "in scope" matches the repository's tracked surface.
+# The working-tree authority is Git. Portable Nix checks receive an exact source
+# tree through AI_NIX_ROOT instead, because Nix store sources have no Git index.
+# Every internal inventory is an array populated from NUL-delimited input. The
+# portable source tree and Git can both contain newlines in filenames; routing
+# either through command substitution would split one file into several paths.
+inventory_paths=()
+selected_paths=()
 
-files_nix() { git ls-files -- '*.nix'; }
-
-# Shell files and extensionless Python are detected by shebang. Python files
-# with .py or .py.in suffixes are also selected by extension.
-_shebang_is() {
-    local pat=$1 f=$2
-    [[ -f $f ]] || return 1
-    IFS= read -r first <"$f" 2>/dev/null || return 1
-    [[ $first == '#!'* && $first == *"$pat"* ]]
-}
-
-files_shell() {
-    local f inventory
-    inventory=$(git ls-files) || return 1
-    while IFS= read -r f; do
-        if _shebang_is bash "$f" || _shebang_is /sh "$f" || _shebang_is 'env sh' "$f"; then
-            printf '%s\n' "$f"
-        fi
-    done <<<"$inventory"
-    return 0
-}
-
-files_python() {
-    local f inventory
-    inventory=$(git ls-files) || return 1
-    while IFS= read -r f; do
-        if [[ $f == *.py || $f == *.py.in ]]; then
-            printf '%s\n' "$f"
-        elif _shebang_is python "$f"; then
-            printf '%s\n' "$f"
-        fi
-    done <<<"$inventory"
-    return 0
-}
-
-# Discover tracked test/bin suites, then classify them by filename.
-# Slow suites end in -slow-test.py; every other test/bin/*-test.py suite is fast.
-# A test outside test/bin is a hard error so no new suite can silently disappear
-# from both tiers.
-files_python_tests_for_tier() {
-    local tier=$1 path inventory selected=0
-    case $tier in
-    fast | full) ;;
-    *)
-        printf 'quality: invalid Python test tier: %s\n' "$tier" >&2
+load_inventory() {
+    local f listing
+    listing=$(mktemp "${TMPDIR:-/tmp}/quality-inventory.XXXXXX") || {
+        printf 'quality: could not create an inventory file\n' >&2
         return 1
-        ;;
-    esac
-    if ! inventory=$(git ls-files -- '*-test.py'); then
-        printf 'quality: could not discover tracked Python test suites\n' >&2
+    }
+    if [[ $inventory_source == tree ]]; then
+        if ! find . \( -type f -o -type l \) -print0 >"$listing"; then
+            rm -f "$listing"
+            return 1
+        fi
+    elif [[ $inventory_source == git ]]; then
+        if ! git ls-files -z >"$listing"; then
+            rm -f "$listing"
+            return 1
+        fi
+    else
+        rm -f "$listing"
+        printf 'quality: not in a git repository\n' >&2
         return 1
     fi
-    while IFS= read -r path; do
-        [[ -n $path ]] || continue
-        case $path in
-        test/bin/*-test.py) ;;
+
+    inventory_paths=()
+    while IFS= read -r -d '' f; do
+        if [[ $inventory_source == tree ]]; then
+            f=${f#./}
+        fi
+        inventory_paths+=("$f")
+    done <"$listing"
+    rm -f "$listing"
+}
+
+# Shell files use their conventional extensions or a shell shebang. Python files
+# with .py or .py.in suffixes are also selected by extension.
+_shebang_is() {
+    local kind=$1 f=$2 first='' command='' token='' index=0
+    local -a words=()
+    [[ -f $f ]] || return 1
+    IFS= read -r first <"$f" 2>/dev/null || [[ -n $first ]] || return 1
+    [[ $first == '#!'* ]] || return 1
+    read -r -a words <<<"${first#\#!}"
+    [[ ${#words[@]} -gt 0 ]] || return 1
+    command=${words[0]##*/}
+    if [[ $command == env ]]; then
+        command=
+        index=1
+        while [[ $index -lt ${#words[@]} ]]; do
+            token=${words[$index]}
+            case $token in
+            -S | --split-string | --)
+                index=$((index + 1))
+                [[ $index -lt ${#words[@]} ]] || return 1
+                command=${words[$index]##*/}
+                break
+                ;;
+            -u | --unset | -C | --chdir)
+                index=$((index + 2))
+                ;;
+            -* | *=*)
+                index=$((index + 1))
+                ;;
+            *)
+                command=${token##*/}
+                break
+                ;;
+            esac
+        done
+    fi
+    case $kind in
+    shell) [[ $command == bash || $command == sh ]] ;;
+    python) [[ $command =~ ^python([0-9]+([.][0-9]+)*)?$ ]] ;;
+    *) return 1 ;;
+    esac
+}
+
+# Select one typed view of the inventory without serializing filenames. Slow
+# Python suites end in -slow-test.py; every other test/bin/*-test.py suite is
+# fast. A test outside test/bin is a hard error so no new suite can silently
+# disappear from both tiers.
+select_files() {
+    local kind=$1 tier=${2:-} f
+    if [[ $kind == python-tests ]]; then
+        case $tier in
+        fast | full) ;;
         *)
-            printf 'quality: Python test suite must live under test/bin: %s\n' "$path" >&2
+            printf 'quality: invalid Python test tier: %s\n' "$tier" >&2
             return 1
             ;;
         esac
-        if [[ $tier == fast && $path == *-slow-test.py ]]; then
-            continue
-        fi
-        printf '%s\n' "$path"
-        selected=$((selected + 1))
-    done <<<"$inventory"
-    if [[ $selected -eq 0 ]]; then
+    fi
+    load_inventory || return 1
+    selected_paths=()
+    for f in "${inventory_paths[@]}"; do
+        case $kind in
+        nix)
+            [[ $f == *.nix ]] && selected_paths+=("$f")
+            ;;
+        shell)
+            if [[ $f == *.sh || $f == *.bash ]] ||
+                _shebang_is shell "$f"; then
+                selected_paths+=("$f")
+            fi
+            ;;
+        python)
+            if [[ $f == *.py || $f == *.py.in ]] || _shebang_is python "$f"; then
+                selected_paths+=("$f")
+            fi
+            ;;
+        python-tests)
+            [[ $f == *-test.py ]] || continue
+            case $f in
+            test/bin/*-test.py) ;;
+            *)
+                printf 'quality: Python test suite must live under test/bin: %s\n' "$f" >&2
+                return 1
+                ;;
+            esac
+            if [[ $tier == fast && $f == *-slow-test.py ]]; then
+                continue
+            fi
+            selected_paths+=("$f")
+            ;;
+        *)
+            printf 'quality: unknown file inventory: %s\n' "$kind" >&2
+            return 1
+            ;;
+        esac
+    done
+    if [[ $kind == python-tests && ${#selected_paths[@]} -eq 0 ]]; then
         printf 'quality: Python test tier %s selected zero suites\n' "$tier" >&2
         return 1
     fi
 }
 
-files_python_tests() { files_python_tests_for_tier full; }
+print_files() {
+    select_files "$@" || return 1
+    if [[ ${#selected_paths[@]} -gt 0 ]]; then
+        printf '%s\n' "${selected_paths[@]}"
+    fi
+}
 
 python_test_budget() {
     case $1 in
@@ -197,20 +281,28 @@ need() {
 # Run a per-file check over every file, accumulating failures. This function is
 # the whole point of the script: it is the thing the old shell loops got wrong.
 #
-# The producer is named explicitly so its exit status is checked before any tool
-# runs. Pipelines and process substitution can obscure producer failure; a
-# pipeline can also run the consuming loop in a subshell and lose `failures`.
+# Selection finishes before any tool runs, so inventory failure cannot become an
+# empty success. The NUL-delimited inventory is read from a temporary file because
+# process substitution cannot reliably return the producer's exit status.
 each_file() {
-    local suite=$1 desc=$2 producer=$3
+    local suite=$1 desc=$2 kind=$3
     shift 3
     local -a cmd=("$@")
-    local f tool_path output inventory bad=0 count=0
-    if ! inventory=$("$producer"); then
-        fail "$suite: tracked-file discovery failed"
-        return
+    local f tool_path output bad=0 count=0
+    local -a paths=()
+    if [[ ${#explicit_paths[@]} -gt 0 ]]; then
+        case $kind in
+        nix) paths=("${explicit_nix_paths[@]}") ;;
+        shell) paths=("${explicit_shell_paths[@]}") ;;
+        esac
+    else
+        if ! select_files "$kind"; then
+            fail "$suite: tracked-file discovery failed"
+            return
+        fi
+        paths=("${selected_paths[@]}")
     fi
-    while IFS= read -r f; do
-        [[ -n $f ]] || continue
+    for f in "${paths[@]}"; do
         # `git ls-files` can report an index entry whose worktree path is absent.
         # A path that is gone cannot be checked, so skip it rather than hand a
         # formatter a nonexistent file and manufacture a failure.
@@ -222,13 +314,14 @@ each_file() {
         # loudly rather than vanish into a silent skip.
         [[ -e $f || -L $f ]] || continue
         count=$((count + 1))
-        tool_path=./$f
+        tool_path=$f
+        [[ $tool_path == /* || $tool_path == ./* ]] || tool_path=./$tool_path
         if ! output=$("${cmd[@]}" "$tool_path" 2>&1); then
             bad=$((bad + 1))
             printf '  --- %s\n' "$f" >&2
             printf '%s\n' "$output" | sed 's/^/      /' >&2
         fi
-    done <<<"$inventory"
+    done
     if [[ $bad -gt 0 ]]; then
         fail "$suite: $bad of $count file(s) failed ($desc)"
     else
@@ -237,22 +330,32 @@ each_file() {
 }
 
 rewrite_files() {
-    local suite=$1 producer=$2
+    local suite=$1 kind=$2
     shift 2
-    local f inventory bad=0 count=0
-    if ! inventory=$("$producer"); then
-        fail "$suite: tracked-file discovery failed"
-        return
+    local f tool_path bad=0 count=0
+    local -a paths=()
+    if [[ ${#explicit_paths[@]} -gt 0 ]]; then
+        case $kind in
+        nix) paths=("${explicit_nix_paths[@]}") ;;
+        shell) paths=("${explicit_shell_paths[@]}") ;;
+        esac
+    else
+        if ! select_files "$kind"; then
+            fail "$suite: tracked-file discovery failed"
+            return
+        fi
+        paths=("${selected_paths[@]}")
     fi
-    while IFS= read -r f; do
-        [[ -n $f ]] || continue
+    for f in "${paths[@]}"; do
         [[ -e $f || -L $f ]] || continue
-        if "$@" "./$f"; then
+        tool_path=$f
+        [[ $tool_path == /* || $tool_path == ./* ]] || tool_path=./$tool_path
+        if "$@" "$tool_path"; then
             count=$((count + 1))
         else
             bad=$((bad + 1))
         fi
-    done <<<"$inventory"
+    done
     if [[ $bad -gt 0 ]]; then
         fail "$suite: $bad file(s) could not be rewritten"
     else
@@ -265,54 +368,54 @@ rewrite_files() {
 run_nix_format() {
     need nixfmt nix-format || return
     if [[ $fix -eq 1 ]]; then
-        rewrite_files nix-format files_nix nixfmt
+        rewrite_files nix-format nix nixfmt
     else
-        each_file nix-format "nixfmt --check" files_nix nixfmt --check
+        each_file nix-format "nixfmt --check" nix nixfmt --check
     fi
 }
 
 run_nix_lint() {
     need statix nix-lint || return
-    each_file nix-lint "statix check" files_nix statix check
+    each_file nix-lint "statix check" nix statix check
 }
 
 run_nix_deadcode() {
     need deadnix nix-deadcode || return
-    each_file nix-deadcode "deadnix" files_nix \
+    each_file nix-deadcode "deadnix" nix \
         deadnix --no-lambda-arg --no-lambda-pattern-names --no-underscore --fail
 }
 
 run_shell_lint() {
     need shellcheck shell-lint || return
     each_file shell-lint "shellcheck --severity=warning" \
-        files_shell shellcheck --severity=warning
+        shell shellcheck --severity=warning
 }
 
 run_shell_format() {
     need shfmt shell-format || return
     if [[ $fix -eq 1 ]]; then
-        rewrite_files shell-format files_shell shfmt -i 4 -w
+        rewrite_files shell-format shell shfmt -i 4 -w
     else
-        each_file shell-format "shfmt -i 4 -d" files_shell shfmt -i 4 -d
+        each_file shell-format "shfmt -i 4 -d" shell shfmt -i 4 -d
     fi
 }
 
 run_python_lint() {
     need ruff python-lint || return
     need python3 python-lint || return
-    local f inventory bad=0
+    local f bad=0
     local -a py=() templates=()
-    if ! inventory=$(files_python); then
+    if ! select_files python; then
         fail "python-lint: tracked-file discovery failed"
         return
     fi
-    while IFS= read -r f; do
+    for f in "${selected_paths[@]}"; do
         if [[ $f == *.py.in ]]; then
             templates+=("$f")
         else
             py+=("./$f")
         fi
-    done <<<"$inventory"
+    done
     if [[ ${#py[@]} -eq 0 && ${#templates[@]} -eq 0 ]]; then
         note "python-lint: no files"
         return
@@ -351,22 +454,14 @@ run_python_test() {
         fail "python-test: test/bin/unittest-strict.py is missing or not executable"
         return
     }
-    local selection budget start elapsed remaining status
+    local budget start elapsed remaining status
     local f bad=0 ran=0 timed_out=0 killed=0 budget_exceeded=0 not_reached=0
     local -a tests=() timeout_args=()
-    selection=$(mktemp "${TMPDIR:-/tmp}/quality-python-tests.XXXXXX") || {
-        fail "python-test: could not create a tier-selection file"
-        return
-    }
-    if ! files_python_tests_for_tier "$python_tier" >"$selection"; then
-        rm -f "$selection"
+    if ! select_files python-tests "$python_tier"; then
         fail "python-test: tier selection failed"
         return
     fi
-    while IFS= read -r f; do
-        [[ -n $f ]] && tests+=("$f")
-    done <"$selection"
-    rm -f "$selection"
+    tests=("${selected_paths[@]}")
     if ! budget=$(python_test_budget "$python_tier"); then
         fail "python-test: tier budget discovery failed"
         return
@@ -505,16 +600,31 @@ while [[ $# -gt 0 ]]; do
             ;;
         esac
         ;;
+    --paths)
+        shift
+        if [[ $# -eq 0 ]]; then
+            printf 'quality: --paths needs at least one path\n' >&2
+            exit 2
+        fi
+        for path in "$@"; do
+            if [[ $path == /* ]]; then
+                explicit_paths+=("$path")
+            else
+                explicit_paths+=("$invocation_dir/$path")
+            fi
+        done
+        break
+        ;;
     --list)
         printf '%s\n' "${SUITES[@]}"
         exit 0
         ;;
     --files)
         case ${2-} in
-        nix) files_nix || exit 1 ;;
-        shell) files_shell || exit 1 ;;
-        python) files_python || exit 1 ;;
-        python-tests) files_python_tests || exit 1 ;;
+        nix) print_files nix || exit 1 ;;
+        shell) print_files shell || exit 1 ;;
+        python) print_files python || exit 1 ;;
+        python-tests) print_files python-tests full || exit 1 ;;
         *)
             printf 'quality: --files needs one of: nix shell python python-tests\n' >&2
             exit 1
@@ -543,6 +653,58 @@ while [[ $# -gt 0 ]]; do
     esac
     shift
 done
+
+suite_requested() {
+    local needle=$1 suite
+    for suite in "${want[@]}"; do
+        [[ $suite == "$needle" ]] && return 0
+    done
+    return 1
+}
+
+if [[ ${#explicit_paths[@]} -gt 0 ]]; then
+    if [[ -n $quality_tier || ${#want[@]} -eq 0 ]]; then
+        printf 'quality: --paths requires explicit formatter suites\n' >&2
+        exit 2
+    fi
+    for suite in "${want[@]}"; do
+        case $suite in
+        nix-format | shell-format) ;;
+        *)
+            printf 'quality: --paths supports only nix-format and shell-format\n' >&2
+            exit 2
+            ;;
+        esac
+    done
+    for path in "${explicit_paths[@]}"; do
+        if [[ ! -f $path ]]; then
+            printf 'quality: formatter path is not a regular file: %s\n' "$path" >&2
+            exit 2
+        fi
+        case $path in
+        *.nix) explicit_nix_paths+=("$path") ;;
+        *.sh | *.bash) explicit_shell_paths+=("$path") ;;
+        *)
+            if ! _shebang_is shell "$path"; then
+                printf 'quality: no formatter for: %s\n' "$path" >&2
+                exit 2
+            fi
+            explicit_shell_paths+=("$path")
+            ;;
+        esac
+    done
+    if [[ ${#explicit_nix_paths[@]} -gt 0 ]] && ! suite_requested nix-format; then
+        printf 'quality: --paths includes Nix files but nix-format was not requested\n' >&2
+        exit 2
+    fi
+    if [[ ${#explicit_shell_paths[@]} -gt 0 ]] && ! suite_requested shell-format; then
+        printf 'quality: --paths includes shell files but shell-format was not requested\n' >&2
+        exit 2
+    fi
+elif [[ $inventory_source == none ]]; then
+    printf 'quality: not in a git repository\n' >&2
+    exit 1
+fi
 
 if [[ -n $quality_tier ]]; then
     if [[ $python_tier_seen -eq 1 ]]; then

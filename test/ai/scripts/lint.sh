@@ -7,11 +7,7 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 . "$script_dir/lib.sh"
 
 if [ -n "${AI_NIX_LINT_ROOT:-}" ]; then
-    cd "$AI_NIX_LINT_ROOT"
-else
-    enter_repo
+    export AI_NIX_ROOT=$AI_NIX_LINT_ROOT
 fi
 
-statix check .
-deadnix --fail .
-find test/ai -type f -name '*.sh' -print0 | xargs -0 -r shellcheck -x
+run_quality nix-lint nix-deadcode shell-lint

@@ -196,8 +196,10 @@ Explicit formatter paths are also supported:
 nix fmt -- path/to/file.nix path/to/script.sh
 ```
 
-Explicit-path mode always rewrites the named supported files, including untracked
-files. It has no check-only form.
+Explicit-path mode accepts `.nix`, `.sh`, `.bash`, and files with a supported
+shell shebang. It validates every path before rewriting any of them, rejects
+unsupported inputs, and includes untracked files. Put `--check` before the paths
+to inspect them without rewriting.
 
 The pre-push hook verifies commit signatures:
 
@@ -418,18 +420,19 @@ The root and portable flakes export the same application names. Invoke them as
 
 | Application | Purpose |
 |---|---|
-| `format` | Rewrite supported Nix and shell sources discovered from the caller's Git checkout; accepts `--check` for inspection only. |
+| `format` | Rewrite supported Nix and shell sources discovered from the caller's Git checkout through the shared quality authority; accepts `--check` for inspection only. |
 | `format-check` | Check those discovered sources without rewriting. |
-| `lint` | Lint the portable AI Nix paths and AI shell checks. |
+| `lint` | Run the shared static Nix and shell suites over the exact portable source. |
 | `test` | Run portable flake show and evaluation checks; not the full repository suite. |
 | `build-check` | Build the portable default package without a result link. |
 | `no-warnings` | Build with evaluation warnings treated as fatal. |
 | `check` | Run the five configured checks in sequence; some operate on the caller's root checkout. |
 | `default` | Alias for `check`. |
 
-The applications discover the repository from the caller's current Git checkout
-unless `AI_NIX_ROOT` is set. Running them from an unrelated checkout can therefore
-target the wrong tree.
+Formatting, evaluation, and build applications discover the repository from the
+caller's current Git checkout unless `AI_NIX_ROOT` is set. Portable linting uses
+the exact source captured by the flake. Running the other applications from an
+unrelated checkout can therefore target the wrong tree.
 
 ## Evidence and safety
 

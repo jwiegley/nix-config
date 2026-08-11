@@ -21,22 +21,14 @@ enter_repo() {
     cd "$(repo_root)"
 }
 
-find_nix_files0() {
-    find . -type f -name '*.nix' \
-        -not -path './.git/*' \
-        -not -path './.direnv/*' \
-        -not -path './build/*' \
-        -not -path './result/*' \
-        -not -path './result-*/*' \
-        -print0
-}
-
-find_shell_files0() {
-    find . -type f -name '*.sh' \
-        -not -path './.git/*' \
-        -not -path './.direnv/*' \
-        -not -path './build/*' \
-        -not -path './result/*' \
-        -not -path './result-*/*' \
-        -print0
+run_quality() {
+    local program=${AI_NIX_QUALITY:-}
+    if [ -z "$program" ]; then
+        program=$(repo_root)/test/bin/quality
+    fi
+    if [ ! -f "$program" ]; then
+        printf 'ai-nix: quality authority is missing: %s\n' "$program" >&2
+        return 2
+    fi
+    bash "$program" "$@"
 }
