@@ -2,9 +2,390 @@
 
 set -uo pipefail
 
+installed_python=
+
+die() {
+    printf 'upgrade-projects: %s\n' "$*" >&2
+    exit 1
+}
+
+python_bin=${installed_python:-}
+if [[ -z $python_bin ]]; then
+    python_bin=$(command -v python3) || die "python3 is required"
+fi
+[[ $python_bin == /* ]] || die "python3 path must be absolute: $python_bin"
+
+check_retention_api() {
+    "$python_bin" - retention-api <<'PY'
+import fcntl
+import inspect
+import os
+import shutil
+import sys
+
+if sys.argv[1] != "retention-api":
+    raise SystemExit("unexpected retention API action")
+required_constants = ("O_DIRECTORY", "O_NOFOLLOW", "O_NONBLOCK")
+missing = [name for name in required_constants if not hasattr(os, name)]
+if os.listdir not in os.supports_fd:
+    missing.append("os.listdir(fd)")
+if os.stat not in os.supports_dir_fd or os.stat not in os.supports_follow_symlinks:
+    missing.append("os.stat(dir_fd, follow_symlinks)")
+if os.rename not in os.supports_dir_fd:
+    missing.append("os.rename(dir_fd)")
+if "dir_fd" not in inspect.signature(shutil.rmtree).parameters:
+    missing.append("shutil.rmtree(dir_fd)")
+if not shutil.rmtree.avoids_symlink_attacks:
+    missing.append("symlink-safe shutil.rmtree")
+if not hasattr(fcntl, "flock") or not hasattr(fcntl, "LOCK_NB"):
+    missing.append("fcntl.flock")
+if missing:
+    raise SystemExit("missing retention APIs: " + ", ".join(missing))
+PY
+}
+
+case ${1:-} in
+--retention-api-check)
+    [[ $# -eq 1 ]] || die "--retention-api-check accepts no arguments"
+    check_retention_api || die "required retention APIs are unavailable"
+    exit 0
+    ;;
+"") ;;
+*) die "usage: upgrade-projects [--retention-api-check]" ;;
+esac
+
+private_path_metadata() {
+    local path=$1
+    local metadata
+
+    if metadata=$(stat -f '%u %Lp' "$path" 2>/dev/null); then
+        printf '%s\n' "$metadata"
+    else
+        stat -c '%u %a' -- "$path" 2>/dev/null
+    fi
+}
+
+validate_private_directory() {
+    local path=$1
+    local label=$2
+    local metadata owner mode
+
+    [[ ! -L $path ]] || die "$label is a symlink: $path"
+    [[ -d $path ]] || die "$label is not a directory: $path"
+    metadata=$(private_path_metadata "$path") ||
+        die "cannot inspect $label: $path"
+    read -r owner mode <<<"$metadata"
+    [[ $owner == "$EUID" ]] ||
+        die "$label has owner $owner, expected $EUID: $path"
+    [[ $mode == 700 ]] ||
+        die "$label has mode $mode, expected 700: $path"
+}
+
+validate_state_anchor() {
+    local requested=$1
+
+    "$python_bin" - anchor "$requested" 7 <<'PY'
+import os
+import stat
+import sys
+
+if sys.argv[1] != "anchor":
+    raise SystemExit("unexpected state-anchor action")
+requested = os.lstat(sys.argv[2])
+anchored = os.fstat(int(sys.argv[3]))
+if not stat.S_ISDIR(requested.st_mode):
+    raise SystemExit("requested state path is not a no-follow directory")
+if (requested.st_dev, requested.st_ino) != (anchored.st_dev, anchored.st_ino):
+    raise SystemExit("requested state path does not match anchored directory")
+PY
+}
+
+private_create_begin() {
+    saved_creation_umask=$(umask)
+    creation_had_noclobber=0
+    [[ -o noclobber ]] && creation_had_noclobber=1
+    umask 077
+    set -o noclobber
+}
+
+private_create_end() {
+    ((creation_had_noclobber)) || set +o noclobber
+    umask "$saved_creation_umask"
+}
+
+log_fd_metadata() {
+    "$python_bin" - fstat 9 <<'PY'
+import os
+import stat
+import sys
+
+if sys.argv[1] != "fstat":
+    raise SystemExit("unexpected descriptor action")
+info = os.fstat(int(sys.argv[2]))
+kind = "regular" if stat.S_ISREG(info.st_mode) else "other"
+print(info.st_uid, format(stat.S_IMODE(info.st_mode), "o"), kind)
+PY
+}
+
+open_private_log() {
+    local name=$1
+    local status metadata owner mode kind
+
+    [[ -n $name && $name != */* && $name != .* ]] ||
+        die "invalid log filename: $name"
+    private_create_begin
+    if exec 9>"$name"; then
+        status=0
+    else
+        status=$?
+    fi
+    private_create_end
+    ((status == 0)) ||
+        die "cannot exclusively create log file: $log_dir/$name"
+
+    metadata=$(log_fd_metadata) ||
+        die "cannot inspect open log descriptor: $log_dir/$name"
+    read -r owner mode kind <<<"$metadata"
+    [[ $kind == regular ]] ||
+        die "open log descriptor is not a regular file: $log_dir/$name"
+    [[ $owner == "$EUID" ]] ||
+        die "open log descriptor has owner $owner, expected $EUID: $log_dir/$name"
+    [[ $mode == 600 ]] ||
+        die "open log descriptor has mode $mode, expected 600: $log_dir/$name"
+    log_fd_open=1
+}
+
+close_private_log() {
+    exec 9>&-
+    log_fd_open=0
+}
+
+open_run_lock() {
+    local status
+
+    private_create_begin
+    if exec 8>".active"; then
+        status=0
+    else
+        status=$?
+    fi
+    private_create_end
+    ((status == 0)) || die "cannot create active-run lock: $log_dir/.active"
+    "$python_bin" - lock 8 <<'PY' || die "cannot lock active run: $log_dir"
+import fcntl
+import sys
+
+if sys.argv[1] != "lock":
+    raise SystemExit("unexpected lock action")
+fcntl.flock(int(sys.argv[2]), fcntl.LOCK_EX | fcntl.LOCK_NB)
+PY
+}
+
+prune_runs() {
+    "$python_bin" - prune "$log_dir" "$retained_runs" \
+        "$abandoned_grace_seconds" <<'PY'
+import fcntl
+import os
+import secrets
+import shutil
+import stat
+import sys
+import time
+
+if sys.argv[1] != "prune":
+    raise SystemExit("unexpected retention action")
+current = os.path.basename(sys.argv[2])
+keep = int(sys.argv[3])
+grace = int(sys.argv[4])
+uid = os.geteuid()
+root_fd = os.dup(7)
+
+
+def private_directory(name):
+    try:
+        info = os.stat(name, dir_fd=root_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        return None
+    if not stat.S_ISDIR(info.st_mode):
+        return None
+    if info.st_uid != uid or stat.S_IMODE(info.st_mode) != 0o700:
+        return None
+    return info
+
+
+def completed(name):
+    try:
+        info = os.stat(
+            os.path.join(name, ".complete"),
+            dir_fd=root_fd,
+            follow_symlinks=False,
+        )
+    except FileNotFoundError:
+        return False
+    return (
+        stat.S_ISREG(info.st_mode)
+        and info.st_uid == uid
+        and stat.S_IMODE(info.st_mode) == 0o600
+    )
+
+
+def locked_or_unsafe(name):
+    try:
+        active_fd = os.open(
+            os.path.join(name, ".active"),
+            os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+            dir_fd=root_fd,
+        )
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return True
+    try:
+        try:
+            info = os.fstat(active_fd)
+        except OSError:
+            return True
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid != uid
+            or stat.S_IMODE(info.st_mode) != 0o600
+        ):
+            return True
+        try:
+            fcntl.flock(active_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        except OSError:
+            return True
+        return False
+    finally:
+        os.close(active_fd)
+
+
+def eligible_runs():
+    result = []
+    for name in os.listdir(root_fd):
+        if not name.startswith("run."):
+            continue
+        info = private_directory(name)
+        if info is None:
+            continue
+        is_complete = completed(name)
+        is_abandoned = time.time() - info.st_mtime >= grace
+        if name == current and is_complete:
+            result.append(name)
+        elif (is_complete or is_abandoned) and not locked_or_unsafe(name):
+            result.append(name)
+    return sorted(result)
+
+
+try:
+    for name in os.listdir(root_fd):
+        if not name.startswith(".prune.run."):
+            continue
+        info = private_directory(name)
+        if info is None or time.time() - info.st_mtime < grace:
+            continue
+        try:
+            shutil.rmtree(name, dir_fd=root_fd)
+        except FileNotFoundError:
+            pass
+    while True:
+        runs = eligible_runs()
+        if len(runs) <= keep:
+            break
+        candidates = [name for name in runs if name != current]
+        if not candidates:
+            break
+        candidate = candidates[0]
+        claim = f".prune.{candidate}.{os.getpid()}.{secrets.token_hex(4)}"
+        try:
+            os.rename(candidate, claim, src_dir_fd=root_fd, dst_dir_fd=root_fd)
+        except FileNotFoundError:
+            continue
+        try:
+            shutil.rmtree(claim, dir_fd=root_fd)
+        except FileNotFoundError:
+            pass
+finally:
+    os.close(root_fd)
+PY
+}
+
+finish_run() {
+    local status=$?
+
+    trap - EXIT
+    if ((log_fd_open)); then
+        close_private_log
+    fi
+    if ! (
+        umask 077
+        set -o noclobber
+        : >".complete"
+    ); then
+        printf 'upgrade-projects: cannot mark run complete: %s\n' "$log_dir" >&2
+        ((status == 0)) && status=1
+    fi
+    exec 8>&-
+    if ! prune_runs; then
+        printf 'upgrade-projects: cannot enforce log retention under %s\n' \
+            "$state_dir" >&2
+        ((status == 0)) && status=1
+    fi
+    exec 7>&-
+    exit "$status"
+}
+
 failures=0
-log_dir=${UPGRADE_LOG_DIR:-/tmp}
-mkdir -p "$log_dir"
+retained_runs=10
+abandoned_grace_seconds=3600
+log_fd_open=0
+[[ $HOME == /* ]] || die "HOME must be absolute: $HOME"
+if [[ -n ${UPGRADE_LOG_DIR:-} ]]; then
+    [[ $UPGRADE_LOG_DIR == /* ]] ||
+        die "UPGRADE_LOG_DIR must be absolute: $UPGRADE_LOG_DIR"
+    state_dir=$UPGRADE_LOG_DIR
+else
+    if [[ ${XDG_STATE_HOME:-} == /* ]]; then
+        state_home=$XDG_STATE_HOME
+    else
+        state_home=$HOME/.local/state
+    fi
+    state_dir=$state_home/upgrade-projects
+fi
+while [[ $state_dir != / && $state_dir == */ ]]; do
+    state_dir=${state_dir%/}
+done
+case $state_dir in
+*/. | */..) die "log state directory must not end in . or ..: $state_dir" ;;
+esac
+requested_state_dir=$state_dir
+[[ ! -L $state_dir ]] || die "log state directory is a symlink: $state_dir"
+(
+    umask 077
+    mkdir -p -- "$state_dir"
+) ||
+    die "cannot create log state directory: $state_dir"
+cd -P -- "$state_dir" || die "cannot enter log state directory: $state_dir"
+state_dir=$PWD
+validate_private_directory . "log state directory"
+exec 7<"." || die "cannot anchor log state directory: $state_dir"
+validate_state_anchor "$requested_state_dir" ||
+    die "log state directory changed while anchoring: $requested_state_dir"
+run_stamp=$(date -u '+%Y%m%dT%H%M%SZ') || die "cannot timestamp log run"
+run_name=$(
+    umask 077
+    mktemp -d "run.$run_stamp.XXXXXXXX"
+) ||
+    die "cannot create per-run log directory under $state_dir"
+[[ $run_name != */* ]] || die "mktemp returned an unsafe run name: $run_name"
+cd -P -- "$run_name" || die "cannot enter per-run log directory: $run_name"
+log_dir=$PWD
+validate_private_directory . "per-run log directory"
+open_run_lock
+trap finish_run EXIT
+printf 'upgrade-projects: logs: %s\n' "$log_dir"
 
 run_project_body() {
     local directory=$1
@@ -37,26 +418,27 @@ run_project_body() {
     return "$status"
 }
 
-run_project() {
+run_project_to_log() {
     local directory=$1
-    local logfile=$2
-    local kind=$3
-    local mode=${4:-truncate}
+    local kind=$2
 
     printf '%s\n' "$directory"
-    if [[ $mode == append ]]; then
-        if (run_project_body "$directory" "$kind") >>"$logfile" 2>&1; then
-            echo "done"
-        else
-            echo FAIL
-            failures=$((failures + 1))
-        fi
-    elif (run_project_body "$directory" "$kind") >"$logfile" 2>&1; then
+    if (run_project_body "$directory" "$kind") >&9 2>&1; then
         echo "done"
     else
         echo FAIL
         failures=$((failures + 1))
     fi
+}
+
+run_project() {
+    local directory=$1
+    local logfile=$2
+    local kind=$3
+
+    open_private_log "$logfile"
+    run_project_to_log "$directory" "$kind"
+    close_private_log
 }
 
 echo '┌────────────────────────────────────────────────────────────────────────────┐'
@@ -65,7 +447,7 @@ echo '└───────────────────────�
 
 while IFS='|' read -r directory logfile kind; do
     [[ -n $directory ]] || continue
-    run_project "$HOME/$directory" "$log_dir/$logfile" "$kind"
+    run_project "$HOME/$directory" "$logfile" "$kind"
 done <<'PROJECTS'
 src/category-theory/master|category-theory-build.log|basic
 src/ltl/coq|ltl-coq-build.log|basic
@@ -84,19 +466,19 @@ src/comparable|comparable-build.log|rust
 PROJECTS
 
 rm -rf -- "$HOME/Library/Caches/pip" "$HOME/.cache/uv"
-rag_log=$log_dir/rag-client-build.log
-: >"$rag_log"
-if ! rag-client --help >>"$rag_log" 2>&1; then
+open_private_log rag-client-build.log
+if ! rag-client --help >&9 2>&1; then
     echo "rag-client --help: FAIL"
     failures=$((failures + 1))
 fi
-if ! huggingface-cli --help >>"$rag_log" 2>&1; then
+if ! huggingface-cli --help >&9 2>&1; then
     echo "huggingface-cli --help: FAIL"
     failures=$((failures + 1))
 fi
-run_project "$HOME/src/rag-client" "$rag_log" basic append
-run_project "$HOME/src/hf" "$log_dir/hf-build.log" basic append
-run_project "$HOME/src/ledger/main" "$log_dir/ledger-build.log" basic append
+run_project_to_log "$HOME/src/rag-client" basic
+close_private_log
+run_project "$HOME/src/hf" hf-build.log basic
+run_project "$HOME/src/ledger/main" ledger-build.log basic
 
 if ((failures)); then
     printf 'upgrade-projects: %d failure(s); inspect %s/*-build.log\n' \

@@ -5,6 +5,7 @@
 # Notes:
 #   - supported nix-scripts from this repository's bin/ directory
 #   - my-scripts requires scripts
+#   - upgrade-projects receives an absolute Python from the package closure
 {
   scripts ? null,
 }:
@@ -60,6 +61,10 @@ in
       substituteInPlace $out/bin/upgrade \
         --replace-fail 'installed_upgrade_projects=' \
         "installed_upgrade_projects=$out/bin/upgrade-projects"
+      substituteInPlace $out/bin/upgrade-projects \
+        --replace-fail 'installed_python=' \
+        "installed_python=${final.python3}/bin/python3"
+      $out/bin/upgrade-projects --retention-api-check
     '';
   };
 

@@ -672,15 +672,17 @@ config/ai/catalog.nix:124-148,1085-1129 contains claude-opus-5[1m, and config/ai
 ]
 #+end_src
 
-* DOING [#B] Move upgrade-projects logs out of shared fixed /tmp paths    :security:shell:validated:
+* DONE [#B] Move upgrade-projects logs out of shared fixed /tmp paths    :security:shell:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.20
 :LABELS: ["heavy-review","security","shell","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 15:31]
+:MODIFIED: [2026-08-10 Mon 17:38]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 17:38]
+:CLOSE_REASON: Moved upgrade-projects logs into unique private state runs with descriptor-validated files, active-run locks, symlink-safe retention, package-closure Python, and 17 security/concurrency regressions.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
