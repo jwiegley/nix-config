@@ -352,15 +352,17 @@ Partner observation .441Z: restore is a recovery path but the transaction now re
 ]
 #+end_src
 
-* TODO [#B] Force a no-op command on the Vulcan-Andoria jump authorization    :security:ssh:
+* DONE [#B] Force a no-op command on the Vulcan-Andoria jump authorization    :security:ssh:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-nap
 :LABELS: ["security","ssh"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 21:46]
-:MODIFIED: [2026-08-10 Mon 21:46]
+:MODIFIED: [2026-08-10 Mon 22:06]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 22:06]
+:CLOSE_REASON: Added the exact Hera-only Vulcan jump authorization with /usr/bin/false for session/exec refusal; restricted TCP forwarding to client-local direct-tcpip, disabled remote and StreamLocal forwarding in a source-scoped sshd Match, and retained the sole andoria-08:22 permitopen destination. Exact Hera singleton, Clio absence, and sshd policy tests pass; focused host-behavior, full Hera system build, static gates, and independent rereview are green. No activation or live SSH acceptance was performed. The dedicated-identity decision remains open as nix-3u8.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

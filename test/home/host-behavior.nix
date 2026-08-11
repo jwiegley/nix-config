@@ -22,6 +22,22 @@ let
   desktopHomesByHost = lib.mapAttrs (
     _: configuration: configuration.config.home-manager.users.johnw
   ) darwinConfigurations;
+  vulcanJumpPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID/5S98ifv/slBhGzSLMK+/3JAHNzzglOfau6RlqKeYs";
+  expectedVulcanJumpAuthorization = ''from="192.168.1.2",restrict,command="/usr/bin/false",port-forwarding,permitopen="andoria-08:22" ${vulcanJumpPublicKey} johnw@vulcan'';
+  vulcanJumpAuthorizations =
+    host:
+    builtins.filter (
+      key: lib.hasInfix vulcanJumpPublicKey key
+    ) darwinConfigurations.${host}.config.users.users.johnw.openssh.authorizedKeys.keys;
+  expectedVulcanJumpSshdPolicy = ''
+    Match User johnw Address 192.168.1.2
+      AllowStreamLocalForwarding no
+      AllowTcpForwarding local
+      PermitListen none
+    Match all
+  '';
+  heraSshdConfig = darwinConfigurations.hera.config.services.openssh.extraConfig;
+  clioSshdConfig = darwinConfigurations.clio.config.services.openssh.extraConfig;
   desktopHomes = builtins.attrValues desktopHomesByHost;
   registry = import ../../config/hosts/registry.nix;
   aiCatalog = import ../../config/ai/catalog.nix {
@@ -180,6 +196,10 @@ let
   allFalse = values: builtins.all (value: !value) values;
 in
 assert builtins.all (host: builtins.hasAttr host darwinConfigurations) requiredDarwinHosts;
+assert vulcanJumpAuthorizations "hera" == [ expectedVulcanJumpAuthorization ];
+assert vulcanJumpAuthorizations "clio" == [ ];
+assert lib.hasInfix expectedVulcanJumpSshdPolicy heraSshdConfig;
+assert !lib.hasInfix "Match User johnw Address 192.168.1.2" clioSshdConfig;
 assert builtins.all (
   host:
   darwinConfigurations.${host}.config.networking.hostName == host

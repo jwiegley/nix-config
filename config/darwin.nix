@@ -80,14 +80,16 @@ in
               "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb cardno:14_476_831"
 
               ''restrict,command="${modelMetadataExtract}" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFZYNrQfHWNV09OQz7uMhjQKflCWKwLG4pp1tJb2QRRq vulcan-model-metadata''
-
+            ]
+            ++ lib.optionals config.johnw.host.isHera [
               # pushme positron sync (vulcan pushme-positron.timer) — JUMP HOST ONLY.
-              # ProxyJump opens a direct-tcpip channel and never execs anything here, so a
-              # forced command would not fire. `restrict` disables port forwarding, which IS
-              # the capability a jump needs, so it is selectively re-enabled and then pinned
-              # to one destination by permitopen. No shell, no pty, no agent/X11.
-              ''from="192.168.1.2",restrict,port-forwarding,permitopen="andoria-08:22" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID/5S98ifv/slBhGzSLMK+/3JAHNzzglOfau6RlqKeYs johnw@vulcan''
-
+              # ProxyJump opens direct-tcpip without invoking the forced command. The
+              # Hera-only sshd Match below permits local forwarding only; this key then
+              # narrows that capability to Andoria. /usr/bin/false closes session/exec
+              # channels. No shell, remote forward, pty, agent, or X11.
+              ''from="192.168.1.2",restrict,command="/usr/bin/false",port-forwarding,permitopen="andoria-08:22" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID/5S98ifv/slBhGzSLMK+/3JAHNzzglOfau6RlqKeYs johnw@vulcan''
+            ]
+            ++ [
               # drafts-mcp bridge (vulcan drafts-mcp.service) — pinned to exec
               # drafts-mcp-server ONLY; SSH_ORIGINAL_COMMAND is ignored by the
               # forced command. `restrict` disables pty/forwarding/X11/agent.
@@ -169,6 +171,16 @@ in
 
         # Disable GSSAPI authentication to prevent timeouts
         GSSAPIAuthentication no
+      ''
+      + lib.optionalString config.johnw.host.isHera ''
+
+        # The Vulcan jump key may open direct-tcpip only. authorized_keys can
+        # restrict its destination, but forwarding direction is sshd policy.
+        Match User johnw Address 192.168.1.2
+          AllowStreamLocalForwarding no
+          AllowTcpForwarding local
+          PermitListen none
+        Match all
       '';
     };
 
