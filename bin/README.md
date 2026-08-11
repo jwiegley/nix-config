@@ -316,7 +316,7 @@ activated it.
 | Clio | `~/src/nix` on Clio | Fast-forward that checkout, then run `make switch` |
 | Vulcan | `/etc/nixos` on Vulcan | Update paired inputs, then run `./build build` and `./build` |
 | VPS | `/etc/nixos` on VPS | Update paired inputs, then run `./build build` and `./build` |
-| Shared work hosts | `~/.config/home-manager` shared by the four hosts | Update the paired inputs once; realize and retain the closure, then activate it on every host |
+| Active shared-work hosts | `~/.config/home-manager` shared by the four active hosts | Update the paired inputs once; realize and retain the closure, then activate it on every active host; dormant `git-ai` is not a rollout target |
 
 The paired external inputs are updated together:
 
@@ -333,11 +333,14 @@ the selected generation. A preceding `make build` does not re-lock local inputs
 and therefore does not, by itself, prove the exact closure that a later switch
 will select.
 
-The shared-work rollout covers `andoria-08`, `andoria-t2`, `delphi-3bd4`, and
-`gpu-server`. It must realize the candidate once, make the closure resident on
-every target, preserve the previous closure for rollback, and activate all four
-hosts. The repository does not yet encode that complete sequence as one command.
-See [Architecture](../doc/ARCHITECTURE.md#host-registry-and-shared-home-policy).
+The active shared-work rollout covers `andoria-08`, `andoria-t2`,
+`delphi-3bd4`, and `gpu-server`. Canonical membership additionally contains
+dormant `git-ai`; membership is not availability evidence and does not put that
+host in the rollout. The rollout must realize the candidate once, make the
+closure resident on every active target, preserve the previous closure for
+rollback, and activate all four hosts. The repository does not yet encode that
+complete sequence as one command. See
+[Architecture](../doc/ARCHITECTURE.md#host-registry-and-shared-home-policy).
 
 Evaluation, build, activation, and a successful command lookup are separate
 evidence. A fleet change is complete only after every intended host reports the
@@ -359,15 +362,17 @@ new generation and the affected executable or service passes a runtime check.
 | `update [OPTIONS]` | Run the transactional lock and source-catalog updater | `--target` is repeatable; `--all-inputs`, `--version`, `--dry-run`, `--pull`, `--commit`, `--switch`, `--push`, and `--brew` control the transaction. Without `--dry-run`, validated changes are written back. |
 | `update-and-pull` | Find repositories under broad home-directory roots and run a PATH-provided `update` in parallel | Follows symlinks and delegates mutation semantics to an external command; use only as an attended personal maintenance operation. |
 | `update-overlay [TARGETS...]` | Inspect or update catalog-managed sources | Direct mode updates owning catalog records; some targets delegate to `bin/update`. Prefer the transaction for coordinated work. |
-| `update-remote` | Open a Clio and selected Linux consumer update jobs | Source-tree-only legacy command; excluded from the installed `nix-scripts` PATH surface. It does not await tmux pane results, omits three shared-work hosts, and bypasses the NixOS build-lock wrappers. Do not use as fleet proof. |
+| `update-remote` | Open Clio/NixOS jobs and update the explicit shared-work rollout | Source-tree-only legacy command; excluded from the installed `nix-scripts` PATH surface. It switches the four active shared-work targets projected from the registry and does not contact dormant `git-ai`, but it does not await tmux pane results and bypasses the NixOS build-lock wrappers. Do not use as fleet proof. |
 | `upgrade [HOST] [--host-only\|--projects-only]` | Combine a host operation with project maintenance | `--help` prints usage. Hera performs the full update transaction, travel/Homebrew tasks, and store signing; Clio builds and switches; Linux behavior delegates to `switch` and inherits its NixOS limitation. |
 | `upgrade-all` | Run broad repository, synchronization, host, and project maintenance | Source-tree-only legacy umbrella command; excluded from the installed `nix-scripts` PATH surface. A failed Hera host upgrade (`upgrade hera --host-only`) aborts before `pushme` and `update-remote`, while project maintenance runs last and is diagnostic only. It inherits `update-remote` limitations and is not a reliable all-host transaction. |
 | `upgrade-projects` | Reconfigure a fixed list of projects and update selected language dependencies | Sources project `.envrc` files, may rewrite Cargo locks, truncates logs, and deletes pip and uv caches. |
 | `yubikey-switch MODE` | Replace active GnuPG key files for a YubiKey arrangement | `MODE` is `restore` or a backup suffix. It preflights and privately stages the complete key set, rolls back replacement failures, then kills GPG agents, probes the card, updates a Git remote, and may create PAM challenge state. Those later external side effects are not rolled back. |
 
-[`lib/host-routing.sh`](lib/host-routing.sh) is an internal sourced library. It
-normalizes host identities and maps them to flake output names; it is not a
-standalone command.
+[`lib/host-routing.sh`](lib/host-routing.sh) is an internal generated projection
+of `config/hosts/registry.nix`. It normalizes host identities, maps them to flake
+outputs, and exposes canonical membership separately from active rollout
+targets. Installed packages render it during the build; runtime commands do not
+evaluate Nix. It is not a standalone command.
 
 ## Make target inventory
 

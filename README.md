@@ -62,7 +62,8 @@ The complete ownership and data-flow contract is maintained in
 | --- | --- | --- | --- |
 | Hera | aarch64-darwin | `~/src/nix` | Direct `darwinConfigurations.hera` output |
 | Clio | aarch64-darwin | `~/src/nix` on Clio | Direct `darwinConfigurations.clio` output |
-| Andoria-08, Andoria-T2, Delphi-3BD4, GPU Server | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Shared standalone Home Manager consumer |
+| Andoria-08, Andoria-T2, Delphi-3BD4, GPU Server | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Active shared-work standalone Home Manager rollout |
+| Git AI | x86_64 Linux | `~/.config/home-manager` on Git AI | Dormant shared-work member; excluded from the active rollout |
 | Vulcan | aarch64 NixOS | `/etc/nixos` on Vulcan | External NixOS consumer plus the shared Home Manager module |
 | VPS | x86_64 NixOS | `/etc/nixos` on VPS | External NixOS consumer plus the shared Home Manager module |
 
@@ -84,6 +85,11 @@ Accepted classes are `clio`, `hera`, `shared-work`, `vps`, `vulcan`, and the
 synthetic `personal-linux` evaluation fixture. Shared-work machine names are not
 profile identities and therefore must not be allowed to fall through to hostname
 selection.
+
+Canonical shared-work membership contains the four active machines plus dormant
+`git-ai`. Membership records identity only: it does not assert that a host is
+online or include it in a rollout. The active rollout remains the explicit
+four-host subset in `config/hosts/registry.nix`.
 
 ## Operations
 

@@ -2,19 +2,36 @@
 
 set -euo pipefail
 
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=bin/lib/host-routing.sh
+source "$script_dir/lib/host-routing.sh"
+
 # Host updates run in parallel panes for an operator watching the fleet.
 tmux split-window "ssh clio 'upgrade clio --host-only'; echo 'clio done — press Enter'; read"
 tmux split-window "ssh vulcan 'cd /etc/nixos && nix flake update --commit-lock-file && switch'; echo 'vulcan done — press Enter'; read"
 tmux split-window "ssh vps 'cd /etc/nixos && nix flake update --commit-lock-file && switch'; echo 'vps done — press Enter'; read"
 tmux select-layout even-vertical
 
-# Update the shared source on andoria-08, then switch `shared_hosts`.
+# Update the shared source once, then switch the explicit active rollout. This
+# list is distinct from canonical membership: dormant git-ai remains known but
+# is not contacted until deliberately restored to the rollout set.
 shared_home=/home/jwiegley/.config/home-manager
-shared_hosts=(andoria-08)
-ssh andoria-08 "cd $shared_home && nix flake update --commit-lock-file"
+shared_hosts_text=$(nix_active_shared_work_rollout_hosts) || {
+    producer_status=$?
+    printf 'update-remote: failed to load active shared-work rollout (status %d)\n' \
+        "$producer_status" >&2
+    exit "$producer_status"
+}
+shared_hosts=()
+while IFS= read -r host; do
+    [[ -n $host ]] && shared_hosts+=("$host")
+done <<<"$shared_hosts_text"
+((${#shared_hosts[@]} > 0)) || {
+    printf '%s\n' 'update-remote: active shared-work rollout is empty' >&2
+    exit 1
+}
+
+ssh "${shared_hosts[0]}" "cd $shared_home && nix flake update --commit-lock-file"
 for host in "${shared_hosts[@]}"; do
     ssh "$host" "cd $shared_home && switch"
 done
-
-remote_home=/home/ubuntu/.config/home-manager
-ssh git-ai "cd $remote_home && nix flake update --commit-lock-file && switch"

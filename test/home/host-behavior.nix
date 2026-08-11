@@ -23,6 +23,7 @@ let
     builtins.attrValues darwinConfigurations
   );
   registry = import ../../config/hosts/registry.nix;
+  renderedHostRouting = import ../../config/hosts/shell-routing.nix { inherit lib; };
   personalLinuxResolution = registry.resolveFor {
     hostname = "linux";
     homeClass = "personal-linux";
@@ -203,6 +204,16 @@ assert !classOverridesHostname.johnw.host.isHera;
 assert !classOverridesHostname.johnw.host.isDarwinWorkstation;
 assert !classOverridesHostname.johnw.profile.heavy;
 assert (registry.capabilitiesFor { hostname = "andoria-08"; }).isSharedWork;
+assert (registry.capabilitiesFor { hostname = "git-ai"; }).isSharedWork;
+assert builtins.elem "git-ai" registry.sharedWork.members;
+assert !(builtins.elem "git-ai" registry.sharedWork.activeRolloutMembers);
+assert builtins.length registry.sharedWork.activeRolloutMembers == 4;
+assert builtins.all (
+  host: builtins.elem host registry.sharedWork.members
+) registry.sharedWork.activeRolloutMembers;
+assert sharedWork.johnw.sharedWork == registry.sharedWork;
+assert sharedWork.johnw.hostRouting == registry.routing;
+assert renderedHostRouting == builtins.readFile ../../bin/lib/host-routing.sh;
 assert unknownHomeClassContract.row == null;
 assert !unknownHomeClassContract.assertion;
 assert lib.hasPrefix unknownHomeClassMessagePrefix unknownHomeClassContract.message;

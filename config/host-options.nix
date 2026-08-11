@@ -1,7 +1,8 @@
-# Typed host-registry options and resolved capability flags shared by Home
-# Manager and nix-darwin. Given the required hostname special argument, this
-# module declares and populates `johnw.host`; its assertion forces the complete
-# registry through the typed schema so invalid rows fail evaluation.
+# Typed host-registry, routing, and shared-work options plus resolved capability
+# flags shared by Home Manager and nix-darwin. Given the required hostname
+# special argument, this module declares and populates `johnw.host`; its
+# assertion forces the complete authority through the typed schema so invalid
+# rows fail evaluation.
 
 args@{
   config,
@@ -51,6 +52,34 @@ let
       };
     };
   };
+  routingRow = types.submodule {
+    options = {
+      flakeOutput = mkOption {
+        type = types.str;
+        description = "Flake output selected by shell dispatch for this host class.";
+      };
+      exactNames = mkOption {
+        type = types.listOf types.str;
+        description = "Exact physical names normalized to this host class.";
+      };
+      containsNames = mkOption {
+        type = types.listOf types.str;
+        description = "Hostname fragments normalized to this host class.";
+      };
+    };
+  };
+  sharedWorkRow = types.submodule {
+    options = {
+      members = mkOption {
+        type = types.listOf types.str;
+        description = "Canonical shared-work membership, independent of availability.";
+      };
+      activeRolloutMembers = mkOption {
+        type = types.listOf types.str;
+        description = "Explicit hosts targeted by the current shared-work rollout.";
+      };
+    };
+  };
 in
 {
   options.johnw = {
@@ -59,6 +88,22 @@ in
       description = ''
         Typed fleet metadata and capability inputs populated from
         config/hosts/registry.nix.
+      '';
+    };
+
+    hostRouting = mkOption {
+      type = types.attrsOf routingRow;
+      description = ''
+        Typed shell normalization and flake-output data populated from
+        config/hosts/registry.nix.
+      '';
+    };
+
+    sharedWork = mkOption {
+      type = sharedWorkRow;
+      description = ''
+        Typed shared-work membership and separately explicit rollout targets
+        populated from config/hosts/registry.nix.
       '';
     };
 
@@ -83,7 +128,7 @@ in
       };
       isSharedWork = mkOption {
         type = types.bool;
-        description = "A member of the shared-\$HOME Positron work group (home class \"shared-work\").";
+        description = "A member of the shared-work policy class (home class \"shared-work\").";
       };
       isCiFixture = mkOption {
         type = types.bool;
@@ -104,6 +149,8 @@ in
   config = {
     johnw = {
       hostRegistry = registry.hosts;
+      hostRouting = registry.routing;
+      inherit (registry) sharedWork;
       host = registry.capabilitiesFor { inherit hostname homeClass; };
       profile.heavy = lib.mkDefault profileHeavyDefault;
     };
@@ -114,7 +161,11 @@ in
     # enum's check.
     assertions = [
       {
-        assertion = builtins.deepSeq config.johnw.hostRegistry true;
+        assertion = builtins.deepSeq [
+          config.johnw.hostRegistry
+          config.johnw.hostRouting
+          config.johnw.sharedWork
+        ] true;
         message = "fleet host registry failed typed-schema validation (config/hosts/registry.nix)";
       }
     ];

@@ -1,33 +1,41 @@
 #!/usr/bin/env bash
-# Shared host normalization and flake-output routing.
+# Generated from config/hosts/registry.nix by config/hosts/shell-routing.nix.
+# Edit the registry, not this projection.
 
-# Normalization MUST be idempotent: nix_flake_output_for_host normalizes its
-# argument, and callers such as bin/switch pass a value they already normalized.
-# The four host names below survived a second pass only by accident of their glob
-# patterns; `shared-work` did not, so `bin/switch` failed for every work machine
-# with a bare `return 1`. Accept the canonical labels explicitly so the property
-# is guaranteed rather than incidental.
 normalize_nix_host() {
     local host=${1%%.*}
     case $host in
-    shared-work) printf '%s\n' shared-work ;;
-    *[Hh][Ee][Rr][Aa]*) printf '%s\n' hera ;;
-    *[Cc][Ll][Ii][Oo]*) printf '%s\n' clio ;;
-    *[Vv][Uu][Ll][Cc][Aa][Nn]*) printf '%s\n' vulcan ;;
-    vps | ovh-vps | *srp-next*) printf '%s\n' vps ;;
-    [Aa]ndoria-* | [Dd]elphi-* | [Gg][Pp][Uu]-* | git-ai) printf '%s\n' shared-work ;;
+    [cC][lL][iI][oO] | *[cC][lL][iI][oO]*) printf '%s\n' clio ;;
+    [hH][eE][rR][aA] | *[hH][eE][rR][aA]*) printf '%s\n' hera ;;
+    [sS][hH][aA][rR][eE][dD]-[wW][oO][rR][kK] | [aA][nN][dD][oO][rR][iI][aA]-08 | [aA][nN][dD][oO][rR][iI][aA]-[tT]2 | [dD][eE][lL][pP][hH][iI]-3[bB][dD]4 | [gG][iI][tT]-[aA][iI] | [gG][pP][uU]-[sS][eE][rR][vV][eE][rR]) printf '%s\n' shared-work ;;
+    [vV][pP][sS] | [oO][vV][hH]-[vV][pP][sS] | *[sS][rR][pP]-[nN][eE][xX][tT]*) printf '%s\n' vps ;;
+    [vV][uU][lL][cC][aA][nN] | *[vV][uU][lL][cC][aA][nN]*) printf '%s\n' vulcan ;;
     *) return 1 ;;
     esac
 }
 
-# Map canonical host classes to the flake output names used by their switch path.
 nix_flake_output_for_host() {
     case $(normalize_nix_host "$1") in
-    hera) printf '%s\n' hera ;;
     clio) printf '%s\n' clio ;;
-    vulcan) printf '%s\n' vulcan ;;
-    vps) printf '%s\n' ovh-vps ;;
+    hera) printf '%s\n' hera ;;
     shared-work) printf '%s\n' jwiegley ;;
+    vps) printf '%s\n' ovh-vps ;;
+    vulcan) printf '%s\n' vulcan ;;
     *) return 1 ;;
     esac
+}
+
+nix_shared_work_members() {
+    printf '%s\n' andoria-08
+    printf '%s\n' andoria-t2
+    printf '%s\n' delphi-3bd4
+    printf '%s\n' git-ai
+    printf '%s\n' gpu-server
+}
+
+nix_active_shared_work_rollout_hosts() {
+    printf '%s\n' andoria-08
+    printf '%s\n' andoria-t2
+    printf '%s\n' delphi-3bd4
+    printf '%s\n' gpu-server
 }

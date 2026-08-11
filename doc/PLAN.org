@@ -1686,15 +1686,17 @@ Authority resolved by the owner: Emacs HEAD is a supported, intentionally non-ho
 ]
 #+end_src
 
-* DOING [#C] Unify host identity and shell routing authority    :architecture:routing:
+* DONE [#C] Unify host identity and shell routing authority    :architecture:routing:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.5
 :LABELS: ["architecture","heavy-review","routing"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 15:50]
+:MODIFIED: [2026-08-10 Mon 17:04]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 17:04]
+:CLOSE_REASON: Centralized shell routing, shared-work membership, and the explicit active rollout in the typed host registry; retained dormant git-ai as a known member; generated the shell projection and added behavioral/package parity coverage.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

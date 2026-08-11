@@ -55,15 +55,25 @@ consumer's checkout or deployment state.
 ## Host registry and shared-home policy
 
 `config/hosts/registry.nix` is the data authority for host system, activation,
-login, and the lean-server role. `config/host-options.nix` gives that table a
-typed module surface and derives the capability flags consumed by modules.
+login, the lean-server role, shared-work membership and rollout targets, and
+shell host/output routing. `config/host-options.nix` gives those tables a typed
+module surface and derives the capability flags consumed by modules.
 
-The four shared-work machines use one generated Home Manager configuration. Their
-Nix-owned leaves must therefore remain byte-identical. The registry classifies
-the shared home; each owning module remains responsible for separating any
-per-machine mutable state from shared generated leaves.
+The four active shared-work machines use one generated Home Manager
+configuration. Their Nix-owned leaves must therefore remain byte-identical.
+Dormant `git-ai` is also a canonical member of that policy class, but membership
+does not claim present availability and does not add it to the explicit active
+rollout. The registry classifies the shared home; each owning module remains
+responsible for separating any per-machine mutable state from shared generated
+leaves.
 
-For shared-work rollouts:
+`config/hosts/shell-routing.nix` renders the shell normalization, flake-output,
+membership, and active-rollout projection from the registry. `nix-scripts`
+installs that rendered file at package build time. The source-tree copy is a
+generated convenience for direct repository commands and must remain byte-equal
+to the renderer; shell commands never invoke Nix to rediscover routing at runtime.
+
+For the explicit four-host shared-work rollout:
 
 1. realize the candidate once;
 2. copy and prove the closure is resident on every target;
@@ -77,7 +87,8 @@ need them for rollback.
 
 | Path | Owns | Must not own |
 | --- | --- | --- |
-| `config/hosts/registry.nix` | Host identity and capabilities | Module implementation |
+| `config/hosts/registry.nix` | Host identity, capabilities, membership, rollout selection, and routing data | Module or shell implementation |
+| `config/hosts/shell-routing.nix` | Build-time shell projection of registry routing data | Independent host identity policy or runtime Nix discovery |
 | `config/ai/catalog.nix` | Profiles, selectors, resources, validation | Client serialization or package builds |
 | `config/ai/renderers/*` | Generated documents for one client | Global resource selection |
 | `config/ai.nix` | Home Manager composition and ownership guards | Package implementation |

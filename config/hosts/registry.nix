@@ -1,15 +1,57 @@
-# Declarative host and capability data shared by the module schema in
-# config/host-options.nix and the plain package selector in config/packages.nix.
-# Keeping this file free of module arguments lets both consumers import the same
-# table and pure capability function.
+# Declarative host, capability, membership, and routing data shared by the
+# module schema, package selector, and generated shell projection. Keeping this
+# file free of module arguments lets every consumer import the same tables and
+# pure capability function.
 
 let
-  sharedWorkMembers = [
-    "andoria-08"
-    "andoria-t2"
-    "delphi-3bd4"
-    "gpu-server"
-  ];
+  # Membership is an identity fact, not an availability probe. git-ai remains
+  # a real member while dormant; activeRolloutMembers is the deliberately
+  # smaller operator target set.
+  sharedWork = {
+    members = [
+      "andoria-08"
+      "andoria-t2"
+      "delphi-3bd4"
+      "git-ai"
+      "gpu-server"
+    ];
+    activeRolloutMembers = [
+      "andoria-08"
+      "andoria-t2"
+      "delphi-3bd4"
+      "gpu-server"
+    ];
+  };
+
+  # Canonical host classes and their shell-facing aliases. The shell library
+  # is generated from this table; do not duplicate these names in Bash.
+  routing = {
+    hera = {
+      flakeOutput = "hera";
+      exactNames = [ ];
+      containsNames = [ "hera" ];
+    };
+    clio = {
+      flakeOutput = "clio";
+      exactNames = [ ];
+      containsNames = [ "clio" ];
+    };
+    vulcan = {
+      flakeOutput = "vulcan";
+      exactNames = [ ];
+      containsNames = [ "vulcan" ];
+    };
+    vps = {
+      flakeOutput = "ovh-vps";
+      exactNames = [ "ovh-vps" ];
+      containsNames = [ "srp-next" ];
+    };
+    shared-work = {
+      flakeOutput = "jwiegley";
+      exactNames = sharedWork.members;
+      containsNames = [ ];
+    };
+  };
 
   # Home classes are logical evaluation identities. Keep their catalog and
   # concrete-registry projections separate: the personal-linux fixture selects
@@ -68,7 +110,7 @@ let
       roles = [ "server-lean" ];
     };
 
-    # Group four shared-work hostnames under one profile identity.
+    # Group the shared-work membership under one profile identity.
     andoria = {
       system = "x86_64-linux";
       activation = "home-standalone";
@@ -107,12 +149,15 @@ in
 assert builtins.all (row: row.registryId == null || builtins.hasAttr row.registryId hosts) (
   builtins.attrValues homeClasses
 );
+assert builtins.all (host: builtins.elem host sharedWork.members) sharedWork.activeRolloutMembers;
 {
   inherit
     homeClasses
     homeClassContractFor
     hosts
+    routing
     resolveFor
+    sharedWork
     ;
 
   # Pure, total capability derivation. Unknown names never throw: concrete-host
@@ -137,7 +182,7 @@ assert builtins.all (row: row.registryId == null || builtins.hasAttr row.registr
 
       # Resolve the shared-work group from either its explicit home class or a
       # physical member hostname.
-      isSharedWork = id == "andoria" || builtins.elem hostname sharedWorkMembers;
+      isSharedWork = id == "andoria" || builtins.elem hostname sharedWork.members;
 
       # The synthetic CI evaluation fixtures pin the name to "linux".
       isCiFixture = hostname == "linux";

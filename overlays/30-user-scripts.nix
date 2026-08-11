@@ -12,6 +12,11 @@ final: prev:
 
 let
   inherit (prev.myLib) mkScriptPackage;
+  hostRouting = final.writeText "host-routing.sh" (
+    import ../config/hosts/shell-routing.nix {
+      inherit (final) lib;
+    }
+  );
 in
 {
 
@@ -24,8 +29,13 @@ in
       "upgrade-all"
     ];
     extraInstall = ''
+      cmp ${../bin/lib/host-routing.sh} ${hostRouting} || {
+        echo "nix-scripts: bin/lib/host-routing.sh is stale; regenerate it from config/hosts/registry.nix" >&2
+        exit 1
+      }
       mkdir -p $out/libexec/nix-scripts
       cp -R ${../bin/lib}/. $out/libexec/nix-scripts/
+      cp --remove-destination ${hostRouting} $out/libexec/nix-scripts/host-routing.sh
       # Derive the consumer list instead of hand-maintaining it: every script
       # carrying the anchor gets the absolute library path.
       grep -l 'installed_routing_path=' $out/bin/* | while read -r script; do
