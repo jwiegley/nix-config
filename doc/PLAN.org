@@ -344,15 +344,17 @@ Makefile:106-159 pipelines local-git-inputs.py output without checking the produ
 ]
 #+end_src
 
-* DOING [#C] Derive model-sync writes, checks, and digest from one desired state    :activation:ai:
+* DONE [#C] Derive model-sync writes, checks, and digest from one desired state    :activation:ai:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.11
 :LABELS: ["activation","ai","heavy-review"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 15:50]
+:MODIFIED: [2026-08-10 Mon 17:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 17:00]
+:CLOSE_REASON: Centralized the complete model-sync preference contract and derived digest invalidation, writes, and read-back verification from it; added mutation-sensitive all-system coverage.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

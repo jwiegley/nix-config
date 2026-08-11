@@ -38,13 +38,108 @@ let
 
   model = "DeepSeek-V4-Flash-0731-oQ8e-mtp";
   chatUrl = "${omlxBaseUrl}/chat/completions";
+
+  # One authority feeds stamp invalidation, preference writes, and read-back
+  # verification. Keep entries grouped to preserve the activation order: all
+  # writes for an application are verified before the next application.
+  desiredState = [
+    {
+      domain = "com.devon-technologies.think";
+      preferences = [
+        {
+          key = "ChatEngine";
+          type = "-int";
+          value = "2";
+          expected = "2";
+        }
+        {
+          key = "ChatModel-OpenAI (Compatible)";
+          type = "-string";
+          value = model;
+          expected = model;
+        }
+        {
+          key = "OpenAI (Compatible)URL";
+          type = "-string";
+          value = chatUrl;
+          expected = chatUrl;
+        }
+        {
+          key = "ChatSummaryEngine";
+          type = "-int";
+          value = "2";
+          expected = "2";
+        }
+        {
+          key = "ChatSummaryModel";
+          type = "-string";
+          value = model;
+          expected = model;
+        }
+      ];
+    }
+    {
+      domain = "com.googlecode.iterm2";
+      preferences = [
+        {
+          key = "UseRecommendedAIModel";
+          type = "-bool";
+          value = "false";
+          expected = "0";
+        }
+        {
+          key = "AiModel";
+          type = "-string";
+          value = model;
+          expected = model;
+        }
+        {
+          key = "AITermAPI";
+          type = "-int";
+          value = "1";
+          expected = "1";
+        }
+        {
+          key = "AitermURL";
+          type = "-string";
+          value = chatUrl;
+          expected = chatUrl;
+        }
+        {
+          key = "AIVendor";
+          type = "-int";
+          value = "2";
+          expected = "2";
+        }
+      ];
+    }
+  ];
+  desiredPreferences = lib.concatMap (
+    state: map (preference: preference // { inherit (state) domain; }) state.preferences
+  ) desiredState;
   digest = builtins.hashString "sha256" (
     builtins.toJSON {
       schema = 1;
-      inherit model chatUrl;
+      preferences = desiredPreferences;
     }
   );
   quote = lib.escapeShellArg;
+  renderWrite =
+    preference:
+    "write_preference ${quote preference.domain} ${quote preference.key} ${quote preference.type} ${quote preference.value}";
+  renderVerification =
+    preference:
+    "verify_preference ${quote preference.domain} ${quote preference.key} ${quote preference.expected}";
+  renderState =
+    state:
+    let
+      preferences = map (preference: preference // { inherit (state) domain; }) state.preferences;
+    in
+    ''
+      ${lib.concatMapStringsSep "\n" renderWrite preferences}
+
+      ${lib.concatMapStringsSep "\n" renderVerification preferences}
+    '';
   script = ''
     (
       set -euo pipefail
@@ -78,9 +173,6 @@ let
       mktemp_tool=${quote tools.mktemp}
       mv_tool=${quote tools.mv}
       rm_tool=${quote tools.rm}
-
-      model=${quote model}
-      chat_url=${quote chatUrl}
 
       fail() {
         printf '%s\n' "nix-managed model sync: $1" >&2
@@ -141,31 +233,7 @@ let
         >/dev/null 2>&1 \
         || fail "iTerm2 credential metadata is missing"
 
-      devonthink_domain="com.devon-technologies.think"
-      write_preference "$devonthink_domain" "ChatEngine" -int 2
-      write_preference "$devonthink_domain" "ChatModel-OpenAI (Compatible)" -string "$model"
-      write_preference "$devonthink_domain" "OpenAI (Compatible)URL" -string "$chat_url"
-      write_preference "$devonthink_domain" "ChatSummaryEngine" -int 2
-      write_preference "$devonthink_domain" "ChatSummaryModel" -string "$model"
-
-      verify_preference "$devonthink_domain" "ChatEngine" 2
-      verify_preference "$devonthink_domain" "ChatModel-OpenAI (Compatible)" "$model"
-      verify_preference "$devonthink_domain" "OpenAI (Compatible)URL" "$chat_url"
-      verify_preference "$devonthink_domain" "ChatSummaryEngine" 2
-      verify_preference "$devonthink_domain" "ChatSummaryModel" "$model"
-
-      iterm_domain="com.googlecode.iterm2"
-      write_preference "$iterm_domain" "UseRecommendedAIModel" -bool false
-      write_preference "$iterm_domain" "AiModel" -string "$model"
-      write_preference "$iterm_domain" "AITermAPI" -int 1
-      write_preference "$iterm_domain" "AitermURL" -string "$chat_url"
-      write_preference "$iterm_domain" "AIVendor" -int 2
-
-      verify_preference "$iterm_domain" "UseRecommendedAIModel" 0
-      verify_preference "$iterm_domain" "AiModel" "$model"
-      verify_preference "$iterm_domain" "AITermAPI" 1
-      verify_preference "$iterm_domain" "AitermURL" "$chat_url"
-      verify_preference "$iterm_domain" "AIVendor" 2
+      ${lib.concatMapStringsSep "\n" renderState desiredState}
 
       "$devonthink_key_present" >/dev/null 2>&1 \
         || fail "DEVONthink compatible credential metadata changed"
@@ -201,6 +269,6 @@ let
   '';
 in
 {
-  inherit digest script;
+  inherit desiredPreferences digest script;
   activation = lib.hm.dag.entryAfter [ "linkGeneration" ] script;
 }

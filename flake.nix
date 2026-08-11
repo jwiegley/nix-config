@@ -412,6 +412,10 @@
                 inherit inputs src;
                 rootObr = packages.${system}.obr;
               };
+              model-sync-state = pkgs.callPackage ./test/ai/model-sync.nix {
+                inherit src;
+                homeManagerLib = home-manager.lib;
+              };
               pi-blackhole-policy = pkgs.callPackage ./test/home/pi-blackhole-policy.nix {
                 inherit
                   darwinConfigurations
