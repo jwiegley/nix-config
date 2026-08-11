@@ -68,15 +68,17 @@ Partner observation .445Z: the malformed claude-opus-5[1m value came from a trun
 
 Make the root-managed `obr` executable available on Hera, Clio, VPS, Vulcan, and the shared-work home spanning Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server. Verify the root input/package contract and affected consumer builds. Publication, paired consumer-lock adoption, and every activation remain separately authorized; any authorized shared-work rollout must realize the candidate once, prove its closure resident on all four shared-work hosts, retain the previous GC root, and activate each from its authoritative checkout before runtime acceptance.
 
-* DOING [#B] Keep Plasma Wiki destination no-follow through copy    :filesystem:plasma:security:
+* DONE [#B] Keep Plasma Wiki destination no-follow through copy    :filesystem:plasma:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-as0
 :LABELS: ["filesystem","heavy-review","plasma","security"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 15:40]
-:MODIFIED: [2026-08-10 Mon 16:06]
+:MODIFIED: [2026-08-10 Mon 19:34]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 19:34]
+:CLOSE_REASON: Kept every Plasma destination mutation descriptor-relative through copy, staged replacement, settings writes, asset installation, cleanup, and identity revalidation, with deterministic ancestor/swap/hard-link/crash-durability tests. Darwin behavior and race review passed; Linux evaluation passed while runtime remained dependency-blocked upstream.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -148,7 +150,6 @@ Partner observation .443Z: plaintext stage/backup copies can survive SIGKILL or 
   }
 ]
 #+end_src
-
 * DONE [#B] Strip ACLs and force 0600 on staged YubiKey keys
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -2270,15 +2271,17 @@ overlays/emacs/edit-env.el:44-51,84-95,114-165 splits VAR=VALUE on every equals 
 ]
 #+end_src
 
-* DOING [#B] Reject symlink roots before making Plasma Wiki writable    :filesystem:security:
+* DONE [#B] Reject symlink roots before making Plasma Wiki writable    :filesystem:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.63
 :LABELS: ["filesystem","heavy-review","security"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 15:23]
+:MODIFIED: [2026-08-10 Mon 19:34]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 19:34]
+:CLOSE_REASON: Replaced path-based writable traversal with a descriptor-rooted, no-follow filesystem capability and adversarial coverage for symlink roots, ancestors, special nodes, hard links, metadata, cleanup, and mode preservation. Darwin smoke, static checks, all-system evaluation, and independent review passed; x86_64 Linux runtime was dependency-blocked before Plasma by gnugrep.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

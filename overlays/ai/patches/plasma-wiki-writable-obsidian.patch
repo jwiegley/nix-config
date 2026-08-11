@@ -1,32 +1,1041 @@
 diff --git a/wiki/core/_obsidian.py b/wiki/core/_obsidian.py
 --- a/wiki/core/_obsidian.py
 +++ b/wiki/core/_obsidian.py
-@@ -52 +52,2 @@
+@@ -2,9 +2,16 @@
+ 
+ from __future__ import annotations
+ 
++import contextlib
++import errno
++import hashlib
++import http.client
++import json
++import os
+ import pathlib
++import secrets
+-import shutil
+-from typing import Union
++import stat
++from typing import Callable, Union
+ 
+ import wiki.util
+ from wiki.constants import WIKI_DIR
+@@ -36,20 +44,783 @@
+     """A downloaded plugin asset failed its pinned-digest check."""
+ 
+ 
+-def seed_template(root: pathlib.Path) -> None:
+-    """Seed a missing ``.wiki/obsidian/`` from the stock template.
+-
+-    ``init`` seeds a fresh wiki and ``update_config`` re-seeds an
+-    adopted tree (or one whose ``.wiki/`` was lost), so both get the
+-    full setup. An existing config directory is left untouched.
+-    """
+-    config_dir = root / WIKI_DIR / 'obsidian'
+-    if not config_dir.exists():
+-        path = pathlib.Path(__file__).parent
+-        template_dir = path.parent / '_assets' / 'obsidian'
+-        if template_dir.exists():
+-            config_dir.parent.mkdir(parents=True, exist_ok=True)
 -            shutil.copytree(template_dir, config_dir)
-+            shutil.copytree(template_dir, config_dir)
-+    _make_writable(config_dir)
-@@ -55 +56,13 @@
--def merge_settings(
++class _TempFile:
++    """Staged file held inside a private, descriptor-pinned directory."""
++
++    _FILENAME = 'payload'
++
++    def __init__(
++        self,
++        directory: _RootedDirectory,
++        stage_name: str,
++        stage_fd: int,
++        fd: int,
++    ) -> None:
++        self._directory = directory
++        self._stage_name = stage_name
++        self._stage_fd = stage_fd
++        self._fd = fd
++        self._creation_mode = stat.S_IMODE(os.fstat(fd).st_mode) & 0o777
++        self._installed = False
++
++    def write_bytes(self, data: bytes) -> None:
++        """Replace the staged contents without exposing a destination path."""
++        os.lseek(self._fd, 0, os.SEEK_SET)
++        os.ftruncate(self._fd, 0)
++        remaining = memoryview(data)
++        while remaining:
++            written = os.write(self._fd, remaining)
++            if written == 0:
++                raise OSError('Could not make progress writing staged contents')
++            remaining = remaining[written:]
++
++    def read_bytes(self) -> bytes:
++        """Read the staged contents through the pinned descriptor."""
++        os.lseek(self._fd, 0, os.SEEK_SET)
++        chunks = []
++        while chunk := os.read(self._fd, 1024 * 1024):
++            chunks.append(chunk)
++        return b''.join(chunks)
++
++    def _verify(self) -> None:
++        self._directory._verify_entry(self._stage_name, self._stage_fd)
++        try:
++            visible = os.stat(
++                self._FILENAME,
++                dir_fd=self._stage_fd,
++                follow_symlinks=False,
++            )
++        except FileNotFoundError as error:
++            raise RuntimeError('Staged file disappeared before install') from error
++        pinned = os.fstat(self._fd)
++        if (
++            not stat.S_ISREG(visible.st_mode)
++            or (visible.st_dev, visible.st_ino)
++            != (pinned.st_dev, pinned.st_ino)
++        ):
++            raise RuntimeError('Staged file changed before install')
++
++    def _remove_stage(self, stage_fd: int) -> None:
++        self._directory._verify_entry(self._stage_name, stage_fd)
++        os.rmdir(self._stage_name, dir_fd=self._directory.fd)
++        os.fsync(self._directory.fd)
++
++    def close(self) -> None:
++        """Discard the stage while attempting every cleanup operation."""
++        if self._stage_fd < 0:
++            return
++        stage_fd, self._stage_fd = self._stage_fd, -1
++        file_fd, self._fd = self._fd, -1
++        with contextlib.ExitStack() as cleanup:
++            cleanup.callback(os.close, stage_fd)
++            if file_fd >= 0:
++                cleanup.callback(os.close, file_fd)
++            cleanup.callback(self._remove_stage, stage_fd)
++            if not self._installed:
++                cleanup.callback(os.unlink, self._FILENAME, dir_fd=stage_fd)
 +
 +
-+def _make_writable(path: pathlib.Path) -> None:
-+    """Make copied Obsidian files writable without following symlinks."""
-+    if not path.exists():
-+        return
-+    for entry in (path, *path.rglob('*')):
-+        if entry.is_symlink():
-+            continue
-+        entry.chmod(entry.stat().st_mode | 0o200)
++class _RootedDirectory:
++    """Directory capability that never reopens a validated destination path."""
++
++    _METADATA_CONTRACT = (
++        'regular-file-contents',
++        'permission-bits-plus-owner-write',
++        'nanosecond-atime-mtime',
++        'descriptor-addressable-xattrs-and-flags',
++        'metadata-without-public-fd-api-excluded',
++    )
++    _DIRECTORY_FLAGS = (
++        os.O_RDONLY
++        | getattr(os, 'O_DIRECTORY', 0)
++        | getattr(os, 'O_NOFOLLOW', 0)
++        | getattr(os, 'O_CLOEXEC', 0)
++    )
++    def __init__(
++        self,
++        fds: list[int],
++        links: list[tuple[int, str, int]],
++    ) -> None:
++        self._fds = fds
++        self._links = links
++
++    @classmethod
++    def open(cls, path: pathlib.Path) -> _RootedDirectory:
++        """Open the trusted root without following the root itself."""
++        cls._require_capabilities()
++        try:
++            fd = os.open(path, cls._DIRECTORY_FLAGS)
++        except OSError as error:
++            if error.errno in (errno.ELOOP, errno.ENOTDIR):
++                raise RuntimeError(
++                    f'Refusing symlink or non-directory root: {path}'
++                ) from error
++            raise
++        try:
++            is_directory = stat.S_ISDIR(os.fstat(fd).st_mode)
++        except BaseException:
++            os.close(fd)
++            raise
++        if not is_directory:
++            os.close(fd)
++            raise NotADirectoryError(path)
++        return cls([fd], [])
++
++    @classmethod
++    def _require_capabilities(cls) -> None:
++        required_dir_fd = (
++            os.mkdir,
++            os.open,
++            os.rename,
++            os.rmdir,
++            os.stat,
++            os.unlink,
++        )
++        if (
++            not hasattr(os, 'O_DIRECTORY')
++            or not hasattr(os, 'O_NOFOLLOW')
++            or not hasattr(os, 'fchmod')
++            or any(
++                function not in os.supports_dir_fd
++                for function in required_dir_fd
++            )
++            or os.stat not in os.supports_follow_symlinks
++            or os.scandir not in os.supports_fd
++            or os.utime not in os.supports_fd
++        ):
++            raise NotImplementedError(
++                'Safe descriptor-relative filesystem operations are unsupported'
++            )
++
++    @property
++    def fd(self) -> int:
++        """Return the pinned directory descriptor."""
++        if not self._fds:
++            raise ValueError('Rooted directory is closed')
++        return self._fds[-1]
++
++    def __enter__(self) -> _RootedDirectory:
++        return self
++
++    def __exit__(self, exc_type, value, traceback) -> bool:
++        verification_error = None
++        try:
++            self._verify_links()
++        except BaseException as error:
++            verification_error = error
++        finally:
++            while self._fds:
++                os.close(self._fds.pop())
++        if verification_error is not None:
++            if value is not None:
++                raise verification_error from value
++            raise verification_error
++        return False
++
++    @staticmethod
++    def _parts(relative: Union[str, pathlib.PurePath]) -> tuple[str, ...]:
++        path = pathlib.PurePath(relative)
++        if (
++            path.is_absolute()
++            or not path.parts
++            or any(part in ('', '.', '..') for part in path.parts)
++        ):
++            raise ValueError(f'Unsafe relative path: {relative}')
++        return path.parts
++
++    @classmethod
++    def _component(cls, name: str) -> str:
++        parts = cls._parts(name)
++        if len(parts) != 1:
++            raise ValueError(f'Expected one path component: {name}')
++        return parts[0]
++
++    @classmethod
++    def _open_directory(cls, parent_fd: int, name: str, *, create: bool) -> int:
++        name = cls._component(name)
++        try:
++            info = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
++        except FileNotFoundError:
++            if not create:
++                raise
++            parent_mode = os.fstat(parent_fd).st_mode
++            os.fchmod(parent_fd, stat.S_IMODE(parent_mode) | stat.S_IWUSR)
++            os.mkdir(name, mode=0o777, dir_fd=parent_fd)
++        else:
++            if stat.S_ISLNK(info.st_mode):
++                raise RuntimeError(
++                    f'Refusing symlink destination component: {name}'
++                )
++            if not stat.S_ISDIR(info.st_mode):
++                raise NotADirectoryError(name)
++        try:
++            child_fd = os.open(name, cls._DIRECTORY_FLAGS, dir_fd=parent_fd)
++        except OSError as error:
++            if error.errno in (errno.ELOOP, errno.ENOTDIR):
++                raise RuntimeError(
++                    f'Refusing changed destination component: {name}'
++                ) from error
++            raise
++        try:
++            is_directory = stat.S_ISDIR(os.fstat(child_fd).st_mode)
++        except BaseException:
++            os.close(child_fd)
++            raise
++        if not is_directory:
++            os.close(child_fd)
++            raise NotADirectoryError(name)
++        return child_fd
++
++    def directory(
++        self,
++        relative: Union[str, pathlib.PurePath],
++        *,
++        create: bool = False,
++    ) -> _RootedDirectory:
++        """Open every relative component with ``O_NOFOLLOW``."""
++        fds = [os.dup(self.fd)]
++        links = []
++        try:
++            for part in self._parts(relative):
++                child_fd = self._open_directory(fds[-1], part, create=create)
++                links.append((fds[-1], part, child_fd))
++                fds.append(child_fd)
++        except BaseException:
++            while fds:
++                os.close(fds.pop())
++            raise
++        return type(self)(fds, links)
++
++    def _verify_links(self) -> None:
++        for parent_fd, name, child_fd in self._links:
++            try:
++                visible = os.stat(
++                    name,
++                    dir_fd=parent_fd,
++                    follow_symlinks=False,
++                )
++            except FileNotFoundError as error:
++                raise RuntimeError(
++                    f'Destination component disappeared during operation: {name}'
++                ) from error
++            pinned = os.fstat(child_fd)
++            if (
++                not stat.S_ISDIR(visible.st_mode)
++                or (visible.st_dev, visible.st_ino)
++                != (pinned.st_dev, pinned.st_ino)
++            ):
++                raise RuntimeError(
++                    f'Destination component changed during operation: {name}'
++                )
++
++    def _entry_stat(self, name: str, *, missing_ok: bool = False):
++        name = self._component(name)
++        try:
++            info = os.stat(name, dir_fd=self.fd, follow_symlinks=False)
++        except FileNotFoundError:
++            if missing_ok:
++                return None
++            raise
++        if stat.S_ISLNK(info.st_mode):
++            raise RuntimeError(f'Refusing symlink destination entry: {name}')
++        return info
++
++    def _verify_entry(self, name: str, fd: int) -> None:
++        visible = self._entry_stat(name)
++        pinned = os.fstat(fd)
++        if (visible.st_dev, visible.st_ino) != (pinned.st_dev, pinned.st_ino):
++            raise RuntimeError(
++                f'Destination entry changed during operation: {name}'
++            )
++
++    def entries(self) -> list[tuple[str, os.stat_result]]:
++        """Return no-follow metadata for the pinned directory entries."""
++        with os.scandir(self.fd) as entries:
++            result = [
++                (entry.name, entry.stat(follow_symlinks=False))
++                for entry in entries
++            ]
++        return sorted(result, key=lambda item: item[0])
++
++    def file_exists(self, name: str) -> bool:
++        info = self._entry_stat(name, missing_ok=True)
++        if info is None:
++            return False
++        if not stat.S_ISREG(info.st_mode):
++            raise IsADirectoryError(name)
++        return True
++
++    def _open_regular(self, name: str, flags: int, mode: int = 0o666) -> int:
++        name = self._component(name)
++        try:
++            fd = os.open(
++                name,
++                flags | os.O_NOFOLLOW | getattr(os, 'O_CLOEXEC', 0),
++                mode,
++                dir_fd=self.fd,
++            )
++        except OSError as error:
++            if error.errno == errno.ELOOP:
++                raise RuntimeError(
++                    f'Refusing symlink destination entry: {name}'
++                ) from error
++            raise
++        try:
++            is_regular = stat.S_ISREG(os.fstat(fd).st_mode)
++        except BaseException:
++            os.close(fd)
++            raise
++        if not is_regular:
++            os.close(fd)
++            raise OSError(f'Refusing non-regular file: {name}')
++        return fd
++
++    def read_bytes(self, name: str) -> bytes:
++        fd = self._open_regular(
++            name,
++            os.O_RDONLY | getattr(os, 'O_NONBLOCK', 0),
++        )
++        try:
++            chunks = []
++            while chunk := os.read(fd, 1024 * 1024):
++                chunks.append(chunk)
++            self._verify_entry(name, fd)
++            return b''.join(chunks)
++        finally:
++            os.close(fd)
++
++    def read_text(self, name: str) -> str:
++        return self.read_bytes(name).decode('utf-8')
++
++    def private_temp(self) -> _TempFile:
++        """Create a file inside a private, descriptor-pinned stage."""
++        for _ in range(100):
++            stage_name = f'.wiki-stage-{secrets.token_hex(12)}'
++            try:
++                os.mkdir(stage_name, mode=0o700, dir_fd=self.fd)
++            except FileExistsError:
++                continue
++            with contextlib.ExitStack() as cleanup:
++                cleanup.callback(os.rmdir, stage_name, dir_fd=self.fd)
++                stage_fd = os.open(
++                    stage_name,
++                    self._DIRECTORY_FLAGS,
++                    dir_fd=self.fd,
++                )
++                cleanup.callback(os.close, stage_fd)
++                self._verify_entry(stage_name, stage_fd)
++                os.fchmod(stage_fd, 0o700)
++                fd = os.open(
++                    _TempFile._FILENAME,
++                    os.O_RDWR
++                    | os.O_CREAT
++                    | os.O_EXCL
++                    | os.O_NOFOLLOW
++                    | getattr(os, 'O_CLOEXEC', 0),
++                    0o666,
++                    dir_fd=stage_fd,
++                )
++                cleanup.callback(
++                    os.unlink,
++                    _TempFile._FILENAME,
++                    dir_fd=stage_fd,
++                )
++                cleanup.callback(os.close, fd)
++                temporary = _TempFile(self, stage_name, stage_fd, fd)
++                cleanup.pop_all()
++                return temporary
++        raise FileExistsError('Could not allocate a private staging directory')
++
++    def install_temp(
++        self,
++        temporary: _TempFile,
++        name: str,
++        *,
++        mode: int | None = None,
++    ) -> None:
++        """Atomically install a staged file within this pinned directory."""
++        name = self._component(name)
++        if (
++            temporary._directory is not self
++            or temporary._stage_fd < 0
++            or temporary._installed
++        ):
++            raise ValueError('Temporary file does not belong to this directory')
++        existing = self._entry_stat(name, missing_ok=True)
++        if existing is not None and not stat.S_ISREG(existing.st_mode):
++            raise OSError(f'Refusing non-regular destination: {name}')
++        if mode is None:
++            mode = (
++                temporary._creation_mode
++                if existing is None
++                else stat.S_IMODE(existing.st_mode) & 0o777
++            )
++        os.fchmod(temporary._fd, mode & 0o777)
++        os.fsync(temporary._fd)
++        temporary._verify()
++        try:
++            os.rename(
++                temporary._FILENAME,
++                name,
++                src_dir_fd=temporary._stage_fd,
++                dst_dir_fd=self.fd,
++            )
++            temporary._installed = True
++        except BaseException:
++            try:
++                self._verify_entry(name, temporary._fd)
++            except (FileNotFoundError, RuntimeError):
++                pass
++            else:
++                temporary._installed = True
++            raise
++        self._verify_entry(name, temporary._fd)
++        os.fsync(temporary._stage_fd)
++        os.fsync(self.fd)
++
++    def write_text(self, name: str, text: str) -> None:
++        temporary = self.private_temp()
++        try:
++            temporary.write_bytes(text.encode('utf-8'))
++            self.install_temp(temporary, name)
++        finally:
++            temporary.close()
++
++    def install_many(self, staged: list[tuple[_TempFile, str]]) -> None:
++        """Install one asset set atomically with respect to exceptions.
++
++        A process or system crash can still expose a partial set because POSIX
++        has no portable atomic operation spanning several directory entries.
++        """
++        names = [self._component(name) for _, name in staged]
++        if len(names) != len(set(names)):
++            raise ValueError('Duplicate staged destination name')
++        backups: list[tuple[_TempFile | None, int | None]] = []
++        try:
++            for name in names:
++                existing = self._entry_stat(name, missing_ok=True)
++                if existing is None:
++                    backups.append((None, None))
++                    continue
++                if not stat.S_ISREG(existing.st_mode):
++                    raise OSError(f'Refusing non-regular destination: {name}')
++                source_fd = self._open_regular(
++                    name,
++                    os.O_RDONLY | getattr(os, 'O_NONBLOCK', 0),
++                )
++                backup = None
++                try:
++                    backup = self.private_temp()
++                    source_info = os.fstat(source_fd)
++                    self._copy_contents(source_fd, backup._fd)
++                    self._copy_metadata(
++                        source_fd,
++                        backup._fd,
++                        info=source_info,
++                    )
++                    self._verify_entry(name, source_fd)
++                except BaseException:
++                    if backup is not None:
++                        backup.close()
++                    raise
++                finally:
++                    os.close(source_fd)
++                backups.append(
++                    (backup, stat.S_IMODE(source_info.st_mode) & 0o777)
++                )
++            try:
++                for temporary, name in staged:
++                    self.install_temp(temporary, name)
++            except BaseException:
++                rollback_error = None
++                for (temporary, name), (backup, mode) in reversed(
++                    list(zip(staged, backups))
++                ):
++                    if not temporary._installed:
++                        continue
++                    try:
++                        if backup is None:
++                            self._verify_entry(name, temporary._fd)
++                            os.unlink(name, dir_fd=self.fd)
++                            os.fsync(self.fd)
++                        else:
++                            self.install_temp(backup, name, mode=mode)
++                    except BaseException as error:
++                        rollback_error = error
++                if rollback_error is not None:
++                    raise RuntimeError(
++                        'Could not restore the previous plugin asset set'
++                    ) from rollback_error
++                raise
++        finally:
++            for backup, _ in backups:
++                if backup is not None:
++                    backup.close()
++
++    def make_writable(self) -> None:
++        """Add owner write permission without mutating regular-file aliases."""
++        info = os.fstat(self.fd)
++        if not stat.S_ISDIR(info.st_mode):
++            raise NotADirectoryError
++        os.fchmod(self.fd, stat.S_IMODE(info.st_mode) | stat.S_IWUSR)
++        for name, entry_info in self.entries():
++            if stat.S_ISLNK(entry_info.st_mode):
++                continue
++            if stat.S_ISDIR(entry_info.st_mode):
++                with self.directory(name) as child:
++                    child.make_writable()
++                continue
++            if not stat.S_ISREG(entry_info.st_mode):
++                continue
++            if entry_info.st_mode & stat.S_IWUSR:
++                continue
++            try:
++                self._copy_file_from(self, name)
++            except PermissionError as error:
++                raise NotImplementedError(
++                    'Safe replacement of an unreadable file is unsupported'
++                ) from error
++
++    @staticmethod
++    def _copy_contents(source_fd: int, destination_fd: int) -> None:
++        os.lseek(source_fd, 0, os.SEEK_SET)
++        os.lseek(destination_fd, 0, os.SEEK_SET)
++        os.ftruncate(destination_fd, 0)
++        while chunk := os.read(source_fd, 1024 * 1024):
++            remaining = memoryview(chunk)
++            while remaining:
++                written = os.write(destination_fd, remaining)
++                if written == 0:
++                    raise OSError('Could not make progress copying file contents')
++                remaining = remaining[written:]
++
++    @staticmethod
++    def _copy_xattrs(source_fd: int, destination_fd: int) -> None:
++        functions = tuple(
++            getattr(os, name, None)
++            for name in ('listxattr', 'getxattr', 'setxattr')
++        )
++        if not all(functions):
++            return
++        listxattr, getxattr, setxattr = functions
++        try:
++            names = listxattr(source_fd)
++        except (TypeError, ValueError, NotImplementedError) as error:
++            raise NotImplementedError(
++                'Descriptor-relative extended metadata is unsupported'
++            ) from error
++        for name in names:
++            setxattr(destination_fd, name, getxattr(source_fd, name))
++
++    @classmethod
++    def _copy_metadata(
++        cls,
++        source_fd: int,
++        destination_fd: int,
++        *,
++        info: os.stat_result | None = None,
++    ) -> None:
++        """Apply the explicit descriptor-safe copy metadata contract.
++
++        The contract covers permission bits plus owner-write, nanosecond times,
++        and extended attributes or flags only when Python exposes an FD API.
++        Metadata without a public ``os`` FD API (including macOS resource
++        forks) is deliberately excluded rather than reopening a raced path.
++        """
++        if info is None:
++            info = os.fstat(source_fd)
++        cls._copy_xattrs(source_fd, destination_fd)
++        os.fchmod(
++            destination_fd,
++            (stat.S_IMODE(info.st_mode) & 0o777) | stat.S_IWUSR,
++        )
++        os.utime(
++            destination_fd,
++            ns=(info.st_atime_ns, info.st_mtime_ns),
++        )
++        flags = getattr(info, 'st_flags', None)
++        destination_flags = getattr(os.fstat(destination_fd), 'st_flags', None)
++        if flags is not None and flags != destination_flags:
++            fchflags = getattr(os, 'fchflags', None)
++            if fchflags is None:
++                raise NotImplementedError(
++                    'Descriptor-relative file flags are unsupported'
++                )
++            fchflags(destination_fd, flags)
++
++    def copytree_from(self, source: _RootedDirectory) -> None:
++        """Merge a source tree under the descriptor-safe metadata contract."""
++        self.make_writable()
++        for name, info in source.entries():
++            if stat.S_ISLNK(info.st_mode):
++                raise RuntimeError(f'Refusing source symlink: {name}')
++            if stat.S_ISDIR(info.st_mode):
++                with source.directory(name) as source_child:
++                    with self.directory(
++                        name,
++                        create=True,
++                    ) as destination_child:
++                        destination_child.copytree_from(source_child)
++                continue
++            if not stat.S_ISREG(info.st_mode):
++                raise OSError(f'Refusing non-regular source: {name}')
++            self._copy_file_from(source, name)
++        self._copy_metadata(source.fd, self.fd)
++
++    def _copy_file_from(
++        self,
++        source: _RootedDirectory,
++        name: str,
++    ) -> None:
++        source_fd = source._open_regular(
++            name,
++            os.O_RDONLY | getattr(os, 'O_NONBLOCK', 0),
++        )
++        try:
++            temporary = self.private_temp()
++            try:
++                source_info = os.fstat(source_fd)
++                mode = (stat.S_IMODE(source_info.st_mode) & 0o777) | stat.S_IWUSR
++                self._copy_contents(source_fd, temporary._fd)
++                self._copy_metadata(
++                    source_fd,
++                    temporary._fd,
++                    info=source_info,
++                )
++                source._verify_entry(name, source_fd)
++                self.install_temp(temporary, name, mode=mode)
++            finally:
++                temporary.close()
++        finally:
++            os.close(source_fd)
 +
 +
-+def merge_settings(
++def seed_template(root: _RootedDirectory) -> None:
++    """Seed a missing ``.wiki/obsidian/`` from the stock template."""
++    template_dir = pathlib.Path(__file__).parent.parent / '_assets' / 'obsidian'
++    with root.directory(WIKI_DIR, create=True) as wiki_dir:
++        created = False
++        try:
++            config_dir = wiki_dir.directory('obsidian')
++        except FileNotFoundError:
++            config_dir = wiki_dir.directory('obsidian', create=True)
++            created = True
++        with config_dir:
++            if created:
++                try:
++                    template = _RootedDirectory.open(template_dir)
++                except FileNotFoundError:
++                    pass
++                else:
++                    with template:
++                        config_dir.copytree_from(template)
++            config_dir.make_writable()
++
++
++def install(
++    root: _RootedDirectory,
++    *,
++    offline: bool,
++    download: Callable[[str, _TempFile], None],
++) -> list[str]:
++    """Install Obsidian configuration beneath one pinned wiki root."""
++    warnings = []
++    seed_template(root)
++    with root.directory(
++        pathlib.PurePath(WIKI_DIR) / 'obsidian',
++    ) as config_dir:
++        with root.directory('.obsidian', create=True) as obsidian_dir:
++            try:
++                plugins_dir = config_dir.directory('plugins')
++            except FileNotFoundError:
++                plugins_dir = None
++            if plugins_dir is not None:
++                with plugins_dir:
++                    for name, info in plugins_dir.entries():
++                        if stat.S_ISLNK(info.st_mode):
++                            raise RuntimeError(
++                                f'Refusing source symlink: {name}'
++                            )
++                        if not stat.S_ISDIR(info.st_mode):
++                            continue
++                        with plugins_dir.directory(name) as source:
++                            relative = pathlib.PurePath('plugins') / name
++                            with obsidian_dir.directory(
++                                relative,
++                                create=True,
++                            ) as target:
++                                target.copytree_from(source)
++                                release_url = _OBSIDIAN_PLUGINS.get(name)
++                                if release_url and offline:
++                                    warnings.append(
++                                        f'Skipped {name} download (OFFLINE_MODE).'
++                                        ' Re-run `wiki config` online to finish setup.'
++                                    )
++                                elif release_url:
++                                    digests = _OBSIDIAN_PLUGIN_DIGESTS[name]
++                                    staged = []
++                                    staged_cleanup = contextlib.ExitStack()
++                                    try:
++                                        for asset in digests:
++                                            temporary = target.private_temp()
++                                            staged_cleanup.callback(temporary.close)
++                                            staged.append((temporary, asset))
++                                            url = release_url.format(asset=asset)
++                                            download(url, temporary)
++                                            digest = hashlib.sha256(
++                                                temporary.read_bytes()
++                                            ).hexdigest()
++                                            if digest != digests[asset]:
++                                                raise PluginChecksumError(
++                                                    f'{asset} digest'
++                                                    f' {digest[:16]}... does not'
++                                                    ' match the pinned release'
++                                                )
++                                    except PluginChecksumError as error:
++                                        warnings.append(
++                                            f'Refused {name}: {error}.'
++                                            ' The published asset changed since'
++                                            ' it was pinned -- verify upstream'
++                                            ' before re-pinning.'
++                                        )
++                                    except (
++                                        OSError,
++                                        http.client.HTTPException,
++                                    ) as error:
++                                        warnings.append(
++                                            f'Could not download {name} ({error}).'
++                                            ' Re-run `wiki config` to finish setup.'
++                                        )
++                                    else:
++                                        target.install_many(staged)
++                                    finally:
++                                        staged_cleanup.close()
++            for name, info in config_dir.entries():
++                if not name.endswith('.json'):
++                    continue
++                if stat.S_ISLNK(info.st_mode):
++                    raise RuntimeError(f'Refusing source symlink: {name}')
++                if not stat.S_ISREG(info.st_mode):
++                    continue
++                source_text = config_dir.read_text(name)
++                if not obsidian_dir.file_exists(name):
++                    obsidian_dir.write_text(name, source_text)
++                    continue
++                source_data = json.loads(source_text)
++                try:
++                    target_data = json.loads(obsidian_dir.read_text(name))
++                except json.JSONDecodeError as error:
++                    raise ValueError(
++                        f'Malformed JSON in .obsidian/{name}: {error}'
++                    ) from error
++                merged = merge_settings(
++                    target_data=target_data,
++                    source_data=source_data,
++                    name=name,
++                )
++                result = json.dumps(merged, indent=2)
++                obsidian_dir.write_text(name, result + '\n')
++    return warnings
+ 
+ 
+ def merge_settings(
 diff --git a/wiki/core/wiki.py b/wiki/core/wiki.py
 --- a/wiki/core/wiki.py
 +++ b/wiki/core/wiki.py
-@@ -533,3 +544,5 @@
-                 target = obsidian_dir / 'plugins' / source.name
+@@ -5,15 +5,11 @@
+ import datetime as dt
+ import difflib
+ import functools
+-import hashlib
+-import http.client
+ import json
+ import logging
+ import os
+ import pathlib
+ import re
+-import shutil
+-import tempfile
+ import unicodedata
+ import urllib.request
+ import zoneinfo
+@@ -517,11 +513,13 @@
+         self._root.mkdir(parents=True, exist_ok=True)
+-        # seed .wiki/settings.json -- the declared-root marker
+-        if seed is not None:
+-            settings_path.parent.mkdir(parents=True, exist_ok=True)
+-            content = json.dumps(seed, indent=2)
+-            wiki.util.fs.write_atomic(settings_path, content + '\n')
+-        # seed .wiki/obsidian from stock template
+-        _obsidian.seed_template(self._root)
++        with _obsidian._RootedDirectory.open(self._root) as root:
++            # seed .wiki/settings.json -- the declared-root marker
++            if seed is not None:
++                with root.directory(WIKI_DIR, create=True) as wiki_dir:
++                    name = pathlib.PurePath(WIKI_SETTINGS).name
++                    content = json.dumps(seed, indent=2)
++                    wiki_dir.write_text(name, content + '\n')
++            # seed .wiki/obsidian from stock template
++            _obsidian.seed_template(root)
+         # create root index
+         root_index = self._root / WIKI_INDEX
+         if not root_index.exists():
+@@ -569,123 +567,16 @@
+         """
+         # validate OFFLINE_MODE before any filesystem mutation
+         offline = _is_offline()
+-        # initialize warnings
+-        warnings = []
+-        # restore the declared-root marker before touching anything else;
+-        # a restoration is informational, so it rides the notice channel
+-        # rather than the returned warnings (which mean setup is unfinished)
+-        for event in self._ensure_settings():
+-            self._dispatch_notice(event)
+-        # seed a missing .wiki/obsidian from the stock template, so an
+-        # adopted tree (or one whose .wiki/ was lost) gets the full setup
+-        _obsidian.seed_template(self._root)
+-        config_dir = self._root / WIKI_DIR / 'obsidian'
+-        # prepare the .obsidian/ vault directory
+-        obsidian_dir = self._root / '.obsidian'
+-        obsidian_dir.mkdir(exist_ok=True)
+-        # install plugin settings, then download pinned plugin code
+-        plugins_dir = config_dir / 'plugins'
+-        if plugins_dir.is_dir():
+-            for source in sorted(plugins_dir.iterdir()):
+-                if not source.is_dir():
+-                    continue
+-                # copy curated settings into the vault
+-                target = obsidian_dir / 'plugins' / source.name
 -                shutil.copytree(source, target, dirs_exist_ok=True)
-+                _obsidian._make_writable(target)
-+                shutil.copytree(source, target, dirs_exist_ok=True)
-+                _obsidian._make_writable(target)
-                 # download pinned plugin code from its release, unless offline
+-                # download pinned plugin code from its release, unless offline
+-                release_url = _obsidian._OBSIDIAN_PLUGINS.get(source.name)
+-                if release_url and offline:
+-                    warnings.append(
+-                        f'Skipped {source.name} download (OFFLINE_MODE).'
+-                        ' Re-run `wiki config` online to finish setup.'
+-                    )
+-                elif release_url:
+-                    # fetch all assets to temp paths first, then move them into
+-                    # place only after every fetch succeeds, so a mid-fetch
+-                    # failure never leaves a skewed main.js/manifest.json pair
+-                    digests = _obsidian._OBSIDIAN_PLUGIN_DIGESTS[source.name]
+-                    staged = []
+-                    try:
+-                        for asset in digests:
+-                            url = release_url.format(asset=asset)
+-                            fd, tmp = tempfile.mkstemp(dir=target, suffix=asset)
+-                            os.close(fd)
+-                            tmp = pathlib.Path(tmp)
+-                            staged.append((tmp, target / asset))
+-                            self._download(url, tmp)
+-                            # verify the pinned digest before anything installs:
+-                            # release assets are mutable upstream, so a swapped
+-                            # artifact is refused here, never written to the
+-                            # vault (the check sits above _download overrides)
+-                            digest = hashlib.sha256(tmp.read_bytes()).hexdigest()
+-                            if digest != digests[asset]:
+-                                raise _obsidian.PluginChecksumError(
+-                                    f'{asset} digest {digest[:16]}... does not'
+-                                    f' match the pinned release'
+-                                )
+-                    except _obsidian.PluginChecksumError as e:
+-                        # discard everything: a failed digest is a refusal,
+-                        # not a retryable network hiccup
+-                        for tmp, _ in staged:
+-                            tmp.unlink(missing_ok=True)
+-                        warnings.append(
+-                            f'Refused {source.name}: {e}. The published asset'
+-                            ' changed since it was pinned -- verify upstream'
+-                            ' before re-pinning.'
+-                        )
+-                    except (OSError, http.client.HTTPException) as e:
+-                        # discard the partial download, leaving existing files
+-                        for tmp, _ in staged:
+-                            tmp.unlink(missing_ok=True)
+-                        warnings.append(
+-                            f'Could not download {source.name} ({e}).'
+-                            ' Re-run `wiki config` to finish setup.'
+-                        )
+-                    except BaseException:
+-                        # a Ctrl-C (or any other interrupt) mid-fetch must not
+-                        # strand random-named temps in the plugin directory
+-                        for tmp, _ in staged:
+-                            tmp.unlink(missing_ok=True)
+-                        raise
+-                    else:
+-                        for tmp, dest in staged:
+-                            # mkstemp creates the temp 0600 and os.replace
+-                            # carries that mode onto the target: preserve the
+-                            # existing mode, or honor the umask for a fresh
+-                            # asset (mirrors write_atomic)
+-                            try:
+-                                os.chmod(tmp, dest.stat().st_mode & 0o777)
+-                            except FileNotFoundError:
+-                                umask = os.umask(0)
+-                                os.umask(umask)
+-                                os.chmod(tmp, 0o666 & ~umask)
+-                            os.replace(tmp, dest)
+-        # create or merge each top-level json file
+-        for source in sorted(config_dir.glob('*.json')):
+-            target = obsidian_dir / source.name
+-            # create from source when the target is absent (atomically, so a
+-            # crash mid-create never leaves a torn file the merge rejects)
+-            if not target.exists():
+-                wiki.util.fs.write_atomic(target, source.read_text(encoding='utf-8'))
+-                continue
+-            # load source and target for merge; the target is user-editable, so
+-            # name the file on bad JSON instead of a bare, undiagnosable error
+-            source_data = json.loads(source.read_text(encoding='utf-8'))
+-            try:
+-                target_data = json.loads(target.read_text(encoding='utf-8'))
+-            except json.JSONDecodeError as e:
+-                raise ValueError(
+-                    f'Malformed JSON in .obsidian/{source.name}: {e}'
+-                ) from e
+-            # merge per the install policy (arrays union, dicts deep)
+-            merged = _obsidian.merge_settings(
+-                target_data=target_data,
+-                source_data=source_data,
+-                name=source.name,
++        with _obsidian._RootedDirectory.open(self._root) as root:
++            # restore the declared-root marker before touching anything else;
++            # a restoration is informational, so it rides the notice channel
++            for event in self._ensure_settings(root):
++                self._dispatch_notice(event)
++            return _obsidian.install(
++                root,
++                offline=offline,
++                download=self._download,
+             )
+-            result = json.dumps(merged, indent=2)
+-            wiki.util.fs.write_atomic(target, result + '\n')
+-        return warnings
+ 
+     def _refuse_enclosing_wiki(self: Wiki, folder: pathlib.Path) -> None:
+         """Refuse a scope strictly inside a nested declared wiki.
+@@ -1852,7 +1743,10 @@
+         """Dispatch a pre-built notice event through its per-kind hook."""
+         return getattr(self, _NOTICE_HOOKS[type(event)])(event=event)
+ 
+-    def _ensure_settings(self: Wiki) -> list[Event]:
++    def _ensure_settings(
++        self: Wiki,
++        root: Optional[_obsidian._RootedDirectory] = None,
++    ) -> list[Event]:
+         """Materialize a missing ``.wiki/settings.json`` as ``{}``.
+ 
+         The settings file is the declared-root marker: ``init`` writes it
+@@ -1872,10 +1766,13 @@
+         # TODO: remove back-compat in future version
+         self._refuse_legacy_layout()
+-        path = self._root / WIKI_SETTINGS
+-        if path.exists():
+-            return []
+-        path.parent.mkdir(parents=True, exist_ok=True)
+-        wiki.util.fs.write_atomic(path, '{}\n')
++        if root is None:
++            with _obsidian._RootedDirectory.open(self._root) as rooted:
++                return self._ensure_settings(rooted)
++        with root.directory(WIKI_DIR, create=True) as wiki_dir:
++            name = pathlib.PurePath(WIKI_SETTINGS).name
++            if wiki_dir.file_exists(name):
++                return []
++            wiki_dir.write_text(name, '{}\n')
+         return [SettingsRestoreEvent(path=WIKI_SETTINGS)]
+ 
+     def _refuse_legacy_layout(self: Wiki) -> None:
+@@ -1994,14 +1891,14 @@
+             relpath = (folder / WIKI_INDEX).relative_to(self._root)
+             self.on_index_markerless(path=str(relpath))
+ 
+-    def _download(self: Wiki, url: str, target: pathlib.Path) -> None:
++    def _download(self: Wiki, url: str, target: _obsidian._TempFile) -> None:
+         """Download ``url`` to ``target``.
+ 
+         Override in subclasses to use a different fetch mechanism.
+ 
+         Args:
+             url: Source URL to download.
+-            target: Destination file path.
++            target: Private descriptor-backed staged file.
+ 
+         Raises:
+             OSError: If the connection fails (e.g. no network).
