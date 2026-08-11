@@ -1604,15 +1604,17 @@ Makefile:250-252 names nix store verify --repair --all as the conventional check
 ]
 #+end_src
 
-* TODO [#D] Remove stale-lock suppression from Codex memory seeding    :codex:concurrency:
+* DONE [#D] Remove stale-lock suppression from Codex memory seeding    :codex:concurrency:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.46
 :LABELS: ["codex","concurrency","heavy-review"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 19:03]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 19:03]
+:CLOSE_REASON: Satisfied by 63960622: Codex seeding uses unique SQLite backups and hard-link no-clobber publication; stale-lock and concurrent contender regressions plus focused/static/all-system gates passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1668,15 +1670,17 @@ overlays/00-lib.nix:16-43 defaults every script package to MIT, causing nix-scri
 ]
 #+end_src
 
-* DOING [#C] Delete unreachable HTTP-header MCP support    :ai:
+* DONE [#C] Delete unreachable HTTP-header MCP support    :ai:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.48
 :LABELS: ["ai","dead-code","heavy-review"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 17:47]
+:MODIFIED: [2026-08-10 Mon 19:03]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 19:03]
+:CLOSE_REASON: Deleted in ab310055. Recovery anchors: retained implementation tree 21048e822dcfd68e52a8f750735540c91b8b6433; last managed consumer removal 1b9ffb9c. Headerless native HTTP and stdio behavior remain covered.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
