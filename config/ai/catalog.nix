@@ -1046,16 +1046,8 @@ let
     };
   };
 
-  settingsDeletionProfiles = [
-    "clio-claude-positron"
-    "hera-claude-positron"
-    "shared-work-claude-positron"
-    "vps-claude-personal"
-    "vulcan-claude-personal"
-  ];
-
   settings = {
-    settings = {
+    claude = {
       selectors.clients = [ "claude" ];
 
       base = {
@@ -1095,7 +1087,6 @@ let
         showThinkingSummaries = true;
         skipDangerousModePermissionPrompt = true;
         verbose = true;
-        preferredNotifChannel = "iterm2_with_bell";
         remoteControlAtStartup = true;
         agentPushNotifEnabled = true;
         model = "claude-opus-5[1m]";
@@ -1106,9 +1097,18 @@ let
         executable = "bash";
         rootRelativePath = "statusline-command.sh";
       };
-      intentionalDeletions = lib.genAttrs settingsDeletionProfiles (_profileId: [
-        "preferredNotifChannel"
-      ]);
+    };
+
+    claude-personal-workstation-notifications = {
+      selectors = {
+        clients = [ "claude" ];
+        audiences = [ "personal" ];
+        hosts = [
+          "clio"
+          "hera"
+        ];
+      };
+      base.preferredNotifChannel = "iterm2_with_bell";
     };
   };
 

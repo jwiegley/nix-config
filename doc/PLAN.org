@@ -1175,15 +1175,17 @@ flake/ai/wrappers/pi.nix:25-41 dispatches long timeouts on provider IDs omlx and
 ]
 #+end_src
 
-* TODO [#B] Select Claude notification settings by dimensions, not profile IDs    :architecture:claude:
+* DONE [#B] Select Claude notification settings by dimensions, not profile IDs    :architecture:claude:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.34
 :LABELS: ["architecture","claude","heavy-review"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 18:53]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 18:53]
+:CLOSE_REASON: Split Claude notification settings into selector-owned items keyed by client, audience, and host; renderer recursively composes selected settings and behavioral tests pin matched and omitted profiles.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

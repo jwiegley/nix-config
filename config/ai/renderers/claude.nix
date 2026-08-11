@@ -43,18 +43,22 @@ let
     ) (builtins.attrNames selected.marketplaces)
   );
 
-  settingsItem = selected.settings.settings;
-  settings =
-    builtins.removeAttrs settingsItem.base (settingsItem.intentionalDeletions.${profile.id} or [ ])
-    // {
-      statusLine = {
-        type = "command";
-        command =
-          "${settingsItem.statusLineCommand.executable} "
-          + "${homeDirectory}/${root}/${settingsItem.statusLineCommand.rootRelativePath}";
-      };
-      inherit hooks extraKnownMarketplaces enabledPlugins;
+  settingsItems = builtins.attrValues selected.settings;
+  statusLineCommands = map (item: item.statusLineCommand) (
+    lib.filter (item: item ? statusLineCommand) settingsItems
+  );
+  statusLineCommand =
+    assert builtins.length statusLineCommands == 1;
+    builtins.head statusLineCommands;
+  settings = lib.foldl' lib.recursiveUpdate { } (map (item: item.base or { }) settingsItems) // {
+    statusLine = {
+      type = "command";
+      command =
+        "${statusLineCommand.executable} "
+        + "${homeDirectory}/${root}/${statusLineCommand.rootRelativePath}";
     };
+    inherit hooks extraKnownMarketplaces enabledPlugins;
+  };
 
   renderSecretReferences =
     value:

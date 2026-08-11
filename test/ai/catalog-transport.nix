@@ -24,12 +24,12 @@ let
   withoutFessCommand = catalog.items // {
     commands = builtins.removeAttrs catalog.items.commands [ "fess" ];
   };
-  claudeSettings = catalog.items.settings.settings;
+  claudeSettings = catalog.items.settings.claude;
   withClaudeSettingsBase =
     base:
     catalog.items
     // {
-      settings.settings = claudeSettings // {
+      settings.claude = claudeSettings // {
         inherit base;
       };
     };
@@ -41,6 +41,41 @@ let
     client:
     lib.findFirst (profile: profile.client == client) (throw "${client} profile missing") profiles;
   claudeProfiles = lib.filter (profile: profile.client == "claude") profiles;
+  syntheticClaudeProfile = catalog.profiles.hera-claude-personal // {
+    id = "synthetic-claude-personal";
+  };
+  notificationSelectionCases = [
+    {
+      name = "all dimensions match";
+      profile = syntheticClaudeProfile;
+      expected = true;
+    }
+    {
+      name = "client differs";
+      profile = syntheticClaudeProfile // {
+        id = "synthetic-codex-personal";
+        client = "codex";
+      };
+      expected = false;
+    }
+    {
+      name = "host differs";
+      profile = syntheticClaudeProfile // {
+        id = "synthetic-remote-claude-personal";
+        host = "vps";
+        platform = "linux";
+      };
+      expected = false;
+    }
+    {
+      name = "audience differs";
+      profile = syntheticClaudeProfile // {
+        id = "synthetic-claude-positron";
+        audiences = [ "positron" ];
+      };
+      expected = false;
+    }
+  ];
   piProfiles = lib.filter (profile: profile.client == "pi") profiles;
   claudeProfile = profileFor "claude";
   codexProfile = profileFor "codex";
@@ -401,6 +436,13 @@ let
   '';
 in
 assert catalog.validate { };
+assert builtins.all (
+  case:
+  let
+    selected = catalog.select case.profile catalog.items.settings;
+  in
+  (selected ? claude-personal-workstation-notifications) == case.expected
+) notificationSelectionCases;
 assert builtins.all (name: catalog.profiles.${name}.id == name) (
   builtins.attrNames catalog.profiles
 );
@@ -638,9 +680,28 @@ pkgs.runCommand "ai-catalog-transport" { } ''
       raise SystemExit("ordinary MCP arguments changed across renderer output")
   PY
   ${lib.concatMapStringsSep "\n" (entry: ''
-    ${pkgs.jq}/bin/jq -e '
+    ${pkgs.jq}/bin/jq -e \
+      --argjson personalWorkstation ${
+        if
+          builtins.elem entry.profile.host [
+            "clio"
+            "hera"
+          ]
+          && builtins.elem "personal" entry.profile.audiences
+        then
+          "true"
+        else
+          "false"
+      } '
       .model == "claude-opus-5[1m]"
       and .env.CLAUDE_CODE_SUBAGENT_MODEL == "claude-opus-5"
+      and (
+        if $personalWorkstation then
+          .preferredNotifChannel == "iterm2_with_bell"
+        else
+          (has("preferredNotifChannel") | not)
+        end
+      )
     ' ${entry.rendered.files."${entry.profile.root}/nix-managed-settings.json".source} >/dev/null
   '') claudeRenderings}
 
