@@ -112,10 +112,16 @@ let
     profile: item:
     let
       transportByHost = item.transportByHost or { };
+      resolved =
+        builtins.removeAttrs item [ "transportByHost" ]
+        // lib.optionalAttrs (builtins.hasAttr profile.host transportByHost) {
+          transport = transportByHost.${profile.host};
+        };
     in
-    builtins.removeAttrs item [ "transportByHost" ]
-    // lib.optionalAttrs (builtins.hasAttr profile.host transportByHost) {
-      transport = transportByHost.${profile.host};
+    assert !(resolved ? transport) || validateTransport resolved.transport;
+    resolved
+    // lib.optionalAttrs (resolved ? transport) {
+      transport = renderTransportArguments resolved.transport;
     };
   select =
     profile: itemSet:
@@ -677,6 +683,9 @@ let
   prompts = builtInPrompts;
 
   typedEnv = env: { inherit env; };
+  publicArg = public: { inherit public; };
+  protectedFileArg = protectedFile: { inherit protectedFile; };
+  publicArgs = map publicArg;
   mcpHttpHeaders = { };
   baseMcpSelectors = {
     clients = contentClients;
@@ -690,7 +699,7 @@ let
       mkMcp
         {
           command = "/Applications/DEVONthink.app/Contents/Library/LoginItems/DEVONthink MCP.app/Contents/MacOS/DEVONthink MCP";
-          args = [ "--stdio" ];
+          args = publicArgs [ "--stdio" ];
         }
         {
           profiles = [
@@ -726,25 +735,28 @@ let
       mkMcp
         {
           command = "ssh";
-          args = [
-            "-T"
-            "-i"
-            "/run/secrets/drafts/hera-ssh-private-key"
-            "-o"
-            "IdentitiesOnly=yes"
-            "-o"
-            "BatchMode=yes"
-            "-o"
-            "StrictHostKeyChecking=yes"
-            "-o"
-            "ConnectTimeout=10"
-            "-o"
-            "ServerAliveInterval=30"
-            "-o"
-            "ServerAliveCountMax=3"
-            "johnw@hera.lan"
-            "/etc/profiles/per-user/johnw/bin/drafts-mcp-server"
-          ];
+          args =
+            publicArgs [
+              "-T"
+              "-i"
+            ]
+            ++ [ (protectedFileArg "/run/secrets/drafts/hera-ssh-private-key") ]
+            ++ publicArgs [
+              "-o"
+              "IdentitiesOnly=yes"
+              "-o"
+              "BatchMode=yes"
+              "-o"
+              "StrictHostKeyChecking=yes"
+              "-o"
+              "ConnectTimeout=10"
+              "-o"
+              "ServerAliveInterval=30"
+              "-o"
+              "ServerAliveCountMax=3"
+              "johnw@hera.lan"
+              "/etc/profiles/per-user/johnw/bin/drafts-mcp-server"
+            ];
         }
         {
           profiles = [
@@ -1231,19 +1243,38 @@ let
     && !(lib.any (control: lib.hasInfix control value) c1Controls)
     && builtins.match ".*\\[[0-9:;<=>?]*[ -/]*[@-~]$" value == null;
 
-  validArgument =
+  validPublicArgument =
     value:
     builtins.isString value
-    && !(containsRenderedReference value)
-    && !(lib.any (prefix: lib.hasPrefix prefix (lib.toLower value)) [
-      "--api-key"
-      "--apikey"
-      "--password"
-      "--secret"
-      "--token"
-      "authorization:"
-      "bearer "
-    ]);
+    && builtins.match "^[^[:cntrl:]]*$" value != null
+    && !(containsRenderedReference value);
+  validProtectedFile =
+    value:
+    let
+      relative = if builtins.isString value then lib.removePrefix "/run/secrets/" value else "";
+      parts = lib.splitString "/" relative;
+    in
+    builtins.isString value
+    && lib.hasPrefix "/run/secrets/" value
+    && relative != ""
+    && builtins.all (
+      part: part != "" && part != "." && part != ".." && builtins.match "^[A-Za-z0-9._-]+$" part != null
+    ) parts;
+  validArgument =
+    value:
+    builtins.isAttrs value
+    && (
+      (builtins.attrNames value == [ "public" ] && validPublicArgument value.public)
+      || (builtins.attrNames value == [ "protectedFile" ] && validProtectedFile value.protectedFile)
+    );
+  validArguments = values: builtins.isList values && builtins.all validArgument values;
+  renderArgument = value: value.public or value.protectedFile;
+  renderTransportArguments =
+    transport:
+    transport
+    // lib.optionalAttrs (transport ? args) {
+      args = map renderArgument transport.args;
+    };
 
   validateSelectors =
     selectors:
@@ -1280,7 +1311,8 @@ let
     overrides:
     let
       validOverrideValue =
-        field: value: if field == "command" then validArgument value else builtins.isInt value && value > 0;
+        field: value:
+        if field == "command" then validPublicArgument value else builtins.isInt value && value > 0;
     in
     builtins.isAttrs overrides
     && builtins.all (
@@ -1319,9 +1351,8 @@ let
     && builtins.all (key: builtins.elem key allowedKeys) (builtins.attrNames transport)
     && (
       if isCommand then
-        validArgument transport.command
-        && builtins.isList (transport.args or [ ])
-        && builtins.all validArgument (transport.args or [ ])
+        validPublicArgument transport.command
+        && validArguments (transport.args or [ ])
         && builtins.isAttrs environment
         && builtins.all (name: validEnvironmentValue name environment.${name}) (
           builtins.attrNames environment
@@ -1445,7 +1476,9 @@ let
               ]
             );
             shouldSelect = matches profile (server.selectors or { });
-            expectedTransport = (server.transportByHost or { }).${profile.host} or server.transport;
+            expectedTransport = renderTransportArguments (
+              (server.transportByHost or { }).${profile.host} or server.transport
+            );
           in
           ensure (
             if shouldSelect then

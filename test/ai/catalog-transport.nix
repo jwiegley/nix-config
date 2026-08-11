@@ -75,7 +75,75 @@ let
       };
     };
   };
-  selectFor = profile: lib.mapAttrs (_: itemSet: catalog.select profile itemSet) catalog.items;
+  safeArgumentValues = [
+    "--header=X-Request-ID:request-42"
+    "MODE=stdio"
+    "--max-tokens=42"
+    "--token-count=42"
+    "--authorization-mode=none"
+    "--no-auth"
+    "--label=secret"
+  ];
+  safeArguments = map (public: { inherit public; }) safeArgumentValues ++ [
+    { protectedFile = "/run/secrets/service-token"; }
+  ];
+  syntheticArgumentMcp = {
+    selectors.clients = [
+      "claude"
+      "codex"
+      "droid"
+      "pi"
+    ];
+    transport = {
+      command = "synthetic-mcp";
+      args = safeArguments;
+    };
+  };
+  withSyntheticArguments =
+    args:
+    withMcpServers (
+      catalog.items.mcpServers
+      // {
+        synthetic-arguments = syntheticArgumentMcp // {
+          transport = syntheticArgumentMcp.transport // {
+            inherit args;
+          };
+        };
+      }
+    );
+  safeArgumentItems = withSyntheticArguments safeArguments;
+  unsafeArgumentLists = [
+    [ "--stdio" ]
+    [ "-HAuthorization:credential-sentinel" ]
+    [
+      "--api-key"
+      "credential-sentinel"
+    ]
+    [
+      "-H"
+      "Authorization: credential-sentinel"
+    ]
+    [ "--CrEdEnTiAlS=credential-sentinel" ]
+    [ "wrapper=--api-key=credential-sentinel" ]
+    [ "sh -c=curl -HAuthorization:credential-sentinel" ]
+    [ "OPENAI_API_KEY=credential-sentinel" ]
+    [ "--auth=credential-sentinel" ]
+    [ "--set=api.key=credential-sentinel" ]
+    [ "--set=api..key=credential-sentinel" ]
+    [ "--set=api%2Dkey=credential-sentinel" ]
+    [ "--set=api%252Dkey=credential-sentinel" ]
+    [ { env = "OPENAI_API_KEY"; } ]
+    [ { protectedFile = "/tmp/credential-sentinel"; } ]
+    [ { protectedFile = "/run/secrets/../credential-sentinel"; } ]
+    [
+      {
+        public = "ordinary";
+        unexpected = "field";
+      }
+    ]
+  ];
+  selectFrom = items: profile: lib.mapAttrs (_: itemSet: catalog.select profile itemSet) items;
+  selectFor = selectFrom catalog.items;
   adversarialName = "metadata-probe";
   adversarialDescription = ''
     Colon: value # not a comment
@@ -199,6 +267,53 @@ let
   primeAdversarialRendered = renderSelectedFor primeRenderer primeProfile "/Users/test" (
     selectAdversarialFor primeProfile
   );
+  safeSelectedFor = selectFrom safeArgumentItems;
+  unsafeRenderedSources =
+    args:
+    let
+      selectedFor = selectFrom (withSyntheticArguments args);
+    in
+    [
+      (builtins.toString
+        (renderSelectedFor claudeRenderer claudeProfile "/Users/test" (selectedFor claudeProfile))
+        .files."${claudeProfile.root}/nix-managed-mcp.json".source
+      )
+      (builtins.toString
+        (renderSelectedFor codexRenderer codexProfile "/Users/test" (selectedFor codexProfile))
+        .files."${codexProfile.root}/nix-managed.config.toml".source
+      )
+      (builtins.toString
+        (renderSelectedFor droidRenderer droidProfile "/Users/test" (selectedFor droidProfile))
+        .files."${droidProfile.root}/mcp.json".source
+      )
+      (builtins.toString
+        (piRenderer {
+          profile = piProfile;
+          selected = selectedFor piProfile;
+          homeDirectory = "/Users/test";
+          xdgConfigHome = "/Users/test/.config";
+          passwordStoreDir = "/Users/test/doc/.password-store";
+          gnupgHome = "/Users/test/.config/gnupg";
+        }).files.".config/mcp/mcp.json".source
+      )
+    ];
+  safeClaudeRendered = renderSelectedFor claudeRenderer claudeProfile "/Users/test" (
+    safeSelectedFor claudeProfile
+  );
+  safeCodexRendered = renderSelectedFor codexRenderer codexProfile "/Users/test" (
+    safeSelectedFor codexProfile
+  );
+  safeDroidRendered = renderSelectedFor droidRenderer droidProfile "/Users/test" (
+    safeSelectedFor droidProfile
+  );
+  safePiRendered = piRenderer {
+    profile = piProfile;
+    selected = safeSelectedFor piProfile;
+    homeDirectory = "/Users/test";
+    xdgConfigHome = "/Users/test/.config";
+    passwordStoreDir = "/Users/test/doc/.password-store";
+    gnupgHome = "/Users/test/.config/gnupg";
+  };
   fessSource = catalog.items.agents.fess-auditor.source;
   fessText = builtins.readFile fessSource;
   hasFessRubric = text: lib.hasInfix "**Fallback smuggling**" text;
@@ -346,6 +461,11 @@ assert
 assert catalog.validate {
   items = withMcpServers (catalog.items.mcpServers // { synthetic-http = syntheticHttpMcp; });
 };
+assert catalog.validate { items = safeArgumentItems; };
+assert builtins.all (
+  args: reject (catalog.validate { items = withSyntheticArguments args; })
+) unsafeArgumentLists;
+assert builtins.all (args: builtins.all reject (unsafeRenderedSources args)) unsafeArgumentLists;
 assert builtins.all (
   entry:
   let
@@ -479,6 +599,44 @@ pkgs.runCommand "ai-catalog-transport" { } ''
   grep -F '**Fallback smuggling**' ${
     droidRendered.files.${fessPaths.droid.command}.source
   }/SKILL.md >/dev/null
+  ${pkgs.python3}/bin/python3 - \
+    ${safeClaudeRendered.files."${claudeProfile.root}/nix-managed-mcp.json".source} \
+    ${safeCodexRendered.files."${codexProfile.root}/nix-managed.config.toml".source} \
+    ${safeDroidRendered.files."${droidProfile.root}/mcp.json".source} \
+    ${safePiRendered.files.".config/mcp/mcp.json".source} <<'PY'
+  import json
+  import sys
+  import tomllib
+
+  expected = [
+      "--header=X-Request-ID:request-42",
+      "MODE=stdio",
+      "--max-tokens=42",
+      "--token-count=42",
+      "--authorization-mode=none",
+      "--no-auth",
+      "--label=secret",
+      "/run/secrets/service-token",
+  ]
+  paths = sys.argv[1:]
+  with open(paths[0], encoding="utf-8") as stream:
+      claude = json.load(stream)
+  with open(paths[1], "rb") as stream:
+      codex = tomllib.load(stream)
+  with open(paths[2], encoding="utf-8") as stream:
+      droid = json.load(stream)
+  with open(paths[3], encoding="utf-8") as stream:
+      pi = json.load(stream)
+
+  rendered = [
+      claude["mcpServers"]["synthetic-arguments"]["args"],
+      codex["mcp_servers"]["synthetic-arguments"]["args"],
+      droid["mcpServers"]["synthetic-arguments"]["args"],
+      pi["mcpServers"]["synthetic-arguments"]["args"],
+  ]
+  if any(arguments != expected for arguments in rendered):
+      raise SystemExit("ordinary MCP arguments changed across renderer output")
+  PY
   ${lib.concatMapStringsSep "\n" (entry: ''
     ${pkgs.jq}/bin/jq -e '
       .model == "claude-opus-5[1m]"

@@ -1431,15 +1431,17 @@ config/johnw.nix:190-210 converts required read, parse, and mktemp failures into
 ]
 #+end_src
 
-* DOING [#C] Enforce the environment-only credential argument contract    :ai:security:
+* DONE [#C] Enforce the environment-only credential argument contract    :ai:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.41
 :LABELS: ["ai","heavy-review","security"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 17:47]
+:MODIFIED: [2026-08-10 Mon 18:50]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 18:50]
+:CLOSE_REASON: Replaced credential-name guessing with typed public and protected-file argv provenance, validated before render-time erasure; all four client artifacts and malformed provenance mutants are covered.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
