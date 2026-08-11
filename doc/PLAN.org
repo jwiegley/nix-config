@@ -1287,15 +1287,17 @@ config/ai/catalog.nix:56-105,1353-1377 duplicates endpoint records across profil
 ]
 #+end_src
 
-* DOING [#B] Represent agent tool policy as typed capabilities    :ai:architecture:
+* DONE [#B] Represent agent tool policy as typed capabilities    :ai:architecture:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.36
 :LABELS: ["ai","architecture","heavy-review"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 19:49]
+:MODIFIED: [2026-08-10 Mon 20:01]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 20:01]
+:CLOSE_REASON: Replaced Claude-formatted agent tool strings with a validated closed capability vocabulary and per-client mappings for Claude, Pi, Prime, Codex, and Factory Droid; subset/reordering/native-shape mutants, focused build, static checks, root and portable all-system evaluation, and independent review passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

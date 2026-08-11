@@ -7,10 +7,23 @@ let
 
   renderMarkdownText =
     metadata: text: if metadata == { } then text else "---\n${builtins.toJSON metadata}\n---\n${text}";
+
+  renderAgentCapabilities =
+    mappings: capabilities:
+    let
+      known = map (mapping: mapping.capability) mappings;
+    in
+    assert builtins.isList capabilities;
+    assert builtins.length known == builtins.length (lib.unique known);
+    assert builtins.length capabilities == builtins.length (lib.unique capabilities);
+    assert builtins.all (capability: builtins.elem capability known) capabilities;
+    lib.concatMap (
+      mapping: lib.optional (builtins.elem mapping.capability capabilities) mapping.output
+    ) mappings;
 in
 {
   inherit (envReference) isTypedEnv;
-  inherit renderMarkdownText;
+  inherit renderAgentCapabilities renderMarkdownText;
 
   renderMarkdownFile = metadata: source: renderMarkdownText metadata (builtins.readFile source);
 

@@ -17,6 +17,33 @@ let
 
   renderLib = import ./render-lib.nix { inherit lib; };
   renderMarkdown = item: renderLib.renderMarkdownFile item.metadata item.source;
+  claudeAgentCapabilities = [
+    {
+      capability = "read-files";
+      output = "Read";
+    }
+    {
+      capability = "search-text";
+      output = "Grep";
+    }
+    {
+      capability = "find-files";
+      output = "Glob";
+    }
+    {
+      capability = "run-commands";
+      output = "Bash";
+    }
+  ];
+  renderAgentMetadata =
+    metadata:
+    builtins.removeAttrs metadata [ "capabilities" ]
+    // lib.optionalAttrs (metadata ? capabilities) {
+      tools = lib.concatStringsSep ", " (
+        renderLib.renderAgentCapabilities claudeAgentCapabilities metadata.capabilities
+      );
+    };
+  renderAgent = item: renderLib.renderMarkdownFile (renderAgentMetadata item.metadata) item.source;
 
   stripSource =
     value:
@@ -96,7 +123,7 @@ let
   agents = lib.mapAttrs' (
     name: item:
     lib.nameValuePair "${root}/agents/${name}.md" {
-      text = renderMarkdown item;
+      text = renderAgent item;
     }
   ) selected.agents;
   commands = lib.mapAttrs' (

@@ -11,6 +11,20 @@ let
     "pi"
     "prime"
   ];
+  allowedAgentCapabilities = [
+    "read-files"
+    "search-text"
+    "find-files"
+    "run-commands"
+  ];
+  # Keep assigned policy explicit. Expanding the allowed vocabulary must not
+  # silently grant a new capability to every restricted specialist.
+  reviewerCapabilities = [
+    "read-files"
+    "search-text"
+    "find-files"
+    "run-commands"
+  ];
   contentClients = clients;
   commandClients = [
     "claude"
@@ -135,12 +149,12 @@ let
     "bash-reviewer" = {
       "description" =
         "Expert Bash/Shell script reviewer specializing in quoting correctness, POSIX compliance, security, and robustness patterns. Use when reviewing shell scripts or shell fragments embedded in CI configs, Makefiles, or installers.";
-      "tools" = "Read, Grep, Glob, Bash";
+      capabilities = reviewerCapabilities;
     };
     "coq-reviewer" = {
       "description" =
         "Expert Coq/Rocq code reviewer specializing in proof soundness, tactic hygiene, termination arguments, and proof engineering patterns. Use when reviewing Coq/Rocq (.v) proof developments.";
-      "tools" = "Read, Grep, Glob, Bash";
+      capabilities = reviewerCapabilities;
     };
     "cpp-pro" = {
       "description" =
@@ -149,12 +163,12 @@ let
     "cpp-reviewer" = {
       "description" =
         "Expert C++ code reviewer specializing in memory safety, undefined behavior, modern C++ idioms, and concurrency. Use when reviewing C or C++ source and header changes.";
-      "tools" = "Read, Grep, Glob, Bash";
+      capabilities = reviewerCapabilities;
     };
     "elisp-reviewer" = {
       "description" =
         "Expert Emacs Lisp code reviewer specializing in lexical binding, package conventions, macro hygiene, and performance. Use when reviewing Emacs Lisp (.el) code or Emacs configurations.";
-      "tools" = "Read, Grep, Glob, Bash";
+      capabilities = reviewerCapabilities;
     };
     "emacs-lisp-pro" = {
       "description" =
@@ -171,7 +185,7 @@ let
     "haskell-reviewer" = {
       "description" =
         "Expert Haskell code reviewer specializing in laziness pitfalls, type safety, space leaks, and idiomatic functional patterns. Use when reviewing Haskell (.hs/.lhs) changes.";
-      "tools" = "Read, Grep, Glob, Bash";
+      capabilities = reviewerCapabilities;
     };
     "nix-pro" = {
       "description" =
@@ -180,12 +194,12 @@ let
     "nix-reviewer" = {
       "description" =
         "Expert Nix code reviewer specializing in reproducibility, flake hygiene, NixOS module design, and security. Use when reviewing Nix expressions, flakes, or NixOS/Home Manager modules.";
-      "tools" = "Read, Grep, Glob, Bash";
+      capabilities = reviewerCapabilities;
     };
     "perf-reviewer" = {
       "description" =
         "Cross-language performance reviewer specializing in algorithmic complexity, resource leaks, allocation patterns, and system-level bottlenecks. Use for a cross-cutting performance pass over a changeset, after or alongside language-specific review.";
-      "tools" = "Read, Grep, Glob, Bash";
+      capabilities = reviewerCapabilities;
     };
     "persian-translator" = {
       "description" = "Translate English language text into high quality, accurate Persian (Farsi) text.";
@@ -205,7 +219,7 @@ let
     "python-reviewer" = {
       "description" =
         "Expert Python code reviewer specializing in type safety, security, common pitfalls, and idiomatic patterns. Use when reviewing Python (.py/.pyi) changes.";
-      "tools" = "Read, Grep, Glob, Bash";
+      capabilities = reviewerCapabilities;
     };
     "rocq-pro" = {
       "description" =
@@ -218,12 +232,12 @@ let
     "rust-reviewer" = {
       "description" =
         "Expert Rust code reviewer specializing in ownership, unsafe code, error handling, and idiomatic patterns. Use when reviewing Rust (.rs) changes.";
-      "tools" = "Read, Grep, Glob, Bash";
+      capabilities = reviewerCapabilities;
     };
     "security-reviewer" = {
       "description" =
         "Cross-language security reviewer specializing in vulnerability detection, authentication, data exposure, and supply chain security. Use for a cross-cutting security pass over any changeset, especially code handling user input, auth, secrets, or network boundaries.";
-      "tools" = "Read, Grep, Glob, Bash";
+      capabilities = reviewerCapabilities;
     };
     "sql-pro" = {
       "description" =
@@ -240,7 +254,7 @@ let
     "typescript-reviewer" = {
       "description" =
         "Expert TypeScript code reviewer specializing in type safety, async correctness, security, and idiomatic patterns. Use when reviewing TypeScript or TSX changes.";
-      "tools" = "Read, Grep, Glob, Bash";
+      capabilities = reviewerCapabilities;
     };
   };
   commandMetadata = {
@@ -1197,6 +1211,32 @@ let
 
   validItemName =
     name: builtins.isString name && builtins.match "^[A-Za-z0-9][A-Za-z0-9._-]*$" name != null;
+  validAgentMetadata =
+    name: metadata:
+    builtins.isAttrs metadata
+    && builtins.all (
+      key:
+      builtins.elem key [
+        "capabilities"
+        "description"
+        "name"
+      ]
+    ) (builtins.attrNames metadata)
+    && metadata ? name
+    && metadata.name == name
+    && metadata ? description
+    && builtins.isString metadata.description
+    && (
+      !(metadata ? capabilities)
+      || (
+        builtins.isList metadata.capabilities
+        && metadata.capabilities != [ ]
+        && builtins.length metadata.capabilities == builtins.length (lib.unique metadata.capabilities)
+        && builtins.all (
+          capability: builtins.elem capability allowedAgentCapabilities
+        ) metadata.capabilities
+      )
+    );
   # Providers own model syntax; reject only control bytes and an unterminated
   # CSI-like suffix.
   c1Controls = builtins.fromJSON ''
@@ -1377,6 +1417,9 @@ let
       selectorChecks = map (
         item: ensure (validateSelectors (item.selectors or { })) "invalid item selector"
       ) allItems;
+      agentChecks = lib.mapAttrsToList (
+        name: item: ensure (validAgentMetadata name item.metadata) "invalid agent metadata for ${name}"
+      ) items.agents;
       settingsChecks = lib.concatLists (
         lib.mapAttrsToList (
           name: item:
@@ -1493,6 +1536,7 @@ let
       checks =
         itemChecks
         ++ selectorChecks
+        ++ agentChecks
         ++ settingsChecks
         ++ endpointChecks
         ++ profileChecks

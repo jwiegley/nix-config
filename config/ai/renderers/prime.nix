@@ -17,6 +17,24 @@ let
   renderLib = import ./render-lib.nix { inherit lib; };
   inherit (renderLib) renderCommandMetadata;
   renderMarkdown = renderLib.renderMarkdownText;
+  primeAgentCapabilities = [
+    {
+      capability = "read-files";
+      output = "Read";
+    }
+    {
+      capability = "search-text";
+      output = "Grep";
+    }
+    {
+      capability = "find-files";
+      output = "Glob";
+    }
+    {
+      capability = "run-commands";
+      output = "Bash";
+    }
+  ];
 
   commandFiles = lib.mapAttrs' (
     name: item:
@@ -29,6 +47,11 @@ let
   ) selected.prompts;
   agentFiles = lib.mapAttrs' (
     name: item:
+    let
+      capabilities = renderLib.renderAgentCapabilities primeAgentCapabilities (
+        item.metadata.capabilities or [ ]
+      );
+    in
     lib.nameValuePair "${root}/prompts/agent-${name}.md" {
       text =
         renderMarkdown
@@ -43,8 +66,8 @@ let
             `$ARGUMENTS`. Require the child to send its result to the parent with
             `agent_message`; do not treat the admission handle as the result. Continue
             independently or wait for that message as the task requires.
-            ${lib.optionalString (item.metadata ? tools) ''
-              Catalog tool policy (advisory in Prime Agent): ${item.metadata.tools}
+            ${lib.optionalString (item.metadata ? capabilities) ''
+              Catalog tool policy (advisory in Prime Agent): ${lib.concatStringsSep ", " capabilities}
             ''}
           '';
     }

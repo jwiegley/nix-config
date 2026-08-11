@@ -133,22 +133,36 @@ let
     "app.model.cycleBackward" = [ ];
   };
 
-  renderAgentTools =
-    tools:
-    if tools == "Read, Grep, Glob, Bash" then
-      "read,grep,find,bash"
-    else
-      throw "unsupported Pi agent tools: ${builtins.toJSON tools}";
+  piAgentCapabilities = [
+    {
+      capability = "read-files";
+      output = "read";
+    }
+    {
+      capability = "search-text";
+      output = "grep";
+    }
+    {
+      capability = "find-files";
+      output = "find";
+    }
+    {
+      capability = "run-commands";
+      output = "bash";
+    }
+  ];
   renderAgentMetadata =
     item:
     assert hasOnlyKeys [
+      "capabilities"
       "description"
       "name"
-      "tools"
     ] item.metadata;
-    builtins.removeAttrs item.metadata [ "tools" ]
-    // lib.optionalAttrs (item.metadata ? tools) {
-      tools = renderAgentTools item.metadata.tools;
+    builtins.removeAttrs item.metadata [ "capabilities" ]
+    // lib.optionalAttrs (item.metadata ? capabilities) {
+      tools = lib.concatStringsSep "," (
+        renderLib.renderAgentCapabilities piAgentCapabilities item.metadata.capabilities
+      );
     };
 
   agentFiles = lib.mapAttrs' (

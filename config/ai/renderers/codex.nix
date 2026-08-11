@@ -136,7 +136,9 @@ let
     name: item:
     lib.nameValuePair "${profile.root}/agents/${name}.toml" {
       source = toml.generate "codex-agent-${name}.toml" (
-        builtins.removeAttrs item.metadata [ "tools" ]
+        # Codex has no per-agent tool-policy field; retain the existing
+        # behavior of omitting catalog policy from the native document.
+        builtins.removeAttrs item.metadata [ "capabilities" ]
         // {
           developer_instructions = builtins.readFile item.source;
         }

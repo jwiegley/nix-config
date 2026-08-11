@@ -45,13 +45,38 @@ let
     mcpServers = lib.mapAttrs renderMcpServer selected.mcpServers;
   };
 
+  droidAgentCapabilities = [
+    {
+      capability = "read-files";
+      output = "Read";
+    }
+    {
+      capability = "search-text";
+      output = "Grep";
+    }
+    {
+      capability = "find-files";
+      output = "Glob";
+    }
+    {
+      capability = "run-commands";
+      output = "Execute";
+    }
+  ];
+  renderAgentMetadata =
+    metadata:
+    builtins.removeAttrs metadata [ "capabilities" ]
+    // lib.optionalAttrs (metadata ? capabilities) {
+      tools = renderLib.renderAgentCapabilities droidAgentCapabilities metadata.capabilities;
+    };
   renderMarkdown = item: renderLib.renderMarkdownFile item.metadata item.source;
+  renderAgent = item: renderLib.renderMarkdownFile (renderAgentMetadata item.metadata) item.source;
   skillDirectory = item: pkgs.writeTextDir "SKILL.md" (renderMarkdown item);
 
   agents = lib.mapAttrs' (
     name: item:
     lib.nameValuePair "${root}/droids/${name}.md" {
-      text = renderMarkdown item;
+      text = renderAgent item;
     }
   ) selected.agents;
   skills = lib.mapAttrs' (

@@ -24,6 +24,17 @@ let
   withoutFessCommand = catalog.items // {
     commands = builtins.removeAttrs catalog.items.commands [ "fess" ];
   };
+  baseAgentMetadata = catalog.items.agents.bash-reviewer.metadata;
+  itemsWithAgentMetadata =
+    metadata:
+    catalog.items
+    // {
+      agents = catalog.items.agents // {
+        bash-reviewer = catalog.items.agents.bash-reviewer // {
+          inherit metadata;
+        };
+      };
+    };
   claudeSettings = catalog.items.settings.claude;
   withClaudeSettingsBase =
     base:
@@ -336,6 +347,76 @@ let
   primeAdversarialRendered = renderSelectedFor primeRenderer primeProfile "/Users/test" (
     selectAdversarialFor primeProfile
   );
+  capabilityProbeName = "capability-probe";
+  primaryCapabilities = [
+    "read-files"
+    "run-commands"
+  ];
+  reorderedCapabilities = [
+    "run-commands"
+    "read-files"
+  ];
+  discoveryCapabilities = [
+    "find-files"
+    "search-text"
+  ];
+  capabilityAgent =
+    capabilities:
+    catalog.items.agents.bash-reviewer
+    // {
+      metadata = baseAgentMetadata // {
+        inherit capabilities;
+        name = capabilityProbeName;
+      };
+      selectors = { };
+    };
+  selectWithCapabilities =
+    profile: capabilities:
+    selectFor profile
+    // {
+      agents = {
+        "${capabilityProbeName}" = capabilityAgent capabilities;
+      };
+    };
+  renderPiSelected =
+    selected:
+    piRenderer {
+      profile = piProfile;
+      inherit selected;
+      homeDirectory = "/Users/test";
+      xdgConfigHome = "/Users/test/.config";
+      passwordStoreDir = "/Users/test/doc/.password-store";
+      gnupgHome = "/Users/test/.config/gnupg";
+      localModelEndpoints = localModelEndpointsFor piProfile;
+    };
+  capabilityRendering =
+    capabilities:
+    let
+      claude = renderSelectedFor claudeRenderer claudeProfile "/Users/test" (
+        selectWithCapabilities claudeProfile capabilities
+      );
+      codex = renderSelectedFor codexRenderer codexProfile "/Users/test" (
+        selectWithCapabilities codexProfile capabilities
+      );
+      droid = renderSelectedFor droidRenderer droidProfile "/Users/test" (
+        selectWithCapabilities droidProfile capabilities
+      );
+      pi = renderPiSelected (selectWithCapabilities piProfile capabilities);
+      prime = renderSelectedFor primeRenderer primeProfile "/Users/test" (
+        selectWithCapabilities primeProfile capabilities
+      );
+    in
+    {
+      claude = claude.files."${claudeProfile.root}/agents/${capabilityProbeName}.md".text;
+      codex = codex.files."${codexProfile.root}/agents/${capabilityProbeName}.toml".source;
+      droid = droid.files."${droidProfile.root}/droids/${capabilityProbeName}.md".text;
+      pi = pi.files."${piProfile.root}/agents/${capabilityProbeName}.md".text;
+      prime = prime.files."${primeProfile.root}/prompts/agent-${capabilityProbeName}.md".text;
+    };
+  frontMatter = text: builtins.fromJSON (builtins.elemAt (lib.splitString "\n" text) 1);
+  primaryRendering = capabilityRendering primaryCapabilities;
+  reorderedRendering = capabilityRendering reorderedCapabilities;
+  discoveryRendering = capabilityRendering discoveryCapabilities;
   safeSelectedFor = selectFrom safeArgumentItems;
   unsafeRenderedSources =
     args:
@@ -449,6 +530,30 @@ let
         argument-hint = "[task]";
       }
     )
+    (frontmatterTextCase "claude-agent-capabilities" primaryRendering.claude (
+      builtins.removeAttrs baseAgentMetadata [ "capabilities" ]
+      // {
+        name = capabilityProbeName;
+        tools = "Read, Bash";
+      }
+    ))
+    (frontmatterTextCase "droid-agent-capabilities" primaryRendering.droid (
+      builtins.removeAttrs baseAgentMetadata [ "capabilities" ]
+      // {
+        name = capabilityProbeName;
+        tools = [
+          "Read"
+          "Execute"
+        ];
+      }
+    ))
+    (frontmatterTextCase "pi-agent-capabilities" primaryRendering.pi (
+      builtins.removeAttrs baseAgentMetadata [ "capabilities" ]
+      // {
+        name = capabilityProbeName;
+        tools = "read,bash";
+      }
+    ))
   ];
   frontmatterPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
   frontmatterChecker = pkgs.writeText "check-frontmatter.py" ''
@@ -491,6 +596,37 @@ assert builtins.all (name: catalog.profiles.${name}.id == name) (
 assert builtins.all (name: catalog.items.agents.${name}.metadata.name == name) (
   builtins.attrNames catalog.items.agents
 );
+assert catalog.validate {
+  items = itemsWithAgentMetadata (baseAgentMetadata // { capabilities = primaryCapabilities; });
+};
+assert catalog.validate {
+  items = itemsWithAgentMetadata (baseAgentMetadata // { capabilities = reorderedCapabilities; });
+};
+assert catalog.validate {
+  items = itemsWithAgentMetadata (baseAgentMetadata // { capabilities = discoveryCapabilities; });
+};
+assert (frontMatter primaryRendering.claude).tools == "Read, Bash";
+assert (frontMatter discoveryRendering.claude).tools == "Grep, Glob";
+assert
+  (frontMatter primaryRendering.droid).tools == [
+    "Read"
+    "Execute"
+  ];
+assert
+  (frontMatter discoveryRendering.droid).tools == [
+    "Grep"
+    "Glob"
+  ];
+assert (frontMatter primaryRendering.pi).tools == "read,bash";
+assert (frontMatter discoveryRendering.pi).tools == "grep,find";
+assert primaryRendering.claude == reorderedRendering.claude;
+assert primaryRendering.droid == reorderedRendering.droid;
+assert primaryRendering.pi == reorderedRendering.pi;
+assert primaryRendering.prime == reorderedRendering.prime;
+assert lib.hasInfix "Catalog tool policy (advisory in Prime Agent): Read, Bash"
+  primaryRendering.prime;
+assert lib.hasInfix "Catalog tool policy (advisory in Prime Agent): Grep, Glob"
+  discoveryRendering.prime;
 assert !(builtins.pathExists "${src}/config/ai/commands/fess.md");
 assert catalog.items.commands.fess.source == fessSource;
 assert lib.hasInfix ''fork_turns="none"'' parallelizeText;
@@ -607,6 +743,31 @@ assert hasFessRubric primeRendered.files.${fessPaths.prime.command}.text;
 assert !(builtins.hasAttr ".config/mcp/mcp.json" primeRendered.files);
 assert !(primeRendered ? mutableMcpGuard);
 assert builtins.all reject [
+  (catalog.validate {
+    items = itemsWithAgentMetadata (baseAgentMetadata // { capabilities = "read-files"; });
+  })
+  (catalog.validate {
+    items = itemsWithAgentMetadata (
+      baseAgentMetadata
+      // {
+        capabilities = [
+          "read-files"
+          "read-files"
+        ];
+      }
+    );
+  })
+  (catalog.validate {
+    items = itemsWithAgentMetadata (baseAgentMetadata // { capabilities = [ "unknown-capability" ]; });
+  })
+  (catalog.validate {
+    items = itemsWithAgentMetadata (baseAgentMetadata // { capabilities = [ ]; });
+  })
+  (catalog.validate {
+    items = itemsWithAgentMetadata (
+      builtins.removeAttrs baseAgentMetadata [ "capabilities" ] // { tools = "Read, Grep, Glob, Bash"; }
+    );
+  })
   (catalog.validate { items = withoutFessCommand; })
   (catalog.validate {
     items = catalog.items // {
@@ -714,6 +875,12 @@ pkgs.runCommand "ai-catalog-transport" { } ''
   test -x "$model_contract"
   ${pkgs.python3}/bin/python3 ${./review-dispatch-contract.py} \
     "$history_contract" "$model_contract"
+
+  ${pkgs.diffutils}/bin/cmp ${primaryRendering.codex} ${reorderedRendering.codex}
+  if ${pkgs.gnugrep}/bin/grep -Eq '^(capabilities|tools) = ' ${primaryRendering.codex}; then
+    echo "Codex unexpectedly rendered catalog agent policy" >&2
+    exit 1
+  fi
 
   grep -F 'base_url = "${catalog.localModelEndpointsByHost.${codexProfile.host}.omlx}"' \
     ${codexRendered.files."${codexProfile.root}/nix-managed.config.toml".source} >/dev/null
