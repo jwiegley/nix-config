@@ -168,7 +168,6 @@ let
       ).omlx;
   };
   piSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "pi") profileIds;
-  droidSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "droid") profileIds;
   primeSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "prime") profileIds;
   piRuntimePackages = with pkgs; [
     actionlint
@@ -363,8 +362,7 @@ in
         };
       };
     packages =
-      lib.optional droidSelected pkgs.agent-http-header-bridge
-      ++ lib.optional (pairedPiPackage != null) pairedPiPackage
+      lib.optional (pairedPiPackage != null) pairedPiPackage
       ++ lib.optional (primeSelected && pairedPrimePackage != null) pairedPrimePackage
       ++ lib.optionals piSelected piRuntimePackages;
     # The dummy keys satisfy codex's env_key lookups for the local providers;

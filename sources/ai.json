@@ -942,32 +942,6 @@
         "kind": "flake-input"
       }
     },
-    "mcp-remote": {
-      "hashes": {
-        "npmDepsHash": "sha256-8aV/WRBrcezMb8HyRKW89v11MumgQnQwSBde5MZkzos="
-      },
-      "source": {
-        "args": {
-          "narHash": "sha256-+oNI2Uq7gW3sLzJS4ky2+BXhTmo44+WpcdYgieGPpmI=",
-          "owner": "geelen",
-          "repo": "mcp-remote",
-          "rev": "02619aff36e79803d7c894e8c8ae7b34b2d11f8c",
-          "type": "github"
-        },
-        "fetcher": "fetchTree",
-        "url": "https://github.com/geelen/mcp-remote"
-      },
-      "update": {
-        "artifacts": [
-          "flake.lock",
-          "config/ai/flake.lock"
-        ],
-        "buildPackage": "agent-http-header-bridge",
-        "input": "mcp-remote",
-        "kind": "flake-input+build"
-      },
-      "version": "0.1.38"
-    },
     "mcp-servers-nix": {
       "source": {
         "args": {

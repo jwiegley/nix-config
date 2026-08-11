@@ -1,11 +1,10 @@
 # Independent Model Context Protocol packages.
 # Dependencies: Uses final for python3Packages; uses prev elsewhere
-# Includes MCP servers, Claude Code tools, and agent-http-header-bridge.
+# Includes MCP servers and Claude Code tools.
 {
   final,
   prev,
   palMcpServer ? null,
-  mcpRemote ? null,
 }:
 
 let
@@ -53,102 +52,6 @@ prev.lib.optionalAttrs (palMcpServer != null) {
       };
     };
 
-}
-// prev.lib.optionalAttrs (mcpRemote != null) {
-
-  agent-http-header-bridge =
-    let
-      source = mcpRemote;
-      sourcePackage = builtins.fromJSON (builtins.readFile "${source}/package.json");
-      pnpm = prev.pnpm_10.override { nodejs-slim = prev.nodejs_22; };
-      proxy = prev.stdenv.mkDerivation (finalAttrs: {
-        pname = "agent-http-header-bridge-proxy";
-        inherit (sourcePackage) version;
-        inherit source;
-        src = source;
-
-        patches = [ ../overlays/ai/patches/mcp-remote-header-only.patch ];
-
-        nativeBuildInputs = [
-          prev.nodejs_22
-          pnpm
-          prev.pnpmConfigHook
-        ];
-
-        pnpmDeps = prev.fetchPnpmDeps {
-          inherit (finalAttrs) pname version src;
-          inherit pnpm;
-          fetcherVersion = 3;
-          hash = sources.mcp-remote.hashes.npmDepsHash;
-        };
-
-        buildPhase = ''
-          runHook preBuild
-          pnpm run check
-          pnpm run test:unit
-          pnpm run build
-          pnpm prune --prod --ignore-scripts
-          runHook postBuild
-        '';
-
-        installPhase = ''
-          runHook preInstall
-          bridge_lib="$out/libexec/agent-http-header-bridge"
-          install -d "$bridge_lib"
-          install -m0755 dist/proxy.js "$bridge_lib/proxy.js"
-          install -m0644 dist/chunk-*.js "$bridge_lib/"
-          install -m0644 package.json "$bridge_lib/package.json"
-          cp -R node_modules "$bridge_lib/node_modules"
-          install -Dm0644 LICENSE \
-            "$out/share/licenses/agent-http-header-bridge/LICENSE"
-          runHook postInstall
-        '';
-      });
-    in
-    prev.writeShellApplication {
-      name = "agent-http-header-bridge";
-      passthru = {
-        inherit proxy source;
-        inherit (source) narHash rev;
-      };
-      text = ''
-        fail_invalid() {
-          printf '%s\n' 'agent-http-header-bridge: invalid invocation' >&2
-          exit 2
-        }
-
-        fail_credential() {
-          printf '%s\n' 'agent-http-header-bridge: credential unavailable' >&2
-          exit 2
-        }
-
-        [ "$#" -eq 3 ] || fail_invalid
-        bridge_url=$1
-        bridge_header=$2
-        bridge_environment=$3
-
-        [[ "$bridge_url" =~ ^https://[^[:space:]]+$ ]] || fail_invalid
-        bridge_header_pattern="^[!#$%&'*+.^_\`|~0-9A-Za-z-]+$"
-        [[ "$bridge_header" =~ $bridge_header_pattern ]] || fail_invalid
-        [[ "$bridge_environment" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || fail_invalid
-        if [[ ! -v $bridge_environment ]] || [ -z "''${!bridge_environment}" ]; then
-          fail_credential
-        fi
-
-        bridge_placeholder='$'"{$bridge_environment}"
-        exec -a agent-http-header-bridge ${prev.nodejs_22}/bin/node \
-          ${proxy}/libexec/agent-http-header-bridge/proxy.js \
-          "$bridge_url" --header "$bridge_header: $bridge_placeholder" \
-          --header-only --transport http-only --silent
-      '';
-      meta = {
-        description = "Credential-safe static-header bridge for Droid MCP servers";
-        homepage = "https://github.com/geelen/mcp-remote";
-        license = prev.lib.licenses.mit;
-        mainProgram = "agent-http-header-bridge";
-        platforms = prev.lib.platforms.all;
-      };
-    };
 }
 // {
 

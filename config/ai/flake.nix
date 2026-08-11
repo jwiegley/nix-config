@@ -56,11 +56,6 @@
       flake = false;
     };
 
-    mcp-remote = {
-      url = "github:geelen/mcp-remote";
-      flake = false;
-    };
-
     git-ai = {
       url = "github:git-ai-project/git-ai";
       inputs.nixpkgs.follows = "nixpkgs";

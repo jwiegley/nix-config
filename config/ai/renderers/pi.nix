@@ -141,18 +141,11 @@ let
       inherit (server) transport;
     in
     if transport ? url then
-      assert hasOnlyKeys [
-        "headers"
-        "url"
-      ] transport;
+      assert hasOnlyKeys [ "url" ] transport;
       assert isSafeUrl transport.url;
-      assert !(transport ? headers) || builtins.all isTypedEnv (builtins.attrValues transport.headers);
       {
         inherit (transport) url;
         oauth = false;
-      }
-      // lib.optionalAttrs (transport ? headers) {
-        headers = lib.mapAttrs (_: reference: renderEnv reference.env) transport.headers;
       }
     else
       assert hasOnlyKeys [

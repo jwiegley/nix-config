@@ -64,7 +64,6 @@ let
       };
       representativePackages = [
         "agent-deck"
-        "agent-http-header-bridge"
         "agent-resources"
         "claude-vault"
         "pal-mcp-server"

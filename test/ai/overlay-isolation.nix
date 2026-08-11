@@ -16,7 +16,6 @@ let
       };
     };
   withoutPal = aiPkgsWithout "pal-mcp-server";
-  withoutRemote = aiPkgsWithout "mcp-remote";
 in
 assert
   (configured.python3Packages.imageio.disabledTests or [ ])
@@ -27,22 +26,11 @@ assert
   == (pkgs.python3Packages.gradio.doInstallCheck or false)
   || throw "Darwin-only Gradio install-check suppression active on Linux";
 assert
-  !(optionalMcpPackages ? pal-mcp-server)
-  && !(optionalMcpPackages ? agent-http-header-bridge)
-  && optionalMcpPackages ? mcp-searxng
+  !(optionalMcpPackages ? pal-mcp-server) && optionalMcpPackages ? mcp-searxng
   || throw "optional MCP inputs must omit only their dependent packages";
 assert
-  !(withoutPal ? pal-mcp-server)
-  && withoutPal ? agent-http-header-bridge
-  && withoutPal ? mcp-searxng
-  && withoutPal ? rustdocs-mcp-server
+  !(withoutPal ? pal-mcp-server) && withoutPal ? mcp-searxng && withoutPal ? rustdocs-mcp-server
   || throw "missing PAL input removed unrelated AI MCP packages";
-assert
-  withoutRemote ? pal-mcp-server
-  && !(withoutRemote ? agent-http-header-bridge)
-  && withoutRemote ? mcp-searxng
-  && withoutRemote ? rustdocs-mcp-server
-  || throw "missing mcp-remote input removed unrelated AI MCP packages";
 assert
   !(configured ? inputs) || throw "overlay composition leaked flake inputs through pkgs.inputs";
 pkgs.runCommand "darwin-overrides-inactive" { } "touch $out"

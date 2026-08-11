@@ -15,7 +15,6 @@ set -euo pipefail
 : "${REAL_CODEX_BIN:?}"
 : "${REAL_PROBED_CODEX_BIN:?}"
 : "${REAL_WRAPPED_CODEX_BIN:?}"
-: "${BRIDGE_BIN:?}"
 : "${NETWORK_GUARD_LIBRARY:?}"
 : "${NETWORK_GUARD_VARIABLE:?}"
 
@@ -2575,62 +2574,6 @@ test_real_codex_profile_contract() {
         fail "pinned Codex attempted network access before rejecting strict config"
 }
 
-run_bridge_failure() {
-    local label=$1
-    local expected=$2
-    shift 2
-    local stdout="$work_root/bridge-$label.stdout"
-    local stderr="$work_root/bridge-$label.stderr"
-    local status bytes
-
-    if "$@" >"$stdout" 2>"$stderr"; then
-        status=0
-    else
-        status=$?
-    fi
-    [ "$status" -ne 0 ] || fail "bridge accepted invalid case: $label"
-    bytes=$(wc -c <"$stderr")
-    [ "$bytes" -gt 0 ] && [ "$bytes" -le 512 ] ||
-        fail "bridge $label error is empty or exceeds 512 bytes"
-    printf '%s\n' "$expected" | cmp -s - "$stderr" ||
-        fail "bridge $label did not emit its exact fixed error"
-    [ ! -s "$stdout" ] || fail "bridge $label wrote to stdout"
-}
-
-test_bridge_static_contract() {
-    [ "$BRIDGE_PRESENT" = 1 ] || fail "agent-http-header-bridge package/output is missing"
-    [ -x "$BRIDGE_BIN" ] || fail "agent-http-header-bridge executable is missing"
-
-    run_bridge_failure arity 'agent-http-header-bridge: invalid invocation' "$BRIDGE_BIN"
-    run_bridge_failure http-url 'agent-http-header-bridge: invalid invocation' \
-        env TASK3_BRIDGE_TOKEN=BRIDGE-SECRET-MUST-NOT-LEAK "$BRIDGE_BIN" \
-        http://example.invalid/mcp x-agent-test-token TASK3_BRIDGE_TOKEN
-    run_bridge_failure malformed-url 'agent-http-header-bridge: invalid invocation' \
-        "$BRIDGE_BIN" https:// x-agent-test-token TASK3_BRIDGE_TOKEN
-    run_bridge_failure credentialed-url 'agent-http-header-bridge: invalid invocation' \
-        env TASK3_BRIDGE_TOKEN=BRIDGE-SECRET-MUST-NOT-LEAK "$BRIDGE_BIN" \
-        https://user:password@example.invalid/mcp x-agent-test-token TASK3_BRIDGE_TOKEN
-    run_bridge_failure header-name 'agent-http-header-bridge: invalid invocation' \
-        "$BRIDGE_BIN" https://example.invalid/mcp 'bad header' TASK3_BRIDGE_TOKEN
-    run_bridge_failure header-colon 'agent-http-header-bridge: invalid invocation' \
-        "$BRIDGE_BIN" https://example.invalid/mcp 'bad:header' TASK3_BRIDGE_TOKEN
-    run_bridge_failure header-newline 'agent-http-header-bridge: invalid invocation' \
-        "$BRIDGE_BIN" https://example.invalid/mcp $'bad\nheader' TASK3_BRIDGE_TOKEN
-    run_bridge_failure environment-name 'agent-http-header-bridge: invalid invocation' \
-        "$BRIDGE_BIN" https://example.invalid/mcp x-agent-test-token 9INVALID
-    run_bridge_failure environment-hyphen 'agent-http-header-bridge: invalid invocation' \
-        "$BRIDGE_BIN" https://example.invalid/mcp x-agent-test-token INVALID-NAME
-    run_bridge_failure missing-environment 'agent-http-header-bridge: credential unavailable' \
-        env -u TASK3_BRIDGE_TOKEN "$BRIDGE_BIN" \
-        https://example.invalid/mcp x-agent-test-token TASK3_BRIDGE_TOKEN
-    run_bridge_failure empty-environment 'agent-http-header-bridge: credential unavailable' \
-        env TASK3_BRIDGE_TOKEN= "$BRIDGE_BIN" \
-        https://example.invalid/mcp x-agent-test-token TASK3_BRIDGE_TOKEN
-    run_bridge_failure control-environment 'agent-http-header-bridge: credential unavailable' \
-        env TASK3_BRIDGE_TOKEN=$'BRIDGE-SECRET-MUST-NOT-LEAK\nbad' "$BRIDGE_BIN" \
-        https://example.invalid/mcp x-agent-test-token TASK3_BRIDGE_TOKEN
-}
-
 run_claude_contract() {
     test_state_matrix claude
     test_conflicts claude
@@ -2677,14 +2620,9 @@ run_codex_contract() {
 case "${1:-all}" in
 claude) run_claude_contract ;;
 codex) run_codex_contract ;;
-bridge)
-    test_bridge_static_contract
-    printf '%s\n' 'agent-wrapper-contract: bridge: PASS'
-    ;;
 all)
     run_claude_contract
     run_codex_contract
-    test_bridge_static_contract
     ;;
 *) fail "unknown contract mode: $1" ;;
 esac

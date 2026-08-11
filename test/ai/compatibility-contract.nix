@@ -12,7 +12,6 @@ in
     "agent-browser-source"
     "git-ai"
     "llm-agents"
-    "mcp-remote"
     "mcp-servers-nix"
     "nixpkgs"
     "pal-mcp-server"
@@ -28,7 +27,6 @@ in
 
   packages = builtins.sort builtins.lessThan [
     "agent-browser"
-    "agent-http-header-bridge"
     "agent-resources"
     "cymbal"
     "default"

@@ -82,7 +82,6 @@ let
             type = "http";
             inherit (transport) url;
           }
-          // lib.optionalAttrs (transport ? headers) { inherit (transport) headers; }
         else
           {
             inherit (transport) command args;

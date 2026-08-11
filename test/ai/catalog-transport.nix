@@ -89,7 +89,7 @@ let
     transport.url = "https://example.invalid/mcp";
     selectors.profiles = [ ];
   };
-  unauthorizedHttpHeader = syntheticHttpMcp // {
+  unsupportedHttpHeader = syntheticHttpMcp // {
     transport = syntheticHttpMcp.transport // {
       headers.Authorization.env = "OPENAI_API_KEY";
     };
@@ -101,14 +101,6 @@ let
   };
   missingHttpUrl = syntheticHttpMcp // {
     transport = { };
-  };
-  multipleUnauthorizedHttpHeaders = syntheticHttpMcp // {
-    transport = syntheticHttpMcp.transport // {
-      headers = {
-        Authorization.env = "OPENAI_API_KEY";
-        X-Synthetic-Token.env = "OPENAI_API_KEY";
-      };
-    };
   };
   safeArgumentValues = [
     "--header=X-Request-ID:request-42"
@@ -179,6 +171,17 @@ let
   ];
   selectFrom = items: profile: lib.mapAttrs (_: itemSet: catalog.select profile itemSet) items;
   selectFor = selectFrom catalog.items;
+  selectWithHttp =
+    profile:
+    let
+      selected = selectFor profile;
+    in
+    selected
+    // {
+      mcpServers = selected.mcpServers // {
+        synthetic-http = syntheticHttpMcp;
+      };
+    };
   adversarialName = "metadata-probe";
   adversarialDescription = ''
     Colon: value # not a comment
@@ -225,7 +228,7 @@ let
     };
   renderFor =
     renderer: profile: homeDirectory:
-    renderSelectedFor renderer profile homeDirectory (selectFor profile);
+    renderSelectedFor renderer profile homeDirectory (selectWithHttp profile);
   codexRenderer = import "${src}/config/ai/renderers/codex.nix" {
     inherit lib pkgs llmAgents;
   };
@@ -246,7 +249,7 @@ let
       inherit profile;
       rendered = claudeRenderer {
         inherit profile homeDirectory;
-        selected = selectFor profile;
+        selected = selectWithHttp profile;
         xdgConfigHome = "${homeDirectory}/.config";
       };
     };
@@ -271,7 +274,7 @@ let
       inherit profile darwin;
       rendered = piRenderer {
         inherit profile homeDirectory;
-        selected = selectFor profile;
+        selected = selectWithHttp profile;
         xdgConfigHome = "${homeDirectory}/.config";
         passwordStoreDir = if darwin then "${homeDirectory}/doc/.password-store" else null;
         gnupgHome = if darwin then "${homeDirectory}/.config/gnupg" else null;
@@ -595,7 +598,7 @@ assert builtins.all reject [
     items = withMcpServers (catalog.items.mcpServers // { "../synthetic-http" = syntheticHttpMcp; });
   })
   (catalog.validate {
-    items = withMcpServers (catalog.items.mcpServers // { synthetic-http = unauthorizedHttpHeader; });
+    items = withMcpServers (catalog.items.mcpServers // { synthetic-http = unsupportedHttpHeader; });
   })
   (catalog.validate {
     items = withMcpServers (
@@ -604,11 +607,6 @@ assert builtins.all reject [
   })
   (catalog.validate {
     items = withMcpServers (catalog.items.mcpServers // { synthetic-http = missingHttpUrl; });
-  })
-  (catalog.validate {
-    items = withMcpServers (
-      catalog.items.mcpServers // { synthetic-http = multipleUnauthorizedHttpHeaders; }
-    );
   })
   (piRenderer {
     profile = piProfile // {
@@ -633,6 +631,19 @@ pkgs.runCommand "ai-catalog-transport" { } ''
       ]
     }"
   ) frontmatterCases}
+
+  ${pkgs.python3}/bin/python3 - ${
+    codexRendered.files."${codexProfile.root}/nix-managed.config.toml".source
+  } <<'PY'
+  import sys
+  import tomllib
+
+  with open(sys.argv[1], "rb") as stream:
+      mcp = tomllib.load(stream)["mcp_servers"]
+  assert mcp["synthetic-http"] == {"url": "https://example.invalid/mcp"}
+  assert isinstance(mcp["pal"]["command"], str)
+  assert isinstance(mcp["pal"]["args"], list)
+  PY
 
   grep -F '**Fallback smuggling**' ${codexRendered.files.${fessPaths.codex.agent}.source} >/dev/null
   grep -F '**Fallback smuggling**' ${
@@ -680,6 +691,12 @@ pkgs.runCommand "ai-catalog-transport" { } ''
       raise SystemExit("ordinary MCP arguments changed across renderer output")
   PY
   ${lib.concatMapStringsSep "\n" (entry: ''
+    ${pkgs.jq}/bin/jq -e '
+      .mcpServers["synthetic-http"]
+        == {"type": "http", "url": "https://example.invalid/mcp"}
+      and (.mcpServers.pal.command | type == "string")
+      and (.mcpServers.pal.args | type == "array")
+    ' ${entry.rendered.files."${entry.profile.root}/nix-managed-mcp.json".source} >/dev/null
     ${pkgs.jq}/bin/jq -e \
       --argjson personalWorkstation ${
         if
@@ -739,7 +756,20 @@ pkgs.runCommand "ai-catalog-transport" { } ''
     ${pkgs.jq}/bin/jq -e '
       type == "object"
       and (.mcpServers | type == "object")
+      and .mcpServers["synthetic-http"]
+        == {"oauth": false, "url": "https://example.invalid/mcp"}
+      and (.mcpServers.pal.command | type == "string")
+      and (.mcpServers.pal.args | type == "array")
     ' ${entry.rendered.files.".config/mcp/mcp.json".source} >/dev/null
   '') piRenderings}
+
+  ${pkgs.jq}/bin/jq -e '
+    .mcpServers["synthetic-http"]
+      == {"disabled": false, "type": "http", "url": "https://example.invalid/mcp"}
+    and .mcpServers.pal.disabled == false
+    and .mcpServers.pal.type == "stdio"
+    and (.mcpServers.pal.command | type == "string")
+    and (.mcpServers.pal.args | type == "array")
+  ' ${droidRendered.files."${droidProfile.root}/mcp.json".source} >/dev/null
   touch "$out"
 ''

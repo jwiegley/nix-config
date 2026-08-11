@@ -48,13 +48,7 @@ let
       literalEnv = lib.filterAttrs (_: value: !isTypedEnv value) (transport.env or { });
       native =
         if transport ? url then
-          assert builtins.all isTypedEnv (builtins.attrValues (transport.headers or { }));
-          {
-            inherit (transport) url;
-          }
-          // lib.optionalAttrs (transport ? headers) {
-            env_http_headers = lib.mapAttrs (_: reference: reference.env) transport.headers;
-          }
+          { inherit (transport) url; }
         else
           {
             inherit (transport) command args;

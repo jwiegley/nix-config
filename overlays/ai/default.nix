@@ -39,7 +39,6 @@
   (import ./30-ai-llm.nix)
   ((import ./30-ai-mcp.nix) {
     palMcpServer = inputs.pal-mcp-server or null;
-    mcpRemote = inputs.mcp-remote or null;
   })
   (import ./30-lazycodex.nix)
   (import ./30-agnix.nix)

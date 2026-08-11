@@ -28,25 +28,7 @@ let
       inherit (server) transport;
       literalEnv = lib.filterAttrs (_: value: !isTypedEnv value) (transport.env or { });
     in
-    if transport ? url && transport ? headers then
-      assert builtins.length (builtins.attrNames transport.headers) == 1;
-      let
-        headerName = builtins.head (builtins.attrNames transport.headers);
-        credential = transport.headers.${headerName};
-      in
-      assert isTypedEnv credential;
-      {
-        type = "stdio";
-        disabled = false;
-        command = "agent-http-header-bridge";
-        args = [
-          transport.url
-          headerName
-          credential.env
-        ];
-      }
-    else if transport ? url then
-      assert !(transport ? headers);
+    if transport ? url then
       {
         type = "http";
         disabled = false;

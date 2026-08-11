@@ -3,8 +3,6 @@
   patchAgentPackage,
   claudePackage,
   codexPackage,
-  agentHttpHeaderBridge ? null,
-  mcpRemote ? null,
 }:
 
 let
@@ -303,22 +301,6 @@ let
     '';
   };
 
-  missingBridge = pkgs.writeShellScript "missing-agent-http-header-bridge" ''
-    printf '%s\n' 'agent-http-header-bridge: package is absent' >&2
-    exit 127
-  '';
-
-  haveBridge = agentHttpHeaderBridge != null && mcpRemote != null;
-  bridgeBin =
-    if agentHttpHeaderBridge == null then
-      missingBridge
-    else
-      "${agentHttpHeaderBridge}/bin/agent-http-header-bridge";
-  bridgeClosure =
-    if agentHttpHeaderBridge == null then
-      pkgs.writeTextDir "store-paths" ""
-    else
-      pkgs.closureInfo { rootPaths = [ agentHttpHeaderBridge ]; };
 in
 pkgs.runCommand "agent-wrappers-check"
   {
@@ -329,7 +311,6 @@ pkgs.runCommand "agent-wrappers-check"
       pkgs.diffutils
       pkgs.findutils
       pkgs.gnugrep
-      pkgs.openssl
       pkgs.python3
     ];
 
@@ -350,11 +331,6 @@ pkgs.runCommand "agent-wrappers-check"
     NETWORK_GUARD_LIBRARY = "${networkGuard}/lib/libagent-wrapper-network-guard.${networkGuardExtension}";
     NETWORK_GUARD_VARIABLE = if pkgs.stdenv.isDarwin then "DYLD_INSERT_LIBRARIES" else "LD_PRELOAD";
 
-    BRIDGE_BIN = bridgeBin;
-    BRIDGE_CLOSURE_PATHS = "${bridgeClosure}/store-paths";
-    BRIDGE_NODE_GUARD = ./node-runtime-guard.cjs;
-    BRIDGE_ORACLE_PY = ./recording-https-bridge-oracle.py;
-    BRIDGE_PRESENT = if haveBridge then "1" else "0";
     PYTHON_BIN = "${pkgs.python3}/bin/python3";
   }
   ''
@@ -367,8 +343,6 @@ pkgs.runCommand "agent-wrappers-check"
     touch "$out/claude-wrapper-contract.ok"
     ${pkgs.bash}/bin/bash ${./agent-wrappers.sh} codex
     touch "$out/codex-wrapper-contract.ok"
-    ${pkgs.bash}/bin/bash ${./agent-wrappers.sh} bridge
-    ${pkgs.bash}/bin/bash ${./run-bridge-oracle.sh}
 
     touch "$out/passed"
   ''

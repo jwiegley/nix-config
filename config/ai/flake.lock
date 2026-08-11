@@ -187,22 +187,6 @@
         "type": "github"
       }
     },
-    "mcp-remote": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1770333622,
-        "narHash": "sha256-+oNI2Uq7gW3sLzJS4ky2+BXhTmo44+WpcdYgieGPpmI=",
-        "owner": "geelen",
-        "repo": "mcp-remote",
-        "rev": "02619aff36e79803d7c894e8c8ae7b34b2d11f8c",
-        "type": "github"
-      },
-      "original": {
-        "owner": "geelen",
-        "repo": "mcp-remote",
-        "type": "github"
-      }
-    },
     "mcp-servers-nix": {
       "inputs": {
         "nixpkgs": [
@@ -396,7 +380,6 @@
         "agent-browser-source": "agent-browser-source",
         "git-ai": "git-ai",
         "llm-agents": "llm-agents",
-        "mcp-remote": "mcp-remote",
         "mcp-servers-nix": "mcp-servers-nix",
         "nixpkgs": "nixpkgs_2",
         "pal-mcp-server": "pal-mcp-server",

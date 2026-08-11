@@ -382,7 +382,6 @@ in
       inherit (toolPkgs) nix-scripts;
       pi = canonicalPiPackages.${system};
       inherit (pkgs)
-        agent-http-header-bridge
         agent-resources
         pi-gallery
         prime-agent
@@ -464,8 +463,6 @@ in
         inherit patchAgentPackage;
         claudePackage = inputs.llm-agents.packages.${system}.claude-code;
         codexPackage = inputs.llm-agents.packages.${system}.codex;
-        agentHttpHeaderBridge = pkgs.agent-http-header-bridge or null;
-        mcpRemote = inputs.mcp-remote or null;
       };
       pi-gallery = pkgs.callPackage ../test/ai/pi-gallery.nix {
         inherit sourceForChecks;

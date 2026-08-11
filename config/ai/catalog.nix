@@ -686,7 +686,6 @@ let
   publicArg = public: { inherit public; };
   protectedFileArg = protectedFile: { inherit protectedFile; };
   publicArgs = map publicArg;
-  mcpHttpHeaders = { };
   baseMcpSelectors = {
     clients = contentClients;
   };
@@ -1194,7 +1193,6 @@ let
       )
     );
 
-  validHeaderName = name: builtins.match "^[A-Za-z0-9_-]+$" name != null;
   validItemName =
     name: builtins.isString name && builtins.match "^[A-Za-z0-9][A-Za-z0-9._-]*$" name != null;
   # Providers own model syntax; reject only control bytes and an unterminated
@@ -1339,12 +1337,8 @@ let
             "env"
           ]
         else
-          [
-            "url"
-            "headers"
-          ];
+          [ "url" ];
       environment = transport.env or { };
-      headers = transport.headers or { };
     in
     builtins.isAttrs transport
     && isCommand != isHttp
@@ -1359,13 +1353,7 @@ let
         )
       else
         validUrl false transport.url
-        && builtins.isAttrs headers
-        && builtins.all (name: validHeaderName name && isEnvReference headers.${name}) (
-          builtins.attrNames headers
-        )
     );
-
-  validateMcpHeaders = name: transport: (transport.headers or { }) == (mcpHttpHeaders.${name} or { });
 
   validate =
     {
@@ -1452,13 +1440,10 @@ let
         in
         ensure (
           validateTransport server.transport
-          && validateMcpHeaders name server.transport
           && builtins.all (host: lib.any (profile: profile.host == host) matchingProfiles) (
             builtins.attrNames hostTransports
           )
-          && builtins.all (
-            host: validateTransport hostTransports.${host} && validateMcpHeaders name hostTransports.${host}
-          ) (builtins.attrNames hostTransports)
+          && builtins.all (host: validateTransport hostTransports.${host}) (builtins.attrNames hostTransports)
           && validateOverrides (server.overrides or { })
         ) "invalid MCP server ${name}"
       ) items.mcpServers;
