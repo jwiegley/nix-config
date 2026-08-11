@@ -9,6 +9,10 @@ routing=${installed_routing_path:-$script_dir/lib/host-routing.sh}
 # shellcheck source=bin/lib/host-routing.sh
 source "$routing"
 
+# Kept as a literal authority boundary; the behavioral test replaces only this
+# path in an isolated script copy.
+system_config_dir=/etc/nixos
+
 raw_host=$(hostname -s)
 [[ ! -d /etc/srp-next ]] || raw_host=vps
 host=$(normalize_nix_host "$raw_host") || {
@@ -18,10 +22,14 @@ host=$(normalize_nix_host "$raw_host") || {
 
 if [[ $(uname -s) == Darwin ]]; then
     exec u switch
-elif [[ -d /etc/nixos ]]; then
-    output=$(nix_flake_output_for_host "$host")
-    cd /etc/nixos
-    exec sudo nixos-rebuild switch --flake ".#$output"
+elif [[ -d $system_config_dir ]]; then
+    build_driver=$system_config_dir/build
+    if [[ ! -x $build_driver ]]; then
+        echo "switch: NixOS build driver is missing or not executable: $build_driver" >&2
+        exit 1
+    fi
+    cd "$system_config_dir"
+    exec ./build switch
 elif [[ -d $HOME/.config/home-manager ]]; then
     # Build and run the activation package from this flake's pinned Home Manager.
     output=$(nix_flake_output_for_host "$host") || {

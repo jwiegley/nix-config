@@ -96,7 +96,9 @@ kinds that possess an explicit version or revision projection; plain flake-input
 targets do not accept it. The remaining public flags are `--brew`, `--help`, and
 the negations `--no-switch` and `--no-brew`, which disable a previously
 requested `--switch`/`--brew` (the later flag wins); switching and Homebrew
-are already disabled unless requested.
+are already disabled unless requested. A shared-work `--switch` is rejected
+before pull or candidate construction: that external Home Manager consumer must
+use its authoritative rollout rather than a nonexistent root-flake system output.
 
 `bin/update-overlay` is the lower-level catalog engine. Its inventory is the
 authoritative answer to which manually tracked sources can be updated:
@@ -314,8 +316,8 @@ activated it.
 |---|---|---|
 | Hera | `~/src/nix` | `make switch`; use `make build` separately for build-only evidence |
 | Clio | `~/src/nix` on Clio | Fast-forward that checkout, then run `make switch` |
-| Vulcan | `/etc/nixos` on Vulcan | Update paired inputs, then run `./build build` and `./build` |
-| VPS | `/etc/nixos` on VPS | Update paired inputs, then run `./build build` and `./build` |
+| Vulcan | `/etc/nixos` on Vulcan | Update paired inputs, then run `./build build` and `./build switch` |
+| VPS | `/etc/nixos` on VPS | Update paired inputs, then run `./build build` and `./build switch` |
 | Active shared-work hosts | `~/.config/home-manager` shared by the four active hosts | Update the paired inputs once; realize and retain the closure, then activate it on every active host; dormant `git-ai` is not a rollout target |
 
 The paired external inputs are updated together:
@@ -325,8 +327,8 @@ nix flake update nix-config nix-config-ai
 ```
 
 Vulcan and VPS must use the consumer-local `./build` script. It owns the build
-lock; raw `nixos-rebuild switch` and the generic `switch` helper bypass that
-protocol.
+lock; raw `nixos-rebuild switch` bypasses that protocol. The generic `switch`
+helper delegates its NixOS branch to this driver and propagates lock refusal.
 
 On Darwin, `make switch` runs `lock-local` before nix-darwin builds and activates
 the selected generation. A preceding `make build` does not re-lock local inputs
@@ -357,14 +359,14 @@ new generation and the affected executable or service passes a runtime check.
 | `persona NAME` | Select Claude, Git, and optional GitHub identities | Replaces mutable identity state and `~/.claude`; persona files are sourced shell code. Inspection forms are `--status/-s`, `--list/-l`, and `--env/-e`; `--help/-h` prints usage and exits with status 1. |
 | `publish [--publish] [--rev REV] [--branch NAME]` | Preflight or perform dual-remote publication | `--publish` pushes; `--dry-run` and the bare form do not. Never force-pushes. |
 | `runemacs [VERSION]` | Start the external Emacs `open` target through `load-env-emacsVERSION` | Depends on the Emacs repository and PATH-provided helper. |
-| `switch` | Dispatch activation by host class | Safe for Darwin and shared Home Manager only under their normal ownership rules. Its NixOS branch bypasses the required Vulcan/VPS build-lock wrapper and must not be used there. |
+| `switch` | Dispatch activation by host class | Darwin delegates to `u`; shared Home Manager builds its activation package; NixOS delegates to the authoritative `/etc/nixos/build` driver and propagates its status. |
 | `u [HOST] MAKE_ARGS...` | Dispatch the configured Makefile for Hera, Clio, or Vulcan | Host identity comes from the shared routing library; other host classes exit 1 with `u: unsupported host class`, and unrecognized hosts exit 1 loudly. On Darwin, first raises launchd and shell file-descriptor limits. It is not a general fleet dispatcher. |
 | `update [OPTIONS]` | Run the transactional lock and source-catalog updater | `--target` is repeatable; `--all-inputs`, `--version`, `--dry-run`, `--pull`, `--commit`, `--switch`, `--push`, and `--brew` control the transaction. Without `--dry-run`, validated changes are written back. |
 | `update-and-pull` | Find repositories under broad home-directory roots and run a PATH-provided `update` in parallel | Follows symlinks and delegates mutation semantics to an external command; use only as an attended personal maintenance operation. |
 | `update-overlay [TARGETS...]` | Inspect or update catalog-managed sources | Direct mode updates owning catalog records; some targets delegate to `bin/update`. Prefer the transaction for coordinated work. |
-| `update-remote` | Open Clio/NixOS jobs and update the explicit shared-work rollout | Source-tree-only legacy command; excluded from the installed `nix-scripts` PATH surface. It switches the four active shared-work targets projected from the registry and does not contact dormant `git-ai`, but it does not await tmux pane results and bypasses the NixOS build-lock wrappers. Do not use as fleet proof. |
-| `upgrade [HOST] [--host-only\|--projects-only]` | Combine a host operation with project maintenance | `--help` prints usage. Hera performs the full update transaction, travel/Homebrew tasks, and store signing; Clio builds and switches; Linux behavior delegates to `switch` and inherits its NixOS limitation. |
-| `upgrade-all` | Run broad repository, synchronization, host, and project maintenance | Source-tree-only legacy umbrella command; excluded from the installed `nix-scripts` PATH surface. A failed Hera host upgrade (`upgrade hera --host-only`) aborts before `pushme` and `update-remote`, while project maintenance runs last and is diagnostic only. It inherits `update-remote` limitations and is not a reliable all-host transaction. |
+| `update-remote` | Run identified Clio and Linux consumer update jobs | Source-tree-only legacy command; excluded from the installed `nix-scripts` PATH surface. Jobs run sequentially with an explicit completion barrier, NixOS uses each checkout's build driver, and dormant `git-ai` is excluded. It does not realize once, prove closure residency, or retain rollback roots, so it is not fleet proof. |
+| `upgrade [HOST] [--host-only\|--projects-only]` | Combine a host operation with project maintenance | `--help` prints usage. Hera performs the full update transaction, travel/Homebrew tasks, and store signing; Clio builds and switches; Linux delegates to `switch`, whose NixOS branch uses the host-owned build driver. |
+| `upgrade-all` | Run broad repository, synchronization, host, and project maintenance | Source-tree-only legacy umbrella command; excluded from the installed `nix-scripts` PATH surface. Its named prerequisites are awaited and dormant `git-ai` is not contacted; a failed Hera upgrade aborts before `pushme` and `update-remote`; `update-remote` must complete before diagnostic project maintenance. It does not supply the shared-work closure and rollback proofs required of a whole-fleet transaction. |
 | `upgrade-projects` | Reconfigure a fixed list of projects and update selected language dependencies | Sources project `.envrc` files, may rewrite Cargo locks, truncates logs, and deletes pip and uv caches. |
 | `yubikey-switch MODE` | Replace active GnuPG key files for a YubiKey arrangement | `MODE` is `restore` or a backup suffix. It preflights and privately stages the complete key set, rolls back replacement failures, then kills GPG agents, probes the card, updates a Git remote, and may create PAM challenge state. Those later external side effects are not rolled back. |
 

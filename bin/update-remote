@@ -6,15 +6,29 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=bin/lib/host-routing.sh
 source "$script_dir/lib/host-routing.sh"
 
-# Host updates run in parallel panes for an operator watching the fleet.
-tmux split-window "ssh clio 'upgrade clio --host-only'; echo 'clio done — press Enter'; read"
-tmux split-window "ssh vulcan 'cd /etc/nixos && nix flake update --commit-lock-file && switch'; echo 'vulcan done — press Enter'; read"
-tmux split-window "ssh vps 'cd /etc/nixos && nix flake update --commit-lock-file && switch'; echo 'vps done — press Enter'; read"
-tmux select-layout even-vertical
+run_remote_job() {
+    local job=$1 host=$2 command=$3 status
+    printf 'update-remote: start %s\n' "$job"
+    if ssh "$host" "$command"; then
+        printf 'update-remote: complete %s\n' "$job"
+    else
+        status=$?
+        printf 'update-remote: failed %s (status %d)\n' "$job" "$status" >&2
+        return "$status"
+    fi
+}
 
-# Update the shared source once, then switch the explicit active rollout. This
-# list is distinct from canonical membership: dormant git-ai remains known but
-# is not contacted until deliberately restored to the rollout set.
+# These jobs are deliberately sequential. Completion of one is the barrier
+# before the next checkout can be updated or activated.
+run_remote_job clio clio \
+    'cd ~/src/nix && ./bin/upgrade clio --host-only'
+run_remote_job vulcan vulcan \
+    'cd /etc/nixos && nix flake update --commit-lock-file && ./build switch'
+run_remote_job vps vps \
+    'cd /etc/nixos && nix flake update --commit-lock-file && ./build switch'
+
+# Update the shared source once, then switch the explicit active rollout.
+# Dormant git-ai remains a known member but is not an activation target.
 shared_home=/home/jwiegley/.config/home-manager
 shared_hosts_text=$(nix_active_shared_work_rollout_hosts) || {
     producer_status=$?
@@ -31,7 +45,8 @@ done <<<"$shared_hosts_text"
     exit 1
 }
 
-ssh "${shared_hosts[0]}" "cd $shared_home && nix flake update --commit-lock-file"
+run_remote_job shared-work-update "${shared_hosts[0]}" \
+    "cd $shared_home && nix flake update --commit-lock-file"
 for host in "${shared_hosts[@]}"; do
-    ssh "$host" "cd $shared_home && switch"
+    run_remote_job "shared-work-$host" "$host" "cd $shared_home && switch"
 done

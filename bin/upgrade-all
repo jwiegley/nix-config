@@ -4,20 +4,31 @@ set -euo pipefail
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 pids=()
+job_names=()
 
-update-and-pull &
-pids+=("$!")
+run_background_job() {
+    local name=$1
+    shift
+    "$@" &
+    pids+=("$!")
+    job_names+=("$name")
+}
 
-pushme andoria hera &
-pids+=("$!")
-pushme git-ai hera &
-pids+=("$!")
+run_background_job repositories update-and-pull
+run_background_job shared-work-source pushme andoria hera
 
 initial_status=0
-for pid in "${pids[@]}"; do
-    wait "$pid" || initial_status=1
+for index in "${!pids[@]}"; do
+    if wait "${pids[$index]}"; then
+        printf 'upgrade-all: complete %s\n' "${job_names[$index]}"
+    else
+        status=$?
+        printf 'upgrade-all: failed %s (status %d)\n' \
+            "${job_names[$index]}" "$status" >&2
+        ((initial_status != 0)) || initial_status=$status
+    fi
 done
-((initial_status == 0)) || exit 1
+((initial_status == 0)) || exit "$initial_status"
 
 # A failed Hera host upgrade must stop the rollout: everything below publishes
 # or activates state derived from it. Project maintenance is diagnostic and

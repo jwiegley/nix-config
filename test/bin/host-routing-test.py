@@ -191,8 +191,16 @@ class HostRoutingTests(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            members = set(
+                self.call_routing("nix_shared_work_members").stdout.splitlines()
+            )
+            shared_work_visits = [
+                host
+                for host in ssh_log.read_text(encoding="utf-8").splitlines()
+                if host in members
+            ]
             self.assertEqual(
-                ssh_log.read_text(encoding="utf-8").splitlines(),
+                shared_work_visits,
                 [
                     "andoria-08",
                     "andoria-08",

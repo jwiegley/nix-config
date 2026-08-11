@@ -40,6 +40,7 @@ expected_candidate_tree=
 publication_kind=
 transaction_complete=false
 transaction_signal_status=0
+switch_output=
 declare -A publication_baseline_git_mode=()
 declare -A publication_baseline_kind=()
 declare -A publication_baseline_mode=()
@@ -511,15 +512,36 @@ if [[ $run_dry_run == true ]] &&
     exit 2
 fi
 
+if [[ $run_switch == true || $run_push == true ]] && [[ $run_commit != true ]]; then
+    echo "update: --switch/--push require --commit" >&2
+    exit 2
+fi
+
+# Shared-work is an external Home Manager consumer, not a root-flake system
+# output. Refuse before pull or candidate construction so --switch cannot
+# mutate this checkout and then fail while looking for a Darwin configuration.
+if [[ $run_switch == true ]]; then
+    raw_host=$(hostname -s)
+    [[ ! -d /etc/srp-next ]] || raw_host=vps
+    switch_host=$(normalize_nix_host "$raw_host") || {
+        echo "update: no switch route for host: $raw_host" >&2
+        exit 2
+    }
+    if [[ $switch_host == shared-work ]]; then
+        echo "update: --switch is unsupported on shared-work hosts" >&2
+        echo "update: use the authoritative external Home Manager rollout" >&2
+        exit 2
+    fi
+    switch_output=$(nix_flake_output_for_host "$switch_host") || {
+        echo "update: no flake output for host: $raw_host" >&2
+        exit 2
+    }
+fi
+
 if [[ $run_pull == true ]]; then
     git_pull_clean "$config_dir"
 else
     require_clean "$config_dir"
-fi
-
-if [[ $run_switch == true || $run_push == true ]] && [[ $run_commit != true ]]; then
-    echo "update: --switch/--push require --commit" >&2
-    exit 2
 fi
 
 transaction_baseline=$(git -C "$config_dir" rev-parse HEAD)
@@ -888,13 +910,7 @@ if [[ $run_switch == true ]]; then
         echo "update: live repository changed before candidate build" >&2
         exit 1
     fi
-    raw_host=$(hostname -s)
-    [[ ! -d /etc/srp-next ]] || raw_host=vps
-    output=$(nix_flake_output_for_host "$raw_host") || {
-        echo "update: no flake output for host: $raw_host" >&2
-        exit 2
-    }
-    case $output in
+    case $switch_output in
     vulcan | ovh-vps)
         build_driver="$config_dir/build"
         if [[ ! -x $build_driver ]]; then
@@ -904,7 +920,7 @@ if [[ $run_switch == true ]]; then
         (
             cd "$config_dir"
             ./build -- nix build --no-link \
-                "$candidate_dir#nixosConfigurations.$output.config.system.build.toplevel"
+                "$candidate_dir#nixosConfigurations.$switch_output.config.system.build.toplevel"
         )
         if ! live_repository_matches_baseline; then
             echo "update: live repository changed before candidate switch" >&2
@@ -912,16 +928,16 @@ if [[ $run_switch == true ]]; then
         fi
         (
             cd "$config_dir"
-            ./build -- nixos-rebuild switch --flake "$candidate_dir#$output"
+            ./build -- nixos-rebuild switch --flake "$candidate_dir#$switch_output"
         )
         ;;
     *)
-        nix build --no-link "$candidate_dir#darwinConfigurations.$output.system"
+        nix build --no-link "$candidate_dir#darwinConfigurations.$switch_output.system"
         if ! live_repository_matches_baseline; then
             echo "update: live repository changed before candidate switch" >&2
             exit 1
         fi
-        sudo darwin-rebuild switch --flake "$candidate_dir#$output"
+        sudo darwin-rebuild switch --flake "$candidate_dir#$switch_output"
         ;;
     esac
     if ! live_repository_matches_baseline; then

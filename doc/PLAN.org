@@ -536,15 +536,17 @@ Makefile:218-235 reparses cached buildInputs through eval nix copy, allowing she
 ]
 #+end_src
 
-* DOING [#B] Route NixOS switching through the host-owned build lock    :nixos:operations:
+* DONE [#B] Route NixOS switching through the host-owned build lock    :nixos:operations:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.17
 :LABELS: ["heavy-review","nixos","operations"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 16:38]
+:MODIFIED: [2026-08-10 Mon 17:09]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 17:09]
+:CLOSE_REASON: Delegated NixOS switch and update activation to each authoritative checkout build driver, propagated lock refusal, and added Vulcan/VPS dispatch tests.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -567,15 +569,17 @@ bin/switch:19-24 and bin/update:897-916 call raw nixos-rebuild and bypass the re
 ]
 #+end_src
 
-* DOING [#B] Give remote rollout jobs an identity and completion barrier    :concurrency:operations:
+* DONE [#B] Give remote rollout jobs an identity and completion barrier    :concurrency:operations:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.18
 :LABELS: ["concurrency","heavy-review","operations"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 16:38]
+:MODIFIED: [2026-08-10 Mon 17:09]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 17:09]
+:CLOSE_REASON: Replaced detached tmux rollout panes with named sequential jobs and completion barriers; aggregated prerequisite status and excluded dormant git-ai with ordering/failure coverage.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1321,15 +1325,17 @@ Makefile:239-281 deletes user generations before an unprivileged system-profile 
 ]
 #+end_src
 
-* DOING [#B] Fail closed for shared-work in bin/update --switch    :routing:validated:
+* DONE [#B] Fail closed for shared-work in bin/update --switch    :routing:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.4
 :LABELS: ["heavy-review","routing","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 16:38]
+:MODIFIED: [2026-08-10 Mon 17:09]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 17:09]
+:CLOSE_REASON: Rejected shared-work --switch before pull or candidate construction and added a command-spy preflight regression.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
