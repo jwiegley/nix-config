@@ -1895,15 +1895,17 @@ test/home/host-behavior.nix:22-35,174-208 duplicates the full home-class roster 
 ]
 #+end_src
 
-* DOING [#C] Share one hermetic Git fixture helper    :git:tests:
+* DONE [#C] Share one hermetic Git fixture helper    :git:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.54
 :LABELS: ["git","heavy-review","tests"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 17:47]
+:MODIFIED: [2026-08-10 Mon 18:03]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 18:03]
+:CLOSE_REASON: Centralized the union of hermetic Git selector cleanup and deterministic Git invocation; both complete slow suites and independent review passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

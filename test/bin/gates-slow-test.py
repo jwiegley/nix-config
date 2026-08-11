@@ -4,7 +4,7 @@
 Tests use throwaway fixtures; the real checkout is read or executed but never
 mutated.
 
-Run: python3 -m unittest -v test/bin/gates-slow-test.py
+Run: test/bin/unittest-strict.py test/bin/gates-slow-test.py
 """
 
 import json
@@ -14,6 +14,9 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
+
+from git_fixture import clean_env, git
 
 # The real checkout supplies gate definitions, commands, and a genuine
 # signature blob. Tests read or execute it but never mutate it.
@@ -23,48 +26,13 @@ VERIFY_SIGNATURES = BIN / "verify-signatures"
 CROSS_CONSUMER_EVAL = BIN / "cross-consumer-eval"
 IMMUTABLE_SUBFLAKE_CHECK = BIN / "immutable-subflake-check"
 
-# Repository/config selectors scrubbed from Git subprocess environments.
-_GIT_LOCATION_VARS = (
-    "GIT_DIR",
-    "GIT_WORK_TREE",
-    "GIT_INDEX_FILE",
-    "GIT_COMMON_DIR",
-    "GIT_OBJECT_DIRECTORY",
-    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-    "GIT_PREFIX",
-    "GIT_CONFIG",
-    "GIT_CONFIG_GLOBAL",
-    "GIT_CONFIG_SYSTEM",
-    "GIT_CONFIG_COUNT",
-    "GIT_CEILING_DIRECTORIES",
-)
 
-
-def clean_env(**extra):
-    env = dict(os.environ)
-    for var in _GIT_LOCATION_VARS:
-        env.pop(var, None)
-    env.update(extra)
-    return env
-
-
-def git(*args, cwd, check=True, env=None):
-    e = clean_env(
-        GIT_AUTHOR_NAME="Test",
-        GIT_AUTHOR_EMAIL="test@example.invalid",
-        GIT_COMMITTER_NAME="Test",
-        GIT_COMMITTER_EMAIL="test@example.invalid",
-        GIT_AUTHOR_DATE="2026-01-01T00:00:00+0000",
-        GIT_COMMITTER_DATE="2026-01-01T00:00:00+0000",
-    )
-    if env:
-        e.update(env)
-    r = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, env=e)
-    if check and r.returncode != 0:
-        raise AssertionError(
-            "git %s failed in %s:\n%s\n%s" % (" ".join(args), cwd, r.stdout, r.stderr)
-        )
-    return r
+class TestGitFixture(unittest.TestCase):
+    def test_internal_super_prefix_is_not_inherited(self):
+        with mock.patch.dict(
+            os.environ, {"GIT_INTERNAL_SUPER_PREFIX": "hostile-prefix"}
+        ):
+            self.assertNotIn("GIT_INTERNAL_SUPER_PREFIX", clean_env())
 
 
 class TestVerifySignaturesRejects(unittest.TestCase):

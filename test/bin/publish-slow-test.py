@@ -4,7 +4,7 @@
 Remote-mutation tests use throwaway local repositories; self-consistency tests
 read the real script without mutating its repository.
 
-Run: python3 -m unittest -v test/bin/publish-slow-test.py
+Run: test/bin/unittest-strict.py test/bin/publish-slow-test.py
 """
 
 import os
@@ -13,62 +13,11 @@ import subprocess
 import tempfile
 import unittest
 
+from git_fixture import clean_env, git
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 PUBLISH = os.path.join(REPO, "bin", "publish")
-
-
-# Repository/config selector variables scrubbed from Git subprocesses.
-_GIT_LOCATION_VARS = (
-    "GIT_DIR",
-    "GIT_WORK_TREE",
-    "GIT_INDEX_FILE",
-    "GIT_COMMON_DIR",
-    "GIT_OBJECT_DIRECTORY",
-    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-    "GIT_PREFIX",
-    "GIT_CONFIG",
-    "GIT_CONFIG_GLOBAL",
-    "GIT_CONFIG_SYSTEM",
-    "GIT_CONFIG_COUNT",
-    "GIT_INTERNAL_SUPER_PREFIX",
-    "GIT_CEILING_DIRECTORIES",
-)
-
-
-def clean_env(**extra):
-    """Return os.environ without the repository selectors listed above."""
-    e = dict(os.environ)
-    for var in _GIT_LOCATION_VARS:
-        e.pop(var, None)
-    e.update(extra)
-    return e
-
-
-def git(*args, cwd, check=True, env=None):
-    e = clean_env()
-    # Deterministic unsigned commits by default; signing tests install their own
-    # fixture behavior.
-    e.update(
-        {
-            "GIT_AUTHOR_NAME": "Test",
-            "GIT_AUTHOR_EMAIL": "test@example.invalid",
-            "GIT_COMMITTER_NAME": "Test",
-            "GIT_COMMITTER_EMAIL": "test@example.invalid",
-            "GIT_AUTHOR_DATE": "2026-01-01T00:00:00+0000",
-            "GIT_COMMITTER_DATE": "2026-01-01T00:00:00+0000",
-        }
-    )
-    if env:
-        e.update(env)
-    r = subprocess.run(
-        ["git", *args], cwd=cwd, capture_output=True, text=True, env=e
-    )
-    if check and r.returncode != 0:
-        raise AssertionError(
-            "git %s failed in %s:\n%s\n%s" % (" ".join(args), cwd, r.stdout, r.stderr)
-        )
-    return r
 
 
 class PublishHarness(unittest.TestCase):
