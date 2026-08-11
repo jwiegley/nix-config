@@ -101,51 +101,8 @@ in
           find $out/bin -type f -exec $SHELL -c "$SCRIPT" \;
         '';
         upstreamParts = prev.lib.splitString upstreamDarwinFixup upstream;
-        batchedDarwinFixup = ''
-          set -o pipefail
-          samba_libs_file=$(mktemp)
-          if ! find "$out" -type f -regex '.*\.dylib\(\..*\)?' \
-            -exec dirname {} \; | sort -u >"$samba_libs_file"; then
-            rm -f "$samba_libs_file"
-            echo "samba: failed to enumerate dylib directories" >&2
-            exit 1
-          fi
-          mapfile -t samba_libs <"$samba_libs_file"
-          rm -f "$samba_libs_file"
-          [ "''${#samba_libs[@]}" -gt 0 ] || {
-            echo "samba: no dylib directories found" >&2
-            exit 1
-          }
-          fix_samba_macho() {
-            local bin=$1
-            local load_commands old_rpath new_rpath
-
-            load_commands=$(otool -L "$bin" 2>/dev/null) || return 0
-            set --
-            if otool -l "$bin" 2>/dev/null \
-              | grep '^[[:space:]]*cmd LC_ID_DYLIB$' >/dev/null; then
-              set -- "$@" -id "$bin"
-            fi
-            while IFS= read -r old_rpath; do
-              [ -n "$old_rpath" ] || continue
-              new_rpath=$(find "''${samba_libs[@]}" \
-                -name "$(basename "$old_rpath")" -print -quit) || return 1
-              [ -n "$new_rpath" ] || return 1
-              set -- "$@" -change "$old_rpath" "$new_rpath"
-            done < <(printf '%s\n' "$load_commands" \
-              | grep -F -- "$NIX_BUILD_TOP/" \
-              | awk '{print $1}')
-            [ "$#" -eq 0 ] || install_name_tool "$@" "$bin"
-          }
-
-          if ! find "$out" -type f -print0 \
-            | while IFS= read -r -d "" bin; do
-              fix_samba_macho "$bin" || exit 1
-            done; then
-            echo "samba: Mach-O fixup traversal failed" >&2
-            exit 1
-          fi
-          unset -f fix_samba_macho
+        batchedDarwinFixup = builtins.readFile ./samba-darwin-fixup.sh + ''
+          samba_fix_macho_tree
         '';
       in
       assert prev.lib.assertMsg (
@@ -153,17 +110,10 @@ in
       ) "samba: expected exactly one upstream Darwin dylib fixup";
       builtins.concatStringsSep batchedDarwinFixup upstreamParts
       + ''
-        if ! find "$out" -type f -print0 \
-          | while IFS= read -r -d "" bin; do
-            if otool -L "$bin" 2>/dev/null \
-              | grep -F -- "$NIX_BUILD_TOP/" >/dev/null; then
-              echo "samba: build-root reference remains in $bin" >&2
-              exit 1
-            fi
-          done; then
-          echo "samba: residual Mach-O scan failed" >&2
-          exit 1
-        fi
+        samba_verify_macho_tree
+        unset SAMBA_HAS_ID SAMBA_LOAD_COMMANDS samba_libs
+        unset -f samba_fix_macho samba_fix_macho_tree samba_macho_has_id \
+          samba_macho_load_commands samba_verify_macho samba_verify_macho_tree
       '';
   });
 

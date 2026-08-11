@@ -3164,10 +3164,10 @@ Path Finder 26.1.7 is independent of Nix Samba. During the reported attempt it p
 :LABELS: []
 :ISSUE_TYPE: chore
 :CREATED:  [2026-08-11 Tue 11:19]
-:MODIFIED: [2026-08-11 Tue 12:31]
+:MODIFIED: [2026-08-11 Tue 12:56]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-11 Tue 12:31]
-:CLOSE_REASON: Replaced the exact upstream Darwin fixup block once, accumulated each Mach-O object optional ID and all dependency changes into one install_name_tool invocation, and used checked pipefail-protected full-tree and residual traversals with path-safe library-root arrays. Samba 4.23.8 built successfully; smbclient, helper, and Python import smokes pass; 855 Mach-O files contain no build-root references; root all-system evaluation and independent Nix/shell reviews are clear. No activation or live SMB connection was performed.
+:FINISHED: [2026-08-11 Tue 12:56]
+:CLOSE_REASON: Replaced the exact upstream Darwin fixup block once with a shared, tested helper that classifies Mach-O by checked magic, validates otool output, fails closed on tool, producer, leaf, and residual errors, and batches each object’s optional ID and all dependency changes into one install_name_tool invocation. Samba 4.23.8 rebuilt successfully; all outputs verify; smbclient, helper, and Python import smokes pass; the main output has 855 regular files, including 342 Mach-O files with no build-root load references. Root all-system evaluation and independent Nix/shell reviews are clear. No activation or live SMB connection was performed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -3186,6 +3186,19 @@ The correctness fix expands upstream Samba's Darwin SCRIPT to 96 additional Mach
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 1,
+    "issue_id": "nix-zk6",
+    "author": "johnw",
+    "text": "Reopened: Fresh fess audit found fail-open otool and extraction paths plus an overstated file-count claim; reopen for a fail-closed correction and exact-tree rebuild.",
+    "created_at": "2026-08-11T19:40:55Z"
   }
 ]
 #+end_src

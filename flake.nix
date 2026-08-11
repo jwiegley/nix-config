@@ -400,6 +400,7 @@
               service-credentials = pkgs.callPackage ./test/home/service-credentials.nix {
                 inherit darwinConfigurations src;
               };
+              samba-darwin-fixup = pkgs.callPackage ./test/overlays/samba-darwin-fixup.nix { };
             }
             // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
               darwin-overrides-inactive = pkgs.callPackage ./test/ai/overlay-isolation.nix {
