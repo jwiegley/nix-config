@@ -23,7 +23,7 @@ let
     _: configuration: configuration.config.home-manager.users.johnw
   ) darwinConfigurations;
   vulcanJumpPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID/5S98ifv/slBhGzSLMK+/3JAHNzzglOfau6RlqKeYs";
-  expectedVulcanJumpAuthorization = ''from="192.168.1.2",restrict,command="/usr/bin/false",port-forwarding,permitopen="andoria-08:22" ${vulcanJumpPublicKey} johnw@vulcan'';
+  expectedVulcanJumpAuthorization = ''from="192.168.1.2",restrict,port-forwarding,permitopen="andoria-08:22",command="/usr/bin/false" ${vulcanJumpPublicKey} johnw@vulcan'';
   vulcanJumpAuthorizations =
     host:
     builtins.filter (

@@ -253,6 +253,37 @@ Follow-up owner decision is tracked as nix-5yr.
 ]
 #+end_src
 
+* TODO [#B] Decide whether to retain emulated MSSQL on Apple Silicon
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-jlj
+:LABELS: []
+:ISSUE_TYPE: question
+:CREATED:  [2026-08-10 Mon 23:18]
+:MODIFIED: [2026-08-10 Mon 23:18]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Microsoft supports the SQL Server 2022 Linux container only on Linux x86-64 and explicitly excludes Rosetta/QEMU-style emulation. MCR's 2022-latest is a single linux/amd64 manifest, so the current aarch64-darwin launchd service necessarily relies on an unsupported Docker Desktop emulation path. Owner must choose to retain that accepted-risk service, migrate it to supported x86-64 Linux, or retire it. Image/service mutation, activation, and data migration remain separately authorized.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-jlj",
+    "depends_on_id": "nix-r10",
+    "type": "discovered-from",
+    "created_at": "2026-08-11T06:18:22.269685Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Strip ACLs and force 0600 on staged YubiKey keys
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -414,6 +445,70 @@ Partner observation 2026-08-10T19:49:52.586Z: restore the Home Manager runtime-o
     "depends_on_id": "nix-tcz",
     "type": "discovered-from",
     "created_at": "2026-08-10T22:13:37.623382Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#C] Keep the jump-authorization test synchronized with its canonical option order
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-pbj
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 23:28]
+:MODIFIED: [2026-08-10 Mon 23:34]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 23:34]
+:CLOSE_REASON: Updated the byte-exact host-behavior expectation to the canonical authorized_keys option order from signed commit 71870d60. Direct host-behavior evaluation succeeds; check-manifest completed every root evaluation-only entry and reached the behavioral build phase. The unrelated 27-derivation build was intentionally interrupted before realization.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Partner observation 2026-08-11T05:53:30.821Z: signed commit 71870d60 reordered the semantically equivalent authorized_keys options in config/darwin.nix but left test/home/host-behavior.nix pinned to the previous byte order, making host-behavior evaluation fail. Update the exact expectation, verify host-behavior and the closeout evaluation phase, then remove the observation only after this issue is durably closed.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-pbj",
+    "depends_on_id": "nix-sj5",
+    "type": "discovered-from",
+    "created_at": "2026-08-11T06:28:15.219766Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DOING [#C] Pin the MSSQL container image to a reviewed manifest digest
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-r10
+:LABELS: []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-10 Mon 23:13]
+:MODIFIED: [2026-08-10 Mon 23:18]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The managed MSSQL launcher still uses mcr.microsoft.com/mssql/server:2022-latest. Resolving the pulled tag to one image ID prevents movement between probe and final startup within a launch, but a later launch can receive a retagged artifact that gets the writable database mount and SA credential. MCR currently serves a single linux/amd64 Docker schema-2 manifest, not a multi-architecture index: sha256:ba4c8329f48fb8f02e1416be6a930ebfd71268caee78aa985f3af4315e457c89, also published as 2022-CU26-ubuntu-22.04. Pin that reviewed digest in an appropriate source authority, use the same digest-only reference for pull/probe/final execution, reject tag-only references, and document explicit reviewed updates. Discovered during independent review of nix-tcz.3; official MCR/Microsoft evidence captured under /tmp/wg-mssql-research/.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-r10",
+    "depends_on_id": "nix-tcz.3",
+    "type": "discovered-from",
+    "created_at": "2026-08-11T06:13:07.875929Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
