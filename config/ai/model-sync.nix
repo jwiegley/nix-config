@@ -4,6 +4,7 @@
   # Base URL of the omlx endpoint, supplied from the catalog's profile
   # declaration so this file cannot drift from the one endpoint authority.
   omlxBaseUrl,
+  tools ? { },
 }:
 
 let
@@ -25,7 +26,7 @@ let
     JXA
   '';
 
-  tools = {
+  resolvedTools = {
     pgrep = "/usr/bin/pgrep";
     defaults = "/usr/bin/defaults";
     devonthinkKeyPresent = toString devonthinkKeyPresent;
@@ -34,7 +35,8 @@ let
     mktemp = "${pkgs.coreutils}/bin/mktemp";
     mv = "${pkgs.coreutils}/bin/mv";
     rm = "${pkgs.coreutils}/bin/rm";
-  };
+  }
+  // tools;
 
   model = "DeepSeek-V4-Flash-0731-oQ8e-mtp";
   chatUrl = "${omlxBaseUrl}/chat/completions";
@@ -150,6 +152,12 @@ let
       state_dir="$state_home/nix-managed-ai"
       stamp="$state_dir/model-sync-v1.sha256"
 
+      if [[ -v DRY_RUN ]]; then
+        printf '%s\n' \
+          "Would reconcile DEVONthink and iTerm2 model defaults and $stamp"
+        exit 0
+      fi
+
       previous_digest=
       stamp_has_extra=0
       if [[ -f "$stamp" ]]; then
@@ -165,14 +173,14 @@ let
         exit 0
       fi
 
-      pgrep_tool=${quote tools.pgrep}
-      defaults_tool=${quote tools.defaults}
-      devonthink_key_present=${quote tools.devonthinkKeyPresent}
-      security_tool=${quote tools.security}
-      mkdir_tool=${quote tools.mkdir}
-      mktemp_tool=${quote tools.mktemp}
-      mv_tool=${quote tools.mv}
-      rm_tool=${quote tools.rm}
+      pgrep_tool=${quote resolvedTools.pgrep}
+      defaults_tool=${quote resolvedTools.defaults}
+      devonthink_key_present=${quote resolvedTools.devonthinkKeyPresent}
+      security_tool=${quote resolvedTools.security}
+      mkdir_tool=${quote resolvedTools.mkdir}
+      mktemp_tool=${quote resolvedTools.mktemp}
+      mv_tool=${quote resolvedTools.mv}
+      rm_tool=${quote resolvedTools.rm}
 
       fail() {
         printf '%s\n' "nix-managed model sync: $1" >&2

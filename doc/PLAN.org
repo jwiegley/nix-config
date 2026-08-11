@@ -820,15 +820,17 @@ Behavior-bearing derivations declared in flake.nix:392-426 and flake/ai.nix:435-
 ]
 #+end_src
 
-* DOING [#B] Make model-sync dry-run safe and behaviorally executable    :activation:tests:
+* DONE [#B] Make model-sync dry-run safe and behaviorally executable    :activation:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.24
 :LABELS: ["activation","heavy-review","tests"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 17:47]
+:MODIFIED: [2026-08-10 Mon 18:31]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 18:31]
+:CLOSE_REASON: Replaced source-count assertions with a hermetic execution matrix for the generated model-sync activation, including dry-run, every state/failure path, atomic publication, and signal cleanup; focused build, all-system evaluation, static checks, and independent rereview passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

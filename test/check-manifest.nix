@@ -55,7 +55,7 @@ let
       home-manager-release-skew = behavioral systems false;
       host-behavior = evaluationOnly systems;
       managed-agent-package-selection = evaluationOnly systems;
-      model-sync-state = evaluationOnly systems;
+      model-sync-state = behavioral systems false;
       obr-ownership = evaluationOnly systems;
       pi-blackhole-policy = behavioral systems false;
       syncthing = behavioral systems false;
