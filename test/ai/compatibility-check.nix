@@ -181,7 +181,10 @@ let
         declared = checks // {
           compatibility-contract =
             (import inputs.nixpkgs { inherit system; }).runCommand "ai-compatibility-contract" { }
-              "touch $out";
+              ''
+                test -x ${actual.packages.${system}.nix-scripts}/bin/upgrade-projects
+                touch $out
+              '';
         };
       in
       guard system declared

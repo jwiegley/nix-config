@@ -93,7 +93,8 @@ in
       substituteInPlace $out/bin/upgrade-projects \
         --replace-fail 'installed_python=' \
         "installed_python=${final.python3}/bin/python3"
-      $out/bin/upgrade-projects --retention-api-check
+      # Linux build sandboxes do not provide the script's /usr/bin/env shim.
+      "${final.bash}/bin/bash" "$out/bin/upgrade-projects" --retention-api-check
     '';
   };
 

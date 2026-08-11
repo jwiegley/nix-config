@@ -100,6 +100,7 @@ Discovered while implementing nix-tcz.63. The hardened _make_writable walk close
   }
 ]
 #+end_src
+
 * CANCELED [#C] This is a test issue
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -181,6 +182,7 @@ doc/CURRENT-WORK.md records an unresolved authority question: confirm that Clio 
   }
 ]
 #+end_src
+
 * DONE [#B] Strip ACLs and force 0600 on staged YubiKey keys
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -213,6 +215,40 @@ Partner observation .440Z: cp -p preserves Darwin ACLs and source owner bits, so
   }
 ]
 #+end_src
+
+* DONE [#B] Fix nix-scripts Linux retention check
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-m5c
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 20:41]
+:MODIFIED: [2026-08-10 Mon 20:44]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 20:44]
+:CLOSE_REASON: Invoke upgrade-projects retention validation with closure Bash, realize nix-scripts through the behavioral portable compatibility contract, and verify all supported systems plus the Andoria activation package without activation.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The nix-scripts package installPhase executes upgrade-projects through its /usr/bin/env bash shebang, which is unavailable in Linux Nix build sandboxes. Invoke the retention check with closure Bash and make the portable compatibility contract realize nix-scripts on every supported system.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-m5c",
+    "depends_on_id": "nix-aln",
+    "type": "discovered-from",
+    "created_at": "2026-08-11T03:41:00.136650Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Allow YubiKey restore when active key files are absent
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -245,6 +281,7 @@ Partner observation .441Z: restore is a recovery path but the transaction now re
   }
 ]
 #+end_src
+
 * DONE [#D] Restore the Syncthing.app runtime-ownership warning
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

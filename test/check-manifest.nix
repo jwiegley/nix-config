@@ -29,7 +29,7 @@ let
       agent-resources = behavioral systems true;
       agent-wrappers = behavioral systems true;
       build = behavioral systems false;
-      compatibility-contract = evaluationOnly systems;
+      compatibility-contract = behavioral systems false;
       format = behavioral systems false;
       fractal-smoke = behavioral systems false;
       lint = behavioral systems false;
