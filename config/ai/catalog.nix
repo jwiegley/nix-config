@@ -33,35 +33,14 @@ let
     "darwin"
     "linux"
   ];
-  profileRoots = {
-    clio-claude-personal = ".config/claude/personal";
-    clio-claude-positron = ".config/claude/positron";
-    clio-codex = ".config/codex";
-    clio-pi = ".config/pi/agent";
-    hera-claude-personal = ".config/claude/personal";
-    hera-claude-positron = ".config/claude/positron";
-    hera-codex = ".config/codex";
-    hera-droid = ".config/factory";
-    hera-pi = ".config/pi/agent";
-    hera-prime = ".prime/agent";
-    shared-work-claude-positron = ".claude";
-    shared-work-codex = ".codex";
-    shared-work-pi = ".config/pi/agent";
-    vps-claude-personal = ".claude";
-    vps-pi = ".config/pi/agent";
-    vulcan-claude-personal = ".claude";
-    vulcan-pi = ".config/pi/agent";
-  };
-
-  mkProfile = id: client: profileAudiences: host: platform: {
+  mkProfile = client: profileAudiences: host: platform: root: {
     inherit
-      id
       client
       host
       platform
+      root
       ;
     audiences = profileAudiences;
-    root = profileRoots.${id};
     # Provider name -> base URL of a local-inference endpoint this profile
     # routes models to, or null. Declared here so renderers and the composer
     # read a capability instead of re-deriving the fact from host or
@@ -82,44 +61,41 @@ let
     llama-swap = "http://localhost:8080/v1";
   };
 
-  catalogProfiles = {
-    clio-claude-personal = mkProfile "clio-claude-personal" "claude" [ "personal" ] "clio" "darwin";
-    clio-claude-positron = mkProfile "clio-claude-positron" "claude" [ "positron" ] "clio" "darwin";
-    clio-codex = mkProfile "clio-codex" "codex" [ "personal" ] "clio" "darwin" // {
+  profileSpecs = {
+    clio-claude-personal = mkProfile "claude" [ "personal" ] "clio" "darwin" ".config/claude/personal";
+    clio-claude-positron = mkProfile "claude" [ "positron" ] "clio" "darwin" ".config/claude/positron";
+    clio-codex = mkProfile "codex" [ "personal" ] "clio" "darwin" ".config/codex" // {
       localModelEndpoints = workstationLocalModelEndpoints;
     };
-    clio-pi = mkProfile "clio-pi" "pi" [ "personal" ] "clio" "darwin" // {
-      localModelEndpoints = workstationLocalModelEndpoints;
-    };
-
-    hera-claude-personal = mkProfile "hera-claude-personal" "claude" [ "personal" ] "hera" "darwin";
-    hera-claude-positron = mkProfile "hera-claude-positron" "claude" [ "positron" ] "hera" "darwin";
-    hera-codex = mkProfile "hera-codex" "codex" [ "personal" ] "hera" "darwin" // {
-      localModelEndpoints = workstationLocalModelEndpoints;
-    };
-    hera-droid = mkProfile "hera-droid" "droid" [ "personal" ] "hera" "darwin";
-    hera-pi = mkProfile "hera-pi" "pi" [ "personal" ] "hera" "darwin" // {
-      localModelEndpoints = workstationLocalModelEndpoints;
-    };
-    hera-prime = mkProfile "hera-prime" "prime" [ "personal" ] "hera" "darwin" // {
+    clio-pi = mkProfile "pi" [ "personal" ] "clio" "darwin" ".config/pi/agent" // {
       localModelEndpoints = workstationLocalModelEndpoints;
     };
 
-    shared-work-claude-positron = mkProfile "shared-work-claude-positron" "claude" [
-      "positron"
-    ] "shared-work" "linux";
-    shared-work-codex = mkProfile "shared-work-codex" "codex" [
+    hera-claude-personal = mkProfile "claude" [ "personal" ] "hera" "darwin" ".config/claude/personal";
+    hera-claude-positron = mkProfile "claude" [ "positron" ] "hera" "darwin" ".config/claude/positron";
+    hera-codex = mkProfile "codex" [ "personal" ] "hera" "darwin" ".config/codex" // {
+      localModelEndpoints = workstationLocalModelEndpoints;
+    };
+    hera-droid = mkProfile "droid" [ "personal" ] "hera" "darwin" ".config/factory";
+    hera-pi = mkProfile "pi" [ "personal" ] "hera" "darwin" ".config/pi/agent" // {
+      localModelEndpoints = workstationLocalModelEndpoints;
+    };
+    hera-prime = mkProfile "prime" [ "personal" ] "hera" "darwin" ".prime/agent" // {
+      localModelEndpoints = workstationLocalModelEndpoints;
+    };
+
+    shared-work-claude-positron = mkProfile "claude" [ "positron" ] "shared-work" "linux" ".claude";
+    shared-work-codex = mkProfile "codex" [
       "personal"
       "positron"
-    ] "shared-work" "linux";
-    shared-work-pi = mkProfile "shared-work-pi" "pi" [ "personal" ] "shared-work" "linux";
-    vps-claude-personal = mkProfile "vps-claude-personal" "claude" [ "personal" ] "vps" "linux";
-    vps-pi = mkProfile "vps-pi" "pi" [ "personal" ] "vps" "linux";
-    vulcan-claude-personal = mkProfile "vulcan-claude-personal" "claude" [
-      "personal"
-    ] "vulcan" "linux";
-    vulcan-pi = mkProfile "vulcan-pi" "pi" [ "personal" ] "vulcan" "linux";
+    ] "shared-work" "linux" ".codex";
+    shared-work-pi = mkProfile "pi" [ "personal" ] "shared-work" "linux" ".config/pi/agent";
+    vps-claude-personal = mkProfile "claude" [ "personal" ] "vps" "linux" ".claude";
+    vps-pi = mkProfile "pi" [ "personal" ] "vps" "linux" ".config/pi/agent";
+    vulcan-claude-personal = mkProfile "claude" [ "personal" ] "vulcan" "linux" ".claude";
+    vulcan-pi = mkProfile "pi" [ "personal" ] "vulcan" "linux" ".config/pi/agent";
   };
+  catalogProfiles = lib.mapAttrs (id: profile: profile // { inherit id; }) profileSpecs;
 
   matchesAny = actual: wanted: wanted == null || lib.any (value: builtins.elem value actual) wanted;
 
@@ -147,140 +123,115 @@ let
       lib.filterAttrs (_: item: matches profile (item.selectors or { })) itemSet
     );
 
-  agentMetadata = {
+  agentMetadata = lib.mapAttrs (name: metadata: metadata // { inherit name; }) {
     "bash-reviewer" = {
       "description" =
         "Expert Bash/Shell script reviewer specializing in quoting correctness, POSIX compliance, security, and robustness patterns. Use when reviewing shell scripts or shell fragments embedded in CI configs, Makefiles, or installers.";
-      "name" = "bash-reviewer";
       "tools" = "Read, Grep, Glob, Bash";
     };
     "coq-reviewer" = {
       "description" =
         "Expert Coq/Rocq code reviewer specializing in proof soundness, tactic hygiene, termination arguments, and proof engineering patterns. Use when reviewing Coq/Rocq (.v) proof developments.";
-      "name" = "coq-reviewer";
       "tools" = "Read, Grep, Glob, Bash";
     };
     "cpp-pro" = {
       "description" =
         "Write idiomatic C++ with modern features, RAII, smart pointers, STL algorithms. Handles templates, move semantics, performance optimization. Use PROACTIVELY for C++ refactoring, memory safety, complex C++ patterns.";
-      "name" = "cpp-pro";
     };
     "cpp-reviewer" = {
       "description" =
         "Expert C++ code reviewer specializing in memory safety, undefined behavior, modern C++ idioms, and concurrency. Use when reviewing C or C++ source and header changes.";
-      "name" = "cpp-reviewer";
       "tools" = "Read, Grep, Glob, Bash";
     };
     "elisp-reviewer" = {
       "description" =
         "Expert Emacs Lisp code reviewer specializing in lexical binding, package conventions, macro hygiene, and performance. Use when reviewing Emacs Lisp (.el) code or Emacs configurations.";
-      "name" = "elisp-reviewer";
       "tools" = "Read, Grep, Glob, Bash";
     };
     "emacs-lisp-pro" = {
       "description" =
         "Expert in Emacs Lisp language, editor environment, module system. Use PROACTIVELY for Emacs Lisp development, package management with use-package, Emacs Lisp expression development.";
-      "name" = "emacs-lisp-pro";
     };
     "fess-auditor" = {
       "description" =
         "Runs the fess audit in a sub-agent and reports the evidence-backed results to the main session. Use after implementation or verification work when the main agent needs an honesty check.";
-      "name" = "fess-auditor";
     };
     "haskell-pro" = {
       "description" =
         "Expert in Haskell, type-level programming, performance tuning, concurrency, and the Cabal/Stack/Nix build toolchain. Use PROACTIVELY for Haskell development, debugging type errors, diagnosing space leaks, and build configuration.";
-      "name" = "haskell-pro";
     };
     "haskell-reviewer" = {
       "description" =
         "Expert Haskell code reviewer specializing in laziness pitfalls, type safety, space leaks, and idiomatic functional patterns. Use when reviewing Haskell (.hs/.lhs) changes.";
-      "name" = "haskell-reviewer";
       "tools" = "Read, Grep, Glob, Bash";
     };
     "nix-pro" = {
       "description" =
         "Expert in NixOS configurations, Nix language, flakes, module system. Masters declarative system management, derivations, reproducible builds. Use PROACTIVELY for NixOS system configuration, package management, Nix expression development.";
-      "name" = "nix-pro";
     };
     "nix-reviewer" = {
       "description" =
         "Expert Nix code reviewer specializing in reproducibility, flake hygiene, NixOS module design, and security. Use when reviewing Nix expressions, flakes, or NixOS/Home Manager modules.";
-      "name" = "nix-reviewer";
       "tools" = "Read, Grep, Glob, Bash";
     };
     "perf-reviewer" = {
       "description" =
         "Cross-language performance reviewer specializing in algorithmic complexity, resource leaks, allocation patterns, and system-level bottlenecks. Use for a cross-cutting performance pass over a changeset, after or alongside language-specific review.";
-      "name" = "perf-reviewer";
       "tools" = "Read, Grep, Glob, Bash";
     };
     "persian-translator" = {
       "description" = "Translate English language text into high quality, accurate Persian (Farsi) text.";
-      "name" = "persian-translator";
     };
     "prd-architect" = {
       "description" =
         "Use this agent when you need to create, update, or refine a Product Requirements Document (PRD) for use with Task Master. This includes developing new PRDs, enhancing existing documents, and capturing significant architectural decisions. Use PROACTIVELY when a user describes a new project or feature set without a formal PRD, when technical decisions are being made that should be documented in requirements, when the user mentions uncertainty about project structure, testing, or architecture, or when an existing PRD appears incomplete or lacks critical sections.";
-      "name" = "prd-architect";
     };
     "prompt-engineer" = {
       "description" =
         "Optimizes prompts for LLMs and AI systems. Use when building AI features, improving agent performance, crafting system prompts. Expert in prompt patterns and techniques.";
-      "name" = "prompt-engineer";
     };
     "python-pro" = {
       "description" =
         "Write idiomatic Python with advanced features like decorators, generators, async/await. Optimizes performance, implements design patterns, ensures comprehensive testing. Use PROACTIVELY for Python refactoring, optimization, complex Python features.";
-      "name" = "python-pro";
     };
     "python-reviewer" = {
       "description" =
         "Expert Python code reviewer specializing in type safety, security, common pitfalls, and idiomatic patterns. Use when reviewing Python (.py/.pyi) changes.";
-      "name" = "python-reviewer";
       "tools" = "Read, Grep, Glob, Bash";
     };
     "rocq-pro" = {
       "description" =
         "Write correct Rocq code establishing proofs for theorems encoded as type specifications.";
-      "name" = "rocq-pro";
     };
     "rust-pro" = {
       "description" =
         "Write idiomatic Rust with ownership patterns, lifetimes, trait implementations. Masters async/await, safe concurrency, zero-cost abstractions. Use PROACTIVELY for Rust memory safety, performance optimization, systems programming.";
-      "name" = "rust-pro";
     };
     "rust-reviewer" = {
       "description" =
         "Expert Rust code reviewer specializing in ownership, unsafe code, error handling, and idiomatic patterns. Use when reviewing Rust (.rs) changes.";
-      "name" = "rust-reviewer";
       "tools" = "Read, Grep, Glob, Bash";
     };
     "security-reviewer" = {
       "description" =
         "Cross-language security reviewer specializing in vulnerability detection, authentication, data exposure, and supply chain security. Use for a cross-cutting security pass over any changeset, especially code handling user input, auth, secrets, or network boundaries.";
-      "name" = "security-reviewer";
       "tools" = "Read, Grep, Glob, Bash";
     };
     "sql-pro" = {
       "description" =
         "Write complex SQL queries, optimize execution plans, design normalized schemas. Masters CTEs, window functions, stored procedures. Use PROACTIVELY for query optimization, complex joins, database design.";
-      "name" = "sql-pro";
     };
     "task-breakdown" = {
       "description" =
         "Expert in decomposing Org-mode tasks into complete, ordered, actionable subtasks with valid properties drawers. Use PROACTIVELY when asked to break down, decompose, or plan an Org-mode TODO item.";
-      "name" = "task-breakdown";
     };
     "typescript-pro" = {
       "description" =
         "Expert in TypeScript specializing in type safety, monorepo architecture, advanced types, modern patterns. Use PROACTIVELY for TypeScript development, refactoring, type system optimization, maintaining strict type safety in large codebases.";
-      "name" = "typescript-pro";
     };
     "typescript-reviewer" = {
       "description" =
         "Expert TypeScript code reviewer specializing in type safety, async correctness, security, and idiomatic patterns. Use when reviewing TypeScript or TSX changes.";
-      "name" = "typescript-reviewer";
       "tools" = "Read, Grep, Glob, Bash";
     };
   };
@@ -1431,7 +1382,7 @@ let
           && builtins.all (audience: builtins.elem audience audiences) profile.audiences
           && builtins.elem profile.host hosts
           && builtins.elem profile.platform platforms
-          && profile.root == profileRoots.${id}
+          && profile.root == profileSpecs.${id}.root
           && (
             profile.localModelEndpoints == null
             || (

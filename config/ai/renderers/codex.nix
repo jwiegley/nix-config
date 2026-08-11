@@ -38,7 +38,7 @@ let
   managedModelCatalog = pkgs.runCommand "codex-nix-managed-model-catalog.json" { } ''
     cp ${codexSourceCatalog} "$out"
   '';
-  inherit (import ./render-lib.nix { inherit lib; }) isTypedEnv;
+  inherit (import ./render-lib.nix { inherit lib; }) isTypedEnv renderMarkdownText;
 
   renderMcpServer =
     server:
@@ -111,15 +111,13 @@ let
 
   projectionText =
     kind: name: metadata: source:
-    "---\n"
-    + "name: ${builtins.toJSON metadata.name}\n"
-    + "description: ${builtins.toJSON metadata.description}\n"
-    + "---\n"
-    + "Use this skill for the managed ${kind} '${name}'.\n\n"
-    + "Treat the user's current request as the arguments for the prompt below. "
-    + "If the prompt contains `$ARGUMENTS`, interpret it as those arguments.\n\n"
-    + "Prompt:\n\n"
-    + builtins.readFile source;
+    renderMarkdownText metadata (
+      "Use this skill for the managed ${kind} '${name}'.\n\n"
+      + "Treat the user's current request as the arguments for the prompt below. "
+      + "If the prompt contains `$ARGUMENTS`, interpret it as those arguments.\n\n"
+      + "Prompt:\n\n"
+      + builtins.readFile source
+    );
 
   explicitOnlyPolicy = pkgs.writeTextDir "agents/openai.yaml" ''
     policy:

@@ -17,6 +17,8 @@ let
     inherit lib;
     resources = "/catalog-agent-resources";
   };
+  renderLib = import "${src}/config/ai/renderers/render-lib.nix" { inherit lib; };
+  inherit (renderLib) renderMarkdownText;
   reject = value: !(builtins.tryEval (builtins.deepSeq value true)).success;
   withMcpServers = mcpServers: catalog.items // { inherit mcpServers; };
   withoutFessCommand = catalog.items // {
@@ -40,6 +42,7 @@ let
     lib.findFirst (profile: profile.client == client) (throw "${client} profile missing") profiles;
   claudeProfiles = lib.filter (profile: profile.client == "claude") profiles;
   piProfiles = lib.filter (profile: profile.client == "pi") profiles;
+  claudeProfile = profileFor "claude";
   codexProfile = profileFor "codex";
   piProfile = profileFor "pi";
   droidProfile = profileFor "droid";
@@ -73,16 +76,60 @@ let
     };
   };
   selectFor = profile: lib.mapAttrs (_: itemSet: catalog.select profile itemSet) catalog.items;
-  renderFor =
-    renderer: profile: homeDirectory:
-    renderer {
-      inherit profile homeDirectory;
+  adversarialName = "metadata-probe";
+  adversarialDescription = ''
+    Colon: value # not a comment
+    --- &anchor *alias
+    Quotes: "double" and 'single'; scalars: null true 2026-08-10
+    Unicode: café 模型; JSON: {"nested":[1,2]}
+  '';
+  adversarialAgent = catalog.items.agents.fess-auditor // {
+    metadata = {
+      name = adversarialName;
+      description = adversarialDescription;
+    };
+    selectors = { };
+  };
+  adversarialCommand = catalog.items.commands.assess // {
+    metadata.description = adversarialDescription;
+    selectors = { };
+  };
+  selectAdversarialFor =
+    profile:
+    let
       selected = selectFor profile;
+    in
+    selected
+    // {
+      agents = {
+        metadata-probe = adversarialAgent;
+      };
+      commands = {
+        metadata-probe = adversarialCommand;
+      };
+      prompts = { };
+      skills = { };
+    };
+  renderSelectedFor =
+    renderer: profile: homeDirectory: selected:
+    renderer {
+      inherit
+        profile
+        homeDirectory
+        selected
+        ;
       xdgConfigHome = "${homeDirectory}/.config";
     };
-  codexRendered = renderFor (import "${src}/config/ai/renderers/codex.nix" {
+  renderFor =
+    renderer: profile: homeDirectory:
+    renderSelectedFor renderer profile homeDirectory (selectFor profile);
+  codexRenderer = import "${src}/config/ai/renderers/codex.nix" {
     inherit lib pkgs llmAgents;
-  }) codexProfile "/Users/test";
+  };
+  codexRendered = renderFor codexRenderer codexProfile "/Users/test";
+  codexAdversarialRendered = renderSelectedFor codexRenderer codexProfile "/Users/test" (
+    selectAdversarialFor codexProfile
+  );
   claudeRenderer = import "${src}/config/ai/renderers/claude.nix" {
     inherit lib;
     pkgs = rendererPkgs;
@@ -101,6 +148,12 @@ let
       };
     };
   claudeRenderings = map renderClaude claudeProfiles;
+  claudeAdversarialRendered = claudeRenderer {
+    profile = claudeProfile;
+    selected = selectAdversarialFor claudeProfile;
+    homeDirectory = "/Users/test";
+    xdgConfigHome = "/Users/test/.config";
+  };
   piRenderer = import "${src}/config/ai/renderers/pi.nix" {
     inherit lib;
     pkgs = rendererPkgs;
@@ -122,21 +175,30 @@ let
       };
     };
   piRenderings = map renderPi piProfiles;
-  droidRendered =
-    (import "${src}/config/ai/renderers/droid.nix" {
-      inherit lib;
-      pkgs = rendererPkgs;
-    })
-      {
-        profile = droidProfile;
-        selected = selectFor droidProfile;
-        homeDirectory = "/Users/test";
-        xdgConfigHome = "/Users/test/.config";
-      };
-  primeRendered = renderFor (import "${src}/config/ai/renderers/prime.nix" {
+  piAdversarialRendered = piRenderer {
+    profile = piProfile;
+    selected = selectAdversarialFor piProfile;
+    homeDirectory = "/Users/test";
+    xdgConfigHome = "/Users/test/.config";
+    passwordStoreDir = "/Users/test/doc/.password-store";
+    gnupgHome = "/Users/test/.config/gnupg";
+  };
+  droidRenderer = import "${src}/config/ai/renderers/droid.nix" {
     inherit lib;
     pkgs = rendererPkgs;
-  }) primeProfile "/Users/test";
+  };
+  droidRendered = renderFor droidRenderer droidProfile "/Users/test";
+  droidAdversarialRendered = renderSelectedFor droidRenderer droidProfile "/Users/test" (
+    selectAdversarialFor droidProfile
+  );
+  primeRenderer = import "${src}/config/ai/renderers/prime.nix" {
+    inherit lib;
+    pkgs = rendererPkgs;
+  };
+  primeRendered = renderFor primeRenderer primeProfile "/Users/test";
+  primeAdversarialRendered = renderSelectedFor primeRenderer primeProfile "/Users/test" (
+    selectAdversarialFor primeProfile
+  );
   fessSource = catalog.items.agents.fess-auditor.source;
   fessText = builtins.readFile fessSource;
   hasFessRubric = text: lib.hasInfix "**Fallback smuggling**" text;
@@ -158,8 +220,78 @@ let
       command = "${primeProfile.root}/prompts/fess.md";
     };
   };
+  frontmatterCase = name: document: expectedMetadata: {
+    inherit name document;
+    expected = pkgs.writeText "${name}-frontmatter.json" (builtins.toJSON expectedMetadata);
+    expectedPrefix = pkgs.writeText "${name}-frontmatter-prefix" (
+      renderMarkdownText expectedMetadata ""
+    );
+  };
+  frontmatterTextCase =
+    name: text: expectedMetadata:
+    frontmatterCase name (pkgs.writeText "${name}-frontmatter.md" text) expectedMetadata;
+  frontmatterCases = [
+    (frontmatterTextCase "claude-agent"
+      claudeAdversarialRendered.files."${claudeProfile.root}/agents/${adversarialName}.md".text
+      adversarialAgent.metadata
+    )
+    (frontmatterCase "codex-command"
+      "${codexAdversarialRendered.files.".agents/skills/command-${adversarialName}".source}/SKILL.md"
+      {
+        name = "command-${adversarialName}";
+        description = adversarialDescription;
+      }
+    )
+    (frontmatterTextCase "droid-agent"
+      droidAdversarialRendered.files."${droidProfile.root}/droids/${adversarialName}.md".text
+      adversarialAgent.metadata
+    )
+    (frontmatterTextCase "pi-agent"
+      piAdversarialRendered.files.".config/pi/agent/agents/${adversarialName}.md".text
+      adversarialAgent.metadata
+    )
+    (frontmatterTextCase "prime-agent"
+      primeAdversarialRendered.files."${primeProfile.root}/prompts/agent-${adversarialName}.md".text
+      {
+        description = adversarialDescription;
+        argument-hint = "[task]";
+      }
+    )
+  ];
+  frontmatterPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
+  frontmatterChecker = pkgs.writeText "check-frontmatter.py" ''
+    import json
+    import pathlib
+    import sys
+
+    import yaml
+
+    case, document_name, expected_name, expected_prefix_name = sys.argv[1:]
+    document = pathlib.Path(document_name).read_text(encoding="utf-8")
+    expected_prefix = pathlib.Path(expected_prefix_name).read_text(encoding="utf-8")
+    if not document.startswith(expected_prefix):
+        raise SystemExit(f"{case}: document does not use the shared frontmatter renderer")
+    lines = document.splitlines()
+    if not lines or lines[0] != "---":
+        raise SystemExit(f"{case}: missing opening frontmatter delimiter")
+    try:
+        end = lines.index("---", 1)
+    except ValueError as error:
+        raise SystemExit(f"{case}: missing closing frontmatter delimiter") from error
+    actual = yaml.safe_load("\n".join(lines[1:end]))
+    with open(expected_name, encoding="utf-8") as expected_file:
+        expected = json.load(expected_file)
+    if actual != expected:
+        raise SystemExit(f"{case}: parsed metadata differs: {actual!r} != {expected!r}")
+  '';
 in
 assert catalog.validate { };
+assert builtins.all (name: catalog.profiles.${name}.id == name) (
+  builtins.attrNames catalog.profiles
+);
+assert builtins.all (name: catalog.items.agents.${name}.metadata.name == name) (
+  builtins.attrNames catalog.items.agents
+);
 assert !(builtins.pathExists "${src}/config/ai/commands/fess.md");
 assert catalog.items.commands.fess.source == fessSource;
 assert builtins.all (invocation: lib.hasInfix invocation fessText) [
@@ -328,6 +460,18 @@ assert builtins.all reject [
   })
 ];
 pkgs.runCommand "ai-catalog-transport" { } ''
+  ${lib.concatMapStringsSep "\n" (
+    case:
+    "${frontmatterPython}/bin/python ${frontmatterChecker} ${
+      lib.escapeShellArgs [
+        case.name
+        (toString case.document)
+        (toString case.expected)
+        (toString case.expectedPrefix)
+      ]
+    }"
+  ) frontmatterCases}
+
   grep -F '**Fallback smuggling**' ${codexRendered.files.${fessPaths.codex.agent}.source} >/dev/null
   grep -F '**Fallback smuggling**' ${
     codexRendered.files.${fessPaths.codex.command}.source

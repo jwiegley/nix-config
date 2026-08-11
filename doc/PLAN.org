@@ -1962,15 +1962,17 @@ test/bin/publish-slow-test.py:21-71 and gates-slow-test.py:26-67 duplicate clean
 ]
 #+end_src
 
-* DOING [#D] Derive catalog IDs, roots, and agent names from keys    :ai:simplification:
+* DONE [#D] Derive catalog IDs, roots, and agent names from keys    :ai:simplification:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.55
 :LABELS: ["ai","heavy-review","simplification"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 17:47]
+:MODIFIED: [2026-08-10 Mon 18:45]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 18:45]
+:CLOSE_REASON: Derived profile IDs and agent metadata names from their catalog attrset keys, with validation preserving key/value identity.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2414,15 +2416,17 @@ validated-code-review promises named and different models, but its non-Claude cl
 ]
 #+end_src
 
-* DOING [#D] Use the shared frontmatter renderer for Codex resources    :architecture:comments:
+* DONE [#D] Use the shared frontmatter renderer for Codex resources    :architecture:comments:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.68
 :LABELS: ["architecture","comments","heavy-review"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 17:47]
+:MODIFIED: [2026-08-10 Mon 18:45]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 18:45]
+:CLOSE_REASON: Routed Codex agent and command frontmatter through the shared renderer and added cross-client adversarial exact-prefix plus YAML semantic coverage.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
