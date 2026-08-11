@@ -87,7 +87,7 @@ in
               # Hera-only sshd Match below permits local forwarding only; this key then
               # narrows that capability to Andoria. /usr/bin/false closes session/exec
               # channels. No shell, remote forward, pty, agent, or X11.
-              ''from="192.168.1.2",restrict,command="/usr/bin/false",port-forwarding,permitopen="andoria-08:22" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID/5S98ifv/slBhGzSLMK+/3JAHNzzglOfau6RlqKeYs johnw@vulcan''
+              ''from="192.168.1.2",restrict,port-forwarding,permitopen="andoria-08:22",command="/usr/bin/false" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID/5S98ifv/slBhGzSLMK+/3JAHNzzglOfau6RlqKeYs johnw@vulcan''
             ]
             ++ [
               # drafts-mcp bridge (vulcan drafts-mcp.service) — pinned to exec
