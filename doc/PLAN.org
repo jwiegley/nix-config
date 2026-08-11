@@ -1295,15 +1295,17 @@ agent-deck-runtime-lifecycle.patch is about 45,582 lines and pi-bounded-session-
 ]
 #+end_src
 
-* DOING [#B] Encode make upgrade ordering in the dependency graph    :concurrency:make:
+* DONE [#B] Encode make upgrade ordering in the dependency graph    :concurrency:make:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.38
 :LABELS: ["concurrency","heavy-review","make"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 17:47]
+:MODIFIED: [2026-08-10 Mon 18:24]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 18:24]
+:CLOSE_REASON: Serialized upgrade by invoking upgrade-tasks only after successful update; MAKEFLAGS=-j8 success and both failure paths are behaviorally pinned, with focused/full tests and independent review green.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1326,15 +1328,17 @@ Makefile:171-193 declares update and upgrade-tasks as unordered prerequisites, s
 ]
 #+end_src
 
-* DOING [#C] Remove or preflight partial clean and purge workflows    :make:safety:
+* DONE [#C] Remove or preflight partial clean and purge workflows    :make:safety:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.39
 :LABELS: ["heavy-review","make","safety"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 17:47]
+:MODIFIED: [2026-08-10 Mon 18:24]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 18:24]
+:CLOSE_REASON: Removed the unsafe clean/purge workflows, made scour phony, and fail-closed on non-absolute HOME with exact quoted deletion operands; focused/full tests, Pyright, and independent review passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1557,15 +1561,17 @@ bin/README.md:343 says make test builds four principal checks, while Makefile:53
 ]
 #+end_src
 
-* DOING [#C] Separate read-only make check from store repair    :make:nix:
+* DONE [#C] Separate read-only make check from store repair    :make:nix:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.45
 :LABELS: ["heavy-review","make","nix"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 17:47]
+:MODIFIED: [2026-08-10 Mon 18:24]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 18:24]
+:CLOSE_REASON: Made make check read-only and moved repair behind the explicit repair-store target; exact argv regressions, focused/full tests, and independent review passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

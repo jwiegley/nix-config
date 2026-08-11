@@ -395,20 +395,19 @@ evaluate Nix. It is not a standalone command.
 | `update` | Run the complete pull, update, validate, sign, switch, and publish transaction. |
 | `update-projects` | Run `nix flake update` in every project listed by `~/.config/projects`; does not commit or publish. Each command runs in its checked project directory; missing paths and command failures are reported across the full list before the target exits nonzero. |
 | `upgrade-tasks` | Run `travel-ready`, then upgrade Homebrew packages. `travel-ready` checks each project directory and aggregates project failures; any failure prevents the Homebrew upgrade. |
-| `upgrade` | Under serial Make, run `update` and then `upgrade-tasks`; the prerequisites are not explicitly ordered and may run concurrently under `make -j` or inherited parallel `MAKEFLAGS`. Do not invoke this target in parallel. |
+| `upgrade` | Run `update`, then invoke `upgrade-tasks` only after the update transaction succeeds. The ordering is preserved under parallel or inherited Make flags. |
 | `changes` | Run an external `changes` command across configured and fixed repositories. Configured projects run in checked directories and aggregate failures across the full list; fixed repositories also require a successful `cd` before invoking `changes`. |
 | `copy` | Copy the current profile closure and per-project direnv build inputs to each host in `REMOTES` via `nix copy`. Project commands run in checked directories, and profile/project failures are aggregated across all hosts before the target exits nonzero. |
-| `check` | Run `nix store verify --no-trust --repair --all`; it disables trust verification and may repair, and therefore mutate, store paths. |
+| `check` | Run read-only verification of every Nix store path with trust verification disabled. |
+| `repair-store` | Explicitly verify and repair every Nix store path with trust verification disabled. This may mutate store paths. |
 | `sizes` | Report the filesystem containing `/nix`. |
-| `clean` | Intended to retain `MAX_AGE` user/system generations and collect paths older than `MAX_AGE` days. The system-profile deletion is unsudoed and can fail after partially deleting user generations but before garbage collection; do not use until repaired. |
-| `scour` | Delete language and package-manager caches. It is not declared phony; a filesystem entry named `scour` suppresses the recipe. |
-| `purge` | Intended to depend on `scour`, retain one generation, and delete old paths. It inherits the unsudoed system-profile failure and can stop after partial deletion; a filesystem entry named `scour` can also suppress cache deletion. Do not use until repaired. |
+| `scour` | Delete language and package-manager caches below an absolute, nonempty shell `HOME`. It is phony, so a filesystem entry named `scour` cannot suppress the recipe. |
 | `sign` | Sign every store path with the configured private Nix signing key. |
 | `format` | Rewrite tracked Nix and shell files through the quality authority. |
 | `lint` | Run the entire default quality suite, including full Python tests; it is broader than its name suggests. |
 | `travel-ready` | Delete both `.envrc` and `.envrc.cache`, invoke an external `clean`, and regenerate configured project environments. Each sequence runs only in its checked project directory, and failures are reported across the full list before the target exits nonzero. |
 
-`clean`, `scour`, `purge`, `sign`, `travel-ready`, and
+`repair-store`, `scour`, `sign`, `travel-ready`, and
 all activation targets require deliberate operator review. Their names do not
 reduce their effects.
 

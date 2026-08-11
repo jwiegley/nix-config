@@ -1,7 +1,6 @@
 HOSTNAME   ?= $(shell myhost)
 REMOTES	   = clio
 GIT_REMOTE = jwiegley
-MAX_AGE	   = 28
 NIX_CONF   = $(HOME)/src/nix
 SYSTEM     ?= $(shell nix eval --impure --raw --expr builtins.currentSystem)
 .DEFAULT_GOAL := help
@@ -13,7 +12,7 @@ NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
 endif
 
 .PHONY: help all verify-inputs lock-local require-darwin-host build switch update update-projects upgrade-tasks upgrade \
-	changes copy check sizes clean purge sign travel-ready test expensive tools repl format lint
+	changes copy check repair-store sizes scour sign travel-ready test expensive tools repl format lint
 
 # These maintenance recipes use Bash functions, strict mode, and arrays.
 verify-inputs update-projects upgrade-tasks changes copy travel-ready: SHELL := bash
@@ -80,6 +79,7 @@ help:
 	  'Non-mutating targets:' \
 	  '  help             Show this help (default)' \
 	  '  build            Build the current Darwin system without switching' \
+	  '  check            Verify every Nix store path without repairing it' \
 	  '  expensive        Run the low-frequency exhaustive assurance tier' \
 	  '  test             Build the core repository contracts' \
 	  '  verify-inputs    Check local flake inputs for NAR hazards' \
@@ -87,10 +87,10 @@ help:
 	  'Mutating targets (explicit only):' \
 	  '  format           Rewrite tracked Nix and shell sources' \
 	  '  lint             Run every quality suite (test/bin/quality)' \
+	  '  repair-store     Verify and repair every Nix store path' \
 	  '  switch           Re-lock local inputs and switch nix-darwin' \
 	  '  update           Update all locks/pins, switch, commit, and push' \
-	  '  upgrade          Update, switch, and run upgrade tasks' \
-	  '  clean / purge    Delete old Nix generations and store paths'
+	  '  upgrade          Update, switch, and run upgrade tasks'
 
 test:
 	test/bin/quality --python-tier full python-test
@@ -257,7 +257,8 @@ upgrade-tasks: travel-ready
 	eval "$$("$$brew" shellenv)";					\
 	brew upgrade --greedy --yes
 
-upgrade: update upgrade-tasks
+upgrade: update
+	@$(MAKE) --no-print-directory upgrade-tasks
 
 changes:
 	@if [[ -z "$${HOME:-}" ]]; then \
@@ -334,50 +335,36 @@ copy:
 
 ########################################################################
 
-define delete-generations
-	nix-env $(1) --delete-generations			\
-	    $(shell nix-env $(1)				\
-		--list-generations | field 1 | head -n -$(2))
-endef
-
-define delete-generations-all
-	$(call delete-generations,,$(1))
-	$(call delete-generations,-p /nix/var/nix/profiles/system,$(1))
-endef
-
 check:
+	$(call announce,nix store verify --no-trust --all)
+	@nix store verify --no-trust --all
+
+repair-store:
 	$(call announce,nix store verify --no-trust --repair --all)
 	@nix store verify --no-trust --repair --all
 
 sizes:
 	df -H /nix 2>&1 | grep /dev
 
-clean:
-	$(call delete-generations-all,$(MAX_AGE))
-	nix-collect-garbage --delete-older-than $(MAX_AGE)d
-	sudo nix-collect-garbage --delete-older-than $(MAX_AGE)d
-
 scour:
-	rm -fr $(HOME)/Library/Caches/pip
-	rm -fr $(HOME)/.cache/bun
-	rm -fr $(HOME)/.cache/cabal
-	rm -fr $(HOME)/.cache/cargo
-	rm -fr $(HOME)/.cache/ccache
-	rm -fr $(HOME)/.cache/ghcide
-	rm -fr $(HOME)/.cache/hie-bios
-	rm -fr $(HOME)/.cache/nix
-	rm -fr $(HOME)/.cache/npm
-	rm -fr $(HOME)/.cache/pnpm
-	rm -fr $(HOME)/.cache/rustup
-	rm -fr $(HOME)/.cache/swiftpm
-	rm -fr $(HOME)/.cache/uv
-	rm -fr $(HOME)/.cache/.bun
-
-purge: scour
-	$(call delete-generations-all,1)
-	nix-collect-garbage --delete-old
-	sudo nix-collect-garbage --delete-old
-
+	@case "$${HOME:-}" in \
+	/*) ;; \
+	*) printf 'Makefile: HOME must be an absolute path\n' >&2; exit 1 ;; \
+	esac
+	rm -fr -- "$${HOME}/Library/Caches/pip"
+	rm -fr -- "$${HOME}/.cache/bun"
+	rm -fr -- "$${HOME}/.cache/cabal"
+	rm -fr -- "$${HOME}/.cache/cargo"
+	rm -fr -- "$${HOME}/.cache/ccache"
+	rm -fr -- "$${HOME}/.cache/ghcide"
+	rm -fr -- "$${HOME}/.cache/hie-bios"
+	rm -fr -- "$${HOME}/.cache/nix"
+	rm -fr -- "$${HOME}/.cache/npm"
+	rm -fr -- "$${HOME}/.cache/pnpm"
+	rm -fr -- "$${HOME}/.cache/rustup"
+	rm -fr -- "$${HOME}/.cache/swiftpm"
+	rm -fr -- "$${HOME}/.cache/uv"
+	rm -fr -- "$${HOME}/.cache/.bun"
 sign:
 	$(call announce,nix store sign -k "<key>" --all)
 	@nix store sign -k $(HOME)/.config/gnupg/nix-signing-key.sec --all
