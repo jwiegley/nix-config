@@ -377,15 +377,17 @@ config/ai/model-sync.nix:39-71,126-176 maintains a partial digest separately fro
 ]
 #+end_src
 
-* DOING [#B] Pin all third-party CI actions to full revisions    :ci:security:validated:
+* DONE [#B] Pin all third-party CI actions to full revisions    :ci:security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.12
 :LABELS: ["ci","heavy-review","security","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 15:50]
+:MODIFIED: [2026-08-10 Mon 17:11]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 17:11]
+:CLOSE_REASON: Pinned every external GitHub Action reference to a full reviewed commit SHA and added a managed-yq workflow parser that recursively rejects mutable, dynamic, malformed, and suffixed action references.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
