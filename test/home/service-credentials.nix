@@ -1721,16 +1721,26 @@ let
             )
     encoded_variants = set()
     unpadded_encoded_variants = set()
+    bounded_encoded_variants = set()
+    bounded_unpadded_encoded_variants = set()
     for value in raw_variants:
         standard = base64.b64encode(value)
         urlsafe = base64.urlsafe_b64encode(value)
-        encoded_variants.update({
+        target_encoded_variants = (
+            bounded_encoded_variants if len(value) < 8 else encoded_variants
+        )
+        target_unpadded_encoded_variants = (
+            bounded_unpadded_encoded_variants
+            if len(value) < 8
+            else unpadded_encoded_variants
+        )
+        target_encoded_variants.update({
             value.hex().encode(),
             value.hex().upper().encode(),
             standard,
             urlsafe,
         })
-        unpadded_encoded_variants.update({
+        target_unpadded_encoded_variants.update({
             (standard.rstrip(b"="), standard),
             (urlsafe.rstrip(b"="), urlsafe),
         })
@@ -1767,6 +1777,15 @@ let
     )
     encoded_right_token_bytes = encoded_left_token_bytes | {ord("=")}
 
+    def has_token_boundaries(haystack, index, end):
+        return (
+            (index == 0 or haystack[index - 1] not in encoded_left_token_bytes)
+            and (
+                end == len(haystack)
+                or haystack[end] not in encoded_right_token_bytes
+            )
+        )
+
     def contains_bounded(haystack, needle):
         offset = 0
         while True:
@@ -1774,13 +1793,7 @@ let
             if index < 0:
                 return False
             end = index + len(needle)
-            if (
-                (index == 0 or haystack[index - 1] not in encoded_left_token_bytes)
-                and (
-                    end == len(haystack)
-                    or haystack[end] not in encoded_right_token_bytes
-                )
-            ):
+            if has_token_boundaries(haystack, index, end):
                 return True
             offset = index + 1
 
@@ -1791,8 +1804,22 @@ let
             if index < 0:
                 return False
             # The padded branch owns only the exact padded occurrence. Any
-            # other suffix retains the original substring-match behavior.
+            # other suffix retains the long-value substring-match behavior.
             if not haystack.startswith(padded, index):
+                return True
+            offset = index + 1
+
+    def contains_bounded_unpadded_encoding(haystack, needle, padded):
+        offset = 0
+        while True:
+            index = haystack.find(needle, offset)
+            if index < 0:
+                return False
+            end = index + len(needle)
+            if (
+                not haystack.startswith(padded, index)
+                and has_token_boundaries(haystack, index, end)
+            ):
                 return True
             offset = index + 1
 
@@ -1800,8 +1827,18 @@ let
         if any(value and value in artifact for value in substring_variants):
             return True
         if any(
+            contains_bounded(artifact, value)
+            for value in bounded_encoded_variants
+        ):
+            return True
+        if any(
             contains_unpadded_encoding(artifact, unpadded, padded)
             for unpadded, padded in unpadded_encoded_variants
+        ):
+            return True
+        if any(
+            contains_bounded_unpadded_encoding(artifact, unpadded, padded)
+            for unpadded, padded in bounded_unpadded_encoded_variants
         ):
             return True
         if options.opaque_binary:
@@ -3761,7 +3798,9 @@ pkgs.runCommand "service-credential-boundaries" { } ''
   assert b"-_" in encoded["base64url-padded"]
   benign = b"\0".join(bytes([value]) for value in range(256))
   (artifact_directory / "opaque-benign.bin").write_bytes(benign)
-  leaks = {"full": secret, "window": window} | encoded
+  leaks = {"full": secret, "window": window} | {
+      name: b"x" + leak + b"y" for name, leak in encoded.items()
+  }
   for name, leak in leaks.items():
       (artifact_directory / f"opaque-{name}.bin").write_bytes(
           benign + b"\0" + leak + b"\0"
@@ -3868,7 +3907,93 @@ pkgs.runCommand "service-credential-boundaries" { } ''
 
   # The exact lower byte bound is accepted.
   printf '\001' >"$SERVICE_TEST_SECRET_FILE"
+  printf '%s\n' \
+    'path=/nix/store/abc01def' \
+    'left=abc01]' \
+    'right=[01def' \
+    'token=prefixAQsuffix' \
+    'unpadded-left=prefixAQ]' \
+    'unpadded-right=[AQsuffix' \
+    'padded=prefixAQ==suffix' \
+    'padded-left=prefixAQ==]' \
+    'padded-right=[AQ==suffix' >one-byte-encoded-collision.out
+  ${pkgs.python3}/bin/python3 ${assertSecretAbsentProgram} \
+    "$SERVICE_TEST_SECRET_FILE" one-byte-encoded-collision.out
+
+  assert_one_byte_encoded_leak_rejected() {
+    one_byte_label=$1
+    one_byte_artifact="one-byte-$one_byte_label-leak.out"
+    if ${pkgs.python3}/bin/python3 ${assertSecretAbsentProgram} \
+      "$SERVICE_TEST_SECRET_FILE" "$one_byte_artifact" \
+      >"$one_byte_artifact.scan.out" \
+      2>"$one_byte_artifact.scan.err"; then
+      fail "the one-byte scanner missed a bounded $one_byte_label leak"
+    fi
+    grep -F "secret material entered $one_byte_artifact" \
+      "$one_byte_artifact.scan.err" >/dev/null ||
+      fail "the one-byte scanner rejected $one_byte_label for the wrong reason"
+  }
+
+  for encoded_leak in hex unpadded padded; do
+    case "$encoded_leak" in
+      hex) encoded_value='[01]' ;;
+      unpadded) encoded_value='[AQ]' ;;
+      padded) encoded_value='[AQ==]' ;;
+    esac
+    printf '%s\n' "$encoded_value" \
+      >"one-byte-$encoded_leak-delimited-leak.out"
+    assert_one_byte_encoded_leak_rejected "$encoded_leak-delimited"
+
+    case "$encoded_leak" in
+      hex) encoded_value='01' ;;
+      unpadded) encoded_value='AQ' ;;
+      padded) encoded_value='AQ==' ;;
+    esac
+    printf '%s' "$encoded_value" >"one-byte-$encoded_leak-exact-leak.out"
+    assert_one_byte_encoded_leak_rejected "$encoded_leak-exact"
+  done
+
+  printf '%s\n%s' 'abc01def' '[01]' >one-byte-hex-mixed-leak.out
+  assert_one_byte_encoded_leak_rejected hex-mixed
+  printf '%s\n%s' 'prefixAQsuffix' '[AQ]' \
+    >one-byte-unpadded-mixed-leak.out
+  assert_one_byte_encoded_leak_rejected unpadded-mixed
+  printf '%s\n%s' 'prefixAQ==suffix' '[AQ==]' \
+    >one-byte-padded-mixed-leak.out
+  assert_one_byte_encoded_leak_rejected padded-mixed
+  printf '%s\n%s' 'prefixAQ==suffix' '[AQ]' \
+    >one-byte-unpadded-after-padded-leak.out
+  assert_one_byte_encoded_leak_rejected unpadded-after-padded
   run_vlc_accept one-byte-password
+
+  # Seven-byte values remain on the bounded side of the split; eight-byte
+  # windows deliberately retain substring matching.
+  seven_byte_secret="$TMPDIR/seven-byte-secret"
+  printf '%s' 'abcdefg' >"$seven_byte_secret"
+  printf '%s\n' \
+    'hex=x61626364656667y' \
+    'unpadded=xYWJjZGVmZwy' \
+    'padded=xYWJjZGVmZw==y' >seven-byte-encoded-collision.out
+  ${pkgs.python3}/bin/python3 ${assertSecretAbsentProgram} \
+    "$seven_byte_secret" seven-byte-encoded-collision.out
+  for seven_byte_leak in \
+    'hex:[61626364656667]' \
+    'unpadded:[YWJjZGVmZw]' \
+    'padded:[YWJjZGVmZw==]'; do
+    seven_byte_label="''${seven_byte_leak%%:*}"
+    seven_byte_value="''${seven_byte_leak#*:}"
+    seven_byte_artifact="seven-byte-$seven_byte_label-leak.out"
+    printf '%s' "$seven_byte_value" >"$seven_byte_artifact"
+    if ${pkgs.python3}/bin/python3 ${assertSecretAbsentProgram} \
+      "$seven_byte_secret" "$seven_byte_artifact" \
+      >"$seven_byte_artifact.scan.out" \
+      2>"$seven_byte_artifact.scan.err"; then
+      fail "the seven-byte scanner missed a bounded $seven_byte_label leak"
+    fi
+    grep -F "secret material entered $seven_byte_artifact" \
+      "$seven_byte_artifact.scan.err" >/dev/null ||
+      fail "the seven-byte scanner rejected $seven_byte_label for the wrong reason"
+  done
 
   # Mutation control: the downstream exclusions are exact. VLC-compatible
   # whitespace remains valid away from the edges, and 0x04 remains valid when
