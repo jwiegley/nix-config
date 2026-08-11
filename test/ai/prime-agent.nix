@@ -14,6 +14,7 @@ let
   selected = lib.mapAttrs (_: items: catalog.select profile items) catalog.items;
   rendered = (import ../../config/ai/renderers/prime.nix { inherit lib pkgs; }) {
     inherit profile selected;
+    localModelEndpoints = catalog.localModelEndpointsByHost.${profile.host};
     homeDirectory = "/Users/johnw";
     xdgConfigHome = "/Users/johnw/.config";
   };

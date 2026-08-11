@@ -41,47 +41,49 @@ let
       root
       ;
     audiences = profileAudiences;
-    # Provider name -> base URL of a local-inference endpoint this profile
-    # routes models to, or null. Declared here so renderers and the composer
-    # read a capability instead of re-deriving the fact from host or
-    # platform identity.
-    localModelEndpoints = null;
+    # Profiles opt in to their home's endpoint authority; they never carry a
+    # private copy of the endpoint records.
+    localModelRoutes = false;
   };
 
   # The local inference stack: config/launchd.nix runs llama-swap and omlx as
   # ungated user agents on every Darwin workstation (hera and clio alike), so
-  # every workstation profile that routes models locally declares the same
-  # endpoints. Only codex consumes the URL values; pi and prime gate their
-  # local provider wiring on the field being non-null. The field asserts that
-  # the services are DEFINED on the host — which models their unmanaged
-  # configs (~/Models/llama-swap.yaml, ~/.config/omlx) actually serve is
-  # mutable host state outside Nix.
+  # both workstation homes expose the same endpoint authority. Profiles opt
+  # in with localModelRoutes; the composer resolves this table once per home
+  # and passes the selected record to every local-model consumer. The table
+  # asserts that the services are DEFINED on the host — which models their
+  # unmanaged configs (~/Models/llama-swap.yaml, ~/.config/omlx) actually
+  # serve is mutable host state outside Nix.
   workstationLocalModelEndpoints = {
     omlx = "http://localhost:8000/v1";
     llama-swap = "http://localhost:8080/v1";
+  };
+  catalogLocalModelEndpointsByHost = {
+    clio = workstationLocalModelEndpoints;
+    hera = workstationLocalModelEndpoints;
   };
 
   profileSpecs = {
     clio-claude-personal = mkProfile "claude" [ "personal" ] "clio" "darwin" ".config/claude/personal";
     clio-claude-positron = mkProfile "claude" [ "positron" ] "clio" "darwin" ".config/claude/positron";
     clio-codex = mkProfile "codex" [ "personal" ] "clio" "darwin" ".config/codex" // {
-      localModelEndpoints = workstationLocalModelEndpoints;
+      localModelRoutes = true;
     };
     clio-pi = mkProfile "pi" [ "personal" ] "clio" "darwin" ".config/pi/agent" // {
-      localModelEndpoints = workstationLocalModelEndpoints;
+      localModelRoutes = true;
     };
 
     hera-claude-personal = mkProfile "claude" [ "personal" ] "hera" "darwin" ".config/claude/personal";
     hera-claude-positron = mkProfile "claude" [ "positron" ] "hera" "darwin" ".config/claude/positron";
     hera-codex = mkProfile "codex" [ "personal" ] "hera" "darwin" ".config/codex" // {
-      localModelEndpoints = workstationLocalModelEndpoints;
+      localModelRoutes = true;
     };
     hera-droid = mkProfile "droid" [ "personal" ] "hera" "darwin" ".config/factory";
     hera-pi = mkProfile "pi" [ "personal" ] "hera" "darwin" ".config/pi/agent" // {
-      localModelEndpoints = workstationLocalModelEndpoints;
+      localModelRoutes = true;
     };
     hera-prime = mkProfile "prime" [ "personal" ] "hera" "darwin" ".prime/agent" // {
-      localModelEndpoints = workstationLocalModelEndpoints;
+      localModelRoutes = true;
     };
 
     shared-work-claude-positron = mkProfile "claude" [ "positron" ] "shared-work" "linux" ".claude";
@@ -1359,6 +1361,7 @@ let
     {
       profiles ? catalogProfiles,
       items ? catalogItems,
+      localModelEndpointsByHost ? catalogLocalModelEndpointsByHost,
     }:
     let
       itemSets = builtins.attrValues items;
@@ -1392,6 +1395,19 @@ let
           ) environmentModels
         ) items.settings
       );
+      endpointChecks = lib.mapAttrsToList (
+        host: endpoints:
+        ensure (
+          builtins.elem host hosts
+          && builtins.isAttrs endpoints
+          &&
+            builtins.attrNames endpoints == [
+              "llama-swap"
+              "omlx"
+            ]
+          && builtins.all (validUrl true) (builtins.attrValues endpoints)
+        ) "invalid local model endpoints for ${host}"
+      ) localModelEndpointsByHost;
       profileChecks = lib.mapAttrsToList (
         id: profile:
         ensure (
@@ -1402,18 +1418,17 @@ let
           && builtins.elem profile.host hosts
           && builtins.elem profile.platform platforms
           && profile.root == profileSpecs.${id}.root
+          && builtins.isBool profile.localModelRoutes
+          && !(profile ? localModelEndpoints)
           && (
-            profile.localModelEndpoints == null
+            !profile.localModelRoutes
             || (
-              builtins.isAttrs profile.localModelEndpoints
-              # Exactly the provider names the codex renderer indexes, each a
-              # URL held to the same standard as MCP transports.
-              &&
-                builtins.attrNames profile.localModelEndpoints == [
-                  "llama-swap"
-                  "omlx"
-                ]
-              && builtins.all (validUrl true) (builtins.attrValues profile.localModelEndpoints)
+              builtins.elem profile.client [
+                "codex"
+                "pi"
+                "prime"
+              ]
+              && builtins.hasAttr profile.host localModelEndpointsByHost
             )
           )
         ) "invalid profile ${id}"
@@ -1479,6 +1494,7 @@ let
         itemChecks
         ++ selectorChecks
         ++ settingsChecks
+        ++ endpointChecks
         ++ profileChecks
         ++ fessProjectionChecks
         ++ mcpChecks
@@ -1510,6 +1526,7 @@ in
 {
   profiles = catalogProfiles;
   items = catalogItems;
+  localModelEndpointsByHost = catalogLocalModelEndpointsByHost;
   inherit
     matches
     select

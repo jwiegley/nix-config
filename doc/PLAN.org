@@ -1208,15 +1208,17 @@ config/ai/catalog.nix:1077-1261 encodes notification exclusions as five exact pr
 ]
 #+end_src
 
-* TODO [#B] Give local model endpoints one home-level authority    :ai:architecture:
+* DONE [#B] Give local model endpoints one home-level authority    :ai:architecture:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.35
 :LABELS: ["ai","architecture","heavy-review"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 19:12]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 19:12]
+:CLOSE_REASON: Centralized local inference endpoints by catalog host, made profiles opt in by boolean route capability, resolved one record per home, passed it explicitly to all consumers, and added behavioral/mutant coverage; focused builds, both all-system evaluations, and independent review passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

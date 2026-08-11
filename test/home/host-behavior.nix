@@ -19,10 +19,15 @@ let
     "johnw@aarch64-linux"
     "jwiegley@x86_64-linux"
   ];
-  desktopHomes = map (configuration: configuration.config.home-manager.users.johnw) (
-    builtins.attrValues darwinConfigurations
-  );
+  desktopHomesByHost = lib.mapAttrs (
+    _: configuration: configuration.config.home-manager.users.johnw
+  ) darwinConfigurations;
+  desktopHomes = builtins.attrValues desktopHomesByHost;
   registry = import ../../config/hosts/registry.nix;
+  aiCatalog = import ../../config/ai/catalog.nix {
+    inherit lib;
+    resources = pkgs.agent-resources;
+  };
   renderedHostRouting = import ../../config/hosts/shell-routing.nix { inherit lib; };
   personalLinuxResolution = registry.resolveFor {
     hostname = "linux";
@@ -104,6 +109,13 @@ let
     "SSH_AUTH_SOCK"
   ];
   contains = needle: value: builtins.isString value && lib.hasInfix needle value;
+  hasLocalModelSessionVariables =
+    config:
+    let
+      variables = config.home.sessionVariables or { };
+    in
+    (variables.OMLX_API_KEY or null) == "dummy-key"
+    && (variables.LLAMA_SWAP_API_KEY or null) == "dummy-key";
   desktopRuntimeRoots = [
     "emacs"
     "gnupg"
@@ -266,6 +278,11 @@ assert builtins.all (
 ) nonDesktopHomes;
 assert builtins.all (config: config.johnw.host.isDarwinWorkstation) desktopHomes;
 assert builtins.all (config: !config.johnw.host.isDarwinWorkstation) nonDesktopHomes;
+assert builtins.all hasLocalModelSessionVariables desktopHomes;
+assert builtins.all (config: !(hasLocalModelSessionVariables config)) nonDesktopHomes;
+assert contains aiCatalog.localModelEndpointsByHost.hera.omlx
+  desktopHomesByHost.hera.home.activation.aiManagedModelSync.data;
+assert !(builtins.hasAttr "aiManagedModelSync" desktopHomesByHost.clio.home.activation);
 assert builtins.all (config: allTrue (desktopOnlyFlags config)) desktopHomes;
 assert builtins.all (config: allFalse (desktopOnlyFlags config)) nonDesktopHomes;
 assert builtins.all (

@@ -116,6 +116,9 @@ Nix owns endpoint wiring and client-specific policy, not a cross-client model
 inventory. Codex retains its native catalog, Pi discovers local models at startup,
 Droid receives no Nix-generated local-model list, and Prime Agent reuses the safe
 Pi-compatible model overrides plus the shared local-provider discovery packages.
+The catalog declares local inference endpoints once per catalog host. Profiles only
+opt into those routes; the composer resolves the home's record once and passes it
+to the renderers and activation logic that consume it.
 The initial Prime Agent profile is Hera-only. Its prompt commands and Agent Skills
 are direct catalog projections; static specialist definitions become native RLM
 prompt adapters; stdio MCP remains available through the shared `pi-mcp-adapter`

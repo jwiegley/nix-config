@@ -37,6 +37,9 @@ let
   c1CsiModelIdentifier = builtins.fromJSON "\"model\\u009b1m\"";
   c1OscModelIdentifier = builtins.fromJSON "\"model\\u009dtitle\"";
   profiles = builtins.attrValues catalog.profiles;
+  localModelEndpointsFor =
+    profile:
+    if profile.localModelRoutes then catalog.localModelEndpointsByHost.${profile.host} else null;
   profileFor =
     client:
     lib.findFirst (profile: profile.client == client) (throw "${client} profile missing") profiles;
@@ -218,14 +221,26 @@ let
     };
   renderSelectedFor =
     renderer: profile: homeDirectory: selected:
-    renderer {
-      inherit
-        profile
-        homeDirectory
-        selected
-        ;
-      xdgConfigHome = "${homeDirectory}/.config";
-    };
+    renderer (
+      {
+        inherit
+          profile
+          homeDirectory
+          selected
+          ;
+        xdgConfigHome = "${homeDirectory}/.config";
+      }
+      //
+        lib.optionalAttrs
+          (builtins.elem profile.client [
+            "codex"
+            "pi"
+            "prime"
+          ])
+          {
+            localModelEndpoints = localModelEndpointsFor profile;
+          }
+    );
   renderFor =
     renderer: profile: homeDirectory:
     renderSelectedFor renderer profile homeDirectory (selectWithHttp profile);
@@ -269,11 +284,12 @@ let
     let
       darwin = profile.platform == "darwin";
       homeDirectory = if darwin then "/Users/test" else "/home/test";
+      localModelEndpoints = localModelEndpointsFor profile;
     in
     {
-      inherit profile darwin;
+      inherit profile darwin localModelEndpoints;
       rendered = piRenderer {
-        inherit profile homeDirectory;
+        inherit profile homeDirectory localModelEndpoints;
         selected = selectWithHttp profile;
         xdgConfigHome = "${homeDirectory}/.config";
         passwordStoreDir = if darwin then "${homeDirectory}/doc/.password-store" else null;
@@ -288,6 +304,7 @@ let
     xdgConfigHome = "/Users/test/.config";
     passwordStoreDir = "/Users/test/doc/.password-store";
     gnupgHome = "/Users/test/.config/gnupg";
+    localModelEndpoints = localModelEndpointsFor piProfile;
   };
   droidRenderer = import "${src}/config/ai/renderers/droid.nix" {
     inherit lib;
@@ -332,6 +349,7 @@ let
           xdgConfigHome = "/Users/test/.config";
           passwordStoreDir = "/Users/test/doc/.password-store";
           gnupgHome = "/Users/test/.config/gnupg";
+          localModelEndpoints = localModelEndpointsFor piProfile;
         }).files.".config/mcp/mcp.json".source
       )
     ];
@@ -351,6 +369,7 @@ let
     xdgConfigHome = "/Users/test/.config";
     passwordStoreDir = "/Users/test/doc/.password-store";
     gnupgHome = "/Users/test/.config/gnupg";
+    localModelEndpoints = localModelEndpointsFor piProfile;
   };
   fessSource = catalog.items.agents.fess-auditor.source;
   fessText = builtins.readFile fessSource;
@@ -488,14 +507,19 @@ assert catalog.validate {
   items = withClaudeSettingsBase (claudeSettings.base // { model = "café/模型@版本"; });
 };
 assert builtins.all (profile: (selectFor profile).mcpServers ? pal) profiles;
-# The endpoint-bearing profile set drives generated codex TOML, pi local
-# provider wiring, prime model overrides, and the dummy-key session
-# variables; pin it so a gained or lost declaration is a visible test edit.
+# The home-level endpoint table is one authority shared by both workstations.
+assert
+  builtins.attrNames catalog.localModelEndpointsByHost == [
+    "clio"
+    "hera"
+  ];
+assert catalog.localModelEndpointsByHost.clio == catalog.localModelEndpointsByHost.hera;
+# Profile opt-ins drive generated codex TOML, pi local provider wiring, prime
+# model overrides, and the dummy-key session variables. Pin the set so a
+# gained or lost route is a visible test edit.
 assert
   lib.sort builtins.lessThan (
-    builtins.attrNames (
-      lib.filterAttrs (_: profile: profile.localModelEndpoints != null) catalog.profiles
-    )
+    builtins.attrNames (lib.filterAttrs (_: profile: profile.localModelRoutes) catalog.profiles)
   ) == [
     "clio-codex"
     "clio-pi"
@@ -585,6 +609,32 @@ assert builtins.all reject [
     );
   })
   (catalog.validate {
+    localModelEndpointsByHost = builtins.removeAttrs catalog.localModelEndpointsByHost [ "clio" ];
+  })
+  (catalog.validate {
+    profiles = catalog.profiles // {
+      clio-codex = catalog.profiles.clio-codex // {
+        localModelEndpoints = catalog.localModelEndpointsByHost.clio;
+      };
+    };
+  })
+  (catalog.validate {
+    profiles = catalog.profiles // {
+      shared-work-pi = catalog.profiles.shared-work-pi // {
+        localModelRoutes = true;
+      };
+    };
+  })
+  (piRenderer {
+    profile = piProfile;
+    selected = selectFor piProfile;
+    homeDirectory = "/Users/test";
+    xdgConfigHome = "/Users/test/.config";
+    passwordStoreDir = "/Users/test/doc/.password-store";
+    gnupgHome = "/Users/test/.config/gnupg";
+    localModelEndpoints = null;
+  })
+  (catalog.validate {
     items = withClaudeSettingsBase (
       claudeSettings.base
       // {
@@ -617,9 +667,14 @@ assert builtins.all reject [
     xdgConfigHome = "/Users/test/.config";
     passwordStoreDir = "/Users/test/doc/.password-store";
     gnupgHome = "/Users/test/.config/gnupg";
+    localModelEndpoints = localModelEndpointsFor piProfile;
   })
 ];
 pkgs.runCommand "ai-catalog-transport" { } ''
+  grep -F 'base_url = "${catalog.localModelEndpointsByHost.${codexProfile.host}.omlx}"' \
+    ${codexRendered.files."${codexProfile.root}/nix-managed.config.toml".source} >/dev/null
+  grep -F 'base_url = "${catalog.localModelEndpointsByHost.${codexProfile.host}.llama-swap}"' \
+    ${codexRendered.files."${codexProfile.root}/nix-managed.config.toml".source} >/dev/null
   ${lib.concatMapStringsSep "\n" (
     case:
     "${frontmatterPython}/bin/python ${frontmatterChecker} ${
@@ -724,9 +779,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
 
   ${lib.concatMapStringsSep "\n" (entry: ''
     ${pkgs.jq}/bin/jq -e \
-      --argjson localModelRoutes ${
-        if entry.profile.localModelEndpoints != null then "true" else "false"
-      } '
+      --argjson localModelRoutes ${if entry.localModelEndpoints != null then "true" else "false"} '
       type == "object"
       and (.providers | type == "object")
       and (

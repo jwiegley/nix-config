@@ -5,6 +5,7 @@
   selected,
   homeDirectory,
   xdgConfigHome,
+  localModelEndpoints,
 }:
 
 let
@@ -51,7 +52,7 @@ let
 
   models.providers =
     modelOverrides.nativeProviders
-    // lib.optionalAttrs (profile.localModelEndpoints != null) modelOverrides.localProviderOverrides;
+    // lib.optionalAttrs (localModelEndpoints != null) modelOverrides.localProviderOverrides;
   packageRoots = [
     "${pkgs.pi-gallery.packages.pi-provider-llama-swap}/share/pi-packages/pi-provider-llama-swap"
     "${pkgs.pi-gallery.packages.pi-provider-omlx}/share/pi-packages/pi-provider-omlx"
@@ -112,6 +113,7 @@ assert profile.client == "prime";
 assert profile.root == root;
 assert profile.host == "hera";
 assert profile.platform == "darwin";
+assert profile.localModelRoutes == (localModelEndpoints != null);
 assert builtins.isString homeDirectory;
 assert xdgConfigHome == "${homeDirectory}/.config";
 assert selected.hooks == { };

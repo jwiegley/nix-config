@@ -63,6 +63,8 @@ let
   homeClassContract = registry.homeClassContractFor homeClass;
   homeClassRow = homeClassContract.row;
   profileHost = if homeClassRow == null then null else homeClassRow.catalogHost;
+  homeLocalModelEndpoints =
+    if profileHost == null then null else catalog.localModelEndpointsByHost.${profileHost} or null;
   profilesForHome =
     if profileHost == null then
       { }
@@ -89,6 +91,14 @@ let
     profileId:
     let
       profile = catalog.profiles.${profileId};
+      localModelEndpoints =
+        if profile.localModelRoutes then
+          if homeLocalModelEndpoints == null then
+            throw "profile ${profile.id} enables local model routes without a home endpoint authority"
+          else
+            homeLocalModelEndpoints
+        else
+          null;
     in
     renderers.${profile.client} (
       {
@@ -101,6 +111,16 @@ let
         passwordStoreDir = config.programs.password-store.settings.PASSWORD_STORE_DIR or null;
         gnupgHome = config.programs.gpg.homedir or null;
       }
+      //
+        lib.optionalAttrs
+          (builtins.elem profile.client [
+            "codex"
+            "pi"
+            "prime"
+          ])
+          {
+            inherit localModelEndpoints;
+          }
     );
 
   renderedProfiles = map renderProfile profileIds;
@@ -158,14 +178,13 @@ let
   };
   modelSync = import ./ai/model-sync.nix {
     inherit lib pkgs;
-    # Lazily resolved: only forced where the model-sync activation is gated
-    # in (hera), so homes without endpoint-bearing profiles never evaluate
-    # the throw.
+    # Lazily forced only where the model-sync activation is gated in (hera).
+    # The endpoint comes from the same home authority as rendered clients.
     omlxBaseUrl =
-      (lib.findFirst (endpoints: endpoints != null)
-        (throw "model-sync requires a profile that declares localModelEndpoints")
-        (map (profileId: catalog.profiles.${profileId}.localModelEndpoints) profileIds)
-      ).omlx;
+      if homeLocalModelEndpoints == null then
+        throw "model-sync requires a home local-model endpoint authority"
+      else
+        homeLocalModelEndpoints.omlx;
   };
   piSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "pi") profileIds;
   primeSelected = lib.any (profileId: catalog.profiles.${profileId}.client == "prime") profileIds;
@@ -299,6 +318,12 @@ in
       message = "nix-managed AI selected a profile for the wrong platform";
     }
     {
+      assertion =
+        !(lib.any (profileId: catalog.profiles.${profileId}.localModelRoutes) profileIds)
+        || homeLocalModelEndpoints != null;
+      message = "nix-managed AI selected local model routes without a home endpoint authority";
+    }
+    {
       assertion = builtins.length rawPaths == builtins.length paths;
       message = "nix-managed AI profiles contain duplicate target paths";
     }
@@ -366,8 +391,8 @@ in
       ++ lib.optional (primeSelected && pairedPrimePackage != null) pairedPrimePackage
       ++ lib.optionals piSelected piRuntimePackages;
     # The dummy keys satisfy codex's env_key lookups for the local providers;
-    # they are only meaningful where a codex profile declares local model
-    # endpoints.
+    # they are only meaningful where a codex profile opts into the home's
+    # local model routes.
     sessionVariables =
       lib.optionalAttrs
         (lib.any (
@@ -375,7 +400,7 @@ in
           let
             profile = catalog.profiles.${profileId};
           in
-          profile.client == "codex" && profile.localModelEndpoints != null
+          profile.client == "codex" && profile.localModelRoutes
         ) profileIds)
         {
           OMLX_API_KEY = "dummy-key";

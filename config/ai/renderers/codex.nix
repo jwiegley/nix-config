@@ -9,10 +9,12 @@
   selected,
   homeDirectory,
   xdgConfigHome,
+  localModelEndpoints,
 }:
 
 assert builtins.isString homeDirectory;
 assert builtins.isString xdgConfigHome;
+assert profile.localModelRoutes == (localModelEndpoints != null);
 
 let
   json = pkgs.formats.json { };
@@ -61,17 +63,17 @@ let
     lib.recursiveUpdate native (server.overrides.codex or { });
 
   hookItems = builtins.attrValues selected.hooks;
-  localConfig = lib.optionalAttrs (profile.localModelEndpoints != null) {
+  localConfig = lib.optionalAttrs (localModelEndpoints != null) {
     model_providers = {
       omlx = {
         name = "oMLX";
-        base_url = profile.localModelEndpoints.omlx;
+        base_url = localModelEndpoints.omlx;
         env_key = "OMLX_API_KEY";
         wire_api = "responses";
       };
       llama-swap = {
         name = "llama-swap";
-        base_url = profile.localModelEndpoints.llama-swap;
+        base_url = localModelEndpoints.llama-swap;
         env_key = "LLAMA_SWAP_API_KEY";
         wire_api = "responses";
       };

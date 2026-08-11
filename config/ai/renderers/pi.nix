@@ -7,6 +7,7 @@
   xdgConfigHome,
   passwordStoreDir,
   gnupgHome,
+  localModelEndpoints,
 }:
 
 let
@@ -30,7 +31,7 @@ let
       "?apiKey="
     ];
   renderEnv = name: "$" + "{" + name + "}";
-  localModelRoutes = profile.localModelEndpoints != null;
+  localModelRoutes = localModelEndpoints != null;
   modelOverrides = import ../model-overrides.nix;
   hermesPassCommand = lib.escapeShellArgs [
     "${pkgs.coreutils}/bin/env"
@@ -216,6 +217,7 @@ let
 in
 assert profile.client == "pi";
 assert profile.root == root;
+assert profile.localModelRoutes == localModelRoutes;
 assert builtins.isString homeDirectory;
 assert xdgConfigHome == "${homeDirectory}/.config";
 assert !localModelRoutes || (builtins.isString passwordStoreDir && builtins.isString gnupgHome);
