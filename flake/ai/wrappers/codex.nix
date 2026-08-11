@@ -7,6 +7,53 @@
 let
   managedArtifactClassifier = import ./managed-artifact-classifier.nix;
 
+  codexSqliteBackup = pkgs.writeTextFile {
+    name = "codex-sqlite-backup";
+    executable = true;
+    text = ''
+      #!${pkgs.python3}/bin/python3
+      import os
+      import sqlite3
+      import sys
+      from pathlib import Path
+
+
+      def connect_readonly(path):
+          return sqlite3.connect(Path(path).resolve().as_uri() + "?mode=ro", uri=True)
+
+
+      def validate(path):
+          with open(path, "rb") as database:
+              if database.read(16) != b"SQLite format 3\0":
+                  raise RuntimeError("invalid SQLite header")
+          with connect_readonly(path) as database:
+              if database.execute("PRAGMA quick_check").fetchall() != [("ok",)]:
+                  raise RuntimeError("SQLite integrity check failed")
+
+
+      try:
+          operation, *paths = sys.argv[1:]
+          if operation == "backup" and len(paths) == 2:
+              source_path, destination_path = paths
+              with connect_readonly(source_path) as source:
+                  with sqlite3.connect(destination_path) as destination:
+                      source.backup(destination)
+                      if destination.execute("PRAGMA journal_mode=DELETE").fetchone() != (
+                          "delete",
+                      ):
+                          raise RuntimeError("cannot normalize backup journal mode")
+              with open(destination_path, "rb") as destination:
+                  os.fsync(destination.fileno())
+              validate(destination_path)
+          elif operation == "validate" and len(paths) == 1:
+              validate(paths[0])
+          else:
+              raise RuntimeError("invalid invocation")
+      except (OSError, RuntimeError, sqlite3.Error, ValueError):
+          raise SystemExit(1)
+    '';
+  };
+
   codexWrapper = pkgs.writeShellScript "codex" ''
     set -euo pipefail
     set +x
@@ -32,62 +79,130 @@ let
     codex_shared_home="''${CODEX_HOME:-''${HOME:?}/.codex}"
     codex_uid="$(${pkgs.coreutils}/bin/id -u)"
     codex_local_root="/var/tmp/codex-$codex_uid"
-    export CODEX_SQLITE_HOME="''${CODEX_SQLITE_HOME:-$codex_local_root/sqlite}"
+    codex_sqlite_home="''${CODEX_SQLITE_HOME:-$codex_local_root/sqlite}"
+    if [ "$codex_sqlite_home" != "$codex_local_root/sqlite" ]; then
+      echo "codex: refusing unapproved SQLite state path" >&2
+      exit 1
+    fi
+    export CODEX_SQLITE_HOME="$codex_sqlite_home"
 
     # /var/tmp is world-writable: fail closed, and loudly, if the
     # local root cannot be created or is not a plain directory we
     # own (pre-creation / symlink planting by another local user).
     # Falling back to the shared home would silently reintroduce
     # the cross-host corruption this wrapper exists to prevent.
-    # The root is validated and locked down to 700 before anything
-    # is created beneath it.
+    # The root must already be private, or be created private under the
+    # wrapper's umask, before anything is created beneath it.
     if ! ${pkgs.coreutils}/bin/mkdir -p "$codex_local_root"; then
       echo "codex: cannot create host-local state under $codex_local_root" >&2
       exit 1
     fi
     if [ -L "$codex_local_root" ] || [ ! -d "$codex_local_root" ] \
-      || [ "$(${pkgs.coreutils}/bin/stat -c %u "$codex_local_root")" != "$codex_uid" ]; then
-      echo "codex: refusing $codex_local_root: not a directory owned by uid $codex_uid" >&2
-      exit 1
-    fi
-    if ! ${pkgs.coreutils}/bin/chmod 700 "$codex_local_root" 2>/dev/null \
+      || [ "$(${pkgs.coreutils}/bin/stat -c %u "$codex_local_root")" != "$codex_uid" ] \
       || [ "$(${pkgs.coreutils}/bin/stat -c %a "$codex_local_root")" != 700 ]; then
-      echo "codex: cannot secure host-local state under $codex_local_root" >&2
+      echo "codex: refusing $codex_local_root: not a private directory owned by uid $codex_uid" >&2
       exit 1
     fi
     if ! ${pkgs.coreutils}/bin/mkdir -p \
-        "$codex_local_root/sqlite" "$codex_local_root/log"; then
+        "$CODEX_SQLITE_HOME" "$codex_local_root/log"; then
       echo "codex: cannot create state directories under $codex_local_root" >&2
       exit 1
     fi
-    for codex_state_dir in "$codex_local_root/sqlite" "$codex_local_root/log"; do
+    for codex_state_dir in "$CODEX_SQLITE_HOME" "$codex_local_root/log"; do
       if [ -L "$codex_state_dir" ] || [ ! -d "$codex_state_dir" ] \
         || [ "$(${pkgs.coreutils}/bin/stat -c %u "$codex_state_dir")" != "$codex_uid" ] \
-        || ! ${pkgs.coreutils}/bin/chmod 700 "$codex_state_dir" 2>/dev/null \
         || [ "$(${pkgs.coreutils}/bin/stat -c %a "$codex_state_dir")" != 700 ]; then
         echo "codex: cannot secure state directory under $codex_local_root" >&2
         exit 1
       fi
     done
 
-    # Seed the host-local memory database once using a directory mutex and a
-    # same-directory temporary file; a failed attempt can retry next launch.
-    if [ -f "$codex_shared_home/memories_1.sqlite" ] \
-      && [ ! -e "$CODEX_SQLITE_HOME/memories_1.sqlite" ] \
-      && ${pkgs.coreutils}/bin/mkdir "$CODEX_SQLITE_HOME/.memories-seed-lock" 2>/dev/null; then
-      codex_seed_tmp="$CODEX_SQLITE_HOME/.memories_1.sqlite.seed.$$"
-      trap '${pkgs.coreutils}/bin/rm -f "$codex_seed_tmp" 2>/dev/null;
-            ${pkgs.coreutils}/bin/rmdir "$CODEX_SQLITE_HOME/.memories-seed-lock" 2>/dev/null' \
-        EXIT
-      if ${pkgs.coreutils}/bin/cp \
-          "$codex_shared_home/memories_1.sqlite" "$codex_seed_tmp" 2>/dev/null; then
-        ${pkgs.coreutils}/bin/mv -n \
-          "$codex_seed_tmp" "$CODEX_SQLITE_HOME/memories_1.sqlite" 2>/dev/null || true
+    codex_shared_database="$codex_shared_home/memories_1.sqlite"
+    codex_local_database="$CODEX_SQLITE_HOME/memories_1.sqlite"
+
+    codex_memory_database_is_private() {
+      [ ! -L "$1" ] && [ -f "$1" ] \
+        && [ "$(${pkgs.coreutils}/bin/stat -c %u "$1" 2>/dev/null)" = "$codex_uid" ] \
+        && [ "$(${pkgs.coreutils}/bin/stat -c %a "$1" 2>/dev/null)" = 600 ]
+    }
+
+    codex_seed_tmp=
+    codex_sqlite_helper_pid=
+    codex_sqlite_helper_timeout=30
+
+    codex_stop_sqlite_helper() {
+      if [ -n "$codex_sqlite_helper_pid" ]; then
+        kill -TERM "$codex_sqlite_helper_pid" 2>/dev/null || true
+        wait "$codex_sqlite_helper_pid" 2>/dev/null || true
+        codex_sqlite_helper_pid=
       fi
-      ${pkgs.coreutils}/bin/rm -f "$codex_seed_tmp" 2>/dev/null || true
-      ${pkgs.coreutils}/bin/rmdir "$CODEX_SQLITE_HOME/.memories-seed-lock" 2>/dev/null || true
-      trap - EXIT
+    }
+
+    codex_cleanup_seed() {
+      codex_stop_sqlite_helper
+      if [ -n "$codex_seed_tmp" ]; then
+        ${pkgs.coreutils}/bin/rm -f -- \
+          "$codex_seed_tmp" "$codex_seed_tmp-wal" \
+          "$codex_seed_tmp-shm" "$codex_seed_tmp-journal" \
+          2>/dev/null || true
+      fi
+    }
+
+    codex_run_sqlite_helper() {
+      local codex_sqlite_helper_status
+
+      ${pkgs.coreutils}/bin/timeout --signal=TERM --kill-after=1 \
+        "$codex_sqlite_helper_timeout" \
+        ${codexSqliteBackup} "$@" >/dev/null 2>&1 &
+      codex_sqlite_helper_pid=$!
+
+      if wait "$codex_sqlite_helper_pid"; then
+        codex_sqlite_helper_status=0
+      else
+        codex_sqlite_helper_status=$?
+      fi
+      codex_sqlite_helper_pid=
+      return "$codex_sqlite_helper_status"
+    }
+
+    codex_validate_memory_database() {
+      codex_memory_database_is_private "$1" \
+        && codex_run_sqlite_helper validate "$1"
+    }
+
+    # Every contender snapshots through SQLite into its own same-directory
+    # temporary file.  A hard link publishes exactly one complete snapshot;
+    # losers wait for their backup, then validate the winner before launching.
+    # A crash can leave only an inert unique temporary file, never a lock that
+    # blocks future launches.
+    trap codex_cleanup_seed EXIT
+    if [ -f "$codex_shared_database" ]; then
+      if [ ! -e "$codex_local_database" ] && [ ! -L "$codex_local_database" ]; then
+        if ! codex_seed_tmp="$(${pkgs.coreutils}/bin/mktemp \
+            "$CODEX_SQLITE_HOME/.memories_1.sqlite.seed.XXXXXX" 2>/dev/null)"; then
+          echo "codex: cannot create host-local memory backup" >&2
+          exit 1
+        fi
+        if ! codex_run_sqlite_helper backup \
+            "$codex_shared_database" "$codex_seed_tmp" \
+          || ! codex_memory_database_is_private "$codex_seed_tmp"; then
+          echo "codex: cannot create host-local memory backup" >&2
+          exit 1
+        fi
+        if ! ${pkgs.coreutils}/bin/ln -T -- \
+            "$codex_seed_tmp" "$codex_local_database" 2>/dev/null \
+          && ! codex_validate_memory_database "$codex_local_database"; then
+          echo "codex: cannot publish host-local memory backup" >&2
+          exit 1
+        fi
+        codex_cleanup_seed
+      elif ! codex_validate_memory_database "$codex_local_database"; then
+        echo "codex: refusing invalid host-local memory database" >&2
+        exit 1
+      fi
     fi
+    codex_cleanup_seed
+    trap - EXIT
 
     # Point the shared log path at machine-local storage.
     codex_log_dir="$codex_shared_home/log"

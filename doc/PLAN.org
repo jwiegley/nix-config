@@ -723,15 +723,17 @@ bin/upgrade-projects:3-99 opens predictable shared /tmp logs without private uma
 ]
 #+end_src
 
-* DOING [#B] Validate or replace inherited CODEX_SQLITE_HOME    :codex:security:
+* DONE [#B] Validate or replace inherited CODEX_SQLITE_HOME    :codex:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.21
 :LABELS: ["codex","heavy-review","security"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 15:31]
+:MODIFIED: [2026-08-10 Mon 18:33]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 18:33]
+:CLOSE_REASON: Pinned CODEX_SQLITE_HOME to the validated host-local root and replaced stale directory locking/raw copies with bounded SQLite backup, integrity validation, and atomic no-clobber publication; focused wrapper build, 92-test baseline, all-system evaluation, and independent final review passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

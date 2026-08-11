@@ -20,19 +20,52 @@ let
   fakeStat = pkgs.writeShellScriptBin "stat" ''
     set -euo pipefail
     if [ "$#" -eq 3 ] && [ "$1" = -c ] && [ "$2" = %u ]; then
-      printf '%s\n' "''${AGENT_TEST_UID:?}"
+      if [ "''${AGENT_TEST_STAT_WRONG_OWNER_PATH:-}" = "$3" ]; then
+        printf '%s\n' 0
+      else
+        printf '%s\n' "''${AGENT_TEST_UID:?}"
+      fi
     else
       exec ${pkgs.coreutils}/bin/stat "$@"
     fi
+  '';
+
+  timeoutChildRecorder = pkgs.writeShellScript "timeout-child-recorder" ''
+    set -euo pipefail
+    printf '%s\n' "$$" >"''${AGENT_TEST_CODEX_TIMEOUT_CHILD_PID_FILE:?}"
+    exec "$@"
+  '';
+
+  fakeTimeout = pkgs.writeShellScriptBin "timeout" ''
+    set -euo pipefail
+    arguments=("$@")
+    if [ "''${AGENT_TEST_CODEX_FAST_BACKUP_DEADLINE:-}" = 1 ]; then
+      for index in "''${!arguments[@]}"; do
+        if [ "''${arguments[$index]}" = 30 ]; then
+          arguments[$index]=0.2
+          break
+        fi
+      done
+    fi
+    if [ -n "''${AGENT_TEST_CODEX_TIMEOUT_PID_FILE:-}" ]; then
+      printf '%s\n' "$$" >"$AGENT_TEST_CODEX_TIMEOUT_PID_FILE"
+    fi
+    if [ -n "''${AGENT_TEST_CODEX_TIMEOUT_CHILD_PID_FILE:-}" ]; then
+      exec ${pkgs.coreutils}/bin/timeout \
+        "''${arguments[0]}" "''${arguments[1]}" "''${arguments[2]}" \
+        ${timeoutChildRecorder} "''${arguments[@]:3}"
+    fi
+    exec ${pkgs.coreutils}/bin/timeout "''${arguments[@]}"
   '';
 
   testCoreutils = pkgs.symlinkJoin {
     name = "agent-wrapper-test-coreutils";
     paths = [ pkgs.coreutils ];
     postBuild = ''
-      rm -- "$out/bin/id" "$out/bin/stat"
+      rm -- "$out/bin/id" "$out/bin/stat" "$out/bin/timeout"
       ln -s ${fakeId}/bin/id "$out/bin/id"
       ln -s ${fakeStat}/bin/stat "$out/bin/stat"
+      ln -s ${fakeTimeout}/bin/timeout "$out/bin/timeout"
     '';
   };
 
@@ -52,39 +85,61 @@ let
       name = binary;
       runtimeInputs = [ pkgs.coreutils ];
       text = ''
-        set -euo pipefail
+                set -euo pipefail
 
-        if [ "''${CODEX_INTERNAL_WRAPPER_POLICY_PROBE:-}" = v1 ]; then
-          if [ -n "''${AGENT_TEST_CODEX_PROBE_READY:-}" ]; then
-            : "''${AGENT_TEST_CODEX_PROBE_RELEASE:?}"
-            touch "$AGENT_TEST_CODEX_PROBE_READY"
-            while [ ! -e "$AGENT_TEST_CODEX_PROBE_RELEASE" ]; do
-              sleep 0.01
-            done
-          fi
-          if [ "''${AGENT_TEST_CODEX_PROBE_NO_OUTPUT:-}" = 1 ]; then
-            :
-          elif [ "''${AGENT_TEST_CODEX_PROBE_NUL:-}" = 1 ]; then
-            printf 'man\0age\n'
-          elif [ "''${AGENT_TEST_CODEX_PROBE_NO_NEWLINE:-}" = 1 ]; then
-            printf %s "''${AGENT_TEST_CODEX_POLICY:-manage}"
-          else
-            printf '%s\n' "''${AGENT_TEST_CODEX_POLICY:-manage}"
-          fi
-          exit "''${AGENT_TEST_CODEX_PROBE_EXIT:-0}"
-        fi
+                if [ "''${CODEX_INTERNAL_WRAPPER_POLICY_PROBE:-}" = v1 ]; then
+                  if [ -n "''${AGENT_TEST_CODEX_PROBE_FILE:-}" ]; then
+                    touch "$AGENT_TEST_CODEX_PROBE_FILE"
+                  fi
+                  if [ -n "''${AGENT_TEST_CODEX_PROBE_READY:-}" ]; then
+                    : "''${AGENT_TEST_CODEX_PROBE_RELEASE:?}"
+                    touch "$AGENT_TEST_CODEX_PROBE_READY"
+                    while [ ! -e "$AGENT_TEST_CODEX_PROBE_RELEASE" ]; do
+                      sleep 0.01
+                    done
+                  fi
+                  if [ "''${AGENT_TEST_CODEX_PROBE_NO_OUTPUT:-}" = 1 ]; then
+                    :
+                  elif [ "''${AGENT_TEST_CODEX_PROBE_NUL:-}" = 1 ]; then
+                    printf 'man\0age\n'
+                  elif [ "''${AGENT_TEST_CODEX_PROBE_NO_NEWLINE:-}" = 1 ]; then
+                    printf %s "''${AGENT_TEST_CODEX_POLICY:-manage}"
+                  else
+                    printf '%s\n' "''${AGENT_TEST_CODEX_POLICY:-manage}"
+                  fi
+                  exit "''${AGENT_TEST_CODEX_PROBE_EXIT:-0}"
+                fi
 
-        : "''${AGENT_TEST_ARGV:?}"
-        : "''${AGENT_TEST_ENV:?}"
+                : "''${AGENT_TEST_ARGV:?}"
+                : "''${AGENT_TEST_ENV:?}"
 
-        : >"$AGENT_TEST_ARGV"
-        for argument in "$@"; do
-          printf '%s\0' "$argument" >>"$AGENT_TEST_ARGV"
-        done
-        AGENT_TEST_OPEN_FILE_LIMIT="$(ulimit -Sn)"
-        export AGENT_TEST_OPEN_FILE_LIMIT
-        env -0 | sort -z >"$AGENT_TEST_ENV"
-        exit "''${AGENT_TEST_EXIT:-0}"
+                if [ -n "''${AGENT_TEST_UPSTREAM_STARTED:-}" ]; then
+                  touch "$AGENT_TEST_UPSTREAM_STARTED"
+                fi
+                if [ -n "''${AGENT_TEST_CODEX_SQLITE_MARKER:-}" ]; then
+                  ${pkgs.python3}/bin/python3 - \
+                    "$CODEX_SQLITE_HOME/memories_1.sqlite" \
+                    "$AGENT_TEST_CODEX_SQLITE_MARKER" <<'PY'
+        import sqlite3
+        import sys
+        from pathlib import Path
+
+        database_uri = Path(sys.argv[1]).resolve().as_uri() + "?mode=ro"
+        with sqlite3.connect(database_uri, uri=True) as database:
+            healthy = database.execute("PRAGMA quick_check").fetchall() == [("ok",)]
+            marker = database.execute("SELECT marker FROM seed").fetchone()
+        raise SystemExit(0 if healthy and marker == (sys.argv[2],) else 1)
+        PY
+                fi
+
+                : >"$AGENT_TEST_ARGV"
+                for argument in "$@"; do
+                  printf '%s\0' "$argument" >>"$AGENT_TEST_ARGV"
+                done
+                AGENT_TEST_OPEN_FILE_LIMIT="$(ulimit -Sn)"
+                export AGENT_TEST_OPEN_FILE_LIMIT
+                env -0 | sort -z >"$AGENT_TEST_ENV"
+                exit "''${AGENT_TEST_EXIT:-0}"
       '';
     };
 

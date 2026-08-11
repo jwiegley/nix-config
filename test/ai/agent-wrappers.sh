@@ -23,6 +23,7 @@ work_root="$TMPDIR/agent wrapper cases"
 managed_file_sentinel='MANAGED-FILE-CONTENT-MUST-NEVER-APPEAR-7d6b78'
 case_counter=0
 cleanup_roots=()
+background_pids=()
 
 mkdir -p "$work_root"
 
@@ -32,7 +33,13 @@ fail() {
 }
 
 cleanup() {
-    local root
+    local pid root
+    for pid in "${background_pids[@]}"; do
+        kill -TERM "$pid" 2>/dev/null || true
+    done
+    for pid in "${background_pids[@]}"; do
+        wait "$pid" 2>/dev/null || true
+    done
     for root in "${cleanup_roots[@]}"; do
         case "$root" in
         /var/tmp/codex-[0-9]*) rm -rf -- "$root" ;;
@@ -201,6 +208,32 @@ invoke_agent() {
         fi
         if [ "${AGENT_TEST_CODEX_PROBE_NUL:-}" = 1 ]; then
             command_env+=(AGENT_TEST_CODEX_PROBE_NUL=1)
+        fi
+        if [ -n "${AGENT_TEST_CODEX_PROBE_FILE:-}" ]; then
+            command_env+=("AGENT_TEST_CODEX_PROBE_FILE=$AGENT_TEST_CODEX_PROBE_FILE")
+        fi
+        if [ -n "${AGENT_TEST_CODEX_SQLITE_MARKER:-}" ]; then
+            command_env+=("AGENT_TEST_CODEX_SQLITE_MARKER=$AGENT_TEST_CODEX_SQLITE_MARKER")
+        fi
+        if [ -n "${AGENT_TEST_UPSTREAM_STARTED:-}" ]; then
+            command_env+=("AGENT_TEST_UPSTREAM_STARTED=$AGENT_TEST_UPSTREAM_STARTED")
+        fi
+        if [ "${AGENT_TEST_CODEX_FAST_BACKUP_DEADLINE:-}" = 1 ]; then
+            command_env+=(AGENT_TEST_CODEX_FAST_BACKUP_DEADLINE=1)
+        fi
+        if [ -n "${AGENT_TEST_CODEX_TIMEOUT_PID_FILE:-}" ]; then
+            command_env+=("AGENT_TEST_CODEX_TIMEOUT_PID_FILE=$AGENT_TEST_CODEX_TIMEOUT_PID_FILE")
+        fi
+        if [ -n "${AGENT_TEST_CODEX_TIMEOUT_CHILD_PID_FILE:-}" ]; then
+            command_env+=(
+                "AGENT_TEST_CODEX_TIMEOUT_CHILD_PID_FILE=$AGENT_TEST_CODEX_TIMEOUT_CHILD_PID_FILE"
+            )
+        fi
+        if [ "${AGENT_TEST_CODEX_SQLITE_HOME+x}" = x ]; then
+            command_env+=("CODEX_SQLITE_HOME=$AGENT_TEST_CODEX_SQLITE_HOME")
+        fi
+        if [ -n "${AGENT_TEST_STAT_WRONG_OWNER_PATH:-}" ]; then
+            command_env+=("AGENT_TEST_STAT_WRONG_OWNER_PATH=$AGENT_TEST_STAT_WRONG_OWNER_PATH")
         fi
         ;;
     *) fail "unknown client: $client" ;;
@@ -899,15 +932,134 @@ test_claude_real() {
     assert_argv "$ARGV_FILE" alpha 'two words'
 }
 
+create_codex_sqlite_seed() {
+    local database=$1
+    local marker=$2
+
+    "$PYTHON_BIN" - "$database" "$marker" <<'PY'
+import sqlite3
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+for suffix in ("", "-shm", "-wal"):
+    try:
+        Path(str(path) + suffix).unlink()
+    except FileNotFoundError:
+        pass
+with sqlite3.connect(path) as database:
+    database.execute("CREATE TABLE seed(marker TEXT NOT NULL)")
+    database.execute("INSERT INTO seed VALUES (?)", (sys.argv[2],))
+PY
+    chmod 600 "$database"
+}
+
+create_codex_sqlite_interior_corruption() {
+    local database=$1
+
+    "$PYTHON_BIN" - "$database" <<'PY'
+import sqlite3
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+with sqlite3.connect(path) as database:
+    database.execute("PRAGMA page_size=1024")
+    database.execute("CREATE TABLE seed(marker TEXT NOT NULL, payload BLOB NOT NULL)")
+    database.executemany(
+        "INSERT INTO seed VALUES (?, ?)",
+        ((f"marker-{index}", bytes(400)) for index in range(500)),
+    )
+    root_page = database.execute(
+        "SELECT rootpage FROM sqlite_schema WHERE name = 'seed'"
+    ).fetchone()[0]
+    page_size = database.execute("PRAGMA page_size").fetchone()[0]
+
+if root_page <= 1:
+    raise RuntimeError("fixture did not allocate an interior database page")
+with path.open("r+b") as database_file:
+    database_file.seek((root_page - 1) * page_size)
+    database_file.write(b"\xff")
+
+if path.read_bytes()[:16] != b"SQLite format 3\0":
+    raise RuntimeError("fixture damaged the SQLite header")
+try:
+    with sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True) as database:
+        corrupted = database.execute("PRAGMA quick_check").fetchall() != [("ok",)]
+except sqlite3.DatabaseError:
+    corrupted = True
+if not corrupted:
+    raise RuntimeError("fixture corruption escaped SQLite quick_check")
+PY
+    chmod 600 "$database"
+}
+
+assert_codex_sqlite_marker() {
+    local database=$1
+    local expected=$2
+
+    if ! "$PYTHON_BIN" - "$database" "$expected" <<'PY'; then
+import sqlite3
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+if path.read_bytes()[:16] != b"SQLite format 3\0":
+    raise SystemExit(1)
+with sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True) as database:
+    healthy = database.execute("PRAGMA quick_check").fetchall() == [("ok",)]
+    marker = database.execute("SELECT marker FROM seed").fetchone()
+raise SystemExit(0 if healthy and marker == (sys.argv[2],) else 1)
+PY
+        fail "Codex SQLite marker is missing or the database is invalid: $expected"
+    fi
+}
+
+assert_codex_sqlite_published_form() {
+    local database=$1
+    local suffix
+
+    if [ "$(
+        "$PYTHON_BIN" - "$database" <<'PY'
+import sqlite3
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+with sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True) as database:
+    print(database.execute("PRAGMA journal_mode").fetchone()[0])
+PY
+    )" != delete ]; then
+        fail "published Codex SQLite database did not use DELETE journal mode"
+    fi
+    for suffix in -wal -shm -journal; do
+        [ ! -e "$database$suffix" ] ||
+            fail "published Codex SQLite database left a $suffix sidecar"
+    done
+}
+
+assert_no_codex_seed_temporaries() {
+    local sqlite_root=$1
+
+    if [ -d "$sqlite_root" ] && find "$sqlite_root" -maxdepth 1 \
+        -name '.memories_1.sqlite.seed.*' -print -quit | grep -q .; then
+        fail "Codex left a SQLite backup temporary file behind"
+    fi
+}
+
 assert_codex_host_state() {
-    local seed=$1
+    local expected_marker=$1
 
     assert_env "CODEX_HOME=$ROOT"
     assert_env "CODEX_SQLITE_HOME=$CODEX_LOCAL_ROOT/sqlite"
     [ -f "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite" ] ||
         fail "Codex did not seed host-local SQLite state"
-    cmp "$seed" "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite" ||
-        fail "Codex altered the seeded SQLite file"
+    assert_codex_sqlite_marker \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite" "$expected_marker"
+    assert_codex_sqlite_published_form \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite"
+    [ "$(stat -c %a "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite")" = 600 ] ||
+        fail "Codex local SQLite database does not have mode 0600"
     [ "$(stat -c %a "$CODEX_LOCAL_ROOT")" = 700 ] ||
         fail "Codex local root does not have mode 0700"
     [ "$(stat -c %a "$CODEX_LOCAL_ROOT/sqlite")" = 700 ] ||
@@ -917,6 +1069,9 @@ assert_codex_host_state() {
     [ -L "$ROOT/log" ] || fail "Codex did not create the host-local log link"
     [ "$(readlink "$ROOT/log")" = "$CODEX_LOCAL_ROOT/log" ] ||
         fail "Codex log link has the wrong target"
+    [ ! -e "$CODEX_LOCAL_ROOT/sqlite/.memories-seed-lock" ] ||
+        fail "Codex left a persistent SQLite backup lock behind"
+    assert_no_codex_seed_temporaries "$CODEX_LOCAL_ROOT/sqlite"
 }
 
 assert_codex_runtime_profile() {
@@ -943,6 +1098,156 @@ assert_codex_runtime_profile_absent() {
         fail "Codex created the runtime profile link outside managed mode"
     [ ! -e "$CODEX_RUNTIME_FILE" ] && [ ! -L "$CODEX_RUNTIME_FILE" ] ||
         fail "Codex created the runtime profile outside managed mode"
+}
+
+assert_codex_sqlite_seed_absent() {
+    local sqlite_root=$1
+
+    [ ! -e "$sqlite_root/memories_1.sqlite" ] ||
+        fail "Codex copied into a rejected SQLite root"
+    [ ! -e "$sqlite_root/.memories-seed-lock" ] ||
+        fail "Codex locked a rejected SQLite root"
+    if [ -d "$sqlite_root" ] && find "$sqlite_root" -maxdepth 1 \
+        -name '.memories_1.sqlite.seed.*' \
+        -print -quit | grep -q .; then
+        fail "Codex created a temporary file in a rejected SQLite root"
+    fi
+}
+
+start_codex_live_wal_seed() {
+    local database=$1
+    local marker=$2
+    local ready=$3
+    local release=$4
+
+    "$PYTHON_BIN" - "$database" "$marker" "$ready" "$release" <<'PY' &
+import sqlite3
+import sys
+import time
+from pathlib import Path
+
+database_path, marker, ready_path, release_path = map(Path, sys.argv[1:])
+with sqlite3.connect(database_path) as database:
+    database.execute("PRAGMA journal_mode=WAL")
+    database.execute("PRAGMA wal_autocheckpoint=0")
+    database.execute("CREATE TABLE seed(marker TEXT NOT NULL)")
+    database.execute("INSERT INTO seed VALUES (?)", (str(marker),))
+    database.commit()
+    ready_path.touch()
+    while not release_path.exists():
+        time.sleep(0.01)
+PY
+    SQLITE_HELPER_PID=$!
+}
+
+start_codex_exclusive_holder() {
+    local database=$1
+    local ready=$2
+    local release=$3
+
+    "$PYTHON_BIN" - "$database" "$ready" "$release" <<'PY' &
+import sqlite3
+import sys
+import time
+from pathlib import Path
+
+database_path, ready_path, release_path = map(Path, sys.argv[1:])
+with sqlite3.connect(database_path, isolation_level=None) as database:
+    database.execute("BEGIN EXCLUSIVE")
+    ready_path.touch()
+    while not release_path.exists():
+        time.sleep(0.01)
+    database.execute("ROLLBACK")
+PY
+    SQLITE_HELPER_PID=$!
+}
+
+start_codex_seed_launch() {
+    local prefix=$1
+    local marker=$2
+    local source_root=${3:-$ROOT}
+    local -a command_env
+
+    command_env=(
+        env -u AI_NIX_BYPASS_MANAGED_CONFIG -u CODEX_SQLITE_HOME
+        "HOME=$HOME_DIR"
+        "CODEX_HOME=$source_root"
+        "AGENT_TEST_UID=$AGENT_TEST_UID"
+        AGENT_TEST_CODEX_POLICY=manage
+        "AGENT_TEST_CODEX_PROBE_FILE=$prefix.probe"
+        "AGENT_TEST_CODEX_SQLITE_MARKER=$marker"
+        "AGENT_TEST_UPSTREAM_STARTED=$prefix.started"
+        "AGENT_TEST_ARGV=$prefix.argv"
+        "AGENT_TEST_ENV=$prefix.env"
+        AGENT_TEST_EXIT=0
+    )
+    if [ "${AGENT_TEST_CODEX_FAST_BACKUP_DEADLINE:-}" = 1 ]; then
+        command_env+=(AGENT_TEST_CODEX_FAST_BACKUP_DEADLINE=1)
+    fi
+    if [ -n "${AGENT_TEST_CODEX_TIMEOUT_PID_FILE:-}" ]; then
+        command_env+=("AGENT_TEST_CODEX_TIMEOUT_PID_FILE=$AGENT_TEST_CODEX_TIMEOUT_PID_FILE")
+    fi
+    if [ -n "${AGENT_TEST_CODEX_TIMEOUT_CHILD_PID_FILE:-}" ]; then
+        command_env+=(
+            "AGENT_TEST_CODEX_TIMEOUT_CHILD_PID_FILE=$AGENT_TEST_CODEX_TIMEOUT_CHILD_PID_FILE"
+        )
+    fi
+    "${command_env[@]}" "$CODEX_BIN" alpha \
+        >"$prefix.stdout" 2>"$prefix.stderr" &
+    CODEX_LAUNCH_PID=$!
+}
+
+wait_for_path() {
+    local path=$1
+    local pid=$2
+    local label=$3
+    local attempt
+
+    for ((attempt = 0; attempt < 1000; attempt++)); do
+        [ -e "$path" ] && return
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 0.01
+    done
+    fail "timed out waiting for $label"
+}
+
+wait_for_codex_seed_temporaries() {
+    local expected=$1
+    local pid=$2
+    local attempt count
+
+    for ((attempt = 0; attempt < 1000; attempt++)); do
+        count=0
+        if [ -d "$CODEX_LOCAL_ROOT/sqlite" ]; then
+            count=$(find "$CODEX_LOCAL_ROOT/sqlite" -maxdepth 1 \
+                -name '.memories_1.sqlite.seed.*' -type f -print | wc -l)
+        fi
+        [ "$count" -ge "$expected" ] && return
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 0.01
+    done
+    fail "timed out waiting for $expected concurrent SQLite backup temporaries"
+}
+
+start_process_watchdog() {
+    local pid=$1
+    local fired=$2
+
+    "$PYTHON_BIN" - "$pid" "$fired" <<'PY' &
+import os
+import signal
+import sys
+import time
+from pathlib import Path
+
+time.sleep(5)
+Path(sys.argv[2]).touch()
+try:
+    os.kill(int(sys.argv[1]), signal.SIGKILL)
+except ProcessLookupError:
+    pass
+PY
+    WATCHDOG_PID=$!
 }
 
 test_codex_runtime_profile() {
@@ -1022,8 +1327,98 @@ test_codex_runtime_profile_rejections() {
 }
 
 test_codex_host_state_rejections() {
+    local external_sqlite
+    local AGENT_TEST_CODEX_PROBE_FILE AGENT_TEST_CODEX_SQLITE_HOME
+    local AGENT_TEST_STAT_WRONG_OWNER_PATH AGENT_TEST_UPSTREAM_STARTED
+
+    new_case codex host-state-external-sqlite
+    configure_state complete
+    external_sqlite="$CASE_DIR/external sqlite"
+    mkdir -m 700 "$external_sqlite"
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" codex-external-seed
+    AGENT_TEST_CODEX_PROBE_FILE="$CASE_DIR/policy-probe"
+    AGENT_TEST_UPSTREAM_STARTED="$CASE_DIR/upstream-started"
+    AGENT_TEST_CODEX_SQLITE_HOME=$external_sqlite
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -ne 0 ] || fail "Codex accepted an external SQLite root"
+    assert_upstream_not_invoked
+    [ ! -e "$AGENT_TEST_CODEX_PROBE_FILE" ] ||
+        fail "Codex probed policy before rejecting an external SQLite root"
+    [ ! -e "$AGENT_TEST_UPSTREAM_STARTED" ] ||
+        fail "Codex launched upstream before rejecting an external SQLite root"
+    grep -F 'codex: refusing unapproved SQLite state path' "$STDERR_FILE" >/dev/null ||
+        fail "Codex external SQLite failure was not reported at the host-state boundary"
+    assert_codex_sqlite_seed_absent "$external_sqlite"
+    finish_case codex
+
+    new_case codex host-state-symlinked-sqlite
+    configure_state complete
+    external_sqlite="$CASE_DIR/external sqlite"
+    mkdir -m 700 "$external_sqlite" "$CODEX_LOCAL_ROOT"
+    ln -s "$external_sqlite" "$CODEX_LOCAL_ROOT/sqlite"
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" codex-symlink-seed
+    AGENT_TEST_CODEX_PROBE_FILE="$CASE_DIR/policy-probe"
+    AGENT_TEST_UPSTREAM_STARTED="$CASE_DIR/upstream-started"
+    AGENT_TEST_CODEX_SQLITE_HOME=$CODEX_LOCAL_ROOT/sqlite
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -ne 0 ] || fail "Codex accepted a symlinked SQLite root"
+    assert_upstream_not_invoked
+    [ ! -e "$AGENT_TEST_CODEX_PROBE_FILE" ] ||
+        fail "Codex probed policy before rejecting a symlinked SQLite root"
+    [ ! -e "$AGENT_TEST_UPSTREAM_STARTED" ] ||
+        fail "Codex launched upstream before rejecting a symlinked SQLite root"
+    grep -F 'codex: cannot secure state directory' "$STDERR_FILE" >/dev/null ||
+        fail "Codex symlinked SQLite failure was not reported at the host-state boundary"
+    assert_codex_sqlite_seed_absent "$external_sqlite"
+    finish_case codex
+
+    new_case codex host-state-wrong-owner-sqlite
+    configure_state complete
+    mkdir -m 700 "$CODEX_LOCAL_ROOT" "$CODEX_LOCAL_ROOT/sqlite"
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" codex-owner-seed
+    AGENT_TEST_CODEX_PROBE_FILE="$CASE_DIR/policy-probe"
+    AGENT_TEST_UPSTREAM_STARTED="$CASE_DIR/upstream-started"
+    AGENT_TEST_CODEX_SQLITE_HOME=$CODEX_LOCAL_ROOT/sqlite
+    AGENT_TEST_STAT_WRONG_OWNER_PATH=$CODEX_LOCAL_ROOT/sqlite
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -ne 0 ] || fail "Codex accepted a wrong-owner SQLite root"
+    assert_upstream_not_invoked
+    [ ! -e "$AGENT_TEST_CODEX_PROBE_FILE" ] ||
+        fail "Codex probed policy before rejecting a wrong-owner SQLite root"
+    [ ! -e "$AGENT_TEST_UPSTREAM_STARTED" ] ||
+        fail "Codex launched upstream before rejecting a wrong-owner SQLite root"
+    grep -F 'codex: cannot secure state directory' "$STDERR_FILE" >/dev/null ||
+        fail "Codex wrong-owner SQLite failure was not reported at the host-state boundary"
+    assert_codex_sqlite_seed_absent "$CODEX_LOCAL_ROOT/sqlite"
+    finish_case codex
+
+    new_case codex host-state-permissive-sqlite
+    configure_state complete
+    mkdir -m 700 "$CODEX_LOCAL_ROOT"
+    mkdir -m 755 "$CODEX_LOCAL_ROOT/sqlite"
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" codex-mode-seed
+    AGENT_TEST_CODEX_PROBE_FILE="$CASE_DIR/policy-probe"
+    AGENT_TEST_UPSTREAM_STARTED="$CASE_DIR/upstream-started"
+    AGENT_TEST_CODEX_SQLITE_HOME=$CODEX_LOCAL_ROOT/sqlite
+    unset AGENT_TEST_STAT_WRONG_OWNER_PATH
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -ne 0 ] || fail "Codex accepted a permissive SQLite root"
+    assert_upstream_not_invoked
+    [ ! -e "$AGENT_TEST_CODEX_PROBE_FILE" ] ||
+        fail "Codex probed policy before rejecting a permissive SQLite root"
+    [ ! -e "$AGENT_TEST_UPSTREAM_STARTED" ] ||
+        fail "Codex launched upstream before rejecting a permissive SQLite root"
+    [ "$(stat -c %a "$CODEX_LOCAL_ROOT/sqlite")" = 755 ] ||
+        fail "Codex changed a rejected permissive SQLite root"
+    grep -F 'codex: cannot secure state directory' "$STDERR_FILE" >/dev/null ||
+        fail "Codex permissive SQLite failure was not reported at the host-state boundary"
+    assert_codex_sqlite_seed_absent "$CODEX_LOCAL_ROOT/sqlite"
+    unset AGENT_TEST_CODEX_SQLITE_HOME
+    finish_case codex
+
     new_case codex host-state-wrong-log-link
     configure_state complete
+    unset AGENT_TEST_CODEX_SQLITE_HOME AGENT_TEST_STAT_WRONG_OWNER_PATH
     mkdir -p "$CASE_DIR/wrong-log-target"
     ln -s "$CASE_DIR/wrong-log-target" "$ROOT/log"
     invoke_agent codex 0 0 alpha
@@ -1044,27 +1439,627 @@ test_codex_host_state_rejections() {
     finish_case codex
 }
 
+test_codex_unapproved_sqlite_routing() {
+    local route state bypass policy external_parent external_sqlite
+    local AGENT_TEST_CODEX_POLICY AGENT_TEST_CODEX_PROBE_FILE
+    local AGENT_TEST_CODEX_SQLITE_HOME AGENT_TEST_UPSTREAM_STARTED
+
+    for route in zero managed delegated bypass; do
+        case "$route" in
+        zero)
+            state=zero
+            bypass=0
+            policy=manage
+            ;;
+        managed)
+            state=complete
+            bypass=0
+            policy=manage
+            ;;
+        delegated)
+            state=complete
+            bypass=0
+            policy=delegate
+            ;;
+        bypass)
+            state=complete
+            bypass=1
+            policy=manage
+            ;;
+        esac
+
+        new_case codex "unapproved-sqlite-$route"
+        configure_state "$state"
+        create_codex_sqlite_seed "$ROOT/memories_1.sqlite" "route-$route"
+        external_parent="$CASE_DIR/nonexistent external parent"
+        external_sqlite="$external_parent/sqlite"
+        AGENT_TEST_CODEX_POLICY=$policy
+        AGENT_TEST_CODEX_PROBE_FILE="$CASE_DIR/policy-probe"
+        AGENT_TEST_CODEX_SQLITE_HOME=$external_sqlite
+        AGENT_TEST_UPSTREAM_STARTED="$CASE_DIR/upstream-started"
+        invoke_agent codex "$bypass" 0 alpha
+        [ "$LAST_STATUS" -ne 0 ] ||
+            fail "Codex accepted an unapproved SQLite root in $route routing"
+        assert_upstream_not_invoked
+        [ ! -e "$AGENT_TEST_CODEX_PROBE_FILE" ] ||
+            fail "Codex probed policy before SQLite validation in $route routing"
+        [ ! -e "$AGENT_TEST_UPSTREAM_STARTED" ] ||
+            fail "Codex launched upstream before SQLite validation in $route routing"
+        [ ! -e "$external_parent" ] ||
+            fail "Codex mutated a nonexistent external target in $route routing"
+        [ ! -e "$CODEX_LOCAL_ROOT" ] ||
+            fail "Codex created local state before rejecting $route routing"
+        grep -F 'codex: refusing unapproved SQLite state path' \
+            "$STDERR_FILE" >/dev/null ||
+            fail "Codex omitted the unapproved SQLite error in $route routing"
+        finish_case codex
+    done
+}
+
+test_codex_parent_root_rejections() {
+    local mode external_root
+    local AGENT_TEST_CODEX_PROBE_FILE AGENT_TEST_CODEX_SQLITE_HOME
+    local AGENT_TEST_STAT_WRONG_OWNER_PATH AGENT_TEST_UPSTREAM_STARTED
+
+    new_case codex host-state-symlinked-parent-root
+    configure_state complete
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" parent-symlink
+    external_root="$CASE_DIR/external parent root"
+    mkdir -m 700 "$external_root"
+    ln -s "$external_root" "$CODEX_LOCAL_ROOT"
+    AGENT_TEST_CODEX_PROBE_FILE="$CASE_DIR/policy-probe"
+    AGENT_TEST_UPSTREAM_STARTED="$CASE_DIR/upstream-started"
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -ne 0 ] || fail "Codex accepted a symlinked parent root"
+    assert_upstream_not_invoked
+    [ ! -e "$AGENT_TEST_CODEX_PROBE_FILE" ] ||
+        fail "Codex probed policy before rejecting a symlinked parent root"
+    [ ! -e "$AGENT_TEST_UPSTREAM_STARTED" ] ||
+        fail "Codex launched upstream before rejecting a symlinked parent root"
+    test -z "$(find "$external_root" -mindepth 1 -print -quit)" ||
+        fail "Codex mutated the target of a symlinked parent root"
+    grep -F 'not a private directory owned by uid' "$STDERR_FILE" >/dev/null ||
+        fail "Codex omitted the symlinked parent-root diagnostic"
+    finish_case codex
+
+    new_case codex host-state-wrong-owner-parent-root
+    configure_state complete
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" parent-owner
+    mkdir -m 700 "$CODEX_LOCAL_ROOT"
+    AGENT_TEST_CODEX_PROBE_FILE="$CASE_DIR/policy-probe"
+    AGENT_TEST_CODEX_SQLITE_HOME=$CODEX_LOCAL_ROOT/sqlite
+    AGENT_TEST_STAT_WRONG_OWNER_PATH=$CODEX_LOCAL_ROOT
+    AGENT_TEST_UPSTREAM_STARTED="$CASE_DIR/upstream-started"
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -ne 0 ] || fail "Codex accepted a wrong-owner parent root"
+    assert_upstream_not_invoked
+    [ ! -e "$CODEX_LOCAL_ROOT/sqlite" ] && [ ! -e "$CODEX_LOCAL_ROOT/log" ] ||
+        fail "Codex created child state beneath a wrong-owner parent root"
+    [ ! -e "$AGENT_TEST_CODEX_PROBE_FILE" ] ||
+        fail "Codex probed policy before rejecting a wrong-owner parent root"
+    [ ! -e "$AGENT_TEST_UPSTREAM_STARTED" ] ||
+        fail "Codex launched upstream before rejecting a wrong-owner parent root"
+    grep -F 'not a private directory owned by uid' "$STDERR_FILE" >/dev/null ||
+        fail "Codex omitted the wrong-owner parent-root diagnostic"
+    finish_case codex
+
+    for mode in 750 755; do
+        new_case codex "host-state-parent-mode-$mode"
+        configure_state complete
+        create_codex_sqlite_seed "$ROOT/memories_1.sqlite" "parent-mode-$mode"
+        mkdir -m "$mode" "$CODEX_LOCAL_ROOT"
+        unset AGENT_TEST_CODEX_SQLITE_HOME AGENT_TEST_STAT_WRONG_OWNER_PATH
+        if [ "$mode" = 755 ]; then
+            AGENT_TEST_CODEX_SQLITE_HOME=$CODEX_LOCAL_ROOT/sqlite
+        fi
+        AGENT_TEST_CODEX_PROBE_FILE="$CASE_DIR/policy-probe"
+        AGENT_TEST_UPSTREAM_STARTED="$CASE_DIR/upstream-started"
+        invoke_agent codex 0 0 alpha
+        [ "$LAST_STATUS" -ne 0 ] ||
+            fail "Codex accepted a mode $mode parent root"
+        assert_upstream_not_invoked
+        [ "$(stat -c %a "$CODEX_LOCAL_ROOT")" = "$mode" ] ||
+            fail "Codex changed a rejected mode $mode parent root"
+        [ ! -e "$CODEX_LOCAL_ROOT/sqlite" ] && [ ! -e "$CODEX_LOCAL_ROOT/log" ] ||
+            fail "Codex created child state beneath a mode $mode parent root"
+        [ ! -e "$AGENT_TEST_CODEX_PROBE_FILE" ] ||
+            fail "Codex probed policy before rejecting a mode $mode parent root"
+        [ ! -e "$AGENT_TEST_UPSTREAM_STARTED" ] ||
+            fail "Codex launched upstream before rejecting a mode $mode parent root"
+        grep -F 'not a private directory owned by uid' "$STDERR_FILE" >/dev/null ||
+            fail "Codex omitted the mode $mode parent-root diagnostic"
+        finish_case codex
+    done
+}
+
 test_codex_host_state() {
-    local seed
+    local marker
+    local AGENT_TEST_CODEX_POLICY=manage
+    local AGENT_TEST_CODEX_SQLITE_HOME AGENT_TEST_CODEX_SQLITE_MARKER
 
     new_case codex host-state-managed
     configure_state complete
-    seed="$ROOT/memories_1.sqlite"
-    printf '%s\n' codex-seed-managed >"$seed"
+    marker=codex-seed-managed
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" "$marker"
+    AGENT_TEST_CODEX_SQLITE_MARKER=$marker
     invoke_agent codex 0 0 alpha
     [ "$LAST_STATUS" -eq 0 ] || fail "managed Codex host-state launch failed"
     assert_managed_argv codex alpha
-    assert_codex_host_state "$seed"
+    assert_codex_host_state "$marker"
+    finish_case codex
+
+    new_case codex host-state-approved-inherited-sqlite
+    configure_state complete
+    marker=codex-seed-inherited
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" "$marker"
+    AGENT_TEST_CODEX_SQLITE_HOME=$CODEX_LOCAL_ROOT/sqlite
+    AGENT_TEST_CODEX_SQLITE_MARKER=$marker
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -eq 0 ] || fail "approved inherited Codex SQLite root failed"
+    assert_managed_argv codex alpha
+    assert_codex_host_state "$marker"
+    unset AGENT_TEST_CODEX_SQLITE_HOME
+    finish_case codex
+
+    new_case codex host-state-zero
+    configure_state zero
+    marker=codex-seed-zero
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" "$marker"
+    AGENT_TEST_CODEX_SQLITE_MARKER=$marker
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -eq 0 ] || fail "zero-state Codex host-state launch failed"
+    assert_argv "$ARGV_FILE" alpha
+    assert_codex_host_state "$marker"
+    finish_case codex
+
+    new_case codex host-state-delegated
+    configure_state complete
+    marker=codex-seed-delegated
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" "$marker"
+    AGENT_TEST_CODEX_POLICY=delegate
+    AGENT_TEST_CODEX_SQLITE_MARKER=$marker
+    invoke_agent codex 0 0 --version
+    [ "$LAST_STATUS" -eq 0 ] || fail "delegated Codex host-state launch failed"
+    assert_argv "$ARGV_FILE" --version
+    assert_codex_host_state "$marker"
     finish_case codex
 
     new_case codex host-state-bypass
-    configure_state directories
-    seed="$ROOT/memories_1.sqlite"
-    printf '%s\n' codex-seed-bypass >"$seed"
+    configure_state complete
+    marker=codex-seed-bypass
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" "$marker"
+    AGENT_TEST_CODEX_POLICY=manage
+    AGENT_TEST_CODEX_SQLITE_MARKER=$marker
     invoke_agent codex 1 0 alpha
     [ "$LAST_STATUS" -eq 0 ] || fail "bypass Codex host-state launch failed"
     assert_argv "$ARGV_FILE" alpha
-    assert_codex_host_state "$seed"
+    assert_codex_host_state "$marker"
+    finish_case codex
+}
+
+test_codex_sqlite_wal_snapshot() {
+    local marker=codex-live-wal writer_pid writer_status
+    local ready release
+    local AGENT_TEST_CODEX_SQLITE_MARKER
+
+    new_case codex sqlite-live-wal-snapshot
+    configure_state complete
+    ready="$CASE_DIR/wal-ready"
+    release="$CASE_DIR/wal-release"
+    start_codex_live_wal_seed "$ROOT/memories_1.sqlite" "$marker" "$ready" "$release"
+    writer_pid=$SQLITE_HELPER_PID
+    background_pids=("$writer_pid")
+    wait_for_path "$ready" "$writer_pid" "live WAL source"
+    AGENT_TEST_CODEX_SQLITE_MARKER=$marker
+    invoke_agent codex 0 0 alpha
+    touch "$release"
+    if wait "$writer_pid"; then
+        writer_status=0
+    else
+        writer_status=$?
+    fi
+    background_pids=()
+    [ "$writer_status" -eq 0 ] || fail "live WAL fixture exited $writer_status"
+    [ "$LAST_STATUS" -eq 0 ] || fail "Codex could not snapshot a live WAL database"
+    assert_managed_argv codex alpha
+    assert_codex_host_state "$marker"
+    finish_case codex
+}
+
+test_codex_sqlite_backup_supervision() {
+    local marker ready release prefix timeout_pid_file timeout_pid
+    local holder_pid wrapper_pid watchdog_pid holder_status wrapper_status
+    local watchdog_fired
+    local AGENT_TEST_CODEX_FAST_BACKUP_DEADLINE
+    local AGENT_TEST_CODEX_TIMEOUT_PID_FILE
+
+    new_case codex sqlite-backup-term
+    configure_state complete
+    marker=codex-term-source
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" "$marker"
+    ready="$CASE_DIR/exclusive-ready"
+    release="$CASE_DIR/exclusive-release"
+    prefix="$CASE_DIR/term-launch"
+    timeout_pid_file="$CASE_DIR/timeout-pid"
+    watchdog_fired="$CASE_DIR/watchdog-fired"
+    start_codex_exclusive_holder "$ROOT/memories_1.sqlite" "$ready" "$release"
+    holder_pid=$SQLITE_HELPER_PID
+    background_pids=("$holder_pid")
+    wait_for_path "$ready" "$holder_pid" "TERM fixture exclusive holder"
+    AGENT_TEST_CODEX_TIMEOUT_PID_FILE=$timeout_pid_file
+    start_codex_seed_launch "$prefix" "$marker"
+    wrapper_pid=$CODEX_LAUNCH_PID
+    background_pids+=("$wrapper_pid")
+    wait_for_codex_seed_temporaries 1 "$wrapper_pid"
+    wait_for_path "$timeout_pid_file" "$wrapper_pid" "backup supervisor PID"
+    timeout_pid=$(<"$timeout_pid_file")
+    start_process_watchdog "$wrapper_pid" "$watchdog_fired"
+    watchdog_pid=$WATCHDOG_PID
+    background_pids+=("$watchdog_pid")
+    kill -TERM "$wrapper_pid"
+    if wait "$wrapper_pid"; then wrapper_status=0; else wrapper_status=$?; fi
+    kill -TERM "$watchdog_pid" 2>/dev/null || true
+    wait "$watchdog_pid" 2>/dev/null || true
+    background_pids=("$holder_pid")
+
+    [ "$wrapper_status" -eq 143 ] ||
+        fail "TERM-interrupted SQLite backup exited $wrapper_status instead of 143"
+    [ ! -e "$watchdog_fired" ] || fail "TERM did not stop the SQLite backup promptly"
+    ! kill -0 "$timeout_pid" 2>/dev/null ||
+        fail "TERM left the SQLite backup supervisor running"
+    kill -0 "$holder_pid" 2>/dev/null ||
+        fail "TERM fixture released the source's exclusive lock"
+    [ ! -e "$release" ] || fail "TERM fixture released its source lock early"
+    [ ! -e "$prefix.probe" ] && [ ! -e "$prefix.started" ] ||
+        fail "TERM-interrupted backup reached policy or upstream"
+    assert_codex_sqlite_seed_absent "$CODEX_LOCAL_ROOT/sqlite"
+
+    touch "$release"
+    if wait "$holder_pid"; then holder_status=0; else holder_status=$?; fi
+    background_pids=()
+    [ "$holder_status" -eq 0 ] || fail "TERM fixture holder exited $holder_status"
+    finish_case codex
+
+    new_case codex sqlite-backup-deadline
+    configure_state complete
+    marker=codex-deadline-source
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" "$marker"
+    ready="$CASE_DIR/exclusive-ready"
+    release="$CASE_DIR/exclusive-release"
+    prefix="$CASE_DIR/deadline-launch"
+    timeout_pid_file="$CASE_DIR/timeout-pid"
+    watchdog_fired="$CASE_DIR/watchdog-fired"
+    start_codex_exclusive_holder "$ROOT/memories_1.sqlite" "$ready" "$release"
+    holder_pid=$SQLITE_HELPER_PID
+    background_pids=("$holder_pid")
+    wait_for_path "$ready" "$holder_pid" "deadline fixture exclusive holder"
+    AGENT_TEST_CODEX_FAST_BACKUP_DEADLINE=1
+    AGENT_TEST_CODEX_TIMEOUT_PID_FILE=$timeout_pid_file
+    start_codex_seed_launch "$prefix" "$marker"
+    wrapper_pid=$CODEX_LAUNCH_PID
+    background_pids+=("$wrapper_pid")
+    wait_for_codex_seed_temporaries 1 "$wrapper_pid"
+    wait_for_path "$timeout_pid_file" "$wrapper_pid" "deadline supervisor PID"
+    timeout_pid=$(<"$timeout_pid_file")
+    start_process_watchdog "$wrapper_pid" "$watchdog_fired"
+    watchdog_pid=$WATCHDOG_PID
+    background_pids+=("$watchdog_pid")
+    if wait "$wrapper_pid"; then wrapper_status=0; else wrapper_status=$?; fi
+    kill -TERM "$watchdog_pid" 2>/dev/null || true
+    wait "$watchdog_pid" 2>/dev/null || true
+    background_pids=("$holder_pid")
+
+    [ "$wrapper_status" -eq 1 ] ||
+        fail "deadline-bounded SQLite backup exited $wrapper_status instead of 1"
+    [ ! -e "$watchdog_fired" ] || fail "SQLite backup deadline exceeded five seconds"
+    ! kill -0 "$timeout_pid" 2>/dev/null ||
+        fail "deadline left the SQLite backup supervisor running"
+    kill -0 "$holder_pid" 2>/dev/null ||
+        fail "deadline fixture released the source's exclusive lock"
+    [ ! -e "$release" ] || fail "deadline fixture released its source lock early"
+    [ ! -e "$prefix.probe" ] && [ ! -e "$prefix.started" ] ||
+        fail "deadline-bounded backup reached policy or upstream"
+    assert_codex_sqlite_seed_absent "$CODEX_LOCAL_ROOT/sqlite"
+    grep -F 'codex: cannot create host-local memory backup' \
+        "$prefix.stderr" >/dev/null || fail "deadline failure omitted its diagnostic"
+
+    touch "$release"
+    if wait "$holder_pid"; then holder_status=0; else holder_status=$?; fi
+    background_pids=()
+    [ "$holder_status" -eq 0 ] || fail "deadline fixture holder exited $holder_status"
+    unset AGENT_TEST_CODEX_FAST_BACKUP_DEADLINE AGENT_TEST_CODEX_TIMEOUT_PID_FILE
+    finish_case codex
+}
+
+test_codex_sqlite_validation_supervision() {
+    local marker ready release prefix timeout_pid_file timeout_child_pid_file
+    local timeout_pid timeout_child_pid holder_pid wrapper_pid watchdog_pid
+    local holder_status wrapper_status watchdog_fired
+    local AGENT_TEST_CODEX_FAST_BACKUP_DEADLINE
+    local AGENT_TEST_CODEX_TIMEOUT_CHILD_PID_FILE AGENT_TEST_CODEX_TIMEOUT_PID_FILE
+
+    new_case codex sqlite-validation-term
+    configure_state complete
+    marker=codex-existing-winner-term
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" codex-unused-source
+    mkdir -m 700 "$CODEX_LOCAL_ROOT" "$CODEX_LOCAL_ROOT/sqlite"
+    create_codex_sqlite_seed \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite" "$marker"
+    ready="$CASE_DIR/exclusive-ready"
+    release="$CASE_DIR/exclusive-release"
+    prefix="$CASE_DIR/term-launch"
+    timeout_pid_file="$CASE_DIR/timeout-pid"
+    timeout_child_pid_file="$CASE_DIR/timeout-child-pid"
+    watchdog_fired="$CASE_DIR/watchdog-fired"
+    start_codex_exclusive_holder \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite" "$ready" "$release"
+    holder_pid=$SQLITE_HELPER_PID
+    background_pids=("$holder_pid")
+    wait_for_path "$ready" "$holder_pid" "validation TERM exclusive holder"
+    AGENT_TEST_CODEX_TIMEOUT_PID_FILE=$timeout_pid_file
+    AGENT_TEST_CODEX_TIMEOUT_CHILD_PID_FILE=$timeout_child_pid_file
+    start_codex_seed_launch "$prefix" "$marker"
+    wrapper_pid=$CODEX_LAUNCH_PID
+    background_pids+=("$wrapper_pid")
+    wait_for_path "$timeout_pid_file" "$wrapper_pid" "validation supervisor PID"
+    wait_for_path "$timeout_child_pid_file" "$wrapper_pid" "validation helper PID"
+    timeout_pid=$(<"$timeout_pid_file")
+    timeout_child_pid=$(<"$timeout_child_pid_file")
+    start_process_watchdog "$wrapper_pid" "$watchdog_fired"
+    watchdog_pid=$WATCHDOG_PID
+    background_pids+=("$watchdog_pid")
+    kill -TERM "$wrapper_pid"
+    if wait "$wrapper_pid"; then wrapper_status=0; else wrapper_status=$?; fi
+    kill -TERM "$watchdog_pid" 2>/dev/null || true
+    wait "$watchdog_pid" 2>/dev/null || true
+    background_pids=("$holder_pid")
+
+    [ "$wrapper_status" -eq 143 ] ||
+        fail "TERM-interrupted SQLite validation exited $wrapper_status instead of 143"
+    [ ! -e "$watchdog_fired" ] || fail "TERM did not stop SQLite validation promptly"
+    ! kill -0 "$timeout_pid" 2>/dev/null ||
+        fail "TERM left the SQLite validation supervisor running"
+    ! kill -0 "$timeout_child_pid" 2>/dev/null ||
+        fail "TERM left the SQLite validation helper running"
+    kill -0 "$holder_pid" 2>/dev/null ||
+        fail "validation TERM fixture released the destination's exclusive lock"
+    [ ! -e "$release" ] || fail "validation TERM fixture released its lock early"
+    [ ! -e "$prefix.probe" ] && [ ! -e "$prefix.started" ] ||
+        fail "TERM-interrupted validation reached policy or upstream"
+    assert_no_codex_seed_temporaries "$CODEX_LOCAL_ROOT/sqlite"
+
+    touch "$release"
+    if wait "$holder_pid"; then holder_status=0; else holder_status=$?; fi
+    background_pids=()
+    [ "$holder_status" -eq 0 ] ||
+        fail "validation TERM fixture holder exited $holder_status"
+    assert_codex_sqlite_marker \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite" "$marker"
+    assert_codex_sqlite_published_form \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite"
+    finish_case codex
+
+    new_case codex sqlite-validation-deadline
+    configure_state complete
+    marker=codex-existing-winner-deadline
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" codex-unused-source
+    mkdir -m 700 "$CODEX_LOCAL_ROOT" "$CODEX_LOCAL_ROOT/sqlite"
+    create_codex_sqlite_seed \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite" "$marker"
+    ready="$CASE_DIR/exclusive-ready"
+    release="$CASE_DIR/exclusive-release"
+    prefix="$CASE_DIR/deadline-launch"
+    timeout_pid_file="$CASE_DIR/timeout-pid"
+    timeout_child_pid_file="$CASE_DIR/timeout-child-pid"
+    watchdog_fired="$CASE_DIR/watchdog-fired"
+    start_codex_exclusive_holder \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite" "$ready" "$release"
+    holder_pid=$SQLITE_HELPER_PID
+    background_pids=("$holder_pid")
+    wait_for_path "$ready" "$holder_pid" "validation deadline exclusive holder"
+    AGENT_TEST_CODEX_FAST_BACKUP_DEADLINE=1
+    AGENT_TEST_CODEX_TIMEOUT_PID_FILE=$timeout_pid_file
+    AGENT_TEST_CODEX_TIMEOUT_CHILD_PID_FILE=$timeout_child_pid_file
+    start_codex_seed_launch "$prefix" "$marker"
+    wrapper_pid=$CODEX_LAUNCH_PID
+    background_pids+=("$wrapper_pid")
+    wait_for_path "$timeout_pid_file" "$wrapper_pid" "validation deadline supervisor PID"
+    wait_for_path "$timeout_child_pid_file" "$wrapper_pid" "validation deadline helper PID"
+    timeout_pid=$(<"$timeout_pid_file")
+    timeout_child_pid=$(<"$timeout_child_pid_file")
+    start_process_watchdog "$wrapper_pid" "$watchdog_fired"
+    watchdog_pid=$WATCHDOG_PID
+    background_pids+=("$watchdog_pid")
+    if wait "$wrapper_pid"; then wrapper_status=0; else wrapper_status=$?; fi
+    kill -TERM "$watchdog_pid" 2>/dev/null || true
+    wait "$watchdog_pid" 2>/dev/null || true
+    background_pids=("$holder_pid")
+
+    [ "$wrapper_status" -eq 1 ] ||
+        fail "deadline-bounded SQLite validation exited $wrapper_status instead of 1"
+    [ ! -e "$watchdog_fired" ] || fail "SQLite validation deadline exceeded five seconds"
+    ! kill -0 "$timeout_pid" 2>/dev/null ||
+        fail "deadline left the SQLite validation supervisor running"
+    ! kill -0 "$timeout_child_pid" 2>/dev/null ||
+        fail "deadline left the SQLite validation helper running"
+    kill -0 "$holder_pid" 2>/dev/null ||
+        fail "validation deadline fixture released the destination's exclusive lock"
+    [ ! -e "$release" ] || fail "validation deadline fixture released its lock early"
+    [ ! -e "$prefix.probe" ] && [ ! -e "$prefix.started" ] ||
+        fail "deadline-bounded validation reached policy or upstream"
+    assert_no_codex_seed_temporaries "$CODEX_LOCAL_ROOT/sqlite"
+    grep -F 'codex: refusing invalid host-local memory database' \
+        "$prefix.stderr" >/dev/null ||
+        fail "validation deadline failure omitted its diagnostic"
+
+    touch "$release"
+    if wait "$holder_pid"; then holder_status=0; else holder_status=$?; fi
+    background_pids=()
+    [ "$holder_status" -eq 0 ] ||
+        fail "validation deadline fixture holder exited $holder_status"
+    assert_codex_sqlite_marker \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite" "$marker"
+    assert_codex_sqlite_published_form \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite"
+    unset AGENT_TEST_CODEX_FAST_BACKUP_DEADLINE
+    unset AGENT_TEST_CODEX_TIMEOUT_CHILD_PID_FILE AGENT_TEST_CODEX_TIMEOUT_PID_FILE
+    finish_case codex
+}
+
+test_codex_sqlite_publication() {
+    local marker source_marker corrupt_before
+    local AGENT_TEST_CODEX_PROBE_FILE AGENT_TEST_CODEX_SQLITE_MARKER
+    local AGENT_TEST_UPSTREAM_STARTED
+
+    new_case codex sqlite-existing-winner
+    configure_state complete
+    mkdir -m 700 "$CODEX_LOCAL_ROOT" "$CODEX_LOCAL_ROOT/sqlite"
+    source_marker=codex-source-loser
+    marker=codex-existing-winner
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" "$source_marker"
+    create_codex_sqlite_seed \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite" "$marker"
+    AGENT_TEST_CODEX_SQLITE_MARKER=$marker
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -eq 0 ] || fail "Codex rejected a valid published winner"
+    assert_codex_sqlite_marker "$ROOT/memories_1.sqlite" "$source_marker"
+    assert_codex_host_state "$marker"
+    finish_case codex
+
+    new_case codex sqlite-existing-corrupt
+    configure_state complete
+    mkdir -m 700 "$CODEX_LOCAL_ROOT" "$CODEX_LOCAL_ROOT/sqlite"
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" codex-valid-source
+    create_codex_sqlite_interior_corruption \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite"
+    corrupt_before=$(sha256sum "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite")
+    AGENT_TEST_CODEX_PROBE_FILE="$CASE_DIR/policy-probe"
+    AGENT_TEST_UPSTREAM_STARTED="$CASE_DIR/upstream-started"
+    unset AGENT_TEST_CODEX_SQLITE_MARKER
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -ne 0 ] || fail "Codex accepted a corrupt published destination"
+    assert_upstream_not_invoked
+    [ ! -e "$AGENT_TEST_CODEX_PROBE_FILE" ] ||
+        fail "Codex probed policy before rejecting a corrupt destination"
+    [ ! -e "$AGENT_TEST_UPSTREAM_STARTED" ] ||
+        fail "Codex launched upstream with a corrupt destination"
+    [ "$(sha256sum "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite")" = "$corrupt_before" ] ||
+        fail "Codex overwrote a corrupt preexisting destination"
+    assert_no_codex_seed_temporaries "$CODEX_LOCAL_ROOT/sqlite"
+    grep -F 'codex: refusing invalid host-local memory database' \
+        "$STDERR_FILE" >/dev/null ||
+        fail "Codex omitted the corrupt destination diagnostic"
+    finish_case codex
+
+    new_case codex sqlite-stale-crash-lock
+    configure_state complete
+    mkdir -m 700 "$CODEX_LOCAL_ROOT" "$CODEX_LOCAL_ROOT/sqlite"
+    mkdir "$CODEX_LOCAL_ROOT/sqlite/.memories-seed-lock"
+    marker=codex-after-stale-lock
+    create_codex_sqlite_seed "$ROOT/memories_1.sqlite" "$marker"
+    AGENT_TEST_CODEX_SQLITE_MARKER=$marker
+    unset AGENT_TEST_CODEX_PROBE_FILE AGENT_TEST_UPSTREAM_STARTED
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -eq 0 ] || fail "stale crash residue blocked a Codex launch"
+    assert_managed_argv codex alpha
+    assert_codex_sqlite_marker \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite" "$marker"
+    assert_codex_sqlite_published_form \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite"
+    [ -d "$CODEX_LOCAL_ROOT/sqlite/.memories-seed-lock" ] ||
+        fail "Codex unexpectedly relied on or removed unrelated crash residue"
+    assert_no_codex_seed_temporaries "$CODEX_LOCAL_ROOT/sqlite"
+    finish_case codex
+}
+
+test_codex_sqlite_concurrent_publication() {
+    local first_marker=codex-first-snapshot
+    local second_marker=codex-second-snapshot
+    local first_root second_root first_ready second_ready first_release second_release
+    local first_prefix second_prefix first_holder_pid second_holder_pid
+    local first_pid second_pid first_holder_status second_holder_status
+    local first_status second_status
+
+    new_case codex sqlite-concurrent-publication
+    first_root="$CASE_DIR/first Codex home"
+    second_root="$CASE_DIR/second Codex home"
+    mkdir -p "$first_root" "$second_root"
+    write_managed_file "$first_root/nix-managed.config.toml"
+    write_managed_file "$second_root/nix-managed.config.toml"
+    create_codex_sqlite_seed "$first_root/memories_1.sqlite" "$first_marker"
+    create_codex_sqlite_seed "$second_root/memories_1.sqlite" "$second_marker"
+    first_ready="$CASE_DIR/first-exclusive-ready"
+    second_ready="$CASE_DIR/second-exclusive-ready"
+    first_release="$CASE_DIR/first-exclusive-release"
+    second_release="$CASE_DIR/second-exclusive-release"
+    first_prefix="$CASE_DIR/first-launch"
+    second_prefix="$CASE_DIR/second-launch"
+
+    start_codex_exclusive_holder \
+        "$first_root/memories_1.sqlite" "$first_ready" "$first_release"
+    first_holder_pid=$SQLITE_HELPER_PID
+    background_pids=("$first_holder_pid")
+    start_codex_exclusive_holder \
+        "$second_root/memories_1.sqlite" "$second_ready" "$second_release"
+    second_holder_pid=$SQLITE_HELPER_PID
+    background_pids+=("$second_holder_pid")
+    wait_for_path "$first_ready" "$first_holder_pid" "first exclusive SQLite holder"
+    wait_for_path "$second_ready" "$second_holder_pid" "second exclusive SQLite holder"
+
+    start_codex_seed_launch "$first_prefix" "$first_marker" "$first_root"
+    first_pid=$CODEX_LAUNCH_PID
+    background_pids+=("$first_pid")
+    wait_for_codex_seed_temporaries 1 "$first_pid"
+
+    start_codex_seed_launch "$second_prefix" "$first_marker" "$second_root"
+    second_pid=$CODEX_LAUNCH_PID
+    background_pids+=("$second_pid")
+    wait_for_codex_seed_temporaries 2 "$second_pid"
+
+    [ ! -e "$first_prefix.probe" ] && [ ! -e "$second_prefix.probe" ] ||
+        fail "a concurrent Codex launch probed policy before backup completion"
+    [ ! -e "$first_prefix.started" ] && [ ! -e "$second_prefix.started" ] ||
+        fail "a concurrent Codex launch reached upstream before publication"
+
+    touch "$first_release"
+    if wait "$first_holder_pid"; then first_holder_status=0; else first_holder_status=$?; fi
+    if wait "$first_pid"; then first_status=0; else first_status=$?; fi
+    background_pids=("$second_holder_pid" "$second_pid")
+
+    [ "$first_holder_status" -eq 0 ] ||
+        fail "first exclusive holder exited $first_holder_status"
+    [ "$first_status" -eq 0 ] || fail "first concurrent launch exited $first_status"
+    assert_codex_sqlite_marker \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite" "$first_marker"
+    [ ! -e "$second_prefix.probe" ] && [ ! -e "$second_prefix.started" ] ||
+        fail "second launch advanced before its distinct source snapshot completed"
+    kill -0 "$second_holder_pid" 2>/dev/null ||
+        fail "second source lock was released before first publication"
+
+    touch "$second_release"
+    if wait "$second_holder_pid"; then second_holder_status=0; else second_holder_status=$?; fi
+    if wait "$second_pid"; then second_status=0; else second_status=$?; fi
+    background_pids=()
+
+    [ "$second_holder_status" -eq 0 ] ||
+        fail "second exclusive holder exited $second_holder_status"
+    [ "$second_status" -eq 0 ] || fail "second concurrent launch exited $second_status"
+    [ -e "$first_prefix.probe" ] && [ -e "$second_prefix.probe" ] ||
+        fail "concurrent launches did not resume policy routing after publication"
+    [ -e "$first_prefix.started" ] && [ -e "$second_prefix.started" ] ||
+        fail "concurrent launches did not both observe the published database"
+    assert_argv "$first_prefix.argv" --profile nix-runtime alpha
+    assert_argv "$second_prefix.argv" --profile nix-runtime alpha
+    assert_codex_sqlite_marker \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite" "$first_marker"
+    assert_codex_sqlite_marker "$second_root/memories_1.sqlite" "$second_marker"
+    assert_codex_sqlite_published_form \
+        "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite"
+    [ "$(stat -c %a "$CODEX_LOCAL_ROOT/sqlite/memories_1.sqlite")" = 600 ] ||
+        fail "concurrently published SQLite database is not mode 0600"
+    [ ! -e "$CODEX_LOCAL_ROOT/sqlite/.memories-seed-lock" ] ||
+        fail "concurrent publication left a persistent lock"
+    assert_no_codex_seed_temporaries "$CODEX_LOCAL_ROOT/sqlite"
     finish_case codex
 }
 
@@ -1659,6 +2654,13 @@ run_codex_contract() {
     test_exit_propagation codex
     test_codex_host_state
     test_codex_host_state_rejections
+    test_codex_unapproved_sqlite_routing
+    test_codex_parent_root_rejections
+    test_codex_sqlite_wal_snapshot
+    test_codex_sqlite_backup_supervision
+    test_codex_sqlite_validation_supervision
+    test_codex_sqlite_publication
+    test_codex_sqlite_concurrent_publication
     test_codex_runtime_profile
     test_codex_runtime_profile_rejections
     test_codex_policy_protocol
