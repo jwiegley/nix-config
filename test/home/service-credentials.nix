@@ -3966,6 +3966,53 @@ pkgs.runCommand "service-credential-boundaries" { } ''
   assert_one_byte_encoded_leak_rejected unpadded-after-padded
   run_vlc_accept one-byte-password
 
+  # 0xfb distinguishes every hex and Base64 branch that 0x01 collapses.
+  # Replacing a set entry with its sibling is equivalent to deleting it because
+  # the sibling is already present, so these deletion mutants also bind collapse.
+  short_binary_secret="$TMPDIR/short-binary-secret"
+  printf '\373' >"$short_binary_secret"
+  printf '%s\n' \
+    'hex-lower=xfby' \
+    'hex-upper=xFBy' \
+    'base64-padded=x+w==y' \
+    'base64-unpadded=x+wy' \
+    'base64url-padded=x-w==y' \
+    'base64url-unpadded=x-wy' >short-binary-encoded-collision.out
+  ${pkgs.python3}/bin/python3 ${assertSecretAbsentProgram} \
+    "$short_binary_secret" short-binary-encoded-collision.out
+  for short_binary_leak in \
+    'hex-lower:fb' \
+    'hex-upper:FB' \
+    'base64-padded:+w==' \
+    'base64-unpadded:+w' \
+    'base64url-padded:-w==' \
+    'base64url-unpadded:-w'; do
+    short_binary_label="''${short_binary_leak%%:*}"
+    short_binary_value="''${short_binary_leak#*:}"
+    short_binary_artifact="short-binary-$short_binary_label-leak.out"
+    printf '[%s]' "$short_binary_value" >"$short_binary_artifact"
+    if ${pkgs.python3}/bin/python3 ${assertSecretAbsentProgram} \
+      "$short_binary_secret" "$short_binary_artifact" \
+      >"$short_binary_artifact.scan.out" \
+      2>"$short_binary_artifact.scan.err"; then
+      fail "the short-binary scanner missed a bounded $short_binary_label leak"
+    fi
+    grep -F "secret material entered $short_binary_artifact" \
+      "$short_binary_artifact.scan.err" >/dev/null ||
+      fail "the short-binary scanner rejected $short_binary_label for the wrong reason"
+    if ! ${pkgs.python3}/bin/python3 \
+      "$opaque_mutant_directory/$short_binary_label.py" \
+      "$short_binary_secret" "$short_binary_artifact" \
+      >"$short_binary_artifact.mutant.out" \
+      2>"$short_binary_artifact.mutant.err"; then
+      fail "the $short_binary_label fixture did not kill its bounded deletion mutant"
+    fi
+    [ ! -s "$short_binary_artifact.mutant.out" ] ||
+      fail "the $short_binary_label mutant wrote unexpected output"
+    [ ! -s "$short_binary_artifact.mutant.err" ] ||
+      fail "the $short_binary_label mutant wrote unexpected diagnostics"
+  done
+
   # Seven-byte values remain on the bounded side of the split; eight-byte
   # windows deliberately retain substring matching.
   seven_byte_secret="$TMPDIR/seven-byte-secret"

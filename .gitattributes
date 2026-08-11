@@ -1,3 +1,6 @@
 
 # Unified diffs encode blank context lines as one space by definition.
 *.patch whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab
+
+# obr owns this generated surface and emits one trailing separator line.
+doc/PLAN.org whitespace=-blank-at-eof
