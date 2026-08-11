@@ -833,15 +833,17 @@ config/ai/model-sync.nix:48-205 mutates live defaults and stamp state during Hom
 ]
 #+end_src
 
-* DOING [#B] Execute Syncthing activation safety branches in tests    :syncthing:tests:
+* DONE [#B] Execute Syncthing activation safety branches in tests    :syncthing:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.25
 :LABELS: ["heavy-review","syncthing","tests"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 16:38]
+:MODIFIED: [2026-08-10 Mon 17:43]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 17:43]
+:CLOSE_REASON: Executed every Syncthing activation safety branch through a hermetic preflight harness; focused 28-case build and all-system evaluation passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -864,15 +866,17 @@ config/syncthing.nix:377-549 owns identity, ownership, login-item, PID, ignore-f
 ]
 #+end_src
 
-* DOING [#B] Test the Syncthing monitor process lifecycle    :syncthing:tests:
+* DONE [#B] Test the Syncthing monitor process lifecycle    :syncthing:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.26
 :LABELS: ["heavy-review","syncthing","tests"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 16:38]
+:MODIFIED: [2026-08-10 Mon 17:43]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 17:43]
+:CLOSE_REASON: Extracted shared monitor lifecycle logic and covered inactive, active, route-loss, signal, reap, and child-failure behavior; focused build passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

@@ -75,6 +75,99 @@ let
   clioWireGuardTunnel =
     builtins.head
       clio.launchd.agents."syncthing-wireguard-tunnel".config.ProgramArguments;
+  testMonitorLibrary = pkgs.writeText "syncthing-monitor-test-library" (
+    builtins.readFile ../../config/syncthing-monitor.sh
+  );
+  testMonitorScripts = import ../../config/syncthing-route-monitors.nix {
+    monitorLibrary = testMonitorLibrary;
+    tools = {
+      awk = "${pkgs.gawk}/bin/awk";
+      ifconfig = "wrapper-bin/ifconfig";
+      printf = "${pkgs.coreutils}/bin/printf";
+      remoteTrue = "/usr/bin/true";
+      route = "wrapper-bin/route";
+      sleep = "wrapper-bin/sleep";
+      socat = "wrapper-bin/socat";
+      ssh = "wrapper-bin/ssh";
+    };
+  };
+  testWireGuardTunnel = pkgs.writeText "syncthing-test-wireguard-tunnel" testMonitorScripts.wireGuardTunnel;
+  testHomeLanBridge = pkgs.writeText "syncthing-test-home-lan-bridge" testMonitorScripts.homeLanBridge;
+  testDefaultPolicy = {
+    folder = {
+      path = "~/test-doc";
+      fsWatcherEnabled = true;
+    };
+    ignores = [ "(?d).test-cache" ];
+  };
+  testPeerPolicies = [
+    {
+      deviceID = "PEER-ONE";
+      addresses = [ "tcp://192.0.2.10:22000" ];
+      networks = [ "192.0.2.10/32" ];
+      autoAcceptFolders = true;
+    }
+    {
+      deviceID = "PEER-TWO";
+      addresses = [ "tcp://198.51.100.20:22000" ];
+      networks = [ "198.51.100.0/24" ];
+      autoAcceptFolders = false;
+    }
+  ];
+  testBootstrapCommand =
+    mode:
+    import ../../config/syncthing-bootstrap-command.nix {
+      inherit lib mode;
+      defaultPolicy = testDefaultPolicy;
+      desktopDirectory = "desktop";
+      documentsDirectory = "documents";
+      guiSocket = "runtime/gui.sock";
+      listenAddress = "tcp://127.0.0.1:22000";
+      localDeviceID = "LOCAL-DEVICE";
+      peerPolicies = testPeerPolicies;
+      program = "fake-bin/bootstrap";
+      stateDirectory = "Library/Application Support/Syncthing";
+    };
+  testPreflight = pkgs.writeText "syncthing-test-preflight" ''
+    wait() {
+      printf '%s\n' "$1" >>.preflight-wait-log
+      builtin wait "$@"
+    }
+    ${import ../../config/syncthing-preflight.nix {
+      inherit lib;
+      bootstrapCommand = testBootstrapCommand;
+      desktopDirectory = "desktop";
+      desktopIgnoreFile = "expected-desktop";
+      documentsDirectory = "documents";
+      documentsIgnoreFile = "expected-documents";
+      guiSocket = "runtime/gui.sock";
+      localDeviceID = "LOCAL-DEVICE";
+      logDirectory = "logs";
+      runtimeDirectory = "runtime";
+      stateDirectory = "Library/Application Support/Syncthing";
+      tools = {
+        awk = "${pkgs.gawk}/bin/awk";
+        cmp = "fake-bin/cmp";
+        grep = "fake-bin/grep";
+        id = "fake-bin/id";
+        install = "fake-bin/install";
+        kill = "fake-bin/kill";
+        launchctl = "fake-bin/launchctl";
+        mv = "fake-bin/mv";
+        pgrep = "fake-bin/pgrep";
+        plutil = "fake-bin/plutil";
+        ps = "fake-bin/ps";
+        rm = "fake-bin/rm";
+        sfltool = "fake-bin/sfltool";
+        sleep = "${pkgs.coreutils}/bin/true";
+        stat = "fake-bin/stat";
+        syncthing = "fake-bin/syncthing";
+        tmutil = "fake-bin/tmutil";
+        tr = "${pkgs.coreutils}/bin/tr";
+      };
+      username = "test";
+    }}
+  '';
   linuxHomes =
     map (fixture: fixture.config) (builtins.attrValues nixosHomeEvaluationFixtures)
     ++ map (configuration: configuration.config) (builtins.attrValues homeConfigurations);
@@ -128,6 +221,45 @@ let
       homeLanBridgeAgent = home.launchd.agents."syncthing-home-lan-bridge" or null;
       wireGuardTunnelAgent = home.launchd.agents."syncthing-wireguard-tunnel" or null;
       preflight = home.home.activation.prepareSyncthing;
+      localDeviceID =
+        if isClio then
+          hera.services.syncthing.settings.devices.clio.id
+        else
+          clio.services.syncthing.settings.devices.hera.id;
+      expectedBootstrapArguments =
+        mode:
+        lib.escapeShellArgs (
+          [
+            mode
+            "--config"
+            "${home.home.homeDirectory}/Library/Application Support/Syncthing/config.xml"
+            "--local-device-id"
+            localDeviceID
+            "--listen-address"
+            localAddress
+          ]
+          ++ lib.concatMap (name: [
+            "--peer-policy"
+            (builtins.toJSON {
+              inherit (service.settings.devices.${name}) addresses autoAcceptFolders;
+              deviceID = service.settings.devices.${name}.id;
+              networks = service.settings.devices.${name}.allowedNetworks;
+            })
+          ]) peerNames
+          ++ [
+            "--gui-socket"
+            "${home.home.homeDirectory}/.local/state/syncthing/gui.sock"
+            "--default-policy"
+            (builtins.toJSON {
+              folder = defaultFolder;
+              ignores = defaultIgnores.lines;
+            })
+            "--documents"
+            "${home.home.homeDirectory}/Documents"
+            "--desktop"
+            "${home.home.homeDirectory}/Desktop"
+          ]
+        );
       syncthingAgents = lib.filterAttrs (name: _: lib.hasInfix "syncthing" name) home.launchd.agents;
       isClio = localName == "clio";
       expectedAgentNames = [
@@ -294,6 +426,8 @@ let
     && preflight.before == [ "setupLaunchAgents" ]
     && preflight.after == [ "linkGeneration" ]
     && lib.hasInfix "/bin/syncthing-bootstrap" preflight.data
+    && lib.hasInfix (expectedBootstrapArguments "--check") preflight.data
+    && lib.hasInfix (expectedBootstrapArguments "--apply") preflight.data
     && lib.hasInfix "required private directory is missing or unsafe: $path" preflight.data
     && lib.hasInfix "${home.home.homeDirectory}/Documents" preflight.data
     && !lib.hasInfix "${home.home.homeDirectory}/doc/obsidian" preflight.data
@@ -322,6 +456,8 @@ pkgs.runCommand "syncthing-home-contract"
   {
     nativeBuildInputs = [
       pkgs.bash
+      pkgs.coreutils
+      pkgs.gawk
       pkgs.gnugrep
       pkgs.python3
       managedSyncthing
@@ -375,11 +511,26 @@ pkgs.runCommand "syncthing-home-contract"
     bash -n ${clioPreflight}
     bash -n ${clioHomeLanBridge}
     bash -n ${clioWireGuardTunnel}
-    grep -F -- '-B "$route_interface"' ${clioWireGuardTunnel} >/dev/null
+    grep -F -- '-B "$1"' ${clioWireGuardTunnel} >/dev/null
+    grep -F -- 'exec /usr/bin/ssh \' ${clioWireGuardTunnel} >/dev/null
     grep -F -- '-b 10.6.0.2' ${clioWireGuardTunnel} >/dev/null
     grep -F -- '/bin/sleep 30' ${clioWireGuardTunnel} >/dev/null
     grep -F -- '/bin/sleep 30' ${clioHomeLanBridge} >/dev/null
+    grep -F -- 'exec ' ${clioHomeLanBridge} | grep -F -- '/bin/socat \' >/dev/null
     grep -F -- 'range=192.168.1.4/32,reuseaddr,fork' ${clioHomeLanBridge} >/dev/null
+    DRY_RUN=1 bash ${heraPreflight}
+    DRY_RUN=1 bash ${clioPreflight}
+    cp ${./syncthing-runtime-check.py} runtime-check.py
+    cp ${./syncthing-fake-tool.sh} fake-tool.sh
+    chmod +x fake-tool.sh
+    python3 runtime-check.py \
+      ${testPreflight} \
+      ${testMonitorLibrary} \
+      ${pkgs.bash}/bin/bash \
+      "$PWD/fake-tool.sh" \
+      ${pkgs.coreutils}/bin/sleep \
+      ${testWireGuardTunnel} \
+      ${testHomeLanBridge}
     cp ${../../config/syncthing-bootstrap.py} bootstrap.py
     cat > config.xml <<'XML'
     <configuration version="52">

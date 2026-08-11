@@ -86,106 +86,22 @@ let
     folder = defaultFolderPolicy;
     ignores = defaultIgnorePatterns;
   };
-  wireGuardTunnel = pkgs.writeShellScript "syncthing-wireguard-tunnel" ''
-    set -euo pipefail
-
-    wireguard_route_active() {
-      route_interface="$(
-        /sbin/route -n get 192.168.1.4 2>/dev/null \
-          | /usr/bin/awk '/^[[:space:]]*interface: / { print $2; exit }'
-      )" || return 1
-      [ -n "$route_interface" ] \
-        && /sbin/ifconfig "$route_interface" 2>/dev/null \
-          | /usr/bin/awk '$1 == "inet" && $2 == "10.6.0.2" { found = 1 } END { exit !found }'
-    }
-    wireguard_route_active || exit 0
-
-    /usr/bin/ssh \
-      -N -T \
-      -B "$route_interface" \
-      -b 10.6.0.2 \
-      -o BatchMode=yes \
-      -o ConnectTimeout=10 \
-      -o ConnectionAttempts=1 \
-      -o ControlMaster=no \
-      -o ControlPath=none \
-      -o ExitOnForwardFailure=yes \
-      -o ForwardAgent=no \
-      -o HostName=192.168.1.4 \
-      -o PermitLocalCommand=no \
-      -o ProxyCommand=none \
-      -o ProxyJump=none \
-      -o ServerAliveCountMax=3 \
-      -o ServerAliveInterval=15 \
-      -o StrictHostKeyChecking=yes \
-      -L 127.0.0.1:22001:192.168.1.4:22000 \
-      hera &
-    child_pid=$!
-    cleanup() {
-      kill -TERM "$child_pid" 2>/dev/null || true
-      wait "$child_pid" 2>/dev/null || true
-    }
-    trap cleanup EXIT HUP INT TERM
-    while kill -0 "$child_pid" 2>/dev/null; do
-      /bin/sleep 30
-      wireguard_route_active || exit 0
-    done
-    child_status=0
-    wait "$child_pid" || child_status=$?
-    trap - EXIT HUP INT TERM
-    exit "$child_status"
-  '';
-  homeLanBridge = pkgs.writeShellScript "syncthing-home-lan-bridge" ''
-    set -euo pipefail
-
-    home_route_active() {
-      route_interface="$(
-        /sbin/route -n get 192.168.1.4 2>/dev/null \
-          | /usr/bin/awk '/^[[:space:]]*interface: / { print $2; exit }'
-      )" || return 1
-      case "$route_interface" in
-        "" | utun*) return 1 ;;
-      esac
-      /sbin/ifconfig "$route_interface" 2>/dev/null \
-        | /usr/bin/awk '$1 == "inet" && $2 == "192.168.1.5" { found = 1 } END { exit !found }'
-    }
-    home_route_active || exit 0
-
-    /usr/bin/ssh \
-      -T \
-      -b 192.168.1.5 \
-      -o BatchMode=yes \
-      -o ClearAllForwardings=yes \
-      -o ConnectTimeout=3 \
-      -o ConnectionAttempts=1 \
-      -o ControlMaster=no \
-      -o ControlPath=none \
-      -o ForwardAgent=no \
-      -o HostName=192.168.1.4 \
-      -o PermitLocalCommand=no \
-      -o ProxyCommand=none \
-      -o ProxyJump=none \
-      -o StrictHostKeyChecking=yes \
-      hera /usr/bin/true </dev/null
-
-    ${lib.getExe pkgs.socat} \
-      "TCP4-LISTEN:22000,bind=192.168.1.5,range=192.168.1.4/32,reuseaddr,fork" \
-      "TCP4:127.0.0.1:22000" &
-    child_pid=$!
-    cleanup() {
-      kill -TERM "$child_pid" 2>/dev/null || true
-      wait "$child_pid" 2>/dev/null || true
-    }
-    trap cleanup EXIT HUP INT TERM
-    while kill -0 "$child_pid" 2>/dev/null; do
-      /bin/sleep 30
-      home_route_active || exit 0
-    done
-    child_status=0
-    wait "$child_pid" || child_status=$?
-    trap - EXIT HUP INT TERM
-    exit "$child_status"
-  '';
+  monitorLibrary = pkgs.writeText "syncthing-monitor.sh" (builtins.readFile ./syncthing-monitor.sh);
+  monitorScripts = import ./syncthing-route-monitors.nix {
+    inherit monitorLibrary;
+    tools = {
+      awk = "/usr/bin/awk";
+      ifconfig = "/sbin/ifconfig";
+      printf = "/usr/bin/printf";
+      remoteTrue = "/usr/bin/true";
+      route = "/sbin/route";
+      sleep = "/bin/sleep";
+      socat = lib.getExe pkgs.socat;
+      ssh = "/usr/bin/ssh";
+    };
+  };
+  wireGuardTunnel = pkgs.writeShellScript "syncthing-wireguard-tunnel" monitorScripts.wireGuardTunnel;
+  homeLanBridge = pkgs.writeShellScript "syncthing-home-lan-bridge" monitorScripts.homeLanBridge;
   managedFolder =
     {
       id,
@@ -241,36 +157,62 @@ let
   };
   bootstrapCommand =
     mode:
-    lib.escapeShellArgs (
-      [
-        "${bootstrapProgram}/bin/syncthing-bootstrap"
-        mode
-        "--config"
-        "${stateDirectory}/config.xml"
-        "--local-device-id"
-        localNode.deviceID
-        "--listen-address"
-        localNode.listenAddress
-      ]
-      ++ lib.concatMap (name: [
-        "--peer-policy"
-        (builtins.toJSON {
-          deviceID = nodes.${name}.deviceID;
-          inherit (nodes.${name}) addresses networks;
-          autoAcceptFolders = peerAutoAcceptFolders name;
-        })
-      ]) peerNames
-      ++ [
-        "--gui-socket"
-        guiSocket
-        "--default-policy"
-        (builtins.toJSON defaultPolicy)
-        "--documents"
-        documentsDirectory
-        "--desktop"
+    import ./syncthing-bootstrap-command.nix {
+      inherit
+        defaultPolicy
         desktopDirectory
-      ]
-    );
+        documentsDirectory
+        guiSocket
+        lib
+        mode
+        stateDirectory
+        ;
+      inherit (localNode) listenAddress;
+      localDeviceID = localNode.deviceID;
+      peerPolicies = map (name: {
+        deviceID = nodes.${name}.deviceID;
+        inherit (nodes.${name}) addresses networks;
+        autoAcceptFolders = peerAutoAcceptFolders name;
+      }) peerNames;
+      program = "${bootstrapProgram}/bin/syncthing-bootstrap";
+    };
+  preflightTools = {
+    awk = "/usr/bin/awk";
+    cmp = "${pkgs.diffutils}/bin/cmp";
+    grep = "/usr/bin/grep";
+    id = "/usr/bin/id";
+    install = "${pkgs.coreutils}/bin/install";
+    kill = "/bin/kill";
+    launchctl = "/bin/launchctl";
+    mv = "${pkgs.coreutils}/bin/mv";
+    pgrep = "/usr/bin/pgrep";
+    plutil = "/usr/bin/plutil";
+    ps = "/bin/ps";
+    rm = "${pkgs.coreutils}/bin/rm";
+    sfltool = "/usr/bin/sfltool";
+    sleep = "/bin/sleep";
+    stat = "/usr/bin/stat";
+    syncthing = lib.getExe syncthingPackage;
+    tmutil = "/usr/bin/tmutil";
+    tr = "/usr/bin/tr";
+  };
+  preflightScript = import ./syncthing-preflight.nix {
+    inherit
+      bootstrapCommand
+      desktopDirectory
+      desktopIgnoreFile
+      documentsDirectory
+      documentsIgnoreFile
+      guiSocket
+      lib
+      logDirectory
+      runtimeDirectory
+      stateDirectory
+      ;
+    localDeviceID = localNode.deviceID;
+    tools = preflightTools;
+    username = config.home.username;
+  };
   documentsIgnoreFile = pkgs.writeText "documents-syncthing-ignore" ''
     ${lib.concatStringsSep "\n" defaultIgnorePatterns}
     /.git
@@ -370,173 +312,8 @@ in
   home.activation.prepareSyncthing = lib.mkIf enabled (
     lib.hm.dag.entryBetween [ "setupLaunchAgents" ] [ "linkGeneration" ] ''
       if [[ ! -v DRY_RUN ]]; then
-        syncthing_fail() {
-          echo "syncthing preflight: $1" >&2
-          exit 1
-        }
-        syncthing_require_directory() {
-          local path="$1" expected_mode="$2"
-          [[ -d "$path" && ! -L "$path" ]] \
-            || syncthing_fail "required private directory is missing or unsafe: $path"
-          [[ "$(/usr/bin/stat -f '%Su' "$path")" == ${lib.escapeShellArg config.home.username} ]] \
-            || syncthing_fail "private directory has the wrong owner: $path"
-          [[ "$(/usr/bin/stat -f '%Lp' "$path")" == "$expected_mode" ]] \
-            || syncthing_fail "private directory has the wrong mode: $path"
-        }
-        syncthing_require_file() {
-          local path="$1"
-          [[ -f "$path" && ! -L "$path" ]] \
-            || syncthing_fail "required private file is missing or unsafe: $path"
-          [[ "$(/usr/bin/stat -f '%Su' "$path")" == ${lib.escapeShellArg config.home.username} ]] \
-            || syncthing_fail "private file has the wrong owner: $path"
-          [[ "$(/usr/bin/stat -f '%Lp' "$path")" == "600" ]] \
-            || syncthing_fail "private file has the wrong mode: $path"
-        }
+        ${preflightScript}
 
-        ${pkgs.coreutils}/bin/install -d -m 0700 \
-          ${lib.escapeShellArg logDirectory} \
-          ${lib.escapeShellArg runtimeDirectory}
-        syncthing_require_directory ${lib.escapeShellArg stateDirectory} 700
-        syncthing_require_directory ${lib.escapeShellArg logDirectory} 700
-        syncthing_require_directory ${lib.escapeShellArg runtimeDirectory} 700
-        syncthing_require_directory ${lib.escapeShellArg documentsDirectory} 700
-        syncthing_require_directory ${lib.escapeShellArg desktopDirectory} 700
-        syncthing_require_file ${lib.escapeShellArg "${stateDirectory}/cert.pem"}
-        syncthing_require_file ${lib.escapeShellArg "${stateDirectory}/key.pem"}
-        syncthing_require_file ${lib.escapeShellArg "${stateDirectory}/config.xml"}
-
-        actual_device_id="$(${lib.getExe syncthingPackage} device-id --home ${lib.escapeShellArg stateDirectory} 2>/dev/null)" \
-          || syncthing_fail "could not derive the bootstrapped device identity"
-        [[ "$actual_device_id" == ${lib.escapeShellArg localNode.deviceID} ]] \
-          || syncthing_fail "bootstrapped device identity does not match this host"
-
-        if /usr/bin/pgrep -f '/Applications/Syncthing[.]app/Contents/MacOS/Syncthing' >/dev/null 2>&1; then
-          syncthing_fail "Syncthing.app must remain closed while Home Manager owns the daemon"
-        fi
-
-        login_items_status=0
-        (
-          set -e
-          login_items=${lib.escapeShellArg "${runtimeDirectory}/login-items"}.$$
-          trap '${pkgs.coreutils}/bin/rm -f "$login_items"' EXIT
-          ${pkgs.coreutils}/bin/install -m 0600 /dev/null "$login_items" || exit 10
-          /usr/bin/sfltool list com.apple.LSSharedFileList.SessionLoginItems >"$login_items" 2>&1 &
-          login_items_pid=$!
-          login_items_done=0
-          for ((attempt = 0; attempt < 50; attempt++)); do
-            if ! /bin/kill -0 "$login_items_pid" 2>/dev/null; then
-              if wait "$login_items_pid"; then
-                login_items_done=1
-              fi
-              break
-            fi
-            /bin/sleep 0.1
-          done
-          if [[ "$login_items_done" == 0 ]]; then
-            /bin/kill "$login_items_pid" 2>/dev/null || true
-            wait "$login_items_pid" 2>/dev/null || true
-            exit 10
-          fi
-          if /usr/bin/grep -Eiq '(/Applications/Syncthing\.app|com\.github\.xor-gate\.syncthing-macosx)' "$login_items"; then
-            exit 20
-          fi
-        ) || login_items_status=$?
-        case "$login_items_status" in
-          0) ;;
-          20) syncthing_fail "Syncthing.app is still registered as a login item" ;;
-          *) syncthing_fail "could not safely inspect legacy login items" ;;
-        esac
-
-        daemon_pids=( )
-        for ((attempt = 0; attempt < 20; attempt++)); do
-          mapfile -t daemon_pids < <(/usr/bin/pgrep -x syncthing 2>/dev/null || true)
-          (( ''${#daemon_pids[@]} != 1 )) && break
-          /bin/sleep 0.1
-        done
-        daemon_running=0
-        if (( ''${#daemon_pids[@]} > 0 )); then
-          managed_pid="$(/bin/launchctl print gui/$(/usr/bin/id -u)/org.nix-community.home.syncthing 2>/dev/null \
-            | /usr/bin/awk '/^[[:space:]]*pid = / { print $3; exit }')"
-          [[ -n "$managed_pid" && ''${#daemon_pids[@]} == 2 ]] \
-            || syncthing_fail "an unmanaged, duplicate, or unhealthy Syncthing instance is running"
-          if [[ "''${daemon_pids[0]}" == "$managed_pid" ]]; then
-            child_pid="''${daemon_pids[1]}"
-          elif [[ "''${daemon_pids[1]}" == "$managed_pid" ]]; then
-            child_pid="''${daemon_pids[0]}"
-          else
-            syncthing_fail "the Syncthing monitor is not owned by the managed launchd job"
-          fi
-          child_parent="$(/bin/ps -p "$child_pid" -o ppid= | /usr/bin/tr -d ' ')"
-          [[ "$child_parent" == "$managed_pid" ]] \
-            || syncthing_fail "the second Syncthing process is not the managed monitor child"
-          daemon_running=1
-        fi
-
-        if [[ -L ${lib.escapeShellArg "${documentsDirectory}/.stignore"} ]] \
-          || { [[ -e ${lib.escapeShellArg "${documentsDirectory}/.stignore"} ]] \
-            && [[ ! -f ${lib.escapeShellArg "${documentsDirectory}/.stignore"} ]]; }; then
-          syncthing_fail "Documents .stignore is not a safe regular file"
-        fi
-        if ! ${pkgs.diffutils}/bin/cmp -s ${documentsIgnoreFile} ${lib.escapeShellArg "${documentsDirectory}/.stignore"}; then
-          (
-            set -e
-            ignore_tmp=${lib.escapeShellArg "${documentsDirectory}/.stignore.tmp"}.$$
-            trap '${pkgs.coreutils}/bin/rm -f "$ignore_tmp"' EXIT
-            ${pkgs.coreutils}/bin/install -m 0600 ${documentsIgnoreFile} "$ignore_tmp"
-            ${pkgs.coreutils}/bin/mv -f "$ignore_tmp" ${lib.escapeShellArg "${documentsDirectory}/.stignore"}
-          ) || syncthing_fail "could not install the managed Documents .stignore"
-        fi
-
-        if [[ -L ${lib.escapeShellArg "${desktopDirectory}/.stignore"} ]] \
-          || { [[ -e ${lib.escapeShellArg "${desktopDirectory}/.stignore"} ]] \
-            && [[ ! -f ${lib.escapeShellArg "${desktopDirectory}/.stignore"} ]]; }; then
-          syncthing_fail "Desktop .stignore is not a safe regular file"
-        fi
-        if ! ${pkgs.diffutils}/bin/cmp -s ${desktopIgnoreFile} ${lib.escapeShellArg "${desktopDirectory}/.stignore"}; then
-          (
-            set -e
-            ignore_tmp=${lib.escapeShellArg "${desktopDirectory}/.stignore.tmp"}.$$
-            trap '${pkgs.coreutils}/bin/rm -f "$ignore_tmp"' EXIT
-            ${pkgs.coreutils}/bin/install -m 0600 ${desktopIgnoreFile} "$ignore_tmp"
-            ${pkgs.coreutils}/bin/mv -f "$ignore_tmp" ${lib.escapeShellArg "${desktopDirectory}/.stignore"}
-          ) || syncthing_fail "could not install the managed Desktop .stignore"
-        fi
-
-        syncthing_exclude_from_time_machine() {
-          local path="$1" excluded
-          excluded="$(
-            /usr/bin/tmutil isexcluded -X "$path" \
-              | /usr/bin/plutil -extract 0.IsExcluded raw -o - -- -
-          )" || syncthing_fail "could not inspect Time Machine exclusion"
-          if [[ "$excluded" != 1 ]]; then
-            /usr/bin/tmutil addexclusion "$path" \
-              || syncthing_fail "could not add Time Machine exclusion"
-          fi
-        }
-        syncthing_exclude_from_time_machine ${lib.escapeShellArg documentsDirectory}
-        syncthing_exclude_from_time_machine ${lib.escapeShellArg desktopDirectory}
-
-        if [[ -e ${lib.escapeShellArg guiSocket} || -L ${lib.escapeShellArg guiSocket} ]]; then
-          [[ -S ${lib.escapeShellArg guiSocket} && ! -L ${lib.escapeShellArg guiSocket} ]] \
-            || syncthing_fail "GUI socket path is unsafe"
-          if [[ "$daemon_running" == 0 ]]; then
-            ${pkgs.coreutils}/bin/rm -f ${lib.escapeShellArg guiSocket}
-          fi
-        fi
-
-        if ${bootstrapCommand "--check"}; then
-          :
-        else
-          bootstrap_status=$?
-          [[ "$bootstrap_status" == 3 ]] \
-            || syncthing_fail "config.xml failed offline policy validation"
-          [[ "$daemon_running" == 0 ]] \
-            || syncthing_fail "config.xml needs hardening while the managed daemon is running"
-          ${bootstrapCommand "--apply"} \
-            || syncthing_fail "could not harden config.xml before launch"
-          ${bootstrapCommand "--check"} \
-            || syncthing_fail "config.xml did not retain the hardened policy"
-        fi
       fi
     ''
   );
