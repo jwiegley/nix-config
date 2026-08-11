@@ -27,12 +27,14 @@ let
         b"\xca\xfe\xba\xbf",
         b"\xbf\xba\xfe\xca",
     }
-    THIN_MACH_O_MAGICS = {
-        b"\xfe\xed\xfa\xce",
-        b"\xce\xfa\xed\xfe",
-        b"\xfe\xed\xfa\xcf",
-        b"\xcf\xfa\xed\xfe",
+    THIN_MACH_O_FORMATS = {
+        b"\xfe\xed\xfa\xce": ("big", 28),
+        b"\xce\xfa\xed\xfe": ("little", 28),
+        b"\xfe\xed\xfa\xcf": ("big", 32),
+        b"\xcf\xfa\xed\xfe": ("little", 32),
     }
+    CPU_TYPE_ARM64 = 0x0100000C
+    CPU_SUBTYPE_ARM64_ALL = 0
     TEAM_ID = "75GAHG3SZQ"
     IDENTIFIER = "org.videolan.vlc"
     UNSAFE_ENTITLEMENTS = {
@@ -230,11 +232,26 @@ let
             try:
                 with path.open("rb") as stream:
                     magic = stream.read(4)
+                    if magic in THIN_MACH_O_FORMATS:
+                        byte_order, header_size = THIN_MACH_O_FORMATS[magic]
+                        header = magic + stream.read(header_size - len(magic))
             except OSError:
                 fail("could not inspect a bundle file")
             if magic in FAT_MACH_O_MAGICS:
                 fail("fat Mach-O code is outside the arm64 entitlement policy")
-            if magic in THIN_MACH_O_MAGICS:
+            if magic in THIN_MACH_O_FORMATS:
+                if len(header) != header_size:
+                    fail("thin Mach-O header is truncated")
+                cpu_type = int.from_bytes(header[4:8], byte_order)
+                cpu_subtype = int.from_bytes(header[8:12], byte_order)
+                if cpu_type != CPU_TYPE_ARM64:
+                    fail("thin Mach-O code does not use the arm64 CPU type")
+                if header_size != 32:
+                    fail("thin Mach-O code does not use a 64-bit header")
+                if cpu_subtype != CPU_SUBTYPE_ARM64_ALL:
+                    fail(
+                        "thin Mach-O code does not use the generic arm64 CPU subtype"
+                    )
                 mach_o_paths.append(path)
                 verify_code(codesign, path, team_requirement)
         if executable not in mach_o_paths:

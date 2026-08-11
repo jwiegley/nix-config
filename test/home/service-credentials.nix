@@ -2136,7 +2136,10 @@ assert lib.hasInfix
 assert lib.hasInfix "package verifies the complete tree hash, rejects fat Mach-O code"
   securityDocument;
 assert lib.hasInfix
-  "external Apple-anchor and exact VideoLAN team requirement to the bundle and every retained thin Mach-O object while also checking each signature's designated requirement"
+  "requires every retained thin Mach-O header to be a non-truncated 64-bit arm64 header with the generic arm64 subtype"
+  securityDocument;
+assert lib.hasInfix
+  "external Apple-anchor and exact VideoLAN team requirement to the bundle and every accepted Mach-O object while also checking each signature's designated requirement"
   securityDocument;
 assert lib.hasInfix "parsed Info.plist, a consistent Hardened Runtime bit and label"
   securityDocument;
@@ -2235,13 +2238,45 @@ pkgs.runCommand "service-credential-boundaries" { } ''
     fi
   }
 
-  scan_mssql_artifacts() {
-    label=$1
+  scan_mssql_artifacts_with_secret() {
+    secret_file=$1
+    label=$2
     ${pkgs.python3}/bin/python3 ${assertSecretAbsentProgram} \
       --assignments \
-      "$mssql_secret_oracle" \
+      "$secret_file" \
       "$label.out" "$label.err" "$SERVICE_TEST_DOCKER_LOG" \
       "$SERVICE_TEST_VALIDATOR_LOG"
+  }
+
+  scan_mssql_artifacts() {
+    scan_mssql_artifacts_with_secret "$mssql_secret_oracle" "$1"
+  }
+
+  assert_replacement_secret_mutants_rejected() {
+    mutant_secret_file=$1
+    mutant_label=$2
+    shift 2
+    mutant_artifact_index=0
+    for mutant_artifact in "$@"; do
+      mutant_clean_artifact="$mutant_artifact.clean"
+      mutant_result="$mutant_label-mutant-$mutant_artifact_index"
+      cp "$mutant_artifact" "$mutant_clean_artifact"
+      # Deliberately independent of both the observed oracle and scanner.
+      printf 'mutant=[abcdefgh]\n' >"$mutant_artifact"
+      if ${pkgs.python3}/bin/python3 ${assertSecretAbsentProgram} \
+        --assignments "$mutant_secret_file" "$@" \
+        >"$mutant_result.out" 2>"$mutant_result.err"; then
+        cp "$mutant_clean_artifact" "$mutant_artifact"
+        rm "$mutant_clean_artifact" "$mutant_result.out" "$mutant_result.err"
+        fail "the $mutant_label scanner accepted a full replacement-secret leak mutant"
+      fi
+      grep -F "secret material entered $mutant_artifact" \
+        "$mutant_result.err" >/dev/null ||
+        fail "the $mutant_label scanner rejected a replacement-secret leak mutant for the wrong reason"
+      cp "$mutant_clean_artifact" "$mutant_artifact"
+      rm "$mutant_clean_artifact" "$mutant_result.out" "$mutant_result.err"
+      mutant_artifact_index=$((mutant_artifact_index + 1))
+    done
   }
 
   scan_vlc_artifacts() {
@@ -2417,6 +2452,7 @@ pkgs.runCommand "service-credential-boundaries" { } ''
   data_parent="$trust_root/mssql-data"
   data_directory="$data_parent/data"
   mssql_secret_oracle="$TMPDIR/mssql-secret-oracle"
+  mssql_current_secret_oracle="$TMPDIR/mssql-current-secret-oracle"
   mkdir -m 0700 "$trust_root"
   mkdir -m 0700 "$trust_root/nix-config"
   mkdir -m 0700 "$credential_directory"
@@ -2849,8 +2885,44 @@ pkgs.runCommand "service-credential-boundaries" { } ''
 
   vlc_hostile_fixture="$TMPDIR/VLC-hostile-fixture.app"
   mkdir -p "$vlc_hostile_fixture/Contents/MacOS"
-  printf '\317\372\355\376fixture-main' \
-    >"$vlc_hostile_fixture/Contents/MacOS/VLC"
+  write_thin_mach_o_fixture() {
+    ${pkgs.python3}/bin/python3 -I - "$1" "$2" <<'PY'
+  import pathlib
+  import struct
+  import sys
+
+  path = pathlib.Path(sys.argv[1])
+  variant = sys.argv[2]
+  variants = {
+      "arm64-little": ("<", 64, 0x0100000C, 0),
+      "x86_64-little": ("<", 64, 0x01000007, 3),
+      "i386-big": (">", 32, 7, 3),
+      "armv7-little": ("<", 32, 12, 9),
+      "arm64e-big": (">", 64, 0x0100000C, 2),
+      "arm64-32-big": (">", 32, 0x0100000C, 0),
+  }
+  if variant == "truncated-64-little":
+      path.write_bytes(struct.pack("<III", 0xFEEDFACF, 0x0100000C, 0))
+  elif variant == "truncated-32-big":
+      path.write_bytes(struct.pack(">III", 0xFEEDFACE, 0x0100000C, 0))
+  else:
+      byte_order, width, cpu_type, cpu_subtype = variants[variant]
+      fields = [
+          0xFEEDFACF if width == 64 else 0xFEEDFACE,
+          cpu_type,
+          cpu_subtype,
+          2,
+          0,
+          0,
+          0,
+      ]
+      if width == 64:
+          fields.append(0)
+      path.write_bytes(struct.pack(byte_order + "I" * len(fields), *fields))
+  PY
+  }
+  write_thin_mach_o_fixture \
+    "$vlc_hostile_fixture/Contents/MacOS/VLC" arm64-little
   chmod 0755 "$vlc_hostile_fixture/Contents/MacOS/VLC"
 
   write_vlc_fixture_info() {
@@ -2898,7 +2970,8 @@ pkgs.runCommand "service-credential-boundaries" { } ''
       >"vlc-hostile-$mutation.out" 2>"vlc-hostile-$mutation.err"; then
       fail "the VLC verifier accepted the $mutation hostile fixture"
     fi
-    grep -F "$expected_message" "vlc-hostile-$mutation.err" >/dev/null ||
+    grep -Fx "VLC bundle verification failed: $expected_message" \
+      "vlc-hostile-$mutation.err" >/dev/null ||
       fail "the VLC verifier did not reject the $mutation hostile fixture clearly"
   }
 
@@ -2936,6 +3009,33 @@ pkgs.runCommand "service-credential-boundaries" { } ''
       "fat-mach-o-$fat_variant" \
       'fat Mach-O code is outside the arm64 entitlement policy'
   done
+  rm "$vlc_hostile_fixture/Contents/MacOS/fat-helper"
+
+  expect_hostile_thin_mach_o_reject() {
+    variant=$1
+    expected_message=$2
+    hostile_path="$vlc_hostile_fixture/Contents/MacOS/hostile-$variant"
+    write_thin_mach_o_fixture "$hostile_path" "$variant"
+    expect_vlc_hostile_fixture_reject \
+      "thin-mach-o-$variant" "$expected_message"
+    rm "$hostile_path"
+  }
+
+  expect_hostile_thin_mach_o_reject \
+    x86_64-little 'thin Mach-O code does not use the arm64 CPU type'
+  expect_hostile_thin_mach_o_reject \
+    i386-big 'thin Mach-O code does not use the arm64 CPU type'
+  expect_hostile_thin_mach_o_reject \
+    armv7-little 'thin Mach-O code does not use the arm64 CPU type'
+  expect_hostile_thin_mach_o_reject \
+    arm64e-big \
+    'thin Mach-O code does not use the generic arm64 CPU subtype'
+  expect_hostile_thin_mach_o_reject \
+    arm64-32-big 'thin Mach-O code does not use a 64-bit header'
+  expect_hostile_thin_mach_o_reject \
+    truncated-64-little 'thin Mach-O header is truncated'
+  expect_hostile_thin_mach_o_reject \
+    truncated-32-big 'thin Mach-O header is truncated'
 
   if /usr/bin/otool -L ${expectedVlc}/bin/vlc-telnet-launcher |
     grep -F '/Security.framework/' >/dev/null; then
@@ -3357,12 +3457,22 @@ pkgs.runCommand "service-credential-boundaries" { } ''
       fail "MSSQL accepted a same-inode credential $mutation mutation during container removal"
     fi
     rm "docker-mutate-envfile-$mutation"
+    # The configured object is the independent authority for the post-rm
+    # credential; do not infer it from the pre-run oracle or fixture source.
+    cp "$credential_file" "$mssql_current_secret_oracle"
     scan_mssql_artifacts "$label"
+    scan_mssql_artifacts_with_secret "$mssql_current_secret_oracle" "$label"
     [ "$(stat -c '%d:%i' "$credential_file")" = "$credential_identity" ] ||
       fail "the credential $mutation mutation replaced its inode"
     case "$mutation" in
       content)
         expected_error='the MSSQL password must use at least three required character classes'
+        ! cmp -s "$mssql_secret_oracle" "$mssql_current_secret_oracle" ||
+          fail "the credential content mutation did not replace the secret"
+        assert_replacement_secret_mutants_rejected \
+          "$mssql_current_secret_oracle" "$label-replacement-secret" \
+          "$label.out" "$label.err" "$SERVICE_TEST_DOCKER_LOG" \
+          "$SERVICE_TEST_VALIDATOR_LOG"
         cp "$mssql_secret_oracle" "$credential_file"
         ;;
       mode)

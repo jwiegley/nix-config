@@ -1320,10 +1320,10 @@ config/ssh.nix:13-19,55-64,243-360 supports settings and matchBlocks paths, but 
 :LABELS: ["heavy-review","launchd","security","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-11 Tue 03:59]
+:MODIFIED: [2026-08-11 Tue 05:38]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-11 Tue 03:59]
-:CLOSE_REASON: Replaced argv/user-file credentials with reviewed descriptor-rooted MSSQL and hardened Keychain-to-immutable-VLC boundaries; focused behavioral, full repository, all-system evaluation, system-build, and independent security review gates passed.
+:FINISHED: [2026-08-11 Tue 05:38]
+:CLOSE_REASON: Completed reviewed MSSQL/VLC credential boundaries and post-commit fess hardening: replacement-secret leak oracles and arm64-only thin Mach-O verification now pass focused, package, all-system, and independent review gates.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
