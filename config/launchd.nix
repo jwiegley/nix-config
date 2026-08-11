@@ -12,6 +12,21 @@ let
   recordingCaBundle = "${pkgs.ca-bundle-with-vulcan or pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
   runsEternalTerminal = config.johnw.host.isDarwinWorkstation;
   serviceLaunchers = import ./launchd-service-launchers.nix { inherit lib pkgs; };
+  mssqlImageSource = (import ../packages/source-catalog.nix "tools").mssql-server-image;
+  mssqlManifestPrefix = "https://mcr.microsoft.com/v2/mssql/server/manifests/";
+  mssqlImageDigest =
+    assert mssqlImageSource.source.fetcher == "fetchurl";
+    assert mssqlImageSource.source.args.url == mssqlImageSource.source.url;
+    assert lib.hasPrefix mssqlManifestPrefix mssqlImageSource.source.url;
+    lib.removePrefix mssqlManifestPrefix mssqlImageSource.source.url;
+  mssqlImageReference =
+    assert
+      mssqlImageSource.source.args.hash == builtins.convertHash {
+        hash = mssqlImageDigest;
+        hashAlgo = "sha256";
+        toHashFormat = "sri";
+      };
+    "mcr.microsoft.com/mssql/server@${mssqlImageDigest}";
   mssqlServerLauncher = serviceLaunchers.mssql {
     credentialDirectory = "/Library/Application Support/nix-config/mssql";
     credentialOwnerUid = 0;
@@ -21,6 +36,7 @@ let
     dataOwnerUid = null;
     dataParentOwnerUid = 0;
     dataTrustRoot = "/";
+    imageReference = mssqlImageReference;
   };
   vlcApp = pkgs.callPackage ../packages/vlc-bin.nix { };
   vlcRuntimeHome = pkgs.runCommand "vlc-telnet-home" { } ''

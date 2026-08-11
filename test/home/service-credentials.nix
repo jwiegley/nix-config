@@ -36,6 +36,7 @@ let
         target.symlink_to(saved.name, target_is_directory=True)
 
     arguments = sys.argv[1:]
+    image_reference = ${builtins.toJSON mssqlImageReference}
     inherited_fds = open_fds()
     credential_file = pathlib.Path("service-trust/nix-config/mssql/environment")
     credential_bytes = b"" if arguments == ["info"] else credential_file.read_bytes()
@@ -173,7 +174,7 @@ let
     image_id = "sha256:" + "a" * 64
     if arguments == [
         "image", "inspect", "--format", "{{.Id}}",
-        "mcr.microsoft.com/mssql/server:2022-latest",
+        image_reference,
     ]:
         print(
             "invalid-image-id"
@@ -1513,8 +1514,7 @@ let
     import sys
 
     mode, log, data_directory = sys.argv[1:]
-    image = "mcr.microsoft.com/mssql/server:2022-latest"
-    image_id = "sha256:" + "a" * 64
+    image = ${builtins.toJSON mssqlImageReference}
     probe = (
         'data=/var/opt/mssql; probe="$data/.nix-config-bind-probe.$$"; '
         'test -d "$data" && test -r "$data" && test -w "$data" '
@@ -1528,7 +1528,7 @@ let
             "run", "--pull=never", "--rm",
             "--mount", f"type=bind,source={data_directory},target=/var/opt/mssql",
             "--entrypoint", "/bin/sh",
-            image_id,
+            image,
             "-c", probe,
         ],
         [
@@ -1544,7 +1544,7 @@ let
             "--mount", f"type=bind,source={data_directory},target=/var/opt/mssql",
             "--env", "ACCEPT_EULA=Y",
             "--env-file", "/dev/fd/3",
-            image_id,
+            image,
         ],
     ]
     if mode == "info-retry":
@@ -1986,6 +1986,7 @@ let
         dataOwnerUid = "__SERVICE_TEST_DATA_UID__";
         dataParentOwnerUid = "__SERVICE_TEST_UID__";
         dataTrustRoot = "/__SERVICE_TEST_ROOT__";
+        imageReference = mssqlImageReference;
       }
       // overrides
     );
@@ -2013,6 +2014,7 @@ let
         credentialDirectory = path;
         dataDirectory = "/valid/data";
         dataOwner = "fixture";
+        imageReference = mssqlImageReference;
       }
     );
   invalidMssqlDataPath =
@@ -2022,6 +2024,17 @@ let
         credentialDirectory = "/valid/credentials";
         dataDirectory = path;
         dataOwner = "fixture";
+        imageReference = mssqlImageReference;
+      }
+    );
+  mssqlImageEvaluation =
+    imageReference:
+    builtins.tryEval (
+      launchers.mssql {
+        credentialDirectory = "/valid/credentials";
+        dataDirectory = "/valid/data";
+        dataOwner = "fixture";
+        inherit imageReference;
       }
     );
   vlcLauncher = launchers.vlcTelnet {
@@ -2103,12 +2116,18 @@ let
     );
 
   toolsDocument = builtins.fromJSON (builtins.readFile ../../sources/tools.json);
+  mssqlCatalog = toolsDocument.sources.mssql-server-image;
+  mssqlImageDigest = "sha256:ba4c8329f48fb8f02e1416be6a930ebfd71268caee78aa985f3af4315e457c89";
+  mssqlImageReference = "mcr.microsoft.com/mssql/server@${mssqlImageDigest}";
+  mssqlManifestUrl = "https://mcr.microsoft.com/v2/mssql/server/manifests/${mssqlImageDigest}";
+  mssqlManifestHash = "sha256-ukyDKfSPuPAuFBa+apMOv9cSaMrueKqYXzr0MV5FfIk=";
   vlcCatalog = toolsDocument.sources.vlc;
   vlcCatalogUrl = "https://get.videolan.org/vlc/3.0.23/macosx/vlc-3.0.23-arm64.dmg";
   vlcCatalogHash = "sha256-/G+sCNh/U4UX1ErKDF56JEtnyMTLWJv0eDY6cxX9Xg0=";
   vlcBundleTreeHash = "sha256-cCXSUXZTLCG1OYKOgOMRwq5sd9GTImCCrGQBGLa5ah8=";
   securityDocument = builtins.readFile ../../doc/SECURITY.md;
   darwinPkgs = darwinConfigurations.hera.pkgs;
+  mssqlManifest = darwinPkgs.fetchurl mssqlCatalog.source.args;
   productionLaunchers = import ../../config/launchd-service-launchers.nix {
     inherit lib;
     pkgs = darwinPkgs;
@@ -2122,6 +2141,7 @@ let
     dataOwnerUid = null;
     dataParentOwnerUid = 0;
     dataTrustRoot = "/";
+    imageReference = mssqlImageReference;
   };
   expectedVlcApp = darwinPkgs.callPackage ../../packages/vlc-bin.nix { };
   expectedVlcVerifier = expectedVlcApp.mkVerifier {
@@ -2150,6 +2170,24 @@ let
   clio = darwinConfigurations.clio.config;
 in
 assert toolsDocument.schemaVersion == 1;
+assert mssqlCatalog.version == "2022-CU26-ubuntu-22.04";
+assert
+  mssqlCatalog.source == {
+    args = {
+      hash = mssqlManifestHash;
+      url = mssqlManifestUrl;
+    };
+    fetcher = "fetchurl";
+    url = mssqlManifestUrl;
+  };
+assert mssqlCatalog.update.kind == "url-release";
+assert mssqlCatalog.update.policy == "manual";
+assert lib.hasInfix "reviewed container manifest digest" mssqlCatalog.update.reason;
+assert expectedMssql.imageReference == mssqlImageReference;
+assert lib.hasInfix "source catalog fetches and hash-pins" securityDocument;
+assert lib.hasInfix "rejects tag-only references" securityDocument;
+assert lib.hasInfix mssqlImageReference securityDocument;
+assert lib.hasInfix "explicit reviewed catalog update" securityDocument;
 assert vlcCatalog.version == "3.0.23";
 assert vlcCatalog.source.fetcher == "fetchurl";
 assert vlcCatalog.source.url == vlcCatalogUrl;
@@ -2247,6 +2285,9 @@ assert !(invalidMssqlPath "/path/with/./credentials").success;
 assert !(invalidMssqlPath "/path/with/trailing/").success;
 assert !(invalidMssqlDataPath "/data//leaf").success;
 assert !(invalidMssqlDataPath "/data/with,comma").success;
+assert (mssqlImageEvaluation mssqlImageReference).success;
+assert !(mssqlImageEvaluation "mcr.microsoft.com/mssql/server:2022-latest").success;
+assert !(mssqlImageEvaluation "mcr.microsoft.com/mssql/server@sha256:ba4c").success;
 assert !(invalidVlcPort 0).success;
 assert !(invalidVlcPort 65536).success;
 assert !(invalidVlcPort "4212").success;
@@ -2265,6 +2306,14 @@ pkgs.runCommand "service-credential-boundaries" { } ''
     echo "service-credentials: $*" >&2
     exit 1
   }
+
+  ${pkgs.jq}/bin/jq -e '
+    .schemaVersion == 2
+    and .mediaType == "application/vnd.docker.distribution.manifest.v2+json"
+    and .config.mediaType == "application/vnd.docker.container.image.v1+json"
+    and (.layers | length) > 0
+  ' ${mssqlManifest} >/dev/null ||
+    fail "reviewed MSSQL source is not a schema-2 image manifest"
 
   snapshot_tree() {
     ${pkgs.python3}/bin/python3 ${snapshotTreeProgram} "$@"
@@ -2604,6 +2653,13 @@ pkgs.runCommand "service-credential-boundaries" { } ''
   grep -F 'DOCKER_HOST=unix:///var/run/docker.sock' \
     ${expectedMssql}/bin/mssql-server-launcher >/dev/null ||
     fail "production MSSQL does not pin the local Docker endpoint"
+  grep -F ${lib.escapeShellArg mssqlImageReference} \
+    ${expectedMssql}/bin/mssql-server-launcher >/dev/null ||
+    fail "production MSSQL lost the digest-pinned image reference"
+  if grep -F 'mcr.microsoft.com/mssql/server:2022-latest' \
+    ${expectedMssql}/bin/mssql-server-launcher >/dev/null; then
+    fail "production MSSQL retained a mutable image tag"
+  fi
   grep -F 'char *const sanitized_environment[] = { NULL };' \
     ${expectedMssql.descriptorSanitizerSource} >/dev/null ||
     fail "production child execution does not construct an empty environment"
@@ -3339,7 +3395,7 @@ pkgs.runCommand "service-credential-boundaries" { } ''
     SERVICE_TEST_FAKE_DOCKER_LEAK="$fake_docker_canary" \
     ${pkgs.python3}/bin/python3 ${fakeDockerProgram} \
       image inspect --format '{{.Id}}' \
-      mcr.microsoft.com/mssql/server:2022-latest \
+      ${lib.escapeShellArg mssqlImageReference} \
       >fake-docker-canary.out 2>fake-docker-canary.err
   grep -F '"secret_value_env_keys":["SERVICE_TEST_FAKE_DOCKER_LEAK"]' \
     "$SERVICE_TEST_DOCKER_LOG" >/dev/null ||

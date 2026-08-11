@@ -251,6 +251,22 @@
       },
       "version": "0.9.29"
     },
+    "mssql-server-image": {
+      "source": {
+        "args": {
+          "hash": "sha256-ukyDKfSPuPAuFBa+apMOv9cSaMrueKqYXzr0MV5FfIk=",
+          "url": "https://mcr.microsoft.com/v2/mssql/server/manifests/sha256:ba4c8329f48fb8f02e1416be6a930ebfd71268caee78aa985f3af4315e457c89"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://mcr.microsoft.com/v2/mssql/server/manifests/sha256:ba4c8329f48fb8f02e1416be6a930ebfd71268caee78aa985f3af4315e457c89"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual",
+        "reason": "The reviewed container manifest digest is part of the managed MSSQL credential boundary"
+      },
+      "version": "2022-CU26-ubuntu-22.04"
+    },
     "sift": {
       "source": {
         "args": {

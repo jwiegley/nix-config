@@ -306,6 +306,7 @@ in
       dataOwnerUid ? null,
       dataParentOwnerUid ? credentialOwnerUid,
       dataTrustRoot ? "/",
+      imageReference,
     }:
     assert isCanonicalAbsolute credentialDirectory && credentialDirectory != "/";
     assert isCanonicalAbsolute credentialTrustRoot;
@@ -313,10 +314,13 @@ in
     assert isCanonicalAbsolute dataDirectory && dataDirectory != "/" && !lib.hasInfix "," dataDirectory;
     assert isCanonicalAbsolute dataTrustRoot;
     assert isDescendant dataTrustRoot dataDirectory;
+    assert
+      builtins.isString imageReference
+      && builtins.match "mcr\\.microsoft\\.com/mssql/server@sha256:[0-9a-f]{64}" imageReference != null;
     pkgs.writeShellApplication {
       name = "mssql-server-launcher";
       passthru = {
-        inherit descriptorSanitizerSource mssqlPathValidator;
+        inherit descriptorSanitizerSource imageReference mssqlPathValidator;
       };
       runtimeInputs = [ pkgs.coreutils ];
       text = ''
@@ -340,6 +344,7 @@ in
         docker=${pkgs.docker-client}/bin/docker
         docker_environment=${pkgs.coreutils}/bin/env
         fd_exec=${descriptorSanitizer}/bin/launchd-fd-exec
+        image=${lib.escapeShellArg imageReference}
 
         fail() {
           echo "mssql-server: $*" >&2
@@ -381,7 +386,6 @@ in
           "$fd_exec" -1 ${pkgs.coreutils}/bin/sleep 5
         done
 
-        image=mcr.microsoft.com/mssql/server:2022-latest
         docker_exec -1 pull "$image"
         image_id=$(docker_exec -1 image inspect --format '{{.Id}}' "$image") ||
           fail "the pulled MSSQL image identity is unavailable"
@@ -403,7 +407,7 @@ in
         docker_exec -1 run --pull=never --rm \
           --mount "type=bind,source=$data_directory,target=/var/opt/mssql" \
           --entrypoint /bin/sh \
-          "$image_id" \
+          "$image" \
           -c "$probe_command" ||
           fail "the MSSQL data bind is unavailable to Docker"
 
@@ -440,7 +444,7 @@ in
           --mount "type=bind,source=$data_directory,target=/var/opt/mssql" \
           --env ACCEPT_EULA=Y \
           --env-file /dev/fd/3 \
-          "$image_id"
+          "$image"
       '';
     };
 
