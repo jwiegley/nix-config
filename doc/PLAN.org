@@ -1320,10 +1320,10 @@ config/ssh.nix:13-19,55-64,243-360 supports settings and matchBlocks paths, but 
 :LABELS: ["heavy-review","launchd","security","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-11 Tue 05:38]
+:MODIFIED: [2026-08-11 Tue 06:35]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-11 Tue 05:38]
-:CLOSE_REASON: Completed reviewed MSSQL/VLC credential boundaries and post-commit fess hardening: replacement-secret leak oracles and arm64-only thin Mach-O verification now pass focused, package, all-system, and independent review gates.
+:FINISHED: [2026-08-11 Tue 06:35]
+:CLOSE_REASON: Closed post-commit fess findings: the post-rm credential scan is now mutation-bound to the production wrapper, VLC verification-order documentation and assertions match implementation, the exact deletion mutant fails for the intended assertion, and the focused credential boundary build passes.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

@@ -2133,13 +2133,14 @@ assert lib.hasInfix
 assert lib.hasInfix
   "tree pin includes every relative path, entry type, symlink target, file content, and Nix-canonical permission mode"
   securityDocument;
-assert lib.hasInfix "package verifies the complete tree hash, rejects fat Mach-O code"
+assert lib.hasInfix
+  "package verifies the complete tree hash, applies an external Apple-anchor and exact VideoLAN team requirement to the bundle, then rejects fat Mach-O code"
   securityDocument;
 assert lib.hasInfix
   "requires every retained thin Mach-O header to be a non-truncated 64-bit arm64 header with the generic arm64 subtype"
   securityDocument;
 assert lib.hasInfix
-  "external Apple-anchor and exact VideoLAN team requirement to the bundle and every accepted Mach-O object while also checking each signature's designated requirement"
+  "applies the signer constraint to every accepted Mach-O object while also checking each signature's designated requirement"
   securityDocument;
 assert lib.hasInfix "parsed Info.plist, a consistent Hardened Runtime bit and label"
   securityDocument;
@@ -2246,6 +2247,7 @@ pkgs.runCommand "service-credential-boundaries" { } ''
       "$secret_file" \
       "$label.out" "$label.err" "$SERVICE_TEST_DOCKER_LOG" \
       "$SERVICE_TEST_VALIDATOR_LOG"
+    mssql_last_scanned_secret_file=$secret_file
   }
 
   scan_mssql_artifacts() {
@@ -3462,6 +3464,8 @@ pkgs.runCommand "service-credential-boundaries" { } ''
     cp "$credential_file" "$mssql_current_secret_oracle"
     scan_mssql_artifacts "$label"
     scan_mssql_artifacts_with_secret "$mssql_current_secret_oracle" "$label"
+    [ "$mssql_last_scanned_secret_file" = "$mssql_current_secret_oracle" ] ||
+      fail "MSSQL did not scan artifacts against the post-rm credential"
     [ "$(stat -c '%d:%i' "$credential_file")" = "$credential_identity" ] ||
       fail "the credential $mutation mutation replaced its inode"
     case "$mutation" in
