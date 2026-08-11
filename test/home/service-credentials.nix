@@ -3780,6 +3780,12 @@ pkgs.runCommand "service-credential-boundaries" { } ''
   secret = secret_path.read_bytes()
   window = b"\xf4\x8f\xbf\xbc\xf3\xa0\x80\x82"
   assert secret.startswith(window)
+  final_window = secret[-8:]
+  assert len(secret) > 8
+  assert all(
+      secret[index:index + 8] != final_window
+      for index in range(len(secret) - 8)
+  )
   encoded = {
       "hex-lower": b"f48fbfbcf3a08082",
       "hex-upper": b"F48FBFBCF3A08082",
@@ -3798,7 +3804,7 @@ pkgs.runCommand "service-credential-boundaries" { } ''
   assert b"-_" in encoded["base64url-padded"]
   benign = b"\0".join(bytes([value]) for value in range(256))
   (artifact_directory / "opaque-benign.bin").write_bytes(benign)
-  leaks = {"full": secret, "window": window} | {
+  leaks = {"full": secret, "window": window, "final-window": final_window} | {
       name: b"x" + leak + b"y" for name, leak in encoded.items()
   }
   for name, leak in leaks.items():
@@ -3817,7 +3823,7 @@ pkgs.runCommand "service-credential-boundaries" { } ''
     opaque-combination.err >/dev/null ||
     fail "the secret scanner rejected opaque short fragments for the wrong reason"
   for opaque_mode in \
-    full window \
+    full window final-window \
     hex-lower hex-upper \
     base64-padded base64-unpadded \
     base64url-padded base64url-unpadded; do
@@ -3840,6 +3846,14 @@ pkgs.runCommand "service-credential-boundaries" { } ''
 
   source_path, destination_directory = map(pathlib.Path, sys.argv[1:])
   source = source_path.read_text()
+
+  def write_exact_mutant(name, before, after):
+      if source.count(before) != 1:
+          raise SystemExit(f"could not construct the {name} mutant")
+      (destination_directory / f"{name}.py").write_text(
+          source.replace(before, after)
+      )
+
   start_marker = "encoded_variants = set()\nunpadded_encoded_variants = set()\n"
   end_marker = "substring_variants = raw_variants | encoded_variants\n"
   if source.count(start_marker) != 1 or source.count(end_marker) != 1:
@@ -3863,6 +3877,46 @@ pkgs.runCommand "service-credential-boundaries" { } ''
       mutant_block = block.replace(branch, "")
       mutant = source[:block_start] + mutant_block + source[block_end:]
       (destination_directory / f"{name}.py").write_text(mutant)
+
+  write_exact_mutant(
+      "final-window-range",
+      "range(len(secret) - 7)",
+      "range(len(secret) - 8)",
+  )
+  write_exact_mutant(
+      "long-padded-routing",
+      "bounded_encoded_variants if len(value) < 8 else encoded_variants",
+      "bounded_encoded_variants if len(value) != 8 else encoded_variants",
+  )
+  write_exact_mutant(
+      "long-unpadded-routing",
+      "if len(value) < 8\n        else unpadded_encoded_variants",
+      "if len(value) != 8\n        else unpadded_encoded_variants",
+  )
+  right_token_assignment = (
+      'encoded_right_token_bytes = encoded_left_token_bytes | {ord("=")}'
+  )
+  for name, character in {
+      "plus": "+",
+      "slash": "/",
+      "underscore": "_",
+      "hyphen": "-",
+  }.items():
+      for side in ("left", "right"):
+          removal = (
+              f"\nencoded_{side}_token_bytes = encoded_{side}_token_bytes"
+              f' - {{ord("{character}")}}'
+          )
+          write_exact_mutant(
+              f"token-{side}-{name}",
+              right_token_assignment,
+              right_token_assignment + removal,
+          )
+  write_exact_mutant(
+      "token-right-equals",
+      right_token_assignment,
+      "encoded_right_token_bytes = encoded_left_token_bytes",
+  )
   PY
   for opaque_mode in \
     hex-lower hex-upper \
@@ -3879,6 +3933,75 @@ pkgs.runCommand "service-credential-boundaries" { } ''
       fail "the $opaque_mode deletion mutant wrote unexpected output"
     [ ! -s "opaque-$opaque_mode-mutant.err" ] ||
       fail "the $opaque_mode deletion mutant wrote unexpected diagnostics"
+  done
+  if ! ${pkgs.python3}/bin/python3 \
+    "$opaque_mutant_directory/final-window-range.py" \
+    --opaque-binary "$SERVICE_TEST_SECRET_FILE" opaque-final-window.bin \
+    >opaque-final-window-mutant.out 2>opaque-final-window-mutant.err; then
+    fail "the final eight-byte window did not kill the shortened-range mutant"
+  fi
+  [ ! -s opaque-final-window-mutant.out ] ||
+    fail "the shortened-range mutant wrote unexpected output"
+  [ ! -s opaque-final-window-mutant.err ] ||
+    fail "the shortened-range mutant wrote unexpected diagnostics"
+
+  long_routing_secret="$TMPDIR/long-routing-secret"
+  ${pkgs.python3}/bin/python3 - "$long_routing_secret" . <<'PY'
+  import base64
+  import pathlib
+  import sys
+
+  secret_path, artifact_directory = map(pathlib.Path, sys.argv[1:])
+  secret = bytes.fromhex("809dbad7f491aecbe885")
+  assert len(secret) > 8
+  secret_path.write_bytes(secret)
+  standard = base64.b64encode(secret)
+  encodings = {
+      "padded": standard,
+      "unpadded": standard.rstrip(b"="),
+  }
+  assert encodings["padded"].endswith(b"=")
+  assert encodings["unpadded"] != encodings["padded"]
+  window_encodings = set()
+  for index in range(len(secret) - 7):
+      window = secret[index:index + 8]
+      standard_window = base64.b64encode(window)
+      urlsafe_window = base64.urlsafe_b64encode(window)
+      window_encodings.update({
+          window,
+          window.hex().encode(),
+          window.hex().upper().encode(),
+          standard_window,
+          standard_window.rstrip(b"="),
+          urlsafe_window,
+          urlsafe_window.rstrip(b"="),
+      })
+  for name, encoding in encodings.items():
+      artifact = b"x" + encoding + b"y"
+      assert not any(value and value in artifact for value in window_encodings)
+      (artifact_directory / f"long-routing-{name}.bin").write_bytes(artifact)
+  PY
+  for routing_mode in padded unpadded; do
+    routing_artifact="long-routing-$routing_mode.bin"
+    if ${pkgs.python3}/bin/python3 ${assertSecretAbsentProgram} \
+      --opaque-binary "$long_routing_secret" "$routing_artifact" \
+      >"$routing_artifact.out" 2>"$routing_artifact.err"; then
+      fail "the scanner missed an embedded full $routing_mode encoding"
+    fi
+    grep -F "secret material entered $routing_artifact" \
+      "$routing_artifact.err" >/dev/null ||
+      fail "the scanner rejected the $routing_mode routing probe for the wrong reason"
+    routing_mutant="$opaque_mutant_directory/long-$routing_mode-routing.py"
+    if ! ${pkgs.python3}/bin/python3 "$routing_mutant" \
+      --opaque-binary "$long_routing_secret" "$routing_artifact" \
+      >"$routing_artifact.mutant.out" \
+      2>"$routing_artifact.mutant.err"; then
+      fail "the embedded $routing_mode encoding did not kill its routing mutant"
+    fi
+    [ ! -s "$routing_artifact.mutant.out" ] ||
+      fail "the $routing_mode routing mutant wrote unexpected output"
+    [ ! -s "$routing_artifact.mutant.err" ] ||
+      fail "the $routing_mode routing mutant wrote unexpected diagnostics"
   done
   ${pkgs.python3}/bin/python3 ${assertSecretAbsentProgram} \
     --opaque-binary \
@@ -4011,6 +4134,43 @@ pkgs.runCommand "service-credential-boundaries" { } ''
       fail "the $short_binary_label mutant wrote unexpected output"
     [ ! -s "$short_binary_artifact.mutant.err" ] ||
       fail "the $short_binary_label mutant wrote unexpected diagnostics"
+  done
+
+  short_binary_token_collision="short-binary-token-collision.out"
+  ${pkgs.python3}/bin/python3 - "$short_binary_token_collision" <<'PY'
+  import pathlib
+  import sys
+
+  artifact_path = pathlib.Path(sys.argv[1])
+  artifact = b"fb+fb.fb/fb.fb_fb.fb-fb.fb="
+  assert artifact.count(b"fb") == 9
+  assert not any(
+      encoding in artifact
+      for encoding in (b"\xfb", b"FB", b"+w==", b"+w", b"-w==", b"-w")
+  )
+  artifact_path.write_bytes(artifact)
+  PY
+  if ! ${pkgs.python3}/bin/python3 ${assertSecretAbsentProgram} \
+    "$short_binary_secret" "$short_binary_token_collision" \
+    >short-binary-token-collision.scan.out \
+    2>short-binary-token-collision.scan.err; then
+    fail "the scanner rejected the one-sided token collisions"
+  fi
+  for token_mutant in \
+    token-left-plus token-right-plus \
+    token-left-slash token-right-slash \
+    token-left-underscore token-right-underscore \
+    token-left-hyphen token-right-hyphen \
+    token-right-equals; do
+    if ${pkgs.python3}/bin/python3 \
+      "$opaque_mutant_directory/$token_mutant.py" \
+      "$short_binary_secret" "$short_binary_token_collision" \
+      >"$token_mutant.out" 2>"$token_mutant.err"; then
+      fail "the one-sided token collisions did not kill $token_mutant"
+    fi
+    grep -F "secret material entered $short_binary_token_collision" \
+      "$token_mutant.err" >/dev/null ||
+      fail "$token_mutant failed for the wrong reason"
   done
 
   # Seven-byte values remain on the bounded side of the split; eight-byte

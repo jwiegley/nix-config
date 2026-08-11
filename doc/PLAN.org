@@ -1320,10 +1320,10 @@ config/ssh.nix:13-19,55-64,243-360 supports settings and matchBlocks paths, but 
 :LABELS: ["heavy-review","launchd","security","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-11 Tue 08:48]
+:MODIFIED: [2026-08-11 Tue 10:07]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-11 Tue 08:48]
-:CLOSE_REASON: Closed final fess findings: bounded short encodings avoid incidental substring collisions; a distinct 0xfb fixture mutation-binds lower/upper hex and standard/URL-safe padded/unpadded Base64; tracker synchronization and the focused credential-boundary build pass.
+:FINISHED: [2026-08-11 Tue 10:07]
+:CLOSE_REASON: Closed final credential-scanner mutation findings: explicit tests bind the final eight-byte window, separate greater-than-eight padded and unpadded encoding routes, and both left/right token-boundary membership for +, /, _, -, and =; the complete credential-boundary build passes.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
