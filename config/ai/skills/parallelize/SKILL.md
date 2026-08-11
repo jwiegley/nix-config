@@ -68,9 +68,41 @@ Dispatch only if every answer is yes; any "no" or "unsure" keeps the task serial
 | Reviewing a subset of files (read-only) | A task needing output for your NEXT edit, or reading your uncommitted edits |
 | Prototyping in a throwaway location | Secrets handling; interactive or unbounded tasks; a subagent spawning subagents |
 
+## Context inheritance is runner-dependent
+
+A new context window is not necessarily a blank context: some runners inherit
+the parent transcript by default. Write every brief so it stands alone, but do
+not claim that a child is independent unless the runner provides an explicit
+no-history option and its behavior has passed this session's sentinel probe.
+
+For an audit or review whose independence matters:
+
+1. Put a random line such as
+   `PARENT_HISTORY_SENTINEL=<at-least-16-random-characters>` in the parent
+   conversation. Do not copy its value into the child request.
+2. Dispatch a probe with the runner's explicit no-history option. In Codex,
+   that is `fork_turns="none"`; other runners must use their documented
+   equivalent. Ask the child to return the inherited sentinel line if it can
+   see one, or exactly `PARENT_HISTORY_ABSENT` otherwise.
+3. Save the raw child response and run:
+
+   ```sh
+   python3 <parallelize-skill>/scripts/verify-history-isolation.py \
+     "$PARENT_HISTORY_SENTINEL_LINE" probe-response.txt
+   ```
+
+4. Use the same no-history option for every independence-sensitive dispatch.
+   Re-probe after changing runner, model, or dispatch configuration.
+
+If the runner has no no-history selector or the probe fails, do not label the
+result independent. Abort an independence-required audit or report that
+verification gap instead of silently accepting inherited history.
+
 ## Subagent brief -- the four required parts
 
-Each subagent starts fresh with none of your context, so state everything explicitly. A good brief has four parts (fill-in template and worked examples in `references/parallelize-playbook.md`):
+The context a subagent receives depends on its runner, so state everything
+explicitly. A good brief has four parts (fill-in template and worked examples
+in `references/parallelize-playbook.md`):
 
 1. **Objective** -- one clear sentence of what to produce and how it fits the larger goal.
 2. **Output** -- the exact UNIQUE path inside its namespace to write to (never a canonical source path), and the instruction to return only a short summary plus that path.

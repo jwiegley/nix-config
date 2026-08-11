@@ -58,7 +58,7 @@ Each iteration:
 
 1. Advance one logical unit of work -- a coherent change that builds and passes. However, if that logic unit is very small, then proceed in larger steps so that commits are not being generated too often -- since that feedback loop takes a lot of time, and doing so too frquently would slow down development unnecessarily.
 2. Commit it in a clean, logical sequence, following the `commit` workflow's approach (you perform the commits directly; `commit` is user-triggered).
-3. Audit that commit: dispatch a subagent -- the `fess-auditor` agent, or one running `fess` -- to check the work and its claims. Keep the evaluator separate; do not grade your own work. See `references/fess-audit.md` for how to pick the audit scope and what context snapshot to provide. Verify any finding before acting, and fold real fixes into the main work. Do not separately re-audit commits whose only purpose is to fix `fess` findings, nor `partner-cleanup`'s own cleanup commits (it self-verifies) -- that loops without progress.
+3. Audit that commit: dispatch a subagent -- the `fess-auditor` agent, or one running `fess` -- to check the work and its claims. Use the runner's explicit no-history mode and first pass the `parallelize` skill's parent-history sentinel probe; a separate context window alone is not evidence of independence. Keep the evaluator separate; do not grade your own work. See `references/fess-audit.md` for how to pick the audit scope and what context snapshot to provide. Verify any finding before acting, and fold real fixes into the main work. Do not separately re-audit commits whose only purpose is to fix `fess` findings, nor `partner-cleanup`'s own cleanup commits (it self-verifies) -- that loops without progress.
 4. Check `doc/observations/`; if non-hidden Markdown is present, run `partner-cleanup`, let it make its cleanup commit, then resume.
 5. On cadence (below), bring the branch current: rebase or restack it LOCALLY onto its base, resolving conflicts with the `resolve` workflow. Do NOT submit or push the stack as part of the loop -- pushing rewritten or shared history is a terminal, human-gated action (see Stop and escalate).
 6. Repeat until the Definition of Done holds or a stop condition fires.
@@ -78,7 +78,7 @@ Keep the branch rebased on its base as you go: on a Graphite stack follow the `r
 
 ## Parallelize non-interfering work
 
-Use the `parallelize` skill. As coordinator you keep all git and shared-state changes in this session and dispatch only safe, non-interfering work -- research, isolated file generation, the `fess` audit, reviews -- to subagents that write only inside their own namespaces and return artifacts you integrate. Bound fan-out to what you can review (roughly 3-5 at a time), and do not let subagents spawn their own subagents.
+Use the `parallelize` skill. As coordinator you keep all git and shared-state changes in this session and dispatch only safe, non-interfering work -- research, isolated file generation, the `fess` audit, reviews -- to subagents that write only inside their own namespaces and return artifacts you integrate. Its no-history sentinel contract is mandatory for the `fess` audit and review roles. Bound fan-out to what you can review (roughly 3-5 at a time), and do not let subagents spawn their own subagents.
 
 ## Confer via PAL for real decisions
 

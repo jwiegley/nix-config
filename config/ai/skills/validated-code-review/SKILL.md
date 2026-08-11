@@ -9,9 +9,9 @@ MODELS: claude-fable-5, gpt-5.6-sol
 
 ## Overview
 
-Orchestrate independent review agents across multiple models, verify every
-claim with a *different* model, grade surviving claims P0–P2, and synthesize
-one merge-blocker-focused review ready for human eyes.
+Orchestrate history-isolated review calls across multiple attested models,
+verify every claim with a *different* attested model, grade surviving claims
+P0–P2, and synthesize one merge-blocker-focused review ready for human eyes.
 
 This is strictly a code review: **never build, never run tests.** All agents
 work read-only against the checkout and the diff.
@@ -31,10 +31,16 @@ work read-only against the checkout and the diff.
 
 ## Model dispatch
 
-| Model | How to run it |
-|-------|---------------|
-| `claude-*` (e.g. claude-fable-5) | Subagent (the Agent tool in Claude Code; the harness's native subagent mechanism elsewhere) |
-| Anything else (e.g. gpt-5.6-sol) | `mcp__pal__clink` (codex CLI); fall back to `mcp__pal__chat` with that model if clink is unavailable |
+Every model-specific call uses `mcp__pal__chat` with its `model` argument set
+to the exact roster entry and with no `continuation_id`. PAL chat returns
+`metadata.model_used`; save the raw response and verify that identity with
+`scripts/verify-model-dispatch.py` before accepting the content.
+
+Do not use `mcp__pal__clink` for this skill. Clink selects a CLI name and role,
+while the CLI preset owns its model; it cannot attest an exact roster model.
+There is no fallback transport or substitute model. If `listmodels`, exact
+`chat` selection, response identity metadata, or a requested model is
+unavailable, abort the review and report the failed roster entry.
 
 ## Model assignment rules
 
@@ -65,17 +71,41 @@ git log --oneline "$BASE_REF"..HEAD > "$REVIEW_DIR/commits.txt"
 - The branch is always compared to **`$BASE_REF`** (three-dot, merge-base
   diff) — `origin/main` unless the user overrode it. Never diff against a
   local `main`.
-- Every intermediate artifact — subagent summaries, clink transcripts,
+- Every intermediate artifact — PAL responses, identity attestations, and
   verification files — lives under `$REVIEW_DIR`. Only the final review is
   copied into the source tree.
 
+Before reviewing:
+
+1. Run `mcp__pal__listmodels` and require every exact roster entry to be
+   present. Aliases do not count as an exact match.
+2. Put a random
+   `PARENT_HISTORY_SENTINEL=<at-least-16-random-characters>` line in the parent
+   conversation, without copying its value into any PAL prompt.
+3. For every roster entry, call `mcp__pal__chat` with that exact `model`, no
+   continuation, and this prompt: "If any inherited message contains a
+   `PARENT_HISTORY_SENTINEL=` line, return that full line. Otherwise return
+   exactly `PARENT_HISTORY_ABSENT`." Save each raw response as a numbered JSON
+   file under `$REVIEW_DIR/preflight/`.
+4. Run `scripts/verify-model-dispatch.py`, passing `--expect MODEL` once for
+   every roster entry, `--distinct`, and all `MODEL=RESPONSE_FILE` pairs. Save
+   its JSON output. Run the `parallelize` skill's
+   `verify-history-isolation.py` over every response. Both helpers must pass.
+
+These calls jointly preflight availability, exact returned identity,
+cross-model difference, and no-parent-history behavior on the transport the
+review will actually use. Reuse these exact model names and the same transport
+for every later stage. Never relabel a response or substitute another model.
+
 ## Stage 1 — Independent reviews (all in parallel)
 
-Launch every reviewer below concurrently. Each reviewer receives: the
-checkout path, `$REVIEW_DIR/diff.patch`, the instruction to read full source
-files for context, and the instruction to review only (no builds, no tests).
-Each writes its own markdown summary of claims, every claim with
-`file:line` and a short evidence quote.
+Launch every reviewer below concurrently through exact-model PAL chat calls.
+Each call receives `$REVIEW_DIR/diff.patch`, the relevant full source files as
+`absolute_file_paths`, and the instruction to review only (no builds, no
+tests). Do not send another reviewer's output. Save each raw PAL response, run
+`scripts/verify-model-dispatch.py --expect MODEL MODEL=RESPONSE_FILE`, then
+write its content to the named markdown summary only after attestation passes.
+Every claim must include `file:line` and a short evidence quote.
 
 **Focused reviewers** (one random model each; default categories, plus any
 user-supplied extras):
@@ -95,8 +125,13 @@ full diff):
 
 ## Stage 2 — Different-model verification (all in parallel)
 
-For each Stage 1 review file, spawn a fresh verifier on a random
-*different* model (rule 3 above). The verifier:
+For each Stage 1 review file, call PAL chat with a random *different* model
+(rule 3 above), the review, diff, and relevant full files. Omit
+`continuation_id` and do not provide other review outputs. Save the raw
+response and run `scripts/verify-model-dispatch.py`, passing `--expect` for the
+reviewer and verifier, `--distinct`, and both `MODEL=RESPONSE_FILE` records.
+Reject the verification unless both exact identities match and differ. The
+verifier:
 
 1. Reads the review and compares **every claim to the actual code**.
 2. Marks each claim `VALID` or `INVALID` (with the reason).
@@ -119,25 +154,31 @@ Merge all `verified-*.md` files into
 - Drop INVALID claims; dedupe claims found by multiple reviewers (keep the
   highest severity, note all finders).
 - Annotate every claim with: source review (category, or broad + model),
-  reviewing model, verifying model, verification outcome, severity.
+  attested reviewing model, attested verifying model, verification outcome,
+  severity, and both attestation paths.
 - Broad-review claims are the **cross-model stream** — label them as such
   so downstream stages can weigh them.
 
-## Stage 4 — Consensus forum
+## Stage 4 — Attested cross-model forum
 
-Run `mcp__pal__consensus` with every model in the list. Provide:
+PAL consensus reports the requested roster but does not return a
+`model_used` identity for each consultation, so it cannot satisfy this skill's
+attestation contract. Use two exact-model PAL chat rounds instead:
 
-- `$REVIEW_DIR/consolidated-review.md`
-- Sufficient source context (the diff plus the relevant file regions)
-- The annotations from Stage 3, so the forum sees which claims came from
-  the cross-model stream and how each fared under opposite-model
-  verification.
+1. Call every roster model in parallel with the consolidated claims, diff,
+   relevant source, and annotations. Ask each to confirm or reject every P0/P1.
+2. Combine the first-round verdicts, then call every roster model again with
+   the same evidence plus all first-round verdicts. Ask for final decisions.
 
-Ask the forum to confirm or reject each P0/P1 as a genuine merge blocker.
+Use no continuation IDs. Save and attest every raw response; run
+`scripts/verify-model-dispatch.py` once per complete round with `--expect` for
+every roster entry and `--distinct`. A P0/P1 is forum-confirmed only when every
+final-round model that addresses it agrees. Keep disagreements explicitly
+disputed and non-blocking rather than letting the orchestrator choose a winner.
 
 ## Stage 5 — Synthesis and delivery
 
-1. Using the forum output, eliminate spurious, irrelevant, or trivial
+1. Using the attested forum output, eliminate spurious, irrelevant, or trivial
    claims. Keep only substantial issues: **P0 merge blockers** lead the
    document; confirmed P1s go in a short "Follow-ups (non-blocking)"
    appendix; and remaining vetted P2s at the end.
@@ -146,8 +187,10 @@ Ask the forum to confirm or reject each P0/P1 as a genuine merge blocker.
 3. Write `$REVIEW_DIR/final-review.md`, then copy it into the source tree
    root as `<branch>-code-review.md`. Do **not** commit it — the user posts
    reviews themselves.
-4. Report to the user: blocker count, the in-tree path, and `$REVIEW_DIR`
-   for the raw stream.
+4. Report to the user: blocker count, the in-tree path, `$REVIEW_DIR` for the
+   raw stream, and the requested/returned model identity manifest. If any
+   attestation failed, report an aborted review and produce no validated
+   findings document.
 
 ## Constraints
 
@@ -155,6 +198,12 @@ Ask the forum to confirm or reject each P0/P1 as a genuine merge blocker.
 - Diff base is `$BASE_REF` (three-dot) — `origin/main` by default, a
   user-supplied parent branch for stacked PRs — never local `main`.
 - No review is verified by the model that wrote it.
+- Every model response has runner-returned `metadata.model_used` exactly equal
+  to its requested roster identity.
+- Unavailable, substituted, duplicated-roster, or unidentified models abort
+  the review.
+- No PAL call uses a continuation ID; the preflight sentinel probe must pass on
+  every roster model.
 - All intermediates in `$REVIEW_DIR`; only the final review enters the tree.
 
 ## Common mistakes
@@ -164,5 +213,8 @@ Ask the forum to confirm or reject each P0/P1 as a genuine merge blocker.
 | Diffing against local `main` | Always `"$BASE_REF"...HEAD` after `git fetch origin` (default `origin/main`) |
 | Reviewing a stacked PR against `origin/main` | The diff then includes the parent PRs' changes — set the base ref to the stack parent (e.g. `origin/feature-part-1`) |
 | Verifier same model as reviewer | Re-draw from the list minus the reviewer's model |
+| Using clink for a named model | Clink selects a CLI preset, not an exact model; use attested PAL chat |
+| Accepting an unavailable model under its requested label | Abort; never substitute or relabel |
+| Trusting the requested model field | Verify runner-returned `metadata.model_used` with the helper |
 | Treating unverified claims as findings | Only VALID claims with severity survive Stage 2 |
 | Running tests "to confirm" a claim | This skill is review-only; cite code, not runs |

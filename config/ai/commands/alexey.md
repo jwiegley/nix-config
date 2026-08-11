@@ -1,6 +1,11 @@
 # Alexey
 
-Spawn a fresh subagent to review the PR given in $ARGUMENTS (default: the current branch's PR), using a read-only agent type (no write tools) where available. The main agent only coordinates and returns the reviewer's findings.
+Review the PR given in $ARGUMENTS (default: the current branch's PR) in a
+read-only subagent. First load `parallelize`, pass its parent-history sentinel
+probe with the runner's explicit no-history mode, then use that same mode for
+the reviewer. If no verified no-history dispatch is available, stop rather than
+claim an independent review. The main agent only coordinates and returns the
+reviewer's findings.
 
 Give the reviewer this stance:
 

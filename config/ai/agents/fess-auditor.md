@@ -15,6 +15,11 @@ When loaded as the `fess-auditor` specialist, apply this rubric directly and
 report the result to the parent. Do not look up a sibling command file or
 recursively dispatch another auditor.
 
+For a delegated independence claim, the parent must name the explicit no-history
+mode it used and provide a passing parent-history sentinel probe.
+If that attestation is absent, run the audit but report that its independence
+was not verified.
+
 ## Operating Rules
 
 1. Do not modify files unless the caller explicitly asks you to fix issues.

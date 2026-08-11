@@ -182,7 +182,6 @@ Partner observation .440Z: cp -p preserves Darwin ACLs and source owner bits, so
   }
 ]
 #+end_src
-
 * DONE [#B] Allow YubiKey restore when active key files are absent
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -2370,15 +2369,17 @@ config/packages.nix:10-13 says two of three call sites omit config and lib, but 
 ]
 #+end_src
 
-* DOING [#B] Require explicit fresh-context dispatch where independence matters    :agents:comments:
+* DONE [#B] Require explicit fresh-context dispatch where independence matters    :agents:comments:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.66
 :LABELS: ["agents","comments","heavy-review"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 17:47]
+:MODIFIED: [2026-08-10 Mon 19:39]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 19:39]
+:CLOSE_REASON: Made context inheritance explicitly runner-dependent, required no-history dispatch plus a behavioral parent-sentinel probe for independence-sensitive audits/reviews, and removed false fresh-context guarantees from parallelize, Wiggum, fess, and review commands. Helper, packaging, catalog, all-system, and independent-review gates passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2401,15 +2402,17 @@ parallelize, Wiggum fess, and validated-review documentation says subagents star
 ]
 #+end_src
 
-* DOING [#B] Attest exact model identities in validated review    :agents:validation:
+* DONE [#B] Attest exact model identities in validated review    :agents:validation:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.67
 :LABELS: ["agents","heavy-review","validation"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 17:47]
+:MODIFIED: [2026-08-10 Mon 19:39]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 19:39]
+:CLOSE_REASON: Replaced CLI-preset/clink model claims with exact PAL chat selection, returned metadata.model_used attestation, distinct reviewer/verifier enforcement, no substitution fallback, and a two-round attested forum. Adversarial helper tests, generated documentation assets, packaging, catalog, all-system checks, and independent review passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

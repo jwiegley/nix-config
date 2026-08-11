@@ -4,7 +4,10 @@ Supporting material for the `parallelize` skill: the full subagent brief templat
 
 ## Full subagent brief template
 
-Fill every section. The subagent has none of your context -- it starts blank.
+Fill every section. The brief must be sufficient for an explicit no-history
+dispatch; never assume the runner starts blank or inherits useful context. For
+independence-sensitive audits and reviews, first run the sentinel probe in the
+parent skill's "Context inheritance is runner-dependent" section.
 
 ```text
 OBJECTIVE

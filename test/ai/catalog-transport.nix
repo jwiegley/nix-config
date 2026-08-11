@@ -374,6 +374,18 @@ let
   fessSource = catalog.items.agents.fess-auditor.source;
   fessText = builtins.readFile fessSource;
   hasFessRubric = text: lib.hasInfix "**Fallback smuggling**" text;
+  parallelizeSource = catalog.items.skills.parallelize.source;
+  validatedReviewSource = catalog.items.skills.validated-code-review.source;
+  parallelizeText = builtins.readFile "${parallelizeSource}/SKILL.md";
+  validatedReviewText = builtins.readFile "${validatedReviewSource}/SKILL.md";
+  noHistoryContractTexts = map builtins.readFile [
+    fessSource
+    "${src}/config/ai/commands/alexey.md"
+    "${src}/config/ai/commands/deep-review.md"
+    "${src}/config/ai/commands/heavy-review.md"
+    "${src}/config/ai/skills/wiggum/SKILL.md"
+    "${src}/config/ai/skills/wiggum/references/fess-audit.md"
+  ];
   fessPaths = {
     codex = {
       agent = "${codexProfile.root}/agents/fess-auditor.toml";
@@ -473,6 +485,21 @@ assert builtins.all (name: catalog.items.agents.${name}.metadata.name == name) (
 );
 assert !(builtins.pathExists "${src}/config/ai/commands/fess.md");
 assert catalog.items.commands.fess.source == fessSource;
+assert lib.hasInfix ''fork_turns="none"'' parallelizeText;
+assert lib.hasInfix "verify-history-isolation.py" parallelizeText;
+assert !(lib.hasInfix "Each subagent starts fresh with none of your context" parallelizeText);
+assert builtins.all (
+  text: lib.hasInfix "explicit no-history" text && lib.hasInfix "parent-history sentinel" text
+) noHistoryContractTexts;
+assert lib.hasInfix "mcp__pal__chat" validatedReviewText;
+assert lib.hasInfix "metadata.model_used" validatedReviewText;
+assert lib.hasInfix "Do not use `mcp__pal__clink`" validatedReviewText;
+assert lib.hasInfix "--expect MODEL" validatedReviewText;
+assert builtins.all (phrase: lib.hasInfix phrase validatedReviewText) [
+  "every roster entry, `--distinct`"
+  "reviewer and verifier, `--distinct`"
+  "every roster entry and `--distinct`"
+];
 assert builtins.all (invocation: lib.hasInfix invocation fessText) [
   "Claude Code: `/fess`"
   "Codex: `$command-fess`"
@@ -671,6 +698,13 @@ assert builtins.all reject [
   })
 ];
 pkgs.runCommand "ai-catalog-transport" { } ''
+  history_contract=${parallelizeSource}/scripts/verify-history-isolation.py
+  model_contract=${validatedReviewSource}/scripts/verify-model-dispatch.py
+  test -x "$history_contract"
+  test -x "$model_contract"
+  ${pkgs.python3}/bin/python3 ${./review-dispatch-contract.py} \
+    "$history_contract" "$model_contract"
+
   grep -F 'base_url = "${catalog.localModelEndpointsByHost.${codexProfile.host}.omlx}"' \
     ${codexRendered.files."${codexProfile.root}/nix-managed.config.toml".source} >/dev/null
   grep -F 'base_url = "${catalog.localModelEndpointsByHost.${codexProfile.host}.llama-swap}"' \

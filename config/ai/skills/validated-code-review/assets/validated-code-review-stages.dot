@@ -26,8 +26,8 @@ digraph validated_code_review {
     //   claude-fable-5  fill #EAF1FA  border #93B4DF  accent #2563AE
     //   your model      fill #E4F2EF  border #82BBAE  (legend placeholder only)
     //   neutral steps   fill #F6F8FA  border #C9D3DE
-    //   subagent stages fill #F2F6FA  (stage-level tint = context isolation)
-    //   PAL forum       fill #F1EEFB  border #7C6FCF  accent #4F3FB5
+    //   attested stages fill #F2F6FA  (exact model + verified no-history)
+    //   chat forum      fill #F1EEFB  border #7C6FCF  accent #4F3FB5
     //   deliverable     fill #E9F6EF  border #5FAE87  accent #1C7A50
 
     // ---- Legend ------------------------------------------------------------
@@ -48,21 +48,21 @@ digraph validated_code_review {
             </tr>
             <tr>
                 <td border="1" bgcolor="#F2F6FA" color="#C9D5E3" fixedsize="true" width="30" height="16"></td>
-                <td align="left"><font color="#334155">tinted stage = isolated subagents</font><br align="left"/><font point-size="9" color="#64748B">each runs in its own context window; only report<br align="left"/>files flow back, so the orchestrator stays clean</font></td>
+                <td align="left"><font color="#334155">tinted stage = attested PAL chat</font><br align="left"/><font point-size="9" color="#64748B">exact returned model identity · no continuation<br align="left"/>parent-history sentinel passed in preflight</font></td>
             </tr>
             <tr><td colspan="2" align="left"><font point-size="9" color="#64748B">“drawn” = model picked at random.<br align="left"/>Reviewer/verifier pairs show opposing colors —<br align="left"/>no review is verified by its own model.</font></td></tr>
         </table>>];
 
     // ---- Stage 0 -----------------------------------------------------------
     subgraph cluster_s0 {
-        label=<<font point-size="12" color="#64748B"><b>Stage 0 · Setup</b></font>>;
+        label=<<font point-size="12" color="#64748B"><b>Stage 0 · Setup &amp; preflight</b></font>>;
         style="rounded"; color="#D3DAE3";
-        setup [label=<<b>Prepare review inputs</b><br/><font point-size="9" color="#64748B">git fetch origin · diff $BASE_REF...HEAD → diff.patch<br/>commit log → commits.txt · all artifacts in $REVIEW_DIR</font>>];
+        setup [label=<<b>Prepare inputs and attest roster</b><br/><font point-size="9" color="#64748B">diff $BASE_REF...HEAD → diff.patch · PAL listmodels<br/>exact model_used match · distinct roster · sentinel absent</font>>];
     }
 
     // ---- Stage 1 — independent reviews (parallel) ---------------------------
     subgraph cluster_s1 {
-        label=<<font point-size="12" color="#64748B"><b>Stage 1 · Independent reviews</b>&nbsp;&nbsp;<i>all parallel · read-only: no builds, no tests</i></font><br/><font point-size="9" color="#7E93AB">isolated subagents — one fresh context window each</font>>;
+        label=<<font point-size="12" color="#64748B"><b>Stage 1 · Independent reviews</b>&nbsp;&nbsp;<i>all parallel · read-only: no builds, no tests</i></font><br/><font point-size="9" color="#7E93AB">exact-model PAL chat · no continuation · identity attested</font>>;
         style="rounded,filled"; color="#C9D5E3"; fillcolor="#F2F6FA";
 
         subgraph cluster_s1_focused {
@@ -85,7 +85,7 @@ digraph validated_code_review {
 
     // ---- Stage 2 — different-model verification ------------------------------
     subgraph cluster_s2 {
-        label=<<font point-size="12" color="#64748B"><b>Stage 2 · Verification by a different model</b>&nbsp;&nbsp;<i>each claim checked against the code: valid / invalid, graded P0–P2</i></font><br/><font point-size="9" color="#7E93AB">isolated subagents — one fresh context window each</font>>;
+        label=<<font point-size="12" color="#64748B"><b>Stage 2 · Verification by a different model</b>&nbsp;&nbsp;<i>each claim checked against the code: valid / invalid, graded P0–P2</i></font><br/><font point-size="9" color="#7E93AB">requested and returned identities must match and differ from reviewer</font>>;
         style="rounded,filled"; color="#C9D5E3"; fillcolor="#F2F6FA";
         v_correct  [label=<<b>Verify correctness</b><br/><font point-size="9" color="#2563AE">claude-fable-5</font>>,    fillcolor="#EAF1FA", color="#93B4DF"];
         v_memory   [label=<<b>Verify memory safety</b><br/><font point-size="9" color="#B15D0E">gpt-5.6-sol</font>>,     fillcolor="#FBF0E5", color="#DCA36A"];
@@ -103,11 +103,11 @@ digraph validated_code_review {
         consolidate [label=<<b>consolidated-review.md</b><br/><font point-size="9" color="#64748B">drop invalid claims · dedupe, keeping highest severity<br/>annotate category, reviewer, verifier, severity<br/>label broad-review claims as the cross-model stream</font>>];
     }
 
-    // ---- Stage 4 — PAL consensus forum (the arbiter) ---------------------------
+    // ---- Stage 4 — attested cross-model forum -----------------------------------
     subgraph cluster_s4 {
-        label=<<font point-size="13" color="#4F3FB5"><b>Stage 4 · Consensus forum — the arbiter of ambiguities</b></font>>;
+        label=<<font point-size="13" color="#4F3FB5"><b>Stage 4 · Attested cross-model forum</b></font>>;
         style="rounded,filled"; color="#B9AFE8"; fillcolor="#FAF9FE";
-        pal [label=<<font point-size="14"><b>PAL consensus forum</b></font><br/><font point-size="10" color="#4F3FB5">every model in the list deliberates together</font><br/><font point-size="9" color="#64748B">reads the diff, source context, and Stage-3 annotations<br/>settles disputed claims — confirms or rejects each P0/P1<br/>as a genuine merge blocker</font><br/><font point-size="8" color="#8B84A8">also context-isolated: deliberation happens out-of-process, only verdicts return</font>>,
+        pal [label=<<font point-size="14"><b>Two exact-model chat rounds</b></font><br/><font point-size="10" color="#4F3FB5">every attested model sees the same evidence</font><br/><font point-size="9" color="#64748B">round 1: independent verdicts<br/>round 2: all verdicts shared · final decisions<br/>only unanimous addressed P0/P1 claims are confirmed</font>>,
              penwidth=2.2, fillcolor="#F1EEFB", color="#7C6FCF", margin="0.35,0.22"];
     }
 
@@ -145,6 +145,6 @@ digraph validated_code_review {
     v_broad_fable -> consolidate;
     v_broad_sol   -> consolidate;
 
-    consolidate -> pal   [label="claims + annotations + source context", penwidth=1.6, color="#7C6FCF"];
+    consolidate -> pal   [label="two attested chat rounds", penwidth=1.6, color="#7C6FCF"];
     pal         -> final [label="confirmed blockers only",               penwidth=1.6, color="#5FAE87"];
 }

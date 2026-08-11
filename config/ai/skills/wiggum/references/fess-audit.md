@@ -17,7 +17,11 @@ Record the selected commit SHAs and one line on why that range was chosen.
 
 ## Context snapshot to hand the fess subagent
 
-Each subagent starts with none of your context, and the audit must judge the commits against the full context that produced them. Include:
+Context inheritance depends on the runner. Dispatch the auditor with its
+explicit no-history option only after the `parallelize` skill's
+parent-history sentinel probe passes. Include the result in the handoff. The
+audit must still judge the commits against the full context that produced them, so
+include:
 
 - the original user request (exact wording where practical);
 - the current plan and handoff state;

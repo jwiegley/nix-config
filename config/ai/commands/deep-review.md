@@ -31,6 +31,12 @@ These are mandatory review lenses, not permission to mutate the changeset.
 Use them to identify and report findings only: do not edit files, add dead-code
 markers, create audit manifests, remove code, or apply comment fixes.
 
+Before dispatching any reviewer, load `parallelize`, select the runner's
+explicit no-history mode, and pass its parent-history sentinel probe. Use the
+same verified mode for every review role. If it is unavailable or fails, stop
+and report the review incomplete instead of dispatching or claiming independent
+passes.
+
 ## Step 1: Determine the review scope
 
 Interpret `$ARGUMENTS` to determine what to review:
