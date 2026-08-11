@@ -36,13 +36,16 @@ separately below:
 Owner-decided review work is tracked in [`PLAN.org`](PLAN.org); only these
 authority questions remain unresolved:
 
-1. `config/ai/skills/node-red/SKILL.md` instructs reading
-   `/run/secrets/node-red-admin-token`, contradicting the binding security
-   rule: host-side helper, or documented exception?
-2. Does anything downstream run the portable lint stack
-   (`config/ai#apps.{format,lint,check}`)? Nothing in this repository does,
-   and it has drifted weaker than `test/bin/quality`.
-3. Do clio's `~/Models/llama-swap.yaml` and omlx state serve the model IDs
-   its codex profiles now advertise (`GLM-5.2`,
-   `Qwen3.6-27B-oQ6e-mtp`)? The catalog asserts the services exist on both
-   workstations; model inventory is unmanaged host state.
+1. `nix-tcz.1`: should the Vulcan-owned Node-RED service provide a bounded
+   administrative helper, or is direct agent access to its runtime secret an
+   explicit exception?
+2. `nix-tcz.37` and `nix-tcz.30`: which reviewed Agent Deck and Pi fork
+   commits should replace the product-scale patches? Agent Deck's runtime
+   binding cleanup must then land in that product repository, not another Nix
+   patch.
+3. `nix-aln`: publication, paired consumer-lock adoption, and each managed
+   host activation require separate authorization before the root-owned `obr`
+   package can be accepted across the fleet.
+4. `nix-iws`: does Clio's mutable llama-swap/oMLX inventory actually serve
+   `GLM-5.2` and `Qwen3.6-27B-oQ6e-mtp`, the local routes advertised by the
+   catalog?

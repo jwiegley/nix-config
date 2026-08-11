@@ -150,6 +150,37 @@ Partner observation .443Z: plaintext stage/backup copies can survive SIGKILL or 
   }
 ]
 #+end_src
+
+* TODO [#B] Verify Clio local-model inventory matches advertised routes
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-iws
+:LABELS: []
+:ISSUE_TYPE: question
+:CREATED:  [2026-08-10 Mon 19:56]
+:MODIFIED: [2026-08-10 Mon 19:56]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+doc/CURRENT-WORK.md records an unresolved authority question: confirm that Clio mutable llama-swap/oMLX state serves GLM-5.2 and Qwen3.6-27B-oQ6e-mtp before treating the catalog routes as deployable. The inventory is host-owned mutable state, so inspection and any repair require explicit Clio authority; record runtime evidence without copying model state into Nix.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-iws",
+    "depends_on_id": "nix-tcz",
+    "type": "discovered-from",
+    "created_at": "2026-08-11T02:56:33.307711Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
 * DONE [#B] Strip ACLs and force 0600 on staged YubiKey keys
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -1058,7 +1089,7 @@ config/launchd.nix:157-208,425-433 reads MSSQL credentials from a user-owned pat
 :LABELS: ["agent-deck","architecture","heavy-review"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 19:53]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1075,6 +1106,15 @@ overlays/ai/patches/agent-deck-runtime-lifecycle.patch keeps a generic RuntimeBi
     "depends_on_id": "nix-tcz",
     "type": "parent-child",
     "created_at": "2026-08-10T20:25:10.796461Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.30",
+    "depends_on_id": "nix-tcz.37",
+    "type": "blocks",
+    "created_at": "2026-08-11T02:53:10.797837Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
@@ -2655,6 +2695,39 @@ Partner observation .444Z: changes now aggregates configured projects but Make a
     "depends_on_id": "nix-tcz.19",
     "type": "discovered-from",
     "created_at": "2026-08-10T23:30:56.170279Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#C] Synchronize CURRENT-WORK with the final authority queue
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tok
+:LABELS: []
+:ISSUE_TYPE: docs
+:CREATED:  [2026-08-10 Mon 19:57]
+:MODIFIED: [2026-08-10 Mon 19:57]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 19:57]
+:CLOSE_REASON: Removed the resolved portable-quality question and linked the four remaining owner/external authority decisions to their canonical obr issues, including the new Clio mutable-model inventory question and the Agent Deck source dependency.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Remove the resolved portable quality question and make the remaining external/owner-authority queue auditable by linking the canonical obr issues for Node-RED secret access, product-source migration/runtime bindings, managed-fleet obr adoption, and Clio model inventory.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tok",
+    "depends_on_id": "nix-tcz",
+    "type": "discovered-from",
+    "created_at": "2026-08-11T02:57:22.695421Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
