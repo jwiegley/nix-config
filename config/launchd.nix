@@ -11,6 +11,29 @@ let
   xdg_cacheHome = "${home}/.cache";
   recordingCaBundle = "${pkgs.ca-bundle-with-vulcan or pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
   runsEternalTerminal = config.johnw.host.isDarwinWorkstation;
+  serviceLaunchers = import ./launchd-service-launchers.nix { inherit lib pkgs; };
+  mssqlServerLauncher = serviceLaunchers.mssql {
+    credentialDirectory = "/Library/Application Support/nix-config/mssql";
+    credentialOwnerUid = 0;
+    credentialTrustRoot = "/";
+    dataDirectory = "/private/var/lib/nix-config/mssql-data/data";
+    dataOwner = "johnw";
+    dataOwnerUid = null;
+    dataParentOwnerUid = 0;
+    dataTrustRoot = "/";
+  };
+  vlcApp = pkgs.callPackage ../packages/vlc-bin.nix { };
+  vlcRuntimeHome = pkgs.runCommand "vlc-telnet-home" { } ''
+    mkdir -p "$out/Library/Application Support/org.videolan.vlc"
+  '';
+  vlcTelnetLauncher = serviceLaunchers.vlcTelnet {
+    account = "johnw";
+    inherit home;
+    keychainService = "nix-config.vlc-telnet";
+    port = 4212;
+    vlcBin = "${vlcApp}/Applications/VLC.app/Contents/MacOS/VLC";
+    vlcHome = "${vlcRuntimeHome}";
+  };
   omlxProxy = config.johnw.omlxProxy;
   eternalTerminalConfig = pkgs.writeText "et.cfg" ''
     ; et.cfg : Config file for Eternal Terminal
@@ -162,54 +185,20 @@ in
     # System daemons run as background services
     daemons = {
       mssql-server = {
-        script = ''
-          # Wait for Docker to be ready
-          while ! /usr/local/bin/docker info > /dev/null 2>&1; do
-            echo "Waiting for Docker to be ready..."
-            sleep 5
-          done
-
-          # Create and own the persistent data directory.
-          mkdir -p ${home}/mssql
-          chown -R johnw:staff ${home}/mssql
-
-          # Create password file directory if it doesn't exist
-          mkdir -p ${xdg_configHome}/mssql
-          chown johnw:staff ${xdg_configHome}/mssql
-
-          # Read the required password file (created manually).
-          # Create this file with: pass mssql.vulcan.lan > ~/.config/mssql/passwd && chmod 600 ~/.config/mssql/passwd
-          if [ ! -f ${xdg_configHome}/mssql/passwd ]; then
-            echo "ERROR: Password file ${xdg_configHome}/mssql/passwd not found"
-            echo "Create it with: pass mssql.vulcan.lan > ~/.config/mssql/passwd && chmod 600 ~/.config/mssql/passwd"
-            exit 1
-          fi
-          MSSQL_SA_PASSWORD=$(cat ${xdg_configHome}/mssql/passwd | tr -d '\n')
-
-          # Validate the minimum password length before invoking SQL Server.
-          if [ ''${#MSSQL_SA_PASSWORD} -lt 8 ]; then
-            echo "ERROR: Password must be at least 8 characters"
-            exit 1
-          fi
-
-          # Refresh the mutable 2022-latest image before replacing the container.
-          /usr/local/bin/docker pull mcr.microsoft.com/mssql/server:2022-latest
-
-          # Stop and remove any existing container with the same name
-          /usr/local/bin/docker rm -f mssql-server 2>/dev/null || true
-
-          # Start the container with restart policy and persistent storage
-          /usr/local/bin/docker run -d \
-            --name mssql-server \
-            --restart unless-stopped \
-            -p 127.0.0.1:1433:1433 \
-            -v ${home}/mssql:/var/opt/mssql \
-            -e ACCEPT_EULA=Y \
-            -e "MSSQL_SA_PASSWORD=$MSSQL_SA_PASSWORD" \
-            mcr.microsoft.com/mssql/server:2022-latest
-        '';
-        serviceConfig.RunAtLoad = true;
-        serviceConfig.KeepAlive = false;
+        serviceConfig = {
+          EnvironmentVariables = {
+            DOCKER_CONFIG = "/var/root/.docker";
+            DOCKER_HOST = "unix:///var/run/docker.sock";
+            HOME = "/var/root";
+            LOGNAME = "root";
+            PATH = "/usr/bin:/bin:/usr/sbin:/sbin";
+            USER = "root";
+            ZDOTDIR = "/var/root";
+          };
+          ProgramArguments = [ "${mssqlServerLauncher}/bin/mssql-server-launcher" ];
+          RunAtLoad = true;
+          KeepAlive = false;
+        };
       };
     }
     // lib.optionalAttrs runsEternalTerminal {
@@ -437,14 +426,18 @@ in
       };
 
       vlc-telnet = {
-        script = ''
-          /Applications/VLC.app/Contents/MacOS/VLC \
-              -I telnet                            \
-              --telnet-password=secret             \
-              --telnet-port=4212
-        '';
-        serviceConfig.RunAtLoad = true;
-        serviceConfig.KeepAlive = true;
+        serviceConfig = {
+          EnvironmentVariables = {
+            HOME = home;
+            LOGNAME = "johnw";
+            PATH = "/usr/bin:/bin:/usr/sbin:/sbin";
+            USER = "johnw";
+          };
+          ProgramArguments = [ "${vlcTelnetLauncher}/bin/vlc-telnet-launcher" ];
+          RunAtLoad = true;
+          KeepAlive = true;
+          ThrottleInterval = 30;
+        };
       };
 
       spotlight-transient-exclusions = {

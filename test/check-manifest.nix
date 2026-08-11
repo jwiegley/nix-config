@@ -61,6 +61,7 @@ let
       obr-ownership = evaluationOnly systems;
       omlx-proxy-boundary = behavioral darwinSystems false;
       pi-blackhole-policy = behavioral systems false;
+      service-credentials = behavioral darwinSystems false;
       syncthing = behavioral systems false;
     };
   };

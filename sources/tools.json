@@ -318,6 +318,25 @@
       },
       "version": "0.1.0"
     },
+    "vlc": {
+      "hashes": {
+        "bundleTreeHash": "sha256-cCXSUXZTLCG1OYKOgOMRwq5sd9GTImCCrGQBGLa5ah8="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-/G+sCNh/U4UX1ErKDF56JEtnyMTLWJv0eDY6cxX9Xg0=",
+          "url": "https://get.videolan.org/vlc/3.0.23/macosx/vlc-3.0.23-arm64.dmg"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://get.videolan.org/vlc/3.0.23/macosx/vlc-3.0.23-arm64.dmg"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual",
+        "reason": "The signed macOS application is pinned as part of the VLC credential-consumer boundary"
+      },
+      "version": "3.0.23"
+    },
     "z": {
       "source": {
         "args": {

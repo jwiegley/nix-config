@@ -397,6 +397,9 @@
               omlx-proxy-boundary = pkgs.callPackage ./test/home/omlx-proxy.nix {
                 inherit darwinConfigurations;
               };
+              service-credentials = pkgs.callPackage ./test/home/service-credentials.nix {
+                inherit darwinConfigurations src;
+              };
             }
             // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
               darwin-overrides-inactive = pkgs.callPackage ./test/ai/overlay-isolation.nix {

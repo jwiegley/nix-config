@@ -53,6 +53,7 @@ Owner decision is recorded. If dedicated: provision and configure the exact cons
   }
 ]
 #+end_src
+
 * DONE [#B] Restore the balanced Claude Opus 5 1M model identifier
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -1312,15 +1313,17 @@ config/ssh.nix:13-19,55-64,243-360 supports settings and matchBlocks paths, but 
 ]
 #+end_src
 
-* DOING [#B] Remove credential exposure from managed MSSQL and VLC services    :launchd:security:validated:
+* DONE [#B] Remove credential exposure from managed MSSQL and VLC services    :launchd:security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.3
 :LABELS: ["heavy-review","launchd","security","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 19:49]
+:MODIFIED: [2026-08-11 Tue 03:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-11 Tue 03:59]
+:CLOSE_REASON: Replaced argv/user-file credentials with reviewed descriptor-rooted MSSQL and hardened Keychain-to-immutable-VLC boundaries; focused behavioral, full repository, all-system evaluation, system-build, and independent security review gates passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
