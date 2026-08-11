@@ -50,6 +50,7 @@ let
       ai-managed-preflight = behavioral systems false;
       coq-overlay = evaluationOnly systems;
       darwin-overrides-inactive = evaluationOnly linuxSystems;
+      edit-env = behavioral systems false;
       emacs-head = evaluationOnly darwinSystems;
       home-manager-release-skew = behavioral systems false;
       host-behavior = evaluationOnly systems;

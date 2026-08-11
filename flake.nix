@@ -450,6 +450,7 @@
               coq-overlay = pkgs.callPackage ./test/coq-overlay.nix {
                 configured = agentTestPkgsFor.${system};
               };
+              edit-env = pkgs.callPackage ./test/overlays/edit-env.nix { };
             }
             // pkgs.lib.optionalAttrs (system == "aarch64-darwin") {
               emacs-head = pkgs.callPackage ./test/overlays/emacs-head.nix {

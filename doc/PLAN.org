@@ -2206,15 +2206,17 @@ skill-creator init emits description: [TODO: ...], which parses as a YAML sequen
 ]
 #+end_src
 
-* DOING [#C] Split edit-env entries at the first equals sign    :comments:emacs:
+* DONE [#C] Split edit-env entries at the first equals sign    :comments:emacs:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.62
 :LABELS: ["comments","emacs","heavy-review"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 17:47]
+:MODIFIED: [2026-08-10 Mon 18:15]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 18:15]
+:CLOSE_REASON: Split environment entries at the first equals sign through one shared helper; both update and display regressions, package build, all-system evaluation, static checks, and independent review passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

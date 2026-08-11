@@ -65,6 +65,13 @@
 (defvar edit-env-changed-ls nil)
 (defvar edit-env-added-ls nil)
 
+(defun edit-env--split-entry (entry)
+  "Split ENTRY at its first equals sign, preserving the rest of its value."
+  (let ((separator (string-match "=" entry)))
+    (when separator
+      (list (substring entry 0 separator)
+            (substring entry (1+ separator))))))
+
 (defun edit-env-update ()
   (let ((var nil)
 	(value nil)
@@ -86,8 +93,8 @@
        (lambda (x)
 	 (if (and x (not (string-match "^[ \t\n]*$" x)))
 	     (progn
-	       (let ((splits (split-string x "=")))
-		 (if (not (= (length splits) 2))
+	       (let ((splits (edit-env--split-entry x)))
+		 (if (not splits)
 		     (message "invalid format %s" x)
 		   (setq var (car splits))
 		   (setq value (cadr splits))
@@ -143,14 +150,14 @@
 
     (mapcar
      (lambda (x)
-       (let* ((pair (split-string x "="))
+       (let* ((pair (edit-env--split-entry x))
 	      (var (car pair))
 	      (val (cadr pair)))
 	 (setq longest-var (max longest-var (length var)))))
      edit-env-ls)
     (mapcar
      (lambda (x)
-       (let* ((pair (split-string x "="))
+       (let* ((pair (edit-env--split-entry x))
 	      (var (car pair))
 	      (val (or (cadr pair) "")))
 	 (widget-insert "\n")
