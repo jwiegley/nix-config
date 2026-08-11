@@ -1,5 +1,6 @@
 {
   lib,
+  llmAgents,
   pkgs,
   src,
 }:
@@ -18,6 +19,9 @@ let
   };
   reject = value: !(builtins.tryEval (builtins.deepSeq value true)).success;
   withMcpServers = mcpServers: catalog.items // { inherit mcpServers; };
+  withoutFessCommand = catalog.items // {
+    commands = builtins.removeAttrs catalog.items.commands [ "fess" ];
+  };
   claudeSettings = catalog.items.settings.settings;
   withClaudeSettingsBase =
     base:
@@ -31,12 +35,15 @@ let
   c1CsiModelIdentifier = builtins.fromJSON "\"model\\u009b1m\"";
   c1OscModelIdentifier = builtins.fromJSON "\"model\\u009dtitle\"";
   profiles = builtins.attrValues catalog.profiles;
+  profileFor =
+    client:
+    lib.findFirst (profile: profile.client == client) (throw "${client} profile missing") profiles;
   claudeProfiles = lib.filter (profile: profile.client == "claude") profiles;
   piProfiles = lib.filter (profile: profile.client == "pi") profiles;
-  piProfile = lib.findFirst (profile: profile.client == "pi") (throw "Pi profile missing") profiles;
-  droidProfile = lib.findFirst (
-    profile: profile.client == "droid"
-  ) (throw "Droid profile missing") profiles;
+  codexProfile = profileFor "codex";
+  piProfile = profileFor "pi";
+  droidProfile = profileFor "droid";
+  primeProfile = profileFor "prime";
   stdioMcp = lib.findFirst (server: server.transport ? command) (throw "stdio MCP server missing") (
     builtins.attrValues catalog.items.mcpServers
   );
@@ -66,6 +73,16 @@ let
     };
   };
   selectFor = profile: lib.mapAttrs (_: itemSet: catalog.select profile itemSet) catalog.items;
+  renderFor =
+    renderer: profile: homeDirectory:
+    renderer {
+      inherit profile homeDirectory;
+      selected = selectFor profile;
+      xdgConfigHome = "${homeDirectory}/.config";
+    };
+  codexRendered = renderFor (import "${src}/config/ai/renderers/codex.nix" {
+    inherit lib pkgs llmAgents;
+  }) codexProfile "/Users/test";
   claudeRenderer = import "${src}/config/ai/renderers/claude.nix" {
     inherit lib;
     pkgs = rendererPkgs;
@@ -116,8 +133,51 @@ let
         homeDirectory = "/Users/test";
         xdgConfigHome = "/Users/test/.config";
       };
+  primeRendered = renderFor (import "${src}/config/ai/renderers/prime.nix" {
+    inherit lib;
+    pkgs = rendererPkgs;
+  }) primeProfile "/Users/test";
+  fessSource = catalog.items.agents.fess-auditor.source;
+  fessText = builtins.readFile fessSource;
+  hasFessRubric = text: lib.hasInfix "**Fallback smuggling**" text;
+  fessPaths = {
+    codex = {
+      agent = "${codexProfile.root}/agents/fess-auditor.toml";
+      command = ".agents/skills/command-fess";
+    };
+    droid = {
+      agent = "${droidProfile.root}/droids/fess-auditor.md";
+      command = "${droidProfile.root}/skills/fess";
+    };
+    pi = {
+      agent = ".config/pi/agent/agents/fess-auditor.md";
+      command = ".config/pi/agent/prompts/fess.md";
+    };
+    prime = {
+      agent = "${primeProfile.root}/prompts/agent-fess-auditor.md";
+      command = "${primeProfile.root}/prompts/fess.md";
+    };
+  };
 in
 assert catalog.validate { };
+assert !(builtins.pathExists "${src}/config/ai/commands/fess.md");
+assert catalog.items.commands.fess.source == fessSource;
+assert builtins.all (invocation: lib.hasInfix invocation fessText) [
+  "Claude Code: `/fess`"
+  "Codex: `$command-fess`"
+  "Factory Droid: `/fess`"
+  "Pi: `/fess`"
+  "Prime Agent: `/fess`"
+];
+assert builtins.all (
+  profile:
+  let
+    selected = selectFor profile;
+  in
+  selected.agents ? fess-auditor
+  && selected.commands ? fess
+  && selected.agents.fess-auditor.source == selected.commands.fess.source
+) profiles;
 assert claudeSettings.base.model == "claude-opus-5[1m]";
 assert catalog.validate {
   items = withClaudeSettingsBase (
@@ -154,6 +214,19 @@ assert
 assert catalog.validate {
   items = withMcpServers (catalog.items.mcpServers // { synthetic-http = syntheticHttpMcp; });
 };
+assert builtins.all (
+  entry:
+  let
+    files = entry.rendered.files;
+    root = entry.profile.root;
+  in
+  hasFessRubric files."${root}/agents/fess-auditor.md".text
+  && hasFessRubric files."${root}/commands/fess.md".text
+) claudeRenderings;
+assert builtins.hasAttr fessPaths.codex.agent codexRendered.files;
+assert builtins.hasAttr fessPaths.codex.command codexRendered.files;
+assert hasFessRubric droidRendered.files.${fessPaths.droid.agent}.text;
+assert builtins.hasAttr fessPaths.droid.command droidRendered.files;
 assert piRenderings != [ ];
 assert builtins.hasAttr "${droidProfile.root}/mcp.json" droidRendered.files;
 assert builtins.all (
@@ -163,10 +236,29 @@ assert builtins.all (
   in
   builtins.hasAttr ".config/pi/agent/models.json" files
   && builtins.hasAttr ".config/mcp/mcp.json" files
+  && hasFessRubric files.${fessPaths.pi.agent}.text
+  && hasFessRubric files.${fessPaths.pi.command}.text
   && (builtins.hasAttr ".config/pi/agent/model-router.json" files) == entry.darwin
   && entry.rendered.mutableMcpGuard.path == ".config/pi/agent/mcp.json"
 ) piRenderings;
+assert
+  let
+    prompt = primeRendered.files.${fessPaths.prime.agent}.text;
+  in
+  lib.hasInfix "Read the immutable specialist role at `" prompt
+  && lib.hasInfix "-fess-auditor.md` in full" prompt;
+assert hasFessRubric primeRendered.files.${fessPaths.prime.command}.text;
 assert builtins.all reject [
+  (catalog.validate { items = withoutFessCommand; })
+  (catalog.validate {
+    items = catalog.items // {
+      commands = catalog.items.commands // {
+        fess = catalog.items.commands.fess // {
+          source = catalog.items.commands.cleanup.source;
+        };
+      };
+    };
+  })
   (catalog.validate {
     items = withClaudeSettingsBase (claudeSettings.base // { model = "claude-opus-5[1m"; });
   })
@@ -236,6 +328,13 @@ assert builtins.all reject [
   })
 ];
 pkgs.runCommand "ai-catalog-transport" { } ''
+  grep -F '**Fallback smuggling**' ${codexRendered.files.${fessPaths.codex.agent}.source} >/dev/null
+  grep -F '**Fallback smuggling**' ${
+    codexRendered.files.${fessPaths.codex.command}.source
+  }/SKILL.md >/dev/null
+  grep -F '**Fallback smuggling**' ${
+    droidRendered.files.${fessPaths.droid.command}.source
+  }/SKILL.md >/dev/null
   ${lib.concatMapStringsSep "\n" (entry: ''
     ${pkgs.jq}/bin/jq -e '
       .model == "claude-opus-5[1m]"

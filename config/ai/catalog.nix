@@ -622,6 +622,7 @@ let
   ];
   droidCommands = [
     "discover-bundles"
+    "fess"
     "restack"
   ];
 
@@ -648,7 +649,15 @@ let
   agents = mkDocumentItems ./agents ".md" agentMetadata (_name: {
     clients = contentClients;
   });
-  commands = mkDocumentItems ./commands ".md" commandMetadata commandSelectors;
+  ordinaryCommands = mkDocumentItems ./commands ".md" commandMetadata commandSelectors;
+  commands = ordinaryCommands // {
+    # The specialist and direct command are two projections of one audit
+    # authority. Keeping the rubric with the specialist also makes delegated
+    # use independent of renderer-specific command paths.
+    fess = ordinaryCommands.fess // {
+      source = agents.fess-auditor.source;
+    };
+  };
 
   localBroadSkills = [
     "abstraction-review"
@@ -1439,6 +1448,18 @@ let
           )
         ) "invalid profile ${id}"
       ) profiles;
+      fessProjectionChecks = lib.mapAttrsToList (
+        id: profile:
+        let
+          selectedAgents = select profile items.agents;
+          selectedCommands = select profile items.commands;
+        in
+        ensure (
+          selectedAgents ? fess-auditor
+          && selectedCommands ? fess
+          && selectedAgents.fess-auditor.source == selectedCommands.fess.source
+        ) "fess auditor has no same-source direct command in profile ${id}"
+      ) profiles;
       mcpChecks = lib.mapAttrsToList (
         name: server:
         let
@@ -1486,7 +1507,13 @@ let
         ) items.mcpServers
       ) (builtins.attrValues profiles);
       checks =
-        itemChecks ++ selectorChecks ++ settingsChecks ++ profileChecks ++ mcpChecks ++ mcpResolutionChecks;
+        itemChecks
+        ++ selectorChecks
+        ++ settingsChecks
+        ++ profileChecks
+        ++ fessProjectionChecks
+        ++ mcpChecks
+        ++ mcpResolutionChecks;
     in
     builtins.deepSeq checks true;
   # Clients that read the shared `.agents/skills` root. That root is one

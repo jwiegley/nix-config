@@ -445,6 +445,7 @@
               };
               ai-catalog-transport = pkgs.callPackage ./test/ai/catalog-transport.nix {
                 inherit src;
+                llmAgents = inputs.llm-agents;
               };
               coq-overlay = pkgs.callPackage ./test/coq-overlay.nix {
                 configured = agentTestPkgsFor.${system};

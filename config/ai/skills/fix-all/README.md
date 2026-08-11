@@ -1,7 +1,7 @@
 # fix-all
 
-A relentless fix-everything skill. Where [`fess`](../../commands/fess.md) only audits and
-reports, `fix-all` acts: it takes the findings uncovered during a piece of
+A relentless fix-everything skill. Where [`fess`](../../agents/fess-auditor.md) only
+audits and reports, `fix-all` acts: it takes the findings uncovered during a
 work and fixes **every one of them**, here and now. "Out of scope,"
 "pre-existing," and "follow-up ticket" are not acceptable framings — if it
 surfaced, it gets fixed.
@@ -32,5 +32,6 @@ zero.
 
 ## Pairs well with `fess`
 
-Run [`fess`](../../commands/fess.md) to surface what was stubbed, faked, swallowed, or
-glossed over; run `fix-all` to drive that list to done without deferrals.
+Run [`fess`](../../agents/fess-auditor.md) to surface what was stubbed, faked,
+swallowed, or glossed over; run `fix-all` to drive that list to done without
+deferrals.

@@ -441,15 +441,17 @@ config/launchd.nix:285-322,362-363 exposes nginx on 8443 and proxies /v1 to loop
 ]
 #+end_src
 
-* DOING [#C] Make the Fess fallback portable across renderers    :ai:docs:validated:
+* DONE [#C] Make the Fess fallback portable across renderers    :ai:docs:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.14
 :LABELS: ["ai","docs","heavy-review","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 16:07]
+:MODIFIED: [2026-08-10 Mon 17:36]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 17:36]
+:CLOSE_REASON: Made the fess-auditor rubric the single source projected to direct commands on Claude, Codex, Droid, Pi, and Prime; added same-source validation, renderer behavior checks, and a divergence mutant.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
