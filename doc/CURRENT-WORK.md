@@ -36,16 +36,13 @@ separately below:
 Owner-decided review work is tracked in [`PLAN.org`](PLAN.org); only these
 authority questions remain unresolved:
 
-1. `nix-tcz.1`: should the Vulcan-owned Node-RED service provide a bounded
-   administrative helper, or is direct agent access to its runtime secret an
-   explicit exception?
-2. `nix-tcz.37` and `nix-tcz.30`: which reviewed Agent Deck and Pi fork
-   commits should replace the product-scale patches? Agent Deck's runtime
-   binding cleanup must then land in that product repository, not another Nix
-   patch.
-3. `nix-aln`: publication, paired consumer-lock adoption, and each managed
+1. `nix-tcz.37` and `nix-tcz.30`: authorize an exact-tree import branch in
+   `jwiegley/agent-deck`, and choose the authoritative Pi repository, before
+   replacing the product-scale patches. Agent Deck's runtime-binding cleanup
+   must then land in that product repository, not another Nix patch.
+2. `nix-aln`: publication, paired consumer-lock adoption, and each managed
    host activation require separate authorization before the root-owned `obr`
    package can be accepted across the fleet.
-4. `nix-iws`: does Clio's mutable llama-swap/oMLX inventory actually serve
-   `GLM-5.2` and `Qwen3.6-27B-oQ6e-mtp`, the local routes advertised by the
-   catalog?
+3. `nix-5yr`: Clio currently serves neither advertised local model. Choose
+   whether to repair its mutable inventory or withdraw/adjust the Clio route
+   opt-ins to models actually served.

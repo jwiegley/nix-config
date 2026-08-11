@@ -53,6 +53,37 @@ Partner observation .445Z: the malformed claude-opus-5[1m value came from a trun
 ]
 #+end_src
 
+* TODO [#B] Align Clio advertised local routes with live inventory
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-5yr
+:LABELS: []
+:ISSUE_TYPE: question
+:CREATED:  [2026-08-10 Mon 21:24]
+:MODIFIED: [2026-08-10 Mon 21:24]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Clio currently serves neither catalog-advertised local route. Choose and implement one authoritative outcome: provision/alias GLM-5.2 and Qwen3.6-27B-oQ6e-mtp in Clio mutable runtime, or withdraw/adjust Clio local-route opt-ins to only models actually served. Preserve Hera routing. Model downloads, service mutation, activation, and publication remain separately authorized. Safe audit evidence: llama-swap listed only bge-m3 and bge-reranker-v2-m3; oMLX required auth and was not queried with credentials, while its two effective installed-model roots contained Qwen3.6-27B-oQ4-mtp but not Qwen3.6-27B-oQ6e-mtp.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-5yr",
+    "depends_on_id": "nix-iws",
+    "type": "discovered-from",
+    "created_at": "2026-08-11T04:24:54.341093Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DOING [#B] Make obr available across the managed fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -153,21 +184,26 @@ Partner observation .443Z: plaintext stage/backup copies can survive SIGKILL or 
 ]
 #+end_src
 
-* TODO [#B] Verify Clio local-model inventory matches advertised routes
+* DONE [#B] Verify Clio local-model inventory matches advertised routes
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-iws
 :LABELS: []
 :ISSUE_TYPE: question
 :CREATED:  [2026-08-10 Mon 19:56]
-:MODIFIED: [2026-08-10 Mon 19:56]
+:MODIFIED: [2026-08-10 Mon 21:25]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 21:25]
+:CLOSE_REASON: Verified negative: Clio currently evidences neither advertised model. llama-swap returned only bge-m3 and bge-reranker-v2-m3; the unauthenticated oMLX endpoint correctly returned 401, and a credential-free scan of its effective installed-model roots found Qwen3.6-27B-oQ4-mtp but not Qwen3.6-27B-oQ6e-mtp. Active generated leaves still advertise both missing IDs. Follow-up nix-5yr records the owner choice between repairing mutable inventory and withdrawing the routes.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
 doc/CURRENT-WORK.md records an unresolved authority question: confirm that Clio mutable llama-swap/oMLX state serves GLM-5.2 and Qwen3.6-27B-oQ6e-mtp before treating the catalog routes as deployable. The inventory is host-owned mutable state, so inspection and any repair require explicit Clio authority; record runtime evidence without copying model state into Nix.
+
+** Notes
+Follow-up owner decision is tracked as nix-5yr.
 
 ** Dependencies
 #+begin_src json
@@ -383,23 +419,24 @@ Partner observations 2026-08-11T03:29:03.210Z and .211Z found an invalid placeho
 
 Parent for the 2026-08-10 seven-pass whole-repository review frozen at commit c8b37be06d054e16b865192cefffce6203a7d64c and tree d2641871fc5dc028682a4f88d8621f051af9df7b. Children preserve verified defects, test gaps, simplifications, documentation defects, and authority questions after cross-pass deduplication. Review evidence is static unless each child says otherwise.
 
-* DONE [#A] Remove agent-visible Node-RED runtime-secret access    :security:validated:
+* DOING [#A] Remove agent-visible Node-RED runtime-secret access    :security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.1
 :LABELS: ["heavy-review","security","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 21:16]
+:MODIFIED: [2026-08-10 Mon 21:25]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-10 Mon 21:16]
-:CLOSE_REASON: Implemented the reviewed host-owned Node-RED admin boundary in Vulcan commit 7a808a186b521299916679a66428299b0698dcfb and rewrote the managed skill to expose only the bounded three-command helper. Vulcan focused 105-test derivation, all-system evaluation, static checks, root ai-catalog-transport build, and root/portable all-system evaluations passed; no activation or push performed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Critical. config/ai/skills/node-red/SKILL.md:39-74,143 and references/api_reference.md:403-422 direct agents to read /run/secrets/node-red-admin-token and place it in curl argv, contradicting AGENTS.md:71-73. Replace these recipes with one host-owned helper that reads the token internally and returns bounded non-secret data. Verify no skill command, argv, output, log, or generated file can carry the token. Sources: validated VCR-001, deep Q-01.
+Critical. The managed Node-RED skill formerly directed agents to read the runtime admin token and place it in curl argv, contradicting the repository secret boundary. Replace that route with one host-owned helper that reads the transport credential internally, exposes only three bounded flow-author commands, and never places that credential in agent-visible input, argv, output, logs, or generated files. The caller is a trusted authorized flow author: selected flow configuration is bounded but sensitive authorized output, not globally non-secret data. Authentication, diagnostics, concurrent-update protection, validation, and documented workflows must fail closed. Sources: validated VCR-001, deep Q-01, post-commit fess audit.
+
+** Notes
+The intended boundary is routine non-disclosure of the helper transport credential for a trusted, authorized flow author; selected flow configuration is bounded but sensitive authorized output, not globally non-secret data. Post-commit fess audit reopened the issue for fail-open Admin API authentication, fixed diagnostic logging, stale selected-flow conflict protection, strict PUT acknowledgement, fail-closed docs, validator compatibility, and stale credential-store guidance.
 
 ** Dependencies
 #+begin_src json
@@ -1147,7 +1184,7 @@ config/launchd.nix:157-208,425-433 reads MSSQL credentials from a user-owned pat
 :LABELS: ["agent-deck","architecture","heavy-review"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 19:53]
+:MODIFIED: [2026-08-10 Mon 21:21]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1155,6 +1192,9 @@ config/launchd.nix:157-208,425-433 reads MSSQL credentials from a user-owned pat
 :END:
 
 overlays/ai/patches/agent-deck-runtime-lifecycle.patch keeps a generic RuntimeBindings map beside five scalar per-tool fields across domain, storage, transitions, and tests, with repeated switches. Make the map canonical, confine legacy scalar projection to a versioned migration boundary, and use one binding descriptor table. Prove a synthetic sixth binding requires no core struct field or switch. Source: abstraction finding 1.
+
+** Notes
+Blocked on nix-tcz.37. After the exact Agent Deck import commit is reviewed and pinned, implement the RuntimeBindings descriptor/migration cleanup as a separate Agent Deck product commit; do not edit or replace the Nix product-scale patch first.
 
 ** Dependencies
 #+begin_src json
@@ -1378,14 +1418,14 @@ config/ai/catalog.nix:150-216 stores the Claude-formatted string Read, Grep, Glo
 ]
 #+end_src
 
-* TODO [#B] Move product-scale Agent Deck and Pi deltas out of Nix patches    :architecture:packaging:
+* DOING [#B] Move product-scale Agent Deck and Pi deltas out of Nix patches    :architecture:packaging:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37
 :LABELS: ["architecture","heavy-review","packaging"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 21:21]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1393,6 +1433,9 @@ config/ai/catalog.nix:150-216 stores the Claude-formatted string Read, Grep, Glo
 :END:
 
 agent-deck-runtime-lifecycle.patch is about 45,582 lines and pi-bounded-session-history.patch about 13,831, far beyond the documented narrow compatibility-patch boundary. Upstream them or pin reviewed fork commits in sources/ai.json, retaining only Nix-specific patches. Compare old and new trees byte-for-byte before removal and run complete product checks. Source: abstraction finding 8.
+
+** Notes
+2026-08-10 authority audit: no reviewed exact-tree product commit currently exists. Agent Deck has a verified destination fork (jwiegley/agent-deck), but its visible tips do not reproduce v1.11.0 plus the current Discord, transition-daemon, and runtime-lifecycle patches. Create an import-only branch from upstream 2f586c5ca97d0e783bb16213d388bcce9e675e67 and require a zero-difference path/type/bytes/symlink/executable manifest before changing the Nix pin. Pi has an exact base 845d6ff1f6643aba440341cce877ce1c43ebbc39 but no verified owner-selected product repository; choose or create one, then import bounded-history, provider-timeout, and session-replacement patches in order with the same identity gate. Product pushes/PRs remain separately authorized.
 
 ** Dependencies
 #+begin_src json
