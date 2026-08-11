@@ -8,16 +8,16 @@ The optional Pi soak procedure remains available in
 [`PI-EIGHT-HOUR-SOAK.md`](PI-EIGHT-HOUR-SOAK.md) for manual use when requested;
 another soak is not a pending acceptance gate.
 
-## 2026-08-09 whole-repository review: closed
+## 2026-08-09 whole-repository review: tracked closeout
 
 A seven-pass heavy review (94 findings, consolidated to 41 clusters) was
-fixed across eight adversarially verified batches, commits
-`3278f5fc..842ce675`, followed by a partner-observation cleanup. The signed
-commits and current tests are the durable evidence; the transient untracked
-observation queue has been consumed. Five findings were adjudicated rather than
-applied, with the rationale recorded below or beside the code they concern;
-unresolved authority questions requiring live or downstream evidence are listed
-separately below:
+addressed across eight adversarially verified batches, commits
+`3278f5fc..842ce675`, followed by partner-observation cleanup and tracked
+security follow-ups. Remaining implementation and authority work is recorded in
+[`PLAN.org`](PLAN.org); this heading does not claim those issues are closed. The
+signed commits and current tests are the durable evidence, and Git preserves the
+consumed original observation queue. Five findings were adjudicated rather than
+applied, with the rationale recorded below or beside the code they concern:
 
 - the preflight allowlist stays leaf-granular (comment at its declaration
   in `config/ai/preflight.nix`);
@@ -46,3 +46,7 @@ authority questions remain unresolved:
 3. `nix-5yr`: Clio currently serves neither advertised local model. Choose
    whether to repair its mutable inventory or withdraw/adjust the Clio route
    opt-ins to models actually served.
+4. `nix-3u8`: choose whether the Vulcan-to-Andoria jump must use a dedicated
+   timer identity or may intentionally reuse the general Vulcan identity. Key
+   provisioning, authoritative consumer changes, activation, and runtime
+   acceptance require separate authorization.

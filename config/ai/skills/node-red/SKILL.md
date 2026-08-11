@@ -16,9 +16,10 @@ description: Build, edit, and debug Node-RED flows on John's NixOS host (vulcan)
 The caller is a trusted, authorized Node-RED flow author. The helper keeps the
 runtime admin transport credential out of routine agent handling; it is not an
 operating-system sandbox or a defense against intentionally malicious flow
-code. A selected flow is authorized but sensitive output and may contain
-private configuration. Never print it into the conversation, logs, command
-arguments, or a shared file.
+code. "Trusted author" means the caller is allowed to inspect and edit the
+selected flow. The returned flow is authorized but sensitive output, not
+"non-secret data," and may contain private configuration. Never print it into
+the conversation, logs, command arguments, or a shared file.
 
 All programmatic flow reads and updates go through `node-red-admin`. The helper
 owns the fixed loopback routing and verified TLS identity for
@@ -44,21 +45,26 @@ The `-h` and `--help` spellings are invalid and exit 2.
 
 - `flows get` emits tab metadata only as compact ASCII JSON:
   `{"flows":[{"id":"a1b2c3d4","label":"Office"}]}`.
-- `flow get` emits one complete selected-flow object as compact ASCII JSON,
-  normalized without field loss. Treat the complete object as sensitive.
-- `flow put` reads JSON only from standard input. Its object ID must match the
-  command ID. Success is exactly `{"ok":true,"id":"FLOW_ID"}`.
+- `flow get` emits a sensitive edit envelope with exact key order:
+  `{"baseDigest":"sha256:<64 lowercase hex>","flow":<complete selected flow>}`.
+- `flow put` reads that exact two-key envelope from standard input. Edit only
+  `flow` and preserve `baseDigest`; the helper re-reads the selected flow and
+  refuses a stale digest before sending any update. The flow ID must match the
+  command ID, `nodes` must be an array, and `configs`, when present, must be an
+  array. Success is exactly `{"ok":true,"id":"FLOW_ID"}`.
 - Every successful response is one compact ASCII JSON line ending in LF.
 
-The helper rejects raw or normalized input above 1 MiB, an upstream response
-above 8 MiB, or final stdout above 1 MiB including LF. Each I/O operation has a
-10-second timeout and the entire valid operation has a 15-second wall deadline.
-Exit status is 0 for success, 2 for invocation/ID/input errors, and 1 for
-credential, transport, upstream, timeout, or other operational failures.
-Ordinary diagnostics are fixed and bounded; they never echo request data,
-upstream bodies, or exception text. Usage is appended only to exit-2 errors.
-A wall-deadline expiry may be silent so a blocked diagnostic stream cannot
-extend the operation.
+The helper rejects raw or normalized PUT input above 1 MiB, an emitted envelope
+above 1 MiB including LF, an upstream response above 8 MiB, or final stdout
+above 1 MiB including LF. The 10-second timeout applies to each network I/O
+operation. One non-rearmed 15-second wall deadline covers the whole lifecycle,
+including stdin parsing and stdout/stderr flushing. Exit status is 0 for
+success, 2 for invocation/ID/input errors, and 1 for credential, transport,
+stale digest, upstream, timeout, or other operational failures. Ordinary
+diagnostics are fixed and bounded; they never echo request data, upstream
+bodies, or exception text. Usage is appended only to exit-2 errors. A
+wall-deadline expiry may be silent so a blocked diagnostic stream cannot extend
+the operation.
 
 Use a private mode-0700 temporary directory with a cleanup trap for every
 returned document and acknowledgement. The reference contains the canonical
@@ -205,7 +211,7 @@ Quick recall list — full catalog and tab UUIDs are in `references/patterns.md`
 ## Available scripts
 
 - `scripts/generate_uuid.py [count]` — Node-RED 16-char hex UUIDs
-- `scripts/validate_flow.py <file>` — JSON + wire integrity
+- `scripts/validate_flow.py <file>` — full-flow or selected-flow-envelope JSON + wire integrity
 - `scripts/wire_nodes.py <file> <src> <tgt> [output]` — programmatic wiring
 - `scripts/create_flow_template.py <type> [out]` — generic boilerplate (mqtt/http-api/data-pipeline/error-handler). **These are not in John's style** — use as scaffolding only.
 

@@ -20,6 +20,39 @@
 
 Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and GIT_NAMESPACE from hermetic Git fixture environments, with a regression that proves both selectors cannot leak into fixture commands.
 
+* TODO [#B] Choose a dedicated identity for the Vulcan-Andoria jump    :authority:security:ssh:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-3u8
+:LABELS: ["authority","security","ssh"]
+:ISSUE_TYPE: question
+:CREATED:  [2026-08-10 Mon 21:46]
+:MODIFIED: [2026-08-10 Mon 21:46]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Observation 2026-08-11T04:43:59.328Z notes that fc4eeb80 reuses the general johnw@vulcan identity despite nix-sj5 recording a dedicated jump-key requirement. Owner must either authorize provisioning a dedicated timer key and updating the authoritative Vulcan consumer, or explicitly accept reuse of the general identity and its coupled rotation/revocation boundary. Key generation, consumer mutation, activation, and runtime acceptance are separately authorized.
+
+** Acceptance Criteria
+Owner decision is recorded. If dedicated: provision and configure the exact consumer and Hera public key atomically, build both authorities, then separately authorize activation/runtime acceptance. If general identity is accepted: record the rationale and retain the forced-command/source/destination constraints.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-3u8",
+    "depends_on_id": "nix-sj5",
+    "type": "discovered-from",
+    "created_at": "2026-08-11T04:46:04.927625Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
 * DONE [#B] Restore the balanced Claude Opus 5 1M model identifier
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -319,6 +352,40 @@ Partner observation .441Z: restore is a recovery path but the transaction now re
 ]
 #+end_src
 
+* TODO [#B] Force a no-op command on the Vulcan-Andoria jump authorization    :security:ssh:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-nap
+:LABELS: ["security","ssh"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 21:46]
+:MODIFIED: [2026-08-10 Mon 21:46]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The signed fc4eeb80 reinstatement permits direct-tcpip only by intent, but restrict does not disable command execution. Add a fixed no-op forced command while retaining the exact Vulcan source and andoria-08:22 permitopen boundary; correct the comment and pin the rendered authorized_keys contract. Runtime jump and exec refusal remain activation-time acceptance.
+
+** Acceptance Criteria
+Rendered Hera authorized_keys contains from=192.168.1.2, restrict, port-forwarding, permitopen=andoria-08:22, and a fixed no-op command for the exact key; tests reject omission; full Hera build passes; no activation is performed without authorization.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-nap",
+    "depends_on_id": "nix-sj5",
+    "type": "discovered-from",
+    "created_at": "2026-08-11T04:46:04.827050Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#D] Restore the Syncthing.app runtime-ownership warning
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -419,15 +486,17 @@ Partner observations 2026-08-11T03:29:03.210Z and .211Z found an invalid placeho
 
 Parent for the 2026-08-10 seven-pass whole-repository review frozen at commit c8b37be06d054e16b865192cefffce6203a7d64c and tree d2641871fc5dc028682a4f88d8621f051af9df7b. Children preserve verified defects, test gaps, simplifications, documentation defects, and authority questions after cross-pass deduplication. Review evidence is static unless each child says otherwise.
 
-* DOING [#A] Remove agent-visible Node-RED runtime-secret access    :security:validated:
+* DONE [#A] Remove agent-visible Node-RED runtime-secret access    :security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.1
 :LABELS: ["heavy-review","security","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 21:25]
+:MODIFIED: [2026-08-10 Mon 21:50]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 21:50]
+:CLOSE_REASON: Implemented the host-owned three-command Node-RED admin boundary in authoritative Vulcan commits 7a808a186b521299916679a66428299b0698dcfb and c9ad1372f970cbdb52648bbc94e039c07522c662, then aligned the root managed skill, validator, whole-tree secret/API scan, fail-closed workflow, stale-digest envelope, strict acknowledgement, and timeout documentation. Authoritative Vulcan tests passed 128/128 plus all-system evaluation; root behavioral/focused/catalog and root/portable all-system gates passed; independent review is clear after correcting one config-node fixture. External commits remain unpushed and neither repository was activated; live TLS, sudo, secret ownership, service, and command acceptance remain separately authorized runtime checks.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -436,7 +505,7 @@ Parent for the 2026-08-10 seven-pass whole-repository review frozen at commit c8
 Critical. The managed Node-RED skill formerly directed agents to read the runtime admin token and place it in curl argv, contradicting the repository secret boundary. Replace that route with one host-owned helper that reads the transport credential internally, exposes only three bounded flow-author commands, and never places that credential in agent-visible input, argv, output, logs, or generated files. The caller is a trusted authorized flow author: selected flow configuration is bounded but sensitive authorized output, not globally non-secret data. Authentication, diagnostics, concurrent-update protection, validation, and documented workflows must fail closed. Sources: validated VCR-001, deep Q-01, post-commit fess audit.
 
 ** Notes
-The intended boundary is routine non-disclosure of the helper transport credential for a trusted, authorized flow author; selected flow configuration is bounded but sensitive authorized output, not globally non-secret data. Post-commit fess audit reopened the issue for fail-open Admin API authentication, fixed diagnostic logging, stale selected-flow conflict protection, strict PUT acknowledgement, fail-closed docs, validator compatibility, and stale credential-store guidance.
+The intended boundary is routine non-disclosure of the helper transport credential for a trusted, authorized flow author; selected flow configuration is bounded but sensitive authorized output, not globally non-secret data. Post-commit fess audit reopened the issue for fail-open Admin API authentication, fixed diagnostic logging, stale selected-flow conflict protection, strict PUT acknowledgement, fail-closed docs, validator compatibility, stale credential-store guidance, and truthful timeout semantics: each network I/O is bounded at 10 seconds while one non-rearmed 15-second deadline covers the whole operation including parsing and output flushing.
 
 ** Dependencies
 #+begin_src json

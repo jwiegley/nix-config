@@ -931,19 +931,22 @@ pkgs.runCommand "ai-catalog-transport" { } ''
       "nodered.vulcan.lan",
       r"[0-9a-f]{1,32}(?:\.[0-9a-f]{1,32})?\Z",
       '"flows":[{"id":',
+      '"baseDigest":"sha256:<64 lowercase hex>","flow":',
       '"ok":true,"id":"FLOW_ID"',
-      "normalized without field loss",
+      "stale digest",
       "1 MiB",
       "8 MiB",
       "10-second",
       "15-second",
+      "network I/O",
+      "whole lifecycle",
       "`-h` and `--help`",
   )
   allowed_invocations = commands | {
       'node-red-admin flows get > "$workdir/flows.json"',
-      'node-red-admin flow get "$flow_id" > "$workdir/before.json"',
-      'node-red-admin flow put "$flow_id" < "$workdir/updated.json" > "$workdir/ack.json"',
-      'node-red-admin flow get "$flow_id" > "$workdir/after.json"',
+      'node-red-admin flow get "$flow_id" > "$workdir/before-envelope.json"',
+      'node-red-admin flow put "$flow_id" < "$workdir/updated-envelope.json" > "$workdir/ack.json"',
+      'node-red-admin flow get "$flow_id" > "$workdir/after-envelope.json"',
   }
 
   for document in documents:
@@ -966,6 +969,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
       "raw admin header": b"Authorization:",
       "raw bearer scheme": b"Bearer",
       "internal runtime port": b":1880",
+      "runtime credential-store filename": b"flows_cred.json",
   }
   regex_forbidden = {
       "raw admin header spelling": re.compile(rb"\bauthorization\s*:", re.IGNORECASE),
@@ -991,6 +995,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
           rb"(?:flows?|auth|nodes|context|settings|projects|inject|diagnostics)(?:[/\s\"']|$)",
           re.IGNORECASE,
       ),
+      "runtime credential backup advice": re.compile(rb"back\s+up\s+with\s+flows", re.IGNORECASE),
   }
 
   for path in sorted(root.rglob("*")):
@@ -1004,6 +1009,9 @@ pkgs.runCommand "ai-catalog-transport" { } ''
           if pattern.search(data):
               raise SystemExit(f"{path.relative_to(root)}: contains {label}")
   PY
+
+  ${pkgs.python3}/bin/python3 ${./node-red-skill-contract.py} \
+    ${nodeRedSource} ${pkgs.bash}/bin/bash
 
   ${pkgs.diffutils}/bin/cmp ${primaryRendering.codex} ${reorderedRendering.codex}
   if ${pkgs.gnugrep}/bin/grep -Eq '^(capabilities|tools) = ' ${primaryRendering.codex}; then

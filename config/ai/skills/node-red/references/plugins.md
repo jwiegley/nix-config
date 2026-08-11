@@ -16,7 +16,9 @@ The Home Assistant bridge. Connects to HA websocket, subscribes to state changes
 
 **Pitfalls:**
 - Numeric comparisons require `state_type: "num"`. Default is `str` so `"23.5" > 20` is string compare.
-- HA long-lived token is in `flows_cred.json` — back up with flows.
+- Enter the Home Assistant secret only through the config node's editor
+  credential field. Keep it out of exported flow JSON, agent output, and
+  manually managed backups.
 - `for:` is HA-side, NOT a simple delay.
 
 ## node-red-contrib-chronos (v1.30.0)
@@ -158,7 +160,8 @@ Single `openai` node wrapping the OpenAI Node SDK v6.37. Works with OpenAI-compa
 
 **Pitfalls:**
 - **v6.34.0 breaking change:** `Create Conversation Item` requires `msg.payload.items` as an **array**. Singular `msg.payload.item` no longer matches.
-- API key best stored as `cred` (encrypted in flows_cred.json).
+- Enter the API key only through the node's editor credential field. Keep it
+  out of exported flow JSON and agent output.
 - Output overwrites `msg.payload`.
 
 ## node-red-debugger (v1.1.1)
