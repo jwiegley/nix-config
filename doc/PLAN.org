@@ -1398,15 +1398,17 @@ bin/lib/host-routing.sh:10-31 maps shared-work to jwiegley, but bin/update:499-5
 ]
 #+end_src
 
-* DOING [#B] Make Claude-memory pinning strict and dry-run safe    :activation:security:
+* DONE [#B] Make Claude-memory pinning strict and dry-run safe    :activation:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.40
 :LABELS: ["activation","heavy-review","security"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 17:47]
+:MODIFIED: [2026-08-10 Mon 18:41]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 18:41]
+:CLOSE_REASON: Extracted strict claude-mem pinning into a tested helper: true absence is a no-op; symlink/non-regular inputs fail closed; dry-run avoids tools; replacement preserves mode/group and cleans temporaries on failure and signals.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

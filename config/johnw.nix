@@ -29,6 +29,7 @@ let
       inputs
       ;
   };
+  claudeMemPin = import ./claude-mem-pin.nix { inherit pkgs; };
 in
 {
   _module.args.vars = vars;
@@ -192,22 +193,10 @@ in
     # patched Claude package. Its settings remain mutable, so update only the path.
     activation.claudeMemRealClaude = lib.mkIf (inputs ? llm-agents) (
       lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        cm_settings="${vars.home}/.claude-mem/settings.json"
-        cm_claude="${config.home.profileDirectory}/bin/claude-real"
-        if [ -f "$cm_settings" ]; then
-          cm_cur="$(${pkgs.jq}/bin/jq -r '.CLAUDE_CODE_PATH // ""' "$cm_settings" 2>/dev/null || true)"
-          if [ "$cm_cur" != "$cm_claude" ]; then
-            cm_tmp="$(mktemp "$cm_settings.XXXXXX" 2>/dev/null || true)"
-            if [ -n "$cm_tmp" ] && ${pkgs.jq}/bin/jq --arg p "$cm_claude" '.CLAUDE_CODE_PATH = $p' "$cm_settings" > "$cm_tmp" 2>/dev/null; then
-              cm_mode="$(stat -c '%a' "$cm_settings" 2>/dev/null || stat -f '%Lp' "$cm_settings" 2>/dev/null || echo 644)"
-              chmod "$cm_mode" "$cm_tmp"
-              $DRY_RUN_CMD mv "$cm_tmp" "$cm_settings"
-              echo "claude-mem: pinned CLAUDE_CODE_PATH -> $cm_claude"
-            elif [ -n "$cm_tmp" ]; then
-              rm -f "$cm_tmp"
-            fi
-          fi
-        fi
+        ${claudeMemPin}/bin/claude-mem-pin \
+          ${lib.escapeShellArg "${vars.home}/.claude-mem/settings.json"} \
+          ${lib.escapeShellArg "${config.home.profileDirectory}/bin/claude-real"} \
+          "''${DRY_RUN_CMD:-}"
       ''
     );
   };
