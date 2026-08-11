@@ -8,23 +8,6 @@ const source = process.argv[2];
 assert.ok(source, "patched Pi source path is required");
 const importFromSource = (relative) => import(pathToFileURL(join(source, relative)));
 
-const { DEFAULT_HTTP_IDLE_TIMEOUT_MS } = await importFromSource(
-  "dist/core/http-dispatcher.js",
-);
-assert.equal(DEFAULT_HTTP_IDLE_TIMEOUT_MS, 7_200_000);
-
-for (const relative of [
-  "node_modules/@earendil-works/pi-ai/dist/api/openai-completions.js",
-  "node_modules/@earendil-works/pi-ai/dist/api/openai-responses.js",
-]) {
-  const openAiApi = await readFile(join(source, relative), "utf8");
-  assert.match(
-    openAiApi,
-    /timeout:[\s\S]*model\.provider === "omlx"[\s\S]*\|\| model\.provider === "llama-swap"[\s\S]*\? 7_200_000/,
-    `${relative} must give opt-in local providers a two-hour OpenAI client timeout`,
-  );
-}
-
 const systemPrompt = await readFile(join(source, "dist/core/system-prompt.js"), "utf8");
 assert.doesNotMatch(systemPrompt, /Pi documentation \(read only when/);
 assert.doesNotMatch(systemPrompt, /get(?:Readme|Docs|Examples)Path/);

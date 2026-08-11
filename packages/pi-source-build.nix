@@ -23,9 +23,10 @@ buildNpmPackageWithNode24 {
     fetchFromGitHub source.source.args;
 
   # Temporary downstream patches against the exact v0.83.0 catalog pin.
-  # Remove them once the bounded-history and replacement fixes are upstreamed.
+  # Remove each once its corresponding behavior is upstreamed.
   patches = [
     ../overlays/ai/patches/pi-bounded-session-history.patch
+    ../overlays/ai/patches/pi-provider-transport-timeouts.patch
     ../overlays/ai/patches/pi-session-replacement.patch
   ];
   patchFlags = [
@@ -49,7 +50,7 @@ buildNpmPackageWithNode24 {
     runHook preCheck
     # Bounded history changes the SessionManager contract consumed throughout
     # the SDK, RPC, compaction, export, and interactive navigation paths. Run
-    # every test changed by the two downstream patches so their regressions
+    # every test changed by the downstream patches so their regressions
     # remain part of the package gate without importing unrelated upstream
     # tests whose external-tool assumptions are incompatible with Nix builds.
     npm exec -- vitest --run --testTimeout 30000 \

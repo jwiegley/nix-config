@@ -26,28 +26,12 @@ nodePackage.overrideAttrs (old: {
     # catalogs are unavailable. The picker still refreshes on demand,
     # but it starts from the cached catalog and owns its short timeout.
     patch -p1 --fuzz=0 < ${../../../overlays/ai/patches/pi-model-catalog-refresh.patch}
-    for openai_api in \
-      node_modules/@earendil-works/pi-ai/dist/api/openai-completions.js \
-      node_modules/@earendil-works/pi-ai/dist/api/openai-responses.js
-    do
-      substituteInPlace "$openai_api" \
-        --replace-fail \
-          '        defaultHeaders: headers,' \
-          $'        defaultHeaders: headers,\n        timeout:\n            model.provider === "omlx" || model.provider === "llama-swap"\n                ? 7_200_000\n                : undefined,'
-    done
-    substituteInPlace dist/core/http-dispatcher.js \
-      --replace-fail \
-        'DEFAULT_HTTP_IDLE_TIMEOUT_MS = 300_000' \
-        'DEFAULT_HTTP_IDLE_TIMEOUT_MS = 7_200_000'
     for patched_js in \
       dist/core/agent-session.js \
       dist/core/extensions/loader.js \
       dist/core/extensions/runner.js \
-      dist/core/http-dispatcher.js \
       dist/modes/interactive/components/model-selector.js \
-      dist/modes/interactive/interactive-mode.js \
-      node_modules/@earendil-works/pi-ai/dist/api/openai-completions.js \
-      node_modules/@earendil-works/pi-ai/dist/api/openai-responses.js
+      dist/modes/interactive/interactive-mode.js
     do
       map_file="$patched_js.map"
       map_name="''${map_file##*/}"
@@ -58,6 +42,8 @@ nodePackage.overrideAttrs (old: {
     rm -f dist/core/extensions/tool-renderers.js.map
     ${pkgs.nodejs_24}/bin/node \
       ${../../../test/ai/pi-tool-renderer-wrapper.test.mjs} "$PWD"
+    ${pkgs.nodejs_24}/bin/node \
+      ${../../../test/ai/pi-provider-transport.test.mjs} "$PWD"
     ${pkgs.nodejs_24}/bin/node \
       ${../../../test/ai/pi-model-catalog-refresh.test.mjs} "$PWD"
   ''

@@ -1,0 +1,160 @@
+--- a/packages/coding-agent/src/core/http-dispatcher.ts
++++ b/packages/coding-agent/src/core/http-dispatcher.ts
+@@ -76,20 +76,44 @@
+ 	);
+ }
+ 
+-export function configureHttpDispatcher(timeoutMs: number = DEFAULT_HTTP_IDLE_TIMEOUT_MS): void {
+-	const normalizedTimeoutMs = parseHttpIdleTimeoutMs(timeoutMs);
+-	if (normalizedTimeoutMs === undefined) {
+-		throw new Error(`Invalid HTTP idle timeout: ${String(timeoutMs)}`);
+-	}
+-	const dispatcher = withUndiciErrorListener(
++function createHttpDispatcher(timeoutMs: number): undici.Dispatcher {
++	return withUndiciErrorListener(
+ 		new undici.EnvHttpProxyAgent({
+ 			allowH2: false,
+-			bodyTimeout: normalizedTimeoutMs,
+-			headersTimeout: normalizedTimeoutMs,
++			bodyTimeout: timeoutMs,
++			headersTimeout: timeoutMs,
+ 			clientFactory: createUndiciClient,
+ 			factory: createUndiciOriginDispatcher,
+ 		}),
+ 	);
++}
++
++export function createHttpIdleTimeoutFetch(timeoutMs: number): typeof globalThis.fetch {
++	const normalizedTimeoutMs = parseHttpIdleTimeoutMs(timeoutMs);
++	if (normalizedTimeoutMs === undefined) {
++		throw new Error(`Invalid HTTP idle timeout: ${String(timeoutMs)}`);
++	}
++	return (async (input, init) => {
++		const dispatcher = createHttpDispatcher(normalizedTimeoutMs);
++		try {
++			return (await undici.fetch(input as Parameters<typeof undici.fetch>[0], {
++				...(init as Parameters<typeof undici.fetch>[1]),
++				dispatcher,
++			})) as unknown as Response;
++		} finally {
++			// Graceful close waits for an active response body, then releases this
++			// request-owned pool. Callers need not own a dispatcher lifecycle.
++			void dispatcher.close();
++		}
++	}) as typeof globalThis.fetch;
++}
++
++export function configureHttpDispatcher(timeoutMs: number = DEFAULT_HTTP_IDLE_TIMEOUT_MS): void {
++	const normalizedTimeoutMs = parseHttpIdleTimeoutMs(timeoutMs);
++	if (normalizedTimeoutMs === undefined) {
++		throw new Error(`Invalid HTTP idle timeout: ${String(timeoutMs)}`);
++	}
++	const dispatcher = createHttpDispatcher(normalizedTimeoutMs);
+ 	undici.setGlobalDispatcher(dispatcher);
+ 	// Keep fetch and the dispatcher on the same undici implementation. Node 26.0's
+ 	// bundled fetch can otherwise consume compressed responses through npm undici's
+--- a/packages/coding-agent/src/core/model-config.ts
++++ b/packages/coding-agent/src/core/model-config.ts
+@@ -136,6 +136,11 @@
+ 	AnthropicMessagesCompatSchema,
+ ]);
+ 
++const ProviderTransportSchema = Type.Object({
++	requestTimeoutMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 2147483647 })),
++	idleTimeoutMs: Type.Optional(Type.Integer({ minimum: 0, maximum: 2147483647 })),
++});
++
+ const ModelCostRatesSchema = {
+ 	input: Type.Number(),
+ 	output: Type.Number(),
+@@ -195,6 +200,7 @@
+ 	headers: Type.Optional(Type.Record(Type.String(), Type.String())),
+ 	compat: Type.Optional(ProviderCompatSchema),
+ 	authHeader: Type.Optional(Type.Boolean()),
++	transport: Type.Optional(ProviderTransportSchema),
+ 	models: Type.Optional(Type.Array(ModelDefinitionSchema)),
+ 	modelOverrides: Type.Optional(Type.Record(Type.String(), ModelOverrideSchema)),
+ });
+--- a/packages/coding-agent/src/core/model-runtime.ts
++++ b/packages/coding-agent/src/core/model-runtime.ts
+@@ -32,6 +32,7 @@
+ import * as builtinProviderCatalog from "@earendil-works/pi-ai/providers/all";
+ import { getAgentDir } from "../config.ts";
+ import { AuthStorage as DefaultAuthStorage } from "./auth-storage.ts";
++import { createHttpIdleTimeoutFetch } from "./http-dispatcher.ts";
+ import { ModelConfig } from "./model-config.ts";
+ import { FileModelsStore, InMemoryCodingAgentModelsStore } from "./models-store.ts";
+ import {
+@@ -352,6 +353,17 @@
+ 		return [...new Set([...this.extensionProviders.keys(), ...this.nativeExtensionProviders.keys()])];
+ 	}
+ 
++	getProviderTransportOptions(providerId: string): Pick<StreamOptions, "fetch" | "timeoutMs"> {
++		const transport = this.config.getProvider(providerId)?.transport;
++		if (!transport) return {};
++		return {
++			...(transport.requestTimeoutMs !== undefined ? { timeoutMs: transport.requestTimeoutMs } : {}),
++			...(transport.idleTimeoutMs !== undefined
++				? { fetch: createHttpIdleTimeoutFetch(transport.idleTimeoutMs) }
++				: {}),
++		};
++	}
++
+ 	getRegisteredNativeProvider(providerId: string): Provider | undefined {
+ 		return this.nativeExtensionProviders.get(providerId);
+ 	}
+@@ -446,7 +458,10 @@
+ 		const resolution = await this.getAuth(model, { apiKey: options?.apiKey, env: options?.env });
+ 		if (!resolution) throw new ModelsError("auth", `Provider is not configured: ${model.provider}`);
+ 
+-		const { transformHeaders, ...providerOptions } = options ?? {};
++		const { transformHeaders, ...providerOptions } = {
++			...this.getProviderTransportOptions(model.provider),
++			...options,
++		};
+ 		let headers = mergeHeaders(resolution.auth.headers, providerOptions.headers);
+ 		if (transformHeaders) headers = await transformHeaders(headers ?? {});
+ 		const env =
+--- a/packages/coding-agent/src/core/provider-composer.ts
++++ b/packages/coding-agent/src/core/provider-composer.ts
+@@ -173,13 +173,14 @@
+ 		!config.baseUrl &&
+ 		!config.headers &&
+ 		!config.compat &&
++		!config.transport &&
+ 		!hasOverrides &&
+ 		!config.apiKey &&
+ 		!config.oauth &&
+ 		config.authHeader === undefined
+ 	) {
+ 		throw new Error(
+-			`Provider ${providerId}: must specify "baseUrl", "headers", "compat", "modelOverrides", or "models".`,
++			`Provider ${providerId}: must specify "baseUrl", "headers", "compat", "transport", "modelOverrides", or "models".`,
+ 		);
+ 	}
+ 
+--- a/packages/coding-agent/src/core/sdk.ts
++++ b/packages/coding-agent/src/core/sdk.ts
+@@ -301,15 +301,21 @@
+ 		convertToLlm: convertToLlmWithBlockImages,
+ 		streamFn: async (model, context, options) => {
+ 			const providerRetrySettings = settingsManager.getProviderRetrySettings();
++			const providerTransportOptions = modelRuntime.getProviderTransportOptions(model.provider);
+ 			const httpIdleTimeoutMs = settingsManager.getHttpIdleTimeoutMs();
+ 			// SDKs treat timeout=0 as 0ms (immediate timeout), not "no timeout".
+ 			// Use max int32 to effectively disable the timeout.
+ 			const effectiveTimeoutMs = httpIdleTimeoutMs === 0 ? 2147483647 : httpIdleTimeoutMs;
+-			const timeoutMs = options?.timeoutMs ?? providerRetrySettings.timeoutMs ?? effectiveTimeoutMs;
++			const timeoutMs =
++				options?.timeoutMs ??
++				providerTransportOptions.timeoutMs ??
++				providerRetrySettings.timeoutMs ??
++				effectiveTimeoutMs;
+ 			const websocketConnectTimeoutMs =
+ 				options?.websocketConnectTimeoutMs ?? settingsManager.getWebSocketConnectTimeoutMs();
+ 			const headerRunner = extensionRunnerRef.current;
+ 			return modelRuntime.streamSimple(model, context, {
++				...providerTransportOptions,
+ 				...options,
+ 				timeoutMs,
+ 				websocketConnectTimeoutMs,

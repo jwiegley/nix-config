@@ -805,6 +805,14 @@ pkgs.runCommand "ai-catalog-transport" { } ''
           true
         end
       )
+      and (
+        [.providers[] | select(has("transport"))] as $transportProviders
+        | ($transportProviders | length) == (if $localModelRoutes then 2 else 0 end)
+        and (
+          $transportProviders
+          | all(.transport == {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000})
+        )
+      )
     ' ${entry.rendered.files.".config/pi/agent/models.json".source} >/dev/null
     ${pkgs.jq}/bin/jq -e '
       type == "object"

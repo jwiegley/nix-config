@@ -124,6 +124,10 @@ are direct catalog projections; static specialist definitions become native RLM
 prompt adapters; stdio MCP remains available through the shared `pi-mcp-adapter`
 because Prime Agent's native MCP integration accepts HTTP transports only.
 
+Pi's managed local providers carry their long request and stream-idle budgets as
+typed `transport` data in `models.json`. The runtime turns that capability into
+provider-scoped client options; the ordinary global HTTP timeout remains unchanged.
+
 Prime Agent is built from the reviewed source revision and normalized dependency
 lock. Nix owns a separate, highest-precedence `managed-settings.json` leaf binding
 the package, theme, and extension roots. Upstream's ordinary `settings.json` remains

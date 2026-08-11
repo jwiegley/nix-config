@@ -87,7 +87,7 @@ The generated model files deliberately emit no Pi default. Model selection remai
 | Router profile | One underlying `sol` model; low → `low`, medium → `medium`, high → `xhigh`; `phaseBias` 0.5; debug disabled |
 | Native overrides | `openai-codex/gpt-5.6-sol` receives a 1,050,000-token context; `openrouter/z-ai/glm-5.2` receives 1,048,576; selected local compatibility overrides receive 262,144 |
 | Local discovery | Each local provider queries its loopback `/models` endpoint once during registration, under a 2.5-second bound; explicit type, modality, and capability metadata determines model behavior, while missing or unknown metadata falls back to text-only, non-reasoning chat with 262,144 context and 65,536 output |
-| Request policy | Local llama-swap and oMLX generation requests receive a 7,200-second client timeout; both providers use policy-approved non-secret loopback credentials |
+| Request policy | Managed local providers declare a 7,200-second request and stream-idle transport budget in `models.json`; the ordinary global timeout remains 300 seconds, and loopback credentials remain policy-approved and non-secret |
 
 The generated `models.json` owns compatibility and context overrides; on Darwin it also owns the synthetic router model and Hermes route. The Hermes credential is a runtime command reference, not a secret copied into the Nix store. The Darwin-registered local provider extensions own runtime model discovery. No generated model is Pi's default.
 

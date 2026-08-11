@@ -98,7 +98,6 @@ Discovered while implementing nix-tcz.63. The hardened _make_writable walk close
   }
 ]
 #+end_src
-
 * CANCELED [#C] This is a test issue
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -1146,15 +1145,17 @@ packages/pi-gallery/providers/local-openai-provider.ts:18-175 derives chat, visi
 ]
 #+end_src
 
-* TODO [#B] Move Pi timeout policy into provider transport data    :architecture:pi:
+* DONE [#B] Move Pi timeout policy into provider transport data    :architecture:pi:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.33
 :LABELS: ["architecture","heavy-review","pi"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 19:31]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 19:31]
+:CLOSE_REASON: Moved long Pi request and stream-idle budgets into bounded per-provider transport data, restored the ordinary global timeout, flowed policy through runtime and SDK precedence without name dispatch, and added socket-lifecycle and transport behavior coverage. Pi, catalog, static, root/portable all-system checks, and independent review passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

@@ -76,16 +76,25 @@ let
     ];
   };
   inherit (modelOverrides) nativeProviders;
-  localProviders = modelOverrides.localProviderOverrides // {
-    hermes = {
-      api = "openai-completions";
-      apiKey = hermesApiKeyCommand;
-      baseUrl = "https://hermes.vulcan.lan/v1";
-      compat.sendSessionAffinityHeaders = true;
-      models = [ { id = "hermes-agent"; } ];
-    };
-    router = routerProvider;
+  # Slow local inference owns its budgets; the global client defaults remain ordinary.
+  localProviderTransport = {
+    requestTimeoutMs = 7200000;
+    idleTimeoutMs = 7200000;
   };
+  localProviders =
+    lib.mapAttrs (
+      _: provider: provider // { transport = localProviderTransport; }
+    ) modelOverrides.localProviderOverrides
+    // {
+      hermes = {
+        api = "openai-completions";
+        apiKey = hermesApiKeyCommand;
+        baseUrl = "https://hermes.vulcan.lan/v1";
+        compat.sendSessionAffinityHeaders = true;
+        models = [ { id = "hermes-agent"; } ];
+      };
+      router = routerProvider;
+    };
   models.providers = nativeProviders // lib.optionalAttrs localModelRoutes localProviders;
   providerApiKeyForms = lib.mapAttrs (_: provider: provider.apiKey) (
     lib.filterAttrs (_: provider: provider ? apiKey) models.providers
