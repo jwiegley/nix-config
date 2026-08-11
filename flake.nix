@@ -401,6 +401,14 @@
                 homeManagerLib = home-manager.lib;
                 homeManagerReleaseLib = home-manager-release.lib;
               };
+              agent-deck = pkgs.callPackage ./test/home/agent-deck.nix {
+                inherit
+                  darwinConfigurations
+                  homeConfigurations
+                  ;
+                homeManagerLib = home-manager.lib;
+                stockDarwinPkgs = stockPkgsFor."aarch64-darwin";
+              };
               host-behavior = pkgs.callPackage ./test/home/host-behavior.nix {
                 inherit
                   darwinConfigurations

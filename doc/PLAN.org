@@ -922,15 +922,17 @@ config/syncthing-bootstrap.py:120-135,371-394 defends against unsafe files and r
 ]
 #+end_src
 
-* DOING [#B] Test Agent Deck Home Manager lifecycle ownership    :tests:
+* DONE [#B] Test Agent Deck Home Manager lifecycle ownership    :tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.28
 :LABELS: ["agent-deck","heavy-review","tests"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 16:38]
+:MODIFIED: [2026-08-10 Mon 17:22]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 17:22]
+:CLOSE_REASON: Added three-system Home Manager lifecycle checks for Agent Deck package ownership, supported/rejected bridge evaluation, exact launchd contracts, private directory activation, and mutable-state preservation.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
