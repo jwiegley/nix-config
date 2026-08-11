@@ -13,6 +13,13 @@
 let
   inherit (pkgs) lib;
   piSources = import ../../packages/source-catalog.nix "pi";
+  skillCreatorSource = ../../config/ai/skills/skill-creator;
+  skillCreatorPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
+  skillCreatorScripts = [
+    "init_skill.py"
+    "package_skill.py"
+    "quick_validate.py"
+  ];
 
   ponytailSkills = [
     "ponytail"
@@ -25,6 +32,7 @@ let
 
   expectedSkills = ponytailSkills ++ [
     "git-surgeon"
+    "skill-creator"
     "translate-en"
   ];
 
@@ -135,6 +143,7 @@ let
 
   expectedSkillArgs = lib.escapeShellArgs expectedSkills;
   ponytailSkillArgs = lib.escapeShellArgs ponytailSkills;
+  skillCreatorScriptArgs = lib.escapeShellArgs skillCreatorScripts;
 
   copyPonytailExpected = lib.concatMapStringsSep "\n" (name: ''
     copy_expected_tree ${lib.escapeShellArg "${ponytail}/skills/${name}"} "$expected/${name}"
@@ -336,6 +345,17 @@ else
       }
 
       ${copyPonytailExpected}
+      copy_expected_tree ${lib.escapeShellArg "${skillCreatorSource}"} \
+        "$expected/skill-creator"
+      for script in ${skillCreatorScriptArgs}; do
+        substituteInPlace "$expected/skill-creator/scripts/$script" \
+          --replace-fail '#!/usr/bin/env python3' \
+          '#!${skillCreatorPython}/bin/python3'
+        chmod --reference=${lib.escapeShellArg "${skillCreatorSource}/scripts"}/"$script" \
+          "$expected/skill-creator/scripts/$script"
+      done
+      chmod --reference=${lib.escapeShellArg "${skillCreatorSource}"} \
+        "$expected/skill-creator"
       copy_expected_tree \
         ${lib.escapeShellArg "${gitSurgeonSource}/skills/git-surgeon"} \
         "$expected/git-surgeon"
@@ -369,6 +389,31 @@ else
         [ -f "$actual/$name/SKILL.md" ] && [ ! -L "$actual/$name/SKILL.md" ] \
           || fail "missing regular SKILL.md: $name"
       done
+
+      skill_creator="$actual/skill-creator"
+      for script in ${skillCreatorScriptArgs}; do
+        [ -x "$skill_creator/scripts/$script" ] \
+          || fail "skill-creator entrypoint is not executable: $script"
+        head -n 1 "$skill_creator/scripts/$script" \
+          | grep -Fx '#!${skillCreatorPython}/bin/python3' >/dev/null \
+          || fail "skill-creator entrypoint lacks its managed interpreter: $script"
+      done
+
+      "$skill_creator/scripts/quick_validate.py" "$skill_creator" \
+        || fail "installed skill-creator validator failed"
+      "$skill_creator/scripts/init_skill.py" generated-skill \
+        --path "$TMPDIR/generated" \
+        || fail "installed skill-creator initializer failed"
+      [ -f "$TMPDIR/generated/generated-skill/SKILL.md" ] \
+        || fail "installed skill-creator initializer omitted SKILL.md"
+      package_input="$TMPDIR/package-input"
+      mkdir "$package_input"
+      cp -R -- "$skill_creator" "$package_input/skill-creator"
+      "$skill_creator/scripts/package_skill.py" \
+        "$package_input/skill-creator" "$TMPDIR/dist" \
+        || fail "installed skill-creator packager failed"
+      [ -f "$TMPDIR/dist/skill-creator.zip" ] \
+        || fail "installed skill-creator packager omitted its archive"
 
       for name in git-surgeon; do
         [ -f "$actual/$name/LICENSE" ] && [ ! -L "$actual/$name/LICENSE" ] \

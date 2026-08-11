@@ -12,19 +12,15 @@ Examples:
 """
 
 import sys
-from pathlib import Path
 
-# Kept on one line in the generated frontmatter (a YAML value), so the
-# placeholder is defined here and injected via str.format below.
-DESCRIPTION_TODO = (
-    "[TODO: Complete and informative explanation of what the skill does and"
-    " when to use it. Include WHEN to use this skill - specific scenarios,"
-    " file types, or tasks that trigger it.]"
+from skill_metadata import (
+    DESCRIPTION_TODO,
+    direct_child_skill_path,
+    dump_frontmatter,
 )
 
 SKILL_TEMPLATE = """---
-name: {skill_name}
-description: {description_todo}
+{frontmatter}
 ---
 
 # {skill_title}
@@ -225,8 +221,11 @@ def init_skill(skill_name, path):
     Returns:
         Path to created skill directory, or None if error
     """
-    # Determine skill directory path
-    skill_dir = Path(path).resolve() / skill_name
+    try:
+        skill_dir = direct_child_skill_path(path, skill_name)
+    except ValueError as error:
+        print(f"❌ Error: {error}")
+        return None
 
     # Check if directory already exists
     if skill_dir.exists():
@@ -244,9 +243,8 @@ def init_skill(skill_name, path):
     # Create SKILL.md from template
     skill_title = title_case_skill_name(skill_name)
     skill_content = SKILL_TEMPLATE.format(
-        skill_name=skill_name,
+        frontmatter=dump_frontmatter(skill_name, DESCRIPTION_TODO),
         skill_title=skill_title,
-        description_todo=DESCRIPTION_TODO,
     )
 
     skill_md_path = skill_dir / "SKILL.md"

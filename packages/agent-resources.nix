@@ -12,6 +12,13 @@
 let
   gitSurgeonSource = (callPackage "${inputs.llm-agents}/packages/git-surgeon/package.nix" { }).src;
   piSources = import ./source-catalog.nix "pi";
+  skillCreatorPython = python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
+  skillCreatorScripts = [
+    "init_skill.py"
+    "package_skill.py"
+    "quick_validate.py"
+  ];
+  skillCreatorScriptArgs = lib.escapeShellArgs skillCreatorScripts;
 
   ponytailSkills = [
     "ponytail"
@@ -133,6 +140,13 @@ runCommand "agent-resources" { } ''
   }
 
   ${copyPonytailSkills}
+  copy_skill ${lib.escapeShellArg "${../config/ai/skills/skill-creator}"} \
+    skill-creator
+  for script in ${skillCreatorScriptArgs}; do
+    substituteInPlace "$skills/skill-creator/scripts/$script" \
+      --replace-fail '#!/usr/bin/env python3' \
+      '#!${skillCreatorPython}/bin/python3'
+  done
   copy_skill ${lib.escapeShellArg "${gitSurgeonSource}/skills/git-surgeon"} \
     git-surgeon ${lib.escapeShellArg "${gitSurgeonSource}/LICENSE"}
 

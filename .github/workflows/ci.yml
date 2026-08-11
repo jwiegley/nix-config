@@ -68,6 +68,6 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
       - name: Python lint and essential tests
         run: >-
-          nix shell nixpkgs#python3 nixpkgs#ruff nixpkgs#nixfmt nixpkgs#coreutils nixpkgs#yq
+          nix shell .#python-test-env nixpkgs#ruff nixpkgs#nixfmt nixpkgs#coreutils nixpkgs#yq
           -c test/bin/quality --python-tier fast
           python-lint python-test

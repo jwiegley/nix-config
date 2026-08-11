@@ -143,6 +143,9 @@
           config.allowUnfree = true;
         }
       );
+      pythonTestEnvFor = forAllSystems (
+        system: stockPkgsFor.${system}.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ])
+      );
       agentTestPkgsFor = forAllSystems (
         system:
         import nixpkgs {
@@ -254,6 +257,7 @@
         portableAi.packages.${system}
         // {
           obr = rootInputs.obr.packages.${system}.default;
+          python-test-env = pythonTestEnvFor.${system};
         }
       );
 
@@ -372,7 +376,7 @@
               shellcheck
               shfmt
               ruff
-              python3
+              pythonTestEnvFor.${system}
               lefthook
             ];
           };

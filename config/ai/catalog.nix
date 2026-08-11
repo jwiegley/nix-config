@@ -664,13 +664,12 @@ let
     "node-red"
     "parallelize"
     "persian"
-    "skill-creator"
     "swiftui"
     "toolkit"
     "validated-code-review"
     "wiggum"
   ];
-  externalBroadSkills = [
+  resourceBroadSkills = [
     "git-surgeon"
     "ponytail"
     "ponytail-audit"
@@ -678,6 +677,7 @@ let
     "ponytail-gain"
     "ponytail-help"
     "ponytail-review"
+    "skill-creator"
     "translate-en"
   ];
   positronPyTorchSkills = [
@@ -695,7 +695,7 @@ let
   broadLocalSkillItems = lib.genAttrs localBroadSkills (
     name: mkSkill ./skills name { clients = contentClients; }
   );
-  broadExternalSkillItems = lib.genAttrs externalBroadSkills (
+  broadResourceSkillItems = lib.genAttrs resourceBroadSkills (
     name: mkSkill resourceSkills name { clients = contentClients; }
   );
   positronPyTorchSkillItems = lib.genAttrs positronPyTorchSkills (
@@ -703,7 +703,7 @@ let
   );
   skills =
     broadLocalSkillItems
-    // broadExternalSkillItems
+    // broadResourceSkillItems
     // positronPyTorchSkillItems
     // {
       forge = mkSkill ./skills "forge" { clients = [ "claude" ]; };

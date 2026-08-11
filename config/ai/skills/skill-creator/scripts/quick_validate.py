@@ -1,65 +1,55 @@
 #!/usr/bin/env python3
-"""
-Quick validation script for skills - minimal version
-"""
+"""Quick validation script for skills."""
 
-import re
 import sys
 from pathlib import Path
 
+from skill_metadata import DESCRIPTION_TODO, parse_frontmatter, validate_skill_name
+
 
 def validate_skill(skill_path):
-    """Basic validation of a skill"""
+    """Validate one skill's required frontmatter contract."""
     skill_path = Path(skill_path)
 
-    # Check SKILL.md exists
     skill_md = skill_path / "SKILL.md"
     if not skill_md.exists():
         return False, "SKILL.md not found"
 
-    # Read and validate frontmatter
-    content = skill_md.read_text()
-    if not content.startswith("---"):
-        return False, "No YAML frontmatter found"
+    try:
+        content = skill_md.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as error:
+        return False, f"Could not read SKILL.md: {error}"
+    try:
+        frontmatter = parse_frontmatter(content)
+    except ValueError as error:
+        return False, str(error)
 
-    # Extract frontmatter
-    match = re.match(r"^---\n(.*?)\n---", content, re.DOTALL)
-    if not match:
-        return False, "Invalid frontmatter format"
-
-    frontmatter = match.group(1)
-
-    # Check required fields
-    if "name:" not in frontmatter:
+    if "name" not in frontmatter:
         return False, "Missing 'name' in frontmatter"
-    if "description:" not in frontmatter:
+    if "description" not in frontmatter:
         return False, "Missing 'description' in frontmatter"
 
-    # Extract name for validation
-    name_match = re.search(r"name:\s*(.+)", frontmatter)
-    if name_match:
-        name = name_match.group(1).strip()
-        # Check naming convention (hyphen-case: lowercase with hyphens)
-        if not re.match(r"^[a-z0-9-]+$", name):
-            return (
-                False,
-                f"Name '{name}' should be hyphen-case"
-                " (lowercase letters, digits, and hyphens only)",
-            )
-        if name.startswith("-") or name.endswith("-") or "--" in name:
-            return (
-                False,
-                f"Name '{name}' cannot start/end with hyphen"
-                " or contain consecutive hyphens",
-            )
+    name = frontmatter["name"]
+    try:
+        validate_skill_name(name)
+    except ValueError as error:
+        return False, str(error)
+    if name != skill_path.name:
+        return (
+            False,
+            f"Name '{name}' must match skill directory '{skill_path.name}'",
+        )
 
-    # Extract and validate description
-    desc_match = re.search(r"description:\s*(.+)", frontmatter)
-    if desc_match:
-        description = desc_match.group(1).strip()
-        # Check for angle brackets
-        if "<" in description or ">" in description:
-            return False, "Description cannot contain angle brackets (< or >)"
+    description = frontmatter["description"]
+    if not isinstance(description, str):
+        return False, f"Description must be a string, got {type(description).__name__}"
+    description = description.strip()
+    if not description:
+        return False, "Description must not be empty"
+    if description == DESCRIPTION_TODO:
+        return False, "Description still contains the unchanged template TODO"
+    if "<" in description or ">" in description:
+        return False, "Description cannot contain angle brackets (< or >)"
 
     return True, "Skill is valid!"
 

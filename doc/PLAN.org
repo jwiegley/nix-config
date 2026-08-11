@@ -2106,15 +2106,17 @@ test/ai/scripts/format.sh:34-61 silently accepts unsupported paths and omits bas
 ]
 #+end_src
 
-* DOING [#B] Enforce skill names before constructing output paths    :comments:security:
+* DONE [#B] Enforce skill names before constructing output paths    :comments:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.60
 :LABELS: ["comments","heavy-review","security"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 16:12]
+:MODIFIED: [2026-08-10 Mon 17:17]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 17:17]
+:CLOSE_REASON: Centralized direct-child skill-name validation before path construction, reused it in quick validation, and added adversarial traversal/name tests.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2137,15 +2139,17 @@ config/ai/skills/skill-creator/scripts/init_skill.py:217-239,299-320 prints a lo
 ]
 #+end_src
 
-* DOING [#C] Generate and parse genuinely valid skill frontmatter    :comments:
+* DONE [#C] Generate and parse genuinely valid skill frontmatter    :comments:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.61
 :LABELS: ["comments","heavy-review","skill-creator"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 16:12]
+:MODIFIED: [2026-08-10 Mon 17:17]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 17:17]
+:CLOSE_REASON: Replaced regex frontmatter handling with safe duplicate-rejecting YAML serialization/parsing, exact metadata contracts, managed PyYAML packaging, and behavioral package tests.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

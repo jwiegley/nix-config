@@ -74,6 +74,16 @@ runCommand "prime-agent-integration-check"
   ''
     set -euo pipefail
 
+    test -x ${skillRoot}/scripts/init_skill.py
+    test -x ${skillRoot}/scripts/package_skill.py
+    test -x ${skillRoot}/scripts/quick_validate.py
+    test -f ${skillRoot}/scripts/skill_metadata.py
+    skill_validation_root=$TMPDIR/skill-validation
+    mkdir "$skill_validation_root"
+    cp -R ${skillRoot} "$skill_validation_root/${skillName}"
+    "$skill_validation_root/${skillName}/scripts/quick_validate.py" \
+      "$skill_validation_root/${skillName}"
+
     test "$(jq -r '.defaultThinkingLevel' ${settings})" = xhigh
     test "$(jq -r '.theme' ${settings})" = dark-tool-backgrounds
     test "$(jq '.packages | length' ${settings})" -eq 3
