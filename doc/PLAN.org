@@ -348,6 +348,24 @@ Partner observation 2026-08-10T21:51:54.606Z: remove already-resolved questions 
 ]
 #+end_src
 
+* DONE [#C] Remove dead pushme jump-key placeholder
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-sj5
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-10 Mon 21:06]
+:MODIFIED: [2026-08-10 Mon 21:09]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 21:09]
+:CLOSE_REASON: Deleted the inert pushme jump-key authorization after verifying Vulcan has no maintained pushme-positron consumer or dedicated jump-key authority. This resolves both partner observations atomically without inventing or broadening a credential. Nix formatting, host-behavior, and the full Hera system build passed; future access must add the consumer, dedicated key, Hera-only forced-command boundary, and runtime acceptance together.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Partner observations 2026-08-11T03:29:03.210Z and .211Z found an invalid placeholder and missing forced command in config/darwin.nix. Vulcan has no maintained pushme-positron consumer or dedicated jump-key authority, so delete the dormant authorization atomically rather than inventing or broadening a credential. A future route must provision the consumer, dedicated public key, Hera-only scope, forced command, and behavioral acceptance together.
+
 * DOING [#A] Resolve whole-repository heavy review findings at c8b37be0
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

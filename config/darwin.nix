@@ -81,13 +81,6 @@ in
 
               ''restrict,command="${modelMetadataExtract}" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFZYNrQfHWNV09OQz7uMhjQKflCWKwLG4pp1tJb2QRRq vulcan-model-metadata''
 
-              # pushme positron sync (vulcan pushme-positron.timer) — JUMP HOST ONLY.
-              # ProxyJump opens a direct-tcpip channel; it never execs anything here, so a
-              # forced command would not fire. `restrict` disables port forwarding, which IS
-              # the capability the jump needs, so it is selectively re-enabled and then pinned
-              # to a single destination by permitopen. No shell, no pty, no agent/X11.
-              ''from="192.168.1.2",restrict,port-forwarding,permitopen="andoria-08:22" ssh-ed25519 AAAA... pushme-jump@vulcan''
-
               # drafts-mcp bridge (vulcan drafts-mcp.service) — pinned to exec
               # drafts-mcp-server ONLY; SSH_ORIGINAL_COMMAND is ignored by the
               # forced command. `restrict` disables pty/forwarding/X11/agent.
