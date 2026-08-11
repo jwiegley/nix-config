@@ -11,6 +11,9 @@ let
   xdg_cacheHome = "${home}/.cache";
   recordingCaBundle = "${pkgs.ca-bundle-with-vulcan or pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
   runsEternalTerminal = config.johnw.host.isDarwinWorkstation;
+  omlxProxy = config.johnw.omlxProxy;
+  omlxProxyAuthFile =
+    if omlxProxy.authBasicPasswordFile == null then "/dev/null" else omlxProxy.authBasicPasswordFile;
   eternalTerminalConfig = pkgs.writeText "et.cfg" ''
     ; et.cfg : Config file for Eternal Terminal
     ;
@@ -152,7 +155,10 @@ in
 {
   # Import the host capability option this module reads rather than relying on a
   # parent module's import list.
-  imports = [ ./host-options.nix ];
+  imports = [
+    ./host-options.nix
+    ./omlx-proxy-boundary.nix
+  ];
 
   launchd = {
     # System daemons run as background services
@@ -295,7 +301,7 @@ in
             http {
               client_body_temp_path ${logDir}/client_body;
               server {
-                listen 8443 ssl;
+                listen ${lib.optionalString omlxProxy.enable "${omlxProxy.listenAddress}:"}8443 ssl;
 
                 ssl_certificate /Users/johnw/hera/hera.lan.crt;
                 ssl_certificate_key /Users/johnw/hera/hera.lan.key;
@@ -305,21 +311,33 @@ in
 
                 access_log ${logDir}/access.log;
 
-                # Expose the loopback-only oMLX API through the TLS gateway.
-                location /v1/ {
-                  client_max_body_size 20M;
-                  proxy_pass http://127.0.0.1:8000;
+                ${lib.optionalString omlxProxy.enable ''
+                  # Expose the loopback-only oMLX API only to authenticated,
+                  # explicitly allowed clients.
+                  location /v1/ {
+                    satisfy all;
+                    ${lib.concatMapStringsSep "\n                  " (
+                      source: "allow ${source};"
+                    ) omlxProxy.allowedSources}
+                    deny all;
+                    auth_basic "oMLX";
+                    auth_basic_user_file ${omlxProxyAuthFile};
 
-                  proxy_set_header Host $host;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header X-Forwarded-Proto $scheme;
+                    client_max_body_size 20M;
+                    proxy_pass http://127.0.0.1:8000;
 
-                  proxy_connect_timeout 600;
-                  proxy_send_timeout 600;
-                  proxy_read_timeout 600;
-                  send_timeout 600;
-                }
+                    proxy_set_header Authorization "";
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+
+                    proxy_connect_timeout 600;
+                    proxy_send_timeout 600;
+                    proxy_read_timeout 600;
+                    send_timeout 600;
+                  }
+                ''}
 
                 # Proxy all other requests to chat.vulcan.lan
                 location / {
@@ -349,6 +367,26 @@ in
         in
         {
           script = ''
+            ${lib.optionalString omlxProxy.enable ''
+              auth_file=${lib.escapeShellArg omlxProxyAuthFile}
+              if [ -L "$auth_file" ] || [ ! -f "$auth_file" ]; then
+                echo "oMLX proxy authorization file must be a regular, non-symlink file" >&2
+                exit 1
+              fi
+              auth_owner=$(/usr/bin/stat -f '%u' "$auth_file")
+              auth_mode=$(/usr/bin/stat -f '%Lp' "$auth_file")
+              if [ "$auth_owner" != "$(/usr/bin/id -u)" ]; then
+                echo "oMLX proxy authorization file must be owned by the launch-agent user" >&2
+                exit 1
+              fi
+              case "$auth_mode" in
+                400|600) ;;
+                *)
+                  echo "oMLX proxy authorization file must have mode 0400 or 0600" >&2
+                  exit 1
+                  ;;
+              esac
+            ''}
             mkdir -p ${logDir} ${logDir}/client_body
             ${pkgs.nginx}/bin/nginx -c ${config} -g "daemon off;" -e ${logDir}/error.log
           '';

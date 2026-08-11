@@ -59,6 +59,7 @@ let
       managed-agent-package-selection = evaluationOnly systems;
       model-sync-state = behavioral systems false;
       obr-ownership = evaluationOnly systems;
+      omlx-proxy-boundary = behavioral darwinSystems false;
       pi-blackhole-policy = behavioral systems false;
       syncthing = behavioral systems false;
     };

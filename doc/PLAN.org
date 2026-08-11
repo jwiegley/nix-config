@@ -426,15 +426,17 @@ config/ai/model-sync.nix:39-71,126-176 maintains a partial digest separately fro
 ]
 #+end_src
 
-* TODO [#B] Add an explicit client boundary to the oMLX proxy    :network:security:validated:
+* DONE [#B] Add an explicit client boundary to the oMLX proxy    :network:security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.13
 :LABELS: ["heavy-review","network","security","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 19:51]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-10 Mon 19:51]
+:CLOSE_REASON: Added an explicit disabled-by-default oMLX TLS gateway policy requiring a concrete listener, restricted source allowlist, owner-only mutable Basic-auth file, credential stripping, and behavioral boundary coverage; focused and all-system gates passed with independent security and abstraction review clear.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1018,14 +1020,14 @@ config/ssh.nix:13-19,55-64,243-360 supports settings and matchBlocks paths, but 
 ]
 #+end_src
 
-* TODO [#B] Remove credential exposure from managed MSSQL and VLC services    :launchd:security:validated:
+* DOING [#B] Remove credential exposure from managed MSSQL and VLC services    :launchd:security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.3
 :LABELS: ["heavy-review","launchd","security","validated"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 19:49]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1245,14 +1247,14 @@ config/ai/catalog.nix:56-105,1353-1377 duplicates endpoint records across profil
 ]
 #+end_src
 
-* TODO [#B] Represent agent tool policy as typed capabilities    :ai:architecture:
+* DOING [#B] Represent agent tool policy as typed capabilities    :ai:architecture:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.36
 :LABELS: ["ai","architecture","heavy-review"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 13:25]
+:MODIFIED: [2026-08-10 Mon 19:49]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix

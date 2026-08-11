@@ -394,6 +394,9 @@
                 inherit darwinConfigurations;
                 configured = agentTestPkgsFor.${system};
               };
+              omlx-proxy-boundary = pkgs.callPackage ./test/home/omlx-proxy.nix {
+                inherit darwinConfigurations;
+              };
             }
             // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
               darwin-overrides-inactive = pkgs.callPackage ./test/ai/overlay-isolation.nix {

@@ -119,6 +119,13 @@ Pi-compatible model overrides plus the shared local-provider discovery packages.
 The catalog declares local inference endpoints once per catalog host. Profiles only
 opt into those routes; the composer resolves the home's record once and passes it
 to the renderers and activation logic that consume it.
+
+oMLX itself is loopback-only. Its TLS gateway route is absent by default; remote
+access is an explicit host policy requiring a concrete listener address, a
+restricted client-source allowlist, and a mutable owner-only htpasswd file. The
+gateway requires both source authorization and Basic authentication, then removes
+the client credential before forwarding to oMLX.
+
 The initial Prime Agent profile is Hera-only. Its prompt commands and Agent Skills
 are direct catalog projections; static specialist definitions become native RLM
 prompt adapters; stdio MCP remains available through the shared `pi-mcp-adapter`
