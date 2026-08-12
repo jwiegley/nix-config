@@ -2708,7 +2708,7 @@ No certified extension invokes a legacy materializer or eager legacy hook payloa
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-12 Wed 02:22]
+:MODIFIED: [2026-08-12 Wed 02:28]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
@@ -2778,6 +2778,13 @@ READY after C1 closed on signed GOOD commit 328cff3f with a fresh history-isolat
     "author": "johnw",
     "text": "Pre-commit correction to the B1 source freeze: Statix required the Nix identity field to use inherit syntax. The evaluated derivation, output path, NAR hash/size, emitted identity and crosswalk, and every source/runtime hash remained byte-identical; the only changed frozen value is the repository build-expression SHA-256, now 8b0ded011329122e2dfed23720b8e3d5e55e647dc5608f5fb3eddc4a9c52052b. This supersedes only the earlier 2a8a0fbe expression-text hash. The failed commit attempt ran no B1 fixture, control, diagnostic, or candidate process.",
     "created_at": "2026-08-12T09:22:15Z"
+  },
+  {
+    "id": 43,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Fess correction to comment 41: the recorded 38e0b9de catalog-record hash was SHA-256 of JSON null plus LF because the audit command used the nonexistent .records path. It is not evidence and is superseded. The authoritative pi-classic-core-baseline catalog-record identity is the exact 773-byte UTF-8 output of jq -cS '.sources[\"pi-classic-core-baseline\"]' sources/ai.json, including its terminating LF: SHA-256 08cfc3aa6640aa260a844fda2d44e06e44e7db4011caede6067f211fad27496d. The source, provider, npm, derivation, output NAR, runtime, compiled-source, causal-line, and empty-extension identities remain unchanged and were independently checked by fess. No B1 fixture, control, diagnostic, or candidate process has run.",
+    "created_at": "2026-08-12T09:28:32Z"
   }
 ]
 #+end_src
