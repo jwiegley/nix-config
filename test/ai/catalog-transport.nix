@@ -499,6 +499,7 @@ let
     text: builtins.all (command: lib.hasInfix command text) nodeRedAdminCommands;
   parallelizeText = builtins.readFile "${parallelizeSource}/SKILL.md";
   validatedReviewText = builtins.readFile "${validatedReviewSource}/SKILL.md";
+  wiggumText = builtins.readFile "${src}/config/ai/skills/wiggum/SKILL.md";
   noHistoryContractTexts = map builtins.readFile [
     fessSource
     "${src}/config/ai/commands/alexey.md"
@@ -664,6 +665,14 @@ assert catalog.items.commands.fess.source == fessSource;
 assert lib.hasInfix ''fork_turns="none"'' parallelizeText;
 assert lib.hasInfix "verify-history-isolation.py" parallelizeText;
 assert !(lib.hasInfix "Each subagent starts fresh with none of your context" parallelizeText);
+assert lib.hasInfix ''
+  A user request to stop or halt overrides everything below: acknowledge it,
+  record the current loop state in the active `obr` issue or handoff document,
+  and stop immediately.
+
+  Exit the loop successfully ONLY when ALL of these hold, with evidence rather than self-assertion:
+'' wiggumText;
+assert !(lib.hasInfix "- No request to stop or halt has been received from the user." wiggumText);
 assert builtins.all (
   text: lib.hasInfix "explicit no-history" text && lib.hasInfix "parent-history sentinel" text
 ) noHistoryContractTexts;

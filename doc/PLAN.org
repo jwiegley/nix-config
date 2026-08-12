@@ -118,15 +118,18 @@ Clio currently serves neither catalog-advertised local route. Choose and impleme
 ]
 #+end_src
 
-* TODO [#D] Move the wiggum halt-request condition out of the ALL-must-hold exit list
+* DONE [#D] Move the wiggum halt-request condition out of the ALL-must-hold exit list
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-84t
 :LABELS: []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-11 Tue 22:14]
-:MODIFIED: [2026-08-11 Tue 22:14]
+:MODIFIED: [2026-08-12 Wed 01:41]
+:ASSIGNEE: johnw
 :CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 01:41]
+:CLOSE_REASON: Moved stop/halt into an explicit override and added a managed-skill regression assertion.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -141,6 +144,29 @@ IMPACT: Wiggum drives long autonomous loops where literal instruction-following 
 SUGGESTED FIX: Remove the bullet from the ALL list and state it as an override above the list, e.g.: 'A user request to stop or halt overrides everything below: acknowledge it, record loop state in the handoff, and stop immediately.' The completion criteria then describe successful completion only.
 
 VERIFICATION: Re-read the exit section as a decision procedure with 'halt received' true: the procedure should terminate the loop immediately rather than block exit.
+
+** Notes
+Partner-cleanup review confirmed the finding and the minimal two-file fix. The stop/halt override and focused catalog assertion are implemented and verified; no renderer change was needed. Review reports: /private/tmp/wg-cleanup-nix84t-20260812/report.md and /private/tmp/wg-nix84t-cleanup-final/report.md.
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 37,
+    "issue_id": "nix-84t",
+    "author": "johnw",
+    "text": "Resuming after the Codex catalog work completed. Baseline ai-catalog-transport check is green; implementing the confirmed stop/halt override and focused regression assertion.",
+    "created_at": "2026-08-12T08:33:04Z"
+  },
+  {
+    "id": 38,
+    "issue_id": "nix-84t",
+    "author": "johnw",
+    "text": "Implemented the confirmed two-file fix. A stop/halt request now overrides the successful-completion list, records current state in obr or the handoff document, and stops immediately; the contradictory ALL-list bullet is gone. Read-only partner-cleanup review PASS: /private/tmp/wg-nix84t-cleanup-final/report.md. Verification green: ai-catalog-transport build; config/ai all-system flake evaluation without builds; full make test (21 Python suites and 7 root behavioral checks); lefthook pre-commit all files. The first focused run exposed only an overly strict test substring and passed after correcting that assertion; no persistent failure remains.",
+    "created_at": "2026-08-12T08:41:41Z"
+  }
+]
+#+end_src
 
 * DONE [#C] Package and install pi-mem for Pi
 :PROPERTIES:

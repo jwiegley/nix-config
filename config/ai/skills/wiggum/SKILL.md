@@ -17,7 +17,11 @@ You perform git operations directly, following the documented approach of the ma
 
 ## Definition of Done
 
-Exit the loop ONLY when ALL of these hold, with evidence rather than self-assertion:
+A user request to stop or halt overrides everything below: acknowledge it,
+record the current loop state in the active `obr` issue or handoff document,
+and stop immediately.
+
+Exit the loop successfully ONLY when ALL of these hold, with evidence rather than self-assertion:
 
 - Every planned task or done-criterion is complete.
 - The build and the full test suite pass, and you have shown the passing output.
@@ -25,7 +29,6 @@ Exit the loop ONLY when ALL of these hold, with evidence rather than self-assert
 - No actionable partner observation is outstanding as of the last cleanup cycle. (Partner review does not necessarily drain to empty; you may finish with a note that further, non-blocking observations are deferred.)
 - The branch is rebased or restacked cleanly onto its base (locally).
 - If a parity target was given, a parity check passes with evidence.
-- No request to stop or halt has been received from the user.
 
 Never edit the plan or the done-criteria to lower the bar. Never weaken, skip, or delete tests, and never hardcode outputs to satisfy a check -- that is reward hacking, and it defeats the whole loop (see the `fix-all` skill's philosophy). Verification comes from a separate evaluator, not from grading your own work.
 
