@@ -539,15 +539,17 @@ Discovered while implementing nix-tcz.63. The hardened _make_writable walk close
 :ORIGINAL_SIZE: 0
 :END:
 
-* DOING [#B] Allow Determinate Nix daemon startup during builder reload
+* DONE [#B] Allow Determinate Nix daemon startup during builder reload
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-bse
 :LABELS: []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-12 Wed 14:17]
-:MODIFIED: [2026-08-12 Wed 14:31]
+:MODIFIED: [2026-08-12 Wed 14:37]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 14:37]
+:CLOSE_REASON: Corrected, verified, published, and cleanly reactivated on Clio
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -586,6 +588,13 @@ Clio activation of signed root commit 6e4a1c4 built successfully but failed afte
     "author": "johnw",
     "text": "Correction verification before publication: nix fmt rewrote only the two intended Nix files; focused checks.aarch64-darwin.host-behavior built successfully; full make test ran all 21 suites in 401 seconds with zero failed/timed-out/killed/budget-exceeded/not-reached; and ./build system completed the full Hera Darwin system without activation. Independent review found the longer bounded probes remain fail-closed. Awaiting signed commit, dual publication, and clean Clio reactivation.",
     "created_at": "2026-08-12T21:31:25Z"
+  },
+  {
+    "id": 103,
+    "issue_id": "nix-bse",
+    "author": "johnw",
+    "text": "Published signed correction 532d97a5 to both remotes. Clio fast-forwarded to that exact GOOD-signed commit and make switch completed cleanly as Darwin generation 290. Live verification: /run/current-system is khnv7..., /etc/nix/machines remains the Nix-owned two-link chain to ckpr61..., the live file exactly matches the current system, contains Hera/Vulcan/Andoria-08 and no nix-builder/T2, and the Determinate daemon is running/trusted with last exit 0. Because machine bytes were already adopted by the prior partial activation, this successful retry did not re-enter the reload branch; the focused generated-text regression and original delayed recovery are the evidence for that branch.",
+    "created_at": "2026-08-12T21:37:30Z"
   }
 ]
 #+end_src
