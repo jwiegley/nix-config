@@ -1,6 +1,12 @@
-______________________________________________________________________
-
-## name: wiggum description: Methodology for the user-triggered /wiggum command (do not self-invoke). An autonomous-continuation loop for long-running work -- run, checkpoint, and verify until a defined Definition of Done holds or a stop-and-escalate condition fires. Covers durable handoff state, baseline re-verification after context compaction, per-commit self-audit, work-unit commit and restack cadence, subagent fan-out limits, and escalation.
+---
+name: wiggum
+description: Methodology for the user-triggered /wiggum command (do not self-invoke).
+  An autonomous-continuation loop for long-running work -- run, checkpoint, and verify
+  until a defined Definition of Done holds or a stop-and-escalate condition fires.
+  Covers durable handoff state, baseline re-verification after context compaction,
+  per-commit self-audit, work-unit commit and restack cadence, subagent fan-out limits,
+  and escalation.
+---
 
 # Wiggum
 
@@ -32,13 +38,15 @@ You perform git operations directly, following the documented approach of the ma
 
 - Use PAL MCP if it is working, per the `heavy` skill, or ignore it if it is not working.
 
-- Use the ponytail and caveman skills, alwaoys avoid scope creep, and stay focused on the task or goal presented to you.
+- Use the ponytail and caveman skills, always avoid scope creep, and stay focused on the task or goal presented to you.
 
 - Use the `abstraction-review` skill and make sure that you avoid circumventing abstractions merely for the sake of expediently reaching "the goal". The goal is not just the outcome, but it is also the principled manner in which we get there.
 
 ## Definition of Done
 
-A user request to stop or halt overrides everything below: acknowledge it, record the current loop state in the active `obr` issue or handoff document, and stop immediately.
+A user request to stop or halt overrides everything below: acknowledge it,
+record the current loop state in the active `obr` issue or handoff document,
+and stop immediately.
 
 Exit the loop successfully ONLY when ALL of these hold, with evidence rather than self-assertion:
 
