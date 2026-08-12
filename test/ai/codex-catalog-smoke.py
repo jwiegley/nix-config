@@ -126,6 +126,16 @@ def main() -> None:
         config = tomllib.load(stream)
     if config.get("model_catalog_json") != args.expected_catalog_path:
         raise AssertionError("managed config changed the installed catalog path")
+    selection = {
+        key: config.get(key)
+        for key in ("model", "model_provider", "model_reasoning_effort")
+    }
+    if selection != {
+        "model": "gpt-5.6-sol",
+        "model_provider": "openai",
+        "model_reasoning_effort": "ultra",
+    }:
+        raise AssertionError(f"managed Codex selection changed: {selection!r}")
     selected_slug = config.get("model")
     selected = [model for model in managed_models if model.get("slug") == selected_slug]
     if len(selected) != 1:

@@ -262,11 +262,11 @@ Discovered while implementing nix-tcz.63. The hardened _make_writable walk close
 :LABELS: ["ai","codex","nix"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-12 Wed 00:16]
-:MODIFIED: [2026-08-12 Wed 01:02]
+:MODIFIED: [2026-08-12 Wed 01:26]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
-:FINISHED: [2026-08-12 Wed 01:02]
-:CLOSE_REASON: Completed and activated: canonical Codex package now owns installation and catalog rendering; exact serializer supplies source-proven instructions; metadata, selection, and live skill refresh are verified.
+:FINISHED: [2026-08-12 Wed 01:26]
+:CLOSE_REASON: Completed after final fess: the regression independently pins gpt-5.6-sol/openai/ultra; focused and full gates pass.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -307,6 +307,34 @@ Rendered catalog is valid JSON; every model has the source-proven correctly type
     "author": "johnw",
     "text": "Final verification: post-compaction make test passed 21/21 Python suites and all 7 root behavioral checks; lefthook pre-commit passed formatting, Nix lint/dead-code, shell checks, Python lint, and 18/18 fast suites. Focused catalog transport, portable/root evaluations, compatibility/package-selection checks, verify-inputs, system build, generation 1063 activation, installed 8/8 schema+metadata validation, and live installed-wrapper model/list plus skills/list(forceReload=true) all passed. Independent package and regression reviews are clear. No partner observations remain. Next: export PLAN, signed commit, no-history fess, and authorized publication.",
     "created_at": "2026-08-12T08:02:10Z"
+  },
+  {
+    "id": 33,
+    "issue_id": "nix-codex-model-catalog-q1u",
+    "author": "johnw",
+    "text": "Reopened: Final no-history fess found one medium regression gap: the smoke test followed the emitted model instead of independently pinning the existing gpt-5.6-sol/openai/ultra selection tuple. Report: /private/tmp/wg-codex-catalog-final-fess/report.md. Reopened for exact assertion and re-verification.",
+    "created_at": "2026-08-12T08:10:07Z"
+  },
+  {
+    "id": 34,
+    "issue_id": "nix-codex-model-catalog-q1u",
+    "author": "johnw",
+    "text": "Fess fix verification: exact gpt-5.6-sol/openai/ultra selection assertion added; ruff and focused ai-catalog-transport passed. Final make test attempt 1 passed 21/21 Python and 6/7 root behavioral checks, then unrelated pi-gallery private-file two-process serialization test timed out at 30s (180/181 pass). Earlier exact candidate full run was green. Inspecting log and allowing one isolated rerun; repeated-signature stop count is 1/3.",
+    "created_at": "2026-08-12T08:18:07Z"
+  },
+  {
+    "id": 35,
+    "issue_id": "nix-codex-model-catalog-q1u",
+    "author": "johnw",
+    "text": "Pi gallery isolated rerun attempt 2 passed the prior writer test in 22.14s, all 181/181 tests, and the full derivation exited 0. The timeout signature cleared; repeated-failure count resets. Running one complete make test again for a single green governing result.",
+    "created_at": "2026-08-12T08:21:59Z"
+  },
+  {
+    "id": 36,
+    "issue_id": "nix-codex-model-catalog-q1u",
+    "author": "johnw",
+    "text": "Final fess medium fixed: smoke test now independently asserts the durable gpt-5.6-sol/openai/ultra selection tuple. Ruff and focused ai-catalog-transport passed. Final make test attempt 1 passed all 21 Python suites and 6/7 root checks, with one unrelated pi-gallery two-process writer timeout; isolated attempt 2 passed 181/181 and the full derivation, resetting the stop count. Complete make test rerun then passed 21/21 Python and all 7 root behavioral checks. Ready for signed fess-fix commit and final audit.",
+    "created_at": "2026-08-12T08:26:46Z"
   }
 ]
 #+end_src
