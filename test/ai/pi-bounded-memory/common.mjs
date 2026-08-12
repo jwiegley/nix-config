@@ -333,7 +333,8 @@ export function edgeOf(entry) {
   return { id: entry.id, parentId: entry.parentId, type: entry.type };
 }
 
-export function streamJsonLines(path, limits, onLine, createFold = () => createHash("sha256")) {
+export function streamJsonLines(path, limits, onLine, createFold) {
+  check(typeof createFold === "function", "retained fold factory is required");
   check(Number.isSafeInteger(limits.chunkBytes) && limits.chunkBytes > 0, "invalid stream chunk limit");
   check(Number.isSafeInteger(limits.maxLineBytes) && limits.maxLineBytes > 0, "invalid line limit");
   const { fd, info } = openRegular(path);

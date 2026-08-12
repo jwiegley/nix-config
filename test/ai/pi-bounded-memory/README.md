@@ -160,8 +160,9 @@ LF-terminated checksum file without replacement.
   bytes; this is a logical-record bound, not a JavaScript heap-size claim. The
   six retained incremental folds are the stream-file hash, four per-scale
   folds, and at most one checkpoint copy; their creation, copying, finalization,
-  maximum, and return to zero are tracked. One-shot helper hashes are outside
-  this incremental-retention metric.
+  exact maximum, and return to zero are tracked. The streaming reader requires
+  the tracked fold factory and fails before opening a fixture when it is
+  omitted. One-shot helper hashes are outside this incremental-retention metric.
 - Diagnostic preflight reads at most 4,096 fixture bytes and retains at most 16
   distinct fixed point IDs. It performs no full-fixture identity pass inside
   the RSS child.

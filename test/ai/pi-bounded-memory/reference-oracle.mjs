@@ -219,6 +219,7 @@ function createRetainedFoldTracker(cap) {
     },
     finish() {
       check(live === 0, "retained incremental folds remain live after reference import");
+      check(maxObserved === cap, "retained incremental fold cap was not exercised");
       return { cap, maxObserved, liveAfterImport: live };
     },
   };

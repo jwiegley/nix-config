@@ -49,13 +49,23 @@ runCommand "pi-classic-core-fixtures-v1"
       --manifest "$out/fixtures/manifest.json" \
       --oracles "$out/fixtures/expected-oracles.json"
 
-    invalid_fixture="$TMPDIR/pi-b1-invalid-postflight.jsonl"
+    node --input-type=module --eval '
+      import assert from "node:assert/strict";
+      import { pathToFileURL } from "node:url";
+      const { streamJsonLines } = await import(pathToFileURL(process.argv[1]));
+      assert.throws(
+        () => streamJsonLines(process.argv[2], { chunkBytes: 8, maxLineBytes: 8 }, () => {}),
+        { message: "retained fold factory is required" },
+      );
+    ' "$out/tools/common.mjs" "$TMPDIR/missing-fold-probe.jsonl"
+
+    postflight_fixture="$TMPDIR/pi-b1-postflight.jsonl"
     invalid_postflight="$TMPDIR/pi-b1-invalid-postflight.json"
     ${coreutils}/bin/cp --reflink=never \
-      "$out/fixtures/pi-b1-16m.jsonl" "$invalid_fixture"
-    chmod 0600 "$invalid_fixture"
+      "$out/fixtures/pi-b1-16m.jsonl" "$postflight_fixture"
+    chmod 0600 "$postflight_fixture"
     if node "$out/tools/record-postflight.mjs" \
-      --fixture "$invalid_fixture" \
+      --fixture "$postflight_fixture" \
       --result "$TMPDIR/missing-result.json" \
       --run-result "$TMPDIR/missing-run-result.json" \
       --oracles "$out/fixtures/expected-oracles.json" \
@@ -77,6 +87,81 @@ runCommand "pi-classic-core-fixtures-v1"
         throw new Error("failed postflight evidence was not preserved");
       }
     ' "$invalid_postflight"
+
+    success_result="$TMPDIR/pi-b1-success-result.json"
+    success_run_result="$TMPDIR/pi-b1-success-run-result.json"
+    success_stderr="$TMPDIR/pi-b1-success-stderr.log"
+    success_postflight="$TMPDIR/pi-b1-success-postflight.json"
+    node "$out/tools/run-capped-command.mjs" \
+      --stdout "$success_result" \
+      --stderr "$success_stderr" \
+      --run-result "$success_run_result" \
+      --max-bytes 16777216 \
+      -- \
+      node --input-type=module --eval '
+        import { appendFileSync, readFileSync } from "node:fs";
+        import { pathToFileURL } from "node:url";
+        const { structuredSha256 } = await import(pathToFileURL(process.argv[1]));
+        const oracles = JSON.parse(readFileSync(process.argv[2], "utf8"));
+        const fixturePath = process.argv[3];
+        const oracle = oracles.fixtures["16m"];
+        const userEntryId = "postflight-success-user-v1";
+        const assistantEntryId = "postflight-success-assistant-v1";
+        const entries = [
+          {
+            type: "message",
+            id: userEntryId,
+            parentId: oracle.before.activeLeaf.id,
+            message: oracles.continuation.userMessage,
+          },
+          {
+            type: "message",
+            id: assistantEntryId,
+            parentId: userEntryId,
+            message: oracles.continuation.assistantMessage,
+          },
+        ];
+        appendFileSync(fixturePath, entries.map((entry) => JSON.stringify(entry)).join("\n") + "\n");
+        process.stdout.write(JSON.stringify({
+          schema: 1,
+          kind: "pi-b1-classic-core-diagnostic",
+          qualification: "descriptive-b1-only",
+          endpoint: "16m",
+          checks: { all: true },
+          process: { environmentSha256: structuredSha256(process.env) },
+          identities: {
+            fixture: {
+              expectedCanonicalBytes: oracle.canonical.bytes,
+              expectedCanonicalSha256: oracle.canonical.sha256,
+            },
+          },
+          continuation: {
+            userEntryId,
+            assistantEntryId,
+            priorLeafId: oracle.before.activeLeaf.id,
+            userMessageSha256: oracles.continuation.userMessageSha256,
+            assistantMessageSha256: oracles.continuation.assistantMessageSha256,
+          },
+        }) + "\n");
+      ' \
+        "$out/tools/common.mjs" \
+        "$out/fixtures/expected-oracles.json" \
+        "$postflight_fixture"
+    node "$out/tools/record-postflight.mjs" \
+      --fixture "$postflight_fixture" \
+      --result "$success_result" \
+      --run-result "$success_run_result" \
+      --oracles "$out/fixtures/expected-oracles.json" \
+      --endpoint 16m \
+      --copy-executable ${coreutils}/bin/cp \
+      --output "$success_postflight"
+    node --input-type=module --eval '
+      import { readFileSync } from "node:fs";
+      const record = JSON.parse(readFileSync(process.argv[1], "utf8"));
+      if (record.success !== true || record.checks?.all !== true) {
+        throw new Error("successful postflight evidence was not preserved");
+      }
+    ' "$success_postflight"
 
     node "$out/tools/seal-bundle.mjs" --root "$out"
   ''
