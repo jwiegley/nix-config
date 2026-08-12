@@ -531,15 +531,17 @@ Hera and Clio evaluate to Vulcan as aarch64-linux only plus Andoria-08 as the se
 
 Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension using the existing source/package/catalog installation pattern. Verify the real package and managed Pi projection without activating hosts.
 
-* DOING [#A] Restore Clio oMLX proxy allowlist    :network:regression:security:
+* DONE [#A] Restore Clio oMLX proxy allowlist    :network:regression:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-9ku
 :LABELS: ["network","regression","security"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-12 Wed 15:16]
-:MODIFIED: [2026-08-12 Wed 15:31]
+:MODIFIED: [2026-08-12 Wed 15:38]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 15:38]
+:CLOSE_REASON: Recovered the exact user-authored Clio LAN and WireGuard allowlist entries, added exact evaluated and generated-nginx regression coverage, built and published the signed change, activated Hera generation 1069, and verified a live Clio request returns HTTP 200.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -574,6 +576,13 @@ Hera's declarative allowlist contains Vulcan plus Clio's LAN and alternate-path 
     "author": "johnw",
     "text": "Recovered exact unstaged config hunk from pi checkpoint 7073e0dc: Vulcan 192.168.1.2/32, Clio LAN 192.168.1.5/32, Clio WireGuard 10.6.0.2/32 in that order. Added exact evaluated-list and generated-nginx coverage. Focused aarch64-darwin omlx-proxy-boundary built successfully; complete non-activating Hera system build produced /nix/store/mpvjdh0gcildkbl1i402bbv2pm0w0qd0-darwin-system-26.11.15abb8c; Hera/Clio proxy evaluations match intended enabled/disabled policy. A broader make test run was stopped at owner request after all suites reached had passed; it is not closeout evidence.",
     "created_at": "2026-08-12T22:31:47Z"
+  },
+  {
+    "id": 109,
+    "issue_id": "nix-9ku",
+    "author": "johnw",
+    "text": "Runtime acceptance complete on Hera generation 1069. /run/current-system exactly equals /nix/store/nv7ay95r7nmqwymz40b9v3s93b03q0an-darwin-system-26.11.15abb8c from published commit 1f38265a; the proxy launch agent is running and the active generated nginx config contains Vulcan plus both recovered Clio allow lines. A live request executed on Clio reached Hera at 192.168.1.4 and returned HTTP 200, proving nginx no longer rejects the Clio source with 403. The WireGuard source is configuration-covered but was not live-probed because the current route used Clio LAN 192.168.1.5.",
+    "created_at": "2026-08-12T22:38:06Z"
   }
 ]
 #+end_src
