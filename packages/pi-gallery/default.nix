@@ -668,6 +668,14 @@ let
     version = members.usage.version;
     install = root: ''
       tar -xzf ${releaseTarballs.pi-usage-extension} -C ${root} --strip-components=1
+      ${jq}/bin/jq '
+        if has("type") then
+          if .type == "module" then . else error("unexpected package module type") end
+        else
+          .type = "module"
+        end
+      ' ${root}/package.json > ${root}/package.json.with-type
+      mv ${root}/package.json.with-type ${root}/package.json
       substituteInPlace ${root}/index.ts \
         --replace-fail \
           'writeFileSync(path, content);' \

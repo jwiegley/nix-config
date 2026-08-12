@@ -1295,15 +1295,17 @@ Rendered Hera authorized_keys contains from=192.168.1.2, restrict, port-forwardi
 ]
 #+end_src
 
-* TODO [#C] Declare Pi Usage package module type
+* DONE [#C] Declare Pi Usage package module type
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-nfi
 :LABELS: []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-12 Wed 10:07]
-:MODIFIED: [2026-08-12 Wed 10:07]
+:MODIFIED: [2026-08-12 Wed 15:58]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 15:58]
+:CLOSE_REASON: Packaged pi-usage-extension now declares guarded ESM type=module; the gallery asserts the manifest and fails on MODULE_TYPELESS_PACKAGE_JSON while replaying unrelated stderr. Focused package and aarch64-darwin pi-gallery builds passed, the exact gallery log contains no module-type warning, config/ai all-system no-build evaluation passed, make test passed all 21 Python suites plus seven behavioral checks, and ./build system produced /nix/store/961vg122vwblbsdx97cialfvabpspgj0-darwin-system-26.11.15abb8c. Independent read-only review returned CLEAR. No activation or publication was performed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

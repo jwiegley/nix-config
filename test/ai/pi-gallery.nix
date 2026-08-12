@@ -204,6 +204,8 @@ runCommand "pi-gallery-check"
 
     echo "Pi gallery check: member versions"
     ${memberVersionChecks}
+    [ "$(jq -r .type ${roots.usage}/package.json)" = module ] \
+      || fail "Pi Usage package must declare ESM module type"
     echo "Pi gallery check: support versions"
     ${supportVersionChecks}
     echo "Pi gallery check: normalization parity"
@@ -973,9 +975,22 @@ runCommand "pi-gallery-check"
       ${bun}/bin/bun "$usage_runtime/probe.ts"
     [ "$(stat -c '%a' "$usage_runtime/usage-extension-cache.json")" = 600 ] \
       || fail "Usage Dashboard cache mode is not 0600"
-    PI_USAGE_ROOT=${roots.usage} \
+    usage_history_stderr="$TMPDIR/pi-usage-bounded-history.stderr"
+    if PI_USAGE_ROOT=${roots.usage} \
       ${nodejs_24}/bin/node --experimental-strip-types \
-        ${sourceForChecks}/test/ai/pi-usage-bounded-history.check.ts
+        ${sourceForChecks}/test/ai/pi-usage-bounded-history.check.ts \
+        2>"$usage_history_stderr"
+    then
+      :
+    else
+      status=$?
+      cat "$usage_history_stderr" >&2
+      exit "$status"
+    fi
+    cat "$usage_history_stderr" >&2
+    if grep -Fq MODULE_TYPELESS_PACKAGE_JSON "$usage_history_stderr"; then
+      fail "Pi Usage bounded-history check emitted a module-type warning"
+    fi
     [ -f ${roots.multi-pass}/extensions/multi-sub.ts ]
     [ ! -e ${roots.multi-pass}/node_modules ]
     [ -f ${piPackages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts ]
