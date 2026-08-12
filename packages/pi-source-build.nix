@@ -28,6 +28,7 @@ buildNpmPackageWithNode24 {
     ../overlays/ai/patches/pi-bounded-session-history.patch
     ../overlays/ai/patches/pi-provider-transport-timeouts.patch
     ../overlays/ai/patches/pi-session-replacement.patch
+    ../overlays/ai/patches/pi-model-default-thinking.patch
   ];
   patchFlags = [
     "-p1"
@@ -68,6 +69,7 @@ buildNpmPackageWithNode24 {
       packages/coding-agent/test/footer-width.test.ts \
       packages/coding-agent/test/git-update.test.ts \
       packages/coding-agent/test/interactive-mode-history-cap.test.ts \
+      packages/coding-agent/test/model-default-thinking.test.ts \
       packages/coding-agent/test/print-mode.test.ts \
       packages/coding-agent/test/rpc-client-paging.test.ts \
       packages/coding-agent/test/rpc-prompt-response-semantics.test.ts \
@@ -88,9 +90,10 @@ buildNpmPackageWithNode24 {
 
   installPhase = ''
     runHook preInstall
-    mkdir -p "$out/coding-agent" "$out/agent"
+    mkdir -p "$out/coding-agent" "$out/agent" "$out/ai"
     cp -R packages/coding-agent/dist "$out/coding-agent/dist"
     cp -R packages/agent/dist "$out/agent/dist"
+    cp -R packages/ai/dist "$out/ai/dist"
     runHook postInstall
   '';
 }

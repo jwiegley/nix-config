@@ -1303,7 +1303,8 @@ runCommand "pi-gallery-check"
     cmp "$TMPDIR/expected-gallery-registrations" "$TMPDIR/actual-gallery-registrations" \
       || fail "gallery registration order or membership differs from the platform contract"
     echo "Pi gallery check: dynamic local providers"
-    ${bun}/bin/bun ${sourceForChecks}/test/ai/local-openai-provider.check.ts
+    PI_CODING_AGENT_ROOT=${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent \
+      ${bun}/bin/bun ${sourceForChecks}/test/ai/local-openai-provider.check.ts
     PI_GOAL_X_ROOT=${roots.goal} \
     PI_CODING_AGENT_ROOT=${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent \
       ${nodejs_24}/bin/node --experimental-strip-types \
@@ -1367,44 +1368,85 @@ runCommand "pi-gallery-check"
           "api": "router-local-api",
           "apiKey": "pi-model-router",
           "baseUrl": "router://local",
+          "modelOverrides": {
+            "sol": {
+              "defaultThinkingLevel": "off",
+              "reasoning": true,
+              "input": ["text"],
+              "thinkingLevelMap": {
+                "minimal": null,
+                "low": null,
+                "medium": null,
+                "high": "high",
+                "xhigh": null,
+                "max": null
+              }
+            }
+          },
           "models": [{
             "id": "sol",
             "name": "Router sol",
-            "reasoning": true,
-            "input": ["text"],
             "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
             "contextWindow": 128000,
-            "maxTokens": 16384,
-            "thinkingLevelMap": {"xhigh": "xhigh"}
+            "maxTokens": 16384
           }]
+        },
+        "omlx": {
+          "api": "synthetic-api",
+          "apiKey": "synthetic",
+          "baseUrl": "synthetic://omlx",
+          "modelOverrides": {
+            "Qwen3.6-27B-oQ6e-mtp": {
+              "defaultThinkingLevel": "off",
+              "reasoning": true,
+              "input": ["text"],
+              "thinkingLevelMap": {
+                "minimal": null,
+                "low": null,
+                "medium": null,
+                "high": "high",
+                "xhigh": null,
+                "max": null
+              },
+              "compat": {
+                "supportsReasoningEffort": false,
+                "thinkingFormat": "qwen-chat-template"
+              }
+            }
+          }
         }
       }
     }
     JSON
     cat > "$routing_smoke/agent/model-router.json" <<'JSON'
     {
+      "models": {
+        "sol": {
+          "model": "synthetic/target",
+          "reasoning": true,
+          "thinkingLevels": ["off", "high"]
+        }
+      },
       "profiles": {
         "sol": {
-          "high": {
-            "model": "synthetic/target",
-            "thinking": "xhigh",
-            "thinkingLevels": ["low", "medium", "high", "xhigh"]
+          "low": {
+            "model": "sol",
+            "thinking": "off"
           },
           "medium": {
-            "model": "synthetic/target",
-            "thinking": "medium",
-            "thinkingLevels": ["low", "medium", "high", "xhigh"]
+            "model": "sol",
+            "thinking": "off"
           },
-          "low": {
-            "model": "synthetic/target",
-            "thinking": "low",
-            "thinkingLevels": ["low", "medium", "high", "xhigh"]
+          "high": {
+            "model": "sol",
+            "thinking": "off"
           }
         }
       }
     }
     JSON
     cat > "$routing_smoke/synthetic.ts" <<'TS'
+    import { appendFileSync } from "node:fs";
     import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
     import { registerApiProvider } from "@earendil-works/pi-ai/compat";
 
@@ -1412,6 +1454,9 @@ runCommand "pi-gallery-check"
       const stream = createAssistantMessageEventStream();
       queueMicrotask(() => {
         const text = options?.reasoning ?? "off";
+        if (process.env.PI_ROUTER_REASONING_LOG) {
+          appendFileSync(process.env.PI_ROUTER_REASONING_LOG, `''${text}\n`);
+        }
         const message: any = {
           role: "assistant",
           content: [{ type: "text", text }],
@@ -1457,19 +1502,50 @@ runCommand "pi-gallery-check"
           cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
           contextWindow: 128000,
           maxTokens: 16384,
-          thinkingLevelMap: { xhigh: "xhigh" },
+          thinkingLevelMap: {
+            minimal: null,
+            low: null,
+            medium: null,
+            high: "high",
+            xhigh: null,
+            max: null,
+          },
+        }, {
+          id: "plain",
+          name: "Plain",
+          reasoning: false,
+          input: ["text"],
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+          contextWindow: 128000,
+          maxTokens: 16384,
+        }],
+      });
+      pi.registerProvider("omlx", {
+        baseUrl: "synthetic://omlx",
+        apiKey: "synthetic",
+        api: "synthetic-api",
+        models: [{
+          id: "Qwen3.6-27B-oQ6e-mtp",
+          name: "Sparse Qwen",
+          reasoning: false,
+          input: ["text"],
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+          contextWindow: 262144,
+          maxTokens: 65536,
         }],
       });
     }
     TS
-    while IFS='|' read -r prompt expected; do
+    while IFS='|' read -r prompt expected_tier; do
+      session_file="$routing_smoke/tier-$expected_tier.jsonl"
       env -u OMLX_API_KEY -u LLAMA_SWAP_API_KEY \
       HOME="$routing_smoke/home" \
       PI_CODING_AGENT_DIR="$routing_smoke/agent" \
+      PI_ROUTER_REASONING_LOG="$routing_smoke/reasoning.log" \
       PI_OFFLINE=1 \
         ${coreutils}/bin/timeout 60 \
         ${lib.getExe piPackage} \
-        --print --offline --no-session --no-context-files \
+        --print --offline --session "$session_file" --no-context-files \
         --no-extensions --no-skills --no-prompt-templates --no-approve \
         --extension ${routingExtension} \
         --extension "$routing_smoke/synthetic.ts" \
@@ -1477,18 +1553,109 @@ runCommand "pi-gallery-check"
         </dev/null >"$routing_smoke/output" 2>"$routing_smoke/error" || {
           status=$?
           cat "$routing_smoke/error" >&2
-          fail "model router failed for expected $expected tier with status $status"
+          fail "model router failed for a disabled tier with status $status"
         }
-      [ "$(cat "$routing_smoke/output")" = "$expected" ] || {
+      [ "$(cat "$routing_smoke/output")" = off ] || {
         cat "$routing_smoke/output" >&2
         cat "$routing_smoke/error" >&2
-        fail "model router did not select expected $expected reasoning tier"
+        fail "model router did not keep its selected tier at reasoning off"
+      }
+      jq -s -e --arg expected "$expected_tier" '
+        ([.[]
+          | select(
+              .type == "custom"
+              and .customType == "router-state"
+              and .data.lastDecision != null
+            )
+        ] | last | .data.lastDecision.tier) == $expected
+      ' "$session_file" >/dev/null || {
+        cat "$session_file" >&2
+        fail "model router did not retain its $expected_tier workload-tier decision"
       }
     done <<'CASES'
     briefly answer|low
     implement the change|medium
-    think deeply about this architecture|xhigh
+    think deeply about this architecture|high
     CASES
+    cat > "$routing_smoke/rpc-input.jsonl" <<'JSON'
+    {"id":"before","type":"get_state"}
+    {"id":"levels","type":"get_available_thinking_levels"}
+    {"id":"router-off","type":"prompt","message":"exercise the router disabled path"}
+    {"id":"plain","type":"set_model","provider":"synthetic","modelId":"plain"}
+    {"id":"qwen","type":"set_model","provider":"omlx","modelId":"Qwen3.6-27B-oQ6e-mtp"}
+    {"id":"direct","type":"get_state"}
+    {"id":"direct-levels","type":"get_available_thinking_levels"}
+    {"id":"direct-off","type":"prompt","message":"exercise the direct disabled path"}
+    {"id":"direct-cycle","type":"cycle_thinking_level"}
+    {"id":"direct-high","type":"prompt","message":"exercise the direct enabled path"}
+    {"id":"direct-reset","type":"cycle_thinking_level"}
+    {"id":"router","type":"set_model","provider":"router","modelId":"sol"}
+    {"id":"router-cycle","type":"cycle_thinking_level"}
+    {"id":"router-high-state","type":"get_state"}
+    {"id":"router-high","type":"prompt","message":"exercise the router enabled path"}
+    JSON
+    env -u OMLX_API_KEY -u LLAMA_SWAP_API_KEY \
+      HOME="$routing_smoke/home" \
+      PI_CODING_AGENT_DIR="$routing_smoke/agent" \
+      PI_ROUTER_REASONING_LOG="$routing_smoke/reasoning.log" \
+      PI_OFFLINE=1 \
+        ${coreutils}/bin/timeout 60 \
+        ${python3}/bin/python3 "$rpc_sequence" \
+        "$routing_smoke/rpc-input.jsonl" \
+        "$routing_smoke/rpc-output.jsonl" \
+        "$routing_smoke/rpc-error.log" \
+        ${lib.getExe piPackage} \
+        --mode rpc --offline --no-session --no-context-files \
+        --no-extensions --no-skills --no-prompt-templates --no-approve \
+        --extension ${routingExtension} \
+        --extension "$routing_smoke/synthetic.ts" \
+        --provider router --model sol || {
+      status=$?
+      cat "$routing_smoke/rpc-output.jsonl" >&2
+      cat "$routing_smoke/rpc-error.log" >&2
+      fail "model router thinking-cycle RPC failed with status $status"
+    }
+    jq -s -e '
+      any(.[]; .type == "response" and .id == "before" and .data.thinkingLevel == "off")
+      and any(.[]; .type == "response" and .id == "levels" and .data.levels == ["off", "high"])
+      and any(.[]; .type == "response" and .id == "router-off" and .success == true)
+      and any(.[]; .type == "response" and .id == "plain" and .success == true)
+      and any(.[]; .type == "response" and .id == "qwen" and .success == true)
+      and any(.[];
+        .type == "response"
+        and .id == "direct"
+        and .data.thinkingLevel == "off"
+        and .data.model.provider == "omlx"
+        and .data.model.id == "Qwen3.6-27B-oQ6e-mtp"
+        and .data.model.reasoning == true
+        and .data.model.input == ["text"]
+        and .data.model.defaultThinkingLevel == "off"
+      )
+      and any(.[]; .type == "response" and .id == "direct-levels" and .data.levels == ["off", "high"])
+      and any(.[]; .type == "response" and .id == "direct-off" and .success == true)
+      and any(.[]; .type == "response" and .id == "direct-cycle" and .data.level == "high")
+      and any(.[]; .type == "response" and .id == "direct-high" and .success == true)
+      and any(.[]; .type == "response" and .id == "direct-reset" and .data.level == "off")
+      and any(.[]; .type == "response" and .id == "router" and .success == true)
+      and any(.[]; .type == "response" and .id == "router-cycle" and .data.level == "high")
+      and any(.[];
+        .type == "response"
+        and .id == "router-high-state"
+        and .data.thinkingLevel == "high"
+        and .data.model.provider == "router"
+        and .data.model.id == "sol"
+      )
+      and any(.[]; .type == "response" and .id == "router-high" and .success == true)
+    ' "$routing_smoke/rpc-output.jsonl" >/dev/null || {
+      cat "$routing_smoke/rpc-output.jsonl" >&2
+      cat "$routing_smoke/rpc-error.log" >&2
+      fail "model router did not expose or cycle the exact off/high contract"
+    }
+    [ "$(jq -R -s -c 'split("\n")[:-1]' "$routing_smoke/reasoning.log")" = \
+      '["off","off","off","off","off","high","high"]' ] || {
+      cat "$routing_smoke/reasoning.log" >&2
+      fail "model router did not delegate off by default and high after thinking-cycle"
+    }
 
     loop_smoke="$TMPDIR/pi-loop-smoke"
     mkdir -p "$loop_smoke/home" "$loop_smoke/agent"

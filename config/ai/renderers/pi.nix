@@ -39,20 +39,42 @@ let
     id = "Qwen3.6-27B-oQ6e-mtp";
     contextLimit = 262144;
     outputLimit = 65536;
+    defaultThinkingLevel = "off";
+    reasoning = true;
+    input = [ "text" ];
+    thinkingLevels = [
+      "off"
+      "high"
+    ];
+    thinkingLevelMap = {
+      minimal = null;
+      low = null;
+      medium = null;
+      high = "high";
+      xhigh = null;
+      max = null;
+    };
+    compat = {
+      supportsReasoningEffort = false;
+      thinkingFormat = "qwen-chat-template";
+    };
   };
   routerProvider = {
     api = "router-local-api";
     apiKey = "pi-model-router";
     baseUrl = "router://local";
+    modelOverrides.sol = {
+      inherit (routerTarget)
+        defaultThinkingLevel
+        reasoning
+        input
+        thinkingLevelMap
+        ;
+    };
     models = [
       {
         id = "sol";
         name = "Router sol";
-        reasoning = true;
-        input = [
-          "text"
-          "image"
-        ];
         cost = {
           input = 0;
           output = 0;
@@ -61,7 +83,6 @@ let
         };
         contextWindow = routerTarget.contextLimit;
         maxTokens = routerTarget.outputLimit;
-        thinkingLevelMap.xhigh = "xhigh";
       }
     ];
   };
@@ -71,10 +92,23 @@ let
     requestTimeoutMs = 7200000;
     idleTimeoutMs = 7200000;
   };
+  localProviderOverrides = lib.recursiveUpdate modelOverrides.localProviderOverrides {
+    omlx.modelOverrides.${routerTarget.id} = {
+      contextWindow = routerTarget.contextLimit;
+      maxTokens = routerTarget.outputLimit;
+      inherit (routerTarget)
+        defaultThinkingLevel
+        reasoning
+        input
+        thinkingLevelMap
+        compat
+        ;
+    };
+  };
   localProviders =
     lib.mapAttrs (
       _: provider: provider // { transport = localProviderTransport; }
-    ) modelOverrides.localProviderOverrides
+    ) localProviderOverrides
     // {
       hermes = {
         api = "openai-completions";
@@ -103,28 +137,19 @@ let
       model = "omlx/${routerTarget.id}";
       contextWindow = routerTarget.contextLimit;
       maxTokens = routerTarget.outputLimit;
-      reasoning = true;
-      thinkingLevels = [
-        "low"
-        "medium"
-        "high"
-        "xhigh"
-      ];
+      inherit (routerTarget) reasoning thinkingLevels;
     };
-    profiles.sol = {
-      high = {
-        model = "sol";
-        thinking = "xhigh";
-      };
-      medium = {
-        model = "sol";
-        thinking = "medium";
-      };
-      low = {
-        model = "sol";
-        thinking = "low";
-      };
-    };
+    profiles.sol =
+      lib.genAttrs
+        [
+          "low"
+          "medium"
+          "high"
+        ]
+        (_: {
+          model = "sol";
+          thinking = "off";
+        });
   };
 
   keybindings = import ../keybindings.nix // {

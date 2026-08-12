@@ -77,20 +77,20 @@ Shared skills remain in the common discovery estate rather than being copied int
 
 ### Model and routing policy
 
-The generated model files deliberately emit no Pi default. Model selection remains mutable at session scope. Darwin configures the locally provisioned providers, opt-in Hermes route, and router; Linux generates only the native remote-provider context overrides even though the complete extension package projection is present.
+The generated model files deliberately emit no default model. Model selection remains mutable at session scope. Darwin configures the locally provisioned providers, opt-in Hermes route, and router; Linux generates only the native remote-provider context overrides even though the complete extension package projection is present.
 
 | Item | Current value |
 | --- | --- |
 | Darwin provider surface | Gallery providers `llama-swap` and `omlx`; the `hermes` OpenAI-compatible provider; native `openai-codex` and `openrouter` overrides; and the synthetic `router` provider |
 | Linux provider surface | Native `openai-codex` and `openrouter` overrides only; the loopback discovery adapters and router are packaged but not registered automatically |
 | Hermes route | `hermes/hermes-agent` at `https://hermes.vulcan.lan/v1`; opt-in, with its bearer credential resolved from the Home Manager-configured password store and GnuPG home only when a request uses the provider; stale inherited `GPG_TTY` state is discarded before lookup, isolating credential resolution from Agent Deck/tmux terminal state; Pi session-affinity headers are enabled for stable upstream routing |
-| Sol router route | `omlx/Qwen3.6-27B-oQ6e-mtp` through the local OpenAI-compatible oMLX service; text and image input; reasoning enabled; 262,144-token context; 65,536-token output |
-| Router profile | One underlying `sol` model; low → `low`, medium → `medium`, high → `xhigh`; `phaseBias` 0.5; debug disabled |
-| Native overrides | `openai-codex/gpt-5.6-sol` receives a 1,050,000-token context; `openrouter/z-ai/glm-5.2` receives 1,048,576; selected local compatibility overrides receive 262,144 |
+| Sol router route | `omlx/Qwen3.6-27B-oQ6e-mtp` through the local OpenAI-compatible oMLX service; text-only input; Boolean reasoning exposed as `off` or `high`; 262,144-token context; 65,536-token output |
+| Router profile | Three workload tiers backed by one `sol` model; each defaults to `off` and may be changed explicitly to `high`; `phaseBias` 0.5; debug disabled |
+| Native overrides | `openai-codex/gpt-5.6-sol` receives a 1,050,000-token context; `openrouter/z-ai/glm-5.2` receives 1,048,576; the exact managed Qwen route receives the compatibility and capability override described above |
 | Local discovery | Each local provider queries its loopback `/models` endpoint once during registration, under a 2.5-second bound; explicit type, modality, and capability metadata determines model behavior, while missing or unknown metadata falls back to text-only, non-reasoning chat with 262,144 context and 65,536 output |
 | Request policy | Managed local providers declare a 7,200-second request and stream-idle transport budget in `models.json`; the ordinary global timeout remains 300 seconds, and loopback credentials remain policy-approved and non-secret |
 
-The generated `models.json` owns compatibility and context overrides; on Darwin it also owns the synthetic router model and Hermes route. The Hermes credential is a runtime command reference, not a secret copied into the Nix store. The Darwin-registered local provider extensions own runtime model discovery. No generated model is Pi's default.
+The generated `models.json` owns compatibility and context overrides; on Darwin it also owns the synthetic router model and Hermes route. The exact managed Qwen record is an explicit exception to sparse oMLX discovery metadata: Nix declares its proven Boolean chat-template thinking behavior, sets its model-local thinking default to `off`, and retains text-only input. Explicit or restored user thinking choices still take precedence. Image input is not advertised until an exact model-and-service probe establishes it. The Hermes credential is a runtime command reference, not a secret copied into the Nix store. The Darwin-registered local provider extensions own runtime model discovery. No generated model is Pi's default.
 
 ### MCP registry
 
@@ -366,9 +366,9 @@ The fleet-packaged llama-swap provider is a reviewed Nix derivative of `pi-local
 
 **Version:** `57583beb` · **Links:** Nix adapter: `~/src/nix/packages/pi-gallery/providers/pi-provider-omlx.ts` · [upstream source](https://github.com/gaurav-321/pi-local-llm)
 
-The fleet-packaged oMLX provider uses the same bounded discovery adapter against the loopback oMLX service. Darwin registers it automatically and uses it for the generated Sol router route, presently `Qwen3.6-27B-oQ6e-mtp`. Linux retains the package without automatic registration.
+The fleet-packaged oMLX provider uses the same bounded discovery adapter against the loopback oMLX service. Darwin registers it automatically and uses it for the generated Sol router route, presently `Qwen3.6-27B-oQ6e-mtp`. Because that service record is sparse, the generated model override supplies the exact text-only, `off`/`high`, Qwen chat-template contract after discovery; all other sparse records remain conservatively non-reasoning and text-only. Linux retains the package without automatic registration.
 
-**Basic usage.** On Darwin, keep the Nix-managed `org.nixos.omlx` launch agent available and select an `omlx/*` model through `/model`, or select `router/sol` and allow Model Router to choose the reasoning tier. Reload Pi after the oMLX model roster changes. Linux requires an independently provisioned trusted service and explicit extension loading.
+**Basic usage.** On Darwin, keep the Nix-managed `org.nixos.omlx` launch agent available and select the managed `omlx/Qwen3.6-27B-oQ6e-mtp` model through `/model`, or select `router/sol`. Both expose only `off` and `high`; Shift-Tab cycles between them. Each starts at `off` when no explicit, restored, or global user preference exists; an existing user-selected level still takes precedence. With no enabled thinking level, the transport sends `enable_thinking: false`. Reload Pi after the oMLX model roster changes. Linux requires an independently provisioned trusted service and explicit extension loading.
 
 ### Multi-Pass
 
@@ -382,9 +382,9 @@ Pi Multi-Pass registers additional OAuth subscription accounts for supported pro
 
 **Version:** 0.4.4 · **Links:** [Pi Packages](https://pi.dev/packages/@yeliu84/pi-model-router) · [Home](https://github.com/yeliu84/pi-model-router#readme) · [GitHub](https://github.com/yeliu84/pi-model-router)
 
-Pi Model Router selects a configured route and reasoning level for each turn according to task complexity, phase, profile, budget, and explicit pins. The Darwin profiles expose one `sol` route backed by `omlx/Qwen3.6-27B-oQ6e-mtp`, so automatic routing changes thinking depth rather than the underlying provider or model. The local Nix configuration keeps this map authoritative, while the extension provides the per-turn decision and interactive control surface. Linux retains the package without automatically loading it or generating a route.
+Pi Model Router selects a configured route for each turn according to task complexity, phase, profile, budget, and explicit pins. The Darwin configuration retains low, medium, and high workload tiers, but all three use the same `sol` model backed by `omlx/Qwen3.6-27B-oQ6e-mtp` and begin with thinking disabled; it does not invent graded reasoning strengths for a server whose proven control is Boolean. An explicit Pi thinking-level change enables `high` across the active router profile. The local Nix configuration keeps this capability map authoritative, while the extension provides the per-turn decision and interactive control surface. Linux retains the package without automatically loading it or generating a route.
 
-**Basic usage.** On Darwin, open `/router` to inspect or change router state. Select `router/sol` when the managed local route is intended; use direct `/model` selection when a task requires another provider or model. The generated configuration does not force a default. Linux requires an independently reviewed router configuration and explicit extension loading.
+**Basic usage.** On Darwin, open `/router` to inspect or change router state. Select `router/sol` when the managed local route is intended, then use Shift-Tab to move explicitly between `off` and `high`; use direct `/model` selection when a task requires another provider or model. The generated configuration does not force a default model. Linux requires an independently reviewed router configuration and explicit extension loading.
 
 ## Companion runtimes
 

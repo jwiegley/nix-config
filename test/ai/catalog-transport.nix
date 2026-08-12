@@ -1176,6 +1176,50 @@ pkgs.runCommand "ai-catalog-transport" { } ''
           and (.providers.hermes.apiKey | startswith("!/nix/store/"))
           and (.providers.hermes.apiKey | contains("/bin/bash -c "))
           and (.providers.hermes.apiKey | contains("/bin/pass"))
+          and .providers.omlx.modelOverrides["Qwen3.6-27B-oQ6e-mtp"] == {
+            "compat": {
+              "supportsReasoningEffort": false,
+              "thinkingFormat": "qwen-chat-template"
+            },
+            "contextWindow": 262144,
+            "defaultThinkingLevel": "off",
+            "input": ["text"],
+            "maxTokens": 65536,
+            "reasoning": true,
+            "thinkingLevelMap": {
+              "high": "high",
+              "low": null,
+              "max": null,
+              "medium": null,
+              "minimal": null,
+              "xhigh": null
+            }
+          }
+          and .providers.router.models[0] == {
+            "contextWindow": 262144,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0
+            },
+            "id": "sol",
+            "maxTokens": 65536,
+            "name": "Router sol"
+          }
+          and .providers.router.modelOverrides.sol == {
+            "defaultThinkingLevel": "off",
+            "input": ["text"],
+            "reasoning": true,
+            "thinkingLevelMap": {
+              "high": "high",
+              "low": null,
+              "max": null,
+              "medium": null,
+              "minimal": null,
+              "xhigh": null
+            }
+          }
         else
           true
         end
@@ -1189,6 +1233,25 @@ pkgs.runCommand "ai-catalog-transport" { } ''
         )
       )
     ' ${entry.rendered.files.".config/pi/agent/models.json".source} >/dev/null
+    ${pkgs.jq}/bin/jq -e '
+      has("app.thinking.cycle") | not
+    ' ${entry.rendered.files.".config/pi/agent/keybindings.json".source} >/dev/null
+    ${lib.optionalString entry.darwin ''
+      ${pkgs.jq}/bin/jq -e '
+        .models.sol == {
+          "contextWindow": 262144,
+          "maxTokens": 65536,
+          "model": "omlx/Qwen3.6-27B-oQ6e-mtp",
+          "reasoning": true,
+          "thinkingLevels": ["off", "high"]
+        }
+        and (.profiles.sol | keys) == ["high", "low", "medium"]
+        and (.profiles.sol | all(
+          .model == "sol"
+          and .thinking == "off"
+        ))
+      ' ${entry.rendered.files.".config/pi/agent/model-router.json".source} >/dev/null
+    ''}
   '') piRenderings}
 
   ${pkgs.jq}/bin/jq -e '

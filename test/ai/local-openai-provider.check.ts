@@ -20,6 +20,15 @@ const warningProcess = (globalThis as unknown as { process: WarningProcess })
 	.process;
 const MAX_DISCOVERY_RESPONSE_BYTES = 1024 * 1024;
 const MAX_DISCOVERY_MODEL_ENTRIES = 4096;
+const QWEN_MODEL_ID = "Qwen3.6-27B-oQ6e-mtp";
+const QWEN_THINKING_LEVEL_MAP = {
+	minimal: null,
+	low: null,
+	medium: null,
+	high: "high",
+	xhigh: null,
+	max: null,
+};
 
 function modelsFor(
 	providers: Map<string, ProviderConfig>,
@@ -135,13 +144,8 @@ try {
 				data: [
 					{ id: "DeepSeek-V4-Flash-0731-oQ8e-mtp", max_model_len: 262144 },
 					{
-						id: "Qwen3.6-27B-oQ6e-mtp",
+						id: QWEN_MODEL_ID,
 						max_model_len: 262144,
-						architecture: {
-							input_modalities: ["text", "image"],
-							output_modalities: ["text"],
-						},
-						capabilities: { reasoning: true },
 					},
 					{
 						id: "cohere-transcribe-03-2026-mlx-fp16",
@@ -263,8 +267,91 @@ try {
 	);
 	expectEqual(
 		{ reasoning: omlxModels[1].reasoning, input: omlxModels[1].input },
-		{ reasoning: true, input: ["text", "image"] },
-		"oMLX explicit capability metadata",
+		{ reasoning: false, input: ["text"] },
+		"oMLX sparse capability metadata",
+	);
+
+	const codingAgentRoot = process.env.PI_CODING_AGENT_ROOT;
+	if (!codingAgentRoot) throw new Error("PI_CODING_AGENT_ROOT is required");
+	const piAiRoot = `${codingAgentRoot}/node_modules/@earendil-works/pi-ai/dist`;
+	const { streamSimple } = await import(`${piAiRoot}/compat.js`);
+	const { getSupportedThinkingLevels } = await import(`${piAiRoot}/models.js`);
+	const { KEYBINDINGS } = await import(
+		`${codingAgentRoot}/dist/core/keybindings.js`
+	);
+	const qwenModel = {
+		...omlxModels[1],
+		api: "openai-completions",
+		provider: "omlx",
+		baseUrl: "http://localhost:8000/v1",
+		defaultThinkingLevel: "off",
+		reasoning: true,
+		input: ["text"],
+		thinkingLevelMap: QWEN_THINKING_LEVEL_MAP,
+		compat: {
+			supportsReasoningEffort: false,
+			thinkingFormat: "qwen-chat-template",
+		},
+	};
+	expectEqual(
+		getSupportedThinkingLevels(qwenModel),
+		["off", "high"],
+		"Qwen thinking levels",
+	);
+	expectEqual(
+		KEYBINDINGS["app.thinking.cycle"].defaultKeys,
+		"shift+tab",
+		"Pi thinking-cycle binding",
+	);
+	const shapedPayloads: unknown[] = [];
+	for (const reasoning of [undefined, "high"] as const) {
+		const result = await streamSimple(
+			qwenModel,
+			{
+				messages: [{ role: "user", content: "probe", timestamp: 1 }],
+			},
+			{
+				apiKey: "test",
+				reasoning,
+				onPayload: (payload: unknown) => {
+					shapedPayloads.push(payload);
+					throw new Error("request captured before transport");
+				},
+			},
+		).result();
+		expect(
+			result.stopReason === "error",
+			"request capture did not stop transport",
+		);
+	}
+	expectEqual(
+		shapedPayloads.map((payload) => {
+			const shaped = payload as Record<string, unknown>;
+			return {
+				chatTemplateKwargs: shaped.chat_template_kwargs,
+				hasEnableThinking: Object.hasOwn(shaped, "enable_thinking"),
+				hasReasoningEffort: Object.hasOwn(shaped, "reasoning_effort"),
+			};
+		}),
+		[
+			{
+				chatTemplateKwargs: {
+					enable_thinking: false,
+					preserve_thinking: true,
+				},
+				hasEnableThinking: false,
+				hasReasoningEffort: false,
+			},
+			{
+				chatTemplateKwargs: {
+					enable_thinking: true,
+					preserve_thinking: true,
+				},
+				hasEnableThinking: false,
+				hasReasoningEffort: false,
+			},
+		],
+		"Qwen request shaping",
 	);
 
 	let failedBodyCancelled = false;

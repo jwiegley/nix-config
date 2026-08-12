@@ -17,6 +17,9 @@ nodePackage.overrideAttrs (old: {
     rm -rf node_modules/@earendil-works/pi-agent-core/dist
     cp -R ${piSourceBuild}/agent/dist node_modules/@earendil-works/pi-agent-core/dist
     chmod -R u+w node_modules/@earendil-works/pi-agent-core/dist
+    rm -rf node_modules/@earendil-works/pi-ai/dist
+    cp -R ${piSourceBuild}/ai/dist node_modules/@earendil-works/pi-ai/dist
+    chmod -R u+w node_modules/@earendil-works/pi-ai/dist
     patch -p1 --fuzz=0 < ${../../../overlays/ai/patches/pi-system-prompt-no-docs.patch}
     substituteInPlace dist/core/system-prompt.js \
       --replace-fail '//# sourceMappingURL=system-prompt.js.map' ""
