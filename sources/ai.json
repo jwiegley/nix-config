@@ -984,6 +984,37 @@
         "kind": "flake-input"
       }
     },
+    "pi-classic-core-baseline": {
+      "artifacts": {
+        "piAiRelease": {
+          "args": {
+            "hash": "sha256-vz5+zzzXMrIgO43oluJwA2kTGLmyKjyda06oYryOfAM=",
+            "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.1.tgz"
+          },
+          "fetcher": "fetchzip",
+          "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.1.tgz"
+        }
+      },
+      "hashes": {
+        "npmDepsHash": "sha256-GP8ksj6HJcK0id6VDr1c/WoHDwK1T50qJnYfj94ljDs="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-Z92ZxL2WdbRl7H1mHbN2sWfH/9ndpqLtBxEv5+A5fbg=",
+          "owner": "earendil-works",
+          "repo": "pi",
+          "rev": "2e4d23959485279aa2da1a45103de2ea22d46395"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/earendil-works/pi"
+      },
+      "update": {
+        "kind": "explicit-rev",
+        "policy": "manual",
+        "reason": "Freeze the exact unmodified upstream source and package used only by the B1 classic-core baseline"
+      },
+      "version": "0.84.1"
+    },
     "pi-coding-agent-source-build": {
       "artifacts": {
         "piAiRelease": {

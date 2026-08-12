@@ -2701,14 +2701,15 @@ No certified extension invokes a legacy materializer or eager legacy hook payloa
 ]
 #+end_src
 
-* TODO [#A] Build exact-upstream Pi fixtures and a classic-core memory baseline    :memory:pi:upstream:
+* DOING [#A] Build exact-upstream Pi fixtures and a classic-core memory baseline    :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.2
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 23:58]
+:MODIFIED: [2026-08-12 Wed 02:22]
+:ASSIGNEE: johnw
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2743,6 +2744,40 @@ READY after C1 closed on signed GOOD commit 328cff3f with a fresh history-isolat
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 39,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Claiming B1 after C1 closure. The branch is linearly based on current origin/main with only the signed local nix-84t cleanup commit ahead. No B1 fixture, control, diagnostic, or candidate process has run. Next: read the frozen contract and inspect the existing exact upstream/package authorities before freezing any identity or generating fixtures.",
+    "created_at": "2026-08-12T08:43:18Z"
+  },
+  {
+    "id": 40,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Fresh upstream authority observation: `git ls-remote https://github.com/earendil-works/pi.git HEAD refs/heads/main` returned the same exact commit for HEAD and main, `2e4d23959485279aa2da1a45103de2ea22d46395`, on 2026-08-12. This supersedes the dated C1 metadata only for B1 selection; source hash, package identity, source-to-runtime crosswalk, and causal structure inspection are not yet frozen. No fixture, control, diagnostic, or candidate process has run. Next: fetch this exact revision through the source-catalog mechanism, inspect its coding-agent implementation/build, and record the complete source/package freeze before generating fixtures.",
+    "created_at": "2026-08-12T08:49:27Z"
+  },
+  {
+    "id": 41,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "B1 exact-upstream source/package freeze is COMPLETE before fixture generation or behavioral attribution.\n\nAuthority and inputs:\n- Fresh upstream HEAD/main selection: 2e4d23959485279aa2da1a45103de2ea22d46395.\n- Source SRI: sha256-Z92ZxL2WdbRl7H1mHbN2sWfH/9ndpqLtBxEv5+A5fbg=; coding-agent version 0.84.1.\n- Canonical pi-classic-core-baseline catalog-record SHA-256: 38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed.\n- npmDepsHash: sha256-GP8ksj6HJcK0id6VDr1c/WoHDwK1T50qJnYfj94ljDs=.\n- Exact pi-ai provider-data artifact: https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.1.tgz, sha256-vz5+zzzXMrIgO43oluJwA2kTGLmyKjyda06oYryOfAM=.\n- Pinned build nixpkgs: 70ce234312134a463ba7728e94da2486a1d237ac, sha256-X44cn5rzytELc3NNoQsh0aLkjWA/QzPfc6HPQmsG3sU=.\n- Downstream patches and extension manifest are both empty.\n\nImmutable build identity:\n- Derivation /nix/store/ix2f913k8c926y5ib68003fjrcgp0qyr-pi-classic-core-source-0.84.1.drv.\n- Output /nix/store/98ldilyr7g34lg78nvn5470zxaqih3zy-pi-classic-core-source-0.84.1.\n- Output NAR SHA-256 sha256-jeZIFwg+NqhCn3spHAQJ9SfV24+UK5mMnZdbAi6Gfqs=; NAR size 258289352 bytes.\n- Build-expression SHA-256 2a8a0fbea9dd133cbeab66dcb39250f3e587609b467160ab442e3c02f4f6abef.\n- Frozen SessionManager source SHA-256 9f00ce7d51fa8bb7e3dbc82a83bd6b28c5922e474a5cd86282a746bf24116fdb; compiled JS 330d2981053679418571efe6ca3a4b02cf3e5af2e94efd40476d3535f74094ac; source map 2da5cd86477902ff2bf740fd3f6f205fd93ccec9d4e620380dd18d4aee12cf90. The source map embeds a byte-identical SessionManager source.\n- Upstream coding-agent package.json SHA-256 f9aaa275eac3292508bd9a1325d705a41c2d24c9a34da2b690e400d5a761a985; package-lock SHA-256 01bb5df57ed0de4f308ed1b88b4536e43a0b61ce82b0eff3fcb1b922176c3c4c.\n- Exact runtime /nix/store/xr117l8hx39m623qlprxb7rdsjr8d69j-nodejs-slim-24.18.0/bin/node, v24.18.0, executable SHA-256 31013bc69975ceb444eec948149f775b2c864e230990f1e4fc0ee851254d1d72.\n- Empty-extension manifest SHA-256 aab8bacf6057ed5a8abdfa527b5c62e80b68faa707d91bbac705fd922b4fa485.\n\nCausal source evidence in the frozen source:\n- fileEntries owner 862; byId owner 863; complete file load 898; index after load 921; index over all fileEntries 963; byId population 965; append retention 1045; complete getEntries projection 1302; context from getEntries/byId 1285.\nThis proves the selected classic core eagerly retains complete loaded history in fileEntries and byId.\n\nVerification:\n- Darwin behavioral source check built successfully.\n- Portable all-system no-build evaluation passed after Darwin-only manifest alignment.\n- Source-catalog/update tests passed 92/92.\n- No-history read-only review found the initial byId causal gap; the strengthened crosswalk and fresh output passed re-review with no remaining finding.\n\nNo B1 fixture, control, diagnostic, or candidate process has run. Next: build the four deterministic logically nested fixtures and their per-fixture semantic oracles from this exact frozen package, then run only the fresh 16 MiB/1 GiB empty-extension classic diagnostic.",
+    "created_at": "2026-08-12T09:10:56Z"
+  },
+  {
+    "id": 42,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Pre-commit correction to the B1 source freeze: Statix required the Nix identity field to use inherit syntax. The evaluated derivation, output path, NAR hash/size, emitted identity and crosswalk, and every source/runtime hash remained byte-identical; the only changed frozen value is the repository build-expression SHA-256, now 8b0ded011329122e2dfed23720b8e3d5e55e647dc5608f5fb3eddc4a9c52052b. This supersedes only the earlier 2a8a0fbe expression-text hash. The failed commit attempt ran no B1 fixture, control, diagnostic, or candidate process.",
+    "created_at": "2026-08-12T09:22:15Z"
   }
 ]
 #+end_src

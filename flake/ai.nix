@@ -507,6 +507,7 @@ in
     }
     // lib.optionalAttrs (pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64) {
       llm-mlx-plugin = pkgs.python3Packages.llm-mlx.passthru.tests.llm-plugin;
+      pi-classic-core-source = pkgs.callPackage ../test/ai/pi-classic-core-source.nix { };
     }
   );
 
