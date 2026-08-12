@@ -39,8 +39,9 @@ non-header session entry in `byId` after compaction selects a small context. In
 upstream 0.84.1, a fixed tail and workload used about 103 MB raw RSS at 16 MiB
 history and 1.28 GB at 1 GiB. This is descriptive, not a threshold.
 
-### How?
+### How? (optional)
 
-Begin with one small PR for bounded reads, stable cursors, cancellation, and
-oversized-record results. Keep import, adoption, migration, and strict cleanup
-separate. A downstream prototype supplies tests, not an upstream patch.
+I intend to implement the first approved step as one small PR for bounded reads,
+stable cursors, cancellation, and oversized-record results. Keep import,
+adoption, migration, and strict cleanup separate. A downstream prototype
+supplies tests, not an upstream patch.
