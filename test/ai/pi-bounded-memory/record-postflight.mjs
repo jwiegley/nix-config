@@ -368,3 +368,5 @@ writeJsonAtomic(args.output, {
   limits,
   tool: { path: resolve(process.argv[1]), ...selfIdentity },
 });
+
+if (!all) process.exitCode = 1;

@@ -1,5 +1,6 @@
 {
   classicPackage,
+  coreutils,
   nodejs_24,
   runCommand,
 }:
@@ -47,6 +48,35 @@ runCommand "pi-classic-core-fixtures-v1"
       --empty-extensions "$out/identity/empty-extensions.json" \
       --manifest "$out/fixtures/manifest.json" \
       --oracles "$out/fixtures/expected-oracles.json"
+
+    invalid_fixture="$TMPDIR/pi-b1-invalid-postflight.jsonl"
+    invalid_postflight="$TMPDIR/pi-b1-invalid-postflight.json"
+    ${coreutils}/bin/cp --reflink=never \
+      "$out/fixtures/pi-b1-16m.jsonl" "$invalid_fixture"
+    chmod 0600 "$invalid_fixture"
+    if node "$out/tools/record-postflight.mjs" \
+      --fixture "$invalid_fixture" \
+      --result "$TMPDIR/missing-result.json" \
+      --run-result "$TMPDIR/missing-run-result.json" \
+      --oracles "$out/fixtures/expected-oracles.json" \
+      --endpoint 16m \
+      --copy-executable ${coreutils}/bin/cp \
+      --output "$invalid_postflight"; then
+      echo "failed postflight unexpectedly exited successfully" >&2
+      exit 1
+    fi
+    node --input-type=module --eval '
+      import { readFileSync } from "node:fs";
+      const record = JSON.parse(readFileSync(process.argv[1], "utf8"));
+      if (
+        record.success !== false ||
+        record.checks?.all !== false ||
+        record.checks?.resultPresent !== false ||
+        record.checks?.runResultPresent !== false
+      ) {
+        throw new Error("failed postflight evidence was not preserved");
+      }
+    ' "$invalid_postflight"
 
     node "$out/tools/seal-bundle.mjs" --root "$out"
   ''

@@ -333,12 +333,12 @@ export function edgeOf(entry) {
   return { id: entry.id, parentId: entry.parentId, type: entry.type };
 }
 
-export function streamJsonLines(path, limits, onLine) {
+export function streamJsonLines(path, limits, onLine, createFold = () => createHash("sha256")) {
   check(Number.isSafeInteger(limits.chunkBytes) && limits.chunkBytes > 0, "invalid stream chunk limit");
   check(Number.isSafeInteger(limits.maxLineBytes) && limits.maxLineBytes > 0, "invalid line limit");
   const { fd, info } = openRegular(path);
   const buffer = Buffer.allocUnsafe(limits.chunkBytes);
-  const fileHash = createHash("sha256");
+  const fileHash = createFold("stream-file-sha256");
   let pending = null;
   let bytes = 0;
   let lines = 0;

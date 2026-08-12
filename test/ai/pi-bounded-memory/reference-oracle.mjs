@@ -180,6 +180,50 @@ check(crosswalk.runtime.version === process.version, "reference runtime version 
 check(crosswalk.runtime.executableSha256 === runtimeExecutable.sha256, "reference runtime executable differs from package build runtime");
 check(generation.runtime?.executableSha256 === runtimeExecutable.sha256, "generation runtime drift");
 
+function createRetainedFoldTracker(cap) {
+  check(Number.isSafeInteger(cap) && cap > 0, "invalid retained-fold cap");
+  let live = 0;
+  let maxObserved = 0;
+
+  const track = (hash, name) => {
+    live += 1;
+    maxObserved = Math.max(maxObserved, live);
+    check(live <= cap, `retained incremental fold cap exceeded by ${name}`);
+    let active = true;
+    const fold = {
+      update(value) {
+        check(active, `retained incremental fold already finalized: ${name}`);
+        hash.update(value);
+        return fold;
+      },
+      copy() {
+        check(active, `retained incremental fold already finalized: ${name}`);
+        return track(hash.copy(), `${name}:copy`);
+      },
+      digest(encoding) {
+        check(active, `retained incremental fold already finalized: ${name}`);
+        active = false;
+        try {
+          return hash.digest(encoding);
+        } finally {
+          live -= 1;
+        }
+      },
+    };
+    return fold;
+  };
+
+  return {
+    create(name) {
+      return track(createHash("sha256"), name);
+    },
+    finish() {
+      check(live === 0, "retained incremental folds remain live after reference import");
+      return { cap, maxObserved, liveAfterImport: live };
+    },
+  };
+}
+
 const fixtureDir = realpathSync(args.fixtures);
 const importLimits = spec.limits.referenceImport;
 const scaleResults = [];
@@ -222,10 +266,11 @@ for (const scale of spec.scales) {
   const expectedTail = tailForScale(spec, scale.bulkEntries);
   const expectedLines = scale.bulkEntries + spec.tail.length + 2;
   const typeCounts = {};
-  const fullEdgeHash = createHash("sha256");
-  const selectedEdgeHash = createHash("sha256");
-  const bulkPrefixHash = createHash("sha256");
-  const nestingPrefixHash = createHash("sha256");
+  const foldTracker = createRetainedFoldTracker(importLimits.foldsRetained);
+  const fullEdgeHash = foldTracker.create("full-edge-fold");
+  const selectedEdgeHash = foldTracker.create("selected-edge-fold");
+  const bulkPrefixHash = foldTracker.create("bulk-prefix-fold");
+  const nestingPrefixHash = foldTracker.create("nesting-prefix-fold");
   const prefixCheckpoints = {};
   const nestingCheckpoints = {};
   const pointChecks = [];
@@ -287,7 +332,7 @@ for (const scale of spec.scales) {
         pointChecks.push({ id: entry.id, type: entry.type, parentId: entry.parentId, sha256: structuredSha256(entry) });
       }
     }
-  });
+  }, (name) => foldTracker.create(name));
 
   check(streamed.lines === expectedLines, `line count drift for ${scale.name}`);
   check(maxConcurrentRecordRepresentations <= importLimits.maxConcurrentRecordRepresentations, "reference record-representation cap exceeded");
@@ -305,6 +350,13 @@ for (const scale of spec.scales) {
     pointChecks.length + invariantPointChecks.length <= spec.limits.diagnosticPreflight.maxPointEntriesRetained,
     "combined point-read set exceeds diagnostic cap",
   );
+  const fullEdgeFoldSha256 = fullEdgeHash.digest("hex");
+  const selectedPathEdgeFoldSha256 = selectedEdgeHash.digest("hex");
+  const finalBulkPrefixSha256 = bulkPrefixHash.digest("hex");
+  const finalNestingPrefixSha256 = nestingPrefixHash.digest("hex");
+  check(finalBulkPrefixSha256 === prefixCheckpoints[scale.name], `final bulk fold mismatch for ${scale.name}`);
+  check(finalNestingPrefixSha256 === nestingCheckpoints[scale.name], `final nesting fold mismatch for ${scale.name}`);
+  const retainedIncrementalFolds = foldTracker.finish();
 
   const beforeFileEntries = streamed.lines;
   const beforeById = nonHeaderEntries;
@@ -388,8 +440,8 @@ for (const scale of spec.scales) {
       byId: beforeById,
       nonHeaderEntries,
       typeCounts: beforeTypes,
-      fullEdgeFoldSha256: fullEdgeHash.digest("hex"),
-      selectedPathEdgeFoldSha256: selectedEdgeHash.digest("hex"),
+      fullEdgeFoldSha256,
+      selectedPathEdgeFoldSha256,
       activeContext: invariantBefore,
       activeContextSha256: invariantBeforeDigest,
       model: invariantBefore.model,
@@ -440,6 +492,7 @@ for (const scale of spec.scales) {
       maxScaleResultOracleGraphsLive: scaleResultOracleGraphAccounting.total,
       maxConcurrentRecordRepresentations,
       maxLogicalRecordBytesRetained,
+      retainedIncrementalFolds,
       diagnosticPointChecks: pointChecks.length + invariantPointChecks.length,
       entryAndPointDescriptorAccounting,
       scaleResultOracleGraphAccounting,
@@ -522,6 +575,11 @@ const manifest = {
       },
       maxConcurrentRecordRepresentationsObserved: Math.max(...scaleResults.map((result) => result.limitsObserved.maxConcurrentRecordRepresentations)),
       maxLogicalRecordBytesObserved: Math.max(...scaleResults.map((result) => result.limitsObserved.maxLogicalRecordBytesRetained)),
+      retainedIncrementalFolds: {
+        cap: importLimits.foldsRetained,
+        maxObserved: Math.max(...scaleResults.map((result) => result.limitsObserved.retainedIncrementalFolds.maxObserved)),
+        liveAfterEveryImport: scaleResults.every((result) => result.limitsObserved.retainedIncrementalFolds.liveAfterImport === 0),
+      },
     },
   },
   operations: { schema: operations.schema, sha256: operationsInput.sha256, rows: operations.rows },

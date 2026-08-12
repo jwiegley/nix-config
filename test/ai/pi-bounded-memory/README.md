@@ -157,7 +157,11 @@ LF-terminated checksum file without replacement.
   fixed-schema scale-result oracle graphs, including the current graph under
   construction. A parsed record and its independently expected record account
   for two concurrent logical representations and at most 65,536 serialized
-  bytes; this is a logical-record bound, not a JavaScript heap-size claim.
+  bytes; this is a logical-record bound, not a JavaScript heap-size claim. The
+  six retained incremental folds are the stream-file hash, four per-scale
+  folds, and at most one checkpoint copy; their creation, copying, finalization,
+  maximum, and return to zero are tracked. One-shot helper hashes are outside
+  this incremental-retention metric.
 - Diagnostic preflight reads at most 4,096 fixture bytes and retains at most 16
   distinct fixed point IDs. It performs no full-fixture identity pass inside
   the RSS child.
