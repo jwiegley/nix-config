@@ -1788,7 +1788,7 @@ Superseding Pi guidance, 2026-08-11:
 :LABELS: ["architecture","memory","pi","pi-bounded-memory","upstream","wiggum"]
 :ISSUE_TYPE: epic
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 23:50]
+:MODIFIED: [2026-08-11 Tue 23:58]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1801,7 +1801,7 @@ Programme E0. Complete the existing Pi SessionRepo and SessionTree direction so,
 Every issue in the frozen pi-bounded-memory roster is closed, explicitly deferred, or has an accepted non-goal. For the actual coding-agent path and certified managed consumers, independent review closes a capability-consumer and history-dataflow inventory across roots, synchronous and suspended transient values, exposed dependency buffers, and declared child processes; every normal ingress is bounded before allocation or hydration. Small merge-blocking boundary tests, a four-scale deterministic qualification including an online append and compaction staircase, lifecycle cleanup, and the exact packaged paired-endpoint RSS integration check pass. Exact durable history, branch, fork, export, explicit legacy compatibility, and cold-work reporting remain intact. Product-scale downstream Pi patches are gone, and no result is presented as a formal proof about opaque runtimes, allocators, arbitrary JavaScript, or third-party extensions.
 
 ** Notes
-Durable continuation, 2026-08-11 PDT. Invariant: for fixed active context, declared budgets, concurrency, and reviewed topology, every source-reviewable Pi-controlled root or transient value on the normal history dataflow has a bound independent of total persisted bytes and entries. Bounded SessionRepo and SessionTree ingress plus the closed capability-consumer and history-dataflow inventory supplies the non-formal architectural argument; deterministic boundary, lifecycle, and online append tests validate each bound; a two-order packaged RSS check is only a material-omission backstop. Opaque runtime and allocator internals remain outside that source claim. The 13,831-line downstream v0.83 patch remains causal and regression evidence, not an import target. Four exact-byte read-only reviews of the current C1 corrective candidate are CLEAR. C1 remains IN_PROGRESS on signed GOOD base 2d36805b; B1 remains blocked and no measurement has begun. Obr is the sole continuation authority. Maintainer outreach, PR and fork publication, Nix cutover, activation, push, history rewrite, and fleet acceptance remain separately authorized. Next: focused checks, a signed corrective commit, and a fresh independent history-isolated fess; only CLEAR closes C1 or permits a B1 claim.
+Durable continuation, 2026-08-11 PDT. Invariant: for fixed active context, declared budgets, concurrency, and reviewed topology, every source-reviewable Pi-controlled root or transient value on the normal history dataflow has a bound independent of total persisted bytes and entries. Bounded SessionRepo and SessionTree ingress plus the closed capability-consumer and history-dataflow inventory supplies the non-formal architectural argument; deterministic boundary, lifecycle, and online append tests validate each bound; a two-order packaged RSS check is only a material-omission backstop. Opaque runtime and allocator internals remain outside that source claim. The 13,831-line downstream v0.83 patch remains causal and regression evidence, not an import target. C1 is closed on signed GOOD commit 328cff3f after four exact-byte reviews and a fresh fork_turns=none fess CLEAR. B1 is now the sole ready pi-bounded-memory issue; no B1 fixture, control, or candidate process has run. Obr is the sole continuation authority. Next: claim B1, freeze and inspect one exact unmodified upstream coding-agent identity, build the shared nested fixtures, and record the classic causal baseline. Maintainer outreach, PR and fork publication, Nix cutover, activation, push, history rewrite, and fleet acceptance remain separately authorized.
 
 ** Dependencies
 #+begin_src json
@@ -1845,16 +1845,18 @@ Durable continuation, 2026-08-11 PDT. Invariant: for fixed active context, decla
 ]
 #+end_src
 
-* DOING [#A] Freeze the Pi bounded-session memory contract and evidence ledger    :memory:pi:upstream:
+* DONE [#A] Freeze the Pi bounded-session memory contract and evidence ledger    :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.1
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 23:50]
+:MODIFIED: [2026-08-11 Tue 23:59]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
+:FINISHED: [2026-08-11 Tue 23:58]
+:CLOSE_REASON: Signed corrective commit 328cff3f45ece73b8af036a39ef904f905d4ab83 has a GOOD John Wiegley signature and changes only CURRENT-WORK, the bounded-memory contract, and PLAN. Four exact-byte pre-commit reviews were CLEAR; the no-build config/ai flake check and pre-commit suite passed; and a fresh fork_turns=none fess audit returned CLEAR with no findings. No fixture, control, B1, M1, or M2 measurement ran.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1866,7 +1868,7 @@ Programme C1. Freeze the bounded-session-memory claim and evidence boundary befo
 The artifact separates the non-formal history-dataflow argument, deterministic conformance, and finite packaged RSS evidence. It defines four logically nested fixtures whose bytes and entry counts both scale, per-fixture exact-output oracles, cross-size equality only for normalized live projections and matched retained occupancy gauges, capped transient peaks, fixed cleanup baselines, and per-fixture cumulative-work oracles. The closed inventory covers synchronous locals, parser and exposed native buffers, suspended state, caller results, certified consumers, relevant dependencies, and every declared process used during the full workload; per-entry IDs, offsets, hashes, and flags are history state. Small boundary fixtures are merge-blocking; M1 and M2 run full four-scale conformance plus an online append and compaction staircase. B1 is a minimal inspected exact-upstream causal baseline. M1 qualifies one realized wrapper and gallery package in fresh closed-world mutable namespaces and two order-balanced 16 MiB and 1 GiB pairs, using the median of every scheduled sample and an absolute raw-RSS difference at most 32 MiB. M2 reuses only a passing M1 under complete behavior-affecting identity equality and otherwise reruns the gate. Evidence uses ordinary Git, Nix, and artifact identities with simple pass, product-failure, and invalid outcomes and an explicit non-formal, non-adversarial boundary.
 
 ** Notes
-Corrective pre-commit checkpoint, 2026-08-11 PDT. Signed base 2d36805b has a GOOD signature; C1 remains IN_PROGRESS. The current correction narrows the architectural claim to source-reviewable Pi-controlled history dataflow, classifies occupancy, peak, cleanup, and cumulative-work gauges, adds full-workload topology and online append duration, and delegates exact oracle and platform mechanics to independently reviewed A2/H1 manifests. Four exact-byte read-only reviews of campaign semantics, controls, graph, and provenance are CLEAR. No fixture, control, B1, M1, or M2 measurement has run. Next: run focused repository checks, create and verify a signed corrective commit, then obtain a fresh history-isolated fess CLEAR. Only that CLEAR permits C1 closure or a B1 claim; push, activation, publication, and history rewrite remain separately authorized.
+Closed 2026-08-11 PDT on signed GOOD commit 328cff3f45ece73b8af036a39ef904f905d4ab83 after four exact-byte reviews, a green config/ai no-build check, two green pre-commit runs, and a fresh fork_turns=none fess CLEAR. No fixture, control, B1, M1, or M2 measurement ran. B1 is the sole ready issue. This issue records the frozen contract; future protocol changes follow change control. Push, activation, publication, delivery, and history rewrite remain separately authorized.
 
 ** Dependencies
 #+begin_src json
@@ -2004,6 +2006,13 @@ Corrective pre-commit checkpoint, 2026-08-11 PDT. Signed base 2d36805b has a GOO
     "author": "codex",
     "text": "Final pre-commit C1 checkpoint, 2026-08-11 PDT. Reviewed bytes before this status append: CURRENT-WORK SHA-256 93cfee3501d8cc0592cfe6f2cea3cf5c7182511172fa9d64e7a4db75c57fe5d9; contract SHA-256 ce2aec0e5ee4d845d897c14ec29375ac617a2ddf573ae182ccbab914cb62d140; PLAN SHA-256 3badaa6a276e1755b924fe871702b95a892bed1e52c812c07b01fe376a8fec82. Four independent read-only reviews covering campaign semantics, host/process controls, oracle and dependency graph, and provenance/authority returned CLEAR. The frozen design uses a closed history-dataflow inventory, separate deterministic and RSS processes, bounded evidence tooling, fresh closed-world endpoint state, two order-balanced RSS pairs, complete M1-to-M2 identity, and retained pass/product-failure/invalid bundles. No fixture, control, B1, M1, or M2 measurement has run. C1 remains IN_PROGRESS and B1 remains blocked. Next: focused checks, signed corrective commit, signature/path verification, and a fresh history-isolated fess audit; only a CLEAR verdict permits C1 closure or a B1 claim. No push, activation, publication, delivery, or history rewrite is authorized.",
     "created_at": "2026-08-12T06:50:42Z"
+  },
+  {
+    "id": 28,
+    "issue_id": "nix-tcz.37.1.1",
+    "author": "johnw",
+    "text": "Fresh history-isolated fess verdict for signed 328cff3f45ece73b8af036a39ef904f905d4ab83: CLEAR. The auditor verified exact object, parent, GOOD signature, three-path scope, contract semantics, issue graph, NOT-RUN state, Pi Sessions cancellation, obr-only continuation, and separate push, publication, activation, and history-rewrite authority. No parent-history sentinel was visible under the attested fork_turns=none dispatch. C1 closes; B1 becomes the next ready issue and remains NOT RUN.",
+    "created_at": "2026-08-12T06:58:33Z"
   }
 ]
 #+end_src
@@ -2589,7 +2598,7 @@ No certified extension invokes a legacy materializer or eager legacy hook payloa
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 23:42]
+:MODIFIED: [2026-08-11 Tue 23:58]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2602,7 +2611,7 @@ Programme B1. Pin and inspect one exact unmodified upstream coding-agent snapsho
 The exact upstream source and package identity is frozen and inspected before any behavioral attribution. Four logically nested 16 MiB, 64 MiB, 256 MiB, and 1 GiB fixtures preserve one normalized active projection while both persisted bytes and entry count increase by at least threefold per step; exact source hashes, bytes, entries, and per-fixture semantic oracles are recorded. Source evidence identifies whether the selected classic path retains complete-history structures such as fileEntries and byId. One fresh low and high diagnostic with an empty extension manifest records raw RSS, heap and external diagnostics, retained classic entry counts, semantic results, commands, and immutable bundle hashes. It is expected to expose history-sized retention; its RSS value cannot satisfy M1 or M2. B1 does not build speculative multiprocess containment or the final product harness.
 
 ** Notes
-Blocked by C1. Dated metadata observed upstream main 534bcbff, but C1 did not retain or inspect that tree. On unblock, freeze and inspect the exact subject before making a classic-path claim. The managed gallery, compatibility shim, wrapper, and user state are excluded. No B1 fixture or candidate process has run; record bundle references, hashes, verdict, and next action here rather than raw records.
+READY after C1 closed on signed GOOD commit 328cff3f with a fresh history-isolated fess CLEAR. Dated metadata observed upstream main 534bcbff, but C1 did not retain or inspect that tree. Before any behavioral attribution, freeze and inspect the exact upstream source and package identity selected for B1. The managed gallery, compatibility shim, wrapper, and user state remain excluded. No B1 fixture, control, diagnostic, or candidate process has run. Next: claim B1, record the exact source/package identity and source evidence, then build the four shared nested fixtures and run only the empty-extension classic low/high diagnostic. Retain immutable raw bundles outside obr and record their references, hashes, verdict, and next action here.
 
 ** Dependencies
 #+begin_src json
