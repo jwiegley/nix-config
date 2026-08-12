@@ -118,6 +118,30 @@ Clio currently serves neither catalog-advertised local route. Choose and impleme
 ]
 #+end_src
 
+* TODO [#D] Move the wiggum halt-request condition out of the ALL-must-hold exit list
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-84t
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-11 Tue 22:14]
+:MODIFIED: [2026-08-11 Tue 22:14]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Source commit: b46c837ce2590b56fc72441b0565b00cc33123a9. Severity: Low. Category: Documentation. File: config/ai/skills/wiggum/SKILL.md:28. Confidence: 85.
+
+PROBLEM: The exit-criteria list is prefixed 'Exit the loop ONLY when ALL of these hold', and the commit adds 'No request to stop or halt has been received from the user' as one of those conditions. Read literally, a received halt request makes the condition false, so the ONLY-when-ALL rule forbids exiting — the inverse of the intent. Once a halt arrives, no legitimate exit path exists under the rule as written.
+
+IMPACT: Wiggum drives long autonomous loops where literal instruction-following matters most. A literalist agent that receives 'please halt' mid-loop gets contradictory guidance and may rationalize continuing ('exit criteria are not met'), which is precisely the failure the line was added to prevent.
+
+SUGGESTED FIX: Remove the bullet from the ALL list and state it as an override above the list, e.g.: 'A user request to stop or halt overrides everything below: acknowledge it, record loop state in the handoff, and stop immediately.' The completion criteria then describe successful completion only.
+
+VERIFICATION: Re-read the exit section as a decision procedure with 'halt received' true: the procedure should terminate the loop immediately rather than block exit.
+
 * DONE [#C] Package and install pi-mem for Pi
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -254,21 +278,41 @@ Partner observation .443Z: plaintext stage/backup copies can survive SIGKILL or 
 ]
 #+end_src
 
-* DOING [#B] Restore Pi Sessions as a reviewed managed product
+* DONE [#B] Restore Pi Sessions as a reviewed managed product    :memory:pi:security:sessions:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-imo
-:LABELS: []
+:LABELS: ["memory","pi","pi-bounded-memory","security","sessions","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:07]
-:MODIFIED: [2026-08-11 Tue 21:07]
+:MODIFIED: [2026-08-11 Tue 22:12]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-11 Tue 21:53]
+:CLOSE_REASON: Cancelled by current user direction: Pi Sessions is no longer used. Preserve isolated review artifacts for audit only; do not integrate, fork, activate, or publish Pi Sessions.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Move Pi Sessions and its required Pi-core behavior into reviewed owner-controlled product commits, pin those immutable commits in the Pi gallery without a product-scale downstream patch, preserve private mutable-state ownership, verify the actual loader and bounded/concurrent runtime behavior, activate Hera, and publish the signed product and Nix commits.
+Restore Pi Sessions as a reviewed managed extension using the accepted bounded history, catalog, scan, lifecycle, and export capabilities. Product behavior must live in a reviewed immutable Pi Sessions product commit rather than a product-scale Nix patch. Preserve private host-local mutable state, same-provider and user-consent boundaries, safe defaults for autonomous features, loader behavior, and exact history semantics. U3 owns any authorized remote delivery; N1 owns the Nix pin.
+
+** Acceptance Criteria
+The reviewed Pi Sessions product tree uses no implicit full-history materializer, unsafe eager lifecycle payload, or unreviewed direct session-file bypass; cross-session index/search and handoff use approved bounded capabilities; security, permissions, provider-egress, lifecycle, compatibility, loader, gallery, and packaged-runtime tests pass; an immutable local commit identity suitable for authorized U3 publication exists. This issue neither pins Nix nor activates or publishes a host.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-imo",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:41.629384Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
 
 ** Comments
 #+begin_src json
@@ -279,6 +323,13 @@ Move Pi Sessions and its required Pi-core behavior into reviewed owner-controlle
     "author": "johnw",
     "text": "Claimed under the user request to commit, activate, and push Pi Mem and Pi Sessions.",
     "created_at": "2026-08-12T04:07:33Z"
+  },
+  {
+    "id": 7,
+    "issue_id": "nix-imo",
+    "author": "johnw",
+    "text": "Parked until its explicit bounded-core prerequisites are ready; remote delivery, Nix pinning, activation, and publication remain separate programme gates.",
+    "created_at": "2026-08-12T04:50:57Z"
   }
 ]
 #+end_src
@@ -1661,7 +1712,7 @@ config/ai/catalog.nix:150-216 stores the Claude-formatted string Read, Grep, Glo
 :LABELS: ["architecture","heavy-review","packaging"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 21:21]
+:MODIFIED: [2026-08-11 Tue 21:41]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1681,6 +1732,1756 @@ agent-deck-runtime-lifecycle.patch is about 45,582 lines and pi-bounded-session-
     "depends_on_id": "nix-tcz",
     "type": "parent-child",
     "created_at": "2026-08-10T20:25:12.432470Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37",
+    "depends_on_id": "nix-tcz.37.1.25",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:40.282714Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DOING [#A] Make Pi session history memory independent of persisted history    :architecture:memory:pi:upstream:wiggum:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1
+:LABELS: ["architecture","memory","pi","pi-bounded-memory","upstream","wiggum"]
+:ISSUE_TYPE: epic
+:CREATED:  [2026-08-11 Tue 21:40]
+:MODIFIED: [2026-08-11 Tue 22:15]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme E0. Complete Pi's existing SessionRepo and SessionTree direction so normal core residency and certified bounded-capability extensions have no term proportional to persisted history bytes or entries. Preserve exact durable history, branches, forks, resume, and export. Treat the downstream 0.83 patch as a prototype and test corpus, never as a third session architecture. External outreach, pull requests, fork publication, Nix cutover, activation, and publication remain separate authority gates.
+
+** Acceptance Criteria
+Every issue in the frozen roster labeled pi-bounded-memory is closed, deferred at an explicitly accepted future compatibility boundary, or has an explicit accepted non-goal; the actual coding-agent path, managed extensions, and packaged runtime pass semantic, lifecycle, deterministic-budget, and geometric-memory gates; product-scale downstream Pi patches are gone; the final contract names active-context, record, page, cache, view, queue, native, concurrency, and caller-owned terms and never claims arbitrary same-process extensions are capped.
+
+** Notes
+Durable continuation state, 2026-08-11 PDT
+
+Programme invariant:
+- Normal Pi core execution and certified managed extensions must not retain state proportional to persisted session bytes or entry count.
+- Preserve exact durable history, resume, branches, forks, lifecycle behavior, and export.
+- Complete the upstream-owned SessionRepo and planned SessionTree direction. Do not transplant the 13,831-line downstream v0.83 store as a third architecture.
+- The normative claim, budget ledger, measurement protocol, evidence boundary, and non-guarantees are in doc/PI-BOUNDED-MEMORY-CONTRACT.md.
+
+Programme graph and restart:
+- This epic plus its 30 issues are the authoritative work roster. Run obr ready --label pi-bounded-memory, obr dep cycles, and obr sync --status; claim exactly one ready issue and keep its notes current.
+- Do not create or maintain a parallel Wiggum handoff document. Record open, in-progress, done, exact next-step, attempt, evidence, and authority state in issue fields and notes so another agent can resume from obr alone.
+- Complete one logical issue at a time with proportionate tests, a signed commit including doc/PLAN.org, an independently isolated fess audit, and partner-observation cleanup.
+- Pi Sessions issue nix-imo is cancelled by current owner direction and is outside implementation, certification, delivery, activation, and publication.
+- C1 nix-tcz.37.1.1 is closed. Its PLAN export and signed commit are in progress; post-commit fess and partner cleanup remain mandatory.
+- The sole newly ready issue is nix-tcz.37.1.2. Do not claim it until the C1 commit audit and cleanup are complete.
+- No candidate memory measurement has begun.
+
+Architecture and evidence boundary:
+- Exact line-level inspection used catalog-pinned Pi v0.83 source 845d6ff1f6643aba440341cce877ce1c43ebbc39. It has SessionStorage and SessionRepo implementations, but no implemented SessionTree interface; classic coding-agent remains on SessionManager.
+- Dated GitHub metadata observed upstream main 534bcbffb7e1e7551d9ee3572dfeb278e203e493 on 2026-08-11. Do not bind v0.83 line evidence to that commit.
+- Signed downstream prototype e2c002e06cc4378b5a55cc1659e99caaab408dcb uses patch SHA-256 4bdb9524839764bf9639740be782e0719168d885332e5cf2b70da16c95f7494a. It is causal and regression evidence only.
+- The historical 1 GiB and eight-hour results are attributed supporting evidence, not the preregistered geometric verdict. Their raw sealed bundles are unavailable in the repository.
+- Repository baseline is signed b3263de3d700ab0650fb9cceadd6586fd1126f1a. The C1 commit contains only doc/CURRENT-WORK.md, doc/PLAN.org, and doc/PI-BOUNDED-MEMORY-CONTRACT.md.
+
+Authority boundaries:
+- Local planning, implementation, tests, and signed local checkpoints are authorized.
+- Posting upstream, creating or publishing a fork or pull request, pushing commits, rewriting shared history, changing production pins, activating any system or Home Manager generation, publishing packages, and declaring fleet acceptance each require separate explicit authority.
+- Continue independent local issues when an external authority gate is not the next necessary action.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1",
+    "depends_on_id": "nix-tcz.37",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:33.876055Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#A] Freeze the Pi bounded-session memory contract and evidence ledger    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.1
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-11 Tue 21:40]
+:MODIFIED: [2026-08-11 Tue 22:15]
+:ASSIGNEE: johnw
+:CREATED_BY: johnw
+:FINISHED: [2026-08-11 Tue 22:15]
+:CLOSE_REASON: Completed the preregistered Pi bounded-session memory contract and evidence ledger; exact-final targeted and portable evaluation gates pass, independent draft and obr-continuation reviews are clear, and candidate measurements remain explicitly not run.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme C1. Turn the research reports and issue #128 prototype into a durable contract/evidence artifact. Define compatibility and strict-bounded modes, covered operations, all live-work budget terms, explicit non-guarantees, the classic fileEntries/byId causal trace, inspected upstream revision, and provenance of the downstream 1 GiB and eight-hour results.
+
+** Acceptance Criteria
+The artifact states that persisted history size does not determine normal core residency; distinguishes retained, peak, cold rebuild, latency, disk, caller retention, and RSS; records current upstream and prototype identities; assigns an owner/enforcement boundary to every budget term; and contains no unqualified constant-process-memory claim. It preregisters 1x, 4x, 16x, and 64x fixtures, at least seven isolated repetitions per size, quiescence and GC rules, raw metrics, the Theil-Sen and bootstrap procedure, the 1 MiB/GiB slope limit, and the max(32 MiB, 5%) median-range limit before candidate measurement.
+
+** Notes
+Completion checkpoint, 2026-08-11 PDT
+
+Delivered artifact:
+- doc/PI-BOUNDED-MEMORY-CONTRACT.md is the sole new durable C1 artifact.
+- It defines compatibility and strict modes, covered operations, every live-work owner and enforcement boundary, explicit non-guarantees, the classic fileEntries and byId causal trace, dated upstream and signed prototype identities, and separate historical provenance.
+- The geometric protocol is frozen at four 16 MiB through 1 GiB source fixtures, nine valid isolated repetitions per size and lane, three preregistered reserves, three fresh child processes per cell, three collections, nine RSS samples, 486 cross-size slopes, 100000 stratified bootstrap replicates, U95 at most 1 MiB per GiB, and median range at most max of 32 MiB or 5 percent.
+- Candidate geometric result: NOT RUN. Historical adjusted-RSS results do not satisfy this gate.
+- Pi Sessions is not part of C1 or the programme target.
+- No parallel Wiggum handoff file is maintained; epic and task issue notes are the continuation authority.
+
+Verification:
+- Four read-only source, contract, metric, and upstream inventories were reconciled.
+- Independent draft review had five initial findings and three follow-up findings; all were corrected. V3 verdict is CLEAR.
+- Independent obr handoff-ownership audit is CLEAR.
+- Targeted contract assertions and git diff --check pass on the final working bytes.
+- Exact-final config/ai all-system no-build flake evaluation passes.
+- Full make test attempt 1 completed its Python full tier at 21 of 21 suites in 801 seconds and began Darwin checks. The tool session then closed without preserving the final command exit, so no full make test verdict is claimed. This docs-only unit relies on the exact-final targeted checks, portable evaluation, and commit hooks; later code-bearing issues retain their own governing build requirements.
+
+Closure:
+- The issue closes with the PLAN export and signed documentation commit that contains this event.
+- The post-commit independently isolated fess audit and partner-observation cleanup remain required by the epic workflow. A real finding reopens or corrects the work; no finding is waived.
+- After that audit, obr ready --label pi-bounded-memory selects the next issue.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.1",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:34.132437Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Page Pi session discovery, search, and grouped statistics    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.10
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-11 Tue 21:40]
+:MODIFIED: [2026-08-11 Tue 21:50]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme D1. Make repository listing, resume search, transcript search, and high-cardinality grouped statistics bounded by page items, bytes, cancellation, and concurrency. Avoid whole-catalog arrays, allMessagesText retention, and unbounded Promise.all fanout.
+
+** Acceptance Criteria
+Geometric session catalogs retain one result page plus fixed repository state; search streams bounded hit pages; oversized physical records fail before unrestricted allocation; high-cardinality groups cap live state while totals reconcile; replacement/close cancels scans and releases resources.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.10",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:36.938538Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.10",
+    "depends_on_id": "nix-tcz.37.1.5",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:17.942386Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.10",
+    "depends_on_id": "nix-tcz.37.1.7",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:18.339724Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.10",
+    "depends_on_id": "nix-tcz.37.1.8",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:50:58.339850Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Bound Pi terminal history and tree navigation    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.11
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-11 Tue 21:40]
+:MODIFIED: [2026-08-11 Tue 21:43]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme T1. Retain a byte-budgeted viewport plus bounded overscan. Page transcript, tree, fork, user-message, filtering, and search views through metadata/previews and hydrate selected entries by identity. Charge streaming messages and pending tool/bash/event output to explicit view and queue budgets.
+
+** Acceptance Criteria
+Many small entries, near-limit entries, one oversized entry, deep ancestry, and star fanout stay inside item/byte budgets or show an explicit limit result; selection, labels, filters, append behavior, and navigation remain correct across pages and session replacement; slow rendering cannot grow retained components without bound.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.11",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:37.257918Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.11",
+    "depends_on_id": "nix-tcz.37.1.5",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:18.729122Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.11",
+    "depends_on_id": "nix-tcz.37.1.7",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:19.157066Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.11",
+    "depends_on_id": "nix-tcz.37.1.8",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:19.556892Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Bound Pi RPC history frames, queues, and backpressure    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.12
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-11 Tue 21:40]
+:MODIFIED: [2026-08-11 Tue 21:43]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme R1. Add bounded entry/tree/fork inspection with expected session identity, opaque snapshot cursor, max items, max bytes, end/truncation reason, cancellation, and write backpressure. Preserve complete legacy commands only for the selected compatibility interval.
+
+** Acceptance Criteria
+Every successful frame is within its byte ceiling; stale session/cursor requests fail deterministically; a non-reading transport pauses or fails at queue/frame limits instead of accumulating; compatibility results remain exact while strict mode rejects legacy commands before hydration.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.12",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:37.663298Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.12",
+    "depends_on_id": "nix-tcz.37.1.5",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:19.955275Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.12",
+    "depends_on_id": "nix-tcz.37.1.7",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:20.340073Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.12",
+    "depends_on_id": "nix-tcz.37.1.8",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:20.759742Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Stream exact Pi fork, JSONL, and HTML exports    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.13
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-11 Tue 21:40]
+:MODIFIED: [2026-08-11 Tue 21:43]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme X1. Stream forks and JSONL/HTML export from a coherent source snapshot into an exclusive bounded sink with cancellation, backpressure, alias detection, no-clobber atomic publication, output permissions, and cleanup. Bound extension renderer chunks; do not materialize a complete transcript or output string on covered paths.
+
+** Acceptance Criteria
+Semantic round trips match for deep branches, high fanout, no-assistant branches, and geometric histories; source mutation, alias, short write, disk full, renderer failure, cancellation, and replacement publish no partial output and remove owned temporaries; retained state is one record/batch plus declared sink/spool budgets.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.13",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:38.065750Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.13",
+    "depends_on_id": "nix-tcz.37.1.5",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:21.171293Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.13",
+    "depends_on_id": "nix-tcz.37.1.7",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:21.553450Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.13",
+    "depends_on_id": "nix-tcz.37.1.8",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:22.009726Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#A] Expose bounded Pi extension history capabilities and strict mode    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.14
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-11 Tue 21:40]
+:MODIFIED: [2026-08-11 Tue 21:43]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme A1. Expose the smallest async read-only SessionTree-like capability for point, page, fact, active-context, and cancellable scan operations. Preserve exact legacy arrays only for the approved runway as explicitly unbounded calls; add strict rejection before hydration. Version unbounded lifecycle hook payloads instead of silently truncating them.
+
+** Acceptance Criteria
+An unchanged legacy fixture remains exact in compatibility mode; a no-history extension loads unchanged; strict mode rejects getEntries, getBranch, getTree, legacy eager hook payloads, and unbounded RPC before allocation; official examples use bounded semantics; capability docs state arbitrary same-process allocation and direct files remain outside the guarantee.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.14",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:38.462138Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.14",
+    "depends_on_id": "nix-tcz.37.1.5",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:22.398657Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.14",
+    "depends_on_id": "nix-tcz.37.1.7",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:22.778233Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.14",
+    "depends_on_id": "nix-tcz.37.1.8",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:23.210789Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Certify managed Pi extensions that require no history migration    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.15
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-11 Tue 21:41]
+:MODIFIED: [2026-08-11 Tue 21:43]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme W0. Audit hashline, smart-fetch, smart-web-search, lens, artifacts, insights, multi-pass, llama-swap-provider, omlx-provider, mem, trace, rtk-optimizer, cymbal-extension, dynamic-workflows, and cache-optimizer for legacy history calls, aliases, direct session-file reads, iterator accumulation, and per-entry caches. Do not edit packages merely to add a badge.
+
+** Acceptance Criteria
+All fifteen have evidence rows and load unchanged under strict history mode; no unexplained history-read path remains; extension-owned caches are bounded or explicitly outside the core-history claim; any contrary evidence reclassifies the extension rather than weakening the gate.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.15",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:38.847809Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.15",
+    "depends_on_id": "nix-tcz.37.1.14",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:23.580302Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Migrate managed point, active-context, and recent-window Pi extensions    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.16
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-11 Tue 21:41]
+:MODIFIED: [2026-08-11 Tue 21:53]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme W1. In their owning product repositories, migrate caveman, model-router, ponytail, loop, agent-browser, btw, copy-message, markdown-preview, openai-server-compaction, and quiet. Use point queries for latest state, Pi's active-context operation for provider input, and item-plus-byte bounded pages only where a recent horizon is a real product rule.
+
+** Acceptance Criteria
+Results match eager references across branches, compaction, invalid newest records, no-match, large records, navigation, replacement, and shutdown; every recent window documents its horizon and truncation; no exact historical behavior is replaced by an undocumented cap; each local release candidate passes strict mode before U3 publishes anything.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.16",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:39.102940Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.16",
+    "depends_on_id": "nix-tcz.37.1.14",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:23.970300Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Migrate managed exact-history Pi extensions without truncation    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.17
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-11 Tue 21:41]
+:MODIFIED: [2026-08-11 Tue 21:43]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme W2. In their owning product repositories, migrate Rewind and Blackhole. Rewind scans complete active ancestry with an O(1) best candidate. Blackhole uses bounded recent pages and indexed lookup, exact scans for recall/search/touched files, and file-backed paging for high-cardinality results.
+
+** Acceptance Criteria
+Rewind finds checkpoints older than prior windows; Blackhole exact recall, search, touched-file totals, ordinal/source/lineage semantics agree with eager oracles beyond former caps; retained memory is bounded by record/page/cache budgets; cancellation, error, re-entry, replacement, and shutdown clean all temporary and cursor state.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.17",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:39.333269Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.17",
+    "depends_on_id": "nix-tcz.37.1.13",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:24.779309Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.17",
+    "depends_on_id": "nix-tcz.37.1.14",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:24.371043Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Migrate managed cross-session and extension-owned Pi histories    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.18
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-11 Tue 21:41]
+:MODIFIED: [2026-08-11 Tue 21:43]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme W3. In owning repositories, migrate Goal-X, Subagents, and Usage. Goal-X bounds its own ledger while preserving exact reduction. Subagents uses named-session scans and an atomic streamed branch transform. Usage pages the session catalog, scans bounded concurrency, and spills global dedupe/aggregation to disk.
+
+** Acceptance Criteria
+All three preserve existing semantic fixtures, malformed/oversized handling, retries, permissions, atomicity, exact totals, dedupe, cold/warm parity, and cleanup; no current-session-only API is misrepresented as covering cross-session/direct-file behavior; any administrative exception is explicit and excludes unconditional certification.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.18",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:39.566504Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.18",
+    "depends_on_id": "nix-tcz.37.1.10",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:25.567999Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.18",
+    "depends_on_id": "nix-tcz.37.1.13",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:26.004691Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.18",
+    "depends_on_id": "nix-tcz.37.1.14",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:25.196131Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#A] Certify the complete managed Pi extension set in strict bounded mode    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.19
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-11 Tue 21:41]
+:MODIFIED: [2026-08-11 Tue 22:12]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme W4. Run the complete managed gallery and non-gallery Pi consumers with implicit full-history APIs denied before materialization. Exercise histories beyond all configured horizons and records above ordinary page budgets. Give every consumer one final disposition: unchanged certified, migrated certified, or explicit administrative/unsafe exception.
+
+** Acceptance Criteria
+No certified extension invokes a legacy materializer or eager legacy hook payload; point, page, active-context, and exact-scan semantics remain correct beyond old windows; every configured live budget has a deterministic counter or explicit ownership boundary; direct-file exceptions are visible; every maintained managed consumer has a disposition. Pi Sessions is excluded by the cancelled nix-imo issue and retained only as audit evidence. This certification does not make the final history-independence claim; M1 owns the geometric process-memory conclusion.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.19",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:39.788482Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.19",
+    "depends_on_id": "nix-tcz.37.1.15",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:28.149344Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.19",
+    "depends_on_id": "nix-tcz.37.1.16",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:28.555529Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.19",
+    "depends_on_id": "nix-tcz.37.1.17",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:28.969428Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.19",
+    "depends_on_id": "nix-tcz.37.1.18",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:29.425858Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#A] Build current-main Pi history fixtures and a geometric memory baseline    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.2
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-11 Tue 21:40]
+:MODIFIED: [2026-08-11 Tue 21:53]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme B1. Build deterministic semantic-history and geometric-size fixtures plus a fresh-child measurement runner against current upstream main before changing architecture. Measure the legacy classic manager and preserve commands, hashes, raw heap, external, array-buffer, RSS, descriptor, and timing evidence.
+
+** Acceptance Criteria
+The 1x, 4x, 16x, and 64x byte and entry fixtures hold active context, maximum record, branch shape, runtime, and operation fixed; each point runs at least seven times in fresh Node children with released results and the preregistered quiescence/GC protocol; raw metrics are retained without subtracting implementation memory; semantic digests cover resume, compaction context, branch, fork, tree, export, and replacement; fixture bytes, seeds, commands, and baseline outputs are immutable evidence inputs to M1.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.2",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:34.447195Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.2",
+    "depends_on_id": "nix-tcz.37.1.1",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:13.552652Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#A] Wire Pi semantic, budget, lifecycle, and resource acceptance gates    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.20
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-11 Tue 21:41]
+:MODIFIED: [2026-08-11 Tue 21:43]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme A2. Build one merge-blocking deterministic suite from shared semantic fixtures, hard item/byte/concurrency boundaries, unbounded-query sentinels, failure atomicity, strict compatibility, lifecycle barriers, slow-consumer backpressure, and resource cleanup. Use faux providers and in-memory transports; no network, ports, sleeps, or finalizer-dependent cleanup.
+
+** Acceptance Criteria
+The suite fails on any charged-budget breach, covered unbounded query, strict hydration, semantic drift, stale-generation leak, or owned resource surviving close; primary Node and required runtime compatibility lanes pass; fixture seeds/hashes and structured counters are retained; no assertion is weakened to meet a wall-time target.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.20",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:40.020195Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.20",
+    "depends_on_id": "nix-tcz.37.1.10",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:30.652398Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.20",
+    "depends_on_id": "nix-tcz.37.1.11",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:31.079811Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.20",
+    "depends_on_id": "nix-tcz.37.1.12",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:31.465787Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.20",
+    "depends_on_id": "nix-tcz.37.1.13",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:31.979898Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.20",
+    "depends_on_id": "nix-tcz.37.1.14",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:32.474448Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.20",
+    "depends_on_id": "nix-tcz.37.1.19",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:32.896954Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.20",
+    "depends_on_id": "nix-tcz.37.1.8",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:33.319654Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.20",
+    "depends_on_id": "nix-tcz.37.1.9",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:30.232047Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#A] Calibrate and enforce the geometric Pi memory gate    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.21
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-11 Tue 21:41]
+:MODIFIED: [2026-08-11 Tue 21:54]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme M1. Before observing the candidate, preregister 1x, 4x, 16x, and 64x persisted-history fixtures with identical active tails and workloads. Run at least seven isolated fresh-process repetitions per size over the actual terminal, managed-extension, and packaged-runtime paths. Record exact deterministic counters plus raw heap, external, arrayBuffers, RSS, maxRSS, timing, disk, and store metrics; separate warm retained state from cold rebuild peak and native caches.
+
+** Acceptance Criteria
+For equal live inputs, hard counters and logical resource counts are identical at every history scale. Warm retained RSS uses the median at each size and a Theil-Sen slope over all repetitions; the upper 95% bootstrap confidence bound must be at most 1 MiB per GiB of persisted history, and the largest-minus-smallest median must be at most max(32 MiB, 5% of the smallest median). No adjusted-RSS subtraction is allowed. Fixture bytes, repetition count, quiescence/GC protocol, estimator, random seed policy, and thresholds are frozen in C1/B1 before candidate measurements; any later change creates a new evidence-ledger revision. Cold rebuild peak, latency, and disk have separate reported envelopes and cannot be used to excuse a warm-retention failure.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.21",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:40.231545Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.21",
+    "depends_on_id": "nix-tcz.37.1.2",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:33.797445Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.21",
+    "depends_on_id": "nix-tcz.37.1.20",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:34.202710Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.21",
+    "depends_on_id": "nix-tcz.37.1.30",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:54:00.520379Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Run the optional long-session Pi memory and lifecycle soak    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.22
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: chore
+:CREATED:  [2026-08-11 Tue 21:41]
+:MODIFIED: [2026-08-11 Tue 21:43]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme S2. After the geometric gate is green, run the documented large-history append/compaction/replacement/navigation/export soak on the selected runtime and managed extension set. Preserve raw time series and identify allocator/platform/runtime/store versions.
+
+** Acceptance Criteria
+The latest result is recorded as passed, failed, or not run; a failure opens or updates a blocking defect with artifacts; no live resource count grows across steady quartiles; prompt/append latency with fixed active context has no unexplained history trend. This supplemental lane never substitutes for deterministic or geometric gates.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.22",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:40.472785Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.22",
+    "depends_on_id": "nix-tcz.37.1.21",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:34.568777Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Finalize the local Pi bounded-session contract, migration guide, and evidence    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.23
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: docs
+:CREATED:  [2026-08-11 Tue 21:41]
+:MODIFIED: [2026-08-11 Tue 21:53]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme D2. Finalize the normative memory equation, covered operations, compatibility and strict modes, configured budgets, typed failures, lifecycle/cursor semantics, extension cookbook, evidence commands, geometric calibration, optional-soak status, and activation requirements in the local product branches. Replace official examples that teach full-history arrays. U3 owns any authorized remote publication of these documents.
+
+** Acceptance Criteria
+Documentation says persisted history size no longer determines normal core residency, not that Pi always uses constant memory; legacy calls state that invocation forfeits the bound; recipes cover point, recent page, active context, exact reduction, file-backed high-cardinality results, cross-session scans, and extension-owned logs; passed, failed, and not-run evidence remain distinct.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.23",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:40.707974Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.23",
+    "depends_on_id": "nix-tcz.37.1.1",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:34.940517Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.23",
+    "depends_on_id": "nix-tcz.37.1.14",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:35.324154Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.23",
+    "depends_on_id": "nix-tcz.37.1.20",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:35.707Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.23",
+    "depends_on_id": "nix-tcz.37.1.21",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:36.094305Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Finalize Pi's strict-default full-history compatibility boundary    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.24
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-11 Tue 21:41]
+:MODIFIED: [2026-08-11 Tue 21:54]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme K1. Implement the compatibility decision approved by U2 before product delivery: remove getEntries, getBranch, and getTree from the default extension context or retain them only behind an explicit operator-enabled administrative capability. Remove eager legacy hook and RPC surfaces, temporary synchronous readers/adapters, and duplicate stores while retaining lossless streaming operations. This issue changes the local product candidate; U3 delivers it, N1 pins it, and P1-P3 qualify, activate, and publish the Nix integration.
+
+** Acceptance Criteria
+No official example or certified managed extension requires the legacy surface; default-context full materialization is absent or rejected before allocation and never truncated; release communication states the contract and same-process/direct-file limits; all transition-only code is deleted rather than becoming a permanent second architecture.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.24",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:40.942874Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.24",
+    "depends_on_id": "nix-tcz.37.1.19",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:36.508727Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.24",
+    "depends_on_id": "nix-tcz.37.1.23",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:36.921134Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.24",
+    "depends_on_id": "nix-tcz.37.1.4",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:54:00.099679Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#A] Pin reviewed Pi product commits and delete product-scale Nix patches    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.25
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-11 Tue 21:41]
+:MODIFIED: [2026-08-11 Tue 21:50]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme N1. After upstream or reviewed owner-controlled product commits implement the accepted behavior, pin immutable source identities in sources/ai.json and package them without the product-scale bounded-history/session-replacement patch stack. Migrate managed extensions to product releases, retain only genuinely Nix-specific compatibility, and preserve provider-timeout work as an independent concern.
+
+** Acceptance Criteria
+A path/type/bytes/symlink/executable crosswalk proves the new product trees contain every intended behavior and no incidental patch change; pi-bounded-session-history.patch, pi-session-replacement.patch, and superseded consumer patches/helpers are removed; source, gallery, compatibility, deterministic, geometric, config/ai, repository, and affected package builds pass; nix-tcz.37 records the Pi half complete.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.25",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:41.166703Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.25",
+    "depends_on_id": "nix-tcz.37.1.19",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:39.193305Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.25",
+    "depends_on_id": "nix-tcz.37.1.20",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:37.385268Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.25",
+    "depends_on_id": "nix-tcz.37.1.21",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:37.838870Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.25",
+    "depends_on_id": "nix-tcz.37.1.23",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:38.633761Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.25",
+    "depends_on_id": "nix-tcz.37.1.27",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:50:59.552655Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Qualify the bounded Pi package and rollback without activation    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.26
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: chore
+:CREATED:  [2026-08-11 Tue 21:41]
+:MODIFIED: [2026-08-11 Tue 22:12]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme P1. Build and qualify the exact Nix-packaged candidate against copied representative legacy state, import/export parity, rollback, and an isolated non-activated canary. Build the exact Hera nix-darwin system closure that P2 would activate and record its immutable store path, without switching a live system, publishing, or pushing.
+
+** Acceptance Criteria
+Copied legacy state retains its semantic digest and visible context; package builds and isolated canary budgets, lifecycle, latency, disk growth, replacement, quit, provider routing, and rollback pass; ./build system produces the exact Hera candidate closure and its store path, dependency/source identities, and derivation are recorded; the prior source and generation remain recoverable. No live activation, remote publication, or fleet claim occurs in this issue.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.26",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:41.400351Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.26",
+    "depends_on_id": "nix-tcz.37.1.25",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:39.852891Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#A] Deliver reviewed Pi bounded-memory changes to an authoritative product repository    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.27
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-11 Tue 21:50]
+:MODIFIED: [2026-08-11 Tue 22:12]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme U3. After maintainer approval and the local product work and acceptance gates, use separately authorized GitHub operations to deliver a reviewable commit or pull-request stack to the selected upstream or owner-controlled Pi repository. Address review, preserve commit provenance, and produce immutable fetchable product identities. This task publishes product source; it does not change Nix pins or activate a host. Pi Sessions is explicitly excluded by the cancelled nix-imo issue.
+
+** Acceptance Criteria
+The maintainer-approved destination and branch strategy are recorded; each review unit is small enough to explain independently; upstream-required checks and review pass; landed or owner-controlled commits are immutable and fetchable; exact links and source identities are recorded. Posting, branch publication, PR creation, merge, and release occur only with explicit authority for those actions. The delivered product contains the U2-approved strict-default compatibility boundary from K1.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.27",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:50:34.942326Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.27",
+    "depends_on_id": "nix-tcz.37.1.19",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:50:58.751477Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.27",
+    "depends_on_id": "nix-tcz.37.1.20",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:50:58.951715Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.27",
+    "depends_on_id": "nix-tcz.37.1.21",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:50:59.151693Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.27",
+    "depends_on_id": "nix-tcz.37.1.23",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:50:59.358607Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.27",
+    "depends_on_id": "nix-tcz.37.1.24",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:54:00.315051Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.27",
+    "depends_on_id": "nix-tcz.37.1.4",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:50:58.541614Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Activate and accept the bounded Pi generation on Hera    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.28
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: chore
+:CREATED:  [2026-08-11 Tue 21:50]
+:MODIFIED: [2026-08-11 Tue 21:50]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme P2. After the packaged candidate qualifies without activation, use separately granted activation authority to switch Hera to that exact generation and perform live runtime acceptance. Preserve the previous generation and mutable Pi state; do not publish or push as part of activation.
+
+** Acceptance Criteria
+The exact prebuilt generation is activated only after explicit authorization; startup, resume, long-history navigation, managed extensions, replacement, quit, provider routing, state ownership, latency, disk growth, and configured memory counters pass on Hera; rollback to the prior generation is proven or remains immediately available; activation evidence is reported separately from publication.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.28",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:50:35.662978Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.28",
+    "depends_on_id": "nix-tcz.37.1.26",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:50:59.984496Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Publish the accepted bounded Pi Nix revision    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.29
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: chore
+:CREATED:  [2026-08-11 Tue 21:50]
+:MODIFIED: [2026-08-11 Tue 22:12]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme P3. After live acceptance, use separately granted push/publication authority to publish the signed Nix checkpoint and any remaining release metadata. Product-source delivery is owned by U3; this task publishes the accepted Nix integration and closes the programme without rewriting shared history.
+
+** Acceptance Criteria
+All programme-required local commits are signed; the accepted source and Nix identities match the qualified and activated artifacts; authorized pushes succeed without force or hidden history rewrite; both authoritative Nix remotes, release references, and issue evidence point to the intended revisions; no uncommitted or unrelated work is included. Before closing, a frozen pi-bounded-memory roster check records every member other than E0/P3 as closed or with an explicit accepted disposition; optional soak S2 must be closed with evidence or explicitly accepted as not run, and cancelled Pi Sessions remains an audit-only non-goal.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.29",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:50:36.375040Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.29",
+    "depends_on_id": "nix-tcz.37.1.28",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:51:00.235208Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Prepare the human-authored Pi maintainer issue and RFC evidence packet    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.3
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: docs
+:CREATED:  [2026-08-11 Tue 21:40]
+:MODIFIED: [2026-08-11 Tue 21:43]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme U1. Prepare a one-screen issue and short heads-up that lead with the retained-history bug and existing v4 seam. Offer the large downstream patch only as evidence. Ask maintainers to choose the terminal adoption seam, durable backend, legacy import policy, runtime support, compatibility runway, lifecycle-hook policy, no-session scope, and guarantee wording. The final public text must be rewritten in John's own voice.
+
+** Acceptance Criteria
+A concise user-reviewable draft, clearly labeled AI-assisted supporting packet, causal trace, current-main benchmark evidence, explicit design questions, and staged PR outline exist locally. Nothing is posted and no GitHub issue, RFC, fork, branch, or PR is created without separate authority.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.3",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:34.723383Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.3",
+    "depends_on_id": "nix-tcz.37.1.1",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:14.038979Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.3",
+    "depends_on_id": "nix-tcz.37.1.2",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:14.636476Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#A] Build a reproducible local-source Pi qualification package    :memory:packaging:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.30
+:LABELS: ["memory","packaging","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-11 Tue 21:53]
+:MODIFIED: [2026-08-11 Tue 22:12]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme H1. After the maintainer selects the authoritative repositories and architecture, provide a development-only packaging entry that builds exact local Pi and managed-extension Git trees through the same Node runtime, immutable gallery, wrappers, and behavioral checks as production. It must record content and commit identities without committing local paths, mutating source locks, or pretending the candidate is remotely fetchable. N1 remains the sole production pin owner.
+
+** Acceptance Criteria
+Two clean checkouts at the same commits produce the same package tree and test inputs; dirty or identity-mismatched trees fail closed; the build uses production runtime and gallery composition; local overrides are command-scoped and absent from generated or committed configuration; exact source commits, tree hashes, package output, commands, and evidence are recorded. The harness supports pre-delivery core, maintained strict-gallery, deterministic, and geometric runtime tests; Pi Sessions is audit-only and excluded. The harness is either retained as an explicit developer tool or deleted by N1.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.30",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:53:49.361895Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.30",
+    "depends_on_id": "nix-tcz.37.1.4",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:53:49.490043Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#A] Obtain Pi maintainer approval and select the bounded-session architecture    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.4
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: question
+:CREATED:  [2026-08-11 Tue 21:40]
+:MODIFIED: [2026-08-11 Tue 21:53]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme U2. Follow Pi's contribution gate and obtain maintainer direction before implementation. Record whether coding-agent adopts AgentHarness directly or a temporary repository adapter; SQLite-canonical versus indexed-JSONL storage; v1-v3 preservation; Node and Bun requirements; count/byte/cursor/scan semantics; lifecycle hook and RPC policy; no-session behavior; the exact public claim; the compatibility duration; and whether the strict default removes legacy materializers or retains them only behind an explicit operator-enabled administrative capability.
+
+** Acceptance Criteria
+A maintainer lgtm authorizes the first PR and an authoritative issue/RFC answers every blocking decision. Unresolved first-order decisions keep dependent implementation blocked; silence, auto-close, or downstream preference is not treated as approval.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.4",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:35.029391Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.4",
+    "depends_on_id": "nix-tcz.37.1.3",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:15.013742Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#A] Make SessionTree bounded reads enforceable    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.5
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-11 Tue 21:40]
+:MODIFIED: [2026-08-11 Tue 21:43]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme Q1. Extend the accepted v4 SessionTree and SessionStorage vocabulary only where needed: budgeted point lookup, item-and-byte bounded entry/tree/children pages, cancellable exact scans, stable ordering, session/generation-bound cursors, append snapshot semantics, and explicit oversized-record results. Keep bulk administration separate from normal readers.
+
+** Acceptance Criteria
+All supported storage backends share conformance for ordering, branch bounds, limits, byte charging, cancellation, cursor invalidation, and oversized entries; no database cursor or lease crosses extension-controlled await; no downstream getEntriesPage-style parallel dialect is introduced; unbounded collection queries are rejected on bounded paths.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.5",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:35.346018Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.5",
+    "depends_on_id": "nix-tcz.37.1.4",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:15.375401Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#A] Implement the selected bounded SessionRepo backend and legacy import    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.6
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-11 Tue 21:40]
+:MODIFIED: [2026-08-11 Tue 21:43]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme S1. Implement exactly the maintainer-selected backend behind SessionRepo. Stream v1-v3 normalization/import, preserve topology and opaque data, use one canonical store, and define atomic publication, repair, torn-tail/corruption behavior, locking, cache ownership, disposal, and rollback. Do not transplant the private coding-agent store or dual-write authorities.
+
+** Acceptance Criteria
+Legacy semantic digests match for topology, leaf, compaction tail, custom records, labels, names, timestamps, usage, and export; normal open performs bounded work; cold import/rebuild retains only configured scanner, record, cache, and connection state; failures preserve the source and clean resources; required Node/Bun lanes pass.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.6",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:35.612298Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.6",
+    "depends_on_id": "nix-tcz.37.1.5",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:15.777020Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#A] Move classic coding-agent execution onto SessionRepo    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.7
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-11 Tue 21:40]
+:MODIFIED: [2026-08-11 Tue 21:43]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme C2. Route create, open, resume, fork, append, branch movement, compaction, active provider context, facts, labels, usage, and close through the accepted repository. Remove eager transcript retention from normal execution. Keep rollback possible without two live write authorities.
+
+** Acceptance Criteria
+The real terminal path uses SessionRepo; a recording backend fails any unlimited/root-to-leaf query during open, append, prompt, retry, or recovery; provider-visible context and all legacy semantic fixtures agree; no normal-path structure retains all entries; append/context work with fixed active context does not grow with persisted history.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.7",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:35.966375Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.7",
+    "depends_on_id": "nix-tcz.37.1.6",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:16.203608Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#A] Make Pi session replacement and repository ownership generation-safe    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.8
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-11 Tue 21:40]
+:MODIFIED: [2026-08-11 Tue 21:43]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme L1. Give the runtime host explicit repository ownership. Long operations capture session identity, generation/snapshot, and cancellation or a lease. Replacement stops new work, aborts and drains old work, detaches consumers, closes old resources, then publishes and binds the new session.
+
+** Acceptance Criteria
+New, resume, fork, import, reload, failed construction, repeated close, quit, delayed UI, export, scan, extension, and RPC barriers either finish against an owned snapshot or return typed stale/closed/abort results; raw closed-database errors fail; repositories, connections, statements, descriptors, leases, and spools return to baseline.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.8",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:36.293704Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.8",
+    "depends_on_id": "nix-tcz.37.1.7",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:16.656977Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Bound no-session and pre-publication Pi sessions    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.9
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-11 Tue 21:40]
+:MODIFIED: [2026-08-11 Tue 21:43]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme E1. Resolve SessionManager.inMemory, --no-session, and the pre-first-assistant publication window. Use a bounded ephemeral repository from the first record or record a maintainer-approved explicit exclusion with a hard admission boundary; never silently accumulate an unlimited transcript.
+
+** Acceptance Criteria
+A large pre-assistant/no-session fixture stays within declared budgets or fails before accumulation at the documented exclusion boundary; publication is atomic and permission-safe; failure leaves recoverable state and no leaked private temporary; the contract and docs name the behavior exactly.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.9",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T04:43:36.611414Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.9",
+    "depends_on_id": "nix-tcz.37.1.6",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:17.125162Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.9",
+    "depends_on_id": "nix-tcz.37.1.7",
+    "type": "blocks",
+    "created_at": "2026-08-12T04:41:17.531505Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""

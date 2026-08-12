@@ -8,6 +8,30 @@ The optional Pi soak procedure remains available in
 [`PI-EIGHT-HOUR-SOAK.md`](PI-EIGHT-HOUR-SOAK.md) for manual use when requested;
 another soak is not a pending acceptance gate.
 
+## Pi bounded-session memory programme
+
+Issue `nix-tcz.37.1` is the active programme for making Pi's normal retained
+session memory independent of persisted-history size. Its tasks cover the core
+query and storage contract, the classic coding-agent cutover, lifecycle and
+presentation paths, managed-extension migration, deterministic and geometric
+acceptance gates, documentation, and the eventual removal of product-scale Nix
+patches. `obr ready --label pi-bounded-memory` is the authoritative next-work
+query, and `obr show nix-tcz.37.1` is the authoritative programme checkpoint.
+
+`obr` is the sole continuation authority for this programme. Issue descriptions,
+notes, statuses, and dependencies hold the invariant, evidence checkpoint,
+authority boundaries, and exact next action; no parallel handoff document is
+maintained. Maintainer outreach, pull requests, creation or publication of an
+owner fork, the Nix cutover, activation, and push remain distinct issue gates.
+The existing large downstream patch is evidence and a prototype, not the
+architecture to upstream wholesale.
+
+The preregistered residency contract, live-work budget ledger, historical
+evidence boundary, and geometric measurement protocol are in
+[`PI-BOUNDED-MEMORY-CONTRACT.md`](PI-BOUNDED-MEMORY-CONTRACT.md). Candidate
+measurements may not begin until that contract is committed and its harness
+controls have been reviewed.
+
 ## 2026-08-09 whole-repository review: tracked closeout
 
 A seven-pass heavy review (94 findings, consolidated to 41 clusters) was
@@ -37,9 +61,11 @@ Owner-decided review work is tracked in [`PLAN.org`](PLAN.org); only these
 authority questions remain unresolved:
 
 1. `nix-tcz.37` and `nix-tcz.30`: authorize an exact-tree import branch in
-   `jwiegley/agent-deck`, and choose the authoritative Pi repository, before
-   replacing the product-scale patches. Agent Deck's runtime-binding cleanup
-   must then land in that product repository, not another Nix patch.
+   `jwiegley/agent-deck` before replacing Agent Deck's product-scale patches.
+   Its runtime-binding cleanup must land in that product repository, not
+   another Nix patch. Pi's corresponding architecture and repository decision
+   is now the explicit `nix-tcz.37.1.4` gate; local contract, fixture, and issue
+   preparation work precedes it without publishing anything.
 2. `nix-aln`: publication, paired consumer-lock adoption, and each managed
    host activation require separate authorization before the root-owned `obr`
    package can be accepted across the fleet.
