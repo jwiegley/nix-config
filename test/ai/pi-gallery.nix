@@ -295,7 +295,7 @@ runCommand "pi-gallery-check"
     [ -f ${roots.mem}/tests/private-file-worker.mjs ]
     (
       cd ${roots.mem}
-      NODE_NO_WARNINGS=1 ${nodejs_24}/bin/node \
+      ${nodejs_24}/bin/node \
         --experimental-strip-types --test tests/*.test.ts
     )
     pi_mem_runtime="$TMPDIR/pi-mem-runtime"

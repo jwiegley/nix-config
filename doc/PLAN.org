@@ -94,10 +94,10 @@ Partner observation .445Z: the malformed claude-opus-5[1m value came from a trun
 :LABELS: []
 :ISSUE_TYPE: question
 :CREATED:  [2026-08-10 Mon 21:24]
-:MODIFIED: [2026-08-12 Wed 09:34]
+:MODIFIED: [2026-08-12 Wed 09:57]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-12 Wed 09:34]
-:CLOSE_REASON: Declaratively withdrew unsupported fixed Clio routes while preserving discovery transport, Hera routing, and behavioral coverage; corrective fess findings resolved and verified.
+:FINISHED: [2026-08-12 Wed 09:57]
+:CLOSE_REASON: Post-commit audit findings corrected: broad Node warning suppression removed and the Pi Mem evidence label corrected to 181 tests; the exact unsuppressed Darwin gallery gate passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -143,6 +143,20 @@ Clio currently serves neither catalog-advertised local route. Choose and impleme
     "author": "johnw",
     "text": "Corrective implementation is complete. Catalog endpoint values now flow through the renderer-generated managed gallery wrapper into dynamic llama-swap/oMLX registration; Darwin Pi profiles fail validation without their discovery endpoint record; Clio retains discovery, Hermes, and 7,200-second transport while fixed Clio routes/router remain absent and Hera remains unchanged. A transport-only dynamic provider test proves the 100 ms idle timeout through the real composed fetch, and the aggregate Darwin gallery smoke proves exact catalog request paths; Linux retains the ordinary gallery path. The Pi Mem package gate now uses its deployed Node 24 runtime instead of the non-deployed Bun-in-Bun topology: all 181 assertions and existing timeouts remain unchanged; Darwin and aarch64-linux both passed 181/181. Final evidence: focused ai-catalog-transport, pi-gallery, host-behavior, and ai-mcp-registry builds passed; config/ai pi package passed; aarch64-linux pi-gallery passed; config/ai all-system no-build evaluation passed; make test ran 21/21 suites with zero failures; Hera and Clio non-activating system builds passed; pre-commit passed; three independent current-byte reviews returned CLEAR. The x86_64-linux pi-gallery build did not reach this check because unchanged pi-artifacts failed under QEMU with a V8 executable-memory SetPermissions/target-signal-5 crash; its evaluation passed. No activation, push, publication, model download, remote service mutation, or live endpoint inspection occurred.",
     "created_at": "2026-08-12T16:34:12Z"
+  },
+  {
+    "id": 79,
+    "issue_id": "nix-5yr",
+    "author": "johnw",
+    "text": "Reopened: Post-commit fess audit of 1c126d9e found broad Node warning suppression and an evidence label that called 181 test cases assertions. Reopening for the narrow test-command and obr-record correction; no production behavior, activation, publication, or push is in scope.",
+    "created_at": "2026-08-12T16:51:14Z"
+  },
+  {
+    "id": 80,
+    "issue_id": "nix-5yr",
+    "author": "johnw",
+    "text": "Correction to the earlier evidence comment: the Pi Mem result is 181 tests, not 181 assertions. NODE_NO_WARNINGS=1 has been removed, so Node warnings are no longer hidden; the exact aarch64-darwin pi-gallery derivation then passed with all 181 tests green. This follow-up changes no production behavior and performs no activation, push, publication, endpoint access, or service mutation.",
+    "created_at": "2026-08-12T16:57:20Z"
   }
 ]
 #+end_src
