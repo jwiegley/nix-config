@@ -3635,7 +3635,7 @@ All programme-required local commits are signed; the accepted source and Nix ide
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: docs
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-12 Wed 05:58]
+:MODIFIED: [2026-08-12 Wed 06:03]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
 :FINISHED: [2026-08-12 Wed 05:58]
@@ -3706,6 +3706,13 @@ A concise user-reviewable draft, clearly labeled AI-assisted supporting packet, 
     "author": "johnw",
     "text": "U1 local evidence packet is complete. Publication-shaped draft: doc/PI-BOUNDED-MEMORY-MAINTAINER-DRAFT.md, SHA-256 9253facb4667358f8def36087a2484191d4cbc503fccf6916cfde6fd66d6ee1a. Visibly AI-assisted packet: doc/PI-BOUNDED-MEMORY-AI-ASSISTED-SUPPORTING-PACKET.md, SHA-256 ef7c2ae55ce30df83b9a42f5db79da60d3fe03f94b6393fa9a9b4138920b0904. The draft carries the retained-history cause, dated exact-upstream 0.84.1 low/high evidence, all eight architecture decisions, and a conditional first-PR seam. The packet distinguishes the full frozen workspace SQLite package from the narrower B1 installed closure, records JSONL eagerness and shared-interface gaps, identifies all immutable B1 artifacts, and treats the downstream patch only as causal/regression evidence. Independent final current-byte review is CLEAR. Verification: relative Markdown links and git diff --check passed; nix fmt check reported no Markdown formatter; config/ai all-system flake evaluation passed; make test completed without failure; full lefthook pre-commit passed. No issue, RFC, fork, branch, PR, post, push, maintainer contact, activation, or measurement was performed.",
     "created_at": "2026-08-12T12:58:37Z"
+  },
+  {
+    "id": 70,
+    "issue_id": "nix-tcz.37.1.3",
+    "author": "johnw",
+    "text": "Evidence-classification correction for the preceding closeout record: the named flake evaluation, make test, and lefthook commands ran in the parent session and reported success, but their stdout/stderr were not retained as independently inspectable artifacts. Treat those entries as parent-run attestations, not reproduced evidence. The no-external-action statement is likewise a parent-session attestation; local Git, obr, and store state are consistent with it but cannot prove absence of every out-of-band action. The independent no-history fess audit of signed commit a8effa5c verified the exact three-path scope, signatures, frozen source/artifact hashes, B1 facts, v4/SQLite/JSONL claims, eight decisions, publication boundaries, synchronized U1/U2 state, and substantive justification for closing U1. U1 remains closed on that independently inspectable content evidence.",
+    "created_at": "2026-08-12T13:03:03Z"
   }
 ]
 #+end_src
