@@ -1302,7 +1302,7 @@ Rendered Hera authorized_keys contains from=192.168.1.2, restrict, port-forwardi
 :LABELS: []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-12 Wed 10:07]
-:MODIFIED: [2026-08-12 Wed 15:58]
+:MODIFIED: [2026-08-12 Wed 16:18]
 :CREATED_BY: johnw
 :FINISHED: [2026-08-12 Wed 15:58]
 :CLOSE_REASON: Packaged pi-usage-extension now declares guarded ESM type=module; the gallery asserts the manifest and fails on MODULE_TYPELESS_PACKAGE_JSON while replaying unrelated stderr. Focused package and aarch64-darwin pi-gallery builds passed, the exact gallery log contains no module-type warning, config/ai all-system no-build evaluation passed, make test passed all 21 Python suites plus seven behavioral checks, and ./build system produced /nix/store/961vg122vwblbsdx97cialfvabpspgj0-darwin-system-26.11.15abb8c. Independent read-only review returned CLEAR. No activation or publication was performed.
@@ -1327,6 +1327,19 @@ The packaged Pi Usage extension declares the correct Node module type; its bound
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 110,
+    "issue_id": "nix-nfi",
+    "author": "johnw",
+    "text": "Post-commit no-history fess audit found two LOW package-seam hardening gaps: jq accepted empty input without --exit-status, and the derivation selected target jq rather than buildPackages.jq during cross compilation. The follow-up uses buildPackages.jq --exit-status. The corrected package, aarch64-darwin pi-gallery runtime check, config/ai all-system no-build evaluation, and pre-commit gate all pass. Per Wiggum, this fess-only corrective commit is not re-audited. No activation or publication was performed.",
+    "created_at": "2026-08-12T23:18:04Z"
   }
 ]
 #+end_src

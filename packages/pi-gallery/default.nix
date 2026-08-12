@@ -668,7 +668,7 @@ let
     version = members.usage.version;
     install = root: ''
       tar -xzf ${releaseTarballs.pi-usage-extension} -C ${root} --strip-components=1
-      ${jq}/bin/jq '
+      ${buildPackages.jq}/bin/jq --exit-status '
         if has("type") then
           if .type == "module" then . else error("unexpected package module type") end
         else
