@@ -1,54 +1,46 @@
 # Pi retained session history grows live memory
 
 Local, unpublished maintainer draft. Posting or maintainer contact requires
-separate authority. The public wording must be reviewed and approved by John.
+separate authority. John must rewrite and review the exact final issue bytes in
+his own voice. Post only through the Contribution Proposal template with
+`pkg:agent` and `pkg:coding-agent` labels.
 
 ## Issue draft
 
 **Title:** Make retained session memory independent of persisted history
 
-I've been tracing why a resumed Pi session can retain memory in proportion to
-its complete JSONL history even after compaction leaves only a small active
-context. Classic coding-agent loads every entry into `fileEntries`, indexes the
-same objects in `byId`, and keeps appending to both. Selecting a small branch for
-the model does not release the complete session.
+### What do you want to change?
 
-I froze unmodified upstream 0.84.1 after observing the same commit at `HEAD` and
-`main` on August 12. With the same active tail and post-open workload, raw RSS
-rose from about 103 MB for a 16 MiB history to 1.28 GB for a 1 GiB history. This
-is descriptive evidence, not a proposed threshold.
+Make normal coding-agent execution retain bounded history through Pi's v4
+repository seam. Before code, please choose:
 
-Pi already has a promising seam in its v4 agent work: `SessionStorage`,
-`SessionRepo`, `SessionTree`, in-memory and JSONL repositories, and a separate
-SQLite repository package. The current JSONL implementation is also eager, and
-classic coding-agent does not use these repositories, but I don't think the
-answer is to add a third session architecture beside them. Before preparing
-code, could you help choose:
+1. direct AgentHarness adoption or a temporary `SessionRepo` adapter; canonical
+   SQLite or indexed JSONL;
+2. reversible v1-v3 import preserving topology and opaque data; required Node,
+   Bun, OS, and filesystem support;
+3. item and byte admission, session- and generation-bound cursors, stale and
+   oversized results, cancellable exact scans, and backpressure;
+4. replacement, close, cancellation, and lease ownership; bounded versioned
+   hook/RPC payloads or an explicitly unbounded administrative path;
+5. a bounded ephemeral repository for `--no-session` and pre-publication state,
+   or a hard admission boundary and explicit exclusion;
+6. compatibility duration and exit condition; eager materializer removal from
+   strict default or an operator-enabled administrative capability; and
+7. this claim: for fixed active context, configured budgets and concurrency,
+   and reviewed topology, source-reviewable Pi-owned live history on normal
+   paths does not grow with total persisted history bytes or entries.
+   Whole-history administration, opaque runtime and allocator state, and
+   uncertified extensions remain outside it.
 
-1. the terminal adoption seam;
-2. the durable backend and product default;
-3. legacy import policy;
-4. required runtimes and platforms;
-5. the compatibility runway for whole-history APIs;
-6. lifecycle ownership and bounded hook and RPC policy;
-7. bounded `--no-session` and pre-publication behavior; and
-8. exact guarantee wording for reviewed Pi-owned state.
+### Why?
 
-I have a large downstream prototype that breaks the retention chain and contains
-useful failure tests, but I don't propose upstreaming it wholesale. If the
-direction sounds right, I'd start with a small PR that makes byte- and
-item-bounded reads enforceable at the existing repository seam. Legacy import,
-coding-agent adoption, consumer migration, and removal of the eager path can
-remain separate review boundaries.
+Classic coding-agent retains every JSONL record in `fileEntries` and every
+non-header session entry in `byId` after compaction selects a small context. In
+upstream 0.84.1, a fixed tail and workload used about 103 MB raw RSS at 16 MiB
+history and 1.28 GB at 1 GiB. This is descriptive, not a threshold.
 
-I can also share an **AI-assisted supporting packet** containing the exact trace,
-immutable evidence, design tradeoffs, and a conditional PR outline. Sharing or
-publishing that packet requires separate authority.
+### How?
 
-## Heads-up draft
-
-I've isolated the retained-history memory issue in classic coding-agent and have
-an unpublished issue draft asking where the existing v4 `SessionRepo` work should
-meet the classic runtime. I also have exact upstream 0.84.1 evidence and a large
-downstream regression corpus, but I'd like maintainer direction before preparing
-code. Where would you prefer that design discussion to happen?
+Begin with one small PR for bounded reads, stable cursors, cancellation, and
+oversized-record results. Keep import, adoption, migration, and strict cleanup
+separate. A downstream prototype supplies tests, not an upstream patch.

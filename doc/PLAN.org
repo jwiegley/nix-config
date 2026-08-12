@@ -4524,14 +4524,14 @@ OPEN and blocked by M1 and P1. No M2 identity check or replay has run. M2 is the
 ]
 #+end_src
 
-* TODO [#A] Obtain Pi maintainer approval and select the bounded-session architecture    :memory:pi:upstream:
+* DOING [#A] Obtain Pi maintainer approval and select the bounded-session architecture    :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.4
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: question
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 22:38]
+:MODIFIED: [2026-08-12 Wed 16:39]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4563,6 +4563,19 @@ Contacting or posting to maintainers occurs only after explicit outreach authori
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 111,
+    "issue_id": "nix-tcz.37.1.4",
+    "author": "johnw",
+    "text": "Local proposal preparation advanced without outreach. The Contribution Proposal now names every U2 decision, uses the frozen template fields, requires John to rewrite/review the exact final bytes in his own voice, pins pkg:agent and pkg:coding-agent labels, and removes the unsupported heads-up route. Independent read-only review returned CLEAR on SHA-256 fb22854db1d3ca36fa6310de1179d494668c39879c0ec17a98a7bc7c9897ddf2. No network, maintainer contact, issue creation, branch/fork publication, PR, activation, or push occurred; U2 remains in progress pending owner rewrite/approval and explicit one-post outreach authority.",
+    "created_at": "2026-08-12T23:39:01Z"
   }
 ]
 #+end_src
