@@ -44,6 +44,7 @@ let
           (_final: _prev: { agent-deck = "caller-override"; })
         ];
       };
+      pinnedCodexPackage = inputs.llm-agents.packages.${system}.codex;
       pinnedPiPackage = inputs.pi-llm-agents.packages.${system}.pi;
       toolPkgs = import inputs.nixpkgs {
         inherit system;
@@ -123,6 +124,13 @@ let
       (lib.assertMsg (
         actual.packages.${system}.default.name == "ai-nix-toolchain"
       ) "portable aggregate name changed on ${system}")
+      (lib.assertMsg (
+        actual.packages.${system}.codex.drvPath
+        == (actual.lib.patchAgentPackage pkgs "codex" pinnedCodexPackage).drvPath
+      ) "portable Codex moved away from its canonical packaging substrate on ${system}")
+      (lib.assertMsg (builtins.any (package: package.drvPath == actual.packages.${system}.codex.drvPath) (
+        actual.lib.aiPackagesFor pkgs
+      )) "portable AI package policy lost the canonical Codex on ${system}")
       (lib.assertMsg (
         actual.packages.${system}.pi.drvPath == (actual.lib.patchAgentPackage pkgs "pi" pinnedPiPackage)
         .drvPath

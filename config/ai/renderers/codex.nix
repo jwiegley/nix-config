@@ -1,7 +1,7 @@
 {
   lib,
   pkgs,
-  llmAgents,
+  codexPackage,
 }:
 
 {
@@ -15,6 +15,8 @@
 assert builtins.isString homeDirectory;
 assert builtins.isString xdgConfigHome;
 assert profile.localModelRoutes == (localModelEndpoints != null);
+assert codexPackage != null;
+assert codexPackage ? unwrappedPackage;
 
 let
   json = pkgs.formats.json { };
@@ -23,10 +25,8 @@ let
 
   sortedNames = set: lib.sort builtins.lessThan (builtins.attrNames set);
 
-  system = pkgs.stdenv.hostPlatform.system;
-  codexSourceCatalog = "${
-    llmAgents.packages.${system}.codex.src
-  }/codex-rs/models-manager/models.json";
+  codexUnwrappedPackage = codexPackage.unwrappedPackage;
+  codexSourceCatalog = "${codexUnwrappedPackage.src}/codex-rs/models-manager/models.json";
   codexSourceCatalogData = builtins.fromJSON (builtins.readFile codexSourceCatalog);
   nativeSolModels = builtins.filter (
     model: model.slug == "gpt-5.6-sol"
@@ -37,8 +37,38 @@ let
   nativeSolAutoCompactTokenLimit =
     assert builtins.isInt nativeSol.context_window;
     builtins.div (nativeSol.context_window * 4) 5;
+  # Codex's public serializer renders the canonical instruction template into
+  # the legacy field expected by external catalogs. Merge only that field so
+  # source metadata unknown to this renderer remains exact.
   managedModelCatalog = pkgs.runCommand "codex-nix-managed-model-catalog.json" { } ''
-    cp ${codexSourceCatalog} "$out"
+    export HOME="$TMPDIR/home"
+    export CODEX_HOME="$TMPDIR/codex-home"
+    mkdir -p "$HOME" "$CODEX_HOME"
+
+    ${codexUnwrappedPackage}/bin/codex debug models --bundled > "$TMPDIR/bundled.json"
+    ${pkgs.jq}/bin/jq --slurp '
+      .[0] as $source
+      | .[1] as $bundled
+      | ($source.models // []) as $sourceModels
+      | ($bundled.models // []) as $bundledModels
+      | if ($source | type) != "object"
+          or ($bundled | type) != "object"
+          or ($sourceModels | length) == 0
+          or ($sourceModels | map(.slug)) != ($bundledModels | map(.slug))
+          or (all($bundledModels[];
+            (.base_instructions | type) == "string"
+            and (.base_instructions | length) > 0) | not)
+        then error("Codex bundled catalog does not match its source catalog")
+        else
+          $source
+          | .models = [
+              range(0; $sourceModels | length) as $index
+              | $sourceModels[$index] + {
+                  base_instructions: $bundledModels[$index].base_instructions
+                }
+            ]
+        end
+    ' ${codexSourceCatalog} "$TMPDIR/bundled.json" > "$out"
   '';
   inherit (import ./render-lib.nix { inherit lib; }) isTypedEnv renderMarkdownText;
 

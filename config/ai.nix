@@ -18,6 +18,7 @@ let
     else
       { };
   pairedPiPackage = pairedAiPackages.pi or null;
+  pairedCodexPackage = pairedAiPackages.codex or null;
   pairedPrimePackage = pairedAiPackages.prime-agent or null;
   pairedAgentResources = pairedAiPackages.agent-resources or null;
   pairedPiGallery = pairedAiPackages.pi-gallery or null;
@@ -43,7 +44,7 @@ let
     codex = import ./ai/renderers/codex.nix {
       inherit lib;
       pkgs = rendererPkgs;
-      llmAgents = moduleInputs.llm-agents;
+      codexPackage = pairedCodexPackage;
     };
     droid = import ./ai/renderers/droid.nix {
       inherit lib;
@@ -370,6 +371,10 @@ in
     {
       assertion = pairedPiPackage != null;
       message = "inputs.nix-config-ai.packages.${system}.pi is missing";
+    }
+    {
+      assertion = pairedCodexPackage != null;
+      message = "inputs.nix-config-ai.packages.${system}.codex is missing";
     }
     {
       assertion = !primeSelected || pairedPrimePackage != null;

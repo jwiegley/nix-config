@@ -130,6 +130,14 @@ let
     patchAgentPackage pkgs "pi" agentFeeds.pi.packages.${system}.pi
   );
 
+  canonicalCodexPackages = forAllSystems (
+    system:
+    let
+      pkgs = mkPkgs system;
+    in
+    patchAgentPackage pkgs "codex" llm-agents.packages.${system}.codex
+  );
+
   optAgent =
     pkgs: name:
     let
@@ -137,7 +145,12 @@ let
       feed = agentFeeds.${name} or llm-agents;
       agentPackages = feed.packages.${system} or { };
     in
-    if agentPackages ? ${name} then [ (patchAgentPackage pkgs name agentPackages.${name}) ] else [ ];
+    if name == "codex" then
+      [ canonicalCodexPackages.${system} ]
+    else if agentPackages ? ${name} then
+      [ (patchAgentPackage pkgs name agentPackages.${name}) ]
+    else
+      [ ];
 
   aiPackagePolicy = import ../packages/ai-package-policy.nix { inherit lib; };
 
@@ -383,6 +396,7 @@ in
     // {
       default = mkAiToolchain pkgs;
       inherit (toolPkgs) nix-scripts;
+      codex = canonicalCodexPackages.${system};
       pi = canonicalPiPackages.${system};
       inherit (pkgs)
         agent-resources

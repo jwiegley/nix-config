@@ -17,6 +17,10 @@ let
     pkgs = configured;
     isClientMachine = false;
   };
+  canonicalCodex = inputs.nix-config-ai.packages.${pkgs.stdenv.hostPlatform.system}.codex;
+  hasCanonicalCodex = builtins.any (
+    package: package.drvPath == canonicalCodex.drvPath
+  ) packages.package-list;
   hasManagedClaude = builtins.any (
     package:
     builtins.hasAttr "name" package
@@ -43,6 +47,8 @@ let
       builtins.all (package: builtins.hasAttr "name" package) unpatchable.package-list
     )).success;
 in
+assert configured.lib.assertMsg hasCanonicalCodex
+  "downstream nix-config-ai consumers lost the canonical Codex package";
 assert configured.lib.assertMsg hasManagedClaude
   "downstream nix-config-ai consumers lost the managed Claude wrapper";
 assert configured.lib.assertMsg degradesLoudly

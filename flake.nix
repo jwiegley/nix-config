@@ -379,7 +379,7 @@
               };
               ai-catalog-transport = pkgs.callPackage ./test/ai/catalog-transport.nix {
                 inherit src;
-                llmAgents = inputs.llm-agents;
+                codexPackage = inputs.nix-config-ai.packages.${system}.codex;
               };
               ai-mcp-registry = pkgs.callPackage ./test/ai/mcp-registry.nix {
                 inherit src;

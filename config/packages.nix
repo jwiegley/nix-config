@@ -35,6 +35,8 @@ let
 
   agentPackages = inputs.llm-agents.packages.${sys} or { };
   localAi = inputs.nix-config-ai or (if inputs ? git-ai then import ../flake/ai.nix inputs else null);
+  canonicalCodexPackage =
+    if localAi != null && localAi ? packages.${sys}.codex then localAi.packages.${sys}.codex else null;
   # config/ai.nix hard-asserts this same input; a consumer that installs agent
   # packages without the portable flake must fail loudly rather than silently
   # receive unwrapped upstream binaries.
@@ -45,7 +47,16 @@ let
     else
       localAi.lib.patchAgentPackage pkgs;
   optAgent =
-    name: if agentPackages ? ${name} then [ (patchAgentPackage name agentPackages.${name}) ] else [ ];
+    name:
+    if name == "codex" then
+      if canonicalCodexPackage != null then
+        [ canonicalCodexPackage ]
+      else
+        throw "config/packages.nix requires inputs.nix-config-ai.packages.${sys}.codex"
+    else if agentPackages ? ${name} then
+      [ (patchAgentPackage name agentPackages.${name}) ]
+    else
+      [ ];
 
   # Only these source-project inputs are user applications. Adding a flake
   # input must never change a profile unless its name is added here. Missing

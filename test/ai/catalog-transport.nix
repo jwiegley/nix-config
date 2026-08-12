@@ -1,6 +1,6 @@
 {
+  codexPackage,
   lib,
-  llmAgents,
   pkgs,
   src,
 }:
@@ -256,9 +256,15 @@ let
     renderer: profile: homeDirectory:
     renderSelectedFor renderer profile homeDirectory (selectWithHttp profile);
   codexRenderer = import "${src}/config/ai/renderers/codex.nix" {
-    inherit lib pkgs llmAgents;
+    inherit codexPackage lib pkgs;
   };
   codexRendered = renderFor codexRenderer codexProfile "/Users/test";
+  codexUnwrappedPackage = codexPackage.unwrappedPackage;
+  codexSourceCatalog = "${codexUnwrappedPackage.src}/codex-rs/models-manager/models.json";
+  codexManagedCatalog =
+    codexRendered.files."${codexProfile.root}/nix-managed-model-catalog.json".source;
+  codexManagedConfig = codexRendered.files."${codexProfile.root}/nix-managed.config.toml".source;
+  codexManagedFessSkill = codexRendered.files.".agents/skills/command-fess".source;
   codexAdversarialRendered = renderSelectedFor codexRenderer codexProfile "/Users/test" (
     selectAdversarialFor codexProfile
   );
@@ -1047,6 +1053,18 @@ pkgs.runCommand "ai-catalog-transport" { } ''
   assert isinstance(mcp["pal"]["command"], str)
   assert isinstance(mcp["pal"]["args"], list)
   PY
+
+  ${pkgs.python3}/bin/python3 ${./codex-catalog-smoke.py} ${
+    lib.escapeShellArgs [
+      "${codexUnwrappedPackage}/bin/codex"
+      (toString codexSourceCatalog)
+      (toString codexManagedCatalog)
+      (toString codexManagedConfig)
+      (toString codexManagedFessSkill)
+      "/Users/test/${codexProfile.root}/nix-managed-model-catalog.json"
+      catalog.items.commands.fess.metadata.description
+    ]
+  }
 
   grep -F '**Fallback smuggling**' ${codexRendered.files.${fessPaths.codex.agent}.source} >/dev/null
   grep -F '**Fallback smuggling**' ${

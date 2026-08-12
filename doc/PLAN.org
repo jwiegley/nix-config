@@ -255,6 +255,62 @@ Discovered while implementing nix-tcz.63. The hardened _make_writable walk close
 :ORIGINAL_SIZE: 0
 :END:
 
+* DONE [#A] Fix Nix-managed Codex model catalog schema mismatch    :ai:codex:nix:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-codex-model-catalog-q1u
+:LABELS: ["ai","codex","nix"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-12 Wed 00:16]
+:MODIFIED: [2026-08-12 Wed 01:02]
+:ASSIGNEE: johnw
+:CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 01:02]
+:CLOSE_REASON: Completed and activated: canonical Codex package now owns installation and catalog rendering; exact serializer supplies source-proven instructions; metadata, selection, and live skill refresh are verified.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Codex skill refresh fails because the Nix-managed model catalog rendered by config/ai/renderers/codex.nix lacks the base_instructions field required by the installed Codex executable. Determine and fix the underlying executable/source version mismatch declaratively. Derive the catalog from the same Codex package version as the executable; do not patch mutable Home Manager links or Nix store outputs and do not fabricate schema values.
+
+** Acceptance Criteria
+Rendered catalog is valid JSON; every model has the source-proven correctly typed base_instructions field; installed Codex loads the generated catalog and refreshes/lists skills; existing model metadata and selection behavior remain intact; focused Nix evaluations/checks/builds pass through direnv; Home Manager rebuild and live verification pass; the complete signed fix and PLAN state are pushed.
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 29,
+    "issue_id": "nix-codex-model-catalog-q1u",
+    "author": "johnw",
+    "text": "Checkpoint: installed wrapped Codex is 0.147.0 (unwrapped /nix/store/dhva54...); its exact llm-agents source is /nix/store/77asj... and the current managed catalog is byte-identical to raw codex-rs/models-manager/models.json (SHA-256 384ff2e0...). Raw JSON has canonical model_messages.instructions_template but omits top-level base_instructions on all 8 models. Codex 0.147.0 ModelsResponse serialization deliberately emits source-rendered base_instructions for legacy consumers; `codex debug models --bundled` proves all 8 are nonempty strings. Root fix under review: render through the exact selected Codex binary rather than copying internal source JSON. Post-compaction baseline `direnv exec . make test` is running (attempt 1); no source edits yet. Resume: finish exact package threading, implement renderer/test smoke with app-server model/list plus skills/list forceReload, then Nix gates/HM activation/live verification/commit/fess/push.",
+    "created_at": "2026-08-12T07:23:21Z"
+  },
+  {
+    "id": 30,
+    "issue_id": "nix-codex-model-catalog-q1u",
+    "author": "johnw",
+    "text": "Post-compaction baseline attempt 1 completed GREEN before edits: direnv exec . make test; Python full tier 21/21, 257s, then root aarch64-darwin check-manifest selected 7 behavioral checks. Tree remained clean. Root-cause decision: the installed 0.147.0 executable and llm-agents source already match; fix the duplicated-authority seam by exposing one canonical wrapped Codex package, deriving the renderer from its unwrappedPackage source and exact serializer, and merging only source-rendered base_instructions into the raw catalog so all other metadata/order/selection remain exact.",
+    "created_at": "2026-08-12T07:32:51Z"
+  },
+  {
+    "id": 31,
+    "issue_id": "nix-codex-model-catalog-q1u",
+    "author": "johnw",
+    "text": "Implementation checkpoint: canonical wrapped Codex is now a portable package output and both config/packages.nix installation and config/ai renderer consume that exact derivation; renderer uses unwrappedPackage.src plus the exact unwrapped serializer and merges only nonempty source-rendered base_instructions. Focused ai-catalog-transport is green after independent review fixes: private runtime sentinel proves app-server honored model_catalog_json; nonblocking JSONL reader enforces the 15s deadline; forced same-process command-fess refresh passes. Portable all-system and root no-build flake checks, compatibility contract, downstream package-selection check, make test, verify-inputs, and ./build system are green. make switch activated Hera generation 1063. Installed catalog resolves to dcldk176... with 8/8 typed nonempty base_instructions, all other source metadata and order exact, runtime profile bound to the installed catalog, and live installed-wrapper model/list plus skills/list(forceReload=true) passed. Independent package review ALIGNED; regression re-review PASS. Next: pre-commit/full final gate, close+flush, signed commit, no-history fess, remote currency check, push.",
+    "created_at": "2026-08-12T07:53:10Z"
+  },
+  {
+    "id": 32,
+    "issue_id": "nix-codex-model-catalog-q1u",
+    "author": "johnw",
+    "text": "Final verification: post-compaction make test passed 21/21 Python suites and all 7 root behavioral checks; lefthook pre-commit passed formatting, Nix lint/dead-code, shell checks, Python lint, and 18/18 fast suites. Focused catalog transport, portable/root evaluations, compatibility/package-selection checks, verify-inputs, system build, generation 1063 activation, installed 8/8 schema+metadata validation, and live installed-wrapper model/list plus skills/list(forceReload=true) all passed. Independent package and regression reviews are clear. No partner observations remain. Next: export PLAN, signed commit, no-history fess, and authorized publication.",
+    "created_at": "2026-08-12T08:02:10Z"
+  }
+]
+#+end_src
+
 * DONE [#B] Repair Samba 4.23.8 Darwin client linkage
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

@@ -29,6 +29,7 @@ in
     "agent-browser"
     "agent-resources"
     "cymbal"
+    "codex"
     "default"
     "nix-scripts"
     "pi"
