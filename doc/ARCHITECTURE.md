@@ -116,9 +116,10 @@ Nix owns endpoint wiring and client-specific policy, not a cross-client model
 inventory. Codex retains its native catalog, Pi discovers local models at startup,
 Droid receives no Nix-generated local-model list, and Prime Agent reuses the safe
 Pi-compatible model overrides plus the shared local-provider discovery packages.
-The catalog declares local inference endpoints once per catalog host. Profiles only
-opt into those routes; the composer resolves the home's record once and passes it
-to the renderers and activation logic that consume it.
+The catalog declares local inference endpoints once per catalog host. The composer
+passes the home record to Darwin Pi for bounded discovery and, separately, to
+profiles that opt into fixed local routes; activation logic consumes the same
+authority where required.
 
 oMLX itself is loopback-only. Its TLS gateway route is absent by default; Hera
 enables it only on its LAN address and admits Vulcan's gateway address. Vulcan
@@ -184,6 +185,12 @@ feed list, drop the `pinnedPiPackage` assertions in
 Pi gallery normalization has one implementation:
 `packages/pi-gallery/normalization-policy.json` defines the closed policy and
 `packages/pi-gallery/normalize-manifest.jq` executes it for both builds and updates.
+The Darwin gallery performs bounded loopback model discovery on both
+workstations, while `config/ai/catalog.nix` grants fixed local model overrides
+and synthetic router configuration only to profiles whose exact model inventory
+has been verified. These overrides are not a second inventory: endpoint
+availability, discovered inventory, and fixed route selection are distinct
+authorities.
 
 ## Source and update authority
 

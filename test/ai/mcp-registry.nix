@@ -89,6 +89,7 @@ let
         profile = piProfile;
         selected = selectFor piProfile;
         localModelEndpoints = catalog.localModelEndpointsByHost.${piProfile.host};
+        localModelDiscoveryEndpoints = catalog.localModelEndpointsByHost.${piProfile.host};
         inherit homeDirectory xdgConfigHome;
         passwordStoreDir = "${homeDirectory}/doc/.password-store";
         gnupgHome = "${xdgConfigHome}/gnupg";

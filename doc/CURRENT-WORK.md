@@ -79,14 +79,11 @@ authority questions remain unresolved:
 2. `nix-aln`: publication, paired consumer-lock adoption, and each managed
    host activation require separate authorization before the root-owned `obr`
    package can be accepted across the fleet.
-3. `nix-5yr`: Clio currently serves neither advertised local model. Choose
-   whether to repair its mutable inventory or withdraw/adjust the Clio route
-   opt-ins to models actually served.
-4. `nix-3u8`: choose whether the Vulcan-to-Andoria jump must use a dedicated
+3. `nix-3u8`: choose whether the Vulcan-to-Andoria jump must use a dedicated
    timer identity or may intentionally reuse the general Vulcan identity. Key
    provisioning, authoritative consumer changes, activation, and runtime
    acceptance require separate authorization.
-5. `nix-jlj`: choose whether to retain the unsupported Docker Desktop
+4. `nix-jlj`: choose whether to retain the unsupported Docker Desktop
    emulation used by MSSQL on Apple Silicon, migrate the service and data to
    supported x86-64 Linux, or retire it. Any service mutation, activation, or
    data migration requires separate authorization.

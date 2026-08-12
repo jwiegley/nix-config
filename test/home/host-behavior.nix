@@ -132,6 +132,12 @@ let
     in
     (variables.OMLX_API_KEY or null) == "dummy-key"
     && (variables.LLAMA_SWAP_API_KEY or null) == "dummy-key";
+  lacksLocalModelSessionVariables =
+    config:
+    let
+      variables = config.home.sessionVariables or { };
+    in
+    (variables.OMLX_API_KEY or null) == null && (variables.LLAMA_SWAP_API_KEY or null) == null;
   desktopRuntimeRoots = [
     "emacs"
     "gnupg"
@@ -298,8 +304,14 @@ assert builtins.all (
 ) nonDesktopHomes;
 assert builtins.all (config: config.johnw.host.isDarwinWorkstation) desktopHomes;
 assert builtins.all (config: !config.johnw.host.isDarwinWorkstation) nonDesktopHomes;
-assert builtins.all hasLocalModelSessionVariables desktopHomes;
-assert builtins.all (config: !(hasLocalModelSessionVariables config)) nonDesktopHomes;
+assert hasLocalModelSessionVariables desktopHomesByHost.hera;
+assert lacksLocalModelSessionVariables desktopHomesByHost.clio;
+assert builtins.all lacksLocalModelSessionVariables nonDesktopHomes;
+assert builtins.hasAttr ".config/pi/agent/model-router.json" desktopHomesByHost.hera.home.file;
+assert !(builtins.hasAttr ".config/pi/agent/model-router.json" desktopHomesByHost.clio.home.file);
+assert
+  desktopHomesByHost.clio.home.file.".config/pi/agent/extensions/nix-gallery/index.ts".source
+  == desktopHomesByHost.hera.home.file.".config/pi/agent/extensions/nix-gallery/index.ts".source;
 assert contains aiCatalog.localModelEndpointsByHost.hera.omlx
   desktopHomesByHost.hera.home.activation.aiManagedModelSync.data;
 assert !(builtins.hasAttr "aiManagedModelSync" desktopHomesByHost.clio.home.activation);

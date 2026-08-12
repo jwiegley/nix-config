@@ -87,15 +87,17 @@ Partner observation .445Z: the malformed claude-opus-5[1m value came from a trun
 ]
 #+end_src
 
-* TODO [#B] Align Clio advertised local routes with live inventory
+* DONE [#B] Align Clio advertised local routes with live inventory
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-5yr
 :LABELS: []
 :ISSUE_TYPE: question
 :CREATED:  [2026-08-10 Mon 21:24]
-:MODIFIED: [2026-08-10 Mon 21:24]
+:MODIFIED: [2026-08-12 Wed 08:24]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 08:24]
+:CLOSE_REASON: Completed the fail-closed declarative outcome: Clio no longer receives fixed GLM/Qwen routes or the synthetic router, while Darwin Pi discovery, Hermes, and 7,200-second local-provider transport remain intact and Hera fixed routing is unchanged. Exact renderer, catalog, dynamic-registration, host, and no-extra-route regressions pass; portable all-systems evaluation, make test, Clio and Hera non-activating system builds, formatting, and pre-commit hooks are green. No Clio access, model download, service mutation, activation, publication, or push was performed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -114,6 +116,19 @@ Clio currently serves neither catalog-advertised local route. Choose and impleme
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 76,
+    "issue_id": "nix-5yr",
+    "author": "johnw",
+    "text": "Starting the fail-closed declarative outcome. Because model downloads, Clio service mutation, activation, publication, and fresh Clio inspection remain separately authorized, this work will withdraw/adjust only Clio route opt-ins that the last authorized inventory did not serve, preserve Hera routing, and add behavioral regression coverage. No remote host access or mutable runtime change is planned.",
+    "created_at": "2026-08-12T14:40:32Z"
   }
 ]
 #+end_src

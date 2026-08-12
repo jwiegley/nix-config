@@ -103,6 +103,14 @@ let
             homeLocalModelEndpoints
         else
           null;
+      localModelDiscoveryEndpoints =
+        if profile.client == "pi" && profile.platform == "darwin" then
+          if homeLocalModelEndpoints == null then
+            throw "profile ${profile.id} enables local model discovery without a home endpoint authority"
+          else
+            homeLocalModelEndpoints
+        else
+          null;
     in
     renderers.${profile.client} (
       {
@@ -114,6 +122,7 @@ let
       // lib.optionalAttrs (profile.client == "pi") {
         passwordStoreDir = config.programs.password-store.settings.PASSWORD_STORE_DIR or null;
         gnupgHome = config.programs.gpg.homedir or null;
+        inherit localModelDiscoveryEndpoints;
       }
       //
         lib.optionalAttrs

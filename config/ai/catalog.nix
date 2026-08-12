@@ -58,13 +58,15 @@ let
     # Profiles opt in to their home's endpoint authority; they never carry a
     # private copy of the endpoint records.
     localModelRoutes = false;
+    hermesRoute = false;
   };
 
   # The local inference stack: config/launchd.nix runs llama-swap and omlx as
   # ungated user agents on every Darwin workstation (hera and clio alike), so
   # both workstation homes expose the same endpoint authority. Profiles opt
-  # in with localModelRoutes; the composer resolves this table once per home
-  # and passes the selected record to every local-model consumer. The table
+  # in with localModelRoutes only when their fixed routes match the host's
+  # verified inventory; the composer resolves this table once per home and
+  # passes the selected record to every local-model consumer. The table
   # asserts that the services are DEFINED on the host — which models their
   # unmanaged configs (~/Models/llama-swap.yaml, ~/.config/omlx) actually
   # serve is mutable host state outside Nix.
@@ -80,11 +82,9 @@ let
   profileSpecs = {
     clio-claude-personal = mkProfile "claude" [ "personal" ] "clio" "darwin" ".config/claude/personal";
     clio-claude-positron = mkProfile "claude" [ "positron" ] "clio" "darwin" ".config/claude/positron";
-    clio-codex = mkProfile "codex" [ "personal" ] "clio" "darwin" ".config/codex" // {
-      localModelRoutes = true;
-    };
+    clio-codex = mkProfile "codex" [ "personal" ] "clio" "darwin" ".config/codex";
     clio-pi = mkProfile "pi" [ "personal" ] "clio" "darwin" ".config/pi/agent" // {
-      localModelRoutes = true;
+      hermesRoute = true;
     };
 
     hera-claude-personal = mkProfile "claude" [ "personal" ] "hera" "darwin" ".config/claude/personal";
@@ -95,6 +95,7 @@ let
     hera-droid = mkProfile "droid" [ "personal" ] "hera" "darwin" ".config/factory";
     hera-pi = mkProfile "pi" [ "personal" ] "hera" "darwin" ".config/pi/agent" // {
       localModelRoutes = true;
+      hermesRoute = true;
     };
     hera-prime = mkProfile "prime" [ "personal" ] "hera" "darwin" ".prime/agent" // {
       localModelRoutes = true;
@@ -1462,6 +1463,7 @@ let
           && builtins.elem profile.platform platforms
           && profile.root == profileSpecs.${id}.root
           && builtins.isBool profile.localModelRoutes
+          && builtins.isBool profile.hermesRoute
           && !(profile ? localModelEndpoints)
           && (
             !profile.localModelRoutes
@@ -1474,6 +1476,7 @@ let
               && builtins.hasAttr profile.host localModelEndpointsByHost
             )
           )
+          && (!profile.hermesRoute || (profile.client == "pi" && profile.platform == "darwin"))
         ) "invalid profile ${id}"
       ) profiles;
       fessProjectionChecks = lib.mapAttrsToList (

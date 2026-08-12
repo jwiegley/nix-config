@@ -50,8 +50,9 @@ and pass it through their Home Manager module arguments; their lock adoption
 remains consumer-owned.
 
 The managed Pi profile makes the same complete 27-member extension gallery
-available on every host. Automatic registration of the two loopback providers
-and their router remains capability-specific.
+available on every host. Darwin registers the two loopback discovery providers
+automatically; fixed local model overrides and the synthetic router remain a
+separate catalog capability, presently enabled only for Hera.
 
 The complete ownership and data-flow contract is maintained in
 [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md).

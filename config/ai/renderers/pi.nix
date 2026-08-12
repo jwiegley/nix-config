@@ -8,6 +8,7 @@
   passwordStoreDir,
   gnupgHome,
   localModelEndpoints,
+  localModelDiscoveryEndpoints,
 }:
 
 let
@@ -22,6 +23,8 @@ let
   hasOnlyKeys =
     allowed: value: builtins.all (name: builtins.elem name allowed) (builtins.attrNames value);
   localModelRoutes = localModelEndpoints != null;
+  localModelDiscovery = localModelDiscoveryEndpoints != null;
+  inherit (profile) hermesRoute;
   modelOverrides = import ../model-overrides.nix;
   hermesPassCommand = lib.escapeShellArgs [
     "${pkgs.coreutils}/bin/env"
@@ -105,31 +108,38 @@ let
         ;
     };
   };
+  hermesProvider = {
+    hermes = {
+      api = "openai-completions";
+      apiKey = hermesApiKeyCommand;
+      baseUrl = "https://hermes.vulcan.lan/v1";
+      compat.sendSessionAffinityHeaders = true;
+      models = [ { id = "hermes-agent"; } ];
+    };
+  };
   localProviders =
     lib.mapAttrs (
       _: provider: provider // { transport = localProviderTransport; }
     ) localProviderOverrides
     // {
-      hermes = {
-        api = "openai-completions";
-        apiKey = hermesApiKeyCommand;
-        baseUrl = "https://hermes.vulcan.lan/v1";
-        compat.sendSessionAffinityHeaders = true;
-        models = [ { id = "hermes-agent"; } ];
-      };
       router = routerProvider;
     };
-  models.providers = nativeProviders // lib.optionalAttrs localModelRoutes localProviders;
+  localDiscoveryProviders = lib.mapAttrs (_: _: { transport = localProviderTransport; }) (
+    if localModelDiscovery then localModelDiscoveryEndpoints else { }
+  );
+  models.providers =
+    nativeProviders
+    // lib.optionalAttrs localModelDiscovery localDiscoveryProviders
+    // lib.optionalAttrs hermesRoute hermesProvider
+    // lib.optionalAttrs localModelRoutes localProviders;
   providerApiKeyForms = lib.mapAttrs (_: provider: provider.apiKey) (
     lib.filterAttrs (_: provider: provider ? apiKey) models.providers
   );
   # Closed security boundary: adding or changing any apiKey-bearing provider
-  # requires an explicit policy edit here. Profiles without local routes must
-  # remain apiKey-free.
-  approvedProviderApiKeyForms = lib.optionalAttrs localModelRoutes {
-    hermes = hermesApiKeyCommand;
-    router = "pi-model-router";
-  };
+  # requires an explicit policy edit here.
+  approvedProviderApiKeyForms =
+    lib.optionalAttrs hermesRoute { hermes = hermesApiKeyCommand; }
+    // lib.optionalAttrs localModelRoutes { router = "pi-model-router"; };
   modelRouter = {
     debug = false;
     phaseBias = 0.5;
@@ -216,9 +226,18 @@ in
 assert profile.client == "pi";
 assert profile.root == root;
 assert profile.localModelRoutes == localModelRoutes;
+assert localModelDiscovery == (profile.platform == "darwin");
+assert
+  !localModelDiscovery
+  ||
+    builtins.attrNames localModelDiscoveryEndpoints == [
+      "llama-swap"
+      "omlx"
+    ];
+assert builtins.isBool hermesRoute;
 assert builtins.isString homeDirectory;
 assert xdgConfigHome == "${homeDirectory}/.config";
-assert !localModelRoutes || (builtins.isString passwordStoreDir && builtins.isString gnupgHome);
+assert !hermesRoute || (builtins.isString passwordStoreDir && builtins.isString gnupgHome);
 assert lib.assertMsg (
   providerApiKeyForms == approvedProviderApiKeyForms
 ) "Pi model-provider apiKey fields escaped the closed Hermes-command/router-sentinel set";

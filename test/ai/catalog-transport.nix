@@ -51,6 +51,12 @@ let
   localModelEndpointsFor =
     profile:
     if profile.localModelRoutes then catalog.localModelEndpointsByHost.${profile.host} else null;
+  localModelDiscoveryEndpointsFor =
+    profile:
+    if profile.client == "pi" && profile.platform == "darwin" then
+      catalog.localModelEndpointsByHost.${profile.host}
+    else
+      null;
   profileFor =
     client:
     lib.findFirst (profile: profile.client == client) (throw "${client} profile missing") profiles;
@@ -92,8 +98,9 @@ let
   ];
   piProfiles = lib.filter (profile: profile.client == "pi") profiles;
   claudeProfile = profileFor "claude";
-  codexProfile = profileFor "codex";
-  piProfile = profileFor "pi";
+  clioCodexProfile = catalog.profiles.clio-codex;
+  codexProfile = catalog.profiles.hera-codex;
+  piProfile = catalog.profiles.hera-pi;
   droidProfile = profileFor "droid";
   primeProfile = profileFor "prime";
   stdioMcp = lib.findFirst (server: server.transport ? command) (throw "stdio MCP server missing") (
@@ -259,6 +266,7 @@ let
     inherit codexPackage lib pkgs;
   };
   codexRendered = renderFor codexRenderer codexProfile "/Users/test";
+  clioCodexRendered = renderFor codexRenderer clioCodexProfile "/Users/test";
   codexUnwrappedPackage = codexPackage.unwrappedPackage;
   codexSourceCatalog = "${codexUnwrappedPackage.src}/codex-rs/models-manager/models.json";
   codexManagedCatalog =
@@ -321,6 +329,7 @@ let
       inherit profile darwin localModelEndpoints;
       rendered = piRenderer {
         inherit profile homeDirectory localModelEndpoints;
+        localModelDiscoveryEndpoints = localModelDiscoveryEndpointsFor profile;
         selected = selectWithHttp profile;
         xdgConfigHome = "${homeDirectory}/.config";
         passwordStoreDir = if darwin then "${homeDirectory}/doc/.password-store" else null;
@@ -336,6 +345,7 @@ let
     passwordStoreDir = "/Users/test/doc/.password-store";
     gnupgHome = "/Users/test/.config/gnupg";
     localModelEndpoints = localModelEndpointsFor piProfile;
+    localModelDiscoveryEndpoints = localModelDiscoveryEndpointsFor piProfile;
   };
   droidRenderer = import "${src}/config/ai/renderers/droid.nix" {
     inherit lib;
@@ -394,6 +404,7 @@ let
       passwordStoreDir = "/Users/test/doc/.password-store";
       gnupgHome = "/Users/test/.config/gnupg";
       localModelEndpoints = localModelEndpointsFor piProfile;
+      localModelDiscoveryEndpoints = localModelDiscoveryEndpointsFor piProfile;
     };
   capabilityRendering =
     capabilities:
@@ -733,11 +744,16 @@ assert
   lib.sort builtins.lessThan (
     builtins.attrNames (lib.filterAttrs (_: profile: profile.localModelRoutes) catalog.profiles)
   ) == [
-    "clio-codex"
-    "clio-pi"
     "hera-codex"
     "hera-pi"
     "hera-prime"
+  ];
+assert
+  lib.sort builtins.lessThan (
+    builtins.attrNames (lib.filterAttrs (_: profile: profile.hermesRoute) catalog.profiles)
+  ) == [
+    "clio-pi"
+    "hera-pi"
   ];
 assert catalog.validate {
   items = withMcpServers (catalog.items.mcpServers // { synthetic-http = syntheticHttpMcp; });
@@ -776,7 +792,8 @@ assert builtins.all (
   && !(builtins.hasAttr ".config/mcp/mcp.json" files)
   && hasFessRubric files.${fessPaths.pi.agent}.text
   && hasFessRubric files.${fessPaths.pi.command}.text
-  && (builtins.hasAttr ".config/pi/agent/model-router.json" files) == entry.darwin
+  &&
+    (builtins.hasAttr ".config/pi/agent/model-router.json" files) == (entry.localModelEndpoints != null)
   && !(entry.rendered ? mutableMcpGuard)
 ) piRenderings;
 assert
@@ -853,7 +870,7 @@ assert builtins.all reject [
     );
   })
   (catalog.validate {
-    localModelEndpointsByHost = builtins.removeAttrs catalog.localModelEndpointsByHost [ "clio" ];
+    localModelEndpointsByHost = builtins.removeAttrs catalog.localModelEndpointsByHost [ "hera" ];
   })
   (catalog.validate {
     profiles = catalog.profiles // {
@@ -869,6 +886,13 @@ assert builtins.all reject [
       };
     };
   })
+  (catalog.validate {
+    profiles = catalog.profiles // {
+      shared-work-pi = catalog.profiles.shared-work-pi // {
+        hermesRoute = true;
+      };
+    };
+  })
   (piRenderer {
     profile = piProfile;
     selected = selectFor piProfile;
@@ -877,6 +901,7 @@ assert builtins.all reject [
     passwordStoreDir = "/Users/test/doc/.password-store";
     gnupgHome = "/Users/test/.config/gnupg";
     localModelEndpoints = null;
+    localModelDiscoveryEndpoints = localModelDiscoveryEndpointsFor piProfile;
   })
   (catalog.validate {
     items = withClaudeSettingsBase (
@@ -912,6 +937,7 @@ assert builtins.all reject [
     passwordStoreDir = "/Users/test/doc/.password-store";
     gnupgHome = "/Users/test/.config/gnupg";
     localModelEndpoints = localModelEndpointsFor piProfile;
+    localModelDiscoveryEndpoints = localModelDiscoveryEndpointsFor piProfile;
   })
 ];
 pkgs.runCommand "ai-catalog-transport" { } ''
@@ -1052,15 +1078,39 @@ pkgs.runCommand "ai-catalog-transport" { } ''
 
   ${pkgs.python3}/bin/python3 - ${
     codexRendered.files."${codexProfile.root}/nix-managed.config.toml".source
-  } <<'PY'
+  } ${clioCodexRendered.files."${clioCodexProfile.root}/nix-managed.config.toml".source} <<'PY'
   import sys
   import tomllib
 
   with open(sys.argv[1], "rb") as stream:
-      mcp = tomllib.load(stream)["mcp_servers"]
+      managed = tomllib.load(stream)
+  mcp = managed["mcp_servers"]
   assert mcp["synthetic-http"] == {"url": "https://example.invalid/mcp"}
   assert isinstance(mcp["pal"]["command"], str)
   assert isinstance(mcp["pal"]["args"], list)
+  assert managed["model_providers"] == {
+      "llama-swap": {
+          "base_url": "${catalog.localModelEndpointsByHost.hera.llama-swap}",
+          "env_key": "LLAMA_SWAP_API_KEY",
+          "name": "llama-swap",
+          "wire_api": "responses",
+      },
+      "omlx": {
+          "base_url": "${catalog.localModelEndpointsByHost.hera.omlx}",
+          "env_key": "OMLX_API_KEY",
+          "name": "oMLX",
+          "wire_api": "responses",
+      },
+  }
+  assert managed["profiles"] == {
+      "llama-swap": {"model": "GLM-5.2", "model_provider": "llama-swap"},
+      "omlx": {"model": "Qwen3.6-27B-oQ6e-mtp", "model_provider": "omlx"},
+  }
+
+  with open(sys.argv[2], "rb") as stream:
+      clio = tomllib.load(stream)
+  assert "model_providers" not in clio
+  assert "profiles" not in clio
   PY
 
   ${pkgs.python3}/bin/python3 ${./codex-catalog-smoke.py} ${
@@ -1154,7 +1204,9 @@ pkgs.runCommand "ai-catalog-transport" { } ''
 
   ${lib.concatMapStringsSep "\n" (entry: ''
     ${pkgs.jq}/bin/jq -e \
-      --argjson localModelRoutes ${if entry.localModelEndpoints != null then "true" else "false"} '
+      --argjson localModelRoutes ${if entry.localModelEndpoints != null then "true" else "false"} \
+      --argjson localModelDiscovery ${if entry.darwin then "true" else "false"} \
+      --argjson hermesRoute ${if entry.profile.hermesRoute then "true" else "false"} '
       type == "object"
       and (.providers | type == "object")
       and (
@@ -1167,66 +1219,111 @@ pkgs.runCommand "ai-catalog-transport" { } ''
           ]
           | sort
         )
-        == (if $localModelRoutes then ["hermes", "router"] else [] end)
+        == (
+          (if $hermesRoute then ["hermes"] else [] end)
+          + (if $localModelRoutes then ["router"] else [] end)
+          | sort
+        )
       )
       and (
-        if $localModelRoutes then
-          .providers.router.apiKey == "pi-model-router"
+        if $hermesRoute then
+          (.providers.hermes | keys | sort) == ["api", "apiKey", "baseUrl", "compat", "models"]
+          and .providers.hermes.api == "openai-completions"
+          and .providers.hermes.baseUrl == "https://hermes.vulcan.lan/v1"
+          and .providers.hermes.compat == {"sendSessionAffinityHeaders": true}
+          and .providers.hermes.models == [{"id": "hermes-agent"}]
           and ((.providers.hermes.apiKey | type) == "string")
           and (.providers.hermes.apiKey | startswith("!/nix/store/"))
           and (.providers.hermes.apiKey | contains("/bin/bash -c "))
+          and (.providers.hermes.apiKey | contains("/bin/env -u GPG_TTY "))
+          and (.providers.hermes.apiKey | contains("PASSWORD_STORE_DIR=/Users/test/doc/.password-store"))
+          and (.providers.hermes.apiKey | contains("GNUPGHOME=/Users/test/.config/gnupg"))
           and (.providers.hermes.apiKey | contains("/bin/pass"))
-          and .providers.omlx.modelOverrides["Qwen3.6-27B-oQ6e-mtp"] == {
-            "compat": {
-              "supportsReasoningEffort": false,
-              "thinkingFormat": "qwen-chat-template"
-            },
-            "contextWindow": 262144,
-            "defaultThinkingLevel": "off",
-            "input": ["text"],
-            "maxTokens": 65536,
-            "reasoning": true,
-            "thinkingLevelMap": {
-              "high": "high",
-              "low": null,
-              "max": null,
-              "medium": null,
-              "minimal": null,
-              "xhigh": null
-            }
+        else
+          (.providers | has("hermes") | not)
+        end
+      )
+      and (
+        if $localModelRoutes then
+          .providers["llama-swap"] == {
+            "modelOverrides": {"GLM-5.2": {"contextWindow": 262144}},
+            "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
           }
-          and .providers.router.models[0] == {
-            "contextWindow": 262144,
-            "cost": {
-              "cacheRead": 0,
-              "cacheWrite": 0,
-              "input": 0,
-              "output": 0
+          and .providers.omlx == {
+            "modelOverrides": {
+              "DeepSeek-V4-Flash-0731-oQ8e-mtp": {"contextWindow": 262144},
+              "Qwen3.6-27B-oQ6e-mtp": {
+                "compat": {
+                  "supportsReasoningEffort": false,
+                  "thinkingFormat": "qwen-chat-template"
+                },
+                "contextWindow": 262144,
+                "defaultThinkingLevel": "off",
+                "input": ["text"],
+                "maxTokens": 65536,
+                "reasoning": true,
+                "thinkingLevelMap": {
+                  "high": "high",
+                  "low": null,
+                  "max": null,
+                  "medium": null,
+                  "minimal": null,
+                  "xhigh": null
+                }
+              }
             },
-            "id": "sol",
-            "maxTokens": 65536,
-            "name": "Router sol"
+            "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
           }
-          and .providers.router.modelOverrides.sol == {
-            "defaultThinkingLevel": "off",
-            "input": ["text"],
-            "reasoning": true,
-            "thinkingLevelMap": {
-              "high": "high",
-              "low": null,
-              "max": null,
-              "medium": null,
-              "minimal": null,
-              "xhigh": null
-            }
+          and .providers.router == {
+            "api": "router-local-api",
+            "apiKey": "pi-model-router",
+            "baseUrl": "router://local",
+            "modelOverrides": {
+              "sol": {
+                "defaultThinkingLevel": "off",
+                "input": ["text"],
+                "reasoning": true,
+                "thinkingLevelMap": {
+                  "high": "high",
+                  "low": null,
+                  "max": null,
+                  "medium": null,
+                  "minimal": null,
+                  "xhigh": null
+                }
+              }
+            },
+            "models": [{
+              "contextWindow": 262144,
+              "cost": {
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "input": 0,
+                "output": 0
+              },
+              "id": "sol",
+              "maxTokens": 65536,
+              "name": "Router sol"
+            }]
           }
         else
-          true
+          (if $localModelDiscovery then
+            .providers["llama-swap"] == {
+              "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
+            }
+            and .providers.omlx == {
+              "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
+            }
+          else
+            (.providers | has("llama-swap") | not)
+            and (.providers | has("omlx") | not)
+          end)
+          and (.providers | has("router") | not)
         end
       )
       and (
         [.providers[] | select(has("transport"))] as $transportProviders
-        | ($transportProviders | length) == (if $localModelRoutes then 2 else 0 end)
+        | ($transportProviders | length) == (if $localModelDiscovery then 2 else 0 end)
         and (
           $transportProviders
           | all(.transport == {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000})
@@ -1236,20 +1333,28 @@ pkgs.runCommand "ai-catalog-transport" { } ''
     ${pkgs.jq}/bin/jq -e '
       has("app.thinking.cycle") | not
     ' ${entry.rendered.files.".config/pi/agent/keybindings.json".source} >/dev/null
-    ${lib.optionalString entry.darwin ''
+    ${lib.optionalString (entry.localModelEndpoints != null) ''
       ${pkgs.jq}/bin/jq -e '
-        .models.sol == {
-          "contextWindow": 262144,
-          "maxTokens": 65536,
-          "model": "omlx/Qwen3.6-27B-oQ6e-mtp",
-          "reasoning": true,
-          "thinkingLevels": ["off", "high"]
+        . == {
+          "debug": false,
+          "models": {
+            "sol": {
+              "contextWindow": 262144,
+              "maxTokens": 65536,
+              "model": "omlx/Qwen3.6-27B-oQ6e-mtp",
+              "reasoning": true,
+              "thinkingLevels": ["off", "high"]
+            }
+          },
+          "phaseBias": 0.5,
+          "profiles": {
+            "sol": {
+              "high": {"model": "sol", "thinking": "off"},
+              "low": {"model": "sol", "thinking": "off"},
+              "medium": {"model": "sol", "thinking": "off"}
+            }
+          }
         }
-        and (.profiles.sol | keys) == ["high", "low", "medium"]
-        and (.profiles.sol | all(
-          .model == "sol"
-          and .thinking == "off"
-        ))
       ' ${entry.rendered.files.".config/pi/agent/model-router.json".source} >/dev/null
     ''}
   '') piRenderings}

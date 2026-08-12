@@ -68,6 +68,8 @@ try {
 
 const provider = "transport-capability";
 const modelId = "slow-model";
+const transportOnlyProvider = "transport-only-capability";
+const transportOnlyModelId = "discovered-slow-model";
 const root = await mkdtemp(join(tmpdir(), "pi-provider-transport-"));
 const agentDir = join(root, "agent");
 await mkdir(agentDir, { recursive: true });
@@ -85,6 +87,12 @@ await writeFile(
 					idleTimeoutMs: 7_200_000,
 				},
 				models: [{ id: modelId }],
+			},
+			[transportOnlyProvider]: {
+				transport: {
+					requestTimeoutMs: 7_200_000,
+					idleTimeoutMs: 7_200_000,
+				},
 			},
 		},
 	}),
@@ -115,35 +123,64 @@ const transport = runtime.getProviderTransportOptions(provider);
 assert.equal(transport.timeoutMs, 7_200_000);
 assert.equal(typeof transport.fetch, "function");
 assert.notEqual(transport.fetch, globalThis.fetch);
+const transportOnly = runtime.getProviderTransportOptions(transportOnlyProvider);
+assert.equal(transportOnly.timeoutMs, 7_200_000);
+assert.equal(typeof transportOnly.fetch, "function");
+assert.notEqual(transportOnly.fetch, globalThis.fetch);
 assert.deepEqual(runtime.getProviderTransportOptions("ordinary-provider"), {});
 
 let captured;
+let transportOnlyCaptured;
 const { createAssistantMessageEventStream } = await importFromSource(
 	"node_modules/@earendil-works/pi-ai/dist/index.js",
 );
+const completedStream = (model) => {
+	const stream = createAssistantMessageEventStream();
+	stream.end({
+		role: "assistant",
+		content: [{ type: "text", text: "ok" }],
+		api: model.api,
+		provider: model.provider,
+		model: model.id,
+		usage: {
+			input: 0,
+			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 0,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		},
+		stopReason: "stop",
+		timestamp: Date.now(),
+	});
+	return stream;
+};
 runtime.registerProvider(provider, {
 	api: "openai-completions",
 	streamSimple: (model, _context, options) => {
 		captured = options;
-		const stream = createAssistantMessageEventStream();
-		stream.end({
-			role: "assistant",
-			content: [{ type: "text", text: "ok" }],
-			api: model.api,
-			provider: model.provider,
-			model: model.id,
-			usage: {
-				input: 0,
-				output: 0,
-				cacheRead: 0,
-				cacheWrite: 0,
-				totalTokens: 0,
-				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
-			},
-			stopReason: "stop",
-			timestamp: Date.now(),
-		});
-		return stream;
+		return completedStream(model);
+	},
+});
+runtime.registerProvider(transportOnlyProvider, {
+	name: "Discovered transport-only provider",
+	api: "openai-completions",
+	apiKey: "test-key",
+	baseUrl: "http://127.0.0.1:1/v1",
+	models: [
+		{
+			id: transportOnlyModelId,
+			name: "Discovered slow model",
+			reasoning: false,
+			input: ["text"],
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+			contextWindow: 262_144,
+			maxTokens: 65_536,
+		},
+	],
+	streamSimple: (model, _context, options) => {
+		transportOnlyCaptured = options;
+		return completedStream(model);
 	},
 });
 
@@ -153,6 +190,18 @@ await runtime.streamSimple(model, { messages: [] }).result();
 assert.equal(captured.timeoutMs, 7_200_000);
 assert.equal(typeof captured.fetch, "function");
 assert.notEqual(captured.fetch, globalThis.fetch);
+
+const transportOnlyModel = runtime.getModel(
+	transportOnlyProvider,
+	transportOnlyModelId,
+);
+assert.ok(transportOnlyModel);
+await runtime
+	.streamSimple(transportOnlyModel, { messages: [] })
+	.result();
+assert.equal(transportOnlyCaptured.timeoutMs, 7_200_000);
+assert.equal(typeof transportOnlyCaptured.fetch, "function");
+assert.notEqual(transportOnlyCaptured.fetch, globalThis.fetch);
 
 const explicitFetch = async () => new Response();
 await runtime
