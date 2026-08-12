@@ -39,6 +39,7 @@ let
       pi-extension-tests = behavioral systems true;
       pi-fleet-theme = behavioral systems true;
       pi-gallery = behavioral systems true;
+      pi-classic-core-fixtures = behavioral darwinSystems false;
       pi-classic-core-source = behavioral darwinSystems false;
       pi-session-replacement = behavioral systems false;
       prime-agent = behavioral systems false;

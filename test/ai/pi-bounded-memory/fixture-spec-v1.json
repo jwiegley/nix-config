@@ -1,0 +1,321 @@
+{
+  "schema": 1,
+  "kind": "pi-b1-fixture-spec",
+  "qualification": "descriptive-b1-only",
+  "sessionVersion": 3,
+  "seed": "pi-b1-public-seed-v1",
+  "scales": [
+    { "name": "16m", "file": "pi-b1-16m.jsonl", "bulkEntries": 512 },
+    { "name": "64m", "file": "pi-b1-64m.jsonl", "bulkEntries": 2048 },
+    { "name": "256m", "file": "pi-b1-256m.jsonl", "bulkEntries": 8192 },
+    { "name": "1g", "file": "pi-b1-1g.jsonl", "bulkEntries": 32768 }
+  ],
+  "bulk": {
+    "recordBytes": 32768,
+    "idPrefix": "bulk-",
+    "idWidth": 5,
+    "timestamp": "2040-01-01T00:02:00.000Z",
+    "messageTimestamp": 2208988920000,
+    "payloadAlphabet": "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_"
+  },
+  "limits": {
+    "generator": {
+      "maxRecordBytes": 32768,
+      "hashChunkBytes": 65536,
+      "maxOpenFiles": 1,
+      "maxBulkEntryRecordsRetained": 1,
+      "maxFixturesRetained": 0
+    },
+    "referenceImport": {
+      "maxLineBytes": 32768,
+      "chunkBytes": 65536,
+      "maxOpenFiles": 1,
+      "maxEntryAndPointDescriptorObjectsLive": 64,
+      "maxScaleResultOracleGraphsLive": 4,
+      "maxConcurrentRecordRepresentations": 2,
+      "maxLogicalRecordBytesRetained": 65536,
+      "foldsRetained": 6
+    },
+    "copy": {
+      "schema": 1,
+      "implementation": "gnu-coreutils-cp",
+      "executableBinding": "exact-launcher-symlink-and-resolved-file-identity",
+      "argv": ["cp", "--reflink=never", "fixture:<endpoint>", "namespace:session.jsonl"],
+      "destinationMode": "0600",
+      "opaqueImplementationInternalsClaimed": false,
+      "postflightVerification": "full-prefix-bytes-and-sha256"
+    },
+    "diagnosticPreflight": {
+      "maxHeaderBytes": 4096,
+      "maxOpenFiles": 1,
+      "maxPointEntriesRetained": 16
+    },
+    "cappedCommand": {
+      "maxBytesPerStream": 16777216,
+      "maxArgumentCount": 64,
+      "maxArgumentBytes": 65536,
+      "maxArgumentBytesPerArgument": 4096,
+      "maxOpenSinkFiles": 2,
+      "maxTemporaryStreamFiles": 2,
+      "maxReservedResultFiles": 1,
+      "signalGraceMilliseconds": 1000
+    },
+    "postflight": {
+      "hashChunkBytes": 65536,
+      "maxOpenFiles": 1,
+      "maxSuffixBytes": 1048576,
+      "maxCopyLauncherTargetBytes": 1024,
+      "maxCopyExecutableBytes": 16777216,
+      "maxSmallJsonBytes": 16777216
+    },
+    "seal": {
+      "hashChunkBytes": 65536,
+      "maxEntries": 512,
+      "maxFiles": 256,
+      "maxOpenDirectories": 9,
+      "maxDepth": 8,
+      "maxRelativePathBytes": 1024,
+      "maxTotalPathBytes": 65536,
+      "maxChecksumBytes": 131072
+    },
+    "smallJsonBytes": 16777216
+  },
+  "header": {
+    "type": "session",
+    "version": 3,
+    "id": "pi-b1-session-v1",
+    "timestamp": "2040-01-01T00:00:00.000Z",
+    "cwd": "/b1/fixed-workspace"
+  },
+  "root": {
+    "type": "message",
+    "id": "root-user-v1",
+    "parentId": null,
+    "timestamp": "2040-01-01T00:01:00.000Z",
+    "message": {
+      "role": "user",
+      "content": [{ "type": "text", "text": "B1 fixed root" }],
+      "timestamp": 2208988860000
+    }
+  },
+  "tailParentPlaceholder": "$LAST_BULK",
+  "tail": [
+    {
+      "type": "model_change",
+      "id": "tail-model-v1",
+      "parentId": "$LAST_BULK",
+      "timestamp": "2040-01-01T00:10:00.000Z",
+      "provider": "b1-faux-provider",
+      "modelId": "b1-faux-model-v1"
+    },
+    {
+      "type": "thinking_level_change",
+      "id": "tail-thinking-v1",
+      "parentId": "tail-model-v1",
+      "timestamp": "2040-01-01T00:10:01.000Z",
+      "thinkingLevel": "medium"
+    },
+    {
+      "type": "message",
+      "id": "tail-left-user-v1",
+      "parentId": "tail-thinking-v1",
+      "timestamp": "2040-01-01T00:10:02.000Z",
+      "message": {
+        "role": "user",
+        "content": [{ "type": "text", "text": "B1 unselected left user" }],
+        "timestamp": 2208989402000
+      }
+    },
+    {
+      "type": "message",
+      "id": "tail-left-assistant-v1",
+      "parentId": "tail-left-user-v1",
+      "timestamp": "2040-01-01T00:10:03.000Z",
+      "message": {
+        "role": "assistant",
+        "content": [{ "type": "text", "text": "B1 unselected left assistant" }],
+        "api": "openai-completions",
+        "provider": "b1-faux-provider",
+        "model": "b1-faux-model-v1",
+        "usage": {
+          "input": 1,
+          "output": 1,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 2,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0, "total": 0 }
+        },
+        "stopReason": "stop",
+        "timestamp": 2208989403000
+      }
+    },
+    {
+      "type": "message",
+      "id": "tail-right-user-v1",
+      "parentId": "tail-thinking-v1",
+      "timestamp": "2040-01-01T00:10:04.000Z",
+      "message": {
+        "role": "user",
+        "content": [{ "type": "text", "text": "B1 selected right user" }],
+        "timestamp": 2208989404000
+      }
+    },
+    {
+      "type": "message",
+      "id": "tail-right-assistant-v1",
+      "parentId": "tail-right-user-v1",
+      "timestamp": "2040-01-01T00:10:05.000Z",
+      "message": {
+        "role": "assistant",
+        "content": [{ "type": "text", "text": "B1 selected right assistant" }],
+        "api": "openai-completions",
+        "provider": "b1-faux-provider",
+        "model": "b1-faux-model-v1",
+        "usage": {
+          "input": 1,
+          "output": 1,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 2,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0, "total": 0 }
+        },
+        "stopReason": "stop",
+        "timestamp": 2208989405000
+      }
+    },
+    {
+      "type": "custom",
+      "id": "tail-snapshot-v1",
+      "parentId": "tail-right-assistant-v1",
+      "timestamp": "2040-01-01T00:10:06.000Z",
+      "customType": "b1.extension-snapshot",
+      "data": {
+        "schema": 1,
+        "extension": "b1-empty-gallery-control",
+        "snapshot": { "enabled": false, "sequence": 7, "value": "fixed" }
+      }
+    },
+    {
+      "type": "label",
+      "id": "tail-left-label-v1",
+      "parentId": "tail-snapshot-v1",
+      "timestamp": "2040-01-01T00:10:07.000Z",
+      "targetId": "tail-left-assistant-v1",
+      "label": "B1 unselected left branch"
+    },
+    {
+      "type": "message",
+      "id": "tail-kept-user-v1",
+      "parentId": "tail-left-label-v1",
+      "timestamp": "2040-01-01T00:10:08.000Z",
+      "message": {
+        "role": "user",
+        "content": [{ "type": "text", "text": "B1 fixed kept user" }],
+        "timestamp": 2208989408000
+      }
+    },
+    {
+      "type": "message",
+      "id": "tail-kept-assistant-v1",
+      "parentId": "tail-kept-user-v1",
+      "timestamp": "2040-01-01T00:10:09.000Z",
+      "message": {
+        "role": "assistant",
+        "content": [{ "type": "text", "text": "B1 fixed kept assistant" }],
+        "api": "openai-completions",
+        "provider": "b1-faux-provider",
+        "model": "b1-faux-model-v1",
+        "usage": {
+          "input": 2,
+          "output": 2,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 4,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0, "total": 0 }
+        },
+        "stopReason": "stop",
+        "timestamp": 2208989409000
+      }
+    },
+    {
+      "type": "compaction",
+      "id": "tail-compaction-v1",
+      "parentId": "tail-kept-assistant-v1",
+      "timestamp": "2040-01-01T00:10:10.000Z",
+      "summary": "B1 deterministic compacted prefix",
+      "firstKeptEntryId": "tail-kept-user-v1",
+      "tokensBefore": 424242
+    },
+    {
+      "type": "message",
+      "id": "tail-post-user-v1",
+      "parentId": "tail-compaction-v1",
+      "timestamp": "2040-01-01T00:10:11.000Z",
+      "message": {
+        "role": "user",
+        "content": [{ "type": "text", "text": "B1 fixed post-compaction user" }],
+        "timestamp": 2208989411000
+      }
+    },
+    {
+      "type": "message",
+      "id": "tail-post-assistant-v1",
+      "parentId": "tail-post-user-v1",
+      "timestamp": "2040-01-01T00:10:12.000Z",
+      "message": {
+        "role": "assistant",
+        "content": [{ "type": "text", "text": "B1 fixed post-compaction assistant" }],
+        "api": "openai-completions",
+        "provider": "b1-faux-provider",
+        "model": "b1-faux-model-v1",
+        "usage": {
+          "input": 3,
+          "output": 3,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 6,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0, "total": 0 }
+        },
+        "stopReason": "stop",
+        "timestamp": 2208989412000
+      }
+    }
+  ],
+  "topology": {
+    "branchPointId": "tail-thinking-v1",
+    "leftChildId": "tail-left-user-v1",
+    "leftLeafId": "tail-left-assistant-v1",
+    "rightChildId": "tail-right-user-v1",
+    "rightLeafId": "tail-right-assistant-v1",
+    "selectedLeafId": "tail-post-assistant-v1",
+    "labelEntryId": "tail-left-label-v1",
+    "labelTargetId": "tail-left-assistant-v1",
+    "snapshotEntryId": "tail-snapshot-v1",
+    "firstKeptEntryId": "tail-kept-user-v1",
+    "compactionEntryId": "tail-compaction-v1"
+  },
+  "continuation": {
+    "userMessage": {
+      "role": "user",
+      "content": [{ "type": "text", "text": "B1 fixed post-open continuation user" }],
+      "timestamp": 2208989500000
+    },
+    "assistantMessage": {
+      "role": "assistant",
+      "content": [{ "type": "text", "text": "B1 fixed post-open continuation assistant" }],
+      "api": "openai-completions",
+      "provider": "b1-faux-provider",
+      "model": "b1-faux-model-v1",
+      "usage": {
+        "input": 5,
+        "output": 5,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "totalTokens": 10,
+        "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0, "total": 0 }
+      },
+      "stopReason": "stop",
+      "timestamp": 2208989501000
+    }
+  }
+}

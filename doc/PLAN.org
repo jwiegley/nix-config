@@ -2701,16 +2701,18 @@ No certified extension invokes a legacy materializer or eager legacy hook payloa
 ]
 #+end_src
 
-* DOING [#A] Build exact-upstream Pi fixtures and a classic-core memory baseline    :memory:pi:upstream:
+* DONE [#A] Build exact-upstream Pi fixtures and a classic-core memory baseline    :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.2
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-12 Wed 02:28]
+:MODIFIED: [2026-08-12 Wed 04:29]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 04:28]
+:CLOSE_REASON: Exact upstream source, four nested fixtures, sole low/high classic diagnostic, immutable evidence, independent review, and all final gates completed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2722,7 +2724,7 @@ Programme B1. Pin and inspect one exact unmodified upstream coding-agent snapsho
 The exact upstream source and package identity is frozen and inspected before any behavioral attribution. Four logically nested 16 MiB, 64 MiB, 256 MiB, and 1 GiB fixtures preserve one normalized active projection while both persisted bytes and entry count increase by at least threefold per step; exact source hashes, bytes, entries, and per-fixture semantic oracles are recorded. Source evidence identifies whether the selected classic path retains complete-history structures such as fileEntries and byId. One fresh low and high diagnostic with an empty extension manifest records raw RSS, heap and external diagnostics, retained classic entry counts, semantic results, commands, and immutable bundle hashes. It is expected to expose history-sized retention; its RSS value cannot satisfy M1 or M2. B1 does not build speculative multiprocess containment or the final product harness.
 
 ** Notes
-READY after C1 closed on signed GOOD commit 328cff3f with a fresh history-isolated fess CLEAR. Dated metadata observed upstream main 534bcbff, but C1 did not retain or inspect that tree. Before any behavioral attribution, freeze and inspect the exact upstream source and package identity selected for B1. The managed gallery, compatibility shim, wrapper, and user state remain excluded. No B1 fixture, control, diagnostic, or candidate process has run. Next: claim B1, record the exact source/package identity and source evidence, then build the four shared nested fixtures and run only the empty-extension classic low/high diagnostic. Retain immutable raw bundles outside obr and record their references, hashes, verdict, and next action here.
+B1 source, fixtures, and the sole descriptive low/high diagnostic are complete. Exact upstream subject: Pi 0.84.1 at 2e4d23959485279aa2da1a45103de2ea22d46395, package /nix/store/98ldilyr7g34lg78nvn5470zxaqih3zy-pi-classic-core-source-0.84.1. Fixture authority: /nix/store/zan7ir6jx415h85my3w07vla2mzvksyw-pi-classic-core-fixtures-v1, NAR sha256-dYiqyYnzpKCTbGiA0PxhgLFZiL4SOahV+lyCDvvT0YY=. Immutable evidence: /nix/store/cp9sqkmswmxab9aa4hwdj4zz6d4hxvx0-pi-b1-classic-core-attempt-0001, NAR sha256-MRZ2TES55znZo53uNKXCS/kaMXja5DgxN960GLFIRA0=, bundle checksum 72a4c763417686ad0fd971f17d3009848e4f1b9e24aff1cb2dc635dd1526b9cd, summary b0bcac2601b5b949510a66fe534e99be97ea6c8c1f355c090d601373d5d1599d. Independent evidence audit is CLEAR. Low/high raw RSS is 103481344/1275248640 bytes; maxRSS 116932608/1361608704; retained pre-continuation fileEntries 527/32783 and byId 526/32782. Publication failed only after seal because the old runner made the source directory read-only before GNU mv on Darwin; reviewed post-measurement recovery published the same bytes without rerunning, and the source repair now applies read-only mode after exclusive publication. All final Nix, fixture, full make test, and pre-commit gates are green. The issue is closed; the signed closeout commit and fresh post-commit fess are the only in-session bookkeeping still in progress. If interrupted before the commit, stage only the B1 paths plus PLAN, commit signed without bypassing hooks, then run a fresh no-history fess and reopen B1 if it finds a blocker. Do not rerun B1. No activation or push is authorized.
 
 ** Dependencies
 #+begin_src json
@@ -2785,6 +2787,97 @@ READY after C1 closed on signed GOOD commit 328cff3f with a fresh history-isolat
     "author": "johnw",
     "text": "Fess correction to comment 41: the recorded 38e0b9de catalog-record hash was SHA-256 of JSON null plus LF because the audit command used the nonexistent .records path. It is not evidence and is superseded. The authoritative pi-classic-core-baseline catalog-record identity is the exact 773-byte UTF-8 output of jq -cS '.sources[\"pi-classic-core-baseline\"]' sources/ai.json, including its terminating LF: SHA-256 08cfc3aa6640aa260a844fda2d44e06e44e7db4011caede6067f211fad27496d. The source, provider, npm, derivation, output NAR, runtime, compiled-source, causal-line, and empty-extension identities remain unchanged and were independently checked by fess. No B1 fixture, control, diagnostic, or candidate process has run.",
     "created_at": "2026-08-12T09:28:32Z"
+  },
+  {
+    "id": 44,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Fixture/diagnostic implementation is in progress after the committed exact-source freeze. The deterministic four-size fixture bundle remains a non-baseline Darwin Nix check. Independent review rejected placing run-dependent RSS in a substitutable fixed runCommand output: the descriptive B1 low/high diagnostic is therefore a Nix-packaged app that requires a new absolute bundle path, creates fresh private endpoint roots, caps child stdout/stderr, seals both success and failure evidence before returning, and removes endpoint state. No fixture or candidate diagnostic has run yet. Current next action: finish and review the isolated generator/reference/diagnostic tools, wire the app/check, build the deterministic fixture bundle, then invoke exactly one fresh low/high bundle.",
+    "created_at": "2026-08-12T09:44:06Z"
+  },
+  {
+    "id": 45,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Pre-build independent review rejected the first fixture/runner draft before any fixture or RSS process ran. The four-scale Pi v3 topology and bounded 4 KiB RSS preflight are sound, but release blockers remain in evidence mechanics: install the omitted capped-command helper; make generated files and final bundle no-clobber; preserve unsealed recovery state on setup/seal/publication failure; make endpoint setup/cleanup explicit rather than relying on errexit under ||; harden capped-child signals/stream errors; source postflight expectations directly from the immutable oracle; isolate all evidence helpers from ambient NODE_OPTIONS; replace false GNU-cp chunk claims with exact executable/argv/mode/postflight custody; bound sealing inventory; and require a complete common low/high identity plus raw RSS unit/count checks. Isolated revisions are in progress. No deterministic fixture, baseline diagnostic, control, or candidate process has run. Next: integrate the corrected frozen tools and runner, re-review, then build the deterministic fixture check.",
+    "created_at": "2026-08-12T10:01:20Z"
+  },
+  {
+    "id": 46,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Process deviation during static copy-policy inspection: one exploratory `nix build --no-link --print-out-paths nixpkgs#coreutils` was accidentally invoked outside `direnv exec .`. It realized or reused only a coreutils store path, made no repository, fixture, diagnostic, activation, or user-state change, and is not accepted as B1 evidence. All remaining Nix evaluation/build/test commands stay under `direnv exec .`. The inspection did reveal that `${coreutils}/bin/cp` is a symlink to the package coreutils binary, so copy custody will bind both the invoked launcher path/target and the resolved executable hash.",
+    "created_at": "2026-08-12T10:12:01Z"
+  },
+  {
+    "id": 47,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Pre-build composed review remains NO-CLEAR; no fixture or RSS process has run. Current blockers are evidence-runner mechanics, not the frozen upstream subject: incremental bounded seal traversal; truthful reference-retention and exact operation-cap accounting; temp ownership/no-clobber derived-path collision checks; capped argv/output/process-group supervision; immediate shell signal forwarding and late-signal failure; trusted publication-parent/recovery labeling. Three isolated repair lanes are in progress. Next: integrate and independently re-review these mechanics, then build fixtures only after CLEAR.",
+    "created_at": "2026-08-12T10:30:17Z"
+  },
+  {
+    "id": 48,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Pre-build composition is now CLEAR on current bytes. All eight JavaScript tools pass Node syntax and frozen-schema validation; the baseline/fixture Nix expressions pass nixfmt and parse; `nix flake check ./config/ai --all-systems --no-build` is green. A fresh no-history semantic review and the final bounds/Bash review found no remaining issue after bounded seal traversal, exact operation/retention accounting, owned-temp no-clobber publication, capped process-group supervision, complete postflight argv evidence, scoped Bash monitor mode, and single-snapshot job custody were fixed. The exact capped-command behavioral probes pass 7/7 plus the 16 MiB overflow case. No deterministic fixture or low/high diagnostic has run yet. Next: build the Darwin pi-classic-core-fixtures check once, inspect its immutable manifest/oracles and growth ratios, then run exactly one fresh low/high diagnostic if the fixture evidence is valid.",
+    "created_at": "2026-08-12T10:57:24Z"
+  },
+  {
+    "id": 49,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Deterministic fixture build attempt 1 failed before fixture generation. Command: `direnv exec . nix build ./config/ai#checks.aarch64-darwin.pi-classic-core-fixtures --no-link --print-out-paths`; derivation `/nix/store/9nzxmvr0fznn9zv3bfd4858m0qy6p6ll-pi-classic-core-fixtures-v1.drv`, exit 1. The builder copied single-file Nix store inputs to directories, preserving hash-prefixed store basenames, then tried the intended unhashed `$out/tools/generate-fixtures.mjs` path. Node reported MODULE_NOT_FOUND. No output path or fixture evidence was produced; no RSS diagnostic ran. Fix: give every copied protocol/tool input an explicit destination filename, re-run static review, then rebuild the deterministic check.",
+    "created_at": "2026-08-12T10:58:50Z"
+  },
+  {
+    "id": 50,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Deterministic B1 fixture authority is COMPLETE and valid after the explicit-copy-filename repair. Successful derivation: `/nix/store/d22q74z9ximj6x9n6h5ykdjag56cngws-pi-classic-core-fixtures-v1.drv`; immutable output: `/nix/store/zan7ir6jx415h85my3w07vla2mzvksyw-pi-classic-core-fixtures-v1`; output NAR `sha256-dYiqyYnzpKCTbGiA0PxhgLFZiL4SOahV+lyCDvvT0YY=`, size 1426331912, signed by newartisans.com. Sealed `SHA256SUMS` SHA-256 b5aed7c3c4b75d2699fa8e0c68fb6a8c063bcfed61c0e0969ed54feb2a7a19f8 verified every file. Manifest af6653b18c5c2a2de2e9042fa560e87126bcbc35f2b41d05866effaa8b46cc6d; oracles 4786cf3513e1de22692184e63a04e549066442b864e36365cf24b2dbf0066d62; generation 79c6d0f2fe4674e9d25e6ef2489eaa3e52d833f1ede9ff1d7d28a27ce4c6b2e0. Scales: 16m 16,781,411 bytes/526 non-header entries/hash 4d3d4d62...; 64m 67,113,059/2062/6ab92c18...; 256m 268,439,651/8206/6d21e8ed...; 1g 1,073,746,019/32782/6368bb08.... Each adjacent byte and entry count grows at least 3x; all bulk/nesting checkpoints and active/point/continuation invariant hashes pass. All copied protocol/tool bytes match the reviewed worktree, and source identity is exact upstream 2e4d239.../0.84.1 with empty extensions. No RSS diagnostic has run. Next: build the packaged baseline app from these exact inputs, freeze the command/output target, and invoke exactly one fresh 16m/1g diagnostic.",
+    "created_at": "2026-08-12T11:01:42Z"
+  },
+  {
+    "id": 51,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Process correction before measurement: the first successful fixture realization was invoked as plain `nix build` rather than the required explicit `direnv exec . nix build`. It is retained as audit history but is not accepted as the governing build. The exact command was rerun through `direnv exec .` and returned the same immutable output `/nix/store/zan7ir6jx415h85my3w07vla2mzvksyw-pi-classic-core-fixtures-v1`; all hashes/NAR/checksum evidence in comment 50 therefore applies to the governing direnv build. A malformed attempt to build the app `.program` string outside direnv only produced a Nix evaluation error and no output; it is not evidence. The exact app derivation `/nix/store/h544wiqm6vj8a7dfd54w2lx27i5ial1y-pi-classic-core-baseline.drv` was then built through direnv to `/nix/store/nqzh8g85jv8s6i987prkhv8v5dhy33qk-pi-classic-core-baseline`, NAR `sha256-YyHjoKrmZZm6IHCmRc6U3rfNLoXwZZiCH5M3PyaswQE=`, size 20592, script SHA-256 24033cffedc678750c96136ec6e7ac4850104e8eef5ef5a810ee0f844e4a1354. No diagnostic process has run yet.",
+    "created_at": "2026-08-12T11:03:03Z"
+  },
+  {
+    "id": 52,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Sole B1 classic low/high diagnostic has run exactly once; do not rerun it. Governing command: direnv exec . /nix/store/nqzh8g85jv8s6i987prkhv8v5dhy33qk-pi-classic-core-baseline /private/tmp/pi-b1-classic-core-attempt-0001. Both endpoint children, semantic checks, postflights, summary, and seal succeeded. Low raw RSS 103481344 bytes and maxRSS 116932608; high raw RSS 1275248640 and maxRSS 1361608704; raw delta 1171767296 and maxRSS delta 1244676096. Retained fileEntries grew 527 to 32783 before continuation and 529 to 32785 after; byId grew 526 to 32782 before and 528 to 32784 after; delta 32256. Empty extensions, low/high common identity, semantic hashes, raw units/counts, and endpoint statuses are all exact/green. Publication alone failed: GNU mv -T --no-clobber on Darwin returned Permission denied because the source directory had been made read-only before the move. The checksum-valid sealed bundle is retained at /private/tmp/.pi-b1-baseline.UrZAN6/bundle, mode dr-x------; intended target /private/tmp/pi-b1-classic-core-attempt-0001 remains absent. All 20 SHA256SUMS entries reverify. The narrow source fix moves chmod -R a-w after the exclusive move; it is under independent review. Resume by reviewing that fix, temporarily adding owner write only to the sealed bundle root, performing the same exclusive move without rerunning measurements, restoring recursive read-only mode, reverifying checksums, then adding the published bundle immutably to the Nix store and recording its identity. No activation, push, or measurement rerun is authorized or needed.",
+    "created_at": "2026-08-12T11:05:35Z"
+  },
+  {
+    "id": 53,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Publication recovery is COMPLETE without rerunning either endpoint. Independent review cleared the exact sequence. A first recovery command stopped before chmod/move because macOS stat format omitted the sticky bit; it made no change. The corrected check used the same pinned GNU coreutils stat as the runner, verified /private=0:755 and /private/tmp=0:1777, confirmed the recovery root contained only the checksum-valid sealed bundle, added owner-write only to the bundle root, performed the exact GNU mv -T --no-clobber move, required source disappearance and physical destination presence, restored recursive a-w, reverified all 20 SHA256SUMS entries, and removed the now-empty recovery root. Published path: /private/tmp/pi-b1-classic-core-attempt-0001, read-only. SHA256SUMS SHA-256 72a4c763417686ad0fd971f17d3009848e4f1b9e24aff1cb2dc635dd1526b9cd; summary SHA-256 b0bcac2601b5b949510a66fe534e99be97ea6c8c1f355c090d601373d5d1599d; measured runner SHA-256 24033cffedc678750c96136ec6e7ac4850104e8eef5ef5a810ee0f844e4a1354. The published bundle was added immutably through direnv to /nix/store/cp9sqkmswmxab9aa4hwdj4zz6d4hxvx0-pi-b1-classic-core-attempt-0001; NAR SHA-256 sha256-MRZ2TES55znZo53uNKXCS/kaMXja5DgxN960GLFIRA0=, NAR size 213056, no references. Store-copy SHA256SUMS verification is green. The source repair moves recursive read-only chmod after exclusive publication and corrects its evidence labels; corrected-sequence synthetic probe passed. Remaining work: rebuild/static-test the repaired app, update the contract evidence ledger and B1 acceptance text, run final repository gates, close/sync B1, commit signed, and run fresh post-commit fess. No activation or push is authorized.",
+    "created_at": "2026-08-12T11:08:03Z"
+  },
+  {
+    "id": 54,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Evidence-count correction to the two preceding publication comments: the bundle contains SHA256SUMS plus 19 listed payload files. shasum -c validates 19/19 entries; the earlier phrase all 20 SHA256SUMS entries incorrectly counted the checksum file itself as a manifest entry. No file, checksum, artifact identity, measurement, or verdict changes. Independent read-only evidence audit is CLEAR: no missing or unlisted files, symlinks, or writable entries in the immutable store copy; fixture SHA256SUMS validates 21/21.",
+    "created_at": "2026-08-12T11:09:27Z"
+  },
+  {
+    "id": 55,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Final verification checkpoint: all eight JavaScript tools pass node --check; frozen spec/operations parse and validate; Nix files pass nixfmt and parse; git diff --check is clean; config/ai all-system no-build flake check passes; exact pi-classic-core-source and pi-classic-core-fixtures checks build to their frozen outputs. The repaired baseline app built as /nix/store/hvgllsdy7jrjiwgd7zpv2pyv33fclysg-pi-classic-core-baseline from derivation /nix/store/9nv8gk80s8iihyv7y97z5230ik6rq25c-pi-classic-core-baseline.drv, NAR sha256-il1OW3qaDvFZgPh7TQ/4/fNlzng/KFEXo/d2J1wCrhU=, size 20784, script SHA-256 8660aff9e7263fa45164fe541b86be857a64006e944fc025c4fb89506848ab8e. Its existing-target preflight returns the expected 73 and launches no diagnostic. One shell harness attempt built and reached that same preflight but then hit zshs reserved status variable while capturing the expected exit; rerunning only the no-child preflight with run_status passed. The first full make test had all 21 Python suites green but its 7-check behavioral phase was 6/7 because the unrelated pi-gallery two-writer child-start gate exceeded 30 seconds under three concurrent cold builds. Exact log retained; 160 sibling tests passed. The unchanged pi-gallery derivation then passed in isolation, and one bounded canonical make test rerun passed the full 21 Python suites and all 7 behavioral checks without timeout or source/test relaxation. Remaining gate: lefthook pre-commit, then B1 close/sync, signed commit, and fresh fess.",
+    "created_at": "2026-08-12T11:27:52Z"
+  },
+  {
+    "id": 56,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "B1 acceptance is complete. Final pre-commit passed Nix format/lint/dead-code, shell lint/format, Python lint, and 18/18 fast suites inside budget. The canonical make test rerun passed 21/21 full Python suites and all seven behavioral checks; config/ai all-system no-build evaluation and exact source/fixture builds are green. Immutable B1 evidence and its descriptive-only standing are recorded in the contract and this issue. No activation or push was performed.",
+    "created_at": "2026-08-12T11:28:56Z"
   }
 ]
 #+end_src

@@ -413,6 +413,14 @@ in
     let
       pkgs = mkPkgs system;
       qualityDeps = qualityInputs pkgs;
+      classicCoreSource = pkgs.callPackage ../test/ai/pi-classic-core-source.nix { };
+      classicCoreFixtures = pkgs.callPackage ../test/ai/pi-classic-core-fixtures.nix {
+        classicPackage = classicCoreSource;
+      };
+      classicCoreBaseline = pkgs.callPackage ../test/ai/pi-classic-core-baseline.nix {
+        classicFixtures = classicCoreFixtures;
+        classicPackage = classicCoreSource;
+      };
       app =
         name: scriptName: runtimeInputs: extraEnv:
         mkScriptApp pkgs name scriptName runtimeInputs extraEnv;
@@ -428,6 +436,12 @@ in
       check = app "check" "check.sh" qualityDeps.all lintRoot;
       default = check;
     }
+    // lib.optionalAttrs (pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64) {
+      pi-classic-core-baseline = {
+        type = "app";
+        program = lib.getExe classicCoreBaseline;
+      };
+    }
   );
 
   checks = forAllSystems (
@@ -435,6 +449,10 @@ in
     let
       pkgs = mkPkgs system;
       qualityDeps = qualityInputs pkgs;
+      classicCoreSource = pkgs.callPackage ../test/ai/pi-classic-core-source.nix { };
+      classicCoreFixtures = pkgs.callPackage ../test/ai/pi-classic-core-fixtures.nix {
+        classicPackage = classicCoreSource;
+      };
       check =
         name: scriptName: runtimeInputs: extraEnv:
         mkScriptCheck pkgs name scriptName runtimeInputs extraEnv;
@@ -507,7 +525,8 @@ in
     }
     // lib.optionalAttrs (pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64) {
       llm-mlx-plugin = pkgs.python3Packages.llm-mlx.passthru.tests.llm-plugin;
-      pi-classic-core-source = pkgs.callPackage ../test/ai/pi-classic-core-source.nix { };
+      pi-classic-core-fixtures = classicCoreFixtures;
+      pi-classic-core-source = classicCoreSource;
     }
   );
 

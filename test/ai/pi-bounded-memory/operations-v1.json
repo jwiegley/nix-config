@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "kind": "pi-b1-operation-oracle-table",
+  "qualification": "descriptive-b1-only",
+  "rows": [
+    {
+      "operation": "classic-open",
+      "projection": "direct fileEntries.length and byId.size",
+      "itemProjection": "fileEntries-length with byId-size recorded separately",
+      "serializedByteProjection": "raw-canonical-session-jsonl",
+      "ordering": "file order",
+      "normalization": "none",
+      "comparison": "per_fixture",
+      "phase": "rss_normal",
+      "expectedSource": "reference-oracle",
+      "owner": "classic SessionManager",
+      "limits": { "items": null, "bytes": null, "concurrency": 1, "spoolBytes": 0 }
+    },
+    {
+      "operation": "active-context-before",
+      "projection": "buildSessionContext",
+      "itemProjection": "active-context-message-count",
+      "serializedByteProjection": "stable-stringify-utf8:active-context-object",
+      "ordering": "compaction then kept and post-compaction messages",
+      "normalization": "recursively key-sorted UTF-8 JSON",
+      "comparison": "history_invariant",
+      "phase": "rss_normal",
+      "expectedSource": "reference-oracle",
+      "owner": "classic SessionManager",
+      "limits": { "items": 5, "bytes": 16384, "concurrency": 1, "spoolBytes": 0 }
+    },
+    {
+      "operation": "bounded-point-diagnostics",
+      "projection": "fixed IDs, label, snapshot, and branch edges",
+      "itemProjection": "fixed-point-descriptor-count",
+      "serializedByteProjection": "stable-stringify-utf8:16-canonical-point-descriptors-with-semantic-hashes",
+      "ordering": "fixed oracle ID order",
+      "normalization": "recursively key-sorted UTF-8 JSON",
+      "comparison": "history_invariant",
+      "phase": "rss_normal",
+      "expectedSource": "reference-oracle",
+      "owner": "B1 diagnostic",
+      "limits": { "items": 16, "bytes": 65536, "concurrency": 1, "spoolBytes": 0 }
+    },
+    {
+      "operation": "fixed-continuation",
+      "projection": "one user append, one assistant append, then buildSessionContext",
+      "itemProjection": "continuation-message-count",
+      "serializedByteProjection": "stable-stringify-utf8:{messages,activeContext}",
+      "ordering": "user then assistant",
+      "normalization": "generated wrapper IDs and timestamps excluded from context digest",
+      "comparison": "history_invariant",
+      "phase": "rss_normal",
+      "expectedSource": "reference-oracle",
+      "owner": "classic SessionManager",
+      "limits": { "items": 2, "bytes": 16384, "concurrency": 1, "spoolBytes": 0 }
+    },
+    {
+      "operation": "retained-ready",
+      "projection": "raw process memory and resource usage with session left open",
+      "itemProjection": "retained-ready-sample-count",
+      "serializedByteProjection": null,
+      "ordering": "three gc plus setImmediate turns",
+      "normalization": "none",
+      "comparison": "per_fixture",
+      "phase": "rss_normal",
+      "expectedSource": "diagnostic-observation",
+      "owner": "B1 diagnostic",
+      "limits": { "items": 1, "bytes": null, "concurrency": 1, "spoolBytes": 0 }
+    }
+  ]
+}
