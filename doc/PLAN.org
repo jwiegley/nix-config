@@ -254,6 +254,35 @@ Partner observation .443Z: plaintext stage/backup copies can survive SIGKILL or 
 ]
 #+end_src
 
+* DOING [#B] Restore Pi Sessions as a reviewed managed product
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-imo
+:LABELS: []
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-11 Tue 21:07]
+:MODIFIED: [2026-08-11 Tue 21:07]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Move Pi Sessions and its required Pi-core behavior into reviewed owner-controlled product commits, pin those immutable commits in the Pi gallery without a product-scale downstream patch, preserve private mutable-state ownership, verify the actual loader and bounded/concurrent runtime behavior, activate Hera, and publish the signed product and Nix commits.
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 6,
+    "issue_id": "nix-imo",
+    "author": "johnw",
+    "text": "Claimed under the user request to commit, activate, and push Pi Mem and Pi Sessions.",
+    "created_at": "2026-08-12T04:07:33Z"
+  }
+]
+#+end_src
+
 * DONE [#B] Verify Clio local-model inventory matches advertised routes
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -3137,6 +3166,37 @@ obr is a general repository/fleet issue tracker, not an AI tool. Move its flake 
     "depends_on_id": "nix-tcz",
     "type": "discovered-from",
     "created_at": "2026-08-10T23:18:58.199108Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Make managed Pi oMLX reasoning and vision capabilities truthful
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-x6r
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-11 Tue 17:18]
+:MODIFIED: [2026-08-11 Tue 17:18]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Live Hera Pi reports both omlx/Qwen3.6-27B-oQ6e-mtp and router/sol as thinking=no even though config/ai/renderers/pi.nix declares router reasoning profiles. The oMLX /v1/models record supplies max_model_len but no architecture or capability metadata, so the managed provider conservatively normalizes reasoning=false and text-only; Model Router consequently does not forward Pi thinking levels, while direct Pi also suppresses image input. Establish one explicit, behaviorally tested authority for the exact managed model's reasoning and VLM capabilities (or remove the misleading router thinking profiles), prove shift+tab/request shaping matches the declared contract without enabling thinking by default, and verify an image probe before advertising vision. Preserve server-side enable_thinking=false as the default unless separately chosen.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-x6r",
+    "depends_on_id": "nix-5yr",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T00:18:06.654586Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
