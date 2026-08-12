@@ -83,6 +83,54 @@ The Eternal Terminal override no longer targets a nonexistent source path; its p
 
 Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and GIT_NAMESPACE from hermetic Git fixture environments, with a regression that proves both selectors cannot leak into fixture commands.
 
+* TODO [#B] Resolve unsigned VPS history before fleet activation
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-3qu
+:LABELS: []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-12 Wed 14:58]
+:MODIFIED: [2026-08-12 Wed 14:58]
+:OWNER: johnw
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The VPS /etc/nixos checkout is clean but has two existing unpushed local commits, 9d1874ee and 15540784, and both lack a valid commit signature. The repository policy requires signed history, while repairing them requires an explicit history rewrite that the current activation authorization does not grant. Preserve the checkout and do not update locks, publish, or activate until the owner selects a history-repair course.
+
+** Acceptance Criteria
+With explicit owner authorization, preserve the two commits' content while replacing or re-signing the unsigned history; verify signatures and unchanged patch content; publish without exposing the credential-bearing remote URL; update the paired nix-config locks to the intended signed revision; run /etc/nixos/./build build and /etc/nixos/./build switch; verify current/system profile equality, Home Manager success, no new failed units, rollback availability, and a clean published checkout.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-3qu",
+    "depends_on_id": "nix-z9h",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T21:58:42.914293Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 105,
+    "issue_id": "nix-3qu",
+    "author": "johnw",
+    "text": "Rollout stopped safely before any VPS mutation. The checkout is clean at 155407842..., ahead by exactly the two unsigned commits 9d1874ee... and 15540784.... No lock update, build, switch, publication, rebase, amend, reset, or remote inspection was performed. The credential-bearing remote URL is not reproduced here; credential rotation remains tracked separately as P0 nix-twq. Explicit owner authorization for history rewrite is required before this host can join the fleet rollout.",
+    "created_at": "2026-08-12T21:58:52Z"
+  }
+]
+#+end_src
+
 * TODO [#B] Choose a dedicated identity for the Vulcan-Andoria jump    :authority:security:ssh:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -6216,15 +6264,17 @@ Path Finder 26.1.7 is independent of Nix Samba. During the reported attempt it p
 ]
 #+end_src
 
-* DOING [#C] Adopt the final declarative Nix builder pool
+* DONE [#C] Adopt the final declarative Nix builder pool
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-z9h
 :LABELS: []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 12:52]
-:MODIFIED: [2026-08-12 Wed 14:05]
+:MODIFIED: [2026-08-12 Wed 14:58]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 14:58]
+:CLOSE_REASON: Final declarative builder pool adopted and behaviorally verified on Hera
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -6259,6 +6309,13 @@ A separately authorized Hera switch adopts the final generated two-row machines 
     "author": "johnw",
     "text": "Owner explicitly authorized signed commit, dual-remote publication, and activation on all hosts after nix-01a closed. Beginning fleet adoption from each authoritative checkout; preserve per-host build/activation/runtime evidence and do not conflate Hera adoption with Clio/shared-work/NixOS adoption.",
     "created_at": "2026-08-12T21:05:01Z"
+  },
+  {
+    "id": 104,
+    "issue_id": "nix-z9h",
+    "author": "johnw",
+    "text": "Signed builder implementation 6e4a1c4 and readiness correction 532d97a5 were published to both remotes; obr-only closeout d91bf153 is also signed and dual-published. Hera generation 1067 is the exact d91bf153 system at /nix/store/48b9g2gp0dkhkw7warhrsnw3yvr0w9f7-darwin-system-26.11.15abb8c. /etc/nix/machines remains the two-link Nix-owned chain to /nix/store/nwlxac7w07bzb2v3zikcaqbsb0pld6jw-etc-machines, SHA-256 346479596193f853afb386974303456009040e2a67dfc7e6fcfc6e2aa667106d, with exactly Vulcan aarch64-linux and Andoria-08 x86_64-linux; nix-builder and Andoria-T2 are absent. The Determinate daemon is running, trusted, last exit 0. Fresh default-file probes after adoption produced exact nonce outputs through Vulcan and the declared sudo-daemon Andoria-08 route. Clio generation 290 adopted its intended Hera/Vulcan/Andoria-08 pool. Vulcan and all four shared-work hosts also adopted their published consumer revisions; the independently blocked VPS is tracked as nix-3qu and was left untouched.",
+    "created_at": "2026-08-12T21:58:49Z"
   }
 ]
 #+end_src
