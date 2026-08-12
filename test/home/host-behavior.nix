@@ -22,6 +22,9 @@ let
   desktopHomesByHost = lib.mapAttrs (
     _: configuration: configuration.config.home-manager.users.johnw
   ) darwinConfigurations;
+  gallerySourceFor =
+    host:
+    desktopHomesByHost.${host}.home.file.".config/pi/agent/extensions/nix-gallery/index.ts".source;
   vulcanJumpPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID/5S98ifv/slBhGzSLMK+/3JAHNzzglOfau6RlqKeYs";
   expectedVulcanJumpAuthorization = ''from="192.168.1.2",restrict,port-forwarding,permitopen="andoria-08:22",command="/usr/bin/false" ${vulcanJumpPublicKey} johnw@vulcan'';
   vulcanJumpAuthorizations =
@@ -309,9 +312,6 @@ assert lacksLocalModelSessionVariables desktopHomesByHost.clio;
 assert builtins.all lacksLocalModelSessionVariables nonDesktopHomes;
 assert builtins.hasAttr ".config/pi/agent/model-router.json" desktopHomesByHost.hera.home.file;
 assert !(builtins.hasAttr ".config/pi/agent/model-router.json" desktopHomesByHost.clio.home.file);
-assert
-  desktopHomesByHost.clio.home.file.".config/pi/agent/extensions/nix-gallery/index.ts".source
-  == desktopHomesByHost.hera.home.file.".config/pi/agent/extensions/nix-gallery/index.ts".source;
 assert contains aiCatalog.localModelEndpointsByHost.hera.omlx
   desktopHomesByHost.hera.home.activation.aiManagedModelSync.data;
 assert !(builtins.hasAttr "aiManagedModelSync" desktopHomesByHost.clio.home.activation);
@@ -325,4 +325,10 @@ assert builtins.all (
   darwinConfigurations.${host}.config.programs.gnupg.agent.enable
   && lib.hasAttrByPath [ "launchd" "user" "agents" "gnupg-agent" ] darwinConfigurations.${host}.config
 ) (builtins.attrNames darwinConfigurations);
-pkgs.runCommand "host-behavior" { } "touch $out"
+pkgs.runCommand "host-behavior" { } ''
+  grep -F -- ${lib.escapeShellArg "export default createNixGallery(${builtins.toJSON aiCatalog.localModelEndpointsByHost.clio});"} ${gallerySourceFor "clio"} >/dev/null
+  grep -F -- ${lib.escapeShellArg "export default createNixGallery(${builtins.toJSON aiCatalog.localModelEndpointsByHost.hera});"} ${gallerySourceFor "hera"} >/dev/null
+  test -f "$(dirname "$(realpath ${gallerySourceFor "clio"})")/projection.json"
+  test -f "$(dirname "$(realpath ${gallerySourceFor "hera"})")/projection.json"
+  touch $out
+''

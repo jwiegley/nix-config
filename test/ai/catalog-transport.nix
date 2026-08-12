@@ -324,12 +324,22 @@ let
       darwin = profile.platform == "darwin";
       homeDirectory = if darwin then "/Users/test" else "/home/test";
       localModelEndpoints = localModelEndpointsFor profile;
+      localModelDiscoveryEndpoints = localModelDiscoveryEndpointsFor profile;
     in
     {
-      inherit profile darwin localModelEndpoints;
+      inherit
+        profile
+        darwin
+        localModelEndpoints
+        localModelDiscoveryEndpoints
+        ;
       rendered = piRenderer {
-        inherit profile homeDirectory localModelEndpoints;
-        localModelDiscoveryEndpoints = localModelDiscoveryEndpointsFor profile;
+        inherit
+          profile
+          homeDirectory
+          localModelEndpoints
+          localModelDiscoveryEndpoints
+          ;
         selected = selectWithHttp profile;
         xdgConfigHome = "${homeDirectory}/.config";
         passwordStoreDir = if darwin then "${homeDirectory}/doc/.password-store" else null;
@@ -346,6 +356,20 @@ let
     gnupgHome = "/Users/test/.config/gnupg";
     localModelEndpoints = localModelEndpointsFor piProfile;
     localModelDiscoveryEndpoints = localModelDiscoveryEndpointsFor piProfile;
+  };
+  syntheticLocalModelDiscoveryEndpoints = {
+    llama-swap = "http://127.0.0.1:18080/v1";
+    omlx = "http://127.0.0.1:18000/v1";
+  };
+  piSyntheticDiscoveryRendered = piRenderer {
+    profile = catalog.profiles.clio-pi;
+    selected = selectFor catalog.profiles.clio-pi;
+    homeDirectory = "/Users/test";
+    xdgConfigHome = "/Users/test/.config";
+    passwordStoreDir = "/Users/test/doc/.password-store";
+    gnupgHome = "/Users/test/.config/gnupg";
+    localModelEndpoints = null;
+    localModelDiscoveryEndpoints = syntheticLocalModelDiscoveryEndpoints;
   };
   droidRenderer = import "${src}/config/ai/renderers/droid.nix" {
     inherit lib;
@@ -873,6 +897,9 @@ assert builtins.all reject [
     localModelEndpointsByHost = builtins.removeAttrs catalog.localModelEndpointsByHost [ "hera" ];
   })
   (catalog.validate {
+    localModelEndpointsByHost = builtins.removeAttrs catalog.localModelEndpointsByHost [ "clio" ];
+  })
+  (catalog.validate {
     profiles = catalog.profiles // {
       clio-codex = catalog.profiles.clio-codex // {
         localModelEndpoints = catalog.localModelEndpointsByHost.clio;
@@ -941,6 +968,14 @@ assert builtins.all reject [
   })
 ];
 pkgs.runCommand "ai-catalog-transport" { } ''
+  ${pkgs.gnugrep}/bin/grep -F -- ${
+    lib.escapeShellArg (
+      "export default createNixGallery(" + builtins.toJSON syntheticLocalModelDiscoveryEndpoints + ");"
+    )
+  } ${
+    piSyntheticDiscoveryRendered.files.".config/pi/agent/extensions/nix-gallery/index.ts".source
+  } >/dev/null
+
   history_contract=${parallelizeSource}/scripts/verify-history-isolation.py
   model_contract=${validatedReviewSource}/scripts/verify-model-dispatch.py
   test -x "$history_contract"
@@ -1330,6 +1365,15 @@ pkgs.runCommand "ai-catalog-transport" { } ''
         )
       )
     ' ${entry.rendered.files.".config/pi/agent/models.json".source} >/dev/null
+    ${pkgs.gnugrep}/bin/grep -F -- ${
+      lib.escapeShellArg (
+        "export default createNixGallery("
+        + builtins.toJSON (
+          if entry.localModelDiscoveryEndpoints == null then { } else entry.localModelDiscoveryEndpoints
+        )
+        + ");"
+      )
+    } ${entry.rendered.files.".config/pi/agent/extensions/nix-gallery/index.ts".source} >/dev/null
     ${pkgs.jq}/bin/jq -e '
       has("app.thinking.cycle") | not
     ' ${entry.rendered.files.".config/pi/agent/keybindings.json".source} >/dev/null

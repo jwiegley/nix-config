@@ -127,6 +127,18 @@ let
   localDiscoveryProviders = lib.mapAttrs (_: _: { transport = localProviderTransport; }) (
     if localModelDiscovery then localModelDiscoveryEndpoints else { }
   );
+  gallerySource = pkgs.writeText "pi-managed-gallery.ts" ''
+    import { createNixGallery } from ${builtins.toJSON "${pkgs.pi-gallery}/share/pi-gallery/index.ts"};
+
+    export default createNixGallery(${
+      builtins.toJSON (if localModelDiscovery then localModelDiscoveryEndpoints else { })
+    });
+  '';
+  galleryRoot = pkgs.runCommand "pi-managed-gallery" { } ''
+    mkdir -p "$out"
+    cp ${gallerySource} "$out/index.ts"
+    ln -s ${pkgs.pi-gallery}/share/pi-gallery/projection.json "$out/projection.json"
+  '';
   models.providers =
     nativeProviders
     // lib.optionalAttrs localModelDiscovery localDiscoveryProviders
@@ -260,7 +272,7 @@ assert builtins.hasAttr "pi-loop" pkgs.pi-gallery.packages;
         widget.visible = false;
       };
       "${root}/extensions/fleet-theme/index.ts".source = fleetThemeSource;
-      "${root}/extensions/nix-gallery/index.ts".source = "${pkgs.pi-gallery}/share/pi-gallery/index.ts";
+      "${root}/extensions/nix-gallery/index.ts".source = "${galleryRoot}/index.ts";
       "${root}/extensions/pi-loop/index.ts".source =
         "${pkgs.pi-gallery.packages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts";
       "${root}/extensions/pi-mcp-adapter".source = "${extensionRoot}/pi-mcp-adapter";

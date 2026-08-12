@@ -295,7 +295,8 @@ runCommand "pi-gallery-check"
     [ -f ${roots.mem}/tests/private-file-worker.mjs ]
     (
       cd ${roots.mem}
-      ${bun}/bin/bun test tests/*.test.ts
+      NODE_NO_WARNINGS=1 ${nodejs_24}/bin/node \
+        --experimental-strip-types --test tests/*.test.ts
     )
     pi_mem_runtime="$TMPDIR/pi-mem-runtime"
     mkdir -p "$pi_mem_runtime/home" "$pi_mem_runtime/project"
@@ -1696,8 +1697,62 @@ runCommand "pi-gallery-check"
       "$smoke/home/.agents/skills/shared-discovery" \
       "$smoke/project" "$smoke/sentinels"
     ln -s "$smoke/home/.config/pi" "$smoke/home/.pi"
-    ln -s ${gallery}/index.ts \
-      "$smoke/home/.config/pi/agent/extensions/nix-gallery/index.ts"
+    ${lib.optionalString stdenv.hostPlatform.isDarwin ''
+      cat > "$smoke/discovery-server.py" <<'PY'
+      import json
+      from http.server import BaseHTTPRequestHandler, HTTPServer
+      from pathlib import Path
+      import sys
+
+      port_file, request_log = map(Path, sys.argv[1:])
+
+      class Handler(BaseHTTPRequestHandler):
+          def do_GET(self):
+              with request_log.open("a") as output:
+                  output.write(f"{self.path}\n")
+              body = json.dumps({"data": [{"id": "catalog-endpoint-probe", "type": "chat"}]}).encode()
+              self.send_response(200)
+              self.send_header("Content-Type", "application/json")
+              self.send_header("Content-Length", str(len(body)))
+              self.end_headers()
+              self.wfile.write(body)
+
+          def log_message(self, *_args):
+              pass
+
+      server = HTTPServer(("127.0.0.1", 0), Handler)
+      port_file.write_text(str(server.server_port))
+      server.serve_forever()
+      PY
+      ${python3}/bin/python3 \
+        "$smoke/discovery-server.py" \
+        "$smoke/discovery-port" \
+        "$smoke/discovery-requests" &
+      discovery_server_pid=$!
+      cleanup_discovery_server() {
+        kill "$discovery_server_pid" 2>/dev/null || true
+        wait "$discovery_server_pid" 2>/dev/null || true
+      }
+      trap cleanup_discovery_server EXIT
+      for _ in $(seq 1 100); do
+        [ -s "$smoke/discovery-port" ] && break
+        sleep 0.05
+      done
+      [ -s "$smoke/discovery-port" ] || fail "managed Pi discovery server did not start"
+      discovery_port=$(cat "$smoke/discovery-port")
+      cat > "$smoke/home/.config/pi/agent/extensions/nix-gallery/index.ts" <<EOF
+      import { createNixGallery } from ${builtins.toJSON "${gallery}/index.ts"};
+
+      export default createNixGallery({
+        "llama-swap": "http://127.0.0.1:$discovery_port/llama/v1",
+        "omlx": "http://127.0.0.1:$discovery_port/omlx/v1"
+      });
+      EOF
+    ''}
+    ${lib.optionalString (!stdenv.hostPlatform.isDarwin) ''
+      ln -s ${gallery}/index.ts \
+        "$smoke/home/.config/pi/agent/extensions/nix-gallery/index.ts"
+    ''}
     printf '%s\n' '{"providers":{"sentinel":{"apiKey":"unchanged"}}}' \
       > "$smoke/home/.config/pi/agent/models.json"
     cp "$smoke/home/.config/pi/agent/models.json" "$smoke/models-before.json"
@@ -1768,6 +1823,16 @@ runCommand "pi-gallery-check"
       cat "$smoke/error.log" >&2
       fail "aggregate Pi gallery failed to load"
     }
+    ${lib.optionalString stdenv.hostPlatform.isDarwin ''
+      [ "$(wc -l < "$smoke/discovery-requests")" -eq 2 ] \
+        || fail "managed Pi gallery made an unexpected number of discovery requests"
+      grep -Fxq '/llama/v1/models' "$smoke/discovery-requests" \
+        || fail "managed Pi gallery ignored the llama-swap catalog endpoint"
+      grep -Fxq '/omlx/v1/models' "$smoke/discovery-requests" \
+        || fail "managed Pi gallery ignored the oMLX catalog endpoint"
+      cleanup_discovery_server
+      trap - EXIT
+    ''}
     jq -s -e '
       any(
         .[];

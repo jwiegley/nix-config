@@ -179,6 +179,41 @@ try {
 		],
 		"provider requests",
 	);
+	const managedEndpoints = {
+		"llama-swap": "http://catalog.test:8080/custom/v1",
+		omlx: "http://catalog.test:8000/custom/v1",
+	};
+	const managedProviders = new Map<string, ProviderConfig>();
+	const managedPi = {
+		registerProvider: (id: string, config: ProviderConfig) =>
+			managedProviders.set(id, config),
+	};
+	await llamaSwap(managedPi, managedEndpoints);
+	await omlx(managedPi, managedEndpoints);
+	expectEqual(
+		requests.slice(2),
+		[
+			{
+				url: `${managedEndpoints["llama-swap"]}/models`,
+				authorization: "Bearer dummy-key",
+			},
+			{
+				url: `${managedEndpoints.omlx}/models`,
+				authorization: "Bearer dummy-key",
+			},
+		],
+		"managed provider requests",
+	);
+	expectEqual(
+		managedProviders.get("llama-swap")?.baseUrl,
+		managedEndpoints["llama-swap"],
+		"managed llama-swap base URL",
+	);
+	expectEqual(
+		managedProviders.get("omlx")?.baseUrl,
+		managedEndpoints.omlx,
+		"managed oMLX base URL",
+	);
 	expectEqual([...providers.keys()], ["llama-swap", "omlx"], "provider IDs");
 	const llamaModels = modelsFor(providers, "llama-swap");
 	const omlxModels = modelsFor(providers, "omlx");

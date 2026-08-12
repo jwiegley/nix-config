@@ -94,10 +94,10 @@ Partner observation .445Z: the malformed claude-opus-5[1m value came from a trun
 :LABELS: []
 :ISSUE_TYPE: question
 :CREATED:  [2026-08-10 Mon 21:24]
-:MODIFIED: [2026-08-12 Wed 08:24]
+:MODIFIED: [2026-08-12 Wed 09:34]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-12 Wed 08:24]
-:CLOSE_REASON: Completed the fail-closed declarative outcome: Clio no longer receives fixed GLM/Qwen routes or the synthetic router, while Darwin Pi discovery, Hermes, and 7,200-second local-provider transport remain intact and Hera fixed routing is unchanged. Exact renderer, catalog, dynamic-registration, host, and no-extra-route regressions pass; portable all-systems evaluation, make test, Clio and Hera non-activating system builds, formatting, and pre-commit hooks are green. No Clio access, model download, service mutation, activation, publication, or push was performed.
+:FINISHED: [2026-08-12 Wed 09:34]
+:CLOSE_REASON: Declaratively withdrew unsupported fixed Clio routes while preserving discovery transport, Hera routing, and behavioral coverage; corrective fess findings resolved and verified.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -129,6 +129,20 @@ Clio currently serves neither catalog-advertised local route. Choose and impleme
     "author": "johnw",
     "text": "Starting the fail-closed declarative outcome. Because model downloads, Clio service mutation, activation, publication, and fresh Clio inspection remain separately authorized, this work will withdraw/adjust only Clio route opt-ins that the last authorized inventory did not serve, preserve Hera routing, and add behavioral regression coverage. No remote host access or mutable runtime change is planned.",
     "created_at": "2026-08-12T14:40:32Z"
+  },
+  {
+    "id": 77,
+    "issue_id": "nix-5yr",
+    "author": "johnw",
+    "text": "Post-commit fess audit of signed 20643afe reopened the issue. Corrective scope: make Pi consume the catalog endpoint URLs rather than only provider names; validate every Darwin Pi discovery host endpoint in catalog.validate; prove idleTimeoutMs through transport-only dynamic composition; narrow docs to fixed local-provider overrides and refresh the renderer review date. No activation, publication, push, remote host access, or service mutation is authorized or planned.",
+    "created_at": "2026-08-12T15:32:37Z"
+  },
+  {
+    "id": 78,
+    "issue_id": "nix-5yr",
+    "author": "johnw",
+    "text": "Corrective implementation is complete. Catalog endpoint values now flow through the renderer-generated managed gallery wrapper into dynamic llama-swap/oMLX registration; Darwin Pi profiles fail validation without their discovery endpoint record; Clio retains discovery, Hermes, and 7,200-second transport while fixed Clio routes/router remain absent and Hera remains unchanged. A transport-only dynamic provider test proves the 100 ms idle timeout through the real composed fetch, and the aggregate Darwin gallery smoke proves exact catalog request paths; Linux retains the ordinary gallery path. The Pi Mem package gate now uses its deployed Node 24 runtime instead of the non-deployed Bun-in-Bun topology: all 181 assertions and existing timeouts remain unchanged; Darwin and aarch64-linux both passed 181/181. Final evidence: focused ai-catalog-transport, pi-gallery, host-behavior, and ai-mcp-registry builds passed; config/ai pi package passed; aarch64-linux pi-gallery passed; config/ai all-system no-build evaluation passed; make test ran 21/21 suites with zero failures; Hera and Clio non-activating system builds passed; pre-commit passed; three independent current-byte reviews returned CLEAR. The x86_64-linux pi-gallery build did not reach this check because unchanged pi-artifacts failed under QEMU with a V8 executable-memory SetPermissions/target-signal-5 crash; its evaluation passed. No activation, push, publication, model download, remote service mutation, or live endpoint inspection occurred.",
+    "created_at": "2026-08-12T16:34:12Z"
   }
 ]
 #+end_src
@@ -494,7 +508,7 @@ The reviewed Pi Sessions product tree uses no implicit full-history materializer
 :LABELS: []
 :ISSUE_TYPE: question
 :CREATED:  [2026-08-10 Mon 19:56]
-:MODIFIED: [2026-08-10 Mon 21:25]
+:MODIFIED: [2026-08-12 Wed 08:42]
 :CREATED_BY: johnw
 :FINISHED: [2026-08-10 Mon 21:25]
 :CLOSE_REASON: Verified negative: Clio currently evidences neither advertised model. llama-swap returned only bge-m3 and bge-reranker-v2-m3; the unauthenticated oMLX endpoint correctly returned 401, and a credential-free scan of its effective installed-model roots found Qwen3.6-27B-oQ4-mtp but not Qwen3.6-27B-oQ6e-mtp. Active generated leaves still advertise both missing IDs. Follow-up nix-5yr records the owner choice between repairing mutable inventory and withdrawing the routes.
@@ -503,10 +517,10 @@ The reviewed Pi Sessions product tree uses no implicit full-history materializer
 :ORIGINAL_SIZE: 0
 :END:
 
-doc/CURRENT-WORK.md records an unresolved authority question: confirm that Clio mutable llama-swap/oMLX state serves GLM-5.2 and Qwen3.6-27B-oQ6e-mtp before treating the catalog routes as deployable. The inventory is host-owned mutable state, so inspection and any repair require explicit Clio authority; record runtime evidence without copying model state into Nix.
+At the time of this audit, doc/CURRENT-WORK.md recorded an unresolved authority question: confirm that Clio mutable llama-swap/oMLX state served GLM-5.2 and Qwen3.6-27B-oQ6e-mtp before treating the catalog routes as deployable. The inventory is host-owned mutable state, so inspection and any repair require explicit Clio authority; record runtime evidence without copying model state into Nix.
 
 ** Notes
-Follow-up owner decision is tracked as nix-5yr.
+The follow-up owner decision was resolved by nix-5yr with the fail-closed withdrawal of Clio fixed local routes.
 
 ** Dependencies
 #+begin_src json

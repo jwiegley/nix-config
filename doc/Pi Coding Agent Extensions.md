@@ -55,7 +55,7 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `pi-goal-x` | 0.19.0 | Durable goals and Sisyphus continuation | `/goals`, `get_goal` |
 | `pi-cache-optimizer` | 2.8.0 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
 
-The llama-swap provider, oMLX provider, and Model Router packages are available on every host. The generated loader registers them automatically only on Darwin. Both workstations run the local services, but only Hera receives fixed model overrides and a synthetic router model and configuration; Clio retains bounded discovery so that Pi advertises the models its services actually return.
+The llama-swap provider, oMLX provider, and Model Router packages are available on every host. The generated loader registers them automatically only on Darwin. Both workstations run the local services, but only Hera receives fixed local-provider overrides and a synthetic router model and configuration; Clio retains bounded discovery so that Pi advertises the models its services actually return.
 
 ## Managed fleet configuration
 
@@ -77,7 +77,7 @@ Shared skills remain in the common discovery estate rather than being copied int
 
 ### Model and routing policy
 
-The generated model files deliberately emit no default model. Model selection remains mutable at session scope. Hera configures fixed local-provider overrides, the Hermes route, and the router. Clio retains Hermes and bounded runtime discovery, but emits no fixed GLM or Qwen override and no synthetic router route because its last authorized inventory did not serve the catalog's exact model identifiers. Linux generates only the native remote-provider context overrides even though the complete extension package projection is present.
+The generated model files deliberately emit no default model. Model selection remains mutable at session scope. Hera configures fixed local-provider overrides, the Hermes route, and the router. Clio retains Hermes and bounded runtime discovery, but emits no fixed local-provider GLM or Qwen override and no synthetic router route because its last authorized inventory did not serve the catalog's exact model identifiers. Linux generates only the native remote-provider context overrides even though the complete extension package projection is present.
 
 | Item | Current value |
 | --- | --- |
@@ -482,4 +482,4 @@ Within a fresh Pi session, confirm the principal control surfaces:
 /model
 ```
 
-Source policy last checked against the current `~/src/nix` fleet renderer on 2026-08-04. Activation evidence is recorded separately so this inventory does not imply that an unactivated source revision is already live.
+Source policy last checked against the current `~/src/nix` fleet renderer on 2026-08-12. Activation evidence is recorded separately so this inventory does not imply that an unactivated source revision is already live.

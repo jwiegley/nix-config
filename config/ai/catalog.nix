@@ -1466,6 +1466,10 @@ let
           && builtins.isBool profile.hermesRoute
           && !(profile ? localModelEndpoints)
           && (
+            !(profile.client == "pi" && profile.platform == "darwin")
+            || builtins.hasAttr profile.host localModelEndpointsByHost
+          )
+          && (
             !profile.localModelRoutes
             || (
               builtins.elem profile.client [

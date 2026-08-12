@@ -14,62 +14,69 @@ const { DEFAULT_HTTP_IDLE_TIMEOUT_MS, createHttpIdleTimeoutFetch } =
 	await importFromSource("dist/core/http-dispatcher.js");
 assert.equal(DEFAULT_HTTP_IDLE_TIMEOUT_MS, 300_000);
 
-const openSockets = new Set();
-const server = createServer((request, response) => {
-	response.writeHead(200, { "content-type": "text/plain" });
-	response.write("ready");
-	if (request.url !== "/stall") response.end();
-});
-server.on("connection", (socket) => {
-	openSockets.add(socket);
-	socket.on("close", () => openSockets.delete(socket));
-});
-await new Promise((resolve, reject) => {
-	server.once("error", reject);
-	server.listen(0, "127.0.0.1", resolve);
-});
-const address = server.address();
-assert.ok(address && typeof address !== "string");
+const assertIdleTimeout = async (idleTimeoutFetch) => {
+	const openSockets = new Set();
+	const server = createServer((request, response) => {
+		response.writeHead(200, { "content-type": "text/plain" });
+		response.write("ready");
+		if (request.url !== "/stall") response.end();
+	});
+	server.on("connection", (socket) => {
+		openSockets.add(socket);
+		socket.on("close", () => openSockets.delete(socket));
+	});
+	await new Promise((resolve, reject) => {
+		server.once("error", reject);
+		server.listen(0, "127.0.0.1", resolve);
+	});
+	const address = server.address();
+	assert.ok(address && typeof address !== "string");
 
-try {
-	const idleTimeoutFetch = createHttpIdleTimeoutFetch(100);
-	const responses = await Promise.all([
-		idleTimeoutFetch(`http://127.0.0.1:${address.port}/one`),
-		idleTimeoutFetch(`http://127.0.0.1:${address.port}/two`),
-	]);
-	assert.deepEqual(
-		await Promise.all(responses.map((response) => response.text())),
-		["ready", "ready"],
-	);
+	try {
+		const responses = await Promise.all([
+			idleTimeoutFetch(`http://127.0.0.1:${address.port}/one`),
+			idleTimeoutFetch(`http://127.0.0.1:${address.port}/two`),
+		]);
+		assert.deepEqual(
+			await Promise.all(responses.map((response) => response.text())),
+			["ready", "ready"],
+		);
 
-	const stalled = await idleTimeoutFetch(
-		`http://127.0.0.1:${address.port}/stall`,
-	);
-	await assert.rejects(
-		stalled.text(),
-		(error) =>
-			error instanceof TypeError &&
-			error.cause?.code === "UND_ERR_BODY_TIMEOUT",
-	);
+		const watchdog = AbortSignal.timeout(2_000);
+		const stalled = await idleTimeoutFetch(
+			`http://127.0.0.1:${address.port}/stall`,
+			{ signal: watchdog },
+		);
+		await assert.rejects(
+			stalled.text(),
+			(error) =>
+				!watchdog.aborted &&
+				error instanceof TypeError &&
+				error.cause?.code === "UND_ERR_BODY_TIMEOUT",
+		);
 
-	const deadline = Date.now() + 2_000;
-	while (openSockets.size > 0 && Date.now() < deadline) {
-		await new Promise((resolve) => setTimeout(resolve, 10));
+		const deadline = Date.now() + 2_000;
+		while (openSockets.size > 0 && Date.now() < deadline) {
+			await new Promise((resolve) => setTimeout(resolve, 10));
+		}
+		assert.equal(
+			openSockets.size,
+			0,
+			"request-owned dispatchers must release their sockets",
+		);
+	} finally {
+		for (const socket of openSockets) socket.destroy();
+		await new Promise((resolve) => server.close(resolve));
 	}
-	assert.equal(
-		openSockets.size,
-		0,
-		"request-owned dispatchers must release their sockets",
-	);
-} finally {
-	for (const socket of openSockets) socket.destroy();
-	await new Promise((resolve) => server.close(resolve));
-}
+};
+
+await assertIdleTimeout(createHttpIdleTimeoutFetch(100));
 
 const provider = "transport-capability";
 const modelId = "slow-model";
 const transportOnlyProvider = "transport-only-capability";
 const transportOnlyModelId = "discovered-slow-model";
+const registeredTransportOnlyBaseUrl = "http://extension-default.invalid/v1";
 const root = await mkdtemp(join(tmpdir(), "pi-provider-transport-"));
 const agentDir = join(root, "agent");
 await mkdir(agentDir, { recursive: true });
@@ -91,7 +98,7 @@ await writeFile(
 			[transportOnlyProvider]: {
 				transport: {
 					requestTimeoutMs: 7_200_000,
-					idleTimeoutMs: 7_200_000,
+					idleTimeoutMs: 100,
 				},
 			},
 		},
@@ -123,7 +130,9 @@ const transport = runtime.getProviderTransportOptions(provider);
 assert.equal(transport.timeoutMs, 7_200_000);
 assert.equal(typeof transport.fetch, "function");
 assert.notEqual(transport.fetch, globalThis.fetch);
-const transportOnly = runtime.getProviderTransportOptions(transportOnlyProvider);
+const transportOnly = runtime.getProviderTransportOptions(
+	transportOnlyProvider,
+);
 assert.equal(transportOnly.timeoutMs, 7_200_000);
 assert.equal(typeof transportOnly.fetch, "function");
 assert.notEqual(transportOnly.fetch, globalThis.fetch);
@@ -131,6 +140,7 @@ assert.deepEqual(runtime.getProviderTransportOptions("ordinary-provider"), {});
 
 let captured;
 let transportOnlyCaptured;
+let transportOnlyIdleProbe;
 const { createAssistantMessageEventStream } = await importFromSource(
 	"node_modules/@earendil-works/pi-ai/dist/index.js",
 );
@@ -166,7 +176,7 @@ runtime.registerProvider(transportOnlyProvider, {
 	name: "Discovered transport-only provider",
 	api: "openai-completions",
 	apiKey: "test-key",
-	baseUrl: "http://127.0.0.1:1/v1",
+	baseUrl: registeredTransportOnlyBaseUrl,
 	models: [
 		{
 			id: transportOnlyModelId,
@@ -180,6 +190,7 @@ runtime.registerProvider(transportOnlyProvider, {
 	],
 	streamSimple: (model, _context, options) => {
 		transportOnlyCaptured = options;
+		transportOnlyIdleProbe = assertIdleTimeout(options.fetch);
 		return completedStream(model);
 	},
 });
@@ -196,12 +207,12 @@ const transportOnlyModel = runtime.getModel(
 	transportOnlyModelId,
 );
 assert.ok(transportOnlyModel);
-await runtime
-	.streamSimple(transportOnlyModel, { messages: [] })
-	.result();
+assert.equal(transportOnlyModel.baseUrl, registeredTransportOnlyBaseUrl);
+await runtime.streamSimple(transportOnlyModel, { messages: [] }).result();
 assert.equal(transportOnlyCaptured.timeoutMs, 7_200_000);
 assert.equal(typeof transportOnlyCaptured.fetch, "function");
 assert.notEqual(transportOnlyCaptured.fetch, globalThis.fetch);
+await transportOnlyIdleProbe;
 
 const explicitFetch = async () => new Response();
 await runtime

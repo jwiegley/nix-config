@@ -1368,18 +1368,21 @@ let
 
         ${galleryImports}
 
-        export default async function nixGallery(pi: unknown) {
-          process.env.PONYTAIL_HIDE_STATUS = "1";
-          process.env.PI_LENS_DISABLE_LSP_INSTALL = "1";
-          process.env.PI_LENS_AUTO_INSTALL = "0";
+        export function createNixGallery(
+          localModelEndpoints: Readonly<Record<string, string>> = {},
+        ) {
+          return async function nixGallery(pi: unknown) {
+            process.env.PONYTAIL_HIDE_STATUS = "1";
+            process.env.PI_LENS_DISABLE_LSP_INSTALL = "1";
+            process.env.PI_LENS_AUTO_INSTALL = "0";
 
-          const toolOwnersFile = process.env.PI_GALLERY_TOOL_OWNERS_FILE;
-          const toolOwners: Record<string, string[]> = {};
-          for (const [owner, extension] of [
+            const toolOwnersFile = process.env.PI_GALLERY_TOOL_OWNERS_FILE;
+            const toolOwners: Record<string, string[]> = {};
+            for (const [owner, extension] of [
         ${galleryRegistrations}
-          ] as const) {
-            const extensionApi = toolOwnersFile
-              ? new Proxy(pi as object, {
+            ] as const) {
+              const extensionApi = toolOwnersFile
+                ? new Proxy(pi as object, {
                   get(target, property) {
                     const value = Reflect.get(target, property, target);
                     if (property !== "registerTool") {
@@ -1400,22 +1403,30 @@ let
                   set(target, property, value) {
                     return Reflect.set(target, property, value, target);
                   },
-                })
-              : pi;
-            await extension(extensionApi as never);
-          }
+                  })
+                : pi;
+              await (extension as (
+                api: never,
+                endpoints: Readonly<Record<string, string>>,
+              ) => unknown)(extensionApi as never, localModelEndpoints);
+            }
 
-          const extensionApi = pi as { on: (event: string, handler: () => unknown) => void };
-          extensionApi.on("resources_discover", () => ({
-            skillPaths: ${builtins.toJSON (lib.concatMap (item: item.skills or [ ]) projection.packages)},
-            promptPaths: ${builtins.toJSON (lib.concatMap (item: item.prompts or [ ]) projection.packages)},
-          }));
-          if (toolOwnersFile) {
-            extensionApi.on("session_start", () => {
-              writeFileSync(toolOwnersFile, JSON.stringify(toolOwners));
-            });
-          }
+            const extensionApi = pi as { on: (event: string, handler: () => unknown) => void };
+            extensionApi.on("resources_discover", () => ({
+              skillPaths: ${builtins.toJSON (lib.concatMap (item: item.skills or [ ]) projection.packages)},
+              promptPaths: ${
+                builtins.toJSON (lib.concatMap (item: item.prompts or [ ]) projection.packages)
+              },
+            }));
+            if (toolOwnersFile) {
+              extensionApi.on("session_start", () => {
+                writeFileSync(toolOwnersFile, JSON.stringify(toolOwners));
+              });
+            }
+          };
         }
+
+        export default createNixGallery();
         TS
         cat > "$root/projection.json" <<'JSON'
         ${builtins.toJSON projection}

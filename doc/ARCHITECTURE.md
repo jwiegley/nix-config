@@ -186,7 +186,7 @@ Pi gallery normalization has one implementation:
 `packages/pi-gallery/normalization-policy.json` defines the closed policy and
 `packages/pi-gallery/normalize-manifest.jq` executes it for both builds and updates.
 The Darwin gallery performs bounded loopback model discovery on both
-workstations, while `config/ai/catalog.nix` grants fixed local model overrides
+workstations, while `config/ai/catalog.nix` grants fixed local-provider overrides
 and synthetic router configuration only to profiles whose exact model inventory
 has been verified. These overrides are not a second inventory: endpoint
 availability, discovered inventory, and fixed route selection are distinct
