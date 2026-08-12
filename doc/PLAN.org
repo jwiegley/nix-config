@@ -1898,7 +1898,7 @@ Superseding Pi guidance, 2026-08-11:
 :LABELS: ["architecture","memory","pi","pi-bounded-memory","upstream","wiggum"]
 :ISSUE_TYPE: epic
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-12 Wed 05:30]
+:MODIFIED: [2026-08-12 Wed 05:39]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1911,7 +1911,7 @@ Programme E0. Complete the existing Pi SessionRepo and SessionTree direction so,
 Every issue in the frozen pi-bounded-memory roster is closed, explicitly deferred, or has an accepted non-goal. For the actual coding-agent path and certified managed consumers, independent review closes a capability-consumer and history-dataflow inventory across roots, synchronous and suspended transient values, exposed dependency buffers, and declared child processes; every normal ingress is bounded before allocation or hydration. Small merge-blocking boundary tests, a four-scale deterministic qualification including an online append and compaction staircase, lifecycle cleanup, and the exact packaged paired-endpoint RSS integration check pass. Exact durable history, branch, fork, export, explicit legacy compatibility, and cold-work reporting remain intact. Product-scale downstream Pi patches are gone, and no result is presented as a formal proof about opaque runtimes, allocators, arbitrary JavaScript, or third-party extensions.
 
 ** Notes
-Durable continuation, 2026-08-12 PDT. The bounded-history invariant and frozen C1 contract remain unchanged. B1 exact-upstream source, deterministic fixtures, and its sole descriptive low/high measurement are complete; do not rerun the measurement. Signed GOOD closeout e74ee383 and signed GOOD correction 325ba2a are retained, not amended. Fresh no-history fess of 325ba2a was CHANGES REQUIRED; all findings are now corrected in the working tree: the tracked fold factory is mandatory and its exact six-fold peak is asserted, failed and successful postflight exit behavior use authentic integration oracles, and live epic/M1 authority matches the graph. Corrected deterministic artifacts, portable/root evaluations, canonical make test, and pre-commit are green. B1 remains in progress and nix-tcz.37.1.3 remains unclaimed solely until this five-path follow-up is signed and receives a fresh exact no-history fess CLEAR. Obr is the sole continuation authority. Maintainer outreach, PR and fork publication, Nix cutover, activation, push, history rewrite, and fleet acceptance remain separately authorized.
+Durable continuation, 2026-08-12 PDT. The bounded-history invariant and frozen C1 contract remain unchanged. B1 exact-upstream source, deterministic fixtures, and its sole descriptive low/high measurement are complete; do not rerun the measurement. B1 closed on retained signed GOOD commits e74ee383, 325ba2a, and 295371fd after exact deterministic artifacts, portable/root evaluations, canonical make test, pre-commit, and a fresh independent no-history fess CLEAR. Original measured fixture and evidence authorities remain immutable; corrected deterministic artifacts are not substitute qualification. Nix-tcz.37.1.3 is now the next ready programme issue and remains unclaimed. Obr is the sole continuation authority. Maintainer outreach, PR and fork publication, Nix cutover, activation, push, history rewrite, and fleet acceptance remain separately authorized.
 
 ** Dependencies
 #+begin_src json
@@ -2701,16 +2701,18 @@ No certified extension invokes a legacy materializer or eager legacy hook payloa
 ]
 #+end_src
 
-* DOING [#A] Build exact-upstream Pi fixtures and a classic-core memory baseline    :memory:pi:upstream:
+* DONE [#A] Build exact-upstream Pi fixtures and a classic-core memory baseline    :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.2
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-12 Wed 05:30]
+:MODIFIED: [2026-08-12 Wed 05:39]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 05:39]
+:CLOSE_REASON: Signed GOOD closeout e74ee383, corrections 325ba2a and 295371fd, exact deterministic artifacts, full gates, and fresh no-history fess CLEAR complete Programme B1. The sole descriptive measurement remains immutable and must not be rerun.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2722,7 +2724,7 @@ Programme B1. Pin and inspect one exact unmodified upstream coding-agent snapsho
 The exact upstream source and package identity is frozen and inspected before any behavioral attribution. Four logically nested 16 MiB, 64 MiB, 256 MiB, and 1 GiB fixtures preserve one normalized active projection while both persisted bytes and entry count increase by at least threefold per step; exact source hashes, bytes, entries, and per-fixture semantic oracles are recorded. Source evidence identifies whether the selected classic path retains complete-history structures such as fileEntries and byId. One fresh low and high diagnostic with an empty extension manifest records raw RSS, heap and external diagnostics, retained classic entry counts, semantic results, commands, and immutable bundle hashes. It is expected to expose history-sized retention; its RSS value cannot satisfy M1 or M2. B1 does not build speculative multiprocess containment or the final product harness.
 
 ** Notes
-B1 source, fixtures, and the sole descriptive low/high diagnostic are complete and remain valid; do not rerun the measurement. Exact upstream subject: Pi 0.84.1 at 2e4d23959485279aa2da1a45103de2ea22d46395; governing measured fixture authority remains /nix/store/zan7ir6jx415h85my3w07vla2mzvksyw-pi-classic-core-fixtures-v1; immutable evidence remains /nix/store/cp9sqkmswmxab9aa4hwdj4zz6d4hxvx0-pi-b1-classic-core-attempt-0001. Signed GOOD commits e74ee383 and 325ba2a are retained, not amended. The 325ba2a fess follow-up is implemented and verified: stream fold tracking is mandatory before fixture open, the exact cap=6 peak and return to zero are enforced, and authentic failed/successful postflight paths prove nonzero/zero exit semantics. Final corrected fixture output /nix/store/f3njxqqf3mq7kgxncg9ysvmhaj8j3j1l-pi-classic-core-fixtures-v1 preserves byte-identical JSONL fixtures. Portable/root evaluations, exact fixture/app builds, canonical make test, and pre-commit are green. B1 stays in progress and dependent work stays blocked only until a signed follow-up passes a fresh exact no-history fess. No activation or push is authorized.
+CLOSED. Exact upstream Pi 0.84.1 source, four deterministic fixtures, and the sole descriptive 16 MiB/1 GiB diagnostic are complete; never rerun that measurement. Governing measured fixture authority remains /nix/store/zan7ir6jx415h85my3w07vla2mzvksyw-pi-classic-core-fixtures-v1 and immutable evidence remains /nix/store/cp9sqkmswmxab9aa4hwdj4zz6d4hxvx0-pi-b1-classic-core-attempt-0001. Retained signed GOOD commits e74ee383, 325ba2a, and 295371fd close all fess findings. Final corrected deterministic output /nix/store/f3njxqqf3mq7kgxncg9ysvmhaj8j3j1l-pi-classic-core-fixtures-v1 preserves byte-identical JSONL fixtures and enforces mandatory exact six-fold accounting plus both postflight exit outcomes. Portable/root evaluations, exact fixture/app builds, canonical make test, pre-commit, and fresh exact no-history fess are CLEAR. This evidence is descriptive-only and does not qualify M1 or M2. No activation or push was performed.
 
 ** Dependencies
 #+begin_src json
@@ -2932,6 +2934,20 @@ B1 source, fixtures, and the sole descriptive low/high diagnostic are complete a
     "author": "johnw",
     "text": "Second corrective implementation and gates are complete without rerunning the B1 measurement. Final fixture drv /nix/store/mx7z6gzbh7minwi7lpv1kc06v5ff8rpr-pi-classic-core-fixtures-v1.drv produced /nix/store/f3njxqqf3mq7kgxncg9ysvmhaj8j3j1l-pi-classic-core-fixtures-v1, NAR sha256-cfR30lwxVpcSGN/dPaEXKSUOS6dtimeSJ1ZyNFdwdtw=, size 1426335424. SHA256SUMS 2ff9803c26c317d21d22ce87e8e05980f507ab7b67717568e380cadf92aac07d verified 21/21; manifest 90f7efa49f32f73c747f7c9ab76a85ffce208b983f146f910595650863836a3c records cap=6, maxObserved=6, liveAfterEveryImport=true; oracles cc6cc250391eb8a5d5c4c6f10cf1e9d2975e3b6f31a5ed38d9190465e41c3849; generation f04953ea032da4c181ee1a053527fc71e622bc3174942a677176afc365ad7822. All four JSONL fixtures compare byte-identical to the governing measured authority. Final app drv /nix/store/d2id2ygz6b856q7kp61qaa97nkwzi07q-pi-classic-core-baseline.drv produced /nix/store/632svv4qqzlwf8561yw32s48njav9v9j-pi-classic-core-baseline, NAR sha256-mXNwwU4NGFaM8OfbKM2MmMsF8dHx8e5VNO5Z/Y97ugU=, size 20784, script e9b11439bdba384c593068a0b51ea6d3a6dad861a8b907424dbda940f850a7cd; its /bin executable exits 73 on the existing immutable target before child launch. One nested app-program build expression and one directory-path preflight invocation failed before running the app; neither is evidence. Portable and root all-system no-build checks passed; canonical make test passed all 21 Python suites and seven behavioral checks; pre-commit passed format/lint/dead-code/shell checks and 18/18 fast suites. Independent current-byte semantic and Ponytail reviews are CLEAR after reusing the real capped runner and one postflight fixture. A signed follow-up and fresh no-history fess remain.",
     "created_at": "2026-08-12T12:30:15Z"
+  },
+  {
+    "id": 66,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Closing B1 after exact commit 295371fd received a fresh independent no-history fess CLEAR. This satisfies the B1 dependency and may make the maintainer evidence issue ready; no dependent issue is claimed here.",
+    "created_at": "2026-08-12T12:39:38Z"
+  },
+  {
+    "id": 65,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Fresh independent no-history fess of signed GOOD commit 295371fd7d91fbce60b9dc236908a6c4b40cbcdc is CLEAR with no findings. Parent 325ba2a and exact five-path scope verify; live obr graph agrees; mandatory pre-open fold tracking, exact six-fold peak and zero final live folds, authentic failed/successful postflight exit oracles, immutable source/fixture/evidence custody, descriptive-only labels, and authority boundaries all pass. The auditor independently verified 21/21 original and corrected fixture checksums, 19/19 immutable evidence checksums, and byte-identical four-scale JSONL fixtures. No measurement, Pi Sessions work, activation, push, or network operation ran during audit. B1 may close.",
+    "created_at": "2026-08-12T12:39:38Z"
   }
 ]
 #+end_src
@@ -3058,7 +3074,7 @@ Independent review closes a source-located history-dataflow inventory for the ex
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-12 Wed 05:10]
+:MODIFIED: [2026-08-12 Wed 05:39]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3071,7 +3087,7 @@ Programme M1. After the exact history-dataflow inventory, deterministic product 
 Independent review closes the capability-consumer and history-dataflow inventory for the exact product source, certified gallery, relevant dependencies, configuration, budgets, and complete workload topology. At all four sizes, fixture-specific exact-output oracles pass; normalized live projections and retained occupancy gauges agree; transient peaks remain capped; cleanup reaches its fixed baseline; cumulative work matches per-fixture expectations; and the online append and compaction staircase plateaus under fixed active context. The H1 harness and analyzer controls pass. The packaged RSS check uses fresh closed-world state and process sets in two adjacent endpoint pairs, one 16 MiB then 1 GiB and one 1 GiB then 16 MiB. Each endpoint summary is the median of every scheduled post-barrier sample, and both absolute aggregate raw-RSS differences are at most 32 MiB, with no subtraction, reserves, sample omission, or outlier deletion. Host monitoring brackets each pair; proven ambient or harness faults are invalid, while candidate-caused resource pressure is a product failure. One cold diagnostic per size reports peak, latency, I/O, and disk separately. Only a passing immutable bundle qualifies M1; it records complete product, configuration, inventory, fixture, harness, runtime, topology, host, raw-record, hash, and next-action identity in obr.
 
 ** Notes
-OPEN and blocked by B1, A2, K1, H1, and the other explicit open graph dependencies. B1 descriptive evidence is complete and must not be rerun, but B1 remains an active graph dependency until its corrective follow-up receives a fresh no-history fess CLEAR and the issue closes. No M1 run has begun. The reviewed history-dataflow inventory is the architectural basis; deterministic tests validate every bound; paired RSS is a finite material-regression backstop. Do not restore multiple descriptive lanes, statistical bootstrap, reserve pools, or campaign transparency machinery.
+OPEN and blocked by A2, K1, H1, and the other explicit open graph dependencies. B1 is closed and its dependency edge is satisfied; its descriptive evidence is complete and must not be rerun. No M1 run has begun. The reviewed history-dataflow inventory is the architectural basis; deterministic tests validate every bound; paired RSS is a finite material-regression backstop. Do not restore multiple descriptive lanes, statistical bootstrap, reserve pools, or campaign transparency machinery.
 
 ** Dependencies
 #+begin_src json
