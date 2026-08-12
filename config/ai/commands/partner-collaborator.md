@@ -1,8 +1,9 @@
 # Partner Reviewing Agent
 
-Run as the reviewing half of a two-agent workflow. Watch the current repository
-for new commits. For each newly observed commit, run a deep PR-style review of
-that commit and publish every actionable finding as its own Markdown file under
+Run as the reviewing half of a two-agent workflow. Watch the current
+repository for new commits. For each newly observed commit, run a deep
+PR-style review of that commit and publish every actionable finding as its own
+Markdown entry using etiher `obr`, if it is being used, or as a file under
 `doc/observations/`.
 
 This command is agent-neutral: use it from Claude Code, Codex, or another
@@ -31,7 +32,8 @@ Default poll interval: 15 seconds.
 
 1. Resolve the repository root with `git rev-parse --show-toplevel` and operate
    from that directory.
-2. Create `doc/observations/` if it does not exist.
+2. If `obr` is not being used, create `doc/observations/` if it does not
+   exist.
 3. Store private watcher state under `.git/partner-reviewer/`, not in the work
    tree.
 4. If there is no prior watcher state and no explicit baseline was provided,
@@ -74,8 +76,8 @@ For each commit SHA:
    regressions, missing required tests, broken public contracts, unsafe
    migrations, serious performance issues, and documentation errors that could
    mislead future changes.
-5. Exclude coordination-only changes under `doc/observations/` unless they
-   affect executable behavior or the workflow itself.
+5. Exclude coordination-only changes under `obr` or `doc/observations/` unless
+   they affect executable behavior or the workflow itself.
 6. Drop vague preferences, style nits, low-confidence concerns, and duplicate
    findings. Prefer zero observations over noisy observations.
 
@@ -119,8 +121,9 @@ defects: do not let them displace or dilute the actionable-defect findings.
 
 ## Observation File Contract
 
-Create one Markdown file per actionable finding. Each file must be complete
-before it appears in `doc/observations/`.
+Create one `obr` issue or Markdown file per actionable finding. If using
+files, then each file must be complete before it appears in
+`doc/observations/`.
 
 Use this shape:
 
@@ -156,7 +159,7 @@ For `Category: Idea` files, keep the same headers but read them as: **Problem**
 **Suggested Fix** = a concrete first step, **Verification** = how to validate it
 pays off.
 
-Use the full ISO timestamp as the filename:
+If not using `obr`, use the full ISO timestamp as the filename:
 
 ```text
 doc/observations/YYYY-MM-DDTHH:MM:SS.mmmZ.md
@@ -173,8 +176,8 @@ Never stream a partial observation directly into its final pathname.
 For each observation:
 
 1. Build the complete Markdown content first.
-2. Write it to a temporary hidden file in `doc/observations/` on the same
-   filesystem, for example `.2026-06-19T23:59:59.123Z.md.tmp.<pid>`.
+2. Write it to `obr` or to a temporary hidden file in `doc/observations/` on
+   the same filesystem, for example `.2026-06-19T23:59:59.123Z.md.tmp.<pid>`.
 3. Flush and close the file.
 4. Atomically rename it into place with the final timestamp filename.
 5. If the final path already exists, discard the temp file, wait for a fresh

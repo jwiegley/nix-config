@@ -1,6 +1,6 @@
 # Partner Reviewing Agent
 
-Run as the reviewing half of a two-agent workflow. Watch the current repository for new commits. For each newly observed commit, run a deep PR-style review of that commit and publish every actionable finding as its own Markdown file under `doc/observations/`.
+Run as the reviewing half of a two-agent workflow. Watch the current repository for new commits. For each newly observed commit, run a deep PR-style review of that commit and publish every actionable finding as its own Markdown entry using `obr` or as a file under `doc/observations/`.
 
 This command is agent-neutral: use it from Claude Code, Codex, or another coding agent. Use the local `heavy-review` command. If no `heavy-review` capability is available, perform the same multi-pass review manually.
 
@@ -19,7 +19,7 @@ Default poll interval: 15 seconds.
 ## Setup
 
 1. Resolve the repository root with `git rev-parse --show-toplevel` and operate from that directory.
-2. Create `doc/observations/` if it does not exist.
+2. If not using `obr`, create `doc/observations/` if it does not exist.
 3. Store private watcher state under `.git/partner-reviewer/`, not in the work tree.
 4. If there is no prior watcher state and no explicit baseline was provided, write the current `HEAD` as the last-reviewed commit and wait for future commits.
 5. Never stage or commit observation files. The reviewing agent only produces coordination files.
@@ -43,12 +43,12 @@ For each commit SHA:
 2. Invoke the `heavy-review` command or skill against exactly that commit, treating it like a PR -- for example, run `heavy-review` with `<sha>^!` as its argument.
 3. If the local `heavy-review` tool does not accept `<sha>^!`, review the output of `git show --find-renames --find-copies --stat --patch <sha>` directly.
 4. Focus on actionable defects: correctness bugs, security problems, regressions, missing required tests, broken public contracts, unsafe migrations, serious performance issues, and documentation errors that could mislead future changes.
-5. Exclude coordination-only changes under `doc/observations/` unless they affect executable behavior or the workflow itself.
+5. Exclude coordination-only changes under `obr` or `doc/observations/` unless they affect executable behavior or the workflow itself.
 6. Drop vague preferences, style nits, low-confidence concerns, and duplicate findings. Prefer zero observations over noisy observations.
 
 ## Observation File Contract
 
-Create one Markdown file per actionable finding. Each file must be complete before it appears in `doc/observations/`.
+Create one Markdown entry in `obr` per actionable finding. If not using `obr`, then create a file where each file must be complete before it appears in `doc/observations/`.
 
 Use this shape:
 
@@ -79,7 +79,7 @@ Use this shape:
 <Tests, commands, or manual checks that should prove the fix.>
 ```
 
-Use the full ISO timestamp as the filename:
+If not using `obr`, use the full ISO timestamp as the filename:
 
 ```text
 doc/observations/YYYY-MM-DDTHH:MM:SS.mmmZ.md
@@ -94,7 +94,7 @@ Never stream a partial observation directly into its final pathname.
 For each observation:
 
 1. Build the complete Markdown content first.
-2. Write it to a temporary hidden file in `doc/observations/` on the same filesystem, for example `.2026-06-19T23:59:59.123Z.md.tmp.<pid>`.
+2. Write it using `obr` or to a temporary hidden file in `doc/observations/` on the same filesystem, for example `.2026-06-19T23:59:59.123Z.md.tmp.<pid>`.
 3. Flush and close the file.
 4. Atomically rename it into place with the final timestamp filename.
 5. If the final path already exists, discard the temp file, wait for a fresh millisecond timestamp, and try again.

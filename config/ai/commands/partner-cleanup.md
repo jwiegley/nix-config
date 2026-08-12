@@ -1,8 +1,9 @@
 # Partner Observation Consumer
 
 Run as the main-agent half of a two-agent workflow. Drain actionable findings
-from `doc/observations/`, have a sub-agent address them one by one, and make a
-single cleanup commit only after every current observation has been handled.
+from `obr`, if it is being used, or from the directory `doc/observations/`;
+have a sub-agent address them one by one, and make a single cleanup commit
+only after every current observation has been handled.
 
 This command is agent-neutral: use it from Claude Code, Codex, or another
 coding agent. Prefer the local sub-agent or Task facility. If no sub-agent
@@ -11,8 +12,8 @@ that no sub-agent tool was available.
 
 ## Scope
 
-Interpret `$ARGUMENTS` as the observations directory. If empty, use
-`doc/observations/`.
+Interpret `$ARGUMENTS` as the observations directory. If empty, use `obr` if
+it is being used, otherwise use `doc/observations/`.
 
 Only process regular, non-hidden `*.md` files directly inside the observations
 directory. Ignore temp files, dotfiles, and nested directories.
@@ -105,10 +106,10 @@ Address partner review observations
 Resolve observations from <first timestamp> through <last timestamp>.
 ```
 
-After committing, check `doc/observations/` again. If new observation files are
-already present because the reviewing partner reacted to the cleanup commit,
-report that another cleanup cycle is available; do not keep looping forever
-unless the user explicitly asked for continuous cleanup.
+After committing, check `obr` or `doc/observations/` again. If new observation
+files are already present because the reviewing partner reacted to the cleanup
+commit, report that another cleanup cycle is available; do not keep looping
+forever unless the user explicitly asked for continuous cleanup.
 
 ## Completion Report
 
