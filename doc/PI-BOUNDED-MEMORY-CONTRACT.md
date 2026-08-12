@@ -69,6 +69,11 @@ The programme uses the following terms consistently:
   only the strict bounded capability set and has passed the extension gate.
 - **Candidate** is one immutable Pi product revision, its complete package
   derivation, and the exact managed-extension set tested with it.
+- **Candidate process set** is the candidate root process and every helper,
+  worker, sidecar, or descendant it creates, including a process that attempts
+  to detach. The harness itself is outside this set. Candidate-process-set RSS
+  is the sum of the raw RSS samples for every live member at the same retained
+  barrier.
 
 ## Compatibility boundary
 
@@ -219,17 +224,28 @@ new contract revision is committed before any candidate measurement.
 Measure the actual packaged coding-agent path in three lanes: core terminal
 startup and continuation; the complete strict managed-extension set; and the
 packaged runtime entry point used by the managed Pi wrapper. Each lane uses
-exactly nine valid isolated repetitions per size. Three reserve repetition
-indices per size and lane are frozen before execution; exhausting them makes the
-evidence unit incomplete. A repetition reuses no process, repository object,
-derived index, writable cache, or temporary state from another repetition.
+exactly nine valid isolated repetitions per size. In every lane-and-size
+stratum, indices `1` through `9` are primary and `10` through `12` are reserves;
+these assignments are frozen before execution. Exactly nine observations enter
+the estimator, never fewer or more. Exhausting the reserves makes the evidence
+unit incomplete. A repetition reuses no process, repository object, derived
+index, writable cache, or temporary state from another repetition.
 
 An evidence unit is one immutable tuple in this fixed order: protocol revision,
-candidate commit, candidate source-manifest SHA-256, package derivation,
-package-output SHA-256, host identity class, platform and OS generation,
-runtime executable SHA-256 and version, and lane identifier. Encode each UTF-8
-field as a four-byte unsigned big-endian byte length followed by its bytes,
-prefix the sequence with `UTF8("nix-tcz.37.1.1-m1-unit-v1\0")`, and define
+campaign designation, candidate commit, candidate source-manifest SHA-256, package derivation,
+package-output SHA-256, managed-extension-manifest SHA-256, fixture-manifest
+SHA-256, runner-analyzer-control-manifest SHA-256, exact
+host-and-environment-manifest SHA-256, host identity class, platform and OS
+generation, runtime executable SHA-256 and version, and lane identifier. The
+host-and-environment manifest identifies the exact host instance and frozen
+non-secret measurement configuration; it neither contains nor hashes
+credentials. The candidate source manifest and managed-extension manifest hash
+canonical sorted path, type, mode, symlink target, and file-byte identities;
+they exclude VCS metadata, commit names, and timestamps. The package-output
+hash is the canonical NAR hash of output content rather than its store-path
+name. Encode each UTF-8 field as a four-byte unsigned big-endian byte length
+followed by its bytes, prefix the sequence with
+`UTF8("nix-tcz.37.1.1-m1-unit-v2\0")`, and define
 `evidence_unit_id` as the lowercase hexadecimal SHA-256 of that sequence. The
 manifest records every source field and the resulting identifier, and freezes
 them before candidate output is observed. Any field change creates a distinct
@@ -241,6 +257,23 @@ closes a pristine derived store without contributing a memory observation. The
 warm child reopens that prepared store, performs the fixed workload, and remains
 open at the retained-state barrier while memory is measured.
 
+Each child runs in a fresh runner-owned containment scope. The harness remains
+outside the scope; the candidate root and every local process or service it
+starts or gives fixture-derived state remain inside it. Detachment or
+reparenting does not remove candidate ownership. The sole allowed transfer to
+the outside harness is a runner-defined framed telemetry channel capped at 64
+KiB per frame and 1 MiB total candidate-emitted bytes per child. Its frozen
+schema admits scalar counters, fixed-length hashes and semantic digests,
+identifiers, and bounded error metadata; it rejects history records, previews,
+model text, arrays of entries, and arbitrary payloads. Escape from containment,
+offload of candidate state through any other channel, telemetry overflow, or
+unstable membership at the retained-state barrier is a candidate lifecycle
+failure. At each retained sample, enumerate the complete stable scope and
+record the PID, immutable start token, declared role, executable SHA-256, and
+raw RSS of every member. The observation is their sum without subtracting
+shared pages. Record PSS when a platform supplies it, but treat it as diagnostic
+rather than the verdict.
+
 Order all primary and reserve cells before execution by sorting the raw 32-byte
 SHA-256 values of the following byte string in ascending byte order:
 
@@ -248,34 +281,101 @@ SHA-256 values of the following byte string in ascending byte order:
 UTF8("nix-tcz.37.1.1-m1-order-v1\0" + lane_id + "\0" + size_label + "\0" + decimal_repetition_index)
 ```
 
-Freeze the resulting order before candidate output is observed. The three
-children of one cell remain adjacent. Runs occur serially on one identified idle
-host, on AC power, under one OS generation, runtime binary, package derivation,
-and environment. Any material change begins a new evidence unit.
+Freeze the resulting order before candidate output is observed. Execute all
+primary cells in frozen-key order. After that phase, each lane-and-size stratum
+has a deficit equal to nine minus its valid-primary count. Select the
+lowest-numbered unused reserves needed to fill each deficit and execute those
+cells in frozen-key order; repeat this rule after each reserve wave. No reserve
+runs otherwise, the operator has no replacement choice, and no cell may be
+added after reserve index `12`. The three children of one cell remain adjacent.
+Runs occur serially on one identified idle host, on AC power, under one OS
+generation, runtime binary, package derivation, and environment. Any material
+change begins a new evidence unit.
+
+### Campaign registration and cell validity
+
+A confirmatory campaign comprises the three lane evidence units for one
+immutable candidate. The only governing designations are `baseline-b1`,
+`local-source-m1`, and `final-packaged-m2`; they are non-substitutable, and a
+later designation never replaces an earlier verdict. Before any control child
+starts, append and fsync the
+signed control preregistration with all identity manifests, schedules,
+validity predicates, and expected verdicts. After control qualification passes
+and before the first governing confirmatory-measurement child starts, append
+and fsync a signed campaign preregistration containing the campaign and
+evidence-unit identifiers, all manifest hashes, the complete primary and
+reserve cell order, the exhaustive validity predicates, the control
+preregistration and result hashes, and the confirmatory designation. A campaign
+starts when its first governing confirmatory-measurement child is invoked.
+Every control attempt, started campaign, and cell, including aborted, invalid,
+incomplete, and failing work, remains in the append-only evidence report.
+
+Exactly one confirmatory campaign may start for a fixed protocol revision,
+governing designation, and candidate key. That key is the candidate commit,
+candidate source-manifest SHA-256, package derivation, package-output SHA-256,
+and managed-extension-manifest SHA-256 in canonical evidence-tuple encoding.
+Host, fixture, seed, order, and attempt identifiers are intentionally not key
+fields and cannot create another chance to pass. An interrupted campaign may
+resume only at its next unstarted frozen cell; a started cell is never rerun
+except through the deterministic reserve rule. Later unchanged-candidate runs
+are diagnostic and cannot replace, pool with, or override the governing
+verdict. Within one designation, a new governing campaign requires either a
+recorded substantive product change that changes the source-manifest,
+package-output, or managed-extension-manifest SHA-256, or a substantive
+protocol correction committed before output is observed. A commit-only,
+derivation-only, seed, order, revision-label, host, fixture, or attempt change
+is insufficient. The separately frozen M1 and M2 designations both remain
+required even if their substantive product hashes happen to match.
+
+A scheduled repetition is a prelaunch non-observation only when no candidate
+executable has been invoked and one of these machine-evaluable predicates is
+true: an expected fixture, package, executable, or manifest hash mismatches;
+the disposable copy cannot be created and fsynced; a required measurement API
+fails its empty-process self-test; AC power is absent; thermal state is not
+nominal; the platform reports memory pressure; swap page-in or page-out
+counters changed during the preceding 60-second preflight; or free space is
+less than the declared peak temporary-disk budget plus 20 GiB. The runner
+commits the predicate inputs and result before launch and before the selector or
+analyzer receives any RSS value. No human override is permitted.
+
+An invalid prelaunch repetition remains in the raw evidence and is replaced
+only by the deterministic reserve procedure. An unlisted harness defect makes
+the campaign incomplete. Once candidate invocation begins, a crash, timeout,
+missing field, containment failure, quiescence failure, budget or counter
+breach, pressure event, cleanup failure, or other candidate behavior fails the
+lane and never invalidates the repetition.
 
 ### Quiescence and collection
 
 After open and the equal workload, wait for lifecycle publication, provider and
 terminal streams, extension hooks, cursors, scans, exports, and all
 candidate-owned queues to finish. The barrier has a 30-second deadline and
-requires stable logical live counters with no candidate task pending.
+requires stable logical live counters, a stable candidate process set, and no
+candidate task pending.
 
-Record an unforced sample first. Drain microtasks and two event-loop turns, then
-invoke exactly three full collections through `global.gc()` in a runtime
-launched with `--expose-gc`, yielding one event-loop turn after each. Wait one
-second without work or collection. Record nine raw RSS samples at 250 ms
-intervals; the repetition's warm retained RSS is their median. Record both
-pre-collection and post-collection metrics. The fixed collection protocol
-reduces allocator history as a confounder; it is not a runtime mechanism, and
-no repeated collection occurs during the measured workload.
+Record an unforced candidate-process-set sample first. Drain microtasks and two
+event-loop turns in every GC-capable candidate runtime. Sort those runtimes by
+declared role, executable SHA-256, and immutable start token, then perform
+exactly three collection rounds. In each round, invoke exactly one full
+collection in every sorted runtime through its frozen platform hook
+(`global.gc()` for Node processes launched with `--expose-gc`), await its
+acknowledgement, and yield one event-loop turn there. No GC-capable member may
+be skipped. Wait one second without work or collection. Record nine raw RSS
+samples at 250 ms intervals; each sample is the synchronized sum across the
+stable candidate process set, and the repetition's warm retained RSS is their
+median. Record both pre-collection and post-collection per-process and
+aggregate metrics. The fixed collection protocol reduces allocator history as
+a confounder; it is not a runtime mechanism, and no repeated collection occurs
+during the measured workload.
 
 ### Raw record
 
 Each repetition emits one append-only JSON record containing at least:
 
-- candidate commit, source manifest, package derivation, executable hashes,
-  runtime version, OS generation, host identity class, lane, scale, repetition,
-  fixed order, and timestamps;
+- campaign and evidence-unit identifiers, manifest hashes, candidate commit,
+  package derivation, executable hashes, runtime version, OS generation, host
+  identity class, lane, scale, repetition, primary or reserve status, frozen
+  order, prelaunch predicate inputs and result, and timestamps;
 - fixture hashes, JSONL bytes and entries, derived-index bytes, and disposable
   copy identity;
 - active entries and bytes, admitted record maximum, page items and bytes,
@@ -283,9 +383,12 @@ Each repetition emits one append-only JSON record containing at least:
   scanner and reducer scratch, sink and spool bytes, concurrency,
   managed-extension state, and caller-retained result counts;
 - raw `rss`, `maxRSS`, `heapTotal`, `heapUsed`, `external`, and `arrayBuffers`
-  before and after collection, together with all nine retained samples;
-- open cursors, statements, connections, descriptors, leases, listeners,
-  timers, pending tasks, and child processes at each lifecycle boundary;
+  before and after collection, together with all nine per-process and summed
+  candidate-process-set retained samples;
+- containment identity, process births and exits, executable identities and
+  roles, plus open cursors, statements, connections, descriptors, leases,
+  listeners, timers, pending tasks, and child processes at each lifecycle
+  boundary;
 - cold-open or rebuild peak, elapsed time, bytes read and written, canonical and
   derived disk bytes, peak temporary disk, and warm operation latencies;
 - host memory pressure, compression and swap deltas, power and thermal state,
@@ -301,15 +404,18 @@ candidate collection begins.
 
 ### Estimator and verdict
 
-For equal live inputs, every hard counter and logical resource count is
-identical at all four scales. A mismatch is a failure before statistical RSS
-analysis.
+For equal live inputs, every retained-state item and byte counter is identical
+at all four scales, including repository metadata, candidate-process-set
+cardinality and role/executable multiset, and every hard logical resource count.
+Fresh PIDs and start tokens need not match. Any other mismatch is a failure
+before statistical RSS analysis.
 
-For each lane, compute the median warm retained RSS at each size. Compute the
-Theil–Sen slope from all cross-size pairs among all repetitions, using exact
-immutable source-fixture bytes as `x` and raw warm retained RSS as `y`;
-equal-size pairs are excluded. Express the result as mebibytes of RSS per
-gibibyte of source-fixture history.
+For each lane, compute the median warm retained RSS at each size from its
+exactly nine governing observations. Compute the Theil–Sen slope from all
+cross-size pairs among those governing observations, using exact immutable
+source-fixture bytes as `x` and raw warm retained RSS as `y`; equal-size pairs
+are excluded. Express the result as mebibytes of RSS per gibibyte of
+source-fixture history.
 
 With nine repetitions at each size, the point estimate is the arithmetic mean
 of the 243rd and 244th sorted values among all 486 cross-size pairwise slopes.
@@ -330,23 +436,37 @@ The lane passes only when both conditions hold:
 2. the range across all four size medians is no greater than **max(32 MiB, 5%
    of the smallest median)**.
 
-No outlier is discarded. A repetition invalidated by an objective environment
-or harness failure remains in the raw evidence and may be replaced only by its
-next preregistered reserve index. Candidate-owned quiescence, cleanup, budget,
-or lifecycle failures are failures rather than invalid repetitions. Cold
-rebuild peak, latency, I/O, disk, and exact-operation latency receive separate
+No outlier is discarded. The exhaustive prelaunch predicates above are the
+only route to a reserve; every started or invalid cell remains in the raw
+evidence. Candidate-owned quiescence, cleanup, budget, containment, counter, or
+lifecycle failures are failures rather than invalid repetitions. Cold rebuild
+peak, latency, I/O, disk, and exact-operation latency receive separate
 descriptive envelopes and cannot excuse a warm-retention failure.
 
 ### Harness controls
 
-Before a candidate is measured, the runner and analyzer must pass three
-immutable controls. The bounded control executes the real runtime and terminal
-barrier without reaching geometric history and must pass both RSS criteria. The
-injected-slope control retains and page-touches an additional 8 MiB per GiB of
+Before any governing confirmatory-measurement child starts, complete exactly
+one preregistered control qualification. Bind it to the same protocol, base
+candidate source and package identities, fixtures, managed-extension manifest,
+host-and-environment manifest, and runner-analyzer-control manifest as the
+confirmatory campaign; changing any of those fields requires a new control
+qualification. Control children are not governing candidate measurements. The
+bounded and injected-slope controls each run the complete three-lane, four-size
+matrix with exactly nine valid repetitions and three reserves per stratum,
+using the candidate ordering, validity, containment, quiescence, sampling, and
+analysis rules. Every bounded-control lane must pass both RSS criteria. Every
+injected-slope lane retains and page-touches an additional 8 MiB per GiB of
 immutable source-fixture bytes through the ninth retained sample and must fail
-the slope criterion. The strict-surface mutation restores one classic
-whole-history materialization and must fail the eager-materialization sentinel
-before RSS analysis; its RSS result is diagnostic only.
+the slope criterion.
+
+The strict-surface mutation runs exactly one valid isolated `64x` cell per lane,
+with three preregistered reserves. It restores one classic whole-history
+materialization and passes only when every lane trips the eager-materialization
+sentinel before RSS analysis; its RSS result is diagnostic only. All control
+attempts and records are preregistered and retained. An incomplete control or
+unexpected verdict blocks the governing confirmatory campaign and requires a
+substantive recorded correction and new contract revision; it may not simply be
+retried.
 
 The analyzer also uses exact synthetic observations below, exactly at, and
 above the slope threshold, plus a non-monotone median case. Control records,
@@ -354,7 +474,8 @@ expected verdicts, and analyzer hashes are part of the preregistration;
 candidate output cannot set or revise them. If the bounded or injected-slope
 control does not produce its required verdict, the host protocol, span, or
 repetition design must be revised in a new contract revision before any
-candidate is observed.
+governing confirmatory campaign starts. The frozen synthetic suite executes
+exactly once.
 
 ## Evidence ledger
 
@@ -364,18 +485,18 @@ future evidence governed by this contract.
 | Evidence | Identity and result | Standing under this contract |
 | --- | --- | --- |
 | Programme baseline | Signed Nix `b3263de3d700ab0650fb9cceadd6586fd1126f1a`; Pi v0.83 source pin `845d6ff1f6643aba440341cce877ce1c43ebbc39`. | Establishes the local source and package baseline only. |
-| Upstream inspection | Live GitHub metadata placed `earendil-works/pi` main at `534bcbffb7e1e7551d9ee3572dfeb278e203e493` on 2026-08-11. Line-level inspection used the locally retained, catalog-pinned v0.83 source `845d6ff1f6643aba440341cce877ce1c43ebbc39`. A surviving handoff records issue `#7937` as describing unfinished v4 integration. | Establishes the remote identity observed at that dated checkpoint separately from the exact inspected source. It does not establish an evergreen current identity or maintainer approval, bind v0.83 line evidence to the observed main commit, or prove that a planned `SessionTree` interface exists. |
+| Upstream inspection | Live GitHub metadata placed `earendil-works/pi` main at `534bcbffb7e1e7551d9ee3572dfeb278e203e493` on 2026-08-11. Line-level inspection used the locally retained, catalog-pinned v0.83 source `845d6ff1f6643aba440341cce877ce1c43ebbc39`. Local research notes point to upstream [issue `#7937`](https://github.com/earendil-works/pi/issues/7937) for unfinished v4 work; this inventory did not recover and freeze the issue body or comments. | Establishes the remote identity observed at that dated checkpoint separately from the exact inspected source. The issue pointer is coordination context, not source evidence or maintainer approval. This row does not establish an evergreen current identity, bind v0.83 line evidence to the observed main commit, or prove that a planned `SessionTree` interface exists. |
 | Downstream prototype | Signed Nix commit `e2c002e06cc4378b5a55cc1659e99caaab408dcb`; `pi-bounded-session-history.patch` SHA-256 `4bdb9524839764bf9639740be782e0719168d885332e5cf2b70da16c95f7494a`, 13,831 lines. | Supplies a causal trace and regression corpus; it is not the intended upstream architecture. |
-| One-gibibyte synthetic run | The final acceptance comment on GitHub issue `#128` names signed acceptance candidate `e44cb99c53ba1f2ae67e9714aff8bbad93243740` and reports `historyBytes=1,074,007,601`, 1,024 messages, 64 compactions, `maxRss=250,085,376`, and adjusted growth `40,501,246` bytes. A separate surviving source-audit report associates a prototype run with base `e2c002e0` and reports the same history size but adjusted growth `40,402,944` bytes. | Historical single-scale evidence with an unresolved 98,302-byte reporting conflict. The absent raw bundle does not establish whether the values describe different runs, a corrected statistic, or a transcription difference, and it prevents an independent run-to-commit reconstruction. Neither adjusted value nor the unrepeated run satisfies the geometric gate. |
-| Eight-hour synthetic run | GitHub issue `#128`: exit 0; `durationMs=28,800,471`; 26,893 messages; 1,681 compactions; `historyBytes=888,276,251`; first/last adjusted-RSS medians `92,307,020` and `94,355,018`; adjusted growth `2,047,998` bytes. Private evidence-manifest SHA-256 `c30f01808c30701d3d66195c72ee7e821d934c4ca00f615cefd7ab0f75cc3aca`. | The computational duration and adjusted-growth criterion was reported as passed. The auxiliary retained-path/provenance checker remained incomplete because it compared macOS `/var` with the equivalent `/private/var` spelling. The private artifact is not reproduced by this repository, and adjusted RSS is not the geometric verdict defined here. |
-| Manual soak procedure | `doc/PI-EIGHT-HOUR-SOAK.md` SHA-256 `54775179da5dee325330d4c47ac74e9d780c9d7fb2acec7c21b5fe6a9196d537`. | Reproducible optional procedure; another soak is not a pending acceptance gate. |
-| Geometric result | Not yet measured. | Must use this revision's fixtures, raw record, repetitions, estimator, and thresholds. |
+| One-gibibyte synthetic run | The public acceptance discussion on [GitHub issue `#128`](https://github.com/jwiegley/nix-config/issues/128#issuecomment-5229843110) names signed acceptance candidate `e44cb99c53ba1f2ae67e9714aff8bbad93243740` and reports `historyBytes=1,074,007,601`, 1,024 messages, 64 compactions, `maxRss=250,085,376`, and adjusted growth `40,501,246` bytes. Independently, signed Nix commit [`ce802467fecd488b8b835da6cc48f7f804797ce5`](https://github.com/jwiegley/nix-config/blob/ce802467fecd488b8b835da6cc48f7f804797ce5/doc/CLEANUP-WIGGUM-HANDOFF.md#L225-L249), `doc/CLEANUP-WIGGUM-HANDOFF.md` blob `20d9a687b9d619b09129f187bdd88481e28d7f77`, records prototype base `e2c002e0`, the same history size and compaction count, and adjusted growth `40,402,944` bytes. | Historical single-scale evidence with an unresolved 98,302-byte reporting conflict. Local Git does not establish whether the values describe different runs, a correction, or transcription drift. The absent raw bundle prevents independent run-to-commit reconstruction; neither adjusted value nor the unrepeated run satisfies the geometric gate. |
+| Eight-hour synthetic run | The same signed [historical checkpoint](https://github.com/jwiegley/nix-config/blob/ce802467fecd488b8b835da6cc48f7f804797ce5/doc/CLEANUP-WIGGUM-HANDOFF.md#L278-L328) records exit 0; `durationMs=28,800,471`; 26,893 messages; 1,681 compactions; `historyBytes=888,276,251`; first/last adjusted-RSS medians `92,307,020` and `94,355,018`; adjusted growth `2,047,998` bytes; and private evidence-manifest SHA-256 `c30f01808c30701d3d66195c72ee7e821d934c4ca00f615cefd7ab0f75cc3aca`. | The computational duration and adjusted-growth criterion was reported as passed. The auxiliary retained-path/provenance checker remained incomplete because it compared macOS `/var` with the equivalent `/private/var` spelling. The private artifact is not reproduced by this repository, and adjusted RSS is not the geometric verdict defined here. |
+| Manual soak procedure | Signed commit [`e44cb99c53ba1f2ae67e9714aff8bbad93243740`](https://github.com/jwiegley/nix-config/blob/e44cb99c53ba1f2ae67e9714aff8bbad93243740/doc/PI-EIGHT-HOUR-SOAK.md), `doc/PI-EIGHT-HOUR-SOAK.md` blob `23ce98c3d16a0481ac7ed9851adf22b22ca6fcec`, SHA-256 `54775179da5dee325330d4c47ac74e9d780c9d7fb2acec7c21b5fe6a9196d537`. | Preserves the final incomplete-checker disposition and reproducible optional procedure; another soak is not a pending acceptance gate. |
+| Local-source geometric result | Not yet measured. | `.21` must use this revision's fixtures, raw record, repetitions, estimator, and thresholds before product delivery. |
+| Final packaged geometric result | Not yet measured. | `.31` must replay the same frozen protocol without recalibration against the exact delivered, Nix-pinned, package-qualified store path before activation. |
 
-The historical numerical results above derive from the final acceptance comment
-on [GitHub issue #128](https://github.com/jwiegley/nix-config/issues/128) and
-from the separately identified surviving source-audit and soak reports described
-in the ledger. They are retained as attributed provenance, not silently
-collapsed into one run or promoted to stronger evidence.
+The historical numerical results above derive from the linked public acceptance
+discussion and the exact signed Git objects named in the ledger. They are
+retained as attributed provenance, not silently collapsed into one run or
+promoted to stronger evidence.
 The raw one-gibibyte result stream and the sealed eight-hour artifact bundle are
 not present in this repository and were not available for rehashing during this
 inventory. Their numerical values therefore remain attributed historical
@@ -389,12 +510,12 @@ contract; it does not mean that the implementation evidence has run.
 
 | Obligation | Authority frozen here | Evidence that closes it |
 | --- | --- | --- |
-| Persisted history is absent from normal retained core state; peak, cold rebuild, latency, disk, caller ownership, and RSS remain distinct | Governing invariant, terms, and explicit non-guarantees | Geometric result in `nix-tcz.37.1.21`, with cold and disk envelopes reported separately |
+| Persisted history is absent from normal retained core state; peak, cold rebuild, latency, disk, caller ownership, and RSS remain distinct | Governing invariant, terms, and explicit non-guarantees | Local-source geometric result in `nix-tcz.37.1.21` and unrecalibrated final packaged replay in `.31`, with cold and disk envelopes reported separately |
 | Compatibility and strict bounded behavior are explicit and do not silently truncate | Compatibility boundary | Capability conformance in `.14`, managed certification in `.19`, and final boundary in `.24` |
 | Every covered operation has an item, byte, cancellation, ownership, or backpressure boundary | Covered operations and live-work budget ledger | Backend and runtime work in `.5` through `.13`, followed by deterministic gate `.20` |
 | Classic eager retention has a source-supported causal trace | Classic causal trace and downstream-prototype ledger row | Current-main baseline `.2` and removal from normal execution in `.7` |
 | Upstream and prototype identities and historical claims remain attributable | Evidence ledger | Immutable candidate/package identities in `.30`, delivery identity in `.27`, and Nix pin crosswalk in `.25` |
-| The geometric procedure is fixed before candidate observation | Fixtures, repetitions, quiescence, raw record, estimator, controls, and thresholds | Runner/control review in `.2`; candidate measurements only in `.21` |
+| The geometric procedure is fixed before candidate observation | Fixtures, repetitions, quiescence, raw record, estimator, controls, and thresholds | Runner and required control verdicts in `.2`; local-source measurement in `.21`; exact packaged replay in `.31` |
 | Managed extensions cannot inherit the claim merely by loading | Certified-extension definition and same-process non-guarantee | Consumer dispositions in `.15` through `.19` and strict aggregate certification in `.19` |
 | Final documentation distinguishes passed, failed, historical, and not-run evidence | This map and evidence ledger | Final contract and migration guide in `.23` |
 
@@ -418,11 +539,13 @@ The programme makes no claim that:
 ## Change control and completion evidence
 
 The committed revision of this document is the preregistration authority for
-issues `nix-tcz.37.1.2`, `.20`, and `.21`. Candidate results begin only after its
-fixture and analysis implementations have been reviewed against this text. Any
-change to fixture scale, active workload, repetitions, quiescence, collection,
-raw metrics, estimator, seed policy, or thresholds creates a new ledger
-revision; old and new results remain separate.
+issues `nix-tcz.37.1.2`, `.20`, `.21`, and `.31`. Candidate results begin only
+after its fixture, process-containment, campaign-ledger, control, and analysis
+implementations have been reviewed against this text. Any change to fixture
+scale, active workload, repetitions, campaign stopping, cell validity, reserve
+selection, containment or process aggregation, quiescence, collection, raw
+metrics, identity manifests, control schedules, estimator, seed policy, or
+thresholds creates a new ledger revision; old and new results remain separate.
 
 Final programme acceptance requires the complete semantic, lifecycle,
 deterministic-budget, geometric-memory, managed-extension, and packaged-runtime

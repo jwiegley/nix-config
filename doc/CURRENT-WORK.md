@@ -29,8 +29,12 @@ architecture to upstream wholesale.
 The preregistered residency contract, live-work budget ledger, historical
 evidence boundary, and geometric measurement protocol are in
 [`PI-BOUNDED-MEMORY-CONTRACT.md`](PI-BOUNDED-MEMORY-CONTRACT.md). Candidate
-measurements may not begin until that contract is committed and its harness
-controls have been reviewed.
+measurements may not begin until that contract is committed, its runner and
+analyzer have been reviewed, and the bounded, injected-slope, strict-surface,
+and synthetic analyzer controls have produced their frozen required verdicts.
+The local-source geometric gate supplies pre-delivery evidence; a separate
+unrecalibrated replay must pass against the exact delivered, Nix-pinned,
+package-qualified store path before activation.
 
 ## 2026-08-09 whole-repository review: tracked closeout
 

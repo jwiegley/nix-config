@@ -1712,7 +1712,7 @@ config/ai/catalog.nix:150-216 stores the Claude-formatted string Read, Grep, Glo
 :LABELS: ["architecture","heavy-review","packaging"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-11 Tue 21:41]
+:MODIFIED: [2026-08-11 Tue 22:32]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1723,6 +1723,11 @@ agent-deck-runtime-lifecycle.patch is about 45,582 lines and pi-bounded-session-
 
 ** Notes
 2026-08-10 authority audit: no reviewed exact-tree product commit currently exists. Agent Deck has a verified destination fork (jwiegley/agent-deck), but its visible tips do not reproduce v1.11.0 plus the current Discord, transition-daemon, and runtime-lifecycle patches. Create an import-only branch from upstream 2f586c5ca97d0e783bb16213d388bcce9e675e67 and require a zero-difference path/type/bytes/symlink/executable manifest before changing the Nix pin. Pi has an exact base 845d6ff1f6643aba440341cce877ce1c43ebbc39 but no verified owner-selected product repository; choose or create one, then import bounded-history, provider-timeout, and session-replacement patches in order with the same identity gate. Product pushes/PRs remain separately authorized.
+
+Superseding Pi guidance, 2026-08-11:
+- The 2026-08-10 note instructing a direct import of pi-bounded-session-history.patch is superseded by programme nix-tcz.37.1.
+- Retain the 13,831-line patch only as signed causal, compatibility, and regression evidence. Do not transplant it into an owner fork or upstream branch.
+- The authoritative Pi direction is to complete the existing SessionRepo and SessionTree architecture, deliver reviewed product commits through U3, and remove the product-scale Nix patch only after the exact-tree and package gates.
 
 ** Dependencies
 #+begin_src json
@@ -1755,7 +1760,7 @@ agent-deck-runtime-lifecycle.patch is about 45,582 lines and pi-bounded-session-
 :LABELS: ["architecture","memory","pi","pi-bounded-memory","upstream","wiggum"]
 :ISSUE_TYPE: epic
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 22:15]
+:MODIFIED: [2026-08-11 Tue 22:43]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1773,29 +1778,34 @@ Durable continuation state, 2026-08-11 PDT
 Programme invariant:
 - Normal Pi core execution and certified managed extensions must not retain state proportional to persisted session bytes or entry count.
 - Preserve exact durable history, resume, branches, forks, lifecycle behavior, and export.
-- Complete the upstream-owned SessionRepo and planned SessionTree direction. Do not transplant the 13,831-line downstream v0.83 store as a third architecture.
-- The normative claim, budget ledger, measurement protocol, evidence boundary, and non-guarantees are in doc/PI-BOUNDED-MEMORY-CONTRACT.md.
+- Complete Pi's existing SessionRepo and SessionTree direction. The 13,831-line downstream v0.83 patch is signed causal/regression evidence, not a third architecture or import target.
+- doc/PI-BOUNDED-MEMORY-CONTRACT.md owns the normative claim, budgets, campaign protocol, evidence boundary, and non-guarantees.
 
-Programme graph and restart:
-- This epic plus its 30 issues are the authoritative work roster. Run obr ready --label pi-bounded-memory, obr dep cycles, and obr sync --status; claim exactly one ready issue and keep its notes current.
-- Do not create or maintain a parallel Wiggum handoff document. Record open, in-progress, done, exact next-step, attempt, evidence, and authority state in issue fields and notes so another agent can resume from obr alone.
-- Complete one logical issue at a time with proportionate tests, a signed commit including doc/PLAN.org, an independently isolated fess audit, and partner-observation cleanup.
-- Pi Sessions issue nix-imo is cancelled by current owner direction and is outside implementation, certification, delivery, activation, and publication.
-- C1 nix-tcz.37.1.1 is closed. Its PLAN export and signed commit are in progress; post-commit fess and partner cleanup remain mandatory.
-- The sole newly ready issue is nix-tcz.37.1.2. Do not claim it until the C1 commit audit and cleanup are complete.
-- No candidate memory measurement has begun.
+Authoritative roster and graph:
+- obr is the sole continuation authority. Do not create or maintain a parallel Wiggum handoff.
+- The labelled roster is this epic E0, numbered tasks .1 through .31, and cancelled audit-only nix-imo: 33 records.
+- C1 is complete after post-commit fess correction. B1 is the next issue but must not be claimed until the signed corrective checkpoint containing the C1 closure is verified.
+- Local candidate-changing K1 precedes D1 and M1. U3 delivers, N1 pins, P1 qualifies the exact package and system closure, M2 replays the frozen geometric gate, P2 activates only with separate authority, S2 receives an explicit disposition, and P3 publishes only with separate authority.
+- Candidate memory measurement has not begun.
 
-Architecture and evidence boundary:
-- Exact line-level inspection used catalog-pinned Pi v0.83 source 845d6ff1f6643aba440341cce877ce1c43ebbc39. It has SessionStorage and SessionRepo implementations, but no implemented SessionTree interface; classic coding-agent remains on SessionManager.
-- Dated GitHub metadata observed upstream main 534bcbffb7e1e7551d9ee3572dfeb278e203e493 on 2026-08-11. Do not bind v0.83 line evidence to that commit.
-- Signed downstream prototype e2c002e06cc4378b5a55cc1659e99caaab408dcb uses patch SHA-256 4bdb9524839764bf9639740be782e0719168d885332e5cf2b70da16c95f7494a. It is causal and regression evidence only.
-- The historical 1 GiB and eight-hour results are attributed supporting evidence, not the preregistered geometric verdict. Their raw sealed bundles are unavailable in the repository.
-- Repository baseline is signed b3263de3d700ab0650fb9cceadd6586fd1126f1a. The C1 commit contains only doc/CURRENT-WORK.md, doc/PLAN.org, and doc/PI-BOUNDED-MEMORY-CONTRACT.md.
+Evidence boundary:
+- Exact inspected Pi v0.83 source: 845d6ff1f6643aba440341cce877ce1c43ebbc39.
+- Dated remote-main observation: 534bcbffb7e1e7551d9ee3572dfeb278e203e493 on 2026-08-11; do not bind v0.83 line evidence to it.
+- Signed prototype: e2c002e06cc4378b5a55cc1659e99caaab408dcb; pi-bounded-session-history.patch SHA-256 4bdb9524839764bf9639740be782e0719168d885332e5cf2b70da16c95f7494a.
+- Historical 1 GiB and eight-hour results are attributed supporting evidence; absent raw bundles and the recorded numerical conflict prevent promotion to the frozen verdict.
+- Signed C1 base commit: da46175772b8429d2fa6050a520021ced4a4e1c8, GOOD signature.
 
 Authority boundaries:
 - Local planning, implementation, tests, and signed local checkpoints are authorized.
-- Posting upstream, creating or publishing a fork or pull request, pushing commits, rewriting shared history, changing production pins, activating any system or Home Manager generation, publishing packages, and declaring fleet acceptance each require separate explicit authority.
-- Continue independent local issues when an external authority gate is not the next necessary action.
+- Maintainer contact/posting, fork or branch publication, pull requests, production Nix pin cutover, activation, push/publication, history rewrite, and fleet acceptance each require the explicit leaf-issue authority recorded in obr.
+- Continue independent local tasks until an authority gate is the next necessary action.
+
+Exact restart:
+1. Inspect git status and preserve independently owned nix-aln PLAN hunks.
+2. Stage doc/CURRENT-WORK.md, doc/PI-BOUNDED-MEMORY-CONTRACT.md, and only the Pi-programme doc/PLAN.org hunks.
+3. Create one signed corrective commit without bypassing hooks; verify signature and exact diff.
+4. Record the corrective hash in this epic, then claim nix-tcz.37.1.2 through obr.
+5. Build B1 exactly from its C1-bound acceptance criteria; record every attempt and result in obr.
 
 ** Dependencies
 #+begin_src json
@@ -1819,11 +1829,11 @@ Authority boundaries:
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 22:15]
+:MODIFIED: [2026-08-11 Tue 22:43]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
-:FINISHED: [2026-08-11 Tue 22:15]
-:CLOSE_REASON: Completed the preregistered Pi bounded-session memory contract and evidence ledger; exact-final targeted and portable evaluation gates pass, independent draft and obr-continuation reviews are clear, and candidate measurements remain explicitly not run.
+:FINISHED: [2026-08-11 Tue 22:43]
+:CLOSE_REASON: Corrected every independently isolated post-commit fess finding: final packaged replay ordering, process-set RSS accounting, append-only non-replaceable campaigns, deterministic RSS-blind reserve selection, exact control/repetition semantics, complete identity manifests, superseded patch-import guidance, and stale checkpoints. Exact corrective contract and graph audits plus partner cleanup are CLEAR; targeted assertions and portable evaluation pass.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1832,31 +1842,41 @@ Authority boundaries:
 Programme C1. Turn the research reports and issue #128 prototype into a durable contract/evidence artifact. Define compatibility and strict-bounded modes, covered operations, all live-work budget terms, explicit non-guarantees, the classic fileEntries/byId causal trace, inspected upstream revision, and provenance of the downstream 1 GiB and eight-hour results.
 
 ** Acceptance Criteria
-The artifact states that persisted history size does not determine normal core residency; distinguishes retained, peak, cold rebuild, latency, disk, caller retention, and RSS; records current upstream and prototype identities; assigns an owner/enforcement boundary to every budget term; and contains no unqualified constant-process-memory claim. It preregisters 1x, 4x, 16x, and 64x fixtures, at least seven isolated repetitions per size, quiescence and GC rules, raw metrics, the Theil-Sen and bootstrap procedure, the 1 MiB/GiB slope limit, and the max(32 MiB, 5%) median-range limit before candidate measurement.
+The artifact states that persisted history size does not determine normal core residency; distinguishes retained, peak, cold rebuild, latency, disk, caller retention, and RSS; records dated upstream and exact prototype identities; assigns an owner and enforcement boundary to every budget term; and contains no unqualified constant-process-memory claim. Before candidate measurement it preregisters 1x, 4x, 16x, and 64x fixtures; exactly nine governing isolated repetitions per size and lane; exactly three deterministic reserve indices and the complete primary-and-reserve order; cold, preparation, and warm fresh children; complete candidate-process containment and aggregate raw RSS; a single append-only governing campaign with no optional stopping; exhaustive RSS-blind prelaunch validity predicates; quiescence and GC rules; identity manifests and raw metrics; the Theil-Sen and bootstrap procedure; the 1 MiB/GiB slope limit; the max of 32 MiB or 5 percent median-range limit; and bounded, injected-slope, strict-surface-mutation, and synthetic controls with their required verdicts. The graph requires an unrecalibrated final replay against the exact delivered, pinned, package-qualified candidate before activation.
 
 ** Notes
-Completion checkpoint, 2026-08-11 PDT
+Final corrective checkpoint, 2026-08-11 PDT
 
-Delivered artifact:
-- doc/PI-BOUNDED-MEMORY-CONTRACT.md is the sole new durable C1 artifact.
-- It defines compatibility and strict modes, covered operations, every live-work owner and enforcement boundary, explicit non-guarantees, the classic fileEntries and byId causal trace, dated upstream and signed prototype identities, and separate historical provenance.
-- The geometric protocol is frozen at four 16 MiB through 1 GiB source fixtures, nine valid isolated repetitions per size and lane, three preregistered reserves, three fresh child processes per cell, three collections, nine RSS samples, 486 cross-size slopes, 100000 stratified bootstrap replicates, U95 at most 1 MiB per GiB, and median range at most max of 32 MiB or 5 percent.
-- Candidate geometric result: NOT RUN. Historical adjusted-RSS results do not satisfy this gate.
-- Pi Sessions is not part of C1 or the programme target.
-- No parallel Wiggum handoff file is maintained; epic and task issue notes are the continuation authority.
+Artifact and scope:
+- doc/PI-BOUNDED-MEMORY-CONTRACT.md remains the normative C1 artifact; doc/CURRENT-WORK.md points continuation exclusively to obr.
+- Signed base commit da46175772b8429d2fa6050a520021ced4a4e1c8 has a GOOD signature. Its independently history-isolated fess audit required correction; C1 was reopened before B1 began.
+- Candidate measurements remain NOT RUN. Historical adjusted-RSS results remain attributed prototype evidence only. Pi Sessions remains cancelled and audit-only.
+
+Corrections completed:
+- Final acceptance now requires an unrecalibrated M2 replay against the exact U3-delivered, N1-pinned, P1-qualified package/store path before activation.
+- K1 precedes deterministic D1 and local-source M1; S2 depends on local-source M1 and final-packaged M2; P3 depends on the explicit S2 disposition.
+- The frozen protocol measures aggregate raw RSS for the entire candidate-owned containment scope, permits only bounded fixed-schema telemetry to the harness, and performs three ordered collection rounds in every GC-capable candidate runtime.
+- Evidence identity includes campaign designation plus content-only source, package-output, managed-extension, fixture, runner/control, and exact host-environment manifests.
+- Exactly three non-substitutable campaign designations exist: baseline-b1, local-source-m1, and final-packaged-m2. Each permits one governing campaign per protocol/designation/candidate key; changed commit, derivation, host, fixture, seed, order, label, or attempt alone cannot create another chance to pass.
+- Only the exhaustive machine-evaluable C1 prelaunch predicates can create a non-observation. Selection is committed before RSS is visible; reserve order is deterministic; every attempt and cell is retained; candidate-owned or unlisted failures cannot be reclassified.
+- Baseline controls validate the harness but cannot satisfy M1 or M2. Each candidate campaign requalifies the identity-bound bounded, injected-slope, strict-surface, and synthetic controls before governing measurement.
+- The older nix-tcz.37 instruction to import the 13,831-line patch is explicitly superseded; that patch is provenance and regression evidence, not the target architecture.
+- The labelled roster is E0, numbered tasks .1 through .31, and cancelled audit-only nix-imo: 33 records.
 
 Verification:
-- Four read-only source, contract, metric, and upstream inventories were reconciled.
-- Independent draft review had five initial findings and three follow-up findings; all were corrected. V3 verdict is CLEAR.
-- Independent obr handoff-ownership audit is CLEAR.
-- Targeted contract assertions and git diff --check pass on the final working bytes.
-- Exact-final config/ai all-system no-build flake evaluation passes.
-- Full make test attempt 1 completed its Python full tier at 21 of 21 suites in 801 seconds and began Darwin checks. The tool session then closed without preserving the final command exit, so no full make test verdict is claimed. This docs-only unit relies on the exact-final targeted checks, portable evaluation, and commit hooks; later code-bearing issues retain their own governing build requirements.
+- Original post-commit fess independence sentinel passed and the fess verdict was CHANGES REQUIRED; every final finding is addressed.
+- Independent exact-corrective contract audit: CLEAR.
+- Independent exact-corrective obr graph and stale-guidance audit: CLEAR.
+- Final partner-observation cleanup: CLEAR.
+- Targeted contract, campaign, control, roster, dependency, no-handoff, and readiness assertions: PASS.
+- obr dep cycles: no cycles. obr ready while C1 was open: no ready issue. obr sync: in sync. git diff --check: PASS.
+- nix flake check ./config/ai --all-systems --no-build: PASS on the corrective worktree.
+- nix fmt with Markdown paths was attempted but this repository formatter reports no formatter for Markdown; it made no change and is not claimed as a passing gate.
+- No second fess audit is required for this fix-only audit cleanup commit; the independent corrective contract and graph reviews verify the findings directly.
 
-Closure:
-- The issue closes with the PLAN export and signed documentation commit that contains this event.
-- The post-commit independently isolated fess audit and partner-observation cleanup remain required by the epic workflow. A real finding reopens or corrects the work; no finding is waived.
-- After that audit, obr ready --label pi-bounded-memory selects the next issue.
+Commit and continuation:
+- The signed corrective commit containing this closure event is the remaining checkpoint action. Stage the two C1 Markdown files and only Pi-programme PLAN hunks; preserve independently owned nix-aln PLAN state.
+- After the signed commit and signature/diff verification, record its hash in the epic, claim B1 nix-tcz.37.1.2, and keep B1 fixtures, attempts, controls, hashes, and exact next action in obr. Do not create a separate handoff file.
 
 ** Dependencies
 #+begin_src json
@@ -1869,6 +1889,54 @@ Closure:
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 8,
+    "issue_id": "nix-tcz.37.1.1",
+    "author": "johnw",
+    "text": "Reopened after the independent post-commit fess audit found readiness/protocol/provenance inconsistencies that must be corrected before B1 can be claimed.",
+    "created_at": "2026-08-12T05:27:22Z"
+  },
+  {
+    "id": 9,
+    "issue_id": "nix-tcz.37.1.1",
+    "author": "johnw",
+    "text": "Concurrent-work alert: an unowned contract expansion adding campaign registration, process containment, deterministic reserve waves, and M2 appeared in the shared worktree during this corrective pass. Read-only review found a medium contradiction in that expansion: candidate/evidence identity freezes the managed-extension and runner/host manifests, but the one-governing-campaign uniqueness key uses only protocol revision, candidate source manifest, and package derivation. A managed-extension change therefore both requires a distinct evidence unit and is forbidden a new governing campaign. Do not commit those expansion hunks until the campaign key and incomplete-campaign policy are made consistent. The current C1 correction must stage only its audited readiness/protocol-issue/provenance changes and preserve the concurrent expansion unstaged unless its owner lands it first.",
+    "created_at": "2026-08-12T05:38:34Z"
+  },
+  {
+    "id": 10,
+    "issue_id": "nix-tcz.37.1.1",
+    "author": "johnw",
+    "text": "Adjudication of comment 9: the campaign/process/M2 expansion is C1-owned audit cleanup and will be committed with C1. The reported mismatch was real and is fixed: the one-campaign key now includes protocol revision plus candidate commit, source-manifest hash, package derivation, package-output hash, and managed-extension-manifest hash, while host, fixture, seed, order, and attempt are deliberately excluded to prevent retry shopping. An incomplete governing campaign remains fail-closed for that candidate key; it may resume only at the next unstarted cell and cannot be replaced. Control qualification is separately preregistered and retained, and its result hashes are fsynced into the campaign preregistration before the first governing child.",
+    "created_at": "2026-08-12T05:40:54Z"
+  },
+  {
+    "id": 11,
+    "issue_id": "nix-tcz.37.1.1",
+    "author": "johnw",
+    "text": "Follow-up adjudication: comment 9's candidate-key fix was tightened after independent review. The contract now permits exactly three non-substitutable governing designations (baseline-b1, local-source-m1, final-packaged-m2), at most one campaign per protocol/designation/candidate key. Within a designation, another governing campaign requires a recorded substantive change to the source-manifest, package-output, or managed-extension-manifest hash, or a substantive protocol correction. Commit-only, derivation-only, host, fixture, seed, order, label, or attempt changes cannot create another chance to pass. M1 and M2 both remain mandatory and neither can replace the other.",
+    "created_at": "2026-08-12T05:41:31Z"
+  },
+  {
+    "id": 12,
+    "issue_id": "nix-tcz.37.1.1",
+    "author": "johnw",
+    "text": "Coordinator handoff request: the integrated campaign/process/M2 expansion is now treated as C1-owned after comments 10-11. Please finish its current review, then either create the signed C1 corrective commit or append an exact frozen-byte/hash checkpoint in this issue before staging. Do not race the shared index. I will hold staging and audit the unified candidate once that checkpoint appears.",
+    "created_at": "2026-08-12T05:42:14Z"
+  },
+  {
+    "id": 13,
+    "issue_id": "nix-tcz.37.1.1",
+    "author": "johnw",
+    "text": "C1 is complete. The signed corrective checkpoint containing this closure must be verified before B1 is claimed.",
+    "created_at": "2026-08-12T05:43:54Z"
   }
 ]
 #+end_src
@@ -2384,7 +2452,7 @@ All three preserve existing semantic fixtures, malformed/oversized handling, ret
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 22:12]
+:MODIFIED: [2026-08-11 Tue 22:37]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2394,7 +2462,7 @@ All three preserve existing semantic fixtures, malformed/oversized handling, ret
 Programme W4. Run the complete managed gallery and non-gallery Pi consumers with implicit full-history APIs denied before materialization. Exercise histories beyond all configured horizons and records above ordinary page budgets. Give every consumer one final disposition: unchanged certified, migrated certified, or explicit administrative/unsafe exception.
 
 ** Acceptance Criteria
-No certified extension invokes a legacy materializer or eager legacy hook payload; point, page, active-context, and exact-scan semantics remain correct beyond old windows; every configured live budget has a deterministic counter or explicit ownership boundary; direct-file exceptions are visible; every maintained managed consumer has a disposition. Pi Sessions is excluded by the cancelled nix-imo issue and retained only as audit evidence. This certification does not make the final history-independence claim; M1 owns the geometric process-memory conclusion.
+No certified extension invokes a legacy materializer or eager legacy hook payload; point, page, active-context, and exact-scan semantics remain correct beyond old windows; every configured live budget has a deterministic counter or explicit ownership boundary; direct-file exceptions are visible; every maintained managed consumer has a disposition. Pi Sessions is excluded by the cancelled nix-imo issue and retained only as audit evidence. This certification does not make the final history-independence claim: M1 owns the local-source geometric conclusion and M2 owns the final packaged conclusion.
 
 ** Dependencies
 #+begin_src json
@@ -2454,17 +2522,17 @@ No certified extension invokes a legacy materializer or eager legacy hook payloa
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 21:53]
+:MODIFIED: [2026-08-11 Tue 22:40]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Programme B1. Build deterministic semantic-history and geometric-size fixtures plus a fresh-child measurement runner against current upstream main before changing architecture. Measure the legacy classic manager and preserve commands, hashes, raw heap, external, array-buffer, RSS, descriptor, and timing evidence.
+Programme B1. Build deterministic semantic-history and geometric-size fixtures plus a fresh-child measurement runner and analyzer against current upstream main before changing architecture. Freeze the complete primary-and-reserve cell order, process-containment census, governing-campaign ledger, validity selector, and all three immutable harness controls against C1. Exercise the baseline controls to prove their required verdicts before the baseline governing campaign. Measure the legacy classic manager and preserve commands, hashes, raw heap, external, array-buffer, complete candidate-process-set RSS, descriptor, timing, and control evidence.
 
 ** Acceptance Criteria
-The 1x, 4x, 16x, and 64x byte and entry fixtures hold active context, maximum record, branch shape, runtime, and operation fixed; each point runs at least seven times in fresh Node children with released results and the preregistered quiescence/GC protocol; raw metrics are retained without subtracting implementation memory; semantic digests cover resume, compaction context, branch, fork, tree, export, and replacement; fixture bytes, seeds, commands, and baseline outputs are immutable evidence inputs to M1.
+The 1x, 4x, 16x, and 64x byte and entry fixtures hold active context, maximum record, branch shape, runtime, and operation fixed. Each size in each core-terminal, complete strict-managed-extension, and packaged-runtime lane selects exactly nine valid isolated governing observations; indices 1 through 9 are primary, 10 through 12 are frozen reserves, and the complete order and deterministic reserve waves are frozen before execution. Only the exhaustive C1 machine-evaluable prelaunch predicates may create a non-observation; inputs and decisions are committed before RSS is visible, no human override is permitted, every cell remains in raw evidence, and an unlisted harness defect makes the campaign incomplete. Candidate invocation, containment, quiescence, cleanup, budget, counter, pressure, or lifecycle failures fail rather than invalidate. Each repetition uses C1 cold, preparation, and warm fresh children, bounded telemetry, containment, aggregate process-set RSS, all-runtime collection, quiescence, and collection rules with caller results released. Every started campaign is registered and cannot be replaced by an unchanged-candidate retry. The baseline bounded control passes both RSS criteria in every lane, the injected 8 MiB per GiB control fails the slope criterion in every lane, every strict-surface lane fails the eager-materialization sentinel before RSS analysis, and the synthetic analyzer suite produces its frozen verdicts. Control definitions, schemas, expected verdicts, analyzer and manifest hashes, fixture bytes, seeds, commands, and baseline outputs are immutable inputs to M1 and M2. Baseline control result records remain provenance and cannot satisfy either later candidate-bound requalification. Semantic digests cover resume, compaction context, branch, fork, tree, export, and replacement.
 
 ** Dependencies
 #+begin_src json
@@ -2497,7 +2565,7 @@ The 1x, 4x, 16x, and 64x byte and entry fixtures hold active context, maximum re
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 21:43]
+:MODIFIED: [2026-08-11 Tue 22:37]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2577,6 +2645,15 @@ The suite fails on any charged-budget breach, covered unbounded query, strict hy
   },
   {
     "issue_id": "nix-tcz.37.1.20",
+    "depends_on_id": "nix-tcz.37.1.24",
+    "type": "blocks",
+    "created_at": "2026-08-12T05:37:02.624546Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.20",
     "depends_on_id": "nix-tcz.37.1.8",
     "type": "blocks",
     "created_at": "2026-08-12T04:41:33.319654Z",
@@ -2603,17 +2680,17 @@ The suite fails on any charged-budget breach, covered unbounded query, strict hy
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 21:54]
+:MODIFIED: [2026-08-11 Tue 22:41]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Programme M1. Before observing the candidate, preregister 1x, 4x, 16x, and 64x persisted-history fixtures with identical active tails and workloads. Run at least seven isolated fresh-process repetitions per size over the actual terminal, managed-extension, and packaged-runtime paths. Record exact deterministic counters plus raw heap, external, arrayBuffers, RSS, maxRSS, timing, disk, and store metrics; separate warm retained state from cold rebuild peak and native caches.
+Programme M1. Using the C1 protocol and B1-reviewed immutable fixtures, runner and analyzer, primary-and-reserve order, control definitions, manifest hashes, and semantic baselines, measure the local-source candidate at 1x, 4x, 16x, and 64x persisted-history sizes with identical active tails and workloads. Before its local-source-m1 governing campaign, requalify the controls exactly once against that candidate, package, managed-extension, and host-environment identity. Select exactly nine valid isolated observations per size in each core-terminal, complete strict-managed-extension, and packaged-runtime lane using only the exhaustive C1 prelaunch predicates and three deterministic reserves. Record exact deterministic counters plus raw heap, external, arrayBuffers, complete candidate-process-set RSS, maxRSS, timing, disk, and store metrics. This supplies pre-delivery evidence; M2 owns final packaged acceptance.
 
 ** Acceptance Criteria
-For equal live inputs, hard counters and logical resource counts are identical at every history scale. Warm retained RSS uses the median at each size and a Theil-Sen slope over all repetitions; the upper 95% bootstrap confidence bound must be at most 1 MiB per GiB of persisted history, and the largest-minus-smallest median must be at most max(32 MiB, 5% of the smallest median). No adjusted-RSS subtraction is allowed. Fixture bytes, repetition count, quiescence/GC protocol, estimator, random seed policy, and thresholds are frozen in C1/B1 before candidate measurements; any later change creates a new evidence-ledger revision. Cold rebuild peak, latency, and disk have separate reported envelopes and cannot be used to excuse a warm-retention failure.
+The exact-candidate control qualification is preregistered, identity-bound, and produces every frozen required verdict before the governing campaign. Every started campaign and cell is registered and retained; unchanged-candidate retries cannot replace, pool with, or override the governing attempt. Exactly nine governing observations per size and lane feed the estimator. Only the exhaustive C1 RSS-blind prelaunch predicates may select the lowest deterministic reserve; no outlier or human invalidation is permitted; an unlisted harness defect makes the campaign incomplete; candidate-owned failures remain failures. For equal live inputs, every retained-state item and byte counter, candidate-process-set role and executable multiset, and hard logical resource count is identical at every history scale. Aggregate raw warm retained RSS uses the median at each size and a Theil-Sen slope over all governing observations; the upper 95 percent bootstrap confidence bound is at most 1 MiB per GiB of persisted history, and the largest-minus-smallest median is at most max of 32 MiB or 5 percent of the smallest median. No adjusted-RSS subtraction is allowed. C1 and B1 freeze all identities, fixtures, repetitions, campaign stopping, validity, reserve, containment, quiescence, collection, control, estimator, seed, and threshold rules before output; later change creates a distinct ledger revision. Cold rebuild peak, latency, and disk are separate and cannot excuse failure.
 
 ** Dependencies
 #+begin_src json
@@ -2647,6 +2724,15 @@ For equal live inputs, hard counters and logical resource counts are identical a
   },
   {
     "issue_id": "nix-tcz.37.1.21",
+    "depends_on_id": "nix-tcz.37.1.24",
+    "type": "blocks",
+    "created_at": "2026-08-12T05:32:18.017953Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.21",
     "depends_on_id": "nix-tcz.37.1.30",
     "type": "blocks",
     "created_at": "2026-08-12T04:54:00.520379Z",
@@ -2664,14 +2750,14 @@ For equal live inputs, hard counters and logical resource counts are identical a
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: chore
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 21:43]
+:MODIFIED: [2026-08-11 Tue 22:37]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Programme S2. After the geometric gate is green, run the documented large-history append/compaction/replacement/navigation/export soak on the selected runtime and managed extension set. Preserve raw time series and identify allocator/platform/runtime/store versions.
+Programme S2. After both the local-source M1 gate and the final packaged M2 replay are green, run the documented large-history append, compaction, replacement, navigation, and export soak on the selected runtime and managed extension set. Preserve raw time series and identify allocator, platform, runtime, and store versions.
 
 ** Acceptance Criteria
 The latest result is recorded as passed, failed, or not run; a failure opens or updates a blocking defect with artifacts; no live resource count grows across steady quartiles; prompt/append latency with fixed active context has no unexplained history trend. This supplemental lane never substitutes for deterministic or geometric gates.
@@ -2696,6 +2782,15 @@ The latest result is recorded as passed, failed, or not run; a failure opens or 
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.22",
+    "depends_on_id": "nix-tcz.37.1.31",
+    "type": "blocks",
+    "created_at": "2026-08-12T05:32:18.864410Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
@@ -2707,17 +2802,17 @@ The latest result is recorded as passed, failed, or not run; a failure opens or 
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: docs
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 21:53]
+:MODIFIED: [2026-08-11 Tue 22:32]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Programme D2. Finalize the normative memory equation, covered operations, compatibility and strict modes, configured budgets, typed failures, lifecycle/cursor semantics, extension cookbook, evidence commands, geometric calibration, optional-soak status, and activation requirements in the local product branches. Replace official examples that teach full-history arrays. U3 owns any authorized remote publication of these documents.
+Programme D2. Before product delivery, finalize the normative memory equation, covered operations, compatibility and strict modes, configured budgets, typed failures, lifecycle and cursor semantics, extension cookbook, evidence commands, local-source geometric result, optional-soak protocol, and activation requirements in the local product branches. Replace official examples that teach full-history arrays. U3 owns any authorized remote publication; M2 and P3 append final packaged and disposition evidence without changing the frozen protocol.
 
 ** Acceptance Criteria
-Documentation says persisted history size no longer determines normal core residency, not that Pi always uses constant memory; legacy calls state that invocation forfeits the bound; recipes cover point, recent page, active context, exact reduction, file-backed high-cardinality results, cross-session scans, and extension-owned logs; passed, failed, and not-run evidence remain distinct.
+Local documentation says persisted history size no longer determines normal core residency, not that Pi always uses constant memory; legacy calls state that invocation forfeits the bound; recipes cover point, recent page, active context, exact reduction, file-backed high-cardinality results, cross-session scans, and extension-owned logs; local-source passed, failed, historical, and not-run evidence remain distinct; no remote publication occurs in this issue.
 
 ** Dependencies
 #+begin_src json
@@ -2777,14 +2872,14 @@ Documentation says persisted history size no longer determines normal core resid
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 21:54]
+:MODIFIED: [2026-08-11 Tue 22:37]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Programme K1. Implement the compatibility decision approved by U2 before product delivery: remove getEntries, getBranch, and getTree from the default extension context or retain them only behind an explicit operator-enabled administrative capability. Remove eager legacy hook and RPC surfaces, temporary synchronous readers/adapters, and duplicate stores while retaining lossless streaming operations. This issue changes the local product candidate; U3 delivers it, N1 pins it, and P1-P3 qualify, activate, and publish the Nix integration.
+Programme K1. Implement the compatibility decision approved by U2 before product delivery: remove getEntries, getBranch, and getTree from the default extension context or retain them only behind an explicit operator-enabled administrative capability. Remove eager legacy hook and RPC surfaces, temporary synchronous readers and adapters, and duplicate stores while retaining lossless streaming operations. This issue changes the local product candidate; U3 delivers it, N1 pins it, P1 builds and qualifies it, M2 replays the frozen geometric gate, P2 activates it, and P3 publishes the Nix integration.
 
 ** Acceptance Criteria
 No official example or certified managed extension requires the legacy surface; default-context full materialization is absent or rejected before allocation and never truncated; release communication states the contract and same-process/direct-file limits; all transition-only code is deleted rather than becoming a permanent second architecture.
@@ -2812,15 +2907,6 @@ No official example or certified managed extension requires the legacy surface; 
   },
   {
     "issue_id": "nix-tcz.37.1.24",
-    "depends_on_id": "nix-tcz.37.1.23",
-    "type": "blocks",
-    "created_at": "2026-08-12T04:41:36.921134Z",
-    "created_by": "johnw",
-    "metadata": "{}",
-    "thread_id": ""
-  },
-  {
-    "issue_id": "nix-tcz.37.1.24",
     "depends_on_id": "nix-tcz.37.1.4",
     "type": "blocks",
     "created_at": "2026-08-12T04:54:00.099679Z",
@@ -2838,7 +2924,7 @@ No official example or certified managed extension requires the legacy surface; 
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 21:50]
+:MODIFIED: [2026-08-11 Tue 22:38]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2848,7 +2934,7 @@ No official example or certified managed extension requires the legacy surface; 
 Programme N1. After upstream or reviewed owner-controlled product commits implement the accepted behavior, pin immutable source identities in sources/ai.json and package them without the product-scale bounded-history/session-replacement patch stack. Migrate managed extensions to product releases, retain only genuinely Nix-specific compatibility, and preserve provider-timeout work as an independent concern.
 
 ** Acceptance Criteria
-A path/type/bytes/symlink/executable crosswalk proves the new product trees contain every intended behavior and no incidental patch change; pi-bounded-session-history.patch, pi-session-replacement.patch, and superseded consumer patches/helpers are removed; source, gallery, compatibility, deterministic, geometric, config/ai, repository, and affected package builds pass; nix-tcz.37 records the Pi half complete.
+N1 may mutate the production Pi pins and remove the downstream patch stack only after explicit Nix-cutover authority; this issue authorizes neither activation nor publication. A path, type, bytes, symlink, and executable crosswalk proves the new product trees contain every intended behavior and no incidental patch change; pi-bounded-session-history.patch, pi-session-replacement.patch, and superseded consumer patches and helpers are removed; source, gallery, compatibility, deterministic, local-source geometric, config/ai, repository, and affected package builds pass; exact product and Nix identities are recorded for the unrecalibrated M2 packaged-candidate replay; nix-tcz.37 records the Pi half complete. N1 does not claim final packaged geometric acceptance.
 
 ** Dependencies
 #+begin_src json
@@ -3048,7 +3134,7 @@ The maintainer-approved destination and branch strategy are recorded; each revie
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: chore
 :CREATED:  [2026-08-11 Tue 21:50]
-:MODIFIED: [2026-08-11 Tue 21:50]
+:MODIFIED: [2026-08-11 Tue 22:32]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3080,6 +3166,15 @@ The exact prebuilt generation is activated only after explicit authorization; st
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.28",
+    "depends_on_id": "nix-tcz.37.1.31",
+    "type": "blocks",
+    "created_at": "2026-08-12T05:32:19.041995Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
@@ -3091,7 +3186,7 @@ The exact prebuilt generation is activated only after explicit authorization; st
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: chore
 :CREATED:  [2026-08-11 Tue 21:50]
-:MODIFIED: [2026-08-11 Tue 22:12]
+:MODIFIED: [2026-08-11 Tue 22:32]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3111,6 +3206,15 @@ All programme-required local commits are signed; the accepted source and Nix ide
     "depends_on_id": "nix-tcz.37.1",
     "type": "discovered-from",
     "created_at": "2026-08-12T04:50:36.375040Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.29",
+    "depends_on_id": "nix-tcz.37.1.22",
+    "type": "blocks",
+    "created_at": "2026-08-12T05:32:19.226648Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
@@ -3222,6 +3326,49 @@ Two clean checkouts at the same commits produce the same package tree and test i
 ]
 #+end_src
 
+* TODO [#A] Replay the frozen geometric gate on the exact packaged Pi candidate    :memory:pi:upstream:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tcz.37.1.31
+:LABELS: ["memory","pi","pi-bounded-memory","upstream"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-11 Tue 22:32]
+:MODIFIED: [2026-08-11 Tue 22:41]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Programme M2 final-packaged-m2. After reviewed product delivery, the Nix source pin, and package/system qualification, replay the frozen C1/M1 geometric protocol without recalibration against the exact package output and store path that is eligible for activation.
+
+** Acceptance Criteria
+The evidence manifest crosswalks the immutable product commits from U3, source pins and patch set from N1, and exact package and system store paths from P1. Before the final-packaged-m2 governing campaign, the unchanged controls are requalified exactly once against those exact candidate, package, managed-extension, and host-environment identities and produce every C1-required verdict. The unchanged C1 fixtures, exactly nine governing isolated observations per size and lane, three deterministic reserves, campaign ledger, exhaustive prelaunch validity predicates, containment, process-set RSS aggregation, order, quiescence, collection, raw record, estimator, seed policy, and thresholds are used without recalibration. Deterministic counters and semantic digests pass; every started campaign and cell is retained; complete candidate-process-set RSS passes both geometric criteria in every lane; raw records and verdicts are retained; any failure blocks activation and publication.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tcz.37.1.31",
+    "depends_on_id": "nix-tcz.37.1",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T05:32:18.498056Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.31",
+    "depends_on_id": "nix-tcz.37.1.26",
+    "type": "blocks",
+    "created_at": "2026-08-12T05:32:18.680993Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * TODO [#A] Obtain Pi maintainer approval and select the bounded-session architecture    :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -3229,7 +3376,7 @@ Two clean checkouts at the same commits produce the same package tree and test i
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: question
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 21:53]
+:MODIFIED: [2026-08-11 Tue 22:38]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3239,7 +3386,7 @@ Two clean checkouts at the same commits produce the same package tree and test i
 Programme U2. Follow Pi's contribution gate and obtain maintainer direction before implementation. Record whether coding-agent adopts AgentHarness directly or a temporary repository adapter; SQLite-canonical versus indexed-JSONL storage; v1-v3 preservation; Node and Bun requirements; count/byte/cursor/scan semantics; lifecycle hook and RPC policy; no-session behavior; the exact public claim; the compatibility duration; and whether the strict default removes legacy materializers or retains them only behind an explicit operator-enabled administrative capability.
 
 ** Acceptance Criteria
-A maintainer lgtm authorizes the first PR and an authoritative issue/RFC answers every blocking decision. Unresolved first-order decisions keep dependent implementation blocked; silence, auto-close, or downstream preference is not treated as approval.
+Contacting or posting to maintainers occurs only after explicit outreach authority; silence is not authority. A maintainer lgtm authorizes the first pull request and an authoritative issue or RFC answers every blocking decision. Unresolved first-order decisions keep dependent implementation blocked; silence, auto-close, or downstream preference is not treated as approval.
 
 ** Dependencies
 #+begin_src json
