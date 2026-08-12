@@ -20,7 +20,8 @@ EXPECTED_COMMANDS = [
     ("vps", "cd /etc/nixos && nix flake update --commit-lock-file && ./build switch"),
     (
         "andoria-08",
-        "cd /home/jwiegley/.config/home-manager && nix flake update --commit-lock-file",
+        "cd /home/jwiegley/.config/home-manager && nix flake update --commit-lock-file "
+        "&& nix flake check --no-update-lock-file",
     ),
     ("andoria-08", "cd /home/jwiegley/.config/home-manager && switch"),
     ("andoria-t2", "cd /home/jwiegley/.config/home-manager && switch"),

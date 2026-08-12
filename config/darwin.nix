@@ -129,17 +129,78 @@ in
         eternal-terminal
       ];
 
-    etc = lib.mkIf config.johnw.host.isHera {
-      "nsmb.conf".text = ''
-        [default]
-        signing_required=no
-        mc_on=yes
-        mc_prefer_wired=yes
-        dir_cache_off=yes
-        protocol_vers_map=6
-      '';
-    };
+    etc = lib.mkMerge [
+      (lib.mkIf config.johnw.host.isHera {
+        "nsmb.conf".text = ''
+          [default]
+          signing_required=no
+          mc_on=yes
+          mc_prefer_wired=yes
+          dir_cache_off=yes
+          protocol_vers_map=6
+        '';
+      })
+      {
+        # Determinate owns the daemon (`nix.enable = false`), so nix-darwin
+        # does not emit this file from `nix.buildMachines` for us.
+        "nix/machines" = {
+          knownSha256Hashes =
+            lib.optionals config.johnw.host.isHera [
+              "46f63cb24e8924d42d09c6dfcb50b9c4c64c84b137d65ee65f21b4c9f07403ef"
+            ]
+            ++ lib.optionals config.johnw.host.isClio [
+              "44c02435dbd05dabf4b972e9575d4ddeceba5d9eca7b30d7788a8388971a85f1"
+            ];
+          text = lib.concatMapStrings (
+            machine:
+            let
+              features = machine.supportedFeatures ++ machine.mandatoryFeatures;
+            in
+            lib.concatStringsSep " " [
+              "${lib.optionalString (machine.protocol != null) "${machine.protocol}://"}${
+                lib.optionalString (machine.sshUser != null) "${machine.sshUser}@"
+              }${machine.hostName}"
+              (
+                if machine.system != null then
+                  machine.system
+                else if machine.systems != [ ] then
+                  lib.concatStringsSep "," machine.systems
+                else
+                  "-"
+              )
+              (if machine.sshKey != null then machine.sshKey else "-")
+              (toString machine.maxJobs)
+              (toString machine.speedFactor)
+              (if features == [ ] then "-" else lib.concatStringsSep "," features)
+              (
+                if machine.mandatoryFeatures == [ ] then "-" else lib.concatStringsSep "," machine.mandatoryFeatures
+              )
+              (if machine.publicHostKey != null then machine.publicHostKey else "-")
+            ]
+            + "\n"
+          ) config.nix.buildMachines;
+        };
+      }
+      (lib.mkIf config.johnw.host.isClio {
+        "nix/builder-known-hosts".text = ''
+          hera.lan ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE92Mnzmx/CVS6GiGbJ1vGC0Sdf+D7/vSU/PN7f1Y1MV
+        '';
+        "ssh/ssh_config.d/050-nix-builders.conf".text = ''
+          Host andoria-08
+            ProxyCommand ssh -o BatchMode=yes -o IdentitiesOnly=yes -o UserKnownHostsFile=/etc/nix/builder-known-hosts -o StrictHostKeyChecking=yes -i ${home}/${hostname}/id_${hostname} -W %h:%p johnw@hera.lan
+        '';
+      })
+    ];
   };
+
+  assertions = [
+    {
+      assertion = builtins.all (
+        machine: machine.system != null || machine.systems != [ ]
+      ) config.nix.buildMachines;
+      message = "every Nix build machine must declare at least one system";
+    }
+  ];
 
   programs = {
     zsh = {
@@ -352,25 +413,38 @@ in
         protocol = "ssh-ng";
         system = "aarch64-darwin";
         sshUser = "johnw";
+        sshKey = "${home}/${hostname}/id_${hostname}";
+        publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUU5Mk1uem14L0NWUzZHaUdiSjF2R0MwU2RmK0Q3L3ZTVS9QTjdmMVkxTVYK";
         maxJobs = 24;
         speedFactor = 4;
       };
-      vulcan-builder = {
+      vulcanBuilder = {
         hostName = "vulcan.lan";
         protocol = "ssh-ng";
-        systems = [
-          "aarch64-linux"
-          "x86_64-linux"
-        ];
+        system = "aarch64-linux";
         sshUser = "johnw";
-        sshKey = "${home}/hera/id_hera";
-        maxJobs = 8;
+        sshKey = "${home}/${hostname}/id_${hostname}";
+        publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUl0TUQ4ODYveGxlUzRpaE5QL3lwZ1VieSsyUnd6UFNJVm5CL0k1aTNXRW8gcm9vdEBuaXhvcwo=";
+        maxJobs = 4;
         speedFactor = 2;
         supportedFeatures = [
           "nixos-test"
           "big-parallel"
           "kvm"
         ];
+      };
+      andoriaBuilder = {
+        # The remote user is not trusted by the system daemon but already has
+        # passwordless sudo; use that authority only for this daemon handoff.
+        hostName = "andoria-08?remote-program=sudo%20-n%20/nix/var/nix/profiles/default/bin/nix-daemon";
+        protocol = "ssh-ng";
+        system = "x86_64-linux";
+        sshUser = "jwiegley";
+        sshKey = "${xdg_configHome}/ssh/id_positron";
+        publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSVBUazhVay9ucEJZRnB2dURRS1lHNFZmZStPdFAwRDM0RkRlNi9scDdyUnggcm9vdEBwb3NpdHJvbgo=";
+        maxJobs = 4;
+        speedFactor = 4;
+        supportedFeatures = [ "big-parallel" ];
       };
     in
     {
@@ -412,9 +486,10 @@ in
       };
 
       distributedBuilds = true;
-      buildMachines =
-        (if config.johnw.host.isClio then [ hera ] else [ ])
-        ++ (if config.johnw.host.isHera then [ vulcan-builder ] else [ ]);
+      buildMachines = (if config.johnw.host.isClio then [ hera ] else [ ]) ++ [
+        vulcanBuilder
+        andoriaBuilder
+      ];
 
       extraOptions = ''
         gc-keep-derivations = true
@@ -439,9 +514,32 @@ in
       /usr/bin/install -o johnw -g staff -m 0644 ${homebrewTrustJson} ${home}/.homebrew/trust.json
     '';
 
-    # Hera hosts LLM services continuously. Reapply sleep=0 on each activation;
-    # disksleep and displaysleep remain user-managed.
-    activationScripts.postActivation.text = lib.mkIf config.johnw.host.isHera ''
+    activationScripts.postActivation.text = ''
+      # nix-darwin does not reload Determinate's daemon when `nix.enable = false`.
+      # Compare against the previous generation, which is still current here.
+      if ! /usr/bin/cmp -s /run/current-system/etc/nix/machines ${
+        config.environment.etc."nix/machines".source
+      }; then
+        echo "reloading Determinate Nix builder configuration..." >&2
+        /bin/launchctl kickstart -k system/systems.determinate.nix-daemon
+        nix_daemon_ready=0
+        for _ in {1..5}; do
+          if ${pkgs.coreutils}/bin/timeout --signal=KILL 1s \
+            ${config.nix.package}/bin/nix store info --store daemon >/dev/null 2>&1; then
+            nix_daemon_ready=1
+            break
+          fi
+          /bin/sleep 0.25
+        done
+        if (( ! nix_daemon_ready )); then
+          echo "Determinate Nix daemon did not become ready" >&2
+          exit 1
+        fi
+      fi
+    ''
+    + lib.optionalString config.johnw.host.isHera ''
+      # Hera hosts LLM services continuously. Reapply sleep=0 on each
+      # activation; disksleep and displaysleep remain user-managed.
       /usr/bin/pmset -a sleep 0
     '';
 

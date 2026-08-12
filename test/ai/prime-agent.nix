@@ -12,15 +12,29 @@ let
   };
   profile = catalog.profiles.hera-prime;
   selected = lib.mapAttrs (_: items: catalog.select profile items) catalog.items;
-  rendered = (import ../../config/ai/renderers/prime.nix { inherit lib pkgs; }) {
-    inherit profile selected;
-    localModelEndpoints = catalog.localModelEndpointsByHost.${profile.host};
-    homeDirectory = "/Users/johnw";
-    xdgConfigHome = "/Users/johnw/.config";
+  render =
+    localModelEndpoints:
+    (import ../../config/ai/renderers/prime.nix { inherit lib pkgs; }) {
+      inherit selected localModelEndpoints;
+      profile = profile // {
+        localModelRoutes = localModelEndpoints != null;
+      };
+      homeDirectory = "/Users/johnw";
+      xdgConfigHome = "/Users/johnw/.config";
+    };
+  rendered = render catalog.localModelEndpointsByHost.${profile.host};
+  syntheticLocalModelEndpoints = {
+    llama-swap = "http://prime-llama.invalid/custom/v1";
+    omlx = "http://prime-omlx.invalid/custom/v1";
   };
+  syntheticRendered = render syntheticLocalModelEndpoints;
+  routesDisabledRendered = render null;
   root = ".prime/agent";
   settings = rendered.files."${root}/managed-settings.json".source;
+  syntheticSettings = syntheticRendered.files."${root}/managed-settings.json".source;
+  routesDisabledSettings = routesDisabledRendered.files."${root}/managed-settings.json".source;
   models = rendered.files."${root}/models.json".source;
+  routesDisabledModels = routesDisabledRendered.files."${root}/models.json".source;
   keybindings = rendered.files."${root}/keybindings.json".source;
   theme = rendered.files."${root}/themes/dark-tool-backgrounds.json".source;
   compatibility = rendered.files."${root}/COMPATIBILITY.md".text;
@@ -80,11 +94,6 @@ let
     xdgConfigHome = "/Users/johnw/.config";
   };
   mcpRegistryFile = mcpRegistry.files.".config/mcp/mcp.json".source;
-  packageRoots = [
-    "${pkgs.pi-gallery.packages.pi-provider-llama-swap}/share/pi-packages/pi-provider-llama-swap"
-    "${pkgs.pi-gallery.packages.pi-provider-omlx}/share/pi-packages/pi-provider-omlx"
-    mcpExtensionRoot
-  ];
 in
 assert catalog.validate { };
 assert builtins.length (builtins.attrNames rendered.files) == 93;
@@ -135,11 +144,15 @@ runCommand "prime-agent-integration-check"
     test "$(jq -r '.defaultThinkingLevel' ${settings})" = xhigh
     test "$(jq -r '.theme' ${settings})" = dark-tool-backgrounds
     test "$(jq '.packages | length' ${settings})" -eq 3
+    test "$(jq '.packages | length' ${syntheticSettings})" -eq 3
+    test "$(jq '.packages | length' ${routesDisabledSettings})" -eq 1
+    test "$(jq -r '.packages[0] | endswith("/pi-mcp-adapter")' ${routesDisabledSettings})" = true
     test "$(jq '.enableBuiltinSkills and .enableSkillCommands' ${settings})" = true
     test "$(jq '.skills == ["-skill-creator/SKILL.md"]' ${settings})" = true
     test "$(jq 'has("mcpServers")' ${settings})" = false
 
     test "$(jq '.providers | keys == ["llama-swap", "omlx", "openai-codex", "openrouter"]' ${models})" = true
+    test "$(jq '.providers | keys == ["openai-codex", "openrouter"]' ${routesDisabledModels})" = true
     test "$(jq '[.. | objects | select(has("apiKey"))] | length' ${models})" -eq 0
     test "$(jq -r '.providers["openai-codex"].modelOverrides["gpt-5.6-sol"].contextWindow' ${models})" -eq 1050000
     test "$(jq -r '.providers.openrouter.modelOverrides["z-ai/glm-5.2"].contextWindow' ${models})" -eq 1048576
@@ -152,9 +165,15 @@ runCommand "prime-agent-integration-check"
     test "$(jq '.colors | has("bashMode") and (has("thinkingMax") | not)' ${theme})" = true
     test "$(jq '.colors | has("toolPanelBg") and has("toolDiffAddedBg") and has("toolDiffRemovedBg")' ${theme})" = true
 
-    ${lib.concatMapStringsSep "\n" (
-      path: "test -f ${lib.escapeShellArg "${path}/package.json"}"
-    ) packageRoots}
+    while IFS= read -r package; do
+      test -f "$package/package.json"
+    done < <(jq -r '.packages[]' ${settings})
+    while IFS= read -r package; do
+      test -f "$package/package.json"
+    done < <(jq -r '.packages[]' ${syntheticSettings})
+    while IFS= read -r package; do
+      test -f "$package/package.json"
+    done < <(jq -r '.packages[]' ${routesDisabledSettings})
     set +e
     prime_version=$(${pkgs.coreutils}/bin/timeout --signal=KILL 30s \
       ${pkgs.prime-agent}/bin/prime-agent --version 2>&1)
@@ -226,7 +245,7 @@ runCommand "prime-agent-integration-check"
       "$home/.prime/agent/themes" \
       "$home/.agents/skills" \
       "$home/.config/mcp"
-    ln -s ${settings} "$home/.prime/agent/managed-settings.json"
+    ln -s ${syntheticSettings} "$home/.prime/agent/managed-settings.json"
     printf '%s\n' '{"onboardingShown":false}' >"$home/.prime/agent/settings.json"
     chmod 600 "$home/.prime/agent/settings.json"
     install -m 600 ${models} "$home/.prime/agent/models.json"
@@ -273,6 +292,7 @@ runCommand "prime-agent-integration-check"
     check(typeof agentDir === "string", "Prime agent root is unavailable");
     const settingsManager = SettingsManager.create(home, agentDir);
     const managedBefore = readFileSync(agentDir + "/managed-settings.json", "utf8");
+    const managedSettings = JSON.parse(managedBefore);
     check(settingsManager.getTheme() === "dark-tool-backgrounds", "managed theme was not effective");
     settingsManager.setOnboardingShown(true);
     settingsManager.setTheme("mutable-attempt");
@@ -286,7 +306,32 @@ runCommand "prime-agent-integration-check"
       "managed settings changed during a mutable preference write",
     );
     const loader = new DefaultResourceLoader({ cwd: home, agentDir, settingsManager });
-    await loader.reload();
+    const expectedDiscoveryRequests = Object.values(${builtins.toJSON syntheticLocalModelEndpoints})
+      .map((endpoint) => endpoint + "/models")
+      .sort();
+    const discoveryRequests = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async (input) => {
+      const url = typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url;
+      discoveryRequests.push(url);
+      return new Response('{"data":[]}', {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    };
+    try {
+      await loader.reload();
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+    check(
+      JSON.stringify(discoveryRequests.sort()) === JSON.stringify(expectedDiscoveryRequests),
+      "Prime local providers ignored the managed endpoints: " + JSON.stringify(discoveryRequests),
+    );
 
     const prompts = new Set(loader.getPrompts().prompts.map((prompt) => prompt.name));
     check(prompts.has("${commandName}"), "managed command prompt was not discovered");
@@ -310,11 +355,15 @@ runCommand "prime-agent-integration-check"
     const extensions = loader.getExtensions();
     check(extensions.errors.length === 0, "extension loader reported an error");
     const loadedPaths = loader.getLoadedExtensionPaths();
-    for (const root of ${builtins.toJSON packageRoots}) {
+    for (const root of managedSettings.packages) {
       check(loadedPaths.some((path) => path.startsWith(root + "/")), "managed extension package was not loaded: " + root);
     }
     const providers = extensions.runtime.pendingProviderRegistrations.map((entry) => entry.name).sort();
     check(JSON.stringify(providers) === JSON.stringify(["llama-swap", "omlx"]), "local provider registrations differ");
+    for (const [name, endpoint] of Object.entries(${builtins.toJSON syntheticLocalModelEndpoints})) {
+      const registration = extensions.runtime.pendingProviderRegistrations.find((entry) => entry.name === name);
+      check(registration?.config.baseUrl === endpoint, "managed endpoint was not registered for " + name);
+    }
     check(
       extensions.extensions.some((extension) =>
         extension.tools.has("mcp") && extension.commands.has("mcp") && extension.commands.has("mcp-auth")

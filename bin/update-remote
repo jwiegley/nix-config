@@ -46,7 +46,7 @@ done <<<"$shared_hosts_text"
 }
 
 run_remote_job shared-work-update "${shared_hosts[0]}" \
-    "cd $shared_home && nix flake update --commit-lock-file"
+    "cd $shared_home && nix flake update --commit-lock-file && nix flake check --no-update-lock-file"
 for host in "${shared_hosts[@]}"; do
     run_remote_job "shared-work-$host" "$host" "cd $shared_home && switch"
 done

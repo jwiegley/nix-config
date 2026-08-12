@@ -341,10 +341,13 @@ will select.
 The active shared-work rollout covers `andoria-08`, `andoria-t2`,
 `delphi-3bd4`, and `gpu-server`. Canonical membership additionally contains
 dormant `git-ai`; membership is not availability evidence and does not put that
-host in the rollout. The rollout must realize the candidate once, make the
-closure resident on every active target, preserve the previous closure for
-rollback, and activate all four hosts. The repository does not yet encode that
-complete sequence as one command. See
+host in the rollout. After updating the shared lock, `update-remote` runs the
+consumer flake checks before the first switch attempt, so a package-level
+regression cannot be discovered only after rollout begins. The rollout must
+still realize the candidate once, make the closure resident on every active
+target, preserve the previous closure for rollback, and activate all four
+hosts. The repository does not yet encode that complete sequence as one
+command. See
 [Architecture](../doc/ARCHITECTURE.md#host-registry-and-shared-home-policy).
 
 Evaluation, build, activation, and a successful command lookup are separate
@@ -367,7 +370,7 @@ new generation and the affected executable or service passes a runtime check.
 | `update [OPTIONS]` | Run the transactional lock and source-catalog updater | `--target` is repeatable; `--all-inputs`, `--version`, `--dry-run`, `--pull`, `--commit`, `--switch`, `--push`, and `--brew` control the transaction. Without `--dry-run`, validated changes are written back. |
 | `update-and-pull` | Find repositories under broad home-directory roots and run a PATH-provided `update` in parallel | Follows symlinks and delegates mutation semantics to an external command; use only as an attended personal maintenance operation. |
 | `update-overlay [TARGETS...]` | Inspect or update catalog-managed sources | Direct mode updates owning catalog records; some targets delegate to `bin/update`. Prefer the transaction for coordinated work. |
-| `update-remote` | Run identified Clio and Linux consumer update jobs | Source-tree-only legacy command; excluded from the installed `nix-scripts` PATH surface. Jobs run sequentially with an explicit completion barrier, NixOS uses each checkout's build driver, and dormant `git-ai` is excluded. It does not realize once, prove closure residency, or retain rollback roots, so it is not fleet proof. |
+| `update-remote` | Run identified Clio and Linux consumer update jobs | Source-tree-only legacy command; excluded from the installed `nix-scripts` PATH surface. Jobs run sequentially with an explicit completion barrier, the shared-work consumer flake is checked after its lock update and before any switch, NixOS uses each checkout's build driver, and dormant `git-ai` is excluded. It does not realize once, prove closure residency, or retain rollback roots, so it is not fleet proof. |
 | `upgrade [HOST] [--host-only\|--projects-only]` | Combine a host operation with project maintenance | `--help` prints usage. Hera performs the full update transaction, travel/Homebrew tasks, and store signing; Clio builds and switches; Linux delegates to `switch`, whose NixOS branch uses the host-owned build driver. |
 | `upgrade-all` | Run broad repository, synchronization, host, and project maintenance | Source-tree-only legacy umbrella command; excluded from the installed `nix-scripts` PATH surface. Its named prerequisites are awaited and dormant `git-ai` is not contacted; a failed Hera upgrade aborts before `pushme` and `update-remote`; `update-remote` must complete before diagnostic project maintenance. It does not supply the shared-work closure and rollback proofs required of a whole-fleet transaction. |
 | `upgrade-projects` | Reconfigure a fixed list of projects and update selected language dependencies | Sources project `.envrc` files, may rewrite Cargo locks, and deletes pip and uv caches. Each invocation writes mode-0600 logs in a unique mode-0700 run below `${UPGRADE_LOG_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/upgrade-projects}`; `UPGRADE_LOG_DIR` must be absolute, must not end in `.` or `..`, and a relative `XDG_STATE_HOME` is ignored. Retention keeps the newest ten completed or abandoned runs, preserves locked active runs, and considers an unlocked incomplete run abandoned after one hour. |

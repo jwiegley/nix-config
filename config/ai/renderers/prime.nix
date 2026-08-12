@@ -76,9 +76,38 @@ let
   models.providers =
     modelOverrides.nativeProviders
     // lib.optionalAttrs (localModelEndpoints != null) modelOverrides.localProviderOverrides;
-  packageRoots = [
-    "${pkgs.pi-gallery.packages.pi-provider-llama-swap}/share/pi-packages/pi-provider-llama-swap"
-    "${pkgs.pi-gallery.packages.pi-provider-omlx}/share/pi-packages/pi-provider-omlx"
+  localProviderPackages = lib.optionals (localModelEndpoints != null) [
+    {
+      name = "pi-provider-llama-swap";
+      package = pkgs.pi-gallery.packages.pi-provider-llama-swap;
+    }
+    {
+      name = "pi-provider-omlx";
+      package = pkgs.pi-gallery.packages.pi-provider-omlx;
+    }
+  ];
+  managedLocalProviderRoot =
+    { name, package }:
+    let
+      packageRoot = "${package}/share/pi-packages/${name}";
+      extension = pkgs.writeText "prime-managed-${name}.ts" ''
+        import provider from ${builtins.toJSON "${packageRoot}/index.ts"};
+
+        export default async function primeManagedProvider(
+          pi: Parameters<typeof provider>[0],
+        ): Promise<void> {
+          await provider(pi, ${builtins.toJSON localModelEndpoints});
+        }
+      '';
+      managedPackage = pkgs.runCommand "prime-managed-${name}" { } ''
+        root="$out/share/pi-packages/${name}"
+        mkdir -p "$root"
+        cp ${packageRoot}/package.json "$root/package.json"
+        cp ${extension} "$root/index.ts"
+      '';
+    in
+    "${managedPackage}/share/pi-packages/${name}";
+  packageRoots = map managedLocalProviderRoot localProviderPackages ++ [
     "${pkgs.agent-resources}/share/agent-resources/pi-extensions/pi-mcp-adapter"
   ];
   settings = {

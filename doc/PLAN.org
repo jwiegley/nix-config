@@ -2,6 +2,69 @@
 #+SEQ_TODO: TODO DOING DRAFT WAIT DEFER NOTE | DONE CANCELED
 #+ISSUE_PREFIX: nix
 
+* DONE [#B] Fix Eternal Terminal 7.0.0 Linux Home Manager build
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-01a
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-12 Wed 10:16]
+:MODIFIED: [2026-08-12 Wed 13:59]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 13:59]
+:CLOSE_REASON: Fixed the consumer-owned Eternal Terminal 7.0 header drift and proved the full Andoria Home Manager closure.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The user reported that Andoria-08 Home Manager failed at eternal-terminal-7.0.0 patchPhase because the consumer-owned override targeted nonexistent src/terminal/PsuedoUserTerminal.hpp. Diagnose the upstream/source drift, fix the owning Nix seam declaratively, add Linux realization coverage, and make the shared-work update workflow run consumer checks before its first switch attempt. Main CI is a separate failure tracked by nix-g5k.
+
+** Acceptance Criteria
+The Eternal Terminal override no longer targets a nonexistent source path; its package builds for the shared-work Linux platform; the relevant Home Manager configuration builds without activation; a regression check detects future source-path drift; repository-wide CI status is reported separately and not inferred from focused local gates.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-01a",
+    "depends_on_id": "nix-5yr",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T17:16:21.447157Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 85,
+    "issue_id": "nix-01a",
+    "author": "johnw",
+    "text": "Root cause localized to the external Andoria consumer at /Users/johnw/src/andoria/flake.nix: its host-specific SSSD override was authored against ET 6.2.11 and names legacy src/terminal/PsuedoUserTerminal.hpp. User's updated nixpkgs 8e2eeb9477c9d40009a5bd51cd3eef2f5abb26f1 supplies ET 7.0.0 with src/terminal/PseudoUserTerminal.hpp; both replacement anchors remain. Root nix-config contains no ET override. Existing root shared-work fixture excludes this consumer-local overlay, and test/bin/cross-consumer-eval forces only activationPackage.drvPath, so patchPhase never ran. Corrective implementation is being made in the owning /Users/johnw/src/andoria checkout with a fail-closed dual-version header probe and checks.x86_64-linux.eternal-terminal; closeout will build that check against both locked 6.2.11 and updated 7.0.0, then build the full activationPackage without activation.",
+    "created_at": "2026-08-12T17:26:35Z"
+  },
+  {
+    "id": 88,
+    "issue_id": "nix-01a",
+    "author": "johnw",
+    "text": "Verification-process correction: the Andoria flake now exports the exact overlaid Eternal Terminal package as checks.x86_64-linux.eternal-terminal, and root bin/update-remote now runs nix flake check --no-update-lock-file immediately after the shared-work lock update and before any switch. The existing sequential/failure behavioral test pins the exact command and proves any check failure prevents the rollout; focused update-remote tests passed 2/2. Root GitHub CI tests this orchestration but does not claim to build the external Andoria checkout. Full package and activation-package closeout builds remain in progress without activation.",
+    "created_at": "2026-08-12T19:42:17Z"
+  },
+  {
+    "id": 94,
+    "issue_id": "nix-01a",
+    "author": "johnw",
+    "text": "Closeout evidence on the final formatted Andoria flake.nix (SHA-256 c5dd70380e800cb2cd95b266e76b37f75c375286b1a8a7102b92247ec23d45f5): the override selects ET 7.0 src/terminal/PseudoUserTerminal.hpp, retains the explicit 6.2.11 Psuedo... fallback, and fails closed if neither or either semantic patch anchor drifts. The x86_64-linux eternal-terminal check is the exact overlaid package; its realized ET 7.0 build passed 125/125 tests and version checks. A full current homeConfigurations.jwiegley.activationPackage build then succeeded on Andoria-08 through the declared root-daemon URI, producing /nix/store/4wv6i1d3zgj21n3w9h5zksmn3cz8ax04-home-manager-generation and explicitly consuming the ET service/output. nix flake check --all-systems --no-update-lock-file confirmed the check as previously built. The first full-closure attempt on saturated Andoria-T2 lost its remote daemon connection after ET succeeded; both daemons remained active with no restart/warning, and that failed attempt is not counted as success. The 6.2.11 fallback was source/anchor inspected but not rebuilt. Root update-remote ordering coverage passed 2/2 and the final full root make test passed 21/21. No Home Manager activation occurred during this closeout.",
+    "created_at": "2026-08-12T20:59:10Z"
+  }
+]
+#+end_src
+
 * DONE [#C] Scrub inherited Git config and namespace selectors
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -94,16 +157,19 @@ Partner observation .445Z: the malformed claude-opus-5[1m value came from a trun
 :LABELS: []
 :ISSUE_TYPE: question
 :CREATED:  [2026-08-10 Mon 21:24]
-:MODIFIED: [2026-08-12 Wed 10:07]
+:MODIFIED: [2026-08-12 Wed 14:02]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-12 Wed 10:07]
-:CLOSE_REASON: All gallery Node warning suppression removed; the exact aarch64-darwin gallery gate passed, and its newly visible unrelated Pi Usage module-type warning is tracked as nix-nfi.
+:FINISHED: [2026-08-12 Wed 14:02]
+:CLOSE_REASON: Aligned Clio local discovery with live inventory while preserving Hera routes and catalog endpoint authority.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
 Clio currently serves neither catalog-advertised local route. Choose and implement one authoritative outcome: provision/alias GLM-5.2 and Qwen3.6-27B-oQ6e-mtp in Clio mutable runtime, or withdraw/adjust Clio local-route opt-ins to only models actually served. Preserve Hera routing. Model downloads, service mutation, activation, and publication remain separately authorized. Safe audit evidence: llama-swap listed only bge-m3 and bge-reranker-v2-m3; oMLX required auth and was not queried with credentials, while its two effective installed-model roots contained Qwen3.6-27B-oQ4-mtp but not Qwen3.6-27B-oQ6e-mtp.
+
+** Acceptance Criteria
+Clio retains dynamic provider discovery, Hermes, and managed transport but has no unsupported fixed local-provider routes or synthetic router; Hera fixed overrides and routing remain intact; catalog endpoint values reach Pi and Prime provider factories; synthetic non-default endpoint tests prove exact /models requests and registrations; routes-disabled rendering omits the local providers; all focused and repository gates pass; no activation, live endpoint mutation, model download, or publication occurs.
 
 ** Dependencies
 #+begin_src json
@@ -171,6 +237,27 @@ Clio currently serves neither catalog-advertised local route. Choose and impleme
     "author": "johnw",
     "text": "Final warning-visibility correction: the second pre-existing NODE_NO_WARNINGS use in the Pi Usage bounded-history command has also been removed. The exact aarch64-darwin pi-gallery derivation passed with no Node warning suppression anywhere in the gate. It visibly emitted the pre-existing Pi Usage MODULE_TYPELESS_PACKAGE_JSON warning; that separate package defect is recorded as discovered issue nix-nfi rather than hidden or misreported. This gate is unsuppressed, not warning-free. No activation, push, publication, endpoint access, or service mutation occurred.",
     "created_at": "2026-08-12T17:07:10Z"
+  },
+  {
+    "id": 83,
+    "issue_id": "nix-5yr",
+    "author": "johnw",
+    "text": "Reopened after independent fess of e37f5222 found that Prime still treats the catalog endpoint record as a boolean and invokes raw llama-swap/oMLX providers with duplicated localhost fallbacks. Corrective scope is the existing provider-factory seam plus synthetic non-default endpoint coverage; no endpoint access, activation, publication, or mutable service change.",
+    "created_at": "2026-08-12T17:24:16Z"
+  },
+  {
+    "id": 93,
+    "issue_id": "nix-5yr",
+    "author": "johnw",
+    "text": "Final portable evaluation on the current tree: direnv exec . nix flake check ./config/ai --all-systems --no-build completed successfully across aarch64-darwin, aarch64-linux, and x86_64-linux. The focused Prime behavioral derivation had already passed with synthetic non-default endpoint URLs and exact provider registration. No activation, live endpoint request, service mutation, publication, or push occurred.",
+    "created_at": "2026-08-12T20:38:43Z"
+  },
+  {
+    "id": 96,
+    "issue_id": "nix-5yr",
+    "author": "johnw",
+    "text": "Closeout on the final tree: Clio retains dynamic llama-swap/oMLX discovery, Hermes, and managed request/idle transport but receives no fixed local-provider overrides or synthetic router; Hera retains its fixed overrides and router. Both Pi and Prime provider factories receive catalog-owned endpoint records. Behavioral tests use synthetic non-default URLs, require exact /models requests and registrations, prove the transport-only idle timeout, and cover routes-disabled rendering. The focused Prime check, full 21-suite root gate, pre-commit gate, and config/ai all-system no-build evaluation passed. No activation, live endpoint request, model download, service mutation, or publication occurred during source closeout.",
+    "created_at": "2026-08-12T21:02:16Z"
   }
 ]
 #+end_src
@@ -221,6 +308,120 @@ Partner-cleanup review confirmed the finding and the minimal two-file fix. The s
     "author": "johnw",
     "text": "Implemented the confirmed two-file fix. A stop/halt request now overrides the successful-completion list, records current state in obr or the handoff document, and stops immediately; the contradictory ALL-list bullet is gone. Read-only partner-cleanup review PASS: /private/tmp/wg-nix84t-cleanup-final/report.md. Verification green: ai-catalog-transport build; config/ai all-system flake evaluation without builds; full make test (21 Python suites and 7 root behavioral checks); lefthook pre-commit all files. The first focused run exposed only an overly strict test substring and passed after correcting that assertion; no persistent failure remains.",
     "created_at": "2026-08-12T08:41:41Z"
+  }
+]
+#+end_src
+
+* TODO [#C] Narrow Andoria remote-builder root authority    :builder:security:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-89t
+:LABELS: ["builder","security"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-12 Wed 12:25]
+:MODIFIED: [2026-08-12 Wed 12:52]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The working client-side ssh-ng route on Andoria-08 invokes nix-daemon through an SSH account that already has unrestricted passwordless sudo. That makes distributed builds functional without changing remote global trust, but the account remains root-equivalent beyond Nix. Move the server-side boundary to declarative least privilege: either a dedicated SSH key with a forced nix-daemon --stdio command, an exact-command sudo rule/wrapper, or a declarative trusted-user/signing-key policy. Do not weaken host-key or identity pinning.
+
+** Acceptance Criteria
+The Andoria builder accepts a fresh client-signed local dependency without unrestricted passwordless sudo; its forced command or exact daemon authority is managed declaratively on the authoritative host; Hera and Clio builder URIs no longer rely on broad sudo; a fresh nonce-bearing remote build and negative non-daemon command probe pass; no activation occurs without separate authorization.
+
+** Notes
+The sudo-daemon URI is present in final declarative source but not in Hera current activated /etc/nix/machines. Remote trust/key or sudo-policy changes and local activation each require separate authorization.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-89t",
+    "depends_on_id": "nix-8gs",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T19:25:42.307882Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#C] Replace the retired Nix builder with maintained Linux builders
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-8gs
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-12 Wed 11:05]
+:MODIFIED: [2026-08-12 Wed 14:08]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 14:08]
+:CLOSE_REASON: Replaced the retired builder with exact Vulcan and Andoria-08 routes and proved both with fresh local inputs.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The live builder configuration historically listed retired ssh-ng://root@nix-builder and a broad Vulcan entry. The declarative owner is config/darwin.nix. Per owner direction, remove the retired VM; use a viable Andoria-08 or Andoria-T2 route for x86_64-linux, while retaining Vulcan only for aarch64-linux. Live probes showed Andoria-T2 cannot accept client-signed local outputs, so the active pool selects Andoria-08 and records T2 remediation separately. Never edit /etc/nix/machines directly; activation is separately authorized.
+
+** Acceptance Criteria
+Hera and Clio evaluate to Vulcan as aarch64-linux only plus Andoria-08 as the selected x86_64-linux builder; each newly configured Linux route accepts a fresh uniquely signed local dependency with its managed identity; behavioral evaluation pins host, platform, user, key, capacity, features, ordering, serialization, and daemon handoff; the system builds without activation; no nix-builder or Andoria-T2 entry remains in the final generated configuration. Adoption of the final source is separately tracked by nix-z9h.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-8gs",
+    "depends_on_id": "nix-01a",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T18:05:56.719667Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 86,
+    "issue_id": "nix-8gs",
+    "author": "johnw",
+    "text": "Owner clarified that nix-builder is retired. Implementing the maintained pool declaratively in config/darwin.nix: Vulcan aarch64-linux only, Andoria-08/T2 x86_64-linux only. Live /etc/nix/machines remains untouched pending separately authorized activation.",
+    "created_at": "2026-08-12T18:08:54Z"
+  },
+  {
+    "id": 87,
+    "issue_id": "nix-8gs",
+    "author": "johnw",
+    "text": "Live post-switch verification found that the initial three-row pool was only superficially green: a source-free default smoke routed correctly, but Andoria-08 rejected an unsigned/local package during the all-system host check because its daemon trusts only root. Andoria-T2 has the same root-only trust and no passwordless sudo, so it cannot be a reliable general builder for dirty local closures. Per the owner’s “andoria-08 or andoria-t2” direction, the declarative pool now selects Andoria-08 only and encodes its already-authorized passwordless sudo handoff to the exact nix-daemon binary in the ssh-ng URI. A unique locally built/signed dependency was then accepted and consumed remotely through that URI. Vulcan remains aarch64-linux only.",
+    "created_at": "2026-08-12T19:22:40Z"
+  },
+  {
+    "id": 89,
+    "issue_id": "nix-8gs",
+    "author": "johnw",
+    "text": "Clarification to comment 87: the Andoria-08 account already had unrestricted passwordless sudo before this work; the client-side URI temporarily uses that pre-existing authority only to launch nix-daemon. This is functional evidence, not least-privilege authorization. Server-side narrowing remains open as nix-89t. The user activated the intermediate three-row generation; final source now emits only Vulcan and Andoria-08 and is not activated. Final adoption is tracked by nix-z9h.",
+    "created_at": "2026-08-12T19:52:18Z"
+  },
+  {
+    "id": 98,
+    "issue_id": "nix-8gs",
+    "author": "johnw",
+    "text": "Current source verification: the complete Hera nix-darwin system built successfully without activation, including the new etc-machines derivation. Andoria-08 accepted the full final Andoria Home Manager closure through the declared root-daemon URI, including a locally present corrected ET output. The explicit three-platform host-behavior build remains in progress on its Vulcan aarch64-linux lane; final declarative adoption is now authorized and tracked by in-progress nix-z9h.",
+    "created_at": "2026-08-12T21:05:01Z"
+  },
+  {
+    "id": 100,
+    "issue_id": "nix-8gs",
+    "author": "johnw",
+    "text": "Final source closeout: config/darwin.nix now renders exactly Vulcan as aarch64-linux and Andoria-08 as x86_64-linux; nix-builder and Andoria-T2 are absent from the final machine files, while Clio retains its separate intended Hera Darwin route. Host behavior pins both complete serialized files, identities, host keys, capacities, features, order, daemon handoff, migration hashes, and reload behavior. The full Hera nix-darwin system built without activation, including the final etc-machines derivation. Andoria-08 accepted a fresh local dependency and the complete Andoria Home Manager closure through the exact sudo nix-daemon URI. Vulcan accepted a fresh unique builtins.toFile nonce with --no-substitute and local max-jobs 0 through the exact managed ssh-ng identity; output r7cdcsvicwi2bpp7i8k3b88zlyygy0x6 reproduced the nonce byte-for-byte. An earlier overbroad three-platform host-behavior build was interrupted after its x86 lane because transferring the full closure to Vulcan exceeded an hour and delayed the commit hook; it is not claimed as passed. The narrower nonce proof plus the already-green behavioral regression is the governing route evidence. Final activation remains separate and in progress under nix-z9h; least-privilege hardening remains open under nix-89t.",
+    "created_at": "2026-08-12T21:08:24Z"
   }
 ]
 #+end_src
@@ -473,6 +674,131 @@ Partner observation .443Z: plaintext stage/backup copies can survive SIGKILL or 
 ]
 #+end_src
 
+* DONE [#B] Restore main Python CI to the repository-pinned toolchain
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-g5k
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-12 Wed 10:24]
+:MODIFIED: [2026-08-12 Wed 14:02]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 14:02]
+:CLOSE_REASON: Restored main Python CI to the repository-pinned toolchain and removed the Linux skip.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Main CI run 31621573191 at e37f5222 has Nix, shell, and signature jobs green but python-checks red. The workflow resolves floating nixpkgs#ruff 0.16.1 while the repository direnv pins Ruff 0.15.22; this produces 208 findings absent from the supported local toolchain. The strict test runner also correctly rejects one Darwin-only YubiKey ACL test that is currently represented as a Linux skip. Fix toolchain authority and platform-specific test discovery without mass-editing code for a floating linter.
+
+** Acceptance Criteria
+CI Python lint/test commands consume the same repository-pinned tools as direnv; the Linux fast suite has no skipped tests; exact local CI-equivalent Python lint and fast tests pass; workflow action tests pass; no linter rule is disabled and the Darwin ACL assertion remains present on Darwin.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-g5k",
+    "depends_on_id": "nix-01a",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T17:24:22.904276Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 84,
+    "issue_id": "nix-g5k",
+    "author": "johnw",
+    "text": "Starting the current-main CI repair. I will pin CI to the repository toolchain already loaded by direnv and make the Darwin-only ACL test absent from Linux discovery rather than skipped; no rule suppression, broad lint rewrite, activation, or publication.",
+    "created_at": "2026-08-12T17:24:26Z"
+  },
+  {
+    "id": 90,
+    "issue_id": "nix-g5k",
+    "author": "johnw",
+    "text": "Current-tree CI-equivalent evidence: test/bin/quality --python-tier fast python-lint python-test passed with 46 linted files and all 18 planned fast suites (failed=0, timed-out=0, killed=0, not-reached=0) in 47 seconds. workflow-actions passed 5/5. The Darwin run discovered and passed all 14 YubiKey tests. A separate sys.platform=linux discovery run of test/bin/yubikey-switch-test.py passed 13/13 with zero skips, proving the Darwin ACL test is absent rather than skipped on Linux. These are local source gates; restored live GitHub main CI remains publication/post-push evidence and is not claimed.",
+    "created_at": "2026-08-12T19:54:11Z"
+  },
+  {
+    "id": 91,
+    "issue_id": "nix-g5k",
+    "author": "johnw",
+    "text": "Final current-tree local verification: direnv exec . lefthook run pre-commit --all-files passed 129 Nix format/lint/dead-code targets, 38 shell format/lint targets, 46 Python lint targets, and all 18 fast Python suites. direnv exec . make test then ran all 21 full Python suites in 398 seconds with zero failures, timeouts, kills, budget overruns, or unreached suites; the behavioral check manifest also completed. This is source/local gate evidence only: main CI still reflects the old failing commit because push remains unauthorized.",
+    "created_at": "2026-08-12T20:38:42Z"
+  },
+  {
+    "id": 95,
+    "issue_id": "nix-g5k",
+    "author": "johnw",
+    "text": "Closeout on the final tree: GitHub CI now enters the locked root devShell rather than floating nixpkgs# tools; coreutils and yq are explicit devShell inputs; the Darwin ACL test is discovered only on Darwin rather than represented as a Linux skip; workflow regression coverage rejects future nixpkgs# bypasses. Exact local evidence: all 46 Python lint targets, all 18 fast suites, workflow-actions 5/5, Darwin YubiKey 14/14, simulated Linux YubiKey 13/13 with zero skips, pre-commit static gates, and the complete 21-suite make test passed. No lint rule or ACL assertion was weakened. The public main CI run still reflects the old commit until the separately authorized push occurs.",
+    "created_at": "2026-08-12T21:02:16Z"
+  }
+]
+#+end_src
+
+* TODO [#D] Make deadline-supervisor tests robust under concurrent build load
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-gw8
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-12 Wed 13:16]
+:MODIFIED: [2026-08-12 Wed 14:07]
+:CREATED_BY: johnw
+:DEFERRED: [2026-08-19 Wed 09:00]
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+A final make test run while the two authorized remote Nix closure builds were active produced two deadline-supervisor-test.py mismatches: expected child outcomes 125/137 were preempted by the fixture 0.2-second supervisor timeout and returned 124. The same eight tests passed in the earlier exact fast-CI lane and again in an immediate isolated run (8/8 in 2.17s), so this is timing sensitivity rather than a current production behavior failure. Preserve the semantic assertions while removing dependence on scheduler latency.
+
+** Acceptance Criteria
+The two process-group outcome tests deterministically distinguish early-child failure and forced group kill from supervisor timeout under controlled CPU/I/O contention; no timeout or cleanup assertion is weakened; mutation tests fail if the supervisor returns 124 for those cases; the focused suite and repeated full make test runs pass.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-gw8",
+    "depends_on_id": "nix-g5k",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T20:16:12.653262Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 92,
+    "issue_id": "nix-gw8",
+    "author": "johnw",
+    "text": "Follow-up evidence: a fresh full make test rerun while both remote Nix builds were still active passed deadline-supervisor-test.py 8/8 and the complete 21-suite gate. The issue remains open because the earlier two 124-vs-125/137 outcomes demonstrate timing sensitivity even though it did not reproduce in this rerun.",
+    "created_at": "2026-08-12T20:38:43Z"
+  },
+  {
+    "id": 99,
+    "issue_id": "nix-gw8",
+    "author": "johnw",
+    "text": "A later ordinary signed-commit hook under the still-running Vulcan cross-system transfer reproduced the broader timing defect: all reported static and individual Python tests were green, but upgrade-projects-test expanded from about 8 seconds to 35 seconds and the fast tier reached yubikey-switch at the 105-second work deadline, so the outer supervisor terminated the group. No hook was bypassed and no root commit was created. The same final tree had passed this hook in 61 seconds and the full 21-suite gate in 398 seconds. The eventual fix must cover whole-tier scheduling slack under concurrent Nix I/O as well as the two child-outcome fixtures, without weakening per-test semantics.",
+    "created_at": "2026-08-12T21:07:34Z"
+  }
+]
+#+end_src
+
 * DONE [#B] Restore Pi Sessions as a reviewed managed product    :memory:pi:security:sessions:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -622,6 +948,41 @@ Partner observation .440Z: cp -p preserves Darwin ACLs and source owner bits, so
     "depends_on_id": "nix-tcz.9",
     "type": "discovered-from",
     "created_at": "2026-08-10T23:30:55.483711Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#D] Make Andoria-T2 a trusted general-purpose Nix builder
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-l8r
+:LABELS: []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-12 Wed 12:25]
+:MODIFIED: [2026-08-12 Wed 12:52]
+:CREATED_BY: johnw
+:DEFERRED: [2026-08-19 Wed 09:00]
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Andoria-T2 can build self-contained derivations but its daemon trusts only root, the jwiegley SSH account has no noninteractive sudo, and it rejects fresh client-signed local outputs because newartisans.com is not a trusted key. It was therefore removed from the final declarative source rather than left as a nondeterministic failure path; Hera still runs the user-activated intermediate generation that contains T2 until separately authorized adoption under nix-z9h. Configure the authoritative remote system declaratively before re-adding it.
+
+** Acceptance Criteria
+The authoritative Andoria-T2 system configuration declaratively grants only the minimum Nix builder authority or trusts the exact client signing key; a fresh nonce-bearing local output is consumed by an x86_64-linux derivation through ssh-ng; no broad sudo or root SSH is added; Hera and Clio then re-add the exact pinned T2 identity with behavioral and serialized-file coverage.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-l8r",
+    "depends_on_id": "nix-8gs",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T19:25:47.808202Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
@@ -5559,6 +5920,37 @@ Remove the resolved portable quality question and make the remaining external/ow
 ]
 #+end_src
 
+* TODO [#A] Rotate the exposed VPS Gitea credential and remove it from the remote URL    :security:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-twq
+:LABELS: ["security"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-12 Wed 14:02]
+:MODIFIED: [2026-08-12 Wed 14:02]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+A read-only fleet preflight printed the VPS Git remote URL, which contained an embedded credential. Rotate/revoke that credential immediately, replace the remote with a credential-free URL backed by managed authentication, and verify no tracked file or durable log contains the secret. Do not copy the old value into obr, PLAN.org, commands, or evidence.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-twq",
+    "depends_on_id": "nix-z9h",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T21:02:44.767063Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#C] Test the YubiKey restore source-root contract
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5760,6 +6152,53 @@ Path Finder 26.1.7 is independent of Nix Samba. During the reported attempt it p
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+* DOING [#C] Adopt the final declarative Nix builder pool
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-z9h
+:LABELS: []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-12 Wed 12:52]
+:MODIFIED: [2026-08-12 Wed 14:05]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Hera currently has the user-activated intermediate three-row /etc/nix/machines (Vulcan, Andoria-08, Andoria-T2). The final declarative source instead emits Vulcan plus the working sudo-daemon Andoria-08 route and removes T2 until nix-l8r is resolved. Build and review the final generation, then activate only with explicit owner authorization; never edit /etc/nix/machines directly.
+
+** Acceptance Criteria
+A separately authorized Hera switch adopts the final generated two-row machines file; /etc/nix/machines remains a nix-darwin symlink to the matching Nix-store source; the daemon reloads and becomes ready; a default source-free aarch64-linux build routes to Vulcan; a fresh local-dependency x86_64-linux build routes to Andoria-08 through the declared daemon handoff; no nix-builder or Andoria-T2 row remains; activation and runtime evidence are recorded without claiming Clio adoption.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-z9h",
+    "depends_on_id": "nix-8gs",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T19:52:03.405616Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 97,
+    "issue_id": "nix-z9h",
+    "author": "johnw",
+    "text": "Owner explicitly authorized signed commit, dual-remote publication, and activation on all hosts after nix-01a closed. Beginning fleet adoption from each authoritative checkout; preserve per-host build/activation/runtime evidence and do not conflate Hera adoption with Clio/shared-work/NixOS adoption.",
+    "created_at": "2026-08-12T21:05:01Z"
   }
 ]
 #+end_src

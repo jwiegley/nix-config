@@ -41,6 +41,104 @@ let
   '';
   heraSshdConfig = darwinConfigurations.hera.config.services.openssh.extraConfig;
   clioSshdConfig = darwinConfigurations.clio.config.services.openssh.extraConfig;
+  andoria08HostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSVBUazhVay9ucEJZRnB2dURRS1lHNFZmZStPdFAwRDM0RkRlNi9scDdyUnggcm9vdEBwb3NpdHJvbgo=";
+  heraHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUU5Mk1uem14L0NWUzZHaUdiSjF2R0MwU2RmK0Q3L3ZTVS9QTjdmMVkxTVYK";
+  vulcanHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUl0TUQ4ODYveGxlUzRpaE5QL3lwZ1VieSsyUnd6UFNJVm5CL0k1aTNXRW8gcm9vdEBuaXhvcwo=";
+  expectedAndoriaBuilder = {
+    mandatoryFeatures = [ ];
+    protocol = "ssh-ng";
+    speedFactor = 4;
+    sshKey = "/Users/johnw/.config/ssh/id_positron";
+    sshUser = "jwiegley";
+    supportedFeatures = [ "big-parallel" ];
+    system = "x86_64-linux";
+    systems = [ ];
+  };
+  expectedAndoriaBuilders = [
+    (
+      expectedAndoriaBuilder
+      // {
+        hostName = "andoria-08?remote-program=sudo%20-n%20/nix/var/nix/profiles/default/bin/nix-daemon";
+        maxJobs = 4;
+        publicHostKey = andoria08HostKey;
+      }
+    )
+  ];
+  expectedVulcanBuilder = sshKey: {
+    hostName = "vulcan.lan";
+    mandatoryFeatures = [ ];
+    maxJobs = 4;
+    protocol = "ssh-ng";
+    publicHostKey = vulcanHostKey;
+    speedFactor = 2;
+    inherit sshKey;
+    sshUser = "johnw";
+    supportedFeatures = [
+      "nixos-test"
+      "big-parallel"
+      "kvm"
+    ];
+    system = "aarch64-linux";
+    systems = [ ];
+  };
+  expectedHeraBuilder = {
+    hostName = "hera.lan";
+    mandatoryFeatures = [ ];
+    maxJobs = 24;
+    protocol = "ssh-ng";
+    publicHostKey = heraHostKey;
+    speedFactor = 4;
+    sshKey = "/Users/johnw/clio/id_clio";
+    sshUser = "johnw";
+    supportedFeatures = [ ];
+    system = "aarch64-darwin";
+    systems = [ ];
+  };
+  heraBuildMachines = darwinConfigurations.hera.config.nix.buildMachines;
+  clioBuildMachines = darwinConfigurations.clio.config.nix.buildMachines;
+  heraEtc = darwinConfigurations.hera.config.environment.etc;
+  clioEtc = darwinConfigurations.clio.config.environment.etc;
+  heraMachinesEntry = heraEtc."nix/machines";
+  clioMachinesEntry = clioEtc."nix/machines";
+  clioBuilderSshEntry = clioEtc."ssh/ssh_config.d/050-nix-builders.conf";
+  clioBuilderKnownHostsEntry = clioEtc."nix/builder-known-hosts";
+  expectedHeraMachinesFile = ''
+    ssh-ng://johnw@vulcan.lan aarch64-linux /Users/johnw/hera/id_hera 4 2 nixos-test,big-parallel,kvm - ${vulcanHostKey}
+    ssh-ng://jwiegley@andoria-08?remote-program=sudo%20-n%20/nix/var/nix/profiles/default/bin/nix-daemon x86_64-linux /Users/johnw/.config/ssh/id_positron 4 4 big-parallel - ${andoria08HostKey}
+  '';
+  expectedClioMachinesFile = ''
+    ssh-ng://johnw@hera.lan aarch64-darwin /Users/johnw/clio/id_clio 24 4 - - ${heraHostKey}
+    ssh-ng://johnw@vulcan.lan aarch64-linux /Users/johnw/clio/id_clio 4 2 nixos-test,big-parallel,kvm - ${vulcanHostKey}
+    ssh-ng://jwiegley@andoria-08?remote-program=sudo%20-n%20/nix/var/nix/profiles/default/bin/nix-daemon x86_64-linux /Users/johnw/.config/ssh/id_positron 4 4 big-parallel - ${andoria08HostKey}
+  '';
+  expectedClioBuilderSshConfig = ''
+    Host andoria-08
+      ProxyCommand ssh -o BatchMode=yes -o IdentitiesOnly=yes -o UserKnownHostsFile=/etc/nix/builder-known-hosts -o StrictHostKeyChecking=yes -i /Users/johnw/clio/id_clio -W %h:%p johnw@hera.lan
+  '';
+  expectedClioBuilderKnownHosts = ''
+    hera.lan ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE92Mnzmx/CVS6GiGbJ1vGC0Sdf+D7/vSU/PN7f1Y1MV
+  '';
+  expectedBuilderReload = machinesEntry: coreutils: nixPackage: ''
+    # nix-darwin does not reload Determinate's daemon when `nix.enable = false`.
+    # Compare against the previous generation, which is still current here.
+    if ! /usr/bin/cmp -s /run/current-system/etc/nix/machines ${machinesEntry.source}; then
+      echo "reloading Determinate Nix builder configuration..." >&2
+      /bin/launchctl kickstart -k system/systems.determinate.nix-daemon
+      nix_daemon_ready=0
+      for _ in {1..5}; do
+        if ${coreutils}/bin/timeout --signal=KILL 1s \
+          ${nixPackage}/bin/nix store info --store daemon >/dev/null 2>&1; then
+          nix_daemon_ready=1
+          break
+        fi
+        /bin/sleep 0.25
+      done
+      if (( ! nix_daemon_ready )); then
+        echo "Determinate Nix daemon did not become ready" >&2
+        exit 1
+      fi
+    fi
+  '';
   desktopHomes = builtins.attrValues desktopHomesByHost;
   registry = import ../../config/hosts/registry.nix;
   aiCatalog = import ../../config/ai/catalog.nix {
@@ -214,6 +312,49 @@ assert builtins.all (
   darwinConfigurations.${host}.config.networking.hostName == host
   && darwinConfigurations.${host}.config.networking.localHostName == host
 ) requiredDarwinHosts;
+assert builtins.head heraBuildMachines == expectedVulcanBuilder "/Users/johnw/hera/id_hera";
+assert builtins.tail heraBuildMachines == expectedAndoriaBuilders;
+assert
+  clioBuildMachines == [
+    expectedHeraBuilder
+    (expectedVulcanBuilder "/Users/johnw/clio/id_clio")
+  ]
+  ++ expectedAndoriaBuilders;
+assert heraMachinesEntry.enable;
+assert heraMachinesEntry.target == "nix/machines";
+assert heraMachinesEntry.text == expectedHeraMachinesFile;
+assert
+  heraMachinesEntry.knownSha256Hashes == [
+    "46f63cb24e8924d42d09c6dfcb50b9c4c64c84b137d65ee65f21b4c9f07403ef"
+  ];
+assert clioMachinesEntry.enable;
+assert clioMachinesEntry.target == "nix/machines";
+assert clioMachinesEntry.text == expectedClioMachinesFile;
+assert
+  clioMachinesEntry.knownSha256Hashes == [
+    "44c02435dbd05dabf4b972e9575d4ddeceba5d9eca7b30d7788a8388971a85f1"
+  ];
+assert lib.hasPrefix (
+  expectedBuilderReload heraMachinesEntry darwinConfigurations.hera.pkgs.coreutils
+    darwinConfigurations.hera.config.nix.package
+  + ''
+    # Hera hosts LLM services continuously. Reapply sleep=0 on each
+    # activation; disksleep and displaysleep remain user-managed.
+    /usr/bin/pmset -a sleep 0
+  ''
+) darwinConfigurations.hera.config.system.activationScripts.postActivation.text;
+assert lib.hasPrefix (expectedBuilderReload clioMachinesEntry
+  darwinConfigurations.clio.pkgs.coreutils
+  darwinConfigurations.clio.config.nix.package
+) darwinConfigurations.clio.config.system.activationScripts.postActivation.text;
+assert clioBuilderSshEntry.enable;
+assert clioBuilderSshEntry.target == "ssh/ssh_config.d/050-nix-builders.conf";
+assert clioBuilderSshEntry.text == expectedClioBuilderSshConfig;
+assert clioBuilderKnownHostsEntry.enable;
+assert clioBuilderKnownHostsEntry.target == "nix/builder-known-hosts";
+assert clioBuilderKnownHostsEntry.text == expectedClioBuilderKnownHosts;
+assert !(builtins.hasAttr "ssh/ssh_config.d/050-nix-builders.conf" heraEtc);
+assert !(builtins.hasAttr "nix/builder-known-hosts" heraEtc);
 assert builtins.all (host: builtins.hasAttr host nixosHomeEvaluationFixtures) requiredNixosHosts;
 assert builtins.all (home: builtins.hasAttr home homeConfigurations) requiredStandaloneHomes;
 assert personalLinuxResolution.homeClassRow.catalogHost == "vps";

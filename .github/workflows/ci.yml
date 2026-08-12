@@ -43,9 +43,7 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@33c9ab3ef95cd57c164d9d6eb1f9a46338538d41 # main
       - uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
       - name: Nix format, lint and dead code
-        run: |
-          nix shell nixpkgs#nixfmt nixpkgs#statix nixpkgs#deadnix \
-            -c test/bin/quality nix-format nix-lint nix-deadcode
+        run: nix develop --no-update-lock-file --command test/bin/quality nix-format nix-lint nix-deadcode
 
   shell-checks:
     runs-on: ubuntu-latest
@@ -54,9 +52,7 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@33c9ab3ef95cd57c164d9d6eb1f9a46338538d41 # main
       - uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
       - name: Shell lint and format
-        run: |
-          nix shell nixpkgs#shellcheck nixpkgs#shfmt \
-            -c test/bin/quality shell-lint shell-format
+        run: nix develop --no-update-lock-file --command test/bin/quality shell-lint shell-format
 
   python-checks:
     runs-on: ubuntu-latest
@@ -68,6 +64,5 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
       - name: Python lint and essential tests
         run: >-
-          nix shell .#python-test-env nixpkgs#ruff nixpkgs#nixfmt nixpkgs#coreutils nixpkgs#yq
-          -c test/bin/quality --python-tier fast
+          nix develop --no-update-lock-file --command test/bin/quality --python-tier fast
           python-lint python-test

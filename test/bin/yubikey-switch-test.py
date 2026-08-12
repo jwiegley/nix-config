@@ -226,33 +226,34 @@ for key in os.environ["EXPECTED_KEYS"].split(os.pathsep):
         self.assert_no_side_effects()
         self.assert_no_transaction_files()
 
-    @unittest.skipUnless(sys.platform == "darwin", "Darwin ACL behavior")
-    def test_source_acl_is_not_copied_to_active_key(self):
-        self.prepare_keys()
-        source = self.key_dir / f"{KEYS[0]}.test"
-        subprocess.run(
-            ["/bin/chmod", "+a", "everyone allow read", str(source)],
-            check=True,
-        )
-        source_listing = subprocess.run(
-            ["/bin/ls", "-lde", str(source)],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout
-        self.assertRegex(source_listing, r"(?m)^\s+\d+:")
+    if sys.platform == "darwin":
 
-        result = self.run_switch()
-
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        for key in KEYS:
-            listing = subprocess.run(
-                ["/bin/ls", "-lde", str(self.key_dir / key)],
+        def test_source_acl_is_not_copied_to_active_key(self):
+            self.prepare_keys()
+            source = self.key_dir / f"{KEYS[0]}.test"
+            subprocess.run(
+                ["/bin/chmod", "+a", "everyone allow read", str(source)],
+                check=True,
+            )
+            source_listing = subprocess.run(
+                ["/bin/ls", "-lde", str(source)],
                 check=True,
                 capture_output=True,
                 text=True,
             ).stdout
-            self.assertNotRegex(listing, r"(?m)^\s+\d+:")
+            self.assertRegex(source_listing, r"(?m)^\s+\d+:")
+
+            result = self.run_switch()
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            for key in KEYS:
+                listing = subprocess.run(
+                    ["/bin/ls", "-lde", str(self.key_dir / key)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                ).stdout
+                self.assertNotRegex(listing, r"(?m)^\s+\d+:")
 
     def test_restore_populates_an_empty_active_key_directory(self):
         self.prepare_restore_keys()

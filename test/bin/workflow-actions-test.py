@@ -71,6 +71,29 @@ def unpinned_external_actions(source):
 
 
 class WorkflowActionPinTests(unittest.TestCase):
+    def test_ci_quality_jobs_use_the_locked_repository_development_shell(self):
+        workflow = parse_workflow(
+            (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        )
+        expected = {
+            "nix-checks": "nix-format nix-lint nix-deadcode",
+            "shell-checks": "shell-lint shell-format",
+            "python-checks": "--python-tier fast python-lint python-test",
+        }
+        for job, arguments in expected.items():
+            commands = [
+                step["run"]
+                for step in workflow["jobs"][job]["steps"]
+                if "run" in step and "test/bin/quality" in step["run"]
+            ]
+            self.assertEqual(
+                commands,
+                [
+                    "nix develop --no-update-lock-file --command "
+                    f"test/bin/quality {arguments}"
+                ],
+            )
+
     def test_external_actions_use_full_commit_shas(self):
         workflows = workflow_files(REPO / ".github/workflows")
         self.assertTrue(workflows, "no GitHub Actions workflows found")

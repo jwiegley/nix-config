@@ -298,12 +298,14 @@
         {
           default = pkgs.mkShell {
             packages = with pkgs; [
+              coreutils
               statix
               deadnix
               nixfmt
               shellcheck
               shfmt
               ruff
+              yq
               pythonTestEnvFor.${system}
               lefthook
             ];
