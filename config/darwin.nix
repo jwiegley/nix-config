@@ -523,8 +523,10 @@ in
         echo "reloading Determinate Nix builder configuration..." >&2
         /bin/launchctl kickstart -k system/systems.determinate.nix-daemon
         nix_daemon_ready=0
-        for _ in {1..5}; do
-          if ${pkgs.coreutils}/bin/timeout --signal=KILL 1s \
+        # A cold Determinate daemon can take several seconds to accept the
+        # first client after kickstart, especially on Clio.
+        for _ in {1..6}; do
+          if ${pkgs.coreutils}/bin/timeout --signal=KILL 5s \
             ${config.nix.package}/bin/nix store info --store daemon >/dev/null 2>&1; then
             nix_daemon_ready=1
             break
