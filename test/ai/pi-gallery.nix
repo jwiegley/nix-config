@@ -974,7 +974,7 @@ runCommand "pi-gallery-check"
     [ "$(stat -c '%a' "$usage_runtime/usage-extension-cache.json")" = 600 ] \
       || fail "Usage Dashboard cache mode is not 0600"
     PI_USAGE_ROOT=${roots.usage} \
-      NODE_NO_WARNINGS=1 ${nodejs_24}/bin/node --experimental-strip-types \
+      ${nodejs_24}/bin/node --experimental-strip-types \
         ${sourceForChecks}/test/ai/pi-usage-bounded-history.check.ts
     [ -f ${roots.multi-pass}/extensions/multi-sub.ts ]
     [ ! -e ${roots.multi-pass}/node_modules ]

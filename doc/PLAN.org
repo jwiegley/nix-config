@@ -94,10 +94,10 @@ Partner observation .445Z: the malformed claude-opus-5[1m value came from a trun
 :LABELS: []
 :ISSUE_TYPE: question
 :CREATED:  [2026-08-10 Mon 21:24]
-:MODIFIED: [2026-08-12 Wed 09:57]
+:MODIFIED: [2026-08-12 Wed 10:07]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-12 Wed 09:57]
-:CLOSE_REASON: Post-commit audit findings corrected: broad Node warning suppression removed and the Pi Mem evidence label corrected to 181 tests; the exact unsuppressed Darwin gallery gate passed.
+:FINISHED: [2026-08-12 Wed 10:07]
+:CLOSE_REASON: All gallery Node warning suppression removed; the exact aarch64-darwin gallery gate passed, and its newly visible unrelated Pi Usage module-type warning is tracked as nix-nfi.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -157,6 +157,20 @@ Clio currently serves neither catalog-advertised local route. Choose and impleme
     "author": "johnw",
     "text": "Correction to the earlier evidence comment: the Pi Mem result is 181 tests, not 181 assertions. NODE_NO_WARNINGS=1 has been removed, so Node warnings are no longer hidden; the exact aarch64-darwin pi-gallery derivation then passed with all 181 tests green. This follow-up changes no production behavior and performs no activation, push, publication, endpoint access, or service mutation.",
     "created_at": "2026-08-12T16:57:20Z"
+  },
+  {
+    "id": 81,
+    "issue_id": "nix-5yr",
+    "author": "johnw",
+    "text": "Reopened: Repeat fess audit of a29ad6ef found a second pre-existing NODE_NO_WARNINGS in the same pi-gallery derivation, so the gate-wide unsuppressed wording was overbroad. Reopening to remove it, rerun the exact gate, and record corrected evidence.",
+    "created_at": "2026-08-12T17:01:59Z"
+  },
+  {
+    "id": 82,
+    "issue_id": "nix-5yr",
+    "author": "johnw",
+    "text": "Final warning-visibility correction: the second pre-existing NODE_NO_WARNINGS use in the Pi Usage bounded-history command has also been removed. The exact aarch64-darwin pi-gallery derivation passed with no Node warning suppression anywhere in the gate. It visibly emitted the pre-existing Pi Usage MODULE_TYPELESS_PACKAGE_JSON warning; that separate package defect is recorded as discovered issue nix-nfi rather than hidden or misreported. This gate is unsuppressed, not warning-free. No activation, push, publication, endpoint access, or service mutation occurred.",
+    "created_at": "2026-08-12T17:07:10Z"
   }
 ]
 #+end_src
@@ -710,6 +724,40 @@ Rendered Hera authorized_keys contains from=192.168.1.2, restrict, port-forwardi
     "depends_on_id": "nix-sj5",
     "type": "discovered-from",
     "created_at": "2026-08-11T04:46:04.827050Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Declare Pi Usage package module type
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-nfi
+:LABELS: []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-12 Wed 10:07]
+:MODIFIED: [2026-08-12 Wed 10:07]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The unsuppressed aarch64-darwin pi-gallery check exposes Node MODULE_TYPELESS_PACKAGE_JSON for pi-usage-extension data.ts because its package.json does not declare a module type. Fix the package at its owning seam rather than suppressing warnings.
+
+** Acceptance Criteria
+The packaged Pi Usage extension declares the correct Node module type; its bounded-history check emits no MODULE_TYPELESS_PACKAGE_JSON warning; focused gallery/package checks pass without warning suppression.
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-nfi",
+    "depends_on_id": "nix-5yr",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T17:07:06.962948Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
