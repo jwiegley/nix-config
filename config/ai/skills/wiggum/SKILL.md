@@ -25,6 +25,7 @@ Exit the loop ONLY when ALL of these hold, with evidence rather than self-assert
 - No actionable partner observation is outstanding as of the last cleanup cycle. (Partner review does not necessarily drain to empty; you may finish with a note that further, non-blocking observations are deferred.)
 - The branch is rebased or restacked cleanly onto its base (locally).
 - If a parity target was given, a parity check passes with evidence.
+- No request to stop or halt has been received from the user.
 
 Never edit the plan or the done-criteria to lower the bar. Never weaken, skip, or delete tests, and never hardcode outputs to satisfy a check -- that is reward hacking, and it defeats the whole loop (see the `fix-all` skill's philosophy). Verification comes from a separate evaluator, not from grading your own work.
 
@@ -45,12 +46,12 @@ Report where you are, what you tried, and what you need.
 Keep three distinct artifacts so work resumes exactly where it left off if the machine dies or the session restarts:
 
 1. **Frozen plan / done-criteria** -- the target, written before work. Read-only for the purpose of lowering the bar.
-2. **Handoff document** -- what is done, what remains, how to resume, and the current stop-and-escalate attempt counts. Append and trim to keep it current and task-state oriented.
+2. **Handoff documentation** -- use `obr` to track this information, if `obr` is being used, otherwise use a Markdown file within the repository. This handoff information should track what is done, what remains, how to resume, and the current stop-and-escalate attempt counts. If using `obr`, use on issue per item being worked on, so that progress and completeness can be tracked with fine granularity; if using a handoff document file, append and trim to keep it current and task-state oriented.
 3. **Running learnings** -- if the `journal` workflow is in use, that append-only, timestamped record of durable learnings is separate from the handoff. Do not conflate the two.
 
 ## Refresh after compaction
 
-After every context compaction, before any new work: re-read this skill, the frozen plan/target, and the handoff document in full (including the attempt counts); if a journal is kept, re-read its preface plus the recent entries needed to recover the latest learnings. Then run a baseline verification -- build and tests, plus the parity check if a parity target exists -- to confirm the current state before touching anything new. Starting new work on an already-broken base only makes it worse.
+After every context compaction, before any new work: re-read this skill, the frozen plan/target, and the `obr` issues or handoff document in full (including the attempt counts); if a journal is kept, re-read its preface plus the recent entries needed to recover the latest learnings. Then run a baseline verification -- build and tests, plus the parity check if a parity target exists -- to confirm the current state before touching anything new. Starting new work on an already-broken base only makes it worse.
 
 ## The loop
 
