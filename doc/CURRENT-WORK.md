@@ -29,13 +29,18 @@ architecture to upstream wholesale.
 The residency contract, live-work budget ledger, historical evidence boundary,
 and bounded-memory evidence protocol are in
 [`PI-BOUNDED-MEMORY-CONTRACT.md`](PI-BOUNDED-MEMORY-CONTRACT.md). Deterministic
-item, byte, lifecycle, and ownership gates establish the architectural bound.
-A small paired endpoint raw-RSS regression on the actual packaged topology is
-the integration backstop. B1 records only the unmodified classic-core causal
-baseline; M1 qualifies the local strict product; M2 repeats the unchanged gate
-against the exact delivered, Nix-pinned, package-qualified store path before
-activation. Results are reproducible signed project evidence, not a claim of
-adversarial non-equivocation by local Git or files.
+bounded history ingress and an independently closed inventory of every
+source-reviewable root and transient value on the history dataflow establish the
+architectural argument. Deterministic item, byte, lifecycle, ownership, online
+append, and semantic-oracle tests verify that design in processes separate from
+RSS-bearing normal workloads. Each qualification endpoint receives a fresh
+closed-world mutable namespace. A small paired endpoint raw-RSS regression on
+the actual packaged topology is only an integration backstop. B1 records the
+unmodified classic-core causal baseline; M1 qualifies the local strict product;
+M2 either proves the activation-eligible package is
+identity-equivalent to M1 or repeats the complete gate when it is not. Results
+are reproducible signed project evidence, not a formal whole-runtime proof or a
+claim of adversarial non-equivocation by local Git or files.
 
 ## 2026-08-09 whole-repository review: tracked closeout
 
