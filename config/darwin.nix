@@ -34,12 +34,16 @@ in
   # Prevent macOS from falling back to the case-preserving LocalHostName.
   networking.hostName = hostname;
 
-  # Hera is the only remote inference host. Vulcan terminates client traffic,
-  # injects the oMLX bearer credential, and reaches this listener over the LAN.
+  # Hera is the only remote inference host. Vulcan and Clio reach this listener
+  # over their declared network paths; oMLX remains the authentication authority.
   johnw.omlxProxy = lib.mkIf config.johnw.host.isHera {
     enable = true;
     listenAddress = "192.168.1.4";
-    allowedSources = [ "192.168.1.2/32" ];
+    allowedSources = [
+      "192.168.1.2/32"
+      "192.168.1.5/32"
+      "10.6.0.2/32"
+    ];
   };
 
   users = {

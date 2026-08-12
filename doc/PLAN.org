@@ -531,6 +531,53 @@ Hera and Clio evaluate to Vulcan as aarch64-linux only plus Andoria-08 as the se
 
 Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension using the existing source/package/catalog installation pattern. Verify the real package and managed Pi projection without activating hosts.
 
+* DOING [#A] Restore Clio oMLX proxy allowlist    :network:regression:security:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-9ku
+:LABELS: ["network","regression","security"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-12 Wed 15:16]
+:MODIFIED: [2026-08-12 Wed 15:31]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Recover the user-authored Clio source entries that were erased from Hera's declarative oMLX nginx allowlist. Preserve Vulcan access and keep the route disabled on Clio itself. Do not edit generated nginx state directly.
+
+** Acceptance Criteria
+Hera's declarative allowlist contains Vulcan plus Clio's LAN and alternate-path /32 addresses; exact generated-nginx regression coverage prevents either Clio entry from disappearing; the focused proxy check and full Hera build pass; the signed change is published; Hera is activated from the authoritative checkout; and a live request from Clio reaches past nginx source denial (not HTTP 403).
+
+** Dependencies
+#+begin_src json
+[
+  {
+    "issue_id": "nix-9ku",
+    "depends_on_id": "nix-tcz.13",
+    "type": "discovered-from",
+    "created_at": "2026-08-12T22:16:38.201448Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 108,
+    "issue_id": "nix-9ku",
+    "author": "johnw",
+    "text": "Recovered exact unstaged config hunk from pi checkpoint 7073e0dc: Vulcan 192.168.1.2/32, Clio LAN 192.168.1.5/32, Clio WireGuard 10.6.0.2/32 in that order. Added exact evaluated-list and generated-nginx coverage. Focused aarch64-darwin omlx-proxy-boundary built successfully; complete non-activating Hera system build produced /nix/store/mpvjdh0gcildkbl1i402bbv2pm0w0qd0-darwin-system-26.11.15abb8c; Hera/Clio proxy evaluations match intended enabled/disabled policy. A broader make test run was stopped at owner request after all suites reached had passed; it is not closeout evidence.",
+    "created_at": "2026-08-12T22:31:47Z"
+  }
+]
+#+end_src
+
 * DOING [#B] Make obr available across the managed fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

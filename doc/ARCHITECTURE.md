@@ -122,11 +122,12 @@ profiles that opt into fixed local routes; activation logic consumes the same
 authority where required.
 
 oMLX itself is loopback-only. Its TLS gateway route is absent by default; Hera
-enables it only on its LAN address and admits Vulcan's gateway address. Vulcan
-injects the bearer credential from its protected runtime configuration, nginx
-forwards that header, and oMLX validates it. This keeps one authentication
-authority instead of consuming the OpenAI `Authorization` header in a second
-Basic-auth layer.
+enables it only on its LAN address and admits Vulcan's gateway plus Clio's
+declared LAN and WireGuard source addresses. Vulcan injects the bearer credential
+from its protected runtime configuration; direct clients provide their own
+credential. Nginx forwards that header, and oMLX validates it. This keeps one
+authentication authority instead of consuming the OpenAI `Authorization` header
+in a second Basic-auth layer.
 
 The initial Prime Agent profile is Hera-only. Its prompt commands and Agent Skills
 are direct catalog projections; static specialist definitions become native RLM

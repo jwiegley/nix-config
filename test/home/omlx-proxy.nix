@@ -73,7 +73,11 @@ assert
   heraSettings == {
     enable = true;
     listenAddress = "192.168.1.4";
-    allowedSources = [ "192.168.1.2/32" ];
+    allowedSources = [
+      "192.168.1.2/32"
+      "192.168.1.5/32"
+      "10.6.0.2/32"
+    ];
   };
 assert
   clioSettings == {
@@ -137,6 +141,8 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
 
   grep -F 'listen 192.168.1.4:8443 ssl;' "$hera_config"
   grep -F 'allow 192.168.1.2/32;' "$hera_config"
+  grep -F 'allow 192.168.1.5/32;' "$hera_config"
+  grep -F 'allow 10.6.0.2/32;' "$hera_config"
   grep -F 'proxy_pass http://127.0.0.1:8000;' "$hera_config"
   grep -F 'proxy_set_header Authorization $http_authorization;' "$hera_config"
   ! grep -F 'proxy_set_header Authorization "";' "$hera_config"
