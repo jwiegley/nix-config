@@ -13,7 +13,7 @@ another soak is not a pending acceptance gate.
 Issue `nix-tcz.37.1` is the active programme for making Pi's normal retained
 session memory independent of persisted-history size. Its tasks cover the core
 query and storage contract, the classic coding-agent cutover, lifecycle and
-presentation paths, managed-extension migration, deterministic and geometric
+presentation paths, managed-extension migration, deterministic and paired-RSS
 acceptance gates, documentation, and the eventual removal of product-scale Nix
 patches. `obr ready --label pi-bounded-memory` is the authoritative next-work
 query, and `obr show nix-tcz.37.1` is the authoritative programme checkpoint.
@@ -26,15 +26,16 @@ owner fork, the Nix cutover, activation, and push remain distinct issue gates.
 The existing large downstream patch is evidence and a prototype, not the
 architecture to upstream wholesale.
 
-The preregistered residency contract, live-work budget ledger, historical
-evidence boundary, and geometric measurement protocol are in
-[`PI-BOUNDED-MEMORY-CONTRACT.md`](PI-BOUNDED-MEMORY-CONTRACT.md). Candidate
-measurements may not begin until that contract is committed, its runner and
-analyzer have been reviewed, and the bounded, injected-slope, strict-surface,
-and synthetic analyzer controls have produced their frozen required verdicts.
-The local-source geometric gate supplies pre-delivery evidence; a separate
-unrecalibrated replay must pass against the exact delivered, Nix-pinned,
-package-qualified store path before activation.
+The residency contract, live-work budget ledger, historical evidence boundary,
+and bounded-memory evidence protocol are in
+[`PI-BOUNDED-MEMORY-CONTRACT.md`](PI-BOUNDED-MEMORY-CONTRACT.md). Deterministic
+item, byte, lifecycle, and ownership gates establish the architectural bound.
+A small paired endpoint raw-RSS regression on the actual packaged topology is
+the integration backstop. B1 records only the unmodified classic-core causal
+baseline; M1 qualifies the local strict product; M2 repeats the unchanged gate
+against the exact delivered, Nix-pinned, package-qualified store path before
+activation. Results are reproducible signed project evidence, not a claim of
+adversarial non-equivocation by local Git or files.
 
 ## 2026-08-09 whole-repository review: tracked closeout
 

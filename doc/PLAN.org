@@ -167,7 +167,7 @@ Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension usin
 :LABELS: []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:02]
-:MODIFIED: [2026-08-10 Mon 16:19]
+:MODIFIED: [2026-08-11 Tue 22:40]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -175,6 +175,34 @@ Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension usin
 :END:
 
 Make the root-managed `obr` executable available on Hera, Clio, VPS, Vulcan, and the shared-work home spanning Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server. Verify the root input/package contract and affected consumer builds. Publication, paired consumer-lock adoption, and every activation remain separately authorized; any authorized shared-work rollout must realize the candidate once, prove its closure resident on all four shared-work hosts, retain the previous GC root, and activate each from its authoritative checkout before runtime acceptance.
+
+** Notes
+Durable continuation state, 2026-08-11 22:42 PDT
+
+Fleet state:
+- Root package/input contract is implemented. This issue remains in progress until remaining consumer/runtime evidence is reconciled.
+- Owner reports all non-VPS host switches succeeded. This VPS lane did not independently inspect those hosts, so that evidence remains attributed rather than re-verified here.
+- VPS adoption, activation, commit, and push were explicitly authorized and are complete. No broader activation was performed in this lane.
+
+VPS implementation and publication — DONE:
+- Authoritative `/etc/nixos/flake.nix` now declares direct `obr.url = "github:jwiegley/obr";`; `flake.lock` contains its dependency graph.
+- Paired `nix-config` and `nix-config-ai` revisions remain equal. Lock rewrite preserved every pre-existing locked source and added only the five obr dependency sources.
+- Signed commit `5c2256f51b48` (`Add obr input to VPS`) changes exactly `flake.nix` and `flake.lock` and passed signature verification before transfer to VPS. Private signing material never left Hera.
+- VPS branch already contained two owner-authored unsigned lock commits, `100aaf7` and `57c8294`. They were preserved without history rewrite. Fast-forward push published all three commits; local HEAD equals `origin/main`; worktree is clean.
+
+Build and activation evidence — DONE:
+- Initial unbounded build reached evaluation but kernel OOM at 2026-08-11 22:21:31 PDT killed `nix`; no activation occurred.
+- One-job/one-core retry reached the exact obr derivation but kernel OOM at 22:29:23 killed `rustc` while compiling `asupersync`; this established resource exhaustion rather than a source defect. VPS has 7754 MiB RAM and no swap.
+- Direct untrusted Nix copy correctly failed because the locally built source path lacked a trusted cache signature. Signature checking was not disabled.
+- The exact expected x86_64-linux obr output and deriver matched all four shared-work hosts. Its NAR was exported from authenticated `andoria-08` and imported through the VPS root build driver; VPS then passed NAR content verification, deriver equality, and executable smoke test.
+- Bounded build attempt 3 passed in 72 seconds. Authorized switch passed in 12 seconds and changed the active generation.
+- After signed commit creation, exact committed-tree build passed in 38 seconds and switch passed in 10 seconds; generation identity remained the already-tested candidate.
+- Runtime acceptance: fresh SSH succeeds; `/run/current-system` matches the system profile; managed obr profile link resolves to expected output and `obr --version` runs; Home Manager result is success; failed systemd unit count is zero; build lock is free.
+
+Exact resume step:
+1. Treat VPS lane as complete; do not repeat its build, switch, commit, or push.
+2. Reconcile recorded evidence for Hera, Clio, Vulcan, and four shared-work consumers against this issue's full fleet requirement.
+3. If every consumer's paired lock adoption, authorized activation, and obr runtime acceptance are evidenced, close `nix-aln`; otherwise create/claim one issue per missing consumer and keep this parent checkpoint current.
 
 * DONE [#B] Keep Plasma Wiki destination no-follow through copy    :filesystem:plasma:security:
 :PROPERTIES:
@@ -1760,7 +1788,7 @@ Superseding Pi guidance, 2026-08-11:
 :LABELS: ["architecture","memory","pi","pi-bounded-memory","upstream","wiggum"]
 :ISSUE_TYPE: epic
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 22:43]
+:MODIFIED: [2026-08-11 Tue 23:19]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1770,42 +1798,37 @@ Superseding Pi guidance, 2026-08-11:
 Programme E0. Complete Pi's existing SessionRepo and SessionTree direction so normal core residency and certified bounded-capability extensions have no term proportional to persisted history bytes or entries. Preserve exact durable history, branches, forks, resume, and export. Treat the downstream 0.83 patch as a prototype and test corpus, never as a third session architecture. External outreach, pull requests, fork publication, Nix cutover, activation, and publication remain separate authority gates.
 
 ** Acceptance Criteria
-Every issue in the frozen roster labeled pi-bounded-memory is closed, deferred at an explicitly accepted future compatibility boundary, or has an explicit accepted non-goal; the actual coding-agent path, managed extensions, and packaged runtime pass semantic, lifecycle, deterministic-budget, and geometric-memory gates; product-scale downstream Pi patches are gone; the final contract names active-context, record, page, cache, view, queue, native, concurrency, and caller-owned terms and never claims arbitrary same-process extensions are capped.
+Every issue in the frozen roster labeled pi-bounded-memory is closed, deferred at an explicitly accepted future compatibility boundary, or has an explicit accepted non-goal; the actual coding-agent path, managed extensions, and packaged runtime pass semantic, lifecycle, deterministic-budget, and paired endpoint raw-RSS gates; product-scale downstream Pi patches are gone; the final contract names active-context, record, page, cache, view, queue, native, concurrency, and caller-owned terms and never claims arbitrary same-process extensions are capped.
 
 ** Notes
 Durable continuation state, 2026-08-11 PDT
 
 Programme invariant:
-- Normal Pi core execution and certified managed extensions must not retain state proportional to persisted session bytes or entry count.
-- Preserve exact durable history, resume, branches, forks, lifecycle behavior, and export.
-- Complete Pi's existing SessionRepo and SessionTree direction. The 13,831-line downstream v0.83 patch is signed causal/regression evidence, not a third architecture or import target.
-- doc/PI-BOUNDED-MEMORY-CONTRACT.md owns the normative claim, budgets, campaign protocol, evidence boundary, and non-guarantees.
+- Normal Pi core execution and certified managed extensions retain no state proportional to persisted session bytes or entry count for fixed active context and declared budgets.
+- Deterministic item, byte, concurrency, lifecycle, ownership, and semantic gates establish the architectural bound. A paired endpoint raw-RSS regression is an end-to-end backstop, not the proof.
+- Complete Pi existing SessionRepo/SessionTree direction. The 13,831-line downstream v0.83 patch is causal and regression evidence, not an import target.
+- doc/PI-BOUNDED-MEMORY-CONTRACT.md owns the normative claim, budgets, evidence protocol, and non-guarantees.
 
 Authoritative roster and graph:
-- obr is the sole continuation authority. Do not create or maintain a parallel Wiggum handoff.
-- The labelled roster is this epic E0, numbered tasks .1 through .31, and cancelled audit-only nix-imo: 33 records.
-- C1 is complete after post-commit fess correction. B1 is the next issue but must not be claimed until the signed corrective checkpoint containing the C1 closure is verified.
-- Local candidate-changing K1 precedes D1 and M1. U3 delivers, N1 pins, P1 qualifies the exact package and system closure, M2 replays the frozen geometric gate, P2 activates only with separate authority, S2 receives an explicit disposition, and P3 publishes only with separate authority.
-- Candidate memory measurement has not begun.
+- obr is the sole continuation authority; no parallel Wiggum handoff exists.
+- The labelled roster is E0, numbered tasks .1 through .31, and cancelled audit-only nix-imo: 33 records.
+- C1 .1 is IN_PROGRESS after independent fess rejected signed checkpoint b1f9b62f. B1 .2 remains blocked and no candidate measurement has begun.
+- B1 is an unmodified classic-core causal baseline. M1 qualifies the local strict product. U3 delivers, N1 pins, P1 package-qualifies, M2 replays the unchanged gate on the activation-eligible package, P2 activates only with separate authority, S2 receives an explicit disposition, and P3 publishes only with separate authority.
+- K1 follows D1/W3/W4 and precedes deterministic A2 and M1; it does not precede D1.
 
-Evidence boundary:
-- Exact inspected Pi v0.83 source: 845d6ff1f6643aba440341cce877ce1c43ebbc39.
-- Dated remote-main observation: 534bcbffb7e1e7551d9ee3572dfeb278e203e493 on 2026-08-11; do not bind v0.83 line evidence to it.
-- Signed prototype: e2c002e06cc4378b5a55cc1659e99caaab408dcb; pi-bounded-session-history.patch SHA-256 4bdb9524839764bf9639740be782e0719168d885332e5cf2b70da16c95f7494a.
-- Historical 1 GiB and eight-hour results are attributed supporting evidence; absent raw bundles and the recorded numerical conflict prevent promotion to the frozen verdict.
-- Signed C1 base commit: da46175772b8429d2fa6050a520021ced4a4e1c8, GOOD signature.
-
-Authority boundaries:
-- Local planning, implementation, tests, and signed local checkpoints are authorized.
-- Maintainer contact/posting, fork or branch publication, pull requests, production Nix pin cutover, activation, push/publication, history rewrite, and fleet acceptance each require the explicit leaf-issue authority recorded in obr.
-- Continue independent local tasks until an authority gate is the next necessary action.
+Evidence and authority boundary:
+- Dated upstream-main observation: 534bcbffb7e1e7551d9ee3572dfeb278e203e493 on 2026-08-11, package 0.84.1. C1 did not line-inspect that snapshot; B1 must freshly pin and verify the classic coding-agent path before attributing the v0.83 fileEntries/byId trace to current main.
+- Signed prototype: e2c002e06cc4378b5a55cc1659e99caaab408dcb; bounded-history patch SHA-256 4bdb9524839764bf9639740be782e0719168d885332e5cf2b70da16c95f7494a.
+- Historical 1 GiB and eight-hour results remain attributed supporting evidence; their absent raw bundles and adjusted-RSS metrics do not qualify the product.
+- Local planning, implementation, tests, and signed local checkpoints are authorized. Maintainer contact/posting, branch or PR publication, production Nix cutover, activation, push/publication, history rewrite, and fleet acceptance remain separate authority gates.
+- Signed project history and result-bundle hashes provide reproducibility, not adversarial non-equivocation against an operator who controls the host and repository.
 
 Exact restart:
-1. Inspect git status and preserve independently owned nix-aln PLAN hunks.
-2. Stage doc/CURRENT-WORK.md, doc/PI-BOUNDED-MEMORY-CONTRACT.md, and only the Pi-programme doc/PLAN.org hunks.
-3. Create one signed corrective commit without bypassing hooks; verify signature and exact diff.
-4. Record the corrective hash in this epic, then claim nix-tcz.37.1.2 through obr.
-5. Build B1 exactly from its C1-bound acceptance criteria; record every attempt and result in obr.
+1. Preserve and review the complete in-sync doc/PLAN.org projection, including legitimate concurrent nix-aln records; do not drop or rewrite them.
+2. Finish aligning C1, B1, A2, M1, and M2 with the simplified deterministic-plus-endpoint protocol.
+3. Run targeted contract/obr assertions, dependency-cycle/readiness checks, diff checks, and portable flake evaluation.
+4. Stage the two C1 narrative documents and the complete in-sync doc/PLAN.org projection, identify nix-aln inclusion as concurrent projection state, then create and verify one signed corrective commit.
+5. Run a fresh independent fess audit. Close C1 and claim B1 only after a CLEAR verdict.
 
 ** Dependencies
 #+begin_src json
@@ -1822,61 +1845,67 @@ Exact restart:
 ]
 #+end_src
 
-* DONE [#A] Freeze the Pi bounded-session memory contract and evidence ledger    :memory:pi:upstream:
+** Comments
+#+begin_src json
+[
+  {
+    "id": 15,
+    "issue_id": "nix-tcz.37.1",
+    "author": "johnw",
+    "text": "Verified signed corrective checkpoint b1f9b62f6f672aabb4ef5a14eafe0e45e3a1299d: GOOD John Wiegley signature; exact commit boundary is doc/CURRENT-WORK.md, doc/PI-BOUNDED-MEMORY-CONTRACT.md, and Pi-programme hunks in doc/PLAN.org; all pre-commit quality suites passed. Independently owned nix-aln PLAN notes remain unstaged. C1 is sealed; proceed to B1.",
+    "created_at": "2026-08-12T05:46:02Z"
+  },
+  {
+    "id": 17,
+    "issue_id": "nix-tcz.37.1",
+    "author": "johnw",
+    "text": "Supersedes comment 15. Signed commit b1f9b62f6f672aabb4ef5a14eafe0e45e3a1299d received an exact independent post-commit fess verdict of CHANGES REQUIRED, so C1 is not sealed and B1 is not ready. The current uncommitted correction redesigns B1 as a two-lane causal upstream baseline, adds content-derived campaign identity and custody limits, prohibits unscheduled candidate pilots, freezes deterministic Darwin timing and bracketed process RSS, adds exact controls and discriminated records, and binds M2 to a passing M1. No candidate or control measurement has run. The next authority-preserving action is working-tree review and verification, followed by a signed correction and a new exact post-commit fess; only a CLEAR verdict permits C1 closure.",
+    "created_at": "2026-08-12T06:06:38Z"
+  },
+  {
+    "id": 19,
+    "issue_id": "nix-tcz.37.1",
+    "author": "johnw",
+    "text": "Correction to the 05:46 UTC comment: C1 is not sealed and B1 must not proceed. The independent post-commit fess verdict for b1f9b62f was CHANGES REQUIRED. C1 remains IN_PROGRESS while the contract is simplified to deterministic architectural bounds plus one paired endpoint packaged RSS regression; B1 is now core-only. The earlier comment is retained as audit history, not current authority.",
+    "created_at": "2026-08-12T06:09:43Z"
+  }
+]
+#+end_src
+
+* DOING [#A] Freeze the Pi bounded-session memory contract and evidence ledger    :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.1
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 22:43]
+:MODIFIED: [2026-08-11 Tue 23:20]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
-:FINISHED: [2026-08-11 Tue 22:43]
-:CLOSE_REASON: Corrected every independently isolated post-commit fess finding: final packaged replay ordering, process-set RSS accounting, append-only non-replaceable campaigns, deterministic RSS-blind reserve selection, exact control/repetition semantics, complete identity manifests, superseded patch-import guidance, and stale checkpoints. Exact corrective contract and graph audits plus partner cleanup are CLEAR; targeted assertions and portable evaluation pass.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Programme C1. Turn the research reports and issue #128 prototype into a durable contract/evidence artifact. Define compatibility and strict-bounded modes, covered operations, all live-work budget terms, explicit non-guarantees, the classic fileEntries/byId causal trace, inspected upstream revision, and provenance of the downstream 1 GiB and eight-hour results.
+Programme C1. Freeze the bounded-session-memory contract and evidence boundary before implementation measurement. State the O(1)-in-persisted-history invariant and its declared budget terms; make deterministic semantic, item, byte, concurrency, ownership, and lifecycle tests the primary proof; separate the unmodified classic-core B1 baseline from M1/M2 product qualification; and define one small raw-RSS regression on the actual packaged topology. Keep historical prototype evidence attributable without promoting it.
 
 ** Acceptance Criteria
-The artifact states that persisted history size does not determine normal core residency; distinguishes retained, peak, cold rebuild, latency, disk, caller retention, and RSS; records dated upstream and exact prototype identities; assigns an owner and enforcement boundary to every budget term; and contains no unqualified constant-process-memory claim. Before candidate measurement it preregisters 1x, 4x, 16x, and 64x fixtures; exactly nine governing isolated repetitions per size and lane; exactly three deterministic reserve indices and the complete primary-and-reserve order; cold, preparation, and warm fresh children; complete candidate-process containment and aggregate raw RSS; a single append-only governing campaign with no optional stopping; exhaustive RSS-blind prelaunch validity predicates; quiescence and GC rules; identity manifests and raw metrics; the Theil-Sen and bootstrap procedure; the 1 MiB/GiB slope limit; the max of 32 MiB or 5 percent median-range limit; and bounded, injected-slope, strict-surface-mutation, and synthetic controls with their required verdicts. The graph requires an unrecalibrated final replay against the exact delivered, pinned, package-qualified candidate before activation.
+The artifact says normal Pi retained memory is independent of persisted history only for fixed active context and declared budgets; distinguishes retained state, cold peak, latency, disk, caller ownership, and RSS; assigns an owner and enforcement boundary to every live-work term; and contains no claim about arbitrary extensions or universal process RSS. It defines four nested deterministic fixtures, all-four-size semantic and counter equality, an unmodified classic-core B1 baseline, and M1/M2 qualification on the real packaged wrapper plus certified gallery. The RSS gate uses six balanced fresh-process 16 MiB/1 GiB pairs, no reserves or outlier replacement, bracketed aggregate raw RSS for a stable containment membership, and passes only when the absolute high/low RSS difference in every block is at most 32 MiB. It defines one cold diagnostic per size; separate block-preflight ready, invalid, and harness-failure records; per-endpoint completed, candidate-failure, and harness-failure outcomes; exact preflight and quiescence cadence; analyzer order/schema controls; bounded full-input traversal; detached-helper aggregation; and strict-surface poison controls. It uses ordinary Git/Nix/artifact identities, states an explicit local-auditability rather than adversarial-non-equivocation boundary, and requires M2 to replay machine-equal protocol inputs and rules on the exact activation-eligible package.
 
 ** Notes
-Final corrective checkpoint, 2026-08-11 PDT
+Corrective checkpoint state, 2026-08-11 PDT
 
-Artifact and scope:
-- doc/PI-BOUNDED-MEMORY-CONTRACT.md remains the normative C1 artifact; doc/CURRENT-WORK.md points continuation exclusively to obr.
-- Signed base commit da46175772b8429d2fa6050a520021ced4a4e1c8 has a GOOD signature. Its independently history-isolated fess audit required correction; C1 was reopened before B1 began.
-- Candidate measurements remain NOT RUN. Historical adjusted-RSS results remain attributed prototype evidence only. Pi Sessions remains cancelled and audit-only.
+- Signed commit b1f9b62f has a GOOD signature but its independent history-isolated fess verdict was CHANGES REQUIRED. C1 was reopened before B1 began.
+- The audit found B1 infeasible against the downstream-only gallery, a false local non-equivocation claim, an unclassified pilot gap, false DONE/CLEAR state, stale K1-before-D1 prose, unproved process aggregation/range/reserve controls, and an impossible uniform failure schema.
+- The corrective design deletes the root causes rather than adding machinery: B1 is core-only; deterministic bounds are primary; product RSS is one paired endpoint topology; reserves, bootstrap/Theil-Sen, duplicate lanes, candidate-wide control matrices, custom campaign/event-chain identities, and external-witness requirements are removed.
+- No fixture, control, classic baseline, M1, or M2 candidate measurement has begun.
 
-Corrections completed:
-- Final acceptance now requires an unrecalibrated M2 replay against the exact U3-delivered, N1-pinned, P1-qualified package/store path before activation.
-- K1 precedes deterministic D1 and local-source M1; S2 depends on local-source M1 and final-packaged M2; P3 depends on the explicit S2 disposition.
-- The frozen protocol measures aggregate raw RSS for the entire candidate-owned containment scope, permits only bounded fixed-schema telemetry to the harness, and performs three ordered collection rounds in every GC-capable candidate runtime.
-- Evidence identity includes campaign designation plus content-only source, package-output, managed-extension, fixture, runner/control, and exact host-environment manifests.
-- Exactly three non-substitutable campaign designations exist: baseline-b1, local-source-m1, and final-packaged-m2. Each permits one governing campaign per protocol/designation/candidate key; changed commit, derivation, host, fixture, seed, order, label, or attempt alone cannot create another chance to pass.
-- Only the exhaustive machine-evaluable C1 prelaunch predicates can create a non-observation. Selection is committed before RSS is visible; reserve order is deterministic; every attempt and cell is retained; candidate-owned or unlisted failures cannot be reclassified.
-- Baseline controls validate the harness but cannot satisfy M1 or M2. Each candidate campaign requalifies the identity-bound bounded, injected-slope, strict-surface, and synthetic controls before governing measurement.
-- The older nix-tcz.37 instruction to import the 13,831-line patch is explicitly superseded; that patch is provenance and regression evidence, not the target architecture.
-- The labelled roster is E0, numbered tasks .1 through .31, and cancelled audit-only nix-imo: 33 records.
-
-Verification:
-- Original post-commit fess independence sentinel passed and the fess verdict was CHANGES REQUIRED; every final finding is addressed.
-- Independent exact-corrective contract audit: CLEAR.
-- Independent exact-corrective obr graph and stale-guidance audit: CLEAR.
-- Final partner-observation cleanup: CLEAR.
-- Targeted contract, campaign, control, roster, dependency, no-handoff, and readiness assertions: PASS.
-- obr dep cycles: no cycles. obr ready while C1 was open: no ready issue. obr sync: in sync. git diff --check: PASS.
-- nix flake check ./config/ai --all-systems --no-build: PASS on the corrective worktree.
-- nix fmt with Markdown paths was attempted but this repository formatter reports no formatter for Markdown; it made no change and is not claimed as a passing gate.
-- No second fess audit is required for this fix-only audit cleanup commit; the independent corrective contract and graph reviews verify the findings directly.
-
-Commit and continuation:
-- The signed corrective commit containing this closure event is the remaining checkpoint action. Stage the two C1 Markdown files and only Pi-programme PLAN hunks; preserve independently owned nix-aln PLAN state.
-- After the signed commit and signature/diff verification, record its hash in the epic, claim B1 nix-tcz.37.1.2, and keep B1 fixtures, attempts, controls, hashes, and exact next action in obr. Do not create a separate handoff file.
+Next action:
+1. Review the exact simplified contract and obr field diff.
+2. Run contract/roster/graph/no-handoff assertions, obr dep cycles and readiness, git diff --check, and nix flake check ./config/ai --all-systems --no-build.
+3. Stage doc/CURRENT-WORK.md, doc/PI-BOUNDED-MEMORY-CONTRACT.md, and the complete in-sync doc/PLAN.org projection, including legitimate concurrent nix-aln records; identify their inclusion as concurrent projection state and do not drop or rewrite them.
+4. Sign one corrective commit, verify its signature and exact diff, then run a fresh independent fess audit.
+5. Close C1 and claim B1 only after that audit is CLEAR.
 
 ** Dependencies
 #+begin_src json
@@ -1937,6 +1966,41 @@ Commit and continuation:
     "author": "johnw",
     "text": "C1 is complete. The signed corrective checkpoint containing this closure must be verified before B1 is claimed.",
     "created_at": "2026-08-12T05:43:54Z"
+  },
+  {
+    "id": 14,
+    "issue_id": "nix-tcz.37.1.1",
+    "author": "johnw",
+    "text": "Reopened because signed corrective commit b1f9b62f6f672aabb4ef5a14eafe0e45e3a1299d still requires the mandatory independent post-commit fess audit before C1 can truthfully close or B1 can be claimed.",
+    "created_at": "2026-08-12T05:45:54Z"
+  },
+  {
+    "id": 16,
+    "issue_id": "nix-tcz.37.1.1",
+    "author": "johnw",
+    "text": "Independent post-commit fess verdict for signed b1f9b62f6f672aabb4ef5a14eafe0e45e3a1299d: CHANGES REQUIRED; C1 remains IN_PROGRESS and B1 must remain unclaimed. High findings: (1) B1 is infeasible as written: unmodified upstream main 534bcbff (Pi 0.84.1) lacks the downstream bounded-history APIs required by the managed gallery, so one immutable current-main candidate cannot produce valid core, complete strict-gallery, and wrapper observations. (2) A signed/fsynced local append-only report authenticates only the surviving bundle; it cannot provide non-equivocation or prove completeness after deletion. (3) Candidate workload pilots before the first governing child are not classified, permitting pre-campaign selection. (4) The exported DONE/CLEAR/B1-ready claims are false until a new corrective commit passes an independent audit. Medium findings: replace stale K1-before-D1 prose with K1-before-A2; add positive controls for off-root/detached allocation aggregation, criterion-2 range boundaries, and deterministic reserve selection/exhaustion; define discriminated prelaunch-invalid, started-failure, and completed-observation schemas. Next action: redesign B1 as an executable causal upstream baseline separate from later strict product qualification; state honestly what local Git/obr governance can and cannot prove about retry history; prohibit or retain every candidate-workload invocation; correct controls, schemas, and stale state; sign a new checkpoint; rerun an independent fess audit. No candidate or control measurement has started.",
+    "created_at": "2026-08-12T05:58:02Z"
+  },
+  {
+    "id": 18,
+    "issue_id": "nix-tcz.37.1.1",
+    "author": "johnw",
+    "text": "Supersedes comments 13 and any no-fess closeout wording. C1 remains IN_PROGRESS. The current working tree addresses the b1f9 CHANGES REQUIRED findings, but it is not evidence until committed and independently audited. B1 now has only the executable legacy core and packaged-runtime causal lanes; strict managed-extension qualification remains exclusively M1/M2. The correction also classifies every post-freeze invocation, defines custody and witness limits, freezes exact scheduler, snapshot, selector, estimator, and control semantics, and requires discriminated records. Required next sequence: independent working-tree audits; focused checks; signed corrective commit; exact history-isolated fess; fix and repeat until CLEAR; then and only then close C1. Measurements remain NOT RUN.",
+    "created_at": "2026-08-12T06:06:39Z"
+  },
+  {
+    "id": 20,
+    "issue_id": "nix-tcz.37.1.1",
+    "author": "johnw",
+    "text": "Corrective redesign checkpoint: the current worktree removes the bespoke three-lane nine-plus-three Theil-Sen/bootstrap campaign, custom identity/event-chain registry, and external-witness claim. It replaces them with four-size deterministic semantics/counter equality, a core-only B1 causal baseline, six balanced endpoint pairs on the actual packaged topology for M1/M2, a 32 MiB per-pair threshold, four discriminated outcomes, and small analyzer/process/strict-surface controls. These bytes are not yet committed or audited; no measurement is authorized until the signed correction receives a fresh independent CLEAR verdict.",
+    "created_at": "2026-08-12T06:09:43Z"
+  },
+  {
+    "id": 21,
+    "issue_id": "nix-tcz.37.1.1",
+    "author": "johnw",
+    "text": "Supersedes the expanded-campaign guidance recorded at 05:38 through 05:42 UTC and 06:06 UTC. The current issue fields and contract define the governing simplified design: deterministic bounds, B1-owned runner/process controls 1-3, A2-owned strict-surface control 4, one six-block paired endpoint M1/M2 topology, ordinary signed artifact identities, explicit rerun dispositions, and no adversarial non-equivocation claim. No candidate or control measurement has run. The complete in-sync PLAN projection, including legitimate concurrent nix-aln records, must be reviewed and committed with the C1 documents.",
+    "created_at": "2026-08-12T06:19:29Z"
   }
 ]
 #+end_src
@@ -2452,7 +2516,7 @@ All three preserve existing semantic fixtures, malformed/oversized handling, ret
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 22:37]
+:MODIFIED: [2026-08-11 Tue 23:10]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2462,7 +2526,7 @@ All three preserve existing semantic fixtures, malformed/oversized handling, ret
 Programme W4. Run the complete managed gallery and non-gallery Pi consumers with implicit full-history APIs denied before materialization. Exercise histories beyond all configured horizons and records above ordinary page budgets. Give every consumer one final disposition: unchanged certified, migrated certified, or explicit administrative/unsafe exception.
 
 ** Acceptance Criteria
-No certified extension invokes a legacy materializer or eager legacy hook payload; point, page, active-context, and exact-scan semantics remain correct beyond old windows; every configured live budget has a deterministic counter or explicit ownership boundary; direct-file exceptions are visible; every maintained managed consumer has a disposition. Pi Sessions is excluded by the cancelled nix-imo issue and retained only as audit evidence. This certification does not make the final history-independence claim: M1 owns the local-source geometric conclusion and M2 owns the final packaged conclusion.
+No certified extension invokes a legacy materializer or eager legacy hook payload; point, page, active-context, and exact-scan semantics remain correct beyond old windows; every configured live budget has a deterministic counter or explicit ownership boundary; direct-file exceptions are visible; every maintained managed consumer has a disposition. Pi Sessions is excluded by the cancelled nix-imo issue and retained only as audit evidence. This certification does not make the final history-independence claim: M1 owns the local-source deterministic and paired-RSS qualification, and M2 owns the final packaged qualification.
 
 ** Dependencies
 #+begin_src json
@@ -2515,24 +2579,27 @@ No certified extension invokes a legacy materializer or eager legacy hook payloa
 ]
 #+end_src
 
-* TODO [#A] Build current-main Pi history fixtures and a geometric memory baseline    :memory:pi:upstream:
+* TODO [#A] Build exact-upstream Pi fixtures and a classic-core memory baseline    :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.2
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 22:40]
+:MODIFIED: [2026-08-11 Tue 23:20]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Programme B1. Build deterministic semantic-history and geometric-size fixtures plus a fresh-child measurement runner and analyzer against current upstream main before changing architecture. Freeze the complete primary-and-reserve cell order, process-containment census, governing-campaign ledger, validity selector, and all three immutable harness controls against C1. Exercise the baseline controls to prove their required verdicts before the baseline governing campaign. Measure the legacy classic manager and preserve commands, hashes, raw heap, external, array-buffer, complete candidate-process-set RSS, descriptor, timing, and control evidence.
+Programme B1. Build the shared deterministic history fixtures, prepared warm stores, small runner/analyzer, process-accounting controls, and result-bundle format. Pin one exact unmodified upstream classic coding-agent snapshot and measure its core SessionManager with an empty extension manifest. The purpose is to reproduce and quantify the fileEntries/byId eager-retention cause before changing architecture, not to qualify a strict gallery or Nix-managed product.
 
 ** Acceptance Criteria
-The 1x, 4x, 16x, and 64x byte and entry fixtures hold active context, maximum record, branch shape, runtime, and operation fixed. Each size in each core-terminal, complete strict-managed-extension, and packaged-runtime lane selects exactly nine valid isolated governing observations; indices 1 through 9 are primary, 10 through 12 are frozen reserves, and the complete order and deterministic reserve waves are frozen before execution. Only the exhaustive C1 machine-evaluable prelaunch predicates may create a non-observation; inputs and decisions are committed before RSS is visible, no human override is permitted, every cell remains in raw evidence, and an unlisted harness defect makes the campaign incomplete. Candidate invocation, containment, quiescence, cleanup, budget, counter, pressure, or lifecycle failures fail rather than invalidate. Each repetition uses C1 cold, preparation, and warm fresh children, bounded telemetry, containment, aggregate process-set RSS, all-runtime collection, quiescence, and collection rules with caller results released. Every started campaign is registered and cannot be replaced by an unchanged-candidate retry. The baseline bounded control passes both RSS criteria in every lane, the injected 8 MiB per GiB control fails the slope criterion in every lane, every strict-surface lane fails the eager-materialization sentinel before RSS analysis, and the synthetic analyzer suite produces its frozen verdicts. Control definitions, schemas, expected verdicts, analyzer and manifest hashes, fixture bytes, seeds, commands, and baseline outputs are immutable inputs to M1 and M2. Baseline control result records remain provenance and cannot satisfy either later candidate-bound requalification. Semantic digests cover resume, compaction context, branch, fork, tree, export, and replacement.
+The 16 MiB, 64 MiB, 256 MiB, and 1 GiB fixtures have nested deterministic prefixes and identical active context, compaction boundary, branch shape, maximum record, model/thinking state, and workload; hashes, bytes, entries, and semantic digests are retained. The baseline subject is an exact unmodified upstream source/package identity with no downstream bounded-history patch, managed gallery, compatibility shim, or managed wrapper. The runner rejects analyzer boundary, schema, block-order, cross-pairing, endpoint-label, and duplicate-cell mutants; a fixed-state control traverses and hashes every byte of both endpoint inputs with bounded live state; and a detached or reparented helper-only page-touched 64 MiB control is retained in every bracketed census and fails only aggregate RSS. The classic baseline runs the same six balanced 16 MiB/1 GiB blocks descriptively and records declared process-set raw RSS, heap/external diagnostics, retained classic entry counts, semantics, outcomes, one cold diagnostic per size, commands, identities, and immutable bundle hashes. It is expected to expose history-sized retention; whether its coarse RSS threshold passes or fails cannot satisfy M1 or M2. No exact-candidate pilot or candidate measurement begins before C1 is signed and independently cleared.
+
+** Notes
+Blocked by C1 nix-tcz.37.1.1. Dated metadata observed upstream main 534bcbff / Pi 0.84.1, but C1 did not line-inspect that snapshot. On unblock, B1 must first freeze the exact upstream source/package identity and verify whether the classic coding-agent path retains fileEntries/byId. The managed gallery is excluded from B1 by design. No B1 fixture, runner control, or candidate process has run; keep immutable raw bundles outside obr and record their references, hashes, verdicts, and next actions in this issue.
 
 ** Dependencies
 #+begin_src json
@@ -2565,7 +2632,7 @@ The 1x, 4x, 16x, and 64x byte and entry fixtures hold active context, maximum re
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 22:37]
+:MODIFIED: [2026-08-11 Tue 23:20]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2575,7 +2642,7 @@ The 1x, 4x, 16x, and 64x byte and entry fixtures hold active context, maximum re
 Programme A2. Build one merge-blocking deterministic suite from shared semantic fixtures, hard item/byte/concurrency boundaries, unbounded-query sentinels, failure atomicity, strict compatibility, lifecycle barriers, slow-consumer backpressure, and resource cleanup. Use faux providers and in-memory transports; no network, ports, sleeps, or finalizer-dependent cleanup.
 
 ** Acceptance Criteria
-The suite fails on any charged-budget breach, covered unbounded query, strict hydration, semantic drift, stale-generation leak, or owned resource surviving close; primary Node and required runtime compatibility lanes pass; fixture seeds/hashes and structured counters are retained; no assertion is weakened to meet a wall-time target.
+The suite fails on any charged-budget breach, covered unbounded query, strict hydration, semantic drift, stale-generation leak, or owned resource surviving close. At every distinct strict load surface, a mutation restoring eager whole-history materialization returns the exact typed whole-history-forbidden error before allocation; poison-delegate calls and hydration/allocation counters remain zero. Primary Node and required runtime compatibility lanes pass; fixture seeds/hashes and structured counters are retained; no assertion is weakened to meet a wall-time target.
 
 ** Dependencies
 #+begin_src json
@@ -2673,24 +2740,27 @@ The suite fails on any charged-budget breach, covered unbounded query, strict hy
 ]
 #+end_src
 
-* TODO [#A] Calibrate and enforce the geometric Pi memory gate    :memory:pi:upstream:
+* TODO [#A] Qualify local-source Pi bounded memory    :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.21
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 22:41]
+:MODIFIED: [2026-08-11 Tue 23:20]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Programme M1. Using the C1 protocol and B1-reviewed immutable fixtures, runner and analyzer, primary-and-reserve order, control definitions, manifest hashes, and semantic baselines, measure the local-source candidate at 1x, 4x, 16x, and 64x persisted-history sizes with identical active tails and workloads. Before its local-source-m1 governing campaign, requalify the controls exactly once against that candidate, package, managed-extension, and host-environment identity. Select exactly nine valid isolated observations per size in each core-terminal, complete strict-managed-extension, and packaged-runtime lane using only the exhaustive C1 prelaunch predicates and three deterministic reserves. Record exact deterministic counters plus raw heap, external, arrayBuffers, complete candidate-process-set RSS, maxRSS, timing, disk, and store metrics. This supplies pre-delivery evidence; M2 owns final packaged acceptance.
+Programme M1. After the deterministic product gate and reproducible local-source package are complete, run the C1 bounded-memory protocol against the actual locally built strict product: the packaged Pi wrapper, complete certified managed gallery, faux provider, and fixed normal workload. This is the pre-delivery qualification and catches product integration mistakes before U3.
 
 ** Acceptance Criteria
-The exact-candidate control qualification is preregistered, identity-bound, and produces every frozen required verdict before the governing campaign. Every started campaign and cell is registered and retained; unchanged-candidate retries cannot replace, pool with, or override the governing attempt. Exactly nine governing observations per size and lane feed the estimator. Only the exhaustive C1 RSS-blind prelaunch predicates may select the lowest deterministic reserve; no outlier or human invalidation is permitted; an unlisted harness defect makes the campaign incomplete; candidate-owned failures remain failures. For equal live inputs, every retained-state item and byte counter, candidate-process-set role and executable multiset, and hard logical resource count is identical at every history scale. Aggregate raw warm retained RSS uses the median at each size and a Theil-Sen slope over all governing observations; the upper 95 percent bootstrap confidence bound is at most 1 MiB per GiB of persisted history, and the largest-minus-smallest median is at most max of 32 MiB or 5 percent of the smallest median. No adjusted-RSS subtraction is allowed. C1 and B1 freeze all identities, fixtures, repetitions, campaign stopping, validity, reserve, containment, quiescence, collection, control, estimator, seed, and threshold rules before output; later change creates a distinct ledger revision. Cold rebuild peak, latency, and disk are separate and cannot excuse failure.
+All-four-size semantic digests and declared retained item/byte/resource counters are equal. B1 controls 1 through 3 and A2 strict-surface control 4 have passed for their current qualified identities; an owning control group reruns if one of those identities changes. Six balanced fresh-process 16 MiB/1 GiB blocks run in frozen order on one fixed host/environment with exact five-second preflight buckets, complete stable containment membership, bracketed aggregate raw RSS, and no adjusted subtraction, reserves, outlier replacement, later-block overtaking, or duplicate descriptive lanes. Every completed block has an absolute high/low RSS difference at most 32 MiB; any deterministic mismatch or started candidate failure fails, a prelaunch-invalid block remains at the schedule head, and a harness failure is incomplete pending reviewed correction. One cold diagnostic per size reports peak, latency, I/O, and disk separately. The immutable result bundle contains source, package, gallery, fixture, runner, runtime, host, raw-record, artifact, and verdict identities; obr records the bundle reference and hash, artifact-manifest hash, evidence class, verdict, and next action rather than raw per-process records. This is pre-delivery evidence; M2 owns final activation eligibility.
+
+** Notes
+OPEN and blocked by B1, A2, K1, and H1. No M1 candidate, control, or RSS run has begun. Use the simplified C1 protocol; do not restore nine-plus-three repetitions, Theil-Sen/bootstrap, three overlapping lanes, candidate-wide control matrices, or campaign transparency machinery.
 
 ** Dependencies
 #+begin_src json
@@ -2750,7 +2820,7 @@ The exact-candidate control qualification is preregistered, identity-bound, and 
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: chore
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 22:37]
+:MODIFIED: [2026-08-11 Tue 23:10]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2760,7 +2830,7 @@ The exact-candidate control qualification is preregistered, identity-bound, and 
 Programme S2. After both the local-source M1 gate and the final packaged M2 replay are green, run the documented large-history append, compaction, replacement, navigation, and export soak on the selected runtime and managed extension set. Preserve raw time series and identify allocator, platform, runtime, and store versions.
 
 ** Acceptance Criteria
-The latest result is recorded as passed, failed, or not run; a failure opens or updates a blocking defect with artifacts; no live resource count grows across steady quartiles; prompt/append latency with fixed active context has no unexplained history trend. This supplemental lane never substitutes for deterministic or geometric gates.
+The latest result is recorded as passed, failed, or not run; a failure opens or updates a blocking defect with artifacts; no live resource count grows across steady quartiles; prompt/append latency with fixed active context has no unexplained history trend. This supplemental lane never substitutes for the deterministic or paired endpoint product gates.
 
 ** Dependencies
 #+begin_src json
@@ -2802,14 +2872,14 @@ The latest result is recorded as passed, failed, or not run; a failure opens or 
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: docs
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 22:32]
+:MODIFIED: [2026-08-11 Tue 23:10]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Programme D2. Before product delivery, finalize the normative memory equation, covered operations, compatibility and strict modes, configured budgets, typed failures, lifecycle and cursor semantics, extension cookbook, evidence commands, local-source geometric result, optional-soak protocol, and activation requirements in the local product branches. Replace official examples that teach full-history arrays. U3 owns any authorized remote publication; M2 and P3 append final packaged and disposition evidence without changing the frozen protocol.
+Programme D2. Before product delivery, finalize the normative memory equation, covered operations, compatibility and strict modes, configured budgets, typed failures, lifecycle and cursor semantics, extension cookbook, evidence commands, local-source deterministic and paired-RSS result, optional-soak protocol, and activation requirements in the local product branches. Replace official examples that teach full-history arrays. U3 owns any authorized remote publication; M2 and P3 append final packaged and disposition evidence without changing the frozen protocol.
 
 ** Acceptance Criteria
 Local documentation says persisted history size no longer determines normal core residency, not that Pi always uses constant memory; legacy calls state that invocation forfeits the bound; recipes cover point, recent page, active context, exact reduction, file-backed high-cardinality results, cross-session scans, and extension-owned logs; local-source passed, failed, historical, and not-run evidence remain distinct; no remote publication occurs in this issue.
@@ -2872,14 +2942,14 @@ Local documentation says persisted history size no longer determines normal core
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 22:37]
+:MODIFIED: [2026-08-11 Tue 23:10]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Programme K1. Implement the compatibility decision approved by U2 before product delivery: remove getEntries, getBranch, and getTree from the default extension context or retain them only behind an explicit operator-enabled administrative capability. Remove eager legacy hook and RPC surfaces, temporary synchronous readers and adapters, and duplicate stores while retaining lossless streaming operations. This issue changes the local product candidate; U3 delivers it, N1 pins it, P1 builds and qualifies it, M2 replays the frozen geometric gate, P2 activates it, and P3 publishes the Nix integration.
+Programme K1. Implement the compatibility decision approved by U2 before product delivery: remove getEntries, getBranch, and getTree from the default extension context or retain them only behind an explicit operator-enabled administrative capability. Remove eager legacy hook and RPC surfaces, temporary synchronous readers and adapters, and duplicate stores while retaining lossless streaming operations. This issue changes the local product candidate; U3 delivers it, N1 pins it, P1 builds and qualifies it, M2 replays the frozen bounded-memory gate, P2 activates it, and P3 publishes the Nix integration.
 
 ** Acceptance Criteria
 No official example or certified managed extension requires the legacy surface; default-context full materialization is absent or rejected before allocation and never truncated; release communication states the contract and same-process/direct-file limits; all transition-only code is deleted rather than becoming a permanent second architecture.
@@ -2924,7 +2994,7 @@ No official example or certified managed extension requires the legacy surface; 
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 22:38]
+:MODIFIED: [2026-08-11 Tue 23:10]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2934,7 +3004,7 @@ No official example or certified managed extension requires the legacy surface; 
 Programme N1. After upstream or reviewed owner-controlled product commits implement the accepted behavior, pin immutable source identities in sources/ai.json and package them without the product-scale bounded-history/session-replacement patch stack. Migrate managed extensions to product releases, retain only genuinely Nix-specific compatibility, and preserve provider-timeout work as an independent concern.
 
 ** Acceptance Criteria
-N1 may mutate the production Pi pins and remove the downstream patch stack only after explicit Nix-cutover authority; this issue authorizes neither activation nor publication. A path, type, bytes, symlink, and executable crosswalk proves the new product trees contain every intended behavior and no incidental patch change; pi-bounded-session-history.patch, pi-session-replacement.patch, and superseded consumer patches and helpers are removed; source, gallery, compatibility, deterministic, local-source geometric, config/ai, repository, and affected package builds pass; exact product and Nix identities are recorded for the unrecalibrated M2 packaged-candidate replay; nix-tcz.37 records the Pi half complete. N1 does not claim final packaged geometric acceptance.
+N1 may mutate the production Pi pins and remove the downstream patch stack only after explicit Nix-cutover authority; this issue authorizes neither activation nor publication. A path, type, bytes, symlink, and executable crosswalk proves the new product trees contain every intended behavior and no incidental patch change; pi-bounded-session-history.patch, pi-session-replacement.patch, and superseded consumer patches and helpers are removed; source, gallery, compatibility, deterministic, local-source bounded-memory, config/ai, repository, and affected package builds pass; exact product and Nix identities are recorded for the unchanged M2 packaged-candidate replay; nix-tcz.37 records the Pi half complete. N1 does not claim final packaged bounded-memory acceptance.
 
 ** Dependencies
 #+begin_src json
@@ -3290,7 +3360,7 @@ A concise user-reviewable draft, clearly labeled AI-assisted supporting packet, 
 :LABELS: ["memory","packaging","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:53]
-:MODIFIED: [2026-08-11 Tue 22:12]
+:MODIFIED: [2026-08-11 Tue 23:10]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3300,7 +3370,7 @@ A concise user-reviewable draft, clearly labeled AI-assisted supporting packet, 
 Programme H1. After the maintainer selects the authoritative repositories and architecture, provide a development-only packaging entry that builds exact local Pi and managed-extension Git trees through the same Node runtime, immutable gallery, wrappers, and behavioral checks as production. It must record content and commit identities without committing local paths, mutating source locks, or pretending the candidate is remotely fetchable. N1 remains the sole production pin owner.
 
 ** Acceptance Criteria
-Two clean checkouts at the same commits produce the same package tree and test inputs; dirty or identity-mismatched trees fail closed; the build uses production runtime and gallery composition; local overrides are command-scoped and absent from generated or committed configuration; exact source commits, tree hashes, package output, commands, and evidence are recorded. The harness supports pre-delivery core, maintained strict-gallery, deterministic, and geometric runtime tests; Pi Sessions is audit-only and excluded. The harness is either retained as an explicit developer tool or deleted by N1.
+Two clean checkouts at the same commits produce the same package tree and test inputs; dirty or identity-mismatched trees fail closed; the build uses production runtime and gallery composition; local overrides are command-scoped and absent from generated or committed configuration; exact source commits, tree hashes, package output, commands, and evidence are recorded. The harness supports pre-delivery deterministic gates and the single actual packaged-topology paired endpoint RSS regression; per-extension strict semantics remain W4/A2 tests rather than duplicate RSS lanes. Pi Sessions is audit-only and excluded. The harness is either retained as an explicit developer tool or deleted by N1.
 
 ** Dependencies
 #+begin_src json
@@ -3326,24 +3396,27 @@ Two clean checkouts at the same commits produce the same package tree and test i
 ]
 #+end_src
 
-* TODO [#A] Replay the frozen geometric gate on the exact packaged Pi candidate    :memory:pi:upstream:
+* TODO [#A] Replay the bounded-memory gate on the exact packaged Pi candidate    :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.31
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 22:32]
-:MODIFIED: [2026-08-11 Tue 22:41]
+:MODIFIED: [2026-08-11 Tue 23:21]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Programme M2 final-packaged-m2. After reviewed product delivery, the Nix source pin, and package/system qualification, replay the frozen C1/M1 geometric protocol without recalibration against the exact package output and store path that is eligible for activation.
+Programme M2. After reviewed product delivery, the Nix source pin, and package/system qualification, replay the unchanged deterministic and paired endpoint bounded-memory gates against the exact package output and store path eligible for activation.
 
 ** Acceptance Criteria
-The evidence manifest crosswalks the immutable product commits from U3, source pins and patch set from N1, and exact package and system store paths from P1. Before the final-packaged-m2 governing campaign, the unchanged controls are requalified exactly once against those exact candidate, package, managed-extension, and host-environment identities and produce every C1-required verdict. The unchanged C1 fixtures, exactly nine governing isolated observations per size and lane, three deterministic reserves, campaign ledger, exhaustive prelaunch validity predicates, containment, process-set RSS aggregation, order, quiescence, collection, raw record, estimator, seed policy, and thresholds are used without recalibration. Deterministic counters and semantic digests pass; every started campaign and cell is retained; complete candidate-process-set RSS passes both geometric criteria in every lane; raw records and verdicts are retained; any failure blocks activation and publication.
+The evidence manifest names the passing M1 bundle and exactly matches its protocol revision, fixture and prepared-store manifests, fixed workload, process-role schema, six-block endpoint and order schedule, quiescence, sampling, outcome and analyzer rules, managed-extension manifest, and 32 MiB threshold. It crosswalks the M1 product source tree to immutable U3 product commits, N1 source pins and patch set, and P1 package/system store paths. Delivery provenance and package derivation, output, and store identities are expected permissible differences. A runner binary, analyzer binary, host-adapter, process-topology, or strict-suite identity may also differ only when required for the final platform, with the difference enumerated, frozen semantics unchanged, and its owning controls rerun. A product source, managed extension, fixture, workload, schedule, outcome rule, analyzer rule or verdict semantic, or threshold change requires a new passing M1. All-four-size deterministic semantics and hard retained counters pass, and the same paired endpoint gate runs without recalibration on the actual managed wrapper/gallery topology. The immutable raw bundle retains records and cold diagnostics; obr records its reference and hash, artifact-manifest hash, evidence class, verdict, and next action. A deterministic, candidate, or RSS failure is terminal for that product and protocol and cannot be replaced by an unchanged passing rerun; a harness-incomplete result may be followed only after reviewed correction and required control reruns. Any required failure or incomplete block blocks activation and publication.
+
+** Notes
+OPEN and blocked by M1 and P1. No M2 work has run. M2 is the final activation-blocking product replay; it does not introduce a third protocol, external witness, statistical bootstrap, reserve pool, or duplicate core/gallery/wrapper matrices.
 
 ** Dependencies
 #+begin_src json
@@ -3353,6 +3426,15 @@ The evidence manifest crosswalks the immutable product commits from U3, source p
     "depends_on_id": "nix-tcz.37.1",
     "type": "discovered-from",
     "created_at": "2026-08-12T05:32:18.498056Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-tcz.37.1.31",
+    "depends_on_id": "nix-tcz.37.1.21",
+    "type": "blocks",
+    "created_at": "2026-08-12T06:03:56.967716Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
