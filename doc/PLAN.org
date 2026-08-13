@@ -2072,7 +2072,7 @@ Partner observation 2026-08-10T19:49:52.586Z: restore the Home Manager runtime-o
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 00:23]
-:MODIFIED: [2026-08-13 Thu 04:38]
+:MODIFIED: [2026-08-13 Thu 05:18]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2115,6 +2115,13 @@ The shared root authority declares one CPU set for the shared-work Nix daemons. 
     "author": "johnw",
     "text": "2026-08-13 partial live proof: gpu-server now runs published Andoria revision fcecc5de3e9a594948fd9ece3ff167dd65357068. The installed 90-cpu-set.conf byte-matches the rendered nix-daemon-cpu-policy leaf; nix-daemon.service is active; systemd AllowedCPUs and EffectiveCPUs and the live service cgroup all report exactly 0-7; a fresh UUID-named runCommandLocal derivation built through the daemon and observed Cpus_allowed_list 0-7; no rollback backup remains. The preceding --rebuild first-run defect triggered and proved the absence-predecessor rollback before the corrected retry. Remaining: andoria-t2 and delphi-3bd4 require interactive sudo; andoria-08 still closes SSH before session establishment; all three plus the full ordered Home Manager build/activation remain pending.",
     "created_at": "2026-08-13T11:38:51Z"
+  },
+  {
+    "id": 191,
+    "issue_id": "nix-p17",
+    "author": "johnw",
+    "text": "2026-08-13 bounded live preflight: gpu-server has the published fcecc5d CPU leaf active with AllowedCPUs=0-7, EffectiveCPUs=0-7, cgroup cpuset 0-7, and the fresh local daemon-build proof. andoria-t2 and delphi-3bd4 share clean fcecc5d and now have exact leaf /nix/store/cpvl9kd3sadjhqddn8838r7y6ni8dbvq resident, but their daemons remain unrestricted at 0-255 and 0-287 pending interactive-sudo installation. andoria-08 closed its one bounded SSH attempt before a session, so its state is unresolved. No shared Home Manager candidate build or activation has begun.",
+    "created_at": "2026-08-13T12:18:41Z"
   }
 ]
 #+end_src
