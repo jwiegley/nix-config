@@ -698,7 +698,7 @@ Partner-cleanup review confirmed the finding and the minimal two-file fix. The s
 :LABELS:   ["builder","security"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 12:25]
-:MODIFIED: [2026-08-13 Thu 02:04]
+:MODIFIED: [2026-08-13 Thu 02:08]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
 :FINISHED: [2026-08-13 Thu 02:04]
@@ -716,7 +716,7 @@ The shared trust record is rendered and installed byte-for-byte on Andoria-08 wi
 
 ** Notes
 
-The plain ssh-ng Andoria-08 and Andoria-T2 client rows are committed locally. The shared signing-trust leaf is installed and proven on both servers. Publication, Hera/Clio activation, and post-activation default-builder verification remain pending; each activation retains its separate authorization boundary.
+The trust leaf is installed and behaviorally proven on both Andoria servers. Publication and both Darwin client activations are complete. Hera rendered three remote rows and Clio four (including Hera); both exact managed files contain the pinned plain Andoria identities, one-job limits, and no sudo remote-program. Fresh default dispatch through Andoria-T2 passed after Andoria-08 failed to open its SSH master; the earlier fresh build through Andoria-08 was proven before that separate host outage.
 
 ** Dependencies
 
@@ -1267,14 +1267,14 @@ Rendered catalog is valid JSON; every model has the source-proven correctly type
 ]
 #+end_src
 
-* TODO [#B] Write comprehensive Nix architecture and operations guide
+* DOING [#B] Write comprehensive Nix architecture and operations guide
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-fbh
 :LABELS:   []
 :ISSUE_TYPE: docs
 :CREATED:  [2026-08-12 Wed 22:21]
-:MODIFIED: [2026-08-12 Wed 22:21]
+:MODIFIED: [2026-08-13 Thu 02:05]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1755,7 +1755,7 @@ Partner observation .440Z: cp -p preserves Darwin ACLs and source owner bits, so
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 12:25]
-:MODIFIED: [2026-08-13 Thu 02:04]
+:MODIFIED: [2026-08-13 Thu 02:08]
 :CREATED_BY: johnw
 :FINISHED: [2026-08-13 Thu 02:04]
 :CLOSE_REASON: Installed and proved the minimal trust leaf on Andoria-T2, activated its pinned plain ssh-ng row on Hera and Clio, and completed fresh default-machines x86_64-linux builds through T2 with one job and eight requested cores.
@@ -1764,7 +1764,7 @@ Partner observation .440Z: cp -p preserves Darwin ACLs and source owner bits, so
 :ORIGINAL_SIZE: 0
 :END:
 
-Andoria-T2 now has the shared minimal Determinate Nix trust leaf installed: require-sigs remains true, trusted-users remains root, and the exact authorized client signing public key is trusted. Signed-positive and unsigned-negative imports have been proven. Its pinned plain ssh-ng row is committed locally in both Hera and Clio pools; publication, client activation, and post-activation default-builder verification remain pending. Human sudo and root SSH are unchanged.
+Andoria-T2 has the shared minimal Determinate Nix trust leaf installed: require-sigs remains true, trusted-users remains root, and the exact authorized client signing public key is trusted. Signed-positive and unsigned-negative imports were proven. Its pinned plain ssh-ng row is published and activated on both Hera and Clio; exact managed-file readback and fresh default x86_64-linux dispatch through T2 passed. Human sudo and root SSH are unchanged.
 
 ** Acceptance Criteria
 
