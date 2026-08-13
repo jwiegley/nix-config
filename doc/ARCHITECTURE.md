@@ -103,6 +103,14 @@ need them for rollback.
 | `test/*` | Interface and integration contracts | Duplicate production algorithms |
 | `bin/*` | Operator transactions | Implicit cross-repository mutation |
 
+The shared-work Home Manager leaf requests the declared caches for unprivileged
+Nix clients; it cannot authorize those caches in the system daemon. Ubuntu
+Determinate Nix hosts render `determinateLinux` into the root-owned
+`/etc/nix/nix.custom.conf` through their consumer configuration, then an
+authorized operator installs that leaf and restarts the daemon. The policy keeps
+`require-sigs = true` and `trusted-users = root`; Home Manager never writes the
+root-owned file or makes the login user a trusted Nix user.
+
 ## AI configuration
 
 ```text

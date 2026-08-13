@@ -198,8 +198,8 @@ let
     max-jobs = 1
     cores = 8
     experimental-features = nix-command flakes
-    extra-substituters = https://cache.iog.io
-    substituters = https://cache.nixos.org https://tron.cachix.org
+    extra-substituters = ${nixTrust.caches.iog.url}
+    substituters = ${nixTrust.caches.nixos.url} ${nixTrust.caches.tron.url}
   '';
   unknownHomeClassContract = registry.homeClassContractFor "unknown";
   unknownHomeClassMessagePrefix = "set nixManagedAiHomeClass to one of ";
@@ -431,6 +431,19 @@ assert sharedWork.johnw.sharedWork == registry.sharedWork;
 assert sharedWork.johnw.hostRouting == registry.routing;
 assert sharedWork.xdg.configFile."nix/nix.conf".text == expectedSharedWorkNixConfig;
 assert !(builtins.hasAttr "nix/nix.conf" personalLinux.xdg.configFile);
+assert nixTrust.determinateLinux.requireSigs;
+assert nixTrust.determinateLinux.trustedUsers == [ "root" ];
+assert
+  nixTrust.determinateLinux.extraSubstituters == [
+    nixTrust.caches.tron.url
+    nixTrust.caches.iog.url
+  ];
+assert
+  nixTrust.determinateLinux.extraTrustedPublicKeys == [
+    nixTrust.caches.tron.publicKey
+    nixTrust.caches.iog.publicKey
+    nixTrust.clientSigningPublicKey
+  ];
 assert renderedHostRouting == builtins.readFile ../../bin/lib/host-routing.sh;
 assert unknownHomeClassContract.row == null;
 assert !unknownHomeClassContract.assertion;

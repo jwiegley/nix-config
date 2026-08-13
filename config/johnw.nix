@@ -19,6 +19,7 @@ let
   inherit (pkgs.stdenv) isDarwin isLinux;
   isPositronRemoteLinux = isLinux && config.johnw.host.isSharedWork;
   isHeavy = config.johnw.profile.heavy;
+  nixTrust = import ./nix-trust.nix;
 
   # Shared variables - also imported by sub-modules
   vars = import ./vars.nix {
@@ -399,8 +400,8 @@ in
           max-jobs = 1
           cores = 8
           experimental-features = nix-command flakes
-          extra-substituters = https://cache.iog.io
-          substituters = https://cache.nixos.org https://tron.cachix.org
+          extra-substituters = ${nixTrust.caches.iog.url}
+          substituters = ${nixTrust.caches.nixos.url} ${nixTrust.caches.tron.url}
         '';
       };
 

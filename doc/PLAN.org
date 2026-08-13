@@ -1925,14 +1925,14 @@ The packaged Pi Usage extension declares the correct Node module type; its bound
 ]
 #+end_src
 
-* TODO [#C] Align gpu-server Nix cache trust with shared Home Manager
+* DOING [#C] Align gpu-server Nix cache trust with shared Home Manager
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-o99
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-12 Wed 23:04]
-:MODIFIED: [2026-08-12 Wed 23:04]
+:MODIFIED: [2026-08-13 Thu 00:40]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix

@@ -16,7 +16,7 @@ let
   clientSigningPublicKey = "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw=";
 in
 {
-  inherit clientSigningPublicKey;
+  inherit caches clientSigningPublicKey;
 
   darwin = {
     trustedSubstituters = [
