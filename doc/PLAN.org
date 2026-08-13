@@ -406,7 +406,7 @@ Partner-cleanup review confirmed the finding and the minimal two-file fix. The s
 :LABELS: ["builder","security"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 12:25]
-:MODIFIED: [2026-08-12 Wed 16:59]
+:MODIFIED: [2026-08-12 Wed 17:02]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -445,6 +445,13 @@ The sudo-daemon URI is present in final declarative source but not in Hera curre
     "author": "johnw",
     "text": "Read-only planning recommends trusting only the existing public signing key, retaining require-sigs, and excluding jwiegley from trusted-users; after that, remove broad sudo and the remote-program=sudo client URI. The exact client owner is known in this repository, but the local Andoria checkout is Home Manager-only and cannot own the server root daemon or sudo policy. Implementation is blocked until the authoritative Andoria-08 root configuration and deployment owner is identified and separately authorized. No remote probe, mutation, build, or activation occurred.",
     "created_at": "2026-08-12T23:59:13Z"
+  },
+  {
+    "id": 116,
+    "issue_id": "nix-89t",
+    "author": "johnw",
+    "text": "Correction to comment 114: trusting the existing public signing key is conditional on the owner confirming, without displaying the secret, that its private key is an intended trust root whose custody is limited to authorized build clients. If custody is broader, provision a dedicated Nix signing key only to Hera and Clio; do not fall back to trusted-users.",
+    "created_at": "2026-08-13T00:02:23Z"
   }
 ]
 #+end_src
@@ -6217,7 +6224,7 @@ Remove the resolved portable quality question and make the remaining external/ow
 :LABELS: ["security"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-12 Wed 14:02]
-:MODIFIED: [2026-08-12 Wed 16:59]
+:MODIFIED: [2026-08-12 Wed 17:02]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -6250,6 +6257,13 @@ A read-only fleet preflight printed the VPS Git remote URL, which contained an e
     "author": "johnw",
     "text": "Read-only local planning found that the existing consumer already owns a host-scoped managed HTTPS credential helper and a Nix netrc. The narrow cutover is to rotate and revoke one uniquely identified token, update both SOPS leaves atomically, and remove userinfo from only the authoritative origin. A bounded VPS SSH probe timed out, so the checkout, active authentication, and runtime state remain unverified. No credential value or credential-bearing URL was read or printed, and no mutation occurred. Proceeding requires explicit authority for token creation and revocation, SOPS editing, remote mutation, and then separate build, activation, and any log-owner cleanup.",
     "created_at": "2026-08-12T23:59:13Z"
+  },
+  {
+    "id": 115,
+    "issue_id": "nix-twq",
+    "author": "johnw",
+    "text": "Correction to comment 113: the exposed value type is unverified. The token-specific path applies only if Gitea exposes one unique matching token record or name. If it does not, stop for owner direction rather than broadening the operation into an account-password rotation or revoking an ambiguous credential.",
+    "created_at": "2026-08-13T00:02:23Z"
   }
 ]
 #+end_src
