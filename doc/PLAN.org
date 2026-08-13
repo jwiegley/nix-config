@@ -1,3 +1,4 @@
+# -*- org-tags-column: -97 -*-
 #+TITLE: Obr Issues
 #+SEQ_TODO: TODO DOING DRAFT WAIT DEFER NOTE | DONE CANCELED
 #+ISSUE_PREFIX: nix
@@ -205,7 +206,7 @@ With explicit owner authorization covering the complete four-commit chain, prese
 ]
 #+end_src
 
-* DONE [#B] Choose a dedicated identity for the Vulcan-Andoria jump    :authority:security:ssh:
+* DONE [#B] Choose a dedicated identity for the Vulcan-Andoria jump      :authority:security:ssh:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-3u8
@@ -511,7 +512,7 @@ Partner-cleanup review confirmed the finding and the minimal two-file fix. The s
 ]
 #+end_src
 
-* TODO [#C] Narrow Andoria remote-builder root authority    :builder:security:
+* TODO [#C] Narrow Andoria remote-builder root authority                       :builder:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-89t
@@ -684,7 +685,7 @@ Hera and Clio evaluate to Vulcan as aarch64-linux only plus Andoria-08 as the se
 
 Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension using the existing source/package/catalog installation pattern. Verify the real package and managed Pi projection without activating hosts.
 
-* DONE [#A] Restore Clio oMLX proxy allowlist    :network:regression:security:
+* DONE [#A] Restore Clio oMLX proxy allowlist                       :network:regression:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-9ku
@@ -788,7 +789,7 @@ Exact resume step:
 2. Reconcile recorded evidence for Hera, Clio, Vulcan, and four shared-work consumers against this issue's full fleet requirement.
 3. If every consumer's paired lock adoption, authorized activation, and obr runtime acceptance are evidenced, close `nix-aln`; otherwise create/claim one issue per missing consumer and keep this parent checkpoint current.
 
-* DONE [#B] Keep Plasma Wiki destination no-follow through copy    :filesystem:plasma:security:
+* DONE [#B] Keep Plasma Wiki destination no-follow through copy      :filesystem:plasma:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-as0
@@ -902,7 +903,7 @@ Clio activation of signed root commit 6e4a1c4 built successfully but failed afte
 ]
 #+end_src
 
-* DONE [#A] Fix Nix-managed Codex model catalog schema mismatch    :ai:codex:nix:
+* DONE [#A] Fix Nix-managed Codex model catalog schema mismatch                    :ai:codex:nix:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-codex-model-catalog-q1u
@@ -1171,7 +1172,7 @@ The two process-group outcome tests deterministically distinguish early-child fa
 ]
 #+end_src
 
-* DONE [#B] Restore Pi Sessions as a reviewed managed product    :memory:pi:security:sessions:upstream:
+* DONE [#B] Restore Pi Sessions as a reviewed managed product :memory:pi:security:sessions:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-imo
@@ -1455,7 +1456,7 @@ Partner observation .441Z: restore is a recovery path but the transaction now re
 ]
 #+end_src
 
-* DONE [#B] Force a no-op command on the Vulcan-Andoria jump authorization    :security:ssh:
+* DONE [#B] Force a no-op command on the Vulcan-Andoria jump authorization         :security:ssh:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-nap
@@ -1755,7 +1756,7 @@ Partner observations 2026-08-11T03:29:03.210Z and .211Z found an invalid placeho
 
 Parent for the 2026-08-10 seven-pass whole-repository review frozen at commit c8b37be06d054e16b865192cefffce6203a7d64c and tree d2641871fc5dc028682a4f88d8621f051af9df7b. Children preserve verified defects, test gaps, simplifications, documentation defects, and authority questions after cross-pass deduplication. Review evidence is static unless each child says otherwise.
 
-* DONE [#A] Remove agent-visible Node-RED runtime-secret access    :security:validated:
+* DONE [#A] Remove agent-visible Node-RED runtime-secret access              :security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.1
@@ -1793,7 +1794,7 @@ The intended boundary is routine non-disclosure of the helper transport credenti
 ]
 #+end_src
 
-* DONE [#B] Make verify-inputs fail closed and test the real prerequisite    :git:nix:validated:
+* DONE [#B] Make verify-inputs fail closed and test the real prerequisite     :git:nix:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.10
@@ -1827,7 +1828,7 @@ Makefile:106-159 pipelines local-git-inputs.py output without checking the produ
 ]
 #+end_src
 
-* DONE [#C] Derive model-sync writes, checks, and digest from one desired state    :activation:ai:
+* DONE [#C] Derive model-sync writes, checks, and digest from one desired state   :activation:ai:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.11
@@ -1861,7 +1862,7 @@ config/ai/model-sync.nix:39-71,126-176 maintains a partial digest separately fro
 ]
 #+end_src
 
-* DONE [#B] Pin all third-party CI actions to full revisions    :ci:security:validated:
+* DONE [#B] Pin all third-party CI actions to full revisions              :ci:security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.12
@@ -1895,7 +1896,7 @@ config/ai/model-sync.nix:39-71,126-176 maintains a partial digest separately fro
 ]
 #+end_src
 
-* DONE [#B] Add an explicit client boundary to the oMLX proxy    :network:security:validated:
+* DONE [#B] Add an explicit client boundary to the oMLX proxy        :network:security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.13
@@ -1929,7 +1930,7 @@ config/launchd.nix:285-322,362-363 exposes nginx on 8443 and proxies /v1 to loop
 ]
 #+end_src
 
-* DONE [#C] Make the Fess fallback portable across renderers    :ai:docs:validated:
+* DONE [#C] Make the Fess fallback portable across renderers                  :ai:docs:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.14
@@ -1963,7 +1964,7 @@ config/ai/agents/fess-auditor.md:6-10 hard-codes commands/fess.md, but renderer 
 ]
 #+end_src
 
-* DONE [#B] Keep .env secrets out of the direnv cache    :direnv:security:validated:
+* DONE [#B] Keep .env secrets out of the direnv cache                 :direnv:security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.15
@@ -1997,7 +1998,7 @@ bin/de:49-103,142-162 sources .env under set -a and serializes the resulting env
 ]
 #+end_src
 
-* DONE [#B] Remove eval from cached Nix store-path copying    :make:security:validated:
+* DONE [#B] Remove eval from cached Nix store-path copying              :make:security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.16
@@ -2031,7 +2032,7 @@ Makefile:218-235 reparses cached buildInputs through eval nix copy, allowing she
 ]
 #+end_src
 
-* DONE [#B] Route NixOS switching through the host-owned build lock    :nixos:operations:
+* DONE [#B] Route NixOS switching through the host-owned build lock            :nixos:operations:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.17
@@ -2065,7 +2066,7 @@ bin/switch:19-24 and bin/update:897-916 call raw nixos-rebuild and bypass the re
 ]
 #+end_src
 
-* DONE [#B] Give remote rollout jobs an identity and completion barrier    :concurrency:operations:
+* DONE [#B] Give remote rollout jobs an identity and completion barrier  :concurrency:operations:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.18
@@ -2099,7 +2100,7 @@ bin/update-remote:5-20 and bin/upgrade-all:22-36 launch tmux panes without waiti
 ]
 #+end_src
 
-* DONE [#B] Replace duplicated Make project loops with one fail-closed iterator    :make:safety:
+* DONE [#B] Replace duplicated Make project loops with one fail-closed iterator     :make:safety:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.19
@@ -2133,7 +2134,7 @@ Makefile:175-235,297-310 repeats four loops that continue after failed cd and le
 ]
 #+end_src
 
-* DONE [#B] Reject malformed model identifiers in the AI catalog    :ai:validated:
+* DONE [#B] Reject malformed model identifiers in the AI catalog                   :ai:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.2
@@ -2167,7 +2168,7 @@ config/ai/catalog.nix:124-148,1085-1129 contains claude-opus-5[1m, and config/ai
 ]
 #+end_src
 
-* DONE [#B] Move upgrade-projects logs out of shared fixed /tmp paths    :security:shell:validated:
+* DONE [#B] Move upgrade-projects logs out of shared fixed /tmp paths  :security:shell:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.20
@@ -2201,7 +2202,7 @@ bin/upgrade-projects:3-99 opens predictable shared /tmp logs without private uma
 ]
 #+end_src
 
-* DONE [#B] Validate or replace inherited CODEX_SQLITE_HOME    :codex:security:
+* DONE [#B] Validate or replace inherited CODEX_SQLITE_HOME                      :codex:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.21
@@ -2235,7 +2236,7 @@ flake/ai/wrappers/codex.nix:30-90 validates its default local root but preserves
 ]
 #+end_src
 
-* DONE [#C] Bound local OpenAI model discovery responses    :ai:
+* DONE [#C] Bound local OpenAI model discovery responses                                     :ai:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.22
@@ -2269,7 +2270,7 @@ packages/pi-gallery/providers/local-openai-provider.ts:178-231 buffers an unboun
 ]
 #+end_src
 
-* DONE [#B] Realize every declared behavioral check in a closeout manifest    :nix:tests:
+* DONE [#B] Realize every declared behavioral check in a closeout manifest            :nix:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.23
@@ -2303,7 +2304,7 @@ Behavior-bearing derivations declared in flake.nix:392-426 and flake/ai.nix:435-
 ]
 #+end_src
 
-* DONE [#B] Make model-sync dry-run safe and behaviorally executable    :activation:tests:
+* DONE [#B] Make model-sync dry-run safe and behaviorally executable           :activation:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.24
@@ -2337,7 +2338,7 @@ config/ai/model-sync.nix:48-205 mutates live defaults and stamp state during Hom
 ]
 #+end_src
 
-* DONE [#B] Execute Syncthing activation safety branches in tests    :syncthing:tests:
+* DONE [#B] Execute Syncthing activation safety branches in tests               :syncthing:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.25
@@ -2371,7 +2372,7 @@ config/syncthing.nix:377-549 owns identity, ownership, login-item, PID, ignore-f
 ]
 #+end_src
 
-* DONE [#B] Test the Syncthing monitor process lifecycle    :syncthing:tests:
+* DONE [#B] Test the Syncthing monitor process lifecycle                        :syncthing:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.26
@@ -2405,7 +2406,7 @@ config/syncthing.nix:99-198 has unexecuted child launch, route-loss, trap, termi
 ]
 #+end_src
 
-* DONE [#B] Add negative fixtures for Syncthing bootstrap file safety    :syncthing:tests:
+* DONE [#B] Add negative fixtures for Syncthing bootstrap file safety           :syncthing:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.27
@@ -2439,7 +2440,7 @@ config/syncthing-bootstrap.py:120-135,371-394 defends against unsafe files and r
 ]
 #+end_src
 
-* DONE [#B] Test Agent Deck Home Manager lifecycle ownership    :tests:
+* DONE [#B] Test Agent Deck Home Manager lifecycle ownership                              :tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.28
@@ -2473,7 +2474,7 @@ config/agent-deck.nix:34-108 has Hera-only assertions, DAG setup, private direct
 ]
 #+end_src
 
-* DONE [#B] Assert the SSH security baseline across both Home Manager APIs    :ssh:tests:
+* DONE [#B] Assert the SSH security baseline across both Home Manager APIs            :ssh:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.29
@@ -2507,7 +2508,7 @@ config/ssh.nix:13-19,55-64,243-360 supports settings and matchBlocks paths, but 
 ]
 #+end_src
 
-* DONE [#B] Remove credential exposure from managed MSSQL and VLC services    :launchd:security:validated:
+* DONE [#B] Remove credential exposure from managed MSSQL and VLC services :launchd:security:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.3
@@ -2541,7 +2542,7 @@ config/launchd.nix:157-208,425-433 reads MSSQL credentials from a user-owned pat
 ]
 #+end_src
 
-* TODO [#A] Make RuntimeBindings the sole Agent Deck runtime state model    :architecture:
+* TODO [#A] Make RuntimeBindings the sole Agent Deck runtime state model           :architecture:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.30
@@ -2586,7 +2587,7 @@ Blocked on nix-tcz.37. After the exact Agent Deck import commit is reviewed and 
 ]
 #+end_src
 
-* DONE [#B] Extract the shared MCP registry from the Pi renderer    :ai:architecture:
+* DONE [#B] Extract the shared MCP registry from the Pi renderer                :ai:architecture:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.31
@@ -2620,7 +2621,7 @@ config/ai/renderers/pi.nix:218-272 solely owns .config/mcp/mcp.json even though 
 ]
 #+end_src
 
-* DONE [#B] Replace model-name capability inference with typed metadata    :ai:architecture:
+* DONE [#B] Replace model-name capability inference with typed metadata         :ai:architecture:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.32
@@ -2654,7 +2655,7 @@ packages/pi-gallery/providers/local-openai-provider.ts:18-175 derives chat, visi
 ]
 #+end_src
 
-* DONE [#B] Move Pi timeout policy into provider transport data    :architecture:pi:
+* DONE [#B] Move Pi timeout policy into provider transport data                 :architecture:pi:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.33
@@ -2688,7 +2689,7 @@ flake/ai/wrappers/pi.nix:25-41 dispatches long timeouts on provider IDs omlx and
 ]
 #+end_src
 
-* DONE [#B] Select Claude notification settings by dimensions, not profile IDs    :architecture:claude:
+* DONE [#B] Select Claude notification settings by dimensions, not profile IDs :architecture:claude:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.34
@@ -2722,7 +2723,7 @@ config/ai/catalog.nix:1077-1261 encodes notification exclusions as five exact pr
 ]
 #+end_src
 
-* DONE [#B] Give local model endpoints one home-level authority    :ai:architecture:
+* DONE [#B] Give local model endpoints one home-level authority                 :ai:architecture:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.35
@@ -2756,7 +2757,7 @@ config/ai/catalog.nix:56-105,1353-1377 duplicates endpoint records across profil
 ]
 #+end_src
 
-* DONE [#B] Represent agent tool policy as typed capabilities    :ai:architecture:
+* DONE [#B] Represent agent tool policy as typed capabilities                   :ai:architecture:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.36
@@ -2790,7 +2791,7 @@ config/ai/catalog.nix:150-216 stores the Claude-formatted string Read, Grep, Glo
 ]
 #+end_src
 
-* DOING [#B] Move product-scale Agent Deck and Pi deltas out of Nix patches    :architecture:packaging:
+* DOING [#B] Move product-scale Agent Deck and Pi deltas out of Nix patches :architecture:packaging:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37
@@ -2840,7 +2841,7 @@ Superseding Pi guidance, 2026-08-11:
 ]
 #+end_src
 
-* DOING [#A] Make Pi session history memory independent of persisted history    :architecture:memory:pi:upstream:wiggum:
+* DOING [#A] Make Pi session history memory independent of persisted history :architecture:memory:pi:upstream:wiggum:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1
@@ -2908,7 +2909,7 @@ Durable continuation, 2026-08-12 PDT. The bounded-history invariant and frozen C
 ]
 #+end_src
 
-* DONE [#A] Freeze the Pi bounded-session memory contract and evidence ledger    :memory:pi:upstream:
+* DONE [#A] Freeze the Pi bounded-session memory contract and evidence ledger :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.1
@@ -3084,7 +3085,7 @@ Closed 2026-08-11 PDT on signed GOOD commit 328cff3f45ece73b8af036a39ef904f905d4
 ]
 #+end_src
 
-* TODO [#B] Page Pi session discovery, search, and grouped statistics    :memory:pi:upstream:
+* TODO [#B] Page Pi session discovery, search, and grouped statistics        :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.10
@@ -3147,7 +3148,7 @@ Geometric session catalogs stay within one result page plus fixed repository sta
 ]
 #+end_src
 
-* TODO [#B] Bound Pi terminal history and tree navigation    :memory:pi:upstream:
+* TODO [#B] Bound Pi terminal history and tree navigation                    :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.11
@@ -3210,7 +3211,7 @@ Many small entries, near-limit entries, one oversized entry, deep ancestry, and 
 ]
 #+end_src
 
-* TODO [#B] Bound Pi RPC history frames, queues, and backpressure    :memory:pi:upstream:
+* TODO [#B] Bound Pi RPC history frames, queues, and backpressure            :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.12
@@ -3273,7 +3274,7 @@ Every successful frame is within its byte ceiling; stale session/cursor requests
 ]
 #+end_src
 
-* TODO [#B] Stream exact Pi fork, JSONL, and HTML exports    :memory:pi:upstream:
+* TODO [#B] Stream exact Pi fork, JSONL, and HTML exports                    :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.13
@@ -3336,7 +3337,7 @@ Semantic round trips match for deep branches, high fanout, no-assistant branches
 ]
 #+end_src
 
-* TODO [#A] Expose bounded Pi extension history capabilities and strict mode    :memory:pi:upstream:
+* TODO [#A] Expose bounded Pi extension history capabilities and strict mode :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.14
@@ -3399,7 +3400,7 @@ An unchanged legacy fixture remains exact in compatibility mode; a no-history ex
 ]
 #+end_src
 
-* TODO [#B] Certify managed Pi extensions that require no history migration    :memory:pi:upstream:
+* TODO [#B] Certify managed Pi extensions that require no history migration  :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.15
@@ -3444,7 +3445,7 @@ All fifteen have evidence rows and load unchanged under strict history mode; no 
 ]
 #+end_src
 
-* TODO [#B] Migrate managed point, active-context, and recent-window Pi extensions    :memory:pi:upstream:
+* TODO [#B] Migrate managed point, active-context, and recent-window Pi extensions :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.16
@@ -3489,7 +3490,7 @@ Results match eager references across branches, compaction, invalid newest recor
 ]
 #+end_src
 
-* TODO [#B] Migrate managed exact-history Pi extensions without truncation    :memory:pi:upstream:
+* TODO [#B] Migrate managed exact-history Pi extensions without truncation   :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.17
@@ -3543,7 +3544,7 @@ Rewind finds checkpoints older than prior windows; Blackhole exact recall, searc
 ]
 #+end_src
 
-* TODO [#B] Migrate managed cross-session and extension-owned Pi histories    :memory:pi:upstream:
+* TODO [#B] Migrate managed cross-session and extension-owned Pi histories   :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.18
@@ -3606,7 +3607,7 @@ All three preserve existing semantic fixtures, malformed/oversized handling, ret
 ]
 #+end_src
 
-* TODO [#A] Certify the complete managed Pi extension set in strict bounded mode    :memory:pi:upstream:
+* TODO [#A] Certify the complete managed Pi extension set in strict bounded mode :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.19
@@ -3678,7 +3679,7 @@ No certified extension invokes a legacy materializer or eager legacy hook payloa
 ]
 #+end_src
 
-* DONE [#A] Build exact-upstream Pi fixtures and a classic-core memory baseline    :memory:pi:upstream:
+* DONE [#A] Build exact-upstream Pi fixtures and a classic-core memory baseline :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.2
@@ -3933,7 +3934,7 @@ CLOSED. Exact upstream Pi 0.84.1 source, four deterministic fixtures, and the so
 ]
 #+end_src
 
-* TODO [#A] Wire Pi semantic, budget, lifecycle, and resource acceptance gates    :memory:pi:upstream:
+* TODO [#A] Wire Pi semantic, budget, lifecycle, and resource acceptance gates :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.20
@@ -4050,7 +4051,7 @@ Independent review closes a source-located history-dataflow inventory for the ex
 ]
 #+end_src
 
-* TODO [#A] Qualify local-source Pi bounded memory    :memory:pi:upstream:
+* TODO [#A] Qualify local-source Pi bounded memory                           :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.21
@@ -4126,7 +4127,7 @@ OPEN and blocked by A2, K1, H1, and the other explicit open graph dependencies. 
 ]
 #+end_src
 
-* TODO [#C] Run the optional long-session Pi memory and lifecycle soak    :memory:pi:upstream:
+* TODO [#C] Run the optional long-session Pi memory and lifecycle soak       :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.22
@@ -4180,7 +4181,7 @@ The latest result is recorded as passed, failed, or not run; a failure opens or 
 ]
 #+end_src
 
-* TODO [#B] Finalize the local Pi bounded-session contract, migration guide, and evidence    :memory:pi:upstream:
+* TODO [#B] Finalize the local Pi bounded-session contract, migration guide, and evidence :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.23
@@ -4252,7 +4253,7 @@ Local documentation says source-reviewable Pi-controlled live session state is b
 ]
 #+end_src
 
-* TODO [#B] Finalize Pi's strict-default full-history compatibility boundary    :memory:pi:upstream:
+* TODO [#B] Finalize Pi's strict-default full-history compatibility boundary :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.24
@@ -4306,7 +4307,7 @@ No official example or certified managed extension requires the legacy surface; 
 ]
 #+end_src
 
-* TODO [#A] Pin reviewed Pi product commits and delete product-scale Nix patches    :memory:pi:upstream:
+* TODO [#A] Pin reviewed Pi product commits and delete product-scale Nix patches :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.25
@@ -4387,7 +4388,7 @@ N1 may mutate production Pi pins and remove the downstream patch stack only afte
 ]
 #+end_src
 
-* TODO [#B] Qualify the bounded Pi package and rollback without activation    :memory:pi:upstream:
+* TODO [#B] Qualify the bounded Pi package and rollback without activation   :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.26
@@ -4432,7 +4433,7 @@ Copied legacy state retains its semantic digest and visible context; package bui
 ]
 #+end_src
 
-* TODO [#A] Deliver reviewed Pi bounded-memory changes to an authoritative product repository    :memory:pi:upstream:
+* TODO [#A] Deliver reviewed Pi bounded-memory changes to an authoritative product repository :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.27
@@ -4522,7 +4523,7 @@ The maintainer-approved destination and branch strategy are recorded; each revie
 ]
 #+end_src
 
-* TODO [#B] Activate and accept the bounded Pi generation on Hera    :memory:pi:upstream:
+* TODO [#B] Activate and accept the bounded Pi generation on Hera            :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.28
@@ -4576,7 +4577,7 @@ The exact prebuilt generation is activated only after explicit authorization; st
 ]
 #+end_src
 
-* TODO [#B] Publish the accepted bounded Pi Nix revision    :memory:pi:upstream:
+* TODO [#B] Publish the accepted bounded Pi Nix revision                     :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.29
@@ -4630,7 +4631,7 @@ All programme-required local commits are signed; the accepted source and Nix ide
 ]
 #+end_src
 
-* DONE [#B] Prepare the human-authored Pi maintainer issue and RFC evidence packet    :memory:pi:upstream:
+* DONE [#B] Prepare the human-authored Pi maintainer issue and RFC evidence packet :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.3
@@ -4722,7 +4723,7 @@ A concise user-reviewable draft, clearly labeled AI-assisted supporting packet, 
 ]
 #+end_src
 
-* TODO [#A] Build a reproducible local-source Pi qualification package    :memory:packaging:pi:upstream:
+* TODO [#A] Build a reproducible local-source Pi qualification package :memory:packaging:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.30
@@ -4767,7 +4768,7 @@ Two clean checkouts at the same commits produce the same package tree and test i
 ]
 #+end_src
 
-* TODO [#A] Verify or replay the bounded-memory gate on the final Pi package    :memory:pi:upstream:
+* TODO [#A] Verify or replay the bounded-memory gate on the final Pi package :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.31
@@ -4825,7 +4826,7 @@ OPEN and blocked by M1 and P1. No M2 identity check or replay has run. M2 is the
 ]
 #+end_src
 
-* DOING [#A] Obtain Pi maintainer approval and select the bounded-session architecture    :memory:pi:upstream:
+* DOING [#A] Obtain Pi maintainer approval and select the bounded-session architecture :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.4
@@ -4905,7 +4906,7 @@ Contacting or posting to maintainers occurs only after explicit outreach authori
 ]
 #+end_src
 
-* TODO [#A] Make SessionTree bounded reads enforceable    :memory:pi:upstream:
+* TODO [#A] Make SessionTree bounded reads enforceable                       :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.5
@@ -4950,7 +4951,7 @@ All supported storage backends share conformance for ordering, branch bounds, it
 ]
 #+end_src
 
-* TODO [#A] Implement the selected bounded SessionRepo backend and legacy import    :memory:pi:upstream:
+* TODO [#A] Implement the selected bounded SessionRepo backend and legacy import :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.6
@@ -4995,7 +4996,7 @@ Legacy semantic oracles match for topology, leaf, compaction tail, custom record
 ]
 #+end_src
 
-* TODO [#A] Move classic coding-agent execution onto SessionRepo    :memory:pi:upstream:
+* TODO [#A] Move classic coding-agent execution onto SessionRepo             :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.7
@@ -5040,7 +5041,7 @@ The real terminal path uses SessionRepo; a recording backend fails any unlimited
 ]
 #+end_src
 
-* TODO [#A] Make Pi session replacement and repository ownership generation-safe    :memory:pi:upstream:
+* TODO [#A] Make Pi session replacement and repository ownership generation-safe :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.8
@@ -5085,7 +5086,7 @@ New, resume, fork, import, reload, failed construction, repeated close, quit, de
 ]
 #+end_src
 
-* TODO [#B] Bound no-session and pre-publication Pi sessions    :memory:pi:upstream:
+* TODO [#B] Bound no-session and pre-publication Pi sessions                 :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.9
@@ -5139,7 +5140,7 @@ A large pre-assistant/no-session fixture stays within declared budgets or fails 
 ]
 #+end_src
 
-* DONE [#B] Encode make upgrade ordering in the dependency graph    :concurrency:make:
+* DONE [#B] Encode make upgrade ordering in the dependency graph               :concurrency:make:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.38
@@ -5173,7 +5174,7 @@ Makefile:171-193 declares update and upgrade-tasks as unordered prerequisites, s
 ]
 #+end_src
 
-* DONE [#C] Remove or preflight partial clean and purge workflows    :make:safety:
+* DONE [#C] Remove or preflight partial clean and purge workflows                   :make:safety:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.39
@@ -5207,7 +5208,7 @@ Makefile:239-281 deletes user generations before an unprivileged system-profile 
 ]
 #+end_src
 
-* DONE [#B] Fail closed for shared-work in bin/update --switch    :routing:validated:
+* DONE [#B] Fail closed for shared-work in bin/update --switch                :routing:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.4
@@ -5241,7 +5242,7 @@ bin/lib/host-routing.sh:10-31 maps shared-work to jwiegley, but bin/update:499-5
 ]
 #+end_src
 
-* DONE [#B] Make Claude-memory pinning strict and dry-run safe    :activation:security:
+* DONE [#B] Make Claude-memory pinning strict and dry-run safe              :activation:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.40
@@ -5275,7 +5276,7 @@ config/johnw.nix:190-210 converts required read, parse, and mktemp failures into
 ]
 #+end_src
 
-* DONE [#C] Enforce the environment-only credential argument contract    :ai:security:
+* DONE [#C] Enforce the environment-only credential argument contract               :ai:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.41
@@ -5309,7 +5310,7 @@ config/ai/catalog.nix:1182-1323 uses a prefix heuristic that accepts embedded cr
 ]
 #+end_src
 
-* DONE [#C] Package supported nix-scripts from an explicit allowlist    :architecture:packaging:
+* DONE [#C] Package supported nix-scripts from an explicit allowlist     :architecture:packaging:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.42
@@ -5343,7 +5344,7 @@ overlays/00-lib.nix:12-39 and overlays/30-user-scripts.nix:18-25 install every t
 ]
 #+end_src
 
-* DONE [#D] Remove inert de --no-cache option    :shell:
+* DONE [#D] Remove inert de --no-cache option                                             :shell:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.43
@@ -5385,7 +5386,7 @@ Authority resolved by the owner: delete the no-op option.
 ]
 #+end_src
 
-* DONE [#D] Correct the documented make test check inventory    :docs:make:
+* DONE [#D] Correct the documented make test check inventory                          :docs:make:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.44
@@ -5419,7 +5420,7 @@ bin/README.md:343 says make test builds four principal checks, while Makefile:53
 ]
 #+end_src
 
-* DONE [#C] Separate read-only make check from store repair    :make:nix:
+* DONE [#C] Separate read-only make check from store repair                            :make:nix:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.45
@@ -5453,7 +5454,7 @@ Makefile:250-252 names nix store verify --repair --all as the conventional check
 ]
 #+end_src
 
-* DONE [#D] Remove stale-lock suppression from Codex memory seeding    :codex:concurrency:
+* DONE [#D] Remove stale-lock suppression from Codex memory seeding           :codex:concurrency:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.46
@@ -5487,7 +5488,7 @@ flake/ai/wrappers/codex.nix:73-90 uses a directory mutex that survives SIGKILL o
 ]
 #+end_src
 
-* DONE [#D] Require explicit licenses in mkScriptPackage    :metadata:packaging:
+* DONE [#D] Require explicit licenses in mkScriptPackage                     :metadata:packaging:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.47
@@ -5521,7 +5522,7 @@ overlays/00-lib.nix:16-43 defaults every script package to MIT, causing nix-scri
 ]
 #+end_src
 
-* DONE [#C] Delete unreachable HTTP-header MCP support    :ai:
+* DONE [#C] Delete unreachable HTTP-header MCP support                                       :ai:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.48
@@ -5563,7 +5564,7 @@ Authority resolved by the owner: delete. When closing, retain the recovery ancho
 ]
 #+end_src
 
-* DONE [#D] Make Emacs HEAD an explicit experimental build surface    :emacs:
+* DONE [#D] Make Emacs HEAD an explicit experimental build surface                        :emacs:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.49
@@ -5605,7 +5606,7 @@ Authority resolved by the owner: Emacs HEAD is a supported, intentionally non-ho
 ]
 #+end_src
 
-* DONE [#C] Unify host identity and shell routing authority    :architecture:routing:
+* DONE [#C] Unify host identity and shell routing authority                :architecture:routing:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.5
@@ -5647,7 +5648,7 @@ Authority resolved by the owner: supported shared-work identity, presently dorma
 ]
 #+end_src
 
-* DONE [#C] Delete dormant Auto Compact Resume implementation    :pi:
+* DONE [#C] Delete dormant Auto Compact Resume implementation                                :pi:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.50
@@ -5689,7 +5690,7 @@ Authority resolved by the owner: delete. The deletion commit body must state tha
 ]
 #+end_src
 
-* DONE [#D] Delete unused portable lib.inputNames output    :nix:
+* DONE [#D] Delete unused portable lib.inputNames output                                    :nix:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.51
@@ -5731,7 +5732,7 @@ Authority resolved by the owner: delete lib.inputNames. The separate root darwin
 ]
 #+end_src
 
-* DONE [#D] Trim the Coq matrix to 8.19 through 9.1 and default 9.1    :coq:
+* DONE [#D] Trim the Coq matrix to 8.19 through 9.1 and default 9.1                         :coq:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.52
@@ -5773,7 +5774,7 @@ Authority resolved by the owner: retain a four-version development matrix and ma
 ]
 #+end_src
 
-* DONE [#C] Replace host registry snapshot tests with behavioral assertions    :architecture:tests:
+* DONE [#C] Replace host registry snapshot tests with behavioral assertions  :architecture:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.53
@@ -5807,7 +5808,7 @@ test/home/host-behavior.nix:22-35,174-208 duplicates the full home-class roster 
 ]
 #+end_src
 
-* DONE [#C] Share one hermetic Git fixture helper    :git:tests:
+* DONE [#C] Share one hermetic Git fixture helper                                     :git:tests:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.54
@@ -5841,7 +5842,7 @@ test/bin/publish-slow-test.py:21-71 and gates-slow-test.py:26-67 duplicate clean
 ]
 #+end_src
 
-* DONE [#D] Derive catalog IDs, roots, and agent names from keys    :ai:simplification:
+* DONE [#D] Derive catalog IDs, roots, and agent names from keys              :ai:simplification:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.55
@@ -5875,7 +5876,7 @@ config/ai/catalog.nix repeats profile IDs as keys, arguments, and a roots table,
 ]
 #+end_src
 
-* DONE [#D] Compute key-files directly without a host attrset    :nix:simplification:
+* DONE [#D] Compute key-files directly without a host attrset                :nix:simplification:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.56
@@ -5909,7 +5910,7 @@ config/key-files.nix:1-18 builds and filters an attrset for all hosts only to se
 ]
 #+end_src
 
-* DONE [#D] Deduplicate the core Nix check installable list    :make:simplification:
+* DONE [#D] Deduplicate the core Nix check installable list                 :make:simplification:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.57
@@ -5943,7 +5944,7 @@ Makefile:53-71 repeats the same six Nix checks in test and expensive. Hoist only
 ]
 #+end_src
 
-* DONE [#D] Normalize statusline numbers in the existing jq pass    :performance:simplification:
+* DONE [#D] Normalize statusline numbers in the existing jq pass     :performance:simplification:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.58
@@ -5977,7 +5978,7 @@ config/ai/statusline-command.sh:5-50 launches eleven awk processes solely to coe
 ]
 #+end_src
 
-* DONE [#D] Inline the one-use last-known-good importer    :nix:simplification:
+* DONE [#D] Inline the one-use last-known-good importer                      :nix:simplification:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.59
@@ -6011,7 +6012,7 @@ overlays/00-last-known-good.nix:5-24 defines a generic name-parameterized import
 ]
 #+end_src
 
-* DONE [#C] Converge portable formatting and linting on one quality authority    :architecture:quality:
+* DONE [#C] Converge portable formatting and linting on one quality authority :architecture:quality:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.6
@@ -6045,7 +6046,7 @@ test/ai/scripts/format.sh:34-61 silently accepts unsupported paths and omits bas
 ]
 #+end_src
 
-* DONE [#B] Enforce skill names before constructing output paths    :comments:security:
+* DONE [#B] Enforce skill names before constructing output paths              :comments:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.60
@@ -6079,7 +6080,7 @@ config/ai/skills/skill-creator/scripts/init_skill.py:217-239,299-320 prints a lo
 ]
 #+end_src
 
-* DONE [#C] Generate and parse genuinely valid skill frontmatter    :comments:
+* DONE [#C] Generate and parse genuinely valid skill frontmatter                       :comments:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.61
@@ -6113,7 +6114,7 @@ skill-creator init emits description: [TODO: ...], which parses as a YAML sequen
 ]
 #+end_src
 
-* DONE [#C] Split edit-env entries at the first equals sign    :comments:emacs:
+* DONE [#C] Split edit-env entries at the first equals sign                      :comments:emacs:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.62
@@ -6147,7 +6148,7 @@ overlays/emacs/edit-env.el:44-51,84-95,114-165 splits VAR=VALUE on every equals 
 ]
 #+end_src
 
-* DONE [#B] Reject symlink roots before making Plasma Wiki writable    :filesystem:security:
+* DONE [#B] Reject symlink roots before making Plasma Wiki writable         :filesystem:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.63
@@ -6181,7 +6182,7 @@ plasma-wiki-writable-obsidian.patch:12-31 claims not to follow symlinks but enum
 ]
 #+end_src
 
-* DONE [#C] Correct quality guard rationale and symlink inventory comments    :comments:quality:
+* DONE [#C] Correct quality guard rationale and symlink inventory comments     :comments:quality:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.64
@@ -6215,7 +6216,7 @@ test/bin/quality:214-232 says staged rename or deletion leaves the old path in g
 ]
 #+end_src
 
-* DONE [#D] Remove the stale packages.nix call-site count    :comments:docs:
+* DONE [#D] Remove the stale packages.nix call-site count                         :comments:docs:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.65
@@ -6249,7 +6250,7 @@ config/packages.nix:10-13 says two of three call sites omit config and lib, but 
 ]
 #+end_src
 
-* DONE [#B] Require explicit fresh-context dispatch where independence matters    :agents:comments:
+* DONE [#B] Require explicit fresh-context dispatch where independence matters  :agents:comments:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.66
@@ -6283,7 +6284,7 @@ parallelize, Wiggum fess, and validated-review documentation says subagents star
 ]
 #+end_src
 
-* DONE [#B] Attest exact model identities in validated review    :agents:validation:
+* DONE [#B] Attest exact model identities in validated review                 :agents:validation:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.67
@@ -6317,7 +6318,7 @@ validated-code-review promises named and different models, but its non-Claude cl
 ]
 #+end_src
 
-* DONE [#D] Use the shared frontmatter renderer for Codex resources    :architecture:comments:
+* DONE [#D] Use the shared frontmatter renderer for Codex resources       :architecture:comments:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.68
@@ -6351,7 +6352,7 @@ config/ai/renderers/render-lib.nix:1-15 claims one frontmatter implementation, b
 ]
 #+end_src
 
-* DONE [#D] Delete unused root darwinPackages output    :nix:
+* DONE [#D] Delete unused root darwinPackages output                                        :nix:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.69
@@ -6393,7 +6394,7 @@ Authority resolved by the owner: delete.
 ]
 #+end_src
 
-* DONE [#B] Stop sourcing unescaped preserved values in bin/de    :security:shell:validated:
+* DONE [#B] Stop sourcing unescaped preserved values in bin/de         :security:shell:validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.7
@@ -6427,7 +6428,7 @@ bin/de:51-97 interpolates decoded environment values into literal single quotes 
 ]
 #+end_src
 
-* DONE [#B] Delete or repair the unpinned update-home-manager path    :validated:
+* DONE [#B] Delete or repair the unpinned update-home-manager path                    :validated:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.8
@@ -6461,7 +6462,7 @@ bin/update-home-manager:1-4 activates even after update failure and then uses mu
 ]
 #+end_src
 
-* DONE [#B] Make YubiKey key switching preflighted and atomic    :security:yubikey:
+* DONE [#B] Make YubiKey key switching preflighted and atomic                  :security:yubikey:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.9
@@ -6581,7 +6582,7 @@ Remove the resolved portable quality question and make the remaining external/ow
 ]
 #+end_src
 
-* TODO [#A] Rotate the exposed VPS Gitea credential and remove it from the remote URL    :security:
+* TODO [#A] Rotate the exposed VPS Gitea credential and remove it from the remote URL  :security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-twq
