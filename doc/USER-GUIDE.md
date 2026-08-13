@@ -150,9 +150,11 @@ that directory.
 
 The Andoria consumer exports one standalone
 `homeConfigurations.jwiegley` configuration for the whole policy class. It also
-exports the data-only `root-policy` package described in Section 7. The
-consumer repository owns these composition choices; `nix-config` supplies the
-shared implementation that they select.
+exports two independent, data-only root packages: the `root-policy` trust leaf
+described in Section 7 and the `nix-daemon-cpu-policy` systemd leaf described in
+Section 6. Neither output installs itself. The consumer repository owns these
+composition choices; `nix-config` supplies the shared implementation that they
+select.
 
 ### 2.4 VPS and other NixOS consumers
 
@@ -160,7 +162,11 @@ VPS follows the same authority rule as Vulcan: the authoritative checkout is
 `/etc/nixos` on the target host, and the consumer-local `./build` driver owns
 build serialization and activation. `/Users/johnw/src/vps` is a secondary
 authoring and review clone; it is not a substitute for the authoritative
-checkout.
+checkout. The VPS consumer pins the root and portable-AI inputs at one paired
+revision, then composes their applicable package and public trust data through
+its own NixOS configuration. It does not install the Andoria manual root leaf:
+the NixOS generation owns daemon policy, rollback, and service activation on
+VPS.
 
 ### 2.5 What “authoritative” does and does not mean
 
@@ -242,9 +248,11 @@ flake uses the same subflake locally through `path:./config/ai`.
 
 `config/hosts/registry.nix` owns stable fleet facts: platform, activation class,
 login name, coarse role, shared-work membership, active rollout membership,
-remote-builder records, ordered builder pools, and shell routing. The typed
-surface in `config/host-options.nix` validates these records and derives
-capabilities such as `isHera`, `isVulcan`, or `isSharedWork`.
+remote-builder records, ordered builder pools, shared-work daemon capacity, and
+shell routing. The shared-work policy presently records
+`nixDaemonAllowedCpus = "0-7"`; the typed surface in
+`config/host-options.nix` validates this value and the remaining records, then
+derives capabilities such as `isHera`, `isVulcan`, or `isSharedWork`.
 
 Modules consume capabilities rather than scattering hostname comparisons.
 Generated shell routing is a build-time projection of the same table; commands
@@ -462,13 +470,13 @@ any failure. It then forces a fresh, local, unsubstituted derivation whose own
 separately on every active shared-work host after quiescing its Nix builds. A
 Home Manager switch neither installs nor rolls back this root-owned file.
 
-## 7. The Andoria Determinate Nix trust leaf
+## 7. The Andoria-rendered Determinate Nix trust leaf
 
 The `root-policy` output is a small data projection, not a configuration or
-lifecycle framework. It renders public trust data for the Ubuntu/Determinate Nix
-daemons on the two Andoria builders while Home Manager remains strictly
-user-scoped. The output neither installs itself nor governs another host's root
-Nix configuration.
+lifecycle framework. The Andoria consumer renders public trust data for an
+Ubuntu/Determinate Nix daemon while Home Manager remains strictly user-scoped.
+The output neither installs itself nor grants authority to alter another host's
+root Nix configuration.
 
 ### 7.1 Source authority
 
@@ -482,11 +490,12 @@ value declares:
 
 The Andoria consumer imports that value and renders one store output whose leaf
 is `etc/nix/nix.custom.conf`. Its documented operator procedure applies the leaf
-separately to each Andoria builder. Another shared-work host may use the common
-trust data only through its own root authority; this output's existence does not
-establish installation there. The renderer performs no host discovery and
-contains no secret. It serializes the camel-case source fields as the dashed Nix
-settings
+separately through each recipient's root authority. A shared-work host may
+install the same public leaf through its authorized operator; VPS instead
+projects the applicable fields through its generation-owned NixOS
+configuration. The output's existence does not establish installation on any
+daemon. The renderer performs no host discovery and contains no secret. It
+serializes the camel-case source fields as the dashed Nix settings
 `require-sigs`, `trusted-users`, `extra-substituters`, and
 `extra-trusted-public-keys`.
 
@@ -686,8 +695,8 @@ signed commit, activates the exact candidate on the current supported host,
 fast-forwards the branch, and publishes through `bin/publish`. Homebrew remains
 outside the transaction.
 
-Automatic catalog targets run serially, each with its own pre-target Git tree
-and untracked-path snapshot. The updater treats its recognized
+Automatic catalog targets run serially, each with its own pre-target staged
+tree and untracked-and-ignored path snapshot. The updater treats its recognized
 candidate-rejection status as provisional: it restores the exact staged Git
 tree, verifies that the untracked and ignored path set is unchanged, and thereby
 restores the tracked source record, dependent hashes, generated locks, and
@@ -845,11 +854,13 @@ constitutes fleet proof.
 
 ### 10.4 Root-policy installation and acceptance
 
-Apply the selected trust leaf separately on each affected Andoria builder before
-depending upon that daemon to accept client-signed closures. Trust-leaf
-installation and Home Manager activation are separate operations. Complete the
-signed-positive and unsigned-negative acceptance described in Section 7 before
-using either builder as evidence for the trusted copy path.
+Apply the selected trust leaf separately on every affected Determinate Nix
+daemon before depending upon that daemon to accept client-signed closures.
+Trust-leaf installation, CPU-policy installation, and Home Manager activation
+are separate operations. Complete the signed-positive and unsigned-negative
+acceptance described in Section 7 on each recipient before using it as evidence
+for the trusted copy path. VPS follows the same acceptance boundary, but its
+NixOS generation remains the installation authority.
 
 ## 11. Rollback and recovery
 
@@ -896,13 +907,19 @@ activate the exact retained previous package wherever the shared profile or
 host-local state changed; and verify all four machines again. Do not expire a
 shared generation while any host may still need it.
 
-### 11.5 Andoria trust-leaf rollback
+### 11.5 Trust-leaf and CPU-policy rollback
 
 Restore the exact previously accepted `/etc/nix/nix.custom.conf`, restart
 `nix-daemon.service`, compare the bytes, inspect effective non-secret fields,
 and repeat signed-positive and unsigned-negative probes on every affected
 builder. A daemon that merely starts has not yet proved the old trust boundary
 restored.
+
+CPU-policy rollback is a separate transaction. Use the canonical exit-trap
+procedure in the Andoria consumer: restore the retained drop-in or remove a
+first installation; reload systemd; restart the daemon; and repeat file,
+`AllowedCPUs`, `EffectiveCPUs`, cgroup, and fresh-build acceptance. Do not infer
+CPU rollback from trust-leaf restoration.
 
 ## 12. Security boundaries
 
@@ -980,6 +997,8 @@ from becoming an unsupported fleet claim.
 | Closure residency | One target has the exact closure locally | Profile selection or runtime health |
 | Activation | One host selected or ran the new generation | Client or service behavior |
 | Publication | Both Git remotes contain the signed revision | Consumer lock adoption |
+| Trust acceptance | One daemon accepts the fresh signed path and rejects its unsigned counterpart | Trust on another daemon |
+| CPU-policy acceptance | One host has exact drop-in bytes, effective systemd and cgroup sets, and a fresh daemon build confined to `0-7` | CPU confinement on another host |
 | Runtime acceptance | The affected executable, service, or security boundary works on one active host | Health on another host |
 | Fleet acceptance | Every named target completed the required build, activation, and runtime checks | Future availability |
 
@@ -1108,16 +1127,18 @@ transient deployment checkpoint.
 
 ### Four-host shared-work rollout
 
-1. Update and check the shared authoritative checkout once.
-2. Realize one bounded candidate.
-3. Sign locally built closure paths through the authorized trust root.
-4. Prove exact closure residency and rollback retention on all four hosts.
-5. Activate Andoria-08.
-6. Activate Andoria-T2.
-7. Activate Delphi-3BD4.
-8. Activate GPU Server.
-9. Verify generation, scheduler policy, and affected runtime on every host.
-10. Retire rollback roots only after fleet acceptance.
+1. Accept the root trust leaf on every daemon that will receive client-signed paths.
+2. Accept the CPU-policy leaf on every host before resource-intensive work.
+3. Update and check the shared authoritative checkout once.
+4. Realize one bounded candidate.
+5. Sign locally built closure paths through the authorized trust root.
+6. Prove exact closure residency and rollback retention on all four hosts.
+7. Activate Andoria-08.
+8. Activate Andoria-T2.
+9. Activate Delphi-3BD4.
+10. Activate GPU Server.
+11. Verify generation, scheduler policy, and affected runtime on every host.
+12. Retire rollback roots only after fleet acceptance.
 
 The configuration remains comprehensible when every operation answers four
 questions: which source owns the decision, which checkout selected it, which

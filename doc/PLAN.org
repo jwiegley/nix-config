@@ -7798,6 +7798,24 @@ Live Hera Pi reports both omlx/Qwen3.6-27B-oQ6e-mtp and router/sol as thinking=n
 ]
 #+end_src
 
+* DONE [#B] Complete the repository operator guide
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-xli
+:LABELS:   []
+:ISSUE_TYPE: docs
+:CREATED:  [2026-08-13 Thu 04:58]
+:MODIFIED: [2026-08-13 Thu 04:59]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 04:59]
+:CLOSE_REASON: Completed the checked-in operator guide with the authoritative Andoria/NFS and VPS topology, independent trust and CPU root leaves, exact target-holdback contract, per-daemon acceptance, rollback, evidence labels, and four-host rollout prerequisites; doc/PLAN.org remains the sole current-work ledger.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Revise doc/USER-GUIDE.md so it explains the authoritative checkout topology, Andoria and VPS consumer roles, separate trust and CPU root leaves, exact updater holdback semantics, and the four-host rollout and acceptance model. Keep obr/doc/PLAN.org as the sole current-work authority and exclude transient rollout status.
+
 * DONE [#B] Reproduce Clio Path Finder SMB mount failure
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
