@@ -69,14 +69,14 @@ The Eternal Terminal override no longer targets a nonexistent source path; its p
 ]
 #+end_src
 
-* TODO [#C] Install pi-mulligan as a managed Pi extension                  :context:extension:pi:
+* DEFER [#C] Install pi-mulligan as a managed Pi extension                 :context:extension:pi:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-0pr
 :LABELS:   ["context","extension","pi","pi-gallery"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-12 Wed 20:51]
-:MODIFIED: [2026-08-12 Wed 20:51]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :EXTERNAL_REF: https://github.com/dabstractor/pi-mulligan
 :SOURCE_REPO: nix
@@ -104,6 +104,20 @@ Pin an immutable reviewed upstream revision and package it through the existing 
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 186,
+    "issue_id": "nix-0pr",
+    "author": "johnw",
+    "text": "The owner requested this issue be recorded, not immediate maintainer publication. Upstream pi-mulligan targets Pi 0.84.x, managed Pi is 0.83.0, and the reviewed release uses unbounded session-history APIs. Defer until the bounded Pi architecture resumes; no acceptance criterion is closed or weakened.",
+    "created_at": "2026-08-13T07:56:45Z"
   }
 ]
 #+end_src
@@ -3284,14 +3298,14 @@ Superseding Pi guidance, 2026-08-11:
 ]
 #+end_src
 
-* DOING [#A] Make Pi session history memory independent of persisted history :architecture:memory:pi:upstream:wiggum:
+* DEFER [#A] Make Pi session history memory independent of persisted history :architecture:memory:pi:upstream:wiggum:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1
 :LABELS:   ["architecture","memory","pi","pi-bounded-memory","upstream","wiggum"]
 :ISSUE_TYPE: epic
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-12 Wed 05:39]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3348,6 +3362,13 @@ Durable continuation, 2026-08-12 PDT. The bounded-history invariant and frozen C
     "author": "johnw",
     "text": "Correction to the 05:46 UTC comment: C1 is not sealed and B1 must not proceed. The independent post-commit fess verdict for b1f9b62f was CHANGES REQUIRED. C1 remains IN_PROGRESS while the contract is simplified to deterministic architectural bounds plus one paired endpoint packaged RSS regression; B1 is now core-only. The earlier comment is retained as audit history, not current authority.",
     "created_at": "2026-08-12T06:09:43Z"
+  },
+  {
+    "id": 157,
+    "issue_id": "nix-tcz.37.1",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
   }
 ]
 #+end_src
@@ -3528,14 +3549,14 @@ Closed 2026-08-11 PDT on signed GOOD commit 328cff3f45ece73b8af036a39ef904f905d4
 ]
 #+end_src
 
-* TODO [#B] Page Pi session discovery, search, and grouped statistics        :memory:pi:upstream:
+* DEFER [#B] Page Pi session discovery, search, and grouped statistics       :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.10
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 23:43]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3591,14 +3612,28 @@ Geometric session catalogs stay within one result page plus fixed repository sta
 ]
 #+end_src
 
-* TODO [#B] Bound Pi terminal history and tree navigation                    :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 164,
+    "issue_id": "nix-tcz.37.1.10",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#B] Bound Pi terminal history and tree navigation                   :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.11
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 21:43]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3654,14 +3689,28 @@ Many small entries, near-limit entries, one oversized entry, deep ancestry, and 
 ]
 #+end_src
 
-* TODO [#B] Bound Pi RPC history frames, queues, and backpressure            :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 165,
+    "issue_id": "nix-tcz.37.1.11",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#B] Bound Pi RPC history frames, queues, and backpressure           :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.12
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 21:43]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3717,14 +3766,28 @@ Every successful frame is within its byte ceiling; stale session/cursor requests
 ]
 #+end_src
 
-* TODO [#B] Stream exact Pi fork, JSONL, and HTML exports                    :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 166,
+    "issue_id": "nix-tcz.37.1.12",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#B] Stream exact Pi fork, JSONL, and HTML exports                   :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.13
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 21:43]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3780,14 +3843,28 @@ Semantic round trips match for deep branches, high fanout, no-assistant branches
 ]
 #+end_src
 
-* TODO [#A] Expose bounded Pi extension history capabilities and strict mode :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 167,
+    "issue_id": "nix-tcz.37.1.13",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#A] Expose bounded Pi extension history capabilities and strict mode :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.14
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 21:43]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3843,14 +3920,28 @@ An unchanged legacy fixture remains exact in compatibility mode; a no-history ex
 ]
 #+end_src
 
-* TODO [#B] Certify managed Pi extensions that require no history migration  :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 168,
+    "issue_id": "nix-tcz.37.1.14",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#B] Certify managed Pi extensions that require no history migration :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.15
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 21:43]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3888,14 +3979,28 @@ All fifteen have evidence rows and load unchanged under strict history mode; no 
 ]
 #+end_src
 
-* TODO [#B] Migrate managed point, active-context, and recent-window Pi extensions :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 169,
+    "issue_id": "nix-tcz.37.1.15",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#B] Migrate managed point, active-context, and recent-window Pi extensions :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.16
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 21:53]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3933,14 +4038,28 @@ Results match eager references across branches, compaction, invalid newest recor
 ]
 #+end_src
 
-* TODO [#B] Migrate managed exact-history Pi extensions without truncation   :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 170,
+    "issue_id": "nix-tcz.37.1.16",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#B] Migrate managed exact-history Pi extensions without truncation  :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.17
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 21:43]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3987,14 +4106,28 @@ Rewind finds checkpoints older than prior windows; Blackhole exact recall, searc
 ]
 #+end_src
 
-* TODO [#B] Migrate managed cross-session and extension-owned Pi histories   :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 171,
+    "issue_id": "nix-tcz.37.1.17",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#B] Migrate managed cross-session and extension-owned Pi histories  :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.18
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 21:43]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4050,14 +4183,28 @@ All three preserve existing semantic fixtures, malformed/oversized handling, ret
 ]
 #+end_src
 
-* TODO [#A] Certify the complete managed Pi extension set in strict bounded mode :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 172,
+    "issue_id": "nix-tcz.37.1.18",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#A] Certify the complete managed Pi extension set in strict bounded mode :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.19
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 23:42]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4118,6 +4265,20 @@ No certified extension invokes a legacy materializer or eager legacy hook payloa
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 173,
+    "issue_id": "nix-tcz.37.1.19",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
   }
 ]
 #+end_src
@@ -4377,14 +4538,14 @@ CLOSED. Exact upstream Pi 0.84.1 source, four deterministic fixtures, and the so
 ]
 #+end_src
 
-* TODO [#A] Wire Pi semantic, budget, lifecycle, and resource acceptance gates :memory:pi:upstream:
+* DEFER [#A] Wire Pi semantic, budget, lifecycle, and resource acceptance gates :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.20
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 23:42]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4494,14 +4655,28 @@ Independent review closes a source-located history-dataflow inventory for the ex
 ]
 #+end_src
 
-* TODO [#A] Qualify local-source Pi bounded memory                           :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 174,
+    "issue_id": "nix-tcz.37.1.20",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#A] Qualify local-source Pi bounded memory                          :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.21
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-12 Wed 05:39]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4570,14 +4745,28 @@ OPEN and blocked by A2, K1, H1, and the other explicit open graph dependencies. 
 ]
 #+end_src
 
-* TODO [#C] Run the optional long-session Pi memory and lifecycle soak       :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 175,
+    "issue_id": "nix-tcz.37.1.21",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#C] Run the optional long-session Pi memory and lifecycle soak      :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.22
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: chore
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 23:34]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4624,14 +4813,28 @@ The latest result is recorded as passed, failed, or not run; a failure opens or 
 ]
 #+end_src
 
-* TODO [#B] Finalize the local Pi bounded-session contract, migration guide, and evidence :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 176,
+    "issue_id": "nix-tcz.37.1.22",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#B] Finalize the local Pi bounded-session contract, migration guide, and evidence :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.23
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: docs
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 23:45]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4696,14 +4899,28 @@ Local documentation says source-reviewable Pi-controlled live session state is b
 ]
 #+end_src
 
-* TODO [#B] Finalize Pi's strict-default full-history compatibility boundary :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 177,
+    "issue_id": "nix-tcz.37.1.23",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#B] Finalize Pi's strict-default full-history compatibility boundary :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.24
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 23:34]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4750,14 +4967,28 @@ No official example or certified managed extension requires the legacy surface; 
 ]
 #+end_src
 
-* TODO [#A] Pin reviewed Pi product commits and delete product-scale Nix patches :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 178,
+    "issue_id": "nix-tcz.37.1.24",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#A] Pin reviewed Pi product commits and delete product-scale Nix patches :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.25
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 23:42]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4831,14 +5062,28 @@ N1 may mutate production Pi pins and remove the downstream patch stack only afte
 ]
 #+end_src
 
-* TODO [#B] Qualify the bounded Pi package and rollback without activation   :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 179,
+    "issue_id": "nix-tcz.37.1.25",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#B] Qualify the bounded Pi package and rollback without activation  :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.26
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: chore
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-11 Tue 22:12]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4876,14 +5121,28 @@ Copied legacy state retains its semantic digest and visible context; package bui
 ]
 #+end_src
 
-* TODO [#A] Deliver reviewed Pi bounded-memory changes to an authoritative product repository :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 180,
+    "issue_id": "nix-tcz.37.1.26",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#A] Deliver reviewed Pi bounded-memory changes to an authoritative product repository :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.27
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:50]
-:MODIFIED: [2026-08-11 Tue 22:12]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4966,14 +5225,28 @@ The maintainer-approved destination and branch strategy are recorded; each revie
 ]
 #+end_src
 
-* TODO [#B] Activate and accept the bounded Pi generation on Hera            :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 181,
+    "issue_id": "nix-tcz.37.1.27",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#B] Activate and accept the bounded Pi generation on Hera           :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.28
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: chore
 :CREATED:  [2026-08-11 Tue 21:50]
-:MODIFIED: [2026-08-11 Tue 22:32]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5020,14 +5293,28 @@ The exact prebuilt generation is activated only after explicit authorization; st
 ]
 #+end_src
 
-* TODO [#B] Publish the accepted bounded Pi Nix revision                     :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 182,
+    "issue_id": "nix-tcz.37.1.28",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#B] Publish the accepted bounded Pi Nix revision                    :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.29
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: chore
 :CREATED:  [2026-08-11 Tue 21:50]
-:MODIFIED: [2026-08-11 Tue 22:32]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5070,6 +5357,20 @@ All programme-required local commits are signed; the accepted source and Nix ide
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 183,
+    "issue_id": "nix-tcz.37.1.29",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
   }
 ]
 #+end_src
@@ -5166,14 +5467,14 @@ A concise user-reviewable draft, clearly labeled AI-assisted supporting packet, 
 ]
 #+end_src
 
-* TODO [#A] Build a reproducible local-source Pi qualification package :memory:packaging:pi:upstream:
+* DEFER [#A] Build a reproducible local-source Pi qualification package :memory:packaging:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.30
 :LABELS:   ["memory","packaging","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:53]
-:MODIFIED: [2026-08-11 Tue 23:49]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5211,14 +5512,28 @@ Two clean checkouts at the same commits produce the same package tree and test i
 ]
 #+end_src
 
-* TODO [#A] Verify or replay the bounded-memory gate on the final Pi package :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 184,
+    "issue_id": "nix-tcz.37.1.30",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#A] Verify or replay the bounded-memory gate on the final Pi package :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.31
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 22:32]
-:MODIFIED: [2026-08-11 Tue 23:49]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5269,14 +5584,28 @@ OPEN and blocked by M1 and P1. No M2 identity check or replay has run. M2 is the
 ]
 #+end_src
 
-* DOING [#A] Obtain Pi maintainer approval and select the bounded-session architecture :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 185,
+    "issue_id": "nix-tcz.37.1.31",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#A] Obtain Pi maintainer approval and select the bounded-session architecture :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.4
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: question
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-12 Wed 17:10]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5345,18 +5674,25 @@ Contacting or posting to maintainers occurs only after explicit outreach authori
     "author": "johnw",
     "text": "Evidence classification for comment 119: the instruction not to publish is an owner decision. The statement that the proposal remains unpublished is a parent-session attestation; repository state is consistent with it but cannot prove absence of every out-of-band publication.",
     "created_at": "2026-08-13T00:10:45Z"
+  },
+  {
+    "id": 158,
+    "issue_id": "nix-tcz.37.1.4",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
   }
 ]
 #+end_src
 
-* TODO [#A] Make SessionTree bounded reads enforceable                       :memory:pi:upstream:
+* DEFER [#A] Make SessionTree bounded reads enforceable                      :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.5
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 23:43]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5394,14 +5730,28 @@ All supported storage backends share conformance for ordering, branch bounds, it
 ]
 #+end_src
 
-* TODO [#A] Implement the selected bounded SessionRepo backend and legacy import :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 159,
+    "issue_id": "nix-tcz.37.1.5",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#A] Implement the selected bounded SessionRepo backend and legacy import :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.6
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 23:43]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5439,14 +5789,28 @@ Legacy semantic oracles match for topology, leaf, compaction tail, custom record
 ]
 #+end_src
 
-* TODO [#A] Move classic coding-agent execution onto SessionRepo             :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 160,
+    "issue_id": "nix-tcz.37.1.6",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#A] Move classic coding-agent execution onto SessionRepo            :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.7
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 21:43]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5484,14 +5848,28 @@ The real terminal path uses SessionRepo; a recording backend fails any unlimited
 ]
 #+end_src
 
-* TODO [#A] Make Pi session replacement and repository ownership generation-safe :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 161,
+    "issue_id": "nix-tcz.37.1.7",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#A] Make Pi session replacement and repository ownership generation-safe :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.8
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 21:43]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5529,14 +5907,28 @@ New, resume, fork, import, reload, failed construction, repeated close, quit, de
 ]
 #+end_src
 
-* TODO [#B] Bound no-session and pre-publication Pi sessions                 :memory:pi:upstream:
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 162,
+    "issue_id": "nix-tcz.37.1.8",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
+  }
+]
+#+end_src
+
+* DEFER [#B] Bound no-session and pre-publication Pi sessions                :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.9
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-11 Tue 21:43]
+:MODIFIED: [2026-08-13 Thu 00:56]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5579,6 +5971,20 @@ A large pre-assistant/no-session fixture stays within declared budgets or fails 
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 163,
+    "issue_id": "nix-tcz.37.1.9",
+    "author": "johnw",
+    "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
+    "created_at": "2026-08-13T07:56:45Z"
   }
 ]
 #+end_src
