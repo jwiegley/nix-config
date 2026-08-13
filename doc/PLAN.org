@@ -1203,16 +1203,18 @@ CI Python lint/test commands consume the same repository-pinned tools as direnv;
 ]
 #+end_src
 
-* TODO [#D] Make deadline-supervisor tests robust under concurrent build load
+* DONE [#D] Make deadline-supervisor tests robust under concurrent build load
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-gw8
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-12 Wed 13:16]
-:MODIFIED: [2026-08-12 Wed 14:07]
+:MODIFIED: [2026-08-12 Wed 20:30]
+:ASSIGNEE: johnw
 :CREATED_BY: johnw
-:DEFERRED: [2026-08-19 Wed 09:00]
+:FINISHED: [2026-08-12 Wed 20:30]
+:CLOSE_REASON: Replaced the two startup-racy fixture clocks with readiness-bound use of the supervisor's existing injected-popen seam, preserving exact 125/137 results and descendant cleanup. Decoupled the complete pre-commit envelope from the nested fast-Python budget: outer 180s/165s work deadline, inner Python 120s unchanged, with exact process-group flag, ordered suite membership, timeout, and forced-kill regressions. Verification: supervisor 8/8; quality 37/37; Python/shell lint and shell format green; three supervisor repetitions under four CPU burners plus two continuous filesystem writers passed 8/8 each; the complete pre-commit gate under the same bounded load passed in 84.75s; final make test ran 21/21 Python suites in 445s and built all 7 behavioral checks; git diff --check clean. Independent correctness and abstraction reviews were clear after pinning the outer containment flag and exact suite order.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1257,6 +1259,13 @@ The two process-group outcome tests deterministically distinguish early-child fa
     "author": "johnw",
     "text": "A later ordinary signed-commit hook under the still-running Vulcan cross-system transfer reproduced the broader timing defect: all reported static and individual Python tests were green, but upgrade-projects-test expanded from about 8 seconds to 35 seconds and the fast tier reached yubikey-switch at the 105-second work deadline, so the outer supervisor terminated the group. No hook was bypassed and no root commit was created. The same final tree had passed this hook in 61 seconds and the full 21-suite gate in 398 seconds. The eventual fix must cover whole-tier scheduling slack under concurrent Nix I/O as well as the two child-outcome fixtures, without weakening per-test semantics.",
     "created_at": "2026-08-12T21:07:34Z"
+  },
+  {
+    "id": 143,
+    "issue_id": "nix-gw8",
+    "author": "johnw",
+    "text": "Owner-directed all-PLAN cleanup supersedes the prior scheduling defer. Claiming the timing-sensitivity fix now; baseline make test, portable AI all-system evaluation, and non-activating Darwin system build all pass on the untouched published tip.",
+    "created_at": "2026-08-13T03:12:44Z"
   }
 ]
 #+end_src

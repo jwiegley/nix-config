@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import contextlib
+import io
 import os
 import runpy
 import signal
@@ -58,6 +60,7 @@ class DeadlineSupervisorTests(unittest.TestCase):
     def test_term_ignoring_group_is_killed_without_orphans(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             pid_path = Path(temp_dir) / "child.pid"
+            child_pid = None
             child = (
                 "import signal,time; "
                 "signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(30)"
@@ -69,12 +72,32 @@ class DeadlineSupervisorTests(unittest.TestCase):
                 f"pathlib.Path({str(pid_path)!r}).write_text(str(p.pid)); "
                 "time.sleep(30)"
             )
-            started = time.monotonic()
-            result = self.run_supervisor(sys.executable, "-c", parent)
+
+            def ready_popen(argv, **kwargs):
+                nonlocal child_pid, started
+                process = subprocess.Popen(argv, **kwargs)
+                for _attempt in range(250):
+                    try:
+                        child_pid = int(pid_path.read_text())
+                        break
+                    except (FileNotFoundError, ValueError):
+                        time.sleep(0.02)
+                started = time.monotonic()
+                return process
+
+            stderr = io.StringIO()
+            started = None
+            with contextlib.redirect_stderr(stderr):
+                status = SUPERVISOR_MODULE["run"](
+                    [sys.executable, "-c", parent],
+                    0.2,
+                    0.2,
+                    popen=ready_popen,
+                )
             elapsed = time.monotonic() - started
-            self.assertEqual(result.returncode, 137, result.stderr)
+            self.assertIsNotNone(child_pid, "child PID was never published")
+            self.assertEqual(status, 137, stderr.getvalue())
             self.assertLess(elapsed, 2)
-            child_pid = int(pid_path.read_text())
             for _attempt in range(50):
                 if not process_exists(child_pid):
                     break
@@ -88,14 +111,36 @@ class DeadlineSupervisorTests(unittest.TestCase):
     def test_early_exit_with_background_child_is_failure_and_cleanup(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             pid_path = Path(temp_dir) / "child.pid"
+            child_pid = None
             parent = (
                 "import pathlib,subprocess,sys; "
                 "p=subprocess.Popen([sys.executable,'-c','import time; time.sleep(30)']); "
                 f"pathlib.Path({str(pid_path)!r}).write_text(str(p.pid))"
             )
-            result = self.run_supervisor(sys.executable, "-c", parent)
-            self.assertEqual(result.returncode, 125, result.stderr)
-            child_pid = int(pid_path.read_text())
+
+            def exited_popen(argv, **kwargs):
+                nonlocal child_pid
+                process = subprocess.Popen(argv, **kwargs)
+                for _attempt in range(250):
+                    try:
+                        child_pid = int(pid_path.read_text())
+                    except (FileNotFoundError, ValueError):
+                        pass
+                    if child_pid is not None and process.poll() is not None:
+                        break
+                    time.sleep(0.02)
+                return process
+
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                status = SUPERVISOR_MODULE["run"](
+                    [sys.executable, "-c", parent],
+                    0.2,
+                    0.2,
+                    popen=exited_popen,
+                )
+            self.assertIsNotNone(child_pid, "child PID was never published")
+            self.assertEqual(status, 125, stderr.getvalue())
             for _attempt in range(50):
                 if not process_exists(child_pid):
                     break

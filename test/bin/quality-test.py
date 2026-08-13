@@ -785,7 +785,7 @@ class QualityPythonTierTests(unittest.TestCase):
     def test_whole_tier_supervisor_reports_timeout_and_forced_kill(self):
         supervisor = self.repo / "test/bin/deadline-supervisor.py"
         for status, expected in (
-            (124, "exceeded its 105s work deadline inside the 120s envelope"),
+            (124, "exceeded its 165s work deadline inside the 180s envelope"),
             (137, "exited 137 (SIGKILL; deadline escalation, OOM, or external kill)"),
         ):
             supervisor.write_text(
@@ -802,8 +802,9 @@ class QualityPythonTierTests(unittest.TestCase):
         expected_shell = shlex.quote(str(expected))
         supervisor.write_text(
             f"#!/usr/bin/env bash\n"
+            "[[ ${QUALITY_TIER_SUPERVISED:-} == 1 ]] || exit 94\n"
             "[[ $1 == --term-after ]] || exit 95\n"
-            "[[ $2 -le 120 ]] || exit 96\n"
+            "[[ $2 == 165 ]] || exit 96\n"
             "[[ $3 == --kill-after ]] || exit 97\n"
             "[[ $4 == 5 && $5 == -- ]] || exit 98\n"
             f"[[ $6 == {expected_shell} ]] || exit 99\n"
@@ -829,22 +830,22 @@ class QualityPythonTierTests(unittest.TestCase):
         pre_commit = self.quality("--tier", "pre-commit")
         self.assertNotEqual(pre_commit.returncode, 0)
         pre_args = log.read_text().splitlines()
-        self.assertEqual(pre_args[0], "--term-after")
-        self.assertLessEqual(int(pre_args[1]), 120)
+        self.assertEqual(
+            pre_args[:5], ["--term-after", "165", "--kill-after", "5", "--"]
+        )
         pre_python = pre_args.index("--python-tier")
         self.assertEqual(pre_args[pre_python + 1], "fast")
-        pre_suites = set(pre_args[pre_python + 2 :])
-        self.assertTrue(
-            {"nix-format", "nix-lint", "shell-lint", "python-lint", "python-test"}
-            <= pre_suites
-        )
-        self.assertTrue(
-            {
-                "portable-eval",
-                "immutable-subflake",
-                "consumer-eval",
-                "signatures",
-            }.isdisjoint(pre_suites)
+        self.assertEqual(
+            pre_args[pre_python + 2 :],
+            [
+                "nix-format",
+                "nix-lint",
+                "nix-deadcode",
+                "shell-lint",
+                "shell-format",
+                "python-lint",
+                "python-test",
+            ],
         )
 
         expensive = self.quality("--tier", "expensive")
@@ -915,6 +916,7 @@ class QualityPythonTierTests(unittest.TestCase):
         self.assertEqual(
             supervised[:3], ["--signal=TERM", "--kill-after=5", "--foreground"]
         )
+        self.assertEqual(supervised[3], "120")
         self.assertEqual(
             supervised[-2:],
             [
@@ -928,6 +930,7 @@ class QualityPythonTierTests(unittest.TestCase):
         self.assertNotEqual(proc.returncode, 0)
         unsupervised = log.read_text().splitlines()
         self.assertEqual(unsupervised[:2], ["--signal=TERM", "--kill-after=5"])
+        self.assertEqual(unsupervised[2], "120")
         self.assertNotIn("--foreground", unsupervised)
 
 

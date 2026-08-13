@@ -722,7 +722,7 @@ if [[ -n $quality_tier ]]; then
     }
     case $quality_tier in
     pre-commit)
-        budget=$(python_test_budget fast) || exit 1
+        budget=180
         python_tier=fast
         tier_suites=("${PRE_COMMIT_CORE_SUITES[@]}")
         ;;

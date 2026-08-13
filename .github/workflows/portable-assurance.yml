@@ -1,8 +1,9 @@
 name: Portable assurance
 
 # Remote-safe portable Nix checks intentionally do not run for every commit.
-# The ordinary commit gate is hard-capped at two minutes; this subset runs twice
-# daily and remains manually dispatchable.  LAN-only exhaustive integration
+# The ordinary commit gate has a three-minute outer envelope and a separate
+# two-minute fast-test deadline; this subset runs twice daily and remains manually
+# dispatchable.  LAN-only exhaustive integration
 # stays available through the local `test/bin/quality --tier expensive` authority.
 on:
   schedule:

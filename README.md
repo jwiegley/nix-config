@@ -155,7 +155,8 @@ Verification is intentionally layered:
 | Publication | Both Git remotes contain the signed revision | Consumer adoption |
 | Runtime acceptance | The affected executable or service works on the active generation | Health on another host |
 
-The ordinary pre-commit gate is bounded to two minutes. Broader portable,
+The ordinary pre-commit gate has a three-minute outer envelope while its fast
+Python suite keeps a separate two-minute deadline. Broader portable,
 cross-consumer, and native build assurance belongs at issue
 closeout or on the scheduled cadence. No single local check constitutes
 whole-fleet runtime proof.
