@@ -186,7 +186,6 @@ rec {
       unixtools.ping
       unixtools.route
       unixtools.top
-      watchman
       xapian
       xauth
       xhost

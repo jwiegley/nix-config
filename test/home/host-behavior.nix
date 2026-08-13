@@ -446,6 +446,7 @@ assert builtins.all (
 ) allHomes;
 assert builtins.all (hasPackage "unisessions") allHomes;
 assert builtins.all (config: !(hasPackage "cass" config) && !(hasPackage "cm" config)) allHomes;
+assert builtins.all (config: !(hasPackage "watchman" config)) allHomes;
 assert builtins.all (hasPackage "obr") allHomes;
 assert builtins.all (config: !(ownsObrState config)) allHomes;
 assert builtins.all (

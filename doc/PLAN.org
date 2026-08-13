@@ -376,6 +376,56 @@ Partner observation .445Z: the malformed claude-opus-5[1m value came from a trun
 ]
 #+end_src
 
+* DOING [#B] Remove the unused Watchman dependency
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-4yi
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-12 Wed 23:49]
+:MODIFIED: [2026-08-12 Wed 23:51]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The shared-work Home Manager lock update from nixpkgs 8e2eeb9 to 044bfe7 exposed a deterministic Folly compile failure through Watchman. A repository-wide search found Watchman only in the common package list; no configuration or consumer uses it. Remove the unused package instead of carrying a Folly compatibility patch, assert it is absent from every rendered Home Manager package set, then build the full shared-work activationPackage and resume the authorized four-host activation without discarding any other lock update.
+
+** Acceptance Criteria
+
+Watchman is absent from all rendered Home Manager package sets; focused host-behavior evaluation passes; the authoritative shared-work activationPackage builds with the retained lock updates; and authorized activation succeeds on andoria-08, andoria-t2, delphi-3bd4, and gpu-server.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-4yi",
+    "depends_on_id": "nix-89t",
+    "type": "discovered-from",
+    "created_at": "2026-08-13T06:49:15.855131Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 155,
+    "issue_id": "nix-4yi",
+    "author": "johnw",
+    "text": "Ponytail correction: Watchman appears exactly once outside tracked issue history, as an unconditional common package; no module, service, test, or consumer references it. Removed that package entry rather than introducing a Linux Folly overlay, and added the existing allHomes assertion that Watchman remains absent. Focused aarch64-darwin host-behavior check built successfully. Full shared-work activationPackage build and four-host activation remain pending.",
+    "created_at": "2026-08-13T06:51:18Z"
+  }
+]
+#+end_src
+
 * DONE [#B] Align Clio advertised local routes with live inventory
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -1560,6 +1610,38 @@ Microsoft supports the SQL Server 2022 Linux container only on Linux x86-64 and 
     "author": "johnw",
     "text": "Evidence classification for the close reason: the statement that no image, service, data, activation, or host state changed is a parent-session attestation. The tracked diff and issue state are consistent with it but cannot independently prove absence of every out-of-band action.",
     "created_at": "2026-08-13T00:10:43Z"
+  }
+]
+#+end_src
+
+* DOING [#B] Prevent documentation-only obr changes from rebuilding Rust
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-jw1
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-12 Wed 23:49]
+:MODIFIED: [2026-08-12 Wed 23:49]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The obr Nix package currently uses the whole repository as src, so PLAN/docs-only revisions invalidate the complete 584-crate release derivation. VPS has 7.75 GiB RAM and no swap; its full-LTO single-codegen-unit compile has previously OOM-killed rustc and now leaves SSH unable to send a banner. Filter the package source to actual build inputs, prove documentation-only changes preserve the derivation/source identity while compiler inputs invalidate it, and deliver the exact x86_64-linux closure to VPS from a capable builder rather than compiling locally.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-jw1",
+    "depends_on_id": "nix-aln",
+    "type": "discovered-from",
+    "created_at": "2026-08-13T06:49:16.047067Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
