@@ -1267,14 +1267,14 @@ Rendered catalog is valid JSON; every model has the source-proven correctly type
 ]
 #+end_src
 
-* DOING [#B] Write comprehensive Nix architecture and operations guide
+* TODO [#B] Write comprehensive Nix architecture and operations guide
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-fbh
 :LABELS:   []
 :ISSUE_TYPE: docs
 :CREATED:  [2026-08-12 Wed 22:21]
-:MODIFIED: [2026-08-13 Thu 02:05]
+:MODIFIED: [2026-08-13 Thu 02:09]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
