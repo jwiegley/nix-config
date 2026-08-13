@@ -438,13 +438,59 @@ core request. The Darwin daemon defaults remain distinct: Hera and Clio declare
 eight and four local jobs respectively, with ten cores.
 
 All of these settings are cooperative Nix and build-system inputs. They are not
-an operating-system cgroup, and a derivation may disregard the core hint.
+an operating-system cgroup, and a derivation may disregard the core hint. The
+shared-work registry therefore also declares `nixDaemonAllowedCpus = "0-7"`.
+The authoritative Andoria consumer renders it in the separate
+`nix-daemon-cpu-policy` output as `AllowedCPUs=0-7` for `nix-daemon.service`.
+The daemon and every process in its cgroup can execute only on those eight
+logical CPUs on each active shared-work host, without changing that host's cache
+or signature trust policy.
 
 Do not generalize the statement to every build surface. Darwin daemon defaults,
 focused package-build modes, and remote builder capacities have their own
-declared settings. When an operation must honor the shared-work bound before a
-new Home Manager generation is active, pass `--max-jobs 1 --cores 8`
-explicitly.
+declared settings. Pass `--max-jobs 1 --cores 8` explicitly when the generated
+client policy is not yet active, but treat those values only as cooperative
+hints. Do not start a resource-intensive shared-work build until the root-owned
+CPU set is active.
+
+Before replacement, record whether the drop-in exists and retain its exact
+bytes when it does. An authorized operator then installs the selected CPU policy
+from the authoritative shared-work checkout on each active host. Quiesce active
+Nix builds before restarting the daemon:
+
+```sh
+(
+  set -euo pipefail
+  policy="$(nix build --no-link --print-out-paths \
+    '.#packages.x86_64-linux.nix-daemon-cpu-policy')"
+  candidate="$policy/etc/systemd/system/nix-daemon.service.d/90-cpu-set.conf"
+  test -f "$candidate"
+  sudo install -D -o root -g root -m 0644 "$candidate" \
+    /etc/systemd/system/nix-daemon.service.d/90-cpu-set.conf
+  sudo systemctl daemon-reload
+  sudo systemctl restart nix-daemon.service
+  sudo cmp "$candidate" \
+    /etc/systemd/system/nix-daemon.service.d/90-cpu-set.conf
+  systemctl is-active --quiet nix-daemon.service
+  test "$(systemctl show nix-daemon.service \
+    --property=AllowedCPUs --value)" = 0-7
+  test "$(systemctl show nix-daemon.service \
+    --property=EffectiveCPUs --value)" = 0-7
+  control_group="$(systemctl show nix-daemon.service \
+    --property=ControlGroup --value)"
+  test "$(cat "/sys/fs/cgroup${control_group}/cpuset.cpus.effective")" = 0-7
+)
+```
+
+If acceptance fails, restore the retained bytes or remove the new leaf when no
+predecessor existed, run `systemctl daemon-reload`, restart the daemon, verify
+that the retained bytes were restored or that the leaf is absent, and verify
+that the daemon is active. A Home Manager switch neither installs nor rolls back
+this root-owned file.
+
+During the first affected build, confirm its builder processes remain below the
+service's reported control group and that each process reports
+`Cpus_allowed_list: 0-7`.
 
 ## 7. The Andoria Determinate Nix trust leaf
 
@@ -470,7 +516,8 @@ separately to each Andoria builder. Another shared-work host may use the common
 trust data only through its own root authority; this output's existence does not
 establish installation there. The renderer performs no host discovery and
 contains no secret. It serializes the camel-case source fields as the dashed Nix
-settings `require-sigs`, `trusted-users`, `extra-substituters`, and
+settings
+`require-sigs`, `trusted-users`, `extra-substituters`, and
 `extra-trusted-public-keys`.
 
 Home Manager writes the unprivileged client policy under

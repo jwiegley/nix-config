@@ -78,6 +78,10 @@ let
         type = types.listOf types.str;
         description = "Explicit hosts targeted by the current shared-work rollout.";
       };
+      nixDaemonAllowedCpus = mkOption {
+        type = types.str;
+        description = "Systemd CPU set available to each shared-work Nix daemon.";
+      };
     };
   };
 in
@@ -102,7 +106,7 @@ in
     sharedWork = mkOption {
       type = sharedWorkRow;
       description = ''
-        Typed shared-work membership and separately explicit rollout targets
+        Typed shared-work membership, rollout targets, and daemon resource policy
         populated from config/hosts/registry.nix.
       '';
     };

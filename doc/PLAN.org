@@ -2049,21 +2049,29 @@ Partner observation 2026-08-10T19:49:52.586Z: restore the Home Manager runtime-o
 ]
 #+end_src
 
-* DOING [#A] Bound shared-work Nix builds to eight cores
+* DOING [#A] Enforce an eight-CPU ceiling on shared-work Nix builds
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-p17
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 00:23]
-:MODIFIED: [2026-08-13 Thu 00:27]
+:MODIFIED: [2026-08-13 Thu 03:49]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-The shared-work Home Manager profile set cores=32 while reachable hosts reported effective max-jobs values of 224-288. A broad lock update therefore launched many heavyweight derivations concurrently and andoria-08 exhausted RAM and swap. Configure local invocations from the shared-work profile, activated on the four active rollout hosts, for one job with eight requested cores; configure Darwin-dispatched Andoria builders for one job with eight requested cores. Verify both rendered client paths and use explicit equivalent bounds until activation. This is cooperative Nix/build-system policy, not an operating-system cgroup ceiling.
+The shared-work Home Manager profile and Darwin clients requested one job with eight cores, but that policy was only cooperative. During the retained lock update, a GPU Server derivation ignored NIX_BUILD_CORES and the nixbld cgroup consumed approximately 7.7 to 9.6 logical CPUs across five samples. Every reachable shared-work nix-daemon.service initially had access to the host's full CPU set, so the configuration did not satisfy the owner requirement that Nix never use more than eight logical CPUs on these four machines.
+
+Keep max-jobs=1 and cores=8 as useful scheduler/build-system hints, but enforce the literal execution boundary with systemd AllowedCPUs=0-7 on nix-daemon.service. Declare the CPU set once in the existing shared host-capacity authority, render it through a separate Andoria data-only package, and apply the root-owned drop-in independently on each active shared-work host. Keep the Andoria cache/signature root-policy output unchanged. Do not create a deployment framework or conflate human sudo policy with Nix resource policy.
+
+The interrupted GPU build produced no activation path and was terminated cleanly before this correction; do not retry it until the hard CPU set is active.
+
+** Acceptance Criteria
+
+The shared root authority declares one CPU set for the shared-work Nix daemons. The authoritative Andoria consumer renders that value as a separate systemd drop-in with AllowedCPUs=0-7, without introducing a lifecycle framework or changing cache/signature trust. The existing max-jobs=1 and cores=8 client settings remain scheduling guidance. On andoria-08, andoria-t2, delphi-3bd4, and gpu-server, the installed drop-in matches the rendered source, systemd and the live cgroup report exactly CPUs 0-7, and an affected builder process reports Cpus_allowed_list 0-7. The full shared-work activationPackage then builds and activates in the authorized four-host order.
 
 ** Dependencies
 

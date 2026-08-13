@@ -424,6 +424,7 @@ assert (registry.capabilitiesFor { hostname = "git-ai"; }).isSharedWork;
 assert builtins.elem "git-ai" registry.sharedWork.members;
 assert !(builtins.elem "git-ai" registry.sharedWork.activeRolloutMembers);
 assert builtins.length registry.sharedWork.activeRolloutMembers == 4;
+assert registry.sharedWork.nixDaemonAllowedCpus == "0-7";
 assert builtins.all (
   host: builtins.elem host registry.sharedWork.members
 ) registry.sharedWork.activeRolloutMembers;

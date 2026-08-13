@@ -21,6 +21,7 @@ let
       "delphi-3bd4"
       "gpu-server"
     ];
+    nixDaemonAllowedCpus = "0-7";
   };
 
   # Builder identity, capacity, and ordered client pools are host facts. Darwin

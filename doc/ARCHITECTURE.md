@@ -55,8 +55,8 @@ consumer's checkout or deployment state.
 ## Host registry and shared-home policy
 
 `config/hosts/registry.nix` is the data authority for host system, activation,
-login, the lean-server role, shared-work membership and rollout targets,
-distributed-builder identity, capacity and client pools, and shell host/output
+login, the lean-server role, shared-work membership, rollout targets and daemon
+capacity, distributed-builder identity and client pools, and shell host/output
 routing. `config/host-options.nix` gives the host tables a typed module surface
 and derives the capability flags consumed by modules. Darwin projects each
 builder's named SSH identity to its host-local key path and writes the resulting
@@ -70,6 +70,13 @@ does not claim present availability and does not add it to the explicit active
 rollout. The registry classifies the shared home; each owning module remains
 responsible for separating any per-machine mutable state from shared generated
 leaves.
+
+The shared-work registry also declares the CPU set available to each system Nix
+daemon. The external Andoria consumer renders that value as an ordinary
+systemd drop-in in a data-only output separate from the Andoria trust policy.
+The operating-system cgroup is the hard boundary; Home Manager's `max-jobs` and
+`cores` values remain useful client scheduling hints but cannot enforce a
+machine-wide ceiling.
 
 `config/hosts/shell-routing.nix` renders the shell normalization, flake-output,
 membership, and active-rollout projection from the registry. `nix-scripts`
@@ -91,7 +98,7 @@ need them for rollback.
 
 | Path | Owns | Must not own |
 | --- | --- | --- |
-| `config/hosts/registry.nix` | Host identity, capabilities, membership, rollout selection, builder records and pools, and routing data | Module or shell implementation, private SSH key material, or activation |
+| `config/hosts/registry.nix` | Host identity, capabilities, membership, rollout selection, daemon and builder capacity, builder pools, and routing data | Module or shell implementation, private SSH key material, or activation |
 | `config/hosts/shell-routing.nix` | Build-time shell projection of registry routing data | Independent host identity policy or runtime Nix discovery |
 | `config/nix-trust.nix` | Shared binary-cache and client-signing trust data | Root-file installation or host activation |
 | `config/ai/catalog.nix` | Profiles, selectors, resources, validation | Client serialization or package builds |
@@ -106,10 +113,12 @@ need them for rollback.
 The shared-work Home Manager leaf requests the declared caches for unprivileged
 Nix clients; it cannot authorize those caches in the system daemon. Ubuntu
 Determinate Nix hosts render `determinateLinux` into the root-owned
-`/etc/nix/nix.custom.conf` through their consumer configuration, then an
-authorized operator installs that leaf and restarts the daemon. The policy keeps
-`require-sigs = true` and `trusted-users = root`; Home Manager never writes the
-root-owned file or makes the login user a trusted Nix user.
+`/etc/nix/nix.custom.conf` through their consumer configuration. The same
+consumer renders the independent shared-work CPU set into a systemd drop-in.
+An authorized operator installs the applicable leaf and restarts the daemon.
+The trust policy keeps `require-sigs = true` and `trusted-users = root`; Home
+Manager never writes the root-owned files or makes the login user a trusted Nix
+user.
 
 ## AI configuration
 
