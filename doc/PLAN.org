@@ -129,7 +129,7 @@ Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and
 :LABELS: []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 14:58]
-:MODIFIED: [2026-08-12 Wed 14:58]
+:MODIFIED: [2026-08-12 Wed 17:07]
 :OWNER: johnw
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
@@ -166,6 +166,13 @@ With explicit owner authorization, preserve the two commits' content while repla
     "author": "johnw",
     "text": "Rollout stopped safely before any VPS mutation. The checkout is clean at 155407842..., ahead by exactly the two unsigned commits 9d1874ee... and 15540784.... No lock update, build, switch, publication, rebase, amend, reset, or remote inspection was performed. The credential-bearing remote URL is not reproduced here; credential rotation remains tracked separately as P0 nix-twq. Explicit owner authorization for history rewrite is required before this host can join the fleet rollout.",
     "created_at": "2026-08-12T21:58:52Z"
+  },
+  {
+    "id": 118,
+    "issue_id": "nix-3qu",
+    "author": "johnw",
+    "text": "Owner authorization received on 2026-08-12 to rewrite and validly sign the two existing unpushed commits 9d1874ee and 15540784 while preserving their patch content. This authority does not include publication, lock updates, build, or activation.",
+    "created_at": "2026-08-13T00:07:15Z"
   }
 ]
 #+end_src
@@ -1114,15 +1121,17 @@ The follow-up owner decision was resolved by nix-5yr with the fail-closed withdr
 ]
 #+end_src
 
-* TODO [#B] Decide whether to retain emulated MSSQL on Apple Silicon
+* DONE [#B] Decide whether to retain emulated MSSQL on Apple Silicon
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-jlj
 :LABELS: []
 :ISSUE_TYPE: question
 :CREATED:  [2026-08-10 Mon 23:18]
-:MODIFIED: [2026-08-10 Mon 23:18]
+:MODIFIED: [2026-08-12 Wed 17:07]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 17:07]
+:CLOSE_REASON: Owner chose to retain the existing Apple-Silicon MSSQL service as an accepted unsupported-emulation risk. No image, service, data, activation, or host state was changed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -4551,7 +4560,7 @@ OPEN and blocked by M1 and P1. No M2 identity check or replay has run. M2 is the
 :LABELS: ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: question
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-12 Wed 16:46]
+:MODIFIED: [2026-08-12 Wed 17:07]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4603,6 +4612,13 @@ Contacting or posting to maintainers occurs only after explicit outreach authori
     "author": "johnw",
     "text": "Evidence and policy correction to comment 111: its prior-review result and no-external-action statement are parent-session attestations rather than retained independently reproducible evidence. A no-history fess audit of signed commit 08ad5eed independently verified the exact scope, signature, U2 state, and ten-decision coverage, then found the missing implementation-intent sentence, the inexact optional-field label, and this evidence classification. Those wording defects are corrected in draft SHA-256 2cdc7923af1875da2b115350ac93eaf981f6edd55782359587b3ffc39ee34fd6. The separate heads-up draft was removed because the Contribution Proposal is the sole locally documented route for an authoritative U2 decision, not because Discord is unsupported; frozen upstream policy retains Discord for questions. The parent session attests that no network, contact, posting, branch/fork publication, PR, activation, or push occurred; local state is consistent with that attestation but cannot prove absence of every out-of-band action. U2 remains in progress pending John rewriting/reviewing the exact final bytes and separately authorizing one post.",
     "created_at": "2026-08-12T23:46:35Z"
+  },
+  {
+    "id": 119,
+    "issue_id": "nix-tcz.37.1.4",
+    "author": "johnw",
+    "text": "Owner direction received on 2026-08-12: do not publish anything to Pi maintainers on GitHub yet. The local proposal remains unpublished and U2 remains in progress; perform no outreach, issue creation, fork, branch publication, or pull request.",
+    "created_at": "2026-08-13T00:07:15Z"
   }
 ]
 #+end_src
@@ -6224,7 +6240,7 @@ Remove the resolved portable quality question and make the remaining external/ow
 :LABELS: ["security"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-12 Wed 14:02]
-:MODIFIED: [2026-08-12 Wed 17:02]
+:MODIFIED: [2026-08-12 Wed 17:07]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -6264,6 +6280,13 @@ A read-only fleet preflight printed the VPS Git remote URL, which contained an e
     "author": "johnw",
     "text": "Correction to comment 113: the exposed value type is unverified. The token-specific path applies only if Gitea exposes one unique matching token record or name. If it does not, stop for owner direction rather than broadening the operation into an account-password rotation or revoking an ambiguous credential.",
     "created_at": "2026-08-13T00:02:23Z"
+  },
+  {
+    "id": 117,
+    "issue_id": "nix-twq",
+    "author": "johnw",
+    "text": "Owner authorization received on 2026-08-12 for the bounded remediation: create a replacement credential only after uniquely identifying the exposed credential record, revoke that identified credential, update the two existing SOPS-managed authentication leaves atomically, and remove userinfo from the authoritative VPS origin. If the credential type or record is ambiguous, stop. This authority does not include build, activation, publication, or destructive log cleanup.",
+    "created_at": "2026-08-13T00:07:15Z"
   }
 ]
 #+end_src
