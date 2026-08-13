@@ -132,12 +132,17 @@ The public operator options are `--all`, `--dry-run`, `--version`, `--verbose`,
 `--inventory`, and `--json`. `--no-build` is retired and returns an error.
 Although help also exposes `--sync-flake-projections`, it requires the isolated
 candidate environment and a detached linked worktree. It and the hidden
-`--prepare-target NAME` mode are transaction-internal steps used by `bin/update`,
-not operator interfaces. Direct target mode updates the owning catalog record;
+`--prepare-target NAME` and `--validate-target NAME` modes are
+transaction-internal steps used by `bin/update`, not operator interfaces.
+Direct target mode updates the owning catalog record;
 update-owned targets delegate back to `bin/update`. `--all` covers automatic
 targets owned by the lower-level executor, not every catalog record. Exit status
 3 identifies a resolved candidate rejected by package validation; other nonzero
 statuses remain hard failures.
+
+Only a candidate failure followed by a successful build of the restored
+pre-target state qualifies as candidate rejection. Persistent baseline,
+interruption, timeout, and process-launch failures remain fatal.
 
 ## Determining package versions
 

@@ -649,6 +649,13 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
         } | sort -u >"$transaction_dir/allowed-paths"
     fi
 
+    run_hard() {
+        local status=0
+        "$@" || status=$?
+        [[ $status -ne 3 ]] || status=1
+        return "$status"
+    }
+
     # Uncatalogued flake inputs remain a repository-wide operation. Catalogued
     # inputs are excluded here and advanced below with their own source record,
     # dependent hashes, and generated files as one target transaction.
@@ -667,12 +674,12 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
             flake.lock >"$transaction_dir/root-inputs"
         mapfile -t root_inputs <"$transaction_dir/root-inputs"
         if ((${#portable_inputs[@]})); then
-            nix flake update --flake ./config/ai "${portable_inputs[@]}"
+            run_hard nix flake update --flake ./config/ai "${portable_inputs[@]}"
         fi
         if ((${#root_inputs[@]})); then
-            nix flake update "${root_inputs[@]}"
+            run_hard nix flake update "${root_inputs[@]}"
         fi
-        nix flake update nix-config-ai
+        run_hard nix flake update nix-config-ai
     fi
 
     # Preserve the dependency order of the former grouped updater while each
@@ -743,8 +750,8 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
         fi
         "${command[@]}" || return $?
         if [[ -n $input ]]; then
-            nix flake update --flake ./config/ai "$input" || exit $?
-            nix flake update nix-config-ai || exit $?
+            run_hard nix flake update --flake ./config/ai "$input" || return $?
+            run_hard nix flake update nix-config-ai || return $?
             python3 bin/update-overlay --sync-flake-projections
         fi
     }
@@ -768,9 +775,9 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
         fi
         [[ $target_status -eq 3 ]] || exit "$target_status"
 
-        # Status 3 is reserved for a resolved candidate that failed package
-        # validation. Restore the complete pre-target tree so shared catalogs
-        # retain earlier accepted records byte-for-byte.
+        # Status 3 is provisional until the complete pre-target tree is
+        # restored and its package contract builds. This separates a bad
+        # candidate from daemon, evaluator, and resource failures.
         git add -A --
         git read-tree --reset -u "$before_target_tree"
         candidate_untracked_paths >"$transaction_dir/after-target-untracked"
@@ -780,6 +787,14 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
                 "$transaction_dir/after-target-untracked"; then
             echo "update: failed to restore held-back target: $target_name" >&2
             exit 1
+        fi
+        set +e
+        python3 bin/update-overlay --validate-target "$target_name"
+        baseline_status=$?
+        set -e
+        if [[ $baseline_status -ne 0 ]]; then
+            echo "update: restored baseline validation failed: $target_name" >&2
+            exit "$baseline_status"
         fi
         held_back+=("$target_name"$'\t'"$target_version")
     done
@@ -809,8 +824,8 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
     if ((${#changed_nix[@]})); then
         nixfmt "${changed_nix[@]}"
     fi
-    nix flake check ./config/ai --all-systems --no-build
-    nix flake check --no-build
+    run_hard nix flake check ./config/ai --all-systems --no-build
+    run_hard nix flake check --no-build
 
     declare -A allowed=()
     while IFS= read -r path; do

@@ -2583,7 +2583,8 @@ def update_npm_lock_target(
         if hash_computer.validate_package_build(name):
             print(f"catalog/{name} {Colors.GREEN}✓ up-to-date{Colors.RESET}")
             return "skipped"
-        changed = True
+        print(f"catalog/{name} {Colors.RED}✗ package build failed{Colors.RESET}")
+        return "failed"
     if args.dry_run:
         print(f"catalog/{name} {Colors.CYAN}→ {new_version} (dry-run){Colors.RESET}")
         return "updated"
@@ -3315,6 +3316,14 @@ def prepare_update_target(
     )
 
 
+def validate_catalog_target(nix_dir: Path, name: str, target: dict) -> bool:
+    """Build the package contract declared by one restored catalog target."""
+    update = target["_record"]["update"]
+    return HashComputer(nix_dir).validate_package_build(
+        update.get("buildPackage", name), update.get("buildMode", "pkg")
+    )
+
+
 def extract_version_number(tag: str, prefix: str = "") -> str:
     """Strip a matching declared prefix, otherwise a conventional prefix."""
     if prefix and tag.startswith(prefix):
@@ -3374,8 +3383,11 @@ Examples:
         "--sync-flake-projections", action="store_true",
         help="Refresh catalog fetchTree projections from config/ai/flake.lock"
     )
-    parser.add_argument("--prepare-target", metavar="NAME", help=argparse.SUPPRESS)
+    internal = parser.add_mutually_exclusive_group()
+    internal.add_argument("--prepare-target", metavar="NAME", help=argparse.SUPPRESS)
+    internal.add_argument("--validate-target", metavar="NAME", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    internal_target = args.prepare_target or args.validate_target
 
     # Validate arguments
     if args.no_build:
@@ -3389,7 +3401,7 @@ Examples:
         and not args.all
         and not args.packages
         and not args.sync_flake_projections
-        and not args.prepare_target
+        and not internal_target
     ):
         parser.error(
             "Please specify package names, --all, --inventory, or --sync-flake-projections"
@@ -3403,11 +3415,11 @@ Examples:
         or args.dry_run
         or args.verbose
         or args.json_output
-        or args.prepare_target
+        or internal_target
     ):
         parser.error("--sync-flake-projections cannot be combined with another operation")
 
-    if args.prepare_target and (
+    if internal_target and (
         args.inventory
         or args.all
         or args.sync_flake_projections
@@ -3416,13 +3428,15 @@ Examples:
         or args.verbose
         or args.json_output
     ):
-        parser.error("--prepare-target cannot be combined with another operation")
+        parser.error("internal target operation cannot be combined with another operation")
+    if args.validate_target and args.version:
+        parser.error("--validate-target does not accept --version")
 
     if args.sync_flake_projections and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
         parser.error("--sync-flake-projections is restricted to the update candidate")
 
-    if args.prepare_target and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
-        parser.error("--prepare-target is restricted to the update candidate")
+    if internal_target and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
+        parser.error("internal target operation is restricted to the update candidate")
 
     if args.inventory and (args.all or args.packages or args.version):
         parser.error("--inventory cannot be combined with package updates")
@@ -3444,16 +3458,34 @@ Examples:
         print(f"synchronized {changed} flake input projection(s)")
         return 0
     internal_prepare = args.prepare_target is not None
+    internal_validate = args.validate_target is not None
     catalog_targets = load_source_catalog(
         nix_dir,
         validate_flake_projections=not internal_prepare,
     )
-    requested_names = [args.prepare_target] if internal_prepare else args.packages
+    requested_names = [internal_target] if internal_target else args.packages
     unknown_names = sorted(set(requested_names) - catalog_targets.keys())
     if unknown_names:
         parser.error(f"unknown catalog target ID(s): {', '.join(unknown_names)}")
     if args.inventory:
         print_inventory(build_inventory(catalog_targets), args.json_output)
+        return 0
+
+    if internal_validate:
+        require_detached_linked_worktree(nix_dir)
+        try:
+            valid = validate_catalog_target(
+                nix_dir, args.validate_target, catalog_targets[args.validate_target]
+            )
+        except RuntimeError as error:
+            print(f"baseline validation failed: {error}", file=sys.stderr)
+            return 1
+        if not valid:
+            print(
+                f"baseline package build failed: {args.validate_target}",
+                file=sys.stderr,
+            )
+            return 1
         return 0
 
     if internal_prepare:
@@ -3600,7 +3632,11 @@ Examples:
 
     if fail_count:
         return 1
-    return CANDIDATE_REJECTED_EXIT if rejected_count else 0
+    if rejected_count:
+        if os.environ.get("UPDATE_AGENTS_CANDIDATE") == "1":
+            return CANDIDATE_REJECTED_EXIT
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

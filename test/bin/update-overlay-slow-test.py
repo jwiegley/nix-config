@@ -161,9 +161,12 @@ class UpdateCliTests(unittest.TestCase):
         }
         observed = []
         mutate_path = None
+        reject = False
 
         def fake_update(name, *_args):
             observed.append(name)
+            if reject:
+                raise CandidateRejected("provisional")
             if mutate_path is not None:
                 transaction = _args[-1]
                 transaction.watch(mutate_path)
@@ -200,6 +203,14 @@ class UpdateCliTests(unittest.TestCase):
             )
             rendered = MODULE["ANSI_ESCAPE_RE"].sub("", output.getvalue())
             self.assertIn("Summary: 0 updated, 2 up-to-date, 0 failed", rendered)
+
+            reject = True
+            observed.clear()
+            sys.argv = [str(SCRIPT), "manual-direct"]
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(MODULE["main"](), 1)
+            self.assertEqual(observed, ["manual-direct"])
+            reject = False
 
             with tempfile.TemporaryDirectory() as temp_dir:
                 mutate_path = Path(temp_dir) / "catalog.json"
@@ -533,10 +544,10 @@ got: sha256-requested
         self.assertEqual(parse(unrelated + requested), "sha256-requested")
         self.assertIsNone(parse(requested + requested.replace("requested", "second")))
 
-    def test_package_build_distinguishes_rejection_from_runner_error(self):
+    def test_package_build_distinguishes_provisional_failure_from_runner_error(self):
         computer = HashComputer(Path("/repo"))
         computer._run_package_build = mock.Mock(
-            return_value=SimpleNamespace(returncode=1, stdout="", stderr="rejected")
+            return_value=SimpleNamespace(returncode=1, stdout="", stderr="failed")
         )
         with contextlib.redirect_stderr(io.StringIO()):
             self.assertFalse(computer.validate_package_build("example"))
@@ -552,6 +563,33 @@ got: sha256-requested
         with contextlib.redirect_stderr(io.StringIO()):
             with self.assertRaisesRegex(RuntimeError, "validation could not run"):
                 computer.validate_package_build("example")
+
+    def test_restored_baseline_uses_the_declared_build_contract(self):
+        calls = []
+        computer = SimpleNamespace(
+            validate_package_build=lambda package, mode: (
+                calls.append((package, mode)) or True
+            )
+        )
+        validate = MODULE["validate_catalog_target"]
+        with mock.patch.dict(
+            validate.__globals__, {"HashComputer": lambda _root: computer}
+        ):
+            cases = (
+                ("projection", {"buildPackage": "built-package"}),
+                ("python-tool", {"buildMode": "python"}),
+                ("plain", {}),
+            )
+            for name, update in cases:
+                self.assertTrue(
+                    validate(
+                        Path("/repo"), name, {"_record": {"update": update}}
+                    )
+                )
+        self.assertEqual(
+            calls,
+            [("built-package", "pkg"), ("python-tool", "python"), ("plain", "pkg")],
+        )
 
     def test_package_hash_build_composes_repo_overlays_without_host_routing(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -2021,19 +2059,12 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             catalog_path.write_text(json.dumps(stale_document))
             repair_target = load_source_catalog(root)["project"]
 
-            class RepairHashes(FakeHashes):
-                def __init__(self):
-                    super().__init__()
-                    self.validation_results = iter((False, True))
-
-                def validate_package_build(self, package):
-                    self.calls.append(("validate", package))
-                    return next(self.validation_results)
-
-            repair_hashes = RepairHashes()
-            repair_hashes.compute_native_hash = lambda _source, _replacements: (
-                "sha256-source-new"
+            current_failure_hashes = FakeHashes(valid=False)
+            current_failure_hashes.compute_native_hash = (
+                lambda _source, _replacements: "sha256-source-new"
             )
+            stale_catalog = catalog_path.read_text()
+            current_lock = lock_path.read_text()
             transaction = SourceTransaction()
             with contextlib.redirect_stdout(io.StringIO()):
                 status = update_npm_lock_target(
@@ -2050,7 +2081,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                             ),
                         }
                     ),
-                    repair_hashes,
+                    current_failure_hashes,
                     transaction,
                     manifest_reader=lambda _path: (
                         '{"name":"project","version":"2.0.0"}',
@@ -2060,13 +2091,17 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     lock_generator=lambda _manifest, _prior, _npm, _flags: new_lock,
                     integrity_verifier=lambda _path, _integrity: True,
                 )
-            transaction.commit()
-            self.assertEqual(status, "updated")
-            repaired = json.loads(catalog_path.read_text())["sources"]["project"]
-            self.assertEqual(repaired["hashes"]["npmDepsHash"], "sha256-npm-new")
+            self.assertEqual(status, "failed")
+            self.assertEqual(transaction.original, {})
+            self.assertEqual(catalog_path.read_text(), stale_catalog)
+            self.assertEqual(lock_path.read_text(), current_lock)
             self.assertEqual(
-                [call for call in repair_hashes.calls if call[0] == "validate"],
-                [("validate", "project"), ("validate", "project")],
+                [
+                    call
+                    for call in current_failure_hashes.calls
+                    if call[0] in {"dependent", "validate"}
+                ],
+                [("validate", "project")],
             )
 
             before_catalog = catalog_path.read_text()
@@ -4918,7 +4953,7 @@ arguments = sys.argv[1:]
 if os.environ.get("UPDATE_TEST_INTERLEAVING_LOG"):
     with open(os.environ["UPDATE_TEST_INTERLEAVING_LOG"], "a") as log:
         log.write("overlay " + " ".join(arguments) + "\\n")
-internal_modes = {"--prepare-target", "--sync-flake-projections"}
+internal_modes = {"--prepare-target", "--validate-target", "--sync-flake-projections"}
 if internal_modes.intersection(arguments) and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
     print("internal update requires update candidate", file=sys.stderr)
     raise SystemExit(77)
@@ -5041,6 +5076,20 @@ if "--inventory" in arguments:
         "schemaVersion": 1,
         "packages": packages,
     }))
+elif "--validate-target" in arguments:
+    name = arguments[arguments.index("--validate-target") + 1]
+    if os.environ.get("UPDATE_TEST_FLAKE_CANDIDATE_REJECT") == "1":
+        locks = (
+            (root / "flake.lock").read_text()
+            + (root / "config/ai/flake.lock").read_text()
+        )
+        if "candidate lock" in locks:
+            print("candidate lock survived restoration", file=sys.stderr)
+            raise SystemExit(84)
+    failures = set(
+        os.environ.get("UPDATE_TEST_BASELINE_FAILURE_TARGETS", "").split(",")
+    )
+    raise SystemExit(1 if name in failures else 0)
 elif "--prepare-target" in arguments:
     name = arguments[arguments.index("--prepare-target") + 1]
     if name == "fixed":
@@ -5076,6 +5125,10 @@ elif "--sync-flake-projections" in arguments:
         os.kill(os.getppid(), signal.SIGTERM)
     if os.environ.get("UPDATE_TEST_FAILURE_PHASE") == "candidate-projection":
         raise SystemExit(71)
+    if os.environ.get("UPDATE_TEST_FLAKE_CANDIDATE_REJECT") == "1" and (
+        "candidate lock" in (root / "config/ai/flake.lock").read_text()
+    ):
+        raise SystemExit(3)
 else:
     if os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
         print("compound update requires update candidate", file=sys.stderr)
@@ -5167,6 +5220,9 @@ signal_phase() {
 fail_phase() {
   if [[ ${UPDATE_TEST_FAILURE_PHASE:-} == "$1" ]]; then exit 71; fi
 }
+status_three_phase() {
+  if [[ ${UPDATE_TEST_NIX_STATUS3_PHASE:-} == "$1" ]]; then exit 3; fi
+}
 mutate_phase() {
   if [[ ${UPDATE_TEST_SIGNAL_PHASE:-} == "$1" \
     || ${UPDATE_TEST_FAILURE_PHASE:-} == "$1" ]]; then
@@ -5175,13 +5231,21 @@ mutate_phase() {
 }
 if [[ $1 == flake && $2 == update ]]; then
   if [[ ${3:-} == --flake ]]; then
+    if [[ ${UPDATE_TEST_FLAKE_CANDIDATE_REJECT:-} == 1 ]]; then
+      printf 'candidate lock\n' >>config/ai/flake.lock
+    fi
     mutate_phase candidate-portable-lock config/ai/flake.lock
     signal_phase candidate-portable-lock
     fail_phase candidate-portable-lock
+    status_three_phase candidate-portable-lock
   else
+    if [[ ${UPDATE_TEST_FLAKE_CANDIDATE_REJECT:-} == 1 ]]; then
+      printf 'candidate lock\n' >>flake.lock
+    fi
     mutate_phase candidate-root-lock flake.lock
     signal_phase candidate-root-lock
     fail_phase candidate-root-lock
+    status_three_phase candidate-root-lock
   fi
 elif [[ $1 == flake && $2 == check ]]; then
   if [[ ${UPDATE_TEST_MUTATE_LIVE:-} == 1 ]]; then
@@ -5190,9 +5254,11 @@ elif [[ $1 == flake && $2 == check ]]; then
   if [[ ${3:-} == ./config/ai ]]; then
     signal_phase candidate-portable-validation
     fail_phase candidate-portable-validation
+    status_three_phase candidate-portable-validation
   else
     signal_phase candidate-root-validation
     fail_phase candidate-root-validation
+    status_three_phase candidate-root-validation
   fi
 elif [[ $1 == build ]]; then
   if [[ -n ${UPDATE_TEST_EXTERNAL_LOG:-} ]]; then
@@ -5650,6 +5716,50 @@ fi
             self.assertIn("every selected catalog candidate was held back", result.stderr)
             self._assert_update_agents_unchanged(root, baseline, before)
 
+    def test_update_agents_requires_a_buildable_restored_baseline(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment.update(
+                UPDATE_TEST_ISOLATED_TARGETS="1",
+                UPDATE_TEST_BASELINE_FAILURE_TARGETS="b-rejected",
+            )
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS)],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 1, result.stderr)
+            self.assertIn("restored baseline validation failed: b-rejected", result.stderr)
+            self.assertNotIn("catalog/c-success: evaluating candidate", result.stderr)
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_restores_flake_locks_before_baseline_validation(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment.update(
+                UPDATE_TEST_BUILD_TARGET="1",
+                UPDATE_TEST_FLAKE_CANDIDATE_REJECT="1",
+            )
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "build"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 3, result.stderr)
+            self.assertIn("build: retained", result.stderr)
+            self.assertNotIn("candidate lock survived restoration", result.stderr)
+            self._assert_update_agents_unchanged(root, baseline, before)
+
     def test_update_agents_fails_if_held_back_restore_fails(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, baseline = self._create_update_agents_fixture(temp_dir)
@@ -5669,6 +5779,35 @@ fi
 
             self.assertEqual(result.returncode, 71)
             self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_never_treats_nix_status_three_as_a_holdback(self):
+        cases = (
+            ("target-portable", "candidate-portable-lock", ["--target", "fixed"]),
+            ("target-root", "candidate-root-lock", ["--target", "fixed"]),
+            ("all-input-root", "candidate-root-lock", ["--all-inputs"]),
+            ("final-check", "candidate-portable-validation", []),
+        )
+        for case, phase, arguments in cases:
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as temp_dir:
+                root, environment, baseline = self._create_update_agents_fixture(
+                    temp_dir
+                )
+                before = self._update_agents_projection(root)
+                environment["UPDATE_TEST_NIX_STATUS3_PHASE"] = phase
+                if case.startswith("target-"):
+                    environment["UPDATE_TEST_FIXED_TARGET"] = "1"
+
+                result = subprocess.run(
+                    [str(UPDATE_AGENTS), *arguments],
+                    capture_output=True,
+                    text=True,
+                    env=environment,
+                    check=False,
+                )
+
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertNotIn("held-back catalog targets", result.stderr)
+                self._assert_update_agents_unchanged(root, baseline, before)
 
     def test_update_agents_treats_schedule_query_failures_as_hard(self):
         cases = (("catalog-inputs", ["--all-inputs"], 71), ("target-rows", [], 72))

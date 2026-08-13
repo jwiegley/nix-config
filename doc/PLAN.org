@@ -1491,16 +1491,30 @@ The follow-up owner decision was resolved by nix-5yr with the fail-closed withdr
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-12 Wed 22:27]
-:MODIFIED: [2026-08-12 Wed 23:17]
+:MODIFIED: [2026-08-12 Wed 23:39]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-12 Wed 23:17]
-:CLOSE_REASON: Automatic catalog updates now run as per-target transactions: a resolved candidate rejected by its final package build is restored byte-for-byte and reported as held back while later targets continue. Signals, tool/query errors, restore failures, and final repository validation remain fatal. Deterministic coverage passes for mixed success/rejection, all-held, explicit rejection, stale shared documents, rollback failure, query failure, and signal/error propagation; independent shell review is CLEAR.
+:FINISHED: [2026-08-12 Wed 23:39]
+:CLOSE_REASON: Per-target update isolation now treats candidate failures as provisional: bin/update restores the exact pre-target tree and revalidates the catalog-declared package/build mode before permitting holdback status 3. Persistent baseline failures, unchanged broken targets, signals, timeouts, process-launch failures, and raw Nix status 3 remain fatal. Focused unit, CLI, rollback, flake-lock, mapping, and hard-failure regressions pass; static Python/Bash checks are green.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
 Change make update so an independently failing package candidate retains its previous source/catalog record and is reported as skipped, while unrelated successful package updates continue through validation and commit. Preserve consistency for coupled hashes/locks/generated files; do not weaken package validation or silently accept a broken candidate. Add deterministic regressions for mixed success/failure and all-failure behavior.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 154,
+    "issue_id": "nix-j78",
+    "author": "johnw",
+    "text": "Reopened: Independent fess found that ordinary positive nix build failures were too broadly classified as candidate rejection, allowing operational failures to be held back. Reopened until candidate-specific baseline revalidation and focused regressions pass.",
+    "created_at": "2026-08-13T06:31:08Z"
+  }
+]
+#+end_src
 
 * DONE [#B] Decide whether to retain emulated MSSQL on Apple Silicon
 :PROPERTIES:
@@ -4219,17 +4233,17 @@ CLOSED. Exact upstream Pi 0.84.1 source, four deterministic fixtures, and the so
     "created_at": "2026-08-12T12:30:15Z"
   },
   {
-    "id": 66,
-    "issue_id": "nix-tcz.37.1.2",
-    "author": "johnw",
-    "text": "Closing B1 after exact commit 295371fd received a fresh independent no-history fess CLEAR. This satisfies the B1 dependency and may make the maintainer evidence issue ready; no dependent issue is claimed here.",
-    "created_at": "2026-08-12T12:39:38Z"
-  },
-  {
     "id": 65,
     "issue_id": "nix-tcz.37.1.2",
     "author": "johnw",
     "text": "Fresh independent no-history fess of signed GOOD commit 295371fd7d91fbce60b9dc236908a6c4b40cbcdc is CLEAR with no findings. Parent 325ba2a and exact five-path scope verify; live obr graph agrees; mandatory pre-open fold tracking, exact six-fold peak and zero final live folds, authentic failed/successful postflight exit oracles, immutable source/fixture/evidence custody, descriptive-only labels, and authority boundaries all pass. The auditor independently verified 21/21 original and corrected fixture checksums, 19/19 immutable evidence checksums, and byte-identical four-scale JSONL fixtures. No measurement, Pi Sessions work, activation, push, or network operation ran during audit. B1 may close.",
+    "created_at": "2026-08-12T12:39:38Z"
+  },
+  {
+    "id": 66,
+    "issue_id": "nix-tcz.37.1.2",
+    "author": "johnw",
+    "text": "Closing B1 after exact commit 295371fd received a fresh independent no-history fess CLEAR. This satisfies the B1 dependency and may make the maintainer evidence issue ready; no dependent issue is claimed here.",
     "created_at": "2026-08-12T12:39:38Z"
   }
 ]
@@ -5001,17 +5015,17 @@ A concise user-reviewable draft, clearly labeled AI-assisted supporting packet, 
     "created_at": "2026-08-12T12:43:39Z"
   },
   {
-    "id": 69,
-    "issue_id": "nix-tcz.37.1.3",
-    "author": "johnw",
-    "text": "Closing only the local preparation work. U2 remains dependent on separate authority for maintainer outreach and architecture approval; this close does not authorize or perform any external action.",
-    "created_at": "2026-08-12T12:58:37Z"
-  },
-  {
     "id": 68,
     "issue_id": "nix-tcz.37.1.3",
     "author": "johnw",
     "text": "U1 local evidence packet is complete. Publication-shaped draft: doc/PI-BOUNDED-MEMORY-MAINTAINER-DRAFT.md, SHA-256 9253facb4667358f8def36087a2484191d4cbc503fccf6916cfde6fd66d6ee1a. Visibly AI-assisted packet: doc/PI-BOUNDED-MEMORY-AI-ASSISTED-SUPPORTING-PACKET.md, SHA-256 ef7c2ae55ce30df83b9a42f5db79da60d3fe03f94b6393fa9a9b4138920b0904. The draft carries the retained-history cause, dated exact-upstream 0.84.1 low/high evidence, all eight architecture decisions, and a conditional first-PR seam. The packet distinguishes the full frozen workspace SQLite package from the narrower B1 installed closure, records JSONL eagerness and shared-interface gaps, identifies all immutable B1 artifacts, and treats the downstream patch only as causal/regression evidence. Independent final current-byte review is CLEAR. Verification: relative Markdown links and git diff --check passed; nix fmt check reported no Markdown formatter; config/ai all-system flake evaluation passed; make test completed without failure; full lefthook pre-commit passed. No issue, RFC, fork, branch, PR, post, push, maintainer contact, activation, or measurement was performed.",
+    "created_at": "2026-08-12T12:58:37Z"
+  },
+  {
+    "id": 69,
+    "issue_id": "nix-tcz.37.1.3",
+    "author": "johnw",
+    "text": "Closing only the local preparation work. U2 remains dependent on separate authority for maintainer outreach and architecture approval; this close does not authorize or perform any external action.",
     "created_at": "2026-08-12T12:58:37Z"
   },
   {
