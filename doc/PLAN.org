@@ -1621,7 +1621,7 @@ Microsoft supports the SQL Server 2022 Linux container only on Linux x86-64 and 
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-12 Wed 23:49]
-:MODIFIED: [2026-08-12 Wed 23:49]
+:MODIFIED: [2026-08-12 Wed 23:57]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1642,6 +1642,20 @@ The obr Nix package currently uses the whole repository as src, so PLAN/docs-onl
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 156,
+    "issue_id": "nix-jw1",
+    "author": "johnw",
+    "text": "Upstream obr commit 5a440b45 is signed and published. It filters the Nix package source to compiler inputs and excludes docs/PLAN.org; current PLAN-only and candidate revisions share the same filtered source identity while an actual source revision differs. Root flake.lock now selects that commit. The authoritative shared-work build is currently building the exact obr 0.2.22+5 derivation on andoria-08; no VPS-local retry is being made.",
+    "created_at": "2026-08-13T06:57:22Z"
   }
 ]
 #+end_src
