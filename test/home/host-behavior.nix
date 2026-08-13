@@ -342,14 +342,12 @@ assert
 assert
   darwinConfigurations.hera.config.nix.settings.trusted-public-keys
   == nixTrust.darwin.trustedPublicKeys;
-assert darwinConfigurations.hera.config.nix.settings.cores == 8;
 assert
   darwinConfigurations.clio.config.nix.settings.trusted-substituters
   == nixTrust.darwin.trustedSubstituters;
 assert
   darwinConfigurations.clio.config.nix.settings.trusted-public-keys
   == nixTrust.darwin.trustedPublicKeys;
-assert darwinConfigurations.clio.config.nix.settings.cores == 8;
 assert
   clioBuildMachines == [
     expectedHeraBuilder
@@ -489,6 +487,8 @@ assert builtins.all (config: config.johnw.host.isDarwinWorkstation) desktopHomes
 assert builtins.all (config: !config.johnw.host.isDarwinWorkstation) nonDesktopHomes;
 assert hasLocalModelSessionVariables desktopHomesByHost.hera;
 assert lacksLocalModelSessionVariables desktopHomesByHost.clio;
+assert desktopHomesByHost.hera.home.sessionVariables.NIX_CONFIG == "cores = 8";
+assert desktopHomesByHost.clio.home.sessionVariables.NIX_CONFIG == "cores = 8";
 assert builtins.all lacksLocalModelSessionVariables nonDesktopHomes;
 assert builtins.hasAttr ".config/pi/agent/model-router.json" desktopHomesByHost.hera.home.file;
 assert !(builtins.hasAttr ".config/pi/agent/model-router.json" desktopHomesByHost.clio.home.file);

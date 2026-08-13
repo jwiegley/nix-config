@@ -105,6 +105,7 @@ in
     // lib.optionalAttrs config.johnw.host.isDarwinWorkstation {
       EDITOR = lib.mkDefault vars.emacsclient;
       EMACS_SERVER_FILE = "${vars.emacs-server}";
+      NIX_CONFIG = "cores = 8";
     }
     // lib.optionalAttrs isHeavy {
       GRAPHVIZ_DOT = "${pkgs.graphviz}/bin/dot";

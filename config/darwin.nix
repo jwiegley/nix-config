@@ -450,7 +450,7 @@ in
           "johnw"
         ];
         max-jobs = if config.johnw.host.isClio then 4 else 8;
-        cores = 8;
+        cores = 10;
 
         trusted-substituters = nixTrust.darwin.trustedSubstituters;
         trusted-public-keys = nixTrust.darwin.trustedPublicKeys;
