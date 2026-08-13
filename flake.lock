@@ -6552,11 +6552,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784070824,
-        "narHash": "sha256-X8nCS0EkrmUtFkS9+V76XI0DaaNvgDHPCaUxFeJB1SA=",
+        "lastModified": 1786595150,
+        "narHash": "sha256-wAigTO5o16t4SfvWzl4dOsw/krNOJj25+hDxWZTabs8=",
         "owner": "jwiegley",
         "repo": "sizes",
-        "rev": "821d3d5d4fd071ffd49d3a499a4140712ea610c9",
+        "rev": "52feaa822ff3112c7d39d853ec38fd1528d83c12",
         "type": "github"
       },
       "original": {
