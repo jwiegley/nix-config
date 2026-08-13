@@ -129,7 +129,7 @@ Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and
 :LABELS: []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 14:58]
-:MODIFIED: [2026-08-12 Wed 17:07]
+:MODIFIED: [2026-08-12 Wed 17:12]
 :OWNER: johnw
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
@@ -173,6 +173,20 @@ With explicit owner authorization, preserve the two commits' content while repla
     "author": "johnw",
     "text": "Owner authorization received on 2026-08-12 to rewrite and validly sign the two existing unpushed commits 9d1874ee and 15540784 while preserving their patch content. This authority does not include publication, lock updates, build, or activation.",
     "created_at": "2026-08-13T00:07:15Z"
+  },
+  {
+    "id": 123,
+    "issue_id": "nix-3qu",
+    "author": "johnw",
+    "text": "Authorized history repair is blocked before rewrite: three bounded VPS SSH attempts timed out, and the reachable secondary clone lacks the two commit objects. Only abbreviated commit IDs are recorded, so no rewrite may proceed. No recovery ref, rebase, amend, signature, remote, fetch, push, or lock state changed. Resume only when the authoritative /etc/nixos checkout is reachable and both full objects can be inventoried.",
+    "created_at": "2026-08-13T00:11:54Z"
+  },
+  {
+    "id": 128,
+    "issue_id": "nix-3qu",
+    "author": "johnw",
+    "text": "Evidence classification for comment 123: its negative action statements are parent-session attestations. The tracked repository and issue state are consistent with them but cannot prove absence of every out-of-band action.",
+    "created_at": "2026-08-13T00:12:03Z"
   }
 ]
 #+end_src
@@ -184,7 +198,7 @@ With explicit owner authorization, preserve the two commits' content while repla
 :LABELS: ["authority","security","ssh"]
 :ISSUE_TYPE: question
 :CREATED:  [2026-08-10 Mon 21:46]
-:MODIFIED: [2026-08-10 Mon 21:46]
+:MODIFIED: [2026-08-12 Wed 17:11]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -207,6 +221,19 @@ Owner decision is recorded. If dedicated: provision and configure the exact cons
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 125,
+    "issue_id": "nix-3u8",
+    "author": "johnw",
+    "text": "Clarification: this question concerns the unattended pushme-positron.timer on Vulcan, which reaches Andoria-08 through Hera. A dedicated identity means a timer-only SSH key, not a new Unix account and not the Andoria second-hop key. The current general Vulcan key is tightly constrained on Hera, but reuse couples rotation and revocation and broadens its blast radius. Recommendation: use a dedicated timer key; that requires coordinated Vulcan and Hera source changes, builds, separately authorized activations, and positive/negative runtime checks. Explicitly accepting current reuse requires no mutation.",
+    "created_at": "2026-08-13T00:11:54Z"
   }
 ]
 #+end_src
@@ -413,7 +440,7 @@ Partner-cleanup review confirmed the finding and the minimal two-file fix. The s
 :LABELS: ["builder","security"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 12:25]
-:MODIFIED: [2026-08-12 Wed 17:02]
+:MODIFIED: [2026-08-12 Wed 17:12]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -459,6 +486,20 @@ The sudo-daemon URI is present in final declarative source but not in Hera curre
     "author": "johnw",
     "text": "Correction to comment 114: trusting the existing public signing key is conditional on the owner confirming, without displaying the secret, that its private key is an intended trust root whose custody is limited to authorized build clients. If custody is broader, provision a dedicated Nix signing key only to Hera and Clio; do not fall back to trusted-users.",
     "created_at": "2026-08-13T00:02:23Z"
+  },
+  {
+    "id": 124,
+    "issue_id": "nix-89t",
+    "author": "johnw",
+    "text": "Read-only Andoria-08 inventory found no declarative root configuration to identify. The host is Ubuntu with Determinate Nix; generated nix.conf includes root-owned untracked /etc/nix/nix.custom.conf, where the public trust entry would live. jwiegley root authority comes from local sudo-group membership plus a global passwordless sudo-group rule; removing the global rule would affect other users, so the narrow account change is removal from the sudo group after signed imports work. Existing key files on Hera and Clio are regular 0600 files under 0700 directories, proving placement but not exclusive custody or correspondence to the named public key. No host state changed.",
+    "created_at": "2026-08-13T00:11:54Z"
+  },
+  {
+    "id": 129,
+    "issue_id": "nix-89t",
+    "author": "johnw",
+    "text": "Evidence classification for comment 124: its no-host-change statement is a parent-session attestation. The tracked repository and issue state are consistent with it but cannot prove absence of every out-of-band action.",
+    "created_at": "2026-08-13T00:12:03Z"
   }
 ]
 #+end_src
@@ -6260,7 +6301,7 @@ Remove the resolved portable quality question and make the remaining external/ow
 :LABELS: ["security"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-12 Wed 14:02]
-:MODIFIED: [2026-08-12 Wed 17:07]
+:MODIFIED: [2026-08-12 Wed 17:12]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -6307,6 +6348,20 @@ A read-only fleet preflight printed the VPS Git remote URL, which contained an e
     "author": "johnw",
     "text": "Owner authorization received on 2026-08-12 for the bounded remediation: create a replacement credential only after uniquely identifying the exposed credential record, revoke that identified credential, update the two existing SOPS-managed authentication leaves atomically, and remove userinfo from the authoritative VPS origin. If the credential type or record is ambiguous, stop. This authority does not include build, activation, publication, or destructive log cleanup.",
     "created_at": "2026-08-13T00:07:15Z"
+  },
+  {
+    "id": 122,
+    "issue_id": "nix-twq",
+    "author": "johnw",
+    "text": "Authorized execution is blocked before credential creation: three bounded SSH attempts to the VPS timed out with no remote output. The reachable secondary clone is non-authoritative. The configured Gitea CLI could not authenticate the token-list endpoint, so it cannot prove credential type or a unique record. No token was created, revoked, read, or printed; no SOPS or remote state changed. Do not retry blindly or create an undeployable replacement. Safe continuation requires VPS reachability plus separate build and activation authority before old-credential revocation.",
+    "created_at": "2026-08-13T00:11:54Z"
+  },
+  {
+    "id": 127,
+    "issue_id": "nix-twq",
+    "author": "johnw",
+    "text": "Evidence classification for comment 122: its no-mutation and no-secret-access statements are parent-session attestations. The tracked repository and issue state are consistent with them but cannot prove absence of every out-of-band action.",
+    "created_at": "2026-08-13T00:12:03Z"
   }
 ]
 #+end_src
@@ -6492,7 +6547,7 @@ Live Hera Pi reports both omlx/Qwen3.6-27B-oQ6e-mtp and router/sol as thinking=n
 :LABELS: []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-11 Tue 10:15]
-:MODIFIED: [2026-08-11 Tue 10:15]
+:MODIFIED: [2026-08-12 Wed 17:11]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -6512,6 +6567,19 @@ Path Finder 26.1.7 is independent of Nix Samba. During the reported attempt it p
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+#+begin_src json
+[
+  {
+    "id": 126,
+    "issue_id": "nix-xrm",
+    "author": "johnw",
+    "text": "Clarification: the prior action request was under-specified; no exact Path Finder menu, field layout, or intended share was recorded. The intended reproduction is a synchronized Clio Path Finder Connect-to-Server attempt using a freshly typed direct smb://samba.vulcan.lan/<owner-selected-existing-share> URL while capturing only the timestamp, UI error or auth prompt, mount-table and /Volumes delta, and narrowly filtered native SMB logs. Do not read credentials or choose a historical URL. Path Finder uses Apple native SMB independently of Nix smbclient.",
+    "created_at": "2026-08-13T00:11:54Z"
   }
 ]
 #+end_src
