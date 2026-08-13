@@ -744,15 +744,17 @@ Hera's declarative allowlist contains Vulcan plus Clio's LAN and alternate-path 
 ]
 #+end_src
 
-* DOING [#B] Make obr available across the managed fleet
+* DONE [#B] Make obr available across the managed fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-aln
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:02]
-:MODIFIED: [2026-08-11 Tue 22:40]
+:MODIFIED: [2026-08-12 Wed 19:32]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 19:32]
+:CLOSE_REASON: All eight managed consumers now select and execute obr from their active managed profiles; implementation, build, and authorized activation evidence is recorded.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -788,6 +790,20 @@ Exact resume step:
 1. Treat VPS lane as complete; do not repeat its build, switch, commit, or push.
 2. Reconcile recorded evidence for Hera, Clio, Vulcan, and four shared-work consumers against this issue's full fleet requirement.
 3. If every consumer's paired lock adoption, authorized activation, and obr runtime acceptance are evidenced, close `nix-aln`; otherwise create/claim one issue per missing consumer and keep this parent checkpoint current.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 136,
+    "issue_id": "nix-aln",
+    "author": "johnw",
+    "text": "Final runtime reconciliation, 2026-08-12 18:48 PDT: all eight scoped consumers were probed directly and passed managed-profile selection plus `obr --version`. Hera resolves `/etc/profiles/per-user/johnw/bin/obr` to `obr 0.2.22+4`; Clio, Vulcan, and VPS resolve their per-user managed profile entries to `0.2.22+3`; Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server all resolve the shared Home Manager profile to one identical x86_64-linux `0.2.22+3` store output. No host was inferred from another. This establishes fleet availability and current runtime selection; it does not claim version convergence, new builds, or new activations. The existing issue record already contains the implementation/build/activation evidence and strict shared-work rollout result.",
+    "created_at": "2026-08-13T02:32:24Z"
+  }
+]
+#+end_src
 
 * DONE [#B] Keep Plasma Wiki destination no-follow through copy      :filesystem:plasma:security:
 :PROPERTIES:
