@@ -69,6 +69,45 @@ The Eternal Terminal override no longer targets a nonexistent source path; its p
 ]
 #+end_src
 
+* TODO [#C] Install pi-mulligan as a managed Pi extension                  :context:extension:pi:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-0pr
+:LABELS:   ["context","extension","pi","pi-gallery"]
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-12 Wed 20:51]
+:MODIFIED: [2026-08-12 Wed 20:51]
+:CREATED_BY: johnw
+:EXTERNAL_REF: https://github.com/dabstractor/pi-mulligan
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Integrate https://github.com/dabstractor/pi-mulligan into this repository using the same immutable source, package, gallery, renderer, manifest, and behavioral-test pattern as the other managed Pi extensions. Upstream describes a zero-configuration Pi extension that provides agent-callable rewind, shrink, cancel, and audit tools plus human checkpoint/audit commands; it currently declares compatibility with Pi 0.84.x and is loaded from src/index.ts or as a Pi package.
+
+Do not use pi install against mutable user state or copy files into ~/.pi. Establish exact managed-Pi API compatibility first, preserve Nix ownership of generated leaves and Pi ownership of mutable session/settings state, and account for the extension's persisted context markers in the bounded-history certification surface.
+
+** Acceptance Criteria
+
+Pin an immutable reviewed upstream revision and package it through the existing Pi gallery/managed-extension abstractions; render it only for the intended Pi profiles without editing mutable Pi state. Prove compatibility with the exact managed Pi version (upstream currently declares Pi 0.84.x) and fail closed rather than silently loading an incompatible API. A behavioral managed-Pi test must load and reload the extension with no mulligan settings, observe its four agent tools and three human commands, exercise a representative context transform without losing the on-disk audit trail, and show existing extension order, metadata, routing, state ownership, and selection remain intact. Add source/update metadata and documentation following the existing extension pattern; run the focused gallery checks, all-systems evaluation, and relevant package/system builds. Activation remains separately authorized.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-0pr",
+    "depends_on_id": "nix-tcz.37.1.19",
+    "type": "related",
+    "created_at": "2026-08-13T03:51:06.511309Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#C] Reconcile the reflowed wiggum halt override with its transport pin
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -127,16 +166,19 @@ VERIFICATION: nix build .#checks.aarch64-darwin.ai-catalog-transport succeeds; m
 
 Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and GIT_NAMESPACE from hermetic Git fixture environments, with a regression that proves both selectors cannot leak into fixture commands.
 
-* TODO [#B] Resolve unsigned VPS history before fleet activation
+* DONE [#B] Resolve unsigned VPS history before fleet activation
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-3qu
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 14:58]
-:MODIFIED: [2026-08-12 Wed 20:39]
+:MODIFIED: [2026-08-12 Wed 20:47]
+:ASSIGNEE: johnw
 :OWNER:    johnw
 :CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 20:47]
+:CLOSE_REASON: Replaced the clean unpublished six-commit VPS chain with six GOOD-signed commits and published the verified result. Mapping: 9d1874ee→d8041eda, 15540784→46120df2, 50d02ed5→abb10aed, d707baf0→61db9788, 82beaff3→41f5888d, 740afdc9→8666a51a. For every pair, tree ID, stable patch ID, raw message, author/committer identity and timestamp, changed-file list, and position match; range-diff is six exact equals; the final tree is unchanged. Objects were staged under a temporary VPS ref, main moved with an old-tip compare-and-swap, and publication used an exact lease on remote base 5c2256f5. Because the old six commits were unpublished, the accepted update was a fast-forward. Gitea main, origin/main, and VPS main now equal 8666a51a; the temporary ref is deleted and the checkout is clean. No lock update, build, activation, or unrelated cleanup was performed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -216,6 +258,13 @@ With explicit owner authorization covering the complete six-commit chain, preser
     "author": "johnw",
     "text": "The current clean unpublished VPS chain now has six commits above origin/main: the original four unsigned lock commits followed by GOOD-signed credential commit 82beaff3 and GOOD-signed read-only-helper commit 740afdc9. The original four remain unchanged. Any complete signing repair must preserve all six trees, patches, metadata, messages, and order and will necessarily regenerate both signed descendant IDs. Existing rewrite authority still covers only the first two commits.",
     "created_at": "2026-08-13T02:57:05Z"
+  },
+  {
+    "id": 149,
+    "issue_id": "nix-3qu",
+    "author": "johnw",
+    "text": "Owner authorization received 2026-08-12 for the complete six-commit repair: rewrite the four unsigned ancestors and regenerate the two signed descendants while preserving every tree, patch, author, message, file list, timestamp, and order; verify the full replacement chain; then publish it with an exact force-with-lease. This authority covers the history rewrite and its publication only. It does not silently authorize unrelated lock updates, builds, activations, or cleanup.",
+    "created_at": "2026-08-13T03:45:38Z"
   }
 ]
 #+end_src
@@ -585,7 +634,7 @@ Partner-cleanup review confirmed the finding and the minimal two-file fix. The s
 :LABELS:   ["builder","security"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 12:25]
-:MODIFIED: [2026-08-12 Wed 20:39]
+:MODIFIED: [2026-08-12 Wed 20:45]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
@@ -671,6 +720,13 @@ The sudo-daemon URI is present in declarative source and recorded as activated o
     "author": "johnw",
     "text": "Evidence clarification: the preceding no-mutation sentence describes the read-only host inventory only. This status transition and comment intentionally mutate the obr database and tracked PLAN.org issue record; they do not mutate Andoria repositories or host policy.",
     "created_at": "2026-08-13T03:39:15Z"
+  },
+  {
+    "id": 148,
+    "issue_id": "nix-89t",
+    "author": "johnw",
+    "text": "Owner decisions received 2026-08-12: johnw/andoria is approved as the canonical source for data-only root-policy outputs; bootstrap of a root-owned fixed no-argument deployer through one exact jwiegley sudo rule is authorized, followed by removal of jwiegley from the broad sudo group after signed imports pass; the existing newartisans.com private signing key is attested as intentionally confined to Hera and Clio authorized build clients; retaining an ordinary unprivileged SSH shell is acceptable while all non-daemon root/sudo commands must fail. These choices authorize implementation and the staged prepare/final host deployment described in this issue, but exact validation must precede removal of the recovery route.",
+    "created_at": "2026-08-13T03:45:37Z"
   }
 ]
 #+end_src
@@ -6993,15 +7049,18 @@ Live Hera Pi reports both omlx/Qwen3.6-27B-oQ6e-mtp and router/sol as thinking=n
 ]
 #+end_src
 
-* TODO [#B] Reproduce Clio Path Finder SMB mount failure
+* DONE [#B] Reproduce Clio Path Finder SMB mount failure
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-xrm
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-11 Tue 10:15]
-:MODIFIED: [2026-08-12 Wed 19:42]
+:MODIFIED: [2026-08-12 Wed 20:51]
+:ASSIGNEE: johnw
 :CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 20:51]
+:CLOSE_REASON: Fresh owner-operated Clio reproduction at 20:44:19 PDT identified the failure boundary. Path Finder initiated a LaunchServices open; CoreServicesUIAgent sent a GURL event to Jump Desktop, which received it. Finder remains the default smb/cifs handler and Jump declares only jump/vnc/rdp, so there is no persistent SMB handler takeover. No NetAuth, NetFS, SMBClient, mount_smbfs, mount, or helper activity occurred; no local mount-point placeholder was created. The private literal scheme was not read, so a saved recent value is not claimed, but an ordinary SMB request is conclusively ruled out: Path Finder handed off a remote-control-class URL or explicitly targeted Jump before native SMB. Treat Path Finder's handoff/server-type coercion as the defect; use Finder Connect to Server as the safe comparison/workaround, and do not mutate LaunchServices. No preferences, credentials, mounts, files, or host state were changed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -7042,6 +7101,13 @@ Path Finder 26.1.7 is independent of Nix Samba. During the reported attempt it p
     "author": "johnw",
     "text": "Current Clio handler evidence rules out a persistent Jump Desktop SMB takeover: LaunchServices maps smb/cifs to Finder and maps only jump/vnc/rdp to Jump Desktop. Path Finder 26.1.7 has its own Go > Connect to Server action, recent-server storage, an SMB server type, and native mount API. The prior redacted URL was handed to Jump, so the best-supported cause is selection of a saved or non-SMB recent value. Keep this issue open for the exact owner GUI reproduction: foreground Path Finder, use Go > Connect to Server (Command-K), avoid recent rows, fully replace Address with a freshly typed smb://samba.vulcan.lan/<existing-share>, select SMB Server if offered, and report only time plus prompt/error/result. No LaunchServices or preference mutation is warranted.",
     "created_at": "2026-08-13T02:42:25Z"
+  },
+  {
+    "id": 150,
+    "issue_id": "nix-xrm",
+    "author": "johnw",
+    "text": "Owner repeated the Path Finder reproduction after the documented instruction and reports that Jump Desktop still attempts to intercept the mount request. A bounded no-secret capture of the current LaunchServices/Path Finder handoff is authorized by the active investigation; do not inspect credentials or saved URL values. Identify the selected scheme/type and explain or correct the handoff before closing.",
+    "created_at": "2026-08-13T03:45:39Z"
   }
 ]
 #+end_src
