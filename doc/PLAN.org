@@ -3248,30 +3248,25 @@ config/ai/catalog.nix:150-216 stores the Claude-formatted string Read, Grep, Glo
 ]
 #+end_src
 
-* DOING [#B] Move product-scale Agent Deck and Pi deltas out of Nix patches :architecture:packaging:
+* DOING [#B] Move product-scale Agent Deck deltas out of Nix patches     :architecture:packaging:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37
 :LABELS:   ["architecture","heavy-review","packaging"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-11 Tue 22:32]
+:MODIFIED: [2026-08-13 Thu 01:03]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-agent-deck-runtime-lifecycle.patch is about 45,582 lines and pi-bounded-session-history.patch about 13,831, far beyond the documented narrow compatibility-patch boundary. Upstream them or pin reviewed fork commits in sources/ai.json, retaining only Nix-specific patches. Compare old and new trees byte-for-byte before removal and run complete product checks. Source: abstraction finding 8.
+agent-deck-runtime-lifecycle.patch is about 45,582 lines, far beyond the documented narrow compatibility-patch boundary. Import the exact current Agent Deck product tree into the verified owner fork, pin the reviewed immutable product commit in sources/ai.json, and retain only genuinely Nix-specific packaging changes. Prove path, type, bytes, symlink, and executable identity before removing the downstream patch; then run the complete Agent Deck and Nix package checks. Source: abstraction finding 8.
 
 ** Notes
 
-2026-08-10 authority audit: no reviewed exact-tree product commit currently exists. Agent Deck has a verified destination fork (jwiegley/agent-deck), but its visible tips do not reproduce v1.11.0 plus the current Discord, transition-daemon, and runtime-lifecycle patches. Create an import-only branch from upstream 2f586c5ca97d0e783bb16213d388bcce9e675e67 and require a zero-difference path/type/bytes/symlink/executable manifest before changing the Nix pin. Pi has an exact base 845d6ff1f6643aba440341cce877ce1c43ebbc39 but no verified owner-selected product repository; choose or create one, then import bounded-history, provider-timeout, and session-replacement patches in order with the same identity gate. Product pushes/PRs remain separately authorized.
-
-Superseding Pi guidance, 2026-08-11:
-- The 2026-08-10 note instructing a direct import of pi-bounded-session-history.patch is superseded by programme nix-tcz.37.1.
-- Retain the 13,831-line patch only as signed causal, compatibility, and regression evidence. Do not transplant it into an owner fork or upstream branch.
-- The authoritative Pi direction is to complete the existing SessionRepo and SessionTree architecture, deliver reviewed product commits through U3, and remove the product-scale Nix patch only after the exact-tree and package gates.
+2026-08-10 authority audit: no reviewed exact-tree Agent Deck product commit currently exists. The verified destination fork is jwiegley/agent-deck, but its visible tips do not reproduce v1.11.0 plus the current Discord, transition-daemon, and runtime-lifecycle patches. Create an import-only branch from upstream 2f586c5ca97d0e783bb16213d388bcce9e675e67 and require a zero-difference path/type/bytes/symlink/executable manifest before changing the Nix pin. Product pushes or pull requests remain separately authorized. 2026-08-13 scope correction: Pi product migration is owned wholly by nix-tcz.37.1.25 and its bounded-memory programme. This issue is Agent Deck-only, so the owner-approved Pi deferral does not block Agent Deck RuntimeBindings work.
 
 ** Dependencies
 
@@ -3282,15 +3277,6 @@ Superseding Pi guidance, 2026-08-11:
     "depends_on_id": "nix-tcz",
     "type": "parent-child",
     "created_at": "2026-08-10T20:25:12.432470Z",
-    "created_by": "johnw",
-    "metadata": "{}",
-    "thread_id": ""
-  },
-  {
-    "issue_id": "nix-tcz.37",
-    "depends_on_id": "nix-tcz.37.1.25",
-    "type": "blocks",
-    "created_at": "2026-08-12T04:41:40.282714Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
