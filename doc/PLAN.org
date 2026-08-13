@@ -634,7 +634,7 @@ Partner-cleanup review confirmed the finding and the minimal two-file fix. The s
 :LABELS:   ["builder","security"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 12:25]
-:MODIFIED: [2026-08-12 Wed 20:45]
+:MODIFIED: [2026-08-12 Wed 22:29]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
@@ -727,6 +727,13 @@ The sudo-daemon URI is present in declarative source and recorded as activated o
     "author": "johnw",
     "text": "Owner decisions received 2026-08-12: johnw/andoria is approved as the canonical source for data-only root-policy outputs; bootstrap of a root-owned fixed no-argument deployer through one exact jwiegley sudo rule is authorized, followed by removal of jwiegley from the broad sudo group after signed imports pass; the existing newartisans.com private signing key is attested as intentionally confined to Hera and Clio authorized build clients; retaining an ordinary unprivileged SSH shell is acceptable while all non-daemon root/sudo commands must fail. These choices authorize implementation and the staged prepare/final host deployment described in this issue, but exact validation must precede removal of the recovery route.",
     "created_at": "2026-08-13T03:45:37Z"
+  },
+  {
+    "id": 151,
+    "issue_id": "nix-89t",
+    "author": "johnw",
+    "text": "Architecture correction after owner-requested Ponytail, abstraction, and Alexey reviews: builder transport trust and the human administrator's sudo role are independent. The bespoke bootstrap/deployer/verifier/finalizer framework is rejected and will be deleted. nix-config now owns the cache/signing trust record once; johnw/andoria renders one Determinate Nix leaf; an explicitly authorized operator installs that leaf and restarts the daemon on each builder. The remote builder then uses plain untrusted ssh-ng with require-sigs=true, trusted-users=root, and signed-positive/unsigned-negative behavioral proof. This issue will not grant, remove, or replace John's ordinary host-administration sudo access.",
+    "created_at": "2026-08-13T05:29:47Z"
   }
 ]
 #+end_src
@@ -1149,6 +1156,38 @@ Rendered catalog is valid JSON; every model has the source-proven correctly type
 ]
 #+end_src
 
+* TODO [#B] Write comprehensive Nix architecture and operations guide
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-fbh
+:LABELS:   []
+:ISSUE_TYPE: docs
+:CREATED:  [2026-08-12 Wed 22:21]
+:MODIFIED: [2026-08-12 Wed 22:21]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Produce a durable user guide for this repository after the current implementation and fleet activation. Explain the architecture and authority boundaries of ~/src/nix, ~/src/nixos, and ~/src/andoria; host ownership and activation flows; portable AI and renderer/catalog ownership; remote builders; the Andoria root-policy mechanism and lifecycle; signing, secrets, sudo, trust, rollback, recovery, verification, and operational safety. This must be reference documentation, not a duplicate current-work tracker.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-fbh",
+    "depends_on_id": "nix-89t",
+    "type": "blocks",
+    "created_at": "2026-08-13T05:21:15.409877Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Repair Samba 4.23.8 Darwin client linkage
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -1437,6 +1476,22 @@ The follow-up owner decision was resolved by nix-5yr with the fail-closed withdr
   }
 ]
 #+end_src
+
+* DOING [#B] Make catalog updates failure-isolated
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-j78
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-12 Wed 22:27]
+:MODIFIED: [2026-08-12 Wed 22:27]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Change make update so an independently failing package candidate retains its previous source/catalog record and is reported as skipped, while unrelated successful package updates continue through validation and commit. Preserve consistency for coupled hashes/locks/generated files; do not weaken package validation or silently accept a broken candidate. Add deterministic regressions for mixed success/failure and all-failure behavior.
 
 * DONE [#B] Decide whether to retain emulated MSSQL on Apple Silicon
 :PROPERTIES:

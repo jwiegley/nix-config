@@ -143,6 +143,7 @@ let
   '';
   desktopHomes = builtins.attrValues desktopHomesByHost;
   registry = import ../../config/hosts/registry.nix;
+  nixTrust = import ../../config/nix-trust.nix;
   aiCatalog = import ../../config/ai/catalog.nix {
     inherit lib;
     resources = pkgs.agent-resources;
@@ -316,6 +317,18 @@ assert builtins.all (
 ) requiredDarwinHosts;
 assert builtins.head heraBuildMachines == expectedVulcanBuilder "/Users/johnw/hera/id_hera";
 assert builtins.tail heraBuildMachines == expectedAndoriaBuilders;
+assert
+  darwinConfigurations.hera.config.nix.settings.trusted-substituters
+  == nixTrust.darwin.trustedSubstituters;
+assert
+  darwinConfigurations.hera.config.nix.settings.trusted-public-keys
+  == nixTrust.darwin.trustedPublicKeys;
+assert
+  darwinConfigurations.clio.config.nix.settings.trusted-substituters
+  == nixTrust.darwin.trustedSubstituters;
+assert
+  darwinConfigurations.clio.config.nix.settings.trusted-public-keys
+  == nixTrust.darwin.trustedPublicKeys;
 assert
   clioBuildMachines == [
     expectedHeraBuilder

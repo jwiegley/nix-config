@@ -11,6 +11,7 @@
 let
   home = "/Users/johnw";
   xdg_configHome = "${home}/.config";
+  nixTrust = import ./nix-trust.nix;
 
   homebrewTrustJson = pkgs.writeText "homebrew-trust.json" (
     builtins.toJSON {
@@ -476,17 +477,8 @@ in
         max-jobs = if config.johnw.host.isClio then 4 else 8;
         cores = 10;
 
-        trusted-substituters = [
-          "https://cache.iog.io"
-          "https://cache.nixos.org"
-          "https://tron.cachix.org"
-        ];
-        trusted-public-keys = [
-          "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-          "newartisans.com:RmQd/aZOinbJR/G5t+3CIhIxT5NBjlCRvTiSbny8fYw="
-          "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
-          "tron.cachix.org-1:frKV7mquRWa4U3F0xjUtBehGgDzRofVj328awV2L+dQ="
-        ];
+        trusted-substituters = nixTrust.darwin.trustedSubstituters;
+        trusted-public-keys = nixTrust.darwin.trustedPublicKeys;
       };
 
       distributedBuilds = true;

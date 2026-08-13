@@ -89,6 +89,7 @@ need them for rollback.
 | --- | --- | --- |
 | `config/hosts/registry.nix` | Host identity, capabilities, membership, rollout selection, and routing data | Module or shell implementation |
 | `config/hosts/shell-routing.nix` | Build-time shell projection of registry routing data | Independent host identity policy or runtime Nix discovery |
+| `config/nix-trust.nix` | Shared binary-cache and client-signing trust data | Root-file installation or host activation |
 | `config/ai/catalog.nix` | Profiles, selectors, resources, validation | Client serialization or package builds |
 | `config/ai/renderers/*` | Generated documents for one client | Global resource selection |
 | `config/ai.nix` | Home Manager composition and ownership guards | Package implementation |
