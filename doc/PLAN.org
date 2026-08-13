@@ -129,7 +129,7 @@ Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and
 :LABELS: []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 14:58]
-:MODIFIED: [2026-08-12 Wed 17:12]
+:MODIFIED: [2026-08-12 Wed 17:16]
 :OWNER: johnw
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
@@ -137,7 +137,7 @@ Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and
 :ORIGINAL_SIZE: 0
 :END:
 
-The VPS /etc/nixos checkout is clean but has two existing unpushed local commits, 9d1874ee and 15540784, and both lack a valid commit signature. The repository policy requires signed history, while repairing them requires an explicit history rewrite that the current activation authorization does not grant. Preserve the checkout and do not update locks, publish, or activate until the owner selects a history-repair course.
+The VPS /etc/nixos checkout is recorded as clean with two existing unpushed local commits, 9d1874ee and 15540784, and both lack a valid commit signature. The owner has authorized an exact two-commit rewrite and re-sign while preserving patch content. Execution is currently blocked because the authoritative VPS checkout is unreachable and only abbreviated IDs are available elsewhere. Preserve the checkout and do not update locks, publish, build, or activate until both full objects are inventoried and the separately gated actions are authorized.
 
 ** Acceptance Criteria
 With explicit owner authorization, preserve the two commits' content while replacing or re-signing the unsigned history; verify signatures and unchanged patch content; publish without exposing the credential-bearing remote URL; update the paired nix-config locks to the intended signed revision; run /etc/nixos/./build build and /etc/nixos/./build switch; verify current/system profile equality, Home Manager success, no new failed units, rollback availability, and a clean published checkout.
@@ -198,7 +198,7 @@ With explicit owner authorization, preserve the two commits' content while repla
 :LABELS: ["authority","security","ssh"]
 :ISSUE_TYPE: question
 :CREATED:  [2026-08-10 Mon 21:46]
-:MODIFIED: [2026-08-12 Wed 17:11]
+:MODIFIED: [2026-08-12 Wed 17:16]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -234,6 +234,13 @@ Owner decision is recorded. If dedicated: provision and configure the exact cons
     "author": "johnw",
     "text": "Clarification: this question concerns the unattended pushme-positron.timer on Vulcan, which reaches Andoria-08 through Hera. A dedicated identity means a timer-only SSH key, not a new Unix account and not the Andoria second-hop key. The current general Vulcan key is tightly constrained on Hera, but reuse couples rotation and revocation and broadens its blast radius. Recommendation: use a dedicated timer key; that requires coordinated Vulcan and Hera source changes, builds, separately authorized activations, and positive/negative runtime checks. Explicitly accepting current reuse requires no mutation.",
     "created_at": "2026-08-13T00:11:54Z"
+  },
+  {
+    "id": 130,
+    "issue_id": "nix-3u8",
+    "author": "johnw",
+    "text": "Correction to comment 125: explicitly accepting current general-key reuse requires no host or configuration mutation, but the owner decision and rationale must still be recorded in this issue.",
+    "created_at": "2026-08-13T00:16:23Z"
   }
 ]
 #+end_src
@@ -440,7 +447,7 @@ Partner-cleanup review confirmed the finding and the minimal two-file fix. The s
 :LABELS: ["builder","security"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 12:25]
-:MODIFIED: [2026-08-12 Wed 17:12]
+:MODIFIED: [2026-08-12 Wed 17:16]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -453,7 +460,7 @@ The working client-side ssh-ng route on Andoria-08 invokes nix-daemon through an
 The Andoria builder accepts a fresh client-signed local dependency without unrestricted passwordless sudo; its forced command or exact daemon authority is managed declaratively on the authoritative host; Hera and Clio builder URIs no longer rely on broad sudo; a fresh nonce-bearing remote build and negative non-daemon command probe pass; no activation occurs without separate authorization.
 
 ** Notes
-The sudo-daemon URI is present in final declarative source but not in Hera current activated /etc/nix/machines. Remote trust/key or sudo-policy changes and local activation each require separate authorization.
+The sudo-daemon URI is present in declarative source and recorded as activated on Hera in generation 1067. Remote trust or key changes, sudo-policy changes, and each client activation require separate authorization.
 
 ** Dependencies
 #+begin_src json
