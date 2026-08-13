@@ -134,7 +134,7 @@ Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 14:58]
-:MODIFIED: [2026-08-12 Wed 19:57]
+:MODIFIED: [2026-08-12 Wed 20:39]
 :OWNER:    johnw
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
@@ -142,11 +142,11 @@ Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and
 :ORIGINAL_SIZE: 0
 :END:
 
-The VPS /etc/nixos checkout is clean and currently contains four linear unpushed unsigned commits: 9d1874ee, 15540784, 50d02ed5, and d707baf0. The owner authorized rewriting and signing only the first two. Because rewriting either ancestor necessarily changes both newer descendant commit IDs, no history mutation may proceed until the owner explicitly chooses the disposition of commits three and four and authorizes the complete resulting rewrite. Preserve the checkout and do not fetch, publish, update locks, build, or activate as part of history repair without the separately recorded authorities.
+The VPS /etc/nixos checkout is clean and currently contains a six-commit linear unpublished chain above origin/main: four unsigned commits (9d1874ee, 15540784, 50d02ed5, and d707baf0) followed by two GOOD-signed commits (82beaff3 and 740afdc9). The owner authorized rewriting and signing only the first two unsigned commits. Rewriting either ancestor necessarily regenerates all later commit IDs, including both signed descendants, so no history mutation may proceed until the owner explicitly authorizes the complete six-commit result. Preserve the checkout and do not fetch, publish, update locks, build, or activate as part of history repair without the separately recorded authorities.
 
 ** Acceptance Criteria
 
-With explicit owner authorization covering the complete four-commit chain, preserve every commit's patch content while replacing or re-signing the unsigned history; verify signatures, tree IDs, stable patch IDs, range-diff, authors, messages, and file lists. Publication, paired nix-config lock updates, /etc/nixos/./build build and switch, runtime acceptance, rollback verification, and checkout cleanup remain separately gated actions.
+With explicit owner authorization covering the complete six-commit chain, preserve every commit tree, patch content, author, message, file list, and order while validly signing the four unsigned changes and regenerating the two signed descendants. Verify signatures, tree IDs, stable patch IDs, range-diff, authors, messages, and file lists. Publication or force-with-lease, paired nix-config lock updates, /etc/nixos/./build build and switch, runtime acceptance, rollback verification, and checkout cleanup remain separately gated actions.
 
 ** Dependencies
 
@@ -578,14 +578,15 @@ Partner-cleanup review confirmed the finding and the minimal two-file fix. The s
 ]
 #+end_src
 
-* TODO [#C] Narrow Andoria remote-builder root authority                       :builder:security:
+* DOING [#C] Narrow Andoria remote-builder root authority                      :builder:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-89t
 :LABELS:   ["builder","security"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 12:25]
-:MODIFIED: [2026-08-12 Wed 19:42]
+:MODIFIED: [2026-08-12 Wed 20:39]
+:ASSIGNEE: johnw
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -656,6 +657,20 @@ The sudo-daemon URI is present in declarative source and recorded as activated o
     "author": "johnw",
     "text": "Authority clarification: /Users/johnw/src/andoria is a secondary clone; andoria-08:~/.config/home-manager remains the authoritative Home Manager checkout and tracks Gitea. No declarative privileged owner currently manages the Ubuntu/Determinate root policy. The narrow proposed seam is a separate root-system output in the same logical johnw/andoria repository, with a privileged lifecycle distinct from Home Manager, managing only Determinate-supported nix.custom.conf and the account policy. This repository must not remove the active sudo-based builder route until the owner confirms that source ownership, names the privileged deployment channel/operator that remains usable after jwiegley leaves sudo, and confirms the intended signing key custody. No host or repository mutation was made for this planning result.",
     "created_at": "2026-08-13T02:42:29Z"
+  },
+  {
+    "id": 144,
+    "issue_id": "nix-89t",
+    "author": "johnw",
+    "text": "Read-only 2026-08-12 inventory resolves the host mechanics but confirms the authority blocker. Andoria-08 is Ubuntu 22.04 with Determinate Nix 3.17.0/Nix 2.33.3; generated nix.conf includes root-owned nix.custom.conf, require-sigs is true, trusted-users is root only, and the client signing public key is absent. The logical johnw/andoria repository can safely expose a data-only root-policy package, but the user-writable Home Manager checkout must never become deployment authority. A separately bootstrapped root-owned deployer must pin an approved revision, manage only nix.custom.conf and jwiegley's sudo-group absence, retain rollback, and restart nix-daemon.service. Migration requires prepare and final phases so signed plain ssh-ng imports are proven before broad sudo is removed. Implementation now needs owner confirmation of the logical source, a privileged operator/channel that survives sudo-group removal, signing-key custody, and whether the negative probe excludes only non-daemon root authority or all non-daemon SSH use. No repository or host mutation, build, activation, or secret access occurred.",
+    "created_at": "2026-08-13T03:39:05Z"
+  },
+  {
+    "id": 146,
+    "issue_id": "nix-89t",
+    "author": "johnw",
+    "text": "Evidence clarification: the preceding no-mutation sentence describes the read-only host inventory only. This status transition and comment intentionally mutate the obr database and tracked PLAN.org issue record; they do not mutate Andoria repositories or host policy.",
+    "created_at": "2026-08-13T03:39:15Z"
   }
 ]
 #+end_src
@@ -1456,15 +1471,14 @@ Partner observation .440Z: cp -p preserves Darwin ACLs and source owner bits, so
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 12:25]
-:MODIFIED: [2026-08-12 Wed 12:52]
+:MODIFIED: [2026-08-12 Wed 20:39]
 :CREATED_BY: johnw
-:DEFERRED: [2026-08-19 Wed 09:00]
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Andoria-T2 can build self-contained derivations but its daemon trusts only root, the jwiegley SSH account has no noninteractive sudo, and it rejects fresh client-signed local outputs because newartisans.com is not a trusted key. It was therefore removed from the final declarative source rather than left as a nondeterministic failure path; Hera still runs the user-activated intermediate generation that contains T2 until separately authorized adoption under nix-z9h. Configure the authoritative remote system declaratively before re-adding it.
+Andoria-T2 can build self-contained derivations but its Determinate Nix daemon trusts only root and does not trust the current client signing key, so it rejects fresh client-signed local outputs. It is absent from the active Hera and Clio builder pools. Like Andoria-08, it has no declarative privileged configuration: the authoritative shared Home Manager checkout cannot own daemon trust. Establish the shared root-policy source and privileged deployment lifecycle before re-adding T2.
 
 ** Acceptance Criteria
 
@@ -1476,12 +1490,42 @@ The authoritative Andoria-T2 system configuration declaratively grants only the 
 [
   {
     "issue_id": "nix-l8r",
+    "depends_on_id": "nix-89t",
+    "type": "blocks",
+    "created_at": "2026-08-13T03:39:06.626717Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-l8r",
     "depends_on_id": "nix-8gs",
     "type": "discovered-from",
     "created_at": "2026-08-12T19:25:47.808202Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 145,
+    "issue_id": "nix-l8r",
+    "author": "johnw",
+    "text": "The owner direction to handle all PLAN work now supersedes the 2026-08-19 defer, which is cleared. Read-only live inventory found Ubuntu 22.04, Determinate Nix 3.17.0/Nix 2.33.3, generated nix.conf including root-owned nix.custom.conf, require-sigs=true, trusted-users=root, and no newartisans.com trust key. No declarative privileged checkout exists; the shared Home Manager checkout is clean but cannot own daemon policy. Hera's active machines file confirms T2 is absent, correcting the stale intermediate-generation wording. The issue now depends on nix-89t because that unit establishes the common root-policy source and privileged lifecycle. After that gate, T2 needs the exact public signing key with trusted-users/root and require-sigs retained, daemon restart, signed-positive and unsigned-negative remote probes, exact host-key pinning, then separately authorized Hera and Clio reactivation. No files, Git state, build, activation, or remote-store mutation occurred.",
+    "created_at": "2026-08-13T03:39:07Z"
+  },
+  {
+    "id": 147,
+    "issue_id": "nix-l8r",
+    "author": "johnw",
+    "text": "Evidence clarification: the preceding no-file/no-Git sentence describes the read-only host inventory only. Clearing the defer, correcting this description, adding the dependency, and recording these comments intentionally mutate the obr database and tracked PLAN.org issue record; they do not mutate Andoria repositories, host policy, remote stores, or activations.",
+    "created_at": "2026-08-13T03:39:16Z"
   }
 ]
 #+end_src
