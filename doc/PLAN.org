@@ -691,16 +691,18 @@ Partner-cleanup review confirmed the finding and the minimal two-file fix. The s
 ]
 #+end_src
 
-* DOING [#C] Narrow Andoria remote-builder root authority                      :builder:security:
+* DONE [#C] Narrow Andoria remote-builder root authority                       :builder:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-89t
 :LABELS:   ["builder","security"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 12:25]
-:MODIFIED: [2026-08-12 Wed 23:27]
+:MODIFIED: [2026-08-13 Thu 02:04]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 02:04]
+:CLOSE_REASON: Installed and behaviorally proved the shared root-only signed-import trust policy on both Andoria builders; activated pinned plain ssh-ng rows on Hera and Clio; verified exact managed machines files, healthy daemons, no sudo remote-program, and fresh x86_64-linux dispatch. Human sudo policy was unchanged.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1746,15 +1748,17 @@ Partner observation .440Z: cp -p preserves Darwin ACLs and source owner bits, so
 ]
 #+end_src
 
-* DOING [#D] Make Andoria-T2 a trusted general-purpose Nix builder
+* DONE [#D] Make Andoria-T2 a trusted general-purpose Nix builder
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-l8r
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 12:25]
-:MODIFIED: [2026-08-12 Wed 23:27]
+:MODIFIED: [2026-08-13 Thu 02:04]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 02:04]
+:CLOSE_REASON: Installed and proved the minimal trust leaf on Andoria-T2, activated its pinned plain ssh-ng row on Hera and Clio, and completed fresh default-machines x86_64-linux builds through T2 with one job and eight requested cores.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
