@@ -3297,7 +3297,7 @@ config/ai/catalog.nix:150-216 stores the Claude-formatted string Read, Grep, Glo
 :LABELS:   ["architecture","heavy-review","packaging"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-13 Thu 02:38]
+:MODIFIED: [2026-08-13 Thu 02:42]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3336,6 +3336,13 @@ agent-deck-runtime-lifecycle.patch is about 45,582 lines, far beyond the documen
     "author": "johnw",
     "text": "Corrected the downstream issue666 fixture to seed the same Instance pointer and reset its empty GroupPath before SaveWithGroups, avoiding a mutex-bearing value copy and ensuring the update path reaches the inserted persistence incarnation. Reconstructing upstream v1.11.0 with all three tracked patches at -p1/--fuzz=0 now yields tree c29f155fa27f45a80bcf715645dd1b6a998a3bb1, exactly equal to signed import commit f09ca2ae. Focused go vet ./internal/session and TestIssue666_SaveWithGroups_NormalizesEmptyGroupPath pass. The product cleanup remains uncommitted and separately reviewed.",
     "created_at": "2026-08-13T09:38:00Z"
+  },
+  {
+    "id": 188,
+    "issue_id": "nix-tcz.37",
+    "author": "johnw",
+    "text": "Independent audit caught stale identity labels after the fixture correction: the patch postimage still named the old blob and f09 recorded the old patch hash. Corrected the postimage to cbe8718 and created append-only signed import c006ff73 from upstream v1.11.0. Its tree remains c29f155f and its message records final patch SHA-256 892f2c358e92400d012ed94c7099929edbf75903b1abd2f477a62fc7617501af. f09 is preserved but superseded; no published history was rewritten.",
+    "created_at": "2026-08-13T09:42:52Z"
   }
 ]
 #+end_src

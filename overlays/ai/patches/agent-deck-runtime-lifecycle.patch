@@ -7789,7 +7789,7 @@ index 013855c..f93e056 100644
  
  // findSweepCall returns the first spyCall with the given envKey, or nil.
 diff --git c/internal/session/issue666_test.go w/internal/session/issue666_test.go
-index 6535d9c..8d0a55f 100644
+index 6535d9c..cbe8718 100644
 --- c/internal/session/issue666_test.go
 +++ w/internal/session/issue666_test.go
 @@ -130,6 +130,11 @@ func TestIssue666_SaveWithGroups_NormalizesEmptyGroupPath(t *testing.T) {
