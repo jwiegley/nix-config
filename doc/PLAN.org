@@ -3291,7 +3291,7 @@ agent-deck-runtime-lifecycle.patch is about 45,582 lines, far beyond the documen
 :LABELS:   ["architecture","memory","pi","pi-bounded-memory","upstream","wiggum"]
 :ISSUE_TYPE: epic
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 01:04]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3312,6 +3312,15 @@ Durable continuation, 2026-08-12 PDT. The bounded-history invariant and frozen C
 
 #+begin_src json
 [
+  {
+    "issue_id": "nix-tcz.37.1",
+    "depends_on_id": "nix-tcz",
+    "type": "parent-child",
+    "created_at": "2026-08-13T08:04:19.121116Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
   {
     "issue_id": "nix-tcz.37.1",
     "depends_on_id": "nix-tcz.37",
