@@ -1983,15 +1983,17 @@ The packaged Pi Usage extension declares the correct Node module type; its bound
 ]
 #+end_src
 
-* DOING [#C] Align gpu-server Nix cache trust with shared Home Manager
+* DONE [#C] Align gpu-server Nix cache trust with shared Home Manager
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-o99
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-12 Wed 23:04]
-:MODIFIED: [2026-08-13 Thu 00:40]
+:MODIFIED: [2026-08-13 Thu 04:40]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 04:40]
+:CLOSE_REASON: The existing exact root policy is now active after the authorized daemon restart; effective trust invariants and a warning-free focused build passed on gpu-server.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2011,6 +2013,20 @@ During the 2026-08-13 authorized shared-work activation, gpu-server completed su
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 190,
+    "issue_id": "nix-o99",
+    "author": "johnw",
+    "text": "2026-08-13 live closeout: gpu-server already had /etc/nix/nix.custom.conf byte-identical to the published Andoria root-policy leaf (SHA-256 263538fe4fba1aab8286cb4c2760984151f7102aae0cd82a0ff02d7b061899cf), but the daemon state was stale. The authorized CPU-policy restart reloaded that existing file. Effective Nix settings now assert require-sigs=true, trusted-users=[root], Tron substituter/key present, and newartisans.com signing key present. A focused checks.x86_64-linux.root-policy build then passed without the prior ignored-extra-substituters/not-trusted warning. No trust file rewrite or trusted-user expansion was needed.",
+    "created_at": "2026-08-13T11:40:59Z"
   }
 ]
 #+end_src
