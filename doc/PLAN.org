@@ -134,7 +134,7 @@ Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 14:58]
-:MODIFIED: [2026-08-12 Wed 18:08]
+:MODIFIED: [2026-08-12 Wed 19:51]
 :OWNER:    johnw
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
@@ -202,6 +202,13 @@ With explicit owner authorization covering the complete four-commit chain, prese
     "author": "johnw",
     "text": "Live read-only preflight after VPS reachability was restored found origin/main at 5c2256f5 and a clean four-commit linear chain: 9d1874ee21adb300, 15540784219b18ee, 50d02ed559209ace, and d707baf0f3d4581a. All four are unsigned. The first two retain the previously authorized identities; the latter two are new descendants. Each patch changes one file with 9 additions and 9 deletions. No Git operation, fetch, build, activation, token action, or host mutation occurred.",
     "created_at": "2026-08-13T01:08:35Z"
+  },
+  {
+    "id": 140,
+    "issue_id": "nix-3qu",
+    "author": "johnw",
+    "text": "Current live state after the separately authorized credential cutover: the original four unsigned commits remain byte-for-byte ancestors and are followed by GOOD-signed one-file credential commit 82beaff38e089972d31f77f4ae9fdd01e1ed0fff. The checkout is clean and still unpushed. No ancestor was amended, rebased, reset, or otherwise rewritten. A complete repair would now rewrite the four unsigned ancestors and necessarily regenerate the descendant signed credential commit ID while preserving all five trees, patches, authors, messages, and order. The previously recorded authority covers only the first two unsigned commits, so explicit authority for the complete five-commit resulting chain is still required.",
+    "created_at": "2026-08-13T02:51:12Z"
   }
 ]
 #+end_src
@@ -519,7 +526,7 @@ Partner-cleanup review confirmed the finding and the minimal two-file fix. The s
 :LABELS:   ["builder","security"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 12:25]
-:MODIFIED: [2026-08-12 Wed 17:16]
+:MODIFIED: [2026-08-12 Wed 19:42]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -583,6 +590,13 @@ The sudo-daemon URI is present in declarative source and recorded as activated o
     "author": "johnw",
     "text": "Evidence classification for comment 124: its no-host-change statement is a parent-session attestation. The tracked repository and issue state are consistent with it but cannot prove absence of every out-of-band action.",
     "created_at": "2026-08-13T00:12:03Z"
+  },
+  {
+    "id": 138,
+    "issue_id": "nix-89t",
+    "author": "johnw",
+    "text": "Authority clarification: /Users/johnw/src/andoria is a secondary clone; andoria-08:~/.config/home-manager remains the authoritative Home Manager checkout and tracks Gitea. No declarative privileged owner currently manages the Ubuntu/Determinate root policy. The narrow proposed seam is a separate root-system output in the same logical johnw/andoria repository, with a privileged lifecycle distinct from Home Manager, managing only Determinate-supported nix.custom.conf and the account policy. This repository must not remove the active sudo-based builder route until the owner confirms that source ownership, names the privileged deployment channel/operator that remains usable after jwiegley leaves sudo, and confirms the intended signing key custody. No host or repository mutation was made for this planning result.",
+    "created_at": "2026-08-13T02:42:29Z"
   }
 ]
 #+end_src
@@ -6598,15 +6612,17 @@ Remove the resolved portable quality question and make the remaining external/ow
 ]
 #+end_src
 
-* TODO [#A] Rotate the exposed VPS Gitea credential and remove it from the remote URL  :security:
+* DONE [#A] Rotate the exposed VPS Gitea credential and remove it from the remote URL  :security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-twq
 :LABELS:   ["security"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-12 Wed 14:02]
-:MODIFIED: [2026-08-12 Wed 18:08]
+:MODIFIED: [2026-08-12 Wed 19:51]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 19:51]
+:CLOSE_REASON: Rotated and revoked the uniquely identified exposed token, activated managed Git and Nix credentials, removed userinfo from the VPS origin, and verified both clients after revocation.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -6675,6 +6691,13 @@ A read-only fleet preflight printed the VPS Git remote URL, which contained an e
     "author": "johnw",
     "text": "Owner restored VPS reachability and explicitly authorized the previously requested build and activation needed for a safe credential cutover. Live read-only preflight found the checkout clean and build driver unlocked. Credential type still cannot be identified from Git/SOPS metadata; the authenticated CLI token cannot list personal tokens, and no browser surface is available in this session. No credential was read, created, deployed, or revoked. Continue only after one exact Gitea credential record is identified without exposing its value.",
     "created_at": "2026-08-13T01:08:35Z"
+  },
+  {
+    "id": 139,
+    "issue_id": "nix-twq",
+    "author": "johnw",
+    "text": "Completed credential cutover, 2026-08-12 PDT. The exposed credential was uniquely matched to one Gitea repository-token record without displaying its value. A replacement was created and validated, both existing SOPS-managed Git and Nix authentication leaves were updated, and the encrypted candidate built and activated as /nix/store/cf4505152kw80v2sghks0zn7d962ss55-nixos-system-vps-25.11.20260630.b6018f8. Before revocation, the managed Git helper authenticated to the known clean VPS repository URL and Nix refreshed a private flake through its configured netrc. The authoritative origin was then replaced with the canonical credential-free URL. The exact old database row was deleted in a serializable transaction that asserted its metadata and preserved the exact replacement row. Both Git and Nix authentication passed again after revocation. Suppressed structural scans found no HTTP(S) userinfo URL in the tracked tree, the sole remote URL, or /var/log/build.log; authorized SOPS/runtime secret leaves are intentionally excluded from a global-absence claim. Encrypted secrets.yaml is committed alone in GOOD-signed commit 82beaff38e089972d31f77f4ae9fdd01e1ed0fff; a clean committed-tree build reproduced the active system path. The VPS checkout is clean and unpushed. Its four pre-existing unsigned ancestor commits remain unchanged and are still tracked by nix-3qu; no history rewrite or publication occurred.",
+    "created_at": "2026-08-13T02:51:08Z"
   }
 ]
 #+end_src
@@ -6865,7 +6888,7 @@ Live Hera Pi reports both omlx/Qwen3.6-27B-oQ6e-mtp and router/sol as thinking=n
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-11 Tue 10:15]
-:MODIFIED: [2026-08-12 Wed 17:11]
+:MODIFIED: [2026-08-12 Wed 19:42]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -6900,6 +6923,13 @@ Path Finder 26.1.7 is independent of Nix Samba. During the reported attempt it p
     "author": "johnw",
     "text": "Clarification: the prior action request was under-specified; no exact Path Finder menu, field layout, or intended share was recorded. The intended reproduction is a synchronized Clio Path Finder Connect-to-Server attempt using a freshly typed direct smb://samba.vulcan.lan/<owner-selected-existing-share> URL while capturing only the timestamp, UI error or auth prompt, mount-table and /Volumes delta, and narrowly filtered native SMB logs. Do not read credentials or choose a historical URL. Path Finder uses Apple native SMB independently of Nix smbclient.",
     "created_at": "2026-08-13T00:11:54Z"
+  },
+  {
+    "id": 137,
+    "issue_id": "nix-xrm",
+    "author": "johnw",
+    "text": "Current Clio handler evidence rules out a persistent Jump Desktop SMB takeover: LaunchServices maps smb/cifs to Finder and maps only jump/vnc/rdp to Jump Desktop. Path Finder 26.1.7 has its own Go > Connect to Server action, recent-server storage, an SMB server type, and native mount API. The prior redacted URL was handed to Jump, so the best-supported cause is selection of a saved or non-SMB recent value. Keep this issue open for the exact owner GUI reproduction: foreground Path Finder, use Go > Connect to Server (Command-K), avoid recent rows, fully replace Address with a freshly typed smb://samba.vulcan.lan/<existing-share>, select SMB Server if offered, and report only time plus prompt/error/result. No LaunchServices or preference mutation is warranted.",
+    "created_at": "2026-08-13T02:42:25Z"
   }
 ]
 #+end_src
