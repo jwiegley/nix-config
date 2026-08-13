@@ -83,7 +83,3 @@ authority questions remain unresolved:
    timer identity or may intentionally reuse the general Vulcan identity. Key
    provisioning, authoritative consumer changes, activation, and runtime
    acceptance require separate authorization.
-4. `nix-jlj`: choose whether to retain the unsupported Docker Desktop
-   emulation used by MSSQL on Apple Silicon, migrate the service and data to
-   supported x86-64 Linux, or retire it. Any service mutation, activation, or
-   data migration requires separate authorization.
