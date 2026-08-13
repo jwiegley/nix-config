@@ -134,7 +134,7 @@ Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 14:58]
-:MODIFIED: [2026-08-12 Wed 19:51]
+:MODIFIED: [2026-08-12 Wed 19:57]
 :OWNER:    johnw
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
@@ -209,6 +209,13 @@ With explicit owner authorization covering the complete four-commit chain, prese
     "author": "johnw",
     "text": "Current live state after the separately authorized credential cutover: the original four unsigned commits remain byte-for-byte ancestors and are followed by GOOD-signed one-file credential commit 82beaff38e089972d31f77f4ae9fdd01e1ed0fff. The checkout is clean and still unpushed. No ancestor was amended, rebased, reset, or otherwise rewritten. A complete repair would now rewrite the four unsigned ancestors and necessarily regenerate the descendant signed credential commit ID while preserving all five trees, patches, authors, messages, and order. The previously recorded authority covers only the first two unsigned commits, so explicit authority for the complete five-commit resulting chain is still required.",
     "created_at": "2026-08-13T02:51:12Z"
+  },
+  {
+    "id": 142,
+    "issue_id": "nix-3qu",
+    "author": "johnw",
+    "text": "The current clean unpublished VPS chain now has six commits above origin/main: the original four unsigned lock commits followed by GOOD-signed credential commit 82beaff3 and GOOD-signed read-only-helper commit 740afdc9. The original four remain unchanged. Any complete signing repair must preserve all six trees, patches, metadata, messages, and order and will necessarily regenerate both signed descendant IDs. Existing rewrite authority still covers only the first two commits.",
+    "created_at": "2026-08-13T02:57:05Z"
   }
 ]
 #+end_src
@@ -431,6 +438,58 @@ Clio retains dynamic provider discovery, Hermes, and managed transport but has n
     "author": "johnw",
     "text": "Closeout on the final tree: Clio retains dynamic llama-swap/oMLX discovery, Hermes, and managed request/idle transport but receives no fixed local-provider overrides or synthetic router; Hera retains its fixed overrides and router. Both Pi and Prime provider factories receive catalog-owned endpoint records. Behavioral tests use synthetic non-default URLs, require exact /models requests and registrations, prove the transport-only idle timeout, and cover routes-disabled rendering. The focused Prime check, full 21-suite root gate, pre-commit gate, and config/ai all-system no-build evaluation passed. No activation, live endpoint request, model download, service mutation, or publication occurred during source closeout.",
     "created_at": "2026-08-12T21:02:16Z"
+  }
+]
+#+end_src
+
+* DONE [#C] Make the VPS Gitea credential helper read-only
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-6a3
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-12 Wed 19:54]
+:MODIFIED: [2026-08-12 Wed 19:57]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 19:57]
+:CLOSE_REASON: Replaced the writable credential-store callback with a read-only managed helper and verified live private Git access with empty stderr.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The VPS host-scoped Git helper uses credential-store directly against a SOPS-managed 0440 file. Authentication succeeds, but Git then invokes store and credential-store emits a fatal lock warning because the immutable managed leaf cannot be rewritten. Replace it with a read-only helper that delegates only get to credential-store and accepts store/erase without mutating the secret.
+
+** Acceptance Criteria
+
+A real private ls-remote through the managed helper succeeds with empty stderr; the SOPS credential file remains root-owned and non-writable; build and authorized activation pass; Git authentication still succeeds after activation.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-6a3",
+    "depends_on_id": "nix-twq",
+    "type": "discovered-from",
+    "created_at": "2026-08-13T02:54:39.970333Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 141,
+    "issue_id": "nix-6a3",
+    "author": "johnw",
+    "text": "Implemented at the VPS-owned Home Manager seam. The host-specific helper now clears inherited helpers, delegates only the get operation to the pinned Git credential-store against the SOPS leaf, and returns success without mutation for Git store/erase callbacks. A real private ls-remote prototype passed with empty stderr before integration. GOOD-signed one-file commit 740afdc93a2e976d2251d4f83336ca58c327f2dc was installed on the clean VPS chain; the committed-tree build passed and authorized switch activated /nix/store/5hw6429gibm9zrb7p8ahzqyvki131dmc-nixos-system-vps-25.11.20260630.b6018f8. Live acceptance then proved private ls-remote exit zero with zero stderr bytes, the SOPS credential leaf remained 0440 root:johnw, current system and system profile matched, failed-unit count was zero, the build lock was free, and the checkout was clean. No credential content was read or displayed.",
+    "created_at": "2026-08-13T02:57:05Z"
   }
 ]
 #+end_src
