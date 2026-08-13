@@ -60,7 +60,7 @@ let
       expectedAndoriaBuilder
       // {
         hostName = "andoria-08";
-        maxJobs = 4;
+        maxJobs = 1;
         publicHostKey = andoria08HostKey;
       }
     )
@@ -68,7 +68,7 @@ let
       expectedAndoriaBuilder
       // {
         hostName = "andoria-t2";
-        maxJobs = 4;
+        maxJobs = 1;
         publicHostKey = andoriaT2HostKey;
       }
     )
@@ -113,14 +113,14 @@ let
   clioBuilderKnownHostsEntry = clioEtc."nix/builder-known-hosts";
   expectedHeraMachinesFile = ''
     ssh-ng://johnw@vulcan.lan aarch64-linux /Users/johnw/hera/id_hera 4 2 nixos-test,big-parallel,kvm - ${vulcanHostKey}
-    ssh-ng://jwiegley@andoria-08 x86_64-linux /Users/johnw/.config/ssh/id_positron 4 4 big-parallel - ${andoria08HostKey}
-    ssh-ng://jwiegley@andoria-t2 x86_64-linux /Users/johnw/.config/ssh/id_positron 4 4 big-parallel - ${andoriaT2HostKey}
+    ssh-ng://jwiegley@andoria-08 x86_64-linux /Users/johnw/.config/ssh/id_positron 1 4 big-parallel - ${andoria08HostKey}
+    ssh-ng://jwiegley@andoria-t2 x86_64-linux /Users/johnw/.config/ssh/id_positron 1 4 big-parallel - ${andoriaT2HostKey}
   '';
   expectedClioMachinesFile = ''
     ssh-ng://johnw@hera.lan aarch64-darwin /Users/johnw/clio/id_clio 24 4 - - ${heraHostKey}
     ssh-ng://johnw@vulcan.lan aarch64-linux /Users/johnw/clio/id_clio 4 2 nixos-test,big-parallel,kvm - ${vulcanHostKey}
-    ssh-ng://jwiegley@andoria-08 x86_64-linux /Users/johnw/.config/ssh/id_positron 4 4 big-parallel - ${andoria08HostKey}
-    ssh-ng://jwiegley@andoria-t2 x86_64-linux /Users/johnw/.config/ssh/id_positron 4 4 big-parallel - ${andoriaT2HostKey}
+    ssh-ng://jwiegley@andoria-08 x86_64-linux /Users/johnw/.config/ssh/id_positron 1 4 big-parallel - ${andoria08HostKey}
+    ssh-ng://jwiegley@andoria-t2 x86_64-linux /Users/johnw/.config/ssh/id_positron 1 4 big-parallel - ${andoriaT2HostKey}
   '';
   expectedClioBuilderSshConfig = ''
     Host andoria-08 andoria-t2
@@ -194,6 +194,13 @@ let
     }).config;
   personalLinux = homeConfigurations."johnw@aarch64-linux".config;
   sharedWork = homeConfigurations."jwiegley@x86_64-linux".config;
+  expectedSharedWorkNixConfig = ''
+    max-jobs = 1
+    cores = 8
+    experimental-features = nix-command flakes
+    extra-substituters = https://cache.iog.io
+    substituters = https://cache.nixos.org https://tron.cachix.org
+  '';
   unknownHomeClassContract = registry.homeClassContractFor "unknown";
   unknownHomeClassMessagePrefix = "set nixManagedAiHomeClass to one of ";
   nonDesktopHomes =
@@ -335,12 +342,14 @@ assert
 assert
   darwinConfigurations.hera.config.nix.settings.trusted-public-keys
   == nixTrust.darwin.trustedPublicKeys;
+assert darwinConfigurations.hera.config.nix.settings.cores == 8;
 assert
   darwinConfigurations.clio.config.nix.settings.trusted-substituters
   == nixTrust.darwin.trustedSubstituters;
 assert
   darwinConfigurations.clio.config.nix.settings.trusted-public-keys
   == nixTrust.darwin.trustedPublicKeys;
+assert darwinConfigurations.clio.config.nix.settings.cores == 8;
 assert
   clioBuildMachines == [
     expectedHeraBuilder
@@ -422,6 +431,8 @@ assert builtins.all (
 ) registry.sharedWork.activeRolloutMembers;
 assert sharedWork.johnw.sharedWork == registry.sharedWork;
 assert sharedWork.johnw.hostRouting == registry.routing;
+assert sharedWork.xdg.configFile."nix/nix.conf".text == expectedSharedWorkNixConfig;
+assert !(builtins.hasAttr "nix/nix.conf" personalLinux.xdg.configFile);
 assert renderedHostRouting == builtins.readFile ../../bin/lib/host-routing.sh;
 assert unknownHomeClassContract.row == null;
 assert !unknownHomeClassContract.assertion;

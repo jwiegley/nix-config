@@ -30,7 +30,7 @@ let
     system = hosts.andoria.system;
     sshUser = hosts.andoria.username;
     sshIdentity = "positron";
-    maxJobs = 4;
+    maxJobs = 1;
     speedFactor = 4;
     supportedFeatures = [ "big-parallel" ];
   };

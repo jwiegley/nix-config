@@ -1991,6 +1991,38 @@ Partner observation 2026-08-10T19:49:52.586Z: restore the Home Manager runtime-o
 ]
 #+end_src
 
+* DOING [#A] Bound shared-work Nix builds to eight cores
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-p17
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-13 Thu 00:23]
+:MODIFIED: [2026-08-13 Thu 00:27]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The shared-work Home Manager profile set cores=32 while reachable hosts reported effective max-jobs values of 224-288. A broad lock update therefore launched many heavyweight derivations concurrently and andoria-08 exhausted RAM and swap. Configure local invocations from the shared-work profile, activated on the four active rollout hosts, for one job with eight requested cores; configure Darwin-dispatched Andoria builders for one job with eight requested cores. Verify both rendered client paths and use explicit equivalent bounds until activation. This is cooperative Nix/build-system policy, not an operating-system cgroup ceiling.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-p17",
+    "depends_on_id": "nix-4yi",
+    "type": "discovered-from",
+    "created_at": "2026-08-13T07:23:22.610853Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#C] Keep the jump-authorization test synchronized with its canonical option order
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

@@ -395,7 +395,8 @@ in
     configFile = lib.optionalAttrs isHeavy {
       "nix/nix.conf" = lib.mkIf isPositronRemoteLinux {
         text = ''
-          cores = 32
+          max-jobs = 1
+          cores = 8
           experimental-features = nix-command flakes
           extra-substituters = https://cache.iog.io
           substituters = https://cache.nixos.org https://tron.cachix.org
