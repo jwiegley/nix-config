@@ -1141,6 +1141,44 @@ Clio activation of signed root commit 6e4a1c4 built successfully but failed afte
 ]
 #+end_src
 
+* DONE [#C] Wait for complete PID records in deadline-supervisor tests      :reliability:testing:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ch9
+:LABELS:   ["reliability","testing"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-13 Thu 01:15]
+:MODIFIED: [2026-08-13 Thu 01:18]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 01:18]
+:CLOSE_REASON: Wait for a complete positive PID within the existing two-second startup allowance before signaling the supervisor. Absent, malformed, empty, and nonpositive records still fail; signal and process-group assertions are unchanged. The focused eight-test suite passed once and in four concurrent runs; Ruff and diff checks passed; independent Python review returned CLEAR.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Under concurrent system load, the fast pre-commit gate observed the deadline-supervisor fixture create its PID file before the child had written the integer. The test then parsed an empty string and failed although the supervised behavior was not under test. Wait for a complete, parseable PID record within the existing bounded deadline rather than treating mere path existence as readiness.
+
+** Acceptance Criteria
+
+The fixture waits only within its existing bounded startup allowance for a positive integer PID; malformed or absent records still fail; supervisor signal and process-group assertions are unchanged; the focused suite passes.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-ch9",
+    "depends_on_id": "nix-p17",
+    "type": "discovered-from",
+    "created_at": "2026-08-13T08:15:44.385102Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#A] Fix Nix-managed Codex model catalog schema mismatch                    :ai:codex:nix:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

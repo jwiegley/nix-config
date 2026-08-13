@@ -26,6 +26,18 @@ def process_exists(pid: int) -> bool:
     return True
 
 
+def wait_for_positive_pid(path: Path, attempts: int = 100) -> int | None:
+    for _attempt in range(attempts):
+        try:
+            pid = int(path.read_text())
+            if pid > 0:
+                return pid
+        except (FileNotFoundError, ValueError):
+            pass
+        time.sleep(0.02)
+    return None
+
+
 class DeadlineSupervisorTests(unittest.TestCase):
     def run_supervisor(self, *command, term_after="0.2", kill_after="0.2"):
         return subprocess.run(
@@ -183,15 +195,11 @@ class DeadlineSupervisorTests(unittest.TestCase):
                     stderr=subprocess.PIPE,
                     text=True,
                 )
-                for _attempt in range(100):
-                    if pid_path.exists():
-                        break
-                    time.sleep(0.02)
-                self.assertTrue(pid_path.exists(), "child PID was never published")
+                child_pid = wait_for_positive_pid(pid_path)
+                self.assertIsNotNone(child_pid, "child PID was never published")
                 os.kill(supervisor.pid, sig)
                 _stdout, stderr = supervisor.communicate(timeout=3)
                 self.assertEqual(supervisor.returncode, 128 + sig, stderr)
-                child_pid = int(pid_path.read_text())
                 for _attempt in range(50):
                     if not process_exists(child_pid):
                         break
