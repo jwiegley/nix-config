@@ -4,8 +4,10 @@ This file provides guidance to coding agents working in this repository.
 
 ## Start here
 
-1. Read `README.md`, `doc/ARCHITECTURE.md`, and `doc/CURRENT-WORK.md`.
-2. Read the active work item named by the task. Do not infer current work from old plans or handoffs; Git history preserves them.
+1. Read `README.md` and `doc/ARCHITECTURE.md`.
+2. Read the active work item with `obr show <id>`; `doc/PLAN.org` is the tracked
+   issue surface. Do not infer current work from old plans or handoffs; Git
+   history preserves them.
 3. Confirm `git status` and load the current direnv environment.
 
 When GitHub work is explicitly authorized, select the `jwiegley` account for every

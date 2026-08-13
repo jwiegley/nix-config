@@ -165,12 +165,12 @@ whole-fleet runtime proof.
 - [`bin/README.md`](bin/README.md) — complete command and operational reference
 - [`test/README.md`](test/README.md) — verification scope and maintainability policy
 - [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) — ownership, data flow, rollout, and state boundaries
-- [`doc/CURRENT-WORK.md`](doc/CURRENT-WORK.md) — current work-unit pointer
+- [`doc/PLAN.org`](doc/PLAN.org) — tracked `obr` issue surface and current-work authority
 - [`doc/Pi Coding Agent Extensions.md`](<doc/Pi Coding Agent Extensions.md>) — managed Pi extension inventory
 
-Git history is the archive for completed plans and handoffs. Current documents
-describe the present architecture and active work rather than preserving obsolete
-execution narratives.
+`obr` and `doc/PLAN.org` are the sole current-work authority. Git history is the
+archive for completed plans and handoffs; architecture documents describe the
+present system rather than preserving obsolete execution narratives.
 
 ## Safety
 
