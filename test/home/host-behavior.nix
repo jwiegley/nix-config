@@ -42,6 +42,7 @@ let
   heraSshdConfig = darwinConfigurations.hera.config.services.openssh.extraConfig;
   clioSshdConfig = darwinConfigurations.clio.config.services.openssh.extraConfig;
   andoria08HostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSVBUazhVay9ucEJZRnB2dURRS1lHNFZmZStPdFAwRDM0RkRlNi9scDdyUnggcm9vdEBwb3NpdHJvbgo=";
+  andoriaT2HostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUwzK28xbWVYQkNZSzhQOTBQL2tIYW4xcnVYMkpEcmZrQUZaUklhcjZrbTIK";
   heraHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUU5Mk1uem14L0NWUzZHaUdiSjF2R0MwU2RmK0Q3L3ZTVS9QTjdmMVkxTVYK";
   vulcanHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUl0TUQ4ODYveGxlUzRpaE5QL3lwZ1VieSsyUnd6UFNJVm5CL0k1aTNXRW8gcm9vdEBuaXhvcwo=";
   expectedAndoriaBuilder = {
@@ -58,9 +59,17 @@ let
     (
       expectedAndoriaBuilder
       // {
-        hostName = "andoria-08?remote-program=sudo%20-n%20/nix/var/nix/profiles/default/bin/nix-daemon";
+        hostName = "andoria-08";
         maxJobs = 4;
         publicHostKey = andoria08HostKey;
+      }
+    )
+    (
+      expectedAndoriaBuilder
+      // {
+        hostName = "andoria-t2";
+        maxJobs = 4;
+        publicHostKey = andoriaT2HostKey;
       }
     )
   ];
@@ -104,15 +113,17 @@ let
   clioBuilderKnownHostsEntry = clioEtc."nix/builder-known-hosts";
   expectedHeraMachinesFile = ''
     ssh-ng://johnw@vulcan.lan aarch64-linux /Users/johnw/hera/id_hera 4 2 nixos-test,big-parallel,kvm - ${vulcanHostKey}
-    ssh-ng://jwiegley@andoria-08?remote-program=sudo%20-n%20/nix/var/nix/profiles/default/bin/nix-daemon x86_64-linux /Users/johnw/.config/ssh/id_positron 4 4 big-parallel - ${andoria08HostKey}
+    ssh-ng://jwiegley@andoria-08 x86_64-linux /Users/johnw/.config/ssh/id_positron 4 4 big-parallel - ${andoria08HostKey}
+    ssh-ng://jwiegley@andoria-t2 x86_64-linux /Users/johnw/.config/ssh/id_positron 4 4 big-parallel - ${andoriaT2HostKey}
   '';
   expectedClioMachinesFile = ''
     ssh-ng://johnw@hera.lan aarch64-darwin /Users/johnw/clio/id_clio 24 4 - - ${heraHostKey}
     ssh-ng://johnw@vulcan.lan aarch64-linux /Users/johnw/clio/id_clio 4 2 nixos-test,big-parallel,kvm - ${vulcanHostKey}
-    ssh-ng://jwiegley@andoria-08?remote-program=sudo%20-n%20/nix/var/nix/profiles/default/bin/nix-daemon x86_64-linux /Users/johnw/.config/ssh/id_positron 4 4 big-parallel - ${andoria08HostKey}
+    ssh-ng://jwiegley@andoria-08 x86_64-linux /Users/johnw/.config/ssh/id_positron 4 4 big-parallel - ${andoria08HostKey}
+    ssh-ng://jwiegley@andoria-t2 x86_64-linux /Users/johnw/.config/ssh/id_positron 4 4 big-parallel - ${andoriaT2HostKey}
   '';
   expectedClioBuilderSshConfig = ''
-    Host andoria-08
+    Host andoria-08 andoria-t2
       ProxyCommand ssh -o BatchMode=yes -o IdentitiesOnly=yes -o UserKnownHostsFile=/etc/nix/builder-known-hosts -o StrictHostKeyChecking=yes -i /Users/johnw/clio/id_clio -W %h:%p johnw@hera.lan
   '';
   expectedClioBuilderKnownHosts = ''
@@ -315,8 +326,9 @@ assert builtins.all (
   darwinConfigurations.${host}.config.networking.hostName == host
   && darwinConfigurations.${host}.config.networking.localHostName == host
 ) requiredDarwinHosts;
-assert builtins.head heraBuildMachines == expectedVulcanBuilder "/Users/johnw/hera/id_hera";
-assert builtins.tail heraBuildMachines == expectedAndoriaBuilders;
+assert
+  heraBuildMachines
+  == [ (expectedVulcanBuilder "/Users/johnw/hera/id_hera") ] ++ expectedAndoriaBuilders;
 assert
   darwinConfigurations.hera.config.nix.settings.trusted-substituters
   == nixTrust.darwin.trustedSubstituters;

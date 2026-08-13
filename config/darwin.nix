@@ -191,7 +191,7 @@ in
           hera.lan ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE92Mnzmx/CVS6GiGbJ1vGC0Sdf+D7/vSU/PN7f1Y1MV
         '';
         "ssh/ssh_config.d/050-nix-builders.conf".text = ''
-          Host andoria-08
+          Host andoria-08 andoria-t2
             ProxyCommand ssh -o BatchMode=yes -o IdentitiesOnly=yes -o UserKnownHostsFile=/etc/nix/builder-known-hosts -o StrictHostKeyChecking=yes -i ${home}/${hostname}/id_${hostname} -W %h:%p johnw@hera.lan
         '';
       })
@@ -413,47 +413,22 @@ in
 
   nix =
     let
-      hera = {
-        hostName = "hera.lan";
-        protocol = "ssh-ng";
-        system = "aarch64-darwin";
-        sshUser = "johnw";
-        sshKey = "${home}/${hostname}/id_${hostname}";
-        publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUU5Mk1uem14L0NWUzZHaUdiSjF2R0MwU2RmK0Q3L3ZTVS9QTjdmMVkxTVYK";
-        maxJobs = 24;
-        speedFactor = 4;
+      hostRegistry = import ./hosts/registry.nix;
+      builderIdentityPaths = {
+        host = "${home}/${hostname}/id_${hostname}";
+        positron = "${xdg_configHome}/ssh/id_positron";
       };
-      vulcanBuilder = {
-        hostName = "vulcan.lan";
-        protocol = "ssh-ng";
-        system = "aarch64-linux";
-        sshUser = "johnw";
-        sshKey = "${home}/${hostname}/id_${hostname}";
-        publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUl0TUQ4ODYveGxlUzRpaE5QL3lwZ1VieSsyUnd6UFNJVm5CL0k1aTNXRW8gcm9vdEBuaXhvcwo=";
-        maxJobs = 4;
-        speedFactor = 2;
-        supportedFeatures = [
-          "nixos-test"
-          "big-parallel"
-          "kvm"
-        ];
-      };
-      andoriaBuilder = {
-        # The remote user is not trusted by the system daemon but already has
-        # passwordless sudo; use that authority only for this daemon handoff.
-        hostName = "andoria-08?remote-program=sudo%20-n%20/nix/var/nix/profiles/default/bin/nix-daemon";
-        protocol = "ssh-ng";
-        system = "x86_64-linux";
-        sshUser = "jwiegley";
-        sshKey = "${xdg_configHome}/ssh/id_positron";
-        publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSVBUazhVay9ucEJZRnB2dURRS1lHNFZmZStPdFAwRDM0RkRlNi9scDdyUnggcm9vdEBwb3NpdHJvbgo=";
-        maxJobs = 4;
-        speedFactor = 4;
-        supportedFeatures = [ "big-parallel" ];
-      };
+      buildMachineFor =
+        name:
+        let
+          builder = hostRegistry.builders.${name};
+        in
+        builtins.removeAttrs builder [ "sshIdentity" ]
+        // {
+          sshKey = builderIdentityPaths.${builder.sshIdentity};
+        };
     in
     {
-
       enable = false;
       package = pkgs.nix;
 
@@ -482,10 +457,7 @@ in
       };
 
       distributedBuilds = true;
-      buildMachines = (if config.johnw.host.isClio then [ hera ] else [ ]) ++ [
-        vulcanBuilder
-        andoriaBuilder
-      ];
+      buildMachines = map buildMachineFor hostRegistry.builderPools.${hostname};
 
       extraOptions = ''
         gc-keep-derivations = true

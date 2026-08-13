@@ -634,7 +634,7 @@ Partner-cleanup review confirmed the finding and the minimal two-file fix. The s
 :LABELS:   ["builder","security"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 12:25]
-:MODIFIED: [2026-08-12 Wed 22:29]
+:MODIFIED: [2026-08-12 Wed 23:21]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
@@ -642,11 +642,11 @@ Partner-cleanup review confirmed the finding and the minimal two-file fix. The s
 :ORIGINAL_SIZE: 0
 :END:
 
-The working client-side ssh-ng route on Andoria-08 invokes nix-daemon through an SSH account that already has unrestricted passwordless sudo. That makes distributed builds functional without changing remote global trust, but the account remains root-equivalent beyond Nix. Move the server-side boundary to declarative least privilege: either a dedicated SSH key with a forced nix-daemon --stdio command, an exact-command sudo rule/wrapper, or a declarative trusted-user/signing-key policy. Do not weaken host-key or identity pinning.
+Make Andoria-08 a plain ssh-ng builder without elevating the SSH account to a trusted Nix user. The shared nix-config trust record owns require-sigs, trusted-users=root, cache trust, and the authorized client signing public key; johnw/andoria renders that data as one Determinate Nix custom-policy leaf for explicit root installation. Builder transport, human sudo, and ordinary SSH access remain separate authorities.
 
 ** Acceptance Criteria
 
-The Andoria builder accepts a fresh client-signed local dependency without unrestricted passwordless sudo; its forced command or exact daemon authority is managed declaratively on the authoritative host; Hera and Clio builder URIs no longer rely on broad sudo; a fresh nonce-bearing remote build and negative non-daemon command probe pass; no activation occurs without separate authorization.
+The shared trust record is rendered and installed byte-for-byte on Andoria-08 with require-sigs=true and trusted-users=root; the daemon is restarted; a fresh client-signed ordinary path imports while a fresh unsigned ordinary path is rejected; Hera and Clio use a pinned plain ssh-ng builder URI with no sudo remote-program; a fresh x86_64-linux build runs through that builder; focused serialization, system build, publication, and authorized client activation pass. Human sudo policy is unchanged.
 
 ** Notes
 
@@ -734,6 +734,13 @@ The sudo-daemon URI is present in declarative source and recorded as activated o
     "author": "johnw",
     "text": "Architecture correction after owner-requested Ponytail, abstraction, and Alexey reviews: builder transport trust and the human administrator's sudo role are independent. The bespoke bootstrap/deployer/verifier/finalizer framework is rejected and will be deleted. nix-config now owns the cache/signing trust record once; johnw/andoria renders one Determinate Nix leaf; an explicitly authorized operator installs that leaf and restarts the daemon on each builder. The remote builder then uses plain untrusted ssh-ng with require-sigs=true, trusted-users=root, and signed-positive/unsigned-negative behavioral proof. This issue will not grant, remove, or replace John's ordinary host-administration sudo access.",
     "created_at": "2026-08-13T05:29:47Z"
+  },
+  {
+    "id": 152,
+    "issue_id": "nix-89t",
+    "author": "johnw",
+    "text": "Live server evidence before client cutover: the exact generated policy SHA-256 263538fe4fba1aab8286cb4c2760984151f7102aae0cd82a0ff02d7b061899cf is installed root:root 0644 on Andoria-08 and its daemon is active. A fresh signed ordinary path imported over plain ssh-ng; a fresh unsigned ordinary output built on T2 was rejected specifically for lacking a trusted signature. A fresh x86_64-linux derivation then built on plain ssh-ng://jwiegley@andoria-08 with local jobs and substitutes disabled. Human sudo was not changed. Client source is built but not yet committed, published, or activated.",
+    "created_at": "2026-08-13T06:21:17Z"
   }
 ]
 #+end_src
@@ -1577,14 +1584,14 @@ Partner observation .440Z: cp -p preserves Darwin ACLs and source owner bits, so
 ]
 #+end_src
 
-* TODO [#D] Make Andoria-T2 a trusted general-purpose Nix builder
+* DOING [#D] Make Andoria-T2 a trusted general-purpose Nix builder
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-l8r
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-12 Wed 12:25]
-:MODIFIED: [2026-08-12 Wed 20:39]
+:MODIFIED: [2026-08-12 Wed 23:21]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1639,6 +1646,13 @@ The authoritative Andoria-T2 system configuration declaratively grants only the 
     "author": "johnw",
     "text": "Evidence clarification: the preceding no-file/no-Git sentence describes the read-only host inventory only. Clearing the defer, correcting this description, adding the dependency, and recording these comments intentionally mutate the obr database and tracked PLAN.org issue record; they do not mutate Andoria repositories, host policy, remote stores, or activations.",
     "created_at": "2026-08-13T03:39:16Z"
+  },
+  {
+    "id": 153,
+    "issue_id": "nix-l8r",
+    "author": "johnw",
+    "text": "Andoria-T2 now has the same minimal signed-import trust policy installed and behaviorally proven; implementing its pinned plain ssh-ng client row and activation together with nix-89t.",
+    "created_at": "2026-08-13T06:21:17Z"
   }
 ]
 #+end_src

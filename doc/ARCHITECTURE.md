@@ -55,9 +55,13 @@ consumer's checkout or deployment state.
 ## Host registry and shared-home policy
 
 `config/hosts/registry.nix` is the data authority for host system, activation,
-login, the lean-server role, shared-work membership and rollout targets, and
-shell host/output routing. `config/host-options.nix` gives those tables a typed
-module surface and derives the capability flags consumed by modules.
+login, the lean-server role, shared-work membership and rollout targets,
+distributed-builder identity, capacity and client pools, and shell host/output
+routing. `config/host-options.nix` gives the host tables a typed module surface
+and derives the capability flags consumed by modules. Darwin projects each
+builder's named SSH identity to its host-local key path and writes the resulting
+ordered pool to `/etc/nix/machines`; the registry does not own private key
+material.
 
 The four active shared-work machines use one generated Home Manager
 configuration. Their Nix-owned leaves must therefore remain byte-identical.
@@ -87,7 +91,7 @@ need them for rollback.
 
 | Path | Owns | Must not own |
 | --- | --- | --- |
-| `config/hosts/registry.nix` | Host identity, capabilities, membership, rollout selection, and routing data | Module or shell implementation |
+| `config/hosts/registry.nix` | Host identity, capabilities, membership, rollout selection, builder records and pools, and routing data | Module or shell implementation, private SSH key material, or activation |
 | `config/hosts/shell-routing.nix` | Build-time shell projection of registry routing data | Independent host identity policy or runtime Nix discovery |
 | `config/nix-trust.nix` | Shared binary-cache and client-signing trust data | Root-file installation or host activation |
 | `config/ai/catalog.nix` | Profiles, selectors, resources, validation | Client serialization or package builds |

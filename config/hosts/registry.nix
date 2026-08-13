@@ -1,7 +1,7 @@
-# Declarative host, capability, membership, and routing data shared by the
-# module schema, package selector, and generated shell projection. Keeping this
-# file free of module arguments lets every consumer import the same tables and
-# pure capability function.
+# Declarative host, builder, capability, membership, and routing data shared by
+# the module schema, package selector, and generated shell projection. Keeping
+# this file free of module arguments lets every consumer import the same tables
+# and pure capability function.
 
 let
   # Membership is an identity fact, not an availability probe. git-ai remains
@@ -20,6 +20,67 @@ let
       "andoria-t2"
       "delphi-3bd4"
       "gpu-server"
+    ];
+  };
+
+  # Builder identity, capacity, and ordered client pools are host facts. Darwin
+  # supplies only the local path for each named SSH identity.
+  andoriaBuilder = {
+    protocol = "ssh-ng";
+    system = hosts.andoria.system;
+    sshUser = hosts.andoria.username;
+    sshIdentity = "positron";
+    maxJobs = 4;
+    speedFactor = 4;
+    supportedFeatures = [ "big-parallel" ];
+  };
+  builders = {
+    hera = {
+      hostName = "hera.lan";
+      protocol = "ssh-ng";
+      system = hosts.hera.system;
+      sshUser = hosts.hera.username;
+      sshIdentity = "host";
+      publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUU5Mk1uem14L0NWUzZHaUdiSjF2R0MwU2RmK0Q3L3ZTVS9QTjdmMVkxTVYK";
+      maxJobs = 24;
+      speedFactor = 4;
+    };
+    vulcan = {
+      hostName = "vulcan.lan";
+      protocol = "ssh-ng";
+      system = hosts.vulcan.system;
+      sshUser = hosts.vulcan.username;
+      sshIdentity = "host";
+      publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUl0TUQ4ODYveGxlUzRpaE5QL3lwZ1VieSsyUnd6UFNJVm5CL0k1aTNXRW8gcm9vdEBuaXhvcwo=";
+      maxJobs = 4;
+      speedFactor = 2;
+      supportedFeatures = [
+        "nixos-test"
+        "big-parallel"
+        "kvm"
+      ];
+    };
+    andoria-08 = andoriaBuilder // {
+      hostName = "andoria-08";
+      publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSVBUazhVay9ucEJZRnB2dURRS1lHNFZmZStPdFAwRDM0RkRlNi9scDdyUnggcm9vdEBwb3NpdHJvbgo=";
+    };
+    andoria-t2 = andoriaBuilder // {
+      hostName = "andoria-t2";
+      publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUwzK28xbWVYQkNZSzhQOTBQL2tIYW4xcnVYMkpEcmZrQUZaUklhcjZrbTIK";
+    };
+  };
+
+  builderPools = {
+    hera = [
+      "vulcan"
+      "andoria-08"
+      "andoria-t2"
+    ];
+    clio = [
+      "hera"
+      "vulcan"
+      "andoria-08"
+      "andoria-t2"
     ];
   };
 
@@ -150,8 +211,13 @@ assert builtins.all (row: row.registryId == null || builtins.hasAttr row.registr
   builtins.attrValues homeClasses
 );
 assert builtins.all (host: builtins.elem host sharedWork.members) sharedWork.activeRolloutMembers;
+assert builtins.all (pool: builtins.all (builder: builtins.hasAttr builder builders) pool) (
+  builtins.attrValues builderPools
+);
 {
   inherit
+    builderPools
+    builders
     homeClasses
     homeClassContractFor
     hosts
