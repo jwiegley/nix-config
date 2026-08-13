@@ -163,6 +163,7 @@ whole-fleet runtime proof.
 
 ## Documentation
 
+- [`doc/USER-GUIDE.md`](doc/USER-GUIDE.md) — architecture, repository relationships, trust, updates, activation, rollback, and security
 - [`bin/README.md`](bin/README.md) — complete command and operational reference
 - [`test/README.md`](test/README.md) — verification scope and maintainability policy
 - [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) — ownership, data flow, rollout, and state boundaries
