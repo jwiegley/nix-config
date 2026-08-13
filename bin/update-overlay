@@ -61,6 +61,7 @@ if not sys.stdout.isatty():
     Colors.disable()
 
 DUMMY_SRI_HASH = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+CANDIDATE_REJECTED_EXIT = 3
 PI_NORMALIZATION_POLICY = Path("packages/pi-gallery/normalization-policy.json")
 PI_NORMALIZER = Path("packages/pi-gallery/normalize-manifest.jq")
 PRIME_AGENT_LOCK = Path("packages/prime-agent/package-lock.json")
@@ -85,6 +86,10 @@ ANSI_ESCAPE_RE = re.compile(
     r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\))"
 )
 CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
+
+
+class CandidateRejected(RuntimeError):
+    """A resolved candidate failed its package-specific build contract."""
 
 
 def _bounded_actionable_error(*output: object, fallback: str) -> str:
@@ -877,11 +882,17 @@ in
                     fallback=f"{package_name} build failed",
                 )
                 print(f"  Error validating {package_name}: {detail}", file=sys.stderr)
+                if result.returncode < 0:
+                    raise RuntimeError(
+                        f"{package_name} validation interrupted: {detail}"
+                    )
                 return False
             return True
         except (OSError, subprocess.TimeoutExpired) as error:
             print(f"  Error validating {package_name}: {error}", file=sys.stderr)
-            return False
+            raise RuntimeError(
+                f"{package_name} validation could not run: {error}"
+            ) from error
 
     def validate_cargo_lock(
         self,
@@ -2103,8 +2114,11 @@ def resolve_flake_input_dependent_hash(
 
 
 def validate_flake_input_build(nix_dir: Path, package_name: str) -> None:
-    if not HashComputer(nix_dir).validate_package_build(package_name):
-        raise RuntimeError(f"flake input package validation failed: {package_name}")
+    validator = HashComputer(nix_dir)
+    if not validator.validate_package_build(package_name):
+        raise CandidateRejected(
+            f"flake input package validation failed: {package_name}"
+        )
 
 
 def sync_flake_projections(
@@ -2591,7 +2605,7 @@ def update_npm_lock_target(
     _write_catalog_target(target)
     if not hash_computer.validate_package_build(name):
         print(f"catalog/{name} {Colors.RED}✗ final package build failed{Colors.RESET}")
-        return "failed"
+        raise CandidateRejected(f"{name} final package build failed")
     print(f"catalog/{name} {Colors.GREEN}→ {new_version} ✓{Colors.RESET}")
     return "updated"
 
@@ -2742,7 +2756,7 @@ def update_github_release_asset_target(
     _write_catalog_target(target)
     if not hash_computer.validate_package_build(name):
         print(f"catalog/{name} {Colors.RED}✗ final package build failed{Colors.RESET}")
-        return "failed"
+        raise CandidateRejected(f"{name} final package build failed")
     print(f"catalog/{name} {Colors.GREEN}→ {new_version} ✓{Colors.RESET}")
     return "updated"
 
@@ -3198,7 +3212,7 @@ def update_catalog_target(
         name, build_mode
     ):
         print(f" {Colors.RED}✗ final {build_mode} build failed{Colors.RESET}")
-        return "failed"
+        raise CandidateRejected(f"{name} final {build_mode} build failed")
     suffix = f" +{','.join(computed)}" if computed else ""
     print(f" {Colors.GREEN}✓{Colors.RESET}{suffix}")
     return "updated"
@@ -3232,6 +3246,60 @@ def update_github_projection_target(
             target,
             args,
             github_client,
+            hash_computer,
+            transaction,
+        )
+    return update_catalog_target(
+        name,
+        target,
+        args,
+        github_client,
+        npm_client,
+        pypi_client,
+        hash_computer,
+        transaction,
+    )
+
+
+def prepare_update_target(
+    name: str,
+    target: dict,
+    args,
+    github_client: GitHubClient,
+    npm_client: NpmRegistryClient,
+    pypi_client: PypiClient,
+    hash_computer: HashComputer,
+    transaction,
+) -> str:
+    """Prepare one update-owned target before any declared flake lock move."""
+    kind = target["kind"]
+    if kind in {"flake-input", "flake-input+build", "flake-input+copy"}:
+        return "skipped"
+    if kind == "npm-release+flake-input":
+        return update_npm_flake_target(
+            name, target, args, npm_client, hash_computer, transaction
+        )
+    if kind == "npm-release":
+        return update_npm_lock_target(
+            name, target, args, npm_client, hash_computer, transaction
+        )
+    if kind == "pypi-release":
+        return update_pypi_artifact_target(
+            name, target, args, pypi_client, transaction
+        )
+    if kind in {
+        "github-commit",
+        "github-release",
+        "github-release-asset",
+        "github-tag",
+    }:
+        return update_github_projection_target(
+            name,
+            target,
+            args,
+            github_client,
+            npm_client,
+            pypi_client,
             hash_computer,
             transaction,
         )
@@ -3306,21 +3374,7 @@ Examples:
         "--sync-flake-projections", action="store_true",
         help="Refresh catalog fetchTree projections from config/ai/flake.lock"
     )
-    parser.add_argument(
-        "--prepare-fixed-inputs", action="store_true", help=argparse.SUPPRESS
-    )
-    parser.add_argument(
-        "--prepare-npm-flake-inputs", action="store_true", help=argparse.SUPPRESS
-    )
-    parser.add_argument(
-        "--prepare-npm-locks", action="store_true", help=argparse.SUPPRESS
-    )
-    parser.add_argument(
-        "--prepare-pypi-artifacts", action="store_true", help=argparse.SUPPRESS
-    )
-    parser.add_argument(
-        "--prepare-github-projections", action="store_true", help=argparse.SUPPRESS
-    )
+    parser.add_argument("--prepare-target", metavar="NAME", help=argparse.SUPPRESS)
     args = parser.parse_args()
 
     # Validate arguments
@@ -3335,11 +3389,7 @@ Examples:
         and not args.all
         and not args.packages
         and not args.sync_flake_projections
-        and not args.prepare_fixed_inputs
-        and not args.prepare_npm_flake_inputs
-        and not args.prepare_npm_locks
-        and not args.prepare_pypi_artifacts
-        and not args.prepare_github_projections
+        and not args.prepare_target
     ):
         parser.error(
             "Please specify package names, --all, --inventory, or --sync-flake-projections"
@@ -3353,96 +3403,26 @@ Examples:
         or args.dry_run
         or args.verbose
         or args.json_output
-        or args.prepare_npm_locks
-        or args.prepare_pypi_artifacts
-        or args.prepare_github_projections
+        or args.prepare_target
     ):
         parser.error("--sync-flake-projections cannot be combined with another operation")
 
-    if args.prepare_fixed_inputs and (
+    if args.prepare_target and (
         args.inventory
         or args.all
         or args.sync_flake_projections
-        or args.prepare_npm_locks
+        or args.packages
         or args.dry_run
         or args.verbose
         or args.json_output
     ):
-        parser.error("--prepare-fixed-inputs cannot be combined with another operation")
-
-    if args.prepare_npm_flake_inputs and (
-        args.inventory
-        or args.all
-        or args.sync_flake_projections
-        or args.prepare_fixed_inputs
-        or args.prepare_npm_locks
-        or args.dry_run
-        or args.verbose
-        or args.json_output
-        or args.prepare_pypi_artifacts
-        or args.prepare_github_projections
-    ):
-        parser.error("--prepare-npm-flake-inputs cannot be combined with another operation")
-
-    if args.prepare_pypi_artifacts and (
-        args.inventory
-        or args.all
-        or args.sync_flake_projections
-        or args.prepare_fixed_inputs
-        or args.prepare_npm_flake_inputs
-        or args.prepare_npm_locks
-        or args.dry_run
-        or args.verbose
-        or args.json_output
-        or args.prepare_github_projections
-    ):
-        parser.error("--prepare-pypi-artifacts cannot be combined with another operation")
-
-    if args.prepare_github_projections and (
-        args.inventory
-        or args.all
-        or args.sync_flake_projections
-        or args.prepare_fixed_inputs
-        or args.prepare_npm_flake_inputs
-        or args.prepare_npm_locks
-        or args.prepare_pypi_artifacts
-        or args.dry_run
-        or args.verbose
-        or args.json_output
-    ):
-        parser.error("--prepare-github-projections cannot be combined with another operation")
-
-    if args.prepare_npm_locks and (
-        args.inventory
-        or args.all
-        or args.sync_flake_projections
-        or args.prepare_fixed_inputs
-        or args.prepare_npm_flake_inputs
-        or args.prepare_pypi_artifacts
-        or args.prepare_github_projections
-        or args.dry_run
-        or args.verbose
-        or args.json_output
-    ):
-        parser.error("--prepare-npm-locks cannot be combined with another operation")
+        parser.error("--prepare-target cannot be combined with another operation")
 
     if args.sync_flake_projections and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
         parser.error("--sync-flake-projections is restricted to the update candidate")
 
-    if args.prepare_fixed_inputs and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
-        parser.error("--prepare-fixed-inputs is restricted to the update candidate")
-
-    if args.prepare_npm_flake_inputs and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
-        parser.error("--prepare-npm-flake-inputs is restricted to the update candidate")
-
-    if args.prepare_npm_locks and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
-        parser.error("--prepare-npm-locks is restricted to the update candidate")
-
-    if args.prepare_pypi_artifacts and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
-        parser.error("--prepare-pypi-artifacts is restricted to the update candidate")
-
-    if args.prepare_github_projections and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
-        parser.error("--prepare-github-projections is restricted to the update candidate")
+    if args.prepare_target and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
+        parser.error("--prepare-target is restricted to the update candidate")
 
     if args.inventory and (args.all or args.packages or args.version):
         parser.error("--inventory cannot be combined with package updates")
@@ -3453,50 +3433,30 @@ Examples:
     if args.all and args.version:
         parser.error("Cannot use --version with --all")
 
-    if args.prepare_fixed_inputs and args.version and len(args.packages) != 1:
-        parser.error("--version with --prepare-fixed-inputs requires exactly one target")
-    if args.prepare_npm_flake_inputs and args.version and len(args.packages) != 1:
-        parser.error("--version with --prepare-npm-flake-inputs requires exactly one target")
-    if args.prepare_npm_locks and args.version and len(args.packages) != 1:
-        parser.error("--version with --prepare-npm-locks requires exactly one target")
-    if args.prepare_pypi_artifacts and args.version and len(args.packages) != 1:
-        parser.error("--version with --prepare-pypi-artifacts requires exactly one target")
-    if args.prepare_github_projections and args.version and len(args.packages) != 1:
-        parser.error("--version with --prepare-github-projections requires exactly one target")
-
     nix_dir = Path(__file__).parent.parent.resolve()
     if args.sync_flake_projections:
         require_detached_linked_worktree(nix_dir)
-        changed = sync_flake_projections(nix_dir)
+        try:
+            changed = sync_flake_projections(nix_dir)
+        except CandidateRejected as error:
+            print(f"candidate rejected: {error}", file=sys.stderr)
+            return CANDIDATE_REJECTED_EXIT
         print(f"synchronized {changed} flake input projection(s)")
         return 0
-    internal_prepare = any(
-        (
-            args.prepare_fixed_inputs,
-            args.prepare_npm_flake_inputs,
-            args.prepare_npm_locks,
-            args.prepare_pypi_artifacts,
-            args.prepare_github_projections,
-        )
-    )
+    internal_prepare = args.prepare_target is not None
     catalog_targets = load_source_catalog(
         nix_dir,
         validate_flake_projections=not internal_prepare,
     )
-    unknown_names = sorted(set(args.packages) - catalog_targets.keys())
+    requested_names = [args.prepare_target] if internal_prepare else args.packages
+    unknown_names = sorted(set(requested_names) - catalog_targets.keys())
     if unknown_names:
         parser.error(f"unknown catalog target ID(s): {', '.join(unknown_names)}")
     if args.inventory:
         print_inventory(build_inventory(catalog_targets), args.json_output)
         return 0
 
-    if (
-        args.prepare_fixed_inputs
-        or args.prepare_npm_flake_inputs
-        or args.prepare_npm_locks
-        or args.prepare_pypi_artifacts
-        or args.prepare_github_projections
-    ):
+    if internal_prepare:
         require_detached_linked_worktree(nix_dir)
     elif args.packages:
         delegated_names = [
@@ -3518,53 +3478,11 @@ Examples:
     atexit.register(transaction.rollback_unless_committed)
     success_count = 0
     fail_count = 0
+    rejected_count = 0
     skipped_count = 0
 
-    if args.prepare_fixed_inputs:
-        selected_catalog_names = (
-            args.packages
-            or [
-                name
-                for name in sorted(catalog_targets)
-                if catalog_targets[name]["kind"] == "fixed-flake-input"
-                and catalog_targets[name]["_record"]["update"].get(
-                    "policy", "automatic"
-                )
-                == "automatic"
-            ]
-        )
-    elif args.prepare_npm_flake_inputs:
-        selected_catalog_names = (
-            args.packages
-            or [
-                name
-                for name in sorted(catalog_targets)
-                if catalog_targets[name]["kind"] == "npm-release+flake-input"
-                and catalog_targets[name]["_record"]["update"].get(
-                    "policy", "automatic"
-                )
-                == "automatic"
-            ]
-        )
-    elif args.prepare_npm_locks:
-        selected_catalog_names = (
-            args.packages
-            or [
-                name
-                for name in sorted(catalog_targets)
-                if catalog_targets[name]["kind"] == "npm-release"
-                and catalog_targets[name]["_record"]["update"].get("normalizer")
-                == "pi-gallery-v1"
-                and catalog_targets[name]["_record"]["update"].get(
-                    "policy", "automatic"
-                )
-                == "automatic"
-            ]
-        )
-    elif args.prepare_pypi_artifacts:
-        selected_catalog_names = args.packages
-    elif args.prepare_github_projections:
-        selected_catalog_names = args.packages
+    if internal_prepare:
+        selected_catalog_names = requested_names
     elif args.all:
         selected_catalog_names = [
             name for name in sorted(catalog_targets)
@@ -3578,42 +3496,14 @@ Examples:
         snapshot_catalog_record_isolation(
             selected_catalog_names, catalog_targets, transaction
         )
-        if args.packages and selected_catalog_names
+        if (args.packages or internal_prepare) and selected_catalog_names
         else {}
     )
     catalog_hash_computer = HashComputer(nix_dir)
     for name in selected_catalog_names:
         target = catalog_targets[name]
-        expected_executor = (
-            "update"
-            if (
-                args.prepare_fixed_inputs
-                or args.prepare_npm_flake_inputs
-                or args.prepare_npm_locks
-                or args.prepare_pypi_artifacts
-                or args.prepare_github_projections
-            )
-            else "update-overlay"
-        )
-        if target.get("executor") != expected_executor or (
-            args.prepare_fixed_inputs and target["kind"] != "fixed-flake-input"
-        ) or (
-            args.prepare_npm_flake_inputs
-            and target["kind"] != "npm-release+flake-input"
-        ) or (
-            args.prepare_npm_locks
-            and (
-                target["kind"] != "npm-release"
-                or target["_record"]["update"].get("normalizer")
-                != "pi-gallery-v1"
-            )
-        ) or (
-            args.prepare_pypi_artifacts and target["kind"] != "pypi-release"
-        ) or (
-            args.prepare_github_projections
-            and target["kind"]
-            not in {"github-commit", "github-release", "github-release-asset", "github-tag"}
-        ):
+        expected_executor = "update" if internal_prepare else "update-overlay"
+        if target.get("executor") != expected_executor:
             if args.all:
                 if args.verbose:
                     print(f"{Colors.DIM}catalog/{name}: skipped (no executor){Colors.RESET}")
@@ -3622,40 +3512,36 @@ Examples:
                 print(f"{Colors.RED}{name}: catalog target has no update executor{Colors.RESET}")
                 fail_count += 1
             continue
-        if args.prepare_npm_flake_inputs:
-            status = update_npm_flake_target(
-                name, target, args, npm_client, catalog_hash_computer, transaction
-            )
-        elif args.prepare_npm_locks:
-            status = update_npm_lock_target(
-                name, target, args, npm_client, catalog_hash_computer, transaction
-            )
-        elif args.prepare_pypi_artifacts:
-            status = update_pypi_artifact_target(
-                name, target, args, pypi_client, transaction
-            )
-        elif args.prepare_github_projections:
-            status = update_github_projection_target(
-                name,
-                target,
-                args,
-                github_client,
-                npm_client,
-                pypi_client,
-                catalog_hash_computer,
-                transaction,
-            )
-        else:
-            status = update_catalog_target(
-                name,
-                target,
-                args,
-                github_client,
-                npm_client,
-                pypi_client,
-                catalog_hash_computer,
-                transaction,
-            )
+        try:
+            if internal_prepare:
+                status = prepare_update_target(
+                    name,
+                    target,
+                    args,
+                    github_client,
+                    npm_client,
+                    pypi_client,
+                    catalog_hash_computer,
+                    transaction,
+                )
+            else:
+                status = update_catalog_target(
+                    name,
+                    target,
+                    args,
+                    github_client,
+                    npm_client,
+                    pypi_client,
+                    catalog_hash_computer,
+                    transaction,
+                )
+        except CandidateRejected:
+            rejected_count += 1
+            continue
+        except RuntimeError as error:
+            print(f"catalog/{name} {Colors.RED}✗ {error}{Colors.RESET}")
+            fail_count += 1
+            continue
         success_count += status == "updated"
         skipped_count += status == "skipped"
         fail_count += status == "failed"
@@ -3669,18 +3555,14 @@ Examples:
             print(f"{Colors.RED}{error}{Colors.RESET}", file=sys.stderr)
             fail_count += 1
 
-    if (
-        args.prepare_fixed_inputs
-        or args.prepare_npm_flake_inputs
-        or args.prepare_npm_locks
-        or args.prepare_pypi_artifacts
-        or args.prepare_github_projections
-    ):
-        if fail_count:
+    if internal_prepare:
+        if fail_count or rejected_count:
             transaction.rollback()
         else:
             transaction.commit()
-        return 0 if fail_count == 0 else 1
+        if fail_count:
+            return 1
+        return CANDIDATE_REJECTED_EXIT if rejected_count else 0
 
     if args.dry_run:
         restored = transaction.rollback()
@@ -3690,10 +3572,15 @@ Examples:
                 file=sys.stderr,
             )
             fail_count += 1
-    elif fail_count:
+    elif fail_count or rejected_count:
         restored = transaction.rollback()
         if restored:
-            print(f"Rolled back {restored} source file(s) after update failure")
+            reason = (
+                "rejected update"
+                if rejected_count and not fail_count
+                else "update failure"
+            )
+            print(f"Rolled back {restored} source file(s) after {reason}")
     else:
         transaction.commit()
 
@@ -3701,9 +3588,19 @@ Examples:
     updated_str = f"{Colors.GREEN}{success_count} updated{Colors.RESET}" if success_count else f"{success_count} updated"
     skipped_str = f"{skipped_count} up-to-date"
     failed_str = f"{Colors.RED}{fail_count} failed{Colors.RESET}" if fail_count else f"{fail_count} failed"
-    print(f"\n{Colors.BOLD}Summary:{Colors.RESET} {updated_str}, {skipped_str}, {failed_str}")
+    rejected_str = (
+        f", {Colors.YELLOW}{rejected_count} rejected{Colors.RESET}"
+        if rejected_count
+        else ""
+    )
+    print(
+        f"\n{Colors.BOLD}Summary:{Colors.RESET} {updated_str}, {skipped_str}"
+        f"{rejected_str}, {failed_str}"
+    )
 
-    return 0 if fail_count == 0 else 1
+    if fail_count:
+        return 1
+    return CANDIDATE_REJECTED_EXIT if rejected_count else 0
 
 
 if __name__ == "__main__":

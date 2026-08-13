@@ -385,17 +385,6 @@ else
 fi
 echo "update: target checkout: $config_dir" >&2
 
-ai_inputs=(
-    git-ai
-    llm-agents
-    mcp-servers-nix
-    pal-mcp-server
-    pi-openai-server-compaction
-    pi-quiet
-    rust-overlay
-    translate-tool
-)
-
 require_clean() {
     local repo=$1
     if [[ -n $(git -C "$repo" status --porcelain) ]]; then
@@ -482,7 +471,13 @@ cleanup_transaction() {
             "$transaction_committed_paths" \
             "$transaction_live_untracked_baseline" \
             "$transaction_live_untracked_current" \
-            "$transaction_dir/inventory.json" "$transaction_dir/allowed-paths"
+            "$transaction_dir/inventory.json" "$transaction_dir/allowed-paths" \
+            "$transaction_dir/catalog-inputs" \
+            "$transaction_dir/portable-inputs" \
+            "$transaction_dir/root-inputs" \
+            "$transaction_dir/target-rows" \
+            "$transaction_dir/before-target-untracked" \
+            "$transaction_dir/after-target-untracked"
         rmdir "$transaction_dir" 2>/dev/null || true
     fi
     if [[ $transaction_lock_acquired == true ]] && ! rmdir "$transaction_lock" 2>/dev/null; then
@@ -575,17 +570,18 @@ git -C "$config_dir" worktree add --quiet --detach "$candidate_dir" "$transactio
 candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --git-dir)
 
 (
+    trap 'exit 129' HUP
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
     cd "$candidate_dir"
     export UPDATE_AGENTS_CANDIDATE=1
     python3 bin/update-overlay --inventory --json >"$transaction_dir/inventory.json"
 
-    declare -a fixed_target_names=()
-    declare -a npm_flake_target_names=()
-    declare -a npm_lock_target_names=()
-    declare -a pypi_target_names=()
-    declare -a github_projection_target_names=()
-    declare -a lock_target_inputs=()
+    explicit_targets=false
+    explicit_has_lock=false
+    requested_targets_json='[]'
     if ((${#requested_targets[@]})); then
+        explicit_targets=true
         declare -A seen_targets=()
         for target_name in "${requested_targets[@]}"; do
             if [[ ${seen_targets[$target_name]+present} ]]; then
@@ -596,127 +592,44 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
             if ! target_row=$(jq -er --arg name "$target_name" '
                 .packages[]
                 | select(.name == $name)
-                | [.kind, .executor, (.input // "")] | @tsv
+                | [.kind, .executor, (.input // "-")] | @tsv
             ' "$transaction_dir/inventory.json"); then
                 echo "update: unknown target: $target_name" >&2
                 exit 2
             fi
             IFS=$'\t' read -r target_kind target_executor target_input <<<"$target_row"
-            if [[ $target_executor != update ]] ||
-                [[ $target_kind != fixed-flake-input && $target_kind != flake-input &&
-                    $target_kind != flake-input+build &&
-                    $target_kind != flake-input+copy &&
-                    $target_kind != npm-release &&
-                    $target_kind != npm-release+flake-input &&
-                    $target_kind != pypi-release &&
-                    $target_kind != github-commit &&
-                    $target_kind != github-release &&
-                    $target_kind != github-tag &&
-                    $target_kind != github-release-asset ]] ||
-                [[ $target_kind != npm-release &&
-                    $target_kind != pypi-release &&
-                    $target_kind != github-commit &&
-                    $target_kind != github-release &&
-                    $target_kind != github-tag &&
-                    $target_kind != github-release-asset &&
-                    -z $target_input ]]; then
+            case "$target_executor:$target_kind" in
+            update:fixed-flake-input | update:flake-input | update:flake-input+build | \
+                update:flake-input+copy | update:npm-release | \
+                update:npm-release+flake-input | update:pypi-release | \
+                update:github-commit | update:github-release | update:github-tag | \
+                update:github-release-asset) ;;
+            *)
                 echo "update: target is not owned by this transaction: $target_name" >&2
                 exit 2
-            fi
-            if [[ -n $requested_version && $target_kind != fixed-flake-input &&
-                $target_kind != npm-release &&
-                $target_kind != npm-release+flake-input &&
-                $target_kind != pypi-release &&
-                $target_kind != github-commit &&
-                $target_kind != github-release &&
-                $target_kind != github-tag &&
-                $target_kind != github-release-asset ]]; then
-                echo "update: --version is unsupported for this target" >&2
-                exit 2
-            fi
-            if [[ -n $target_input ]]; then
-                lock_target_inputs+=("$target_input")
-            fi
-            if [[ $target_kind == fixed-flake-input ]]; then
-                fixed_target_names+=("$target_name")
-            elif [[ $target_kind == npm-release ]]; then
-                npm_lock_target_names+=("$target_name")
-            elif [[ $target_kind == npm-release+flake-input ]]; then
-                npm_flake_target_names+=("$target_name")
-            elif [[ $target_kind == pypi-release ]]; then
-                pypi_target_names+=("$target_name")
-            elif [[ $target_kind == github-commit || $target_kind == github-release ||
-                $target_kind == github-tag ||
-                $target_kind == github-release-asset ]]; then
-                github_projection_target_names+=("$target_name")
-            fi
+                ;;
+            esac
+            case $target_kind in
+            fixed-flake-input | flake-input | flake-input+build | flake-input+copy | \
+                npm-release+flake-input)
+                [[ $target_input != - ]] || {
+                    echo "update: target has no declared flake input: $target_name" >&2
+                    exit 2
+                }
+                explicit_has_lock=true
+                ;;
+            esac
+            case $target_kind in
+            fixed-flake-input | npm-release | npm-release+flake-input | pypi-release | \
+                github-commit | github-release | github-tag | github-release-asset) ;;
+            *)
+                if [[ -n $requested_version ]]; then
+                    echo "update: --version is unsupported for this target" >&2
+                    exit 2
+                fi
+                ;;
+            esac
         done
-    else
-        while IFS=$'\t' read -r target_name target_input target_kind; do
-            [[ -n $target_name && -n $target_input ]] || continue
-            lock_target_inputs+=("$target_input")
-            if [[ $target_kind == fixed-flake-input ]]; then
-                fixed_target_names+=("$target_name")
-            elif [[ $target_kind == npm-release+flake-input ]]; then
-                npm_flake_target_names+=("$target_name")
-            fi
-        done < <(
-            jq -r --arg include_manual "$run_all_inputs" '
-                .packages[]
-                | select(
-                    (
-                        .kind == "fixed-flake-input"
-                        or .kind == "flake-input+build"
-                        or .kind == "flake-input+copy"
-                        or .kind == "npm-release+flake-input"
-                    )
-                    and .executor == "update"
-                    and ($include_manual == "true" or .policy == "automatic")
-                )
-                | [.name, .input, .kind] | @tsv
-            ' "$transaction_dir/inventory.json"
-        )
-        mapfile -t pypi_target_names < <(
-            jq -r '
-                .packages[]
-                | select(
-                    .kind == "pypi-release"
-                    and .executor == "update"
-                    and .policy == "automatic"
-                )
-                | .name
-            ' "$transaction_dir/inventory.json"
-        )
-        mapfile -t npm_lock_target_names < <(
-            jq -r '
-                .packages[]
-                | select(
-                    .kind == "npm-release"
-                    and .executor == "update"
-                    and .policy == "automatic"
-                )
-                | .name
-            ' "$transaction_dir/inventory.json"
-        )
-        mapfile -t github_projection_target_names < <(
-            jq -r '
-                .packages[]
-                | select(
-                    (
-                        .kind == "github-commit"
-                        or .kind == "github-release"
-                        or .kind == "github-tag"
-                        or .kind == "github-release-asset"
-                    )
-                    and .executor == "update"
-                    and .policy == "automatic"
-                )
-                | .name
-            ' "$transaction_dir/inventory.json"
-        )
-    fi
-
-    if ((${#requested_targets[@]})); then
         requested_targets_json=$(printf '%s\n' "${requested_targets[@]}" |
             jq -Rsc 'split("\n")[:-1]')
         {
@@ -725,7 +638,7 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
                 | select(.name as $name | $names | index($name))
                 | .files[]
             ' "$transaction_dir/inventory.json"
-            if ((${#lock_target_inputs[@]})); then
+            if [[ $explicit_has_lock == true ]]; then
                 printf '%s\n' flake.lock config/ai/flake.lock
             fi
         } | sort -u >"$transaction_dir/allowed-paths"
@@ -736,77 +649,163 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
         } | sort -u >"$transaction_dir/allowed-paths"
     fi
 
-    # Resolve projections that need the currently locked package set before
-    # either flake.nix literal is moved ahead of config/ai/flake.lock.
-    if ((${#pypi_target_names[@]})); then
-        prepare_args=(--prepare-pypi-artifacts)
-        if [[ -n $requested_version ]]; then
-            prepare_args+=(--version "$requested_version")
-        fi
-        python3 bin/update-overlay "${prepare_args[@]}" \
-            "${pypi_target_names[@]}"
-    fi
-    if ((${#github_projection_target_names[@]})); then
-        prepare_args=(--prepare-github-projections)
-        if [[ -n $requested_version ]]; then
-            prepare_args+=(--version "$requested_version")
-        fi
-        python3 bin/update-overlay "${prepare_args[@]}" \
-            "${github_projection_target_names[@]}"
-    fi
-    if ((${#npm_flake_target_names[@]})); then
-        prepare_args=(--prepare-npm-flake-inputs)
-        if [[ -n $requested_version ]]; then
-            prepare_args+=(--version "$requested_version")
-        fi
-        python3 bin/update-overlay "${prepare_args[@]}" \
-            "${npm_flake_target_names[@]}"
-    fi
-    # Fixed fetchTree projection hashing is lock-independent, so it is the last
-    # preparation allowed to run while catalog projections are temporarily ahead.
-    if ((${#fixed_target_names[@]})); then
-        prepare_args=(--prepare-fixed-inputs)
-        if [[ -n $requested_version ]]; then
-            prepare_args+=(--version "$requested_version")
-        fi
-        python3 bin/update-overlay "${prepare_args[@]}" "${fixed_target_names[@]}"
-    fi
-
+    # Uncatalogued flake inputs remain a repository-wide operation. Catalogued
+    # inputs are excluded here and advanced below with their own source record,
+    # dependent hashes, and generated files as one target transaction.
     if [[ $run_all_inputs == true ]]; then
-        nix flake update --flake ./config/ai
-        nix flake update
-    elif ((${#requested_targets[@]})); then
-        if ((${#lock_target_inputs[@]})); then
-            nix flake update --flake ./config/ai "${lock_target_inputs[@]}"
-            nix flake update nix-config-ai
+        jq -r '.packages[] | .input // empty' "$transaction_dir/inventory.json" |
+            sort -u >"$transaction_dir/catalog-inputs"
+        mapfile -t catalog_inputs <"$transaction_dir/catalog-inputs"
+        catalog_inputs_json=$(printf '%s\n' "${catalog_inputs[@]}" |
+            jq -Rsc 'split("\n")[:-1]')
+        jq -r --argjson catalog "$catalog_inputs_json" '
+            .nodes[.root].inputs | keys[]
+            | select(. as $name | $catalog | index($name) | not)
+        ' config/ai/flake.lock >"$transaction_dir/portable-inputs"
+        mapfile -t portable_inputs <"$transaction_dir/portable-inputs"
+        jq -r '.nodes[.root].inputs | keys[] | select(. != "nix-config-ai")' \
+            flake.lock >"$transaction_dir/root-inputs"
+        mapfile -t root_inputs <"$transaction_dir/root-inputs"
+        if ((${#portable_inputs[@]})); then
+            nix flake update --flake ./config/ai "${portable_inputs[@]}"
         fi
-    else
-        nix flake update --flake ./config/ai "${ai_inputs[@]}" "${lock_target_inputs[@]}"
-        # The root consumes the portable subflake transitively; refresh its nested
-        # nodes only after the portable lock is complete.
+        if ((${#root_inputs[@]})); then
+            nix flake update "${root_inputs[@]}"
+        fi
         nix flake update nix-config-ai
     fi
-    if ((${#requested_targets[@]} == 0 || ${#lock_target_inputs[@]})); then
-        python bin/update-overlay --sync-flake-projections
-    fi
-    # npmDepsHash validation observes the complete package graph. Prepare Pi
-    # locks only after every flake lock and its catalog projection are final.
-    if ((${#npm_lock_target_names[@]})); then
-        prepare_args=(--prepare-npm-locks)
-        if [[ -n $requested_version ]]; then
-            prepare_args+=(--version "$requested_version")
+
+    # Preserve the dependency order of the former grouped updater while each
+    # target now owns its own subprocess and rollback boundary. In particular,
+    # npm lock validation still observes the complete updated flake graph.
+    jq -r \
+        --argjson names "$requested_targets_json" \
+        --argjson explicit "$explicit_targets" \
+        --argjson all_inputs "$run_all_inputs" '
+            def phase:
+                if .executor == "update-overlay" then 6
+                elif .kind == "pypi-release" then 0
+                elif (
+                    .kind == "github-commit"
+                    or .kind == "github-release"
+                    or .kind == "github-tag"
+                    or .kind == "github-release-asset"
+                ) then 1
+                elif .kind == "npm-release+flake-input" then 2
+                elif .kind == "fixed-flake-input" then 3
+                elif (.input // "") != "" then 4
+                elif .kind == "npm-release" then 5
+                else 0
+                end;
+            [
+                .packages[]
+                | select(
+                    if $explicit then
+                        .name as $name | $names | index($name)
+                    else
+                        .managed
+                        and (
+                            .executor == "update"
+                            or .executor == "update-overlay"
+                        )
+                        and (
+                            (.policy // "automatic") == "automatic"
+                            or ($all_inputs and (.input // "") != "")
+                        )
+                    end
+                )
+                | [
+                    phase,
+                    .name,
+                    (.kind // "-"),
+                    (.executor // "-"),
+                    (.input // "-"),
+                    (.version // "unknown")
+                  ]
+            ]
+            | sort_by(.[0], .[1])[]
+            | .[1:]
+            | @tsv
+        ' "$transaction_dir/inventory.json" >"$transaction_dir/target-rows"
+    mapfile -t target_rows <"$transaction_dir/target-rows"
+
+    run_target() {
+        local name=$1 executor=$2 input=$3
+        local -a command
+        if [[ $executor == update-overlay ]]; then
+            python3 bin/update-overlay "$name"
+            return
         fi
-        python3 bin/update-overlay "${prepare_args[@]}" \
-            "${npm_lock_target_names[@]}"
+
+        command=(python3 bin/update-overlay --prepare-target "$name")
+        if [[ -n $requested_version ]]; then
+            command+=(--version "$requested_version")
+        fi
+        "${command[@]}" || return $?
+        if [[ -n $input ]]; then
+            nix flake update --flake ./config/ai "$input" || exit $?
+            nix flake update nix-config-ai || exit $?
+            python3 bin/update-overlay --sync-flake-projections
+        fi
+    }
+
+    declare -a held_back=()
+    for target_row in "${target_rows[@]}"; do
+        IFS=$'\t' read -r target_name target_kind target_executor target_input \
+            target_version <<<"$target_row"
+        [[ $target_input != - ]] || target_input=
+        git add -A --
+        before_target_tree=$(git write-tree)
+        candidate_untracked_paths >"$transaction_dir/before-target-untracked"
+        echo "update: catalog/$target_name: evaluating candidate" >&2
+        set +e
+        run_target "$target_name" "$target_executor" "$target_input"
+        target_status=$?
+        set -e
+        if [[ $target_status -eq 0 ]]; then
+            git add -A --
+            continue
+        fi
+        [[ $target_status -eq 3 ]] || exit "$target_status"
+
+        # Status 3 is reserved for a resolved candidate that failed package
+        # validation. Restore the complete pre-target tree so shared catalogs
+        # retain earlier accepted records byte-for-byte.
+        git add -A --
+        git read-tree --reset -u "$before_target_tree"
+        candidate_untracked_paths >"$transaction_dir/after-target-untracked"
+        if [[ $(git write-tree) != "$before_target_tree" ]] ||
+            ! git diff --quiet ||
+            ! cmp -s "$transaction_dir/before-target-untracked" \
+                "$transaction_dir/after-target-untracked"; then
+            echo "update: failed to restore held-back target: $target_name" >&2
+            exit 1
+        fi
+        held_back+=("$target_name"$'\t'"$target_version")
+    done
+    rm -f -- "$transaction_dir/before-target-untracked" \
+        "$transaction_dir/after-target-untracked"
+
+    if ((${#held_back[@]})); then
+        echo "update: held-back catalog targets:" >&2
+        for target_row in "${held_back[@]}"; do
+            IFS=$'\t' read -r name version <<<"$target_row"
+            printf '  %s: retained %s (package validation rejected the candidate)\n' \
+                "$name" "$version" >&2
+        done
+        if ((${#held_back[@]} == ${#target_rows[@]})); then
+            echo "update: every selected catalog candidate was held back" >&2
+            exit 3
+        fi
     fi
-    # Internal preparation may temporarily put catalog projections ahead of
-    # their locks. Re-establish the strict catalog/lock invariant before any
-    # generic update, validation, or publication step.
+
+    # Every target subprocess reloads the catalog. The global checks remain a
+    # fatal publication gate over the combined accepted candidate.
+    if ((${#requested_targets[@]} == 0)) || [[ $explicit_has_lock == true ]]; then
+        python3 bin/update-overlay --sync-flake-projections
+    fi
     python3 bin/update-overlay --inventory --json >/dev/null
-    if ((${#requested_targets[@]} == 0)); then
-        python bin/update-overlay --all
-    fi
-    mapfile -t changed_nix < <(git diff --no-renames --name-only -- '*.nix')
+    mapfile -t changed_nix < <(git diff --no-renames --name-only HEAD -- '*.nix')
     if ((${#changed_nix[@]})); then
         nixfmt "${changed_nix[@]}"
     fi
@@ -835,9 +834,7 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
         fi
     done
 
-    if ((${#changed[@]})); then
-        git add -- "${changed[@]}"
-    fi
+    git add -A --
     git diff --cached --no-renames --name-only -z HEAD -- >"$transaction_paths"
     git diff --cached --no-renames --binary --full-index HEAD -- >"$transaction_patch"
     mapfile -d '' -t remaining_untracked < <(candidate_untracked_paths)

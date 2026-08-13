@@ -1477,15 +1477,17 @@ The follow-up owner decision was resolved by nix-5yr with the fail-closed withdr
 ]
 #+end_src
 
-* DOING [#B] Make catalog updates failure-isolated
+* DONE [#B] Make catalog updates failure-isolated
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-j78
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-12 Wed 22:27]
-:MODIFIED: [2026-08-12 Wed 22:27]
+:MODIFIED: [2026-08-12 Wed 23:17]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-12 Wed 23:17]
+:CLOSE_REASON: Automatic catalog updates now run as per-target transactions: a resolved candidate rejected by its final package build is restored byte-for-byte and reported as held back while later targets continue. Signals, tool/query errors, restore failures, and final repository validation remain fatal. Deterministic coverage passes for mixed success/rejection, all-held, explicit rejection, stale shared documents, rollback failure, query failure, and signal/error propagation; independent shell review is CLEAR.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1795,6 +1797,38 @@ The packaged Pi Usage extension declares the correct Node module type; its bound
     "author": "johnw",
     "text": "Post-commit no-history fess audit found two LOW package-seam hardening gaps: jq accepted empty input without --exit-status, and the derivation selected target jq rather than buildPackages.jq during cross compilation. The follow-up uses buildPackages.jq --exit-status. The corrected package, aarch64-darwin pi-gallery runtime check, config/ai all-system no-build evaluation, and pre-commit gate all pass. Per Wiggum, this fess-only corrective commit is not re-audited. No activation or publication was performed.",
     "created_at": "2026-08-12T23:18:04Z"
+  }
+]
+#+end_src
+
+* TODO [#C] Align gpu-server Nix cache trust with shared Home Manager
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-o99
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-12 Wed 23:04]
+:MODIFIED: [2026-08-12 Wed 23:04]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+During the 2026-08-13 authorized shared-work activation, gpu-server completed successfully but Nix repeatedly ignored https://tron.cachix.org because jwiegley is not trusted to add that substituter. Identify the authoritative gpu-server root policy and align its permitted substituters/public keys with the shared declared cache policy without making jwiegley a trusted-user or weakening require-sigs. Add a behavioral build/activation regression and document the root-vs-Home-Manager boundary.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-o99",
+    "depends_on_id": "nix-89t",
+    "type": "discovered-from",
+    "created_at": "2026-08-13T06:04:35.860796Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src

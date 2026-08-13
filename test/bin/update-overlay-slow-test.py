@@ -30,6 +30,7 @@ UPDATE_AGENTS = BIN / "update"
 MODULE = runpy.run_path(str(SCRIPT))
 GitHubClient = MODULE["GitHubClient"]
 HashComputer = MODULE["HashComputer"]
+CandidateRejected = MODULE["CandidateRejected"]
 PypiClient = MODULE["PypiClient"]
 NpmRegistryClient = MODULE["NpmRegistryClient"]
 SourceTransaction = MODULE["SourceTransaction"]
@@ -531,6 +532,26 @@ got: sha256-requested
         self.assertIsNone(parse(unrelated))
         self.assertEqual(parse(unrelated + requested), "sha256-requested")
         self.assertIsNone(parse(requested + requested.replace("requested", "second")))
+
+    def test_package_build_distinguishes_rejection_from_runner_error(self):
+        computer = HashComputer(Path("/repo"))
+        computer._run_package_build = mock.Mock(
+            return_value=SimpleNamespace(returncode=1, stdout="", stderr="rejected")
+        )
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertFalse(computer.validate_package_build("example"))
+
+        computer._run_package_build = mock.Mock(
+            return_value=SimpleNamespace(returncode=-15, stdout="", stderr="")
+        )
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaisesRegex(RuntimeError, "validation interrupted"):
+                computer.validate_package_build("example")
+
+        computer._run_package_build = mock.Mock(side_effect=OSError("unavailable"))
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaisesRegex(RuntimeError, "validation could not run"):
+                computer.validate_package_build("example")
 
     def test_package_hash_build_composes_repo_overlays_without_host_routing(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1088,7 +1109,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             [
                 sys.executable,
                 str(SCRIPT),
-                "--prepare-npm-locks",
+                "--prepare-target",
                 "pi-artifacts",
             ],
             capture_output=True,
@@ -2053,8 +2074,11 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             failing_target = load_source_catalog(root)["project"]
             failing_hashes = FakeHashes(valid=False)
             transaction = SourceTransaction()
-            with contextlib.redirect_stdout(io.StringIO()):
-                status = update_npm_lock_target(
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                self.assertRaises(CandidateRejected),
+            ):
+                update_npm_lock_target(
                     "project",
                     failing_target,
                     SimpleNamespace(version="3.0.0", dry_run=False),
@@ -2080,7 +2104,6 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     lock_generator=lambda *_args: new_lock.replace("2.0.0", "3.0.0"),
                     integrity_verifier=lambda _path, _integrity: True,
                 )
-            self.assertEqual(status, "failed")
             self.assertEqual(transaction.rollback(), 2)
             self.assertEqual(catalog_path.read_text(), before_catalog)
             self.assertEqual(lock_path.read_text(), before_lock)
@@ -3755,6 +3778,43 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             self.assertEqual(path.read_text(), replay_before)
             self.assertEqual(transaction.original, {})
 
+            class CurrentBuildFailure:
+                def compute_native_hash(self, source, _replacements):
+                    return source["args"]["hash"]
+
+                def validate_package_build(self, _package):
+                    return False
+
+            current_failure = CurrentBuildFailure()
+            globals_ = MODULE["main"].__globals__
+            replacements = {
+                "HashComputer": lambda _root: current_failure,
+                "load_source_catalog": lambda *_args, **_kwargs: {
+                    "tool": load_source_catalog(root)["tool"]
+                },
+                "require_detached_linked_worktree": lambda _root: None,
+                "snapshot_catalog_record_isolation": lambda *_args: {},
+            }
+            with (
+                mock.patch.dict(globals_, replacements),
+                mock.patch.object(
+                    sys,
+                    "argv",
+                    [
+                        str(SCRIPT),
+                        "--prepare-target",
+                        "tool",
+                        "--version",
+                        "2.0.0",
+                    ],
+                ),
+                mock.patch.dict(os.environ, {"UPDATE_AGENTS_CANDIDATE": "1"}),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                current_failure_status = MODULE["main"]()
+            self.assertEqual(current_failure_status, 1)
+            self.assertEqual(path.read_text(), replay_before)
+
             source_only = copy.deepcopy(record)
             source_only.pop("artifacts")
             source_only["update"]["assets"] = {"source": "tool-{version}-darwin-arm64"}
@@ -3804,8 +3864,11 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             failing_before = path.read_text()
             failing_builds = []
             transaction = SourceTransaction()
-            with contextlib.redirect_stdout(io.StringIO()):
-                status = update_github_release_asset_target(
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                self.assertRaises(CandidateRejected),
+            ):
+                update_github_release_asset_target(
                     "tool",
                     failing_target,
                     SimpleNamespace(version=None, dry_run=False),
@@ -3818,7 +3881,6 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     ),
                     transaction,
                 )
-            self.assertEqual(status, "failed")
             self.assertEqual(failing_builds, ["tool"])
             self.assertNotEqual(path.read_text(), failing_before)
             self.assertEqual(transaction.rollback(), 1)
@@ -3983,8 +4045,11 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             failing_target = load_source_catalog(root)["python-project"]
             failing = FakeHashes(valid=False)
             transaction = SourceTransaction()
-            with contextlib.redirect_stdout(io.StringIO()):
-                status = update_catalog_target(
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                self.assertRaises(CandidateRejected),
+            ):
+                update_catalog_target(
                     "python-project",
                     failing_target,
                     SimpleNamespace(version="3.0.0", dry_run=False),
@@ -3994,7 +4059,6 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     failing,
                     transaction,
                 )
-            self.assertEqual(status, "failed")
             self.assertEqual(transaction.rollback(), 1)
             self.assertEqual(path.read_text(), before_failure)
 
@@ -4617,7 +4681,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 enforce_catalog_record_isolation(snapshots, failing)
             self.assertEqual(path.read_text(), before_sibling_attempt)
 
-    def test_prepare_npm_locks_wiring_rejects_and_rolls_back_sibling_record(self):
+    def test_prepare_target_rejects_and_rolls_back_sibling_record(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "shared.json"
             initial = {
@@ -4663,7 +4727,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 os.environ["UPDATE_AGENTS_CANDIDATE"] = "1"
                 sys.argv = [
                     str(SCRIPT),
-                    "--prepare-npm-locks",
+                    "--prepare-target",
                     "selected",
                 ]
                 stderr = io.StringIO()
@@ -4814,6 +4878,18 @@ class IntegratedWorkflowTests(unittest.TestCase):
         (root / "npm-lock-second.txt").write_text("npm lock second before\n")
         (root / "pypi.txt").write_text("pypi before\n")
         (root / "github.txt").write_text("github before\n")
+        (root / "shared.json").write_text(
+            json.dumps(
+                {
+                    "sources": {
+                        name: {"version": "1.0.0"}
+                        for name in ("a-success", "b-rejected", "c-success")
+                    }
+                },
+                indent=2,
+            )
+            + "\n"
+        )
         (root / "config/ai/flake.nix").write_text("{ }\n")
         (root / "target-old").write_text("old target\n")
         (root / "target-new").write_text("new target\n")
@@ -4842,14 +4918,7 @@ arguments = sys.argv[1:]
 if os.environ.get("UPDATE_TEST_INTERLEAVING_LOG"):
     with open(os.environ["UPDATE_TEST_INTERLEAVING_LOG"], "a") as log:
         log.write("overlay " + " ".join(arguments) + "\\n")
-internal_modes = {
-    "--prepare-fixed-inputs",
-    "--prepare-npm-flake-inputs",
-    "--prepare-npm-locks",
-    "--prepare-pypi-artifacts",
-    "--prepare-github-projections",
-    "--sync-flake-projections",
-}
+internal_modes = {"--prepare-target", "--sync-flake-projections"}
 if internal_modes.intersection(arguments) and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
     print("internal update requires update candidate", file=sys.stderr)
     raise SystemExit(77)
@@ -4861,13 +4930,24 @@ declared = [
     "new-directory/generated-lock.json"
 ]
 if "--inventory" in arguments:
-    packages = [{
-        "name": "fixture",
-        "files": declared,
-        "inventoried": True,
-        "managed": True,
-        "executor": "update-overlay",
-    }]
+    if os.environ.get("UPDATE_TEST_ISOLATED_TARGETS") == "1":
+        packages = [{
+            "name": name,
+            "files": ["shared.json"],
+            "inventoried": True,
+            "managed": True,
+            "executor": "update-overlay",
+            "policy": "automatic",
+            "version": "1.0.0",
+        } for name in ("a-success", "b-rejected", "c-success")]
+    else:
+        packages = [{
+            "name": "fixture",
+            "files": declared,
+            "inventoried": True,
+            "managed": True,
+            "executor": "update-overlay",
+        }]
     if os.environ.get("UPDATE_TEST_FIXED_TARGET") == "1":
         packages.append({
             "name": "fixed",
@@ -4930,6 +5010,7 @@ if "--inventory" in arguments:
             "kind": "npm-release",
             "managed": True,
             "executor": "update",
+            "version": "1.0.0",
             "policy": (
                 "automatic"
                 if os.environ.get("UPDATE_TEST_NPM_LOCK_AUTOMATIC") == "1"
@@ -4960,42 +5041,35 @@ if "--inventory" in arguments:
         "schemaVersion": 1,
         "packages": packages,
     }))
-elif "--prepare-fixed-inputs" in arguments:
-    if arguments != ["--prepare-fixed-inputs", "fixed"]:
-        print(f"unexpected fixed preparation: {arguments}", file=sys.stderr)
-        raise SystemExit(78)
-    (root / "fixed.txt").write_text("fixed after\\n")
-elif "--prepare-npm-flake-inputs" in arguments:
-    if arguments != ["--prepare-npm-flake-inputs", "npm-flake"]:
-        print(f"unexpected npm flake preparation: {arguments}", file=sys.stderr)
-        raise SystemExit(79)
-    (root / "fixed.txt").write_text("npm flake after\\n")
-elif "--prepare-npm-locks" in arguments:
-    if arguments not in (
-        ["--prepare-npm-locks", "npm-lock"],
-        ["--prepare-npm-locks", "npm-lock", "npm-lock-second"],
-    ):
-        print(f"unexpected npm lock preparation: {arguments}", file=sys.stderr)
-        raise SystemExit(82)
-    (root / "npm-lock.txt").write_text("npm lock after\\n")
-    if "npm-lock-second" in arguments:
+elif "--prepare-target" in arguments:
+    name = arguments[arguments.index("--prepare-target") + 1]
+    if name == "fixed":
+        (root / "fixed.txt").write_text("fixed after\\n")
+    elif name == "npm-flake":
+        (root / "fixed.txt").write_text("npm flake after\\n")
+    elif name == "npm-lock":
+        (root / "npm-lock.txt").write_text("npm lock after\\n")
+        if os.environ.get("UPDATE_TEST_REJECT_NPM_LOCK") == "1":
+            print("catalog/npm-lock final package build failed")
+            raise SystemExit(3)
+        if os.environ.get("UPDATE_TEST_MUTATE_OTHER_DECLARED") == "1":
+            (root / "github.txt").write_text("cross-target mutation\\n")
+    elif name == "npm-lock-second":
         (root / "npm-lock-second.txt").write_text("npm lock second after\\n")
         if os.environ.get("UPDATE_TEST_NPM_LOCK_SECOND_FAIL") == "1":
             raise SystemExit(83)
-    if os.environ.get("UPDATE_TEST_MUTATE_OTHER_DECLARED") == "1":
-        (root / "github.txt").write_text("cross-target mutation\\n")
-elif "--prepare-pypi-artifacts" in arguments:
-    if arguments != ["--prepare-pypi-artifacts", "pypi"]:
-        print(f"unexpected PyPI preparation: {arguments}", file=sys.stderr)
-        raise SystemExit(80)
-    (root / "pypi.txt").write_text("pypi after\\n")
-elif "--prepare-github-projections" in arguments:
-    if arguments != ["--prepare-github-projections", "github"]:
-        print(f"unexpected GitHub preparation: {arguments}", file=sys.stderr)
-        raise SystemExit(81)
-    (root / "github.txt").write_text("github after\\n")
+    elif name == "pypi":
+        (root / "pypi.txt").write_text("pypi after\\n")
+    elif name == "github":
+        (root / "github.txt").write_text("github after\\n")
+    elif name not in {"copy", "build"}:
+        print(f"unexpected target preparation: {arguments}", file=sys.stderr)
+        raise SystemExit(82)
 elif "--sync-flake-projections" in arguments:
-    if os.environ.get("UPDATE_TEST_NO_CHANGES") != "1":
+    if (
+        os.environ.get("UPDATE_TEST_NO_CHANGES") != "1"
+        and os.environ.get("UPDATE_TEST_ISOLATED_TARGETS") != "1"
+    ):
         (root / "projection.json").write_text('{"projected": true}\\n')
     if os.environ.get("UPDATE_TEST_SIGNAL_PHASE") == "candidate-projection":
         Path(os.environ["UPDATE_TEST_SIGNAL_MARKER"]).touch()
@@ -5006,6 +5080,18 @@ else:
     if os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
         print("compound update requires update candidate", file=sys.stderr)
         raise SystemExit(77)
+    if os.environ.get("UPDATE_TEST_ISOLATED_TARGETS") == "1":
+        name = arguments[-1]
+        document = json.loads((root / "shared.json").read_text())
+        document["sources"][name]["version"] = "2.0.0"
+        (root / "shared.json").write_text(json.dumps(document, indent=2) + "\\n")
+        rejected = set(
+            os.environ.get("UPDATE_TEST_REJECT_TARGETS", "b-rejected").split(",")
+        )
+        if name in rejected:
+            print(f"catalog/{name} final package build failed")
+            raise SystemExit(3)
+        raise SystemExit(0)
     if os.environ.get("UPDATE_TEST_NO_CHANGES") == "1":
         raise SystemExit(0)
     (root / "tracked.txt").write_text("after\\n")
@@ -5137,6 +5223,7 @@ if [[ ${UPDATE_TEST_FAILURE_PHASE:-} == candidate-format ]]; then exit 71; fi
         )
         real_git = shutil.which("git") or "/usr/bin/git"
         real_chmod = shutil.which("chmod") or "/bin/chmod"
+        real_jq = shutil.which("jq") or "/usr/bin/jq"
         real_mkdir = shutil.which("mkdir") or "/bin/mkdir"
         executable(
             "git",
@@ -5215,6 +5302,10 @@ if [[ ${UPDATE_TEST_FAIL_RESTORE:-} == 1 && " $* " == *" restore --source="* \
   : >"$UPDATE_TEST_RESTORE_FAILURE_MARKER"
   exit 71
 fi
+if [[ ${UPDATE_TEST_FAIL_HELD_BACK_RESTORE:-} == 1 \
+  && " $* " == *" read-tree --reset -u "* ]]; then
+  exit 71
+fi
 if [[ $phase == after-apply && " $* " == *" apply --index "* ]]; then
   "$REAL_GIT" "$@"
   if [[ ! -e $marker ]]; then : >"$marker"; kill -TERM "$PPID"; fi
@@ -5240,6 +5331,21 @@ if [[ " $* " == *" push "* ]]; then
 fi
 exec "$REAL_GIT" "$@"
             """,
+        )
+        executable(
+            "jq",
+            """#!/usr/bin/env bash
+set -euo pipefail
+if [[ ${UPDATE_TEST_JQ_FAILURE:-} == catalog-inputs \
+  && " $* " == *".packages[] | .input // empty"* ]]; then
+  exit 71
+fi
+if [[ ${UPDATE_TEST_JQ_FAILURE:-} == target-rows \
+  && " $* " == *"def phase:"* ]]; then
+  exit 72
+fi
+exec "$REAL_JQ" "$@"
+""",
         )
         if nixos_driver is None:
             executable("hostname", "#!/bin/sh\nprintf 'hera\\n'\n")
@@ -5354,6 +5460,7 @@ fi
             "PATH": f"{fake_bin}:{os.environ['PATH']}",
             "REAL_CHMOD": real_chmod,
             "REAL_GIT": real_git,
+            "REAL_JQ": real_jq,
             "REAL_MKDIR": real_mkdir,
             "TMPDIR": temporary,
         }
@@ -5483,6 +5590,127 @@ fi
             )
             self.assertFalse((root / ".git/update-agents.lock").exists())
             self.assertEqual(list(root.parent.glob("update.*")), [])
+
+    def test_update_agents_holds_back_only_rejected_shared_record(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, _baseline = self._create_update_agents_fixture(temp_dir)
+            environment["UPDATE_TEST_ISOLATED_TARGETS"] = "1"
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS)],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            versions = {
+                name: record["version"]
+                for name, record in json.loads(
+                    (root / "shared.json").read_text()
+                )["sources"].items()
+            }
+            self.assertEqual(
+                versions,
+                {
+                    "a-success": "2.0.0",
+                    "b-rejected": "1.0.0",
+                    "c-success": "2.0.0",
+                },
+            )
+            self.assertIn(
+                "b-rejected: retained 1.0.0 (package validation rejected the candidate)",
+                result.stderr,
+            )
+            positions = [
+                result.stderr.index(f"catalog/{name}: evaluating candidate")
+                for name in ("a-success", "b-rejected", "c-success")
+            ]
+            self.assertEqual(positions, sorted(positions))
+
+    def test_update_agents_returns_nonzero_when_every_candidate_is_held_back(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment.update(
+                UPDATE_TEST_ISOLATED_TARGETS="1",
+                UPDATE_TEST_REJECT_TARGETS="a-success,b-rejected,c-success",
+            )
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS)],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 3)
+            self.assertIn("every selected catalog candidate was held back", result.stderr)
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_fails_if_held_back_restore_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment.update(
+                UPDATE_TEST_ISOLATED_TARGETS="1",
+                UPDATE_TEST_FAIL_HELD_BACK_RESTORE="1",
+            )
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS)],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 71)
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_treats_schedule_query_failures_as_hard(self):
+        cases = (("catalog-inputs", ["--all-inputs"], 71), ("target-rows", [], 72))
+        for failure, arguments, expected in cases:
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temp_dir:
+                root, environment, baseline = self._create_update_agents_fixture(
+                    temp_dir
+                )
+                before = self._update_agents_projection(root)
+                environment["UPDATE_TEST_JQ_FAILURE"] = failure
+
+                result = subprocess.run(
+                    [str(UPDATE_AGENTS), *arguments],
+                    capture_output=True,
+                    text=True,
+                    env=environment,
+                    check=False,
+                )
+
+                self.assertEqual(result.returncode, expected, result.stderr)
+                self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_returns_nonzero_for_one_explicit_rejection(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment.update(
+                UPDATE_TEST_NPM_LOCK_TARGET="1",
+                UPDATE_TEST_REJECT_NPM_LOCK="1",
+            )
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "npm-lock"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 3)
+            self.assertIn("npm-lock: retained 1.0.0", result.stderr)
+            self._assert_update_agents_unchanged(root, baseline, before)
 
     def test_update_agents_runs_one_fixed_input_without_unrelated_updates(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -5777,9 +6005,7 @@ fi
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(
                 command_log.read_text().splitlines()[0],
-                "flake update --flake ./config/ai git-ai llm-agents "
-                "mcp-servers-nix pal-mcp-server pi-openai-server-compaction "
-                "pi-quiet rust-overlay translate-tool copy-input",
+                "flake update --flake ./config/ai copy-input",
             )
 
     def test_update_agents_routes_flake_input_build_through_named_locks(self):
@@ -5918,15 +6144,18 @@ fi
             self.assertEqual(result.returncode, 0, result.stderr)
             events = interleaving_log.read_text().splitlines()
             ordered = [
-                "overlay --prepare-pypi-artifacts pypi",
-                "overlay --prepare-github-projections github",
-                "overlay --prepare-npm-flake-inputs npm-flake",
-                "overlay --prepare-fixed-inputs fixed",
-                "nix flake update --flake ./config/ai npm-flake-input fixed-input",
+                "overlay --prepare-target pypi",
+                "overlay --prepare-target github",
+                "overlay --prepare-target npm-flake",
+                "nix flake update --flake ./config/ai npm-flake-input",
+                "overlay --sync-flake-projections",
+                "overlay --prepare-target fixed",
+                "nix flake update --flake ./config/ai fixed-input",
                 "overlay --sync-flake-projections",
             ]
-            positions = [events.index(event) for event in ordered]
-            self.assertEqual(positions, sorted(positions))
+            position = -1
+            for event in ordered:
+                position = events.index(event, position + 1)
             self.assertEqual(events.count("overlay --inventory --json"), 2)
             self.assertIn("authoritative tree unchanged", result.stdout)
             self._assert_update_agents_unchanged(root, baseline, before)
@@ -6069,11 +6298,12 @@ fi
             self.assertNotEqual(result.returncode, 0)
             self._assert_update_agents_unchanged(root, baseline, before)
 
-    def test_all_inputs_prepares_npm_locks_after_lock_sync_before_generic_update(self):
+    def test_all_inputs_runs_automatic_targets_after_uncatalogued_locks(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, _baseline = self._create_update_agents_fixture(temp_dir)
             interleaving_log = Path(temp_dir) / "interleaving.log"
             environment.update(
+                UPDATE_TEST_COPY_TARGET="1",
                 UPDATE_TEST_INTERLEAVING_LOG=str(interleaving_log),
                 UPDATE_TEST_NPM_LOCK_AUTOMATIC="1",
                 UPDATE_TEST_NPM_LOCK_TARGET="1",
@@ -6087,23 +6317,29 @@ fi
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             events = interleaving_log.read_text().splitlines()
-            portable_lock = events.index("nix flake update --flake ./config/ai")
-            root_lock = events.index("nix flake update")
-            projection_sync = events.index("overlay --sync-flake-projections")
-            npm_locks = events.index("overlay --prepare-npm-locks npm-lock")
+            root_lock = events.index("nix flake update nix-config-ai")
+            portable_target = events.index(
+                "nix flake update --flake ./config/ai copy-input"
+            )
+            direct_target = events.index("overlay fixture")
+            npm_locks = events.index("overlay --prepare-target npm-lock")
+            projection_syncs = [
+                index
+                for index, event in enumerate(events)
+                if event == "overlay --sync-flake-projections"
+            ]
             inventory_checks = [
                 index
                 for index, event in enumerate(events)
                 if event == "overlay --inventory --json"
             ]
-            generic_update = events.index("overlay --all")
             self.assertEqual(len(inventory_checks), 2)
-            self.assertLess(portable_lock, projection_sync)
-            self.assertLess(root_lock, projection_sync)
-            self.assertLess(projection_sync, npm_locks)
+            self.assertLess(root_lock, portable_target)
+            self.assertLess(portable_target, projection_syncs[0])
+            self.assertLess(projection_syncs[0], npm_locks)
+            self.assertLess(npm_locks, direct_target)
+            self.assertLess(direct_target, projection_syncs[-1])
             self.assertLess(npm_locks, inventory_checks[-1])
-            self.assertLess(inventory_checks[-1], generic_update)
-            self.assertLess(npm_locks, generic_update)
             self.assertEqual((root / "npm-lock.txt").read_text(), "npm lock after\n")
 
     def test_update_agents_routes_github_projection_without_lock_updates(self):
@@ -6525,6 +6761,8 @@ fi
                         "UPDATE_TEST_SIGNAL_MARKER": str(marker),
                     }
                 )
+                if phase in {"candidate-portable-lock", "candidate-root-lock"}:
+                    environment["UPDATE_TEST_COPY_TARGET"] = "1"
                 result = subprocess.run(
                     [str(UPDATE_AGENTS)],
                     capture_output=True,
@@ -6552,6 +6790,8 @@ fi
                 )
                 before = self._update_agents_projection(root)
                 environment["UPDATE_TEST_FAILURE_PHASE"] = phase
+                if phase in {"candidate-portable-lock", "candidate-root-lock"}:
+                    environment["UPDATE_TEST_COPY_TARGET"] = "1"
                 result = subprocess.run(
                     [str(UPDATE_AGENTS)],
                     capture_output=True,
@@ -6639,11 +6879,13 @@ fi
 """,
             )
             executable(
-                "python",
+                "python3",
                 """#!/usr/bin/env bash
 set -euo pipefail
-if [[ ${2:-} == --sync-flake-projections ]]; then exec python3 "$@"; fi
-echo catalog-change >> sources/test.json
+if [[ ${2:-} == --inventory || ${2:-} == --sync-flake-projections ]]; then
+  exec "$REAL_PYTHON3" "$@"
+fi
+"$REAL_PYTHON3" -c 'from pathlib import Path; p = Path("sources/test.json"); p.write_text(p.read_text().replace("1.0.0", "1.0.1"))'
 """,
             )
             executable("nixfmt", "#!/usr/bin/env bash\nexit 0\n")
@@ -6677,6 +6919,7 @@ echo catalog-change >> sources/test.json
                 **os.environ,
                 "NIX_CONFIG_DIR": str(root),
                 "PATH": f"{fake_bin}:{os.environ['PATH']}",
+                "REAL_PYTHON3": sys.executable,
             }
             result = subprocess.run(
                 [str(UPDATE_AGENTS)],
@@ -6685,7 +6928,7 @@ echo catalog-change >> sources/test.json
                 env=env,
                 check=False,
             )
-            self.assertEqual(result.returncode, 23)
+            self.assertEqual(result.returncode, 23, result.stderr)
             status = subprocess.run(
                 ["git", "-C", str(root), "status", "--porcelain"],
                 capture_output=True,
@@ -6751,11 +6994,13 @@ fi
 """,
             )
             executable(
-                "python",
+                "python3",
                 """#!/usr/bin/env bash
 set -euo pipefail
-if [[ ${2:-} == --sync-flake-projections ]]; then exec python3 "$@"; fi
-echo catalog-change >> sources/test.json
+if [[ ${2:-} == --inventory || ${2:-} == --sync-flake-projections ]]; then
+  exec "$REAL_PYTHON3" "$@"
+fi
+"$REAL_PYTHON3" -c 'from pathlib import Path; p = Path("sources/test.json"); p.write_text(p.read_text().replace("1.0.0", "1.0.1"))'
 """,
             )
             executable("nixfmt", "#!/usr/bin/env bash\nexit 0\n")
@@ -6802,6 +7047,7 @@ exec "$REAL_GIT" "$@"
                 "PATH": f"{fake_bin}:{os.environ['PATH']}",
                 "PUSH_MARKER": str(push_marker),
                 "REAL_GIT": real_git,
+                "REAL_PYTHON3": sys.executable,
             }
             result = subprocess.run(
                 [str(UPDATE_AGENTS), "--commit", "--push"],
@@ -6811,7 +7057,11 @@ exec "$REAL_GIT" "$@"
                 check=False,
             )
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("signed commit failed", result.stderr)
+            self.assertIn(
+                "signed commit failed",
+                result.stderr,
+                f"status={result.returncode}\nstdout={result.stdout}",
+            )
             self.assertFalse(push_marker.exists())
             self.assertEqual(
                 subprocess.run(

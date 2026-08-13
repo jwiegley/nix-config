@@ -51,6 +51,14 @@ the required validation, creates a signed commit, activates the exact candidate,
 fast-forwards the checked-out branch, and publishes through `bin/publish`.
 Homebrew is intentionally outside this transaction.
 
+Automatic catalog targets are attempted one at a time. If a resolved candidate
+fails its package build, that target's source record, hashes, generated locks,
+and flake locks are restored and its retained version is reported; later targets
+still run against the accepted on-disk state. One explicitly selected rejection,
+or a pass in which every selected target is rejected, exits nonzero. Command
+errors, signals, restore failures, undeclared mutations, and the final repository
+validation remain fatal to the whole transaction.
+
 The target checkout is selected in this order: `NIX_CONFIG_DIR`; the system
 checkout (`UPDATE_AGENTS_SYSTEM_CONFIG_DIR`, default `/etc/nixos`) when that
 directory exists — on NixOS hosts it is authoritative and owns the build
@@ -123,11 +131,13 @@ manual-policy records.
 The public operator options are `--all`, `--dry-run`, `--version`, `--verbose`,
 `--inventory`, and `--json`. `--no-build` is retired and returns an error.
 Although help also exposes `--sync-flake-projections`, it requires the isolated
-candidate environment and a detached linked worktree; it and the five hidden
-`--prepare-*` modes are transaction-internal steps used by `bin/update`, not
-operator interfaces. Direct target mode updates the owning catalog record;
+candidate environment and a detached linked worktree. It and the hidden
+`--prepare-target NAME` mode are transaction-internal steps used by `bin/update`,
+not operator interfaces. Direct target mode updates the owning catalog record;
 update-owned targets delegate back to `bin/update`. `--all` covers automatic
-targets owned by the lower-level executor, not every catalog record.
+targets owned by the lower-level executor, not every catalog record. Exit status
+3 identifies a resolved candidate rejected by package validation; other nonzero
+statuses remain hard failures.
 
 ## Determining package versions
 
