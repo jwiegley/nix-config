@@ -18,6 +18,18 @@ let
     else
       { };
   pairedPiPackage = pairedAiPackages.pi or null;
+  piNodeExtraCaFallback = config.home.sessionVariables.SSL_CERT_FILE or null;
+  wrapPiWithNodeExtraCa = import ../flake/ai/wrappers/pi-node-extra-ca.nix {
+    inherit lib pkgs;
+  };
+  managedPiPackage =
+    if pairedPiPackage == null || !isDarwin || piNodeExtraCaFallback == null then
+      pairedPiPackage
+    else
+      wrapPiWithNodeExtraCa {
+        package = pairedPiPackage;
+        caBundle = piNodeExtraCaFallback;
+      };
   pairedCodexPackage = pairedAiPackages.codex or null;
   pairedPrimePackage = pairedAiPackages.prime-agent or null;
   pairedAgentResources = pairedAiPackages.agent-resources or null;
@@ -424,7 +436,7 @@ in
         };
       };
     packages =
-      lib.optional (pairedPiPackage != null) pairedPiPackage
+      lib.optional (managedPiPackage != null) managedPiPackage
       ++ lib.optional (primeSelected && pairedPrimePackage != null) pairedPrimePackage
       ++ lib.optionals piSelected piRuntimePackages;
     # The dummy keys satisfy codex's env_key lookups for the local providers;

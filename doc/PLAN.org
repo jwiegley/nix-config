@@ -2404,6 +2404,22 @@ The full session suite fails TestInstance_UpdateGeminiSession_UsesLatestFromFile
 ]
 #+end_src
 
+* DOING [#B] Propagate Node CA bundle into Darwin Pi wrapper
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-9z1f
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-13 Thu 23:45]
+:MODIFIED: [2026-08-13 Thu 23:45]
+:CREATED_BY: johnw
+:SOURCE_REPO: doc
+:SOURCE_REPO_PATH: /private/tmp/nix-pi-ca-final.lDLs5E/candidate/doc
+:ORIGINAL_SIZE: 0
+:END:
+
+Make every Nix-managed Pi launch on Darwin inherit the authoritative CA bundle even under tmux or GUI launchers that lack Home Manager session variables; add behavioral wrapper coverage and verify the child Node runtime loads extra certificates without reading real credentials.
+
 * DONE [#B] Make obr available across the managed fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

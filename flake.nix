@@ -403,6 +403,9 @@
                 inherit darwinConfigurations;
                 configured = agentTestPkgsFor.${system};
               };
+              pi-node-ca = pkgs.callPackage ./test/home/pi-node-ca.nix {
+                inherit darwinConfigurations;
+              };
               omlx-proxy-boundary = pkgs.callPackage ./test/home/omlx-proxy.nix {
                 inherit darwinConfigurations;
               };
