@@ -73,7 +73,9 @@ let
 
   nonDarwinTestPkgs = testPkgs // {
     stdenv = testPkgs.stdenv // {
-      isDarwin = false;
+      hostPlatform = testPkgs.stdenv.hostPlatform // {
+        isDarwin = false;
+      };
     };
   };
 

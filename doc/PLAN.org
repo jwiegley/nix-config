@@ -4814,6 +4814,39 @@ The Andoria flake and lock contain no GitHub nix-config source; both root and co
 ]
 #+end_src
 
+* DONE [#B] Fix the codex non-darwin open-file-limit case broken by the hostPlatform sweep
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ki4n
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-14 Fri 10:40]
+:MODIFIED: [2026-08-14 Fri 11:21]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-14 Fri 11:21]
+:CLOSE_REASON: Corrected the non-Darwin wrapper fixture to override stdenv.hostPlatform.isDarwin; the focused agent-wrappers derivation now passes.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Source commit: f865ddbba80f49e849c066602feaa7f4af434d79. Severity: High. Category: Bug. File: test/ai/agent-wrappers.sh (case codex/72-non-darwin-limit) with flake/ai/wrappers/codex.nix. Confidence: 100.
+
+PROBLEM: The stdenv.isDarwin -> stdenv.hostPlatform.isDarwin sweep breaks the BASELINE agent-wrappers check. Reproduced twice on the identical derivation, including from a clean worktree of the commit itself:
+
+  nix build .#checks.aarch64-darwin.agent-wrappers
+  -> agent-wrappers check [.../codex/72-non-darwin-limit]:
+     missing upstream environment entry: AGENT_TEST_OPEN_FILE_LIMIT=256
+  (drv /nix/store/ikgqmsvh2a6026c6wbb6h2hxn6k2g4rs-agent-wrappers-check.drv)
+
+The non-darwin case exercises the wrapper generated under a Linux hostPlatform instantiation. Under the old build-platform predicates that wrapper still embedded the darwin branch (buildPlatform is darwin on this machine); with hostPlatform predicates it now genuinely embeds the non-darwin branch, and the case's expectation (an AGENT_TEST_OPEN_FILE_LIMIT=256 entry reaching the fake upstream) no longer holds — either the expectation was calibrated against the old mis-branched wrapper, or the wrapper's non-darwin limit handling needs the entry it no longer produces.
+
+IMPACT: agent-wrappers is a baseline behavioral check: make test, nix flake check, the closeout tier, and CI are red at HEAD.
+
+SUGGESTED FIX: Decide which side is right for a real Linux host: if the non-darwin wrapper must preserve/propagate the caller's open-file limit to upstream, restore that in flake/ai/wrappers/codex.nix under the hostPlatform predicate; if the old expectation encoded the mis-branched behavior, update case 72's expected environment to the correct non-darwin contract. Keep the wrapper and case in one commit.
+
+VERIFICATION: nix build .#checks.aarch64-darwin.agent-wrappers succeeds; case 72 exercises the Linux-hostPlatform wrapper text (grep the generated script for the limit branch) so the case provably tests the non-darwin artifact.
+
 * DONE [#B] Quiesce persistence background writers before TempDir cleanup
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
