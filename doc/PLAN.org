@@ -2990,14 +2990,14 @@ Rendered catalog is valid JSON; every model has the source-proven correctly type
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-13 Thu 16:22]
-:MODIFIED: [2026-08-13 Thu 22:26]
+:MODIFIED: [2026-08-13 Thu 22:32]
 :CREATED_BY: johnw
 :SOURCE_REPO: vps
 :SOURCE_REPO_PATH: /Users/johnw/src/vps
 :ORIGINAL_SIZE: 0
 :END:
 
-The maintained /Users/johnw/src/vps flake still declares both nix-config and nix-config-ai as github:jwiegley/nix-config sources, contrary to the Gitea-only consumer authority. Acceptance: both source URLs use the canonical Gitea git+ssh repository with root and dir=config/ai at one revision, the complete lock graph contains no GitHub jwiegley/nix-config node, locked offline evaluation succeeds, and authoritative VPS adoption/build remains separately evidenced before deployment is claimed.
+The prepared review checkout /Users/johnw/src/vps now declares both nix-config and nix-config-ai from the canonical Gitea repository and has matching Gitea-shaped selected lock nodes. The authoritative /etc/nixos checkout still declares and locks both inputs through github:jwiegley/nix-config and has three local commits that must be preserved. Adopt the reviewed source+lock migration into that authoritative checkout without overwriting host state. Acceptance: the authoritative source URLs use canonical Gitea root and dir=config/ai inputs at one revision; the complete lock graph contains no GitHub jwiegley/nix-config node; locked offline evaluation and an authoritative VPS build succeed before any separately authorized deployment is claimed.
 
 ** Notes
 
@@ -4586,7 +4586,7 @@ Partner observation .440Z: cp -p preserves Darwin ACLs and source owner bits, so
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-13 Thu 13:54]
-:MODIFIED: [2026-08-13 Thu 22:26]
+:MODIFIED: [2026-08-13 Thu 22:32]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4657,6 +4657,13 @@ The Andoria flake and lock contain no GitHub nix-config source; both root and co
     "author": "johnw",
     "text": "Deferred at the authoritative shared-work boundary. The secondary Andoria source+lock migration and offline evaluation are prepared; resume only with explicit authority to preserve and adopt into the NFS-shared checkout, build, and perform any ordered fleet activation; commit/push remain separate authorizations.",
     "created_at": "2026-08-14T05:26:32Z"
+  },
+  {
+    "id": 382,
+    "issue_id": "nix-keap",
+    "author": "johnw",
+    "text": "Correction to the deferral trigger: authoritative source+lock adoption and the non-activating shared-work build may resume with authority to modify the NFS-shared checkout. Fleet activation is not required for this issue's closure and remains a separate explicit authorization.",
+    "created_at": "2026-08-14T05:32:36Z"
   }
 ]
 #+end_src
@@ -5601,14 +5608,14 @@ PLAN runtime-binding integrity acceptance requires existing hostile-permission r
 ]
 #+end_src
 
-* DEFER [#A] Enforce an eight-CPU ceiling on shared-work Nix builds
+* TODO [#A] Enforce an eight-CPU ceiling on shared-work Nix builds
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-p17
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 00:23]
-:MODIFIED: [2026-08-13 Thu 22:26]
+:MODIFIED: [2026-08-13 Thu 22:32]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5679,6 +5686,13 @@ The shared root authority declares one CPU set for shared-work Nix daemons. The 
     "author": "johnw",
     "text": "Deferred at the owner-authority boundary. Resume only with explicit permission for the ordered four-host Home Manager activation and interactive sudo availability on the remaining hosts; preserve the already-proved gpu-server CPU policy and do not retry the interrupted GPU build before the CPU set is active everywhere.",
     "created_at": "2026-08-14T05:26:30Z"
+  },
+  {
+    "id": 381,
+    "issue_id": "nix-p17",
+    "author": "johnw",
+    "text": "Independent audit correction: the full non-activating shared-work activationPackage build is actionable without activation authority, so this item returns to OPEN. Run only that bounded build/checkpoint next; any host activation and interactive sudo remain separately authorized.",
+    "created_at": "2026-08-14T05:32:36Z"
   }
 ]
 #+end_src
