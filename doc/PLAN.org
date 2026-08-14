@@ -224,7 +224,7 @@ test/bin/cross-consumer-eval rejects skips only when exactly one consumer evalua
 :LABELS:   ["context","extension","pi","pi-gallery"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-12 Wed 20:51]
-:MODIFIED: [2026-08-13 Thu 21:59]
+:MODIFIED: [2026-08-13 Thu 22:09]
 :CREATED_BY: johnw
 :FINISHED: [2026-08-13 Thu 21:59]
 :CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
@@ -268,6 +268,13 @@ Pin an immutable reviewed upstream revision and package it through the existing 
     "author": "johnw",
     "text": "The owner requested this issue be recorded, not immediate maintainer publication. Upstream pi-mulligan targets Pi 0.84.x, managed Pi is 0.83.0, and the reviewed release uses unbounded session-history APIs. Defer until the bounded Pi architecture resumes; no acceptance criterion is closed or weakened.",
     "created_at": "2026-08-13T07:56:45Z"
+  },
+  {
+    "id": 372,
+    "issue_id": "nix-0pr",
+    "author": "johnw",
+    "text": "2026-08-13 superseding owner decision: drop unnecessary extensions now. pi-mulligan was classified as an unrelated speculative extension with no compatible managed Pi API, so the earlier record-only request no longer keeps this feature open. Recreate only after a compatible authoritative Pi API exists and the owner requests installation again.",
+    "created_at": "2026-08-14T05:09:04Z"
   }
 ]
 #+end_src
@@ -3171,7 +3178,7 @@ The schema-20 lazy importer currently routes legacy consumed-turn JSON through u
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 16:07]
-:MODIFIED: [2026-08-13 Thu 22:01]
+:MODIFIED: [2026-08-13 Thu 22:09]
 :CREATED_BY: johnw
 :FINISHED: [2026-08-13 Thu 22:01]
 :CLOSE_REASON: Dropped as speculative TCC-labeling product scope; the initiating process/prompt premise was unproved and the native supervisor added 381 net lines without preventing filesystem traversal.
@@ -3231,6 +3238,13 @@ GUI helpers and commands launched through Agent Deck are attributed to a stable,
     "author": "johnw",
     "text": "2026-08-13 signed source checkpoints: 3a765aeb introduced the native LSBackgroundOnly bridge identity; d3054c85 corrected inherited signal-mask preservation and expanded process-semantics probes. The exact focused offline check path:.#checks.aarch64-darwin.agent-deck passed. Independent fess on the corrected range remains BLOCKED for closure: source behavior is coherent, but the tests do not mutation-kill true signaled death, launcher mask restoration, or wait/reap, cleanup can miss a child before PID capture, inherited SIG_IGN/SIGCHLD disposition assumptions are not constrained, and the prior freeze hashes were stale. Keep IN_PROGRESS; activation/live TCC evidence remains separately unauthorized and unrun.",
     "created_at": "2026-08-14T04:21:38Z"
+  },
+  {
+    "id": 374,
+    "issue_id": "nix-e5mi",
+    "author": "johnw",
+    "text": "2026-08-13 superseding owner decision: drop speculative additions during issue triage. The native TCC supervisor premise was not proved and did not prevent traversal, so commits 3a765aeb and d3054c85 are reverted by the signed triage checkpoint.",
+    "created_at": "2026-08-14T05:09:05Z"
   }
 ]
 #+end_src
@@ -5566,7 +5580,7 @@ PLAN runtime-binding integrity acceptance requires existing hostile-permission r
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 00:23]
-:MODIFIED: [2026-08-13 Thu 15:00]
+:MODIFIED: [2026-08-13 Thu 22:09]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5581,7 +5595,7 @@ The interrupted GPU build produced no activation path and was terminated cleanly
 
 ** Acceptance Criteria
 
-The shared root authority declares one CPU set for the shared-work Nix daemons. The authoritative Andoria consumer renders that value as a separate systemd drop-in with AllowedCPUs=0-7, without introducing a lifecycle framework or changing cache/signature trust. The existing max-jobs=1 and cores=8 client settings remain scheduling guidance. On andoria-08, andoria-t2, delphi-3bd4, and gpu-server, the installed drop-in matches the rendered source, systemd and the live cgroup report exactly CPUs 0-7, and an affected builder process reports Cpus_allowed_list 0-7. The full shared-work activationPackage then builds and activates in the authorized four-host order.
+The shared root authority declares one CPU set for shared-work Nix daemons. The authoritative Andoria consumer renders a separate systemd drop-in with AllowedCPUs=0-7 without a deployment framework or trust-policy change; max-jobs=1 and cores=8 remain scheduler guidance. The same shared-work package checkpoint proves Watchman absent, Agda absent on shared-work hosts, Agda retained on personal and Darwin hosts, and no duplicate Andoria name filter. On andoria-08, andoria-t2, delphi-3bd4, and gpu-server, the installed drop-in byte-matches the rendered source, systemd and the live cgroup report CPUs 0-7, and an affected builder reports Cpus_allowed_list 0-7. One full shared-work activationPackage build and one authorized ordered four-host activation satisfy the merged package and CPU outcomes.
 
 ** Dependencies
 
@@ -8203,7 +8217,7 @@ config/ai/catalog.nix:150-216 stores the Claude-formatted string Read, Grep, Glo
 :LABELS:   ["architecture","heavy-review","packaging"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-13 Thu 18:51]
+:MODIFIED: [2026-08-13 Thu 22:09]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -8211,6 +8225,10 @@ config/ai/catalog.nix:150-216 stores the Claude-formatted string Read, Grep, Glo
 :END:
 
 agent-deck-runtime-lifecycle.patch is about 45,582 lines, far beyond the documented narrow compatibility-patch boundary. Import the exact current Agent Deck product tree into the verified owner fork, pin the reviewed immutable product commit in sources/ai.json, and retain only genuinely Nix-specific packaging changes. Prove path, type, bytes, symlink, and executable identity before removing the downstream patch; then run the complete Agent Deck and Nix package checks. Source: abstraction finding 8.
+
+** Acceptance Criteria
+
+This is one indivisible Agent Deck product checkpoint. The owner designates the canonical Gitea repository and branch; no writable GitHub remote remains; any product push is separately authorized and is read back from Gitea. The selected GOOD-signed product commit reproduces the currently shipped downstream composition by an exact path, type, bytes, symlink, and executable manifest. Within the retained runtime scope, RuntimeBindings is the sole mutable runtime authority, and any retained runtime-hook authority path rejects symlinked or unowned ancestors and unsafe fallback resolution. sources/ai.json pins that exact immutable Gitea revision; package tests assert provider, revision, and source identity and fail on an unreviewed revision. The three product-scale patches and their application are deleted only after the exact product and Nix package checks plus one non-activating Hera system build pass. Profile migration, schema-20 consumed-turn optimization, multi-profile side-store expansion, and their derived hardening programmes are explicitly excluded from this checkpoint.
 
 ** Notes
 
@@ -8267,7 +8285,7 @@ agent-deck-runtime-lifecycle.patch is about 45,582 lines, far beyond the documen
 :LABELS:   ["architecture","memory","pi","pi-bounded-memory","upstream","wiggum"]
 :ISSUE_TYPE: epic
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-13 Thu 21:59]
+:MODIFIED: [2026-08-13 Thu 22:09]
 :CREATED_BY: johnw
 :FINISHED: [2026-08-13 Thu 21:59]
 :CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
@@ -8342,6 +8360,13 @@ Durable continuation, 2026-08-12 PDT. The bounded-history invariant and frozen C
     "author": "johnw",
     "text": "Owner decision on 2026-08-12: do not contact or publish to Pi maintainers yet. This issue is the U2 gate, the E0 umbrella, or a direct/transitive dependent of U2; defer indefinitely. Nothing is closed, accepted as a non-goal, authorized for outreach, or changed in scope or acceptance. Resume only after explicit owner authority.",
     "created_at": "2026-08-13T07:56:45Z"
+  },
+  {
+    "id": 371,
+    "issue_id": "nix-tcz.37.1",
+    "author": "johnw",
+    "text": "2026-08-13 superseding owner decision: triage all unfinished work, drop scope creep and unnecessary extensions, and cut dead wood. Under that explicit direction, this unapproved upstream Pi architecture programme and its unfinished children were declined rather than merely deferred. Existing historical evidence remains in Git; a future concrete task requires a real maintainer-approved API or explicit owner-fork authority.",
+    "created_at": "2026-08-14T05:09:04Z"
   }
 ]
 #+end_src
@@ -12902,7 +12927,7 @@ TestPerf_OutboxDrain_AccumulatedLedger claims to model 25 children, but historic
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 16:35]
-:MODIFIED: [2026-08-13 Thu 21:59]
+:MODIFIED: [2026-08-13 Thu 22:09]
 :CREATED_BY: johnw
 :FINISHED: [2026-08-13 Thu 21:59]
 :CLOSE_REASON: Completed the narrow executable-policy/grant/test remediation; dropped speculative cross-client OS confinement and TCC supervisor expansion.
@@ -12985,6 +13010,13 @@ Agent tooling never searches for executables by recursively traversing home, fil
     "author": "johnw",
     "text": "2026-08-13 final architecture map: no maintained shared seam can enforce the original strong runtime guarantee without broad Darwin filesystem confinement. Catalog run-commands is coarse; allowed-tools is Claude-only; Codex/Pi/Prime/Droid differ; Agent Deck wraps only the conductor while sessions run under persistent tmux; PATH/find/interpreter wrappers are bypassable; TCC cannot express discovery intent. Seatbelt is deprecated/broker-bypassable, while App Sandbox or Endpoint Security would be a materially broader privileged feature. Current policy/grant changes are independently clear only for the narrower contract: repository instruction + permission hygiene + sanitized transcript diagnostics, explicitly not kernel confinement. Owner adjudication is required: accept that narrower contract, or authorize a separate broad Darwin confinement product covering every client entrypoint/broker/descendant with project/state/socket allowances and synthetic syscall/FD/symlink tests.",
     "created_at": "2026-08-14T01:09:10Z"
+  },
+  {
+    "id": 373,
+    "issue_id": "nix-vb0k",
+    "author": "johnw",
+    "text": "2026-08-13 superseding owner adjudication: accept the implemented narrow repository policy, permission hygiene, and sanitized diagnostic contract; explicitly decline App Sandbox, Endpoint Security, or another cross-client OS-confinement product. This closes the issue without claiming kernel enforcement.",
+    "created_at": "2026-08-14T05:09:04Z"
   }
 ]
 #+end_src
