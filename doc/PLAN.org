@@ -5615,7 +5615,7 @@ PLAN runtime-binding integrity acceptance requires existing hostile-permission r
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 00:23]
-:MODIFIED: [2026-08-13 Thu 22:32]
+:MODIFIED: [2026-08-13 Thu 22:53]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5693,6 +5693,20 @@ The shared root authority declares one CPU set for shared-work Nix daemons. The 
     "author": "johnw",
     "text": "Independent audit correction: the full non-activating shared-work activationPackage build is actionable without activation authority, so this item returns to OPEN. Run only that bounded build/checkpoint next; any host activation and interactive sudo remain separately authorized.",
     "created_at": "2026-08-14T05:32:36Z"
+  },
+  {
+    "id": 383,
+    "issue_id": "nix-p17",
+    "author": "johnw",
+    "text": "Starting exactly one non-activating full activationPackage realization from the prepared Gitea-backed /Users/johnw/src/andoria candidate, using only gpu-server's remote store with builders disabled, max-jobs=1, cores=8, and its live daemon CPU set reverified as 0-7. No lock write, source mutation, activation, or other host operation.",
+    "created_at": "2026-08-14T05:37:19Z"
+  },
+  {
+    "id": 384,
+    "issue_id": "nix-p17",
+    "author": "johnw",
+    "text": "The single non-activating gpu-server remote-store realization was interrupted after about sixteen minutes, before any output path or failure, solely to honor the owner's immediate git pull --rebase request. The local client exited, its remote daemon workers drained, and no lock, source, activation, or host policy changed. Candidate hashes remain flake.nix 9d676878... and flake.lock 437c159f...; rerun the same bounded build after repository currency is restored.",
+    "created_at": "2026-08-14T05:53:11Z"
   }
 ]
 #+end_src
