@@ -49,7 +49,7 @@ that import this repository with `flake = false` declare `obr` as a direct input
 and pass it through their Home Manager module arguments; their lock adoption
 remains consumer-owned.
 
-The managed Pi profile makes the same complete 27-member extension gallery
+The managed Pi profile makes the same complete 26-member extension gallery
 available on every host. Darwin registers the two loopback discovery providers
 automatically; fixed local-provider overrides and the synthetic router remain a
 separate catalog capability, presently enabled only for Hera.

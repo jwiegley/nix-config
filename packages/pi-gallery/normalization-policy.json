@@ -17,12 +17,6 @@
     "overrideDependencies": {}
   },
   "targets": {
-    "pi-artifacts": {
-      "removeTopLevel": [],
-      "forbidDependencies": [],
-      "defensiveForbidDependencies": [],
-      "overrideDependencies": {}
-    },
     "pi-dynamic-workflows": {
       "removeTopLevel": [],
       "forbidDependencies": [],

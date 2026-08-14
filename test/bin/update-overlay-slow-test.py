@@ -954,7 +954,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         with self.assertRaisesRegex(RuntimeError, "identity does not match"):
             normalize_pi_manifest(
                 root,
-                "pi-artifacts",
+                "pi-insights",
                 "wrong-name",
                 "1.0.0",
                 json.dumps(manifest),
@@ -974,7 +974,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                         jq,
                         "--arg",
                         "target",
-                        "pi-artifacts",
+                        "pi-insights",
                         "--arg",
                         "expectedName",
                         "example",
@@ -994,7 +994,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 )
 
             enforced = copy.deepcopy(contract)
-            enforced["targets"]["pi-artifacts"]["forbidDependencies"] = ["keep"]
+            enforced["targets"]["pi-insights"]["forbidDependencies"] = ["keep"]
             enforced_result = run_policy(enforced)
             self.assertEqual(
                 enforced_result.returncode,
@@ -1004,7 +1004,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             self.assertNotIn("keep", json.loads(enforced_result.stdout)["dependencies"])
 
             inert = copy.deepcopy(contract)
-            inert["targets"]["pi-artifacts"]["forbidDependencies"] = [
+            inert["targets"]["pi-insights"]["forbidDependencies"] = [
                 "missing-enforced-dependency"
             ]
             inert_result = run_policy(inert)
@@ -1013,7 +1013,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             self.assertIn("missing-enforced-dependency", inert_result.stderr)
 
             defensive = copy.deepcopy(contract)
-            defensive["targets"]["pi-artifacts"]["defensiveForbidDependencies"] = [
+            defensive["targets"]["pi-insights"]["defensiveForbidDependencies"] = [
                 "future-defensive-dependency"
             ]
             defensive_result = run_policy(defensive)
@@ -1024,7 +1024,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             )
 
             inert_override = copy.deepcopy(contract)
-            inert_override["targets"]["pi-artifacts"]["overrideDependencies"] = {
+            inert_override["targets"]["pi-insights"]["overrideDependencies"] = {
                 "missing-override-dependency": "2"
             }
             inert_override_result = run_policy(inert_override)
@@ -1072,7 +1072,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             )
             rejected(
                 "invalid override value",
-                lambda value: value["targets"]["pi-artifacts"][
+                lambda value: value["targets"]["pi-insights"][
                     "overrideDependencies"
                 ].update(keep=""),
             )
@@ -1080,7 +1080,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 "override repeated across common and target",
                 lambda value: (
                     value["common"]["overrideDependencies"].update(keep="1"),
-                    value["targets"]["pi-artifacts"][
+                    value["targets"]["pi-insights"][
                         "overrideDependencies"
                     ].update(keep="2"),
                 ),
@@ -1089,7 +1089,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 "dependency repeated across override and forbid policies",
                 lambda value: (
                     value["common"]["overrideDependencies"].update(keep="2"),
-                    value["targets"]["pi-artifacts"][
+                    value["targets"]["pi-insights"][
                         "forbidDependencies"
                     ].append("keep"),
                 ),
@@ -1105,7 +1105,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 "dependency repeated across common and target policies",
                 lambda value: (
                     value["common"]["forbidDependencies"].append("duplicate"),
-                    value["targets"]["pi-artifacts"][
+                    value["targets"]["pi-insights"][
                         "defensiveForbidDependencies"
                     ].append("duplicate"),
                 ),
@@ -1114,7 +1114,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 "enforced dependency repeated across common and target",
                 lambda value: (
                     value["common"]["forbidDependencies"].append("duplicate"),
-                    value["targets"]["pi-artifacts"]["forbidDependencies"].append(
+                    value["targets"]["pi-insights"]["forbidDependencies"].append(
                         "duplicate"
                     ),
                 ),
@@ -1123,7 +1123,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 "defensive dependency repeated across common and target",
                 lambda value: (
                     value["common"]["defensiveForbidDependencies"].append("duplicate"),
-                    value["targets"]["pi-artifacts"][
+                    value["targets"]["pi-insights"][
                         "defensiveForbidDependencies"
                     ].append("duplicate"),
                 ),
@@ -1148,7 +1148,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 sys.executable,
                 str(SCRIPT),
                 "--prepare-target",
-                "pi-artifacts",
+                "pi-insights",
             ],
             capture_output=True,
             text=True,

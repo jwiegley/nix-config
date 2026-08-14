@@ -34,7 +34,6 @@ in
     "browser"
     "btw"
     "copy-message"
-    "artifacts"
     "insights"
     "usage"
     "multi-pass"
@@ -91,11 +90,6 @@ in
     copy-message = member "pi-copy-message" {
       publicName = "pi-copy-message";
       extension = "extensions/copy-message.ts";
-    };
-    artifacts = member "pi-artifacts" {
-      publicName = "@jakeryderv/pi-artifacts";
-      extension = "extensions/nix-bundle.js";
-      skills = [ "skills/artifacts-authoring" ];
     };
     insights = member "pi-insights" {
       publicName = "@ygncode/pi-insights";

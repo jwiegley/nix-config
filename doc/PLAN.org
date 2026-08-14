@@ -6936,6 +6936,54 @@ TestIssue1225_DrainInbox_ConcurrentDrainNoDoubleNoLoss silently returns on conte
 
 Partner observations 2026-08-11T03:29:03.210Z and .211Z found an invalid placeholder and missing forced command in config/darwin.nix. Vulcan has no maintained pushme-positron consumer or dedicated jump-key authority, so delete the dormant authorization atomically rather than inventing or broadening a credential. A future route must provision the consumer, dedicated public key, Hera-only scope, forced command, and behavioral acceptance together.
 
+* DONE [#B] Remove Pi Artifacts from the always-on Pi Gallery
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-syku
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-14 Fri 12:32]
+:MODIFIED: [2026-08-14 Fri 12:37]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-14 Fri 12:37]
+:CLOSE_REASON: Removed Pi Artifacts and all package-specific residue while preserving automatic activation of the remaining 26 Gallery members; focused evaluation/tests and independent review are clear.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pi Artifacts is the dominant measured Gallery member startup outlier and the user explicitly authorized removing it on 2026-08-14. Remove only this member from the declared always-on Gallery, delete package/source/test/documentation residue that becomes unreferenced, preserve automatic activation of every remaining declared Pi extension, and use focused non-activating verification only. Do not restart sessions, activate hosts, push, or run expensive suites.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-syku",
+    "depends_on_id": "nix-yojh",
+    "type": "discovered-from",
+    "created_at": "2026-08-14T19:32:20.814687Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 406,
+    "issue_id": "nix-syku",
+    "author": "johnw",
+    "text": "Removal complete. Pi Artifacts was deleted from the declared Gallery, exported packages, source catalog, normalization policy, lockfile, focused checks, and documentation. The remaining 26 members retain the unchanged automatic Gallery path; Darwin still registers all 26 and Linux retains only its existing three-provider exception. Focused evidence: exact aarch64-darwin manifest evaluation returned 26 members with artifacts absent; the exported package set reports no pi-artifacts; the shared normalizer unit passed; Nix formatting, Ruff lint, JSON parsing, and diff checks passed. Independent current-diff review: CLEAR. No heavy Gallery build, activation, push, or session control occurred. Clio reportedly starts quickly with the full extension set, so this removal is not claimed to explain the Hera/Clio latency difference; that remains a separate host-specific diagnosis.",
+    "created_at": "2026-08-14T19:36:56Z"
+  }
+]
+#+end_src
+
 * DONE [#C] Require hook admission in Codex subagent negative regressions
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

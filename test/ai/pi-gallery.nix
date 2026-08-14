@@ -251,11 +251,6 @@ runCommand "pi-gallery-check"
       PI_BTW_EXTENSION=${roots.btw}/extensions/btw.ts \
         bun test ./test/ai/pi-btw-escape.check.ts
     )
-    [ -f ${roots.artifacts}/extensions/index.ts ]
-    [ -f ${roots.artifacts}/extensions/nix-bundle.js ]
-    [ -f ${roots.artifacts}/skills/artifacts-authoring/SKILL.md ]
-    [ -d ${roots.artifacts}/node_modules/mermaid ]
-    [ -d ${roots.artifacts}/node_modules/markdown-it ]
     [ -f ${roots.insights}/index.ts ]
     [ -f ${roots.insights}/dist/index.html ]
     [ -d ${roots.insights}/node_modules/react ]
@@ -1855,7 +1850,6 @@ runCommand "pi-gallery-check"
         and .command == "get_commands"
         and .success == true
         and ([
-          "artifacts-clean",
           "blackhole",
           "blackhole-memory",
           "blackhole-recall",
@@ -1907,7 +1901,6 @@ runCommand "pi-gallery-check"
           "subagents-watchdog",
           "trace",
           "usage",
-          "viewer",
           "workflows"
         ] - [.data.commands[].name] | length) == 0
         and ([.data.commands[].name | select(startswith("sidebar"))] | length) == 0

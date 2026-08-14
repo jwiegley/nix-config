@@ -28,7 +28,6 @@ let
         agent-browser
         cymbal
         pi-agent-browser-native
-        pi-artifacts
         pi-blackhole
         pi-btw
         pi-cache-optimizer
@@ -395,7 +394,6 @@ let
     lens = true;
   };
   markdownPreviewSource = mkMemberReleaseSource members.markdown-preview { };
-  artifactsSource = mkMemberReleaseSource members.artifacts { };
   insightsSource = mkMemberReleaseSource members.insights { };
   memSource = mkMemberReleaseSource members.mem { };
   dynamicWorkflowsSource = mkMemberReleaseSource members.dynamic-workflows { };
@@ -459,88 +457,6 @@ let
         echo "pi-subagents patch did not apply exactly: $patch_artifact" >&2
         exit 1
       fi
-    '';
-  };
-  pi-artifacts = mkNpmPackageRoot {
-    pname = members.artifacts.attrName;
-    version = members.artifacts.version;
-    src = artifactsSource;
-    npmDepsHash = members.artifacts.hashes.npmDepsHash;
-    bundleEntry = "extensions/index.ts";
-    prepareBundle = root: ''
-      ${python3}/bin/python3 - "${root}" <<'PY'
-      from pathlib import Path
-      import sys
-
-      root = Path(sys.argv[1])
-      markdown = root / "extensions/markdown.ts"
-      text = markdown.read_text()
-      text = text.replace(
-          'import { createRequire } from "node:module";\n\nimport * as katex from "katex";',
-          'import hljsImport from "highlight.js/lib/common";\n'
-          'import MarkdownItImport from "markdown-it";\n'
-          'import footnotePluginImport from "markdown-it-footnote";\n\n'
-          'import * as katex from "katex";',
-      )
-      text = text.replace('\nconst require = createRequire(import.meta.url);\n', '\n')
-      old_candidates = ["""const MarkdownIt = require("markdown-it") as MarkdownItConstructor;
-      // `lib/common` bundles the ~40 common grammars instead of all ~190.
-      const hljsModule = require("highlight.js/lib/common") as
-        | HighlightJsLike
-        | { default: HighlightJsLike };
-      const hljs = "default" in hljsModule ? hljsModule.default : hljsModule;
-      const footnotePlugin = require("markdown-it-footnote") as (
-        md: MarkdownItInstance,
-      ) => void;""", """const MarkdownIt = require("markdown-it") as MarkdownItConstructor;
-      // `lib/common` bundles the ~40 common grammars instead of all ~190.
-      const hljsModule = require("highlight.js/lib/common") as
-        HighlightJsLike | { default: HighlightJsLike };
-      const hljs = "default" in hljsModule ? hljsModule.default : hljsModule;
-      const footnotePlugin = require("markdown-it-footnote") as (
-        md: MarkdownItInstance,
-      ) => void;"""]
-      new = """const MarkdownIt = MarkdownItImport as unknown as MarkdownItConstructor;
-      // `lib/common` bundles the ~40 common grammars instead of all ~190.
-      const hljsModule = hljsImport as unknown as
-        | HighlightJsLike
-        | { default: HighlightJsLike };
-      const hljs = "default" in hljsModule ? hljsModule.default : hljsModule;
-      const footnotePlugin = footnotePluginImport as unknown as (
-        md: MarkdownItInstance,
-      ) => void;"""
-      matches = [candidate for candidate in old_candidates if candidate in text]
-      if len(matches) != 1:
-          raise SystemExit("pi-artifacts markdown require block drifted")
-      markdown.write_text(text.replace(matches[0], new))
-
-      validation = root / "extensions/validation/html.ts"
-      text = validation.read_text()
-      text = text.replace(
-          'import { createRequire } from "node:module";\n\nimport prettier from "prettier";',
-          'import * as htmlhintModule from "htmlhint";\n\nimport prettier from "prettier";',
-      )
-      text = text.replace('\nconst require = createRequire(import.meta.url);\n', '\n')
-      old = 'const { HTMLHint } = require("htmlhint") as { HTMLHint: HtmlHintLike };'
-      new = (
-          'const HTMLHint = (htmlhintModule as unknown as { HTMLHint: HtmlHintLike })'
-          '.HTMLHint;'
-      )
-      if old not in text:
-          raise SystemExit("pi-artifacts HTMLHint require block drifted")
-      validation.write_text(text.replace(old, new))
-      PY
-
-      substituteInPlace "${root}/extensions/runtime.ts" \
-        --replace-fail 'dirname(require.resolve("katex/dist/katex.min.css"))' \
-          '"'"${root}/node_modules/katex/dist"'"' \
-        --replace-fail 'dirname(require.resolve("chart.js"))' \
-          '"'"${root}/node_modules/chart.js/dist"'"' \
-        --replace-fail 'dirname(require.resolve("highlight.js/styles/github.min.css"))' \
-          '"'"${root}/node_modules/highlight.js/styles"'"' \
-        --replace-fail 'dirname(require.resolve("mermaid/dist/mermaid.min.js"))' \
-          '"'"${root}/node_modules/mermaid/dist"'"' \
-        --replace-fail 'dirname(require.resolve("@picocss/pico/css/pico.classless.min.css"))' \
-          '"'"${root}/node_modules/@picocss/pico/css"'"'
     '';
   };
   pi-insights = mkNpmPackageRoot {

@@ -95,28 +95,6 @@
       },
       "version": "0.2.72"
     },
-    "pi-artifacts": {
-      "hashes": {
-        "npmDepsHash": "sha256-uLiXHIt9XJ2IYcPLywSMzi8Ata1O0R1k0TzPbAkdOG0="
-      },
-      "source": {
-        "args": {
-          "hash": "sha256-hpEfIEpWV6HhfTkrsGXQd4mupZUUITjpa948V5v5Y/w=",
-          "url": "https://registry.npmjs.org/@jakeryderv/pi-artifacts/-/pi-artifacts-0.9.1.tgz"
-        },
-        "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/@jakeryderv/pi-artifacts/-/pi-artifacts-0.9.1.tgz"
-      },
-      "update": {
-        "artifacts": [
-          "packages/pi-gallery/locks/pi-artifacts-package-lock.json"
-        ],
-        "kind": "npm-release",
-        "normalizer": "pi-gallery-v1",
-        "package": "@jakeryderv/pi-artifacts"
-      },
-      "version": "0.9.1"
-    },
     "pi-blackhole": {
       "source": {
         "args": {

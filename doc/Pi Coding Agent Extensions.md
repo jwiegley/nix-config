@@ -14,7 +14,7 @@ pi-version: 0.83.0
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: 27 gallery packages available on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: 26 gallery packages available on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope.
 
@@ -35,7 +35,6 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `pi-agent-browser-native` | 0.2.72 | Native Pi interface to `agent-browser` | `agent_browser` |
 | `pi-btw` | 0.4.1 | Side conversations without disturbing the main turn | `/btw` |
 | `pi-copy-message` | 1.0.11 | Search and copy raw session messages | `/copy-message`, `/copy-user` |
-| `@jakeryderv/pi-artifacts` | 0.9.1 | Portable Markdown and HTML artifacts | `scaffold_artifact`, `/viewer` |
 | `@ygncode/pi-insights` | 1.0.1 | Session analytics | `/insights` |
 | `@tmustier/pi-usage-extension` | 0.9.4 | Local usage, cost, and token statistics | `/usage` |
 | `pi-multi-pass` | 1.3.0 | Multiple OAuth accounts and failover pools | `/subs`, `/pool`, `/mp-preset` |
@@ -69,11 +68,11 @@ The Hera, Clio, shared-work, VPS, and Vulcan Pi profiles are rendered by `~/src/
 | Extension entries | Fleet Theme, Nix Gallery loader, Pi Loop, Pi MCP Adapter, and Quiet Display on every managed host; Linux keeps the two loopback providers and router available without registering them automatically |
 | Agent resources | 25 Nix-managed agent definitions |
 | Prompt resources | 63 files: 61 command prompts and the `emacs` and `spanish` prompts |
-| Skill resources | Shared catalog skills selected for Pi, plus six gallery package skill paths and one gallery prompt path advertised at runtime |
+| Skill resources | Shared catalog skills selected for Pi, plus five gallery package skill paths and one gallery prompt path advertised at runtime |
 | Generated policy | `keybindings.json`, `models.json`, the managed theme, the hidden Lens widget setting, and the global MCP registry; Hera also receives `model-router.json` |
 | Deliberately absent | No Pi-specific Nix settings file, hooks, marketplaces, or companion leaves |
 
-Shared skills remain in the common discovery estate rather than being copied into a private Pi skill tree. Their ownership is independent of Codex, so Pi-only hosts receive them too. Package skills supplied by Lens, BTW, Artifacts, Subagents, and Dynamic Workflows enter through the gallery loader.
+Shared skills remain in the common discovery estate rather than being copied into a private Pi skill tree. Their ownership is independent of Codex, so Pi-only hosts receive them too. Package skills supplied by Lens, BTW, Subagents, and Dynamic Workflows enter through the gallery loader.
 
 ### Model and routing policy
 
@@ -121,7 +120,7 @@ The generated keymap retains the ordinary keys and adds Emacs-style editing:
 
 **Version:** local · **Links:** Nix authority: `~/src/nix/packages/pi-gallery/` · deployed leaf: `~/.config/pi/agent/extensions/nix-gallery/index.ts`
 
-The Nix Gallery loader projects the complete managed package set on every host. It imports and registers extensions in deterministic order, except that Linux does not automatically import the two loopback providers or their router. All 27 immutable package paths remain in the projection. Before registration the loader suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
+The Nix Gallery loader projects the complete managed package set on every host. It imports and registers extensions in deterministic order, except that Linux does not automatically import the two loopback providers or their router. All 26 immutable package paths remain in the projection. Before registration the loader suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
 
 **Basic usage.** No direct command is required. Run `/reload` after activating a new Nix generation, or start a fresh Pi process, to load the current gallery. The loader itself owns no mutable state.
 
@@ -293,15 +292,7 @@ Pi Cymbal exposes Cymbal's local tree-sitter and SQLite index as agent-native co
 
 **Basic usage.** Begin unfamiliar work with `cymbal_map` or `cymbal_structure`, then narrow through `cymbal_search`, `cymbal_outline`, and `cymbal_show`. Use `cymbal_refs`, `cymbal_impact`, `cymbal_changed`, or `cymbal_diff` before a refactor. `/cymbal:remind` refreshes the navigation guidance. The Nix profile supplies Cymbal 0.14.0.
 
-## Rendering and artifacts
-
-### Artifacts
-
-**Version:** 0.9.1 · **Links:** [Pi Packages](https://pi.dev/packages/@jakeryderv/pi-artifacts) · [Home](https://github.com/jakeryderv/pi-packages/tree/main/packages/pi-artifacts#readme) · [GitHub](https://github.com/jakeryderv/pi-packages)
-
-Pi Artifacts creates portable Markdown and HTML bundles for reports, diagrams, dashboards, and other results that benefit from a rendered view. Bundles separate authored content from assets, pass through validation before display, and may be exported to a self-contained HTML file.
-
-**Basic usage.** Call `scaffold_artifact`, write the returned bundle entry and assets, then call `render_artifact`. Use `export_artifact` for a portable file, `list_artifacts` for discovery, and the deletion tools for cleanup. `/viewer`, `/viewer-mode`, `/viewer-auto`, and `/artifacts-clean` govern the interactive store.
+## Rendering and previews
 
 ### Markdown Preview
 
