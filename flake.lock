@@ -6528,11 +6528,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1785587135,
-        "narHash": "sha256-c54SY2tMFB5b25Gjfb9c9Ihk1aDfGDuht4wzh7jZtk4=",
+        "lastModified": 1786677376,
+        "narHash": "sha256-+LC/spNtAaeAcQ/2rnO/zBdo+VM1O9dNli0Qb5tXKfc=",
         "owner": "jwiegley",
         "repo": "scripts",
-        "rev": "499f9fe06744b31c8c7bb68b9c0189e0ab66bbf5",
+        "rev": "c1cfc438626d75cef3b22e1dcdfdd798169bcdf7",
         "type": "github"
       },
       "original": {
