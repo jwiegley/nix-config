@@ -4207,6 +4207,24 @@ Andoria consumes the root shared-work Agda decision without a second name-based 
 ]
 #+end_src
 
+* DONE [#A] Restore de regeneration after deleting direnv files
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-i0x8
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-13 Thu 23:15]
+:MODIFIED: [2026-08-13 Thu 23:16]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 23:16]
+:CLOSE_REASON: Removed the false post-unload DIRENV_DIFF failure, explicitly drops stale bookkeeping before cache generation, and added a focused absent-file regression proving .envrc and private .envrc.cache regeneration without diff or secret leakage. The 10-test de suite, Bash syntax, ShellCheck, Ruff, and diff checks pass; shfmt is not claimed because the existing script intentionally uses its established four-space style.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The recently added post-unload DIRENV_DIFF assertion makes de abort with 'direnv did not restore the pre-direnv environment' after the owner deletes .envrc and .envrc.cache. Restore the longstanding contract: de must recreate both generated files. Remove the unsolicited false-failure guard without weakening private cache generation or .env secret exclusion, and add a focused regression for successful regeneration when direnv leaves its bookkeeping variable set.
+
 * DONE [#B] Restore Pi Sessions as a reviewed managed product :memory:pi:security:sessions:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5615,7 +5633,7 @@ PLAN runtime-binding integrity acceptance requires existing hostile-permission r
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 00:23]
-:MODIFIED: [2026-08-13 Thu 22:53]
+:MODIFIED: [2026-08-13 Thu 23:14]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5707,6 +5725,34 @@ The shared root authority declares one CPU set for shared-work Nix daemons. The 
     "author": "johnw",
     "text": "The single non-activating gpu-server remote-store realization was interrupted after about sixteen minutes, before any output path or failure, solely to honor the owner's immediate git pull --rebase request. The local client exited, its remote daemon workers drained, and no lock, source, activation, or host policy changed. Candidate hashes remain flake.nix 9d676878... and flake.lock 437c159f...; rerun the same bounded build after repository currency is restored.",
     "created_at": "2026-08-14T05:53:11Z"
+  },
+  {
+    "id": 385,
+    "issue_id": "nix-p17",
+    "author": "johnw",
+    "text": "2026-08-13 post-rebase resumption: the prepared Andoria candidate remains byte-identical (flake.nix 9d676878..., flake.lock 437c159f...), its repository is unchanged except those two preexisting candidate files, and gpu-server again reports nix-daemon active with AllowedCPUs=0-7, EffectiveCPUs=0-7, and live cgroup cpuset 0-7. Restarting exactly one non-activating activationPackage realization through ssh-ng://gpu-server with builders disabled, max-jobs=1, cores=8, and no lock write. No activation, sudo, source mutation, or other host operation is authorized.",
+    "created_at": "2026-08-14T05:57:55Z"
+  },
+  {
+    "id": 386,
+    "issue_id": "nix-p17",
+    "author": "johnw",
+    "text": "2026-08-13 correction: the restarted build was stopped promptly after current-state audit proved the prepared candidate stale. Its paired lock still selected root c143b2ec, predating the shared-work Agda exclusion at bed89645, while its flake removed the consumer-side Agda filter; completing it would have contradicted acceptance. No output path or activation was produced and no source/lock/host policy changed. The only honest non-publishing checkpoint is now an exact signed-local-revision override build; Gitea adoption and fleet activation remain separate authority gates.",
+    "created_at": "2026-08-14T06:02:10Z"
+  },
+  {
+    "id": 387,
+    "issue_id": "nix-p17",
+    "author": "johnw",
+    "text": "2026-08-13 corrected non-publishing candidate preflight: both nix-config and nix-config-ai override to exact signed local commit 0c8cb11c via git+file without writing Andoria's lock. Direct evaluation of homeConfigurations.jwiegley.config.home.packages returns an empty Agda/Watchman match set. Starting one full activationPackage realization through gpu-server's CPU-confined remote store; this proves only current-source package/build behavior, not Gitea publication, consumer adoption, or activation.",
+    "created_at": "2026-08-14T06:03:25Z"
+  },
+  {
+    "id": 388,
+    "issue_id": "nix-p17",
+    "author": "johnw",
+    "text": "2026-08-13 the corrected exact-local-revision build was interrupted immediately at owner request to address a high-priority de regression. It had produced no output path or failure; local client exited. Exact override preflight remains valid, but no full realization is claimed.",
+    "created_at": "2026-08-14T06:14:18Z"
   }
 ]
 #+end_src
@@ -13918,24 +13964,6 @@ Path Finder 26.1.7 is independent of Nix Samba. During the reported attempt it p
 ]
 #+end_src
 
-* DONE [#B] Remove legacy PromptDeploy route from recordings
-:PROPERTIES:
-:OBR_SCHEMA_VERSION: 17
-:ID:       nix-yvw
-:LABELS:   []
-:ISSUE_TYPE: bug
-:CREATED:  [2026-08-13 Thu 21:01]
-:MODIFIED: [2026-08-13 Thu 22:05]
-:CREATED_BY: johnw
-:FINISHED: [2026-08-13 Thu 22:05]
-:CLOSE_REASON: Published the Documents archive path and Nix-managed credential-free transcription route, activated Hera generation 1077, transcribed and archived all 9 preserved recordings, and verified a clean follow-up sweep.
-:SOURCE_REPO: candidate
-:SOURCE_REPO_PATH: /private/tmp/nix-scripts-repin.r19iCf/candidate
-:ORIGINAL_SIZE: 0
-:END:
-
-Generate the Hera transcription route from the current AI catalog, remove the obsolete PromptDeploy-namespaced route and secret-bearing schema from scripts, preserve transaction retry identity, and verify the queued recordings complete.
-
 * DONE [#B] Derive publication signature ranges from freshly fetched Gitea refs only
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -14059,6 +14087,24 @@ The session layer will correctly reject all running cross-profile migrations, bu
   }
 ]
 #+end_src
+
+* DONE [#B] Remove legacy PromptDeploy route from recordings
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-yvw
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-13 Thu 21:01]
+:MODIFIED: [2026-08-13 Thu 22:05]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:05]
+:CLOSE_REASON: Published the Documents archive path and Nix-managed credential-free transcription route, activated Hera generation 1077, transcribed and archived all 9 preserved recordings, and verified a clean follow-up sweep.
+:SOURCE_REPO: candidate
+:SOURCE_REPO_PATH: /private/tmp/nix-scripts-repin.r19iCf/candidate
+:ORIGINAL_SIZE: 0
+:END:
+
+Generate the Hera transcription route from the current AI catalog, remove the obsolete PromptDeploy-namespaced route and secret-bearing schema from scripts, preserve transaction retry identity, and verify the queued recordings complete.
 
 * DONE [#C] Adopt the final declarative Nix builder pool
 :PROPERTIES:
@@ -14238,3 +14284,4 @@ The capture helper waits for a complete expected argv record without fixed sleep
   }
 ]
 #+end_src
+

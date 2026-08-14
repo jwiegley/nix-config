@@ -123,6 +123,9 @@ dump)
     if [[ ${SECRET_SENTINEL+x} ]]; then
         printf 'SECRET_SENTINEL=%s\\n' "$SECRET_SENTINEL"
     fi
+    if [[ ${DIRENV_DIFF+x} ]]; then
+        printf 'DIRENV_DIFF=%s\\n' "$DIRENV_DIFF"
+    fi
     ;;
 apply_dump)
     if [[ ${DIRENV_TEST_APPLY_FAIL+x} ]]; then
@@ -272,15 +275,19 @@ esac
         self.assertIn("remove .envrc and rerun de", result.stderr)
         self.assertFalse((self.project / ".envrc.cache").exists())
 
-    def test_successful_but_incomplete_direnv_unload_is_rejected(self):
+    def test_stale_direnv_diff_does_not_block_regeneration_or_enter_cache(self):
         result = self.run_de(
             {"DIRENV_TEST_INCOMPLETE_UNLOAD": "1"},
-            expected_returncode=1,
         )
 
-        self.assertIn("direnv did not restore", result.stderr)
-        self.assertFalse((self.project / ".envrc").exists())
-        self.assertFalse((self.project / ".envrc.cache").exists())
+        self.assertNotIn("direnv did not restore", result.stderr)
+        self.assertTrue((self.project / ".envrc").is_file())
+        cache = self.project / ".envrc.cache"
+        self.assertTrue(cache.is_file())
+        self.assertEqual(stat.S_IMODE(cache.stat().st_mode), 0o600)
+        cache_contents = cache.read_text(encoding="utf-8")
+        self.assertNotIn("DIRENV_DIFF", cache_contents)
+        self.assertNotIn("SECRET_SENTINEL", cache_contents)
 
     def test_failed_dump_preserves_old_cache_and_removes_temporary_file(self):
         cache = self.project / ".envrc.cache"

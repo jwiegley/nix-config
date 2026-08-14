@@ -10,10 +10,7 @@ if [[ -n ${DIRENV_DIFF-} ]]; then
     # This is the same shell-escaped export consumed by direnv's Bash hook.
     eval "$direnv_unload"
     unset direnv_unload
-    if [[ -n ${DIRENV_DIFF-} ]]; then
-        echo "de: direnv did not restore the pre-direnv environment" >&2
-        exit 1
-    fi
+    unset DIRENV_DIFF
 fi
 
 # I use this to keep build products in a separate directory tree.
