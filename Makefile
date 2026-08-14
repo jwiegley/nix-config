@@ -20,7 +20,7 @@ endif
 	vps-push
 
 # These maintenance recipes use Bash functions, strict mode, and arrays.
-verify-inputs update-projects upgrade-tasks changes copy travel-ready: SHELL := bash
+verify-inputs update-projects upgrade-tasks changes copy travel-ready vps-push: SHELL := bash
 
 all: switch
 

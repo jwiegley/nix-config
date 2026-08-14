@@ -172,6 +172,21 @@ class MakeMaintenanceTests(unittest.TestCase):
             [["rm", "-fr", "--", str(home / path)] for path in paths],
         )
 
+    def test_vps_push_uses_target_local_bash(self) -> None:
+        rejecting_shell = self.root / "reject-shell"
+        write_executable(rejecting_shell, "#!/bin/sh\nexit 97\n")
+        self.fixture.write_text(
+            f"SHELL := {rejecting_shell}\n"
+            f"include {MAKEFILE}\n"
+            "vps-push:\n"
+            '\t@test -n "$${BASH_VERSION:-}"\n',
+            encoding="utf-8",
+        )
+
+        result = self.run_make("vps-push")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
 
 class MakeUpgradeOrderingTests(unittest.TestCase):
     def setUp(self) -> None:

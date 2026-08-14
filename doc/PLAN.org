@@ -5280,15 +5280,17 @@ Terminal audit found runtime hook authority writes use temp-file plus rename wit
 ]
 #+end_src
 
-* TODO [#D] Designate vps-push as a bash recipe in the Makefile
+* DONE [#D] Designate vps-push as a bash recipe in the Makefile
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-n7vb
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 23:36]
-:MODIFIED: [2026-08-13 Thu 23:36]
+:MODIFIED: [2026-08-14 Fri 00:15]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-14 Fri 00:15]
+:CLOSE_REASON: Completed: vps-push now uses the existing target-local Bash authority; behavioral Make regression proves it ignores a rejecting global shell, and focused 9-test Make safety plus Ruff and dry expansion pass.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
