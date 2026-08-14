@@ -7,6 +7,7 @@ let
   checkManifest = import ../check-manifest.nix;
   contract = import ./compatibility-contract.nix;
   lib = inputs.nixpkgs.lib;
+  implementationSource = builtins.readFile ../../flake/ai.nix;
   sortedNames = value: lib.sort builtins.lessThan (builtins.attrNames value);
   hasAll = actual: required: builtins.all (name: builtins.elem name actual) required;
   inputNames = sortedNames (builtins.removeAttrs inputs [ "self" ]);
@@ -118,6 +119,9 @@ let
         toolPkgs.nix-scripts.meta.license.spdxId == "BSD-3-Clause"
       ) "portable nix-scripts package lost its BSD-3-Clause SPDX metadata on ${system}")
       (lib.assertMsg (
+        !(toolPkgs.nix-scripts.meta ? homepage)
+      ) "portable nix-scripts package advertises a non-authoritative homepage on ${system}")
+      (lib.assertMsg (
         actual.lib.patchAgentPackage pkgs "unhandled" sentinel == sentinel
       ) "patchAgentPackage no longer passes unknown agents through on ${system}")
       (lib.assertMsg (builtins.isList (actual.lib.aiPackagesFor pkgs)) "aiPackagesFor no longer returns a package list on ${system}")
@@ -157,6 +161,12 @@ let
     (lib.assertMsg (builtins.isFunction actual.overlays.tools) "portable tools overlay is not callable")
     (lib.assertMsg (builtins.isFunction actual.lib.aiPackagesFor) "aiPackagesFor is not callable")
     (lib.assertMsg (builtins.isFunction actual.lib.patchAgentPackage) "patchAgentPackage is not callable")
+    # Package-set identity is an evaluation-cost property that output equality
+    # cannot observe, so keep this one contract source-based.
+    (lib.assertMsg (
+      lib.hasInfix "pkgsFor = forAllSystems mkPkgs;" implementationSource
+      && !(lib.hasInfix "pkgs = mkPkgs system;" implementationSource)
+    ) "portable outputs reopened the primary nixpkgs package set")
     (lib.assertMsg (hasAll (sortedNames actual.packages) contract.systems) "portable packages lost a required system")
     (lib.assertMsg (hasAll (sortedNames actual.apps) contract.systems) "portable apps lost a required system")
     (lib.assertMsg (hasAll (sortedNames actual.checks) contract.systems) "portable checks lost a required system")

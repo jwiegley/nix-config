@@ -3,6 +3,7 @@
   inputs,
   pkgs,
   isClientMachine ? true,
+  nixManagedAiHomeClass ? null,
   ...
 }:
 with pkgs;
@@ -11,13 +12,15 @@ let
   # sometimes without `config` or `lib`. So it reads capabilities from the PURE
   # registry rather than from `config.johnw.host`.
   registry = import ./hosts/registry.nix;
-  caps = registry.capabilitiesFor { inherit hostname; };
+  caps = registry.capabilitiesFor {
+    inherit hostname;
+    homeClass = nixManagedAiHomeClass;
+  };
   inherit (stdenv)
     isDarwin
     isLinux
     ;
   sys = pkgs.stdenv.hostPlatform.system;
-  sourcePython313Packages = inputs.nixpkgs.legacyPackages.${sys}.python313Packages;
   aiPackagePolicy = import ../packages/ai-package-policy.nix { inherit lib; };
   inherit (aiPackagePolicy) supportsAiperf supportsGradio6;
 
@@ -297,6 +300,8 @@ rec {
     # ── Programming Languages & Dev Tools ────────────────────────────
     ++ [
       act
+    ]
+    ++ lib.optionals (!caps.isSharedWork) [
       # Agda and agda2-mode derive from the same haskellPackages.Agda.
       (agda.withPackages (
         agda-pkgs: with agda-pkgs; [
@@ -304,6 +309,8 @@ rec {
           standard-library
         ]
       ))
+    ]
+    ++ [
       cmake
       cmdperf
       doxygen
@@ -505,7 +512,7 @@ rec {
       openmpi
       qdrant
     ]
-    ++ lib.optionals (supportsAiperf sourcePython313Packages) (optPkg "aiperf")
+    ++ lib.optionals (supportsAiperf pkgs.python313Packages) (optPkg "aiperf")
     ++ optPkgs (aiPackagePolicy.groups.common ++ aiPackagePolicy.groups.homeOnly)
     ++ optAgent "claude-code"
     ++ optAgent "ccusage"
@@ -559,7 +566,7 @@ rec {
       terminal-notifier
       xquartz
     ]
-    ++ lib.optionals (isDarwin && supportsGradio6 sourcePython313Packages) (optPkg "vllm-mlx")
+    ++ lib.optionals (isDarwin && supportsGradio6 pkgs.python313Packages) (optPkg "vllm-mlx")
     ++ lib.optionals isDarwin (optPkg "mtplx")
     ++ lib.optionals isDarwin (optPkg "omlx")
 

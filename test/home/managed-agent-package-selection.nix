@@ -10,7 +10,11 @@ let
   # declare `obr` separately for the root module; they do not inherit this
   # repository's flattened `git-ai` input set. Keep this fixture shaped like
   # those consumers so managed wrappers cannot silently degrade upstream.
-  downstreamInputs = builtins.removeAttrs inputs [ "git-ai" ];
+  downstreamInputs = (builtins.removeAttrs inputs [ "git-ai" ]) // {
+    nixpkgs = inputs.nixpkgs // {
+      legacyPackages = throw "config/packages.nix reopened the stock nixpkgs package set";
+    };
+  };
   packages = import "${src}/config/packages.nix" {
     hostname = "vulcan";
     inputs = downstreamInputs;
@@ -27,6 +31,9 @@ let
     && configured.lib.hasInfix "claude-code" package.name
     && configured.lib.hasSuffix "-managed-config" package.name
   ) packages.package-list;
+  # Force every conditional list spine, but no package derivation, so either
+  # predicate reopening the poisoned stock package set fails here.
+  avoidsLegacyPackages = (builtins.tryEval (builtins.length packages.package-list)).success;
 
   # A consumer with agent packages but no portable-flake route must fail
   # loudly at evaluation, never silently install unwrapped upstream agents.
@@ -51,6 +58,8 @@ assert configured.lib.assertMsg hasCanonicalCodex
   "downstream nix-config-ai consumers lost the canonical Codex package";
 assert configured.lib.assertMsg hasManagedClaude
   "downstream nix-config-ai consumers lost the managed Claude wrapper";
+assert configured.lib.assertMsg avoidsLegacyPackages
+  "config/packages.nix reopened the stock nixpkgs package set for package predicates";
 assert configured.lib.assertMsg degradesLoudly
   "config/packages.nix silently degraded managed agent wrappers without inputs.nix-config-ai";
 pkgs.runCommand "managed-agent-package-selection" { } "touch $out"

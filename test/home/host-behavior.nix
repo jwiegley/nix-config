@@ -203,6 +203,15 @@ let
     }).config;
   personalLinux = homeConfigurations."johnw@aarch64-linux".config;
   sharedWork = homeConfigurations."jwiegley@x86_64-linux".config;
+  packageSelectionFor =
+    hostname:
+    (import ../../config/packages.nix {
+      inherit hostname;
+      inherit (nixosHomeEvaluationFixtures.vps) pkgs;
+      inherit (nixosHomeEvaluationFixtures.vps._module.specialArgs) inputs;
+    }).package-list;
+  physicalSharedWorkPackages = packageSelectionFor "andoria-08";
+  physicalMaintainedPackages = packageSelectionFor "vps";
   expectedSharedWorkNixConfig = ''
     max-jobs = 1
     cores = 8
@@ -216,7 +225,8 @@ let
     map (fixture: fixture.config) (builtins.attrValues nixosHomeEvaluationFixtures)
     ++ map (configuration: configuration.config) (builtins.attrValues homeConfigurations);
   allHomes = desktopHomes ++ nonDesktopHomes;
-  hasPackage = name: config: builtins.elem name (map lib.getName config.home.packages);
+  hasSelectedPackage = name: packages: builtins.elem name (map lib.getName packages);
+  hasPackage = name: config: hasSelectedPackage name config.home.packages;
   managedPiExtensions = [
     ".config/pi/agent/extensions/fleet-theme/index.ts"
     ".config/pi/agent/extensions/nix-gallery/index.ts"
@@ -428,8 +438,9 @@ assert sharedWork.johnw.profile.heavy;
 assert !classOverridesHostname.johnw.host.isHera;
 assert !classOverridesHostname.johnw.host.isDarwinWorkstation;
 assert !classOverridesHostname.johnw.profile.heavy;
-assert (registry.capabilitiesFor { hostname = "andoria-08"; }).isSharedWork;
-assert (registry.capabilitiesFor { hostname = "git-ai"; }).isSharedWork;
+assert builtins.all (
+  host: (registry.capabilitiesFor { hostname = host; }).isSharedWork
+) registry.sharedWork.members;
 assert builtins.elem "git-ai" registry.sharedWork.members;
 assert !(builtins.elem "git-ai" registry.sharedWork.activeRolloutMembers);
 assert builtins.length registry.sharedWork.activeRolloutMembers == 4;
@@ -479,6 +490,11 @@ assert builtins.all (
 assert builtins.all (hasPackage "unisessions") allHomes;
 assert builtins.all (config: !(hasPackage "cass" config) && !(hasPackage "cm" config)) allHomes;
 assert builtins.all (config: !(hasPackage "watchman" config)) allHomes;
+assert !(hasPackage "agdaWithPackages" sharedWork);
+assert hasPackage "agdaWithPackages" personalLinux;
+assert builtins.all (hasPackage "agdaWithPackages") desktopHomes;
+assert !(hasSelectedPackage "agdaWithPackages" physicalSharedWorkPackages);
+assert hasSelectedPackage "agdaWithPackages" physicalMaintainedPackages;
 assert builtins.all (hasPackage "obr") allHomes;
 assert builtins.all (config: !(ownsObrState config)) allHomes;
 assert builtins.all (

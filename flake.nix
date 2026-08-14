@@ -185,7 +185,12 @@
               }:
               let
                 packages = import ./config/packages.nix {
-                  inherit hostname inputs pkgs;
+                  inherit
+                    hostname
+                    inputs
+                    nixManagedAiHomeClass
+                    pkgs
+                    ;
                 };
               in
               {
@@ -304,6 +309,8 @@
               nixfmt
               shellcheck
               shfmt
+              go
+              golangci-lint
               ruff
               yq
               pythonTestEnvFor.${system}

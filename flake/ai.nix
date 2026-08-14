@@ -35,6 +35,7 @@ let
       inherit system overlays;
       config.allowUnfree = true;
     };
+  pkgsFor = forAllSystems mkPkgs;
 
   optPkg =
     pkgs: name:
@@ -125,7 +126,7 @@ let
   canonicalPiPackages = forAllSystems (
     system:
     let
-      pkgs = mkPkgs system;
+      pkgs = pkgsFor.${system};
     in
     patchAgentPackage pkgs "pi" agentFeeds.pi.packages.${system}.pi
   );
@@ -133,7 +134,7 @@ let
   canonicalCodexPackages = forAllSystems (
     system:
     let
-      pkgs = mkPkgs system;
+      pkgs = pkgsFor.${system};
     in
     patchAgentPackage pkgs "codex" llm-agents.packages.${system}.codex
   );
@@ -364,7 +365,7 @@ in
   devShells = forAllSystems (
     system:
     let
-      pkgs = mkPkgs system;
+      pkgs = pkgsFor.${system};
     in
     {
       default = pkgs.mkShell {
@@ -385,7 +386,7 @@ in
   packages = forAllSystems (
     system:
     let
-      pkgs = mkPkgs system;
+      pkgs = pkgsFor.${system};
       toolPkgs = import nixpkgs {
         inherit system;
         config.allowUnfree = true;
@@ -411,7 +412,7 @@ in
   apps = forAllSystems (
     system:
     let
-      pkgs = mkPkgs system;
+      pkgs = pkgsFor.${system};
       qualityDeps = qualityInputs pkgs;
       classicCoreSource = pkgs.callPackage ../test/ai/pi-classic-core-source.nix { };
       classicCoreFixtures = pkgs.callPackage ../test/ai/pi-classic-core-fixtures.nix {
@@ -447,7 +448,7 @@ in
   checks = forAllSystems (
     system:
     let
-      pkgs = mkPkgs system;
+      pkgs = pkgsFor.${system};
       qualityDeps = qualityInputs pkgs;
       classicCoreSource = pkgs.callPackage ../test/ai/pi-classic-core-source.nix { };
       classicCoreFixtures = pkgs.callPackage ../test/ai/pi-classic-core-fixtures.nix {
@@ -533,7 +534,7 @@ in
   formatter = forAllSystems (
     system:
     let
-      pkgs = mkPkgs system;
+      pkgs = pkgsFor.${system};
     in
     mkScriptPackage pkgs "format" "format.sh" (qualityInputs pkgs).format ""
   );
