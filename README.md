@@ -143,6 +143,11 @@ policy begins in [`config/johnw.nix`](config/johnw.nix); Darwin adds
 The portable AI boundary enters through [`config/ai/flake.nix`](config/ai/flake.nix)
 and is implemented by [`flake/ai.nix`](flake/ai.nix).
 
+## Repository authority
+
+The sole fetch and push authority is the `origin` remote at
+`gitea@gitea:johnw/nix-config.git`. GitHub must not be configured as a remote.
+
 ## Verification model
 
 Verification is intentionally layered:
@@ -152,7 +157,7 @@ Verification is intentionally layered:
 | Evaluation | The configuration can be constructed | Derivation success or runtime behavior |
 | Build | The selected closure can be realized | Activation on any host |
 | Activation | A host selected the new generation | Client or service health |
-| Publication | Both Git remotes contain the signed revision | Consumer adoption |
+| Publication | The Gitea authority contains the signed revision | Consumer adoption |
 | Runtime acceptance | The affected executable or service works on the active generation | Health on another host |
 
 The ordinary pre-commit gate has a three-minute outer envelope while its fast

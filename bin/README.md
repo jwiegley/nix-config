@@ -21,7 +21,7 @@ consumer's authoritative checkout.
 | Build the complete current Darwin system | `./build system` | Builds without activating; Hera and Clio only |
 | Inspect the Pi package version | `nix eval --raw .#packages.$(nix eval --impure --raw --expr builtins.currentSystem).pi.version` | Reports the package selected by this checkout, not necessarily the active binary |
 | Preflight publication | `bin/publish` | Performs no push |
-| Publish a reviewed signed revision | `bin/publish --publish` | Fast-forward-only publication to both authoritative remotes |
+| Publish a reviewed signed revision | `bin/publish --publish` | Fast-forward-only publication to authoritative Gitea |
 
 There is presently no correct one-command whole-fleet rollout. Publication,
 consumer lock updates, builds, activation, and runtime acceptance remain separate
@@ -307,23 +307,36 @@ link. Additional arguments after the mode and optional package are passed to
 
 ### Publication
 
-`bin/publish` is the sole dual-remote publication command:
+`bin/publish` is the sole publication command for authoritative Gitea:
 
 ```sh
 bin/publish             # Fetch, verify, and perform push dry-runs.
 bin/publish --publish   # Run the gate once and push the signed branch tip.
 ```
 
-It requires a clean tracked tree at the checked-out branch tip, verifies
-signatures, proves that both remotes accept a fast-forward, and reads both remotes
-back after publication. It never force-pushes. Two independent remotes cannot
-provide atomic publication; the command therefore reports a partial publication
-as a failure requiring reconciliation.
+It requires a clean tracked tree at the checked-out branch tip, verifies and
+revalidates the configured Gitea fetch and push URLs, and binds network operations
+to the literal Gitea authority. Every transport subprocess uses an isolated bare
+Git repository with system, global, caller-injected, and checkout-local Git
+configuration unavailable, so transient URL rewrites cannot redirect it.
+Signature ranges come only from exact object IDs reported by a forced, pruned
+fetch into a proven-empty temporary namespace, independent of configured refspecs
+and tracking refs. The isolated repository traverses raw object links so local
+replacement refs, grafts, and shallow metadata cannot hide a commit from the
+range whose exact objects are verified. The exact selected tip and every newly
+published commit must have a valid signature.
+The command proves that Gitea accepts a fast-forward and reads the remote ref back
+after publication. It never force-pushes.
 
-`--dry-run` is an explicit spelling of the non-publishing default. `--rev REV`
-and `--branch NAME` assert the exact tip to publish. `--help` prints the contract.
-Force options are refused rather than forwarded to Git. Untracked files are
-permitted because they do not alter the published tree.
+`--dry-run` is an explicit spelling of the non-publishing default and cannot be
+combined with `--publish`. `--rev REV` and `--branch NAME` assert the exact tip to
+publish. `--help` prints the contract. Force options are refused rather than
+forwarded to Git. Untracked files are permitted because they do not alter the
+published tree. If final readback fails, retry only with the exact `bin/publish`
+command it prints; raw `git push` is not a supported recovery path. An interrupt
+before the real push reports that nothing was published. Once the real push has
+begun, `INT` or `TERM` conservatively prints that same supported recovery command
+until final readback has verified the target.
 
 ### Host-owned activation
 
@@ -379,7 +392,7 @@ new generation and the affected executable or service passes a runtime check.
 | `git-sha OWNER/REPO REV` | Prefetch a Git revision and print its Nix SHA-256 | Invokes `nix-prefetch-git`; intended for source maintenance. |
 | `myhost` | Print the locally inferred host class | Resolves through the shared routing library (hera/clio/vulcan/shared-work/vps), using `ipaddr en0` only to disambiguate the two workstations; exits 1 loudly on an unrecognized host. Do not use it as security or deployment authorization. |
 | `persona NAME` | Select Claude, Git, and optional GitHub identities | Replaces mutable identity state and `~/.claude`; persona files are sourced shell code. Inspection forms are `--status/-s`, `--list/-l`, and `--env/-e`; `--help/-h` prints usage and exits with status 1. |
-| `publish [--publish] [--rev REV] [--branch NAME]` | Preflight or perform dual-remote publication | `--publish` pushes; `--dry-run` and the bare form do not. Never force-pushes. |
+| `publish [--publish] [--rev REV] [--branch NAME]` | Preflight or publish to Gitea | `--publish` pushes; `--dry-run` and the bare form do not. Never force-pushes. |
 | `runemacs [VERSION]` | Start the external Emacs `open` target through `load-env-emacsVERSION` | Depends on the Emacs repository and PATH-provided helper. |
 | `switch` | Dispatch activation by host class | Darwin delegates to `u`; shared Home Manager builds its activation package; NixOS delegates to the authoritative `/etc/nixos/build` driver and propagates its status. |
 | `u [HOST] MAKE_ARGS...` | Dispatch the configured Makefile for Hera, Clio, or Vulcan | Host identity comes from the shared routing library; other host classes exit 1 with `u: unsupported host class`, and unrecognized hosts exit 1 loudly. On Darwin, first raises launchd and shell file-descriptor limits. It is not a general fleet dispatcher. |

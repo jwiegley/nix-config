@@ -233,9 +233,18 @@ the portable closure without them.
 
 ## Publication and activation
 
-The repository has two authoritative remotes. A publication is complete only when
-both point at the intended signed revision. `bin/publish` owns the dual-remote,
-fast-forward-only transaction and mirror-race handling.
+The repository has one authoritative remote: LAN Gitea, named `origin`, at
+`gitea@gitea:johnw/nix-config.git`. It is the sole fetch and push authority;
+GitHub must not be configured as a remote. Every managed consumer fetches from that
+authority. `bin/publish` verifies the configured fetch and push URLs, then owns
+the fast-forward-only publication transaction. Network operations bind to the
+literal authority through an isolated Git configuration. The transaction derives
+signature scope only from exact object IDs reported by a forced, pruned temporary
+fetch, traverses raw object links outside checkout-local replacement, graft, and
+shallow views, and requires an exact signed tip plus final remote readback.
+The transaction tracks the real-push/readback interval explicitly: an interrupt
+inside it reports unverified state and only the supported transactional retry,
+while an earlier interrupt does not claim possible remote mutation.
 
 Publication and activation are separate actions. Activation remains consumer-owned
 and must be explicitly authorized for the target host. Preserve the previous

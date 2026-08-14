@@ -11,13 +11,19 @@
 #   vps          VPS_CHECKOUT's ovh-vps system.build.toplevel with its nix-config
 #                input overridden to this working tree.
 #
+#   andoria      ANDORIA_CHECKOUT's standalone Home Manager activation package.
+#
+#   vulcan       VULCAN_CHECKOUT's nixosConfigurations.vulcan system toplevel.
+#
 # Each target is forced to drvPath. Evaluation can still realize
 # import-from-derivation dependencies from the consumer configuration.
 #
-# Every eval uses --no-write-lock-file; the VPS input override is in-memory.
+# Every eval uses --no-write-lock-file; external-consumer input overrides are
+# in-memory. A full run also evaluates VPS, Andoria, and Vulcan from their paired
+# Gitea locks, without overrides and with --offline --no-update-lock-file.
 #
 # Usage:
-#   test/bin/cross-consumer-eval                     # every discoverable consumer
+#   test/bin/cross-consumer-eval                     # full required-consumer gate
 #   test/bin/cross-consumer-eval vps                 # a subset
 #   test/bin/cross-consumer-eval --list              # print the consumer set, exit
 #
@@ -25,8 +31,10 @@
 #   NIX_CONFIG_TREE          nix-config revision under test
 #                            (default: this checkout, from the script's location)
 #   VPS_CHECKOUT             vps checkout (default: ~/src/vps)
-#   CONSUMER_EVAL_OFFLINE=1  add --offline to every eval; use where the
-#                            consumers' inputs are already realized in the store
+#   ANDORIA_CHECKOUT         Andoria checkout (default: ~/src/andoria)
+#   VULCAN_CHECKOUT          Vulcan checkout (default: ~/src/nixos)
+#   CONSUMER_EVAL_OFFLINE=1  add --offline to every eval and include the locked
+#                            lane for a named external consumer
 #   CONSUMER_EVAL_STRICT=1   a missing consumer checkout is a FAILURE, not a
 #                            skip (use where the checkouts are guaranteed, e.g.
 #                            a local closeout on hera/clio)
@@ -40,8 +48,9 @@ repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 tree=${NIX_CONFIG_TREE:-$repo_root}
 vps_checkout=${VPS_CHECKOUT:-$HOME/src/vps}
 andoria_checkout=${ANDORIA_CHECKOUT:-$HOME/src/andoria}
+vulcan_checkout=${VULCAN_CHECKOUT:-$HOME/src/nixos}
 
-CONSUMERS=(shared-work vps andoria)
+CONSUMERS=(shared-work vps andoria vulcan)
 
 # ---- reporting ----------------------------------------------------------
 
@@ -49,6 +58,9 @@ failures=()
 ran=0
 evaluated=0
 skipped=0
+vps_locked_evaluated=0
+andoria_locked_evaluated=0
+vulcan_locked_evaluated=0
 
 note() { printf 'cross-consumer-eval: %s\n' "$*"; }
 fail() {
@@ -70,7 +82,20 @@ fi
 eval_target() {
     local name=$1
     shift
-    local -a cmd=(nix eval "${nix_common[@]}" "$@")
+    local locked=0 failure_context="against $tree"
+    if [[ ${1:-} == --locked-consumer ]]; then
+        locked=1
+        failure_context="from its checked-in consumer lock offline"
+        shift
+    fi
+    local -a cmd=(nix eval "${nix_common[@]}")
+    if [[ $locked -eq 1 ]]; then
+        if [[ ${CONSUMER_EVAL_OFFLINE:-0} != 1 ]]; then
+            cmd+=(--offline)
+        fi
+        cmd+=(--no-update-lock-file)
+    fi
+    cmd+=("$@")
     note "$name: ${cmd[*]}"
     ran=$((ran + 1))
     evaluated=$((evaluated + 1))
@@ -82,7 +107,7 @@ eval_target() {
         drv=$(printf '%s\n' "$out" | grep -oE '/nix/store/[a-z0-9]{32}-[^ ]*\.drv' | tr '\n' ' ')
         note "$name: OK  ${drv:-(evaluated)}"
     else
-        fail "$name: evaluation failed against $tree"
+        fail "$name: evaluation failed $failure_context"
         printf '%s\n' "$out" | sed 's/^/      /' >&2
     fi
 }
@@ -101,45 +126,436 @@ skip_or_fail() {
 
 # ---- lock coherence ------------------------------------------------------
 #
-# VPS takes two inputs from this repository: `nix-config` for path-imported
-# modules and `nix-config-ai` for portable typed outputs. Require coherent
-# revisions so those two surfaces cannot drift apart.
+# External consumers take two inputs from this repository: `nix-config` for
+# path-imported modules and `nix-config-ai` for portable typed outputs. Require
+# coherent revisions so those two surfaces cannot drift apart.
 #
 # Two inputs drifting apart is the same class of failure as a consumer crossing
 # an incompatible revision, with a harder-to-read symptom.
 #
-# Checked from the consumer's own committed lock, read-only. Nothing here
-# depends on the rename (jwiegley/nix-config#47) having landed.
+# Checked from the consumer's own committed lock, read-only. Gitea-only
+# consumers require selected nix-config inputs to use the authoritative
+# repository, and no other flake input or lock node may retain the retired
+# GitHub nix-config source. Other GitHub repositories remain legitimate.
 check_lock_coherence() {
-    local name=$1 checkout=$2
+    local name=$1 checkout=$2 policy=${3:-coherence}
     local lock=$checkout/flake.lock
     if [[ ! -f $lock ]]; then
-        skip_or_fail "$name [lock coherence]" "no flake.lock at $checkout"
+        if [[ $policy == gitea-only ]]; then
+            fail "$name [lock coherence]: no flake.lock at $checkout"
+        else
+            skip_or_fail "$name [lock coherence]" "no flake.lock at $checkout"
+        fi
         return
     fi
     local out
     if ! out=$(
-        python3 - "$lock" <<'PYEOF'
-import json, sys
+        python3 - "$lock" "$checkout/flake.nix" "$policy" <<'PYEOF'
+import json
+import re
+import sys
+from pathlib import Path
+from urllib.parse import parse_qsl, unquote_to_bytes, urlsplit
 
-nodes = json.load(open(sys.argv[1]))["nodes"]
-revs = {}
-for key in ("nix-config", "nix-config-ai"):
-    node = nodes.get(key)
-    if node is None:
-        print("MISSING %s" % key)
-        raise SystemExit(1)
-    revs[key] = node.get("locked", {}).get("rev")
-if None in revs.values():
-    print("NOREV %s" % revs)
+CANONICAL_REPO_URL = "ssh://gitea/johnw/nix-config"
+SOURCE_QUERIES = {
+    "nix-config": {(), (("ref", "main"),)},
+    "nix-config-ai": {
+        (("dir", "config/ai"),),
+        (("dir", "config/ai"), ("ref", "main")),
+    },
+}
+# GitHub serves repository fetches from both its primary and content domains;
+# every subdomain is part of the same forbidden source authority family.
+GITHUB_AUTHORITY_SUFFIXES = ("github.com", "githubusercontent.com")
+
+
+def die(message):
+    print(message)
     raise SystemExit(1)
-if len(set(revs.values())) != 1:
-    print(
-        "SKEW nix-config=%s nix-config-ai=%s"
-        % (revs["nix-config"][:12], revs["nix-config-ai"][:12])
+
+
+def normalized_path(path):
+    parts = []
+    for part in path.replace("\\", "/").split("/"):
+        part = part.casefold()
+        if not part or part == ".":
+            continue
+        if part == "..":
+            if parts:
+                parts.pop()
+            continue
+        parts.append(part)
+    return parts
+
+
+def nix_config_identity(parts):
+    if parts[:1] == ["repos"]:
+        parts = parts[1:]
+    if len(parts) < 2:
+        return False
+    owner, repo = parts[:2]
+    if repo.endswith(".git"):
+        repo = repo[:-4]
+    return (owner, repo) == ("jwiegley", "nix-config")
+
+
+def ambiguous_nix_config_identity(parts):
+    if parts[:1] == ["repos"]:
+        parts = parts[1:]
+    if len(parts) == 1:
+        return "%" in parts[0] and "jwiegley" in parts[0]
+    if len(parts) < 2:
+        return False
+    owner, repo = parts[:2]
+    if repo.endswith(".git"):
+        repo = repo[:-4]
+    return (owner == "jwiegley" or "%" in owner) and (
+        repo == "nix-config" or "%" in repo
     )
-    raise SystemExit(1)
-print(next(iter(revs.values()))[:12])
+
+
+def nix_config_path(path):
+    value = path
+    while True:
+        parts = normalized_path(value)
+        if nix_config_identity(parts):
+            return True
+        try:
+            decoded = unquote_to_bytes(value).decode("utf-8")
+        except UnicodeDecodeError:
+            return ambiguous_nix_config_identity(parts)
+        if decoded == value:
+            return ambiguous_nix_config_identity(parts)
+        value = decoded
+
+
+def github_authority(host):
+    host = host.rstrip(".").casefold()
+    return any(
+        host == suffix or host.endswith("." + suffix)
+        for suffix in GITHUB_AUTHORITY_SUFFIXES
+    )
+
+
+def is_github_nix_config_url(url):
+    if not isinstance(url, str):
+        return False
+    value = url.strip()
+    try:
+        parsed = urlsplit(value)
+    except ValueError:
+        return False
+
+    if parsed.scheme.casefold() == "github":
+        path = (
+            "%s/%s" % (parsed.netloc, parsed.path.lstrip("/"))
+            if parsed.netloc
+            else parsed.path
+        )
+        return nix_config_path(path)
+
+    if parsed.hostname is not None:
+        if github_authority(parsed.hostname):
+            return nix_config_path(parsed.path)
+
+    # Git's scp-style spelling has no URL authority according to urlsplit.
+    scp = re.fullmatch(
+        r"(?i)(?:[^/@:\s]+@)?(?P<host>[^/:?#\s]+)[:/]"
+        r"(?P<path>[^?#]+)(?:[?#].*)?",
+        value,
+    )
+    return bool(
+        scp
+        and github_authority(scp.group("host"))
+        and nix_config_path(scp.group("path"))
+    )
+
+
+def nix_tokens(source):
+    tokens = []
+    index = 0
+    while index < len(source):
+        if source[index].isspace():
+            index += 1
+        elif source[index] == "#":
+            newline = source.find("\n", index)
+            index = len(source) if newline < 0 else newline + 1
+        elif source.startswith("/*", index):
+            depth = 1
+            index += 2
+            while index < len(source) and depth:
+                if source.startswith("/*", index):
+                    depth += 1
+                    index += 2
+                elif source.startswith("*/", index):
+                    depth -= 1
+                    index += 2
+                else:
+                    index += 1
+            if depth:
+                die("unterminated block comment in flake.nix")
+        elif source[index] == '"':
+            index += 1
+            value = []
+            while index < len(source) and source[index] != '"':
+                if source[index] == "\\" and index + 1 < len(source):
+                    index += 1
+                value.append(source[index])
+                index += 1
+            if index == len(source):
+                die("unterminated string in flake.nix")
+            tokens.append(("string", "".join(value)))
+            index += 1
+        elif source.startswith("''", index):
+            index += 2
+            value = []
+            while index < len(source):
+                if source.startswith("''", index):
+                    if index + 2 < len(source) and source[index + 2] in "'$\\":
+                        value.append(source[index + 2])
+                        index += 3
+                        continue
+                    index += 2
+                    break
+                value.append(source[index])
+                index += 1
+            else:
+                die("unterminated indented string in flake.nix")
+            tokens.append(("string", "".join(value)))
+        elif source[index].isalnum() or source[index] in "_-'":
+            end = index + 1
+            while end < len(source) and (source[end].isalnum() or source[end] in "_-'"):
+                end += 1
+            tokens.append(("word", source[index:end]))
+            index = end
+        else:
+            tokens.append(("symbol", source[index]))
+            index += 1
+    return tokens
+
+
+def symbol_is(token, value):
+    return token == ("symbol", value)
+
+
+def attribute_is(token, name):
+    return token in {("word", name), ("string", name)}
+
+
+def matching_brace(tokens, opening):
+    depth = 0
+    for index in range(opening, len(tokens)):
+        if symbol_is(tokens[index], "{"):
+            depth += 1
+        elif symbol_is(tokens[index], "}"):
+            depth -= 1
+            if depth == 0:
+                return index
+    die("unterminated attribute set in flake.nix")
+
+
+def direct_assignment_index(tokens, name, opening, closing):
+    delimiter_depth = 0
+    let_depth = 0
+    assignment_start = True
+    for index in range(opening + 1, closing):
+        source = tokens[index]
+        if source[0] == "symbol" and source[1] in "}])":
+            delimiter_depth -= 1
+        if delimiter_depth == 0:
+            if (
+                assignment_start
+                and index + 2 < closing
+                and attribute_is(source, name)
+                and symbol_is(tokens[index + 1], "=")
+            ):
+                return index + 2
+            if source == ("word", "let"):
+                let_depth += 1
+            elif source == ("word", "in") and let_depth:
+                let_depth -= 1
+            if symbol_is(source, ";") and let_depth == 0:
+                assignment_start = True
+            elif assignment_start:
+                assignment_start = False
+        if source[0] == "symbol" and source[1] in "{[(":
+            delimiter_depth += 1
+    return None
+
+
+def direct_assignment(tokens, name, opening, closing):
+    index = direct_assignment_index(tokens, name, opening, closing)
+    return None if index is None else tokens[index]
+
+
+def direct_attrset(tokens, name, opening, closing):
+    index = direct_assignment_index(tokens, name, opening, closing)
+    if index is None or not symbol_is(tokens[index], "{"):
+        return None
+    return index, matching_brace(tokens, index)
+
+
+def root_attrset(tokens, start=0):
+    while start < len(tokens) and symbol_is(tokens[start], "("):
+        start += 1
+    if start < len(tokens) and tokens[start] == ("word", "let"):
+        let_depth = 1
+        delimiter_depth = 0
+        for index in range(start + 1, len(tokens)):
+            source = tokens[index]
+            if source[0] == "symbol" and source[1] in "{[(":
+                delimiter_depth += 1
+            elif source[0] == "symbol" and source[1] in "}])":
+                delimiter_depth -= 1
+            elif delimiter_depth == 0 and source == ("word", "let"):
+                let_depth += 1
+            elif delimiter_depth == 0 and source == ("word", "in"):
+                let_depth -= 1
+                if let_depth == 0:
+                    return root_attrset(tokens, index + 1)
+        return None
+    if start < len(tokens) and tokens[start] == ("word", "rec"):
+        start += 1
+    if start < len(tokens) and symbol_is(tokens[start], "{"):
+        return start, matching_brace(tokens, start)
+    return None
+
+
+def normalize_gitea_url(url, scheme, queries):
+    if not isinstance(url, str):
+        return None
+    try:
+        parsed = urlsplit(url)
+        host = parsed.hostname
+        port = parsed.port
+        query = tuple(
+            sorted(parse_qsl(parsed.query, keep_blank_values=True, strict_parsing=True))
+        )
+    except ValueError:
+        return None
+    if (
+        parsed.scheme.casefold() != scheme
+        or host is None
+        or host.rstrip(".").casefold() != "gitea"
+        or parsed.username not in {None, "gitea"}
+        or parsed.password is not None
+        or port is not None
+        or parsed.path not in {"/johnw/nix-config", "/johnw/nix-config.git"}
+        or parsed.fragment
+        or query not in queries
+    ):
+        return None
+    return CANONICAL_REPO_URL
+
+
+data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+nodes = data.get("nodes", {})
+root = nodes.get(data.get("root"))
+if not isinstance(root, dict):
+    die("MISSING lock root node")
+
+root_inputs = root.get("inputs", {})
+selected = {}
+for key in ("nix-config", "nix-config-ai"):
+    node_name = root_inputs.get(key)
+    if not isinstance(node_name, str) or not isinstance(nodes.get(node_name), dict):
+        die("MISSING root.inputs.%s node" % key)
+    selected[key] = nodes[node_name]
+
+
+def paired_locked_value(field):
+    values = {key: node.get("locked", {}).get(field) for key, node in selected.items()}
+    if not all(isinstance(value, str) and value for value in values.values()):
+        die("MISSING locked.%s %s" % (field, values))
+    if len(set(values.values())) != 1:
+        die(
+            "SKEW %s nix-config=%s nix-config-ai=%s"
+            % (field, values["nix-config"][:12], values["nix-config-ai"][:12])
+        )
+    return values["nix-config"]
+
+
+rev = paired_locked_value("rev")
+
+policy = sys.argv[3]
+if policy == "gitea-only":
+    paired_locked_value("narHash")
+    if selected["nix-config"].get("flake") is not False:
+        die("nix-config must set flake=false")
+
+    for key, node in selected.items():
+        for section in ("original", "locked"):
+            source = node.get(section, {})
+            if source.get("type") != "git":
+                die("%s %s.type must be git" % (key, section))
+            if normalize_gitea_url(source.get("url"), "ssh", {()}) is None:
+                die(
+                    "%s %s.url must be canonical Gitea nix-config SSH URL"
+                    % (key, section)
+                )
+
+    for section in ("original", "locked"):
+        if "dir" in selected["nix-config"].get(section, {}):
+            die("nix-config %s.dir must be absent" % section)
+        if selected["nix-config-ai"].get(section, {}).get("dir") != "config/ai":
+            die("nix-config-ai %s.dir must be config/ai" % section)
+
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for section in ("original", "locked"):
+            source = node.get(section)
+            if not isinstance(source, dict):
+                continue
+            if (
+                str(source.get("type", "")).casefold() == "github"
+                and str(source.get("owner", "")).lower() == "jwiegley"
+                and str(source.get("repo", "")).lower() == "nix-config"
+            ) or (is_github_nix_config_url(source.get("url"))):
+                die(
+                    "GitHub nix-config source is forbidden in lock node %s %s"
+                    % (node_name, section)
+                )
+
+    source_tokens = nix_tokens(Path(sys.argv[2]).read_text(encoding="utf-8"))
+    root_source = root_attrset(source_tokens)
+    if root_source is None:
+        die("MISSING root flake attribute set")
+    root_opening, root_closing = root_source
+    inputs = direct_attrset(source_tokens, "inputs", root_opening, root_closing)
+    if inputs is None:
+        die("MISSING inputs source set")
+    inputs_opening, inputs_closing = inputs
+    for key, expected_queries in SOURCE_QUERIES.items():
+        source = direct_attrset(source_tokens, key, inputs_opening, inputs_closing)
+        if source is None:
+            die("MISSING %s source input block" % key)
+        source_opening, source_closing = source
+        url = direct_assignment(source_tokens, "url", source_opening, source_closing)
+        if (
+            url is None
+            or url[0] != "string"
+            or normalize_gitea_url(url[1], "git+ssh", expected_queries) is None
+        ):
+            die("%s source url must be canonical Gitea nix-config SSH URL" % key)
+        flake = direct_assignment(
+            source_tokens, "flake", source_opening, source_closing
+        )
+        if key == "nix-config" and flake != ("word", "false"):
+            die("nix-config source must set flake=false")
+    for index in range(inputs_opening + 1, inputs_closing - 1):
+        if (
+            attribute_is(source_tokens[index], "url")
+            and symbol_is(source_tokens[index + 1], "=")
+            and source_tokens[index + 2][0] == "string"
+            and is_github_nix_config_url(source_tokens[index + 2][1])
+        ):
+            die("GitHub nix-config source is forbidden anywhere in flake.nix")
+elif policy != "coherence":
+    die("unknown lock policy %s" % policy)
+
+print(rev[:12])
 PYEOF
     ); then
         fail "$name [lock coherence]: $out"
@@ -160,7 +576,7 @@ run_shared_work() {
 }
 
 run_vps() {
-    check_lock_coherence "vps" "$vps_checkout"
+    check_lock_coherence "vps" "$vps_checkout" gitea-only
     if [[ ! -f $vps_checkout/flake.nix ]]; then
         skip_or_fail "vps [ovh-vps toplevel]" "no flake.nix at $vps_checkout (set VPS_CHECKOUT)"
         return
@@ -169,6 +585,12 @@ run_vps() {
         --raw --override-input nix-config "$tree" \
         --override-input nix-config-ai "$tree?dir=config/ai" \
         "$vps_checkout#nixosConfigurations.ovh-vps.config.system.build.toplevel.drvPath"
+    if [[ $full_run -eq 1 || ${CONSUMER_EVAL_OFFLINE:-0} == 1 ]]; then
+        eval_target "vps [ovh-vps toplevel, locked]" \
+            --locked-consumer --raw \
+            "$vps_checkout#nixosConfigurations.ovh-vps.config.system.build.toplevel.drvPath"
+        vps_locked_evaluated=1
+    fi
 }
 
 run_andoria() {
@@ -176,7 +598,7 @@ run_andoria() {
     # external caller of config/overlays.nix (it injects its pinned
     # nix-config-ai overlay through the aiOverlay parameter), so the
     # synthetic shared-work fixture above cannot stand in for it.
-    check_lock_coherence "andoria" "$andoria_checkout"
+    check_lock_coherence "andoria" "$andoria_checkout" gitea-only
     if [[ ! -f $andoria_checkout/flake.nix ]]; then
         skip_or_fail "andoria [jwiegley activation]" \
             "no flake.nix at $andoria_checkout (set ANDORIA_CHECKOUT)"
@@ -186,6 +608,31 @@ run_andoria() {
         --raw --override-input nix-config "$tree" \
         --override-input nix-config-ai "$tree?dir=config/ai" \
         "$andoria_checkout#homeConfigurations.jwiegley.activationPackage.drvPath"
+    if [[ $full_run -eq 1 || ${CONSUMER_EVAL_OFFLINE:-0} == 1 ]]; then
+        eval_target "andoria [jwiegley activation, locked]" \
+            --locked-consumer --raw \
+            "$andoria_checkout#homeConfigurations.jwiegley.activationPackage.drvPath"
+        andoria_locked_evaluated=1
+    fi
+}
+
+run_vulcan() {
+    check_lock_coherence "vulcan" "$vulcan_checkout" gitea-only
+    if [[ ! -f $vulcan_checkout/flake.nix ]]; then
+        skip_or_fail "vulcan [vulcan toplevel]" \
+            "no flake.nix at $vulcan_checkout (set VULCAN_CHECKOUT)"
+        return
+    fi
+    eval_target "vulcan [vulcan toplevel]" \
+        --raw --override-input nix-config "$tree" \
+        --override-input nix-config-ai "$tree?dir=config/ai" \
+        "$vulcan_checkout#nixosConfigurations.vulcan.config.system.build.toplevel.drvPath"
+    if [[ $full_run -eq 1 || ${CONSUMER_EVAL_OFFLINE:-0} == 1 ]]; then
+        eval_target "vulcan [vulcan toplevel, locked]" \
+            --locked-consumer --raw \
+            "$vulcan_checkout#nixosConfigurations.vulcan.config.system.build.toplevel.drvPath"
+        vulcan_locked_evaluated=1
+    fi
 }
 
 # ---- argument parsing ---------------------------------------------------
@@ -221,6 +668,18 @@ done
 
 [[ ${#want[@]} -gt 0 ]] || want=("${CONSUMERS[@]}")
 
+declare -A requested=()
+for consumer in "${want[@]}"; do
+    requested[$consumer]=1
+done
+full_run=1
+for consumer in "${CONSUMERS[@]}"; do
+    if [[ ${requested[$consumer]:-0} -ne 1 ]]; then
+        full_run=0
+        break
+    fi
+done
+
 need_nix() {
     command -v nix >/dev/null 2>&1 && return 0
     printf 'cross-consumer-eval: required tool '\''nix'\'' not found in PATH\n' >&2
@@ -235,10 +694,24 @@ for consumer in "${want[@]}"; do
     shared-work) run_shared_work ;;
     vps) run_vps ;;
     andoria) run_andoria ;;
+    vulcan) run_vulcan ;;
     esac
 done
 
 # ---- summary ------------------------------------------------------------
+
+# A full run must evaluate every external consumer from its own checked-in lock,
+# offline and without overrides. A named subset remains an explicit fast-lane
+# choice. Record omissions beside any consumer-specific failure.
+if [[ $full_run -eq 1 && $vps_locked_evaluated -eq 0 ]]; then
+    fail "a full run did not evaluate required consumer vps from its checked-in lock offline ($skipped skipped); point VPS_CHECKOUT at a real checkout, or name a subset to acknowledge the narrower scope"
+fi
+if [[ $full_run -eq 1 && $andoria_locked_evaluated -eq 0 ]]; then
+    fail "a full run did not evaluate required consumer andoria from its checked-in lock offline ($skipped skipped); point ANDORIA_CHECKOUT at a real checkout, or name a subset to acknowledge the narrower scope"
+fi
+if [[ $full_run -eq 1 && $vulcan_locked_evaluated -eq 0 ]]; then
+    fail "a full run did not evaluate required consumer vulcan from its checked-in lock offline ($skipped skipped); point VULCAN_CHECKOUT at a real checkout, or name a subset to acknowledge the narrower scope"
+fi
 
 if [[ ${#failures[@]} -gt 0 ]]; then
     printf '\n' >&2
@@ -253,17 +726,6 @@ fi
 if [[ $evaluated -eq 0 ]]; then
     printf 'cross-consumer-eval: evaluated nothing (%d skipped); refusing to report success\n' \
         "$skipped" >&2
-    exit 1
-fi
-
-# A full run must reach VPS rather than succeeding on the shared-work proxy
-# alone. A named shared-work-only subset remains an explicit caller choice.
-if [[ ${#want[@]} -eq ${#CONSUMERS[@]} && $evaluated -eq 1 && $skipped -gt 0 ]]; then
-    printf 'cross-consumer-eval: a full run evaluated ONLY shared-work (%d skipped).\n' \
-        "$skipped" >&2
-    printf '    shared-work is this repo own fixture and a moderate proxy; it says\n' >&2
-    printf '    nothing about vps. Point VPS_CHECKOUT at a real checkout, or name a\n' >&2
-    printf '    subset to acknowledge the narrower scope.\n' >&2
     exit 1
 fi
 

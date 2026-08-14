@@ -345,15 +345,29 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
     """Exercise zero-evaluation and proxy-only refusal paths."""
 
     def setUp(self):
-        self.nowhere = os.path.join(tempfile.gettempdir(), "gates-no-such-checkout")
+        self.temp = tempfile.TemporaryDirectory(prefix="gates-no-live-nix-")
+        self.addCleanup(self.temp.cleanup)
+        root = Path(self.temp.name)
+        self.nowhere = str(root / "no-such-checkout")
         self.assertFalse(
             os.path.exists(self.nowhere), "fixture path unexpectedly exists"
         )
+        self.fakebin = root / "fakebin"
+        self.fakebin.mkdir()
+        fake_nix = self.fakebin / "nix"
+        fake_nix.write_text(
+            "#!/bin/sh\n"
+            "printf '%s\\n' /nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-gate-fixture.drv\n",
+            encoding="utf-8",
+        )
+        fake_nix.chmod(0o755)
 
     def run_tool(self, *args, **env):
         env = {
+            "PATH": f"{self.fakebin}{os.pathsep}{os.environ['PATH']}",
             "VPS_CHECKOUT": self.nowhere,
             "ANDORIA_CHECKOUT": self.nowhere,
+            "VULCAN_CHECKOUT": self.nowhere,
             **env,
         }
         return subprocess.run(
@@ -364,38 +378,53 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
             env=clean_env(**env),
         )
 
-    def test_refuses_success_when_every_selected_target_is_skipped(self):
-        """ran == 0 must refuse. Reachable only via a named subset."""
+    def test_named_vps_fails_closed_when_required_lock_is_missing(self):
         r = self.run_tool(
             "vps",
             VPS_CHECKOUT=self.nowhere,
         )
         combined = r.stdout + r.stderr
         self.assertNotEqual(
-            r.returncode, 0, "evaluated nothing yet reported success:\n%s" % combined
+            r.returncode, 0, "missing VPS lock reported success:\n%s" % combined
         )
-        self.assertIn("evaluated nothing", combined)
+        self.assertIn("vps [lock coherence]: no flake.lock", combined)
         self.assertNotIn("all evaluated consumers passed", combined)
 
-    def test_full_run_refuses_when_only_the_proxy_was_evaluated(self):
-        """A full run must not pass after evaluating only shared-work."""
+    def test_named_vulcan_fails_closed_when_lock_and_checkout_are_missing(self):
+        r = self.run_tool("vulcan")
+        combined = r.stdout + r.stderr
+        self.assertNotEqual(
+            r.returncode, 0, "missing Vulcan checkout reported success:\n%s" % combined
+        )
+        self.assertIn("vulcan [lock coherence]: no flake.lock", combined)
+        self.assertIn("vulcan [vulcan toplevel]: SKIPPED", combined)
+        self.assertNotIn("all evaluated consumers passed", combined)
+
+    def test_full_run_fails_closed_when_andoria_lock_is_missing(self):
+        """A full run must not turn an absent Andoria lock into a skip."""
         r = self.run_tool(VPS_CHECKOUT=self.nowhere)
         combined = r.stdout + r.stderr
         self.assertNotEqual(
             r.returncode,
             0,
-            "a full run passed having evaluated only the proxy:\n%s" % combined,
+            "a full run passed without Andoria's required lock:\n%s" % combined,
         )
-        self.assertIn("ONLY shared-work", combined)
+        self.assertIn("andoria [lock coherence]: no flake.lock", combined)
 
-    def test_full_run_refuses_when_only_consumer_locks_were_checked(self):
-        """Parsing coherent locks must not count as evaluating reach-in consumers."""
+    def test_full_run_refuses_malformed_vps_lock_and_missing_andoria_lock(self):
         with tempfile.TemporaryDirectory(prefix="gates-lock-only-") as tmp:
             lock = """{
               "nodes": {
+                "root": {
+                  "inputs": {
+                    "nix-config": "nix-config",
+                    "nix-config-ai": "nix-config-ai"
+                  }
+                },
                 "nix-config": {"locked": {"rev": "aaaaaaaaaaaaaaaa"}},
                 "nix-config-ai": {"locked": {"rev": "aaaaaaaaaaaaaaaa"}}
-              }
+              },
+              "root": "root"
             }"""
             vps = Path(tmp) / "vps"
             vps.mkdir()
@@ -407,10 +436,10 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
         self.assertNotEqual(
             r.returncode,
             0,
-            f"a full run passed after reading locks but no consumer flakes:\n{combined}",
+            f"a full run passed with malformed or missing consumer locks:\n{combined}",
         )
-        self.assertIn("[lock coherence]: OK", combined)
-        self.assertIn("ONLY shared-work", combined)
+        self.assertIn("vps [lock coherence]", combined)
+        self.assertIn("andoria [lock coherence]: no flake.lock", combined)
         self.assertNotIn("all evaluated consumers passed", combined)
 
     def test_strict_mode_turns_a_skip_into_a_failure(self):
@@ -426,6 +455,766 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
         r = self.run_tool("not-a-consumer")
         self.assertNotEqual(r.returncode, 0)
 
+
+class TestCrossConsumerEvalGiteaPolicy(unittest.TestCase):
+    LOCK_URL = "ssh://gitea@gitea/johnw/nix-config.git"
+    ROOT_SOURCE_URL = "git+ssh://gitea@gitea/johnw/nix-config.git?ref=main"
+    AI_SOURCE_URL = "git+ssh://gitea@gitea/johnw/nix-config.git?dir=config/ai&ref=main"
+    VULCAN_LOCK_URL = "SSH://GITEA/johnw/nix-config"
+    VULCAN_ROOT_SOURCE_URL = "GIT+SSH://GITEA/johnw/nix-config"
+    VULCAN_AI_SOURCE_URL = "GIT+SSH://GITEA/johnw/nix-config?dir=config/ai"
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="gates-andoria-gitea-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.andoria = self.root / "andoria"
+        self.andoria.mkdir()
+        self.fakebin = self.root / "fakebin"
+        self.fakebin.mkdir()
+        self.nix_log = self.root / "nix-calls.jsonl"
+        fake_nix = self.fakebin / "nix"
+        fake_nix.write_text(
+            "#!/usr/bin/env python3\n"
+            "import json, os, sys\n"
+            "with open(os.environ['NIX_CALL_LOG'], 'a', encoding='utf-8') as f:\n"
+            "    f.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+            "print('/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-andoria-fixture.drv')\n",
+            encoding="utf-8",
+        )
+        fake_nix.chmod(0o755)
+
+    def gitea_lock(self, lock_url=None):
+        lock_url = lock_url or self.LOCK_URL
+        rev = "a" * 40
+        nar_hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        root_source = {
+            "flake": False,
+            "original": {"type": "git", "url": lock_url, "ref": "main"},
+            "locked": {
+                "type": "git",
+                "url": lock_url,
+                "rev": rev,
+                "narHash": nar_hash,
+            },
+        }
+        ai_source = {
+            "original": {
+                "type": "git",
+                "url": lock_url,
+                "ref": "main",
+                "dir": "config/ai",
+            },
+            "locked": {
+                "type": "git",
+                "url": lock_url,
+                "rev": rev,
+                "narHash": nar_hash,
+                "dir": "config/ai",
+            },
+        }
+        return {
+            "nodes": {
+                "root": {
+                    "inputs": {
+                        "nix-config": "shared-root-source",
+                        "nix-config-ai": "portable-ai-source",
+                        "nixpkgs": "unrelated-github-source",
+                    }
+                },
+                "shared-root-source": root_source,
+                "portable-ai-source": ai_source,
+                # The Andoria policy is intentionally not a global GitHub ban.
+                "unrelated-github-source": {
+                    "original": {
+                        "type": "github",
+                        "owner": "NixOS",
+                        "repo": "nixpkgs",
+                    },
+                    "locked": {
+                        "type": "github",
+                        "owner": "NixOS",
+                        "repo": "nixpkgs",
+                        "rev": "b" * 40,
+                        "narHash": "sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=",
+                    },
+                },
+            },
+            "root": "root",
+            "version": 7,
+        }
+
+    def write_fixture(
+        self,
+        lock=None,
+        *,
+        checkout=None,
+        github_source=None,
+        root_flake=True,
+        extra_input="",
+        expression_prefix="",
+        flake_prelude="",
+        root_prelude="",
+        root_source_url=None,
+        ai_source_url=None,
+    ):
+        checkout = checkout or self.andoria
+        lock = lock or self.gitea_lock()
+        (checkout / "flake.lock").write_text(
+            json.dumps(lock, indent=2) + "\n", encoding="utf-8"
+        )
+        root_url = (
+            "github:jwiegley/nix-config?ref=main"
+            if github_source == "nix-config"
+            else root_source_url or self.ROOT_SOURCE_URL
+        )
+        ai_url = (
+            "github:jwiegley/nix-config?dir=config/ai&ref=main"
+            if github_source == "nix-config-ai"
+            else ai_source_url or self.AI_SOURCE_URL
+        )
+        flake_line = "      flake = false;\n" if root_flake else ""
+        (checkout / "flake.nix").write_text(
+            """%s{
+%s
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs";
+%s
+    nix-config = {
+%s      url = "%s";
+%s    };
+    nix-config-ai = {
+      url = "%s";
+    };
+  };
+}
+"""
+            % (
+                expression_prefix,
+                flake_prelude,
+                extra_input,
+                root_prelude,
+                root_url,
+                flake_line,
+                ai_url,
+            ),
+            encoding="utf-8",
+        )
+
+    def write_vulcan_fixture(self, checkout, lock=None):
+        checkout.mkdir(parents=True, exist_ok=True)
+        self.write_fixture(
+            lock or self.gitea_lock(self.VULCAN_LOCK_URL),
+            checkout=checkout,
+            root_source_url=self.VULCAN_ROOT_SOURCE_URL,
+            ai_source_url=self.VULCAN_AI_SOURCE_URL,
+        )
+
+    def run_gate(
+        self,
+        *,
+        consumer="andoria",
+        full=False,
+        vps_checkout=None,
+        vulcan_checkout=None,
+        **env,
+    ):
+        self.nix_log.unlink(missing_ok=True)
+        return subprocess.run(
+            [str(CROSS_CONSUMER_EVAL), *([] if full else [consumer])],
+            cwd=str(BIN.parent),
+            capture_output=True,
+            text=True,
+            env=clean_env(
+                PATH=f"{self.fakebin}{os.pathsep}{os.environ['PATH']}",
+                ANDORIA_CHECKOUT=str(self.andoria),
+                VPS_CHECKOUT=str(vps_checkout or self.root / "unused-vps"),
+                VULCAN_CHECKOUT=str(vulcan_checkout or self.root / "unused-vulcan"),
+                NIX_CALL_LOG=str(self.nix_log),
+                **env,
+            ),
+        )
+
+    def nix_calls(self):
+        if not self.nix_log.exists():
+            return []
+        return [json.loads(line) for line in self.nix_log.read_text().splitlines()]
+
+    def assert_gate_fails(self, message):
+        result = self.run_gate()
+        combined = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, combined)
+        self.assertIn(message, combined)
+        self.assertNotIn("all evaluated consumers passed", combined)
+
+    def test_accepts_exact_gitea_pair_and_unrelated_github_inputs(self):
+        self.write_fixture()
+        result = self.run_gate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("andoria [lock coherence]: OK", result.stdout)
+        self.assertIn("all evaluated consumers passed", result.stdout)
+
+    def test_accepts_equivalent_vulcan_gitea_urls_and_exact_target(self):
+        vulcan = self.root / "vulcan"
+        self.write_vulcan_fixture(vulcan)
+        result = self.run_gate(consumer="vulcan", vulcan_checkout=vulcan)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("vulcan [lock coherence]: OK", result.stdout)
+        self.assertIn("all evaluated consumers passed", result.stdout)
+        self.assertEqual(
+            self.nix_calls()[-1][-1],
+            f"{vulcan}#nixosConfigurations.vulcan.config.system.build.toplevel.drvPath",
+        )
+
+    def test_vulcan_rejects_github_nix_config_anywhere_in_lock(self):
+        vulcan = self.root / "vulcan"
+        lock = self.gitea_lock(self.VULCAN_LOCK_URL)
+        lock["nodes"]["retired-github-source"] = {
+            "locked": {
+                "type": "git",
+                "url": "https://github.com/jwiegley/nix-config.git",
+            }
+        }
+        self.write_vulcan_fixture(vulcan, lock)
+        result = self.run_gate(consumer="vulcan", vulcan_checkout=vulcan)
+        combined = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, combined)
+        self.assertIn(
+            "GitHub nix-config source is forbidden in lock node "
+            "retired-github-source locked",
+            combined,
+        )
+        self.assertNotIn("all evaluated consumers passed", combined)
+
+    def test_vps_enforces_the_same_complete_gitea_policy(self):
+        vps = self.root / "vps"
+        vps.mkdir()
+        lock = self.gitea_lock()
+        lock["nodes"]["shared-root-source"]["original"] = {
+            "type": "github",
+            "owner": "jwiegley",
+            "repo": "nix-config",
+            "ref": "main",
+        }
+        self.write_fixture(lock, checkout=vps)
+        result = self.run_gate(
+            consumer="vps",
+            vps_checkout=vps,
+            CONSUMER_EVAL_OFFLINE="1",
+        )
+        combined = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, combined)
+        self.assertIn("nix-config original.type must be git", combined)
+        self.assertIn("vps [ovh-vps toplevel]: OK", combined)
+        self.assertIn("vps [ovh-vps toplevel, locked]: OK", combined)
+        self.assertNotIn("evaluation failed", combined)
+        self.assertNotIn("all evaluated consumers passed", combined)
+
+    def test_full_run_evaluates_every_external_lock_offline_without_overrides(self):
+        self.write_fixture()
+        vps = self.root / "vps"
+        vps.mkdir()
+        self.write_fixture(checkout=vps)
+        vulcan = self.root / "vulcan"
+        self.write_vulcan_fixture(vulcan)
+
+        result = self.run_gate(full=True, vps_checkout=vps, vulcan_checkout=vulcan)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        locked_calls = [
+            call for call in self.nix_calls() if "--no-update-lock-file" in call
+        ]
+        self.assertEqual(
+            locked_calls,
+            [
+                [
+                    "eval",
+                    "--no-write-lock-file",
+                    "--no-warn-dirty",
+                    "--offline",
+                    "--no-update-lock-file",
+                    "--raw",
+                    f"{vps}#nixosConfigurations.ovh-vps.config.system.build.toplevel.drvPath",
+                ],
+                [
+                    "eval",
+                    "--no-write-lock-file",
+                    "--no-warn-dirty",
+                    "--offline",
+                    "--no-update-lock-file",
+                    "--raw",
+                    f"{self.andoria}#homeConfigurations.jwiegley.activationPackage.drvPath",
+                ],
+                [
+                    "eval",
+                    "--no-write-lock-file",
+                    "--no-warn-dirty",
+                    "--offline",
+                    "--no-update-lock-file",
+                    "--raw",
+                    f"{vulcan}#nixosConfigurations.vulcan.config.system.build.toplevel.drvPath",
+                ],
+            ],
+        )
+        self.assertTrue(
+            all("--override-input" not in call for call in locked_calls),
+            locked_calls,
+        )
+
+    def test_full_run_rejects_vps_skip_after_andoria_succeeds(self):
+        self.write_fixture()
+        vulcan = self.root / "vulcan"
+        self.write_vulcan_fixture(vulcan)
+        result = self.run_gate(full=True, vulcan_checkout=vulcan)
+        combined = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, combined)
+        self.assertIn("andoria [lock coherence]: OK", combined)
+        self.assertIn("andoria [jwiegley activation]: OK", combined)
+        self.assertIn("a full run did not evaluate required consumer vps", combined)
+        self.assertNotIn("all evaluated consumers passed", combined)
+
+    def test_full_run_rejects_vulcan_skip_after_other_consumers_succeed(self):
+        self.write_fixture()
+        vps = self.root / "vps"
+        vps.mkdir()
+        self.write_fixture(checkout=vps)
+        result = self.run_gate(full=True, vps_checkout=vps)
+        combined = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, combined)
+        self.assertIn("vps [ovh-vps toplevel]: OK", combined)
+        self.assertIn("andoria [jwiegley activation]: OK", combined)
+        self.assertIn("a full run did not evaluate required consumer vulcan", combined)
+        self.assertNotIn("all evaluated consumers passed", combined)
+
+    def test_full_run_rejects_andoria_skip_after_other_consumers_succeed(self):
+        vps = self.root / "vps"
+        vps.mkdir()
+        self.write_fixture(checkout=vps)
+        vulcan = self.root / "vulcan"
+        self.write_vulcan_fixture(vulcan)
+        result = self.run_gate(full=True, vps_checkout=vps, vulcan_checkout=vulcan)
+        combined = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, combined)
+        self.assertIn("andoria [jwiegley activation]: SKIPPED", combined)
+        self.assertIn(
+            "a full run did not evaluate required consumer andoria from its "
+            "checked-in lock offline",
+            combined,
+        )
+        self.assertNotIn("all evaluated consumers passed", combined)
+
+    def test_missing_lock_fails_closed_without_strict_mode(self):
+        self.write_fixture()
+        (self.andoria / "flake.lock").unlink()
+        self.assert_gate_fails("andoria [lock coherence]: no flake.lock")
+
+    def test_rejects_extra_github_nix_config_lock_nodes(self):
+        sources = (
+            (
+                "github",
+                {
+                    "type": "github",
+                    "owner": "jwiegley",
+                    "repo": "nix-config",
+                },
+            ),
+            (
+                "https-url",
+                {
+                    "type": "git",
+                    "url": "https://github.com/jwiegley/nix-config.git",
+                },
+            ),
+            (
+                "https-explicit-port",
+                {
+                    "type": "git",
+                    "url": "https://GitHub.COM:443/JWIEGLEY/NIX-CONFIG.GIT",
+                },
+            ),
+            (
+                "ssh-explicit-port",
+                {
+                    "type": "git",
+                    "url": "ssh://git@GitHub.COM:22/jwiegley/nix-config.git",
+                },
+            ),
+            (
+                "git-explicit-port",
+                {
+                    "type": "git",
+                    "url": "git://GitHub.COM:9418/jwiegley/nix-config.git",
+                },
+            ),
+            (
+                "git-url-shorthand",
+                {
+                    "type": "git",
+                    "url": "GitHub:jwiegley/nix-config",
+                },
+            ),
+            (
+                "archive-url",
+                {
+                    "type": "tarball",
+                    "url": (
+                        "tarball+https://github.com/jwiegley/nix-config/"
+                        "archive/refs/heads/main.tar.gz"
+                    ),
+                },
+            ),
+            (
+                "alternate-ssh-authority",
+                {
+                    "type": "git",
+                    "url": "ssh://git@ssh.github.com:443/jwiegley/nix-config.git",
+                },
+            ),
+            (
+                "github-content-authority",
+                {
+                    "type": "file",
+                    "url": (
+                        "https://raw.githubusercontent.com/jwiegley/nix-config/"
+                        "main/flake.nix"
+                    ),
+                },
+            ),
+            (
+                "github-api-authority",
+                {
+                    "type": "tarball",
+                    "url": (
+                        "https://api.github.com/repos/jwiegley/nix-config/tarball/main"
+                    ),
+                },
+            ),
+            (
+                "dot-segment-path",
+                {
+                    "type": "git",
+                    "url": (
+                        "https://github.com/jwiegley/other/../nix-config/archive/main"
+                    ),
+                },
+            ),
+            (
+                "encoded-separator-path",
+                {
+                    "type": "git",
+                    "url": ("https://github.com/jwiegley%2Fnix-config/archive/main"),
+                },
+            ),
+            (
+                "mixed-separator-path",
+                {
+                    "type": "git",
+                    "url": (
+                        r"ssh://git@ssh.github.com:443/jwiegley\other\..\nix-config"
+                    ),
+                },
+            ),
+        )
+        for variant, github_source in sources:
+            for section in ("original", "locked"):
+                with self.subTest(variant=variant, section=section):
+                    lock = self.gitea_lock()
+                    lock["nodes"]["retired-github-source"] = {section: github_source}
+                    self.write_fixture(lock)
+                    self.assert_gate_fails(
+                        "GitHub nix-config source is forbidden in lock node "
+                        f"retired-github-source {section}"
+                    )
+
+    def test_rejects_extra_github_nix_config_flake_source(self):
+        for url in (
+            "github:jwiegley/nix-config",
+            "https://github.com/jwiegley/nix-config.git",
+            "https://GitHub.COM:443/JWIEGLEY/NIX-CONFIG.GIT",
+            "ssh://git@GitHub.COM:22/jwiegley/nix-config.git",
+            "git://GitHub.COM:9418/jwiegley/nix-config.git",
+            "git@GitHub.COM:jwiegley/nix-config.git",
+            (
+                "tarball+https://github.com/jwiegley/nix-config/"
+                "archive/refs/heads/main.tar.gz"
+            ),
+            "ssh://git@ssh.github.com:443/jwiegley/nix-config.git",
+            "https://raw.githubusercontent.com/jwiegley/nix-config/main/flake.nix",
+            "https://api.github.com/repos/jwiegley/nix-config/tarball/main",
+            ("https://github.com/jwiegley/other/%2e%2e/nix-config/archive/main"),
+            "https://github.com/jwiegley%2Fnix-config/archive/main",
+            "https://github.com/jwiegley%252Fnix-config/archive/main",
+            "https://github.com/jwiegley/%ZZ/nix-config/archive/main",
+        ):
+            with self.subTest(url=url):
+                self.write_fixture(extra_input=f'    retired-nix-config.url = "{url}";')
+                self.assert_gate_fails(
+                    "GitHub nix-config source is forbidden anywhere in flake.nix"
+                )
+
+    def test_ignores_github_text_in_comments_and_nix_strings(self):
+        self.write_fixture(
+            extra_input=r"""    # retired-line.url = "https://github.com/jwiegley/nix-config";
+    /*
+      retired-block.url = "ssh://git@ssh.github.com:443/jwiegley/nix-config";
+    */
+    source-note = "retired.url = \"https://github.com/jwiegley/nix-config\";";
+    source-brace = "{";
+    source-raw = ''
+      retired.url = "tarball+https://github.com/jwiegley/nix-config/archive/main";
+    '';
+""",
+            root_prelude="""      /*
+        url = "https://github.com/jwiegley/nix-config";
+      */
+""",
+        )
+        result = self.run_gate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("andoria [lock coherence]: OK", result.stdout)
+
+    def test_rejects_github_source_in_indented_string_value(self):
+        self.write_fixture(
+            extra_input="""    retired-nix-config.url = ''
+      tarball+https://github.com/jwiegley/nix-config/archive/main
+    '';
+"""
+        )
+        self.assert_gate_fails(
+            "GitHub nix-config source is forbidden anywhere in flake.nix"
+        )
+
+    def test_accepts_non_github_authority_with_github_suffix_text(self):
+        self.write_fixture(
+            extra_input=(
+                '    mirror.url = "https://github.com.example.invalid/'
+                'jwiegley/nix-config/archive/main";'
+            )
+        )
+        result = self.run_gate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_dot_segments_can_leave_nix_config_without_false_positive(self):
+        for url in (
+            "https://github.com/jwiegley/nix-config/../other/archive/main",
+            ("https://github.com/jwiegley/nix-config%2F%2e%2e%2Fother/archive/main"),
+        ):
+            with self.subTest(url=url):
+                self.write_fixture(extra_input=f'    mirror.url = "{url}";')
+                result = self.run_gate()
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_allows_ambiguous_escapes_after_unrelated_repository_identity(self):
+        for url in (
+            "https://github.com/NixOS/nixpkgs/archive/feature%252Ftest",
+            "https://github.com/NixOS/nixpkgs/archive/feature%ZZtest",
+        ):
+            with self.subTest(url=url):
+                self.write_fixture(extra_input=f'    mirror.url = "{url}";')
+                result = self.run_gate()
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_real_root_inputs_win_over_earlier_let_bound_decoy(self):
+        decoy = f"""let
+  inputs = {{
+    nix-config = {{
+      url = "{self.ROOT_SOURCE_URL}";
+      flake = false;
+    }};
+    nix-config-ai = {{
+      url = "{self.AI_SOURCE_URL}";
+    }};
+  }};
+in
+"""
+        self.write_fixture(
+            expression_prefix=decoy,
+            github_source="nix-config",
+        )
+        result = self.run_gate()
+        combined = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, combined)
+        self.assertIn(
+            "nix-config source url must be canonical Gitea nix-config SSH URL",
+            combined,
+        )
+        self.assertIn("andoria [jwiegley activation]: OK", combined)
+        self.assertNotIn("all evaluated consumers passed", combined)
+
+    def test_root_inputs_win_over_decoy_in_preceding_assignment(self):
+        decoy = f"""  description = let
+    ignored = null;
+    inputs = {{
+      nix-config = {{
+        url = "{self.ROOT_SOURCE_URL}";
+        flake = false;
+      }};
+      nix-config-ai.url = "{self.AI_SOURCE_URL}";
+    }};
+  in "decoy";"""
+        self.write_fixture(
+            flake_prelude=decoy,
+            github_source="nix-config",
+        )
+        result = self.run_gate()
+        combined = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, combined)
+        self.assertIn(
+            "nix-config source url must be canonical Gitea nix-config SSH URL",
+            combined,
+        )
+        self.assertIn("andoria [jwiegley activation]: OK", combined)
+        self.assertNotIn("all evaluated consumers passed", combined)
+
+    def test_offline_mode_runs_exact_locked_eval_without_overrides(self):
+        self.write_fixture()
+        result = self.run_gate(CONSUMER_EVAL_OFFLINE="1")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        target = f"{self.andoria}#homeConfigurations.jwiegley.activationPackage.drvPath"
+        self.assertEqual(
+            self.nix_calls(),
+            [
+                [
+                    "eval",
+                    "--no-write-lock-file",
+                    "--no-warn-dirty",
+                    "--offline",
+                    "--raw",
+                    "--override-input",
+                    "nix-config",
+                    str(REPO),
+                    "--override-input",
+                    "nix-config-ai",
+                    f"{REPO}?dir=config/ai",
+                    target,
+                ],
+                [
+                    "eval",
+                    "--no-write-lock-file",
+                    "--no-warn-dirty",
+                    "--offline",
+                    "--no-update-lock-file",
+                    "--raw",
+                    target,
+                ],
+            ],
+        )
+
+    def test_vulcan_offline_mode_runs_exact_locked_eval_without_overrides(self):
+        vulcan = self.root / "vulcan"
+        self.write_vulcan_fixture(vulcan)
+        result = self.run_gate(
+            consumer="vulcan",
+            vulcan_checkout=vulcan,
+            CONSUMER_EVAL_OFFLINE="1",
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        target = (
+            f"{vulcan}#nixosConfigurations.vulcan.config.system.build.toplevel.drvPath"
+        )
+        self.assertEqual(
+            self.nix_calls(),
+            [
+                [
+                    "eval",
+                    "--no-write-lock-file",
+                    "--no-warn-dirty",
+                    "--offline",
+                    "--raw",
+                    "--override-input",
+                    "nix-config",
+                    str(REPO),
+                    "--override-input",
+                    "nix-config-ai",
+                    f"{REPO}?dir=config/ai",
+                    target,
+                ],
+                [
+                    "eval",
+                    "--no-write-lock-file",
+                    "--no-warn-dirty",
+                    "--offline",
+                    "--no-update-lock-file",
+                    "--raw",
+                    target,
+                ],
+            ],
+        )
+
+    def test_rejects_github_in_each_selected_lock_source(self):
+        for node_name, input_name in (
+            ("shared-root-source", "nix-config"),
+            ("portable-ai-source", "nix-config-ai"),
+        ):
+            for section in ("original", "locked"):
+                with self.subTest(input=input_name, section=section):
+                    lock = self.gitea_lock()
+                    replacement = {
+                        "type": "github",
+                        "owner": "jwiegley",
+                        "repo": "nix-config",
+                    }
+                    if section == "original":
+                        replacement["ref"] = "main"
+                    else:
+                        replacement.update(
+                            rev="a" * 40,
+                            narHash=(
+                                "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+                            ),
+                        )
+                    if input_name == "nix-config-ai":
+                        replacement["dir"] = "config/ai"
+                    lock["nodes"][node_name][section] = replacement
+                    self.write_fixture(lock)
+                    self.assert_gate_fails(f"{input_name} {section}.type must be git")
+
+    def test_rejects_github_only_on_the_two_selected_source_lines(self):
+        for input_name in ("nix-config", "nix-config-ai"):
+            with self.subTest(input=input_name):
+                self.write_fixture(github_source=input_name)
+                self.assert_gate_fails(f"{input_name} source url must be")
+
+    def test_rejects_incoherent_or_misshapen_selected_nodes(self):
+        cases = (
+            (
+                ("nodes", "shared-root-source", "flake"),
+                True,
+                "nix-config must set flake=false",
+            ),
+            (
+                ("nodes", "shared-root-source", "original", "dir"),
+                "config/ai",
+                "nix-config original.dir must be absent",
+            ),
+            (
+                ("nodes", "portable-ai-source", "original", "dir"),
+                "wrong",
+                "nix-config-ai original.dir must be config/ai",
+            ),
+            (
+                ("nodes", "portable-ai-source", "locked", "rev"),
+                "b" * 40,
+                "SKEW rev",
+            ),
+            (
+                ("nodes", "portable-ai-source", "locked", "narHash"),
+                "sha256-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC=",
+                "SKEW narHash",
+            ),
+        )
+        for path, value, message in cases:
+            with self.subTest(path=path):
+                lock = self.gitea_lock()
+                target = lock
+                for key in path[:-1]:
+                    target = target[key]
+                target[path[-1]] = value
+                self.write_fixture(lock)
+                self.assert_gate_fails(message)
+
+    def test_rejects_root_source_without_flake_false(self):
+        self.write_fixture(root_flake=False)
+        self.assert_gate_fails("nix-config source must set flake=false")
 
 
 class TestImmutableSubflakeCheck(unittest.TestCase):
@@ -606,16 +1395,12 @@ else:
         prefetch, metadata, check = calls
         self.assertEqual(prefetch["args"][:3], ["flake", "prefetch", "--json"])
         self.assertEqual(prefetch["archiveLock"], self.committed_lock_bytes)
-        self.assertEqual(
-            prefetch["archiveSourceMarker"], self.committed_source_marker
-        )
+        self.assertEqual(prefetch["archiveSourceMarker"], self.committed_source_marker)
         self.assertFalse(Path(prefetch["archivePath"]).exists())
 
         immutable_ref = metadata["args"][-1]
         self.assertTrue(immutable_ref.startswith("tarball+file://"), immutable_ref)
-        self.assertIn(
-            "?dir=config/ai&narHash=sha256-%2F%2Bfixture%3D", immutable_ref
-        )
+        self.assertIn("?dir=config/ai&narHash=sha256-%2F%2Bfixture%3D", immutable_ref)
         self.assertNotIn("git+file", immutable_ref)
         self.assertEqual(
             metadata["args"],
@@ -1410,18 +2195,18 @@ class TestGatesAreRegistered(unittest.TestCase):
             "\t@probe_project() { \\\n"
             "\t    local input stdin_state; \\\n"
             "\t    if IFS= read -r input; then \\\n"
-            "\t        stdin_state=\"data:$$input\"; \\\n"
+            '\t        stdin_state="data:$$input"; \\\n'
             "\t    else \\\n"
             "\t        stdin_state=eof; \\\n"
             "\t    fi; \\\n"
-            '\t    printf \'start:%s|arg1:%s|pwd:%s|stdin:%s\\n\' '
+            "\t    printf 'start:%s|arg1:%s|pwd:%s|stdin:%s\\n' "
             '"$$2" "$$1" "$$PWD" "$$stdin_state" >>"$$PROJECT_LOG"; \\\n'
-            "\t    if [[ \"$$2\" == \"$${FAIL_PROJECT:-}\" ]]; then false; fi; \\\n"
+            '\t    if [[ "$$2" == "$${FAIL_PROJECT:-}" ]]; then false; fi; \\\n'
             '\t    printf \'done:%s\\n\' "$$2" >>"$$PROJECT_LOG"; \\\n'
             "\t}; \\\n"
             "\t$(call for-each-project,probe_project); \\\n"
             "\tstatus=$$?; \\\n"
-            "\texit \"$$status\"\n"
+            '\texit "$$status"\n'
         )
         result = subprocess.run(
             [

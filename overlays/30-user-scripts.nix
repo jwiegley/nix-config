@@ -47,7 +47,7 @@ in
     name = "nix-scripts";
     src = ../bin;
     description = "Nix configuration scripts";
-    homepage = "https://github.com/jwiegley/nix-config";
+    homepage = null;
     license = prev.lib.licenses.bsd3;
     includeFiles = supportedNixScripts;
     extraInstall = ''

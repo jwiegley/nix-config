@@ -54,10 +54,11 @@ in
           ${extraInstall}
         '';
         meta = {
-          inherit description homepage license;
+          inherit description license;
           maintainers = with lib.maintainers; [ jwiegley ];
           platforms = lib.platforms.unix;
-        };
+        }
+        // lib.optionalAttrs (homepage != null) { inherit homepage; };
       };
 
     # Copy one binary or interpreted script from a catalog-owned GitHub source

@@ -95,11 +95,11 @@ This repository also exports the shared Home Manager module and the portable AI
 subflake used by external consumers. It does not own an external consumer's
 `flake.lock`, `/etc/nixos`, standalone Home Manager profile, or activation.
 
-The repository publishes to two remotes: LAN Gitea (`origin`) and GitHub
-(`github`). Both are authoritative publication destinations because different
-consumers reach different remotes. `bin/publish` preflights the fast-forward
-transaction without pushing; `bin/publish --publish` performs the dual-remote
-publication. A push to only one remote is a partial publication.
+The repository publishes only to LAN Gitea (`origin`) at
+`gitea@gitea:johnw/nix-config.git`. Every managed consumer fetches from that
+authority; GitHub is not a publication destination or consumer source.
+`bin/publish` preflights the fast-forward transaction without pushing, and
+`bin/publish --publish` publishes to Gitea.
 
 ### 2.2 `~/src/nixos`: a secondary Vulcan development clone
 
@@ -561,23 +561,36 @@ Two independent signature systems appear in this configuration.
 
 ### Git commit signatures
 
-Repository policy requires every new commit to be signed. The pre-push gate
-verifies every commit that would become newly visible on either publication
-remote, not merely the tip. Stage explicit paths, inspect the index, and do not
-bypass hooks.
+Repository policy requires every new commit to be signed. The publication
+transaction verifies the exact selected branch tip on every path, including a
+no-op or new branch, and every commit that would become newly visible on Gitea.
+Stage explicit paths, inspect the index, and do not bypass hooks.
 
-`bin/publish` then verifies a clean tracked tree, refreshes both remote views,
-checks fast-forward ancestry and signatures, performs dry-run pushes, runs the
-tracked pre-push gate once, publishes, and reads both remote refs back. It never
-force-pushes. Since two remotes cannot form an atomic Git transaction, a partial
-publication is reported as a failure requiring reconciliation.
+`bin/publish` then verifies a clean tracked tree and the exact Gitea fetch/push
+URLs. It binds network operations to that literal authority and derives the
+signature range only from exact object IDs reported by a forced, pruned fetch
+into a proven-empty temporary namespace, never configured refspecs or tracking
+refs. The isolated repository traverses raw object links so local replacement
+refs, grafts, and shallow metadata cannot hide a commit from the range whose exact
+objects are verified. Transport subprocesses cannot read mutable system, global,
+caller-injected, or checkout-local Git configuration; SSH authentication remains
+environment-owned.
+The transaction checks fast-forward ancestry and signatures, performs a dry-run
+push, runs the tracked pre-push gate once, revalidates the authority, publishes,
+and reads the Gitea ref back. It never force-pushes.
 
 The bare command is inspection only; publication is explicit:
 
 ```sh
 bin/publish             # Preflight only; pushes nothing.
-bin/publish --publish   # Run the gate and publish to both remotes.
+bin/publish --publish   # Run the gate and publish to Gitea.
 ```
+
+The explicit `--dry-run` spelling cannot be combined with `--publish`.
+An interrupt before the real push reports that no publication began. From the
+start of the real push through final readback, `INT` and `TERM` instead report
+unverified remote state and print the exact supported `bin/publish` retry command.
+They never recommend a raw Git recovery path.
 
 ### Nix store signatures
 
@@ -871,14 +884,16 @@ not a repair invented after a failure.
 
 Published history is not rewritten as routine recovery. Correct a published
 source error with a new signed commit. `bin/publish` refuses force options; a
-partial two-remote publication must be reconciled explicitly and read back
-before consumers adopt it.
+failed or unverified Gitea publication must be retried through the exact
+`bin/publish --publish --rev ... --branch ...` command reported by the
+transaction. That path revalidates authority, signatures, fast-forward state,
+and final readback; raw `git push` is not a supported recovery path.
 
 If `bin/update` rejects one package candidate, inspect its report and retained
 version. Do not use a broad reset or stash to “clean up” the checkout. Hard
 transaction failures may have completed external effects; the transaction
-reports them rather than pretending atomicity across activation and two Git
-remotes.
+reports them rather than pretending atomicity across publication and
+activation.
 
 ### 11.2 Consumer lock rollback
 
@@ -996,7 +1011,7 @@ from becoming an unsupported fleet claim.
 | Build | The selected closure can be realized | Activation anywhere |
 | Closure residency | One target has the exact closure locally | Profile selection or runtime health |
 | Activation | One host selected or ran the new generation | Client or service behavior |
-| Publication | Both Git remotes contain the signed revision | Consumer lock adoption |
+| Publication | The Gitea authority contains the signed revision | Consumer lock adoption |
 | Trust acceptance | One daemon accepts the fresh signed path and rejects its unsigned counterpart | Trust on another daemon |
 | CPU-policy acceptance | One host has exact drop-in bytes, effective systemd and cgroup sets, and a fresh daemon build confined to `0-7` | CPU confinement on another host |
 | Runtime acceptance | The affected executable, service, or security boundary works on one active host | Health on another host |
@@ -1109,7 +1124,7 @@ transient deployment checkpoint.
 4. Close or update the issue and flush `doc/PLAN.org`.
 5. Stage explicit paths and create a signed commit.
 6. Run independent review and the pre-push signature gate.
-7. Publish fast-forward-only to both remotes.
+7. Publish fast-forward-only to Gitea.
 8. Let each affected consumer adopt the paired revision from its authoritative checkout.
 9. Build, activate, and perform runtime acceptance per host family.
 10. Run low-frequency expensive assurance at closeout, after other required verification and activation are complete.
