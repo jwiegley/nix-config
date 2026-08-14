@@ -5,6 +5,7 @@ NIX_CONF   = $(HOME)/src/nix
 VPS        = vps
 VPS_SYSTEM = x86_64-linux
 VPS_BUILDER = jwiegley@andoria-08
+VPS_BUILDER_KEY = $(HOME)/.config/ssh/id_positron
 SIGN_KEY   = $(HOME)/.config/gnupg/nix-signing-key.sec
 SYSTEM     ?= $(shell nix eval --impure --raw --expr builtins.currentSystem)
 .DEFAULT_GOAL := help
@@ -351,21 +352,30 @@ copy:
 #
 #     nixos-rebuild switch --flake /etc/nixos#$(VPS)
 #
-# Signing is not optional. A remote builder rejects unsigned paths from a user
-# who is not in its trusted-users ("cannot add path ... because it lacks a
-# signature by a trusted key"), and the builders already trust this key. Note
-# `nix store sign --recursive` on a .drv signs the DERIVATION closure, not the
-# output paths of its inputs, which is why the requisites query below is
-# --include-outputs and filters .drv.
+# ONE builder, explicitly. /etc/nix/machines lists two x86_64-linux hosts, and
+# letting nix use both fails: a path built on andoria-08 comes back to this
+# machine UNSIGNED (remote-built paths carry no signature), and pushing it on to
+# andoria-t2 is then rejected for exactly that. Measured on codex-0.147.0.
+# Pinning to a single builder means nothing has to move between them.
+#
+# Signing is not optional, and it has to be `--all`. A remote builder rejects
+# unsigned paths from a user who is not in its trusted-users ("cannot add path
+# ... because it lacks a signature by a trusted key"), and the builders already
+# trust this key. Two narrower approaches were tried and both failed:
+# `nix store sign --recursive` on a .drv signs the DERIVATION closure rather
+# than the output paths of its inputs, and signing the requisites closure up
+# front still misses paths the build realises as it goes -- that failure showed
+# up mid-build on codex-wrapper-policy-response-check, which did not exist when
+# the closure was computed. `--all` is what the repo's own `sign` target uses,
+# for the same reason.
 vps-push:
 	$(call announce,build on $(VPS_BUILDER) -> sign -> copy to $(VPS))
 	@set -euo pipefail; \
 	attr='.#homeConfigurations."jwiegley@$(VPS_SYSTEM)".activationPackage'; \
-	drv=$$(nix path-info --derivation "$$attr"); \
-	nix-store --query --requisites --include-outputs "$$drv" \
-	    | grep -v '\.drv$$' \
-	    | xargs -r nix store sign --key-file '$(SIGN_KEY)'; \
-	out=$$(nix build --no-link --print-out-paths "$$attr"); \
+	nix store sign -k '$(SIGN_KEY)' --all; \
+	out=$$(nix build --no-link --print-out-paths \
+	    --builders 'ssh-ng://$(VPS_BUILDER) $(VPS_SYSTEM) $(VPS_BUILDER_KEY) 8 4 big-parallel' \
+	    "$$attr"); \
 	nix store sign --key-file '$(SIGN_KEY)' --recursive "$$out"; \
 	nix copy --to "ssh-ng://$(VPS)" "$$out"; \
 	printf 'staged on %s: %s\n' '$(VPS)' "$$out"; \
