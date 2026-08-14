@@ -85,7 +85,7 @@ eval_target() {
     local locked=0 failure_context="against $tree"
     if [[ ${1:-} == --locked-consumer ]]; then
         locked=1
-        failure_context="from its checked-in consumer lock offline"
+        failure_context="from its consumer lock offline"
         shift
     fi
     local -a cmd=(nix eval "${nix_common[@]}")
@@ -133,7 +133,7 @@ skip_or_fail() {
 # Two inputs drifting apart is the same class of failure as a consumer crossing
 # an incompatible revision, with a harder-to-read symptom.
 #
-# Checked from the consumer's own committed lock, read-only. Gitea-only
+# Checked from the consumer's current lock and flake source, read-only. Gitea-only
 # consumers require selected nix-config inputs to use the authoritative
 # repository, and no other flake input or lock node may retain the retired
 # GitHub nix-config source. Other GitHub repositories remain legitimate.
@@ -298,18 +298,22 @@ def nix_tokens(source):
         elif source[index] == '"':
             index += 1
             value = []
+            dynamic = False
             while index < len(source) and source[index] != '"':
                 if source[index] == "\\" and index + 1 < len(source):
                     index += 1
+                elif source.startswith("${", index):
+                    dynamic = True
                 value.append(source[index])
                 index += 1
             if index == len(source):
                 die("unterminated string in flake.nix")
-            tokens.append(("string", "".join(value)))
+            tokens.append(("dynamic-string" if dynamic else "string", "".join(value)))
             index += 1
         elif source.startswith("''", index):
             index += 2
             value = []
+            dynamic = False
             while index < len(source):
                 if source.startswith("''", index):
                     if index + 2 < len(source) and source[index + 2] in "'$\\":
@@ -318,11 +322,13 @@ def nix_tokens(source):
                         continue
                     index += 2
                     break
+                if source.startswith("${", index):
+                    dynamic = True
                 value.append(source[index])
                 index += 1
             else:
                 die("unterminated indented string in flake.nix")
-            tokens.append(("string", "".join(value)))
+            tokens.append(("dynamic-string" if dynamic else "string", "".join(value)))
         elif source[index].isalnum() or source[index] in "_-'":
             end = index + 1
             while end < len(source) and (source[end].isalnum() or source[end] in "_-'"):
@@ -545,12 +551,18 @@ if policy == "gitea-only":
         if key == "nix-config" and flake != ("word", "false"):
             die("nix-config source must set flake=false")
     for index in range(inputs_opening + 1, inputs_closing - 1):
-        if (
+        if not (
             attribute_is(source_tokens[index], "url")
             and symbol_is(source_tokens[index + 1], "=")
-            and source_tokens[index + 2][0] == "string"
-            and is_github_nix_config_url(source_tokens[index + 2][1])
         ):
+            continue
+        if (
+            index + 3 >= inputs_closing
+            or source_tokens[index + 2][0] != "string"
+            or not symbol_is(source_tokens[index + 3], ";")
+        ):
+            die("flake input URL assignments must use literal strings")
+        if is_github_nix_config_url(source_tokens[index + 2][1]):
             die("GitHub nix-config source is forbidden anywhere in flake.nix")
 elif policy != "coherence":
     die("unknown lock policy %s" % policy)
@@ -700,32 +712,30 @@ done
 
 # ---- summary ------------------------------------------------------------
 
-# A full run must evaluate every external consumer from its own checked-in lock,
+# A full run must evaluate every external consumer from its own current lock,
 # offline and without overrides. A named subset remains an explicit fast-lane
 # choice. Record omissions beside any consumer-specific failure.
 if [[ $full_run -eq 1 && $vps_locked_evaluated -eq 0 ]]; then
-    fail "a full run did not evaluate required consumer vps from its checked-in lock offline ($skipped skipped); point VPS_CHECKOUT at a real checkout, or name a subset to acknowledge the narrower scope"
+    fail "a full run did not evaluate required consumer vps from its consumer lock offline ($skipped skipped); point VPS_CHECKOUT at a real checkout, or name a subset to acknowledge the narrower scope"
 fi
 if [[ $full_run -eq 1 && $andoria_locked_evaluated -eq 0 ]]; then
-    fail "a full run did not evaluate required consumer andoria from its checked-in lock offline ($skipped skipped); point ANDORIA_CHECKOUT at a real checkout, or name a subset to acknowledge the narrower scope"
+    fail "a full run did not evaluate required consumer andoria from its consumer lock offline ($skipped skipped); point ANDORIA_CHECKOUT at a real checkout, or name a subset to acknowledge the narrower scope"
 fi
 if [[ $full_run -eq 1 && $vulcan_locked_evaluated -eq 0 ]]; then
-    fail "a full run did not evaluate required consumer vulcan from its checked-in lock offline ($skipped skipped); point VULCAN_CHECKOUT at a real checkout, or name a subset to acknowledge the narrower scope"
+    fail "a full run did not evaluate required consumer vulcan from its consumer lock offline ($skipped skipped); point VULCAN_CHECKOUT at a real checkout, or name a subset to acknowledge the narrower scope"
+fi
+
+# A gate that evaluated nothing must not report success, even if auxiliary lock
+# checks also failed. Report this before the accumulated failure summary so the
+# zero-evaluation contract remains observable.
+if [[ $evaluated -eq 0 ]]; then
+    fail "evaluated nothing ($skipped skipped); refusing to report success"
 fi
 
 if [[ ${#failures[@]} -gt 0 ]]; then
     printf '\n' >&2
     printf 'cross-consumer-eval: %d consumer(s) failed:\n' "${#failures[@]}" >&2
     printf '  - %s\n' "${failures[@]}" >&2
-    exit 1
-fi
-
-# A gate that evaluated nothing must not report success — the same failure mode
-# as a formatter that exits 0 having formatted nothing (jwiegley/nix-config#48).
-# Reading a consumer lock is an auxiliary check, not a consumer evaluation.
-if [[ $evaluated -eq 0 ]]; then
-    printf 'cross-consumer-eval: evaluated nothing (%d skipped); refusing to report success\n' \
-        "$skipped" >&2
     exit 1
 fi
 

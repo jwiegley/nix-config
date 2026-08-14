@@ -388,6 +388,7 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
             r.returncode, 0, "missing VPS lock reported success:\n%s" % combined
         )
         self.assertIn("vps [lock coherence]: no flake.lock", combined)
+        self.assertIn("evaluated nothing", combined)
         self.assertNotIn("all evaluated consumers passed", combined)
 
     def test_named_vulcan_fails_closed_when_lock_and_checkout_are_missing(self):
@@ -797,7 +798,7 @@ class TestCrossConsumerEvalGiteaPolicy(unittest.TestCase):
         self.assertIn("andoria [jwiegley activation]: SKIPPED", combined)
         self.assertIn(
             "a full run did not evaluate required consumer andoria from its "
-            "checked-in lock offline",
+            "consumer lock offline",
             combined,
         )
         self.assertNotIn("all evaluated consumers passed", combined)
@@ -949,6 +950,20 @@ class TestCrossConsumerEvalGiteaPolicy(unittest.TestCase):
                 self.write_fixture(extra_input=f'    retired-nix-config.url = "{url}";')
                 self.assert_gate_fails(
                     "GitHub nix-config source is forbidden anywhere in flake.nix"
+                )
+
+    def test_rejects_computed_flake_input_urls(self):
+        for expression in (
+            '"github:" + "jwiegley/nix-config"',
+            '"github:${owner}/nix-config"',
+            "''github:${owner}/nix-config''",
+        ):
+            with self.subTest(expression=expression):
+                self.write_fixture(
+                    extra_input=f"    retired-nix-config.url = {expression};"
+                )
+                self.assert_gate_fails(
+                    "flake input URL assignments must use literal strings"
                 )
 
     def test_ignores_github_text_in_comments_and_nix_strings(self):

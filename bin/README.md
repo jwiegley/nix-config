@@ -311,22 +311,25 @@ link. Additional arguments after the mode and optional package are passed to
 
 ```sh
 bin/publish             # Fetch, verify, and perform push dry-runs.
-bin/publish --publish   # Run the gate once and push the signed branch tip.
+bin/publish --publish   # If needed, run the gate once and push the signed tip.
 ```
 
-It requires a clean tracked tree at the checked-out branch tip, verifies and
-revalidates the configured Gitea fetch and push URLs, and binds network operations
-to the literal Gitea authority. Every transport subprocess uses an isolated bare
-Git repository with system, global, caller-injected, and checkout-local Git
-configuration unavailable, so transient URL rewrites cannot redirect it.
-Signature ranges come only from exact object IDs reported by a forced, pruned
-fetch into a proven-empty temporary namespace, independent of configured refspecs
-and tracking refs. The isolated repository traverses raw object links so local
-replacement refs, grafts, and shallow metadata cannot hide a commit from the
-range whose exact objects are verified. The exact selected tip and every newly
-published commit must have a valid signature.
-The command proves that Gitea accepts a fast-forward and reads the remote ref back
-after publication. It never force-pushes.
+It requires a clean tracked tree at the checked-out branch tip, requires `origin`
+to be the only configured remote, verifies and revalidates its Gitea fetch and
+push URLs, and binds network operations to the literal Gitea authority. Every
+transport subprocess uses an isolated bare Git repository, a private empty
+template, and a scrubbed Git environment; system, global, caller-injected, and
+checkout-local Git configuration and graph selectors are unavailable. SSH agent
+authentication remains environment-owned, but Git SSH-command overrides do not.
+Signature ranges come only from the exact target-branch object ID reported by a
+forced, pruned fetch into a proven-empty temporary namespace, independent of
+configured refspecs and tracking refs. The isolated repository traverses raw
+object links so replacement refs, grafts, and shallow metadata cannot hide a
+commit from the range whose exact objects are verified. The exact selected tip
+and every commit newly reachable from that Gitea branch must have a valid
+signature. The command proves that Gitea accepts a fast-forward, uses an exact
+old-tip lease to close the fetch/push race, and reads the remote ref back after
+publication. It never permits a non-fast-forward publication.
 
 `--dry-run` is an explicit spelling of the non-publishing default and cannot be
 combined with `--publish`. `--rev REV` and `--branch NAME` assert the exact tip to

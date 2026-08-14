@@ -566,18 +566,20 @@ transaction verifies the exact selected branch tip on every path, including a
 no-op or new branch, and every commit that would become newly visible on Gitea.
 Stage explicit paths, inspect the index, and do not bypass hooks.
 
-`bin/publish` then verifies a clean tracked tree and the exact Gitea fetch/push
-URLs. It binds network operations to that literal authority and derives the
-signature range only from exact object IDs reported by a forced, pruned fetch
-into a proven-empty temporary namespace, never configured refspecs or tracking
-refs. The isolated repository traverses raw object links so local replacement
-refs, grafts, and shallow metadata cannot hide a commit from the range whose exact
-objects are verified. Transport subprocesses cannot read mutable system, global,
-caller-injected, or checkout-local Git configuration; SSH authentication remains
-environment-owned.
+`bin/publish` then verifies a clean tracked tree, requires `origin` to be the sole
+configured remote, and verifies its exact Gitea fetch/push URLs. It binds network
+operations to that literal authority and derives the signature range only from
+the exact target-branch object ID reported by a forced, pruned fetch into a
+proven-empty temporary namespace, never configured refspecs or tracking refs.
+The isolated repository uses a private empty template and traverses raw object
+links so replacement refs, grafts, and shallow metadata cannot hide a commit from
+the range whose exact objects are verified. Transport subprocesses cannot read
+mutable system, global, caller-injected, or checkout-local Git configuration or
+Git SSH-command overrides; SSH agent authentication remains environment-owned.
 The transaction checks fast-forward ancestry and signatures, performs a dry-run
-push, runs the tracked pre-push gate once, revalidates the authority, publishes,
-and reads the Gitea ref back. It never force-pushes.
+push, runs the tracked pre-push gate once when publication is needed, revalidates
+the authority, applies an exact old-tip lease, publishes, and reads the Gitea ref
+back. It never permits a non-fast-forward publication.
 
 The bare command is inspection only; publication is explicit:
 

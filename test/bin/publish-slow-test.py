@@ -231,6 +231,21 @@ class TestRefusals(PublishHarness):
         self.assertIn("must push to gitea@gitea:johnw/nix-config.git", r.stderr)
         self.assertNotEqual(self.remote_sha(self.origin), head)
 
+    def test_additional_remote_is_refused_before_any_fetch(self):
+        git(
+            "remote",
+            "add",
+            "github",
+            "git@github.com:jwiegley/nix-config.git",
+            cwd=self.work,
+        )
+        head = self._commit("more\n", "second commit")
+        r = self.publish()
+        self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("configured remote set must be exactly 'origin'", r.stderr)
+        self.assertEqual(self.network_actions(), [])
+        self.assertNotEqual(self.remote_sha(self.origin), head)
+
     def test_multiple_fetch_urls_are_refused_even_when_gitea_is_last(self):
         git("config", "--unset-all", "remote.origin.url", cwd=self.work)
         git(
@@ -489,6 +504,27 @@ exit "${PUBLISH_GATE_EXIT:-0}"
         git("config", "user.signingkey", fpr, cwd=self.work)
         git("config", "gpg.format", "openpgp", cwd=self.work)
         git("config", "commit.gpgsign", "true", cwd=self.work)
+        # Signed-publication fixtures start from a signed remote root so a new
+        # target branch can conservatively verify its complete ancestry.
+        git(
+            "commit",
+            "-q",
+            "--amend",
+            "--no-edit",
+            "-S",
+            cwd=self.work,
+            env=self.signing_env,
+        )
+        git(
+            "push",
+            "-q",
+            "--force",
+            "--no-verify",
+            self.origin,
+            "main",
+            cwd=self.work,
+            env={"GNUPGHOME": self.gnupghome, "PATH": os.environ["PATH"]},
+        )
 
     def _signed_commit(self, content, message):
         p = os.path.join(self.work, "signed.txt")
@@ -996,6 +1032,102 @@ exec "$REAL_GIT" "$@"
         self.assertIn(unsigned[:12], r.stderr)
         self.assertNotEqual(self.remote_sha(self.origin), head)
 
+    def test_inherited_graft_file_cannot_hide_unsigned_middle_object(self):
+        base = self.remote_sha(self.origin)
+        unsigned = self._commit("unsigned middle\n", "an unsigned middle commit")
+        head = self._signed_commit("signed tip\n", "a signed branch tip")
+        grafts = os.path.join(self.tmp, "hostile-grafts")
+        with open(grafts, "w") as fh:
+            fh.write(f"{head} {base}\n")
+
+        r = subprocess.run(
+            [PUBLISH, "--dry-run"],
+            cwd=self.work,
+            capture_output=True,
+            text=True,
+            env=clean_env(**{**self.signing_env, "GIT_GRAFT_FILE": grafts}),
+        )
+
+        self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("UNSIGNED", r.stderr)
+        self.assertIn(unsigned[:12], r.stderr)
+        self.assertNotEqual(self.remote_sha(self.origin), head)
+
+    def test_inherited_shallow_file_does_not_change_signature_traversal(self):
+        head = self._signed_commit("signed tip\n", "a signed branch tip")
+        shallow = os.path.join(self.tmp, "hostile-shallow")
+        with open(shallow, "w") as fh:
+            fh.write(f"{head}\n")
+
+        r = subprocess.run(
+            [PUBLISH, "--dry-run"],
+            cwd=self.work,
+            capture_output=True,
+            text=True,
+            env=clean_env(**{**self.signing_env, "GIT_SHALLOW_FILE": shallow}),
+        )
+
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("all selected commits signed", r.stdout)
+
+    def test_inherited_git_template_is_not_used(self):
+        self._signed_commit("signed tip\n", "a signed branch tip")
+        template = os.path.join(self.tmp, "hostile-template")
+        os.makedirs(template)
+        with open(os.path.join(template, "config"), "w") as fh:
+            fh.write("[invalid-template-config\n")
+
+        r = subprocess.run(
+            [PUBLISH, "--dry-run"],
+            cwd=self.work,
+            capture_output=True,
+            text=True,
+            env=clean_env(**{**self.signing_env, "GIT_TEMPLATE_DIR": template}),
+        )
+
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("all selected commits signed", r.stdout)
+
+    def test_checkout_gpg_program_cannot_override_signature_verifier(self):
+        self._signed_commit("signed tip\n", "a signed branch tip")
+        git("config", "gpg.program", "/usr/bin/false", cwd=self.work)
+
+        r = subprocess.run(
+            [PUBLISH, "--dry-run"],
+            cwd=self.work,
+            capture_output=True,
+            text=True,
+            env=clean_env(**self.signing_env),
+        )
+
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("all selected commits signed", r.stdout)
+
+    def test_other_remote_branch_does_not_hide_unsigned_target_ancestor(self):
+        unsigned = self._commit("unsigned side\n", "an unsigned side commit")
+        git(
+            "push",
+            "-q",
+            "--no-verify",
+            self.origin,
+            f"{unsigned}:refs/heads/side",
+            cwd=self.work,
+        )
+        head = self._signed_commit("signed tip\n", "a signed branch tip")
+
+        r = subprocess.run(
+            [PUBLISH, "--dry-run"],
+            cwd=self.work,
+            capture_output=True,
+            text=True,
+            env=clean_env(**self.signing_env),
+        )
+
+        self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("UNSIGNED", r.stderr)
+        self.assertIn(unsigned[:12], r.stderr)
+        self.assertNotEqual(self.remote_sha(self.origin), head)
+
     def test_signed_tip_already_on_gitea_is_a_verified_noop(self):
         head = self._signed_commit("s\n", "a signed commit")
         git("push", "-q", "--no-verify", self.origin, "main", cwd=self.work)
@@ -1030,12 +1162,13 @@ exec "$REAL_GIT" "$@"
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("would create it", r.stdout)
         self.assertIn(
-            "all selected commits signed (unique commits checked: 1)", r.stdout
+            "all selected commits signed (unique commits checked: 2)", r.stdout
         )
         self.assertIsNone(self.remote_sha(self.origin, "feature"))
         self.assertEqual(self.remote_sha(self.origin), head)
 
     def test_publish_runs_tracked_pre_push_group_exactly_once(self):
+        before = self.remote_sha(self.origin)
         head = self._signed_commit("s\n", "a signed commit")
         r = subprocess.run(
             [PUBLISH, "--publish"],
@@ -1050,6 +1183,13 @@ exec "$REAL_GIT" "$@"
         self.assertEqual(invocations, ["run pre-push --force"])
         self.assertIn("all tracked gates passed once", r.stdout)
         self.assertEqual(self.remote_sha(self.origin), head)
+        real_pushes = [
+            action
+            for action in self.network_actions()
+            if action.startswith("push ") and " --dry-run " not in f" {action} "
+        ]
+        self.assertEqual(len(real_pushes), 1, real_pushes)
+        self.assertIn(f"--force-with-lease=refs/heads/main:{before}", real_pushes[0])
 
     def test_failed_explicit_gate_stops_before_real_push(self):
         head = self._signed_commit("s\n", "a signed commit")
@@ -1476,6 +1616,24 @@ class TestSelfConsistency(unittest.TestCase):
         self.assertIn("REMOTE=origin", body)
         self.assertIn("EXPECTED_REMOTE_URL=gitea@gitea:johnw/nix-config.git", body)
         self.assertNotIn("git@github.com:jwiegley/nix-config.git", body)
+
+    def test_isolated_transport_scrubs_graph_template_and_ssh_selectors(self):
+        with open(PUBLISH) as fh:
+            body = fh.read()
+        for name in (
+            "GIT_GRAFT_FILE",
+            "GIT_SHALLOW_FILE",
+            "GIT_TEMPLATE_DIR",
+            "GIT_SSH",
+            "GIT_SSH_COMMAND",
+            "GIT_SSH_VARIANT",
+        ):
+            self.assertIn(f"-u {name}", body)
+        self.assertIn('--template="$transport_template_dir"', body)
+        self.assertLess(
+            body.index("trap cleanup_transport EXIT"),
+            body.index("transport_root=$(mktemp -d"),
+        )
 
     def test_current_docs_describe_one_gitea_publication_authority(self):
         expected = {

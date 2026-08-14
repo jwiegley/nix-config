@@ -198,7 +198,11 @@ assert_exact_remote_urls() {
 }
 
 assert_remote_authority() {
-    local phase=$1 configured_fetches configured_pushes effective_fetches effective_pushes
+    local phase=$1 configured_fetches configured_pushes effective_fetches effective_pushes remotes
+
+    remotes=$(git remote 2>/dev/null || true)
+    [[ $remotes == "$REMOTE" ]] ||
+        die "$phase: configured remote set must be exactly '$REMOTE'"
 
     configured_fetches=$(git config --get-all "remote.$REMOTE.url" 2>/dev/null || true)
     assert_exact_remote_urls "fetch from" "$phase configured" "$configured_fetches"
@@ -249,7 +253,7 @@ check_signature_record() {
 
 check_signature_oid() {
     local oid=$1 record inspected_sha
-    record=$(git --no-replace-objects log --no-walk=unsorted -1 \
+    record=$(transport_git --no-replace-objects log --no-walk=unsorted -1 \
         --pretty='%G? %H %s' "$oid") ||
         die "could not inspect signature for commit $oid"
     inspected_sha=${record#* }
@@ -268,19 +272,44 @@ source_object_dir=$(git rev-parse --path-format=absolute --git-path objects) ||
     die "could not locate the publication object database"
 object_format=$(git rev-parse --show-object-format) ||
     die "could not determine the repository object format"
+transport_root=""
+transport_git_dir=""
+
+# shellcheck disable=SC2329 # Invoked by the EXIT trap below.
+cleanup_transport() {
+    if [[ -n ${transport_root:-} && -d $transport_root ]]; then
+        rm -rf -- "$transport_root"
+    fi
+}
+trap cleanup_transport EXIT
+
 transport_root=$(mktemp -d "${TMPDIR:-/tmp}/publish-transport.XXXXXX") ||
     die "could not create an isolated Git transport directory"
 transport_git_dir="$transport_root/repo.git"
+transport_template_dir="$transport_root/empty-template"
+mkdir -m 0700 "$transport_template_dir" ||
+    die "could not create the isolated Git template directory"
 snapshot_namespace=refs/publish-snapshot
 
 transport_git() {
     env \
         -u GIT_COMMON_DIR \
         -u GIT_CONFIG \
+        -u GIT_CONFIG_COUNT \
         -u GIT_CONFIG_PARAMETERS \
+        -u GIT_GRAFT_FILE \
+        -u GIT_IMPLICIT_WORK_TREE \
         -u GIT_INDEX_FILE \
+        -u GIT_INTERNAL_SUPER_PREFIX \
         -u GIT_NAMESPACE \
         -u GIT_OBJECT_DIRECTORY \
+        -u GIT_PREFIX \
+        -u GIT_REPLACE_REF_BASE \
+        -u GIT_SHALLOW_FILE \
+        -u GIT_SSH \
+        -u GIT_SSH_COMMAND \
+        -u GIT_SSH_VARIANT \
+        -u GIT_TEMPLATE_DIR \
         -u GIT_WORK_TREE \
         GIT_CONFIG_NOSYSTEM=1 \
         GIT_CONFIG_SYSTEM=/dev/null \
@@ -299,19 +328,14 @@ delete_snapshot_refs() {
     done < <(transport_git for-each-ref --format='%(refname)' "$snapshot_namespace/")
 }
 
-# shellcheck disable=SC2329 # Invoked by the EXIT trap below.
-cleanup_transport() {
-    if [[ -d ${transport_git_dir:-} ]]; then
-        delete_snapshot_refs || true
-    fi
-    if [[ -n ${transport_root:-} && -d $transport_root ]]; then
-        rm -rf -- "$transport_root"
-    fi
-}
-trap cleanup_transport EXIT
-
-transport_git init --bare --quiet --object-format="$object_format" ||
+transport_git init --bare --quiet --template="$transport_template_dir" \
+    --object-format="$object_format" ||
     die "could not initialize the isolated Git transport"
+unexpected_transport_config=$(transport_git config --local --name-only --list |
+    LC_ALL=C grep -Ev \
+        '^(core\.(bare|filemode|ignorecase|logallrefupdates|precomposeunicode|repositoryformatversion|symlinks)|extensions\.objectformat)$' || true)
+[[ -z $unexpected_transport_config ]] ||
+    die "isolated Git transport acquired unexpected local configuration"
 delete_snapshot_refs || die "could not clear the temporary Gitea ref namespace"
 snapshot_residue=$(transport_git for-each-ref --format='%(refname)' "$snapshot_namespace/")
 [[ -z $snapshot_residue ]] ||
@@ -360,11 +384,9 @@ observed_refs=$(transport_git for-each-ref --sort=refname \
 [[ $observed_refs == "$reported_refs" ]] ||
     die "temporary Gitea refs did not exactly match the authoritative fetch report"
 
-declare -a snapshot_tips=()
 remote_sha=""
 while IFS=$'\t' read -r fetched_ref observed_sha; do
     [[ -n ${fetched_ref:-} ]] || continue
-    snapshot_tips+=("$observed_sha")
     if [[ $fetched_ref == "$snapshot_namespace/$branch" ]]; then
         remote_sha=$observed_sha
     fi
@@ -405,10 +427,10 @@ check_signature_oid "$rev"
 # Signed commits only (CLAUDE.md). Check every commit that would become newly
 # published, not just the tip — an unsigned commit in the middle still lands.
 if [[ ${#need_push[@]} -gt 0 ]]; then
-    say "checking signatures on commits not present in fresh Gitea refs"
+    say "checking signatures on commits newly reachable from Gitea $branch"
     declare -a signature_range=("$rev")
-    if [[ ${#snapshot_tips[@]} -gt 0 ]]; then
-        signature_range+=(--not "${snapshot_tips[@]}")
+    if [[ -n $remote_sha ]]; then
+        signature_range+=(--not "$remote_sha")
     fi
     unpublished_oids=$(transport_git rev-list "${signature_range[@]}" 2>/dev/null) ||
         die "could not compute the unpublished commit range from fresh Gitea refs"
@@ -428,10 +450,15 @@ fi
 # Require dry-run ref negotiation before mutating Gitea.
 # Real hooks, concurrent changes, or network faults can still reject a real push.
 say "pre-flight: dry-run push to Gitea"
+target_ref="refs/heads/$branch"
+# This exact compare-and-swap lease closes the fetch/push race. The ancestry
+# check above still prohibits non-fast-forward publication; the lease cannot be
+# used by a caller to request a rewrite.
+target_lease="--force-with-lease=$target_ref:$remote_sha"
 for r in "${need_push[@]}"; do
     assert_remote_authority "before Gitea dry-run"
-    if dry_run_output=$(transport_git push --dry-run --no-verify "$EXPECTED_REMOTE_URL" \
-        "$rev:refs/heads/$branch" 2>&1); then
+    if dry_run_output=$(transport_git push --dry-run --no-verify "$target_lease" \
+        "$EXPECTED_REMOTE_URL" "$rev:$target_ref" 2>&1); then
         assert_remote_authority "after Gitea dry-run"
         say "  $r would accept"
     else
@@ -469,8 +496,8 @@ for r in "${need_push[@]}"; do
     say "pushing to $r"
     assert_remote_authority "immediately before Gitea push"
     publication_state=in-flight
-    if transport_git push --no-verify "$EXPECTED_REMOTE_URL" \
-        "$rev:refs/heads/$branch"; then
+    if transport_git push --no-verify "$target_lease" "$EXPECTED_REMOTE_URL" \
+        "$rev:$target_ref"; then
         push_succeeded=1
     else
         push_succeeded=0
