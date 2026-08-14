@@ -65,15 +65,6 @@ in
   [[ "$actual_device_id" == ${quote localDeviceID} ]] \
     || syncthing_fail "bootstrapped device identity does not match this host"
 
-  app_status=0
-  ${tools.pgrep} -f '/Applications/Syncthing[.]app/Contents/MacOS/Syncthing' >/dev/null 2>&1 \
-    || app_status=$?
-  case "$app_status" in
-    0) syncthing_fail "Syncthing.app must remain closed while Home Manager owns the daemon" ;;
-    1) ;;
-    *) syncthing_fail "could not safely inspect running Syncthing.app processes" ;;
-  esac
-
   login_items_status=0
   (
     set -e

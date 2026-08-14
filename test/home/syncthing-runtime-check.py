@@ -341,13 +341,8 @@ class PreflightTests(unittest.TestCase):
             with self.subTest(message=message):
                 self.assert_failure(message, extra_environment=environment)
 
-    def test_syncthing_app_and_login_item_ownership_are_enforced(self):
+    def test_login_item_ownership_is_enforced(self):
         cases = (
-            ({"FAKE_APP_RUNNING": "1"}, "Syncthing.app must remain closed"),
-            (
-                {"FAKE_APP_PGREP_STATUS": "2"},
-                "could not safely inspect running Syncthing.app processes",
-            ),
             ({"FAKE_LOGIN_ITEMS": "registered"}, "Syncthing.app is still registered"),
             ({"FAKE_LOGIN_ITEMS": "bundle"}, "Syncthing.app is still registered"),
             (

@@ -88,35 +88,25 @@ syncthing)
     ;;
 pgrep)
     (($# == 2)) || exit 64
-    if [[ "$1" == -f ]]; then
-        [[ "$2" == '/Applications/Syncthing[.]app/Contents/MacOS/Syncthing' ]] || exit 64
-        if [[ -n "${FAKE_APP_PGREP_STATUS:-}" ]]; then
-            [[ "$FAKE_APP_PGREP_STATUS" != 0 ]] || printf '900\n'
-            exit "$FAKE_APP_PGREP_STATUS"
-        fi
-        [[ "${FAKE_APP_RUNNING:-0}" == 1 ]] || exit 1
-        printf '900\n'
-    else
-        [[ "$1" == -x && "$2" == syncthing ]] || exit 64
-        if [[ -n "${FAKE_DAEMON_PGREP_SEQUENCE:-}" ]]; then
-            index=0
-            [[ ! -f .daemon-pgrep-index ]] || index="$(<.daemon-pgrep-index)"
-            printf '%s' "$((index + 1))" >.daemon-pgrep-index
-            IFS=';' read -r -a responses <<<"$FAKE_DAEMON_PGREP_SEQUENCE"
-            ((index < ${#responses[@]})) || index=$((${#responses[@]} - 1))
-            response="${responses[index]}"
-            [[ "$response" != none ]] || exit 1
-            printf '%s\n' "${response//,/$'\n'}"
-            exit 0
-        fi
-        if [[ -n "${FAKE_DAEMON_PGREP_STATUS:-}" ]]; then
-            [[ "$FAKE_DAEMON_PGREP_STATUS" != 0 ]] ||
-                printf '%s\n' "${FAKE_DAEMON_PIDS:-100}"
-            exit "$FAKE_DAEMON_PGREP_STATUS"
-        fi
-        [[ -n "${FAKE_DAEMON_PIDS:-}" ]] || exit 1
-        printf '%s\n' "${FAKE_DAEMON_PIDS//,/$'\n'}"
+    [[ "$1" == -x && "$2" == syncthing ]] || exit 64
+    if [[ -n "${FAKE_DAEMON_PGREP_SEQUENCE:-}" ]]; then
+        index=0
+        [[ ! -f .daemon-pgrep-index ]] || index="$(<.daemon-pgrep-index)"
+        printf '%s' "$((index + 1))" >.daemon-pgrep-index
+        IFS=';' read -r -a responses <<<"$FAKE_DAEMON_PGREP_SEQUENCE"
+        ((index < ${#responses[@]})) || index=$((${#responses[@]} - 1))
+        response="${responses[index]}"
+        [[ "$response" != none ]] || exit 1
+        printf '%s\n' "${response//,/$'\n'}"
+        exit 0
     fi
+    if [[ -n "${FAKE_DAEMON_PGREP_STATUS:-}" ]]; then
+        [[ "$FAKE_DAEMON_PGREP_STATUS" != 0 ]] ||
+            printf '%s\n' "${FAKE_DAEMON_PIDS:-100}"
+        exit "$FAKE_DAEMON_PGREP_STATUS"
+    fi
+    [[ -n "${FAKE_DAEMON_PIDS:-}" ]] || exit 1
+    printf '%s\n' "${FAKE_DAEMON_PIDS//,/$'\n'}"
     ;;
 sfltool)
     [[ $# == 2 && "$1" == list && "$2" == com.apple.LSSharedFileList.SessionLoginItems ]] ||

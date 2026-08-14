@@ -177,14 +177,9 @@ let
     lib.any (
       cask: if builtins.isString cask then cask == "syncthing-app" else cask.name == "syncthing-app"
     ) system.homebrew.casks;
-  hasDormantSyncthingApp =
+  hasSyncthingAppPreferences =
     system:
-    let
-      preferences = system.system.defaults.CustomUserPreferences."com.github.xor-gate.syncthing-macosx";
-    in
-    !preferences.StartAtLogin
-    && !preferences.SUEnableAutomaticChecks
-    && !preferences.SUAutomaticallyUpdate;
+    builtins.hasAttr "com.github.xor-gate.syncthing-macosx" system.system.defaults.CustomUserPreferences;
   ownsMutableState =
     home:
     lib.any (
@@ -432,15 +427,16 @@ let
     && lib.hasInfix "${home.home.homeDirectory}/Documents" preflight.data
     && !lib.hasInfix "${home.home.homeDirectory}/doc/obsidian" preflight.data
     && lib.hasInfix "SessionLoginItems" preflight.data
+    && !lib.hasInfix "/Applications/Syncthing[.]app/Contents/MacOS/Syncthing" preflight.data
     && lib.hasInfix "managed monitor child" preflight.data
     && lib.hasInfix "tmutil addexclusion" preflight.data
     && !ownsMutableState home;
 in
-assert hasSyncthingApp heraSystem;
-assert hasSyncthingApp clioSystem;
+assert !hasSyncthingApp heraSystem;
+assert !hasSyncthingApp clioSystem;
 assert managedSyncthing.version == clio.services.syncthing.package.version;
-assert hasDormantSyncthingApp heraSystem;
-assert hasDormantSyncthingApp clioSystem;
+assert !hasSyncthingAppPreferences heraSystem;
+assert !hasSyncthingAppPreferences clioSystem;
 assert validDarwinHome hera "hera";
 assert validDarwinHome clio "clio";
 assert
