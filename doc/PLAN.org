@@ -14211,10 +14211,10 @@ The session layer will correctly reject all running cross-profile migrations, bu
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-14 Fri 00:31]
-:MODIFIED: [2026-08-14 Fri 02:01]
+:MODIFIED: [2026-08-14 Fri 02:27]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-14 Fri 01:53]
-:CLOSE_REASON: Completed: costly Pi extensions are native opt-in; focused behavioral checks and network-denied Hera latency acceptance pass.
+:FINISHED: [2026-08-14 Fri 02:27]
+:CLOSE_REASON: Completed
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -14250,6 +14250,20 @@ Acceptance: on Hera, the managed offline/no-session/no-context-files interactive
     "author": "johnw",
     "text": "Final review correction: USER-GUIDE now states that Pi local-model discovery occurs only when the optional gallery is explicitly loaded. The Fleet Theme startup derivation now injects a Node connection-attempt guard, mutation-checks it with a deliberately rejected loopback connect, then requires the real default Pi launch to load the guard and make zero connects. Current focused pi-fleet-theme build, Nix parse, nixfmt, and diff check pass. Independent exact-byte acceptance/architecture rereview: CLEAR.",
     "created_at": "2026-08-14T09:01:15Z"
+  },
+  {
+    "id": 397,
+    "issue_id": "nix-yojh",
+    "author": "johnw",
+    "text": "Final fess audit of signed commit 589db792: NOT CLEAR. Two proof gaps reopened this issue: the recorded latency harness staged only Fleet Theme rather than the exact rendered managed Pi tree, and the integration check did not observably prove Fleet Theme auto-discovery/selection. Correcting only those proofs now; no production design expansion.",
+    "created_at": "2026-08-14T09:10:00Z"
+  },
+  {
+    "id": 398,
+    "issue_id": "nix-yojh",
+    "author": "johnw",
+    "text": "Fess proof gaps corrected without changing production scope. The focused Pi check now uses a test-only wrapper at the real automatic-extension path, delegates to the exact production Fleet Theme module, and requires its sentinel in Pi get_commands; the same derivation runs the production Bun unit that proves exact theme discovery and TUI selection. Focused pi-fleet-theme build, Nix parse, nixfmt, and diff-check pass. The corrected disposable benchmark archived the exact dirty Hera flake, built one immutable selected Home Manager snapshot, validated and staged all 188 rendered entries (97 .config/pi/agent plus 91 .agents/skills), kept skills/prompts enabled, and denied network. Managed prompt samples were 0.757/0.774/0.769s; no-extensions samples were 6.498/0.750/0.749s (the first cold baseline outlier is recorded), medians 0.769s vs 0.750s, overhead 0.019s. Archive /nix/store/l1xwirg3mqs6xfwxzklz8p06xn8lisk5-source; snapshot /nix/store/zrfb1ppwxqgyjigwsc2mwihgx4hk2ac8-pi-managed-home-snapshot; manifest SHA-256 5168c17f...; result /Users/johnw/Products/pi-startup-benchmark-lc210q0n/result.json SHA-256 3bc30d75...; harness SHA-256 84226b64.... No activation, push, Agent Deck session, mutable Pi state, or network access occurred.",
+    "created_at": "2026-08-14T09:27:16Z"
   }
 ]
 #+end_src

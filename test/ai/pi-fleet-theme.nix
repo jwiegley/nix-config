@@ -1,4 +1,5 @@
 {
+  bun,
   coreutils,
   diffutils,
   findutils,
@@ -13,6 +14,7 @@
 runCommand "pi-fleet-theme-check"
   {
     nativeBuildInputs = [
+      bun
       coreutils
       diffutils
       findutils
@@ -28,12 +30,23 @@ runCommand "pi-fleet-theme-check"
       "$scratch/agent/extensions/fleet-theme" \
       "$scratch/agent/themes" \
       "$scratch/project"
-    cp ${lib.escapeShellArg "${sourceForChecks}/config/ai/extensions/fleet-theme/index.ts"} \
-      "$scratch/agent/extensions/fleet-theme/index.ts"
+    cat >"$scratch/agent/extensions/fleet-theme/index.ts" <<'EOF'
+    import fleetTheme from ${builtins.toJSON "${sourceForChecks}/config/ai/extensions/fleet-theme/index.ts"};
+
+    export default function fleetThemeWithTestSentinel(pi) {
+      fleetTheme(pi);
+      pi.registerCommand("fleet-theme-test-loaded", {
+        description: "Test-only auto-discovery sentinel",
+        handler: async () => {},
+      });
+    }
+    EOF
     cp ${lib.escapeShellArg "${sourceForChecks}/config/ai/themes/dark-tool-backgrounds.json"} \
       "$scratch/agent/themes/dark-tool-backgrounds.json"
     printf '%s' '{}' >"$scratch/agent/auth.json"
     chmod 600 "$scratch/agent/auth.json"
+    HOME="$scratch/home" ${lib.getExe bun} test \
+      ${lib.escapeShellArg "${sourceForChecks}/test/ai/extensions/fleet-theme/index.test.ts"}
     snapshot() {
       find "$scratch" -mindepth 1 -printf '%P|%y|%m|%l\n' | sort
       find "$scratch" -type f -print0 | sort -z | xargs -0 -r sha256sum
@@ -86,6 +99,7 @@ runCommand "pi-fleet-theme-check"
         .type == "response"
         and .command == "get_commands"
         and .success == true
+        and any(.data.commands[]; .name == "fleet-theme-test-loaded")
         and all(
           .data.commands[];
           .name as $name
