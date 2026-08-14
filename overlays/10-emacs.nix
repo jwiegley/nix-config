@@ -825,15 +825,18 @@ in
 
   # NOTE: Using 'final' for emacs aliases because they reference
   # packages defined in this same overlay
-  emacs = if prev.stdenv.isDarwin then final.emacs30-macport else final.emacs30;
+  emacs = if prev.stdenv.hostPlatform.isDarwin then final.emacs30-macport else final.emacs30;
   emacsPackages =
-    if prev.stdenv.isDarwin then final.emacs30MacPortPackages else final.emacs30Packages;
+    if prev.stdenv.hostPlatform.isDarwin then final.emacs30MacPortPackages else final.emacs30Packages;
   emacsPackagesNg =
-    if prev.stdenv.isDarwin then final.emacs30MacPortPackagesNg else final.emacs30PackagesNg;
-  emacsEnv = if prev.stdenv.isDarwin then final.emacs30MacPortEnv else final.emacs30Env;
+    if prev.stdenv.hostPlatform.isDarwin then
+      final.emacs30MacPortPackagesNg
+    else
+      final.emacs30PackagesNg;
+  emacsEnv = if prev.stdenv.hostPlatform.isDarwin then final.emacs30MacPortEnv else final.emacs30Env;
 
 }
-// prev.lib.optionalAttrs prev.stdenv.isDarwin {
+// prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
 
   ##########################################################################
 
@@ -878,7 +881,8 @@ in
       (attrs: {
         configureFlags = attrs.configureFlags ++ [ "--disable-gc-mark-trace" ];
         patches =
-          attrs.patches ++ prev.lib.optionals prev.stdenv.isDarwin [ ./emacs/patches/nsthread.patch ];
+          attrs.patches
+          ++ prev.lib.optionals prev.stdenv.hostPlatform.isDarwin [ ./emacs/patches/nsthread.patch ];
       });
   emacs30Packages = final.emacs30PackagesNg;
   emacs30PackagesNg = mkEmacsPackages final.emacs30;

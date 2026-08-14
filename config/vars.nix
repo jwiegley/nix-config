@@ -10,7 +10,7 @@ let
   home = config.home.homeDirectory;
   tmpdir = "/tmp";
 
-  inherit (pkgs.stdenv) isDarwin isLinux;
+  inherit (pkgs.stdenv.hostPlatform) isDarwin isLinux;
 
   userName = "John Wiegley";
   userEmail = "johnw@newartisans.com";

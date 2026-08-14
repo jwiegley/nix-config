@@ -131,7 +131,7 @@ prev.lib.optionalAttrs (platformSrc != null) {
 
     dontUnpack = true;
 
-    nativeBuildInputs = prev.lib.optionals prev.stdenv.isLinux [
+    nativeBuildInputs = prev.lib.optionals prev.stdenv.hostPlatform.isLinux [
       prev.autoPatchelfHook
     ];
 

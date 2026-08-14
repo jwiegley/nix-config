@@ -7,7 +7,7 @@ let
   popplerPatch = compatibilitySources.poppler-darwin-mutex-patch;
   useLld =
     package:
-    if prev.stdenv.isDarwin then
+    if prev.stdenv.hostPlatform.isDarwin then
       package.overrideAttrs (oldAttrs: {
         nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [ prev.llvmPackages.lld ];
         env = (oldAttrs.env or { }) // {
@@ -31,7 +31,7 @@ in
 
   # Apply the cataloged PopplerPage constructor/destructor patch on Darwin.
   poppler =
-    if prev.stdenv.isDarwin then
+    if prev.stdenv.hostPlatform.isDarwin then
       prev.poppler.overrideAttrs (oldAttrs: {
         patches = (oldAttrs.patches or [ ]) ++ [
           (
@@ -47,7 +47,7 @@ in
   # filesystem metrics.
   prometheus-node-exporter = prev.prometheus-node-exporter.overrideAttrs (
     oldAttrs:
-    prev.lib.optionalAttrs prev.stdenv.isDarwin {
+    prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
       patches = (oldAttrs.patches or [ ]) ++ [
         ./patches/prometheus-node-exporter-disable-darwin-purgeable.patch
       ];
@@ -56,7 +56,7 @@ in
 
   # Change scdaemon's Darwin polling interval from 0.5 to 5 seconds.
   gnupg =
-    if prev.stdenv.isDarwin then
+    if prev.stdenv.hostPlatform.isDarwin then
       prev.gnupg.overrideAttrs (oldAttrs: {
         patches = (oldAttrs.patches or [ ]) ++ [
           ./patches/gnupg-darwin-scdaemon-poll-interval.patch
@@ -68,7 +68,7 @@ in
   # Preseed zsh's sigsuspend configure result on Darwin.
   zsh = prev.zsh.overrideAttrs (
     oldAttrs:
-    prev.lib.optionalAttrs prev.stdenv.isDarwin {
+    prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
       preConfigure = (oldAttrs.preConfigure or "") + ''
         export zsh_cv_sys_sigsuspend=yes
       '';
@@ -79,7 +79,7 @@ in
   samba = prev.samba.overrideAttrs (oldAttrs: {
     postPatch =
       (oldAttrs.postPatch or "")
-      + prev.lib.optionalString prev.stdenv.isDarwin ''
+      + prev.lib.optionalString prev.stdenv.hostPlatform.isDarwin ''
         substituteInPlace lib/ldb/tests/test_ldb_comparison_fold.c \
           --replace-fail 'discard_const(s)' '(void *)(s)'
       '';
@@ -120,7 +120,7 @@ in
   # Disable direnv checks on Darwin.
   direnv = prev.direnv.overrideAttrs (
     _oldAttrs:
-    prev.lib.optionalAttrs prev.stdenv.isDarwin {
+    prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
       doCheck = false;
     }
   );
@@ -145,7 +145,7 @@ in
           doCheck = false;
         });
       })
-      // (prev.lib.optionalAttrs (prev.stdenv.isDarwin && pprev ? imageio) {
+      // (prev.lib.optionalAttrs (prev.stdenv.hostPlatform.isDarwin && pprev ? imageio) {
         imageio = pprev.imageio.overridePythonAttrs (oldAttrs: {
           disabledTests = (oldAttrs.disabledTests or [ ]) ++ [ "test_lagging_video_stream" ];
         });
@@ -161,7 +161,7 @@ in
   # Compile srm as gnu89 on Darwin.
   srm = prev.srm.overrideAttrs (
     oldAttrs:
-    prev.lib.optionalAttrs prev.stdenv.isDarwin {
+    prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
       env = (oldAttrs.env or { }) // {
         NIX_CFLAGS_COMPILE = (oldAttrs.env.NIX_CFLAGS_COMPILE or "") + " -std=gnu89";
       };
@@ -176,7 +176,7 @@ in
   # Build opencv4 without its HDF module on Darwin.
   opencv4 = prev.opencv4.overrideAttrs (
     oldAttrs:
-    prev.lib.optionalAttrs prev.stdenv.isDarwin {
+    prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
       cmakeFlags = (oldAttrs.cmakeFlags or [ ]) ++ [ "-DBUILD_opencv_hdf=OFF" ];
     }
   );
@@ -184,7 +184,7 @@ in
   # Disable chromaprint checks on Darwin.
   chromaprint = prev.chromaprint.overrideAttrs (
     _:
-    prev.lib.optionalAttrs prev.stdenv.isDarwin {
+    prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
       doCheck = false;
     }
   );
@@ -192,7 +192,7 @@ in
   # Give Darwin's pmixcc the include/share prefixes required by OpenMPI.
   pmix = prev.pmix.overrideAttrs (
     oldAttrs:
-    prev.lib.optionalAttrs prev.stdenv.isDarwin {
+    prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
       postFixup = (oldAttrs.postFixup or "") + ''
         if [ -x "$out/bin/pmixcc" ]; then
           wrapProgram "$out/bin/pmixcc" \
@@ -206,7 +206,7 @@ in
   # Give Graphite completion generation a writable HOME and disable stripping.
   graphite-cli = prev.graphite-cli.overrideAttrs (
     oldAttrs:
-    prev.lib.optionalAttrs prev.stdenv.isDarwin {
+    prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
       dontStrip = true;
       postInstall = ''
         export HOME="$(mktemp -d)"

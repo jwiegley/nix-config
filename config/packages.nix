@@ -16,7 +16,7 @@ let
     inherit hostname;
     homeClass = nixManagedAiHomeClass;
   };
-  inherit (stdenv)
+  inherit (stdenv.hostPlatform)
     isDarwin
     isLinux
     ;

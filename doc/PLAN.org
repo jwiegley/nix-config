@@ -4179,6 +4179,51 @@ bin/publish declares exactly one authoritative REMOTE but still loops over the q
 ]
 #+end_src
 
+* DEFER [#B] Remove deprecated stdenv platform aliases
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-hbdj
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-14 Fri 10:08]
+:MODIFIED: [2026-08-14 Fri 10:25]
+:ASSIGNEE: johnw
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Linux Home Manager evaluation emits repeated nixpkgs deprecation warnings because maintained root and portable configuration reads stdenv.isDarwin and stdenv.isLinux. Replace those aliases with stdenv.hostPlatform platform predicates at every maintained source/test use, without changing package selection or activation behavior. Acceptance: tracked Nix source has no stdenv.isDarwin or stdenv.isLinux references; focused Linux and Darwin evaluations complete without those warnings; no lock update or activation occurs.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 400,
+    "issue_id": "nix-hbdj",
+    "author": "johnw",
+    "text": "Starting bounded source migration and focused warning-free evaluations; no activation or lock update.",
+    "created_at": "2026-08-14T17:08:09Z"
+  },
+  {
+    "id": 401,
+    "issue_id": "nix-hbdj",
+    "author": "johnw",
+    "text": "Root source migration is complete: all 43 deprecated stdenv.isDarwin/isLinux reads across production and tests now use hostPlatform, including four inherited lazy bindings. An uncached offline evaluation of homeConfigurations.\"jwiegley@x86_64-linux\".activationPackage.drvPath completed successfully with none of the reported deprecation warnings; it emitted only the separate pre-existing builtins.derivation context warning. The external Andoria-only alias is prepared as signed commit 6ad5e2ee3a48e704d5db2e17592805a98fe2994d in /Users/johnw/Products/nix-hbdj-andoria.bundle (SHA-256 431097365a36db87b2bbce2d888f4fe4c1e5d8e65f45cb352d72aed099230191). It was not imported while the owner activation was running. Resume for separately authorized root publication, paired consumer lock adoption, import of that Andoria commit, and post-adoption evaluation; no activation is part of this issue.",
+    "created_at": "2026-08-14T17:21:27Z"
+  },
+  {
+    "id": 402,
+    "issue_id": "nix-hbdj",
+    "author": "johnw",
+    "text": "Focused Darwin evaluation also passed: darwinConfigurations.hera.system.drvPath evaluated offline to /nix/store/jyqlr0af0q8779mbv2ycbiwwlkmkzi42-darwin-system-26.11.15abb8c.drv with none of the reported stdenv deprecation warnings. This completes local Linux and Darwin evaluation evidence; deployment remains deferred solely for publication and consumer adoption authority.",
+    "created_at": "2026-08-14T17:25:25Z"
+  }
+]
+#+end_src
+
 * DONE [#B] Fence consumed-turn cleanup receipts by source incarnation
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

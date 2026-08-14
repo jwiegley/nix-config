@@ -92,8 +92,8 @@ buildNpmPackage {
   npmConfigHook = primeNpmConfigHook;
   npmInstallFlags = [ "--ignore-scripts" ];
   npmFlags = [ "--legacy-peer-deps" ];
-  nativeBuildInputs = [ makeWrapper ] ++ lib.optional stdenv.isLinux autoPatchelfHook;
-  buildInputs = lib.optional stdenv.isLinux stdenv.cc.cc.lib;
+  nativeBuildInputs = [ makeWrapper ] ++ lib.optional stdenv.hostPlatform.isLinux autoPatchelfHook;
+  buildInputs = lib.optional stdenv.hostPlatform.isLinux stdenv.cc.cc.lib;
 
   buildPhase = ''
     runHook preBuild
@@ -186,7 +186,7 @@ buildNpmPackage {
     copy_internal_package packages/tui "$scope/pi-tui"
     ln -s ../.. "$scope/pi-coding-agent"
 
-    ${lib.optionalString stdenv.isLinux ''
+    ${lib.optionalString stdenv.hostPlatform.isLinux ''
       find "$root/node_modules/koffi/build/koffi" -mindepth 1 -maxdepth 1 \
         ! -name ${linuxNative.koffi} -exec rm -rf -- {} +
       rm -rf \

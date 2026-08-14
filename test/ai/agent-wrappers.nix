@@ -283,7 +283,7 @@ let
     #endif
   '';
 
-  networkGuardExtension = if pkgs.stdenv.isDarwin then "dylib" else "so";
+  networkGuardExtension = if pkgs.stdenv.hostPlatform.isDarwin then "dylib" else "so";
   networkGuard = pkgs.stdenv.mkDerivation {
     name = "agent-wrapper-network-guard";
     dontUnpack = true;
@@ -291,7 +291,7 @@ let
     buildPhase = ''
       runHook preBuild
       $CC -Wall ${
-        if pkgs.stdenv.isDarwin then "-dynamiclib" else "-shared -fPIC -ldl"
+        if pkgs.stdenv.hostPlatform.isDarwin then "-dynamiclib" else "-shared -fPIC -ldl"
       } ${networkGuardSource} -o libagent-wrapper-network-guard.${networkGuardExtension}
       runHook postBuild
     '';
@@ -304,7 +304,7 @@ let
 in
 pkgs.runCommand "agent-wrappers-check"
   {
-    __darwinAllowLocalNetworking = pkgs.stdenv.isDarwin;
+    __darwinAllowLocalNetworking = pkgs.stdenv.hostPlatform.isDarwin;
     nativeBuildInputs = [
       pkgs.bash
       pkgs.coreutils
@@ -327,9 +327,10 @@ pkgs.runCommand "agent-wrappers-check"
     REAL_WRAPPED_CODEX_BIN = "${realWrappedCodex}/bin/codex";
     CODEX_POLICY_RESPONSE_CHECKER =
       realWrappedCodex.unwrappedPackage.passthru.wrapperPolicyResponseChecker;
-    CODEX_RAISES_OPEN_FILE_LIMIT = if pkgs.stdenv.isDarwin then "1" else "0";
+    CODEX_RAISES_OPEN_FILE_LIMIT = if pkgs.stdenv.hostPlatform.isDarwin then "1" else "0";
     NETWORK_GUARD_LIBRARY = "${networkGuard}/lib/libagent-wrapper-network-guard.${networkGuardExtension}";
-    NETWORK_GUARD_VARIABLE = if pkgs.stdenv.isDarwin then "DYLD_INSERT_LIBRARIES" else "LD_PRELOAD";
+    NETWORK_GUARD_VARIABLE =
+      if pkgs.stdenv.hostPlatform.isDarwin then "DYLD_INSERT_LIBRARIES" else "LD_PRELOAD";
 
     PYTHON_BIN = "${pkgs.python3}/bin/python3";
   }

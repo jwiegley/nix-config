@@ -414,7 +414,7 @@
               };
               samba-darwin-fixup = pkgs.callPackage ./test/overlays/samba-darwin-fixup.nix { };
             }
-            // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
+            // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
               darwin-overrides-inactive = pkgs.callPackage ./test/ai/overlay-isolation.nix {
                 inherit inputs;
                 configured = agentTestPkgsFor.${system};

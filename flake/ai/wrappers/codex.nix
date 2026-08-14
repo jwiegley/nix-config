@@ -58,7 +58,7 @@ let
     set -euo pipefail
     set +x
     unset CODEX_INTERNAL_WRAPPER_POLICY_PROBE
-    ${pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
+    ${pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
       # Raise the soft descriptor limit up to the inherited hard limit for Codex
       # and its descendants.
       codex_open_file_hard_limit="$(ulimit -Hn)"

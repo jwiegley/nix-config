@@ -138,9 +138,9 @@ assert builtins.all (
   configuration: hasAgentDeckPackage configuration.pkgs.agent-deck configuration.config
 ) linuxConfigurations;
 assert builtins.all (configuration: lifecycleAbsent configuration.config) linuxConfigurations;
-assert stockDarwinPkgs.stdenv.isDarwin;
+assert stockDarwinPkgs.stdenv.hostPlatform.isDarwin;
 assert !(stockDarwinPkgs ? agent-deck);
-assert !linuxPkgs.stdenv.isDarwin;
+assert !linuxPkgs.stdenv.hostPlatform.isDarwin;
 assert linuxPkgs ? agent-deck;
 assert (configurationEvaluation darwinPkgs true).success;
 assert (configurationEvaluation stockDarwinPkgs false).success;

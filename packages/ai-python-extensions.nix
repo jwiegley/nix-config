@@ -7,7 +7,7 @@ in
 [
   (
     pfinal: pprev:
-    prev.lib.optionalAttrs prev.stdenv.isDarwin {
+    prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
       # Keep huggingface-hub and hf-xet on the catalog-pinned release pair.
       hf-xet = pprev.hf-xet.overridePythonAttrs (_oldAttrs: rec {
         inherit (sources.hf-xet) version;
@@ -43,7 +43,7 @@ in
 
       mlx = pprev.mlx.overridePythonAttrs (
         oldAttrs:
-        prev.lib.optionalAttrs (prev.stdenv.isDarwin && prev.stdenv.isAarch64) (
+        prev.lib.optionalAttrs (prev.stdenv.hostPlatform.isDarwin && prev.stdenv.isAarch64) (
           let
             pythonTag = "cp${pfinal.python.sourceVersion.major}${pfinal.python.sourceVersion.minor}";
             wheelSources = sources.mlx.artifacts // {

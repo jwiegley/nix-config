@@ -16,7 +16,7 @@
   ...
 }:
 let
-  inherit (pkgs.stdenv) isDarwin isLinux;
+  inherit (pkgs.stdenv.hostPlatform) isDarwin isLinux;
   isPositronRemoteLinux = isLinux && config.johnw.host.isSharedWork;
   isHeavy = config.johnw.profile.heavy;
   nixTrust = import ./nix-trust.nix;

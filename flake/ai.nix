@@ -169,12 +169,14 @@ let
         requests
         tiktoken
       ]
-      ++ pkgs.lib.optionals (pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64 && ps ? llm-mlx) [
+      ++ pkgs.lib.optionals (pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.isAarch64 && ps ? llm-mlx) [
         llm-mlx
       ]
-      ++ pkgs.lib.optionals (pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64 && ps ? mlx-speech) [
-        mlx-speech
-      ]
+      ++
+        pkgs.lib.optionals (pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.isAarch64 && ps ? mlx-speech)
+          [
+            mlx-speech
+          ]
     );
 
   aiPackagesFor =
@@ -185,7 +187,7 @@ let
       opt = optPkg pkgs;
       optMany = names: lib.concatMap opt names;
       agent = optAgent pkgs;
-      appleSilicon = pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64;
+      appleSilicon = pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.isAarch64;
       supportsGradio6 = aiPackagePolicy.supportsGradio6 pkgs.python313Packages;
       gitAiPackages = git-ai.packages.${system} or { };
     in
@@ -212,7 +214,7 @@ let
     ++ lib.optionals (pkgs ? mcp-server-sequential-thinking) [
       (lib.hiPrio pkgs.mcp-server-sequential-thinking)
     ]
-    ++ lib.optionals pkgs.stdenv.isDarwin (opt "drafts-mcp-server")
+    ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin (opt "drafts-mcp-server")
     ++ lib.optionals appleSilicon (opt "mlx-lm" ++ opt "mtplx" ++ opt "omlx")
     ++ lib.optionals (appleSilicon && supportsGradio6) (opt "vllm-mlx");
 
@@ -437,7 +439,7 @@ in
       check = app "check" "check.sh" qualityDeps.all lintRoot;
       default = check;
     }
-    // lib.optionalAttrs (pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64) {
+    // lib.optionalAttrs (pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.isAarch64) {
       pi-classic-core-baseline = {
         type = "app";
         program = lib.getExe classicCoreBaseline;
@@ -524,7 +526,7 @@ in
       format = check "format" "format-check.sh" qualityDeps.format "";
       lint = check "lint" "lint.sh" qualityDeps.lint "";
     }
-    // lib.optionalAttrs (pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64) {
+    // lib.optionalAttrs (pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.isAarch64) {
       llm-mlx-plugin = pkgs.python3Packages.llm-mlx.passthru.tests.llm-plugin;
       pi-classic-core-fixtures = classicCoreFixtures;
       pi-classic-core-source = classicCoreSource;

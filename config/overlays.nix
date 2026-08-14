@@ -12,7 +12,7 @@
 let
   darwinOnly =
     overlay: final: prev:
-    if prev.stdenv.isDarwin then overlay final prev else { };
+    if prev.stdenv.hostPlatform.isDarwin then overlay final prev else { };
 
   caOverlay = _final: prev: {
     ca-bundle-with-vulcan = prev.runCommand "ca-bundle-with-vulcan" { } ''

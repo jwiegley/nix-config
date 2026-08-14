@@ -8,7 +8,7 @@ args@{
 
 let
   nixManagedAiHomeClass = args.nixManagedAiHomeClass or null;
-  inherit (pkgs.stdenv) isDarwin isLinux;
+  inherit (pkgs.stdenv.hostPlatform) isDarwin isLinux;
   system = pkgs.stdenv.hostPlatform.system;
   moduleInputs = args.inputs or { };
   pairedAiInput = moduleInputs.nix-config-ai or null;

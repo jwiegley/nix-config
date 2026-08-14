@@ -40,7 +40,7 @@ in
           message = "The Agent Deck conductor requires the agent-deck package";
         }
         {
-          assertion = pkgs.stdenv.isDarwin;
+          assertion = pkgs.stdenv.hostPlatform.isDarwin;
           message = "The agent-deck conductor Discord bridge currently requires launchd";
         }
       ];
