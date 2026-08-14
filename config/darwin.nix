@@ -84,7 +84,12 @@ in
               "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJAj2IzkXyXEl+ReCg9H+t55oa6GIiumPWeufcYCWy3F cardno:31_768_527"
               "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAING2r8bns7h9vZIfZSGsX+YmTSe2Tv1X8f/Qlqo+RGBb cardno:14_476_831"
 
-              ''restrict,command="${modelMetadataExtract}" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFZYNrQfHWNV09OQz7uMhjQKflCWKwLG4pp1tJb2QRRq vulcan-model-metadata''
+              # vulcan session-log gathering (session-gather.timer) — READ-ONLY rsync.
+              # rrsync confines the forced command to reading under DIR; -ro also implies
+              # -no-del. `restrict` removes pty/forwarding/agent/X11.
+              ''from="192.168.1.2",restrict,command="${pkgs.rrsync}/bin/rrsync -ro /Users/johnw" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG5gtakoBc1b52Jkj29dnrFb5ADlXTBf60VOBNbnwcLD id_rsync''
+
+              ''from="192.168.1.2",restrict,command="${modelMetadataExtract}" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFZYNrQfHWNV09OQz7uMhjQKflCWKwLG4pp1tJb2QRRq vulcan-model-metadata''
             ]
             ++ lib.optionals config.johnw.host.isHera [
               # pushme positron sync (vulcan pushme-positron.timer) — JUMP HOST ONLY.
@@ -93,14 +98,13 @@ in
               # narrows that capability to Andoria. /usr/bin/false closes session/exec
               # channels. No shell, remote forward, pty, agent, or X11.
               ''from="192.168.1.2",restrict,port-forwarding,permitopen="andoria-08:22",command="/usr/bin/false" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID/5S98ifv/slBhGzSLMK+/3JAHNzzglOfau6RlqKeYs johnw@vulcan''
-            ]
-            ++ [
+
               # drafts-mcp bridge (vulcan drafts-mcp.service) — pinned to exec
               # drafts-mcp-server ONLY; SSH_ORIGINAL_COMMAND is ignored by the
               # forced command. `restrict` disables pty/forwarding/X11/agent.
               # This is the per-key least-privilege gate (NOT key-files.nix,
               # which grants an unrestricted login shell).
-              "command=\"/etc/profiles/per-user/johnw/bin/drafts-mcp-server\",restrict,no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINfhC6rPhjkSucPkTuL+On43E4udAss806oVAqNso3Qy drafts-bridge@vulcan"
+              ''from="192.168.1.2",command="/etc/profiles/per-user/johnw/bin/drafts-mcp-server",restrict,no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINfhC6rPhjkSucPkTuL+On43E4udAss806oVAqNso3Qy drafts-bridge@vulcan''
             ];
           keyFiles =
             # Each machine accepts SSH key authentication from the rest
