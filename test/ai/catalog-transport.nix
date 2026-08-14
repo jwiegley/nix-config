@@ -507,6 +507,59 @@ let
   fessSource = catalog.items.agents.fess-auditor.source;
   fessText = builtins.readFile fessSource;
   hasFessRubric = text: lib.hasInfix "**Fallback smuggling**" text;
+  repositoryAgentInstructions = builtins.readFile "${src}/AGENTS.md";
+  reviewCommandNames = [
+    "deep-review"
+    "heavy-review"
+    "quick-review"
+    "sec-audit"
+  ];
+  requiredReviewToolGrants = [
+    "Read"
+    "Grep"
+    "Glob"
+    "Bash(git:*)"
+    "Bash(wc:*)"
+  ];
+  allowedReviewShellGrants = [
+    "Bash(git:*)"
+    "Bash(grep:*)"
+    "Bash(wc:*)"
+    "Bash(gh pr diff:*)"
+  ];
+  unsafeReviewShellGrants = [
+    "Bash"
+    "Bash(find:*)"
+    "Bash(python:*)"
+  ];
+  validReviewToolPolicy =
+    metadata:
+    let
+      grants = lib.splitString ", " metadata."allowed-tools";
+    in
+    builtins.all (grant: builtins.elem grant grants) requiredReviewToolGrants
+    && builtins.all (
+      grant: !(lib.hasPrefix "Bash" grant) || builtins.elem grant allowedReviewShellGrants
+    ) grants;
+  sourceReviewToolPolicies = builtins.filter (metadata: builtins.hasAttr "allowed-tools" metadata) (
+    map (item: item.metadata) (builtins.attrValues catalog.items.commands)
+  );
+  mutatedReviewToolPolicies = lib.concatMap (
+    metadata:
+    map (
+      unsafeGrant:
+      metadata
+      // {
+        "allowed-tools" = metadata."allowed-tools" + ", ${unsafeGrant}";
+      }
+    ) unsafeReviewShellGrants
+  ) sourceReviewToolPolicies;
+  renderedClaudeReviewToolPolicies = lib.concatMap (
+    entry:
+    map (
+      name: frontMatter entry.rendered.files."${entry.profile.root}/commands/${name}.md".text
+    ) reviewCommandNames
+  ) claudeRenderings;
   parallelizeSource = catalog.items.skills.parallelize.source;
   validatedReviewSource = catalog.items.skills.validated-code-review.source;
   nodeRedSource = catalog.items.skills.node-red.source;
@@ -698,6 +751,21 @@ assert lib.hasInfix "Catalog tool policy (advisory in Prime Agent): Read, Bash"
   primaryRendering.prime;
 assert lib.hasInfix "Catalog tool policy (advisory in Prime Agent): Grep, Glob"
   discoveryRendering.prime;
+assert builtins.all validReviewToolPolicy sourceReviewToolPolicies;
+assert builtins.all validReviewToolPolicy renderedClaudeReviewToolPolicies;
+assert builtins.all (metadata: !(validReviewToolPolicy metadata)) mutatedReviewToolPolicies;
+assert lib.hasInfix "Discover executables only with `direnv exec . command -v <name>`"
+  repositoryAgentInstructions;
+assert lib.hasInfix "recursively search home, filesystem roots, mounted volumes"
+  repositoryAgentInstructions;
+assert lib.hasInfix "other TCC-protected locations" repositoryAgentInstructions;
+assert lib.hasInfix "missing tool to `flake.nix`" repositoryAgentInstructions;
+assert lib.hasInfix "regenerate the environment with `de`" repositoryAgentInstructions;
+assert lib.hasInfix "identify the initiating command" repositoryAgentInstructions;
+assert lib.hasInfix "redact private paths, arguments, and payloads" repositoryAgentInstructions;
+assert lib.hasInfix "workflow-scoped signer home and agent" repositoryAgentInstructions;
+assert lib.hasInfix "separate and keyless, verify the exact signer" repositoryAgentInstructions;
+assert lib.hasInfix "Never create a new signing home for" repositoryAgentInstructions;
 assert !(builtins.pathExists "${src}/config/ai/commands/fess.md");
 assert catalog.items.commands.fess.source == fessSource;
 assert lib.hasInfix ''fork_turns="none"'' parallelizeText;

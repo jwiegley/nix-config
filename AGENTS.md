@@ -17,6 +17,12 @@ When GitHub work is explicitly authorized, select the `jwiegley` account for eve
 GH_TOKEN="$(gh auth token --hostname github.com --user jwiegley)" gh <command>
 ```
 
+When a bounded workflow needs multiple isolated signing steps, reuse one private
+workflow-scoped signer home and agent for those steps. Keep verification homes
+separate and keyless, verify the exact signer and payload identity, and tear the
+signer session down on success or failure. Never create a new signing home for
+each step or disturb the long-lived login agent.
+
 ## Commands
 
 ```bash
@@ -73,6 +79,13 @@ Never run `nix flake update` or `nix flake lock` under `sudo`; root and user fet
 ## Security
 
 Do not display secret-bearing files or outputs. In particular, never decrypt SOPS content, read runtime secret files, dump credential settings, or print API/auth payloads. Prefer structural metadata and field-targeted checks.
+
+Discover executables only with `direnv exec . command -v <name>`. Never
+recursively search home, filesystem roots, mounted volumes, Photos, Music, or
+other TCC-protected locations for a command. Add a missing tool to `flake.nix`,
+regenerate the environment with `de`, and reload direnv instead. When reporting
+a refused or accidental discovery attempt, identify the initiating command but
+redact private paths, arguments, and payloads.
 
 ## Quality bar
 

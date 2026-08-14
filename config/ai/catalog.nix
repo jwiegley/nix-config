@@ -310,8 +310,7 @@ let
         "Commit all work as a series of atomic, logically sequenced commits, each one coherent, reviewable, and revertible on its own";
     };
     "deep-review" = {
-      "allowed-tools" =
-        "Read, Grep, Glob, Bash(git:*), Bash(find:*), Bash(wc:*), Bash(gh pr diff:*), Skill, Task";
+      "allowed-tools" = "Read, Grep, Glob, Bash(git:*), Bash(wc:*), Bash(gh pr diff:*), Skill, Task";
       "argument-hint" = [
         "files"
         "directories"
@@ -322,7 +321,7 @@ let
     };
     "heavy-review" = {
       "allowed-tools" =
-        "Read, Grep, Glob, Bash(git:*), Bash(find:*), Bash(wc:*), Bash(gh pr diff:*), Task, Skill, Workflow";
+        "Read, Grep, Glob, Bash(git:*), Bash(wc:*), Bash(gh pr diff:*), Task, Skill, Workflow";
       "argument-hint" = "repository | working-tree | pr [N] | path | revision range";
       "description" =
         "Coordinate deep, Alexey-discipline, abstraction-alignment, validated multi-model, Ponytail, dead-code, and comment audits concurrently, one subagent per pass, into one deduplicated report";
@@ -483,7 +482,7 @@ let
         "Build an SQL query with sql-pro and the mssql MCP from schema alone, never revealing any table data";
     };
     "quick-review" = {
-      "allowed-tools" = "Read, Grep, Glob, Bash(git:*), Bash(find:*), Bash(wc:*)";
+      "allowed-tools" = "Read, Grep, Glob, Bash(git:*), Bash(wc:*)";
       "argument-hint" = [
         "files"
         "commit range"
@@ -548,7 +547,7 @@ let
         "Act as the project orchestrator -- analyze the work to be done and coordinate execution by spawning sub-agents with the Task tool";
     };
     "sec-audit" = {
-      "allowed-tools" = "Read, Grep, Glob, Bash(git:*), Bash(find:*), Bash(grep:*), Bash(wc:*), Task";
+      "allowed-tools" = "Read, Grep, Glob, Bash(git:*), Bash(grep:*), Bash(wc:*), Task";
       "argument-hint" = [
         "files"
         "directories"
