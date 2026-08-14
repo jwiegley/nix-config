@@ -217,15 +217,17 @@ test/bin/cross-consumer-eval rejects skips only when exactly one consumer evalua
 ]
 #+end_src
 
-* DEFER [#C] Install pi-mulligan as a managed Pi extension                 :context:extension:pi:
+* DONE [#C] Install pi-mulligan as a managed Pi extension                  :context:extension:pi:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-0pr
 :LABELS:   ["context","extension","pi","pi-gallery"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-12 Wed 20:51]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :EXTERNAL_REF: https://github.com/dabstractor/pi-mulligan
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -826,15 +828,17 @@ With explicit owner authorization covering the complete six-commit chain, preser
 ]
 #+end_src
 
-* DOING [#B] Temporarily omit Agda from shared-work package closures
+* DONE [#B] Temporarily omit Agda from shared-work package closures
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-3qw
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-13 Thu 12:38]
-:MODIFIED: [2026-08-13 Thu 12:38]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: codex
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Merged into nix-4yi: Agda omission is implemented and its only remaining proof is the same shared-work build and ordered activation.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1184,15 +1188,17 @@ Frozen product docs: SESSION-PERSISTENCE-SPEC.md cbcba81331f37071b2acd907caaf488
 ]
 #+end_src
 
-* DOING [#B] Remove the unused Watchman dependency
+* DONE [#B] Remove the unused Watchman dependency
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-4yi
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-12 Wed 23:49]
-:MODIFIED: [2026-08-12 Wed 23:51]
+:MODIFIED: [2026-08-13 Thu 22:01]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:01]
+:CLOSE_REASON: Merged into nix-p17: Watchman removal is implemented and shares the same remaining shared-work build and ordered activation.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2452,15 +2458,17 @@ Exact resume step:
 ]
 #+end_src
 
-* DOING [#B] Pin inbox promotion source identity across publication
+* DONE [#B] Pin inbox promotion source identity across publication
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-am53
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 18:54]
-:MODIFIED: [2026-08-13 Thu 18:54]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Dropped with the unsolicited profile-migration/profile-scoped side-store expansion. Do not continue hardening machinery that is no longer an accepted product direction.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2522,15 +2530,17 @@ Discovered while implementing nix-tcz.63. The hardened _make_writable walk close
 ]
 #+end_src
 
-* DOING [#B] Preserve transient completion-delivery failures during replay
+* DONE [#B] Preserve transient completion-delivery failures during replay
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-b47b
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 16:22]
-:MODIFIED: [2026-08-13 Thu 18:39]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Dropped with the unsolicited profile-migration/profile-scoped side-store expansion. Do not continue hardening machinery that is no longer an accepted product direction.
 :SOURCE_REPO: agent-deck
 :SOURCE_REPO_PATH: /Users/johnw/Products/agent-deck-runtime-bindings-cleanup
 :ORIGINAL_SIZE: 0
@@ -3037,15 +3047,17 @@ The maintained /Users/johnw/src/vps flake still declares both nix-config and nix
 ]
 #+end_src
 
-* DOING [#B] Propagate durable parent-directory sync failures for inbox writes
+* DONE [#B] Propagate durable parent-directory sync failures for inbox writes
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-d5f7
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 16:16]
-:MODIFIED: [2026-08-13 Thu 18:35]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Dropped with the unsolicited profile-migration/profile-scoped side-store expansion. Do not continue hardening machinery that is no longer an accepted product direction.
 :SOURCE_REPO: agent-deck
 :SOURCE_REPO_PATH: /Users/johnw/Products/agent-deck-runtime-bindings-cleanup
 :ORIGINAL_SIZE: 0
@@ -3152,15 +3164,17 @@ The schema-20 lazy importer currently routes legacy consumed-turn JSON through u
 ]
 #+end_src
 
-* DOING [#C] Give Agent Deck GUI descendants a stable TCC responsibility identity
+* DONE [#C] Give Agent Deck GUI descendants a stable TCC responsibility identity
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-e5mi
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 16:07]
-:MODIFIED: [2026-08-13 Thu 21:21]
+:MODIFIED: [2026-08-13 Thu 22:01]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:01]
+:CLOSE_REASON: Dropped as speculative TCC-labeling product scope; the initiating process/prompt premise was unproved and the native supervisor added 381 net lines without preventing filesystem traversal.
 :SOURCE_REPO: agent-deck
 :SOURCE_REPO_PATH: /Users/johnw/Products/agent-deck-runtime-bindings-cleanup
 :ORIGINAL_SIZE: 0
@@ -3221,15 +3235,17 @@ GUI helpers and commands launched through Agent Deck are attributed to a stable,
 ]
 #+end_src
 
-* DOING [#B] Make last-wins inbox replacement failure-atomic
+* DONE [#B] Make last-wins inbox replacement failure-atomic
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-ecpl
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 18:35]
-:MODIFIED: [2026-08-13 Thu 18:42]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Dropped with the unsolicited profile-migration/profile-scoped side-store expansion. Do not continue hardening machinery that is no longer an accepted product direction.
 :SOURCE_REPO: agent-deck
 :SOURCE_REPO_PATH: /Users/johnw/Products/agent-deck-runtime-bindings-cleanup
 :ORIGINAL_SIZE: 0
@@ -3305,15 +3321,17 @@ Ruff reports two unused local variables in test/bin/publish-slow-test.py: the un
 ]
 #+end_src
 
-* DOING [#B] Add cross-process concurrency acceptance tests for profile migration sidecars
+* DONE [#B] Add cross-process concurrency acceptance tests for profile migration sidecars
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-elap
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-13 Thu 15:47]
-:MODIFIED: [2026-08-13 Thu 18:30]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Dropped with the unsolicited profile-migration/profile-scoped side-store expansion. Do not continue hardening machinery that is no longer an accepted product direction.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -3496,15 +3514,17 @@ Final completion-record persistence must succeed before delivery or acknowledgem
 ]
 #+end_src
 
-* DOING [#B] Namespace all physical runtime identity and lifecycle authority by profile
+* DONE [#B] Namespace all physical runtime identity and lifecycle authority by profile
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-fgd1
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 15:46]
-:MODIFIED: [2026-08-13 Thu 15:50]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Dropped with the unsolicited profile-migration/profile-scoped side-store expansion. Do not continue hardening machinery that is no longer an accepted product direction.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -3528,15 +3548,17 @@ Physical runtime identity is keyed only by instance ID even though duplicate IDs
 ]
 #+end_src
 
-* DOING [#D] Correct stale best-effort fsync comment in conductor migration
+* DONE [#D] Correct stale best-effort fsync comment in conductor migration
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-fht2
 :LABELS:   []
 :ISSUE_TYPE: docs
 :CREATED:  [2026-08-13 Thu 19:00]
-:MODIFIED: [2026-08-13 Thu 19:06]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Merged into nix-d5f7: correct the stale durability comment only when the owning fsync semantics are finalized.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -3685,15 +3707,17 @@ Partner observation .443Z: plaintext stage/backup copies can survive SIGKILL or 
 
 On 2026-08-13, make switch in /Users/johnw/src/nix on Hera failed before activation. Non-activating ./build system reproduced two deterministic blockers: (1) tracked config/agent-deck.nix imported untracked config/agent-deck-conductor-launcher.nix, which Nix Git flake snapshots omit; the exact frozen launcher was staged. (2) Agent Deck packaging removed the three Nix patches while sources/ai.json still pins raw upstream v1.11.0 commit 2f586c5, yet checkPhase still calls patch-provided make target test-runtime-lifecycle; the derivation fails with No rule to make target. Repair must keep the tree switchable without weakening package tests or activating the wrong Agent Deck, and must respect the separate Gitea-only product authority/pin blockers nix-ql8l and nix-g0tj. make verify-inputs is green and local-git-input inventory is empty.
 
-* TODO [#B] Pin Agent Deck packaging tests to the exact reviewed product revision
+* DONE [#B] Pin Agent Deck packaging tests to the exact reviewed product revision
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-g0tj
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 16:46]
-:MODIFIED: [2026-08-13 Thu 17:45]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Merged into nix-tcz.37: exact immutable Agent Deck product revision and package-test pinning are one indivisible patch-removal unit.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -4124,15 +4148,17 @@ Receipt-linked child cleanup validates the target incarnation but does not reval
 ]
 #+end_src
 
-* DOING [#B] Remove Andoria duplicate Agda name filter
+* DONE [#B] Remove Andoria duplicate Agda name filter
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-hh70
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 16:08]
-:MODIFIED: [2026-08-13 Thu 16:25]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Merged into the shared-work package closeout; the duplicate Andoria Agda filter is already removed and needs no standalone work item.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -4689,15 +4715,17 @@ Agent Deck taskworker ignores the initial completion-record claim write before e
 ]
 #+end_src
 
-* DOING [#B] Enforce Gitea-only nix-config remotes across managed hosts
+* DONE [#B] Enforce Gitea-only nix-config remotes across managed hosts
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-kte7
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-13 Thu 13:33]
-:MODIFIED: [2026-08-13 Thu 18:55]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Merged: its remaining acceptance is exactly the authoritative Andoria and VPS adoption tracked by nix-keap and nix-csxx; independent Gitea policy work is complete.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -5019,15 +5047,17 @@ The full Agent Deck Go suite measured agent-deck --version trimmed mean 41.24357
 ]
 #+end_src
 
-* DOING [#B] Harden runtime hook authority root ancestry and fallback resolution
+* DONE [#B] Harden runtime hook authority root ancestry and fallback resolution
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-mqv9
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 15:46]
-:MODIFIED: [2026-08-13 Thu 15:46]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Merged into nix-tcz.37: any retained runtime-authority path must be reviewed as part of the exact product revision, not as a separate expansion.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -5051,15 +5081,17 @@ Runtime hook authority creation follows symlinked hooks-directory ancestors via 
 ]
 #+end_src
 
-* DOING [#B] Durably publish runtime hook authority records
+* DONE [#B] Durably publish runtime hook authority records
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-mw69
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 15:45]
-:MODIFIED: [2026-08-13 Thu 18:32]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Dropped with the unsolicited profile-migration/profile-scoped side-store expansion. Do not continue hardening machinery that is no longer an accepted product direction.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -5142,15 +5174,17 @@ Rendered Hera authorized_keys contains from=192.168.1.2, restrict, port-forwardi
 ]
 #+end_src
 
-* DOING [#B] Serialize task-completion sidecars across forced profile migration
+* DONE [#B] Serialize task-completion sidecars across forced profile migration
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-nct6
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 15:45]
-:MODIFIED: [2026-08-13 Thu 18:30]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Dropped with the unsolicited profile-migration/profile-scoped side-store expansion. Do not continue hardening machinery that is no longer an accepted product direction.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -5470,15 +5504,17 @@ bin/publish is documented as the sole publication command and partial publicatio
 ]
 #+end_src
 
-* DOING [#C] Mutation-test hostile sidecar permissions and exclusive temporary publication
+* DONE [#C] Mutation-test hostile sidecar permissions and exclusive temporary publication
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-oy6k
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-13 Thu 15:50]
-:MODIFIED: [2026-08-13 Thu 18:34]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Dropped with the unsolicited profile-migration/profile-scoped side-store expansion. Do not continue hardening machinery that is no longer an accepted product direction.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -5808,15 +5844,17 @@ The new conductor heartbeat test hard-codes /bin/bash and a /usr/bin:/bin PATH, 
 ]
 #+end_src
 
-* DOING [#B] Namespace runtime hook authority and sandbox bridge artifacts by profile
+* DONE [#B] Namespace runtime hook authority and sandbox bridge artifacts by profile
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-qkv5
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 15:43]
-:MODIFIED: [2026-08-13 Thu 17:36]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Dropped with the unsolicited profile-migration/profile-scoped side-store expansion. Do not continue hardening machinery that is no longer an accepted product direction.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -5900,15 +5938,17 @@ Duplicate instance IDs across profiles cannot collide in authority, hook status,
 ]
 #+end_src
 
-* DOING [#B] Move Agent Deck product publication authority to Gitea
+* DONE [#B] Move Agent Deck product publication authority to Gitea
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-ql8l
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-13 Thu 16:40]
-:MODIFIED: [2026-08-13 Thu 18:03]
+:MODIFIED: [2026-08-13 Thu 22:01]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:01]
+:CLOSE_REASON: Merged into nix-tcz.37: canonical Gitea publication, immutable product pin, and downstream patch removal form one checkpoint.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -6607,15 +6647,17 @@ handleWatcherInstallSkill writes deterministic SKILL.md and README.md paths with
 ]
 #+end_src
 
-* DOING [#A] Resolve whole-repository heavy review findings at c8b37be0
+* DONE [#A] Resolve whole-repository heavy review findings at c8b37be0
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz
 :LABELS:   ["heavy-review","snapshot-c8b37be0"]
 :ISSUE_TYPE: epic
 :CREATED:  [2026-08-10 Mon 13:23]
-:MODIFIED: [2026-08-10 Mon 15:13]
+:MODIFIED: [2026-08-13 Thu 22:01]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:01]
+:CLOSE_REASON: Heavy-review umbrella retired after delete-first reconciliation; the seven retained concrete outcomes stand on their own.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -7409,15 +7451,17 @@ config/launchd.nix:157-208,425-433 reads MSSQL credentials from a user-owned pat
 ]
 #+end_src
 
-* TODO [#A] Make RuntimeBindings the sole Agent Deck runtime state model           :architecture:
+* DONE [#A] Make RuntimeBindings the sole Agent Deck runtime state model           :architecture:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.30
 :LABELS:   ["agent-deck","architecture","heavy-review"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-10 Mon 21:21]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Merged into nix-tcz.37: RuntimeBindings extraction, exact product revision, and patch removal are one product checkpoint.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -7454,15 +7498,17 @@ Blocked on nix-tcz.37. After the exact Agent Deck import commit is reviewed and 
 ]
 #+end_src
 
-* DOING [#A] Harden profile-scoped Agent Deck side-store transactions
+* DONE [#A] Harden profile-scoped Agent Deck side-store transactions
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.30.1
 :LABELS:   []
 :ISSUE_TYPE: epic
 :CREATED:  [2026-08-13 Thu 12:50]
-:MODIFIED: [2026-08-13 Thu 12:50]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: codex
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Dropped with the unsolicited profile-migration/profile-scoped side-store expansion. Do not continue hardening machinery that is no longer an accepted product direction.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -8214,15 +8260,17 @@ agent-deck-runtime-lifecycle.patch is about 45,582 lines, far beyond the documen
 ]
 #+end_src
 
-* DEFER [#A] Make Pi session history memory independent of persisted history :architecture:memory:pi:upstream:wiggum:
+* DONE [#A] Make Pi session history memory independent of persisted history :architecture:memory:pi:upstream:wiggum:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1
 :LABELS:   ["architecture","memory","pi","pi-bounded-memory","upstream","wiggum"]
 :ISSUE_TYPE: epic
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-13 Thu 01:04]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -8474,15 +8522,17 @@ Closed 2026-08-11 PDT on signed GOOD commit 328cff3f45ece73b8af036a39ef904f905d4
 ]
 #+end_src
 
-* DEFER [#B] Page Pi session discovery, search, and grouped statistics       :memory:pi:upstream:
+* DONE [#B] Page Pi session discovery, search, and grouped statistics        :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.10
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -8551,15 +8601,17 @@ Geometric session catalogs stay within one result page plus fixed repository sta
 ]
 #+end_src
 
-* DEFER [#B] Bound Pi terminal history and tree navigation                   :memory:pi:upstream:
+* DONE [#B] Bound Pi terminal history and tree navigation                    :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.11
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -8628,15 +8680,17 @@ Many small entries, near-limit entries, one oversized entry, deep ancestry, and 
 ]
 #+end_src
 
-* DEFER [#B] Bound Pi RPC history frames, queues, and backpressure           :memory:pi:upstream:
+* DONE [#B] Bound Pi RPC history frames, queues, and backpressure            :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.12
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -8705,15 +8759,17 @@ Every successful frame is within its byte ceiling; stale session/cursor requests
 ]
 #+end_src
 
-* DEFER [#B] Stream exact Pi fork, JSONL, and HTML exports                   :memory:pi:upstream:
+* DONE [#B] Stream exact Pi fork, JSONL, and HTML exports                    :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.13
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -8782,15 +8838,17 @@ Semantic round trips match for deep branches, high fanout, no-assistant branches
 ]
 #+end_src
 
-* DEFER [#A] Expose bounded Pi extension history capabilities and strict mode :memory:pi:upstream:
+* DONE [#A] Expose bounded Pi extension history capabilities and strict mode :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.14
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -8859,15 +8917,17 @@ An unchanged legacy fixture remains exact in compatibility mode; a no-history ex
 ]
 #+end_src
 
-* DEFER [#B] Certify managed Pi extensions that require no history migration :memory:pi:upstream:
+* DONE [#B] Certify managed Pi extensions that require no history migration  :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.15
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -8918,15 +8978,17 @@ All fifteen have evidence rows and load unchanged under strict history mode; no 
 ]
 #+end_src
 
-* DEFER [#B] Migrate managed point, active-context, and recent-window Pi extensions :memory:pi:upstream:
+* DONE [#B] Migrate managed point, active-context, and recent-window Pi extensions :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.16
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -8977,15 +9039,17 @@ Results match eager references across branches, compaction, invalid newest recor
 ]
 #+end_src
 
-* DEFER [#B] Migrate managed exact-history Pi extensions without truncation  :memory:pi:upstream:
+* DONE [#B] Migrate managed exact-history Pi extensions without truncation   :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.17
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -9045,15 +9109,17 @@ Rewind finds checkpoints older than prior windows; Blackhole exact recall, searc
 ]
 #+end_src
 
-* DEFER [#B] Migrate managed cross-session and extension-owned Pi histories  :memory:pi:upstream:
+* DONE [#B] Migrate managed cross-session and extension-owned Pi histories   :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.18
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -9122,15 +9188,17 @@ All three preserve existing semantic fixtures, malformed/oversized handling, ret
 ]
 #+end_src
 
-* DEFER [#A] Certify the complete managed Pi extension set in strict bounded mode :memory:pi:upstream:
+* DONE [#A] Certify the complete managed Pi extension set in strict bounded mode :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.19
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -9463,15 +9531,17 @@ CLOSED. Exact upstream Pi 0.84.1 source, four deterministic fixtures, and the so
 ]
 #+end_src
 
-* DEFER [#A] Wire Pi semantic, budget, lifecycle, and resource acceptance gates :memory:pi:upstream:
+* DONE [#A] Wire Pi semantic, budget, lifecycle, and resource acceptance gates :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.20
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -9594,15 +9664,17 @@ Independent review closes a source-located history-dataflow inventory for the ex
 ]
 #+end_src
 
-* DEFER [#A] Qualify local-source Pi bounded memory                          :memory:pi:upstream:
+* DONE [#A] Qualify local-source Pi bounded memory                           :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.21
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -9684,15 +9756,17 @@ OPEN and blocked by A2, K1, H1, and the other explicit open graph dependencies. 
 ]
 #+end_src
 
-* DEFER [#C] Run the optional long-session Pi memory and lifecycle soak      :memory:pi:upstream:
+* DONE [#C] Run the optional long-session Pi memory and lifecycle soak       :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.22
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: chore
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -9752,15 +9826,17 @@ The latest result is recorded as passed, failed, or not run; a failure opens or 
 ]
 #+end_src
 
-* DEFER [#B] Finalize the local Pi bounded-session contract, migration guide, and evidence :memory:pi:upstream:
+* DONE [#B] Finalize the local Pi bounded-session contract, migration guide, and evidence :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.23
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: docs
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -9838,15 +9914,17 @@ Local documentation says source-reviewable Pi-controlled live session state is b
 ]
 #+end_src
 
-* DEFER [#B] Finalize Pi's strict-default full-history compatibility boundary :memory:pi:upstream:
+* DONE [#B] Finalize Pi's strict-default full-history compatibility boundary :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.24
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -9906,15 +9984,17 @@ No official example or certified managed extension requires the legacy surface; 
 ]
 #+end_src
 
-* DEFER [#A] Pin reviewed Pi product commits and delete product-scale Nix patches :memory:pi:upstream:
+* DONE [#A] Pin reviewed Pi product commits and delete product-scale Nix patches :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.25
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -10001,15 +10081,17 @@ N1 may mutate production Pi pins and remove the downstream patch stack only afte
 ]
 #+end_src
 
-* DEFER [#B] Qualify the bounded Pi package and rollback without activation  :memory:pi:upstream:
+* DONE [#B] Qualify the bounded Pi package and rollback without activation   :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.26
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: chore
 :CREATED:  [2026-08-11 Tue 21:41]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -10060,15 +10142,17 @@ Copied legacy state retains its semantic digest and visible context; package bui
 ]
 #+end_src
 
-* DEFER [#A] Deliver reviewed Pi bounded-memory changes to an authoritative product repository :memory:pi:upstream:
+* DONE [#A] Deliver reviewed Pi bounded-memory changes to an authoritative product repository :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.27
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:50]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -10164,15 +10248,17 @@ The maintainer-approved destination and branch strategy are recorded; each revie
 ]
 #+end_src
 
-* DEFER [#B] Activate and accept the bounded Pi generation on Hera           :memory:pi:upstream:
+* DONE [#B] Activate and accept the bounded Pi generation on Hera            :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.28
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: chore
 :CREATED:  [2026-08-11 Tue 21:50]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -10232,15 +10318,17 @@ The exact prebuilt generation is activated only after explicit authorization; st
 ]
 #+end_src
 
-* DEFER [#B] Publish the accepted bounded Pi Nix revision                    :memory:pi:upstream:
+* DONE [#B] Publish the accepted bounded Pi Nix revision                     :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.29
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: chore
 :CREATED:  [2026-08-11 Tue 21:50]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -10392,15 +10480,17 @@ A concise user-reviewable draft, clearly labeled AI-assisted supporting packet, 
 ]
 #+end_src
 
-* DEFER [#A] Build a reproducible local-source Pi qualification package :memory:packaging:pi:upstream:
+* DONE [#A] Build a reproducible local-source Pi qualification package :memory:packaging:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.30
 :LABELS:   ["memory","packaging","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 21:53]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -10451,15 +10541,17 @@ Two clean checkouts at the same commits produce the same package tree and test i
 ]
 #+end_src
 
-* DEFER [#A] Verify or replay the bounded-memory gate on the final Pi package :memory:pi:upstream:
+* DONE [#A] Verify or replay the bounded-memory gate on the final Pi package :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.31
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-11 Tue 22:32]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -10523,15 +10615,17 @@ OPEN and blocked by M1 and P1. No M2 identity check or replay has run. M2 is the
 ]
 #+end_src
 
-* DEFER [#A] Obtain Pi maintainer approval and select the bounded-session architecture :memory:pi:upstream:
+* DONE [#A] Obtain Pi maintainer approval and select the bounded-session architecture :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.4
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: question
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -10610,15 +10704,17 @@ Contacting or posting to maintainers occurs only after explicit outreach authori
 ]
 #+end_src
 
-* DEFER [#A] Make SessionTree bounded reads enforceable                      :memory:pi:upstream:
+* DONE [#A] Make SessionTree bounded reads enforceable                       :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.5
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -10669,15 +10765,17 @@ All supported storage backends share conformance for ordering, branch bounds, it
 ]
 #+end_src
 
-* DEFER [#A] Implement the selected bounded SessionRepo backend and legacy import :memory:pi:upstream:
+* DONE [#A] Implement the selected bounded SessionRepo backend and legacy import :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.6
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -10728,15 +10826,17 @@ Legacy semantic oracles match for topology, leaf, compaction tail, custom record
 ]
 #+end_src
 
-* DEFER [#A] Move classic coding-agent execution onto SessionRepo            :memory:pi:upstream:
+* DONE [#A] Move classic coding-agent execution onto SessionRepo             :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.7
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -10787,15 +10887,17 @@ The real terminal path uses SessionRepo; a recording backend fails any unlimited
 ]
 #+end_src
 
-* DEFER [#A] Make Pi session replacement and repository ownership generation-safe :memory:pi:upstream:
+* DONE [#A] Make Pi session replacement and repository ownership generation-safe :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.8
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -10846,15 +10948,17 @@ New, resume, fork, import, reload, failed construction, repeated close, quit, de
 ]
 #+end_src
 
-* DEFER [#B] Bound no-session and pre-publication Pi sessions                :memory:pi:upstream:
+* DONE [#B] Bound no-session and pre-publication Pi sessions                 :memory:pi:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37.1.9
 :LABELS:   ["memory","pi","pi-bounded-memory","upstream"]
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-11 Tue 21:40]
-:MODIFIED: [2026-08-13 Thu 00:56]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Dropped as speculative upstream product scope: no maintainer-approved architecture or owner-fork authority. Recreate one concrete task only after an authoritative bounded-history API exists.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -12610,15 +12714,17 @@ flake.nix currently reuses rootInputs.nix-config-ai, but the compatibility sourc
 ]
 #+end_src
 
-* TODO [#B] Fence legacy Agent Deck consumers during the schema-20 rollout
+* DONE [#B] Fence legacy Agent Deck consumers during the schema-20 rollout
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-umw4
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-13 Thu 16:29]
-:MODIFIED: [2026-08-13 Thu 17:58]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Dropped with the schema-20 synthetic-scale consumed-turn optimization and its multi-release writer-fencing programme. Retain the simpler prior ledger model.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -12789,15 +12895,17 @@ TestPerf_OutboxDrain_AccumulatedLedger claims to model 25 children, but historic
 ]
 #+end_src
 
-* DOING [#B] Prevent executable discovery from traversing protected macOS filesystem roots
+* DONE [#B] Prevent executable discovery from traversing protected macOS filesystem roots
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-vb0k
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 16:35]
-:MODIFIED: [2026-08-13 Thu 18:09]
+:MODIFIED: [2026-08-13 Thu 21:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 21:59]
+:CLOSE_REASON: Completed the narrow executable-policy/grant/test remediation; dropped speculative cross-client OS confinement and TCC supervisor expansion.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -12957,15 +13065,17 @@ A maintained Darwin package-set assertion proves the exact Agda wrapper remains 
 ]
 #+end_src
 
-* DOING [#C] Measure real outbox durability sync scaling
+* DONE [#C] Measure real outbox durability sync scaling
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-w78z
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-13 Thu 18:34]
-:MODIFIED: [2026-08-13 Thu 18:34]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Dropped with the schema-20 synthetic-scale consumed-turn optimization and its multi-release writer-fencing programme. Retain the simpler prior ledger model.
 :SOURCE_REPO: agent-deck
 :SOURCE_REPO_PATH: /Users/johnw/Products/agent-deck-runtime-bindings-cleanup
 :ORIGINAL_SIZE: 0
@@ -13147,15 +13257,17 @@ The full Agent Deck Go suite fails TestRuntimeHookTransactionRejectsSupersededSa
 ]
 #+end_src
 
-* DOING [#B] Durably commit profile-sidecar migration target writes and source removals
+* DONE [#B] Durably commit profile-sidecar migration target writes and source removals
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-wgm2
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 15:46]
-:MODIFIED: [2026-08-13 Thu 18:39]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Dropped with the unsolicited profile-migration/profile-scoped side-store expansion. Do not continue hardening machinery that is no longer an accepted product direction.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -13434,15 +13546,17 @@ obr is a general repository/fleet issue tracker, not an AI tool. Move its flake 
 ]
 #+end_src
 
-* TODO [#B] Fence all already-open schema-19 StateDB writers after schema-20 cutover
+* DONE [#B] Fence all already-open schema-19 StateDB writers after schema-20 cutover
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-x0ox
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 17:56]
-:MODIFIED: [2026-08-13 Thu 17:58]
+:MODIFIED: [2026-08-13 Thu 22:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:00]
+:CLOSE_REASON: Dropped with the schema-20 synthetic-scale consumed-turn optimization and its multi-release writer-fencing programme. Retain the simpler prior ledger model.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
