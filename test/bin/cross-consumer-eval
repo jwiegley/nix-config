@@ -157,7 +157,6 @@ import sys
 from pathlib import Path
 from urllib.parse import parse_qsl, unquote_to_bytes, urlsplit
 
-CANONICAL_REPO_URL = "ssh://gitea/johnw/nix-config"
 SOURCE_QUERIES = {
     "nix-config": {(), (("ref", "main"),)},
     "nix-config-ai": {
@@ -467,7 +466,7 @@ def require_static_inputs(tokens, opening, closing):
         die("flake inputs must use one static literal attribute set")
 
 
-def normalize_gitea_url(url, scheme, queries):
+def normalize_gitea_url(url, schemes, queries):
     if not isinstance(url, str):
         return None
     try:
@@ -479,19 +478,32 @@ def normalize_gitea_url(url, scheme, queries):
         )
     except ValueError:
         return None
+    scheme = parsed.scheme.casefold()
+    if scheme in {"https", "git+https"}:
+        base = f"{scheme}://gitea.newartisans.com/johnw/nix-config.git"
+        authority_ok = url in {
+            base
+            + ("" if not query else "?" + "&".join(f"{k}={v}" for k, v in query))
+            for query in queries
+        }
+    else:
+        authority_ok = (
+            scheme in {"ssh", "git+ssh"}
+            and host is not None
+            and host.rstrip(".").casefold() == "gitea"
+            and parsed.username in {None, "gitea"}
+            and parsed.path in {"/johnw/nix-config", "/johnw/nix-config.git"}
+        )
     if (
-        parsed.scheme.casefold() != scheme
-        or host is None
-        or host.rstrip(".").casefold() != "gitea"
-        or parsed.username not in {None, "gitea"}
+        scheme not in schemes
+        or not authority_ok
         or parsed.password is not None
         or port is not None
-        or parsed.path not in {"/johnw/nix-config", "/johnw/nix-config.git"}
         or parsed.fragment
         or query not in queries
     ):
         return None
-    return CANONICAL_REPO_URL
+    return url
 
 
 data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -534,9 +546,11 @@ if policy == "gitea-only":
             source = node.get(section, {})
             if source.get("type") != "git":
                 die("%s %s.type must be git" % (key, section))
-            if normalize_gitea_url(source.get("url"), "ssh", {()}) is None:
+            if normalize_gitea_url(
+                source.get("url"), {"ssh", "https"}, {()}
+            ) is None:
                 die(
-                    "%s %s.url must be canonical Gitea nix-config SSH URL"
+                    "%s %s.url must be an approved Gitea nix-config fetch URL"
                     % (key, section)
                 )
 
@@ -582,9 +596,11 @@ if policy == "gitea-only":
         if (
             url is None
             or url[0] != "string"
-            or normalize_gitea_url(url[1], "git+ssh", expected_queries) is None
+            or normalize_gitea_url(
+                url[1], {"git+ssh", "git+https"}, expected_queries
+            ) is None
         ):
-            die("%s source url must be canonical Gitea nix-config SSH URL" % key)
+            die("%s source url must be an approved Gitea nix-config fetch URL" % key)
         flake = direct_assignment(
             source_tokens, "flake", source_opening, source_closing
         )

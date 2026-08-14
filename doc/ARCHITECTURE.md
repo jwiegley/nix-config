@@ -235,8 +235,10 @@ the portable closure without them.
 
 The repository has one authoritative remote: LAN Gitea, named `origin`, at
 `gitea@gitea:johnw/nix-config.git`. It is the sole fetch and push authority;
-GitHub must not be configured as a remote. Every managed consumer fetches from that
-authority. `bin/publish` verifies the configured fetch and push URLs, then owns
+GitHub must not be configured as a remote. Managed consumers may fetch the same
+repository through the exact public HTTPS fetch endpoint at
+`https://gitea.newartisans.com/johnw/nix-config.git`. `bin/publish` verifies the
+configured SSH fetch and push URLs, then owns
 the fast-forward-only publication transaction. Network operations bind to the
 literal authority through an isolated Git configuration and private empty
 template. The transaction derives signature scope only from the exact target-tip

@@ -96,8 +96,10 @@ subflake used by external consumers. It does not own an external consumer's
 `flake.lock`, `/etc/nixos`, standalone Home Manager profile, or activation.
 
 The repository publishes only to LAN Gitea (`origin`) at
-`gitea@gitea:johnw/nix-config.git`. Every managed consumer fetches from that
-authority; GitHub is not a publication destination or consumer source.
+`gitea@gitea:johnw/nix-config.git`. Managed consumers fetch that same repository
+through either the LAN SSH endpoint or the exact public HTTPS fetch endpoint at
+`https://gitea.newartisans.com/johnw/nix-config.git`; GitHub is not a publication
+destination or consumer source.
 `bin/publish` preflights the fast-forward transaction without pushing, and
 `bin/publish --publish` publishes to Gitea.
 

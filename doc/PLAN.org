@@ -3358,6 +3358,44 @@ Ruff reports two unused local variables in test/bin/publish-slow-test.py: the un
 ]
 #+end_src
 
+* DONE [#B] Make shared-work Gitea transport routable during activation
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-el2v
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-13 Thu 23:39]
+:MODIFIED: [2026-08-14 Fri 00:06]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-14 Fri 00:06]
+:CLOSE_REASON: Completed: committed the authoritative shared consumer to exact public Gitea HTTPS fetch URLs while preserving paired rev/narHash; all four hosts passed public-route metadata evaluation; restored/realized the exact qj/8fv closure and activated in required a08->t2->delphi->gpu order; starship and fixed de resolve everywhere; prior generations remain retained.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The NFS-shared Home Manager checkout now pins nix-config and config/ai to ssh://gitea@gitea/johnw/nix-config.git, but andoria-t2, delphi-3bd4, and gpu-server resolve gitea to the LAN-only 192.168.1.2:2222 endpoint and fail with No route to host during evaluation. The failed switch also leaves shells reporting a missing ~/.nix-profile/bin/starship. Recover the authorized rollout from the already-built exact activation closure without reevaluation, then establish one durable shared-work route to the canonical Gitea authority so future evaluation needs no ad hoc GIT_SSH_COMMAND or proxy.
+
+** Acceptance Criteria
+
+The exact existing activation closure is proven resident and activated in the required order without another evaluation; starship resolves from the active profile on each host; ordinary locked evaluation can fetch canonical Gitea from every active shared-work host without ad hoc command environment; no GitHub fallback, copied checkout, or raw home-manager/master command is introduced; rollback generations are retained.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-el2v",
+    "depends_on_id": "nix-keap",
+    "type": "discovered-from",
+    "created_at": "2026-08-14T06:39:48.950094Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Add cross-process concurrency acceptance tests for profile migration sidecars
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -4415,7 +4453,7 @@ Change make update so an independently failing package candidate retains its pre
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 21:49]
-:MODIFIED: [2026-08-13 Thu 22:26]
+:MODIFIED: [2026-08-14 Fri 00:06]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4438,6 +4476,20 @@ Current Nix source and active generated settings contain no Cozempic reference; 
     "author": "johnw",
     "text": "Deferred at the live-session boundary. Source, active settings, executable paths, registries, backups, and generated digests are cleaned; resume only with explicit session-control authority to restart the four pre-cleanup Claude processes and verify that no retained in-memory hook recreates Cozempic state.",
     "created_at": "2026-08-14T05:26:31Z"
+  },
+  {
+    "id": 391,
+    "issue_id": "nix-jhjx",
+    "author": "johnw",
+    "text": "Owner explicitly renewed authorization to eliminate Cozempic from all systems and agent environments. Resume at the deferred live-session boundary: identify exact stale Agent Deck Claude sessions, restart them without losing durable history, purge remaining active plugin/cache state, and verify no artifact recreation on reachable hosts.",
+    "created_at": "2026-08-14T06:35:41Z"
+  },
+  {
+    "id": 392,
+    "issue_id": "nix-jhjx",
+    "author": "johnw",
+    "text": "2026-08-14 cleanup removed the missed project-scoped /Users/johnw/work/git-ai Cozempic/git-ai hook objects plus exact dedicated state, and removed Clio's active Positron hook producer and fleet residue. Current exact checks are zero on Hera, Clio, shared NFS, Vulcan, and VPS; active Positron settings have zero git-ai/Cozempic hook matches. Owner explicitly forbids restarting Agent Deck sessions, so four pre-clean Hera processes remain untouched; no session was restarted or signaled.",
+    "created_at": "2026-08-14T07:06:39Z"
   }
 ]
 #+end_src
@@ -4613,15 +4665,17 @@ Partner observation .440Z: cp -p preserves Darwin ACLs and source owner bits, so
 ]
 #+end_src
 
-* DEFER [#B] Migrate Andoria nix-config flake inputs to Gitea
+* DONE [#B] Migrate Andoria nix-config flake inputs to Gitea
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-keap
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-13 Thu 13:54]
-:MODIFIED: [2026-08-13 Thu 22:32]
+:MODIFIED: [2026-08-14 Fri 00:06]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-14 Fri 00:06]
+:CLOSE_REASON: Completed: authoritative NFS flake source and both selected original/locked nodes are Git type on exact Gitea HTTPS at paired rev 852f482b/narHash; no GitHub nix-config source remains in the selected pair; locked evaluation returned pbxbn0... and the shared-work qjv8... generation built/activated successfully.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -4698,6 +4752,13 @@ The Andoria flake and lock contain no GitHub nix-config source; both root and co
     "author": "johnw",
     "text": "Correction to the deferral trigger: authoritative source+lock adoption and the non-activating shared-work build may resume with authority to modify the NFS-shared checkout. Fleet activation is not required for this issue's closure and remains a separate explicit authorization.",
     "created_at": "2026-08-14T05:32:36Z"
+  },
+  {
+    "id": 389,
+    "issue_id": "nix-keap",
+    "author": "johnw",
+    "text": "2026-08-13 owner explicitly authorized urgent all-host update and activation for de commit 37c3389f. Resuming authoritative shared-work Gitea source+lock adoption and ordered fleet activation; preserve unrelated checkout history and stop on any host failure.",
+    "created_at": "2026-08-14T06:27:14Z"
   }
 ]
 #+end_src
@@ -5219,6 +5280,30 @@ Terminal audit found runtime hook authority writes use temp-file plus rename wit
 ]
 #+end_src
 
+* TODO [#D] Designate vps-push as a bash recipe in the Makefile
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-n7vb
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-13 Thu 23:36]
+:MODIFIED: [2026-08-13 Thu 23:36]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Source commit: 852f482bb82bf5726c12b07814cb065ca1e36658. Severity: Low. Category: Bug. File: Makefile:362. Confidence: 90.
+
+PROBLEM: The new vps-push recipe begins 'set -euo pipefail' but is not listed on the Makefile's 'SHELL := bash' designation line (line 23), whose comment exists precisely to mark strict-mode recipes. 'pipefail' is not POSIX sh: it works on macOS because /bin/sh is bash in sh mode, but fails immediately ('Illegal option -o pipefail') under dash, the /bin/sh on Debian/Ubuntu hosts. It is the only pipefail outside the designated set.
+
+IMPACT: On any Linux invocation the target dies before doing anything (fail-closed, so no misbuild) — but the deeper point is the pipefail here is load-bearing: the sign pipeline 'nix-store --query ... | grep -v .drv | xargs nix store sign' would otherwise mask a failed requisites query behind grep/xargs success, and losing strict mode silently would degrade exactly the signing guarantee the commit message explains was worth two failed builds to get right.
+
+SUGGESTED FIX: Add vps-push to line 23: 'verify-inputs update-projects upgrade-tasks changes copy travel-ready vps-push: SHELL := bash'.
+
+VERIFICATION: 'make -n vps-push' unchanged; on a dash-sh system (or 'make SHELL=dash vps-push' dry probe) the recipe no longer aborts at set; grep confirms every pipefail recipe is bash-designated.
+
 * DONE [#B] Force a no-op command on the Vulcan-Andoria jump authorization         :security:ssh:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5642,14 +5727,14 @@ PLAN runtime-binding integrity acceptance requires existing hostile-permission r
 ]
 #+end_src
 
-* TODO [#A] Enforce an eight-CPU ceiling on shared-work Nix builds
+* DOING [#A] Enforce an eight-CPU ceiling on shared-work Nix builds
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-p17
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 00:23]
-:MODIFIED: [2026-08-13 Thu 23:14]
+:MODIFIED: [2026-08-13 Thu 23:27]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5769,6 +5854,13 @@ The shared root authority declares one CPU set for shared-work Nix daemons. The 
     "author": "johnw",
     "text": "2026-08-13 the corrected exact-local-revision build was interrupted immediately at owner request to address a high-priority de regression. It had produced no output path or failure; local client exited. Exact override preflight remains valid, but no full realization is claimed.",
     "created_at": "2026-08-14T06:14:18Z"
+  },
+  {
+    "id": 390,
+    "issue_id": "nix-p17",
+    "author": "johnw",
+    "text": "2026-08-13 owner explicitly authorized the ordered all-host activation while deploying de 37c3389f. Reusing the same corrected Gitea-backed shared-work candidate for the bounded build and ordered andoria-08, andoria-t2, delphi-3bd4, gpu-server activation; no separate build matrix.",
+    "created_at": "2026-08-14T06:27:15Z"
   }
 ]
 #+end_src

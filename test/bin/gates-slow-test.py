@@ -461,6 +461,13 @@ class TestCrossConsumerEvalGiteaPolicy(unittest.TestCase):
     LOCK_URL = "ssh://gitea@gitea/johnw/nix-config.git"
     ROOT_SOURCE_URL = "git+ssh://gitea@gitea/johnw/nix-config.git?ref=main"
     AI_SOURCE_URL = "git+ssh://gitea@gitea/johnw/nix-config.git?dir=config/ai&ref=main"
+    HTTPS_LOCK_URL = "https://gitea.newartisans.com/johnw/nix-config.git"
+    HTTPS_ROOT_SOURCE_URL = (
+        "git+https://gitea.newartisans.com/johnw/nix-config.git?ref=main"
+    )
+    HTTPS_AI_SOURCE_URL = (
+        "git+https://gitea.newartisans.com/johnw/nix-config.git?dir=config/ai&ref=main"
+    )
     VULCAN_LOCK_URL = "SSH://GITEA/johnw/nix-config"
     VULCAN_ROOT_SOURCE_URL = "GIT+SSH://GITEA/johnw/nix-config"
     VULCAN_AI_SOURCE_URL = "GIT+SSH://GITEA/johnw/nix-config?dir=config/ai"
@@ -656,6 +663,60 @@ class TestCrossConsumerEvalGiteaPolicy(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("andoria [lock coherence]: OK", result.stdout)
         self.assertIn("all evaluated consumers passed", result.stdout)
+
+    def test_accepts_exact_public_gitea_https_fetch_pair(self):
+        self.write_fixture(
+            self.gitea_lock(self.HTTPS_LOCK_URL),
+            root_source_url=self.HTTPS_ROOT_SOURCE_URL,
+            ai_source_url=self.HTTPS_AI_SOURCE_URL,
+        )
+        result = self.run_gate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("andoria [lock coherence]: OK", result.stdout)
+
+    def test_rejects_other_https_fetch_authorities(self):
+        for url in (
+            "https://gitea.newartisans.com.evil.invalid/johnw/nix-config.git",
+            "HTTPS://gitea.newartisans.com/johnw/nix-config.git",
+            "https://GITEA.NEWARTISANS.COM/johnw/nix-config.git",
+            "https://gitea.newartisans.com./johnw/nix-config.git",
+            "https://gitea.newartisans.com/johnw/nix-config",
+            "https://gitea.newartisans.com/johnw/nix-config.git?",
+            "https://gitea.newartisans.com/johnw/nix-config.git#",
+            "https://gitea.newartisans.com/johnw/other.git",
+            "https://user@gitea.newartisans.com/johnw/nix-config.git",
+            "https://gitea.newartisans.com:443/johnw/nix-config.git",
+        ):
+            with self.subTest(url=url):
+                self.write_fixture(self.gitea_lock(url))
+                self.assert_gate_fails(
+                    "nix-config original.url must be an approved Gitea "
+                    "nix-config fetch URL"
+                )
+
+    def test_rejects_other_git_https_source_urls(self):
+        for url in (
+            "git+https://gitea.newartisans.com/johnw/nix-config",
+            "GIT+HTTPS://gitea.newartisans.com/johnw/nix-config.git?ref=main",
+            "git+https://gitea.newartisans.com./johnw/nix-config.git?ref=main",
+            "git+https://gitea.newartisans.com/johnw/other.git?ref=main",
+        ):
+            with self.subTest(url=url):
+                self.write_fixture(root_source_url=url)
+                self.assert_gate_fails(
+                    "nix-config source url must be an approved Gitea "
+                    "nix-config fetch URL"
+                )
+
+        self.write_fixture(
+            ai_source_url=(
+                "git+https://gitea.newartisans.com/johnw/nix-config"
+                "?dir=config/ai&ref=main"
+            )
+        )
+        self.assert_gate_fails(
+            "nix-config-ai source url must be an approved Gitea nix-config fetch URL"
+        )
 
     def test_accepts_equivalent_vulcan_gitea_urls_and_exact_target(self):
         vulcan = self.root / "vulcan"
@@ -1071,7 +1132,7 @@ in
         combined = result.stdout + result.stderr
         self.assertNotEqual(result.returncode, 0, combined)
         self.assertIn(
-            "nix-config source url must be canonical Gitea nix-config SSH URL",
+            "nix-config source url must be an approved Gitea nix-config fetch URL",
             combined,
         )
         self.assertIn("andoria [jwiegley activation]: OK", combined)
@@ -1096,7 +1157,7 @@ in
         combined = result.stdout + result.stderr
         self.assertNotEqual(result.returncode, 0, combined)
         self.assertIn(
-            "nix-config source url must be canonical Gitea nix-config SSH URL",
+            "nix-config source url must be an approved Gitea nix-config fetch URL",
             combined,
         )
         self.assertIn("andoria [jwiegley activation]: OK", combined)
