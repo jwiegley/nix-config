@@ -2983,14 +2983,14 @@ Rendered catalog is valid JSON; every model has the source-proven correctly type
 ]
 #+end_src
 
-* DOING [#B] Migrate VPS nix-config inputs from GitHub to Gitea
+* DEFER [#B] Migrate VPS nix-config inputs from GitHub to Gitea
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-csxx
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-13 Thu 16:22]
-:MODIFIED: [2026-08-13 Thu 18:55]
+:MODIFIED: [2026-08-13 Thu 22:26]
 :CREATED_BY: johnw
 :SOURCE_REPO: vps
 :SOURCE_REPO_PATH: /Users/johnw/src/vps
@@ -3050,6 +3050,13 @@ The maintained /Users/johnw/src/vps flake still declares both nix-config and nix
     "author": "johnw",
     "text": "2026-08-13 prepared checkout refresh: /Users/johnw/src/vps is ahead of origin/main by four signed/local commits and has only flake.nix/flake.lock changes for this unit. Both root and config/ai inputs use ssh://gitea@gitea/johnw/nix-config.git at exact live Gitea main c143b2ec. Local VPS HEAD d03f30bc, origin/main 8666a51a. No new commit, push, authoritative /etc/nixos adoption, build, or activation performed.",
     "created_at": "2026-08-14T01:55:41Z"
+  },
+  {
+    "id": 378,
+    "issue_id": "nix-csxx",
+    "author": "johnw",
+    "text": "Deferred at the authoritative-checkout boundary. The secondary VPS source+lock migration and offline evaluation are prepared; resume only with explicit authority to preserve and adopt into /etc/nixos, build there, and separately authorize any required commit or push.",
+    "created_at": "2026-08-14T05:26:32Z"
   }
 ]
 #+end_src
@@ -4367,14 +4374,14 @@ Change make update so an independently failing package candidate retains its pre
 ]
 #+end_src
 
-* DOING [#B] Remove residual Cozempic agent state
+* DEFER [#B] Remove residual Cozempic agent state
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-jhjx
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 21:49]
-:MODIFIED: [2026-08-13 Thu 21:50]
+:MODIFIED: [2026-08-13 Thu 22:26]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4386,6 +4393,20 @@ Remove Cozempic plugin registration, generated project-memory digests, and obsol
 ** Notes
 
 Current Nix source and active generated settings contain no Cozempic reference; no Cozempic executable or plugin payload/marketplace directory exists. Removed the two live git-ai registry entries, five obsolete settings/registry backups, and 28 generated project-memory cozempic_digest.md files. JSON validation and bounded active-config/name checks are clean. Four Claude processes started before the cleaned settings rewrite remain live and may retain old hooks in memory; restarting those sessions requires separate session-control authorization. Conversation/prompt/file history was intentionally preserved as historical evidence.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 377,
+    "issue_id": "nix-jhjx",
+    "author": "johnw",
+    "text": "Deferred at the live-session boundary. Source, active settings, executable paths, registries, backups, and generated digests are cleaned; resume only with explicit session-control authority to restart the four pre-cleanup Claude processes and verify that no retained in-memory hook recreates Cozempic state.",
+    "created_at": "2026-08-14T05:26:31Z"
+  }
+]
+#+end_src
 
 * DONE [#B] Decide whether to retain emulated MSSQL on Apple Silicon
 :PROPERTIES:
@@ -4558,14 +4579,14 @@ Partner observation .440Z: cp -p preserves Darwin ACLs and source owner bits, so
 ]
 #+end_src
 
-* DOING [#B] Migrate Andoria nix-config flake inputs to Gitea
+* DEFER [#B] Migrate Andoria nix-config flake inputs to Gitea
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-keap
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-13 Thu 13:54]
-:MODIFIED: [2026-08-13 Thu 18:55]
+:MODIFIED: [2026-08-13 Thu 22:26]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4629,6 +4650,13 @@ The Andoria flake and lock contain no GitHub nix-config source; both root and co
     "author": "johnw",
     "text": "2026-08-13 prepared checkout refresh: /Users/johnw/src/andoria is clean relative to origin except flake.nix/flake.lock. Both root and config/ai inputs use ssh://gitea@gitea/johnw/nix-config.git at exact live Gitea main c143b2ec; the same diff removes the duplicate broad Agda name filter tracked by nix-hh70. Local Andoria HEAD/origin/gitea are eb1d95e5. No commit, push, authoritative shared-work adoption, build, or activation performed.",
     "created_at": "2026-08-14T01:55:36Z"
+  },
+  {
+    "id": 379,
+    "issue_id": "nix-keap",
+    "author": "johnw",
+    "text": "Deferred at the authoritative shared-work boundary. The secondary Andoria source+lock migration and offline evaluation are prepared; resume only with explicit authority to preserve and adopt into the NFS-shared checkout, build, and perform any ordered fleet activation; commit/push remain separate authorizations.",
+    "created_at": "2026-08-14T05:26:32Z"
   }
 ]
 #+end_src
@@ -5573,14 +5601,14 @@ PLAN runtime-binding integrity acceptance requires existing hostile-permission r
 ]
 #+end_src
 
-* DOING [#A] Enforce an eight-CPU ceiling on shared-work Nix builds
+* DEFER [#A] Enforce an eight-CPU ceiling on shared-work Nix builds
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-p17
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 00:23]
-:MODIFIED: [2026-08-13 Thu 22:09]
+:MODIFIED: [2026-08-13 Thu 22:26]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5644,6 +5672,13 @@ The shared root authority declares one CPU set for shared-work Nix daemons. The 
     "author": "johnw",
     "text": "Correction to the preceding comment: the intended final diagnostic is sshd -T -C with the reproduced connection tuple. The prior shell invocation interpreted the Markdown backticks locally while adding the comment; it made no remote request or state change.",
     "created_at": "2026-08-13T22:00:57Z"
+  },
+  {
+    "id": 376,
+    "issue_id": "nix-p17",
+    "author": "johnw",
+    "text": "Deferred at the owner-authority boundary. Resume only with explicit permission for the ordered four-host Home Manager activation and interactive sudo availability on the remaining hosts; preserve the already-proved gpu-server CPU policy and do not retry the interrupted GPU build before the CPU set is active everywhere.",
+    "created_at": "2026-08-14T05:26:30Z"
   }
 ]
 #+end_src
@@ -8219,14 +8254,14 @@ config/ai/catalog.nix:150-216 stores the Claude-formatted string Read, Grep, Glo
 ]
 #+end_src
 
-* DOING [#B] Move product-scale Agent Deck deltas out of Nix patches     :architecture:packaging:
+* DEFER [#B] Move product-scale Agent Deck deltas out of Nix patches     :architecture:packaging:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37
 :LABELS:   ["architecture","heavy-review","packaging"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-13 Thu 22:09]
+:MODIFIED: [2026-08-13 Thu 22:26]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -8283,6 +8318,13 @@ This is one indivisible Agent Deck product checkpoint. The owner designates the 
     "author": "johnw",
     "text": "2026-08-13 switchability rollback: the premature Nix package cutover had removed all three patches while sources/ai.json still selected raw upstream 2f586c5; checkPhase then failed because test-runtime-lifecycle exists only in the runtime patch. With no canonical Gitea Agent Deck repository and no published reviewed product commit, the only reproducible repair was to restore upstream v1.11.0 plus the exact three ordered patches and -p1/--fuzz=0. The product worktree and signed import commits are preserved; extraction/publication/pin work stays open. Focused Agent Deck package build and full non-activating Hera system build both pass after the rollback.",
     "created_at": "2026-08-14T01:51:46Z"
+  },
+  {
+    "id": 380,
+    "issue_id": "nix-tcz.37",
+    "author": "johnw",
+    "text": "Deferred at the product-publication boundary. Resume only after the owner designates the canonical Agent Deck Gitea repository and branch and separately authorizes publication of the reviewed GOOD-signed product commit. Do not restore a writable GitHub remote, invent a Gitea destination, or remove downstream patches before exact-tree and package/build acceptance passes.",
+    "created_at": "2026-08-14T05:26:32Z"
   }
 ]
 #+end_src
