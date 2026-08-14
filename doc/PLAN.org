@@ -14204,6 +14204,56 @@ The session layer will correctly reject all running cross-profile migrations, bu
 ]
 #+end_src
 
+* DONE [#B] Make managed Pi startup effectively instant
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-yojh
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-14 Fri 00:31]
+:MODIFIED: [2026-08-14 Fri 02:01]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-14 Fri 01:53]
+:CLOSE_REASON: Completed: costly Pi extensions are native opt-in; focused behavioral checks and network-denied Hera latency acceptance pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+On Hera, a controlled disposable interactive benchmark with --offline --no-session --no-context-files measured 569ms inside Pi (about 2.7s wall) with --no-extensions versus 45,950ms with the managed extension set. The proven dominant cost is nix-gallery module import: 29,997ms. The generated Darwin gallery statically imports all 27 members (11.45 MB of direct entrypoints) and Pi loads the graph through Jiti with moduleCache=false. pi-mcp-adapter module import adds 5,593ms. Interactive initialization adds 7,733ms and displayed "MCP: connecting to 6 servers", but static review indicates cached connections should be asynchronous; isolate that residual instead of assuming all of it is MCP. The two serial local-model discovery factories expose up to 5s if their loopback endpoints are slow, though the controlled run's gallery factory took only 644ms.
+
+Keep this narrow and delete-first: determine the genuinely essential default gallery members and stop loading the entire 27-member gallery on every launch. Put any retained costly optional capability behind an explicit opt-in profile or an existing native Pi mechanism; do not build a generic lazy-loader subsystem merely to preserve unused defaults. Defer local-model refresh and MCP connection work until after the prompt/first use. Measure Rewind and Mem only if material latency remains after removing the fixed import floor.
+
+Acceptance: on Hera, the managed offline/no-session/no-context-files interactive prompt appears within 3s and managed extension overhead is <=1s relative to --no-extensions; no network connection is required before the first prompt; the explicitly retained default capabilities work; costly optional capabilities, if any remain, are opt-in; a deterministic startup regression fails if eager all-gallery import or pre-prompt connection work returns.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 394,
+    "issue_id": "nix-yojh",
+    "author": "johnw",
+    "text": "Pi /new diagnosis: isolated disposable RPC baselines show core-only new_session is effectively cheap (5-246 ms across probes), while gallery-only/full-managed lifecycle adds roughly 0.65-5.9 s depending cache and fixture state. Cold startup remains dominated by eager nix-gallery import (about 10.5-30 s across warm/cold probes; all 27 members loaded) plus pi-mcp-adapter import. /new does not normally repay that import graph, but AgentSessionRuntime tears down and recreates runtime services, reruns every cached gallery factory, and awaits all serial shutdown/start handlers. Ranked real-workspace offenders: Trace synchronously spawns Python HTML rendering on session_shutdown with a 30 s timeout; Rewind creates a full Git worktree checkpoint on reason=new; Lens changes subsequent sessions from quick to full project scan; two local-provider factories rerun serial 2.5 s model probes; MCP can amplify teardown when connections are pending. Session history/SQLite creation is not the cause. Delete-first fix order: make Trace rendering explicit/detached, skip Rewind checkpoint on new, keep Lens quick/reuse snapshot on new, then remove nonessential default gallery members and defer connection/provider discovery. Do not build a generic lazy loader or broad Pi-core rewrite before these direct costs are removed.",
+    "created_at": "2026-08-14T07:51:43Z"
+  },
+  {
+    "id": 395,
+    "issue_id": "nix-yojh",
+    "author": "johnw",
+    "text": "Delete-first implementation complete. Managed Pi now auto-discovers only Fleet Theme; Nix Gallery, Pi Loop, MCP Adapter, and Quiet are rendered under opt-in-extensions and load through native -e. The former automatic leaves are registered with the existing retired-path preflight, so only prior Home Manager links may disappear cleanly; unmanaged replacements fail activation. Deterministic coverage now requires the exact automatic set, verifies retired and opt-in paths, auto-loads Fleet Theme with no optional commands, and runs the full gallery through the documented explicit path. Focused offline checks passed: host-behavior, ai-managed-preflight, ai-catalog-transport, pi-fleet-theme, and pi-gallery; nixfmt --check, Nix parse, and git diff --check passed. Current Hera wrapper, isolated 3+3 PTY benchmark under sandbox-exec network denial: no-extensions [0.736, 0.564, 0.562]s, managed [0.598, 0.587, 0.582]s; medians 0.564s vs 0.587s, managed overhead 0.023s. Every sample accepted /quit and exited cleanly. Evidence: /Users/johnw/Products/pi-startup-benchmark-ue2k11_l/result.json SHA-256 7531f0c096aa5cdac57ea8ac84d9354d8094375531e07a452bf434a6a262e39d; harness /Users/johnw/Products/pi-startup-benchmark.py SHA-256 39f8294e50ea698d31b7ea16e230a6565df4b3b922d04688d16717e9c353789e. No activation, push, Agent Deck session, or mutable Pi state was touched.",
+    "created_at": "2026-08-14T08:53:39Z"
+  },
+  {
+    "id": 396,
+    "issue_id": "nix-yojh",
+    "author": "johnw",
+    "text": "Final review correction: USER-GUIDE now states that Pi local-model discovery occurs only when the optional gallery is explicitly loaded. The Fleet Theme startup derivation now injects a Node connection-attempt guard, mutation-checks it with a deliberately rejected loopback connect, then requires the real default Pi launch to load the guard and make zero connects. Current focused pi-fleet-theme build, Nix parse, nixfmt, and diff check pass. Independent exact-byte acceptance/architecture rereview: CLEAR.",
+    "created_at": "2026-08-14T09:01:15Z"
+  }
+]
+#+end_src
+
 * DONE [#B] Remove legacy PromptDeploy route from recordings
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

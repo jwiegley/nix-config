@@ -50,9 +50,11 @@ and pass it through their Home Manager module arguments; their lock adoption
 remains consumer-owned.
 
 The managed Pi profile makes the same complete 27-member extension gallery
-available on every host. Darwin registers the two loopback discovery providers
-automatically; fixed local-provider overrides and the synthetic router remain a
-separate catalog capability, presently enabled only for Hera.
+available on every host without loading it before every prompt. The fleet theme
+is the only automatic extension; the gallery, Pi Loop, MCP Adapter, and Quiet
+Display use Pi's native explicit `-e` mechanism. Fixed local-provider overrides
+and the synthetic router remain a separate catalog capability, presently enabled
+only for Hera and usable when the gallery is explicitly loaded.
 
 The complete ownership and data-flow contract is maintained in
 [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md).

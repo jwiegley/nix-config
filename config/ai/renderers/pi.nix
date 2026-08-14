@@ -127,16 +127,16 @@ let
   localDiscoveryProviders = lib.mapAttrs (_: _: { transport = localProviderTransport; }) (
     if localModelDiscovery then localModelDiscoveryEndpoints else { }
   );
-  gallerySource = pkgs.writeText "pi-managed-gallery.ts" ''
+  optInGallerySource = pkgs.writeText "pi-managed-gallery.ts" ''
     import { createNixGallery } from ${builtins.toJSON "${pkgs.pi-gallery}/share/pi-gallery/index.ts"};
 
     export default createNixGallery(${
       builtins.toJSON (if localModelDiscovery then localModelDiscoveryEndpoints else { })
     });
   '';
-  galleryRoot = pkgs.runCommand "pi-managed-gallery" { } ''
+  optInGalleryRoot = pkgs.runCommand "pi-managed-gallery" { } ''
     mkdir -p "$out"
-    cp ${gallerySource} "$out/index.ts"
+    cp ${optInGallerySource} "$out/index.ts"
     ln -s ${pkgs.pi-gallery}/share/pi-gallery/projection.json "$out/projection.json"
   '';
   models.providers =
@@ -272,11 +272,13 @@ assert builtins.hasAttr "pi-loop" pkgs.pi-gallery.packages;
         widget.visible = false;
       };
       "${root}/extensions/fleet-theme/index.ts".source = fleetThemeSource;
-      "${root}/extensions/nix-gallery/index.ts".source = "${galleryRoot}/index.ts";
-      "${root}/extensions/pi-loop/index.ts".source =
+      # Pi auto-discovers only extensions/. Costly packages remain available
+      # through Pi's native `-e` flag without delaying every prompt or /new.
+      "${root}/opt-in-extensions/nix-gallery/index.ts".source = "${optInGalleryRoot}/index.ts";
+      "${root}/opt-in-extensions/pi-loop/index.ts".source =
         "${pkgs.pi-gallery.packages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts";
-      "${root}/extensions/pi-mcp-adapter".source = "${extensionRoot}/pi-mcp-adapter";
-      "${root}/extensions/pi-quiet".source = "${extensionRoot}/pi-quiet";
+      "${root}/opt-in-extensions/pi-mcp-adapter".source = "${extensionRoot}/pi-mcp-adapter";
+      "${root}/opt-in-extensions/pi-quiet".source = "${extensionRoot}/pi-quiet";
       "${root}/keybindings.json".source = json.generate "pi-${profile.id}-keybindings.json" keybindings;
       "${root}/models.json".source = json.generate "pi-${profile.id}-models.json" models;
       "${root}/themes/dark-tool-backgrounds.json".source = fleetTheme;

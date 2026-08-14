@@ -1708,7 +1708,7 @@ runCommand "pi-gallery-check"
 
     smoke="$TMPDIR/pi-gallery-smoke"
     mkdir -p \
-      "$smoke/home/.config/pi/agent/extensions/nix-gallery" \
+      "$smoke/home/.config/pi/agent/opt-in-extensions/nix-gallery" \
       "$smoke/home/.agents/skills/shared-discovery" \
       "$smoke/project" "$smoke/sentinels"
     ln -s "$smoke/home/.config/pi" "$smoke/home/.pi"
@@ -1755,7 +1755,7 @@ runCommand "pi-gallery-check"
       done
       [ -s "$smoke/discovery-port" ] || fail "managed Pi discovery server did not start"
       discovery_port=$(cat "$smoke/discovery-port")
-      cat > "$smoke/home/.config/pi/agent/extensions/nix-gallery/index.ts" <<EOF
+      cat > "$smoke/home/.config/pi/agent/opt-in-extensions/nix-gallery/index.ts" <<EOF
       import { createNixGallery } from ${builtins.toJSON "${gallery}/index.ts"};
 
       export default createNixGallery({
@@ -1766,7 +1766,7 @@ runCommand "pi-gallery-check"
     ''}
     ${lib.optionalString (!stdenv.hostPlatform.isDarwin) ''
       ln -s ${gallery}/index.ts \
-        "$smoke/home/.config/pi/agent/extensions/nix-gallery/index.ts"
+        "$smoke/home/.config/pi/agent/opt-in-extensions/nix-gallery/index.ts"
     ''}
     printf '%s\n' '{"providers":{"sentinel":{"apiKey":"unchanged"}}}' \
       > "$smoke/home/.config/pi/agent/models.json"
@@ -1830,8 +1830,10 @@ runCommand "pi-gallery-check"
         "$smoke/error.log" \
         ${lib.getExe piPackage} \
         --mode rpc --no-session --offline \
+        --no-extensions \
         --no-prompt-templates \
         --no-context-files --no-approve \
+        --extension "$smoke/home/.config/pi/agent/opt-in-extensions/nix-gallery/index.ts" \
         --extension "$smoke/active-tools.ts"
     ) || {
       cat "$smoke/output.log" >&2

@@ -125,7 +125,7 @@ user.
 ```text
 llm-setup-models-list -> llama-swap configuration and GPTel
 oMLX /v1/models -------\
-                         -> Pi startup discovery
+                         -> explicit Pi gallery discovery
 llama-swap /v1/models --/
 
 Nix client-local transport/default/override policy
@@ -135,9 +135,10 @@ Nix client-local transport/default/override policy
 ```
 
 Nix owns endpoint wiring and client-specific policy, not a cross-client model
-inventory. Codex retains its native catalog, Pi discovers local models at startup,
-Droid receives no Nix-generated local-model list, and Prime Agent reuses the safe
-Pi-compatible model overrides plus the shared local-provider discovery packages.
+inventory. Codex retains its native catalog, Pi discovers local models only when
+its optional gallery is explicitly loaded, Droid receives no Nix-generated
+local-model list, and Prime Agent reuses the safe Pi-compatible model overrides
+plus the shared local-provider discovery packages.
 The catalog declares local inference endpoints once per catalog host. The composer
 passes the home record to Darwin Pi for bounded discovery and, separately, to
 profiles that opt into fixed local routes; activation logic consumes the same
@@ -208,12 +209,12 @@ feed list, drop the `pinnedPiPackage` assertions in
 Pi gallery normalization has one implementation:
 `packages/pi-gallery/normalization-policy.json` defines the closed policy and
 `packages/pi-gallery/normalize-manifest.jq` executes it for both builds and updates.
-The Darwin gallery performs bounded loopback model discovery on both
-workstations, while `config/ai/catalog.nix` grants fixed local-provider overrides
-and synthetic router configuration only to profiles whose exact model inventory
-has been verified. These overrides are not a second inventory: endpoint
-availability, discovered inventory, and fixed route selection are distinct
-authorities.
+When explicitly loaded, the Darwin gallery performs bounded loopback model
+discovery on both workstations, while `config/ai/catalog.nix` grants fixed
+local-provider overrides and synthetic router configuration only to profiles
+whose exact model inventory has been verified. These overrides are not a second
+inventory: endpoint availability, discovered inventory, and fixed route selection
+are distinct authorities.
 
 ## Source and update authority
 

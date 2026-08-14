@@ -50,7 +50,7 @@ let
     newPaths = [ ".config/pi/agent/keybindings.json" ];
   };
   task9PiLoopPreflight = preflightFactory {
-    newPaths = [ ".config/pi/agent/extensions/pi-loop/index.ts" ];
+    newPaths = [ ".config/pi/agent/opt-in-extensions/pi-loop/index.ts" ];
   };
   task9SharedLeafPreflight = preflightFactory {
     newPaths = [
@@ -182,7 +182,7 @@ pkgs.runCommand "ai-managed-preflight"
     removed_path=".config/claude/personal/agents/removed.md"
     pi_leaf_path=".config/pi/agent/agents/bash-reviewer.md"
     pi_keybindings_path=".config/pi/agent/keybindings.json"
-    pi_loop_path=".config/pi/agent/extensions/pi-loop/index.ts"
+    pi_loop_path=".config/pi/agent/opt-in-extensions/pi-loop/index.ts"
     retired_pi_path=".config/pi/agent/extensions/auto-compact-resume/index.ts"
     blackhole_path=".config/pi/agent/pi-blackhole/pi-blackhole-config.json"
     legacy_claude=".local/bin/claude"

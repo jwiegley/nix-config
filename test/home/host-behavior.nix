@@ -24,7 +24,7 @@ let
   ) darwinConfigurations;
   gallerySourceFor =
     host:
-    desktopHomesByHost.${host}.home.file.".config/pi/agent/extensions/nix-gallery/index.ts".source;
+    desktopHomesByHost.${host}.home.file.".config/pi/agent/opt-in-extensions/nix-gallery/index.ts".source;
   vulcanJumpPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID/5S98ifv/slBhGzSLMK+/3JAHNzzglOfau6RlqKeYs";
   expectedVulcanJumpAuthorization = ''from="192.168.1.2",restrict,port-forwarding,permitopen="andoria-08:22",command="/usr/bin/false" ${vulcanJumpPublicKey} johnw@vulcan'';
   vulcanJumpAuthorizations =
@@ -227,13 +227,27 @@ let
   allHomes = desktopHomes ++ nonDesktopHomes;
   hasSelectedPackage = name: packages: builtins.elem name (map lib.getName packages);
   hasPackage = name: config: hasSelectedPackage name config.home.packages;
-  managedPiExtensions = [
+  automaticPiExtensions = [
     ".config/pi/agent/extensions/fleet-theme/index.ts"
+  ];
+  optInPiExtensions = [
+    ".config/pi/agent/opt-in-extensions/nix-gallery/index.ts"
+    ".config/pi/agent/opt-in-extensions/pi-loop/index.ts"
+    ".config/pi/agent/opt-in-extensions/pi-mcp-adapter"
+    ".config/pi/agent/opt-in-extensions/pi-quiet"
+  ];
+  retiredPiExtensions = [
+    ".config/pi/agent/extensions/auto-compact-resume/index.ts"
     ".config/pi/agent/extensions/nix-gallery/index.ts"
     ".config/pi/agent/extensions/pi-loop/index.ts"
     ".config/pi/agent/extensions/pi-mcp-adapter"
     ".config/pi/agent/extensions/pi-quiet"
   ];
+  renderedAutomaticPiExtensions =
+    config:
+    builtins.filter (lib.hasPrefix ".config/pi/agent/extensions/") (
+      builtins.attrNames config.home.file
+    );
   ownsObrState =
     config:
     builtins.any (
@@ -482,7 +496,14 @@ assert builtins.all (
   config: builtins.hasAttr ".config/pi/agent/models.json" config.home.file
 ) allHomes;
 assert builtins.all (
-  config: builtins.all (path: builtins.hasAttr path config.home.file) managedPiExtensions
+  config: renderedAutomaticPiExtensions config == automaticPiExtensions
+) allHomes;
+assert builtins.all (
+  config: builtins.all (fileName: builtins.hasAttr fileName config.home.file) optInPiExtensions
+) allHomes;
+assert builtins.all (
+  config:
+  builtins.all (lib.flip lib.hasInfix config.home.activation.aiManagedPreflight.data) retiredPiExtensions
 ) allHomes;
 assert builtins.all (
   config: config.home.activation.aiManagedPiBlackholePolicy.after == [ "linkGeneration" ]

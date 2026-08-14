@@ -8,13 +8,13 @@ tags:
   - ai-agents
   - developer-tools
 created: 2026-07-27
-updated: 2026-08-12
+updated: 2026-08-14
 pi-version: 0.83.0
 ---
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: 27 gallery packages available on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: 27 gallery packages available on every managed host, four explicit opt-in extension entries, one automatically loaded fleet theme, the rendered fleet profiles, and the immediate runtime companions. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope.
 
@@ -22,11 +22,11 @@ The inventory includes generated ownership, model routing, MCP registration, and
 
 | Extension | Version | Principal purpose | Primary interface |
 | --- | ---: | --- | --- |
-| Nix Gallery loader | local | Compose the managed package gallery | automatic |
+| Nix Gallery loader | local | Compose the managed package gallery | explicit `pi -e` |
 | Fleet Theme | local | Discover and select the managed TUI theme | automatic |
-| `@realvendex/pi-loop` | 1.0.2 | Repeat prompts under explicit stop conditions | `/loop` |
-| `pi-mcp-adapter` | 2.17.0 | Lazy, context-efficient MCP access | `mcp`, `/mcp` |
-| `@zenspc/pi-quiet` | 0.4.0 | Dense tool-result presentation | `/quiet` |
+| `@realvendex/pi-loop` | 1.0.2 | Repeat prompts under explicit stop conditions | opt-in, then `/loop` |
+| `pi-mcp-adapter` | 2.17.0 | Lazy, context-efficient MCP access | opt-in, then `mcp`, `/mcp` |
+| `@zenspc/pi-quiet` | 0.4.0 | Dense tool-result presentation | opt-in, then `/quiet` |
 | `pi-hashline-edit-pro` | 0.17.5 | Hash-anchored reads and replacements | `read`, `replace` |
 | `pi-smart-fetch` | 0.3.17 | Browser-fingerprinted readable web fetching | `web_fetch`, `batch_web_fetch` |
 | `pi-smart-web-search` | 0.4.0 | Ranked batch web discovery | `web_search` |
@@ -55,7 +55,12 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `pi-goal-x` | 0.19.0 | Durable goals and Sisyphus continuation | `/goals`, `get_goal` |
 | `pi-cache-optimizer` | 2.8.0 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
 
-The llama-swap provider, oMLX provider, and Model Router packages are available on every host. The generated loader registers them automatically only on Darwin. Both workstations run the local services, but only Hera receives fixed local-provider overrides and a synthetic router model and configuration; Clio retains bounded discovery so that Pi advertises the models its services actually return.
+Except for Fleet Theme, every extension and command in this inventory is inert
+until selected with Pi's native `-e` option. Within the full opt-in gallery,
+"automatic" behavior means automatic after that explicit selection, never part
+of the default prompt or `/new` path.
+
+The llama-swap provider, oMLX provider, and Model Router packages are available on every host. When the generated gallery is explicitly loaded, it registers them only on Darwin. Both workstations run the local services, but only Hera receives fixed local-provider overrides and a synthetic router model and configuration; Clio retains bounded discovery so that Pi advertises the models its services actually return.
 
 ## Managed fleet configuration
 
@@ -66,14 +71,14 @@ The Hera, Clio, shared-work, VPS, and Vulcan Pi profiles are rendered by `~/src/
 | Surface | Current projection |
 | --- | --- |
 | Generated ownership | Individual leaves below `~/.config/pi/agent`, plus `~/.pi-lens/config.json` and the `~/.pi` compatibility link; Pi shares `~/.config/mcp/mcp.json` with Prime Agent |
-| Extension entries | Fleet Theme, Nix Gallery loader, Pi Loop, Pi MCP Adapter, and Quiet Display on every managed host; Linux keeps the two loopback providers and router available without registering them automatically |
+| Extension entries | Fleet Theme under auto-discovered `extensions/`; Nix Gallery, Pi Loop, Pi MCP Adapter, and Quiet Display under inert `opt-in-extensions/` on every managed host |
 | Agent resources | 25 Nix-managed agent definitions |
 | Prompt resources | 63 files: 61 command prompts and the `emacs` and `spanish` prompts |
-| Skill resources | Shared catalog skills selected for Pi, plus six gallery package skill paths and one gallery prompt path advertised at runtime |
+| Skill resources | Shared catalog skills selected for Pi; six gallery package skill paths and one gallery prompt path are advertised only when the gallery is explicitly loaded |
 | Generated policy | `keybindings.json`, `models.json`, the managed theme, the hidden Lens widget setting, and the global MCP registry; Hera also receives `model-router.json` |
 | Deliberately absent | No Pi-specific Nix settings file, hooks, marketplaces, or companion leaves |
 
-Shared skills remain in the common discovery estate rather than being copied into a private Pi skill tree. Their ownership is independent of Codex, so Pi-only hosts receive them too. Package skills supplied by Lens, BTW, Artifacts, Subagents, and Dynamic Workflows enter through the gallery loader.
+Shared skills remain in the common discovery estate rather than being copied into a private Pi skill tree. Their ownership is independent of Codex, so Pi-only hosts receive them too. Package skills supplied by Lens, BTW, Artifacts, Subagents, and Dynamic Workflows enter only through the opt-in gallery loader.
 
 ### Model and routing policy
 
@@ -81,21 +86,21 @@ The generated model files deliberately emit no default model. Model selection re
 
 | Item | Current value |
 | --- | --- |
-| Hera provider surface | Gallery providers `llama-swap` and `omlx`; their fixed model overrides; the `hermes` OpenAI-compatible provider; native `openai-codex` and `openrouter` overrides; and the synthetic `router` provider |
-| Clio provider surface | Gallery providers `llama-swap` and `omlx`, whose bounded discovery exposes only returned chat models; the `hermes` OpenAI-compatible provider; and native `openai-codex` and `openrouter` overrides. No fixed local model or synthetic router route is generated |
+| Hera provider surface | Native `hermes`, `openai-codex`, and `openrouter` providers at startup; explicit gallery loading adds `llama-swap`, `omlx`, their fixed overrides, and the synthetic `router` provider |
+| Clio provider surface | Native `hermes`, `openai-codex`, and `openrouter` providers at startup; explicit gallery loading adds bounded `llama-swap` and `omlx` discovery. No fixed local model or synthetic router route is generated |
 | Linux provider surface | Native `openai-codex` and `openrouter` overrides only; the loopback discovery adapters and router are packaged but not registered automatically |
 | Hermes route | `hermes/hermes-agent` at `https://hermes.vulcan.lan/v1`; opt-in, with its bearer credential resolved from the Home Manager-configured password store and GnuPG home only when a request uses the provider; stale inherited `GPG_TTY` state is discarded before lookup, isolating credential resolution from Agent Deck/tmux terminal state; Pi session-affinity headers are enabled for stable upstream routing |
 | Sol router route | Hera only: `omlx/Qwen3.6-27B-oQ6e-mtp` through the local OpenAI-compatible oMLX service; text-only input; Boolean reasoning exposed as `off` or `high`; 262,144-token context; 65,536-token output |
 | Router profile | Three workload tiers backed by one `sol` model; each defaults to `off` and may be changed explicitly to `high`; `phaseBias` 0.5; debug disabled |
 | Native overrides | `openai-codex/gpt-5.6-sol` receives a 1,050,000-token context; `openrouter/z-ai/glm-5.2` receives 1,048,576; the exact managed Qwen route receives the compatibility and capability override described above |
-| Local discovery | Each local provider queries its loopback `/models` endpoint once during registration, under a 2.5-second bound; explicit type, modality, and capability metadata determines model behavior, while missing or unknown metadata falls back to text-only, non-reasoning chat with 262,144 context and 65,536 output |
+| Local discovery | After explicit gallery loading, each local provider queries its loopback `/models` endpoint once during registration, under a 2.5-second bound; explicit type, modality, and capability metadata determines model behavior, while missing or unknown metadata falls back to text-only, non-reasoning chat with 262,144 context and 65,536 output |
 | Request policy | Both Darwin profiles declare a 7,200-second request and stream-idle transport budget for the discovered local providers in `models.json`; the ordinary global timeout remains 300 seconds, and loopback credentials remain policy-approved and non-secret |
 
 The generated `models.json` owns compatibility and context overrides; on Hera it also owns the synthetic router model and fixed local-provider overrides, while both Darwin profiles own the Hermes route. Hera's exact managed Qwen override is an explicit exception to sparse oMLX discovery metadata: Nix declares its proven Boolean chat-template thinking behavior, sets its model-local thinking default to `off`, and retains text-only input. Explicit or restored user thinking choices still take precedence. Image input is not advertised until an exact model-and-service probe establishes it. The Hermes credential is a runtime command reference, not a secret copied into the Nix store. The Darwin-registered local provider extensions own runtime model discovery. No generated model is Pi's default.
 
 ### MCP registry
 
-Nix generates the shared, catalog-selected registry at `~/.config/mcp/mcp.json`; Pi MCP Adapter exposes it lazily and renders compact footer status.
+Nix generates the shared, catalog-selected registry at `~/.config/mcp/mcp.json`; the explicitly loaded Pi MCP Adapter exposes it lazily and renders compact footer status.
 
 | Profiles | Servers |
 | --- | --- |
@@ -119,11 +124,11 @@ The generated keymap retains the ordinary keys and adds Emacs-style editing:
 
 ### Nix Gallery loader
 
-**Version:** local · **Links:** Nix authority: `~/src/nix/packages/pi-gallery/` · deployed leaf: `~/.config/pi/agent/extensions/nix-gallery/index.ts`
+**Version:** local · **Links:** Nix authority: `~/src/nix/packages/pi-gallery/` · deployed leaf: `~/.config/pi/agent/opt-in-extensions/nix-gallery/index.ts`
 
-The Nix Gallery loader projects the complete managed package set on every host. It imports and registers extensions in deterministic order, except that Linux does not automatically import the two loopback providers or their router. All 27 immutable package paths remain in the projection. Before registration the loader suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
+The Nix Gallery loader projects the complete managed package set on every host. When explicitly selected, it imports and registers extensions in deterministic order, except that Linux omits the two loopback providers and their router. All 27 immutable package paths remain in the projection. Before registration the loader suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
 
-**Basic usage.** No direct command is required. Run `/reload` after activating a new Nix generation, or start a fresh Pi process, to load the current gallery. The loader itself owns no mutable state.
+**Basic usage.** Start Pi with `pi -e ~/.config/pi/agent/opt-in-extensions/nix-gallery/index.ts`. The loader itself owns no mutable state. Leaving off `-e` keeps every gallery member out of the prompt and `/new` critical path.
 
 ### Fleet Theme
 
@@ -139,7 +144,7 @@ Fleet Theme advertises the immutable `dark-tool-backgrounds` theme during resour
 
 Pi Loop repeats a prompt under bounded iteration, timeout, convergence, text, regular-expression, command, and error stop conditions. It supports prompt templating, lifecycle hooks, run logs, named presets, a live TUI panel, and completion notifications. Nix deploys its entry directly from an immutable support package rather than loading it through the managed gallery.
 
-**Basic usage.** Run `/loop "prompt" --max 5` for confirmed rounds, or add `--yes` only when unattended execution and automatic approval of confirmations are intended. Use `/loop stop` to cancel after the current iteration, `/loop preview` to inspect a resolved run without starting it, and `/loop list`, `/loop logs`, or `/loop show` for retained state under `~/.pi/loops/`.
+**Basic usage.** Start Pi with `pi -e ~/.config/pi/agent/opt-in-extensions/pi-loop/index.ts`, then run `/loop "prompt" --max 5` for confirmed rounds. Add `--yes` only when unattended execution and automatic approval of confirmations are intended. Use `/loop stop` to cancel after the current iteration, `/loop preview` to inspect a resolved run without starting it, and `/loop list`, `/loop logs`, or `/loop show` for retained state under `~/.pi/loops/`.
 
 ### Pi MCP Adapter
 
@@ -147,7 +152,7 @@ Pi Loop repeats a prompt under bounded iteration, timeout, convergence, text, re
 
 Pi MCP Adapter exposes Model Context Protocol servers through one compact proxy tool instead of placing every remote tool schema in the model context. Servers are lazy by default; metadata, instructions, resources, and prompts are cached; large results are guarded; selected tools may be promoted directly; and MCP Apps and remote OAuth retain explicit interactive surfaces.
 
-**Basic usage.** Open `/mcp` for status and direct-tool control, `/mcp setup` for guided configuration, and `/mcp-auth` for OAuth. From an agent turn, use `mcp({ search: "term" })`, inspect a candidate with `mcp({ describe: "tool" })`, read server guidance with `mcp({ instructions: "server" })`, and call it with `mcp({ tool: "tool", args: { ... } })`. `/mcp enable` and `/mcp disable` write only project-local overrides and require `/reload`; reconnects and direct-tool changes refresh the current session.
+**Basic usage.** Start Pi with `pi -e ~/.config/pi/agent/opt-in-extensions/pi-mcp-adapter`, then open `/mcp` for status and direct-tool control, `/mcp setup` for guided configuration, or `/mcp-auth` for OAuth. From an agent turn, use `mcp({ search: "term" })`, inspect a candidate with `mcp({ describe: "tool" })`, read server guidance with `mcp({ instructions: "server" })`, and call it with `mcp({ tool: "tool", args: { ... } })`. `/mcp enable` and `/mcp disable` write only project-local overrides and require `/reload`; reconnects and direct-tool changes refresh the current session.
 
 ### Quiet Display
 
@@ -155,7 +160,7 @@ Pi MCP Adapter exposes Model Context Protocol servers through one compact proxy 
 
 Quiet Display changes presentation, not execution. It renders built-in and foreign tool activity as dense verb-first rows, folds adjacent successful operations of the same kind, suppresses live stdout while a tool is running, and preserves Pi's stock expanded display for inspection and failures.
 
-**Basic usage.** Quiet mode is enabled by default. Use `/quiet`, `/quiet on`, `/quiet off`, or `/quiet status`. The sticky preference is stored in `~/.config/pi/agent/extensions/quiet.json`.
+**Basic usage.** Start Pi with `pi -e ~/.config/pi/agent/opt-in-extensions/pi-quiet`, then use `/quiet`, `/quiet on`, `/quiet off`, or `/quiet status`. The sticky preference remains mutable Pi state.
 
 ## Editing, context, and session control
 
@@ -209,7 +214,7 @@ The managed package keeps its dashboard summary local instead of making upstream
 
 Pi Trace records the execution structure of each session—model requests, steps, tool calls, timings, usage, and outcomes—as local JSONL, then renders a self-contained HTML report. The Nix package sanitizes persisted values under secret-like key names, including common authorization, API-key, AWS-secret, and cookie fields; bounds nesting; truncates long strings; flushes pending events before rendering; supplies an immutable Python renderer; and handles unavailable browser launchers without crashing Pi. Trace directories are created with mode 0700 and their JSONL and HTML files with mode 0600.
 
-**Basic usage.** Tracing starts automatically. Run `/trace` for the current session or `/trace all` for the cross-session dashboard. Files live below `~/.pi/agent/traces/`. They still contain prompts, tool inputs and results, file paths, and model data; treat them as sensitive. The extension has no retention or rotation policy.
+**Basic usage.** After the gallery is explicitly loaded, tracing starts automatically. Run `/trace` for the current session or `/trace all` for the cross-session dashboard. Files live below `~/.pi/agent/traces/`. They still contain prompts, tool inputs and results, file paths, and model data; treat them as sensitive. The extension has no retention or rotation policy.
 
 ### Cache Optimizer
 
@@ -359,17 +364,17 @@ Pi Copy Message opens a searchable, keyboard-driven picker over raw session mess
 
 **Version:** `57583beb` · **Links:** Nix adapter: `~/src/nix/packages/pi-gallery/providers/pi-provider-llama-swap.ts` · [upstream source](https://github.com/gaurav-321/pi-local-llm)
 
-The fleet-packaged llama-swap provider is a reviewed Nix derivative of `pi-local-llm`. Darwin registers it automatically; Linux retains the package without doing so. At registration it queries the loopback llama-swap service once, filters non-chat and non-text models, derives modality and reasoning support from model metadata, and registers the surviving models through Pi's OpenAI Completions interface. A failed discovery emits a warning and leaves the provider empty until Pi reloads or restarts.
+The fleet-packaged llama-swap provider is a reviewed Nix derivative of `pi-local-llm`. The opt-in gallery registers it on Darwin; Linux retains the package without doing so. At registration it queries the loopback llama-swap service once, filters non-chat and non-text models, derives modality and reasoning support from model metadata, and registers the surviving models through Pi's OpenAI Completions interface. A failed discovery emits a warning and leaves the provider empty until Pi reloads or restarts.
 
-**Basic usage.** On Darwin, keep the Nix-managed `org.nixos.llama-swap` launch agent available, then select a discovered `llama-swap/*` model through `/model`. Reload Pi after the local model roster changes so that the one-time discovery runs again. Linux requires an independently provisioned trusted service and explicit extension loading.
+**Basic usage.** On Darwin, keep the Nix-managed `org.nixos.llama-swap` launch agent available, start Pi with the opt-in gallery, then select a discovered `llama-swap/*` model through `/model`. Reload Pi after the local model roster changes so that the one-time discovery runs again. Linux requires an independently provisioned trusted service and explicit extension loading.
 
 ### oMLX Provider
 
 **Version:** `57583beb` · **Links:** Nix adapter: `~/src/nix/packages/pi-gallery/providers/pi-provider-omlx.ts` · [upstream source](https://github.com/gaurav-321/pi-local-llm)
 
-The fleet-packaged oMLX provider uses the same bounded discovery adapter against the loopback oMLX service. Darwin registers it automatically. Hera uses it for the generated Sol router route, presently `Qwen3.6-27B-oQ6e-mtp`; because that service record is sparse, the generated model override supplies the exact text-only, `off`/`high`, Qwen chat-template contract after discovery. Clio has no fixed Qwen override and exposes only models returned by discovery, with sparse records remaining conservatively non-reasoning and text-only. Linux retains the package without automatic registration.
+The fleet-packaged oMLX provider uses the same bounded discovery adapter against the loopback oMLX service. The opt-in gallery registers it on Darwin. Hera uses it for the generated Sol router route, presently `Qwen3.6-27B-oQ6e-mtp`; because that service record is sparse, the generated model override supplies the exact text-only, `off`/`high`, Qwen chat-template contract after discovery. Clio has no fixed Qwen override and exposes only models returned by discovery, with sparse records remaining conservatively non-reasoning and text-only. Linux retains the package without automatic registration.
 
-**Basic usage.** On Hera, keep the Nix-managed `org.nixos.omlx` launch agent available and select the managed `omlx/Qwen3.6-27B-oQ6e-mtp` model through `/model`, or select `router/sol`. Both expose only `off` and `high`; Shift-Tab cycles between them. Each starts at `off` when no explicit, restored, or global user preference exists; an existing user-selected level still takes precedence. With no enabled thinking level, the transport sends `enable_thinking: false`. On Clio, select only a model returned by `/model` discovery; no fixed Qwen or `router/sol` entry is generated. Reload Pi after the oMLX model roster changes. Linux requires an independently provisioned trusted service and explicit extension loading.
+**Basic usage.** On Hera, keep the Nix-managed `org.nixos.omlx` launch agent available, start Pi with the opt-in gallery, and select the managed `omlx/Qwen3.6-27B-oQ6e-mtp` model through `/model`, or select `router/sol`. Both expose only `off` and `high`; Shift-Tab cycles between them. Each starts at `off` when no explicit, restored, or global user preference exists; an existing user-selected level still takes precedence. With no enabled thinking level, the transport sends `enable_thinking: false`. On Clio, select only a model returned by `/model` discovery; no fixed Qwen or `router/sol` entry is generated. Reload Pi after the oMLX model roster changes. Linux requires an independently provisioned trusted service and explicit extension loading.
 
 ### Multi-Pass
 
@@ -383,9 +388,9 @@ Pi Multi-Pass registers additional OAuth subscription accounts for supported pro
 
 **Version:** 0.4.4 · **Links:** [Pi Packages](https://pi.dev/packages/@yeliu84/pi-model-router) · [Home](https://github.com/yeliu84/pi-model-router#readme) · [GitHub](https://github.com/yeliu84/pi-model-router)
 
-Pi Model Router selects a configured route for each turn according to task complexity, phase, profile, budget, and explicit pins. The Hera configuration retains low, medium, and high workload tiers, but all three use the same `sol` model backed by `omlx/Qwen3.6-27B-oQ6e-mtp` and begin with thinking disabled; it does not invent graded reasoning strengths for a server whose proven control is Boolean. An explicit Pi thinking-level change enables `high` across the active router profile. The local Nix configuration keeps this capability map authoritative, while the extension provides the per-turn decision and interactive control surface. Clio loads the packaged extension but generates no route; Linux retains the package without automatically loading it or generating a route.
+Pi Model Router selects a configured route for each turn according to task complexity, phase, profile, budget, and explicit pins. The Hera configuration retains low, medium, and high workload tiers, but all three use the same `sol` model backed by `omlx/Qwen3.6-27B-oQ6e-mtp` and begin with thinking disabled; it does not invent graded reasoning strengths for a server whose proven control is Boolean. An explicit Pi thinking-level change enables `high` across the active router profile. The local Nix configuration keeps this capability map authoritative, while the extension provides the per-turn decision and interactive control surface. Clio and Linux retain the packaged extension without loading it or generating a route.
 
-**Basic usage.** On Hera, open `/router` to inspect or change router state. Select `router/sol` when the managed local route is intended, then use Shift-Tab to move explicitly between `off` and `high`; use direct `/model` selection when a task requires another provider or model. The generated configuration does not force a default model. Clio and Linux require an independently reviewed router configuration before a route can be used; Linux also requires explicit extension loading.
+**Basic usage.** On Hera, explicitly load the gallery, then open `/router` to inspect or change router state. Select `router/sol` when the managed local route is intended, then use Shift-Tab to move explicitly between `off` and `high`; use direct `/model` selection when a task requires another provider or model. The generated configuration does not force a default model. Clio and Linux require an independently reviewed router configuration before a route can be used; Linux also requires explicit extension loading.
 
 ## Companion runtimes
 
@@ -407,7 +412,7 @@ The Pi profile also installs the support toolchain expected by Lens and the orch
 
 - The active profile root is `~/.config/pi/agent`; Nix owns only the generated leaves enumerated above.
 - Run `/reload` after a Nix activation when the current Pi process must adopt changed extension code.
-- On Hera and Clio, restart or reload Pi after the llama-swap or oMLX model roster changes, because local provider discovery runs once during registration.
+- On Hera and Clio, restart or reload an explicitly gallery-enabled Pi after the llama-swap or oMLX model roster changes, because local provider discovery runs once during registration.
 - Mutable extension state remains outside Nix ownership. Examples include Blackhole configuration and observational memory; Pi Mem Markdown, scratchpad, and dashboard cache; trace files; the Usage Dashboard cache; Cache Optimizer, Caveman, Quiet, and RTK preferences; Pi Loop presets and logs; MCP credentials and cache; Cymbal indexes; and Subagent, Workflow, and Goal run state. Nix reconciles Blackhole's four enabled-policy fields and removes its three retired aliases.
 - Style extensions retain distinct purposes: Ponytail minimizes implementation; Caveman compresses prose; Quiet compresses tool presentation; Fleet Theme changes TUI color treatment.
 
@@ -418,19 +423,19 @@ Confirm the Nix-owned extension entries, exact gallery projection, generated res
 ```bash
 profile=~/.config/pi/agent
 
-for path in \
+for entry in \
   "$profile/extensions/fleet-theme/index.ts" \
-  "$profile/extensions/nix-gallery/index.ts" \
-  "$profile/extensions/pi-loop/index.ts" \
-  "$profile/extensions/pi-mcp-adapter" \
-  "$profile/extensions/pi-quiet" \
+  "$profile/opt-in-extensions/nix-gallery/index.ts" \
+  "$profile/opt-in-extensions/pi-loop/index.ts" \
+  "$profile/opt-in-extensions/pi-mcp-adapter" \
+  "$profile/opt-in-extensions/pi-quiet" \
   "$profile/themes/dark-tool-backgrounds.json" \
   ~/.pi-lens/config.json
 do
-  realpath "$path"
+  realpath "$entry"
 done
 
-gallery=$(dirname "$(realpath "$profile/extensions/nix-gallery/index.ts")")
+gallery=$(dirname "$(realpath "$profile/opt-in-extensions/nix-gallery/index.ts")")
 jq -r '.packages[] | "\(.name)\t\(.version)"' "$gallery/projection.json"
 find "$profile/agents" -mindepth 1 -maxdepth 1 \( -type f -o -type l \) | wc -l
 find "$profile/prompts" -mindepth 1 -maxdepth 1 \( -type f -o -type l \) | wc -l
