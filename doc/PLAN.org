@@ -4327,6 +4327,26 @@ Change make update so an independently failing package candidate retains its pre
 ]
 #+end_src
 
+* DOING [#B] Remove residual Cozempic agent state
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-jhjx
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-13 Thu 21:49]
+:MODIFIED: [2026-08-13 Thu 21:50]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Remove Cozempic plugin registration, generated project-memory digests, and obsolete agent-config backups from Hera. Verify current Nix source, active settings, executable paths, and plugin cache/marketplace state cannot recreate it. Do not rewrite conversation history or interrupt live agent sessions without separate authorization.
+
+** Notes
+
+Current Nix source and active generated settings contain no Cozempic reference; no Cozempic executable or plugin payload/marketplace directory exists. Removed the two live git-ai registry entries, five obsolete settings/registry backups, and 28 generated project-memory cozempic_digest.md files. JSON validation and bounded active-config/name checks are clean. Four Claude processes started before the cleaned settings rewrite remain live and may retain old hooks in memory; restarting those sessions requires separate session-control authorization. Conversation/prompt/file history was intentionally preserved as historical evidence.
+
 * DONE [#B] Decide whether to retain emulated MSSQL on Apple Silicon
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
