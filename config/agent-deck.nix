@@ -14,10 +14,14 @@ let
       toml
     ]
   );
+  bridgeLauncher = pkgs.callPackage ./agent-deck-conductor-launcher.nix { };
 
   homeDirectory = config.home.homeDirectory;
   conductorDirectory = "${config.xdg.dataHome}/agent-deck/conductor";
   logDirectory = "${config.xdg.dataHome}/agent-deck/logs";
+  bridgeApp = "${bridgeLauncher}/${bridgeLauncher.appRelativePath}";
+  bridgeAppDirectory = "${conductorDirectory}/${bridgeLauncher.bundleName}.app";
+  bridgeExecutable = "${bridgeAppDirectory}/Contents/MacOS/${bridgeLauncher.executableName}";
   daemonPath = "${config.home.profileDirectory}/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin";
   commonEnvironment = {
     HOME = homeDirectory;
@@ -45,9 +49,16 @@ in
         }
       ];
 
-      # agent-deck prefers this conventional path when it renders its own plist.
-      # The directory is a Nix Python environment, not a mutable virtualenv.
-      xdg.dataFile."agent-deck/conductor/venv".source = bridgePython;
+      xdg.dataFile = {
+        # agent-deck prefers this conventional path when it renders its own
+        # plist. The directory is a Nix Python environment, not a mutable
+        # virtualenv.
+        "agent-deck/conductor/venv".source = bridgePython;
+
+        # Keep the responsible GUI process native and intentionally named while
+        # leaving bridge.py and the conductor state mutable.
+        "agent-deck/conductor/${bridgeLauncher.bundleName}.app".source = bridgeApp;
+      };
 
       # launchd opens log files before starting a job. Ensure both parents exist
       # after Home Manager links the Python environment and before it bootstraps
@@ -67,6 +78,7 @@ in
           config = {
             Label = "com.agentdeck.conductor-bridge";
             ProgramArguments = [
+              bridgeExecutable
               "${conductorDirectory}/venv/bin/python3"
               "${conductorDirectory}/bridge.py"
             ];

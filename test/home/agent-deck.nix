@@ -31,6 +31,13 @@ let
       toml
     ]
   );
+  bridgeLauncher = darwinPkgs.callPackage ../../config/agent-deck-conductor-launcher.nix { };
+  bridgeApp = "${bridgeLauncher}/${bridgeLauncher.appRelativePath}";
+  bridgeAppDirectory = "${conductorDirectory}/${bridgeLauncher.bundleName}.app";
+  bridgeAppRelative = relativeToHome bridgeAppDirectory;
+  bridgeExecutable = "${bridgeAppDirectory}/Contents/MacOS/${bridgeLauncher.executableName}";
+  bridgeAppDataFile =
+    hera.xdg.dataFile."agent-deck/conductor/${bridgeLauncher.bundleName}.app".source;
 
   bridge = hera.launchd.agents.agent-deck-conductor-bridge or null;
   notifier = hera.launchd.agents.agent-deck-transition-notifier or null;
@@ -45,6 +52,7 @@ let
     && cfg.Label == "com.agentdeck.conductor-bridge"
     &&
       cfg.ProgramArguments == [
+        bridgeExecutable
         "${conductorDirectory}/venv/bin/python3"
         "${conductorDirectory}/bridge.py"
       ]
@@ -130,6 +138,9 @@ assert lib.hasPrefix "${homeDirectory}/" conductorDirectory;
 assert lib.hasPrefix "${homeDirectory}/" logDirectory;
 assert hera.xdg.dataFile ? "agent-deck/conductor/venv";
 assert bridgeVenv.drvPath == expectedBridgeVenv.drvPath;
+assert bridgeAppDataFile == bridgeApp;
+assert bridgeLauncher.bundleIdentifier == bridge.config.Label;
+assert bridgeLauncher.tccEntitlements == { };
 assert activation.before == [ "setupLaunchAgents" ];
 assert activation.after == [ "linkGeneration" ];
 assert validBridge;
@@ -200,6 +211,89 @@ pkgs.runCommand "agent-deck-home-manager-lifecycle" { } ''
 
   ${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
     ${bridgeVenv}/bin/python3 -c 'import discord, toml'
+
+    launcher_source=${lib.escapeShellArg bridgeApp}
+    launcher_app="$HOME/${bridgeAppRelative}"
+    ln -s "$launcher_source" "$launcher_app"
+    launcher="$launcher_app/Contents/MacOS/${bridgeLauncher.executableName}"
+    launcher_info="$launcher_app/Contents/Info.plist"
+
+    /usr/bin/plutil -lint "$launcher_info" >/dev/null
+    [ "$(/usr/bin/plutil -extract CFBundleIdentifier raw -o - "$launcher_info")" = \
+      ${lib.escapeShellArg bridgeLauncher.bundleIdentifier} ]
+    [ "$(/usr/bin/plutil -extract CFBundleExecutable raw -o - "$launcher_info")" = \
+      ${lib.escapeShellArg bridgeLauncher.executableName} ]
+    [ "$(/usr/bin/plutil -extract CFBundleName raw -o - "$launcher_info")" = \
+      ${lib.escapeShellArg bridgeLauncher.bundleName} ]
+    [ "$(/usr/bin/plutil -extract CFBundleDisplayName raw -o - "$launcher_info")" = \
+      ${lib.escapeShellArg bridgeLauncher.bundleName} ]
+    [ "$(/usr/bin/plutil -extract CFBundlePackageType raw -o - "$launcher_info")" = APPL ]
+    [ "$(/usr/bin/plutil -extract LSBackgroundOnly raw -o - "$launcher_info")" = true ]
+
+    /usr/bin/codesign --verify --strict --verbose=4 "$launcher_app"
+    launcher_signature=$(/usr/bin/codesign --display --verbose=4 "$launcher" 2>&1)
+    grep -F ${lib.escapeShellArg "Identifier=${bridgeLauncher.bundleIdentifier}"} \
+      <<<"$launcher_signature" >/dev/null
+    grep -E 'flags=.*\([^)]*adhoc' <<<"$launcher_signature" >/dev/null
+    grep -E 'flags=.*\([^)]*runtime' <<<"$launcher_signature" >/dev/null
+
+    /usr/bin/codesign --display --entitlements - --xml \
+      "$launcher" > launcher-entitlements.plist
+    if [ -s launcher-entitlements.plist ]; then
+      /usr/bin/plutil -lint launcher-entitlements.plist >/dev/null
+      if grep -F '<key>' launcher-entitlements.plist >/dev/null; then
+        echo "Agent Deck bridge launcher has an entitlement" >&2
+        exit 1
+      fi
+    fi
+    if grep -E \
+      '(tccutil|TCC[.]db|UsageDescription|com[.]apple[.]security[.]personal-information)' \
+      ${bridgeLauncher.launcherSource} ${bridgeLauncher.infoPlist} \
+      ${../../config/agent-deck.nix} >/dev/null; then
+      echo "Agent Deck bridge launcher grants or requests TCC access" >&2
+      exit 1
+    fi
+    grep -F 'posix_spawn(&pid' ${bridgeLauncher.launcherSource} >/dev/null
+    grep -F 'waitpid(pid' ${bridgeLauncher.launcherSource} >/dev/null
+    grep -F 'forward_signal' ${bridgeLauncher.launcherSource} >/dev/null
+
+    if "$launcher" > launcher-no-child.out 2> launcher-no-child.err; then
+      echo "Agent Deck bridge launcher accepted an empty command" >&2
+      exit 1
+    fi
+    [ ! -s launcher-no-child.out ]
+    grep -F 'expected an absolute child executable' launcher-no-child.err >/dev/null
+
+    if "$launcher" /bin/sh -c 'exit 23'; then
+      echo "Agent Deck bridge launcher lost the child exit status" >&2
+      exit 1
+    else
+      child_status=$?
+    fi
+    [ "$child_status" -eq 23 ]
+
+    child_marker="$PWD/bridge-child"
+    child_completion="$PWD/bridge-child-complete"
+    "$launcher" /bin/sh -c \
+      'trap "printf \"%s\\n\" done > \"\$2\"; exit 0" TERM; printf "%s\n" "$PPID" > "$1"; while :; do /bin/sleep 0.1; done' \
+      bridge-child "$child_marker" "$child_completion" &
+    launcher_pid=$!
+    cleanup_launcher() {
+      kill -TERM "$launcher_pid" 2>/dev/null || true
+      wait "$launcher_pid" 2>/dev/null || true
+    }
+    trap cleanup_launcher EXIT
+    for _ in $(seq 1 100); do
+      [ -s "$child_marker" ] && break
+      /bin/sleep 0.05
+    done
+    [ -s "$child_marker" ]
+    read -r recorded_parent < "$child_marker"
+    [ "$recorded_parent" = "$launcher_pid" ]
+    kill -TERM "$launcher_pid"
+    wait "$launcher_pid"
+    [ "$(< "$child_completion")" = done ]
+    trap - EXIT
   ''}
 
   touch "$out"
