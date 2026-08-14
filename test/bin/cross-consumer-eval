@@ -428,6 +428,45 @@ def root_attrset(tokens, start=0):
     return None
 
 
+def require_static_inputs(tokens, opening, closing):
+    if closing + 1 >= len(tokens) or not symbol_is(tokens[closing + 1], ";"):
+        die("flake inputs must use one static literal attribute set")
+
+    expression_words = {
+        "assert",
+        "else",
+        "if",
+        "in",
+        "inherit",
+        "let",
+        "rec",
+        "then",
+        "with",
+    }
+    literal_values = {
+        ("word", "false"),
+        ("word", "null"),
+        ("word", "true"),
+    }
+    literal_symbols = {"{", "}", ".", "=", ";"}
+    for index in range(opening + 1, closing):
+        token = tokens[index]
+        if token[0] == "dynamic-string":
+            die("flake inputs must use one static literal attribute set")
+        if token[0] == "word" and token[1] in expression_words:
+            die("flake inputs must use one static literal attribute set")
+        if token[0] == "symbol" and token[1] not in literal_symbols:
+            die("flake inputs must use one static literal attribute set")
+        if not symbol_is(token, "="):
+            continue
+        if index + 1 >= closing:
+            die("flake inputs must use one static literal attribute set")
+        value = tokens[index + 1]
+        if value[0] == "string" or symbol_is(value, "{") or value in literal_values:
+            continue
+        die("flake inputs must use one static literal attribute set")
+
+
 def normalize_gitea_url(url, scheme, queries):
     if not isinstance(url, str):
         return None
@@ -533,6 +572,7 @@ if policy == "gitea-only":
     if inputs is None:
         die("MISSING inputs source set")
     inputs_opening, inputs_closing = inputs
+    require_static_inputs(source_tokens, inputs_opening, inputs_closing)
     for key, expected_queries in SOURCE_QUERIES.items():
         source = direct_attrset(source_tokens, key, inputs_opening, inputs_closing)
         if source is None:

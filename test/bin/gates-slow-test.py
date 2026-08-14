@@ -553,6 +553,7 @@ class TestCrossConsumerEvalGiteaPolicy(unittest.TestCase):
         github_source=None,
         root_flake=True,
         extra_input="",
+        inputs_suffix="",
         expression_prefix="",
         flake_prelude="",
         root_prelude="",
@@ -587,7 +588,7 @@ class TestCrossConsumerEvalGiteaPolicy(unittest.TestCase):
     nix-config-ai = {
       url = "%s";
     };
-  };
+  }%s;
 }
 """
             % (
@@ -598,6 +599,7 @@ class TestCrossConsumerEvalGiteaPolicy(unittest.TestCase):
                 root_url,
                 flake_line,
                 ai_url,
+                inputs_suffix,
             ),
             encoding="utf-8",
         )
@@ -963,8 +965,28 @@ class TestCrossConsumerEvalGiteaPolicy(unittest.TestCase):
                     extra_input=f"    retired-nix-config.url = {expression};"
                 )
                 self.assert_gate_fails(
-                    "flake input URL assignments must use literal strings"
+                    "flake inputs must use one static literal attribute set"
                 )
+
+    def test_rejects_composed_inputs_attribute_set(self):
+        self.write_fixture(
+            expression_prefix="""let
+  extraInputs.retired.url = "github:jwiegley/nix-config";
+in
+""",
+            inputs_suffix=" // extraInputs",
+        )
+        self.assert_gate_fails("flake inputs must use one static literal attribute set")
+
+    def test_rejects_inherited_input_url(self):
+        self.write_fixture(
+            expression_prefix="""let
+  url = "github:jwiegley/nix-config";
+in
+""",
+            extra_input="    retired = { inherit url; };\n",
+        )
+        self.assert_gate_fails("flake inputs must use one static literal attribute set")
 
     def test_ignores_github_text_in_comments_and_nix_strings(self):
         self.write_fixture(

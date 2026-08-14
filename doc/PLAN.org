@@ -1107,10 +1107,10 @@ bin/publish validates raw/effective origin URLs, then runs a gate and later fetc
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 21:09]
-:MODIFIED: [2026-08-13 Thu 21:21]
+:MODIFIED: [2026-08-13 Thu 21:39]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-13 Thu 21:21]
-:CLOSE_REASON: Caller Git graph/config/SSH selectors and computed URL bypasses are closed with focused mutation tests; exact target-tip leasing preserves fast-forward-only publication.
+:FINISHED: [2026-08-13 Thu 21:39]
+:CLOSE_REASON: Disabled alternate-store commit-graph and bitmap acceleration in the isolated Gitea transport and made consumer flake inputs fail closed unless they are one static literal attribute set. Added composition/inheritance regressions and corrected publication wording. Focused evidence: consumer gate 68/68 and publication 59/59; Bash, ShellCheck, Ruff, and diff checks pass. No Nix evaluation, build, network publication, push, or activation.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1128,6 +1128,13 @@ Independent fess audit of commit 5016353 found that bin/publish inherits graph s
     "author": "johnw",
     "text": "2026-08-13 bounded correction: the transport now scrubs graph/template/SSH selector variables, initializes from a private empty template, rejects unexpected local transport config, verifies signatures through that sanitized repository, requires origin as the sole remote, checks only commits newly reachable from the exact target branch, and applies an exact old-tip lease. Consumer flake input URLs must be literal, including rejecting concatenation/interpolation. Focused evidence: publish 59/59 and consumer gate 66/66; bash -n, ShellCheck, Ruff, and diff checks pass. No real network, push, activation, Nix evaluation, or broad suite ran.",
     "created_at": "2026-08-14T04:21:39Z"
+  },
+  {
+    "id": 369,
+    "issue_id": "nix-49th",
+    "author": "johnw",
+    "text": "Independent fess of db820f86 found two remaining high-severity gaps: raw-parent traversal did not disable alternate-store commit-graph/bitmap acceleration, and the literal input scanner allowed inherit/composed input expressions. Reopen for one bounded correction; no publication or activation occurred.",
+    "created_at": "2026-08-14T04:29:49Z"
   }
 ]
 #+end_src

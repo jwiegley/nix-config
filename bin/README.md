@@ -324,8 +324,9 @@ authentication remains environment-owned, but Git SSH-command overrides do not.
 Signature ranges come only from the exact target-branch object ID reported by a
 forced, pruned fetch into a proven-empty temporary namespace, independent of
 configured refspecs and tracking refs. The isolated repository traverses raw
-object links so replacement refs, grafts, and shallow metadata cannot hide a
-commit from the range whose exact objects are verified. The exact selected tip
+object links with commit-graph and bitmap acceleration disabled, so replacement
+refs, grafts, shallow metadata, and alternate-store graph metadata cannot hide
+a commit from the range whose exact objects are verified. The exact selected tip
 and every commit newly reachable from that Gitea branch must have a valid
 signature. The command proves that Gitea accepts a fast-forward, uses an exact
 old-tip lease to close the fetch/push race, and reads the remote ref back after
@@ -395,7 +396,7 @@ new generation and the affected executable or service passes a runtime check.
 | `git-sha OWNER/REPO REV` | Prefetch a Git revision and print its Nix SHA-256 | Invokes `nix-prefetch-git`; intended for source maintenance. |
 | `myhost` | Print the locally inferred host class | Resolves through the shared routing library (hera/clio/vulcan/shared-work/vps), using `ipaddr en0` only to disambiguate the two workstations; exits 1 loudly on an unrecognized host. Do not use it as security or deployment authorization. |
 | `persona NAME` | Select Claude, Git, and optional GitHub identities | Replaces mutable identity state and `~/.claude`; persona files are sourced shell code. Inspection forms are `--status/-s`, `--list/-l`, and `--env/-e`; `--help/-h` prints usage and exits with status 1. |
-| `publish [--publish] [--rev REV] [--branch NAME]` | Preflight or publish to Gitea | `--publish` pushes; `--dry-run` and the bare form do not. Never force-pushes. |
+| `publish [--publish] [--rev REV] [--branch NAME]` | Preflight or publish to Gitea | `--publish` pushes; `--dry-run` and the bare form do not. Never permits non-fast-forward publication. |
 | `runemacs [VERSION]` | Start the external Emacs `open` target through `load-env-emacsVERSION` | Depends on the Emacs repository and PATH-provided helper. |
 | `switch` | Dispatch activation by host class | Darwin delegates to `u`; shared Home Manager builds its activation package; NixOS delegates to the authoritative `/etc/nixos/build` driver and propagates its status. |
 | `u [HOST] MAKE_ARGS...` | Dispatch the configured Makefile for Hera, Clio, or Vulcan | Host identity comes from the shared routing library; other host classes exit 1 with `u: unsupported host class`, and unrecognized hosts exit 1 loudly. On Darwin, first raises launchd and shell file-descriptor limits. It is not a general fleet dispatcher. |

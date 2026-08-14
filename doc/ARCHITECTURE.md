@@ -241,8 +241,9 @@ the fast-forward-only publication transaction. Network operations bind to the
 literal authority through an isolated Git configuration and private empty
 template. The transaction derives signature scope only from the exact target-tip
 object ID reported by a forced, pruned temporary fetch, traverses raw object links
-outside replacement, graft, and shallow views, requires an exact old-tip lease,
-and requires an exact signed tip plus final remote readback.
+with commit-graph and bitmap acceleration disabled and outside replacement,
+graft, and shallow views, requires an exact old-tip lease, and requires an exact
+signed tip plus final remote readback.
 The transaction tracks the real-push/readback interval explicitly: an interrupt
 inside it reports unverified state and only the supported transactional retry,
 while an earlier interrupt does not claim possible remote mutation.

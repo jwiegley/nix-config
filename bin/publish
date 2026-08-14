@@ -10,8 +10,9 @@
 # silently publish elsewhere. The push is fast-forward-only; never weaken this by
 # adding force.
 #
-# Never force-pushes. Never embeds a credential: authentication is whatever ssh
-# already provides, so this works only where the operator's keys already work.
+# Never permits a non-fast-forward publication. Never embeds a credential:
+# authentication is whatever ssh already provides, so this works only where the
+# operator's keys already work.
 #
 # Usage:
 #   bin/publish                     # no push; refresh refs and pre-flight. The default.
@@ -314,7 +315,11 @@ transport_git() {
         GIT_CONFIG_NOSYSTEM=1 \
         GIT_CONFIG_SYSTEM=/dev/null \
         GIT_CONFIG_GLOBAL=/dev/null \
-        GIT_CONFIG_COUNT=0 \
+        GIT_CONFIG_COUNT=2 \
+        GIT_CONFIG_KEY_0=core.commitGraph \
+        GIT_CONFIG_VALUE_0=false \
+        GIT_CONFIG_KEY_1=pack.useBitmapIndex \
+        GIT_CONFIG_VALUE_1=false \
         GIT_DIR="$transport_git_dir" \
         GIT_ALTERNATE_OBJECT_DIRECTORIES="$source_object_dir" \
         git "$@"
