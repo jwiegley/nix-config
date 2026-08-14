@@ -100,11 +100,6 @@ runCommand "pi-fleet-theme-check"
         and .command == "get_commands"
         and .success == true
         and any(.data.commands[]; .name == "fleet-theme-test-loaded")
-        and all(
-          .data.commands[];
-          .name as $name
-          | (["loop", "mcp", "quiet", "trace"] | index($name) | not)
-        )
       )
     ' "$TMPDIR/rpc.stdout" >/dev/null
 

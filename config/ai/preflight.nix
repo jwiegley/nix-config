@@ -65,13 +65,13 @@ let
     ".config/mcp/mcp.json"
     ".pi-lens/config.json"
     ".config/pi/agent/extensions/fleet-theme/index.ts"
+    ".config/pi/agent/extensions/nix-gallery/index.ts"
+    ".config/pi/agent/extensions/pi-loop/index.ts"
+    ".config/pi/agent/extensions/pi-mcp-adapter"
+    ".config/pi/agent/extensions/pi-quiet"
     ".config/pi/agent/keybindings.json"
     ".config/pi/agent/model-router.json"
     ".config/pi/agent/models.json"
-    ".config/pi/agent/opt-in-extensions/nix-gallery/index.ts"
-    ".config/pi/agent/opt-in-extensions/pi-loop/index.ts"
-    ".config/pi/agent/opt-in-extensions/pi-mcp-adapter"
-    ".config/pi/agent/opt-in-extensions/pi-quiet"
     ".config/pi/agent/themes/dark-tool-backgrounds.json"
     ".config/transcribe/llm-route.json"
     ".prime/agent/COMPATIBILITY.md"
@@ -137,7 +137,8 @@ let
   retiredPathsValid =
     retiredPaths == lib.sort builtins.lessThan (lib.unique retiredPaths)
     && builtins.all (
-      path: validRelativePath path && lib.hasPrefix ".config/pi/agent/extensions/" path
+      path:
+      validRelativePath path && lib.hasSuffix "/pi/agent/extensions/auto-compact-resume/index.ts" path
     ) retiredPaths;
   renderMcpGuard = path: ''
     mcp_path="$HOME/${path}"

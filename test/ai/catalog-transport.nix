@@ -1070,7 +1070,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
       "export default createNixGallery(" + builtins.toJSON syntheticLocalModelDiscoveryEndpoints + ");"
     )
   } ${
-    piSyntheticDiscoveryRendered.files.".config/pi/agent/opt-in-extensions/nix-gallery/index.ts".source
+    piSyntheticDiscoveryRendered.files.".config/pi/agent/extensions/nix-gallery/index.ts".source
   } >/dev/null
 
   history_contract=${parallelizeSource}/scripts/verify-history-isolation.py
@@ -1470,9 +1470,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
         )
         + ");"
       )
-    } ${
-      entry.rendered.files.".config/pi/agent/opt-in-extensions/nix-gallery/index.ts".source
-    } >/dev/null
+    } ${entry.rendered.files.".config/pi/agent/extensions/nix-gallery/index.ts".source} >/dev/null
     ${pkgs.jq}/bin/jq -e '
       has("app.thinking.cycle") | not
     ' ${entry.rendered.files.".config/pi/agent/keybindings.json".source} >/dev/null

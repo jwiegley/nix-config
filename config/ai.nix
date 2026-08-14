@@ -216,20 +216,14 @@ let
   selectedPlatform = if isDarwin then "darwin" else "linux";
   piAgentRelative = "${xdgConfigRelative}/pi/agent";
   piBlackholeConfigPath = "${piAgentRelative}/pi-blackhole/pi-blackhole-config.json";
-  retiredPiExtensionPaths = map (entry: "${piAgentRelative}/extensions/${entry}") [
-    "auto-compact-resume/index.ts"
-    "nix-gallery/index.ts"
-    "pi-loop/index.ts"
-    "pi-mcp-adapter"
-    "pi-quiet"
-  ];
+  retiredAutoCompactPath = "${piAgentRelative}/extensions/auto-compact-resume/index.ts";
 
   preflight = (import ./ai/preflight.nix { inherit lib pkgs; }) {
     newPaths = paths;
     inherit mcpGuards;
     piAliasTarget = if piSelected then "${xdgConfigRelative}/pi" else null;
     blackholeConfigPath = if piSelected then piBlackholeConfigPath else null;
-    retiredPaths = lib.optionals piSelected retiredPiExtensionPaths;
+    retiredPaths = lib.optional piSelected retiredAutoCompactPath;
   };
   modelSync = import ./ai/model-sync.nix {
     inherit lib pkgs;
