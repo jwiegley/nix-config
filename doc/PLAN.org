@@ -3932,15 +3932,17 @@ CI Python lint/test commands consume the same repository-pinned tools as direnv;
 ]
 #+end_src
 
-* DEFER [#C] Restore Agda to shared-work packages after its build is healthy
+* DONE [#C] Restore Agda to shared-work packages after its build is healthy
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-giz
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-13 Thu 12:39]
-:MODIFIED: [2026-08-13 Thu 12:39]
+:MODIFIED: [2026-08-14 Fri 00:18]
 :CREATED_BY: codex
+:FINISHED: [2026-08-14 Fri 00:18]
+:CLOSE_REASON: Declined as unnecessary scope: keep Agda intentionally absent from shared-work closures while retaining it for personal Linux and Darwin; no future shared-work restoration or fleet activation is required.
 :DEFERRED: [2026-09-12 Sat 12:39]
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4446,15 +4448,17 @@ Change make update so an independently failing package candidate retains its pre
 ]
 #+end_src
 
-* DEFER [#B] Remove residual Cozempic agent state
+* DONE [#B] Remove residual Cozempic agent state
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-jhjx
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 21:49]
-:MODIFIED: [2026-08-14 Fri 00:06]
+:MODIFIED: [2026-08-14 Fri 00:18]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-14 Fri 00:18]
+:CLOSE_REASON: Completed: persistent and generated Cozempic/git-ai state is removed and current exact checks are zero on reachable managed systems; per the owner's explicit instruction, no Agent Deck session was restarted or signaled and possible retained in-memory state is an accepted non-goal.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -8438,15 +8442,17 @@ config/ai/catalog.nix:150-216 stores the Claude-formatted string Read, Grep, Glo
 ]
 #+end_src
 
-* DEFER [#B] Move product-scale Agent Deck deltas out of Nix patches     :architecture:packaging:
+* DONE [#B] Move product-scale Agent Deck deltas out of Nix patches      :architecture:packaging:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tcz.37
 :LABELS:   ["architecture","heavy-review","packaging"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-10 Mon 13:25]
-:MODIFIED: [2026-08-13 Thu 22:26]
+:MODIFIED: [2026-08-14 Fri 00:18]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-14 Fri 00:18]
+:CLOSE_REASON: Declined as unnecessary scope: retain the reproducible upstream Agent Deck v1.11.0 plus three exact ordered downstream patches; do not create or publish a new product fork merely to eliminate the patch representation.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
