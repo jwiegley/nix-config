@@ -1631,7 +1631,9 @@ class TestSelfConsistency(unittest.TestCase):
             self.assertIn(f"-u {name}", body)
         self.assertIn('--template="$transport_template_dir"', body)
         self.assertIn("GIT_CONFIG_KEY_0=core.commitGraph", body)
-        self.assertIn("GIT_CONFIG_KEY_1=pack.useBitmapIndex", body)
+        self.assertIn("GIT_CONFIG_VALUE_0=false", body)
+        self.assertIn("GIT_CONFIG_KEY_1=pack.useBitmaps", body)
+        self.assertIn("GIT_CONFIG_VALUE_1=false", body)
         self.assertLess(
             body.index("trap cleanup_transport EXIT"),
             body.index("transport_root=$(mktemp -d"),

@@ -1107,10 +1107,10 @@ bin/publish validates raw/effective origin URLs, then runs a gate and later fetc
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 21:09]
-:MODIFIED: [2026-08-13 Thu 21:39]
+:MODIFIED: [2026-08-13 Thu 21:47]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-13 Thu 21:39]
-:CLOSE_REASON: Disabled alternate-store commit-graph and bitmap acceleration in the isolated Gitea transport and made consumer flake inputs fail closed unless they are one static literal attribute set. Added composition/inheritance regressions and corrected publication wording. Focused evidence: consumer gate 68/68 and publication 59/59; Bash, ShellCheck, Ruff, and diff checks pass. No Nix evaluation, build, network publication, push, or activation.
+:FINISHED: [2026-08-13 Thu 21:47]
+:CLOSE_REASON: Corrected the isolated transport to Git's recognized pack.useBitmaps=false key while retaining core.commitGraph=false. Focused publication suite 59/59; Bash, ShellCheck, Ruff, and diff checks pass. Independent rereview had already cleared the static-input grammar. No Nix evaluation, network publication, push, or activation.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1135,6 +1135,13 @@ Independent fess audit of commit 5016353 found that bin/publish inherits graph s
     "author": "johnw",
     "text": "Independent fess of db820f86 found two remaining high-severity gaps: raw-parent traversal did not disable alternate-store commit-graph/bitmap acceleration, and the literal input scanner allowed inherit/composed input expressions. Reopen for one bounded correction; no publication or activation occurred.",
     "created_at": "2026-08-14T04:29:49Z"
+  },
+  {
+    "id": 370,
+    "issue_id": "nix-49th",
+    "author": "johnw",
+    "text": "Narrow rereview of fb81a75f found the bitmap config key misspelled: Git recognizes pack.useBitmaps, not pack.useBitmapIndex. Reopen for the one-key correction and focused publication rerun; no publication or activation occurred.",
+    "created_at": "2026-08-14T04:43:39Z"
   }
 ]
 #+end_src

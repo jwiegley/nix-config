@@ -318,7 +318,7 @@ transport_git() {
         GIT_CONFIG_COUNT=2 \
         GIT_CONFIG_KEY_0=core.commitGraph \
         GIT_CONFIG_VALUE_0=false \
-        GIT_CONFIG_KEY_1=pack.useBitmapIndex \
+        GIT_CONFIG_KEY_1=pack.useBitmaps \
         GIT_CONFIG_VALUE_1=false \
         GIT_DIR="$transport_git_dir" \
         GIT_ALTERNATE_OBJECT_DIRECTORIES="$source_object_dir" \
