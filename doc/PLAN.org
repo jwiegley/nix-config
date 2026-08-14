@@ -2404,15 +2404,17 @@ The full session suite fails TestInstance_UpdateGeminiSession_UsesLatestFromFile
 ]
 #+end_src
 
-* DOING [#B] Propagate Node CA bundle into Darwin Pi wrapper
+* DONE [#B] Propagate Node CA bundle into Darwin Pi wrapper
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-9z1f
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 23:45]
-:MODIFIED: [2026-08-13 Thu 23:45]
+:MODIFIED: [2026-08-14 Fri 00:54]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-14 Fri 00:54]
+:CLOSE_REASON: Shared Darwin wrapper is active on Hera, preserves explicit overrides, supplies the authoritative Vulcan-aware CA bundle when launchers omit it, and the focused child-Node behavioral derivation passed at current HEAD.
 :SOURCE_REPO: doc
 :SOURCE_REPO_PATH: /private/tmp/nix-pi-ca-final.lDLs5E/candidate/doc
 :ORIGINAL_SIZE: 0
@@ -4815,6 +4817,24 @@ Two persistence tests intermittently fail during t.TempDir cleanup because backg
 ]
 #+end_src
 
+* DONE [#B] Fix Hermes native SearXNG TLS trust
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-koys
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-14 Fri 00:43]
+:MODIFIED: [2026-08-14 Fri 01:00]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-14 Fri 01:00]
+:CLOSE_REASON: Fixed at Vulcan authority in signed commit 0951e14b: hermes-agent exports the Vulcan-aware CA through SSL_CERT_FILE, the packaged-httpx env-i TLS regression passed, and full build-only realization produced rhaansni6zj0big7g4gxjfd71h9yii8m. No switch, restart, or activation occurred.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Hermes MicroVM native web_search uses packaged Python/httpx against https://searxng.vulcan.lan. The host SearXNG/uWSGI/nginx service and the Node mcp-searxng adapter are healthy, but the hermes-agent service exports SEARXNG_URL without SSL_CERT_FILE. Exact packaged Python under env -i reproduces CERTIFICATE_VERIFY_FAILED; adding SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt returns HTTP 200 with results. Fix at Vulcan's authoritative /etc/nixos Hermes service environment, not in the root Node MCP wrapper. Add an evaluation assertion and an env-i behavioral TLS trust regression. No service restart or activation is authorized by this issue.
+
 * DONE [#B] Fail task launch when the initial completion claim cannot be persisted
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5733,14 +5753,14 @@ PLAN runtime-binding integrity acceptance requires existing hostile-permission r
 ]
 #+end_src
 
-* DOING [#A] Enforce an eight-CPU ceiling on shared-work Nix builds
+* DEFER [#A] Enforce an eight-CPU ceiling on shared-work Nix builds
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-p17
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 00:23]
-:MODIFIED: [2026-08-13 Thu 23:27]
+:MODIFIED: [2026-08-14 Fri 02:38]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5867,6 +5887,20 @@ The shared root authority declares one CPU set for shared-work Nix daemons. The 
     "author": "johnw",
     "text": "2026-08-13 owner explicitly authorized the ordered all-host activation while deploying de 37c3389f. Reusing the same corrected Gitea-backed shared-work candidate for the bounded build and ordered andoria-08, andoria-t2, delphi-3bd4, gpu-server activation; no separate build matrix.",
     "created_at": "2026-08-14T06:27:15Z"
+  },
+  {
+    "id": 393,
+    "issue_id": "nix-p17",
+    "author": "johnw",
+    "text": "2026-08-14 current execution: authoritative shared consumer is clean at b820f374, with paired root/AI lock revision 78380b34 and one narHash. Built CPU-policy output /nix/store/cpvl9kd3sadjhqddn8838r7y6ni8dbvq on andoria-08, then ran the documented rollback-capable installer and fresh unsubstituted daemon probe successfully. Andoria-08 and gpu-server now both have byte-identical drop-in SHA-256 56f1a145..., active daemon, AllowedCPUs=0-7, EffectiveCPUs=0-7, and cgroup 0-7. Andoria-t2 and delphi-3bd4 remain unrestricted (0-255/0-287), drop-in absent; no nixbld processes were active, but sudo -n and root SSH are unavailable. No bypass or deployment framework was introduced. Completion still requires the owner to provide interactive sudo on those two hosts, then the same documented installer/probe and final all-host recheck.",
+    "created_at": "2026-08-14T07:21:47Z"
+  },
+  {
+    "id": 399,
+    "issue_id": "nix-p17",
+    "author": "johnw",
+    "text": "2026-08-14 non-activating acceptance advanced to the authority boundary. The authoritative shared-work checkout is clean at signed commit e9aed071331fcc9702b3e0ec550196af88372e37, which removes the duplicate consumer-side Agda filter while preserving the paired root/AI lock at 78380b34. A full CPU-bounded activationPackage realization on andoria-08 completed successfully with builders disabled, max-jobs=1, cores=8, and no lock write, producing /nix/store/qjv8bdq5707sxx0i4q6bs58snr00wdji-home-manager-generation. This was build-only: no activation, sudo, profile, or VPS operation occurred. Andoria-08 and gpu-server remain proved at live CPUs 0-7; andoria-t2 and delphi-3bd4 still require interactive sudo to install/restart and prove the rendered drop-in, followed by the authorized serial activation/recheck. Resume only when that interactive root authority is available.",
+    "created_at": "2026-08-14T09:38:06Z"
   }
 ]
 #+end_src
