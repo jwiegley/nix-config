@@ -73,6 +73,7 @@ let
     ".config/pi/agent/model-router.json"
     ".config/pi/agent/models.json"
     ".config/pi/agent/themes/dark-tool-backgrounds.json"
+    ".config/transcribe/llm-route.json"
     ".prime/agent/COMPATIBILITY.md"
     ".prime/agent/keybindings.json"
     ".prime/agent/managed-settings.json"

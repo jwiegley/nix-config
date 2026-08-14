@@ -70,6 +70,21 @@ let
   profileHost = if homeClassRow == null then null else homeClassRow.catalogHost;
   homeLocalModelEndpoints =
     if profileHost == null then null else catalog.localModelEndpointsByHost.${profileHost} or null;
+  recordingTranscriptionRoute =
+    if profileHost == null then
+      null
+    else
+      catalog.recordingTranscriptionRoutesByHost.${profileHost} or null;
+  xdgConfigRelative = lib.removePrefix "${config.home.homeDirectory}/" config.xdg.configHome;
+  recordingTranscriptionFiles = lib.optionalAttrs (recordingTranscriptionRoute != null) {
+    "${xdgConfigRelative}/transcribe/llm-route.json" = {
+      source = (pkgs.formats.json { }).generate "transcribe-llm-route.json" {
+        version = 2;
+        inherit (recordingTranscriptionRoute) model;
+        base_url = homeLocalModelEndpoints.${recordingTranscriptionRoute.provider};
+      };
+    };
+  };
   profilesForHome =
     if profileHost == null then
       { }
@@ -151,11 +166,12 @@ let
   renderedSurfaces = renderedProfiles ++ lib.optional mcpRegistrySelected mcpRegistryRendering;
   rawPaths =
     builtins.attrNames sharedSkillFiles
+    ++ builtins.attrNames recordingTranscriptionFiles
     ++ lib.concatMap (rendered: builtins.attrNames rendered.files) renderedSurfaces;
   paths = lib.sort builtins.lessThan (lib.unique rawPaths);
-  mergedFiles = lib.foldl' (
-    files: rendered: files // rendered.files
-  ) sharedSkillFiles renderedSurfaces;
+  mergedFiles = lib.foldl' (files: rendered: files // rendered.files) (
+    sharedSkillFiles // recordingTranscriptionFiles
+  ) renderedSurfaces;
   mcpGuards = if mcpRegistrySelected then mcpRegistryRendering.mutableMcpGuards else [ ];
   validRelativePath =
     path:
@@ -186,7 +202,6 @@ let
   ];
   ownsAncestor = path: lib.any (other: other != path && lib.hasPrefix "${path}/" other) paths;
   selectedPlatform = if isDarwin then "darwin" else "linux";
-  xdgConfigRelative = lib.removePrefix "${config.home.homeDirectory}/" config.xdg.configHome;
   piAgentRelative = "${xdgConfigRelative}/pi/agent";
   piBlackholeConfigPath = "${piAgentRelative}/pi-blackhole/pi-blackhole-config.json";
   retiredAutoCompactPath = "${piAgentRelative}/extensions/auto-compact-resume/index.ts";

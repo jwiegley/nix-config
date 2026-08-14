@@ -159,6 +159,15 @@ let
     inherit lib;
     resources = pkgs.agent-resources;
   };
+  recordingTranscriptionPath = ".config/transcribe/llm-route.json";
+  recordingTranscriptionRoute = aiCatalog.recordingTranscriptionRoutesByHost.hera;
+  heraRecordingTranscriptionSource =
+    desktopHomesByHost.hera.home.file.${recordingTranscriptionPath}.source;
+  expectedRecordingTranscriptionSource = (pkgs.formats.json { }).generate "expected-llm-route.json" {
+    version = 2;
+    inherit (recordingTranscriptionRoute) model;
+    base_url = aiCatalog.localModelEndpointsByHost.hera.${recordingTranscriptionRoute.provider};
+  };
   renderedHostRouting = import ../../config/hosts/shell-routing.nix { inherit lib; };
   personalLinuxResolution = registry.resolveFor {
     hostname = "linux";
@@ -501,6 +510,11 @@ assert builtins.all (config: config.johnw.host.isDarwinWorkstation) desktopHomes
 assert builtins.all (config: !config.johnw.host.isDarwinWorkstation) nonDesktopHomes;
 assert hasLocalModelSessionVariables desktopHomesByHost.hera;
 assert lacksLocalModelSessionVariables desktopHomesByHost.clio;
+assert builtins.hasAttr recordingTranscriptionPath desktopHomesByHost.hera.home.file;
+assert !(builtins.hasAttr recordingTranscriptionPath desktopHomesByHost.clio.home.file);
+assert builtins.all (
+  config: !(builtins.hasAttr recordingTranscriptionPath config.home.file)
+) nonDesktopHomes;
 assert desktopHomesByHost.hera.home.sessionVariables.NIX_CONFIG == "cores = 8";
 assert desktopHomesByHost.clio.home.sessionVariables.NIX_CONFIG == "cores = 8";
 assert builtins.all lacksLocalModelSessionVariables nonDesktopHomes;
@@ -520,6 +534,17 @@ assert builtins.all (
   && lib.hasAttrByPath [ "launchd" "user" "agents" "gnupg-agent" ] darwinConfigurations.${host}.config
 ) (builtins.attrNames darwinConfigurations);
 pkgs.runCommand "host-behavior" { } ''
+  ${pkgs.diffutils}/bin/cmp -s \
+    ${heraRecordingTranscriptionSource} \
+    ${expectedRecordingTranscriptionSource}
+  ${pkgs.jq}/bin/jq -e '
+    type == "object"
+    and keys == ["base_url", "model", "version"]
+    and .version == 2
+    and (.model | type == "string")
+    and (.base_url | type == "string")
+    and ([keys[] | ascii_downcase | test("credential|key|token|secret")] | any | not)
+  ' ${heraRecordingTranscriptionSource} >/dev/null
   grep -F -- ${lib.escapeShellArg "export default createNixGallery(${builtins.toJSON aiCatalog.localModelEndpointsByHost.clio});"} ${gallerySourceFor "clio"} >/dev/null
   grep -F -- ${lib.escapeShellArg "export default createNixGallery(${builtins.toJSON aiCatalog.localModelEndpointsByHost.hera});"} ${gallerySourceFor "hera"} >/dev/null
   test -f "$(dirname "$(realpath ${gallerySourceFor "clio"})")/projection.json"

@@ -98,6 +98,9 @@ let
   primeManagedSettingsProbe = builtins.tryEval (preflightFactory {
     newPaths = [ ".prime/agent/managed-settings.json" ];
   });
+  recordingTranscriptionProbe = builtins.tryEval (preflightFactory {
+    newPaths = [ ".config/transcribe/llm-route.json" ];
+  });
   # The documented mutable boundary: these sit inside directories renderers
   # legitimately own, yet a renderer claiming them must fail evaluation —
   # with `force = true` on rendered files, a claim would otherwise delete
@@ -117,6 +120,7 @@ assert task9PreflightWithMcp.activation.after == [ ];
 assert !invalidPreflightProbe.success;
 assert !sherlockAncestorProbe.success;
 assert primeManagedSettingsProbe.success;
+assert recordingTranscriptionProbe.success;
 assert !primeUserSettingsProbe.success;
 assert !piMutableMcpProbe.success;
 assert !codexAuthProbe.success;

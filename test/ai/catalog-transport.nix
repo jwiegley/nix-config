@@ -17,6 +17,9 @@ let
     inherit lib;
     resources = "/catalog-agent-resources";
   };
+  modelOverrides = import "${src}/config/ai/model-overrides.nix";
+  recordingTranscriptionModels = builtins.attrNames modelOverrides.localProviderOverrides.omlx.modelOverrides;
+  recordingTranscriptionRoute = catalog.recordingTranscriptionRoutesByHost.hera;
   renderLib = import "${src}/config/ai/renderers/render-lib.nix" { inherit lib; };
   inherit (renderLib) renderMarkdownText;
   reject = value: !(builtins.tryEval (builtins.deepSeq value true)).success;
@@ -761,6 +764,16 @@ assert
     "hera"
   ];
 assert catalog.localModelEndpointsByHost.clio == catalog.localModelEndpointsByHost.hera;
+assert builtins.attrNames catalog.recordingTranscriptionRoutesByHost == [ "hera" ];
+assert
+  builtins.attrNames recordingTranscriptionRoute == [
+    "model"
+    "provider"
+  ];
+assert recordingTranscriptionRoute.provider == "omlx";
+assert builtins.length recordingTranscriptionModels == 1;
+assert recordingTranscriptionRoute.model == builtins.head recordingTranscriptionModels;
+assert builtins.hasAttr recordingTranscriptionRoute.provider catalog.localModelEndpointsByHost.hera;
 # Profile opt-ins drive generated codex TOML, pi local provider wiring, prime
 # model overrides, and the dummy-key session variables. Pin the set so a
 # gained or lost route is a visible test edit.
@@ -898,6 +911,22 @@ assert builtins.all reject [
   })
   (catalog.validate {
     localModelEndpointsByHost = builtins.removeAttrs catalog.localModelEndpointsByHost [ "clio" ];
+  })
+  (catalog.validate { recordingTranscriptionRoutesByHost = { }; })
+  (catalog.validate {
+    recordingTranscriptionRoutesByHost = catalog.recordingTranscriptionRoutesByHost // {
+      clio = recordingTranscriptionRoute;
+    };
+  })
+  (catalog.validate {
+    recordingTranscriptionRoutesByHost.hera = recordingTranscriptionRoute // {
+      provider = "llama-swap";
+    };
+  })
+  (catalog.validate {
+    recordingTranscriptionRoutesByHost.hera = recordingTranscriptionRoute // {
+      model = recordingTranscriptionRoute.model + "-invalid";
+    };
   })
   (catalog.validate {
     profiles = catalog.profiles // {

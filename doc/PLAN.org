@@ -7886,6 +7886,22 @@ Path Finder 26.1.7 is independent of Nix Samba. During the reported attempt it p
 ]
 #+end_src
 
+* DOING [#B] Remove legacy PromptDeploy route from recordings
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-yvw
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-13 Thu 21:01]
+:MODIFIED: [2026-08-13 Thu 21:01]
+:CREATED_BY: johnw
+:SOURCE_REPO: candidate
+:SOURCE_REPO_PATH: /private/tmp/nix-scripts-repin.r19iCf/candidate
+:ORIGINAL_SIZE: 0
+:END:
+
+Generate the Hera transcription route from the current AI catalog, remove the obsolete PromptDeploy-namespaced route and secret-bearing schema from scripts, preserve transaction retry identity, and verify the queued recordings complete.
+
 * DONE [#C] Adopt the final declarative Nix builder pool
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

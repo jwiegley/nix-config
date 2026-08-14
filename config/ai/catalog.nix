@@ -4,6 +4,7 @@
 }:
 
 let
+  modelOverrides = import ./model-overrides.nix;
   clients = [
     "claude"
     "codex"
@@ -77,6 +78,18 @@ let
   catalogLocalModelEndpointsByHost = {
     clio = workstationLocalModelEndpoints;
     hera = workstationLocalModelEndpoints;
+  };
+  recordingTranscriptionModels = builtins.attrNames modelOverrides.localProviderOverrides.omlx.modelOverrides;
+  recordingTranscriptionModel =
+    assert lib.assertMsg (
+      builtins.length recordingTranscriptionModels == 1
+    ) "recording transcription requires exactly one oMLX model override";
+    builtins.head recordingTranscriptionModels;
+  catalogRecordingTranscriptionRoutesByHost = {
+    hera = {
+      provider = "omlx";
+      model = recordingTranscriptionModel;
+    };
   };
 
   profileSpecs = {
@@ -1403,6 +1416,7 @@ let
       profiles ? catalogProfiles,
       items ? catalogItems,
       localModelEndpointsByHost ? catalogLocalModelEndpointsByHost,
+      recordingTranscriptionRoutesByHost ? catalogRecordingTranscriptionRoutesByHost,
     }:
     let
       itemSets = builtins.attrValues items;
@@ -1452,6 +1466,13 @@ let
           && builtins.all (validUrl true) (builtins.attrValues endpoints)
         ) "invalid local model endpoints for ${host}"
       ) localModelEndpointsByHost;
+      recordingTranscriptionChecks = [
+        (ensure (
+          recordingTranscriptionRoutesByHost == catalogRecordingTranscriptionRoutesByHost
+          && builtins.hasAttr "hera" localModelEndpointsByHost
+          && builtins.hasAttr recordingTranscriptionRoutesByHost.hera.provider localModelEndpointsByHost.hera
+        ) "recording transcription route authority")
+      ];
       profileChecks = lib.mapAttrsToList (
         id: profile:
         ensure (
@@ -1546,6 +1567,7 @@ let
         ++ agentChecks
         ++ settingsChecks
         ++ endpointChecks
+        ++ recordingTranscriptionChecks
         ++ profileChecks
         ++ fessProjectionChecks
         ++ mcpChecks
@@ -1606,6 +1628,7 @@ in
   profiles = catalogProfiles;
   items = catalogItems;
   localModelEndpointsByHost = catalogLocalModelEndpointsByHost;
+  recordingTranscriptionRoutesByHost = catalogRecordingTranscriptionRoutesByHost;
   inherit
     matches
     select
