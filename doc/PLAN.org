@@ -7886,15 +7886,17 @@ Path Finder 26.1.7 is independent of Nix Samba. During the reported attempt it p
 ]
 #+end_src
 
-* DOING [#B] Remove legacy PromptDeploy route from recordings
+* DONE [#B] Remove legacy PromptDeploy route from recordings
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-yvw
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-13 Thu 21:01]
-:MODIFIED: [2026-08-13 Thu 21:01]
+:MODIFIED: [2026-08-13 Thu 22:05]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-13 Thu 22:05]
+:CLOSE_REASON: Published the Documents archive path and Nix-managed credential-free transcription route, activated Hera generation 1077, transcribed and archived all 9 preserved recordings, and verified a clean follow-up sweep.
 :SOURCE_REPO: candidate
 :SOURCE_REPO_PATH: /private/tmp/nix-scripts-repin.r19iCf/candidate
 :ORIGINAL_SIZE: 0
