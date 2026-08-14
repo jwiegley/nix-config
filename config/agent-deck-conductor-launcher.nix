@@ -68,7 +68,8 @@ let
         sigaddset(&forwarded_signals, SIGINT);
         sigaddset(&forwarded_signals, SIGQUIT);
         sigaddset(&forwarded_signals, SIGTERM);
-        if (sigprocmask(SIG_BLOCK, &forwarded_signals, NULL) != 0) {
+        sigset_t inherited_mask;
+        if (sigprocmask(SIG_BLOCK, &forwarded_signals, &inherited_mask) != 0) {
             return fail("could not block forwarded signals", errno);
         }
 
@@ -85,9 +86,7 @@ let
         int result = posix_spawnattr_init(&attributes);
         if (result != 0) return fail("could not initialize spawn attributes", result);
 
-        sigset_t child_mask;
-        sigemptyset(&child_mask);
-        result = posix_spawnattr_setsigmask(&attributes, &child_mask);
+        result = posix_spawnattr_setsigmask(&attributes, &inherited_mask);
         if (result == 0) {
             result = posix_spawnattr_setsigdefault(&attributes, &forwarded_signals);
         }
@@ -105,11 +104,11 @@ let
         if (result != 0) return fail("could not start the bridge", result);
 
         child_pid = pid;
-        if (sigprocmask(SIG_UNBLOCK, &forwarded_signals, NULL) != 0) {
+        if (sigprocmask(SIG_SETMASK, &inherited_mask, NULL) != 0) {
             int error_number = errno;
             (void)kill(pid, SIGTERM);
             (void)waitpid(pid, NULL, 0);
-            return fail("could not unblock forwarded signals", error_number);
+            return fail("could not restore the inherited signal mask", error_number);
         }
 
         siginfo_t child_info;
