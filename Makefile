@@ -2,6 +2,10 @@ HOSTNAME   ?= $(shell myhost)
 REMOTES	   = clio
 GIT_REMOTE = jwiegley
 NIX_CONF   = $(HOME)/src/nix
+VPS        = vps
+VPS_SYSTEM = x86_64-linux
+VPS_BUILDER = jwiegley@andoria-08
+SIGN_KEY   = $(HOME)/.config/gnupg/nix-signing-key.sec
 SYSTEM     ?= $(shell nix eval --impure --raw --expr builtins.currentSystem)
 .DEFAULT_GOAL := help
 NIXOPTS	   =
@@ -12,7 +16,8 @@ NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
 endif
 
 .PHONY: help all verify-inputs lock-local require-darwin-host build switch update update-projects upgrade-tasks upgrade \
-	changes copy check repair-store sizes scour sign travel-ready test expensive tools repl format lint
+	changes copy check repair-store sizes scour sign travel-ready test expensive tools repl format lint \
+	vps-push
 
 # These maintenance recipes use Bash functions, strict mode, and arrays.
 verify-inputs update-projects upgrade-tasks changes copy travel-ready: SHELL := bash
@@ -90,7 +95,8 @@ help:
 	  '  repair-store     Verify and repair every Nix store path' \
 	  '  switch           Re-lock local inputs and switch nix-darwin' \
 	  '  update           Update all locks/pins, switch, commit, and push' \
-	  '  upgrade          Update, switch, and run upgrade tasks'
+	  '  upgrade          Update, switch, and run upgrade tasks' \
+	  '  vps-push         Build x86_64-linux on $(VPS_BUILDER), sign, copy to $(VPS)'
 
 test:
 	test/bin/quality --python-tier full python-test
@@ -334,6 +340,37 @@ copy:
 	exit "$$status"
 
 ########################################################################
+
+# Build this repository's x86_64-linux closure on a big builder, sign it, and
+# push it to the VPS, so the VPS's own `nixos-rebuild` finds it already built
+# instead of compiling it on a box that does not have the memory to.
+#
+# The VPS owns /etc/nixos and its own activation (see README); this target
+# deliberately only stages the store closure and never touches that checkout.
+# After it succeeds, activate ON the VPS:
+#
+#     nixos-rebuild switch --flake /etc/nixos#$(VPS)
+#
+# Signing is not optional. A remote builder rejects unsigned paths from a user
+# who is not in its trusted-users ("cannot add path ... because it lacks a
+# signature by a trusted key"), and the builders already trust this key. Note
+# `nix store sign --recursive` on a .drv signs the DERIVATION closure, not the
+# output paths of its inputs, which is why the requisites query below is
+# --include-outputs and filters .drv.
+vps-push:
+	$(call announce,build on $(VPS_BUILDER) -> sign -> copy to $(VPS))
+	@set -euo pipefail; \
+	attr='.#homeConfigurations."jwiegley@$(VPS_SYSTEM)".activationPackage'; \
+	drv=$$(nix path-info --derivation "$$attr"); \
+	nix-store --query --requisites --include-outputs "$$drv" \
+	    | grep -v '\.drv$$' \
+	    | xargs -r nix store sign --key-file '$(SIGN_KEY)'; \
+	out=$$(nix build --no-link --print-out-paths "$$attr"); \
+	nix store sign --key-file '$(SIGN_KEY)' --recursive "$$out"; \
+	nix copy --to "ssh-ng://$(VPS)" "$$out"; \
+	printf 'staged on %s: %s\n' '$(VPS)' "$$out"; \
+	printf 'now run on %s: nixos-rebuild switch --flake /etc/nixos#%s\n' '$(VPS)' '$(VPS)'
+
 
 check:
 	$(call announce,nix store verify --no-trust --all)
