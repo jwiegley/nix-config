@@ -6359,15 +6359,17 @@ Partner observation 2026-08-10T21:51:54.606Z: remove already-resolved questions 
 ]
 #+end_src
 
-* DOING [#C] Reduce cold Hera Darwin configuration evaluation cost
+* DONE [#C] Reduce cold Hera Darwin configuration evaluation cost
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-s45q
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-13 Thu 13:22]
-:MODIFIED: [2026-08-13 Thu 16:56]
+:MODIFIED: [2026-08-13 Thu 22:23]
 :CREATED_BY: codex
+:FINISHED: [2026-08-13 Thu 22:23]
+:CLOSE_REASON: Completed the narrow package-set reuse and found no remaining Hera-specific evaluation defect.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -6426,6 +6428,13 @@ Profile the maintained evaluation path without broad store scans; identify the l
     "author": "johnw",
     "text": "2026-08-13 post-fix source review: CLEAR. Shared pkgsFor, configured Python predicates, compatibility mutation guard, and root reuse guard align; the separate tools-overlay package set is intentional. Focused aarch64-darwin ai-lock-coherence, compatibility-contract, and managed-agent-package-selection checks pass. Signed checkpoint remains blocked because the required pinentry was cancelled twice after the full pre-commit suite passed; no unsigned commit was created.",
     "created_at": "2026-08-13T23:56:10Z"
+  },
+  {
+    "id": 375,
+    "issue_id": "nix-s45q",
+    "author": "johnw",
+    "text": "Final clean committed comparison used the same serialized offline drvPath command for both Darwin hosts: Hera 202.53s real / 64.38s CPU; Clio 209.04s real / 65.99s CPU. Hera was 6.51s faster, so the reported Hera-versus-Clio asymmetry is not reproducible. A bounded Hera sample found active shared catalog/render duplicate-path validation (concatMap/attrNames/length/deepSeq), not a Hera-only branch; source review confirms both hosts use the same configuration graph, with small offsetting leaf differences. Earlier post-fix dirty/warm results were 57.42s and 39.45s versus 79-101s baselines. No further caching, strictness weakening, or host special-case is justified.",
+    "created_at": "2026-08-14T05:23:56Z"
   }
 ]
 #+end_src
