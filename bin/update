@@ -944,12 +944,18 @@ if [[ $run_switch == true ]]; then
         )
         ;;
     *)
-        nix build --no-link "$candidate_dir#darwinConfigurations.$switch_output.system"
+        system_config=$(nix build --no-link --print-out-paths \
+            "$candidate_dir#darwinConfigurations.$switch_output.system")
+        if [[ -z $system_config || ! -x $system_config/sw/bin/darwin-rebuild ]]; then
+            echo "update: Nix did not produce an activatable Darwin system" >&2
+            exit 1
+        fi
         if ! live_repository_matches_baseline; then
             echo "update: live repository changed before candidate switch" >&2
             exit 1
         fi
-        sudo darwin-rebuild switch --flake "$candidate_dir#$switch_output"
+        sudo nix-env -p /nix/var/nix/profiles/system --set "$system_config"
+        sudo "$system_config/sw/bin/darwin-rebuild" activate
         ;;
     esac
     if ! live_repository_matches_baseline; then

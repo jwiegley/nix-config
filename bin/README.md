@@ -51,6 +51,10 @@ the required validation, creates a signed commit, activates the exact candidate,
 fast-forwards the checked-out branch, and publishes through `bin/publish`.
 Homebrew is intentionally outside this transaction.
 
+On Darwin, the candidate is evaluated and built by the invoking user. The
+switch phase elevates only the system-profile update and the already-built
+candidate's activation; it does not evaluate the flake again as root.
+
 Automatic catalog targets are attempted one at a time. If a resolved candidate
 fails its package build, that target's source record, hashes, generated locks,
 and flake locks are restored and its retained version is reported; later targets

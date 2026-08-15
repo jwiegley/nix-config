@@ -2621,6 +2621,24 @@ Transient classification reaches replay policy; transient failures remain retrya
 ]
 #+end_src
 
+* DONE [#B] Avoid compaudit on every interactive shell startup
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-bf4q
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-14 Fri 18:21]
+:MODIFIED: [2026-08-14 Fri 20:31]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-14 Fri 20:31]
+:CLOSE_REASON: Completed: Darwin zsh now runs compinit -C against a completion dump rebuilt during Home Manager activation with regular-file, owner, and 0600 validation. Focused host-behavior checks pass. The generated profile starts in 0.26s cold and 0.10-0.11s warm. Build-only validation passed; activation was not performed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Hera zsh startup runs compinit/compaudit across large immutable Nix completion trees, causing 30-65 second prompt latency under metadata contention. Definition of done: ordinary startup uses the valid completion dump without a full audit, a bounded managed check preserves ownership/mode safety, focused tests cover the generated zsh behavior, and shell startup is measured below the existing threshold.
+
 * DONE [#B] Make Andoria Gitea policy validation fail closed on the complete lock graph
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5153,6 +5171,28 @@ The authoritative Andoria-T2 system configuration declaratively grants only the 
   }
 ]
 #+end_src
+
+* DONE [#B] Keep Hera configuration evaluation below 30 seconds
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-lzym
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-14 Fri 18:21]
+:MODIFIED: [2026-08-14 Fri 20:31]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-14 Fri 20:31]
+:CLOSE_REASON: Completed: source-project inputs are source-only and their applications build from Hera's existing package set, eliminating repeated nixpkgs/HaskellNix flake evaluation while preserving all 13 selections. No-cache Hera evaluations completed in 22.18s and 23.57s. make switch and bin/update now build once as the invoking user and elevate only profile set plus activation. 71 gate tests, 102 update/overlay tests, org-jw smoke/closure checks, and the full Hera system build passed. No activation was performed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Hera configuration evaluation still takes 40-200 seconds on serialized focused runs. make switch and bin/update also hand the flake back to sudo darwin-rebuild, causing root to repeat the full evaluation with a separate cache. The prior nix-s45q work removed obvious duplicate package-set construction and disproved a Hera-versus-Clio asymmetry, but did not establish that the remaining shared evaluation cost is irreducible.
+
+** Acceptance Criteria
+
+The maintained focused Hera evaluation path completes within 30 seconds on a serialized repeatable benchmark without weakening configuration checks or behavior. The Darwin switch workflow evaluates and builds the system closure exactly once as the invoking user, validates that closure, and elevates only the system-profile update and activation of that already-built closure. Focused regression tests protect the privilege and failure-ordering boundary. No activation is required without separate authorization.
 
 * DONE [#B] Fix nix-scripts Linux retention check
 :PROPERTIES:

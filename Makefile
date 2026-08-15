@@ -235,14 +235,22 @@ lock-local: verify-inputs
 	fi
 
 build: require-darwin-host
-	$(call announce,darwin-rebuild build --flake .#$(HOSTNAME))
-	@sudo darwin-rebuild build --flake .#$(HOSTNAME) $(NIXOPTS)
+	$(call announce,nix build .#darwinConfigurations.$(HOSTNAME).system)
+	@nix build ".#darwinConfigurations.$(HOSTNAME).system" $(NIXOPTS)
 	@rm -f result
 
 switch: require-darwin-host lock-local
-	$(call announce,darwin-rebuild switch --flake .#$(HOSTNAME))
-	@sudo darwin-rebuild switch --flake .#$(HOSTNAME) $(NIXOPTS)
-	@echo "Darwin generation: $$(sudo darwin-rebuild --list-generations | tail -1)"
+	$(call announce,Build as user and activate .#$(HOSTNAME))
+	@set -e; \
+	system_config=$$(nix build --no-link --print-out-paths \
+	    ".#darwinConfigurations.$(HOSTNAME).system" $(NIXOPTS)); \
+	[[ -n "$$system_config" && -x "$$system_config/sw/bin/darwin-rebuild" ]] || { \
+	    echo "Makefile: Nix did not produce an activatable Darwin system" >&2; \
+	    exit 1; \
+	}; \
+	sudo nix-env -p /nix/var/nix/profiles/system --set "$$system_config"; \
+	sudo "$$system_config/sw/bin/darwin-rebuild" activate; \
+	echo "Activated Darwin system: $$system_config"
 
 update:
 	$(call announce,bin/update --all-inputs --pull --commit --switch --push)

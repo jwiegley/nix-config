@@ -212,6 +212,26 @@ let
     }).package-list;
   physicalSharedWorkPackages = packageSelectionFor "andoria-08";
   physicalMaintainedPackages = packageSelectionFor "vps";
+  heraPackageSelection = import ../../config/packages.nix {
+    hostname = "hera";
+    inherit (darwinConfigurations.hera) pkgs;
+    inherit (darwinConfigurations.hera._module.specialArgs) inputs;
+  };
+  expectedHeraSourceProjectInputs = [
+    "gh-to-org"
+    "git-all"
+    "gitlib"
+    "hours"
+    "org-jw"
+    "org2jsonl"
+    "pushme"
+    "rag-client"
+    "renamer"
+    "rust-overlay"
+    "sizes"
+    "trade-journal"
+    "una"
+  ];
   expectedSharedWorkNixConfig = ''
     max-jobs = 1
     cores = 8
@@ -482,6 +502,30 @@ assert
   sharedWork.programs.zsh.history.path == "${sharedWork.xdg.configHome}/zsh/history-\${HOST%%.*}";
 assert !sharedWork.programs.zsh.history.share;
 assert builtins.elem "INC_APPEND_HISTORY" sharedWork.programs.zsh.setOptions;
+assert builtins.all (
+  config:
+  config.programs.zsh.completionInit == ''
+    fpath=(${lib.escapeShellArg "${config.xdg.configHome}/zsh/completions"} $fpath)
+    autoload -Uz compinit
+    compinit -C
+  ''
+) desktopHomes;
+assert builtins.all (
+  config: config.home.activation.refreshZshCompletionDump.after == [ "linkGeneration" ]
+) desktopHomes;
+assert builtins.all (
+  config:
+  let
+    activation = config.home.activation.refreshZshCompletionDump.data;
+  in
+  lib.hasInfix ''rm -f -- "$completion_dump"'' activation
+  && lib.hasInfix "zsh -ic exit" activation
+  && lib.hasInfix ''stat -c '%u:%a' "$completion_dump"'' activation
+  && lib.hasInfix ''$actual_metadata != "$expected_metadata"'' activation
+) desktopHomes;
+assert builtins.all (
+  config: !(builtins.hasAttr "refreshZshCompletionDump" config.home.activation)
+) nonDesktopHomes;
 assert builtins.all (config: builtins.hasAttr ".pi" config.home.file) allHomes;
 assert builtins.all (
   config: builtins.hasAttr ".config/pi/agent/models.json" config.home.file
@@ -500,6 +544,7 @@ assert hasPackage "agdaWithPackages" personalLinux;
 assert builtins.all (hasPackage "agdaWithPackages") desktopHomes;
 assert !(hasSelectedPackage "agdaWithPackages" physicalSharedWorkPackages);
 assert hasSelectedPackage "agdaWithPackages" physicalMaintainedPackages;
+assert heraPackageSelection.userPackageInputNames == expectedHeraSourceProjectInputs;
 assert builtins.all (hasPackage "obr") allHomes;
 assert builtins.all (config: !(ownsObrState config)) allHomes;
 assert builtins.all (

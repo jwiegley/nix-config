@@ -33,50 +33,67 @@
 
     org-jw = {
       url = "github:jwiegley/org-jw";
+      flake = false;
     };
 
     rag-client = {
       url = "github:jwiegley/rag-client";
+      flake = false;
     };
 
     git-all = {
       url = "github:jwiegley/git-all";
+      flake = false;
     };
 
     gitlib = {
       url = "github:jwiegley/gitlib?submodules=0";
+      flake = false;
+    };
+
+    libgit2-src = {
+      url = "github:jwiegley/libgit2/1dbd0b6fe7752657416fc1c69600fbe9c6e04d61";
+      flake = false;
     };
 
     hours = {
       url = "github:jwiegley/hours";
+      flake = false;
     };
 
     pushme = {
       url = "github:jwiegley/pushme";
+      flake = false;
     };
 
     renamer = {
       url = "github:jwiegley/renamer";
+      flake = false;
     };
 
     sizes = {
       url = "github:jwiegley/sizes";
+      flake = false;
     };
 
     trade-journal = {
       url = "github:jwiegley/trade-journal";
+      flake = false;
     };
 
     una = {
       url = "github:jwiegley/una";
+      flake = false;
     };
 
     gh-to-org = {
       url = "github:jwiegley/gh-to-org";
+      flake = false;
     };
 
     org2jsonl = {
       url = "github:jwiegley/org2jsonl";
+      flake = false;
     };
 
     scripts = {

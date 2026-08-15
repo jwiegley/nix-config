@@ -131,6 +131,24 @@
       },
       "version": "0.34.1"
     },
+    "hakyll-jw": {
+      "source": {
+        "args": {
+          "hash": "sha256-Jp/OI4mvH+2lBMMyxa/6Ouy0d6h4MgVxgvqLwKF5LN8=",
+          "owner": "jwiegley",
+          "repo": "hakyll",
+          "rev": "023b4124ab791e3b436b554434be42f2f86a2f7b"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/hakyll"
+      },
+      "update": {
+        "kind": "explicit-rev",
+        "policy": "manual",
+        "reason": "org-jw pins this fork and commit in cabal.project"
+      },
+      "version": "023b4124"
+    },
     "hammer": {
       "source": {
         "args": {

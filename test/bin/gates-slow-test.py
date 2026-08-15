@@ -2497,14 +2497,34 @@ class TestGatesAreRegistered(unittest.TestCase):
             self.assertNotIn("###", result.stdout)
             self.assertFalse(changes_log.exists())
 
-    def test_make_build_and_switch_propagate_darwin_rebuild_failure(self):
+    def test_make_builds_as_user_and_propagates_activation_failure(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             fake_bin = root / "bin"
             fake_bin.mkdir()
+            system_config = root / "darwin-system"
+            (system_config / "sw/bin").mkdir(parents=True)
+            activation = system_config / "sw/bin/darwin-rebuild"
+            activation.write_text(
+                '#!/bin/sh\n[ "$1" = activate ] || exit 72\nexit 73\n'
+            )
+            activation.chmod(0o755)
+
+            nix = fake_bin / "nix"
+            nix.write_text(
+                "#!/bin/sh\n"
+                'printf "%s\\n" "$*" >>"$NIX_LOG"\n'
+                'if [ "${NIX_FAIL:-0}" = 1 ]; then exit 71; fi\n'
+                'case " $* " in *" --print-out-paths "*) printf "%s\\n" "$SYSTEM_CONFIG";; esac\n'
+            )
+            nix.chmod(0o755)
+            nix_env = fake_bin / "nix-env"
+            nix_env.write_text("#!/bin/sh\nexit 0\n")
+            nix_env.chmod(0o755)
             sudo = fake_bin / "sudo"
-            sudo.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >>"$SUDO_LOG"\nexit 73\n')
+            sudo.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >>"$SUDO_LOG"\nexec "$@"\n')
             sudo.chmod(0o755)
+            nix_log = root / "nix.log"
             sudo_log = root / "sudo.log"
 
             fixture = root / "Makefile"
@@ -2513,7 +2533,10 @@ class TestGatesAreRegistered(unittest.TestCase):
             )
             env = clean_env(
                 PATH=f"{fake_bin}:{os.environ['PATH']}",
+                NIX_FAIL="1",
+                NIX_LOG=str(nix_log),
                 SUDO_LOG=str(sudo_log),
+                SYSTEM_CONFIG=str(system_config),
             )
 
             result_file = root / "result"
@@ -2535,8 +2558,10 @@ class TestGatesAreRegistered(unittest.TestCase):
             )
             self.assertNotEqual(build.returncode, 0, build.stdout + build.stderr)
             self.assertTrue(result_file.exists(), "cleanup ran after failed build")
+            self.assertFalse(sudo_log.exists())
 
-            sudo_log.write_text("")
+            env["NIX_FAIL"] = "0"
+            nix_log.write_text("")
             switch = subprocess.run(
                 [
                     "make",
@@ -2553,9 +2578,20 @@ class TestGatesAreRegistered(unittest.TestCase):
                 check=False,
             )
             self.assertNotEqual(switch.returncode, 0, switch.stdout + switch.stderr)
+            self.assertEqual(
+                nix_log.read_text().splitlines(),
+                [
+                    "build --no-link --print-out-paths .#darwinConfigurations.hera.system"
+                ],
+            )
             sudo_calls = sudo_log.read_text().splitlines()
-            self.assertEqual(len(sudo_calls), 1, sudo_calls)
-            self.assertNotIn("--list-generations", sudo_calls[0])
+            self.assertEqual(
+                sudo_calls,
+                [
+                    f"nix-env -p /nix/var/nix/profiles/system --set {system_config}",
+                    f"{activation} activate",
+                ],
+            )
 
     def test_make_lock_local_propagates_update_failure(self):
         with tempfile.TemporaryDirectory() as temp_dir:

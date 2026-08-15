@@ -38,6 +38,11 @@ in
 
     enable = true;
     enableCompletion = lib.mkDefault true;
+    completionInit = lib.mkIf isDarwin ''
+      fpath=(${lib.escapeShellArg "${dotDir}/completions"} $fpath)
+      autoload -Uz compinit
+      compinit -C
+    '';
 
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
@@ -154,8 +159,6 @@ in
             . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
             . ${config.xdg.configHome}/shellfish/shellfishrc
 
-            fpath=("${config.xdg.configHome}/zsh/completions" $fpath)
-
             ${lib.optionalString config.johnw.host.isHera ''
               # OpenClaw Completion
               [[ -f "${vars.home}/.openclaw/completions/openclaw.zsh" ]] && \
@@ -192,9 +195,6 @@ in
       ''
       + lib.optionalString isLinux ''
         else
-          autoload -Uz compinit
-          compinit
-
           # Reset terminal state before each prompt.
           autoload -Uz add-zsh-hook
           __reset_broken_terminal() {
@@ -217,4 +217,38 @@ in
       }
     ];
   };
+
+  # Ordinary shells trust the dump above. Rebuild it during activation, where
+  # compinit can afford to audit the complete Nix-backed completion path.
+  home.activation.refreshZshCompletionDump = lib.mkIf isDarwin (
+    lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+      (
+        set -euo pipefail
+        umask 077
+
+        completion_dump=${lib.escapeShellArg "${dotDir}/.zcompdump"}
+        if [[ -v DRY_RUN ]]; then
+          printf 'Would refresh zsh completion dump: %s\n' "$completion_dump"
+          exit 0
+        fi
+
+        ${pkgs.coreutils}/bin/rm -f -- "$completion_dump"
+        if ! ZDOTDIR=${lib.escapeShellArg dotDir} TERM=dumb \
+          ${pkgs.zsh}/bin/zsh -ic exit </dev/null
+        then
+          echo "zsh completion audit failed" >&2
+          exit 1
+        fi
+
+        expected_metadata="$(${pkgs.coreutils}/bin/id -u):600"
+        actual_metadata="$(${pkgs.coreutils}/bin/stat -c '%u:%a' "$completion_dump")"
+        if [[ -L $completion_dump || ! -f $completion_dump \
+          || $actual_metadata != "$expected_metadata" ]]
+        then
+          echo "zsh completion dump has unsafe ownership or mode" >&2
+          exit 1
+        fi
+      )
+    ''
+  );
 }

@@ -4891,6 +4891,21 @@ class IntegratedWorkflowTests(unittest.TestCase):
         (root / "config/ai").mkdir(parents=True)
         (root / "overlays/ai").mkdir(parents=True)
         fake_bin.mkdir()
+        system_config = Path(temporary) / "darwin-system"
+        (system_config / "sw/bin").mkdir(parents=True)
+        (system_config / "sw/bin/darwin-rebuild").write_text(
+            """#!/usr/bin/env bash
+set -euo pipefail
+[[ $1 == activate ]]
+if [[ -n ${UPDATE_TEST_EXTERNAL_LOG:-} ]]; then
+  printf 'switch\n' >>"$UPDATE_TEST_EXTERNAL_LOG"
+fi
+if [[ ${UPDATE_TEST_FAILURE_PHASE:-} == candidate-switch ]]; then
+  exit 71
+fi
+"""
+        )
+        (system_config / "sw/bin/darwin-rebuild").chmod(0o700)
 
         empty_lock = json.dumps(
             {"nodes": {"root": {"inputs": {}}}, "root": "root", "version": 7}
@@ -5265,6 +5280,9 @@ elif [[ $1 == build ]]; then
     printf 'build\n' >>"$UPDATE_TEST_EXTERNAL_LOG"
   fi
   fail_phase candidate-build
+  if [[ " $* " == *" --print-out-paths "* ]]; then
+    printf '%s\n' "$UPDATE_TEST_SYSTEM_CONFIG"
+  fi
 else
   exit 2
 fi
@@ -5449,7 +5467,16 @@ exec "$@"
 """
                 )
                 (root / "build").chmod(0o700 if nixos_driver == "executable" else 0o600)
-        executable("sudo", '#!/bin/sh\nexec "$@"\n')
+        executable("nix-env", "#!/bin/sh\nexit 0\n")
+        executable(
+            "sudo",
+            """#!/bin/sh
+if [ -n "${UPDATE_TEST_SUDO_LOG:-}" ]; then
+  printf '%s\n' "$*" >>"$UPDATE_TEST_SUDO_LOG"
+fi
+exec "$@"
+""",
+        )
         executable(
             "darwin-rebuild",
             """#!/usr/bin/env bash
@@ -5529,6 +5556,7 @@ fi
             "REAL_JQ": real_jq,
             "REAL_MKDIR": real_mkdir,
             "TMPDIR": temporary,
+            "UPDATE_TEST_SYSTEM_CONFIG": str(system_config),
         }
         return root, environment, baseline
 
@@ -7372,11 +7400,15 @@ exec "$REAL_GIT" "$@"
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, baseline = self._create_update_agents_fixture(temp_dir)
             external_log = Path(temp_dir) / "external.log"
+            command_log = Path(temp_dir) / "commands.log"
             push_marker = Path(temp_dir) / "push-called"
+            sudo_log = Path(temp_dir) / "sudo.log"
             environment.update(
                 {
+                    "UPDATE_TEST_COMMAND_LOG": str(command_log),
                     "UPDATE_TEST_EXTERNAL_LOG": str(external_log),
                     "UPDATE_TEST_PUSH_MARKER": str(push_marker),
+                    "UPDATE_TEST_SUDO_LOG": str(sudo_log),
                 }
             )
 
@@ -7392,6 +7424,23 @@ exec "$REAL_GIT" "$@"
             self.assertEqual(
                 external_log.read_text().splitlines(),
                 ["build", "switch", "publish", "push"],
+            )
+            darwin_builds = [
+                command
+                for command in command_log.read_text().splitlines()
+                if "#darwinConfigurations.hera.system" in command
+            ]
+            self.assertEqual(len(darwin_builds), 1)
+            self.assertTrue(
+                darwin_builds[0].startswith("build --no-link --print-out-paths ")
+            )
+            system_config = environment["UPDATE_TEST_SYSTEM_CONFIG"]
+            self.assertEqual(
+                sudo_log.read_text().splitlines(),
+                [
+                    f"nix-env -p /nix/var/nix/profiles/system --set {system_config}",
+                    f"{system_config}/sw/bin/darwin-rebuild activate",
+                ],
             )
             self.assertTrue(push_marker.exists())
             self.assertNotEqual(
