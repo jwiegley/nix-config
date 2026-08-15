@@ -515,7 +515,7 @@ rec {
     ++ lib.optionals (supportsAiperf pkgs.python313Packages) (optPkg "aiperf")
     ++ optPkgs (aiPackagePolicy.groups.common ++ aiPackagePolicy.groups.homeOnly)
     ++ optAgent "claude-code"
-    ++ optAgent "claude-code-acp"
+    ++ optAgent "claude-agent-acp"
     ++ optAgent "ccusage"
     ++ optAgent "ccstatusline"
     ++ optAgent "codex"
