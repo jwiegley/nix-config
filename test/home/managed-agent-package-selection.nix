@@ -35,6 +35,40 @@ let
   # predicate reopening the poisoned stock package set fails here.
   avoidsLegacyPackages = (builtins.tryEval (builtins.length packages.package-list)).success;
 
+  reducedPackages = import "${src}/config/packages.nix" {
+    hostname = "vulcan";
+    inputs = builtins.removeAttrs downstreamInputs [ "git-all" ];
+    pkgs = configured;
+    isClientMachine = false;
+  };
+  acceptsReducedInputs =
+    (builtins.tryEval (
+      assert !(builtins.elem "git-all" reducedPackages.userPackageInputNames);
+      builtins.length reducedPackages.package-list
+    )).success;
+
+  noIfdConfigured = configured // {
+    haskellPackages = configured.haskellPackages // {
+      callCabal2nix = throw "source-project applications must not use callCabal2nix during evaluation";
+    };
+  };
+  noIfdPackages = import "${src}/config/packages.nix" {
+    hostname = "vulcan";
+    inputs = downstreamInputs;
+    pkgs = noIfdConfigured;
+    isClientMachine = false;
+  };
+  noIfdGitAll = configured.lib.findFirst (
+    package: configured.lib.getName package == "git-all"
+  ) null noIfdPackages.package-list;
+  avoidsImportFromDerivation =
+    (builtins.tryEval (
+      assert noIfdGitAll != null;
+      assert noIfdGitAll.src == inputs.git-all.outPath;
+      assert noIfdGitAll.system == configured.stdenv.hostPlatform.system;
+      noIfdGitAll.drvPath
+    )).success;
+
   # A consumer with agent packages but no portable-flake route must fail
   # loudly at evaluation, never silently install unwrapped upstream agents.
   unpatchable = import "${src}/config/packages.nix" {
@@ -60,6 +94,10 @@ assert configured.lib.assertMsg hasManagedClaude
   "downstream nix-config-ai consumers lost the managed Claude wrapper";
 assert configured.lib.assertMsg avoidsLegacyPackages
   "config/packages.nix reopened the stock nixpkgs package set for package predicates";
+assert configured.lib.assertMsg acceptsReducedInputs
+  "config/packages.nix requires the optional git-all input";
+assert configured.lib.assertMsg avoidsImportFromDerivation
+  "the git-all source projection used callCabal2nix during evaluation";
 assert configured.lib.assertMsg degradesLoudly
   "config/packages.nix silently degraded managed agent wrappers without inputs.nix-config-ai";
 pkgs.runCommand "managed-agent-package-selection" { } "touch $out"
