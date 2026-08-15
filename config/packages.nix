@@ -81,12 +81,15 @@ let
     "renamer"
     "trade-journal"
   ];
+  sourceProjectApps = import ../packages/source-project-apps.nix { inherit inputs pkgs; };
   userPackageInputNames = lib.sort builtins.lessThan (
     lib.filter (
-      name: inputs ? ${name} && inputs.${name} ? packages.${sys}.default
+      name: inputs ? ${name} && (sourceProjectApps ? ${name} || inputs.${name} ? packages.${sys}.default)
     ) userPackageInputAllowlist
   );
-  userPackageInputs = map (name: inputs.${name}.packages.${sys}.default) userPackageInputNames;
+  userPackageInputs = map (
+    name: sourceProjectApps.${name} or inputs.${name}.packages.${sys}.default
+  ) userPackageInputNames;
 in
 rec {
   inherit userPackageInputNames;

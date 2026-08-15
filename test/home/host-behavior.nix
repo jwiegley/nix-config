@@ -227,6 +227,10 @@ let
   allHomes = desktopHomes ++ nonDesktopHomes;
   hasSelectedPackage = name: packages: builtins.elem name (map lib.getName packages);
   hasPackage = name: config: hasSelectedPackage name config.home.packages;
+  heraGitAll = lib.findFirst (
+    package: lib.getName package == "git-all"
+  ) null desktopHomesByHost.hera.home.packages;
+  gitAllSource = darwinConfigurations.hera._module.specialArgs.inputs.git-all.outPath;
   automaticPiExtensions = [
     ".config/pi/agent/extensions/fleet-theme/index.ts"
     ".config/pi/agent/extensions/nix-gallery/index.ts"
@@ -498,6 +502,10 @@ assert builtins.all (config: !(hasPackage "watchman" config)) allHomes;
 assert !(hasPackage "agdaWithPackages" sharedWork);
 assert hasPackage "agdaWithPackages" personalLinux;
 assert builtins.all (hasPackage "agdaWithPackages") desktopHomes;
+assert heraGitAll != null;
+assert heraGitAll.version == "1.8.1";
+assert heraGitAll.src == gitAllSource;
+assert heraGitAll.system == "aarch64-darwin";
 assert !(hasSelectedPackage "agdaWithPackages" physicalSharedWorkPackages);
 assert hasSelectedPackage "agdaWithPackages" physicalMaintainedPackages;
 assert builtins.all (hasPackage "obr") allHomes;

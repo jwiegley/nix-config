@@ -41,6 +41,7 @@
 
     git-all = {
       url = "github:jwiegley/git-all";
+      flake = false;
     };
 
     gitlib = {
