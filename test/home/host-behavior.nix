@@ -32,6 +32,19 @@ let
     builtins.filter (
       key: lib.hasInfix vulcanJumpPublicKey key
     ) darwinConfigurations.${host}.config.users.users.johnw.openssh.authorizedKeys.keys;
+  idRsyncPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG5gtakoBc1b52Jkj29dnrFb5ADlXTBf60VOBNbnwcLD";
+  expectedIdRsyncAuthorization =
+    host:
+    let
+      forwarding = lib.optionalString (host == "hera") '',port-forwarding,permitopen="andoria-08:22"'';
+      rrsync = darwinConfigurations.${host}.pkgs.rrsync;
+    in
+    ''from="192.168.1.2",restrict${forwarding},command="${rrsync}/bin/rrsync -ro /Users/johnw" ${idRsyncPublicKey} id_rsync'';
+  idRsyncAuthorizations =
+    host:
+    builtins.filter (
+      key: lib.hasInfix idRsyncPublicKey key
+    ) darwinConfigurations.${host}.config.users.users.johnw.openssh.authorizedKeys.keys;
   expectedVulcanJumpSshdPolicy = ''
     Match User johnw Address 192.168.1.2
       AllowStreamLocalForwarding no
@@ -370,6 +383,9 @@ in
 assert builtins.all (host: builtins.hasAttr host darwinConfigurations) requiredDarwinHosts;
 assert vulcanJumpAuthorizations "hera" == [ expectedVulcanJumpAuthorization ];
 assert vulcanJumpAuthorizations "clio" == [ ];
+assert builtins.all (
+  host: idRsyncAuthorizations host == [ (expectedIdRsyncAuthorization host) ]
+) requiredDarwinHosts;
 assert lib.hasInfix expectedVulcanJumpSshdPolicy heraSshdConfig;
 assert !lib.hasInfix "Match User johnw Address 192.168.1.2" clioSshdConfig;
 assert builtins.all (

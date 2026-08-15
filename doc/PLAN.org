@@ -6700,6 +6700,36 @@ The runtime cleanup worktree adds an Unreleased entry, but Agent Deck CONTRIBUTI
 ]
 #+end_src
 
+* DOING [#B] Finish id_rsync session gathering across fleet
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-rdpi
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-14 Fri 19:07]
+:MODIFIED: [2026-08-14 Fri 19:34]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Install the dedicated Vulcan id_rsync public authorization at each owning seam. Hera must retain the read-only rrsync forced command while permitting only local forwarding to andoria-08:22; Clio retains the shared read-only entry; VPS uses read-only rrsync without a LAN-only source constraint; the NFS-shared Andoria home preserves the existing pushme authorization. Definition of done: source configurations evaluate/build without weakening SSH confinement, the live Andoria entry is present exactly once with the verified fingerprint, and post-activation Vulcan checks prove Hera, VPS, and Andoria reachability while treating travelling Clio as expected-unreachable. System activation, publication, and history changes remain separately authorized.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 407,
+    "issue_id": "nix-rdpi",
+    "author": "johnw",
+    "text": "Source implementation complete: Hera alone receives port-forwarding plus permitopen=andoria-08:22 while Clio retains forced read-only rrsync only; direct host evaluation passes. VPS source has no from= and its exact authorization check, rrsync package, and materialized authorized_keys leaf pass. Live NFS-shared Andoria authorization is present exactly once, preserves pushme, uses the observed ProxyJump peer 100.120.206.121, permits list-only, and rejects upload. Vulcan source fixes OpenSSH Host ordering; its ssh -G check and full non-activating system build pass. Remaining: explicit activation/adoption authorization and post-activation job run. Hera full system build is independently blocked by nix-kk0z.",
+    "created_at": "2026-08-15T02:34:42Z"
+  }
+]
+#+end_src
+
 * DONE [#D] Synchronize CURRENT-WORK with resolved obr authority decisions
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
