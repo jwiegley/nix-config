@@ -4937,15 +4937,17 @@ Two persistence tests intermittently fail during t.TempDir cleanup because backg
 ]
 #+end_src
 
-* DOING [#B] Restore Hera build after git-all drops x86_64-darwin
+* DONE [#B] Restore Hera build after git-all drops x86_64-darwin
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-kk0z
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-14 Fri 19:33]
-:MODIFIED: [2026-08-14 Fri 20:05]
+:MODIFIED: [2026-08-14 Fri 21:41]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-14 Fri 21:41]
+:CLOSE_REASON: Resolved by building git-all from the host Haskell package set with the pinned source override; focused platform-selection checks and the exact merged Hera ./build system both pass.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
