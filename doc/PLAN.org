@@ -2628,7 +2628,7 @@ Transient classification reaches replay policy; transient failures remain retrya
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-14 Fri 18:21]
-:MODIFIED: [2026-08-14 Fri 20:31]
+:MODIFIED: [2026-08-14 Fri 21:55]
 :CREATED_BY: johnw
 :FINISHED: [2026-08-14 Fri 20:31]
 :CLOSE_REASON: Completed: Darwin zsh now runs compinit -C against a completion dump rebuilt during Home Manager activation with regular-file, owner, and 0600 validation. Focused host-behavior checks pass. The generated profile starts in 0.26s cold and 0.10-0.11s warm. Build-only validation passed; activation was not performed.
@@ -2638,6 +2638,20 @@ Transient classification reaches replay policy; transient failures remain retrya
 :END:
 
 Hera zsh startup runs compinit/compaudit across large immutable Nix completion trees, causing 30-65 second prompt latency under metadata contention. Definition of done: ordinary startup uses the valid completion dump without a full audit, a bounded managed check preserves ownership/mode safety, focused tests cover the generated zsh behavior, and shell startup is measured below the existing threshold.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 409,
+    "issue_id": "nix-bf4q",
+    "author": "johnw",
+    "text": "Authorized Hera activation completed at the exact built system closure. Live ~/.config/zsh/.zcompdump is a regular UID-501 mode-0600 file, generated .zshrc uses compinit -C, and three fresh login-interactive starts measured 0.29s cold then 0.12s/0.12s warm with no compaudit warning.",
+    "created_at": "2026-08-15T04:55:24Z"
+  }
+]
+#+end_src
 
 * DONE [#B] Make Andoria Gitea policy validation fail closed on the complete lock graph
 :PROPERTIES:
@@ -5237,10 +5251,10 @@ The authoritative Andoria-T2 system configuration declaratively grants only the 
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-14 Fri 18:21]
-:MODIFIED: [2026-08-14 Fri 20:31]
+:MODIFIED: [2026-08-14 Fri 22:23]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-14 Fri 20:31]
-:CLOSE_REASON: Completed: source-project inputs are source-only and their applications build from Hera's existing package set, eliminating repeated nixpkgs/HaskellNix flake evaluation while preserving all 13 selections. No-cache Hera evaluations completed in 22.18s and 23.57s. make switch and bin/update now build once as the invoking user and elevate only profile set plus activation. 71 gate tests, 102 update/overlay tests, org-jw smoke/closure checks, and the full Hera system build passed. No activation was performed.
+:FINISHED: [2026-08-14 Fri 22:23]
+:CLOSE_REASON: Completed: the remaining Obr input is source-only and builds from Hera’s already-open Nixpkgs and Rust overlay, removing its private package-set evaluation without weakening compatibility checks. Two consecutive serialized full production evaluations with offline and no-eval-cache completed in 19.67s and 20.12s. The exact Obr package and filtered source, Obr ownership check, all 21 full Python suites, 7 behavioral checks, and the full Hera system build passed. The single user-build and closure-only sudo activation boundary remains protected.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -5251,6 +5265,20 @@ Hera configuration evaluation still takes 40-200 seconds on serialized focused r
 ** Acceptance Criteria
 
 The maintained focused Hera evaluation path completes within 30 seconds on a serialized repeatable benchmark without weakening configuration checks or behavior. The Darwin switch workflow evaluates and builds the system closure exactly once as the invoking user, validates that closure, and elevates only the system-profile update and activation of that already-built closure. Focused regression tests protect the privilege and failure-ordering boundary. No activation is required without separate authorization.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 408,
+    "issue_id": "nix-lzym",
+    "author": "johnw",
+    "text": "Reopened after authorized Hera activation: the exact system closure activated, but fresh no-eval-cache full-system evaluations regressed to 120.02s and 50.43s, with substantial wait time and a concurrent Nix client parented by interactive zsh. Root cause investigation remains active; the prior source/build evidence is retained.",
+    "created_at": "2026-08-15T04:54:27Z"
+  }
+]
+#+end_src
 
 * DONE [#B] Fix nix-scripts Linux retention check
 :PROPERTIES:
@@ -6765,7 +6793,7 @@ The runtime cleanup worktree adds an Unreleased entry, but Agent Deck CONTRIBUTI
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-14 Fri 19:07]
-:MODIFIED: [2026-08-14 Fri 19:34]
+:MODIFIED: [2026-08-14 Fri 21:55]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -6784,6 +6812,13 @@ Install the dedicated Vulcan id_rsync public authorization at each owning seam. 
     "author": "johnw",
     "text": "Source implementation complete: Hera alone receives port-forwarding plus permitopen=andoria-08:22 while Clio retains forced read-only rrsync only; direct host evaluation passes. VPS source has no from= and its exact authorization check, rrsync package, and materialized authorized_keys leaf pass. Live NFS-shared Andoria authorization is present exactly once, preserves pushme, uses the observed ProxyJump peer 100.120.206.121, permits list-only, and rejects upload. Vulcan source fixes OpenSSH Host ordering; its ssh -G check and full non-activating system build pass. Remaining: explicit activation/adoption authorization and post-activation job run. Hera full system build is independently blocked by nix-kk0z.",
     "created_at": "2026-08-15T02:34:42Z"
+  },
+  {
+    "id": 410,
+    "issue_id": "nix-rdpi",
+    "author": "johnw",
+    "text": "Authorized Hera activation completed. Live nix-darwin AuthorizedKeysCommand materialization contains exactly one id_rsync authorization with the expected SHA256:oO6GcyEo+c7vRfDPuUAaX1N7ycuhS+pzh9YK5cFbYlM fingerprint, read-only rrsync forced command, source restriction, port-forwarding exception, and sole permitopen=andoria-08:22 destination. Effective sshd Match policy reports local-only TCP forwarding, no StreamLocal forwarding, and no listen forwarding. Fleet post-activation Vulcan reachability remains unrun and this issue stays open.",
+    "created_at": "2026-08-15T04:55:24Z"
   }
 ]
 #+end_src

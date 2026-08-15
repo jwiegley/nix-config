@@ -42,12 +42,13 @@ its source-built package, managed-settings overlay, model/provider overrides, pr
 commands, RLM specialist adapters, skills, theme, keybindings, and MCP adapter are
 managed. Its writable preference/onboarding settings, daemon, kernel, authentication,
 continual harness, history, sessions, caches, logs, and refinements remain mutable.
-The root flake exports `obr`, and the dedicated root module selects it for every
-managed home. Nix owns the executable; each machine's ignored `.obr/` cache and
-each repository's tracked `PLAN.org` remain mutable project state. Consumers
-that import this repository with `flake = false` declare `obr` as a direct input
-and pass it through their Home Manager module arguments; their lock adoption
-remains consumer-owned.
+The root flake exports `obr`, built from its source-only input against the
+already-open consumer package set, and the dedicated root module selects it for
+every managed home. Nix owns the executable; each machine's ignored `.obr/`
+cache and each repository's tracked `PLAN.org` remain mutable project state.
+Consumers that import this repository with `flake = false` declare `obr` as a
+direct source-only input and pass it through their Home Manager module
+arguments; their lock adoption remains consumer-owned.
 
 The managed Pi profile makes the same complete 26-member extension gallery
 available on every host. Darwin registers the two loopback discovery providers
