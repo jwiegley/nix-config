@@ -3991,6 +3991,30 @@ The Agda build failure is diagnosed and repaired at its owning seam; the exact A
 ]
 #+end_src
 
+* TODO [#D] Guard optAgent requests against feed-absent typos
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-gk36
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-14 Fri 18:25]
+:MODIFIED: [2026-08-14 Fri 18:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Source commit: d0abf4fd726149c1f21545fbc2d1e6b22b8c9b52. Severity: Low. Category: Test Coverage. File: config/packages.nix:515 and flake/ai.nix optAgent. Confidence: 85.
+
+PROBLEM: optAgent deliberately returns [] for names absent from the feed (feeds differ per system), so a misspelled agent name installs nothing with no diagnostic. This just happened: 73fcbeaf requested 'claude-code-acp', which exists in no feed; the managed-agent-package-selection and host-behavior gates both passed with the typo, and only manual inspection caught it (corrected to 'claude-agent-acp' in d0abf4fd 12 minutes later).
+
+IMPACT: A typo'd or upstream-renamed agent silently vanishes from every home while all gates stay green — the same silent-inventory-drift class the nix-scripts exact cmp and the source-project input allowlist already guard elsewhere.
+
+SUGGESTED FIX: Add a check (or extend managed-agent-package-selection) asserting every name passed to optAgent resolves in at least one supported system's feed — absent-on-some-systems stays legal, absent-everywhere fails as a typo. A literal expected-agents list compared two-way against the requested names would match the house inventory pattern.
+
+VERIFICATION: Re-introduce 'claude-code-acp' as a mutant; the check must fail naming the unresolvable agent; with correct names it passes on all systems.
+
 * DONE [#C] Exercise same-child last-wins behavior in Agent Deck outbox tests
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -4909,6 +4933,38 @@ Two persistence tests intermittently fail during t.TempDir cleanup because backg
     "author": "johnw",
     "text": "The persistence fixture now uses the production quiescence boundary before killing its overridden tmux runtime: it aligns tmux ownership after changing Instance.ID, bumps spawn generation and waits for the fast-death watcher barrier, retries only transient unstable-tree capture, and surfaces final cleanup errors. Worker reproduction failed 2/100 before the fix, then passed normal count=100 and race count=20. Root isolated race count=5 passed (5.948s).",
     "created_at": "2026-08-13T21:56:44Z"
+  }
+]
+#+end_src
+
+* DOING [#B] Restore Hera build after git-all drops x86_64-darwin
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-kk0z
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-14 Fri 19:33]
+:MODIFIED: [2026-08-14 Fri 20:05]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The 2026-08-14 ./build system gate fails while evaluating git-all: its Nixpkgs 26.11 input rejects x86_64-darwin, before the Darwin system can be realized. This is unrelated to id_rsync but blocks the required pre-activation Hera build. Definition of done: the maintained package/input projection no longer evaluates the unsupported x86_64-darwin branch, ./build system succeeds without weakening supported-system coverage, and focused regression evidence protects the platform selection.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-kk0z",
+    "depends_on_id": "nix-rdpi",
+    "type": "discovered-from",
+    "created_at": "2026-08-15T02:33:01.451858Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
