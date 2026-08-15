@@ -62,6 +62,7 @@ in
         openssh.authorizedKeys = {
           keys =
             let
+              idRsyncForwarding = lib.optionalString config.johnw.host.isHera '',port-forwarding,permitopen="andoria-08:22"'';
               modelMetadataExtract = pkgs.writeShellScript "model-metadata-extract" ''
                 exec ${pkgs.gawk}/bin/awk '
                   BEGIN{IGNORECASE=1}
@@ -86,8 +87,9 @@ in
 
               # vulcan session-log gathering (session-gather.timer) — READ-ONLY rsync.
               # rrsync confines the forced command to reading under DIR; -ro also implies
-              # -no-del. `restrict` removes pty/forwarding/agent/X11.
-              ''from="192.168.1.2",restrict,command="${pkgs.rrsync}/bin/rrsync -ro /Users/johnw" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG5gtakoBc1b52Jkj29dnrFb5ADlXTBf60VOBNbnwcLD id_rsync''
+              # -no-del. Hera alone receives the destination-limited forwarding
+              # exception; its sshd Match below also permits only local TCP forwarding.
+              ''from="192.168.1.2",restrict${idRsyncForwarding},command="${pkgs.rrsync}/bin/rrsync -ro /Users/johnw" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG5gtakoBc1b52Jkj29dnrFb5ADlXTBf60VOBNbnwcLD id_rsync''
 
               ''from="192.168.1.2",restrict,command="${modelMetadataExtract}" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFZYNrQfHWNV09OQz7uMhjQKflCWKwLG4pp1tJb2QRRq vulcan-model-metadata''
             ]
