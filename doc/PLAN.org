@@ -680,6 +680,95 @@ The installed user-scripts package metadata still advertises the retired GitHub 
 ]
 #+end_src
 
+* DEFER [#C] Investigate intermittent zsh first-prompt history stalls
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-2hjj
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-15 Sat 15:02]
+:MODIFIED: [2026-08-15 Sat 15:02]
+:CREATED_BY: johnw
+:DEFERRED: [2026-09-14 Mon 15:02]
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Opening a new interactive zsh on Hera is intermittently delayed before the
+first prompt. The strongest user reproduction was a new tmux window opened in
+`~/src/nix` on 2026-08-15 at about 14:59 PDT: the prompt took more than 15
+seconds. This is distinct from the previously fixed compaudit/zcompdump path.
+
+Evidence gathered without changing shell behavior:
+
+- Current Darwin generation 1093 was reactivated at 07:48, but it points to an
+  already-built system generation. Its generated `.config/zsh/.zshrc` is
+  byte-identical to generation 1092. The current repository candidate does not
+  modify `config/zsh.nix`, `config/johnw.nix`, `config/home.nix`, or
+  `config/darwin.nix`.
+- Controlled interactive-shell runs are bimodal. Immediate repeats often take
+  0.10-0.14 seconds, while observed slow runs took 3.41, 5.49, 6.63, 7.32, and
+  9.65 seconds. The user independently observed a real tmux first-prompt delay
+  over 15 seconds.
+- A field-filtered child-name trace of a 6.63-second slow run saw no Nix or
+  direnv child. After the ordinary zsh/carapace initialization, no external
+  child was present for the multi-second tail. Direct `direnv export zsh` took
+  0.09 seconds and the repository `.envrc` only applies `.envrc.cache`; it does
+  not contain `use flake` or invoke Nix.
+- Standalone initializers were fast: Starship about 0.06 seconds cold, fzf about
+  0.04, carapace about 0.05, and zoxide/direnv-hook effectively zero. A zprof
+  source of `.zshrc` accounted for about 1.19 seconds total, with no component
+  explaining the intermittent multi-second wait. `compinit -C` itself was
+  about 0.21 ms, so the activation-time zcompdump fix is not implicated.
+- The managed history file was 4,710,652 bytes and 126,540 lines. At the end of
+  the user's delayed tmux startup its mtime was 14:59:13, immediately before
+  the prompt appeared. Hera has many concurrent long-lived zsh processes.
+- `config/zsh.nix` configures a 500,000-entry saved history with sharing and
+  appending enabled. The generated `.zshrc` enables `SHARE_HISTORY`,
+  `APPEND_HISTORY`, and `HIST_FCNTL_LOCK`. Zsh documents that shared history
+  imports new commands and appends typed commands, while `HIST_FCNTL_LOCK`
+  serializes history writes with `fcntl`.
+
+Current diagnosis: intermittent history-file lock/import/merge coordination is
+the best-supported seam. It explains low CPU, no external child, the bimodal
+latency, concurrent shells, and the history-file update at prompt time. This is
+not yet filesystem-confirmed because no lock-owner snapshot was captured during
+the exact 15-second stall. Do not attribute the delay to Nix or direnv without
+new evidence.
+
+No history behavior change is authorized. In particular, do not disable
+`SHARE_HISTORY`, change persistence timing, reduce retained history, or activate
+a shell configuration merely to make the benchmark green. A possible future
+tradeoff, only after owner approval, is to replace live cross-shell importing
+with `INC_APPEND_HISTORY_TIME`: commands would still persist after completion,
+but already-open shells would not immediately import commands entered elsewhere.
+
+Future investigation should measure actual tmux time-to-first-prompt rather
+than conflate startup with `zsh -lic exit` history flushing; capture narrowly
+filtered child/process and history-lock evidence during a slow sample; and
+compare unchanged behavior with any explicitly approved alternative.
+
+** Acceptance Criteria
+
+Capture a slow tmux time-to-first-prompt sample and identify or falsify history locking with direct evidence; preserve current history semantics unless the owner explicitly approves a tradeoff; verify repeated real first prompts without Nix or direnv children before closing.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-2hjj",
+    "depends_on_id": "nix-lzym",
+    "type": "discovered-from",
+    "created_at": "2026-08-15T22:02:14.138880Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#C] Scrub inherited Git config and namespace selectors
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -3306,6 +3395,42 @@ GUI helpers and commands launched through Agent Deck are attributed to a stable,
 ]
 #+end_src
 
+* DOING [#B] Roll out simplified upstream Obr across managed hosts
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-eazx
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-15 Sat 15:03]
+:MODIFIED: [2026-08-15 Sat 15:03]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Restore the pre-aa72 upstream-flake Obr package path, lock today’s upstream tip, verify every maintained consumer, publish signed root and consumer revisions, and activate from each authoritative checkout. Do not add compatibility hardening or mutate daemon trust, CPU policy, or restart policy.
+
+** Acceptance Criteria
+
+Root and strict cross-consumer tests pass; today’s Obr tip is realized; signed revisions are published; Hera, Clio, Vulcan, VPS, and shared-work hosts activate from authoritative checkouts and report the intended Obr version; all touched repositories finish clean and pushed; no daemon trust, CPU-policy, or restart repair is performed.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-eazx",
+    "depends_on_id": "nix-lzym",
+    "type": "discovered-from",
+    "created_at": "2026-08-15T22:03:22.515861Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Make last-wins inbox replacement failure-atomic
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5251,10 +5376,10 @@ The authoritative Andoria-T2 system configuration declaratively grants only the 
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-14 Fri 18:21]
-:MODIFIED: [2026-08-14 Fri 22:23]
+:MODIFIED: [2026-08-15 Sat 14:47]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-14 Fri 22:23]
-:CLOSE_REASON: Completed: the remaining Obr input is source-only and builds from Hera’s already-open Nixpkgs and Rust overlay, removing its private package-set evaluation without weakening compatibility checks. Two consecutive serialized full production evaluations with offline and no-eval-cache completed in 19.67s and 20.12s. The exact Obr package and filtered source, Obr ownership check, all 21 full Python suites, 7 behavioral checks, and the full Hera system build passed. The single user-build and closure-only sudo activation boundary remains protected.
+:FINISHED: [2026-08-15 Sat 14:47]
+:CLOSE_REASON: Closed at owner direction: restored Obr to its earlier flake-provided package path and removed the source-only local build, Rust-overlay compatibility layer, cache runbook, and defensive input matrix. No further configuration hardening is being pursued.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -5276,6 +5401,48 @@ The maintained focused Hera evaluation path completes within 30 seconds on a ser
     "author": "johnw",
     "text": "Reopened after authorized Hera activation: the exact system closure activated, but fresh no-eval-cache full-system evaluations regressed to 120.02s and 50.43s, with substantial wait time and a concurrent Nix client parented by interactive zsh. Root cause investigation remains active; the prior source/build evidence is retained.",
     "created_at": "2026-08-15T04:54:27Z"
+  },
+  {
+    "id": 411,
+    "issue_id": "nix-lzym",
+    "author": "johnw",
+    "text": "Reopened after fleet regression: published aa72a9b0 changed the shared Home Manager Obr input contract to require a top-level rust-overlay. Hera and Clio pass because the root flake flattens nix-config-ai.lib.inputSet; Andoria, Vulcan, and VPS pass raw inputs and fail evaluation. The existing cross-consumer closeout gate was not run. Resolution requires a shared-seam normalization fix, the complete strict consumer and repository matrix, and authorized activation/runtime verification on every active host.",
+    "created_at": "2026-08-15T15:34:33Z"
+  },
+  {
+    "id": 412,
+    "issue_id": "nix-lzym",
+    "author": "johnw",
+    "text": "Fleet-regression fix in progress: config/obr.nix now resolves the Rust overlay from either direct inputs.rust-overlay or the canonical nested inputs.nix-config-ai.lib.inputSet.rust-overlay without adding a top-level consumer package-selection alias. Regression coverage exercises both shapes and fail-closed missing-input behavior. Passing evidence so far: formatting; pre-commit (133 Nix, 38 shell, 46 Python files and 18 fast suites); make test (21 full Python files and 7 baseline Nix checks); root all-system flake evaluation; aarch64-darwin Obr realization; focused Obr ownership; strict candidate overrides for Andoria and VPS. Local Vulcan candidate evaluation reached the governed missing /etc/nixos/firmware fixture, so its authoritative-host lane remains required. Native x86_64-linux Obr realization is currently compiling on the Andoria builders.",
+    "created_at": "2026-08-15T16:14:41Z"
+  },
+  {
+    "id": 414,
+    "issue_id": "nix-lzym",
+    "author": "johnw",
+    "text": "Post-Obr +6 candidate acceptance rerun (2026-08-15): with no other Nix client present, two serialized `direnv exec . /usr/bin/time -p nix eval --offline --no-eval-cache --no-write-lock-file --no-update-lock-file --raw .#darwinConfigurations.hera.system.drvPath` runs succeeded but took 37.69s (user 16.39, sys 10.11) and 37.01s (user 16.25, sys 9.73). This improves the prior 50.43s/120.02s regression but still fails the <30s criterion, so issue remains in progress; next seam is the monolithic portable compatibility guard forced by packages.<system>.",
+    "created_at": "2026-08-15T18:25:57Z"
+  },
+  {
+    "id": 415,
+    "issue_id": "nix-lzym",
+    "author": "johnw",
+    "text": "The proposed package/full compatibility-guard split was discarded before commit. Independent audit proved it moved 19 selected-system checks off the package/activation path, contradicting commit 73fc8248s deliberate fail-closed contract, and its new check was unclassified on Linux. A clean immutable aa72a9b0 parent evaluation under the same Hera conditions took 178.53s real (16.93s user, 10.79s sys), leaving about 150.81s in wait; the current candidate is therefore not necessary for the delay. Live observation found 75-153 MB/s of small-file APFS I/O and multiple concurrent Nix/Cargo clients, while the daemon, memory, CPU capacity, and free store space were healthy. The source candidate is back to the Obr-only four-file unit; no compatibility semantics were weakened.",
+    "created_at": "2026-08-15T19:51:51Z"
+  },
+  {
+    "id": 416,
+    "issue_id": "nix-lzym",
+    "author": "johnw",
+    "text": "Operational root cause and bounded repair (2026-08-15): the per-user Nix tarball cache contained 3,450 pack/index pairs (about 1.1 GiB) with no refs. After quiescing same-user Nix clients, the Determinate Nix 3.21.7 documented git multi-pack-index write/repack/expire sequence plus verify reduced it to one pack and one MIDX. The first post-rewrite no-eval-cache Hera system evaluation took 120.42s (cold pack/page-cache traversal), then two serialized identical repeats took 22.55s and 22.13s, satisfying the repeatable under-30-second criterion. An autonomous daily expire job was rejected: independent review proved a point-in-time lsof probe cannot exclude a Nix client starting afterward or holding libgit2 cached pack state, so destructive cache expiry remains an operator-quiesced procedure. A second source experiment reusing compatibility package sets passed its focused semantic check but weakened the guard independent exported-overlay evidence and a full run was stopped after 209.85s (11.03s user, 7.59s sys); it remains isolated and will not ship. The production contract is unchanged.",
+    "created_at": "2026-08-15T21:21:56Z"
+  },
+  {
+    "id": 417,
+    "issue_id": "nix-lzym",
+    "author": "johnw",
+    "text": "Final shared-seam regression hardening (2026-08-15): normalization now imports only rust-overlay from nix-config-ai.lib.inputSet; Obr remains a required direct consumer input. The ownership check now rejects nested-only Obr, missing inputs, malformed Obr, malformed direct Rust overlay even when a valid nested fallback exists, and malformed nested Rust overlay, while proving direct-input precedence and identical root-owned derivation routing. Two independent current-byte re-reviews returned CLEAR. The focused aarch64-darwin obr-ownership check and the final root nix flake check --all-systems --no-build both passed.",
+    "created_at": "2026-08-15T21:34:38Z"
   }
 ]
 #+end_src
@@ -6853,6 +7020,54 @@ Partner observation 2026-08-10T21:51:54.606Z: remove already-resolved questions 
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#B] Make Andoria builders accept peer-produced store paths
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-rpf8
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-15 Sat 10:05]
+:MODIFIED: [2026-08-15 Sat 14:47]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-15 Sat 14:47]
+:CLOSE_REASON: Closed at owner direction: the distributed-builder trust expansion was out of scope. No daemon trust, signature, CPU-policy, or restart changes will be made as part of this work.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+A full x86_64-linux Obr realization from Hera scheduled rustc on andoria-08 and rust-analyzer on andoria-t2. T2 rejected the rustc store path with 'lacks a signature by a trusted key', aborting the build after the dependency compiled successfully. Establish the intended signing/trusted-key boundary for distributed builders, preserve require-sigs protections, and prove one build whose dependency graph crosses Andoria-08 and Andoria-T2.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-rpf8",
+    "depends_on_id": "nix-lzym",
+    "type": "discovered-from",
+    "created_at": "2026-08-15T17:05:07.737675Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 413,
+    "issue_id": "nix-rpf8",
+    "author": "johnw",
+    "text": "Two reproductions from Hera. Multi-builder run: rustc built successfully on Andoria-08, then Andoria-T2 rejected that unsigned path while building rust-analyzer. Exact single-builder retry on Andoria-08: toolchain components built successfully, then 08 rejected an unsigned rust-docs path previously produced on T2 and cached by the client. Direct batch SSH to Andoria-08 succeeds. This confirms a store-signing/trust topology defect, not a compiler failure. The source proof will proceed as a native one-daemon build; no signature checks will be disabled and no store paths removed.",
+    "created_at": "2026-08-15T17:13:33Z"
   }
 ]
 #+end_src

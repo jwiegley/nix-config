@@ -8,13 +8,7 @@
 let
   inherit (pkgs) lib;
   system = pkgs.stdenv.hostPlatform.system;
-  obrNode = rootLock.nodes.${rootLock.nodes.root.inputs.obr};
-  directObr = (import "${src}/packages/source-project-apps.nix" { inherit inputs pkgs; }).obr;
-  sourceProjectInputNames =
-    (import "${src}/config/packages.nix" {
-      hostname = "hera";
-      inherit inputs pkgs;
-    }).userPackageInputNames;
+  directObr = inputs.obr.packages.${system}.default;
   portablePackages = inputs.nix-config-ai.packages.${system};
   portableContract = import "${src}/test/ai/compatibility-contract.nix";
   rootLock = builtins.fromJSON (builtins.readFile "${src}/flake.lock");
@@ -49,37 +43,29 @@ let
         (import "${src}/config/obr.nix")
       ];
     }).config;
-  present = evalObrModule { inherit (inputs) obr rust-overlay; };
-  missingObr = evalObrModule { inherit (inputs) rust-overlay; };
-  missingRustOverlay = evalObrModule { inherit (inputs) obr; };
+  present = evalObrModule { inherit (inputs) obr; };
+  missing = evalObrModule { };
 in
 assert rootLock.nodes.root.inputs ? obr;
-assert !(obrNode.flake or true);
-assert !(obrNode ? inputs);
-assert inputs.obr ? outPath;
-assert !(inputs.obr ? packages);
 assert !(portableLock.nodes.root.inputs ? obr);
 assert !(builtins.elem "obr" portableContract.inputs);
 assert !(builtins.elem "obr" portableContract.packages);
 assert !(portablePackages ? obr);
-assert !(builtins.elem "obr" sourceProjectInputNames);
 assert rootObr.drvPath == directObr.drvPath;
 assert
   present.assertions == [
     {
       assertion = true;
-      message = "managed home requires inputs.obr.outPath and inputs.rust-overlay.outPath";
+      message = "managed home requires inputs.obr.packages.${system}.default";
     }
   ];
 assert present.home.packages == [ directObr ];
 assert
-  missingObr.assertions == [
+  missing.assertions == [
     {
       assertion = false;
-      message = "managed home requires inputs.obr.outPath and inputs.rust-overlay.outPath";
+      message = "managed home requires inputs.obr.packages.${system}.default";
     }
   ];
-assert missingObr.home.packages == [ ];
-assert missingRustOverlay.assertions == missingObr.assertions;
-assert missingRustOverlay.home.packages == [ ];
+assert missing.home.packages == [ ];
 pkgs.runCommand "obr-ownership" { } "touch $out"

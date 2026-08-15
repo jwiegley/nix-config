@@ -55,41 +55,6 @@ let
     }
   );
   orgJwSource = inputs.org-jw.outPath;
-  obrRoot = inputs.obr.outPath;
-  obrPkgs = pkgs.extend (import inputs.rust-overlay.outPath);
-  obrRustToolchain = obrPkgs.rust-bin.nightly.latest.default.override {
-    extensions = [
-      "rust-src"
-      "rust-analyzer"
-      "clippy"
-      "rustfmt"
-    ];
-  };
-  obrRustPlatform = pkgs.makeRustPlatform {
-    cargo = obrRustToolchain;
-    rustc = obrRustToolchain;
-  };
-  obrCompilerInputs = [
-    "Cargo.lock"
-    "Cargo.toml"
-    "README.md"
-    "build.rs"
-    "docs/AGENT_INTEGRATION.md"
-    "docs/CLI_REFERENCE.md"
-    "src"
-  ];
-  obrSource = builtins.path {
-    path = inputs.obr;
-    name = "obr-source";
-    filter =
-      path: _type:
-      let
-        relative = lib.removePrefix "${obrRoot}/" (toString path);
-      in
-      builtins.any (
-        input: relative == input || lib.hasPrefix "${input}/" relative || lib.hasPrefix "${relative}/" input
-      ) obrCompilerInputs;
-  };
   orgJwPackageNames = [
     "flatparse-util"
     "org-cbor"
@@ -243,35 +208,6 @@ in
       pkgs.libiconv
       pkgs.apple-sdk_15
     ];
-  };
-
-  obr = obrRustPlatform.buildRustPackage {
-    pname = "obr";
-    version = (builtins.fromTOML (builtins.readFile (obrRoot + "/Cargo.toml"))).package.version;
-    src = obrSource;
-
-    cargoLock = {
-      lockFile = obrSource + "/Cargo.lock";
-      outputHashes = {
-        "org2jsonl-0.1.0" = "sha256-mWeouJ5jYN5Cfk5ofb82uIyne7A9SMydpvGszeicHhI=";
-      };
-    };
-
-    nativeBuildInputs = [ pkgs.pkg-config ];
-    buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
-      pkgs.libiconv
-      pkgs.apple-sdk_15
-    ];
-
-    doCheck = false;
-
-    meta = {
-      description = "Agent-first issue tracker (SQLite + Org-mode)";
-      homepage = "https://github.com/jwiegley/obr";
-      license = lib.licenses.mit;
-      mainProgram = "obr";
-      platforms = lib.platforms.unix;
-    };
   };
 
   org-jw = orgJw;

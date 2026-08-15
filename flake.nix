@@ -4,10 +4,7 @@
   inputs = {
     nix-config-ai.url = "path:./config/ai";
 
-    obr = {
-      url = "github:jwiegley/obr";
-      flake = false;
-    };
+    obr.url = "github:jwiegley/obr";
 
     darwin = {
       url = "github:lnl7/nix-darwin";
@@ -160,13 +157,6 @@
           config.allowUnfree = true;
         }
       );
-      sourceProjectAppsFor = forAllSystems (
-        system:
-        import ./packages/source-project-apps.nix {
-          inherit inputs;
-          pkgs = stockPkgsFor.${system};
-        }
-      );
       pythonTestEnvFor = forAllSystems (
         system: stockPkgsFor.${system}.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ])
       );
@@ -285,7 +275,7 @@
         system:
         portableAi.packages.${system}
         // {
-          inherit (sourceProjectAppsFor.${system}) obr;
+          obr = rootInputs.obr.packages.${system}.default;
           python-test-env = pythonTestEnvFor.${system};
         }
       );
