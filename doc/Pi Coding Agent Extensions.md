@@ -8,13 +8,13 @@ tags:
   - ai-agents
   - developer-tools
 created: 2026-07-27
-updated: 2026-08-14
+updated: 2026-08-15
 pi-version: 0.83.0
 ---
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: 26 gallery packages available on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: 26 gallery packages available on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. Pi Lens remains installed but is presently excluded from automatic registration. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope.
 
@@ -120,7 +120,7 @@ The generated keymap retains the ordinary keys and adds Emacs-style editing:
 
 **Version:** local · **Links:** Nix authority: `~/src/nix/packages/pi-gallery/` · deployed leaf: `~/.config/pi/agent/extensions/nix-gallery/index.ts`
 
-The Nix Gallery loader projects the complete managed package set on every host. It imports and registers extensions in deterministic order, except that Linux does not automatically import the two loopback providers or their router. All 26 immutable package paths remain in the projection. Before registration the loader suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
+The Nix Gallery loader projects the complete managed package set on every host. It imports and registers extensions in deterministic order, except that Linux does not automatically import the two loopback providers or their router and Pi Lens is temporarily excluded on every platform. All 26 immutable package paths, including Lens, remain in the projection. Before registration the loader suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
 
 **Basic usage.** No direct command is required. Run `/reload` after activating a new Nix generation, or start a fresh Pi process, to load the current gallery. The loader itself owns no mutable state.
 
@@ -266,7 +266,9 @@ Pi Smart Web Search owns the `web_search` tool. It accepts up to six focused que
 
 Pi Lens combines language-server diagnostics, formatters, linters, structural scanners, complexity checks, symbol indexing, and edit-read guards. Its indexed tools provide a narrow discovery funnel—search for likely modules, inspect an outline, then read the exact symbol—before resorting to broad file reads.
 
-**Basic usage.** Start with `symbol_search`, `module_report`, and `read_symbol`; use `lsp_diagnostics` for focused type errors and `lens_diagnostics` for the complete runner set. `/lens-health`, `/lens-tools`, `/lens-tdi`, and `/lens-map` expose operational and architectural views. Runtime tool installation is disabled by the Nix policy.
+Pi Lens is currently retained as a managed package and projected resource but is not imported or registered by the generated Gallery. This reversible state isolates its eager startup cost without uninstalling it.
+
+**Basic usage.** Lens tools and commands are unavailable while automatic registration is disabled. Restoring Lens to the generated Gallery restores `symbol_search`, `module_report`, `read_symbol`, `lsp_diagnostics`, `lens_diagnostics`, `/lens-health`, `/lens-tools`, `/lens-tdi`, and `/lens-map`. Runtime tool installation remains disabled by the Nix policy.
 
 ### Agent Browser Native
 
@@ -465,12 +467,13 @@ Within a fresh Pi session, confirm the principal control surfaces:
 /trace
 /usage
 /cache-optimizer doctor
-/lens-health
 /rtk verify
 /subagents-doctor
 /workflows
 /goal
 /model
 ```
+
+Lens commands and tools should be absent while Lens remains excluded from the generated Gallery.
 
 Source policy last checked against the current `~/src/nix` fleet renderer on 2026-08-12. Activation evidence is recorded separately so this inventory does not imply that an unactivated source revision is already live.

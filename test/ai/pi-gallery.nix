@@ -41,11 +41,12 @@ let
     "omlx-provider"
     "router"
   ];
-  activeOrder =
+  activeOrder = lib.subtractLists [ "lens" ] (
     if stdenv.hostPlatform.isDarwin then
       manifest.order
     else
-      lib.subtractLists localModelMemberIds manifest.order;
+      lib.subtractLists localModelMemberIds manifest.order
+  );
   quiet = "${piPackages.agent-resources}/share/agent-resources/pi-extensions/pi-quiet/src/index.ts";
   packageRoots = lib.escapeShellArgs (builtins.attrValues roots);
   memberVersionChecks = lib.concatMapStringsSep "\n" (
@@ -2041,10 +2042,8 @@ runCommand "pi-gallery-check"
     [ ! -e "$smoke/home/.npm" ] || fail "gallery invoked npm"
     [ ! -e "$smoke/installer-invocations" ] || {
       cat "$smoke/installer-invocations" >&2
-      fail "Lens invoked a runtime installer or downloader"
+      fail "an active Gallery extension invoked a package installer or downloader"
     }
-    [ ! -e "$smoke/home/.pi-lens/bin" ] || fail "Lens populated its managed binary directory"
-    [ ! -e "$smoke/home/.pi-lens/tools" ] || fail "Lens populated its managed tool directory"
 
     quiet_smoke="$TMPDIR/pi-quiet-renderer-smoke"
     mkdir -p "$quiet_smoke/home" "$quiet_smoke/agent"

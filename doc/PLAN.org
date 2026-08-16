@@ -3238,6 +3238,52 @@ The prepared review checkout /Users/johnw/src/vps now declares both nix-config a
 ]
 #+end_src
 
+* DONE [#B] Measure Pi startup with Pi Lens disabled
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-cw75
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-15 Sat 21:53]
+:MODIFIED: [2026-08-15 Sat 22:43]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-15 Sat 22:28]
+:CLOSE_REASON: Disabled Pi Lens at the generated Gallery active-order seam without uninstalling it; focused Gallery check, full Hera build, exact activation, and one guarded Sana restart passed. Measured main startup fell to 44.5s and equivalent full readiness to about 98s, proving Lens was material but leaving separately tracked Gallery and pi-mem stalls.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Temporarily disable Pi Lens registration without removing its package, source pin, projection metadata, or installation. Activate the experimental configuration on Hera only, restart exactly the Agent Deck session sana once through the guarded lifecycle, capture Pi startup timing, and compare it with the 2026-08-15 full-gallery baseline. Preserve all other gallery members and mutable session state. Acceptance: Lens is absent from the active gallery but remains packaged; focused tests and a nonactivating build pass; the exact active generation is verified; sana preserves its session identity; measured launch-to-ready and extension milestones are recorded; no other host or session is changed.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 418,
+    "issue_id": "nix-cw75",
+    "author": "johnw",
+    "text": "Hera A/B result, 2026-08-15: Pi Lens was removed only from the generated Gallery active order; its source pin, normalized lock, package export, 26-member projection, skills, and managed config remain. The focused aarch64-darwin pi-gallery check passed at /nix/store/bd047ngbm2rvh9favdb10rs7q91dnr1f-pi-gallery-check. Full nonactivating system build passed and exact closure /nix/store/q899z3qzyykqcbrn4dyg4zmc6rxvnf52-darwin-system-26.11.15abb8c was activated on Hera. Sana instance 44a28383-1786397839 restarted once from runtime generation 4 to 5 with unchanged command identity and PI_TIMING=1. Lens log mtime remained 22:22:08, before the 22:24:07 restart, proving Lens did not execute. Pi timing: main 44,496 ms; extensions 43,032 ms; Nix Gallery module import 37,303 ms plus factory 924 ms; MCP adapter import 4,498 ms. pi-mem then delayed readiness until its cache write at 22:25:45, about 98 seconds after restart. The prior full-Gallery run needed about 185 seconds to the equivalent pi-mem completion marker, so Lens exclusion materially improved startup but did not make Pi usable. No other host or session was changed.",
+    "created_at": "2026-08-16T05:28:11Z"
+  },
+  {
+    "id": 419,
+    "issue_id": "nix-cw75",
+    "author": "johnw",
+    "text": "Evidence correction: Lens startup-event logs sessionstart, daily, bus, and cascade remained at 22:22:08 before the 22:24:07 restart, and no post-restart extension_loaded event exists. latency.log did advance at 22:24:08 with old-process shutdown events, so its aggregate mtime is not evidence that Lens stayed unloaded.",
+    "created_at": "2026-08-16T05:36:23Z"
+  },
+  {
+    "id": 420,
+    "issue_id": "nix-cw75",
+    "author": "johnw",
+    "text": "Final focused verification after review corrections passed at /nix/store/wkwdcj8a90wrydjw51rnbpqfyab35f50-pi-gallery-check. The current smoke keeps its generic active-Gallery installer sentinel, removes Lens-only assertions that became vacuous when Lens left activeOrder, and documents Lens interfaces as intentionally unavailable.",
+    "created_at": "2026-08-16T05:43:32Z"
+  }
+]
+#+end_src
+
 * DONE [#B] Propagate durable parent-directory sync failures for inbox writes
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5936,6 +5982,38 @@ The full session suite fails TestRm_SweepsConductorInboxes because the fixture/e
     "depends_on_id": "nix-tcz.30.1",
     "type": "discovered-from",
     "created_at": "2026-08-13T20:32:28.310124Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Measure and reduce remaining Pi Gallery startup load
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-nx2k
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-15 Sat 22:28]
+:MODIFIED: [2026-08-15 Sat 22:28]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+With Pi Lens truly absent, Pi 0.83 still spent 37,303 ms importing the 25-member generated Nix Gallery and 924 ms running its factories on Hera. Add per-member import/factory timing first, identify the dominant remaining members, and propose the smallest fixes. Do not disable or remove additional members without explicit approval.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-nx2k",
+    "depends_on_id": "nix-cw75",
+    "type": "discovered-from",
+    "created_at": "2026-08-16T05:28:12.302851Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
@@ -14668,6 +14746,38 @@ On each shared-work host, the supported switch path selects Home Manager, builds
     "depends_on_id": "nix-eazx",
     "type": "discovered-from",
     "created_at": "2026-08-16T00:00:38.314965Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Fix pi-mem empty-summary startup rebuild
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-xl13
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-15 Sat 22:28]
+:MODIFIED: [2026-08-15 Sat 22:28]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pi-mem synchronously scans 130 legacy session directories during every session_start when the resulting daily summary is empty. Its cache test treats an empty summary as a cache miss, so Sana paid 73.4 seconds in the full-Gallery baseline and about 53 seconds in the Lens-disabled run even though no recent JSONL qualified. Make a valid empty cached summary reusable, retain cache invalidation semantics, add a deterministic empty-result regression, and measure restart readiness without changing other Pi extensions.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-xl13",
+    "depends_on_id": "nix-cw75",
+    "type": "discovered-from",
+    "created_at": "2026-08-16T05:28:12.041501Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""

@@ -213,6 +213,9 @@ feed list, drop the `pinnedPiPackage` assertions in
 Pi gallery normalization has one implementation:
 `packages/pi-gallery/normalization-policy.json` defines the closed policy and
 `packages/pi-gallery/normalize-manifest.jq` executes it for both builds and updates.
+The full package projection remains uniform across hosts, while Pi Lens is presently
+excluded from the generated active order so its eager startup cost can be measured
+without uninstalling it.
 The Darwin gallery performs bounded loopback model discovery on both
 workstations, while `config/ai/catalog.nix` grants fixed local-provider overrides
 and synthetic router configuration only to profiles whose exact model inventory

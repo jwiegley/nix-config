@@ -64,8 +64,10 @@ let
     "omlx-provider"
     "router"
   ];
-  activeOrder =
-    if stdenv.hostPlatform.isDarwin then order else lib.subtractLists localModelMemberIds order;
+  # Keep Lens packaged and projected while excluding its eager startup load.
+  activeOrder = lib.subtractLists [ "lens" ] (
+    if stdenv.hostPlatform.isDarwin then order else lib.subtractLists localModelMemberIds order
+  );
   piCatalogRecords = manifest.sourceCatalog;
   sourceRecords = members // supportSources;
   catalogSourceIds = builtins.attrNames piCatalogRecords;
