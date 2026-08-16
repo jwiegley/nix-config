@@ -4764,6 +4764,38 @@ Current Nix source and active generated settings contain no Cozempic reference; 
 ]
 #+end_src
 
+* DEFER [#C] Restore outbound SSH identity resolution on shared-work hosts
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-jiej
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-15 Sat 20:22]
+:MODIFIED: [2026-08-15 Sat 20:22]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Outbound OpenSSH on andoria-08 exits before connection with 'No user exists for uid 158771033', even with an explicit home/config and forwarded agent. Diagnose the NSS/passwd source for the shared UID, repair only with explicit owner approval, prove outbound BatchMode SSH from andoria-08 to each shared peer, and avoid copying or exposing private keys.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-jiej",
+    "depends_on_id": "nix-eazx",
+    "type": "discovered-from",
+    "created_at": "2026-08-16T03:22:28.356367Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Decide whether to retain emulated MSSQL on Apple Silicon
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -6894,6 +6926,38 @@ The managed MSSQL launcher still uses mcr.microsoft.com/mssql/server:2022-latest
     "depends_on_id": "nix-tcz.3",
     "type": "discovered-from",
     "created_at": "2026-08-11T06:13:07.875929Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DEFER [#B] Restore Delphi trust for signed shared-work closures
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-r9dh
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-15 Sat 20:22]
+:MODIFIED: [2026-08-15 Sat 20:22]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Delphi's effective Nix trusted-key set differs from andoria-t2 and gpu-server by one signer, so the exact signed Home Manager candidate is rejected while the same cache is accepted on the other hosts. Reconcile the root-owned trust leaf from the signed Andoria root-policy authority, verify exact byte identity without exposing key values, restart only the Nix daemon after explicit owner approval, prove a signed candidate is accepted and an unsigned probe remains rejected, and provide a rollback. Do not bypass signature checks.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-r9dh",
+    "depends_on_id": "nix-eazx",
+    "type": "discovered-from",
+    "created_at": "2026-08-16T03:22:17.828297Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
