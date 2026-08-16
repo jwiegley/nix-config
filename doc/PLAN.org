@@ -7130,6 +7130,52 @@ Delphi's effective Nix trusted-key set differs from andoria-t2 and gpu-server by
 ]
 #+end_src
 
+* DOING [#B] Advance rust-overlay past deprecated platform aliases
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-r9p5
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-16 Sun 15:53]
+:MODIFIED: [2026-08-16 Sun 16:27]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+After all maintained stdenv alias uses were removed, warning tracing identifies the remaining four evaluation warnings in pinned oxalica/rust-overlay 6ef009b lib/mk-aggregated.nix. Upstream fixed the three predicates in 892c035d. Advance only the canonical rust-overlay input/projections to a fixed revision, preserve the maintained stable.latest and exact 1.95.0 selections, and leave Git-AI/Obr overlay nodes unchanged. Acceptance: root and portable lock coherence checks pass; maintained Linux and Darwin evaluations emit no stdenv alias warnings; focused toolchain/Qdrant checks and the full repository gate pass; no activation.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-r9p5",
+    "depends_on_id": "nix-hbdj",
+    "type": "discovered-from",
+    "created_at": "2026-08-16T22:53:26.454697Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 430,
+    "issue_id": "nix-r9p5",
+    "author": "johnw",
+    "text": "Canonical rust-overlay advanced through the supported single-target updater from 6ef009b to b211eade (2026-08-16). Both lock projections and sources/ai.json agree; Git-AI and Obr overlay nodes are byte-unchanged. Fresh no-eval-cache Linux and Hera evaluations emit no deprecated stdenv alias warnings. The Darwin stable.latest toolchain build passes; x86_64-linux Qdrant evaluates to /nix/store/phh4h8v62bp13sqhjxx539xfghy177nh-qdrant-1.18.2.drv with Rust 1.95.0 selected. Its real remote build was stopped by the already-tracked Andoria trusted-signature boundary before compilation, with no daemon change attempted. Portable all-system no-build and full make test pass (21 Python suites plus 7 behavioral checks). No activation.",
+    "created_at": "2026-08-16T23:27:37Z"
+  }
+]
+#+end_src
+
 * DONE [#C] Exercise physical shared-work host package selection for Agda
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

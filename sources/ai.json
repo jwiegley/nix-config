@@ -1049,10 +1049,10 @@
     "rust-overlay": {
       "source": {
         "args": {
-          "narHash": "sha256-/CXwCFPS41rb/JI2VitKCgVK6V5E6/sfw5ke3B9zyVQ=",
+          "narHash": "sha256-MS8cOa/ii1+QA8R3JWVzqEIoXimu9n50GwQDiBVTFOM=",
           "owner": "oxalica",
           "repo": "rust-overlay",
-          "rev": "6ef009bf4c4873cdc1a621826722bdea7c03e62c",
+          "rev": "b211eadeba8b180da9453ec3413a8a3535c85b3f",
           "type": "github"
         },
         "fetcher": "fetchTree",
