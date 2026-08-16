@@ -39,19 +39,30 @@ def shared_work_hosts() -> list[str]:
 
 
 class SwitchTests(unittest.TestCase):
-    def run_switch(self, host: str, driver_status: int | None = 0):
+    def run_switch(
+        self,
+        host: str,
+        driver_status: int | None = 0,
+        *,
+        system_checkout: bool = True,
+        home_checkout: bool = True,
+        u_status: int = 0,
+    ):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             script_dir = root / "bin"
             (script_dir / "lib").mkdir(parents=True)
             system_config = root / "etc/nixos"
-            system_config.mkdir(parents=True)
+            if system_checkout:
+                system_config.mkdir(parents=True)
             home_manager = root / "home/.config/home-manager"
-            home_manager.mkdir(parents=True)
+            if home_checkout:
+                home_manager.mkdir(parents=True)
             fake_bin = root / "fake-bin"
             fake_bin.mkdir()
             driver_log = root / "driver.log"
             nix_log = root / "nix.args"
+            u_log = root / "u.args"
             forbidden_log = root / "forbidden.log"
             generation = root / "generation"
             generation.mkdir()
@@ -68,7 +79,7 @@ class SwitchTests(unittest.TestCase):
                 ROUTING.read_text(encoding="utf-8"), encoding="utf-8"
             )
 
-            if driver_status is not None:
+            if system_checkout and driver_status is not None:
                 write_executable(
                     system_config / "build",
                     """#!/bin/sh
@@ -79,11 +90,15 @@ exit "$DRIVER_STATUS"
                 )
             write_executable(fake_bin / "hostname", f"#!/bin/sh\nprintf '{host}\\n'\n")
             write_executable(fake_bin / "uname", "#!/bin/sh\nprintf 'Linux\n'\n")
-            for name in ("nixos-rebuild", "sudo", "u"):
+            for name in ("nixos-rebuild", "sudo"):
                 write_executable(
                     fake_bin / name,
                     f"#!/bin/sh\nprintf '{name}\\n' >>\"$FORBIDDEN_LOG\"\nexit 99\n",
                 )
+            write_executable(
+                fake_bin / "u",
+                '#!/bin/sh\nprintf \'%s\\n\' "$*" >"$U_LOG"\nexit "$U_STATUS"\n',
+            )
             write_executable(
                 fake_bin / "nix",
                 '#!/bin/sh\nprintf \'%s\\n\' "$@" >"$NIX_LOG"\nprintf \'%s\\n\' "$GENERATION"\n',
@@ -100,6 +115,8 @@ exit "$DRIVER_STATUS"
                     "DRIVER_LOG": str(driver_log),
                     "DRIVER_STATUS": str(driver_status or 0),
                     "NIX_LOG": str(nix_log),
+                    "U_LOG": str(u_log),
+                    "U_STATUS": str(u_status),
                     "ACTIVATION_MARKER": str(activation_marker),
                     "FORBIDDEN_LOG": str(forbidden_log),
                     "GENERATION": str(generation),
@@ -114,6 +131,7 @@ exit "$DRIVER_STATUS"
                 result,
                 driver_log.read_text(encoding="utf-8") if driver_log.exists() else "",
                 nix_log.read_text(encoding="utf-8") if nix_log.exists() else "",
+                u_log.read_text(encoding="utf-8") if u_log.exists() else "",
                 activation_marker.exists(),
                 forbidden_log.exists(),
             )
@@ -124,42 +142,48 @@ exit "$DRIVER_STATUS"
             ("vps", "\t5\tswitch --max-jobs 1 --cores 1\n"),
         ):
             with self.subTest(host=host):
-                result, driver_log, nix_log, activated, forbidden = self.run_switch(
-                    host
+                result, driver_log, nix_log, u_log, activated, forbidden = (
+                    self.run_switch(host)
                 )
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertTrue(driver_log.endswith(expected), driver_log)
                 self.assertEqual(nix_log, "")
+                self.assertEqual(u_log, "")
                 self.assertFalse(activated)
                 self.assertFalse(forbidden)
 
     def test_build_driver_lock_refusal_is_propagated(self):
-        result, _driver_log, nix_log, activated, forbidden = self.run_switch(
+        result, _driver_log, nix_log, u_log, activated, forbidden = self.run_switch(
             "vulcan", 75
         )
         self.assertEqual(result.returncode, 75, result.stdout + result.stderr)
         self.assertIn("build driver refused lock", result.stderr)
         self.assertEqual(nix_log, "")
+        self.assertEqual(u_log, "")
         self.assertFalse(activated)
         self.assertFalse(forbidden)
 
     def test_missing_build_driver_fails_before_raw_rebuild(self):
-        result, driver_log, nix_log, activated, forbidden = self.run_switch("vps", None)
+        result, driver_log, nix_log, u_log, activated, forbidden = self.run_switch(
+            "vps", None
+        )
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("build driver is missing or not executable", result.stderr)
         self.assertEqual(driver_log, "")
         self.assertEqual(nix_log, "")
+        self.assertEqual(u_log, "")
         self.assertFalse(activated)
         self.assertFalse(forbidden)
 
     def test_shared_work_ignores_competing_nixos_checkout(self):
         for host in shared_work_hosts():
             with self.subTest(host=host):
-                result, driver_log, nix_log, activated, forbidden = self.run_switch(
-                    host
+                result, driver_log, nix_log, u_log, activated, forbidden = (
+                    self.run_switch(host)
                 )
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertEqual(driver_log, "")
+                self.assertEqual(u_log, "")
                 self.assertTrue(activated)
                 self.assertFalse(forbidden)
                 self.assertEqual(
@@ -171,6 +195,40 @@ exit "$DRIVER_STATUS"
                         '.#homeConfigurations."jwiegley".activationPackage',
                     ],
                 )
+
+    def test_darwin_delegation_propagates_failure(self):
+        for host in ("hera", "clio"):
+            with self.subTest(host=host):
+                result, driver_log, nix_log, u_log, activated, forbidden = (
+                    self.run_switch(host, u_status=76)
+                )
+                self.assertEqual(result.returncode, 76, result.stdout + result.stderr)
+                self.assertEqual(driver_log, "")
+                self.assertEqual(nix_log, "")
+                self.assertEqual(u_log, "switch\n")
+                self.assertFalse(activated)
+                self.assertFalse(forbidden)
+
+    def test_missing_checkout_fallback_propagates_failure(self):
+        for host, expected in (
+            ("andoria-08", "shared-work switch\n"),
+            ("vulcan", "vulcan switch\n"),
+        ):
+            with self.subTest(host=host):
+                result, driver_log, nix_log, u_log, activated, forbidden = (
+                    self.run_switch(
+                        host,
+                        system_checkout=False,
+                        home_checkout=False,
+                        u_status=77,
+                    )
+                )
+                self.assertEqual(result.returncode, 77, result.stdout + result.stderr)
+                self.assertEqual(driver_log, "")
+                self.assertEqual(nix_log, "")
+                self.assertEqual(u_log, expected)
+                self.assertFalse(activated)
+                self.assertFalse(forbidden)
 
     def test_linux_upgrade_routes_through_switch_and_propagates_failure(self):
         for host in ("vulcan", "vps"):
