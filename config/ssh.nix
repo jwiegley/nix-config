@@ -42,15 +42,6 @@ let
         }
         // lib.optionalAttrs (hostAddr != proxyJump) { ProxyJump = proxyJump; };
 
-      localBind = here: there: {
-        bind = {
-          port = here;
-        };
-        host = {
-          address = "127.0.0.1";
-          port = there;
-        };
-      };
     in
     rec {
       "*" = {
@@ -99,8 +90,6 @@ let
         ServerAliveInterval = 30;
         ServerAliveCountMax = 6;
         TCPKeepAlive = true;
-
-        # RemoteForward = [ (localBind 8317 8317) ];
       });
 
       gitea = controlMastered (withIdentity {
