@@ -128,7 +128,7 @@ let
     if localModelDiscovery then localModelDiscoveryEndpoints else { }
   );
   gallerySource = pkgs.writeText "pi-managed-gallery.ts" ''
-    import { createNixGallery } from ${builtins.toJSON "${pkgs.pi-gallery}/share/pi-gallery/index.ts"};
+    import { createNixGallery } from ${builtins.toJSON "${pkgs.pi-gallery}/share/pi-gallery/loader.ts"};
 
     export default createNixGallery(${
       builtins.toJSON (if localModelDiscovery then localModelDiscoveryEndpoints else { })

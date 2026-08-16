@@ -6012,15 +6012,17 @@ The full session suite fails TestRm_SweepsConductorInboxes because the fixture/e
 ]
 #+end_src
 
-* TODO [#B] Measure and reduce remaining Pi Gallery startup load
+* DONE [#B] Measure and reduce remaining Pi Gallery startup load
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-nx2k
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-15 Sat 22:28]
-:MODIFIED: [2026-08-15 Sat 23:39]
+:MODIFIED: [2026-08-16 Sun 15:20]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-16 Sun 15:20]
+:CLOSE_REASON: Added an opt-in PI_TIMING Gallery loader that preserves the ordinary static import path, reports exact per-member diagnostic import/factory timings, and shares the same registration/runtime semantics. The final focused check passed at /nix/store/ys8d07r8z1fi29mxzmim5gfcj2hn84py-pi-gallery-check; config/ai all-system no-build, full make test, and the complete pre-commit hook passed. Reviews are clear. The measurements identify dynamic-workflows and Blackhole as the leading candidates, with their smallest safe follow-ups recorded; no additional member was disabled or removed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -6054,6 +6056,13 @@ With Pi Lens truly absent, Pi 0.83 still spent 37,303 ms importing the 25-member
     "author": "johnw",
     "text": "After also excluding Pi Mem, the active Darwin Gallery has 24 members. The first controlled Sana restart reported Gallery module import 1,701 ms plus factory 109 ms, main startup 17,217 ms, and the complete timing block at 23 seconds. This is a warm-state observation rather than a per-member cold A/B; keep this issue focused on timing any remaining Gallery load before disabling anything else.",
     "created_at": "2026-08-16T06:39:46Z"
+  },
+  {
+    "id": 428,
+    "issue_id": "nix-nx2k",
+    "author": "johnw",
+    "text": "Implemented managed opt-in per-member Gallery timing at the shared loader seam: PI_TIMING=1 selects a timed diagnostic entrypoint, while the default entrypoint retains the raw static member imports. Both paths use one shared runtime for registration, tool ownership, factory invocation, and resource discovery. The focused check /nix/store/p42b6gdkpc1hlk12456y5k2vf3hchgvs-pi-gallery-check passed twice (normal build plus --rebuild) and mutation-checks exact import/factory records plus command, active-tool, tool-owner, and discovery parity. Two serialized warm diagnostic samples totaled 1,257/1,010 ms for imports and 23/19 ms for factories. Persistent leaders were dynamic-workflows 344/293 ms and blackhole 330/282 ms; next were rtk-optimizer 95/87 ms, subagents 84/71 ms, smart-fetch 98/67 ms, and smart-web-search 63/57 ms. These sequential dynamic-import durations are diagnostic and non-additive, not an independent decomposition of the static graph; the prior controlled static Gallery aggregate was 1,701 ms. Smallest proposed reductions: use the existing package bundle seam for dynamic-workflows only after adding raw-versus-bundle behavior parity, and defer Blackhole node:sqlite plus consolidation-agent imports until first use. No member was disabled or removed, and the transient unproven bundle experiment was discarded. Final abstraction, performance, and ponytail reviews are clear.",
+    "created_at": "2026-08-16T21:42:16Z"
   }
 ]
 #+end_src

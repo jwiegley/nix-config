@@ -111,9 +111,16 @@ let
   expectedPromptCount = builtins.length (
     lib.concatMap (id: manifest.members.${id}.prompts or [ ]) manifest.order
   );
-  expectedActiveImportPaths = map (
-    id: "${roots.${id}}/${manifest.members.${id}.extension}"
+  galleryIdentifier = id: lib.replaceStrings [ "-" ] [ "_" ] id;
+  expectedStaticImportRecords = map (
+    id: "${galleryIdentifier id}|${roots.${id}}/${manifest.members.${id}.extension}"
   ) activeOrder;
+  expectedActiveImportRecords = map (
+    id: "${id}|${galleryIdentifier id}|${roots.${id}}/${manifest.members.${id}.extension}"
+  ) activeOrder;
+  expectedActiveRegistrationRecords = map (id: "${id}|${galleryIdentifier id}") activeOrder;
+  expectedGalleryTimingRecords =
+    map (id: "${id}|module import") activeOrder ++ map (id: "${id}|factory") activeOrder;
   routingExtension =
     if stdenv.hostPlatform.isDarwin then
       "${gallery}/index.ts"
@@ -1338,7 +1345,10 @@ runCommand "pi-gallery-check"
     printf '%s\n' "$browser_version" | grep -F '${manifest.supportSources.agent-browser.version}' >/dev/null \
       || fail "agent-browser version drifted: $browser_version"
 
+    [ -f ${gallery}/runtime.ts ]
     [ -f ${gallery}/index.ts ]
+    [ -f ${gallery}/timing.ts ]
+    [ -f ${gallery}/loader.ts ]
     [ -f ${gallery}/projection.json ]
     [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq ${toString (builtins.length manifest.order)} ]
     [ "$(jq '[.packages[].skills // [] | length] | add' ${gallery}/projection.json)" -eq ${toString expectedSkillCount} ]
@@ -1353,23 +1363,51 @@ runCommand "pi-gallery-check"
       | $btw != null and $goal != null and $btw < $goal
     ' ${gallery}/projection.json >/dev/null \
       || fail "BTW must register before Goal X so its focused overlay owns the first Escape"
-    cat > "$TMPDIR/expected-gallery-imports" <<'EOF'
-    ${lib.concatStringsSep "\n" expectedActiveImportPaths}
+    cat > "$TMPDIR/expected-gallery-static-imports" <<'EOF'
+    ${lib.concatStringsSep "\n" expectedStaticImportRecords}
     EOF
     sed -nE \
-      's|^[[:space:]]*import[[:space:]]+[A-Za-z0-9_]+[[:space:]]+from[[:space:]]+"([^"]+)";$|\1|p' \
-      ${gallery}/index.ts > "$TMPDIR/actual-gallery-imports"
-    cmp "$TMPDIR/expected-gallery-imports" "$TMPDIR/actual-gallery-imports" \
-      || fail "gallery import order or membership differs from the platform contract"
+      's#^[[:space:]]*import[[:space:]]+([A-Za-z0-9_]+)[[:space:]]+from[[:space:]]+"([^"]+)";$#\1|\2#p' \
+      ${gallery}/index.ts > "$TMPDIR/actual-gallery-static-imports"
+    cmp "$TMPDIR/expected-gallery-static-imports" "$TMPDIR/actual-gallery-static-imports" \
+      || fail "ordinary gallery static import identity, order, or membership differs"
+    if grep -Fq 'module import' ${gallery}/index.ts; then
+      fail "ordinary gallery entrypoint contains timing imports"
+    fi
+
+    cat > "$TMPDIR/expected-gallery-timing-imports" <<'EOF'
+    ${lib.concatStringsSep "\n" expectedActiveImportRecords}
+    EOF
+    sed -nE \
+      's#^[[:space:]]*const \{ default: ([A-Za-z0-9_]+) \} = await timeGallery\("([^"]+)", "module import", \(\) => import\("([^"]+)"\)\);$#\2|\1|\3#p' \
+      ${gallery}/timing.ts > "$TMPDIR/actual-gallery-timing-imports"
+    cmp "$TMPDIR/expected-gallery-timing-imports" "$TMPDIR/actual-gallery-timing-imports" \
+      || fail "timed gallery import identity, order, or membership differs"
+    grep -Fq 'process.env.PI_TIMING === "1"' ${gallery}/loader.ts \
+      || fail "managed gallery timing is not selected by exact PI_TIMING=1"
+    grep -Fq 'await import("./timing.ts")' ${gallery}/loader.ts \
+      || fail "managed gallery loader cannot select the timed entrypoint"
+    grep -Fq 'await import("./index.ts")' ${gallery}/loader.ts \
+      || fail "managed gallery loader cannot select the ordinary entrypoint"
+    grep -Fq 'performance.now()' ${gallery}/timing.ts \
+      || fail "gallery timing does not use a monotonic clock"
+    if grep -Fq 'Date.now()' ${gallery}/timing.ts; then
+      fail "gallery timing uses the wall clock"
+    fi
 
     cat > "$TMPDIR/expected-gallery-registrations" <<'EOF'
-    ${lib.concatStringsSep "\n" activeOrder}
+    ${lib.concatStringsSep "\n" expectedActiveRegistrationRecords}
     EOF
     sed -nE \
-      's/^[[:space:]]*\["([^"]+)",[[:space:]]+[A-Za-z0-9_]+\],?$/\1/p' \
+      's/^[[:space:]]*\["([^"]+)",[[:space:]]+([A-Za-z0-9_]+)\],?$/\1|\2/p' \
       ${gallery}/index.ts > "$TMPDIR/actual-gallery-registrations"
     cmp "$TMPDIR/expected-gallery-registrations" "$TMPDIR/actual-gallery-registrations" \
-      || fail "gallery registration order or membership differs from the platform contract"
+      || fail "gallery registration identity, order, or membership differs from the platform contract"
+    sed -nE \
+      's/^[[:space:]]*\["([^"]+)",[[:space:]]+([A-Za-z0-9_]+)\],?$/\1|\2/p' \
+      ${gallery}/timing.ts > "$TMPDIR/actual-gallery-timing-registrations"
+    cmp "$TMPDIR/expected-gallery-registrations" "$TMPDIR/actual-gallery-timing-registrations" \
+      || fail "timed gallery registration identity, order, or membership differs"
     echo "Pi gallery check: dynamic local providers"
     PI_CODING_AGENT_ROOT=${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent \
       ${bun}/bin/bun ${sourceForChecks}/test/ai/local-openai-provider.check.ts
@@ -1808,7 +1846,7 @@ runCommand "pi-gallery-check"
       [ -s "$smoke/discovery-port" ] || fail "managed Pi discovery server did not start"
       discovery_port=$(cat "$smoke/discovery-port")
       cat > "$smoke/home/.config/pi/agent/extensions/nix-gallery/index.ts" <<EOF
-      import { createNixGallery } from ${builtins.toJSON "${gallery}/index.ts"};
+      import { createNixGallery } from ${builtins.toJSON "${gallery}/loader.ts"};
 
       export default createNixGallery({
         "llama-swap": "http://127.0.0.1:$discovery_port/llama/v1",
@@ -1817,7 +1855,7 @@ runCommand "pi-gallery-check"
       EOF
     ''}
     ${lib.optionalString (!stdenv.hostPlatform.isDarwin) ''
-      ln -s ${gallery}/index.ts \
+      ln -s ${gallery}/loader.ts \
         "$smoke/home/.config/pi/agent/extensions/nix-gallery/index.ts"
     ''}
     printf '%s\n' '{"providers":{"sentinel":{"apiKey":"unchanged"}}}' \
@@ -1868,6 +1906,7 @@ runCommand "pi-gallery-check"
       PI_GALLERY_TOOL_OWNERS_FILE="$smoke/tool-owners.json" \
       PI_GALLERY_INSTALLER_SENTINEL="$smoke/installer-invocations" \
       PI_OFFLINE=1 \
+      PI_TIMING=0 \
       PATH="$smoke/sentinels":${
         lib.makeBinPath [
           piPackages.agent-browser
@@ -1890,13 +1929,81 @@ runCommand "pi-gallery-check"
       cat "$smoke/error.log" >&2
       fail "aggregate Pi gallery failed to load"
     }
+    if grep -Fq '[pi-gallery timing]' "$smoke/error.log"; then
+      fail "gallery timing ran when PI_TIMING was not exactly 1"
+    fi
     ${lib.optionalString stdenv.hostPlatform.isDarwin ''
-      [ "$(wc -l < "$smoke/discovery-requests")" -eq 2 ] \
-        || fail "managed Pi gallery made an unexpected number of discovery requests"
-      grep -Fxq '/llama/v1/models' "$smoke/discovery-requests" \
-        || fail "managed Pi gallery ignored the llama-swap catalog endpoint"
-      grep -Fxq '/omlx/v1/models' "$smoke/discovery-requests" \
-        || fail "managed Pi gallery ignored the oMLX catalog endpoint"
+      validate_discovery_requests() {
+        [ "$(wc -l < "$smoke/discovery-requests")" -eq 2 ] \
+          && grep -Fxq '/llama/v1/models' "$smoke/discovery-requests" \
+          && grep -Fxq '/omlx/v1/models' "$smoke/discovery-requests"
+      }
+      validate_discovery_requests \
+        || fail "managed Pi gallery discovery requests differ"
+      : > "$smoke/discovery-requests"
+    ''}
+    printf '%s\n' '{"id":"timing","type":"get_commands"}' \
+      > "$smoke/timing-input.jsonl"
+    (
+      cd "$smoke/project"
+      env -u PI_CODING_AGENT_DIR \
+      HOME="$smoke/home" \
+      PI_GALLERY_ACTIVE_TOOLS="$smoke/timing-active-tools.json" \
+      PI_GALLERY_TOOL_OWNERS_FILE="$smoke/timing-tool-owners.json" \
+      PI_GALLERY_INSTALLER_SENTINEL="$smoke/installer-invocations" \
+      PI_OFFLINE=1 \
+      PI_TIMING=1 \
+      PATH="$smoke/sentinels":${
+        lib.makeBinPath [
+          piPackages.agent-browser
+          piPackages.cymbal
+          piPackages.rtk
+        ]
+      }:$PATH \
+        ${coreutils}/bin/timeout 120 \
+        ${python3}/bin/python3 "$rpc_sequence" \
+        "$smoke/timing-input.jsonl" \
+        "$smoke/timing-output.log" \
+        "$smoke/timing-error.log" \
+        ${lib.getExe piPackage} \
+        --mode rpc --no-session --offline \
+        --no-prompt-templates \
+        --no-context-files --no-approve \
+        --extension "$smoke/active-tools.ts"
+    ) || {
+      cat "$smoke/timing-output.log" >&2
+      cat "$smoke/timing-error.log" >&2
+      fail "timed aggregate Pi gallery failed to load"
+    }
+    cat > "$TMPDIR/expected-gallery-timings" <<'EOF'
+    ${lib.concatStringsSep "\n" expectedGalleryTimingRecords}
+    EOF
+    sed -nE \
+      's/^\[pi-gallery timing\] ([^ ]+) (module import|factory): [0-9]+ms$/\1|\2/p' \
+      "$smoke/timing-error.log" > "$TMPDIR/actual-gallery-timings"
+    cmp "$TMPDIR/expected-gallery-timings" "$TMPDIR/actual-gallery-timings" \
+      || fail "gallery per-member timing membership, phase, or order differs"
+    gallery_commands() {
+      jq -s -c '
+        [.[]
+          | select(.type == "response" and .command == "get_commands" and .success == true)
+          | .data.commands
+          | map(.name)
+          | sort]
+        | if length == 1 then .[0] else error("expected one command response") end
+      ' "$1"
+    }
+    cmp <(gallery_commands "$smoke/output.log") <(gallery_commands "$smoke/timing-output.log") \
+      || fail "timed gallery changed registered commands"
+    cmp "$smoke/active-tools.json" "$smoke/timing-active-tools.json" \
+      || fail "timed gallery changed the active tool surface"
+    cmp "$smoke/tool-owners.json" "$smoke/timing-tool-owners.json" \
+      || fail "timed gallery changed tool ownership"
+    grep -E '^\[pi-gallery timing\] [^ ]+ (module import|factory): [0-9]+ms$' \
+      "$smoke/timing-error.log"
+    ${lib.optionalString stdenv.hostPlatform.isDarwin ''
+      validate_discovery_requests \
+        || fail "timed managed Pi gallery discovery requests differ"
       cleanup_discovery_server
       trap - EXIT
     ''}

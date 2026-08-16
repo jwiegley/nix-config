@@ -1270,6 +1270,10 @@ let
     id:
     "import ${galleryIdentifier id} from ${builtins.toJSON "${roots.${id}}/${members.${id}.extension}"};"
   ) activeOrder;
+  galleryTimingImports = lib.concatMapStringsSep "\n" (
+    id:
+    "const { default: ${galleryIdentifier id} } = await timeGallery(${builtins.toJSON id}, \"module import\", () => import(${builtins.toJSON "${roots.${id}}/${members.${id}.extension}"}));"
+  ) activeOrder;
   galleryRegistrations = lib.concatMapStringsSep ",\n" (
     id: "            [${builtins.toJSON id}, ${galleryIdentifier id}]"
   ) activeOrder;
@@ -1289,13 +1293,16 @@ let
       ''
         root="$out/share/pi-gallery"
         mkdir -p "$root"
-        cat > "$root/index.ts" <<'TS'
+        cat > "$root/runtime.ts" <<'TS'
         import { writeFileSync } from "node:fs";
 
-        ${galleryImports}
+        type GalleryEntry = readonly [owner: string, extension: unknown];
+        type GalleryInvoke = (owner: string, operation: () => unknown) => unknown;
 
-        export function createNixGallery(
+        export function createGallery(
+          entries: readonly GalleryEntry[],
           localModelEndpoints: Readonly<Record<string, string>> = {},
+          invoke: GalleryInvoke = (_owner, operation) => operation(),
         ) {
           return async function nixGallery(pi: unknown) {
             process.env.PONYTAIL_HIDE_STATUS = "1";
@@ -1304,9 +1311,7 @@ let
 
             const toolOwnersFile = process.env.PI_GALLERY_TOOL_OWNERS_FILE;
             const toolOwners: Record<string, string[]> = {};
-            for (const [owner, extension] of [
-        ${galleryRegistrations}
-            ] as const) {
+            for (const [owner, extension] of entries) {
               const extensionApi = toolOwnersFile
                 ? new Proxy(pi as object, {
                   get(target, property) {
@@ -1331,10 +1336,12 @@ let
                   },
                   })
                 : pi;
-              await (extension as (
-                api: never,
-                endpoints: Readonly<Record<string, string>>,
-              ) => unknown)(extensionApi as never, localModelEndpoints);
+              await invoke(owner, () =>
+                (extension as (
+                  api: never,
+                  endpoints: Readonly<Record<string, string>>,
+                ) => unknown)(extensionApi as never, localModelEndpoints),
+              );
             }
 
             const extensionApi = pi as { on: (event: string, handler: () => unknown) => void };
@@ -1351,6 +1358,61 @@ let
             }
           };
         }
+        TS
+        cat > "$root/index.ts" <<'TS'
+        import { createGallery } from "./runtime.ts";
+
+        ${galleryImports}
+
+        const entries = [
+        ${galleryRegistrations}
+        ] as const;
+
+        export function createNixGallery(
+          localModelEndpoints: Readonly<Record<string, string>> = {},
+        ) {
+          return createGallery(entries, localModelEndpoints);
+        }
+
+        export default createNixGallery();
+        TS
+        cat > "$root/timing.ts" <<'TS'
+        import { performance } from "node:perf_hooks";
+        import { createGallery } from "./runtime.ts";
+
+        async function timeGallery<T>(
+          owner: string,
+          phase: "module import" | "factory",
+          operation: () => T,
+        ) {
+          const startedAt = performance.now();
+          const result = await operation();
+          console.error(
+            `[pi-gallery timing] ''${owner} ''${phase}: ''${Math.round(performance.now() - startedAt)}ms`,
+          );
+          return result;
+        }
+
+        ${galleryTimingImports}
+
+        const entries = [
+        ${galleryRegistrations}
+        ] as const;
+
+        export function createNixGallery(
+          localModelEndpoints: Readonly<Record<string, string>> = {},
+        ) {
+          return createGallery(entries, localModelEndpoints, (owner, operation) =>
+            timeGallery(owner, "factory", operation),
+          );
+        }
+
+        export default createNixGallery();
+        TS
+        cat > "$root/loader.ts" <<'TS'
+        export const { createNixGallery } = process.env.PI_TIMING === "1"
+          ? await import("./timing.ts")
+          : await import("./index.ts");
 
         export default createNixGallery();
         TS
