@@ -4221,7 +4221,7 @@ The Agda build failure is diagnosed and repaired at its owning seam; the exact A
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-14 Fri 18:25]
-:MODIFIED: [2026-08-16 Sun 11:41]
+:MODIFIED: [2026-08-16 Sun 11:49]
 :CREATED_BY: johnw
 :FINISHED: [2026-08-16 Sun 11:41]
 :CLOSE_REASON: Centralized managed-agent selection in flake/ai.nix, exported optAgent through the portable contract, and made config/packages.nix delegate to it. Names absent on one system remain optional, while names absent from every supported feed now fail with the exact name. Added a Home Manager mutant using claude-code-acp and portable-lib contract coverage. Verification: direct mutant eval failed with claude-code-acp; managed-agent-package-selection built; config/ai all-system no-build evaluation passed; full make test passed (21 Python suites, 500s, zero failures/timeouts, plus all seven behavioral checks).
@@ -4250,6 +4250,13 @@ VERIFICATION: Re-introduce 'claude-code-acp' as a mutant; the check must fail na
     "author": "johnw",
     "text": "Closeout correction: the direct mutant evaluation failed with the exact diagnostic: optAgent agent claude-code-acp is absent from every supported system feed. The prior close command used shell-sensitive punctuation, so this comment restores the complete evidence wording; no source or test result changed.",
     "created_at": "2026-08-16T18:41:42Z"
+  },
+  {
+    "id": 425,
+    "issue_id": "nix-gk36",
+    "author": "johnw",
+    "text": "Fess correction: the direct mutant evaluation failed with the exact diagnostic: optAgent: agent `claude-code-acp` is absent from every supported system feed. The previous correction omitted punctuation; this comment records the source and observed diagnostic byte-for-byte.",
+    "created_at": "2026-08-16T18:49:29Z"
   }
 ]
 #+end_src

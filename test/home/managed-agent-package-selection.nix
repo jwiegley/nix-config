@@ -54,6 +54,26 @@ let
   rejectsAbsentEverywhereAgent =
     !(builtins.tryEval (builtins.length typoPackages.package-list)).success;
 
+  expectedMissingAgentDiagnostic = "optAgent: agent `claude-code-acp` is absent from every supported system feed";
+  diagnosticInputs = inputs // {
+    nixpkgs = inputs.nixpkgs // {
+      lib = inputs.nixpkgs.lib // {
+        # Let the failing assertion proceed only when its diagnostic is exact.
+        # The separate typoPackages probe still requires the real assertion to
+        # fail, so these two probes jointly protect behavior and wording.
+        assertMsg = condition: message: condition || message == expectedMissingAgentDiagnostic;
+      };
+    };
+  };
+  diagnosticAi = import "${src}/flake/ai.nix" diagnosticInputs;
+  exactMissingAgentDiagnostic =
+    let
+      result = builtins.tryEval (
+        builtins.length (diagnosticAi.lib.optAgent configured "claude-code-acp")
+      );
+    in
+    result.success && result.value == 0;
+
   reducedPackages = import "${src}/config/packages.nix" {
     hostname = "vulcan";
     inputs = builtins.removeAttrs downstreamInputs [ "git-all" ];
@@ -115,6 +135,8 @@ assert configured.lib.assertMsg avoidsLegacyPackages
   "config/packages.nix reopened the stock nixpkgs package set for package predicates";
 assert configured.lib.assertMsg rejectsAbsentEverywhereAgent
   "config/packages.nix accepted an agent absent from every supported feed";
+assert configured.lib.assertMsg exactMissingAgentDiagnostic
+  "optAgent changed the diagnostic for an agent absent from every supported feed";
 assert configured.lib.assertMsg acceptsReducedInputs
   "config/packages.nix requires the optional git-all input";
 assert configured.lib.assertMsg avoidsImportFromDerivation
