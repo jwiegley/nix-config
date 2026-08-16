@@ -35,6 +35,25 @@ let
   # predicate reopening the poisoned stock package set fails here.
   avoidsLegacyPackages = (builtins.tryEval (builtins.length packages.package-list)).success;
 
+  baseAi = downstreamInputs.nix-config-ai;
+  typoInputs = downstreamInputs // {
+    nix-config-ai = baseAi // {
+      lib = baseAi.lib // {
+        optAgent =
+          agentPkgs: name:
+          baseAi.lib.optAgent agentPkgs (if name == "claude-code" then "claude-code-acp" else name);
+      };
+    };
+  };
+  typoPackages = import "${src}/config/packages.nix" {
+    hostname = "vulcan";
+    inputs = typoInputs;
+    pkgs = configured;
+    isClientMachine = false;
+  };
+  rejectsAbsentEverywhereAgent =
+    !(builtins.tryEval (builtins.length typoPackages.package-list)).success;
+
   reducedPackages = import "${src}/config/packages.nix" {
     hostname = "vulcan";
     inputs = builtins.removeAttrs downstreamInputs [ "git-all" ];
@@ -94,6 +113,8 @@ assert configured.lib.assertMsg hasManagedClaude
   "downstream nix-config-ai consumers lost the managed Claude wrapper";
 assert configured.lib.assertMsg avoidsLegacyPackages
   "config/packages.nix reopened the stock nixpkgs package set for package predicates";
+assert configured.lib.assertMsg rejectsAbsentEverywhereAgent
+  "config/packages.nix accepted an agent absent from every supported feed";
 assert configured.lib.assertMsg acceptsReducedInputs
   "config/packages.nix requires the optional git-all input";
 assert configured.lib.assertMsg avoidsImportFromDerivation

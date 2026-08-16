@@ -123,12 +123,17 @@ let
     pi = inputs.pi-llm-agents;
   };
 
+  agentFeedFor = name: agentFeeds.${name} or llm-agents;
+  agentPackagesFor = name: system: (agentFeedFor name).packages.${system} or { };
+  agentExistsOnSupportedSystem =
+    name: builtins.any (system: builtins.hasAttr name (agentPackagesFor name system)) systems;
+
   canonicalPiPackages = forAllSystems (
     system:
     let
       pkgs = pkgsFor.${system};
     in
-    patchAgentPackage pkgs "pi" agentFeeds.pi.packages.${system}.pi
+    patchAgentPackage pkgs "pi" (agentPackagesFor "pi" system).pi
   );
 
   canonicalCodexPackages = forAllSystems (
@@ -136,22 +141,23 @@ let
     let
       pkgs = pkgsFor.${system};
     in
-    patchAgentPackage pkgs "codex" llm-agents.packages.${system}.codex
+    patchAgentPackage pkgs "codex" (agentPackagesFor "codex" system).codex
   );
 
   optAgent =
     pkgs: name:
+    assert lib.assertMsg (agentExistsOnSupportedSystem name)
+      "optAgent: agent `${name}` is absent from every supported system feed";
     let
       system = pkgs.stdenv.hostPlatform.system;
-      feed = agentFeeds.${name} or llm-agents;
-      agentPackages = feed.packages.${system} or { };
+      agentPackages = agentPackagesFor name system;
     in
-    if name == "codex" then
+    if !(builtins.hasAttr name agentPackages) then
+      [ ]
+    else if name == "codex" then
       [ canonicalCodexPackages.${system} ]
-    else if agentPackages ? ${name} then
-      [ (patchAgentPackage pkgs name agentPackages.${name}) ]
     else
-      [ ];
+      [ (patchAgentPackage pkgs name agentPackages.${name}) ];
 
   aiPackagePolicy = import ../packages/ai-package-policy.nix { inherit lib; };
 
@@ -361,7 +367,7 @@ in
   };
 
   lib = {
-    inherit aiPackagesFor patchAgentPackage;
+    inherit aiPackagesFor optAgent patchAgentPackage;
   };
 
   devShells = forAllSystems (

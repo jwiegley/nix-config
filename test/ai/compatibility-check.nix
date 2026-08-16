@@ -160,6 +160,7 @@ let
     (lib.assertMsg (builtins.isFunction actual.overlays.default) "portable default overlay is not callable")
     (lib.assertMsg (builtins.isFunction actual.overlays.tools) "portable tools overlay is not callable")
     (lib.assertMsg (builtins.isFunction actual.lib.aiPackagesFor) "aiPackagesFor is not callable")
+    (lib.assertMsg (builtins.isFunction actual.lib.optAgent) "optAgent is not callable")
     (lib.assertMsg (builtins.isFunction actual.lib.patchAgentPackage) "patchAgentPackage is not callable")
     # Package-set identity is an evaluation-cost property that output equality
     # cannot observe, so keep this one contract source-based.
