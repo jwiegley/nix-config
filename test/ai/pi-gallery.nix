@@ -399,11 +399,11 @@ runCommand "pi-gallery-check"
     const mode = (path) => statSync(path).mode & 0o777;
     const assertMode = (path, expected) => assert.equal(mode(path), expected, path);
     const execFileAsync = promisify(execFile);
-    const runWorker = (kind, id) => execFileAsync(
+    const runWorker = (kind, id, env = {}) => execFileAsync(
       process.env.PI_MEM_NODE,
       [process.env.PI_MEM_WORKER, kind, String(id)],
       {
-        env: { ...process.env },
+        env: { ...process.env, ...env },
         maxBuffer: 1024 * 1024,
       },
     );
@@ -553,6 +553,57 @@ runCommand "pi-gallery-check"
       Array.from({ length: workerCount }, (_, id) => runWorker("cache", id)),
     );
     JSON.parse(readFileSync(join(daily, "cache.json"), "utf8"));
+
+    const emptyRuntime = join(runtime, "empty-cache");
+    const emptyMemory = join(emptyRuntime, "memory");
+    const emptyDaily = join(emptyRuntime, "daily");
+    const emptyAgent = join(emptyRuntime, "agent");
+    mkdirSync(join(emptyAgent, "sessions"), { recursive: true });
+    const emptyEnv = {
+      PI_MEM_RUNTIME: emptyRuntime,
+      PI_MEMORY_DIR: emptyMemory,
+      PI_DAILY_DIR: emptyDaily,
+      PI_CODING_AGENT_DIR: emptyAgent,
+    };
+    const emptyCache = join(emptyDaily, "cache.json");
+    const produced = JSON.parse(
+      (await runWorker("cache", "empty-produce", emptyEnv)).stdout,
+    );
+    assert.equal(produced.widgetCalls, 0);
+    assertMode(emptyCache, 0o600);
+    const freshEmptyBytes = readFileSync(emptyCache);
+    const freshEmpty = JSON.parse(freshEmptyBytes.toString("utf8"));
+    assert.equal(freshEmpty.summary, "");
+    assert.equal(typeof freshEmpty.timestamp, "number");
+
+    const sentinelSession = join(
+      emptyAgent,
+      "sessions",
+      "--empty-cache-fixture--",
+    );
+    mkdirSync(sentinelSession, { recursive: true });
+    writeFileSync(join(sentinelSession, "fixture.jsonl"), [
+      JSON.stringify({ timestamp: new Date().toISOString(), cwd: emptyRuntime }),
+      JSON.stringify({ type: "session_info", name: "EMPTY_CACHE_RESCAN_SENTINEL" }),
+    ].join("\n") + "\n");
+    const reused = JSON.parse(
+      (await runWorker("cache", "empty-reuse", emptyEnv)).stdout,
+    );
+    assert.equal(reused.widgetCalls, 0);
+    assert.deepEqual(readFileSync(emptyCache), freshEmptyBytes);
+
+    writeFileSync(
+      emptyCache,
+      JSON.stringify({ ...freshEmpty, timestamp: 0 }),
+    );
+    const rebuilt = JSON.parse(
+      (await runWorker("cache", "empty-stale", emptyEnv)).stdout,
+    );
+    assert.equal(rebuilt.widgetCalls, 1);
+    assert.match(
+      JSON.parse(readFileSync(emptyCache, "utf8")).summary,
+      /EMPTY_CACHE_RESCAN_SENTINEL/,
+    );
 
     const beforeFreshLock = readFileSync(memoryFile, "utf8");
     const freshLock = createLock(memoryFile, "fresh-owner-token");
@@ -837,13 +888,14 @@ runCommand "pi-gallery-check"
     );
     assert.deepEqual(loaded.errors, []);
     const extension = loaded.extensions[0];
+    let widgetCalls = 0;
     const ctx = {
       hasUI: true,
       modelRegistry: new Proxy({}, {
         get() { throw new Error("worker consulted model registry"); },
       }),
       sessionManager: { getSessionId: () => "pi-mem-worker-" + id },
-      ui: { setWidget() {} },
+      ui: { setWidget() { widgetCalls++; } },
     };
     const execute = async (name, params) => {
       const tool = extension.tools.get(name)?.definition;
@@ -887,8 +939,12 @@ runCommand "pi-gallery-check"
           ("whole payload " + id + "\n").repeat(4096),
       });
     } else if (kind === "cache") {
-      await emit("session_start");
-      await emit("session_shutdown");
+      try {
+        await emit("session_start");
+      } finally {
+        await emit("session_shutdown");
+      }
+      process.stdout.write(JSON.stringify({ widgetCalls }) + "\n");
     } else {
       throw new Error("unknown worker kind: " + kind);
     }

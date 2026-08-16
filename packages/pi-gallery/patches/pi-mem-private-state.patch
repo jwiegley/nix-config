@@ -269,16 +269,18 @@ index 64a6826c470599cc2efc44f6afdf0bcafb9c9962..cba30a6027e85526e3699e5d03c624db
  	const lines = [header, ""];
  	for (const s of sorted) {
  		const childCount = childCountMap.get(s.file) || 0;
-@@ -213,7 +95,8 @@ async function getOrRebuildSummary(): Promise<string> {
+@@ -213,8 +95,9 @@ async function getOrRebuildSummary(): Promise<string> {
  
  	if (!cachedSummary) {
  		try {
 -			const cache = JSON.parse(fs.readFileSync(SUMMARY_CACHE, "utf-8"));
 +			ensureDirs(config);
 +			const cache = JSON.parse(readFileSafe(SUMMARY_CACHE, config.dailyDir) ?? "");
- 			if (cache.summary && now - cache.timestamp < REBUILD_INTERVAL_MS) {
+-			if (cache.summary && now - cache.timestamp < REBUILD_INTERVAL_MS) {
++			if (typeof cache.summary === "string" && now - cache.timestamp < REBUILD_INTERVAL_MS) {
  				cachedSummary = cache.summary;
  				lastRebuildTime = cache.timestamp;
+ 				return cachedSummary;
 @@ -227,7 +110,7 @@ async function getOrRebuildSummary(): Promise<string> {
  
  	try {

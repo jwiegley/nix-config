@@ -14858,15 +14858,17 @@ On each shared-work host, the supported switch path selects Home Manager, builds
 ]
 #+end_src
 
-* TODO [#B] Fix pi-mem empty-summary startup rebuild
+* DONE [#B] Fix pi-mem empty-summary startup rebuild
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-xl13
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-15 Sat 22:28]
-:MODIFIED: [2026-08-15 Sat 23:39]
+:MODIFIED: [2026-08-16 Sun 13:17]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-16 Sun 13:17]
+:CLOSE_REASON: Repaired the packaged Pi Mem cache-validity check so a fresh empty-string summary is reusable while the existing 15-minute invalidation remains intact. Added a three-fresh-process packaged-extension regression that proves empty-cache creation, byte-identical reuse after a qualifying sentinel appears, and stale-cache rebuild. The test-only mutant failed with widgetCalls 1 != 0; the repaired aarch64-darwin Pi Gallery check passed at /nix/store/nyj9dksxdwqnvybhbni9m7v59rj2zz18-pi-gallery-check, and config/ai all-system no-build evaluation passed. All 21 Python suites passed: the canonical aggregate reached its fixed 900-second envelope with zero test failures while update-overlay-slow was running; that suite then passed 102 tests directly and the six unreached suites passed 43 tests directly. Minimality and architecture reviews were clear. Pi Mem remains packaged and projected but excluded from automatic Gallery loading, so no Pi session or runtime activation was performed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
