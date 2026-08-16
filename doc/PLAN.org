@@ -14865,7 +14865,7 @@ On each shared-work host, the supported switch path selects Home Manager, builds
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-15 Sat 22:28]
-:MODIFIED: [2026-08-16 Sun 13:17]
+:MODIFIED: [2026-08-16 Sun 13:50]
 :CREATED_BY: johnw
 :FINISHED: [2026-08-16 Sun 13:17]
 :CLOSE_REASON: Repaired the packaged Pi Mem cache-validity check so a fresh empty-string summary is reusable while the existing 15-minute invalidation remains intact. Added a three-fresh-process packaged-extension regression that proves empty-cache creation, byte-identical reuse after a qualifying sentinel appears, and stale-cache rebuild. The test-only mutant failed with widgetCalls 1 != 0; the repaired aarch64-darwin Pi Gallery check passed at /nix/store/nyj9dksxdwqnvybhbni9m7v59rj2zz18-pi-gallery-check, and config/ai all-system no-build evaluation passed. All 21 Python suites passed: the canonical aggregate reached its fixed 900-second envelope with zero test failures while update-overlay-slow was running; that suite then passed 102 tests directly and the six unreached suites passed 43 tests directly. Minimality and architecture reviews were clear. Pi Mem remains packaged and projected but excluded from automatic Gallery loading, so no Pi session or runtime activation was performed.
@@ -14902,6 +14902,13 @@ Pi-mem synchronously scans 130 legacy session directories during every session_s
     "author": "johnw",
     "text": "Operational mitigation nix-ttx2 now excludes Pi Mem from automatic Gallery loading without uninstalling it, eliminating the synchronous empty-summary scan from current Pi startup. This issue remains open for a future package repair before Pi Mem is re-enabled; its diagnosed falsey empty-summary cache behavior is unchanged.",
     "created_at": "2026-08-16T06:39:46Z"
+  },
+  {
+    "id": 427,
+    "issue_id": "nix-xl13",
+    "author": "johnw",
+    "text": "Runtime acceptance completed on Hera at signed source commit d1f35921f3aa519ed568281f91632be6c333a715. `make verify-inputs` passed; `./build system` realized `/nix/store/wb702s2c2hc77c4zci29i1l7x1jpi2nv-darwin-system-26.11.15abb8c`; and the authorized `make switch` passed. Both `/run/current-system` and the system profile resolve to that exact candidate. The active immutable Gallery has 24 imports and 24 registrations with Lens and Mem absent from automatic loading; its 26-package projection retains both packages, and the projected Pi Mem 1.2.0 source contains the repaired string-validity predicate while the old truthiness predicate is absent.\n\nBefore the one controlled Sana restart, instance `44a28383-1786397839` was idle at generation 6 with matching tmux stamps, the established command hash, and zero claims, destructions, or legacy adoptions. Exactly one `--force --env PI_TIMING=1` restart succeeded and advanced the same instance to generation 7. The replacement pane and Pi process started in the same second as the request; durable state is idle, tmux/runtime generation stamps agree at 7, the command hash is unchanged, and claim/destruction counts remain zero. Pi reported main startup TOTAL 3596ms, Gallery module import 3008ms, Gallery factory 103ms, and all extensions TOTAL 3357ms. The Agent Deck restart command returned in 0.514s and the first field-only poll saw generation 7/idle at 8s. A timing-only capture was first observed at 76s because the initial readiness poll incorrectly required `comm=pi` while this managed Pi runs as a Node process; therefore 76s is only an observation upper bound, not a measured startup duration. No second restart was attempted.",
+    "created_at": "2026-08-16T20:50:02Z"
   }
 ]
 #+end_src
