@@ -204,7 +204,7 @@ in
     src = inputs.org2jsonl.outPath;
     cargoLock.lockFile = inputs.org2jsonl.outPath + "/Cargo.lock";
     strictDeps = true;
-    buildInputs = lib.optionals pkgs.stdenv.isDarwin [
+    buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
       pkgs.libiconv
       pkgs.apple-sdk_15
     ];

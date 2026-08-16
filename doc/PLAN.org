@@ -4467,14 +4467,14 @@ bin/publish declares exactly one authoritative REMOTE but still loops over the q
 ]
 #+end_src
 
-* DEFER [#B] Remove deprecated stdenv platform aliases
+* DOING [#B] Remove deprecated stdenv platform aliases
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-hbdj
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-14 Fri 10:08]
-:MODIFIED: [2026-08-14 Fri 10:25]
+:MODIFIED: [2026-08-16 Sun 15:39]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
@@ -4508,6 +4508,13 @@ Linux Home Manager evaluation emits repeated nixpkgs deprecation warnings becaus
     "author": "johnw",
     "text": "Focused Darwin evaluation also passed: darwinConfigurations.hera.system.drvPath evaluated offline to /nix/store/jyqlr0af0q8779mbv2ycbiwwlkmkzi42-darwin-system-26.11.15abb8c.drv with none of the reported stdenv deprecation warnings. This completes local Linux and Darwin evaluation evidence; deployment remains deferred solely for publication and consumer adoption authority.",
     "created_at": "2026-08-14T17:25:25Z"
+  },
+  {
+    "id": 429,
+    "issue_id": "nix-hbdj",
+    "author": "johnw",
+    "text": "Resumed after later source growth exposed two remaining uses: root packages/source-project-apps.nix and the Andoria consumer. The root use now reads pkgs.stdenv.hostPlatform.isDarwin; tracked root Nix source has zero deprecated alias hits. Fresh offline evaluations passed for x86_64-linux Home Manager (/nix/store/zbfgcxyq4sldspd05s2bd88y6pa98i3w-home-manager-generation.drv) and Hera Darwin (/nix/store/sky5fc69rvljcgwy5vgqnsgw76xs0cfh-darwin-system-26.11.15abb8c.drv) with no stdenv alias warning; Linux emitted only the separate pre-existing builtins.derivation context warning. Full make test passed: 21 Python suites and seven root behavioral checks. The prepared signed Andoria patch remains applicable but must be replayed onto current authoritative history in an isolated clone before closure.",
+    "created_at": "2026-08-16T22:39:42Z"
   }
 ]
 #+end_src
