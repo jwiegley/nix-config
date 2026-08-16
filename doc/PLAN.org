@@ -5996,7 +5996,7 @@ The full session suite fails TestRm_SweepsConductorInboxes because the fixture/e
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-15 Sat 22:28]
-:MODIFIED: [2026-08-15 Sat 22:28]
+:MODIFIED: [2026-08-15 Sat 23:39]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -6017,6 +6017,20 @@ With Pi Lens truly absent, Pi 0.83 still spent 37,303 ms importing the 25-member
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 423,
+    "issue_id": "nix-nx2k",
+    "author": "johnw",
+    "text": "After also excluding Pi Mem, the active Darwin Gallery has 24 members. The first controlled Sana restart reported Gallery module import 1,701 ms plus factory 109 ms, main startup 17,217 ms, and the complete timing block at 23 seconds. This is a warm-state observation rather than a per-member cold A/B; keep this issue focused on timing any remaining Gallery load before disabling anything else.",
+    "created_at": "2026-08-16T06:39:46Z"
   }
 ]
 #+end_src
@@ -13444,6 +13458,58 @@ Remove the resolved portable quality question and make the remaining external/ow
 ]
 #+end_src
 
+* DONE [#B] Disable pi-mem automatic Gallery loading
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ttx2
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-15 Sat 23:04]
+:MODIFIED: [2026-08-15 Sat 23:39]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-15 Sat 23:39]
+:CLOSE_REASON: Disabled Pi Mem at the generated Gallery active-order seam without uninstalling it; focused/full checks, exact Hera activation, and one guarded Sana timing restart passed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Keep pi-mem packaged, pinned, tested, and projected, but exclude it from the generated Pi Gallery active order so its synchronous session_start scan no longer blocks every Pi launch. Activate the experiment on Hera only, restart exactly the Agent Deck session sana once with PI_TIMING enabled, and record startup readiness without changing any other extension, host, session, or mutable Pi state.
+
+** Acceptance Criteria
+
+pi-mem and Lens are absent from generated imports and registrations while all 26 packages remain projected; focused Gallery check and full Hera build pass; exact Hera activation is verified; sana preserves its instance and command identity across one guarded restart; timing proves the pi-mem readiness delay is absent; signed commit and issue state are pushed.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-ttx2",
+    "depends_on_id": "nix-xl13",
+    "type": "discovered-from",
+    "created_at": "2026-08-16T06:04:09.588651Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 421,
+    "issue_id": "nix-ttx2",
+    "author": "johnw",
+    "text": "Implemented the reversible load exclusion at the existing Gallery activeOrder seam: Lens and mem are omitted from imports and registrations, while both source packages and all 26 projection entries remain. Final focused check passed at /nix/store/vm5d9qmdav06gdg64c19f4f684ksz42m-pi-gallery-check; make test passed all 21 Python suites and 7 behavioral checks; config/ai all-system no-build evaluation passed; full Hera build and activation passed at /nix/store/57k2spi66k6y337gdmd0ymcldyl8yac0-darwin-system-26.11.15abb8c. Live loader has 24 imports and registrations, 26 projected packages, and no Lens or Mem import/registration. Sana 44a28383-1786397839 restarted exactly once through Agent Deck from runtime generation 5 to 6 with unchanged command hash and a new live pane. PI_TIMING reported main 17,217 ms, extensions 14,785 ms, Gallery import 1,701 ms plus factory 109 ms, and MCP adapter import 9,852 ms plus factory 658 ms. The complete timing block appeared 23 seconds after restart, rather than the prior about 98-second readiness path, and pi-mem cache mtime 1786861548 remained older than restart epoch 1786862300. No other host or session was changed.",
+    "created_at": "2026-08-16T06:39:35Z"
+  }
+]
+#+end_src
+
 * DONE [#A] Rotate the exposed VPS Gitea credential and remove it from the remote URL  :security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -14760,7 +14826,7 @@ On each shared-work host, the supported switch path selects Home Manager, builds
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-15 Sat 22:28]
-:MODIFIED: [2026-08-15 Sat 22:28]
+:MODIFIED: [2026-08-15 Sat 23:39]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -14781,6 +14847,20 @@ Pi-mem synchronously scans 130 legacy session directories during every session_s
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 422,
+    "issue_id": "nix-xl13",
+    "author": "johnw",
+    "text": "Operational mitigation nix-ttx2 now excludes Pi Mem from automatic Gallery loading without uninstalling it, eliminating the synchronous empty-summary scan from current Pi startup. This issue remains open for a future package repair before Pi Mem is re-enabled; its diagnosed falsey empty-summary cache behavior is unchanged.",
+    "created_at": "2026-08-16T06:39:46Z"
   }
 ]
 #+end_src

@@ -64,8 +64,8 @@ let
     "omlx-provider"
     "router"
   ];
-  # Keep Lens packaged and projected while excluding its eager startup load.
-  activeOrder = lib.subtractLists [ "lens" ] (
+  # Keep Lens and Pi Mem packaged and projected while excluding their startup load.
+  activeOrder = lib.subtractLists [ "lens" "mem" ] (
     if stdenv.hostPlatform.isDarwin then order else lib.subtractLists localModelMemberIds order
   );
   piCatalogRecords = manifest.sourceCatalog;

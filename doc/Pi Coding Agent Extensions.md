@@ -14,7 +14,7 @@ pi-version: 0.83.0
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: 26 gallery packages available on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. Pi Lens remains installed but is presently excluded from automatic registration. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: 26 gallery packages available on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. Pi Lens and Pi Mem remain installed but are presently excluded from automatic registration. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope.
 
@@ -120,7 +120,7 @@ The generated keymap retains the ordinary keys and adds Emacs-style editing:
 
 **Version:** local · **Links:** Nix authority: `~/src/nix/packages/pi-gallery/` · deployed leaf: `~/.config/pi/agent/extensions/nix-gallery/index.ts`
 
-The Nix Gallery loader projects the complete managed package set on every host. It imports and registers extensions in deterministic order, except that Linux does not automatically import the two loopback providers or their router and Pi Lens is temporarily excluded on every platform. All 26 immutable package paths, including Lens, remain in the projection. Before registration the loader suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
+The Nix Gallery loader projects the complete managed package set on every host. It imports and registers extensions in deterministic order, except that Linux does not automatically import the two loopback providers or their router and Pi Lens and Pi Mem are temporarily excluded on every platform. All 26 immutable package paths, including Lens and Pi Mem, remain in the projection. Before registration the loader suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
 
 **Basic usage.** No direct command is required. Run `/reload` after activating a new Nix generation, or start a fresh Pi process, to load the current gallery. The loader itself owns no mutable state.
 
@@ -196,11 +196,13 @@ The fleet activation policy enables memory, automatic Blackhole compaction, and 
 
 **Version:** 1.2.0 · **Links:** [Pi Packages](https://pi.dev/packages/@askjo/pi-mem) · [Home](https://github.com/jo-inc/pi-mem#readme) · [GitHub](https://github.com/jo-inc/pi-mem)
 
-Pi Mem maintains explicit, user-directed memory as plain Markdown. `MEMORY.md` holds durable facts and decisions, dated files hold daily notes, `notes/` holds named topics, and `SCRATCHPAD.md` holds a checklist. Writes and mutating scratchpad actions require an explicit user request. It injects selected memory, recent daily logs, and recent catchup indexes into each agent turn, so the chosen model provider receives that content along with the rest of the prompt. This is distinct from Blackhole's session-derived observational memory and compaction pipeline; Pi Mem does not own Blackhole's `recall` tool.
+When registered, Pi Mem maintains explicit, user-directed memory as plain Markdown. `MEMORY.md` holds durable facts and decisions, dated files hold daily notes, `notes/` holds named topics, and `SCRATCHPAD.md` holds a checklist. Writes and mutating scratchpad actions require an explicit user request. While active, it injects selected memory, recent daily logs, and recent catchup indexes into each agent turn, so the chosen model provider receives that content along with the rest of the prompt. This is distinct from Blackhole's session-derived observational memory and compaction pipeline; Pi Mem does not own Blackhole's `recall` tool.
 
 The managed package keeps its dashboard summary local instead of making upstream's automatic secondary model request. It reads recent Pi session titles and costs for the local dashboard, but does not send that inventory to a separate summarizer. Its mutable root is logically `~/.pi/agent/memory` and therefore resolves through the managed compatibility link to `~/.config/pi/agent/memory`; `PI_MEMORY_DIR` may select another root. Configured state directories are created or tightened to mode 0700, and files Pi Mem creates or replaces use mode 0600. File updates reject symbolic-link leaves, replace whole files atomically, and serialize read-modify-write operations across Pi processes. Stale file locks are reclaimed only when a same-host owner is proven to have exited; foreign-host, live-owner, malformed, and in-progress-recovery locks remain in place, and writes fail closed. Nix does not own or delete this state. The managed package deliberately removes upstream Git autocommit: `PI_AUTOCOMMIT` and the legacy `.pi-mem.json` `autocommit` field are inert. Memory history therefore requires an explicit private Git workflow outside Pi Mem, operated manually or by a separate external tool.
 
-**Basic usage.** Use `memory_write` for durable, daily, or named notes; `memory_read` for exact files and indexed notes; `memory_search` for case-insensitive local search; and `scratchpad` to add, complete, reopen, list, or clear checklist items. Start a fresh Pi process or run `/reload` after activation to register the tools.
+Pi Mem is currently retained as a managed package and projected resource but is not imported or registered by the generated Gallery. This reversible state removes its synchronous startup scan without deleting its mutable memory.
+
+**Basic usage.** Pi Mem tools are unavailable while automatic registration is disabled. Restoring Pi Mem to the generated Gallery restores `memory_write`, `memory_read`, `memory_search`, and `scratchpad`; start a fresh Pi process or run `/reload` after activation to register them.
 
 ### Trace
 
@@ -474,6 +476,6 @@ Within a fresh Pi session, confirm the principal control surfaces:
 /model
 ```
 
-Lens commands and tools should be absent while Lens remains excluded from the generated Gallery.
+Lens commands and tools and Pi Mem tools should be absent while they remain excluded from the generated Gallery.
 
 Source policy last checked against the current `~/src/nix` fleet renderer on 2026-08-12. Activation evidence is recorded separately so this inventory does not imply that an unactivated source revision is already live.

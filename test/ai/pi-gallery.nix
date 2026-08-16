@@ -41,7 +41,7 @@ let
     "omlx-provider"
     "router"
   ];
-  activeOrder = lib.subtractLists [ "lens" ] (
+  activeOrder = lib.subtractLists [ "lens" "mem" ] (
     if stdenv.hostPlatform.isDarwin then
       manifest.order
     else
@@ -1940,17 +1940,17 @@ runCommand "pi-gallery-check"
           [
             "batch_web_fetch",
             "edit",
-            "memory_read",
-            "memory_search",
-            "memory_write",
             "read",
             "recall",
-            "scratchpad",
             "web_fetch",
             "web_search",
             "write"
           ][];
           . as $required | $actual | index($required) != null
+        )
+        and all(
+          ["memory_read", "memory_search", "memory_write", "scratchpad"][];
+          . as $inactive | $actual | index($inactive) == null
         )
         and all($actual[]; contains("anvil") | not)
     ' "$smoke/active-tools.json" >/dev/null || {
@@ -1968,29 +1968,10 @@ runCommand "pi-gallery-check"
       cat "$smoke/tool-owners.json" >&2
       fail "Pi gallery web tools do not have exactly one declared owner"
     }
-    validate_memory_tool_owners() {
-      jq -e '
-        .memory_read == ["mem"]
-        and .memory_search == ["mem"]
-        and .memory_write == ["mem"]
-        and .scratchpad == ["mem"]
-        and .recall == ["blackhole"]
-      ' "$1" >/dev/null
-    }
-    validate_memory_tool_owners "$smoke/tool-owners.json" || {
+    jq -e '.recall == ["blackhole"]' "$smoke/tool-owners.json" >/dev/null || {
       cat "$smoke/tool-owners.json" >&2
-      fail "Pi memory tools do not have exactly one declared owner"
+      fail "Blackhole does not exclusively own recall"
     }
-    jq '.memory_write += ["blackhole"]' "$smoke/tool-owners.json" \
-      > "$smoke/tool-owners-memory-duplicate.json"
-    if validate_memory_tool_owners "$smoke/tool-owners-memory-duplicate.json"; then
-      fail "tool-ownership gate accepted a second memory_write owner"
-    fi
-    jq '.memory_read = ["blackhole"]' "$smoke/tool-owners.json" \
-      > "$smoke/tool-owners-memory-wrong.json"
-    if validate_memory_tool_owners "$smoke/tool-owners-memory-wrong.json"; then
-      fail "tool-ownership gate accepted the wrong memory_read owner"
-    fi
     jq '.web_search += ["smart-fetch"]' "$smoke/tool-owners.json" \
       > "$smoke/tool-owners-duplicate.json"
     if validate_web_tool_owners "$smoke/tool-owners-duplicate.json"; then

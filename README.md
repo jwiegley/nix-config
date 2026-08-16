@@ -50,11 +50,11 @@ and pass it through their Home Manager module arguments; their lock adoption
 remains consumer-owned.
 
 The managed Pi profile makes the same complete 26-member extension gallery
-available on every host. Pi Lens remains packaged and projected but is excluded
-from automatic registration while its startup cost is isolated. Darwin registers
-the two loopback discovery providers automatically; fixed local-provider overrides
-and the synthetic router remain a separate catalog capability, presently enabled
-only for Hera.
+available on every host. Pi Lens and Pi Mem remain packaged and projected but are
+excluded from automatic registration while their startup costs are isolated.
+Darwin registers the two loopback discovery providers automatically; fixed
+local-provider overrides and the synthetic router remain a separate catalog
+capability, presently enabled only for Hera.
 
 The complete ownership and data-flow contract is maintained in
 [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md).
