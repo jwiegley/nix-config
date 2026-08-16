@@ -412,7 +412,7 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
         )
         self.assertIn("andoria [lock coherence]: no flake.lock", combined)
 
-    def test_full_run_refuses_malformed_vps_lock_and_missing_andoria_lock(self):
+    def test_full_run_ignores_parked_vps_lock_and_rejects_missing_andoria_lock(self):
         with tempfile.TemporaryDirectory(prefix="gates-lock-only-") as tmp:
             lock = """{
               "nodes": {
@@ -437,9 +437,9 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
         self.assertNotEqual(
             r.returncode,
             0,
-            f"a full run passed with malformed or missing consumer locks:\n{combined}",
+            f"a full run passed without Andoria's required lock:\n{combined}",
         )
-        self.assertIn("vps [lock coherence]", combined)
+        self.assertNotIn("vps [lock coherence]", combined)
         self.assertIn("andoria [lock coherence]: no flake.lock", combined)
         self.assertNotIn("all evaluated consumers passed", combined)
 
@@ -455,6 +455,23 @@ class TestCrossConsumerEvalRefusesEmptySuccess(unittest.TestCase):
     def test_unknown_target_is_refused_rather_than_silently_ignored(self):
         r = self.run_tool("not-a-consumer")
         self.assertNotEqual(r.returncode, 0)
+
+    def test_all_cannot_be_combined_with_named_consumers(self):
+        for arguments in (("all", "vps"), ("vps", "all")):
+            with self.subTest(arguments=arguments):
+                r = self.run_tool(*arguments)
+                self.assertNotEqual(r.returncode, 0)
+                self.assertIn(
+                    "all cannot be combined with named consumers",
+                    r.stdout + r.stderr,
+                )
+
+    def test_supported_list_keeps_parked_vps_discoverable(self):
+        r = self.run_tool("--list")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(
+            r.stdout.splitlines(), ["shared-work", "vps", "andoria", "vulcan"]
+        )
 
 
 class TestCrossConsumerEvalGiteaPolicy(unittest.TestCase):
@@ -630,8 +647,9 @@ class TestCrossConsumerEvalGiteaPolicy(unittest.TestCase):
         **env,
     ):
         self.nix_log.unlink(missing_ok=True)
+        arguments = ["all"] if full == "all" else ([] if full else [consumer])
         return subprocess.run(
-            [str(CROSS_CONSUMER_EVAL), *([] if full else [consumer])],
+            [str(CROSS_CONSUMER_EVAL), *arguments],
             cwd=str(BIN.parent),
             capture_output=True,
             text=True,
@@ -774,29 +792,35 @@ class TestCrossConsumerEvalGiteaPolicy(unittest.TestCase):
         self.assertNotIn("evaluation failed", combined)
         self.assertNotIn("all evaluated consumers passed", combined)
 
-    def test_full_run_evaluates_every_external_lock_offline_without_overrides(self):
-        self.write_fixture()
+    def test_named_vps_lane_remains_available_offline(self):
         vps = self.root / "vps"
         vps.mkdir()
         self.write_fixture(checkout=vps)
-        vulcan = self.root / "vulcan"
-        self.write_vulcan_fixture(vulcan)
 
-        result = self.run_gate(full=True, vps_checkout=vps, vulcan_checkout=vulcan)
+        result = self.run_gate(
+            consumer="vps",
+            vps_checkout=vps,
+            CONSUMER_EVAL_OFFLINE="1",
+        )
+
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        locked_calls = [
-            call for call in self.nix_calls() if "--no-update-lock-file" in call
-        ]
+        self.assertIn("vps [ovh-vps toplevel]: OK", result.stdout)
+        self.assertIn("vps [ovh-vps toplevel, locked]: OK", result.stdout)
         self.assertEqual(
-            locked_calls,
+            self.nix_calls(),
             [
                 [
                     "eval",
                     "--no-write-lock-file",
                     "--no-warn-dirty",
                     "--offline",
-                    "--no-update-lock-file",
                     "--raw",
+                    "--override-input",
+                    "nix-config",
+                    str(REPO),
+                    "--override-input",
+                    "nix-config-ai",
+                    f"{REPO}?dir=config/ai",
                     f"{vps}#nixosConfigurations.ovh-vps.config.system.build.toplevel.drvPath",
                 ],
                 [
@@ -806,56 +830,129 @@ class TestCrossConsumerEvalGiteaPolicy(unittest.TestCase):
                     "--offline",
                     "--no-update-lock-file",
                     "--raw",
-                    f"{self.andoria}#homeConfigurations.jwiegley.activationPackage.drvPath",
-                ],
-                [
-                    "eval",
-                    "--no-write-lock-file",
-                    "--no-warn-dirty",
-                    "--offline",
-                    "--no-update-lock-file",
-                    "--raw",
-                    f"{vulcan}#nixosConfigurations.vulcan.config.system.build.toplevel.drvPath",
+                    f"{vps}#nixosConfigurations.ovh-vps.config.system.build.toplevel.drvPath",
                 ],
             ],
         )
-        self.assertTrue(
-            all("--override-input" not in call for call in locked_calls),
-            locked_calls,
-        )
 
-    def test_full_run_rejects_vps_skip_after_andoria_succeeds(self):
+    def test_full_run_evaluates_every_active_external_lock_offline_without_overrides(
+        self,
+    ):
         self.write_fixture()
         vulcan = self.root / "vulcan"
         self.write_vulcan_fixture(vulcan)
-        result = self.run_gate(full=True, vulcan_checkout=vulcan)
-        combined = result.stdout + result.stderr
-        self.assertNotEqual(result.returncode, 0, combined)
-        self.assertIn("andoria [lock coherence]: OK", combined)
-        self.assertIn("andoria [jwiegley activation]: OK", combined)
-        self.assertIn("a full run did not evaluate required consumer vps", combined)
-        self.assertNotIn("all evaluated consumers passed", combined)
+
+        for full in (True, "all"):
+            with self.subTest(full=full):
+                result = self.run_gate(full=full, vulcan_checkout=vulcan)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertNotIn("vps [", result.stdout + result.stderr)
+                expected_calls = [
+                    [
+                        "eval",
+                        "--no-write-lock-file",
+                        "--no-warn-dirty",
+                        "--raw",
+                        f'{REPO}#homeConfigurations."jwiegley@x86_64-linux".activationPackage.drvPath',
+                    ],
+                    [
+                        "eval",
+                        "--no-write-lock-file",
+                        "--no-warn-dirty",
+                        "--raw",
+                        "--override-input",
+                        "nix-config",
+                        str(REPO),
+                        "--override-input",
+                        "nix-config-ai",
+                        f"{REPO}?dir=config/ai",
+                        f"{self.andoria}#homeConfigurations.jwiegley.activationPackage.drvPath",
+                    ],
+                    [
+                        "eval",
+                        "--no-write-lock-file",
+                        "--no-warn-dirty",
+                        "--offline",
+                        "--no-update-lock-file",
+                        "--raw",
+                        f"{self.andoria}#homeConfigurations.jwiegley.activationPackage.drvPath",
+                    ],
+                    [
+                        "eval",
+                        "--no-write-lock-file",
+                        "--no-warn-dirty",
+                        "--raw",
+                        "--override-input",
+                        "nix-config",
+                        str(REPO),
+                        "--override-input",
+                        "nix-config-ai",
+                        f"{REPO}?dir=config/ai",
+                        f"{vulcan}#nixosConfigurations.vulcan.config.system.build.toplevel.drvPath",
+                    ],
+                    [
+                        "eval",
+                        "--no-write-lock-file",
+                        "--no-warn-dirty",
+                        "--offline",
+                        "--no-update-lock-file",
+                        "--raw",
+                        f"{vulcan}#nixosConfigurations.vulcan.config.system.build.toplevel.drvPath",
+                    ],
+                ]
+                self.assertEqual(self.nix_calls(), expected_calls)
+                self.assertTrue(
+                    all(
+                        "ovh-vps" not in argument
+                        for call in self.nix_calls()
+                        for argument in call
+                    ),
+                    self.nix_calls(),
+                )
+                locked_calls = [
+                    call for call in self.nix_calls() if "--no-update-lock-file" in call
+                ]
+                self.assertEqual(
+                    locked_calls,
+                    [
+                        [
+                            "eval",
+                            "--no-write-lock-file",
+                            "--no-warn-dirty",
+                            "--offline",
+                            "--no-update-lock-file",
+                            "--raw",
+                            f"{self.andoria}#homeConfigurations.jwiegley.activationPackage.drvPath",
+                        ],
+                        [
+                            "eval",
+                            "--no-write-lock-file",
+                            "--no-warn-dirty",
+                            "--offline",
+                            "--no-update-lock-file",
+                            "--raw",
+                            f"{vulcan}#nixosConfigurations.vulcan.config.system.build.toplevel.drvPath",
+                        ],
+                    ],
+                )
+                self.assertTrue(
+                    all("--override-input" not in call for call in locked_calls),
+                    locked_calls,
+                )
 
     def test_full_run_rejects_vulcan_skip_after_other_consumers_succeed(self):
         self.write_fixture()
-        vps = self.root / "vps"
-        vps.mkdir()
-        self.write_fixture(checkout=vps)
-        result = self.run_gate(full=True, vps_checkout=vps)
+        result = self.run_gate(full=True)
         combined = result.stdout + result.stderr
         self.assertNotEqual(result.returncode, 0, combined)
-        self.assertIn("vps [ovh-vps toplevel]: OK", combined)
         self.assertIn("andoria [jwiegley activation]: OK", combined)
         self.assertIn("a full run did not evaluate required consumer vulcan", combined)
         self.assertNotIn("all evaluated consumers passed", combined)
 
     def test_full_run_rejects_andoria_skip_after_other_consumers_succeed(self):
-        vps = self.root / "vps"
-        vps.mkdir()
-        self.write_fixture(checkout=vps)
         vulcan = self.root / "vulcan"
         self.write_vulcan_fixture(vulcan)
-        result = self.run_gate(full=True, vps_checkout=vps, vulcan_checkout=vulcan)
+        result = self.run_gate(full=True, vulcan_checkout=vulcan)
         combined = result.stdout + result.stderr
         self.assertNotEqual(result.returncode, 0, combined)
         self.assertIn("andoria [jwiegley activation]: SKIPPED", combined)

@@ -29,7 +29,12 @@ elif [[ -d $system_config_dir ]]; then
         exit 1
     fi
     cd "$system_config_dir"
-    exec ./build switch
+    nixos_limits=()
+    if build_limits=$(nix_local_build_limits_for_host "$host"); then
+        read -r max_jobs cores <<<"$build_limits"
+        nixos_limits=(--max-jobs "$max_jobs" --cores "$cores")
+    fi
+    exec ./build switch "${nixos_limits[@]}"
 elif [[ -d $HOME/.config/home-manager ]]; then
     # Build and run the activation package from this flake's pinned Home Manager.
     output=$(nix_flake_output_for_host "$host") || {

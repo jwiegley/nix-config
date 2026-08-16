@@ -82,6 +82,17 @@ class HostRoutingTests(unittest.TestCase):
         self.assertEqual(len(rollout_names), 4)
         self.assertLessEqual(set(rollout_names), set(member_names))
 
+    def test_local_build_limits_are_projected_only_for_bounded_hosts(self):
+        limits = self.call_routing("nix_local_build_limits_for_host", "vps")
+        self.assertEqual(limits.returncode, 0, limits.stderr)
+        self.assertEqual(limits.stdout.strip(), "1 1")
+
+        for host in ("hera", "clio", "vulcan", "shared-work"):
+            with self.subTest(host=host):
+                result = self.call_routing("nix_local_build_limits_for_host", host)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, "")
+
     def test_build_dispatches_the_projected_darwin_output(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

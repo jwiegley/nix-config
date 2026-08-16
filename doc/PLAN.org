@@ -425,6 +425,44 @@ Every dirty drain reads, parses, prunes, marshals, and durably rewrites the full
 ]
 #+end_src
 
+* DONE [#B] Park VPS outside the active fleet
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-1coh
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-15 Sat 17:00]
+:MODIFIED: [2026-08-15 Sat 18:44]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-15 Sat 18:44]
+:CLOSE_REASON: Default cross-consumer and remote-update paths now exclude VPS; explicit manual validation and deployment remain documented; registry-owned VPS build limits enforce one job and one core; full hermetic tests, all-system root checks, Darwin build, and pre-commit gates passed; VPS was not fetched, built, copied, or activated.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Remove VPS from unattended upgrades, default cross-consumer validation, and routine activation while preserving explicit manual update, build, test, and deployment support. Leave its current running system unchanged until a future operator deliberately selects it.
+
+** Acceptance Criteria
+
+Default upgrade and cross-consumer paths do not target VPS; an explicit named VPS validation/deployment path remains documented and tested; routine rollout documentation identifies VPS as parked/manual; the live VPS is neither built nor activated during this change.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-1coh",
+    "depends_on_id": "nix-eazx",
+    "type": "discovered-from",
+    "created_at": "2026-08-16T00:00:37.483142Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#C] Reconcile the reflowed wiggum halt override with its transport pin
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -3402,18 +3440,18 @@ GUI helpers and commands launched through Agent Deck are attributed to a stable,
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-15 Sat 15:03]
-:MODIFIED: [2026-08-15 Sat 15:03]
+:MODIFIED: [2026-08-15 Sat 17:05]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Restore the pre-aa72 upstream-flake Obr package path, lock today’s upstream tip, verify every maintained consumer, publish signed root and consumer revisions, and activate from each authoritative checkout. Do not add compatibility hardening or mutate daemon trust, CPU policy, or restart policy.
+Restore the pre-aa72 upstream-flake Obr package path, lock today’s upstream tip, verify and publish every maintained consumer, and activate the active fleet from each authoritative checkout. The VPS remains a supported manual consumer but is parked at its current running system and excluded from this rollout. Do not add compatibility hardening or mutate daemon trust, CPU policy, or restart policy.
 
 ** Acceptance Criteria
 
-Root and strict cross-consumer tests pass; today’s Obr tip is realized; signed revisions are published; Hera, Clio, Vulcan, VPS, and shared-work hosts activate from authoritative checkouts and report the intended Obr version; all touched repositories finish clean and pushed; no daemon trust, CPU-policy, or restart repair is performed.
+Root and strict active-consumer tests pass; today’s Obr tip is realized; signed revisions are published; Hera, Clio, Vulcan, and the four shared-work hosts activate from authoritative checkouts and report the intended Obr version; VPS remains unchanged and is excluded from default cross-consumer evaluation and activation while retaining an explicit manual path; all touched repositories finish clean and pushed; no daemon trust, CPU-policy, or restart repair is performed.
 
 ** Dependencies
 
@@ -14533,6 +14571,42 @@ Live Hera Pi reports both omlx/Qwen3.6-27B-oQ6e-mtp and router/sol as thinking=n
     "author": "johnw",
     "text": "Corrected both fess P3 findings. The Pi inventory now records updated: 2026-08-12, and patch 61f6a52b263365a94bfe0dfe9f0daa1dde2d6e001c8b7ae23f56fefd737711e7 extends the pinned source comment to describe the actual model-switch precedence. The revised patch applies with --fuzz=0 to the exact source and reproduces all eight intended postimages byte-for-byte. Corrective verification: exact Pi package 30 files / 464 passed / 2 intentional skips; packaged pi-gallery integration green; config/ai all-systems flake evaluation green. No activation, push, live provider request, or image probe occurred.",
     "created_at": "2026-08-12T14:32:14Z"
+  }
+]
+#+end_src
+
+* DEFER [#C] Repair shared-work switch wrapper host classification
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-xdhc
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-15 Sat 17:00]
+:MODIFIED: [2026-08-15 Sat 17:00]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The installed generic switch helper on shared-work Linux exits before activation because it classifies the host as NixOS and requires /etc/nixos/build. Shared-work is Home Manager-managed and its exact activationPackage activate script works without that NixOS driver.
+
+** Acceptance Criteria
+
+On each shared-work host, the supported switch path selects Home Manager, builds or accepts the exact activation package, activates it, and has a regression test proving it never requires /etc/nixos/build; NixOS host behavior remains unchanged.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-xdhc",
+    "depends_on_id": "nix-eazx",
+    "type": "discovered-from",
+    "created_at": "2026-08-16T00:00:38.314965Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src

@@ -85,6 +85,15 @@ let
     ];
   };
 
+  # Local resource ceilings are host facts. Shell dispatchers consume this
+  # table through the generated routing library rather than naming hosts.
+  localBuildLimits = {
+    vps = {
+      maxJobs = 1;
+      cores = 1;
+    };
+  };
+
   # Canonical host classes and their shell-facing aliases. The shell library
   # is generated from this table; do not duplicate these names in Bash.
   routing = {
@@ -215,6 +224,14 @@ assert builtins.all (host: builtins.elem host sharedWork.members) sharedWork.act
 assert builtins.all (pool: builtins.all (builder: builtins.hasAttr builder builders) pool) (
   builtins.attrValues builderPools
 );
+assert builtins.all (name: builtins.hasAttr name routing) (builtins.attrNames localBuildLimits);
+assert builtins.all (
+  limits:
+  builtins.isInt limits.maxJobs
+  && limits.maxJobs > 0
+  && builtins.isInt limits.cores
+  && limits.cores > 0
+) (builtins.attrValues localBuildLimits);
 {
   inherit
     builderPools
@@ -222,6 +239,7 @@ assert builtins.all (pool: builtins.all (builder: builtins.hasAttr builder build
     homeClasses
     homeClassContractFor
     hosts
+    localBuildLimits
     routing
     resolveFor
     sharedWork

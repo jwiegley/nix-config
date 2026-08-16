@@ -20,3 +20,7 @@ NixOS installation.
   For a custom command use `./build -- COMMAND ...`. The driver owns the
   `.nixos-build` lock; never create, remove, or seize that path manually. If
   the driver cannot acquire its lock, report its error and stop.
+
+- VPS is parked and must be selected explicitly for maintenance. On VPS, pass
+  `--max-jobs 1 --cores 1` to every `./build build` and `./build switch`
+  invocation.

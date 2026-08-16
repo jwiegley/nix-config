@@ -64,7 +64,9 @@ Never run `nix flake update` or `nix flake lock` under `sudo`; root and user fet
 
 - Hera/Clio: build from each host's `~/src/nix`; use nix-darwin.
 - Shared-work Linux: build from each authoritative `~/.config/home-manager`; do not copy Hera's checkout over it.
-- Vulcan/VPS: build from authoritative `/etc/nixos`; obey `/etc/nixos/.nixos-build` locking.
+- Vulcan: build from authoritative `/etc/nixos`; obey `/etc/nixos/.nixos-build` locking.
+- VPS: parked/manual only. Build from authoritative `/etc/nixos`, obey its
+  `.nixos-build` lock, and pass `--max-jobs 1 --cores 1` to both build and switch.
 - Preserve existing local commits, lock updates, tmux sessions, and unrelated working-tree changes.
 
 ## Git and deployment

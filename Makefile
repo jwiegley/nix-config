@@ -350,15 +350,16 @@ copy:
 
 ########################################################################
 
-# Build this repository's x86_64-linux closure on a big builder, sign it, and
-# push it to the VPS, so the VPS's own `nixos-rebuild` finds it already built
-# instead of compiling it on a box that does not have the memory to.
+# Build this repository's generic x86_64-linux Home Manager closure on a big
+# builder, sign it, and push it to the VPS. This stages shared user packages;
+# it does not build the consumer-owned VPS NixOS system closure.
 #
 # The VPS owns /etc/nixos and its own activation (see README); this target
 # deliberately only stages the store closure and never touches that checkout.
-# After it succeeds, activate ON the VPS:
+# After it succeeds, when deliberately resuming VPS maintenance, activate on
+# the VPS:
 #
-#     nixos-rebuild switch --flake /etc/nixos#$(VPS)
+#     cd /etc/nixos && ./build switch --max-jobs 1 --cores 1
 #
 # ONE builder, explicitly. /etc/nix/machines lists two x86_64-linux hosts, and
 # letting nix use both fails: a path built on andoria-08 comes back to this
@@ -387,7 +388,7 @@ vps-push:
 	nix store sign --key-file '$(SIGN_KEY)' --recursive "$$out"; \
 	nix copy --to "ssh-ng://$(VPS)" "$$out"; \
 	printf 'staged on %s: %s\n' '$(VPS)' "$$out"; \
-	printf 'now run on %s: nixos-rebuild switch --flake /etc/nixos#%s\n' '$(VPS)' '$(VPS)'
+	printf 'when resuming maintenance on %s: cd /etc/nixos && ./build switch --max-jobs 1 --cores 1\n' '$(VPS)'
 
 
 check:

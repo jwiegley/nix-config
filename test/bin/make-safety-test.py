@@ -187,6 +187,15 @@ class MakeMaintenanceTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_vps_push_prints_bounded_manual_activation(self) -> None:
+        result = self.run_make("vps-push")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(
+            "./build switch --max-jobs 1 --cores 1",
+            result.stdout,
+        )
+
 
 class MakeUpgradeOrderingTests(unittest.TestCase):
     def setUp(self) -> None:

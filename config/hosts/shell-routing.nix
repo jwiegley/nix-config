@@ -3,6 +3,7 @@
 let
   registry = import ./registry.nix;
   routingNames = builtins.attrNames registry.routing;
+  localBuildLimitNames = builtins.attrNames registry.localBuildLimits;
   validName = name: builtins.match "[a-z0-9][a-z0-9-]*" name != null;
   caseInsensitive =
     value:
@@ -31,10 +32,17 @@ let
       route = registry.routing.${class};
     in
     "    ${lib.escapeShellArg class}) printf '%s\\n' ${lib.escapeShellArg route.flakeOutput} ;;";
+  renderLocalBuildLimitArm =
+    class:
+    let
+      limits = registry.localBuildLimits.${class};
+    in
+    "    ${lib.escapeShellArg class}) printf '%s %s\\n' ${lib.escapeShellArg (toString limits.maxJobs)} ${lib.escapeShellArg (toString limits.cores)} ;;";
   renderValues =
     values: lib.concatMapStrings (value: "    printf '%s\\n' ${lib.escapeShellArg value}\n") values;
 in
 assert builtins.all validName routingNames;
+assert builtins.all validName localBuildLimitNames;
 assert builtins.all (route: builtins.all validName (route.exactNames ++ route.containsNames)) (
   builtins.attrValues registry.routing
 );
@@ -54,6 +62,13 @@ assert builtins.all (route: builtins.all validName (route.exactNames ++ route.co
   nix_flake_output_for_host() {
       case $(normalize_nix_host "$1") in
   ${lib.concatMapStringsSep "\n" renderOutputArm routingNames}
+      *) return 1 ;;
+      esac
+  }
+
+  nix_local_build_limits_for_host() {
+      case $(normalize_nix_host "$1") in
+  ${lib.concatMapStringsSep "\n" renderLocalBuildLimitArm localBuildLimitNames}
       *) return 1 ;;
       esac
   }

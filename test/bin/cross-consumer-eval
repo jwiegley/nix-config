@@ -19,18 +19,20 @@
 # import-from-derivation dependencies from the consumer configuration.
 #
 # Every eval uses --no-write-lock-file; external-consumer input overrides are
-# in-memory. A full run also evaluates VPS, Andoria, and Vulcan from their paired
-# Gitea locks, without overrides and with --offline --no-update-lock-file.
+# in-memory. A full run also evaluates active Andoria and Vulcan consumers from
+# their paired Gitea locks, without overrides and with
+# --offline --no-update-lock-file. VPS remains available as an explicit subset.
 #
 # Usage:
-#   test/bin/cross-consumer-eval                     # full required-consumer gate
-#   test/bin/cross-consumer-eval vps                 # a subset
-#   test/bin/cross-consumer-eval --list              # print the consumer set, exit
+#   test/bin/cross-consumer-eval                     # full active-consumer gate
+#   test/bin/cross-consumer-eval vps                 # parked manual subset
+#   test/bin/cross-consumer-eval --list              # print supported subsets, exit
 #
 # Environment:
 #   NIX_CONFIG_TREE          nix-config revision under test
 #                            (default: this checkout, from the script's location)
-#   VPS_CHECKOUT             vps checkout (default: ~/src/vps)
+#   VPS_CHECKOUT             vps checkout for an explicit vps run
+#                            (default: ~/src/vps)
 #   ANDORIA_CHECKOUT         Andoria checkout (default: ~/src/andoria)
 #   VULCAN_CHECKOUT          Vulcan checkout (default: ~/src/nixos)
 #   CONSUMER_EVAL_OFFLINE=1  add --offline to every eval and include the locked
@@ -50,7 +52,8 @@ vps_checkout=${VPS_CHECKOUT:-$HOME/src/vps}
 andoria_checkout=${ANDORIA_CHECKOUT:-$HOME/src/andoria}
 vulcan_checkout=${VULCAN_CHECKOUT:-$HOME/src/nixos}
 
-CONSUMERS=(shared-work vps andoria vulcan)
+ACTIVE_CONSUMERS=(shared-work andoria vulcan)
+SUPPORTED_CONSUMERS=(shared-work vps andoria vulcan)
 
 # ---- reporting ----------------------------------------------------------
 
@@ -58,7 +61,6 @@ failures=()
 ran=0
 evaluated=0
 skipped=0
-vps_locked_evaluated=0
 andoria_locked_evaluated=0
 vulcan_locked_evaluated=0
 
@@ -657,7 +659,6 @@ run_vps() {
         eval_target "vps [ovh-vps toplevel, locked]" \
             --locked-consumer --raw \
             "$vps_checkout#nixosConfigurations.ovh-vps.config.system.build.toplevel.drvPath"
-        vps_locked_evaluated=1
     fi
 }
 
@@ -706,24 +707,25 @@ run_vulcan() {
 # ---- argument parsing ---------------------------------------------------
 
 want=()
+saw_all=0
 while [[ $# -gt 0 ]]; do
     case $1 in
     --list)
-        printf '%s\n' "${CONSUMERS[@]}"
+        printf '%s\n' "${SUPPORTED_CONSUMERS[@]}"
         exit 0
         ;;
     -h | --help)
         sed -n '2,/^set -uo/p' "$0" | sed 's/^# \{0,1\}//; $d'
         exit 0
         ;;
-    all) want=("${CONSUMERS[@]}") ;;
+    all) saw_all=1 ;;
     -*)
         printf 'cross-consumer-eval: unknown option: %s\n' "$1" >&2
         exit 1
         ;;
     *)
         # shellcheck disable=SC2076  # literal membership test is intended
-        if [[ " ${CONSUMERS[*]} " =~ " $1 " ]]; then
+        if [[ " ${SUPPORTED_CONSUMERS[*]} " =~ " $1 " ]]; then
             want+=("$1")
         else
             printf 'cross-consumer-eval: unknown consumer: %s (try --list)\n' "$1" >&2
@@ -734,14 +736,20 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-[[ ${#want[@]} -gt 0 ]] || want=("${CONSUMERS[@]}")
+if [[ $saw_all -eq 1 && ${#want[@]} -gt 0 ]]; then
+    printf 'cross-consumer-eval: all cannot be combined with named consumers\n' >&2
+    exit 1
+fi
+if [[ $saw_all -eq 1 || ${#want[@]} -eq 0 ]]; then
+    want=("${ACTIVE_CONSUMERS[@]}")
+fi
 
 declare -A requested=()
 for consumer in "${want[@]}"; do
     requested[$consumer]=1
 done
 full_run=1
-for consumer in "${CONSUMERS[@]}"; do
+for consumer in "${ACTIVE_CONSUMERS[@]}"; do
     if [[ ${requested[$consumer]:-0} -ne 1 ]]; then
         full_run=0
         break
@@ -768,12 +776,9 @@ done
 
 # ---- summary ------------------------------------------------------------
 
-# A full run must evaluate every external consumer from its own current lock,
-# offline and without overrides. A named subset remains an explicit fast-lane
-# choice. Record omissions beside any consumer-specific failure.
-if [[ $full_run -eq 1 && $vps_locked_evaluated -eq 0 ]]; then
-    fail "a full run did not evaluate required consumer vps from its consumer lock offline ($skipped skipped); point VPS_CHECKOUT at a real checkout, or name a subset to acknowledge the narrower scope"
-fi
+# A full run must evaluate every active external consumer from its own current
+# lock, offline and without overrides. A named subset remains an explicit
+# fast-lane choice. Record omissions beside any consumer-specific failure.
 if [[ $full_run -eq 1 && $andoria_locked_evaluated -eq 0 ]]; then
     fail "a full run did not evaluate required consumer andoria from its consumer lock offline ($skipped skipped); point ANDORIA_CHECKOUT at a real checkout, or name a subset to acknowledge the narrower scope"
 fi

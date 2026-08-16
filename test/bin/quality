@@ -508,8 +508,8 @@ run_python_test() {
     fi
 }
 
-# Evaluate the vps and shared-work targets against this working tree. The helper
-# reports every selected consumer before failing; this expensive tier records its
+# Evaluate the active consumers against this working tree. The helper reports
+# every selected consumer before failing; this expensive tier records its
 # aggregate verdict. portable-eval owns the separate portable-flake contract.
 run_consumer_eval() {
     need nix consumer-eval || return

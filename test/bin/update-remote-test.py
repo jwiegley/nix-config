@@ -17,7 +17,6 @@ EXPECTED_COMMANDS = [
         "vulcan",
         "cd /etc/nixos && nix flake update --commit-lock-file && ./build switch",
     ),
-    ("vps", "cd /etc/nixos && nix flake update --commit-lock-file && ./build switch"),
     (
         "andoria-08",
         "cd /home/jwiegley/.config/home-manager && nix flake update --commit-lock-file "
@@ -31,7 +30,6 @@ EXPECTED_COMMANDS = [
 EXPECTED_JOBS = [
     "clio",
     "vulcan",
-    "vps",
     "shared-work-update",
     "shared-work-andoria-08",
     "shared-work-andoria-t2",

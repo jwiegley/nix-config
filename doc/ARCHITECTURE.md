@@ -52,12 +52,17 @@ External Home Manager and NixOS checkouts own their locks and activation. This
 repository exports implementation and modules; it does not overwrite another
 consumer's checkout or deployment state.
 
+VPS remains a supported external consumer but is parked outside the default
+cross-consumer evaluation and active rollout sets. Its explicit consumer
+evaluation and consumer-owned build driver remain available for deliberate
+future updates.
+
 ## Host registry and shared-home policy
 
 `config/hosts/registry.nix` is the data authority for host system, activation,
-login, the lean-server role, shared-work membership, rollout targets and daemon
-capacity, distributed-builder identity and client pools, and shell host/output
-routing. `config/host-options.nix` gives the host tables a typed module surface
+login, the lean-server role, shared-work membership, rollout targets, daemon and
+local-build capacity, distributed-builder identity and client pools, and shell
+host/output routing. `config/host-options.nix` gives the host tables a typed module surface
 and derives the capability flags consumed by modules. Darwin projects each
 builder's named SSH identity to its host-local key path and writes the resulting
 ordered pool to `/etc/nix/machines`; the registry does not own private key
@@ -98,7 +103,7 @@ need them for rollback.
 
 | Path | Owns | Must not own |
 | --- | --- | --- |
-| `config/hosts/registry.nix` | Host identity, capabilities, membership, rollout selection, daemon and builder capacity, builder pools, and routing data | Module or shell implementation, private SSH key material, or activation |
+| `config/hosts/registry.nix` | Host identity, capabilities, membership, rollout selection, daemon, local-build, and distributed-builder capacity, builder pools, and routing data | Module or shell implementation, private SSH key material, or activation |
 | `config/hosts/shell-routing.nix` | Build-time shell projection of registry routing data | Independent host identity policy or runtime Nix discovery |
 | `config/nix-trust.nix` | Shared binary-cache and client-signing trust data | Root-file installation or host activation |
 | `config/ai/catalog.nix` | Profiles, selectors, resources, validation | Client serialization or package builds |

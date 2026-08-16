@@ -170,6 +170,11 @@ its own NixOS configuration. It does not install the Andoria manual root leaf:
 the NixOS generation owns daemon policy, rollback, and service activation on
 VPS.
 
+VPS is currently parked. Default cross-consumer evaluation and `update-remote`
+do not contact or activate it. Its explicit
+`test/bin/cross-consumer-eval vps` lane and host-owned driver remain available
+for a deliberate future maintenance window.
+
 ### 2.5 What “authoritative” does and does not mean
 
 An authoritative checkout is not necessarily the only clone, the first clone,
@@ -355,7 +360,7 @@ reachability or deployment state.
 | Hera | `aarch64-darwin` | `~/src/nix` on Hera | `darwinConfigurations.hera`; nix-darwin plus Home Manager |
 | Clio | `aarch64-darwin` | `~/src/nix` on Clio | `darwinConfigurations.clio`; nix-darwin plus Home Manager |
 | Vulcan | `aarch64-linux` | `/etc/nixos` on Vulcan | Consumer-owned NixOS system importing shared modules |
-| VPS | `x86_64-linux` | `/etc/nixos` on VPS | Consumer-owned NixOS system importing shared modules |
+| VPS | `x86_64-linux` | `/etc/nixos` on VPS | Parked consumer-owned NixOS system; explicit manual maintenance only |
 | Shared work | `x86_64-linux` | shared `~/.config/home-manager` | One standalone `homeConfigurations.jwiegley` that must be activated separately on four hosts |
 
 The root flake contains generic Linux Home Manager outputs for evaluation and
@@ -767,11 +772,11 @@ After activation, verify the active `/run/current-system`, the generated
 daemon readiness, and the affected client or service. A successful switch alone
 does not establish those runtime results.
 
-### 10.2 Vulcan and VPS
+### 10.2 Vulcan and parked VPS
 
 Run lock updates as the regular user from the target's authoritative
-`/etc/nixos`, keeping `nix-config` and `nix-config-ai` paired. Build and switch
-through the consumer's driver:
+`/etc/nixos`, keeping `nix-config` and `nix-config-ai` paired. Vulcan builds and
+switches through the consumer's driver:
 
 ```sh
 (
@@ -782,6 +787,21 @@ through the consumer's driver:
   ./build switch
 )
 ```
+
+For a deliberate VPS maintenance window, keep both phases to one job and one
+core:
+
+```sh
+(
+  set -euo pipefail
+  cd /etc/nixos
+  nix flake update nix-config nix-config-ai
+  ./build build --max-jobs 1 --cores 1
+  ./build switch --max-jobs 1 --cores 1
+)
+```
+
+VPS is not part of the default rollout or required consumer gate.
 
 The driver coordinates work through `/etc/nixos/.nixos-build`, records a
 bounded root-only log, and releases its own lock on success, failure, or signal.

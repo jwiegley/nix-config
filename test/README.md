@@ -25,6 +25,9 @@ The ordinary gate remains bounded. Full integration, cross-consumer evaluation,
 native builds, and affected-host runtime acceptance belong at issue closeout or
 on the scheduled assurance cadence.
 
+The default cross-consumer gate covers active consumers. Parked VPS coverage is
+retained as an explicit named lane for deliberate maintenance windows.
+
 `check-manifest.nix` is the single supported-system roster for Nix checks. It
 classifies each declared check as behavioral or evaluation-only and marks the
 bounded `make test` subset. Flake evaluation rejects declarations that are

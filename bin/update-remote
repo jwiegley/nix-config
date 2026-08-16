@@ -24,8 +24,9 @@ run_remote_job clio clio \
     'cd ~/src/nix && ./bin/upgrade clio --host-only'
 run_remote_job vulcan vulcan \
     'cd /etc/nixos && nix flake update --commit-lock-file && ./build switch'
-run_remote_job vps vps \
-    'cd /etc/nixos && nix flake update --commit-lock-file && ./build switch'
+
+# VPS is parked: retain its explicit host-owned update path, but do not include
+# it in the active remote rollout.
 
 # Update the shared source once, then switch the explicit active rollout.
 # Dormant git-ai remains a known member but is not an activation target.

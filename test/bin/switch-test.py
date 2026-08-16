@@ -82,11 +82,14 @@ exit "$DRIVER_STATUS"
             )
 
     def test_vulcan_and_vps_delegate_to_host_build_driver(self):
-        for host in ("vulcan", "vps"):
+        for host, expected in (
+            ("vulcan", "\t1\tswitch\n"),
+            ("vps", "\t5\tswitch --max-jobs 1 --cores 1\n"),
+        ):
             with self.subTest(host=host):
                 result, driver_log, forbidden = self.run_nixos_switch(host, 0)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertTrue(driver_log.endswith("\t1\tswitch\n"), driver_log)
+                self.assertTrue(driver_log.endswith(expected), driver_log)
                 self.assertFalse(forbidden)
 
     def test_build_driver_lock_refusal_is_propagated(self):

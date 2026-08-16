@@ -7310,10 +7310,20 @@ exec "$REAL_GIT" "$@"
                 self.assertEqual(len(invocations), expected_count)
                 if invocations:
                     self.assertEqual(
-                        invocations[0][:5],
-                        [str(root), "--", "nix", "build", "--no-link"],
+                        invocations[0][:9],
+                        [
+                            str(root),
+                            "--",
+                            "nix",
+                            "build",
+                            "--max-jobs",
+                            "1",
+                            "--cores",
+                            "1",
+                            "--no-link",
+                        ],
                     )
-                    candidate, attribute = invocations[0][5].split("#", 1)
+                    candidate, attribute = invocations[0][9].split("#", 1)
                     self.assertEqual(
                         attribute,
                         "nixosConfigurations.ovh-vps.config.system.build.toplevel",
@@ -7326,6 +7336,10 @@ exec "$REAL_GIT" "$@"
                                 "--",
                                 "nixos-rebuild",
                                 "switch",
+                                "--max-jobs",
+                                "1",
+                                "--cores",
+                                "1",
                                 "--flake",
                                 f"{candidate}#ovh-vps",
                             ],

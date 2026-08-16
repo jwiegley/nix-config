@@ -924,6 +924,11 @@ if [[ $run_switch == true ]]; then
     fi
     case $switch_output in
     vulcan | ovh-vps)
+        nixos_limits=()
+        if build_limits=$(nix_local_build_limits_for_host "$switch_host"); then
+            read -r max_jobs cores <<<"$build_limits"
+            nixos_limits=(--max-jobs "$max_jobs" --cores "$cores")
+        fi
         build_driver="$config_dir/build"
         if [[ ! -x $build_driver ]]; then
             echo "update: NixOS build driver is missing or not executable: $build_driver" >&2
@@ -931,7 +936,7 @@ if [[ $run_switch == true ]]; then
         fi
         (
             cd "$config_dir"
-            ./build -- nix build --no-link \
+            ./build -- nix build "${nixos_limits[@]}" --no-link \
                 "$candidate_dir#nixosConfigurations.$switch_output.config.system.build.toplevel"
         )
         if ! live_repository_matches_baseline; then
@@ -940,7 +945,8 @@ if [[ $run_switch == true ]]; then
         fi
         (
             cd "$config_dir"
-            ./build -- nixos-rebuild switch --flake "$candidate_dir#$switch_output"
+            ./build -- nixos-rebuild switch "${nixos_limits[@]}" \
+                --flake "$candidate_dir#$switch_output"
         )
         ;;
     *)

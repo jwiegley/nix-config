@@ -357,7 +357,7 @@ activated it.
 | Hera | `~/src/nix` | `make switch`; use `make build` separately for build-only evidence |
 | Clio | `~/src/nix` on Clio | Fast-forward that checkout, then run `make switch` |
 | Vulcan | `/etc/nixos` on Vulcan | Update paired inputs, then run `./build build` and `./build switch` |
-| VPS | `/etc/nixos` on VPS | Update paired inputs, then run `./build build` and `./build switch` |
+| VPS | `/etc/nixos` on VPS | Parked/manual: update paired inputs, then run `./build build --max-jobs 1 --cores 1` and `./build switch --max-jobs 1 --cores 1` |
 | Active shared-work hosts | `~/.config/home-manager` shared by the four active hosts | Update the paired inputs once; realize and retain the closure, then activate it on every active host; dormant `git-ai` is not a rollout target |
 
 The paired external inputs are updated together:
@@ -369,6 +369,9 @@ nix flake update nix-config nix-config-ai
 Vulcan and VPS must use the consumer-local `./build` script. It owns the build
 lock; raw `nixos-rebuild switch` bypasses that protocol. The generic `switch`
 helper delegates its NixOS branch to this driver and propagates lock refusal.
+VPS is deliberately absent from `update-remote` and the default
+`cross-consumer-eval` gate; invoke `test/bin/cross-consumer-eval vps` and its
+host-owned driver explicitly when resuming maintenance.
 
 On Darwin, `make switch` runs `lock-local` before nix-darwin builds and activates
 the selected generation. A preceding `make build` does not re-lock local inputs
@@ -407,7 +410,7 @@ new generation and the affected executable or service passes a runtime check.
 | `update [OPTIONS]` | Run the transactional lock and source-catalog updater | `--target` is repeatable; `--all-inputs`, `--version`, `--dry-run`, `--pull`, `--commit`, `--switch`, `--push`, and `--brew` control the transaction. Without `--dry-run`, validated changes are written back. |
 | `update-and-pull` | Find repositories under broad home-directory roots and run a PATH-provided `update` in parallel | Follows symlinks and delegates mutation semantics to an external command; use only as an attended personal maintenance operation. |
 | `update-overlay [TARGETS...]` | Inspect or update catalog-managed sources | Direct mode updates owning catalog records; some targets delegate to `bin/update`. Prefer the transaction for coordinated work. |
-| `update-remote` | Run identified Clio and Linux consumer update jobs | Source-tree-only legacy command; excluded from the installed `nix-scripts` PATH surface. Jobs run sequentially with an explicit completion barrier, the shared-work consumer flake is checked after its lock update and before any switch, NixOS uses each checkout's build driver, and dormant `git-ai` is excluded. It does not realize once, prove closure residency, or retain rollback roots, so it is not fleet proof. |
+| `update-remote` | Run identified Clio and active Linux consumer update jobs | Source-tree-only legacy command; excluded from the installed `nix-scripts` PATH surface. Jobs run sequentially with an explicit completion barrier, the shared-work consumer flake is checked after its lock update and before any switch, NixOS uses each checkout's build driver, and parked VPS plus dormant `git-ai` are excluded. It does not realize once, prove closure residency, or retain rollback roots, so it is not fleet proof. |
 | `upgrade [HOST] [--host-only\|--projects-only]` | Combine a host operation with project maintenance | `--help` prints usage. Hera performs the full update transaction, travel/Homebrew tasks, and store signing; Clio builds and switches; Linux delegates to `switch`, whose NixOS branch uses the host-owned build driver. |
 | `upgrade-all` | Run broad repository, synchronization, host, and project maintenance | Source-tree-only legacy umbrella command; excluded from the installed `nix-scripts` PATH surface. Its named prerequisites are awaited and dormant `git-ai` is not contacted; a failed Hera upgrade aborts before `pushme` and `update-remote`; `update-remote` must complete before diagnostic project maintenance. It does not supply the shared-work closure and rollback proofs required of a whole-fleet transaction. |
 | `upgrade-projects` | Reconfigure a fixed list of projects and update selected language dependencies | Sources project `.envrc` files, may rewrite Cargo locks, and deletes pip and uv caches. Each invocation writes mode-0600 logs in a unique mode-0700 run below `${UPGRADE_LOG_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/upgrade-projects}`; `UPGRADE_LOG_DIR` must be absolute, must not end in `.` or `..`, and a relative `XDG_STATE_HOME` is ignored. Retention keeps the newest ten completed or abandoned runs, preserves locked active runs, and considers an unlocked incomplete run abandoned after one hour. |
@@ -440,6 +443,7 @@ evaluate Nix. It is not a standalone command.
 | `upgrade` | Run `update`, then invoke `upgrade-tasks` only after the update transaction succeeds. The ordering is preserved under parallel or inherited Make flags. |
 | `changes` | Run an external `changes` command across configured and fixed repositories. Configured projects run in checked directories and aggregate failures across the full list; fixed repositories also require a successful `cd` before invoking `changes`. |
 | `copy` | Copy the current profile closure and per-project direnv build inputs to each host in `REMOTES` via `nix copy`. Project commands run in checked directories, and profile/project failures are aggregated across all hosts before the target exits nonzero. |
+| `vps-push` | Manually stage this repository's generic x86_64 Home Manager closure on the parked VPS; it does not build or activate the consumer-owned VPS NixOS system. A later VPS switch must use one job and one core. |
 | `check` | Run read-only verification of every Nix store path with trust verification disabled. |
 | `repair-store` | Explicitly verify and repair every Nix store path with trust verification disabled. This may mutate store paths. |
 | `sizes` | Report the filesystem containing `/nix`. |

@@ -66,7 +66,7 @@ The complete ownership and data-flow contract is maintained in
 | Andoria-08, Andoria-T2, Delphi-3BD4, GPU Server | x86_64 Linux | `~/.config/home-manager` on the shared-work hosts | Active shared-work standalone Home Manager rollout |
 | Git AI | x86_64 Linux | `~/.config/home-manager` on Git AI | Dormant shared-work member; excluded from the active rollout |
 | Vulcan | aarch64 NixOS | `/etc/nixos` on Vulcan | External NixOS consumer plus the shared Home Manager module |
-| VPS | x86_64 NixOS | `/etc/nixos` on VPS | External NixOS consumer plus the shared Home Manager module |
+| VPS | x86_64 NixOS | `/etc/nixos` on VPS | Parked external consumer; retained for explicit manual updates |
 
 An external consumer pins the root input and its `dir=config/ai` input at the
 same repository revision. The consumer owns both lock entries and must update
@@ -119,8 +119,10 @@ make update
 
 `make update` is a repository transaction, not a whole-fleet deployment. External
 consumers must adopt the published revision in their own locks and activate it
-from their authoritative checkouts. Vulcan and VPS must use their local `./build`
-driver so that the consumer build lock remains authoritative.
+from their authoritative checkouts. Vulcan must use its local `./build` driver.
+The parked VPS is excluded from default cross-consumer evaluation and
+`update-remote` activation; its same driver remains the supported path when a
+manual update is deliberately resumed.
 
 ## Repository layout
 

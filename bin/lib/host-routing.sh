@@ -25,6 +25,13 @@ nix_flake_output_for_host() {
     esac
 }
 
+nix_local_build_limits_for_host() {
+    case $(normalize_nix_host "$1") in
+    vps) printf '%s %s\n' 1 1 ;;
+    *) return 1 ;;
+    esac
+}
+
 nix_shared_work_members() {
     printf '%s\n' andoria-08
     printf '%s\n' andoria-t2
