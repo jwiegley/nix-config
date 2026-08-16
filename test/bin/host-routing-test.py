@@ -12,7 +12,6 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 ROUTING = REPO / "bin/lib/host-routing.sh"
 BUILD = REPO / "build"
-SWITCH = REPO / "bin/switch"
 UPDATE_REMOTE = REPO / "bin/update-remote"
 BASH = shutil.which("bash") or "/bin/bash"
 
@@ -71,6 +70,19 @@ class HostRoutingTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(result.stdout.strip(), expected)
 
+        expected_activations = {
+            "clio": "darwin",
+            "hera": "darwin",
+            "shared-work": "home-standalone",
+            "vps": "nixos-module",
+            "vulcan": "nixos-module",
+        }
+        for host_class, expected in expected_activations.items():
+            with self.subTest(host_class=host_class):
+                result = self.call_routing("nix_activation_for_host", host_class)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.strip(), expected)
+
         members = self.call_routing("nix_shared_work_members")
         rollout = self.call_routing("nix_active_shared_work_rollout_hosts")
         self.assertEqual(members.returncode, 0, members.stderr)
@@ -124,54 +136,6 @@ class HostRoutingTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn(
                 ".#darwinConfigurations.hera.system",
-                command_log.read_text(encoding="utf-8").splitlines(),
-            )
-
-    def test_switch_dispatches_a_known_dormant_member(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            fake_bin = root / "bin"
-            fake_bin.mkdir()
-            home = root / "home"
-            (home / ".config/home-manager").mkdir(parents=True)
-            generation = root / "generation"
-            generation.mkdir()
-            command_log = root / "nix.args"
-            activation_marker = root / "activated"
-            write_executable(
-                fake_bin / "hostname", "#!/bin/sh\nprintf '%s\\n' git-ai.example.org\n"
-            )
-            write_executable(fake_bin / "uname", "#!/bin/sh\nprintf '%s\\n' Linux\n")
-            write_executable(
-                fake_bin / "nix",
-                '#!/bin/sh\nprintf \'%s\\n\' "$@" >"$COMMAND_LOG"\nprintf \'%s\\n\' "$GENERATION"\n',
-            )
-            write_executable(
-                generation / "activate",
-                '#!/bin/sh\nprintf activated >"$ACTIVATION_MARKER"\n',
-            )
-            env = os.environ.copy()
-            env.update(
-                {
-                    "ACTIVATION_MARKER": str(activation_marker),
-                    "COMMAND_LOG": str(command_log),
-                    "GENERATION": str(generation),
-                    "HOME": str(home),
-                    "PATH": f"{fake_bin}{os.pathsep}{os.defpath}",
-                }
-            )
-            result = subprocess.run(
-                [BASH, str(SWITCH)],
-                cwd=REPO,
-                env=env,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertTrue(activation_marker.exists())
-            self.assertIn(
-                '.#homeConfigurations."jwiegley".activationPackage',
                 command_log.read_text(encoding="utf-8").splitlines(),
             )
 

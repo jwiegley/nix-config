@@ -25,6 +25,17 @@ nix_flake_output_for_host() {
     esac
 }
 
+nix_activation_for_host() {
+    case $(normalize_nix_host "$1") in
+    clio) printf '%s\n' darwin ;;
+    hera) printf '%s\n' darwin ;;
+    shared-work) printf '%s\n' home-standalone ;;
+    vps) printf '%s\n' nixos-module ;;
+    vulcan) printf '%s\n' nixos-module ;;
+    *) return 1 ;;
+    esac
+}
+
 nix_local_build_limits_for_host() {
     case $(normalize_nix_host "$1") in
     vps) printf '%s %s\n' 1 1 ;;

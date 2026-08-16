@@ -14806,15 +14806,17 @@ Live Hera Pi reports both omlx/Qwen3.6-27B-oQ6e-mtp and router/sol as thinking=n
 ]
 #+end_src
 
-* DEFER [#C] Repair shared-work switch wrapper host classification
+* DONE [#C] Repair shared-work switch wrapper host classification
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-xdhc
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-15 Sat 17:00]
-:MODIFIED: [2026-08-15 Sat 17:00]
+:MODIFIED: [2026-08-16 Sun 12:26]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-16 Sun 12:26]
+:CLOSE_REASON: Projected the registry-owned activation kind into the generated shell routing library and made bin/switch dispatch from that declared route. Shared-work now always uses its Home Manager activation package even when /etc/nixos exists; Vulcan and VPS remain on the NixOS driver, including VPS one-job/one-core limits. Verification: architecture review CLEAR; 11 focused routing/switch tests passed; nix-scripts package build passed its renderer byte comparison; full make test passed 21 Python suites in 581s with zero failures or timeouts plus all seven behavioral checks.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

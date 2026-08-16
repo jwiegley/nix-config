@@ -19,10 +19,14 @@ host=$(normalize_nix_host "$raw_host") || {
     echo "switch: unknown host: $raw_host" >&2
     exit 2
 }
+activation=$(nix_activation_for_host "$host") || {
+    echo "switch: no activation route for host: $host" >&2
+    exit 2
+}
 
-if [[ $(uname -s) == Darwin ]]; then
+if [[ $activation == darwin ]]; then
     exec u switch
-elif [[ -d $system_config_dir ]]; then
+elif [[ $activation == nixos-module && -d $system_config_dir ]]; then
     build_driver=$system_config_dir/build
     if [[ ! -x $build_driver ]]; then
         echo "switch: NixOS build driver is missing or not executable: $build_driver" >&2
@@ -35,7 +39,7 @@ elif [[ -d $system_config_dir ]]; then
         nixos_limits=(--max-jobs "$max_jobs" --cores "$cores")
     fi
     exec ./build switch "${nixos_limits[@]}"
-elif [[ -d $HOME/.config/home-manager ]]; then
+elif [[ $activation == home-standalone && -d $HOME/.config/home-manager ]]; then
     # Build and run the activation package from this flake's pinned Home Manager.
     output=$(nix_flake_output_for_host "$host") || {
         echo "switch: no flake output for host: $host" >&2

@@ -32,6 +32,16 @@ let
       route = registry.routing.${class};
     in
     "    ${lib.escapeShellArg class}) printf '%s\\n' ${lib.escapeShellArg route.flakeOutput} ;;";
+  renderActivationArm =
+    class:
+    let
+      resolved = registry.resolveFor {
+        hostname = class;
+        homeClass = class;
+      };
+    in
+    assert resolved.registryRow != null;
+    "    ${lib.escapeShellArg class}) printf '%s\\n' ${lib.escapeShellArg resolved.registryRow.activation} ;;";
   renderLocalBuildLimitArm =
     class:
     let
@@ -62,6 +72,13 @@ assert builtins.all (route: builtins.all validName (route.exactNames ++ route.co
   nix_flake_output_for_host() {
       case $(normalize_nix_host "$1") in
   ${lib.concatMapStringsSep "\n" renderOutputArm routingNames}
+      *) return 1 ;;
+      esac
+  }
+
+  nix_activation_for_host() {
+      case $(normalize_nix_host "$1") in
+  ${lib.concatMapStringsSep "\n" renderActivationArm routingNames}
       *) return 1 ;;
       esac
   }
