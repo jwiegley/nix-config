@@ -1833,7 +1833,7 @@ Standard cross-consumer evaluations override root/config-ai with local paths; lo
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-16 Sun 17:32]
-:MODIFIED: [2026-08-16 Sun 18:37]
+:MODIFIED: [2026-08-16 Sun 20:54]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1852,6 +1852,13 @@ The owner requires Git-AI, Cozempic, Pi Mem, and Pi Artifacts to remain fully di
     "author": "johnw",
     "text": "Implementation checkpoint: flake/ai.nix no longer accepts or selects Git-AI in aiPackagesFor, removing it from the portable aggregate, dev shell, and build check while retaining the dormant input/overlay for explicit development. Current configuration already had Git-AI HM enable/hooks false, Pi Mem excluded from activeOrder, and Cozempic/Pi Artifacts absent. New contracts cover all managed home package selections and Git-AI hook/Trace2 state, every Claude managed settings rendering, the portable package policy, and Pi Gallery inactive/removed membership. Focused compatibility, catalog, host-behavior, and Pi Gallery checks passed; portable all-system no-build passed; derivation inspection found 61 aggregate/dev-shell direct inputs and zero Git-AI; canonical make test passed 21/21 Python suites plus seven behavioral checks. An initial make test attempt hit its 900s aggregate budget after 16 passing suites and no failures; the five unreached suites passed explicitly, then the warmed canonical rerun passed in 424s. Hera nonactivating system build passed at /nix/store/v0yzj70fp8gsl20ayg3d5j5zj46pqaf9-darwin-system-26.11.15abb8c, with Obr 0.2.22+7 and no Git-AI derivation in the build plan. Activation/publication pending.",
     "created_at": "2026-08-17T01:37:39Z"
+  },
+  {
+    "id": 435,
+    "issue_id": "nix-7qla",
+    "author": "johnw",
+    "text": "Wiggum checkpoint: Hera, Vulcan, and all four shared-work hosts are built, activated, and verified on the final published configuration. Clio remains the sole rollout gate. Three bounded reachability waves (direct, declared-endpoint plus Vulcan-routed audit, and a 21-attempt ten-minute watch of 10.6.0.2) all failed before an SSH banner; Clio ran no command and received no mutation. Per the repeated-gate stop rule, do not retry until reachability demonstrably changes. Pending after that change: Clio preflight, exact build/switch/postchecks, then issue closure and final PLAN publication.",
+    "created_at": "2026-08-17T03:54:01Z"
   }
 ]
 #+end_src
@@ -3516,7 +3523,7 @@ GUI helpers and commands launched through Agent Deck are attributed to a stable,
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-15 Sat 15:03]
-:MODIFIED: [2026-08-15 Sat 17:05]
+:MODIFIED: [2026-08-16 Sun 20:54]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3541,6 +3548,20 @@ Root and strict active-consumer tests pass; today’s Obr tip is realized; signe
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 436,
+    "issue_id": "nix-eazx",
+    "author": "johnw",
+    "text": "Wiggum checkpoint: Hera, Vulcan, and all four shared-work hosts are built, activated, and verified on the final published configuration. Clio remains the sole rollout gate. Three bounded reachability waves (direct, declared-endpoint plus Vulcan-routed audit, and a 21-attempt ten-minute watch of 10.6.0.2) all failed before an SSH banner; Clio ran no command and received no mutation. Per the repeated-gate stop rule, do not retry until reachability demonstrably changes. Pending after that change: Clio preflight, exact build/switch/postchecks, then issue closure and final PLAN publication.",
+    "created_at": "2026-08-17T03:54:08Z"
   }
 ]
 #+end_src
@@ -7362,15 +7383,17 @@ The runtime cleanup worktree adds an Unreleased entry, but Agent Deck CONTRIBUTI
 ]
 #+end_src
 
-* DOING [#B] Finish id_rsync session gathering across fleet
+* DONE [#B] Finish id_rsync session gathering across fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-rdpi
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-14 Fri 19:07]
-:MODIFIED: [2026-08-14 Fri 21:55]
+:MODIFIED: [2026-08-16 Sun 21:01]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-16 Sun 21:01]
+:CLOSE_REASON: Completed: confined id_rsync/session-gather readiness and post-activation fleet acceptance are proven; no new archive run was needed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -7395,6 +7418,13 @@ Install the dedicated Vulcan id_rsync public authorization at each owning seam. 
     "author": "johnw",
     "text": "Authorized Hera activation completed. Live nix-darwin AuthorizedKeysCommand materialization contains exactly one id_rsync authorization with the expected SHA256:oO6GcyEo+c7vRfDPuUAaX1N7ycuhS+pzh9YK5cFbYlM fingerprint, read-only rrsync forced command, source restriction, port-forwarding exception, and sole permitopen=andoria-08:22 destination. Effective sshd Match policy reports local-only TCP forwarding, no StreamLocal forwarding, and no listen forwarding. Fleet post-activation Vulcan reachability remains unrun and this issue stays open.",
     "created_at": "2026-08-15T04:55:24Z"
+  },
+  {
+    "id": 437,
+    "issue_id": "nix-rdpi",
+    "author": "johnw",
+    "text": "Closeout reconciliation: the supposed remaining Vulcan acceptance had already completed in the authoritative Vulcan tracker. It records three successful runs, including the timer path, with 27 attempted / 8 travelling-Clio skips / 0 failures and successful Hera, VPS, Andoria, and local rows. Fresh read-only checks today found /etc/nixos and the Vulcan sessions checkout clean, session-gather.service Result=success with ExecMainStatus=0, the timer enabled/active/waiting, all job-private SSH users/identity/routing and existing host-key entries correct, the 27-row source map and no-delete/no-source-write gatherer invariants intact, and configured-source rsync --list-only passing for Hera and Andoria. VPS was not contacted today because it is now parked; its required acceptance is the already-recorded successful run. Clio remains transport-offline as the accepted travelling-host skip. The full service was not restarted, so no session archive or remote source was mutated.",
+    "created_at": "2026-08-17T04:01:16Z"
   }
 ]
 #+end_src
