@@ -7390,7 +7390,7 @@ The runtime cleanup worktree adds an Unreleased entry, but Agent Deck CONTRIBUTI
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-14 Fri 19:07]
-:MODIFIED: [2026-08-16 Sun 21:01]
+:MODIFIED: [2026-08-16 Sun 21:06]
 :CREATED_BY: johnw
 :FINISHED: [2026-08-16 Sun 21:01]
 :CLOSE_REASON: Completed: confined id_rsync/session-gather readiness and post-activation fleet acceptance are proven; no new archive run was needed.
@@ -7425,6 +7425,20 @@ Install the dedicated Vulcan id_rsync public authorization at each owning seam. 
     "author": "johnw",
     "text": "Closeout reconciliation: the supposed remaining Vulcan acceptance had already completed in the authoritative Vulcan tracker. It records three successful runs, including the timer path, with 27 attempted / 8 travelling-Clio skips / 0 failures and successful Hera, VPS, Andoria, and local rows. Fresh read-only checks today found /etc/nixos and the Vulcan sessions checkout clean, session-gather.service Result=success with ExecMainStatus=0, the timer enabled/active/waiting, all job-private SSH users/identity/routing and existing host-key entries correct, the 27-row source map and no-delete/no-source-write gatherer invariants intact, and configured-source rsync --list-only passing for Hera and Andoria. VPS was not contacted today because it is now parked; its required acceptance is the already-recorded successful run. Clio remains transport-offline as the accepted travelling-host skip. The full service was not restarted, so no session archive or remote source was mutated.",
     "created_at": "2026-08-17T04:01:16Z"
+  },
+  {
+    "id": 438,
+    "issue_id": "nix-rdpi",
+    "author": "johnw",
+    "text": "Audit traceability addendum: the authoritative cross-repository acceptance is Vulcan repository issue nixos-ep6, closed by revision 01e9861e0aec (). The current published Vulcan PLAN retains that closeout record. This pointer identifies the external evidence cited in the preceding close comment; no acceptance criterion or runtime state changed.",
+    "created_at": "2026-08-17T04:06:13Z"
+  },
+  {
+    "id": 439,
+    "issue_id": "nix-rdpi",
+    "author": "johnw",
+    "text": "Correction to comment 438: the exact close subject for revision 01e9861e0aec is \"docs(plan): close nixos-ep6, session gathering has converged\". The revision and issue identifier in comment 438 were already correct.\n",
+    "created_at": "2026-08-17T04:06:23Z"
   }
 ]
 #+end_src
