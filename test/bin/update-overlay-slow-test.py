@@ -565,12 +565,66 @@ error: Cannot build '/nix/store/package.drv'.
 
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
-            self.assertIsNone(computer._compute_fod_hash("pi-lens", "npmDepsHash"))
+            with self.assertRaisesRegex(CandidateRejected, "pi-lens npmDepsHash"):
+                computer._compute_fod_hash("pi-lens", "npmDepsHash")
 
         diagnostic = stderr.getvalue()
         self.assertIn("FileNotFoundError", diagnostic)
         self.assertIn("dist/clients/lsp/interactive-install.js", diagnostic)
         self.assertNotIn("these 3 derivations will be built", diagnostic)
+
+    def test_fod_hash_rejection_surfaces_failed_patch_hunk(self):
+        computer = HashComputer(Path("/repo"))
+        computer._run_package_build = mock.Mock(
+            return_value=SimpleNamespace(
+                returncode=1,
+                stdout="",
+                stderr="""this derivation will be built:
+  /nix/store/package.drv
+building '/nix/store/package.drv'...
+ERROR unrelated diagnostic one
+ERROR unrelated diagnostic two
+ERROR unrelated diagnostic three
+ERROR unrelated diagnostic four
+Hunk #3 FAILED at 83.
+1 out of 4 hunks FAILED -- saving rejects to file fork-context.ts.rej
+error: Cannot build '/nix/store/package.drv'.
+""",
+            )
+        )
+
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            with self.assertRaisesRegex(CandidateRejected, "Hunk #3 FAILED"):
+                computer._compute_fod_hash("pi-subagents", "npmDepsHash")
+
+        diagnostic = stderr.getvalue()
+        self.assertIn("Hunk #3 FAILED at 83", diagnostic)
+        self.assertNotIn("this derivation will be built", diagnostic)
+
+    def test_fod_hash_non_candidate_failures_remain_hard(self):
+        computer = HashComputer(Path("/repo"))
+        cases = (
+            SimpleNamespace(returncode=0, stdout="", stderr="no mismatch"),
+            SimpleNamespace(
+                returncode=-15,
+                stdout=f"specified: {MODULE['DUMMY_SRI_HASH']}\ngot: sha256-buffered\n",
+                stderr="terminated",
+            ),
+            subprocess.TimeoutExpired(["nix", "build"], 600),
+            OSError("nix unavailable"),
+        )
+        for result in cases:
+            with self.subTest(result=type(result).__name__):
+                computer._run_package_build = (
+                    mock.Mock(side_effect=result)
+                    if isinstance(result, Exception)
+                    else mock.Mock(return_value=result)
+                )
+                with contextlib.redirect_stderr(io.StringIO()):
+                    self.assertIsNone(
+                        computer._compute_fod_hash("example", "vendorHash")
+                    )
 
     def test_package_build_distinguishes_provisional_failure_from_runner_error(self):
         computer = HashComputer(Path("/repo"))
@@ -4810,6 +4864,72 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             self.assertEqual(status, 1)
             self.assertIn("changed unselected data", stderr.getvalue())
             self.assertEqual(path.read_text(), before)
+
+    def test_prepare_target_treats_signaled_hash_build_as_hard_and_rolls_back(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "shared.json"
+            before = '{"version":"1.0.0"}\n'
+            path.write_text(before)
+            target = {
+                "kind": "npm-release",
+                "executor": "update",
+                "_path": path,
+                "_record": {"update": {"kind": "npm-release"}},
+            }
+            computer = HashComputer(Path("/repo"))
+            computer._run_package_build = mock.Mock(
+                return_value=SimpleNamespace(
+                    returncode=-15,
+                    stdout=(
+                        f"specified: {MODULE['DUMMY_SRI_HASH']}\n"
+                        "got: sha256-buffered\n"
+                    ),
+                    stderr="terminated",
+                )
+            )
+
+            def interrupted_target(
+                _name,
+                _target,
+                _args,
+                _npm_client,
+                hash_computer,
+                transaction,
+            ):
+                transaction.watch(path)
+                path.write_text('{"version":"2.0.0"}\n')
+                return (
+                    "updated"
+                    if hash_computer._compute_fod_hash("selected", "npmDepsHash")
+                    else "failed"
+                )
+
+            globals_ = MODULE["main"].__globals__
+            replacements = {
+                "HashComputer": lambda _root: computer,
+                "load_source_catalog": lambda _root, **_kwargs: {
+                    "selected": target
+                },
+                "require_detached_linked_worktree": lambda _root: None,
+                "snapshot_catalog_record_isolation": lambda *_args: {},
+                "update_npm_lock_target": interrupted_target,
+            }
+            with (
+                mock.patch.dict(globals_, replacements),
+                mock.patch.object(
+                    sys,
+                    "argv",
+                    [str(SCRIPT), "--prepare-target", "selected"],
+                ),
+                mock.patch.dict(os.environ, {"UPDATE_AGENTS_CANDIDATE": "1"}),
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                status = MODULE["main"]()
+
+            self.assertEqual(status, 1)
+            self.assertEqual(path.read_text(), before)
+            computer._run_package_build.assert_called_once_with("selected", "pkg")
 
 
     def test_prime_agent_lock_normalizer_adds_only_registry_metadata(self):

@@ -110,13 +110,19 @@ def _bounded_actionable_error(*output: object, fallback: str) -> str:
             if line and line not in lines:
                 lines.append(line)
 
-    meaningful = [
+    patch_failures = [
+        line for line in lines if re.search(r"\bHunk #\d+ FAILED\b", line)
+    ]
+    meaningful = patch_failures + [
         line
         for line in lines
-        if re.search(r"\bfatal:", line, re.IGNORECASE)
-        or re.search(r"\bERROR\b", line)
-        or re.search(r"\bUnable\b", line, re.IGNORECASE)
-        or re.search(r"\b[A-Za-z]+(?:Error|Exception):", line)
+        if line not in patch_failures
+        and (
+            re.search(r"\bfatal:", line, re.IGNORECASE)
+            or re.search(r"\bERROR\b", line)
+            or re.search(r"\bUnable\b", line, re.IGNORECASE)
+            or re.search(r"\b[A-Za-z]+(?:Error|Exception):", line)
+        )
     ]
     secondary = [
         line
@@ -856,7 +862,11 @@ in
         try:
             result = self._run_package_build(package_name, build_mode)
             output = result.stdout + result.stderr
-            value = self._parse_dummy_hash_mismatch(output)
+            value = (
+                self._parse_dummy_hash_mismatch(output)
+                if result.returncode > 0
+                else None
+            )
             if value is None:
                 detail = _bounded_actionable_error(
                     result.stderr,
@@ -864,7 +874,13 @@ in
                     fallback=f"{package_name} build produced no hash mismatch",
                 )
                 print(f"  Error computing {hash_type}: {detail}", file=sys.stderr)
+                if result.returncode > 0:
+                    raise CandidateRejected(
+                        f"{package_name} {hash_type} candidate rejected: {detail}"
+                    )
             return value
+        except CandidateRejected:
+            raise
         except subprocess.TimeoutExpired:
             print(f"  Timeout computing {hash_type}", file=sys.stderr)
         except Exception as e:

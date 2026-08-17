@@ -18,9 +18,21 @@ assert(
 	"PI_SUBAGENTS_ROOT must name the packaged pi-subagents root",
 );
 
-const { createForkContextResolver, sanitizePersistedFork } = await import(
-	join(packageRoot, "src/shared/fork-context.ts")
-);
+const {
+	alignForkedSessionCwd,
+	createForkContextResolver,
+	sanitizePersistedFork,
+} = await import(join(packageRoot, "src/shared/fork-context.ts"));
+const [packageMajor, packageMinor] = (
+	JSON.parse(
+		realFs.readFileSync(join(packageRoot, "package.json"), "utf-8"),
+	) as {
+		version: string;
+	}
+).version
+	.split(".")
+	.map(Number);
+const expectsForkCwdAlignment = packageMajor > 0 || packageMinor >= 50;
 const { parseSessionTokens } = await import(
 	join(packageRoot, "src/shared/session-tokens.ts")
 );
@@ -192,6 +204,10 @@ if (rssChildLane === "tokens" || rssChildLane === "fork") {
 			parentFile,
 			'{"type":"session","version":3,"id":"parent"}\n',
 		);
+		const childCwd = join(dir, "child-cwd");
+		const childCwdLink = join(dir, "child-cwd-link");
+		realFs.mkdirSync(childCwd);
+		realFs.symlinkSync(childCwd, childCwdLink);
 		const warmDir = join(dir, "warm");
 		realFs.mkdirSync(warmDir);
 		const warmFile = join(warmDir, "session.jsonl");
@@ -247,6 +263,10 @@ if (rssChildLane === "tokens" || rssChildLane === "fork") {
 				);
 				expect(resolver.sessionFileForIndex()).toBe(branchFile);
 				expect(resolver.thinkingOverrideForIndex()).toBe("off");
+				if (expectsForkCwdAlignment) {
+					expect(typeof alignForkedSessionCwd).toBe("function");
+					alignForkedSessionCwd(branchFile, childCwdLink);
+				}
 			}
 			const rssDeltaBytes = Math.max(0, maxResidentBytes() - before);
 			expect(rssDeltaBytes).toBeLessThan(maxRssDelta);
@@ -257,6 +277,10 @@ if (rssChildLane === "tokens" || rssChildLane === "fork") {
 					const head = Buffer.alloc(128 * 1024);
 					const bytes = realFs.readSync(headFd, head, 0, head.length, 0);
 					const text = head.subarray(0, bytes).toString("utf-8");
+					const header = JSON.parse(text.split("\n", 1)[0]);
+					if (expectsForkCwdAlignment) {
+						expect(header.cwd).toBe(realFs.realpathSync.native(childCwd));
+					}
 					expect(text).not.toContain("thinkingSignature");
 					expect(text).toContain(payload.slice(0, 1024));
 				} finally {
@@ -375,6 +399,44 @@ if (rssChildLane === "tokens" || rssChildLane === "fork") {
 					type: "thinking_level_change",
 					parentId: "label",
 					thinkingLevel: "off",
+				});
+				expect(tempFiles(dir, branchFile)).toEqual([]);
+			} finally {
+				realFs.rmSync(dir, { recursive: true, force: true });
+			}
+		});
+
+		test("aligns cwd atomically without sanitizing signed thinking", () => {
+			if (!expectsForkCwdAlignment) return;
+			const dir = realFs.mkdtempSync(join(tmpdir(), "pi-subagents-cwd-"));
+			try {
+				const branchFile = join(dir, "branch.jsonl");
+				const childCwd = join(dir, "child-cwd");
+				realFs.mkdirSync(childCwd);
+				realFs.writeFileSync(
+					branchFile,
+					encodeJsonl([
+						{ type: "session", version: 3, id: "fork", cwd: "/parent" },
+						{
+							type: "message",
+							id: "assistant",
+							message: {
+								role: "assistant",
+								provider: "anthropic",
+								content: [{ type: "thinking", thinkingSignature: "signed" }],
+							},
+						},
+					]),
+				);
+
+				expect(typeof alignForkedSessionCwd).toBe("function");
+				alignForkedSessionCwd(branchFile, childCwd);
+				const entries = decodeJsonl(branchFile);
+				expect(entries[0].cwd).toBe(realFs.realpathSync.native(childCwd));
+				expect(entries[1]).toMatchObject({
+					message: {
+						content: [{ type: "thinking", thinkingSignature: "signed" }],
+					},
 				});
 				expect(tempFiles(dir, branchFile)).toEqual([]);
 			} finally {
@@ -556,6 +618,10 @@ if (rssChildLane === "tokens" || rssChildLane === "fork") {
 				join(packageRoot, "src/shared/fork-context.ts"),
 				"utf-8",
 			);
+			const extensionSource = realFs.readFileSync(
+				join(packageRoot, "src/extension/index.ts"),
+				"utf-8",
+			);
 			const tokenSource = realFs.readFileSync(
 				join(packageRoot, "src/shared/session-tokens.ts"),
 				"utf-8",
@@ -579,6 +645,14 @@ if (rssChildLane === "tokens" || rssChildLane === "fork") {
 			for (const forbidden of ["readFileSync", '.split("\\n")']) {
 				expect(tokenSource).not.toContain(forbidden);
 			}
+			expect(extensionSource).toContain(
+				"restoreSlashFinalSnapshots(ctx.sessionManager.getRecentActiveEntries({",
+			);
+			expect(extensionSource).toContain("customType: SLASH_RESULT_TYPE");
+			expect(extensionSource).toContain("limit: 256");
+			expect(extensionSource).not.toContain(
+				"restoreSlashFinalSnapshots(ctx.sessionManager.getEntries())",
+			);
 			expect(slashSource).not.toContain("_rewriteFile");
 			expect(slashSource).toContain("sessionManager.flush()");
 			expect(slashSource).toContain(

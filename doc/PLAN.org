@@ -2409,6 +2409,22 @@ The full session suite fails TestUpdateStatus_CLIvsTUIParity_Error with statedb 
 
 Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension using the existing source/package/catalog installation pattern. Verify the real package and managed Pi projection without activating hosts.
 
+* DOING [#B] Restore full make update after Pi Subagents and Agent Deck upstream drift
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-9guj
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-17 Mon 15:14]
+:MODIFIED: [2026-08-17 Mon 15:35]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+make update must complete end to end. Initial blockers: pi-subagents 0.50.0 compatibility patch hunks fail in src/extension/index.ts and src/shared/fork-context.ts; Agent Deck 1.13.0 vendorHash discovery aborts before a hash is returned. Repair each root cause at its owning package/update seam, retain behavioral contracts, run focused builds/tests, then rerun make update through signed commit, Hera activation, publication, push, and clean remote readback. Bootstrap exit condition: after pi-subagents advances to 0.50.0, collapse the temporary dual-patch selector to one current patch and require cwd-alignment coverage unconditionally before the full update run.
+
 * DONE [#A] Restore Clio oMLX proxy allowlist                       :network:regression:security:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -14264,6 +14280,38 @@ Taskworker completion-record readers collapse invalid profile/path, unreadable/s
     "author": "johnw",
     "text": "2026-08-13 independent current-byte audit CLEAR on taskworker.go c594546a and transition_daemon.go 2015fc5a. Typed corruption/no-follow reads, strict identity decode, ack rejection of read errors/pending claims, and daemon duplicate-terminal suppression on infrastructure errors are present. Selected corrupt/symlink/FIFO/directory fail-closed tests passed offline.",
     "created_at": "2026-08-14T01:21:10Z"
+  }
+]
+#+end_src
+
+* TODO [#B] Port Agent Deck lifecycle patches to 1.13.0
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-v1uk
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-17 Mon 15:25]
+:MODIFIED: [2026-08-17 Mon 15:25]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Agent Deck v1.13.0 is provisionally held back because patchPhase fails before vendorHash discovery: agent-deck-transition-daemon-churn.patch has 6 failed hunks and agent-deck-runtime-lifecycle.patch has extensive upstream drift. Semantically rebase all lifecycle protections onto 1.13.0; do not bypass patches or accept a raw vendorHash. Acceptance: all three patches apply with fuzz=0, runtime lifecycle/race and installed-binary checks pass on supported systems, the package updates through the atomic catalog transaction, and no existing lifecycle/state-ownership guarantee is weakened.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-v1uk",
+    "depends_on_id": "nix-9guj",
+    "type": "discovered-from",
+    "created_at": "2026-08-17T22:25:50.120213Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
