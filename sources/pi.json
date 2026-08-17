@@ -304,15 +304,15 @@
     },
     "pi-lens": {
       "hashes": {
-        "npmDepsHash": "sha256-6k/LetYDtSbvcfls0VFVi9McAZZOpofz0oUUMrRwDbY="
+        "npmDepsHash": "sha256-kl+jPxYld5BBFlaITA/+MFjlrt6K8jAXJjFnB1N7/4o="
       },
       "source": {
         "args": {
-          "hash": "sha256-MR69DINvHCKULUh0QBZ2WQ9glW5+F7dryyM7vg5WycM=",
-          "url": "https://registry.npmjs.org/pi-lens/-/pi-lens-3.8.73.tgz"
+          "hash": "sha256-k76SQZrFSTqgZNC7x5aMi2sFjU2q0dqrjK3DxJYi/Tk=",
+          "url": "https://registry.npmjs.org/pi-lens/-/pi-lens-4.0.1.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-lens/-/pi-lens-3.8.73.tgz"
+        "url": "https://registry.npmjs.org/pi-lens/-/pi-lens-4.0.1.tgz"
       },
       "update": {
         "artifacts": [
@@ -322,7 +322,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "pi-lens"
       },
-      "version": "3.8.73"
+      "version": "4.0.1"
     },
     "pi-loop": {
       "source": {

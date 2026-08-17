@@ -1261,6 +1261,25 @@ runCommand "pi-gallery-check"
       || fail "Lens still enables an auto-installer"
     grep -F 'disabled by Nix policy' ${roots.lens}/dist/clients/installer/index.js >/dev/null \
       || fail "Lens installer policy patch is missing"
+    [ "$(grep -Fc 'if (process.env.PI_LENS_DISABLE_TOOL_INSTALL === "1") {' \
+      ${roots.lens}/dist/index.js)" -eq 3 ] \
+      || fail "Lens bundled tool-install gates differ"
+    for lens_install_gate in \
+      ${roots.lens}/dist/clients/project-trust.js \
+      ${roots.lens}/dist/index.js
+    do
+      grep -F 'if (process.env.PI_LENS_DISABLE_TOOL_INSTALL === "1") return false;' \
+        "$lens_install_gate" >/dev/null \
+        || fail "Lens install authorization does not enforce the Nix policy"
+    done
+    PI_LENS_DISABLE_TOOL_INSTALL=1 node --input-type=module <<'JS'
+    const projectTrust = await import(
+      "file://${roots.lens}/dist/clients/project-trust.js"
+    );
+    if (projectTrust.assertInstallAllowed("Nix policy test") !== false) {
+      throw new Error("Lens install authorization ignored the Nix policy");
+    }
+    JS
     ! grep -R -E '"npx(\.cmd)?"' ${roots.lens}/dist >/dev/null \
       || fail "Lens still contains a live npx fallback"
     grep -F 'setStatus("pi-lens-lsp", activeIds.length > 0 ? theme.bold("LSP") : theme.fg("dim", "LSP"));' \
@@ -1352,6 +1371,12 @@ runCommand "pi-gallery-check"
     [ -f ${gallery}/timing.ts ]
     [ -f ${gallery}/loader.ts ]
     [ -f ${gallery}/projection.json ]
+    grep -Fq 'process.env.PI_LENS_DISABLE_LSP_INSTALL = "1";' ${gallery}/runtime.ts \
+      || fail "gallery runtime does not disable Lens LSP installation"
+    grep -Fq 'process.env.PI_LENS_DISABLE_TOOL_INSTALL = "1";' ${gallery}/runtime.ts \
+      || fail "gallery runtime does not disable Lens tool installation"
+    ! grep -Fq 'PI_LENS_AUTO_INSTALL' ${gallery}/runtime.ts \
+      || fail "gallery runtime retains the obsolete Lens installation toggle"
     [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq ${toString (builtins.length manifest.order)} ]
     [ "$(jq '[.packages[].skills // [] | length] | add' ${gallery}/projection.json)" -eq ${toString expectedSkillCount} ]
     [ "$(jq '[.packages[].prompts // [] | length] | add' ${gallery}/projection.json)" -eq ${toString expectedPromptCount} ]

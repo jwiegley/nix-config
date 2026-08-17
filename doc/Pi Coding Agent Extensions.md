@@ -30,7 +30,7 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `pi-hashline-edit-pro` | 0.17.5 | Hash-anchored reads and replacements | `read`, `replace` |
 | `pi-smart-fetch` | 0.3.17 | Browser-fingerprinted readable web fetching | `web_fetch`, `batch_web_fetch` |
 | `pi-smart-web-search` | 0.4.0 | Ranked batch web discovery | `web_search` |
-| `pi-lens` | 3.8.73 | LSP, diagnostics, and structural code intelligence | `lens_diagnostics`, `symbol_search` |
+| `pi-lens` | 4.0.1 | LSP, diagnostics, and structural code intelligence | `lens_diagnostics`, `symbol_search` |
 | `@dietrichgebert/ponytail` | 4.8.4 | Minimal implementation discipline | `/ponytail` |
 | `pi-agent-browser-native` | 0.2.72 | Native Pi interface to `agent-browser` | `agent_browser` |
 | `pi-btw` | 0.4.1 | Side conversations without disturbing the main turn | `/btw` |
@@ -264,7 +264,7 @@ Pi Smart Web Search owns the `web_search` tool. It accepts up to six focused que
 
 ### Lens
 
-**Version:** 3.8.73 · **Links:** [Pi Packages](https://pi.dev/packages/pi-lens) · [Home](https://github.com/apmantza/pi-lens#readme) · [GitHub](https://github.com/apmantza/pi-lens)
+**Version:** 4.0.1 · **Links:** [Pi Packages](https://pi.dev/packages/pi-lens) · [Home](https://github.com/apmantza/pi-lens#readme) · [GitHub](https://github.com/apmantza/pi-lens)
 
 Pi Lens combines language-server diagnostics, formatters, linters, structural scanners, complexity checks, symbol indexing, and edit-read guards. Its indexed tools provide a narrow discovery funnel—search for likely modules, inspect an outline, then read the exact symbol—before resorting to broad file reads.
 

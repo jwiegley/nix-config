@@ -544,6 +544,34 @@ got: sha256-requested
         self.assertEqual(parse(unrelated + requested), "sha256-requested")
         self.assertIsNone(parse(requested + requested.replace("requested", "second")))
 
+    def test_fod_hash_failure_surfaces_the_underlying_builder_exception(self):
+        computer = HashComputer(Path("/repo"))
+        computer._run_package_build = mock.Mock(
+            return_value=SimpleNamespace(
+                returncode=1,
+                stdout="",
+                stderr="""these 3 derivations will be built:
+  /nix/store/source.drv
+  /nix/store/deps.drv
+  /nix/store/package.drv
+error: Cannot build '/nix/store/source.drv'.
+Reason: builder failed with exit code 1.
+Last 1 log lines:
+  > FileNotFoundError: /build/pi-lens/dist/clients/lsp/interactive-install.js
+error: Cannot build '/nix/store/package.drv'.
+""",
+            )
+        )
+
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            self.assertIsNone(computer._compute_fod_hash("pi-lens", "npmDepsHash"))
+
+        diagnostic = stderr.getvalue()
+        self.assertIn("FileNotFoundError", diagnostic)
+        self.assertIn("dist/clients/lsp/interactive-install.js", diagnostic)
+        self.assertNotIn("these 3 derivations will be built", diagnostic)
+
     def test_package_build_distinguishes_provisional_failure_from_runner_error(self):
         computer = HashComputer(Path("/repo"))
         computer._run_package_build = mock.Mock(

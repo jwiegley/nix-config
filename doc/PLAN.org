@@ -6820,6 +6820,45 @@ Concurrent creation/open of one canonical profile database is deterministic: tra
 ]
 #+end_src
 
+* DONE [#B] Repair Pi Lens npmDepsHash update failure
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-qij5
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-17 Mon 10:05]
+:MODIFIED: [2026-08-17 Mon 10:41]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-17 Mon 10:41]
+:CLOSE_REASON: Updated Pi Lens to 4.0.1, repaired its retired interactive-installer layout, enforced all current runtime-install gates, and exposed nested builder exceptions. The exact catalog transaction, package build, Gallery behavioral check, full make test, formatting, and pre-commit hook pass; independent Nix and security reviews are clear. Lens remains packaged/projected but inactive, with no activation or live-session change.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+make update aborts in the automatic catalog updater at catalog/pi-lens because npmDepsHash computation tries to build pi-lens-release-source, pi-lens-4.0.1-npm-deps, and pi-lens-4.0.1 and returns an error. Diagnose and repair the narrow shared update/package seam without re-enabling or uninstalling Pi Lens and without touching live Pi sessions. Acceptance: deterministic regression coverage kills the failure, the focused hash/package path passes, and the complete update transaction can pass this stage.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 448,
+    "issue_id": "nix-qij5",
+    "author": "johnw",
+    "text": "Root cause: Pi Lens 4.0.1 removed dist/clients/lsp/interactive-install.js, but the release-source normalizer opened it unconditionally before the dummy npm hash mismatch could be emitted. Repair keeps the legacy rewrite when present, otherwise requires the exact native LSP gate in both module and bundle, requires all three bundled tool-install gates, and uses PI_LENS_DISABLE_TOOL_INSTALL=1. The updater diagnostic now prefers nested Python Error/Exception lines over Nix scheduling noise. Exact isolated prepare-target advanced 3.8.73 to 4.0.1 and computed npmDepsHash; replay reports catalog/pi-lens up-to-date. Verification so far: updater Python suite 103/103; full make test passed (21 Python suites plus 7 baseline behavioral checks); final ./build pkg pi-lens passed; final aarch64-darwin pi-gallery behavioral build passed; nix fmt and diff check passed. Lens remains packaged/projected but inactive; no live session or activation was touched.",
+    "created_at": "2026-08-17T17:31:07Z"
+  },
+  {
+    "id": 449,
+    "issue_id": "nix-qij5",
+    "author": "johnw",
+    "text": "Final delta additionally patches the shared assertInstallAllowed function in both module and bundle so every project-scoped installer honors PI_LENS_DISABLE_TOOL_INSTALL=1. A behavioral module invocation and bundled-copy assertion pass. Final ./build pkg pi-lens, aarch64-darwin pi-gallery check, and pre-commit hook pass from these exact bytes.",
+    "created_at": "2026-08-17T17:41:11Z"
+  }
+]
+#+end_src
+
 * DONE [#C] Remove dead SSH localBind helper
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

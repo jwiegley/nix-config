@@ -116,6 +116,7 @@ def _bounded_actionable_error(*output: object, fallback: str) -> str:
         if re.search(r"\bfatal:", line, re.IGNORECASE)
         or re.search(r"\bERROR\b", line)
         or re.search(r"\bUnable\b", line, re.IGNORECASE)
+        or re.search(r"\b[A-Za-z]+(?:Error|Exception):", line)
     ]
     secondary = [
         line

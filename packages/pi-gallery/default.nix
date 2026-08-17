@@ -268,14 +268,38 @@ let
           installer.write_text(text[:start] + replacement + text[end:])
 
           interactive = root / "dist/clients/lsp/interactive-install.js"
-          text = interactive.read_text()
-          start = text.index("async function installTool(config) {")
-          end = text.index("/**\n * Prompt user for installation", start)
-          replacement = """async function installTool(_config) {
-              return false;
-          }
-          """
-          interactive.write_text(text[:start] + replacement + text[end:])
+          if interactive.exists():
+              text = interactive.read_text()
+              start = text.index("async function installTool(config) {")
+              end = text.index("/**\n * Prompt user for installation", start)
+              replacement = """async function installTool(_config) {
+                  return false;
+              }
+              """
+              interactive.write_text(text[:start] + replacement + text[end:])
+          else:
+              native_lsp_gate = 'return process.env.PI_LENS_DISABLE_LSP_INSTALL !== "1";'
+              for relative in ["dist/clients/lsp/index.js", "dist/index.js"]:
+                  if (root / relative).read_text().count(native_lsp_gate) != 1:
+                      raise SystemExit(f"pi-lens lacks the LSP install gate in {relative}")
+
+          native_tool_gate = 'if (process.env.PI_LENS_DISABLE_TOOL_INSTALL === "1") {'
+          if (root / "dist/index.js").read_text().count(native_tool_gate) != 3:
+              raise SystemExit("pi-lens lacks the bundled tool-install gates")
+
+          for relative, signature, indent in [
+              ("dist/clients/project-trust.js", "export function assertInstallAllowed(context) {", "    "),
+              ("dist/index.js", "function assertInstallAllowed(context) {", "  "),
+          ]:
+              target = root / relative
+              text = target.read_text()
+              if text.count(signature) != 1:
+                  raise SystemExit(f"unexpected pi-lens install authorization gate in {relative}")
+              replacement = (
+                  f'{signature}\n{indent}if (process.env.PI_LENS_DISABLE_TOOL_INSTALL === "1") '
+                  "return false;"
+              )
+              target.write_text(text.replace(signature, replacement))
 
           policy = root / "dist/clients/tool-policy.js"
           text = policy.read_text()
@@ -1307,7 +1331,7 @@ let
           return async function nixGallery(pi: unknown) {
             process.env.PONYTAIL_HIDE_STATUS = "1";
             process.env.PI_LENS_DISABLE_LSP_INSTALL = "1";
-            process.env.PI_LENS_AUTO_INSTALL = "0";
+            process.env.PI_LENS_DISABLE_TOOL_INSTALL = "1";
 
             const toolOwnersFile = process.env.PI_GALLERY_TOOL_OWNERS_FILE;
             const toolOwners: Record<string, string[]> = {};
