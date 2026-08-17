@@ -72,6 +72,16 @@ let
         "plasma-fractal"
         "plasma-wiki"
       ];
+      gitAiDrvPaths = map (package: package.drvPath) (
+        builtins.attrValues inputs.git-ai.packages.${system}
+      );
+      lacksGitAiReference = package: !(builtins.elem package.drvPath gitAiDrvPaths);
+      activePackageSelections =
+        actual.lib.aiPackagesFor pkgs
+        ++ actual.packages.${system}.default.paths
+        ++ (actual.devShells.${system}.default.buildInputs or [ ])
+        ++ (actual.devShells.${system}.default.nativeBuildInputs or [ ])
+        ++ actual.checks.${system}.build.paths;
       declaredChecks = actual.checks.${system} // {
         # The wrapper below adds this evaluation-only gate after checking the
         # implementation. A placeholder lets every guarded output validate the
@@ -125,9 +135,8 @@ let
         actual.lib.patchAgentPackage pkgs "unhandled" sentinel == sentinel
       ) "patchAgentPackage no longer passes unknown agents through on ${system}")
       (lib.assertMsg (builtins.isList (actual.lib.aiPackagesFor pkgs)) "aiPackagesFor no longer returns a package list on ${system}")
-      (lib.assertMsg (builtins.all (package: !(lib.hasPrefix "git-ai" (lib.getName package))) (
-        actual.lib.aiPackagesFor pkgs
-      )) "portable AI package policy re-enabled dormant Git-AI on ${system}")
+      (lib.assertMsg (gitAiDrvPaths != [ ]) "portable Git-AI reference oracle is empty on ${system}")
+      (lib.assertMsg (builtins.all lacksGitAiReference activePackageSelections) "portable package policy, aggregate, dev shell, or build check references dormant Git-AI on ${system}")
       (lib.assertMsg (
         actual.packages.${system}.default.name == "ai-nix-toolchain"
       ) "portable aggregate name changed on ${system}")
@@ -171,9 +180,6 @@ let
       lib.hasInfix "pkgsFor = forAllSystems mkPkgs;" implementationSource
       && !(lib.hasInfix "pkgs = mkPkgs system;" implementationSource)
     ) "portable outputs reopened the primary nixpkgs package set")
-    (lib.assertMsg (
-      !(lib.hasInfix "git-ai.packages" implementationSource)
-    ) "portable outputs directly select dormant Git-AI")
     (lib.assertMsg (hasAll (sortedNames actual.packages) contract.systems) "portable packages lost a required system")
     (lib.assertMsg (hasAll (sortedNames actual.apps) contract.systems) "portable apps lost a required system")
     (lib.assertMsg (hasAll (sortedNames actual.checks) contract.systems) "portable checks lost a required system")

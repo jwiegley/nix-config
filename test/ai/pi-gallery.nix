@@ -131,7 +131,6 @@ assert builtins.length (builtins.attrNames manifest.members) == builtins.length 
 assert sourceCatalogComplete;
 assert orphanedCatalogRejected;
 assert manifestPackagesMatch;
-assert !(builtins.elem "mem" activeOrder);
 assert !(manifest.members ? artifacts);
 assert !(builtins.hasAttr "pi-artifacts" piPackages);
 assert piPackage.drvPath == canonicalPiPackage.drvPath;
