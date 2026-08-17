@@ -2092,6 +2092,9 @@ runCommand "pi-gallery-check"
           "usage",
           "workflows"
         ] - [.data.commands[].name] | length) == 0
+        and ([.data.commands[].name
+          | select(. == "parallel-context-build" or . == "parallel-handoff-plan")]
+          | length) == 0
         and ([.data.commands[].name | select(startswith("sidebar"))] | length) == 0
       )
     ' "$smoke/output.log" >/dev/null || {

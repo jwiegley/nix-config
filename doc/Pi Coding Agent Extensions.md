@@ -8,7 +8,7 @@ tags:
   - ai-agents
   - developer-tools
 created: 2026-07-27
-updated: 2026-08-15
+updated: 2026-08-17
 pi-version: 0.83.0
 ---
 
@@ -49,7 +49,7 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `pi-caveman` | 1.0.7 | Compressed response style | `/caveman` |
 | `pi-rtk-optimizer` | 0.9.0 | RTK command rewriting and output compaction | `/rtk` |
 | `pi-cymbal` | 0.5.2 | Indexed, symbol-oriented code navigation | `cymbal_*` |
-| `pi-subagents` | 0.42.1 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
+| `pi-subagents` | 0.50.0 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
 | `@quintinshaw/pi-dynamic-workflows` | 3.5.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
 | `pi-goal-x` | 0.19.0 | Durable goals and Sisyphus continuation | `/goals`, `get_goal` |
 | `pi-cache-optimizer` | 2.8.0 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
@@ -318,11 +318,11 @@ Pi Goal X persists explicit objectives, lifecycle state, usage, and ordered Sisy
 
 ### Subagents
 
-**Version:** 0.42.1 · **Links:** [Pi Packages](https://pi.dev/packages/pi-subagents) · [Home](https://github.com/nicobailon/pi-subagents#readme) · [GitHub](https://github.com/nicobailon/pi-subagents)
+**Version:** 0.50.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-subagents) · [Home](https://github.com/nicobailon/pi-subagents#readme) · [GitHub](https://github.com/nicobailon/pi-subagents)
 
 Pi Subagents delegates focused work to child Pi sessions without replacing the parent as orchestrator. It supports single, parallel, chained, forked-context, foreground, and background runs, with fleet status and supervisor communication.
 
-Eight builtin roles—context-builder, delegate, oracle, planner, researcher, reviewer, scout, and worker—ship with the extension; `advisor` remains an alias for `oracle`. The Nix-managed baseline adds twenty-five user definitions without collisions, accounting for thirty-three roles before mutable package, user, or project definitions are considered. Live discovery may therefore report a larger total without changing Nix ownership.
+Six builtin roles—delegate, oracle, researcher, reviewer, scout, and worker—ship with the extension; `advisor` remains an alias for `oracle`. The Nix-managed baseline adds twenty-five user definitions without collisions, accounting for thirty-one roles before mutable package, user, or project definitions are considered. Live discovery may therefore report a larger total without changing Nix ownership.
 
 **Basic usage.** Ask naturally for `reviewer`, `oracle`, `scout`, or `worker`, or use `/run` for a single child. Use packaged prompt shortcuts such as `/parallel-review` and `/review-loop`, or call `subagent` with `workflowScript` for coordinated multi-agent work. Use `/subagents-doctor` to check setup and `/subagents-fleet` for active work. The watchdog remains opt-in.
 
