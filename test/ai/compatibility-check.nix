@@ -125,6 +125,9 @@ let
         actual.lib.patchAgentPackage pkgs "unhandled" sentinel == sentinel
       ) "patchAgentPackage no longer passes unknown agents through on ${system}")
       (lib.assertMsg (builtins.isList (actual.lib.aiPackagesFor pkgs)) "aiPackagesFor no longer returns a package list on ${system}")
+      (lib.assertMsg (builtins.all (package: !(lib.hasPrefix "git-ai" (lib.getName package))) (
+        actual.lib.aiPackagesFor pkgs
+      )) "portable AI package policy re-enabled dormant Git-AI on ${system}")
       (lib.assertMsg (
         actual.packages.${system}.default.name == "ai-nix-toolchain"
       ) "portable aggregate name changed on ${system}")
@@ -168,6 +171,9 @@ let
       lib.hasInfix "pkgsFor = forAllSystems mkPkgs;" implementationSource
       && !(lib.hasInfix "pkgs = mkPkgs system;" implementationSource)
     ) "portable outputs reopened the primary nixpkgs package set")
+    (lib.assertMsg (
+      !(lib.hasInfix "git-ai.packages" implementationSource)
+    ) "portable outputs directly select dormant Git-AI")
     (lib.assertMsg (hasAll (sortedNames actual.packages) contract.systems) "portable packages lost a required system")
     (lib.assertMsg (hasAll (sortedNames actual.apps) contract.systems) "portable apps lost a required system")
     (lib.assertMsg (hasAll (sortedNames actual.checks) contract.systems) "portable checks lost a required system")

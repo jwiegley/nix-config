@@ -1826,6 +1826,36 @@ Standard cross-consumer evaluations override root/config-ai with local paths; lo
 ]
 #+end_src
 
+* DOING [#B] Keep disabled AI tools out of active configurations
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-7qla
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-16 Sun 17:32]
+:MODIFIED: [2026-08-16 Sun 18:37]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The owner requires Git-AI, Cozempic, Pi Mem, and Pi Artifacts to remain fully disabled from active configurations. Git-AI must not be selected by the portable aggregate or development shell when its integration flag is false. Preserve dormant Git-AI source/development access and the packaged Pi Mem projection for future re-enablement, but prove neither is installed/loaded by active host profiles; preserve the already-complete removal of Cozempic and Pi Artifacts. Acceptance: deterministic configuration tests prove all four absences, full repository gates pass, signed revisions are pushed, and the resulting configuration is rebuilt and activated on Hera, Clio, Vulcan, and the four active shared-work hosts; VPS remains parked.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 434,
+    "issue_id": "nix-7qla",
+    "author": "johnw",
+    "text": "Implementation checkpoint: flake/ai.nix no longer accepts or selects Git-AI in aiPackagesFor, removing it from the portable aggregate, dev shell, and build check while retaining the dormant input/overlay for explicit development. Current configuration already had Git-AI HM enable/hooks false, Pi Mem excluded from activeOrder, and Cozempic/Pi Artifacts absent. New contracts cover all managed home package selections and Git-AI hook/Trace2 state, every Claude managed settings rendering, the portable package policy, and Pi Gallery inactive/removed membership. Focused compatibility, catalog, host-behavior, and Pi Gallery checks passed; portable all-system no-build passed; derivation inspection found 61 aggregate/dev-shell direct inputs and zero Git-AI; canonical make test passed 21/21 Python suites plus seven behavioral checks. An initial make test attempt hit its 900s aggregate budget after 16 passing suites and no failures; the five unreached suites passed explicitly, then the warmed canonical rerun passed in 424s. Hera nonactivating system build passed at /nix/store/v0yzj70fp8gsl20ayg3d5j5zj46pqaf9-darwin-system-26.11.15abb8c, with Obr 0.2.22+7 and no Git-AI derivation in the build plan. Activation/publication pending.",
+    "created_at": "2026-08-17T01:37:39Z"
+  }
+]
+#+end_src
+
 * DONE [#B] Reject symlinked profile-sidecar fallback ancestors and unsafe temp fallback
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -4467,16 +4497,18 @@ bin/publish declares exactly one authoritative REMOTE but still loops over the q
 ]
 #+end_src
 
-* DOING [#B] Remove deprecated stdenv platform aliases
+* DONE [#B] Remove deprecated stdenv platform aliases
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-hbdj
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-14 Fri 10:08]
-:MODIFIED: [2026-08-16 Sun 15:39]
+:MODIFIED: [2026-08-16 Sun 17:29]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
+:FINISHED: [2026-08-16 Sun 17:29]
+:CLOSE_REASON: All maintained root and Andoria Nix sources now contain zero stdenv.isDarwin/isLinux references. Root fixes and the signed Andoria consumer predicate/paired-lock adoption are published; fresh warnings-fatal Hera and locked x86_64 Andoria evaluations passed, full root gates passed, and the exact shared Home Manager generation was activated successfully on all four active shared-work hosts with no new service failures.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -4515,6 +4547,13 @@ Linux Home Manager evaluation emits repeated nixpkgs deprecation warnings becaus
     "author": "johnw",
     "text": "Resumed after later source growth exposed two remaining uses: root packages/source-project-apps.nix and the Andoria consumer. The root use now reads pkgs.stdenv.hostPlatform.isDarwin; tracked root Nix source has zero deprecated alias hits. Fresh offline evaluations passed for x86_64-linux Home Manager (/nix/store/zbfgcxyq4sldspd05s2bd88y6pa98i3w-home-manager-generation.drv) and Hera Darwin (/nix/store/sky5fc69rvljcgwy5vgqnsgw76xs0cfh-darwin-system-26.11.15abb8c.drv) with no stdenv alias warning; Linux emitted only the separate pre-existing builtins.derivation context warning. Full make test passed: 21 Python suites and seven root behavioral checks. The prepared signed Andoria patch remains applicable but must be replayed onto current authoritative history in an isolated clone before closure.",
     "created_at": "2026-08-16T22:39:42Z"
+  },
+  {
+    "id": 433,
+    "issue_id": "nix-hbdj",
+    "author": "johnw",
+    "text": "Andoria publication completed as signed range 9beeefc..37a580c on the existing public base; authoritative NFS checkout is exact and clean. No VPS action, daemon repair, or restart was required.",
+    "created_at": "2026-08-17T00:29:34Z"
   }
 ]
 #+end_src
@@ -7178,15 +7217,17 @@ Delphi's effective Nix trusted-key set differs from andoria-t2 and gpu-server by
 ]
 #+end_src
 
-* DOING [#B] Advance rust-overlay past deprecated platform aliases
+* DONE [#B] Advance rust-overlay past deprecated platform aliases
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-r9p5
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-16 Sun 15:53]
-:MODIFIED: [2026-08-16 Sun 16:27]
+:MODIFIED: [2026-08-16 Sun 17:29]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-16 Sun 17:29]
+:CLOSE_REASON: Canonical rust-overlay is published at b211eade in root, portable source metadata, and both lock projections; Git-AI now follows that single authority while Obr retains its independent overlay. Maintained Darwin and Linux evaluations are warning-free. The Darwin stable.latest toolchain and Git-AI 1.6.21 builds passed; the exact shared x86 candidate realizes qdrant 1.18.2. Portable all-systems evaluation, lock coherence, full make test, hooks, signed publication, and Andoria locked adoption all passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -7220,6 +7261,13 @@ After all maintained stdenv alias uses were removed, warning tracing identifies 
     "author": "johnw",
     "text": "Canonical rust-overlay advanced through the supported single-target updater from 6ef009b to b211eade (2026-08-16). Both lock projections and sources/ai.json agree; Git-AI and Obr overlay nodes are byte-unchanged. Fresh no-eval-cache Linux and Hera evaluations emit no deprecated stdenv alias warnings. The Darwin stable.latest toolchain build passes; x86_64-linux Qdrant evaluates to /nix/store/phh4h8v62bp13sqhjxx539xfghy177nh-qdrant-1.18.2.drv with Rust 1.95.0 selected. Its real remote build was stopped by the already-tracked Andoria trusted-signature boundary before compilation, with no daemon change attempted. Portable all-system no-build and full make test pass (21 Python suites plus 7 behavioral checks). No activation.",
     "created_at": "2026-08-16T23:27:37Z"
+  },
+  {
+    "id": 432,
+    "issue_id": "nix-r9p5",
+    "author": "johnw",
+    "text": "The final Andoria lock is published at 37a580c and a fresh warnings-fatal locked x86_64 Home Manager evaluation passed. The active shared candidate reports qdrant 1.18.2. A separate optional standalone x86 Git-AI rebuild encountered an upstream GNU mirror 404 before Git-AI compilation; it is not part of the maintained shared package set and does not weaken the successful Darwin build or consumer gates.",
+    "created_at": "2026-08-17T00:29:11Z"
   }
 ]
 #+end_src

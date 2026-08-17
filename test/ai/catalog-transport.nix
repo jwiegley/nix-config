@@ -1332,6 +1332,12 @@ pkgs.runCommand "ai-catalog-transport" { } ''
         end
       )
     ' ${entry.rendered.files."${entry.profile.root}/nix-managed-settings.json".source} >/dev/null
+    if ${pkgs.gnugrep}/bin/grep -qi 'cozempic' ${
+      entry.rendered.files."${entry.profile.root}/nix-managed-settings.json".source
+    }; then
+      echo "Claude managed settings reintroduced Cozempic" >&2
+      exit 1
+    fi
   '') claudeRenderings}
 
   ${lib.concatMapStringsSep "\n" (entry: ''

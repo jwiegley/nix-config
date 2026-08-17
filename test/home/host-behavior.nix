@@ -260,6 +260,8 @@ let
   allHomes = desktopHomes ++ nonDesktopHomes;
   hasSelectedPackage = name: packages: builtins.elem name (map lib.getName packages);
   hasPackage = name: config: hasSelectedPackage name config.home.packages;
+  hasPackagePrefix =
+    prefix: config: builtins.any (lib.hasPrefix prefix) (map lib.getName config.home.packages);
   heraGitAll = lib.findFirst (
     package: lib.getName package == "git-all"
   ) null desktopHomesByHost.hera.home.packages;
@@ -484,6 +486,9 @@ assert !classOverridesHostname.johnw.host.isHera;
 assert !classOverridesHostname.johnw.host.isDarwinWorkstation;
 assert !classOverridesHostname.johnw.profile.heavy;
 assert builtins.all (
+  home: !(home.programs.git-ai.enable or false) && !(home.programs.git-ai.installHooks or false)
+) desktopHomes;
+assert builtins.all (
   host: (registry.capabilitiesFor { hostname = host; }).isSharedWork
 ) registry.sharedWork.members;
 assert builtins.elem "git-ai" registry.sharedWork.members;
@@ -558,6 +563,14 @@ assert builtins.all (
 ) allHomes;
 assert builtins.all (hasPackage "unisessions") allHomes;
 assert builtins.all (config: !(hasPackage "cass" config) && !(hasPackage "cm" config)) allHomes;
+assert builtins.all (
+  config: !(hasPackagePrefix "git-ai" config) && !(hasPackagePrefix "cozempic" config)
+) allHomes;
+assert builtins.all (
+  config:
+  (config.home.sessionVariables.GIT_AI_INSTALL_DEV_HOOKS or null) == "0"
+  && !(config.programs.git.settings ? trace2)
+) allHomes;
 assert builtins.all (config: !(hasPackage "watchman" config)) allHomes;
 assert !(hasPackage "agdaWithPackages" sharedWork);
 assert hasPackage "agdaWithPackages" personalLinux;

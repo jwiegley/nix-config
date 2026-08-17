@@ -1,7 +1,6 @@
 inputs@{
   nixpkgs,
   llm-agents,
-  git-ai,
   ...
 }:
 let
@@ -188,14 +187,12 @@ let
   aiPackagesFor =
     pkgs:
     let
-      system = pkgs.stdenv.hostPlatform.system;
       inherit (pkgs) lib;
       opt = optPkg pkgs;
       optMany = names: lib.concatMap opt names;
       agent = optAgent pkgs;
       appleSilicon = pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.isAarch64;
       supportsGradio6 = aiPackagePolicy.supportsGradio6 pkgs.python313Packages;
-      gitAiPackages = git-ai.packages.${system} or { };
     in
     [
       (lib.hiPrio (pythonAiEnv pkgs))
@@ -205,7 +202,6 @@ let
       pkgs.qdrant
       pkgs.uv
     ]
-    ++ lib.optionals (gitAiPackages ? minimal) [ gitAiPackages.minimal ]
     ++ agent "claude-code"
     ++ agent "ccusage"
     ++ agent "codex"
