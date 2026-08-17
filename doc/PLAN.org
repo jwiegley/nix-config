@@ -1833,7 +1833,7 @@ Standard cross-consumer evaluations override root/config-ai with local paths; lo
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-16 Sun 17:32]
-:MODIFIED: [2026-08-16 Sun 20:54]
+:MODIFIED: [2026-08-16 Sun 21:11]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1859,6 +1859,13 @@ The owner requires Git-AI, Cozempic, Pi Mem, and Pi Artifacts to remain fully di
     "author": "johnw",
     "text": "Wiggum checkpoint: Hera, Vulcan, and all four shared-work hosts are built, activated, and verified on the final published configuration. Clio remains the sole rollout gate. Three bounded reachability waves (direct, declared-endpoint plus Vulcan-routed audit, and a 21-attempt ten-minute watch of 10.6.0.2) all failed before an SSH banner; Clio ran no command and received no mutation. Per the repeated-gate stop rule, do not retry until reachability demonstrably changes. Pending after that change: Clio preflight, exact build/switch/postchecks, then issue closure and final PLAN publication.",
     "created_at": "2026-08-17T03:54:01Z"
+  },
+  {
+    "id": 440,
+    "issue_id": "nix-7qla",
+    "author": "johnw",
+    "text": "Second Wiggum checkpoint: a fresh field-targeted runtime audit passed on Hera, Vulcan, and andoria-08, andoria-t2, delphi-3bd4, and gpu-server. Every host reports Obr 0.2.22+7; Git-AI is absent from active profile bins and the effective Trace2 target is absent; every active generated Claude settings leaf is Cozempic-free; ordinary and timed Pi Gallery loaders contain exactly 24 active members on Hera and 21 on Linux with neither Pi Mem nor Pi Artifacts; each full projection contains 26 packages with Pi Mem exactly once and Pi Artifacts absent; system or Home Manager profile targets are coherent. Root, authoritative Andoria, and authoritative Vulcan checkouts are clean and published. VPS was not contacted and no daemon, service, session, or archive state was changed. Clio mesh state remains offline with the same last-seen timestamp, so the repeated-gate rule forbids another blind SSH wave. Clio build, activation, and identical postchecks remain the sole acceptance gap.\n",
+    "created_at": "2026-08-17T04:11:28Z"
   }
 ]
 #+end_src
@@ -3523,7 +3530,7 @@ GUI helpers and commands launched through Agent Deck are attributed to a stable,
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-15 Sat 15:03]
-:MODIFIED: [2026-08-16 Sun 20:54]
+:MODIFIED: [2026-08-16 Sun 21:11]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3562,6 +3569,13 @@ Root and strict active-consumer tests pass; today’s Obr tip is realized; signe
     "author": "johnw",
     "text": "Wiggum checkpoint: Hera, Vulcan, and all four shared-work hosts are built, activated, and verified on the final published configuration. Clio remains the sole rollout gate. Three bounded reachability waves (direct, declared-endpoint plus Vulcan-routed audit, and a 21-attempt ten-minute watch of 10.6.0.2) all failed before an SSH banner; Clio ran no command and received no mutation. Per the repeated-gate stop rule, do not retry until reachability demonstrably changes. Pending after that change: Clio preflight, exact build/switch/postchecks, then issue closure and final PLAN publication.",
     "created_at": "2026-08-17T03:54:08Z"
+  },
+  {
+    "id": 441,
+    "issue_id": "nix-eazx",
+    "author": "johnw",
+    "text": "Second Wiggum checkpoint: a fresh field-targeted runtime audit passed on Hera, Vulcan, and andoria-08, andoria-t2, delphi-3bd4, and gpu-server. Every host reports Obr 0.2.22+7; Git-AI is absent from active profile bins and the effective Trace2 target is absent; every active generated Claude settings leaf is Cozempic-free; ordinary and timed Pi Gallery loaders contain exactly 24 active members on Hera and 21 on Linux with neither Pi Mem nor Pi Artifacts; each full projection contains 26 packages with Pi Mem exactly once and Pi Artifacts absent; system or Home Manager profile targets are coherent. Root, authoritative Andoria, and authoritative Vulcan checkouts are clean and published. VPS was not contacted and no daemon, service, session, or archive state was changed. Clio mesh state remains offline with the same last-seen timestamp, so the repeated-gate rule forbids another blind SSH wave. Clio build, activation, and identical postchecks remain the sole acceptance gap.\n",
+    "created_at": "2026-08-17T04:11:28Z"
   }
 ]
 #+end_src
