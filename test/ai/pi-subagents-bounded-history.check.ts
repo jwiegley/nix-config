@@ -23,16 +23,6 @@ const {
 	createForkContextResolver,
 	sanitizePersistedFork,
 } = await import(join(packageRoot, "src/shared/fork-context.ts"));
-const [packageMajor, packageMinor] = (
-	JSON.parse(
-		realFs.readFileSync(join(packageRoot, "package.json"), "utf-8"),
-	) as {
-		version: string;
-	}
-).version
-	.split(".")
-	.map(Number);
-const expectsForkCwdAlignment = packageMajor > 0 || packageMinor >= 50;
 const { parseSessionTokens } = await import(
 	join(packageRoot, "src/shared/session-tokens.ts")
 );
@@ -263,10 +253,8 @@ if (rssChildLane === "tokens" || rssChildLane === "fork") {
 				);
 				expect(resolver.sessionFileForIndex()).toBe(branchFile);
 				expect(resolver.thinkingOverrideForIndex()).toBe("off");
-				if (expectsForkCwdAlignment) {
-					expect(typeof alignForkedSessionCwd).toBe("function");
-					alignForkedSessionCwd(branchFile, childCwdLink);
-				}
+				expect(typeof alignForkedSessionCwd).toBe("function");
+				alignForkedSessionCwd(branchFile, childCwdLink);
 			}
 			const rssDeltaBytes = Math.max(0, maxResidentBytes() - before);
 			expect(rssDeltaBytes).toBeLessThan(maxRssDelta);
@@ -278,9 +266,7 @@ if (rssChildLane === "tokens" || rssChildLane === "fork") {
 					const bytes = realFs.readSync(headFd, head, 0, head.length, 0);
 					const text = head.subarray(0, bytes).toString("utf-8");
 					const header = JSON.parse(text.split("\n", 1)[0]);
-					if (expectsForkCwdAlignment) {
-						expect(header.cwd).toBe(realFs.realpathSync.native(childCwd));
-					}
+					expect(header.cwd).toBe(realFs.realpathSync.native(childCwd));
 					expect(text).not.toContain("thinkingSignature");
 					expect(text).toContain(payload.slice(0, 1024));
 				} finally {
@@ -407,7 +393,6 @@ if (rssChildLane === "tokens" || rssChildLane === "fork") {
 		});
 
 		test("aligns cwd atomically without sanitizing signed thinking", () => {
-			if (!expectsForkCwdAlignment) return;
 			const dir = realFs.mkdtempSync(join(tmpdir(), "pi-subagents-cwd-"));
 			try {
 				const branchFile = join(dir, "branch.jsonl");

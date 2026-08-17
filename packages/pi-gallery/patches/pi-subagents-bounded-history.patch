@@ -1,21 +1,21 @@
 diff --git a/src/extension/index.ts b/src/extension/index.ts
-index 747d9ea..14e5ee4 100644
+index 1e1a37d7..8165fd64 100644
 --- a/src/extension/index.ts
 +++ b/src/extension/index.ts
-@@ -705,7 +705,10 @@ export default function registerSubagentExtension(pi: ExtensionAPI): void {
- 		resetJobs(ctx);
- 		restoreActiveJobs(ctx);
+@@ -826,7 +826,10 @@ export default function registerSubagentExtension(pi: ExtensionAPI): void {
  		scheduledRunManager.bindSession(ctx);
+ 		logSlowPhase("scheduled-runs", phaseStartedAt);
+ 		phaseStartedAt = Date.now();
 -		restoreSlashFinalSnapshots(ctx.sessionManager.getEntries());
 +		restoreSlashFinalSnapshots(ctx.sessionManager.getRecentActiveEntries({
 +			customType: SLASH_RESULT_TYPE,
 +			limit: 256,
 +		}));
+ 		logSlowPhase("slash-snapshots", phaseStartedAt);
+ 		phaseStartedAt = Date.now();
  		waitSubscriptionManager.restore();
- 		startResultWatcher();
- 		primeExistingResults({ triggerTurn: !recovering });
 diff --git a/src/shared/fork-context.ts b/src/shared/fork-context.ts
-index 6c0c293..b87f754 100644
+index 6565a8dd..88a4d27d 100644
 --- a/src/shared/fork-context.ts
 +++ b/src/shared/fork-context.ts
 @@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
@@ -26,7 +26,7 @@ index 6c0c293..b87f754 100644
  import { findModelInfo, type ModelInfo } from "./model-info.ts";
  
  type SubagentExecutionContext = "fresh" | "fork";
-@@ -23,8 +24,8 @@ interface BranchSessionEntry {
+@@ -24,8 +25,8 @@ interface BranchSessionEntry {
  
  interface BranchSessionManager {
  	createBranchedSession(leafId: string): string | undefined;
@@ -37,7 +37,7 @@ index 6c0c293..b87f754 100644
  }
  
  interface ForkableSessionManager {
-@@ -82,50 +83,107 @@ function isUnsafeAnthropicThinkingBlock(message: BranchSessionEntry["message"],
+@@ -83,62 +84,156 @@ function isUnsafeAnthropicThinkingBlock(message: BranchSessionEntry["message"],
  	return record.redacted === true || (typeof signature === "string" && signature.length > 0);
  }
  
@@ -59,6 +59,13 @@ index 6c0c293..b87f754 100644
 +export interface ForkRewriteOperations {
 +	renameSync?: (source: fs.PathLike, destination: fs.PathLike) => void;
 +	writeSync?: SyncBufferWriter;
++}
++
++interface ForkRewriteOptions {
++	forceThinkingOff: boolean;
++	sanitizeThinking: boolean;
++	cwd?: string;
++	operations?: ForkRewriteOperations;
 +}
 +
 +function parseForkEntry(sessionFile: string, text: string, lineNumber: number): BranchSessionEntry {
@@ -85,10 +92,9 @@ index 6c0c293..b87f754 100644
 -}
 -
 -function sanitizeUnsafeThinkingBlocks(entries: BranchSessionEntry[]): boolean {
-+export function sanitizePersistedFork(
++function rewritePersistedFork(
 +	sessionFile: string,
-+	forceThinkingOff: boolean,
-+	operations: ForkRewriteOperations = {},
++	options: ForkRewriteOptions,
 +): "off" | undefined {
 +	const sourceMode = fs.statSync(sessionFile).mode & 0o777;
 +	const tempFile = path.join(
@@ -96,8 +102,10 @@ index 6c0c293..b87f754 100644
 +		`.${path.basename(sessionFile)}.${process.pid}.${randomUUID()}.tmp`,
 +	);
 +	const candidateIds = new Set(Array.from({ length: 100 }, () => randomUUID().slice(0, 8)));
++	const operations = options.operations ?? {};
 +	let tempFd: number | undefined;
 +	let ownsTemp = false;
++	let rewritten = false;
  	let sanitized = false;
 -	for (const entry of entries) {
 -		if (entry.type !== "message" || entry.message?.role !== "assistant" || !Array.isArray(entry.message.content)) continue;
@@ -105,9 +113,7 @@ index 6c0c293..b87f754 100644
 -		if (filtered.length === entry.message.content.length) continue;
 -		entry.message.content = filtered;
 -		sanitized = true;
--	}
--	return sanitized;
--}
++	let sawEntry = false;
 +	let lastEntryId: string | undefined;
 +	let lastEntryWasThinkingOff = false;
 +	let sawPhysicalLine = false;
@@ -129,29 +135,39 @@ index 6c0c293..b87f754 100644
 +			}
 +			if (text.trim().length > 0) {
 +				const entry = parseForkEntry(sessionFile, text, lineNumber);
++				let entryChanged = false;
++				if (!sawEntry) {
++					sawEntry = true;
++					if (options.cwd !== undefined) {
++						if (entry.type !== "session") throw new Error(`Forked session ${sessionFile} does not start with a session header.`);
++						if (entry.cwd !== options.cwd) {
++							entry.cwd = options.cwd;
++							entryChanged = true;
++						}
++					}
++				}
 +				if (typeof entry.id === "string") {
 +					candidateIds.delete(entry.id);
 +					lastEntryId = entry.id;
 +				}
 +				lastEntryWasThinkingOff = entry.type === "thinking_level_change" && entry.thinkingLevel === "off";
-+				if (sanitizeUnsafeThinkingBlocks(entry)) {
++				if (options.sanitizeThinking && sanitizeUnsafeThinkingBlocks(entry)) {
 +					sanitized = true;
++					entryChanged = true;
++				}
++				if (entryChanged) {
++					rewritten = true;
 +					output = Buffer.from(JSON.stringify(entry), "utf-8");
 +				}
 +			}
 +			writeAllSync(tempFd!, output, operations.writeSync);
 +			if (terminated) writeAllSync(tempFd!, "\n", operations.writeSync);
 +		});
- 
--function readSessionEntries(sessionFile: string): BranchSessionEntry[] {
--	const lines = fs.readFileSync(sessionFile, "utf-8").split("\n").filter((line) => line.trim().length > 0);
--	return lines.map((line, index) => {
--		try {
--			return JSON.parse(line) as BranchSessionEntry;
--		} catch (error) {
--			const cause = error instanceof Error ? error : new Error(String(error));
--			throw new Error(`Unable to inspect forked session ${sessionFile}: invalid JSONL on line ${index + 1}: ${cause.message}`, { cause });
-+		if (sanitized && forceThinkingOff && !lastEntryWasThinkingOff) {
++
++		if (options.cwd !== undefined && !sawEntry) {
++			throw new Error(`Forked session ${sessionFile} does not start with a session header.`);
++		}
++		if (sanitized && options.forceThinkingOff && !lastEntryWasThinkingOff) {
 +			if (sawPhysicalLine && !finalLineTerminated) writeAllSync(tempFd, "\n", operations.writeSync);
 +			const id = candidateIds.values().next().value;
 +			if (!id) throw new Error(`Unable to allocate a unique entry ID while sanitizing ${sessionFile}`);
@@ -162,16 +178,15 @@ index 6c0c293..b87f754 100644
 +				timestamp: new Date().toISOString(),
 +				thinkingLevel: "off",
 +			})}\n`, operations.writeSync);
- 		}
--	});
++		}
 +
 +		fs.fsyncSync(tempFd);
 +		fs.closeSync(tempFd);
 +		tempFd = undefined;
-+		if (sanitized) (operations.renameSync ?? fs.renameSync)(tempFile, sessionFile);
++		if (rewritten) (operations.renameSync ?? fs.renameSync)(tempFile, sessionFile);
 +		else fs.unlinkSync(tempFile);
 +		ownsTemp = false;
-+		return sanitized && forceThinkingOff ? "off" : undefined;
++		return sanitized && options.forceThinkingOff ? "off" : undefined;
 +	} finally {
 +		if (tempFd !== undefined) {
 +			try { fs.closeSync(tempFd); } catch {}
@@ -179,11 +194,51 @@ index 6c0c293..b87f754 100644
 +		if (ownsTemp) {
 +			try { fs.unlinkSync(tempFile); } catch {}
 +		}
-+	}
+ 	}
+-	return sanitized;
+ }
+ 
+-function readSessionEntries(sessionFile: string): BranchSessionEntry[] {
+-	const lines = fs.readFileSync(sessionFile, "utf-8").split("\n").filter((line) => line.trim().length > 0);
+-	return lines.map((line, index) => {
+-		try {
+-			return JSON.parse(line) as BranchSessionEntry;
+-		} catch (error) {
+-			const cause = error instanceof Error ? error : new Error(String(error));
+-			throw new Error(`Unable to inspect forked session ${sessionFile}: invalid JSONL on line ${index + 1}: ${cause.message}`, { cause });
+-		}
++export function sanitizePersistedFork(
++	sessionFile: string,
++	forceThinkingOff: boolean,
++	operations: ForkRewriteOperations = {},
++): "off" | undefined {
++	return rewritePersistedFork(sessionFile, {
++		forceThinkingOff,
++		sanitizeThinking: true,
++		operations,
+ 	});
+ }
+ 
+ /** Keep Pi from restoring a forked session into the parent's cwd instead of the child launch cwd. */
+ export function alignForkedSessionCwd(sessionFile: string, cwd: string): void {
+-	const entries = readSessionEntries(sessionFile);
+-	const header = entries[0];
+-	if (header?.type !== "session") throw new Error(`Forked session ${sessionFile} does not start with a session header.`);
+-	const resolvedCwd = path.resolve(cwd);
+-	const effectiveCwd = fs.realpathSync.native(resolvedCwd);
+-	if (header.cwd === effectiveCwd) return;
+-	header.cwd = effectiveCwd;
+-	fs.writeFileSync(sessionFile, `${entries.map((entry) => JSON.stringify(entry)).join("\n")}\n`, "utf-8");
++	const effectiveCwd = fs.realpathSync.native(path.resolve(cwd));
++	rewritePersistedFork(sessionFile, {
++		forceThinkingOff: false,
++		sanitizeThinking: false,
++		cwd: effectiveCwd,
++	});
  }
  
  export function createForkContextResolver(
-@@ -164,35 +222,22 @@ export function createForkContextResolver(
+@@ -177,35 +272,22 @@ export function createForkContextResolver(
  				throw new Error(`Parent session file does not exist: ${parentSessionFile}. Pi has not persisted enough history to fork yet.`);
  			}
  			const sourceManager = openSession(parentSessionFile, sessionDir);
@@ -233,9 +288,9 @@ index 6c0c293..b87f754 100644
  			const resolution = { sessionFile, ...(thinkingOverride ? { thinkingOverride } : {}) };
  			cachedResolutions.set(index, resolution);
  			return resolution;
-diff --git b/src/shared/jsonl-lines.ts b/src/shared/jsonl-lines.ts
+diff --git a/src/shared/jsonl-lines.ts b/src/shared/jsonl-lines.ts
 new file mode 100644
-index 0000000..db8b37a
+index 00000000..db8b37aa
 --- /dev/null
 +++ b/src/shared/jsonl-lines.ts
 @@ -0,0 +1,73 @@
@@ -313,7 +368,7 @@ index 0000000..db8b37a
 +	}
 +}
 diff --git a/src/shared/session-tokens.ts b/src/shared/session-tokens.ts
-index 3825268..5f2718c 100644
+index 3825268b..5f2718c1 100644
 --- a/src/shared/session-tokens.ts
 +++ b/src/shared/session-tokens.ts
 @@ -1,5 +1,6 @@
@@ -348,10 +403,10 @@ index 3825268..5f2718c 100644
  	} catch {
  		// Usage extraction should not fail the run.
 diff --git a/src/slash/slash-commands.ts b/src/slash/slash-commands.ts
-index bb98322..7620224 100644
+index 536a0851..49ed51a9 100644
 --- a/src/slash/slash-commands.ts
 +++ b/src/slash/slash-commands.ts
-@@ -380,23 +380,27 @@ function buildSubagentCostReport(ctx: ExtensionContext): string {
+@@ -383,23 +383,27 @@ function buildSubagentCostReport(ctx: ExtensionContext): string {
  	const childTotal = emptyUsage();
  	const total = emptyUsage();
  	const children: Array<{ label: string; usage: Usage; sessionFile?: string }> = [];
@@ -387,7 +442,7 @@ index bb98322..7620224 100644
  	addUsage(total, parent);
  	addUsage(total, childTotal);
  	const lines = [
-@@ -411,6 +415,7 @@ function buildSubagentCostReport(ctx: ExtensionContext): string {
+@@ -414,6 +418,7 @@ function buildSubagentCostReport(ctx: ExtensionContext): string {
  			lines.push(formatCostUsage(child.label, child.usage));
  			if (child.sessionFile) lines.push(`  Session: ${child.sessionFile}`);
  		}
@@ -395,7 +450,7 @@ index bb98322..7620224 100644
  	}
  	lines.push("────────────────────────────", formatCostUsage("Children", childTotal), formatCostUsage("Total", total));
  	return lines.join("\n");
-@@ -546,14 +551,12 @@ function persistSlashSessionSnapshot(ctx: ExtensionContext): void {
+@@ -549,14 +554,12 @@ function persistSlashSessionSnapshot(ctx: ExtensionContext): void {
  	try {
  		if (!ctx.sessionManager) return;
  		const sessionManager = ctx.sessionManager as typeof ctx.sessionManager & {

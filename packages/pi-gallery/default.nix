@@ -474,12 +474,7 @@ let
     prepareBundle = root: ''
       ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
         --directory=${root} --strip=1 \
-        < ${
-          if lib.versionAtLeast members.subagents.version "0.50.0" then
-            ./patches/pi-subagents-bounded-history-0.50.patch
-          else
-            ./patches/pi-subagents-bounded-history.patch
-        }
+        < ${./patches/pi-subagents-bounded-history.patch}
       patch_artifact="$(
         find ${root}/src -type f \( -name '*.orig' -o -name '*.rej' \) \
           -print -quit

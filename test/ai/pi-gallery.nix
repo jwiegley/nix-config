@@ -2071,8 +2071,6 @@ runCommand "pi-gallery-check"
           "pool",
           "subs",
           "parallel-cleanup",
-          "parallel-context-build",
-          "parallel-handoff-plan",
           "parallel-research",
           "parallel-review",
           "ponytail",

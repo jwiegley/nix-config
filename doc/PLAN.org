@@ -4437,6 +4437,38 @@ TestIssue1225_DrainInbox_LastWinsWithinDrain claims multiple records for one chi
 ]
 #+end_src
 
+* DONE [#B] Update the Gallery command inventory for pi-subagents 0.50.0
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-gnl6
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-17 Mon 15:57]
+:MODIFIED: [2026-08-17 Mon 15:58]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-17 Mon 15:58]
+:CLOSE_REASON: Pi Subagents 0.50 intentionally removed only parallel-context-build and parallel-handoff-plan with the bundled context-builder role in 0.43. The Gallery inventory now drops exactly those two stale expectations while retaining all direct Subagents commands and the sidebar prohibition. nix build --no-link .#checks.aarch64-darwin.pi-gallery passed on the final single-patch 0.50 path.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Source commit: 55a419a68de5 (pin bump), with a57d1095619b (staged 0.50 patch). Severity: High. Category: Bug. File: test/ai/pi-gallery.nix (command-inventory smoke) with packages/pi-gallery/patches/pi-subagents-bounded-history-0.50.patch. Confidence: 100.
+
+PROBLEM: The pi-subagents 0.42.1 -> 0.50.0 pin bump activates the staged 0.50 bounded-history patch, but the Gallery smoke now fails deterministically:
+
+  nix build ./config/ai#checks.aarch64-darwin.pi-gallery
+  -> Pi gallery check: new Pi gallery commands were not registered
+  (drv /nix/store/myq6czrv1yq1s6bzi0f76mpfb8qbwrn9-pi-gallery-check.drv)
+
+The smoke's get_commands response shows the loaded gallery, but the expected new-command set for subagents does not match what 0.50.0 registers — either upstream renamed/added commands, or the 0.50 patch's registration seam diverges from the old one. The pin-bump commit updated only sources/pi.json and the package lock; the expected inventory and/or patch coverage did not move with it.
+
+IMPACT: pi-gallery is a BASELINE behavioral check: make test, the closeout tier, and CI are red at HEAD.
+
+SUGGESTED FIX: Diff the 0.50.0 command registrations against the smoke's expected set (nix log of the failing drv prints the full get_commands JSON), update the expected inventory — and if the bounded-history patch is meant to gate any of the new commands, extend the 0.50 patch accordingly. Land inventory and pin in one commit per the source-and-pin rule.
+
+VERIFICATION: nix build ./config/ai#checks.aarch64-darwin.pi-gallery succeeds; the smoke asserts the exact 0.50.0 command set including any newly registered subagents commands.
+
 * DONE [#B] Align inbox path regression with profile-scoped identity
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
