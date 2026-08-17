@@ -4954,6 +4954,54 @@ TestCrossConsumerEvalRefusesEmptySuccess invokes the real shared-work nix eval d
 ]
 #+end_src
 
+* DONE [#B] Reuse canonical rust-overlay for Git-AI
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-jvcz
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-16 Sun 16:36]
+:MODIFIED: [2026-08-16 Sun 17:13]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-16 Sun 17:13]
+:CLOSE_REASON: Git-AI now follows the canonical portable rust-overlay. Both lock projections encode the exact follows path and remove 095c394; Git-AI remains source/version 6eef70e/1.6.21 with Rust 1.93.0. Real Darwin build and version check passed, fresh Hera and maintained Andoria evaluations were warning-free, portable all-systems evaluation passed, ai-lock-coherence passed, and make test passed 21 Python suites plus 7 behavioral checks. No activation.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+After canonical rust-overlay was advanced, the maintained Andoria x86_64 Home Manager evaluation still emits two deprecated stdenv platform warnings. Abort-on-warn traces both to Git-AI nested rust-overlay 095c394. Replace that redundant authority at the narrowest supported input seam only if Git-AI package semantics remain compatible; otherwise update Git-AI through its owned target. Acceptance: root/portable lock projections stay coherent, Git-AI package identity/build is verified, fresh Linux and Darwin consumer evaluations are warning-free, full gates pass, and no activation.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-jvcz",
+    "depends_on_id": "nix-r9p5",
+    "type": "discovered-from",
+    "created_at": "2026-08-16T23:36:48.259893Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 431,
+    "issue_id": "nix-jvcz",
+    "author": "johnw",
+    "text": "Implemented at the existing config/ai input-authority seam; added a deterministic lock-path assertion so duplicate-but-identical overlay nodes cannot satisfy coherence.",
+    "created_at": "2026-08-17T00:13:05Z"
+  }
+]
+#+end_src
+
 * DONE [#B] Prevent documentation-only obr changes from rebuilding Rust
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

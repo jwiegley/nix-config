@@ -149,7 +149,9 @@
         "nixpkgs": [
           "nixpkgs"
         ],
-        "rust-overlay": "rust-overlay"
+        "rust-overlay": [
+          "rust-overlay"
+        ]
       },
       "locked": {
         "lastModified": 1785528634,
@@ -389,32 +391,11 @@
         "pi-openai-server-compaction": "pi-openai-server-compaction",
         "pi-quiet": "pi-quiet",
         "ponytail": "ponytail",
-        "rust-overlay": "rust-overlay_2",
+        "rust-overlay": "rust-overlay",
         "translate-tool": "translate-tool"
       }
     },
     "rust-overlay": {
-      "inputs": {
-        "nixpkgs": [
-          "git-ai",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1770174315,
-        "narHash": "sha256-GUaMxDmJB1UULsIYpHtfblskVC6zymAaQ/Zqfo+13jc=",
-        "owner": "oxalica",
-        "repo": "rust-overlay",
-        "rev": "095c394bb91342882f27f6c73f64064fb9de9f2a",
-        "type": "github"
-      },
-      "original": {
-        "owner": "oxalica",
-        "repo": "rust-overlay",
-        "type": "github"
-      }
-    },
-    "rust-overlay_2": {
       "inputs": {
         "nixpkgs": [
           "nixpkgs"

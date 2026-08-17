@@ -59,6 +59,7 @@
     git-ai = {
       url = "github:git-ai-project/git-ai";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.rust-overlay.follows = "rust-overlay";
     };
 
     pal-mcp-server = {
