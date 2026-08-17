@@ -1833,7 +1833,7 @@ Standard cross-consumer evaluations override root/config-ai with local paths; lo
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-16 Sun 17:32]
-:MODIFIED: [2026-08-17 Mon 09:18]
+:MODIFIED: [2026-08-17 Mon 09:41]
 :CREATED_BY: johnw
 :FINISHED: [2026-08-17 Mon 09:18]
 :CLOSE_REASON: Full deterministic and repository gates passed; signed revisions are published; Git-AI, Cozempic, Pi Mem, and Pi Artifacts are disabled as specified and the result is activated and runtime-verified on Hera, Clio, Vulcan, and all four shared-work hosts; VPS remains parked.
@@ -1882,6 +1882,13 @@ The owner requires Git-AI, Cozempic, Pi Mem, and Pi Artifacts to remain fully di
     "author": "johnw",
     "text": "Clio completion gate passed on 2026-08-17. The strict direct route used HostKeyAlias=clio.lan and 192.168.1.5 with host-key checking enabled. The authoritative clean `~/src/nix` main fast-forwarded 12 commits from 81a46d7460df18daad8f9fcf74118c734605d671 to exact signed/published aee78e538ff06a5737e7aa1ca7623162fc28ab07. `make verify-inputs` passed; `./build system` realized exact candidate `/nix/store/b2yvhfv8qkydysbsn3p4jl6652pinyn4-darwin-system-26.11.15abb8c`; authorized `make switch` passed and reported that exact candidate active. Postcheck proved `/run/current-system` and the system profile both resolve to it, checkout HEAD/origin are exact and clean, Obr is 0.2.22+7, Git-AI is absent from command resolution and active profile bins, Trace2 has no effective target, all three managed Claude settings leaves are Cozempic-free, normal/timed Gallery loaders each contain 24 imports and 24 registrations with Lens/Pi Mem/Pi Artifacts absent, projection has 26 packages with Pi Mem exactly once and no artifact package, and the Determinate daemon is running with a healthy never-exited state. No Pi/Claude/Agent Deck session was restarted; no standalone daemon/trust/CPU-policy repair or restart was performed; VPS was not contacted. Together with nix-7qla comment 442, this completes the seven-host active-fleet acceptance matrix.\n",
     "created_at": "2026-08-17T16:18:47Z"
+  },
+  {
+    "id": 446,
+    "issue_id": "nix-7qla",
+    "author": "johnw",
+    "text": "Post-close publication-integrity correction (2026-08-17): concurrent external lock updates had left clean, unpublished unsigned sibling commits on the authoritative Andoria and Vulcan checkouts after the earlier fleet audit. With explicit user authorization, signed tree-identical replacements were prepared and verified on Hera: Andoria cc0536702ffb9915756f627d76f23f1012f706d6 -> fcfd1c9606ac5a204f28e8305bfbbdab0b2f0dbc from remote base 0a8bb4abdaea576e87cff5085dbddc0f333d55c9; Vulcan f0db80d6ddc064a27b4153240fbb6b539a47d990 -> 080d2f816b4700d75283fc4e2ee282355975030e from remote base 4dad75146913201b5de0a3b4d2b1ec614ff5bfd3. Each replacement was published by ordinary fast-forward, each unsigned sibling remains reachable under refs/archive/pre-signed-lock-20260817/<old-hash>, and each authoritative main was moved by exact compare-and-swap. Final checks prove authoritative HEAD, origin/main, and live remote main agree and are clean; the replacement trees exactly equal the already evaluated and activated trees. The seven-host runtime audit was rerun successfully: Hera and Clio remain on root 6f739cd7424d19e8ee86376c9c9ba0f63c9cd834 with 24 active Gallery members; Vulcan is on 080d2f8 and the four shared-work hosts are on fcfd1c9 with 21 active members; all report Obr 0.2.22+7, coherent profiles, no active Git-AI/Trace2/Cozempic/Lens/Pi Mem/Pi Artifacts, and the expected 26-package projection. No rebuild, activation, daemon or session restart was needed because the trees were identical. VPS was not contacted.",
+    "created_at": "2026-08-17T16:41:11Z"
   }
 ]
 #+end_src
@@ -3546,7 +3553,7 @@ GUI helpers and commands launched through Agent Deck are attributed to a stable,
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-15 Sat 15:03]
-:MODIFIED: [2026-08-17 Mon 09:18]
+:MODIFIED: [2026-08-17 Mon 09:41]
 :CREATED_BY: johnw
 :FINISHED: [2026-08-17 Mon 09:18]
 :CLOSE_REASON: Obr 0.2.22+7 is built, activated, and runtime-verified on all seven active hosts from clean authoritative checkouts; root and consumer revisions are signed and pushed; VPS remains parked and no daemon policy or restart repair was performed.
@@ -3608,6 +3615,13 @@ Root and strict active-consumer tests pass; today’s Obr tip is realized; signe
     "author": "johnw",
     "text": "Clio completion gate passed on 2026-08-17. The strict direct route used HostKeyAlias=clio.lan and 192.168.1.5 with host-key checking enabled. The authoritative clean `~/src/nix` main fast-forwarded 12 commits from 81a46d7460df18daad8f9fcf74118c734605d671 to exact signed/published aee78e538ff06a5737e7aa1ca7623162fc28ab07. `make verify-inputs` passed; `./build system` realized exact candidate `/nix/store/b2yvhfv8qkydysbsn3p4jl6652pinyn4-darwin-system-26.11.15abb8c`; authorized `make switch` passed and reported that exact candidate active. Postcheck proved `/run/current-system` and the system profile both resolve to it, checkout HEAD/origin are exact and clean, Obr is 0.2.22+7, Git-AI is absent from command resolution and active profile bins, Trace2 has no effective target, all three managed Claude settings leaves are Cozempic-free, normal/timed Gallery loaders each contain 24 imports and 24 registrations with Lens/Pi Mem/Pi Artifacts absent, projection has 26 packages with Pi Mem exactly once and no artifact package, and the Determinate daemon is running with a healthy never-exited state. No Pi/Claude/Agent Deck session was restarted; no standalone daemon/trust/CPU-policy repair or restart was performed; VPS was not contacted. Together with nix-7qla comment 442, this completes the seven-host active-fleet acceptance matrix.\n",
     "created_at": "2026-08-17T16:18:48Z"
+  },
+  {
+    "id": 447,
+    "issue_id": "nix-eazx",
+    "author": "johnw",
+    "text": "Post-close publication-integrity correction (2026-08-17): concurrent external lock updates had left clean, unpublished unsigned sibling commits on the authoritative Andoria and Vulcan checkouts after the earlier fleet audit. With explicit user authorization, signed tree-identical replacements were prepared and verified on Hera: Andoria cc0536702ffb9915756f627d76f23f1012f706d6 -> fcfd1c9606ac5a204f28e8305bfbbdab0b2f0dbc from remote base 0a8bb4abdaea576e87cff5085dbddc0f333d55c9; Vulcan f0db80d6ddc064a27b4153240fbb6b539a47d990 -> 080d2f816b4700d75283fc4e2ee282355975030e from remote base 4dad75146913201b5de0a3b4d2b1ec614ff5bfd3. Each replacement was published by ordinary fast-forward, each unsigned sibling remains reachable under refs/archive/pre-signed-lock-20260817/<old-hash>, and each authoritative main was moved by exact compare-and-swap. Final checks prove authoritative HEAD, origin/main, and live remote main agree and are clean; the replacement trees exactly equal the already evaluated and activated trees. The seven-host runtime audit was rerun successfully: Hera and Clio remain on root 6f739cd7424d19e8ee86376c9c9ba0f63c9cd834 with 24 active Gallery members; Vulcan is on 080d2f8 and the four shared-work hosts are on fcfd1c9 with 21 active members; all report Obr 0.2.22+7, coherent profiles, no active Git-AI/Trace2/Cozempic/Lens/Pi Mem/Pi Artifacts, and the expected 26-package projection. No rebuild, activation, daemon or session restart was needed because the trees were identical. VPS was not contacted.",
+    "created_at": "2026-08-17T16:41:12Z"
   }
 ]
 #+end_src
