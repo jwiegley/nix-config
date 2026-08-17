@@ -1833,7 +1833,7 @@ Standard cross-consumer evaluations override root/config-ai with local paths; lo
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-16 Sun 17:32]
-:MODIFIED: [2026-08-16 Sun 21:11]
+:MODIFIED: [2026-08-16 Sun 21:19]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1866,6 +1866,13 @@ The owner requires Git-AI, Cozempic, Pi Mem, and Pi Artifacts to remain fully di
     "author": "johnw",
     "text": "Second Wiggum checkpoint: a fresh field-targeted runtime audit passed on Hera, Vulcan, and andoria-08, andoria-t2, delphi-3bd4, and gpu-server. Every host reports Obr 0.2.22+7; Git-AI is absent from active profile bins and the effective Trace2 target is absent; every active generated Claude settings leaf is Cozempic-free; ordinary and timed Pi Gallery loaders contain exactly 24 active members on Hera and 21 on Linux with neither Pi Mem nor Pi Artifacts; each full projection contains 26 packages with Pi Mem exactly once and Pi Artifacts absent; system or Home Manager profile targets are coherent. Root, authoritative Andoria, and authoritative Vulcan checkouts are clean and published. VPS was not contacted and no daemon, service, session, or archive state was changed. Clio mesh state remains offline with the same last-seen timestamp, so the repeated-gate rule forbids another blind SSH wave. Clio build, activation, and identical postchecks remain the sole acceptance gap.\n",
     "created_at": "2026-08-17T04:11:28Z"
+  },
+  {
+    "id": 442,
+    "issue_id": "nix-7qla",
+    "author": "johnw",
+    "text": "Reproducible live-audit record (2026-08-16 PDT), added after independent review requested durable commands and exact targets. This tracked comment is the evidence record. The audit used only status/readlink/grep/jq checks; it printed no generated-settings contents, contacted no VPS, and changed no host, service, daemon, session, archive, profile, or checkout.\n\nExact checks, with the resolved checkout/profile/Gallery paths shown below, were: `git -C \"$checkout\" rev-parse HEAD`; `git -C \"$checkout\" status --porcelain=v1`; `readlink -f` of both the selected profile and active-system/current-home link followed by exact equality; `obr --version`; failure if `command -v git-ai` succeeded or any active profile bin contained `git-ai`; failure if `GIT_TRACE2_EVENT`/`GIT_TRACE2` or `git -C \"$checkout\" config --get trace2.eventTarget` was set; `grep -Eqi 'cozempic'` over each exact managed `nix-managed-settings.json` leaf with success only on no match; resolution of `~/.config/pi/agent/extensions/nix-gallery/index.ts` to its immutable `pi-gallery` loader; `grep -Ec` counts for normal static imports, timed dynamic imports, and both entry arrays; failure on `pi-lens|pi-mem|pi-artifacts|[\"(lens|mem|artifacts)\",` in either active loader; and `jq -e` assertions that `projection.json` has 26 packages, exactly one `@askjo/pi-mem`, and zero package names matching `artifact` case-insensitively. Hera expected 24 active members and three managed Claude leaves; Linux expected 21 and one. The same Bash program ran locally as `runtime-audit.sh darwin 24 5ed1db2afa1d0beb645a88bbf9bce3e0454a30ee`, and remotely as `ssh HOST bash -s -- ROLE COUNT REV < runtime-audit.sh` (Andoria also accepts `/bin/bash`).\n\nPassing target matrix:\n- hera: checkout 5ed1db2afa1d0beb645a88bbf9bce3e0454a30ee; system/profile `/nix/store/ayl23rdqv57z6m34pxg65fg88swr9r8g-darwin-system-26.11.15abb8c`; Gallery `/nix/store/ki2pbi41xl62c5fp697mc0hgpkcvhpzg-pi-gallery`; active/settings 24/3; Obr 0.2.22+7.\n- vulcan: checkout 4dad75146913201b5de0a3b4d2b1ec614ff5bfd3; system/profile `/nix/store/bx9ghm9xgkrb49rb0sbags7f13681zhv-nixos-system-vulcan-25.11.20260630.b6018f8`; Gallery `/nix/store/0zlvvkd8nv7dvl7z73ax7bd4j0a1mxkr-pi-gallery`; active/settings 21/1; Obr 0.2.22+7.\n- andoria-08, andoria-t2, delphi-3bd4, gpu-server: shared checkout 0a8bb4abdaea576e87cff5085dbddc0f333d55c9; profile/current-home `/nix/store/asgz5r1b9yz34x6j59jl1jbwgf33g4ad-home-manager-generation`; Gallery `/nix/store/yq7zlcxmnnar9r5s7ckqld43zhlbyckc-pi-gallery`; each active/settings 21/1; Obr 0.2.22+7.\n\nImmutable source references are root implementation 01b39d1d1f58f71e342885d2235957aee4bd755c, Andoria consumer 0a8bb4abdaea576e87cff5085dbddc0f333d55c9, and deployed Vulcan consumer 319298f6db47ede1859092f02b544e975b5a747c. `git diff --name-only` from the root implementation to the audited root checkout and from the deployed Vulcan consumer to the audited Vulcan checkout returned only `doc/PLAN.org` and `docs/PLAN.org`, respectively. The field-targeted `tailscale status --json | jq` Clio peer query remained `Online=false`, `Active=false`, `LastSeen=2026-08-12T16:58:34.1Z`; no SSH retry was made against that unchanged offline state.\n",
+    "created_at": "2026-08-17T04:19:00Z"
   }
 ]
 #+end_src
@@ -3530,7 +3537,7 @@ GUI helpers and commands launched through Agent Deck are attributed to a stable,
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-15 Sat 15:03]
-:MODIFIED: [2026-08-16 Sun 21:11]
+:MODIFIED: [2026-08-16 Sun 21:19]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3576,6 +3583,13 @@ Root and strict active-consumer tests pass; today’s Obr tip is realized; signe
     "author": "johnw",
     "text": "Second Wiggum checkpoint: a fresh field-targeted runtime audit passed on Hera, Vulcan, and andoria-08, andoria-t2, delphi-3bd4, and gpu-server. Every host reports Obr 0.2.22+7; Git-AI is absent from active profile bins and the effective Trace2 target is absent; every active generated Claude settings leaf is Cozempic-free; ordinary and timed Pi Gallery loaders contain exactly 24 active members on Hera and 21 on Linux with neither Pi Mem nor Pi Artifacts; each full projection contains 26 packages with Pi Mem exactly once and Pi Artifacts absent; system or Home Manager profile targets are coherent. Root, authoritative Andoria, and authoritative Vulcan checkouts are clean and published. VPS was not contacted and no daemon, service, session, or archive state was changed. Clio mesh state remains offline with the same last-seen timestamp, so the repeated-gate rule forbids another blind SSH wave. Clio build, activation, and identical postchecks remain the sole acceptance gap.\n",
     "created_at": "2026-08-17T04:11:28Z"
+  },
+  {
+    "id": 443,
+    "issue_id": "nix-eazx",
+    "author": "johnw",
+    "text": "The exact reproducible six-host runtime audit, command predicates, immutable source revisions, selected profile/Gallery store targets, and Clio offline state are recorded durably in nix-7qla comment 442. This Obr +7 rollout shares those same deployed generations and passed matrix; that record contacted no VPS and performed no mutation. Clio remains the sole unfinished activation/postcheck gate for this issue.\n",
+    "created_at": "2026-08-17T04:19:13Z"
   }
 ]
 #+end_src
