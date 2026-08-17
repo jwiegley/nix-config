@@ -78,10 +78,13 @@ let
       lacksGitAiReference = package: !(builtins.elem package.drvPath gitAiDrvPaths);
       activePackageSelections =
         actual.lib.aiPackagesFor pkgs
-        ++ actual.packages.${system}.default.paths
         ++ (actual.devShells.${system}.default.buildInputs or [ ])
-        ++ (actual.devShells.${system}.default.nativeBuildInputs or [ ])
-        ++ actual.checks.${system}.build.paths;
+        ++ (actual.devShells.${system}.default.nativeBuildInputs or [ ]);
+      expectedAggregate = pkgs.buildEnv {
+        name = "ai-nix-toolchain";
+        paths = actual.lib.aiPackagesFor pkgs;
+        ignoreCollisions = true;
+      };
       declaredChecks = actual.checks.${system} // {
         # The wrapper below adds this evaluation-only gate after checking the
         # implementation. A placeholder lets every guarded output validate the
@@ -136,7 +139,11 @@ let
       ) "patchAgentPackage no longer passes unknown agents through on ${system}")
       (lib.assertMsg (builtins.isList (actual.lib.aiPackagesFor pkgs)) "aiPackagesFor no longer returns a package list on ${system}")
       (lib.assertMsg (gitAiDrvPaths != [ ]) "portable Git-AI reference oracle is empty on ${system}")
-      (lib.assertMsg (builtins.all lacksGitAiReference activePackageSelections) "portable package policy, aggregate, dev shell, or build check references dormant Git-AI on ${system}")
+      (lib.assertMsg (builtins.all lacksGitAiReference activePackageSelections) "portable package policy or dev shell references dormant Git-AI on ${system}")
+      (lib.assertMsg (
+        actual.packages.${system}.default.drvPath == expectedAggregate.drvPath
+        && actual.checks.${system}.build.drvPath == expectedAggregate.drvPath
+      ) "portable aggregate or build check diverged from the Git-AI-free package policy on ${system}")
       (lib.assertMsg (
         actual.packages.${system}.default.name == "ai-nix-toolchain"
       ) "portable aggregate name changed on ${system}")
