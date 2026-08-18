@@ -1,8 +1,8 @@
 diff --git a/cmd/agent-deck/mcp_cmd.go b/cmd/agent-deck/mcp_cmd.go
-index cbc2c0eb..bd62375a 100644
+index 1866ef475d680ef97c0c4ae821f94f809acb1f2c..eadf6f45b46efcb0a9b8b4f538f4b71d2fbc77a8 100644
 --- a/cmd/agent-deck/mcp_cmd.go
 +++ b/cmd/agent-deck/mcp_cmd.go
-@@ -468,13 +468,17 @@ func handleMCPAttach(profile string, args []string) {
+@@ -472,13 +472,17 @@ func handleMCPAttach(profile string, args []string) {
  	// Restart if requested
  	restarted := false
  	if *restart && inst.SupportsMCPAgentRestart() {
@@ -22,7 +22,7 @@ index cbc2c0eb..bd62375a 100644
  			// Auto-continue: wait for the agent to initialize, then send continue message.
  			time.Sleep(2 * time.Second)
  			if tmuxSess := inst.GetTmuxSession(); tmuxSess != nil && inst.Tool != "cursor" {
-@@ -629,13 +633,17 @@ func handleMCPDetach(profile string, args []string) {
+@@ -645,13 +649,17 @@ func handleMCPDetach(profile string, args []string) {
  	// Restart if requested
  	restarted := false
  	if *restart && inst.SupportsMCPAgentRestart() {
@@ -43,13 +43,13 @@ index cbc2c0eb..bd62375a 100644
  			time.Sleep(2 * time.Second)
  			if tmuxSess := inst.GetTmuxSession(); tmuxSess != nil && inst.Tool != "cursor" {
 diff --git a/cmd/agent-deck/plugin_cmd.go b/cmd/agent-deck/plugin_cmd.go
-index 26dc4d60..c501c586 100644
+index f6cdecab4c8454d7f7b20aace97b15489c33f2af..817c1ffd29bb2ac5114c4eda1a7878a08f7ed78d 100644
 --- a/cmd/agent-deck/plugin_cmd.go
 +++ b/cmd/agent-deck/plugin_cmd.go
-@@ -240,10 +240,14 @@ func pluginAttachOrDetach(profile string, args []string, op string) {
- 			return
- 		}
- 		fmt.Println("Restarting session to apply enabledPlugins...")
+@@ -243,10 +243,14 @@ func pluginAttachOrDetach(profile string, args []string, op string) {
+ 		// See adoptStateDB: the restart records its new tmux name through the
+ 		// process-wide StateDB, which a CLI process does not have until now.
+ 		adoptStateDB(storage)
 -		if err := inst.Restart(); err != nil {
 -			out.Error(fmt.Sprintf("restart failed: %s", err.Error()), ErrCodeNotFound)
 +		restartErr, persistenceWarning := normalizeRestartResult(inst.Restart())
@@ -60,12 +60,12 @@ index 26dc4d60..c501c586 100644
 +		if persistenceWarning != "" {
 +			fmt.Fprintf(os.Stderr, "Warning: %s\n", persistenceWarning)
 +		}
- 	}
- }
- 
+ 		// The save above ran BEFORE the restart, so it recorded the tmux name
+ 		// the restart then killed. The replacement name is recorded at the
+ 		// chokepoint in Instance.restart (#1870) rather than by repeating that
 diff --git a/cmd/agent-deck/restart_result.go b/cmd/agent-deck/restart_result.go
 new file mode 100644
-index 00000000..65b78c95
+index 0000000000000000000000000000000000000000..65b78c9536a22882df7a77c2fe56f613ca30bf3d
 --- /dev/null
 +++ b/cmd/agent-deck/restart_result.go
 @@ -0,0 +1,23 @@
@@ -93,10 +93,10 @@ index 00000000..65b78c95
 +	return first + "; " + second
 +}
 diff --git a/cmd/agent-deck/session_cmd.go b/cmd/agent-deck/session_cmd.go
-index a3e90ca6..1beb1be7 100644
+index a719e34e130f469dca009f943c414d0330f898fc..9921893843c7d929e582caae1066862542716162 100644
 --- a/cmd/agent-deck/session_cmd.go
 +++ b/cmd/agent-deck/session_cmd.go
-@@ -732,14 +732,15 @@ func handleSessionRestart(profile string, args []string) {
+@@ -733,14 +733,15 @@ func handleSessionRestart(profile string, args []string) {
  	}
  
  	// Restart the session
@@ -115,7 +115,7 @@ index a3e90ca6..1beb1be7 100644
  	if warning != "" && !*jsonOutput {
  		fmt.Fprintf(os.Stderr, "Warning: %s\n", warning)
  	}
-@@ -804,18 +805,19 @@ func restartAllSessions(out *CLIOutput, storage *session.Storage, instances []*s
+@@ -805,18 +806,19 @@ func restartAllSessions(out *CLIOutput, storage *session.Storage, instances []*s
  			fmt.Printf("Restarting %s...\n", inst.Title)
  		}
  
@@ -140,10 +140,10 @@ index a3e90ca6..1beb1be7 100644
  			fmt.Fprintf(os.Stderr, "  Warning: %s\n", warning)
  		}
 diff --git a/cmd/agent-deck/session_move.go b/cmd/agent-deck/session_move.go
-index 2239c8ac..06963254 100644
+index cd2790cac8095f22e3ccff95d4bad57a63e8ad7e..811351848a47dc550e2e0c5e0af3fcb0d4ebd577 100644
 --- a/cmd/agent-deck/session_move.go
 +++ b/cmd/agent-deck/session_move.go
-@@ -149,10 +149,14 @@ func handleSessionMove(profile string, args []string) {
+@@ -164,10 +164,14 @@ func handleSessionMove(profile string, args []string) {
  
  	restarted := false
  	if !*noRestart && inst.Exists() {
@@ -161,12 +161,12 @@ index 2239c8ac..06963254 100644
  			inst.PostStartSync(3 * time.Second)
  		}
 diff --git a/cmd/agent-deck/skill_cmd.go b/cmd/agent-deck/skill_cmd.go
-index 56529198..26cd320f 100644
+index a48484c6c02b6fa2172391a5b63cb718beb4a686..5047d3e7aa077833838f0fa065cb09f6609d9213 100644
 --- a/cmd/agent-deck/skill_cmd.go
 +++ b/cmd/agent-deck/skill_cmd.go
-@@ -21,12 +21,16 @@ func restartProjectSkillsSession(inst *session.Instance, jsonOutput, quietMode b
+@@ -29,9 +29,10 @@ func restartProjectSkillsSession(inst *session.Instance, jsonOutput, quietMode b
  	if inst == nil || !session.ShouldRestartProjectSkills(inst.Tool) {
- 		return false
+ 		return restartOutcomeFor(nil, false)
  	}
 -	if err := inst.Restart(); err != nil {
 +	restartErr, persistenceWarning := normalizeRestartResult(inst.Restart())
@@ -175,7 +175,11 @@ index 56529198..26cd320f 100644
 -			fmt.Fprintf(os.Stderr, "Warning: failed to restart session: %v\n", err)
 +			fmt.Fprintf(os.Stderr, "Warning: failed to restart session: %v\n", restartErr)
  		}
- 		return false
+ 		return restartOutcomeFor(inst, false)
+ 	}
+@@ -41,6 +42,9 @@ func restartProjectSkillsSession(inst *session.Instance, jsonOutput, quietMode b
+ 	if !jsonOutput {
+ 		outcome.warn(os.Stderr)
  	}
 +	if persistenceWarning != "" && !jsonOutput && !quietMode {
 +		fmt.Fprintf(os.Stderr, "Warning: %s\n", persistenceWarning)
@@ -183,11 +187,90 @@ index 56529198..26cd320f 100644
  	if session.IsClaudeCompatible(inst.Tool) {
  		time.Sleep(2 * time.Second)
  		if tmuxSess := inst.GetTmuxSession(); tmuxSess != nil {
+diff --git a/internal/fleet/recover.go b/internal/fleet/recover.go
+index ae5057bbf4e54d1344ecd922d90bad6acd2bda26..e332f5a213c43bec84d87d8a57bd053a49422f52 100644
+--- a/internal/fleet/recover.go
++++ b/internal/fleet/recover.go
+@@ -262,21 +262,32 @@ func (r *Recoverer) Recover(as Assessment) Summary {
+ 		attempts++
+ 		sum.Attempted++
+ 
+-		if err := r.restart(c.Instance); err != nil {
++		restartErr := r.restart(c.Instance)
++		if session.IsRestartPartialSuccess(restartErr) {
++			// The replacement pane is already live; retrying would destroy it.
++			if r.Log != nil {
++				r.Log.Warn("fleet_recover_restart_persistence_warning",
++					slog.String("instance_id", c.ID()),
++					slog.String("title", c.Title()),
++					slog.String("warning", restartErr.Error()))
++			}
++			restartErr = nil
++		}
++		if restartErr != nil {
+ 			res.Outcome = OutcomeFailed
+-			res.Err = err
++			res.Err = restartErr
+ 			sum.Failed++
+ 			consecutiveFailures++
+-			r.logf("fleet_recover_restart_failed", c, slog.String("error", err.Error()))
++			r.logf("fleet_recover_restart_failed", c, slog.String("error", restartErr.Error()))
+ 			if r.AuthGate != nil {
+-				r.AuthGate.Observe(c.Instance, VerifyReport{}, err)
++				r.AuthGate.Observe(c.Instance, VerifyReport{}, restartErr)
+ 			}
+ 			sum.Results = append(sum.Results, res)
+ 			if consecutiveFailures >= r.maxFailures() {
+ 				sum.Halted = true
+ 				sum.HaltReason = fmt.Sprintf(
+ 					"%d consecutive restarts failed — halting instead of failing through the rest of the fleet (last error: %v)",
+-					consecutiveFailures, err)
++					consecutiveFailures, restartErr)
+ 				r.logHalt(sum.HaltReason)
+ 			}
+ 			continue
+diff --git a/internal/fleet/recover_test.go b/internal/fleet/recover_test.go
+index 5824f019ce030831cd3c6dc45f40436956eecc32..267449611fd526f838986248a917559317853d9c 100644
+--- a/internal/fleet/recover_test.go
++++ b/internal/fleet/recover_test.go
+@@ -275,6 +275,32 @@ func TestRecoverHaltsAfterConsecutiveRestartFailures(t *testing.T) {
+ 	}
+ }
+ 
++func TestRecoverContinuesAfterRestartPartialSuccess(t *testing.T) {
++	r := &recorder{}
++	rec := newTestRecoverer(r, func(*session.Instance) VerifyReport { return bootedReport() })
++	rec.Restart = func(inst *session.Instance) error {
++		r.restarts = append(r.restarts, inst.Title)
++		r.log("restart %s", inst.Title)
++		return &session.RestartPartialSuccessError{
++			InstanceID: inst.ID,
++			Err:        errors.New("database is locked"),
++		}
++	}
++	rec.MaxFailures = 1
++
++	sum := rec.Recover(downAssessment("a", "b"))
++
++	if sum.Failed != 0 || sum.Halted {
++		t.Fatalf("summary = %+v, want no failed restarts and no halt", sum)
++	}
++	if sum.Recovered != 2 {
++		t.Fatalf("Recovered = %d, want both completed restarts verified", sum.Recovered)
++	}
++	if len(r.verified) != 2 || len(r.persists) != 4 {
++		t.Fatalf("verified = %v, persists = %v, want both partial successes verified and persisted", r.verified, r.persists)
++	}
++}
++
+ func TestRecoverSuccessResetsTheFailureRun(t *testing.T) {
+ 	r := &recorder{}
+ 	rec := newTestRecoverer(r, func(*session.Instance) VerifyReport { return bootedReport() })
 diff --git a/internal/session/instance.go b/internal/session/instance.go
-index 5816114e..5b838879 100644
+index c24f878fb4b10118641b4529e528adf7e6057c1a..f8a78770045eab72bcdf64182ce77a5a56c70940 100644
 --- a/internal/session/instance.go
 +++ b/internal/session/instance.go
-@@ -407,6 +407,11 @@ type Instance struct {
+@@ -507,6 +507,11 @@ type Instance struct {
  	ToolOptionsJSON json.RawMessage `json:"tool_options,omitempty"`
  
  	tmuxSession *tmux.Session // Internal tmux session
@@ -199,7 +282,7 @@ index 5816114e..5b838879 100644
  
  	paneDeadExitStatusForTest func() (int, bool) // nil uses tmuxSession.PaneDeadExitStatus
  
-@@ -434,7 +439,8 @@ type Instance struct {
+@@ -586,7 +591,8 @@ type Instance struct {
  
  	// lastErrorCheck tracks when we last confirmed the session doesn't exist
  	// Used to skip expensive Exists() checks for ghost sessions (sessions in JSON but not in tmux)
@@ -209,7 +292,7 @@ index 5816114e..5b838879 100644
  	lastErrorCheck time.Time
  
  	// Tiered polling: skip expensive checks for idle sessions with no activity
-@@ -555,6 +561,172 @@ type Instance struct {
+@@ -645,6 +651,172 @@ type Instance struct {
  	hermesGatewayOK        bool
  }
  
@@ -382,7 +465,7 @@ index 5816114e..5b838879 100644
  // newSpawnGenWatch bumps the generation and hands back both the new generation
  // and the channel that the NEXT bump will close.
  //
-@@ -2251,7 +2427,9 @@ func (i *Instance) detectCodexSessionAsync() {
+@@ -2923,7 +3095,9 @@ func (i *Instance) detectCodexSessionAsync() {
  
  		sessionID, _ := i.queryCodexSessionFromProcessFiles()
  		if sessionID == "" {
@@ -393,7 +476,7 @@ index 5816114e..5b838879 100644
  		}
  		if sessionID != "" {
  			i.CodexSessionID = sessionID
-@@ -2347,11 +2525,32 @@ func runWithTimeout(timeout time.Duration, op func()) bool {
+@@ -3019,11 +3193,32 @@ func runWithTimeout(timeout time.Duration, op func()) bool {
  // while still preventing indefinite hangs.
  const codexWalkDirTimeout = 5 * time.Second
  
@@ -427,7 +510,7 @@ index 5816114e..5b838879 100644
  	sessionsDir := filepath.Join(i.getCodexHomeDir(), "sessions")
  	if _, err := os.Stat(sessionsDir); os.IsNotExist(err) {
  		return ""
-@@ -2381,7 +2580,7 @@ func (i *Instance) queryCodexSession(excludeIDs map[string]bool, allowUnscoped b
+@@ -3053,7 +3248,7 @@ func (i *Instance) queryCodexSession(excludeIDs map[string]bool, allowUnscoped b
  			if sessionID == "" {
  				return nil
  			}
@@ -436,7 +519,7 @@ index 5816114e..5b838879 100644
  				return nil
  			}
  
-@@ -2544,43 +2743,118 @@ func decodeJSONStringField(raw map[string]json.RawMessage, key string) string {
+@@ -3216,43 +3411,118 @@ func decodeJSONStringField(raw map[string]json.RawMessage, key string) string {
  	return strings.TrimSpace(s)
  }
  
@@ -577,7 +660,7 @@ index 5816114e..5b838879 100644
  		return false
  	}
  
-@@ -2976,20 +3250,24 @@ func (i *Instance) updateCodexSession(excludeIDs map[string]bool, forceProbe boo
+@@ -3672,20 +3942,24 @@ func (i *Instance) updateCodexSession(excludeIDs map[string]bool, forceProbe boo
  
  	// Only allow unscoped fallback when we don't have a known session ID yet.
  	allowUnscoped := envSessionID == "" && i.CodexSessionID == "" && i.CodexStartedAt > 0
@@ -611,7 +694,7 @@ index 5816114e..5b838879 100644
  		// queryCodexSession already filters subagent rollouts out of candidacy
  		// (incident 2026-07-15), so sessionID here is always a user thread.
  		changed := sessionID != i.CodexSessionID
-@@ -4627,12 +4905,7 @@ func (i *Instance) UpdateStatus() error {
+@@ -5918,12 +6192,7 @@ func (i *Instance) UpdateStatus() error {
  
  			// Update Codex session tracking (non-blocking, best-effort)
  			if IsCodexCompatible(i.Tool) {
@@ -625,7 +708,7 @@ index 5816114e..5b838879 100644
  			}
  
  			// Update OpenCode session tracking (non-blocking, best-effort).
-@@ -6601,7 +6874,21 @@ func (i *Instance) RestartWithEnv(env map[string]string) error {
+@@ -8244,7 +8513,21 @@ func (i *Instance) RestartWithEnv(env map[string]string) error {
  	return i.restart(env)
  }
  
@@ -648,7 +731,7 @@ index 5816114e..5b838879 100644
  	beforeLock := nowFn()
  	release, lockErr := acquireInstanceSpawnLock(i.ID)
  	if lockErr != nil {
-@@ -6825,7 +7112,7 @@ func (i *Instance) restart(env map[string]string) error {
+@@ -8503,7 +8786,7 @@ func (i *Instance) restart(env map[string]string) error {
  		i.mu.Lock()
  		i.pendingCodexRestartWarning = ""
  		i.mu.Unlock()
@@ -659,7 +742,7 @@ index 5816114e..5b838879 100644
  			i.mu.Unlock()
 diff --git a/internal/session/restart_result.go b/internal/session/restart_result.go
 new file mode 100644
-index 00000000..6181d278
+index 0000000000000000000000000000000000000000..6181d278683fb34b00d6f0a9f296a7f42acac34f
 --- /dev/null
 +++ b/internal/session/restart_result.go
 @@ -0,0 +1,34 @@
@@ -698,7 +781,7 @@ index 00000000..6181d278
 +	return errors.As(err, &completed) && completed.RestartCompleted()
 +}
 diff --git a/internal/session/selfheal_pass.go b/internal/session/selfheal_pass.go
-index 4259bd30..09e864c6 100644
+index 4259bd30ba2da52615148e42a6257c8c3b1ea0db..09e864c63d0f0fb4a4f904d775804b50c1059b1d 100644
 --- a/internal/session/selfheal_pass.go
 +++ b/internal/session/selfheal_pass.go
 @@ -51,6 +51,21 @@ func (r *selfHealRegistry) engineFor(profile string, caps selfheal.Caps) *selfhe
@@ -724,10 +807,10 @@ index 4259bd30..09e864c6 100644
  // trusted defaults for any unset field.
  func capsFromSettings(s SelfHealSettings) selfheal.Caps {
 diff --git a/internal/session/storage.go b/internal/session/storage.go
-index 22bfd1f1..b2f74599 100644
+index a5fb247174ba70df6d889e60856f2f40d045de28..ee0d83780309b2da3df995b1025d5635ec94a31a 100644
 --- a/internal/session/storage.go
 +++ b/internal/session/storage.go
-@@ -325,6 +326,7 @@ func (s *Storage) SaveWithGroups(instances []*Instance, groupTree *GroupTree) er
+@@ -356,6 +356,7 @@ func (s *Storage) SaveWithGroups(instances []*Instance, groupTree *GroupTree) er
  	// Convert instances to database rows
  	rows := make([]*statedb.InstanceRow, len(instances))
  	for i, inst := range instances {
@@ -735,7 +818,7 @@ index 22bfd1f1..b2f74599 100644
  		row, err := instanceToRow(inst)
  		if err != nil {
  			return err
-@@ -593,6 +595,7 @@ func (s *Storage) InsertSessionAndVerify(newInstance *Instance, groupTree *Group
+@@ -629,6 +630,7 @@ func (s *Storage) InsertSessionAndVerify(newInstance *Instance, groupTree *Group
  	if newInstance == nil {
  		return fmt.Errorf("nil instance")
  	}
@@ -743,7 +826,7 @@ index 22bfd1f1..b2f74599 100644
  	row, err := instanceToRow(newInstance)
  	if err != nil {
  		return err
-@@ -859,6 +862,7 @@ func (s *Storage) PersistRecoveredInstances(instances []*Instance) error {
+@@ -896,6 +898,7 @@ func (s *Storage) PersistRecoveredInstances(instances []*Instance) error {
  		if inst == nil {
  			continue
  		}
@@ -751,31 +834,30 @@ index 22bfd1f1..b2f74599 100644
  		row, err := instanceToRow(inst)
  		if err != nil {
  			errs = append(errs, fmt.Errorf("convert %s: %w", inst.ID, err))
-@@ -1506,6 +1509,7 @@ func (s *Storage) convertToInstances(data *StorageData) ([]*Instance, []*GroupDa
- 			AdditionalPaths:              instData.AdditionalPaths,
- 			MultiRepoTempDir:             instData.MultiRepoTempDir,
- 			tmuxSession:                  tmuxSess,
+@@ -1611,6 +1614,7 @@ func (s *Storage) convertToInstances(data *StorageData) ([]*Instance, []*GroupDa
+ 			AdditionalPaths:       instData.AdditionalPaths,
+ 			MultiRepoTempDir:      instData.MultiRepoTempDir,
+ 			tmuxSession:           tmuxSess,
 +			owningDB:                     s.db,
  		}
  		// Convert multi-repo worktree data
  		for _, wt := range instData.MultiRepoWorktrees {
 diff --git a/internal/session/transition_daemon.go b/internal/session/transition_daemon.go
-index 9cccb8a8..a6586f14 100644
+index 652556806ec2a9e8511b5baf963765801db39f9a..119d287b2e7fe378377e4db280ef3f87bd52738d 100644
 --- a/internal/session/transition_daemon.go
 +++ b/internal/session/transition_daemon.go
-@@ -10,6 +10,8 @@ import (
- 	"strings"
- 	"sync/atomic"
+@@ -14,6 +14,7 @@ import (
  	"time"
-+
+ 
+ 	"github.com/asheshgoplani/agent-deck/internal/desknotify"
 +	"github.com/asheshgoplani/agent-deck/internal/tmux"
  )
  
  const (
-@@ -71,6 +73,12 @@ type TransitionDaemon struct {
- 	// logs at most once per probeStallLogInterval instead of flooding the log
- 	// every few seconds. Accessed only from the single-threaded Run loop.
- 	lastProbeStall map[string]time.Time
+@@ -102,6 +103,12 @@ type TransitionDaemon struct {
+ 	// off the poll loop so a wedged notifier binary cannot stall session
+ 	// monitoring. Only tests wait on it.
+ 	desktopWG sync.WaitGroup
 +
 +	// pollState carries process-local status caches and throttles across
 +	// LoadWithGroups calls. Each load constructs fresh Instance and tmux.Session
@@ -785,15 +867,15 @@ index 9cccb8a8..a6586f14 100644
  }
  
  func NewTransitionDaemon() *TransitionDaemon {
-@@ -82,6 +90,7 @@ func NewTransitionDaemon() *TransitionDaemon {
- 		lastDone:       map[string]map[string]DoneSignal{},
- 		lastDoneScan:   map[string]map[string]time.Time{},
+@@ -116,6 +123,7 @@ func NewTransitionDaemon() *TransitionDaemon {
  		lastProbeStall: map[string]time.Time{},
+ 
+ 		lastDesktopNotify: map[string]string{},
 +		pollState:      map[string]map[string]instancePollingState{},
  	}
  }
  
-@@ -111,11 +120,20 @@ func (d *TransitionDaemon) Run(ctx context.Context) error {
+@@ -145,11 +153,20 @@ func (d *TransitionDaemon) Run(ctx context.Context) error {
  // SyncOnce performs one full monitoring pass and returns the recommended delay
  // until the next pass.
  func (d *TransitionDaemon) SyncOnce(_ context.Context) time.Duration {
@@ -815,7 +897,7 @@ index 9cccb8a8..a6586f14 100644
  	nextInterval := notifyPollSlow
  	for _, profile := range profiles {
  		interval := d.syncProfile(profile)
-@@ -309,13 +327,68 @@ func notifierProbeStallLogPath() string {
+@@ -343,13 +360,68 @@ func notifierProbeStallLogPath() string {
  	return path
  }
  
@@ -888,7 +970,7 @@ index 9cccb8a8..a6586f14 100644
  }
  
  func (d *TransitionDaemon) syncProfile(profile string) time.Duration {
-@@ -328,6 +401,13 @@ func (d *TransitionDaemon) syncProfile(profile string) time.Duration {
+@@ -362,6 +434,13 @@ func (d *TransitionDaemon) syncProfile(profile string) time.Duration {
  	if err != nil {
  		return notifyPollSlow
  	}
@@ -902,7 +984,7 @@ index 9cccb8a8..a6586f14 100644
  
  	byID := make(map[string]*Instance, len(instances))
  	hookCandidates := make(map[string]hookTransitionCandidate, len(instances))
-@@ -411,6 +491,7 @@ func (d *TransitionDaemon) syncProfile(profile string) time.Duration {
+@@ -445,6 +524,7 @@ func (d *TransitionDaemon) syncProfile(profile string) time.Duration {
  				statuses[inst.ID] = previousStatus
  				continue
  			}
@@ -910,7 +992,7 @@ index 9cccb8a8..a6586f14 100644
  			status := normalizeStatusString(string(inst.GetStatusThreadSafe()))
  			statuses[inst.ID] = status
  			if db != nil && status != previousStatus {
-@@ -470,6 +551,32 @@ func (d *TransitionDaemon) syncProfile(profile string) time.Duration {
+@@ -514,6 +594,32 @@ func (d *TransitionDaemon) syncProfile(profile string) time.Duration {
  	return choosePollInterval(statuses)
  }
  
@@ -944,10 +1026,10 @@ index 9cccb8a8..a6586f14 100644
  // the hook status file by the Stop-hook handler, issue #1186) into a distinct
  // "finished" event delivered to the parent. Per-task idempotency is enforced
 diff --git a/internal/statedb/statedb.go b/internal/statedb/statedb.go
-index f5b9439c..9e3d4d64 100644
+index bf583149c5b3aa8d3ce5bfb4bb390b4467173194..9378261b5257c32a16de49885d3b5b0dec7e6986 100644
 --- a/internal/statedb/statedb.go
 +++ b/internal/statedb/statedb.go
-@@ -1442,6 +1442,36 @@ func (s *StateDB) WriteGeminiSessionBinding(id, sessionID string, detectedAt tim
+@@ -1524,6 +1524,36 @@ func (s *StateDB) WriteLastAccessed(id string, at time.Time) error {
  	})
  }
  
@@ -985,10 +1067,10 @@ index f5b9439c..9e3d4d64 100644
  func (s *StateDB) ReadAllStatuses() (map[string]StatusRow, error) {
  	rows, err := s.db.Query("SELECT id, status, tool, acknowledged FROM instances")
 diff --git a/internal/tmux/tmux.go b/internal/tmux/tmux.go
-index 2342a1be..fa6aae9f 100644
+index d3dcbda07fdc3558f741f50beec3d19a738bd6f2..68438056b97af799c005f3a09d0c67ce627f592f 100644
 --- a/internal/tmux/tmux.go
 +++ b/internal/tmux/tmux.go
-@@ -5636,6 +5636,61 @@ func ListAgentDeckSessions() ([]string, error) {
+@@ -6190,6 +6190,61 @@ func ListAgentDeckSessions() ([]string, error) {
  	return sessions, nil
  }
  
@@ -1051,10 +1133,10 @@ index 2342a1be..fa6aae9f 100644
  // Used by NotificationManager to display waiting session notifications.
  func SetStatusLeft(sessionName, text string) error {
 diff --git a/internal/ui/home.go b/internal/ui/home.go
-index 50f123f6..4c90b355 100644
+index c1912c895fdde39fbe456a9a39cc0749a51f32a8..306f1d9a92ed23f3a5c116e1872b8e9e275b4e3f 100644
 --- a/internal/ui/home.go
 +++ b/internal/ui/home.go
-@@ -5700,6 +5700,7 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -6077,6 +6077,7 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
  		return h, nil
  
  	case sessionRestoredMsg:
@@ -1062,7 +1144,7 @@ index 50f123f6..4c90b355 100644
  		h.reloadMu.Lock()
  		reloading := h.isReloading
  		h.reloadMu.Unlock()
-@@ -5781,6 +5782,7 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -6158,6 +6159,7 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
  		return h, nil
  
  	case sessionRestartedMsg:
@@ -1070,7 +1152,7 @@ index 50f123f6..4c90b355 100644
  		if msg.err != nil {
  			// Restart failed - clear resuming animation immediately so user can retry.
  			delete(h.resumingSessions, msg.sessionID)
-@@ -5819,6 +5821,10 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -6212,6 +6214,10 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
  		return h, nil
  
  	case mcpRestartedMsg:
@@ -1081,7 +1163,7 @@ index 50f123f6..4c90b355 100644
  		if msg.err != nil {
  			h.setError(fmt.Errorf("failed to restart session for MCP changes: %w", msg.err))
  			return h, nil
-@@ -5994,8 +6000,12 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -6393,8 +6399,12 @@ func (h *Home) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
  		inst := h.instanceByID[msg.instanceID]
  		h.instancesMu.RUnlock()
  		if inst != nil {
@@ -1096,7 +1178,7 @@ index 50f123f6..4c90b355 100644
  				h.errTime = time.Now()
  			}
  			// Force save to persist the model change
-@@ -12615,6 +12625,16 @@ type sessionRestartedMsg struct {
+@@ -13325,6 +13335,16 @@ type sessionRestartedMsg struct {
  	unarchived bool
  }
  
@@ -1113,7 +1195,7 @@ index 50f123f6..4c90b355 100644
  // mcpRestartedMsg signals that an MCP-triggered restart completed and should auto-attach
  type mcpRestartedMsg struct {
  	session *session.Instance
-@@ -12641,6 +12661,9 @@ func restartWithArchiveTransition(
+@@ -13351,6 +13371,9 @@ func restartWithArchiveTransition(
  	}
  
  	if err := restart(); err != nil {
@@ -1124,10 +1206,10 @@ index 50f123f6..4c90b355 100644
  		if rollbackErr := persist(inst); rollbackErr != nil {
  			return false, fmt.Errorf("restart failed: %w; restoring archive state failed: %v", err, rollbackErr)
 diff --git a/internal/ui/web_mutator.go b/internal/ui/web_mutator.go
-index 19c0de93..7af1777d 100644
+index 4029bf22669040e7a2fd729ea353fdcbc3532368..7a23d10c62346687aae06576ddd28bc32ad5da1b 100644
 --- a/internal/ui/web_mutator.go
 +++ b/internal/ui/web_mutator.go
-@@ -186,7 +186,12 @@ func (m *WebMutator) RestartSession(id string) error {
+@@ -193,7 +193,12 @@ func (m *WebMutator) RestartSession(id string) error {
  	if inst == nil {
  		return fmt.Errorf("session not found: %s", id)
  	}
@@ -1141,7 +1223,7 @@ index 19c0de93..7af1777d 100644
  }
  
  // DeleteSession kills a session and removes it from persistent storage.
-@@ -333,8 +338,11 @@ func (m *WebMutator) UndoDelete() (string, error) {
+@@ -340,8 +345,11 @@ func (m *WebMutator) UndoDelete() (string, error) {
  	// tool (e.g. a tool the user has since uninstalled). Bubble the
  	// error up so the handler returns 500; the entry has already been
  	// popped, mirroring the TUI's ctrl+z semantics.
@@ -1155,82 +1237,3 @@ index 19c0de93..7af1777d 100644
  	}
  
  	// #1397: hydrate + serialize before reading/persisting the in-memory list so
-diff --git a/internal/fleet/recover.go b/internal/fleet/recover.go
-index ae5057b..e332f5a 100644
---- a/internal/fleet/recover.go
-+++ b/internal/fleet/recover.go
-@@ -262,21 +262,32 @@ func (r *Recoverer) Recover(as Assessment) Summary {
- 		attempts++
- 		sum.Attempted++
- 
--		if err := r.restart(c.Instance); err != nil {
-+		restartErr := r.restart(c.Instance)
-+		if session.IsRestartPartialSuccess(restartErr) {
-+			// The replacement pane is already live; retrying would destroy it.
-+			if r.Log != nil {
-+				r.Log.Warn("fleet_recover_restart_persistence_warning",
-+					slog.String("instance_id", c.ID()),
-+					slog.String("title", c.Title()),
-+					slog.String("warning", restartErr.Error()))
-+			}
-+			restartErr = nil
-+		}
-+		if restartErr != nil {
- 			res.Outcome = OutcomeFailed
--			res.Err = err
-+			res.Err = restartErr
- 			sum.Failed++
- 			consecutiveFailures++
--			r.logf("fleet_recover_restart_failed", c, slog.String("error", err.Error()))
-+			r.logf("fleet_recover_restart_failed", c, slog.String("error", restartErr.Error()))
- 			if r.AuthGate != nil {
--				r.AuthGate.Observe(c.Instance, VerifyReport{}, err)
-+				r.AuthGate.Observe(c.Instance, VerifyReport{}, restartErr)
- 			}
- 			sum.Results = append(sum.Results, res)
- 			if consecutiveFailures >= r.maxFailures() {
- 				sum.Halted = true
- 				sum.HaltReason = fmt.Sprintf(
- 					"%d consecutive restarts failed — halting instead of failing through the rest of the fleet (last error: %v)",
--					consecutiveFailures, err)
-+					consecutiveFailures, restartErr)
- 				r.logHalt(sum.HaltReason)
- 			}
- 			continue
-diff --git a/internal/fleet/recover_test.go b/internal/fleet/recover_test.go
-index 5824f01..2674496 100644
---- a/internal/fleet/recover_test.go
-+++ b/internal/fleet/recover_test.go
-@@ -275,6 +275,32 @@ func TestRecoverHaltsAfterConsecutiveRestartFailures(t *testing.T) {
- 	}
- }
- 
-+func TestRecoverContinuesAfterRestartPartialSuccess(t *testing.T) {
-+	r := &recorder{}
-+	rec := newTestRecoverer(r, func(*session.Instance) VerifyReport { return bootedReport() })
-+	rec.Restart = func(inst *session.Instance) error {
-+		r.restarts = append(r.restarts, inst.Title)
-+		r.log("restart %s", inst.Title)
-+		return &session.RestartPartialSuccessError{
-+			InstanceID: inst.ID,
-+			Err:        errors.New("database is locked"),
-+		}
-+	}
-+	rec.MaxFailures = 1
-+
-+	sum := rec.Recover(downAssessment("a", "b"))
-+
-+	if sum.Failed != 0 || sum.Halted {
-+		t.Fatalf("summary = %+v, want no failed restarts and no halt", sum)
-+	}
-+	if sum.Recovered != 2 {
-+		t.Fatalf("Recovered = %d, want both completed restarts verified", sum.Recovered)
-+	}
-+	if len(r.verified) != 2 || len(r.persists) != 4 {
-+		t.Fatalf("verified = %v, persists = %v, want both partial successes verified and persisted", r.verified, r.persists)
-+	}
-+}
-+
- func TestRecoverSuccessResetsTheFailureRun(t *testing.T) {
- 	r := &recorder{}
- 	rec := newTestRecoverer(r, func(*session.Instance) VerifyReport { return bootedReport() })
