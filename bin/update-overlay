@@ -1772,7 +1772,7 @@ def load_source_catalog(
             {"assets", "owner", "repo", "tagPrefix"},
         ),
         "npm-release": (
-            common_update_fields | {"normalizer", "package"},
+            common_update_fields | {"buildPackage", "normalizer", "package"},
             {"package"},
         ),
         "npm-release+flake-input": (
@@ -1823,6 +1823,13 @@ def load_source_catalog(
                 raise RuntimeError(f"manual source catalog record requires a reason: {name}")
             kind = update["kind"]
             build_mode = update.get("buildMode")
+            build_package = update.get("buildPackage")
+            if build_package is not None and (
+                not isinstance(build_package, str) or not build_package
+            ):
+                raise RuntimeError(
+                    f"invalid update build package for source catalog record: {name}"
+                )
             if build_mode is not None and (
                 build_mode not in {"pkg", "python"} or not hashes
             ):
@@ -3227,11 +3234,16 @@ def update_catalog_target(
         record["hashes"][hash_type] = new_dependent_hash
         computed.append(hash_type)
     _write_catalog_target(target)
-    if build_mode and computed and not hash_computer.validate_package_build(
-        name, build_mode
+    validation_package = update.get("buildPackage")
+    if validation_package is None and build_mode and computed:
+        validation_package = name
+    validation_mode = build_mode or "pkg"
+    if validation_package and not hash_computer.validate_package_build(
+        validation_package, validation_mode
     ):
-        print(f" {Colors.RED}✗ final {build_mode} build failed{Colors.RESET}")
-        raise CandidateRejected(f"{name} final {build_mode} build failed")
+        label = "package" if validation_mode == "pkg" else validation_mode
+        print(f" {Colors.RED}✗ final {label} build failed{Colors.RESET}")
+        raise CandidateRejected(f"{name} final {label} build failed")
     suffix = f" +{','.join(computed)}" if computed else ""
     print(f" {Colors.GREEN}✓{Colors.RESET}{suffix}")
     return "updated"

@@ -3408,6 +3408,86 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             self.assertEqual(failing_transaction.rollback(), 1)
             self.assertEqual(path.read_text(), before_failure)
 
+    def test_source_only_catalog_update_validates_candidate_and_rolls_back_rejection(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            path = root / "sources/pi.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {
+                            "example": {
+                                "version": "1.0.0",
+                                "source": {
+                                    "fetcher": "fetchurl",
+                                    "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
+                                    "args": {
+                                        "url": "https://registry.npmjs.org/example/-/example-1.0.0.tgz",
+                                        "hash": "sha256-old",
+                                    },
+                                },
+                                "update": {
+                                    "buildPackage": "example-package",
+                                    "kind": "npm-release",
+                                    "package": "example",
+                                },
+                            }
+                        },
+                    }
+                )
+            )
+            before = path.read_bytes()
+
+            class RejectingHashes:
+                def compute_native_hash(self, _source, _replacements):
+                    return "sha256-new"
+
+                def validate_package_build(self, package, build_mode):
+                    candidate = json.loads(path.read_text())["sources"]["example"]
+                    self.validation = (package, build_mode, candidate["version"])
+                    return False
+
+            hashes = RejectingHashes()
+            transaction = SourceTransaction()
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                self.assertRaisesRegex(
+                    CandidateRejected, "example final package build failed"
+                ),
+            ):
+                update_catalog_target(
+                    "example",
+                    load_source_catalog(root)["example"],
+                    SimpleNamespace(version=None, dry_run=False),
+                    SimpleNamespace(),
+                    SimpleNamespace(
+                        get_version=lambda _package, _requested=None: (
+                            "2.0.0",
+                            "sha512-registry",
+                        )
+                    ),
+                    SimpleNamespace(),
+                    hashes,
+                    transaction,
+                )
+
+            self.assertEqual(
+                hashes.validation, ("example-package", "pkg", "2.0.0")
+            )
+            self.assertEqual(transaction.rollback(), 1)
+            self.assertEqual(path.read_bytes(), before)
+
+            for invalid in ("", 7):
+                document = json.loads(before)
+                document["sources"]["example"]["update"]["buildPackage"] = invalid
+                path.write_text(json.dumps(document))
+                with self.assertRaisesRegex(
+                    RuntimeError, "invalid update build package"
+                ):
+                    load_source_catalog(root)
+
     def test_catalog_github_release_preserves_native_tag_field(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

@@ -1422,6 +1422,38 @@ TestXDGDataTask4_RuntimeStateDirsUseCategorySpecificLegacyFallback fails: merely
 ]
 #+end_src
 
+* DEFER [#B] Port managed Pi Goal X bounded history to 0.27.4
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-58dc
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-17 Mon 19:24]
+:MODIFIED: [2026-08-17 Mon 19:24]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pi Goal X 0.27.4 cannot be adopted by the managed gallery yet. The strict 0.19 bounded-history patch no longer applies. An isolated 0.27 port proved the basic streaming and accounting fixtures, but independent review found its upstream all-goal checkpoint/cache retains O(distinct historical goal IDs), making append checkpointing O(goal cardinality), and found stale-checkpoint event loss/duplication, concurrent usage loss, failed forced-flush dirty-state loss, durable audit-state eviction, tail replay duplication, and stale compaction slicing. Rebase at the owning Goal X seams: use an item-and-byte-bounded global window, exact on-demand per-goal streaming facts, bounded terminal summaries, bounded checkpoints, and fixed-cardinality mutation tests; preserve concurrent accounting and retry semantics. Until then, sources/pi.json buildPackage=pi-goal-x must cause 0.27.4 to be rejected, rolled back, and held back without aborting the full update.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-58dc",
+    "depends_on_id": "nix-9guj",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T02:24:05.825916Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#C] Make Agent Deck outbox performance classification truthful
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -2416,7 +2448,7 @@ Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension usin
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-17 Mon 15:14]
-:MODIFIED: [2026-08-17 Mon 18:33]
+:MODIFIED: [2026-08-17 Mon 19:24]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2449,6 +2481,13 @@ make update must complete end to end. Initial blockers: pi-subagents 0.50.0 comp
     "author": "johnw",
     "text": "Cold-path verification of the final correction passed. In a fresh isolated candidate, a harmless temporary callCabal2nix helper-name change produced a new unregistered git-monitor helper; the root no-build gate failed on that exact invalid path. The writable all-system flake-show derivation inventory built and registered the helper, store validity then passed, and the unchanged serialized/non-lazy/cache-free root no-build gate completed successfully. The updater now owns that prepass and has explicit command-order plus interruption, failure, cleanup, and status-3 coverage. The strict updater suite passes 106/106, formatting passes, pre-commit passes all 18 fast suites, and independent Nix review is clear. A signed corrective checkpoint precedes the next full make update rerun.",
     "created_at": "2026-08-18T01:33:16Z"
+  },
+  {
+    "id": 454,
+    "issue_id": "nix-9guj",
+    "author": "johnw",
+    "text": "Third full update rerun reached final Hera system realization and exposed Pi Goal X 0.27.4: its strict managed bounded-history patch no longer applies. The actual updater defect was earlier—plain npm-release records with no dependent hash were never package-built, so the candidate was falsely accepted. Added an explicit optional buildPackage contract to the generic catalog path and declared pi-goal-x; the mutated candidate is now built, CandidateRejected on failure, exactly rolled back, and the restored 0.19 baseline is built before holdback. Strict updater suite passes 107/107. An isolated 0.27 port was rejected after independent performance and TypeScript reviews found unbounded per-historical-goal checkpoint/cache state plus checkpoint, concurrent-accounting, forced-flush, durable-audit, tail-replay, and compaction correctness defects; deferred issue nix-58dc owns that future port. No unsafe 0.27 code entered the repository. Next: sync/sign this updater correction and rerun full make update.",
+    "created_at": "2026-08-18T02:24:43Z"
   }
 ]
 #+end_src
