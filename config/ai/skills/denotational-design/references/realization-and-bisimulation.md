@@ -31,6 +31,29 @@ breaking an always-green invariant is a redesign.
 
 ## Evidence discipline
 
+Two ceiling statements frame everything below, in Elliott's phrasing.
+**Type-checking's ceiling**: it rejects only what is superficially,
+obviously wrong — "the most egregious boneheaded answers"; stronger types
+raise the ceiling but do not reach the spec (in a dependently typed host
+you *can* state an adequate criterion, but only if you try, and an
+inadequate one still type-checks). **Testing's ceiling**: "testing cannot
+get to truth. It can only detect errors, and worse, only the obvious
+errors — and obvious errors are our friends, not our enemies… testing
+chases away the most obvious bugs and leaves the more subtle ones behind."
+Both are load-bearing here precisely because realizations are accepted
+empirically: the acceptance card exists to buy back, explicitly and with
+declared limits, what these two cannot give.
+
+A corollary for morphism property tests specifically: **their ceiling is
+narrower than it looks.** They do not evidence correctness; they guard
+against the *human* having misapplied the derivation — "QuickCheck can't
+tell you that your programs are correct; it can only tell you that it
+failed to find that they're incorrect. This methodology tells you it's
+correct… you might want QuickCheck as a backup." Where a derivation exists
+and the type is abstract, the test is insurance on the derivation; where
+no derivation exists, the test is the only evidence there is and must be
+labelled as such.
+
 - **Every empirical gate is a sampled square.** An artifact counts only if
   it names: the square it samples (which levels, which operation), the full
   **comparison tuple** (every input that fixes the point being compared —
@@ -127,7 +150,14 @@ system's enforcement where needed.
 ## Efficiency discipline, restated for realizations
 
 Hold the meaning fixed and rebuild the representation, on the record, with
-reasons. Reject any speed-up that would move a denotation ("a speed-up that
+reasons. Before swapping a representation, **name the dimension the
+dominant cost is polynomial in**, and choose the representation that puts
+the cost on the dimension you control: extracting a gradient from a
+function-representation of linear maps is quadratic in the dimension of
+the *domain* (millions); dualizing makes it quadratic in the dimension of
+the *codomain*, which for an objective function is one — "that's a great
+number to be quadratic in." The domain fact that licenses the swap
+(objective functions are scalar-valued) is part of the record. Reject any speed-up that would move a denotation ("a speed-up that
 changes any square's meaning is not an optimization but a semantics
 change") — a legitimate behavioral option enters as a distinct policy
 object at a named level, never as an environment flag or a runtime

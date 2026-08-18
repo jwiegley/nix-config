@@ -19,11 +19,16 @@ not what does):
 
 **Candidate notions and their subtractions** (each candidate names the
 technology of production/storage/display it smuggles in; each subtraction
-names the level where the removed thing reappears as a representation):
+names the level where the removed thing reappears as a representation;
+score every candidate — "many ideas are simple only because they're not
+precise"):
 
-| Candidate | Baggage | Reappears at |
-|---|---|---|
-| | | |
+| Candidate | Baggage | Adequate? | Simple (when made precise)? | Reappears at |
+|---|---|---|---|---|
+| | | | | |
+
+Minimality/restrictiveness is deliberately NOT a criterion here; it is
+bought in §2 (vocabulary) and §5 (representation).
 
 **The object** (one line; may be non-computable):
 
@@ -74,10 +79,14 @@ dilemmas dissolved:
 
 ## 5. The representation tower (K4)
 
-| Level | Object | Carrier | ≡ on its leg | Verification style |
-|---|---|---|---|---|
-| L0 | {mathematical object} | — | exact | proof |
-| L1 | | | | |
+Candidate fan first (radically different, each respecting the denotation;
+peers under one denotation are recorded as peers), then the pick, then the
+table. Justify each carrier against the naive functional baseline.
+
+| Level | Object | Carrier | Parameter/transformer | ≡ on its leg | Verification style |
+|---|---|---|---|---|---|
+| L0 | {mathematical object} | — | — | exact | proof |
+| L1 | | | | | |
 
 **Negative boundaries**:
 
@@ -100,11 +109,15 @@ derivations; they are the proofs' skeletons).
 
 ### L1
 
-| Operation | Equation | Solved definition | Derivation note |
-|---|---|---|---|
-| | | | |
+| Operation | Equation | Solved definition | Best rejected candidate (and why declined) | Derivation note |
+|---|---|---|---|---|
+| | | | | |
 
-**Unclosed equations and their diagnoses** (findings, not defeats):
+Un-denoted arguments audited? (every RHS argument is either wrapped in
+`⟦·⟧` or recorded as a deliberately meaning-free primitive): …
+
+**Unclosed equations, diagnoses, and recorded warts** (findings, not
+defeats; a declared compromise names its declined alternative):
 
 - …
 
@@ -172,6 +185,23 @@ checker}. Measured kernel size: {lines}.
 | # | Question | Options | Ruling (dated) / RECOMMENDED / DEFERRED | Reversal cost |
 |---|---|---|---|---|
 | | | | | |
+
+## Parked questions
+
+Objections raised out of order, recorded rather than resolved; some close
+as "never resolved, accepted" — a legitimate outcome.
+
+| # | Question | Raised at phase | Blocked on | Status |
+|---|---|---|---|---|
+| | | | | |
+
+## Elimination list
+
+The standard machinery of the field this design never needed ("no graphs,
+no tapes, no perturbation tags, certainly not mutation") — the exit-side
+counterpart of §1's subtractions:
+
+- …
 
 ## Open problems (published, not papered over)
 

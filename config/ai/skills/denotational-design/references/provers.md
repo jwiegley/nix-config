@@ -1,11 +1,27 @@
 # Prover selection and idioms
 
-The method's proof artifacts — the mathematical object, meaning functions,
-morphism statements, commuting squares, and their proofs — live in a
-dependently typed proof assistant. Default to **Lean 4**; support **Rocq**
-(formerly Coq) and **Agda** as first-class alternatives. Settle the choice
-in phase 1 and record it; the design documents then use that prover's
-notation throughout.
+A proof assistant is not only where finished proofs are deposited; it is
+the written language in which a specification can be held still and
+criticized. Elliott's testimony after decades of paper practice: "now that
+I can write my specifications and proofs in Agda, I'm much more critical
+of them than I used to be… things that not only couldn't I say in Haskell,
+but I couldn't *think of*." The formal language changes which designs are
+thinkable — use it from phase 1 where the engagement is formal, not as a
+phase-8 deposit box.
+
+It is also an amplifier, not a constituent (see the ground rules): the
+minimum viable home for a specification is a comment, the documentation,
+and optionally a property test — "it doesn't need to be executable" — and
+the minimum viable proof is the hand equational chain recorded beside the
+definition, which is the derivation read backwards. Do not gate getting
+started on tooling.
+
+For a formal engagement: the method's proof artifacts — the mathematical
+object, meaning functions, morphism statements, commuting squares, and
+their proofs — live in a dependently typed proof assistant. Default to
+**Lean 4**; support **Rocq** (formerly Coq) and **Agda** as first-class
+alternatives. Settle the choice in phase 1 and record it; the design
+documents then use that prover's notation throughout.
 
 ## Choosing
 
@@ -26,6 +42,29 @@ Coinductive semantic domains front and center, or a taste for
 proofs-as-programs minimalism → Agda. When the project already hosts one
 prover, do not introduce a second for this design — "port a statement when
 a consumer needs it, never as a bulk campaign."
+
+**Provenance of the default.** The Lean 4 default is this skill's
+ecosystem choice, not Elliott's. His working language is **Agda**, chosen
+on taste and internal consistency — "of the lot [Coq, Lean, Idris], Agda
+for me is the most tasteful… it has a beautiful consistency" — and he
+treats the four as interchangeable guarantors of non-self-deception ("you
+'re not going to get away with lying to Coq or Agda or Idris or Lean").
+Three method-relevant Agda affordances the table understates: **totality**
+(no ⊥, so the ⊥-level morphism failures in the failure table cannot
+arise — the same `and` is commutative in Agda and not in Haskell);
+**implicit/instance arguments**, which discharge the totalization recipe's
+proof obligations ("idioms that in a lot of cases make that completely
+easy"); and partiality made a *type* error (divide-by-zero takes a proof
+that the divisor is nonzero).
+
+**Why not SMT or refinement types alone.** SMT automation is real and
+composes with dependent types, but it is combinatorial: "you can get a
+couple orders of magnitude. That's it… it's useful in conjunction with
+dependent types, but it's not a solution on its own" — it cannot be the
+substrate for a design whose whole claim is that correctness composes
+unboundedly. Refinement/liquid types occupy a middle ground Elliott tried
+in earnest and could not adopt ("I really wanted to love liquid types…
+and I couldn't"); treat that as unresolved taste, not a settled verdict.
 
 ## The method's artifacts, per prover
 
@@ -89,4 +128,16 @@ mathematics ends (classical axioms admitted, floating-point left to
 empirical gates, external kernels quarantined behind a version-pinned
 citation). Adding to the list is a decision-register event. Refuse global
 theorems the substrate cannot support and say what empirically covers the
-gap — "by design and not by concession."
+gap — "by design and not by concession." The human rationale for the
+policy: "you're not going to get away with lying to the prover — if it
+comes to a false conclusion, it's because you explicitly gave it a false
+postulate, so you've had to own up to that." And the reason the
+*statements* are the human-review surface: the theorem "is the one thing
+that can't be proved. So it has to be simple in order for it not to be
+misleading."
+
+Flag one seam honestly: treating floating point as a permanent empirical
+seam is this skill's engineering compromise, not Elliott's stance — his is
+"floating point numbers, we have to get past them. And we have to do it
+efficiently. I think we absolutely can," on the same compounding-error
+argument that kills "probably correct" components.
