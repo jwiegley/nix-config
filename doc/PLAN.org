@@ -2756,7 +2756,7 @@ Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension usin
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-17 Mon 15:14]
-:MODIFIED: [2026-08-17 Mon 21:58]
+:MODIFIED: [2026-08-18 Tue 09:35]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2845,6 +2845,13 @@ make update must complete end to end. Initial blockers: pi-subagents 0.50.0 comp
     "author": "johnw",
     "text": "The next clean make update reached Hera realization and exposed a timing-only Cyclopts failure: Python 3.14 Cyclopts 4.22.5 completed 2630 tests, then the first selected Zsh scenario timed out waiting for its initial ZTEST prompt before any completion behavior ran. Historical logs and a controlled cold probe confirm the fixed four-second startup wait is too short under Darwin build load. The narrow shared Darwin override raises only that pexpect initial-prompt timeout to 20 seconds and preserves the full test matrix; the exact Cyclopts package build passes. Follow-on focused checks also repaired four accepted-pin consumer contracts: Pi Copy Message's Bun mock now exports decodeKittyPrintable, Pi Cymbal requires /cymbal and rejects retired /cymbal:remind, Pi Quiet packages its newly imported bash-settings.ts, and Pi MCP Adapter 2.26's exact runtime file/skill contract is reconciled. Agent Resources and Pi Gallery checks now pass.",
     "created_at": "2026-08-18T04:58:46Z"
+  },
+  {
+    "id": 482,
+    "issue_id": "nix-9guj",
+    "author": "johnw",
+    "text": "Component repairs and validation are complete pending signed commit partition and the final clean update transaction. Closed component issues cover Ruff policy, candidate-realization infrastructure (Python and Pi), MLX/oMLX/DDGS, mtplx, Goal X 0.27.4, and Obr 0.3.2. Final shared evidence: strict updater suite 118/118; canonical pre-commit hook green; Goal X Gallery check green with independent no-history fess CLEAR; MLX/oMLX metadata and runtime contracts green with final no-history consumer fess CLEAR; Pi realization v7 independent audit CLEAR; and non-activating Hera system build /nix/store/w23s0pr2b62wx3psclqkbpnfzvv2v09h-darwin-system-26.11.4cff07d.drv succeeded. Remaining umbrella work is to create signed logical commits, run make update cleanly through Hera activation/publication/push/readback, and repair any newly rejected candidate. VPS remains excluded.",
+    "created_at": "2026-08-18T16:35:57Z"
   }
 ]
 #+end_src
