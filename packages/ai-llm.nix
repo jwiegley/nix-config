@@ -112,7 +112,7 @@ in
   # AIPerf - Generative AI model-server benchmarking
   aiperf =
     let
-      # AIPerf 0.11.0 requires Python >=3.10,<3.14. nixpkgs' default Python is
+      # AIPerf 0.12.0 requires Python >=3.11,<3.14. nixpkgs' default Python is
       # 3.14, so keep this application and its private dependencies on 3.13.
       ps = prev.python313Packages;
 
@@ -171,7 +171,7 @@ in
         };
       };
 
-      # AIPerf 0.11.0 declares kaleido~=1.2.0. Keep the catalog target manual
+      # AIPerf 0.12.0 declares kaleido~=1.2.0. Keep the catalog target manual
       # until AIPerf accepts the 1.3 series.
       kaleido = ps.buildPythonPackage rec {
         pname = "kaleido";

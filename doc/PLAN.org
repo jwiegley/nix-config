@@ -2448,7 +2448,7 @@ Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension usin
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-17 Mon 15:14]
-:MODIFIED: [2026-08-17 Mon 20:25]
+:MODIFIED: [2026-08-17 Mon 20:49]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2516,6 +2516,20 @@ make update must complete end to end. Initial blockers: pi-subagents 0.50.0 comp
     "author": "johnw",
     "text": "Guard repair verified before commit: sources/pi.json now declares buildPackage for pi-blackhole and pi-cache-optimizer, and the existing source-only candidate rollback test pins both real records alongside Browser Native and Goal X. Full strict update-overlay suite passed 107/107 in 144.443s; nix fmt and lefthook pre-commit --all-files passed. No source pin, profile, activation, or remote state changed.",
     "created_at": "2026-08-18T03:25:19Z"
+  },
+  {
+    "id": 459,
+    "issue_id": "nix-9guj",
+    "author": "johnw",
+    "text": "Fifth full make update rerun correctly rejected, exactly rolled back, baseline-validated, and held back Agent Deck 1.13.0, Pi Agent Browser Native 0.3.0, Pi Blackhole 0.4.7, Pi Cache Optimizer 2.8.3, and Pi Goal X 0.27.4. Portable/root evaluation gates and the full pre-commit gate passed, producing signed candidate 29d59060. The independent pre-activation audit found its maintained Pi inventory stale for accepted source pins, so the final Hera build was stopped before activation or push; transaction cleanup passed and the signed candidate was preserved locally. The inventory is now being reconciled against that accepted candidate, after which the exact tree will be signed and the full update/build/activation/publication sequence rerun.",
+    "created_at": "2026-08-18T03:48:41Z"
+  },
+  {
+    "id": 460,
+    "issue_id": "nix-9guj",
+    "author": "johnw",
+    "text": "Candidate documentation reconciliation also found live AIPerf rationales still naming 0.11.0 after the accepted 0.12.0 pin. Direct 0.12.0 wheel metadata requires Python >=3.11,<3.14 and kaleido~=1.2.0, so the existing Python 3.13 and Kaleido 1.2 selections remain correct; only the versioned rationale was stale. Updated those live comments/reason, reconciled the 11 changed Pi/runtime inventory entries, and relabeled the runtime table as selected rather than activated because activation remains pending.",
+    "created_at": "2026-08-18T03:49:58Z"
   }
 ]
 #+end_src

@@ -580,7 +580,7 @@
         "kind": "pypi-release",
         "package": "kaleido",
         "policy": "manual",
-        "reason": "AIPerf 0.11.0 requires kaleido~=1.2.0"
+        "reason": "AIPerf 0.12.0 requires kaleido~=1.2.0"
       },
       "version": "1.2.0"
     },
