@@ -2448,7 +2448,7 @@ Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension usin
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-17 Mon 15:14]
-:MODIFIED: [2026-08-17 Mon 19:55]
+:MODIFIED: [2026-08-17 Mon 20:02]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2495,6 +2495,13 @@ make update must complete end to end. Initial blockers: pi-subagents 0.50.0 comp
     "author": "johnw",
     "text": "Fourth full make update rerun produced signed candidate 5858eb41 after both Agent Deck 1.13 and Goal X 0.27 were correctly rejected, rolled back, and held back. Portable and root no-build gates plus pre-commit passed, but final Hera realization exposed another source-only catalog gap: pi-agent-browser-native 0.3.0 was never package-validated and its strict bounded-history restore hunk fails. Upstream 0.3 also raises its supported Pi floor to 0.84 while managed Pi remains 0.83, so adoption would be unsupported. Declared buildPackage=pi-agent-browser-native and added a mutation-killing real-catalog assertion; the candidate will now reject, exactly restore, baseline-validate, and hold back at 0.2.72. Deferred issue nix-tr5m owns the coupled Pi 0.84 migration and patch rebase. The full strict updater suite passes 107/107. Independent candidate audit also found the maintained Pi extension inventory stale for accepted pins; reconciled those exact versions before the next rerun.",
     "created_at": "2026-08-18T02:55:48Z"
+  },
+  {
+    "id": 456,
+    "issue_id": "nix-9guj",
+    "author": "johnw",
+    "text": "Correction after independent audit: the Browser Native guard commit must describe the currently pinned tree, so the accepted-candidate version inventory has been reverted to the retained pins. The inventory will be reconciled only after make update creates and accepts the source/lock commit that makes those versions current; no future candidate versions are asserted in the guard-only commit.",
+    "created_at": "2026-08-18T03:02:11Z"
   }
 ]
 #+end_src
