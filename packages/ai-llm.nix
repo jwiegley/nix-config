@@ -424,12 +424,23 @@ in
         buildPythonPackage rec {
           pname = "mtplx";
           inherit (sources.mtplx) version;
-          pyproject = null;
-          format = "wheel";
+          pyproject = true;
 
           src =
             assert sources.mtplx.source.fetcher == "fetchPypi";
             fetchPypi sources.mtplx.source.args;
+
+          # Backport upstream's Transformers 5.15 compatibility fix while
+          # waiting for a release newer than 2.8.2.
+          # https://github.com/youssofal/MTPLX/pull/260
+          patches = [ ../overlays/ai/patches/mtplx-transformers-5.15.patch ];
+
+          build-system = [
+            setuptools
+            wheel
+          ];
+
+          nativeCheckInputs = [ packaging ];
 
           propagatedBuildInputs = [
             fastapi
@@ -446,8 +457,47 @@ in
             uvicorn
           ];
 
-          dontBuild = true;
-          doCheck = false;
+          # Upstream's model-download and live-server integration suite is not
+          # a deterministic package-build contract. Verify the rebuilt wheel's
+          # installed dependency semantics against this package set instead.
+          # buildPythonPackage maps doCheck to doInstallCheck, so this enables
+          # the custom installCheckPhase below (not an upstream checkPhase).
+          doCheck = true;
+          installCheckPhase = ''
+            runHook preInstallCheck
+            (
+              cd "$out"
+              PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
+                ${python.interpreter} - <<'PY'
+            from importlib import metadata
+
+            from packaging.requirements import Requirement
+            from packaging.version import Version
+            import transformers
+
+            requirements = [
+                Requirement(value)
+                for value in metadata.requires("mtplx") or ()
+                if Requirement(value).name == "transformers"
+            ]
+            assert len(requirements) == 1, requirements
+            requirement = requirements[0]
+            assert Version("5.13.0") not in requirement.specifier, requirement
+            assert Version("5.14.1") in requirement.specifier, requirement
+            assert Version("5.15.0") in requirement.specifier, requirement
+            assert Version("5.15.999") in requirement.specifier, requirement
+            assert Version("5.16.0") not in requirement.specifier, requirement
+            assert str(requirement.marker) == (
+                'sys_platform == "darwin" and platform_machine == "arm64"'
+            ), requirement
+
+            selected = Version(transformers.__version__)
+            assert selected.release[:2] == (5, 15), selected
+            assert selected in requirement.specifier, (selected, requirement)
+            PY
+            )
+            runHook postInstallCheck
+          '';
 
           pythonImportsCheck = [ "mtplx" ];
         };
@@ -457,6 +507,7 @@ in
     final.runCommand "mtplx-${pyPkg.version}"
       {
         inherit (pyPkg) version;
+        passthru.tests.transformers-compat = pyPkg;
         meta = {
           description = "MTP speculative decoding runtime for Apple Silicon (MLX-native)";
           homepage = "https://github.com/youssofal/MTPLX";

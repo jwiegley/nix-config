@@ -518,6 +518,7 @@ in
     }
     // lib.optionalAttrs (pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.isAarch64) {
       llm-mlx-plugin = pkgs.python3Packages.llm-mlx.passthru.tests.llm-plugin;
+      mtplx-transformers-compat = pkgs.mtplx.passthru.tests.transformers-compat;
       pi-classic-core-fixtures = classicCoreFixtures;
       pi-classic-core-source = classicCoreSource;
     }

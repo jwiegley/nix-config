@@ -36,6 +36,7 @@ let
       llama-cpp-platform-compat = evaluationOnly systems;
       llm-agents-nixpkgs-independent = evaluationOnly systems;
       llm-mlx-plugin = behavioral darwinSystems false;
+      mtplx-transformers-compat = behavioral darwinSystems false;
       pi-extension-tests = behavioral systems true;
       pi-fleet-theme = behavioral systems true;
       pi-gallery = behavioral systems true;

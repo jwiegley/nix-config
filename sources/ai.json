@@ -794,17 +794,16 @@
     "mtplx": {
       "source": {
         "args": {
-          "dist": "py3",
-          "format": "wheel",
-          "hash": "sha256-dDXq6+u0GSSJEWnCU0XyTBeThmEHaTaNCn8VpqxWd3E=",
+          "hash": "sha256-U51igBH/dTf0VY3OBnQECaFa+lU7FgfY3CelOZ+8SbE=",
           "pname": "mtplx",
-          "python": "py3",
           "version": "2.8.2"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/mtplx"
       },
       "update": {
+        "buildMode": "pkg",
+        "buildPackage": "mtplx",
         "kind": "pypi-release",
         "package": "mtplx"
       },

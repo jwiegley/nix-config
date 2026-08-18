@@ -8417,6 +8417,68 @@ A full x86_64-linux Obr realization from Hera scheduled rustc on andoria-08 and 
 ]
 #+end_src
 
+* DONE [#B] Adopt mtplx compatible with Transformers 5.15
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-s2fp
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 02:50]
+:MODIFIED: [2026-08-18 Tue 09:35]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 09:35]
+:CLOSE_REASON: Backported upstream's exact Darwin Transformers <5.16 fix to the official mtplx 2.8.2 sdist, made the installed-metadata check source-independent and dependency-explicit, and passed the real mtplx, wrapper, hook, and final system builds with independent CLEAR.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The exact Hera system build fails python3.14-mtplx-2.8.2 because its wheel declares transformers!=5.13.0,<5.15 while the accepted graph selects Transformers 5.15.0. Adopt or port a compatible mtplx at the package authority without suppressing dependency validation or rolling Transformers back merely for green; prove the real dependent Python environment/system closure.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-s2fp",
+    "depends_on_id": "nix-9guj",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T09:50:43.879887Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 469,
+    "issue_id": "nix-s2fp",
+    "author": "johnw",
+    "text": "Integrated an exact backport of upstream d90eb384 against official mtplx 2.8.2 sdist, widening only the Darwin arm64 Transformers ceiling from <5.15 to <5.16. Focused drv qd05y7… built to z7q5vs…; runtime dependency hook, custom installCheckPhase, import check, and metadata check all ran. Installed METADATA requires transformers!=5.13.0,<5.16 and all launchers reference selected Transformers 5.15.0. Updater preservation and check-manifest driver tests pass. Signed commit/closeout remains pending.",
+    "created_at": "2026-08-18T10:14:55Z"
+  },
+  {
+    "id": 475,
+    "issue_id": "nix-s2fp",
+    "author": "johnw",
+    "text": "Independent fess found and we fixed two installCheck integrity gaps: the metadata probe now runs from the installed output rather than the unpacked source tree, and packaging is an explicit nativeCheckInput rather than a transitive accident. Final shared-tree build passes: Python drv k28gwfsd3r7x152f6fimhisskvq8p0cj -> hnw79c5jhhlv1dg371qxy8w9r1mqk2hz; wrapper drv hrxgmbd61b5acgmaqid5vyl26m6y45b3 -> nyqz897pkrnl7mmdbyc33wkl52kxv499. Log shows runtime-dependency, installCheck, and import phases; installed METADATA retains exact Darwin arm64 transformers!=5.13.0,<5.16.",
+    "created_at": "2026-08-18T11:14:22Z"
+  },
+  {
+    "id": 476,
+    "issue_id": "nix-s2fp",
+    "author": "johnw",
+    "text": "Formal no-history independent fess is CLEAR after re-auditing the two corrected check-integrity findings. No remaining findings, scope drift, reward-hacking, or documentation issue. Auditor independently confirmed the fresh final mtplx build and installed metadata semantics.",
+    "created_at": "2026-08-18T11:17:39Z"
+  }
+]
+#+end_src
+
 * DONE [#C] Reduce cold Hera Darwin configuration evaluation cost
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
