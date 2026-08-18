@@ -650,6 +650,7 @@ let
     "alexey-review"
     "caveman"
     "comment-audit"
+    "denotational-design"
     "eliminate-dead-code"
     "fix-all"
     "fix-transcript"

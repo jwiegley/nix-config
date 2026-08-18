@@ -100,7 +100,7 @@ assert builtins.length (builtins.attrNames rendered.files) == 93;
 assert builtins.length agentNames == 25;
 assert builtins.length (builtins.attrNames selected.commands) == 61;
 assert builtins.length (builtins.attrNames selected.prompts) == 2;
-assert builtins.length (builtins.attrNames selected.skills) == 26;
+assert builtins.length (builtins.attrNames selected.skills) == 27;
 assert builtins.hasAttr skillName selected.skills;
 assert !(builtins.hasAttr "${root}/settings.json" rendered.files);
 assert builtins.hasAttr "${root}/managed-settings.json" rendered.files;
