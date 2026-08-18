@@ -1053,9 +1053,10 @@ def load_pi_normalization_contract(nix_dir: Path) -> dict:
     # roles: normalize-manifest.jq enforces them whenever a target is
     # normalized (build release-sources and lock regeneration), and the
     # whole-contract eval-time assert in packages/pi-gallery/default.nix
-    # gates every `nix flake check` — including bin/update's pre-sign
-    # validation, which never builds. This loader validates only the shape
-    # its own consumers index (a nonempty `targets` object) plus the npm
+    # gates every `nix flake check` — including bin/update's root no-build
+    # validation after its writable IFD-instantiation pass. This loader
+    # validates only the shape its own consumers index (a nonempty `targets`
+    # object) plus the npm
     # argv tripwire below: the flags feed npm directly, so losing
     # --ignore-scripts must fail here even if both other stages were
     # bypassed.

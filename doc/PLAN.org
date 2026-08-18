@@ -2416,7 +2416,7 @@ Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension usin
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-17 Mon 15:14]
-:MODIFIED: [2026-08-17 Mon 17:17]
+:MODIFIED: [2026-08-17 Mon 18:33]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2435,6 +2435,20 @@ make update must complete end to end. Initial blockers: pi-subagents 0.50.0 comp
     "author": "johnw",
     "text": "Discovery run found two additional blockers. Gogcli 0.37.0 requires Go 1.26.6 while its dedicated manual toolchain was 1.26.5; advanced the coupled source pin, renamed its version-bearing authority to gogcli-go, and proved the real 0.37.0 vendorHash/package transaction. Final root flake validation also exposed missing evaluation-time derivations under all-core lazy evaluation. Replaced the eager Starship preset store read with Home Manager presets, made the final mutable-candidate gate cache-free/serialized/non-lazy, and added command-log plus host-behavior coverage. Focused Gogcli, updater routing, and host-behavior gates pass; full strict suite and make update rerun remain pending.",
     "created_at": "2026-08-18T00:17:26Z"
+  },
+  {
+    "id": 452,
+    "issue_id": "nix-9guj",
+    "author": "johnw",
+    "text": "Second full make update rerun isolated the final gate defect. Determinate Nix 3.21.7 makes flake check --no-build enter read-only evaluation and disables IFD; newly hashed callCabal2nix derivations are computed but not registered, producing the invalid cabal2nix-git-monitor path. Serialized, non-lazy, cache-free evaluation therefore could not repair it. Exact candidate reproduction confirmed the failure, and a writable Hera pre-evaluation merely advanced to new cross-system cabal2nix-una and cabal2nix-sizes failures. The durable shared correction is to retain the portable all-system no-build gate but run the root publication gate as a real writable flake check, with eval-cores 1, lazy-trees false, and eval-cache false. The strict 106-test updater suite passes; exact candidate real-check verification remains in progress.",
+    "created_at": "2026-08-18T01:09:40Z"
+  },
+  {
+    "id": 453,
+    "issue_id": "nix-9guj",
+    "author": "johnw",
+    "text": "Cold-path verification of the final correction passed. In a fresh isolated candidate, a harmless temporary callCabal2nix helper-name change produced a new unregistered git-monitor helper; the root no-build gate failed on that exact invalid path. The writable all-system flake-show derivation inventory built and registered the helper, store validity then passed, and the unchanged serialized/non-lazy/cache-free root no-build gate completed successfully. The updater now owns that prepass and has explicit command-order plus interruption, failure, cleanup, and status-3 coverage. The strict updater suite passes 106/106, formatting passes, pre-commit passes all 18 fast suites, and independent Nix review is clear. A signed corrective checkpoint precedes the next full make update rerun.",
+    "created_at": "2026-08-18T01:33:16Z"
   }
 ]
 #+end_src

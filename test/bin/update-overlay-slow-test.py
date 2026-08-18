@@ -5423,6 +5423,10 @@ elif [[ $1 == flake && $2 == check ]]; then
     fail_phase candidate-root-validation
     status_three_phase candidate-root-validation
   fi
+elif [[ $1 == flake && $2 == show ]]; then
+  signal_phase candidate-root-instantiation
+  fail_phase candidate-root-instantiation
+  status_three_phase candidate-root-instantiation
 elif [[ $1 == build ]]; then
   if [[ -n ${UPDATE_TEST_EXTERNAL_LOG:-} ]]; then
     printf 'build\n' >>"$UPDATE_TEST_EXTERNAL_LOG"
@@ -5962,6 +5966,7 @@ fi
             ("target-root", "candidate-root-lock", ["--target", "fixed"]),
             ("all-input-root", "candidate-root-lock", ["--all-inputs"]),
             ("final-check", "candidate-portable-validation", []),
+            ("final-root-instantiation", "candidate-root-instantiation", []),
         )
         for case, phase, arguments in cases:
             with self.subTest(case=case), tempfile.TemporaryDirectory() as temp_dir:
@@ -6065,6 +6070,7 @@ fi
                     "flake update --flake ./config/ai fixed-input",
                     "flake update nix-config-ai",
                     "flake check ./config/ai --all-systems --no-build --no-eval-cache",
+                    "flake show --json --drv-paths --all-systems --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                     "flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
@@ -6301,6 +6307,7 @@ fi
                     "flake update --flake ./config/ai copy-input",
                     "flake update nix-config-ai",
                     "flake check ./config/ai --all-systems --no-build --no-eval-cache",
+                    "flake show --json --drv-paths --all-systems --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                     "flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
@@ -6357,6 +6364,7 @@ fi
                     "flake update --flake ./config/ai build-input",
                     "flake update nix-config-ai",
                     "flake check ./config/ai --all-systems --no-build --no-eval-cache",
+                    "flake show --json --drv-paths --all-systems --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                     "flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
@@ -6407,6 +6415,7 @@ fi
                     "flake update --flake ./config/ai npm-flake-input",
                     "flake update nix-config-ai",
                     "flake check ./config/ai --all-systems --no-build --no-eval-cache",
+                    "flake show --json --drv-paths --all-systems --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                     "flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
@@ -6504,6 +6513,7 @@ fi
                 command_log.read_text().splitlines(),
                 [
                     "flake check ./config/ai --all-systems --no-build --no-eval-cache",
+                    "flake show --json --drv-paths --all-systems --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                     "flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
@@ -6552,6 +6562,7 @@ fi
                 command_log.read_text().splitlines(),
                 [
                     "flake check ./config/ai --all-systems --no-build --no-eval-cache",
+                    "flake show --json --drv-paths --all-systems --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                     "flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
@@ -6686,6 +6697,7 @@ fi
                 command_log.read_text().splitlines(),
                 [
                     "flake check ./config/ai --all-systems --no-build --no-eval-cache",
+                    "flake show --json --drv-paths --all-systems --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                     "flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
@@ -7062,6 +7074,7 @@ fi
             "candidate-update",
             "candidate-format",
             "candidate-portable-validation",
+            "candidate-root-instantiation",
             "candidate-root-validation",
         ):
             with self.subTest(phase=phase), tempfile.TemporaryDirectory() as temp_dir:
@@ -7097,6 +7110,7 @@ fi
             "candidate-update",
             "candidate-format",
             "candidate-portable-validation",
+            "candidate-root-instantiation",
             "candidate-root-validation",
         ):
             with self.subTest(phase=phase), tempfile.TemporaryDirectory() as temp_dir:
