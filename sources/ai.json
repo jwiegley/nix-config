@@ -481,24 +481,45 @@
       },
       "version": "0.10.0"
     },
+    "ddgs": {
+      "source": {
+        "args": {
+          "hash": "sha256-iKDdNt26Rpm6ogcvvy+tSCj4Ra7m3Jc2EhjQcFyVSvM=",
+          "owner": "deedy5",
+          "repo": "ddgs",
+          "tag": "v9.14.4"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/deedy5/ddgs"
+      },
+      "update": {
+        "buildMode": "pkg",
+        "buildPackage": "omlx",
+        "kind": "github-release",
+        "tagPrefix": "v"
+      },
+      "version": "9.14.4"
+    },
     "dflash-mlx": {
       "source": {
         "args": {
-          "hash": "sha256-5YK2lXxKagO0TwR2EmIUaTwouhJozrWmUVYg5J5hlSw=",
+          "hash": "sha256-VVXAm+nkmSmw8teVPiegBdiUY4eI5vcG75d4Zzu5C4w=",
           "owner": "jundot",
           "repo": "dflash-mlx",
-          "rev": "474f8e1ba95864f5bb0759cd1b9a13c80abc5ce3"
+          "rev": "2eb169f461ad6b3c5b58e29025f8afb07f23cf3e"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jundot/dflash-mlx"
       },
       "update": {
         "branch": "main",
+        "buildMode": "pkg",
+        "buildPackage": "omlx",
         "kind": "github-commit",
         "policy": "manual",
         "reason": "oMLX pins this exact fork and commit for its speculative-decoding kernels"
       },
-      "version": "0.1.10+omlx.3"
+      "version": "0.1.10+omlx.5"
     },
     "espeakng-loader": {
       "source": {
@@ -696,7 +717,7 @@
         "buildPackage": "mlx-audio",
         "kind": "github-commit"
       },
-      "version": "0.4.7"
+      "version": "0.5.0"
     },
     "mlx-embeddings": {
       "source": {
@@ -754,21 +775,21 @@
     "mlx-vlm": {
       "source": {
         "args": {
-          "hash": "sha256-JEECMpjP7YK2Y59g54KVWtBKZsfB+rOK4dQlPabLjF8=",
+          "hash": "sha256-wsL8vV51R55ctwtTxxW/zr3Z7ttQtBN4RpFXte5//+c=",
           "owner": "Blaizzy",
           "repo": "mlx-vlm",
-          "rev": "78b96eb5462141447b9a6b4943ef553891da56dd"
+          "tag": "v0.6.14"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/Blaizzy/mlx-vlm"
       },
       "update": {
-        "branch": "main",
-        "kind": "github-commit",
-        "policy": "manual",
-        "reason": "oMLX's compatibility patch targets this exact 0.6.3 commit; newer main requires Transformers 5.14"
+        "buildMode": "pkg",
+        "buildPackage": "omlx",
+        "kind": "github-release",
+        "tagPrefix": "v"
       },
-      "version": "0.6.3"
+      "version": "0.6.14"
     },
     "mtplx": {
       "source": {

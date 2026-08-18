@@ -38,6 +38,34 @@ in
           )
           ++ [ pfinal.click ];
       });
+
+      ddgs = pprev.ddgs.overridePythonAttrs (oldAttrs: {
+        inherit (sources.ddgs) version;
+        src =
+          assert sources.ddgs.source.fetcher == "fetchFromGitHub";
+          prev.fetchFromGitHub sources.ddgs.source.args;
+        dependencies =
+          with pfinal;
+          [
+            click
+            fake-useragent
+            httpx
+            lxml
+            primp
+          ]
+          ++ httpx.optional-dependencies.brotli
+          ++ httpx.optional-dependencies.http2
+          ++ httpx.optional-dependencies.socks;
+        pythonImportsCheck = [ "ddgs" ];
+        nativeCheckInputs = (oldAttrs.nativeCheckInputs or [ ]) ++ [ pfinal.packaging ];
+        doCheck = true;
+        installCheckPhase = ''
+          runHook preInstallCheck
+          PYTHONPATH="$out/${pfinal.python.sitePackages}:''${PYTHONPATH:-}" \
+            ${pfinal.python.interpreter} ${../test/ai/overlays/ddgs-dependency-contract.py} ${sources.ddgs.version}
+          runHook postInstallCheck
+        '';
+      });
     }
     // {
 
@@ -93,18 +121,41 @@ in
           prev.fetchFromGitHub sources.mlx-lm.source.args;
       });
 
-      # Use the catalog-pinned mlx-vlm revision and explicit optional dependencies.
-      mlx-vlm = pprev.mlx-vlm.overridePythonAttrs (oldAttrs: {
+      # Use the catalog-pinned mlx-vlm release and its complete runtime dependency set.
+      mlx-vlm = pprev.mlx-vlm.overridePythonAttrs (_oldAttrs: {
         inherit (sources.mlx-vlm) version;
         src =
           assert sources.mlx-vlm.source.fetcher == "fetchFromGitHub";
           prev.fetchFromGitHub sources.mlx-vlm.source.args;
-        dependencies = (oldAttrs.dependencies or [ ]) ++ [
+        dependencies = with pfinal; [
+          fastapi
           pfinal.llguidance
           pfinal.mlx-audio
+          miniaudio
+          mlx
+          numpy
+          opencv-python
+          pillow
           pfinal.python-multipart
+          requests
+          starlette
+          tqdm
+          transformers
+          uvicorn
+          websockets
         ];
-        doCheck = false;
+        nativeCheckInputs = [ pfinal.packaging ];
+        doCheck = true;
+        pythonImportsCheck = [
+          "mlx_vlm"
+          "mlx_vlm.server"
+        ];
+        installCheckPhase = ''
+          runHook preInstallCheck
+          PYTHONPATH="$out/${pfinal.python.sitePackages}:''${PYTHONPATH:-}" \
+            ${pfinal.python.interpreter} ${../test/ai/overlays/mlx-vlm-dependency-contract.py} ${sources.mlx-vlm.version}
+          runHook postInstallCheck
+        '';
       });
 
       mlx-speech = pfinal.buildPythonPackage {
@@ -183,11 +234,15 @@ in
           mlx-lm
         ];
 
-        pythonImportsCheck = [ "dflash_mlx" ];
+        # oMLX 0.6.1 relies on the Muse Glimmer backend added by this fork revision.
+        pythonImportsCheck = [
+          "dflash_mlx"
+          "dflash_mlx.engine.target_muse_glimmer"
+        ];
 
         meta = {
           description = "Lossless DFlash speculative decoding for MLX on Apple Silicon";
-          homepage = "https://github.com/bstnxbt/dflash-mlx";
+          homepage = "https://github.com/jundot/dflash-mlx";
           license = prev.lib.licenses.asl20;
           platforms = [ "aarch64-darwin" ];
         };
@@ -344,10 +399,6 @@ in
           pfinal.wheel
         ];
 
-        # Runtime metadata constraints do not match this package set, so provide
-        # explicit dependencies below and skip the generic metadata check.
-        dontCheckRuntimeDeps = true;
-
         dependencies = with pfinal; [
           mlx
           numpy
@@ -372,6 +423,13 @@ in
         ];
 
         pythonImportsCheck = [ "mlx_audio" ];
+        doCheck = true;
+        installCheckPhase = ''
+          runHook preInstallCheck
+          PYTHONPATH="$out/${pfinal.python.sitePackages}:''${PYTHONPATH:-}" \
+            ${pfinal.python.interpreter} ${../test/ai/overlays/mlx-audio-version-contract.py} ${sources.mlx-audio.version}
+          runHook postInstallCheck
+        '';
 
         meta = {
           description = "TTS/STT/STS inference for Apple Silicon via MLX";

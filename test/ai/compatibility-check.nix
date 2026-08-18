@@ -7,6 +7,7 @@ let
   checkManifest = import ../check-manifest.nix;
   contract = import ./compatibility-contract.nix;
   lib = inputs.nixpkgs.lib;
+  sources = import ../../packages/source-catalog.nix "ai";
   implementationSource = builtins.readFile ../../flake/ai.nix;
   sortedNames = value: lib.sort builtins.lessThan (builtins.attrNames value);
   hasAll = actual: required: builtins.all (name: builtins.elem name actual) required;
@@ -75,6 +76,10 @@ let
       gitAiDrvPaths = map (package: package.drvPath) (
         builtins.attrValues inputs.git-ai.packages.${system}
       );
+      mlxVlm313 = pkgs.python313Packages.mlx-vlm;
+      mlxVlm314 = pkgs.python314Packages.mlx-vlm;
+      ddgs313 = pkgs.python313Packages.ddgs;
+      ddgs314 = pkgs.python314Packages.ddgs;
       lacksGitAiReference = package: !(builtins.elem package.drvPath gitAiDrvPaths);
       activePackageSelections =
         actual.lib.aiPackagesFor pkgs
@@ -119,6 +124,14 @@ let
       (lib.assertMsg (
         overridden.agent-deck == "caller-override"
       ) "portable AI overlay prevents later caller overrides on ${system}")
+      (lib.assertMsg (
+        system != "aarch64-darwin"
+        || (mlxVlm313.version == sources.mlx-vlm.version && mlxVlm314.version == sources.mlx-vlm.version)
+      ) "mlx-vlm package variants diverged from the catalog on ${system}")
+      (lib.assertMsg (
+        system != "aarch64-darwin"
+        || (ddgs313.version == sources.ddgs.version && ddgs314.version == sources.ddgs.version)
+      ) "DDGS package variants diverged from the catalog on ${system}")
       (lib.assertMsg (
         pkgs.agent-deck.passthru.runtimeLifecycleRaceEnabled == (system != "aarch64-linux")
       ) "agent-deck lifecycle race policy changed on ${system}")

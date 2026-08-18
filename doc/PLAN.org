@@ -855,6 +855,54 @@ Capture a slow tmux time-to-first-prompt sample and identify or falsify history 
 ]
 #+end_src
 
+* DONE [#B] Adopt mlx-vlm compatible with vllm-mlx 0.4.1
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-308q
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 03:05]
+:MODIFIED: [2026-08-18 Tue 09:35]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 09:35]
+:CLOSE_REASON: Adopted mlx-vlm 0.6.14 with its complete declared dependency set, metadata/API checks, oMLX consumer validation, and passing Python 3.13/3.14, vllm-mlx, oMLX, compatibility, and final system builds.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+After mlx-audio 0.5.0 built successfully, vllm-mlx 0.4.1 rejected the selected mlx-vlm 0.6.3 because it requires mlx-vlm>=0.6.5. Advance and port mlx-vlm at its catalog/package authority without suppressing dependency checks or rolling vllm-mlx back; retain compatibility patches and prove real package/dependent builds.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-308q",
+    "depends_on_id": "nix-3qs7",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T10:05:36.881645Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 471,
+    "issue_id": "nix-308q",
+    "author": "johnw",
+    "text": "Integrated the frozen mlx-vlm 0.6.14 repair into the shared worktree from artifact db8c2281a9cc216acb1c13c50eb6d6ea07bd3aa108d453e3d611252d7b74b961. The combined strict updater suite passes 108/108. Isolated real evidence remains: Python 3.13 and 3.14 mlx-vlm 0.6.14 builds, vllm-mlx 0.4.1, and the AI compatibility contract all pass; version and missing-miniaudio mutants fail. Final combined system proof and signed commit remain pending.",
+    "created_at": "2026-08-18T10:39:02Z"
+  }
+]
+#+end_src
+
 * DONE [#C] Scrub inherited Git config and namespace selectors
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -903,6 +951,68 @@ test/bin/publish-slow-test.py assumes an unscoped pre-push command is skipped fo
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#B] Reconcile mlx-audio source and Python package version metadata
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-3qs7
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 02:50]
+:MODIFIED: [2026-08-18 Tue 09:35]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 09:35]
+:CLOSE_REASON: Aligned mlx-audio catalog/source/package metadata at 0.5.0, added installed metadata/module validation and candidate rollback coverage, and proved both Python sets plus the final oMLX/system closure.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The exact Hera system build for the accepted update graph fails both Python 3.13 and 3.14 mlx-audio derivations: the Nix package is labeled 0.4.7 while installed METADATA reports 0.5.0. Repair the source/package version authority at the narrow shared seam without disabling metadata checks or rolling back the requested update; retain behavioral coverage and prove downstream mlx-vlm, mlx-embeddings, oMLX, and vllm-mlx closure compatibility.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-3qs7",
+    "depends_on_id": "nix-9guj",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T09:50:43.211837Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 468,
+    "issue_id": "nix-3qs7",
+    "author": "johnw",
+    "text": "Root cause and repair verified: catalog rev 65fb3cc is upstream's 0.5.0 bump, but github-commit preserved version 0.4.7. Integrated truthful version 0.5.0 plus explicit buildPackage=mlx-audio/buildMode=python and source-only github-commit rejection/rollback coverage. Strict updater suite passed 108/108. Real Python 3.14 drv mr9gyi… and Python 3.13 drv cj30c5… built; installed METADATA and module version both report 0.5.0. Downstream mlx-vlm/mlx-embeddings passed. Separate masked blockers are tracked as nix-ji5u and nix-308q. Signed commit/closeout remains pending.",
+    "created_at": "2026-08-18T10:14:25Z"
+  },
+  {
+    "id": 477,
+    "issue_id": "nix-3qs7",
+    "author": "johnw",
+    "text": "Formal no-history MLX-chain fess returned NOT CLEAR. Required corrections: explicit mlx-audio installed METADATA/module/catalog version oracle with mismatch rollback regression; metadata-driven mlx-vlm/DDGS dependency checks rather than mirrored name lists; and dflash homepage correction to the packaged jundot fork. The isolated MLX owner has reopened all three; no commit/closure until a fresh composed build and re-audit are green.",
+    "created_at": "2026-08-18T11:24:43Z"
+  },
+  {
+    "id": 481,
+    "issue_id": "nix-3qs7",
+    "author": "johnw",
+    "text": "Fresh no-history fess rejected the first final MLX metadata-oracle artifact: the auto-discovered mutation suite lacked packaging in the root Python test environment, the oMLX DDGS oracle accepted an inactive marked exact pin, and the shared updater test was not Ruff-format-clean. Root added packaging at pythonTestEnvFor and regenerated direnv, required a unique active DDGS requirement with a marker mutant, and removed invalid non-executable shebangs/formatted the new contract files. The exact metadata suite now passes 4/4 under the repository direnv. Updater-file formatting is deferred to the single post-Python/Pi formatting pass; final combined fess remains required before closeout.",
+    "created_at": "2026-08-18T12:23:35Z"
   }
 ]
 #+end_src
@@ -3202,6 +3312,40 @@ Hera zsh startup runs compinit/compaudit across large immutable Nix completion t
 ]
 #+end_src
 
+* DONE [#B] Reconcile oMLX 0.6.1 dflash-mlx dependency source
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-bg32
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 03:05]
+:MODIFIED: [2026-08-18 Tue 03:14]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 03:14]
+:CLOSE_REASON: Duplicate of nix-ji5u created by a timed-out CLI invocation; no separate work performed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+After mlx-audio 0.5.0 built successfully, the real oMLX 0.6.1 package failed its strict postPatch because the expected dflash-mlx Git URL is no longer present upstream. Port the Nix dependency rewrite to the current oMLX source contract, preserve offline/fixed-source ownership, add mutation-honest coverage, and prove the real oMLX package and dependent closure.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-bg32",
+    "depends_on_id": "nix-3qs7",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T10:05:29.383524Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Make Andoria Gitea policy validation fail closed on the complete lock graph
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5421,6 +5565,54 @@ Current Nix source and active generated settings contain no Cozempic reference; 
 ]
 #+end_src
 
+* DONE [#B] Reconcile oMLX 0.6.1 dflash-mlx dependency source
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ji5u
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 03:05]
+:MODIFIED: [2026-08-18 Tue 09:35]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 09:35]
+:CLOSE_REASON: Pinned the exact oMLX dflash-mlx fork revision, derived the strict rewrite from catalog authority, added the required Muse API gate, and passed both Python builds and the composed oMLX/system closure.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+After mlx-audio 0.5.0 built successfully, the real oMLX 0.6.1 package failed its strict postPatch because the expected dflash-mlx Git URL is no longer present upstream. Port the Nix dependency rewrite to the current oMLX source contract, preserve offline fixed-source ownership, add mutation-honest coverage, and prove the real oMLX package and dependent closure.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-ji5u",
+    "depends_on_id": "nix-3qs7",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T10:05:34.129405Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 470,
+    "issue_id": "nix-ji5u",
+    "author": "johnw",
+    "text": "Integrated standalone dflash source repair: catalog now pins upstream oMLX 0.6.1's exact dflash fork commit 2eb169f at version 0.1.10+omlx.5; the strict oMLX rewrite derives owner/repo/rev from that catalog authority and the package import gate requires target_muse_glimmer. Focused updater suite passed 107/107. Real Python 3.13 and 3.14 dflash derivations built with matching METADATA/runtime version. Composed oMLX reached dependency validation and exposed separate nix-jswl (mlx==0.32.0 vs selected 0.32.1); no constraint relaxation was folded into this unit. Signed commit/closeout remains pending.",
+    "created_at": "2026-08-18T10:24:34Z"
+  }
+]
+#+end_src
+
 * DEFER [#C] Restore outbound SSH identity resolution on shared-work hosts
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5531,6 +5723,54 @@ TestCrossConsumerEvalRefusesEmptySuccess invokes the real shared-work nix eval d
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#B] Reconcile oMLX 0.6.1 with MLX 0.32.1
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-jswl
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 03:23]
+:MODIFIED: [2026-08-18 Tue 09:35]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 09:35]
+:CLOSE_REASON: Applied the exact oMLX MLX 0.32.1 compatibility backport without relaxing runtime checks, added installed requirement/version/runtime oracles, and passed the final real oMLX and Hera system builds.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+After the exact dflash-mlx source repair, the real oMLX 0.6.1 build reaches dependency validation and fails because upstream declares mlx==0.32.0 while the accepted package set supplies MLX 0.32.1. Adopt an upstream-supported oMLX revision/release or exact compatibility backport at the package authority; do not suppress runtime dependency checks or roll MLX back merely for green. Add semantic coverage and prove the real oMLX package and dependent closure.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-jswl",
+    "depends_on_id": "nix-ji5u",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T10:23:50.606843Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 472,
+    "issue_id": "nix-jswl",
+    "author": "johnw",
+    "text": "Integrated frozen oMLX MLX 0.32.1 exact-pin repair artifact 6c7c7e2c6f6ace71b6b3eb27b5dca9ab51c86d24275d62438c192aa838b76acf into the shared worktree. Artifact reverse-check, JSON contract check, nixfmt, ruff, py_compile, and diff checks pass. Isolated composed oMLX build gets through wheel construction and the prior MLX mismatch, then stops at the separately tracked exact DDGS 9.14.4 dependency. Final combined oMLX/system proof and signed commit remain pending.",
+    "created_at": "2026-08-18T10:42:42Z"
   }
 ]
 #+end_src
@@ -16148,6 +16388,61 @@ The session layer will correctly reject all running cross-profile migrations, bu
     "author": "johnw",
     "text": "2026-08-13 final frozen implementation and independent review CLEAR. All three session/group/conductor help+error surfaces state that --force is compatibility-only and any live physical runtime must stop regardless of recorded running/waiting/idle/starting/stopped/queued/error status; stale status alone is not authority. Real isolated-tmux CLI matrix covers all seven statuses and no source/target mutation. Normal, race, compile and gofmt gates pass. Hashes session_move 7994e7cb, group af19ffcd, conductor 87eb8b5e, CLI test 5987db27.",
     "created_at": "2026-08-14T01:33:10Z"
+  }
+]
+#+end_src
+
+* DONE [#B] Package oMLX 0.6.1 with DDGS 9.14.4
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-yj3l
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 03:32]
+:MODIFIED: [2026-08-18 Tue 09:35]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 09:35]
+:CLOSE_REASON: Packaged DDGS 9.14.4 with complete dependencies/extras, added it to oMLX with exact metadata/API checks, and passed both Python variants, oMLX, compatibility, the final system build, and fresh no-history fess.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+After the exact MLX 0.32.1 compatibility backport, the real oMLX 0.6.1 runtime dependency check fails because upstream requires ddgs==9.14.4 for its default web-search provider, the derivation omits ddgs, and nixpkgs exposes only 9.14.2. Package the exact supported DDGS release and add it to oMLX at the narrow Python package seam; do not relax the exact dependency or disable runtime checks. Add import/metadata/behavior coverage and prove the real oMLX closure.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-yj3l",
+    "depends_on_id": "nix-jswl",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T10:32:31.669335Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 473,
+    "issue_id": "nix-yj3l",
+    "author": "johnw",
+    "text": "Integrated frozen DDGS 9.14.4/oMLX dependency artifact 1cc7f62081bc083912c8a55e99c69e579bb89c2d279f78c59baf53ecdc25df45 into the shared worktree. Artifact reverse-check, JSON contract check, nixfmt, ruff, py_compile, and diff checks pass. Isolated exact-stack builds pass for Python 3.13/3.14 DDGS, top-level oMLX 0.6.1, and the AI compatibility contract; wrong-version, missing-oMLX-edge, and missing-dependency mutants fail. Final combined suite/system proof and signed commit remain pending.",
+    "created_at": "2026-08-18T10:53:07Z"
+  },
+  {
+    "id": 474,
+    "issue_id": "nix-yj3l",
+    "author": "johnw",
+    "text": "Post-integration shared-tree proof: the full strict updater suite passes 108/108 in 150.646s with mlx-audio, mlx-vlm, dflash, oMLX MLX, and DDGS repairs composed. No skips or failures.",
+    "created_at": "2026-08-18T11:00:33Z"
   }
 ]
 #+end_src

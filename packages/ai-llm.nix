@@ -495,20 +495,26 @@ in
       # cmake and nanobind build only optional custom Metal kernels, which are
       # disabled because the sandbox lacks that toolchain. Drop those two build
       # requirements; the remaining MLX requirement is supplied by our wheel.
+      # This build ships no ABI-coupled custom kernels, so retarget upstream's
+      # three exact MLX pins to the selected 0.32.1 wheel.
       postPatch = ''
+        substituteInPlace pyproject.toml \
+          --replace-fail '"mlx==0.32.0"' '"mlx==0.32.1"'
         substituteInPlace pyproject.toml \
           --replace-fail '"cmake>=3.27",' "" \
           --replace-fail '"nanobind==2.13.0",' "" \
           --replace-fail '"mlx-lm @ git+https://github.com/ml-explore/mlx-lm@ab1806e8f5d6aa035973af194a1b9198ab4754dc"' '"mlx-lm"' \
           --replace-fail '"mlx-embeddings @ git+https://github.com/Blaizzy/mlx-embeddings@32981fa4e8064ed664b52071789dd18271fe4206"' '"mlx-embeddings"' \
           --replace-fail '"mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm@78b96eb5462141447b9a6b4943ef553891da56dd"' '"mlx-vlm"' \
-          --replace-fail '"dflash-mlx @ git+https://github.com/jundot/dflash-mlx@474f8e1ba95864f5bb0759cd1b9a13c80abc5ce3"' '"dflash-mlx"'
+          --replace-fail '"dflash-mlx @ git+https://github.com/${sources.dflash-mlx.source.args.owner}/${sources.dflash-mlx.source.args.repo}@${sources.dflash-mlx.source.args.rev}"' '"dflash-mlx"'
       '';
 
       build-system = [
         setuptools
         wheel
       ];
+
+      nativeCheckInputs = [ packaging ];
 
       # Use the numpy and transformers versions shared by this MLX package set.
       # The checks below exercise imports and CLI startup with those versions.
@@ -524,6 +530,7 @@ in
         mlx-vlm
         mlx-audio
         dflash-mlx
+        ddgs
         regex
         transformers
         mistral-common
@@ -569,6 +576,12 @@ in
       installCheckPhase = ''
         runHook preInstallCheck
         $out/bin/omlx --help > /dev/null
+        PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
+          ${python.interpreter} ${../test/ai/overlays/omlx-ddgs-version-contract.py} ${ddgs.version}
+        PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
+          ${python.interpreter} ${../test/ai/overlays/omlx-mlx-version-contract.py} ${mlx.version}
+        PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
+          ${python.interpreter} ${../test/ai/overlays/omlx-direct-reference-contract.py} ${mlx-embeddings.version} ${mlx-vlm.version}
         PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
           ${python.interpreter} ${../test/ai/overlays/omlx-host-vm-info64-count.py}
         runHook postInstallCheck

@@ -158,7 +158,13 @@
         }
       );
       pythonTestEnvFor = forAllSystems (
-        system: stockPkgsFor.${system}.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ])
+        system:
+        stockPkgsFor.${system}.python3.withPackages (
+          pythonPackages: with pythonPackages; [
+            packaging
+            pyyaml
+          ]
+        )
       );
       agentTestPkgsFor = forAllSystems (
         system:

@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -3946,6 +3947,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             self.assertEqual(path.read_text(), before_failure)
 
     def test_source_only_catalog_update_validates_candidate_and_rolls_back_rejection(self):
+        ai_catalog = json.loads((REPO / "sources/ai.json").read_text())["sources"]
         catalog = load_source_catalog(REPO)
         updates = {
             name: target["_record"]["update"] for name, target in catalog.items()
@@ -3967,6 +3969,15 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     updates[package].get("buildMode"),
                     build_mode,
                 )
+        mlx_audio = ai_catalog["mlx-audio"]
+        self.assertEqual(mlx_audio["update"].get("buildPackage"), "mlx-audio")
+        self.assertEqual(mlx_audio["update"].get("buildMode"), "python")
+        mlx_vlm = ai_catalog["mlx-vlm"]
+        self.assertEqual(mlx_vlm["update"].get("buildPackage"), "omlx")
+        self.assertEqual(mlx_vlm["update"].get("buildMode"), "pkg")
+        ddgs = ai_catalog["ddgs"]
+        self.assertEqual(ddgs["update"].get("buildPackage"), "omlx")
+        self.assertEqual(ddgs["update"].get("buildMode"), "pkg")
 
         catalog = json.loads((REPO / "sources/pi.json").read_text())["sources"]
         expected_builds = {
@@ -4121,6 +4132,362 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     RuntimeError, "invalid update build package"
                 ):
                     load_source_catalog(root)
+
+    def test_build_contract_schema_rejects_wrong_kind_and_invalid_check_shapes(self):
+        github_source = {
+            "fetcher": "fetchFromGitHub",
+            "url": "https://github.com/example/project",
+            "args": {
+                "hash": "sha256-source",
+                "owner": "example",
+                "repo": "project",
+                "tag": "v1.0.0",
+            },
+        }
+        fetch_tree_source = {
+            "fetcher": "fetchTree",
+            "url": "https://github.com/example/project",
+            "args": {
+                "narHash": "sha256-source",
+                "owner": "example",
+                "repo": "project",
+                "rev": "a" * 40,
+                "type": "github",
+            },
+        }
+        cases = {
+            "wrong-build-kind": (
+                {
+                    "source": {
+                        "fetcher": "fetchurl",
+                        "url": "https://example.invalid/project.tar.gz",
+                        "args": {
+                            "hash": "sha256-source",
+                            "url": "https://example.invalid/project.tar.gz",
+                        },
+                    },
+                    "update": {
+                        "buildPackage": "project",
+                        "kind": "url-release",
+                    },
+                },
+                "invalid update strategy fields",
+            ),
+            "wrong-check-kind": (
+                {
+                    "source": github_source,
+                    "update": {
+                        "buildMode": "check",
+                        "buildPackage": "pi-gallery",
+                        "kind": "github-tag",
+                    },
+                },
+                "invalid update build mode",
+            ),
+            "missing-implicit-copy-package": (
+                {
+                    "version": "1.0.0",
+                    "source": fetch_tree_source,
+                    "update": {
+                        "input": "project",
+                        "kind": "flake-input+copy",
+                    },
+                },
+                "invalid update strategy fields",
+            ),
+            "missing-pkg-copy-package": (
+                {
+                    "version": "1.0.0",
+                    "source": fetch_tree_source,
+                    "hashes": {"npmDepsHash": "sha256-deps"},
+                    "update": {
+                        "buildMode": "pkg",
+                        "input": "project",
+                        "kind": "flake-input+copy",
+                    },
+                },
+                "invalid update strategy fields",
+            ),
+            "missing-python-copy-package": (
+                {
+                    "version": "1.0.0",
+                    "source": fetch_tree_source,
+                    "hashes": {"npmDepsHash": "sha256-deps"},
+                    "update": {
+                        "buildMode": "python",
+                        "input": "project",
+                        "kind": "flake-input+copy",
+                    },
+                },
+                "invalid update strategy fields",
+            ),
+            "missing-check-copy-package": (
+                {
+                    "version": "1.0.0",
+                    "source": fetch_tree_source,
+                    "update": {
+                        "buildMode": "check",
+                        "input": "project",
+                        "kind": "flake-input+copy",
+                    },
+                },
+                "invalid update strategy fields",
+            ),
+            "check-with-dependent-hash": (
+                {
+                    "version": "1.0.0",
+                    "source": fetch_tree_source,
+                    "hashes": {"npmDepsHash": "sha256-deps"},
+                    "update": {
+                        "buildMode": "check",
+                        "buildPackage": "pi-gallery",
+                        "input": "project",
+                        "kind": "flake-input+copy",
+                    },
+                },
+                "invalid update build mode",
+            ),
+        }
+        for label, (record, expected) in cases.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temp_dir:
+                root = Path(temp_dir)
+                (root / "sources").mkdir()
+                (root / "sources/test.json").write_text(
+                    json.dumps(
+                        {"schemaVersion": 1, "sources": {"project": record}},
+                        indent=2,
+                    )
+                    + "\n"
+                )
+                with self.assertRaisesRegex(RuntimeError, expected):
+                    load_source_catalog(root, validate_flake_projections=False)
+
+    def test_mlx_candidate_targets_omlx_exact_version_contract(self):
+        sources = json.loads((REPO / "sources/ai.json").read_text())["sources"]
+        catalog = load_source_catalog(REPO)
+        for source_name in (
+            "mlx",
+            "mlx-embeddings",
+            "mlx-vlm",
+            "dflash-mlx",
+            "omlx",
+        ):
+            with self.subTest(source=source_name):
+                update = sources[source_name]["update"]
+                self.assertEqual(
+                    (update.get("buildPackage"), update.get("buildMode")),
+                    ("omlx", "pkg"),
+                )
+                self.assertEqual(catalog[source_name]["executor"], "update")
+        self.assertEqual(sources["dflash-mlx"]["update"]["policy"], "manual")
+        expression = HashComputer(REPO)._package_build_command("omlx", "pkg")[-1]
+        self.assertIn('repoPath = builtins.getEnv "UPDATE_OVERLAY_REPO_DIR"', expression)
+        self.assertIn('overlays = import (repo + "/config/overlays.nix")', expression)
+        self.assertIn('builtins.getAttr "omlx" pkgs', expression)
+        self.assertIn(
+            "${python.interpreter} "
+            "${../test/ai/overlays/omlx-mlx-version-contract.py} ${mlx.version}",
+            (REPO / "packages/ai-llm.nix").read_text(),
+        )
+        self.assertIn(
+            "${python.interpreter} "
+            "${../test/ai/overlays/omlx-direct-reference-contract.py} "
+            "${mlx-embeddings.version} ${mlx-vlm.version}",
+            (REPO / "packages/ai-llm.nix").read_text(),
+        )
+
+        calls = []
+
+        class ConsumerHashes:
+            def __init__(self, nix_dir):
+                self.nix_dir = nix_dir
+
+            def validate_package_build(self, package, build_mode):
+                calls.append((self.nix_dir, package, build_mode))
+                return True
+
+        with mock.patch.dict(
+            validate_catalog_target.__globals__, {"HashComputer": ConsumerHashes}
+        ):
+            for source_name in ("mlx-embeddings", "mlx-vlm"):
+                self.assertTrue(
+                    validate_catalog_target(REPO, source_name, catalog[source_name])
+                )
+        self.assertEqual(
+            calls,
+            [(REPO, "omlx", "pkg"), (REPO, "omlx", "pkg")],
+        )
+
+        contract = REPO / "test/ai/overlays/omlx-mlx-version-contract.py"
+
+        class Total:
+            @staticmethod
+            def item():
+                return 6
+
+        def run_contract(requirement):
+            def requirements(distribution):
+                self.assertEqual(distribution, "omlx")
+                return [requirement]
+
+            def installed_version(distribution):
+                self.assertEqual(distribution, "mlx")
+                return "0.32.1"
+
+            core = types.ModuleType("mlx.core")
+            core.__version__ = "0.32.1"
+            core.int32 = object()
+            core.array = lambda values, dtype: values
+            core.sum = lambda _values: Total()
+            core.eval = lambda _value: None
+            mlx = types.ModuleType("mlx")
+            mlx.__path__ = []
+            mlx.core = core
+            old_argv = sys.argv
+            try:
+                sys.argv = [str(contract), "0.32.1"]
+                with (
+                    mock.patch.dict(
+                        sys.modules, {"mlx": mlx, "mlx.core": core}
+                    ),
+                    mock.patch(
+                        "importlib.metadata.requires", side_effect=requirements
+                    ),
+                    mock.patch(
+                        "importlib.metadata.version", side_effect=installed_version
+                    ),
+                ):
+                    runpy.run_path(str(contract))
+            finally:
+                sys.argv = old_argv
+
+        run_contract("mlx==0.32.1")
+        for invalid in (
+            "mlx==0.32.0",
+            'mlx==0.32.1; python_version < "0"',
+            "mlx[bogus]==0.32.1",
+        ):
+            with self.subTest(requirement=invalid), self.assertRaises(SystemExit):
+                run_contract(invalid)
+
+    def test_github_commit_stale_catalog_version_rejects_and_rolls_back_exactly(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            path = root / "sources/ai.json"
+            old_ref = "1" * 40
+            new_ref = "2" * 40
+            record = {
+                "version": "0.4.7",
+                "source": {
+                    "fetcher": "fetchFromGitHub",
+                    "url": "https://github.com/Blaizzy/mlx-audio",
+                    "args": {
+                        "owner": "Blaizzy",
+                        "repo": "mlx-audio",
+                        "rev": old_ref,
+                        "hash": "sha256-source-old",
+                    },
+                },
+                "update": {
+                    "branch": "main",
+                    "buildMode": "python",
+                    "buildPackage": "mlx-audio",
+                    "kind": "github-commit",
+                },
+            }
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"mlx-audio": record},
+                    }
+                )
+            )
+            before = path.read_bytes()
+
+            class VersionMismatchHashes:
+                installed_metadata_version = "0.5.0"
+                installed_module_version = "0.5.0"
+
+                def compute_native_hash(self, _source, replacements):
+                    self.replacements = replacements
+                    return "sha256-source-new"
+
+                def validate_package_build(self, package, build_mode):
+                    candidate = json.loads(path.read_text())["sources"]["mlx-audio"]
+                    self.validation = (
+                        package,
+                        build_mode,
+                        candidate["version"],
+                        self.installed_metadata_version,
+                        self.installed_module_version,
+                        candidate["source"]["args"]["rev"],
+                    )
+                    return (
+                        candidate["version"]
+                        == self.installed_metadata_version
+                        == self.installed_module_version
+                    )
+
+            hashes = VersionMismatchHashes()
+            transaction = SourceTransaction()
+            target = load_source_catalog(root)["mlx-audio"]
+            self.assertEqual(target["executor"], "update")
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                self.assertRaisesRegex(
+                    CandidateRejected, "mlx-audio final python build failed"
+                ),
+            ):
+                update_catalog_target(
+                    "mlx-audio",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    SimpleNamespace(
+                        get_latest_commit=lambda _owner, _repo, _branch: (
+                            new_ref,
+                            new_ref[:8],
+                        )
+                    ),
+                    SimpleNamespace(),
+                    SimpleNamespace(),
+                    hashes,
+                    transaction,
+                )
+
+            self.assertEqual(hashes.replacements, {"rev": new_ref})
+            self.assertEqual(
+                hashes.validation,
+                (
+                    "mlx-audio",
+                    "python",
+                    "0.4.7",
+                    "0.5.0",
+                    "0.5.0",
+                    new_ref,
+                ),
+            )
+            candidate = json.loads(path.read_text())["sources"]["mlx-audio"]
+            self.assertEqual(candidate["source"]["args"]["rev"], new_ref)
+            self.assertEqual(candidate["source"]["args"]["hash"], "sha256-source-new")
+            self.assertNotEqual(path.read_bytes(), before)
+            self.assertEqual(transaction.rollback(), 1)
+            self.assertEqual(path.read_bytes(), before)
+
+            record["update"].pop("buildPackage")
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {"mlx-audio": record},
+                    }
+                )
+            )
+            with self.assertRaisesRegex(RuntimeError, "invalid update build mode"):
+                load_source_catalog(root)
 
     def test_catalog_github_release_preserves_native_tag_field(self):
         with tempfile.TemporaryDirectory() as temp_dir:
