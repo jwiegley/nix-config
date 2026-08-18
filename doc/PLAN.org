@@ -2603,7 +2603,7 @@ make update must complete end to end. Initial blockers: pi-subagents 0.50.0 comp
     "id": 461,
     "issue_id": "nix-9guj",
     "author": "johnw",
-    "text": "The next clean make update reached Hera realization and exposed a timing-only Cyclopts failure: Python 3.14 Cyclopts 4.22.5 completed 2630 tests, then the first selected Zsh scenario timed out waiting for its initial ZTEST prompt before any completion behavior ran. Historical logs and a controlled cold probe confirm the fixed four-second startup wait is too short under Darwin build load. The narrow shared Darwin override raises only that pexpect initial-prompt timeout to 20 seconds and preserves the full test matrix; the exact Cyclopts package build passes. Follow-on focused checks also repaired three accepted-pin consumer contracts: Pi Copy Message's Bun mock now exports decodeKittyPrintable, Pi Cymbal requires /cymbal and rejects retired /cymbal:remind, Pi Quiet packages its newly imported bash-settings.ts, and Pi MCP Adapter 2.26's exact runtime file/skill contract is reconciled. Agent Resources and Pi Gallery checks now pass.",
+    "text": "The next clean make update reached Hera realization and exposed a timing-only Cyclopts failure: Python 3.14 Cyclopts 4.22.5 completed 2630 tests, then the first selected Zsh scenario timed out waiting for its initial ZTEST prompt before any completion behavior ran. Historical logs and a controlled cold probe confirm the fixed four-second startup wait is too short under Darwin build load. The narrow shared Darwin override raises only that pexpect initial-prompt timeout to 20 seconds and preserves the full test matrix; the exact Cyclopts package build passes. Follow-on focused checks also repaired four accepted-pin consumer contracts: Pi Copy Message's Bun mock now exports decodeKittyPrintable, Pi Cymbal requires /cymbal and rejects retired /cymbal:remind, Pi Quiet packages its newly imported bash-settings.ts, and Pi MCP Adapter 2.26's exact runtime file/skill contract is reconciled. Agent Resources and Pi Gallery checks now pass.",
     "created_at": "2026-08-18T04:58:46Z"
   }
 ]
@@ -14634,15 +14634,17 @@ Taskworker completion-record readers collapse invalid profile/path, unreadable/s
 ]
 #+end_src
 
-* TODO [#B] Port Agent Deck lifecycle patches to 1.13.0
+* DONE [#B] Port Agent Deck lifecycle patches to 1.13.0
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-v1uk
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-17 Mon 15:25]
-:MODIFIED: [2026-08-17 Mon 15:25]
+:MODIFIED: [2026-08-18 Tue 00:41]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 00:41]
+:CLOSE_REASON: Ported all three lifecycle patches to Agent Deck 1.13.0 with zero-fuzz sequential application, exact overlap composition, lifecycle/race coverage, and installed-binary validation. The updater-derived source/vendor hashes and explicit final-package validation landed in signed commit 2a7152ec; the exact config/ai lifecycle check passes.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -14700,6 +14702,36 @@ TestPerf_OutboxDrain_AccumulatedLedger claims to model 25 children, but historic
   }
 ]
 #+end_src
+
+* DONE [#B] Land Agent Deck 1.13 pin with its rewritten patch stack atomically
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-v34m
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 00:11]
+:MODIFIED: [2026-08-18 Tue 00:41]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 00:41]
+:CLOSE_REASON: Agent Deck 1.13.0 source, source hash, vendor hash, and buildMode=pkg landed in signed commit 2a7152ec immediately after the prepared patch stack. The exact config/ai Agent Deck lifecycle check and real package build pass at the pinned tip.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Source commit: 1d25bdc3f49b. Severity: High. Category: Bug. File: overlays/ai/patches/agent-deck-runtime-lifecycle.patch (with the other two rewritten patches) vs sources/ai.json agent-deck 1.11.0 pin. Confidence: 100.
+
+PROBLEM: The commit rewrites all three Agent Deck patches for the upcoming 1.13 adoption, but the catalog pin is still 1.11.0 and the patches were replaced in place rather than staged behind a version conditional. The package no longer builds:
+
+  nix build ./config/ai#checks.aarch64-darwin.agent-deck-runtime-lifecycle
+  -> Cannot build agent-deck-1.11.0.drv
+     Hunk #4 FAILED at 1614 (storage.go.rej), further hunks FAILED at 14/102...
+
+IMPACT: pkgs.agent-deck is selected by the hera/clio homes, so every home/system build and the agent-deck checks are broken at this revision — an unbuildable commit on main that also defeats bisection. The subagents 0.50 staging did this correctly with versionAtLeast patch selection; this preparation commit did not.
+
+SUGGESTED FIX: Land the 1.13 pin (sources/ai.json + any lock artifacts) in the immediate next commit if not already in flight — or, for future preparations, stage rewritten patches behind a version conditional as with pi-subagents so every commit on main builds.
+
+VERIFICATION: nix build ./config/ai#checks.aarch64-darwin.agent-deck-runtime-lifecycle succeeds at HEAD; the full patch stack applies at --fuzz=0 against the pinned version.
 
 * DONE [#B] Prevent executable discovery from traversing protected macOS filesystem roots
 :PROPERTIES:
