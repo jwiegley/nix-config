@@ -189,8 +189,9 @@ runCommand "pi-gallery-check"
         try:
             for request_line in requests:
                 request = json.loads(request_line)
+                ui_responses = request.pop("_ui_responses", [])
                 request_id = request["id"]
-                process.stdin.write(request_line)
+                process.stdin.write(json.dumps(request) + "\n")
                 process.stdin.flush()
                 while True:
                     response_line = process.stdout.readline()
@@ -199,7 +200,37 @@ runCommand "pi-gallery-check"
                     output.write(response_line)
                     output.flush()
                     response = json.loads(response_line)
+                    if (
+                        response.get("type") == "extension_ui_request"
+                        and response.get("method") in {"confirm", "editor", "input", "select"}
+                    ):
+                        if not ui_responses:
+                            raise RuntimeError(f"unexpected Pi UI request: {response}")
+                        expected = ui_responses.pop(0)
+                        for field in ("method", "title"):
+                            if response.get(field) != expected.get(field):
+                                raise RuntimeError(
+                                    f"Pi UI {field} mismatch: expected {expected.get(field)!r}, "
+                                    f"got {response.get(field)!r}"
+                                )
+                        if response["method"] != "select":
+                            raise RuntimeError(f"unsupported Pi UI request: {response}")
+                        if expected["value"] not in response["options"]:
+                            raise RuntimeError(f"Pi UI option missing: {expected['value']!r}")
+                        process.stdin.write(
+                            json.dumps(
+                                {
+                                    "type": "extension_ui_response",
+                                    "id": response["id"],
+                                    "value": expected["value"],
+                                }
+                            )
+                            + "\n"
+                        )
+                        process.stdin.flush()
                     if response.get("type") == "response" and response.get("id") == request_id:
+                        if ui_responses:
+                            raise RuntimeError(f"Pi did not request expected UI interactions: {ui_responses}")
                         break
             process.stdin.close()
             for response_line in process.stdout:
@@ -1667,6 +1698,20 @@ runCommand "pi-gallery-check"
           maxTokens: 65536,
         }],
       });
+      pi.registerProvider("cache-probe", {
+        baseUrl: "https://cache-probe.invalid/v1",
+        apiKey: "synthetic",
+        api: "openai-completions",
+        models: [{
+          id: "fixable",
+          name: "Cache Fix Probe",
+          reasoning: false,
+          input: ["text"],
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+          contextWindow: 128000,
+          maxTokens: 16384,
+        }],
+      });
     }
     TS
     while IFS='|' read -r prompt expected_tier; do
@@ -1903,6 +1948,7 @@ runCommand "pi-gallery-check"
       '{"id":"commands","type":"get_commands"}' \
       '{"id":"ponytail","type":"prompt","message":"/ponytail ultra"}' \
       '{"id":"cache-fix","type":"prompt","message":"/cache-optimizer fix"}' \
+      '{"id":"cache-menu-fix","type":"prompt","message":"/cache-optimizer","_ui_responses":[{"method":"select","title":"Cache Optimizer","value":"Fix — Disabled because Nix manages models.json"}]}' \
       '{"id":"entries","type":"get_entries"}' > "$smoke/input.jsonl"
     for command in npm npx pip pip3 curl wget bun pnpm yarn; do
       cat > "$smoke/sentinels/$command" <<'SH'
@@ -1950,7 +1996,9 @@ runCommand "pi-gallery-check"
         --mode rpc --no-session --offline \
         --no-prompt-templates \
         --no-context-files --no-approve \
-        --extension "$smoke/active-tools.ts"
+        --extension "$routing_smoke/synthetic.ts" \
+        --extension "$smoke/active-tools.ts" \
+        --provider cache-probe --model fixable
     ) || {
       cat "$smoke/output.log" >&2
       cat "$smoke/error.log" >&2
@@ -2178,16 +2226,18 @@ runCommand "pi-gallery-check"
       fail "tool-ownership gate accepted the wrong web_fetch owner"
     fi
     jq -s -e '
-      any(
-        .[];
-        .type == "extension_ui_request"
-        and .method == "notify"
-        and .notifyType == "warning"
-        and .message == "Nix manages models.json; edit config/ai and switch the configuration instead."
-      )
+      ([
+          .[]
+          | select(
+            .type == "extension_ui_request"
+            and .method == "notify"
+            and .notifyType == "warning"
+            and .message == "Nix manages models.json; edit config/ai and switch the configuration instead."
+          )
+        ] | length == 2)
     ' "$smoke/output.log" >/dev/null || {
       cat "$smoke/output.log" >&2
-      fail "Cache Optimizer did not refuse its models.json write path"
+      fail "Cache Optimizer direct and menu commands did not refuse their models.json write paths"
     }
     jq -s -e '
       any(

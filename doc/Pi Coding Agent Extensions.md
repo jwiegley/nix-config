@@ -52,7 +52,7 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `pi-subagents` | 0.50.0 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
 | `@quintinshaw/pi-dynamic-workflows` | 3.6.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
 | `pi-goal-x` | 0.19.0 | Durable goals and Sisyphus continuation | `/goals`, `get_goal` |
-| `pi-cache-optimizer` | 2.8.0 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
+| `pi-cache-optimizer` | 2.8.3 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
 
 The llama-swap provider, oMLX provider, and Model Router packages are available on every host. The generated loader registers them automatically only on Darwin. Both workstations run the local services, but only Hera receives fixed local-provider overrides and a synthetic router model and configuration; Clio retains bounded discovery so that Pi advertises the models its services actually return.
 
@@ -214,7 +214,7 @@ Pi Trace records the execution structure of each session—model requests, steps
 
 ### Cache Optimizer
 
-**Version:** 2.8.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-cache-optimizer) · [Home](https://github.com/jiangge/pi-cache-optimizer) · [GitHub](https://github.com/jiangge/pi-cache-optimizer)
+**Version:** 2.8.3 · **Links:** [Pi Packages](https://pi.dev/packages/pi-cache-optimizer) · [Home](https://github.com/jiangge/pi-cache-optimizer) · [GitHub](https://github.com/jiangge/pi-cache-optimizer)
 
 Pi Cache Optimizer keeps stable prompt content near the front, compresses volatile skill listings, supplies conservative OpenAI-compatible cache keys, diagnoses proxy compatibility, and reports local cache statistics. It is registered last so its prompt hook observes the gallery's final prompt shape.
 

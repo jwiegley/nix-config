@@ -654,19 +654,15 @@ let
           '        return;\n\n'
           '        if (!model) {'
       )
-      menu_marker = (
+      menu_delegate = (
           '} else if (choice === menuOptions[5]) {\n'
-          '            // Fix — auto-fix compat issues'
+          '            await handleCacheOptimizerCommand("fix", cmdCtx);\n'
+          '          } else if (choice === menuOptions[6]) {'
       )
-      menu_replacement = (
-          '} else if (choice === menuOptions[5]) {\n'
-          f'            {warning}\n'
-          '            return;\n\n'
-          '            // Fix — auto-fix compat issues'
-      )
+      if text.count(menu_delegate) != 1:
+          raise SystemExit("unexpected pi-cache-optimizer menu delegation")
       replacements = {
           command_marker: command_replacement,
-          menu_marker: menu_replacement,
           '"Fix — Auto-fix compat issues (writes models.json)"':
               '"Fix — Disabled because Nix manages models.json"',
           'diagnosis.push("  fix     — Auto-fix compat issues (writes models.json, requires UI)");':
