@@ -70,8 +70,8 @@
         "args": {
           "owner": "manzaltu",
           "repo": "claude-code-ide.el",
-          "rev": "1de17bbadc650962a05fd68463fdff71697ec649",
-          "sha256": "sha256-jW0R4TqXqVIumHJB9DziqB7NPfMmIKbhsn2H1dLwT6A="
+          "rev": "32a8a904ac21e52c54231b99796d12ae36df9c22",
+          "sha256": "sha256-LlJn5lbJpN/fHLggy8KmOAFt3abcG0oZAahruuxCSgM="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/manzaltu/claude-code-ide.el"
@@ -262,8 +262,8 @@
         "args": {
           "owner": "karthink",
           "repo": "gptel",
-          "rev": "9cafa41e7172a995e4eeadb5049a8c05bf7c30ba",
-          "sha256": "sha256-wFR4qFXzJcWMfVz2GSN15m93JSAkloBcBUijHigszHo="
+          "rev": "ac4e1fe736f37cf6d3927cd3ebc26f54d383425a",
+          "sha256": "sha256-mrKHLyvJEBueWWzfrDm3sdAxUS70HZ5YFxuFvzDKhfI="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/karthink/gptel"
@@ -1094,8 +1094,8 @@
         "args": {
           "owner": "jdtsmith",
           "repo": "ultra-scroll-mac",
-          "rev": "5be267d2d92c230b4347e0769f584c71aec53589",
-          "sha256": "sha256-N8+ITu25WLtw6sqYxFR2LvfQQCV4ASTYVwDTYN5m/lM="
+          "rev": "0222f429955f5a2a3810f3c84d59ca441aa16eb2",
+          "sha256": "sha256-h9yKFnMrPFF7ZaEEqwDVQWGrrZQX69awG2WsGEwqUdk="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jdtsmith/ultra-scroll-mac"

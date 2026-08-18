@@ -23,14 +23,14 @@
     },
     "agnix": {
       "hashes": {
-        "cargoHash": "sha256-Xuemx5CcqCrdOQZYNbM1dVxLJKPV/1lhxafiUGive+o="
+        "cargoHash": "sha256-YrgtZ5mjZpYvUATPjstPVK1yElJo1kAJpXD6uHMcIR4="
       },
       "source": {
         "args": {
-          "hash": "sha256-sHq3u5zGkRu5Ksbm+5p5slpLLa6ZLuKN9THOQxveobc=",
+          "hash": "sha256-1fS3n2FSxQH5ZUlWXRC35aKKaP2q09K57q27dH1TifY=",
           "owner": "avifenesh",
           "repo": "agnix",
-          "tag": "v0.44.0"
+          "tag": "v0.49.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/avifenesh/agnix"
@@ -39,7 +39,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.44.0"
+      "version": "0.49.0"
     },
     "browser-control-mcp": {
       "hashes": {
@@ -161,28 +161,28 @@
     "lazycodex-ai": {
       "source": {
         "args": {
-          "hash": "sha256-RW4bBtb5JcjWrPH62YSMFCtLc0y2YTYxUWGjMRkvkaM=",
-          "url": "https://registry.npmjs.org/lazycodex-ai/-/lazycodex-ai-4.19.3.tgz"
+          "hash": "sha256-OuzDv/WhOnQXJM6khtE9RFuhYaykVBkbEpKeI4xEdYU=",
+          "url": "https://registry.npmjs.org/lazycodex-ai/-/lazycodex-ai-4.19.4.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/lazycodex-ai/-/lazycodex-ai-4.19.3.tgz"
+        "url": "https://registry.npmjs.org/lazycodex-ai/-/lazycodex-ai-4.19.4.tgz"
       },
       "update": {
         "kind": "npm-release",
         "package": "lazycodex-ai"
       },
-      "version": "4.19.3"
+      "version": "4.19.4"
     },
     "llama-cpp": {
       "hashes": {
-        "npmDepsHash": "sha256-B7uEynAG70a3xauBKc20RuFa9cnWaWzVBCh+LPLBnIM="
+        "npmDepsHash": "sha256-2Q7XhaLAArmviOLdQsNbYTfdyDE5pW9lR26cRHEVl9k="
       },
       "source": {
         "args": {
-          "hash": "sha256-a+rmJmFRgkDc/ky3hHOVWwnMVrcZu97DwJt+phSVq04=",
+          "hash": "sha256-Wm3Nnl3AUr0YMDGRjV3vK8qAcp4dCMyg1A7SMD4LJRg=",
           "owner": "ggml-org",
           "repo": "llama.cpp",
-          "tag": "b10216"
+          "tag": "b10472"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/ggml-org/llama.cpp"
@@ -191,19 +191,19 @@
         "kind": "github-release",
         "tagPrefix": "b"
       },
-      "version": "10216"
+      "version": "10472"
     },
     "llama-swap": {
       "hashes": {
-        "npmDepsHash": "sha256-cAdFKDhmyaYCoKqSYEuAhu29rBxs7i8uTmU2SHwTLnY=",
-        "vendorHash": "sha256-jQRnFGqQvk6my7ejnesv1pylCmEXLs9GKbQJEZdsaYg="
+        "npmDepsHash": "sha256-6MPXQtmaz97D9PUU2Nn5DH/2HZNP/rnAWVSck/FiCyk=",
+        "vendorHash": "sha256-MhR8B2+Yb/xqrTlIxaVHLoQf1eTOO49c65l72IAuZyU="
       },
       "source": {
         "args": {
-          "hash": "sha256-QqeWJaWUTaCrYiHAg/sKARurUy4YtFRnus6w86H1lHY=",
+          "hash": "sha256-LYdtxcuzt0Klk6LCgN2ddDVXBQzSJp/Z4apY77zbpfM=",
           "owner": "mostlygeek",
           "repo": "llama-swap",
-          "rev": "v245"
+          "rev": "v250"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/mostlygeek/llama-swap"
@@ -212,7 +212,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "245"
+      "version": "250"
     },
     "llm-mlx": {
       "source": {
@@ -233,14 +233,14 @@
     },
     "mcp-searxng": {
       "hashes": {
-        "npmDepsHash": "sha256-8R1DJ4S/q6ZLxPMVcBKTE0lJre5KAssWTreG4yNKZFw="
+        "npmDepsHash": "sha256-LYVlgiEIZ2MoLifrASjQxeZjqKfKccKZKMFFfSR6kUs="
       },
       "source": {
         "args": {
-          "hash": "sha256-M3VfUAxocp+Trj68WofTXwMAxBcD2j5bzb2mmNEPnAE=",
+          "hash": "sha256-vNh96VKUD+hrwVhHvVAk88IKunfsY2gQ8WWmgRaywqY=",
           "owner": "ihor-sokoliuk",
           "repo": "mcp-searxng",
-          "tag": "v1.14.0"
+          "tag": "v1.15.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/ihor-sokoliuk/mcp-searxng"
@@ -249,15 +249,15 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "1.14.0"
+      "version": "1.15.0"
     },
     "omlx": {
       "source": {
         "args": {
-          "hash": "sha256-d3laCgYb1o8uuNBdECs+It402qVEixXWrISAAFgdSbk=",
+          "hash": "sha256-jLDhp5wDwUuPPY8oEQeRRffng+Ongfu3JZtWkOFnJTQ=",
           "owner": "jundot",
           "repo": "omlx",
-          "tag": "v0.5.7"
+          "tag": "v0.6.1"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jundot/omlx"
@@ -266,7 +266,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.5.7"
+      "version": "0.6.1"
     },
     "prime-agent": {
       "commit": "be9e2fa0714e7cd1c6bd9bdb1b554d2cc6550387",
@@ -339,17 +339,17 @@
     "aiperf": {
       "source": {
         "args": {
-          "hash": "sha256-Fjjyk9BdQmFCXKiBQCoQAxNrbecrrHKpUEKPMrbhkmA=",
-          "url": "https://files.pythonhosted.org/packages/a7/89/38715fbd81e36e54b0d7913204a29e419795b3cf613703ec0c3bdc470a9d/aiperf-0.11.0-py3-none-any.whl"
+          "hash": "sha256-fTWKoU4lGu+2euoYdcMO++E3FIfxbBubP73qB1SBMq8=",
+          "url": "https://files.pythonhosted.org/packages/e3/95/ecc9c131ff800e434f6c52dec2ef8ab44ce15f473a2bbc2809ed945eda07/aiperf-0.12.0-py3-none-any.whl"
         },
         "fetcher": "fetchurl",
-        "url": "https://files.pythonhosted.org/packages/a7/89/38715fbd81e36e54b0d7913204a29e419795b3cf613703ec0c3bdc470a9d/aiperf-0.11.0-py3-none-any.whl"
+        "url": "https://files.pythonhosted.org/packages/e3/95/ecc9c131ff800e434f6c52dec2ef8ab44ce15f473a2bbc2809ed945eda07/aiperf-0.12.0-py3-none-any.whl"
       },
       "update": {
         "kind": "pypi-release",
         "package": "aiperf"
       },
-      "version": "0.11.0"
+      "version": "0.12.0"
     },
     "choreographer": {
       "source": {
@@ -373,11 +373,11 @@
             "abi": "cp311",
             "dist": "cp311",
             "format": "wheel",
-            "hash": "sha256-ZP1d9K/omvBQZkKYV2B+kkgu0mvltzMSd7Hsm2TpORw=",
+            "hash": "sha256-kP13CDdpD/HRFHxloGb3CET09XZjU8cl40gnYGGiVOc=",
             "platform": "macosx_11_0_arm64",
             "pname": "cohere_melody",
             "python": "cp311",
-            "version": "0.12.0"
+            "version": "0.13.3"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/cohere-melody"
@@ -387,11 +387,11 @@
             "abi": "cp312",
             "dist": "cp312",
             "format": "wheel",
-            "hash": "sha256-hzj/kzhSocvrh2v4ZTOdlnrWHkog1k+z83exDqsAj80=",
+            "hash": "sha256-fCi4VXPlunqCj4JRhdpXAdOr0Iws6D/8toPvMLfS6ew=",
             "platform": "macosx_11_0_arm64",
             "pname": "cohere_melody",
             "python": "cp312",
-            "version": "0.12.0"
+            "version": "0.13.3"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/cohere-melody"
@@ -401,11 +401,11 @@
             "abi": "cp314",
             "dist": "cp314",
             "format": "wheel",
-            "hash": "sha256-8wvlaP7ZLNlk2QO6r/u/Yu2hUkWHbLNjXg+FHnrp4M4=",
+            "hash": "sha256-y0q0I0ZUKo1M2SZP2s36Qw4Q/zTABnBS77c1wKGrwSU=",
             "platform": "macosx_11_0_arm64",
             "pname": "cohere_melody",
             "python": "cp314",
-            "version": "0.12.0"
+            "version": "0.13.3"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/cohere-melody"
@@ -416,11 +416,11 @@
           "abi": "cp313",
           "dist": "cp313",
           "format": "wheel",
-          "hash": "sha256-9ydwZw58CeSvnMjABcFxzg4Dv0nFF7BOjBa4gMZXwK8=",
+          "hash": "sha256-sey3A88Dvp191GI/ey23y4Sp+oqpwQ4Jdj9ud1Iem/A=",
           "platform": "macosx_11_0_arm64",
           "pname": "cohere_melody",
           "python": "cp313",
-          "version": "0.12.0"
+          "version": "0.13.3"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/cohere-melody"
@@ -429,7 +429,7 @@
         "kind": "pypi-release",
         "package": "cohere-melody"
       },
-      "version": "0.12.0"
+      "version": "0.13.3"
     },
     "crick": {
       "source": {
@@ -531,14 +531,14 @@
     },
     "hf-xet": {
       "hashes": {
-        "cargoDepsHash": "sha256-roXmcXMsJtqRqUd1HcqiGwhjlSr/si3u4/IoDQ7zAeg="
+        "cargoDepsHash": "sha256-pvtq9mKlmwaqAq281Lin/UgVGcRe2SEvyzCa+xWSwVQ="
       },
       "source": {
         "args": {
-          "hash": "sha256-KXa5w1el80TiUtkqKQ+Ouxb5guQhSH73IXz0NSU85i8=",
+          "hash": "sha256-SP6Z8iIkrt3FVXxXYdvjeiIAfcrVlfCPQq6C36DfhEM=",
           "owner": "huggingface",
           "repo": "xet-core",
-          "tag": "v1.5.2"
+          "tag": "v1.6.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/huggingface/xet-core"
@@ -548,15 +548,15 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "1.5.2"
+      "version": "1.6.0"
     },
     "huggingface-hub": {
       "source": {
         "args": {
-          "hash": "sha256-JF0hWsDO0ERiTwFJ9pu1ImuD+ggWySg/zeU/c++GEXE=",
+          "hash": "sha256-AJglCIJZPeabIjgx+qeEpKM2HhX2hr4xx4SWpghDrhE=",
           "owner": "huggingface",
           "repo": "huggingface_hub",
-          "tag": "v1.26.0"
+          "tag": "v1.27.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/huggingface/huggingface_hub"
@@ -565,7 +565,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "1.26.0"
+      "version": "1.27.0"
     },
     "kaleido": {
       "source": {
@@ -591,11 +591,11 @@
             "abi": "cp311",
             "dist": "cp311",
             "format": "wheel",
-            "hash": "sha256-csYFNo0UXHVodwV9fjxU8WnJiZ/h+DIyv7OmNCVh4jQ=",
+            "hash": "sha256-UIBR9DoIyokwNX4h4mSn67Ym04sIbO7+PSEto5hcnhs=",
             "platform": "macosx_14_0_arm64",
             "pname": "mlx",
             "python": "cp311",
-            "version": "0.32.0"
+            "version": "0.32.1"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/mlx"
@@ -605,11 +605,11 @@
             "abi": "cp312",
             "dist": "cp312",
             "format": "wheel",
-            "hash": "sha256-6lpZQ1XInACV6rpBP9OdTKqGQvoTQy37DJNU0UEEZGc=",
+            "hash": "sha256-8LaigInK6s3Ce4nhj/eG7pVrglPPiBl3hXX9kNKvjKo=",
             "platform": "macosx_14_0_arm64",
             "pname": "mlx",
             "python": "cp312",
-            "version": "0.32.0"
+            "version": "0.32.1"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/mlx"
@@ -619,11 +619,11 @@
             "abi": "cp314",
             "dist": "cp314",
             "format": "wheel",
-            "hash": "sha256-LuebH4wsKjKa/JXs59zgvnmNQ/PedxpjcNK5+XArvZo=",
+            "hash": "sha256-6zsNEdIAVIGPMl5ZgRFwBOgpWGs0rLWQutjaSsDMCcg=",
             "platform": "macosx_14_0_arm64",
             "pname": "mlx",
             "python": "cp314",
-            "version": "0.32.0"
+            "version": "0.32.1"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/mlx"
@@ -632,11 +632,11 @@
           "args": {
             "dist": "py3",
             "format": "wheel",
-            "hash": "sha256-W2SyCsJLDEAfSJ3gHoIJ7cTTchJSAfGTFObznjhTIqo=",
+            "hash": "sha256-P799PeeDaA53GBgYm8c0h3ybEprpExIzi17eQgzeRMk=",
             "platform": "macosx_14_0_arm64",
             "pname": "mlx_metal",
             "python": "py3",
-            "version": "0.32.0"
+            "version": "0.32.1"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/mlx-metal"
@@ -647,11 +647,11 @@
           "abi": "cp313",
           "dist": "cp313",
           "format": "wheel",
-          "hash": "sha256-q7eG7h6WOHWb6CWDIi/H0JxWUO+QrSt8XafRkxqGdtw=",
+          "hash": "sha256-PpquJ98WMZqBV7heUU1m4yIj8gQkDYU3bfstBKxV/Ew=",
           "platform": "macosx_14_0_arm64",
           "pname": "mlx",
           "python": "cp313",
-          "version": "0.32.0"
+          "version": "0.32.1"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/mlx"
@@ -660,15 +660,15 @@
         "kind": "pypi-release",
         "package": "mlx"
       },
-      "version": "0.32.0"
+      "version": "0.32.1"
     },
     "mlx-audio": {
       "source": {
         "args": {
-          "hash": "sha256-7O9PnlHEc3wJa3Xc9UKzlVxxaotb1goXyG4DcMe1SqI=",
+          "hash": "sha256-ufnGdCL/hCcZi69+AbPXsvpQbIoN+28T2nB8Ju5Bsq8=",
           "owner": "Blaizzy",
           "repo": "mlx-audio",
-          "rev": "223afd602c6d583455bdb9f181b91fc090f4aff9"
+          "rev": "65fb3ccbecbbbb8b32fd625326fb0bc85d2ad03b"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/Blaizzy/mlx-audio"
@@ -716,10 +716,10 @@
     "mlx-speech": {
       "source": {
         "args": {
-          "hash": "sha256-qj3/fSBbvwJB6wyfNStYK8l2ADJTnWkYQy74SSeFWSc=",
+          "hash": "sha256-8sQLx/ZEFhhhwRCIqqozLYJSvo33J+oFcBgDgagx78M=",
           "owner": "appautomaton",
           "repo": "mlx-speech",
-          "rev": "401606f21fe60e19c963b6d1d8acc2664764c1c0"
+          "rev": "1974d4570b6522d8236128234d9ed20d6e62cf6e"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/appautomaton/mlx-speech"
@@ -754,10 +754,10 @@
         "args": {
           "dist": "py3",
           "format": "wheel",
-          "hash": "sha256-3hXm6xfTM0icTN3aOWxVcQgQLVC4m0jBT1TeXntHQl0=",
+          "hash": "sha256-dDXq6+u0GSSJEWnCU0XyTBeThmEHaTaNCn8VpqxWd3E=",
           "pname": "mtplx",
           "python": "py3",
-          "version": "2.4.0"
+          "version": "2.8.2"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/mtplx"
@@ -766,7 +766,7 @@
         "kind": "pypi-release",
         "package": "mtplx"
       },
-      "version": "2.4.0"
+      "version": "2.8.2"
     },
     "phonemizer-fork": {
       "source": {
@@ -888,25 +888,25 @@
     "vllm-mlx": {
       "source": {
         "args": {
-          "hash": "sha256-qSUwLyHeC688OoMlDDZGlWOKqmMf+9wuWBtpSISMZbo=",
-          "url": "https://files.pythonhosted.org/packages/bf/4e/1fb1768a77caeae55376d6e2f3cc053da9809bc6b19567473977ff74c132/vllm_mlx-0.4.0-py3-none-any.whl"
+          "hash": "sha256-8eFzMMy3nSLoIr2dre1KGLC2KgIh9QikfzfEh9JIDK8=",
+          "url": "https://files.pythonhosted.org/packages/d0/db/2dac4b94379af9f188aaf18be930dc109fc0e7fca92c1b40e34f4c786511/vllm_mlx-0.4.1-py3-none-any.whl"
         },
         "fetcher": "fetchurl",
-        "url": "https://files.pythonhosted.org/packages/bf/4e/1fb1768a77caeae55376d6e2f3cc053da9809bc6b19567473977ff74c132/vllm_mlx-0.4.0-py3-none-any.whl"
+        "url": "https://files.pythonhosted.org/packages/d0/db/2dac4b94379af9f188aaf18be930dc109fc0e7fca92c1b40e34f4c786511/vllm_mlx-0.4.1-py3-none-any.whl"
       },
       "update": {
         "kind": "pypi-release",
         "package": "vllm-mlx"
       },
-      "version": "0.4.0"
+      "version": "0.4.1"
     },
     "git-ai": {
       "source": {
         "args": {
-          "narHash": "sha256-L5vPqZenw0r71U0OqCtbA1EI3xkUjMcy7kPZQoaJuZc=",
+          "narHash": "sha256-u32UadTq+ERYgvA61H0P4z9PLqWJBv7YhkYBx//6KFg=",
           "owner": "git-ai-project",
           "repo": "git-ai",
-          "rev": "6eef70e3a8f5f9509d66c3fc2a7364fea8c955d8",
+          "rev": "22ceb60507f90009181bbcf8305e1229e5500937",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -924,10 +924,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-UG8v0D6MCJs7TCpdpAOLKus+IHktnt4MlV19kFLZQ2w=",
+          "narHash": "sha256-bUWdz1ntMgtOoe0hE171n6asEFu1qbYXvql75SHQDAY=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "33656317a15ef8171dc2efbbdefd5f7b092b57b9",
+          "rev": "b4e89112480413a21e29710e2f87c9d7b1687fad",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -945,10 +945,10 @@
     "mcp-servers-nix": {
       "source": {
         "args": {
-          "narHash": "sha256-bkBKfxv/xOcDmBdzX8hGg+ksdXuCJW99FYdv8Y9Jy9s=",
+          "narHash": "sha256-ll3Kxi0zPdSTFUnqCVATTDhoc+tUN5ki52T2Xm5LZ88=",
           "owner": "natsukium",
           "repo": "mcp-servers-nix",
-          "rev": "b0c29de3f36447dcccf307cefb1d523060557ef0",
+          "rev": "c157da8e48b9b0756c436fd81abfaa337785198e",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1049,10 +1049,10 @@
     "rust-overlay": {
       "source": {
         "args": {
-          "narHash": "sha256-MS8cOa/ii1+QA8R3JWVzqEIoXimu9n50GwQDiBVTFOM=",
+          "narHash": "sha256-wNlYM/obKOkkRELrOfto1JT5CRANR6hB/RjOELp223U=",
           "owner": "oxalica",
           "repo": "rust-overlay",
-          "rev": "b211eadeba8b180da9453ec3413a8a3535c85b3f",
+          "rev": "b32685dd7c5a965aa8273adb7ddaf7f5b40d0faa",
           "type": "github"
         },
         "fetcher": "fetchTree",

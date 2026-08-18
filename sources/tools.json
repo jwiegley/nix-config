@@ -66,8 +66,8 @@
         "args": {
           "owner": "novoid",
           "repo": "filetags",
-          "rev": "89b9d704cb8d663936b99e17f296f9e4d8a30c5b",
-          "sha256": "sha256-z1kiwms85p8JjI4H4HuWxjUk0NbTYD+jo8JNCXKXN9k="
+          "rev": "2cfbad4ca4eda118ce4c3c71828cefb6aa21e832",
+          "sha256": "sha256-/t3PbXBNxN9cHeyCU5roI97Pm3YSIeAHKp1ZjNWqgSY="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/novoid/filetags"
@@ -76,7 +76,7 @@
         "branch": "master",
         "kind": "github-commit"
       },
-      "version": "89b9d704"
+      "version": "2cfbad4c"
     },
     "git-branchstack": {
       "source": {
@@ -339,9 +339,9 @@
     "unisessions": {
       "source": {
         "args": {
-          "hash": "sha256-SX20+bYgYJdbyfNxkXONmiMxSMDAMUBrchVClnfutFI=",
+          "hash": "sha256-GwZqb58iDj+aVJOL3jia93cOh+SK8IPBDGW0N+5pdY4=",
           "pname": "unisessions",
-          "version": "0.1.0"
+          "version": "0.2.0"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/unisessions"
@@ -350,7 +350,7 @@
         "kind": "pypi-release",
         "package": "unisessions"
       },
-      "version": "0.1.0"
+      "version": "0.2.0"
     },
     "vlc": {
       "hashes": {
