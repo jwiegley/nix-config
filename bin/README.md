@@ -156,10 +156,8 @@ checkout, and the binary active in the current profile. For Pi, inspect all
 four as follows:
 
 ```sh
-# Packaging substrate revision pinned for Pi by the root lock. Pi builds from
-# the dedicated pi-llm-agents feed; the floating llm-agents input packages the
-# other agents and does not build Pi.
-jq -r '.nodes["pi-llm-agents"].locked.rev' flake.lock
+# Packaging substrate revision used for Pi and the other agents.
+jq -r '.nodes["llm-agents"].locked.rev' flake.lock
 
 # Reviewed Pi source revision; flake/ai.nix asserts the packaged version
 # agrees with this record.

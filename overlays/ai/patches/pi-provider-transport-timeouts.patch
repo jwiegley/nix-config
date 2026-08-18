@@ -1,27 +1,24 @@
+diff --git a/packages/coding-agent/src/core/http-dispatcher.ts b/packages/coding-agent/src/core/http-dispatcher.ts
+index 0cae09a..eb4688b 100644
 --- a/packages/coding-agent/src/core/http-dispatcher.ts
 +++ b/packages/coding-agent/src/core/http-dispatcher.ts
-@@ -76,20 +76,44 @@
+@@ -78,23 +78,47 @@ function createUndiciOriginDispatcher(origin: string | URL, options: object): un
  	);
  }
  
--export function configureHttpDispatcher(timeoutMs: number = DEFAULT_HTTP_IDLE_TIMEOUT_MS): void {
--	const normalizedTimeoutMs = parseHttpIdleTimeoutMs(timeoutMs);
--	if (normalizedTimeoutMs === undefined) {
--		throw new Error(`Invalid HTTP idle timeout: ${String(timeoutMs)}`);
--	}
--	const dispatcher = withUndiciErrorListener(
 +function createHttpDispatcher(timeoutMs: number): undici.Dispatcher {
 +	return withUndiciErrorListener(
- 		new undici.EnvHttpProxyAgent({
- 			allowH2: false,
--			bodyTimeout: normalizedTimeoutMs,
--			headersTimeout: normalizedTimeoutMs,
++		new undici.EnvHttpProxyAgent({
++			allowH2: false,
 +			bodyTimeout: timeoutMs,
++			connect: {
++				autoSelectFamilyAttemptTimeout: DEFAULT_AUTO_SELECT_FAMILY_ATTEMPT_TIMEOUT_MS,
++			},
 +			headersTimeout: timeoutMs,
- 			clientFactory: createUndiciClient,
- 			factory: createUndiciOriginDispatcher,
- 		}),
- 	);
++			clientFactory: createUndiciClient,
++			factory: createUndiciOriginDispatcher,
++		}),
++	);
 +}
 +
 +export function createHttpIdleTimeoutFetch(timeoutMs: number): typeof globalThis.fetch {
@@ -44,18 +41,32 @@
 +	}) as typeof globalThis.fetch;
 +}
 +
-+export function configureHttpDispatcher(timeoutMs: number = DEFAULT_HTTP_IDLE_TIMEOUT_MS): void {
-+	const normalizedTimeoutMs = parseHttpIdleTimeoutMs(timeoutMs);
-+	if (normalizedTimeoutMs === undefined) {
-+		throw new Error(`Invalid HTTP idle timeout: ${String(timeoutMs)}`);
-+	}
+ export function configureHttpDispatcher(timeoutMs: number = DEFAULT_HTTP_IDLE_TIMEOUT_MS): void {
+ 	const normalizedTimeoutMs = parseHttpIdleTimeoutMs(timeoutMs);
+ 	if (normalizedTimeoutMs === undefined) {
+ 		throw new Error(`Invalid HTTP idle timeout: ${String(timeoutMs)}`);
+ 	}
+-	const dispatcher = withUndiciErrorListener(
+-		new undici.EnvHttpProxyAgent({
+-			allowH2: false,
+-			bodyTimeout: normalizedTimeoutMs,
+-			connect: {
+-				autoSelectFamilyAttemptTimeout: DEFAULT_AUTO_SELECT_FAMILY_ATTEMPT_TIMEOUT_MS,
+-			},
+-			headersTimeout: normalizedTimeoutMs,
+-			clientFactory: createUndiciClient,
+-			factory: createUndiciOriginDispatcher,
+-		}),
+-	);
 +	const dispatcher = createHttpDispatcher(normalizedTimeoutMs);
  	undici.setGlobalDispatcher(dispatcher);
  	// Keep fetch and the dispatcher on the same undici implementation. Node 26.0's
  	// bundled fetch can otherwise consume compressed responses through npm undici's
+diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
+index 7ea12cb..cf6c36d 100644
 --- a/packages/coding-agent/src/core/model-config.ts
 +++ b/packages/coding-agent/src/core/model-config.ts
-@@ -136,6 +136,11 @@
+@@ -139,6 +139,11 @@ const ProviderCompatSchema = Type.Union([
  	AnthropicMessagesCompatSchema,
  ]);
  
@@ -67,7 +78,7 @@
  const ModelCostRatesSchema = {
  	input: Type.Number(),
  	output: Type.Number(),
-@@ -195,6 +200,7 @@
+@@ -200,6 +205,7 @@ const ProviderConfigSchema = Type.Object({
  	headers: Type.Optional(Type.Record(Type.String(), Type.String())),
  	compat: Type.Optional(ProviderCompatSchema),
  	authHeader: Type.Optional(Type.Boolean()),
@@ -75,17 +86,19 @@
  	models: Type.Optional(Type.Array(ModelDefinitionSchema)),
  	modelOverrides: Type.Optional(Type.Record(Type.String(), ModelOverrideSchema)),
  });
+diff --git a/packages/coding-agent/src/core/model-runtime.ts b/packages/coding-agent/src/core/model-runtime.ts
+index 6f4071b..bcc37a3 100644
 --- a/packages/coding-agent/src/core/model-runtime.ts
 +++ b/packages/coding-agent/src/core/model-runtime.ts
-@@ -32,6 +32,7 @@
- import * as builtinProviderCatalog from "@earendil-works/pi-ai/providers/all";
+@@ -40,6 +40,7 @@ import * as builtinProviderCatalog from "@earendil-works/pi-ai/providers/all";
  import { getAgentDir } from "../config.ts";
+ import { operationSignal, raceWithAbortSignal } from "../utils/abort.ts";
  import { AuthStorage as DefaultAuthStorage } from "./auth-storage.ts";
 +import { createHttpIdleTimeoutFetch } from "./http-dispatcher.ts";
  import { ModelConfig } from "./model-config.ts";
  import { FileModelsStore, InMemoryCodingAgentModelsStore } from "./models-store.ts";
  import {
-@@ -352,6 +353,17 @@
+@@ -442,6 +443,17 @@ export class ModelRuntime implements Models {
  		return [...new Set([...this.extensionProviders.keys(), ...this.nativeExtensionProviders.keys()])];
  	}
  
@@ -103,21 +116,23 @@
  	getRegisteredNativeProvider(providerId: string): Provider | undefined {
  		return this.nativeExtensionProviders.get(providerId);
  	}
-@@ -446,7 +458,10 @@
- 		const resolution = await this.getAuth(model, { apiKey: options?.apiKey, env: options?.env });
+@@ -587,7 +599,10 @@ export class ModelRuntime implements Models {
+ 		});
  		if (!resolution) throw new ModelsError("auth", `Provider is not configured: ${model.provider}`);
  
--		const { transformHeaders, ...providerOptions } = options ?? {};
-+		const { transformHeaders, ...providerOptions } = {
+-		const { transformHeaders, ...rawProviderOptions } = options ?? {};
++		const { transformHeaders, ...rawProviderOptions } = {
 +			...this.getProviderTransportOptions(model.provider),
 +			...options,
 +		};
+ 		const providerOptions = rawProviderOptions as Omit<TOptions, "transformHeaders"> & ProviderRequestOptions;
  		let headers = mergeHeaders(resolution.auth.headers, providerOptions.headers);
  		if (transformHeaders) headers = await transformHeaders(headers ?? {});
- 		const env =
+diff --git a/packages/coding-agent/src/core/provider-composer.ts b/packages/coding-agent/src/core/provider-composer.ts
+index 1be7fcd..31c9a41 100644
 --- a/packages/coding-agent/src/core/provider-composer.ts
 +++ b/packages/coding-agent/src/core/provider-composer.ts
-@@ -173,13 +173,14 @@
+@@ -180,13 +180,14 @@ function applyModelsJson(
  		!config.baseUrl &&
  		!config.headers &&
  		!config.compat &&
@@ -133,9 +148,11 @@
  		);
  	}
  
+diff --git a/packages/coding-agent/src/core/sdk.ts b/packages/coding-agent/src/core/sdk.ts
+index e61e67a..505d276 100644
 --- a/packages/coding-agent/src/core/sdk.ts
 +++ b/packages/coding-agent/src/core/sdk.ts
-@@ -301,15 +301,21 @@
+@@ -304,15 +304,21 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
  		convertToLlm: convertToLlmWithBlockImages,
  		streamFn: async (model, context, options) => {
  			const providerRetrySettings = settingsManager.getProviderRetrySettings();

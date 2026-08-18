@@ -1,8 +1,8 @@
 diff --git a/packages/ai/src/types.ts b/packages/ai/src/types.ts
-index 26470a4..23c34f9 100644
+index 7e1fd00..7b66fea 100644
 --- a/packages/ai/src/types.ts
 +++ b/packages/ai/src/types.ts
-@@ -763,6 +763,8 @@ export interface Model<TApi extends Api> {
+@@ -798,6 +798,8 @@ export interface Model<TApi extends Api> {
  	provider: ProviderId;
  	baseUrl: string;
  	reasoning: boolean;
@@ -12,10 +12,10 @@ index 26470a4..23c34f9 100644
  	 * Maps pi thinking levels to provider/model-specific values.
  	 * Missing keys use provider defaults. null marks a level as unsupported.
 diff --git a/packages/coding-agent/src/core/agent-session.ts b/packages/coding-agent/src/core/agent-session.ts
-index ebb14c9..5c8936b 100644
+index 48a5fc6..6c121dc 100644
 --- a/packages/coding-agent/src/core/agent-session.ts
 +++ b/packages/coding-agent/src/core/agent-session.ts
-@@ -1620,13 +1620,13 @@ export class AgentSession {
+@@ -1628,13 +1628,13 @@ export class AgentSession {
  		}
  
  		const previousModel = this.model;
@@ -31,7 +31,7 @@ index ebb14c9..5c8936b 100644
  
  		await this._emitModelSelect(model, previousModel, "set");
  	}
-@@ -1661,7 +1661,10 @@ export class AgentSession {
+@@ -1668,7 +1668,10 @@ export class AgentSession {
  		const len = scopedModels.length;
  		const nextIndex = direction === "forward" ? (currentIndex + 1) % len : (currentIndex - 1 + len) % len;
  		const next = scopedModels[nextIndex];
@@ -43,7 +43,7 @@ index ebb14c9..5c8936b 100644
  
  		// Apply model
  		this.agent.state.model = next.model;
-@@ -1670,9 +1673,9 @@ export class AgentSession {
+@@ -1677,9 +1680,9 @@ export class AgentSession {
  
  		// Apply thinking level.
  		// - Explicit scoped model thinking level overrides current session level
@@ -56,7 +56,7 @@ index ebb14c9..5c8936b 100644
  
  		await this._emitModelSelect(next.model, currentModel, "cycle");
  
-@@ -1691,13 +1694,13 @@ export class AgentSession {
+@@ -1698,13 +1701,13 @@ export class AgentSession {
  		const nextIndex = direction === "forward" ? (currentIndex + 1) % len : (currentIndex - 1 + len) % len;
  		const nextModel = availableModels[nextIndex];
  
@@ -72,7 +72,7 @@ index ebb14c9..5c8936b 100644
  
  		await this._emitModelSelect(nextModel, currentModel, "cycle");
  
-@@ -1714,6 +1717,10 @@ export class AgentSession {
+@@ -1721,6 +1724,10 @@ export class AgentSession {
  	 * Saves to session and settings only if the level actually changes.
  	 */
  	setThinkingLevel(level: ThinkingLevel): void {
@@ -83,7 +83,7 @@ index ebb14c9..5c8936b 100644
  		const availableLevels = this.getAvailableThinkingLevels();
  		const effectiveLevel = availableLevels.includes(level) ? level : this._clampThinkingLevel(level, availableLevels);
  
-@@ -1725,7 +1732,7 @@ export class AgentSession {
+@@ -1732,7 +1739,7 @@ export class AgentSession {
  
  		if (isChanging) {
  			this.sessionManager.appendThinkingLevelChange(effectiveLevel);
@@ -92,7 +92,7 @@ index ebb14c9..5c8936b 100644
  				this.settingsManager.setDefaultThinkingLevel(effectiveLevel);
  			}
  			this._emit({ type: "thinking_level_changed", level: effectiveLevel });
-@@ -1769,14 +1776,24 @@ export class AgentSession {
+@@ -1776,14 +1783,24 @@ export class AgentSession {
  		return !!this.model?.reasoning;
  	}
  
@@ -122,10 +122,10 @@ index ebb14c9..5c8936b 100644
  
  	private _clampThinkingLevel(level: ThinkingLevel, _availableLevels: ThinkingLevel[]): ThinkingLevel {
 diff --git a/packages/coding-agent/src/core/extensions/types.ts b/packages/coding-agent/src/core/extensions/types.ts
-index b607c7f..c2532a3 100644
+index db0ebac..24abd73 100644
 --- a/packages/coding-agent/src/core/extensions/types.ts
 +++ b/packages/coding-agent/src/core/extensions/types.ts
-@@ -1475,6 +1475,8 @@ export interface ProviderModelConfig {
+@@ -1499,6 +1499,8 @@ export interface ProviderModelConfig {
  	baseUrl?: string;
  	/** Whether the model supports extended thinking. */
  	reasoning: boolean;
@@ -135,10 +135,10 @@ index b607c7f..c2532a3 100644
  	thinkingLevelMap?: Model<Api>["thinkingLevelMap"];
  	/** Supported input types. */
 diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
-index ee391a5..40ea583 100644
+index cf6c36d..c486bd6 100644
 --- a/packages/coding-agent/src/core/model-config.ts
 +++ b/packages/coding-agent/src/core/model-config.ts
-@@ -162,6 +162,7 @@ const ModelDefinitionSchema = Type.Object({
+@@ -165,6 +165,7 @@ const ModelDefinitionSchema = Type.Object({
  	api: Type.Optional(Type.String({ minLength: 1 })),
  	baseUrl: Type.Optional(Type.String({ minLength: 1 })),
  	reasoning: Type.Optional(Type.Boolean()),
@@ -146,7 +146,7 @@ index ee391a5..40ea583 100644
  	thinkingLevelMap: Type.Optional(ThinkingLevelMapSchema),
  	input: Type.Optional(Type.Array(Type.Union([Type.Literal("text"), Type.Literal("image")]))),
  	cost: Type.Optional(ModelCostSchema),
-@@ -174,6 +175,7 @@ const ModelDefinitionSchema = Type.Object({
+@@ -178,6 +179,7 @@ const ModelDefinitionSchema = Type.Object({
  const ModelOverrideSchema = Type.Object({
  	name: Type.Optional(Type.String({ minLength: 1 })),
  	reasoning: Type.Optional(Type.Boolean()),
@@ -155,10 +155,10 @@ index ee391a5..40ea583 100644
  	input: Type.Optional(Type.Array(Type.Union([Type.Literal("text"), Type.Literal("image")]))),
  	cost: Type.Optional(
 diff --git a/packages/coding-agent/src/core/provider-composer.ts b/packages/coding-agent/src/core/provider-composer.ts
-index 76cddd0..7561ef2 100644
+index 31c9a41..194efd6 100644
 --- a/packages/coding-agent/src/core/provider-composer.ts
 +++ b/packages/coding-agent/src/core/provider-composer.ts
-@@ -56,6 +56,7 @@ export interface ProviderConfigInput {
+@@ -58,6 +58,7 @@ export interface ProviderConfigInput {
  		api?: Api;
  		baseUrl?: string;
  		reasoning: boolean;
@@ -166,7 +166,7 @@ index 76cddd0..7561ef2 100644
  		thinkingLevelMap?: Model<Api>["thinkingLevelMap"];
  		input: ("text" | "image")[];
  		cost: Model<Api>["cost"];
-@@ -102,6 +103,7 @@ function applyModelOverride(model: Model<Api>, override: ModelsJsonModelOverride
+@@ -105,6 +106,7 @@ function applyModelOverride(model: Model<Api>, override: ModelsJsonModelOverride
  		...model,
  		name: override.name ?? model.name,
  		reasoning: override.reasoning ?? model.reasoning,
@@ -174,7 +174,7 @@ index 76cddd0..7561ef2 100644
  		thinkingLevelMap: override.thinkingLevelMap
  			? { ...model.thinkingLevelMap, ...override.thinkingLevelMap }
  			: model.thinkingLevelMap,
-@@ -148,6 +150,7 @@ function modelFromJson(
+@@ -154,6 +156,7 @@ function modelFromJson(
  		provider: providerId,
  		baseUrl,
  		reasoning: definition.reasoning ?? false,
@@ -183,7 +183,7 @@ index 76cddd0..7561ef2 100644
  		input: (definition.input ?? ["text"]) as ("text" | "image")[],
  		cost: definition.cost ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 diff --git a/packages/coding-agent/src/core/sdk.ts b/packages/coding-agent/src/core/sdk.ts
-index a9b5c9f..69e35f7 100644
+index 505d276..3618802 100644
 --- a/packages/coding-agent/src/core/sdk.ts
 +++ b/packages/coding-agent/src/core/sdk.ts
 @@ -46,7 +46,7 @@ export interface CreateAgentSessionOptions {
@@ -195,7 +195,7 @@ index a9b5c9f..69e35f7 100644
  	thinkingLevel?: ThinkingLevel;
  	/** Models available for cycling (Ctrl+P in interactive mode) */
  	scopedModels?: Array<{ model: Model<any>; thinkingLevel?: ThinkingLevel }>;
-@@ -221,18 +221,17 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
+@@ -223,18 +223,17 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
  		}
  	}
  
@@ -220,10 +220,10 @@ index a9b5c9f..69e35f7 100644
  
  	// Clamp to model capabilities
 diff --git a/packages/coding-agent/src/main.ts b/packages/coding-agent/src/main.ts
-index 0de0f14f..ab373f87 100644
+index b78e790..57be2ea 100644
 --- a/packages/coding-agent/src/main.ts
 +++ b/packages/coding-agent/src/main.ts
-@@ -477,7 +477,8 @@ function buildSessionOptions(
+@@ -525,7 +525,8 @@ function buildSessionOptions(
  
  	// Scoped models for Ctrl+P cycling
  	// Keep thinking level undefined when not explicitly set in the model pattern.
@@ -417,3 +417,15 @@ index 0000000..759b846
 +		expect(reasoning.thinkingLevel).toBe("high");
 +	});
 +});
+diff --git a/packages/server/src/protocol.ts b/packages/server/src/protocol.ts
+index 069828e..94ac605 100644
+--- a/packages/server/src/protocol.ts
++++ b/packages/server/src/protocol.ts
+@@ -64,6 +64,7 @@ type _AiModelFieldsAccountedFor = Assert<
+ 		| "provider"
+ 		| "baseUrl"
+ 		| "reasoning"
++		| "defaultThinkingLevel"
+ 		| "thinkingLevelMap"
+ 		| "input"
+ 		| "cost"

@@ -850,6 +850,9 @@ let
     version = members.multi-pass.version;
     install = root: ''
       tar -xzf ${releaseTarballs.pi-multi-pass} -C ${root} --strip-components=1
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
+        < ${./patches/pi-multi-pass-native-oauth.patch}
     '';
   };
 

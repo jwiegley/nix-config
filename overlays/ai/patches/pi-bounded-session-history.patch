@@ -1,8 +1,8 @@
-diff --git c/packages/agent/src/agent.ts i/packages/agent/src/agent.ts
-index 147edc8..6403c42 100644
---- c/packages/agent/src/agent.ts
-+++ i/packages/agent/src/agent.ts
-@@ -64,11 +64,98 @@ type MutableAgentState = Omit<AgentState, "isStreaming" | "streamingMessage" | "
+diff --git a/packages/agent/src/agent.ts b/packages/agent/src/agent.ts
+index 0de7edd..1dd0f74 100644
+--- a/packages/agent/src/agent.ts
++++ b/packages/agent/src/agent.ts
+@@ -65,11 +65,98 @@ type MutableAgentState = Omit<AgentState, "isStreaming" | "streamingMessage" | "
  	errorMessage?: string;
  };
  
@@ -102,7 +102,7 @@ index 147edc8..6403c42 100644
  
  	return {
  		systemPrompt: initialState?.systemPrompt ?? "",
-@@ -81,10 +168,10 @@ function createMutableAgentState(
+@@ -82,10 +169,10 @@ function createMutableAgentState(
  			tools = nextTools.slice();
  		},
  		get messages() {
@@ -115,7 +115,7 @@ index 147edc8..6403c42 100644
  		},
  		isStreaming: false,
  		streamingMessage: undefined,
-@@ -170,6 +257,7 @@ type ActiveRun = {
+@@ -172,6 +259,7 @@ type ActiveRun = {
   */
  export class Agent {
  	private _state: MutableAgentState;
@@ -123,7 +123,7 @@ index 147edc8..6403c42 100644
  	private readonly listeners = new Set<(event: AgentEvent, signal: AbortSignal) => Promise<void> | void>();
  	private readonly steeringQueue: PendingMessageQueue;
  	private readonly followUpQueue: PendingMessageQueue;
-@@ -210,7 +298,8 @@ export class Agent {
+@@ -216,7 +304,8 @@ export class Agent {
  	constructor(options: AgentOptions) {
  		// Older compiled consumers may omit options or streamFn even though the current API requires them.
  		const runtimeOptions: Partial<AgentOptions> = options ?? {};
@@ -133,7 +133,7 @@ index 147edc8..6403c42 100644
  		this.convertToLlm = runtimeOptions.convertToLlm ?? defaultConvertToLlm;
  		this.transformContext = runtimeOptions.transformContext;
  		this.streamFunction = runtimeOptions.streamFn ?? getDefaultStreamFn();
-@@ -254,6 +343,50 @@ export class Agent {
+@@ -261,6 +350,50 @@ export class Agent {
  		return this._state;
  	}
  
@@ -184,16 +184,16 @@ index 147edc8..6403c42 100644
  	/** Controls how queued steering messages are drained. */
  	set steeringMode(mode: QueueMode) {
  		this.steeringQueue.mode = mode;
-@@ -324,7 +457,7 @@ export class Agent {
+@@ -335,7 +468,7 @@ export class Agent {
+ 			throw new Error("Agent is already processing. Wait for completion before resetting.");
+ 		}
  
- 	/** Clear transcript state, runtime state, and queued messages. */
- 	reset(): void {
 -		this._state.messages = [];
 +		this.messageBacking.messages = [];
  		this._state.isStreaming = false;
  		this._state.streamingMessage = undefined;
  		this._state.pendingToolCalls = new Set<string>();
-@@ -352,7 +485,7 @@ export class Agent {
+@@ -363,7 +496,7 @@ export class Agent {
  			throw new Error("Agent is already processing. Wait for completion before continuing.");
  		}
  
@@ -202,7 +202,7 @@ index 147edc8..6403c42 100644
  		if (!lastMessage) {
  			throw new Error("No messages to continue from");
  		}
-@@ -426,7 +559,7 @@ export class Agent {
+@@ -437,7 +570,7 @@ export class Agent {
  	private createContextSnapshot(): AgentContext {
  		return {
  			systemPrompt: this._state.systemPrompt,
@@ -211,7 +211,7 @@ index 147edc8..6403c42 100644
  			tools: this._state.tools.slice(),
  		};
  	}
-@@ -538,7 +671,7 @@ export class Agent {
+@@ -553,7 +686,7 @@ export class Agent {
  
  			case "message_end":
  				this._state.streamingMessage = undefined;
@@ -220,10 +220,10 @@ index 147edc8..6403c42 100644
  				break;
  
  			case "tool_execution_start": {
-diff --git c/packages/agent/test/agent.test.ts i/packages/agent/test/agent.test.ts
-index 50d2048..dcde121 100644
---- c/packages/agent/test/agent.test.ts
-+++ i/packages/agent/test/agent.test.ts
+diff --git a/packages/agent/test/agent.test.ts b/packages/agent/test/agent.test.ts
+index 672c4a6..78c1e4b 100644
+--- a/packages/agent/test/agent.test.ts
++++ b/packages/agent/test/agent.test.ts
 @@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
  import {
  	Agent,
@@ -427,11 +427,11 @@ index 50d2048..dcde121 100644
  	it("should support steering message queue", async () => {
  		const agent = new Agent({ streamFn: unusedStreamFunction });
  
-diff --git c/packages/coding-agent/README.md i/packages/coding-agent/README.md
-index ebb81ec..b6046a4 100644
---- c/packages/coding-agent/README.md
-+++ i/packages/coding-agent/README.md
-@@ -198,6 +198,8 @@ Type `/` in the editor to trigger commands. [Extensions](#extensions) can regist
+diff --git a/packages/coding-agent/README.md b/packages/coding-agent/README.md
+index e6e43c2..dfcac74 100644
+--- a/packages/coding-agent/README.md
++++ b/packages/coding-agent/README.md
+@@ -199,6 +199,8 @@ Type `/` in the editor to trigger commands. [Extensions](#extensions) can regist
  | `/changelog` | Display version history |
  | `/quit` | Quit pi |
  
@@ -440,11 +440,11 @@ index ebb81ec..b6046a4 100644
  ### Keyboard Shortcuts
  
  See `/hotkeys` for the full list. Customize via `~/.pi/agent/keybindings.json`. See [docs/keybindings.md](docs/keybindings.md).
-diff --git c/packages/coding-agent/docs/extensions.md i/packages/coding-agent/docs/extensions.md
-index 7eea02c..81f3ec3 100644
---- c/packages/coding-agent/docs/extensions.md
-+++ i/packages/coding-agent/docs/extensions.md
-@@ -976,12 +976,15 @@ Read-only access to session state. See [Session Format](session-format.md) for t
+diff --git a/packages/coding-agent/docs/extensions.md b/packages/coding-agent/docs/extensions.md
+index 9ec65f8..967f466 100644
+--- a/packages/coding-agent/docs/extensions.md
++++ b/packages/coding-agent/docs/extensions.md
+@@ -977,12 +977,15 @@ Read-only access to session state. See [Session Format](session-format.md) for t
  For `tool_call`, this state is synchronized through the current assistant message before handlers run. In parallel tool execution mode it is still not guaranteed to include sibling tool results from the same assistant message.
  
  ```typescript
@@ -461,10 +461,10 @@ index 7eea02c..81f3ec3 100644
  ### ctx.modelRegistry / ctx.model / ctx.thinkingLevel / ctx.scopedModels
  
  Access to models, providers, and resolved authentication. `ctx.modelRegistry.getProvider(id)` returns the effective pi-ai provider, while `getProviderAuth(id)` resolves its current API key, headers, base URL, and provider-scoped environment without requiring a loaded model. `ctx.model` is the active model, and `ctx.thinkingLevel` is its current effective thinking level.
-diff --git c/packages/coding-agent/docs/rpc.md i/packages/coding-agent/docs/rpc.md
-index 12f5b02..14e79b3 100644
---- c/packages/coding-agent/docs/rpc.md
-+++ i/packages/coding-agent/docs/rpc.md
+diff --git a/packages/coding-agent/docs/rpc.md b/packages/coding-agent/docs/rpc.md
+index fc4c698..522053f 100644
+--- a/packages/coding-agent/docs/rpc.md
++++ b/packages/coding-agent/docs/rpc.md
 @@ -584,6 +584,8 @@ With custom path:
  {"type": "export_html", "outputPath": "/tmp/session.html"}
  ```
@@ -642,7 +642,7 @@ index 12f5b02..14e79b3 100644
  #### get_last_assistant_text
  
  Get the text content of the last assistant message.
-@@ -1511,7 +1606,7 @@ for event in read_events():
+@@ -1524,7 +1619,7 @@ for event in read_events():
          delta = event.get("assistantMessageEvent", {})
          if delta.get("type") == "text_delta":
              print(delta["delta"], end="", flush=True)
@@ -651,11 +651,11 @@ index 12f5b02..14e79b3 100644
      if event.get("type") == "agent_end":
          print()
          break
-diff --git c/packages/coding-agent/docs/sdk.md i/packages/coding-agent/docs/sdk.md
-index 1dc32a1..90d43ce 100644
---- c/packages/coding-agent/docs/sdk.md
-+++ i/packages/coding-agent/docs/sdk.md
-@@ -802,14 +802,20 @@ const sm = SessionManager.open("/path/to/session.jsonl");
+diff --git a/packages/coding-agent/docs/sdk.md b/packages/coding-agent/docs/sdk.md
+index a4e4f22..197acba 100644
+--- a/packages/coding-agent/docs/sdk.md
++++ b/packages/coding-agent/docs/sdk.md
+@@ -829,14 +829,20 @@ const sm = SessionManager.open("/path/to/session.jsonl");
  const currentProjectSessions = await SessionManager.list(process.cwd());
  const allSessions = await SessionManager.listAll(process.cwd());
  
@@ -681,10 +681,10 @@ index 1dc32a1..90d43ce 100644
  // Labels
  const label = sm.getLabel(id);          // Get label for entry
  sm.appendLabelChange(id, "checkpoint"); // Set label
-diff --git c/packages/coding-agent/docs/session-format.md i/packages/coding-agent/docs/session-format.md
+diff --git a/packages/coding-agent/docs/session-format.md b/packages/coding-agent/docs/session-format.md
 index c5956ed..a4db7b8 100644
---- c/packages/coding-agent/docs/session-format.md
-+++ i/packages/coding-agent/docs/session-format.md
+--- a/packages/coding-agent/docs/session-format.md
++++ b/packages/coding-agent/docs/session-format.md
 @@ -418,7 +418,8 @@ Key methods for working with sessions programmatically.
  - `getLeafEntry()` - Get current leaf entry
  - `getEntry(id)` - Get entry by ID
@@ -715,11 +715,11 @@ index c5956ed..a4db7b8 100644
 +contain the newest records while remaining chronological within each page. `nextOrdinal` is the cursor
 +for the next page in that direction, or `null` at the end. Tree pages contain metadata only; fetch a
 +specific payload with `getEntry(id)` when needed.
-diff --git c/packages/coding-agent/docs/usage.md i/packages/coding-agent/docs/usage.md
-index 8c0aa56..5c21eda 100644
---- c/packages/coding-agent/docs/usage.md
-+++ i/packages/coding-agent/docs/usage.md
-@@ -132,6 +132,7 @@ Use `/trust` in interactive mode to save a project trust decision for future ses
+diff --git a/packages/coding-agent/docs/usage.md b/packages/coding-agent/docs/usage.md
+index 41a5c37..8385e0c 100644
+--- a/packages/coding-agent/docs/usage.md
++++ b/packages/coding-agent/docs/usage.md
+@@ -134,6 +134,7 @@ Use `/trust` in interactive mode to save a project trust decision for future ses
  ## Exporting and Sharing Sessions
  
  Use `/export [file]` to write a session to HTML.
@@ -727,10 +727,10 @@ index 8c0aa56..5c21eda 100644
  
  Use `/share` to upload a private GitHub gist with a shareable HTML link.
  
-diff --git c/packages/coding-agent/src/core/agent-session-runtime.ts i/packages/coding-agent/src/core/agent-session-runtime.ts
+diff --git a/packages/coding-agent/src/core/agent-session-runtime.ts b/packages/coding-agent/src/core/agent-session-runtime.ts
 index c3b6056..65f4b98 100644
---- c/packages/coding-agent/src/core/agent-session-runtime.ts
-+++ i/packages/coding-agent/src/core/agent-session-runtime.ts
+--- a/packages/coding-agent/src/core/agent-session-runtime.ts
++++ b/packages/coding-agent/src/core/agent-session-runtime.ts
 @@ -208,19 +208,25 @@ export class AgentSessionRuntime {
  
  		const previousSessionFile = this.session.sessionFile;
@@ -859,10 +859,10 @@ index c3b6056..65f4b98 100644
  	}
  
  	async dispose(): Promise<void> {
-diff --git c/packages/coding-agent/src/core/agent-session.ts i/packages/coding-agent/src/core/agent-session.ts
-index 312404d..ebb14c9 100644
---- c/packages/coding-agent/src/core/agent-session.ts
-+++ i/packages/coding-agent/src/core/agent-session.ts
+diff --git a/packages/coding-agent/src/core/agent-session.ts b/packages/coding-agent/src/core/agent-session.ts
+index 1a1228d..48a5fc6 100644
+--- a/packages/coding-agent/src/core/agent-session.ts
++++ b/packages/coding-agent/src/core/agent-session.ts
 @@ -13,8 +13,20 @@
   * Modes use this class and add their own I/O layer on top.
   */
@@ -886,7 +886,7 @@ index 312404d..ebb14c9 100644
  import type {
  	Agent,
  	AgentEvent,
-@@ -56,7 +68,7 @@ import {
+@@ -58,7 +70,7 @@ import {
  	calculateContextTokens,
  	collectEntriesForBranchSummary,
  	compact,
@@ -895,7 +895,7 @@ index 312404d..ebb14c9 100644
  	estimateTokens,
  	generateBranchSummary,
  	prepareCompaction,
-@@ -97,8 +109,14 @@ import { ModelRegistry } from "./model-registry.ts";
+@@ -99,8 +111,14 @@ import { ModelRegistry } from "./model-registry.ts";
  import type { ModelRuntime } from "./model-runtime.ts";
  import { expandPromptTemplate, type PromptTemplate } from "./prompt-templates.ts";
  import type { ResourceExtensionPaths, ResourceLoader } from "./resource-loader.ts";
@@ -912,7 +912,7 @@ index 312404d..ebb14c9 100644
  import type { SettingsManager } from "./settings-manager.ts";
  import type { SlashCommandInfo } from "./slash-commands.ts";
  import { createSyntheticSourceInfo, type SourceInfo } from "./source-info.ts";
-@@ -106,7 +124,6 @@ import { type BuildSystemPromptOptions, buildSystemPrompt } from "./system-promp
+@@ -108,7 +126,6 @@ import { type BuildSystemPromptOptions, buildSystemPrompt } from "./system-promp
  import { type BashOperations, createLocalBashOperations } from "./tools/bash.ts";
  import { createAllToolDefinitions } from "./tools/index.ts";
  import { createToolDefinitionFromAgentTool } from "./tools/tool-definition-wrapper.ts";
@@ -920,7 +920,7 @@ index 312404d..ebb14c9 100644
  
  // ============================================================================
  // Skill Block Parsing
-@@ -276,12 +293,24 @@ export interface SessionStats {
+@@ -278,12 +295,24 @@ export interface SessionStats {
  	contextUsage?: ContextUsage;
  }
  
@@ -946,7 +946,7 @@ index 312404d..ebb14c9 100644
  	let tokens = 0;
  	for (const message of messages) {
  		tokens += estimateTokens(message);
-@@ -295,6 +324,7 @@ function estimateMessagesTokens(messages: AgentMessage[]): number {
+@@ -297,6 +326,7 @@ function estimateMessagesTokens(messages: AgentMessage[]): number {
  
  /** Standard thinking levels */
  const THINKING_LEVELS: ThinkingLevel[] = ["off", "minimal", "low", "medium", "high"];
@@ -954,7 +954,7 @@ index 312404d..ebb14c9 100644
  
  // ============================================================================
  // AgentSession Class
-@@ -682,14 +712,7 @@ export class AgentSession {
+@@ -697,14 +727,7 @@ export class AgentSession {
  
  	/** Find the last assistant message in agent state (including aborted ones) */
  	private _findLastAssistantMessage(): AssistantMessage | undefined {
@@ -970,7 +970,7 @@ index 312404d..ebb14c9 100644
  	}
  
  	private _replaceMessageInPlace(target: AgentMessage, replacement: AgentMessage): void {
-@@ -850,6 +873,7 @@ export class AgentSession {
+@@ -852,6 +875,7 @@ export class AgentSession {
  		);
  		this._disconnectFromAgent();
  		this._eventListeners = [];
@@ -978,7 +978,7 @@ index 312404d..ebb14c9 100644
  		cleanupSessionResources(this.sessionId);
  	}
  
-@@ -954,6 +978,21 @@ export class AgentSession {
+@@ -956,6 +980,21 @@ export class AgentSession {
  		return this.agent.state.messages;
  	}
  
@@ -1000,7 +1000,7 @@ index 312404d..ebb14c9 100644
  	/** Current steering mode */
  	get steeringMode(): "all" | "one-at-a-time" {
  		return this.agent.steeringMode;
-@@ -1450,7 +1489,7 @@ export class AgentSession {
+@@ -1458,7 +1497,7 @@ export class AgentSession {
  		} else if (options?.triggerTurn) {
  			await this._runAgentPrompt(appMessage);
  		} else {
@@ -1009,16 +1009,16 @@ index 312404d..ebb14c9 100644
  			this.sessionManager.appendCustomMessageEntry(
  				message.customType,
  				message.content,
-@@ -1793,7 +1832,7 @@ export class AgentSession {
+@@ -1799,7 +1838,7 @@ export class AgentSession {
  
- 			const { apiKey, headers, env } = await this._getSummarizationRequestAuth(this.model);
+ 			const { model: requestModel, apiKey, headers, env } = await this._getSummarizationRequestAuth(this.model);
  
 -			const pathEntries = this.sessionManager.getBranch();
 +			const pathEntries = this.sessionManager.getActiveContextEntries();
  			const settings = this.settingsManager.getCompactionSettings();
  
  			const preparation = prepareCompaction(pathEntries, settings);
-@@ -1869,16 +1908,20 @@ export class AgentSession {
+@@ -1875,16 +1914,20 @@ export class AgentSession {
  				throw new Error("Compaction cancelled");
  			}
  
@@ -1047,7 +1047,7 @@ index 312404d..ebb14c9 100644
  
  			if (this._extensionRunner && savedCompactionEntry) {
  				await this._extensionRunner.emit({
-@@ -1969,7 +2012,7 @@ export class AgentSession {
+@@ -1978,7 +2021,7 @@ export class AgentSession {
  		// Skip compaction checks if this assistant message is older than the latest
  		// compaction boundary. This prevents a stale pre-compaction usage/error
  		// from retriggering compaction on the first prompt after compaction.
@@ -1056,10 +1056,10 @@ index 312404d..ebb14c9 100644
  		const assistantIsFromBeforeCompaction =
  			compactionEntry !== null && assistantMessage.timestamp <= new Date(compactionEntry.timestamp).getTime();
  		if (assistantIsFromBeforeCompaction) {
-@@ -2003,10 +2046,7 @@ export class AgentSession {
+@@ -2014,10 +2057,7 @@ export class AgentSession {
  			this._overflowRecoveryAttempted = true;
- 			// Remove the error message from agent state (it IS saved to session for history,
- 			// but we don't want it in context for the retry)
+ 			// Remove the failed or truncated message from agent state. It remains in session history,
+ 			// but must not be included in the compact-and-retry context.
 -			const messages = this.agent.state.messages;
 -			if (messages.length > 0 && messages[messages.length - 1].role === "assistant") {
 -				this.agent.state.messages = messages.slice(0, -1);
@@ -1068,7 +1068,7 @@ index 312404d..ebb14c9 100644
  			return await this._runAutoCompaction("overflow", willRetry);
  		}
  
-@@ -2017,18 +2057,13 @@ export class AgentSession {
+@@ -2028,18 +2068,13 @@ export class AgentSession {
  		let contextTokens: number;
  		const directContextTokens = assistantMessage.usage ? calculateContextTokens(assistantMessage.usage) : 0;
  		if (assistantMessage.stopReason === "error" || directContextTokens === 0) {
@@ -1090,16 +1090,16 @@ index 312404d..ebb14c9 100644
  				return false;
  			}
  			contextTokens = estimate.tokens;
-@@ -2062,7 +2097,7 @@ export class AgentSession {
- 				({ apiKey, headers, env } = await this._getSummarizationRequestAuth(this.model));
- 			}
+@@ -2066,7 +2101,7 @@ export class AgentSession {
+ 
+ 			const { model: requestModel, apiKey, headers, env } = await this._getSummarizationRequestAuth(this.model);
  
 -			const pathEntries = this.sessionManager.getBranch();
 +			const pathEntries = this.sessionManager.getActiveContextEntries();
  
  			const preparation = prepareCompaction(pathEntries, settings);
  			if (!preparation) {
-@@ -2150,16 +2185,20 @@ export class AgentSession {
+@@ -2154,16 +2189,20 @@ export class AgentSession {
  				return false;
  			}
  
@@ -1128,20 +1128,24 @@ index 312404d..ebb14c9 100644
  
  			if (this._extensionRunner && savedCompactionEntry) {
  				await this._extensionRunner.emit({
-@@ -2182,10 +2221,9 @@ export class AgentSession {
+@@ -2186,14 +2225,13 @@ export class AgentSession {
  			this._emit({ type: "compaction_end", reason, result, aborted: false, willRetry });
  
  			if (willRetry) {
 -				const messages = this.agent.state.messages;
 -				const lastMsg = messages[messages.length - 1];
 +				const lastMsg = this.agent.lastMessage;
- 				if (lastMsg?.role === "assistant" && (lastMsg as AssistantMessage).stopReason === "error") {
+ 				// The overflow response was persisted on message_end before _checkCompaction() removed it
+ 				// from agent state. Rebuilding state from the new compaction can restore that kept entry,
+ 				// leaving an assistant as the final message. agent.continue() rejects that state, so remove
+ 				// the retriable error or truncated-length response again before continuing the interrupted turn.
+ 				if (lastMsg?.role === "assistant" && (lastMsg.stopReason === "error" || lastMsg.stopReason === "length")) {
 -					this.agent.state.messages = messages.slice(0, -1);
 +					this.agent.popMessage();
  				}
  				return true;
  			}
-@@ -2698,10 +2736,7 @@ export class AgentSession {
+@@ -2708,10 +2746,7 @@ export class AgentSession {
  		});
  
  		// Remove error message from agent state (keep in session for history)
@@ -1153,7 +1157,7 @@ index 312404d..ebb14c9 100644
  
  		// Wait with exponential backoff (abortable)
  		this._retryAbortController = new AbortController();
-@@ -2819,7 +2854,7 @@ export class AgentSession {
+@@ -2829,7 +2864,7 @@ export class AgentSession {
  			this._pendingBashMessages.push(bashMessage);
  		} else {
  			// Add to agent state immediately
@@ -1162,7 +1166,7 @@ index 312404d..ebb14c9 100644
  
  			// Save to session
  			this.sessionManager.appendMessage(bashMessage);
-@@ -2854,7 +2889,7 @@ export class AgentSession {
+@@ -2864,7 +2899,7 @@ export class AgentSession {
  
  		for (const bashMessage of this._pendingBashMessages) {
  			// Add to agent state
@@ -1171,7 +1175,7 @@ index 312404d..ebb14c9 100644
  
  			// Save to session
  			this.sessionManager.appendMessage(bashMessage);
-@@ -3064,8 +3099,8 @@ export class AgentSession {
+@@ -3074,8 +3109,8 @@ export class AgentSession {
  			}
  
  			// Update agent state
@@ -1182,7 +1186,7 @@ index 312404d..ebb14c9 100644
  
  			// Emit session_tree event
  			await this._extensionRunner.emit({
-@@ -3084,22 +3119,56 @@ export class AgentSession {
+@@ -3094,22 +3129,56 @@ export class AgentSession {
  		}
  	}
  
@@ -1250,7 +1254,7 @@ index 312404d..ebb14c9 100644
  
  		return result;
  	}
-@@ -3110,53 +3179,24 @@ export class AgentSession {
+@@ -3120,53 +3189,24 @@ export class AgentSession {
  	 * actually billed across the session.
  	 */
  	getSessionStats(): SessionStats {
@@ -1316,7 +1320,7 @@ index 312404d..ebb14c9 100644
  			contextUsage: this.getContextUsage(),
  		};
  	}
-@@ -3171,33 +3211,15 @@ export class AgentSession {
+@@ -3181,33 +3221,15 @@ export class AgentSession {
  		// After compaction, the last assistant usage reflects pre-compaction context size.
  		// We can only trust usage from an assistant that responded after the latest compaction.
  		// If no such assistant exists, context token count is unknown until the next LLM response.
@@ -1358,7 +1362,7 @@ index 312404d..ebb14c9 100644
  		const percent = (estimate.tokens / contextWindow) * 100;
  
  		return {
-@@ -3241,6 +3263,19 @@ export class AgentSession {
+@@ -3253,6 +3275,19 @@ export class AgentSession {
  			outputPath ?? `session-${new Date().toISOString().replace(/[:.]/g, "-")}.jsonl`,
  			process.cwd(),
  		);
@@ -1378,7 +1382,7 @@ index 312404d..ebb14c9 100644
  		const dir = dirname(filePath);
  		if (!existsSync(dir)) {
  			mkdirSync(dir, { recursive: true });
-@@ -3254,18 +3289,28 @@ export class AgentSession {
+@@ -3266,18 +3301,28 @@ export class AgentSession {
  			cwd: this.sessionManager.getCwd(),
  		};
  
@@ -1418,7 +1422,7 @@ index 312404d..ebb14c9 100644
  		return filePath;
  	}
  
-@@ -3279,21 +3324,16 @@ export class AgentSession {
+@@ -3291,21 +3336,16 @@ export class AgentSession {
  	 * @returns Text content, or undefined if no assistant message exists
  	 */
  	getLastAssistantText(): string | undefined {
@@ -1446,10 +1450,10 @@ index 312404d..ebb14c9 100644
  			if (content.type === "text") {
  				text += content.text;
  			}
-diff --git c/packages/coding-agent/src/core/cache-stats.ts i/packages/coding-agent/src/core/cache-stats.ts
+diff --git a/packages/coding-agent/src/core/cache-stats.ts b/packages/coding-agent/src/core/cache-stats.ts
 index f6054a2..174623b 100644
---- c/packages/coding-agent/src/core/cache-stats.ts
-+++ i/packages/coding-agent/src/core/cache-stats.ts
+--- a/packages/coding-agent/src/core/cache-stats.ts
++++ b/packages/coding-agent/src/core/cache-stats.ts
 @@ -47,6 +47,11 @@ interface PreviousRequest {
  	reportedCache: boolean;
  }
@@ -1503,10 +1507,10 @@ index f6054a2..174623b 100644
  }
  
  /**
-diff --git c/packages/coding-agent/src/core/compaction/branch-summarization.ts i/packages/coding-agent/src/core/compaction/branch-summarization.ts
+diff --git a/packages/coding-agent/src/core/compaction/branch-summarization.ts b/packages/coding-agent/src/core/compaction/branch-summarization.ts
 index dbb1217..b70875c 100644
---- c/packages/coding-agent/src/core/compaction/branch-summarization.ts
-+++ i/packages/coding-agent/src/core/compaction/branch-summarization.ts
+--- a/packages/coding-agent/src/core/compaction/branch-summarization.ts
++++ b/packages/coding-agent/src/core/compaction/branch-summarization.ts
 @@ -115,18 +115,34 @@ export function collectEntriesForBranchSummary(
  		return { entries: [], commonAncestorId: null };
  	}
@@ -1552,10 +1556,10 @@ index dbb1217..b70875c 100644
  
  	// Collect entries from old leaf back to common ancestor
  	const entries: SessionEntry[] = [];
-diff --git c/packages/coding-agent/src/core/compaction/compaction.ts i/packages/coding-agent/src/core/compaction/compaction.ts
+diff --git a/packages/coding-agent/src/core/compaction/compaction.ts b/packages/coding-agent/src/core/compaction/compaction.ts
 index 3f9b90c..9a5a535 100644
---- c/packages/coding-agent/src/core/compaction/compaction.ts
-+++ i/packages/coding-agent/src/core/compaction/compaction.ts
+--- a/packages/coding-agent/src/core/compaction/compaction.ts
++++ b/packages/coding-agent/src/core/compaction/compaction.ts
 @@ -187,6 +187,10 @@ export interface ContextUsageEstimate {
  	lastUsageIndex: number | null;
  }
@@ -1609,10 +1613,10 @@ index 3f9b90c..9a5a535 100644
  /**
   * Check if compaction should trigger based on context usage.
   */
-diff --git c/packages/coding-agent/src/core/export-html/index.ts i/packages/coding-agent/src/core/export-html/index.ts
+diff --git a/packages/coding-agent/src/core/export-html/index.ts b/packages/coding-agent/src/core/export-html/index.ts
 index 3762c26..4bc98bc 100644
---- c/packages/coding-agent/src/core/export-html/index.ts
-+++ i/packages/coding-agent/src/core/export-html/index.ts
+--- a/packages/coding-agent/src/core/export-html/index.ts
++++ b/packages/coding-agent/src/core/export-html/index.ts
 @@ -1,12 +1,33 @@
  import type { AgentState } from "@earendil-works/pi-agent-core";
 -import { existsSync, readFileSync, writeFileSync } from "fs";
@@ -2435,11 +2439,11 @@ index 3762c26..4bc98bc 100644
 +		sm.close();
 +	}
  }
-diff --git c/packages/coding-agent/src/core/extensions/runner.ts i/packages/coding-agent/src/core/extensions/runner.ts
-index a23cd6a..e354084 100644
---- c/packages/coding-agent/src/core/extensions/runner.ts
-+++ i/packages/coding-agent/src/core/extensions/runner.ts
-@@ -977,6 +977,8 @@ export class ExtensionRunner {
+diff --git a/packages/coding-agent/src/core/extensions/runner.ts b/packages/coding-agent/src/core/extensions/runner.ts
+index fc486e4..6fccc98 100644
+--- a/packages/coding-agent/src/core/extensions/runner.ts
++++ b/packages/coding-agent/src/core/extensions/runner.ts
+@@ -982,6 +982,8 @@ export class ExtensionRunner {
  	}
  
  	async emitContext(messages: AgentMessage[]): Promise<AgentMessage[]> {
@@ -2448,11 +2452,11 @@ index a23cd6a..e354084 100644
  		const ctx = this.createContext();
  		let currentMessages = structuredClone(messages);
  
-diff --git c/packages/coding-agent/src/core/sdk.ts i/packages/coding-agent/src/core/sdk.ts
-index 7f662d3..bc95670 100644
---- c/packages/coding-agent/src/core/sdk.ts
-+++ i/packages/coding-agent/src/core/sdk.ts
-@@ -185,9 +185,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
+diff --git a/packages/coding-agent/src/core/sdk.ts b/packages/coding-agent/src/core/sdk.ts
+index a9a2664..e61e67a 100644
+--- a/packages/coding-agent/src/core/sdk.ts
++++ b/packages/coding-agent/src/core/sdk.ts
+@@ -187,9 +187,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
  	}
  
  	// Check if session has existing data to restore
@@ -2464,7 +2468,7 @@ index 7f662d3..bc95670 100644
  
  	let model = options.model;
  	let modelFallbackMessage: string | undefined;
-@@ -361,7 +361,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
+@@ -364,7 +364,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
  
  	// Restore messages if session has existing data
  	if (hasExistingSession) {
@@ -2473,11 +2477,11 @@ index 7f662d3..bc95670 100644
  		if (!hasThinkingEntry) {
  			sessionManager.appendThinkingLevelChange(thinkingLevel);
  		}
-diff --git c/packages/coding-agent/src/core/session-history-store.ts i/packages/coding-agent/src/core/session-history-store.ts
+diff --git a/packages/coding-agent/src/core/session-history-store.ts b/packages/coding-agent/src/core/session-history-store.ts
 new file mode 100644
 index 0000000..8098570
 --- /dev/null
-+++ i/packages/coding-agent/src/core/session-history-store.ts
++++ b/packages/coding-agent/src/core/session-history-store.ts
 @@ -0,0 +1,2841 @@
 +import { createHash, randomUUID } from "node:crypto";
 +import {
@@ -5320,10 +5324,10 @@ index 0000000..8098570
 +		}
 +	}
 +}
-diff --git c/packages/coding-agent/src/core/session-manager.ts i/packages/coding-agent/src/core/session-manager.ts
-index 0dbce18..5beadfd 100644
---- c/packages/coding-agent/src/core/session-manager.ts
-+++ i/packages/coding-agent/src/core/session-manager.ts
+diff --git a/packages/coding-agent/src/core/session-manager.ts b/packages/coding-agent/src/core/session-manager.ts
+index cd9d2f4..46fe66c 100644
+--- a/packages/coding-agent/src/core/session-manager.ts
++++ b/packages/coding-agent/src/core/session-manager.ts
 @@ -1,20 +1,28 @@
 -import type { AgentMessage } from "@earendil-works/pi-agent-core";
 +import type { AgentMessage, AgentMessageSource } from "@earendil-works/pi-agent-core";
@@ -5355,7 +5359,7 @@ index 0dbce18..5beadfd 100644
 +import { basename, dirname, join, resolve } from "path";
  import { createInterface } from "readline";
  import { StringDecoder } from "string_decoder";
- import { getAgentDir as getDefaultAgentDir, getSessionsDir } from "../config.ts";
+ import { APP_NAME, getAgentDir as getDefaultAgentDir, getSessionsDir } from "../config.ts";
 @@ -26,6 +34,22 @@ import {
  	createCompactionSummaryMessage,
  	createCustomMessage,
@@ -6280,7 +6284,7 @@ index 0dbce18..5beadfd 100644
 +			if (statSync(this.sessionFile).size === 0) {
  				const explicitPath = this.sessionFile;
 -				if (statSync(explicitPath).size > 0) {
--					throw new Error(`Session file is not a valid pi session: ${explicitPath}`);
+-					throw new Error(`Session file is not a valid ${APP_NAME} session: ${explicitPath}`);
 -				}
  				this.newSession();
  				this.sessionFile = explicitPath;
@@ -7285,11 +7289,11 @@ index 0dbce18..5beadfd 100644
  
  		return new SessionManager(resolvedTargetCwd, dir, newSessionFile, true);
  	}
-diff --git c/packages/coding-agent/src/core/sqlite.ts i/packages/coding-agent/src/core/sqlite.ts
+diff --git a/packages/coding-agent/src/core/sqlite.ts b/packages/coding-agent/src/core/sqlite.ts
 new file mode 100644
 index 0000000..3987c2a
 --- /dev/null
-+++ i/packages/coding-agent/src/core/sqlite.ts
++++ b/packages/coding-agent/src/core/sqlite.ts
 @@ -0,0 +1,152 @@
 +import { createRequire } from "node:module";
 +import type { SQLInputValue, SQLOutputValue, StatementResultingChanges } from "node:sqlite";
@@ -7443,10 +7447,10 @@ index 0000000..3987c2a
 +}
 +
 +export const DatabaseSync: new (location: string) => DatabaseSync = CompatibleDatabase;
-diff --git c/packages/coding-agent/src/core/usage-totals.ts i/packages/coding-agent/src/core/usage-totals.ts
+diff --git a/packages/coding-agent/src/core/usage-totals.ts b/packages/coding-agent/src/core/usage-totals.ts
 index 4ae55d0..915d1b3 100644
---- c/packages/coding-agent/src/core/usage-totals.ts
-+++ i/packages/coding-agent/src/core/usage-totals.ts
+--- a/packages/coding-agent/src/core/usage-totals.ts
++++ b/packages/coding-agent/src/core/usage-totals.ts
 @@ -33,38 +33,52 @@ export interface UsageCostBreakdownEntry {
  	tokens: number;
  }
@@ -7532,10 +7536,10 @@ index 4ae55d0..915d1b3 100644
 +	for (const entry of entries) accumulator.add(entry);
 +	return accumulator.getEntries();
  }
-diff --git c/packages/coding-agent/src/index.ts i/packages/coding-agent/src/index.ts
-index e223d31..c4ea5c0 100644
---- c/packages/coding-agent/src/index.ts
-+++ i/packages/coding-agent/src/index.ts
+diff --git a/packages/coding-agent/src/index.ts b/packages/coding-agent/src/index.ts
+index 6d64d70..20101b9 100644
+--- a/packages/coding-agent/src/index.ts
++++ b/packages/coding-agent/src/index.ts
 @@ -17,6 +17,8 @@ export {
  	type AgentSessionConfig,
  	type AgentSessionEvent,
@@ -7545,7 +7549,7 @@ index e223d31..c4ea5c0 100644
  	type ModelCycleResult,
  	type ParsedSkillBlock,
  	type PromptOptions,
-@@ -219,12 +221,24 @@ export {
+@@ -223,12 +225,24 @@ export {
  	createWriteTool,
  	type PromptTemplate,
  } from "./core/sdk.ts";
@@ -7570,7 +7574,7 @@ index e223d31..c4ea5c0 100644
  	type CustomEntry,
  	type CustomMessageEntry,
  	type FileEntry,
-@@ -242,6 +256,9 @@ export {
+@@ -246,6 +260,9 @@ export {
  	SessionManager,
  	type SessionMessageEntry,
  	type SessionTreeNode,
@@ -7580,7 +7584,7 @@ index e223d31..c4ea5c0 100644
  	sessionEntryToContextMessages,
  	type ThinkingLevelChangeEntry,
  } from "./core/session-manager.ts";
-@@ -337,6 +354,7 @@ export {
+@@ -344,6 +361,7 @@ export {
  	type RpcEventListener,
  	type RpcExtensionUIRequest,
  	type RpcExtensionUIResponse,
@@ -7588,14 +7592,14 @@ index e223d31..c4ea5c0 100644
  	type RpcResponse,
  	type RpcSessionState,
  	runPrintMode,
-diff --git c/packages/coding-agent/src/main.ts i/packages/coding-agent/src/main.ts
-index a9c3e46..0de0f14 100644
---- c/packages/coding-agent/src/main.ts
-+++ i/packages/coding-agent/src/main.ts
-@@ -25,7 +25,11 @@ import { createProjectTrustContext } from "./cli/project-trust.ts";
+diff --git a/packages/coding-agent/src/main.ts b/packages/coding-agent/src/main.ts
+index c6a6625..b78e790 100644
+--- a/packages/coding-agent/src/main.ts
++++ b/packages/coding-agent/src/main.ts
+@@ -33,7 +33,11 @@ import { createProjectTrustContext } from "./cli/project-trust.ts";
  import { selectSession } from "./cli/session-picker.ts";
  import { shouldRunFirstTimeSetup, showFirstTimeSetup, showStartupSelector } from "./cli/startup-ui.ts";
- import { ENV_SESSION_DIR, expandTildePath, getAgentDir, getPackageDir, VERSION } from "./config.ts";
+ import { APP_NAME, ENV_SESSION_DIR, expandTildePath, getAgentDir, getPackageDir, VERSION } from "./config.ts";
 -import { type CreateAgentSessionRuntimeFactory, createAgentSessionRuntime } from "./core/agent-session-runtime.ts";
 +import {
 +	type AgentSessionRuntime,
@@ -7605,7 +7609,7 @@ index a9c3e46..0de0f14 100644
  import {
  	type AgentSessionRuntimeDiagnostic,
  	createAgentSessionFromServices,
-@@ -635,6 +639,7 @@ export async function main(args: string[], options?: MainOptions) {
+@@ -687,6 +691,7 @@ export async function main(args: string[], options?: MainOptions) {
  			if (!selectedCwd) {
  				process.exit(0);
  			}
@@ -7613,7 +7617,7 @@ index a9c3e46..0de0f14 100644
  			sessionManager = SessionManager.open(missingSessionCwdIssue.sessionFile!, sessionDir, selectedCwd);
  		} else {
  			console.error(chalk.red(new MissingSessionCwdError(missingSessionCwdIssue).message));
-@@ -748,7 +753,7 @@ export async function main(args: string[], options?: MainOptions) {
+@@ -803,7 +808,7 @@ export async function main(args: string[], options?: MainOptions) {
  		} = buildSessionOptions(
  			parsed,
  			scopedModels,
@@ -7622,7 +7626,7 @@ index a9c3e46..0de0f14 100644
  			modelRuntime,
  			settingsManager,
  		);
-@@ -790,11 +795,17 @@ export async function main(args: string[], options?: MainOptions) {
+@@ -844,11 +849,17 @@ export async function main(args: string[], options?: MainOptions) {
  		};
  	};
  	time("createRuntime");
@@ -7645,11 +7649,11 @@ index a9c3e46..0de0f14 100644
  	time("createAgentSessionRuntime");
  	const { services, session, modelFallbackMessage } = runtime;
  	const { settingsManager, modelRuntime, resourceLoader } = services;
-diff --git c/packages/coding-agent/src/modes/index.ts i/packages/coding-agent/src/modes/index.ts
-index 732aee5..8e6a073 100644
---- c/packages/coding-agent/src/modes/index.ts
-+++ i/packages/coding-agent/src/modes/index.ts
-@@ -10,6 +10,7 @@ export type {
+diff --git a/packages/coding-agent/src/modes/index.ts b/packages/coding-agent/src/modes/index.ts
+index ce860b0..08878cd 100644
+--- a/packages/coding-agent/src/modes/index.ts
++++ b/packages/coding-agent/src/modes/index.ts
+@@ -11,6 +11,7 @@ export type {
  	RpcCommand,
  	RpcExtensionUIRequest,
  	RpcExtensionUIResponse,
@@ -7657,10 +7661,10 @@ index 732aee5..8e6a073 100644
  	RpcResponse,
  	RpcSessionState,
  } from "./rpc/rpc-types.ts";
-diff --git c/packages/coding-agent/src/modes/interactive/components/footer.ts i/packages/coding-agent/src/modes/interactive/components/footer.ts
-index 44cf886..c039d19 100644
---- c/packages/coding-agent/src/modes/interactive/components/footer.ts
-+++ i/packages/coding-agent/src/modes/interactive/components/footer.ts
+diff --git a/packages/coding-agent/src/modes/interactive/components/footer.ts b/packages/coding-agent/src/modes/interactive/components/footer.ts
+index 26c9f27..aec8776 100644
+--- a/packages/coding-agent/src/modes/interactive/components/footer.ts
++++ b/packages/coding-agent/src/modes/interactive/components/footer.ts
 @@ -3,7 +3,6 @@ import { type Component, truncateToWidth, visibleWidth } from "@earendil-works/p
  import type { AgentSession } from "../../../core/agent-session.ts";
  import { areExperimentalFeaturesEnabled } from "../../../core/experimental.ts";
@@ -7696,10 +7700,10 @@ index 44cf886..c039d19 100644
  
  		// Calculate context usage from session (handles compaction correctly).
  		// After compaction, tokens are unknown until the next LLM response.
-diff --git c/packages/coding-agent/src/modes/interactive/components/session-selector-search.ts i/packages/coding-agent/src/modes/interactive/components/session-selector-search.ts
+diff --git a/packages/coding-agent/src/modes/interactive/components/session-selector-search.ts b/packages/coding-agent/src/modes/interactive/components/session-selector-search.ts
 index 9b5bf23..d9eb75d 100644
---- c/packages/coding-agent/src/modes/interactive/components/session-selector-search.ts
-+++ i/packages/coding-agent/src/modes/interactive/components/session-selector-search.ts
+--- a/packages/coding-agent/src/modes/interactive/components/session-selector-search.ts
++++ b/packages/coding-agent/src/modes/interactive/components/session-selector-search.ts
 @@ -24,7 +24,7 @@ function normalizeWhitespaceLower(text: string): string {
  }
  
@@ -7709,10 +7713,10 @@ index 9b5bf23..d9eb75d 100644
  }
  
  export function hasSessionName(session: SessionInfo): boolean {
-diff --git c/packages/coding-agent/src/modes/interactive/components/session-selector.ts i/packages/coding-agent/src/modes/interactive/components/session-selector.ts
+diff --git a/packages/coding-agent/src/modes/interactive/components/session-selector.ts b/packages/coding-agent/src/modes/interactive/components/session-selector.ts
 index 4949eee..65bc0d9 100644
---- c/packages/coding-agent/src/modes/interactive/components/session-selector.ts
-+++ i/packages/coding-agent/src/modes/interactive/components/session-selector.ts
+--- a/packages/coding-agent/src/modes/interactive/components/session-selector.ts
++++ b/packages/coding-agent/src/modes/interactive/components/session-selector.ts
 @@ -642,11 +642,14 @@ type SessionsLoader = (onProgress?: SessionListProgress) => Promise<SessionInfo[
  /**
   * Delete a session file, trying the `trash` CLI first, then falling back to unlink
@@ -7754,10 +7758,10 @@ index 4949eee..65bc0d9 100644
  		return { ok: true, method: "unlink" };
  	} catch (err) {
  		const unlinkError = err instanceof Error ? err.message : String(err);
-diff --git c/packages/coding-agent/src/modes/interactive/components/tree-selector.ts i/packages/coding-agent/src/modes/interactive/components/tree-selector.ts
+diff --git a/packages/coding-agent/src/modes/interactive/components/tree-selector.ts b/packages/coding-agent/src/modes/interactive/components/tree-selector.ts
 index f70e206..ea28de5 100644
---- c/packages/coding-agent/src/modes/interactive/components/tree-selector.ts
-+++ i/packages/coding-agent/src/modes/interactive/components/tree-selector.ts
+--- a/packages/coding-agent/src/modes/interactive/components/tree-selector.ts
++++ b/packages/coding-agent/src/modes/interactive/components/tree-selector.ts
 @@ -12,7 +12,7 @@ import {
  	visibleWidth,
  	wrapTextWithAnsi,
@@ -7988,10 +7992,10 @@ index f70e206..ea28de5 100644
  	getTreeList(): TreeList {
  		return this.treeList;
  	}
-diff --git c/packages/coding-agent/src/modes/interactive/components/user-message-selector.ts i/packages/coding-agent/src/modes/interactive/components/user-message-selector.ts
+diff --git a/packages/coding-agent/src/modes/interactive/components/user-message-selector.ts b/packages/coding-agent/src/modes/interactive/components/user-message-selector.ts
 index 69fbbc8..bee58a2 100644
---- c/packages/coding-agent/src/modes/interactive/components/user-message-selector.ts
-+++ i/packages/coding-agent/src/modes/interactive/components/user-message-selector.ts
+--- a/packages/coding-agent/src/modes/interactive/components/user-message-selector.ts
++++ b/packages/coding-agent/src/modes/interactive/components/user-message-selector.ts
 @@ -5,6 +5,7 @@ import { DynamicBorder } from "./dynamic-border.ts";
  interface UserMessageItem {
  	id: string; // Entry ID in the session
@@ -8027,11 +8031,11 @@ index 69fbbc8..bee58a2 100644
  		this.addChild(new Spacer(1));
  		this.addChild(new DynamicBorder());
  		this.addChild(new Spacer(1));
-diff --git c/packages/coding-agent/src/modes/interactive/interactive-mode.ts i/packages/coding-agent/src/modes/interactive/interactive-mode.ts
-index 6eba438..b9ebd62 100644
---- c/packages/coding-agent/src/modes/interactive/interactive-mode.ts
-+++ i/packages/coding-agent/src/modes/interactive/interactive-mode.ts
-@@ -57,7 +57,7 @@ import {
+diff --git a/packages/coding-agent/src/modes/interactive/interactive-mode.ts b/packages/coding-agent/src/modes/interactive/interactive-mode.ts
+index 6d5e6b8..a725312 100644
+--- a/packages/coding-agent/src/modes/interactive/interactive-mode.ts
++++ b/packages/coding-agent/src/modes/interactive/interactive-mode.ts
+@@ -62,7 +62,7 @@ import {
  	CACHE_TTL_MS,
  	type CacheMiss,
  	collectCacheMisses,
@@ -8040,7 +8044,7 @@ index 6eba438..b9ebd62 100644
  	detectCacheMiss,
  } from "../../core/cache-stats.ts";
  import type {
-@@ -85,13 +85,18 @@ import {
+@@ -91,14 +91,19 @@ import { CredentialSynchronizationError } from "../../core/model-runtime.ts";
  import { DefaultPackageManager } from "../../core/package-manager.ts";
  import type { ResourceDiagnostic } from "../../core/resource-loader.ts";
  import { formatMissingSessionCwdPrompt, MissingSessionCwdError } from "../../core/session-cwd.ts";
@@ -8051,6 +8055,7 @@ index 6eba438..b9ebd62 100644
 +	SessionManager,
 +	sessionEntryToContextMessages,
 +} from "../../core/session-manager.ts";
+ import type { FullscreenExitOutput, TuiMode } from "../../core/settings-manager.ts";
  import { BUILTIN_SLASH_COMMANDS } from "../../core/slash-commands.ts";
  import type { SourceInfo } from "../../core/source-info.ts";
  import { isInstallTelemetryEnabled } from "../../core/telemetry.ts";
@@ -8061,7 +8066,7 @@ index 6eba438..b9ebd62 100644
  import { getChangelogPath, getNewEntries, normalizeChangelogLinks, parseChangelog } from "../../utils/changelog.ts";
  import { copyToClipboard, readClipboardText } from "../../utils/clipboard.ts";
  import { extensionForImageMimeType, readClipboardImage } from "../../utils/clipboard-image.ts";
-@@ -138,7 +143,7 @@ import {
+@@ -147,7 +152,7 @@ import {
  	WorkingStatusIndicator,
  } from "./components/status-indicator.ts";
  import { ToolExecutionComponent } from "./components/tool-execution.ts";
@@ -8070,7 +8075,7 @@ index 6eba438..b9ebd62 100644
  import { TrustSelectorComponent } from "./components/trust-selector.ts";
  import { UserMessageComponent } from "./components/user-message.ts";
  import { UserMessageSelectorComponent } from "./components/user-message-selector.ts";
-@@ -201,6 +206,10 @@ function isCustomSessionEntry(item: RenderSessionItem): item is Extract<SessionE
+@@ -211,6 +216,10 @@ function isCustomSessionEntry(item: RenderSessionItem): item is Extract<SessionE
  }
  
  const DEAD_TERMINAL_ERROR_CODES = new Set(["EIO", "EPIPE", "ENOTCONN"]);
@@ -8081,7 +8086,7 @@ index 6eba438..b9ebd62 100644
  
  function isDeadTerminalError(error: unknown): boolean {
  	if (!error || typeof error !== "object" || !("code" in error)) {
-@@ -990,7 +999,7 @@ export class InteractiveMode {
+@@ -1195,7 +1204,7 @@ export class InteractiveMode {
  	 */
  	private getChangelogForDisplay(): string | undefined {
  		// Skip changelog for resumed/continued sessions (already have messages)
@@ -8090,7 +8095,7 @@ index 6eba438..b9ebd62 100644
  			return undefined;
  		}
  
-@@ -2583,9 +2592,9 @@ export class InteractiveMode {
+@@ -2804,9 +2813,9 @@ export class InteractiveMode {
  					const now = Date.now();
  					if (now - this.lastEscapeTime < 500) {
  						if (action === "tree") {
@@ -8102,7 +8107,7 @@ index 6eba438..b9ebd62 100644
  						}
  						this.lastEscapeTime = 0;
  					} else {
-@@ -2613,8 +2622,8 @@ export class InteractiveMode {
+@@ -2834,8 +2843,8 @@ export class InteractiveMode {
  		this.defaultEditor.onAction("app.message.followUp", () => this.handleFollowUp());
  		this.defaultEditor.onAction("app.message.dequeue", () => this.handleDequeue());
  		this.defaultEditor.onAction("app.session.new", () => this.handleClearCommand());
@@ -8113,7 +8118,7 @@ index 6eba438..b9ebd62 100644
  		this.defaultEditor.onAction("app.session.resume", () => this.showSessionSelector());
  
  		this.defaultEditor.onChange = (text: string) => {
-@@ -2705,7 +2714,7 @@ export class InteractiveMode {
+@@ -2945,7 +2954,7 @@ export class InteractiveMode {
  				return;
  			}
  			if (text === "/session") {
@@ -8122,7 +8127,7 @@ index 6eba438..b9ebd62 100644
  				this.editor.setText("");
  				return;
  			}
-@@ -2720,7 +2729,7 @@ export class InteractiveMode {
+@@ -2960,7 +2969,7 @@ export class InteractiveMode {
  				return;
  			}
  			if (text === "/fork") {
@@ -8131,7 +8136,7 @@ index 6eba438..b9ebd62 100644
  				this.editor.setText("");
  				return;
  			}
-@@ -2730,7 +2739,7 @@ export class InteractiveMode {
+@@ -2970,7 +2979,7 @@ export class InteractiveMode {
  				return;
  			}
  			if (text === "/tree") {
@@ -8140,7 +8145,7 @@ index 6eba438..b9ebd62 100644
  				this.editor.setText("");
  				return;
  			}
-@@ -2892,7 +2901,8 @@ export class InteractiveMode {
+@@ -3132,7 +3141,8 @@ export class InteractiveMode {
  
  			case "entry_appended":
  				if (event.entry.type === "custom") {
@@ -8150,7 +8155,7 @@ index 6eba438..b9ebd62 100644
  					this.ui.requestRender();
  				}
  				break;
-@@ -3064,6 +3074,7 @@ export class InteractiveMode {
+@@ -3305,6 +3315,7 @@ export class InteractiveMode {
  					this.streamingMessage = undefined;
  				}
  				this.pendingTools.clear();
@@ -8158,7 +8163,7 @@ index 6eba438..b9ebd62 100644
  
  				this.ui.requestRender();
  				break;
-@@ -3349,10 +3360,13 @@ export class InteractiveMode {
+@@ -3607,10 +3618,13 @@ export class InteractiveMode {
  	): void {
  		this.pendingTools.clear();
  		const renderedPendingTools = new Map<string, ToolExecutionComponent>();
@@ -8175,7 +8180,7 @@ index 6eba438..b9ebd62 100644
  			: new Map<AssistantMessage, CacheMiss>();
  
  		if (options.updateFooter) {
-@@ -3456,7 +3470,11 @@ export class InteractiveMode {
+@@ -3714,7 +3728,11 @@ export class InteractiveMode {
  		if (!this.settingsManager.getShowCacheMissNotices()) return;
  
  		// Entries don't contain `message` yet: message_end fires before persistence.
@@ -8188,7 +8193,7 @@ index 6eba438..b9ebd62 100644
  		if (miss) this.addCacheMissNotice(miss);
  	}
  
-@@ -3477,16 +3495,14 @@ export class InteractiveMode {
+@@ -3735,16 +3753,14 @@ export class InteractiveMode {
  	}
  
  	renderInitialMessages(): void {
@@ -8207,7 +8212,7 @@ index 6eba438..b9ebd62 100644
  		if (compactionCount > 0) {
  			const times = compactionCount === 1 ? "1 time" : `${compactionCount} times`;
  			this.showStatus(`Session compacted ${times}`);
-@@ -3529,7 +3545,36 @@ export class InteractiveMode {
+@@ -3787,7 +3803,36 @@ export class InteractiveMode {
  
  	private rebuildChatFromMessages(): void {
  		this.chatContainer.clear();
@@ -8245,7 +8250,7 @@ index 6eba438..b9ebd62 100644
  	}
  
  	// =========================================================================
-@@ -4579,19 +4624,43 @@ export class InteractiveMode {
+@@ -4933,19 +4978,43 @@ export class InteractiveMode {
  		});
  	}
  
@@ -8293,7 +8298,7 @@ index 6eba438..b9ebd62 100644
  				async (entryId) => {
  					done();
  					try {
-@@ -4612,6 +4681,7 @@ export class InteractiveMode {
+@@ -4966,6 +5035,7 @@ export class InteractiveMode {
  					this.ui.requestRender();
  				},
  				initialSelectedId,
@@ -8301,7 +8306,7 @@ index 6eba438..b9ebd62 100644
  			);
  			return { component: selector, focus: selector.getMessageList() };
  		});
-@@ -4638,10 +4708,30 @@ export class InteractiveMode {
+@@ -4992,10 +5062,30 @@ export class InteractiveMode {
  		}
  	}
  
@@ -8334,7 +8339,7 @@ index 6eba438..b9ebd62 100644
  
  		if (tree.length === 0) {
  			this.showStatus("No entries in session");
-@@ -4679,7 +4769,7 @@ export class InteractiveMode {
+@@ -5033,7 +5123,7 @@ export class InteractiveMode {
  
  							if (summaryChoice === undefined) {
  								// User pressed escape - re-show tree selector with same selection
@@ -8343,7 +8348,7 @@ index 6eba438..b9ebd62 100644
  								return;
  							}
  
-@@ -4727,7 +4817,7 @@ export class InteractiveMode {
+@@ -5081,7 +5171,7 @@ export class InteractiveMode {
  						if (result.aborted) {
  							// Summarization aborted - re-show tree selector with same selection
  							this.showStatus("Branch summarization cancelled");
@@ -8352,7 +8357,7 @@ index 6eba438..b9ebd62 100644
  							return;
  						}
  						if (result.cancelled) {
-@@ -4762,8 +4852,11 @@ export class InteractiveMode {
+@@ -5116,8 +5206,11 @@ export class InteractiveMode {
  				},
  				initialSelectedId,
  				initialFilterMode,
@@ -8365,7 +8370,7 @@ index 6eba438..b9ebd62 100644
  				if (!text) {
  					this.showError("Selected entry has no text to copy");
  					return;
-@@ -4775,6 +4868,39 @@ export class InteractiveMode {
+@@ -5129,6 +5222,39 @@ export class InteractiveMode {
  					this.showError(error instanceof Error ? error.message : String(error));
  				}
  			};
@@ -8405,7 +8410,7 @@ index 6eba438..b9ebd62 100644
  			return { component: selector, focus: selector };
  		});
  	}
-@@ -4805,7 +4931,11 @@ export class InteractiveMode {
+@@ -5159,7 +5285,11 @@ export class InteractiveMode {
  						const next = (nextName ?? "").trim();
  						if (!next) return;
  						const mgr = SessionManager.open(sessionFilePath);
@@ -8418,7 +8423,7 @@ index 6eba438..b9ebd62 100644
  					},
  					showRenameHint: true,
  					keybindings: this.keybindings,
-@@ -5653,16 +5783,21 @@ export class InteractiveMode {
+@@ -6042,16 +6172,21 @@ export class InteractiveMode {
  		this.ui.requestRender();
  	}
  
@@ -8444,7 +8449,7 @@ index 6eba438..b9ebd62 100644
  
  		let info = `${theme.bold("Session Info")}\n\n`;
  		if (sessionName) {
-@@ -5902,7 +6037,7 @@ export class InteractiveMode {
+@@ -6291,7 +6426,7 @@ export class InteractiveMode {
  			}),
  			"",
  			"=== Agent messages (JSONL) ===",
@@ -8453,7 +8458,7 @@ index 6eba438..b9ebd62 100644
  			"",
  		].join("\n");
  
-@@ -5950,6 +6085,7 @@ export class InteractiveMode {
+@@ -6339,6 +6474,7 @@ export class InteractiveMode {
  			excludeFromContext,
  			cwd: this.sessionManager.getCwd(),
  		});
@@ -8461,7 +8466,7 @@ index 6eba438..b9ebd62 100644
  
  		// If extension returned a full result, use it directly
  		if (eventResult?.result) {
-@@ -5957,7 +6093,7 @@ export class InteractiveMode {
+@@ -6346,7 +6482,7 @@ export class InteractiveMode {
  
  			// Create UI component for display
  			this.bashComponent = new BashExecutionComponent(command, this.ui, excludeFromContext);
@@ -8470,7 +8475,7 @@ index 6eba438..b9ebd62 100644
  				this.pendingMessagesContainer.addChild(this.bashComponent);
  				this.pendingBashComponents.push(this.bashComponent);
  			} else {
-@@ -5978,12 +6114,12 @@ export class InteractiveMode {
+@@ -6367,12 +6503,12 @@ export class InteractiveMode {
  			// Record the result in session
  			this.session.recordBashResult(command, result, { excludeFromContext });
  			this.bashComponent = undefined;
@@ -8484,7 +8489,7 @@ index 6eba438..b9ebd62 100644
  		this.bashComponent = new BashExecutionComponent(command, this.ui, excludeFromContext);
  
  		if (isDeferred) {
-@@ -5996,6 +6132,7 @@ export class InteractiveMode {
+@@ -6385,6 +6521,7 @@ export class InteractiveMode {
  		}
  		this.ui.requestRender();
  
@@ -8492,7 +8497,7 @@ index 6eba438..b9ebd62 100644
  		try {
  			const result = await this.session.executeBash(
  				command,
-@@ -6016,6 +6153,7 @@ export class InteractiveMode {
+@@ -6405,6 +6542,7 @@ export class InteractiveMode {
  					result.fullOutputPath,
  				);
  			}
@@ -8500,7 +8505,7 @@ index 6eba438..b9ebd62 100644
  		} catch (error) {
  			if (this.bashComponent) {
  				this.bashComponent.setComplete(undefined, false);
-@@ -6024,6 +6162,7 @@ export class InteractiveMode {
+@@ -6413,6 +6551,7 @@ export class InteractiveMode {
  		}
  
  		this.bashComponent = undefined;
@@ -8508,11 +8513,11 @@ index 6eba438..b9ebd62 100644
  		this.ui.requestRender();
  	}
  
-diff --git c/packages/coding-agent/src/modes/print-mode.ts i/packages/coding-agent/src/modes/print-mode.ts
-index ca63157..47b126d 100644
---- c/packages/coding-agent/src/modes/print-mode.ts
-+++ i/packages/coding-agent/src/modes/print-mode.ts
-@@ -127,8 +127,14 @@ export async function runPrintMode(runtimeHost: AgentSessionRuntime, options: Pr
+diff --git a/packages/coding-agent/src/modes/print-mode.ts b/packages/coding-agent/src/modes/print-mode.ts
+index 3f677ee..9ed9893 100644
+--- a/packages/coding-agent/src/modes/print-mode.ts
++++ b/packages/coding-agent/src/modes/print-mode.ts
+@@ -137,8 +137,14 @@ export async function runPrintMode(runtimeHost: AgentSessionRuntime, options: Pr
  		}
  
  		if (mode === "text") {
@@ -8529,27 +8534,28 @@ index ca63157..47b126d 100644
  
  			if (lastMessage?.role === "assistant") {
  				const assistantMsg = lastMessage as AssistantMessage;
-diff --git c/packages/coding-agent/src/modes/rpc/rpc-client.ts i/packages/coding-agent/src/modes/rpc/rpc-client.ts
-index 79cd7f2..fbb573c 100644
---- c/packages/coding-agent/src/modes/rpc/rpc-client.ts
-+++ i/packages/coding-agent/src/modes/rpc/rpc-client.ts
-@@ -7,12 +7,12 @@
+diff --git a/packages/coding-agent/src/modes/rpc/rpc-client.ts b/packages/coding-agent/src/modes/rpc/rpc-client.ts
+index a4cc4b2..d6165c3 100644
+--- a/packages/coding-agent/src/modes/rpc/rpc-client.ts
++++ b/packages/coding-agent/src/modes/rpc/rpc-client.ts
+@@ -7,13 +7,13 @@
  import { type ChildProcess, spawn } from "node:child_process";
  import type { AgentMessage, ThinkingLevel } from "@earendil-works/pi-agent-core";
  import type { ImageContent } from "@earendil-works/pi-ai";
--import type { AgentSessionEvent, SessionStats } from "../../core/agent-session.ts";
-+import type { AgentSessionEvent, ForkMessageChoice, SessionStats } from "../../core/agent-session.ts";
+-import type { SessionStats } from "../../core/agent-session.ts";
++import type { ForkMessageChoice, SessionStats } from "../../core/agent-session.ts";
  import type { BashResult } from "../../core/bash-executor.ts";
  import type { CompactionResult } from "../../core/compaction/index.ts";
 -import type { SessionEntry, SessionTreeNode } from "../../core/session-manager.ts";
 +import type { SessionEntry, SessionTreeNode, SessionTreePageEntry } from "../../core/session-manager.ts";
+ import type { JsonAgentSessionEvent } from "../json-event.ts";
  import { attachJsonlLineReader, serializeJsonLine } from "./jsonl.ts";
 -import type { RpcCommand, RpcResponse, RpcSessionState, RpcSlashCommand } from "./rpc-types.ts";
 +import type { RpcCommand, RpcPageOptions, RpcResponse, RpcSessionState, RpcSlashCommand } from "./rpc-types.ts";
  
  // ============================================================================
  // Types
-@@ -389,8 +389,17 @@ export class RpcClient {
+@@ -390,8 +390,17 @@ export class RpcClient {
  		return this.getData(response);
  	}
  
@@ -8568,7 +8574,7 @@ index 79cd7f2..fbb573c 100644
  	 */
  	async getForkMessages(): Promise<Array<{ entryId: string; text: string }>> {
  		const response = await this.send({ type: "get_fork_messages" });
-@@ -405,8 +414,30 @@ export class RpcClient {
+@@ -406,8 +415,30 @@ export class RpcClient {
  		return this.getData<{ entries: SessionEntry[]; leafId: string | null }>(response);
  	}
  
@@ -8600,11 +8606,11 @@ index 79cd7f2..fbb573c 100644
  	 */
  	async getTree(): Promise<{ tree: SessionTreeNode[]; leafId: string | null }> {
  		const response = await this.send({ type: "get_tree" });
-diff --git c/packages/coding-agent/src/modes/rpc/rpc-mode.ts i/packages/coding-agent/src/modes/rpc/rpc-mode.ts
-index c6db8c3..e160405 100644
---- c/packages/coding-agent/src/modes/rpc/rpc-mode.ts
-+++ i/packages/coding-agent/src/modes/rpc/rpc-mode.ts
-@@ -42,6 +42,7 @@ export type {
+diff --git a/packages/coding-agent/src/modes/rpc/rpc-mode.ts b/packages/coding-agent/src/modes/rpc/rpc-mode.ts
+index 1b5d8a6..bf4280d 100644
+--- a/packages/coding-agent/src/modes/rpc/rpc-mode.ts
++++ b/packages/coding-agent/src/modes/rpc/rpc-mode.ts
+@@ -43,6 +43,7 @@ export type {
  	RpcCommand,
  	RpcExtensionUIRequest,
  	RpcExtensionUIResponse,
@@ -8612,7 +8618,7 @@ index c6db8c3..e160405 100644
  	RpcResponse,
  	RpcSessionState,
  } from "./rpc-types.ts";
-@@ -454,7 +455,7 @@ export async function runRpcMode(runtimeHost: AgentSessionRuntime): Promise<neve
+@@ -455,7 +456,7 @@ export async function runRpcMode(runtimeHost: AgentSessionRuntime): Promise<neve
  					sessionId: session.sessionId,
  					sessionName: session.sessionName,
  					autoCompactionEnabled: session.autoCompactionEnabled,
@@ -8621,7 +8627,7 @@ index c6db8c3..e160405 100644
  					pendingMessageCount: session.pendingMessageCount,
  				};
  				return success(id, "get_state", state);
-@@ -626,12 +627,34 @@ export async function runRpcMode(runtimeHost: AgentSessionRuntime): Promise<neve
+@@ -627,12 +628,34 @@ export async function runRpcMode(runtimeHost: AgentSessionRuntime): Promise<neve
  			}
  
  			case "get_fork_messages": {
@@ -8658,7 +8664,7 @@ index c6db8c3..e160405 100644
  				let entries = sessionManager.getEntries();
  				if (command.since !== undefined) {
  					const sinceIndex = entries.findIndex((e) => e.id === command.since);
-@@ -645,7 +668,21 @@ export async function runRpcMode(runtimeHost: AgentSessionRuntime): Promise<neve
+@@ -646,7 +669,21 @@ export async function runRpcMode(runtimeHost: AgentSessionRuntime): Promise<neve
  
  			case "get_tree": {
  				const sessionManager = session.sessionManager;
@@ -8681,7 +8687,7 @@ index c6db8c3..e160405 100644
  			}
  
  			case "get_last_assistant_text": {
-@@ -667,7 +704,7 @@ export async function runRpcMode(runtimeHost: AgentSessionRuntime): Promise<neve
+@@ -668,7 +705,7 @@ export async function runRpcMode(runtimeHost: AgentSessionRuntime): Promise<neve
  			// =================================================================
  
  			case "get_messages": {
@@ -8690,10 +8696,10 @@ index c6db8c3..e160405 100644
  			}
  
  			// =================================================================
-diff --git c/packages/coding-agent/src/modes/rpc/rpc-types.ts i/packages/coding-agent/src/modes/rpc/rpc-types.ts
+diff --git a/packages/coding-agent/src/modes/rpc/rpc-types.ts b/packages/coding-agent/src/modes/rpc/rpc-types.ts
 index 5957eeb..2f563f9 100644
---- c/packages/coding-agent/src/modes/rpc/rpc-types.ts
-+++ i/packages/coding-agent/src/modes/rpc/rpc-types.ts
+--- a/packages/coding-agent/src/modes/rpc/rpc-types.ts
++++ b/packages/coding-agent/src/modes/rpc/rpc-types.ts
 @@ -7,12 +7,19 @@
  
  import type { AgentMessage, ThinkingLevel } from "@earendil-works/pi-agent-core";
@@ -8763,10 +8769,10 @@ index 5957eeb..2f563f9 100644
  	| {
  			id?: string;
  			type: "response";
-diff --git c/packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts i/packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts
+diff --git a/packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts b/packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts
 index 8c1769d..6dc6bc3 100644
---- c/packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts
-+++ i/packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts
+--- a/packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts
++++ b/packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts
 @@ -1,7 +1,7 @@
  import { existsSync, mkdirSync, rmSync } from "node:fs";
  import { tmpdir } from "node:os";
@@ -8820,11 +8826,11 @@ index 8c1769d..6dc6bc3 100644
  	});
  
  	it("should not trigger threshold compaction for error messages when no prior usage exists", async () => {
-diff --git c/packages/coding-agent/test/agent-session-jsonl-export.test.ts i/packages/coding-agent/test/agent-session-jsonl-export.test.ts
+diff --git a/packages/coding-agent/test/agent-session-jsonl-export.test.ts b/packages/coding-agent/test/agent-session-jsonl-export.test.ts
 new file mode 100644
 index 0000000..033ed11
 --- /dev/null
-+++ i/packages/coding-agent/test/agent-session-jsonl-export.test.ts
++++ b/packages/coding-agent/test/agent-session-jsonl-export.test.ts
 @@ -0,0 +1,205 @@
 +import {
 +	linkSync,
@@ -9031,11 +9037,11 @@ index 0000000..033ed11
 +		expect(readdirSync(root).some((name) => name.endsWith(".tmp"))).toBe(false);
 +	});
 +});
-diff --git c/packages/coding-agent/test/agent-session-runtime-ownership.test.ts i/packages/coding-agent/test/agent-session-runtime-ownership.test.ts
+diff --git a/packages/coding-agent/test/agent-session-runtime-ownership.test.ts b/packages/coding-agent/test/agent-session-runtime-ownership.test.ts
 new file mode 100644
 index 0000000..d3d5b44
 --- /dev/null
-+++ i/packages/coding-agent/test/agent-session-runtime-ownership.test.ts
++++ b/packages/coding-agent/test/agent-session-runtime-ownership.test.ts
 @@ -0,0 +1,140 @@
 +import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 +import { tmpdir } from "node:os";
@@ -9177,10 +9183,10 @@ index 0000000..d3d5b44
 +		expect(candidateManager.close).toHaveBeenCalledOnce();
 +	});
 +});
-diff --git c/packages/coding-agent/test/agent-session-stats.test.ts i/packages/coding-agent/test/agent-session-stats.test.ts
+diff --git a/packages/coding-agent/test/agent-session-stats.test.ts b/packages/coding-agent/test/agent-session-stats.test.ts
 index 434524d..74819c4 100644
---- c/packages/coding-agent/test/agent-session-stats.test.ts
-+++ i/packages/coding-agent/test/agent-session-stats.test.ts
+--- a/packages/coding-agent/test/agent-session-stats.test.ts
++++ b/packages/coding-agent/test/agent-session-stats.test.ts
 @@ -1,4 +1,4 @@
 -import { Agent } from "@earendil-works/pi-agent-core";
 +import { Agent, type AgentMessage } from "@earendil-works/pi-agent-core";
@@ -9329,10 +9335,10 @@ index 434524d..74819c4 100644
 +		}
 +	});
  });
-diff --git c/packages/coding-agent/test/compaction.test.ts i/packages/coding-agent/test/compaction.test.ts
+diff --git a/packages/coding-agent/test/compaction.test.ts b/packages/coding-agent/test/compaction.test.ts
 index 12c9d0b..5b405f9 100644
---- c/packages/coding-agent/test/compaction.test.ts
-+++ i/packages/coding-agent/test/compaction.test.ts
+--- a/packages/coding-agent/test/compaction.test.ts
++++ b/packages/coding-agent/test/compaction.test.ts
 @@ -10,6 +10,7 @@ import {
  	compact,
  	DEFAULT_COMPACTION_SETTINGS,
@@ -9384,11 +9390,11 @@ index 12c9d0b..5b405f9 100644
  });
  
  describe("shouldCompact", () => {
-diff --git c/packages/coding-agent/test/export-html-streaming.test.ts i/packages/coding-agent/test/export-html-streaming.test.ts
+diff --git a/packages/coding-agent/test/export-html-streaming.test.ts b/packages/coding-agent/test/export-html-streaming.test.ts
 new file mode 100644
 index 0000000..ae14c98
 --- /dev/null
-+++ i/packages/coding-agent/test/export-html-streaming.test.ts
++++ b/packages/coding-agent/test/export-html-streaming.test.ts
 @@ -0,0 +1,694 @@
 +import { spawnSync } from "node:child_process";
 +import {
@@ -10084,10 +10090,10 @@ index 0000000..ae14c98
 +		});
 +	}, 30_000);
 +});
-diff --git c/packages/coding-agent/test/export-html-whitespace.test.ts i/packages/coding-agent/test/export-html-whitespace.test.ts
+diff --git a/packages/coding-agent/test/export-html-whitespace.test.ts b/packages/coding-agent/test/export-html-whitespace.test.ts
 index 9d2a0e8..c544153 100644
---- c/packages/coding-agent/test/export-html-whitespace.test.ts
-+++ i/packages/coding-agent/test/export-html-whitespace.test.ts
+--- a/packages/coding-agent/test/export-html-whitespace.test.ts
++++ b/packages/coding-agent/test/export-html-whitespace.test.ts
 @@ -1,12 +1,20 @@
 +import { tmpdir } from "node:os";
 +import { join } from "node:path";
@@ -10156,11 +10162,11 @@ index 9d2a0e8..c544153 100644
 +		}
 +	});
  });
-diff --git c/packages/coding-agent/test/export-html-write.test.ts i/packages/coding-agent/test/export-html-write.test.ts
+diff --git a/packages/coding-agent/test/export-html-write.test.ts b/packages/coding-agent/test/export-html-write.test.ts
 new file mode 100644
 index 0000000..f62c941
 --- /dev/null
-+++ i/packages/coding-agent/test/export-html-write.test.ts
++++ b/packages/coding-agent/test/export-html-write.test.ts
 @@ -0,0 +1,190 @@
 +import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 +import { tmpdir } from "node:os";
@@ -10352,11 +10358,11 @@ index 0000000..f62c941
 +		expect(readFileSync(outputPath, "utf8")).toBe("substituted temp");
 +	});
 +});
-diff --git c/packages/coding-agent/test/extensions-runner.test.ts i/packages/coding-agent/test/extensions-runner.test.ts
-index af7d42c..52c91e3 100644
---- c/packages/coding-agent/test/extensions-runner.test.ts
-+++ i/packages/coding-agent/test/extensions-runner.test.ts
-@@ -565,6 +565,113 @@ describe("ExtensionRunner", () => {
+diff --git a/packages/coding-agent/test/extensions-runner.test.ts b/packages/coding-agent/test/extensions-runner.test.ts
+index f58a4da..e0835ed 100644
+--- a/packages/coding-agent/test/extensions-runner.test.ts
++++ b/packages/coding-agent/test/extensions-runner.test.ts
+@@ -564,6 +564,113 @@ describe("ExtensionRunner", () => {
  		});
  	});
  
@@ -10470,11 +10476,11 @@ index af7d42c..52c91e3 100644
  	describe("error handling", () => {
  		it("calls error listeners when handler throws", async () => {
  			const extCode = `
-diff --git c/packages/coding-agent/test/footer-width.test.ts i/packages/coding-agent/test/footer-width.test.ts
-index 310114a..1c4ae29 100644
---- c/packages/coding-agent/test/footer-width.test.ts
-+++ i/packages/coding-agent/test/footer-width.test.ts
-@@ -62,6 +62,18 @@ function createSession(options: {
+diff --git a/packages/coding-agent/test/footer-width.test.ts b/packages/coding-agent/test/footer-width.test.ts
+index 03db5b6..fc124b2 100644
+--- a/packages/coding-agent/test/footer-width.test.ts
++++ b/packages/coding-agent/test/footer-width.test.ts
+@@ -63,6 +63,18 @@ function createSession(options: {
  		});
  	}
  
@@ -10493,7 +10499,7 @@ index 310114a..1c4ae29 100644
  	const session = {
  		state: {
  			model: {
-@@ -74,6 +86,7 @@ function createSession(options: {
+@@ -75,6 +87,7 @@ function createSession(options: {
  		},
  		sessionManager: {
  			getEntries: () => entries,
@@ -10501,10 +10507,10 @@ index 310114a..1c4ae29 100644
  			getSessionName: () => options.sessionName,
  			getCwd: () => "/tmp/project",
  		},
-diff --git c/packages/coding-agent/test/git-update.test.ts i/packages/coding-agent/test/git-update.test.ts
+diff --git a/packages/coding-agent/test/git-update.test.ts b/packages/coding-agent/test/git-update.test.ts
 index 7b2a8f7..394ed1c 100644
---- c/packages/coding-agent/test/git-update.test.ts
-+++ i/packages/coding-agent/test/git-update.test.ts
+--- a/packages/coding-agent/test/git-update.test.ts
++++ b/packages/coding-agent/test/git-update.test.ts
 @@ -31,6 +31,8 @@ function initGitRepo(repoDir: string): void {
  	git(["init", "--initial-branch=main"], repoDir);
  	git(["config", "--local", "user.email", "test@test.com"], repoDir);
@@ -10514,11 +10520,11 @@ index 7b2a8f7..394ed1c 100644
  }
  
  // Helper to create a commit with a file
-diff --git c/packages/coding-agent/test/interactive-mode-history-cap.test.ts i/packages/coding-agent/test/interactive-mode-history-cap.test.ts
+diff --git a/packages/coding-agent/test/interactive-mode-history-cap.test.ts b/packages/coding-agent/test/interactive-mode-history-cap.test.ts
 new file mode 100644
 index 0000000..9c1506a
 --- /dev/null
-+++ i/packages/coding-agent/test/interactive-mode-history-cap.test.ts
++++ b/packages/coding-agent/test/interactive-mode-history-cap.test.ts
 @@ -0,0 +1,192 @@
 +import { Container, Text } from "@earendil-works/pi-tui";
 +import { beforeAll, describe, expect, test, vi } from "vitest";
@@ -10712,10 +10718,10 @@ index 0000000..9c1506a
 +		expect(showError).toHaveBeenNthCalledWith(2, "paging failed");
 +	});
 +});
-diff --git c/packages/coding-agent/test/print-mode.test.ts i/packages/coding-agent/test/print-mode.test.ts
-index 30d7251..0c516bf 100644
---- c/packages/coding-agent/test/print-mode.test.ts
-+++ i/packages/coding-agent/test/print-mode.test.ts
+diff --git a/packages/coding-agent/test/print-mode.test.ts b/packages/coding-agent/test/print-mode.test.ts
+index 32cec8e..3b3cf58 100644
+--- a/packages/coding-agent/test/print-mode.test.ts
++++ b/packages/coding-agent/test/print-mode.test.ts
 @@ -139,4 +139,23 @@ describe("runPrintMode", () => {
  		expect(session.extensionRunner.emit).toHaveBeenCalledTimes(1);
  		expect(session.extensionRunner.emit).toHaveBeenCalledWith({ type: "session_shutdown", reason: "quit" });
@@ -10740,11 +10746,11 @@ index 30d7251..0c516bf 100644
 +		expect(stateGetter).not.toHaveBeenCalled();
 +	});
  });
-diff --git c/packages/coding-agent/test/rpc-client-paging.test.ts i/packages/coding-agent/test/rpc-client-paging.test.ts
+diff --git a/packages/coding-agent/test/rpc-client-paging.test.ts b/packages/coding-agent/test/rpc-client-paging.test.ts
 new file mode 100644
 index 0000000..2a40f6d
 --- /dev/null
-+++ i/packages/coding-agent/test/rpc-client-paging.test.ts
++++ b/packages/coding-agent/test/rpc-client-paging.test.ts
 @@ -0,0 +1,107 @@
 +import { describe, expect, it, vi } from "vitest";
 +import { RpcClient } from "../src/modes/rpc/rpc-client.ts";
@@ -10853,10 +10859,10 @@ index 0000000..2a40f6d
 +		expect(send).toHaveBeenCalledWith({ type: "get_tree" });
 +	});
 +});
-diff --git c/packages/coding-agent/test/rpc-prompt-response-semantics.test.ts i/packages/coding-agent/test/rpc-prompt-response-semantics.test.ts
-index 155d2d3..42fca1a 100644
---- c/packages/coding-agent/test/rpc-prompt-response-semantics.test.ts
-+++ i/packages/coding-agent/test/rpc-prompt-response-semantics.test.ts
+diff --git a/packages/coding-agent/test/rpc-prompt-response-semantics.test.ts b/packages/coding-agent/test/rpc-prompt-response-semantics.test.ts
+index 698773d..ad5dd4c 100644
+--- a/packages/coding-agent/test/rpc-prompt-response-semantics.test.ts
++++ b/packages/coding-agent/test/rpc-prompt-response-semantics.test.ts
 @@ -172,6 +172,7 @@ async function createRuntimeHost(options: { withAuth: boolean; responseDelayMs:
  
  async function startRpcMode(options: { withAuth: boolean; responseDelayMs: number; model?: Model<any> }): Promise<{
@@ -10954,11 +10960,11 @@ index 155d2d3..42fca1a 100644
 +		}
 +	});
 +});
-diff --git c/packages/coding-agent/test/session-info-search-text.test.ts i/packages/coding-agent/test/session-info-search-text.test.ts
+diff --git a/packages/coding-agent/test/session-info-search-text.test.ts b/packages/coding-agent/test/session-info-search-text.test.ts
 new file mode 100644
 index 0000000..16be9ed
 --- /dev/null
-+++ i/packages/coding-agent/test/session-info-search-text.test.ts
++++ b/packages/coding-agent/test/session-info-search-text.test.ts
 @@ -0,0 +1,97 @@
 +import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 +import { tmpdir } from "node:os";
@@ -11057,10 +11063,10 @@ index 0000000..16be9ed
 +		expect(filterAndSortSessions([session], "needle-after-cap", "recent")).toEqual([]);
 +	});
 +});
-diff --git c/packages/coding-agent/test/session-manager/file-operations.test.ts i/packages/coding-agent/test/session-manager/file-operations.test.ts
+diff --git a/packages/coding-agent/test/session-manager/file-operations.test.ts b/packages/coding-agent/test/session-manager/file-operations.test.ts
 index c978b32..93e43fb 100644
---- c/packages/coding-agent/test/session-manager/file-operations.test.ts
-+++ i/packages/coding-agent/test/session-manager/file-operations.test.ts
+--- a/packages/coding-agent/test/session-manager/file-operations.test.ts
++++ b/packages/coding-agent/test/session-manager/file-operations.test.ts
 @@ -1,5 +1,18 @@
  import { constants as bufferConstants } from "buffer";
 -import { appendFileSync, closeSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync, writeSync } from "fs";
@@ -11147,11 +11153,11 @@ index c978b32..93e43fb 100644
  			}
  		}
  	});
-diff --git c/packages/coding-agent/test/session-manager/indexed-history-store.test.ts i/packages/coding-agent/test/session-manager/indexed-history-store.test.ts
+diff --git a/packages/coding-agent/test/session-manager/indexed-history-store.test.ts b/packages/coding-agent/test/session-manager/indexed-history-store.test.ts
 new file mode 100644
 index 0000000..d682d31
 --- /dev/null
-+++ i/packages/coding-agent/test/session-manager/indexed-history-store.test.ts
++++ b/packages/coding-agent/test/session-manager/indexed-history-store.test.ts
 @@ -0,0 +1,1336 @@
 +import { spawn } from "node:child_process";
 +import { createHash } from "node:crypto";
@@ -12489,10 +12495,10 @@ index 0000000..d682d31
 +		manager.close();
 +	});
 +});
-diff --git c/packages/coding-agent/test/session-manager/migration.test.ts i/packages/coding-agent/test/session-manager/migration.test.ts
+diff --git a/packages/coding-agent/test/session-manager/migration.test.ts b/packages/coding-agent/test/session-manager/migration.test.ts
 index 0577423..df8d445 100644
---- c/packages/coding-agent/test/session-manager/migration.test.ts
-+++ i/packages/coding-agent/test/session-manager/migration.test.ts
+--- a/packages/coding-agent/test/session-manager/migration.test.ts
++++ b/packages/coding-agent/test/session-manager/migration.test.ts
 @@ -1,78 +1,447 @@
 -import { describe, expect, it } from "vitest";
 -import { type FileEntry, migrateSessionEntries } from "../../src/core/session-manager.ts";
@@ -13004,11 +13010,11 @@ index 0577423..df8d445 100644
 +		expect(migrationDebris(root)).toEqual([]);
 +	}, 90_000);
  });
-diff --git c/packages/coding-agent/test/session-manager/paged-navigation.test.ts i/packages/coding-agent/test/session-manager/paged-navigation.test.ts
+diff --git a/packages/coding-agent/test/session-manager/paged-navigation.test.ts b/packages/coding-agent/test/session-manager/paged-navigation.test.ts
 new file mode 100644
 index 0000000..a5aaf38
 --- /dev/null
-+++ i/packages/coding-agent/test/session-manager/paged-navigation.test.ts
++++ b/packages/coding-agent/test/session-manager/paged-navigation.test.ts
 @@ -0,0 +1,372 @@
 +import { mkdtempSync, rmSync } from "node:fs";
 +import { tmpdir } from "node:os";
@@ -13382,10 +13388,10 @@ index 0000000..a5aaf38
 +		}
 +	});
 +});
-diff --git c/packages/coding-agent/test/session-manager/tree-traversal.test.ts i/packages/coding-agent/test/session-manager/tree-traversal.test.ts
+diff --git a/packages/coding-agent/test/session-manager/tree-traversal.test.ts b/packages/coding-agent/test/session-manager/tree-traversal.test.ts
 index d6e20f0..a2267fc 100644
---- c/packages/coding-agent/test/session-manager/tree-traversal.test.ts
-+++ i/packages/coding-agent/test/session-manager/tree-traversal.test.ts
+--- a/packages/coding-agent/test/session-manager/tree-traversal.test.ts
++++ b/packages/coding-agent/test/session-manager/tree-traversal.test.ts
 @@ -318,6 +318,31 @@ describe("SessionManager append and tree traversal", () => {
  			const branchedEntry = entries.find((e) => e.id === id3)!;
  			expect(branchedEntry.parentId).toBe(id1); // sibling of id2
@@ -13418,10 +13424,10 @@ index d6e20f0..a2267fc 100644
  	});
  
  	describe("branchWithSummary", () => {
-diff --git c/packages/coding-agent/test/session-selector-path-delete.test.ts i/packages/coding-agent/test/session-selector-path-delete.test.ts
+diff --git a/packages/coding-agent/test/session-selector-path-delete.test.ts b/packages/coding-agent/test/session-selector-path-delete.test.ts
 index cb702d5..7543e5d 100644
---- c/packages/coding-agent/test/session-selector-path-delete.test.ts
-+++ i/packages/coding-agent/test/session-selector-path-delete.test.ts
+--- a/packages/coding-agent/test/session-selector-path-delete.test.ts
++++ b/packages/coding-agent/test/session-selector-path-delete.test.ts
 @@ -1,11 +1,11 @@
 -import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 +import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
@@ -13466,10 +13472,10 @@ index cb702d5..7543e5d 100644
  	it("enters confirmation mode on Ctrl+D even with a non-empty search query", async () => {
  		const sessions = [makeSession({ id: "a" }), makeSession({ id: "b" })];
  
-diff --git c/packages/coding-agent/test/session-selector-rename.test.ts i/packages/coding-agent/test/session-selector-rename.test.ts
+diff --git a/packages/coding-agent/test/session-selector-rename.test.ts b/packages/coding-agent/test/session-selector-rename.test.ts
 index d535496..1240e79 100644
---- c/packages/coding-agent/test/session-selector-rename.test.ts
-+++ i/packages/coding-agent/test/session-selector-rename.test.ts
+--- a/packages/coding-agent/test/session-selector-rename.test.ts
++++ b/packages/coding-agent/test/session-selector-rename.test.ts
 @@ -1,8 +1,9 @@
  import { setKeybindings } from "@earendil-works/pi-tui";
 -import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -13549,10 +13555,10 @@ index d535496..1240e79 100644
 +		expect(manager.close).toHaveBeenCalledOnce();
 +	});
  });
-diff --git c/packages/coding-agent/test/session-selector-search.test.ts i/packages/coding-agent/test/session-selector-search.test.ts
+diff --git a/packages/coding-agent/test/session-selector-search.test.ts b/packages/coding-agent/test/session-selector-search.test.ts
 index c1aed71..4eab9fd 100644
---- c/packages/coding-agent/test/session-selector-search.test.ts
-+++ i/packages/coding-agent/test/session-selector-search.test.ts
+--- a/packages/coding-agent/test/session-selector-search.test.ts
++++ b/packages/coding-agent/test/session-selector-search.test.ts
 @@ -14,7 +14,9 @@ function makeSession(
  		modified: overrides.modified,
  		messageCount: overrides.messageCount ?? 1,
@@ -13563,19 +13569,11 @@ index c1aed71..4eab9fd 100644
  	};
  }
  
-diff --git c/packages/coding-agent/test/test-harness.test.ts i/packages/coding-agent/test/test-harness.test.ts
-index 3ac7162..2030d8b 100644
---- c/packages/coding-agent/test/test-harness.test.ts
-+++ i/packages/coding-agent/test/test-harness.test.ts
-@@ -89,10 +89,14 @@ describe("test harness", () => {
- 	});
- 
- 	it("turns a pending terminal response into an error", async () => {
--		harness = await createHarness({ responses: [{ text: "partial", stopReason: "pending" }] });
-+		harness = await createHarness({
-+			responses: [{ text: "partial", stopReason: "pending" }],
-+			settings: { retry: { enabled: false } },
-+		});
+diff --git a/packages/coding-agent/test/test-harness.test.ts b/packages/coding-agent/test/test-harness.test.ts
+index 5f1ad41..2030d8b 100644
+--- a/packages/coding-agent/test/test-harness.test.ts
++++ b/packages/coding-agent/test/test-harness.test.ts
+@@ -96,6 +96,7 @@ describe("test harness", () => {
  
  		await harness.session.prompt("hi");
  
@@ -13583,10 +13581,10 @@ index 3ac7162..2030d8b 100644
  		const assistantMessages = harness.session.messages.filter((m): m is AssistantMessage => m.role === "assistant");
  		expect(assistantMessages).toHaveLength(1);
  		expect(assistantMessages[0].stopReason).toBe("error");
-diff --git c/packages/coding-agent/test/tree-selector.test.ts i/packages/coding-agent/test/tree-selector.test.ts
+diff --git a/packages/coding-agent/test/tree-selector.test.ts b/packages/coding-agent/test/tree-selector.test.ts
 index 9dc750d..f898c33 100644
---- c/packages/coding-agent/test/tree-selector.test.ts
-+++ i/packages/coding-agent/test/tree-selector.test.ts
+--- a/packages/coding-agent/test/tree-selector.test.ts
++++ b/packages/coding-agent/test/tree-selector.test.ts
 @@ -273,6 +273,27 @@ describe("TreeSelectorComponent", () => {
  		});
  	});
@@ -13798,11 +13796,11 @@ index 9dc750d..f898c33 100644
  	describe("branch navigation and folding with ctrl+arrow keys", () => {
  		// Key escape sequences
  		const UP = "\x1b[A";
-diff --git c/packages/coding-agent/test/user-message-selector.test.ts i/packages/coding-agent/test/user-message-selector.test.ts
+diff --git a/packages/coding-agent/test/user-message-selector.test.ts b/packages/coding-agent/test/user-message-selector.test.ts
 new file mode 100644
 index 0000000..2f025c6
 --- /dev/null
-+++ i/packages/coding-agent/test/user-message-selector.test.ts
++++ b/packages/coding-agent/test/user-message-selector.test.ts
 @@ -0,0 +1,25 @@
 +import { stripVTControlCharacters } from "node:util";
 +import { beforeAll, describe, expect, test } from "vitest";

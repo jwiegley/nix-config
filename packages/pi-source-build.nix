@@ -22,7 +22,7 @@ buildNpmPackageWithNode24 {
     assert source.source.fetcher == "fetchFromGitHub";
     fetchFromGitHub source.source.args;
 
-  # Temporary downstream patches against the exact v0.83.0 catalog pin.
+  # Temporary downstream patches against the exact v0.84.2 catalog pin.
   # Remove each once its corresponding behavior is upstreamed.
   patches = [
     ../overlays/ai/patches/pi-bounded-session-history.patch

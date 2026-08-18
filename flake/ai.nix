@@ -116,14 +116,7 @@ let
     else
       package;
 
-  # Per-agent packaging feeds. Every agent comes from the floating llm-agents
-  # feed unless a reviewed pin names another substrate for it.
-  agentFeeds = {
-    pi = inputs.pi-llm-agents;
-  };
-
-  agentFeedFor = name: agentFeeds.${name} or llm-agents;
-  agentPackagesFor = name: system: (agentFeedFor name).packages.${system} or { };
+  agentPackagesFor = _name: system: llm-agents.packages.${system} or { };
   agentExistsOnSupportedSystem =
     name: builtins.any (system: builtins.hasAttr name (agentPackagesFor name system)) systems;
 
@@ -474,12 +467,7 @@ in
           independentNixpkgs =
             name: builtins.isString portableLock.nodes.${portableLock.nodes.root.inputs.${name}}.inputs.nixpkgs;
         in
-        if
-          builtins.all independentNixpkgs [
-            "llm-agents"
-            "pi-llm-agents"
-          ]
-        then
+        if independentNixpkgs "llm-agents" then
           pkgs.runCommand "llm-agents-nixpkgs-independent" { } "touch $out"
         else
           throw "every llm-agents feed must retain its independent nixpkgs input";
@@ -507,7 +495,7 @@ in
       pi-gallery = pkgs.callPackage ../test/ai/pi-gallery.nix {
         inherit sourceForChecks;
         piPackage = canonicalPiPackages.${system};
-        upstreamPiPackage = agentFeeds.pi.packages.${system}.pi;
+        upstreamPiPackage = llm-agents.packages.${system}.pi;
         piPackages = pkgs.pi-gallery.packages // {
           inherit (pkgs) agent-resources pi-gallery;
           pi = canonicalPiPackages.${system};

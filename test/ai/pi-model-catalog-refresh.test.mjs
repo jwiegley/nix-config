@@ -11,9 +11,13 @@ const interactiveMode = readFileSync(
   join(sourceRoot, "dist/modes/interactive/interactive-mode.js"),
   "utf8",
 );
+const runStartup = interactiveMode.match(
+  /async run\(\) \{([\s\S]*?)\/\/ Start version check asynchronously/,
+)?.[1];
+assert.ok(runStartup, "could not locate interactive startup body");
 assert.doesNotMatch(
-  interactiveMode,
-  /void this\.session\.modelRuntime\s*\.refresh\(\)\s*\.then\(\(\) => this\.updateAvailableProviderCount\(\)\)/,
+  runStartup,
+  /(?:modelRuntime\s*\.refresh|refreshModelCatalogs)/,
   "interactive startup must not refresh remote model catalogs",
 );
 
@@ -58,4 +62,4 @@ while (selector.errorMessage !== "Model refresh timed out; showing cached models
 
 assert.ok(refreshSignal?.aborted, "timed-out refresh was not aborted");
 assert.ok(renderCount >= 2, "timed-out refresh did not request a new render");
-selector.close();
+selector.dispose();

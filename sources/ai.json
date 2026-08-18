@@ -1019,22 +1019,22 @@
       "artifacts": {
         "piAiRelease": {
           "args": {
-            "hash": "sha256-OpiG7u0hptGZRnwhSlB6jbA1iNHd71zBXrDEERrpQTg=",
-            "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.83.0.tgz"
+            "hash": "sha256-g+7VNBsWcXAW+xmZ4wSfMZvWagfetfNI87A87Q4Ip4U=",
+            "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.2.tgz"
           },
           "fetcher": "fetchzip",
-          "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.83.0.tgz"
+          "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.2.tgz"
         }
       },
       "hashes": {
-        "npmDepsHash": "sha256-AbSfP1Ion8bN309NUBQb1QSn2cIIUjNONmZgls9vnYE="
+        "npmDepsHash": "sha256-6J5Efe+6ptCuR3VZojwYPZO8BBnnZsOQ4OAeB64uYOY="
       },
       "source": {
         "args": {
-          "hash": "sha256-+XRJua2TSXkZMnWtxtLMskSzEHrGEFFyvYcPATi7An4=",
+          "hash": "sha256-d29ft9otYxdHRWYIAX8KMHPpppToX9ME5LbPb1rPcYo=",
           "owner": "earendil-works",
           "repo": "pi",
-          "rev": "845d6ff1f6643aba440341cce877ce1c43ebbc39"
+          "rev": "914cf1472e715297caa30db4b9535d534a9eb718"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/earendil-works/pi"
@@ -1044,7 +1044,7 @@
         "policy": "manual",
         "reason": "Keep the patched source build and its packaged provider data on one reviewed Pi release"
       },
-      "version": "0.83.0"
+      "version": "0.84.2"
     },
     "rust-overlay": {
       "source": {

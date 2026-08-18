@@ -1,7 +1,8 @@
 diff --git a/dist/modes/interactive/components/model-selector.js b/dist/modes/interactive/components/model-selector.js
+index de1ebc1..95db21d 100644
 --- a/dist/modes/interactive/components/model-selector.js
 +++ b/dist/modes/interactive/components/model-selector.js
-@@ -116,18 +116,24 @@
+@@ -117,18 +117,24 @@ export class ModelSelectorComponent extends Container {
              currentIndex >= 0 ? currentIndex : Math.min(this.selectedIndex, Math.max(0, this.filteredModels.length - 1));
      }
      async refreshModels() {
@@ -20,9 +21,9 @@ diff --git a/dist/modes/interactive/components/model-selector.js b/dist/modes/in
 +            }, timeoutMs);
 +        });
          try {
--            const result = await this.modelRuntime.refresh({ signal: this.refreshAbortController.signal });
+-            const result = await refreshModelCatalogs(this.modelRuntime, this.refreshAbortController.signal);
 +            const result = await Promise.race([
-+                this.modelRuntime.refresh({ signal: this.refreshAbortController.signal }),
++                refreshModelCatalogs(this.modelRuntime, this.refreshAbortController.signal),
 +                timeoutResult,
 +            ]);
              if (this.closed)
@@ -34,17 +35,20 @@ diff --git a/dist/modes/interactive/components/model-selector.js b/dist/modes/in
              }
              else if (result.errors.size === 1) {
 diff --git a/dist/modes/interactive/interactive-mode.js b/dist/modes/interactive/interactive-mode.js
+index 771f922..4906d42 100644
 --- a/dist/modes/interactive/interactive-mode.js
 +++ b/dist/modes/interactive/interactive-mode.js
-@@ -581,12 +581,6 @@
+@@ -778,14 +778,6 @@ export class InteractiveMode {
       */
      async run() {
          await this.init();
 -        if (!process.env.PI_OFFLINE) {
--            void this.session.modelRuntime
--                .refresh()
+-            const controller = new AbortController();
+-            const timeout = setTimeout(() => controller.abort(), 15_000);
+-            void refreshModelCatalogs(this.session.modelRuntime, controller.signal)
 -                .then(() => this.updateAvailableProviderCount())
--                .catch(() => { });
+-                .catch(() => { })
+-                .finally(() => clearTimeout(timeout));
 -        }
          // Start version check asynchronously
          checkForNewPiVersion(this.version).then((newRelease) => {

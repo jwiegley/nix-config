@@ -1,5 +1,5 @@
 diff --git a/dist/core/system-prompt.js b/dist/core/system-prompt.js
-index 1111111..2222222 100644
+index 9d24886..4bef42a 100644
 --- a/dist/core/system-prompt.js
 +++ b/dist/core/system-prompt.js
 @@ -1,7 +1,6 @@
@@ -11,7 +11,7 @@ index 1111111..2222222 100644
  /** Build the system prompt with tools, guidelines, and context */
  export function buildSystemPrompt(options) {
 @@ -32,10 +31,6 @@ export function buildSystemPrompt(options) {
-         prompt += `\nCurrent working directory: ${promptCwd}`;
+         prompt += `\nCurrent working directory: ${promptCwd}\n`;
          return prompt;
      }
 -    // Get absolute paths to documentation and examples
@@ -21,7 +21,8 @@ index 1111111..2222222 100644
      // Build tools list based on selected tools.
      // A tool appears in Available tools only when the caller provides a one-line snippet.
      const tools = selectedTools || ["read", "bash", "edit", "write"];
-@@ -78,15 +73,6 @@ In addition to the tools above, you may have access to other custom tools depend
+@@ -78,16 +73,7 @@ ${toolsList}
+ In addition to the tools above, you may have access to other custom tools depending on the project.
  
  Guidelines:
 -${guidelines}

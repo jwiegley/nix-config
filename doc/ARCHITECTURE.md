@@ -192,23 +192,14 @@ this repository as a non-flake source must declare `obr` directly and pass it in
 the Home Manager module arguments. That explicit consumer lock is part of the
 separately authorized adoption step; the module fails closed when it is absent.
 
-Pi's packaging substrate is pinned through a dedicated `pi-llm-agents` input at
-the exact revision whose Pi packaging matches the reviewed source build in
-`packages/pi-source-build.nix` (record `pi-coding-agent-source-build` in
-`sources/ai.json`). The floating `llm-agents` feed packages the other agents
-and advances past that revision; because `flake/ai.nix` asserts the packaged
-Pi version agrees with the reviewed source build, packaging Pi from the
-floating feed fails at evaluation once the feed ships a newer Pi. The pin
-costs an independent nixpkgs closure in `config/ai/flake.lock`; the
-`llm-agents-nixpkgs-independent` check verifies both feeds keep their own
-nixpkgs rather than following the consumer channel. Exit condition: when the
-reviewed Pi source advances to the version the floating feed packages, retire
-the pin as one unit — drop the `pi` entry from `agentFeeds` and rewrite
-`canonicalPiPackages` and `upstreamPiPackage` in `flake/ai.nix` to read
-`llm-agents`, remove `pi-llm-agents` from the `llm-agents-nixpkgs-independent`
-feed list, drop the `pinnedPiPackage` assertions in
-`test/ai/compatibility-check.nix`, and delete the input from
-`config/ai/flake.nix`.
+Pi uses the floating `llm-agents` packaging substrate while replacing its built
+artifacts with the reviewed source build in `packages/pi-source-build.nix`
+(record `pi-coding-agent-source-build` in `sources/ai.json`). `flake/ai.nix`
+asserts that the feed package and reviewed source build have the same version,
+so an automatic feed advance fails at evaluation until the source, downstream
+patches, and Gallery compatibility surface are reviewed together. The
+`llm-agents-nixpkgs-independent` check keeps the feed's nixpkgs input independent
+from the consumer channel.
 
 Pi gallery normalization has one implementation:
 `packages/pi-gallery/normalization-policy.json` defines the closed policy and

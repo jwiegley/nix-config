@@ -46,7 +46,7 @@ let
         ];
       };
       pinnedCodexPackage = inputs.llm-agents.packages.${system}.codex;
-      pinnedPiPackage = inputs.pi-llm-agents.packages.${system}.pi;
+      upstreamPiPackage = inputs.llm-agents.packages.${system}.pi;
       toolPkgs = import inputs.nixpkgs {
         inherit system;
         config.allowUnfree = true;
@@ -155,25 +155,17 @@ let
         actual.lib.aiPackagesFor pkgs
       )) "portable AI package policy lost the canonical Codex on ${system}")
       (lib.assertMsg (
-        actual.packages.${system}.pi.drvPath == (actual.lib.patchAgentPackage pkgs "pi" pinnedPiPackage)
+        actual.packages.${system}.pi.drvPath == (actual.lib.patchAgentPackage pkgs "pi" upstreamPiPackage)
         .drvPath
-      ) "portable Pi moved away from its pinned packaging substrate on ${system}")
+      ) "portable Pi moved away from its canonical packaging substrate on ${system}")
       (lib.assertMsg (builtins.any (package: package.drvPath == actual.packages.${system}.pi.drvPath) (
         actual.lib.aiPackagesFor pkgs
-      )) "portable AI package policy lost the canonical pinned Pi on ${system}")
+      )) "portable AI package policy lost the canonical Pi on ${system}")
     ]
     ++ map (value: lib.assertMsg value "portable compatibility alias changed on ${system}") (
       aliasesMatch system
     );
-  # The `.rev` literal below is a test-owned tripwire: an exact-rev flake URL
-  # cannot drift on its own, but editing it moves the input and both locks
-  # together, so the literal forces a pin change to be a deliberate two-place
-  # edit. The per-system drvPath assertion catches Pi being packaged from any
-  # feed other than `pi-llm-agents` or bypassing `patchAgentPackage`.
   assertions = [
-    (lib.assertMsg (
-      inputs.pi-llm-agents.rev == "f99bb437fd6860f23ea6c67a5161578a3b89d856"
-    ) "portable Pi packaging input moved from its reviewed llm-agents revision")
     (lib.assertMsg (hasAll inputNames contract.inputs) "portable AI input contract lost a required input")
     (lib.assertMsg (hasAll (sortedNames actual) outputNames) "portable AI top-level output contract lost a required output")
     (lib.assertMsg (builtins.isFunction actual.overlays.default) "portable default overlay is not callable")

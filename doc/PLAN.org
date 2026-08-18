@@ -14148,15 +14148,17 @@ Remove the resolved portable quality question and make the remaining external/ow
 ]
 #+end_src
 
-* DEFER [#C] Adopt pi-agent-browser-native 0.3 after Pi 0.84 migration
+* DONE [#C] Adopt pi-agent-browser-native 0.3 after Pi 0.84 migration
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tr5m
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-17 Mon 19:52]
-:MODIFIED: [2026-08-17 Mon 19:52]
+:MODIFIED: [2026-08-18 Tue 00:01]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 00:01]
+:CLOSE_REASON: Adopted Pi 0.84.2 with pi-agent-browser-native 0.3.0, rebased all managed Pi and Browser bounded-history patches at exact no-fuzz seams, and ported Pi Multi Pass to the native provider/OAuth API with AbortSignal, toAuth, credential-aware filterModels, and offline behavioral coverage. Pi and Browser packages, Gallery, compatibility, all-system evaluation, updater regressions, and input coherence pass; independent TypeScript and Nix reviews are CLEAR.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

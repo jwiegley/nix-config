@@ -1,7 +1,7 @@
-diff --git i/packages/coding-agent/src/modes/interactive/components/footer.ts w/packages/coding-agent/src/modes/interactive/components/footer.ts
-index c039d19..43cbd88 100644
---- i/packages/coding-agent/src/modes/interactive/components/footer.ts
-+++ w/packages/coding-agent/src/modes/interactive/components/footer.ts
+diff --git a/packages/coding-agent/src/modes/interactive/components/footer.ts b/packages/coding-agent/src/modes/interactive/components/footer.ts
+index aec8776..36df086 100644
+--- a/packages/coding-agent/src/modes/interactive/components/footer.ts
++++ b/packages/coding-agent/src/modes/interactive/components/footer.ts
 @@ -48,7 +48,7 @@ export function formatCwdForFooter(cwd: string, home: string | undefined): strin
   */
  export class FooterComponent implements Component {
@@ -77,17 +77,17 @@ index c039d19..43cbd88 100644
  
  		// Kimi Coding is subscription-backed despite using API-key authentication.
  		const usingSubscription = state.model
--			? state.model.provider === "kimi-coding" || this.session.modelRuntime.isUsingOAuth(state.model.provider)
-+			? state.model.provider === "kimi-coding" || session.modelRuntime.isUsingOAuth(state.model.provider)
+-			? state.model.provider === "kimi-coding" || this.session.modelRuntime.isUsingSubscription(state.model.provider)
++			? state.model.provider === "kimi-coding" || session.modelRuntime.isUsingSubscription(state.model.provider)
  			: false;
  		if (usageTotals.cost || usingSubscription) {
  			const costStr = `$${usageTotals.cost.toFixed(3)}${usingSubscription ? " (sub)" : ""}`;
-diff --git i/packages/coding-agent/src/modes/interactive/interactive-mode.ts w/packages/coding-agent/src/modes/interactive/interactive-mode.ts
-index b9ebd62..e9cef11 100644
---- i/packages/coding-agent/src/modes/interactive/interactive-mode.ts
-+++ w/packages/coding-agent/src/modes/interactive/interactive-mode.ts
-@@ -459,7 +459,11 @@ export class InteractiveMode {
- 		this.options = options;
+diff --git a/packages/coding-agent/src/modes/interactive/interactive-mode.ts b/packages/coding-agent/src/modes/interactive/interactive-mode.ts
+index a725312..92dfc23 100644
+--- a/packages/coding-agent/src/modes/interactive/interactive-mode.ts
++++ b/packages/coding-agent/src/modes/interactive/interactive-mode.ts
+@@ -555,7 +555,11 @@ export class InteractiveMode {
+ 		this.options = { ...options, tuiMode };
  		this.autoTrustOnReloadCwd = options.autoTrustOnReloadCwd;
  		this.runtimeHost.setBeforeSessionInvalidate(() => {
 -			this.resetExtensionUI();
@@ -99,19 +99,19 @@ index b9ebd62..e9cef11 100644
  		});
  		this.runtimeHost.setRebindSession(async () => {
  			await this.rebindCurrentSession({ renderBeforeBind: true });
-@@ -1722,7 +1726,7 @@ export class InteractiveMode {
- 
+@@ -1932,7 +1936,7 @@ export class InteractiveMode {
  	private applyRuntimeSettings(): void {
  		configureHttpDispatcher(this.settingsManager.getHttpIdleTimeoutMs());
+ 		this.applyFullscreenScrollbarSetting();
 -		this.footer.setSession(this.session);
 +		this.footer.bindSession(this.session);
  		this.footer.setAutoCompactEnabled(this.session.autoCompactionEnabled);
  		this.footerDataProvider.setCwd(this.sessionManager.getCwd());
  		this.hideThinkingBlock = this.settingsManager.getHideThinkingBlock();
-diff --git i/packages/coding-agent/test/agent-session-runtime-events.test.ts w/packages/coding-agent/test/agent-session-runtime-events.test.ts
+diff --git a/packages/coding-agent/test/agent-session-runtime-events.test.ts b/packages/coding-agent/test/agent-session-runtime-events.test.ts
 index 32bb828..c51dae9 100644
---- i/packages/coding-agent/test/agent-session-runtime-events.test.ts
-+++ w/packages/coding-agent/test/agent-session-runtime-events.test.ts
+--- a/packages/coding-agent/test/agent-session-runtime-events.test.ts
++++ b/packages/coding-agent/test/agent-session-runtime-events.test.ts
 @@ -1,4 +1,4 @@
 -import { existsSync, mkdirSync, rmSync } from "node:fs";
 +import { copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
@@ -186,11 +186,11 @@ index 32bb828..c51dae9 100644
  	it("emits session_before_fork and session_start and honors cancellation", async () => {
  		const events: RecordedSessionEvent[] = [];
  		let cancelNextFork = false;
-diff --git i/packages/coding-agent/test/footer-width.test.ts w/packages/coding-agent/test/footer-width.test.ts
-index 1c4ae29..ee3221c 100644
---- i/packages/coding-agent/test/footer-width.test.ts
-+++ w/packages/coding-agent/test/footer-width.test.ts
-@@ -140,6 +140,30 @@ describe("FooterComponent width handling", () => {
+diff --git a/packages/coding-agent/test/footer-width.test.ts b/packages/coding-agent/test/footer-width.test.ts
+index fc124b2..c90cf58 100644
+--- a/packages/coding-agent/test/footer-width.test.ts
++++ b/packages/coding-agent/test/footer-width.test.ts
+@@ -141,6 +141,30 @@ describe("FooterComponent width handling", () => {
  		}
  	});
  

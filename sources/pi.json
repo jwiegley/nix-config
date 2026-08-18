@@ -83,18 +83,18 @@
     "pi-agent-browser-native": {
       "source": {
         "args": {
-          "hash": "sha256-3subgZHSxRN4wigNrM0KO6o2QmNSr8PtdrT4mg2kRlE=",
-          "url": "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.2.72.tgz"
+          "hash": "sha256-beS3DWbEOyNt6klfmJNYJtOOKUQG1YI6NNW4UJTgoRY=",
+          "url": "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.3.0.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.2.72.tgz"
+        "url": "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.3.0.tgz"
       },
       "update": {
         "buildPackage": "pi-agent-browser-native",
         "kind": "npm-release",
         "package": "pi-agent-browser-native"
       },
-      "version": "0.2.72"
+      "version": "0.3.0"
     },
     "pi-blackhole": {
       "source": {

@@ -9,7 +9,7 @@ tags:
   - developer-tools
 created: 2026-07-27
 updated: 2026-08-17
-pi-version: 0.83.0
+pi-version: 0.84.2
 ---
 
 # Pi Coding Agent Extensions
@@ -32,7 +32,7 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `pi-smart-web-search` | 0.4.0 | Ranked batch web discovery | `web_search` |
 | `pi-lens` | 4.0.1 | LSP, diagnostics, and structural code intelligence | `lens_diagnostics`, `symbol_search` |
 | `@dietrichgebert/ponytail` | 4.9.0 | Minimal implementation discipline | `/ponytail` |
-| `pi-agent-browser-native` | 0.2.72 | Native Pi interface to `agent-browser` | `agent_browser` |
+| `pi-agent-browser-native` | 0.3.0 | Native Pi interface to `agent-browser` | `agent_browser` |
 | `pi-btw` | 0.4.1 | Side conversations without disturbing the main turn | `/btw` |
 | `pi-copy-message` | 2.0.0 | Search and copy raw session messages | `/copy-message`, `/copy-user` |
 | `@ygncode/pi-insights` | 1.0.1 | Session analytics | `/insights` |
@@ -274,7 +274,7 @@ Pi Lens is currently retained as a managed package and projected resource but is
 
 ### Agent Browser Native
 
-**Version:** 0.2.72 · **Links:** [Pi Packages](https://pi.dev/packages/pi-agent-browser-native) · [Home](https://github.com/fitchmultz/pi-agent-browser-native#readme) · [GitHub](https://github.com/fitchmultz/pi-agent-browser-native) · [agent-browser](https://github.com/vercel-labs/agent-browser)
+**Version:** 0.3.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-agent-browser-native) · [Home](https://github.com/fitchmultz/pi-agent-browser-native#readme) · [GitHub](https://github.com/fitchmultz/pi-agent-browser-native) · [agent-browser](https://github.com/vercel-labs/agent-browser)
 
 Pi Agent Browser Native presents `agent-browser` as the `agent_browser` Pi tool. It supports live browsing, semantic locators, multi-step jobs, screenshots, extraction, QA presets, authenticated browser profiles, and Electron application control while retaining explicit stopping points before consequential submissions.
 
@@ -370,7 +370,7 @@ The fleet-packaged oMLX provider uses the same bounded discovery adapter against
 
 **Version:** 1.3.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-multi-pass) · [Home](https://github.com/hjanuschka/pi-multi-pass#readme) · [GitHub](https://github.com/hjanuschka/pi-multi-pass)
 
-Pi Multi-Pass registers additional OAuth subscription accounts for supported providers. Pools rotate accounts on rate limits or errors; project config may restrict accounts, override pools, and define named routing presets.
+Pi Multi-Pass registers additional OAuth subscription accounts for the managed Pi runtime's native Anthropic, OpenAI Codex, and GitHub Copilot providers. It reuses each native provider's login, refresh, request-auth, model-filtering, and cancellation behavior; stale Gemini CLI and Antigravity entries are ignored because managed Pi no longer provides those runtimes. Pools rotate accounts on rate limits or errors; project config may restrict accounts, override pools, and define named routing presets.
 
 **Basic usage.** Use `/subs` to add, authenticate, inspect, or remove accounts; `/pool` to create and manage failover pools and chains; and `/mp-preset` for named model routes. Mutable account and pool state remains outside Nix ownership.
 
@@ -388,7 +388,7 @@ These binaries are not additional Pi extensions. They are the immediate runtime 
 
 | Runtime | Selected version | Consumer | Links |
 | --- | ---: | --- | --- |
-| Pi | 0.83.0 | All extensions | [Home](https://pi.dev) · [GitHub](https://github.com/badlogic/pi-mono) |
+| Pi | 0.84.2 | All extensions | [Home](https://pi.dev) · [GitHub](https://github.com/badlogic/pi-mono) |
 | `agent-browser` | 0.34.0 | Pi Agent Browser Native | [GitHub](https://github.com/vercel-labs/agent-browser) |
 | RTK | 0.44.0 | Pi RTK Optimizer | [Home](https://www.rtk-ai.app) · [GitHub](https://github.com/rtk-ai/rtk) |
 | Cymbal | 0.14.0 | Pi Cymbal | [Home](https://chain.sh/cymbal/) · [GitHub](https://github.com/1broseidon/cymbal) |

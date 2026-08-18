@@ -1087,6 +1087,16 @@ runCommand "pi-gallery-check"
     fi
     [ -f ${roots.multi-pass}/extensions/multi-sub.ts ]
     [ ! -e ${roots.multi-pass}/node_modules ]
+    multi_pass_runtime="$TMPDIR/pi-multi-pass-runtime"
+    mkdir -p "$multi_pass_runtime/agent" "$multi_pass_runtime/project"
+    PI_CODING_AGENT_ROOT=${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent \
+      PI_MULTI_PASS_ROOT=${roots.multi-pass} \
+      PI_CODING_AGENT_DIR="$multi_pass_runtime/agent" \
+      PI_MULTI_PASS_PROJECT="$multi_pass_runtime/project" \
+      PI_OFFLINE=1 \
+      NODE_NO_WARNINGS=1 \
+      ${nodejs_24}/bin/node \
+        ${sourceForChecks}/test/ai/pi-multi-pass-native-oauth.check.mjs
     [ -f ${piPackages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts ]
     [ -f ${piPackages.pi-loop}/share/pi-packages/pi-loop/LICENSE ]
     [ ! -e ${piPackages.pi-loop}/share/pi-packages/pi-loop/node_modules ]
@@ -1332,6 +1342,10 @@ runCommand "pi-gallery-check"
     [ -f ${roots.ponytail}/pi-extension/index.js ]
 
     [ -f ${roots.browser}/dist/extensions/agent-browser/index.js ]
+    PI_AGENT_BROWSER_NATIVE_ROOT=${roots.browser} \
+    PI_CODING_AGENT_ROOT=${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent \
+      ${nodejs_24}/bin/node --expose-gc \
+        ${sourceForChecks}/test/ai/pi-agent-browser-bounded-history.check.mjs
     [ -f ${roots.blackhole}/index.ts ]
     [ ! -e ${roots.blackhole}/node_modules ]
     [ ! -e ${roots.blackhole}/dist ] \

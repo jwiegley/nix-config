@@ -16,7 +16,6 @@ in
     "nixpkgs"
     "pal-mcp-server"
     "pi-btw"
-    "pi-llm-agents"
     "pi-mcp-adapter"
     "pi-openai-server-compaction"
     "pi-quiet"
