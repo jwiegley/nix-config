@@ -42,7 +42,7 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `pi-provider-omlx` | `57583beb` | Discover chat models from local oMLX | `/model`, `omlx/*` |
 | `@yeliu84/pi-model-router` | 0.4.4 | Per-turn route and reasoning-tier selection | `/router` |
 | `pi-rewind` | 0.5.0 | Conversation and file checkpoints | `/rewind` |
-| `pi-blackhole` | 0.4.2 | Context compaction and observational memory | `/blackhole`, `recall` |
+| `pi-blackhole` | 0.4.7 | Context compaction and observational memory | `/blackhole`, `recall` |
 | `@askjo/pi-mem` | 1.2.0 | Explicit plain-Markdown memory and scratchpad | `memory_write`, `memory_read`, `memory_search`, `scratchpad` |
 | `pi-trace-extension` | 0.1.15 | Local execution traces and HTML reports | `/trace` |
 | `pi-markdown-preview` | 0.14.1 | Terminal, browser, PDF, and artifact previews | `/preview`, `preview_export` |
@@ -184,13 +184,13 @@ Pi Rewind records per-tool checkpoints so conversation state, file changes, or b
 
 ### Blackhole
 
-**Version:** 0.4.2 · **Links:** [Pi Packages](https://pi.dev/packages/pi-blackhole) · [Home](https://github.com/k0valik/pi-blackhole#readme) · [GitHub](https://github.com/k0valik/pi-blackhole)
+**Version:** 0.4.7 · **Links:** [Pi Packages](https://pi.dev/packages/pi-blackhole) · [Home](https://github.com/k0valik/pi-blackhole#readme) · [GitHub](https://github.com/k0valik/pi-blackhole)
 
 Pi Blackhole combines deterministic structured compaction with observational memory. Compaction preserves the active goal, completed and pending work, errors, modified files, and next action without an LLM summarization call. Background observer, reflector, and dropper workers use the active session model by default, so memory processing can consume that provider's quota and send it session content. Their observations and durable reflections remain associated with the Pi session ledger and survive compaction.
 
 The fleet activation policy enables memory, automatic Blackhole compaction, and mid-run resume. It preflights path and JSON blockers before Home Manager changes managed links, then atomically updates the user-owned `~/.config/pi/agent/pi-blackhole/pi-blackhole-config.json`. It preserves user-selected models and thresholds while reconciling `memory=true`, `compaction=auto`, `compactionEngine=blackhole`, and `midRunCompaction=resume` and removing the retired aliases `overrideDefaultCompaction`, `noAutoCompact`, and `passive`; it also keeps that directory and file at modes 0700 and 0600. The packaged extension uses Pi's live context accounting and starts proactive compaction at 70 percent of the active model's context window: 735,000 tokens for the 1,050,000-token Sol model and 183,500 for a 262,144-token local model. Blackhole's `compactAfterTokens` remains the fallback only when Pi cannot report usable context data. Process-level `PI_BLACKHOLE_*`, `PI_VCC_OM_PASSIVE`, or `PI_OBSERVATIONAL_MEMORY_PASSIVE` settings can override the file.
 
-**Basic usage.** Use `/blackhole` for immediate compaction, `/blackhole configure` for other mutable settings, `/blackhole-memory` for pipeline status, and `/blackhole-recall <query>` for manual searches. The `recall` tool supports entry expansion, file drill-down, regular expressions, lineage or all-session scope, and file/touched modes. `/blackhole om-off` is temporary: the next Nix activation restores the requested memory policy. Run `/reload` or start a new Pi process after activating a policy change because Blackhole caches its configuration.
+**Basic usage.** Use `/blackhole` for immediate compaction, `/blackhole configure` for other mutable settings, `/blackhole-memory` for pipeline status, and `/blackhole-recall <query>` for manual searches. The `recall` tool supports entry expansion, file drill-down, safe fixed-width regular expressions, lineage or all-session scope, and file/touched modes; grouped, quantified, or backreference patterns are rejected to keep searches bounded. `/blackhole om-off` is temporary: the next Nix activation restores the requested memory policy. Run `/reload` or start a new Pi process after activating a policy change because Blackhole caches its configuration.
 
 ### Pi Mem
 

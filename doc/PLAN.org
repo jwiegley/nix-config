@@ -5150,15 +5150,17 @@ Before any fetch or push, publication resolves and validates every effective fet
 ]
 #+end_src
 
-* DEFER [#C] Port Pi Blackhole packaging to 0.4.7
+* DONE [#C] Port Pi Blackhole packaging to 0.4.7
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-j0ll
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-17 Mon 20:23]
-:MODIFIED: [2026-08-17 Mon 20:23]
+:MODIFIED: [2026-08-17 Mon 23:49]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-17 Mon 23:49]
+:CLOSE_REASON: Ported Pi Blackhole 0.4.7 to the consolidated managed-history patch; preserved exact recall, bounded streaming history and compaction behavior, fixed scope/marker/regex/type regressions found in review, and passed the package, full Pi Gallery, dedicated Blackhole policy, formatting, lint, and mutation gates.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

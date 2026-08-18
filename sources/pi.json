@@ -99,18 +99,18 @@
     "pi-blackhole": {
       "source": {
         "args": {
-          "hash": "sha256-3LXpb6Y2yAd/73fevpLsKDo8sno3BQ890ejBxROPdkg=",
-          "url": "https://registry.npmjs.org/pi-blackhole/-/pi-blackhole-0.4.2.tgz"
+          "hash": "sha256-vqOQMcJq8f2aiKLosllGv/oiK89jAJhhPXx9iePMpik=",
+          "url": "https://registry.npmjs.org/pi-blackhole/-/pi-blackhole-0.4.7.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-blackhole/-/pi-blackhole-0.4.2.tgz"
+        "url": "https://registry.npmjs.org/pi-blackhole/-/pi-blackhole-0.4.7.tgz"
       },
       "update": {
         "buildPackage": "pi-blackhole",
         "kind": "npm-release",
         "package": "pi-blackhole"
       },
-      "version": "0.4.2"
+      "version": "0.4.7"
     },
     "pi-cache-optimizer": {
       "source": {

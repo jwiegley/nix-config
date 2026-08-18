@@ -12,6 +12,7 @@
   runCommand,
   sourceForChecks,
   stdenv,
+  typescript,
   upstreamPiPackage,
 }:
 
@@ -146,6 +147,7 @@ runCommand "pi-gallery-check"
       git
       jq
       nodejs_24
+      typescript
     ];
   }
   ''
@@ -1332,7 +1334,33 @@ runCommand "pi-gallery-check"
     [ -f ${roots.browser}/dist/extensions/agent-browser/index.js ]
     [ -f ${roots.blackhole}/index.ts ]
     [ ! -e ${roots.blackhole}/node_modules ]
+    [ ! -e ${roots.blackhole}/dist ] \
+      || fail "Blackhole retains the unpatched upstream bundle"
+    [ "$(${jq}/bin/jq -r .main ${roots.blackhole}/package.json)" = "index.ts" ] \
+      || fail "Blackhole runtime would load the unpatched upstream bundle"
     [ -f ${roots.blackhole}/src/om/compaction-threshold.ts ]
+    blackhole_typecheck="$TMPDIR/pi-blackhole-typecheck"
+    cp -R ${roots.blackhole} "$blackhole_typecheck"
+    chmod -R u+w "$blackhole_typecheck"
+    pi_node_modules=${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent/node_modules
+    mkdir -p \
+      "$blackhole_typecheck/node_modules/@earendil-works" \
+      "$blackhole_typecheck/node_modules/@types"
+    ln -s ${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent \
+      "$blackhole_typecheck/node_modules/@earendil-works/pi-coding-agent"
+    for dependency in pi-agent-core pi-ai pi-tui; do
+      ln -s "$pi_node_modules/@earendil-works/$dependency" \
+        "$blackhole_typecheck/node_modules/@earendil-works/$dependency"
+    done
+    ln -s "$pi_node_modules/typebox" "$blackhole_typecheck/node_modules/typebox"
+    ln -s "$pi_node_modules/@types/node" "$blackhole_typecheck/node_modules/@types/node"
+    ln -s "$pi_node_modules/undici-types" "$blackhole_typecheck/node_modules/undici-types"
+    (
+      cd "$blackhole_typecheck"
+      tsc --noEmit --skipLibCheck --strict --allowImportingTsExtensions \
+        --module ESNext --moduleResolution Bundler --target ES2022 \
+        --lib ES2022 --types node index.ts
+    )
     (
       cd ${sourceForChecks}
       PI_BLACKHOLE_THRESHOLD_HELPER=${roots.blackhole}/src/om/compaction-threshold.ts \
@@ -1484,6 +1512,9 @@ runCommand "pi-gallery-check"
     PI_BLACKHOLE_ROOT=${roots.blackhole} \
       ${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/.bin/jiti \
         ${sourceForChecks}/test/ai/pi-blackhole-exact-history.check.mts
+    PI_BLACKHOLE_ROOT=${roots.blackhole} \
+      ${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/.bin/jiti \
+        ${sourceForChecks}/test/ai/pi-blackhole-compaction-trigger.check.ts
     echo "Pi gallery check: patched agent-core history source"
     ${nodejs_24}/bin/node --input-type=module <<'EOF'
     import { Agent } from "${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core/dist/index.js";

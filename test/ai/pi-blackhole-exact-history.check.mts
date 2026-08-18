@@ -35,6 +35,7 @@ type Entry = {
 	customType?: string;
 	data?: unknown;
 	message?: any;
+	firstKeptEntryId?: string;
 };
 
 type Metadata = {
@@ -78,6 +79,10 @@ class FixtureHistory {
 
 	getMessageByOrdinal(target: number): Entry | undefined {
 		return this.entries.find((entry) => this.metadata.get(entry.id)?.messageOrdinal === target);
+	}
+
+	getSessionFile(): string {
+		return "fixture.jsonl";
 	}
 
 	async iterateEntries(options: any, visitor: (entry: Entry, metadata: Metadata) => void | Promise<void>): Promise<void> {
@@ -263,6 +268,61 @@ assert.equal(
 assert.equal(
 	await rawTokensSinceLastCompactionStreaming(fixture as any, fixtureEstimate),
 	expectedTokensAfter(),
+);
+
+const compactionFixture = (firstKeptEntryId: string): FixtureHistory => {
+	const compactedEntries: Entry[] = [
+		user("c0", null, "before compaction"),
+		{ type: "compaction", id: "c1", parentId: "c0", firstKeptEntryId },
+		user("c2", "c1", "first retained"),
+		user("c3", "c2", "after compaction"),
+	];
+	return new FixtureHistory(compactedEntries, "c3");
+};
+const expectedRetainedTokens = [
+	user("c2", "c1", "first retained"),
+	user("c3", "c2", "after compaction"),
+].reduce((total, entry) => total + fixtureEstimate(entry), 0);
+assert.equal(
+	await rawTokensSinceLastCompactionStreaming(compactionFixture("c2") as any, fixtureEstimate),
+	expectedRetainedTokens,
+);
+assert.equal(
+	await rawTokensSinceLastCompactionStreaming(compactionFixture("missing") as any, fixtureEstimate),
+	expectedRetainedTokens,
+);
+
+const adversarialText = `literal (a+)+$\n${"a".repeat(20)}!`;
+const adversarialFixture = new FixtureHistory(
+	[user("regex", null, adversarialText)],
+	"regex",
+);
+const adversarialStarted = performance.now();
+await assert.rejects(
+	searchHistory(
+		adversarialFixture as any,
+		"lineage",
+		"(a+)+$",
+		"hybrid",
+		1,
+		5,
+	),
+	/grouped, quantified, or backreference patterns/,
+);
+assert(
+	performance.now() - adversarialStarted < 500,
+	"unsafe regex fallback must remain bounded",
+);
+await assert.rejects(
+	searchHistory(
+		adversarialFixture as any,
+		"lineage",
+		"x".repeat(4097),
+		"hybrid",
+		1,
+		5,
+	),
+	/Recall query exceeds 4096 characters/,
 );
 
 class SyntheticHistory {
