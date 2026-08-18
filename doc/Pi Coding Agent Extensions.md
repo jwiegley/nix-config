@@ -25,16 +25,16 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | Nix Gallery loader | local | Compose the managed package gallery | automatic |
 | Fleet Theme | local | Discover and select the managed TUI theme | automatic |
 | `@realvendex/pi-loop` | 1.0.2 | Repeat prompts under explicit stop conditions | `/loop` |
-| `pi-mcp-adapter` | 2.17.0 | Lazy, context-efficient MCP access | `mcp`, `/mcp` |
+| `pi-mcp-adapter` | 2.26.0 | Lazy, context-efficient MCP access | `mcp`, `/mcp` |
 | `@zenspc/pi-quiet` | 0.4.0 | Dense tool-result presentation | `/quiet` |
 | `pi-hashline-edit-pro` | 0.17.5 | Hash-anchored reads and replacements | `read`, `replace` |
 | `pi-smart-fetch` | 0.3.17 | Browser-fingerprinted readable web fetching | `web_fetch`, `batch_web_fetch` |
 | `pi-smart-web-search` | 0.4.0 | Ranked batch web discovery | `web_search` |
 | `pi-lens` | 4.0.1 | LSP, diagnostics, and structural code intelligence | `lens_diagnostics`, `symbol_search` |
-| `@dietrichgebert/ponytail` | 4.8.4 | Minimal implementation discipline | `/ponytail` |
+| `@dietrichgebert/ponytail` | 4.9.0 | Minimal implementation discipline | `/ponytail` |
 | `pi-agent-browser-native` | 0.2.72 | Native Pi interface to `agent-browser` | `agent_browser` |
 | `pi-btw` | 0.4.1 | Side conversations without disturbing the main turn | `/btw` |
-| `pi-copy-message` | 1.0.11 | Search and copy raw session messages | `/copy-message`, `/copy-user` |
+| `pi-copy-message` | 2.0.0 | Search and copy raw session messages | `/copy-message`, `/copy-user` |
 | `@ygncode/pi-insights` | 1.0.1 | Session analytics | `/insights` |
 | `@tmustier/pi-usage-extension` | 0.9.4 | Local usage, cost, and token statistics | `/usage` |
 | `pi-multi-pass` | 1.3.0 | Multiple OAuth accounts and failover pools | `/subs`, `/pool`, `/mp-preset` |
@@ -42,17 +42,17 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `pi-provider-omlx` | `57583beb` | Discover chat models from local oMLX | `/model`, `omlx/*` |
 | `@yeliu84/pi-model-router` | 0.4.4 | Per-turn route and reasoning-tier selection | `/router` |
 | `pi-rewind` | 0.5.0 | Conversation and file checkpoints | `/rewind` |
-| `pi-blackhole` | 0.4.2 | Context compaction and observational memory | `/blackhole`, `recall` |
+| `pi-blackhole` | 0.4.7 | Context compaction and observational memory | `/blackhole`, `recall` |
 | `@askjo/pi-mem` | 1.2.0 | Explicit plain-Markdown memory and scratchpad | `memory_write`, `memory_read`, `memory_search`, `scratchpad` |
-| `pi-trace-extension` | 0.1.12 | Local execution traces and HTML reports | `/trace` |
-| `pi-markdown-preview` | 0.11.1 | Terminal, browser, PDF, and artifact previews | `/preview`, `preview_export` |
-| `pi-caveman` | 1.0.7 | Compressed response style | `/caveman` |
+| `pi-trace-extension` | 0.1.15 | Local execution traces and HTML reports | `/trace` |
+| `pi-markdown-preview` | 0.14.1 | Terminal, browser, PDF, and artifact previews | `/preview`, `preview_export` |
+| `pi-caveman` | 1.0.8 | Compressed response style | `/caveman` |
 | `pi-rtk-optimizer` | 0.9.0 | RTK command rewriting and output compaction | `/rtk` |
-| `pi-cymbal` | 0.5.2 | Indexed, symbol-oriented code navigation | `cymbal_*` |
+| `pi-cymbal` | 0.5.3 | Indexed, symbol-oriented code navigation | `cymbal_*` |
 | `pi-subagents` | 0.50.0 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
-| `@quintinshaw/pi-dynamic-workflows` | 3.5.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
+| `@quintinshaw/pi-dynamic-workflows` | 3.6.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
 | `pi-goal-x` | 0.19.0 | Durable goals and Sisyphus continuation | `/goals`, `get_goal` |
-| `pi-cache-optimizer` | 2.8.0 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
+| `pi-cache-optimizer` | 2.8.3 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
 
 The llama-swap provider, oMLX provider, and Model Router packages are available on every host. The generated loader registers them automatically only on Darwin. Both workstations run the local services, but only Hera receives fixed local-provider overrides and a synthetic router model and configuration; Clio retains bounded discovery so that Pi advertises the models its services actually return.
 
@@ -142,7 +142,7 @@ Pi Loop repeats a prompt under bounded iteration, timeout, convergence, text, re
 
 ### Pi MCP Adapter
 
-**Version:** 2.17.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-mcp-adapter) · [Home](https://github.com/nicobailon/pi-mcp-adapter#readme) · [GitHub](https://github.com/nicobailon/pi-mcp-adapter)
+**Version:** 2.26.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-mcp-adapter) · [Home](https://github.com/nicobailon/pi-mcp-adapter#readme) · [GitHub](https://github.com/nicobailon/pi-mcp-adapter)
 
 Pi MCP Adapter exposes Model Context Protocol servers through one compact proxy tool instead of placing every remote tool schema in the model context. Servers are lazy by default; metadata, instructions, resources, and prompts are cached; large results are guarded; selected tools may be promoted directly; and MCP Apps and remote OAuth retain explicit interactive surfaces.
 
@@ -168,7 +168,7 @@ Hashline Edit Pro replaces ambiguous text matching with stable, short anchors at
 
 ### Ponytail
 
-**Version:** 4.8.4 (`4.8.4+16f2980` in the Nix projection) · **Links:** [Pi Packages](https://pi.dev/packages/@dietrichgebert/ponytail) · [Home](https://github.com/DietrichGebert/ponytail) · [GitHub](https://github.com/DietrichGebert/ponytail)
+**Version:** 4.9.0 (`4.9.0+2ed6c52` in the Nix projection) · **Links:** [Pi Packages](https://pi.dev/packages/@dietrichgebert/ponytail) · [Home](https://github.com/DietrichGebert/ponytail) · [GitHub](https://github.com/DietrichGebert/ponytail)
 
 Ponytail imposes a minimal implementation discipline: question speculative work, reuse the existing codebase, prefer the standard library and native platform, and stop at the first simple solution that satisfies the actual requirement. Its purpose is to reduce avoidable code rather than compress prose alone.
 
@@ -184,7 +184,7 @@ Pi Rewind records per-tool checkpoints so conversation state, file changes, or b
 
 ### Blackhole
 
-**Version:** 0.4.2 · **Links:** [Pi Packages](https://pi.dev/packages/pi-blackhole) · [Home](https://github.com/k0valik/pi-blackhole#readme) · [GitHub](https://github.com/k0valik/pi-blackhole)
+**Version:** 0.4.7 · **Links:** [Pi Packages](https://pi.dev/packages/pi-blackhole) · [Home](https://github.com/k0valik/pi-blackhole#readme) · [GitHub](https://github.com/k0valik/pi-blackhole)
 
 Pi Blackhole combines deterministic structured compaction with observational memory. Compaction preserves the active goal, completed and pending work, errors, modified files, and next action without an LLM summarization call. Background observer, reflector, and dropper workers use the active session model by default, so memory processing can consume that provider's quota and send it session content. Their observations and durable reflections remain associated with the Pi session ledger and survive compaction.
 
@@ -206,7 +206,7 @@ Pi Mem is currently retained as a managed package and projected resource but is 
 
 ### Trace
 
-**Version:** 0.1.12 · **Links:** [Pi Packages](https://pi.dev/packages/pi-trace-extension) · [Home](https://github.com/npxcnency-ux/pi-trace-extension) · [GitHub](https://github.com/npxcnency-ux/pi-trace-extension)
+**Version:** 0.1.15 · **Links:** [Pi Packages](https://pi.dev/packages/pi-trace-extension) · [Home](https://github.com/npxcnency-ux/pi-trace-extension) · [GitHub](https://github.com/npxcnency-ux/pi-trace-extension)
 
 Pi Trace records the execution structure of each session—model requests, steps, tool calls, timings, usage, and outcomes—as local JSONL, then renders a self-contained HTML report. The Nix package sanitizes persisted values under secret-like key names, including common authorization, API-key, AWS-secret, and cookie fields; bounds nesting; truncates long strings; flushes pending events before rendering; supplies an immutable Python renderer; and handles unavailable browser launchers without crashing Pi. Trace directories are created with mode 0700 and their JSONL and HTML files with mode 0600.
 
@@ -214,7 +214,7 @@ Pi Trace records the execution structure of each session—model requests, steps
 
 ### Cache Optimizer
 
-**Version:** 2.8.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-cache-optimizer) · [Home](https://github.com/jiangge/pi-cache-optimizer) · [GitHub](https://github.com/jiangge/pi-cache-optimizer)
+**Version:** 2.8.3 · **Links:** [Pi Packages](https://pi.dev/packages/pi-cache-optimizer) · [Home](https://github.com/jiangge/pi-cache-optimizer) · [GitHub](https://github.com/jiangge/pi-cache-optimizer)
 
 Pi Cache Optimizer keeps stable prompt content near the front, compresses volatile skill listings, supplies conservative OpenAI-compatible cache keys, diagnoses proxy compatibility, and reports local cache statistics. It is registered last so its prompt hook observes the gallery's final prompt shape.
 
@@ -222,7 +222,7 @@ Pi Cache Optimizer keeps stable prompt content near the front, compresses volati
 
 ### Caveman
 
-**Version:** 1.0.7 · **Links:** [Pi Packages](https://pi.dev/packages/pi-caveman) · [Home](https://github.com/jonjonrankin/pi-caveman) · [GitHub](https://github.com/jonjonrankin/pi-caveman)
+**Version:** 1.0.8 · **Links:** [Pi Packages](https://pi.dev/packages/pi-caveman) · [Home](https://github.com/jonjonrankin/pi-caveman) · [GitHub](https://github.com/jonjonrankin/pi-caveman)
 
 Pi Caveman appends a response-style instruction that reduces output prose while retaining technical content. It is a communication control rather than an implementation policy; this distinguishes it from Ponytail, which governs the amount and shape of code produced.
 
@@ -278,7 +278,7 @@ Pi Lens is currently retained as a managed package and projected resource but is
 
 Pi Agent Browser Native presents `agent-browser` as the `agent_browser` Pi tool. It supports live browsing, semantic locators, multi-step jobs, screenshots, extraction, QA presets, authenticated browser profiles, and Electron application control while retaining explicit stopping points before consequential submissions.
 
-**Basic usage.** Follow the stable sequence `open` → interactive snapshot → action by current reference → new snapshot. Use the `job` input for bounded multi-step work, `qa` for page assertions and diagnostics, and `electron` only for desktop applications. The managed runtime companion is `agent-browser` 0.33.1.
+**Basic usage.** Follow the stable sequence `open` → interactive snapshot → action by current reference → new snapshot. Use the `job` input for bounded multi-step work, `qa` for page assertions and diagnostics, and `electron` only for desktop applications. The managed runtime companion is `agent-browser` 0.34.0.
 
 ### RTK Optimizer
 
@@ -290,7 +290,7 @@ Pi RTK Optimizer delegates shell-command rewrites to RTK—Rust Token Killer—a
 
 ### Cymbal
 
-**Version:** 0.5.2 · **Links:** [Pi Packages](https://pi.dev/packages/pi-cymbal) · [Home](https://github.com/raphapr/pi-cymbal#readme) · [GitHub](https://github.com/raphapr/pi-cymbal) · [Cymbal home](https://chain.sh/cymbal/) · [Cymbal GitHub](https://github.com/1broseidon/cymbal)
+**Version:** 0.5.3 · **Links:** [Pi Packages](https://pi.dev/packages/pi-cymbal) · [Home](https://github.com/raphapr/pi-cymbal#readme) · [GitHub](https://github.com/raphapr/pi-cymbal) · [Cymbal home](https://chain.sh/cymbal/) · [Cymbal GitHub](https://github.com/1broseidon/cymbal)
 
 Pi Cymbal exposes Cymbal's local tree-sitter and SQLite index as agent-native code navigation. Its tools cover repository maps, structural summaries, symbol and text search, outlines, exact source retrieval, references, impact, imports, implementations, changed symbols, symbol diffs, guided investigations, call traces, and context bundles.
 
@@ -300,7 +300,7 @@ Pi Cymbal exposes Cymbal's local tree-sitter and SQLite index as agent-native co
 
 ### Markdown Preview
 
-**Version:** 0.11.1 · **Links:** [Pi Packages](https://pi.dev/packages/pi-markdown-preview) · [Home](https://github.com/omaclaren/pi-markdown-preview#readme) · [GitHub](https://github.com/omaclaren/pi-markdown-preview)
+**Version:** 0.14.1 · **Links:** [Pi Packages](https://pi.dev/packages/pi-markdown-preview) · [Home](https://github.com/omaclaren/pi-markdown-preview#readme) · [GitHub](https://github.com/omaclaren/pi-markdown-preview)
 
 Pi Markdown Preview renders assistant responses and local Markdown, LaTeX, source, and diff files in the terminal or browser, and exports PDF, HTML, or PNG artifacts. It supports syntax highlighting, mathematical notation, Mermaid diagrams, local images, response selection, and Pi-theme-aware styling.
 
@@ -328,7 +328,7 @@ Six builtin roles—delegate, oracle, researcher, reviewer, scout, and worker—
 
 ### Dynamic Workflows
 
-**Version:** 3.5.0 · **Links:** [Pi Packages](https://pi.dev/packages/@quintinshaw/pi-dynamic-workflows) · [Home](https://github.com/QuintinShaw/pi-dynamic-workflows#readme) · [GitHub](https://github.com/QuintinShaw/pi-dynamic-workflows)
+**Version:** 3.6.0 · **Links:** [Pi Packages](https://pi.dev/packages/@quintinshaw/pi-dynamic-workflows) · [Home](https://github.com/QuintinShaw/pi-dynamic-workflows#readme) · [GitHub](https://github.com/QuintinShaw/pi-dynamic-workflows)
 
 Pi Dynamic Workflows builds JavaScript orchestration over Pi Subagents. A workflow may compose `agent()`, `parallel()`, and `pipeline()` calls, run in the background, retain resumable run state, isolate work in Git worktrees, or invoke the built-in deep-research, adversarial-review, code-review, multi-perspective, and codebase-audit patterns.
 
@@ -344,7 +344,7 @@ Pi BTW creates a focused side conversation while the main session remains intact
 
 ### Copy Message
 
-**Version:** 1.0.11 · **Links:** [Pi Packages](https://pi.dev/packages/pi-copy-message) · [Home](https://github.com/fitchmultz/pi-copy-message#readme) · [GitHub](https://github.com/fitchmultz/pi-copy-message)
+**Version:** 2.0.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-copy-message) · [Home](https://github.com/fitchmultz/pi-copy-message#readme) · [GitHub](https://github.com/fitchmultz/pi-copy-message)
 
 Pi Copy Message opens a searchable, keyboard-driven picker over raw session messages, avoiding terminal wrapping and rendered TUI artifacts. It can filter by role or text, include metadata, and copy user, assistant, tool, or bash messages. The Nix package delegates copying to Pi's portable clipboard layer, including its terminal fallback for remote sessions.
 
@@ -389,11 +389,11 @@ These binaries are not additional Pi extensions. They are the immediate runtime 
 | Runtime | Activated version | Consumer | Links |
 | --- | ---: | --- | --- |
 | Pi | 0.83.0 | All extensions | [Home](https://pi.dev) · [GitHub](https://github.com/badlogic/pi-mono) |
-| `agent-browser` | 0.33.1 | Pi Agent Browser Native | [GitHub](https://github.com/vercel-labs/agent-browser) |
+| `agent-browser` | 0.34.0 | Pi Agent Browser Native | [GitHub](https://github.com/vercel-labs/agent-browser) |
 | RTK | 0.44.0 | Pi RTK Optimizer | [Home](https://www.rtk-ai.app) · [GitHub](https://github.com/rtk-ai/rtk) |
 | Cymbal | 0.14.0 | Pi Cymbal | [Home](https://chain.sh/cymbal/) · [GitHub](https://github.com/1broseidon/cymbal) |
-| llama-swap | v245 | llama-swap Provider | [GitHub](https://github.com/mostlygeek/llama-swap) |
-| oMLX | 0.5.7 | oMLX Provider and managed Sol route | [GitHub](https://github.com/jundot/omlx) |
+| llama-swap | v250 | llama-swap Provider | [GitHub](https://github.com/mostlygeek/llama-swap) |
+| oMLX | 0.6.1 | oMLX Provider and managed Sol route | [GitHub](https://github.com/jundot/omlx) |
 | Pandoc | 3.7.0.2 | Markdown Preview | [Home](https://pandoc.org) · [GitHub](https://github.com/jgm/pandoc) |
 
 The Pi profile also installs the support toolchain expected by Lens and the orchestration extensions: `actionlint`, ast-grep, Bash Language Server, Biome, `gopls`, `nil`, Node.js 22, Pyright, Ruff, Rust Analyzer, ShellCheck, shfmt, Taplo, Terraform Language Server, tmux, typos, TypeScript Language Server, and YAML Language Server. Agent Browser, Cymbal, RTK, llama-swap, and oMLX appear separately above.

@@ -90,6 +90,7 @@
         "url": "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.2.72.tgz"
       },
       "update": {
+        "buildPackage": "pi-agent-browser-native",
         "kind": "npm-release",
         "package": "pi-agent-browser-native"
       },

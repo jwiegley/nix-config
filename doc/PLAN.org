@@ -2448,7 +2448,7 @@ Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension usin
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-17 Mon 15:14]
-:MODIFIED: [2026-08-17 Mon 19:24]
+:MODIFIED: [2026-08-17 Mon 19:55]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2488,6 +2488,13 @@ make update must complete end to end. Initial blockers: pi-subagents 0.50.0 comp
     "author": "johnw",
     "text": "Third full update rerun reached final Hera system realization and exposed Pi Goal X 0.27.4: its strict managed bounded-history patch no longer applies. The actual updater defect was earlier—plain npm-release records with no dependent hash were never package-built, so the candidate was falsely accepted. Added an explicit optional buildPackage contract to the generic catalog path and declared pi-goal-x; the mutated candidate is now built, CandidateRejected on failure, exactly rolled back, and the restored 0.19 baseline is built before holdback. Strict updater suite passes 107/107. An isolated 0.27 port was rejected after independent performance and TypeScript reviews found unbounded per-historical-goal checkpoint/cache state plus checkpoint, concurrent-accounting, forced-flush, durable-audit, tail-replay, and compaction correctness defects; deferred issue nix-58dc owns that future port. No unsafe 0.27 code entered the repository. Next: sync/sign this updater correction and rerun full make update.",
     "created_at": "2026-08-18T02:24:43Z"
+  },
+  {
+    "id": 455,
+    "issue_id": "nix-9guj",
+    "author": "johnw",
+    "text": "Fourth full make update rerun produced signed candidate 5858eb41 after both Agent Deck 1.13 and Goal X 0.27 were correctly rejected, rolled back, and held back. Portable and root no-build gates plus pre-commit passed, but final Hera realization exposed another source-only catalog gap: pi-agent-browser-native 0.3.0 was never package-validated and its strict bounded-history restore hunk fails. Upstream 0.3 also raises its supported Pi floor to 0.84 while managed Pi remains 0.83, so adoption would be unsupported. Declared buildPackage=pi-agent-browser-native and added a mutation-killing real-catalog assertion; the candidate will now reject, exactly restore, baseline-validate, and hold back at 0.2.72. Deferred issue nix-tr5m owns the coupled Pi 0.84 migration and patch rebase. The full strict updater suite passes 107/107. Independent candidate audit also found the maintained Pi extension inventory stale for accepted pins; reconciled those exact versions before the next rerun.",
+    "created_at": "2026-08-18T02:55:48Z"
   }
 ]
 #+end_src
@@ -13930,6 +13937,38 @@ Remove the resolved portable quality question and make the remaining external/ow
     "depends_on_id": "nix-tcz",
     "type": "discovered-from",
     "created_at": "2026-08-11T02:57:22.695421Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DEFER [#C] Adopt pi-agent-browser-native 0.3 after Pi 0.84 migration
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tr5m
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-17 Mon 19:52]
+:MODIFIED: [2026-08-17 Mon 19:52]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+pi-agent-browser-native 0.3.0 raises its supported Pi runtime floor to 0.84.0 while the managed Pi source remains 0.83.0, and its expanded branch-restore code makes the strict pi-agent-browser-bounded-history.patch restore hunk fail. Keep 0.2.72 held back. After the managed Pi 0.84 migration, rebase the bounded-history patch at the new restoreBranchBackedState seam, preserve item-bounded active transcript reads and latest-user point queries, run the focused Gallery behavior/memory contract, and only then resume the automatic catalog advance.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-tr5m",
+    "depends_on_id": "nix-9guj",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T02:52:29.250298Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
