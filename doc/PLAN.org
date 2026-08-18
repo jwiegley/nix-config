@@ -589,6 +589,34 @@ Delete the dead capture/reset helpers and unnecessary sink mutex while preservin
 ]
 #+end_src
 
+* DONE [#D] denotational-design SKILL.md references two uncommitted files
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-1wtr
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 14:45]
+:MODIFIED: [2026-08-18 Tue 14:49]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 14:49]
+:CLOSE_REASON: Fixed by 40acf7f01811: both reference files (objections.md, worked-example-images.md) committed; all eight SKILL.md-referenced paths verified present in the tree
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Source commit: 11bc4dda4812167275e7e2883b (docs(ai): refine denotational design guidance)
+Severity: Low | Category: Documentation | File: config/ai/skills/denotational-design/SKILL.md
+Confidence: 95
+
+PROBLEM: The refined SKILL.md points agents at references/worked-example-images.md ('Read it before running the dialog for the first time') and references/objections.md ('Do not improvise these'), but neither file is in the commit tree — both exist only as untracked working-tree files (in-flight follow-up work). git ls-tree 11bc4dda confirms only the original five references are tracked.
+
+IMPACT: Any consumer pinned at this revision renders a skill whose imperative instructions dereference missing files; the objections section forbids improvising while pointing at nothing, leaving a skill-following agent with no sanctioned behavior. Third unvalidated agent-content seam this week (qanda registration nix-ben7; this).
+
+SUGGESTED FIX: Commit the two reference files (they exist untracked). Follow-up guard shared with nix-ben7: a check validating that every references/assets path named in a SKILL.md exists in the skill directory — cheap eval-time assertion over the catalog's skill sources.
+
+VERIFICATION: git ls-tree HEAD config/ai/skills/denotational-design/references/ lists both files; the guard fails when a SKILL.md names a missing reference.
+
 * DONE [#B] Open Agent Deck profile databases without symlink substitution races
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -2465,6 +2493,32 @@ Every maintained checkout with a GitHub comparison/upstream remote has no usable
 ]
 #+end_src
 
+* TODO [#C] Run behavioral checks for flake-input bumps in update transactions
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-86d8
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-18 Tue 12:55]
+:MODIFIED: [2026-08-18 Tue 12:55]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Source commit: 29d590601 (2026-08-17), discovered reviewing bc420e7e6248
+Severity: Medium | Category: Test Coverage | File: bin/update (transaction gates), test/check-manifest.nix:46
+Confidence: 90
+
+PROBLEM: The prime-agent behavioral check regressed on 08-17 and stayed red across ~10 commits and two 'Update project pins' transactions because input-bump validation relies on 'nix flake check --no-build' (evaluation only). PyPI/npm sources now have buildPackage/buildMode consumer realization (2093329e), but flake INPUT bumps (pi-mcp-adapter, llm-agents, etc.) have no equivalent behavioral gate; prime-agent is manifest-classified behavioral non-baseline so no routine gate builds it.
+
+IMPACT: Any input bump can silently break runtime integration checks; green close-reasons cite evaluation-only evidence, misleading later reviews.
+
+SUGGESTED FIX: Mirror the buildPackage contract for flake inputs: map each updated input to the behavioral checks that realize it (pi-mcp-adapter -> prime-agent, pi extensions -> pi-gallery/pi-extension-tests) and build those in the update transaction before acceptance; or promote prime-agent to the baseline set.
+
+VERIFICATION: update transaction on a deliberately broken adapter rev rejects the candidate; updater suite gains a case pinning input->check routing.
+
 * DONE [#A] Prevent Agent Deck tests from resolving the real user home
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -3363,6 +3417,32 @@ Transient classification reaches replay policy; transient failures remain retrya
   }
 ]
 #+end_src
+
+* TODO [#C] Register qanda command in commandMetadata (file is inert)
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ben7
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 12:14]
+:MODIFIED: [2026-08-18 Tue 12:14]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Source commit: b341d15fd2641b599c2a7a2427d87d2986775bb8 (reached HEAD via merge 13502d821c5b)
+Severity: Medium | Category: Bug | File: config/ai/commands/qanda.md (catalog: config/ai/catalog.nix:274 commandMetadata)
+Confidence: 90
+
+PROBLEM: 'Add qanda.md AI command' adds the command file but no commandMetadata entry. config/ai/catalog.nix builds commands via mkDocumentItems ./commands ".md" commandMetadata commandSelectors (catalog.nix:638), which maps over commandMetadata keys, not the directory — a file without an entry is never rendered. qanda is the only commands/*.md with no metadata entry; no other .nix references it.
+
+IMPACT: The commit's intent (a usable /qanda command) is silently unmet in every client; the file is dead weight and future readers will assume the command exists.
+
+SUGGESTED FIX: Add a commandMetadata entry for "qanda" (with description) so commandSelectors picks it up. Consider a follow-up guard: a check asserting every config/ai/commands/*.md has a commandMetadata entry (no test currently detects orphaned command files, so this class fails silently).
+
+VERIFICATION: nix eval of the catalog's rendered command set includes qanda for the intended profiles; a rendered client config (e.g. Claude commands dir) contains qanda.md; the orphan guard fails when a commands/*.md lacks metadata.
 
 * DONE [#B] Avoid compaudit on every interactive shell startup
 :PROPERTIES:
@@ -6467,6 +6547,32 @@ The authoritative Andoria-T2 system configuration declaratively grants only the 
   }
 ]
 #+end_src
+
+* TODO [#B] Prime loses MCP: pi-mcp-adapter fails to load (pi-ai/compat subpath)
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-lwka
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 12:55]
+:MODIFIED: [2026-08-18 Tue 12:55]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Source commit: 29d590601 'Update project pins' (2026-08-17); still failing at HEAD bc420e7e6248
+Severity: High | Category: Bug | File: config/ai flake input pi-mcp-adapter (sampling-handler.ts:1) + prime-agent 0.7.0 extension loader
+Confidence: 98
+
+PROBLEM: checks.aarch64-darwin.prime-agent fails at every commit since 29d59060: 'extension loader reported an error'. Instrumented run shows: pi-mcp-adapter/index.ts -> Cannot find module '<prime-agent-0.7.0>/lib/prime-agent/node_modules/@earendil-works/pi-ai/dist/index.js/compat' (require stack: sampling-handler.ts). Bisection: 29d59060^ PASS, 29d59060 FAIL. That pin update bumped pi-mcp-adapter 82c631dc->1bf36719, which changed sampling-handler.ts from 'import { complete } from "@earendil-works/pi-ai"' to 'import { complete } from "@earendil-works/pi-ai/compat"'. Prime's loader aliases the pi-ai package to its bundled entry FILE and joins subpaths naively (dist/index.js/compat), so any subpath import from any extension is unresolvable. Current rev 48799fae keeps the /compat import.
+
+IMPACT: Prime agent loads without the MCP extension — no mcp/mcp-auth commands, no MCP tools — and the behavioral check that guards exactly this has been red for 2 days while update transactions and commit evidence cite 'nix flake check --no-build', which only evaluates behavioral checks. pi-gallery stays green because the real pi node_modules resolves ./compat via the exports map, masking the Prime-specific break.
+
+SUGGESTED FIX: Root seam is Prime's resolver: alias @earendil-works/pi-ai to the package ROOT and resolve subpaths through its exports map (or special-case known subpaths). If prime-agent is upstream-pinned, the narrow local seam is the agent-resources packaging: patch the adapter's import back to the bare package IF prime-agent's bundled pi-ai still exports a compatible 'complete' at the root — verify signature compatibility first (upstream moved complete to /compat, likely a breaking root change).
+
+VERIFICATION: nix build ./config/ai#checks.aarch64-darwin.prime-agent passes; instrumented extensions.errors empty; mcp + mcp-auth commands present (prime-agent.nix:367-369 assertions reached).
 
 * DONE [#B] Keep Hera configuration evaluation below 30 seconds
 :PROPERTIES:
