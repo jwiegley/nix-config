@@ -566,15 +566,15 @@
     },
     "pi-subagents": {
       "hashes": {
-        "npmDepsHash": "sha256-R4+18dKC+OLIfho3C15kFIXrwxvdP76G5EI1vQh/U7I="
+        "npmDepsHash": "sha256-NlfDVgWHRQbjyfex8bb/UZrMSFb5UMr0oKF9FXpL3Ec="
       },
       "source": {
         "args": {
-          "hash": "sha256-kk4gDY9XSMfv3H45TA4HH2T4pvwKDwqzi9p2ZdIkYNU=",
-          "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.50.0.tgz"
+          "hash": "sha256-EQ547lwOi9idrzAIXwwRmywIHokb7wCl8VXdeHWwVI4=",
+          "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.51.0.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.50.0.tgz"
+        "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.51.0.tgz"
       },
       "update": {
         "artifacts": [
@@ -584,7 +584,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "pi-subagents"
       },
-      "version": "0.50.0"
+      "version": "0.51.0"
     },
     "pi-trace-extension": {
       "source": {
@@ -650,10 +650,10 @@
       },
       "source": {
         "args": {
-          "narHash": "sha256-meIyWlYVDVFZkbUiZA2aP5SUq34/JZxIeGHTV2/9tdg=",
+          "narHash": "sha256-3TyHuiBg9svpHqN3QnSOqzCElwCmAEiIKJpEo7uYuIs=",
           "owner": "nicobailon",
           "repo": "pi-mcp-adapter",
-          "rev": "1bf36719cec478a163bb52e3390182963aab9f85",
+          "rev": "48799faecd9c3c81c5843f0adf268152d483f973",
           "type": "github"
         },
         "fetcher": "fetchTree",

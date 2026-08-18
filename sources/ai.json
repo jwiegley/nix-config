@@ -180,10 +180,10 @@
       },
       "source": {
         "args": {
-          "hash": "sha256-Wm3Nnl3AUr0YMDGRjV3vK8qAcp4dCMyg1A7SMD4LJRg=",
+          "hash": "sha256-5noPIcSD9Ki1D3J7b6JofeXiPO1RdL/Q8z+E0ZCwceY=",
           "owner": "ggml-org",
           "repo": "llama.cpp",
-          "tag": "b10472"
+          "tag": "b10488"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/ggml-org/llama.cpp"
@@ -192,7 +192,7 @@
         "kind": "github-release",
         "tagPrefix": "b"
       },
-      "version": "10472"
+      "version": "10488"
     },
     "llama-swap": {
       "hashes": {
@@ -255,10 +255,10 @@
     "omlx": {
       "source": {
         "args": {
-          "hash": "sha256-jLDhp5wDwUuPPY8oEQeRRffng+Ongfu3JZtWkOFnJTQ=",
+          "hash": "sha256-7fYVMhbQKCEXDrtNYFF3tBpzeNV95iAJM6Q8nl3lxPI=",
           "owner": "jundot",
           "repo": "omlx",
-          "tag": "v0.6.1"
+          "tag": "v0.6.2"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jundot/omlx"
@@ -269,7 +269,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.6.1"
+      "version": "0.6.2"
     },
     "prime-agent": {
       "commit": "be9e2fa0714e7cd1c6bd9bdb1b554d2cc6550387",
@@ -589,10 +589,10 @@
     "huggingface-hub": {
       "source": {
         "args": {
-          "hash": "sha256-AJglCIJZPeabIjgx+qeEpKM2HhX2hr4xx4SWpghDrhE=",
+          "hash": "sha256-nUdBUBLM2NivmQiumY36GfUYREl+4hRszlJEM6ryj1w=",
           "owner": "huggingface",
           "repo": "huggingface_hub",
-          "tag": "v1.27.0"
+          "tag": "v1.28.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/huggingface/huggingface_hub"
@@ -601,7 +601,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "1.27.0"
+      "version": "1.28.0"
     },
     "kaleido": {
       "source": {
@@ -794,9 +794,9 @@
     "mtplx": {
       "source": {
         "args": {
-          "hash": "sha256-U51igBH/dTf0VY3OBnQECaFa+lU7FgfY3CelOZ+8SbE=",
+          "hash": "sha256-d4UnTl3AEwch8vj8Q+O9zj1xlKZiaq6q/89JJEEpfAE=",
           "pname": "mtplx",
-          "version": "2.8.2"
+          "version": "2.8.3"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/mtplx"
@@ -807,7 +807,7 @@
         "kind": "pypi-release",
         "package": "mtplx"
       },
-      "version": "2.8.2"
+      "version": "2.8.3"
     },
     "phonemizer-fork": {
       "source": {
@@ -977,10 +977,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-bUWdz1ntMgtOoe0hE171n6asEFu1qbYXvql75SHQDAY=",
+          "narHash": "sha256-8IqYrCfNgO+T4Sc2gM4AHSuqhSgwcrAq0uOTMq9ixKg=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "b4e89112480413a21e29710e2f87c9d7b1687fad",
+          "rev": "50e05f7a7cc039d39d53bc77c132d9457f990375",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -998,10 +998,10 @@
     "mcp-servers-nix": {
       "source": {
         "args": {
-          "narHash": "sha256-ll3Kxi0zPdSTFUnqCVATTDhoc+tUN5ki52T2Xm5LZ88=",
+          "narHash": "sha256-BNUGBpaOmh3dShJaoXS09XiInpnjYf66Vd/GCt9ks2M=",
           "owner": "natsukium",
           "repo": "mcp-servers-nix",
-          "rev": "c157da8e48b9b0756c436fd81abfaa337785198e",
+          "rev": "3a8936db39a3ebfc46c64e968121c5304b1e168f",
           "type": "github"
         },
         "fetcher": "fetchTree",

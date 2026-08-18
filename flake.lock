@@ -100,11 +100,11 @@
     "emacs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1786995732,
-        "narHash": "sha256-cLcRogWfD/7f0mgtLLKIqYXiFjE4yibZ901g6CmsoIo=",
+        "lastModified": 1787053303,
+        "narHash": "sha256-lqueU+23MMoSFZBfqp2Cne4/O7DlxOGlfGT3uFsybBI=",
         "owner": "emacs-mirror",
         "repo": "emacs",
-        "rev": "1de92cc3ec0915d412a531224b504f57ace55cc7",
+        "rev": "5e706878229fc7a3b57be0930ad28210733a30a3",
         "type": "github"
       },
       "original": {
@@ -382,11 +382,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1787013373,
-        "narHash": "sha256-bUWdz1ntMgtOoe0hE171n6asEFu1qbYXvql75SHQDAY=",
+        "lastModified": 1787027504,
+        "narHash": "sha256-8IqYrCfNgO+T4Sc2gM4AHSuqhSgwcrAq0uOTMq9ixKg=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "b4e89112480413a21e29710e2f87c9d7b1687fad",
+        "rev": "50e05f7a7cc039d39d53bc77c132d9457f990375",
         "type": "github"
       },
       "original": {
@@ -403,11 +403,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1786904622,
-        "narHash": "sha256-ll3Kxi0zPdSTFUnqCVATTDhoc+tUN5ki52T2Xm5LZ88=",
+        "lastModified": 1787056340,
+        "narHash": "sha256-BNUGBpaOmh3dShJaoXS09XiInpnjYf66Vd/GCt9ks2M=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "c157da8e48b9b0756c436fd81abfaa337785198e",
+        "rev": "3a8936db39a3ebfc46c64e968121c5304b1e168f",
         "type": "github"
       },
       "original": {
@@ -476,11 +476,11 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1786963906,
-        "narHash": "sha256-3tkeMWSvHPo3tYljfXbPC/TgknikU1GvdVr/DkdfvE0=",
+        "lastModified": 1787022431,
+        "narHash": "sha256-Kly49ipfBSEIKPFcKUUjlL6yzNAnFetwKAehc9P1h4I=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "f4b6996c4e8b9ee06ce147ec344c885f51071b14",
+        "rev": "f165e44f135784a494bca3d4ab4834c139f0b37d",
         "type": "github"
       },
       "original": {
@@ -513,11 +513,11 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1787037189,
-        "narHash": "sha256-f98aIHThLMehNkUMnCWmY2RqTT6QgiUGuSrIKBUHwkU=",
+        "lastModified": 1787055120,
+        "narHash": "sha256-VTJPlog1bjQD5GFWYR5jiCLKXtK3hcu8NsUiGmNmCNE=",
         "owner": "jwiegley",
         "repo": "obr",
-        "rev": "89745faaeb3eb875b1633ebfac2c1ed65c788193",
+        "rev": "f3fe87fc21384c7805e797328ef22ff8dd2f55ef",
         "type": "github"
       },
       "original": {
@@ -610,11 +610,11 @@
     "pi-mcp-adapter": {
       "flake": false,
       "locked": {
-        "lastModified": 1786823098,
-        "narHash": "sha256-meIyWlYVDVFZkbUiZA2aP5SUq34/JZxIeGHTV2/9tdg=",
+        "lastModified": 1787064077,
+        "narHash": "sha256-3TyHuiBg9svpHqN3QnSOqzCElwCmAEiIKJpEo7uYuIs=",
         "owner": "nicobailon",
         "repo": "pi-mcp-adapter",
-        "rev": "1bf36719cec478a163bb52e3390182963aab9f85",
+        "rev": "48799faecd9c3c81c5843f0adf268152d483f973",
         "type": "github"
       },
       "original": {
