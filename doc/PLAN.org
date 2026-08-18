@@ -2816,6 +2816,68 @@ The full session suite fails TestInstance_UpdateGeminiSession_UsesLatestFromFile
 
 Make every Nix-managed Pi launch on Darwin inherit the authoritative CA bundle even under tmux or GUI launchers that lack Home Manager session variables; add behavioral wrapper coverage and verify the child Node runtime loads extra certificates without reading real credentials.
 
+* DONE [#B] Validate and adopt Obr 0.3.2 root lock update
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-a1cb
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-18 Tue 01:25]
+:MODIFIED: [2026-08-18 Tue 09:35]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 09:35]
+:CLOSE_REASON: Validated Obr 0.3.2+1 source/signature, exact package and ownership check, upstream unit/lint gates, forward/backward schema-17 migration, and the final exact Hera system build; the root lock hunk is ready for its isolated signed commit.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The root flake.lock currently advances the source-only Obr input from d2ce69f (0.2.22+7) to non-fast-forward revision 89745faa (0.3.2+1). Preserve the user-owned lock hunk, validate lock/source identity, root ownership evaluation, exact Obr package build, full candidate system integration, and isolate it in its own signed commit before make update resumes.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-a1cb",
+    "depends_on_id": "nix-9guj",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T08:25:38.588719Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 462,
+    "issue_id": "nix-a1cb",
+    "author": "johnw",
+    "text": "Isolated exact-HEAD snapshot /tmp/nix-obr032.9EMf0e contains only the root flake.lock hunk. make verify-inputs passed; flake metadata resolved Obr rev 89745faaeb3eb875b1633ebfac2c1ed65c788193 with declared narHash; packages.aarch64-darwin.obr evaluated as 0.3.2+1 and built to /nix/store/hgj1wma7rqppq8xd1h3z673ghcafhd4x-obr-0.3.2+1; the binary reports obr 0.3.2+1; checks.aarch64-darwin.obr-ownership built to /nix/store/82h49000qqc55zr0jfkkrkm49jnqjscr-obr-ownership. Full root-system integration remains pending the final clean make update.",
+    "created_at": "2026-08-18T08:31:34Z"
+  },
+  {
+    "id": 464,
+    "issue_id": "nix-a1cb",
+    "author": "johnw",
+    "text": "Stateful migration proof passed in /tmp/obr-migration.CQL6hZ. Exact active 0.2.22+7 initialized schema-17 workspace, created two issues/comment/dependency and flushed. Exact Nix-built 0.3.2+1 then showed/listed old records, added a comment, closed the old blocker, updated the dependent, created/commented a new issue, flushed, and reported sync status clean. A second 0.3.2 flush was byte-stable for PLAN.org and merge.base.jsonl. Rollback compatibility also passed: 0.2.22+7 read the post-migration issue, wrote/flushed a new comment, and 0.3.2+1 read it; a final pair of 0.3.2 flushes left PLAN.org byte-stable and status in sync.",
+    "created_at": "2026-08-18T08:40:31Z"
+  },
+  {
+    "id": 465,
+    "issue_id": "nix-a1cb",
+    "author": "johnw",
+    "text": "Exact upstream 89745faa validation is now complete on its Nix-selected nightly-2026-08-06 toolchain. scripts/unit-gate.sh passes the no-new unit baseline and all curated integration binaries (vocabulary_lint, golden_obr_init, golden_rich_panels) when PATH is sanitized to one obr executable; the unsanitized first attempt correctly failed because doctor detected three obr installations. scripts/lint-gate.sh passes with no new clippy findings. The upstream flake still inaccurately claims parity with rust-toolchain.toml nightly-2026-08-13 and its package doCheck remains false; record that as upstream packaging debt, but the exact artifact has now passed source-owned gates plus stateful forward/backward migration.",
+    "created_at": "2026-08-18T08:54:38Z"
+  }
+]
+#+end_src
+
 * DONE [#B] Make obr available across the managed fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -7126,6 +7188,38 @@ Concurrent creation/open of one canonical profile database is deterministic: tra
 ]
 #+end_src
 
+* TODO [#C] Align upstream Obr Nix nightly with rust-toolchain and checks
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-pxru
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 01:54]
+:MODIFIED: [2026-08-18 Tue 01:54]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Obr 0.3.2+1 pins nightly-2026-08-13 in rust-toolchain.toml, but its flake selects rust-bin.nightly.latest from an older lock and builds with nightly-2026-08-06 while claiming parity. The release package also sets doCheck=false; validation relies on separate baseline gates. Correct this in the upstream Obr repository, refresh its lock, and make the package/check contract state the exact compiler and executable tests truthfully. The Nix-config adoption is separately mitigated by running the exact source-owned unit/lint gates and forward/backward schema-17 migration smoke.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-pxru",
+    "depends_on_id": "nix-a1cb",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T08:54:46.871562Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Pin repository Ruff policy across toolchain updates
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -7159,6 +7253,7 @@ Ruff 0.16.2 expanded its unconfigured default rules after the root nixpkgs refre
   }
 ]
 #+end_src
+
 * DONE [#B] Complete Pi Copy Message 2.0 test mock
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
