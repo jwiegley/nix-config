@@ -51,7 +51,7 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `pi-cymbal` | 0.5.3 | Indexed, symbol-oriented code navigation | `cymbal_*` |
 | `pi-subagents` | 0.50.0 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
 | `@quintinshaw/pi-dynamic-workflows` | 3.6.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
-| `pi-goal-x` | 0.19.0 | Durable goals and Sisyphus continuation | `/goals`, `get_goal` |
+| `pi-goal-x` | 0.27.4 | Durable goals and Sisyphus continuation | `/goal`, `get_goal` |
 | `pi-cache-optimizer` | 2.8.3 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
 
 The llama-swap provider, oMLX provider, and Model Router packages are available on every host. The generated loader registers them automatically only on Darwin. Both workstations run the local services, but only Hera receives fixed local-provider overrides and a synthetic router model and configuration; Clio retains bounded discovery so that Pi advertises the models its services actually return.
@@ -310,11 +310,11 @@ Pi Markdown Preview renders assistant responses and local Markdown, LaTeX, sourc
 
 ### Goal X
 
-**Version:** 0.19.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-goal-x) · [Home](https://github.com/tmonk/pi-goal-x#readme) · [GitHub](https://github.com/tmonk/pi-goal-x)
+**Version:** 0.27.4 · **Links:** [Pi Packages](https://pi.dev/packages/pi-goal-x) · [Home](https://github.com/tmonk/pi-goal-x#readme) · [GitHub](https://github.com/tmonk/pi-goal-x)
 
 Pi Goal X persists explicit objectives, lifecycle state, usage, and ordered Sisyphus continuation. Goals can pause, resume, be audited before completion, and survive context compaction without restating the objective in the footer.
 
-**Basic usage.** Use `/goals` or `/sisyphus` to discuss and confirm a new objective; `/goals-set` and `/sisyphus-set` bypass discussion when the objective is already final. `/goal` and `/goal-status` display status, `get_goal` inspects the focused goal, and the remaining commands and phase-specific tools govern pause, resume, abort, and completion. Start a fresh Pi session after activation.
+**Basic usage.** Use `/goal` or `/sisyphus` to discuss and confirm a new objective; `/goal-direct` and `/sisyphus-direct` bypass discussion when the objective is already final. `/goal-list` lists open goals, `/goal-status` displays the focused goal, and `get_goal` exposes it to the agent. Use `/goal-clear` for user-owned abandonment and `/goal-cancel` to discard an unconfirmed draft; the remaining commands and phase-specific tools govern selection, pause, resume, recovery, and completion. Start a fresh Pi session after activation.
 
 ### Subagents
 

@@ -838,10 +838,6 @@ let
         echo "pi-goal-x patch did not apply exactly: $patch_artifact" >&2
         exit 1
       fi
-      substituteInPlace ${root}/extensions/goal.ts \
-        --replace-fail \
-          'export default function goalExtension(pi: ExtensionAPI): void {' \
-          $'export default function goalExtension(pi: ExtensionAPI): void {\n\tif (process.env.PI_SUBAGENT_CHILD === "1") return;'
     '';
   };
 

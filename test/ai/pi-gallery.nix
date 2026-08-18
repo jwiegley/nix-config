@@ -1403,11 +1403,17 @@ runCommand "pi-gallery-check"
     import sys
 
     source = pathlib.Path(sys.argv[1]).read_text()
-    guarded_entry = (
-        'export default function goalExtension(pi: ExtensionAPI): void {\n'
-        '\tif (process.env.PI_SUBAGENT_CHILD === "1") return;'
-    )
-    if source.count(guarded_entry) != 1:
+    entry = "export default function goalExtension("
+    if source.count(entry) != 1:
+        raise SystemExit("Goal X extension entry point is not unique")
+    body_marker = "): void {"
+    body_start = source.find(body_marker, source.find(entry))
+    if body_start == -1:
+        raise SystemExit("Goal X extension body was not found")
+    body = source[body_start + len(body_marker) :]
+    first_statement = next((line.lstrip() for line in body.splitlines() if line.strip()), "")
+    child_guard = 'if (process.env.PI_SUBAGENT_CHILD === "1") return;'
+    if first_statement != child_guard or source.count(child_guard) != 1:
         raise SystemExit("Goal X child guard is not the first extension statement")
     PY
     [ ! -e ${roots.goal}/node_modules ]
@@ -1513,7 +1519,7 @@ runCommand "pi-gallery-check"
       ${bun}/bin/bun ${sourceForChecks}/test/ai/local-openai-provider.check.ts
     PI_GOAL_X_ROOT=${roots.goal} \
     PI_CODING_AGENT_ROOT=${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent \
-      ${nodejs_24}/bin/node --experimental-strip-types \
+      ${nodejs_24}/bin/node --expose-gc --experimental-strip-types \
         ${sourceForChecks}/test/ai/pi-goal-x-bounded-history.check.ts
     PI_SUBAGENTS_ROOT=${roots.subagents} \
     PI_SUBAGENTS_HISTORY_BYTES=67108864 \
@@ -2146,19 +2152,21 @@ runCommand "pi-gallery-check"
           "cymbal",
           "gather-context-and-clarify",
           "goal",
-          "goal-abort",
+          "goal-cancel",
           "goal-clear",
+          "goal-direct",
           "goal-focus",
           "goal-list",
           "goal-pause",
+          "goal-recovery",
+          "goal-refresh",
           "goal-resume",
           "goal-settings",
           "goal-status",
           "goal-tweak",
-          "goals",
-          "goals-set",
+          "goal-unfocus",
           "sisyphus",
-          "sisyphus-set",
+          "sisyphus-direct",
           "insights",
           "mp-preset",
           "pool",
@@ -2188,8 +2196,12 @@ runCommand "pi-gallery-check"
         and ([.data.commands[].name
           | select(
               . == "cymbal:remind"
+              or . == "goal-abort"
+              or . == "goals"
+              or . == "goals-set"
               or . == "parallel-context-build"
               or . == "parallel-handoff-plan"
+              or . == "sisyphus-set"
             )]
           | length) == 0
         and ([.data.commands[].name | select(startswith("sidebar"))] | length) == 0
