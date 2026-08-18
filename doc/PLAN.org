@@ -3569,6 +3569,24 @@ Andoria validation requires flake.lock; rejects any root/config-ai GitHub source
 ]
 #+end_src
 
+* DONE [#C] Report unchanged PyPI catalog targets as up-to-date
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-bkx9
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 15:01]
+:MODIFIED: [2026-08-18 Tue 15:06]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 15:06]
+:CLOSE_REASON: Source-only PyPI updates now classify identical version, URL, and hash candidates as skipped and render the same concise up-to-date status as compound PyPI targets; focused and full updater tests pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Generic source-only PyPI updates incorrectly assign the release version to a nonexistent source ref, so unchanged records are reported and rewritten as old-version to identical-version updates. Treat identical version/location/hash records as skipped and render the same concise up-to-date status used by compound PyPI targets.
+
 * DONE [#B] Preserve consumed-turn cleanup lineage across multi-hop profile moves
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

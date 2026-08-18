@@ -3840,6 +3840,83 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         self.assertIn("fetch failed: GitHub commit lookup failed", output.getvalue())
         self.assertIn("requested branch 'gone'", output.getvalue())
 
+    def test_source_only_pypi_current_release_reports_up_to_date(self):
+        artifact_url = "https://files.pythonhosted.org/example-1.0.0.whl"
+        sources = {
+            "fetchPypi": {
+                "fetcher": "fetchPypi",
+                "url": "https://pypi.org/project/example",
+                "args": {
+                    "pname": "example",
+                    "version": "1.0.0",
+                    "hash": "sha256-current",
+                },
+            },
+            "fetchurl": {
+                "fetcher": "fetchurl",
+                "url": artifact_url,
+                "args": {
+                    "url": artifact_url,
+                    "hash": "sha256-current",
+                },
+            },
+        }
+
+        for fetcher, source in sources.items():
+            with (
+                self.subTest(fetcher=fetcher),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
+                root = Path(temp_dir)
+                (root / "sources").mkdir()
+                path = root / "sources/ai.json"
+                path.write_text(
+                    json.dumps(
+                        {
+                            "schemaVersion": 1,
+                            "sources": {
+                                "example": {
+                                    "version": "1.0.0",
+                                    "source": source,
+                                    "update": {
+                                        "kind": "pypi-release",
+                                        "package": "example",
+                                        "buildPackage": "example",
+                                        "buildMode": "pkg",
+                                    },
+                                }
+                            },
+                        }
+                    )
+                )
+                before = path.read_bytes()
+                target = load_source_catalog(root)["example"]
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    status = update_catalog_target(
+                        "example",
+                        target,
+                        SimpleNamespace(version=None, dry_run=False),
+                        SimpleNamespace(),
+                        SimpleNamespace(),
+                        SimpleNamespace(
+                            get_release=lambda _package, _record, _requested=None: (
+                                "1.0.0",
+                                artifact_url,
+                                "sha256-current",
+                            )
+                        ),
+                        SimpleNamespace(validate_package_build=lambda *_args: True),
+                        SourceTransaction(),
+                    )
+
+                self.assertEqual(status, "skipped")
+                self.assertEqual(path.read_bytes(), before)
+                self.assertEqual(
+                    MODULE["ANSI_ESCAPE_RE"].sub("", output.getvalue()),
+                    "catalog/example ✓ up-to-date\n",
+                )
+
     def test_catalog_npm_update_rewrites_source_and_dependent_hash_atomically(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -3899,6 +3976,10 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             transaction.commit()
             record = json.loads(path.read_text())["sources"]["example"]
             self.assertEqual(status, "updated")
+            self.assertIn(
+                "catalog/example 1.0.0 → 2.0.0 ✓",
+                MODULE["ANSI_ESCAPE_RE"].sub("", output.getvalue()),
+            )
             self.assertEqual(record["version"], "2.0.0")
             self.assertEqual(record["source"]["args"]["hash"], "sha256-native")
             self.assertIn("example-2.0.0.tgz", record["source"]["args"]["url"])

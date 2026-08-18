@@ -3060,7 +3060,7 @@ def update_catalog_target(
     fetch_error = None
     hash_error = None
 
-    display = f"{Colors.BOLD}catalog/{name}{Colors.RESET} {Colors.DIM}{old_version}{Colors.RESET}"
+    display = f"{Colors.BOLD}catalog/{name}{Colors.RESET}"
     print(display, end=" ")
 
     if kind == "fixed-flake-input":
@@ -3096,7 +3096,6 @@ def update_catalog_target(
         if candidate:
             new_version, artifact_url, new_hash = candidate
             new_url = artifact_url if source["fetcher"] == "fetchurl" else None
-            new_ref = new_version
     elif kind == "github-commit":
         if args.version:
             new_ref = args.version
@@ -3233,7 +3232,11 @@ def update_catalog_target(
         print(f"{Colors.GREEN}✓ up-to-date{Colors.RESET}")
         return "skipped"
 
-    print(f"{Colors.YELLOW}→ {new_version}{Colors.RESET}", end="")
+    print(
+        f"{Colors.DIM}{old_version}{Colors.RESET} "
+        f"{Colors.YELLOW}→ {new_version}{Colors.RESET}",
+        end="",
+    )
     if args.dry_run:
         print(f" {Colors.CYAN}(dry-run){Colors.RESET}")
         return "updated"
