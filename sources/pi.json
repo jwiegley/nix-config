@@ -106,6 +106,7 @@
         "url": "https://registry.npmjs.org/pi-blackhole/-/pi-blackhole-0.4.2.tgz"
       },
       "update": {
+        "buildPackage": "pi-blackhole",
         "kind": "npm-release",
         "package": "pi-blackhole"
       },
@@ -121,6 +122,7 @@
         "url": "https://registry.npmjs.org/pi-cache-optimizer/-/pi-cache-optimizer-2.8.0.tgz"
       },
       "update": {
+        "buildPackage": "pi-cache-optimizer",
         "kind": "npm-release",
         "package": "pi-cache-optimizer"
       },

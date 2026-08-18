@@ -3409,12 +3409,15 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             self.assertEqual(path.read_text(), before_failure)
 
     def test_source_only_catalog_update_validates_candidate_and_rolls_back_rejection(self):
-        browser_update = json.loads((REPO / "sources/pi.json").read_text())[
-            "sources"
-        ]["pi-agent-browser-native"]["update"]
-        self.assertEqual(
-            browser_update.get("buildPackage"), "pi-agent-browser-native"
-        )
+        catalog = json.loads((REPO / "sources/pi.json").read_text())["sources"]
+        for package in (
+            "pi-agent-browser-native",
+            "pi-blackhole",
+            "pi-cache-optimizer",
+            "pi-goal-x",
+        ):
+            with self.subTest(package=package):
+                self.assertEqual(catalog[package]["update"].get("buildPackage"), package)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

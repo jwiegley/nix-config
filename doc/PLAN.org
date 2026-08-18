@@ -2448,7 +2448,7 @@ Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension usin
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-17 Mon 15:14]
-:MODIFIED: [2026-08-17 Mon 20:02]
+:MODIFIED: [2026-08-17 Mon 20:25]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2502,6 +2502,20 @@ make update must complete end to end. Initial blockers: pi-subagents 0.50.0 comp
     "author": "johnw",
     "text": "Correction after independent audit: the Browser Native guard commit must describe the currently pinned tree, so the accepted-candidate version inventory has been reverted to the retained pins. The inventory will be reconciled only after make update creates and accepts the source/lock commit that makes those versions current; no future candidate versions are asserted in the guard-only commit.",
     "created_at": "2026-08-18T03:02:11Z"
+  },
+  {
+    "id": 457,
+    "issue_id": "nix-9guj",
+    "author": "johnw",
+    "text": "2026-08-17 final Hera realization of isolated signed candidate 062aa093 failed after the evaluation gates. Exact-leaf replays proved two independent source-layout rejections: pi-blackhole 0.4.7 at the managed compaction-trigger rewrite and pi-cache-optimizer 2.8.3 at the Nix-managed models.json menu rewrite. Both fetched tarballs were valid; gallery/Home Manager/system errors were downstream. The transaction cleaned its worktree/lock and performed no activation or push. Fix in progress: require explicit per-target package validation for both records so incompatible candidates roll back and are held; ports are deferred as nix-j0ll and nix-f14j.",
+    "created_at": "2026-08-18T03:23:23Z"
+  },
+  {
+    "id": 458,
+    "issue_id": "nix-9guj",
+    "author": "johnw",
+    "text": "Guard repair verified before commit: sources/pi.json now declares buildPackage for pi-blackhole and pi-cache-optimizer, and the existing source-only candidate rollback test pins both real records alongside Browser Native and Goal X. Full strict update-overlay suite passed 107/107 in 144.443s; nix fmt and lefthook pre-commit --all-files passed. No source pin, profile, activation, or remote state changed.",
+    "created_at": "2026-08-18T03:25:19Z"
   }
 ]
 #+end_src
@@ -3947,6 +3961,38 @@ Current-byte independent re-audit confirms profile-scoped paths/IDs/admission, b
 ]
 #+end_src
 
+* DEFER [#C] Port Pi Cache Optimizer packaging to 2.8.3
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-f14j
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-17 Mon 20:23]
+:MODIFIED: [2026-08-17 Mon 20:23]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The 2026-08-17 automatic candidate 2.8.3 is incompatible with the fail-closed managed models.json transform in packages/pi-gallery/default.nix: upstream removed or moved the expected menu marker, so the Nix-managed configuration rewrite rejects it. Keep 2.8.0 active until the no-models.json-write policy is ported and the focused Gallery contract plus the real package build pass.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-f14j",
+    "depends_on_id": "nix-9guj",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T03:23:20.344935Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Write comprehensive Nix architecture and operations guide
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5006,6 +5052,38 @@ Before any fetch or push, publication resolves and validates every effective fet
     "depends_on_id": "nix-kte7",
     "type": "discovered-from",
     "created_at": "2026-08-13T23:08:47.666325Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DEFER [#C] Port Pi Blackhole packaging to 0.4.7
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-j0ll
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-17 Mon 20:23]
+:MODIFIED: [2026-08-17 Mon 20:23]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The 2026-08-17 automatic candidate 0.4.7 is incompatible with the fail-closed managed transform in packages/pi-gallery/default.nix: upstream reformatted the compaction-trigger getBranch block, so the resolveCompactionPressure rewrite rejects it. Keep 0.4.2 active until the compaction-pressure, bounded-history, exact-recall, and exact-memory policies are ported and their focused checks plus the real package build pass.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-j0ll",
+    "depends_on_id": "nix-9guj",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T03:23:16.523676Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
