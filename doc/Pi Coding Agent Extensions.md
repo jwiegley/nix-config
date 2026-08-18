@@ -8,7 +8,7 @@ tags:
   - ai-agents
   - developer-tools
 created: 2026-07-27
-updated: 2026-08-17
+updated: 2026-08-18
 pi-version: 0.84.2
 ---
 
@@ -393,7 +393,7 @@ These binaries are not additional Pi extensions. They are the immediate runtime 
 | RTK | 0.44.0 | Pi RTK Optimizer | [Home](https://www.rtk-ai.app) · [GitHub](https://github.com/rtk-ai/rtk) |
 | Cymbal | 0.14.0 | Pi Cymbal | [Home](https://chain.sh/cymbal/) · [GitHub](https://github.com/1broseidon/cymbal) |
 | llama-swap | v250 | llama-swap Provider | [GitHub](https://github.com/mostlygeek/llama-swap) |
-| oMLX | 0.6.1 | oMLX Provider and managed Sol route | [GitHub](https://github.com/jundot/omlx) |
+| oMLX | 0.6.2 | oMLX Provider and managed Sol route | [GitHub](https://github.com/jundot/omlx) |
 | Pandoc | 3.7.0.2 | Markdown Preview | [Home](https://pandoc.org) · [GitHub](https://github.com/jgm/pandoc) |
 
 The Pi profile also installs the support toolchain expected by Lens and the orchestration extensions: `actionlint`, ast-grep, Bash Language Server, Biome, `gopls`, `nil`, Node.js 22, Pyright, Ruff, Rust Analyzer, ShellCheck, shfmt, Taplo, Terraform Language Server, tmux, typos, TypeScript Language Server, and YAML Language Server. Agent Browser, Cymbal, RTK, llama-swap, and oMLX appear separately above.

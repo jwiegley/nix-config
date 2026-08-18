@@ -4270,6 +4270,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             "mlx-embeddings",
             "mlx-vlm",
             "dflash-mlx",
+            "ddgs",
             "omlx",
         ):
             with self.subTest(source=source_name):
@@ -4284,6 +4285,11 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         self.assertIn('repoPath = builtins.getEnv "UPDATE_OVERLAY_REPO_DIR"', expression)
         self.assertIn('overlays = import (repo + "/config/overlays.nix")', expression)
         self.assertIn('builtins.getAttr "omlx" pkgs', expression)
+        self.assertIn(
+            "${python.interpreter} "
+            "${../test/ai/overlays/omlx-ddgs-version-contract.py} ${ddgs.version}",
+            (REPO / "packages/ai-llm.nix").read_text(),
+        )
         self.assertIn(
             "${python.interpreter} "
             "${../test/ai/overlays/omlx-mlx-version-contract.py} ${mlx.version}",
@@ -4309,13 +4315,17 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         with mock.patch.dict(
             validate_catalog_target.__globals__, {"HashComputer": ConsumerHashes}
         ):
-            for source_name in ("mlx-embeddings", "mlx-vlm"):
+            for source_name in ("mlx-embeddings", "mlx-vlm", "ddgs"):
                 self.assertTrue(
                     validate_catalog_target(REPO, source_name, catalog[source_name])
                 )
         self.assertEqual(
             calls,
-            [(REPO, "omlx", "pkg"), (REPO, "omlx", "pkg")],
+            [
+                (REPO, "omlx", "pkg"),
+                (REPO, "omlx", "pkg"),
+                (REPO, "omlx", "pkg"),
+            ],
         )
 
         contract = REPO / "test/ai/overlays/omlx-mlx-version-contract.py"

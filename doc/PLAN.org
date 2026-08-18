@@ -1847,6 +1847,42 @@ Clio retains dynamic provider discovery, Hermes, and managed transport but has n
 ]
 #+end_src
 
+* DOING [#B] Adopt DDGS 9.15.0 through the oMLX consumer contract
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-5ytd
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 11:21]
+:MODIFIED: [2026-08-18 Tue 11:21]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The full make update transaction correctly rejected DDGS 9.15.0 because oMLX 0.6.2 still pins ddgs==9.14.4 and advertises the now-disabled Yandex backend. Retarget the exact oMLX dependency to the catalog-selected DDGS version, remove the unsupported backend, extend the installed consumer contract and updater regressions, build the real oMLX package, then rerun make update with zero held-back candidates.
+
+** Acceptance Criteria
+
+DDGS 9.15.0 is selected; oMLX declares the exact selected DDGS version and advertises only available text backends; focused metadata/updater tests and the real oMLX build pass; the final make update run reports no rejected or held-back candidate.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-5ytd",
+    "depends_on_id": "nix-9guj",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T18:21:22.772863Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#C] Make the VPS Gitea credential helper read-only
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

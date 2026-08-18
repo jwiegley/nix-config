@@ -430,8 +430,8 @@ in
             assert sources.mtplx.source.fetcher == "fetchPypi";
             fetchPypi sources.mtplx.source.args;
 
-          # Backport upstream's Transformers 5.15 compatibility fix while
-          # waiting for a release newer than 2.8.2.
+          # MTPLX 2.8.3 still needs the pending Transformers 5.15
+          # compatibility backport.
           # https://github.com/youssofal/MTPLX/pull/260
           patches = [ ../overlays/ai/patches/mtplx-transformers-5.15.patch ];
 
@@ -551,6 +551,19 @@ in
       postPatch = ''
         substituteInPlace pyproject.toml \
           --replace-fail '"mlx==0.32.0"' '"mlx==0.32.1"'
+        substituteInPlace pyproject.toml \
+          --replace-fail '"ddgs==9.14.4"' '"ddgs==${ddgs.version}"' \
+          --replace-fail '    # DuckDuckGo backend for the chat web_search tool. Pinned to 9.14.1:' '    # DDGS backend for the chat web_search tool, pinned by the package set:' \
+          --replace-fail "    # the last release inside packaging/venvstacks.toml's exclude-newer" "" \
+          --replace-fail '    # cutoff (2026-04-23), and the last with the minimal dep tree' "" \
+          --replace-fail '    # (click/primp/lxml only; 9.14.2+ adds fake-useragent and httpx' "" \
+          --replace-fail '    # extras). Bump together with the cutoff.' ""
+        substituteInPlace omlx/websearch.py \
+          --replace-fail '# Text backends the pinned ddgs 9.14.1 actually registers (bing/google' '# Text backends the selected ddgs package registers (bing/google' \
+          --replace-fail '    "yandex",' ""
+        substituteInPlace omlx/admin/static/js/dashboard.js \
+          --replace-fail '// Engines selectable for the DDGS Custom provider (ddgs 9.14.1 text registry)' '// Engines selectable for the DDGS Custom provider (selected DDGS text registry)' \
+          --replace-fail "ddgsBackendList: ['brave', 'duckduckgo', 'grokipedia', 'mojeek', 'wikipedia', 'yahoo', 'yandex']," "ddgsBackendList: ['brave', 'duckduckgo', 'grokipedia', 'mojeek', 'wikipedia', 'yahoo'],"
         substituteInPlace pyproject.toml \
           --replace-fail '"cmake>=3.27",' "" \
           --replace-fail '"nanobind==2.13.0",' "" \

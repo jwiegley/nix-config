@@ -234,7 +234,7 @@ in
           mlx-lm
         ];
 
-        # oMLX 0.6.1 relies on the Muse Glimmer backend added by this fork revision.
+        # oMLX relies on the Muse Glimmer backend added by this fork revision.
         pythonImportsCheck = [
           "dflash_mlx"
           "dflash_mlx.engine.target_muse_glimmer"
