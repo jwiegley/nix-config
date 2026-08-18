@@ -727,7 +727,8 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
                     (.kind // "-"),
                     (.executor // "-"),
                     (.input // "-"),
-                    (.version // "unknown")
+                    (.version // "unknown"),
+                    (.buildPackage // "-")
                   ]
             ]
             | sort_by(.[0], .[1])[]
@@ -737,7 +738,8 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
     mapfile -t target_rows <"$transaction_dir/target-rows"
 
     run_target() {
-        local name=$1 executor=$2 input=$3
+        local name=$1 executor=$2 input=$3 build_package=$4 before_tree=$5
+        local after_tree
         local -a command
         if [[ $executor == update-overlay ]]; then
             python3 bin/update-overlay "$name"
@@ -752,21 +754,30 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
         if [[ -n $input ]]; then
             run_hard nix flake update --flake ./config/ai "$input" || return $?
             run_hard nix flake update nix-config-ai || return $?
-            python3 bin/update-overlay --sync-flake-projections
+            python3 bin/update-overlay --sync-flake-projections "$name" || return $?
+            if [[ -n $build_package ]]; then
+                run_hard git add -A -- || return $?
+                after_tree=$(run_hard git write-tree) || return $?
+                if [[ $after_tree != "$before_tree" ]]; then
+                    python3 bin/update-overlay --validate-candidate-target "$name"
+                fi
+            fi
         fi
     }
 
     declare -a held_back=()
     for target_row in "${target_rows[@]}"; do
         IFS=$'\t' read -r target_name target_kind target_executor target_input \
-            target_version <<<"$target_row"
+            target_version target_build_package <<<"$target_row"
         [[ $target_input != - ]] || target_input=
+        [[ $target_build_package != - ]] || target_build_package=
         git add -A --
         before_target_tree=$(git write-tree)
         candidate_untracked_paths >"$transaction_dir/before-target-untracked"
         echo "update: catalog/$target_name: evaluating candidate" >&2
         set +e
-        run_target "$target_name" "$target_executor" "$target_input"
+        run_target "$target_name" "$target_executor" "$target_input" \
+            "$target_build_package" "$before_target_tree"
         target_status=$?
         set -e
         if [[ $target_status -eq 0 ]]; then
@@ -815,10 +826,9 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
     fi
 
     # Every target subprocess reloads the catalog. The global checks remain a
-    # fatal publication gate over the combined accepted candidate.
-    if ((${#requested_targets[@]} == 0)) || [[ $explicit_has_lock == true ]]; then
-        python3 bin/update-overlay --sync-flake-projections
-    fi
+    # fatal publication gate over the combined accepted candidate. In
+    # particular, the inventory reload rejects any unselected projection drift
+    # instead of attributing it to the selected target's candidate.
     python3 bin/update-overlay --inventory --json >/dev/null
     mapfile -t changed_nix < <(git diff --no-renames --name-only HEAD -- '*.nix')
     if ((${#changed_nix[@]})); then

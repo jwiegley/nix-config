@@ -134,10 +134,12 @@ manual-policy records.
 
 The public operator options are `--all`, `--dry-run`, `--version`, `--verbose`,
 `--inventory`, and `--json`. `--no-build` is retired and returns an error.
-Although help also exposes `--sync-flake-projections`, it requires the isolated
+Although help also exposes `--sync-flake-projections NAME`, it requires the isolated
 candidate environment and a detached linked worktree. It and the hidden
-`--prepare-target NAME` and `--validate-target NAME` modes are
-transaction-internal steps used by `bin/update`, not operator interfaces.
+`--prepare-target NAME`, `--validate-target NAME`, and
+`--validate-candidate-target NAME` modes are transaction-internal steps used by
+`bin/update`, not operator interfaces. Candidate validation reads and builds the
+candidate worktree before the target is accepted.
 Direct target mode updates the owning catalog record;
 update-owned targets delegate back to `bin/update`. `--all` covers automatic
 targets owned by the lower-level executor, not every catalog record. Exit status

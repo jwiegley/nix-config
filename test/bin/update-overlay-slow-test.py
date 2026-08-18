@@ -50,9 +50,11 @@ prime_agent_lock_is_normalized = MODULE.get("_prime_agent_lock_is_normalized")
 require_detached_linked_worktree = MODULE["require_detached_linked_worktree"]
 sync_flake_projections = MODULE["sync_flake_projections"]
 resolve_flake_input_version = MODULE.get("resolve_flake_input_version")
+validate_catalog_target = MODULE["validate_catalog_target"]
 update_catalog_target = MODULE["update_catalog_target"]
 update_npm_flake_target = MODULE.get("update_npm_flake_target")
 update_pypi_artifact_target = MODULE.get("update_pypi_artifact_target")
+prepare_update_target = MODULE.get("prepare_update_target")
 update_github_release_asset_target = MODULE.get("update_github_release_asset_target")
 update_github_commit_artifact_target = MODULE.get(
     "update_github_commit_artifact_target"
@@ -71,6 +73,24 @@ PI_NORMALIZATION_TARGETS = frozenset(
 )
 
 VENDOR_HASH = "sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
+PYPI_CANDIDATE_BUILDS = {
+    "aiologic": ("culsans", "python"),
+    "aiperf": ("aiperf", "pkg"),
+    "choreographer": ("aiperf", "pkg"),
+    "cohere-melody": ("cohere-melody", "python"),
+    "crick": ("aiperf", "pkg"),
+    "espeakng-loader": ("mlx-audio", "python"),
+    "mlx": ("omlx", "pkg"),
+    "mlx-embeddings": ("omlx", "pkg"),
+    "mtplx": ("mtplx", "pkg"),
+    "phonemizer-fork": ("mlx-audio", "python"),
+    "plasma-fractal": ("plasma-fractal", "pkg"),
+    "plasma-wiki": ("plasma-fractal", "pkg"),
+    "pyloudnorm": ("mlx-audio", "python"),
+    "standard-distutils": ("pymssql", "python"),
+    "unisessions": ("unisessions", "pkg"),
+    "vllm-mlx": ("vllm-mlx", "pkg"),
+}
 
 
 def write_minimal_catalog(root):
@@ -383,17 +403,77 @@ class UpdateInventoryTests(unittest.TestCase):
             ):
                 load_source_catalog(root)
 
+    def test_flake_projection_shapes_fail_closed_with_or_without_lock_validation(self):
+        def wrong_fetcher(document):
+            url = "https://example.invalid/project.tar.gz"
+            document["sources"]["example"]["source"] = {
+                "args": {"hash": "sha256-source", "url": url},
+                "fetcher": "fetchurl",
+                "url": url,
+            }
+
+        def missing_compound_projection(document):
+            url = "https://registry.npmjs.org/example/-/example-1.0.0.tgz"
+            document["sources"]["example"] = {
+                "version": "1.0.0",
+                "source": {
+                    "args": {"hash": "sha256-source", "url": url},
+                    "fetcher": "fetchurl",
+                    "url": url,
+                },
+                "update": {
+                    "buildPackage": "example",
+                    "input": "example",
+                    "kind": "npm-release+flake-input",
+                    "package": "example",
+                },
+            }
+
+        def empty_input(document):
+            document["sources"]["example"]["update"]["input"] = ""
+
+        def duplicate_owner(document):
+            document["sources"]["example-copy"] = copy.deepcopy(
+                document["sources"]["example"]
+            )
+
+        cases = (
+            (wrong_fetcher, "requires fetchTree"),
+            (missing_compound_projection, "requires fetchTree"),
+            (empty_input, "no non-empty input"),
+            (duplicate_owner, "multiple catalog owners"),
+        )
+        for mutate, expected in cases:
+            for validate_projections in (False, True):
+                with (
+                    self.subTest(
+                        case=mutate.__name__,
+                        validate_projections=validate_projections,
+                    ),
+                    tempfile.TemporaryDirectory() as temp_dir,
+                ):
+                    root = Path(temp_dir)
+                    document, _lock = self._write_projection_fixture(root)
+                    mutate(document)
+                    (root / "sources/test.json").write_text(
+                        json.dumps(document, indent=2) + "\n"
+                    )
+                    with self.assertRaisesRegex(RuntimeError, expected):
+                        load_source_catalog(
+                            root,
+                            validate_flake_projections=validate_projections,
+                        )
+
     def test_issue34_sync_refreshes_selected_lock_projection(self):
         def make_stale(document, _lock):
             source = document["sources"]["example"]["source"]
             source["args"]["rev"] = "0" * 40
             source["args"]["narHash"] = "sha256-stale"
-            source["url"] = "https://github.com/stale/project"
 
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             self._write_projection_fixture(root, make_stale)
-            self.assertEqual(sync_flake_projections(root), 1)
+            self.assertEqual(sync_flake_projections(root, "example"), 1)
             target = load_source_catalog(root)["example"]
             args = target["_record"]["source"]["args"]
             self.assertEqual(args["rev"], "a" * 40)
@@ -405,7 +485,7 @@ class UpdateInventoryTests(unittest.TestCase):
         env = os.environ.copy()
         env.pop("UPDATE_AGENTS_CANDIDATE", None)
         refused = subprocess.run(
-            [sys.executable, str(SCRIPT), "--sync-flake-projections"],
+            [sys.executable, str(SCRIPT), "--sync-flake-projections", "example"],
             cwd=SCRIPT.parent.parent,
             capture_output=True,
             text=True,
@@ -424,7 +504,10 @@ class UpdateInventoryTests(unittest.TestCase):
         def make_copy_stale(document, lock):
             record = document["sources"]["example"]
             record["version"] = "1.0.0"
-            record["update"]["kind"] = "flake-input+copy"
+            record["update"].update(
+                buildPackage="candidate-package",
+                kind="flake-input+copy",
+            )
             record["source"]["args"]["rev"] = "0" * 40
             record["source"]["args"]["narHash"] = "sha256-stale"
             lock["nodes"]["example"]["locked"]["rev"] = "d" * 40
@@ -437,6 +520,7 @@ class UpdateInventoryTests(unittest.TestCase):
             self.assertEqual(
                 sync_flake_projections(
                     root,
+                    "example",
                     version_resolver=lambda _root, input_name, locked: (
                         seen.append((input_name, locked["rev"])) or "2.0.0"
                     ),
@@ -450,6 +534,79 @@ class UpdateInventoryTests(unittest.TestCase):
             self.assertEqual(record["version"], "2.0.0")
             self.assertEqual(record["source"]["args"]["rev"], "a" * 40)
             self.assertEqual(record["source"]["args"]["narHash"], "sha256-selected")
+
+    def test_flake_input_candidate_validation_observes_selected_projection(self):
+        for kind in ("flake-input", "flake-input+copy"):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as temp_dir:
+                root = Path(temp_dir)
+
+                def make_stale(document, _lock):
+                    record = document["sources"]["example"]
+                    record["update"].update(
+                        buildPackage=(
+                            "pi-gallery" if kind == "flake-input+copy" else "candidate-package"
+                        ),
+                        kind=kind,
+                    )
+                    if kind == "flake-input+copy":
+                        record["version"] = "1.0.0"
+                        record["update"]["buildMode"] = "check"
+                    record["source"]["args"]["rev"] = "0" * 40
+                    record["source"]["args"]["narHash"] = "sha256-stale"
+
+                self._write_projection_fixture(root, make_stale)
+                validations = []
+
+                def validate_build(package, mode):
+                    candidate = json.loads(
+                        (root / "sources/test.json").read_text()
+                    )["sources"]["example"]
+                    validations.append(
+                        (
+                            package,
+                            mode,
+                            candidate["source"]["args"]["rev"],
+                            candidate["source"]["args"]["narHash"],
+                            candidate.get("version"),
+                        )
+                    )
+                    return True
+
+                self.assertEqual(
+                    sync_flake_projections(
+                        root,
+                        "example",
+                        version_resolver=lambda _root, _input, _locked: "2.0.0",
+                    ),
+                    1,
+                )
+                target = load_source_catalog(root)["example"]
+                with mock.patch.dict(
+                    validate_catalog_target.__globals__,
+                    {
+                        "HashComputer": lambda candidate_root: (
+                            self.assertEqual(candidate_root, root)
+                            or SimpleNamespace(validate_package_build=validate_build)
+                        )
+                    },
+                ):
+                    self.assertTrue(validate_catalog_target(root, "example", target))
+                self.assertEqual(
+                    validations,
+                    [
+                        (
+                            (
+                                "pi-gallery"
+                                if kind == "flake-input+copy"
+                                else "candidate-package"
+                            ),
+                            "check" if kind == "flake-input+copy" else "pkg",
+                            "a" * 40,
+                            "sha256-selected",
+                            "2.0.0" if kind == "flake-input+copy" else None,
+                        )
+                    ],
+                )
 
     def test_flake_input_version_resolver_reads_locked_package_manifest(self):
         calls = []
@@ -492,7 +649,6 @@ class UpdateInventoryTests(unittest.TestCase):
             root = Path(temp_dir)
             self._write_projection_fixture(root, make_build_stale)
             hash_calls = []
-            build_calls = []
 
             def resolve_hash(_root, package, hash_type):
                 on_disk = json.loads((root / "sources/test.json").read_text())[
@@ -507,27 +663,38 @@ class UpdateInventoryTests(unittest.TestCase):
                 )
                 return "sha256-new"
 
-            def validate_build(_root, package):
+            build_calls = []
+
+            def validate_build(package, mode):
                 on_disk = json.loads((root / "sources/test.json").read_text())[
                     "sources"
                 ]["example"]
-                build_calls.append(package)
+                build_calls.append((package, mode))
                 self.assertEqual(on_disk["hashes"]["npmDepsHash"], "sha256-new")
+                return True
 
             self.assertEqual(
                 sync_flake_projections(
                     root,
+                    "example",
                     version_resolver=lambda _root, _input, _locked: "2.0.0",
                     dependent_hash_resolver=resolve_hash,
-                    build_validator=validate_build,
                 ),
                 1,
             )
+            target = load_source_catalog(root)["example"]
+            with mock.patch.dict(
+                validate_catalog_target.__globals__,
+                {"HashComputer": lambda _root: SimpleNamespace(
+                    validate_package_build=validate_build
+                )},
+            ):
+                self.assertTrue(validate_catalog_target(root, "example", target))
             record = json.loads((root / "sources/test.json").read_text())["sources"][
                 "example"
             ]
             self.assertEqual(hash_calls, [("agent-resources", "npmDepsHash")])
-            self.assertEqual(build_calls, ["agent-resources"])
+            self.assertEqual(build_calls, [("agent-resources", "pkg")])
             self.assertEqual(record["version"], "2.0.0")
             self.assertEqual(record["source"]["args"]["rev"], "a" * 40)
             self.assertEqual(record["hashes"]["npmDepsHash"], "sha256-new")
@@ -687,6 +854,10 @@ error: Cannot build '/nix/store/package.drv'.
                     computer._package_build_command("hf-xet", "python"),
                     'builtins.getAttr "hf-xet" pkgs.python3Packages',
                 ),
+                (
+                    computer._package_build_command("pi-gallery", "check"),
+                    'builtins.getAttr "pi-gallery" flake.inputs.nix-config-ai.checks.${system}',
+                ),
             )
             for command, package_expression in commands:
                 self.assertEqual(
@@ -697,6 +868,12 @@ error: Cannot build '/nix/store/package.drv'.
                 expression = command[-1]
                 self.assertNotIn(str(root), expression)
                 self.assertIn("UPDATE_OVERLAY_REPO_DIR", expression)
+                self.assertIn("flake = builtins.getFlake repoPath;", expression)
+                self.assertIn("repo = flake.outPath;", expression)
+                self.assertIn(
+                    'overlays = import (repo + "/config/overlays.nix")',
+                    expression,
+                )
                 self.assertIn(package_expression, expression)
                 self.assertNotIn("darwinConfigurations", expression)
                 self.assertNotIn("nixosConfigurations", expression)
@@ -800,30 +977,49 @@ error: Cannot build '/nix/store/package.drv'.
         # markless and linkdups prove the root repository overlays are composed;
         # cpx must remain reachable on Darwin for cargoHash computation even
         # though normal package selection remains Linux-only.
-        for package, evaluation_system, drv_pattern in (
+        evaluated_drvs = {}
+        for package, build_mode, evaluation_system, drv_pattern in (
             (
                 "agent-resources",
+                "pkg",
                 None,
                 r"^/nix/store/[a-z0-9]+-agent-resources\.drv$",
             ),
             (
                 "markless",
+                "pkg",
                 None,
                 r"^/nix/store/[a-z0-9]+-markless-[0-9][^/]*\.drv$",
             ),
             (
                 "linkdups",
+                "pkg",
                 None,
                 r"^/nix/store/[a-z0-9]+-linkdups-[^/]+\.drv$",
             ),
             (
                 "cpx",
+                "pkg",
                 "aarch64-darwin",
                 r"^/nix/store/[a-z0-9]+-cpx-[0-9][^/]*\.drv$",
             ),
+            (
+                "pi-gallery",
+                "check",
+                None,
+                r"^/nix/store/[a-z0-9]+-pi-gallery-check\.drv$",
+            ),
+            (
+                "pi-ponytail",
+                "pkg",
+                None,
+                r"^/nix/store/[a-z0-9]+-pi-ponytail-[^/]+\.drv$",
+            ),
         ):
             with self.subTest(package=package, system=evaluation_system):
-                expression = HashComputer(REPO)._package_build_command(package)[-1]
+                expression = HashComputer(REPO)._package_build_command(
+                    package, build_mode
+                )[-1]
                 environment = dict(os.environ)
                 environment["UPDATE_OVERLAY_REPO_DIR"] = str(REPO)
                 command = ["nix", "eval"]
@@ -847,6 +1043,28 @@ error: Cannot build '/nix/store/package.drv'.
                 )
                 self.assertEqual(evaluated.returncode, 0, evaluated.stderr)
                 self.assertRegex(evaluated.stdout.strip(), drv_pattern)
+                evaluated_drvs[(package, build_mode)] = evaluated.stdout.strip()
+
+        check_drv = evaluated_drvs[("pi-gallery", "check")]
+        shown = subprocess.run(
+            ["nix", "derivation", "show", check_drv],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        self.assertEqual(shown.returncode, 0, shown.stderr)
+        derivations = json.loads(shown.stdout)["derivations"]
+        check = next(iter(derivations.values()))
+        input_drvs = set(check["inputs"]["drvs"])
+        self.assertIn(
+            Path(evaluated_drvs[("pi-ponytail", "pkg")]).name,
+            input_drvs,
+        )
+        self.assertIn(
+            Path(evaluated_drvs[("agent-resources", "pkg")]).name,
+            input_drvs,
+        )
 
     def test_cpx_hash_build_reaches_injected_dummy_on_current_system(self):
         # The Darwin drvPath subcase above proves that the Linux-only package is
@@ -2472,6 +2690,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                                     },
                                     "update": {
                                         "artifacts": ["config/ai/flake.nix"],
+                                        "buildPackage": "candidate-package",
                                         "input": "example",
                                         "kind": "npm-release+flake-input",
                                         "package": "example",
@@ -2484,7 +2703,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     + "\n"
                 )
                 flake_path.write_text(
-                    '{ inputs.example.url = "github:example/project"; }\n'
+                    '{\n  inputs = {\n    example.url = "github:example/project";\n  };\n}\n'
                 )
 
             def load_target():
@@ -2540,7 +2759,6 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                                 "url": "https://registry.npmjs.org/example/-/example-2.0.0.tgz"
                             },
                         ),
-                        ("fetchTree", {"rev": new_rev}),
                     ],
                 )
                 return status
@@ -2548,7 +2766,12 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             write_old_state()
             rolled_back = SourceTransaction()
             self.assertEqual(update(rolled_back), "updated")
-            self.assertIn(new_rev, catalog_path.read_text())
+            candidate = json.loads(catalog_path.read_text())["sources"]["example"]
+            self.assertEqual(candidate["artifacts"]["flakeInput"]["args"]["rev"], old_rev)
+            self.assertEqual(
+                candidate["artifacts"]["flakeInput"]["args"]["narHash"],
+                "sha256-git-old",
+            )
             self.assertIn(new_rev, flake_path.read_text())
             self.assertEqual(rolled_back.rollback(), 2)
             self.assertIn(old_rev, catalog_path.read_text())
@@ -2560,12 +2783,137 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             record = json.loads(catalog_path.read_text())["sources"]["example"]
             self.assertEqual(record["version"], "2.0.0")
             self.assertEqual(record["source"]["args"]["hash"], "sha256-tar-new")
-            self.assertEqual(record["artifacts"]["flakeInput"]["args"]["rev"], new_rev)
+            self.assertEqual(record["artifacts"]["flakeInput"]["args"]["rev"], old_rev)
             self.assertEqual(
                 record["artifacts"]["flakeInput"]["args"]["narHash"],
-                "sha256-git-new",
+                "sha256-git-old",
             )
             self.assertIn(new_rev, flake_path.read_text())
+
+            lock = {
+                "nodes": {
+                    "root": {"inputs": {"example": "selected"}},
+                    "selected": {
+                        "locked": {
+                            "narHash": "sha256-git-new",
+                            "owner": "example",
+                            "repo": "project",
+                            "rev": new_rev,
+                            "type": "github",
+                        },
+                        "original": {
+                            "owner": "example",
+                            "repo": "project",
+                            "type": "github",
+                        },
+                    },
+                },
+                "root": "root",
+                "version": 7,
+            }
+            (root / "config/ai/flake.lock").write_text(
+                json.dumps(lock, indent=2) + "\n"
+            )
+            builds = []
+
+            def validate_build(package, mode):
+                candidate = json.loads(catalog_path.read_text())["sources"]["example"]
+                builds.append(
+                    (
+                        package,
+                        mode,
+                        candidate["version"],
+                        candidate["source"]["args"]["hash"],
+                        candidate["artifacts"]["flakeInput"]["args"]["rev"],
+                        candidate["artifacts"]["flakeInput"]["args"]["narHash"],
+                    )
+                )
+                return True
+
+            self.assertEqual(
+                sync_flake_projections(root, "example"),
+                1,
+            )
+            with mock.patch.dict(
+                validate_catalog_target.__globals__,
+                {"HashComputer": lambda _root: SimpleNamespace(
+                    validate_package_build=validate_build
+                )},
+            ):
+                self.assertTrue(
+                    validate_catalog_target(
+                        root, "example", load_source_catalog(root)["example"]
+                    )
+                )
+            self.assertEqual(
+                builds,
+                [
+                    (
+                        "candidate-package",
+                        "pkg",
+                        "2.0.0",
+                        "sha256-tar-new",
+                        new_rev,
+                        "sha256-git-new",
+                    )
+                ],
+            )
+
+            document = json.loads(catalog_path.read_text())
+            document["sources"]["other"] = {
+                "source": {
+                    "fetcher": "fetchTree",
+                    "url": "https://github.com/other/project",
+                    "args": {
+                        "owner": "other",
+                        "repo": "project",
+                        "rev": "0" * 40,
+                        "narHash": "sha256-other-old",
+                        "type": "github",
+                    },
+                },
+                "update": {
+                    "buildPackage": "other-package",
+                    "input": "other",
+                    "kind": "flake-input",
+                },
+            }
+            catalog_path.write_text(json.dumps(document, indent=2) + "\n")
+            lock["nodes"]["root"]["inputs"]["other"] = "other-selected"
+            lock["nodes"]["other-selected"] = {
+                "locked": {
+                    "narHash": "sha256-other-new",
+                    "owner": "other",
+                    "repo": "project",
+                    "rev": "c" * 40,
+                    "type": "github",
+                },
+                "original": {
+                    "owner": "other",
+                    "repo": "project",
+                    "type": "github",
+                },
+            }
+            (root / "config/ai/flake.lock").write_text(
+                json.dumps(lock, indent=2) + "\n"
+            )
+            flake_path.write_text(
+                "{\n  inputs = {\n"
+                f'    example.url = "github:example/project/{new_rev}";\n'
+                f'    other.url = "github:other/project/{"c" * 40}";\n'
+                "  };\n}\n"
+            )
+            before_other = copy.deepcopy(document["sources"]["other"])
+            self.assertEqual(
+                sync_flake_projections(root, "example"),
+                0,
+            )
+            after_selected_sync = json.loads(catalog_path.read_text())
+            self.assertEqual(after_selected_sync["sources"]["other"], before_other)
+            with self.assertRaisesRegex(
+                RuntimeError, "other rev does not match portable lock"
+            ):
+                load_source_catalog(root)
 
             write_old_state()
             before_catalog = catalog_path.read_text()
@@ -2589,10 +2937,199 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             self.assertEqual(catalog_path.read_text(), before_catalog)
             self.assertEqual(flake_path.read_text(), before_flake)
 
+            write_old_state()
+            before_catalog = catalog_path.read_bytes()
+            before_flake = flake_path.read_bytes()
+
+            class RejectingSameHeadHashes(FakeHashComputer):
+                def validate_package_build(self, package, mode="pkg"):
+                    candidate = json.loads(catalog_path.read_text())["sources"][
+                        "example"
+                    ]
+                    self.validation = (
+                        package,
+                        mode,
+                        candidate["version"],
+                        candidate["source"]["args"]["hash"],
+                        candidate["artifacts"]["flakeInput"]["args"]["rev"],
+                        candidate["artifacts"]["flakeInput"]["args"]["narHash"],
+                    )
+                    return False
+
+            same_head_npm = SimpleNamespace(
+                get_version_metadata=lambda _package, _requested: {
+                    "version": "2.0.0",
+                    "integrity": "sha512-registry",
+                    "gitHead": old_rev,
+                }
+            )
+            same_head_hashes = RejectingSameHeadHashes()
+            same_head_transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                same_head_status = update_npm_flake_target(
+                    "example",
+                    load_target(),
+                    SimpleNamespace(version=None, dry_run=False),
+                    same_head_npm,
+                    same_head_hashes,
+                    same_head_transaction,
+                )
+            self.assertEqual(same_head_status, "updated")
+            same_head_lock = {
+                "nodes": {
+                    "root": {"inputs": {"example": "selected"}},
+                    "selected": {
+                        "locked": {
+                            "narHash": "sha256-git-old",
+                            "owner": "example",
+                            "repo": "project",
+                            "rev": old_rev,
+                            "type": "github",
+                        },
+                        "original": {
+                            "owner": "example",
+                            "repo": "project",
+                            "type": "github",
+                        },
+                    },
+                },
+                "root": "root",
+                "version": 7,
+            }
+            (root / "config/ai/flake.lock").write_text(
+                json.dumps(same_head_lock, indent=2) + "\n"
+            )
+            self.assertEqual(sync_flake_projections(root, "example"), 0)
+            with mock.patch.dict(
+                validate_catalog_target.__globals__,
+                {"HashComputer": lambda _root: same_head_hashes},
+            ):
+                self.assertFalse(
+                    validate_catalog_target(
+                        root, "example", load_source_catalog(root)["example"]
+                    )
+                )
+            self.assertEqual(
+                same_head_hashes.validation,
+                (
+                    "candidate-package",
+                    "pkg",
+                    "2.0.0",
+                    "sha256-tar-new",
+                    old_rev,
+                    "sha256-git-old",
+                ),
+            )
+            self.assertEqual(same_head_transaction.rollback(), 2)
+            self.assertEqual(catalog_path.read_bytes(), before_catalog)
+            self.assertEqual(flake_path.read_bytes(), before_flake)
+
+            literal_transaction = SourceTransaction()
+            literal_npm = SimpleNamespace(
+                get_version_metadata=lambda _package, _requested: {
+                    "version": "1.0.0",
+                    "integrity": "sha512-registry",
+                    "gitHead": old_rev,
+                }
+            )
+            literal_hashes = FakeHashComputer()
+            literal_hashes.compute_native_hash = lambda _source, _changes: "sha256-tar-old"
+            with contextlib.redirect_stdout(io.StringIO()):
+                literal_status = update_npm_flake_target(
+                    "example",
+                    load_target(),
+                    SimpleNamespace(version=None, dry_run=False),
+                    literal_npm,
+                    literal_hashes,
+                    literal_transaction,
+                )
+            self.assertEqual(literal_status, "updated")
+            expected_repaired_flake = (
+                b'{\n  inputs = {\n    example.url = "github:example/project/'
+                + old_rev.encode("ascii")
+                + b'";\n  };\n}\n'
+            )
+            self.assertEqual(flake_path.read_bytes(), expected_repaired_flake)
+            self.assertEqual(sync_flake_projections(root, "example"), 0)
+            literal_validations = []
+
+            class LiteralCandidateHashComputer:
+                def __init__(self, candidate_root):
+                    self.candidate_root = candidate_root
+
+                def validate_package_build(self, package, mode):
+                    candidate_bytes = (
+                        self.candidate_root / "config/ai/flake.nix"
+                    ).read_bytes()
+                    literal_validations.append(
+                        (self.candidate_root, package, mode, candidate_bytes)
+                    )
+                    return candidate_bytes == expected_repaired_flake
+
+            with mock.patch.dict(
+                validate_catalog_target.__globals__,
+                {"HashComputer": LiteralCandidateHashComputer},
+            ):
+                self.assertTrue(
+                    validate_catalog_target(
+                        root, "example", load_source_catalog(root)["example"]
+                    )
+                )
+
+            wrong_root = root / "wrong-root"
+            wrong_flake = wrong_root / "config/ai/flake.nix"
+            wrong_flake.parent.mkdir(parents=True)
+            wrong_bytes = b"this is not the candidate flake\n"
+            wrong_flake.write_bytes(wrong_bytes)
+            self.assertFalse(
+                LiteralCandidateHashComputer(wrong_root).validate_package_build(
+                    "candidate-package", "pkg"
+                )
+            )
+
+            newline_root = root / "newline-root"
+            newline_flake = newline_root / "config/ai/flake.nix"
+            newline_flake.parent.mkdir(parents=True)
+            newline_bytes = expected_repaired_flake.replace(b"\n", b"\r\n")
+            newline_flake.write_bytes(newline_bytes)
+            self.assertFalse(
+                LiteralCandidateHashComputer(newline_root).validate_package_build(
+                    "candidate-package", "pkg"
+                )
+            )
+            self.assertEqual(
+                literal_validations,
+                [
+                    (
+                        root,
+                        "candidate-package",
+                        "pkg",
+                        expected_repaired_flake,
+                    ),
+                    (wrong_root, "candidate-package", "pkg", wrong_bytes),
+                    (newline_root, "candidate-package", "pkg", newline_bytes),
+                ],
+            )
+            literal_transaction.commit()
+
+            no_op_transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                no_op_status = update_npm_flake_target(
+                    "example",
+                    load_target(),
+                    SimpleNamespace(version=None, dry_run=False),
+                    literal_npm,
+                    literal_hashes,
+                    no_op_transaction,
+                )
+            self.assertEqual(no_op_status, "skipped")
+            self.assertEqual(no_op_transaction.original, {})
+
             drifted = json.loads(catalog_path.read_text())
             drifted["sources"]["example"]["version"] = "2.0.0"
             catalog_path.write_text(json.dumps(drifted, indent=2) + "\n")
             before_catalog = catalog_path.read_text()
+            before_flake = flake_path.read_text()
             with contextlib.redirect_stdout(io.StringIO()):
                 refused = update_npm_flake_target(
                     "example",
@@ -3409,15 +3946,102 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             self.assertEqual(path.read_text(), before_failure)
 
     def test_source_only_catalog_update_validates_candidate_and_rolls_back_rejection(self):
-        catalog = json.loads((REPO / "sources/pi.json").read_text())["sources"]
-        for package in (
-            "pi-agent-browser-native",
-            "pi-blackhole",
-            "pi-cache-optimizer",
-            "pi-goal-x",
-        ):
+        catalog = load_source_catalog(REPO)
+        updates = {
+            name: target["_record"]["update"] for name, target in catalog.items()
+        }
+        automatic_pypi = {
+            name
+            for name, update in updates.items()
+            if update["kind"] == "pypi-release"
+            and update.get("policy", "automatic") == "automatic"
+        }
+        self.assertEqual(automatic_pypi, set(PYPI_CANDIDATE_BUILDS))
+        for package, (build_package, build_mode) in PYPI_CANDIDATE_BUILDS.items():
             with self.subTest(package=package):
-                self.assertEqual(catalog[package]["update"].get("buildPackage"), package)
+                self.assertEqual(
+                    updates[package].get("buildPackage"),
+                    build_package,
+                )
+                self.assertEqual(
+                    updates[package].get("buildMode"),
+                    build_mode,
+                )
+
+        catalog = json.loads((REPO / "sources/pi.json").read_text())["sources"]
+        expected_builds = {
+            "agent-browser": "agent-browser",
+            "pi-agent-browser-native": "pi-agent-browser-native",
+            "pi-blackhole": "pi-blackhole",
+            "pi-btw": "pi-btw",
+            "pi-cache-optimizer": "pi-cache-optimizer",
+            "pi-caveman": "pi-caveman",
+            "pi-copy-message": "pi-copy-message",
+            "pi-goal-x": "pi-goal-x",
+            "pi-loop": "pi-loop",
+            "pi-mcp-adapter": "agent-resources",
+            "pi-model-router": "pi-model-router",
+            "pi-multi-pass": "pi-multi-pass",
+            "pi-openai-server-compaction": "agent-resources",
+            "pi-ponytail": "pi-gallery",
+            "pi-quiet": "agent-resources",
+            "pi-rewind": "pi-rewind",
+            "pi-trace-extension": "pi-trace-extension",
+            "pi-usage-extension": "pi-usage-extension",
+            "ws": "agent-resources",
+        }
+        self.assertEqual(
+            {
+                name: record["update"]["buildPackage"]
+                for name, record in catalog.items()
+                if "buildPackage" in record["update"]
+            },
+            expected_builds,
+        )
+        loaded = load_source_catalog(REPO)
+        for name, package in expected_builds.items():
+            with self.subTest(name=name):
+                self.assertEqual(loaded[name]["executor"], "update")
+                self.assertEqual(loaded[name]["_record"]["update"]["buildPackage"], package)
+                expected_mode = "check" if name == "pi-ponytail" else None
+                self.assertEqual(
+                    loaded[name]["_record"]["update"].get("buildMode"),
+                    expected_mode,
+                )
+        normalized_no_metadata = {
+            "pi-dynamic-workflows",
+            "pi-insights",
+            "pi-lens",
+            "pi-markdown-preview",
+            "pi-mem",
+            "pi-smart-fetch",
+            "pi-smart-web-search",
+            "pi-subagents",
+        }
+        copy_only = {"pi-cymbal", "pi-rtk-optimizer"}
+        fixed_projection = {"agent-browser-source"}
+        self.assertTrue(
+            all(
+                catalog[name]["update"].get("normalizer") == "pi-gallery-v1"
+                and "buildPackage" not in catalog[name]["update"]
+                for name in normalized_no_metadata
+            )
+        )
+        self.assertTrue(
+            all(
+                catalog[name]["update"]["kind"] == "npm-release"
+                and not catalog[name]["update"].get("artifacts")
+                and "buildPackage" not in catalog[name]["update"]
+                for name in copy_only
+            )
+        )
+        self.assertTrue(
+            all(
+                catalog[name]["update"]["kind"] == "fixed-flake-input"
+                and "buildPackage" not in catalog[name]["update"]
+                for name in fixed_projection
+            )
+        )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -3467,7 +4091,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     CandidateRejected, "example final package build failed"
                 ),
             ):
-                update_catalog_target(
+                prepare_update_target(
                     "example",
                     load_source_catalog(root)["example"],
                     SimpleNamespace(version=None, dry_run=False),
@@ -3520,7 +4144,12 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                                         "hash": "sha256-old",
                                     },
                                 },
-                                "update": {"kind": "github-release", "tagPrefix": "v"},
+                                "update": {
+                                    "buildMode": "python",
+                                    "buildPackage": "example-package",
+                                    "kind": "github-release",
+                                    "tagPrefix": "v",
+                                },
                             }
                         },
                     }
@@ -3529,8 +4158,12 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             target = load_source_catalog(root)["example"]
 
             github = SimpleNamespace(get_latest_release=lambda _owner, _repo: "v2.0.0")
+            builds = []
             hashes = SimpleNamespace(
-                compute_native_hash=lambda _source, _replacements: "sha256-new"
+                compute_native_hash=lambda _source, _replacements: "sha256-new",
+                validate_package_build=lambda package, mode: (
+                    builds.append((package, mode)) or True
+                ),
             )
             transaction = SourceTransaction()
             with contextlib.redirect_stdout(io.StringIO()):
@@ -3549,6 +4182,35 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             self.assertEqual(status, "updated")
             self.assertEqual(record["source"]["args"]["tag"], "v2.0.0")
             self.assertNotIn("rev", record["source"]["args"])
+            self.assertEqual(builds, [("example-package", "python")])
+
+            before_rejection = path.read_bytes()
+            target = load_source_catalog(root)["example"]
+            transaction = SourceTransaction()
+            rejecting_hashes = SimpleNamespace(
+                compute_native_hash=lambda _source, _replacements: "sha256-rejected",
+                validate_package_build=lambda _package, _mode: False,
+            )
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                self.assertRaisesRegex(
+                    CandidateRejected, "example final python build failed"
+                ),
+            ):
+                update_catalog_target(
+                    "example",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    SimpleNamespace(
+                        get_latest_release=lambda _owner, _repo: "v3.0.0"
+                    ),
+                    SimpleNamespace(),
+                    SimpleNamespace(),
+                    rejecting_hashes,
+                    transaction,
+                )
+            self.assertEqual(transaction.rollback(), 1)
+            self.assertEqual(path.read_bytes(), before_rejection)
 
     def test_catalog_github_tag_preserves_native_tag_field(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -3572,7 +4234,11 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                                         "hash": "sha256-old",
                                     },
                                 },
-                                "update": {"kind": "github-tag", "tagPrefix": "v"},
+                                "update": {
+                                    "buildPackage": "example-package",
+                                    "kind": "github-tag",
+                                    "tagPrefix": "v",
+                                },
                             }
                         },
                     }
@@ -3582,8 +4248,24 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             github = SimpleNamespace(
                 get_latest_tag=lambda _owner, _repo, prefix: f"{prefix}2.0.0"
             )
+            builds = []
+
+            def validate_candidate(package, mode):
+                candidate = json.loads(path.read_text())["sources"]["example"]
+                builds.append(
+                    (
+                        package,
+                        mode,
+                        candidate["version"],
+                        candidate["source"]["args"]["tag"],
+                        candidate["source"]["args"]["hash"],
+                    )
+                )
+                return True
+
             hashes = SimpleNamespace(
-                compute_native_hash=lambda _source, _replacements: "sha256-new"
+                compute_native_hash=lambda _source, _replacements: "sha256-new",
+                validate_package_build=validate_candidate,
             )
             transaction = SourceTransaction()
             with contextlib.redirect_stdout(io.StringIO()):
@@ -3602,6 +4284,73 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             self.assertEqual(status, "updated")
             self.assertEqual(record["source"]["args"]["tag"], "v2.0.0")
             self.assertNotIn("rev", record["source"]["args"])
+            self.assertEqual(
+                builds,
+                [
+                    (
+                        "example-package",
+                        "pkg",
+                        "2.0.0",
+                        "v2.0.0",
+                        "sha256-new",
+                    )
+                ],
+            )
+
+            before_rejection = path.read_bytes()
+            target = load_source_catalog(root)["example"]
+            transaction = SourceTransaction()
+            rejected_builds = []
+
+            def reject_candidate(package, mode):
+                candidate = json.loads(path.read_text())["sources"]["example"]
+                rejected_builds.append(
+                    (
+                        package,
+                        mode,
+                        candidate["version"],
+                        candidate["source"]["args"]["tag"],
+                        candidate["source"]["args"]["hash"],
+                    )
+                )
+                return False
+
+            rejecting_hashes = SimpleNamespace(
+                compute_native_hash=lambda _source, _replacements: "sha256-rejected",
+                validate_package_build=reject_candidate,
+            )
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                self.assertRaisesRegex(
+                    CandidateRejected, "example final package build failed"
+                ),
+            ):
+                update_catalog_target(
+                    "example",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    SimpleNamespace(
+                        get_latest_tag=lambda _owner, _repo, prefix: f"{prefix}3.0.0"
+                    ),
+                    SimpleNamespace(),
+                    SimpleNamespace(),
+                    rejecting_hashes,
+                    transaction,
+                )
+            self.assertEqual(transaction.rollback(), 1)
+            self.assertEqual(path.read_bytes(), before_rejection)
+            self.assertEqual(
+                rejected_builds,
+                [
+                    (
+                        "example-package",
+                        "pkg",
+                        "3.0.0",
+                        "v3.0.0",
+                        "sha256-rejected",
+                    )
+                ],
+            )
 
     def test_catalog_pypi_update_preserves_fetchpypi_arguments(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -3693,7 +4442,12 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     "cp311": wheel("example", "cp311", "cp311", "example"),
                     "metal": wheel("example_metal", "py3", "none", "example-metal"),
                 },
-                "update": {"kind": "pypi-release", "package": "example"},
+                "update": {
+                    "buildMode": "python",
+                    "buildPackage": "example-package",
+                    "kind": "pypi-release",
+                    "package": "example",
+                },
             }
             path.write_text(
                 json.dumps(
@@ -3752,11 +4506,56 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     target,
                     SimpleNamespace(version=None, dry_run=False),
                     missing,
+                    SimpleNamespace(),
                     transaction,
                 )
             self.assertEqual(status, "failed")
             self.assertEqual(path.read_text(), before)
             self.assertEqual(transaction.original, {})
+
+            class RejectingCandidateHashes:
+                def validate_package_build(self, package, mode):
+                    candidate = json.loads(path.read_text())["sources"]["example"]
+                    self.validation = (
+                        package,
+                        mode,
+                        candidate["version"],
+                        candidate["source"]["args"]["hash"],
+                        candidate["artifacts"]["metal"]["args"]["hash"],
+                    )
+                    return False
+
+            rejecting_client = PypiClient()
+            rejecting_client._get_metadata = lambda package: documents.get(package)
+            rejecting_hashes = RejectingCandidateHashes()
+            before_rejection = path.read_bytes()
+            transaction = SourceTransaction()
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                self.assertRaisesRegex(
+                    CandidateRejected, "example final python build failed"
+                ),
+            ):
+                update_pypi_artifact_target(
+                    "example",
+                    load_source_catalog(root)["example"],
+                    SimpleNamespace(version=None, dry_run=False),
+                    rejecting_client,
+                    rejecting_hashes,
+                    transaction,
+                )
+            self.assertEqual(
+                rejecting_hashes.validation,
+                (
+                    "example-package",
+                    "python",
+                    "2.0.0",
+                    "sha256-IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                    "sha256-MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM=",
+                ),
+            )
+            self.assertEqual(transaction.rollback(), 1)
+            self.assertEqual(path.read_bytes(), before_rejection)
 
             calls = []
             client = PypiClient()
@@ -3764,17 +4563,42 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 calls.append(package) or documents.get(package)
             )
             transaction = SourceTransaction()
+
+            class CandidateHashes:
+                def validate_package_build(self, package, mode):
+                    candidate = json.loads(path.read_text())["sources"]["example"]
+                    self.validation = (
+                        package,
+                        mode,
+                        candidate["version"],
+                        candidate["source"]["args"]["hash"],
+                        candidate["artifacts"]["metal"]["args"]["hash"],
+                    )
+                    return True
+
+            hashes = CandidateHashes()
             with contextlib.redirect_stdout(io.StringIO()):
                 status = update_pypi_artifact_target(
                     "example",
                     target,
                     SimpleNamespace(version=None, dry_run=False),
                     client,
+                    hashes,
                     transaction,
                 )
             transaction.commit()
             self.assertEqual(status, "updated")
             self.assertEqual(calls, ["example", "example-metal"])
+            self.assertEqual(
+                hashes.validation,
+                (
+                    "example-package",
+                    "python",
+                    "2.0.0",
+                    "sha256-IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                    "sha256-MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM=",
+                ),
+            )
             updated = json.loads(path.read_text())["sources"]["example"]
             self.assertEqual(updated["version"], "2.0.0")
             self.assertEqual(
@@ -3832,6 +4656,116 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 RuntimeError, "compound PyPI artifact version does not match"
             ):
                 load_source_catalog(root)
+
+    def test_pypi_candidates_reject_from_mutated_sources_and_roll_back_exactly(self):
+        for fetcher in ("fetchPypi", "fetchurl"):
+            with (
+                self.subTest(fetcher=fetcher),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
+                root = Path(temp_dir)
+                (root / "sources").mkdir()
+                path = root / "sources/ai.json"
+                source = {
+                    "fetcher": fetcher,
+                    "url": "https://pypi.org/project/example",
+                    "args": {
+                        "pname": "example",
+                        "version": "1.0.0",
+                        "hash": "sha256-old",
+                    },
+                }
+                if fetcher == "fetchurl":
+                    old_url = "https://files.pythonhosted.org/example-1.0.0.whl"
+                    source = {
+                        "fetcher": fetcher,
+                        "url": old_url,
+                        "args": {"url": old_url, "hash": "sha256-old"},
+                    }
+                path.write_text(
+                    json.dumps(
+                        {
+                            "schemaVersion": 1,
+                            "sources": {
+                                "example": {
+                                    "version": "1.0.0",
+                                    "source": source,
+                                    "update": {
+                                        "buildMode": "python",
+                                        "buildPackage": "example-package",
+                                        "kind": "pypi-release",
+                                        "package": "example",
+                                    },
+                                }
+                            },
+                        },
+                        indent=2,
+                    )
+                    + "\n"
+                )
+                before = path.read_bytes()
+
+                class RejectingHashes:
+                    def __init__(self, catalog_path):
+                        self.catalog_path = catalog_path
+
+                    def validate_package_build(self, package, mode):
+                        candidate = json.loads(self.catalog_path.read_text())["sources"][
+                            "example"
+                        ]
+                        self.validation = (
+                            package,
+                            mode,
+                            candidate["version"],
+                            candidate["source"]["args"]["hash"],
+                            candidate["source"]["args"].get("url"),
+                        )
+                        return False
+
+                hashes = RejectingHashes(path)
+                transaction = SourceTransaction()
+                pypi = SimpleNamespace(
+                    get_release=lambda _package, _record, _requested=None: (
+                        "2.0.0",
+                        "https://files.pythonhosted.org/example-2.0.0.whl",
+                        "sha256-new",
+                    )
+                )
+                target = load_source_catalog(root)["example"]
+                self.assertEqual(target["executor"], "update")
+                with (
+                    contextlib.redirect_stdout(io.StringIO()),
+                    self.assertRaisesRegex(
+                        CandidateRejected, "example final python build failed"
+                    ),
+                ):
+                    prepare_update_target(
+                        "example",
+                        target,
+                        SimpleNamespace(version=None, dry_run=False),
+                        SimpleNamespace(),
+                        SimpleNamespace(),
+                        pypi,
+                        hashes,
+                        transaction,
+                    )
+
+                self.assertEqual(
+                    hashes.validation,
+                    (
+                        "example-package",
+                        "python",
+                        "2.0.0",
+                        "sha256-new",
+                        (
+                            None
+                            if fetcher == "fetchPypi"
+                            else "https://files.pythonhosted.org/example-2.0.0.whl"
+                        ),
+                    ),
+                )
+                self.assertEqual(transaction.rollback(), 1)
+                self.assertEqual(path.read_bytes(), before)
 
     def test_github_release_assets_resolve_as_one_projection(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -4563,23 +5497,32 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             self.assertEqual(updated["source"]["args"]["rev"], new_ref)
             self.assertEqual(updated["hashes"]["cargoDepsHash"], "sha256-cargo-new")
 
-            combined = copy.deepcopy(record)
-            combined["update"]["artifacts"] = ["Cargo.lock"]
-            combined["update"]["artifactSources"] = {"Cargo.lock": "Cargo.lock"}
             (root / "Cargo.lock").write_text("version = 4\n")
-            path.write_text(
-                json.dumps(
-                    {
-                        "schemaVersion": 1,
-                        "sources": {"project": combined},
-                    }
-                )
-            )
-            with self.assertRaisesRegex(
-                RuntimeError,
-                "cannot also declare artifacts",
+            for build_fields in (
+                {"buildMode": "python"},
+                {"buildPackage": "project"},
             ):
-                load_source_catalog(root)
+                with self.subTest(build_fields=build_fields):
+                    combined = copy.deepcopy(record)
+                    combined["update"].pop("buildMode", None)
+                    combined["update"].update(build_fields)
+                    combined["update"]["artifacts"] = ["Cargo.lock"]
+                    combined["update"]["artifactSources"] = {
+                        "Cargo.lock": "Cargo.lock"
+                    }
+                    path.write_text(
+                        json.dumps(
+                            {
+                                "schemaVersion": 1,
+                                "sources": {"project": combined},
+                            }
+                        )
+                    )
+                    with self.assertRaisesRegex(
+                        RuntimeError,
+                        "cannot also declare artifacts",
+                    ):
+                        load_source_catalog(root)
 
     def test_github_commit_fetches_lock_from_exact_selected_revision(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -4805,6 +5748,16 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         self.assertEqual(len(names), len(set(names)))
         self.assertEqual(names, sorted(catalog))
         self.assertTrue(all(item.get("inventoried") for item in packages))
+        inventory_by_name = {item["name"]: item for item in packages}
+        for name, expected in PYPI_CANDIDATE_BUILDS.items():
+            with self.subTest(name=name):
+                self.assertEqual(
+                    (
+                        inventory_by_name[name].get("buildPackage"),
+                        inventory_by_name[name].get("buildMode"),
+                    ),
+                    expected,
+                )
         for item in packages:
             self.assertTrue(
                 {"executor", "files", "kind", "name", "policy", "source"}
@@ -4826,20 +5779,131 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
 
     def test_source_transaction_rolls_back_and_commit_preserves(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            path = Path(temp_dir) / "overlay.nix"
-            path.write_text("old\n")
+            root = Path(temp_dir)
+            path = root / "overlay.nix"
+            binary_path = root / "catalog.bin"
+            baseline = b"old\r\n"
+            binary_baseline = b"\x00\xffcatalog\r\n"
+            path.write_bytes(baseline)
+            binary_path.write_bytes(binary_baseline)
             transaction = SourceTransaction()
             transaction.watch(path)
+            transaction.watch(binary_path)
             path.write_text("broken\n")
-            self.assertEqual(transaction.rollback(), 1)
-            self.assertEqual(path.read_text(), "old\n")
+            binary_path.write_bytes(b"changed\n")
+            self.assertEqual(transaction.rollback(), 2)
+            self.assertEqual(path.read_bytes(), baseline)
+            self.assertEqual(binary_path.read_bytes(), binary_baseline)
 
             committed = SourceTransaction()
             committed.watch(path)
-            path.write_text("new\n")
+            path.write_bytes(b"new\r\n")
             committed.commit()
             committed.rollback_unless_committed()
-            self.assertEqual(path.read_text(), "new\n")
+            self.assertEqual(path.read_bytes(), b"new\r\n")
+
+    def test_candidate_validation_cli_scopes_projection_and_maps_status(self):
+        target = {
+            "_record": {
+                "update": {
+                    "buildMode": "check",
+                    "buildPackage": "candidate-check",
+                    "kind": "flake-input+copy",
+                }
+            }
+        }
+        load_calls = []
+        required_roots = []
+        build_calls = []
+        outcome = {"value": True}
+
+        def load_catalog(root, **kwargs):
+            load_calls.append((root, kwargs))
+            return {"example": target}
+
+        class CandidateHashComputer:
+            def __init__(self, root):
+                self.root = root
+
+            def validate_package_build(self, package, mode):
+                build_calls.append((self.root, package, mode))
+                value = outcome["value"]
+                if isinstance(value, Exception):
+                    raise value
+                return value
+
+        globals_ = MODULE["main"].__globals__
+        replacements = {
+            "HashComputer": CandidateHashComputer,
+            "load_source_catalog": load_catalog,
+            "require_detached_linked_worktree": required_roots.append,
+        }
+        originals = {name: globals_[name] for name in replacements}
+        old_argv = sys.argv
+        old_candidate = os.environ.get("UPDATE_AGENTS_CANDIDATE")
+        try:
+            globals_.update(replacements)
+            os.environ["UPDATE_AGENTS_CANDIDATE"] = "1"
+            sys.argv = [
+                str(SCRIPT),
+                "--validate-candidate-target",
+                "example",
+            ]
+
+            outcome["value"] = True
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(MODULE["main"](), 0)
+
+            outcome["value"] = False
+            rejected_stderr = io.StringIO()
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(rejected_stderr),
+            ):
+                self.assertEqual(MODULE["main"](), 3)
+            self.assertIn(
+                "candidate package build failed: example",
+                rejected_stderr.getvalue(),
+            )
+
+            outcome["value"] = RuntimeError("evaluator unavailable")
+            failed_stderr = io.StringIO()
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(failed_stderr),
+            ):
+                self.assertEqual(MODULE["main"](), 1)
+            self.assertIn(
+                "candidate validation failed: evaluator unavailable",
+                failed_stderr.getvalue(),
+            )
+        finally:
+            globals_.update(originals)
+            sys.argv = old_argv
+            if old_candidate is None:
+                os.environ.pop("UPDATE_AGENTS_CANDIDATE", None)
+            else:
+                os.environ["UPDATE_AGENTS_CANDIDATE"] = old_candidate
+
+        expected_root = SCRIPT.parent.parent.resolve()
+        self.assertEqual(required_roots, [expected_root] * 3)
+        self.assertEqual(
+            load_calls,
+            [
+                (
+                    expected_root,
+                    {
+                        "flake_projection_names": {"example"},
+                        "validate_flake_projections": True,
+                    },
+                )
+            ]
+            * 3,
+        )
+        self.assertEqual(
+            build_calls,
+            [(expected_root, "candidate-check", "check")] * 3,
+        )
 
     def test_explicit_catalog_record_isolation_allows_selected_and_rolls_back_sibling(
         self,
@@ -4957,15 +6021,16 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
 
     def test_prepare_target_treats_signaled_hash_build_as_hard_and_rolls_back(self):
         with tempfile.TemporaryDirectory() as temp_dir:
+            name = "pi-mem"
             path = Path(temp_dir) / "shared.json"
             before = '{"version":"1.0.0"}\n'
             path.write_text(before)
-            target = {
-                "kind": "npm-release",
-                "executor": "update",
-                "_path": path,
-                "_record": {"update": {"kind": "npm-release"}},
-            }
+            target = copy.deepcopy(load_source_catalog(REPO)[name])
+            self.assertEqual(target["_record"]["update"]["normalizer"], "pi-gallery-v1")
+            self.assertEqual(
+                target["_record"]["update"]["package"], "@askjo/pi-mem"
+            )
+            target["_path"] = path
             computer = HashComputer(Path("/repo"))
             computer._run_package_build = mock.Mock(
                 return_value=SimpleNamespace(
@@ -4990,7 +6055,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 path.write_text('{"version":"2.0.0"}\n')
                 return (
                     "updated"
-                    if hash_computer._compute_fod_hash("selected", "npmDepsHash")
+                    if hash_computer._compute_fod_hash(name, "npmDepsHash")
                     else "failed"
                 )
 
@@ -4998,7 +6063,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             replacements = {
                 "HashComputer": lambda _root: computer,
                 "load_source_catalog": lambda _root, **_kwargs: {
-                    "selected": target
+                    name: target
                 },
                 "require_detached_linked_worktree": lambda _root: None,
                 "snapshot_catalog_record_isolation": lambda *_args: {},
@@ -5009,7 +6074,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 mock.patch.object(
                     sys,
                     "argv",
-                    [str(SCRIPT), "--prepare-target", "selected"],
+                    [str(SCRIPT), "--prepare-target", name],
                 ),
                 mock.patch.dict(os.environ, {"UPDATE_AGENTS_CANDIDATE": "1"}),
                 contextlib.redirect_stdout(io.StringIO()),
@@ -5019,7 +6084,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
 
             self.assertEqual(status, 1)
             self.assertEqual(path.read_text(), before)
-            computer._run_package_build.assert_called_once_with("selected", "pkg")
+            computer._run_package_build.assert_called_once_with(name, "pkg")
 
 
     def test_prime_agent_lock_normalizer_adds_only_registry_metadata(self):
@@ -5121,7 +6186,12 @@ class IntegratedWorkflowTests(unittest.TestCase):
         os.environ.update(self._git_local_env)
 
     def _create_update_agents_fixture(
-        self, temporary: str, *, nixos_driver: str | None = None
+        self,
+        temporary: str,
+        *,
+        nixos_driver: str | None = None,
+        portable_inputs: tuple[str, ...] = (),
+        root_inputs: tuple[str, ...] = (),
     ):
         root = Path(temporary) / "repo"
         fake_bin = Path(temporary) / "bin"
@@ -5145,11 +6215,24 @@ fi
         )
         (system_config / "sw/bin/darwin-rebuild").chmod(0o700)
 
-        empty_lock = json.dumps(
-            {"nodes": {"root": {"inputs": {}}}, "root": "root", "version": 7}
-        )
-        (root / "flake.lock").write_text(empty_lock + "\n")
-        (root / "config/ai/flake.lock").write_text(empty_lock + "\n")
+        def lock(inputs):
+            return (
+                json.dumps(
+                    {
+                        "nodes": {
+                            "root": {
+                                "inputs": {name: name for name in inputs},
+                            }
+                        },
+                        "root": "root",
+                        "version": 7,
+                    }
+                )
+                + "\n"
+            )
+
+        (root / "flake.lock").write_text(lock(root_inputs))
+        (root / "config/ai/flake.lock").write_text(lock(portable_inputs))
         (root / ".gitignore").write_text("ignored.tmp\n")
         (root / "tracked.txt").write_text("before\n")
         (root / "tracked.txt").chmod(0o640)
@@ -5206,7 +6289,35 @@ arguments = sys.argv[1:]
 if os.environ.get("UPDATE_TEST_INTERLEAVING_LOG"):
     with open(os.environ["UPDATE_TEST_INTERLEAVING_LOG"], "a") as log:
         log.write("overlay " + " ".join(arguments) + "\\n")
-internal_modes = {"--prepare-target", "--validate-target", "--sync-flake-projections"}
+internal_modes = {
+    "--prepare-target",
+    "--validate-candidate-target",
+    "--validate-target",
+    "--sync-flake-projections",
+}
+
+def flake_state():
+    def markers(path):
+        return [
+            line.removeprefix("state:")
+            for line in path.read_text().splitlines()
+            if line.startswith("state:")
+        ]
+
+    projection = json.loads((root / "projection.json").read_text())
+    return {
+        "portable": markers(root / "config/ai/flake.lock"),
+        "root": markers(root / "flake.lock"),
+        "projection": sorted(projection),
+    }
+
+def record_flake_state(phase, name):
+    state = flake_state()
+    if os.environ.get("UPDATE_TEST_STATE_LOG"):
+        with open(os.environ["UPDATE_TEST_STATE_LOG"], "a") as log:
+            log.write(json.dumps({"phase": phase, "name": name, **state}) + "\\n")
+    return state
+
 if internal_modes.intersection(arguments) and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
     print("internal update requires update candidate", file=sys.stderr)
     raise SystemExit(77)
@@ -5218,6 +6329,12 @@ declared = [
     "new-directory/generated-lock.json"
 ]
 if "--inventory" in arguments:
+    if (
+        os.environ.get("UPDATE_TEST_FINAL_INVENTORY_FAIL") == "1"
+        and json.loads((root / "projection.json").read_text())
+    ):
+        print("unselected projection drift", file=sys.stderr)
+        raise SystemExit(85)
     if os.environ.get("UPDATE_TEST_ISOLATED_TARGETS") == "1":
         packages = [{
             "name": name,
@@ -5250,6 +6367,8 @@ if "--inventory" in arguments:
     if os.environ.get("UPDATE_TEST_COPY_TARGET") == "1":
         packages.append({
             "name": "copy",
+            "buildMode": "check",
+            "buildPackage": "pi-gallery",
             "files": ["projection.json"],
             "input": "copy-input",
             "inventoried": True,
@@ -5261,6 +6380,7 @@ if "--inventory" in arguments:
     if os.environ.get("UPDATE_TEST_BUILD_TARGET") == "1":
         packages.append({
             "name": "build",
+            "buildPackage": "agent-resources",
             "files": ["projection.json"],
             "input": "build-input",
             "inventoried": True,
@@ -5272,6 +6392,7 @@ if "--inventory" in arguments:
     if os.environ.get("UPDATE_TEST_NPM_FLAKE_TARGET") == "1":
         packages.append({
             "name": "npm-flake",
+            "buildPackage": "candidate-package",
             "files": ["fixed.txt", "projection.json", "config/ai/flake.nix"],
             "input": "npm-flake-input",
             "inventoried": True,
@@ -5280,6 +6401,18 @@ if "--inventory" in arguments:
             "executor": "update",
             "policy": "automatic",
         })
+    if os.environ.get("UPDATE_TEST_FLAKE_ISOLATED_TARGETS") == "1":
+        packages.extend({
+            "name": name,
+            "buildPackage": f"{name}-package",
+            "files": ["projection.json"],
+            "input": f"{name}-input",
+            "inventoried": True,
+            "kind": "flake-input",
+            "managed": True,
+            "executor": "update",
+            "policy": "manual",
+        } for name in ("flake-a", "flake-b", "flake-c"))
     if os.environ.get("UPDATE_TEST_PYPI_TARGET") == "1":
         packages.append({
             "name": "pypi",
@@ -5329,8 +6462,57 @@ if "--inventory" in arguments:
         "schemaVersion": 1,
         "packages": packages,
     }))
+elif "--validate-candidate-target" in arguments:
+    name = arguments[arguments.index("--validate-candidate-target") + 1]
+    if os.environ.get("UPDATE_TEST_FAILURE_PHASE") == "candidate-validation":
+        raise SystemExit(71)
+    if os.environ.get("UPDATE_TEST_STATEFUL_FLAKE_TARGETS") == "1":
+        state = record_flake_state("candidate", name)
+        normalized = sorted(
+            marker.removeprefix("invalid-") for marker in state["portable"]
+        )
+        if (
+            state["portable"] != state["root"]
+            or normalized != state["projection"]
+            or name not in state["projection"]
+        ):
+            print("candidate validation observed incoherent lock state", file=sys.stderr)
+            raise SystemExit(86)
+        raise SystemExit(
+            3
+            if any(marker.startswith("invalid-") for marker in state["portable"])
+            else 0
+        )
+    rejected = set(
+        os.environ.get("UPDATE_TEST_CANDIDATE_REJECT_TARGETS", "").split(",")
+    )
+    if os.environ.get("UPDATE_TEST_FLAKE_CANDIDATE_REJECT") == "1":
+        locks = (
+            (root / "flake.lock").read_text()
+            + (root / "config/ai/flake.lock").read_text()
+        )
+        projection = json.loads((root / "projection.json").read_text())
+        if locks.count("candidate lock") != 2 or not projection.get(name):
+            print("candidate validation ran before locks/projection", file=sys.stderr)
+            raise SystemExit(86)
+        rejected.add(name)
+    raise SystemExit(3 if name in rejected else 0)
 elif "--validate-target" in arguments:
     name = arguments[arguments.index("--validate-target") + 1]
+    if os.environ.get("UPDATE_TEST_STATEFUL_FLAKE_TARGETS") == "1":
+        state = record_flake_state("baseline", name)
+        normalized = sorted(
+            marker.removeprefix("invalid-") for marker in state["portable"]
+        )
+        if (
+            state["portable"] != state["root"]
+            or normalized != state["projection"]
+            or name in state["projection"]
+            or any(marker.startswith("invalid-") for marker in state["portable"])
+        ):
+            print("baseline validation observed leaked candidate state", file=sys.stderr)
+            raise SystemExit(86)
+        raise SystemExit(0)
     if os.environ.get("UPDATE_TEST_FLAKE_CANDIDATE_REJECT") == "1":
         locks = (
             (root / "flake.lock").read_text()
@@ -5364,24 +6546,23 @@ elif "--prepare-target" in arguments:
         (root / "pypi.txt").write_text("pypi after\\n")
     elif name == "github":
         (root / "github.txt").write_text("github after\\n")
-    elif name not in {"copy", "build"}:
+    elif name not in {"copy", "build", "flake-a", "flake-b", "flake-c"}:
         print(f"unexpected target preparation: {arguments}", file=sys.stderr)
         raise SystemExit(82)
 elif "--sync-flake-projections" in arguments:
+    name = arguments[arguments.index("--sync-flake-projections") + 1]
     if (
         os.environ.get("UPDATE_TEST_NO_CHANGES") != "1"
         and os.environ.get("UPDATE_TEST_ISOLATED_TARGETS") != "1"
     ):
-        (root / "projection.json").write_text('{"projected": true}\\n')
+        projection = json.loads((root / "projection.json").read_text())
+        projection[name] = True
+        (root / "projection.json").write_text(json.dumps(projection) + "\\n")
     if os.environ.get("UPDATE_TEST_SIGNAL_PHASE") == "candidate-projection":
         Path(os.environ["UPDATE_TEST_SIGNAL_MARKER"]).touch()
         os.kill(os.getppid(), signal.SIGTERM)
     if os.environ.get("UPDATE_TEST_FAILURE_PHASE") == "candidate-projection":
         raise SystemExit(71)
-    if os.environ.get("UPDATE_TEST_FLAKE_CANDIDATE_REJECT") == "1" and (
-        "candidate lock" in (root / "config/ai/flake.lock").read_text()
-    ):
-        raise SystemExit(3)
 else:
     if os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
         print("compound update requires update candidate", file=sys.stderr)
@@ -5484,6 +6665,13 @@ mutate_phase() {
 }
 if [[ $1 == flake && $2 == update ]]; then
   if [[ ${3:-} == --flake ]]; then
+    if [[ ${UPDATE_TEST_STATEFUL_FLAKE_TARGETS:-} == 1 \
+      && ${5:-} == flake-*-input ]]; then
+      target=${5%-input}
+      marker=$target
+      if [[ $target == flake-b ]]; then marker=invalid-$target; fi
+      printf 'state:%s\n' "$marker" >>config/ai/flake.lock
+    fi
     if [[ ${UPDATE_TEST_FLAKE_CANDIDATE_REJECT:-} == 1 ]]; then
       printf 'candidate lock\n' >>config/ai/flake.lock
     fi
@@ -5492,6 +6680,11 @@ if [[ $1 == flake && $2 == update ]]; then
     fail_phase candidate-portable-lock
     status_three_phase candidate-portable-lock
   else
+    if [[ ${UPDATE_TEST_STATEFUL_FLAKE_TARGETS:-} == 1 ]]; then
+      marker=$(awk '/^state:/{last=$0} END{print last}' config/ai/flake.lock)
+      [[ -n $marker ]] || exit 87
+      printf '%s\n' "$marker" >>flake.lock
+    fi
     if [[ ${UPDATE_TEST_FLAKE_CANDIDATE_REJECT:-} == 1 ]]; then
       printf 'candidate lock\n' >>flake.lock
     fi
@@ -5557,6 +6750,23 @@ if [[ ${UPDATE_TEST_FAILURE_PHASE:-} == candidate-format ]]; then exit 71; fi
 set -euo pipefail
 phase=${UPDATE_TEST_SIGNAL_PHASE:-}
 marker=${UPDATE_TEST_SIGNAL_MARKER:-}
+tree_failure=${UPDATE_TEST_CANDIDATE_TREE_FAILURE:-}
+tree_failure_marker=${UPDATE_TEST_CANDIDATE_TREE_FAILURE_MARKER:-}
+if [[ -n $tree_failure && -n $tree_failure_marker \
+  && ! -e $tree_failure_marker && -f projection.json \
+  && $(<projection.json) != "{}" ]]; then
+  fail_tree_operation=false
+  if [[ $tree_failure == add && ${1:-} == add && ${2:-} == -A \
+    && ${3:-} == -- ]]; then
+    fail_tree_operation=true
+  elif [[ $tree_failure == write-tree && ${1:-} == write-tree && $# -eq 1 ]]; then
+    fail_tree_operation=true
+  fi
+  if [[ $fail_tree_operation == true ]]; then
+    printf '%s\n' "$tree_failure" >"$tree_failure_marker"
+    exit 71
+  fi
+fi
 for argument in "$@"; do
   if [[ $argument == verify-commit ]]; then
     if [[ ${UPDATE_TEST_MUTATE_LIVE_DURING_VERIFY:-} == 1 ]]; then
@@ -5900,7 +7110,7 @@ fi
             )
             self.assertEqual(
                 projection["projection.json"],
-                ("file", 0o644, b'{"projected": true}\n'),
+                ("file", 0o644, b"{}\n"),
             )
             self.assertEqual(projection["link"], ("symlink", "target-new"))
             self.assertEqual(projection["regular-to-link"], ("symlink", "target-new"))
@@ -6009,25 +7219,170 @@ fi
             self._assert_update_agents_unchanged(root, baseline, before)
 
     def test_update_agents_restores_flake_locks_before_baseline_validation(self):
+        cases = (
+            ("build", "UPDATE_TEST_BUILD_TARGET"),
+            ("copy", "UPDATE_TEST_COPY_TARGET"),
+            ("npm-flake", "UPDATE_TEST_NPM_FLAKE_TARGET"),
+        )
+        for target, selector in cases:
+            with self.subTest(target=target), tempfile.TemporaryDirectory() as temp_dir:
+                root, environment, baseline = self._create_update_agents_fixture(
+                    temp_dir
+                )
+                before = self._update_agents_projection(root)
+                environment.update(
+                    {
+                        selector: "1",
+                        "UPDATE_TEST_FLAKE_CANDIDATE_REJECT": "1",
+                    }
+                )
+
+                result = subprocess.run(
+                    [str(UPDATE_AGENTS), "--target", target],
+                    capture_output=True,
+                    text=True,
+                    env=environment,
+                    check=False,
+                )
+
+                self.assertEqual(result.returncode, 3, result.stderr)
+                self.assertIn(f"{target}: retained", result.stderr)
+                self.assertNotIn("candidate lock survived restoration", result.stderr)
+                self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_attributes_flake_candidate_rejection_to_selected_target(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, baseline = self._create_update_agents_fixture(temp_dir)
-            before = self._update_agents_projection(root)
+            interleaving_log = Path(temp_dir) / "interleaving.log"
+            state_log = Path(temp_dir) / "state.log"
             environment.update(
-                UPDATE_TEST_BUILD_TARGET="1",
-                UPDATE_TEST_FLAKE_CANDIDATE_REJECT="1",
+                UPDATE_TEST_FLAKE_ISOLATED_TARGETS="1",
+                UPDATE_TEST_INTERLEAVING_LOG=str(interleaving_log),
+                UPDATE_TEST_STATEFUL_FLAKE_TARGETS="1",
+                UPDATE_TEST_STATE_LOG=str(state_log),
             )
 
             result = subprocess.run(
-                [str(UPDATE_AGENTS), "--target", "build"],
+                [
+                    str(UPDATE_AGENTS),
+                    "--target",
+                    "flake-a",
+                    "--target",
+                    "flake-b",
+                    "--target",
+                    "flake-c",
+                ],
                 capture_output=True,
                 text=True,
                 env=environment,
                 check=False,
             )
 
-            self.assertEqual(result.returncode, 3, result.stderr)
-            self.assertIn("build: retained", result.stderr)
-            self.assertNotIn("candidate lock survived restoration", result.stderr)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("flake-b: retained", result.stderr)
+            self.assertNotIn("flake-a: retained", result.stderr)
+            self.assertNotIn("flake-c: retained", result.stderr)
+            self.assertEqual(
+                json.loads((root / "projection.json").read_text()),
+                {"flake-a": True, "flake-c": True},
+            )
+            expected_lock_markers = ["state:flake-a", "state:flake-c"]
+            for lock_path in (root / "config/ai/flake.lock", root / "flake.lock"):
+                markers = [
+                    line
+                    for line in lock_path.read_text().splitlines()
+                    if line.startswith("state:")
+                ]
+                self.assertEqual(markers, expected_lock_markers)
+
+            self.assertEqual(
+                [json.loads(line) for line in state_log.read_text().splitlines()],
+                [
+                    {
+                        "phase": "candidate",
+                        "name": "flake-a",
+                        "portable": ["flake-a"],
+                        "root": ["flake-a"],
+                        "projection": ["flake-a"],
+                    },
+                    {
+                        "phase": "candidate",
+                        "name": "flake-b",
+                        "portable": ["flake-a", "invalid-flake-b"],
+                        "root": ["flake-a", "invalid-flake-b"],
+                        "projection": ["flake-a", "flake-b"],
+                    },
+                    {
+                        "phase": "baseline",
+                        "name": "flake-b",
+                        "portable": ["flake-a"],
+                        "root": ["flake-a"],
+                        "projection": ["flake-a"],
+                    },
+                    {
+                        "phase": "candidate",
+                        "name": "flake-c",
+                        "portable": ["flake-a", "flake-c"],
+                        "root": ["flake-a", "flake-c"],
+                        "projection": ["flake-a", "flake-c"],
+                    },
+                ],
+            )
+            events = interleaving_log.read_text().splitlines()
+            self.assertEqual(
+                events,
+                [
+                    "overlay --inventory --json",
+                    "overlay --prepare-target flake-a",
+                    "nix flake update --flake ./config/ai flake-a-input",
+                    "nix flake update nix-config-ai",
+                    "overlay --sync-flake-projections flake-a",
+                    "overlay --validate-candidate-target flake-a",
+                    "overlay --prepare-target flake-b",
+                    "nix flake update --flake ./config/ai flake-b-input",
+                    "nix flake update nix-config-ai",
+                    "overlay --sync-flake-projections flake-b",
+                    "overlay --validate-candidate-target flake-b",
+                    "overlay --validate-target flake-b",
+                    "overlay --prepare-target flake-c",
+                    "nix flake update --flake ./config/ai flake-c-input",
+                    "nix flake update nix-config-ai",
+                    "overlay --sync-flake-projections flake-c",
+                    "overlay --validate-candidate-target flake-c",
+                    "overlay --inventory --json",
+                    "nix flake check ./config/ai --all-systems --no-build --no-eval-cache",
+                    "nix flake show --json --drv-paths --all-systems --option eval-cores 1 --option lazy-trees false --option eval-cache false",
+                    "nix flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
+                ],
+            )
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip(),
+                baseline,
+            )
+
+    def test_update_agents_treats_unselected_final_projection_drift_as_hard(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment.update(
+                UPDATE_TEST_COPY_TARGET="1",
+                UPDATE_TEST_FINAL_INVENTORY_FAIL="1",
+            )
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "copy"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 85, result.stderr)
+            self.assertIn("unselected projection drift", result.stderr)
+            self.assertNotIn("retained", result.stderr)
             self._assert_update_agents_unchanged(root, baseline, before)
 
     def test_update_agents_fails_if_held_back_restore_fails(self):
@@ -6151,7 +7506,7 @@ fi
             self.assertEqual((root / "fixed.txt").read_text(), "fixed after\n")
             self.assertEqual((root / "tracked.txt").read_text(), "before\n")
             self.assertEqual(
-                (root / "projection.json").read_text(), '{"projected": true}\n'
+                (root / "projection.json").read_text(), '{"fixed": true}\n'
             )
             commands = command_log.read_text().splitlines()
             self.assertEqual(
@@ -6367,8 +7722,11 @@ fi
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, baseline = self._create_update_agents_fixture(temp_dir)
             command_log = Path(temp_dir) / "commands.log"
+            interleaving_log = Path(temp_dir) / "interleaving.log"
+            environment["UPDATE_TEST_BUILD_TARGET"] = "1"
             environment["UPDATE_TEST_COPY_TARGET"] = "1"
             environment["UPDATE_TEST_COMMAND_LOG"] = str(command_log)
+            environment["UPDATE_TEST_INTERLEAVING_LOG"] = str(interleaving_log)
             result = subprocess.run(
                 [str(UPDATE_AGENTS), "--target", "copy"],
                 capture_output=True,
@@ -6389,7 +7747,7 @@ fi
             self.assertEqual((root / "fixed.txt").read_text(), "fixed before\n")
             self.assertEqual((root / "tracked.txt").read_text(), "before\n")
             self.assertEqual(
-                (root / "projection.json").read_text(), '{"projected": true}\n'
+                (root / "projection.json").read_text(), '{"copy": true}\n'
             )
             self.assertEqual(
                 command_log.read_text().splitlines(),
@@ -6401,12 +7759,32 @@ fi
                     "flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
+            events = interleaving_log.read_text().splitlines()
+            ordered = [
+                "overlay --prepare-target copy",
+                "nix flake update --flake ./config/ai copy-input",
+                "nix flake update nix-config-ai",
+                "overlay --sync-flake-projections copy",
+                "overlay --validate-candidate-target copy",
+            ]
+            position = -1
+            for event in ordered:
+                position = events.index(event, position + 1)
+            self.assertEqual(
+                events.count("overlay --validate-candidate-target copy"), 1
+            )
+            self.assertNotIn(
+                "overlay --validate-candidate-target build", events
+            )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, _baseline = self._create_update_agents_fixture(temp_dir)
             command_log = Path(temp_dir) / "commands.log"
+            interleaving_log = Path(temp_dir) / "interleaving.log"
             environment["UPDATE_TEST_COPY_TARGET"] = "1"
             environment["UPDATE_TEST_COMMAND_LOG"] = str(command_log)
+            environment["UPDATE_TEST_INTERLEAVING_LOG"] = str(interleaving_log)
+            environment["UPDATE_TEST_NO_CHANGES"] = "1"
             result = subprocess.run(
                 [str(UPDATE_AGENTS)],
                 capture_output=True,
@@ -6418,6 +7796,10 @@ fi
             self.assertEqual(
                 command_log.read_text().splitlines()[0],
                 "flake update --flake ./config/ai copy-input",
+            )
+            self.assertNotIn(
+                "overlay --validate-candidate-target copy",
+                interleaving_log.read_text().splitlines(),
             )
 
     def test_update_agents_routes_flake_input_build_through_named_locks(self):
@@ -6446,7 +7828,7 @@ fi
             self.assertEqual((root / "fixed.txt").read_text(), "fixed before\n")
             self.assertEqual((root / "tracked.txt").read_text(), "before\n")
             self.assertEqual(
-                (root / "projection.json").read_text(), '{"projected": true}\n'
+                (root / "projection.json").read_text(), '{"build": true}\n'
             )
             self.assertEqual(
                 command_log.read_text().splitlines(),
@@ -6474,12 +7856,87 @@ fi
             self.assertNotEqual(result.returncode, 0)
             self._assert_update_agents_unchanged(root, baseline, before)
 
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment["UPDATE_TEST_BUILD_TARGET"] = "1"
+            environment["UPDATE_TEST_FAILURE_PHASE"] = "candidate-validation"
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "build"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 71, result.stderr)
+            self.assertNotIn("retained", result.stderr)
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_candidate_tree_capture_failures_abort_before_validation_or_publication(
+        self,
+    ):
+        for operation in ("add", "write-tree"):
+            with (
+                self.subTest(operation=operation),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
+                root, environment, baseline = self._create_update_agents_fixture(
+                    temp_dir
+                )
+                before = self._update_agents_projection(root)
+                failure_marker = Path(temp_dir) / f"{operation}.failed"
+                interleaving_log = Path(temp_dir) / f"{operation}.events"
+                external_log = Path(temp_dir) / f"{operation}.external"
+                push_marker = Path(temp_dir) / f"{operation}.pushed"
+                external_log.write_text("")
+                environment.update(
+                    UPDATE_TEST_BUILD_TARGET="1",
+                    UPDATE_TEST_CANDIDATE_TREE_FAILURE=operation,
+                    UPDATE_TEST_CANDIDATE_TREE_FAILURE_MARKER=str(failure_marker),
+                    UPDATE_TEST_EXTERNAL_LOG=str(external_log),
+                    UPDATE_TEST_INTERLEAVING_LOG=str(interleaving_log),
+                    UPDATE_TEST_PUSH_MARKER=str(push_marker),
+                )
+
+                result = subprocess.run(
+                    [
+                        str(UPDATE_AGENTS),
+                        "--target",
+                        "build",
+                        "--commit",
+                        "--push",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    env=environment,
+                    check=False,
+                )
+
+                self.assertEqual(result.returncode, 71, result.stderr)
+                self.assertEqual(failure_marker.read_text(), f"{operation}\n")
+                self.assertNotIn("retained", result.stderr)
+                self.assertEqual(
+                    interleaving_log.read_text().splitlines(),
+                    [
+                        "overlay --inventory --json",
+                        "overlay --prepare-target build",
+                        "nix flake update --flake ./config/ai build-input",
+                        "nix flake update nix-config-ai",
+                        "overlay --sync-flake-projections build",
+                    ],
+                )
+                self.assertEqual(external_log.read_text(), "")
+                self.assertFalse(push_marker.exists())
+                self._assert_update_agents_unchanged(root, baseline, before)
+
     def test_update_agents_routes_npm_flake_input_as_one_named_transaction(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, baseline = self._create_update_agents_fixture(temp_dir)
             command_log = Path(temp_dir) / "commands.log"
+            interleaving_log = Path(temp_dir) / "interleaving.log"
             environment["UPDATE_TEST_NPM_FLAKE_TARGET"] = "1"
             environment["UPDATE_TEST_COMMAND_LOG"] = str(command_log)
+            environment["UPDATE_TEST_INTERLEAVING_LOG"] = str(interleaving_log)
             result = subprocess.run(
                 [str(UPDATE_AGENTS), "--target", "npm-flake"],
                 capture_output=True,
@@ -6509,6 +7966,17 @@ fi
                     "flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
+            events = interleaving_log.read_text().splitlines()
+            ordered = [
+                "overlay --prepare-target npm-flake",
+                "nix flake update --flake ./config/ai npm-flake-input",
+                "nix flake update nix-config-ai",
+                "overlay --sync-flake-projections npm-flake",
+                "overlay --validate-candidate-target npm-flake",
+            ]
+            position = -1
+            for event in ordered:
+                position = events.index(event, position + 1)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, _baseline = self._create_update_agents_fixture(temp_dir)
@@ -6525,6 +7993,25 @@ fi
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual((root / "fixed.txt").read_text(), "npm flake after\n")
             self.assertIn("npm-flake-input", command_log.read_text().splitlines()[0])
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment.update(
+                UPDATE_TEST_CANDIDATE_REJECT_TARGETS="npm-flake",
+                UPDATE_TEST_NO_CHANGES="1",
+                UPDATE_TEST_NPM_FLAKE_TARGET="1",
+            )
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--target", "npm-flake"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 3, result.stderr)
+            self.assertIn("npm-flake: retained", result.stderr)
+            self._assert_update_agents_unchanged(root, baseline, before)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, baseline = self._create_update_agents_fixture(temp_dir)
@@ -6562,10 +8049,11 @@ fi
                 "overlay --prepare-target github",
                 "overlay --prepare-target npm-flake",
                 "nix flake update --flake ./config/ai npm-flake-input",
-                "overlay --sync-flake-projections",
+                "overlay --sync-flake-projections npm-flake",
+                "overlay --validate-candidate-target npm-flake",
                 "overlay --prepare-target fixed",
                 "nix flake update --flake ./config/ai fixed-input",
-                "overlay --sync-flake-projections",
+                "overlay --sync-flake-projections fixed",
             ]
             position = -1
             for event in ordered:
@@ -6742,7 +8230,7 @@ fi
             projection_syncs = [
                 index
                 for index, event in enumerate(events)
-                if event == "overlay --sync-flake-projections"
+                if event.startswith("overlay --sync-flake-projections")
             ]
             inventory_checks = [
                 index
@@ -6751,12 +8239,79 @@ fi
             ]
             self.assertEqual(len(inventory_checks), 2)
             self.assertLess(root_lock, portable_target)
+            self.assertEqual(
+                [events[index] for index in projection_syncs],
+                ["overlay --sync-flake-projections copy"],
+            )
             self.assertLess(portable_target, projection_syncs[0])
             self.assertLess(projection_syncs[0], npm_locks)
             self.assertLess(npm_locks, direct_target)
-            self.assertLess(direct_target, projection_syncs[-1])
-            self.assertLess(npm_locks, inventory_checks[-1])
+            self.assertLess(direct_target, inventory_checks[-1])
             self.assertEqual((root / "npm-lock.txt").read_text(), "npm lock after\n")
+
+    def test_all_inputs_separates_uncatalogued_and_named_catalog_inputs(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, _baseline = self._create_update_agents_fixture(
+                temp_dir,
+                portable_inputs=(
+                    "portable-only",
+                    "copy-input",
+                    "build-input",
+                    "fixed-input",
+                ),
+                root_inputs=("root-only", "nix-config-ai"),
+            )
+            interleaving_log = Path(temp_dir) / "interleaving.log"
+            environment.update(
+                UPDATE_TEST_BUILD_TARGET="1",
+                UPDATE_TEST_COPY_TARGET="1",
+                UPDATE_TEST_FIXED_TARGET="1",
+                UPDATE_TEST_INTERLEAVING_LOG=str(interleaving_log),
+            )
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--all-inputs"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            events = interleaving_log.read_text().splitlines()
+            self.assertEqual(
+                events,
+                [
+                    "overlay --inventory --json",
+                    "nix flake update --flake ./config/ai portable-only",
+                    "nix flake update root-only",
+                    "nix flake update nix-config-ai",
+                    "overlay --prepare-target fixed",
+                    "nix flake update --flake ./config/ai fixed-input",
+                    "nix flake update nix-config-ai",
+                    "overlay --sync-flake-projections fixed",
+                    "overlay --prepare-target build",
+                    "nix flake update --flake ./config/ai build-input",
+                    "nix flake update nix-config-ai",
+                    "overlay --sync-flake-projections build",
+                    "overlay --validate-candidate-target build",
+                    "overlay --prepare-target copy",
+                    "nix flake update --flake ./config/ai copy-input",
+                    "nix flake update nix-config-ai",
+                    "overlay --sync-flake-projections copy",
+                    "overlay --validate-candidate-target copy",
+                    "overlay fixture",
+                    "overlay --inventory --json",
+                    "nix flake check ./config/ai --all-systems --no-build --no-eval-cache",
+                    "nix flake show --json --drv-paths --all-systems --option eval-cores 1 --option lazy-trees false --option eval-cache false",
+                    "nix flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
+                ],
+            )
+            self.assertNotIn("overlay --sync-flake-projections", events)
+            self.assertEqual(
+                json.loads((root / "projection.json").read_text()),
+                {"fixed": True, "build": True, "copy": True},
+            )
 
     def test_update_agents_routes_github_projection_without_lock_updates(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -7179,7 +8734,11 @@ fi
                         "UPDATE_TEST_SIGNAL_MARKER": str(marker),
                     }
                 )
-                if phase in {"candidate-portable-lock", "candidate-root-lock"}:
+                if phase in {
+                    "candidate-portable-lock",
+                    "candidate-root-lock",
+                    "candidate-projection",
+                }:
                     environment["UPDATE_TEST_COPY_TARGET"] = "1"
                 result = subprocess.run(
                     [str(UPDATE_AGENTS)],
@@ -7209,7 +8768,11 @@ fi
                 )
                 before = self._update_agents_projection(root)
                 environment["UPDATE_TEST_FAILURE_PHASE"] = phase
-                if phase in {"candidate-portable-lock", "candidate-root-lock"}:
+                if phase in {
+                    "candidate-portable-lock",
+                    "candidate-root-lock",
+                    "candidate-projection",
+                }:
                     environment["UPDATE_TEST_COPY_TARGET"] = "1"
                 result = subprocess.run(
                     [str(UPDATE_AGENTS)],

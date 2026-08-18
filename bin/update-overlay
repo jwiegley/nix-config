@@ -806,13 +806,19 @@ in
     def _package_build_command(
         self, package_name: str, build_mode: str = "pkg"
     ) -> list[str]:
-        if build_mode not in {"pkg", "python"}:
+        if build_mode not in {"check", "pkg", "python"}:
             raise ValueError(f"unsupported package build mode: {build_mode}")
-        package_expression = (
-            f"builtins.getAttr {json.dumps(package_name)} pkgs.python3Packages"
-            if build_mode == "python"
-            else f"builtins.getAttr {json.dumps(package_name)} pkgs"
-        )
+        if build_mode == "python":
+            package_expression = (
+                f"builtins.getAttr {json.dumps(package_name)} pkgs.python3Packages"
+            )
+        elif build_mode == "check":
+            package_expression = (
+                f"builtins.getAttr {json.dumps(package_name)} "
+                "flake.inputs.nix-config-ai.checks.${system}"
+            )
+        else:
+            package_expression = f"builtins.getAttr {json.dumps(package_name)} pkgs"
         expression = f"""
 let
   repoPath = builtins.getEnv "UPDATE_OVERLAY_REPO_DIR";
@@ -1579,17 +1585,42 @@ def _flake_input_literal(nix_dir: Path, input_name: str, catalog_name: str) -> d
     return literal
 
 
+def _flake_projection(name: str, record: dict) -> Optional[tuple[str, dict]]:
+    """Return one structurally valid catalog-owned fetchTree projection."""
+    update = record["update"]
+    kind = update["kind"]
+    if kind not in {
+        "fixed-flake-input",
+        "flake-input",
+        "flake-input+build",
+        "flake-input+copy",
+        "npm-release+flake-input",
+    }:
+        return None
+    input_name = update.get("input")
+    if not isinstance(input_name, str) or not input_name:
+        raise RuntimeError(f"flake input projection has no non-empty input: {name}")
+    projection = (
+        record.get("artifacts", {}).get("flakeInput")
+        if kind == "npm-release+flake-input"
+        else record.get("source")
+    )
+    if not isinstance(projection, dict) or projection.get("fetcher") != "fetchTree":
+        raise RuntimeError(f"flake input projection requires fetchTree: {name}")
+    return input_name, projection
+
+
 def _validate_flake_projection(
     nix_dir: Path, name: str, record: dict, portable_lock: Optional[dict]
 ) -> None:
-    update = record["update"]
-    source = record["source"]
-    if source["fetcher"] != "fetchTree" or "input" not in update:
+    selected = _flake_projection(name, record)
+    if selected is None:
         return
+    input_name, source = selected
     if portable_lock is None:
         raise RuntimeError(f"flake input projection requires config/ai/flake.lock: {name}")
 
-    node = _lock_input_node(portable_lock, update["input"], name)
+    node = _lock_input_node(portable_lock, input_name, name)
     locked = node.get("locked")
     original = node.get("original")
     if not isinstance(locked, dict) or not isinstance(original, dict):
@@ -1604,7 +1635,7 @@ def _validate_flake_projection(
             raise RuntimeError(f"flake input projection {name} {field} does not match declared input")
     if "rev" in original and args.get("rev") != original["rev"]:
         raise RuntimeError(f"flake input projection {name} rev does not match declared input")
-    literal = _flake_input_literal(nix_dir, update["input"], name)
+    literal = _flake_input_literal(nix_dir, input_name, name)
     for field in ("type", "owner", "repo"):
         if args.get(field) != literal.get(field):
             raise RuntimeError(f"flake input projection {name} {field} does not match flake literal")
@@ -1688,8 +1719,11 @@ def _catalog_executor(record: dict) -> Optional[str]:
     update = record["update"]
     if update["kind"] == "npm-release" and update.get("normalizer") == "pi-gallery-v1":
         return "update"
-    if update["kind"] == "github-release-asset" or update.get("buildMode") or update.get(
-        "artifactSources"
+    if (
+        update["kind"] == "github-release-asset"
+        or update.get("buildMode")
+        or update.get("buildPackage")
+        or update.get("artifactSources")
     ):
         return "update"
     if (
@@ -1729,6 +1763,7 @@ def load_source_catalog(
     nix_dir: Path,
     *,
     validate_flake_projections: bool = True,
+    flake_projection_names: Optional[set[str]] = None,
 ) -> dict[str, dict]:
     """Load data-only package source records from sources/*.json."""
     catalog_dir = nix_dir / "sources"
@@ -1742,6 +1777,7 @@ def load_source_catalog(
     pi_npm_targets: set[str] = set()
     pi_lock_shape_targets: set[str] = set()
     artifact_owners: dict[Path, set[str]] = {}
+    flake_input_owners: dict[str, str] = {}
     allowed = {
         "artifacts", "commit", "date", "hashes", "source", "update", "version",
     }
@@ -1749,22 +1785,30 @@ def load_source_catalog(
     update_schema = {
         "explicit-rev": (common_update_fields | {"branch"}, set()),
         "fixed-flake-input": (common_update_fields | {"input"}, {"input"}),
-        "flake-input": (common_update_fields | {"input"}, {"input"}),
+        "flake-input": (
+            common_update_fields | {"buildPackage", "input"},
+            {"input"},
+        ),
         "flake-input+build": (
             common_update_fields | {"buildPackage", "input"},
             {"buildPackage", "input"},
         ),
-        "flake-input+copy": (common_update_fields | {"input"}, {"input"}),
+        "flake-input+copy": (
+            common_update_fields | {"buildMode", "buildPackage", "input"},
+            {"buildPackage", "input"},
+        ),
         "github-commit": (
-            common_update_fields | {"artifactSources", "branch", "buildMode"},
+            common_update_fields
+            | {"artifactSources", "branch", "buildMode", "buildPackage"},
             {"branch"},
         ),
         "github-release": (
-            common_update_fields | {"buildMode", "normalizer", "tagPrefix"},
+            common_update_fields
+            | {"buildMode", "buildPackage", "normalizer", "tagPrefix"},
             set(),
         ),
         "github-tag": (
-            common_update_fields | {"buildMode", "tagPrefix"},
+            common_update_fields | {"buildMode", "buildPackage", "tagPrefix"},
             set(),
         ),
         "github-release-asset": (
@@ -1776,10 +1820,13 @@ def load_source_catalog(
             {"package"},
         ),
         "npm-release+flake-input": (
-            common_update_fields | {"input", "package"},
+            common_update_fields | {"buildPackage", "input", "package"},
             {"input", "package"},
         ),
-        "pypi-release": (common_update_fields | {"package"}, {"package"}),
+        "pypi-release": (
+            common_update_fields | {"buildMode", "buildPackage", "package"},
+            {"package"},
+        ),
         "url-release": (common_update_fields, set()),
     }
     portable_lock_path = nix_dir / "config" / "ai" / "flake.lock"
@@ -1831,10 +1878,19 @@ def load_source_catalog(
                     f"invalid update build package for source catalog record: {name}"
                 )
             if build_mode is not None and (
-                build_mode not in {"pkg", "python"} or not hashes
+                build_mode not in {"check", "pkg", "python"}
+                or (not hashes and build_package is None)
+                or (
+                    build_mode == "check"
+                    and (
+                        kind != "flake-input+copy"
+                        or build_package is None
+                        or bool(hashes)
+                    )
+                )
             ):
                 raise RuntimeError(
-                    f"invalid dependent-hash build mode for source catalog record: {name}"
+                    f"invalid update build mode for source catalog record: {name}"
                 )
             if kind == "flake-input+build" and (
                 not isinstance(update["buildPackage"], str)
@@ -1846,6 +1902,16 @@ def load_source_catalog(
                 )
             source_args = record["source"]["args"]
             source_fetcher = record["source"]["fetcher"]
+            projection = _flake_projection(name, record)
+            if projection is not None:
+                input_name, _projection_source = projection
+                previous_owner = flake_input_owners.get(input_name)
+                if previous_owner is not None:
+                    raise RuntimeError(
+                        "flake input projection has multiple catalog owners: "
+                        f"{input_name} ({previous_owner}, {name})"
+                    )
+                flake_input_owners[input_name] = name
             tag_prefix = update.get("tagPrefix")
             if kind in {"github-release", "github-tag"} and tag_prefix is not None and not isinstance(
                 tag_prefix, str
@@ -1861,35 +1927,16 @@ def load_source_catalog(
                 raise RuntimeError(
                     f"GitHub dependent-hash projection requires fetchFromGitHub: {name}"
                 )
-            if validate_flake_projections:
-                if (
-                    source_fetcher == "fetchTree"
-                    or kind == "npm-release+flake-input"
-                ) and "input" in update and portable_lock is None:
+            if projection is not None and validate_flake_projections and (
+                flake_projection_names is None or name in flake_projection_names
+            ):
+                if portable_lock is None:
                     if not portable_lock_path.is_file():
                         raise RuntimeError(
                             f"flake input projection requires config/ai/flake.lock: {name}"
                         )
                     portable_lock = json.loads(portable_lock_path.read_text())
                 _validate_flake_projection(nix_dir, name, record, portable_lock)
-                if kind == "npm-release+flake-input":
-                    flake_input = artifacts.get("flakeInput")
-                    if not isinstance(flake_input, dict):
-                        raise RuntimeError(
-                            f"npm flake input record has no flakeInput artifact: {name}"
-                        )
-                    _validate_flake_projection(
-                        nix_dir,
-                        name,
-                        {
-                            "source": flake_input,
-                            "update": {
-                                "input": update["input"],
-                                "kind": "fixed-flake-input",
-                            },
-                        },
-                        portable_lock,
-                    )
             if source_fetcher == "fetchPypi" and record.get("version") != source_args["version"]:
                 raise RuntimeError(f"PyPI source version does not match catalog version: {name}")
             if kind == "github-commit" and (
@@ -2044,7 +2091,21 @@ def load_source_catalog(
                         f"invalid Pi npm normalization projection: {name}"
                     )
                 pi_npm_targets.add(name)
-            if build_mode is not None and (artifacts or update_artifacts) and not prime_normalization:
+            build_only_compound_pypi = (
+                kind == "pypi-release"
+                and bool(artifacts)
+                and not hashes
+                and not update_artifacts
+            )
+            if (
+                (
+                    (build_mode is not None and build_mode != "check")
+                    or (kind == "github-commit" and build_package is not None)
+                )
+                and (artifacts or update_artifacts)
+                and not prime_normalization
+                and not build_only_compound_pypi
+            ):
                 raise RuntimeError(
                     f"dependent-hash projection cannot also declare artifacts: {name}"
                 )
@@ -2138,79 +2199,72 @@ def resolve_flake_input_dependent_hash(
     return value
 
 
-def validate_flake_input_build(nix_dir: Path, package_name: str) -> None:
-    validator = HashComputer(nix_dir)
-    if not validator.validate_package_build(package_name):
-        raise CandidateRejected(
-            f"flake input package validation failed: {package_name}"
-        )
-
-
 def sync_flake_projections(
     nix_dir: Path,
+    selected_name: str,
     version_resolver=resolve_flake_input_version,
     dependent_hash_resolver=resolve_flake_input_dependent_hash,
-    build_validator=validate_flake_input_build,
 ) -> int:
-    """Refresh catalog fetchTree projections from the selected portable lock nodes."""
+    """Refresh one named catalog projection from its selected portable lock node."""
+    if not selected_name:
+        raise RuntimeError("flake projection sync requires a selected catalog target")
     lock_path = nix_dir / "config" / "ai" / "flake.lock"
     if not lock_path.is_file():
         raise RuntimeError("flake projection sync requires config/ai/flake.lock")
     portable_lock = json.loads(lock_path.read_text())
-    changed_records = 0
-    for path in sorted((nix_dir / "sources").glob("*.json")):
-        payload = json.loads(path.read_text(), object_pairs_hook=_unique_object)
-        changed_document = False
-        for name, record in payload.get("sources", {}).items():
-            source = record.get("source", {})
-            update = record.get("update", {})
-            if source.get("fetcher") != "fetchTree" or not isinstance(update.get("input"), str):
-                continue
-            node = _lock_input_node(portable_lock, update["input"], name)
-            locked = node.get("locked")
-            if not isinstance(locked, dict):
-                raise RuntimeError(f"flake input projection has no locked source: {name}")
-            args = source.get("args")
-            if not isinstance(args, dict):
-                raise RuntimeError(f"flake input projection has no fetchTree args: {name}")
-            projected = {
-                **args,
-                **{field: locked[field] for field in ("type", "owner", "repo", "rev", "narHash")},
-            }
-            projected_url = f"https://github.com/{locked['owner']}/{locked['repo']}"
-            record_changed = False
-            if projected != args or source.get("url") != projected_url:
-                source["args"] = projected
-                source["url"] = projected_url
-                record_changed = True
-            if update["kind"] in {"flake-input+build", "flake-input+copy"}:
-                projected_version = version_resolver(
-                    nix_dir, update["input"], locked
-                )
-                if record.get("version") != projected_version:
-                    record["version"] = projected_version
-                    record_changed = True
-            if update["kind"] == "flake-input+build" and record_changed:
-                dependent_hashes = record.get("hashes", {})
-                if not dependent_hashes:
-                    raise RuntimeError(
-                        f"flake input build has no dependent hashes: {name}"
-                    )
-                for hash_type in dependent_hashes:
-                    dependent_hashes[hash_type] = DUMMY_SRI_HASH
-                    path.write_text(json.dumps(payload, indent=2) + "\n")
-                    dependent_hashes[hash_type] = dependent_hash_resolver(
-                        nix_dir, update["buildPackage"], hash_type
-                    )
-                path.write_text(json.dumps(payload, indent=2) + "\n")
-                build_validator(nix_dir, update["buildPackage"])
-            if record_changed:
-                changed_document = True
-                changed_records += 1
-        if changed_document:
-            path.write_text(json.dumps(payload, indent=2) + "\n")
-    load_source_catalog(nix_dir)
-    return changed_records
+    targets = load_source_catalog(nix_dir, validate_flake_projections=False)
+    if selected_name not in targets:
+        raise RuntimeError(f"unknown selected flake projection: {selected_name}")
+    target = targets[selected_name]
+    record = target["_record"]
+    selected = _flake_projection(selected_name, record)
+    if selected is None:
+        raise RuntimeError(
+            f"selected catalog target has no flake projection: {selected_name}"
+        )
+    input_name, projection = selected
+    node = _lock_input_node(portable_lock, input_name, selected_name)
+    locked = node.get("locked")
+    if not isinstance(locked, dict):
+        raise RuntimeError(
+            f"flake input projection has no locked source: {selected_name}"
+        )
+    args = projection["args"]
+    projected = {
+        **args,
+        **{
+            field: locked[field]
+            for field in ("type", "owner", "repo", "rev", "narHash")
+        },
+    }
+    projected_url = f"https://github.com/{locked['owner']}/{locked['repo']}"
+    record_changed = False
+    if projected != args or projection["url"] != projected_url:
+        projection["args"] = projected
+        projection["url"] = projected_url
+        record_changed = True
+    update = record["update"]
+    if update["kind"] in {"flake-input+build", "flake-input+copy"}:
+        projected_version = version_resolver(nix_dir, input_name, locked)
+        if record.get("version") != projected_version:
+            record["version"] = projected_version
+            record_changed = True
+    path = target["_path"]
+    if update["kind"] == "flake-input+build" and record_changed:
+        dependent_hashes = record["hashes"]
+        for hash_type in dependent_hashes:
+            dependent_hashes[hash_type] = DUMMY_SRI_HASH
+            path.write_text(json.dumps(target["_document"], indent=2) + "\n")
+            dependent_hashes[hash_type] = dependent_hash_resolver(
+                nix_dir, update["buildPackage"], hash_type
+            )
+    if record_changed:
+        path.write_text(json.dumps(target["_document"], indent=2) + "\n")
+    load_source_catalog(
+        nix_dir,
+        flake_projection_names={selected_name},
+    )
+    return int(record_changed)
 
 
 def require_detached_linked_worktree(nix_dir: Path) -> None:
@@ -2252,6 +2306,9 @@ def build_inventory(catalog_targets: dict[str, dict]) -> dict:
             package["reason"] = update["reason"]
         if "input" in update:
             package["input"] = update["input"]
+        for field in ("buildPackage", "buildMode"):
+            if field in update:
+                package[field] = update[field]
         packages.append(package)
     return {
         "schemaVersion": 1,
@@ -2290,17 +2347,17 @@ class SourceTransaction:
     """Restore every watched source file unless the invocation commits."""
 
     def __init__(self) -> None:
-        self.original: dict[Path, str] = {}
+        self.original: dict[Path, bytes] = {}
         self.committed = False
 
     def watch(self, path: Path) -> None:
-        self.original.setdefault(path, path.read_text())
+        self.original.setdefault(path, path.read_bytes())
 
     def rollback(self) -> int:
         restored = 0
         for path, content in self.original.items():
-            if path.read_text() != content:
-                path.write_text(content)
+            if path.read_bytes() != content:
+                path.write_bytes(content)
                 restored += 1
         self.committed = True
         return restored
@@ -2456,25 +2513,16 @@ def update_npm_flake_target(
         )
         print(f"{Colors.RED}{name}: {message}{Colors.RESET}")
         return "failed"
-    new_git_hash = hash_computer.compute_native_hash(git_source, {"rev": new_rev})
-    if not new_git_hash:
-        message = _failure_message(
-            "flake input hash failed",
-            getattr(hash_computer, "last_error", None),
-        )
-        print(f"{Colors.RED}{name}: {message}{Colors.RESET}")
-        return "failed"
-
     flake_path = target["_path"].parent.parent / "config" / "ai" / "flake.nix"
     exact_literal = f"github:{git_args['owner']}/{git_args['repo']}/{new_rev}"
-    changed = (
+    npm_changed = (
         new_version != old_version
         or new_url != old_url
         or new_tar_hash != source_args["hash"]
-        or new_rev != git_args["rev"]
-        or new_git_hash != git_args["narHash"]
-        or exact_literal not in flake_path.read_text()
     )
+    git_changed = new_rev != git_args["rev"]
+    literal_changed = exact_literal not in flake_path.read_text()
+    changed = npm_changed or git_changed or literal_changed
     if not changed:
         print(f"catalog/{name} {Colors.GREEN}✓ up-to-date{Colors.RESET}")
         return "skipped"
@@ -2488,8 +2536,6 @@ def update_npm_flake_target(
     source_args["url"] = new_url
     source_args["hash"] = new_tar_hash
     source["url"] = new_url
-    git_args["rev"] = new_rev
-    git_args["narHash"] = new_git_hash
     _rewrite_npm_flake_input_literal(target, new_rev)
     _write_catalog_target(target)
     print(f"catalog/{name} {Colors.GREEN}→ {new_version} ✓{Colors.RESET}")
@@ -2641,6 +2687,7 @@ def update_pypi_artifact_target(
     target: dict,
     args,
     pypi_client: PypiClient,
+    hash_computer: HashComputer,
     transaction,
 ) -> str:
     """Resolve a compound PyPI record and write it under transaction rollback."""
@@ -2686,6 +2733,15 @@ def update_pypi_artifact_target(
         if source["fetcher"] == "fetchurl":
             source_args["url"] = artifact_url
     _write_catalog_target(target)
+    update = record["update"]
+    validation_package = update.get("buildPackage")
+    validation_mode = update.get("buildMode", "pkg")
+    if validation_package and not hash_computer.validate_package_build(
+        validation_package, validation_mode
+    ):
+        label = "package" if validation_mode == "pkg" else validation_mode
+        print(f"catalog/{name} {Colors.RED}✗ final {label} build failed{Colors.RESET}")
+        raise CandidateRejected(f"{name} final {label} build failed")
     print(f"catalog/{name} {Colors.GREEN}→ {new_version} ✓{Colors.RESET}")
     return "updated"
 
@@ -3310,13 +3366,16 @@ def prepare_update_target(
         return update_npm_flake_target(
             name, target, args, npm_client, hash_computer, transaction
         )
-    if kind == "npm-release":
+    if (
+        kind == "npm-release"
+        and target["_record"]["update"].get("normalizer") == "pi-gallery-v1"
+    ):
         return update_npm_lock_target(
             name, target, args, npm_client, hash_computer, transaction
         )
-    if kind == "pypi-release":
+    if kind == "pypi-release" and target["_record"].get("artifacts"):
         return update_pypi_artifact_target(
-            name, target, args, pypi_client, transaction
+            name, target, args, pypi_client, hash_computer, transaction
         )
     if kind in {
         "github-commit",
@@ -3347,7 +3406,7 @@ def prepare_update_target(
 
 
 def validate_catalog_target(nix_dir: Path, name: str, target: dict) -> bool:
-    """Build the package contract declared by one restored catalog target."""
+    """Build the package contract declared by a candidate or restored target."""
     update = target["_record"]["update"]
     return HashComputer(nix_dir).validate_package_build(
         update.get("buildPackage", name), update.get("buildMode", "pkg")
@@ -3410,14 +3469,24 @@ Examples:
         help="Emit inventory as JSON (with --inventory)"
     )
     parser.add_argument(
-        "--sync-flake-projections", action="store_true",
-        help="Refresh catalog fetchTree projections from config/ai/flake.lock"
+        "--sync-flake-projections",
+        default=None,
+        metavar="NAME",
+        help="Refresh one named catalog fetchTree projection from config/ai/flake.lock",
     )
     internal = parser.add_mutually_exclusive_group()
     internal.add_argument("--prepare-target", metavar="NAME", help=argparse.SUPPRESS)
     internal.add_argument("--validate-target", metavar="NAME", help=argparse.SUPPRESS)
+    internal.add_argument(
+        "--validate-candidate-target", metavar="NAME", help=argparse.SUPPRESS
+    )
     args = parser.parse_args()
-    internal_target = args.prepare_target or args.validate_target
+    sync_flake_projections_requested = args.sync_flake_projections is not None
+    internal_target = (
+        args.prepare_target
+        or args.validate_target
+        or args.validate_candidate_target
+    )
 
     # Validate arguments
     if args.no_build:
@@ -3430,14 +3499,14 @@ Examples:
         not args.inventory
         and not args.all
         and not args.packages
-        and not args.sync_flake_projections
+        and not sync_flake_projections_requested
         and not internal_target
     ):
         parser.error(
             "Please specify package names, --all, --inventory, or --sync-flake-projections"
         )
 
-    if args.sync_flake_projections and (
+    if sync_flake_projections_requested and (
         args.inventory
         or args.all
         or args.packages
@@ -3452,17 +3521,19 @@ Examples:
     if internal_target and (
         args.inventory
         or args.all
-        or args.sync_flake_projections
+        or sync_flake_projections_requested
         or args.packages
         or args.dry_run
         or args.verbose
         or args.json_output
     ):
         parser.error("internal target operation cannot be combined with another operation")
-    if args.validate_target and args.version:
-        parser.error("--validate-target does not accept --version")
+    if (args.validate_target or args.validate_candidate_target) and args.version:
+        parser.error(
+            "--validate-target and --validate-candidate-target do not accept --version"
+        )
 
-    if args.sync_flake_projections and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
+    if sync_flake_projections_requested and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
         parser.error("--sync-flake-projections is restricted to the update candidate")
 
     if internal_target and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
@@ -3478,20 +3549,31 @@ Examples:
         parser.error("Cannot use --version with --all")
 
     nix_dir = Path(__file__).parent.parent.resolve()
-    if args.sync_flake_projections:
+    if sync_flake_projections_requested:
         require_detached_linked_worktree(nix_dir)
         try:
-            changed = sync_flake_projections(nix_dir)
+            changed = sync_flake_projections(
+                nix_dir,
+                args.sync_flake_projections,
+            )
         except CandidateRejected as error:
             print(f"candidate rejected: {error}", file=sys.stderr)
             return CANDIDATE_REJECTED_EXIT
         print(f"synchronized {changed} flake input projection(s)")
         return 0
     internal_prepare = args.prepare_target is not None
-    internal_validate = args.validate_target is not None
+    internal_validate = (
+        args.validate_target is not None
+        or args.validate_candidate_target is not None
+    )
     catalog_targets = load_source_catalog(
         nix_dir,
         validate_flake_projections=not internal_prepare,
+        flake_projection_names=(
+            {args.validate_candidate_target}
+            if args.validate_candidate_target is not None
+            else None
+        ),
     )
     requested_names = [internal_target] if internal_target else args.packages
     unknown_names = sorted(set(requested_names) - catalog_targets.keys())
@@ -3505,14 +3587,25 @@ Examples:
         require_detached_linked_worktree(nix_dir)
         try:
             valid = validate_catalog_target(
-                nix_dir, args.validate_target, catalog_targets[args.validate_target]
+                nix_dir, internal_target, catalog_targets[internal_target]
             )
         except RuntimeError as error:
-            print(f"baseline validation failed: {error}", file=sys.stderr)
+            state = (
+                "candidate"
+                if args.validate_candidate_target is not None
+                else "baseline"
+            )
+            print(f"{state} validation failed: {error}", file=sys.stderr)
             return 1
         if not valid:
+            if args.validate_candidate_target is not None:
+                print(
+                    f"candidate package build failed: {internal_target}",
+                    file=sys.stderr,
+                )
+                return CANDIDATE_REJECTED_EXIT
             print(
-                f"baseline package build failed: {args.validate_target}",
+                f"baseline package build failed: {internal_target}",
                 file=sys.stderr,
             )
             return 1

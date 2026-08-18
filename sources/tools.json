@@ -347,6 +347,8 @@
         "url": "https://pypi.org/project/unisessions"
       },
       "update": {
+        "buildMode": "pkg",
+        "buildPackage": "unisessions",
         "kind": "pypi-release",
         "package": "unisessions"
       },

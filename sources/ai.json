@@ -264,6 +264,8 @@
         "url": "https://github.com/jundot/omlx"
       },
       "update": {
+        "buildMode": "pkg",
+        "buildPackage": "omlx",
         "kind": "github-release",
         "tagPrefix": "v"
       },
@@ -332,6 +334,8 @@
         "url": "https://pypi.org/project/aiologic"
       },
       "update": {
+        "buildMode": "python",
+        "buildPackage": "culsans",
         "kind": "pypi-release",
         "package": "aiologic"
       },
@@ -347,6 +351,8 @@
         "url": "https://files.pythonhosted.org/packages/e3/95/ecc9c131ff800e434f6c52dec2ef8ab44ce15f473a2bbc2809ed945eda07/aiperf-0.12.0-py3-none-any.whl"
       },
       "update": {
+        "buildMode": "pkg",
+        "buildPackage": "aiperf",
         "kind": "pypi-release",
         "package": "aiperf"
       },
@@ -362,6 +368,8 @@
         "url": "https://files.pythonhosted.org/packages/ba/6c/ff8bf52315064dbeb55cb5067e191120a5b2e58bb648d0d34cf7969dc2c2/choreographer-1.3.0-py3-none-any.whl"
       },
       "update": {
+        "buildMode": "pkg",
+        "buildPackage": "aiperf",
         "kind": "pypi-release",
         "package": "choreographer"
       },
@@ -427,6 +435,8 @@
         "url": "https://pypi.org/project/cohere-melody"
       },
       "update": {
+        "buildMode": "python",
+        "buildPackage": "cohere-melody",
         "kind": "pypi-release",
         "package": "cohere-melody"
       },
@@ -443,6 +453,8 @@
         "url": "https://pypi.org/project/crick"
       },
       "update": {
+        "buildMode": "pkg",
+        "buildPackage": "aiperf",
         "kind": "pypi-release",
         "package": "crick"
       },
@@ -504,6 +516,8 @@
         "url": "https://pypi.org/project/espeakng-loader"
       },
       "update": {
+        "buildMode": "python",
+        "buildPackage": "mlx-audio",
         "kind": "pypi-release",
         "package": "espeakng-loader"
       },
@@ -658,6 +672,8 @@
         "url": "https://pypi.org/project/mlx"
       },
       "update": {
+        "buildMode": "pkg",
+        "buildPackage": "omlx",
         "kind": "pypi-release",
         "package": "mlx"
       },
@@ -676,6 +692,8 @@
       },
       "update": {
         "branch": "main",
+        "buildMode": "python",
+        "buildPackage": "mlx-audio",
         "kind": "github-commit"
       },
       "version": "0.4.7"
@@ -690,6 +708,8 @@
         "url": "https://files.pythonhosted.org/packages/78/18/05a341c811c9ee04f227cdbc064a635b84202cb8f85471adfdeebe0da32d/mlx_embeddings-0.1.0-py2.py3-none-any.whl"
       },
       "update": {
+        "buildMode": "pkg",
+        "buildPackage": "omlx",
         "kind": "pypi-release",
         "package": "mlx-embeddings"
       },
@@ -780,6 +800,8 @@
         "url": "https://pypi.org/project/phonemizer-fork"
       },
       "update": {
+        "buildMode": "python",
+        "buildPackage": "mlx-audio",
         "kind": "pypi-release",
         "package": "phonemizer-fork"
       },
@@ -796,6 +818,8 @@
         "url": "https://pypi.org/project/pyloudnorm"
       },
       "update": {
+        "buildMode": "python",
+        "buildPackage": "mlx-audio",
         "kind": "pypi-release",
         "package": "pyloudnorm"
       },
@@ -812,6 +836,8 @@
         "url": "https://pypi.org/project/standard-distutils"
       },
       "update": {
+        "buildMode": "python",
+        "buildPackage": "pymssql",
         "kind": "pypi-release",
         "package": "standard-distutils"
       },
@@ -831,6 +857,8 @@
         "url": "https://pypi.org/project/plasma-fractal"
       },
       "update": {
+        "buildMode": "pkg",
+        "buildPackage": "plasma-fractal",
         "kind": "pypi-release",
         "package": "plasma-fractal"
       },
@@ -850,6 +878,8 @@
         "url": "https://pypi.org/project/plasma-wiki"
       },
       "update": {
+        "buildMode": "pkg",
+        "buildPackage": "plasma-fractal",
         "kind": "pypi-release",
         "package": "plasma-wiki"
       },
@@ -896,6 +926,8 @@
         "url": "https://files.pythonhosted.org/packages/d0/db/2dac4b94379af9f188aaf18be930dc109fc0e7fca92c1b40e34f4c786511/vllm_mlx-0.4.1-py3-none-any.whl"
       },
       "update": {
+        "buildMode": "pkg",
+        "buildPackage": "vllm-mlx",
         "kind": "pypi-release",
         "package": "vllm-mlx"
       },

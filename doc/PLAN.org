@@ -463,6 +463,54 @@ Default upgrade and cross-consumer paths do not target VPS; an explicit named VP
 ]
 #+end_src
 
+* DONE [#B] Realize compound and source-only Python candidates before acceptance
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-1dq4
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 04:32]
+:MODIFIED: [2026-08-18 Tue 09:35]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 09:35]
+:CLOSE_REASON: Added declarative buildPackage/buildMode contracts for every automatic PyPI source across AI/tools, candidate-on-disk realization and exact rollback coverage, oMLX consumer routing for MLX-family dependencies, and passed the final strict 118-test updater authority plus real package/system builds.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Compound PyPI and source-only Python updates can currently rewrite hashes and pass evaluation without realizing the package or dependent closure that owns their compatibility contract. Add explicit buildPackage/buildMode metadata and schema/executor support for the affected records, beginning with MLX-family and mtplx consumers exposed by the current update, plus mutation-honest rejection and exact rollback coverage.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-1dq4",
+    "depends_on_id": "nix-9guj",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T11:32:31.023741Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 478,
+    "issue_id": "nix-1dq4",
+    "author": "johnw",
+    "text": "Read-only candidate audit confirmed that pypi-release and compound PyPI paths can accept changed source/hash records without realizing the consuming package. Isolated implementation is in progress: explicit contracts are mlx/python, cohere-melody/python, mlx-embeddings/python, mtplx/pkg, and vllm-mlx/pkg; compound updates will build after writing the complete candidate, source-only updates will use the generic transaction, and inventory JSON will expose buildPackage/buildMode. Focused 56/56 inventory tests pass; full strict suite and artifact freeze remain pending.",
+    "created_at": "2026-08-18T11:39:01Z"
+  }
+]
+#+end_src
+
 * DONE [#C] Reconcile the reflowed wiggum halt override with its transport pin
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -1736,6 +1784,51 @@ All competing evaluators are drained; one serialized build-only Hera system eval
     "type": "discovered-from",
     "created_at": "2026-08-13T20:02:53.424859Z",
     "created_by": "codex",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Complete catalog-wide candidate realization coverage
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-73in
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-18 Tue 06:12]
+:MODIFIED: [2026-08-18 Tue 06:12]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Extend candidate realization beyond the current Python and Pi repair lanes to the remaining automatic catalog records whose accepted source/hash/lock projections are only caught by the final invoking-host build. Add narrow consumer-owned build contracts for dependent-hash, Emacs, tool, flake-input, cross-platform, and interpreter-specific consumers; preserve true copy-only and inert/projection-only classifications; avoid blanket builds and identity dispatch. Cover production dispatcher reachability, exact candidate bytes, rejection/rollback, and cross-platform or ABI matrices where one host/default interpreter is insufficient.
+
+** Acceptance Criteria
+
+Every automatic source record is either mapped to a mutation-honest maintained consumer realization contract or documented/tested as true copy-only, inert, or projection-only; production dispatch reaches each declared contract; current-host, cross-platform, and interpreter-specific gaps are explicit and tested; full updater and portable evaluation gates pass.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-73in",
+    "depends_on_id": "nix-1dq4",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T13:12:02.676514Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-73in",
+    "depends_on_id": "nix-ucwv",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T13:12:02.676514Z",
+    "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
   }
@@ -14550,6 +14643,54 @@ The full Agent Deck session suite idles indefinitely in TestUsageLimited_RebindD
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#B] Realize source-only Pi candidates before accepting updates
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ucwv
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 04:32]
+:MODIFIED: [2026-08-18 Tue 09:35]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 09:35]
+:CLOSE_REASON: Added selected-target candidate realization for transformed Pi sources and lock/copy projections, byte-exact rollback and hard-failure coverage, realized all 16 unique declared package/check contracts, passed 118 strict updater tests, and received an independent no-history CLEAR.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Several automatic Pi source records feed patched, substituted, or exact-file-copy consumers but do not declare a candidate package build. Extend the updater schema and per-record metadata at the narrow owning seams so each source-changing candidate realizes its exact consumer and incompatible upstream changes are rejected and byte-exactly rolled back before the full system build. Cover direct npm/GitHub records and compound flake-input/copy projections without turning plain copy-only members into unnecessary builds.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-ucwv",
+    "depends_on_id": "nix-9guj",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T11:32:30.540614Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 479,
+    "issue_id": "nix-ucwv",
+    "author": "johnw",
+    "text": "Read-only candidate audit found transformed Pi records without per-target realization. The isolated repair lane has classified agent-browser, pi-usage-extension, pi-caveman, pi-copy-message, pi-model-router, pi-rewind, pi-trace-extension, pi-multi-pass, pi-loop, pi-btw, and pi-ponytail for exact package builds; pi-quiet and pi-openai-server-compaction will validate through agent-resources. Plain copy-only members remain excluded. Schema/executor support is being added for github-tag, npm-release+flake-input, flake-input, and flake-input+copy, with candidate-byte observation, rejection, exact rollback, and post-lock-projection validation. ws classification and tests remain pending.",
+    "created_at": "2026-08-18T11:39:51Z"
   }
 ]
 #+end_src
