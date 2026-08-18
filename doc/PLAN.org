@@ -1847,15 +1847,17 @@ Clio retains dynamic provider discovery, Hermes, and managed transport but has n
 ]
 #+end_src
 
-* DOING [#B] Adopt DDGS 9.15.0 through the oMLX consumer contract
+* DONE [#B] Adopt DDGS 9.15.0 through the oMLX consumer contract
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-5ytd
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-18 Tue 11:21]
-:MODIFIED: [2026-08-18 Tue 11:21]
+:MODIFIED: [2026-08-18 Tue 14:31]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 14:31]
+:CLOSE_REASON: DDGS 9.15.0 was adopted through the oMLX consumer contract; the final make update completed with zero held candidates, Hera activation, signed publication, and remote readback.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2785,15 +2787,17 @@ The full session suite fails TestUpdateStatus_CLIvsTUIParity_Error with statedb 
 
 Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension using the existing source/package/catalog installation pattern. Verify the real package and managed Pi projection without activating hosts.
 
-* DOING [#B] Restore full make update after Pi Subagents and Agent Deck upstream drift
+* DONE [#B] Restore full make update after Pi Subagents and Agent Deck upstream drift
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-9guj
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-17 Mon 15:14]
-:MODIFIED: [2026-08-18 Tue 09:35]
+:MODIFIED: [2026-08-18 Tue 14:31]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 14:31]
+:CLOSE_REASON: Full make update completed with zero held candidates; the signed update was built and activated on Hera, published, pushed, and confirmed by remote readback. VPS remained excluded.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
