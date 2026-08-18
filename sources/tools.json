@@ -95,32 +95,32 @@
       },
       "version": "94563ec5"
     },
-    "go-1.26.5": {
+    "gogcli-go": {
       "source": {
         "args": {
-          "hash": "sha256-SVvkvIcXasVnOS5bQRar2YRm0z17SdQedkzMaXay3EI=",
-          "url": "https://go.dev/dl/go1.26.5.src.tar.gz"
+          "hash": "sha256-oHIcVMaIkBRI13rZs+x+p8R0cwdV/4kTgukuy5P/LLE=",
+          "url": "https://go.dev/dl/go1.26.6.src.tar.gz"
         },
         "fetcher": "fetchurl",
-        "url": "https://go.dev/dl/go1.26.5.src.tar.gz"
+        "url": "https://go.dev/dl/go1.26.6.src.tar.gz"
       },
       "update": {
         "kind": "url-release",
         "policy": "manual",
         "reason": "The Go source version is coupled to the explicit toolchain override"
       },
-      "version": "1.26.5"
+      "version": "1.26.6"
     },
     "gogcli": {
       "hashes": {
-        "vendorHash": "sha256-MAbbCLdoOLWer7HO3+RZJuN10gLeTgN6/CbNn6pzGwQ="
+        "vendorHash": "sha256-+Nbuwok3dY/82gUDKeGgrC0F1ZqXSW8IpV6Q1yzIPvo="
       },
       "source": {
         "args": {
-          "hash": "sha256-ocC+A63GLrZQA3mXEPjIfsM7Af9NiYjGF8DZI/2yNS0=",
+          "hash": "sha256-UQa9Z7zv2IuH7GL1udNee2F+uB2BAZA5a0/2XtFcBWg=",
           "owner": "openclaw",
           "repo": "gogcli",
-          "tag": "v0.34.1"
+          "tag": "v0.37.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/openclaw/gogcli"
@@ -129,7 +129,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.34.1"
+      "version": "0.37.0"
     },
     "hakyll-jw": {
       "source": {

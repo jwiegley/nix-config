@@ -2416,7 +2416,7 @@ Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension usin
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-17 Mon 15:14]
-:MODIFIED: [2026-08-17 Mon 15:35]
+:MODIFIED: [2026-08-17 Mon 17:17]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2424,6 +2424,20 @@ Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension usin
 :END:
 
 make update must complete end to end. Initial blockers: pi-subagents 0.50.0 compatibility patch hunks fail in src/extension/index.ts and src/shared/fork-context.ts; Agent Deck 1.13.0 vendorHash discovery aborts before a hash is returned. Repair each root cause at its owning package/update seam, retain behavioral contracts, run focused builds/tests, then rerun make update through signed commit, Hera activation, publication, push, and clean remote readback. Bootstrap exit condition: after pi-subagents advances to 0.50.0, collapse the temporary dual-patch selector to one current patch and require cwd-alignment coverage unconditionally before the full update run.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 451,
+    "issue_id": "nix-9guj",
+    "author": "johnw",
+    "text": "Discovery run found two additional blockers. Gogcli 0.37.0 requires Go 1.26.6 while its dedicated manual toolchain was 1.26.5; advanced the coupled source pin, renamed its version-bearing authority to gogcli-go, and proved the real 0.37.0 vendorHash/package transaction. Final root flake validation also exposed missing evaluation-time derivations under all-core lazy evaluation. Replaced the eager Starship preset store read with Home Manager presets, made the final mutable-candidate gate cache-free/serialized/non-lazy, and added command-log plus host-behavior coverage. Focused Gogcli, updater routing, and host-behavior gates pass; full strict suite and make update rerun remain pending.",
+    "created_at": "2026-08-18T00:17:26Z"
+  }
+]
+#+end_src
 
 * DONE [#A] Restore Clio oMLX proxy allowlist                       :network:regression:security:
 :PROPERTIES:

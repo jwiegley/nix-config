@@ -5,14 +5,14 @@
 _final: prev:
 let
   sources = import ../packages/source-catalog.nix "tools";
-  # Build gogcli with the catalog-pinned Go 1.26.5 toolchain.
-  go_1_26_5 = prev.buildPackages.go_1_26.overrideAttrs {
-    version = sources."go-1.26.5".version;
+  # Build gogcli with its catalog-pinned Go toolchain.
+  gogcliGo = prev.buildPackages.go_1_26.overrideAttrs {
+    version = sources.gogcli-go.version;
     src =
-      assert sources."go-1.26.5".source.fetcher == "fetchurl";
-      prev.fetchurl sources."go-1.26.5".source.args;
+      assert sources.gogcli-go.source.fetcher == "fetchurl";
+      prev.fetchurl sources.gogcli-go.source.args;
   };
-  buildGo1265Module = prev.buildGo126Module.override { go = go_1_26_5; };
+  buildGoForGogcli = prev.buildGo126Module.override { go = gogcliGo; };
 in
 {
 
@@ -109,7 +109,7 @@ in
 // prev.lib.optionalAttrs (prev ? gogcli) {
   # Bump gogcli ahead of nixpkgs when the consumer channel provides a base.
   # Older stable channels simply omit this optional package.
-  gogcli = (prev.gogcli.override { buildGoModule = buildGo1265Module; }).overrideAttrs (_: {
+  gogcli = (prev.gogcli.override { buildGoModule = buildGoForGogcli; }).overrideAttrs (_: {
     version = sources.gogcli.version;
     src =
       assert sources.gogcli.source.fetcher == "fetchFromGitHub";

@@ -229,33 +229,29 @@ in
 
     starship = {
       enable = true;
-      settings = lib.mkMerge [
-        (builtins.fromTOML (
-          builtins.readFile "${pkgs.starship}/share/starship/presets/nerd-font-symbols.toml"
-        ))
-        {
-          add_newline = false;
-          scan_timeout = lib.mkDefault 50;
-          follow_symlinks = false;
-          command_timeout = lib.mkDefault 1000;
+      presets = [ "nerd-font-symbols" ];
+      settings = {
+        add_newline = false;
+        scan_timeout = lib.mkDefault 50;
+        follow_symlinks = false;
+        command_timeout = lib.mkDefault 1000;
 
-          format = "$hostname$directory$character";
+        format = "$hostname$directory$character";
 
-          hostname = {
-            ssh_only = false;
-            trim_at = ".";
-            format = "[$hostname]($style) ";
-          };
+        hostname = {
+          ssh_only = false;
+          trim_at = ".";
+          format = "[$hostname]($style) ";
+        };
 
-          directory = {
-            format = "[$path]($style) ";
-            truncation_length = 1;
-            truncate_to_repo = false;
-          };
+        directory = {
+          format = "[$path]($style) ";
+          truncation_length = 1;
+          truncate_to_repo = false;
+        };
 
-          line_break.disabled = true;
-        }
-      ];
+        line_break.disabled = true;
+      };
 
       enableBashIntegration = true;
       enableZshIntegration = true;

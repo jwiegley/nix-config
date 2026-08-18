@@ -6064,8 +6064,8 @@ fi
                 [
                     "flake update --flake ./config/ai fixed-input",
                     "flake update nix-config-ai",
-                    "flake check ./config/ai --all-systems --no-build",
-                    "flake check --no-build",
+                    "flake check ./config/ai --all-systems --no-build --no-eval-cache",
+                    "flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
 
@@ -6300,8 +6300,8 @@ fi
                 [
                     "flake update --flake ./config/ai copy-input",
                     "flake update nix-config-ai",
-                    "flake check ./config/ai --all-systems --no-build",
-                    "flake check --no-build",
+                    "flake check ./config/ai --all-systems --no-build --no-eval-cache",
+                    "flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
 
@@ -6356,8 +6356,8 @@ fi
                 [
                     "flake update --flake ./config/ai build-input",
                     "flake update nix-config-ai",
-                    "flake check ./config/ai --all-systems --no-build",
-                    "flake check --no-build",
+                    "flake check ./config/ai --all-systems --no-build --no-eval-cache",
+                    "flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
 
@@ -6406,8 +6406,8 @@ fi
                 [
                     "flake update --flake ./config/ai npm-flake-input",
                     "flake update nix-config-ai",
-                    "flake check ./config/ai --all-systems --no-build",
-                    "flake check --no-build",
+                    "flake check ./config/ai --all-systems --no-build --no-eval-cache",
+                    "flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
 
@@ -6503,8 +6503,8 @@ fi
             self.assertEqual(
                 command_log.read_text().splitlines(),
                 [
-                    "flake check ./config/ai --all-systems --no-build",
-                    "flake check --no-build",
+                    "flake check ./config/ai --all-systems --no-build --no-eval-cache",
+                    "flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
 
@@ -6551,8 +6551,8 @@ fi
             self.assertEqual(
                 command_log.read_text().splitlines(),
                 [
-                    "flake check ./config/ai --all-systems --no-build",
-                    "flake check --no-build",
+                    "flake check ./config/ai --all-systems --no-build --no-eval-cache",
+                    "flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
 
@@ -6685,8 +6685,8 @@ fi
             self.assertEqual(
                 command_log.read_text().splitlines(),
                 [
-                    "flake check ./config/ai --all-systems --no-build",
-                    "flake check --no-build",
+                    "flake check ./config/ai --all-systems --no-build --no-eval-cache",
+                    "flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
 

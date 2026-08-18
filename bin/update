@@ -824,8 +824,10 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
     if ((${#changed_nix[@]})); then
         nixfmt "${changed_nix[@]}"
     fi
-    run_hard nix flake check ./config/ai --all-systems --no-build
-    run_hard nix flake check --no-build
+    run_hard nix flake check ./config/ai --all-systems --no-build --no-eval-cache
+    # The root graph has IFD inputs. Serialize their store registration and
+    # materialize lazy sources so the publication gate cannot cache a race.
+    run_hard nix flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false
 
     declare -A allowed=()
     while IFS= read -r path; do

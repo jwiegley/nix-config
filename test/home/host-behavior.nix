@@ -586,7 +586,8 @@ assert builtins.all (hasPackage "obr") allHomes;
 assert builtins.all (config: !(ownsObrState config)) allHomes;
 assert builtins.all (
   config:
-  config.programs.starship.settings.add_newline == false
+  config.programs.starship.presets == [ "nerd-font-symbols" ]
+  && config.programs.starship.settings.add_newline == false
   && config.programs.starship.settings.format == "$hostname$directory$character"
   && config.programs.starship.settings.hostname.ssh_only == false
   && config.programs.starship.settings.hostname.trim_at == "."
