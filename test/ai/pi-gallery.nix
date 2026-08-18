@@ -2050,7 +2050,7 @@ runCommand "pi-gallery-check"
           "caveman",
           "copy-message",
           "copy-user",
-          "cymbal:remind",
+          "cymbal",
           "gather-context-and-clarify",
           "goal",
           "goal-abort",
@@ -2093,7 +2093,11 @@ runCommand "pi-gallery-check"
           "workflows"
         ] - [.data.commands[].name] | length) == 0
         and ([.data.commands[].name
-          | select(. == "parallel-context-build" or . == "parallel-handoff-plan")]
+          | select(
+              . == "cymbal:remind"
+              or . == "parallel-context-build"
+              or . == "parallel-handoff-plan"
+            )]
           | length) == 0
         and ([.data.commands[].name | select(startswith("sidebar"))] | length) == 0
       )

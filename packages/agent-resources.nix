@@ -38,6 +38,7 @@ let
     "package.json"
     "CHANGELOG.md"
     "README.md"
+    "src/bash-settings.ts"
     "src/classify.ts"
     "src/command.ts"
     "src/compaction.ts"

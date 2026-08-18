@@ -13,6 +13,7 @@ mock.module("@earendil-works/pi-coding-agent", () => ({
 }));
 
 mock.module("@earendil-works/pi-tui", () => ({
+	decodeKittyPrintable: () => undefined,
 	matchesKey: () => false,
 	truncateToWidth: (text: string) => text,
 	visibleWidth: (text: string) => text.length,

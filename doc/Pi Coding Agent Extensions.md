@@ -294,7 +294,7 @@ Pi RTK Optimizer delegates shell-command rewrites to RTK—Rust Token Killer—a
 
 Pi Cymbal exposes Cymbal's local tree-sitter and SQLite index as agent-native code navigation. Its tools cover repository maps, structural summaries, symbol and text search, outlines, exact source retrieval, references, impact, imports, implementations, changed symbols, symbol diffs, guided investigations, call traces, and context bundles.
 
-**Basic usage.** Begin unfamiliar work with `cymbal_map` or `cymbal_structure`, then narrow through `cymbal_search`, `cymbal_outline`, and `cymbal_show`. Use `cymbal_refs`, `cymbal_impact`, `cymbal_changed`, or `cymbal_diff` before a refactor. `/cymbal:remind` refreshes the navigation guidance. The Nix profile supplies Cymbal 0.14.0.
+**Basic usage.** Begin unfamiliar work with `cymbal_map` or `cymbal_structure`, then narrow through `cymbal_search`, `cymbal_outline`, and `cymbal_show`. Use `cymbal_refs`, `cymbal_impact`, `cymbal_changed`, or `cymbal_diff` before a refactor. `/cymbal` shows or changes session guidance settings. The Nix profile supplies Cymbal 0.14.0.
 
 ## Rendering and previews
 

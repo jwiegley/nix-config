@@ -1374,6 +1374,40 @@ Watchman is absent from all rendered Home Manager package sets; focused host-beh
 ]
 #+end_src
 
+* DONE [#B] Reconcile Pi MCP Adapter 2.26 runtime file contract
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-550u
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-17 Mon 21:56]
+:MODIFIED: [2026-08-17 Mon 21:58]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-17 Mon 21:58]
+:CLOSE_REASON: Reconciled the explicit Pi MCP Adapter 2.26 runtime-file contract, retained exact top-level validation, and added structural verification of the bundled skills tree. Agent Resources and Pi Gallery focused checks both passed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The accepted Pi MCP Adapter 2.26 package contains new directly imported runtime modules and a packaged mcp-scripting skill, while test/ai/agent-resources.nix still pins the prior top-level file contract. The immutable package itself is copied intact, but the independent behavioral check rejects the accepted file set. Enumerate the new runtime files, keep the exact top-level contract, compare the skills subtree structurally, and rerun agent-resources and Pi Gallery checks.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-550u",
+    "depends_on_id": "nix-9guj",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T04:56:17.509673Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#C] Keep inboxes on XDG data root when only legacy profiles marker exists
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -1925,6 +1959,40 @@ The owner requires Git-AI, Cozempic, Pi Mem, and Pi Artifacts to remain fully di
 ]
 #+end_src
 
+* DONE [#B] Package Pi Quiet's complete imported source closure
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-7zmh
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-17 Mon 21:55]
+:MODIFIED: [2026-08-17 Mon 21:58]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-17 Mon 21:58]
+:CLOSE_REASON: Added src/bash-settings.ts to the explicit Pi Quiet package allowlist and independent manifest contract. Agent Resources passed at /nix/store/3p2vqxxa72wgfp96p1d4l331v8ygdhd9-agent-resources-check and the Pi Gallery integration passed at /nix/store/p807cqdmcyay0cipx1ph4ynh358jvfsr-pi-gallery-check.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The accepted Pi Quiet source revision added src/bash-settings.ts and imported it from src/tools.ts, but packages/agent-resources.nix retained an explicit file allowlist that omitted the new module. The generated immutable extension therefore failed to load during the Pi Gallery smoke. Add exactly the missing source file to the package and its independent manifest contract, then prove the agent-resources and Gallery entrypoint smokes.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-7zmh",
+    "depends_on_id": "nix-9guj",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T04:55:12.947006Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Reject symlinked profile-sidecar fallback ancestors and unsafe temp fallback
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -2448,7 +2516,7 @@ Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension usin
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-17 Mon 15:14]
-:MODIFIED: [2026-08-17 Mon 20:49]
+:MODIFIED: [2026-08-17 Mon 21:58]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -2530,6 +2598,13 @@ make update must complete end to end. Initial blockers: pi-subagents 0.50.0 comp
     "author": "johnw",
     "text": "Candidate documentation reconciliation also found live AIPerf rationales still naming 0.11.0 after the accepted 0.12.0 pin. Direct 0.12.0 wheel metadata requires Python >=3.11,<3.14 and kaleido~=1.2.0, so the existing Python 3.13 and Kaleido 1.2 selections remain correct; only the versioned rationale was stale. Updated those live comments/reason, reconciled the 11 changed Pi/runtime inventory entries, and relabeled the runtime table as selected rather than activated because activation remains pending.",
     "created_at": "2026-08-18T03:49:58Z"
+  },
+  {
+    "id": 461,
+    "issue_id": "nix-9guj",
+    "author": "johnw",
+    "text": "The next clean make update reached Hera realization and exposed a timing-only Cyclopts failure: Python 3.14 Cyclopts 4.22.5 completed 2630 tests, then the first selected Zsh scenario timed out waiting for its initial ZTEST prompt before any completion behavior ran. Historical logs and a controlled cold probe confirm the fixed four-second startup wait is too short under Darwin build load. The narrow shared Darwin override raises only that pexpect initial-prompt timeout to 20 seconds and preserves the full test matrix; the exact Cyclopts package build passes. Follow-on focused checks also repaired three accepted-pin consumer contracts: Pi Copy Message's Bun mock now exports decodeKittyPrintable, Pi Cymbal requires /cymbal and rejects retired /cymbal:remind, Pi Quiet packages its newly imported bash-settings.ts, and Pi MCP Adapter 2.26's exact runtime file/skill contract is reconciled. Agent Resources and Pi Gallery checks now pass.",
+    "created_at": "2026-08-18T04:58:46Z"
   }
 ]
 #+end_src
@@ -7046,6 +7121,32 @@ Concurrent creation/open of one canonical profile database is deterministic: tra
   }
 ]
 #+end_src
+
+* DONE [#B] Complete Pi Copy Message 2.0 test mock
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-qf9g
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-17 Mon 21:18]
+:MODIFIED: [2026-08-17 Mon 21:58]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-17 Mon 21:58]
+:CLOSE_REASON: Added the missing decodeKittyPrintable export to the existing Pi TUI test mock; the pinned runtime already exports it. Exact aarch64-darwin Pi Gallery check passed at /nix/store/p807cqdmcyay0cipx1ph4ynh358jvfsr-pi-gallery-check.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Source commit: 29d59060a9f7 (Update project pins). Severity: High. Category: Bug. File: test/ai/pi-copy-message.check.ts. Confidence: 100.
+
+PROBLEM: Pi Copy Message 2.0.0 newly imports decodeKittyPrintable from @earendil-works/pi-tui. The pinned Pi TUI does export that symbol, but the focused Bun test fully replaces the module with mock.module and omitted the new named export. The Gallery check therefore failed during test module loading before exercising Copy Message.
+
+IMPACT: pi-gallery is a baseline behavioral check, so the accepted pin sweep left make test and the update closeout red. The defect is in the independently maintained test double, not the packaged Pi runtime.
+
+FIX: Extend only the existing pi-tui mock with a no-op decodeKittyPrintable export. Keep the real pinned module unchanged. The tested latest, numeric-selection, and copy-user paths do not invoke interactive Kitty decoding.
+
+VERIFICATION: Build the exact aarch64-darwin pi-gallery check and prove the Copy Message suite plus Gallery smoke pass against the pinned Pi package.
 
 * DONE [#B] Repair Pi Lens npmDepsHash update failure
 :PROPERTIES:

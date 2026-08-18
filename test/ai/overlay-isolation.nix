@@ -22,6 +22,10 @@ assert
   == (pkgs.python3Packages.imageio.disabledTests or [ ])
   || throw "Darwin-only imageio test suppression active on Linux";
 assert
+  (configured.python3Packages.cyclopts.postPatch or "")
+  == (pkgs.python3Packages.cyclopts.postPatch or "")
+  || throw "Darwin-only Cyclopts prompt timeout active on Linux";
+assert
   (configured.python3Packages.gradio.doInstallCheck or false)
   == (pkgs.python3Packages.gradio.doInstallCheck or false)
   || throw "Darwin-only Gradio install-check suppression active on Linux";

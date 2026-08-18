@@ -44,6 +44,7 @@ let
     "package.json"
     "CHANGELOG.md"
     "README.md"
+    "src/bash-settings.ts"
     "src/classify.ts"
     "src/command.ts"
     "src/compaction.ts"
@@ -82,6 +83,7 @@ let
   piMcpFiles = [
     "cli.js"
     "agent-dir.ts"
+    "agent-plugin-loader.ts"
     "index.ts"
     "error-signal.ts"
     "state.ts"
@@ -97,6 +99,10 @@ let
     "prompts.ts"
     "onboarding-state.ts"
     "mcp-setup-panel.ts"
+    "mcp-code.ts"
+    "mcp-keyring-helper.cjs"
+    "mcp-probe.ts"
+    "mcp-script-worker.mjs"
     "types.ts"
     "ui-stream-types.ts"
     "config.ts"
@@ -119,6 +125,7 @@ let
     "ui-server.ts"
     "glimpse-ui.ts"
     "npx-resolver.ts"
+    "oauth.ts"
     "oauth-handler.ts"
     "mcp-auth.ts"
     "mcp-oauth-provider.ts"
@@ -127,7 +134,13 @@ let
     "mcp-panel.ts"
     "panel-keys.ts"
     "mcp-trace.ts"
+    "request-headers-command.ts"
+    "search-ranking.ts"
     "logger.ts"
+    "tool-approval.ts"
+    "ts-shape.ts"
+    "ui-app-bridge-helpers.ts"
+    "ui-tool-visibility.ts"
     "errors.ts"
     "app-bridge.bundle.js"
     "banner.png"
@@ -137,6 +150,14 @@ let
   ];
 
   piMcpFileArgs = lib.escapeShellArgs ([ "package.json" ] ++ piMcpFiles);
+  piMcpTopLevelArgs = lib.escapeShellArgs (
+    [ "package.json" ]
+    ++ piMcpFiles
+    ++ [
+      "node_modules"
+      "skills"
+    ]
+  );
   piQuietFileArgs = lib.escapeShellArgs piQuietFiles;
   piQuietPackagedFileArgs = lib.escapeShellArgs (piQuietFiles ++ [ "LICENSE" ]);
   piOpenaiServerCompactionFileArgs = lib.escapeShellArgs piOpenaiServerCompactionFiles;
@@ -668,7 +689,7 @@ else
           }
         ' "$openai_compaction"
 
-        printf '%s\0' ${piMcpFileArgs} node_modules \
+        printf '%s\0' ${piMcpTopLevelArgs} \
           | sort -z >"$TMPDIR/expected-mcp-top-level"
         find -P "$mcp" -mindepth 1 -maxdepth 1 -printf '%f\0' \
           | sort -z >"$TMPDIR/actual-mcp-top-level"
@@ -714,6 +735,15 @@ else
           cmp "$expected_mcp_file" "$mcp/$relative" \
             || fail "unexpected pi-mcp-adapter file: $relative"
         done
+
+        [ -d "$mcp/skills" ] && [ ! -L "$mcp/skills" ] \
+          || fail "missing regular pi-mcp-adapter skills root"
+        write_manifest ${lib.escapeShellArg "${piMcpAdapter}/skills"} \
+          "$TMPDIR/expected-mcp-skills.manifest"
+        write_manifest "$mcp/skills" "$TMPDIR/actual-mcp-skills.manifest"
+        cmp "$TMPDIR/expected-mcp-skills.manifest" \
+          "$TMPDIR/actual-mcp-skills.manifest" \
+          || fail "pi-mcp-adapter packaged skills differ"
 
         jq -e '
           .name == "pi-mcp-adapter"

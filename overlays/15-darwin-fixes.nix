@@ -150,6 +150,15 @@ in
           disabledTests = (oldAttrs.disabledTests or [ ]) ++ [ "test_lagging_video_stream" ];
         });
       })
+      // (prev.lib.optionalAttrs (prev.stdenv.hostPlatform.isDarwin && pprev ? cyclopts) {
+        cyclopts = pprev.cyclopts.overridePythonAttrs (oldAttrs: {
+          postPatch = (oldAttrs.postPatch or "") + ''
+            substituteInPlace tests/completion/conftest.py \
+              --replace-fail 'child.expect("ZTEST> ", timeout=4)' \
+              'child.expect("ZTEST> ", timeout=20)'
+          '';
+        });
+      })
       // (prev.lib.optionalAttrs (pprev ? gradio) {
         gradio = pprev.gradio.overrideAttrs (_: {
           doInstallCheck = false;

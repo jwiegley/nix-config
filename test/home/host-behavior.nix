@@ -266,6 +266,13 @@ let
     package: lib.getName package == "git-all"
   ) null desktopHomesByHost.hera.home.packages;
   gitAllSource = darwinConfigurations.hera._module.specialArgs.inputs.git-all.outPath;
+  hasCycloptsPromptTimeout =
+    package:
+    let
+      postPatch = package.postPatch or "";
+    in
+    lib.hasInfix ''child.expect("ZTEST> ", timeout=4)'' postPatch
+    && lib.hasInfix ''child.expect("ZTEST> ", timeout=20)'' postPatch;
   automaticPiExtensions = [
     ".config/pi/agent/extensions/fleet-theme/index.ts"
     ".config/pi/agent/extensions/nix-gallery/index.ts"
@@ -387,6 +394,11 @@ let
   allFalse = values: builtins.all (value: !value) values;
 in
 assert builtins.all (host: builtins.hasAttr host darwinConfigurations) requiredDarwinHosts;
+assert builtins.all (
+  host:
+  hasCycloptsPromptTimeout darwinConfigurations.${host}.pkgs.python3Packages.cyclopts
+  && hasCycloptsPromptTimeout darwinConfigurations.${host}.pkgs.python313Packages.cyclopts
+) requiredDarwinHosts;
 assert vulcanJumpAuthorizations "hera" == [ expectedVulcanJumpAuthorization ];
 assert vulcanJumpAuthorizations "clio" == [ ];
 assert builtins.all (
