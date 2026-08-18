@@ -7126,6 +7126,39 @@ Concurrent creation/open of one canonical profile database is deterministic: tra
 ]
 #+end_src
 
+* DONE [#B] Pin repository Ruff policy across toolchain updates
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-qemy
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 08:35]
+:MODIFIED: [2026-08-18 Tue 09:35]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 09:35]
+:CLOSE_REASON: Pinned Ruff to the repository's E4,E7,E9,F policy at the shared quality seam, added exact argv coverage, and passed the final all-files pre-commit hook across 53 Python files and all 19 fast test programs in 73.07s.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Ruff 0.16.2 expanded its unconfigured default rules after the root nixpkgs refresh, turning the canonical pre-commit gate red with hundreds of unrelated historical findings. Make the previously enforced E4/E7/E9/F policy explicit at the quality-runner seam, cover the exact Ruff argv, and rerun the full pre-commit authority.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-qemy",
+    "depends_on_id": "nix-9guj",
+    "type": "discovered-from",
+    "created_at": "2026-08-18T15:35:16.288252Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
 * DONE [#B] Complete Pi Copy Message 2.0 test mock
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

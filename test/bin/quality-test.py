@@ -418,7 +418,9 @@ class QualityEachFileTests(unittest.TestCase):
         env["PATH"] = f"{fakebin}{os.pathsep}{env['PATH']}"
         proc = self.quality("python-lint", env=env)
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-        self.assertIn("./--version.py", log.read_text().splitlines())
+        arguments = log.read_text().splitlines()
+        self.assertEqual(arguments[:3], ["check", "--select", "E4,E7,E9,F"])
+        self.assertIn("./--version.py", arguments)
 
     @unittest.skipUnless(have("ruff"), "ruff is not on PATH")
     def test_python_template_is_rendered_for_lint(self):

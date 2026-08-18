@@ -404,7 +404,7 @@ run_python_lint() {
     need ruff python-lint || return
     need python3 python-lint || return
     local f bad=0
-    local -a py=() templates=()
+    local -a py=() templates=() ruff_policy=(--select 'E4,E7,E9,F')
     if ! select_files python; then
         fail "python-lint: tracked-file discovery failed"
         return
@@ -420,12 +420,12 @@ run_python_lint() {
         note "python-lint: no files"
         return
     fi
-    if [[ ${#py[@]} -gt 0 ]] && ! ruff check "${py[@]}"; then
+    if [[ ${#py[@]} -gt 0 ]] && ! ruff check "${ruff_policy[@]}" "${py[@]}"; then
         bad=1
     fi
     if [[ ${#templates[@]} -gt 0 ]]; then
         for f in "${templates[@]}"; do
-            if ! python3 - "$f" <<'PY' | ruff check --stdin-filename "${f%.in}" -; then
+            if ! python3 - "$f" <<'PY' | ruff check "${ruff_policy[@]}" --stdin-filename "${f%.in}" -; then
 import re
 import sys
 from pathlib import Path
