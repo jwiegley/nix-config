@@ -775,10 +775,10 @@
     "mlx-vlm": {
       "source": {
         "args": {
-          "hash": "sha256-wsL8vV51R55ctwtTxxW/zr3Z7ttQtBN4RpFXte5//+c=",
+          "hash": "sha256-16+f9jzsYoE5+1KWvL9/CcifbqwH82WdOeDrH3cLigM=",
           "owner": "Blaizzy",
           "repo": "mlx-vlm",
-          "tag": "v0.6.14"
+          "tag": "v0.6.15"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/Blaizzy/mlx-vlm"
@@ -789,7 +789,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.6.14"
+      "version": "0.6.15"
     },
     "mtplx": {
       "source": {
@@ -977,10 +977,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-8IqYrCfNgO+T4Sc2gM4AHSuqhSgwcrAq0uOTMq9ixKg=",
+          "narHash": "sha256-11knS5cQBMnI6sUIgfOV3mXnQisNE2ysJUupk/bc0a0=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "50e05f7a7cc039d39d53bc77c132d9457f990375",
+          "rev": "168977b24c59aa91e76609e4c741c9592a944cd7",
           "type": "github"
         },
         "fetcher": "fetchTree",
