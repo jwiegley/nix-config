@@ -16,7 +16,7 @@ pi-version: 0.84.2
 
 This note records the Nix-managed Pi estate: 26 gallery packages available on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. Pi Lens and Pi Mem remain installed but are presently excluded from automatic registration. Versions below are the versions selected by the current Nix source.
 
-The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope.
+The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope. The `agent-resources` package also carries `pi-openai-server-compaction` for compatibility testing, but no managed Pi profile renders or loads it, so it is not part of this configured inventory.
 
 ## At a glance
 
@@ -26,7 +26,7 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | Fleet Theme | local | Discover and select the managed TUI theme | automatic |
 | `@realvendex/pi-loop` | 1.0.2 | Repeat prompts under explicit stop conditions | `/loop` |
 | `pi-mcp-adapter` | 2.26.0 | Lazy, context-efficient MCP access | `mcp`, `/mcp` |
-| `@zenspc/pi-quiet` | 0.4.0 | Dense tool-result presentation | `/quiet` |
+| `@zenspc/pi-quiet` | 0.4.1 | Dense tool-result presentation | `/quiet` |
 | `pi-hashline-edit-pro` | 0.17.5 | Hash-anchored reads and replacements | `read`, `replace` |
 | `pi-smart-fetch` | 0.3.17 | Browser-fingerprinted readable web fetching | `web_fetch`, `batch_web_fetch` |
 | `pi-smart-web-search` | 0.4.0 | Ranked batch web discovery | `web_search` |
@@ -49,7 +49,7 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `pi-caveman` | 1.0.8 | Compressed response style | `/caveman` |
 | `pi-rtk-optimizer` | 0.9.0 | RTK command rewriting and output compaction | `/rtk` |
 | `pi-cymbal` | 0.5.3 | Indexed, symbol-oriented code navigation | `cymbal_*` |
-| `pi-subagents` | 0.50.0 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
+| `pi-subagents` | 0.51.0 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
 | `@quintinshaw/pi-dynamic-workflows` | 3.6.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
 | `pi-goal-x` | 0.27.4 | Durable goals and Sisyphus continuation | `/goal`, `get_goal` |
 | `pi-cache-optimizer` | 2.8.3 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
@@ -150,7 +150,7 @@ Pi MCP Adapter exposes Model Context Protocol servers through one compact proxy 
 
 ### Quiet Display
 
-**Version:** 0.4.0 · **Links:** [Pi Packages](https://pi.dev/packages/@zenspc/pi-quiet) · [Home](https://github.com/zenspc/pi-extensions/tree/master/packages/pi-quiet#readme) · [GitHub](https://github.com/zenspc/pi-extensions)
+**Version:** 0.4.1 · **Links:** [Pi Packages](https://pi.dev/packages/@zenspc/pi-quiet) · [Home](https://github.com/zenspc/pi-extensions/tree/master/packages/pi-quiet#readme) · [GitHub](https://github.com/zenspc/pi-extensions)
 
 Quiet Display changes presentation, not execution. It renders built-in and foreign tool activity as dense verb-first rows, folds adjacent successful operations of the same kind, suppresses live stdout while a tool is running, and preserves Pi's stock expanded display for inspection and failures.
 
@@ -318,11 +318,11 @@ Pi Goal X persists explicit objectives, lifecycle state, usage, and ordered Sisy
 
 ### Subagents
 
-**Version:** 0.50.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-subagents) · [Home](https://github.com/nicobailon/pi-subagents#readme) · [GitHub](https://github.com/nicobailon/pi-subagents)
+**Version:** 0.51.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-subagents) · [Home](https://github.com/nicobailon/pi-subagents#readme) · [GitHub](https://github.com/nicobailon/pi-subagents)
 
-Pi Subagents delegates focused work to child Pi sessions without replacing the parent as orchestrator. It supports single, parallel, chained, forked-context, foreground, and background runs, with fleet status and supervisor communication.
+Pi Subagents delegates focused work to child Pi sessions without replacing the parent as orchestrator. It supports single foreground and asynchronous runs, scripted sequential and parallel composition, fresh or forked context, fleet status, steering, and supervisor communication.
 
-Six builtin roles—delegate, oracle, researcher, reviewer, scout, and worker—ship with the extension; `advisor` remains an alias for `oracle`. The Nix-managed baseline adds twenty-five user definitions without collisions, accounting for thirty-one roles before mutable package, user, or project definitions are considered. Live discovery may therefore report a larger total without changing Nix ownership.
+Seven builtin definitions—delegate, gpt-pro, oracle, researcher, reviewer, scout, and worker—ship with the extension; `advisor` remains an alias for `oracle`. The `gpt-pro` definition requires a separately registered Surf `surf-oracle` external-job provider, which the managed fleet does not configure, so it is discoverable but cannot run from Nix configuration alone. The Nix-managed baseline adds twenty-five user definitions without collisions, accounting for thirty-two definitions before mutable package, user, or project definitions are considered. Live discovery may therefore report a larger total without changing Nix ownership.
 
 **Basic usage.** Ask naturally for `reviewer`, `oracle`, `scout`, or `worker`, or use `/run` for a single child. Use packaged prompt shortcuts such as `/parallel-review` and `/review-loop`, or call `subagent` with `workflowScript` for coordinated multi-agent work. Use `/subagents-doctor` to check setup and `/subagents-fleet` for active work. The watchdog remains opt-in.
 
@@ -478,4 +478,4 @@ Within a fresh Pi session, confirm the principal control surfaces:
 
 Lens commands and tools and Pi Mem tools should be absent while they remain excluded from the generated Gallery.
 
-Source policy last checked against the current `~/src/nix` fleet renderer on 2026-08-12. Activation evidence is recorded separately so this inventory does not imply that an unactivated source revision is already live.
+Source policy last checked against the current `~/src/nix` fleet renderer on 2026-08-18. Activation evidence is recorded separately so this inventory does not imply that an unactivated source revision is already live.

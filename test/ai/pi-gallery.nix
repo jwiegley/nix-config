@@ -19,6 +19,10 @@
 let
   root = package: name: "${package}/share/pi-packages/${name}";
   canonicalPiPackage = piPackages.pi;
+  piExtensionsDocument = builtins.path {
+    path = ../../doc + "/Pi Coding Agent Extensions.md";
+    name = "pi-coding-agent-extensions.md";
+  };
   manifest = piPackages.pi-gallery.manifest;
   catalogSourceIds = builtins.attrNames manifest.sourceCatalog;
   declaredSourceIds =
@@ -70,6 +74,13 @@ let
           ]
         )
       );
+  documentGalleryRows = map (
+    id:
+    let
+      member = manifest.members.${id};
+    in
+    "${member.publicName}\t${member.version}"
+  ) manifest.order;
   normalizationPolicy = builtins.fromJSON (
     builtins.readFile ../../packages/pi-gallery/normalization-policy.json
   );
@@ -251,6 +262,42 @@ runCommand "pi-gallery-check"
       || fail "Pi Usage package must declare ESM module type"
     echo "Pi gallery check: support versions"
     ${supportVersionChecks}
+    echo "Pi gallery check: documented inventory"
+    {
+      printf '%s\t%s\n' 'Nix Gallery loader' local 'Fleet Theme' local
+      jq -r '[.name, .version] | @tsv' \
+        ${root manifest.supportSources.loop.package manifest.supportSources.loop.attrName}/package.json \
+        ${piPackages.agent-resources}/share/agent-resources/pi-extensions/pi-mcp-adapter/package.json \
+        ${piPackages.agent-resources}/share/agent-resources/pi-extensions/pi-quiet/package.json
+      cat <<'EOF'
+    ${lib.concatStringsSep "\n" documentGalleryRows}
+    EOF
+    } > "$TMPDIR/expected-extension-inventory"
+    awk -F '|' '
+      function trim(value) {
+        sub(/^[[:space:]]+/, "", value)
+        sub(/[[:space:]]+$/, "", value)
+        return value
+      }
+      $0 == "| Extension | Version | Principal purpose | Primary interface |" {
+        inventory = 1
+        next
+      }
+      inventory && /^\| ---/ { next }
+      inventory && /^\|/ {
+        name = trim($2)
+        version = trim($3)
+        gsub(/`/, "", name)
+        gsub(/`/, "", version)
+        print name "\t" version
+        next
+      }
+      inventory { exit }
+      END { if (!inventory) exit 2 }
+    ' ${lib.escapeShellArg "${piExtensionsDocument}"} \
+      > "$TMPDIR/actual-extension-inventory"
+    cmp "$TMPDIR/expected-extension-inventory" "$TMPDIR/actual-extension-inventory" \
+      || fail "Pi extension documentation inventory differs from the managed package set"
     echo "Pi gallery check: normalization parity"
     ${normalizationParityChecks}
     echo "Pi gallery check: packaged roots"

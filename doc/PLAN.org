@@ -4149,6 +4149,24 @@ The schema-20 lazy importer currently routes legacy consumed-turn JSON through u
 ]
 #+end_src
 
+* DONE [#C] Refresh Pi extension inventory documentation
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-dzj7
+:LABELS:   []
+:ISSUE_TYPE: docs
+:CREATED:  [2026-08-18 Tue 19:17]
+:MODIFIED: [2026-08-18 Tue 19:42]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 19:42]
+:CLOSE_REASON: Updated all 31 configured Pi extension entries against current package and renderer authorities; corrected Quiet and Subagents versions and semantics, documented packaged-but-inactive compaction scope, and added a derived inventory regression. Focused Pi Gallery build, all-systems flake evaluation, pre-commit, and three read-only reviews passed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Audit doc/Pi Coding Agent Extensions.md against the authoritative Pi gallery catalog, package projection, active registration order, provider integration, commands, shortcuts, and current versions; correct confirmed drift and add the narrowest regression coverage needed to keep the inventory current.
+
 * DONE [#C] Give Agent Deck GUI descendants a stable TCC responsibility identity
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
