@@ -4625,6 +4625,30 @@ Ruff reports two unused local variables in test/bin/publish-slow-test.py: the un
 ]
 #+end_src
 
+* TODO [#D] cross-consumer-eval vulcan leg cannot run off-vulcan
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ein7
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-19 Wed 12:48]
+:MODIFIED: [2026-08-19 Wed 12:48]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Source: discovered 2026-08-19 while reviewing 6fb5306732 (agnix Rust 1.95), reproduced identically at parent 68250bca — pre-existing, not commit-caused.
+Severity: Low | Category: Test Coverage | File: test/bin/cross-consumer-eval (vulcan legs)
+Confidence: 95
+
+PROBLEM: Both vulcan legs ('vulcan toplevel' against the working tree and 'vulcan toplevel, locked') fail on any non-vulcan host: vulcan's hosts/vulcan/hardware-configuration.nix takes a 'firmware' module argument backed by the git+file:///etc/nixos/firmware input, which exists only on vulcan. The harness therefore cannot validate the consumer input contract for exactly the host that motivated the agnix toolchain pin, and input-contract regressions for vulcan (the aa72a9b0/rust-overlay class) stay invisible from hera.
+
+SUGGESTED FIX: Make the vulcan leg runnable off-host: substitute a stub firmware input (empty flake with the expected output shape) via --override-input in the harness, or gate the leg host-conditionally with an explicit SKIPPED marker so a green run cannot be misread as full consumer coverage.
+
+VERIFICATION: cross-consumer-eval on hera either passes the vulcan legs against the stub or reports them SKIPPED explicitly; a deliberate inputs-contract break (e.g. removing rust-overlay wiring) is caught by the stubbed leg.
+
 * DONE [#B] Make shared-work Gitea transport routable during activation
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
