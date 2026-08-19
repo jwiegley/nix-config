@@ -1524,6 +1524,38 @@ Frozen product docs: SESSION-PERSISTENCE-SPEC.md cbcba81331f37071b2acd907caaf488
 ]
 #+end_src
 
+* TODO [#C] Bound inherited environment for managed stdio MCP servers
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-4jtb
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-19 Wed 00:21]
+:MODIFIED: [2026-08-19 Wed 00:21]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Managed stdio MCP clients may augment rather than replace their parent environment, allowing a server process to inherit unrelated credentials and agent sockets beyond the catalog's explicit typed environment. Establish one shared renderer/launcher policy, preserve required provider and platform variables, and add behavioral tests with unrelated canaries across maintained clients. Discovered while repairing PAL; do not add a PAL-only env-i wrapper that would bypass the common MCP process boundary.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-4jtb",
+    "depends_on_id": "nix-4w3q",
+    "type": "discovered-from",
+    "created_at": "2026-08-19T07:21:22.729935Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DOING [#B] Repair PAL MCP across managed machines
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5407,6 +5439,38 @@ bin/publish declares exactly one authoritative REMOTE but still loops over the q
 ]
 #+end_src
 
+* TODO [#B] Stabilize Fleet Theme RPC state baseline under Pi 0.84.2
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ha6p
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-19 Wed 00:46]
+:MODIFIED: [2026-08-19 Wed 00:46]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The root make test gate fails because the Fleet Theme negative RPC probe observes Pi creating agent/models-store.json after its before snapshot. Determine whether this is expected Pi-owned startup state or an extension mutation, preserve the negative RPC no-side-effect contract, and add a mutation-honest regression rather than excluding arbitrary paths.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-ha6p",
+    "depends_on_id": "nix-1jdb",
+    "type": "discovered-from",
+    "created_at": "2026-08-19T07:46:17.455462Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Remove deprecated stdenv platform aliases
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5547,6 +5611,38 @@ Andoria consumes the root shared-work Agda decision without a second name-based 
     "depends_on_id": "nix-3qw",
     "type": "discovered-from",
     "created_at": "2026-08-13T23:08:58.773568Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#C] Reject authority-free and control-bearing MCP URLs
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-hk8d
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-19 Wed 00:24]
+:MODIFIED: [2026-08-19 Wed 00:24]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The shared MCP URL validator accepts scheme-only, authority-free, and control-bearing HTTP endpoints. Tighten the common URL contract and add mutation-honest catalog tests before renderer serialization.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-hk8d",
+    "depends_on_id": "nix-4w3q",
+    "type": "discovered-from",
+    "created_at": "2026-08-19T07:24:01.984631Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
@@ -15512,30 +15608,28 @@ Schema-20 writer-epoch checks reject incompatible new database opens but cannot 
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-18 Tue 23:45]
-:MODIFIED: [2026-08-19 Wed 00:17]
+:MODIFIED: [2026-08-19 Wed 00:47]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-INVESTIGATION COMPLETE (2026-08-19). Correct solution: wrapper-side size-capped rotation of the disposable logs DB. Evidence and reasoning below.
+INVESTIGATION COMPLETE (2026-08-19), REVISED after John clarified he keeps codex sessions running for weeks: a source patch is the PRIMARY fix; the wrapper size-cap is a backstop. Launch-time rotation cannot help a session that never restarts, and the TRACE firehose degrades live sessions (insert-time window-function prunes slow down as the DB grows) and ratchets the WAL while running.
 
-UPSTREAM FACTS (codex 0.148 source, verified in /nix/store/ass3ccqbzgwsw5csrmvc0qamd4w08fri-source):
-1. The sqlite log layer's filter is hardcoded: state/src/log_db.rs default_filter() = Targets::default(TRACE) with a few per-target throttles. RUST_LOG only affects the OPT-IN file logger (tui/src/startup_orchestration.rs:450,467; file logging only when config log_dir set). No config.toml key gates the sqlite layer. Upstream issues #29463/#29532 confirm behaviorally that TRACE persists despite RUST_LOG=warn.
-2. Retention is per-partition only: 10 MiB / 1,000 rows per thread_id and per process_uuid (state/src/runtime.rs:83-84), enforced inside each insert transaction, and ONLY for partitions named in the current batch (runtime/logs.rs prune_logs_after_insert). Dead partitions survive until the 10-day sweep, so aggregate size = live-partition-count x cap: unbounded for multi-agent usage. hera equilibrium: ~0.5-1.5 GB/day, 13.4 GB at 10 days.
-3. The main file never shrinks: auto_vacuum=Incremental is set at open (sqlite.rs:284) but no incremental_vacuum or VACUUM is ever executed anywhere in the tree.
-4. WAL ratchets upward: only PASSIVE checkpoints exist (startup maintenance + SQLite default autocheckpoint); PASSIVE skips frames pinned by readers, and each codex keeps a 5-connection pool (sqlite.rs:288) alive for the process lifetime, so long-lived agent-deck sessions starve truncation (hera: 5.5 GB WAL after ~5 days of conductor-director).
-5. The stall is by construction: StateRuntime::init awaits run_logs_startup_maintenance() inline (runtime.rs:261) = 10-day DELETE + PASSIVE checkpoint, no timeout, before the app-server/TUI can proceed; cost scales with DB+WAL size and cold page cache (~18 s/GB measured on hera; 19 GB = 5m40s).
-6. No supported maintenance interface: codex-state-logs binary is read-only query; codex doctor/debug offer no prune; no CLI subcommand deletes logs.
-7. Upstream status: >=10 open issues (Jun-Aug 2026) covering this exact failure family (#27741 startup blocked by big logs_2.sqlite, #28997 34.8 GB WAL, #29463/#29532 TRACE despite RUST_LOG, #30105 second holder blocks init, more); zero fixes merged to state/src/runtime/logs.rs since 2026-07-23 as of 2026-08-18. Waiting for upstream is not a near-term solution.
+UPSTREAM FACTS (codex 0.148 source, /nix/store/ass3ccqbzgwsw5csrmvc0qamd4w08fri-source):
+1. The sqlite flight-recorder filter is hardcoded: state/src/log_db.rs default_filter() = Targets default TRACE with per-target throttles. RUST_LOG only affects the opt-in file logger (config log_dir). No config key gates the sqlite layer (upstream #29463/#29532 confirm behaviorally).
+2. Exactly two production attach sites, both funneling through that one function: tui/src/startup_orchestration.rs:519 and app-server/src/lib.rs:684. Single-seam patch covers TUI and app-server/desktop.
+3. Retention is per-partition only (10 MiB / 1,000 rows per thread_id and per process_uuid, runtime.rs:83-84), pruned only for partitions in the current insert batch; 10-day sweep is the only global bound; no VACUUM/incremental_vacuum anywhere; PASSIVE-only checkpoints starve under each process's always-alive 5-connection pool; StateRuntime::init awaits the DELETE+checkpoint inline with no timeout (runtime.rs:261) -> the 5m40s cold-start stall (~18 s/GB measured).
+4. Volume measured on hera: fresh DB collected 8,488 rows in ~90 min; WARN+ERROR were 333 rows / <0.5 MiB. A WARN default filter cuts >=95% of rows (more under heavy streaming where TRACE SSE/markdown bodies dominate). Historical: 13.4 GB + 5.5 GB WAL at 10-day retention.
+5. Upstream: >=10 open issues (Jun-Aug) on this exact family (#27741, #28997 34.8GB WAL, #29463/#29532, #30105...); no fix merged; log_db.rs is HOT (9 commits Jul-Aug: filter tightening, payload-trace limits, batching) -> upstream is converging on the same problem; expect our patch to conflict on some llm-agents bumps and expect a real upstream default/knob eventually.
 
-DECISION - implement in flake/ai/wrappers/codex.nix (the seam that already owns host-local disposable sqlite placement):
-At wrapper start, stat logs_2.sqlite + logs_2.sqlite-wal under CODEX_SQLITE_HOME; if combined size exceeds a cap (recommend 1 GiB, a shell variable), rm -f the trio (db, -wal, -shm) and warn on stderr, then exec codex normally so it recreates a fresh DB via sqlx migrations. POSIX unlink semantics make this safe even if a live codex holds the files (it keeps its fds; disk frees on its exit); the logs DB is a pure diagnostics sink (feedback/ and codex-state-logs are its only readers), so a benign two-launcher race at most costs recent diagnostics. NEVER touch state_5, queue_1, goals_1, memories_1, thread_history_1 - those are real state. Cap keeps roughly a day of /feedback-usable diagnostics on hera and bounds worst-case cold startup to ~20 s.
+PRIMARY FIX - source patch (overlays/ai/patches/, applied like codex-argv-policy-probe.patch via patch -p1 --fuzz=0 in flake/ai.nix preBuild):
+Modify state/src/log_db.rs default_filter(): default WARN instead of TRACE, preserving the existing OFF targets (log, codex_otel.log_only, codex_otel.trace_safe - they prevent duplicate/unsafe capture and can carry WARN-level events meant only for otel), and honor an env override CODEX_LOG_DB_FILTER parsed as tracing Targets syntax (Targets implements FromStr) so full TRACE diagnostics can be restored per-session without a rebuild when debugging codex itself. No secrets involved (env carries a filter directive only). Anchor the hunk at the function head (signature + Targets::new() + with_default lines): upstream churn is concentrated in the with_target list below, so a head-anchored hunk minimizes conflicts; fuzz=0 makes any drift a loud build failure surfaced by the update-agents flow (same maintenance pattern as the omlx pin substitutions). Result: steady-state DB of tens of MiB; startup maintenance millisecond-fast; WAL trivial even when pinned for weeks; also removes the constant multi-GB/day write amplification (I/O, SSD wear). A global-size-cap patch (option B) is rejected: invasive surgery on churny pruning code, and unnecessary once volume is WARN-only.
 
-REJECTED ALTERNATIVES: patching default_filter or startup maintenance (upstream divergence + rebase cost on every llm-agents bump, degrades /feedback; violates minimal-patch discipline); PRAGMA wal_checkpoint(TRUNCATE) at launch (blocks exactly like the disease, cannot shrink the main file, fails under pinned readers); RUST_LOG/env (provably ignored by the sqlite layer); disabling the state runtime (loses resume/history/queue).
+BACKSTOP - wrapper rotation (original plan, now secondary): in flake/ai/wrappers/codex.nix, at launch rm the logs_2.sqlite/-wal/-shm trio when combined size exceeds 1 GiB, warn on stderr. Covers the window where the patch is consciously dropped during an upstream conflict. POSIX-safe under live holders; logs DB is a pure diagnostics sink; never touch state_5/queue_1/goals_1/memories_1/thread_history_1.
 
-FOLLOW-THROUGH: add wrapper test coverage in test/ai/agent-wrappers.nix (over-cap rotates trio + warns; under-cap untouched; other DBs never touched). Watch upstream logs.rs for a real fix (global cap / vacuum / async maintenance) and retire the wrapper cap when it lands. Operational note: avoid week-long codex processes spanning version switches; they pin the WAL (memory: codex-logs-sqlite-bloat).
+VERIFICATION PLAN: build with patch; behavioral check that a fresh session writes no TRACE/DEBUG/INFO rows to logs_2.sqlite (sqlite3 level query) and that CODEX_LOG_DB_FILTER=trace restores them; wrapper backstop covered in test/ai/agent-wrappers.nix. RETIREMENT: drop the patch when upstream ships an acceptable default or a supported knob (watch state/src/log_db.rs and the open issues on each bump).
 
 * DONE [#B] Serialize child consumed-turn cleanup with profile migration
 :PROPERTIES:
@@ -15815,6 +15909,38 @@ Agent tooling never searches for executables by recursively traversing home, fil
     "author": "johnw",
     "text": "2026-08-13 superseding owner adjudication: accept the implemented narrow repository policy, permission hygiene, and sanitized diagnostic contract; explicitly decline App Sandbox, Endpoint Security, or another cross-client OS-confinement product. This closes the issue without claiming kernel enforcement.",
     "created_at": "2026-08-14T05:09:04Z"
+  }
+]
+#+end_src
+
+* TODO [#C] Align stdio MCP argument schema with every renderer
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-vwn8
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-19 Wed 00:23]
+:MODIFIED: [2026-08-19 Wed 00:23]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Catalog validation accepts a stdio MCP transport with omitted args, while maintained renderers dereference transport.args unconditionally. Choose one shared contract (require args or normalize it once), add a missing-args mutant, and keep renderers consuming the normalized shape.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-vwn8",
+    "depends_on_id": "nix-4w3q",
+    "type": "discovered-from",
+    "created_at": "2026-08-19T07:23:52.397550Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
