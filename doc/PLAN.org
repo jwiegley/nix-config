@@ -6649,7 +6649,7 @@ The authoritative Andoria-T2 system configuration declaratively grants only the 
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-18 Tue 12:55]
-:MODIFIED: [2026-08-18 Tue 12:55]
+:MODIFIED: [2026-08-18 Tue 22:20]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -6667,6 +6667,20 @@ IMPACT: Prime agent loads without the MCP extension — no mcp/mcp-auth commands
 SUGGESTED FIX: Root seam is Prime's resolver: alias @earendil-works/pi-ai to the package ROOT and resolve subpaths through its exports map (or special-case known subpaths). If prime-agent is upstream-pinned, the narrow local seam is the agent-resources packaging: patch the adapter's import back to the bare package IF prime-agent's bundled pi-ai still exports a compatible 'complete' at the root — verify signature compatibility first (upstream moved complete to /compat, likely a breaking root change).
 
 VERIFICATION: nix build ./config/ai#checks.aarch64-darwin.prime-agent passes; instrumented extensions.errors empty; mcp + mcp-auth commands present (prime-agent.nix:367-369 assertions reached).
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 483,
+    "issue_id": "nix-lwka",
+    "author": "johnw",
+    "text": "Still failing at 562e036973dc: the pin update moved pi-mcp-adapter to 8eabb29c5d, which retains the pi-ai/compat subpath import (sampling-handler.ts:1); prime-agent check reproduced FAIL at HEAD.",
+    "created_at": "2026-08-19T05:20:47Z"
+  }
+]
+#+end_src
 
 * DONE [#B] Keep Hera configuration evaluation below 30 seconds
 :PROPERTIES:
