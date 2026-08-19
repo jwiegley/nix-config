@@ -7,10 +7,10 @@
       },
       "source": {
         "args": {
-          "hash": "sha256-KNPf9LI1rUD6NY+gO1maTZwMPq/kCDl2tL2dMd5DOhc=",
+          "hash": "sha256-JMlXBoXkCgOLlq4l4cWsOYKuHpBfPvOWfjMrBBeZr9Q=",
           "owner": "miklosn",
           "repo": "cmdperf",
-          "tag": "v0.1.4"
+          "tag": "v0.2.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/miklosn/cmdperf"
@@ -19,7 +19,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.1.4"
+      "version": "0.2.0"
     },
     "cpx": {
       "hashes": {

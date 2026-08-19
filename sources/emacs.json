@@ -262,8 +262,8 @@
         "args": {
           "owner": "karthink",
           "repo": "gptel",
-          "rev": "ac4e1fe736f37cf6d3927cd3ebc26f54d383425a",
-          "sha256": "sha256-mrKHLyvJEBueWWzfrDm3sdAxUS70HZ5YFxuFvzDKhfI="
+          "rev": "df4c9d8b768675bcde4a02b65eea67e2f6dcc6d4",
+          "sha256": "sha256-M9Qx8fdg/55B+ROMgCgjZHwoqBP1ZG3zAKwV0laYLV0="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/karthink/gptel"
@@ -550,8 +550,8 @@
         "args": {
           "owner": "laurynas-biveinis",
           "repo": "mcp-server-lib.el",
-          "rev": "dec55e6405987250256a81efe92d65bdfa8a140c",
-          "sha256": "sha256-zaeysvqWmRGheDkILGI/0F4+lz9VYunHVXJzK4zkhsM="
+          "rev": "f7c34f5ab6ae4620cfa88a25ef9cbd47313322e4",
+          "sha256": "sha256-wc3w5x6ZQHJSKh4DgsBdEghcckbc4h9UIt9JMlPsAek="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/laurynas-biveinis/mcp-server-lib.el"
@@ -790,8 +790,8 @@
         "args": {
           "owner": "meedstrom",
           "repo": "org-node",
-          "rev": "10ea878528a24ae9bf6903da198f347d093f2b11",
-          "sha256": "sha256-uK0VN0ABA+iOpTMFqXW2vxnWtjp/S7vEVH2s/FS0bus="
+          "rev": "7466daf5ec82504eab0fe2a68652830776f0baa8",
+          "sha256": "sha256-ZiBfqNT0+yswP/5HmrkVStoBHZ5Pls/27pcjwU62Pfc="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/meedstrom/org-node"

@@ -180,10 +180,10 @@
       },
       "source": {
         "args": {
-          "hash": "sha256-5noPIcSD9Ki1D3J7b6JofeXiPO1RdL/Q8z+E0ZCwceY=",
+          "hash": "sha256-m1dsCowHkJnwhcpINszrn5pSCN8LwwV2bS3+3+shNtA=",
           "owner": "ggml-org",
           "repo": "llama.cpp",
-          "tag": "b10488"
+          "tag": "b10502"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/ggml-org/llama.cpp"
@@ -192,7 +192,7 @@
         "kind": "github-release",
         "tagPrefix": "b"
       },
-      "version": "10488"
+      "version": "10502"
     },
     "llama-swap": {
       "hashes": {
@@ -909,20 +909,20 @@
       "artifacts": {
         "x86_64-linux": {
           "args": {
-            "hash": "sha256-+AfcIZIp7rJP+tDSSjb3Xt0kY3dkmN3oKOWiDX7SPg4=",
-            "url": "https://github.com/michaelbromley/sherlock/releases/download/v1.4.0/sherlock-linux-x64"
+            "hash": "sha256-63LFg3iS/OMl+OI2eSd2zY1lozyPexm3nhJZBW25srk=",
+            "url": "https://github.com/michaelbromley/sherlock/releases/download/v1.6.0/sherlock-linux-x64"
           },
           "fetcher": "fetchurl",
-          "url": "https://github.com/michaelbromley/sherlock/releases/download/v1.4.0/sherlock-linux-x64"
+          "url": "https://github.com/michaelbromley/sherlock/releases/download/v1.6.0/sherlock-linux-x64"
         }
       },
       "source": {
         "args": {
-          "hash": "sha256-k43lSCVvcMnqN1tf+lY02JfkhrKPHc4OZJVAxghqink=",
-          "url": "https://github.com/michaelbromley/sherlock/releases/download/v1.4.0/sherlock-darwin-arm64"
+          "hash": "sha256-G0QrftNbX65BW+3C5RoIScIFQ9KUmII7nHkkEJ82CT0=",
+          "url": "https://github.com/michaelbromley/sherlock/releases/download/v1.6.0/sherlock-darwin-arm64"
         },
         "fetcher": "fetchurl",
-        "url": "https://github.com/michaelbromley/sherlock/releases/download/v1.4.0/sherlock-darwin-arm64"
+        "url": "https://github.com/michaelbromley/sherlock/releases/download/v1.6.0/sherlock-darwin-arm64"
       },
       "update": {
         "assets": {
@@ -934,7 +934,7 @@
         "repo": "sherlock",
         "tagPrefix": "v"
       },
-      "version": "1.4.0"
+      "version": "1.6.0"
     },
     "vllm-mlx": {
       "source": {
@@ -977,10 +977,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-LYHdEFpZ5Zx6VgKmbhG3SGEUUtV/zksg+YcZT3e9mHg=",
+          "narHash": "sha256-N6FReE8YDFK0NFxLDWiabbnZPPdBGw3zjQQ0y+94eJ4=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "c4c6673c4c1ceb69d845fa665a714e1273d0acac",
+          "rev": "45dba955f7f08b3ab99189efc73b98c76733faeb",
           "type": "github"
         },
         "fetcher": "fetchTree",

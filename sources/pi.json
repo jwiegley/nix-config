@@ -229,15 +229,15 @@
     },
     "pi-dynamic-workflows": {
       "hashes": {
-        "npmDepsHash": "sha256-B4cyU94tPzi6YOCm9ULS8q2c3Npn5y8YNSrBGcIlSTs="
+        "npmDepsHash": "sha256-f/xx+awEnL8Kr7HQOF+mxFp+USi6sOY5uKPHuPGtxH8="
       },
       "source": {
         "args": {
-          "hash": "sha256-XMqgpWnOPSXNlLOt3DjZEUj/DDPPJ2OogcujWVdnbnM=",
-          "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.6.0.tgz"
+          "hash": "sha256-i1Ww9b9nXGkLSAQgvAXmecdMhxiHDVZyppwecGGSIjM=",
+          "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.7.0.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.6.0.tgz"
+        "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.7.0.tgz"
       },
       "update": {
         "artifacts": [
@@ -247,7 +247,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "@quintinshaw/pi-dynamic-workflows"
       },
-      "version": "3.6.0"
+      "version": "3.7.0"
     },
     "pi-goal-x": {
       "source": {
@@ -650,10 +650,10 @@
       },
       "source": {
         "args": {
-          "narHash": "sha256-IAQHzrauKztN5mrQAH3fLaRSi9i14h5dpzTpsoY8Y+w=",
+          "narHash": "sha256-IhcMcpAUVwg2b7KVfBeizbywvgUd0DFV1/gNQl8nqc8=",
           "owner": "nicobailon",
           "repo": "pi-mcp-adapter",
-          "rev": "8eabb29c5d7a343e4a67bdec8dd624b804479a03",
+          "rev": "d85c78cd5881320387f73a35c827dfa1f9d9604c",
           "type": "github"
         },
         "fetcher": "fetchTree",
