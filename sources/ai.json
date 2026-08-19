@@ -1033,6 +1033,7 @@
           "flake.lock",
           "config/ai/flake.lock"
         ],
+        "buildPackage": "pal-mcp-server",
         "input": "pal-mcp-server",
         "kind": "flake-input"
       }

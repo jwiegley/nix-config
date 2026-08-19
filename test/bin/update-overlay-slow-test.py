@@ -4269,6 +4269,9 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         ddgs = ai_catalog["ddgs"]
         self.assertEqual(ddgs["update"].get("buildPackage"), "omlx")
         self.assertEqual(ddgs["update"].get("buildMode"), "pkg")
+        pal = ai_catalog["pal-mcp-server"]
+        self.assertEqual(pal["update"].get("buildPackage"), "pal-mcp-server")
+        self.assertNotIn("buildMode", pal["update"])
 
         catalog = json.loads((REPO / "sources/pi.json").read_text())["sources"]
         expected_builds = {

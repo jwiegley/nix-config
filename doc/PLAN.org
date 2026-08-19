@@ -551,15 +551,17 @@ VERIFICATION: nix build .#checks.aarch64-darwin.ai-catalog-transport succeeds; m
 ]
 #+end_src
 
-* DOING [#C] Separate inactive Pi gallery packages from active extension inventory
+* DONE [#C] Separate inactive Pi gallery packages from active extension inventory
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-1jdb
 :LABELS:   []
 :ISSUE_TYPE: docs
 :CREATED:  [2026-08-18 Tue 23:46]
-:MODIFIED: [2026-08-18 Tue 23:46]
+:MODIFIED: [2026-08-19 Wed 04:08]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-19 Wed 04:08]
+:CLOSE_REASON: Implemented: Pi Extensions now distinguishes the 26 projected Gallery packages from active registrations (24 on Darwin, 21 on Linux), moves Lens and Pi Mem to explicit packaged-but-inactive inventory, and retains Usage Dashboard as active. Manifest-derived document assertions plus Gallery runtime checks, make test, all-system config evaluation, and the all-files hook pass; no activation performed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1556,15 +1558,17 @@ Managed stdio MCP clients may augment rather than replace their parent environme
 ]
 #+end_src
 
-* DOING [#B] Repair PAL MCP across managed machines
+* DONE [#B] Repair PAL MCP across managed machines
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-4w3q
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-18 Tue 23:42]
-:MODIFIED: [2026-08-18 Tue 23:43]
+:MODIFIED: [2026-08-19 Wed 04:08]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-19 Wed 04:08]
+:CLOSE_REASON: Implemented: removed PAL's immutable rotating file logger at the shared package seam and added a credential-free, network-blocked installed MCP initialize/tools-list/listmodels contract plus exact generated-client transport assertions. An exact-lock unpatched output fails the current probe while the patched output passes. Darwin, aarch64-Linux, and x86_64-Linux PAL outputs were realized; all-system evaluation, make test, and hooks pass. No secret values or activation involved.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

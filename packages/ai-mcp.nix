@@ -26,6 +26,8 @@ prev.lib.optionalAttrs (palMcpServer != null) {
 
       src = palMcpServer;
 
+      patches = [ ../overlays/ai/patches/pal-mcp-server-stderr-logging.patch ];
+
       build-system = [
         setuptools
         setuptools-scm
@@ -42,12 +44,19 @@ prev.lib.optionalAttrs (palMcpServer != null) {
 
       env.SETUPTOOLS_SCM_PRETEND_VERSION = palPackage.project.version;
 
-      doCheck = false;
+      doCheck = true;
+      installCheckPhase = ''
+        runHook preInstallCheck
+        ${python.interpreter} ${../test/ai/overlays/pal-mcp-contract.py} \
+          "$out" "$out/bin/pal-mcp-server" \
+          ${lib.escapeShellArg palPackage.project.version}
+        runHook postInstallCheck
+      '';
 
       meta = {
         description = "AI-powered MCP server with multiple model providers";
         homepage = "https://github.com/jwiegley/pal-mcp-server";
-        license = lib.licenses.mit;
+        license = lib.licenses.asl20;
         mainProgram = "pal-mcp-server";
       };
     };

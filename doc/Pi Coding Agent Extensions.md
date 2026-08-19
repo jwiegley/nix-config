@@ -8,17 +8,19 @@ tags:
   - ai-agents
   - developer-tools
 created: 2026-07-27
-updated: 2026-08-18
+updated: 2026-08-19
 pi-version: 0.84.2
 ---
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: 26 gallery packages available on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. Pi Lens and Pi Mem remain installed but are presently excluded from automatic registration. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: 26 gallery packages projected on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 24 of those packages on Darwin and 21 on Linux; Pi Lens and Pi Mem are retained but are not registered on any managed profile. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope. The `agent-resources` package also carries `pi-openai-server-compaction` for compatibility testing, but no managed Pi profile renders or loads it, so it is not part of this configured inventory.
 
 ## At a glance
+
+This table lists extensions that are active on at least one managed Pi profile. The retained but inactive Gallery packages are listed separately below.
 
 | Extension | Version | Principal purpose | Primary interface |
 | --- | ---: | --- | --- |
@@ -30,7 +32,6 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `pi-hashline-edit-pro` | 0.17.5 | Hash-anchored reads and replacements | `read`, `replace` |
 | `pi-smart-fetch` | 0.3.17 | Browser-fingerprinted readable web fetching | `web_fetch`, `batch_web_fetch` |
 | `pi-smart-web-search` | 0.4.0 | Ranked batch web discovery | `web_search` |
-| `pi-lens` | 4.0.1 | LSP, diagnostics, and structural code intelligence | `lens_diagnostics`, `symbol_search` |
 | `@dietrichgebert/ponytail` | 4.9.0 | Minimal implementation discipline | `/ponytail` |
 | `pi-agent-browser-native` | 0.3.0 | Native Pi interface to `agent-browser` | `agent_browser` |
 | `pi-btw` | 0.4.1 | Side conversations without disturbing the main turn | `/btw` |
@@ -43,7 +44,6 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `@yeliu84/pi-model-router` | 0.4.4 | Per-turn route and reasoning-tier selection | `/router` |
 | `pi-rewind` | 0.5.0 | Conversation and file checkpoints | `/rewind` |
 | `pi-blackhole` | 0.4.7 | Context compaction and observational memory | `/blackhole`, `recall` |
-| `@askjo/pi-mem` | 1.2.0 | Explicit plain-Markdown memory and scratchpad | `memory_write`, `memory_read`, `memory_search`, `scratchpad` |
 | `pi-trace-extension` | 0.1.15 | Local execution traces and HTML reports | `/trace` |
 | `pi-markdown-preview` | 0.14.1 | Terminal, browser, PDF, and artifact previews | `/preview`, `preview_export` |
 | `pi-caveman` | 1.0.8 | Compressed response style | `/caveman` |
@@ -53,6 +53,15 @@ The inventory includes generated ownership, model routing, MCP registration, and
 | `@quintinshaw/pi-dynamic-workflows` | 3.6.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
 | `pi-goal-x` | 0.27.4 | Durable goals and Sisyphus continuation | `/goal`, `get_goal` |
 | `pi-cache-optimizer` | 2.8.3 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
+
+### Packaged but inactive
+
+These packages remain pinned, built, and present in the immutable Gallery projection, but their extension code is not imported or registered by any managed Pi profile.
+
+| Retained package | Version | Remaining use |
+| --- | ---: | --- |
+| `pi-lens` | 4.0.1 | One packaged skill root exposing four Lens skills remains advertised, and Nix still renders the hidden Lens widget setting; Lens tools and commands are unavailable |
+| `@askjo/pi-mem` | 1.2.0 | Projection only; no Pi Mem imports, tools, commands, or managed state activation |
 
 The llama-swap provider, oMLX provider, and Model Router packages are available on every host. The generated loader registers them automatically only on Darwin. Both workstations run the local services, but only Hera receives fixed local-provider overrides and a synthetic router model and configuration; Clio retains bounded discovery so that Pi advertises the models its services actually return.
 
@@ -103,6 +112,8 @@ Nix generates the shared, catalog-selected registry at `~/.config/mcp/mcp.json`;
 | Vulcan | `pal`, `searxng`, `sequential-thinking` |
 
 Credential-bearing values are environment references rather than literal secrets. The mutable `~/.config/pi/agent/mcp.json` may retain adapter state, but Nix preflight forbids `mcpServers` and `imports` there so that it cannot shadow the generated registry.
+
+PAL may initialize and expose its provider-independent discovery tools without credentials. Its model-backed tools require at least one referenced provider variable to be present in the launching client's environment; the generated registry carries variable names, never their values. Nix limits PAL's stderr logging to warnings and errors and disables its upstream persistent file logging.
 
 ### Keybindings
 
@@ -200,7 +211,7 @@ When registered, Pi Mem maintains explicit, user-directed memory as plain Markdo
 
 The managed package keeps its dashboard summary local instead of making upstream's automatic secondary model request. It reads recent Pi session titles and costs for the local dashboard, but does not send that inventory to a separate summarizer. Its mutable root is logically `~/.pi/agent/memory` and therefore resolves through the managed compatibility link to `~/.config/pi/agent/memory`; `PI_MEMORY_DIR` may select another root. Configured state directories are created or tightened to mode 0700, and files Pi Mem creates or replaces use mode 0600. File updates reject symbolic-link leaves, replace whole files atomically, and serialize read-modify-write operations across Pi processes. Stale file locks are reclaimed only when a same-host owner is proven to have exited; foreign-host, live-owner, malformed, and in-progress-recovery locks remain in place, and writes fail closed. Nix does not own or delete this state. The managed package deliberately removes upstream Git autocommit: `PI_AUTOCOMMIT` and the legacy `.pi-mem.json` `autocommit` field are inert. Memory history therefore requires an explicit private Git workflow outside Pi Mem, operated manually or by a separate external tool.
 
-Pi Mem is currently retained as a managed package and projected resource but is not imported or registered by the generated Gallery. This reversible state removes its synchronous startup scan without deleting its mutable memory.
+Pi Mem is currently retained as a managed package in the Gallery projection but is not imported or registered by the generated Gallery. This reversible state removes its synchronous startup scan without deleting its mutable memory.
 
 **Basic usage.** Pi Mem tools are unavailable while automatic registration is disabled. Restoring Pi Mem to the generated Gallery restores `memory_write`, `memory_read`, `memory_search`, and `scratchpad`; start a fresh Pi process or run `/reload` after activation to register them.
 
@@ -268,7 +279,7 @@ Pi Smart Web Search owns the `web_search` tool. It accepts up to six focused que
 
 Pi Lens combines language-server diagnostics, formatters, linters, structural scanners, complexity checks, symbol indexing, and edit-read guards. Its indexed tools provide a narrow discovery funnel—search for likely modules, inspect an outline, then read the exact symbol—before resorting to broad file reads.
 
-Pi Lens is currently retained as a managed package and projected resource but is not imported or registered by the generated Gallery. This reversible state isolates its eager startup cost without uninstalling it.
+Pi Lens is currently retained as a managed package and projected resource but is not imported or registered by the generated Gallery. Its packaged skill root continues to expose four Lens skills through the Gallery, and Nix still renders the hidden Lens widget setting. This reversible state isolates the extension's eager startup cost without removing those resources.
 
 **Basic usage.** Lens tools and commands are unavailable while automatic registration is disabled. Restoring Lens to the generated Gallery restores `symbol_search`, `module_report`, `read_symbol`, `lsp_diagnostics`, `lens_diagnostics`, `/lens-health`, `/lens-tools`, `/lens-tdi`, and `/lens-map`. Runtime tool installation remains disabled by the Nix policy.
 
@@ -478,4 +489,4 @@ Within a fresh Pi session, confirm the principal control surfaces:
 
 Lens commands and tools and Pi Mem tools should be absent while they remain excluded from the generated Gallery.
 
-Source policy last checked against the current `~/src/nix` fleet renderer on 2026-08-18. Activation evidence is recorded separately so this inventory does not imply that an unactivated source revision is already live.
+Source policy last checked against the current `~/src/nix` fleet renderer on 2026-08-19. Activation evidence is recorded separately so this inventory does not imply that an unactivated source revision is already live.

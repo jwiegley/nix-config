@@ -1301,6 +1301,38 @@ pkgs.runCommand "ai-catalog-transport" { } ''
   ]
   if any(arguments != expected for arguments in rendered):
       raise SystemExit("ordinary MCP arguments changed across renderer output")
+
+  claude_pal = claude["mcpServers"]["pal"]
+  codex_pal = codex["mcp_servers"]["pal"]
+  droid_pal = droid["mcpServers"]["pal"]
+  pi_pal = pi["mcpServers"]["pal"]
+  pal_servers = [claude_pal, codex_pal, droid_pal, pi_pal]
+  if any(
+      server.get("command") != "pal-mcp-server" or server.get("args") != []
+      for server in pal_servers
+  ):
+      raise SystemExit("PAL stdio command changed across renderer output")
+
+  pal_literal_environment = {
+      "DEFAULT_MODEL": "auto",
+      "DISABLED_TOOLS": "testgen,secaudit,docgen,tracer",
+      "LOG_LEVEL": "WARNING",
+  }
+  pal_environment_references = {
+      "ANTHROPIC_API_KEY": "''${ANTHROPIC_API_KEY}",
+      "GEMINI_API_KEY": "''${GEMINI_API_KEY}",
+      "OPENAI_API_KEY": "''${OPENAI_API_KEY}",
+  }
+  if claude_pal.get("env") != pal_literal_environment | pal_environment_references:
+      raise SystemExit("Claude PAL environment projection changed")
+  if pi_pal.get("env") != pal_literal_environment | pal_environment_references:
+      raise SystemExit("Pi PAL environment projection changed")
+  if droid_pal.get("env") != pal_literal_environment:
+      raise SystemExit("Droid PAL literal environment projection changed")
+  if codex_pal.get("env") != pal_literal_environment or codex_pal.get(
+      "env_vars"
+  ) != sorted(pal_environment_references):
+      raise SystemExit("Codex PAL environment projection changed")
   PY
   ${lib.concatMapStringsSep "\n" (entry: ''
     ${pkgs.jq}/bin/jq -e '

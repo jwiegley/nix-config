@@ -52,6 +52,11 @@ let
     else
       lib.subtractLists localModelMemberIds manifest.order
   );
+  documentActiveOrder = lib.subtractLists [ "lens" "mem" ] manifest.order;
+  documentInactiveOrder = [
+    "lens"
+    "mem"
+  ];
   quiet = "${piPackages.agent-resources}/share/agent-resources/pi-extensions/pi-quiet/src/index.ts";
   packageRoots = lib.escapeShellArgs (builtins.attrValues roots);
   memberVersionChecks = lib.concatMapStringsSep "\n" (
@@ -74,13 +79,22 @@ let
           ]
         )
       );
-  documentGalleryRows = map (
-    id:
-    let
-      member = manifest.members.${id};
-    in
-    "${member.publicName}\t${member.version}"
-  ) manifest.order;
+  documentRows =
+    order:
+    map (
+      id:
+      let
+        member = manifest.members.${id};
+      in
+      "${member.publicName}\t${member.version}"
+    ) order;
+  documentGalleryRows = documentRows documentActiveOrder;
+  documentInactiveRows = documentRows documentInactiveOrder;
+  documentProjectedCount = builtins.length manifest.order;
+  documentDarwinActiveCount = builtins.length documentActiveOrder;
+  documentLinuxActiveCount = builtins.length (
+    lib.subtractLists localModelMemberIds documentActiveOrder
+  );
   normalizationPolicy = builtins.fromJSON (
     builtins.readFile ../../packages/pi-gallery/normalization-policy.json
   );
@@ -139,7 +153,7 @@ let
     else
       "${roots.router}/extensions/index.ts";
 in
-assert builtins.length (builtins.attrNames manifest.members) == builtins.length manifest.order;
+assert lib.sort builtins.lessThan manifest.order == builtins.attrNames manifest.members;
 assert sourceCatalogComplete;
 assert orphanedCatalogRejected;
 assert manifestPackagesMatch;
@@ -298,6 +312,39 @@ runCommand "pi-gallery-check"
       > "$TMPDIR/actual-extension-inventory"
     cmp "$TMPDIR/expected-extension-inventory" "$TMPDIR/actual-extension-inventory" \
       || fail "Pi extension documentation inventory differs from the managed package set"
+    cat <<'EOF' > "$TMPDIR/expected-inactive-extension-inventory"
+    ${lib.concatStringsSep "\n" documentInactiveRows}
+    EOF
+    awk -F '|' '
+      function trim(value) {
+        sub(/^[[:space:]]+/, "", value)
+        sub(/[[:space:]]+$/, "", value)
+        return value
+      }
+      $0 == "| Retained package | Version | Remaining use |" {
+        inventory = 1
+        next
+      }
+      inventory && /^\| ---/ { next }
+      inventory && /^\|/ {
+        name = trim($2)
+        version = trim($3)
+        gsub(/`/, "", name)
+        gsub(/`/, "", version)
+        print name "\t" version
+        next
+      }
+      inventory { exit }
+      END { if (!inventory) exit 2 }
+    ' ${lib.escapeShellArg "${piExtensionsDocument}"} \
+      > "$TMPDIR/actual-inactive-extension-inventory"
+    cmp "$TMPDIR/expected-inactive-extension-inventory" "$TMPDIR/actual-inactive-extension-inventory" \
+      || fail "Pi inactive extension documentation differs from the managed package set"
+    grep -F '${toString documentProjectedCount} gallery packages projected' \
+      ${lib.escapeShellArg "${piExtensionsDocument}"} >/dev/null \
+      || fail "Pi extension documentation projected-package count differs from the manifest"
+    grep -F 'registers ${toString documentDarwinActiveCount} of those packages on Darwin and ${toString documentLinuxActiveCount} on Linux' ${lib.escapeShellArg "${piExtensionsDocument}"} >/dev/null \
+      || fail "Pi extension documentation active-package counts differ from the generated loaders"
     echo "Pi gallery check: normalization parity"
     ${normalizationParityChecks}
     echo "Pi gallery check: packaged roots"

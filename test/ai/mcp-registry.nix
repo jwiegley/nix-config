@@ -142,9 +142,18 @@ pkgs.runCommand "ai-mcp-registry" { } ''
         "stock-trader"
       ]
       and .settings.mcpFooterStatus == "compact"
-      and .mcpServers.pal.env.ANTHROPIC_API_KEY == "''${ANTHROPIC_API_KEY}"
-      and .mcpServers.pal.env.GEMINI_API_KEY == "''${GEMINI_API_KEY}"
-      and .mcpServers.pal.env.OPENAI_API_KEY == "''${OPENAI_API_KEY}"
+      and .mcpServers.pal == {
+        command: "pal-mcp-server",
+        args: [],
+        env: {
+          ANTHROPIC_API_KEY: "''${ANTHROPIC_API_KEY}",
+          DEFAULT_MODEL: "auto",
+          DISABLED_TOOLS: "testgen,secaudit,docgen,tracer",
+          GEMINI_API_KEY: "''${GEMINI_API_KEY}",
+          LOG_LEVEL: "WARNING",
+          OPENAI_API_KEY: "''${OPENAI_API_KEY}"
+        }
+      }
     ' "$registry" >/dev/null
   done
 

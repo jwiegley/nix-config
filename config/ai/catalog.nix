@@ -804,6 +804,7 @@ let
             OPENAI_API_KEY = typedEnv "OPENAI_API_KEY";
             DISABLED_TOOLS = "testgen,secaudit,docgen,tracer";
             DEFAULT_MODEL = "auto";
+            LOG_LEVEL = "WARNING";
           };
         }
         {
@@ -1206,6 +1207,7 @@ let
   approvedLiteralEnvironment = {
     DISABLED_TOOLS = [ "testgen,secaudit,docgen,tracer" ];
     DEFAULT_MODEL = [ "auto" ];
+    LOG_LEVEL = [ "WARNING" ];
     SEARXNG_URL = [
       "http://localhost:8890"
       "https://searxng.vulcan.lan"
