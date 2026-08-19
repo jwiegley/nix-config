@@ -4213,6 +4213,71 @@ Agent Deck WriteInboxEvent fsyncs the file but does not durably sync a newly cre
 ]
 #+end_src
 
+* DOING [#B] Adopt and verify the PAL MCP repair on managed hosts
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-djfl
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-19 Wed 04:25]
+:MODIFIED: [2026-08-19 Wed 10:02]
+:ASSIGNEE: johnw
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The shared PAL package repair is published but no host activation was performed, so source/build evidence does not prove the active clients work. After explicit activation authorization, update and activate authoritative Hera/Clio, shared-work consumers in the prescribed order, and Vulcan under its /etc/nixos lock; then run secret-safe fresh-client MCP initialize/tools-list/listmodels acceptance using only credential-name/presence booleans. VPS remains parked and excluded. Preserve prior generations and report each host separately.
+
+** Notes
+
+Read-only adoption audit on 2026-08-19: Hera and Clio resolve the prepatch Darwin PAL 1.4.0 output; all four shared-work hosts resolve the same prepatch Linux output; Vulcan resolves a prepatch Linux output. Exact installed server.py markers on every host contain RotatingFileHandler and lack the patched stderr-only marker. Hera reproduces the immutable-store logging failure under the credential-free network-blocked installed contract. All six remote hosts are reachable and structurally select PAL; initialize/tools-list succeeds, but this does not supersede the prepatch finding. Published repair commit b14b6348 is contained by main and origin/main. Activation and post-activation fresh-client acceptance remain required; VPS is parked and excluded.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-djfl",
+    "depends_on_id": "nix-4w3q",
+    "type": "discovered-from",
+    "created_at": "2026-08-19T11:25:19.501141Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 486,
+    "issue_id": "nix-djfl",
+    "author": "johnw",
+    "text": "Resuming adoption audit: Hera currently resolves the exact pre-repair PAL store output; running one bounded secret-safe read-only fleet probe before requesting activation authority.",
+    "created_at": "2026-08-19T12:56:44Z"
+  },
+  {
+    "id": 487,
+    "issue_id": "nix-djfl",
+    "author": "johnw",
+    "text": "Read-only activation preflight on 2026-08-19: Hera HEAD 177cac6f contains the PAL repair but has 10 protected dirty entries from the separate Pi model-refresh slice; retain system generation 1109 and do not activate this checkout as-is. Clio is clean at b95bf839 without the repair; retain system generation 315. The shared-work NFS authority is clean with paired nix-config and nix-config-ai locks at b95bf839 without the repair; current generation 246 and prior generation 245 are resident on all four hosts, and no shared-work build mutex is documented, so operator serialization is required. Vulcan is clean with paired locks at b95bf839 without the repair, its .nixos-build lock is absent, and system generation 2524 is the rollback anchor. Minimal authorized path: establish one clean published revision containing b14b6348; fast-forward Clio, adopt paired inputs on shared-work and Vulcan, build without activation, then activate only with explicit authorization, serializing shared-work and stopping on first failure. No fetch, pull, lock update, build, activation, or VPS access occurred.",
+    "created_at": "2026-08-19T13:06:48Z"
+  },
+  {
+    "id": 488,
+    "issue_id": "nix-djfl",
+    "author": "johnw",
+    "text": "Explicit authorization received on 2026-08-19 for the signed Pi model-refresh commit/push and for build plus activation on Hera, Clio, shared-work, and Vulcan; VPS remains excluded. Model-refresh commit 137b8be3 is signed and published. Proceeding with exact-revision candidate builds, retained rollback anchors, serial activation, and secret-safe PAL acceptance; stop on first failure.",
+    "created_at": "2026-08-19T17:02:31Z"
+  }
+]
+#+end_src
+
 * DONE [#B] Bound legacy consumed-turn ledger import
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
