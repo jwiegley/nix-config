@@ -3219,6 +3219,32 @@ The root flake.lock currently advances the source-only Obr input from d2ce69f (0
 ]
 #+end_src
 
+* TODO [#D] Quiet dry-run reports nothing while updates are pending
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-a48d
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 21:28]
+:MODIFIED: [2026-08-18 Tue 21:28]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Source commit: 9743dc65c1b85dc (Stream update progress and report accepted changes)
+Severity: Low | Category: Bug | File: bin/update (quiet_emit_changes dry-run branch; --record-target-change flow)
+Confidence: 85
+
+PROBLEM: In quiet mode, accepted changes are derived post-hoc via 'update-overlay --record-target-change', which compares the pre-transaction inventory row to the CURRENT catalog record. Under --dry-run the updater returns 'updated' without writing the catalog, so the comparison always sees old==new, _catalog_change_coordinates returns None, and no row is emitted. Consequences: (1) 'bin/update --quiet --dry-run' prints dots then reports nothing even when updates are pending — reads as 'everything up-to-date'; (2) quiet_emit_changes' '(dry-run)' rendering branch is unreachable dead code, indicating the intent was for pending rows to render. No test covers quiet+dry-run (grep for quiet/dry interaction in the 131-test suite: 0 hits).
+
+IMPACT: Hand-invoked path only (Makefile 'update' uses --quiet without --dry-run), but the silent output is actively misleading for exactly the question dry-run answers.
+
+SUGGESTED FIX: Either have the dry-run path record the candidate coordinates it resolved (e.g., update_catalog_target emits the change row itself in dry-run, or record-target-change accepts explicit --new-version from the dry-run result), or reject --quiet with --dry-run as mutually exclusive and drop the dead rendering branch.
+
+VERIFICATION: A suite case running quiet+dry-run against a pending PyPI candidate asserts either rendered 'old → new (dry-run)' rows or a usage error; dead-branch removal confirmed by coverage.
+
 * DONE [#B] Make obr available across the managed fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5838,6 +5864,38 @@ Outbound OpenSSH on andoria-08 exits before connection with 'No user exists for 
     "depends_on_id": "nix-eazx",
     "type": "discovered-from",
     "created_at": "2026-08-16T03:22:28.356367Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DOING [#B] Normalize nullable Pi provider headers in compaction extension
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-jlh5
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 19:49]
+:MODIFIED: [2026-08-18 Tue 19:49]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pi 0.84.2 ProviderHeaders permits null values, while pi-openai-server-compaction passes auth.headers to two string-only APIs. Normalize once at the local compatibility seam by dropping nulls, preserving strings, and returning undefined when empty; add behavioral coverage and restore the agent-resources check. Discovered while validating the Pi extension documentation work.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-jlh5",
+    "depends_on_id": "nix-tr5m",
+    "type": "discovered-from",
+    "created_at": "2026-08-19T02:49:32.604386Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
