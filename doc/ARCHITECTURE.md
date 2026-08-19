@@ -223,8 +223,10 @@ updater-owned projections beside their consumers.
 
 `bin/update` performs the isolated repository update transaction. `make update`
 requests the complete pull, update, validation, signed commit, exact-candidate
-build and activation, publication, and push sequence. Homebrew is outside the
-repository transaction.
+build and activation, publication, and push sequence, and reports only accepted
+old-to-new catalog changes. `make update-verbose` exposes the transaction's
+progress and successful no-op diagnostics. Homebrew is outside the repository
+transaction.
 
 Routine validation should use scoped outputs. Broad root checks can force unrelated
 host-only inputs; the portable subflake exists so remote-safe checks can evaluate

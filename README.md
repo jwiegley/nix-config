@@ -117,8 +117,13 @@ nix flake check ./config/ai --all-systems --no-build
 
 # Update all flake inputs and automatic catalog targets; validate, sign, switch, and publish.
 make update
+
+# Show the same transaction's progress and successful no-op diagnostics.
+make update-verbose
 ```
 
+The quiet command prints one old-to-new line per accepted catalog change and no
+successful no-op lines; failures and held-back warnings remain visible.
 `make update` is a repository transaction, not a whole-fleet deployment. External
 consumers must adopt the published revision in their own locks and activate it
 from their authoritative checkouts. Vulcan must use its local `./build` driver.

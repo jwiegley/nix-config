@@ -88,6 +88,33 @@ ANSI_ESCAPE_RE = re.compile(
 CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
 
 
+def _print_catalog_change(
+    name: str,
+    old_version: str,
+    new_version: str,
+    *,
+    dry_run: bool = False,
+    suffix: str = "",
+) -> None:
+    color = Colors.CYAN if dry_run else Colors.GREEN
+    status = " (dry-run)" if dry_run else f" ✓{suffix}"
+    print(
+        f"catalog/{name} {Colors.DIM}{old_version}{Colors.RESET} "
+        f"{color}→ {new_version}{status}{Colors.RESET}"
+    )
+
+
+def _catalog_verbose(args=None) -> bool:
+    return os.environ.get("UPDATE_VERBOSE") == "1" or bool(
+        getattr(args, "verbose", False)
+    )
+
+
+def _print_catalog_unchanged(name: str, args=None) -> None:
+    if _catalog_verbose(args):
+        print(f"catalog/{name} {Colors.GREEN}✓ up-to-date{Colors.RESET}")
+
+
 class CandidateRejected(RuntimeError):
     """A resolved candidate failed its package-specific build contract."""
 
@@ -2524,10 +2551,10 @@ def update_npm_flake_target(
     literal_changed = exact_literal not in flake_path.read_text()
     changed = npm_changed or git_changed or literal_changed
     if not changed:
-        print(f"catalog/{name} {Colors.GREEN}✓ up-to-date{Colors.RESET}")
+        _print_catalog_unchanged(name, args)
         return "skipped"
     if args.dry_run:
-        print(f"catalog/{name} {Colors.CYAN}→ {new_version} (dry-run){Colors.RESET}")
+        _print_catalog_change(name, old_version, new_version, dry_run=True)
         return "updated"
 
     transaction.watch(target["_path"])
@@ -2538,7 +2565,7 @@ def update_npm_flake_target(
     source["url"] = new_url
     _rewrite_npm_flake_input_literal(target, new_rev)
     _write_catalog_target(target)
-    print(f"catalog/{name} {Colors.GREEN}→ {new_version} ✓{Colors.RESET}")
+    _print_catalog_change(name, old_version, new_version)
     return "updated"
 
 
@@ -2652,12 +2679,12 @@ def update_npm_lock_target(
     )
     if not changed:
         if hash_computer.validate_package_build(name):
-            print(f"catalog/{name} {Colors.GREEN}✓ up-to-date{Colors.RESET}")
+            _print_catalog_unchanged(name, args)
             return "skipped"
         print(f"catalog/{name} {Colors.RED}✗ package build failed{Colors.RESET}")
         return "failed"
     if args.dry_run:
-        print(f"catalog/{name} {Colors.CYAN}→ {new_version} (dry-run){Colors.RESET}")
+        _print_catalog_change(name, old_version, new_version, dry_run=True)
         return "updated"
 
     transaction.watch(target["_path"])
@@ -2678,7 +2705,7 @@ def update_npm_lock_target(
     if not hash_computer.validate_package_build(name):
         print(f"catalog/{name} {Colors.RED}✗ final package build failed{Colors.RESET}")
         raise CandidateRejected(f"{name} final package build failed")
-    print(f"catalog/{name} {Colors.GREEN}→ {new_version} ✓{Colors.RESET}")
+    _print_catalog_change(name, old_version, new_version)
     return "updated"
 
 
@@ -2716,10 +2743,10 @@ def update_pypi_artifact_target(
             changed = changed or source_args["url"] != artifact_url
 
     if not changed:
-        print(f"catalog/{name} {Colors.GREEN}✓ up-to-date{Colors.RESET}")
+        _print_catalog_unchanged(name, args)
         return "skipped"
     if args.dry_run:
-        print(f"catalog/{name} {Colors.CYAN}→ {new_version} (dry-run){Colors.RESET}")
+        _print_catalog_change(name, old_version, new_version, dry_run=True)
         return "updated"
 
     transaction.watch(target["_path"])
@@ -2742,7 +2769,7 @@ def update_pypi_artifact_target(
         label = "package" if validation_mode == "pkg" else validation_mode
         print(f"catalog/{name} {Colors.RED}✗ final {label} build failed{Colors.RESET}")
         raise CandidateRejected(f"{name} final {label} build failed")
-    print(f"catalog/{name} {Colors.GREEN}→ {new_version} ✓{Colors.RESET}")
+    _print_catalog_change(name, old_version, new_version)
     return "updated"
 
 
@@ -2756,6 +2783,7 @@ def update_github_release_asset_target(
 ) -> str:
     """Resolve every declared GitHub release asset before writing any of them."""
     record = target["_record"]
+    old_version = record["version"]
     update = record["update"]
     prefix = update.get("tagPrefix", "")
     if args.version:
@@ -2820,10 +2848,10 @@ def update_github_release_asset_target(
         if not hash_computer.validate_package_build(name):
             print(f"catalog/{name} {Colors.RED}✗ package build failed{Colors.RESET}")
             return "failed"
-        print(f"catalog/{name} {Colors.GREEN}✓ up-to-date{Colors.RESET}")
+        _print_catalog_unchanged(name, args)
         return "skipped"
     if args.dry_run:
-        print(f"catalog/{name} {Colors.CYAN}→ {new_version} (dry-run){Colors.RESET}")
+        _print_catalog_change(name, old_version, new_version, dry_run=True)
         return "updated"
 
     transaction.watch(target["_path"])
@@ -2839,7 +2867,7 @@ def update_github_release_asset_target(
     if not hash_computer.validate_package_build(name):
         print(f"catalog/{name} {Colors.RED}✗ final package build failed{Colors.RESET}")
         raise CandidateRejected(f"{name} final package build failed")
-    print(f"catalog/{name} {Colors.GREEN}→ {new_version} ✓{Colors.RESET}")
+    _print_catalog_change(name, old_version, new_version)
     return "updated"
 
 
@@ -2874,6 +2902,7 @@ def update_github_commit_artifact_target(
     record = target["_record"]
     source = record["source"]
     source_args = source["args"]
+    old_ref = source_args["rev"]
     update = record["update"]
     candidate = (
         (args.version, "")
@@ -2930,10 +2959,10 @@ def update_github_commit_artifact_target(
         path.read_text() != content for path, content in resolved_files.items()
     )
     if not changed:
-        print(f"catalog/{name} {Colors.GREEN}✓ up-to-date{Colors.RESET}")
+        _print_catalog_unchanged(name, args)
         return "skipped"
     if args.dry_run:
-        print(f"catalog/{name} {Colors.CYAN}→ {new_ref[:8]} (dry-run){Colors.RESET}")
+        _print_catalog_change(name, old_ref[:8], new_ref[:8], dry_run=True)
         return "updated"
 
     transaction.watch(target["_path"])
@@ -2944,7 +2973,7 @@ def update_github_commit_artifact_target(
     _write_catalog_target(target)
     for path, content in resolved_files.items():
         path.write_text(content)
-    print(f"catalog/{name} {Colors.GREEN}→ {new_ref[:8]} ✓{Colors.RESET}")
+    _print_catalog_change(name, old_ref[:8], new_ref[:8])
     return "updated"
 
 
@@ -3061,7 +3090,6 @@ def update_catalog_target(
     hash_error = None
 
     display = f"{Colors.BOLD}catalog/{name}{Colors.RESET}"
-    print(display, end=" ")
 
     if kind == "fixed-flake-input":
         if args.version:
@@ -3140,7 +3168,9 @@ def update_catalog_target(
             new_version = extract_version_number(new_ref, prefix)
     elif kind == "explicit-rev":
         if not args.version:
-            print(f"{Colors.RED}✗ explicit --version required{Colors.RESET}")
+            print(
+                f"{display} {Colors.RED}✗ explicit --version required{Colors.RESET}"
+            )
             return "failed"
         if current_ref:
             prefix = (
@@ -3153,7 +3183,9 @@ def update_catalog_target(
         elif current_url:
             match = re.search(r"[0-9a-fA-F]{40}", current_url)
             if match is None:
-                print(f"{Colors.RED}✗ URL has no replaceable revision{Colors.RESET}")
+                print(
+                    f"{display} {Colors.RED}✗ URL has no replaceable revision{Colors.RESET}"
+                )
                 return "failed"
             new_ref = args.version
             new_version = record.get("version", new_ref)
@@ -3162,7 +3194,9 @@ def update_catalog_target(
         new_version = args.version or old_version
         if args.version:
             if not record.get("version") or current_url.count(old_version) != 1:
-                print(f"{Colors.RED}✗ URL has no unique version coordinate{Colors.RESET}")
+                print(
+                    f"{display} {Colors.RED}✗ URL has no unique version coordinate{Colors.RESET}"
+                )
                 return "failed"
             new_url = current_url.replace(old_version, args.version, 1)
         else:
@@ -3170,10 +3204,10 @@ def update_catalog_target(
 
     if new_version is None:
         message = _failure_message("fetch failed", fetch_error)
-        print(f"{Colors.RED}✗ {message}{Colors.RESET}")
+        print(f"{display} {Colors.RED}✗ {message}{Colors.RESET}")
         return "failed"
     if kind == "npm-release" and new_url is None:
-        print(f"{Colors.RED}✗ URL rewrite failed{Colors.RESET}")
+        print(f"{display} {Colors.RED}✗ URL rewrite failed{Colors.RESET}")
         return "failed"
 
     replacements = {}
@@ -3187,7 +3221,7 @@ def update_catalog_target(
             hash_error = getattr(hash_computer, "last_error", None)
     if not new_hash:
         message = _failure_message("hash failed", hash_error)
-        print(f"{Colors.RED}✗ {message}{Colors.RESET}")
+        print(f"{display} {Colors.RED}✗ {message}{Colors.RESET}")
         return "failed"
 
     normalized_artifact_path = None
@@ -3200,7 +3234,9 @@ def update_catalog_target(
             {**replacements, hash_name: new_hash},
         )
         if source_path is None:
-            print(f"{Colors.RED}✗ Prime Agent source realization failed{Colors.RESET}")
+            print(
+                f"{display} {Colors.RED}✗ Prime Agent source realization failed{Colors.RESET}"
+            )
             return "failed"
         try:
             normalized_artifact = normalize_prime_agent_lock(
@@ -3213,7 +3249,7 @@ def update_catalog_target(
                 error,
                 fallback="Prime Agent lock normalization failed",
             )
-            print(f"{Colors.RED}✗ {detail}{Colors.RESET}")
+            print(f"{display} {Colors.RED}✗ {detail}{Colors.RESET}")
             return "failed"
 
     same_location = (new_ref is None or new_ref == current_ref) and (
@@ -3229,16 +3265,11 @@ def update_catalog_target(
         and new_hash == old_hash
         and not normalized_artifact_changed
     ):
-        print(f"{Colors.GREEN}✓ up-to-date{Colors.RESET}")
+        _print_catalog_unchanged(name, args)
         return "skipped"
 
-    print(
-        f"{Colors.DIM}{old_version}{Colors.RESET} "
-        f"{Colors.YELLOW}→ {new_version}{Colors.RESET}",
-        end="",
-    )
     if args.dry_run:
-        print(f" {Colors.CYAN}(dry-run){Colors.RESET}")
+        _print_catalog_change(name, old_version, new_version, dry_run=True)
         return "updated"
 
     transaction.watch(target["_path"])
@@ -3268,7 +3299,9 @@ def update_catalog_target(
         )
         commits = [line.split()[0] for line in resolved.stdout.splitlines() if line.split()]
         if resolved.returncode != 0 or not commits:
-            print(f" {Colors.RED}✗ commit resolution failed{Colors.RESET}")
+            print(
+                f"{display} {Colors.RED}✗ commit resolution failed{Colors.RESET}"
+            )
             return "failed"
         record["commit"] = commits[-1]
     _write_catalog_target(target)
@@ -3288,7 +3321,7 @@ def update_catalog_target(
         if not new_dependent_hash:
             record["hashes"][hash_type] = old_dependent_hash
             _write_catalog_target(target)
-            print(f" {Colors.RED}✗ {hash_type} failed{Colors.RESET}")
+            print(f"{display} {Colors.RED}✗ {hash_type} failed{Colors.RESET}")
             return "failed"
         record["hashes"][hash_type] = new_dependent_hash
         computed.append(hash_type)
@@ -3301,10 +3334,12 @@ def update_catalog_target(
         validation_package, validation_mode
     ):
         label = "package" if validation_mode == "pkg" else validation_mode
-        print(f" {Colors.RED}✗ final {label} build failed{Colors.RESET}")
+        print(
+            f"{display} {Colors.RED}✗ final {label} build failed{Colors.RESET}"
+        )
         raise CandidateRejected(f"{name} final {label} build failed")
     suffix = f" +{','.join(computed)}" if computed else ""
-    print(f" {Colors.GREEN}✓{Colors.RESET}{suffix}")
+    _print_catalog_change(name, old_version, new_version, suffix=suffix)
     return "updated"
 
 
@@ -3742,19 +3777,26 @@ Examples:
     else:
         transaction.commit()
 
-    # Colored summary
-    updated_str = f"{Colors.GREEN}{success_count} updated{Colors.RESET}" if success_count else f"{success_count} updated"
-    skipped_str = f"{skipped_count} up-to-date"
-    failed_str = f"{Colors.RED}{fail_count} failed{Colors.RESET}" if fail_count else f"{fail_count} failed"
-    rejected_str = (
-        f", {Colors.YELLOW}{rejected_count} rejected{Colors.RESET}"
-        if rejected_count
-        else ""
-    )
-    print(
-        f"\n{Colors.BOLD}Summary:{Colors.RESET} {updated_str}, {skipped_str}"
-        f"{rejected_str}, {failed_str}"
-    )
+    if _catalog_verbose(args):
+        updated = (
+            f"{Colors.GREEN}{success_count} updated{Colors.RESET}"
+            if success_count
+            else f"{success_count} updated"
+        )
+        failed = (
+            f"{Colors.RED}{fail_count} failed{Colors.RESET}"
+            if fail_count
+            else f"{fail_count} failed"
+        )
+        rejected = (
+            f", {Colors.YELLOW}{rejected_count} rejected{Colors.RESET}"
+            if rejected_count
+            else ""
+        )
+        print(
+            f"\n{Colors.BOLD}Summary:{Colors.RESET} {updated}, "
+            f"{skipped_count} up-to-date{rejected}, {failed}"
+        )
 
     if fail_count:
         return 1

@@ -706,10 +706,21 @@ authorization for each action before invoking it.
 make update
 ```
 
+The default display contains one old-to-new line for each accepted catalog
+change. Successful no-ops and transaction progress are silent. To expose the
+same transaction's progress, successful no-op diagnostics, summaries, and
+underlying command output, run:
+
+```sh
+make update-verbose
+```
+
+Failures and held-back warnings remain visible in either mode.
+
 It delegates to:
 
 ```sh
-bin/update --all-inputs --pull --commit --switch --push
+bin/update --quiet --all-inputs --pull --commit --switch --push
 ```
 
 This is a root-repository transaction: it requires a clean checkout, takes a

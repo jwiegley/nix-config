@@ -16,7 +16,7 @@ ifneq ($(BUILDER),)
 NIXOPTS	  := $(NIXOPTS) --option builders 'ssh://$(BUILDER)'
 endif
 
-.PHONY: help all verify-inputs lock-local require-darwin-host build switch update update-projects upgrade-tasks upgrade \
+.PHONY: help all verify-inputs lock-local require-darwin-host build switch update update-verbose update-projects upgrade-tasks upgrade \
 	changes copy check repair-store sizes scour sign travel-ready test expensive tools repl format lint \
 	vps-push
 
@@ -95,7 +95,8 @@ help:
 	  '  lint             Run every quality suite (test/bin/quality)' \
 	  '  repair-store     Verify and repair every Nix store path' \
 	  '  switch           Re-lock local inputs and switch nix-darwin' \
-	  '  update           Update all locks/pins, switch, commit, and push' \
+	  '  update           Quietly update all locks/pins, switch, commit, and push' \
+	  '  update-verbose   Run update with progress and no-op diagnostics' \
 	  '  upgrade          Update, switch, and run upgrade tasks' \
 	  '  vps-push         Build x86_64-linux on $(VPS_BUILDER), sign, copy to $(VPS)'
 
@@ -253,8 +254,11 @@ switch: require-darwin-host lock-local
 	echo "Activated Darwin system: $$system_config"
 
 update:
-	$(call announce,bin/update --all-inputs --pull --commit --switch --push)
-	bin/update --all-inputs --pull --commit --switch --push
+	@bin/update --quiet --all-inputs --pull --commit --switch --push
+
+update-verbose:
+	$(call announce,bin/update --verbose --all-inputs --pull --commit --switch --push)
+	@bin/update --verbose --all-inputs --pull --commit --switch --push
 
 update-projects:
 	$(call announce,nix flake update (in projects))

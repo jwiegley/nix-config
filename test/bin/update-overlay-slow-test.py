@@ -210,7 +210,7 @@ class UpdateCliTests(unittest.TestCase):
                 self.assertEqual(MODULE["main"](), 0)
             self.assertEqual(observed, ["manual-direct"])
             rendered = MODULE["ANSI_ESCAPE_RE"].sub("", output.getvalue())
-            self.assertIn("Summary: 0 updated, 1 up-to-date, 0 failed", rendered)
+            self.assertEqual(rendered, "")
 
             observed.clear()
             sys.argv = [str(SCRIPT), "--all", "--verbose"]
@@ -223,7 +223,11 @@ class UpdateCliTests(unittest.TestCase):
                 output.getvalue(),
             )
             rendered = MODULE["ANSI_ESCAPE_RE"].sub("", output.getvalue())
-            self.assertIn("Summary: 0 updated, 2 up-to-date, 0 failed", rendered)
+            self.assertEqual(
+                rendered,
+                "catalog/automatic-delegated: skipped (no executor)\n"
+                "\nSummary: 0 updated, 2 up-to-date, 0 failed\n",
+            )
 
             reject = True
             observed.clear()
@@ -3840,7 +3844,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         self.assertIn("fetch failed: GitHub commit lookup failed", output.getvalue())
         self.assertIn("requested branch 'gone'", output.getvalue())
 
-    def test_source_only_pypi_current_release_reports_up_to_date(self):
+    def test_source_only_pypi_current_release_is_silent(self):
         artifact_url = "https://files.pythonhosted.org/example-1.0.0.whl"
         sources = {
             "fetchPypi": {
@@ -3912,8 +3916,32 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
 
                 self.assertEqual(status, "skipped")
                 self.assertEqual(path.read_bytes(), before)
+                self.assertEqual(output.getvalue(), "")
+
+                verbose_output = io.StringIO()
+                with (
+                    mock.patch.dict(os.environ, {"UPDATE_VERBOSE": "1"}),
+                    contextlib.redirect_stdout(verbose_output),
+                ):
+                    verbose_status = update_catalog_target(
+                        "example",
+                        load_source_catalog(root)["example"],
+                        SimpleNamespace(version=None, dry_run=False),
+                        SimpleNamespace(),
+                        SimpleNamespace(),
+                        SimpleNamespace(
+                            get_release=lambda _package, _record, _requested=None: (
+                                "1.0.0",
+                                artifact_url,
+                                "sha256-current",
+                            )
+                        ),
+                        SimpleNamespace(validate_package_build=lambda *_args: True),
+                        SourceTransaction(),
+                    )
+                self.assertEqual(verbose_status, "skipped")
                 self.assertEqual(
-                    MODULE["ANSI_ESCAPE_RE"].sub("", output.getvalue()),
+                    MODULE["ANSI_ESCAPE_RE"].sub("", verbose_output.getvalue()),
                     "catalog/example ✓ up-to-date\n",
                 )
 
@@ -4624,7 +4652,8 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 ),
             )
             transaction = SourceTransaction()
-            with contextlib.redirect_stdout(io.StringIO()):
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
                 status = update_catalog_target(
                     "example",
                     target,
@@ -4638,6 +4667,10 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             transaction.commit()
             record = json.loads(path.read_text())["sources"]["example"]
             self.assertEqual(status, "updated")
+            self.assertEqual(
+                MODULE["ANSI_ESCAPE_RE"].sub("", output.getvalue()),
+                "catalog/example 1.0.0 → 2.0.0 ✓\n",
+            )
             self.assertEqual(record["source"]["args"]["tag"], "v2.0.0")
             self.assertNotIn("rev", record["source"]["args"])
             self.assertEqual(builds, [("example-package", "python")])
@@ -4849,7 +4882,8 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 )
             )
             transaction = SourceTransaction()
-            with contextlib.redirect_stdout(io.StringIO()):
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
                 status = update_catalog_target(
                     "example",
                     target,
@@ -4863,6 +4897,10 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             transaction.commit()
             record = json.loads(path.read_text())["sources"]["example"]
             self.assertEqual(status, "updated")
+            self.assertEqual(
+                MODULE["ANSI_ESCAPE_RE"].sub("", output.getvalue()),
+                "catalog/example 1.0.0 → 2.0.0 ✓\n",
+            )
             self.assertEqual(record["version"], "2.0.0")
             self.assertEqual(record["source"]["args"]["version"], "2.0.0")
             self.assertEqual(record["source"]["args"]["hash"], "sha256-new")
@@ -5035,7 +5073,8 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     return True
 
             hashes = CandidateHashes()
-            with contextlib.redirect_stdout(io.StringIO()):
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
                 status = update_pypi_artifact_target(
                     "example",
                     target,
@@ -5046,6 +5085,10 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 )
             transaction.commit()
             self.assertEqual(status, "updated")
+            self.assertEqual(
+                MODULE["ANSI_ESCAPE_RE"].sub("", output.getvalue()),
+                "catalog/example 1.0.0 → 2.0.0 ✓\n",
+            )
             self.assertEqual(calls, ["example", "example-metal"])
             self.assertEqual(
                 hashes.validation,
@@ -5100,6 +5143,19 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     },
                 },
             )
+
+            replay_output = io.StringIO()
+            with contextlib.redirect_stdout(replay_output):
+                replay_status = update_pypi_artifact_target(
+                    "example",
+                    load_source_catalog(root)["example"],
+                    SimpleNamespace(version=None, dry_run=False),
+                    client,
+                    hashes,
+                    SourceTransaction(),
+                )
+            self.assertEqual(replay_status, "skipped")
+            self.assertEqual(replay_output.getvalue(), "")
 
             updated["artifacts"]["cp311"]["args"]["version"] = "1.0.0"
             path.write_text(
@@ -7030,6 +7086,7 @@ else:
         document = json.loads((root / "shared.json").read_text())
         document["sources"][name]["version"] = "2.0.0"
         (root / "shared.json").write_text(json.dumps(document, indent=2) + "\\n")
+        print(f"catalog/{name} 1.0.0 → 2.0.0 ✓")
         rejected = set(
             os.environ.get("UPDATE_TEST_REJECT_TARGETS", "b-rejected").split(",")
         )
@@ -7601,7 +7658,7 @@ fi
             environment["UPDATE_TEST_ISOLATED_TARGETS"] = "1"
 
             result = subprocess.run(
-                [str(UPDATE_AGENTS)],
+                [str(UPDATE_AGENTS), "--quiet"],
                 capture_output=True,
                 text=True,
                 env=environment,
@@ -7627,11 +7684,17 @@ fi
                 "b-rejected: retained 1.0.0 (package validation rejected the candidate)",
                 result.stderr,
             )
-            positions = [
-                result.stderr.index(f"catalog/{name}: evaluating candidate")
-                for name in ("a-success", "b-rejected", "c-success")
-            ]
-            self.assertEqual(positions, sorted(positions))
+            self.assertEqual(
+                [line for line in result.stdout.splitlines() if " → " in line],
+                [
+                    "catalog/a-success 1.0.0 → 2.0.0 ✓",
+                    "catalog/c-success 1.0.0 → 2.0.0 ✓",
+                ],
+            )
+            self.assertNotIn(
+                "evaluating candidate",
+                result.stdout + result.stderr,
+            )
 
     def test_update_agents_returns_nonzero_when_every_candidate_is_held_back(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -7643,7 +7706,7 @@ fi
             )
 
             result = subprocess.run(
-                [str(UPDATE_AGENTS)],
+                [str(UPDATE_AGENTS), "--quiet"],
                 capture_output=True,
                 text=True,
                 env=environment,
@@ -7652,15 +7715,18 @@ fi
 
             self.assertEqual(result.returncode, 3)
             self.assertIn("every selected catalog candidate was held back", result.stderr)
+            self.assertIn("target checkout:", result.stderr)
             self._assert_update_agents_unchanged(root, baseline, before)
 
     def test_update_agents_requires_a_buildable_restored_baseline(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, baseline = self._create_update_agents_fixture(temp_dir)
             before = self._update_agents_projection(root)
+            interleaving_log = Path(temp_dir) / "interleaving.log"
             environment.update(
                 UPDATE_TEST_ISOLATED_TARGETS="1",
                 UPDATE_TEST_BASELINE_FAILURE_TARGETS="b-rejected",
+                UPDATE_TEST_INTERLEAVING_LOG=str(interleaving_log),
             )
 
             result = subprocess.run(
@@ -7673,7 +7739,10 @@ fi
 
             self.assertEqual(result.returncode, 1, result.stderr)
             self.assertIn("restored baseline validation failed: b-rejected", result.stderr)
-            self.assertNotIn("catalog/c-success: evaluating candidate", result.stderr)
+            self.assertNotIn(
+                "overlay c-success",
+                interleaving_log.read_text(),
+            )
             self._assert_update_agents_unchanged(root, baseline, before)
 
     def test_update_agents_restores_flake_locks_before_baseline_validation(self):
@@ -8244,13 +8313,15 @@ fi
             environment["UPDATE_TEST_INTERLEAVING_LOG"] = str(interleaving_log)
             environment["UPDATE_TEST_NO_CHANGES"] = "1"
             result = subprocess.run(
-                [str(UPDATE_AGENTS)],
+                [str(UPDATE_AGENTS), "--quiet"],
                 capture_output=True,
                 text=True,
                 env=environment,
                 check=False,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, "")
+            self.assertEqual(result.stderr, "")
             self.assertEqual(
                 command_log.read_text().splitlines()[0],
                 "flake update --flake ./config/ai copy-input",
@@ -8259,6 +8330,17 @@ fi
                 "overlay --validate-candidate-target copy",
                 interleaving_log.read_text().splitlines(),
             )
+
+            verbose_result = subprocess.run(
+                [str(UPDATE_AGENTS), "--verbose"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(verbose_result.returncode, 0, verbose_result.stderr)
+            self.assertIn("target checkout:", verbose_result.stderr)
+            self.assertIn("evaluating candidate", verbose_result.stderr)
 
     def test_update_agents_routes_flake_input_build_through_named_locks(self):
         with tempfile.TemporaryDirectory() as temp_dir:

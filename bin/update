@@ -21,8 +21,11 @@ run_switch=false
 run_push=false
 run_brew=false
 run_dry_run=false
+run_quiet=false
+run_verbose=false
 requested_version=
 declare -a requested_targets=()
+original_args=("$@")
 
 candidate_dir=
 candidate_git_dir=
@@ -51,6 +54,7 @@ usage() {
     cat <<'EOF'
 usage: update [--all-inputs] [--target NAME] [--version VALUE] [--dry-run]
                      [--pull] [--commit] [--switch] [--push] [--brew]
+                     [--quiet | --verbose]
 
 Update both repository locks and every catalog-managed package source.
 By default, leave reviewed working-tree changes without external side effects.
@@ -65,6 +69,8 @@ Options:
   --switch     Switch the host after a successful signed commit
   --push       Push after a successful signed commit
   --brew       Update/upgrade Homebrew after the repository transaction
+  --quiet      Print only accepted old-to-new catalog changes
+  --verbose    Show progress and successful no-op diagnostics
   --no-switch  Disable a previously requested --switch (later flag wins; off by default)
   --no-brew    Disable a previously requested --brew (later flag wins; off by default)
 EOF
@@ -312,6 +318,12 @@ while (($#)); do
     --dry-run)
         run_dry_run=true
         ;;
+    --quiet)
+        run_quiet=true
+        ;;
+    -v | --verbose)
+        run_verbose=true
+        ;;
     --pull)
         run_pull=true
         ;;
@@ -345,6 +357,71 @@ while (($#)); do
     esac
     shift
 done
+
+if [[ $run_quiet == true && $run_verbose == true ]]; then
+    echo "update: --quiet and --verbose are mutually exclusive" >&2
+    exit 2
+fi
+
+# Quiet mode is a presentation boundary around the unchanged transaction. Run
+# the detailed path once, then retain only accepted catalog changes. A failed
+# transaction replays its complete log, while partial candidate rejections keep
+# their held-back warning and never masquerade as accepted updates.
+if [[ $run_quiet == true ]]; then
+    quiet_log=$(mktemp "${TMPDIR:-/tmp}/update-output.XXXXXX")
+    quiet_warnings=$quiet_log.warnings
+    quiet_cleanup() {
+        rm -f -- "$quiet_log" "$quiet_warnings"
+    }
+    trap quiet_cleanup EXIT
+    trap 'exit 129' HUP
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    child_args=()
+    for arg in "${original_args[@]}"; do
+        [[ $arg == --quiet ]] || child_args+=("$arg")
+    done
+    set +e
+    "$script_dir/update" --verbose "${child_args[@]}" >"$quiet_log" 2>&1
+    quiet_status=$?
+    set -e
+    if [[ $quiet_status -ne 0 ]]; then
+        cat "$quiet_log" >&2
+        exit "$quiet_status"
+    fi
+    awk -v warnings="$quiet_warnings" '
+        /^  [^:]+: retained / {
+            name = $1
+            sub(/:$/, "", name)
+            held[name] = 1
+        }
+        { lines[NR] = $0 }
+        END {
+            for (line_number = 1; line_number <= NR; line_number++) {
+                line = lines[line_number]
+                if (line ~ /^catalog\// && line ~ /→/) {
+                    name = line
+                    sub(/^catalog\//, "", name)
+                    sub(/ .*/, "", name)
+                    if (!(name in held))
+                        print line
+                }
+                if (line ~ /^update: held-back catalog targets:$/ || line ~ /^  [^:]+: retained /)
+                    print line > warnings
+            }
+        }
+    ' "$quiet_log"
+    if [[ -s $quiet_warnings ]]; then
+        cat "$quiet_warnings" >&2
+    fi
+    exit 0
+fi
+
+if [[ $run_verbose == true ]]; then
+    export UPDATE_VERBOSE=1
+else
+    unset UPDATE_VERBOSE
+fi
 
 # Target selection. Explicit NIX_CONFIG_DIR wins. The system checkout wins
 # next: on NixOS hosts /etc/nixos is the authoritative checkout and owns the
@@ -774,7 +851,9 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
         git add -A --
         before_target_tree=$(git write-tree)
         candidate_untracked_paths >"$transaction_dir/before-target-untracked"
-        echo "update: catalog/$target_name: evaluating candidate" >&2
+        if [[ $run_verbose == true ]]; then
+            echo "update: catalog/$target_name: evaluating candidate" >&2
+        fi
         set +e
         run_target "$target_name" "$target_executor" "$target_input" \
             "$target_build_package" "$before_target_tree"

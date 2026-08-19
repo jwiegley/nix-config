@@ -7271,6 +7271,24 @@ Partner observation 2026-08-10T19:49:52.586Z: restore the Home Manager runtime-o
 ]
 #+end_src
 
+* DONE [#C] Silence unchanged catalog targets during update
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ou9w
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-18 Tue 15:12]
+:MODIFIED: [2026-08-18 Tue 15:29]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 15:29]
+:CLOSE_REASON: make update now emits only accepted old-to-new catalog changes; successful no-ops and progress are silent, failures and held-back warnings remain visible, and make update-verbose restores detailed progress, no-op diagnostics, summaries, and underlying command output. The full 119-test updater authority and focused output-contract tests pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Make update quiet by default: emit one old-to-new line for each accepted catalog change, omit successful no-ops and progress, preserve failures and held-back warnings, and provide make update-verbose for the detailed transaction display.
+
 * DONE [#C] Keep publication recovery inside bin/publish with readback
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
