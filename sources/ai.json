@@ -977,10 +977,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-11knS5cQBMnI6sUIgfOV3mXnQisNE2ysJUupk/bc0a0=",
+          "narHash": "sha256-LYHdEFpZ5Zx6VgKmbhG3SGEUUtV/zksg+YcZT3e9mHg=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "168977b24c59aa91e76609e4c741c9592a944cd7",
+          "rev": "c4c6673c4c1ceb69d845fa665a714e1273d0acac",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1102,10 +1102,10 @@
     "rust-overlay": {
       "source": {
         "args": {
-          "narHash": "sha256-wNlYM/obKOkkRELrOfto1JT5CRANR6hB/RjOELp223U=",
+          "narHash": "sha256-WLhxXPMCzbeufsDZxdzkurLGBq74GX+JgLX8fFy6HZs=",
           "owner": "oxalica",
           "repo": "rust-overlay",
-          "rev": "b32685dd7c5a965aa8273adb7ddaf7f5b40d0faa",
+          "rev": "99607a06c2ea1290cd3258c11d1416dde9201f94",
           "type": "github"
         },
         "fetcher": "fetchTree",
