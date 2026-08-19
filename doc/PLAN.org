@@ -4213,16 +4213,18 @@ Agent Deck WriteInboxEvent fsyncs the file but does not durably sync a newly cre
 ]
 #+end_src
 
-* DOING [#B] Adopt and verify the PAL MCP repair on managed hosts
+* DONE [#B] Adopt and verify the PAL MCP repair on managed hosts
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-djfl
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-19 Wed 04:25]
-:MODIFIED: [2026-08-19 Wed 10:02]
+:MODIFIED: [2026-08-19 Wed 12:15]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
+:FINISHED: [2026-08-19 Wed 12:11]
+:CLOSE_REASON: Published PAL repair adopted and runtime-accepted on every managed in-scope host; rollback anchors retained and VPS untouched.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -4274,6 +4276,41 @@ Read-only adoption audit on 2026-08-19: Hera and Clio resolve the prepatch Darwi
     "author": "johnw",
     "text": "Explicit authorization received on 2026-08-19 for the signed Pi model-refresh commit/push and for build plus activation on Hera, Clio, shared-work, and Vulcan; VPS remains excluded. Model-refresh commit 137b8be3 is signed and published. Proceeding with exact-revision candidate builds, retained rollback anchors, serial activation, and secret-safe PAL acceptance; stop on first failure.",
     "created_at": "2026-08-19T17:02:31Z"
+  },
+  {
+    "id": 489,
+    "issue_id": "nix-djfl",
+    "author": "johnw",
+    "text": "Authorized adoption progress: Hera generation 1110 and Clio generation 316 activated the exact published candidate; each active PAL 1.4.0 output has the stderr-only repair and passes credential-free, network-blocked initialize/tools-list/listmodels acceptance. Shared-work exact candidate 25pjg738… was built once on Andoria-08, its 2,267-path closure was signed through the authorized ssh-ng client seam, and zero paths remain unsigned. Candidate roots and exact closure digests match on Andoria-08, Andoria-T2, and GPU Server; rollback generation 245 is rooted on all four. Delphi rejects the same signed path because its root-owned trusted-key set differs by one signer, so no shared activation has begun; trust-leaf installation plus nix-daemon restart requires separate owner confirmation. Vulcan adoption commit 36a0a42 is signed/published and authoritative HEAD is cleanly advanced, but concurrent unrelated docs/PLAN.org and flake.lock edits appeared, so its build remains paused. VPS untouched.",
+    "created_at": "2026-08-19T18:37:06Z"
+  },
+  {
+    "id": 490,
+    "issue_id": "nix-djfl",
+    "author": "johnw",
+    "text": "Correction to the immediately preceding progress comment: Clio active profile readback is system generation 317 (not 316); its exact active system and PAL acceptance claims are unchanged.",
+    "created_at": "2026-08-19T18:37:28Z"
+  },
+  {
+    "id": 491,
+    "issue_id": "nix-djfl",
+    "author": "johnw",
+    "text": "Final adoption evidence on 2026-08-19: Hera generation 1110 and Clio generation 317 remain active and accepted. Shared-work used the one frozen candidate 25pjg738… with the exact 2,267-path closure digest c556b72d…; candidate and rollback generation 245 are GC-rooted on all four stores. Delphi installed the published root-policy leaf byte-exactly (SHA-256 263538fe…), retained its exact predecessor (23826767…), restarted only nix-daemon, matched the effective trust policy on T2/GPU, accepted a signed ordinary path, and rejected its byte-equivalent unsigned control with require-sigs retained. The shared candidate was then activated serially on Andoria-08, Andoria-T2, Delphi, and GPU Server; each exact profile, max-jobs=1/cores=8 policy, PAL registry resolution, patched installed bytes, and fresh credential-free/network-blocked initialize/tools-list/listmodels contract passed. A separate authorized session advanced Vulcan to generation 2525; this session preserved its newer paired input/worktree state and independently proved its active PAL registry, patched bytes, and the same fresh protocol contract. Prior Darwin generations, shared rollback generation 245, and Vulcan generation 2524 remain retained. VPS was not contacted.",
+    "created_at": "2026-08-19T19:11:01Z"
+  },
+  {
+    "id": 492,
+    "issue_id": "nix-djfl",
+    "author": "johnw",
+    "text": "Audit clarification with full safe identities: the shared activation package is /nix/store/25pjg738wcnsbbkabj3380k7q6bmbilv-home-manager-generation and its PAL is /nix/store/9qixj4ygi2zpa248iwbnd83064f3f8cc-pal-mcp-server-1.4.0; its sorted 2,267-path closure digest is c556b72dd2777973db1906a5555f69dddafde3720e22605ac8f39ac325b16abf. Delphi installed root-policy leaf SHA-256 263538fe4fba1aab8286cb4c2760984151f7102aae0cd82a0ff02d7b061899cf and retained predecessor SHA-256 23826767715cf7a9bd717c4907ee5f2766352acfd0bdf1f9760b218029a2ad02. Vulcan active generation 2525 resolves exactly to /nix/store/ya40qwcfb53pclmxh4p41p79q05wk9p7-nixos-system-vulcan-25.11.20260630.b6018f8 and its active PAL is /nix/store/p5kd59ly57fkdlm53hb1pfp124xxg7rh-pal-mcp-server-1.4.0. Vulcan lock evidence: during the concurrent authorized switch, this lane observed /etc/nixos/.nixos-build present/busy plus the field-limited active process tree (.nixos-rebuild- with child nix); it did not start a competing invocation. After that holder completed, the lock and builder processes were absent and generation 2525 was active. Thus the observed switch used the consumer driver lock; generation 2524 remains the rollback anchor. No key values are recorded.",
+    "created_at": "2026-08-19T19:13:36Z"
+  },
+  {
+    "id": 493,
+    "issue_id": "nix-djfl",
+    "author": "johnw",
+    "text": "Authorization record: before the Delphi mutation on 2026-08-19, the owner was told the exact pending scope—install only Delphi’s published root trust leaf, retain its previous leaf for rollback, restart only nix-daemon, and prove signed acceptance plus unsigned rejection without exposing key material—and explicitly replied “I authorize.” The operator then encountered interactive sudo, staged a fail-closed installer with byte-hash guards and automatic predecessor restoration, asked the owner to run that exact installer locally without sharing the password, and the owner reported its successful completion. No broader root operation was inferred from this authorization.",
+    "created_at": "2026-08-19T19:15:09Z"
   }
 ]
 #+end_src
