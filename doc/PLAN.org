@@ -15505,21 +15505,37 @@ Schema-20 writer-epoch checks reject incompatible new database opens but cannot 
 ]
 #+end_src
 
-* TODO [#C] Cap or rotate codex host-local logs_2.sqlite in the wrapper
+* DOING [#C] Cap or rotate codex host-local logs_2.sqlite in the wrapper
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-up8x
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-18 Tue 23:45]
-:MODIFIED: [2026-08-18 Tue 23:45]
+:MODIFIED: [2026-08-19 Wed 00:17]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-codex's built-in feedback logger writes TRACE-level rows (full SSE/JSON-RPC payloads) into CODEX_SQLITE_HOME/logs_2.sqlite at ~1-4M rows/day. On hera it reached 13.4GB plus a 5.5GB WAL that long-lived agent-deck codex processes keep pinned (no checkpoint since ~Aug 13). After the 0.148 switch on 2026-08-18, the first fresh open had to run WAL recovery over the cold 5.5GB WAL: sessions sat ~5m40s (23:30:01 tmux create -> 23:35:40 first log row) with no model name and no input before coming alive. Recurrence risk: WAL keeps growing; any cold open (reboot, cache eviction, all-connections-closed) repeats the multi-minute stall. Fix candidates, in the codex wrapper (flake/ai/wrappers/codex.nix), which already owns host-local disposable state: (a) at launch, if logs_2.sqlite+WAL exceed a size cap, rotate/delete them before exec (logs are disposable diagnostics; schema is recreated via sqlx migrations); (b) investigate an upstream codex config knob for feedback-log retention/level before rolling our own; (c) consider warning about stale mixed-version codex processes pinning the WAL.
+INVESTIGATION COMPLETE (2026-08-19). Correct solution: wrapper-side size-capped rotation of the disposable logs DB. Evidence and reasoning below.
+
+UPSTREAM FACTS (codex 0.148 source, verified in /nix/store/ass3ccqbzgwsw5csrmvc0qamd4w08fri-source):
+1. The sqlite log layer's filter is hardcoded: state/src/log_db.rs default_filter() = Targets::default(TRACE) with a few per-target throttles. RUST_LOG only affects the OPT-IN file logger (tui/src/startup_orchestration.rs:450,467; file logging only when config log_dir set). No config.toml key gates the sqlite layer. Upstream issues #29463/#29532 confirm behaviorally that TRACE persists despite RUST_LOG=warn.
+2. Retention is per-partition only: 10 MiB / 1,000 rows per thread_id and per process_uuid (state/src/runtime.rs:83-84), enforced inside each insert transaction, and ONLY for partitions named in the current batch (runtime/logs.rs prune_logs_after_insert). Dead partitions survive until the 10-day sweep, so aggregate size = live-partition-count x cap: unbounded for multi-agent usage. hera equilibrium: ~0.5-1.5 GB/day, 13.4 GB at 10 days.
+3. The main file never shrinks: auto_vacuum=Incremental is set at open (sqlite.rs:284) but no incremental_vacuum or VACUUM is ever executed anywhere in the tree.
+4. WAL ratchets upward: only PASSIVE checkpoints exist (startup maintenance + SQLite default autocheckpoint); PASSIVE skips frames pinned by readers, and each codex keeps a 5-connection pool (sqlite.rs:288) alive for the process lifetime, so long-lived agent-deck sessions starve truncation (hera: 5.5 GB WAL after ~5 days of conductor-director).
+5. The stall is by construction: StateRuntime::init awaits run_logs_startup_maintenance() inline (runtime.rs:261) = 10-day DELETE + PASSIVE checkpoint, no timeout, before the app-server/TUI can proceed; cost scales with DB+WAL size and cold page cache (~18 s/GB measured on hera; 19 GB = 5m40s).
+6. No supported maintenance interface: codex-state-logs binary is read-only query; codex doctor/debug offer no prune; no CLI subcommand deletes logs.
+7. Upstream status: >=10 open issues (Jun-Aug 2026) covering this exact failure family (#27741 startup blocked by big logs_2.sqlite, #28997 34.8 GB WAL, #29463/#29532 TRACE despite RUST_LOG, #30105 second holder blocks init, more); zero fixes merged to state/src/runtime/logs.rs since 2026-07-23 as of 2026-08-18. Waiting for upstream is not a near-term solution.
+
+DECISION - implement in flake/ai/wrappers/codex.nix (the seam that already owns host-local disposable sqlite placement):
+At wrapper start, stat logs_2.sqlite + logs_2.sqlite-wal under CODEX_SQLITE_HOME; if combined size exceeds a cap (recommend 1 GiB, a shell variable), rm -f the trio (db, -wal, -shm) and warn on stderr, then exec codex normally so it recreates a fresh DB via sqlx migrations. POSIX unlink semantics make this safe even if a live codex holds the files (it keeps its fds; disk frees on its exit); the logs DB is a pure diagnostics sink (feedback/ and codex-state-logs are its only readers), so a benign two-launcher race at most costs recent diagnostics. NEVER touch state_5, queue_1, goals_1, memories_1, thread_history_1 - those are real state. Cap keeps roughly a day of /feedback-usable diagnostics on hera and bounds worst-case cold startup to ~20 s.
+
+REJECTED ALTERNATIVES: patching default_filter or startup maintenance (upstream divergence + rebase cost on every llm-agents bump, degrades /feedback; violates minimal-patch discipline); PRAGMA wal_checkpoint(TRUNCATE) at launch (blocks exactly like the disease, cannot shrink the main file, fails under pinned readers); RUST_LOG/env (provably ignored by the sqlite layer); disabling the state runtime (loses resume/history/queue).
+
+FOLLOW-THROUGH: add wrapper test coverage in test/ai/agent-wrappers.nix (over-cap rotates trio + warns; under-cap untouched; other DBs never touched). Watch upstream logs.rs for a real fix (global cap / vacuum / async maintenance) and retire the wrapper cap when it lands. Operational note: avoid week-long codex processes spanning version switches; they pin the WAL (memory: codex-logs-sqlite-bloat).
 
 * DONE [#B] Serialize child consumed-turn cleanup with profile migration
 :PROPERTIES:
