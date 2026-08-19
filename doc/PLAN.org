@@ -551,6 +551,22 @@ VERIFICATION: nix build .#checks.aarch64-darwin.ai-catalog-transport succeeds; m
 ]
 #+end_src
 
+* DOING [#C] Separate inactive Pi gallery packages from active extension inventory
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-1jdb
+:LABELS:   []
+:ISSUE_TYPE: docs
+:CREATED:  [2026-08-18 Tue 23:46]
+:MODIFIED: [2026-08-18 Tue 23:46]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The Pi Extensions document's main table currently mixes the 24 platform-independent active gallery registrations with Lens and Pi Mem, which remain packaged/projected but are excluded from every generated loader. Keep pi-usage-extension as active, move Lens and Pi Mem to an explicit inactive/retained status, and make the document inventory test derive the active rows from the manifest rather than treating inactive projections as in-use extensions.
+
 * DONE [#D] Remove dead path-warning test capture seams
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -1507,6 +1523,22 @@ Frozen product docs: SESSION-PERSISTENCE-SPEC.md cbcba81331f37071b2acd907caaf488
   }
 ]
 #+end_src
+
+* DOING [#B] Repair PAL MCP across managed machines
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-4w3q
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 23:42]
+:MODIFIED: [2026-08-18 Tue 23:43]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Diagnose why the managed PAL stdio MCP server fails on every configured client/host and repair the narrow shared authority without exposing credentials. Done requires: reproduce the failure through a secret-safe protocol/runtime probe; prove the root cause; fix the package/configuration seam once; add mutation-honest package and generated-client coverage; build/evaluate the affected portable outputs for every supported system that selects PAL; verify local MCP initialize/list-tools behavior using only credential presence/placeholder structure, never values; document any operator impact; pass focused/full gates and an independent no-history fess audit.
 
 * DONE [#B] Remove the unused Watchman dependency
 :PROPERTIES:
@@ -15472,6 +15504,22 @@ Schema-20 writer-epoch checks reject incompatible new database opens but cannot 
   }
 ]
 #+end_src
+
+* TODO [#C] Cap or rotate codex host-local logs_2.sqlite in the wrapper
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-up8x
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-18 Tue 23:45]
+:MODIFIED: [2026-08-18 Tue 23:45]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+codex's built-in feedback logger writes TRACE-level rows (full SSE/JSON-RPC payloads) into CODEX_SQLITE_HOME/logs_2.sqlite at ~1-4M rows/day. On hera it reached 13.4GB plus a 5.5GB WAL that long-lived agent-deck codex processes keep pinned (no checkpoint since ~Aug 13). After the 0.148 switch on 2026-08-18, the first fresh open had to run WAL recovery over the cold 5.5GB WAL: sessions sat ~5m40s (23:30:01 tmux create -> 23:35:40 first log row) with no model name and no input before coming alive. Recurrence risk: WAL keeps growing; any cold open (reboot, cache eviction, all-connections-closed) repeats the multi-minute stall. Fix candidates, in the codex wrapper (flake/ai/wrappers/codex.nix), which already owns host-local disposable state: (a) at launch, if logs_2.sqlite+WAL exceed a size cap, rotate/delete them before exec (logs are disposable diagnostics; schema is recreated via sqlx migrations); (b) investigate an upstream codex config knob for feedback-log retention/level before rolling our own; (c) consider warning about stale mixed-version codex processes pinning the WAL.
 
 * DONE [#B] Serialize child consumed-turn cleanup with profile migration
 :PROPERTIES:
