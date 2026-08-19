@@ -42,6 +42,21 @@ assert.equal(
 	"remote-state reconstruction must use one bounded active projection",
 );
 assert.match(openaiSource, /selectCompactionLineage\(/, "remote state must exclude retained pre-compaction entries");
+const compactionHandlerSource = openaiSource.slice(
+	openaiSource.indexOf('pi.on("session_before_compact"'),
+	openaiSource.indexOf('pi.on("message_end"'),
+);
+assert.ok(compactionHandlerSource.length > 0, "missing session_before_compact handler");
+assert.equal(
+	(compactionHandlerSource.match(/\n\s+headers,\n/g) ?? []).length,
+	2,
+	"local and remote compaction must share normalized concrete headers",
+);
+assert.doesNotMatch(
+	compactionHandlerSource,
+	/headers:\s*auth\.headers/,
+	"ProviderHeaders leaked into a concrete-header compaction call",
+);
 assert.match(
 	customStreamSource,
 	/setRequestContextLength\(options\.sessionId, context\.messages\.length\)/,
@@ -140,7 +155,15 @@ function makeEventRegistry() {
 
 const openaiEvents = makeEventRegistry();
 let registeredProvider;
-const { default: openaiExtension } = await import(pathToFileURL(openaiIndexPath));
+const { default: openaiExtension, withoutDeletedHeaders } = await import(pathToFileURL(openaiIndexPath));
+assert.equal(withoutDeletedHeaders(undefined), undefined);
+assert.equal(withoutDeletedHeaders({}), undefined);
+assert.equal(withoutDeletedHeaders({ "x-deleted": null }), undefined);
+assert.deepEqual(
+	withoutDeletedHeaders({ "x-retained": "yes", "x-deleted": null }),
+	{ "x-retained": "yes" },
+	"provider header deletion markers reached concrete-header APIs",
+);
 openaiExtension({
 	on: openaiEvents.on,
 	registerProvider(provider, registration) {

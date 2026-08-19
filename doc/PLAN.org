@@ -5439,15 +5439,17 @@ bin/publish declares exactly one authoritative REMOTE but still loops over the q
 ]
 #+end_src
 
-* TODO [#B] Stabilize Fleet Theme RPC state baseline under Pi 0.84.2
+* DONE [#B] Stabilize Fleet Theme RPC state baseline under Pi 0.84.2
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-ha6p
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-19 Wed 00:46]
-:MODIFIED: [2026-08-19 Wed 00:46]
+:MODIFIED: [2026-08-19 Wed 04:08]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-19 Wed 04:08]
+:CLOSE_REASON: Implemented: proved models-store.json is Pi-owned startup state created before extension loading, then made the Fleet Theme negative RPC test assert its absence before seeding the exact core-owned baseline. The full before/after state contract remains mutation-honest; focused Fleet Theme build and make test pass.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -5467,6 +5469,20 @@ The root make test gate fails because the Fleet Theme negative RPC probe observe
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 484,
+    "issue_id": "nix-ha6p",
+    "author": "johnw",
+    "text": "Confirmed Pi 0.84.2 core owns models-store.json creation before extension loading; adding a direct Fleet Theme absence oracle before the exact Pi-owned state baseline.",
+    "created_at": "2026-08-19T09:47:56Z"
   }
 ]
 #+end_src
@@ -5999,15 +6015,17 @@ Outbound OpenSSH on andoria-08 exits before connection with 'No user exists for 
 ]
 #+end_src
 
-* DOING [#B] Normalize nullable Pi provider headers in compaction extension
+* DONE [#B] Normalize nullable Pi provider headers in compaction extension
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-jlh5
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-18 Tue 19:49]
-:MODIFIED: [2026-08-18 Tue 19:49]
+:MODIFIED: [2026-08-19 Wed 04:08]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-19 Wed 04:08]
+:CLOSE_REASON: Implemented: the Pi 0.84 compatibility adapter drops null ProviderHeaders tombstones, preserves string headers, and returns undefined for absent or empty results before both concrete-header compaction APIs. Behavioral empty/all-null/mixed mutations and both call sites are covered; agent-resources build, make test, and hooks pass.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

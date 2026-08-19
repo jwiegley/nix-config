@@ -45,8 +45,14 @@ runCommand "pi-fleet-theme-check"
       "$scratch/agent/themes/dark-tool-backgrounds.json"
     printf '%s' '{}' >"$scratch/agent/auth.json"
     chmod 600 "$scratch/agent/auth.json"
-    HOME="$scratch/home" ${lib.getExe bun} test \
+    HOME="$scratch/home" \
+      PI_CODING_AGENT_DIR="$scratch/agent" \
+      ${lib.getExe bun} test \
       ${lib.escapeShellArg "${sourceForChecks}/test/ai/extensions/fleet-theme/index.test.ts"}
+    test ! -e "$scratch/agent/models-store.json" \
+      || { echo "Fleet Theme created Pi core model-store state" >&2; exit 1; }
+    printf '%s' '{}' >"$scratch/agent/models-store.json"
+    chmod 600 "$scratch/agent/models-store.json"
     snapshot() {
       find "$scratch" -mindepth 1 -printf '%P|%y|%m|%l\n' | sort
       find "$scratch" -type f -print0 | sort -z | xargs -0 -r sha256sum

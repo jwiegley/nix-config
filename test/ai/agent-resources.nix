@@ -106,6 +106,7 @@ let
     "types.ts"
     "ui-stream-types.ts"
     "config.ts"
+    "package-mcp-loader.ts"
     "server-manager.ts"
     "unix-socket-transport.ts"
     "json-schema-validator.ts"

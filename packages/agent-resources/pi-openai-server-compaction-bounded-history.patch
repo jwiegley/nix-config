@@ -85,7 +85,7 @@ diff --git a/src/index.ts b/src/index.ts
    };
  };
  
-@@ -73,10 +77,6 @@ function getBranchMessages(branchEntries: BranchEntry[]): AgentMessage[] {
+@@ -74,10 +78,6 @@ function getBranchMessages(branchEntries: BranchEntry[]): AgentMessage[] {
    );
  }
  
@@ -113,7 +113,26 @@ diff --git a/src/index.ts b/src/index.ts
    const state = reconstructRemoteCompactionStateFromBranch({ branchEntries });
    if (state) {
      setRemoteCompactionState(sessionId, state);
-@@ -201,8 +199,9 @@ export default function openaiServerCompactionExtension(pi: ExtensionAPI) {
+@@ -161,6 +159,18 @@ function maybeNotifyRequestFeatures(params: {
+   params.ui.notify(`OpenAI compaction active for ${key} (${params.features.join(", ")})`, "info");
+ }
+ 
++export function withoutDeletedHeaders(
++  headers: Record<string, string | null> | undefined,
++): Record<string, string> | undefined {
++  if (!headers) return undefined;
++  const normalized = Object.fromEntries(
++    Object.entries(headers).filter(
++      (entry): entry is [string, string] => entry[1] !== null,
++    ),
++  );
++  return Object.keys(normalized).length === 0 ? undefined : normalized;
++}
++
+ export default function openaiServerCompactionExtension(pi: ExtensionAPI) {
+   const notifiedModels = new Set<string>();
+ 
+@@ -201,11 +211,13 @@ export default function openaiServerCompactionExtension(pi: ExtensionAPI) {
  
    pi.on("session_before_compact", async (event, ctx) => {
      const cfg = loadConfig(ctx.cwd);
@@ -125,7 +144,30 @@ diff --git a/src/index.ts b/src/index.ts
  
      const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
      if (!auth.ok || !auth.apiKey) return undefined;
-@@ -305,13 +304,19 @@ export default function openaiServerCompactionExtension(pi: ExtensionAPI) {
++    const headers = withoutDeletedHeaders(auth.headers);
+ 
+     const tools = buildToolsPayload(pi.getAllTools(), pi.getActiveTools());
+     const sessionId = getSessionId(ctx);
+@@ -230,7 +242,7 @@ export default function openaiServerCompactionExtension(pi: ExtensionAPI) {
+         messages: fullBranchMessages,
+         model,
+         apiKey: auth.apiKey,
+-        headers: auth.headers,
++        headers,
+         customInstructions: event.customInstructions,
+         signal: event.signal,
+         thinkingLevel,
+@@ -240,7 +252,7 @@ export default function openaiServerCompactionExtension(pi: ExtensionAPI) {
+       callRemoteCompactionEndpoint({
+         model,
+         apiKey: auth.apiKey,
+-        headers: auth.headers,
++        headers,
+         sessionId,
+         input: promptResponseItems,
+         instructions: ctx.getSystemPrompt(),
+@@ -304,14 +316,20 @@ export default function openaiServerCompactionExtension(pi: ExtensionAPI) {
+     if (!cfg.enabled || !supportsPreviousResponseId(model, cfg)) return;
      if (!messageMatchesModel(event.message, model)) return;
  
 +    const requestContextLength = takeRequestContextLength(sessionId);
