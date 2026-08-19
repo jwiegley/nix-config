@@ -9,6 +9,7 @@ import json
 import os
 import re
 import runpy
+import select
 import shutil
 import socket
 import stat
@@ -16,6 +17,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import types
 import unittest
 from pathlib import Path
@@ -50,6 +52,9 @@ normalize_prime_agent_lock = MODULE.get("normalize_prime_agent_lock")
 prime_agent_lock_is_normalized = MODULE.get("_prime_agent_lock_is_normalized")
 require_detached_linked_worktree = MODULE["require_detached_linked_worktree"]
 sync_flake_projections = MODULE["sync_flake_projections"]
+print_catalog_change = MODULE["_print_catalog_change"]
+update_main = MODULE["main"]
+ANSI_ESCAPE_RE = MODULE["ANSI_ESCAPE_RE"]
 resolve_flake_input_version = MODULE.get("resolve_flake_input_version")
 validate_catalog_target = MODULE["validate_catalog_target"]
 update_catalog_target = MODULE["update_catalog_target"]
@@ -123,6 +128,145 @@ def write_minimal_catalog(root):
 
 
 class UpdateCliTests(unittest.TestCase):
+    def test_catalog_change_suppresses_equal_versions_and_reports_changed_refs(self):
+        with mock.patch.dict(os.environ):
+            os.environ.pop("UPDATE_VERBOSE", None)
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                print_catalog_change("project", "1.0.0", "1.0.0")
+            self.assertEqual(ANSI_ESCAPE_RE.sub("", output.getvalue()), "")
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                print_catalog_change(
+                    "project",
+                    "1.0.0",
+                    "1.0.0",
+                    old_ref="1" * 40,
+                    new_ref="2" * 40,
+                )
+            self.assertEqual(
+                ANSI_ESCAPE_RE.sub("", output.getvalue()),
+                "catalog/project 11111111 → 22222222 ✓\n",
+            )
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                print_catalog_change(
+                    "project",
+                    "1.0.0",
+                    "1.0.0",
+                    old_ref="12345678" + "a" * 32,
+                    new_ref="12345678" + "b" * 32,
+                )
+            self.assertEqual(
+                ANSI_ESCAPE_RE.sub("", output.getvalue()),
+                "catalog/project 12345678a → 12345678b ✓\n",
+            )
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            print_catalog_change(
+                "project",
+                "1.0.0",
+                "1.0.0",
+                args=SimpleNamespace(verbose=True),
+            )
+        self.assertEqual(
+            ANSI_ESCAPE_RE.sub("", output.getvalue()),
+            "catalog/project 1.0.0 → 1.0.0 ✓\n",
+        )
+
+    def test_record_target_change_emits_structured_accepted_result(self):
+        target = {
+            "kind": "github-commit",
+            "version": "1.0.0",
+            "_record": {
+                "source": {"args": {"rev": "2" * 40}},
+                "update": {"kind": "github-commit"},
+            },
+        }
+        with (
+            mock.patch.object(
+                sys,
+                "argv",
+                [
+                    str(SCRIPT),
+                    "--record-target-change",
+                    "project",
+                    "--old-version",
+                    "1.0.0",
+                    "--old-revision",
+                    "1" * 40,
+                ],
+            ),
+            mock.patch.dict(os.environ, {"UPDATE_AGENTS_CANDIDATE": "1"}),
+            mock.patch.dict(
+                update_main.__globals__,
+                {
+                    "require_detached_linked_worktree": mock.Mock(),
+                    "load_source_catalog": mock.Mock(
+                        return_value={"project": target}
+                    ),
+                },
+            ),
+        ):
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(update_main(), 0)
+        self.assertEqual(
+            json.loads(output.getvalue()),
+            {"name": "project", "old": "11111111", "new": "22222222"},
+        )
+
+    def test_flake_sync_cli_reports_same_version_revision_change(self):
+        for kind in ("flake-input", "flake-input+build", "flake-input+copy"):
+            with self.subTest(kind=kind):
+                before = {
+                    "kind": kind,
+                    "version": "1.0.0",
+                    "_record": {
+                        "source": {
+                            "fetcher": "fetchTree",
+                            "args": {"rev": "1" * 40},
+                        },
+                        "update": {"input": "project", "kind": kind},
+                    },
+                }
+                after = copy.deepcopy(before)
+                after["_record"]["source"]["args"]["rev"] = "2" * 40
+                with (
+                    mock.patch.object(sys, "argv", [
+                        str(SCRIPT),
+                        "--sync-flake-projections",
+                        "project",
+                    ]),
+                    mock.patch.dict(
+                        os.environ,
+                        {"UPDATE_AGENTS_CANDIDATE": "1", "UPDATE_VERBOSE": ""},
+                    ),
+                    mock.patch.dict(
+                        update_main.__globals__,
+                        {
+                            "require_detached_linked_worktree": mock.Mock(),
+                            "load_source_catalog": mock.Mock(
+                                side_effect=[
+                                    {"project": before},
+                                    {"project": after},
+                                ]
+                            ),
+                            "sync_flake_projections": mock.Mock(return_value=1),
+                        },
+                    ),
+                ):
+                    output = io.StringIO()
+                    with contextlib.redirect_stdout(output):
+                        self.assertEqual(update_main(), 0)
+                self.assertEqual(
+                    ANSI_ESCAPE_RE.sub("", output.getvalue()),
+                    "catalog/project 11111111 → 22222222 ✓\n",
+                )
+
     def test_retired_ai_nix_flags_are_rejected(self):
         for flag in (
             "--ai-nix-dir",
@@ -2745,7 +2889,8 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             def update(transaction):
                 npm = FakeNpmClient()
                 hashes = FakeHashComputer()
-                with contextlib.redirect_stdout(io.StringIO()):
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
                     status = update_npm_flake_target(
                         "example",
                         load_target(),
@@ -2766,11 +2911,46 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                         ),
                     ],
                 )
-                return status
+                return status, ANSI_ESCAPE_RE.sub("", output.getvalue())
+
+            class HeadOnlyNpmClient:
+                def get_version_metadata(self, package, requested):
+                    self.request = (package, requested)
+                    return {
+                        "version": "1.0.0",
+                        "integrity": "sha512-registry",
+                        "gitHead": new_rev,
+                    }
+
+            write_old_state()
+            head_only = SourceTransaction()
+            head_only_npm = HeadOnlyNpmClient()
+            head_only_hashes = FakeHashComputer()
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(
+                    update_npm_flake_target(
+                        "example",
+                        load_target(),
+                        SimpleNamespace(version=None, dry_run=False, verbose=False),
+                        head_only_npm,
+                        head_only_hashes,
+                        head_only,
+                    ),
+                    "updated",
+                )
+            self.assertEqual(head_only_npm.request, ("example", None))
+            self.assertEqual(
+                ANSI_ESCAPE_RE.sub("", output.getvalue()),
+                "catalog/example aaaaaaaa → bbbbbbbb ✓\n",
+            )
+            self.assertEqual(head_only.rollback(), 2)
 
             write_old_state()
             rolled_back = SourceTransaction()
-            self.assertEqual(update(rolled_back), "updated")
+            status, output = update(rolled_back)
+            self.assertEqual(status, "updated")
+            self.assertEqual(output, "catalog/example 1.0.0 → 2.0.0 ✓\n")
             candidate = json.loads(catalog_path.read_text())["sources"]["example"]
             self.assertEqual(candidate["artifacts"]["flakeInput"]["args"]["rev"], old_rev)
             self.assertEqual(
@@ -2783,7 +2963,9 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             self.assertNotIn(new_rev, flake_path.read_text())
 
             committed = SourceTransaction()
-            self.assertEqual(update(committed), "updated")
+            status, output = update(committed)
+            self.assertEqual(status, "updated")
+            self.assertEqual(output, "catalog/example 1.0.0 → 2.0.0 ✓\n")
             committed.commit()
             record = json.loads(catalog_path.read_text())["sources"]["example"]
             self.assertEqual(record["version"], "2.0.0")
@@ -5937,7 +6119,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             old_ref = "1" * 40
             new_ref = "2" * 40
             record = {
-                "version": old_ref[:8],
+                "version": "0.4.7",
                 "source": {
                     "fetcher": "fetchFromGitHub",
                     "url": "https://github.com/example/project",
@@ -5984,7 +6166,8 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
 
             hashes = FakeHashes()
             transaction = SourceTransaction()
-            with contextlib.redirect_stdout(io.StringIO()):
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
                 status = update_github_projection_target(
                     "project",
                     target,
@@ -6002,6 +6185,10 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 )
             transaction.commit()
             self.assertEqual(status, "updated")
+            self.assertEqual(
+                ANSI_ESCAPE_RE.sub("", output.getvalue()),
+                "catalog/project 11111111 → 22222222 ✓ +cargoDepsHash\n",
+            )
             self.assertIn(("source", {"rev": new_ref}), hashes.calls)
             self.assertIn(
                 ("dependent", "project", "cargoDepsHash", "python"),
@@ -6048,8 +6235,8 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             new_lock = 'version = 4\n\n[[package]]\nname = "new"\nversion = "2.0.0"\n'
             lock_path.write_text(old_lock)
             path = root / "sources/project.json"
-            old_ref = "1" * 40
-            new_ref = "2" * 40
+            old_ref = "12345678" + "1" * 32
+            new_ref = "12345678" + "2" * 32
             record = {
                 "version": "1.0.0",
                 "source": {
@@ -6128,7 +6315,8 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
 
             def run_update(github, hashes):
                 transaction = SourceTransaction()
-                with contextlib.redirect_stdout(io.StringIO()):
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
                     status = update_github_commit_artifact_target(
                         "project",
                         load_source_catalog(root)["project"],
@@ -6137,7 +6325,9 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                         hashes,
                         transaction,
                     )
-                return status, transaction
+                return status, transaction, ANSI_ESCAPE_RE.sub(
+                    "", output.getvalue()
+                )
 
             def assert_failure_is_atomic(transaction):
                 self.assertEqual(transaction.original, {})
@@ -6147,7 +6337,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
 
             invalid_content_github = FakeGitHub("not a Cargo lock")
             invalid_content_hashes = FakeHashes()
-            status, transaction = run_update(
+            status, transaction, _output = run_update(
                 invalid_content_github,
                 invalid_content_hashes,
             )
@@ -6169,7 +6359,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
 
             invalid_source_github = FakeGitHub(new_lock)
             invalid_source_lock = FakeHashes(lock_valid=False)
-            status, transaction = run_update(
+            status, transaction, _output = run_update(
                 invalid_source_github,
                 invalid_source_lock,
             )
@@ -6194,8 +6384,14 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
 
             rollback_github = FakeGitHub(new_lock)
             rollback_hashes = FakeHashes()
-            status, transaction = run_update(rollback_github, rollback_hashes)
+            status, transaction, output = run_update(
+                rollback_github, rollback_hashes
+            )
             self.assertEqual(status, "updated")
+            self.assertEqual(
+                output,
+                "catalog/project 123456781 → 123456782 ✓\n",
+            )
             self.assertEqual(rollback_github.commit_requests, [expected_commit_request])
             self.assertEqual(rollback_github.file_requests, [expected_file_request])
             self.assertEqual(
@@ -6214,8 +6410,12 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
 
             commit_github = FakeGitHub(new_lock)
             commit_hashes = FakeHashes()
-            status, transaction = run_update(commit_github, commit_hashes)
+            status, transaction, output = run_update(commit_github, commit_hashes)
             self.assertEqual(status, "updated")
+            self.assertEqual(
+                output,
+                "catalog/project 123456781 → 123456782 ✓\n",
+            )
             transaction.commit()
             transaction.rollback_unless_committed()
             self.assertEqual(commit_github.commit_requests, [expected_commit_request])
@@ -6805,6 +7005,7 @@ if os.environ.get("UPDATE_TEST_INTERLEAVING_LOG"):
         log.write("overlay " + " ".join(arguments) + "\\n")
 internal_modes = {
     "--prepare-target",
+    "--record-target-change",
     "--validate-candidate-target",
     "--validate-target",
     "--sync-flake-projections",
@@ -6914,6 +7115,8 @@ if "--inventory" in arguments:
             "managed": True,
             "executor": "update",
             "policy": "automatic",
+            "revision": "1" * 40,
+            "version": "1.0.0",
         })
     if os.environ.get("UPDATE_TEST_FLAKE_ISOLATED_TARGETS") == "1":
         packages.extend({
@@ -6976,6 +7179,22 @@ if "--inventory" in arguments:
         "schemaVersion": 1,
         "packages": packages,
     }))
+elif "--record-target-change" in arguments:
+    name = arguments[arguments.index("--record-target-change") + 1]
+    old_version = arguments[arguments.index("--old-version") + 1]
+    if os.environ.get("UPDATE_TEST_ISOLATED_TARGETS") == "1":
+        new_version = json.loads((root / "shared.json").read_text())["sources"][name]["version"]
+        if old_version != new_version:
+            print(json.dumps({"name": name, "old": old_version, "new": new_version}))
+    elif name == "npm-flake":
+        old_revision = arguments[arguments.index("--old-revision") + 1]
+        new_revision = json.loads((root / "projection.json").read_text())[name]
+        if old_revision != new_revision:
+            print(json.dumps({
+                "name": name,
+                "old": old_revision[:8],
+                "new": new_revision[:8],
+            }))
 elif "--validate-candidate-target" in arguments:
     name = arguments[arguments.index("--validate-candidate-target") + 1]
     if os.environ.get("UPDATE_TEST_FAILURE_PHASE") == "candidate-validation":
@@ -7045,6 +7264,7 @@ elif "--prepare-target" in arguments:
         (root / "fixed.txt").write_text("fixed after\\n")
     elif name == "npm-flake":
         (root / "fixed.txt").write_text("npm flake after\\n")
+        print("catalog/npm-flake 11111111 → 22222222 ✓")
     elif name == "npm-lock":
         (root / "npm-lock.txt").write_text("npm lock after\\n")
         if os.environ.get("UPDATE_TEST_REJECT_NPM_LOCK") == "1":
@@ -7070,8 +7290,10 @@ elif "--sync-flake-projections" in arguments:
         and os.environ.get("UPDATE_TEST_ISOLATED_TARGETS") != "1"
     ):
         projection = json.loads((root / "projection.json").read_text())
-        projection[name] = True
+        projection[name] = "2" * 40 if name == "npm-flake" else True
         (root / "projection.json").write_text(json.dumps(projection) + "\\n")
+        if name == "npm-flake":
+            print("catalog/npm-flake 11111111 → 22222222 ✓")
     if os.environ.get("UPDATE_TEST_SIGNAL_PHASE") == "candidate-projection":
         Path(os.environ["UPDATE_TEST_SIGNAL_MARKER"]).touch()
         os.kill(os.getppid(), signal.SIGTERM)
@@ -7086,7 +7308,7 @@ else:
         document = json.loads((root / "shared.json").read_text())
         document["sources"][name]["version"] = "2.0.0"
         (root / "shared.json").write_text(json.dumps(document, indent=2) + "\\n")
-        print(f"catalog/{name} 1.0.0 → 2.0.0 ✓")
+        print(f"catalog/{name} fabricated → phase-output ✓")
         rejected = set(
             os.environ.get("UPDATE_TEST_REJECT_TARGETS", "b-rejected").split(",")
         )
@@ -7122,6 +7344,10 @@ else:
         Path(os.environ["UPDATE_TEST_SIGNAL_MARKER"]).touch()
         os.kill(os.getppid(), signal.SIGTERM)
     if os.environ.get("UPDATE_TEST_FAILURE_PHASE") == "candidate-update":
+        if os.environ.get("UPDATE_TEST_NOISY_FAILURE") == "1":
+            for index in range(30):
+                print(f"noise {index}")
+        print("catalog/fixture fabricated → phase-output ✓")
         raise SystemExit(71)
 """
         )
@@ -7179,6 +7405,13 @@ mutate_phase() {
   fi
 }
 if [[ $1 == flake && $2 == update ]]; then
+  if [[ -n ${UPDATE_TEST_BLOCK_FLAKE_MARKER:-} \
+    && ! -e $UPDATE_TEST_BLOCK_FLAKE_MARKER ]]; then
+    : >"$UPDATE_TEST_BLOCK_FLAKE_MARKER"
+    while [[ ! -e ${UPDATE_TEST_BLOCK_FLAKE_RELEASE:?} ]]; do
+      sleep 0.01
+    done
+  fi
   if [[ ${3:-} == --flake ]]; then
     if [[ ${UPDATE_TEST_STATEFUL_FLAKE_TARGETS:-} == 1 \
       && ${5:-} == flake-*-input ]]; then
@@ -7259,6 +7492,7 @@ if [[ ${UPDATE_TEST_FAILURE_PHASE:-} == candidate-format ]]; then exit 71; fi
         real_chmod = shutil.which("chmod") or "/bin/chmod"
         real_jq = shutil.which("jq") or "/usr/bin/jq"
         real_mkdir = shutil.which("mkdir") or "/bin/mkdir"
+        real_rm = shutil.which("rm") or "/bin/rm"
         executable(
             "git",
             """#!/usr/bin/env bash
@@ -7336,6 +7570,9 @@ fi
 if [[ $phase == worktree-remove-failure \
   && " $* " == *" worktree remove --force "* ]]; then
   : >"$marker"
+  if [[ -n ${UPDATE_TEST_BLOCK_CLEANUP_RELEASE:-} ]]; then
+    while [[ ! -e $UPDATE_TEST_BLOCK_CLEANUP_RELEASE ]]; do sleep 0.01; done
+  fi
   exit 71
 fi
 if [[ $phase == worktree-list-failure \
@@ -7480,6 +7717,18 @@ if [[ ${UPDATE_TEST_SIGNAL_PHASE:-} == lock-acquisition \
 fi
 """,
         )
+        executable(
+            "rm",
+            """#!/usr/bin/env bash
+set -euo pipefail
+if [[ ${UPDATE_TEST_FAIL_QUIET_LOG_REMOVE:-} == 1 ]]; then
+  for argument in "$@"; do
+    if [[ $argument == "$TMPDIR"/update-output.* ]]; then exit 71; fi
+  done
+fi
+exec "$REAL_RM" "$@"
+""",
+        )
 
         subprocess.run([real_git, "init", "-q", str(root)], check=True)
         subprocess.run(
@@ -7522,6 +7771,7 @@ fi
             "REAL_GIT": real_git,
             "REAL_JQ": real_jq,
             "REAL_MKDIR": real_mkdir,
+            "REAL_RM": real_rm,
             "TMPDIR": temporary,
             "UPDATE_TEST_SYSTEM_CONFIG": str(system_config),
         }
@@ -7680,20 +7930,66 @@ fi
                     "c-success": "2.0.0",
                 },
             )
-            self.assertIn(
-                "b-rejected: retained 1.0.0 (package validation rejected the candidate)",
-                result.stderr,
+            self.assertEqual(
+                result.stdout,
+                "..\n.\n....\n"
+                "catalog/a-success 1.0.0 → 2.0.0 ✓\n"
+                "catalog/c-success 1.0.0 → 2.0.0 ✓\n",
             )
             self.assertEqual(
-                [line for line in result.stdout.splitlines() if " → " in line],
-                [
-                    "catalog/a-success 1.0.0 → 2.0.0 ✓",
-                    "catalog/c-success 1.0.0 → 2.0.0 ✓",
-                ],
+                result.stderr,
+                "update: held-back catalog targets:\n"
+                "  b-rejected: retained 1.0.0 "
+                "(package validation rejected the candidate)\n",
             )
             self.assertNotIn(
                 "evaluating candidate",
                 result.stdout + result.stderr,
+            )
+
+    def test_update_agents_quiet_reports_changes_only_after_push_succeeds(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            push_marker = Path(temp_dir) / "push-called"
+            environment.update(
+                UPDATE_TEST_ISOLATED_TARGETS="1",
+                UPDATE_TEST_PUSH_MARKER=str(push_marker),
+                UPDATE_TEST_PUSH_STATUS="71",
+                UPDATE_TEST_REJECT_TARGETS="",
+            )
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--quiet", "--commit", "--push"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 71)
+            self.assertTrue(push_marker.exists(), "failing push was not attempted")
+            self.assertNotIn("catalog/", result.stdout + result.stderr)
+            self.assertNotEqual(
+                subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip(),
+                baseline,
+            )
+            self.assertEqual(
+                {
+                    name: record["version"]
+                    for name, record in json.loads(
+                        (root / "shared.json").read_text()
+                    )["sources"].items()
+                },
+                {
+                    "a-success": "2.0.0",
+                    "b-rejected": "2.0.0",
+                    "c-success": "2.0.0",
+                },
             )
 
     def test_update_agents_returns_nonzero_when_every_candidate_is_held_back(self):
@@ -7714,9 +8010,267 @@ fi
             )
 
             self.assertEqual(result.returncode, 3)
-            self.assertIn("every selected catalog candidate was held back", result.stderr)
-            self.assertIn("target checkout:", result.stderr)
+            self.assertEqual(result.stdout, ".\n.\n.\n")
+            self.assertEqual(
+                result.stderr,
+                "update: held-back catalog targets:\n"
+                "  a-success: retained 1.0.0 "
+                "(package validation rejected the candidate)\n"
+                "  b-rejected: retained 1.0.0 "
+                "(package validation rejected the candidate)\n"
+                "  c-success: retained 1.0.0 "
+                "(package validation rejected the candidate)\n"
+                "update: every selected catalog candidate was held back\n",
+            )
+            self.assertNotIn("target checkout:", result.stderr)
             self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_quiet_streams_progress_before_slow_flake_update(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, _baseline = self._create_update_agents_fixture(
+                temp_dir,
+                portable_inputs=("uncatalogued",),
+            )
+            marker = Path(temp_dir) / "flake-started"
+            release = Path(temp_dir) / "flake-release"
+            environment.update(
+                UPDATE_TEST_BLOCK_FLAKE_MARKER=str(marker),
+                UPDATE_TEST_BLOCK_FLAKE_RELEASE=str(release),
+                UPDATE_TEST_NO_CHANGES="1",
+            )
+            process = subprocess.Popen(
+                [str(UPDATE_AGENTS), "--quiet", "--all-inputs"],
+                cwd=root,
+                env=environment,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            try:
+                deadline = time.monotonic() + 10
+                while (
+                    not marker.exists()
+                    and process.poll() is None
+                    and time.monotonic() < deadline
+                ):
+                    time.sleep(0.01)
+                self.assertTrue(marker.exists(), "fake flake update never started")
+                ready, _, _ = select.select([process.stdout], [], [], 2)
+                self.assertTrue(ready, "quiet progress was not streamed")
+                first = os.read(process.stdout.fileno(), 1)
+                self.assertEqual(first, b".")
+                self.assertIsNone(process.poll())
+            finally:
+                release.touch()
+                stdout_tail, stderr = process.communicate(timeout=30)
+            self.assertEqual(process.returncode, 0, stderr.decode())
+            self.assertEqual(first + stdout_tail, b".......\n")
+            self.assertEqual(stderr, b"")
+
+    def test_update_agents_quiet_bounds_hard_failure_output(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            environment.update(
+                UPDATE_TEST_FAILURE_PHASE="candidate-update",
+                UPDATE_TEST_NOISY_FAILURE="1",
+            )
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--quiet"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 71)
+            self.assertEqual(result.stdout, ".\n")
+            self.assertNotIn("noise 9\n", result.stderr)
+            self.assertTrue(result.stderr.startswith("noise 10\n"), result.stderr)
+            self.assertNotIn("fabricated", result.stderr)
+            self.assertTrue(
+                result.stderr.endswith(
+                    "noise 29\nupdate: catalog/fixture failed (status 71)\n"
+                ),
+                result.stderr,
+            )
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_quiet_does_not_report_rolled_back_candidate_changes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            interleaving_log = Path(temp_dir) / "interleaving.log"
+            environment.update(
+                UPDATE_TEST_FAILURE_PHASE="candidate-root-validation",
+                UPDATE_TEST_INTERLEAVING_LOG=str(interleaving_log),
+                UPDATE_TEST_ISOLATED_TARGETS="1",
+                UPDATE_TEST_REJECT_TARGETS="",
+            )
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--quiet"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 71)
+            self.assertNotIn("catalog/", result.stdout + result.stderr)
+            events = interleaving_log.read_text().splitlines()
+            self.assertIn("overlay a-success", events)
+            self.assertIn("overlay b-rejected", events)
+            self.assertIn("overlay c-success", events)
+            self.assertIn(
+                "nix flake check --no-build --option eval-cores 1 "
+                "--option lazy-trees false --option eval-cache false",
+                events,
+            )
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_quiet_reports_changes_only_after_cleanup_succeeds(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, _baseline = self._create_update_agents_fixture(temp_dir)
+            interleaving_log = Path(temp_dir) / "interleaving.log"
+            environment.update(
+                UPDATE_TEST_ISOLATED_TARGETS="1",
+                UPDATE_TEST_INTERLEAVING_LOG=str(interleaving_log),
+                UPDATE_TEST_REJECT_TARGETS="",
+                UPDATE_TEST_SIGNAL_PHASE="worktree-list-failure",
+            )
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--quiet"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("failed to verify candidate worktree removal", result.stderr)
+            self.assertNotIn("catalog/", result.stdout + result.stderr)
+            self.assertEqual(
+                {
+                    name: record["version"]
+                    for name, record in json.loads(
+                        (root / "shared.json").read_text()
+                    )["sources"].items()
+                },
+                {
+                    "a-success": "2.0.0",
+                    "b-rejected": "2.0.0",
+                    "c-success": "2.0.0",
+                },
+            )
+            events = interleaving_log.read_text().splitlines()
+            self.assertIn(
+                "overlay --record-target-change a-success --old-version 1.0.0",
+                events,
+            )
+            self.assertIn(
+                "overlay --record-target-change b-rejected --old-version 1.0.0",
+                events,
+            )
+            self.assertIn(
+                "overlay --record-target-change c-success --old-version 1.0.0",
+                events,
+            )
+
+    def test_update_agents_quiet_reports_diagnostic_tail_once_on_cleanup_failure(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _root, environment, _baseline = self._create_update_agents_fixture(
+                temp_dir
+            )
+            environment.update(
+                UPDATE_TEST_HOOK_INJECT="1",
+                UPDATE_TEST_SIGNAL_PHASE="worktree-list-failure",
+            )
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--quiet", "--commit"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            diagnostic = "signed commit did not capture the complete transaction"
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(result.stderr.count(diagnostic), 1, result.stderr)
+            self.assertEqual(
+                result.stderr.count("failed to verify candidate worktree removal"),
+                1,
+                result.stderr,
+            )
+
+    def test_update_agents_quiet_fails_if_diagnostic_log_cannot_be_removed(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _root, environment, _baseline = self._create_update_agents_fixture(
+                temp_dir
+            )
+            environment.update(
+                UPDATE_TEST_FAIL_QUIET_LOG_REMOVE="1",
+                UPDATE_TEST_NO_CHANGES="1",
+            )
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--quiet"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("failed to remove quiet diagnostic log", result.stderr)
+
+    def test_update_agents_quiet_fails_when_requested_brew_is_unavailable(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, _baseline = self._create_update_agents_fixture(
+                temp_dir
+            )
+            path_without_brew = os.pathsep.join(
+                entry
+                for entry in environment["PATH"].split(os.pathsep)
+                if shutil.which("brew", path=entry) is None
+            )
+            self.assertIsNone(shutil.which("brew", path=path_without_brew))
+            interleaving_log = Path(temp_dir) / "interleaving.log"
+            environment.update(
+                PATH=path_without_brew,
+                UPDATE_TEST_ISOLATED_TARGETS="1",
+                UPDATE_TEST_INTERLEAVING_LOG=str(interleaving_log),
+                UPDATE_TEST_REJECT_TARGETS="",
+            )
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--quiet", "--brew"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("--brew requested but brew is unavailable", result.stderr)
+            self.assertNotIn("catalog/", result.stdout + result.stderr)
+            self.assertEqual(
+                {
+                    name: record["version"]
+                    for name, record in json.loads(
+                        (root / "shared.json").read_text()
+                    )["sources"].items()
+                },
+                {
+                    "a-success": "2.0.0",
+                    "b-rejected": "2.0.0",
+                    "c-success": "2.0.0",
+                },
+            )
+            events = interleaving_log.read_text().splitlines()
+            for name in ("a-success", "b-rejected", "c-success"):
+                self.assertIn(
+                    f"overlay --record-target-change {name} --old-version 1.0.0",
+                    events,
+                )
 
     def test_update_agents_requires_a_buildable_restored_baseline(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -8320,7 +8874,7 @@ fi
                 check=False,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(result.stdout, "")
+            self.assertEqual(result.stdout, "......\n")
             self.assertEqual(result.stderr, "")
             self.assertEqual(
                 command_log.read_text().splitlines()[0],
@@ -8478,13 +9032,18 @@ fi
             environment["UPDATE_TEST_COMMAND_LOG"] = str(command_log)
             environment["UPDATE_TEST_INTERLEAVING_LOG"] = str(interleaving_log)
             result = subprocess.run(
-                [str(UPDATE_AGENTS), "--target", "npm-flake"],
+                [str(UPDATE_AGENTS), "--quiet", "--target", "npm-flake"],
                 capture_output=True,
                 text=True,
                 env=environment,
                 check=False,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                result.stdout,
+                ".....\ncatalog/npm-flake 11111111 → 22222222 ✓\n",
+            )
+            self.assertEqual(result.stderr, "")
             self.assertEqual(
                 subprocess.run(
                     ["git", "-C", str(root), "rev-parse", "HEAD"],
@@ -8513,6 +9072,8 @@ fi
                 "nix flake update nix-config-ai",
                 "overlay --sync-flake-projections npm-flake",
                 "overlay --validate-candidate-target npm-flake",
+                "overlay --record-target-change npm-flake --old-version 1.0.0 --old-revision "
+                + "1" * 40,
             ]
             position = -1
             for event in ordered:
@@ -9147,6 +9708,52 @@ fi
             self.assertIn(
                 "signed commit did not capture the complete transaction", result.stderr
             )
+            self._assert_update_agents_unchanged(root, baseline, before)
+
+    def test_update_agents_quiet_reports_outer_failure_before_cleanup_finishes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            marker = Path(temp_dir) / "cleanup-started"
+            release = Path(temp_dir) / "cleanup-release"
+            environment.update(
+                UPDATE_TEST_HOOK_INJECT="1",
+                UPDATE_TEST_SIGNAL_PHASE="worktree-remove-failure",
+                UPDATE_TEST_SIGNAL_MARKER=str(marker),
+                UPDATE_TEST_BLOCK_CLEANUP_RELEASE=str(release),
+            )
+            process = subprocess.Popen(
+                [str(UPDATE_AGENTS), "--quiet", "--commit"],
+                cwd=root,
+                env=environment,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            diagnostic = b"signed commit did not capture the complete transaction"
+            stderr_head = b""
+            try:
+                deadline = time.monotonic() + 30
+                while (
+                    not marker.exists()
+                    and process.poll() is None
+                    and time.monotonic() < deadline
+                ):
+                    time.sleep(0.01)
+                self.assertTrue(marker.exists(), "cleanup never reached worktree removal")
+                while diagnostic not in stderr_head and time.monotonic() < deadline:
+                    ready, _, _ = select.select([process.stderr], [], [], 0.1)
+                    if ready:
+                        chunk = os.read(process.stderr.fileno(), 4096)
+                        if not chunk:
+                            break
+                        stderr_head += chunk
+                self.assertIn(diagnostic, stderr_head)
+                self.assertIsNone(process.poll())
+            finally:
+                release.touch()
+                stdout, stderr_tail = process.communicate(timeout=30)
+            self.assertEqual(process.returncode, 1, stderr_head + stderr_tail)
+            self.assertTrue(stdout.endswith(b"\n"), stdout)
             self._assert_update_agents_unchanged(root, baseline, before)
 
     def test_update_agents_sigterm_during_lock_acquisition_releases_lock(self):

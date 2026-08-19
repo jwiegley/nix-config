@@ -41,11 +41,14 @@ make update
 This delegates to:
 
 ```sh
-bin/update --all-inputs --pull --commit --switch --push
+bin/update --quiet --all-inputs --pull --commit --switch --push
 ```
 
 The transaction updates both flake locks and every automatic source catalog
-record under `sources/`. It requires a clean checkout, takes a repository lock,
+record under `sources/`. Quiet mode streams progress dots, then reports accepted
+version or revision changes after the transaction succeeds;
+`make update-verbose` exposes the full diagnostic path. The transaction requires
+a clean checkout, takes a repository lock,
 constructs an isolated candidate worktree, rejects undeclared file changes, runs
 the required validation, creates a signed commit, activates the exact candidate,
 fast-forwards the checked-out branch, and publishes through `bin/publish`.
@@ -72,8 +75,8 @@ Git work tree when it is a primary nix-config checkout (it contains
 `flake.nix` and `config/ai`, and is not a linked worktree — so `update` run
 from an agent worktree cannot pull, activate, and publish a feature branch;
 a separate full clone parked on a feature branch is treated as a deliberate
-operator context and is honored); and otherwise `~/src/nix`. The resolved
-target is printed to stderr before the transaction starts. Set
+operator context and is honored); and otherwise `~/src/nix`. In verbose mode,
+the resolved target is printed to stderr before the transaction starts. Set
 `NIX_CONFIG_DIR` when the implicit choice would be ambiguous; it overrides
 the working directory.
 

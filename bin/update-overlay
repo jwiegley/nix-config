@@ -88,14 +88,49 @@ ANSI_ESCAPE_RE = re.compile(
 CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
 
 
+def _catalog_change_coordinates(
+    old_version: str,
+    new_version: str,
+    *,
+    old_ref: str | None = None,
+    new_ref: str | None = None,
+    include_unchanged: bool = False,
+) -> tuple[str, str] | None:
+    if old_version == new_version:
+        if old_ref and new_ref and old_ref != new_ref:
+            old_version, new_version = old_ref, new_ref
+        elif not include_unchanged:
+            return None
+    if all(
+        re.fullmatch(r"[0-9a-fA-F]{40}", value)
+        for value in (old_version, new_version)
+    ):
+        width = min(40, max(8, len(os.path.commonprefix((old_version, new_version))) + 1))
+        old_version, new_version = old_version[:width], new_version[:width]
+    return old_version, new_version
+
+
 def _print_catalog_change(
     name: str,
     old_version: str,
     new_version: str,
     *,
+    old_ref: str | None = None,
+    new_ref: str | None = None,
+    args=None,
     dry_run: bool = False,
     suffix: str = "",
 ) -> None:
+    coordinates = _catalog_change_coordinates(
+        old_version,
+        new_version,
+        old_ref=old_ref,
+        new_ref=new_ref,
+        include_unchanged=_catalog_verbose(args),
+    )
+    if coordinates is None:
+        return
+    old_version, new_version = coordinates
     color = Colors.CYAN if dry_run else Colors.GREEN
     status = " (dry-run)" if dry_run else f" ✓{suffix}"
     print(
@@ -2327,6 +2362,11 @@ def build_inventory(catalog_targets: dict[str, dict]) -> dict:
             "managed": executor is not None,
             "executor": executor,
         }
+        selected = _flake_projection(name, target["_record"])
+        source = selected[1] if selected is not None else target["_record"]["source"]
+        reference = source["args"].get("rev", source["args"].get("tag"))
+        if isinstance(reference, str) and reference:
+            package["revision"] = reference
         update = target["_record"]["update"]
         package["policy"] = update.get("policy", "automatic")
         if "reason" in update:
@@ -2554,7 +2594,15 @@ def update_npm_flake_target(
         _print_catalog_unchanged(name, args)
         return "skipped"
     if args.dry_run:
-        _print_catalog_change(name, old_version, new_version, dry_run=True)
+        _print_catalog_change(
+            name,
+            old_version,
+            new_version,
+            old_ref=git_args["rev"],
+            new_ref=new_rev,
+            args=args,
+            dry_run=True,
+        )
         return "updated"
 
     transaction.watch(target["_path"])
@@ -2565,7 +2613,14 @@ def update_npm_flake_target(
     source["url"] = new_url
     _rewrite_npm_flake_input_literal(target, new_rev)
     _write_catalog_target(target)
-    _print_catalog_change(name, old_version, new_version)
+    _print_catalog_change(
+        name,
+        old_version,
+        new_version,
+        old_ref=git_args["rev"],
+        new_ref=new_rev,
+        args=args,
+    )
     return "updated"
 
 
@@ -2684,7 +2739,9 @@ def update_npm_lock_target(
         print(f"catalog/{name} {Colors.RED}✗ package build failed{Colors.RESET}")
         return "failed"
     if args.dry_run:
-        _print_catalog_change(name, old_version, new_version, dry_run=True)
+        _print_catalog_change(
+            name, old_version, new_version, args=args, dry_run=True
+        )
         return "updated"
 
     transaction.watch(target["_path"])
@@ -2705,7 +2762,7 @@ def update_npm_lock_target(
     if not hash_computer.validate_package_build(name):
         print(f"catalog/{name} {Colors.RED}✗ final package build failed{Colors.RESET}")
         raise CandidateRejected(f"{name} final package build failed")
-    _print_catalog_change(name, old_version, new_version)
+    _print_catalog_change(name, old_version, new_version, args=args)
     return "updated"
 
 
@@ -2746,7 +2803,9 @@ def update_pypi_artifact_target(
         _print_catalog_unchanged(name, args)
         return "skipped"
     if args.dry_run:
-        _print_catalog_change(name, old_version, new_version, dry_run=True)
+        _print_catalog_change(
+            name, old_version, new_version, args=args, dry_run=True
+        )
         return "updated"
 
     transaction.watch(target["_path"])
@@ -2769,7 +2828,7 @@ def update_pypi_artifact_target(
         label = "package" if validation_mode == "pkg" else validation_mode
         print(f"catalog/{name} {Colors.RED}✗ final {label} build failed{Colors.RESET}")
         raise CandidateRejected(f"{name} final {label} build failed")
-    _print_catalog_change(name, old_version, new_version)
+    _print_catalog_change(name, old_version, new_version, args=args)
     return "updated"
 
 
@@ -2851,7 +2910,9 @@ def update_github_release_asset_target(
         _print_catalog_unchanged(name, args)
         return "skipped"
     if args.dry_run:
-        _print_catalog_change(name, old_version, new_version, dry_run=True)
+        _print_catalog_change(
+            name, old_version, new_version, args=args, dry_run=True
+        )
         return "updated"
 
     transaction.watch(target["_path"])
@@ -2867,7 +2928,7 @@ def update_github_release_asset_target(
     if not hash_computer.validate_package_build(name):
         print(f"catalog/{name} {Colors.RED}✗ final package build failed{Colors.RESET}")
         raise CandidateRejected(f"{name} final package build failed")
-    _print_catalog_change(name, old_version, new_version)
+    _print_catalog_change(name, old_version, new_version, args=args)
     return "updated"
 
 
@@ -2962,7 +3023,7 @@ def update_github_commit_artifact_target(
         _print_catalog_unchanged(name, args)
         return "skipped"
     if args.dry_run:
-        _print_catalog_change(name, old_ref[:8], new_ref[:8], dry_run=True)
+        _print_catalog_change(name, old_ref, new_ref, args=args, dry_run=True)
         return "updated"
 
     transaction.watch(target["_path"])
@@ -2973,7 +3034,7 @@ def update_github_commit_artifact_target(
     _write_catalog_target(target)
     for path, content in resolved_files.items():
         path.write_text(content)
-    _print_catalog_change(name, old_ref[:8], new_ref[:8])
+    _print_catalog_change(name, old_ref, new_ref, args=args)
     return "updated"
 
 
@@ -3269,7 +3330,15 @@ def update_catalog_target(
         return "skipped"
 
     if args.dry_run:
-        _print_catalog_change(name, old_version, new_version, dry_run=True)
+        _print_catalog_change(
+            name,
+            old_version,
+            new_version,
+            old_ref=current_ref,
+            new_ref=new_ref,
+            args=args,
+            dry_run=True,
+        )
         return "updated"
 
     transaction.watch(target["_path"])
@@ -3339,7 +3408,15 @@ def update_catalog_target(
         )
         raise CandidateRejected(f"{name} final {label} build failed")
     suffix = f" +{','.join(computed)}" if computed else ""
-    _print_catalog_change(name, old_version, new_version, suffix=suffix)
+    _print_catalog_change(
+        name,
+        old_version,
+        new_version,
+        old_ref=current_ref,
+        new_ref=new_ref,
+        args=args,
+        suffix=suffix,
+    )
     return "updated"
 
 
@@ -3518,12 +3595,18 @@ Examples:
     internal.add_argument(
         "--validate-candidate-target", metavar="NAME", help=argparse.SUPPRESS
     )
+    internal.add_argument(
+        "--record-target-change", metavar="NAME", help=argparse.SUPPRESS
+    )
+    parser.add_argument("--old-version", help=argparse.SUPPRESS)
+    parser.add_argument("--old-revision", help=argparse.SUPPRESS)
     args = parser.parse_args()
     sync_flake_projections_requested = args.sync_flake_projections is not None
     internal_target = (
         args.prepare_target
         or args.validate_target
         or args.validate_candidate_target
+        or args.record_target_change
     )
 
     # Validate arguments
@@ -3570,6 +3653,13 @@ Examples:
         parser.error(
             "--validate-target and --validate-candidate-target do not accept --version"
         )
+    if args.record_target_change is not None:
+        if args.old_version is None:
+            parser.error("--record-target-change requires --old-version")
+        if args.version is not None:
+            parser.error("--record-target-change does not accept --version")
+    elif args.old_version is not None or args.old_revision is not None:
+        parser.error("old target coordinates require --record-target-change")
 
     if sync_flake_projections_requested and os.environ.get("UPDATE_AGENTS_CANDIDATE") != "1":
         parser.error("--sync-flake-projections is restricted to the update candidate")
@@ -3589,6 +3679,20 @@ Examples:
     nix_dir = Path(__file__).parent.parent.resolve()
     if sync_flake_projections_requested:
         require_detached_linked_worktree(nix_dir)
+        before_target = load_source_catalog(
+            nix_dir, validate_flake_projections=False
+        )[args.sync_flake_projections]
+        before_version = before_target["version"]
+        report_projection_ref = before_target["kind"] in {
+            "flake-input",
+            "flake-input+build",
+            "flake-input+copy",
+        }
+        before_ref = (
+            before_target["_record"]["source"]["args"]["rev"]
+            if report_projection_ref
+            else None
+        )
         try:
             changed = sync_flake_projections(
                 nix_dir,
@@ -3597,7 +3701,26 @@ Examples:
         except CandidateRejected as error:
             print(f"candidate rejected: {error}", file=sys.stderr)
             return CANDIDATE_REJECTED_EXIT
-        print(f"synchronized {changed} flake input projection(s)")
+        after_target = load_source_catalog(
+            nix_dir, validate_flake_projections=False
+        )[args.sync_flake_projections]
+        after_version = after_target["version"]
+        after_ref = (
+            after_target["_record"]["source"]["args"]["rev"]
+            if report_projection_ref
+            else None
+        )
+        if changed:
+            _print_catalog_change(
+                args.sync_flake_projections,
+                before_version,
+                after_version,
+                old_ref=before_ref,
+                new_ref=after_ref,
+                args=args,
+            )
+        if _catalog_verbose(args):
+            print(f"synchronized {changed} flake input projection(s)")
         return 0
     internal_prepare = args.prepare_target is not None
     internal_validate = (
@@ -3619,6 +3742,31 @@ Examples:
         parser.error(f"unknown catalog target ID(s): {', '.join(unknown_names)}")
     if args.inventory:
         print_inventory(build_inventory(catalog_targets), args.json_output)
+        return 0
+
+    if args.record_target_change is not None:
+        require_detached_linked_worktree(nix_dir)
+        target = catalog_targets[args.record_target_change]
+        selected = _flake_projection(args.record_target_change, target["_record"])
+        source = selected[1] if selected is not None else target["_record"]["source"]
+        new_revision = source["args"].get("rev", source["args"].get("tag"))
+        coordinates = _catalog_change_coordinates(
+            args.old_version,
+            target["version"],
+            old_ref=args.old_revision,
+            new_ref=new_revision,
+        )
+        if coordinates is not None:
+            print(
+                json.dumps(
+                    {
+                        "name": args.record_target_change,
+                        "old": coordinates[0],
+                        "new": coordinates[1],
+                    },
+                    separators=(",", ":"),
+                )
+            )
         return 0
 
     if internal_validate:

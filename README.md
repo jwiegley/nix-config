@@ -122,8 +122,10 @@ make update
 make update-verbose
 ```
 
-The quiet command prints one old-to-new line per accepted catalog change and no
-successful no-op lines; failures and held-back warnings remain visible.
+The quiet command streams one dot per work item as processing proceeds. After the
+transaction succeeds, it prints one old-to-new line for each accepted version
+or revision change; unchanged items remain silent. Failures and held-back
+warnings remain visible. `make update-verbose` retains the detailed display.
 `make update` is a repository transaction, not a whole-fleet deployment. External
 consumers must adopt the published revision in their own locks and activate it
 from their authoritative checkouts. Vulcan must use its local `./build` driver.

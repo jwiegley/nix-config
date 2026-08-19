@@ -6722,6 +6722,40 @@ The nix-scripts package installPhase executes upgrade-projects through its /usr/
 ]
 #+end_src
 
+* DONE [#B] Stream make update progress while suppressing unchanged targets
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-mdtr
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-18 Tue 19:49]
+:MODIFIED: [2026-08-18 Tue 21:17]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-18 Tue 21:17]
+:CLOSE_REASON: Implemented live dot progress for each update work item, deferred one-line version/revision reports until every requested action and cleanup succeeds, bounded immediate failures, and retained update-verbose details. Focused 8/8 and strict 131/131 updater tests passed; format, syntax, compile, diff, Bash, Python, and independent no-history fess reviews are clear.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Replace the buffered quiet wrapper with live progress: stream one dot as each update work item begins; after every requested action and transaction cleanup succeeds, print only accepted old-to-new version or revision changes, one per line; unchanged targets remain silent; surface concise failures immediately; retain make update-verbose for the full transcript. The separately tracked Pi ProviderHeaders validation failure is owned by nix-jlh5.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-mdtr",
+    "depends_on_id": "nix-ou9w",
+    "type": "discovered-from",
+    "created_at": "2026-08-19T02:49:18.729597Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#C] Declare golangci-lint in the root development shell
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

@@ -25,7 +25,9 @@ run_quiet=false
 run_verbose=false
 requested_version=
 declare -a requested_targets=()
-original_args=("$@")
+
+quiet_log=
+quiet_line_open=false
 
 candidate_dir=
 candidate_git_dir=
@@ -69,7 +71,7 @@ Options:
   --switch     Switch the host after a successful signed commit
   --push       Push after a successful signed commit
   --brew       Update/upgrade Homebrew after the repository transaction
-  --quiet      Print only accepted old-to-new catalog changes
+  --quiet      Stream progress dots and print only accepted old-to-new changes
   --verbose    Show progress and successful no-op diagnostics
   --no-switch  Disable a previously requested --switch (later flag wins; off by default)
   --no-brew    Disable a previously requested --brew (later flag wins; off by default)
@@ -363,58 +365,80 @@ if [[ $run_quiet == true && $run_verbose == true ]]; then
     exit 2
 fi
 
-# Quiet mode is a presentation boundary around the unchanged transaction. Run
-# the detailed path once, then retain only accepted catalog changes. A failed
-# transaction replays its complete log, while partial candidate rejections keep
-# their held-back warning and never masquerade as accepted updates.
-if [[ $run_quiet == true ]]; then
-    quiet_log=$(mktemp "${TMPDIR:-/tmp}/update-output.XXXXXX")
-    quiet_warnings=$quiet_log.warnings
-    quiet_cleanup() {
-        rm -f -- "$quiet_log" "$quiet_warnings"
-    }
-    trap quiet_cleanup EXIT
-    trap 'exit 129' HUP
-    trap 'exit 130' INT
-    trap 'exit 143' TERM
-    child_args=()
-    for arg in "${original_args[@]}"; do
-        [[ $arg == --quiet ]] || child_args+=("$arg")
-    done
+quiet_finish_line() {
+    if [[ $run_quiet == true && $quiet_line_open == true ]]; then
+        printf '\n' >&3
+        quiet_line_open=false
+    fi
+}
+
+quiet_progress() {
+    if [[ $run_quiet == true ]]; then
+        printf '.' >&3
+        quiet_line_open=true
+    fi
+}
+
+quiet_emit_changes() {
+    local changes=${1:-}
+    local rendered=
+    [[ $run_quiet == true ]] || return 0
+    [[ -n $changes ]] || return 0
+    if [[ $run_dry_run == true ]]; then
+        rendered=$(jq -r '"catalog/\(.name) \(.old) → \(.new) (dry-run)"' <<<"$changes") ||
+            return
+    else
+        rendered=$(jq -r '"catalog/\(.name) \(.old) → \(.new) ✓"' <<<"$changes") ||
+            return
+    fi
+    quiet_finish_line
+    printf '%s\n' "$rendered" >&3
+}
+
+quiet_replay_failure() {
+    local path=$1
+    [[ $run_quiet == true && -s $path ]] || return 0
+    awk 'NF && !($0 ~ /^catalog\// && $0 ~ / → /)' "$path" | tail -n 20 >&4
+}
+
+quiet_early_cleanup() {
+    local status=$?
+    trap - EXIT
     set +e
-    "$script_dir/update" --verbose "${child_args[@]}" >"$quiet_log" 2>&1
-    quiet_status=$?
-    set -e
-    if [[ $quiet_status -ne 0 ]]; then
-        cat "$quiet_log" >&2
-        exit "$quiet_status"
+    quiet_finish_line
+    if [[ $status -ne 0 ]]; then
+        quiet_replay_failure "$quiet_log"
+        echo "update: preflight failed (status $status)" >&4
     fi
-    awk -v warnings="$quiet_warnings" '
-        /^  [^:]+: retained / {
-            name = $1
-            sub(/:$/, "", name)
-            held[name] = 1
-        }
-        { lines[NR] = $0 }
-        END {
-            for (line_number = 1; line_number <= NR; line_number++) {
-                line = lines[line_number]
-                if (line ~ /^catalog\// && line ~ /→/) {
-                    name = line
-                    sub(/^catalog\//, "", name)
-                    sub(/ .*/, "", name)
-                    if (!(name in held))
-                        print line
-                }
-                if (line ~ /^update: held-back catalog targets:$/ || line ~ /^  [^:]+: retained /)
-                    print line > warnings
-            }
-        }
-    ' "$quiet_log"
-    if [[ -s $quiet_warnings ]]; then
-        cat "$quiet_warnings" >&2
+    if [[ -n $quiet_log ]] && ! rm -f -- "$quiet_log"; then
+        echo "update: failed to remove quiet diagnostic log" >&4
+        status=1
     fi
-    exit 0
+    exit "$status"
+}
+
+quiet_candidate_cleanup() {
+    local status=$?
+    trap - EXIT
+    set +e
+    quiet_finish_line
+    if [[ $status -ne 0 && ! -e $transaction_dir/quiet-failure-reported ]]; then
+        quiet_replay_failure "$quiet_log"
+        echo "update: candidate transaction failed (status $status)" >&4
+        : >"$quiet_log"
+        : >"$transaction_dir/quiet-failure-reported"
+    fi
+    exit "$status"
+}
+
+# Quiet mode runs the real transaction once. Progress bypasses the bounded
+# diagnostic log immediately; accepted changes are reported only after the
+# complete transaction succeeds.
+if [[ $run_quiet == true ]]; then
+    exec 3>&1 4>&2
+    quiet_log=$(mktemp "${TMPDIR:-/tmp}/update-output.XXXXXX")
+    trap quiet_early_cleanup EXIT
+    exec >"$quiet_log" 2>&1
 fi
 
 if [[ $run_verbose == true ]]; then
@@ -460,7 +484,9 @@ elif is_primary_nix_config_work_tree "$invoking_work_tree"; then
 else
     config_dir=$HOME/src/nix
 fi
-echo "update: target checkout: $config_dir" >&2
+if [[ $run_quiet != true ]]; then
+    echo "update: target checkout: $config_dir" >&2
+fi
 
 require_clean() {
     local repo=$1
@@ -480,9 +506,33 @@ cleanup_transaction() {
     local status=$?
     local rollback_status=0
     local rollback_failed=false
+    local quiet_changes=
+    local quiet_failure_reported=false
     local worktree_list=
     set +e
     trap - HUP INT TERM
+
+    if [[ -n $transaction_dir && -e $transaction_dir/quiet-failure-reported ]]; then
+        quiet_failure_reported=true
+    fi
+    if [[ $run_quiet == true && $status -ne 0 && $quiet_failure_reported != true ]]; then
+        quiet_finish_line
+        quiet_replay_failure "$quiet_log"
+        echo "update: transaction failed (status $status)" >&4
+        if ! : >"$quiet_log"; then
+            echo "update: failed to reset quiet diagnostic log" >&4
+            rollback_failed=true
+        fi
+        quiet_failure_reported=true
+        [[ -z $transaction_dir ]] || : >"$transaction_dir/quiet-failure-reported"
+    fi
+    if [[ $run_quiet == true && $status -eq 0 && -n $transaction_dir ]] &&
+        [[ -s $transaction_dir/accepted-changes ]]; then
+        if ! quiet_changes=$(cat -- "$transaction_dir/accepted-changes"); then
+            echo "update: failed to read accepted catalog changes" >&2
+            rollback_failed=true
+        fi
+    fi
 
     if [[ -n $publication_kind && $transaction_complete != true ]]; then
         if [[ $publication_kind == commit ]]; then
@@ -491,7 +541,11 @@ cleanup_transaction() {
             restore_publication_baseline || rollback_status=$?
         fi
         if [[ $rollback_status -eq 0 ]]; then
-            echo "update: rolled back incomplete source transaction" >&2
+            if [[ $run_quiet == true ]]; then
+                echo "update: rolled back incomplete source transaction" >&4
+            else
+                echo "update: rolled back incomplete source transaction" >&2
+            fi
         else
             echo "update: failed to roll back incomplete source transaction" >&2
             rollback_failed=true
@@ -553,9 +607,15 @@ cleanup_transaction() {
             "$transaction_dir/portable-inputs" \
             "$transaction_dir/root-inputs" \
             "$transaction_dir/target-rows" \
+            "$transaction_dir/target-output" \
+            "$transaction_dir/accepted-changes" \
+            "$transaction_dir/quiet-failure-reported" \
             "$transaction_dir/before-target-untracked" \
             "$transaction_dir/after-target-untracked"
-        rmdir "$transaction_dir" 2>/dev/null || true
+        if ! rmdir "$transaction_dir" 2>/dev/null; then
+            echo "update: failed to remove transaction directory" >&2
+            rollback_failed=true
+        fi
     fi
     if [[ $transaction_lock_acquired == true ]] && ! rmdir "$transaction_lock" 2>/dev/null; then
         echo "update: failed to release transaction lock" >&2
@@ -563,6 +623,18 @@ cleanup_transaction() {
     fi
 
     if [[ $rollback_failed == true ]]; then
+        status=1
+    fi
+    quiet_finish_line
+    if [[ $status -ne 0 && ($quiet_failure_reported != true || $rollback_failed == true) ]]; then
+        quiet_replay_failure "$quiet_log"
+    fi
+    if [[ -n $quiet_log ]] && ! rm -f -- "$quiet_log"; then
+        echo "update: failed to remove quiet diagnostic log" >&4
+        status=1
+    fi
+    if [[ $status -eq 0 ]] && ! quiet_emit_changes "$quiet_changes"; then
+        echo "update: failed to report accepted catalog changes" >&4
         status=1
     fi
     trap - EXIT
@@ -611,6 +683,7 @@ if [[ $run_switch == true ]]; then
 fi
 
 if [[ $run_pull == true ]]; then
+    quiet_progress
     git_pull_clean "$config_dir"
 else
     require_clean "$config_dir"
@@ -646,10 +719,14 @@ authoritative_untracked_paths >"$transaction_live_untracked_baseline"
 git -C "$config_dir" worktree add --quiet --detach "$candidate_dir" "$transaction_baseline"
 candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --git-dir)
 
+quiet_finish_line
 (
     trap 'exit 129' HUP
     trap 'exit 130' INT
     trap 'exit 143' TERM
+    if [[ $run_quiet == true ]]; then
+        trap quiet_candidate_cleanup EXIT
+    fi
     cd "$candidate_dir"
     export UPDATE_AGENTS_CANDIDATE=1
     python3 bin/update-overlay --inventory --json >"$transaction_dir/inventory.json"
@@ -751,11 +828,14 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
             flake.lock >"$transaction_dir/root-inputs"
         mapfile -t root_inputs <"$transaction_dir/root-inputs"
         if ((${#portable_inputs[@]})); then
+            quiet_progress
             run_hard nix flake update --flake ./config/ai "${portable_inputs[@]}"
         fi
         if ((${#root_inputs[@]})); then
+            quiet_progress
             run_hard nix flake update "${root_inputs[@]}"
         fi
+        quiet_progress
         run_hard nix flake update nix-config-ai
     fi
 
@@ -805,6 +885,7 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
                     (.executor // "-"),
                     (.input // "-"),
                     (.version // "unknown"),
+                    (.revision // "-"),
                     (.buildPackage // "-")
                   ]
             ]
@@ -845,25 +926,53 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
     declare -a held_back=()
     for target_row in "${target_rows[@]}"; do
         IFS=$'\t' read -r target_name target_kind target_executor target_input \
-            target_version target_build_package <<<"$target_row"
+            target_version target_revision target_build_package <<<"$target_row"
         [[ $target_input != - ]] || target_input=
+        [[ $target_revision != - ]] || target_revision=
         [[ $target_build_package != - ]] || target_build_package=
         git add -A --
         before_target_tree=$(git write-tree)
         candidate_untracked_paths >"$transaction_dir/before-target-untracked"
+        quiet_progress
         if [[ $run_verbose == true ]]; then
             echo "update: catalog/$target_name: evaluating candidate" >&2
         fi
         set +e
-        run_target "$target_name" "$target_executor" "$target_input" \
-            "$target_build_package" "$before_target_tree"
+        if [[ $run_quiet == true ]]; then
+            : >"$transaction_dir/target-output"
+            run_target "$target_name" "$target_executor" "$target_input" \
+                "$target_build_package" "$before_target_tree" \
+                >"$transaction_dir/target-output" 2>&1
+        else
+            run_target "$target_name" "$target_executor" "$target_input" \
+                "$target_build_package" "$before_target_tree"
+        fi
         target_status=$?
         set -e
         if [[ $target_status -eq 0 ]]; then
+            if [[ $run_quiet == true ]]; then
+                change_command=(
+                    python3 bin/update-overlay
+                    --record-target-change "$target_name"
+                    --old-version "$target_version"
+                )
+                if [[ -n $target_revision ]]; then
+                    change_command+=(--old-revision "$target_revision")
+                fi
+                "${change_command[@]}" >>"$transaction_dir/accepted-changes"
+            fi
             git add -A --
             continue
         fi
-        [[ $target_status -eq 3 ]] || exit "$target_status"
+        if [[ $target_status -ne 3 ]]; then
+            if [[ $run_quiet == true ]]; then
+                quiet_finish_line
+                quiet_replay_failure "$transaction_dir/target-output"
+                echo "update: catalog/$target_name failed (status $target_status)" >&4
+                : >"$transaction_dir/quiet-failure-reported"
+            fi
+            exit "$target_status"
+        fi
 
         # Status 3 is provisional until the complete pre-target tree is
         # restored and its package contract builds. This separates a bad
@@ -879,27 +988,55 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
             exit 1
         fi
         set +e
-        python3 bin/update-overlay --validate-target "$target_name"
+        if [[ $run_quiet == true ]]; then
+            python3 bin/update-overlay --validate-target "$target_name" \
+                >>"$transaction_dir/target-output" 2>&1
+        else
+            python3 bin/update-overlay --validate-target "$target_name"
+        fi
         baseline_status=$?
         set -e
         if [[ $baseline_status -ne 0 ]]; then
-            echo "update: restored baseline validation failed: $target_name" >&2
+            if [[ $run_quiet == true ]]; then
+                quiet_finish_line
+                quiet_replay_failure "$transaction_dir/target-output"
+                echo "update: restored baseline validation failed: $target_name" >&4
+                : >"$transaction_dir/quiet-failure-reported"
+            else
+                echo "update: restored baseline validation failed: $target_name" >&2
+            fi
             exit "$baseline_status"
         fi
         held_back+=("$target_name"$'\t'"$target_version")
+        if [[ $run_quiet == true ]]; then
+            quiet_finish_line
+            if ((${#held_back[@]} == 1)); then
+                echo "update: held-back catalog targets:" >&4
+            fi
+            printf '  %s: retained %s (package validation rejected the candidate)\n' \
+                "$target_name" "$target_version" >&4
+        fi
     done
     rm -f -- "$transaction_dir/before-target-untracked" \
         "$transaction_dir/after-target-untracked"
 
     if ((${#held_back[@]})); then
-        echo "update: held-back catalog targets:" >&2
-        for target_row in "${held_back[@]}"; do
-            IFS=$'\t' read -r name version <<<"$target_row"
-            printf '  %s: retained %s (package validation rejected the candidate)\n' \
-                "$name" "$version" >&2
-        done
+        quiet_finish_line
+        if [[ $run_quiet != true ]]; then
+            echo "update: held-back catalog targets:" >&2
+            for target_row in "${held_back[@]}"; do
+                IFS=$'\t' read -r name version <<<"$target_row"
+                printf '  %s: retained %s (package validation rejected the candidate)\n' \
+                    "$name" "$version" >&2
+            done
+        fi
         if ((${#held_back[@]} == ${#target_rows[@]})); then
-            echo "update: every selected catalog candidate was held back" >&2
+            if [[ $run_quiet == true ]]; then
+                echo "update: every selected catalog candidate was held back" >&4
+                : >"$transaction_dir/quiet-failure-reported"
+            else
+                echo "update: every selected catalog candidate was held back" >&2
+            fi
             exit 3
         fi
     fi
@@ -908,16 +1045,21 @@ candidate_git_dir=$(git -C "$candidate_dir" rev-parse --path-format=absolute --g
     # fatal publication gate over the combined accepted candidate. In
     # particular, the inventory reload rejects any unselected projection drift
     # instead of attributing it to the selected target's candidate.
+    quiet_progress
     python3 bin/update-overlay --inventory --json >/dev/null
     mapfile -t changed_nix < <(git diff --no-renames --name-only HEAD -- '*.nix')
     if ((${#changed_nix[@]})); then
+        quiet_progress
         nixfmt "${changed_nix[@]}"
     fi
+    quiet_progress
     run_hard nix flake check ./config/ai --all-systems --no-build --no-eval-cache
     # A no-build check makes Nix evaluation read-only. First force the root
     # flake's displayed all-system derivation paths in writable mode so changed
     # IFD inputs are valid, then run the cache-free check without final builds.
+    quiet_progress
     run_hard nix flake show --json --drv-paths --all-systems --option eval-cores 1 --option lazy-trees false --option eval-cache false >/dev/null
+    quiet_progress
     run_hard nix flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false
 
     declare -A allowed=()
@@ -972,6 +1114,7 @@ if [[ $run_dry_run == true ]]; then
     fi
 elif [[ $run_commit == true && -s $transaction_patch ]]; then
     commit_baseline=$(git -C "$candidate_dir" rev-parse HEAD)
+    quiet_progress
     if ! git -C "$candidate_dir" commit -S -m "Update project pins"; then
         echo "update: signed commit failed" >&2
         exit 1
@@ -1027,6 +1170,7 @@ if [[ $run_switch == true ]]; then
             echo "update: NixOS build driver is missing or not executable: $build_driver" >&2
             exit 1
         fi
+        quiet_progress
         (
             cd "$config_dir"
             ./build -- nix build "${nixos_limits[@]}" --no-link \
@@ -1036,6 +1180,7 @@ if [[ $run_switch == true ]]; then
             echo "update: live repository changed before candidate switch" >&2
             exit 1
         fi
+        quiet_progress
         (
             cd "$config_dir"
             ./build -- nixos-rebuild switch "${nixos_limits[@]}" \
@@ -1043,6 +1188,7 @@ if [[ $run_switch == true ]]; then
         )
         ;;
     *)
+        quiet_progress
         system_config=$(nix build --no-link --print-out-paths \
             "$candidate_dir#darwinConfigurations.$switch_output.system")
         if [[ -z $system_config || ! -x $system_config/sw/bin/darwin-rebuild ]]; then
@@ -1053,6 +1199,7 @@ if [[ $run_switch == true ]]; then
             echo "update: live repository changed before candidate switch" >&2
             exit 1
         fi
+        quiet_progress
         sudo nix-env -p /nix/var/nix/profiles/system --set "$system_config"
         sudo "$system_config/sw/bin/darwin-rebuild" activate
         ;;
@@ -1084,8 +1231,9 @@ if [[ $commit_created == true ]]; then
     fi
 fi
 
-# A push failure retains the local commit for an explicit retry; earlier
-# transaction failures still roll back.
+# Source publication is complete here. A later push or Homebrew failure retains
+# the local commit for an explicit retry, but accepted changes remain unreported
+# until every requested action succeeds.
 transaction_complete=true
 
 if [[ $run_push == true && $commit_created == true ]]; then
@@ -1093,13 +1241,20 @@ if [[ $run_push == true && $commit_created == true ]]; then
         echo "update: cannot publish a detached branch" >&2
         exit 1
     }
+    quiet_progress
     (
         cd "$config_dir"
         bin/publish --publish --rev "$committed_head" --branch "$publish_branch"
     )
 fi
 
-if [[ $run_brew == true ]] && command -v brew >/dev/null 2>&1; then
+if [[ $run_brew == true ]]; then
+    if ! command -v brew >/dev/null 2>&1; then
+        echo "update: --brew requested but brew is unavailable" >&2
+        exit 1
+    fi
+    quiet_progress
     brew update
+    quiet_progress
     brew upgrade --greedy --yes
 fi

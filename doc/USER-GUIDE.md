@@ -706,10 +706,10 @@ authorization for each action before invoking it.
 make update
 ```
 
-The default display contains one old-to-new line for each accepted catalog
-change. Successful no-ops and transaction progress are silent. To expose the
-same transaction's progress, successful no-op diagnostics, summaries, and
-underlying command output, run:
+The default display streams one dot per work item as processing proceeds. After the
+transaction succeeds, it prints one old-to-new line for each accepted version
+or revision change; unchanged items remain silent. To expose successful no-op
+diagnostics, summaries, and underlying command output, run:
 
 ```sh
 make update-verbose
