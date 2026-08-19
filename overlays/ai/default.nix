@@ -41,7 +41,7 @@
     palMcpServer = inputs.pal-mcp-server or null;
   })
   (import ./30-lazycodex.nix)
-  (import ./30-agnix.nix)
+  ((import ./30-agnix.nix) { inherit inputs; })
   (import ./30-claude-vault.nix)
   (import ./30-sherlock-db.nix)
   (import ./30-vllm-mlx.nix)
