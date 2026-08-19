@@ -13,6 +13,14 @@ function expect(condition: boolean, label: string): void {
 	if (!condition) throw new Error(label);
 }
 
+async function waitFor(condition: () => boolean, label: string): Promise<void> {
+	for (let attempt = 0; attempt < 1000; attempt += 1) {
+		if (condition()) return;
+		await Promise.resolve();
+	}
+	throw new Error(label);
+}
+
 type ProviderConfig = Record<string, unknown>;
 type ProviderModel = Record<string, unknown>;
 type WarningProcess = { emitWarning(warning: string | Error): void };
@@ -48,6 +56,7 @@ function registeredModels(
 }
 
 const realFetch = globalThis.fetch;
+const realSetTimeout = globalThis.setTimeout;
 const realEmitWarning = warningProcess.emitWarning;
 
 try {
@@ -309,6 +318,107 @@ try {
 	const codingAgentRoot = process.env.PI_CODING_AGENT_ROOT;
 	if (!codingAgentRoot) throw new Error("PI_CODING_AGENT_ROOT is required");
 	const piAiRoot = `${codingAgentRoot}/node_modules/@earendil-works/pi-ai/dist`;
+	const { InMemoryCredentialStore } = await import(
+		`${piAiRoot}/auth/credential-store.js`
+	);
+	const { ModelRuntime } = await import(
+		`${codingAgentRoot}/dist/core/model-runtime.js`
+	);
+	let dynamicModelId = "runtime-initial";
+	let dynamicRequests = 0;
+	globalThis.fetch = (() => {
+		dynamicRequests += 1;
+		return Promise.resolve(Response.json({ data: [{ id: dynamicModelId }] }));
+	}) as typeof fetch;
+	const dynamicRuntime = await ModelRuntime.create({
+		credentials: new InMemoryCredentialStore(),
+		modelsPath: null,
+		refreshOnCreate: false,
+	});
+	await omlx(dynamicRuntime);
+	await dynamicRuntime.refresh({ allowNetwork: false, providers: ["omlx"] });
+	expectEqual(
+		dynamicRuntime.getModels("omlx").map((model) => model.id),
+		["runtime-initial"],
+		"offline runtime catalog",
+	);
+	expectEqual(dynamicRequests, 1, "offline refresh requests");
+
+	dynamicModelId = "runtime-refreshed";
+	const refreshedResult = await dynamicRuntime.refresh({
+		allowNetwork: true,
+		providers: ["omlx"],
+	});
+	expectEqual([...refreshedResult.errors.keys()], [], "dynamic refresh errors");
+	expectEqual(
+		dynamicRuntime.getModels("omlx").map((model) => model.id),
+		["runtime-refreshed"],
+		"dynamic runtime catalog",
+	);
+	expectEqual(dynamicRequests, 2, "dynamic refresh requests");
+
+	const pendingRefreshes: Array<{
+		signal: AbortSignal;
+		resolve(response: Response): void;
+	}> = [];
+	globalThis.fetch = ((_input: RequestInfo | URL, init?: RequestInit) =>
+		new Promise<Response>((resolve) => {
+			if (!init?.signal) throw new Error("dynamic refresh has no abort signal");
+			pendingRefreshes.push({ signal: init.signal, resolve });
+		})) as typeof fetch;
+	const olderRefresh = dynamicRuntime.refresh({
+		allowNetwork: true,
+		providers: ["omlx"],
+	});
+	await waitFor(
+		() => pendingRefreshes.length === 1,
+		"older dynamic refresh did not start",
+	);
+	const newerRefresh = dynamicRuntime.refresh({
+		allowNetwork: true,
+		providers: ["omlx"],
+	});
+	await waitFor(
+		() => pendingRefreshes.length === 2,
+		"newer dynamic refresh did not start",
+	);
+	expect(
+		pendingRefreshes[0].signal.aborted,
+		"older refresh was not superseded",
+	);
+	pendingRefreshes[1].resolve(
+		Response.json({ data: [{ id: "runtime-newer" }] }),
+	);
+	const newerResult = await newerRefresh;
+	expectEqual([...newerResult.errors.keys()], [], "newer refresh errors");
+	pendingRefreshes[0].resolve(
+		Response.json({ data: [{ id: "runtime-older" }] }),
+	);
+	await olderRefresh;
+	await dynamicRuntime.refresh({ allowNetwork: false, providers: ["omlx"] });
+	expectEqual(
+		dynamicRuntime.getModels("omlx").map((model) => model.id),
+		["runtime-newer"],
+		"superseded runtime catalog",
+	);
+
+	globalThis.fetch = (() =>
+		Promise.reject(new Error("temporary discovery failure"))) as typeof fetch;
+	const failedRefresh = await dynamicRuntime.refresh({
+		allowNetwork: true,
+		providers: ["omlx"],
+	});
+	expectEqual(
+		[...failedRefresh.errors.keys()],
+		["omlx"],
+		"dynamic refresh failure attribution",
+	);
+	expectEqual(
+		dynamicRuntime.getModels("omlx").map((model) => model.id),
+		["runtime-newer"],
+		"last-known-good runtime catalog",
+	);
+
 	const { streamSimple } = await import(`${piAiRoot}/compat.js`);
 	const { getSupportedThinkingLevels } = await import(`${piAiRoot}/models.js`);
 	const { KEYBINDINGS } = await import(
@@ -621,14 +731,23 @@ try {
 		"malformed response warning",
 	);
 
-	// A hung server must abort rather than block registration forever, so the
-	// signal has to reach fetch. Asserting it is wired costs nothing; waiting for
-	// it to fire would add the whole timeout budget to every build.
+	// Exercise the real timeout path without adding 2.5 seconds to every build.
+	const discoveryDelays: number[] = [];
+	globalThis.setTimeout = ((callback: () => void, delay?: number) => {
+		discoveryDelays.push(Number(delay));
+		return realSetTimeout(callback, 0);
+	}) as typeof setTimeout;
 	globalThis.fetch = ((_input: RequestInfo | URL, init?: RequestInit) => {
-		if (!init?.signal) throw new Error("fetch called without an abort signal");
-		return Promise.reject(
-			new DOMException("The operation was aborted.", "AbortError"),
-		);
+		const signal = init?.signal;
+		if (!signal) throw new Error("fetch called without an abort signal");
+		return new Promise<Response>((_resolve, reject) => {
+			signal.addEventListener(
+				"abort",
+				() =>
+					reject(new DOMException("The operation was aborted.", "AbortError")),
+				{ once: true },
+			);
+		});
 	}) as typeof fetch;
 	warnings.length = 0;
 	let abortedProvider: ProviderConfig | undefined;
@@ -638,6 +757,7 @@ try {
 		},
 	});
 	expectEqual(abortedProvider?.models, [], "aborted provider catalog");
+	expectEqual(discoveryDelays, [2_500], "local discovery timeout budget");
 	expectEqual(
 		warnings,
 		[
@@ -647,5 +767,6 @@ try {
 	);
 } finally {
 	globalThis.fetch = realFetch;
+	globalThis.setTimeout = realSetTimeout;
 	warningProcess.emitWarning = realEmitWarning;
 }

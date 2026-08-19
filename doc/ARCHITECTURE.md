@@ -130,7 +130,7 @@ user.
 ```text
 llm-setup-models-list -> llama-swap configuration and GPTel
 oMLX /v1/models -------\
-                         -> Pi startup discovery
+                         -> Pi startup and /model discovery
 llama-swap /v1/models --/
 
 Nix client-local transport/default/override policy
@@ -140,7 +140,9 @@ Nix client-local transport/default/override policy
 ```
 
 Nix owns endpoint wiring and client-specific policy, not a cross-client model
-inventory. Codex retains its native catalog, Pi discovers local models at startup,
+inventory. Codex retains its native catalog. Pi renders its cached model snapshot
+immediately, gives `/model` refreshes the upstream 15-second selector deadline,
+and discovers local models at startup and through its native provider-refresh contract.
 Droid receives no Nix-generated local-model list, and Prime Agent reuses the safe
 Pi-compatible model overrides plus the shared local-provider discovery packages.
 The catalog declares local inference endpoints once per catalog host. The composer

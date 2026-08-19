@@ -1829,6 +1829,7 @@ runCommand "pi-gallery-check"
           maxTokens: 16384,
         }],
       });
+      pi.unregisterProvider("omlx");
       pi.registerProvider("omlx", {
         baseUrl: "synthetic://omlx",
         apiKey: "synthetic",

@@ -2909,6 +2909,24 @@ The full session suite fails TestUpdateStatus_CLIvsTUIParity_Error with statedb 
 
 Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension using the existing source/package/catalog installation pattern. Verify the real package and managed Pi projection without activating hosts.
 
+* DONE [#B] Make Pi model catalog refresh update remote and local providers
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-9e4y
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-19 Wed 04:25]
+:MODIFIED: [2026-08-19 Wed 05:53]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-19 Wed 05:53]
+:CLOSE_REASON: Restored Pi upstream 15-second picker refresh, added native refreshModels for oMLX and llama-swap with 2.5-second local bounds and last-known-good caching, repaired exact provider replacement in the router fixture, and updated docs. Focused behavior, mutation controls, Pi/package aggregate, config/ai all-system evaluation, literal make test, all-files hooks, and fresh fork_turns=none fess audit are green. Activation/runtime acceptance remains separately authorized.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Repair the shared Pi model refresh path so /model keeps cached models responsive, completes healthy cold pi.dev catalog refreshes without the downstream 2.5s false timeout, and re-discovers dynamic oMLX models through ProviderConfig.refreshModels rather than only at extension startup. Done requires secret-safe current-runtime reproduction, a bounded timeout, last-known-good behavior on local discovery failure, mutation-honest remote and local refresh regressions, affected package/full gates, and independent no-history audit. Activation/runtime acceptance is a separate explicitly authorized step.
+
 * DONE [#B] Restore full make update after Pi Subagents and Agent Deck upstream drift
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5705,6 +5723,40 @@ The shared MCP URL validator accepts scheme-only, authority-free, and control-be
 :END:
 
 The recently added post-unload DIRENV_DIFF assertion makes de abort with 'direnv did not restore the pre-direnv environment' after the owner deletes .envrc and .envrc.cache. Restore the longstanding contract: de must recreate both generated files. Remove the unsolicited false-failure guard without weakening private cache generation or .env secret exclusion, and add a focused regression for successful regeneration when direnv leaves its bookkeeping variable set.
+
+* DONE [#C] Make the Pi router RPC fixture replace oMLX exactly
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-iei8
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-19 Wed 04:55]
+:MODIFIED: [2026-08-19 Wed 05:28]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-19 Wed 05:28]
+:CLOSE_REASON: The router fixture now unregisters oMLX before installing its synthetic replacement, matching exact replacement semantics. The rebuilt aarch64-darwin Pi Gallery aggregate passed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The nix-9e4y refresh callback exposed that the Pi Gallery router RPC fixture merged a synthetic oMLX definition over the real dynamic provider. Pi correctly retained the omitted refreshModels callback, whose offline phase then restored its private catalog and removed the synthetic Qwen model. Explicitly unregister the real oMLX provider before registering the synthetic replacement, then prove the aggregate Pi Gallery runtime check passes.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-iei8",
+    "depends_on_id": "nix-9e4y",
+    "type": "discovered-from",
+    "created_at": "2026-08-19T11:55:17.009627Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
 
 * DONE [#B] Restore Pi Sessions as a reviewed managed product :memory:pi:security:sessions:upstream:
 :PROPERTIES:

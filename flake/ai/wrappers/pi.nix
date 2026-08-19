@@ -27,7 +27,7 @@ nodePackage.overrideAttrs (old: {
     patch -p1 --fuzz=0 < ${../../../overlays/ai/patches/pi-tool-renderer-wrapper.patch}
     # Keep the model picker responsive when pi.dev's optional remote
     # catalogs are unavailable. The picker still refreshes on demand,
-    # but it starts from the cached catalog and owns its short timeout.
+    # but it starts from the cached catalog and owns a bounded timeout.
     patch -p1 --fuzz=0 < ${../../../overlays/ai/patches/pi-model-catalog-refresh.patch}
     for patched_js in \
       dist/core/agent-session.js \

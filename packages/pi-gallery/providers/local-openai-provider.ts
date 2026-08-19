@@ -4,6 +4,11 @@
 // upstream LICENSE file.
 
 type ProviderModelConfig = Record<string, unknown>;
+interface RefreshModelsContext {
+	allowNetwork: boolean;
+	signal: AbortSignal;
+	publish(publication: { update?(): void }): Promise<boolean>;
+}
 interface ExtensionAPI {
 	registerProvider(id: string, config: Record<string, unknown>): void;
 }
@@ -48,10 +53,8 @@ const DEFAULT_CONTEXT_WINDOW = 262_144;
 const DEFAULT_MAX_TOKENS = 65_536;
 const MAX_DISCOVERY_RESPONSE_BYTES = 1024 * 1024;
 const MAX_DISCOVERY_MODEL_ENTRIES = 4096;
-// Discovery runs once, at registration, so a timeout does not degrade to "slow"
-// — it leaves the provider with no models until Pi restarts. The budget covers
-// connect, response and JSON parse, and these hosts run jobs heavy enough to
-// stall a loopback round trip well past half a second.
+// The budget covers connect, response and JSON parse. These hosts run jobs heavy
+// enough to stall a loopback round trip well past half a second.
 const FETCH_TIMEOUT_MS = 2_500;
 const NON_CHAT_TYPES = new Set([
 	"asr",
@@ -283,23 +286,28 @@ async function readDiscoveryPayload(
 
 async function discoverModels(
 	config: LocalProviderConfig,
+	callerSignal?: AbortSignal,
 ): Promise<ProviderModelConfig[]> {
 	const url = `${config.baseUrl.replace(/\/$/, "")}/models`;
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+	const signal = callerSignal
+		? AbortSignal.any([callerSignal, controller.signal])
+		: controller.signal;
 	try {
 		const response = await fetch(url, {
 			headers: {
 				Accept: "application/json",
 				Authorization: `Bearer ${config.apiKey}`,
 			},
-			signal: controller.signal,
+			signal,
 		});
 		if (!response.ok) {
 			await abortDiscovery(controller, response.body);
 			throw new Error(`${response.status} ${response.statusText}`);
 		}
 		const payload = await readDiscoveryPayload(response, controller);
+		signal.throwIfAborted();
 		if (!payload || typeof payload !== "object" || Array.isArray(payload))
 			throw new Error("response is not an object");
 		const catalog = payload as {
@@ -322,27 +330,52 @@ async function discoverModels(
 			const model = normalizeModel(entry);
 			return model?.capabilities.type === "chat" ? [toPiModel(model)] : [];
 		});
-	} catch (error) {
-		const detail = error instanceof Error ? error.message : String(error);
-		runtimeProcess.emitWarning(
-			`[${config.id}] Cannot discover models from ${url}: ${detail}`,
-		);
-		return [];
 	} finally {
 		clearTimeout(timeout);
 	}
+}
+
+function warnDiscoveryFailure(
+	config: LocalProviderConfig,
+	error: unknown,
+): void {
+	const detail = error instanceof Error ? error.message : String(error);
+	const url = `${config.baseUrl.replace(/\/$/, "")}/models`;
+	runtimeProcess.emitWarning(
+		`[${config.id}] Cannot discover models from ${url}: ${detail}`,
+	);
 }
 
 export async function registerLocalProvider(
 	pi: ExtensionAPI,
 	config: LocalProviderConfig,
 ): Promise<void> {
+	let cachedModels: ProviderModelConfig[];
+	try {
+		cachedModels = await discoverModels(config);
+	} catch (error) {
+		warnDiscoveryFailure(config, error);
+		cachedModels = [];
+	}
 	pi.registerProvider(config.id, {
 		name: config.name,
 		baseUrl: config.baseUrl,
 		api: "openai-completions",
 		apiKey: config.apiKey,
 		authHeader: true,
-		models: await discoverModels(config),
+		models: cachedModels,
+		refreshModels: async (
+			context: RefreshModelsContext,
+		): Promise<ProviderModelConfig[]> => {
+			if (!context.allowNetwork) return cachedModels;
+			const refreshed = await discoverModels(config, context.signal);
+			context.signal.throwIfAborted();
+			const published = await context.publish({
+				update: () => {
+					cachedModels = refreshed;
+				},
+			});
+			return published ? refreshed : cachedModels;
+		},
 	});
 }

@@ -283,10 +283,11 @@ collisions and unsafe parent ownership, and gives Home Manager only the
 generated leaves it may own.
 
 Client-native behavior remains client-native where appropriate. Codex retains
-its native model catalog; Pi discovers local models at startup; mutable auth,
-history, sessions, caches, reports, and preferences remain outside generated
-Nix leaves. The purpose is one policy authority, not one invented universal
-client format.
+its native model catalog; Pi displays its cached model snapshot immediately,
+allows `/model` refreshes up to 15 seconds, and gives each local discovery request
+a separate 2.5-second bound; mutable auth, history, sessions, caches,
+reports, and preferences remain outside generated Nix leaves. The purpose is
+one policy authority, not one invented universal client format.
 
 ### 3.6 Mutable state
 
