@@ -56,6 +56,15 @@ let
     exec ${pkgs.coreutils}/bin/timeout "''${arguments[@]}"
   '';
 
+  fakeLsof = pkgs.writeShellScriptBin "lsof" ''
+    set -euo pipefail
+    if [ "''${AGENT_TEST_CODEX_LSOF_ERROR:-}" = 1 ]; then
+      echo "synthetic lsof inspection failure" >&2
+      exit 1
+    fi
+    exec ${pkgs.lsof}/bin/lsof "$@"
+  '';
+
   testCoreutils = pkgs.symlinkJoin {
     name = "agent-wrapper-test-coreutils";
     paths = [ pkgs.coreutils ];
@@ -69,6 +78,7 @@ let
 
   testPkgs = pkgs // {
     coreutils = testCoreutils;
+    lsof = fakeLsof;
   };
 
   nonDarwinTestPkgs = testPkgs // {

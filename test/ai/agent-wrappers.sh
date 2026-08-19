@@ -23,10 +23,14 @@ managed_file_sentinel='MANAGED-FILE-CONTENT-MUST-NEVER-APPEAR-7d6b78'
 case_counter=0
 cleanup_roots=()
 background_pids=()
+test_run_id=$(printf '%s' "$TMPDIR" | cksum | awk '{ print $1 }')
 
 mkdir -p "$work_root"
 
 fail() {
+    if [ -n "${STDERR_FILE:-}" ] && [ -s "$STDERR_FILE" ]; then
+        sed -n '1,20p' "$STDERR_FILE" >&2
+    fi
     printf 'agent-wrappers check [%s]: %s\n' "${CASE_DIR:-global}" "$*" >&2
     exit 1
 }
@@ -63,7 +67,7 @@ new_case() {
     case_counter=$((case_counter + 1))
     CASE_DIR="$work_root/$client/$case_counter-$label"
     HOME_DIR="$CASE_DIR/home with spaces"
-    AGENT_TEST_UID="9$BASHPID$case_counter"
+    AGENT_TEST_UID="9$test_run_id$case_counter"
     CODEX_LOCAL_ROOT="/var/tmp/codex-$AGENT_TEST_UID"
     ARGV_FILE="$CASE_DIR/upstream.argv"
     ENV_FILE="$CASE_DIR/upstream.env"
@@ -1636,6 +1640,150 @@ test_codex_host_state() {
     finish_case codex
 }
 
+test_codex_log_rotation() {
+    local holder_pid holder_status ready release sqlite_root
+    local AGENT_TEST_CODEX_LSOF_ERROR
+
+    new_case codex log-rotation-over-cap
+    configure_state zero
+    sqlite_root="$CODEX_LOCAL_ROOT/sqlite"
+    mkdir -m 700 "$CODEX_LOCAL_ROOT"
+    mkdir -m 700 "$sqlite_root"
+    printf 'unrelated-state' >"$sqlite_root/state_5.sqlite"
+    truncate -s $((900 * 1024 * 1024)) "$sqlite_root/logs_2.sqlite"
+    truncate -s $((100 * 1024 * 1024)) "$sqlite_root/logs_2.sqlite-wal"
+    truncate -s $((50 * 1024 * 1024)) "$sqlite_root/logs_2.sqlite-shm"
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -eq 0 ] ||
+        fail "Codex launch with an oversized log database failed"
+    assert_argv "$ARGV_FILE" alpha
+    [ ! -e "$sqlite_root/logs_2.sqlite" ] ||
+        fail "Codex did not rotate an oversized log database"
+    [ ! -e "$sqlite_root/logs_2.sqlite-wal" ] ||
+        fail "Codex did not rotate an oversized log database WAL"
+    [ ! -e "$sqlite_root/logs_2.sqlite-shm" ] ||
+        fail "Codex did not rotate an oversized log database shared memory"
+    [ "$(cat "$sqlite_root/state_5.sqlite")" = unrelated-state ] ||
+        fail "Codex log rotation modified an unrelated database"
+    grep -F 'rotating oversized log database' "$STDERR_FILE" >/dev/null ||
+        fail "Codex log rotation did not warn"
+    finish_case codex
+
+    new_case codex log-rotation-under-cap
+    configure_state zero
+    sqlite_root="$CODEX_LOCAL_ROOT/sqlite"
+    mkdir -m 700 "$CODEX_LOCAL_ROOT"
+    mkdir -m 700 "$sqlite_root"
+    truncate -s $((512 * 1024 * 1024)) "$sqlite_root/logs_2.sqlite"
+    truncate -s $((256 * 1024 * 1024)) "$sqlite_root/logs_2.sqlite-wal"
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -eq 0 ] ||
+        fail "Codex launch with an in-budget log database failed"
+    assert_argv "$ARGV_FILE" alpha
+    [ -f "$sqlite_root/logs_2.sqlite" ] && [ -f "$sqlite_root/logs_2.sqlite-wal" ] ||
+        fail "Codex rotated an in-budget log database"
+    if grep -F 'rotating oversized log database' "$STDERR_FILE" >/dev/null; then
+        fail "Codex warned about an in-budget log database"
+    fi
+    finish_case codex
+
+    new_case codex log-rotation-symlink-uncounted
+    configure_state zero
+    sqlite_root="$CODEX_LOCAL_ROOT/sqlite"
+    mkdir -m 700 "$CODEX_LOCAL_ROOT"
+    mkdir -m 700 "$sqlite_root"
+    truncate -s $((2048 * 1024 * 1024)) "$CASE_DIR/decoy.sqlite"
+    ln -s "$CASE_DIR/decoy.sqlite" "$sqlite_root/logs_2.sqlite"
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -eq 0 ] ||
+        fail "Codex launch with a symlinked log database failed"
+    assert_argv "$ARGV_FILE" alpha
+    [ -L "$sqlite_root/logs_2.sqlite" ] ||
+        fail "Codex removed a symlinked log database it must not count"
+    if grep -F 'rotating oversized log database' "$STDERR_FILE" >/dev/null; then
+        fail "Codex counted a symlinked log database toward the rotation cap"
+    fi
+    finish_case codex
+
+    new_case codex log-rotation-removal-failure
+    configure_state zero
+    sqlite_root="$CODEX_LOCAL_ROOT/sqlite"
+    mkdir -m 700 "$CODEX_LOCAL_ROOT"
+    mkdir -m 700 "$sqlite_root"
+    truncate -s $((1024 * 1024 * 1024 + 1)) "$sqlite_root/logs_2.sqlite"
+    mkdir "$sqlite_root/logs_2.sqlite-shm"
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -ne 0 ] ||
+        fail "Codex ignored a log database rotation failure"
+    assert_upstream_not_invoked
+    grep -F 'cannot rotate oversized log database' "$STDERR_FILE" >/dev/null ||
+        fail "Codex log rotation failure had no diagnostic"
+    finish_case codex
+
+    new_case codex log-rotation-holder-probe-failure
+    configure_state zero
+    sqlite_root="$CODEX_LOCAL_ROOT/sqlite"
+    mkdir -m 700 "$CODEX_LOCAL_ROOT"
+    mkdir -m 700 "$sqlite_root"
+    truncate -s $((1024 * 1024 * 1024 + 1)) "$sqlite_root/logs_2.sqlite"
+    export AGENT_TEST_CODEX_LSOF_ERROR=1
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -eq 0 ] ||
+        fail "Codex rejected an uninspectable oversized log database"
+    assert_argv "$ARGV_FILE" alpha
+    [ -e "$sqlite_root/logs_2.sqlite" ] ||
+        fail "Codex rotated a log database after holder inspection failed"
+    grep -F 'cannot inspect log database holders; skipping rotation' \
+        "$STDERR_FILE" >/dev/null ||
+        fail "Codex did not report the holder inspection failure"
+    unset AGENT_TEST_CODEX_LSOF_ERROR
+    finish_case codex
+
+    new_case codex log-rotation-live-holder
+    configure_state zero
+    sqlite_root="$CODEX_LOCAL_ROOT/sqlite"
+    ready="$CASE_DIR/holder-ready"
+    release="$CASE_DIR/holder-release"
+    mkdir -m 700 "$CODEX_LOCAL_ROOT"
+    mkdir -m 700 "$sqlite_root"
+    "$PYTHON_BIN" - "$sqlite_root/logs_2.sqlite" "$ready" "$release" <<'PY' &
+import sqlite3
+import sys
+import time
+from pathlib import Path
+
+database_path, ready_path, release_path = map(Path, sys.argv[1:])
+with sqlite3.connect(database_path) as database:
+    database.execute("PRAGMA journal_mode=WAL")
+    database.execute("CREATE TABLE IF NOT EXISTS events (value TEXT)")
+    database.execute("INSERT INTO events VALUES ('held')")
+    database.commit()
+    ready_path.touch()
+    while not release_path.exists():
+        time.sleep(0.01)
+PY
+    holder_pid=$!
+    background_pids=("$holder_pid")
+    wait_for_path "$ready" "$holder_pid" "live Codex log database holder"
+    truncate -s $((1024 * 1024 * 1024 + 1)) "$sqlite_root/logs_2.sqlite-wal"
+    invoke_agent codex 0 0 alpha
+    [ "$LAST_STATUS" -eq 0 ] ||
+        fail "Codex rejected an oversized log database with a live holder"
+    assert_argv "$ARGV_FILE" alpha
+    [ -e "$sqlite_root/logs_2.sqlite" ] &&
+        [ -e "$sqlite_root/logs_2.sqlite-wal" ] &&
+        [ -e "$sqlite_root/logs_2.sqlite-shm" ] ||
+        fail "Codex rotated a log database with a live holder"
+    grep -F 'oversized log database is in use; skipping rotation' \
+        "$STDERR_FILE" >/dev/null ||
+        fail "Codex did not report the live-holder rotation skip"
+    touch "$release"
+    if wait "$holder_pid"; then holder_status=0; else holder_status=$?; fi
+    background_pids=()
+    [ "$holder_status" -eq 0 ] || fail "live log holder exited $holder_status"
+    finish_case codex
+}
+
 test_codex_sqlite_wal_snapshot() {
     local marker=codex-live-wal writer_pid writer_status
     local ready release
@@ -2134,6 +2282,7 @@ assert_real_probe_policy() {
         HOME="$probe_home" CODEX_HOME="$probe_home/codex" \
         CODEX_SQLITE_HOME="$probe_home/sqlite" \
         CODEX_INTERNAL_WRAPPER_POLICY_PROBE=v1 \
+        timeout --signal=TERM --kill-after=1 30 \
         "$REAL_PROBED_CODEX_BIN" "$@" \
         >"$probe_dir/actual" 2>"$probe_dir/stderr"; then
         fail "real Codex policy probe failed: $label"
@@ -2231,9 +2380,9 @@ run_real_wrapped_codex() {
         TASK3_NETWORK_GUARD_LOADED_FILE="$network_guard_loaded" \
         TASK3_NETWORK_ATTEMPT_FILE="$network_hit" \
         "$NETWORK_GUARD_VARIABLE=$NETWORK_GUARD_LIBRARY" \
+        timeout --signal=TERM --kill-after=1 30 \
         "$binary" "$@" >"$STDOUT_FILE" 2>"$STDERR_FILE" &
     wrapper_pid=$!
-    REAL_WRAPPED_CODEX_LAST_PID=$wrapper_pid
     if wait "$wrapper_pid"; then
         LAST_STATUS=0
     else
@@ -2244,7 +2393,7 @@ run_real_wrapped_codex() {
     printf '%s\n' poison | cmp -s - "$poison_sqlite" ||
         fail "real wrapped Codex touched the poison SQLite path"
     if [ "$LAST_STATUS" -eq 0 ] && [ -z "${REAL_WRAPPED_CODEX_TEST_BIN:-}" ]; then
-        assert_network_guard_loaded "$network_guard_loaded" codex "$wrapper_pid"
+        assert_network_guard_loaded "$network_guard_loaded" codex
     fi
 }
 
@@ -2271,6 +2420,7 @@ assert_real_codex_status_parity() {
         TASK3_NETWORK_GUARD_LOADED_FILE="$raw_network_guard_loaded" \
         TASK3_NETWORK_ATTEMPT_FILE="$raw_network_hit" \
         "$NETWORK_GUARD_VARIABLE=$NETWORK_GUARD_LIBRARY" \
+        timeout --signal=TERM --kill-after=1 30 \
         "$REAL_CODEX_BIN" "$@" >"$CASE_DIR/raw.stdout" 2>"$CASE_DIR/raw.stderr"; then
         raw_status=0
     else
@@ -2303,8 +2453,7 @@ assert_real_codex_status_parity() {
     *) fail "unknown real Codex route expectation: $expected_route" ;;
     esac
     assert_network_guard_loaded "$raw_network_guard_loaded" codex
-    assert_network_guard_loaded \
-        "$wrapped_network_guard_loaded" codex "$REAL_WRAPPED_CODEX_LAST_PID"
+    assert_network_guard_loaded "$wrapped_network_guard_loaded" codex
     [ ! -e "$raw_network_hit" ] && [ ! -e "$wrapped_network_hit" ] ||
         fail "Codex parity probe attempted network access"
     [ ! -e "$ROOT/sessions" ] && [ ! -e "$raw_home/sessions" ] ||
@@ -2494,7 +2643,8 @@ test_real_codex_profile_contract() {
     printf 'developer_instructions = "%s"\n' "$marker" \
         >"$codex_home/nix-runtime.config.toml"
 
-    if env HOME="$codex_home" CODEX_HOME="$codex_home" \
+    if timeout --signal=TERM --kill-after=1 30 \
+        env HOME="$codex_home" CODEX_HOME="$codex_home" \
         CODEX_SQLITE_HOME="$codex_home/sqlite" \
         "$REAL_CODEX_BIN" debug prompt-input hello \
         >"$codex_home/without-profile.json" 2>"$codex_home/without-profile.stderr"; then
@@ -2506,7 +2656,8 @@ test_real_codex_profile_contract() {
         "$codex_home/without-profile.json" "$marker" absent ||
         fail "pinned Codex loaded the managed developer instructions without --profile"
 
-    if env HOME="$codex_home" CODEX_HOME="$codex_home" \
+    if timeout --signal=TERM --kill-after=1 30 \
+        env HOME="$codex_home" CODEX_HOME="$codex_home" \
         CODEX_SQLITE_HOME="$codex_home/sqlite" \
         "$REAL_CODEX_BIN" --profile nix-runtime debug prompt-input hello \
         >"$codex_home/with-profile.json" 2>"$codex_home/with-profile.stderr"; then
@@ -2530,7 +2681,8 @@ test_real_codex_profile_contract() {
         printf 'wire_api = "responses"\n'
         printf 'requires_openai_auth = false\n'
     } >"$codex_home/nix-runtime.config.toml"
-    if env HOME="$codex_home" CODEX_HOME="$codex_home" \
+    if timeout --signal=TERM --kill-after=1 30 \
+        env HOME="$codex_home" CODEX_HOME="$codex_home" \
         CODEX_SQLITE_HOME="$codex_home/sqlite" \
         TASK3_SHELL_POLICY_SENTINEL=synthetic-policy-value \
         TASK3_ORACLE_API_KEY=not-a-real-key \
@@ -2556,7 +2708,8 @@ test_real_codex_profile_contract() {
         printf 'wire_api = "responses"\n'
         printf 'requires_openai_auth = false\n'
     } >"$codex_home/nix-runtime.config.toml"
-    if env HOME="$codex_home" CODEX_HOME="$codex_home" \
+    if timeout --signal=TERM --kill-after=1 30 \
+        env HOME="$codex_home" CODEX_HOME="$codex_home" \
         CODEX_SQLITE_HOME="$codex_home/sqlite" \
         TASK3_ORACLE_API_KEY=not-a-real-key \
         TASK3_NETWORK_GUARD_LOADED_FILE="$network_guard_loaded" \
@@ -2597,6 +2750,7 @@ run_codex_contract() {
     test_exit_propagation codex
     test_codex_host_state
     test_codex_host_state_rejections
+    test_codex_log_rotation
     test_codex_unapproved_sqlite_routing
     test_codex_parent_root_rejections
     test_codex_sqlite_wal_snapshot

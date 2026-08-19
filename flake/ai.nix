@@ -64,6 +64,9 @@ let
             if [ -f cli/src/main.rs ]; then
               patch -p1 --fuzz=0 < ${../overlays/ai/patches/codex-argv-policy-probe.patch}
             fi
+            ${pkgs.lib.optionalString (!((old.passthru or { }).wrapperPolicyProbeTestDouble or false)) ''
+              patch -p1 --fuzz=0 < ${../overlays/ai/patches/codex-log-db-filter.patch}
+            ''}
           ''
           + (old.preBuild or "");
 
@@ -81,6 +84,7 @@ let
                 trap 'exit 130' INT
                 trap 'exit 143' TERM
                 if ! CODEX_INTERNAL_WRAPPER_POLICY_PROBE=v1 \
+                    ${pkgs.coreutils}/bin/timeout --signal=TERM --kill-after=1 30 \
                     "$out/bin/codex" "$@" >"$actual_file" 2>/dev/null; then
                   printf '%s\n' 'codex: build-time wrapper-policy probe failed' >&2
                   exit 1

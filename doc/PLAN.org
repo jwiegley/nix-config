@@ -5199,6 +5199,24 @@ VERIFICATION: Re-introduce 'claude-code-acp' as a mutant; the check must fail na
 ]
 #+end_src
 
+* DONE [#B] Bound Codex diagnostic log database growth and wrapper probes
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-gkw8
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-19 Wed 01:49]
+:MODIFIED: [2026-08-19 Wed 04:08]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-19 Wed 04:08]
+:CLOSE_REASON: Implemented: Codex now defaults persisted SQLite diagnostics to WARN with an explicit filter override while preserving mandatory OFF exclusions; fuzz-zero application is unconditional for real builds. Wrapper rotation bounds the regular DB/WAL/SHM trio, skips detected holders and inspection errors, fails on stat/remove errors, and all real-client probes have hard deadlines. Six rotation cases, focused wrapper build, native toolchain build, make test, and hooks pass; no activation performed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The pinned Codex SQLite flight recorder defaults to TRACE and can grow without bound, causing cold-start stalls. Lower the persisted default to warnings with an explicit diagnostic override, rotate only logs_2.sqlite above a bounded cap, preserve all other state, and make real-client wrapper oracles terminate under a hard deadline so validation cannot hang indefinitely.
+
 * DONE [#C] Exercise same-child last-wins behavior in Agent Deck outbox tests
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -15623,15 +15641,17 @@ Schema-20 writer-epoch checks reject incompatible new database opens but cannot 
 ]
 #+end_src
 
-* DOING [#C] Cap or rotate codex host-local logs_2.sqlite in the wrapper
+* DONE [#C] Cap or rotate codex host-local logs_2.sqlite in the wrapper
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-up8x
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-18 Tue 23:45]
-:MODIFIED: [2026-08-19 Wed 00:47]
+:MODIFIED: [2026-08-19 Wed 04:08]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-19 Wed 04:08]
+:CLOSE_REASON: Implemented: codex-log-db-filter.patch replaces the full pinned default_filter at fuzz zero, defaults persisted SQLite diagnostics to WARN, preserves mandatory OFF targets, and supports CODEX_LOG_DB_FILTER with safe warning/fallback handling. The wrapper bounds the regular logs_2.sqlite DB/WAL/SHM trio above 1 GiB, uses a bounded lsof preflight, skips rotation for detected holders or inspection errors, and fails on stat/remove errors. Six wrapper cases cover over/under cap, symlink, remove failure, lsof failure, and a real live SQLite holder. Focused wrapper build, native toolchain build, make test, config/ai all-system evaluation, and hooks pass; no activation performed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -15647,11 +15667,25 @@ UPSTREAM FACTS (codex 0.148 source, /nix/store/ass3ccqbzgwsw5csrmvc0qamd4w08fri-
 5. Upstream: >=10 open issues (Jun-Aug) on this exact family (#27741, #28997 34.8GB WAL, #29463/#29532, #30105...); no fix merged; log_db.rs is HOT (9 commits Jul-Aug: filter tightening, payload-trace limits, batching) -> upstream is converging on the same problem; expect our patch to conflict on some llm-agents bumps and expect a real upstream default/knob eventually.
 
 PRIMARY FIX - source patch (overlays/ai/patches/, applied like codex-argv-policy-probe.patch via patch -p1 --fuzz=0 in flake/ai.nix preBuild):
-Modify state/src/log_db.rs default_filter(): default WARN instead of TRACE, preserving the existing OFF targets (log, codex_otel.log_only, codex_otel.trace_safe - they prevent duplicate/unsafe capture and can carry WARN-level events meant only for otel), and honor an env override CODEX_LOG_DB_FILTER parsed as tracing Targets syntax (Targets implements FromStr) so full TRACE diagnostics can be restored per-session without a rebuild when debugging codex itself. No secrets involved (env carries a filter directive only). Anchor the hunk at the function head (signature + Targets::new() + with_default lines): upstream churn is concentrated in the with_target list below, so a head-anchored hunk minimizes conflicts; fuzz=0 makes any drift a loud build failure surfaced by the update-agents flow (same maintenance pattern as the omlx pin substitutions). Result: steady-state DB of tens of MiB; startup maintenance millisecond-fast; WAL trivial even when pinned for weeks; also removes the constant multi-GB/day write amplification (I/O, SSD wear). A global-size-cap patch (option B) is rejected: invasive surgery on churny pruning code, and unnecessary once volume is WARN-only.
+Modify state/src/log_db.rs default_filter(): default WARN instead of TRACE, preserving the existing OFF targets (log, codex_otel.log_only, codex_otel.trace_safe - they prevent duplicate/unsafe capture and can carry WARN-level events meant only for otel), and honor an env override CODEX_LOG_DB_FILTER parsed as tracing Targets syntax (Targets implements FromStr) so full TRACE diagnostics can be restored per-session without a rebuild when debugging codex itself. No secrets involved (env carries a filter directive only). Replace the full current default_filter implementation; fuzz=0 makes any upstream drift a loud build failure surfaced by the update-agents flow (the same maintenance pattern as the omlx pin substitutions). Result: steady-state DB of tens of MiB; startup maintenance millisecond-fast; WAL trivial even when pinned for weeks; also removes the constant multi-GB/day write amplification (I/O, SSD wear). A global-size-cap patch (option B) is rejected: invasive surgery on churny pruning code, and unnecessary once volume is WARN-only.
 
-BACKSTOP - wrapper rotation (original plan, now secondary): in flake/ai/wrappers/codex.nix, at launch rm the logs_2.sqlite/-wal/-shm trio when combined size exceeds 1 GiB, warn on stderr. Covers the window where the patch is consciously dropped during an upstream conflict. POSIX-safe under live holders; logs DB is a pure diagnostics sink; never touch state_5/queue_1/goals_1/memories_1/thread_history_1.
+BACKSTOP - wrapper rotation (original plan, now secondary): in flake/ai/wrappers/codex.nix, at launch rm the logs_2.sqlite/-wal/-shm trio when combined size exceeds 1 GiB, warn on stderr. Covers the window where the patch is consciously dropped during an upstream conflict. Before rotating, a bounded lsof probe checks the existing regular DB/WAL/SHM paths; a detected holder or any inspection failure skips rotation. This is a conservative preflight, not an atomic lifetime guarantee. The logs DB is a pure diagnostics sink; never touch state_5/queue_1/goals_1/memories_1/thread_history_1.
 
 VERIFICATION PLAN: build with patch; behavioral check that a fresh session writes no TRACE/DEBUG/INFO rows to logs_2.sqlite (sqlite3 level query) and that CODEX_LOG_DB_FILTER=trace restores them; wrapper backstop covered in test/ai/agent-wrappers.nix. RETIREMENT: drop the patch when upstream ships an acceptable default or a supported knob (watch state/src/log_db.rs and the open issues on each bump).
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 485,
+    "issue_id": "nix-up8x",
+    "author": "johnw",
+    "text": "Reopened: Correcting the close evidence to match the final six-case rotation contract and conservative live-holder preflight.",
+    "created_at": "2026-08-19T11:08:47Z"
+  }
+]
+#+end_src
 
 * DONE [#B] Serialize child consumed-turn cleanup with profile migration
 :PROPERTIES:

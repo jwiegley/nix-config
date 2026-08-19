@@ -1,0 +1,58 @@
+--- a/state/src/log_db.rs
++++ b/state/src/log_db.rs
+@@ -50,25 +50,38 @@
+ const LOG_BATCH_SIZE: usize = 128;
+ const LOG_FLUSH_INTERVAL: Duration = Duration::from_secs(2);
+
+ pub fn default_filter() -> Targets {
+-    Targets::new()
+-        .with_default(LevelFilter::TRACE)
+-        .with_target("hyper_util", LevelFilter::WARN)
+-        .with_target("log", LevelFilter::OFF)
+-        .with_target("codex_rmcp_client", LevelFilter::INFO)
+-        .with_target("codex_otel.log_only", LevelFilter::OFF)
+-        .with_target("codex_otel.trace_safe", LevelFilter::OFF)
+-        .with_target("rmcp", LevelFilter::INFO)
+-        .with_target("codex_api::responses_websocket_timing", LevelFilter::OFF)
+-        .with_target("codex_core::post_sampling_token_estimate", LevelFilter::OFF)
+-        // Full model request bodies and streamed response payloads overwhelm the
+-        // SQLite log database, but remain available to explicit TRACE subscribers.
+-        .with_target("codex_http_client::transport", LevelFilter::DEBUG)
+-        .with_target("codex_api::sse", LevelFilter::DEBUG)
+-        // Per-chunk streaming traces otherwise flood the bounded SQLite log queue.
+-        .with_target("codex_tui::streaming::controller", LevelFilter::DEBUG)
+-        .with_target("codex_tui::streaming::table_holdback", LevelFilter::DEBUG)
++    // The persisted SQLite log database grows without bound under the
++    // upstream TRACE default once sessions run for days or weeks, and every
++    // cold start then stalls on its inline maintenance. Keep only warnings
++    // and errors by default; CODEX_LOG_DB_FILTER (tracing `Targets` syntax,
++    // for example "info" or "trace,hyper_util=warn") restores richer capture
++    // for a single session when diagnosing Codex itself.
++    let targets = match std::env::var("CODEX_LOG_DB_FILTER") {
++        Ok(spec) => match spec.parse::<Targets>() {
++            Ok(targets) => targets,
++            Err(_) => {
++                eprintln!("codex: invalid CODEX_LOG_DB_FILTER; using warn");
++                Targets::new().with_default(LevelFilter::WARN)
++            }
++        },
++        Err(std::env::VarError::NotPresent) => {
++            Targets::new().with_default(LevelFilter::WARN)
++        }
++        Err(std::env::VarError::NotUnicode(_)) => {
++            eprintln!("codex: invalid CODEX_LOG_DB_FILTER; using warn");
++            Targets::new().with_default(LevelFilter::WARN)
++        }
++    };
++    targets
++        // These targets duplicate other sinks or are explicitly kept out of
++        // the persisted log database regardless of an operator override.
++        .with_target("log", LevelFilter::OFF)
++        .with_target("codex_otel.log_only", LevelFilter::OFF)
++        .with_target("codex_otel.trace_safe", LevelFilter::OFF)
++        .with_target("codex_api::responses_websocket_timing", LevelFilter::OFF)
++        .with_target("codex_core::post_sampling_token_estimate", LevelFilter::OFF)
+ }
+
+ #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+ pub struct LogSinkQueueConfig {

@@ -117,6 +117,59 @@ let
       fi
     done
 
+    # The flight recorder in logs_2.sqlite is disposable diagnostics whose
+    # backlog stalls cold session starts for minutes once it grows large.
+    # The pinned binary carries the log-level patch that keeps growth
+    # negligible; rotating past the cap protects launches if that patch is
+    # ever dropped during an upstream conflict.  Only the logs database may
+    # be rotated: every other database under the SQLite home is real state.
+    codex_logs_cap_bytes=$((1024 * 1024 * 1024))
+    codex_logs_bytes=0
+    codex_logs_candidates=()
+    for codex_logs_candidate in \
+      "$CODEX_SQLITE_HOME/logs_2.sqlite" \
+      "$CODEX_SQLITE_HOME/logs_2.sqlite-wal" \
+      "$CODEX_SQLITE_HOME/logs_2.sqlite-shm"
+    do
+      if [ -f "$codex_logs_candidate" ] && [ ! -L "$codex_logs_candidate" ]; then
+        if ! codex_logs_candidate_bytes="$(${pkgs.coreutils}/bin/stat -c %s \
+          "$codex_logs_candidate" 2>/dev/null)"; then
+          echo "codex: cannot inspect log database under $CODEX_SQLITE_HOME" >&2
+          exit 1
+        fi
+        codex_logs_bytes=$((codex_logs_bytes + codex_logs_candidate_bytes))
+        codex_logs_candidates+=("$codex_logs_candidate")
+      fi
+    done
+    if [ "$codex_logs_bytes" -gt "$codex_logs_cap_bytes" ]; then
+      codex_logs_probe_output=
+      codex_logs_probe_status=0
+      if codex_logs_probe_output="$(${pkgs.coreutils}/bin/timeout \
+          --signal=TERM --kill-after=1 5 \
+          ${pkgs.lsof}/bin/lsof -t -- \
+          "''${codex_logs_candidates[@]}" 2>&1)"; then
+        :
+      else
+        codex_logs_probe_status=$?
+      fi
+      if [ "$codex_logs_probe_status" -eq 0 ] \
+          && [ -n "$codex_logs_probe_output" ]; then
+        echo "codex: oversized log database is in use; skipping rotation" >&2
+      elif [ "$codex_logs_probe_status" -ne 1 ] \
+          || [ -n "$codex_logs_probe_output" ]; then
+        echo "codex: cannot inspect log database holders; skipping rotation" >&2
+      else
+        echo "codex: rotating oversized log database in $CODEX_SQLITE_HOME" >&2
+        if ! ${pkgs.coreutils}/bin/rm -f -- \
+          "$CODEX_SQLITE_HOME/logs_2.sqlite" \
+          "$CODEX_SQLITE_HOME/logs_2.sqlite-wal" \
+          "$CODEX_SQLITE_HOME/logs_2.sqlite-shm"; then
+          echo "codex: cannot rotate oversized log database" >&2
+          exit 1
+        fi
+      fi
+    fi
+
     codex_shared_database="$codex_shared_home/memories_1.sqlite"
     codex_local_database="$CODEX_SQLITE_HOME/memories_1.sqlite"
 
