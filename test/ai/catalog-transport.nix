@@ -1393,6 +1393,26 @@ pkgs.runCommand "ai-catalog-transport" { } ''
   assert "profiles" not in clio
   PY
 
+  printf '[]\n' >invalid-codex-root.json
+  printf '{"models":[null]}\n' >invalid-codex-model.json
+  printf '{"models":[{"slug":"valid"}]}\n' >valid-codex-model.json
+  if ${pkgs.python3}/bin/python3 ${./codex-catalog-smoke.py} \
+    /bin/false invalid-codex-root.json valid-codex-model.json \
+    /dev/null /dev/null /dev/null unused unused \
+    >invalid-root.out 2>invalid-root.err; then
+    fail "Codex catalog smoke accepted a non-object root"
+  fi
+  grep -F 'TypeError: invalid-codex-root.json: catalog root is not an object' \
+    invalid-root.err >/dev/null
+  if ${pkgs.python3}/bin/python3 ${./codex-catalog-smoke.py} \
+    /bin/false invalid-codex-model.json valid-codex-model.json \
+    /dev/null /dev/null /dev/null unused unused \
+    >invalid-model.out 2>invalid-model.err; then
+    fail "Codex catalog smoke accepted a non-object model"
+  fi
+  grep -F 'TypeError: source model 0 is not an object' \
+    invalid-model.err >/dev/null
+
   ${pkgs.python3}/bin/python3 ${./codex-catalog-smoke.py} ${
     lib.escapeShellArgs [
       "${codexUnwrappedPackage}/bin/codex"

@@ -40,8 +40,8 @@ class JsonlReader:
     def close(self) -> None:
         self.selector.close()
 
-    def receive(self, request_id: int) -> dict:
-        deadline = time.monotonic() + 15
+    def receive(self, request_id: int, *, timeout: float = 15) -> dict:
+        deadline = time.monotonic() + timeout
         while True:
             while b"\n" in self.buffer:
                 line, _, remainder = self.buffer.partition(b"\n")
@@ -98,6 +98,12 @@ def main() -> None:
         raise AssertionError("source catalog has no models")
     if not isinstance(managed_models, list) or not managed_models:
         raise AssertionError("managed catalog has no models")
+    for index, model in enumerate(source_models):
+        if not isinstance(model, dict):
+            raise TypeError(f"source model {index} is not an object")
+    for index, model in enumerate(managed_models):
+        if not isinstance(model, dict):
+            raise TypeError(f"managed model {index} is not an object")
     if {key: value for key, value in source.items() if key != "models"} != {
         key: value for key, value in managed.items() if key != "models"
     }:
@@ -110,8 +116,6 @@ def main() -> None:
     for index, (source_model, managed_model) in enumerate(
         zip(source_models, managed_models, strict=True)
     ):
-        if not isinstance(source_model, dict) or not isinstance(managed_model, dict):
-            raise TypeError(f"model {index} is not an object")
         base_instructions = managed_model.get("base_instructions")
         if not isinstance(base_instructions, str) or not base_instructions:
             raise AssertionError(f"model {index} has invalid base_instructions")
@@ -352,7 +356,9 @@ def main() -> None:
                         "params": {"detail": "toolsAndAuthOnly"},
                     },
                 )
-                mcp_result = reader.receive(5)
+                # MCP startup includes the native client handshake and can exceed
+                # the ordinary app-server response budget on loaded builders.
+                mcp_result = reader.receive(5, timeout=60)
                 if mcp_result.get("nextCursor") is not None:
                     raise AssertionError("MCP status unexpectedly paginated")
                 statuses = mcp_result.get("data")
