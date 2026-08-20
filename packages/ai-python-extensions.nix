@@ -227,6 +227,8 @@ in
           assert sources.dflash-mlx.source.fetcher == "fetchFromGitHub";
           prev.fetchFromGitHub sources.dflash-mlx.source.args;
 
+        patches = [ ../overlays/ai/patches/dflash-sparse-rejection-coverage.patch ];
+
         build-system = [ pfinal.setuptools ];
 
         dependencies = with pfinal; [

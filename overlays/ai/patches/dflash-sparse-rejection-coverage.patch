@@ -1,0 +1,34 @@
+diff --git a/tests/test_prefill_step_size_runtime.py b/tests/test_prefill_step_size_runtime.py
+--- a/tests/test_prefill_step_size_runtime.py
++++ b/tests/test_prefill_step_size_runtime.py
+@@ -388,13 +388,29 @@ def test_chat_template_prompt_path_uses_template_without_encode():
+ 
+ 
+ def test_dflash2_sampling_runs_sparse_rejection_path_end_to_end():
++    class SparseDraftBackend(_FakeDraftBackend):
++        def draft_sample(self, **kwargs):
++            assert kwargs["draft_model"].is_dflash2
++            draft_count = max(0, int(kwargs["block_len"]) - 1)
++            return (
++                mx.full((draft_count,), 2, dtype=mx.uint32),
++                mx.broadcast_to(
++                    mx.array([[[1.0, 0.0]]], dtype=mx.float32),
++                    (1, draft_count, 2),
++                ),
++                mx.broadcast_to(
++                    mx.array([[[2, 0]]], dtype=mx.uint32),
++                    (1, draft_count, 2),
++                ),
++            )
++
+     events = list(
+         spec_epoch.stream_dflash_generate_impl(
+             target_model=object(),
+             target_ops=_FakeTargetOps(),
+             tokenizer=object(),
+             draft_model=_draft_model(is_dflash2=True),
+-            draft_backend=_FakeDraftBackend(),
++            draft_backend=SparseDraftBackend(),
+             prompt="unused",
+             max_new_tokens=5,
+             temperature=1.0,

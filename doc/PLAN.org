@@ -5917,7 +5917,7 @@ The shared MCP URL validator accepts scheme-only, authority-free, control-bearin
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-20 Thu 02:29]
-:MODIFIED: [2026-08-20 Thu 13:11]
+:MODIFIED: [2026-08-20 Thu 13:57]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5936,6 +5936,13 @@ The automatic updater selects upstream GitHub Latest v0.6.3rc1 but package valid
     "author": "johnw",
     "text": "Reopened: Reopened before publication: the package/source update is uncommitted and exact-commit package verification plus fleet activation remain outstanding.",
     "created_at": "2026-08-20T20:10:55Z"
+  },
+  {
+    "id": 501,
+    "issue_id": "nix-htl4",
+    "author": "johnw",
+    "text": "Independent audit of a8ba3d51 found the selected upstream sparse-path test survived dropping draft_indices. The follow-up fixture now drafts token 2 with compact probabilities [1,0] mapped by sparse indices [2,0]: the correct path passes, while an independently reproduced caller-dropping mutant fails deterministically with an 8-vs-2 residual shape error. ./build pkg omlx --no-link passes with the corrected fixture; signed fix commit and fleet activation remain outstanding.",
+    "created_at": "2026-08-20T20:57:50Z"
   }
 ]
 #+end_src
