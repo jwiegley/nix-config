@@ -5800,15 +5800,17 @@ Andoria consumes the root shared-work Agda decision without a second name-based 
 ]
 #+end_src
 
-* TODO [#C] Reject authority-free and control-bearing MCP URLs
+* DONE [#C] Reject authority-free and control-bearing MCP URLs
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-hk8d
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-19 Wed 00:24]
-:MODIFIED: [2026-08-19 Wed 00:24]
+:MODIFIED: [2026-08-20 Thu 02:19]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-20 Thu 02:19]
+:CLOSE_REASON: Catalog validation now rejects authority-free, userinfo-bearing, query/fragment-bearing, C0/C1-control, and malformed HTTP MCP URLs with portable IPv6 authority handling. Renderer mutation coverage, ai-catalog-transport, and portable/root all-system evaluation pass.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

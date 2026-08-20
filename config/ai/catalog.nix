@@ -1191,18 +1191,31 @@ let
 
   validUrl =
     allowHttp: value:
-    builtins.isString value
-    && (lib.hasPrefix "https://" value || (allowHttp && lib.hasPrefix "http://" value))
-    && !(lib.any (fragment: lib.hasInfix fragment value) [
-      "?"
-      "#"
-      "@"
-      " "
-      "\t"
-      "\n"
-      "\r"
-    ])
-    && !(containsRenderedReference value);
+    if !builtins.isString value then
+      false
+    else
+      let
+        scheme =
+          if lib.hasPrefix "https://" value then
+            "https://"
+          else if allowHttp && lib.hasPrefix "http://" value then
+            "http://"
+          else
+            null;
+        remainder = if scheme == null then "" else lib.removePrefix scheme value;
+        authority = builtins.head (lib.splitString "/" remainder);
+      in
+      scheme != null
+      && builtins.match "^([A-Za-z0-9][A-Za-z0-9.-]*|[[][0-9A-Fa-f:.]+[]])(:[0-9]+)?$" authority != null
+      && builtins.match "^[^[:cntrl:]]+$" value != null
+      && !(lib.any (control: lib.hasInfix control value) c1Controls)
+      && !(lib.any (fragment: lib.hasInfix fragment value) [
+        "?"
+        "#"
+        "@"
+        " "
+      ])
+      && !(containsRenderedReference value);
 
   approvedLiteralEnvironment = {
     DISABLED_TOOLS = [ "testgen,secaudit,docgen,tracer" ];
@@ -1303,6 +1316,7 @@ let
     value:
     builtins.isString value
     && builtins.match "^[^[:cntrl:]]*$" value != null
+    && !(lib.any (control: lib.hasInfix control value) c1Controls)
     && !(containsRenderedReference value);
   validProtectedFile =
     value:

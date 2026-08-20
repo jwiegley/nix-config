@@ -113,6 +113,32 @@ let
     transport.url = "https://example.invalid/mcp";
     selectors.profiles = [ ];
   };
+  withSyntheticHttpUrl =
+    url:
+    withMcpServers (
+      catalog.items.mcpServers
+      // {
+        synthetic-http = syntheticHttpMcp // {
+          transport.url = url;
+        };
+      }
+    );
+  unsafeHttpUrls = [
+    "https://"
+    "https:///mcp"
+    "https://:443/mcp"
+    "https://example.invalid/mcp?token=unsafe"
+    "https://user@example.invalid/mcp"
+    (builtins.fromJSON ''"https://example.invalid/mcp\nnext"'')
+    (builtins.fromJSON ''"https://example.invalid/mcp\u001b"'')
+    (builtins.fromJSON ''"https://example.invalid/mcp\u0085"'')
+  ];
+  safeHttpUrls = [
+    "https://example.invalid"
+    "https://example.invalid:443/mcp"
+    "https://[2001:db8::1]/mcp"
+    "https://[::1]:443/mcp"
+  ];
   unsupportedHttpHeader = syntheticHttpMcp // {
     transport = syntheticHttpMcp.transport // {
       headers.Authorization.env = "OPENAI_API_KEY";
@@ -183,6 +209,7 @@ let
     [ "--set=api..key=credential-sentinel" ]
     [ "--set=api%2Dkey=credential-sentinel" ]
     [ "--set=api%252Dkey=credential-sentinel" ]
+    [ { public = builtins.fromJSON ''"ordinary\u009b1m"''; } ]
     [ { env = "OPENAI_API_KEY"; } ]
     [ { protectedFile = "/tmp/credential-sentinel"; } ]
     [ { protectedFile = "/run/secrets/../credential-sentinel"; } ]
@@ -863,6 +890,10 @@ assert
 assert catalog.validate {
   items = withMcpServers (catalog.items.mcpServers // { synthetic-http = syntheticHttpMcp; });
 };
+assert builtins.all (
+  url: reject (catalog.validate { items = withSyntheticHttpUrl url; })
+) unsafeHttpUrls;
+assert builtins.all (url: catalog.validate { items = withSyntheticHttpUrl url; }) safeHttpUrls;
 assert catalog.validate { items = safeArgumentItems; };
 assert builtins.all (
   args: reject (catalog.validate { items = withSyntheticArguments args; })
