@@ -767,7 +767,7 @@ Agent Deck StateDB writable and read-only openers still pass profile state.db pa
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-20 Thu 01:36]
-:MODIFIED: [2026-08-20 Thu 01:36]
+:MODIFIED: [2026-08-20 Thu 14:09]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -775,6 +775,20 @@ Agent Deck StateDB writable and read-only openers still pass profile state.db pa
 :END:
 
 Declarative git-ai enablement, packages, Trace2, and session variables are disabled, but historical install-hooks may have left mutable client hooks, Trace2 targets, daemon/socket state, editor extensions, repository-local hooks, and already-loaded sessions. Perform a fail-closed exact-identity audit and surgical cleanup on Hera, Clio, the four active shared-work hosts, and Vulcan; preserve unrelated hooks/config; use constrained unwrapped git-ai only where safe; independently verify postconditions and restart affected clients. Do not contact VPS or dormant git-ai host.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 509,
+    "issue_id": "nix-26zg",
+    "author": "johnw",
+    "text": "Signed phase-one commit 5c183d78 removes the last declarative GIT_AI_ session variable; the exact host-behavior check and independent fess audit are CLEAR. This issue intentionally remains open because mutable hooks, sockets, daemon/editor/session state and client restarts are separately unauthorized. Fleet activation will verify only declarative absence without performing cleanup.",
+    "created_at": "2026-08-20T21:09:54Z"
+  }
+]
+#+end_src
 
 * DONE [#D] Replace current nix-config package metadata homepage with Gitea authority
 :PROPERTIES:
@@ -1549,7 +1563,7 @@ Frozen product docs: SESSION-PERSISTENCE-SPEC.md cbcba81331f37071b2acd907caaf488
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-19 Wed 00:21]
-:MODIFIED: [2026-08-20 Thu 12:22]
+:MODIFIED: [2026-08-20 Thu 14:09]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1584,6 +1598,13 @@ Managed stdio MCP clients may augment rather than replace their parent environme
     "author": "johnw",
     "text": "Reopened: Reopened before publication: the managed-stdio implementation is staged, but exact-commit checks and independent audit must precede final closure.",
     "created_at": "2026-08-20T19:22:15Z"
+  },
+  {
+    "id": 503,
+    "issue_id": "nix-4jtb",
+    "author": "johnw",
+    "text": "Signed commits 38592be3 and 8f429970 implement the shared managed-stdio boundary and fail-closed fd enumeration. Exact launcher, catalog, registry, wrapper, native-client, package, portable/root evaluation checks passed; independent no-history fess audit of b46257f2..8f429970 is CLEAR. Publication, Linux runtime coverage, and fleet selection remain tracked by nix-fleet-converge-09ln; provider-backed PAL remains separately open as nix-ff4j.",
+    "created_at": "2026-08-20T21:09:51Z"
   }
 ]
 #+end_src
@@ -5151,6 +5172,46 @@ Partner observation .443Z: plaintext stage/backup copies can survive SIGKILL or 
 ]
 #+end_src
 
+* DOING [#B] Converge unpublished configuration across active fleet
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-fleet-converge-09ln
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-20 Thu 11:09]
+:MODIFIED: [2026-08-20 Thu 14:10]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Converge every current unpublished working-tree change into signed logical commits, publish the fast-forward result to the sole Gitea origin, and adopt it on every maintained active system except VPS.
+
+Frozen completion criteria:
+
+- Preserve and account for every current staged and unstaged source/PLAN hunk; do not stage ignored backups, caches, result links, secrets, or unrelated artifacts.
+- Each logical unit carries its matching `obr` state, passes focused checks, and receives an independent fess audit; the exact aggregate candidate passes formatting/hooks, canonical tests, portable/root evaluation, and affected non-activating builds.
+- All newly reachable commits are signed; local ancestry is a fast-forward of the live origin; publication receives exact remote readback. No force-push or history rewrite is authorized.
+- Activate from authoritative checkouts on Hera, Clio, shared-work in order `andoria-08`, `andoria-t2`, `delphi-3bd4`, `gpu-server`, and Vulcan. Do not contact or activate VPS or dormant `git-ai`.
+- Verify each active generation and affected runtime behavior, then leave all authoritative checkouts clean and current. Preserve rollback roots and unrelated host state.
+
+The user explicitly authorized commit, push, and activation on all maintained systems except VPS on 2026-08-20. Mutable Git-AI cleanup, credential provisioning, destructive cleanup, client/session restart, force-push, and history rewrite remain separate actions unless independently authorized.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 512,
+    "issue_id": "nix-fleet-converge-09ln",
+    "author": "johnw",
+    "text": "All discovered source hunks are now partitioned into signed commits through 09e5178a, including the separate oMLX audit fix 704e31e4 and declarative-only Git-AI phase one. The only remaining tracked edit is this evidence reconciliation. Exact aggregate gates, final audit, fast-forward publication, non-VPS activation, runtime probes, and clean/current consumer proof remain outstanding.",
+    "created_at": "2026-08-20T21:10:16Z"
+  }
+]
+#+end_src
+
 * DONE [#B] Repair Hera make switch regression
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5917,7 +5978,7 @@ The shared MCP URL validator accepts scheme-only, authority-free, control-bearin
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-20 Thu 02:29]
-:MODIFIED: [2026-08-20 Thu 13:57]
+:MODIFIED: [2026-08-20 Thu 14:10]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5943,6 +6004,13 @@ The automatic updater selects upstream GitHub Latest v0.6.3rc1 but package valid
     "author": "johnw",
     "text": "Independent audit of a8ba3d51 found the selected upstream sparse-path test survived dropping draft_indices. The follow-up fixture now drafts token 2 with compact probabilities [1,0] mapped by sparse indices [2,0]: the correct path passes, while an independently reproduced caller-dropping mutant fails deterministically with an 8-vs-2 residual shape error. ./build pkg omlx --no-link passes with the corrected fixture; signed fix commit and fleet activation remain outstanding.",
     "created_at": "2026-08-20T20:57:50Z"
+  },
+  {
+    "id": 510,
+    "issue_id": "nix-htl4",
+    "author": "johnw",
+    "text": "Signed fix commit 704e31e4 applies the mutation-honest width-two sparse fixture. ./build pkg omlx --no-link and the full pre-commit hook pass; the invalid direct dflash-mlx build command was not credited because that package is not a root flake output. Final aggregate audit, publication, and live oMLX selection remain tracked by nix-fleet-converge-09ln.",
+    "created_at": "2026-08-20T21:10:15Z"
   }
 ]
 #+end_src
@@ -7110,24 +7178,14 @@ The authoritative Andoria-T2 system configuration declaratively grants only the 
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-18 Tue 12:55]
-:MODIFIED: [2026-08-20 Thu 12:40]
+:MODIFIED: [2026-08-20 Thu 14:09]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Source commit: 29d590601 'Update project pins' (2026-08-17); still failing at HEAD bc420e7e6248
-Severity: High | Category: Bug | File: config/ai flake input pi-mcp-adapter (sampling-handler.ts:1) + prime-agent 0.7.0 extension loader
-Confidence: 98
-
-PROBLEM: checks.aarch64-darwin.prime-agent fails at every commit since 29d59060: 'extension loader reported an error'. Instrumented run shows: pi-mcp-adapter/index.ts -> Cannot find module '<prime-agent-0.7.0>/lib/prime-agent/node_modules/@earendil-works/pi-ai/dist/index.js/compat' (require stack: sampling-handler.ts). Bisection: 29d59060^ PASS, 29d59060 FAIL. That pin update bumped pi-mcp-adapter 82c631dc->1bf36719, which changed sampling-handler.ts from 'import { complete } from "@earendil-works/pi-ai"' to 'import { complete } from "@earendil-works/pi-ai/compat"'. Prime's loader aliases the pi-ai package to its bundled entry FILE and joins subpaths naively (dist/index.js/compat), so any subpath import from any extension is unresolvable. Current rev 48799fae keeps the /compat import.
-
-IMPACT: Prime agent loads without the MCP extension — no mcp/mcp-auth commands, no MCP tools — and the behavioral check that guards exactly this has been red for 2 days while update transactions and commit evidence cite 'nix flake check --no-build', which only evaluates behavioral checks. pi-gallery stays green because the real pi node_modules resolves ./compat via the exports map, masking the Prime-specific break.
-
-SUGGESTED FIX: Root seam is Prime's resolver: alias @earendil-works/pi-ai to the package ROOT and resolve subpaths through its exports map (or special-case known subpaths). If prime-agent is upstream-pinned, the narrow local seam is the agent-resources packaging: patch the adapter's import back to the bare package IF prime-agent's bundled pi-ai still exports a compatible 'complete' at the root — verify signature compatibility first (upstream moved complete to /compat, likely a breaking root change).
-
-VERIFICATION: nix build ./config/ai#checks.aarch64-darwin.prime-agent passes; instrumented extensions.errors empty; mcp + mcp-auth commands present (the MCP command assertions in test/ai/prime-agent.nix are reached).
+Historical failure: pin commit 29d590601 introduced an @earendil-works/pi-ai/compat import in pi-mcp-adapter, while Prime 0.7 had no alias for that unregistered subpath and fell through to the invalid dist/index.js/compat path. The current pinned adapter revision d85c78cd5881320387f73a35c827dfa1f9d9604c retains that import. Commit a231877c adds exact compat aliases for both maintained package spellings through the existing bundled-module seam. The exact Prime check passes with empty loader errors, the exact managed adapter registers mcp and mcp-auth, and its synthetic MCP echo succeeds. Publication, activation, and live selection remain tracked by nix-fleet-converge-09ln.
 
 ** Comments
 
@@ -7146,6 +7204,20 @@ VERIFICATION: nix build ./config/ai#checks.aarch64-darwin.prime-agent passes; in
     "author": "johnw",
     "text": "Reopened: Reopened before publication: the repair is still uncommitted and exact-commit Prime verification plus independent audit remain outstanding.",
     "created_at": "2026-08-20T19:40:20Z"
+  },
+  {
+    "id": 498,
+    "issue_id": "nix-lwka",
+    "author": "johnw",
+    "text": "Reviewer reproduction at a231877c582d: checks.aarch64-darwin.prime-agent PASS from a clean worktree — first green since 29d59060 (08-17). The /compat alias fix loads the exact pinned adapter and its mcp/mcp-auth surface per the strengthened assertions. Leaving open per the commit's outstanding exact-commit/fleet verification.",
+    "created_at": "2026-08-20T19:45:03Z"
+  },
+  {
+    "id": 507,
+    "issue_id": "nix-lwka",
+    "author": "johnw",
+    "text": "Independent exact-commit audit found the resolver repair and behavioral test sound. The active description now names the actual pinned adapter revision and narrows the failure to the unregistered compat subpath; the historical duplicated Reopened prefix is retained as audit history. Publication and Hera live selection remain tracked by nix-fleet-converge-09ln.",
+    "created_at": "2026-08-20T21:09:53Z"
   }
 ]
 #+end_src
@@ -7829,31 +7901,23 @@ During the 2026-08-13 authorized shared-work activation, gpu-server completed su
 ]
 #+end_src
 
-* DOING [#B] pi-gallery baseline red: extensions doc not updated for pi-dynamic-workflows 3.7.0
+* DONE [#B] pi-gallery baseline red: extensions doc not updated for pi-dynamic-workflows 3.7.0
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-ojug
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-19 Wed 16:43]
-:MODIFIED: [2026-08-20 Thu 12:51]
+:MODIFIED: [2026-08-20 Thu 14:09]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-20 Thu 13:01]
+:CLOSE_REASON: Fixed by d002c421797e: extensions doc table row and per-extension Version line updated to pi-dynamic-workflows 3.7.0; pi-gallery (documented-inventory cmp included) reproduced PASS from a clean worktree at the commit
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Source commit: b5ce08df0732 (Update project pins)
-Severity: High | Category: Bug | File: doc/Pi Coding Agent Extensions.md (At-a-glance table) vs manifest
-Confidence: 98
-
-PROBLEM: The pin transaction moved pi-dynamic-workflows 3.6.0 -> 3.7.0 (sources/pi.json + package-lock) without updating 'doc/Pi Coding Agent Extensions.md', whose At-a-glance table still says 3.6.0. The documented-inventory assertion added in 67bdd8ff (expected inventory derived from manifest.order vs the doc table, cmp) now fails: 'expected-extension-inventory ... actual-extension-inventory differ: line 27'. pi-gallery is manifest-classified behavioral BASELINE, so make test / built flake checks are red at HEAD.
-
-IMPACT: Baseline gate red for every downstream consumer of this revision; blocks the canonical test path until the one-line doc row is corrected. Also the second live demonstration of nix-86d8: the update transaction validated the npm package build but never ran the behavioral check (pi-gallery) that owns the doc-coupling contract, so the transaction landed red.
-
-SUGGESTED FIX: Update the table row to 3.7.0 (and any per-extension Version line for dynamic-workflows). Durable fix per nix-86d8: route pi.json pin acceptance through the pi-gallery check inside the update transaction, or auto-derive the doc's version column from the manifest so version currency cannot drift.
-
-VERIFICATION: nix build ./config/ai#checks.aarch64-darwin.pi-gallery passes; cmp of expected/actual inventories is byte-identical.
+At baseline b5ce08df, the managed pi-dynamic-workflows pin was 3.7.0 while both inventory references still said 3.6.0, making the documented-inventory check fail. Signed commit d002c421 updates the table and detailed Version line to 3.7.0. The exact clean pi-gallery check and a clean detached pre-commit replay pass. Publication and non-VPS adoption remain tracked by nix-fleet-converge-09ln.
 
 ** Comments
 
@@ -7865,6 +7929,13 @@ VERIFICATION: nix build ./config/ai#checks.aarch64-darwin.pi-gallery passes; cmp
     "author": "johnw",
     "text": "Reopened: Reopened before publication: the documentation repair is uncommitted and exact-commit pi-gallery verification remains outstanding.",
     "created_at": "2026-08-20T19:51:43Z"
+  },
+  {
+    "id": 508,
+    "issue_id": "nix-ojug",
+    "author": "johnw",
+    "text": "Current authority correction: the description now distinguishes the historical b5ce08df failure from the exact signed d002c421 repair and passing check. The earlier duplicated Reopened prefix remains immutable audit history; it is not current state.",
+    "created_at": "2026-08-20T21:09:54Z"
   }
 ]
 #+end_src
@@ -8293,7 +8364,7 @@ The first full-suite command forced GOSUMDB=off while TestSmoke_BuildVersion int
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-20 Thu 11:09]
-:MODIFIED: [2026-08-20 Thu 11:09]
+:MODIFIED: [2026-08-20 Thu 14:09]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -8308,6 +8379,20 @@ Acceptance criteria:
 - Direct and managed-launcher protocol checks prove omission and denial, strict JSON-RPC identities, no credential/network canary disclosure, no network access, stderr-only bounded logging, and no persistent logs.
 - Managed review documentation states that exact-model PAL chat replaces clink; no model-backed provider availability claim is made.
 - The affected package/checks build on every supported surface selected by the repository manifest, and activation/runtime evidence remains separately labeled.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 505,
+    "issue_id": "nix-pal-disable-clink-fuab",
+    "author": "johnw",
+    "text": "Exact signed commit b46257f2 passed independent no-history fess audit CLEAR: the installed PAL package omits and denies clink while retaining provider-independent protocol behavior, and the prior unpatched output fails the same contract. The later independently CLEAR managed-stdio audit covers the wrapped path. Publication and live fleet selection remain tracked by nix-fleet-converge-09ln; provider-backed chat is not claimed and remains nix-ff4j.",
+    "created_at": "2026-08-20T21:09:52Z"
+  }
+]
+#+end_src
 
 * DONE [#C] Keep the jump-authorization test synchronized with its canonical option order
 :PROPERTIES:
@@ -8409,7 +8494,7 @@ Concurrent creation/open of one canonical profile database is deterministic: tra
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-20 Thu 10:29]
-:MODIFIED: [2026-08-20 Thu 14:05]
+:MODIFIED: [2026-08-20 Thu 14:10]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -8443,6 +8528,13 @@ Signed commit, fast-forward publication, and activation on Hera plus the maintai
     "author": "johnw",
     "text": "Main replay completed on the aggregate branch. Independent read-only review found no production defect and confirmed launchd interval jobs are not overlapped and stdout/stderr files are opened append-only. Focused coverage now also requires KeepAlive to remain null and asserts the exact ordered printf-plus-exec script. checks.aarch64-darwin.host-behavior passes; the post-compaction ./build system also passed with the generated org.nixos.push-tank plist. Signed commit, exact-commit audit, publication, activation, and runtime acceptance remain outstanding.",
     "created_at": "2026-08-20T21:05:29Z"
+  },
+  {
+    "id": 511,
+    "issue_id": "nix-push-tank-launchd-ptl3",
+    "author": "johnw",
+    "text": "Signed work commit 09e5178a contains exactly the launchd implementation, focused host-behavior assertions, and this issue record; its full pre-commit hook passed. Independent no-history fess audit is now running. Publication and activation attempt count remain zero.",
+    "created_at": "2026-08-20T21:10:16Z"
   }
 ]
 #+end_src
@@ -8486,7 +8578,7 @@ Obr 0.3.2+1 pins nightly-2026-08-13 in rust-toolchain.toml, but its flake select
 :LABELS:   []
 :ISSUE_TYPE: chore
 :CREATED:  [2026-08-20 Thu 12:45]
-:MODIFIED: [2026-08-20 Thu 12:45]
+:MODIFIED: [2026-08-20 Thu 14:09]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -8494,6 +8586,20 @@ Obr 0.3.2+1 pins nightly-2026-08-13 in rust-toolchain.toml, but its flake select
 :END:
 
 Preserve the pending test-only cleanup in test/ai/codex-catalog-smoke.py: remove the unused executable shebang because the fixture is invoked by an explicit interpreter, keep standard-library imports grouped, and report malformed catalog/model object shapes as TypeError rather than assertion failures. Verify Python lint plus the exact ai-catalog-transport check. No production or runtime behavior changes.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 506,
+    "issue_id": "nix-pz8r",
+    "author": "johnw",
+    "text": "Independent audit of 6f43a2ce found malformed model validation unreachable and native MCP startup too tightly bounded. Signed fix fa1e81ab validates shapes before projection, adds mutation-honest malformed-root/model cases, and bounds native MCP startup separately; the exact ai-catalog-transport check passes. Final aggregate gates and fleet adoption remain tracked by nix-fleet-converge-09ln.",
+    "created_at": "2026-08-20T21:09:53Z"
+  }
+]
+#+end_src
 
 * DONE [#B] Pin repository Ruff policy across toolchain updates
 :PROPERTIES:
@@ -16400,7 +16506,7 @@ Agent tooling never searches for executables by recursively traversing home, fil
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-19 Wed 00:23]
-:MODIFIED: [2026-08-20 Thu 12:22]
+:MODIFIED: [2026-08-20 Thu 14:09]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -16435,6 +16541,13 @@ Catalog validation accepts a stdio MCP transport with omitted args, while mainta
     "author": "johnw",
     "text": "Reopened: Reopened before publication: the managed-stdio implementation is staged, but exact-commit checks and independent audit must precede final closure.",
     "created_at": "2026-08-20T19:22:15Z"
+  },
+  {
+    "id": 504,
+    "issue_id": "nix-vwn8",
+    "author": "johnw",
+    "text": "The shared catalog now normalizes omitted stdio args once and every maintained renderer consumes that list. Exact compatibility, catalog, registry, native-client, portable/root evaluation checks passed within the independently CLEAR managed-stdio audit through 8f429970. Publication and fleet selection remain tracked by nix-fleet-converge-09ln.",
+    "created_at": "2026-08-20T21:09:52Z"
   }
 ]
 #+end_src
