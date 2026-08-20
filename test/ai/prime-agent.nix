@@ -381,7 +381,10 @@ runCommand "prime-agent-integration-check"
     );
 
     const extensions = loader.getExtensions();
-    check(extensions.errors.length === 0, "extension loader reported an error");
+    check(
+      extensions.errors.length === 0,
+      "extension loader reported errors: " + JSON.stringify(extensions.errors),
+    );
     const loadedPaths = loader.getLoadedExtensionPaths();
     for (const root of managedSettings.packages) {
       check(loadedPaths.some((path) => path.startsWith(root + "/")), "managed extension package was not loaded: " + root);
@@ -392,11 +395,16 @@ runCommand "prime-agent-integration-check"
       const registration = extensions.runtime.pendingProviderRegistrations.find((entry) => entry.name === name);
       check(registration?.config.baseUrl === endpoint, "managed endpoint was not registered for " + name);
     }
+    const mcpAdapterEntry = "${mcpExtensionRoot}/index.ts";
+    const mcpAdapter = extensions.extensions.find(
+      (extension) => extension.resolvedPath === mcpAdapterEntry,
+    );
+    check(mcpAdapter !== undefined, "managed pi-mcp-adapter failed to load: " + mcpAdapterEntry);
     check(
-      extensions.extensions.some((extension) =>
-        extension.tools.has("mcp") && extension.commands.has("mcp") && extension.commands.has("mcp-auth")
-      ),
-      "MCP adapter tools and commands were not registered",
+      mcpAdapter?.tools.has("mcp")
+        && mcpAdapter.commands.has("mcp")
+        && mcpAdapter.commands.has("mcp-auth"),
+      "managed pi-mcp-adapter did not register its MCP surface",
     );
 
     const syntheticModel = {
@@ -642,7 +650,7 @@ runCommand "prime-agent-integration-check"
       PRIME_AGENT_CODING_AGENT_DIR="$home/.prime/agent" \
       ${pkgs.coreutils}/bin/timeout --signal=KILL 60s \
       ${pkgs.prime-agent}/bin/prime-agent model list --offline >model-list.out 2>model-list.err
-    ! grep -E '(Failed to load extension|Cannot find package|Invalid theme|Invalid skill|TypeError|ReferenceError)' \
+    ! grep -E '(Failed to load extension|Cannot find (module|package)|ERR_MODULE_NOT_FOUND|ENOTDIR|Invalid theme|Invalid skill|TypeError|ReferenceError)' \
       model-list.out model-list.err
     test ! -e "$home/poison-pi-root"
     daemon_workers="$home/.prime/agent/daemon-workers"

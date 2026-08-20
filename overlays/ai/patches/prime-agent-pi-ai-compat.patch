@@ -1,0 +1,32 @@
+diff --git a/packages/coding-agent/src/core/extensions/loader.ts b/packages/coding-agent/src/core/extensions/loader.ts
+--- a/packages/coding-agent/src/core/extensions/loader.ts
++++ b/packages/coding-agent/src/core/extensions/loader.ts
+@@ -63,10 +63,12 @@ function getAliases(): Record<string, string> {
+ 		"@earendil-works/pi-coding-agent": piCodingAgentEntry,
+ 		"@earendil-works/pi-agent-core": piAgentCoreEntry,
+ 		"@earendil-works/pi-tui": piTuiEntry,
++		"@earendil-works/pi-ai/compat": piAiEntry,
+ 		"@earendil-works/pi-ai": piAiEntry,
+ 		"@earendil-works/pi-ai/oauth": piAiOauthEntry,
+ 		"@mariozechner/pi-coding-agent": piCodingAgentEntry,
+ 		"@mariozechner/pi-agent-core": piAgentCoreEntry,
+ 		"@mariozechner/pi-tui": piTuiEntry,
++		"@mariozechner/pi-ai/compat": piAiEntry,
+ 		"@mariozechner/pi-ai": piAiEntry,
+ 		"@mariozechner/pi-ai/oauth": piAiOauthEntry,
+diff --git a/packages/coding-agent/src/core/extensions/bundled-modules.ts b/packages/coding-agent/src/core/extensions/bundled-modules.ts
+--- a/packages/coding-agent/src/core/extensions/bundled-modules.ts
++++ b/packages/coding-agent/src/core/extensions/bundled-modules.ts
+@@ -28,11 +28,13 @@ export const VIRTUAL_MODULES: Record<string, unknown> = {
+ 	"@sinclair/typebox/value": _bundledTypeboxValue,
+ 	"@earendil-works/pi-agent-core": _bundledPiAgentCore,
+ 	"@earendil-works/pi-tui": _bundledPiTui,
++	"@earendil-works/pi-ai/compat": _bundledPiAi,
+ 	"@earendil-works/pi-ai": _bundledPiAi,
+ 	"@earendil-works/pi-ai/oauth": _bundledPiAiOauth,
+ 	"@earendil-works/pi-coding-agent": _bundledPiCodingAgent,
+ 	"@mariozechner/pi-agent-core": _bundledPiAgentCore,
+ 	"@mariozechner/pi-tui": _bundledPiTui,
++	"@mariozechner/pi-ai/compat": _bundledPiAi,
+ 	"@mariozechner/pi-ai": _bundledPiAi,
+ 	"@mariozechner/pi-ai/oauth": _bundledPiAiOauth,

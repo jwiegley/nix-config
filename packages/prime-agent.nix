@@ -85,7 +85,10 @@ buildNpmPackage {
   inherit (source) version;
   inherit src;
 
-  patches = [ ../overlays/ai/patches/prime-agent-managed-settings.patch ];
+  patches = [
+    ../overlays/ai/patches/prime-agent-managed-settings.patch
+    ../overlays/ai/patches/prime-agent-pi-ai-compat.patch
+  ];
   nodejs = nodejs_24;
   npmDepsHash = source.hashes.npmDepsHash;
   npmDepsFetcherVersion = 2;
