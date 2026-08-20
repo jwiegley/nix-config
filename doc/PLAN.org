@@ -5807,16 +5807,16 @@ Andoria consumes the root shared-work Agda decision without a second name-based 
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-19 Wed 00:24]
-:MODIFIED: [2026-08-20 Thu 02:19]
+:MODIFIED: [2026-08-20 Thu 11:45]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-20 Thu 02:19]
-:CLOSE_REASON: Catalog validation now rejects authority-free, userinfo-bearing, query/fragment-bearing, C0/C1-control, and malformed HTTP MCP URLs with portable IPv6 authority handling. Renderer mutation coverage, ai-catalog-transport, and portable/root all-system evaluation pass.
+:FINISHED: [2026-08-20 Thu 11:45]
+:CLOSE_REASON: Catalog validation now structurally validates hostname, IPv4, bracketed IPv6, and port authorities; rejects userinfo, query/fragment, C0/C1 controls, malformed addresses, and ports above 65535; and explicitly rejects C1 controls in public stdio arguments. The focused catalog transport check passes. Final portable/root all-system evaluation is owned by nix-fleet-converge-09ln.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-The shared MCP URL validator accepts scheme-only, authority-free, and control-bearing HTTP endpoints. Tighten the common URL contract and add mutation-honest catalog tests before renderer serialization.
+The shared MCP URL validator accepts scheme-only, authority-free, control-bearing, malformed-authority, and out-of-range-port HTTP endpoints. Tighten the common URL contract and add mutation-honest catalog tests before renderer serialization. The same input boundary must explicitly account for rejection of C1 controls in public stdio arguments.
 
 ** Dependencies
 
@@ -5830,6 +5830,20 @@ The shared MCP URL validator accepts scheme-only, authority-free, and control-be
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 494,
+    "issue_id": "nix-hk8d",
+    "author": "johnw",
+    "text": "Reopened: Independent fess audit of signed commit 3c658557 found that malformed IPv6 literals and out-of-range ports still passed catalog validation, exact-commit evaluation was overstated, and the C1 public-argument restriction was not accounted for.",
+    "created_at": "2026-08-20T18:40:30Z"
   }
 ]
 #+end_src

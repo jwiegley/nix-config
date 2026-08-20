@@ -128,7 +128,25 @@ let
     "https:///mcp"
     "https://:443/mcp"
     "https://example.invalid/mcp?token=unsafe"
+    "https://example.invalid/mcp#unsafe"
     "https://user@example.invalid/mcp"
+    "https://example.invalid:65536/mcp"
+    "https://[::1]:65536/mcp"
+    "https://256.0.0.1/mcp"
+    "https://127.00.0.1/mcp"
+    "https://example..invalid/mcp"
+    "https://-example.invalid/mcp"
+    "https://[]/mcp"
+    "https://[.]/mcp"
+    "https://[:::]/mcp"
+    "https://[2001:db8::1::2]/mcp"
+    "https://[1:2:3:4:5:6:7]/mcp"
+    "https://[1:2:3:4:5:6:7:8:9]/mcp"
+    "https://[1:2:3:4:5:6:7::8]/mcp"
+    "https://[12345::1]/mcp"
+    "https://[gggg::1]/mcp"
+    "https://[::ffff:256.0.0.1]/mcp"
+    "https://[192.0.2.1::]/mcp"
     (builtins.fromJSON ''"https://example.invalid/mcp\nnext"'')
     (builtins.fromJSON ''"https://example.invalid/mcp\u001b"'')
     (builtins.fromJSON ''"https://example.invalid/mcp\u0085"'')
@@ -136,8 +154,15 @@ let
   safeHttpUrls = [
     "https://example.invalid"
     "https://example.invalid:443/mcp"
+    "https://example.invalid.:65535/mcp"
+    "https://127.0.0.1:00080/mcp"
+    "https://localhost:0/mcp"
+    "https://[::]/mcp"
     "https://[2001:db8::1]/mcp"
     "https://[::1]:443/mcp"
+    "https://[1:2:3:4:5:6:7:8]:65535/mcp"
+    "https://[::ffff:192.0.2.128]/mcp"
+    "https://[0:0:0:0:0:ffff:192.0.2.128]/mcp"
   ];
   unsupportedHttpHeader = syntheticHttpMcp // {
     transport = syntheticHttpMcp.transport // {

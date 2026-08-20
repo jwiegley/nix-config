@@ -1189,6 +1189,84 @@ let
       "}"
     ];
 
+  validPort =
+    value:
+    let
+      match = if builtins.isString value then builtins.match "^0*([0-9]{1,5})$" value else null;
+      significant = if match == null then "" else builtins.head match;
+    in
+    match != null && (builtins.stringLength significant < 5 || builtins.lessThan significant "65536");
+
+  validIPv4Octet =
+    octet:
+    builtins.match "^(0|[1-9][0-9]{0,2})$" octet != null
+    && (builtins.stringLength octet < 3 || builtins.lessThan octet "256");
+
+  validIPv4 =
+    address:
+    let
+      octets = lib.splitString "." address;
+    in
+    builtins.length octets == 4 && builtins.all validIPv4Octet octets;
+
+  validHextet = group: builtins.match "^[0-9A-Fa-f]{1,4}$" group != null;
+
+  validIPv6 =
+    address:
+    let
+      pieces = lib.splitString "::" address;
+      compressed = builtins.length pieces == 2;
+      sideGroups = side: if side == "" then [ ] else lib.splitString ":" side;
+      groups = lib.concatMap sideGroups pieces;
+      ipv4Groups = builtins.filter (group: lib.hasInfix "." group) groups;
+      hasIPv4 = ipv4Groups != [ ];
+      ipv4 = if hasIPv4 then builtins.head ipv4Groups else "";
+      hexGroups = if hasIPv4 then lib.init groups else groups;
+      explicitGroups = builtins.length hexGroups + (if hasIPv4 then 2 else 0);
+    in
+    lib.hasInfix ":" address
+    && builtins.length pieces <= 2
+    && builtins.all validHextet hexGroups
+    && (!hasIPv4 || (builtins.length ipv4Groups == 1 && lib.hasSuffix ipv4 address && validIPv4 ipv4))
+    && (if compressed then explicitGroups < 8 else explicitGroups == 8);
+
+  validHostnameLabel =
+    label:
+    builtins.stringLength label > 0
+    && builtins.stringLength label <= 63
+    && builtins.match "^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?$" label != null;
+
+  validHostname =
+    host:
+    let
+      rawLabels = lib.splitString "." host;
+      absolute = lib.hasSuffix "." host;
+      labels = if absolute then lib.init rawLabels else rawLabels;
+    in
+    host != ""
+    && builtins.stringLength host <= (if absolute then 254 else 253)
+    && labels != [ ]
+    && builtins.all validHostnameLabel labels;
+
+  validHost =
+    host:
+    if lib.hasInfix "." host && builtins.match "^[0-9.]+$" host != null then
+      validIPv4 host
+    else
+      validHostname host;
+
+  validAuthority =
+    authority:
+    let
+      bracketed = builtins.match "^[[]([^][]+)[]](:([0-9]+))?$" authority;
+      named = builtins.match "^([A-Za-z0-9.-]+)(:([0-9]+))?$" authority;
+      validMatchPort = match: builtins.elemAt match 2 == null || validPort (builtins.elemAt match 2);
+    in
+    if bracketed != null then
+      validIPv6 (builtins.head bracketed) && validMatchPort bracketed
+    else
+      named != null && validHost (builtins.head named) && validMatchPort named;
+
   validUrl =
     allowHttp: value:
     if !builtins.isString value then
@@ -1206,7 +1284,7 @@ let
         authority = builtins.head (lib.splitString "/" remainder);
       in
       scheme != null
-      && builtins.match "^([A-Za-z0-9][A-Za-z0-9.-]*|[[][0-9A-Fa-f:.]+[]])(:[0-9]+)?$" authority != null
+      && validAuthority authority
       && builtins.match "^[^[:cntrl:]]+$" value != null
       && !(lib.any (control: lib.hasInfix control value) c1Controls)
       && !(lib.any (fragment: lib.hasInfix fragment value) [
