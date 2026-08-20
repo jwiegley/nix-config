@@ -7776,6 +7776,46 @@ During the 2026-08-13 authorized shared-work activation, gpu-server completed su
 ]
 #+end_src
 
+* DOING [#B] pi-gallery baseline red: extensions doc not updated for pi-dynamic-workflows 3.7.0
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ojug
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-19 Wed 16:43]
+:MODIFIED: [2026-08-20 Thu 12:51]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Source commit: b5ce08df0732 (Update project pins)
+Severity: High | Category: Bug | File: doc/Pi Coding Agent Extensions.md (At-a-glance table) vs manifest
+Confidence: 98
+
+PROBLEM: The pin transaction moved pi-dynamic-workflows 3.6.0 -> 3.7.0 (sources/pi.json + package-lock) without updating 'doc/Pi Coding Agent Extensions.md', whose At-a-glance table still says 3.6.0. The documented-inventory assertion added in 67bdd8ff (expected inventory derived from manifest.order vs the doc table, cmp) now fails: 'expected-extension-inventory ... actual-extension-inventory differ: line 27'. pi-gallery is manifest-classified behavioral BASELINE, so make test / built flake checks are red at HEAD.
+
+IMPACT: Baseline gate red for every downstream consumer of this revision; blocks the canonical test path until the one-line doc row is corrected. Also the second live demonstration of nix-86d8: the update transaction validated the npm package build but never ran the behavioral check (pi-gallery) that owns the doc-coupling contract, so the transaction landed red.
+
+SUGGESTED FIX: Update the table row to 3.7.0 (and any per-extension Version line for dynamic-workflows). Durable fix per nix-86d8: route pi.json pin acceptance through the pi-gallery check inside the update transaction, or auto-derive the doc's version column from the manifest so version currency cannot drift.
+
+VERIFICATION: nix build ./config/ai#checks.aarch64-darwin.pi-gallery passes; cmp of expected/actual inventories is byte-identical.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 499,
+    "issue_id": "nix-ojug",
+    "author": "johnw",
+    "text": "Reopened: Reopened before publication: the documentation repair is uncommitted and exact-commit pi-gallery verification remains outstanding.",
+    "created_at": "2026-08-20T19:51:43Z"
+  }
+]
+#+end_src
+
 * DONE [#D] Restore the Syncthing.app runtime-ownership warning
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
