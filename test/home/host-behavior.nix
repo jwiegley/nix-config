@@ -22,6 +22,23 @@ let
   desktopHomesByHost = lib.mapAttrs (
     _: configuration: configuration.config.home-manager.users.johnw
   ) darwinConfigurations;
+  heraPushTankAgent = darwinConfigurations.hera.config.launchd.user.agents.push-tank;
+  heraPushTankPackages = darwinConfigurations.hera.pkgs;
+  heraPushTankScript = builtins.unsafeDiscardStringContext heraPushTankAgent.script;
+  expectedPushTankCommand = builtins.unsafeDiscardStringContext "${heraPushTankPackages.my-scripts}/bin/push tank";
+  expectedPushTankScript = ''
+    printf '\n----- push tank: %s -----\n' "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')"
+    exec ${expectedPushTankCommand}
+  '';
+  expectedPushTankPath = "${
+    lib.makeBinPath [
+      heraPushTankPackages.bash
+      heraPushTankPackages.my-scripts
+      heraPushTankPackages.nix-scripts
+      heraPushTankPackages.openssh
+      heraPushTankPackages.rsync
+    ]
+  }:/etc/profiles/per-user/johnw/bin:/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:/usr/sbin:/sbin";
   gallerySourceFor =
     host:
     desktopHomesByHost.${host}.home.file.".config/pi/agent/extensions/nix-gallery/index.ts".source;
@@ -651,6 +668,22 @@ assert builtins.all (
   darwinConfigurations.${host}.config.programs.gnupg.agent.enable
   && lib.hasAttrByPath [ "launchd" "user" "agents" "gnupg-agent" ] darwinConfigurations.${host}.config
 ) (builtins.attrNames darwinConfigurations);
+assert !(darwinConfigurations.clio.config.launchd.user.agents ? push-tank);
+assert
+  heraPushTankAgent.serviceConfig.EnvironmentVariables == {
+    HOME = "/Users/johnw";
+    LOGNAME = "johnw";
+    PATH = expectedPushTankPath;
+    SSH_AUTH_SOCK = "/Users/johnw/.config/gnupg/S.gpg-agent.ssh";
+    USER = "johnw";
+  };
+assert !heraPushTankAgent.serviceConfig.RunAtLoad;
+assert heraPushTankAgent.serviceConfig.KeepAlive == null;
+assert heraPushTankAgent.serviceConfig.StartInterval == 3600;
+assert heraPushTankAgent.serviceConfig.StandardOutPath == "/Users/johnw/Library/Logs/push-tank.log";
+assert
+  heraPushTankAgent.serviceConfig.StandardErrorPath == "/Users/johnw/Library/Logs/push-tank.log";
+assert heraPushTankScript == expectedPushTankScript;
 pkgs.runCommand "host-behavior" { } ''
   ${pkgs.diffutils}/bin/cmp -s \
     ${heraRecordingTranscriptionSource} \

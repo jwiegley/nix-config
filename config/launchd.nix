@@ -469,11 +469,38 @@ in
         };
       };
     }
-    # `flatten-recordings` shells out to pkgs.my-scripts/bin/flatten-recordings,
-    # which exists only where the flake provides a `scripts` input. Guard the
-    # whole agent so a Darwin consumer without that input still evaluates
-    # (mirrors the config/ssh.nix guard).
+    # These agents shell out to pkgs.my-scripts, which exists only where the
+    # flake provides a `scripts` input. Guard the whole set so a Darwin consumer
+    # without that input still evaluates (mirrors the config/ssh.nix guard).
     // lib.optionalAttrs (config.johnw.host.isHera && (pkgs ? my-scripts)) {
+
+      push-tank = {
+        script = ''
+          printf '\n----- push tank: %s -----\n' "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')"
+          exec ${pkgs.my-scripts}/bin/push tank
+        '';
+        serviceConfig = {
+          EnvironmentVariables = {
+            HOME = home;
+            LOGNAME = "johnw";
+            PATH = "${
+              lib.makeBinPath [
+                pkgs.bash
+                pkgs.my-scripts
+                pkgs.nix-scripts
+                pkgs.openssh
+                pkgs.rsync
+              ]
+            }:/etc/profiles/per-user/johnw/bin:/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+            SSH_AUTH_SOCK = "${xdg_configHome}/gnupg/S.gpg-agent.ssh";
+            USER = "johnw";
+          };
+          RunAtLoad = false;
+          StartInterval = 3600;
+          StandardOutPath = "${home}/Library/Logs/push-tank.log";
+          StandardErrorPath = "${home}/Library/Logs/push-tank.log";
+        };
+      };
 
       flatten-recordings = {
         script = ''

@@ -8402,6 +8402,51 @@ Concurrent creation/open of one canonical profile database is deterministic: tra
 ]
 #+end_src
 
+* DOING [#C] Run push tank hourly on Hera
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-push-tank-launchd-ptl3
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-20 Thu 10:29]
+:MODIFIED: [2026-08-20 Thu 14:05]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Frozen objective
+
+Configure Hera only so launchd runs `push tank` as the `johnw` user once every hour and appends each run to `~/Library/Logs/push-tank.log`, preceded by a separator line containing that run's date.
+
+Definition of done
+
+- The root Darwin/Home Manager configuration declares the job only for the `hera` consumer; `clio` and exported non-Hera consumers do not receive it.
+- launchd schedules the user agent at a 3600-second interval and invokes the repository-owned `push` executable with argument `tank` under `johnw`'s user session.
+- Each invocation appends a date-bearing separator and both stdout and stderr to `/Users/johnw/Library/Logs/push-tank.log`; overlapping invocations do not corrupt the log or run concurrently.
+- Focused evaluation tests prove Hera inclusion, Clio exclusion, schedule, command, and log destination. The affected system builds, the full repository test suite passes, and evidence is labeled by tier.
+- A signed logical work commit passes an independent final fess audit, partner observations have no actionable item, and the branch is locally current with its base.
+- After activation, the authoritative `~/src/nix` checkout selects the generation and runtime acceptance proves the loaded agent, user identity, forced execution, separator, and appended command output. Activation attempt count: 0.
+
+Authorization boundary
+
+Signed commit, fast-forward publication, and activation on Hera plus the maintained fleet are explicitly authorized. History rewrite or force-push, credential provisioning, mutable Git-AI cleanup, client or session restart, destructive cleanup, and VPS contact or activation remain unauthorized.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 502,
+    "issue_id": "nix-push-tank-launchd-ptl3",
+    "author": "johnw",
+    "text": "Main replay completed on the aggregate branch. Independent read-only review found no production defect and confirmed launchd interval jobs are not overlapped and stdout/stderr files are opened append-only. Focused coverage now also requires KeepAlive to remain null and asserts the exact ordered printf-plus-exec script. checks.aarch64-darwin.host-behavior passes; the post-compaction ./build system also passed with the generated org.nixos.push-tank plist. Signed commit, exact-commit audit, publication, activation, and runtime acceptance remain outstanding.",
+    "created_at": "2026-08-20T21:05:29Z"
+  }
+]
+#+end_src
+
 * TODO [#C] Align upstream Obr Nix nightly with rust-toolchain and checks
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
