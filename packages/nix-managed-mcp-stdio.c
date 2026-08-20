@@ -117,10 +117,15 @@ static int close_from_directory(const char *path) {
 }
 
 static int close_extra_descriptors(void) {
+#ifdef NIX_MANAGED_MCP_TEST_NO_FD_DIRECTORY
+  const char *directories[] = {
+      "/nix-managed-mcp-stdio-test-no-proc-fd",
+      "/nix-managed-mcp-stdio-test-no-dev-fd",
+  };
+#else
   const char *directories[] = {"/proc/self/fd", "/dev/fd"};
+#endif
   size_t index;
-  long maximum;
-  int descriptor;
 
   for (index = 0; index < sizeof(directories) / sizeof(directories[0]);
        ++index) {
@@ -130,23 +135,7 @@ static int close_extra_descriptors(void) {
       return result;
     }
   }
-
-  maximum = sysconf(_SC_OPEN_MAX);
-  if (maximum < 0 || maximum > INT_MAX) {
-    return -1;
-  }
-  for (descriptor = 3; descriptor < maximum; ++descriptor) {
-    while (close(descriptor) < 0) {
-      if (errno == EINTR) {
-        continue;
-      }
-      if (errno != EBADF) {
-        return -1;
-      }
-      break;
-    }
-  }
-  return 0;
+  return -1;
 }
 
 static int usage(const char *message) {

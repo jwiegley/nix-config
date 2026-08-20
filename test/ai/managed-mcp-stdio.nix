@@ -20,7 +20,16 @@ let
     '';
   };
   launcher = lib.getExe pkgs.nix-managed-mcp-stdio;
+  launcherWithoutFdDirectory = lib.getExe (
+    pkgs.nix-managed-mcp-stdio.overrideAttrs (_: {
+      pname = "nix-managed-mcp-stdio-no-fd-directory";
+      NIX_CFLAGS_COMPILE = "-DNIX_MANAGED_MCP_TEST_NO_FD_DIRECTORY";
+    })
+  );
   managedPath = pkgs.nix-managed-mcp-stdio.runtimePath;
+  mustNotExecute = pkgs.writeShellScript "managed-mcp-must-not-execute" ''
+    touch "$1"
+  '';
   networkGuardedPal = pkgs.writeShellScript "network-guarded-pal-mcp-server" ''
     export PYTHONPATH="''${PAL_NETWORK_GUARD_PATH:?}"
     exec ${lib.getExe pkgs.pal-mcp-server} "$@"
@@ -122,6 +131,17 @@ pkgs.runCommand "managed-mcp-stdio-contract"
     result="$(${launcher} -- ${probe}/bin/managed-mcp-stdio-probe fd)"
     exec 9>&-
     test "$result" = ok
+
+    set +e
+    ${launcherWithoutFdDirectory} -- ${mustNotExecute} "$work/fallback-executed" \
+      2>fd-directory.err
+    unavailable_fd_directory_status=$?
+    set -e
+    test "$unavailable_fd_directory_status" -eq 70
+    test ! -e "$work/fallback-executed"
+    grep -Fx \
+      'nix-managed-mcp-stdio: could not close inherited descriptors' \
+      fd-directory.err >/dev/null
 
     export ANTHROPIC_API_KEY=anthropic-sentinel
     export GEMINI_API_KEY=other-provider-sentinel
