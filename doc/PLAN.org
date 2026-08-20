@@ -8140,6 +8140,29 @@ The first full-suite command forced GOSUMDB=off while TestSmoke_BuildVersion int
 ]
 #+end_src
 
+* DOING [#B] Disable PAL clink subprocess bridge
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-pal-disable-clink-fuab
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-20 Thu 11:09]
+:MODIFIED: [2026-08-20 Thu 11:09]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Disable PAL's same-UID `clink` subprocess bridge in the managed package. The bridge can spawn a mutable client beneath PAL's multi-provider environment, outside the shared stdio MCP child boundary, so filtering only PAL's direct children cannot provide a credential boundary.
+
+Acceptance criteria:
+
+- The packaged PAL server exposes neither the `clink` tool nor its prompt while retaining provider-independent initialize, tools/list, listmodels, and surviving prompt behavior.
+- Direct and managed-launcher protocol checks prove omission and denial, strict JSON-RPC identities, no credential/network canary disclosure, no network access, stderr-only bounded logging, and no persistent logs.
+- Managed review documentation states that exact-model PAL chat replaces clink; no model-backed provider availability claim is made.
+- The affected package/checks build on every supported surface selected by the repository manifest, and activation/runtime evidence remains separately labeled.
+
 * DONE [#C] Keep the jump-authorization test synchronized with its canonical option order
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

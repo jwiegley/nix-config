@@ -22,19 +22,47 @@ def fail(message: str, *, stderr: str = "") -> None:
 
 
 def response_by_id(responses: list[object], response_id: int) -> dict[str, object]:
-    for response in responses:
-        if isinstance(response, dict) and response.get("id") == response_id:
-            return response
-    fail(f"missing JSON-RPC response {response_id}")
+    matches = [
+        response
+        for response in responses
+        if isinstance(response, dict)
+        and type(response.get("id")) is int
+        and response.get("id") == response_id
+    ]
+    if len(matches) != 1:
+        fail(f"expected exactly one JSON-RPC response {response_id}")
+    response = matches[0]
+    if response.get("jsonrpc") != "2.0":
+        fail(f"response {response_id} omitted the JSON-RPC 2.0 identity")
+    has_result = "result" in response
+    has_error = "error" in response
+    if has_result == has_error:
+        fail(f"response {response_id} must contain exactly one of result or error")
+    if has_error:
+        error = response["error"]
+        if (
+            not isinstance(error, dict)
+            or not isinstance(error.get("code"), int)
+            or isinstance(error.get("code"), bool)
+            or not isinstance(error.get("message"), str)
+            or not error["message"]
+        ):
+            fail(f"response {response_id} returned malformed JSON-RPC error data")
+    return response
 
 
 def tool_payload(response: dict[str, object], response_id: int) -> dict[str, object]:
     result = response.get("result")
     if not isinstance(result, dict):
         fail(f"response {response_id} has no result")
+    is_error = result.get("isError", False)
+    if not isinstance(is_error, bool) or is_error:
+        fail(f"response {response_id} reported an MCP execution error")
     content = result.get("content")
     if not isinstance(content, list) or not content or not isinstance(content[0], dict):
         fail(f"response {response_id} has no tool content")
+    if content[0].get("type") != "text":
+        fail(f"response {response_id} returned non-text MCP content")
     text = content[0].get("text")
     if not isinstance(text, str):
         fail(f"response {response_id} has no text payload")
@@ -145,6 +173,30 @@ def main() -> None:
             "method": "tools/call",
             "params": {"name": "listmodels", "arguments": {}},
         },
+        {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {"name": "clink", "arguments": {}},
+        },
+        {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "prompts/list",
+            "params": {},
+        },
+        {
+            "jsonrpc": "2.0",
+            "id": 6,
+            "method": "prompts/get",
+            "params": {"name": "clink", "arguments": {}},
+        },
+        {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "prompts/get",
+            "params": {"name": "chat", "arguments": {}},
+        },
     ]
     with tempfile.TemporaryDirectory(prefix="pal-mcp-contract-") as temporary:
         root = Path(temporary)
@@ -176,6 +228,7 @@ Path(os.environ["PAL_NETWORK_GUARD_MARKER"]).touch()
 
         environment = {
             "DEFAULT_MODEL": "auto",
+            "DISABLED_TOOLS": "testgen,secaudit,docgen,tracer",
             "HOME": str(home),
             "LANG": "C.UTF-8",
             "LC_ALL": "C.UTF-8",
@@ -274,6 +327,18 @@ Path(os.environ["PAL_NETWORK_GUARD_MARKER"]).touch()
                 stderr=stderr,
             )
 
+        expected_response_ids = set(range(1, 8))
+        response_ids = [
+            response.get("id") if isinstance(response, dict) else None
+            for response in responses
+        ]
+        if (
+            len(responses) != len(expected_response_ids)
+            or any(type(response_id) is not int for response_id in response_ids)
+            or set(response_ids) != expected_response_ids
+        ):
+            fail("stdout contained missing, duplicate, or extraneous protocol messages")
+
         initialized = response_by_id(responses, 1).get("result")
         if not isinstance(initialized, dict):
             fail("initialize response has no result")
@@ -284,6 +349,13 @@ Path(os.environ["PAL_NETWORK_GUARD_MARKER"]).touch()
             fail("initialize returned an unexpected server identity")
         if server_info.get("version") != expected_version:
             fail("initialize returned a version that differs from the package")
+        capabilities = initialized.get("capabilities")
+        if (
+            not isinstance(capabilities, dict)
+            or not isinstance(capabilities.get("tools"), dict)
+            or not isinstance(capabilities.get("prompts"), dict)
+        ):
+            fail("initialize omitted tools or prompts capability advertisement")
 
         listed = response_by_id(responses, 2).get("result")
         if not isinstance(listed, dict) or not isinstance(listed.get("tools"), list):
@@ -293,11 +365,25 @@ Path(os.environ["PAL_NETWORK_GUARD_MARKER"]).touch()
             for tool in listed["tools"]
             if isinstance(tool, dict) and isinstance(tool.get("name"), str)
         }
-        required_tools = {"chat", "clink", "listmodels", "version"}
+        required_tools = {"chat", "listmodels", "version"}
         if not required_tools <= tool_names:
             fail(
                 f"tools/list omitted required tools: {sorted(required_tools - tool_names)}"
             )
+        for required_tool in required_tools:
+            matching_tools = [
+                tool
+                for tool in listed["tools"]
+                if isinstance(tool, dict) and tool.get("name") == required_tool
+            ]
+            if (
+                len(matching_tools) != 1
+                or not isinstance(matching_tools[0].get("inputSchema"), dict)
+                or matching_tools[0]["inputSchema"].get("type") != "object"
+            ):
+                fail(f"tools/list returned an invalid {required_tool} schema")
+        if "clink" in tool_names:
+            fail("tools/list exposed the disabled clink subprocess bridge")
 
         models = tool_payload(response_by_id(responses, 3), 3)
         if models.get("status") != "success":
@@ -305,6 +391,57 @@ Path(os.environ["PAL_NETWORK_GUARD_MARKER"]).touch()
         metadata = models.get("metadata")
         if not isinstance(metadata, dict) or metadata.get("configured_providers") != 0:
             fail("provider-free listmodels did not report zero configured providers")
+
+        denied = response_by_id(responses, 4).get("result")
+        denied_content = denied.get("content") if isinstance(denied, dict) else None
+        denied_is_error = denied.get("isError", False) if isinstance(denied, dict) else None
+        if (
+            not isinstance(denied_is_error, bool)
+            or denied_is_error
+            or not isinstance(denied_content, list)
+            or len(denied_content) != 1
+            or not isinstance(denied_content[0], dict)
+            or denied_content[0].get("type") != "text"
+            or denied_content[0].get("text") != "Unknown tool: clink"
+        ):
+            fail("tools/call did not deny the disabled clink subprocess bridge")
+
+        prompts = response_by_id(responses, 5).get("result")
+        prompt_entries = prompts.get("prompts") if isinstance(prompts, dict) else None
+        prompt_names = {
+            prompt.get("name")
+            for prompt in prompt_entries or []
+            if isinstance(prompt, dict) and isinstance(prompt.get("name"), str)
+        }
+        if (
+            not isinstance(prompt_entries, list)
+            or not {"chat", "continue"} <= prompt_names
+            or "clink" in prompt_names
+        ):
+            fail("prompts/list exposed the disabled clink subprocess bridge")
+        denied_prompt = response_by_id(responses, 6).get("error")
+        if (
+            not isinstance(denied_prompt, dict)
+            or denied_prompt.get("code") != 0
+            or denied_prompt.get("message") != "Unknown prompt: clink"
+        ):
+            fail("prompts/get did not deny the disabled clink subprocess bridge")
+        chat_prompt = response_by_id(responses, 7).get("result")
+        chat_messages = chat_prompt.get("messages") if isinstance(chat_prompt, dict) else None
+        if (
+            not isinstance(chat_messages, list)
+            or not chat_messages
+            or not all(
+                isinstance(message, dict)
+                and message.get("role") in {"user", "assistant"}
+                and isinstance(message.get("content"), dict)
+                and message["content"].get("type") == "text"
+                and isinstance(message["content"].get("text"), str)
+                and bool(message["content"]["text"])
+                for message in chat_messages
+            )
+        ):
+            fail("prompts/get could not resolve the surviving chat prompt")
 
         if not marker.is_file():
             fail("network guard did not load")

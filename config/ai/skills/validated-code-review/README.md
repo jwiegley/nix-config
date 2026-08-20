@@ -87,12 +87,13 @@ from being a transcript echo.
 
 ### 4.2 Exact model attestation
 
-PAL clink chooses a CLI name and role; the selected CLI preset owns its model.
-That route cannot prove an exact roster identity. The skill therefore uses PAL
-`listmodels` for discovery and PAL `chat` with an exact `model` selector for
-every review call. Its helper checks the returned `metadata.model_used` value
-against the request and records the result. Missing, substituted, duplicated,
-or unidentified roster entries abort instead of falling back.
+Managed PAL disables clink's same-UID subprocess bridge. Upstream clink also
+chooses a CLI name and role whose preset owns its model, so that route cannot
+prove an exact roster identity. The skill therefore uses PAL `listmodels` for
+discovery and PAL `chat` with an exact `model` selector for every review call.
+Its helper checks the returned `metadata.model_used` value against the request
+and records the result. Missing, substituted, duplicated, or unidentified
+roster entries abort instead of falling back.
 
 Cross-model diversity is the point of the whole design. Different models have
 different blind spots, and a single model verifying its own claims tends to

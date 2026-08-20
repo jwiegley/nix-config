@@ -30,8 +30,8 @@ Orchestration — every pass always runs in its own subagent, all passes concurr
 - Each pass subagent receives the frozen scope snapshot, loads any skill its pass names, works read-only, and returns findings as structured data: finding, file and line, evidence, severity, source pass.
 - The validated pass drives its attested PAL `listmodels`/`chat` stages from
   inside its own no-history subagent. It must abort if exact model selection or
-  returned identity attestation fails; clink presets and silent model
-  substitution do not satisfy that contract.
+  returned identity attestation fails; managed PAL disables clink, and silent
+  model substitution does not satisfy that contract.
 - The orchestrator reads no diffs and reviews no code itself; it only dispatches, collects, and consolidates.
 
 Consolidate the results into one report:

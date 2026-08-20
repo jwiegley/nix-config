@@ -113,7 +113,7 @@ Nix generates the shared, catalog-selected registry at `~/.config/mcp/mcp.json`;
 
 Credential-bearing values are environment references rather than literal secrets. The mutable `~/.config/pi/agent/mcp.json` may retain adapter state, but Nix preflight forbids `mcpServers` and `imports` there so that it cannot shadow the generated registry.
 
-PAL may initialize and expose its provider-independent discovery tools without credentials. Its model-backed tools require at least one referenced provider variable to be present in the launching client's environment; the generated registry carries variable names, never their values. Nix limits PAL's stderr logging to warnings and errors and disables its upstream persistent file logging.
+PAL may initialize and expose its provider-independent discovery tools without credentials. Its model-backed tools require at least one referenced provider variable to be present in the launching client's environment; the generated registry carries variable names, never their values. Nix limits PAL's stderr logging to warnings and errors and disables its upstream persistent file logging. The packaged server does not expose upstream `clink`: a same-UID nested CLI could inspect PAL's multi-provider ancestor environment and mutable client hooks, so filtering only the child environment would not provide a credential boundary.
 
 ### Keybindings
 

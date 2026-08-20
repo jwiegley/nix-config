@@ -26,7 +26,12 @@ prev.lib.optionalAttrs (palMcpServer != null) {
 
       src = palMcpServer;
 
-      patches = [ ../overlays/ai/patches/pal-mcp-server-stderr-logging.patch ];
+      # clink launches same-UID coding agents beneath the multi-provider PAL
+      # process, so it cannot isolate provider keys or mutable client hooks.
+      patches = [
+        ../overlays/ai/patches/pal-mcp-server-disable-clink.patch
+        ../overlays/ai/patches/pal-mcp-server-stderr-logging.patch
+      ];
 
       build-system = [
         setuptools

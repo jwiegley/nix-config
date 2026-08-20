@@ -36,8 +36,9 @@ to the exact roster entry and with no `continuation_id`. PAL chat returns
 `metadata.model_used`; save the raw response and verify that identity with
 `scripts/verify-model-dispatch.py` before accepting the content.
 
-Do not use `mcp__pal__clink` for this skill. Clink selects a CLI name and role,
-while the CLI preset owns its model; it cannot attest an exact roster model.
+Do not use `mcp__pal__clink` for this skill. Managed PAL disables that
+same-UID subprocess bridge; upstream clink also cannot attest an exact roster
+model because its CLI preset owns model selection.
 There is no fallback transport or substitute model. If `listmodels`, exact
 `chat` selection, response identity metadata, or a requested model is
 unavailable, abort the review and report the failed roster entry.
@@ -213,7 +214,7 @@ disputed and non-blocking rather than letting the orchestrator choose a winner.
 | Diffing against local `main` | Always `"$BASE_REF"...HEAD` after `git fetch origin` (default `origin/main`) |
 | Reviewing a stacked PR against `origin/main` | The diff then includes the parent PRs' changes — set the base ref to the stack parent (e.g. `origin/feature-part-1`) |
 | Verifier same model as reviewer | Re-draw from the list minus the reviewer's model |
-| Using clink for a named model | Clink selects a CLI preset, not an exact model; use attested PAL chat |
+| Using clink for a named model | Managed PAL disables clink; use attested PAL chat with an exact model |
 | Accepting an unavailable model under its requested label | Abort; never substitute or relabel |
 | Trusting the requested model field | Verify runner-returned `metadata.model_used` with the helper |
 | Treating unverified claims as findings | Only VALID claims with severity survive Stage 2 |
