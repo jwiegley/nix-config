@@ -580,7 +580,9 @@ assert builtins.all (
 ) allHomes;
 assert builtins.all (
   config:
-  (config.home.sessionVariables.GIT_AI_INSTALL_DEV_HOOKS or null) == "0"
+  builtins.all (name: !(lib.hasPrefix "GIT_AI_" name)) (
+    builtins.attrNames config.home.sessionVariables
+  )
   && !(config.programs.git.settings ? trace2)
 ) allHomes;
 assert builtins.all (config: !(hasPackage "watchman" config)) allHomes;

@@ -128,9 +128,6 @@ in
     }
     // lib.optionalAttrs isLinux {
       FACTORY_AUTO_UPDATE = "false";
-    }
-    // lib.optionalAttrs (!vars.gitAiEnabled) {
-      GIT_AI_INSTALL_DEV_HOOKS = "0";
     };
 
     sessionSearchVariables = {

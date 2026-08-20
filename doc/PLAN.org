@@ -760,6 +760,22 @@ Agent Deck StateDB writable and read-only openers still pass profile state.db pa
 ]
 #+end_src
 
+* TODO [#B] Remove stale git-ai runtime integrations from managed work environments
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-26zg
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-20 Thu 01:36]
+:MODIFIED: [2026-08-20 Thu 01:36]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Declarative git-ai enablement, packages, Trace2, and session variables are disabled, but historical install-hooks may have left mutable client hooks, Trace2 targets, daemon/socket state, editor extensions, repository-local hooks, and already-loaded sessions. Perform a fail-closed exact-identity audit and surgical cleanup on Hera, Clio, the four active shared-work hosts, and Vulcan; preserve unrelated hooks/config; use constrained unwrapped git-ai only where safe; independently verify postconditions and restart affected clients. Do not contact VPS or dormant git-ai host.
+
 * DONE [#D] Replace current nix-config package metadata homepage with Gitea authority
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
