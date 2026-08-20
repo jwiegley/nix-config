@@ -476,7 +476,8 @@ in
 
       push-tank = {
         script = ''
-          printf '\n----- push tank: %s -----\n' "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')"
+          timestamp=$(/bin/date '+%Y-%m-%d %H:%M:%S %Z') || exit
+          printf '\n----- push tank: %s -----\n' "$timestamp" || exit
           exec ${pkgs.my-scripts}/bin/push tank
         '';
         serviceConfig = {

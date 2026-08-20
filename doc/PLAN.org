@@ -5208,6 +5208,13 @@ The user explicitly authorized commit, push, and activation on all maintained sy
     "author": "johnw",
     "text": "All discovered source hunks are now partitioned into signed commits through 09e5178a, including the separate oMLX audit fix 704e31e4 and declarative-only Git-AI phase one. The only remaining tracked edit is this evidence reconciliation. Exact aggregate gates, final audit, fast-forward publication, non-VPS activation, runtime probes, and clean/current consumer proof remain outstanding.",
     "created_at": "2026-08-20T21:10:16Z"
+  },
+  {
+    "id": 514,
+    "issue_id": "nix-fleet-converge-09ln",
+    "author": "johnw",
+    "text": "Root main through db60ba70 was signed, fast-forward published, and read back exactly. Hera and Clio activated that candidate and passed generation plus narrow Pi, oMLX, managed MCP, and declarative Git-AI probes. A later push-tank fess finding requires a new corrective root commit and Hera reactivation before fleet convergence is final. Vulcan paired inputs were advanced to db60ba70 and the authoritative build driver produced a candidate, but no consumer commit or activation occurred because the root correction supersedes it. Shared-work remains clean but has two pre-existing unsigned local flake.lock commits ahead of its remote; no history rewrite or unsigned publication was attempted. VPS remains untouched.",
+    "created_at": "2026-08-20T22:29:20Z"
   }
 ]
 #+end_src
@@ -8535,6 +8542,13 @@ Signed commit, fast-forward publication, and activation on Hera plus the maintai
     "author": "johnw",
     "text": "Signed work commit 09e5178a contains exactly the launchd implementation, focused host-behavior assertions, and this issue record; its full pre-commit hook passed. Independent no-history fess audit is now running. Publication and activation attempt count remain zero.",
     "created_at": "2026-08-20T21:10:16Z"
+  },
+  {
+    "id": 513,
+    "issue_id": "nix-push-tank-launchd-ptl3",
+    "author": "johnw",
+    "text": "Independent no-history fess of signed 09e5178a returned NOT CLEAR with one medium finding: the script could still execute push tank if date or separator printf failed. The corrective unit now fails closed on both operations and adds runnable negative probes proving the push command marker is not reached for either failure. Exact checks pass: checks.aarch64-darwin.host-behavior, ./build system with corrected push-tank plist, and make test with 22 of 22 Python suites plus 8 root behavioral checks. The previously published db60ba70 candidate was activated on Hera (activation attempt 1); its loaded hourly job completed one controlled run with exit 0, exactly one dated separator, and appended bytes. That runtime proves the original behavior but not the corrective source. Signed correction, final fess, publication, reactivation, and corrected runtime acceptance remain pending.",
+    "created_at": "2026-08-20T22:29:20Z"
   }
 ]
 #+end_src

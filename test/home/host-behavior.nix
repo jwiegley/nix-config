@@ -27,9 +27,26 @@ let
   heraPushTankScript = builtins.unsafeDiscardStringContext heraPushTankAgent.script;
   expectedPushTankCommand = builtins.unsafeDiscardStringContext "${heraPushTankPackages.my-scripts}/bin/push tank";
   expectedPushTankScript = ''
-    printf '\n----- push tank: %s -----\n' "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')"
+    timestamp=$(/bin/date '+%Y-%m-%d %H:%M:%S %Z') || exit
+    printf '\n----- push tank: %s -----\n' "$timestamp" || exit
     exec ${expectedPushTankCommand}
   '';
+  pushTankMarkerCommand = ''${pkgs.coreutils}/bin/touch "$marker"'';
+  pushTankDateFailureProbe = pkgs.writeShellScript "push-tank-date-failure-probe" (
+    lib.replaceStrings
+      [
+        "/bin/date"
+        expectedPushTankCommand
+      ]
+      [
+        "${pkgs.coreutils}/bin/false"
+        pushTankMarkerCommand
+      ]
+      heraPushTankScript
+  );
+  pushTankPrintfFailureProbe = pkgs.writeShellScript "push-tank-printf-failure-probe" (
+    lib.replaceStrings [ expectedPushTankCommand ] [ pushTankMarkerCommand ] heraPushTankScript
+  );
   expectedPushTankPath = "${
     lib.makeBinPath [
       heraPushTankPackages.bash
@@ -685,6 +702,18 @@ assert
   heraPushTankAgent.serviceConfig.StandardErrorPath == "/Users/johnw/Library/Logs/push-tank.log";
 assert heraPushTankScript == expectedPushTankScript;
 pkgs.runCommand "host-behavior" { } ''
+  dateMarker="$TMPDIR/push-tank-date-ran"
+  if marker="$dateMarker" ${pushTankDateFailureProbe} >/dev/null 2>&1; then
+    exit 1
+  fi
+  test ! -e "$dateMarker"
+
+  printfMarker="$TMPDIR/push-tank-printf-ran"
+  if marker="$printfMarker" ${pushTankPrintfFailureProbe} >&- 2>/dev/null; then
+    exit 1
+  fi
+  test ! -e "$printfMarker"
+
   ${pkgs.diffutils}/bin/cmp -s \
     ${heraRecordingTranscriptionSource} \
     ${expectedRecordingTranscriptionSource}
