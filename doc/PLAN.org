@@ -5179,7 +5179,7 @@ Partner observation .443Z: plaintext stage/backup copies can survive SIGKILL or 
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-20 Thu 11:09]
-:MODIFIED: [2026-08-20 Thu 14:10]
+:MODIFIED: [2026-08-20 Thu 15:29]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -8501,7 +8501,7 @@ Concurrent creation/open of one canonical profile database is deterministic: tra
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-20 Thu 10:29]
-:MODIFIED: [2026-08-20 Thu 14:10]
+:MODIFIED: [2026-08-20 Thu 15:44]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -8549,6 +8549,13 @@ Signed commit, fast-forward publication, and activation on Hera plus the maintai
     "author": "johnw",
     "text": "Independent no-history fess of signed 09e5178a returned NOT CLEAR with one medium finding: the script could still execute push tank if date or separator printf failed. The corrective unit now fails closed on both operations and adds runnable negative probes proving the push command marker is not reached for either failure. Exact checks pass: checks.aarch64-darwin.host-behavior, ./build system with corrected push-tank plist, and make test with 22 of 22 Python suites plus 8 root behavioral checks. The previously published db60ba70 candidate was activated on Hera (activation attempt 1); its loaded hourly job completed one controlled run with exit 0, exactly one dated separator, and appended bytes. That runtime proves the original behavior but not the corrective source. Signed correction, final fess, publication, reactivation, and corrected runtime acceptance remain pending.",
     "created_at": "2026-08-20T22:29:20Z"
+  },
+  {
+    "id": 515,
+    "issue_id": "nix-push-tank-launchd-ptl3",
+    "author": "johnw",
+    "text": "Final independent no-history audit over 09e5178a plus corrective 38b610b0 is CLEAR with no actionable source, architecture, or test findings. The auditor confirmed both failure probes are non-vacuous and the existing launchd seam preserves Hera-only, hourly, append, and singleton semantics. Corrected publication, Hera activation/runtime, and clean/current proof remain pending. Report: /Users/johnw/Products/nix/wg-push-tank/fess/wg-38b610b0-final/report.md.",
+    "created_at": "2026-08-20T22:44:49Z"
   }
 ]
 #+end_src
