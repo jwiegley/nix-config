@@ -412,9 +412,12 @@
               ai-catalog-transport = pkgs.callPackage ./test/ai/catalog-transport.nix {
                 inherit src;
                 codexPackage = inputs.nix-config-ai.packages.${system}.codex;
+                configured = agentTestPkgsFor.${system};
+                droidPackage = inputs.nix-config-ai.packages.${system}.droid;
               };
               ai-mcp-registry = pkgs.callPackage ./test/ai/mcp-registry.nix {
                 inherit src;
+                configured = agentTestPkgsFor.${system};
               };
               coq-overlay = pkgs.callPackage ./test/coq-overlay.nix {
                 configured = agentTestPkgsFor.${system};

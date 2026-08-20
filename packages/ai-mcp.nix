@@ -10,6 +10,10 @@
 let
   sources = import ./source-catalog.nix "ai";
   palPackage = builtins.fromTOML (builtins.readFile "${palMcpServer}/pyproject.toml");
+  managedMcpPath = prev.lib.makeBinPath [
+    prev.coreutils
+    prev.openssh
+  ];
 in
 prev.lib.optionalAttrs (palMcpServer != null) {
 
@@ -68,6 +72,40 @@ prev.lib.optionalAttrs (palMcpServer != null) {
 
 }
 // {
+
+  # Common environment boundary for catalog-managed stdio MCP servers.
+  nix-managed-mcp-stdio =
+    with prev;
+    stdenv.mkDerivation {
+      pname = "nix-managed-mcp-stdio";
+      version = "1";
+      src = ./nix-managed-mcp-stdio.c;
+      dontUnpack = true;
+      strictDeps = true;
+
+      buildPhase = ''
+        runHook preBuild
+        $CC -std=c11 -Wall -Wextra -Werror -pedantic \
+          -DNIX_MANAGED_MCP_PATH='"${managedMcpPath}"' \
+          "$src" -o nix-managed-mcp-stdio
+        runHook postBuild
+      '';
+
+      installPhase = ''
+        runHook preInstall
+        install -Dm0755 nix-managed-mcp-stdio "$out/bin/nix-managed-mcp-stdio"
+        runHook postInstall
+      '';
+
+      meta = with lib; {
+        description = "Environment boundary for managed stdio MCP servers";
+        license = licenses.mit;
+        mainProgram = "nix-managed-mcp-stdio";
+        platforms = platforms.unix;
+      };
+
+      passthru.runtimePath = managedMcpPath;
+    };
 
   # Rust documentation MCP server
   rustdocs-mcp-server =
@@ -251,6 +289,20 @@ prev.lib.optionalAttrs (palMcpServer != null) {
         fetchFromGitHub sources.drafts-mcp-server.source.args;
 
       npmDepsHash = sources.drafts-mcp-server.hashes.npmDepsHash;
+
+      postPatch = ''
+        substituteInPlace src/applescript.ts \
+          --replace-fail "spawn('osascript'," "spawn('/usr/bin/osascript',"
+      '';
+
+      postInstall = ''
+        compiled="$out/lib/node_modules/@agiletortoise/drafts-mcp-server/dist/applescript.js"
+        test "$(grep -F -c "spawn('/usr/bin/osascript'," "$compiled")" -eq 2
+        if grep -F "spawn('osascript'," "$compiled" >/dev/null; then
+          echo "drafts-mcp-server retained a PATH-resolved osascript call" >&2
+          exit 1
+        fi
+      '';
 
       makeWrapperArgs = [ "--prefix PATH : ${lib.makeBinPath [ nodejs ]}" ];
 

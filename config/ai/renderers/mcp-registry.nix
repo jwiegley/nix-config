@@ -10,6 +10,7 @@ let
   json = pkgs.formats.json { };
   renderLib = import ./render-lib.nix { inherit lib; };
   inherit (renderLib) isTypedEnv;
+  renderManagedStdio = (import ../managed-stdio.nix { inherit lib; }).render pkgs;
 
   hasOnlyKeys =
     allowed: value: builtins.all (name: builtins.elem name allowed) (builtins.attrNames value);
@@ -22,19 +23,14 @@ let
       "$env:"
       "?apiKey="
     ];
-  renderEnv = name: "$" + "{" + name + "}";
   renderEnvValue =
     value:
-    if isTypedEnv value then
-      renderEnv value.env
-    else if builtins.isString value then
-      value
-    else
-      throw "unsupported MCP registry environment value";
+    if builtins.isString value then value else throw "unsupported MCP registry environment value";
   renderServer =
     _: server:
     let
-      inherit (server) transport;
+      transport = renderManagedStdio server.transport;
+      environment = lib.filterAttrs (_: value: !isTypedEnv value) (transport.env or { });
     in
     if transport ? url then
       assert hasOnlyKeys [ "url" ] transport;
@@ -54,8 +50,8 @@ let
       {
         inherit (transport) command args;
       }
-      // lib.optionalAttrs (transport ? env) {
-        env = lib.mapAttrs (_: renderEnvValue) transport.env;
+      // lib.optionalAttrs (environment != { }) {
+        env = lib.mapAttrs (_: renderEnvValue) environment;
       };
 
   xdgConfigRelative = lib.removePrefix "${homeDirectory}/" xdgConfigHome;

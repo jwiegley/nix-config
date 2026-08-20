@@ -5,6 +5,9 @@
 
 let
   modelOverrides = import ./model-overrides.nix;
+  managedStdio = import ./managed-stdio.nix { inherit lib; };
+  inherit (managedStdio) typedEnvironment;
+  manageStdioTransport = managedStdio.normalize;
   clients = [
     "claude"
     "codex"
@@ -151,7 +154,7 @@ let
     assert !(resolved ? transport) || validateTransport resolved.transport;
     resolved
     // lib.optionalAttrs (resolved ? transport) {
-      transport = renderTransportArguments resolved.transport;
+      transport = manageStdioTransport (renderTransportArguments resolved.transport);
     };
   select =
     profile: itemSet:
@@ -712,7 +715,12 @@ let
   });
   prompts = builtInPrompts;
 
-  typedEnv = env: { inherit env; };
+  typedEnv =
+    env:
+    assert builtins.elem env typedEnvironment;
+    {
+      inherit env;
+    };
   publicArg = public: { inherit public; };
   protectedFileArg = protectedFile: { inherit protectedFile; };
   publicArgs = map publicArg;
@@ -840,14 +848,10 @@ let
         };
       };
 
-    sequential-thinking =
-      (mkMcp {
-        command = "mcp-server-sequential-thinking";
-        args = [ ];
-      } baseMcpSelectors)
-      // {
-        overrides.codex.command = "mcp-server-sequential-thinking";
-      };
+    sequential-thinking = mkMcp {
+      command = "mcp-server-sequential-thinking";
+      args = [ ];
+    } baseMcpSelectors;
 
     stock-trader =
       mkMcp
@@ -1168,11 +1172,7 @@ let
   ensure =
     condition: message: if condition then true else throw "agent catalog validation: ${message}";
 
-  declaredEnvNames = [
-    "ANTHROPIC_API_KEY"
-    "GEMINI_API_KEY"
-    "OPENAI_API_KEY"
-  ];
+  declaredEnvNames = typedEnvironment;
 
   validEnvName = value: builtins.isString value && builtins.match "^[A-Z][A-Z0-9_]*$" value != null;
 
@@ -1447,7 +1447,6 @@ let
   allowedOverrideFields = {
     claude = [ "timeout" ];
     codex = [
-      "command"
       "startup_timeout_sec"
       "tool_timeout_sec"
     ];
@@ -1458,9 +1457,7 @@ let
   validateOverrides =
     overrides:
     let
-      validOverrideValue =
-        field: value:
-        if field == "command" then validPublicArgument value else builtins.isInt value && value > 0;
+      validOverrideValue = _field: value: builtins.isInt value && value > 0;
     in
     builtins.isAttrs overrides
     && builtins.all (
@@ -1641,8 +1638,8 @@ let
               ]
             );
             shouldSelect = matches profile (server.selectors or { });
-            expectedTransport = renderTransportArguments (
-              (server.transportByHost or { }).${profile.host} or server.transport
+            expectedTransport = manageStdioTransport (
+              renderTransportArguments ((server.transportByHost or { }).${profile.host} or server.transport)
             );
           in
           ensure (

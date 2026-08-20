@@ -1,12 +1,14 @@
 {
   codexPackage,
+  configured,
+  droidPackage,
   lib,
   pkgs,
   src,
 }:
 
 let
-  rendererPkgs = pkgs // {
+  rendererPkgs = configured // {
     agent-resources = "/catalog-agent-resources";
     pi-gallery = {
       outPath = "/catalog-pi-gallery";
@@ -18,6 +20,7 @@ let
     resources = "/catalog-agent-resources";
   };
   modelOverrides = import "${src}/config/ai/model-overrides.nix";
+  mcpEnvironment = import "${src}/config/ai/managed-stdio.nix" { inherit lib; };
   recordingTranscriptionModels = builtins.attrNames modelOverrides.localProviderOverrides.omlx.modelOverrides;
   recordingTranscriptionRoute = catalog.recordingTranscriptionRoutesByHost.hera;
   renderLib = import "${src}/config/ai/renderers/render-lib.nix" { inherit lib; };
@@ -174,6 +177,9 @@ let
       env.SYNTHETIC_TOKEN.env = "OPENAI_API_KEY";
     };
   };
+  commandOverrideMcp = catalog.items.mcpServers.pal // {
+    overrides.codex.command = "pal-mcp-server";
+  };
   missingHttpUrl = syntheticHttpMcp // {
     transport = { };
   };
@@ -197,7 +203,7 @@ let
       "pi"
     ];
     transport = {
-      command = "synthetic-mcp";
+      command = "/synthetic-mcp";
       args = safeArguments;
     };
   };
@@ -214,6 +220,14 @@ let
       }
     );
   safeArgumentItems = withSyntheticArguments safeArguments;
+  argumentlessItems = withMcpServers (
+    catalog.items.mcpServers
+    // {
+      synthetic-arguments = syntheticArgumentMcp // {
+        transport = builtins.removeAttrs syntheticArgumentMcp.transport [ "args" ];
+      };
+    }
+  );
   unsafeArgumentLists = [
     [ "--stdio" ]
     [ "-HAuthorization:credential-sentinel" ]
@@ -318,7 +332,8 @@ let
     renderer: profile: homeDirectory:
     renderSelectedFor renderer profile homeDirectory (selectWithHttp profile);
   codexRenderer = import "${src}/config/ai/renderers/codex.nix" {
-    inherit codexPackage lib pkgs;
+    inherit codexPackage lib;
+    pkgs = rendererPkgs;
   };
   codexRendered = renderFor codexRenderer codexProfile "/Users/test";
   clioCodexRendered = renderFor codexRenderer clioCodexProfile "/Users/test";
@@ -328,6 +343,33 @@ let
     codexRendered.files."${codexProfile.root}/nix-managed-model-catalog.json".source;
   codexManagedConfig = codexRendered.files."${codexProfile.root}/nix-managed.config.toml".source;
   codexManagedFessSkill = codexRendered.files.".agents/skills/command-fess".source;
+  mcpEnvironmentProbeScript = pkgs.writeText "mcp-environment-probe.py" (
+    builtins.readFile ./mcp-environment-probe.py
+  );
+  codexMcpProbeItems = catalog.items // {
+    mcpServers = {
+      managed-environment-probe = {
+        selectors.profiles = [ codexProfile.id ];
+        transport = {
+          command = "${pkgs.python3}/bin/python3";
+          args = [
+            { public = toString mcpEnvironmentProbeScript; }
+            { public = configured.nix-managed-mcp-stdio.runtimePath; }
+          ];
+          env = {
+            ANTHROPIC_API_KEY.env = "ANTHROPIC_API_KEY";
+            DEFAULT_MODEL = "auto";
+            OPENAI_API_KEY.env = "OPENAI_API_KEY";
+          };
+        };
+      };
+    };
+  };
+  codexMcpProbeRendered = renderSelectedFor codexRenderer codexProfile "/Users/test" (
+    (selectFrom codexMcpProbeItems) codexProfile
+  );
+  codexMcpProbeConfig =
+    codexMcpProbeRendered.files."${codexProfile.root}/nix-managed.config.toml".source;
   codexAdversarialRendered = renderSelectedFor codexRenderer codexProfile "/Users/test" (
     selectAdversarialFor codexProfile
   );
@@ -431,6 +473,33 @@ let
     pkgs = rendererPkgs;
   };
   droidRendered = renderFor droidRenderer droidProfile "/Users/test";
+  droidMcpProbeItems = catalog.items // {
+    mcpServers = {
+      managed-environment-probe = {
+        selectors.profiles = [ droidProfile.id ];
+        transport = {
+          command = "${pkgs.python3}/bin/python3";
+          args = [
+            { public = toString mcpEnvironmentProbeScript; }
+            { public = configured.nix-managed-mcp-stdio.runtimePath; }
+            { public = "droid"; }
+            { public = "@DROID_HOME@"; }
+            { public = "@DROID_TMPDIR@"; }
+          ];
+          env = {
+            ANTHROPIC_API_KEY.env = "ANTHROPIC_API_KEY";
+            DEFAULT_MODEL = "auto";
+            GEMINI_API_KEY.env = "GEMINI_API_KEY";
+            OPENAI_API_KEY.env = "OPENAI_API_KEY";
+          };
+        };
+      };
+    };
+  };
+  droidMcpProbeRendered = renderSelectedFor droidRenderer droidProfile "/Users/test" (
+    (selectFrom droidMcpProbeItems) droidProfile
+  );
+  droidMcpProbeConfig = droidMcpProbeRendered.files."${droidProfile.root}/mcp.json".source;
   droidAdversarialRendered = renderSelectedFor droidRenderer droidProfile "/Users/test" (
     selectAdversarialFor droidProfile
   );
@@ -546,6 +615,17 @@ let
     safeSelectedFor droidProfile
   );
   safeMcpRegistryRendered = renderMcpRegistryFor piProfile safeArgumentItems;
+  argumentlessSelectedFor = selectFrom argumentlessItems;
+  argumentlessClaudeRendered = renderSelectedFor claudeRenderer claudeProfile "/Users/test" (
+    argumentlessSelectedFor claudeProfile
+  );
+  argumentlessCodexRendered = renderSelectedFor codexRenderer codexProfile "/Users/test" (
+    argumentlessSelectedFor codexProfile
+  );
+  argumentlessDroidRendered = renderSelectedFor droidRenderer droidProfile "/Users/test" (
+    argumentlessSelectedFor droidProfile
+  );
+  argumentlessMcpRegistryRendered = renderMcpRegistryFor piProfile argumentlessItems;
   httpMcpRegistryRendered = renderMcpRegistryFor piProfile (
     withMcpServers (
       catalog.items.mcpServers
@@ -877,6 +957,14 @@ assert catalog.validate {
   items = withClaudeSettingsBase (claudeSettings.base // { model = "café/模型@版本"; });
 };
 assert builtins.all (profile: (selectFor profile).mcpServers ? pal) profiles;
+assert builtins.all (
+  profile:
+  builtins.all (
+    server:
+    server.transport ? url
+    || (server.transport.command == "nix-managed-mcp-stdio" && builtins.elem "--" server.transport.args)
+  ) (builtins.attrValues (selectFor profile).mcpServers)
+) profiles;
 # The home-level endpoint table is one authority shared by both workstations.
 assert
   builtins.attrNames catalog.localModelEndpointsByHost == [
@@ -920,6 +1008,7 @@ assert builtins.all (
 ) unsafeHttpUrls;
 assert builtins.all (url: catalog.validate { items = withSyntheticHttpUrl url; }) safeHttpUrls;
 assert catalog.validate { items = safeArgumentItems; };
+assert catalog.validate { items = argumentlessItems; };
 assert builtins.all (
   args: reject (catalog.validate { items = withSyntheticArguments args; })
 ) unsafeArgumentLists;
@@ -1103,6 +1192,9 @@ assert builtins.all reject [
     items = withMcpServers (
       catalog.items.mcpServers // { synthetic-stdio = mismatchedStdioEnvironment; }
     );
+  })
+  (catalog.validate {
+    items = withMcpServers (catalog.items.mcpServers // { boundary-bypass = commandOverrideMcp; });
   })
   (catalog.validate {
     items = withMcpServers (catalog.items.mcpServers // { synthetic-http = missingHttpUrl; });
@@ -1308,10 +1400,77 @@ pkgs.runCommand "ai-catalog-transport" { } ''
       (toString codexManagedCatalog)
       (toString codexManagedConfig)
       (toString codexManagedFessSkill)
+      (toString codexMcpProbeConfig)
       "/Users/test/${codexProfile.root}/nix-managed-model-catalog.json"
       catalog.items.commands.fess.metadata.description
     ]
   }
+
+  droid_home="$TMPDIR/droid-managed-mcp/home"
+  droid_tmp="$TMPDIR/droid-managed-mcp/tmp"
+  mkdir -p "$droid_home/.config/factory" "$droid_tmp"
+  cp ${droidMcpProbeConfig} "$droid_home/.config/factory/mcp.json"
+  substituteInPlace "$droid_home/.config/factory/mcp.json" \
+    --replace-fail '@DROID_HOME@' "$droid_home" \
+    --replace-fail '@DROID_TMPDIR@' "$droid_tmp"
+  ln -s "$droid_home/.config/factory" "$droid_home/.factory"
+  if ! ${pkgs.coreutils}/bin/timeout --signal=TERM --kill-after=1 20 \
+    ${pkgs.coreutils}/bin/env -i \
+      HOME="$droid_home" \
+      USER=test \
+      LOGNAME=test \
+      LANG=C.UTF-8 \
+      LC_ALL=C.UTF-8 \
+      PATH=${
+        lib.escapeShellArg (
+          lib.makeBinPath [
+            droidPackage
+            pkgs.coreutils
+          ]
+        )
+      } \
+      TERM=dumb \
+      TMPDIR="$droid_tmp" \
+      NIX_SSL_CERT_FILE=/managed-ca \
+      SHELL=/managed-shell \
+      SSL_CERT_FILE=/managed-ssl \
+      ANTHROPIC_API_KEY= \
+      OPENAI_API_KEY=typed-sentinel \
+      DEFAULT_MODEL=parent-poison \
+      GEMINI_API_KEY=droid-gemini-sentinel \
+      GIT_AI_SOCKET=/forbidden \
+      GIT_TRACE2_EVENT=/forbidden \
+      SSH_AUTH_SOCK=/forbidden \
+      NODE_OPTIONS=--trace-warnings \
+      PYTHONPATH=/forbidden \
+      UNRELATED_SECRET=unrelated-sentinel \
+      FACTORY_AIRGAP_ENABLED=true \
+      FACTORY_OTEL_ENABLED=false \
+      FACTORY_DISABLE_DYNAMIC_CONFIG=true \
+      FACTORY_DROID_AUTO_UPDATE_ENABLED=false \
+      FACTORY_MCP_BLOCKING_LOAD_TIMEOUT_MS=5000 \
+      ${droidPackage}/bin/droid mcp list \
+      >"$TMPDIR/droid-managed-mcp.stdout" \
+      2>"$TMPDIR/droid-managed-mcp.stderr"; then
+    ${pkgs.coreutils}/bin/cat "$TMPDIR/droid-managed-mcp.stdout" >&2
+    ${pkgs.coreutils}/bin/cat "$TMPDIR/droid-managed-mcp.stderr" >&2
+    exit 1
+  fi
+  ${pkgs.gnugrep}/bin/grep -F \
+    'managed-environment-probe  stdio  connected  [user]' \
+    "$TMPDIR/droid-managed-mcp.stdout" >/dev/null
+  if ${pkgs.gnugrep}/bin/grep -E \
+    'managed-environment-probe.*(connecting|failed|needs authentication)' \
+    "$TMPDIR/droid-managed-mcp.stdout" >/dev/null; then
+    echo "Droid did not connect to the managed environment probe" >&2
+    exit 1
+  fi
+  if ${pkgs.gnugrep}/bin/grep -E \
+    '(typed-sentinel|droid-gemini-sentinel|parent-poison|unrelated-sentinel|/forbidden)' \
+    "$TMPDIR/droid-managed-mcp.stdout" "$TMPDIR/droid-managed-mcp.stderr" >/dev/null; then
+    echo "Droid disclosed managed MCP environment canaries" >&2
+    exit 1
+  fi
 
   grep -F '**Fallback smuggling**' ${codexRendered.files.${fessPaths.codex.agent}.source} >/dev/null
   grep -F '**Fallback smuggling**' ${
@@ -1324,12 +1483,16 @@ pkgs.runCommand "ai-catalog-transport" { } ''
     ${safeClaudeRendered.files."${claudeProfile.root}/nix-managed-mcp.json".source} \
     ${safeCodexRendered.files."${codexProfile.root}/nix-managed.config.toml".source} \
     ${safeDroidRendered.files."${droidProfile.root}/mcp.json".source} \
-    ${safeMcpRegistryRendered.files.".config/mcp/mcp.json".source} <<'PY'
+    ${safeMcpRegistryRendered.files.".config/mcp/mcp.json".source} \
+    ${argumentlessClaudeRendered.files."${claudeProfile.root}/nix-managed-mcp.json".source} \
+    ${argumentlessCodexRendered.files."${codexProfile.root}/nix-managed.config.toml".source} \
+    ${argumentlessDroidRendered.files."${droidProfile.root}/mcp.json".source} \
+    ${argumentlessMcpRegistryRendered.files.".config/mcp/mcp.json".source} <<'PY'
   import json
   import sys
   import tomllib
 
-  expected = [
+  original_arguments = [
       "--header=X-Request-ID:request-42",
       "MODE=stdio",
       "--max-tokens=42",
@@ -1339,7 +1502,16 @@ pkgs.runCommand "ai-catalog-transport" { } ''
       "--label=secret",
       "/run/secrets/service-token",
   ]
-  paths = sys.argv[1:]
+  platform_environment = ${builtins.toJSON mcpEnvironment.platformEnvironment}
+
+  def managed_arguments(command, arguments, environment=()):
+      result = []
+      for name in sorted(set(platform_environment) | set(environment)):
+          result.extend(["--inherit", name])
+      return result + ["--", command] + arguments
+
+  expected = managed_arguments("/synthetic-mcp", original_arguments)
+  paths = sys.argv[1:5]
   with open(paths[0], encoding="utf-8") as stream:
       claude = json.load(stream)
   with open(paths[1], "rb") as stream:
@@ -1358,17 +1530,30 @@ pkgs.runCommand "ai-catalog-transport" { } ''
   if any(arguments != expected for arguments in rendered):
       raise SystemExit("ordinary MCP arguments changed across renderer output")
 
+  argumentless_paths = sys.argv[5:]
+  with open(argumentless_paths[0], encoding="utf-8") as stream:
+      argumentless_claude = json.load(stream)
+  with open(argumentless_paths[1], "rb") as stream:
+      argumentless_codex = tomllib.load(stream)
+  with open(argumentless_paths[2], encoding="utf-8") as stream:
+      argumentless_droid = json.load(stream)
+  with open(argumentless_paths[3], encoding="utf-8") as stream:
+      argumentless_pi = json.load(stream)
+  argumentless_rendered = [
+      argumentless_claude["mcpServers"]["synthetic-arguments"]["args"],
+      argumentless_codex["mcp_servers"]["synthetic-arguments"]["args"],
+      argumentless_droid["mcpServers"]["synthetic-arguments"]["args"],
+      argumentless_pi["mcpServers"]["synthetic-arguments"]["args"],
+  ]
+  expected_argumentless = managed_arguments("/synthetic-mcp", [])
+  if any(arguments != expected_argumentless for arguments in argumentless_rendered):
+      raise SystemExit("omitted MCP args were not normalized across renderer output")
+
   claude_pal = claude["mcpServers"]["pal"]
   codex_pal = codex["mcp_servers"]["pal"]
   droid_pal = droid["mcpServers"]["pal"]
   pi_pal = pi["mcpServers"]["pal"]
   pal_servers = [claude_pal, codex_pal, droid_pal, pi_pal]
-  if any(
-      server.get("command") != "pal-mcp-server" or server.get("args") != []
-      for server in pal_servers
-  ):
-      raise SystemExit("PAL stdio command changed across renderer output")
-
   pal_literal_environment = {
       "DEFAULT_MODEL": "auto",
       "DISABLED_TOOLS": "testgen,secaudit,docgen,tracer",
@@ -1379,15 +1564,31 @@ pkgs.runCommand "ai-catalog-transport" { } ''
       "GEMINI_API_KEY": "''${GEMINI_API_KEY}",
       "OPENAI_API_KEY": "''${OPENAI_API_KEY}",
   }
-  if claude_pal.get("env") != pal_literal_environment | pal_environment_references:
+  droid_environment_references = {
+      name: "$" + "{" + name + ":-}"
+      for name in set(platform_environment) | set(pal_environment_references)
+  }
+  expected_pal_arguments = managed_arguments(
+      "${configured.pal-mcp-server}/bin/pal-mcp-server",
+      [],
+      pal_literal_environment.keys() | pal_environment_references.keys(),
+  )
+  if any(
+      server.get("command") != "${configured.nix-managed-mcp-stdio}/bin/nix-managed-mcp-stdio"
+      or server.get("args") != expected_pal_arguments
+      for server in pal_servers
+  ):
+      raise SystemExit("PAL stdio command changed across renderer output")
+
+  if claude_pal.get("env") != pal_literal_environment:
       raise SystemExit("Claude PAL environment projection changed")
-  if pi_pal.get("env") != pal_literal_environment | pal_environment_references:
+  if pi_pal.get("env") != pal_literal_environment:
       raise SystemExit("Pi PAL environment projection changed")
-  if droid_pal.get("env") != pal_literal_environment:
-      raise SystemExit("Droid PAL literal environment projection changed")
+  if droid_pal.get("env") != pal_literal_environment | droid_environment_references:
+      raise SystemExit("Droid PAL environment projection changed")
   if codex_pal.get("env") != pal_literal_environment or codex_pal.get(
       "env_vars"
-  ) != sorted(pal_environment_references):
+  ) != sorted(set(platform_environment) | set(pal_environment_references)):
       raise SystemExit("Codex PAL environment projection changed")
   PY
   ${lib.concatMapStringsSep "\n" (entry: ''

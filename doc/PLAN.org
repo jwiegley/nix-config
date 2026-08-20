@@ -1526,14 +1526,14 @@ Frozen product docs: SESSION-PERSISTENCE-SPEC.md cbcba81331f37071b2acd907caaf488
 ]
 #+end_src
 
-* TODO [#C] Bound inherited environment for managed stdio MCP servers
+* DOING [#C] Bound inherited environment for managed stdio MCP servers
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-4jtb
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-19 Wed 00:21]
-:MODIFIED: [2026-08-19 Wed 00:21]
+:MODIFIED: [2026-08-20 Thu 12:22]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1554,6 +1554,20 @@ Managed stdio MCP clients may augment rather than replace their parent environme
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 495,
+    "issue_id": "nix-4jtb",
+    "author": "johnw",
+    "text": "Reopened: Reopened before publication: the managed-stdio implementation is staged, but exact-commit checks and independent audit must precede final closure.",
+    "created_at": "2026-08-20T19:22:15Z"
   }
 ]
 #+end_src
@@ -4910,6 +4924,38 @@ Final completion-record persistence must succeed before delivery or acknowledgem
     "author": "johnw",
     "text": "2026-08-13 after the cost API froze, exact regression `TestRunTaskAndNotifyDoesNotDeliverAfterFinalWriteFailure` compiled and passed (cmd/agent-deck 0.508s, GOPROXY/GOSUMDB off). Independent source audit already confirmed final durable write precedes return and the command exits before delivery on write failure.",
     "created_at": "2026-08-14T01:28:13Z"
+  }
+]
+#+end_src
+
+* TODO [#B] Define managed PAL provider credential authority
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ff4j
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-20 Thu 01:36]
+:MODIFIED: [2026-08-20 Thu 01:36]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+PAL transport and native client launch are credential-safe, but model-backed tools remain unavailable because no managed authority provisions OPENAI_API_KEY and GEMINI_API_KEY (with ANTHROPIC_API_KEY optional) into fresh work sessions. Choose backend and entry names for Darwin and Linux without recording values; preserve environment-only delivery; verify exact model availability and a bounded provider-backed PAL call on each intended active host/client class. VPS remains parked/manual.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-ff4j",
+    "depends_on_id": "nix-4jtb",
+    "type": "discovered-from",
+    "created_at": "2026-08-20T08:36:03.923070Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
@@ -16186,14 +16232,14 @@ Agent tooling never searches for executables by recursively traversing home, fil
 ]
 #+end_src
 
-* TODO [#C] Align stdio MCP argument schema with every renderer
+* DOING [#C] Align stdio MCP argument schema with every renderer
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-vwn8
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-19 Wed 00:23]
-:MODIFIED: [2026-08-19 Wed 00:23]
+:MODIFIED: [2026-08-20 Thu 12:22]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -16214,6 +16260,20 @@ Catalog validation accepts a stdio MCP transport with omitted args, while mainta
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 496,
+    "issue_id": "nix-vwn8",
+    "author": "johnw",
+    "text": "Reopened: Reopened before publication: the managed-stdio implementation is staged, but exact-commit checks and independent audit must precede final closure.",
+    "created_at": "2026-08-20T19:22:15Z"
   }
 ]
 #+end_src

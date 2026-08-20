@@ -30,6 +30,7 @@ in
     "cymbal"
     "codex"
     "default"
+    "droid"
     "nix-scripts"
     "pi"
     "pi-agent-browser-native"

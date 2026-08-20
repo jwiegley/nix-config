@@ -39,6 +39,106 @@ let
   resources = pkgs.agent-resources;
   haveSources = ponytail != null && translate-tool != null && gitSurgeonSource != null;
   havePiSources = piMcpAdapter != null && piOpenaiServerCompaction != null && piQuiet != null;
+  catalog = import ../../config/ai/catalog.nix {
+    inherit lib resources;
+  };
+  piProfile = catalog.profiles.hera-pi;
+  mcpEnvironmentProbeScript = pkgs.writeText "mcp-environment-probe.py" (
+    builtins.readFile ./mcp-environment-probe.py
+  );
+  piMcpRegistryItems = catalog.items // {
+    mcpServers = {
+      managed-environment-probe = {
+        selectors.clients = [ "pi" ];
+        transport = {
+          command = "${pkgs.python3}/bin/python3";
+          args = [
+            { public = toString mcpEnvironmentProbeScript; }
+            { public = pkgs.nix-managed-mcp-stdio.runtimePath; }
+          ];
+          env = {
+            ANTHROPIC_API_KEY.env = "ANTHROPIC_API_KEY";
+            DEFAULT_MODEL = "auto";
+            OPENAI_API_KEY.env = "OPENAI_API_KEY";
+          };
+        };
+      };
+    };
+  };
+  piMcpRegistry = (import ../../config/ai/renderers/mcp-registry.nix { inherit lib pkgs; }) {
+    projection = catalog.sharedMcpRegistryFor {
+      profiles = [ piProfile ];
+      items = piMcpRegistryItems;
+    };
+    homeDirectory = "/Users/test";
+    xdgConfigHome = "/Users/test/.config";
+  };
+  piMcpRegistryFile = piMcpRegistry.files.".config/mcp/mcp.json".source;
+  piMcpSyntheticProvider = pkgs.writeText "pi-mcp-synthetic-provider.ts" ''
+    import { registerFauxProvider } from "@earendil-works/pi-ai/compat";
+
+    const zeroUsage = {
+      input: 0,
+      output: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+      totalTokens: 0,
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+    };
+    const assistantMessage = (content: any, stopReason = "stop") => ({
+      role: "assistant",
+      content: typeof content === "string" ? [{ type: "text", text: content }] : [content],
+      api: "faux",
+      provider: "faux",
+      model: "faux-1",
+      usage: zeroUsage,
+      stopReason,
+      timestamp: Date.now(),
+    });
+
+    export default function syntheticMcpProvider(pi: any) {
+      const faux = registerFauxProvider({
+        api: "synthetic-mcp-api",
+        provider: "synthetic-mcp",
+        models: [{ id: "target", name: "Synthetic MCP" }],
+      });
+      faux.setResponses([
+        assistantMessage(
+          {
+            type: "toolCall",
+            id: "tool:managed-mcp",
+            name: "mcp",
+            arguments: {
+              tool: "managed-environment-probe_environment_ok",
+              server: "managed-environment-probe",
+              args: { value: "round-trip" },
+            },
+          },
+          "toolUse",
+        ),
+        (context: any) => {
+          const result = context.messages.findLast(
+            (message: any) => message.role === "toolResult" && message.toolName === "mcp",
+          );
+          const text = result?.content
+            ?.filter((item: any) => item.type === "text")
+            .map((item: any) => item.text)
+            .join("\n");
+          return assistantMessage(
+            text?.includes("synthetic-mcp:round-trip")
+              ? "pi-mcp-round-trip-ok"
+              : "pi-mcp-round-trip-failed",
+          );
+        },
+      ]);
+      pi.registerProvider("synthetic-mcp", {
+        baseUrl: "synthetic://local",
+        apiKey: "synthetic",
+        api: faux.api,
+        models: faux.models,
+      });
+    }
+  '';
 
   piQuietFiles = [
     "package.json"
@@ -100,6 +200,7 @@ let
     "onboarding-state.ts"
     "mcp-setup-panel.ts"
     "mcp-code.ts"
+    "mcp-bearer-store.ts"
     "mcp-keyring-helper.cjs"
     "mcp-probe.ts"
     "mcp-script-worker.mjs"
@@ -760,6 +861,50 @@ else
 
         node --experimental-import-meta-resolve ${piClosureCheck} \
           "$mcp" ${lib.escapeShellArg "${piMcpAdapter}/package-lock.json"}
+
+        pi_mcp_runtime="$TMPDIR/pi-mcp-round-trip"
+        mkdir -p \
+          "$pi_mcp_runtime/home/.config/mcp" \
+          "$pi_mcp_runtime/agent" \
+          "$pi_mcp_runtime/project"
+        install -m 600 ${piMcpRegistryFile} \
+          "$pi_mcp_runtime/home/.config/mcp/mcp.json"
+        (
+          cd "$pi_mcp_runtime/project"
+          BASH_ENV=/forbidden \
+            DEFAULT_MODEL=parent-poison \
+            GEMINI_API_KEY=other-provider-sentinel \
+            GIT_AI_SOCKET=/forbidden \
+            GIT_TRACE2_EVENT=/forbidden \
+            HOME="$pi_mcp_runtime/home" \
+            XDG_CONFIG_HOME="$pi_mcp_runtime/home/.config" \
+            NODE_OPTIONS=--trace-warnings \
+            NIX_SSL_CERT_FILE=/managed-ca \
+            OPENAI_API_KEY=typed-sentinel \
+            PI_CODING_AGENT_DIR="$pi_mcp_runtime/agent" \
+            PI_OFFLINE=1 \
+            PYTHONPATH=/forbidden \
+            SSH_AUTH_SOCK=/forbidden \
+            UNRELATED_SECRET=unrelated-sentinel \
+            ${pkgs.coreutils}/bin/timeout --signal=KILL 60s \
+            ${lib.getExe piPackage} \
+              --print --offline --no-session --no-context-files \
+              --no-extensions --no-skills --no-prompt-templates --no-approve \
+              --extension "$mcp/index.ts" \
+              --extension ${piMcpSyntheticProvider} \
+              --provider synthetic-mcp --model target \
+              "exercise the managed MCP environment" \
+              >"$pi_mcp_runtime/stdout" 2>"$pi_mcp_runtime/stderr"
+        ) || {
+          cat "$pi_mcp_runtime/stdout" >&2
+          cat "$pi_mcp_runtime/stderr" >&2
+          fail "Pi managed MCP round trip failed"
+        }
+        grep -Fx 'pi-mcp-round-trip-ok' "$pi_mcp_runtime/stdout" >/dev/null || {
+          cat "$pi_mcp_runtime/stdout" >&2
+          cat "$pi_mcp_runtime/stderr" >&2
+          fail "Pi did not complete the managed MCP round trip"
+        }
       ''}
 
       mkdir -p "$out"

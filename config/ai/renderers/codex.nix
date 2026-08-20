@@ -71,13 +71,20 @@ let
     ' ${codexSourceCatalog} "$TMPDIR/bundled.json" > "$out"
   '';
   inherit (import ./render-lib.nix { inherit lib; }) isTypedEnv renderMarkdownText;
+  managedStdio = import ../managed-stdio.nix { inherit lib; };
+  renderManagedStdio = managedStdio.render pkgs;
 
   renderMcpServer =
     server:
     let
-      inherit (server) transport;
+      transport = renderManagedStdio server.transport;
       typedEnv = lib.filterAttrs (_: isTypedEnv) (transport.env or { });
       literalEnv = lib.filterAttrs (_: value: !isTypedEnv value) (transport.env or { });
+      inheritedEnv = lib.sort builtins.lessThan (
+        lib.unique (
+          managedStdio.platformEnvironment ++ map (name: typedEnv.${name}.env) (sortedNames typedEnv)
+        )
+      );
       native =
         if transport ? url then
           { inherit (transport) url; }
@@ -86,8 +93,8 @@ let
             inherit (transport) command args;
           }
           // lib.optionalAttrs (literalEnv != { }) { env = literalEnv; }
-          // lib.optionalAttrs (typedEnv != { }) {
-            env_vars = map (name: typedEnv.${name}.env) (sortedNames typedEnv);
+          // lib.optionalAttrs (inheritedEnv != [ ]) {
+            env_vars = inheritedEnv;
           };
     in
     lib.recursiveUpdate native (server.overrides.codex or { });

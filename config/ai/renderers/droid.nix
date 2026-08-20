@@ -21,12 +21,23 @@ let
 
   renderLib = import ./render-lib.nix { inherit lib; };
   inherit (renderLib) isTypedEnv;
+  managedStdio = import ../managed-stdio.nix { inherit lib; };
+  renderManagedStdio = managedStdio.render pkgs;
+  droidOptionalReference = name: "$" + "{" + name + ":-}";
+  inheritedEnvironment = lib.genAttrs managedStdio.platformEnvironment droidOptionalReference;
+  renderEnvironment =
+    name: value:
+    if isTypedEnv value then
+      assert name == value.env;
+      droidOptionalReference name
+    else
+      value;
 
   renderMcpServer =
     _: server:
     let
-      inherit (server) transport;
-      literalEnv = lib.filterAttrs (_: value: !isTypedEnv value) (transport.env or { });
+      transport = renderManagedStdio server.transport;
+      environment = inheritedEnvironment // lib.mapAttrs renderEnvironment (transport.env or { });
     in
     if transport ? url then
       {
@@ -40,7 +51,7 @@ let
         disabled = false;
         inherit (transport) command args;
       }
-      // lib.optionalAttrs (literalEnv != { }) { env = literalEnv; };
+      // lib.optionalAttrs (environment != { }) { env = environment; };
   mcp = {
     mcpServers = lib.mapAttrs renderMcpServer selected.mcpServers;
   };

@@ -1,8 +1,12 @@
-{ pkgs, src }:
+{
+  configured,
+  pkgs,
+  src,
+}:
 
 let
   inherit (pkgs) lib;
-  rendererPkgs = pkgs // {
+  rendererPkgs = configured // {
     agent-resources = "/mcp-registry-agent-resources";
     pi-gallery = {
       outPath = "/mcp-registry-pi-gallery";
@@ -132,7 +136,9 @@ pkgs.runCommand "ai-mcp-registry" { } ''
     ${cases.primeOnly.files.${registryPath}.source} \
     ${cases.combined.files.${registryPath}.source}
   do
-    ${pkgs.jq}/bin/jq -e '
+    ${pkgs.jq}/bin/jq -e \
+      --arg launcher ${lib.escapeShellArg "${configured.nix-managed-mcp-stdio}/bin/nix-managed-mcp-stdio"} \
+      --arg pal ${lib.escapeShellArg "${configured.pal-mcp-server}/bin/pal-mcp-server"} '
       (.mcpServers | keys) == [
         "devonthink",
         "drafts",
@@ -143,15 +149,31 @@ pkgs.runCommand "ai-mcp-registry" { } ''
       ]
       and .settings.mcpFooterStatus == "compact"
       and .mcpServers.pal == {
-        command: "pal-mcp-server",
-        args: [],
+        command: $launcher,
+        args: [
+          "--inherit", "ANTHROPIC_API_KEY",
+          "--inherit", "DEFAULT_MODEL",
+          "--inherit", "DISABLED_TOOLS",
+          "--inherit", "GEMINI_API_KEY",
+          "--inherit", "HOME",
+          "--inherit", "LANG",
+          "--inherit", "LC_ALL",
+          "--inherit", "LOGNAME",
+          "--inherit", "LOG_LEVEL",
+          "--inherit", "NIX_SSL_CERT_FILE",
+          "--inherit", "NODE_EXTRA_CA_CERTS",
+          "--inherit", "OPENAI_API_KEY",
+          "--inherit", "SHELL",
+          "--inherit", "SSL_CERT_FILE",
+          "--inherit", "TERM",
+          "--inherit", "TMPDIR",
+          "--inherit", "USER",
+          "--", $pal
+        ],
         env: {
-          ANTHROPIC_API_KEY: "''${ANTHROPIC_API_KEY}",
           DEFAULT_MODEL: "auto",
           DISABLED_TOOLS: "testgen,secaudit,docgen,tracer",
-          GEMINI_API_KEY: "''${GEMINI_API_KEY}",
-          LOG_LEVEL: "WARNING",
-          OPENAI_API_KEY: "''${OPENAI_API_KEY}"
+          LOG_LEVEL: "WARNING"
         }
       }
     ' "$registry" >/dev/null

@@ -47,6 +47,7 @@ let
         ];
       };
       pinnedCodexPackage = inputs.llm-agents.packages.${system}.codex;
+      pinnedDroidPackage = inputs.llm-agents.packages.${system}.droid;
       upstreamPiPackage = inputs.llm-agents.packages.${system}.pi;
       toolPkgs = import inputs.nixpkgs {
         inherit system;
@@ -69,6 +70,7 @@ let
         "agent-deck"
         "agent-resources"
         "claude-vault"
+        "nix-managed-mcp-stdio"
         "pal-mcp-server"
         "plasma-fractal"
         "plasma-wiki"
@@ -117,10 +119,14 @@ let
       ) representativePackages) "portable AI overlay lost representative packages on ${system}")
       (lib.assertMsg (
         pkgs ? pal-mcp-server
+        && pkgs ? nix-managed-mcp-stdio
         && builtins.any (package: package.drvPath == pkgs.pal-mcp-server.drvPath) (
           actual.lib.aiPackagesFor pkgs
         )
-      ) "portable AI package policy lost PAL on ${system}")
+        && builtins.any (package: package.drvPath == pkgs.nix-managed-mcp-stdio.drvPath) (
+          actual.lib.aiPackagesFor pkgs
+        )
+      ) "portable AI package policy lost PAL or its stdio boundary on ${system}")
       (lib.assertMsg (
         overridden.agent-deck == "caller-override"
       ) "portable AI overlay prevents later caller overrides on ${system}")
@@ -167,6 +173,13 @@ let
       (lib.assertMsg (builtins.any (package: package.drvPath == actual.packages.${system}.codex.drvPath) (
         actual.lib.aiPackagesFor pkgs
       )) "portable AI package policy lost the canonical Codex on ${system}")
+      (lib.assertMsg (
+        actual.packages.${system}.droid.drvPath
+        == (actual.lib.patchAgentPackage pkgs "droid" pinnedDroidPackage).drvPath
+      ) "portable Droid moved away from its canonical packaging substrate on ${system}")
+      (lib.assertMsg (builtins.any (package: package.drvPath == actual.packages.${system}.droid.drvPath) (
+        actual.lib.aiPackagesFor pkgs
+      )) "portable AI package policy lost the canonical Droid on ${system}")
       (lib.assertMsg (
         actual.packages.${system}.pi.drvPath == (actual.lib.patchAgentPackage pkgs "pi" upstreamPiPackage)
         .drvPath

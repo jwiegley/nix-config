@@ -140,6 +140,8 @@ let
     patchAgentPackage pkgs "codex" (agentPackagesFor "codex" system).codex
   );
 
+  canonicalDroidPackages = forAllSystems (system: (agentPackagesFor "droid" system).droid);
+
   optAgent =
     pkgs: name:
     assert lib.assertMsg (agentExistsOnSupportedSystem name)
@@ -152,6 +154,8 @@ let
       [ ]
     else if name == "codex" then
       [ canonicalCodexPackages.${system} ]
+    else if name == "droid" then
+      [ canonicalDroidPackages.${system} ]
     else
       [ (patchAgentPackage pkgs name agentPackages.${name}) ];
 
@@ -293,6 +297,7 @@ let
       ../packages/ai-package-policy.nix
       ../packages/ai-llm.nix
       ../packages/ai-mcp.nix
+      ../packages/nix-managed-mcp-stdio.c
       ../packages/ai-python-extensions.nix
       ../packages/llm-mlx.nix
       ../packages/prime-agent
@@ -399,6 +404,7 @@ in
       default = mkAiToolchain pkgs;
       inherit (toolPkgs) nix-scripts;
       codex = canonicalCodexPackages.${system};
+      droid = canonicalDroidPackages.${system};
       pi = canonicalPiPackages.${system};
       inherit (pkgs)
         agent-resources
@@ -506,6 +512,7 @@ in
         };
       };
       prime-agent = pkgs.callPackage ../test/ai/prime-agent.nix { inherit pkgs; };
+      managed-mcp-stdio = pkgs.callPackage ../test/ai/managed-mcp-stdio.nix { inherit pkgs; };
       pi-extension-tests = pkgs.callPackage ../test/ai/pi-extension-tests.nix {
         inherit sourceForChecks;
       };

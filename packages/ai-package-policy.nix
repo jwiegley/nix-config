@@ -22,6 +22,7 @@
       "lazycodex-ai"
       "llama-swap"
       "mcp-searxng"
+      "nix-managed-mcp-stdio"
       "pal-mcp-server"
       "playwright-mcp"
       "qdrant-web-ui"

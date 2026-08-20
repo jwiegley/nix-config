@@ -1,4 +1,4 @@
-"""Exercise the installed PAL MCP server without credentials or network access."""
+"""Exercise installed PAL directly or through a supplied launcher argument list."""
 
 from __future__ import annotations
 
@@ -148,11 +148,12 @@ def drain_stderr(
 
 
 def main() -> None:
-    if len(sys.argv) != 4:
-        fail("expected OUT EXECUTABLE VERSION")
+    if len(sys.argv) < 4 or (len(sys.argv) > 4 and sys.argv[4] != "--"):
+        fail("expected OUT EXECUTABLE VERSION [-- EXECUTABLE-ARG ...]")
     output = Path(sys.argv[1]).resolve()
     executable = Path(sys.argv[2]).resolve()
     expected_version = sys.argv[3]
+    executable_arguments = sys.argv[5:]
 
     requests = [
         {
@@ -235,6 +236,7 @@ Path(os.environ["PAL_NETWORK_GUARD_MARKER"]).touch()
             "LOG_LEVEL": "WARNING",
             "PAL_MCP_UNRELATED_CANARY": "pal-mcp-contract-canary",
             "PAL_NETWORK_ATTEMPT_MARKER": str(network_attempt),
+            "PAL_NETWORK_GUARD_PATH": str(guard),
             "PAL_NETWORK_GUARD_MARKER": str(marker),
             "PATH": str(executable.parent),
             "PYTHONPATH": str(guard),
@@ -244,7 +246,7 @@ Path(os.environ["PAL_NETWORK_GUARD_MARKER"]).touch()
             "XDG_STATE_HOME": str(state),
         }
         process = subprocess.Popen(
-            [str(executable)],
+            [str(executable), *executable_arguments],
             cwd=root,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,

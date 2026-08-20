@@ -12,6 +12,7 @@ set -euo pipefail
 : "${CODEX_IDENTITY_BIN:?}"
 : "${CODEX_POLICY_RESPONSE_CHECKER:?}"
 : "${REAL_CLAUDE_BIN:?}"
+: "${REAL_NATIVE_CLAUDE_BIN:?}"
 : "${REAL_CODEX_BIN:?}"
 : "${REAL_PROBED_CODEX_BIN:?}"
 : "${REAL_WRAPPED_CODEX_BIN:?}"
@@ -2270,6 +2271,51 @@ test_real_claude_mcp_list_contract() {
         fail "pinned Claude attempted network access during mcp list"
 }
 
+test_real_claude_managed_mcp_environment() {
+    local claude_home="$work_root/real Claude managed MCP"
+    local claude_root="$claude_home/.claude"
+    local empty_bash_env="$claude_home/empty-bash-env"
+
+    mkdir -p "$claude_root"
+    : >"$empty_bash_env"
+    cp "$CLAUDE_MCP_PROBE_CONFIG" "$claude_root/.claude.json"
+
+    if timeout --signal=TERM --kill-after=1 20 \
+        env -i \
+        HOME="$claude_home" \
+        CLAUDE_CONFIG_DIR="$claude_root" \
+        PATH="$PATH" \
+        TMPDIR="$TMPDIR" \
+        USER=test \
+        LOGNAME=test \
+        SHELL=/bin/sh \
+        NIX_SSL_CERT_FILE=/managed-ca \
+        OPENAI_API_KEY=typed-sentinel \
+        DEFAULT_MODEL=parent-poison \
+        GEMINI_API_KEY=other-provider-sentinel \
+        DISABLE_AUTOUPDATER=1 \
+        DISABLE_INSTALLATION_CHECKS=1 \
+        DISABLE_NON_ESSENTIAL_MODEL_CALLS=1 \
+        GIT_AI_SOCKET=/forbidden \
+        GIT_TRACE2_EVENT=/forbidden \
+        SSH_AUTH_SOCK=/forbidden \
+        BASH_ENV="$empty_bash_env" \
+        NODE_OPTIONS=--trace-warnings \
+        PYTHONPATH=/forbidden \
+        UNRELATED_SECRET=unrelated-sentinel \
+        "$REAL_NATIVE_CLAUDE_BIN" mcp list \
+        >"$claude_home/stdout" 2>"$claude_home/stderr"; then
+        :
+    else
+        STDERR_FILE="$claude_home/stderr" \
+            fail "pinned Claude failed its managed MCP environment check"
+    fi
+    grep -F 'Checking MCP server health' "$claude_home/stdout" >/dev/null ||
+        fail "pinned Claude did not health-check the managed MCP"
+    grep -E '^synthetic-managed: .* - ✔ Connected$' "$claude_home/stdout" >/dev/null ||
+        fail "pinned Claude did not connect to the managed MCP"
+}
+
 assert_real_probe_policy() {
     local label=$1
     local expected=$2
@@ -2739,6 +2785,7 @@ run_claude_contract() {
     test_claude_real
     test_claude_real_process_identity
     test_real_claude_mcp_list_contract
+    test_real_claude_managed_mcp_environment
     printf '%s\n' 'agent-wrapper-contract: claude: PASS'
 }
 

@@ -70,6 +70,26 @@ let
     }));
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (request.params.name !== "echo") throw new Error("unexpected synthetic tool");
+      const forbiddenEnvironment = [
+        "ANTHROPIC_API_KEY",
+        "BASH_ENV",
+        "GEMINI_API_KEY",
+        "GIT_AI_SOCKET",
+        "GIT_TRACE2_EVENT",
+        "NODE_OPTIONS",
+        "PYTHONPATH",
+        "SSH_AUTH_SOCK",
+        "UNRELATED_SECRET",
+      ];
+      if (
+        process.env.OPENAI_API_KEY !== "typed-sentinel"
+        || process.env.DEFAULT_MODEL !== "auto"
+        || process.env.NIX_SSL_CERT_FILE !== "/managed-ca"
+        || process.env.PATH !== ${builtins.toJSON pkgs.nix-managed-mcp-stdio.runtimePath}
+        || forbiddenEnvironment.some((name) => Object.hasOwn(process.env, name))
+      ) {
+        throw new Error("managed MCP environment boundary failed");
+      }
       const value = request.params.arguments?.value;
       if (typeof value !== "string") throw new Error("synthetic value must be a string");
       return { content: [{ type: "text", text: "synthetic-mcp:" + value }] };
@@ -82,6 +102,11 @@ let
       transport = {
         command = "${pkgs.nodejs_24}/bin/node";
         args = [ { public = toString syntheticMcpServer; } ];
+        env = {
+          ANTHROPIC_API_KEY.env = "ANTHROPIC_API_KEY";
+          DEFAULT_MODEL = "auto";
+          OPENAI_API_KEY.env = "OPENAI_API_KEY";
+        };
       };
     };
   };
@@ -126,7 +151,10 @@ assert lib.hasInfix "stdio servers" compatibility;
 assert lib.hasInfix "secret-command-backed" compatibility;
 runCommand "prime-agent-integration-check"
   {
-    nativeBuildInputs = [ jq ];
+    nativeBuildInputs = [
+      jq
+      pkgs.nix-managed-mcp-stdio
+    ];
   }
   ''
     set -euo pipefail
@@ -515,13 +543,23 @@ runCommand "prime-agent-integration-check"
     JS
     poison_home="$TMPDIR/poison-home"
     mkdir -m 700 "$poison_home"
-    HOME="$poison_home" XDG_CONFIG_HOME="$home/.config" \
+    BASH_ENV=/forbidden \
+      GEMINI_API_KEY=other-provider-sentinel \
+      GIT_AI_SOCKET=/forbidden \
+      GIT_TRACE2_EVENT=/forbidden \
+      HOME="$poison_home" XDG_CONFIG_HOME="$home/.config" \
       NIX_MANAGED_AI_HOME="$home" \
+      NODE_OPTIONS=--trace-warnings \
+      NIX_SSL_CERT_FILE=/managed-ca \
+      OPENAI_API_KEY=typed-sentinel \
+      PYTHONPATH=/forbidden \
       PRIME_AGENT_CODING_AGENT_DIR="$home/.prime/agent" \
       PRIME_AGENT_MANAGED_SETTINGS="$home/.prime/agent/managed-settings.json" \
       PI_CODING_AGENT_DIR="$home/.prime/agent" \
       PI_PACKAGE_DIR="${pkgs.prime-agent}/lib/prime-agent" \
       PRIME_AGENT_INSTALL_UV=0 \
+      SSH_AUTH_SOCK=/forbidden \
+      UNRELATED_SECRET=unrelated-sentinel \
       ${pkgs.coreutils}/bin/timeout --signal=KILL 120s \
       ${pkgs.nodejs_24}/bin/node resource-check.mjs
     daemon_tmp="$TMPDIR/prime-daemon"

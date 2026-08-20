@@ -86,6 +86,7 @@ def main() -> None:
     parser.add_argument("managed_catalog", type=Path)
     parser.add_argument("managed_config", type=Path)
     parser.add_argument("managed_skill", type=Path)
+    parser.add_argument("mcp_probe_config", type=Path)
     parser.add_argument("expected_catalog_path")
     parser.add_argument("expected_skill_description")
     args = parser.parse_args()
@@ -155,13 +156,25 @@ def main() -> None:
         workspace = root / "workspace"
         for path in (home, codex_home, sqlite_home, workspace):
             path.mkdir()
+        shutil.copyfile(args.mcp_probe_config, codex_home / "config.toml")
         environment = {
+            "BASH_ENV": "/forbidden",
             "CODEX_HOME": str(codex_home),
             "CODEX_INTERNAL_APP_SERVER_REMOTE_CONTROL_DISABLED": "1",
             "CODEX_SQLITE_HOME": str(sqlite_home),
+            "DEFAULT_MODEL": "parent-poison",
+            "GEMINI_API_KEY": "other-provider-sentinel",
+            "GIT_AI_SOCKET": "/forbidden",
+            "GIT_TRACE2_EVENT": "/forbidden",
             "HOME": str(home),
+            "NODE_OPTIONS": "--trace-warnings",
+            "NIX_SSL_CERT_FILE": "/managed-ca",
+            "OPENAI_API_KEY": "typed-sentinel",
             "PATH": os.environ.get("PATH", ""),
+            "PYTHONPATH": "/forbidden",
+            "SSH_AUTH_SOCK": "/forbidden",
             "TMPDIR": str(root),
+            "UNRELATED_SECRET": "unrelated-sentinel",
             "XDG_CACHE_HOME": str(root / "cache"),
             "XDG_CONFIG_HOME": str(root / "config"),
             "XDG_DATA_HOME": str(root / "data"),
@@ -331,6 +344,44 @@ def main() -> None:
                     )
                 if matches[0].get("description") != args.expected_skill_description:
                     raise AssertionError("refreshed command skill metadata changed")
+
+                send(
+                    process,
+                    {
+                        "method": "mcpServerStatus/list",
+                        "id": 5,
+                        "params": {"detail": "toolsAndAuthOnly"},
+                    },
+                )
+                mcp_result = reader.receive(5)
+                if mcp_result.get("nextCursor") is not None:
+                    raise AssertionError("MCP status unexpectedly paginated")
+                statuses = mcp_result.get("data")
+                if not isinstance(statuses, list) or len(statuses) != 1:
+                    raise AssertionError(f"unexpected MCP statuses: {statuses!r}")
+                status = statuses[0]
+                if status.get("name") != "managed-environment-probe":
+                    raise AssertionError(f"unexpected MCP status: {status!r}")
+                server_info = status.get("serverInfo")
+                if not isinstance(server_info, dict) or {
+                    "name": server_info.get("name"),
+                    "version": server_info.get("version"),
+                } != {
+                    "name": "nix-managed-environment-probe",
+                    "version": "1",
+                }:
+                    raise AssertionError(
+                        f"Codex did not initialize the managed MCP: {server_info!r}"
+                    )
+                tools = status.get("tools")
+                if not isinstance(tools, dict) or set(tools) != {"environment_ok"}:
+                    raise AssertionError(f"unexpected managed MCP tools: {tools!r}")
+                if status.get("authStatus") != "unsupported":
+                    raise AssertionError(f"unexpected MCP auth status: {status!r}")
+                if status.get("resources") not in (None, []) or status.get(
+                    "resourceTemplates"
+                ) not in (None, []):
+                    raise AssertionError(f"unexpected MCP resources: {status!r}")
             except Exception:
                 stderr.flush()
                 stderr.seek(0)

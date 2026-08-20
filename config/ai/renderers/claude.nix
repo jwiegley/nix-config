@@ -99,10 +99,14 @@ let
       map renderSecretReferences value
     else
       value;
+  renderManagedStdio = (import ../managed-stdio.nix { inherit lib; }).render pkgs;
   renderMcpServer =
     server:
     let
-      transport = renderSecretReferences server.transport;
+      transport = renderManagedStdio server.transport;
+      environment = renderSecretReferences (
+        lib.filterAttrs (_: value: !renderLib.isTypedEnv value) (transport.env or { })
+      );
       native =
         if transport ? url then
           {
@@ -113,7 +117,7 @@ let
           {
             inherit (transport) command args;
           }
-          // lib.optionalAttrs (transport ? env) { inherit (transport) env; };
+          // lib.optionalAttrs (environment != { }) { env = environment; };
     in
     lib.recursiveUpdate native (server.overrides.claude or { });
   mcp = {
