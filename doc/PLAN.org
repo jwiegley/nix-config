@@ -8341,6 +8341,22 @@ Obr 0.3.2+1 pins nightly-2026-08-13 in rust-toolchain.toml, but its flake select
 ]
 #+end_src
 
+* DOING [#D] Normalize Codex catalog smoke fixture validation
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-pz8r
+:LABELS:   []
+:ISSUE_TYPE: chore
+:CREATED:  [2026-08-20 Thu 12:45]
+:MODIFIED: [2026-08-20 Thu 12:45]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Preserve the pending test-only cleanup in test/ai/codex-catalog-smoke.py: remove the unused executable shebang because the fixture is invoked by an explicit interpreter, keep standard-library imports grouped, and report malformed catalog/model object shapes as TypeError rather than assertion failures. Verify Python lint plus the exact ai-catalog-transport check. No production or runtime behavior changes.
+
 * DONE [#B] Pin repository Ruff policy across toolchain updates
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

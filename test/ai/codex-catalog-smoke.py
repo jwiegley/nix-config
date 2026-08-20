@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import argparse
 import json
 import os
@@ -8,15 +6,16 @@ import shutil
 import subprocess
 import tempfile
 import time
-import tomllib
 from pathlib import Path
+
+import tomllib
 
 
 def load_json(path: Path) -> dict:
     with path.open(encoding="utf-8") as stream:
         value = json.load(stream)
     if not isinstance(value, dict):
-        raise AssertionError(f"{path}: catalog root is not an object")
+        raise TypeError(f"{path}: catalog root is not an object")
     return value
 
 
@@ -112,7 +111,7 @@ def main() -> None:
         zip(source_models, managed_models, strict=True)
     ):
         if not isinstance(source_model, dict) or not isinstance(managed_model, dict):
-            raise AssertionError(f"model {index} is not an object")
+            raise TypeError(f"model {index} is not an object")
         base_instructions = managed_model.get("base_instructions")
         if not isinstance(base_instructions, str) or not base_instructions:
             raise AssertionError(f"model {index} has invalid base_instructions")
