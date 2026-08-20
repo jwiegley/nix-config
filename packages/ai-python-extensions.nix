@@ -234,7 +234,14 @@ in
           mlx-lm
         ];
 
-        # oMLX relies on the Muse Glimmer backend added by this fork revision.
+        nativeCheckInputs = [ pfinal.pytestCheckHook ];
+
+        pytestFlags = [
+          "tests/test_dflash2.py"
+          "tests/test_prefill_step_size_runtime.py::test_dflash2_sampling_runs_sparse_rejection_path_end_to_end"
+        ];
+
+        # oMLX relies on the DFlash 2 and Muse Glimmer backends in this fork.
         pythonImportsCheck = [
           "dflash_mlx"
           "dflash_mlx.engine.target_muse_glimmer"
