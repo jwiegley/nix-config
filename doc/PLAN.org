@@ -4838,6 +4838,38 @@ Current-byte independent re-audit confirms profile-scoped paths/IDs/admission, b
 ]
 #+end_src
 
+* TODO [#D] Replace deprecated stdenv.isAarch64 predicates
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-enu4
+:LABELS:   []
+:ISSUE_TYPE: chore
+:CREATED:  [2026-08-20 Thu 16:14]
+:MODIFIED: [2026-08-20 Thu 16:14]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Hera and Clio system evaluation emit repeated deprecation warnings from six repository-local stdenv.isAarch64 predicates: five in flake/ai.nix and one in packages/ai-python-extensions.nix. Replace them with the corresponding stdenv.hostPlatform.isAarch64 predicates and verify focused all-system evaluation plus the affected Darwin system builds. Keep this cleanup independent from the audited push-tank change.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-enu4",
+    "depends_on_id": "nix-push-tank-launchd-ptl3",
+    "type": "discovered-from",
+    "created_at": "2026-08-20T23:14:14.971975Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#C] Port Pi Cache Optimizer packaging to 2.8.3
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5179,7 +5211,7 @@ Partner observation .443Z: plaintext stage/backup copies can survive SIGKILL or 
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-20 Thu 11:09]
-:MODIFIED: [2026-08-20 Thu 15:29]
+:MODIFIED: [2026-08-20 Thu 17:05]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5215,6 +5247,20 @@ The user explicitly authorized commit, push, and activation on all maintained sy
     "author": "johnw",
     "text": "Root main through db60ba70 was signed, fast-forward published, and read back exactly. Hera and Clio activated that candidate and passed generation plus narrow Pi, oMLX, managed MCP, and declarative Git-AI probes. A later push-tank fess finding requires a new corrective root commit and Hera reactivation before fleet convergence is final. Vulcan paired inputs were advanced to db60ba70 and the authoritative build driver produced a candidate, but no consumer commit or activation occurred because the root correction supersedes it. Shared-work remains clean but has two pre-existing unsigned local flake.lock commits ahead of its remote; no history rewrite or unsigned publication was attempted. VPS remains untouched.",
     "created_at": "2026-08-20T22:29:20Z"
+  },
+  {
+    "id": 516,
+    "issue_id": "nix-fleet-converge-09ln",
+    "author": "johnw",
+    "text": "Signed root main through b2aa3731 is fast-forward published and read back exactly. Hera activated its exact system candidate and a controlled launchd run passed with one run, one dated separator, appended output, exit 0, and idle completion; the first natural hourly firing is still under passive observation. Clio is clean/current at b2aa3731, activated its own candidate, and excludes the Hera-only agent. Vulcan published signed consumer commit 1a63c832 with coherent paired inputs at b2aa3731; its authoritative driver build and switch passed and the checkout is clean/current. Shared-work is clean but remains two unsigned, unpublished lock-only commits ahead of its remote; no rewrite or activation was attempted without explicit history-rewrite authority. VPS remains untouched. The separate evaluation-warning cleanup is tracked as nix-enu4.",
+    "created_at": "2026-08-20T23:32:29Z"
+  },
+  {
+    "id": 518,
+    "issue_id": "nix-fleet-converge-09ln",
+    "author": "johnw",
+    "text": "Hera automatic interval acceptance is now complete: after 3711 seconds of passive observation with no kickstart or reload, launchd started one natural run and it completed with runs +1, separators +1, 5257 appended bytes, last exit 0, and idle final state. This confirms the loaded 3600-second schedule and successful timer-driven execution.",
+    "created_at": "2026-08-21T00:05:22Z"
   }
 ]
 #+end_src
@@ -8494,15 +8540,17 @@ Concurrent creation/open of one canonical profile database is deterministic: tra
 ]
 #+end_src
 
-* DOING [#C] Run push tank hourly on Hera
+* DONE [#C] Run push tank hourly on Hera
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-push-tank-launchd-ptl3
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-20 Thu 10:29]
-:MODIFIED: [2026-08-20 Thu 15:44]
+:MODIFIED: [2026-08-20 Thu 17:05]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-20 Thu 17:05]
+:CLOSE_REASON: Completed: signed aggregate b2aa3731 passed focused/system/full gates and independent final fess audit, was fast-forward published and activated on Hera, and the loaded Hera-only agent matched the 3600-second singleton append-log contract. Controlled and natural timer-driven runs each completed once with a dated separator, appended output, exit 0, and idle final state; the natural run followed 3711 seconds of passive observation without kickstart or reload. Clio exclusion and clean/current root publication were also verified.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -8556,6 +8604,13 @@ Signed commit, fast-forward publication, and activation on Hera plus the maintai
     "author": "johnw",
     "text": "Final independent no-history audit over 09e5178a plus corrective 38b610b0 is CLEAR with no actionable source, architecture, or test findings. The auditor confirmed both failure probes are non-vacuous and the existing launchd seam preserves Hera-only, hourly, append, and singleton semantics. Corrected publication, Hera activation/runtime, and clean/current proof remain pending. Report: /Users/johnw/Products/nix/wg-push-tank/fess/wg-38b610b0-final/report.md.",
     "created_at": "2026-08-20T22:44:49Z"
+  },
+  {
+    "id": 517,
+    "issue_id": "nix-push-tank-launchd-ptl3",
+    "author": "johnw",
+    "text": "Corrected signed aggregate b2aa3731 passed the final no-history fess audit, fast-forward publication, exact Hera build, and activation attempt 2. The loaded plist and script match the Hera-only, 3600-second, no-KeepAlive, shared append-log, fail-closed separator contract. One controlled run completed with runs +1, separators +1, 5268 appended bytes, last exit 0, and idle final state. A passive observer is now waiting for the first natural launchd interval firing requested as additional live confirmation; no further kickstart or reload is being used.",
+    "created_at": "2026-08-20T23:32:29Z"
   }
 ]
 #+end_src
