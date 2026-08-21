@@ -15,7 +15,6 @@
     common = [
       "agnix"
       "claude-replay"
-      "claude-vault"
       "gguf-tools"
       "github-mcp-server"
       "guidellm"

@@ -994,6 +994,13 @@ assert catalog.validate {
   );
 };
 assert claudeRenderings != [ ];
+assert builtins.all (
+  profile:
+  builtins.attrNames (selectFor profile).hooks == [
+    "agent-deck-claude"
+    "claude-code"
+  ]
+) claudeProfiles;
 assert catalog.validate {
   items = withClaudeSettingsBase (claudeSettings.base // { model = "café/模型@版本"; });
 };
@@ -1858,6 +1865,19 @@ pkgs.runCommand "ai-catalog-transport" { } ''
           (has("preferredNotifChannel") | not)
         end
       )
+      and (
+        (.hooks | map_values(length)) == {
+          "Notification": 1,
+          "PermissionRequest": 1,
+          "PreCompact": 1,
+          "SessionEnd": 1,
+          "SessionStart": 1,
+          "Stop": 2,
+          "UserPromptSubmit": 1
+        }
+      )
+      and ([.hooks[][] | (.hooks | length)] | all(. == 1))
+      and ([.hooks[][] | .hooks[] | .type] | unique == ["command"])
     ' ${entry.rendered.files."${entry.profile.root}/nix-managed-settings.json".source} >/dev/null
     if ${pkgs.gnugrep}/bin/grep -qi 'cozempic' ${
       entry.rendered.files."${entry.profile.root}/nix-managed-settings.json".source

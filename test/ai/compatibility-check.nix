@@ -159,6 +159,9 @@ let
       (lib.assertMsg (builtins.isList (actual.lib.aiPackagesFor pkgs)) "aiPackagesFor no longer returns a package list on ${system}")
       (lib.assertMsg (gitAiDrvPaths != [ ]) "portable Git-AI reference oracle is empty on ${system}")
       (lib.assertMsg (builtins.all lacksGitAiReference activePackageSelections) "portable package policy or dev shell references dormant Git-AI on ${system}")
+      (lib.assertMsg (builtins.all (package: package.drvPath != pkgs.claude-vault.drvPath)
+        activePackageSelections
+      ) "portable package policy or dev shell selected claude-vault on ${system}")
       (lib.assertMsg (
         actual.packages.${system}.default.drvPath == expectedAggregate.drvPath
         && actual.checks.${system}.build.drvPath == expectedAggregate.drvPath

@@ -630,6 +630,7 @@ assert builtins.all (
 ) allHomes;
 assert builtins.all (hasPackage "unisessions") allHomes;
 assert builtins.all (config: !(hasPackage "cass" config) && !(hasPackage "cm" config)) allHomes;
+assert builtins.all (config: !(hasPackage "claude-vault" config)) allHomes;
 assert builtins.all (
   config: !(hasPackagePrefix "git-ai" config) && !(hasPackagePrefix "cozempic" config)
 ) allHomes;

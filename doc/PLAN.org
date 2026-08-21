@@ -17743,6 +17743,26 @@ The session layer will correctly reject all running cross-profile migrations, bu
 ]
 #+end_src
 
+* DOING [#B] Remove claude-vault from every maintained machine and agent hook
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ychd
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-21 Fri 12:56]
+:MODIFIED: [2026-08-21 Fri 13:36]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Remove every maintained automatic package selection and every generated or mutable agent-hook invocation of claude-vault. Preserve its compatibility-tested public overlay availability, unrelated Claude behavior, mutable archives, histories, sessions, caches, and rollback state. Verify zero selected, rendered, or live use; package absence from active profiles; hook absence; no running processes; all affected evaluations, tests, and builds; signed publication; consumer adoption; and activation on every maintained Darwin, shared Linux, and NixOS system. VPS remains parked and must not be contacted.
+
+** Acceptance Criteria
+
+The public overlay package remains evaluable but no maintained home, portable aggregate, or development shell selects it. Every maintained generated and mutable Claude settings layer has zero target handlers while unrelated hooks remain. No active profile exposes the executable and no exact-name process, service, schedule, or non-Claude hook uses it. The source change and issue state are signed, reviewed, published, adopted, activated, and leave all authoritative checkouts clean. VPS and dormant Git-AI are not contacted.
+
 * DONE [#B] Package oMLX 0.6.1 with DDGS 9.14.4
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

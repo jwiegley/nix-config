@@ -1050,31 +1050,6 @@ let
       ];
     };
 
-    claude-vault = {
-      selectors.clients = [ "claude" ];
-      hooks = {
-        PreCompact = [
-          {
-            hooks = [
-              {
-                type = "command";
-                command = "claude-vault import >/dev/null 2>&1";
-              }
-            ];
-          }
-        ];
-        SessionEnd = [
-          {
-            hooks = [
-              {
-                type = "command";
-                command = "claude-vault import >/dev/null 2>&1 &";
-              }
-            ];
-          }
-        ];
-      };
-    };
   };
 
   marketplaces = {
