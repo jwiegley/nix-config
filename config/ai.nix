@@ -19,19 +19,46 @@ let
       { };
   pairedPiPackage = pairedAiPackages.pi or null;
   piNodeExtraCaFallback = config.home.sessionVariables.SSL_CERT_FILE or null;
-  wrapPiWithNodeExtraCa = import ../flake/ai/wrappers/pi-node-extra-ca.nix {
+  wrapRuntimeEnvironment = import ../flake/ai/wrappers/runtime-environment.nix {
     inherit lib pkgs;
   };
+  omlxCredentialPolicy = import ./ai/omlx-credential-policy.nix;
+  piOmlxKeychainCredentials = omlxCredentialPolicy.keychainByEnvironment;
+  localOmlxKeychainCredential =
+    if profileHost == null then
+      null
+    else
+      (omlxCredentialPolicy.byHost.${profileHost} or { }).keychain or null;
+  piOmlxCredentialEnvironmentNames = lib.sort builtins.lessThan (
+    map (endpoint: endpoint.apiKey.env) (
+      builtins.attrValues (
+        lib.filterAttrs (_: endpoint: builtins.isAttrs endpoint) catalog.piModelDiscoveryEndpoints
+      )
+    )
+  );
   managedPiPackage =
-    if pairedPiPackage == null || !isDarwin || piNodeExtraCaFallback == null then
+    if pairedPiPackage == null || !isDarwin then
       pairedPiPackage
     else
-      wrapPiWithNodeExtraCa {
+      wrapRuntimeEnvironment {
+        defaults = lib.optionalAttrs (piNodeExtraCaFallback != null) {
+          NODE_EXTRA_CA_CERTS = piNodeExtraCaFallback;
+        };
+        keychainCredentials = piOmlxKeychainCredentials;
         package = pairedPiPackage;
-        caBundle = piNodeExtraCaFallback;
+        program = "pi";
       };
   pairedCodexPackage = pairedAiPackages.codex or null;
   pairedPrimePackage = pairedAiPackages.prime-agent or null;
+  managedPrimePackage =
+    if pairedPrimePackage == null || !isDarwin || localOmlxKeychainCredential == null then
+      pairedPrimePackage
+    else
+      wrapRuntimeEnvironment {
+        keychainCredentials.OMLX_API_KEY = localOmlxKeychainCredential;
+        package = pairedPrimePackage;
+        program = "prime-agent";
+      };
   pairedAgentResources = pairedAiPackages.agent-resources or null;
   pairedPiGallery = pairedAiPackages.pi-gallery or null;
   resourcePackage = pkgs.agent-resources;
@@ -105,6 +132,24 @@ let
   homeClassDeclared = homeClassContract.assertion;
   profileHostPopulated = profilesForHome != { };
   profileIds = lib.sort builtins.lessThan (builtins.attrNames profilesForHome);
+  codexLocalModelRoutes = lib.any (
+    profileId:
+    let
+      profile = catalog.profiles.${profileId};
+    in
+    profile.client == "codex" && profile.localModelRoutes
+  ) profileIds;
+  managedCodexPackage =
+    if pairedCodexPackage == null || !codexLocalModelRoutes then
+      pairedCodexPackage
+    else if !isDarwin || localOmlxKeychainCredential == null then
+      throw "Codex local oMLX routes require a Darwin Keychain credential policy"
+    else
+      wrapRuntimeEnvironment {
+        keychainCredentials.OMLX_API_KEY = localOmlxKeychainCredential;
+        package = pairedCodexPackage;
+        program = "codex";
+      };
   selectedProfiles = map (profileId: catalog.profiles.${profileId}) profileIds;
   selectedFor =
     profileId:
@@ -132,10 +177,7 @@ let
           null;
       localModelDiscoveryEndpoints =
         if profile.client == "pi" && profile.platform == "darwin" then
-          if homeLocalModelEndpoints == null then
-            throw "profile ${profile.id} enables local model discovery without a home endpoint authority"
-          else
-            homeLocalModelEndpoints
+          catalog.piModelDiscoveryEndpoints
         else
           null;
     in
@@ -413,6 +455,10 @@ in
       message = "inputs.nix-config-ai.packages.${system}.codex is missing";
     }
     {
+      assertion = builtins.attrNames piOmlxKeychainCredentials == piOmlxCredentialEnvironmentNames;
+      message = "Pi oMLX Keychain credentials must match the catalog environment references";
+    }
+    {
       assertion = !primeSelected || pairedPrimePackage != null;
       message = "inputs.nix-config-ai.packages.${system}.prime-agent is missing";
     }
@@ -436,12 +482,13 @@ in
         };
       };
     packages =
-      lib.optional (managedPiPackage != null) managedPiPackage
-      ++ lib.optional (primeSelected && pairedPrimePackage != null) pairedPrimePackage
+      lib.optional (managedCodexPackage != null) managedCodexPackage
+      ++ lib.optional (managedPiPackage != null) managedPiPackage
+      ++ lib.optional (primeSelected && managedPrimePackage != null) managedPrimePackage
       ++ lib.optionals piSelected piRuntimePackages;
-    # The dummy keys satisfy codex's env_key lookups for the local providers;
-    # they are only meaningful where a codex profile opts into the home's
-    # local model routes.
+    # llama-swap retains its non-secret local sentinel. oMLX credentials are
+    # resolved from the login Keychain by the Darwin client wrappers and never
+    # enter Nix evaluation, generated files, or the process argument vector.
     sessionVariables =
       lib.optionalAttrs
         (lib.any (
@@ -449,10 +496,10 @@ in
           let
             profile = catalog.profiles.${profileId};
           in
-          profile.client == "codex" && profile.localModelRoutes
+          (profile.client == "codex" && profile.localModelRoutes)
+          || (profile.client == "pi" && profile.platform == "darwin")
         ) profileIds)
         {
-          OMLX_API_KEY = "dummy-key";
           LLAMA_SWAP_API_KEY = "dummy-key";
         };
     activation = {

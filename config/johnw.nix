@@ -118,7 +118,7 @@ in
     // lib.optionalAttrs isDarwin {
       ASPELL_CONF = "conf ${config.xdg.configHome}/aspell/config;";
       GTAGSCONF = "${pkgs.global}/share/gtags/gtags.conf";
-      NODE_EXTRA_CA_CERTS = "${config.xdg.configHome}/ragflow/root_ca.crt";
+      NODE_EXTRA_CA_CERTS = vars.ca-bundle_crt;
       VAGRANT_DEFAULT_PROVIDER = "vmware_desktop";
       VAGRANT_VMWARE_CLONE_DIRECTORY = "${vars.home}/Machines/vagrant";
     }

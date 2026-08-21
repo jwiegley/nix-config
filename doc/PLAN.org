@@ -4264,6 +4264,38 @@ Agent Deck WriteInboxEvent fsyncs the file but does not durably sync a newly cre
 ]
 #+end_src
 
+* DOING [#B] Expose both oMLX hosts to Pi on Hera and Clio
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-dge2
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-20 Thu 17:49]
+:MODIFIED: [2026-08-20 Thu 17:49]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Hera and Clio currently expose only the built-in host-local Pi provider name. Clio has no listener on the declared oMLX TLS proxy port, while Hera's proxy rejects credential-free requests. Make the root-owned configuration render two stable providers, omlx-hera and omlx-clio, into Pi on both machines; serve each host's local oMLX through its declared hostname-based HTTPS nginx endpoint on port 8443; keep credentials environment-only; and verify bilateral TLS model discovery plus a bounded authenticated request from both clients. Add source/rendered/host-behavior tests that fail if either provider, proxy, TLS endpoint, or cross-host mapping disappears. Activate and accept on Hera and Clio before regenerating downstream consumer locks.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-dge2",
+    "depends_on_id": "nix-fleet-converge-09ln",
+    "type": "discovered-from",
+    "created_at": "2026-08-21T00:49:05.402158Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Adopt and verify the PAL MCP repair on managed hosts
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

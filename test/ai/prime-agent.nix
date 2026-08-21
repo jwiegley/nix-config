@@ -560,6 +560,7 @@ runCommand "prime-agent-integration-check"
       NODE_OPTIONS=--trace-warnings \
       NIX_SSL_CERT_FILE=/managed-ca \
       OPENAI_API_KEY=typed-sentinel \
+      OMLX_API_KEY=omlx-synthetic-sentinel \
       PYTHONPATH=/forbidden \
       PRIME_AGENT_CODING_AGENT_DIR="$home/.prime/agent" \
       PRIME_AGENT_MANAGED_SETTINGS="$home/.prime/agent/managed-settings.json" \

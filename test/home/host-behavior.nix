@@ -59,6 +59,16 @@ let
   gallerySourceFor =
     host:
     desktopHomesByHost.${host}.home.file.".config/pi/agent/extensions/nix-gallery/index.ts".source;
+  codexPackageFor =
+    host:
+    lib.findFirst (
+      package: lib.getName package == "codex"
+    ) null desktopHomesByHost.${host}.home.packages;
+  clioCodexPackage = codexPackageFor "clio";
+  heraCodexPackage = codexPackageFor "hera";
+  heraPrimePackage = lib.findFirst (
+    package: lib.getName package == "prime-agent"
+  ) null desktopHomesByHost.hera.home.packages;
   vulcanJumpPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID/5S98ifv/slBhGzSLMK+/3JAHNzzglOfau6RlqKeYs";
   expectedVulcanJumpAuthorization = ''from="192.168.1.2",restrict,port-forwarding,permitopen="andoria-08:22",command="/usr/bin/false" ${vulcanJumpPublicKey} johnw@vulcan'';
   vulcanJumpAuthorizations =
@@ -351,19 +361,24 @@ let
     "SSH_AUTH_SOCK"
   ];
   contains = needle: value: builtins.isString value && lib.hasInfix needle value;
-  hasLocalModelSessionVariables =
+  hasSafeLocalModelSessionVariables =
     config:
     let
       variables = config.home.sessionVariables or { };
     in
-    (variables.OMLX_API_KEY or null) == "dummy-key"
+    (variables.OMLX_API_KEY or null) == null
+    && (variables.OMLX_CLIO_API_KEY or null) == null
+    && (variables.OMLX_HERA_API_KEY or null) == null
     && (variables.LLAMA_SWAP_API_KEY or null) == "dummy-key";
   lacksLocalModelSessionVariables =
     config:
     let
       variables = config.home.sessionVariables or { };
     in
-    (variables.OMLX_API_KEY or null) == null && (variables.LLAMA_SWAP_API_KEY or null) == null;
+    (variables.OMLX_API_KEY or null) == null
+    && (variables.OMLX_CLIO_API_KEY or null) == null
+    && (variables.OMLX_HERA_API_KEY or null) == null
+    && (variables.LLAMA_SWAP_API_KEY or null) == null;
   desktopRuntimeRoots = [
     "emacs"
     "gnupg"
@@ -660,8 +675,14 @@ assert builtins.all (
 ) nonDesktopHomes;
 assert builtins.all (config: config.johnw.host.isDarwinWorkstation) desktopHomes;
 assert builtins.all (config: !config.johnw.host.isDarwinWorkstation) nonDesktopHomes;
-assert hasLocalModelSessionVariables desktopHomesByHost.hera;
-assert lacksLocalModelSessionVariables desktopHomesByHost.clio;
+assert builtins.all hasSafeLocalModelSessionVariables desktopHomes;
+assert clioCodexPackage != null;
+assert heraCodexPackage != null;
+assert heraPrimePackage != null;
+assert builtins.all (
+  config:
+  config.home.sessionVariables.NODE_EXTRA_CA_CERTS == config.home.sessionVariables.SSL_CERT_FILE
+) desktopHomes;
 assert builtins.hasAttr recordingTranscriptionPath desktopHomesByHost.hera.home.file;
 assert !(builtins.hasAttr recordingTranscriptionPath desktopHomesByHost.clio.home.file);
 assert builtins.all (
@@ -725,8 +746,14 @@ pkgs.runCommand "host-behavior" { } ''
     and (.base_url | type == "string")
     and ([keys[] | ascii_downcase | test("credential|key|token|secret")] | any | not)
   ' ${heraRecordingTranscriptionSource} >/dev/null
-  grep -F -- ${lib.escapeShellArg "export default createNixGallery(${builtins.toJSON aiCatalog.localModelEndpointsByHost.clio});"} ${gallerySourceFor "clio"} >/dev/null
-  grep -F -- ${lib.escapeShellArg "export default createNixGallery(${builtins.toJSON aiCatalog.localModelEndpointsByHost.hera});"} ${gallerySourceFor "hera"} >/dev/null
+  grep -F -- ${lib.escapeShellArg "export default createNixGallery(${builtins.toJSON aiCatalog.piModelDiscoveryEndpoints});"} ${gallerySourceFor "clio"} >/dev/null
+  grep -F -- ${lib.escapeShellArg "export default createNixGallery(${builtins.toJSON aiCatalog.piModelDiscoveryEndpoints});"} ${gallerySourceFor "hera"} >/dev/null
+  ! grep -F '/usr/bin/security find-generic-password' ${clioCodexPackage}/bin/codex
+  ! grep -F 'nix-config.omlx-clio-client' ${clioCodexPackage}/bin/codex
+  grep -F '/usr/bin/security find-generic-password' ${heraCodexPackage}/bin/codex >/dev/null
+  grep -F 'nix-config.omlx-hera-client' ${heraCodexPackage}/bin/codex >/dev/null
+  grep -F '/usr/bin/security find-generic-password' ${heraPrimePackage}/bin/prime-agent >/dev/null
+  grep -F 'nix-config.omlx-hera-client' ${heraPrimePackage}/bin/prime-agent >/dev/null
   test -f "$(dirname "$(realpath ${gallerySourceFor "clio"})")/projection.json"
   test -f "$(dirname "$(realpath ${gallerySourceFor "hera"})")/projection.json"
   touch $out

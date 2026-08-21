@@ -23,9 +23,7 @@ async function waitFor(condition: () => boolean, label: string): Promise<void> {
 
 type ProviderConfig = Record<string, unknown>;
 type ProviderModel = Record<string, unknown>;
-type WarningProcess = { emitWarning(warning: string | Error): void };
-const warningProcess = (globalThis as unknown as { process: WarningProcess })
-	.process;
+const warningProcess = process;
 const MAX_DISCOVERY_RESPONSE_BYTES = 1024 * 1024;
 const MAX_DISCOVERY_MODEL_ENTRIES = 4096;
 const QWEN_MODEL_ID = "Qwen3.6-27B-oQ6e-mtp";
@@ -58,8 +56,14 @@ function registeredModels(
 const realFetch = globalThis.fetch;
 const realSetTimeout = globalThis.setTimeout;
 const realEmitWarning = warningProcess.emitWarning;
+const realOmlxApiKey = warningProcess.env.OMLX_API_KEY;
+const realClioOmlxApiKey = warningProcess.env.OMLX_CLIO_API_KEY;
+const realHeraOmlxApiKey = warningProcess.env.OMLX_HERA_API_KEY;
 
 try {
+	warningProcess.env.OMLX_API_KEY = "gallery-test-key";
+	warningProcess.env.OMLX_CLIO_API_KEY = "clio-gallery-test-key";
+	warningProcess.env.OMLX_HERA_API_KEY = "hera-gallery-test-key";
 	const requests: Array<{ url: string; authorization: string | null }> = [];
 	globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
 		const url = String(input);
@@ -183,14 +187,21 @@ try {
 			},
 			{
 				url: "http://localhost:8000/v1/models",
-				authorization: "Bearer dummy-key",
+				authorization: "Bearer gallery-test-key",
 			},
 		],
 		"provider requests",
 	);
 	const managedEndpoints = {
 		"llama-swap": "http://catalog.test:8080/custom/v1",
-		omlx: "http://catalog.test:8000/custom/v1",
+		"omlx-clio": {
+			baseUrl: "http://catalog.test:18000/custom/v1",
+			apiKey: { env: "OMLX_CLIO_API_KEY" },
+		},
+		"omlx-hera": {
+			baseUrl: "http://catalog.test:28000/custom/v1",
+			apiKey: { env: "OMLX_HERA_API_KEY" },
+		},
 	};
 	const managedProviders = new Map<string, ProviderConfig>();
 	const managedPi = {
@@ -207,8 +218,12 @@ try {
 				authorization: "Bearer dummy-key",
 			},
 			{
-				url: `${managedEndpoints.omlx}/models`,
-				authorization: "Bearer dummy-key",
+				url: `${managedEndpoints["omlx-clio"].baseUrl}/models`,
+				authorization: "Bearer clio-gallery-test-key",
+			},
+			{
+				url: `${managedEndpoints["omlx-hera"].baseUrl}/models`,
+				authorization: "Bearer hera-gallery-test-key",
 			},
 		],
 		"managed provider requests",
@@ -219,9 +234,19 @@ try {
 		"managed llama-swap base URL",
 	);
 	expectEqual(
-		managedProviders.get("omlx")?.baseUrl,
-		managedEndpoints.omlx,
-		"managed oMLX base URL",
+		managedProviders.get("omlx-clio")?.baseUrl,
+		managedEndpoints["omlx-clio"].baseUrl,
+		"managed Clio oMLX base URL",
+	);
+	expectEqual(
+		managedProviders.get("omlx-hera")?.baseUrl,
+		managedEndpoints["omlx-hera"].baseUrl,
+		"managed Hera oMLX base URL",
+	);
+	expectEqual(
+		[...managedProviders.keys()],
+		["llama-swap", "omlx-clio", "omlx-hera"],
+		"managed provider IDs",
 	);
 	expectEqual([...providers.keys()], ["llama-swap", "omlx"], "provider IDs");
 	const llamaModels = modelsFor(providers, "llama-swap");
@@ -356,6 +381,36 @@ try {
 		"dynamic runtime catalog",
 	);
 	expectEqual(dynamicRequests, 2, "dynamic refresh requests");
+	const privateLocatorSentinel = "private-locator-sentinel";
+	globalThis.fetch = (() =>
+		Promise.reject(
+			new Error(`request to ${privateLocatorSentinel} exposed transport details`),
+		)) as typeof fetch;
+	const sanitizedRefresh = await dynamicRuntime.refresh({
+		allowNetwork: true,
+		providers: ["omlx"],
+	});
+	expectEqual(
+		[...sanitizedRefresh.errors.keys()],
+		["omlx"],
+		"failed refresh provider",
+	);
+	const sanitizedRefreshError = String(sanitizedRefresh.errors.get("omlx"));
+	expect(
+		sanitizedRefreshError.includes(
+			"[omlx] Model discovery failed: request failed",
+		),
+		"refresh failure was not sanitized",
+	);
+	expect(
+		!sanitizedRefreshError.includes(privateLocatorSentinel),
+		"refresh failure exposed transport details",
+	);
+	expectEqual(
+		dynamicRuntime.getModels("omlx").map((model) => model.id),
+		["runtime-refreshed"],
+		"failed refresh changed the cached catalog",
+	);
 
 	const pendingRefreshes: Array<{
 		signal: AbortSignal;
@@ -531,7 +586,7 @@ try {
 	expectEqual(
 		warnings,
 		[
-			"[omlx] Cannot discover models from http://localhost:8000/v1/models: 503 Unavailable",
+			"[omlx] Model discovery failed: HTTP 503",
 		],
 		"failure warning",
 	);
@@ -607,7 +662,7 @@ try {
 	expectEqual(
 		warnings,
 		[
-			"[omlx] Cannot discover models from http://localhost:8000/v1/models: response exceeds 1048576 bytes",
+			"[omlx] Model discovery failed: request failed",
 		],
 		"declared oversized warning",
 	);
@@ -654,7 +709,7 @@ try {
 	expectEqual(
 		warnings,
 		[
-			"[omlx] Cannot discover models from http://localhost:8000/v1/models: response exceeds 1048576 bytes",
+			"[omlx] Model discovery failed: request failed",
 		],
 		"streamed oversized warning",
 	);
@@ -704,7 +759,7 @@ try {
 	expectEqual(
 		warnings,
 		[
-			"[omlx] Cannot discover models from http://localhost:8000/v1/models: response has 4097 model entries; limit is 4096",
+			"[omlx] Model discovery failed: request failed",
 		],
 		"oversized entry warning",
 	);
@@ -723,11 +778,9 @@ try {
 		},
 	});
 	expectEqual(malformedProvider?.models, [], "malformed response catalog");
-	expect(
-		warnings.length === 1 &&
-			warnings[0].startsWith(
-				"[omlx] Cannot discover models from http://localhost:8000/v1/models:",
-			),
+	expectEqual(
+		warnings,
+		["[omlx] Model discovery failed: request failed"],
 		"malformed response warning",
 	);
 
@@ -761,12 +814,58 @@ try {
 	expectEqual(
 		warnings,
 		[
-			"[omlx] Cannot discover models from http://localhost:8000/v1/models: The operation was aborted.",
+			"[omlx] Model discovery failed: request aborted",
 		],
 		"abort warning",
+	);
+
+	globalThis.setTimeout = realSetTimeout;
+	const partialRequestStart = requests.length;
+	globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+		const url = String(input);
+		const headers = new Headers(init?.headers);
+		requests.push({ url, authorization: headers.get("authorization") });
+		return Promise.resolve(Response.json({ data: [] }));
+	}) as typeof fetch;
+	delete warningProcess.env.OMLX_CLIO_API_KEY;
+	warnings.length = 0;
+	const partialProviders = new Map<string, ProviderConfig>();
+	await omlx({
+		registerProvider: (id: string, config: ProviderConfig) =>
+			partialProviders.set(id, config),
+	}, managedEndpoints);
+	expectEqual(
+		[...partialProviders.keys()],
+		["omlx-hera"],
+		"missing credential skips only its provider",
+	);
+	expectEqual(
+		requests.slice(partialRequestStart),
+		[
+			{
+				url: `${managedEndpoints["omlx-hera"].baseUrl}/models`,
+				authorization: "Bearer hera-gallery-test-key",
+			},
+		],
+		"missing credential makes no request for its provider",
+	);
+	expectEqual(
+		warnings,
+		[
+			"[omlx-clio] Credential environment is unset; provider was not registered",
+		],
+		"missing environment key warning",
 	);
 } finally {
 	globalThis.fetch = realFetch;
 	globalThis.setTimeout = realSetTimeout;
 	warningProcess.emitWarning = realEmitWarning;
+	if (realOmlxApiKey === undefined) delete warningProcess.env.OMLX_API_KEY;
+	else warningProcess.env.OMLX_API_KEY = realOmlxApiKey;
+	if (realClioOmlxApiKey === undefined)
+		delete warningProcess.env.OMLX_CLIO_API_KEY;
+	else warningProcess.env.OMLX_CLIO_API_KEY = realClioOmlxApiKey;
+	if (realHeraOmlxApiKey === undefined)
+		delete warningProcess.env.OMLX_HERA_API_KEY;
+	else warningProcess.env.OMLX_HERA_API_KEY = realHeraOmlxApiKey;
 }

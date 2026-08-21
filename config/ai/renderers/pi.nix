@@ -38,30 +38,7 @@ let
   hermesApiKeyScript = "secret=\"$(${hermesPassCommand})\" || exit; ${pkgs.coreutils}/bin/printf \"%s\\n\" \"$secret\" | ${pkgs.coreutils}/bin/head -n 1";
   hermesApiKeyCommand = "!${pkgs.bash}/bin/bash -c ${lib.escapeShellArg hermesApiKeyScript}";
 
-  routerTarget = {
-    id = "Qwen3.6-27B-oQ6e-mtp";
-    contextLimit = 262144;
-    outputLimit = 65536;
-    defaultThinkingLevel = "off";
-    reasoning = true;
-    input = [ "text" ];
-    thinkingLevels = [
-      "off"
-      "high"
-    ];
-    thinkingLevelMap = {
-      minimal = null;
-      low = null;
-      medium = null;
-      high = "high";
-      xhigh = null;
-      max = null;
-    };
-    compat = {
-      supportsReasoningEffort = false;
-      thinkingFormat = "qwen-chat-template";
-    };
-  };
+  routerTarget = modelOverrides.pi.router.target;
   routerProvider = {
     api = "router-local-api";
     apiKey = "pi-model-router";
@@ -95,19 +72,7 @@ let
     requestTimeoutMs = 7200000;
     idleTimeoutMs = 7200000;
   };
-  localProviderOverrides = lib.recursiveUpdate modelOverrides.localProviderOverrides {
-    omlx.modelOverrides.${routerTarget.id} = {
-      contextWindow = routerTarget.contextLimit;
-      maxTokens = routerTarget.outputLimit;
-      inherit (routerTarget)
-        defaultThinkingLevel
-        reasoning
-        input
-        thinkingLevelMap
-        compat
-        ;
-    };
-  };
+  localProviderOverrides = modelOverrides.pi.localProviderOverrides;
   hermesProvider = {
     hermes = {
       api = "openai-completions";
@@ -156,7 +121,7 @@ let
     debug = false;
     phaseBias = 0.5;
     models.sol = {
-      model = "omlx/${routerTarget.id}";
+      model = "${modelOverrides.pi.router.provider}/${routerTarget.id}";
       contextWindow = routerTarget.contextLimit;
       maxTokens = routerTarget.outputLimit;
       inherit (routerTarget) reasoning thinkingLevels;
@@ -241,11 +206,7 @@ assert profile.localModelRoutes == localModelRoutes;
 assert localModelDiscovery == (profile.platform == "darwin");
 assert
   !localModelDiscovery
-  ||
-    builtins.attrNames localModelDiscoveryEndpoints == [
-      "llama-swap"
-      "omlx"
-    ];
+  || builtins.attrNames localModelDiscoveryEndpoints == builtins.attrNames localProviderOverrides;
 assert builtins.isBool hermesRoute;
 assert builtins.isString homeDirectory;
 assert xdgConfigHome == "${homeDirectory}/.config";

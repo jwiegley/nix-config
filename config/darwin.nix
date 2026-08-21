@@ -12,6 +12,27 @@ let
   home = "/Users/johnw";
   xdg_configHome = "${home}/.config";
   nixTrust = import ./nix-trust.nix;
+  omlxProxyNetworkByHost = {
+    clio = {
+      legacyGatewayEnable = false;
+      listenAddress = "192.168.1.5";
+      allowedSources = [ "192.168.1.4/32" ];
+    };
+    hera = {
+      legacyGatewayEnable = true;
+      listenAddress = "192.168.1.4";
+      allowedSources = [
+        "192.168.1.2/32"
+        "192.168.1.5/32"
+        "10.6.0.2/32"
+      ];
+    };
+  };
+  omlxProxyNetwork = omlxProxyNetworkByHost.${hostname} or null;
+  omlxProxyCertificateByHost = {
+    clio = ./certs/omlx-clio.crt;
+    hera = ./certs/omlx-hera.crt;
+  };
 
   homebrewTrustJson = pkgs.writeText "homebrew-trust.json" (
     builtins.toJSON {
@@ -35,17 +56,18 @@ in
   # Prevent macOS from falling back to the case-preserving LocalHostName.
   networking.hostName = hostname;
 
-  # Hera is the only remote inference host. Vulcan and Clio reach this listener
-  # over their declared network paths; oMLX remains the authentication authority.
-  johnw.omlxProxy = lib.mkIf config.johnw.host.isHera {
-    enable = true;
-    listenAddress = "192.168.1.4";
-    allowedSources = [
-      "192.168.1.2/32"
-      "192.168.1.5/32"
-      "10.6.0.2/32"
-    ];
-  };
+  # Both Darwin workstations expose their loopback oMLX service through the
+  # same TLS boundary. The key remains host-local; only trust material is
+  # Nix-owned.
+  johnw.omlxProxy = lib.mkIf (omlxProxyNetwork != null) (
+    omlxProxyNetwork
+    // {
+      enable = true;
+      certificateFile = "${omlxProxyCertificateByHost.${hostname}}";
+      certificateKeyFile = "${home}/${hostname}/${hostname}.lan.key";
+      trustedCaFile = lib.optionalString omlxProxyNetwork.legacyGatewayEnable "${vulcan-crt}/vulcan-root-ca.crt";
+    }
+  );
 
   users = {
     # nix-darwin's Prometheus module registers its own service account when the

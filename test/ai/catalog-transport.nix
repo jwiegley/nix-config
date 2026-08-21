@@ -60,7 +60,7 @@ let
   localModelDiscoveryEndpointsFor =
     profile:
     if profile.client == "pi" && profile.platform == "darwin" then
-      catalog.localModelEndpointsByHost.${profile.host}
+      catalog.piModelDiscoveryEndpoints
     else
       null;
   profileFor =
@@ -456,7 +456,14 @@ let
   };
   syntheticLocalModelDiscoveryEndpoints = {
     llama-swap = "http://127.0.0.1:18080/v1";
-    omlx = "http://127.0.0.1:18000/v1";
+    omlx-clio = {
+      baseUrl = "https://synthetic-clio.invalid:18443/v1";
+      apiKey.env = "OMLX_CLIO_API_KEY";
+    };
+    omlx-hera = {
+      baseUrl = "https://synthetic-hera.invalid:28443/v1";
+      apiKey.env = "OMLX_HERA_API_KEY";
+    };
   };
   piSyntheticDiscoveryRendered = piRenderer {
     profile = catalog.profiles.clio-pi;
@@ -972,6 +979,35 @@ assert
     "hera"
   ];
 assert catalog.localModelEndpointsByHost.clio == catalog.localModelEndpointsByHost.hera;
+assert
+  catalog.localModelEndpointsByHost.clio == {
+    llama-swap = "http://localhost:8080/v1";
+    omlx = "http://localhost:8000/v1";
+  };
+assert
+  builtins.attrNames catalog.piModelDiscoveryEndpoints == [
+    "llama-swap"
+    "omlx-clio"
+    "omlx-hera"
+  ];
+assert
+  builtins.attrNames modelOverrides.pi.localProviderOverrides
+  == builtins.attrNames catalog.piModelDiscoveryEndpoints;
+assert builtins.hasAttr modelOverrides.pi.router.provider catalog.piModelDiscoveryEndpoints;
+assert catalog.piModelDiscoveryEndpoints.llama-swap == "http://localhost:8080/v1";
+assert builtins.all
+  (
+    host:
+    let
+      endpoint = catalog.piModelDiscoveryEndpoints."omlx-${host}";
+    in
+    endpoint.baseUrl == "https://${host}.lan:8443/v1"
+    && endpoint.apiKey.env == "OMLX_${lib.toUpper host}_API_KEY"
+  )
+  [
+    "clio"
+    "hera"
+  ];
 assert builtins.attrNames catalog.recordingTranscriptionRoutesByHost == [ "hera" ];
 assert
   builtins.attrNames recordingTranscriptionRoute == [
@@ -982,9 +1018,9 @@ assert recordingTranscriptionRoute.provider == "omlx";
 assert builtins.length recordingTranscriptionModels == 1;
 assert recordingTranscriptionRoute.model == builtins.head recordingTranscriptionModels;
 assert builtins.hasAttr recordingTranscriptionRoute.provider catalog.localModelEndpointsByHost.hera;
-# Profile opt-ins drive generated codex TOML, pi local provider wiring, prime
-# model overrides, and the dummy-key session variables. Pin the set so a
-# gained or lost route is a visible test edit.
+# Profile opt-ins drive generated Codex TOML, Pi local provider wiring, Prime
+# model overrides, and runtime credential injection. Pin the set so a gained
+# or lost route is a visible test edit.
 assert
   lib.sort builtins.lessThan (
     builtins.attrNames (lib.filterAttrs (_: profile: profile.localModelRoutes) catalog.profiles)
@@ -1124,6 +1160,35 @@ assert builtins.all reject [
   })
   (catalog.validate {
     localModelEndpointsByHost = builtins.removeAttrs catalog.localModelEndpointsByHost [ "clio" ];
+  })
+  (catalog.validate {
+    localModelEndpointsByHost = catalog.localModelEndpointsByHost // {
+      clio = catalog.localModelEndpointsByHost.clio // {
+        omlx = "http://synthetic-local.invalid:8000/v1";
+      };
+    };
+  })
+  (catalog.validate {
+    piModelDiscoveryEndpoints = builtins.removeAttrs catalog.piModelDiscoveryEndpoints [ "omlx-hera" ];
+  })
+  (catalog.validate {
+    piModelDiscoveryEndpoints = catalog.piModelDiscoveryEndpoints // {
+      llama-swap = "http://synthetic-loopback.invalid:8080/v1";
+    };
+  })
+  (catalog.validate {
+    piModelDiscoveryEndpoints = catalog.piModelDiscoveryEndpoints // {
+      omlx-clio = catalog.piModelDiscoveryEndpoints.omlx-clio // {
+        baseUrl = "https://synthetic-clio.invalid:8443/v1";
+      };
+    };
+  })
+  (catalog.validate {
+    piModelDiscoveryEndpoints = catalog.piModelDiscoveryEndpoints // {
+      omlx-clio = catalog.piModelDiscoveryEndpoints.omlx-clio // {
+        apiKey.env = "OMLX_HERA_API_KEY";
+      };
+    };
   })
   (catalog.validate { recordingTranscriptionRoutesByHost = { }; })
   (catalog.validate {
@@ -1696,7 +1761,10 @@ pkgs.runCommand "ai-catalog-transport" { } ''
             "modelOverrides": {"GLM-5.2": {"contextWindow": 262144}},
             "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
           }
-          and .providers.omlx == {
+          and .providers["omlx-clio"] == {
+            "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
+          }
+          and .providers["omlx-hera"] == {
             "modelOverrides": {
               "DeepSeek-V4-Flash-0731-oQ8e-mtp": {"contextWindow": 262144},
               "Qwen3.6-27B-oQ6e-mtp": {
@@ -1758,19 +1826,23 @@ pkgs.runCommand "ai-catalog-transport" { } ''
             .providers["llama-swap"] == {
               "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
             }
-            and .providers.omlx == {
+            and .providers["omlx-clio"] == {
+              "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
+            }
+            and .providers["omlx-hera"] == {
               "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
             }
           else
             (.providers | has("llama-swap") | not)
-            and (.providers | has("omlx") | not)
+            and (.providers | has("omlx-clio") | not)
+            and (.providers | has("omlx-hera") | not)
           end)
           and (.providers | has("router") | not)
         end
       )
       and (
         [.providers[] | select(has("transport"))] as $transportProviders
-        | ($transportProviders | length) == (if $localModelDiscovery then 2 else 0 end)
+        | ($transportProviders | length) == (if $localModelDiscovery then 3 else 0 end)
         and (
           $transportProviders
           | all(.transport == {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000})
@@ -1797,7 +1869,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
             "sol": {
               "contextWindow": 262144,
               "maxTokens": 65536,
-              "model": "omlx/Qwen3.6-27B-oQ6e-mtp",
+              "model": "omlx-hera/Qwen3.6-27B-oQ6e-mtp",
               "reasoning": true,
               "thinkingLevels": ["off", "high"]
             }

@@ -46,7 +46,6 @@ let
       throw "config/packages.nix cannot resolve managed agent `${name}` without inputs.nix-config-ai (or the in-repo flake/ai.nix route)"
     else
       localAi.lib.optAgent pkgs;
-
   # Only these source-project inputs are user applications. Adding a flake
   # input must never change a profile unless its name is added here. Missing
   # inputs remain valid for downstream flakes with reduced input sets.
@@ -507,7 +506,6 @@ rec {
     ++ optAgent "claude-agent-acp"
     ++ optAgent "ccusage"
     ++ optAgent "ccstatusline"
-    ++ optAgent "codex"
     ++ optAgent "codex-acp"
     ++ optAgent "droid"
     ++ optAgent "git-surgeon"

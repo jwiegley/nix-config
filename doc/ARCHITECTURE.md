@@ -145,16 +145,21 @@ immediately, gives `/model` refreshes the upstream 15-second selector deadline,
 and discovers local models at startup and through its native provider-refresh contract.
 Droid receives no Nix-generated local-model list, and Prime Agent reuses the safe
 Pi-compatible model overrides plus the shared local-provider discovery packages.
-The catalog declares local inference endpoints once per catalog host. The composer
-passes the home record to Darwin Pi for bounded discovery and, separately, to
-profiles that opt into fixed local routes; activation logic consumes the same
-authority where required.
+The catalog declares host-local inference endpoints once per catalog host for
+fixed routes and non-Pi consumers. Darwin Pi receives a separate bilateral
+discovery map: local llama-swap plus the stable `omlx-clio` and `omlx-hera`
+providers. Both Pi homes therefore render the same provider identities while
+retaining their host-specific fixed-route policy.
 
-oMLX itself is loopback-only. Its TLS gateway route is absent by default; Hera
-enables it only on its LAN address and admits Vulcan's gateway plus Clio's
-declared LAN and WireGuard source addresses. Vulcan injects the bearer credential
-from its protected runtime configuration; direct clients provide their own
-credential. Nginx forwards that header, and oMLX validates it. This keeps one
+oMLX itself is loopback-only. Its TLS gateway route is absent by default; both
+Darwin workstations enable it on their exact LAN address and admit the other
+workstation, with Hera retaining its declared gateway sources. Nix supplies the
+reviewed, CA-signed server leaf for each listener and trusts only the existing
+root CA; each matching private key remains a mode-0600 host-local file. Pi loads
+two distinct provider credentials from the login Keychain into provider-specific
+environment names at process start. The generated provider records contain only
+those environment references. Nginx forwards each bearer header unchanged, and
+the destination oMLX instance validates its own credential. This keeps one
 authentication authority instead of consuming the OpenAI `Authorization` header
 in a second Basic-auth layer.
 

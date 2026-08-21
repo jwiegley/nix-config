@@ -5,6 +5,7 @@
 
 let
   modelOverrides = import ./model-overrides.nix;
+  omlxCredentialPolicy = import ./omlx-credential-policy.nix;
   managedStdio = import ./managed-stdio.nix { inherit lib; };
   inherit (managedStdio) typedEnvironment;
   manageStdioTransport = managedStdio.normalize;
@@ -82,6 +83,22 @@ let
     clio = workstationLocalModelEndpoints;
     hera = workstationLocalModelEndpoints;
   };
+  workstationHosts = builtins.attrNames catalogLocalModelEndpointsByHost;
+  omlxPiCredentialEnvironmentByHost = builtins.mapAttrs (
+    _: policy: policy.environment
+  ) omlxCredentialPolicy.byHost;
+  catalogPiModelDiscoveryEndpoints = {
+    inherit (workstationLocalModelEndpoints) llama-swap;
+  }
+  // builtins.listToAttrs (
+    map (host: {
+      name = "omlx-${host}";
+      value = {
+        baseUrl = "https://${host}.lan:8443/v1";
+        apiKey.env = omlxPiCredentialEnvironmentByHost.${host};
+      };
+    }) workstationHosts
+  );
   recordingTranscriptionModels = builtins.attrNames modelOverrides.localProviderOverrides.omlx.modelOverrides;
   recordingTranscriptionModel =
     assert lib.assertMsg (
@@ -1507,6 +1524,7 @@ let
       profiles ? catalogProfiles,
       items ? catalogItems,
       localModelEndpointsByHost ? catalogLocalModelEndpointsByHost,
+      piModelDiscoveryEndpoints ? catalogPiModelDiscoveryEndpoints,
       recordingTranscriptionRoutesByHost ? catalogRecordingTranscriptionRoutesByHost,
     }:
     let
@@ -1547,7 +1565,8 @@ let
       endpointChecks = lib.mapAttrsToList (
         host: endpoints:
         ensure (
-          builtins.elem host hosts
+          localModelEndpointsByHost == catalogLocalModelEndpointsByHost
+          && builtins.elem host hosts
           && builtins.isAttrs endpoints
           &&
             builtins.attrNames endpoints == [
@@ -1557,6 +1576,36 @@ let
           && builtins.all (validUrl true) (builtins.attrValues endpoints)
         ) "invalid local model endpoints for ${host}"
       ) localModelEndpointsByHost;
+      piModelDiscoveryChecks = [
+        (ensure (
+          piModelDiscoveryEndpoints == catalogPiModelDiscoveryEndpoints
+          &&
+            builtins.attrNames piModelDiscoveryEndpoints
+            == [ "llama-swap" ] ++ map (host: "omlx-${host}") workstationHosts
+          &&
+            builtins.attrNames modelOverrides.pi.localProviderOverrides
+            == builtins.attrNames piModelDiscoveryEndpoints
+          && builtins.hasAttr modelOverrides.pi.router.provider piModelDiscoveryEndpoints
+          && piModelDiscoveryEndpoints.llama-swap == workstationLocalModelEndpoints.llama-swap
+          && validUrl true piModelDiscoveryEndpoints.llama-swap
+          && builtins.all (
+            host:
+            let
+              endpoint = piModelDiscoveryEndpoints."omlx-${host}";
+            in
+            builtins.isAttrs endpoint
+            &&
+              builtins.attrNames endpoint == [
+                "apiKey"
+                "baseUrl"
+              ]
+            && validUrl false endpoint.baseUrl
+            && builtins.isAttrs endpoint.apiKey
+            && builtins.attrNames endpoint.apiKey == [ "env" ]
+            && endpoint.apiKey.env == omlxPiCredentialEnvironmentByHost.${host}
+          ) workstationHosts
+        ) "invalid Pi model discovery endpoints")
+      ];
       recordingTranscriptionChecks = [
         (ensure (
           recordingTranscriptionRoutesByHost == catalogRecordingTranscriptionRoutesByHost
@@ -1658,6 +1707,7 @@ let
         ++ agentChecks
         ++ settingsChecks
         ++ endpointChecks
+        ++ piModelDiscoveryChecks
         ++ recordingTranscriptionChecks
         ++ profileChecks
         ++ fessProjectionChecks
@@ -1719,6 +1769,7 @@ in
   profiles = catalogProfiles;
   items = catalogItems;
   localModelEndpointsByHost = catalogLocalModelEndpointsByHost;
+  piModelDiscoveryEndpoints = catalogPiModelDiscoveryEndpoints;
   recordingTranscriptionRoutesByHost = catalogRecordingTranscriptionRoutesByHost;
   inherit
     matches

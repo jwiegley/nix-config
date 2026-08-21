@@ -51,6 +51,7 @@ let
     vlcHome = "${vlcRuntimeHome}";
   };
   omlxProxy = config.johnw.omlxProxy;
+  omlxProxyKeyPreflight = import ./omlx-proxy-key-preflight.nix { inherit pkgs; };
   eternalTerminalConfig = pkgs.writeText "et.cfg" ''
     ; et.cfg : Config file for Eternal Terminal
     ;
@@ -290,7 +291,8 @@ in
         serviceConfig.RunAtLoad = true;
         serviceConfig.KeepAlive = true;
       };
-
+    }
+    // lib.optionalAttrs omlxProxy.enable {
       llama-swap-https-proxy =
         let
           logDir = "${xdg_cacheHome}/llama-swap-proxy";
@@ -306,8 +308,8 @@ in
               server {
                 listen ${lib.optionalString omlxProxy.enable "${omlxProxy.listenAddress}:"}8443 ssl;
 
-                ssl_certificate /Users/johnw/hera/hera.lan.crt;
-                ssl_certificate_key /Users/johnw/hera/hera.lan.key;
+                ssl_certificate ${omlxProxy.certificateFile};
+                ssl_certificate_key ${omlxProxy.certificateKeyFile};
                 ssl_protocols TLSv1.2 TLSv1.3;
                 ssl_prefer_server_ciphers on;
                 ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
@@ -319,6 +321,7 @@ in
                   # allowed clients. oMLX validates the forwarded bearer
                   # credential itself.
                   location /v1/ {
+                    allow ${omlxProxy.listenAddress};
                     ${lib.concatMapStringsSep "\n                  " (
                       source: "allow ${source};"
                     ) omlxProxy.allowedSources}
@@ -326,6 +329,8 @@ in
 
                     client_max_body_size 20M;
                     proxy_pass http://127.0.0.1:8000;
+                    proxy_http_version 1.1;
+                    proxy_buffering off;
 
                     proxy_set_header Authorization $http_authorization;
                     proxy_set_header Host $host;
@@ -341,34 +346,46 @@ in
                 ''}
 
                 # Proxy all other requests to chat.vulcan.lan
-                location / {
-                  proxy_pass https://chat.vulcan.lan;
-                  proxy_ssl_verify on;
-                  proxy_ssl_trusted_certificate /Users/johnw/hera/vulcan-root-ca.crt;
-                  proxy_ssl_server_name on;
+                ${lib.optionalString omlxProxy.legacyGatewayEnable ''
+                  location / {
+                    proxy_pass https://chat.vulcan.lan;
+                    proxy_ssl_verify on;
+                    proxy_ssl_trusted_certificate ${omlxProxy.trustedCaFile};
+                    proxy_ssl_server_name on;
 
-                  proxy_set_header Host chat.vulcan.lan;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header X-Forwarded-Proto $scheme;
+                    proxy_set_header Host chat.vulcan.lan;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
 
-                  proxy_connect_timeout 600;
-                  proxy_send_timeout 600;
-                  proxy_read_timeout 600;
-                  send_timeout 600;
+                    proxy_connect_timeout 600;
+                    proxy_send_timeout 600;
+                    proxy_read_timeout 600;
+                    send_timeout 600;
 
-                  # WebSocket support for chat interface
-                  proxy_http_version 1.1;
-                  proxy_set_header Upgrade $http_upgrade;
-                  proxy_set_header Connection "upgrade";
-                }
+                    # WebSocket support for chat interface
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection "upgrade";
+                  }
+                ''}
+                ${lib.optionalString (!omlxProxy.legacyGatewayEnable) ''
+                  location / {
+                    return 404;
+                  }
+                ''}
               }
             }
           '';
         in
         {
           script = ''
+            ${omlxProxyKeyPreflight}/bin/omlx-proxy-key-preflight \
+              ${lib.escapeShellArg omlxProxy.certificateFile} \
+              ${lib.escapeShellArg omlxProxy.certificateKeyFile} \
+              johnw
             mkdir -p ${logDir} ${logDir}/client_body
+            ${pkgs.nginx}/bin/nginx -t -c ${config} -e ${logDir}/error.log >/dev/null
             ${pkgs.nginx}/bin/nginx -c ${config} -g "daemon off;" -e ${logDir}/error.log
           '';
           serviceConfig = {
@@ -377,7 +394,8 @@ in
             SoftResourceLimits.NumberOfFiles = 4096;
           };
         };
-
+    }
+    // {
       omlx = {
         script = "exec ${pkgs.omlx}/bin/omlx serve --host 127.0.0.1 --port 8000 --base-path /Users/johnw/.config/omlx/.omlx";
         serviceConfig = {

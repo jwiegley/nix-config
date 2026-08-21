@@ -1469,6 +1469,42 @@ runCommand "pi-gallery-check"
         --module ESNext --moduleResolution Bundler --target ES2022 \
         --lib ES2022 --types node index.ts
     )
+    local_provider_typecheck="$TMPDIR/pi-local-provider-typecheck"
+    mkdir -p "$local_provider_typecheck/node_modules/@types"
+    cp ${roots.omlx-provider}/index.ts "$local_provider_typecheck/omlx.ts"
+    cp ${roots.llama-swap-provider}/index.ts "$local_provider_typecheck/llama-swap.ts"
+    cp ${roots.omlx-provider}/local-openai-provider.ts \
+      "$local_provider_typecheck/local-openai-provider.ts"
+    cp ${gallery}/runtime.ts "$local_provider_typecheck/gallery-runtime.ts"
+    cat >"$local_provider_typecheck/endpoint-contract.ts" <<'TS'
+    import type { LocalModelEndpoints as GalleryEndpoints } from "./gallery-runtime.js";
+    import type { LocalModelEndpoints as ProviderEndpoints } from "./local-openai-provider.js";
+
+    type Assert<T extends true> = T;
+    type GalleryAcceptsProvider = ProviderEndpoints extends GalleryEndpoints ? true : false;
+    type ProviderAcceptsGallery = GalleryEndpoints extends ProviderEndpoints ? true : false;
+
+    const galleryAcceptsProvider: Assert<GalleryAcceptsProvider> = true;
+    const providerAcceptsGallery: Assert<ProviderAcceptsGallery> = true;
+    const structured: GalleryEndpoints = {
+      "omlx-test": {
+        baseUrl: "https://example.invalid/v1",
+        apiKey: { env: "OMLX_TEST_API_KEY" },
+      },
+    };
+    const providerStructured: ProviderEndpoints = structured;
+    void [galleryAcceptsProvider, providerAcceptsGallery, providerStructured];
+    TS
+    ln -s "$pi_node_modules/@types/node" \
+      "$local_provider_typecheck/node_modules/@types/node"
+    ln -s "$pi_node_modules/undici-types" \
+      "$local_provider_typecheck/node_modules/undici-types"
+    (
+      cd "$local_provider_typecheck"
+      tsc --noEmit --skipLibCheck --strict --allowImportingTsExtensions \
+        --module ESNext --moduleResolution Bundler --target ES2022 \
+        --lib ES2022 --types node endpoint-contract.ts omlx.ts llama-swap.ts
+    )
     (
       cd ${sourceForChecks}
       PI_BLACKHOLE_THRESHOLD_HELPER=${roots.blackhole}/src/om/compaction-threshold.ts \
@@ -1862,7 +1898,8 @@ runCommand "pi-gallery-check"
     TS
     while IFS='|' read -r prompt expected_tier; do
       session_file="$routing_smoke/tier-$expected_tier.jsonl"
-      env -u OMLX_API_KEY -u LLAMA_SWAP_API_KEY \
+      env -u OMLX_API_KEY -u OMLX_CLIO_API_KEY -u OMLX_HERA_API_KEY \
+        -u LLAMA_SWAP_API_KEY \
       HOME="$routing_smoke/home" \
       PI_CODING_AGENT_DIR="$routing_smoke/agent" \
       PI_ROUTER_REASONING_LOG="$routing_smoke/reasoning.log" \
@@ -1918,7 +1955,8 @@ runCommand "pi-gallery-check"
     {"id":"router-high-state","type":"get_state"}
     {"id":"router-high","type":"prompt","message":"exercise the router enabled path"}
     JSON
-    env -u OMLX_API_KEY -u LLAMA_SWAP_API_KEY \
+    env -u OMLX_API_KEY -u OMLX_CLIO_API_KEY -u OMLX_HERA_API_KEY \
+      -u LLAMA_SWAP_API_KEY \
       HOME="$routing_smoke/home" \
       PI_CODING_AGENT_DIR="$routing_smoke/agent" \
       PI_ROUTER_REASONING_LOG="$routing_smoke/reasoning.log" \
@@ -1983,7 +2021,8 @@ runCommand "pi-gallery-check"
 
     loop_smoke="$TMPDIR/pi-loop-smoke"
     mkdir -p "$loop_smoke/home" "$loop_smoke/agent"
-    env -u OMLX_API_KEY -u LLAMA_SWAP_API_KEY \
+    env -u OMLX_API_KEY -u OMLX_CLIO_API_KEY -u OMLX_HERA_API_KEY \
+      -u LLAMA_SWAP_API_KEY \
       HOME="$loop_smoke/home" \
       PI_CODING_AGENT_DIR="$loop_smoke/agent" \
       PI_OFFLINE=1 \
@@ -2032,7 +2071,8 @@ runCommand "pi-gallery-check"
       class Handler(BaseHTTPRequestHandler):
           def do_GET(self):
               with request_log.open("a") as output:
-                  output.write(f"{self.path}\n")
+                  authorization = self.headers.get("Authorization", "")
+                  output.write(f"{self.path}\t{authorization}\n")
               body = json.dumps({"data": [{"id": "catalog-endpoint-probe", "type": "chat"}]}).encode()
               self.send_response(200)
               self.send_header("Content-Type", "application/json")
@@ -2068,7 +2108,14 @@ runCommand "pi-gallery-check"
 
       export default createNixGallery({
         "llama-swap": "http://127.0.0.1:$discovery_port/llama/v1",
-        "omlx": "http://127.0.0.1:$discovery_port/omlx/v1"
+        "omlx-clio": {
+          "baseUrl": "http://127.0.0.1:$discovery_port/omlx-clio/v1",
+          "apiKey": { "env": "OMLX_CLIO_API_KEY" }
+        },
+        "omlx-hera": {
+          "baseUrl": "http://127.0.0.1:$discovery_port/omlx-hera/v1",
+          "apiKey": { "env": "OMLX_HERA_API_KEY" }
+        }
       });
       EOF
     ''}
@@ -2124,6 +2171,8 @@ runCommand "pi-gallery-check"
       PI_GALLERY_ACTIVE_TOOLS="$smoke/active-tools.json" \
       PI_GALLERY_TOOL_OWNERS_FILE="$smoke/tool-owners.json" \
       PI_GALLERY_INSTALLER_SENTINEL="$smoke/installer-invocations" \
+      OMLX_CLIO_API_KEY=clio-gallery-smoke-key \
+      OMLX_HERA_API_KEY=hera-gallery-smoke-key \
       PI_OFFLINE=1 \
       PI_TIMING=0 \
       PATH="$smoke/sentinels":${
@@ -2155,9 +2204,10 @@ runCommand "pi-gallery-check"
     fi
     ${lib.optionalString stdenv.hostPlatform.isDarwin ''
       validate_discovery_requests() {
-        [ "$(wc -l < "$smoke/discovery-requests")" -eq 2 ] \
-          && grep -Fxq '/llama/v1/models' "$smoke/discovery-requests" \
-          && grep -Fxq '/omlx/v1/models' "$smoke/discovery-requests"
+        [ "$(wc -l < "$smoke/discovery-requests")" -eq 3 ] \
+          && grep -Fxq $'/llama/v1/models\tBearer dummy-key' "$smoke/discovery-requests" \
+          && grep -Fxq $'/omlx-clio/v1/models\tBearer clio-gallery-smoke-key' "$smoke/discovery-requests" \
+          && grep -Fxq $'/omlx-hera/v1/models\tBearer hera-gallery-smoke-key' "$smoke/discovery-requests"
       }
       validate_discovery_requests \
         || fail "managed Pi gallery discovery requests differ"
@@ -2172,6 +2222,8 @@ runCommand "pi-gallery-check"
       PI_GALLERY_ACTIVE_TOOLS="$smoke/timing-active-tools.json" \
       PI_GALLERY_TOOL_OWNERS_FILE="$smoke/timing-tool-owners.json" \
       PI_GALLERY_INSTALLER_SENTINEL="$smoke/installer-invocations" \
+      OMLX_CLIO_API_KEY=clio-gallery-smoke-key \
+      OMLX_HERA_API_KEY=hera-gallery-smoke-key \
       PI_OFFLINE=1 \
       PI_TIMING=1 \
       PATH="$smoke/sentinels":${

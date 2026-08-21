@@ -20,6 +20,15 @@ export interface LocalProviderConfig {
 	apiKey: string;
 }
 
+export interface ManagedLocalModelEndpoint {
+	baseUrl: string;
+	apiKey: { env: string };
+}
+
+export type LocalModelEndpoints = Readonly<
+	Record<string, string | ManagedLocalModelEndpoint>
+>;
+
 interface ModelEntry {
 	id?: unknown;
 	name?: unknown;
@@ -84,10 +93,6 @@ const NON_CHAT_ENDPOINT_CAPABILITIES = new Set([
 	"image_generation",
 	"image_to_image",
 ]);
-const runtimeProcess = (
-	globalThis as unknown as { process: { emitWarning(message: string): void } }
-).process;
-
 function positiveInteger(...values: unknown[]): number | undefined {
 	for (const value of values) {
 		if (typeof value === "number" && Number.isSafeInteger(value) && value > 0)
@@ -335,15 +340,35 @@ async function discoverModels(
 	}
 }
 
+function discoveryFailureReason(error: unknown): string {
+	let reason = "request failed";
+	if (error instanceof Error && error.name === "AbortError") {
+		reason = "request aborted";
+	} else if (error instanceof Error) {
+		const status = /^([1-5][0-9]{2})(?:\s|$)/.exec(error.message);
+		if (status) reason = `HTTP ${status[1]}`;
+	}
+	return reason;
+}
+
+function sanitizedDiscoveryError(
+	config: LocalProviderConfig,
+	error: unknown,
+): Error {
+	const sanitized = new Error(
+		`[${config.id}] Model discovery failed: ${discoveryFailureReason(error)}`,
+	);
+	if (error instanceof Error && error.name === "AbortError") {
+		sanitized.name = "AbortError";
+	}
+	return sanitized;
+}
+
 function warnDiscoveryFailure(
 	config: LocalProviderConfig,
 	error: unknown,
 ): void {
-	const detail = error instanceof Error ? error.message : String(error);
-	const url = `${config.baseUrl.replace(/\/$/, "")}/models`;
-	runtimeProcess.emitWarning(
-		`[${config.id}] Cannot discover models from ${url}: ${detail}`,
-	);
+	process.emitWarning(sanitizedDiscoveryError(config, error).message);
 }
 
 export async function registerLocalProvider(
@@ -368,7 +393,12 @@ export async function registerLocalProvider(
 			context: RefreshModelsContext,
 		): Promise<ProviderModelConfig[]> => {
 			if (!context.allowNetwork) return cachedModels;
-			const refreshed = await discoverModels(config, context.signal);
+			let refreshed: ProviderModelConfig[];
+			try {
+				refreshed = await discoverModels(config, context.signal);
+			} catch (error) {
+				throw sanitizedDiscoveryError(config, error);
+			}
 			context.signal.throwIfAborted();
 			const published = await context.publish({
 				update: () => {
