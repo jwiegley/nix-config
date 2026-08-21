@@ -360,7 +360,17 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
   ${pkgs.nginx}/bin/nginx -c "$behavior_root/nginx.conf" \
     -e "$behavior_root/error.log" -g 'daemon off;' &
   behavior_pid=$!
-  trap 'kill "$behavior_pid" 2>/dev/null || true; wait "$behavior_pid" 2>/dev/null || true' EXIT
+  stop_behavior() {
+    kill "$behavior_pid" 2>/dev/null || true
+    if kill -0 "$behavior_pid" 2>/dev/null; then
+      if ! ${pkgs.coreutils}/bin/timeout --signal=TERM --kill-after=1 5 \
+        ${pkgs.coreutils}/bin/tail --pid="$behavior_pid" -f /dev/null; then
+        kill -KILL "$behavior_pid" 2>/dev/null || true
+      fi
+    fi
+    wait "$behavior_pid" 2>/dev/null || true
+  }
+  trap stop_behavior EXIT
   attempts=0
   while [ ! -S "$behavior_root/front.sock" ]; do
     attempts=$((attempts + 1))
@@ -368,6 +378,7 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
     ${pkgs.coreutils}/bin/sleep 0.05
   done
   api_body=$(${pkgs.curl}/bin/curl --silent --show-error --insecure \
+    --connect-timeout 2 --max-time 5 \
     --unix-socket "$behavior_root/front.sock" \
     -H 'Authorization: Bearer behavioral-sentinel' \
     https://localhost/v1/models)
@@ -376,6 +387,7 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
     exit 1
   fi
   legacy_body=$(${pkgs.curl}/bin/curl --silent --show-error --insecure \
+    --connect-timeout 2 --max-time 5 \
     --unix-socket "$behavior_root/front.sock" \
     -H 'Authorization: Bearer behavioral-sentinel' \
     https://localhost/chat)
@@ -385,6 +397,7 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
   fi
   for near_miss in /v1 /v1models; do
     status=$(${pkgs.curl}/bin/curl --silent --show-error --insecure \
+      --connect-timeout 2 --max-time 5 \
       --unix-socket "$behavior_root/front.sock" \
       -H 'Authorization: Bearer behavioral-sentinel' \
       --output /dev/null --write-out '%{http_code}' \
@@ -395,8 +408,7 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
       exit 1
     fi
   done
-  kill "$behavior_pid"
-  wait "$behavior_pid"
+  stop_behavior
   trap - EXIT
 
   sed \

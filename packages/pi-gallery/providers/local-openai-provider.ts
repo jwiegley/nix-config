@@ -62,8 +62,8 @@ const DEFAULT_CONTEXT_WINDOW = 262_144;
 const DEFAULT_MAX_TOKENS = 65_536;
 const MAX_DISCOVERY_RESPONSE_BYTES = 1024 * 1024;
 const MAX_DISCOVERY_MODEL_ENTRIES = 4096;
-// The budget covers connect, response and JSON parse. These hosts run jobs heavy
-// enough to stall a loopback round trip well past half a second.
+// The budget covers connect, response, and JSON parsing. Local inference jobs
+// can keep either a loopback or authenticated TLS service busy for a while.
 const FETCH_TIMEOUT_MS = 2_500;
 const NON_CHAT_TYPES = new Set([
 	"asr",

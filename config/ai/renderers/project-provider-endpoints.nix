@@ -8,44 +8,9 @@
 let
   definitionNames = builtins.attrNames definitions;
   endpointNames = builtins.attrNames endpoints;
-  validApiKey =
-    value:
-    builtins.isAttrs value
-    && builtins.attrNames value == [ "env" ]
-    && builtins.isString value.env
-    && value.env != "";
-  validDefinition =
-    value:
-    builtins.isAttrs value
-    && builtins.all (
-      name:
-      builtins.elem name [
-        "apiKey"
-        "name"
-        "owner"
-      ]
-    ) (builtins.attrNames value)
-    && builtins.isString (value.owner or null)
-    && value.owner != ""
-    && builtins.isString (value.name or null)
-    && value.name != ""
-    && (!(value ? apiKey) || validApiKey value.apiKey);
-  validEndpoint =
-    value:
-    (builtins.isString value && value != "")
-    || (
-      builtins.isAttrs value
-      && builtins.all (
-        name:
-        builtins.elem name [
-          "apiKey"
-          "baseUrl"
-        ]
-      ) (builtins.attrNames value)
-      && builtins.isString (value.baseUrl or null)
-      && value.baseUrl != ""
-      && (!(value ? apiKey) || validApiKey value.apiKey)
-    );
+  # The catalog owns URL, credential-reference, and definition validation. This
+  # helper only joins those validated authorities and groups the result by its
+  # declared adapter owner.
   records = map (
     id:
     let
@@ -67,12 +32,6 @@ let
   ) definitionNames;
 in
 assert lib.assertMsg (definitionNames == endpointNames) "provider definitions and endpoints differ";
-assert lib.assertMsg (builtins.all (
-  name: validDefinition definitions.${name}
-) definitionNames) "invalid provider definition";
-assert lib.assertMsg (builtins.all (
-  name: validEndpoint endpoints.${name}
-) endpointNames) "invalid provider endpoint";
 lib.foldl' (
   byOwner: record:
   byOwner

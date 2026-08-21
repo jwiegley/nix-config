@@ -8,7 +8,7 @@ tags:
   - ai-agents
   - developer-tools
 created: 2026-07-27
-updated: 2026-08-19
+updated: 2026-08-21
 pi-version: 0.84.2
 ---
 
@@ -367,7 +367,7 @@ Pi Copy Message opens a searchable, keyboard-driven picker over raw session mess
 
 The fleet-packaged llama-swap provider is a reviewed Nix derivative of `pi-local-llm`. Darwin registers it automatically; Linux retains the package without doing so. At registration and on an explicit `/model` refresh it queries the loopback llama-swap service, filters non-chat and non-text models, derives modality and reasoning support from model metadata, and registers the surviving models through Pi's OpenAI Completions interface. A failed initial discovery emits a warning; a later refresh failure is reported by Pi while retaining the last good model list.
 
-**Basic usage.** On Darwin, keep the Nix-managed `org.nixos.llama-swap` launch agent available, then open `/model` to refresh and select a discovered `llama-swap/*` model. Linux requires an independently provisioned trusted service and explicit extension loading.
+**Basic usage.** On Darwin, keep the Nix-managed `org.nixos.llama-swap` launch agent available, then open `/model` to refresh and select a discovered `llama-swap/*` model. Managed Linux profiles provide no maintained local-provider loading path. A custom deployment must supply its own trusted service and loader that passes a validated typed endpoint projection to the adapter; loading the adapter directly without that projection is intentionally inert.
 
 ### oMLX Provider
 
@@ -375,7 +375,7 @@ The fleet-packaged llama-swap provider is a reviewed Nix derivative of `pi-local
 
 The fleet-packaged oMLX provider uses the same bounded discovery adapter against two authenticated TLS services. Darwin registers the stable `omlx-hera` and `omlx-clio` provider identities on both workstations. Pi obtains a distinct bearer credential for each provider from its own Keychain item through a provider-specific runtime environment variable; generated configuration contains only the environment-variable references. Hera targets `omlx-hera` for the generated Sol router route, presently `Qwen3.6-27B-oQ6e-mtp`; because that service record is sparse, the generated model override supplies the exact text-only, `off`/`high`, Qwen chat-template contract after discovery. Clio has no fixed Qwen override and exposes only models returned by either service, with sparse records remaining conservatively non-reasoning and text-only. Linux retains the package without automatic registration.
 
-**Basic usage.** On either workstation, keep both managed TLS proxies reachable, then open `/model` to refresh and select a discovered `omlx-hera/*` or `omlx-clio/*` model. On Hera, the managed `omlx-hera/Qwen3.6-27B-oQ6e-mtp` model and `router/sol` expose only `off` and `high`; Shift-Tab cycles between them. Each starts at `off` when no explicit, restored, or global user preference exists; an existing user-selected level still takes precedence. With no enabled thinking level, the transport sends `enable_thinking: false`. Clio generates neither the fixed Qwen override nor `router/sol`, so its discovered sparse records retain the conservative defaults. Linux requires an independently provisioned trusted service and explicit extension loading.
+**Basic usage.** On either workstation, keep both managed TLS proxies reachable, then open `/model` to refresh and select a discovered `omlx-hera/*` or `omlx-clio/*` model. On Hera, the managed `omlx-hera/Qwen3.6-27B-oQ6e-mtp` model and `router/sol` expose only `off` and `high`; Shift-Tab cycles between them. Each starts at `off` when no explicit, restored, or global user preference exists; an existing user-selected level still takes precedence. With no enabled thinking level, the transport sends `enable_thinking: false`. Clio generates neither the fixed Qwen override nor `router/sol`, so its discovered sparse records retain the conservative defaults. Managed Linux profiles provide no maintained local-provider loading path. A custom deployment must supply its own trusted service and loader that passes validated typed endpoint and credential-reference records to the adapter; loading the adapter directly without those records is intentionally inert.
 
 ### Multi-Pass
 

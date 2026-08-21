@@ -13,6 +13,10 @@ function expect(condition: boolean, label: string): void {
 	if (!condition) throw new Error(label);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 async function waitFor(condition: () => boolean, label: string): Promise<void> {
 	for (let attempt = 0; attempt < 1000; attempt += 1) {
 		if (condition()) return;
@@ -228,21 +232,21 @@ try {
 	);
 	const managedLlamaSwapEndpoints = [
 		{
-			id: "llama-swap",
-			name: "Typed llama-swap name",
+			id: "p7",
+			name: "Cedar 17",
 			baseUrl: "http://catalog.test:8080/custom/v1",
 		},
 	] as const;
 	const managedOmlxEndpoints = [
 		{
-			id: "omlx-clio",
-			name: "Typed Clio oMLX name",
+			id: "q9",
+			name: "Quartz 29",
 			baseUrl: "http://catalog.test:18000/custom/v1",
 			apiKey: { env: "OMLX_CLIO_API_KEY" },
 		},
 		{
-			id: "omlx-hera",
-			name: "Typed Hera oMLX name",
+			id: "r4",
+			name: "Violet 41",
 			baseUrl: "http://catalog.test:28000/custom/v1",
 			apiKey: { env: "OMLX_HERA_API_KEY" },
 		},
@@ -273,17 +277,17 @@ try {
 		"managed provider requests",
 	);
 	expectEqual(
-		managedProviders.get("llama-swap")?.baseUrl,
+		managedProviders.get("p7")?.baseUrl,
 		managedLlamaSwapEndpoints[0].baseUrl,
 		"managed llama-swap base URL",
 	);
 	expectEqual(
-		managedProviders.get("omlx-clio")?.baseUrl,
+		managedProviders.get("q9")?.baseUrl,
 		managedOmlxEndpoints[0].baseUrl,
 		"managed Clio oMLX base URL",
 	);
 	expectEqual(
-		managedProviders.get("omlx-hera")?.baseUrl,
+		managedProviders.get("r4")?.baseUrl,
 		managedOmlxEndpoints[1].baseUrl,
 		"managed Hera oMLX base URL",
 	);
@@ -295,26 +299,26 @@ try {
 		})),
 		[
 			{
-				id: "omlx-clio",
-				name: "Typed Clio oMLX name",
+				id: "q9",
+				name: "Quartz 29",
 				apiKey: "clio-gallery-test-key",
 			},
 			{
-				id: "omlx-hera",
-				name: "Typed Hera oMLX name",
+				id: "r4",
+				name: "Violet 41",
 				apiKey: "hera-gallery-test-key",
 			},
 		],
 		"typed oMLX names and credentials",
 	);
 	expectEqual(
-		managedProviders.get("llama-swap")?.name,
-		"Typed llama-swap name",
-		"typed llama-swap name",
+		managedProviders.get("p7")?.name,
+		"Cedar 17",
+		"opaque adapter name",
 	);
 	expectEqual(
 		[...managedProviders.keys()],
-		["llama-swap", "omlx-clio", "omlx-hera"],
+		["p7", "q9", "r4"],
 		"managed provider IDs",
 	);
 	expectEqual([...providers.keys()], ["llama-swap", "omlx"], "provider IDs");
@@ -550,6 +554,307 @@ try {
 	const { KEYBINDINGS } = await import(
 		`${codingAgentRoot}/dist/core/keybindings.js`
 	);
+	const withDeadline = async <T>(
+		promise: Promise<T>,
+		label: string,
+		onTimeout: () => void,
+	): Promise<T> => {
+		let timer: ReturnType<typeof realSetTimeout> | undefined;
+		const deadline = new Promise<never>((_resolve, reject) => {
+			timer = realSetTimeout(() => {
+				onTimeout();
+				reject(new Error(label));
+			}, 1_000);
+		});
+		try {
+			return await Promise.race([promise, deadline]);
+		} finally {
+			if (timer !== undefined) clearTimeout(timer);
+		}
+	};
+	const encoder = new TextEncoder();
+	const encodeSseRecord = (record: unknown): Uint8Array =>
+		encoder.encode(`data: ${JSON.stringify(record)}\n\n`);
+	type CompletionFixture = {
+		apiKey: string;
+		baseUrl: string;
+		id: string;
+		model: Record<string, unknown>;
+	};
+	const completionFixtures: CompletionFixture[] = [];
+	for (const endpoint of managedOmlxEndpoints) {
+		const config = managedProviders.get(endpoint.id);
+		if (!config) throw new Error("managed completion provider is missing");
+		expect(
+			config.api === "openai-completions",
+			"managed completion provider uses the wrong API",
+		);
+		expect(
+			config.authHeader === true,
+			"managed completion provider does not require bearer authentication",
+		);
+		const apiKey = config.apiKey;
+		const baseUrl = config.baseUrl;
+		if (typeof apiKey !== "string")
+			throw new Error("managed completion credential is missing");
+		if (typeof baseUrl !== "string")
+			throw new Error("managed completion destination is missing");
+		const discoveredModel = registeredModels(config, endpoint.id)[0];
+		if (!discoveredModel)
+			throw new Error("managed completion model is missing");
+		const model = {
+			...discoveredModel,
+			api: "openai-completions",
+			provider: endpoint.id,
+			baseUrl,
+		};
+		completionFixtures.push({ apiKey, baseUrl, id: endpoint.id, model });
+		let responseBody: ReadableStream<Uint8Array> | null = null;
+		let terminalRecordPulled = false;
+		let responseCancelled = false;
+		const completionFetch = async (
+			input: RequestInfo | URL,
+			init?: RequestInit,
+		): Promise<Response> => {
+			const request = new Request(input, init);
+			expect(
+				request.url === `${baseUrl.replace(/\/+$/, "")}/chat/completions`,
+				"managed completion request used the wrong destination",
+			);
+			expect(
+				request.headers.get("authorization") === `Bearer ${apiKey}`,
+				"managed completion request used the wrong bearer",
+			);
+			const payloadText = await request.text();
+			const payload: unknown = JSON.parse(payloadText);
+			if (!isRecord(payload))
+				throw new Error("managed completion payload is not an object");
+			expect(payload.stream === true, "managed completion was not streamed");
+			const nonAuthorizationHeaders = [...request.headers.entries()]
+				.filter(([name]) => name.toLowerCase() !== "authorization")
+				.map(([, value]) => value)
+				.join("\n");
+			const nonAuthorizationMaterial = `${request.url}\n${nonAuthorizationHeaders}\n${payloadText}`;
+			for (const other of managedOmlxEndpoints) {
+				const otherKey = warningProcess.env[other.apiKey.env];
+				if (otherKey) {
+					expect(
+						!nonAuthorizationMaterial.includes(otherKey),
+						"managed completion leaked a credential outside authorization",
+					);
+				}
+			}
+			const records = [
+				encodeSseRecord({
+					id: "completion-success",
+					object: "chat.completion.chunk",
+					created: 1,
+					model: discoveredModel.id,
+					choices: [
+						{
+							index: 0,
+							delta: { role: "assistant", content: "bounded " },
+							finish_reason: null,
+						},
+					],
+				}),
+				encodeSseRecord({
+					id: "completion-success",
+					object: "chat.completion.chunk",
+					created: 1,
+					model: discoveredModel.id,
+					choices: [
+						{
+							index: 0,
+							delta: { content: "stream" },
+							finish_reason: "stop",
+						},
+					],
+				}),
+				encoder.encode("data: [DONE]\n\n"),
+			];
+			const response = new Response(
+				new ReadableStream<Uint8Array>(
+					{
+						pull(controller) {
+							const record = records.shift();
+							if (!record) {
+								controller.close();
+								return;
+							}
+							controller.enqueue(record);
+							if (records.length === 0) {
+								terminalRecordPulled = true;
+								controller.close();
+							}
+						},
+						cancel() {
+							responseCancelled = true;
+						},
+					},
+					{ highWaterMark: 0 },
+				),
+				{ headers: { "content-type": "text/event-stream" } },
+			);
+			responseBody = response.body;
+			return response;
+		};
+		const completionAbort = new AbortController();
+		try {
+			const completion = await withDeadline(
+				streamSimple(
+					model,
+					{
+						messages: [{ role: "user", content: "probe", timestamp: 1 }],
+					},
+					{
+						apiKey,
+						fetch: completionFetch,
+						signal: completionAbort.signal,
+					},
+				).result(),
+				"managed completion did not finish",
+				() => completionAbort.abort(),
+			);
+			const completionContent: unknown = completion.content;
+			if (
+				!Array.isArray(completionContent) ||
+				!completionContent.every(isRecord)
+			) {
+				throw new Error("managed completion content is malformed");
+			}
+			const completionText = completionContent
+				.filter((block) => block.type === "text")
+				.map((block) => {
+					if (typeof block.text !== "string")
+						throw new Error("managed completion text is malformed");
+					return block.text;
+				})
+				.join("");
+			expect(completionText === "bounded stream", "managed SSE text differed");
+			expect(
+				completion.stopReason === "stop",
+				"managed SSE did not stop cleanly",
+			);
+			expect(
+				terminalRecordPulled || responseCancelled,
+				"managed SSE terminal record was neither consumed nor cancelled",
+			);
+			expect(responseBody?.locked === false, "managed SSE body stayed locked");
+		} finally {
+			completionAbort.abort();
+		}
+	}
+
+	const abortFixture = completionFixtures[0];
+	if (!abortFixture) throw new Error("managed abort fixture is missing");
+	const callerAbort = new AbortController();
+	let abortBody: ReadableStream<Uint8Array> | null = null;
+	let abortBodyController:
+		| ReadableStreamDefaultController<Uint8Array>
+		| undefined;
+	let fetchSignal: AbortSignal | null = null;
+	let transportCancelled = false;
+	let bodyReadStartedResolve: (() => void) | undefined;
+	const bodyReadStarted = new Promise<void>((resolve) => {
+		bodyReadStartedResolve = resolve;
+	});
+	let abortChunkSent = false;
+	const abortFetch = async (
+		input: RequestInfo | URL,
+		init?: RequestInit,
+	): Promise<Response> => {
+		const request = new Request(input, init);
+		expect(
+			request.url ===
+				`${abortFixture.baseUrl.replace(/\/+$/, "")}/chat/completions`,
+			"aborted completion request used the wrong destination",
+		);
+		expect(
+			request.headers.get("authorization") === `Bearer ${abortFixture.apiKey}`,
+			"aborted completion request used the wrong bearer",
+		);
+		fetchSignal = init?.signal ?? null;
+		expect(fetchSignal !== null, "completion fetch did not receive a signal");
+		const body = new ReadableStream<Uint8Array>(
+			{
+				pull(controller) {
+					abortBodyController = controller;
+					if (abortChunkSent) return;
+					abortChunkSent = true;
+					controller.enqueue(
+						encodeSseRecord({
+							id: "completion-abort",
+							object: "chat.completion.chunk",
+							created: 1,
+							model: abortFixture.model.id,
+							choices: [
+								{
+									index: 0,
+									delta: { role: "assistant", content: "partial" },
+									finish_reason: null,
+								},
+							],
+						}),
+					);
+					bodyReadStartedResolve?.();
+				},
+				cancel() {
+					transportCancelled = true;
+				},
+			},
+			{ highWaterMark: 0 },
+		);
+		fetchSignal?.addEventListener(
+			"abort",
+			() => {
+				transportCancelled = true;
+				abortBodyController?.error(
+					new DOMException("Request was aborted", "AbortError"),
+				);
+			},
+			{ once: true },
+		);
+		const response = new Response(body, {
+			headers: { "content-type": "text/event-stream" },
+		});
+		abortBody = response.body;
+		return response;
+	};
+	const abortResultPromise = streamSimple(
+		abortFixture.model,
+		{ messages: [{ role: "user", content: "probe", timestamp: 1 }] },
+		{
+			apiKey: abortFixture.apiKey,
+			fetch: abortFetch,
+			signal: callerAbort.signal,
+		},
+	).result();
+	try {
+		await withDeadline(
+			bodyReadStarted,
+			"managed completion body was not read",
+			() => callerAbort.abort(),
+		);
+		callerAbort.abort();
+		const aborted = await withDeadline(
+			abortResultPromise,
+			"managed completion did not honor caller abort",
+			() => callerAbort.abort(),
+		);
+		expect(
+			aborted.stopReason === "aborted",
+			"managed completion was not aborted",
+		);
+		expect(fetchSignal?.aborted === true, "fetch-owned signal was not aborted");
+		expect(transportCancelled, "aborted completion transport stayed open");
+		expect(
+			abortBody?.locked === false,
+			"aborted completion body stayed locked",
+		);
+	} finally {
+		callerAbort.abort();
+	}
 	const qwenModel = {
 		...omlxModels[1],
 		api: "openai-completions",
@@ -924,7 +1229,7 @@ try {
 	);
 	expectEqual(
 		[...partialProviders.keys()],
-		["omlx-hera"],
+		["r4"],
 		"missing credential skips only its provider",
 	);
 	expectEqual(
@@ -939,9 +1244,7 @@ try {
 	);
 	expectEqual(
 		warnings,
-		[
-			"[omlx-clio] Credential environment is unset; provider was not registered",
-		],
+		["[q9] Credential environment is unset; provider was not registered"],
 		"missing environment key warning",
 	);
 } finally {

@@ -1081,8 +1081,26 @@ assert
   };
 assert catalog.validGalleryProviderDefinitions modelOverrides.localGalleryProviders;
 assert catalog.validGalleryProviderDefinitions modelOverrides.pi.galleryProviders;
+assert
+  !(catalog.validGalleryProviderDefinitions (
+    modelOverrides.pi.galleryProviders
+    // {
+      omlx-clio = modelOverrides.pi.galleryProviders.omlx-clio // {
+        apiKey.env = "invalid-lowercase-reference";
+      };
+    }
+  ));
 assert catalog.validLocalModelEndpoints catalog.localModelEndpointsByHost.clio;
 assert catalog.validPiModelDiscoveryEndpoints catalog.piModelDiscoveryEndpoints;
+assert
+  !(catalog.validPiModelDiscoveryEndpoints (
+    catalog.piModelDiscoveryEndpoints
+    // {
+      omlx-clio = catalog.piModelDiscoveryEndpoints.omlx-clio // {
+        baseUrl = "ftp://invalid.example/v1";
+      };
+    }
+  ));
 assert
   !(catalog.validGalleryProviderDefinitions {
     poison = {
@@ -1209,12 +1227,6 @@ assert builtins.all reject [
   (projectProviderEndpoints {
     definitions = modelOverrides.pi.galleryProviders;
     endpoints = builtins.removeAttrs catalog.piModelDiscoveryEndpoints [ "omlx-hera" ];
-  })
-  (projectProviderEndpoints {
-    definitions = modelOverrides.localGalleryProviders;
-    endpoints = catalog.localModelEndpointsByHost.clio // {
-      omlx = "";
-    };
   })
   (projectProviderEndpoints {
     definitions = modelOverrides.pi.galleryProviders // {
