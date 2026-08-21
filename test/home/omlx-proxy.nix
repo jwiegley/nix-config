@@ -360,17 +360,67 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
   ${pkgs.nginx}/bin/nginx -c "$behavior_root/nginx.conf" \
     -e "$behavior_root/error.log" -g 'daemon off;' &
   behavior_pid=$!
-  stop_behavior() {
-    kill "$behavior_pid" 2>/dev/null || true
-    if kill -0 "$behavior_pid" 2>/dev/null; then
-      if ! ${pkgs.coreutils}/bin/timeout --signal=TERM --kill-after=1 5 \
-        ${pkgs.coreutils}/bin/tail --pid="$behavior_pid" -f /dev/null; then
-        kill -KILL "$behavior_pid" 2>/dev/null || true
-      fi
+  behavior_term_seconds=5
+  behavior_kill_seconds=1
+  wait_with_deadline() {
+    target_pid=$1
+    seconds=$2
+    timed_out=0
+    shell_pid=$$
+    trap 'timed_out=1' USR1
+    ${pkgs.perl}/bin/perl -e \
+      'select undef, undef, undef, shift; kill "USR1", shift' \
+      "$seconds" "$shell_pid" &
+    timer_pid=$!
+    status=0
+    wait "$target_pid" 2>/dev/null || status=$?
+    if [ "$timed_out" -eq 0 ]; then
+      kill "$timer_pid" 2>/dev/null || true
     fi
-    wait "$behavior_pid" 2>/dev/null || true
+    wait "$timer_pid" 2>/dev/null || true
+    trap - USR1
+    if [ "$timed_out" -ne 0 ]; then
+      return 124
+    fi
+    return "$status"
   }
-  trap stop_behavior EXIT
+  cleanup_behavior() {
+    kill "$behavior_pid" 2>/dev/null || true
+    status=0
+    wait_with_deadline "$behavior_pid" "$behavior_term_seconds" || status=$?
+    if [ "$status" -eq 124 ]; then
+      kill -KILL "$behavior_pid" 2>/dev/null || true
+      wait_with_deadline "$behavior_pid" "$behavior_kill_seconds" || true
+    fi
+  }
+  stop_behavior() {
+    if ! kill "$behavior_pid" 2>/dev/null; then
+      echo "failed to terminate nginx" >&2
+      return 1
+    fi
+    status=0
+    wait_with_deadline "$behavior_pid" "$behavior_term_seconds" || status=$?
+    if [ "$status" -eq 124 ]; then
+      kill -KILL "$behavior_pid" 2>/dev/null || true
+      kill_status=0
+      wait_with_deadline "$behavior_pid" "$behavior_kill_seconds" \
+        || kill_status=$?
+      if [ "$kill_status" -eq 124 ]; then
+        echo "nginx remained live after bounded teardown" >&2
+        return 1
+      fi
+      echo "nginx required forced termination" >&2
+      return 1
+    fi
+    case "$status" in
+      0 | 143) ;;
+      *)
+        echo "nginx exited unexpectedly during teardown (status $status)" >&2
+        return 1
+        ;;
+    esac
+  }
+  trap 'cleanup_behavior || true' EXIT
   attempts=0
   while [ ! -S "$behavior_root/front.sock" ]; do
     attempts=$((attempts + 1))
@@ -409,6 +459,35 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
     fi
   done
   stop_behavior
+  trap - EXIT
+
+  stubborn_ready="$behavior_root/stubborn-ready"
+  (
+    trap : TERM
+    ${pkgs.coreutils}/bin/touch "$stubborn_ready"
+    while true; do
+      ${pkgs.coreutils}/bin/sleep 1
+    done
+  ) &
+  behavior_pid=$!
+  behavior_term_seconds=0.1
+  behavior_kill_seconds=1
+  trap 'cleanup_behavior || true' EXIT
+  attempts=0
+  while [ ! -e "$stubborn_ready" ]; do
+    attempts=$((attempts + 1))
+    test "$attempts" -lt 100
+    ${pkgs.coreutils}/bin/sleep 0.05
+  done
+  if stop_behavior; then
+    echo 'strict teardown accepted forced termination' >&2
+    exit 1
+  fi
+  if kill -0 "$behavior_pid" 2>/dev/null \
+    || jobs -p | ${pkgs.gnugrep}/bin/grep -Fxq "$behavior_pid"; then
+    echo 'strict teardown left its forced-termination fixture live' >&2
+    exit 1
+  fi
   trap - EXIT
 
   sed \
