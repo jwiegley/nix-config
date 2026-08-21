@@ -4838,15 +4838,17 @@ Current-byte independent re-audit confirms profile-scoped paths/IDs/admission, b
 ]
 #+end_src
 
-* TODO [#D] Replace deprecated stdenv.isAarch64 predicates
+* DONE [#D] Replace deprecated stdenv.isAarch64 predicates
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-enu4
 :LABELS:   []
 :ISSUE_TYPE: chore
 :CREATED:  [2026-08-20 Thu 16:14]
-:MODIFIED: [2026-08-20 Thu 16:14]
+:MODIFIED: [2026-08-20 Thu 20:58]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-20 Thu 20:58]
+:CLOSE_REASON: Replaced all six repository-local stdenv.isAarch64 predicates with stdenv.hostPlatform.isAarch64. Portable AI all-system evaluation passed with abort-on-warn, no deprecated predicates remain in executable Nix, and both Darwin workstation system derivations built successfully.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0

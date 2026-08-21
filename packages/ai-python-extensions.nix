@@ -71,7 +71,7 @@ in
 
       mlx = pprev.mlx.overridePythonAttrs (
         oldAttrs:
-        prev.lib.optionalAttrs (prev.stdenv.hostPlatform.isDarwin && prev.stdenv.isAarch64) (
+        prev.lib.optionalAttrs (prev.stdenv.hostPlatform.isDarwin && prev.stdenv.hostPlatform.isAarch64) (
           let
             pythonTag = "cp${pfinal.python.sourceVersion.major}${pfinal.python.sourceVersion.minor}";
             wheelSources = sources.mlx.artifacts // {

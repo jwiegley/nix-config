@@ -175,11 +175,15 @@ let
         requests
         tiktoken
       ]
-      ++ pkgs.lib.optionals (pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.isAarch64 && ps ? llm-mlx) [
-        llm-mlx
-      ]
       ++
-        pkgs.lib.optionals (pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.isAarch64 && ps ? mlx-speech)
+        pkgs.lib.optionals
+          (pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.hostPlatform.isAarch64 && ps ? llm-mlx)
+          [
+            llm-mlx
+          ]
+      ++
+        pkgs.lib.optionals
+          (pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.hostPlatform.isAarch64 && ps ? mlx-speech)
           [
             mlx-speech
           ]
@@ -192,7 +196,7 @@ let
       opt = optPkg pkgs;
       optMany = names: lib.concatMap opt names;
       agent = optAgent pkgs;
-      appleSilicon = pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.isAarch64;
+      appleSilicon = pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.hostPlatform.isAarch64;
       supportsGradio6 = aiPackagePolicy.supportsGradio6 pkgs.python313Packages;
     in
     [
@@ -444,7 +448,7 @@ in
       check = app "check" "check.sh" qualityDeps.all lintRoot;
       default = check;
     }
-    // lib.optionalAttrs (pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.isAarch64) {
+    // lib.optionalAttrs (pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.hostPlatform.isAarch64) {
       pi-classic-core-baseline = {
         type = "app";
         program = lib.getExe classicCoreBaseline;
@@ -527,7 +531,7 @@ in
       format = check "format" "format-check.sh" qualityDeps.format "";
       lint = check "lint" "lint.sh" qualityDeps.lint "";
     }
-    // lib.optionalAttrs (pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.isAarch64) {
+    // lib.optionalAttrs (pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.hostPlatform.isAarch64) {
       llm-mlx-plugin = pkgs.python3Packages.llm-mlx.passthru.tests.llm-plugin;
       mtplx-transformers-compat = pkgs.mtplx.passthru.tests.transformers-compat;
       pi-classic-core-fixtures = classicCoreFixtures;
