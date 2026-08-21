@@ -31,6 +31,7 @@ let
       hours = inputs.hours or null;
       emacsSrc = inputs.emacs-src or null;
     })
+    (import ../overlays/15-python-fixes.nix)
     (darwinOnly (import ../overlays/15-darwin-fixes.nix))
   ];
 

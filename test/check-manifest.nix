@@ -66,6 +66,7 @@ let
       omlx-proxy-boundary = behavioral darwinSystems false;
       pi-blackhole-policy = behavioral systems false;
       pi-node-ca = behavioral darwinSystems false;
+      python-package-fixes = behavioral systems true;
       samba-darwin-fixup = behavioral darwinSystems false;
       service-credentials = behavioral darwinSystems false;
       syncthing = behavioral systems false;
