@@ -27,6 +27,13 @@ let
     llama-swap = "http://prime-llama.invalid/custom/v1";
     omlx = "http://prime-omlx.invalid/custom/v1";
   };
+  projectProviderEndpoints = import ../../config/ai/renderers/project-provider-endpoints.nix {
+    inherit lib;
+  };
+  syntheticGalleryEndpointsByOwner = projectProviderEndpoints {
+    definitions = (import ../../config/ai/model-overrides.nix).localGalleryProviders;
+    endpoints = syntheticLocalModelEndpoints;
+  };
   syntheticRendered = render syntheticLocalModelEndpoints;
   routesDisabledRendered = render null;
   root = ".prime/agent";
@@ -149,6 +156,24 @@ assert builtins.all (
 ) agentPrompts;
 assert lib.hasInfix "stdio servers" compatibility;
 assert lib.hasInfix "secret-command-backed" compatibility;
+assert
+  syntheticGalleryEndpointsByOwner == {
+    llama-swap-provider = [
+      {
+        baseUrl = syntheticLocalModelEndpoints.llama-swap;
+        id = "llama-swap";
+        name = "llama-swap";
+      }
+    ];
+    omlx-provider = [
+      {
+        apiKey.env = "OMLX_API_KEY";
+        baseUrl = syntheticLocalModelEndpoints.omlx;
+        id = "omlx";
+        name = "oMLX";
+      }
+    ];
+  };
 runCommand "prime-agent-integration-check"
   {
     nativeBuildInputs = [
@@ -334,8 +359,32 @@ runCommand "prime-agent-integration-check"
       "managed settings changed during a mutable preference write",
     );
     const loader = new DefaultResourceLoader({ cwd: home, agentDir, settingsManager });
-    const expectedDiscoveryRequests = Object.values(${builtins.toJSON syntheticLocalModelEndpoints})
-      .map((endpoint) => endpoint + "/models")
+    const expectedEndpointsByOwner = ${builtins.toJSON syntheticGalleryEndpointsByOwner};
+    const expectedEndpoints = Object.values(expectedEndpointsByOwner).flat();
+    const providerSources = managedSettings.packages
+      .map((root) => ({ root, path: root + "/index.ts" }))
+      .filter(({ path }) => existsSync(path))
+      .map(({ root, path }) => ({ root, source: readFileSync(path, "utf8") }))
+      .filter(({ source }) => expectedEndpoints.some((endpoint) => source.includes(endpoint.baseUrl)));
+    check(
+      providerSources.length === Object.keys(expectedEndpointsByOwner).length,
+      "Prime managed-provider wrapper count differs",
+    );
+    for (const [owner, ownedEndpoints] of Object.entries(expectedEndpointsByOwner)) {
+      const source = providerSources.find(({ source }) =>
+        ownedEndpoints.every((endpoint) => source.includes(endpoint.baseUrl))
+      );
+      check(source !== undefined, "Prime wrapper is missing endpoints for " + owner);
+      const foreignEndpoints = expectedEndpoints.filter(
+        (endpoint) => !ownedEndpoints.some((owned) => owned.id === endpoint.id),
+      );
+      check(
+        foreignEndpoints.every((endpoint) => !source.source.includes(endpoint.baseUrl)),
+        "Prime wrapper received endpoints owned by another provider: " + owner,
+      );
+    }
+    const expectedDiscoveryRequests = expectedEndpoints
+      .map((endpoint) => endpoint.baseUrl + "/models")
       .sort();
     const discoveryRequests = [];
     const realFetch = globalThis.fetch;
@@ -391,9 +440,15 @@ runCommand "prime-agent-integration-check"
     }
     const providers = extensions.runtime.pendingProviderRegistrations.map((entry) => entry.name).sort();
     check(JSON.stringify(providers) === JSON.stringify(["llama-swap", "omlx"]), "local provider registrations differ");
-    for (const [name, endpoint] of Object.entries(${builtins.toJSON syntheticLocalModelEndpoints})) {
-      const registration = extensions.runtime.pendingProviderRegistrations.find((entry) => entry.name === name);
-      check(registration?.config.baseUrl === endpoint, "managed endpoint was not registered for " + name);
+    for (const endpoint of expectedEndpoints) {
+      const registration = extensions.runtime.pendingProviderRegistrations.find(
+        (entry) => entry.name === endpoint.id,
+      );
+      check(
+        registration?.config.baseUrl === endpoint.baseUrl
+          && registration?.config.name === endpoint.name,
+        "managed endpoint was not registered exactly for " + endpoint.id,
+      );
     }
     const mcpAdapterEntry = "${mcpExtensionRoot}/index.ts";
     const mcpAdapter = extensions.extensions.find(

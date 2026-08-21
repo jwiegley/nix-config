@@ -1,4 +1,8 @@
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  localProviderTransportPolicy ? import ../local-provider-transport.nix,
+}:
 
 {
   profile,
@@ -26,6 +30,7 @@ let
   localModelDiscovery = localModelDiscoveryEndpoints != null;
   inherit (profile) hermesRoute;
   modelOverrides = import ../model-overrides.nix;
+  projectProviderEndpoints = import ./project-provider-endpoints.nix { inherit lib; };
   hermesPassCommand = lib.escapeShellArgs [
     "${pkgs.coreutils}/bin/env"
     "-u"
@@ -69,10 +74,18 @@ let
   inherit (modelOverrides) nativeProviders;
   # Slow local inference owns its budgets; the global client defaults remain ordinary.
   localProviderTransport = {
-    requestTimeoutMs = 7200000;
-    idleTimeoutMs = 7200000;
+    requestTimeoutMs = localProviderTransportPolicy.client.requestTimeoutMilliseconds;
+    idleTimeoutMs = localProviderTransportPolicy.client.streamIdleTimeoutMilliseconds;
   };
   localProviderOverrides = modelOverrides.pi.localProviderOverrides;
+  galleryEndpointsByOwner =
+    if localModelDiscovery then
+      projectProviderEndpoints {
+        definitions = modelOverrides.pi.galleryProviders;
+        endpoints = localModelDiscoveryEndpoints;
+      }
+    else
+      { };
   hermesProvider = {
     hermes = {
       api = "openai-completions";
@@ -95,9 +108,7 @@ let
   gallerySource = pkgs.writeText "pi-managed-gallery.ts" ''
     import { createNixGallery } from ${builtins.toJSON "${pkgs.pi-gallery}/share/pi-gallery/loader.ts"};
 
-    export default createNixGallery(${
-      builtins.toJSON (if localModelDiscovery then localModelDiscoveryEndpoints else { })
-    });
+    export default createNixGallery(${builtins.toJSON galleryEndpointsByOwner});
   '';
   galleryRoot = pkgs.runCommand "pi-managed-gallery" { } ''
     mkdir -p "$out"
@@ -207,6 +218,11 @@ assert localModelDiscovery == (profile.platform == "darwin");
 assert
   !localModelDiscovery
   || builtins.attrNames localModelDiscoveryEndpoints == builtins.attrNames localProviderOverrides;
+assert
+  !localModelDiscovery
+  ||
+    builtins.attrNames localModelDiscoveryEndpoints
+    == builtins.attrNames modelOverrides.pi.galleryProviders;
 assert builtins.isBool hermesRoute;
 assert builtins.isString homeDirectory;
 assert xdgConfigHome == "${homeDirectory}/.config";

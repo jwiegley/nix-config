@@ -52,9 +52,13 @@ remains consumer-owned.
 The managed Pi profile makes the same complete 26-member extension gallery
 available on every host. Pi Lens and Pi Mem remain packaged and projected but are
 excluded from automatic registration while their startup costs are isolated.
-Darwin registers the two loopback discovery providers automatically; fixed
-local-provider overrides and the synthetic router remain a separate catalog
-capability, presently enabled only for Hera.
+Darwin registers loopback `llama-swap` plus the stable `omlx-hera` and
+`omlx-clio` discovery providers automatically. Both workstations reach both oMLX
+providers through authenticated TLS, with distinct provider-specific credentials
+loaded from Keychain into the runtime environment. Fixed provider overrides and
+the synthetic router remain a separate Hera-only capability; the router targets
+`omlx-hera`. Linux retains the provider packages and router without registering
+them automatically.
 
 The complete ownership and data-flow contract is maintained in
 [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md).

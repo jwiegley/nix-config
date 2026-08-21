@@ -20,14 +20,14 @@ export interface LocalProviderConfig {
 	apiKey: string;
 }
 
-export interface ManagedLocalModelEndpoint {
-	baseUrl: string;
-	apiKey: { env: string };
+export interface LocalModelEndpoint {
+	readonly id: string;
+	readonly name: string;
+	readonly baseUrl: string;
+	readonly apiKey?: { readonly env: string };
 }
 
-export type LocalModelEndpoints = Readonly<
-	Record<string, string | ManagedLocalModelEndpoint>
->;
+export type LocalModelEndpoints = readonly LocalModelEndpoint[];
 
 interface ModelEntry {
 	id?: unknown;

@@ -42,11 +42,38 @@ in
     llama-swap = llamaSwapOverrides;
     omlx = omlxOverrides;
   };
+  # Prime consumes these local identities through the same owner projection as
+  # Pi; the adapter never rediscovers ownership or presentation from an ID.
+  localGalleryProviders = {
+    llama-swap = {
+      owner = "llama-swap-provider";
+      name = "llama-swap";
+    };
+    omlx = {
+      owner = "omlx-provider";
+      name = "oMLX";
+      apiKey.env = "OMLX_API_KEY";
+    };
+  };
 
   # Pi discovery names are globally stable provider identities. Keep their
-  # final names and model policy in data so the renderer projects whatever
-  # complete provider set the catalog validates.
+  # owner, final names, and model policy in data so the renderer projects
+  # whatever complete provider set the catalog validates.
   pi = {
+    galleryProviders = {
+      llama-swap = {
+        owner = "llama-swap-provider";
+        name = "llama-swap";
+      };
+      omlx-clio = {
+        owner = "omlx-provider";
+        name = "oMLX Clio";
+      };
+      omlx-hera = {
+        owner = "omlx-provider";
+        name = "oMLX Hera";
+      };
+    };
     localProviderOverrides = {
       llama-swap = llamaSwapOverrides;
       omlx-clio = { };

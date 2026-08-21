@@ -6,6 +6,7 @@
 let
   modelOverrides = import ./model-overrides.nix;
   omlxCredentialPolicy = import ./omlx-credential-policy.nix;
+  envReference = import ./env-reference.nix;
   managedStdio = import ./managed-stdio.nix { inherit lib; };
   inherit (managedStdio) typedEnvironment;
   manageStdioTransport = managedStdio.normalize;
@@ -1195,8 +1196,8 @@ let
 
   # Structural recognition is shared with the renderers (env-reference.nix);
   # the catalog additionally requires the name to be on the declared roster.
-  isEnvReference =
-    value: (import ./env-reference.nix).isTypedEnv value && builtins.elem value.env declaredEnvNames;
+  isTypedEnvReference = value: envReference.isTypedEnv value && validEnvName value.env;
+  isEnvReference = value: isTypedEnvReference value && builtins.elem value.env declaredEnvNames;
 
   containsRenderedReference =
     value:
@@ -1311,6 +1312,55 @@ let
         " "
       ])
       && !(containsRenderedReference value);
+
+  validGalleryProviderDefinitions =
+    definitions:
+    builtins.isAttrs definitions
+    && builtins.all (
+      definition:
+      builtins.isAttrs definition
+      && builtins.all (
+        name:
+        builtins.elem name [
+          "apiKey"
+          "name"
+          "owner"
+        ]
+      ) (builtins.attrNames definition)
+      && validItemName (definition.owner or null)
+      && builtins.isString (definition.name or null)
+      && definition.name != ""
+      && (!(definition ? apiKey) || isTypedEnvReference definition.apiKey)
+    ) (builtins.attrValues definitions);
+  validLocalModelEndpoints =
+    endpoints:
+    builtins.isAttrs endpoints
+    &&
+      builtins.attrNames endpoints == [
+        "llama-swap"
+        "omlx"
+      ]
+    && builtins.all (validUrl true) (builtins.attrValues endpoints);
+  validPiModelDiscoveryEndpoints =
+    endpoints:
+    builtins.isAttrs endpoints
+    && builtins.attrNames endpoints == [ "llama-swap" ] ++ map (host: "omlx-${host}") workstationHosts
+    && validUrl true endpoints.llama-swap
+    && builtins.all (
+      host:
+      let
+        endpoint = endpoints."omlx-${host}";
+      in
+      builtins.isAttrs endpoint
+      &&
+        builtins.attrNames endpoint == [
+          "apiKey"
+          "baseUrl"
+        ]
+      && validUrl false endpoint.baseUrl
+      && isTypedEnvReference endpoint.apiKey
+      && endpoint.apiKey.env == omlxPiCredentialEnvironmentByHost.${host}
+    ) workstationHosts;
 
   approvedLiteralEnvironment = {
     DISABLED_TOOLS = [ "testgen,secaudit,docgen,tracer" ];
@@ -1565,45 +1615,35 @@ let
       endpointChecks = lib.mapAttrsToList (
         host: endpoints:
         ensure (
-          localModelEndpointsByHost == catalogLocalModelEndpointsByHost
-          && builtins.elem host hosts
-          && builtins.isAttrs endpoints
-          &&
-            builtins.attrNames endpoints == [
-              "llama-swap"
-              "omlx"
-            ]
-          && builtins.all (validUrl true) (builtins.attrValues endpoints)
+          builtins.elem host hosts
+          && validLocalModelEndpoints endpoints
+          && localModelEndpointsByHost == catalogLocalModelEndpointsByHost
         ) "invalid local model endpoints for ${host}"
       ) localModelEndpointsByHost;
+      galleryProviderChecks = [
+        (ensure (
+          validGalleryProviderDefinitions modelOverrides.localGalleryProviders
+          &&
+            builtins.attrNames modelOverrides.localGalleryProviders
+            == builtins.attrNames modelOverrides.localProviderOverrides
+          && validGalleryProviderDefinitions modelOverrides.pi.galleryProviders
+          &&
+            builtins.attrNames modelOverrides.pi.galleryProviders
+            == builtins.attrNames modelOverrides.pi.localProviderOverrides
+        ) "invalid local gallery provider definitions")
+      ];
       piModelDiscoveryChecks = [
         (ensure (
-          piModelDiscoveryEndpoints == catalogPiModelDiscoveryEndpoints
-          &&
-            builtins.attrNames piModelDiscoveryEndpoints
-            == [ "llama-swap" ] ++ map (host: "omlx-${host}") workstationHosts
+          validPiModelDiscoveryEndpoints piModelDiscoveryEndpoints
+          && piModelDiscoveryEndpoints == catalogPiModelDiscoveryEndpoints
           &&
             builtins.attrNames modelOverrides.pi.localProviderOverrides
             == builtins.attrNames piModelDiscoveryEndpoints
+          &&
+            builtins.attrNames modelOverrides.pi.galleryProviders
+            == builtins.attrNames piModelDiscoveryEndpoints
           && builtins.hasAttr modelOverrides.pi.router.provider piModelDiscoveryEndpoints
           && piModelDiscoveryEndpoints.llama-swap == workstationLocalModelEndpoints.llama-swap
-          && validUrl true piModelDiscoveryEndpoints.llama-swap
-          && builtins.all (
-            host:
-            let
-              endpoint = piModelDiscoveryEndpoints."omlx-${host}";
-            in
-            builtins.isAttrs endpoint
-            &&
-              builtins.attrNames endpoint == [
-                "apiKey"
-                "baseUrl"
-              ]
-            && validUrl false endpoint.baseUrl
-            && builtins.isAttrs endpoint.apiKey
-            && builtins.attrNames endpoint.apiKey == [ "env" ]
-            && endpoint.apiKey.env == omlxPiCredentialEnvironmentByHost.${host}
-          ) workstationHosts
         ) "invalid Pi model discovery endpoints")
       ];
       recordingTranscriptionChecks = [
@@ -1707,6 +1747,7 @@ let
         ++ agentChecks
         ++ settingsChecks
         ++ endpointChecks
+        ++ galleryProviderChecks
         ++ piModelDiscoveryChecks
         ++ recordingTranscriptionChecks
         ++ profileChecks
@@ -1779,5 +1820,8 @@ in
     sharedSkillClients
     sharedSkillsFor
     validate
+    validGalleryProviderDefinitions
+    validLocalModelEndpoints
+    validPiModelDiscoveryEndpoints
     ;
 }

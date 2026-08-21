@@ -6,11 +6,12 @@
 let
   inherit (pkgs) lib;
   configuredPkgs = darwinConfigurations.hera.pkgs;
-  configFor =
-    settings:
+  configForWithTransportPolicy =
+    localProviderTransportPolicy: settings:
     (lib.evalModules {
       specialArgs = {
         hostname = "hera";
+        inherit localProviderTransportPolicy;
         pkgs = configuredPkgs;
       };
       modules = [
@@ -37,7 +38,11 @@ let
         { johnw.omlxProxy = settings; }
       ];
     }).config;
+  configFor = configForWithTransportPolicy localProviderTransport;
   proxyAgentFor = settings: (configFor settings).launchd.user.agents.llama-swap-https-proxy or null;
+  proxyAgentForWithTransportPolicy =
+    policy: settings:
+    (configForWithTransportPolicy policy settings).launchd.user.agents.llama-swap-https-proxy or null;
   proxyAssertionsFor =
     settings:
     builtins.filter (entry: lib.hasPrefix "oMLX " entry.message) (configFor settings).assertions;
@@ -81,6 +86,32 @@ let
   heraScript = pkgs.writeText "omlx-proxy-hera-script" darwinConfigurations.hera.config.launchd.user.agents.llama-swap-https-proxy.script;
   clioScript = pkgs.writeText "omlx-proxy-clio-script" darwinConfigurations.clio.config.launchd.user.agents.llama-swap-https-proxy.script;
   omlxScript = (configFor { }).launchd.user.agents.omlx.script;
+  localProviderTransport = import ../../config/ai/local-provider-transport.nix;
+  syntheticLocalProviderTransport = {
+    client = {
+      requestTimeoutMilliseconds = 1111000;
+      streamIdleTimeoutMilliseconds = 2222000;
+    };
+    proxy = {
+      upstreamSendTimeoutSeconds = 3333;
+      upstreamReadTimeoutSeconds = 4444;
+      downstreamSendTimeoutSeconds = 5555;
+    };
+  };
+  syntheticTransportScript = pkgs.writeText "omlx-proxy-synthetic-transport-script" (proxyAgentForWithTransportPolicy syntheticLocalProviderTransport validSettings)
+  .script;
+  behaviorBackendsTemplate = pkgs.writeText "omlx-proxy-behavior-backends.conf" ''
+    server {
+      listen unix:@BEHAVIOR_ROOT@/omlx.sock;
+      access_log off;
+      location / { return 200 "omlx:$http_authorization:$uri"; }
+    }
+    server {
+      listen unix:@BEHAVIOR_ROOT@/legacy.sock;
+      access_log off;
+      location / { return 200 "legacy:$http_authorization:$uri"; }
+    }
+  '';
 in
 assert builtins.length (proxyAssertionsFor { }) == 5;
 assert builtins.all (entry: entry.assertion) (proxyAssertionsFor { });
@@ -194,17 +225,28 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
     ' "$1"
   }
 
+  reject_fixed() {
+    if grep -Fq -- "$1" "$2"; then
+      echo 'generated proxy configuration contains a forbidden directive' >&2
+      exit 1
+    fi
+  }
+
   valid_config=$(nginx_config ${validScript})
   restricted_config=$(nginx_config ${restrictedScript})
   hera_config=$(nginx_config ${heraScript})
   clio_config=$(nginx_config ${clioScript})
+  synthetic_transport_config=$(nginx_config ${syntheticTransportScript})
   test -f "$valid_config"
   test -f "$restricted_config"
   test -f "$hera_config"
   test -f "$clio_config"
+  test -f "$synthetic_transport_config"
 
   grep -F 'listen 192.0.2.10:8443 ssl;' "$valid_config"
-  grep -F 'location /v1/' "$valid_config"
+  grep -F 'location = /v1' "$valid_config"
+  grep -F 'location ^~ /v1/' "$valid_config"
+  grep -F 'location ~ ^/v1(?:[^/]|$)' "$valid_config"
   grep -F 'allow 192.0.2.20/32;' "$valid_config"
   grep -F 'allow 2001:db8::20/128;' "$valid_config"
   grep -F 'deny all;' "$valid_config"
@@ -212,8 +254,14 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
   grep -F 'proxy_http_version 1.1;' "$valid_config"
   grep -F 'proxy_buffering off;' "$valid_config"
   grep -F 'proxy_set_header Authorization $http_authorization;' "$valid_config"
-  ! grep -F 'proxy_set_header Authorization "";' "$valid_config"
-  ! grep -F 'auth_basic' "$valid_config"
+  test "$(grep -Fc 'proxy_set_header Authorization "";' "$valid_config")" -eq 1
+  grep -F 'proxy_send_timeout ${toString localProviderTransport.proxy.upstreamSendTimeoutSeconds};' "$valid_config"
+  grep -F 'proxy_read_timeout ${toString localProviderTransport.proxy.upstreamReadTimeoutSeconds};' "$valid_config"
+  grep -F 'send_timeout ${toString localProviderTransport.proxy.downstreamSendTimeoutSeconds};' "$valid_config"
+  grep -F 'proxy_send_timeout 3333;' "$synthetic_transport_config"
+  grep -F 'proxy_read_timeout 4444;' "$synthetic_transport_config"
+  grep -F 'send_timeout 5555;' "$synthetic_transport_config"
+  reject_fixed 'auth_basic' "$valid_config"
 
   grep -F 'ssl_certificate /Users/test/omlx-test.crt;' "$valid_config"
   grep -F 'ssl_certificate_key /Users/test/omlx-test.key;' "$valid_config"
@@ -221,8 +269,9 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
   grep -F 'proxy_ssl_verify on;' "$valid_config"
   grep -F 'proxy_ssl_server_name on;' "$valid_config"
   grep -F 'allow ${validSettings.listenAddress};' "$valid_config"
-  grep -F 'return 404;' "$restricted_config"
-  ! grep -F 'proxy_ssl_trusted_certificate' "$restricted_config"
+  test "$(grep -Fc 'return 404;' "$valid_config")" -eq 2
+  test "$(grep -Fc 'return 404;' "$restricted_config")" -eq 3
+  reject_fixed 'proxy_ssl_trusted_certificate' "$restricted_config"
 
   grep -F '/bin/omlx-proxy-key-preflight' ${validScript}
   grep -F 'nginx -t -c' ${validScript}
@@ -244,20 +293,26 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
     grep -F "listen $listen:8443 ssl;" "$config"
     grep -F "allow $listen;" "$config"
     grep -F "allow $peer/32;" "$config"
-    grep -F 'location /v1/' "$config"
+    grep -F 'location = /v1' "$config"
+    grep -F 'location ^~ /v1/' "$config"
+    grep -F 'location ~ ^/v1(?:[^/]|$)' "$config"
     grep -F 'proxy_pass http://127.0.0.1:8000;' "$config"
     grep -F 'proxy_http_version 1.1;' "$config"
     grep -F 'proxy_buffering off;' "$config"
     grep -F 'proxy_set_header Authorization $http_authorization;' "$config"
-    ! grep -F 'proxy_set_header Authorization "";' "$config"
+    grep -F 'proxy_send_timeout ${toString localProviderTransport.proxy.upstreamSendTimeoutSeconds};' "$config"
+    grep -F 'proxy_read_timeout ${toString localProviderTransport.proxy.upstreamReadTimeoutSeconds};' "$config"
+    grep -F 'send_timeout ${toString localProviderTransport.proxy.downstreamSendTimeoutSeconds};' "$config"
     if [ "$host" = hera ]; then
       grep -F 'proxy_ssl_trusted_certificate' "$config"
       grep -F 'proxy_ssl_verify on;' "$config"
       grep -F 'proxy_ssl_server_name on;' "$config"
-      ! grep -F 'return 404;' "$config"
+      test "$(grep -Fc 'proxy_set_header Authorization "";' "$config")" -eq 1
+      test "$(grep -Fc 'return 404;' "$config")" -eq 2
     else
-      grep -F 'return 404;' "$config"
-      ! grep -F 'proxy_ssl_trusted_certificate' "$config"
+      test "$(grep -Fc 'return 404;' "$config")" -eq 3
+      reject_fixed 'proxy_set_header Authorization "";' "$config"
+      reject_fixed 'proxy_ssl_trusted_certificate' "$config"
     fi
   done
 
@@ -277,6 +332,72 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
     "$valid_config" > "$nginx_test/nginx.conf"
   ${pkgs.nginx}/bin/nginx -t -c "$nginx_test/nginx.conf" \
     -e "$nginx_test/error.log" >/dev/null
+
+  behavior_root="$nginx_test/behavior"
+  mkdir -p "$behavior_root/client_body"
+  ${pkgs.gnused}/bin/sed \
+    -e "s#$nginx_test#$behavior_root#g" \
+    -e "s#listen localhost:18443 ssl;#listen unix:$behavior_root/front.sock ssl;#" \
+    -e "s#proxy_pass http://[^;]*:8000;#proxy_pass http://unix:$behavior_root/omlx.sock:;#" \
+    -e "s#proxy_pass http://localhost:8001;#proxy_pass http://unix:$behavior_root/legacy.sock:;#" \
+    -e 's/allow [^;]*;/allow all;/' \
+    "$nginx_test/nginx.conf" > "$behavior_root/base.conf"
+  cp "$nginx_test/server.crt" "$behavior_root/server.crt"
+  cp "$nginx_test/server.key" "$behavior_root/server.key"
+  ${pkgs.gnused}/bin/sed \
+    -e "s#@BEHAVIOR_ROOT@#$behavior_root#g" \
+    ${behaviorBackendsTemplate} > "$behavior_root/backends.conf"
+  ${pkgs.gawk}/bin/awk -v include_file="$behavior_root/backends.conf" '
+    { lines[NR] = $0 }
+    END {
+      for (line = 1; line < NR; line++) print lines[line]
+      print "  include " include_file ";"
+      print lines[NR]
+    }
+  ' "$behavior_root/base.conf" > "$behavior_root/nginx.conf"
+  ${pkgs.nginx}/bin/nginx -t -c "$behavior_root/nginx.conf" \
+    -e "$behavior_root/error.log" >/dev/null
+  ${pkgs.nginx}/bin/nginx -c "$behavior_root/nginx.conf" \
+    -e "$behavior_root/error.log" -g 'daemon off;' &
+  behavior_pid=$!
+  trap 'kill "$behavior_pid" 2>/dev/null || true; wait "$behavior_pid" 2>/dev/null || true' EXIT
+  attempts=0
+  while [ ! -S "$behavior_root/front.sock" ]; do
+    attempts=$((attempts + 1))
+    test "$attempts" -lt 100
+    ${pkgs.coreutils}/bin/sleep 0.05
+  done
+  api_body=$(${pkgs.curl}/bin/curl --silent --show-error --insecure \
+    --unix-socket "$behavior_root/front.sock" \
+    -H 'Authorization: Bearer behavioral-sentinel' \
+    https://localhost/v1/models)
+  if [ "$api_body" != 'omlx:Bearer behavioral-sentinel:/v1/models' ]; then
+    echo 'oMLX route did not preserve its bearer and path' >&2
+    exit 1
+  fi
+  legacy_body=$(${pkgs.curl}/bin/curl --silent --show-error --insecure \
+    --unix-socket "$behavior_root/front.sock" \
+    -H 'Authorization: Bearer behavioral-sentinel' \
+    https://localhost/chat)
+  if [ "$legacy_body" != 'legacy::/chat' ]; then
+    echo 'legacy route did not clear authorization' >&2
+    exit 1
+  fi
+  for near_miss in /v1 /v1models; do
+    status=$(${pkgs.curl}/bin/curl --silent --show-error --insecure \
+      --unix-socket "$behavior_root/front.sock" \
+      -H 'Authorization: Bearer behavioral-sentinel' \
+      --output /dev/null --write-out '%{http_code}' \
+      "https://localhost$near_miss")
+    if [ "$status" != 404 ]; then
+      printf 'near-miss API route did not fail closed: %s returned %s\n' \
+        "$near_miss" "$status" >&2
+      exit 1
+    fi
+  done
+  kill "$behavior_pid"
+  wait "$behavior_pid"
+  trap - EXIT
 
   sed \
     -e "s#/Users/test/omlx-test.crt#$nginx_test/server.crt#g" \

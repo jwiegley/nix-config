@@ -216,6 +216,12 @@ let
     inherit lib;
     resources = pkgs.agent-resources;
   };
+  expectedPiGalleryEndpointsByOwner =
+    (import ../../config/ai/renderers/project-provider-endpoints.nix { inherit lib; })
+      {
+        definitions = (import ../../config/ai/model-overrides.nix).pi.galleryProviders;
+        endpoints = aiCatalog.piModelDiscoveryEndpoints;
+      };
   recordingTranscriptionPath = ".config/transcribe/llm-route.json";
   recordingTranscriptionRoute = aiCatalog.recordingTranscriptionRoutesByHost.hera;
   heraRecordingTranscriptionSource =
@@ -746,10 +752,14 @@ pkgs.runCommand "host-behavior" { } ''
     and (.base_url | type == "string")
     and ([keys[] | ascii_downcase | test("credential|key|token|secret")] | any | not)
   ' ${heraRecordingTranscriptionSource} >/dev/null
-  grep -F -- ${lib.escapeShellArg "export default createNixGallery(${builtins.toJSON aiCatalog.piModelDiscoveryEndpoints});"} ${gallerySourceFor "clio"} >/dev/null
-  grep -F -- ${lib.escapeShellArg "export default createNixGallery(${builtins.toJSON aiCatalog.piModelDiscoveryEndpoints});"} ${gallerySourceFor "hera"} >/dev/null
-  ! grep -F '/usr/bin/security find-generic-password' ${clioCodexPackage}/bin/codex
-  ! grep -F 'nix-config.omlx-clio-client' ${clioCodexPackage}/bin/codex
+  grep -F -- ${lib.escapeShellArg "export default createNixGallery(${builtins.toJSON expectedPiGalleryEndpointsByOwner});"} ${gallerySourceFor "clio"} >/dev/null
+  grep -F -- ${lib.escapeShellArg "export default createNixGallery(${builtins.toJSON expectedPiGalleryEndpointsByOwner});"} ${gallerySourceFor "hera"} >/dev/null
+  if grep -Fq '/usr/bin/security find-generic-password' ${clioCodexPackage}/bin/codex; then
+    exit 1
+  fi
+  if grep -Fq 'nix-config.omlx-clio-client' ${clioCodexPackage}/bin/codex; then
+    exit 1
+  fi
   grep -F '/usr/bin/security find-generic-password' ${heraCodexPackage}/bin/codex >/dev/null
   grep -F 'nix-config.omlx-hera-client' ${heraCodexPackage}/bin/codex >/dev/null
   grep -F '/usr/bin/security find-generic-password' ${heraPrimePackage}/bin/prime-agent >/dev/null

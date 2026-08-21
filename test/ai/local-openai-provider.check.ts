@@ -64,7 +64,41 @@ try {
 	warningProcess.env.OMLX_API_KEY = "gallery-test-key";
 	warningProcess.env.OMLX_CLIO_API_KEY = "clio-gallery-test-key";
 	warningProcess.env.OMLX_HERA_API_KEY = "hera-gallery-test-key";
+	const llamaSwapEndpoints = [
+		{
+			id: "llama-swap",
+			name: "llama-swap",
+			baseUrl: "http://localhost:8080/v1",
+		},
+	] as const;
+	const omlxEndpoints = [
+		{
+			id: "omlx",
+			name: "oMLX",
+			baseUrl: "http://localhost:8000/v1",
+			apiKey: { env: "OMLX_API_KEY" },
+		},
+	] as const;
 	const requests: Array<{ url: string; authorization: string | null }> = [];
+	const omittedProviders = new Map<string, ProviderConfig>();
+	let omittedRequests = 0;
+	globalThis.fetch = (() => {
+		omittedRequests += 1;
+		throw new Error("omitted endpoints attempted discovery");
+	}) as typeof fetch;
+	const omittedPi = {
+		registerProvider: (id: string, config: ProviderConfig) =>
+			omittedProviders.set(id, config),
+	};
+	await llamaSwap(omittedPi);
+	await omlx(omittedPi);
+	expectEqual([...omittedProviders.keys()], [], "omitted endpoint providers");
+	expectEqual(omittedRequests, 0, "omitted endpoint requests");
+	await llamaSwap(omittedPi, []);
+	await omlx(omittedPi, []);
+	expectEqual([...omittedProviders.keys()], [], "empty endpoint providers");
+	expectEqual(omittedRequests, 0, "empty endpoint requests");
+
 	globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
 		const url = String(input);
 		const headers = new Headers(init?.headers);
@@ -175,8 +209,8 @@ try {
 		registerProvider: (id: string, config: ProviderConfig) =>
 			providers.set(id, config),
 	};
-	await llamaSwap(pi);
-	await omlx(pi);
+	await llamaSwap(pi, llamaSwapEndpoints);
+	await omlx(pi, omlxEndpoints);
 
 	expectEqual(
 		requests,
@@ -192,37 +226,47 @@ try {
 		],
 		"provider requests",
 	);
-	const managedEndpoints = {
-		"llama-swap": "http://catalog.test:8080/custom/v1",
-		"omlx-clio": {
+	const managedLlamaSwapEndpoints = [
+		{
+			id: "llama-swap",
+			name: "Typed llama-swap name",
+			baseUrl: "http://catalog.test:8080/custom/v1",
+		},
+	] as const;
+	const managedOmlxEndpoints = [
+		{
+			id: "omlx-clio",
+			name: "Typed Clio oMLX name",
 			baseUrl: "http://catalog.test:18000/custom/v1",
 			apiKey: { env: "OMLX_CLIO_API_KEY" },
 		},
-		"omlx-hera": {
+		{
+			id: "omlx-hera",
+			name: "Typed Hera oMLX name",
 			baseUrl: "http://catalog.test:28000/custom/v1",
 			apiKey: { env: "OMLX_HERA_API_KEY" },
 		},
-	};
+	] as const;
 	const managedProviders = new Map<string, ProviderConfig>();
 	const managedPi = {
 		registerProvider: (id: string, config: ProviderConfig) =>
 			managedProviders.set(id, config),
 	};
-	await llamaSwap(managedPi, managedEndpoints);
-	await omlx(managedPi, managedEndpoints);
+	await llamaSwap(managedPi, managedLlamaSwapEndpoints);
+	await omlx(managedPi, managedOmlxEndpoints);
 	expectEqual(
 		requests.slice(2),
 		[
 			{
-				url: `${managedEndpoints["llama-swap"]}/models`,
+				url: `${managedLlamaSwapEndpoints[0].baseUrl}/models`,
 				authorization: "Bearer dummy-key",
 			},
 			{
-				url: `${managedEndpoints["omlx-clio"].baseUrl}/models`,
+				url: `${managedOmlxEndpoints[0].baseUrl}/models`,
 				authorization: "Bearer clio-gallery-test-key",
 			},
 			{
-				url: `${managedEndpoints["omlx-hera"].baseUrl}/models`,
+				url: `${managedOmlxEndpoints[1].baseUrl}/models`,
 				authorization: "Bearer hera-gallery-test-key",
 			},
 		],
@@ -230,18 +274,43 @@ try {
 	);
 	expectEqual(
 		managedProviders.get("llama-swap")?.baseUrl,
-		managedEndpoints["llama-swap"],
+		managedLlamaSwapEndpoints[0].baseUrl,
 		"managed llama-swap base URL",
 	);
 	expectEqual(
 		managedProviders.get("omlx-clio")?.baseUrl,
-		managedEndpoints["omlx-clio"].baseUrl,
+		managedOmlxEndpoints[0].baseUrl,
 		"managed Clio oMLX base URL",
 	);
 	expectEqual(
 		managedProviders.get("omlx-hera")?.baseUrl,
-		managedEndpoints["omlx-hera"].baseUrl,
+		managedOmlxEndpoints[1].baseUrl,
 		"managed Hera oMLX base URL",
+	);
+	expectEqual(
+		managedOmlxEndpoints.map(({ id }) => ({
+			id,
+			name: managedProviders.get(id)?.name,
+			apiKey: managedProviders.get(id)?.apiKey,
+		})),
+		[
+			{
+				id: "omlx-clio",
+				name: "Typed Clio oMLX name",
+				apiKey: "clio-gallery-test-key",
+			},
+			{
+				id: "omlx-hera",
+				name: "Typed Hera oMLX name",
+				apiKey: "hera-gallery-test-key",
+			},
+		],
+		"typed oMLX names and credentials",
+	);
+	expectEqual(
+		managedProviders.get("llama-swap")?.name,
+		"Typed llama-swap name",
+		"typed llama-swap name",
 	);
 	expectEqual(
 		[...managedProviders.keys()],
@@ -360,7 +429,7 @@ try {
 		modelsPath: null,
 		refreshOnCreate: false,
 	});
-	await omlx(dynamicRuntime);
+	await omlx(dynamicRuntime, omlxEndpoints);
 	await dynamicRuntime.refresh({ allowNetwork: false, providers: ["omlx"] });
 	expectEqual(
 		dynamicRuntime.getModels("omlx").map((model) => model.id),
@@ -384,7 +453,9 @@ try {
 	const privateLocatorSentinel = "private-locator-sentinel";
 	globalThis.fetch = (() =>
 		Promise.reject(
-			new Error(`request to ${privateLocatorSentinel} exposed transport details`),
+			new Error(
+				`request to ${privateLocatorSentinel} exposed transport details`,
+			),
 		)) as typeof fetch;
 	const sanitizedRefresh = await dynamicRuntime.refresh({
 		allowNetwork: true,
@@ -577,17 +648,18 @@ try {
 		warnings.push(typeof warning === "string" ? warning : warning.message);
 	};
 	let failedProvider: ProviderConfig | undefined;
-	await omlx({
-		registerProvider: (_id: string, config: ProviderConfig) => {
-			failedProvider = config;
+	await omlx(
+		{
+			registerProvider: (_id: string, config: ProviderConfig) => {
+				failedProvider = config;
+			},
 		},
-	});
+		omlxEndpoints,
+	);
 	expectEqual(failedProvider?.models, [], "failed provider catalog");
 	expectEqual(
 		warnings,
-		[
-			"[omlx] Model discovery failed: HTTP 503",
-		],
+		["[omlx] Model discovery failed: HTTP 503"],
 		"failure warning",
 	);
 	expect(failedBodyCancelled, "failed response body was not cancelled");
@@ -615,11 +687,14 @@ try {
 		)) as typeof fetch;
 	warnings.length = 0;
 	let boundaryProvider: ProviderConfig | undefined;
-	await omlx({
-		registerProvider: (_id: string, config: ProviderConfig) => {
-			boundaryProvider = config;
+	await omlx(
+		{
+			registerProvider: (_id: string, config: ProviderConfig) => {
+				boundaryProvider = config;
+			},
 		},
-	});
+		omlxEndpoints,
+	);
 	expectEqual(
 		registeredModels(boundaryProvider, "response byte boundary").map(
 			(model) => model.id,
@@ -653,17 +728,18 @@ try {
 	}) as typeof fetch;
 	warnings.length = 0;
 	let declaredProvider: ProviderConfig | undefined;
-	await omlx({
-		registerProvider: (_id: string, config: ProviderConfig) => {
-			declaredProvider = config;
+	await omlx(
+		{
+			registerProvider: (_id: string, config: ProviderConfig) => {
+				declaredProvider = config;
+			},
 		},
-	});
+		omlxEndpoints,
+	);
 	expectEqual(declaredProvider?.models, [], "declared oversized catalog");
 	expectEqual(
 		warnings,
-		[
-			"[omlx] Model discovery failed: request failed",
-		],
+		["[omlx] Model discovery failed: request failed"],
 		"declared oversized warning",
 	);
 	expect(
@@ -700,17 +776,18 @@ try {
 	}) as typeof fetch;
 	warnings.length = 0;
 	let streamedProvider: ProviderConfig | undefined;
-	await omlx({
-		registerProvider: (_id: string, config: ProviderConfig) => {
-			streamedProvider = config;
+	await omlx(
+		{
+			registerProvider: (_id: string, config: ProviderConfig) => {
+				streamedProvider = config;
+			},
 		},
-	});
+		omlxEndpoints,
+	);
 	expectEqual(streamedProvider?.models, [], "streamed oversized catalog");
 	expectEqual(
 		warnings,
-		[
-			"[omlx] Model discovery failed: request failed",
-		],
+		["[omlx] Model discovery failed: request failed"],
 		"streamed oversized warning",
 	);
 	expect(streamedBodyCancelled, "streamed oversized body was not cancelled");
@@ -727,11 +804,14 @@ try {
 		Promise.resolve(Response.json({ data: boundaryEntries }))) as typeof fetch;
 	warnings.length = 0;
 	let entryBoundaryProvider: ProviderConfig | undefined;
-	await omlx({
-		registerProvider: (_id: string, config: ProviderConfig) => {
-			entryBoundaryProvider = config;
+	await omlx(
+		{
+			registerProvider: (_id: string, config: ProviderConfig) => {
+				entryBoundaryProvider = config;
+			},
 		},
-	});
+		omlxEndpoints,
+	);
 	expectEqual(
 		registeredModels(entryBoundaryProvider, "model entry boundary").length,
 		MAX_DISCOVERY_MODEL_ENTRIES,
@@ -750,17 +830,18 @@ try {
 		Promise.resolve(new Response(oversizedEntriesBody))) as typeof fetch;
 	warnings.length = 0;
 	let oversizedEntriesProvider: ProviderConfig | undefined;
-	await omlx({
-		registerProvider: (_id: string, config: ProviderConfig) => {
-			oversizedEntriesProvider = config;
+	await omlx(
+		{
+			registerProvider: (_id: string, config: ProviderConfig) => {
+				oversizedEntriesProvider = config;
+			},
 		},
-	});
+		omlxEndpoints,
+	);
 	expectEqual(oversizedEntriesProvider?.models, [], "oversized entry catalog");
 	expectEqual(
 		warnings,
-		[
-			"[omlx] Model discovery failed: request failed",
-		],
+		["[omlx] Model discovery failed: request failed"],
 		"oversized entry warning",
 	);
 
@@ -772,11 +853,14 @@ try {
 		)) as typeof fetch;
 	warnings.length = 0;
 	let malformedProvider: ProviderConfig | undefined;
-	await omlx({
-		registerProvider: (_id: string, config: ProviderConfig) => {
-			malformedProvider = config;
+	await omlx(
+		{
+			registerProvider: (_id: string, config: ProviderConfig) => {
+				malformedProvider = config;
+			},
 		},
-	});
+		omlxEndpoints,
+	);
 	expectEqual(malformedProvider?.models, [], "malformed response catalog");
 	expectEqual(
 		warnings,
@@ -804,18 +888,19 @@ try {
 	}) as typeof fetch;
 	warnings.length = 0;
 	let abortedProvider: ProviderConfig | undefined;
-	await omlx({
-		registerProvider: (_id: string, config: ProviderConfig) => {
-			abortedProvider = config;
+	await omlx(
+		{
+			registerProvider: (_id: string, config: ProviderConfig) => {
+				abortedProvider = config;
+			},
 		},
-	});
+		omlxEndpoints,
+	);
 	expectEqual(abortedProvider?.models, [], "aborted provider catalog");
 	expectEqual(discoveryDelays, [2_500], "local discovery timeout budget");
 	expectEqual(
 		warnings,
-		[
-			"[omlx] Model discovery failed: request aborted",
-		],
+		["[omlx] Model discovery failed: request aborted"],
 		"abort warning",
 	);
 
@@ -830,10 +915,13 @@ try {
 	delete warningProcess.env.OMLX_CLIO_API_KEY;
 	warnings.length = 0;
 	const partialProviders = new Map<string, ProviderConfig>();
-	await omlx({
-		registerProvider: (id: string, config: ProviderConfig) =>
-			partialProviders.set(id, config),
-	}, managedEndpoints);
+	await omlx(
+		{
+			registerProvider: (id: string, config: ProviderConfig) =>
+				partialProviders.set(id, config),
+		},
+		managedOmlxEndpoints,
+	);
 	expectEqual(
 		[...partialProviders.keys()],
 		["omlx-hera"],
@@ -843,7 +931,7 @@ try {
 		requests.slice(partialRequestStart),
 		[
 			{
-				url: `${managedEndpoints["omlx-hera"].baseUrl}/models`,
+				url: `${managedOmlxEndpoints[1].baseUrl}/models`,
 				authorization: "Bearer hera-gallery-test-key",
 			},
 		],

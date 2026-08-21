@@ -1197,14 +1197,20 @@ let
 
         type GalleryEntry = readonly [owner: string, extension: unknown];
         type GalleryInvoke = (owner: string, operation: () => unknown) => unknown;
-        export type LocalModelEndpoint =
-          | string
-          | { baseUrl: string; apiKey: { env: string } };
-        export type LocalModelEndpoints = Readonly<Record<string, LocalModelEndpoint>>;
+        export interface LocalModelEndpoint {
+          readonly id: string;
+          readonly name: string;
+          readonly baseUrl: string;
+          readonly apiKey?: { readonly env: string };
+        }
+        export type LocalModelEndpoints = readonly LocalModelEndpoint[];
+        export type LocalModelEndpointsByOwner = Readonly<
+          Record<string, LocalModelEndpoints>
+        >;
 
         export function createGallery(
           entries: readonly GalleryEntry[],
-          localModelEndpoints: LocalModelEndpoints = {},
+          endpointsByOwner: LocalModelEndpointsByOwner = {},
           invoke: GalleryInvoke = (_owner, operation) => operation(),
         ) {
           return async function nixGallery(pi: unknown) {
@@ -1243,7 +1249,7 @@ let
                 (extension as (
                   api: never,
                   endpoints: LocalModelEndpoints,
-                ) => unknown)(extensionApi as never, localModelEndpoints),
+                ) => unknown)(extensionApi as never, endpointsByOwner[owner] ?? []),
               );
             }
 
@@ -1263,7 +1269,7 @@ let
         }
         TS
         cat > "$root/index.ts" <<'TS'
-        import { createGallery, type LocalModelEndpoints } from "./runtime.ts";
+        import { createGallery, type LocalModelEndpointsByOwner } from "./runtime.ts";
 
         ${galleryImports}
 
@@ -1272,16 +1278,16 @@ let
         ] as const;
 
         export function createNixGallery(
-          localModelEndpoints: LocalModelEndpoints = {},
+          endpointsByOwner: LocalModelEndpointsByOwner = {},
         ) {
-          return createGallery(entries, localModelEndpoints);
+          return createGallery(entries, endpointsByOwner);
         }
 
         export default createNixGallery();
         TS
         cat > "$root/timing.ts" <<'TS'
         import { performance } from "node:perf_hooks";
-        import { createGallery, type LocalModelEndpoints } from "./runtime.ts";
+        import { createGallery, type LocalModelEndpointsByOwner } from "./runtime.ts";
 
         async function timeGallery<T>(
           owner: string,
@@ -1303,9 +1309,9 @@ let
         ] as const;
 
         export function createNixGallery(
-          localModelEndpoints: LocalModelEndpoints = {},
+          endpointsByOwner: LocalModelEndpointsByOwner = {},
         ) {
-          return createGallery(entries, localModelEndpoints, (owner, operation) =>
+          return createGallery(entries, endpointsByOwner, (owner, operation) =>
             timeGallery(owner, "factory", operation),
           );
         }

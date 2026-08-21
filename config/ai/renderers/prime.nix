@@ -13,6 +13,7 @@ let
   json = pkgs.formats.json { };
   mergeFiles = import ./merge-files.nix { inherit lib; };
   modelOverrides = import ../model-overrides.nix;
+  projectProviderEndpoints = import ./project-provider-endpoints.nix { inherit lib; };
 
   renderLib = import ./render-lib.nix { inherit lib; };
   inherit (renderLib) renderCommandMetadata;
@@ -76,18 +77,32 @@ let
   models.providers =
     modelOverrides.nativeProviders
     // lib.optionalAttrs (localModelEndpoints != null) modelOverrides.localProviderOverrides;
+  galleryEndpointsByOwner =
+    if localModelEndpoints == null then
+      { }
+    else
+      projectProviderEndpoints {
+        definitions = modelOverrides.localGalleryProviders;
+        endpoints = localModelEndpoints;
+      };
   localProviderPackages = lib.optionals (localModelEndpoints != null) [
     {
       name = "pi-provider-llama-swap";
+      owner = modelOverrides.localGalleryProviders.llama-swap.owner;
       package = pkgs.pi-gallery.packages.pi-provider-llama-swap;
     }
     {
       name = "pi-provider-omlx";
+      owner = modelOverrides.localGalleryProviders.omlx.owner;
       package = pkgs.pi-gallery.packages.pi-provider-omlx;
     }
   ];
   managedLocalProviderRoot =
-    { name, package }:
+    {
+      name,
+      owner,
+      package,
+    }:
     let
       packageRoot = "${package}/share/pi-packages/${name}";
       extension = pkgs.writeText "prime-managed-${name}.ts" ''
@@ -96,7 +111,7 @@ let
         export default async function primeManagedProvider(
           pi: Parameters<typeof provider>[0],
         ): Promise<void> {
-          await provider(pi, ${builtins.toJSON localModelEndpoints});
+          await provider(pi, ${builtins.toJSON (galleryEndpointsByOwner.${owner} or [ ])});
         }
       '';
       managedPackage = pkgs.runCommand "prime-managed-${name}" { } ''
@@ -166,6 +181,14 @@ assert profile.root == root;
 assert profile.host == "hera";
 assert profile.platform == "darwin";
 assert profile.localModelRoutes == (localModelEndpoints != null);
+assert
+  localModelEndpoints == null
+  ||
+    builtins.attrNames localModelEndpoints == builtins.attrNames modelOverrides.localProviderOverrides;
+assert
+  localModelEndpoints == null
+  ||
+    builtins.attrNames localModelEndpoints == builtins.attrNames modelOverrides.localGalleryProviders;
 assert builtins.isString homeDirectory;
 assert xdgConfigHome == "${homeDirectory}/.config";
 assert selected.hooks == { };

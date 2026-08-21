@@ -1,4 +1,4 @@
-{
+moduleArgs@{
   pkgs,
   lib,
   config,
@@ -52,6 +52,8 @@ let
   };
   omlxProxy = config.johnw.omlxProxy;
   omlxProxyKeyPreflight = import ./omlx-proxy-key-preflight.nix { inherit pkgs; };
+  localProviderTransportPolicy =
+    moduleArgs.localProviderTransportPolicy or (import ./ai/local-provider-transport.nix);
   eternalTerminalConfig = pkgs.writeText "et.cfg" ''
     ; et.cfg : Config file for Eternal Terminal
     ;
@@ -320,7 +322,11 @@ in
                   # Expose the loopback-only oMLX API only to explicitly
                   # allowed clients. oMLX validates the forwarded bearer
                   # credential itself.
-                  location /v1/ {
+                  location = /v1 {
+                    return 404;
+                  }
+
+                  location ^~ /v1/ {
                     allow ${omlxProxy.listenAddress};
                     ${lib.concatMapStringsSep "\n                  " (
                       source: "allow ${source};"
@@ -339,9 +345,15 @@ in
                     proxy_set_header X-Forwarded-Proto $scheme;
 
                     proxy_connect_timeout 600;
-                    proxy_send_timeout 600;
-                    proxy_read_timeout 600;
-                    send_timeout 600;
+                    proxy_send_timeout ${toString localProviderTransportPolicy.proxy.upstreamSendTimeoutSeconds};
+                    proxy_read_timeout ${toString localProviderTransportPolicy.proxy.upstreamReadTimeoutSeconds};
+                    send_timeout ${toString localProviderTransportPolicy.proxy.downstreamSendTimeoutSeconds};
+                  }
+
+                  # Do not let malformed API routes fall through to a legacy
+                  # upstream with a provider credential attached.
+                  location ~ ^/v1(?:[^/]|$) {
+                    return 404;
                   }
                 ''}
 
@@ -352,6 +364,8 @@ in
                     proxy_ssl_verify on;
                     proxy_ssl_trusted_certificate ${omlxProxy.trustedCaFile};
                     proxy_ssl_server_name on;
+
+                    proxy_set_header Authorization "";
 
                     proxy_set_header Host chat.vulcan.lan;
                     proxy_set_header X-Real-IP $remote_addr;

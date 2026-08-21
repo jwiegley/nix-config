@@ -41,11 +41,16 @@ let
     piPackages.${member.attrName} == member.package && member.package.version == member.version
   ) manifest.order;
   gallery = "${piPackages.pi-gallery}/share/pi-gallery";
-  localModelMemberIds = [
+  localProviderMemberIds = [
     "llama-swap-provider"
     "omlx-provider"
+  ];
+  localModelMemberIds = localProviderMemberIds ++ [
     "router"
   ];
+  modelOverrides = import ../../config/ai/model-overrides.nix;
+  galleryOwners =
+    definitions: lib.unique (map (definition: definition.owner) (builtins.attrValues definitions));
   activeOrder = lib.subtractLists [ "lens" "mem" ] (
     if stdenv.hostPlatform.isDarwin then
       manifest.order
@@ -154,6 +159,12 @@ let
       "${roots.router}/extensions/index.ts";
 in
 assert lib.sort builtins.lessThan manifest.order == builtins.attrNames manifest.members;
+assert
+  lib.sort builtins.lessThan (galleryOwners modelOverrides.localGalleryProviders)
+  == localProviderMemberIds;
+assert
+  lib.sort builtins.lessThan (galleryOwners modelOverrides.pi.galleryProviders)
+  == localProviderMemberIds;
 assert sourceCatalogComplete;
 assert orphanedCatalogRejected;
 assert manifestPackagesMatch;
@@ -1477,7 +1488,10 @@ runCommand "pi-gallery-check"
       "$local_provider_typecheck/local-openai-provider.ts"
     cp ${gallery}/runtime.ts "$local_provider_typecheck/gallery-runtime.ts"
     cat >"$local_provider_typecheck/endpoint-contract.ts" <<'TS'
-    import type { LocalModelEndpoints as GalleryEndpoints } from "./gallery-runtime.js";
+    import type {
+      LocalModelEndpoints as GalleryEndpoints,
+      LocalModelEndpointsByOwner,
+    } from "./gallery-runtime.js";
     import type { LocalModelEndpoints as ProviderEndpoints } from "./local-openai-provider.js";
 
     type Assert<T extends true> = T;
@@ -1486,14 +1500,17 @@ runCommand "pi-gallery-check"
 
     const galleryAcceptsProvider: Assert<GalleryAcceptsProvider> = true;
     const providerAcceptsGallery: Assert<ProviderAcceptsGallery> = true;
-    const structured: GalleryEndpoints = {
-      "omlx-test": {
+    const structured: GalleryEndpoints = [
+      {
+        id: "omlx-test",
+        name: "Typed oMLX test",
         baseUrl: "https://example.invalid/v1",
         apiKey: { env: "OMLX_TEST_API_KEY" },
       },
-    };
+    ];
+    const byOwner: LocalModelEndpointsByOwner = { "omlx-provider": structured };
     const providerStructured: ProviderEndpoints = structured;
-    void [galleryAcceptsProvider, providerAcceptsGallery, providerStructured];
+    void [byOwner, galleryAcceptsProvider, providerAcceptsGallery, providerStructured];
     TS
     ln -s "$pi_node_modules/@types/node" \
       "$local_provider_typecheck/node_modules/@types/node"
@@ -1504,6 +1521,41 @@ runCommand "pi-gallery-check"
       tsc --noEmit --skipLibCheck --strict --allowImportingTsExtensions \
         --module ESNext --moduleResolution Bundler --target ES2022 \
         --lib ES2022 --types node endpoint-contract.ts omlx.ts llama-swap.ts
+    )
+    cat >"$local_provider_typecheck/owner-isolation.ts" <<'TS'
+    import {
+      createGallery,
+      type LocalModelEndpoints,
+    } from "./gallery-runtime.ts";
+
+    const observed = new Map<string, LocalModelEndpoints>();
+    const extension = (owner: string) =>
+      async (_pi: unknown, endpoints: LocalModelEndpoints) => {
+        observed.set(owner, endpoints);
+      };
+    const alpha = [{ id: "alpha", name: "Alpha", baseUrl: "https://alpha.invalid/v1" }];
+    const beta = [{ id: "beta", name: "Beta", baseUrl: "https://beta.invalid/v1" }];
+    await createGallery(
+      [
+        ["alpha-owner", extension("alpha-owner")],
+        ["beta-owner", extension("beta-owner")],
+        ["omitted-owner", extension("omitted-owner")],
+      ],
+      {
+        "alpha-owner": alpha,
+        "beta-owner": beta,
+        "unowned-provider": [
+          { id: "poison", name: "Poison", baseUrl: "https://poison.invalid/v1" },
+        ],
+      },
+    )({ on() {} });
+    if (observed.get("alpha-owner") !== alpha) throw new Error("alpha owner received another endpoint set");
+    if (observed.get("beta-owner") !== beta) throw new Error("beta owner received another endpoint set");
+    if (observed.get("omitted-owner")?.length !== 0) throw new Error("omitted owner did not fail closed");
+    TS
+    (
+      cd "$local_provider_typecheck"
+      ${bun}/bin/bun owner-isolation.ts
     )
     (
       cd ${sourceForChecks}
@@ -2107,15 +2159,27 @@ runCommand "pi-gallery-check"
       import { createNixGallery } from ${builtins.toJSON "${gallery}/loader.ts"};
 
       export default createNixGallery({
-        "llama-swap": "http://127.0.0.1:$discovery_port/llama/v1",
-        "omlx-clio": {
+        "llama-swap-provider": [{
+          "id": "llama-swap",
+          "name": "llama-swap",
+          "baseUrl": "http://127.0.0.1:$discovery_port/llama/v1"
+        }],
+        "omlx-provider": [{
+          "id": "omlx-clio",
+          "name": "oMLX Clio",
           "baseUrl": "http://127.0.0.1:$discovery_port/omlx-clio/v1",
           "apiKey": { "env": "OMLX_CLIO_API_KEY" }
-        },
-        "omlx-hera": {
+        }, {
+          "id": "omlx-hera",
+          "name": "oMLX Hera",
           "baseUrl": "http://127.0.0.1:$discovery_port/omlx-hera/v1",
           "apiKey": { "env": "OMLX_HERA_API_KEY" }
-        }
+        }],
+        "unowned-provider": [{
+          "id": "poison",
+          "name": "Poison",
+          "baseUrl": "http://127.0.0.1:$discovery_port/poison/v1"
+        }]
       });
       EOF
     ''}

@@ -20,6 +20,9 @@ let
     resources = "/catalog-agent-resources";
   };
   modelOverrides = import "${src}/config/ai/model-overrides.nix";
+  projectProviderEndpoints = import "${src}/config/ai/renderers/project-provider-endpoints.nix" {
+    inherit lib;
+  };
   mcpEnvironment = import "${src}/config/ai/managed-stdio.nix" { inherit lib; };
   recordingTranscriptionModels = builtins.attrNames modelOverrides.localProviderOverrides.omlx.modelOverrides;
   recordingTranscriptionRoute = catalog.recordingTranscriptionRoutesByHost.hera;
@@ -401,6 +404,22 @@ let
     inherit lib;
     pkgs = rendererPkgs;
   };
+  syntheticLocalProviderTransportPolicy = {
+    client = {
+      requestTimeoutMilliseconds = 1111000;
+      streamIdleTimeoutMilliseconds = 2222000;
+    };
+    proxy = {
+      upstreamSendTimeoutSeconds = 3333;
+      upstreamReadTimeoutSeconds = 4444;
+      downstreamSendTimeoutSeconds = 5555;
+    };
+  };
+  piSyntheticTransportRenderer = import "${src}/config/ai/renderers/pi.nix" {
+    inherit lib;
+    pkgs = rendererPkgs;
+    localProviderTransportPolicy = syntheticLocalProviderTransportPolicy;
+  };
   mcpRegistryRenderer = import "${src}/config/ai/renderers/mcp-registry.nix" {
     inherit lib;
     pkgs = rendererPkgs;
@@ -465,9 +484,24 @@ let
       apiKey.env = "OMLX_HERA_API_KEY";
     };
   };
+  syntheticGalleryEndpointsByOwner = projectProviderEndpoints {
+    definitions = modelOverrides.pi.galleryProviders;
+    endpoints = syntheticLocalModelDiscoveryEndpoints;
+  };
+  syntheticDiscoveryProfile = catalog.profiles.clio-pi;
   piSyntheticDiscoveryRendered = piRenderer {
-    profile = catalog.profiles.clio-pi;
-    selected = selectFor catalog.profiles.clio-pi;
+    profile = syntheticDiscoveryProfile;
+    selected = selectFor syntheticDiscoveryProfile;
+    homeDirectory = "/Users/test";
+    xdgConfigHome = "/Users/test/.config";
+    passwordStoreDir = "/Users/test/doc/.password-store";
+    gnupgHome = "/Users/test/.config/gnupg";
+    localModelEndpoints = null;
+    localModelDiscoveryEndpoints = syntheticLocalModelDiscoveryEndpoints;
+  };
+  piSyntheticTransportRendered = piSyntheticTransportRenderer {
+    profile = syntheticDiscoveryProfile;
+    selected = selectFor syntheticDiscoveryProfile;
     homeDirectory = "/Users/test";
     xdgConfigHome = "/Users/test/.config";
     passwordStoreDir = "/Users/test/doc/.password-store";
@@ -993,6 +1027,86 @@ assert
 assert
   builtins.attrNames modelOverrides.pi.localProviderOverrides
   == builtins.attrNames catalog.piModelDiscoveryEndpoints;
+assert
+  builtins.attrNames modelOverrides.pi.galleryProviders
+  == builtins.attrNames catalog.piModelDiscoveryEndpoints;
+assert
+  modelOverrides.localGalleryProviders == {
+    llama-swap = {
+      name = "llama-swap";
+      owner = "llama-swap-provider";
+    };
+    omlx = {
+      apiKey.env = "OMLX_API_KEY";
+      name = "oMLX";
+      owner = "omlx-provider";
+    };
+  };
+assert
+  modelOverrides.pi.galleryProviders == {
+    llama-swap = {
+      name = "llama-swap";
+      owner = "llama-swap-provider";
+    };
+    omlx-clio = {
+      name = "oMLX Clio";
+      owner = "omlx-provider";
+    };
+    omlx-hera = {
+      name = "oMLX Hera";
+      owner = "omlx-provider";
+    };
+  };
+assert
+  syntheticGalleryEndpointsByOwner == {
+    llama-swap-provider = [
+      {
+        baseUrl = syntheticLocalModelDiscoveryEndpoints.llama-swap;
+        id = "llama-swap";
+        name = "llama-swap";
+      }
+    ];
+    omlx-provider = [
+      {
+        inherit (syntheticLocalModelDiscoveryEndpoints.omlx-clio) apiKey baseUrl;
+        id = "omlx-clio";
+        name = "oMLX Clio";
+      }
+      {
+        inherit (syntheticLocalModelDiscoveryEndpoints.omlx-hera) apiKey baseUrl;
+        id = "omlx-hera";
+        name = "oMLX Hera";
+      }
+    ];
+  };
+assert catalog.validGalleryProviderDefinitions modelOverrides.localGalleryProviders;
+assert catalog.validGalleryProviderDefinitions modelOverrides.pi.galleryProviders;
+assert catalog.validLocalModelEndpoints catalog.localModelEndpointsByHost.clio;
+assert catalog.validPiModelDiscoveryEndpoints catalog.piModelDiscoveryEndpoints;
+assert
+  !(catalog.validGalleryProviderDefinitions {
+    poison = {
+      name = "Poison";
+      owner = "";
+    };
+  });
+assert
+  !(catalog.validLocalModelEndpoints {
+    inherit (catalog.localModelEndpointsByHost.clio) llama-swap;
+    omlx = "file:///tmp/poison";
+  });
+assert
+  !(catalog.validPiModelDiscoveryEndpoints (
+    catalog.piModelDiscoveryEndpoints
+    // {
+      omlx-clio = catalog.piModelDiscoveryEndpoints.omlx-clio // {
+        apiKey = {
+          env = "OMLX_CLIO_API_KEY";
+          extra = "poison";
+        };
+      };
+    }
+  ));
 assert builtins.hasAttr modelOverrides.pi.router.provider catalog.piModelDiscoveryEndpoints;
 assert catalog.piModelDiscoveryEndpoints.llama-swap == "http://localhost:8080/v1";
 assert builtins.all
@@ -1092,6 +1206,24 @@ assert hasFessRubric primeRendered.files.${fessPaths.prime.command}.text;
 assert !(builtins.hasAttr ".config/mcp/mcp.json" primeRendered.files);
 assert !(primeRendered ? mutableMcpGuard);
 assert builtins.all reject [
+  (projectProviderEndpoints {
+    definitions = modelOverrides.pi.galleryProviders;
+    endpoints = builtins.removeAttrs catalog.piModelDiscoveryEndpoints [ "omlx-hera" ];
+  })
+  (projectProviderEndpoints {
+    definitions = modelOverrides.localGalleryProviders;
+    endpoints = catalog.localModelEndpointsByHost.clio // {
+      omlx = "";
+    };
+  })
+  (projectProviderEndpoints {
+    definitions = modelOverrides.pi.galleryProviders // {
+      omlx-clio = modelOverrides.pi.galleryProviders.omlx-clio // {
+        apiKey.env = "OMLX_CLIO_API_KEY";
+      };
+    };
+    endpoints = catalog.piModelDiscoveryEndpoints;
+  })
   (catalog.validate {
     items = itemsWithAgentMetadata (baseAgentMetadata // { capabilities = "read-files"; });
   })
@@ -1278,9 +1410,18 @@ assert builtins.all reject [
   })
 ];
 pkgs.runCommand "ai-catalog-transport" { } ''
+  ${pkgs.jq}/bin/jq -e '
+    [.providers[] | select(has("transport"))]
+    | length == 3
+      and all(
+        .transport
+          == {"idleTimeoutMs": 2222000, "requestTimeoutMs": 1111000}
+      )
+  ' ${piSyntheticTransportRendered.files.".config/pi/agent/models.json".source} >/dev/null
+
   ${pkgs.gnugrep}/bin/grep -F -- ${
     lib.escapeShellArg (
-      "export default createNixGallery(" + builtins.toJSON syntheticLocalModelDiscoveryEndpoints + ");"
+      "export default createNixGallery(" + builtins.toJSON syntheticGalleryEndpointsByOwner + ");"
     )
   } ${
     piSyntheticDiscoveryRendered.files.".config/pi/agent/extensions/nix-gallery/index.ts".source
@@ -1853,7 +1994,13 @@ pkgs.runCommand "ai-catalog-transport" { } ''
       lib.escapeShellArg (
         "export default createNixGallery("
         + builtins.toJSON (
-          if entry.localModelDiscoveryEndpoints == null then { } else entry.localModelDiscoveryEndpoints
+          if entry.localModelDiscoveryEndpoints == null then
+            { }
+          else
+            projectProviderEndpoints {
+              definitions = modelOverrides.pi.galleryProviders;
+              endpoints = entry.localModelDiscoveryEndpoints;
+            }
         )
         + ");"
       )
