@@ -578,7 +578,6 @@ try {
 	type CompletionFixture = {
 		apiKey: string;
 		baseUrl: string;
-		id: string;
 		model: Record<string, unknown>;
 	};
 	const completionFixtures: CompletionFixture[] = [];
@@ -608,7 +607,7 @@ try {
 			provider: endpoint.id,
 			baseUrl,
 		};
-		completionFixtures.push({ apiKey, baseUrl, id: endpoint.id, model });
+		completionFixtures.push({ apiKey, baseUrl, model });
 		let responseBody: ReadableStream<Uint8Array> | null = null;
 		let terminalRecordPulled = false;
 		let responseCancelled = false;
