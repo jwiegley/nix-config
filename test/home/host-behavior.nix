@@ -647,6 +647,8 @@ assert heraGitAll != null;
 assert heraGitAll.version == "1.8.1";
 assert heraGitAll.src == gitAllSource;
 assert heraGitAll.system == "aarch64-darwin";
+assert builtins.length physicalSharedWorkPackages > 0;
+assert builtins.length physicalMaintainedPackages > 0;
 assert !(hasSelectedPackage "agdaWithPackages" physicalSharedWorkPackages);
 assert !(hasSelectedPackage "agdaWithPackages" physicalMaintainedPackages);
 assert heraPackageSelection.userPackageInputNames == expectedHeraSourceProjectInputs;

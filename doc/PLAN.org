@@ -8656,10 +8656,10 @@ Partner observation 2026-08-11T05:53:30.821Z: signed commit 71870d60 reordered t
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-22 Sat 14:02]
-:MODIFIED: [2026-08-22 Sat 14:08]
+:MODIFIED: [2026-08-22 Sat 14:26]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-22 Sat 14:08]
-:CLOSE_REASON: Inverted the Agda host-behavior contract to require global absence after the signed package disable; the focused aarch64-darwin host-behavior build, nixfmt check, and root flake no-build evaluation pass.
+:FINISHED: [2026-08-22 Sat 14:26]
+:CLOSE_REASON: Aligned the Agda host-behavior contract with the signed global disable and added explicit non-empty guards for both physical package selectors before their Agda-absence assertions. The focused aarch64-darwin host-behavior build, nixfmt check, root flake no-build evaluation, and full pre-commit gate all pass; pre-commit ran all seven quality suites and all 19 fast Python groups.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -8676,6 +8676,20 @@ IMPACT: host-behavior is evaluation-only, so the assertion fires at instantiatio
 SUGGESTED FIX: Update the host-behavior Agda assertions to match the disabled state (e.g. assert absence on all homes alongside the existing sharedWork absence assertion at line 645), or delete the presence assertions while the package set is disabled. If the disable is temporary, invert rather than remove so re-enabling forces the contract update again.
 
 VERIFICATION: nix build .#checks.aarch64-darwin.host-behavior passes from a clean worktree; nix flake check --no-build on the root surface evaluates green.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 524,
+    "issue_id": "nix-pq8l",
+    "author": "johnw",
+    "text": "Reopened: Independent audit found the physical selector assertions could pass vacuously if both package selections were empty; adding explicit non-empty selector guards before final publication.",
+    "created_at": "2026-08-22T21:21:23Z"
+  }
+]
+#+end_src
 
 * DONE [#B] Retry transient Darwin main-database create ENOENT
 :PROPERTIES:
