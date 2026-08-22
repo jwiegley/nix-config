@@ -17743,15 +17743,17 @@ The session layer will correctly reject all running cross-profile migrations, bu
 ]
 #+end_src
 
-* DOING [#B] Remove claude-vault from every maintained machine and agent hook
+* DONE [#B] Remove claude-vault from every maintained machine and agent hook
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-ychd
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-21 Fri 12:56]
-:MODIFIED: [2026-08-21 Fri 13:36]
+:MODIFIED: [2026-08-21 Fri 17:55]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-21 Fri 17:55]
+:CLOSE_REASON: Removed claude-vault from maintained package selection and generated hooks; activated the source change across all maintained Darwin, shared Linux, and NixOS consumers; retired every expected mutable hook with reviewed transactions and retained private backups; verified zero active executable, generated hook, mutable hook, and exact-name process use while preserving unrelated hooks. Final issue-state revision is being published and adopted across the maintained fleet; VPS and dormant Git-AI remained untouched.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
