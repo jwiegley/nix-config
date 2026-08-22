@@ -642,15 +642,13 @@ assert builtins.all (
   && !(config.programs.git.settings ? trace2)
 ) allHomes;
 assert builtins.all (config: !(hasPackage "watchman" config)) allHomes;
-assert !(hasPackage "agdaWithPackages" sharedWork);
-assert hasPackage "agdaWithPackages" personalLinux;
-assert builtins.all (hasPackage "agdaWithPackages") desktopHomes;
+assert builtins.all (config: !(hasPackage "agdaWithPackages" config)) allHomes;
 assert heraGitAll != null;
 assert heraGitAll.version == "1.8.1";
 assert heraGitAll.src == gitAllSource;
 assert heraGitAll.system == "aarch64-darwin";
 assert !(hasSelectedPackage "agdaWithPackages" physicalSharedWorkPackages);
-assert hasSelectedPackage "agdaWithPackages" physicalMaintainedPackages;
+assert !(hasSelectedPackage "agdaWithPackages" physicalMaintainedPackages);
 assert heraPackageSelection.userPackageInputNames == expectedHeraSourceProjectInputs;
 assert builtins.all (hasPackage "obr") allHomes;
 assert builtins.all (config: !(ownsObrState config)) allHomes;
