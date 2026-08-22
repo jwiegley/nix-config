@@ -99,8 +99,14 @@ let
               }
 
               codex_policy_probe_handshake delegate --version
+              codex_policy_probe_handshake delegate agents
+              codex_policy_probe_handshake delegate --profile build-probe agents
               codex_policy_probe_handshake manage
+              codex_policy_probe_handshake manage \
+                queue --thread build-probe --message task
               codex_policy_probe_handshake conflict-profile --profile build-probe
+              codex_policy_probe_handshake conflict-profile \
+                queue --thread build-probe --message task --profile build-probe
               codex_policy_probe_handshake conflict-ignore-user-config \
                 exec --ignore-user-config task
             '';

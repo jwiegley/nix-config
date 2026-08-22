@@ -8,7 +8,7 @@ tags:
   - ai-agents
   - developer-tools
 created: 2026-07-27
-updated: 2026-08-21
+updated: 2026-08-22
 pi-version: 0.84.2
 ---
 
@@ -27,7 +27,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | Nix Gallery loader | local | Compose the managed package gallery | automatic |
 | Fleet Theme | local | Discover and select the managed TUI theme | automatic |
 | `@realvendex/pi-loop` | 1.0.2 | Repeat prompts under explicit stop conditions | `/loop` |
-| `pi-mcp-adapter` | 2.26.0 | Lazy, context-efficient MCP access | `mcp`, `/mcp` |
+| `pi-mcp-adapter` | 2.27.0 | Lazy, context-efficient MCP access | `mcp`, `/mcp` |
 | `@zenspc/pi-quiet` | 0.4.1 | Dense tool-result presentation | `/quiet` |
 | `pi-hashline-edit-pro` | 0.17.5 | Hash-anchored reads and replacements | `read`, `replace` |
 | `pi-smart-fetch` | 0.3.17 | Browser-fingerprinted readable web fetching | `web_fetch`, `batch_web_fetch` |
@@ -35,7 +35,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | `@dietrichgebert/ponytail` | 4.9.0 | Minimal implementation discipline | `/ponytail` |
 | `pi-agent-browser-native` | 0.3.0 | Native Pi interface to `agent-browser` | `agent_browser` |
 | `pi-btw` | 0.4.1 | Side conversations without disturbing the main turn | `/btw` |
-| `pi-copy-message` | 2.0.0 | Search and copy raw session messages | `/copy-message`, `/copy-user` |
+| `pi-copy-message` | 2.1.0 | Search and copy raw session messages | `/copy-message`, `/copy-user` |
 | `@ygncode/pi-insights` | 1.0.1 | Session analytics | `/insights` |
 | `@tmustier/pi-usage-extension` | 0.9.4 | Local usage, cost, and token statistics | `/usage` |
 | `pi-multi-pass` | 1.3.0 | Multiple OAuth accounts and failover pools | `/subs`, `/pool`, `/mp-preset` |
@@ -49,10 +49,10 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | `pi-caveman` | 1.0.8 | Compressed response style | `/caveman` |
 | `pi-rtk-optimizer` | 0.9.0 | RTK command rewriting and output compaction | `/rtk` |
 | `pi-cymbal` | 0.5.3 | Indexed, symbol-oriented code navigation | `cymbal_*` |
-| `pi-subagents` | 0.51.0 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
+| `pi-subagents` | 0.54.0 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
 | `@quintinshaw/pi-dynamic-workflows` | 3.7.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
 | `pi-goal-x` | 0.27.4 | Durable goals and Sisyphus continuation | `/goal`, `get_goal` |
-| `pi-cache-optimizer` | 2.8.3 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
+| `pi-cache-optimizer` | 2.8.5 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
 
 ### Packaged but inactive
 
@@ -153,7 +153,7 @@ Pi Loop repeats a prompt under bounded iteration, timeout, convergence, text, re
 
 ### Pi MCP Adapter
 
-**Version:** 2.26.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-mcp-adapter) · [Home](https://github.com/nicobailon/pi-mcp-adapter#readme) · [GitHub](https://github.com/nicobailon/pi-mcp-adapter)
+**Version:** 2.27.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-mcp-adapter) · [Home](https://github.com/nicobailon/pi-mcp-adapter#readme) · [GitHub](https://github.com/nicobailon/pi-mcp-adapter)
 
 Pi MCP Adapter exposes Model Context Protocol servers through one compact proxy tool instead of placing every remote tool schema in the model context. Servers are lazy by default; metadata, instructions, resources, and prompts are cached; large results are guarded; selected tools may be promoted directly; and MCP Apps and remote OAuth retain explicit interactive surfaces.
 
@@ -225,7 +225,7 @@ Pi Trace records the execution structure of each session—model requests, steps
 
 ### Cache Optimizer
 
-**Version:** 2.8.3 · **Links:** [Pi Packages](https://pi.dev/packages/pi-cache-optimizer) · [Home](https://github.com/jiangge/pi-cache-optimizer) · [GitHub](https://github.com/jiangge/pi-cache-optimizer)
+**Version:** 2.8.5 · **Links:** [Pi Packages](https://pi.dev/packages/pi-cache-optimizer) · [Home](https://github.com/jiangge/pi-cache-optimizer) · [GitHub](https://github.com/jiangge/pi-cache-optimizer)
 
 Pi Cache Optimizer keeps stable prompt content near the front, compresses volatile skill listings, supplies conservative OpenAI-compatible cache keys, diagnoses proxy compatibility, and reports local cache statistics. It is registered last so its prompt hook observes the gallery's final prompt shape.
 
@@ -329,7 +329,7 @@ Pi Goal X persists explicit objectives, lifecycle state, usage, and ordered Sisy
 
 ### Subagents
 
-**Version:** 0.51.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-subagents) · [Home](https://github.com/nicobailon/pi-subagents#readme) · [GitHub](https://github.com/nicobailon/pi-subagents)
+**Version:** 0.54.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-subagents) · [Home](https://github.com/nicobailon/pi-subagents#readme) · [GitHub](https://github.com/nicobailon/pi-subagents)
 
 Pi Subagents delegates focused work to child Pi sessions without replacing the parent as orchestrator. It supports single foreground and asynchronous runs, scripted sequential and parallel composition, fresh or forked context, fleet status, steering, and supervisor communication.
 
@@ -355,7 +355,7 @@ Pi BTW creates a focused side conversation while the main session remains intact
 
 ### Copy Message
 
-**Version:** 2.0.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-copy-message) · [Home](https://github.com/fitchmultz/pi-copy-message#readme) · [GitHub](https://github.com/fitchmultz/pi-copy-message)
+**Version:** 2.1.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-copy-message) · [Home](https://github.com/fitchmultz/pi-copy-message#readme) · [GitHub](https://github.com/fitchmultz/pi-copy-message)
 
 Pi Copy Message opens a searchable, keyboard-driven picker over raw session messages, avoiding terminal wrapping and rendered TUI artifacts. It can filter by role or text, include metadata, and copy user, assistant, tool, or bash messages. The Nix package delegates copying to Pi's portable clipboard layer, including its terminal fallback for remote sessions.
 

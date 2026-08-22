@@ -4272,8 +4272,22 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         pal = ai_catalog["pal-mcp-server"]
         self.assertEqual(pal["update"].get("buildPackage"), "pal-mcp-server")
         self.assertNotIn("buildMode", pal["update"])
+        llama_cpp = ai_catalog["llama-cpp"]
+        self.assertEqual(llama_cpp["update"].get("kind"), "github-release")
+        self.assertEqual(llama_cpp["update"].get("tagPrefix"), "v")
+        self.assertEqual(
+            llama_cpp["update"].get("buildPackage"),
+            "llama-cpp-update-validator",
+        )
+        self.assertEqual(
+            llama_cpp["source"]["args"]["tag"],
+            f"v{llama_cpp['version']}",
+        )
 
         catalog = json.loads((REPO / "sources/pi.json").read_text())["sources"]
+        pi_lens_update = catalog["pi-lens"]["update"]
+        self.assertEqual(pi_lens_update.get("policy"), "manual")
+        self.assertIn("inactive", pi_lens_update["reason"].lower())
         expected_builds = {
             "agent-browser": "agent-browser",
             "pi-agent-browser-native": "pi-agent-browser-native",

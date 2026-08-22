@@ -1679,6 +1679,40 @@ Watchman is absent from all rendered Home Manager package sets; focused host-beh
 ]
 #+end_src
 
+* DONE [#B] Rebase Codex wrapper policy patches for 0.149
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-50a8
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-22 Sat 00:58]
+:MODIFIED: [2026-08-22 Sat 04:32]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-22 Sat 04:32]
+:CLOSE_REASON: Codex 0.149 policy and log-filter patches were rebased with Agents delegation, Queue management, mandatory nested SQLx filtering, real Codex/package and wrapper checks, portable evaluation, and the Hera system closure passing.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Port the fuzz-zero wrapper-policy probe and SQLite log-filter patches to Codex 0.149 without regressing Agents delegation, Queue profile management, upstream queue tuning, or mandatory SQLx OFF filters. Verify the real package, wrapper behavior, and Hera candidate closure.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-50a8",
+    "depends_on_id": "nix-tumd",
+    "type": "discovered-from",
+    "created_at": "2026-08-22T07:58:38.098651Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Reconcile Pi MCP Adapter 2.26 runtime file contract
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -2195,6 +2229,40 @@ Delete doc/CURRENT-WORK.md and route every maintained current-work reference to 
     "author": "johnw",
     "text": "Reopened: Correct an escaped apostrophe in the close reason.",
     "created_at": "2026-08-13T01:08:43Z"
+  }
+]
+#+end_src
+
+* DONE [#B] Adapt llama.cpp stable release metadata
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-766k
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-22 Sat 04:32]
+:MODIFIED: [2026-08-22 Sat 04:32]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-22 Sat 04:32]
+:CLOSE_REASON: Official v0.2.0 now builds with integer build 0 and release mode; candidate validation fails closed unless the Darwin catalog pin is active. Focused contract, validator package, all-system evaluation, independent Nix review, and the Hera system closure passed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Keep the updater on upstream's official v0.2.0 stable release while separating semantic versioning from the integer LLAMA_BUILD_NUMBER contract. Preserve unrelated CMake flags, mark release builds non-dev, require candidate realization only when the Darwin catalog pin is active, and cover supported/bypass platforms plus the real Hera package and system closure.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-766k",
+    "depends_on_id": "nix-tumd",
+    "type": "discovered-from",
+    "created_at": "2026-08-22T11:32:10.922622Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
@@ -5245,7 +5313,7 @@ Partner observation .443Z: plaintext stage/backup copies can survive SIGKILL or 
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-20 Thu 11:09]
-:MODIFIED: [2026-08-20 Thu 17:05]
+:MODIFIED: [2026-08-22 Sat 10:41]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5295,6 +5363,20 @@ The user explicitly authorized commit, push, and activation on all maintained sy
     "author": "johnw",
     "text": "Hera automatic interval acceptance is now complete: after 3711 seconds of passive observation with no kickstart or reload, launchd started one natural run and it completed with runs +1, separators +1, 5257 appended bytes, last exit 0, and idle final state. This confirms the loaded 3600-second schedule and successful timer-driven execution.",
     "created_at": "2026-08-21T00:05:22Z"
+  },
+  {
+    "id": 520,
+    "issue_id": "nix-fleet-converge-09ln",
+    "author": "johnw",
+    "text": "Current convergence candidate accounts for all 23 worktree paths as one catalog-update and validation-fallout transaction. Pre-commit hooks, updater tests, portable all-system evaluation, Hera system build, curl, Codex, llama.cpp, and aarch64 Darwin/Linux Pi Gallery gates passed; x86_64 Pi Gallery remains infrastructure-blocked before assertions by configured builder signature trust and was not weakened. All seven in-scope hosts are reachable and preflight-clear; VPS and dormant Git-AI were not contacted. Publication is waiting only on the mandated physical signing-card serial confirmation.",
+    "created_at": "2026-08-22T17:10:29Z"
+  },
+  {
+    "id": 522,
+    "issue_id": "nix-fleet-converge-09ln",
+    "author": "johnw",
+    "text": "Final pre-publication candidate evidence: exact staged 24-path diff passed git diff --check; canonical make test passed 22/22 Python groups including 131 updater tests and all nine behavioral Nix checks. An isolated ordinary-Git reconstruction of the exact staged patch (SHA-256 7d783545dbe23b3d2be6135627effa4189b8c216cc4a0e76b7c6a45db77639a9) passed the x86_64-linux Pi Gallery check locally on Andoria-08 with builders disabled; authoritative shared checkout was untouched and fixture directories were removed. Pi MCP 2.27 file-set issue nix-kvln is closed. Remaining pre-publication gates are final hooks/audit and designated-card confirmation.",
+    "created_at": "2026-08-22T17:41:23Z"
   }
 ]
 #+end_src
@@ -7129,6 +7211,58 @@ The root checkout now has only origin=gitea@gitea:johnw/nix-config.git. Before f
     "author": "johnw",
     "text": "2026-08-13 live authority refresh: root HEAD, local origin/main, and live Gitea refs/heads/main all resolve exactly c143b2ec4e0714117d59e7977ff9fb45d5cd675b. Prepared /Users/johnw/src/andoria source+lock and /Users/johnw/src/vps source+lock both select that exact revision through ssh://gitea@gitea/johnw/nix-config.git; no push or authoritative consumer adoption was performed. Andoria authoritative shared-work checkout remains remote on andoria-08; VPS authoritative /etc/nixos is unavailable on Hera. Source adoption, signed commits, pushes, builds, and activation remain separate evidence.",
     "created_at": "2026-08-14T01:55:31Z"
+  }
+]
+#+end_src
+
+* DONE [#B] Adopt pi-mcp-adapter 2.27 packaged namespace files
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-kvln
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-22 Sat 10:20]
+:MODIFIED: [2026-08-22 Sat 10:41]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-22 Sat 10:41]
+:CLOSE_REASON: Updated the exact packaged-file oracle for pi-mcp-adapter 2.27.0 and passed focused plus canonical gates.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The canonical make test gate found that pi-mcp-adapter 2.27.0 adds mcp-references.ts and namespace-tools.ts, both imported by index.ts and declared in the upstream package files. The independent packaged-file oracle still describes 2.26.0 and rejects the realized closure.
+
+** Acceptance Criteria
+
+Extend the independent exact file-set oracle to the two required 2.27.0 modules; preserve byte-for-byte source checks; pass the agent-resources check and canonical make test; record the result with the update transaction.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-kvln",
+    "depends_on_id": "nix-fleet-converge-09ln",
+    "type": "discovered-from",
+    "created_at": "2026-08-22T17:20:17.476902Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 521,
+    "issue_id": "nix-kvln",
+    "author": "johnw",
+    "text": "Resolved by extending the existing exact piMcpFiles oracle with the two upstream 2.27.0 modules that index.ts imports. Focused aarch64-darwin agent-resources build passed, preserving top-level set and byte-for-byte source checks. Canonical make test then passed all 22 Python groups, all 131 updater tests, and all nine behavioral Nix checks.",
+    "created_at": "2026-08-22T17:41:20Z"
   }
 ]
 #+end_src
@@ -15922,7 +16056,7 @@ pi-mem and Lens are absent from generated imports and registrations while all 26
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-20 Thu 22:19]
-:MODIFIED: [2026-08-21 Fri 01:51]
+:MODIFIED: [2026-08-22 Sat 10:41]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -15943,6 +16077,27 @@ Preserve ordinary nix flake update --commit-lock-file on the authoritative share
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 519,
+    "issue_id": "nix-tumd",
+    "author": "johnw",
+    "text": "Source repair is complete in the current unpublished tree: the exact curl-cffi 0.15.0/curl-impersonate 2.1.0 Darwin transition is guarded, the runtime and upstream test ports are covered, the focused curl package check passed (364 passed, 22 skipped, 32 deselected), portable all-system evaluation passed, and the exact Hera system build passed. Keep this issue open until the published revision is adopted by shared-work and its authoritative updated lock builds successfully.",
+    "created_at": "2026-08-22T17:10:29Z"
+  },
+  {
+    "id": 523,
+    "issue_id": "nix-tumd",
+    "author": "johnw",
+    "text": "The exact curl-cffi 0.15.0 / curl-impersonate 2.1.0 Darwin transition is green in canonical make test: real configured curl-cffi build/import, Python package-fix checks, and mutation-honest partial WebSocket retry regression all passed. The issue remains open until signed publication and shared consumer lock/build validation complete.",
+    "created_at": "2026-08-22T17:41:23Z"
   }
 ]
 #+end_src
@@ -17427,6 +17582,40 @@ Live Hera Pi reports both omlx/Qwen3.6-27B-oQ6e-mtp and router/sol as thinking=n
     "author": "johnw",
     "text": "Corrected both fess P3 findings. The Pi inventory now records updated: 2026-08-12, and patch 61f6a52b263365a94bfe0dfe9f0daa1dde2d6e001c8b7ae23f56fefd737711e7 extends the pinned source comment to describe the actual model-switch precedence. The revised patch applies with --fuzz=0 to the exact source and reproduces all eight intended postimages byte-for-byte. Corrective verification: exact Pi package 30 files / 464 passed / 2 intentional skips; packaged pi-gallery integration green; config/ai all-systems flake evaluation green. No activation, push, live provider request, or image probe occurred.",
     "created_at": "2026-08-12T14:32:14Z"
+  }
+]
+#+end_src
+
+* DONE [#C] Keep inactive Pi Lens out of automatic updates
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-xc3x
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-22 Sat 00:27]
+:MODIFIED: [2026-08-22 Sat 04:32]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-22 Sat 04:32]
+:CLOSE_REASON: Pi Lens remains excluded from every Gallery runtime and is now manual-update only with an explicit reason; the updater suite, Darwin Gallery, aarch64-linux Gallery, and portable all-system evaluation passed. The x86_64 Gallery realization remains independently fixture-blocked by configured builder trust before assertions.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pi Lens is already packaged and projected but excluded from the generated Gallery active order. Mark its source update policy manual so ordinary make update does not fetch, validate, or warn about new Pi Lens releases while it is inactive; preserve explicit targeted updates for deliberate maintenance. Acceptance: active Gallery exclusion remains behaviorally covered, the production source record is manual with a reason, ordinary catalog selection skips it, an explicit target remains supported, and focused updater/Gallery checks pass.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-xc3x",
+    "depends_on_id": "nix-tumd",
+    "type": "discovered-from",
+    "created_at": "2026-08-22T07:27:50.002811Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src

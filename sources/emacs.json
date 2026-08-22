@@ -262,8 +262,8 @@
         "args": {
           "owner": "karthink",
           "repo": "gptel",
-          "rev": "df4c9d8b768675bcde4a02b65eea67e2f6dcc6d4",
-          "sha256": "sha256-M9Qx8fdg/55B+ROMgCgjZHwoqBP1ZG3zAKwV0laYLV0="
+          "rev": "cd2cd7367dc0e0b1ba14cf6e5e648c0e488fff99",
+          "sha256": "sha256-jKsWAgwpnBcchxWtsNJLTkggOybYzwItbIIvwVP72gw="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/karthink/gptel"

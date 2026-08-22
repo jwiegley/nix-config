@@ -201,27 +201,51 @@ if (rssChildLane === "tokens" || rssChildLane === "fork") {
 		const warmDir = join(dir, "warm");
 		realFs.mkdirSync(warmDir);
 		const warmFile = join(warmDir, "session.jsonl");
-		realFs.writeFileSync(
-			warmFile,
-			encodeJsonl([
-				{ type: "session", version: 3, id: "warm" },
-				{
+		let warmBytes = 0;
+		let warmEntries = 0;
+		let warmPreviousId: string | null = null;
+		const warmFd = realFs.openSync(warmFile, "wx");
+		try {
+			const header = `${JSON.stringify({ type: "session", version: 3, id: "warm" })}\n`;
+			writeAll(warmFd, header);
+			warmBytes += Buffer.byteLength(header);
+			while (warmBytes < 16 * 1024 * 1024) {
+				const id = `warm-${warmEntries}`;
+				const line = `${JSON.stringify({
 					type: "message",
-					id: "warm-assistant",
+					id,
+					parentId: warmPreviousId,
 					message: {
-						role: "assistant",
-						provider: "anthropic",
-						content: [{ type: "thinking", thinkingSignature: "signed" }],
+						role: warmEntries === 0 ? "assistant" : "user",
+						provider: warmEntries === 0 ? "anthropic" : undefined,
+						content:
+							warmEntries === 0
+								? [
+										{ type: "thinking", thinkingSignature: "signed" },
+										{ type: "text", text: payload },
+									]
+								: [{ type: "text", text: payload }],
 						usage: { inputTokens: 1, outputTokens: 1 },
 					},
-				},
-			]),
+				})}\n`;
+				writeAll(warmFd, line);
+				warmBytes += Buffer.byteLength(line);
+				warmPreviousId = id;
+				warmEntries++;
+			}
+			realFs.fsyncSync(warmFd);
+		} finally {
+			realFs.closeSync(warmFd);
+		}
+		assert(
+			historyBytes - warmBytes > maxRssDelta,
+			"measured history must exceed the warmup by more than the RSS ceiling",
 		);
 		if (rssChildLane === "tokens") {
 			expect(parseSessionTokens(warmDir)).toEqual({
-				input: 1,
-				output: 1,
-				total: 2,
+				input: warmEntries,
+				output: warmEntries,
+				total: warmEntries * 2,
 			});
 		} else {
 			expect(sanitizePersistedFork(warmFile, true)).toBe("off");

@@ -20,10 +20,10 @@
     "agent-browser-source": {
       "source": {
         "args": {
-          "narHash": "sha256-UdCBSe7w0ZgJimB7ixGcaabJjH3m6O0vB1SV9n9apfE=",
+          "narHash": "sha256-T5tqhBrfRpeFlQbjqn/l0iW1yxjl4RgmH5VthDC2Bk0=",
           "owner": "vercel-labs",
           "repo": "agent-browser",
-          "rev": "548b159b30eef119ccf6846c8bc807d0eaa3f6f8",
+          "rev": "b041bd4c9e71b0b1ea0727a9d9deb1e661615050",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -116,18 +116,18 @@
     "pi-cache-optimizer": {
       "source": {
         "args": {
-          "hash": "sha256-AFeaQHb7uDq69X5/oxa2ptbqTsHzL2J7o1gz6HmHr8w=",
-          "url": "https://registry.npmjs.org/pi-cache-optimizer/-/pi-cache-optimizer-2.8.3.tgz"
+          "hash": "sha256-YJpb6df7OrXRH8cKPBbw7I2yJgo3S2rPiDaH2EBRKRM=",
+          "url": "https://registry.npmjs.org/pi-cache-optimizer/-/pi-cache-optimizer-2.8.5.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-cache-optimizer/-/pi-cache-optimizer-2.8.3.tgz"
+        "url": "https://registry.npmjs.org/pi-cache-optimizer/-/pi-cache-optimizer-2.8.5.tgz"
       },
       "update": {
         "buildPackage": "pi-cache-optimizer",
         "kind": "npm-release",
         "package": "pi-cache-optimizer"
       },
-      "version": "2.8.3"
+      "version": "2.8.5"
     },
     "pi-usage-extension": {
       "source": {
@@ -199,18 +199,18 @@
     "pi-copy-message": {
       "source": {
         "args": {
-          "hash": "sha256-3TL3BlrFUiHAvxETJeTi9Vvoct1MJ1PNGiQV2UP4yxA=",
-          "url": "https://registry.npmjs.org/pi-copy-message/-/pi-copy-message-2.0.0.tgz"
+          "hash": "sha256-nPkndZ/9eLvZZ+wVj99cULK4z8zB2rj864wcjR85D9k=",
+          "url": "https://registry.npmjs.org/pi-copy-message/-/pi-copy-message-2.1.0.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-copy-message/-/pi-copy-message-2.0.0.tgz"
+        "url": "https://registry.npmjs.org/pi-copy-message/-/pi-copy-message-2.1.0.tgz"
       },
       "update": {
         "buildPackage": "pi-copy-message",
         "kind": "npm-release",
         "package": "pi-copy-message"
       },
-      "version": "2.0.0"
+      "version": "2.1.0"
     },
     "pi-cymbal": {
       "source": {
@@ -329,7 +329,9 @@
         ],
         "kind": "npm-release",
         "normalizer": "pi-gallery-v1",
-        "package": "pi-lens"
+        "package": "pi-lens",
+        "policy": "manual",
+        "reason": "Pi Lens is packaged but inactive and should only be updated deliberately"
       },
       "version": "4.0.1"
     },
@@ -566,15 +568,15 @@
     },
     "pi-subagents": {
       "hashes": {
-        "npmDepsHash": "sha256-NlfDVgWHRQbjyfex8bb/UZrMSFb5UMr0oKF9FXpL3Ec="
+        "npmDepsHash": "sha256-MccurZDbWj5Fu/Jbivq6nsQ0gfpAOkGQh5/YaU5RbP0="
       },
       "source": {
         "args": {
-          "hash": "sha256-EQ547lwOi9idrzAIXwwRmywIHokb7wCl8VXdeHWwVI4=",
-          "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.51.0.tgz"
+          "hash": "sha256-1IqTnvGBlc0REhyvwATFrdQnLbShV+oJYUlGcVe+YQ4=",
+          "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.54.0.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.51.0.tgz"
+        "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.54.0.tgz"
       },
       "update": {
         "artifacts": [
@@ -584,7 +586,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "pi-subagents"
       },
-      "version": "0.51.0"
+      "version": "0.54.0"
     },
     "pi-trace-extension": {
       "source": {
@@ -646,14 +648,14 @@
     },
     "pi-mcp-adapter": {
       "hashes": {
-        "npmDepsHash": "sha256-NdPGmgCvH6D9WSrysJn2/cuRjRSSTKyS7KkCGG9wF0U="
+        "npmDepsHash": "sha256-mRIuJPMzSUvcmD3R6Aww1bFg4XsD2H+aggZHckoBock="
       },
       "source": {
         "args": {
-          "narHash": "sha256-IhcMcpAUVwg2b7KVfBeizbywvgUd0DFV1/gNQl8nqc8=",
+          "narHash": "sha256-RE2dfNSZfRy7oWYhlFKm0ibAq1l4Fv1TZ7zQBYlHcIU=",
           "owner": "nicobailon",
           "repo": "pi-mcp-adapter",
-          "rev": "d85c78cd5881320387f73a35c827dfa1f9d9604c",
+          "rev": "4ce34a0f3a0f2e9538bc19c33616a8cd55a5606c",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -668,7 +670,7 @@
         "input": "pi-mcp-adapter",
         "kind": "flake-input+build"
       },
-      "version": "2.26.0"
+      "version": "2.27.0"
     },
     "pi-openai-server-compaction": {
       "source": {

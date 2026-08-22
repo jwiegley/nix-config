@@ -2351,6 +2351,8 @@ test_real_codex_probe_matrix() {
     assert_real_probe_policy manage-exec-short manage e prompt
     assert_real_probe_policy manage-review manage review --uncommitted
     assert_real_probe_policy manage-resume manage resume --last
+    assert_real_probe_policy manage-queue manage \
+        queue --thread thread --message message
     assert_real_probe_policy manage-archive manage archive thread
     assert_real_probe_policy manage-delete manage delete thread
     assert_real_probe_policy manage-unarchive manage unarchive thread
@@ -2362,6 +2364,11 @@ test_real_codex_probe_matrix() {
     assert_real_probe_policy delegate-completion delegate completion bash
     assert_real_probe_policy delegate-features delegate features list
     assert_real_probe_policy delegate-debug-models delegate debug models --bundled
+    assert_real_probe_policy delegate-agents delegate agents
+    assert_real_probe_policy delegate-agents-profile delegate \
+        --profile work agents
+    assert_real_probe_policy delegate-agents-ignore delegate \
+        agents --ignore-user-config
     assert_real_probe_policy delegate-root-help delegate --help
     assert_real_probe_policy delegate-root-version delegate --version
     assert_real_probe_policy delegate-exec-help delegate exec --help
@@ -2375,6 +2382,7 @@ test_real_codex_probe_matrix() {
     assert_real_probe_policy delegate-ignore-inapplicable delegate \
         mcp list --ignore-user-config
     assert_real_probe_policy delegate-mcp-add-incomplete delegate mcp add
+    assert_real_probe_policy delegate-queue-incomplete delegate queue
 
     assert_real_probe_policy conflict-root-profile conflict-profile \
         --profile work
@@ -2384,6 +2392,8 @@ test_real_codex_probe_matrix() {
         exec --profile=work prompt
     assert_real_probe_policy conflict-resume-profile conflict-profile \
         resume --profile work --last
+    assert_real_probe_policy conflict-queue-profile conflict-profile \
+        queue --thread thread --message message --profile work
     assert_real_probe_policy conflict-sandbox-profile conflict-profile \
         sandbox --profile work -- echo
 
@@ -2527,6 +2537,10 @@ test_real_wrapped_codex_status_parity() {
         sandbox --permission-profile standard --sandbox-state-json '{}' /usr/bin/true
     assert_real_codex_status_parity debug-empty-image delegate \
         debug prompt-input --image=
+    assert_real_codex_status_parity agents-profile delegate \
+        --profile work agents
+    assert_real_codex_status_parity agents-ignore delegate \
+        agents --ignore-user-config
 }
 
 test_real_wrapped_codex_routing() {

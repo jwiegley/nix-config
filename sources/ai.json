@@ -180,19 +180,20 @@
       },
       "source": {
         "args": {
-          "hash": "sha256-m1dsCowHkJnwhcpINszrn5pSCN8LwwV2bS3+3+shNtA=",
+          "hash": "sha256-46b+5YWwF5k1vBBzsjSCrn6k8dkPuBYy2bqWhgFqCbQ=",
           "owner": "ggml-org",
           "repo": "llama.cpp",
-          "tag": "b10502"
+          "tag": "v0.2.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/ggml-org/llama.cpp"
       },
       "update": {
+        "buildPackage": "llama-cpp-update-validator",
         "kind": "github-release",
-        "tagPrefix": "b"
+        "tagPrefix": "v"
       },
-      "version": "10502"
+      "version": "0.2.0"
     },
     "llama-swap": {
       "hashes": {
@@ -234,14 +235,14 @@
     },
     "mcp-searxng": {
       "hashes": {
-        "npmDepsHash": "sha256-LYVlgiEIZ2MoLifrASjQxeZjqKfKccKZKMFFfSR6kUs="
+        "npmDepsHash": "sha256-4WUOJJU9fXLVPE8ryB1IMWKVg5OL743VjupctYpPH0Y="
       },
       "source": {
         "args": {
-          "hash": "sha256-vNh96VKUD+hrwVhHvVAk88IKunfsY2gQ8WWmgRaywqY=",
+          "hash": "sha256-zakEU/6eeYClbj8VsSU0T6OqG0rl5iXUPSdAife4Juo=",
           "owner": "ihor-sokoliuk",
           "repo": "mcp-searxng",
-          "tag": "v1.15.0"
+          "tag": "v2.0.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/ihor-sokoliuk/mcp-searxng"
@@ -250,15 +251,15 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "1.15.0"
+      "version": "2.0.0"
     },
     "omlx": {
       "source": {
         "args": {
-          "hash": "sha256-AcxJ1Q8eZGb3/sxm1nX4gb9YjDm1U5gEkXsIRjMXjl4=",
+          "hash": "sha256-2gN8E3vgnKDRD+n9nrUWFfbIRX287KSbmGUpiNDp/Mc=",
           "owner": "jundot",
           "repo": "omlx",
-          "tag": "v0.6.3rc1"
+          "tag": "v0.6.3rc2"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jundot/omlx"
@@ -269,7 +270,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.6.3rc1"
+      "version": "0.6.3rc2"
     },
     "prime-agent": {
       "commit": "be9e2fa0714e7cd1c6bd9bdb1b554d2cc6550387",
@@ -703,10 +704,10 @@
     "mlx-audio": {
       "source": {
         "args": {
-          "hash": "sha256-ufnGdCL/hCcZi69+AbPXsvpQbIoN+28T2nB8Ju5Bsq8=",
+          "hash": "sha256-JtFhrfhmsozVTktqKrjUr01KEsPJYz33Nebsy5zos3Q=",
           "owner": "Blaizzy",
           "repo": "mlx-audio",
-          "rev": "65fb3ccbecbbbb8b32fd625326fb0bc85d2ad03b"
+          "rev": "ebf44dfcdcf28cac2993445e46e7c72a9eca7421"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/Blaizzy/mlx-audio"
@@ -794,9 +795,9 @@
     "mtplx": {
       "source": {
         "args": {
-          "hash": "sha256-d4UnTl3AEwch8vj8Q+O9zj1xlKZiaq6q/89JJEEpfAE=",
+          "hash": "sha256-w0z2khBs/eZ0qqEPAWNHDzSbZnCvxCXs62oYSFt7kTw=",
           "pname": "mtplx",
-          "version": "2.8.3"
+          "version": "2.9.0"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/mtplx"
@@ -807,7 +808,7 @@
         "kind": "pypi-release",
         "package": "mtplx"
       },
-      "version": "2.8.3"
+      "version": "2.9.0"
     },
     "phonemizer-fork": {
       "source": {
@@ -956,10 +957,10 @@
     "git-ai": {
       "source": {
         "args": {
-          "narHash": "sha256-u32UadTq+ERYgvA61H0P4z9PLqWJBv7YhkYBx//6KFg=",
+          "narHash": "sha256-BNpJayddBlSzNyqxXiEgN49EDZMBhPPspMt3uxqKc94=",
           "owner": "git-ai-project",
           "repo": "git-ai",
-          "rev": "22ceb60507f90009181bbcf8305e1229e5500937",
+          "rev": "c08de56df34cbc9aca2674053e86070e42f4f07f",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -977,10 +978,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-N6FReE8YDFK0NFxLDWiabbnZPPdBGw3zjQQ0y+94eJ4=",
+          "narHash": "sha256-0o/VXqH7ENNuDZ9YOL2JMUo0wkhZc6FUKLUwGOwGq1A=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "45dba955f7f08b3ab99189efc73b98c76733faeb",
+          "rev": "304ada966596829e870cacc580e6b8bf27186744",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -998,10 +999,10 @@
     "mcp-servers-nix": {
       "source": {
         "args": {
-          "narHash": "sha256-BNUGBpaOmh3dShJaoXS09XiInpnjYf66Vd/GCt9ks2M=",
+          "narHash": "sha256-hgrLFA05Ndh5cBfFJtmVZuWXCTxGGzC7FlV6pPjmOIM=",
           "owner": "natsukium",
           "repo": "mcp-servers-nix",
-          "rev": "3a8936db39a3ebfc46c64e968121c5304b1e168f",
+          "rev": "9ced2e7048a0cb43d801940d4b345b8027a4c02f",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1103,10 +1104,10 @@
     "rust-overlay": {
       "source": {
         "args": {
-          "narHash": "sha256-WLhxXPMCzbeufsDZxdzkurLGBq74GX+JgLX8fFy6HZs=",
+          "narHash": "sha256-YT4Fs2k7bi+7YzuLt93EtIRgjpwHK5ZfsQEIh5dEQSk=",
           "owner": "oxalica",
           "repo": "rust-overlay",
-          "rev": "99607a06c2ea1290cd3258c11d1416dde9201f94",
+          "rev": "fd2ebb9cc4323d0c5a1336138dab5c3c5a5d8bd9",
           "type": "github"
         },
         "fetcher": "fetchTree",

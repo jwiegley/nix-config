@@ -228,7 +228,9 @@ runCommand "pi-gallery-check"
             for request_line in requests:
                 request = json.loads(request_line)
                 ui_responses = request.pop("_ui_responses", [])
+                wait_for_agent_settled = request.pop("_wait_for_agent_settled", False)
                 request_id = request["id"]
+                response_received = False
                 process.stdin.write(json.dumps(request) + "\n")
                 process.stdin.flush()
                 while True:
@@ -269,6 +271,10 @@ runCommand "pi-gallery-check"
                     if response.get("type") == "response" and response.get("id") == request_id:
                         if ui_responses:
                             raise RuntimeError(f"Pi did not request expected UI interactions: {ui_responses}")
+                        response_received = response.get("success") is True
+                        if not response_received or not wait_for_agent_settled:
+                            break
+                    if response_received and response.get("type") == "agent_settled":
                         break
             process.stdin.close()
             for response_line in process.stdout:
@@ -1993,19 +1999,19 @@ runCommand "pi-gallery-check"
     cat > "$routing_smoke/rpc-input.jsonl" <<'JSON'
     {"id":"before","type":"get_state"}
     {"id":"levels","type":"get_available_thinking_levels"}
-    {"id":"router-off","type":"prompt","message":"exercise the router disabled path"}
+    {"id":"router-off","type":"prompt","message":"exercise the router disabled path","_wait_for_agent_settled":true}
     {"id":"plain","type":"set_model","provider":"synthetic","modelId":"plain"}
     {"id":"qwen","type":"set_model","provider":"omlx","modelId":"Qwen3.6-27B-oQ6e-mtp"}
     {"id":"direct","type":"get_state"}
     {"id":"direct-levels","type":"get_available_thinking_levels"}
-    {"id":"direct-off","type":"prompt","message":"exercise the direct disabled path"}
+    {"id":"direct-off","type":"prompt","message":"exercise the direct disabled path","_wait_for_agent_settled":true}
     {"id":"direct-cycle","type":"cycle_thinking_level"}
-    {"id":"direct-high","type":"prompt","message":"exercise the direct enabled path"}
+    {"id":"direct-high","type":"prompt","message":"exercise the direct enabled path","_wait_for_agent_settled":true}
     {"id":"direct-reset","type":"cycle_thinking_level"}
     {"id":"router","type":"set_model","provider":"router","modelId":"sol"}
     {"id":"router-cycle","type":"cycle_thinking_level"}
     {"id":"router-high-state","type":"get_state"}
-    {"id":"router-high","type":"prompt","message":"exercise the router enabled path"}
+    {"id":"router-high","type":"prompt","message":"exercise the router enabled path","_wait_for_agent_settled":true}
     JSON
     env -u OMLX_API_KEY -u OMLX_CLIO_API_KEY -u OMLX_HERA_API_KEY \
       -u LLAMA_SWAP_API_KEY \
@@ -2184,8 +2190,11 @@ runCommand "pi-gallery-check"
       EOF
     ''}
     ${lib.optionalString (!stdenv.hostPlatform.isDarwin) ''
-      ln -s ${gallery}/loader.ts \
-        "$smoke/home/.config/pi/agent/extensions/nix-gallery/index.ts"
+      cat > "$smoke/home/.config/pi/agent/extensions/nix-gallery/index.ts" <<'EOF'
+      import { createNixGallery } from ${builtins.toJSON "${gallery}/loader.ts"};
+
+      export default createNixGallery({});
+      EOF
     ''}
     printf '%s\n' '{"providers":{"sentinel":{"apiKey":"unchanged"}}}' \
       > "$smoke/home/.config/pi/agent/models.json"

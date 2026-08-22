@@ -3,6 +3,48 @@ final: prev:
 
 let
   sources = import ../../packages/source-catalog.nix "ai";
+
+  llamaCppPinActive =
+    prev.stdenv.hostPlatform.isDarwin
+    && builtins.hasAttr "nodejs_latest" prev.llama-cpp.override.__functionArgs;
+
+  llamaCpp =
+    if llamaCppPinActive then
+      (prev.llama-cpp.override { nodejs_latest = final.nodejs_22; }).overrideAttrs (attrs: rec {
+        version = sources.llama-cpp.version;
+        src =
+          assert sources.llama-cpp.source.fetcher == "fetchFromGitHub";
+          prev.fetchFromGitHub sources.llama-cpp.source.args;
+        postPatch = "";
+        cmakeFlags =
+          builtins.filter (flag: !(prev.lib.hasPrefix "-DLLAMA_BUILD_NUMBER" flag)) (attrs.cmakeFlags or [ ])
+          ++ [
+            "-DLLAMA_BUILD_NUMBER:STRING=0"
+            "-DLLAMA_BUILD_IS_DEV:BOOL=OFF"
+          ];
+        npmRoot = "tools/ui";
+        preConfigure = ''
+          pushd tools/ui
+          npm run build
+          [[ -f dist/index.html ]] || {
+            echo "ERROR: tools/ui/dist/index.html not produced — npm run build genuinely failed" >&2
+            exit 1
+          }
+          popd
+        '';
+        npmDepsHash = sources.llama-cpp.hashes.npmDepsHash;
+        npmDeps = prev.fetchNpmDeps {
+          name = "llama-cpp-${version}-npm-deps";
+          inherit src;
+          patches = attrs.patches or [ ];
+          preBuild = "pushd tools/ui";
+          hash = npmDepsHash;
+        };
+      })
+    else if prev.stdenv.hostPlatform.isDarwin then
+      prev.lib.warn "llama-cpp: Darwin pin inactive (no nodejs_latest override arg); using upstream llama-cpp" prev.llama-cpp
+    else
+      prev.llama-cpp;
 in
 (import ../../packages/ai-llm.nix { inherit final prev; })
 // {
@@ -25,41 +67,15 @@ in
   nodejs_latest = final.nodejs_26;
 
   # llama.cpp's current web UI and npm project live under tools/ui.
-  llama-cpp =
-    if
-      prev.stdenv.hostPlatform.isDarwin
-      && builtins.hasAttr "nodejs_latest" prev.llama-cpp.override.__functionArgs
-    then
-      (prev.llama-cpp.override { nodejs_latest = final.nodejs_22; }).overrideAttrs (attrs: rec {
-        version = sources.llama-cpp.version;
-        src =
-          assert sources.llama-cpp.source.fetcher == "fetchFromGitHub";
-          prev.fetchFromGitHub sources.llama-cpp.source.args;
-        postPatch = "";
-        npmRoot = "tools/ui";
-        preConfigure = ''
-          prependToVar cmakeFlags "-DLLAMA_BUILD_COMMIT:STRING=b${version}"
-          pushd tools/ui
-          npm run build
-          [[ -f dist/index.html ]] || {
-            echo "ERROR: tools/ui/dist/index.html not produced — npm run build genuinely failed" >&2
-            exit 1
-          }
-          popd
-        '';
-        npmDepsHash = sources.llama-cpp.hashes.npmDepsHash;
-        npmDeps = prev.fetchNpmDeps {
-          name = "llama-cpp-${version}-npm-deps";
-          inherit src;
-          patches = attrs.patches or [ ];
-          preBuild = "pushd tools/ui";
-          hash = npmDepsHash;
-        };
-      })
-    else if prev.stdenv.hostPlatform.isDarwin then
-      prev.lib.warn "llama-cpp: Darwin pin inactive (no nodejs_latest override arg); using upstream llama-cpp" prev.llama-cpp
+  llama-cpp = llamaCpp;
+
+  # Candidate validation must fail rather than build upstream llama.cpp when
+  # this Darwin-only catalog pin is inactive.
+  llama-cpp-update-validator =
+    if llamaCppPinActive then
+      llamaCpp
     else
-      prev.llama-cpp;
+      throw "llama-cpp catalog pin is inactive on this updater host";
 
   # Expose the catalog-pinned Python mlx-lm package at top level.
   mlx-lm = final.python3Packages.mlx-lm;

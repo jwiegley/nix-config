@@ -1,6 +1,6 @@
 --- a/cli/src/main.rs
 +++ b/cli/src/main.rs
-@@ -56,6 +56,7 @@
+@@ -60,6 +60,7 @@
  #[cfg(target_os = "windows")]
  mod sandbox_setup;
  mod state_db_recovery;
@@ -8,7 +8,7 @@
  #[cfg(not(windows))]
  mod wsl_paths;
  
-@@ -956,6 +957,10 @@
+@@ -1038,6 +1039,10 @@
  }
  
  fn main() -> anyhow::Result<()> {
@@ -19,14 +19,16 @@
      let remote_control_disabled = codex_app_server::take_remote_control_disabled_env();
      arg0_dispatch_or_else(move |arg0_paths: Arg0DispatchPaths| async move {
          cli_main(arg0_paths, remote_control_disabled).await?;
-@@ -1672,25 +1677,33 @@
+@@ -1829,27 +1834,35 @@
          return Ok(None);
      };
  
 -    match subcommand {
--        Subcommand::Exec(_)
+-        Subcommand::Agents(_)
+-        | Subcommand::Exec(_)
 -        | Subcommand::Review(_)
 -        | Subcommand::Resume(_)
+-        | Subcommand::Queue(_)
 -        | Subcommand::Archive(_)
 -        | Subcommand::Delete(_)
 -        | Subcommand::Unarchive(_)
@@ -41,7 +43,7 @@
 +        Ok(Some(profile_v2))
 +    } else {
 +        anyhow::bail!(
-             "--profile only applies to runtime commands and `codex mcp`: `codex`, `codex exec`, `codex review`, `codex resume`, `codex archive`, `codex delete`, `codex unarchive`, `codex fork`, `codex mcp`, `codex sandbox`, and `codex debug prompt-input`."
+             "--profile only applies to runtime commands and `codex mcp`: `codex`, `codex exec`, `codex review`, `codex resume`, `codex queue`, `codex archive`, `codex delete`, `codex unarchive`, `codex fork`, `codex mcp`, `codex sandbox`, and `codex debug prompt-input`."
 -        ),
 +        )
      }
@@ -50,9 +52,11 @@
 +fn profile_v2_applies_to_subcommand(subcommand: &Subcommand) -> bool {
 +    matches!(
 +        subcommand,
-+        Subcommand::Exec(_)
++        Subcommand::Agents(_)
++            | Subcommand::Exec(_)
 +            | Subcommand::Review(_)
 +            | Subcommand::Resume(_)
++            | Subcommand::Queue(_)
 +            | Subcommand::Archive(_)
 +            | Subcommand::Delete(_)
 +            | Subcommand::Unarchive(_)
@@ -70,8 +74,9 @@
      arg0_paths: &Arg0DispatchPaths,
 --- /dev/null
 +++ b/cli/src/wrapper_policy_probe.rs
-@@ -0,0 +1,93 @@
+@@ -0,0 +1,99 @@
 +use super::MultitoolCli;
++use super::Subcommand;
 +use super::profile_v2_applies_to_subcommand;
 +use clap::ArgMatches;
 +use clap::Command;
@@ -127,6 +132,11 @@
 +        Ok(cli) => cli,
 +        Err(_) => return Policy::Delegate,
 +    };
++    // `agents` passes the early profile gate so upstream can emit its targeted
++    // invocation-override error, but it cannot accept an injected profile.
++    if matches!(cli.subcommand.as_ref(), Some(Subcommand::Agents(_))) {
++        return Policy::Delegate;
++    }
 +    if !cli
 +        .subcommand
 +        .as_ref()
@@ -166,7 +176,7 @@
 +mod tests;
 --- /dev/null
 +++ b/cli/src/wrapper_policy_probe_tests.rs
-@@ -0,0 +1,129 @@
+@@ -0,0 +1,151 @@
 +use super::Policy;
 +use super::policy_for_args;
 +use pretty_assertions::assert_eq;
@@ -176,7 +186,7 @@
 +}
 +
 +#[test]
-+fn manages_exactly_the_existing_profile_applicability_set() {
++fn manages_exactly_the_profile_injectable_set() {
 +    for args in [
 +        &["codex"][..],
 +        &["codex", "prompt"][..],
@@ -184,6 +194,14 @@
 +        &["codex", "e", "prompt"][..],
 +        &["codex", "review", "--uncommitted"][..],
 +        &["codex", "resume", "--last"][..],
++        &[
++            "codex",
++            "queue",
++            "--thread",
++            "thread",
++            "--message",
++            "message",
++        ][..],
 +        &["codex", "archive", "thread"][..],
 +        &["codex", "delete", "thread"][..],
 +        &["codex", "unarchive", "thread"][..],
@@ -196,6 +214,9 @@
 +    }
 +
 +    for args in [
++        &["codex", "agents"][..],
++        &["codex", "--profile", "work", "agents"][..],
++        &["codex", "agents", "--ignore-user-config"][..],
 +        &["codex", "completion", "bash"][..],
 +        &["codex", "features", "list"][..],
 +        &["codex", "debug", "models", "--bundled"][..],
@@ -218,6 +239,7 @@
 +        &["codex", "--ignore-user-config"][..],
 +        &["codex", "mcp", "list", "--ignore-user-config"][..],
 +        &["codex", "mcp", "add"][..],
++        &["codex", "queue"][..],
 +    ] {
 +        assert_eq!(policy(args), Policy::Delegate, "argv: {args:?}");
 +    }
@@ -230,6 +252,16 @@
 +        &["codex", "-pwork", "exec", "prompt"][..],
 +        &["codex", "exec", "--profile=work", "prompt"][..],
 +        &["codex", "resume", "--profile", "work", "--last"][..],
++        &[
++            "codex",
++            "queue",
++            "--thread",
++            "thread",
++            "--message",
++            "message",
++            "--profile",
++            "work",
++        ][..],
 +        &["codex", "sandbox", "--profile", "work", "--", "echo"][..],
 +    ] {
 +        assert_eq!(policy(args), Policy::ConflictProfile, "argv: {args:?}");

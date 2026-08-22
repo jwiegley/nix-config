@@ -195,6 +195,8 @@ let
     "ui-session.ts"
     "proxy-modes.ts"
     "direct-tools.ts"
+    "namespace-tools.ts"
+    "mcp-references.ts"
     "commands.ts"
     "prompts.ts"
     "onboarding-state.ts"

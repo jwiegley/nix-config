@@ -66,8 +66,8 @@
         "args": {
           "owner": "novoid",
           "repo": "filetags",
-          "rev": "2cfbad4ca4eda118ce4c3c71828cefb6aa21e832",
-          "sha256": "sha256-/t3PbXBNxN9cHeyCU5roI97Pm3YSIeAHKp1ZjNWqgSY="
+          "rev": "47ef6de3e39d17812818397e45f8761e74578fd2",
+          "sha256": "sha256-4kPnqSX7vxh4qGW+yjgMw5V4+FsmW6dW+KA1kjdLIYI="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/novoid/filetags"
@@ -76,7 +76,7 @@
         "branch": "master",
         "kind": "github-commit"
       },
-      "version": "2cfbad4c"
+      "version": "47ef6de3"
     },
     "git-branchstack": {
       "source": {
