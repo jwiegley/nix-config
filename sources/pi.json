@@ -20,10 +20,10 @@
     "agent-browser-source": {
       "source": {
         "args": {
-          "narHash": "sha256-T5tqhBrfRpeFlQbjqn/l0iW1yxjl4RgmH5VthDC2Bk0=",
+          "narHash": "sha256-FtB7AXqrROZs8UZv8UtxtofZwj4VlEERRFhEIXsZ3Y0=",
           "owner": "vercel-labs",
           "repo": "agent-browser",
-          "rev": "b041bd4c9e71b0b1ea0727a9d9deb1e661615050",
+          "rev": "f9a6cc34212340dad62b114559f7a306c4be0707",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -652,10 +652,10 @@
       },
       "source": {
         "args": {
-          "narHash": "sha256-RE2dfNSZfRy7oWYhlFKm0ibAq1l4Fv1TZ7zQBYlHcIU=",
+          "narHash": "sha256-M1ZOVgcoryRwfe/LsInLC2sF6/C1vTUxvwi3y4U9UDY=",
           "owner": "nicobailon",
           "repo": "pi-mcp-adapter",
-          "rev": "4ce34a0f3a0f2e9538bc19c33616a8cd55a5606c",
+          "rev": "4755775a6487136b1896128683ebfa0b3826b8b3",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -697,10 +697,10 @@
     "pi-quiet": {
       "source": {
         "args": {
-          "narHash": "sha256-4f37gKCGvEt8015z28d0tUnd8oh5/0y8gjBO7mwV2GU=",
+          "narHash": "sha256-J005rxU/6LY4+8weMQVNrOLEqSxm8eEap54MKZ8wfzM=",
           "owner": "zenspc",
           "repo": "pi-extensions",
-          "rev": "26ea4483c0b20ef8222fc4dfe8e6a402879e2ac0",
+          "rev": "fb1d70aafb7b0aff79da3be9b3dc7440c086bdb4",
           "type": "github"
         },
         "fetcher": "fetchTree",

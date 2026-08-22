@@ -795,9 +795,9 @@
     "mtplx": {
       "source": {
         "args": {
-          "hash": "sha256-w0z2khBs/eZ0qqEPAWNHDzSbZnCvxCXs62oYSFt7kTw=",
+          "hash": "sha256-czLIhkQmOZmfDAPYl8M0R/Er41AXUuOUB8/c3tGgQr4=",
           "pname": "mtplx",
-          "version": "2.9.0"
+          "version": "2.9.1"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/mtplx"
@@ -808,7 +808,7 @@
         "kind": "pypi-release",
         "package": "mtplx"
       },
-      "version": "2.9.0"
+      "version": "2.9.1"
     },
     "phonemizer-fork": {
       "source": {
@@ -957,10 +957,10 @@
     "git-ai": {
       "source": {
         "args": {
-          "narHash": "sha256-BNpJayddBlSzNyqxXiEgN49EDZMBhPPspMt3uxqKc94=",
+          "narHash": "sha256-bQXGKIypTfhPISMAvGA3hpVzhnjdBx8I77NFePAndU8=",
           "owner": "git-ai-project",
           "repo": "git-ai",
-          "rev": "c08de56df34cbc9aca2674053e86070e42f4f07f",
+          "rev": "55a1d728fb968fff90c5050470d6bd5d629967c6",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -978,10 +978,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-0o/VXqH7ENNuDZ9YOL2JMUo0wkhZc6FUKLUwGOwGq1A=",
+          "narHash": "sha256-uW7wn57rp06ISq2rP6ogP4joD1+JWdxTb2TSxLUkjKY=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "304ada966596829e870cacc580e6b8bf27186744",
+          "rev": "ac43040c34cd7853a8a1711513d0b1f688b5f217",
           "type": "github"
         },
         "fetcher": "fetchTree",
