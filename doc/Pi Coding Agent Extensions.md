@@ -52,8 +52,8 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | `pi-cymbal` | 0.5.3 | Indexed, symbol-oriented code navigation | `cymbal_*` |
 | `pi-subagents` | 0.55.0 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
 | `@quintinshaw/pi-dynamic-workflows` | 3.7.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
-| `pi-goal-x` | 0.27.4 | Durable goals and Sisyphus continuation | `/goal`, `get_goal` |
-| `pi-cache-optimizer` | 2.8.5 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
+| `pi-goal-x` | 0.30.0 | Durable goals and Sisyphus continuation | `/goal`, `get_goal` |
+| `pi-cache-optimizer` | 2.8.6 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
 
 ### Packaged but inactive
 
@@ -226,7 +226,7 @@ Pi Trace records the execution structure of each session—model requests, steps
 
 ### Cache Optimizer
 
-**Version:** 2.8.5 · **Links:** [Pi Packages](https://pi.dev/packages/pi-cache-optimizer) · [Home](https://github.com/jiangge/pi-cache-optimizer) · [GitHub](https://github.com/jiangge/pi-cache-optimizer)
+**Version:** 2.8.6 · **Links:** [Pi Packages](https://pi.dev/packages/pi-cache-optimizer) · [Home](https://github.com/jiangge/pi-cache-optimizer) · [GitHub](https://github.com/jiangge/pi-cache-optimizer)
 
 Pi Cache Optimizer keeps stable prompt content near the front, compresses volatile skill listings, supplies conservative OpenAI-compatible cache keys, diagnoses proxy compatibility, and reports local cache statistics. It is registered last so its prompt hook observes the gallery's final prompt shape.
 
@@ -322,9 +322,9 @@ Pi Markdown Preview renders assistant responses and local Markdown, LaTeX, sourc
 
 ### Goal X
 
-**Version:** 0.27.4 · **Links:** [Pi Packages](https://pi.dev/packages/pi-goal-x) · [Home](https://github.com/tmonk/pi-goal-x#readme) · [GitHub](https://github.com/tmonk/pi-goal-x)
+**Version:** 0.30.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-goal-x) · [Home](https://github.com/tmonk/pi-goal-x#readme) · [GitHub](https://github.com/tmonk/pi-goal-x)
 
-Pi Goal X persists explicit objectives, lifecycle state, usage, and ordered Sisyphus continuation. Goals can pause, resume, be audited before completion, and survive context compaction without restating the objective in the footer.
+Pi Goal X persists explicit objectives, lifecycle and task state, usage, ordered Sisyphus continuation, and a bounded append-only event ledger. Goals can pause, resume, be audited before completion, retain compact task and recent-ledger guidance across context compaction, retry transient network interruptions, and consult an optional blocker Oracle without restating the objective in the footer.
 
 **Basic usage.** Use `/goal` or `/sisyphus` to discuss and confirm a new objective; `/goal-direct` and `/sisyphus-direct` bypass discussion when the objective is already final. `/goal-list` lists open goals, `/goal-status` displays the focused goal, and `get_goal` exposes it to the agent. Use `/goal-clear` for user-owned abandonment and `/goal-cancel` to discard an unconfirmed draft; the remaining commands and phase-specific tools govern selection, pause, resume, recovery, and completion. Start a fresh Pi session after activation.
 

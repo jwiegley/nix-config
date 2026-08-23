@@ -180,13 +180,6 @@ let
     hash = "sha256-b3zpflsUAU9KpAT1uQb4QLZMbPn7faYlDdm8vNRWNzY=";
   };
 
-  piMcpUpstreamManifest = builtins.fromJSON (builtins.readFile "${piMcpAdapter}/package.json");
-  piMcpUpstreamScripts = piMcpUpstreamManifest.scripts or { };
-  piMcpHasPublicDist =
-    (piMcpUpstreamScripts."build:public" or null) == "tsc -p tsconfig.public.json"
-    && (piMcpUpstreamScripts.prepare or null) == "npm run build:public"
-    && builtins.elem "dist" (piMcpUpstreamManifest.files or [ ]);
-
   piMcpFiles = [
     "cli.js"
     "agent-dir.ts"
@@ -199,6 +192,7 @@ let
     "runtime-owner.ts"
     "tool-metadata.ts"
     "init.ts"
+    "failure-backoff.ts"
     "ui-session.ts"
     "proxy-modes.ts"
     "direct-tools.ts"
@@ -258,8 +252,7 @@ let
     "README.md"
     "CHANGELOG.md"
     "LICENSE"
-  ]
-  ++ lib.optionals piMcpHasPublicDist [ "failure-backoff.ts" ];
+  ];
 
   piMcpPublicSources = [
     "agent-dir.ts"
@@ -294,8 +287,8 @@ let
     ++ [
       "node_modules"
       "skills"
+      "dist"
     ]
-    ++ lib.optionals piMcpHasPublicDist [ "dist" ]
   );
   piQuietFileArgs = lib.escapeShellArgs piQuietFiles;
   piQuietPackagedFileArgs = lib.escapeShellArgs (piQuietFiles ++ [ "LICENSE" ]);
@@ -835,12 +828,6 @@ else
         cmp "$TMPDIR/expected-mcp-top-level" "$TMPDIR/actual-mcp-top-level" \
           || fail "pi-mcp-adapter packaged file set differs"
 
-        mcp_init_expected="$TMPDIR/pi-mcp-init.ts"
-        cp ${lib.escapeShellArg "${piMcpAdapter}/init.ts"} "$mcp_init_expected"
-        chmod u+w "$mcp_init_expected"
-        ${pkgs.python3}/bin/python3 \
-          ${../../packages/pi-mcp-adapter-normalize.py} "$mcp_init_expected"
-
         mcp_config_expected_root="$TMPDIR/pi-mcp-adapter-expected"
         mkdir "$mcp_config_expected_root"
         cp ${lib.escapeShellArg "${piMcpAdapter}/config.ts"} \
@@ -861,9 +848,7 @@ else
 
         package = json.loads(Path(sys.argv[1]).read_text())
         package.pop("devDependencies", None)
-        scripts = package.get("scripts", {})
-        for name in ("preinstall", "install", "postinstall", "prepare"):
-            scripts.pop(name, None)
+        package.pop("scripts", None)
         Path(sys.argv[2]).write_text(json.dumps(package, indent=2) + "\n")
         PY
 
@@ -871,12 +856,15 @@ else
           [ -f "$mcp/$relative" ] && [ ! -L "$mcp/$relative" ] \
             || fail "missing regular pi-mcp-adapter file: $relative"
           expected_mcp_file=${lib.escapeShellArg "${piMcpAdapter}"}/"$relative"
-          [ "$relative" != init.ts ] || expected_mcp_file=$mcp_init_expected
           [ "$relative" != config.ts ] || expected_mcp_file=$mcp_config_expected
           [ "$relative" != package.json ] || expected_mcp_file=$mcp_package_expected
           cmp "$expected_mcp_file" "$mcp/$relative" \
             || fail "unexpected pi-mcp-adapter file: $relative"
         done
+
+        test "$(grep -Fc 'state.config.settings?.mcpFooterStatus ?? "full"' \
+          "$mcp/init.ts")" -eq 1 \
+          || fail "pi-mcp-adapter native footer-status contract changed"
 
         [ -d "$mcp/skills" ] && [ ! -L "$mcp/skills" ] \
           || fail "missing regular pi-mcp-adapter skills root"
@@ -887,73 +875,58 @@ else
           "$TMPDIR/actual-mcp-skills.manifest" \
           || fail "pi-mcp-adapter packaged skills differ"
 
-        ${lib.optionalString piMcpHasPublicDist ''
-          [ -d "$mcp/dist" ] && [ ! -L "$mcp/dist" ] \
-            || fail "missing regular pi-mcp-adapter public dist root"
-          printf '%s\0' ${piMcpPublicDistFileArgs} \
-            | sort -z >"$TMPDIR/expected-mcp-dist"
-          find -P "$mcp/dist" -mindepth 1 -maxdepth 1 -printf '%f\0' \
-            | sort -z >"$TMPDIR/actual-mcp-dist"
-          cmp "$TMPDIR/expected-mcp-dist" "$TMPDIR/actual-mcp-dist" \
-            || fail "pi-mcp-adapter public dist differs"
-          while IFS= read -r -d "" public_file; do
-            [ -f "$mcp/dist/$public_file" ] && [ ! -L "$mcp/dist/$public_file" ] \
-              || fail "invalid pi-mcp-adapter public dist file: $public_file"
-          done <"$TMPDIR/expected-mcp-dist"
+        [ -d "$mcp/dist" ] && [ ! -L "$mcp/dist" ] \
+          || fail "missing regular pi-mcp-adapter public dist root"
+        printf '%s\0' ${piMcpPublicDistFileArgs} \
+          | sort -z >"$TMPDIR/expected-mcp-dist"
+        find -P "$mcp/dist" -mindepth 1 -maxdepth 1 -printf '%f\0' \
+          | sort -z >"$TMPDIR/actual-mcp-dist"
+        cmp "$TMPDIR/expected-mcp-dist" "$TMPDIR/actual-mcp-dist" \
+          || fail "pi-mcp-adapter public dist differs"
+        while IFS= read -r -d "" public_file; do
+          [ -f "$mcp/dist/$public_file" ] && [ ! -L "$mcp/dist/$public_file" ] \
+            || fail "invalid pi-mcp-adapter public dist file: $public_file"
+        done <"$TMPDIR/expected-mcp-dist"
 
-          public_fixture="$TMPDIR/pi-mcp-public-import"
-          mkdir -p "$public_fixture/node_modules"
-          ln -s "$mcp" "$public_fixture/node_modules/pi-mcp-adapter"
-          (
-            cd "$public_fixture"
-            node --input-type=module - <<'NODE'
+        public_fixture="$TMPDIR/pi-mcp-public-import"
+        mkdir -p "$public_fixture/node_modules"
+        ln -s "$mcp" "$public_fixture/node_modules/pi-mcp-adapter"
+        (
+          cd "$public_fixture"
+          node --input-type=module -e '
             const metadata = await import("pi-mcp-adapter/metadata-cache");
             const config = await import("pi-mcp-adapter/config");
             const types = await import("pi-mcp-adapter/types");
             if (typeof metadata.isServerCacheValid !== "function") process.exit(2);
             if (typeof config.loadMcpConfig !== "function") process.exit(3);
             if (typeof types.formatToolName !== "function") process.exit(4);
-            NODE
-          ) || fail "pi-mcp-adapter public exports failed to load"
-        ''}
+          '
+        ) || fail "pi-mcp-adapter public exports failed to load"
 
-        jq -e --argjson public_dist ${lib.escapeShellArg (builtins.toJSON piMcpHasPublicDist)} '
+        jq -e '
           .name == "pi-mcp-adapter"
           and .version == ${builtins.toJSON piSources.pi-mcp-adapter.version}
           and .type == "module"
           and .bin == {"pi-mcp-adapter":"cli.js"}
           and .pi.extensions == ["./index.ts"]
           and (.devDependencies == null)
-          and ((.scripts // {})
-            | (has("preinstall") or has("install") or has("postinstall") or has("prepare"))
-            | not)
-          and (if $public_dist then
-            (.files | index("dist")) != null
-            and .exports["./types"] == {
-              "types":"./dist/types.d.ts",
-              "import":"./dist/types.js",
-              "default":"./dist/types.js"
-            }
-            and .exports["./config"] == {
-              "types":"./dist/config.d.ts",
-              "import":"./dist/config.js",
-              "default":"./dist/config.js"
-            }
-            and .exports["./metadata-cache"] == {
-              "types":"./dist/metadata-cache.d.ts",
-              "import":"./dist/metadata-cache.js",
-              "default":"./dist/metadata-cache.js"
-            }
-          else
-            (.files | index("dist")) == null
-            and .exports["./types"] == {
-              "types":"./types.ts",
-              "import":"./types.ts",
-              "default":"./types.ts"
-            }
-            and (.exports | has("./config") | not)
-            and (.exports | has("./metadata-cache") | not)
-          end)
+          and (.scripts == null)
+          and (.files | index("dist")) != null
+          and .exports["./types"] == {
+            "types":"./dist/types.d.ts",
+            "import":"./dist/types.js",
+            "default":"./dist/types.js"
+          }
+          and .exports["./config"] == {
+            "types":"./dist/config.d.ts",
+            "import":"./dist/config.js",
+            "default":"./dist/config.js"
+          }
+          and .exports["./metadata-cache"] == {
+            "types":"./dist/metadata-cache.d.ts",
+            "import":"./dist/metadata-cache.js",
+            "default":"./dist/metadata-cache.js"
+          }
         ' "$mcp/package.json" >/dev/null \
           || fail "invalid pi-mcp-adapter package manifest"
 

@@ -71,15 +71,6 @@ let
   );
   piCatalogRecords = manifest.sourceCatalog;
   sourceRecords = members // supportSources;
-  goalHistoryPatch =
-    if members.goal.version == "0.27.4" then
-      ./patches/pi-goal-x-bounded-history.patch
-    else if members.goal.version == "0.28.0" then
-      ./patches/pi-goal-x-bounded-history-0.28.0.patch
-    else if members.goal.version == "0.30.0" then
-      ./patches/pi-goal-x-bounded-history-0.30.0.patch
-    else
-      throw "unsupported pi-goal-x bounded-history patch version ${members.goal.version}";
   catalogSourceIds = builtins.attrNames piCatalogRecords;
   gallerySourceIds = map (record: record.sourceName) (builtins.attrValues sourceRecords);
   externalSourceIds = builtins.attrNames manifest.externalSourceConsumers;
@@ -914,7 +905,11 @@ let
 
   pi-goal-x = mkCopyRoot {
     pname = members.goal.attrName;
-    version = members.goal.version;
+    version =
+      if members.goal.version == "0.30.0" then
+        members.goal.version
+      else
+        throw "unsupported pi-goal-x bounded-history patch version ${members.goal.version}";
     install = root: ''
       tar -xzf ${releaseTarballs.pi-goal-x} -C ${root} --strip-components=1
       substituteInPlace ${root}/extensions/goal-core.ts \
@@ -923,7 +918,7 @@ let
           'return `''${prefix}: ''${statusLabel(goal)}''${usage}`;'
       ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
         --directory=${root} --strip=1 \
-        < ${goalHistoryPatch}
+        < ${./patches/pi-goal-x-bounded-history-0.30.0.patch}
       patch_artifact="$(
         find ${root} -path '*/node_modules' -prune -o \
           -type f \( -name '*.orig' -o -name '*.rej' \) -print -quit

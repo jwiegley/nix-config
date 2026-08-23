@@ -80,6 +80,25 @@ let
 
   wsSource = fetchzip piSources.ws.source.args;
 
+  piMcpForbiddenBuildScripts = [
+    "predependencies"
+    "dependencies"
+    "postdependencies"
+    "preinstall"
+    "install"
+    "postinstall"
+    "prepublish"
+    "prepublishOnly"
+    "preprepare"
+    "postprepare"
+    "prepack"
+    "postpack"
+    "publish"
+    "postpublish"
+    "prebuild:public"
+    "postbuild:public"
+  ];
+
   piMcpAdapter = buildNpmPackage {
     pname = "pi-mcp-adapter";
     version = piSources.pi-mcp-adapter.version;
@@ -89,17 +108,13 @@ let
     npmDepsFetcherVersion = 2;
     dontNpmBuild = true;
     postPatch = ''
-      # Legacy revisions do not build package artifacts, so their development
-      # graph remains unnecessary. Newer revisions publish plain-Node public
-      # exports from dist/ and build those files from TypeScript in prepare.
-      # Keep that graph for the public build, while repairing the exact six
-      # nested Pi lock entries that upstream publishes without integrity.
+      # Keep the development graph needed by prepare's public build, while
+      # repairing the exact six nested Pi lock entries published without integrity.
       ${python3}/bin/python3 - <<'PY'
       import json
       from pathlib import Path
 
-      package_path = Path("package.json")
-      package = json.loads(package_path.read_text())
+      package = json.loads(Path("package.json").read_text())
       lock_path = Path("package-lock.json")
       lock = json.loads(lock_path.read_text())
 
@@ -136,63 +151,39 @@ let
           if path and metadata.get("resolved") and not metadata.get("integrity")
       }
       scripts = package.get("scripts", {})
+      forbidden_build_scripts = set(${builtins.toJSON piMcpForbiddenBuildScripts})
       exports = package.get("exports", {})
       files = package.get("files", [])
-      public_build = (
+      if not (
           scripts.get("build:public") == "tsc -p tsconfig.public.json"
           and scripts.get("prepare") == "npm run build:public"
-          and not any(name in scripts for name in ("preinstall", "install", "postinstall"))
+          and forbidden_build_scripts.isdisjoint(scripts)
           and "dist" in files
           and exports.get("./types", {}).get("import") == "./dist/types.js"
           and exports.get("./config", {}).get("import") == "./dist/config.js"
           and exports.get("./metadata-cache", {}).get("import")
               == "./dist/metadata-cache.js"
           and Path("tsconfig.public.json").is_file()
-      )
-      legacy_build = (
-          not any(name in scripts for name in ("preinstall", "install", "postinstall", "prepare"))
-          and "dist" not in files
-          and exports.get("./types", {}).get("import") == "./types.ts"
-          and "./config" not in exports
-          and "./metadata-cache" not in exports
-      )
-      if not (public_build or legacy_build):
+      ):
           raise SystemExit("pi-mcp-adapter package build contract changed")
 
-      if public_build:
-          if missing_integrity != set(integrity_repairs):
-              raise SystemExit(
-                  "pi-mcp-adapter lock integrity omissions changed: "
-                  f"{sorted(missing_integrity)}"
-              )
-          for path, (resolved, integrity) in integrity_repairs.items():
-              metadata = lock["packages"][path]
-              if metadata.get("resolved") != resolved:
-                  raise SystemExit(f"pi-mcp-adapter lock source changed: {path}")
-              metadata["integrity"] = integrity
-      else:
-          package.pop("devDependencies", None)
-          lock["packages"][""].pop("devDependencies", None)
-          lock["packages"] = {
-              path: metadata
-              for path, metadata in lock["packages"].items()
-              if not metadata.get("dev", False)
-          }
-          retained_missing_integrity = {
-              path
-              for path, metadata in lock["packages"].items()
-              if path and metadata.get("resolved") and not metadata.get("integrity")
-          }
-          if retained_missing_integrity:
-              raise SystemExit(
-                  "legacy pi-mcp-adapter runtime lock has integrity omissions: "
-                  f"{sorted(retained_missing_integrity)}"
-              )
+      if missing_integrity != set(integrity_repairs):
+          raise SystemExit(
+              "pi-mcp-adapter lock integrity omissions changed: "
+              f"{sorted(missing_integrity)}"
+          )
+      for path, (resolved, integrity) in integrity_repairs.items():
+          metadata = lock["packages"][path]
+          if metadata.get("resolved") != resolved:
+              raise SystemExit(f"pi-mcp-adapter lock source changed: {path}")
+          metadata["integrity"] = integrity
 
-      package_path.write_text(json.dumps(package, indent=2) + "\n")
+      native_footer_status = 'state.config.settings?.mcpFooterStatus ?? "full"'
+      if Path("init.ts").read_text().count(native_footer_status) != 1:
+          raise SystemExit("pi-mcp-adapter native footer-status contract changed")
+
       lock_path.write_text(json.dumps(lock, indent=2) + "\n")
       PY
-      ${python3}/bin/python3 ${./pi-mcp-adapter-normalize.py} init.ts
     '';
     postInstall = ''
       ${python3}/bin/python3 - "$out/lib/node_modules/pi-mcp-adapter/package.json" <<'PY'
@@ -203,9 +194,7 @@ let
       package_path = Path(sys.argv[1])
       package = json.loads(package_path.read_text())
       package.pop("devDependencies", None)
-      scripts = package.get("scripts", {})
-      for name in ("preinstall", "install", "postinstall", "prepare"):
-          scripts.pop(name, None)
+      package.pop("scripts", None)
       package_path.write_text(json.dumps(package, indent=2) + "\n")
       PY
     '';

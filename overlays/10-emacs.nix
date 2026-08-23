@@ -479,10 +479,11 @@ let
       };
 
       ########################################################################
-      # Former ~/.emacs.d/lisp git submodules, pinned to the exact revs that
-      # were checked out when migrated to Nix (2026-07-07). Packages that
-      # exist upstream in MELPA keep their melpaBuild (and autoloads) with
-      # only the src swapped; personal/unpublished ones use compileEmacsFiles.
+      # Former ~/.emacs.d/lisp git submodules, initialized from the exact revs
+      # checked out when migrated to Nix (2026-07-07) and now advanced by their
+      # catalog update policies. Packages that exist upstream in MELPA keep
+      # their melpaBuild (and autoloads) with only the src swapped;
+      # personal/unpublished ones use compileEmacsFiles.
 
       alert = esuper.alert.overrideAttrs (_: {
         src = githubSource "alert";
@@ -501,8 +502,8 @@ let
         src = githubSource "git-undo";
       });
 
-      # gptel pinned to the rev formerly checked out in ~/.emacs.d/lisp/gptel,
-      # overriding the stock MELPA gptel's src. This MUST stay a melpaBuild
+      # gptel follows its catalog-managed master revision while overriding the
+      # stock MELPA gptel's src. This MUST stay a melpaBuild
       # (src override, not compileEmacsFiles) so it keeps package.el version
       # metadata: gptel-fn-complete and other gptel-* packages declare a versioned
       # dependency `(gptel "0.9.8")`, which a compileEmacsFiles package (no

@@ -32,14 +32,9 @@ const packageVersion = (
 	}
 ).version;
 assert(
-	packageVersion === "0.27.4" ||
-		packageVersion === "0.28.0" ||
-		packageVersion === "0.30.0",
+	packageVersion === "0.30.0",
 	`review Goal-X bounded-history behavior for ${String(packageVersion)}`,
 );
-const hasV2Checkpoints =
-	packageVersion === "0.28.0" || packageVersion === "0.30.0";
-const hasCompactTaskPointers = packageVersion === "0.30.0";
 const codingAgentRoot = process.env.PI_CODING_AGENT_ROOT;
 assert(
 	codingAgentRoot,
@@ -74,7 +69,7 @@ assert.equal(
 	1,
 	"all Goal-X state checkpoints must pass through one ordered persistence path",
 );
-if (hasCompactTaskPointers) {
+{
 	const eventsSource = readFileSync(
 		join(packageRoot, "extensions/goal-events.ts"),
 		"utf8",
@@ -429,7 +424,7 @@ try {
 		nonterminalTruncation,
 		/older terminal history lies outside/,
 	);
-	if (hasCompactTaskPointers) {
+	{
 		assert.equal(typeof buildPostCompactionGoalDelta, "function");
 		const deltaGoal = {
 			...compactGoal,
@@ -482,7 +477,7 @@ try {
 		report: "latest rejection",
 		at: "t-1",
 	});
-	if (hasCompactTaskPointers) {
+	{
 		assert.equal(typeof readGoalOracleState, "function");
 		const oracleWorkdir = join(workdir, "oracle-exact-reducer");
 		const oracleDir = join(oracleWorkdir, ".pi/goals");
@@ -3988,7 +3983,7 @@ try {
 		};
 	}
 
-	if (hasCompactTaskPointers) {
+	{
 		const committedArchiveCleanup = createHarness(
 			"committed-archive-cleanup-failure",
 			{ skipAuditor: true },
@@ -4678,7 +4673,7 @@ try {
 		goalEventsModule.compactGoalCheckpointContext as
 			| ((messages: readonly unknown[], goal: typeof runtimeGoal | null) => unknown[] | null)
 			| undefined;
-	if (hasV2Checkpoints) {
+	{
 		assert.equal(typeof compactGoalCheckpointContext, "function");
 		const ordinaryMessage = { role: "assistant", content: "retain me" };
 		const latestCheckpoint = {
@@ -4722,8 +4717,6 @@ try {
 			},
 		});
 		assert.doesNotMatch(JSON.stringify(compacted), /objective leak/);
-	} else {
-		assert.equal(compactGoalCheckpointContext, undefined);
 	}
 	{
 		const sent: Array<{ content: string; details: Record<string, unknown> }> = [];
@@ -4745,7 +4738,7 @@ try {
 		assert.equal(sent.length, 1);
 		const firstTimestamp = sent[0]?.details.timestamp;
 		assert.equal(typeof firstTimestamp, "number");
-		if (hasV2Checkpoints) {
+		{
 			assert.deepEqual(sent[0], {
 				content:
 					'<pi_goal_continuation goal_id="runtime-goal" kind="checkpoint" v="2"/>',
@@ -4765,15 +4758,6 @@ try {
 			mock.timers.tick(0);
 			assert.equal(sent[1]?.details.checkpointSeq, 2);
 			assert.equal("objective" in sent[1]!.details, false);
-		} else {
-			assert.match(sent[0]!.content, /runtime retry lifecycle/);
-			assert.deepEqual(sent[0]!.details, {
-				kind: "checkpoint",
-				goalId: runtimeGoal.id,
-				status: "active",
-				objective: runtimeGoal.objective,
-				timestamp: firstTimestamp,
-			});
 		}
 		runtime.clearContinuationState();
 	}
