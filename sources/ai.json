@@ -7,10 +7,10 @@
       },
       "source": {
         "args": {
-          "hash": "sha256-V94mcoWmyso2yux0bgveeS2WB1CcGybbk/lPLNQer/8=",
+          "hash": "sha256-LdpTOnru4r46BYwHdKknlzqnOMutH6zseQZxd/BFAOY=",
           "owner": "asheshgoplani",
           "repo": "agent-deck",
-          "tag": "v1.14.0"
+          "tag": "v1.15.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/asheshgoplani/agent-deck"
@@ -20,7 +20,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "1.14.0"
+      "version": "1.15.0"
     },
     "agnix": {
       "hashes": {
@@ -958,10 +958,10 @@
     "git-ai": {
       "source": {
         "args": {
-          "narHash": "sha256-bQXGKIypTfhPISMAvGA3hpVzhnjdBx8I77NFePAndU8=",
+          "narHash": "sha256-c3rZFEZ6ZCf2BNWXD1BoNCHUDKYNNvozxvmwK+SVB+8=",
           "owner": "git-ai-project",
           "repo": "git-ai",
-          "rev": "55a1d728fb968fff90c5050470d6bd5d629967c6",
+          "rev": "c395f5463e3fa51fc8f07191d0db1a94e8b06135",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -979,10 +979,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-JzRwvboh8r37Coj6UhtnDiL0LIdPyz3+0zknDqS1zi0=",
+          "narHash": "sha256-2AnKVZNgXcpcYV1rK9h9DILL6uzJ7PlKYdAs0FtrUS0=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "5fae6955fa522382e640b65876fb2f456059f4c2",
+          "rev": "aa8a6076962029a05e40abc3742c000877027c60",
           "type": "github"
         },
         "fetcher": "fetchTree",

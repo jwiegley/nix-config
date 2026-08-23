@@ -116,18 +116,18 @@
     "pi-cache-optimizer": {
       "source": {
         "args": {
-          "hash": "sha256-YJpb6df7OrXRH8cKPBbw7I2yJgo3S2rPiDaH2EBRKRM=",
-          "url": "https://registry.npmjs.org/pi-cache-optimizer/-/pi-cache-optimizer-2.8.5.tgz"
+          "hash": "sha256-pWpHc76PFQQbhxVqyV7VOxuJZnYyR1zpDzMkBXnk6Ao=",
+          "url": "https://registry.npmjs.org/pi-cache-optimizer/-/pi-cache-optimizer-2.8.6.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-cache-optimizer/-/pi-cache-optimizer-2.8.5.tgz"
+        "url": "https://registry.npmjs.org/pi-cache-optimizer/-/pi-cache-optimizer-2.8.6.tgz"
       },
       "update": {
         "buildPackage": "pi-cache-optimizer",
         "kind": "npm-release",
         "package": "pi-cache-optimizer"
       },
-      "version": "2.8.5"
+      "version": "2.8.6"
     },
     "pi-usage-extension": {
       "source": {
@@ -275,18 +275,18 @@
     "pi-goal-x": {
       "source": {
         "args": {
-          "hash": "sha256-DRNaraAOeTxU/MiawkAGaoOElBPo63oZyqSACzzmlxQ=",
-          "url": "https://registry.npmjs.org/pi-goal-x/-/pi-goal-x-0.27.4.tgz"
+          "hash": "sha256-g3PGSh+Coyha93Q3puG8oxEa1yxfX5vtAMn3Y+cRrjM=",
+          "url": "https://registry.npmjs.org/pi-goal-x/-/pi-goal-x-0.30.0.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-goal-x/-/pi-goal-x-0.27.4.tgz"
+        "url": "https://registry.npmjs.org/pi-goal-x/-/pi-goal-x-0.30.0.tgz"
       },
       "update": {
         "buildPackage": "pi-goal-x",
         "kind": "npm-release",
         "package": "pi-goal-x"
       },
-      "version": "0.27.4"
+      "version": "0.30.0"
     },
     "pi-hashline-edit-pro": {
       "hashes": {
@@ -671,14 +671,14 @@
     },
     "pi-mcp-adapter": {
       "hashes": {
-        "npmDepsHash": "sha256-p90p6NFjyB25UKpAbtCPwUu/NCEKpn6Ir8jYAEKxZH0="
+        "npmDepsHash": "sha256-dIJsGgjXnNt6iwCXkhNIg8ZczV9+o64oBXGku++ZtqE="
       },
       "source": {
         "args": {
-          "narHash": "sha256-M1ZOVgcoryRwfe/LsInLC2sF6/C1vTUxvwi3y4U9UDY=",
+          "narHash": "sha256-GRbhymazgB4zD1QHp5FuJPiVjlYHsCbKiM3293UnkBc=",
           "owner": "nicobailon",
           "repo": "pi-mcp-adapter",
-          "rev": "4755775a6487136b1896128683ebfa0b3826b8b3",
+          "rev": "6c08147f7a3c6eba670fa8fb73e1fe68a7ab471f",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -720,10 +720,10 @@
     "pi-quiet": {
       "source": {
         "args": {
-          "narHash": "sha256-J005rxU/6LY4+8weMQVNrOLEqSxm8eEap54MKZ8wfzM=",
+          "narHash": "sha256-ay7PjZi/0wXgODMou9ZjkFR3e/nWh4iCIer5UV7rBp4=",
           "owner": "zenspc",
           "repo": "pi-extensions",
-          "rev": "fb1d70aafb7b0aff79da3be9b3dc7440c086bdb4",
+          "rev": "6fe09706acea703daec5f903357c548a7e27e60e",
           "type": "github"
         },
         "fetcher": "fetchTree",
