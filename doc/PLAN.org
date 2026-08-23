@@ -2500,6 +2500,23 @@ The owner requires Git-AI, Cozempic, Pi Mem, and Pi Artifacts to remain fully di
 ]
 #+end_src
 
+* DOING [#C] Run full source update and deploy authorized fleet
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-7ttl
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-23 Sun 04:28]
+:MODIFIED: [2026-08-23 Sun 04:28]
+:ASSIGNEE: johnw
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Run the canonical make update transaction from the clean signed/live main branch through completion. Preserve every updater hold-back and failure diagnostic, repair only evidence-backed compatibility breakage, and require the repository validation/signing/publication transaction to finish successfully. Then update paired external-consumer locks, build before switching, preserve rollback generations, and activate Hera, Clio, Vulcan, Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server. Exclude parked VPS and dormant git-ai. Acceptance: source and consumer commits are signed/live, all authoritative checkouts are clean/current, exact candidates are built and activated with host runtime health verified, and all residual problems are tracked explicitly.
+
 * DONE [#B] Package Pi Quiet's complete imported source closure
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
