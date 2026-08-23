@@ -18,6 +18,7 @@ let
     else
       { };
   pairedPiPackage = pairedAiPackages.pi or null;
+  pairedDroidPackage = pairedAiPackages.droid or null;
   piNodeExtraCaFallback = config.home.sessionVariables.SSL_CERT_FILE or null;
   wrapRuntimeEnvironment = import ../flake/ai/wrappers/runtime-environment.nix {
     inherit lib pkgs;
@@ -451,6 +452,10 @@ in
       message = "inputs.nix-config-ai.packages.${system}.pi is missing";
     }
     {
+      assertion = pairedDroidPackage != null;
+      message = "inputs.nix-config-ai.packages.${system}.droid is missing";
+    }
+    {
       assertion = pairedCodexPackage != null;
       message = "inputs.nix-config-ai.packages.${system}.codex is missing";
     }
@@ -484,6 +489,7 @@ in
     packages =
       lib.optional (managedCodexPackage != null) managedCodexPackage
       ++ lib.optional (managedPiPackage != null) managedPiPackage
+      ++ lib.optional (pairedDroidPackage != null) pairedDroidPackage
       ++ lib.optional (primeSelected && managedPrimePackage != null) managedPrimePackage
       ++ lib.optionals piSelected piRuntimePackages;
     # llama-swap retains its non-secret local sentinel. oMLX credentials are

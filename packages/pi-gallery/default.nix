@@ -34,6 +34,7 @@ let
         pi-caveman
         pi-copy-message
         pi-cymbal
+        pi-droid-sdk
         pi-dynamic-workflows
         pi-goal-x
         pi-markdown-preview
@@ -424,6 +425,66 @@ let
   memSource = mkMemberReleaseSource members.mem { };
   dynamicWorkflowsSource = mkMemberReleaseSource members.dynamic-workflows { };
   subagentsSource = mkMemberReleaseSource members.subagents { };
+  droidSdkUpstream = fetchFromGitHub members.droid.source.args;
+  droidRuntime = inputs.llm-agents.packages.${stdenv.hostPlatform.system}.droid;
+  droidSdkSource = runCommand "pi-droid-sdk-source" { nativeBuildInputs = [ jq ]; } ''
+    mkdir -p "$out"
+    cp -R ${droidSdkUpstream}/. "$out"
+    chmod -R u+w "$out"
+    ${jq}/bin/jq -e --arg version ${lib.escapeShellArg members.droid.version} '
+      .name == "pi-droid-sdk"
+      and .version == $version
+      and .dependencies == {
+        "@factory/droid-sdk": "^0.2.0",
+        "zod": "^3.25.76"
+      }
+    ' "$out/package.json" >/dev/null
+    ${jq}/bin/jq -e '
+      .lockfileVersion == 3
+      and .packages["node_modules/@factory/droid-sdk"].version == "0.2.0"
+      and .packages["node_modules/zod"].version == "3.25.76"
+      and ([
+        .packages
+        | to_entries[]
+        | select(
+            .key != ""
+            and .value.resolved != null
+            and .value.integrity == null
+          )
+        | .key
+      ] | sort) == [
+        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core",
+        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-ai",
+        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui"
+      ]
+      and ([
+        .packages[]
+        | select(
+            (.dev != true and .peer != true)
+            and .hasInstallScript == true
+          )
+      ] | length == 0)
+    ' "$out/package-lock.json" >/dev/null
+    ${jq}/bin/jq '
+      .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core"].integrity = "sha512-cGYbysb4EqUf0B28OeqFq2ppm1XF3bYBOP71q9dv38yf/UJfzMjiXBeNelrcio+QWIoVrW+xzYm7sMzYIUc9Og=="
+      | .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-ai"].integrity = "sha512-m/w8Hh3vQ0rAycwJiJWdzkypkn4295f4eq/966lDRy8aX5sk6bgYXH8TQmL16TO7Uwc7MbJG0QoyFHgX8RqXUQ=="
+      | .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui"].integrity = "sha512-PDhKU7u6fmEcvHUFHzrRwGc/Ytokj/hO+X4RPf+MWKEGpvg3B1vHv88Ee+Dy33004tYkQF5YeXV4btJZcp5x1g=="
+    ' "$out/package-lock.json" > "$out/package-lock.json.fixed"
+    mv "$out/package-lock.json.fixed" "$out/package-lock.json"
+    ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+      --directory="$out" --strip=1 \
+      < ${./patches/pi-droid-sdk-managed-runtime.patch}
+    substituteInPlace "$out/src/droid-process-env.ts" \
+      --replace-fail '@droid@' ${lib.escapeShellArg (lib.getExe droidRuntime)}
+    patch_artifact="$(
+      find "$out/src" -type f \( -name '*.orig' -o -name '*.rej' \) \
+        -print -quit
+    )"
+    if [ -n "$patch_artifact" ]; then
+      echo "pi-droid-sdk patch did not apply exactly: $patch_artifact" >&2
+      exit 1
+    fi
+  '';
 
   pi-hashline-edit-pro = mkNpmPackageRoot {
     pname = members.hashline.attrName;
@@ -465,6 +526,24 @@ let
     version = members.dynamic-workflows.version;
     src = dynamicWorkflowsSource;
     npmDepsHash = members.dynamic-workflows.hashes.npmDepsHash;
+  };
+  pi-droid-sdk = mkNpmPackageRoot {
+    pname = members.droid.attrName;
+    version = members.droid.version;
+    src = droidSdkSource;
+    npmDepsHash = members.droid.hashes.npmDepsHash;
+    prepareBundle = root: ''
+      rmdir ${root}/node_modules/@earendil-works
+      for sdk_dist in \
+        ${root}/node_modules/@factory/droid-sdk/dist/index.js \
+        ${root}/node_modules/@factory/droid-sdk/dist/index.cjs
+      do
+        substituteInPlace "$sdk_dist" \
+          --replace-fail \
+            'const mergedEnv = this.env ? { ...process.env, ...this.env } : void 0;' \
+            'const mergedEnv = this.env ?? {};'
+      done
+    '';
   };
   pi-subagents = mkNpmPackageRoot {
     pname = members.subagents.attrName;
@@ -1182,6 +1261,7 @@ let
       {
         passthru = {
           inherit
+            droidRuntime
             manifest
             projection
             roots
@@ -1217,6 +1297,8 @@ let
             process.env.PONYTAIL_HIDE_STATUS = "1";
             process.env.PI_LENS_DISABLE_LSP_INSTALL = "1";
             process.env.PI_LENS_DISABLE_TOOL_INSTALL = "1";
+            process.env.PI_DROID_AUTONOMY_LEVEL = "off";
+            process.env.PI_DROID_PI_TOOL_BRIDGE = "0";
 
             const toolOwnersFile = process.env.PI_GALLERY_TOOL_OWNERS_FILE;
             const toolOwners: Record<string, string[]> = {};

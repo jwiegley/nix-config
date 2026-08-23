@@ -37,6 +37,7 @@ in
     "insights"
     "usage"
     "multi-pass"
+    "droid"
     "llama-swap-provider"
     "omlx-provider"
     "router"
@@ -102,6 +103,10 @@ in
     multi-pass = member "pi-multi-pass" {
       publicName = "pi-multi-pass";
       extension = "extensions/multi-sub.ts";
+    };
+    droid = member "pi-droid-sdk" {
+      publicName = "pi-droid-sdk";
+      extension = "src/index.ts";
     };
     llama-swap-provider = member "pi-provider-llama-swap" {
       publicName = "pi-provider-llama-swap";

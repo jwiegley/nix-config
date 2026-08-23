@@ -4296,6 +4296,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             "pi-cache-optimizer": "pi-cache-optimizer",
             "pi-caveman": "pi-caveman",
             "pi-copy-message": "pi-copy-message",
+            "pi-droid-sdk": "pi-droid-sdk",
             "pi-goal-x": "pi-goal-x",
             "pi-loop": "pi-loop",
             "pi-mcp-adapter": "agent-resources",
@@ -4317,6 +4318,9 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             },
             expected_builds,
         )
+        pi_droid_sdk_update = catalog["pi-droid-sdk"]["update"]
+        self.assertEqual(pi_droid_sdk_update.get("policy"), "manual")
+        self.assertIn("tool bridge", pi_droid_sdk_update["reason"].lower())
         loaded = load_source_catalog(REPO)
         for name, package in expected_builds.items():
             with self.subTest(name=name):

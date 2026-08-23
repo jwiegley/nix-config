@@ -1,0 +1,231 @@
+diff --git a/src/droid-permissions.ts b/src/droid-permissions.ts
+index 18cbc62..38977b4 100644
+--- a/src/droid-permissions.ts
++++ b/src/droid-permissions.ts
+@@ -25,15 +25,12 @@ export function resolveDroidAutonomyLevel(): AutonomyLevel {
+ 		case "medium":
+ 			return AutonomyLevel.Medium;
+ 		case "high":
+-		default:
+ 			return AutonomyLevel.High;
++		default:
++			return AutonomyLevel.Off;
+ 	}
+ }
+ 
+-function isBridgeMcpTool(params: RequestPermissionRequestParams): boolean {
+-	return params.toolUses.some((item) => item.details.type === ToolConfirmationType.McpTool);
+-}
+-
+ function summarizePermissionRequest(params: RequestPermissionRequestParams): string {
+ 	return params.toolUses
+ 		.map((item) => {
+@@ -50,10 +47,6 @@ function summarizePermissionRequest(params: RequestPermissionRequestParams): str
+ export async function handleDroidPermissionRequest(
+ 	params: RequestPermissionRequestParams,
+ ): Promise<ToolConfirmationOutcome> {
+-	if (isBridgeMcpTool(params)) {
+-		return ToolConfirmationOutcome.ProceedOnce;
+-	}
+-
+ 	if (permissionPromptHandler) {
+ 		return permissionPromptHandler(params);
+ 	}
+diff --git a/src/droid-pi-tool-bridge.ts b/src/droid-pi-tool-bridge.ts
+index 64cbe9c..67f7d71 100644
+--- a/src/droid-pi-tool-bridge.ts
++++ b/src/droid-pi-tool-bridge.ts
+@@ -80,7 +80,7 @@ function resolveEnvFlag(value: string | undefined, defaultEnabled: boolean): boo
+ }
+ 
+ export function resolveDroidPiToolBridgeEnabled(env: Record<string, string | undefined> = process.env): boolean {
+-	return resolveEnvFlag(env[DROID_PI_TOOL_BRIDGE_ENV], true);
++	return resolveEnvFlag(env[DROID_PI_TOOL_BRIDGE_ENV], false);
+ }
+ 
+ function resolveExposeOverlappingBuiltins(env: Record<string, string | undefined> = process.env): boolean {
+diff --git a/src/droid-process-env.ts b/src/droid-process-env.ts
+new file mode 100644
+index 0000000..2efc719
+--- /dev/null
++++ b/src/droid-process-env.ts
+@@ -0,0 +1,62 @@
++const DROID_PROCESS_ENVIRONMENT = new Set([
++	"ALL_PROXY",
++	"COLORTERM",
++	"CURL_CA_BUNDLE",
++	"GIT_SSL_CAINFO",
++	"HOME",
++	"HTTP_PROXY",
++	"HTTPS_PROXY",
++	"LANG",
++	"LANGUAGE",
++	"LC_ALL",
++	"LC_CTYPE",
++	"LOGNAME",
++	"NIX_SSL_CERT_FILE",
++	"NODE_EXTRA_CA_CERTS",
++	"NO_COLOR",
++	"NO_PROXY",
++	"PATH",
++	"REQUESTS_CA_BUNDLE",
++	"SHELL",
++	"SSL_CERT_DIR",
++	"SSL_CERT_FILE",
++	"TEMP",
++	"TERM",
++	"TMP",
++	"TMPDIR",
++	"TZ",
++	"USER",
++	"XDG_CACHE_HOME",
++	"XDG_CONFIG_HOME",
++	"XDG_DATA_HOME",
++	"XDG_STATE_HOME",
++	"all_proxy",
++	"http_proxy",
++	"https_proxy",
++	"no_proxy",
++]);
++
++const DROID_EXEC_PATH = "@droid@";
++
++export function getDroidExecPath(): string {
++	return DROID_EXEC_PATH;
++}
++
++export function buildDroidProcessEnv(
++	apiKey: string,
++	env: NodeJS.ProcessEnv = process.env,
++): Record<string, string> {
++	const childEnv: Record<string, string> = {};
++	for (const [name, value] of Object.entries(env)) {
++		if (value === undefined) continue;
++		if (
++			DROID_PROCESS_ENVIRONMENT.has(name)
++			|| name.startsWith("FACTORY_")
++			|| name.startsWith("LC_")
++		) {
++			childEnv[name] = value;
++		}
++	}
++	childEnv.FACTORY_API_KEY = apiKey;
++	return childEnv;
++}
+diff --git a/src/droid-provider.ts b/src/droid-provider.ts
+index 4bd513d..cd8911a 100644
+--- a/src/droid-provider.ts
++++ b/src/droid-provider.ts
+@@ -23,9 +23,10 @@ import {
+ 	type DroidPiToolBridgeRun,
+ } from "./droid-pi-tool-bridge.js";
+ import { getDroidSessionCwd } from "./droid-session-cwd.js";
++import { buildDroidProcessEnv, getDroidExecPath } from "./droid-process-env.js";
+ 
+ const MISSING_API_KEY_MESSAGE =
+-	"Factory API key required. Use /login (Use an API key -> Factory), set FACTORY_API_KEY, or pass --api-key.";
++	"Factory API key required. Use /login (Use an API key -> Factory) or set FACTORY_API_KEY.";
+ const ZERO_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 };
+ 
+ class DroidAbortError extends Error {
+@@ -78,9 +79,8 @@ function makeInitialMessage(model: Model<Api>): AssistantMessage {
+ 	};
+ }
+ 
+-function resolveFactoryApiKey(optionsApiKey?: string): string | undefined {
++export function resolveFactoryApiKey(optionsApiKey?: string): string | undefined {
+ 	const trimmed = optionsApiKey?.trim();
+-	if (trimmed && trimmed !== "FACTORY_API_KEY") return trimmed;
+ 	if (trimmed === "FACTORY_API_KEY") return process.env.FACTORY_API_KEY?.trim() || undefined;
+ 	return undefined;
+ }
+@@ -394,10 +394,11 @@ export function streamDroid(
+ 			const session = await createSession({
+ 				modelId: model.id,
+ 				cwd,
++				execPath: getDroidExecPath(),
+ 				reasoningEffort,
+ 				autonomyLevel: resolveDroidAutonomyLevel(),
+ 				mcpServers: bridgeRun?.enabled ? bridgeRun.mcpServers : undefined,
+-				env: { ...process.env, FACTORY_API_KEY: apiKey },
++				env: buildDroidProcessEnv(apiKey),
+ 				permissionHandler: handleDroidPermissionRequest,
+ 				askUserHandler: handleDroidAskUserRequest,
+ 				abortSignal: options?.signal,
+diff --git a/src/droid-question-tool.ts b/src/droid-question-tool.ts
+index 96f2b95..7809e66 100644
+--- a/src/droid-question-tool.ts
++++ b/src/droid-question-tool.ts
+@@ -171,6 +171,7 @@ export function registerDroidQuestionTool(pi: Pick<ExtensionAPI, "getActiveTools
+ 	on(event: "session_start", handler: ExtensionHandler<SessionStartEvent>): void;
+ 	on(event: "model_select", handler: (event: { model: ExtensionContext["model"] }, ctx: ExtensionContext) => Promise<void> | void): void;
+ }): void {
++	if (!resolveDroidPiToolBridgeEnabled()) return;
+ 	pi.registerTool({
+ 		name: DROID_ASK_QUESTION_TOOL_NAME,
+ 		label: "Droid question",
+diff --git a/src/model-discovery.ts b/src/model-discovery.ts
+index 49460c0..28596ee 100644
+--- a/src/model-discovery.ts
++++ b/src/model-discovery.ts
+@@ -4,13 +4,14 @@ import { AuthStorage, type ProviderModelConfig } from "@earendil-works/pi-coding
+ import type { ModelThinkingLevel, ThinkingLevelMap } from "@earendil-works/pi-ai";
+ import { ReasoningEffort } from "@factory/droid-sdk";
+ import { FALLBACK_MODEL_ITEMS } from "./droid-fallback-models.generated.js";
++import { buildDroidProcessEnv, getDroidExecPath } from "./droid-process-env.js";
+ 
+ const FACTORY_PROVIDER_ID = "factory";
+ const FACTORY_API_KEY_ENV_VAR = "FACTORY_API_KEY";
+ const FALLBACK_CONTEXT_WINDOW = 200_000;
+ const FALLBACK_MAX_TOKENS = 16_384;
+ const ZERO_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+-const AUTH_SETUP_HINT = "/login (Use an API key -> Factory), FACTORY_API_KEY, or --api-key";
++const AUTH_SETUP_HINT = "/login (Use an API key -> Factory) or FACTORY_API_KEY";
+ const CATALOG_REFRESH_HINT =
+ 	"After adding auth to an already-started pi session, run /droid-refresh-models to refresh the live Factory model catalog without restarting pi.";
+ 
+@@ -42,24 +43,6 @@ export interface DroidModelMetadata {
+ 
+ const metadataByPiModelId = new Map<string, DroidModelMetadata>();
+ 
+-function getCliApiKeyFromArgv(argv: string[] = process.argv): string | undefined {
+-	for (let index = 0; index < argv.length; index++) {
+-		const arg = argv[index];
+-		if (arg === "--api-key") {
+-			const value = argv[index + 1];
+-			if (!value || value.startsWith("--")) return undefined;
+-			const trimmed = value.trim();
+-			return trimmed || undefined;
+-		}
+-		const prefix = "--api-key=";
+-		if (arg.startsWith(prefix)) {
+-			const trimmed = arg.slice(prefix.length).trim();
+-			return trimmed || undefined;
+-		}
+-	}
+-	return undefined;
+-}
+-
+ function normalizeApiKey(value: string | undefined): string | undefined {
+ 	const trimmed = value?.trim();
+ 	if (!trimmed) return undefined;
+@@ -76,9 +59,6 @@ async function getStoredFactoryApiKey(): Promise<string | undefined> {
+ }
+ 
+ export async function getDiscoveryApiKey(): Promise<string | undefined> {
+-	const cliApiKey = normalizeApiKey(getCliApiKeyFromArgv());
+-	if (cliApiKey) return cliApiKey;
+-
+ 	const storedApiKey = await getStoredFactoryApiKey();
+ 	if (storedApiKey) return storedApiKey;
+ 
+@@ -248,7 +228,8 @@ export async function discoverModels(options: DiscoverModelsOptions = {}): Promi
+ 		const session = await createSession({
+ 			modelId: FALLBACK_MODEL_ITEMS[0]?.id ?? "kimi-k2.5",
+ 			cwd: process.cwd(),
+-			env: { ...process.env, FACTORY_API_KEY: apiKey },
++			execPath: getDroidExecPath(),
++			env: buildDroidProcessEnv(apiKey),
+ 		});
+ 		try {
+ 			const available = session.initResult.availableModels ?? [];

@@ -628,6 +628,7 @@ assert builtins.all (
 assert builtins.all (
   config: config.home.activation.aiManagedPiBlackholePolicy.after == [ "linkGeneration" ]
 ) allHomes;
+assert builtins.all (hasPackage "droid") allHomes;
 assert builtins.all (hasPackage "unisessions") allHomes;
 assert builtins.all (config: !(hasPackage "cass" config) && !(hasPackage "cm" config)) allHomes;
 assert builtins.all (config: !(hasPackage "claude-vault" config)) allHomes;

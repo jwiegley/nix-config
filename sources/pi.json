@@ -249,6 +249,29 @@
       },
       "version": "3.7.0"
     },
+    "pi-droid-sdk": {
+      "hashes": {
+        "npmDepsHash": "sha256-Sxh4IJB1sSstw613JS6971CWJa4iidPjJDAIrLA70EI="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-Ltv0KeEPKG9jsWlHYdivgK4ASE4/jDFbXQZdeb2QauA=",
+          "owner": "bentossell",
+          "repo": "pi-droid-sdk",
+          "rev": "ecc7e9e35fd7d82aab5281de1623be35c734aa20"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/bentossell/pi-droid-sdk"
+      },
+      "update": {
+        "branch": "main",
+        "buildPackage": "pi-droid-sdk",
+        "kind": "github-commit",
+        "policy": "manual",
+        "reason": "Source updates require review of the nested Droid runtime and Pi tool bridge"
+      },
+      "version": "0.1.0"
+    },
     "pi-goal-x": {
       "source": {
         "args": {

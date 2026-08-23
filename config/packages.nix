@@ -507,7 +507,6 @@ rec {
     ++ optAgent "ccusage"
     ++ optAgent "ccstatusline"
     ++ optAgent "codex-acp"
-    ++ optAgent "droid"
     ++ optAgent "git-surgeon"
     ++ optAgent "opencode"
     ++ optPkg "unisessions"

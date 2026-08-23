@@ -40,6 +40,7 @@ in
     "pi-caveman"
     "pi-copy-message"
     "pi-cymbal"
+    "pi-droid-sdk"
     "pi-dynamic-workflows"
     "pi-gallery"
     "pi-goal-x"

@@ -1541,6 +1541,8 @@ runCommand "pi-gallery-check"
       };
     const alpha = [{ id: "alpha", name: "Alpha", baseUrl: "https://alpha.invalid/v1" }];
     const beta = [{ id: "beta", name: "Beta", baseUrl: "https://beta.invalid/v1" }];
+    delete process.env.PI_DROID_AUTONOMY_LEVEL;
+    delete process.env.PI_DROID_PI_TOOL_BRIDGE;
     await createGallery(
       [
         ["alpha-owner", extension("alpha-owner")],
@@ -1558,6 +1560,13 @@ runCommand "pi-gallery-check"
     if (observed.get("alpha-owner") !== alpha) throw new Error("alpha owner received another endpoint set");
     if (observed.get("beta-owner") !== beta) throw new Error("beta owner received another endpoint set");
     if (observed.get("omitted-owner")?.length !== 0) throw new Error("omitted owner did not fail closed");
+    if (process.env.PI_DROID_AUTONOMY_LEVEL !== "off") throw new Error("Droid autonomy was not forced off");
+    if (process.env.PI_DROID_PI_TOOL_BRIDGE !== "0") throw new Error("Droid Pi tool bridge was not forced off");
+    process.env.PI_DROID_AUTONOMY_LEVEL = "low";
+    process.env.PI_DROID_PI_TOOL_BRIDGE = "1";
+    await createGallery([])({ on() {} });
+    if (process.env.PI_DROID_AUTONOMY_LEVEL !== "off") throw new Error("Droid autonomy override escaped model-only policy");
+    if (process.env.PI_DROID_PI_TOOL_BRIDGE !== "0") throw new Error("Droid Pi tool bridge override escaped model-only policy");
     TS
     (
       cd "$local_provider_typecheck"
@@ -1620,6 +1629,34 @@ runCommand "pi-gallery-check"
     [ -d ${roots.subagents}/node_modules/yaml ]
     [ ! -e ${roots.subagents}/node_modules/typebox ]
     [ -f ${roots.subagents}/skills/pi-subagents/SKILL.md ]
+    [ -f ${roots.droid}/src/index.ts ]
+    [ -d ${roots.droid}/node_modules/@factory/droid-sdk ]
+    [ -d ${roots.droid}/node_modules/zod ]
+    [ ! -e ${roots.droid}/node_modules/@earendil-works ]
+    [ ! -e ${roots.droid}/node_modules/typebox ]
+    droid_smoke="$TMPDIR/pi-droid-sdk-smoke"
+    mkdir -p "$droid_smoke/home" "$droid_smoke/agent"
+    env -u FACTORY_API_KEY \
+      HOME="$droid_smoke/home" \
+      PI_CODING_AGENT_DIR="$droid_smoke/agent" \
+      PI_DROID_EXPECTED_EXEC_PATH=${lib.getExe piPackages.pi-gallery.droidRuntime} \
+      PI_DROID_SDK_ROOT=${roots.droid} \
+      ${bun}/bin/bun test ${sourceForChecks}/test/ai/pi-droid-sdk.check.ts
+    for sdk_dist in \
+      ${roots.droid}/node_modules/@factory/droid-sdk/dist/index.js \
+      ${roots.droid}/node_modules/@factory/droid-sdk/dist/index.cjs
+    do
+      [ "$(grep -Fc 'const mergedEnv = this.env ?? {};' "$sdk_dist")" -eq 1 ] \
+        || fail "Factory SDK child environment is not fail-closed in $sdk_dist"
+      ! grep -Fq '{ ...process.env, ...this.env }' "$sdk_dist" \
+        || fail "Factory SDK still merges the parent environment in $sdk_dist"
+    done
+    [ "$(grep -hF 'execPath: getDroidExecPath(),' \
+      ${roots.droid}/src/model-discovery.ts ${roots.droid}/src/droid-provider.ts | wc -l)" -eq 2 ] \
+      || fail "pi-droid-sdk does not bind both Droid sessions to the managed executable"
+    [ "$(grep -hF 'env: buildDroidProcessEnv(apiKey),' \
+      ${roots.droid}/src/model-discovery.ts ${roots.droid}/src/droid-provider.ts | wc -l)" -eq 2 ] \
+      || fail "pi-droid-sdk does not sanitize both Droid child environments"
     cymbal_version=$(${lib.getExe piPackages.cymbal} --version)
     printf '%s\n' "$cymbal_version" | grep -F '${manifest.supportSources.cymbal.version}' >/dev/null \
       || fail "Cymbal version drifted: $cymbal_version"
@@ -1642,6 +1679,10 @@ runCommand "pi-gallery-check"
       || fail "gallery runtime does not disable Lens LSP installation"
     grep -Fq 'process.env.PI_LENS_DISABLE_TOOL_INSTALL = "1";' ${gallery}/runtime.ts \
       || fail "gallery runtime does not disable Lens tool installation"
+    grep -Fq 'process.env.PI_DROID_AUTONOMY_LEVEL = "off";' ${gallery}/runtime.ts \
+      || fail "gallery runtime does not force Droid autonomy off"
+    grep -Fq 'process.env.PI_DROID_PI_TOOL_BRIDGE = "0";' ${gallery}/runtime.ts \
+      || fail "gallery runtime does not force the Droid Pi tool bridge off"
     ! grep -Fq 'PI_LENS_AUTO_INSTALL' ${gallery}/runtime.ts \
       || fail "gallery runtime retains the obsolete Lens installation toggle"
     [ "$(jq '.packages | length' ${gallery}/projection.json)" -eq ${toString (builtins.length manifest.order)} ]
@@ -2216,7 +2257,7 @@ runCommand "pi-gallery-check"
       '{"id":"cache-fix","type":"prompt","message":"/cache-optimizer fix"}' \
       '{"id":"cache-menu-fix","type":"prompt","message":"/cache-optimizer","_ui_responses":[{"method":"select","title":"Cache Optimizer","value":"Fix — Disabled because Nix manages models.json"}]}' \
       '{"id":"entries","type":"get_entries"}' > "$smoke/input.jsonl"
-    for command in npm npx pip pip3 curl wget bun pnpm yarn; do
+    for command in npm npx pip pip3 curl wget bun pnpm yarn droid; do
       cat > "$smoke/sentinels/$command" <<'SH'
     #!/bin/sh
     printf '%s\n' "$0 $*" >> "$PI_GALLERY_INSTALLER_SENTINEL"
@@ -2239,7 +2280,7 @@ runCommand "pi-gallery-check"
     EOF
     (
       cd "$smoke/project"
-      env -u PI_CODING_AGENT_DIR \
+      env -u FACTORY_API_KEY -u PI_CODING_AGENT_DIR \
       HOME="$smoke/home" \
       PI_GALLERY_ACTIVE_TOOLS="$smoke/active-tools.json" \
       PI_GALLERY_TOOL_OWNERS_FILE="$smoke/tool-owners.json" \
@@ -2290,7 +2331,7 @@ runCommand "pi-gallery-check"
       > "$smoke/timing-input.jsonl"
     (
       cd "$smoke/project"
-      env -u PI_CODING_AGENT_DIR \
+      env -u FACTORY_API_KEY -u PI_CODING_AGENT_DIR \
       HOME="$smoke/home" \
       PI_GALLERY_ACTIVE_TOOLS="$smoke/timing-active-tools.json" \
       PI_GALLERY_TOOL_OWNERS_FILE="$smoke/timing-tool-owners.json" \
@@ -2370,6 +2411,7 @@ runCommand "pi-gallery-check"
           "copy-message",
           "copy-user",
           "cymbal",
+          "droid-refresh-models",
           "gather-context-and-clarify",
           "goal",
           "goal-cancel",
@@ -2469,7 +2511,7 @@ runCommand "pi-gallery-check"
           . as $required | $actual | index($required) != null
         )
         and all(
-          ["memory_read", "memory_search", "memory_write", "scratchpad"][];
+          ["droid_ask_question", "memory_read", "memory_search", "memory_write", "scratchpad"][];
           . as $inactive | $actual | index($inactive) == null
         )
         and all($actual[]; contains("anvil") | not)

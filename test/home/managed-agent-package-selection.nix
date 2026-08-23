@@ -22,8 +22,11 @@ let
     isClientMachine = false;
   };
   canonicalCodex = inputs.nix-config-ai.packages.${pkgs.stdenv.hostPlatform.system}.codex;
+  canonicalDroid = inputs.nix-config-ai.packages.${pkgs.stdenv.hostPlatform.system}.droid;
   plainPackagesExcludeCanonicalCodex =
     !builtins.any (package: package.drvPath == canonicalCodex.drvPath) packages.package-list;
+  plainPackagesExcludeCanonicalDroid =
+    !builtins.any (package: package.drvPath == canonicalDroid.drvPath) packages.package-list;
   hasManagedClaude = builtins.any (
     package:
     builtins.hasAttr "name" package
@@ -128,6 +131,8 @@ let
 in
 assert configured.lib.assertMsg plainPackagesExcludeCanonicalCodex
   "config/packages.nix retained a duplicate Codex owner outside config/ai.nix";
+assert configured.lib.assertMsg plainPackagesExcludeCanonicalDroid
+  "config/packages.nix retained a duplicate Droid owner outside config/ai.nix";
 assert configured.lib.assertMsg hasManagedClaude
   "downstream nix-config-ai consumers lost the managed Claude wrapper";
 assert configured.lib.assertMsg avoidsLegacyPackages

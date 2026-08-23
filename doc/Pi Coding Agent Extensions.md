@@ -14,7 +14,7 @@ pi-version: 0.84.2
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: 26 gallery packages projected on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 24 of those packages on Darwin and 21 on Linux; Pi Lens and Pi Mem are retained but are not registered on any managed profile. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: 27 gallery packages projected on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 25 of those packages on Darwin and 22 on Linux; Pi Lens and Pi Mem are retained but are not registered on any managed profile. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope. The `agent-resources` package also carries `pi-openai-server-compaction` for compatibility testing, but no managed Pi profile renders or loads it, so it is not part of this configured inventory.
 
@@ -39,6 +39,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | `@ygncode/pi-insights` | 1.0.1 | Session analytics | `/insights` |
 | `@tmustier/pi-usage-extension` | 0.9.4 | Local usage, cost, and token statistics | `/usage` |
 | `pi-multi-pass` | 1.3.0 | Multiple OAuth accounts and failover pools | `/subs`, `/pool`, `/mp-preset` |
+| `pi-droid-sdk` | 0.1.0 | Factory Droid models through the official Droid SDK and CLI | `/model`, `factory/*` |
 | `pi-provider-llama-swap` | `57583beb` | Discover chat models from local llama-swap | `/model`, `llama-swap/*` |
 | `pi-provider-omlx` | `57583beb` | Discover chat models from both authenticated workstation oMLX services | `/model`, `omlx-hera/*`, `omlx-clio/*` |
 | `@yeliu84/pi-model-router` | 0.4.4 | Per-turn route and reasoning-tier selection | `/router` |
@@ -63,7 +64,7 @@ These packages remain pinned, built, and present in the immutable Gallery projec
 | `pi-lens` | 4.0.1 | One packaged skill root exposing four Lens skills remains advertised, and Nix still renders the hidden Lens widget setting; Lens tools and commands are unavailable |
 | `@askjo/pi-mem` | 1.2.0 | Projection only; no Pi Mem imports, tools, commands, or managed state activation |
 
-The llama-swap provider, oMLX provider, and Model Router packages are available on every host. The generated loader registers them automatically only on Darwin. Local llama-swap remains loopback-only. On both workstations the oMLX adapter registers the stable `omlx-hera` and `omlx-clio` identities and discovers both services through authenticated TLS. Only Hera receives fixed `omlx-hera` overrides and a synthetic router model and configuration; Clio retains bounded discovery so that Pi advertises only the models the two services actually return.
+The Factory Droid SDK provider is available and registered on every host. The llama-swap provider, oMLX provider, and Model Router packages are also available everywhere, but the generated loader registers those three only on Darwin. Local llama-swap remains loopback-only. On both workstations the oMLX adapter registers the stable `omlx-hera` and `omlx-clio` identities and discovers both services through authenticated TLS. Only Hera receives fixed `omlx-hera` overrides and a synthetic router model and configuration; Clio retains bounded discovery so that Pi advertises only the models the two services actually return.
 
 ## Managed fleet configuration
 
@@ -74,7 +75,7 @@ The Hera, Clio, shared-work, VPS, and Vulcan Pi profiles are rendered by `~/src/
 | Surface | Current projection |
 | --- | --- |
 | Generated ownership | Individual leaves below `~/.config/pi/agent`, plus `~/.pi-lens/config.json` and the `~/.pi` compatibility link; Pi shares `~/.config/mcp/mcp.json` with Prime Agent |
-| Extension entries | Fleet Theme, Nix Gallery loader, Pi Loop, Pi MCP Adapter, and Quiet Display on every managed host; Darwin loads loopback llama-swap and the bilateral authenticated oMLX discovery adapter, while Linux retains the provider and router packages without registering them automatically |
+| Extension entries | Fleet Theme, Nix Gallery loader, Pi Loop, Pi MCP Adapter, and Quiet Display on every managed host; the Gallery loads the Factory Droid SDK provider everywhere; Darwin additionally loads loopback llama-swap and the bilateral authenticated oMLX discovery adapter, while Linux retains those local providers and their router without registering them automatically |
 | Agent resources | 25 Nix-managed agent definitions |
 | Prompt resources | 63 files: 61 command prompts and the `emacs` and `spanish` prompts |
 | Skill resources | Shared catalog skills selected for Pi, plus five gallery package skill paths and one gallery prompt path advertised at runtime |
@@ -89,15 +90,15 @@ The generated model files deliberately emit no default model. Model selection re
 
 | Item | Current value |
 | --- | --- |
-| Hera provider surface | Gallery providers `llama-swap`, `omlx-hera`, and `omlx-clio`; fixed `llama-swap` and `omlx-hera` model overrides; the `hermes` OpenAI-compatible provider; native `openai-codex` and `openrouter` overrides; and the synthetic `router` provider |
-| Clio provider surface | Gallery providers `llama-swap`, `omlx-hera`, and `omlx-clio`, whose bounded discovery exposes only returned chat models; the `hermes` OpenAI-compatible provider; and native `openai-codex` and `openrouter` overrides. No fixed local model or synthetic router route is generated |
-| Linux provider surface | Native `openai-codex` and `openrouter` overrides only; the llama-swap and oMLX discovery adapters and router are packaged but not registered automatically |
+| Hera provider surface | Gallery providers `factory`, `llama-swap`, `omlx-hera`, and `omlx-clio`; fixed `llama-swap` and `omlx-hera` model overrides; the `hermes` OpenAI-compatible provider; native `openai-codex` and `openrouter` overrides; and the synthetic `router` provider |
+| Clio provider surface | Gallery providers `factory`, `llama-swap`, `omlx-hera`, and `omlx-clio`, whose bounded discovery exposes only returned chat models; the `hermes` OpenAI-compatible provider; and native `openai-codex` and `openrouter` overrides. No fixed local model or synthetic router route is generated |
+| Linux provider surface | Gallery provider `factory` plus native `openai-codex` and `openrouter` overrides; the llama-swap and oMLX discovery adapters and router are packaged but not registered automatically |
 | Hermes route | `hermes/hermes-agent` at `https://hermes.vulcan.lan/v1`; opt-in, with its bearer credential resolved from the Home Manager-configured password store and GnuPG home only when a request uses the provider; stale inherited `GPG_TTY` state is discarded before lookup, isolating credential resolution from Agent Deck/tmux terminal state; Pi session-affinity headers are enabled for stable upstream routing |
 | Sol router route | Hera only: `omlx-hera/Qwen3.6-27B-oQ6e-mtp` through Hera's authenticated TLS oMLX provider; text-only input; Boolean reasoning exposed as `off` or `high`; 262,144-token context; 65,536-token output |
 | Router profile | Three workload tiers backed by one `sol` model; each defaults to `off` and may be changed explicitly to `high`; `phaseBias` 0.5; debug disabled |
 | Native overrides | `openai-codex/gpt-5.6-sol` receives a 1,050,000-token context; `openrouter/z-ai/glm-5.2` receives 1,048,576; the exact managed Qwen route receives the compatibility and capability override described above |
 | Discovery | `llama-swap` queries its loopback `/models` endpoint; `omlx-hera` and `omlx-clio` query their respective authenticated TLS endpoints. Registration and `/model` refreshes use a 2.5-second per-request bound, and a failed refresh retains the last good list. Explicit type, modality, and capability metadata determines model behavior, while missing or unknown metadata falls back to text-only, non-reasoning chat with 262,144 context and 65,536 output |
-| Request and credential policy | Both Darwin profiles declare a 7,200-second request and stream-idle transport budget for all three discovery providers in `models.json`; the ordinary global timeout remains 300 seconds. Pi resolves distinct `omlx-hera` and `omlx-clio` bearer credentials from separate Keychain items into provider-specific runtime environment variables, without rendering either credential into Nix-owned files |
+| Request and credential policy | Both Darwin profiles declare a 7,200-second request and stream-idle transport budget for all three local discovery providers in `models.json`; the ordinary global timeout remains 300 seconds. Pi resolves distinct `omlx-hera` and `omlx-clio` bearer credentials from separate Keychain items into provider-specific runtime environment variables. The Factory provider uses the launching process's `FACTORY_API_KEY` or Pi's mutable `factory` login, without rendering any credential into Nix-owned files |
 
 The generated `models.json` owns compatibility and context overrides; on Hera it also owns the synthetic router model and fixed `llama-swap` and `omlx-hera` overrides, while both Darwin profiles own the Hermes route. Hera's exact managed Qwen override is an explicit exception to sparse `omlx-hera` discovery metadata: Nix declares its proven Boolean chat-template thinking behavior, sets its model-local thinking default to `off`, and retains text-only input. Explicit or restored user thinking choices still take precedence. Image input is not advertised until an exact model-and-service probe establishes it. Hermes uses a runtime command reference, and each oMLX provider uses its own Keychain-backed runtime environment value; none of those credentials is copied into the Nix store. The Darwin-registered provider extensions own runtime model discovery. No generated model is Pi's default.
 
@@ -131,7 +132,7 @@ The generated keymap retains the ordinary keys and adds Emacs-style editing:
 
 **Version:** local · **Links:** Nix authority: `~/src/nix/packages/pi-gallery/` · deployed leaf: `~/.config/pi/agent/extensions/nix-gallery/index.ts`
 
-The Nix Gallery loader projects the complete managed package set on every host. It imports and registers extensions in deterministic order, except that Linux does not automatically import the llama-swap or oMLX providers or their router and Pi Lens and Pi Mem are temporarily excluded on every platform. All 26 immutable package paths, including Lens and Pi Mem, remain in the projection. Before registration the loader suppresses Ponytail's footer status and disables Lens runtime installers. It is infrastructure rather than a public Pi package.
+The Nix Gallery loader projects the complete managed package set on every host. It imports and registers extensions in deterministic order, except that Linux does not automatically import the llama-swap or oMLX providers or their router and Pi Lens and Pi Mem are temporarily excluded on every platform. All 27 immutable package paths, including Lens and Pi Mem, remain in the projection. Before registration the loader suppresses Ponytail's footer status, disables Lens runtime installers, and enforces model-only Factory Droid operation by setting autonomy off and disabling the Pi tool bridge. It is infrastructure rather than a public Pi package.
 
 **Basic usage.** No direct command is required. Run `/reload` after activating a new Nix generation, or start a fresh Pi process, to load the current gallery. The loader itself owns no mutable state.
 
@@ -385,6 +386,14 @@ Pi Multi-Pass registers additional OAuth subscription accounts for the managed P
 
 **Basic usage.** Use `/subs` to add, authenticate, inspect, or remove accounts; `/pool` to create and manage failover pools and chains; and `/mp-preset` for named model routes. Mutable account and pool state remains outside Nix ownership.
 
+### Factory Droid SDK Provider
+
+**Version:** 0.1.0, pinned at `ecc7e9e` · **Links:** [Pi extension](https://github.com/bentossell/pi-droid-sdk) · [Factory TypeScript SDK](https://docs.factory.ai/sdk/typescript) · [Factory models](https://docs.factory.ai/models)
+
+Pi Droid SDK registers Factory's model catalog through the public `@factory/droid-sdk` package and the official `droid` CLI. It presents those models under `factory/*` and maps Pi thinking levels to the model's advertised Droid reasoning levels. The managed Gallery enforces model-only operation with autonomy off and the Pi tool bridge disabled. When no credential is available, the extension loads a bundled fallback roster without contacting Factory; live discovery and requests require `FACTORY_API_KEY` or Pi's mutable `factory` login. Nix owns only the pinned extension and dependency closure.
+
+**Basic usage.** The managed configuration installs the official `droid` CLI. Set `FACTORY_API_KEY` in the launching environment or use Pi's `/login` flow for the `factory` provider, then open `/model` and select a `factory/*` model. After adding credentials to an already-running Pi process, run `/droid-refresh-models` to refresh the account's current catalog. Model availability and organization policy remain controlled by Factory.
+
 ### Model Router
 
 **Version:** 0.4.4 · **Links:** [Pi Packages](https://pi.dev/packages/@yeliu84/pi-model-router) · [Home](https://github.com/yeliu84/pi-model-router#readme) · [GitHub](https://github.com/yeliu84/pi-model-router)
@@ -400,6 +409,7 @@ These binaries are not additional Pi extensions. They are the immediate runtime 
 | Runtime | Selected version | Consumer | Links |
 | --- | ---: | --- | --- |
 | Pi | 0.84.2 | All extensions | [Home](https://pi.dev) · [GitHub](https://github.com/badlogic/pi-mono) |
+| Droid CLI | managed installation | Factory Droid SDK Provider | [Factory quickstart](https://docs.factory.ai/cli/getting-started/quickstart) |
 | `agent-browser` | 0.34.0 | Pi Agent Browser Native | [GitHub](https://github.com/vercel-labs/agent-browser) |
 | RTK | 0.44.0 | Pi RTK Optimizer | [Home](https://www.rtk-ai.app) · [GitHub](https://github.com/rtk-ai/rtk) |
 | Cymbal | 0.14.0 | Pi Cymbal | [Home](https://chain.sh/cymbal/) · [GitHub](https://github.com/1broseidon/cymbal) |
@@ -414,6 +424,7 @@ The Pi profile also installs the support toolchain expected by Lens and the orch
 - The active profile root is `~/.config/pi/agent`; Nix owns only the generated leaves enumerated above.
 - Run `/reload` after a Nix activation when the current Pi process must adopt changed extension code.
 - On Hera and Clio, reopen `/model` after the llama-swap, `omlx-hera`, or `omlx-clio` roster changes; the picker continues to display its cached list while allowing up to 15 seconds for the combined catalog refresh. Each discovery request retains its separate 2.5-second bound.
+- Run `/droid-refresh-models` after adding or changing Factory authentication in an already-running Pi session.
 - Mutable extension state remains outside Nix ownership. Examples include Blackhole configuration and observational memory; Pi Mem Markdown, scratchpad, and dashboard cache; trace files; the Usage Dashboard cache; Cache Optimizer, Caveman, Quiet, and RTK preferences; Pi Loop presets and logs; MCP credentials and cache; Cymbal indexes; and Subagent, Workflow, and Goal run state. Nix reconciles Blackhole's four enabled-policy fields and removes its three retired aliases.
 - Style extensions retain distinct purposes: Ponytail minimizes implementation; Caveman compresses prose; Quiet compresses tool presentation; Fleet Theme changes TUI color treatment.
 

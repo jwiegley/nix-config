@@ -10037,6 +10037,47 @@ TestIssue1225_DrainInbox_ConcurrentDrainNoDoubleNoLoss silently returns on conte
 ]
 #+end_src
 
+* DONE [#C] Add pi-droid-sdk Factory provider to managed Pi Gallery
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-shtu
+:LABELS:   []
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-22 Sat 15:28]
+:MODIFIED: [2026-08-22 Sat 18:38]
+:ASSIGNEE: johnw
+:CREATED_BY: johnw
+:FINISHED: [2026-08-22 Sat 18:38]
+:CLOSE_REASON: Added the pinned pi-droid-sdk Gallery provider through Factory's public Droid SDK/CLI path; bound the paired Droid executable, environment-only Factory auth, fail-closed model-only runtime policy, exact dependency closure, and fleet/package/runtime regressions. Package, Pi Gallery, portable all-system evaluation, updater suite, make test, and pre-commit all pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Package and register bentossell/pi-droid-sdk as an immutable managed Pi Gallery extension. Pin the exact GitHub revision and npm dependency closure, use Factory’s published @factory/droid-sdk with the official droid CLI, preserve credentials and session state outside Nix, and expose Factory models through Pi’s existing model picker.
+
+** Acceptance Criteria
+
+The exact reviewed source revision and dependency closure are pinned through the existing Pi Gallery abstraction; every managed Pi profile loads the extension without embedding credentials or calling Factory during evaluation/build; Gallery counts, docs, compatibility contracts, updater ownership, and behavioral/loadability tests are updated; credential-free portable checks and the package build pass; no live Factory completion is required for source acceptance.
+
+** Notes
+
+Factory’s current TypeScript SDK documentation explicitly supports custom applications and product integrations using the public @factory/droid-sdk package and official droid subprocess. This replacement does not call or emulate Factory non-public HTTP APIs. Use remains subject to the account Order, organization controls, and published Factory documentation. The earlier @bzzimmy/pi-droid proposal was abandoned before code or package installation.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 525,
+    "issue_id": "nix-shtu",
+    "author": "johnw",
+    "text": "Owner explicitly directed installation of the requested package; proceeding with the exact pinned artifact, environment-only credential reference, credential-free tests, and no live Factory request.",
+    "created_at": "2026-08-22T23:24:28Z"
+  }
+]
+#+end_src
+
 * DONE [#C] Remove dead pushme jump-key placeholder
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
