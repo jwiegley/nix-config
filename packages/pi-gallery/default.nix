@@ -60,13 +60,6 @@ let
     };
   };
   inherit (manifest) members order supportSources;
-  agentBrowserHistoryPatch =
-    if members.browser.version == "0.3.0" then
-      ./patches/pi-agent-browser-bounded-history.patch
-    else if members.browser.version == "0.5.0" then
-      ./patches/pi-agent-browser-bounded-history-0.5.patch
-    else
-      throw "review the Browser Native bounded-history patch for ${members.browser.version}";
   localModelMemberIds = [
     "llama-swap-provider"
     "omlx-provider"
@@ -78,13 +71,13 @@ let
   );
   piCatalogRecords = manifest.sourceCatalog;
   sourceRecords = members // supportSources;
-  blackholeHistoryPatch =
-    if members.blackhole.version == "0.4.7" then
-      ./patches/pi-blackhole-managed-history.patch
-    else if members.blackhole.version == "0.4.8" then
-      ./patches/pi-blackhole-managed-history-0.4.8.patch
+  goalHistoryPatch =
+    if members.goal.version == "0.27.4" then
+      ./patches/pi-goal-x-bounded-history.patch
+    else if members.goal.version == "0.28.0" then
+      ./patches/pi-goal-x-bounded-history-0.28.0.patch
     else
-      throw "unsupported pi-blackhole managed-history patch version ${members.blackhole.version}";
+      throw "unsupported pi-goal-x bounded-history patch version ${members.goal.version}";
   catalogSourceIds = builtins.attrNames piCatalogRecords;
   gallerySourceIds = map (record: record.sourceName) (builtins.attrValues sourceRecords);
   externalSourceIds = builtins.attrNames manifest.externalSourceConsumers;
@@ -689,13 +682,16 @@ let
   pi-agent-browser-native = mkCopyRoot {
     pname = members.browser.attrName;
     version = members.browser.version;
-    install = root: ''
-      tar -xzf ${releaseTarballs.pi-agent-browser-native} -C ${root} \
-        --strip-components=1
-      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
-        --directory=${root} --strip=1 \
-        < ${agentBrowserHistoryPatch}
-    '';
+    install =
+      root:
+      assert members.browser.version == "0.5.0";
+      ''
+        tar -xzf ${releaseTarballs.pi-agent-browser-native} -C ${root} \
+          --strip-components=1
+        ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+          --directory=${root} --strip=1 \
+          < ${./patches/pi-agent-browser-bounded-history-0.5.patch}
+      '';
   };
 
   pi-usage-extension = mkCopyRoot {
@@ -816,13 +812,16 @@ let
   pi-blackhole = mkCopyRoot {
     pname = members.blackhole.attrName;
     version = members.blackhole.version;
-    install = root: ''
-      tar -xzf ${releaseTarballs.pi-blackhole} -C ${root} --strip-components=1
-      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
-        --directory=${root} --strip=1 \
-        < ${blackholeHistoryPatch}
-      rm -r ${root}/dist
-    '';
+    install =
+      root:
+      assert members.blackhole.version == "0.4.8";
+      ''
+        tar -xzf ${releaseTarballs.pi-blackhole} -C ${root} --strip-components=1
+        ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+          --directory=${root} --strip=1 \
+          < ${./patches/pi-blackhole-managed-history-0.4.8.patch}
+        rm -r ${root}/dist
+      '';
   };
 
   pi-caveman = mkCopyRoot {
@@ -922,7 +921,7 @@ let
           'return `''${prefix}: ''${statusLabel(goal)}''${usage}`;'
       ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
         --directory=${root} --strip=1 \
-        < ${./patches/pi-goal-x-bounded-history.patch}
+        < ${goalHistoryPatch}
       patch_artifact="$(
         find ${root} -path '*/node_modules' -prune -o \
           -type f \( -name '*.orig' -o -name '*.rej' \) -print -quit

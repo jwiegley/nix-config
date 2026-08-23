@@ -18,7 +18,7 @@ assert(packageRoot, "PI_BLACKHOLE_ROOT must name the packaged Blackhole root");
 const packageVersion = JSON.parse(
 	readFileSync(join(packageRoot, "package.json"), "utf8"),
 ).version;
-assert.match(packageVersion, /^0\.4\.[78]$/, "unexpected Blackhole version");
+assert.equal(packageVersion, "0.4.8", "unexpected Blackhole version");
 
 function makeTreeWritable(root: string): void {
 	const metadata = lstatSync(root);
@@ -111,7 +111,6 @@ try {
 		},
 		ensureConfig(): void {},
 		midRunCompactionRetry: { failures: 0, retryAfter: 0 },
-		midRunCompactionSuspended: false,
 		resetInfoGate(): void {},
 		tryEmitInfo(): boolean {
 			return false;
@@ -154,26 +153,18 @@ try {
 	assert.equal(nativeCalls, 0, "resume mode must not invoke native pausing compaction");
 	assert.equal(historyMaterializations, 0);
 	assert.equal(runtime.compactInFlight, false);
-	if (packageVersion === "0.4.7") {
-		assert.equal(runtime.midRunCompactionSuspended, false);
-	} else {
-		assert.deepEqual(runtime.midRunCompactionRetry, {
-			failures: 0,
-			retryAfter: 0,
-		});
-	}
+	assert.deepEqual(runtime.midRunCompactionRetry, {
+		failures: 0,
+		retryAfter: 0,
+	});
 
 	inlineShouldFail = true;
 	await turnEnd({}, ctx);
 	assert.equal(inlineCalls, 2);
 	assert.equal(runtime.compactInFlight, false);
-	if (packageVersion === "0.4.7") {
-		assert.equal(runtime.midRunCompactionSuspended, true);
-	} else {
-		assert.equal(runtime.midRunCompactionRetry.failures, 1);
-		assert(runtime.midRunCompactionRetry.retryAfter > Date.now());
-		runtime.midRunCompactionRetry.retryAfter = Date.now() + 60_000;
-	}
+	assert.equal(runtime.midRunCompactionRetry.failures, 1);
+	assert(runtime.midRunCompactionRetry.retryAfter > Date.now());
+	runtime.midRunCompactionRetry.retryAfter = Date.now() + 60_000;
 
 	await turnEnd({}, ctx);
 	assert.equal(inlineCalls, 2, "failure state must suppress an immediate retry");
@@ -181,16 +172,86 @@ try {
 	contextTokens = 69;
 	await turnEnd({}, ctx);
 	assert.equal(inlineCalls, 2, "pressure relief must not retry inline compaction");
-	if (packageVersion === "0.4.7") {
-		assert.equal(runtime.midRunCompactionSuspended, false);
-	} else {
-		assert.deepEqual(runtime.midRunCompactionRetry, {
-			failures: 0,
-			retryAfter: 0,
-		});
-	}
+	assert.deepEqual(runtime.midRunCompactionRetry, {
+		failures: 0,
+		retryAfter: 0,
+	});
 	assert.equal(nativeCalls, 0);
 	assert.equal(historyMaterializations, 0);
+
+	const { registerCompactionContextHook } = await import(
+		join(moduleRoot, "src/hooks/compaction-context.ts")
+	);
+	registerCompactionContextHook(pi as any, runtime);
+	const contextHook = handlers.get("context");
+	assert(contextHook, "Blackhole must register a context projection hook");
+	let recentLimit = 0;
+	let fullHistoryCalls = 0;
+	const fallbackMessages = [
+		{ role: "compactionSummary", summary: "fallback summary" },
+	];
+	const projected = contextHook(
+		{ messages: fallbackMessages },
+		{
+			cwd: workdir,
+			sessionManager: {
+				getBranch(): never {
+					fullHistoryCalls += 1;
+					throw new Error("context projection must not hydrate full history");
+				},
+				getRecentActiveEntries({ limit }: { limit: number }): object[] {
+					recentLimit = limit;
+					return [
+						{
+							id: "compaction-1",
+							type: "compaction",
+							timestamp: 1,
+							summary: "fallback summary",
+							details: {
+								compactor: "blackhole",
+								version: 2,
+								summaryMode: "append",
+								chainStart: true,
+								segment: {
+									sequence: 1,
+									summary: "bounded segment",
+									coverage: {
+										firstCoveredEntryId: "message-1",
+										lastCoveredEntryId: "message-1",
+										firstKeptEntryId: "",
+										sourceMessageCount: 1,
+									},
+									tokensBefore: 12,
+								},
+								trailingSummary: "bounded tail",
+								sections: [],
+								sourceMessageCount: 1,
+								previousSummaryUsed: false,
+							},
+						},
+					];
+				},
+			},
+		},
+	) as { messages: object[] };
+	assert.equal(fullHistoryCalls, 0);
+	assert.equal(recentLimit, 4096);
+	assert.deepEqual(projected.messages, [
+		{
+			role: "compactionSummary",
+			summary: "bounded segment",
+			tokensBefore: 12,
+			timestamp: 1,
+		},
+		{
+			role: "custom",
+			customType: "blackhole-compaction-tail",
+			content: "bounded tail",
+			display: false,
+			details: { compactor: "blackhole", version: 2 },
+			timestamp: 1,
+		},
+	]);
 
 	const { registerRecallTool } = await import(
 		join(moduleRoot, "src/tools/recall.ts")

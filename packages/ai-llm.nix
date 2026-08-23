@@ -70,13 +70,7 @@ in
             --replace-fail '"../internal/server/ui_dist"' '"${placeholder "out"}/ui_dist"'
           '';
 
-          sourceRoot =
-            if version == "250" then
-              "source/ui-svelte"
-            else if version == "251" then
-              "source/ui"
-            else
-              throw "review the llama-swap UI source root for ${version}";
+          sourceRoot = "source/ui";
 
           npmDepsHash = sources.llama-swap.hashes.npmDepsHash;
 

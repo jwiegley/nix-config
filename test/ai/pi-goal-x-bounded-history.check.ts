@@ -26,6 +26,16 @@ import { pathToFileURL } from "node:url";
 
 const packageRoot = process.env.PI_GOAL_X_ROOT;
 assert(packageRoot, "PI_GOAL_X_ROOT must name the packaged Goal-X root");
+const packageVersion = (
+	JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8")) as {
+		version?: unknown;
+	}
+).version;
+assert(
+	packageVersion === "0.27.4" || packageVersion === "0.28.0",
+	`review Goal-X bounded-history behavior for ${String(packageVersion)}`,
+);
+const hasV2Checkpoints = packageVersion === "0.28.0";
 const codingAgentRoot = process.env.PI_CODING_AGENT_ROOT;
 assert(
 	codingAgentRoot,
@@ -1436,6 +1446,9 @@ try {
 	const { GoalRuntime, CONTINUATION_IDLE_RETRY_MS } = await import(
 		join(runtimeRoot, "extensions/goal-runtime.ts")
 	);
+	const goalEventsModule = (await import(
+		join(runtimeRoot, "extensions/goal-events.ts")
+	)) as Record<string, unknown>;
 	const { DRAFT_ENTRY, rehydrateDraft } = await import(
 		join(runtimeRoot, "extensions/goal-drafting.ts")
 	);
@@ -4073,11 +4086,133 @@ try {
 		objective: "runtime retry lifecycle",
 		status: "active" as const,
 		autoContinue: true,
+		revision: 7,
 		usage: { tokensUsed: 0, activeSeconds: 0 },
 		sisyphus: false,
 		createdAt: "runtime-created",
 		updatedAt: "runtime-updated",
 	};
+	const compactGoalCheckpointContext =
+		goalEventsModule.compactGoalCheckpointContext as
+			| ((messages: readonly unknown[], goal: typeof runtimeGoal | null) => unknown[] | null)
+			| undefined;
+	if (hasV2Checkpoints) {
+		assert.equal(typeof compactGoalCheckpointContext, "function");
+		const ordinaryMessage = { role: "assistant", content: "retain me" };
+		const latestCheckpoint = {
+			role: "custom",
+			customType: "pi-goal-event",
+			content: "objective leak from latest checkpoint",
+			display: true,
+			details: {
+				version: 1,
+				goalId: runtimeGoal.id,
+				objective: "objective leak",
+			},
+		};
+		const compacted = compactGoalCheckpointContext?.(
+			[
+				{
+					role: "custom",
+					customType: "pi-goal-event",
+					content: "obsolete checkpoint",
+					details: { goalId: "obsolete-goal" },
+				},
+				ordinaryMessage,
+				latestCheckpoint,
+			],
+			runtimeGoal,
+		);
+		assert(compacted);
+		assert.equal(compacted.length, 2);
+		assert.equal(compacted[0], ordinaryMessage);
+		assert.deepEqual(compacted[1], {
+			...latestCheckpoint,
+			content:
+				'<pi_goal_continuation goal_id="runtime-goal" kind="checkpoint" v="2"/>',
+			display: false,
+			details: {
+				version: 2,
+				kind: "checkpoint",
+				goalId: runtimeGoal.id,
+				currentGoalId: runtimeGoal.id,
+				currentStatus: "active",
+			},
+		});
+		assert.doesNotMatch(JSON.stringify(compacted), /objective leak/);
+	} else {
+		assert.equal(compactGoalCheckpointContext, undefined);
+	}
+	{
+		const sent: Array<{ content: string; details: Record<string, unknown> }> = [];
+		const runtime = new GoalRuntime({
+			sendFollowUp: (content: string, details: Record<string, unknown>) =>
+				sent.push({ content, details }),
+			getGoal: () => runtimeGoal,
+			isActionable: () => true,
+		});
+		const readyCtx = {
+			cwd: workdir,
+			hasPendingMessages: () => false,
+			isIdle: () => true,
+			signal: new AbortController().signal,
+		};
+		runtime.queueContinuation(readyCtx as never, runtimeGoal);
+		mock.timers.tick(0);
+		assert.equal(runtime.continuationPendingFor(runtimeGoal.id), true);
+		assert.equal(sent.length, 1);
+		const firstTimestamp = sent[0]?.details.timestamp;
+		assert.equal(typeof firstTimestamp, "number");
+		if (hasV2Checkpoints) {
+			assert.deepEqual(sent[0], {
+				content:
+					'<pi_goal_continuation goal_id="runtime-goal" kind="checkpoint" v="2"/>',
+				details: {
+					version: 2,
+					kind: "checkpoint",
+					goalId: runtimeGoal.id,
+					status: "active",
+					revision: 7,
+					checkpointSeq: 1,
+					timestamp: firstTimestamp,
+				},
+			});
+			assert.equal("objective" in sent[0]!.details, false);
+			runtime.clearContinuationState();
+			runtime.queueContinuation(readyCtx as never, runtimeGoal);
+			mock.timers.tick(0);
+			assert.equal(sent[1]?.details.checkpointSeq, 2);
+			assert.equal("objective" in sent[1]!.details, false);
+		} else {
+			assert.match(sent[0]!.content, /runtime retry lifecycle/);
+			assert.deepEqual(sent[0]!.details, {
+				kind: "checkpoint",
+				goalId: runtimeGoal.id,
+				status: "active",
+				objective: runtimeGoal.objective,
+				timestamp: firstTimestamp,
+			});
+		}
+		runtime.clearContinuationState();
+	}
+	{
+		let actionabilityChecks = 0;
+		const runtime = new GoalRuntime({
+			sendFollowUp: () => assert.fail("a goal that became non-actionable must not send"),
+			getGoal: () => runtimeGoal,
+			isActionable: () => ++actionabilityChecks === 1,
+		});
+		const readyCtx = {
+			cwd: workdir,
+			hasPendingMessages: () => false,
+			isIdle: () => true,
+			signal: new AbortController().signal,
+		};
+		runtime.queueContinuation(readyCtx as never, runtimeGoal);
+		mock.timers.tick(0);
+		assert.equal(actionabilityChecks, 2);
+		assert.equal(runtime.continuationPendingFor(runtimeGoal.id), false);
+	}
 	{
 		const sent: unknown[] = [];
 		const controller = new AbortController();

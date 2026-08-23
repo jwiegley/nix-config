@@ -391,9 +391,6 @@
                 inherit src;
                 homeManagerLib = home-manager.lib;
               };
-              python-package-fixes = pkgs.callPackage ./test/overlays/python-package-fixes.nix {
-                configured = agentTestPkgsFor.${system};
-              };
               pi-blackhole-policy = pkgs.callPackage ./test/home/pi-blackhole-policy.nix {
                 inherit
                   darwinConfigurations

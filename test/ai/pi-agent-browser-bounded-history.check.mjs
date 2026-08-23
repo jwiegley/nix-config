@@ -11,10 +11,7 @@ assert(codingAgentRoot, "PI_CODING_AGENT_ROOT must name the packaged Pi coding-a
 const extensionRelativePath = "dist/extensions/agent-browser/index.js";
 const extensionSource = readFileSync(join(packageRoot, extensionRelativePath), "utf8");
 const packageVersion = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8")).version;
-assert(
-	packageVersion === "0.3.0" || packageVersion === "0.5.0",
-	`review Browser Native bounded-history coverage for ${packageVersion}`,
-);
+assert.equal(packageVersion, "0.5.0", "unexpected Browser Native version");
 assert.equal(
 	extensionSource.match(/sessionManager\.getRecentActiveEntries\(\{ type: "message", limit: 4096 \}\)/g)?.length,
 	1,
@@ -22,7 +19,7 @@ assert.equal(
 );
 assert.equal(
 	extensionSource.match(/customType: "agent-browser-script-session"/g)?.length ?? 0,
-	packageVersion === "0.5.0" ? 1 : 0,
+	1,
 	"script-session lease recovery must use one type-bounded active-history query",
 );
 assert.equal(
@@ -34,7 +31,7 @@ assert.equal(
 	extensionSource.match(
 		/for \(const lease of getScriptSessionLeasesFromBranch\(leaseEntries\)\.values\(\)\)/g,
 	)?.length ?? 0,
-	packageVersion === "0.5.0" ? 1 : 0,
+	1,
 	"script-session recovery must consume the bounded lease query",
 );
 assert(!extensionSource.includes("sessionManager.getBranch("), "Browser Native must not hydrate the full branch");
@@ -96,17 +93,15 @@ try {
 		},
 		type: "custom",
 	};
-	if (packageVersion === "0.5.0") {
-		const { getScriptSessionLeasesFromBranch } = await import(
-			join(runtimeRoot, "dist/extensions/agent-browser/lib/orchestration/script-mode.js")
-		);
-		assert.deepEqual(getScriptSessionLeasesFromBranch([closedLeaseEntry]), new Map([
-			[
-				scriptSessionName,
-				{ cleanup: "closed", closeCommandArgs, launchAttempted: true, sessionName: scriptSessionName },
-			],
-		]));
-	}
+	const { getScriptSessionLeasesFromBranch } = await import(
+		join(runtimeRoot, "dist/extensions/agent-browser/lib/orchestration/script-mode.js")
+	);
+	assert.deepEqual(getScriptSessionLeasesFromBranch([closedLeaseEntry]), new Map([
+		[
+			scriptSessionName,
+			{ cleanup: "closed", closeCommandArgs, launchAttempted: true, sessionName: scriptSessionName },
+		],
+	]));
 	const context = {
 		cwd: workdir,
 		isProjectTrusted: () => true,
@@ -185,14 +180,9 @@ try {
 	assert.equal(fullBranchCalls, 0, "Browser Native requested an unbounded branch");
 	const messageQuery = { type: "message", limit: 4096 };
 	const leaseQuery = { customType: "agent-browser-script-session", limit: 4096 };
-	assert.deepEqual(
-		boundedQueries,
-		packageVersion === "0.5.0"
-			? [messageQuery, leaseQuery, messageQuery, leaseQuery]
-			: [messageQuery, messageQuery],
-	);
-	assert.equal(leaseEntriesConsumed, packageVersion === "0.5.0" ? 2 : 0);
-	assert.equal(leaseCleanupReads, packageVersion === "0.5.0" ? 2 : 0);
+	assert.deepEqual(boundedQueries, [messageQuery, leaseQuery, messageQuery, leaseQuery]);
+	assert.equal(leaseEntriesConsumed, 2);
+	assert.equal(leaseCleanupReads, 2);
 	assert.deepEqual(appendedEntries, [], "closed script-session leases must not trigger cleanup writes");
 	assert.deepEqual(pointQueries, [
 		["user", { scope: "active" }],

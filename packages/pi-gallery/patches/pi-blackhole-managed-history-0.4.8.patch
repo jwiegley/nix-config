@@ -2567,3 +2567,17 @@ index b9fcf77..42439ae 100644
 +		},
 +	});
  }
+diff --git a/src/hooks/compaction-context.ts b/src/hooks/compaction-context.ts
+--- a/src/hooks/compaction-context.ts
++++ b/src/hooks/compaction-context.ts
+@@ -13,7 +13,9 @@ export function registerCompactionContextHook(
+     const dbg = (ev: string, data?: Record<string, unknown>) =>
+       debugLog(ev, data, runtime.config.debugLog === true);
+     try {
+-      const branchEntries = ctx.sessionManager.getBranch();
++      const branchEntries = ctx.sessionManager.getRecentActiveEntries({
++        limit: 4096,
++      });
+       const messages = projectAppendOnlyContext(event.messages, branchEntries);
+       if (messages === event.messages) return;
+       return { messages };

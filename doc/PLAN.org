@@ -2507,7 +2507,7 @@ The owner requires Git-AI, Cozempic, Pi Mem, and Pi Artifacts to remain fully di
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-23 Sun 04:28]
-:MODIFIED: [2026-08-23 Sun 06:44]
+:MODIFIED: [2026-08-23 Sun 09:11]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
@@ -2519,7 +2519,7 @@ Run the canonical make update transaction from the clean signed/live main branch
 
 ** Notes
 
-First canonical make update attempt completed and failed before commit/activation on the curl-cffi check's retired 0.15-only assertion; it also held pi-mcp-adapter, pi-agent-browser-native, pi-blackhole, and llama-swap. Precursor repairs now keep the current 0.15 overlay and its full behavioral/divergence/RPATH check while making that check accept only the proven 0.15 transition or 0.16 integrated state; they add dual-version candidate support for all four holds. Verification: nix fmt PASS; updater strict suite 131/131 PASS; current curl-cffi realization and registered python-package-fixes check PASS; portable all-system no-build PASS; Pi Gallery PASS; make test full tier PASS; pre-commit PASS. Exact make update rerun, zero-hold acceptance, publication, and fleet deployment remain open.
+The first canonical make update completed its full transaction and published/activated source commit 3ba5bd71, with pi-mcp-adapter and pi-goal-x held back. A signed MCP cache-v2 checkpoint 216e5d19 followed; exact pi-mcp-adapter candidate dry-run now exits 0 through candidate package, portable all-system evaluation, and root derivation gates. Goal X now has strict dual 0.27.4/0.28.0 support with an independently audited fuzz-zero patch preserving upstream bounded v2 checkpoints and managed cancellation/actionability. Accepted first-pass Browser 0.5.0, Blackhole 0.4.8, llama-swap v251, curl-cffi 0.16, and pi-subagents 0.55.0 cleanup is implemented. Integrated evidence on current bytes: focused package builds PASS; curl-cffi build PASS; Pi Gallery PASS including bounded-history and provider behavior; portable all-system no-build PASS; make test PASS with 22/22 Python suites, 131/131 updater tests, and manifest behavioral checks. A second clean canonical make update with zero held-back targets, final cleanup/publication, and fleet deployment remain open.
 
 * DONE [#B] Package Pi Quiet's complete imported source closure
 :PROPERTIES:
@@ -5086,7 +5086,7 @@ Hera and Clio system evaluation emit repeated deprecation warnings from six repo
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-23 Sun 05:10]
-:MODIFIED: [2026-08-23 Sun 07:55]
+:MODIFIED: [2026-08-23 Sun 09:11]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5097,7 +5097,7 @@ Preserve upstream public dist exports after 6c08147 introduced a prepare build w
 
 ** Notes
 
-Legacy and public-dist package contracts are implemented. The public branch builds with the full dev graph, repairs exactly six pinned integrity omissions, lets prepare emit dist, prunes dev dependencies, and removes lifecycle scripts/devDependencies from the installed manifest. Normalization 4/4, combined Pi Gallery, portable evaluation, and full make test passed before the canonical update. That update held candidate 6c08147f because fetchNpmDeps v1 omitted a nested Pi development tarball. The package now uses fetcher v2 with exact baseline npmDepsHash sha256-p90p6NFjyB25UKpAbtCPwUu/NCEKpn6Ir8jYAEKxZH0=; ./build pkg agent-resources passes. Exact candidate dry-run, adoption, post-adoption cleanup, publication, and activation remain open.
+The fetchNpmDeps v2 repair is committed in signed checkpoint 216e5d19. Exact bin/update --target pi-mcp-adapter --dry-run exits 0: candidate 6c08147f, npm cache, public dist package, portable all-system evaluation, and root derivation prepass/no-build all pass. Integrated Pi Gallery, portable evaluation, and full make test also pass on the transition tree. Actual canonical adoption, post-adoption legacy cleanup, final publication, and activation remain open.
 
 ** Dependencies
 
@@ -5738,7 +5738,7 @@ The Agda build failure is diagnosed and repaired at its owning seam; the exact A
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-23 Sun 07:44]
-:MODIFIED: [2026-08-23 Sun 07:55]
+:MODIFIED: [2026-08-23 Sun 09:11]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5749,7 +5749,7 @@ Rebase the managed bounded-history/runtime patch onto pi-goal-x 0.28.0 while pre
 
 ** Notes
 
-Canonical make update rejected npm 0.28.0 after the old managed patch failed in goal-commands.ts, goal-events.ts, and goal-runtime.ts. The exact candidate archive hash is sha256-Nx87OkkR0b/1yJ6QY7H70HM7LA2NWcx8NCNK3F/B3rA=. The 0.28 runtime replaces the old continuation payload with bounded v2 checkpoint triggers carrying version, revision, and checkpointSeq; the repair must retain that protocol together with managed cancellation, actionability, cleanup, and fuzz-zero application. An isolated dual-version rebase and mutation-killing test are in progress; adoption, cleanup, publication, and activation remain open.
+Dual 0.27.4/0.28.0 transition is complete. The exact 0.28 patch applies with fuzz zero to retained candidate hash sha256-Nx87OkkR0b/1yJ6QY7H70HM7LA2NWcx8NCNK3F/B3rA= and independently audited CLEAR. It preserves bounded v2 checkpoint markers/details, monotonic checkpointSeq, no objective leakage, compaction, cancellation, actionability revalidation, and failure cleanup; mutation probes kill missing-send and no-op-compactor regressions. Both version behaviors and a focused 0.28 Nix derivation pass. Integrated Pi Gallery, portable evaluation, and full make test pass. Canonical adoption, removal of the 0.27 transition arm, final publication, and activation remain open.
 
 ** Dependencies
 
@@ -6363,15 +6363,17 @@ The automatic updater selects upstream GitHub Latest v0.6.3rc1 but package valid
 ]
 #+end_src
 
-* DOING [#B] Adopt pi-blackhole 0.4.8 without losing bounded history
+* DONE [#B] Adopt pi-blackhole 0.4.8 without losing bounded history
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-hy79
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-23 Sun 05:10]
-:MODIFIED: [2026-08-23 Sun 06:19]
+:MODIFIED: [2026-08-23 Sun 09:11]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-23 Sun 09:11]
+:CLOSE_REASON: Adopted 0.4.8 with all automatic history paths bounded and transition cleanup validated by focused, Gallery, portable, and full repository gates.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -6381,7 +6383,7 @@ Rebase the managed-history patch across upstream 0.4.8, preserve the bounded ses
 
 ** Notes
 
-Dual 0.4.7/0.4.8 transition support is implemented. The generated 0.4.8 patch applies with fuzz 0 and matches the prepared candidate tree; both 0.4.7 and 0.4.8 behavioral lanes pass, including bounded retry backoff/suppression and pressure reset. Current package build, combined Pi Gallery, portable evaluation, and full make test pass. Automatic pin adoption, cleanup/docs, publication, and activation remain open.
+Canonical update adopted pi-blackhole 0.4.8. Cleanup now applies only the strict 0.4.8 managed-history patch and deletes the obsolete 0.4.7 arm. Aggregate Gallery exposed one missed compaction-context getBranch call; the patch now uses getRecentActiveEntries with exact limit 4096, and a mutation-resistant test rejects full-history fallback and proves exact segment/tail projection. Focused package build, integrated Pi Gallery, portable all-system evaluation, and full make test pass.
 
 ** Dependencies
 
@@ -16422,7 +16424,7 @@ pi-mem and Lens are absent from generated imports and registrations while all 26
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-20 Thu 22:19]
-:MODIFIED: [2026-08-23 Sun 06:31]
+:MODIFIED: [2026-08-23 Sun 09:11]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -16433,7 +16435,7 @@ Preserve ordinary nix flake update --commit-lock-file on the authoritative share
 
 ** Notes
 
-Current transition stays active in the precursor because committed locks still select curl-cffi 0.15.0 with curl-impersonate 2.1.0. The registered behavioral check is preserved: it requires exactly the 0.15 transition or 0.16 integrated state, retains all 0.15 patch/divergence/cookie/RPATH assertions, and runs installed import/cookie behavior for both. Current curl-cffi realization, the exact python-package-fixes check, and full make test pass. The overlay and patches will be removed only after make update advances to 0.16; shared consumer build/activation and final compatibility deletion remain open.
+Canonical first-pass update advanced current nixpkgs to integrated curl-cffi 0.16.0. The transition-only overlay, four 0.15 patches, registration, manifest row, and behavioral guard are now removed after maintained-consumer search. ./build python curl-cffi passes on 0.16; portable all-system evaluation and full make test pass. Keep open until the final published revision is adopted by shared-work and its authoritative paired lock build/activation proves the integrated channel state.
 
 ** Dependencies
 
@@ -17166,15 +17168,17 @@ Agent tooling never searches for executables by recursively traversing home, fil
 ]
 #+end_src
 
-* DOING [#B] Adopt pi-agent-browser-native 0.5.0 with bounded lease recovery
+* DONE [#B] Adopt pi-agent-browser-native 0.5.0 with bounded lease recovery
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-vpxe
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-23 Sun 05:10]
-:MODIFIED: [2026-08-23 Sun 06:19]
+:MODIFIED: [2026-08-23 Sun 09:11]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-23 Sun 09:11]
+:CLOSE_REASON: Adopted 0.5.0 and removed the transition arm after focused, Gallery, portable, and full repository gates passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -17184,7 +17188,7 @@ Rebase the bounded-history patch across upstream 0.5.0, bound the new script-ses
 
 ** Notes
 
-Dual 0.3.0/0.5.0 transition support is implemented. The 0.5 patch applies with fuzz 0; the version-aware behavior test proves bounded message and lease queries, consumes the bounded lease result, and preserves explicit bash opt-in. Current package build, combined Pi Gallery, portable evaluation, and full make test pass. Automatic pin adoption, cleanup/docs, publication, and activation remain open.
+Canonical update adopted pi-agent-browser-native 0.5.0. Cleanup now applies only the strict fuzz-zero 0.5 bounded-history patch, deletes the obsolete 0.3 patch/selector, collapses the behavior test to exact 0.5 bounded message and lease queries with consumed lease data and explicit bash opt-in, and updates inventory docs. Focused package build, integrated Pi Gallery, portable all-system evaluation, and full make test pass.
 
 ** Dependencies
 
@@ -17202,15 +17206,17 @@ Dual 0.3.0/0.5.0 transition support is implemented. The 0.5 patch applies with f
 ]
 #+end_src
 
-* DOING [#B] Adopt llama-swap 251 after upstream UI layout rename
+* DONE [#B] Adopt llama-swap 251 after upstream UI layout rename
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-vsic
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-23 Sun 05:10]
-:MODIFIED: [2026-08-23 Sun 06:19]
+:MODIFIED: [2026-08-23 Sun 09:11]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-23 Sun 09:11]
+:CLOSE_REASON: Adopted v251 and removed the obsolete UI-layout transition after focused, portable, and full repository validation.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -17220,7 +17226,7 @@ Update the package for ui-svelte to ui, require final-package validation during 
 
 ** Notes
 
-Dual v250/v251 UI source-root support and final-package updater validation are implemented. Current llama-swap package build, updater strict suite, portable evaluation, and full make test pass. Automatic v251 pin/hash adoption, transition cleanup/docs, publication, and activation remain open.
+Canonical update adopted llama-swap v251. The package now uses the sole current upstream UI root source/ui, removes the v250/v251 selector, and documents v251. Focused package build, portable all-system evaluation, and full make test pass.
 
 ** Dependencies
 

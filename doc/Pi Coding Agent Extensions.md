@@ -8,7 +8,7 @@ tags:
   - ai-agents
   - developer-tools
 created: 2026-07-27
-updated: 2026-08-22
+updated: 2026-08-23
 pi-version: 0.84.2
 ---
 
@@ -33,7 +33,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | `pi-smart-fetch` | 0.3.17 | Browser-fingerprinted readable web fetching | `web_fetch`, `batch_web_fetch` |
 | `pi-smart-web-search` | 0.4.0 | Ranked batch web discovery | `web_search` |
 | `@dietrichgebert/ponytail` | 4.9.0 | Minimal implementation discipline | `/ponytail` |
-| `pi-agent-browser-native` | 0.3.0 | Native Pi interface to `agent-browser` | `agent_browser` |
+| `pi-agent-browser-native` | 0.5.0 | Native Pi interface to `agent-browser` | `agent_browser` |
 | `pi-btw` | 0.4.1 | Side conversations without disturbing the main turn | `/btw` |
 | `pi-copy-message` | 2.1.0 | Search and copy raw session messages | `/copy-message`, `/copy-user` |
 | `@ygncode/pi-insights` | 1.0.1 | Session analytics | `/insights` |
@@ -44,13 +44,13 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | `pi-provider-omlx` | `57583beb` | Discover chat models from both authenticated workstation oMLX services | `/model`, `omlx-hera/*`, `omlx-clio/*` |
 | `@yeliu84/pi-model-router` | 0.4.4 | Per-turn route and reasoning-tier selection | `/router` |
 | `pi-rewind` | 0.5.0 | Conversation and file checkpoints | `/rewind` |
-| `pi-blackhole` | 0.4.7 | Context compaction and observational memory | `/blackhole`, `recall` |
+| `pi-blackhole` | 0.4.8 | Context compaction and observational memory | `/blackhole`, `recall` |
 | `pi-trace-extension` | 0.1.15 | Local execution traces and HTML reports | `/trace` |
 | `pi-markdown-preview` | 0.14.1 | Terminal, browser, PDF, and artifact previews | `/preview`, `preview_export` |
 | `pi-caveman` | 1.0.8 | Compressed response style | `/caveman` |
 | `pi-rtk-optimizer` | 0.9.0 | RTK command rewriting and output compaction | `/rtk` |
 | `pi-cymbal` | 0.5.3 | Indexed, symbol-oriented code navigation | `cymbal_*` |
-| `pi-subagents` | 0.54.0 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
+| `pi-subagents` | 0.55.0 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
 | `@quintinshaw/pi-dynamic-workflows` | 3.7.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
 | `pi-goal-x` | 0.27.4 | Durable goals and Sisyphus continuation | `/goal`, `get_goal` |
 | `pi-cache-optimizer` | 2.8.5 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
@@ -196,7 +196,7 @@ Pi Rewind records per-tool checkpoints so conversation state, file changes, or b
 
 ### Blackhole
 
-**Version:** 0.4.7 · **Links:** [Pi Packages](https://pi.dev/packages/pi-blackhole) · [Home](https://github.com/k0valik/pi-blackhole#readme) · [GitHub](https://github.com/k0valik/pi-blackhole)
+**Version:** 0.4.8 · **Links:** [Pi Packages](https://pi.dev/packages/pi-blackhole) · [Home](https://github.com/k0valik/pi-blackhole#readme) · [GitHub](https://github.com/k0valik/pi-blackhole)
 
 Pi Blackhole combines deterministic structured compaction with observational memory. Compaction preserves the active goal, completed and pending work, errors, modified files, and next action without an LLM summarization call. Background observer, reflector, and dropper workers use the active session model by default, so memory processing can consume that provider's quota and send it session content. Their observations and durable reflections remain associated with the Pi session ledger and survive compaction.
 
@@ -286,7 +286,7 @@ Pi Lens is currently retained as a managed package and projected resource but is
 
 ### Agent Browser Native
 
-**Version:** 0.3.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-agent-browser-native) · [Home](https://github.com/fitchmultz/pi-agent-browser-native#readme) · [GitHub](https://github.com/fitchmultz/pi-agent-browser-native) · [agent-browser](https://github.com/vercel-labs/agent-browser)
+**Version:** 0.5.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-agent-browser-native) · [Home](https://github.com/fitchmultz/pi-agent-browser-native#readme) · [GitHub](https://github.com/fitchmultz/pi-agent-browser-native) · [agent-browser](https://github.com/vercel-labs/agent-browser)
 
 Pi Agent Browser Native presents `agent-browser` as the `agent_browser` Pi tool. It supports live browsing, semantic locators, multi-step jobs, screenshots, extraction, QA presets, authenticated browser profiles, and Electron application control while retaining explicit stopping points before consequential submissions.
 
@@ -330,7 +330,7 @@ Pi Goal X persists explicit objectives, lifecycle state, usage, and ordered Sisy
 
 ### Subagents
 
-**Version:** 0.54.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-subagents) · [Home](https://github.com/nicobailon/pi-subagents#readme) · [GitHub](https://github.com/nicobailon/pi-subagents)
+**Version:** 0.55.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-subagents) · [Home](https://github.com/nicobailon/pi-subagents#readme) · [GitHub](https://github.com/nicobailon/pi-subagents)
 
 Pi Subagents delegates focused work to child Pi sessions without replacing the parent as orchestrator. It supports single foreground and asynchronous runs, scripted sequential and parallel composition, fresh or forked context, fleet status, steering, and supervisor communication.
 
@@ -413,7 +413,7 @@ These binaries are not additional Pi extensions. They are the immediate runtime 
 | `agent-browser` | 0.34.0 | Pi Agent Browser Native | [GitHub](https://github.com/vercel-labs/agent-browser) |
 | RTK | 0.44.0 | Pi RTK Optimizer | [Home](https://www.rtk-ai.app) · [GitHub](https://github.com/rtk-ai/rtk) |
 | Cymbal | 0.14.0 | Pi Cymbal | [Home](https://chain.sh/cymbal/) · [GitHub](https://github.com/1broseidon/cymbal) |
-| llama-swap | v250 | llama-swap Provider | [GitHub](https://github.com/mostlygeek/llama-swap) |
+| llama-swap | v251 | llama-swap Provider | [GitHub](https://github.com/mostlygeek/llama-swap) |
 | oMLX | 0.6.3rc1 | oMLX Provider and managed Sol route | [GitHub](https://github.com/jundot/omlx) |
 | Pandoc | 3.7.0.2 | Markdown Preview | [Home](https://pandoc.org) · [GitHub](https://github.com/jgm/pandoc) |
 
