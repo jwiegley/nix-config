@@ -6496,6 +6496,42 @@ Canonical update adopted pi-blackhole 0.4.8. Cleanup now applies only the strict
 
 The recently added post-unload DIRENV_DIFF assertion makes de abort with 'direnv did not restore the pre-direnv environment' after the owner deletes .envrc and .envrc.cache. Restore the longstanding contract: de must recreate both generated files. Remove the unsolicited false-failure guard without weakening private cache generation or .env secret exclusion, and add a focused regression for successful regeneration when direnv leaves its bookkeeping variable set.
 
+* DOING [#B] Make Hera GPG commit signing autonomous
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ibbs
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-23 Sun 14:48]
+:MODIFIED: [2026-08-23 Sun 15:32]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Configure Hera to use the locally available ed25519 signing key without smart-card dependencies, keep the GnuPG passphrase cache effectively indefinite, preserve passphrases outside the Nix store/argv/logs, and verify noninteractive signed Git commits. Record the runtime-versus-reboot persistence boundary.
+
+** Notes
+
+Evidence on 2026-08-23: Hera already rendered default-cache-ttl and max-cache-ttl as 2147483647 seconds, roughly 68 years. The source change disables scdaemon only on Hera, preserves Clio card support, explicitly permits external pinentry caching, and declares Hera pinentry-mac Keychain preferences. Focused aarch64-darwin host-behavior evaluation passed, nix fmt and diff checks passed, the full make test gate passed, the authoritative non-activating Hera system build passed, and the final all-files pre-commit gate passed in 65.76 seconds with all 18 fast Python suites completing in 51 seconds. Two earlier hook attempts exhausted the same 120-second Python budget because an accidental read-only audit scan across the Nix store created sustained host contention; terminating only that exact scan restored the unchanged fast tier to a 62-second direct PASS and the unchanged full hook to PASS. Runtime acceptance killed the current gpg-agent and then completed a bounded no-TTY detached signature with the local signing key in 7 seconds without a card or passphrase prompt; the restarted agent retained both declared TTL values. Persistence and security boundary: the GnuPG agent memory cache is volatile across reload, exit, logout, and reboot regardless of TTL. pinentry-mac can repopulate it from the login Keychain only while that Keychain is unlocked and authorized. Post-agent-restart autonomy is demonstrated; cold-reboot persistence is not yet tested and must not be claimed. This policy deliberately permits any process running as johnw that can reach the unlocked login agents GPG socket to request signatures without a fresh prompt. Locking or removing the Keychain item alone does not evict a passphrase already held by the running agent. Immediate revocation requires clearing or terminating the agent cache and separately disabling or removing Keychain retrieval; account or session compromise retains signing authority until both sources are neutralized. Remaining acceptance: signed commit and push, Hera activation, rendered-config verification, and a post-activation noninteractive signing probe.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-ibbs",
+    "depends_on_id": "nix-7ttl",
+    "type": "discovered-from",
+    "created_at": "2026-08-23T21:48:46.648060Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#C] Make the Pi router RPC fixture replace oMLX exactly
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

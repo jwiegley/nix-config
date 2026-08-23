@@ -325,11 +325,11 @@ in
         keyserver = "keys.openpgp.org";
         keyserver-options = "no-honor-keyserver-url include-revoked auto-key-retrieve";
       };
-      scdaemonSettings = {
+      # Hera signs with its local secret key. Keep smart-card support only on
+      # Clio, where it remains part of the workstation configuration.
+      scdaemonSettings = lib.mkIf config.johnw.host.isClio {
         card-timeout = "1";
         disable-ccid = true;
-      }
-      // lib.optionalAttrs isDarwin {
         pcsc-driver = "/System/Library/Frameworks/PCSC.framework/PCSC";
       };
     };
@@ -381,6 +381,8 @@ in
       # Use the maximum supported cache TTLs.
       defaultCacheTtl = 2147483647;
       maxCacheTtl = 2147483647;
+      enableScDaemon = !config.johnw.host.isHera;
+      noAllowExternalCache = false;
       pinentry.package = pkgs.pinentry_mac;
     };
   };

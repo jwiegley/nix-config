@@ -708,6 +708,25 @@ assert builtins.all (
 ) nonDesktopHomes;
 assert desktopHomesByHost.hera.home.sessionVariables.NIX_CONFIG == "cores = 8";
 assert desktopHomesByHost.clio.home.sessionVariables.NIX_CONFIG == "cores = 8";
+assert desktopHomesByHost.hera.services.gpg-agent.defaultCacheTtl == 2147483647;
+assert desktopHomesByHost.hera.services.gpg-agent.maxCacheTtl == 2147483647;
+assert !desktopHomesByHost.hera.services.gpg-agent.enableScDaemon;
+assert !desktopHomesByHost.hera.services.gpg-agent.noAllowExternalCache;
+assert desktopHomesByHost.hera.programs.gpg.scdaemonSettings == { };
+assert desktopHomesByHost.clio.services.gpg-agent.enableScDaemon;
+assert
+  desktopHomesByHost.clio.programs.gpg.scdaemonSettings == {
+    card-timeout = "1";
+    disable-ccid = true;
+    pcsc-driver = "/System/Library/Frameworks/PCSC.framework/PCSC";
+  };
+assert
+  darwinConfigurations.hera.config.system.defaults.CustomUserPreferences."org.gpgtools.common" == {
+    DisableKeychain = false;
+    UseKeychain = true;
+  };
+assert
+  !(darwinConfigurations.clio.config.system.defaults.CustomUserPreferences ? "org.gpgtools.common");
 assert builtins.all lacksLocalModelSessionVariables nonDesktopHomes;
 assert builtins.hasAttr ".config/pi/agent/model-router.json" desktopHomesByHost.hera.home.file;
 assert !(builtins.hasAttr ".config/pi/agent/model-router.json" desktopHomesByHost.clio.home.file);

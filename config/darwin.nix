@@ -609,6 +609,14 @@ in
 
         # Turn on app auto-update
         "com.apple.commerce".AutoUpdate = true;
+      }
+      // lib.optionalAttrs config.johnw.host.isHera {
+        # pinentry-mac retrieves the local signing-key passphrase from the
+        # unlocked login Keychain after gpg-agent restarts.
+        "org.gpgtools.common" = {
+          UseKeychain = true;
+          DisableKeychain = false;
+        };
       };
 
       ".GlobalPreferences" = {
