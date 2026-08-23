@@ -211,6 +211,7 @@
         "url": "https://github.com/mostlygeek/llama-swap"
       },
       "update": {
+        "buildPackage": "llama-swap",
         "kind": "github-release",
         "tagPrefix": "v"
       },

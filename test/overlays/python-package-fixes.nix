@@ -136,7 +136,11 @@ let
   };
 
   configuredCurlCffi = configured.python3Packages.curl-cffi;
-  configuredTransition = (configured.curl-impersonate.version or "") == "2.1.0";
+  configuredVersion = configuredCurlCffi.version or "";
+  configuredTransition =
+    configuredVersion == "0.15.0" && (configured.curl-impersonate.version or "") == "2.1.0";
+  configuredIntegrated = configuredVersion == "0.16.0";
+  configuredSupported = configuredTransition || configuredIntegrated;
   configuredPostPatch = configuredCurlCffi.postPatch or "";
   configuredPython = configured.python3.withPackages (pythonPackages: [ pythonPackages.curl-cffi ]);
   configuredCurlRpath = "${lib.getLib configured.curl-impersonate}/lib";
@@ -201,10 +205,12 @@ assert futureCurlCffi.curl-cffi.postPatch == "";
 assert !(futureCurlCffi.curl-cffi ? NIX_LDFLAGS);
 assert lib.hasInfix "\"$TMPDIR/inherited-post-patch\"\n_nix_config_apply_curl_backport"
   inheritedPostPatch.curl-cffi.postPatch;
+assert configuredSupported || throw "unsupported curl-cffi transition state ${configuredVersion}";
 assert
-  configuredCurlCffi.version == "0.15.0"
-  || throw "remove the retired curl-cffi 0.15 transition overlay and check";
-assert configuredCurlCffi.passthru.nixConfigCurlCffiTransitionOwner or false;
+  !configuredTransition || (configuredCurlCffi.passthru.nixConfigCurlCffiTransitionOwner or false);
+assert
+  !configuredIntegrated || !(configuredCurlCffi.passthru.nixConfigCurlCffiTransitionOwner or false);
+assert !configuredIntegrated || !(lib.hasInfix "curl-cffi-0.15-" configuredPostPatch);
 assert
   !configuredTransition
   || (
@@ -227,7 +233,7 @@ runCommand "python-package-fixes-tests"
         configured.stdenv.cc.bintools
       ];
     }
-    // lib.optionalAttrs configuredTransition {
+    // lib.optionalAttrs configuredSupported {
       __darwinAllowLocalNetworking = true;
     }
   )
@@ -255,25 +261,23 @@ runCommand "python-package-fixes-tests"
       test "$rpath_count" = 1
     ''}
 
-    cd "$source_root"
+    if ${lib.boolToString configuredTransition}; then
+      cd "$source_root"
 
-    transition_hook="$TMPDIR/apply-curl-cffi-transition"
-    inherited_hook="$TMPDIR/apply-curl-cffi-transition-after-inherited-hook"
-    cat > "$transition_hook" <<'HOOK'
+      transition_hook="$TMPDIR/apply-curl-cffi-transition"
+      inherited_hook="$TMPDIR/apply-curl-cffi-transition-after-inherited-hook"
+      cat > "$transition_hook" <<'HOOK'
     ${transitional.curl-cffi.postPatch}
     HOOK
-    cat > "$inherited_hook" <<'HOOK'
+      cat > "$inherited_hook" <<'HOOK'
     ${inheritedPostPatch.curl-cffi.postPatch}
     HOOK
 
-    # Exercise the transition hook mechanics against the locked 0.15 source:
-    # pristine preimage first, then exact postimage without a duplicate patch.
-    # This is source-level evidence only while the configured native dependency
-    # remains pre-2.1; the installed-session check below activates only for the
-    # exact production transition tuple.
-    bash -e "$inherited_hook"
-    test "$(cat "$TMPDIR/inherited-post-patch")" = inherited-post-patch
-    bash -e "$transition_hook"
+      # Exercise the transition hook mechanics against the locked 0.15 source:
+      # pristine preimage first, then exact postimage without a duplicate patch.
+      bash -e "$inherited_hook"
+      test "$(cat "$TMPDIR/inherited-post-patch")" = inherited-post-patch
+      bash -e "$transition_hook"
     test "$(grep -Fc 'port=0' tests/unittest/conftest.py)" = 2
     grep -F 'thread = threading.Thread(target=server.run, daemon=True)' tests/unittest/conftest.py >/dev/null
     grep -F 'deadline = time.monotonic() + timeout' tests/unittest/conftest.py >/dev/null
@@ -400,50 +404,49 @@ runCommand "python-package-fixes-tests"
       exit 1
     fi
     grep -F "curl-cffi backport neither applies nor reverses cleanly" "$TMPDIR/websocket-divergence.log" >/dev/null
+    fi
 
-    ${lib.optionalString configuredTransition ''
-        cd "$TMPDIR"
-        python - <<'PY'
-      from http.server import BaseHTTPRequestHandler, HTTPServer
-      from threading import Thread
+    cd "$TMPDIR"
+    python - <<'PY'
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    from threading import Thread
 
-      from curl_cffi import requests
-
-
-      class CookieHandler(BaseHTTPRequestHandler):
-          def do_GET(self):
-              self.send_response(200)
-              if self.path == "/set":
-                  self.send_header("Set-Cookie", "foo=bar; Path=/")
-                  self.send_header("Set-Cookie", "keep=present; Path=/")
-              elif self.path == "/delete":
-                  self.send_header("Set-Cookie", "foo=; Max-Age=0; Path=/")
-              self.send_header("Content-Length", "0")
-              self.end_headers()
-
-          def log_message(self, _format, *_args):
-              pass
+    from curl_cffi import requests
 
 
-      server = HTTPServer(("127.0.0.1", 0), CookieHandler)
-      thread = Thread(target=server.serve_forever, daemon=True)
-      thread.start()
-      session = requests.Session()
-      try:
-          base_url = f"http://127.0.0.1:{server.server_port}"
-          session.get(f"{base_url}/set", timeout=5)
-          assert session.cookies["foo"] == "bar"
-          assert session.cookies["keep"] == "present"
-          session.get(f"{base_url}/delete", timeout=5)
-          assert "foo" not in session.cookies
-          assert session.cookies["keep"] == "present"
-      finally:
-          session.close()
-          server.shutdown()
-          thread.join()
-          server.server_close()
-      PY
-    ''}
+    class CookieHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            if self.path == "/set":
+                self.send_header("Set-Cookie", "foo=bar; Path=/")
+                self.send_header("Set-Cookie", "keep=present; Path=/")
+            elif self.path == "/delete":
+                self.send_header("Set-Cookie", "foo=; Max-Age=0; Path=/")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def log_message(self, _format, *_args):
+            pass
+
+
+    server = HTTPServer(("127.0.0.1", 0), CookieHandler)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    session = requests.Session()
+    try:
+        base_url = f"http://127.0.0.1:{server.server_port}"
+        session.get(f"{base_url}/set", timeout=5)
+        assert session.cookies["foo"] == "bar"
+        assert session.cookies["keep"] == "present"
+        session.get(f"{base_url}/delete", timeout=5)
+        assert "foo" not in session.cookies
+        assert session.cookies["keep"] == "present"
+    finally:
+        session.close()
+        server.shutdown()
+        thread.join()
+        server.server_close()
+    PY
 
     touch "$out"
   ''

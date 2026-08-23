@@ -86,32 +86,127 @@ let
     src = inputs.pi-mcp-adapter;
     patches = [ ./agent-resources/pi-mcp-adapter-xdg-config-home.patch ];
     npmDepsHash = piSources.pi-mcp-adapter.hashes.npmDepsHash;
-    npmInstallFlags = [ "--omit=dev" ];
     dontNpmBuild = true;
     postPatch = ''
-      # Nix validates every lock entry before npm applies --omit=dev. Remove
-      # the unused development graph from both manifests instead of pinning
-      # repairs for whichever dev-package versions upstream currently locks.
+      # Legacy revisions do not build package artifacts, so their development
+      # graph remains unnecessary. Newer revisions publish plain-Node public
+      # exports from dist/ and build those files from TypeScript in prepare.
+      # Keep that graph for the public build, while repairing the exact six
+      # nested Pi lock entries that upstream publishes without integrity.
       ${python3}/bin/python3 - <<'PY'
       import json
       from pathlib import Path
 
       package_path = Path("package.json")
       package = json.loads(package_path.read_text())
-      package.pop("devDependencies", None)
-      package_path.write_text(json.dumps(package, indent=2) + "\n")
-
       lock_path = Path("package-lock.json")
       lock = json.loads(lock_path.read_text())
-      lock["packages"][""].pop("devDependencies", None)
-      lock["packages"] = {
-          path: metadata
-          for path, metadata in lock["packages"].items()
-          if not metadata.get("dev", False)
+
+      integrity_repairs = {
+          "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core": (
+              "https://registry.npmjs.org/@earendil-works/pi-agent-core/-/pi-agent-core-0.84.1.tgz",
+              "sha512-evyzXYWCLQGmcaBYHlmSku02r8qoN4SGI60GZABo6iV+H+nqX+P9ud8fEZ4GmRq9mUSREvvfX+w9dA9ThF9C6w==",
+          ),
+          "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-ai": (
+              "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.1.tgz",
+              "sha512-wMsAdJMxuNri08vLqTyYVI201DQQezGhPSTkzYsHdw5dYX3rCNwEmSvpaAwhi7ELKI/2tE/CEgSWg/6iRxSgdQ==",
+          ),
+          "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-client": (
+              "https://registry.npmjs.org/@earendil-works/pi-client/-/pi-client-0.84.1.tgz",
+              "sha512-/V5hGHE4Zq+jG0GtwIB9PyBUOGd6gBLZ7lkQYFKchKnxYHeH3rmWC5xw4kpnZKKBuBuFTdLVbU9vEjlAGMMb2A==",
+          ),
+          "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-protocol": (
+              "https://registry.npmjs.org/@earendil-works/pi-protocol/-/pi-protocol-0.84.1.tgz",
+              "sha512-Ox1pciyeSPGEEUcxvR0/dJcrY7C6hrEGA8y71rOsvSIUlXN1Cbp/be/eoL71OGDBk5O97TeQPfWN6Ju/2Ehjww==",
+          ),
+          "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-telemetry": (
+              "https://registry.npmjs.org/@earendil-works/pi-telemetry/-/pi-telemetry-0.84.1.tgz",
+              "sha512-180/xGJtsq7IoR3p9EKWjRd0e9M4DkxInhlo9xyD7prDC7Qrhqq+nhvwrW0lFjPfXcEI2FSHmGCSyvSJE9GsaQ==",
+          ),
+          "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui": (
+              "https://registry.npmjs.org/@earendil-works/pi-tui/-/pi-tui-0.84.1.tgz",
+              "sha512-udeXFbgEhJ6JiB0uguwNVNkDy2FENfmtQwPcY+/iJ8GWeq18wkal1tKqa5YyeH0IqtX1vG0cGh8zfSYzyzVuLA==",
+          ),
       }
+
+      missing_integrity = {
+          path
+          for path, metadata in lock["packages"].items()
+          if path and metadata.get("resolved") and not metadata.get("integrity")
+      }
+      scripts = package.get("scripts", {})
+      exports = package.get("exports", {})
+      files = package.get("files", [])
+      public_build = (
+          scripts.get("build:public") == "tsc -p tsconfig.public.json"
+          and scripts.get("prepare") == "npm run build:public"
+          and not any(name in scripts for name in ("preinstall", "install", "postinstall"))
+          and "dist" in files
+          and exports.get("./types", {}).get("import") == "./dist/types.js"
+          and exports.get("./config", {}).get("import") == "./dist/config.js"
+          and exports.get("./metadata-cache", {}).get("import")
+              == "./dist/metadata-cache.js"
+          and Path("tsconfig.public.json").is_file()
+      )
+      legacy_build = (
+          not any(name in scripts for name in ("preinstall", "install", "postinstall", "prepare"))
+          and "dist" not in files
+          and exports.get("./types", {}).get("import") == "./types.ts"
+          and "./config" not in exports
+          and "./metadata-cache" not in exports
+      )
+      if not (public_build or legacy_build):
+          raise SystemExit("pi-mcp-adapter package build contract changed")
+
+      if public_build:
+          if missing_integrity != set(integrity_repairs):
+              raise SystemExit(
+                  "pi-mcp-adapter lock integrity omissions changed: "
+                  f"{sorted(missing_integrity)}"
+              )
+          for path, (resolved, integrity) in integrity_repairs.items():
+              metadata = lock["packages"][path]
+              if metadata.get("resolved") != resolved:
+                  raise SystemExit(f"pi-mcp-adapter lock source changed: {path}")
+              metadata["integrity"] = integrity
+      else:
+          package.pop("devDependencies", None)
+          lock["packages"][""].pop("devDependencies", None)
+          lock["packages"] = {
+              path: metadata
+              for path, metadata in lock["packages"].items()
+              if not metadata.get("dev", False)
+          }
+          retained_missing_integrity = {
+              path
+              for path, metadata in lock["packages"].items()
+              if path and metadata.get("resolved") and not metadata.get("integrity")
+          }
+          if retained_missing_integrity:
+              raise SystemExit(
+                  "legacy pi-mcp-adapter runtime lock has integrity omissions: "
+                  f"{sorted(retained_missing_integrity)}"
+              )
+
+      package_path.write_text(json.dumps(package, indent=2) + "\n")
       lock_path.write_text(json.dumps(lock, indent=2) + "\n")
       PY
       ${python3}/bin/python3 ${./pi-mcp-adapter-normalize.py} init.ts
+    '';
+    postInstall = ''
+      ${python3}/bin/python3 - "$out/lib/node_modules/pi-mcp-adapter/package.json" <<'PY'
+      import json
+      from pathlib import Path
+      import sys
+
+      package_path = Path(sys.argv[1])
+      package = json.loads(package_path.read_text())
+      package.pop("devDependencies", None)
+      scripts = package.get("scripts", {})
+      for name in ("preinstall", "install", "postinstall", "prepare"):
+          scripts.pop(name, None)
+      package_path.write_text(json.dumps(package, indent=2) + "\n")
+      PY
     '';
   };
 

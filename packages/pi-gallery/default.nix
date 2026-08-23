@@ -60,6 +60,13 @@ let
     };
   };
   inherit (manifest) members order supportSources;
+  agentBrowserHistoryPatch =
+    if members.browser.version == "0.3.0" then
+      ./patches/pi-agent-browser-bounded-history.patch
+    else if members.browser.version == "0.5.0" then
+      ./patches/pi-agent-browser-bounded-history-0.5.patch
+    else
+      throw "review the Browser Native bounded-history patch for ${members.browser.version}";
   localModelMemberIds = [
     "llama-swap-provider"
     "omlx-provider"
@@ -71,6 +78,13 @@ let
   );
   piCatalogRecords = manifest.sourceCatalog;
   sourceRecords = members // supportSources;
+  blackholeHistoryPatch =
+    if members.blackhole.version == "0.4.7" then
+      ./patches/pi-blackhole-managed-history.patch
+    else if members.blackhole.version == "0.4.8" then
+      ./patches/pi-blackhole-managed-history-0.4.8.patch
+    else
+      throw "unsupported pi-blackhole managed-history patch version ${members.blackhole.version}";
   catalogSourceIds = builtins.attrNames piCatalogRecords;
   gallerySourceIds = map (record: record.sourceName) (builtins.attrValues sourceRecords);
   externalSourceIds = builtins.attrNames manifest.externalSourceConsumers;
@@ -680,7 +694,7 @@ let
         --strip-components=1
       ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
         --directory=${root} --strip=1 \
-        < ${./patches/pi-agent-browser-bounded-history.patch}
+        < ${agentBrowserHistoryPatch}
     '';
   };
 
@@ -806,7 +820,7 @@ let
       tar -xzf ${releaseTarballs.pi-blackhole} -C ${root} --strip-components=1
       ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
         --directory=${root} --strip=1 \
-        < ${./patches/pi-blackhole-managed-history.patch}
+        < ${blackholeHistoryPatch}
       rm -r ${root}/dist
     '';
   };

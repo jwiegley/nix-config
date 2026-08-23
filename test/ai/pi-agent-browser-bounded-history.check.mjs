@@ -10,15 +10,32 @@ assert(codingAgentRoot, "PI_CODING_AGENT_ROOT must name the packaged Pi coding-a
 
 const extensionRelativePath = "dist/extensions/agent-browser/index.js";
 const extensionSource = readFileSync(join(packageRoot, extensionRelativePath), "utf8");
+const packageVersion = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8")).version;
+assert(
+	packageVersion === "0.3.0" || packageVersion === "0.5.0",
+	`review Browser Native bounded-history coverage for ${packageVersion}`,
+);
 assert.equal(
 	extensionSource.match(/sessionManager\.getRecentActiveEntries\(\{ type: "message", limit: 4096 \}\)/g)?.length,
 	1,
 	"branch restoration must use one item-bounded active-history query",
 );
 assert.equal(
+	extensionSource.match(/customType: "agent-browser-script-session"/g)?.length ?? 0,
+	packageVersion === "0.5.0" ? 1 : 0,
+	"script-session lease recovery must use one type-bounded active-history query",
+);
+assert.equal(
 	extensionSource.match(/sessionManager\.getLatestMessage\("user", \{ scope: "active" \}\)/g)?.length,
 	2,
 	"prompt policy must use active-branch point queries",
+);
+assert.equal(
+	extensionSource.match(
+		/for \(const lease of getScriptSessionLeasesFromBranch\(leaseEntries\)\.values\(\)\)/g,
+	)?.length ?? 0,
+	packageVersion === "0.5.0" ? 1 : 0,
+	"script-session recovery must consume the bounded lease query",
 );
 assert(!extensionSource.includes("sessionManager.getBranch("), "Browser Native must not hydrate the full branch");
 
@@ -40,7 +57,11 @@ try {
 	const { default: registerBrowser } = await import(join(runtimeRoot, extensionRelativePath));
 	const handlers = new Map();
 	const tools = [];
+	const appendedEntries = [];
 	registerBrowser({
+		appendEntry(...args) {
+			appendedEntries.push(args);
+		},
 		on(event, handler) {
 			const registered = handlers.get(event) ?? [];
 			registered.push(handler);
@@ -53,14 +74,39 @@ try {
 
 	const boundedQueries = [];
 	const pointQueries = [];
+	let leaseEntriesConsumed = 0;
+	let leaseCleanupReads = 0;
 	let fullBranchCalls = 0;
 	const latestUserEntry = {
 		id: "user-1",
 		parentId: null,
 		timestamp: "2026-08-18T00:00:00.000Z",
 		type: "message",
-		message: { role: "user", content: "Use the browser tool", timestamp: 1 },
+		message: { role: "user", content: "Use agent-browser via bash", timestamp: 1 },
 	};
+	const scriptSessionName = "piab-script-00000000-0000-4000-8000-000000000000";
+	const closeCommandArgs = ["--namespace", "", "--session", scriptSessionName, "close"];
+	const closedLeaseEntry = {
+		customType: "agent-browser-script-session",
+		data: {
+			cleanup: "closed",
+			closeCommandArgs,
+			launchAttempted: true,
+			sessionName: scriptSessionName,
+		},
+		type: "custom",
+	};
+	if (packageVersion === "0.5.0") {
+		const { getScriptSessionLeasesFromBranch } = await import(
+			join(runtimeRoot, "dist/extensions/agent-browser/lib/orchestration/script-mode.js")
+		);
+		assert.deepEqual(getScriptSessionLeasesFromBranch([closedLeaseEntry]), new Map([
+			[
+				scriptSessionName,
+				{ cleanup: "closed", closeCommandArgs, launchAttempted: true, sessionName: scriptSessionName },
+			],
+		]));
+	}
 	const context = {
 		cwd: workdir,
 		isProjectTrusted: () => true,
@@ -79,7 +125,22 @@ try {
 			},
 			getRecentActiveEntries(options) {
 				boundedQueries.push(options);
-				return [latestUserEntry];
+				if (!options.customType) return [latestUserEntry];
+				const leases = [{
+					...closedLeaseEntry,
+					data: {
+						...closedLeaseEntry.data,
+						get cleanup() {
+							leaseCleanupReads += 1;
+							return "closed";
+						},
+					},
+				}];
+				leases[Symbol.iterator] = function* () {
+					leaseEntriesConsumed += 1;
+					yield leases[0];
+				};
+				return leases;
 			},
 			getSessionId: () => "session-1",
 		},
@@ -87,11 +148,27 @@ try {
 
 	global.gc?.();
 	const rssBefore = process.memoryUsage().rss;
-	for (const handler of handlers.get("session_start") ?? []) await handler({}, context);
-	for (const handler of handlers.get("session_tree") ?? []) await handler({}, context);
-	for (const handler of handlers.get("tool_call") ?? []) {
-		await handler({ input: {}, toolName: "read" }, context);
+	const previousPath = process.env.PATH;
+	process.env.PATH = "";
+	try {
+		for (const handler of handlers.get("session_start") ?? []) await handler({}, context);
+		for (const handler of handlers.get("session_tree") ?? []) await handler({}, context);
+	} finally {
+		if (previousPath === undefined) delete process.env.PATH;
+		else process.env.PATH = previousPath;
 	}
+	let bashToolCallResult;
+	for (const handler of handlers.get("tool_call") ?? []) {
+		bashToolCallResult = await handler(
+			{ input: { command: "agent-browser open https://example.com" }, toolName: "bash" },
+			context,
+		);
+	}
+	assert.equal(
+		bashToolCallResult,
+		undefined,
+		"the latest-user point query must preserve an explicit bash opt-in",
+	);
 	const browserTool = tools.find((tool) => tool.name === "agent_browser");
 	assert(browserTool, "Browser Native did not register agent_browser");
 	const invalidResult = await browserTool.execute(
@@ -106,10 +183,17 @@ try {
 	const rssDelta = Math.max(0, process.memoryUsage().rss - rssBefore);
 
 	assert.equal(fullBranchCalls, 0, "Browser Native requested an unbounded branch");
-	assert.deepEqual(boundedQueries, [
-		{ type: "message", limit: 4096 },
-		{ type: "message", limit: 4096 },
-	]);
+	const messageQuery = { type: "message", limit: 4096 };
+	const leaseQuery = { customType: "agent-browser-script-session", limit: 4096 };
+	assert.deepEqual(
+		boundedQueries,
+		packageVersion === "0.5.0"
+			? [messageQuery, leaseQuery, messageQuery, leaseQuery]
+			: [messageQuery, messageQuery],
+	);
+	assert.equal(leaseEntriesConsumed, packageVersion === "0.5.0" ? 2 : 0);
+	assert.equal(leaseCleanupReads, packageVersion === "0.5.0" ? 2 : 0);
+	assert.deepEqual(appendedEntries, [], "closed script-session leases must not trigger cleanup writes");
 	assert.deepEqual(pointQueries, [
 		["user", { scope: "active" }],
 		["user", { scope: "active" }],

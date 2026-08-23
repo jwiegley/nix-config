@@ -5,6 +5,7 @@ import {
 	lstatSync,
 	mkdirSync,
 	mkdtempSync,
+	readFileSync,
 	readdirSync,
 	rmSync,
 	writeFileSync,
@@ -14,6 +15,10 @@ import { join } from "node:path";
 
 const packageRoot = process.env.PI_BLACKHOLE_ROOT;
 assert(packageRoot, "PI_BLACKHOLE_ROOT must name the packaged Blackhole root");
+const packageVersion = JSON.parse(
+	readFileSync(join(packageRoot, "package.json"), "utf8"),
+).version;
+assert.match(packageVersion, /^0\.4\.[78]$/, "unexpected Blackhole version");
 
 function makeTreeWritable(root: string): void {
 	const metadata = lstatSync(root);
@@ -53,6 +58,7 @@ try {
 		join(agentStub, "index.js"),
 		[
 			"export class AgentSession {}",
+			"export function calculateContextTokens() { return 0; }",
 			"export function estimateTokens() { return 0; }",
 			`export function getAgentDir() { return ${JSON.stringify(workdir)}; }`,
 		].join("\n"),
@@ -104,6 +110,7 @@ try {
 			midRunCompaction: "resume",
 		},
 		ensureConfig(): void {},
+		midRunCompactionRetry: { failures: 0, retryAfter: 0 },
 		midRunCompactionSuspended: false,
 		resetInfoGate(): void {},
 		tryEmitInfo(): boolean {
@@ -147,18 +154,41 @@ try {
 	assert.equal(nativeCalls, 0, "resume mode must not invoke native pausing compaction");
 	assert.equal(historyMaterializations, 0);
 	assert.equal(runtime.compactInFlight, false);
-	assert.equal(runtime.midRunCompactionSuspended, false);
+	if (packageVersion === "0.4.7") {
+		assert.equal(runtime.midRunCompactionSuspended, false);
+	} else {
+		assert.deepEqual(runtime.midRunCompactionRetry, {
+			failures: 0,
+			retryAfter: 0,
+		});
+	}
 
 	inlineShouldFail = true;
 	await turnEnd({}, ctx);
 	assert.equal(inlineCalls, 2);
 	assert.equal(runtime.compactInFlight, false);
-	assert.equal(runtime.midRunCompactionSuspended, true);
+	if (packageVersion === "0.4.7") {
+		assert.equal(runtime.midRunCompactionSuspended, true);
+	} else {
+		assert.equal(runtime.midRunCompactionRetry.failures, 1);
+		assert(runtime.midRunCompactionRetry.retryAfter > Date.now());
+		runtime.midRunCompactionRetry.retryAfter = Date.now() + 60_000;
+	}
+
+	await turnEnd({}, ctx);
+	assert.equal(inlineCalls, 2, "failure state must suppress an immediate retry");
 
 	contextTokens = 69;
 	await turnEnd({}, ctx);
 	assert.equal(inlineCalls, 2, "pressure relief must not retry inline compaction");
-	assert.equal(runtime.midRunCompactionSuspended, false);
+	if (packageVersion === "0.4.7") {
+		assert.equal(runtime.midRunCompactionSuspended, false);
+	} else {
+		assert.deepEqual(runtime.midRunCompactionRetry, {
+			failures: 0,
+			retryAfter: 0,
+		});
+	}
 	assert.equal(nativeCalls, 0);
 	assert.equal(historyMaterializations, 0);
 
