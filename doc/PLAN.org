@@ -425,15 +425,17 @@ Every dirty drain reads, parses, prunes, marshals, and durably rewrites the full
 ]
 #+end_src
 
-* DOING [#B] Restore Pi oMLX and Factory model visibility on Hera and Clio
+* DONE [#B] Restore Pi oMLX and Factory model visibility on Hera and Clio
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-146i
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-22 Sat 23:26]
-:MODIFIED: [2026-08-23 Sun 03:23]
+:MODIFIED: [2026-08-23 Sun 04:21]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-23 Sun 04:21]
+:CLOSE_REASON: Completed: the Pi 0.84-compatible Factory credential seam, safe request-time auth, stable bilateral oMLX providers, and scoped mutable-model migration are published, tested, activated, and live-verified on Hera and Clio. Hera exposes 44 authenticated Factory models plus both oMLX rosters; Clio exposes 26 fallback Factory models plus both oMLX rosters; neither exposes the retired omlx provider. The signed revision is active across every authorized host.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -444,6 +446,8 @@ Diagnose and repair the active managed Pi configuration so both Darwin workstati
 ** Notes
 
 Root causes confirmed: mutable enabledModels still used the retired omlx provider identity; the Darwin Pi wrappers had no fallback after missing Keychain lookups; and pi-droid-sdk called the removed Pi AuthStorage API, so stored Factory login was ignored. The source repair migrates only legacy enabledModels under Pi locking, contributes any missing stable oMLX identities in workstation-local-first order, deduplicates generated/current-provider collisions while preserving unrelated mutable entries and an existing factory position, restores the previously accepted non-secret oMLX compatibility sentinel after explicit and Keychain values, and uses Pi 0.84 readStoredCredential for both discovery and request-time authentication. Verification PASS: pi-droid-sdk package build; final Pi Gallery; migration, CA/credential precedence, catalog transport, and host behavior checks; config/ai all-systems no-build; nix fmt; make test; full unchanged pre-commit hook; and Hera system build. Signed publication, fleet activation, and live provider discovery remain before closure.
+
+Publication and deployment PASS: signed source commits ab052a05d10ed1ee6ac7d1df4c136473ed702d32 and 35428a77b1df9439461f86fad13873449df03674 are live. Hera activated hiyzhfik and Clio activated bkx9b7; both report Pi 0.84.2. Redacted bounded no-session discovery passed: Hera factory=44, omlx-hera=5, omlx-clio=2, legacy omlx=0; Clio factory=26 fallback, omlx-clio=2, omlx-hera=5, legacy omlx=0. Hera preserves local-first mutable scope; Clio has no enabledModels field and is correctly unfiltered. The same signed root was also activated on Vulcan and the four shared-work hosts; all report Pi 0.84.2 and passed offline no-session configuration loading. VPS and git-ai remained excluded. Authenticated Factory inference was not invoked; authenticated catalog discovery is proven on Hera and fallback catalog visibility on Clio.
 
 * DONE [#B] Park VPS outside the active fleet
 :PROPERTIES:
@@ -2093,7 +2097,7 @@ DDGS 9.15.0 is selected; oMLX declares the exact selected DDGS version and adver
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-22 Sat 22:58]
-:MODIFIED: [2026-08-23 Sun 00:26]
+:MODIFIED: [2026-08-23 Sun 04:21]
 :CREATED_BY: johnw
 :FINISHED: [2026-08-23 Sun 00:26]
 :CLOSE_REASON: Upgraded Agent Deck to official v1.14.0; rebased all three strict patches; updater, package, lifecycle, all-system evaluation, pre-commit, and independent audits passed. Residual rollback gaps tracked as nix-y8rg and nix-jax0.
@@ -2107,6 +2111,8 @@ Determine why the automatic catalog updater rejects the current Agent Deck relea
 ** Notes
 
 Selected official upstream v1.14.0 (commit 5bcd0c3626ea20bfaf29a80a7c8e0c2d7292bafc). Root cause: the automatic github-release updater was correct, but all three strict downstream patches needed rebasing. Final rebased patch identities: discord 904f634b716cb689e600b280fcef0d0e49a7448549fc5579c7333addb1cfdfe7; transition 3fae7335cd136b0aaa9d3f9212106230cd8c2953963e1dc1a9a8ca76a24a13fd; runtime 302d79065b2b6dfbae3c78d98959b1f0c1800c2d524fd1229c7853565b0b288b. Updater candidate reported catalog/agent-deck 1.13.0 -> 1.14.0 OK with vendorHash. PASS: ./build pkg agent-deck; root and portable aarch64-darwin agent-deck-go-compat + agent-deck-runtime-lifecycle; test/bin/unittest-strict.py test/bin/update-overlay-slow-test.py (131 tests); nix flake check ./config/ai --all-systems --no-build; fresh RestartFresh live-tmux cases for Gemini/Cursor/Hermes/DeepSeek passed count=5. Independent focused review CLEAR at scratch 8f318e3fa6a62538406c8f61d2175b3914f8b6dd. Residual rollback gaps are tracked separately as nix-y8rg and nix-jax0.
+
+Deployment PASS: signed source 35428a77b1df9439461f86fad13873449df03674 was activated on Hera, Clio, Vulcan, Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server. Every host reports Agent Deck v1.14.0; exact host profiles/current links, rollback preservation, host health, and no competing deployment workers were verified. VPS and git-ai remained excluded.
 
 * DONE [#C] Make the VPS Gitea credential helper read-only
 :PROPERTIES:
@@ -3691,15 +3697,17 @@ Transient classification reaches replay policy; transient failures remain retrya
 ]
 #+end_src
 
-* TODO [#B] Restore reliable oMLX client authentication on Hera and Clio
+* DONE [#B] Restore reliable oMLX client authentication on Hera and Clio
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-b5cz
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-23 Sun 00:45]
-:MODIFIED: [2026-08-23 Sun 01:56]
+:MODIFIED: [2026-08-23 Sun 03:59]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-23 Sun 03:59]
+:CLOSE_REASON: Completed: the managed Darwin wrappers now preserve explicit and Keychain credentials with the documented non-secret compatibility sentinel as the bounded fallback. Post-activation redacted discovery passed on both workstations: Hera exposed omlx-hera=5 and omlx-clio=2; Clio exposed omlx-clio=2 and omlx-hera=5; legacy omlx=0 on both. No secret value was printed or committed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -7735,6 +7743,38 @@ Agent Deck's mandatory pre-push hook invokes golangci-lint, but the shared /User
     "author": "johnw",
     "text": "2026-08-13 implementation is committed in e31a67fb: the root devShell declares Go and golangci-lint, and both resolve in direnv. The later publication-policy commit makes the current tip coherent with the compatibility assertion that independently blocked the intermediate commit audit.",
     "created_at": "2026-08-14T04:21:38Z"
+  }
+]
+#+end_src
+
+* TODO [#C] Constrain shared-work Nix daemon CPU affinity on T2 and Delphi
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-mkx1
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-23 Sun 03:52]
+:MODIFIED: [2026-08-23 Sun 03:52]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Andoria-T2 and Delphi currently expose unrestricted nix-daemon effective CPU sets (0-255 and 0-287), while Andoria-08 and gpu-server are correctly confined to CPUs 0-7. Repair the separately owned daemon CPU-policy leaf, authorize and perform the required daemon restarts, then verify effective affinity, scheduler max-jobs=1/cores=8, store signature policy, and unchanged host health. This issue does not block copying or activating a prebuilt exact closure; it blocks claiming the fleet resource-policy contract is fully converged.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-mkx1",
+    "depends_on_id": "nix-146i",
+    "type": "discovered-from",
+    "created_at": "2026-08-23T10:52:01.463135Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
