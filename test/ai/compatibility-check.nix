@@ -9,6 +9,7 @@ let
   lib = inputs.nixpkgs.lib;
   sources = import ../../packages/source-catalog.nix "ai";
   implementationSource = builtins.readFile ../../flake/ai.nix;
+  agentResourcesFormals = builtins.functionArgs (import ../../packages/agent-resources.nix);
   sortedNames = value: lib.sort builtins.lessThan (builtins.attrNames value);
   hasAll = actual: required: builtins.all (name: builtins.elem name actual) required;
   inputNames = sortedNames (builtins.removeAttrs inputs [ "self" ]);
@@ -37,6 +38,26 @@ let
         inherit system;
         config.allowUnfree = true;
         overlays = [ actual.overlays.default ];
+      };
+      followableNixpkgsPoisonedResources = pkgs.callPackage ../../packages/agent-resources.nix {
+        inputs = inputs // {
+          nixpkgs = throw "agent-resources used followable consumer nixpkgs for its npm builder";
+        };
+      };
+      consumerNpmBuilderPoisonedResources = pkgs.callPackage ../../packages/agent-resources.nix {
+        inherit inputs;
+        buildPackages = {
+          inherit (pkgs.buildPackages) patch;
+        };
+        callPackage =
+          package: overrides:
+          if
+            (builtins.isString package || builtins.isPath package)
+            && toString package == "${inputs.llm-agents}/packages/git-surgeon/package.nix"
+          then
+            pkgs.callPackage package overrides
+          else
+            throw "agent-resources used consumer callPackage outside its reviewed git-surgeon seam";
       };
       overridden = import inputs.nixpkgs {
         inherit system;
@@ -128,6 +149,12 @@ let
         )
       ) "portable AI package policy lost PAL or its stdio boundary on ${system}")
       (lib.assertMsg (
+        followableNixpkgsPoisonedResources.drvPath == pkgs.agent-resources.drvPath
+      ) "agent-resources npm builder depends on followable consumer nixpkgs on ${system}")
+      (lib.assertMsg (
+        consumerNpmBuilderPoisonedResources.drvPath == pkgs.agent-resources.drvPath
+      ) "agent-resources regained a consumer-owned npm builder route on ${system}")
+      (lib.assertMsg (
         overridden.agent-deck == "caller-override"
       ) "portable AI overlay prevents later caller overrides on ${system}")
       (lib.assertMsg (
@@ -196,12 +223,19 @@ let
     );
   assertions = [
     (lib.assertMsg (hasAll inputNames contract.inputs) "portable AI input contract lost a required input")
+    (lib.assertMsg (
+      !(inputs.npm-cache-nixpkgs ? legacyPackages)
+      && (inputs.npm-cache-nixpkgs.rev or null) == "a831408e6378bc02ebf8cc09b52c96ca86f6bab4"
+    ) "portable npm-cache nixpkgs input lost its independent exact pin")
     (lib.assertMsg (hasAll (sortedNames actual) outputNames) "portable AI top-level output contract lost a required output")
     (lib.assertMsg (builtins.isFunction actual.overlays.default) "portable default overlay is not callable")
     (lib.assertMsg (builtins.isFunction actual.overlays.tools) "portable tools overlay is not callable")
     (lib.assertMsg (builtins.isFunction actual.lib.aiPackagesFor) "aiPackagesFor is not callable")
     (lib.assertMsg (builtins.isFunction actual.lib.optAgent) "optAgent is not callable")
     (lib.assertMsg (builtins.isFunction actual.lib.patchAgentPackage) "patchAgentPackage is not callable")
+    (lib.assertMsg (
+      !(agentResourcesFormals ? buildNpmPackage)
+    ) "agent-resources regained a consumer-owned npm builder")
     # Package-set identity is an evaluation-cost property that output equality
     # cannot observe, so keep this one contract source-based.
     (lib.assertMsg (

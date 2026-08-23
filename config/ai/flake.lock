@@ -187,6 +187,23 @@
         "type": "github"
       }
     },
+    "npm-cache-nixpkgs": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787364730,
+        "narHash": "sha256-NcYt9QJfpJiF1lAyN8BDPB4EeScbPU+EwQqPiBElrpU=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "a831408e6378bc02ebf8cc09b52c96ca86f6bab4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "a831408e6378bc02ebf8cc09b52c96ca86f6bab4",
+        "type": "github"
+      }
+    },
     "pal-mcp-server": {
       "flake": false,
       "locked": {
@@ -291,6 +308,7 @@
         "llm-agents": "llm-agents",
         "mcp-servers-nix": "mcp-servers-nix",
         "nixpkgs": "nixpkgs_2",
+        "npm-cache-nixpkgs": "npm-cache-nixpkgs",
         "pal-mcp-server": "pal-mcp-server",
         "pi-btw": "pi-btw",
         "pi-mcp-adapter": "pi-mcp-adapter",

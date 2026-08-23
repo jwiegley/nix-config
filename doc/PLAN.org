@@ -449,6 +449,42 @@ Root causes confirmed: mutable enabledModels still used the retired omlx provide
 
 Publication and deployment PASS: signed source commits ab052a05d10ed1ee6ac7d1df4c136473ed702d32 and 35428a77b1df9439461f86fad13873449df03674 are live. Hera activated hiyzhfik and Clio activated bkx9b7; both report Pi 0.84.2. Redacted bounded no-session discovery passed: Hera factory=44, omlx-hera=5, omlx-clio=2, legacy omlx=0; Clio factory=26 fallback, omlx-clio=2, omlx-hera=5, legacy omlx=0. Hera preserves local-first mutable scope; Clio has no enabledModels field and is correctly unfiltered. The same signed root was also activated on Vulcan and the four shared-work hosts; all report Pi 0.84.2 and passed offline no-session configuration loading. VPS and git-ai remained excluded. Authenticated Factory inference was not invoked; authenticated catalog discovery is proven on Hera and fallback catalog visibility on Clio.
 
+* DOING [#B] Make pi-mcp-adapter npm cache hash cross-platform
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-194u
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-23 Sun 13:27]
+:MODIFIED: [2026-08-23 Sun 14:35]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Vulcan's authoritative Linux system build from source f1263ecd and paired consumer locks failed before activation: pi-mcp-adapter 2.27.0 npmDepsFetcherVersion=2 specified Darwin-proven sha256-dIJsGgjXnNt6iwCXkhNIg8ZczV9+o64oBXGku++ZtqE= but x86_64-linux realized sha256-eMaVwntrMdQ/lO7fbi96xZO0fTj8zgKkK/WJlNXaryI=. Preserve the exact public-build/lifecycle contracts, make the fixed-output hash platform-correct at the narrow package seam, add a Linux realization oracle, pass Darwin and Linux package/system checks, then resume the authorized fleet rollout without activating failed candidates.
+
+** Notes
+
+Root cause confirmed: Vulcan release-25.11 buildNpmPackage silently ignores npmDepsFetcherVersion and uses v1 cache output eMaV; the v2 dIJs hash is platform-independent. Repair: the portable flake owns an exact raw a831 Nixpkgs input and agent-resources uses its coherent buildNpmPackage/fetcher/config-hook seam on every consumer. Compatibility oracles pin the independent raw input; poison followable consumer nixpkgs; narrow injected buildPackages to the sole reviewed patch capability; allow nested consumer callPackage only at the existing exact git-surgeon seam; and reject an outer consumer buildNpmPackage formal. Verification PASS: make verify-inputs; portable/root lock projection; nix fmt; ./build pkg agent-resources; Darwin agent-resources and compatibility-contract checks; config/ai all-systems no-build; x86_64-linux agent-resources package plus full behavioral check realized only on Andoria-08; make test (all 21 Python groups plus declared Darwin behavioral baseline); non-activating Hera ./build system; and four isolated mutation probes killing restored outer-formal, buildPackages builder, nested root callPackage, and buildPackages.callPackage consumer-builder routes. Exact-snapshot hooks/audits, signed publication, authoritative Vulcan rebuild, consumer commits, and fleet activation remain open.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-194u",
+    "depends_on_id": "nix-7ttl",
+    "type": "discovered-from",
+    "created_at": "2026-08-23T20:27:35.890622Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Park VPS outside the active fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

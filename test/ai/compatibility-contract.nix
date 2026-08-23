@@ -13,6 +13,7 @@ in
     "git-ai"
     "llm-agents"
     "mcp-servers-nix"
+    "npm-cache-nixpkgs"
     "nixpkgs"
     "pal-mcp-server"
     "pi-btw"

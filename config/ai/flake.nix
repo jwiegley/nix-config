@@ -9,6 +9,15 @@
 
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
+    # pi-mcp-adapter's public build needs npm dependency-cache format v2.
+    # Keep its coherent builder and cache hook independent of consumer
+    # nixpkgs: release-25.11 silently ignores npmDepsFetcherVersion and uses
+    # cache format v1.
+    npm-cache-nixpkgs = {
+      url = "github:NixOS/nixpkgs/a831408e6378bc02ebf8cc09b52c96ca86f6bab4";
+      flake = false;
+    };
+
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";

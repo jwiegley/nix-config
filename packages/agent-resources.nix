@@ -1,5 +1,4 @@
 {
-  buildNpmPackage,
   buildPackages,
   callPackage,
   fetchzip,
@@ -7,6 +6,7 @@
   lib,
   python3,
   runCommand,
+  stdenv,
 }:
 
 let
@@ -99,7 +99,11 @@ let
     "postbuild:public"
   ];
 
-  piMcpAdapter = buildNpmPackage {
+  npmCachePkgs = import inputs.npm-cache-nixpkgs {
+    system = stdenv.hostPlatform.system;
+  };
+
+  piMcpAdapter = npmCachePkgs.buildNpmPackage {
     pname = "pi-mcp-adapter";
     version = piSources.pi-mcp-adapter.version;
     src = inputs.pi-mcp-adapter;
