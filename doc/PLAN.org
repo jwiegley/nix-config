@@ -449,15 +449,17 @@ Root causes confirmed: mutable enabledModels still used the retired omlx provide
 
 Publication and deployment PASS: signed source commits ab052a05d10ed1ee6ac7d1df4c136473ed702d32 and 35428a77b1df9439461f86fad13873449df03674 are live. Hera activated hiyzhfik and Clio activated bkx9b7; both report Pi 0.84.2. Redacted bounded no-session discovery passed: Hera factory=44, omlx-hera=5, omlx-clio=2, legacy omlx=0; Clio factory=26 fallback, omlx-clio=2, omlx-hera=5, legacy omlx=0. Hera preserves local-first mutable scope; Clio has no enabledModels field and is correctly unfiltered. The same signed root was also activated on Vulcan and the four shared-work hosts; all report Pi 0.84.2 and passed offline no-session configuration loading. VPS and git-ai remained excluded. Authenticated Factory inference was not invoked; authenticated catalog discovery is proven on Hera and fallback catalog visibility on Clio.
 
-* DOING [#B] Make pi-mcp-adapter npm cache hash cross-platform
+* DONE [#B] Make pi-mcp-adapter npm cache hash cross-platform
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-194u
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-23 Sun 13:27]
-:MODIFIED: [2026-08-23 Sun 14:35]
+:MODIFIED: [2026-08-23 Sun 16:51]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-23 Sun 16:51]
+:CLOSE_REASON: The pinned coherent npm v2 builder is published and proven on Darwin, Vulcan, and the shared Linux fleet; exact signed consumer commits and runtime activations all passed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -467,7 +469,7 @@ Vulcan's authoritative Linux system build from source f1263ecd and paired consum
 
 ** Notes
 
-Root cause confirmed: Vulcan release-25.11 buildNpmPackage silently ignores npmDepsFetcherVersion and uses v1 cache output eMaV; the v2 dIJs hash is platform-independent. Repair: the portable flake owns an exact raw a831 Nixpkgs input and agent-resources uses its coherent buildNpmPackage/fetcher/config-hook seam on every consumer. Compatibility oracles pin the independent raw input; poison followable consumer nixpkgs; narrow injected buildPackages to the sole reviewed patch capability; allow nested consumer callPackage only at the existing exact git-surgeon seam; and reject an outer consumer buildNpmPackage formal. Verification PASS: make verify-inputs; portable/root lock projection; nix fmt; ./build pkg agent-resources; Darwin agent-resources and compatibility-contract checks; config/ai all-systems no-build; x86_64-linux agent-resources package plus full behavioral check realized only on Andoria-08; make test (all 21 Python groups plus declared Darwin behavioral baseline); non-activating Hera ./build system; and four isolated mutation probes killing restored outer-formal, buildPackages builder, nested root callPackage, and buildPackages.callPackage consumer-builder routes. Exact-snapshot hooks/audits, signed publication, authoritative Vulcan rebuild, consumer commits, and fleet activation remain open.
+Root cause and repair completed. Vulcan release-25.11 buildNpmPackage silently ignored npmDepsFetcherVersion and attempted the v1 cache under the v2 hash. Signed source repair cd5ada03138a9b2106805af213c4808e95d43b2b makes portable AI own an exact raw a831 Nixpkgs input and uses its coherent buildNpmPackage, v2 fetcher, and matching hook on every consumer. Compatibility checks pin and poison the consumer-builder escape routes; four mutation probes killed the known regressions. Darwin package/system, all-systems evaluation, Andoria x86_64-linux package and behavioral checks, full make test, and exact hooks passed. Final live source a0c5c779 includes the repair. Vulcan signed consumer eb46cbbd built and activated /nix/store/1c7nicxq57ay3y6qxd47018vk2xllv9c-nixos-system-vulcan-25.11.20260630.b6018f8 with Agent Deck 1.15.0, Pi 0.84.2, and the sanitized pi-mcp-adapter payload. Shared signed consumer b600ebd5 built, recursively signed, distributed, and activated /nix/store/jaarvhv490903a7xsnzkby7a4wz5v65r-home-manager-generation on all four Linux hosts; manifest and trusted-signature checks passed everywhere.
 
 ** Dependencies
 
@@ -2536,16 +2538,18 @@ The owner requires Git-AI, Cozempic, Pi Mem, and Pi Artifacts to remain fully di
 ]
 #+end_src
 
-* DOING [#C] Run full source update and deploy authorized fleet
+* DONE [#C] Run full source update and deploy authorized fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-7ttl
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-23 Sun 04:28]
-:MODIFIED: [2026-08-23 Sun 12:03]
+:MODIFIED: [2026-08-23 Sun 16:51]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
+:FINISHED: [2026-08-23 Sun 16:51]
+:CLOSE_REASON: Canonical update, signed source and consumer publication, and authorized activation completed on Hera, Clio, Vulcan, Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server with runtime health verified; excluded hosts stayed untouched and residuals are explicitly tracked.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2555,7 +2559,7 @@ Run the canonical make update transaction from the clean signed/live main branch
 
 ** Notes
 
-The first canonical make update published and activated source commit 3ba5bd71 with pi-mcp-adapter and pi-goal-x held. Signed repair checkpoints 216e5d19, da0964a6, and 4a619cb7 prepared the accepted transitions. The final canonical make update processed all 164 targets with zero held targets and accepted exactly Agent Deck 1.15.0, git-ai source c395f546, llm-agents aa8a6076, pi-mcp-adapter 6c08147f, Pi Quiet 6fe09706, Pi Cache Optimizer 2.8.6, Goal-X 0.30.0, and gptel 5d6312fd. Portable/root evaluation, isolated signed commit hooks, exact Hera system build and activation, authoritative fast-forward adoption, and Gitea publication completed. Signed update commit b5e4b535 is clean and live at origin/main; Hera current-system and system profile converge on /nix/store/4i25fa1fni0v0vi7d17y04mspz70qwpn-darwin-system-26.11.4cff07d, exposing Agent Deck 1.15.0 and Pi 0.84.2. Dormant git-ai remains source-only and excluded from host contact. Post-adoption transition cleanup, its final verification/commit/publication, and Clio, Vulcan, and shared-work fleet deployment remain open.
+Completed fleet evidence on 2026-08-23. The final canonical make update processed all 164 catalog targets with zero held targets and accepted Agent Deck 1.15.0, git-ai source c395f546, llm-agents aa8a6076, pi-mcp-adapter 6c08147f, Pi Quiet 6fe09706, Pi Cache Optimizer 2.8.6, Goal-X 0.30.0, and gptel 5d6312fd. Signed source checkpoints b5e4b535, f1263ecd, cd5ada03, and final a0c5c779 are published and verified. Hera activated /nix/store/y1p41aqrqbjf96mgk36s6xlryhydkj6d-darwin-system-26.11.4cff07d; Clio fast-forwarded clean/live and activated /nix/store/4igmv5waybngd4an264331mjbfygcg3n-darwin-system-26.11.4cff07d. Vulcan signed consumer eb46cbbd is clean/live and activated /nix/store/1c7nicxq57ay3y6qxd47018vk2xllv9c-nixos-system-vulcan-25.11.20260630.b6018f8. Shared signed consumer b600ebd5 is clean/live; exact recursively signed 2268-path closure c2425b9214d5877e6f70362dcc5e8a18ac5344b00f5b5558998c2078d875ee4e was activated serially on Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server at /nix/store/jaarvhv490903a7xsnzkby7a4wz5v65r-home-manager-generation. Every active host reports Agent Deck 1.15.0 and Pi 0.84.2 with required health, rollback, trust, no-session, clean-checkout, and no-new-failure checks. Hera and Clio model inventories expose Factory plus omlx-clio and omlx-hera with legacy omlx absent. Hera Agent Deck sees the one waiting Clio Claude session after changing only the remote destination to johnw@clio. Hera non-card GPG signing is autonomous after a fresh agent start; Clio card support remains intact. Session inventories were unchanged. VPS and the dormant git-ai host were not contacted or activated. Explicit residuals remain tracked: nix-vjus for Agent Deck remote JSON error reporting, nix-ezv3 for the September certificate renewal validation, and the pre-existing T2/Delphi CPU-affinity debt.
 
 * DONE [#B] Package Pi Quiet's complete imported source closure
 :PROPERTIES:
@@ -4475,6 +4479,40 @@ Agent Deck WriteInboxEvent fsyncs the file but does not durably sync a newly cre
 ]
 #+end_src
 
+* DONE [#B] Repair Hera Agent Deck Clio remote SSH alias
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-da4u
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-23 Sun 15:46]
+:MODIFIED: [2026-08-23 Sun 15:46]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-23 Sun 15:46]
+:CLOSE_REASON: Reproduced raw-IP SSH exit 255 while ssh clio succeeded with the dedicated identity. Re-registered the existing remote as johnw@clio with profile default and path agent-deck. agent-deck remote sessions --json clio now returns exactly one waiting Claude session; no session was attached, restarted, or controlled.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Hera registered Clio as johnw@192.168.1.5, bypassing the Host clio SSH stanza and its dedicated identity. Diagnose without session control, re-register only the remote host as johnw@clio while preserving profile and executable path, and prove the same Clio session is visible from Hera.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-da4u",
+    "depends_on_id": "nix-7ttl",
+    "type": "discovered-from",
+    "created_at": "2026-08-23T22:46:45.639657Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DOING [#B] Expose both oMLX hosts to Pi on Hera and Clio
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5160,7 +5198,7 @@ The fetchNpmDeps v2 repair was committed in signed checkpoint 216e5d19. Exact bi
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-23 Sun 12:43]
-:MODIFIED: [2026-08-23 Sun 12:48]
+:MODIFIED: [2026-08-23 Sun 16:51]
 :CREATED_BY: johnw
 :DEFERRED: [2026-09-01 Tue 09:00]
 :SOURCE_REPO: nix
@@ -5172,7 +5210,7 @@ Read-only predeployment baseline on 2026-08-23 found certificate-validation.serv
 
 ** Notes
 
-Read-only diagnosis found the timer-triggered oneshot behaved as designed: 46 certificates are valid and one Nginx certificate entered the 30-day warning window, so validation intentionally exits 1. Runs from August 18 through 22 were green. Automatic Nginx renewal is scheduled for September 1 around 03:43 PDT; validation should be checked after the September 1 06:00 run for 47 valid and zero warnings. Ordinary system activation does not rerun this timer-only unit. Until renewal, rollout health must require the failed-unit set to remain baseline-identical rather than clearing or restarting the alert.
+Read-only diagnosis found the timer-triggered oneshot behaved as designed: 46 certificates were valid and one Nginx certificate entered the 30-day warning window, so validation intentionally exited 1. Runs from August 18 through 22 were green. Automatic Nginx renewal is scheduled for September 1 around 03:43 PDT; validation should be checked after the September 1 06:00 run for 47 valid and zero warnings. The 2026-08-23 system activation cleared the recorded failed state: certificate-validation.service is now loaded, inactive/dead, and Result=success, with the system manager running and zero failed units. Activation did not rerun the timer-only validation, so this state reset does not prove the certificate warning itself is resolved; the post-renewal validation remains required before closing.
 
 ** Dependencies
 
@@ -6496,15 +6534,17 @@ Canonical update adopted pi-blackhole 0.4.8. Cleanup now applies only the strict
 
 The recently added post-unload DIRENV_DIFF assertion makes de abort with 'direnv did not restore the pre-direnv environment' after the owner deletes .envrc and .envrc.cache. Restore the longstanding contract: de must recreate both generated files. Remove the unsolicited false-failure guard without weakening private cache generation or .env secret exclusion, and add a focused regression for successful regeneration when direnv leaves its bookkeeping variable set.
 
-* DOING [#B] Make Hera GPG commit signing autonomous
+* DONE [#B] Make Hera GPG commit signing autonomous
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-ibbs
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-23 Sun 14:48]
-:MODIFIED: [2026-08-23 Sun 15:32]
+:MODIFIED: [2026-08-23 Sun 15:52]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-23 Sun 15:52]
+:CLOSE_REASON: Signed commit a0c5c779 is live and activated on Hera; rendered non-card configuration matches policy, and a fresh-agent no-TTY signature succeeded without a prompt.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -6514,7 +6554,7 @@ Configure Hera to use the locally available ed25519 signing key without smart-ca
 
 ** Notes
 
-Evidence on 2026-08-23: Hera already rendered default-cache-ttl and max-cache-ttl as 2147483647 seconds, roughly 68 years. The source change disables scdaemon only on Hera, preserves Clio card support, explicitly permits external pinentry caching, and declares Hera pinentry-mac Keychain preferences. Focused aarch64-darwin host-behavior evaluation passed, nix fmt and diff checks passed, the full make test gate passed, the authoritative non-activating Hera system build passed, and the final all-files pre-commit gate passed in 65.76 seconds with all 18 fast Python suites completing in 51 seconds. Two earlier hook attempts exhausted the same 120-second Python budget because an accidental read-only audit scan across the Nix store created sustained host contention; terminating only that exact scan restored the unchanged fast tier to a 62-second direct PASS and the unchanged full hook to PASS. Runtime acceptance killed the current gpg-agent and then completed a bounded no-TTY detached signature with the local signing key in 7 seconds without a card or passphrase prompt; the restarted agent retained both declared TTL values. Persistence and security boundary: the GnuPG agent memory cache is volatile across reload, exit, logout, and reboot regardless of TTL. pinentry-mac can repopulate it from the login Keychain only while that Keychain is unlocked and authorized. Post-agent-restart autonomy is demonstrated; cold-reboot persistence is not yet tested and must not be claimed. This policy deliberately permits any process running as johnw that can reach the unlocked login agents GPG socket to request signatures without a fresh prompt. Locking or removing the Keychain item alone does not evict a passphrase already held by the running agent. Immediate revocation requires clearing or terminating the agent cache and separately disabling or removing Keychain retrieval; account or session compromise retains signing authority until both sources are neutralized. Remaining acceptance: signed commit and push, Hera activation, rendered-config verification, and a post-activation noninteractive signing probe.
+Completed evidence on 2026-08-23: Hera keeps GnuPG default-cache-ttl and max-cache-ttl at 2147483647 seconds, disables scdaemon only on Hera, preserves Clio smart-card support, permits external pinentry caching, and declares Hera pinentry-mac Keychain preferences. Focused host-behavior evaluation, nix fmt, make test, clean-source Hera system build, and exact-snapshot pre-commit all passed. Signed source commit a0c5c779354ccb92b4c97c99554009b112c39c57 is verified and live. Hera activated exact candidate /nix/store/y1p41aqrqbjf96mgk36s6xlryhydkj6d-darwin-system-26.11.4cff07d as system generation 1128; current-system and system profile match. The rendered agent config contains disable-scdaemon, both declared TTL values, and pinentry-mac; external caching remains allowed and the Hera Keychain preferences are active. After killing gpg-agent, a bounded no-TTY detached signature with the local signing key completed in 2 seconds without a card or passphrase prompt, and the restarted agent plus Nix daemon remained healthy. Persistence boundary: the in-memory cache is volatile across agent reload, exit, logout, and reboot. pinentry-mac can repopulate it only while the login Keychain is unlocked and authorized. Post-agent-restart autonomy is demonstrated; cold-reboot persistence is not tested. This deliberately grants processes running as johnw that can reach the unlocked login agents GPG socket signing authority without a fresh prompt. Immediate revocation requires both clearing or terminating the agent cache and disabling or removing Keychain retrieval.
 
 ** Dependencies
 
@@ -16530,15 +16570,17 @@ pi-mem and Lens are absent from generated imports and registrations while all 26
 ]
 #+end_src
 
-* DOING [#B] Keep shared-work flake updates buildable across curl-cffi transition
+* DONE [#B] Keep shared-work flake updates buildable across curl-cffi transition
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-tumd
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-20 Thu 22:19]
-:MODIFIED: [2026-08-23 Sun 09:11]
+:MODIFIED: [2026-08-23 Sun 16:57]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-23 Sun 16:57]
+:CLOSE_REASON: The integrated curl-cffi 0.16 source is published and the exact signed shared-work paired lock built, distributed, and activated successfully on all four maintained hosts.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -16548,7 +16590,7 @@ Preserve ordinary nix flake update --commit-lock-file on the authoritative share
 
 ** Notes
 
-Canonical first-pass update advanced current nixpkgs to integrated curl-cffi 0.16.0. The transition-only overlay, four 0.15 patches, registration, manifest row, and behavioral guard are now removed after maintained-consumer search. ./build python curl-cffi passes on 0.16; portable all-system evaluation and full make test pass. Keep open until the final published revision is adopted by shared-work and its authoritative paired lock build/activation proves the integrated channel state.
+Canonical update advanced current nixpkgs to integrated curl-cffi 0.16.0. The transition-only overlay, four 0.15 patches, registration, manifest row, and behavioral guard were removed after maintained-consumer search. ./build python curl-cffi passed on 0.16; portable all-system evaluation, full make test, and exact source hooks passed. Final signed source a0c5c779 is live. Shared-work signed consumer b600ebd5 adopted the paired a0c5c779 lock, passed its no-build check, built exact activation package /nix/store/jaarvhv490903a7xsnzkby7a4wz5v65r-home-manager-generation on Andoria-08, recursively signed and distributed its exact 2268-path closure, then activated it serially on Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server. All four final convergence checks passed, proving the integrated channel state on the maintained shared consumer.
 
 ** Dependencies
 
@@ -17277,6 +17319,38 @@ Agent tooling never searches for executables by recursively traversing home, fil
     "author": "johnw",
     "text": "2026-08-13 superseding owner adjudication: accept the implemented narrow repository policy, permission hygiene, and sanitized diagnostic contract; explicitly decline App Sandbox, Endpoint Security, or another cross-client OS-confinement product. This closes the issue without claiming kernel enforcement.",
     "created_at": "2026-08-14T05:09:04Z"
+  }
+]
+#+end_src
+
+* TODO [#C] Make Agent Deck remote JSON diagnostics preserve failures
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-vjus
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-23 Sun 15:49]
+:MODIFIED: [2026-08-23 Sun 15:49]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Agent Deck v1.15 remote sessions uses Go flag parsing, so the documented spelling with a remote name before --json does not enable JSON mode. With the accepted spelling, per-remote SSH or PATH errors are suppressed and an empty array can be mistaken for a remote with no sessions. Update the CLI/help and tests so flag order is unambiguous and machine-readable mode retains structured remote failures.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-vjus",
+    "depends_on_id": "nix-da4u",
+    "type": "discovered-from",
+    "created_at": "2026-08-23T22:49:43.528314Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
