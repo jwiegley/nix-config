@@ -86,6 +86,7 @@ let
     src = inputs.pi-mcp-adapter;
     patches = [ ./agent-resources/pi-mcp-adapter-xdg-config-home.patch ];
     npmDepsHash = piSources.pi-mcp-adapter.hashes.npmDepsHash;
+    npmDepsFetcherVersion = 2;
     dontNpmBuild = true;
     postPatch = ''
       # Legacy revisions do not build package artifacts, so their development

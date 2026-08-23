@@ -5086,7 +5086,7 @@ Hera and Clio system evaluation emit repeated deprecation warnings from six repo
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-23 Sun 05:10]
-:MODIFIED: [2026-08-23 Sun 06:19]
+:MODIFIED: [2026-08-23 Sun 07:55]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -5097,7 +5097,7 @@ Preserve upstream public dist exports after 6c08147 introduced a prepare build w
 
 ** Notes
 
-Legacy and public-dist package contracts are implemented. The public branch builds with the full dev graph, repairs exactly six pinned integrity omissions, lets prepare emit dist, prunes dev dependencies, and removes lifecycle scripts/devDependencies from the installed manifest. Normalization 4/4, current package build, combined Pi Gallery, portable evaluation, and full make test pass. Candidate npm hash/adoption, cleanup, publication, and activation remain open.
+Legacy and public-dist package contracts are implemented. The public branch builds with the full dev graph, repairs exactly six pinned integrity omissions, lets prepare emit dist, prunes dev dependencies, and removes lifecycle scripts/devDependencies from the installed manifest. Normalization 4/4, combined Pi Gallery, portable evaluation, and full make test passed before the canonical update. That update held candidate 6c08147f because fetchNpmDeps v1 omitted a nested Pi development tarball. The package now uses fetcher v2 with exact baseline npmDepsHash sha256-p90p6NFjyB25UKpAbtCPwUu/NCEKpn6Ir8jYAEKxZH0=; ./build pkg agent-resources passes. Exact candidate dry-run, adoption, post-adoption cleanup, publication, and activation remain open.
 
 ** Dependencies
 
@@ -5725,6 +5725,42 @@ The Agda build failure is diagnosed and repaired at its owning seam; the exact A
     "type": "discovered-from",
     "created_at": "2026-08-13T19:39:01.799906Z",
     "created_by": "codex",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DOING [#B] Adopt pi-goal-x 0.28.0 without losing bounded checkpoint semantics
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-gjx6
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-23 Sun 07:44]
+:MODIFIED: [2026-08-23 Sun 07:55]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Rebase the managed bounded-history/runtime patch onto pi-goal-x 0.28.0 while preserving its v2 bounded checkpoint trigger format, strict fuzz-zero application, cancellation/cleanup semantics, and behavioral coverage. Discovered when canonical make update held 0.28.0 after patch failure.
+
+** Notes
+
+Canonical make update rejected npm 0.28.0 after the old managed patch failed in goal-commands.ts, goal-events.ts, and goal-runtime.ts. The exact candidate archive hash is sha256-Nx87OkkR0b/1yJ6QY7H70HM7LA2NWcx8NCNK3F/B3rA=. The 0.28 runtime replaces the old continuation payload with bounded v2 checkpoint triggers carrying version, revision, and checkpointSeq; the repair must retain that protocol together with managed cancellation, actionability, cleanup, and fuzz-zero application. An isolated dual-version rebase and mutation-killing test are in progress; adoption, cleanup, publication, and activation remain open.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-gjx6",
+    "depends_on_id": "nix-7ttl",
+    "type": "discovered-from",
+    "created_at": "2026-08-23T14:44:59.110261Z",
+    "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
   }
