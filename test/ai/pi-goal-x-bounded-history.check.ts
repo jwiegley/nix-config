@@ -32,10 +32,14 @@ const packageVersion = (
 	}
 ).version;
 assert(
-	packageVersion === "0.27.4" || packageVersion === "0.28.0",
+	packageVersion === "0.27.4" ||
+		packageVersion === "0.28.0" ||
+		packageVersion === "0.30.0",
 	`review Goal-X bounded-history behavior for ${String(packageVersion)}`,
 );
-const hasV2Checkpoints = packageVersion === "0.28.0";
+const hasV2Checkpoints =
+	packageVersion === "0.28.0" || packageVersion === "0.30.0";
+const hasCompactTaskPointers = packageVersion === "0.30.0";
 const codingAgentRoot = process.env.PI_CODING_AGENT_ROOT;
 assert(
 	codingAgentRoot,
@@ -70,6 +74,20 @@ assert.equal(
 	1,
 	"all Goal-X state checkpoints must pass through one ordered persistence path",
 );
+if (hasCompactTaskPointers) {
+	const eventsSource = readFileSync(
+		join(packageRoot, "extensions/goal-events.ts"),
+		"utf8",
+	);
+	const toolsSource = readFileSync(
+		join(packageRoot, "extensions/goal-core-tools.ts"),
+		"utf8",
+	);
+	assert(eventsSource.includes("buildPostCompactionGoalDelta"));
+	assert(eventsSource.includes("readGoalLedgerForGoal(ctx, activeGoal.id)"));
+	assert(eventsSource.includes("scheduleNetworkErrorRetry"));
+	assert(toolsSource.includes("runBlockerOracle"));
+}
 
 const workdir = mkdtempSync(join(tmpdir(), "pi-goal-x-bounded-"));
 const runtimeRoot = join(workdir, "runtime");
@@ -104,6 +122,7 @@ type LedgerIoProbe = {
 	opens: number;
 	readOperations: number;
 	bytesRead: number;
+	maxRequestedReadLength?: number;
 	failOpen?: Error;
 	failOpenAfterOpens?: number;
 	failRead?: Error;
@@ -138,6 +157,10 @@ mutableFs.readSync = ((
 ) => {
 	const probe = ledgerIoProbe;
 	if (probe && probedLedgerFds.has(fd)) {
+		probe.maxRequestedReadLength = Math.max(
+			probe.maxRequestedReadLength ?? 0,
+			length,
+		);
 		if (
 			probe.failRead &&
 			probe.readOperations >= (probe.failReadAfterOperations ?? 0)
@@ -194,9 +217,10 @@ try {
 		latestAuditorResultForGoal,
 		readGoalLedger,
 		readGoalLedgerForGoal,
+		readGoalOracleState,
 		reconstructGoalLedger,
 	} = ledgerModule;
-	const { buildCompactionSummary } = await import(
+	const { buildCompactionSummary, buildPostCompactionGoalDelta } = await import(
 		join(runtimeRoot, "extensions/goal-compaction.ts")
 	);
 	const { GoalWidgetComponent } = await import(
@@ -405,6 +429,49 @@ try {
 		nonterminalTruncation,
 		/older terminal history lies outside/,
 	);
+	if (hasCompactTaskPointers) {
+		assert.equal(typeof buildPostCompactionGoalDelta, "function");
+		const deltaGoal = {
+			...compactGoal,
+			currentTaskId: "task-current",
+			taskList: {
+				tasks: [
+					{
+						id: "task-current",
+						title: "Preserve the current task",
+						status: "pending" as const,
+						verificationContract: "prove the compact-v2 pointer",
+					},
+				],
+				blockCompletion: true,
+				proposedAt: "compact-created",
+			},
+		};
+		const deltaEvents = Array.from({ length: 7 }, (_, index) => ({
+				type: "task_complete" as const,
+				goalId: deltaGoal.id,
+				taskId: `delta-${index}`,
+				at: `2026-08-23T00:00:0${index}Z`,
+			}));
+		const delta = buildPostCompactionGoalDelta({
+			goal: deltaGoal,
+			ledgerEvents: deltaEvents,
+			auditorResult: {
+				verdict: "disapproved",
+				report: "retain this actionable audit finding",
+				at: "2026-08-23T00:00:07Z",
+			},
+			otherOpenCount: 2,
+		});
+		assert.match(
+			delta,
+			/Current task: task-current — Preserve the current task \(contract: prove the compact-v2 pointer\)/,
+		);
+		assert.doesNotMatch(delta, /00:00:0[01] task_complete/);
+		assert.match(delta, /00:00:02 task_complete/);
+		assert.match(delta, /retain this actionable audit finding/);
+		assert.match(delta, /Other open goals: 2/);
+	}
 	assert.equal(
 		latestAuditorResultForGoal(target.events, "target"),
 		undefined,
@@ -415,6 +482,82 @@ try {
 		report: "latest rejection",
 		at: "t-1",
 	});
+	if (hasCompactTaskPointers) {
+		assert.equal(typeof readGoalOracleState, "function");
+		const oracleWorkdir = join(workdir, "oracle-exact-reducer");
+		const oracleDir = join(oracleWorkdir, ".pi/goals");
+		mkdirSync(oracleDir, { recursive: true });
+		const oracleFingerprint = "0123456789abcdef01234567";
+		const oracleEvents = [
+			{
+				type: "oracle_result",
+				goalId: "oracle-goal",
+				fingerprint: oracleFingerprint,
+				adviceId: "durable-advice",
+				disposition: "actionable",
+				summary: "try the exact alternative",
+				at: "oracle-result",
+			},
+			{
+				type: "oracle_failed",
+				goalId: "oracle-goal",
+				fingerprint: oracleFingerprint,
+				attempt: 1,
+				errorCode: "provider",
+				message: "first failure",
+				at: "oracle-failure-1",
+			},
+			{
+				type: "oracle_failed",
+				goalId: "oracle-goal",
+				fingerprint: oracleFingerprint,
+				attempt: 2,
+				errorCode: "invalid_output",
+				message: "latest failure",
+				at: "oracle-failure-2",
+			},
+			{
+				type: "oracle_followup_attempted",
+				goalId: "oracle-goal",
+				fingerprint: oracleFingerprint,
+				adviceId: "durable-advice",
+				firstToolName: "read",
+				at: "oracle-followup",
+			},
+			...Array.from({ length: 5000 }, (_, index) => ({
+				type: "task_complete",
+				goalId: "oracle-goal",
+				taskId: `oracle-noise-${index}`,
+				at: `oracle-noise-${index}`,
+			})),
+		];
+		writeFileSync(
+			join(oracleDir, "goal_events.jsonl"),
+			`${oracleEvents.map((event) => JSON.stringify(event)).join("\n")}\n`,
+			"utf8",
+		);
+		assert.deepEqual(
+			readGoalOracleState(
+				{ cwd: oracleWorkdir },
+				"oracle-goal",
+				oracleFingerprint,
+			),
+			{
+				result: {
+					adviceId: "durable-advice",
+					disposition: "actionable",
+					summary: "try the exact alternative",
+				},
+				failedAttempts: 2,
+				lastFailure: {
+					errorCode: "invalid_output",
+					message: "latest failure",
+				},
+				followupAttempted: true,
+			},
+			"Oracle state must survive beyond both managed ledger tail windows",
+		);
+	}
 
 	const passthroughTheme = new Proxy(
 		{},
@@ -930,6 +1073,7 @@ try {
 		opens: 0,
 		readOperations: 0,
 		bytesRead: 0,
+		maxRequestedReadLength: 0,
 	};
 	ledgerIoProbe = evictedCardinalityProbe;
 	const evictedCardinality = readGoalLedgerForGoal(
@@ -942,6 +1086,14 @@ try {
 	assert(
 		evictedCardinalityProbe.bytesRead > 1024 * 1024,
 		"a goal absent from both fixed-cardinality caches must perform one exact streaming bootstrap",
+	);
+	assert(
+		evictedCardinalityProbe.readOperations > 1,
+		"a cold bootstrap larger than 1 MiB must use multiple bounded reads",
+	);
+	assert(
+		(evictedCardinalityProbe.maxRequestedReadLength ?? 0) <= 64 * 1024,
+		`a cold bootstrap must cap each read at 64 KiB (${evictedCardinalityProbe.maxRequestedReadLength} bytes requested)`,
 	);
 	const hotCardinalityProbe: LedgerIoProbe = {
 		path: cardinalityPath,
@@ -1180,6 +1332,7 @@ try {
 		ctx,
 		goal,
 		readGoalFileSnapshotChecked(ctx, join(ctx.cwd, goal.activePath ?? "")),
+		() => {},
 	);
 	const { runRecoveryRepair, runRecoveryReport } = await import(
 		join(runtimeRoot, "extensions/goal-recovery.ts")
@@ -3603,6 +3756,7 @@ try {
 			confirm?: () => boolean | Promise<boolean>;
 			goal?: Partial<{
 				autoContinue: boolean;
+				currentTaskId: string;
 				objective: string;
 				skipAuditor: boolean;
 				status: "active" | "paused" | "blocked" | "budget_limited";
@@ -3611,6 +3765,7 @@ try {
 			}>;
 			hasUI?: boolean;
 			isIdle?: boolean;
+			runBlockerOracle?: (...args: unknown[]) => Promise<unknown>;
 			runCompletionAuditor?: (...args: unknown[]) => Promise<unknown>;
 			skipAuditor?: boolean;
 			withTasks?: boolean;
@@ -3637,6 +3792,9 @@ try {
 			activePath,
 			...(options.goal?.tokenBudget !== undefined
 				? { tokenBudget: options.goal.tokenBudget }
+				: {}),
+			...(options.goal?.currentTaskId !== undefined
+				? { currentTaskId: options.goal.currentTaskId }
 				: {}),
 			...(options.withTasks
 				? {
@@ -3780,9 +3938,14 @@ try {
 		};
 		goalExtension(
 			extensionApi as never,
-			options.runCompletionAuditor
-				? { runCompletionAuditor: options.runCompletionAuditor as never }
-				: {},
+			{
+				...(options.runCompletionAuditor
+					? { runCompletionAuditor: options.runCompletionAuditor as never }
+					: {}),
+				...(options.runBlockerOracle
+					? { runBlockerOracle: options.runBlockerOracle as never }
+					: {}),
+			},
 		);
 		const core = (
 			extensionApi as unknown as {
@@ -3823,6 +3986,425 @@ try {
 			},
 			trace,
 		};
+	}
+
+	if (hasCompactTaskPointers) {
+		const committedArchiveCleanup = createHarness(
+			"committed-archive-cleanup-failure",
+			{ skipAuditor: true },
+		);
+		currentTrace = committedArchiveCleanup.trace;
+		await committedArchiveCleanup.emit("session_start", { reason: "new" });
+		await committedArchiveCleanup.runTool("update_goal", {
+			status: "complete",
+		});
+		assert.equal(committedArchiveCleanup.readGoal()?.status, "complete");
+		const committedArchiveSource = readFileSync(
+			committedArchiveCleanup.activePath,
+		);
+		const committedArchiveUnlinkSync = mutableFs.unlinkSync;
+		const committedArchiveConsoleWarn = console.warn;
+		const committedArchiveWarnings: string[] = [];
+		let committedArchiveQuarantinePath: string | null = null;
+		let committedArchiveCleanupFaults = 0;
+		mutableFs.unlinkSync = ((filePath: import("node:fs").PathLike) => {
+			const candidate = String(filePath);
+			if (
+				candidate.includes(".active_goal_2026080612000000_target.md.archive-")
+				&& candidate.endsWith("/active_goal_2026080612000000_target.md")
+			) {
+				committedArchiveCleanupFaults++;
+				committedArchiveQuarantinePath = candidate;
+				throw Object.assign(
+					new Error("injected-committed-archive-cleanup-failure"),
+					{ code: "EIO" },
+				);
+			}
+			return committedArchiveUnlinkSync(filePath);
+		}) as typeof mutableFs.unlinkSync;
+		console.warn = (...parts: unknown[]) => {
+			committedArchiveWarnings.push(parts.map(String).join(" "));
+		};
+		syncBuiltinESMExports();
+		try {
+			await committedArchiveCleanup.emit("turn_end", {
+				message: {
+					role: "assistant",
+					stopReason: "stop",
+					usage: { input: 0, output: 0 },
+				},
+			});
+		} finally {
+			console.warn = committedArchiveConsoleWarn;
+			mutableFs.unlinkSync = committedArchiveUnlinkSync;
+			syncBuiltinESMExports();
+		}
+		assert.equal(
+			committedArchiveCleanupFaults,
+			1,
+			"the mutation must fire after the exact active inode is quarantined",
+		);
+		assert(committedArchiveQuarantinePath);
+		assert.equal(existsSync(committedArchiveCleanup.activePath), false);
+		assert.deepEqual(
+			readFileSync(committedArchiveQuarantinePath),
+			committedArchiveSource,
+			"failed cleanup must retain the exact claimed active inode for manual recovery",
+		);
+		const committedArchives = readdirSync(
+			join(committedArchiveCleanup.trace.cwd, ".pi/goals/archived"),
+		).filter((name) => name.endsWith(".md"));
+		assert.equal(committedArchives.length, 1);
+		const committedArchiveName = committedArchives[0];
+		assert(committedArchiveName);
+		assert.equal(
+			parseGoalFile(join(
+				committedArchiveCleanup.trace.cwd,
+				".pi/goals/archived",
+				committedArchiveName,
+			))?.id,
+			"target",
+		);
+		const committedArchiveEvents = readGoalLedgerForGoal(
+			{ cwd: committedArchiveCleanup.trace.cwd },
+			"target",
+		).events
+			.map((event) => event.type)
+			.filter((type) => type === "goal_completed" || type === "goal_archived");
+		assert.deepEqual(committedArchiveEvents, ["goal_completed", "goal_archived"]);
+		const committedArchiveCore = committedArchiveCleanup.core as unknown as {
+			focusedGoalId: string | null;
+			state: { goal: unknown | null };
+		};
+		assert.equal(committedArchiveCore.focusedGoalId, null);
+		assert.equal(committedArchiveCore.state.goal, null);
+		assert.equal(committedArchiveCleanup.trace.notifications.at(-1)?.level, "info");
+		assert.match(
+			committedArchiveCleanup.trace.notifications.at(-1)?.message ?? "",
+			/archive/i,
+		);
+		assert.match(
+			committedArchiveWarnings.join("\n"),
+			/archive diagnostic: Goal archive committed.*injected-committed-archive-cleanup-failure/i,
+		);
+		assert(
+			committedArchiveWarnings.join("\n").includes(committedArchiveQuarantinePath),
+			"the diagnostic must identify the retained quarantine for manual cleanup",
+		);
+
+		const {
+			buildBlockerFingerprint,
+			consumeOracleFollowupMarker,
+			hasPendingOracleAdviceForFocusedGoal,
+		} = await import(join(runtimeRoot, "extensions/goal-oracle.ts"));
+		const compactPointers = createHarness("compact-task-pointers", {
+			goal: { currentTaskId: "task-a" },
+			withTasks: true,
+		});
+		currentTrace = compactPointers.trace;
+		await compactPointers.emit("session_start", { reason: "new" });
+		const result = (await compactPointers.runTool("get_goal", {})) as {
+			content: Array<{ text?: string }>;
+		};
+		const text = result.content[0]?.text ?? "";
+		assert.match(text, /Current task: task-a — Task A/);
+		assert.match(text, /Next pending: task-b — Task B/);
+
+		const blockerReason = "The same durable blocker recurred";
+		let blockerOracleCalls = 0;
+		let blockerOracleArgs: {
+			ctx: { cwd: string };
+			goal: { id: string };
+			reason: string;
+			attemptedActions: string[];
+			settings: {
+				provider?: string;
+				model?: string;
+				maxFailedAttemptsPerBlocker: number;
+			};
+			recentEvidence: string;
+		} | null = null;
+		const oracleBelowCapRetry = createHarness("oracle-below-cap-retry", {
+			runBlockerOracle: async (...args: unknown[]) => {
+				blockerOracleCalls++;
+				blockerOracleArgs = args[0] as NonNullable<typeof blockerOracleArgs>;
+				return {
+					ok: false,
+					errorCode: "provider",
+					message: "injected Oracle retry failure",
+				};
+			},
+		});
+		const belowCapGoal = oracleBelowCapRetry.readGoal();
+		assert(belowCapGoal);
+		const belowCapFingerprint = buildBlockerFingerprint(
+			belowCapGoal,
+			blockerReason,
+		);
+		writeFileSync(
+			join(oracleBelowCapRetry.trace.cwd, ".pi/pi-goal-x-settings.json"),
+			JSON.stringify({
+				oracle: {
+					enabled: true,
+					provider: "test-provider",
+					model: "test-model",
+					maxFailedAttemptsPerBlocker: 2,
+				},
+			}),
+			"utf8",
+		);
+		writeFileSync(
+			join(oracleBelowCapRetry.trace.cwd, ".pi/goals/goal_events.jsonl"),
+			`${JSON.stringify({
+				type: "oracle_failed",
+				goalId: "target",
+				fingerprint: belowCapFingerprint,
+				attempt: 1,
+				errorCode: "provider",
+				message: "durable first failure",
+				at: "oracle-failure-1",
+			})}\n`,
+			"utf8",
+		);
+		currentTrace = oracleBelowCapRetry.trace;
+		await oracleBelowCapRetry.emit("session_start", { reason: "resume" });
+		const belowCapBlock = (await oracleBelowCapRetry.runTool(
+			"update_goal",
+			{
+				status: "blocked",
+				reason: blockerReason,
+				attempted_actions: ["inspect logs", "retry bounded probe"],
+			},
+		)) as { content: Array<{ text?: string }>; terminate?: boolean };
+		assert.equal(belowCapBlock.terminate, false);
+		assert.equal(oracleBelowCapRetry.readGoal()?.status, "active");
+		assert.match(
+			belowCapBlock.content[0]?.text ?? "",
+			/injected Oracle retry failure/,
+		);
+		assert.equal(blockerOracleCalls, 1);
+		assert.deepEqual(
+			blockerOracleArgs && {
+				cwd: blockerOracleArgs.ctx.cwd,
+				goalId: blockerOracleArgs.goal.id,
+				reason: blockerOracleArgs.reason,
+				attemptedActions: blockerOracleArgs.attemptedActions,
+				provider: blockerOracleArgs.settings.provider,
+				model: blockerOracleArgs.settings.model,
+				maxFailedAttemptsPerBlocker:
+					blockerOracleArgs.settings.maxFailedAttemptsPerBlocker,
+				recentEvidence: blockerOracleArgs.recentEvidence,
+			},
+			{
+				cwd: oracleBelowCapRetry.trace.cwd,
+				goalId: "target",
+				reason: blockerReason,
+				attemptedActions: ["inspect logs", "retry bounded probe"],
+				provider: "test-provider",
+				model: "test-model",
+				maxFailedAttemptsPerBlocker: 2,
+				recentEvidence: "",
+			},
+			"the below-cap retry must invoke the injected production dependency exactly once with the complete call contract",
+		);
+		assert.deepEqual(
+			readGoalOracleState(
+				{ cwd: oracleBelowCapRetry.trace.cwd },
+				"target",
+				belowCapFingerprint,
+			),
+			{
+				failedAttempts: 2,
+				lastFailure: {
+					errorCode: "provider",
+					message: "injected Oracle retry failure",
+				},
+				followupAttempted: false,
+			},
+			"the retry failure must persist beyond the seeded first attempt",
+		);
+		const belowCapEvents = readGoalLedgerForGoal(
+			{ cwd: oracleBelowCapRetry.trace.cwd },
+			"target",
+			{ maxEvents: 16 },
+		).events;
+		assert.equal(
+			belowCapEvents.filter(
+				(event) =>
+					event.type === "oracle_started" &&
+					event.fingerprint === belowCapFingerprint,
+			).length,
+			1,
+			"a below-cap retry must start exactly one Oracle consultation",
+		);
+		assert.deepEqual(
+			belowCapEvents
+				.filter(
+					(event) =>
+						event.type === "oracle_failed" &&
+						event.fingerprint === belowCapFingerprint,
+				)
+				.map((event) => ({
+					attempt: event.type === "oracle_failed" ? event.attempt : 0,
+					errorCode: event.type === "oracle_failed" ? event.errorCode : "",
+					message: event.type === "oracle_failed" ? event.message : "",
+				})),
+			[
+				{
+					attempt: 1,
+					errorCode: "provider",
+					message: "durable first failure",
+				},
+				{
+					attempt: 2,
+					errorCode: "provider",
+					message: "injected Oracle retry failure",
+				},
+			],
+			"the below-cap call must persist exactly one new attempt=2 failure",
+		);
+		const cappedAfterRetry = (await oracleBelowCapRetry.runTool(
+			"update_goal",
+			{ status: "blocked", reason: blockerReason },
+		)) as { terminate?: boolean };
+		assert.equal(cappedAfterRetry.terminate, true);
+		assert.equal(oracleBelowCapRetry.readGoal()?.status, "blocked");
+		assert.equal(
+			blockerOracleCalls,
+			1,
+			"the persisted attempt=2 cap must suppress a second Oracle runner call",
+		);
+
+		const oracleRestart = createHarness("oracle-restart-rearm");
+		const oracleRestartGoal = oracleRestart.readGoal();
+		assert(oracleRestartGoal);
+		const restartFingerprint = buildBlockerFingerprint(
+			oracleRestartGoal,
+			blockerReason,
+		);
+		writeFileSync(
+			join(oracleRestart.trace.cwd, ".pi/pi-goal-x-settings.json"),
+			JSON.stringify({
+				oracle: { enabled: true, maxFailedAttemptsPerBlocker: 2 },
+			}),
+			"utf8",
+		);
+		writeFileSync(
+			join(oracleRestart.trace.cwd, ".pi/goals/goal_events.jsonl"),
+			`${[
+				{
+					type: "oracle_result",
+					goalId: "target",
+					fingerprint: restartFingerprint,
+					adviceId: "restart-advice",
+					disposition: "actionable",
+					summary: "resume the durable alternative",
+					at: "oracle-restart-result",
+				},
+				...Array.from({ length: 5000 }, (_, index) => ({
+					type: "task_complete",
+					goalId: "target",
+					taskId: `restart-noise-${index}`,
+					at: `restart-noise-${index}`,
+				})),
+			].map((event) => JSON.stringify(event)).join("\n")}\n`,
+			"utf8",
+		);
+		consumeOracleFollowupMarker("target");
+		currentTrace = oracleRestart.trace;
+		await oracleRestart.emit("session_start", { reason: "resume" });
+		const restartBlock = (await oracleRestart.runTool("update_goal", {
+			status: "blocked",
+			reason: blockerReason,
+		})) as {
+			content: Array<{ text?: string }>;
+			terminate?: boolean;
+		};
+		assert.equal(restartBlock.terminate, false);
+		assert.match(restartBlock.content[0]?.text ?? "", /goal was NOT marked blocked/i);
+		assert.equal(oracleRestart.readGoal()?.status, "active");
+		assert.equal(
+			hasPendingOracleAdviceForFocusedGoal("target"),
+			true,
+			"a durable actionable result must re-arm the session marker after restart",
+		);
+		await oracleRestart.emit("tool_call", {
+			toolName: "bash",
+			args: { command: "true" },
+		});
+		assert.equal(hasPendingOracleAdviceForFocusedGoal("target"), false);
+		assert.equal(
+			readGoalOracleState(
+				{ cwd: oracleRestart.trace.cwd },
+				"target",
+				restartFingerprint,
+			).followupAttempted,
+			true,
+			"the first meaningful tool after restart must persist the follow-up marker",
+		);
+		const restartBlockAfterFollowup = (await oracleRestart.runTool(
+			"update_goal",
+			{ status: "blocked", reason: blockerReason },
+		)) as { terminate?: boolean };
+		assert.equal(restartBlockAfterFollowup.terminate, true);
+		assert.equal(oracleRestart.readGoal()?.status, "blocked");
+
+		const oracleFailureCap = createHarness("oracle-failure-cap");
+		const oracleFailureGoal = oracleFailureCap.readGoal();
+		assert(oracleFailureGoal);
+		const failureFingerprint = buildBlockerFingerprint(
+			oracleFailureGoal,
+			blockerReason,
+		);
+		writeFileSync(
+			join(oracleFailureCap.trace.cwd, ".pi/pi-goal-x-settings.json"),
+			JSON.stringify({
+				oracle: { enabled: true, maxFailedAttemptsPerBlocker: 2 },
+			}),
+			"utf8",
+		);
+		writeFileSync(
+			join(oracleFailureCap.trace.cwd, ".pi/goals/goal_events.jsonl"),
+			`${[
+				...Array.from({ length: 2 }, (_, index) => ({
+					type: "oracle_failed",
+					goalId: "target",
+					fingerprint: failureFingerprint,
+					attempt: index + 1,
+					errorCode: "provider",
+					message: `durable failure ${index + 1}`,
+					at: `oracle-failure-${index + 1}`,
+				})),
+				...Array.from({ length: 5000 }, (_, index) => ({
+					type: "task_complete",
+					goalId: "target",
+					taskId: `failure-noise-${index}`,
+					at: `failure-noise-${index}`,
+				})),
+			].map((event) => JSON.stringify(event)).join("\n")}\n`,
+			"utf8",
+		);
+		currentTrace = oracleFailureCap.trace;
+		await oracleFailureCap.emit("session_start", { reason: "resume" });
+		const failureCapBlock = (await oracleFailureCap.runTool("update_goal", {
+			status: "blocked",
+			reason: blockerReason,
+		})) as { terminate?: boolean };
+		assert.equal(failureCapBlock.terminate, true);
+		assert.equal(
+			oracleFailureCap.readGoal()?.status,
+			"blocked",
+			"the durable Oracle failure cap must survive bounded-tail eviction",
+		);
+		assert.equal(
+			readGoalLedgerForGoal(
+				{ cwd: oracleFailureCap.trace.cwd },
+				"target",
+				{ maxEvents: 16 },
+			).events.filter((event) => event.type === "oracle_started").length,
+			0,
+			"a blocker at the durable failure cap must not start another Oracle consultation",
+		);
 	}
 
 	const ledgerBuilderFailure = createHarness("ledger-builder-failure");

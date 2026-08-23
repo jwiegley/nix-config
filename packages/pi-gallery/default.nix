@@ -76,6 +76,8 @@ let
       ./patches/pi-goal-x-bounded-history.patch
     else if members.goal.version == "0.28.0" then
       ./patches/pi-goal-x-bounded-history-0.28.0.patch
+    else if members.goal.version == "0.30.0" then
+      ./patches/pi-goal-x-bounded-history-0.30.0.patch
     else
       throw "unsupported pi-goal-x bounded-history patch version ${members.goal.version}";
   catalogSourceIds = builtins.attrNames piCatalogRecords;

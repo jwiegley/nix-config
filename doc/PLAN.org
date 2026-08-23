@@ -2507,7 +2507,7 @@ The owner requires Git-AI, Cozempic, Pi Mem, and Pi Artifacts to remain fully di
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-23 Sun 04:28]
-:MODIFIED: [2026-08-23 Sun 09:11]
+:MODIFIED: [2026-08-23 Sun 11:32]
 :ASSIGNEE: johnw
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
@@ -2519,7 +2519,7 @@ Run the canonical make update transaction from the clean signed/live main branch
 
 ** Notes
 
-The first canonical make update completed its full transaction and published/activated source commit 3ba5bd71, with pi-mcp-adapter and pi-goal-x held back. A signed MCP cache-v2 checkpoint 216e5d19 followed; exact pi-mcp-adapter candidate dry-run now exits 0 through candidate package, portable all-system evaluation, and root derivation gates. Goal X now has strict dual 0.27.4/0.28.0 support with an independently audited fuzz-zero patch preserving upstream bounded v2 checkpoints and managed cancellation/actionability. Accepted first-pass Browser 0.5.0, Blackhole 0.4.8, llama-swap v251, curl-cffi 0.16, and pi-subagents 0.55.0 cleanup is implemented. Integrated evidence on current bytes: focused package builds PASS; curl-cffi build PASS; Pi Gallery PASS including bounded-history and provider behavior; portable all-system no-build PASS; make test PASS with 22/22 Python suites, 131/131 updater tests, and manifest behavioral checks. A second clean canonical make update with zero held-back targets, final cleanup/publication, and fleet deployment remain open.
+The first canonical make update published and activated source commit 3ba5bd71 with pi-mcp-adapter and pi-goal-x held. Signed repair checkpoints 216e5d19 and da0964a6 followed; pi-mcp-adapter candidate dry-run passes and the accepted Browser 0.5.0, Blackhole 0.4.8, llama-swap v251, curl-cffi 0.16, and related cleanup passed focused packages, Pi Gallery, portable all-system evaluation, make test, pre-commit, and independent audit. A second canonical make update processed all 164 targets and accepted Agent Deck 1.15.0, git-ai source c395f546, pi-mcp-adapter 6c08147f, and pi-cache-optimizer 2.8.6. It held only pi-goal-x because npm latest jumped directly to unsupported 0.30.0, then passed portable and root no-build gates; its isolated candidate commit hook exceeded the 165-second deadline after heavy store evaluation. No signed update commit, build, activation, adoption, or push occurred, and cleanup restored clean da0964a6. The exact 0.30 transition and its three final review repairs now pass independent source audit, an exact offline package build, and the full 25,000-event Node 24 behavior suite. Signed transition checkpoint, canonical zero-hold run through build, activation, signing and push, post-adoption cleanup, and fleet deployment remain open.
 
 * DONE [#B] Package Pi Quiet's complete imported source closure
 :PROPERTIES:
@@ -5731,25 +5731,25 @@ The Agda build failure is diagnosed and repaired at its owning seam; the exact A
 ]
 #+end_src
 
-* DOING [#B] Adopt pi-goal-x 0.28.0 without losing bounded checkpoint semantics
+* DOING [#B] Adopt pi-goal-x 0.30.0 without losing bounded checkpoint semantics
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-gjx6
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-23 Sun 07:44]
-:MODIFIED: [2026-08-23 Sun 09:11]
+:MODIFIED: [2026-08-23 Sun 11:32]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Rebase the managed bounded-history/runtime patch onto pi-goal-x 0.28.0 while preserving its v2 bounded checkpoint trigger format, strict fuzz-zero application, cancellation/cleanup semantics, and behavioral coverage. Discovered when canonical make update held 0.28.0 after patch failure.
+Rebase the managed bounded-history and runtime patch onto pi-goal-x 0.30.0 while preserving its v2 bounded checkpoint trigger format, strict fuzz-zero application, cancellation and cleanup semantics, Oracle durability, task-pointer compaction behavior, and behavioral coverage. Discovered when canonical make update resolved npm latest directly from retained 0.27.4 to 0.30.0 and the fail-closed selector rejected the unsupported version.
 
 ** Notes
 
-Dual 0.27.4/0.28.0 transition is complete. The exact 0.28 patch applies with fuzz zero to retained candidate hash sha256-Nx87OkkR0b/1yJ6QY7H70HM7LA2NWcx8NCNK3F/B3rA= and independently audited CLEAR. It preserves bounded v2 checkpoint markers/details, monotonic checkpointSeq, no objective leakage, compaction, cancellation, actionability revalidation, and failure cleanup; mutation probes kill missing-send and no-op-compactor regressions. Both version behaviors and a focused 0.28 Nix derivation pass. Integrated Pi Gallery, portable evaluation, and full make test pass. Canonical adoption, removal of the 0.27 transition arm, final publication, and activation remain open.
+The prior exact 0.28 transition remains independently audited and correct, but npm latest skipped it. The second canonical update attempt accepted four other targets, held only pi-goal-x 0.30.0 at the fail-closed selector, and passed portable and root no-build gates before its isolated commit hook exceeded the 165-second deadline; it performed no build, activation, adoption, or push and cleaned up fully. A distinct 0.30 fuzz-zero transition patch is now applied. Exact offline package builds PASS for retained 0.27.4 and cached 0.30.0. Independent review found and the implementation fixed three final seams: post-publication quarantine cleanup is a nonfatal archive diagnostic, cold ledger bootstrap caps every read request at 64 KiB, and blocker-Oracle retry is injected through the existing GoalCore dependency bag with durable cap coverage. Final independent source audit is CLEAR. The corrected 0.30 package build exited 0 at /nix/store/2mlnl1cckvl9sh5mkxd4cz7jkhksk3z5-pi-goal-x-0.30.0, and the full Node 24 behavior suite exited 0 in 77 seconds with 25,000 ledger events and 50,000 goal identities, exercising archive cleanup, bounded reads, compact-v2 task pointers, exact post-compaction auditor state, Oracle durability and retry-cap behavior. Retained 0.27.4 behavior also passes. Signed checkpoint, zero-hold canonical adoption, removal of obsolete 0.27/0.28 transition arms, publication, and fleet activation remain open.
 
 ** Dependencies
 
