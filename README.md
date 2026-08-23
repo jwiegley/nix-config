@@ -54,9 +54,10 @@ available on every host. Pi Lens and Pi Mem remain packaged and projected but ar
 excluded from automatic registration while their startup costs are isolated.
 Darwin registers loopback `llama-swap` plus the stable `omlx-hera` and
 `omlx-clio` discovery providers automatically. Both workstations reach both oMLX
-providers through authenticated TLS, with distinct provider-specific credentials
-loaded from Keychain into the runtime environment. Fixed provider overrides and
-the synthetic router remain a separate Hera-only capability; the router targets
+providers through authenticated TLS. Pi prefers explicit or login-Keychain
+provider credentials and otherwise uses the services' non-secret compatibility
+sentinel. Fixed provider overrides and the synthetic router remain a separate
+Hera-only capability; the router targets
 `omlx-hera`. Linux retains the provider packages and router without registering
 them automatically.
 

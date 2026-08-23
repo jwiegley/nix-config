@@ -88,12 +88,18 @@ let
   omlxPiCredentialEnvironmentByHost = builtins.mapAttrs (
     _: policy: policy.environment
   ) omlxCredentialPolicy.byHost;
+  catalogPiLocalDiscoveryProviderByHost = builtins.listToAttrs (
+    map (host: {
+      name = host;
+      value = "omlx-${host}";
+    }) workstationHosts
+  );
   catalogPiModelDiscoveryEndpoints = {
     inherit (workstationLocalModelEndpoints) llama-swap;
   }
   // builtins.listToAttrs (
     map (host: {
-      name = "omlx-${host}";
+      name = catalogPiLocalDiscoveryProviderByHost.${host};
       value = {
         baseUrl = "https://${host}.lan:8443/v1";
         apiKey.env = omlxPiCredentialEnvironmentByHost.${host};
@@ -1549,6 +1555,7 @@ let
       profiles ? catalogProfiles,
       items ? catalogItems,
       localModelEndpointsByHost ? catalogLocalModelEndpointsByHost,
+      piLocalDiscoveryProviderByHost ? catalogPiLocalDiscoveryProviderByHost,
       piModelDiscoveryEndpoints ? catalogPiModelDiscoveryEndpoints,
       recordingTranscriptionRoutesByHost ? catalogRecordingTranscriptionRoutesByHost,
     }:
@@ -1619,6 +1626,11 @@ let
             == builtins.attrNames piModelDiscoveryEndpoints
           && builtins.hasAttr modelOverrides.pi.router.provider piModelDiscoveryEndpoints
           && piModelDiscoveryEndpoints.llama-swap == workstationLocalModelEndpoints.llama-swap
+          && piLocalDiscoveryProviderByHost == catalogPiLocalDiscoveryProviderByHost
+          && builtins.attrNames piLocalDiscoveryProviderByHost == workstationHosts
+          && builtins.all (
+            host: builtins.hasAttr piLocalDiscoveryProviderByHost.${host} piModelDiscoveryEndpoints
+          ) workstationHosts
         ) "invalid Pi model discovery endpoints")
       ];
       recordingTranscriptionChecks = [
@@ -1785,6 +1797,7 @@ in
   profiles = catalogProfiles;
   items = catalogItems;
   localModelEndpointsByHost = catalogLocalModelEndpointsByHost;
+  piLocalDiscoveryProviderByHost = catalogPiLocalDiscoveryProviderByHost;
   piModelDiscoveryEndpoints = catalogPiModelDiscoveryEndpoints;
   recordingTranscriptionRoutesByHost = catalogRecordingTranscriptionRoutesByHost;
   inherit

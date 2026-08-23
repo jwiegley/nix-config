@@ -37,6 +37,20 @@ let
       )
     )
   );
+  piOmlxLocalProvider =
+    if profileHost == null then "" else catalog.piLocalDiscoveryProviderByHost.${profileHost} or "";
+  # Preserve the pre-Keychain non-secret local sentinel as Pi's last-resort
+  # workstation fallback. The outer wrapper still prefers an explicit value or
+  # the matching login-Keychain item and never puts either value in the store.
+  piPackageWithOmlxFallback =
+    if pairedPiPackage == null || !isDarwin then
+      pairedPiPackage
+    else
+      wrapRuntimeEnvironment {
+        defaults = lib.genAttrs piOmlxCredentialEnvironmentNames (_: "dummy-key");
+        package = pairedPiPackage;
+        program = "pi";
+      };
   managedPiPackage =
     if pairedPiPackage == null || !isDarwin then
       pairedPiPackage
@@ -46,7 +60,7 @@ let
           NODE_EXTRA_CA_CERTS = piNodeExtraCaFallback;
         };
         keychainCredentials = piOmlxKeychainCredentials;
-        package = pairedPiPackage;
+        package = piPackageWithOmlxFallback;
         program = "pi";
       };
   pairedCodexPackage = pairedAiPackages.codex or null;
@@ -375,6 +389,15 @@ let
       trap - EXIT HUP INT TERM
     )
   '';
+  piEnabledModelsMigrationActivation = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+    (
+      set -euo pipefail
+      PI_CODING_AGENT_DIR="$HOME/${piAgentRelative}" \
+        PI_OMLX_LOCAL_PROVIDER=${lib.escapeShellArg piOmlxLocalProvider} \
+        PI_CODING_AGENT_ROOT=${lib.escapeShellArg "${pairedPiPackage}/lib/node_modules/@earendil-works/pi-coding-agent"} \
+        ${pkgs.nodejs_22}/bin/node ${./ai/pi-enabled-models-migration.mjs}
+    )
+  '';
 in
 {
   # Import the host capability option this module reads rather than relying on a
@@ -464,6 +487,10 @@ in
       message = "Pi oMLX Keychain credentials must match the catalog environment references";
     }
     {
+      assertion = !(piSelected && isDarwin) || piOmlxLocalProvider != "";
+      message = "Darwin Pi profiles require a managed local oMLX provider";
+    }
+    {
       assertion = !primeSelected || pairedPrimePackage != null;
       message = "inputs.nix-config-ai.packages.${system}.prime-agent is missing";
     }
@@ -492,9 +519,9 @@ in
       ++ lib.optional (pairedDroidPackage != null) pairedDroidPackage
       ++ lib.optional (primeSelected && managedPrimePackage != null) managedPrimePackage
       ++ lib.optionals piSelected piRuntimePackages;
-    # llama-swap retains its non-secret local sentinel. oMLX credentials are
-    # resolved from the login Keychain by the Darwin client wrappers and never
-    # enter Nix evaluation, generated files, or the process argument vector.
+    # llama-swap retains its non-secret local sentinel. Secret oMLX credentials
+    # are resolved from the login Keychain by the Darwin client wrappers; Pi's
+    # scoped non-secret fallback is applied inside its wrapper above.
     sessionVariables =
       lib.optionalAttrs
         (lib.any (
@@ -513,6 +540,9 @@ in
     }
     // lib.optionalAttrs piSelected {
       aiManagedPiBlackholePolicy = blackholePolicyActivation;
+    }
+    // lib.optionalAttrs (piSelected && isDarwin) {
+      aiManagedPiEnabledModelsMigration = piEnabledModelsMigrationActivation;
     }
     // lib.optionalAttrs (config.johnw.host.isHera && isDarwin) {
       aiManagedModelSync = modelSync.activation;

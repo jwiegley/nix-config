@@ -113,10 +113,23 @@ index 0000000..2efc719
 +	return childEnv;
 +}
 diff --git a/src/droid-provider.ts b/src/droid-provider.ts
-index 4bd513d..cd8911a 100644
+index 4bd513d..6180ebc 100644
 --- a/src/droid-provider.ts
 +++ b/src/droid-provider.ts
-@@ -23,9 +23,10 @@ import {
+@@ -14,7 +14,11 @@ import {
+ 	type DroidSession,
+ } from "@factory/droid-sdk";
+ import { buildDroidPrompt, estimateDroidPromptInputTokens } from "./context.js";
+-import { getDiscoveryApiKey, mapPiThinkingToReasoningEffort } from "./model-discovery.js";
++import {
++	getDiscoveryApiKey,
++	getStoredFactoryApiKey,
++	mapPiThinkingToReasoningEffort,
++} from "./model-discovery.js";
+ import { handleDroidAskUserRequest } from "./droid-ask-user.js";
+ import { handleDroidPermissionRequest, resolveDroidAutonomyLevel } from "./droid-permissions.js";
+ import {
+@@ -23,9 +27,10 @@ import {
  	type DroidPiToolBridgeRun,
  } from "./droid-pi-tool-bridge.js";
  import { getDroidSessionCwd } from "./droid-session-cwd.js";
@@ -128,18 +141,36 @@ index 4bd513d..cd8911a 100644
  const ZERO_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 };
  
  class DroidAbortError extends Error {
-@@ -78,9 +79,8 @@ function makeInitialMessage(model: Model<Api>): AssistantMessage {
+@@ -78,11 +83,13 @@ function makeInitialMessage(model: Model<Api>): AssistantMessage {
  	};
  }
  
 -function resolveFactoryApiKey(optionsApiKey?: string): string | undefined {
-+export function resolveFactoryApiKey(optionsApiKey?: string): string | undefined {
++export async function resolveFactoryApiKey(optionsApiKey?: string): Promise<string | undefined> {
  	const trimmed = optionsApiKey?.trim();
 -	if (trimmed && trimmed !== "FACTORY_API_KEY") return trimmed;
- 	if (trimmed === "FACTORY_API_KEY") return process.env.FACTORY_API_KEY?.trim() || undefined;
- 	return undefined;
+-	if (trimmed === "FACTORY_API_KEY") return process.env.FACTORY_API_KEY?.trim() || undefined;
+-	return undefined;
++	const environmentApiKey = process.env.FACTORY_API_KEY?.trim() || undefined;
++	if (trimmed === "FACTORY_API_KEY") return environmentApiKey;
++	if (!trimmed) return undefined;
++	const storedApiKey = await getStoredFactoryApiKey();
++	return trimmed === storedApiKey || trimmed === environmentApiKey ? trimmed : undefined;
  }
-@@ -394,10 +394,11 @@ export function streamDroid(
+ 
+ function getPendingLiveRun(context: Context): DroidLiveRun | undefined {
+@@ -372,8 +379,8 @@ export function streamDroid(
+ 				return;
+ 			}
+ 
+-			const cliApiKey = resolveFactoryApiKey(options?.apiKey);
+-			const apiKey = cliApiKey ?? await getDiscoveryApiKey();
++			const scopedApiKey = await resolveFactoryApiKey(options?.apiKey);
++			const apiKey = scopedApiKey ?? await getDiscoveryApiKey();
+ 			if (!apiKey) throw new Error(MISSING_API_KEY_MESSAGE);
+ 
+ 			const cwd = getDroidSessionCwd();
+@@ -394,10 +401,11 @@ export function streamDroid(
  			const session = await createSession({
  				modelId: model.id,
  				cwd,
@@ -165,10 +196,14 @@ index 96f2b95..7809e66 100644
  		name: DROID_ASK_QUESTION_TOOL_NAME,
  		label: "Droid question",
 diff --git a/src/model-discovery.ts b/src/model-discovery.ts
-index 49460c0..28596ee 100644
+index 49460c0..e883616 100644
 --- a/src/model-discovery.ts
 +++ b/src/model-discovery.ts
-@@ -4,13 +4,14 @@ import { AuthStorage, type ProviderModelConfig } from "@earendil-works/pi-coding
+@@ -1,16 +1,17 @@
+ import { createSession } from "@factory/droid-sdk";
+ import type { AvailableModelConfig } from "@factory/droid-sdk";
+-import { AuthStorage, type ProviderModelConfig } from "@earendil-works/pi-coding-agent";
++import { readStoredCredential, type ProviderModelConfig } from "@earendil-works/pi-coding-agent";
  import type { ModelThinkingLevel, ThinkingLevelMap } from "@earendil-works/pi-ai";
  import { ReasoningEffort } from "@factory/droid-sdk";
  import { FALLBACK_MODEL_ITEMS } from "./droid-fallback-models.generated.js";
@@ -209,7 +244,17 @@ index 49460c0..28596ee 100644
  function normalizeApiKey(value: string | undefined): string | undefined {
  	const trimmed = value?.trim();
  	if (!trimmed) return undefined;
-@@ -76,9 +59,6 @@ async function getStoredFactoryApiKey(): Promise<string | undefined> {
+@@ -69,16 +52,14 @@ function normalizeApiKey(value: string | undefined): string | undefined {
+ 
+-async function getStoredFactoryApiKey(): Promise<string | undefined> {
++export async function getStoredFactoryApiKey(): Promise<string | undefined> {
+ 	try {
+-		return normalizeApiKey(await AuthStorage.create().getApiKey(FACTORY_PROVIDER_ID, { includeFallback: false }));
++		const credential = readStoredCredential(FACTORY_PROVIDER_ID);
++		return credential?.type === "api_key" ? normalizeApiKey(credential.key) : undefined;
+ 	} catch {
+ 		return undefined;
+ 	}
  }
  
  export async function getDiscoveryApiKey(): Promise<string | undefined> {

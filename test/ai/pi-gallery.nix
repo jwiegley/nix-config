@@ -1639,6 +1639,7 @@ runCommand "pi-gallery-check"
     env -u FACTORY_API_KEY \
       HOME="$droid_smoke/home" \
       PI_CODING_AGENT_DIR="$droid_smoke/agent" \
+      PI_CODING_AGENT_ROOT=${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent \
       PI_DROID_EXPECTED_EXEC_PATH=${lib.getExe piPackages.pi-gallery.droidRuntime} \
       PI_DROID_SDK_ROOT=${roots.droid} \
       ${bun}/bin/bun test ${sourceForChecks}/test/ai/pi-droid-sdk.check.ts

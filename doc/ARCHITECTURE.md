@@ -155,10 +155,11 @@ oMLX itself is loopback-only. Its TLS gateway route is absent by default; both
 Darwin workstations enable it on their exact LAN address and admit the other
 workstation, with Hera retaining its declared gateway sources. Nix supplies the
 reviewed, CA-signed server leaf for each listener and trusts only the existing
-root CA; each matching private key remains a mode-0600 host-local file. Pi loads
-two distinct provider credentials from the login Keychain into provider-specific
-environment names at process start. The generated provider records contain only
-those environment references. Nginx forwards each bearer header unchanged, and
+root CA; each matching private key remains a mode-0600 host-local file. Pi
+resolves two provider-specific environment names at process start, preferring
+explicit values and login-Keychain items before the services' non-secret
+compatibility sentinel. The generated provider records contain only those
+environment references. Nginx forwards each bearer header unchanged, and
 the destination oMLX instance validates its own credential. This keeps one
 authentication authority instead of consuming the OpenAI `Authorization` header
 in a second Basic-auth layer.

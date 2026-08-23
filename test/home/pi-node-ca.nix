@@ -88,6 +88,30 @@ let
     package = environmentProbe;
     program = "runtime-environment-probe";
   };
+  fallbackEnvironmentProbe = wrapRuntimeEnvironment {
+    defaults = {
+      OMLX_CLIO_API_KEY = "clio-fallback";
+      OMLX_HERA_API_KEY = "hera-fallback";
+      TEST_DEFAULT = "managed-default";
+    };
+    package = environmentProbe;
+    program = "runtime-environment-probe";
+  };
+  nestedEnvironmentProbe = wrapRuntimeEnvironment {
+    keychainCommand = "${fakeKeychain}";
+    keychainCredentials = {
+      OMLX_CLIO_API_KEY = {
+        account = "johnw";
+        service = "nix-config.test-clio";
+      };
+      OMLX_HERA_API_KEY = {
+        account = "johnw";
+        service = "nix-config.test-hera";
+      };
+    };
+    package = fallbackEnvironmentProbe;
+    program = "runtime-environment-probe";
+  };
   overlappingEnvironmentEvaluation =
     builtins.tryEval
       (wrapRuntimeEnvironment {
@@ -113,10 +137,10 @@ let
     if (require("node:tls").getCACertificates("extra").length === 0) {
       process.exit(1);
     }
-    if (process.env.OMLX_CLIO_API_KEY !== "clio-wrapper-sentinel") {
+    if (process.env.OMLX_CLIO_API_KEY !== process.env.PI_TEST_EXPECT_CLIO) {
       process.exit(1);
     }
-    if (process.env.OMLX_HERA_API_KEY !== "hera-wrapper-sentinel") {
+    if (process.env.OMLX_HERA_API_KEY !== process.env.PI_TEST_EXPECT_HERA) {
       process.exit(1);
     }
     process.exit(0);
@@ -168,6 +192,18 @@ pkgs.runCommand "pi-node-ca" { } ''
     PI_TEST_EXPECT_DEFAULT=explicit-default \
     ${wrappedEnvironmentProbe}/bin/runtime-environment-probe
   test ! -e "$override_log"
+
+  nested_log="$TMPDIR/keychain-over-fallback.log"
+  ${pkgs.coreutils}/bin/env -u OMLX_CLIO_API_KEY -u OMLX_HERA_API_KEY \
+    PI_TEST_SECURITY_LOG="$nested_log" \
+    PI_TEST_EXPECT_CLIO=lookup-sentinel \
+    PI_TEST_EXPECT_HERA=hera-fallback \
+    PI_TEST_EXPECT_HERA_SET=1 \
+    PI_TEST_EXPECT_DEFAULT=managed-default \
+    ${nestedEnvironmentProbe}/bin/runtime-environment-probe
+  grep -F 'nix-config.test-clio' "$nested_log" >/dev/null
+  grep -F 'nix-config.test-hera' "$nested_log" >/dev/null
+  ! grep -F 'lookup-sentinel' "$nested_log"
 
   for host in clio hera; do
     certificate=${../../config/certs}/omlx-$host.crt
@@ -230,6 +266,8 @@ pkgs.runCommand "pi-node-ca" { } ''
     HOME="$TMPDIR" \
     OMLX_CLIO_API_KEY=clio-wrapper-sentinel \
     OMLX_HERA_API_KEY=hera-wrapper-sentinel \
+    PI_TEST_EXPECT_CLIO=clio-wrapper-sentinel \
+    PI_TEST_EXPECT_HERA=hera-wrapper-sentinel \
     PI_OFFLINE=1 \
     PI_TEST_EXPECTED_CA=${lib.escapeShellArg expectedCa} \
     NODE_OPTIONS=${lib.escapeShellArg "--require=${probe}"} \
@@ -239,9 +277,21 @@ pkgs.runCommand "pi-node-ca" { } ''
     HOME="$TMPDIR" \
     OMLX_CLIO_API_KEY=clio-wrapper-sentinel \
     OMLX_HERA_API_KEY=hera-wrapper-sentinel \
+    PI_TEST_EXPECT_CLIO=clio-wrapper-sentinel \
+    PI_TEST_EXPECT_HERA=hera-wrapper-sentinel \
     PI_OFFLINE=1 \
     NODE_EXTRA_CA_CERTS=${lib.escapeShellArg overrideCa} \
     PI_TEST_EXPECTED_CA=${lib.escapeShellArg overrideCa} \
+    NODE_OPTIONS=${lib.escapeShellArg "--require=${probe}"} \
+    ${piPackage}/bin/pi --version >/dev/null 2>&1
+
+  ${pkgs.coreutils}/bin/env -u NODE_EXTRA_CA_CERTS -u SSL_CERT_FILE \
+    -u OMLX_CLIO_API_KEY -u OMLX_HERA_API_KEY \
+    HOME="$TMPDIR" \
+    PI_OFFLINE=1 \
+    PI_TEST_EXPECT_CLIO=dummy-key \
+    PI_TEST_EXPECT_HERA=dummy-key \
+    PI_TEST_EXPECTED_CA=${lib.escapeShellArg expectedCa} \
     NODE_OPTIONS=${lib.escapeShellArg "--require=${probe}"} \
     ${piPackage}/bin/pi --version >/dev/null 2>&1
 

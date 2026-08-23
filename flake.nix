@@ -435,6 +435,9 @@
               pi-node-ca = pkgs.callPackage ./test/home/pi-node-ca.nix {
                 inherit darwinConfigurations;
               };
+              pi-enabled-models-migration = pkgs.callPackage ./test/home/pi-enabled-models-migration.nix {
+                piPackage = portableAi.packages.${system}.pi;
+              };
               omlx-proxy-boundary = pkgs.callPackage ./test/home/omlx-proxy.nix {
                 inherit darwinConfigurations;
               };

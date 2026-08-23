@@ -628,6 +628,16 @@ assert builtins.all (
 assert builtins.all (
   config: config.home.activation.aiManagedPiBlackholePolicy.after == [ "linkGeneration" ]
 ) allHomes;
+assert builtins.all (
+  config: config.home.activation.aiManagedPiEnabledModelsMigration.after == [ "linkGeneration" ]
+) desktopHomes;
+assert lib.hasInfix "PI_OMLX_LOCAL_PROVIDER=omlx-hera"
+  desktopHomesByHost.hera.home.activation.aiManagedPiEnabledModelsMigration.data;
+assert lib.hasInfix "PI_OMLX_LOCAL_PROVIDER=omlx-clio"
+  desktopHomesByHost.clio.home.activation.aiManagedPiEnabledModelsMigration.data;
+assert builtins.all (
+  config: !(builtins.hasAttr "aiManagedPiEnabledModelsMigration" config.home.activation)
+) nonDesktopHomes;
 assert builtins.all (hasPackage "droid") allHomes;
 assert builtins.all (hasPackage "unisessions") allHomes;
 assert builtins.all (config: !(hasPackage "cass" config) && !(hasPackage "cm" config)) allHomes;

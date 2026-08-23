@@ -1,45 +1,80 @@
 import { expect, mock, test } from "bun:test";
+import { unlink, writeFile } from "node:fs/promises";
 
-const authQueries: Array<[unknown, unknown]> = [];
+const authQueries: unknown[] = [];
+let useStoredFactoryCredential = false;
+let assistantStreamEvents: Array<Record<string, unknown>> = [];
+let assistantStreamFinished: Promise<void> | undefined;
+let finishAssistantStream: (() => void) | undefined;
+
+const piCodingAgentRoot = process.env.PI_CODING_AGENT_ROOT;
+if (!piCodingAgentRoot) throw new Error("PI_CODING_AGENT_ROOT is required");
+const piCodingAgentDir = process.env.PI_CODING_AGENT_DIR;
+if (!piCodingAgentDir) throw new Error("PI_CODING_AGENT_DIR is required");
+const actualPiCodingAgent = await import(`${piCodingAgentRoot}/dist/index.js`);
+if (typeof actualPiCodingAgent.readStoredCredential !== "function") {
+	throw new Error("Pi must export readStoredCredential");
+}
 
 mock.module("@earendil-works/pi-coding-agent", () => ({
-	AuthStorage: {
-		create: () => ({
-			getApiKey: async (provider: unknown, options: unknown) => {
-				authQueries.push([provider, options]);
-				return undefined;
-			},
-		}),
+	readStoredCredential: (provider: unknown) => {
+		authQueries.push(provider);
+		return useStoredFactoryCredential
+			? actualPiCodingAgent.readStoredCredential(String(provider))
+			: undefined;
 	},
 }));
 mock.module("@earendil-works/pi-ai", () => ({
 	createAssistantMessageEventStream: () => {
-		throw new Error("streaming is outside the credential-free load test");
+		assistantStreamEvents = [];
+		assistantStreamFinished = new Promise((resolve) => {
+			finishAssistantStream = resolve;
+		});
+		return {
+			push(event: Record<string, unknown>) {
+				assistantStreamEvents.push(event);
+			},
+			end() {
+				finishAssistantStream?.();
+			},
+		};
 	},
 }));
 mock.module("@earendil-works/pi-tui", () => ({
 	Text: class Text {},
 }));
 mock.module("typebox", () => ({
-	Type: new Proxy({}, {
-		get: () => (...args: unknown[]) => ({ args }),
-	}),
+	Type: new Proxy(
+		{},
+		{
+			get:
+				() =>
+				(...args: unknown[]) => ({ args }),
+		},
+	),
 }));
 
 const root = process.env.PI_DROID_SDK_ROOT;
 if (!root) throw new Error("PI_DROID_SDK_ROOT is required");
 const expectedExecPath = process.env.PI_DROID_EXPECTED_EXEC_PATH;
-if (!expectedExecPath) throw new Error("PI_DROID_EXPECTED_EXEC_PATH is required");
+if (!expectedExecPath)
+	throw new Error("PI_DROID_EXPECTED_EXEC_PATH is required");
 delete process.env.FACTORY_API_KEY;
 process.env.PI_DROID_AUTONOMY_LEVEL = "off";
 process.env.PI_DROID_PI_TOOL_BRIDGE = "0";
 
-const factorySdk = await import(`${root}/node_modules/@factory/droid-sdk/dist/index.js`);
+const factorySdk = await import(
+	`${root}/node_modules/@factory/droid-sdk/dist/index.js`
+);
 let createSessionCalls = 0;
+let createSessionOptions: Record<string, unknown> | undefined;
+let discoverySession: Record<string, unknown> | undefined;
 mock.module("@factory/droid-sdk", () => ({
 	...factorySdk,
-	createSession: (..._args: unknown[]) => {
+	createSession: (options: Record<string, unknown>) => {
 		createSessionCalls += 1;
+		createSessionOptions = options;
+		if (discoverySession) return discoverySession;
 		throw new Error("Droid startup is outside the credential-free load test");
 	},
 }));
@@ -47,17 +82,29 @@ mock.module("@factory/droid-sdk", () => ({
 const [
 	{ default: registerDroid },
 	{ buildDroidProcessEnv, getDroidExecPath },
-	{ resolveFactoryApiKey },
+	{ resolveFactoryApiKey, streamDroid },
 	{ handleDroidPermissionRequest, resolveDroidAutonomyLevel },
 	{ resolveDroidPiToolBridgeEnabled },
+	{ discoverModels, getDiscoveryApiKey },
 ] = await Promise.all([
 	import(`${root}/src/index.ts`),
 	import(`${root}/src/droid-process-env.ts`),
 	import(`${root}/src/droid-provider.ts`),
 	import(`${root}/src/droid-permissions.ts`),
 	import(`${root}/src/droid-pi-tool-bridge.ts`),
+	import(`${root}/src/model-discovery.ts`),
 ]);
-const { AutonomyLevel, ToolConfirmationOutcome, ToolConfirmationType } = factorySdk;
+const { AutonomyLevel, ToolConfirmationOutcome, ToolConfirmationType } =
+	factorySdk;
+const factoryLiveModel = factorySdk.AvailableModelConfigSchema.parse({
+	id: "factory-live-test",
+	modelId: "factory-live-test",
+	displayName: "Factory live test",
+	shortDisplayName: "Live test",
+	modelProvider: factorySdk.ModelProvider.FACTORY,
+	supportedReasoningEfforts: [factorySdk.ReasoningEffort.Off],
+	defaultReasoningEffort: factorySdk.ReasoningEffort.Off,
+});
 
 type Provider = {
 	name?: unknown;
@@ -103,7 +150,7 @@ test("loads the pinned Factory provider without credentials or Droid startup", a
 	expect(provider?.apiKey).toBe("FACTORY_API_KEY");
 	expect(provider?.api).toBe("droid-sdk");
 	expect(provider?.models).toHaveLength(26);
-	expect(authQueries).toEqual([["factory", { includeFallback: false }]]);
+	expect(authQueries).toEqual(["factory"]);
 
 	const models = provider?.models ?? [];
 	const ids = models.map((model) => model.id);
@@ -117,6 +164,118 @@ test("loads the pinned Factory provider without credentials or Droid startup", a
 	expect(tools).not.toContain("droid_ask_question");
 	expect(activeTools).toEqual([]);
 	expect(createSessionCalls).toBe(0);
+});
+
+test("reads stored Factory auth through the current Pi credential API", async () => {
+	const authPath = `${piCodingAgentDir}/auth.json`;
+	let closeCalls = 0;
+	await writeFile(
+		authPath,
+		JSON.stringify({
+			factory: { type: "api_key", key: "stored-factory-key" },
+		}),
+		{ flag: "wx", mode: 0o600 },
+	);
+	useStoredFactoryCredential = true;
+	discoverySession = {
+		initResult: {
+			availableModels: [factoryLiveModel],
+		},
+		close: async () => {
+			closeCalls += 1;
+		},
+	};
+	try {
+		expect(await getDiscoveryApiKey()).toBe("stored-factory-key");
+		expect(await resolveFactoryApiKey("stored-factory-key")).toBe(
+			"stored-factory-key",
+		);
+		expect(
+			await resolveFactoryApiKey("cross-provider-decoy"),
+		).toBeUndefined();
+		const models = await discoverModels();
+		expect(models.map((model) => model.id)).toEqual(["factory-live-test"]);
+		const requestModel = models[0];
+		if (!requestModel) throw new Error("Factory discovery returned no model");
+		expect(createSessionOptions?.execPath).toBe(expectedExecPath);
+		expect(
+			(createSessionOptions?.env as Record<string, unknown>).FACTORY_API_KEY,
+		).toBe("stored-factory-key");
+		expect(closeCalls).toBe(1);
+
+		discoverySession = {
+			async *stream() {
+				yield { type: factorySdk.DroidMessageType.TurnComplete };
+			},
+			close: async () => {
+				closeCalls += 1;
+			},
+		};
+		createSessionOptions = undefined;
+		streamDroid(
+			{
+				...requestModel,
+				provider: "factory",
+				baseUrl: "https://factory.ai",
+			},
+			{
+				systemPrompt: "Factory request auth test",
+				messages: [{ role: "user", content: "test", timestamp: 0 }],
+			},
+			{ apiKey: "stored-factory-key", reasoning: "off" },
+		);
+		if (!assistantStreamFinished) throw new Error("Factory stream did not start");
+		await assistantStreamFinished;
+		expect(createSessionOptions?.execPath).toBe(expectedExecPath);
+		expect(createSessionOptions?.env).toEqual(
+			buildDroidProcessEnv("stored-factory-key", process.env),
+		);
+		expect(assistantStreamEvents.map((event) => event.type)).toContain("done");
+		expect(assistantStreamEvents.map((event) => event.type)).not.toContain(
+			"error",
+		);
+		expect(closeCalls).toBe(2);
+	} finally {
+		discoverySession = undefined;
+		createSessionOptions = undefined;
+		useStoredFactoryCredential = false;
+		await unlink(authPath);
+	}
+	expect(authQueries.at(-1)).toBe("factory");
+});
+
+test("reads Factory auth from the environment for model discovery", async () => {
+	let closeCalls = 0;
+	const originalOmlxKey = process.env.OMLX_API_KEY;
+	const originalSshAgent = process.env.SSH_AUTH_SOCK;
+	process.env.FACTORY_API_KEY = "environment-factory-key";
+	process.env.OMLX_API_KEY = "blocked-discovery-secret";
+	process.env.SSH_AUTH_SOCK = "/blocked/agent.sock";
+	discoverySession = {
+		initResult: { availableModels: [factoryLiveModel] },
+		close: async () => {
+			closeCalls += 1;
+		},
+	};
+	try {
+		expect(await getDiscoveryApiKey()).toBe("environment-factory-key");
+		const expectedDroidEnv = buildDroidProcessEnv(
+			"environment-factory-key",
+			process.env,
+		);
+		const models = await discoverModels();
+		expect(models.map((model) => model.id)).toEqual(["factory-live-test"]);
+		expect(createSessionOptions?.env).toEqual(expectedDroidEnv);
+		expect(closeCalls).toBe(1);
+	} finally {
+		delete process.env.FACTORY_API_KEY;
+		if (originalOmlxKey === undefined) delete process.env.OMLX_API_KEY;
+		else process.env.OMLX_API_KEY = originalOmlxKey;
+		if (originalSshAgent === undefined) delete process.env.SSH_AUTH_SOCK;
+		else process.env.SSH_AUTH_SOCK = originalSshAgent;
+		discoverySession = undefined;
+		createSessionOptions = undefined;
+	}
 });
 
 test("passes only the managed Droid process environment", () => {
@@ -165,8 +324,12 @@ test("passes only the managed Droid process environment", () => {
 test("rejects unscoped keys and fails closed on Droid permissions", async () => {
 	process.env.FACTORY_API_KEY = "factory-env-decoy";
 	try {
-		expect(resolveFactoryApiKey("cross-provider-decoy")).toBeUndefined();
-		expect(resolveFactoryApiKey("FACTORY_API_KEY")).toBe("factory-env-decoy");
+		expect(
+			await resolveFactoryApiKey("cross-provider-decoy"),
+		).toBeUndefined();
+		expect(await resolveFactoryApiKey("FACTORY_API_KEY")).toBe(
+			"factory-env-decoy",
+		);
 	} finally {
 		delete process.env.FACTORY_API_KEY;
 	}
@@ -175,23 +338,37 @@ test("rejects unscoped keys and fails closed on Droid permissions", async () => 
 		if (value === undefined) delete process.env.PI_DROID_AUTONOMY_LEVEL;
 		else process.env.PI_DROID_AUTONOMY_LEVEL = value;
 		expect(resolveDroidAutonomyLevel()).toBe(AutonomyLevel.Off);
-		expect(resolveDroidPiToolBridgeEnabled({ PI_DROID_PI_TOOL_BRIDGE: value })).toBe(false);
+		expect(
+			resolveDroidPiToolBridgeEnabled({ PI_DROID_PI_TOOL_BRIDGE: value }),
+		).toBe(false);
 	}
 	delete process.env.PI_DROID_AUTONOMY_LEVEL;
 
 	const nativeMcp = {
-		toolUses: [{ details: { type: ToolConfirmationType.McpTool }, toolName: "native_mcp" }],
+		toolUses: [
+			{
+				details: { type: ToolConfirmationType.McpTool },
+				toolName: "native_mcp",
+			},
+		],
 	};
 	const piBridgeName = {
-		toolUses: [{ details: { type: ToolConfirmationType.McpTool }, toolName: "pi__read" }],
+		toolUses: [
+			{ details: { type: ToolConfirmationType.McpTool }, toolName: "pi__read" },
+		],
 	};
 	const mixed = {
 		toolUses: [
 			{ details: { type: ToolConfirmationType.McpTool }, toolName: "pi__read" },
-			{ details: { type: ToolConfirmationType.Execute, command: "true" }, toolName: "execute" },
+			{
+				details: { type: ToolConfirmationType.Execute, command: "true" },
+				toolName: "execute",
+			},
 		],
 	};
 	for (const request of [nativeMcp, piBridgeName, mixed]) {
-		expect(await handleDroidPermissionRequest(request as never)).toBe(ToolConfirmationOutcome.Cancel);
+		expect(await handleDroidPermissionRequest(request as never)).toBe(
+			ToolConfirmationOutcome.Cancel,
+		);
 	}
 });

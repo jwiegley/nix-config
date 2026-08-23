@@ -425,14 +425,14 @@ Every dirty drain reads, parses, prunes, marshals, and durably rewrites the full
 ]
 #+end_src
 
-* TODO [#B] Restore Pi oMLX and Factory model visibility on Hera and Clio
+* DOING [#B] Restore Pi oMLX and Factory model visibility on Hera and Clio
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-146i
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-22 Sat 23:26]
-:MODIFIED: [2026-08-22 Sat 23:26]
+:MODIFIED: [2026-08-23 Sun 03:23]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -440,6 +440,10 @@ Every dirty drain reads, parses, prunes, marshals, and durably rewrites the full
 :END:
 
 Diagnose and repair the active managed Pi configuration so both Darwin workstations expose the expected oMLX provider models and the newly installed Factory Droid SDK models. Correlate the exact active generation, immutable Gallery loader, provider registration, credential-reference handoff, and bounded runtime discovery without printing secrets or prompt/session content. Acceptance: Hera and Clio each register the intended providers; oMLX discovery returns its managed model roster; Factory authentication is recognized through the supported mutable Pi login or environment seam; behavioral tests cover the regression; both hosts are built and activated only under explicit deployment authority.
+
+** Notes
+
+Root causes confirmed: mutable enabledModels still used the retired omlx provider identity; the Darwin Pi wrappers had no fallback after missing Keychain lookups; and pi-droid-sdk called the removed Pi AuthStorage API, so stored Factory login was ignored. The source repair migrates only legacy enabledModels under Pi locking, contributes any missing stable oMLX identities in workstation-local-first order, deduplicates generated/current-provider collisions while preserving unrelated mutable entries and an existing factory position, restores the previously accepted non-secret oMLX compatibility sentinel after explicit and Keychain values, and uses Pi 0.84 readStoredCredential for both discovery and request-time authentication. Verification PASS: pi-droid-sdk package build; final Pi Gallery; migration, CA/credential precedence, catalog transport, and host behavior checks; config/ai all-systems no-build; nix fmt; make test; full unchanged pre-commit hook; and Hera system build. Signed publication, fleet activation, and live provider discovery remain before closure.
 
 * DONE [#B] Park VPS outside the active fleet
 :PROPERTIES:
@@ -3683,6 +3687,42 @@ Transient classification reaches replay policy; transient failures remain retrya
     "author": "johnw",
     "text": "Current exact seams: inbox_outbox.go marks dead-letter state before writeDeadLetter and discards its error; transition_daemon.go and transition_notifier.go can then acknowledge terminal source state. Reopened acceptance requires durable dead-letter evidence before any terminal acknowledgement, with write/sync failure retaining retry state and no duplicate evidence.",
     "created_at": "2026-08-14T01:35:47Z"
+  }
+]
+#+end_src
+
+* TODO [#B] Restore reliable oMLX client authentication on Hera and Clio
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-b5cz
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-23 Sun 00:45]
+:MODIFIED: [2026-08-23 Sun 01:56]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Restore oMLX client authentication on both Darwin workstations without exposing secret values in argv, logs, generated files, or the Nix store. Runtime precedence is an explicit OMLX environment value, then the matching login-Keychain item, then the documented non-secret dummy-key compatibility sentinel. Keychain provisioning is optional while the sentinel remains accepted; provider registration must fail closed if no usable credential is available. Acceptance: fresh managed Pi on Hera and Clio registers both omlx-hera and omlx-clio, bounded authenticated discovery returns each managed roster, and no secret value is printed or committed.
+
+** Notes
+
+Metadata-only checks found both expected items absent initially. Hera items were provisioned without exposing values; Clio login-Keychain mutation is not available through the remote session. Bounded status-only probes established that the existing non-secret dummy-key compatibility sentinel is accepted by both oMLX endpoints from both workstations, so the source repair restores that last-resort fallback instead of requiring four secret items. Close as superseded only after live post-activation discovery passes.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-b5cz",
+    "depends_on_id": "nix-146i",
+    "type": "discovered-from",
+    "created_at": "2026-08-23T07:45:33.098307Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src

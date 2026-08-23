@@ -1032,6 +1032,11 @@ assert
     "omlx-hera"
   ];
 assert
+  catalog.piLocalDiscoveryProviderByHost == {
+    clio = "omlx-clio";
+    hera = "omlx-hera";
+  };
+assert
   builtins.attrNames modelOverrides.pi.localProviderOverrides
   == builtins.attrNames catalog.piModelDiscoveryEndpoints;
 assert
@@ -1321,6 +1326,11 @@ assert builtins.all reject [
   })
   (catalog.validate {
     piModelDiscoveryEndpoints = builtins.removeAttrs catalog.piModelDiscoveryEndpoints [ "omlx-hera" ];
+  })
+  (catalog.validate {
+    piLocalDiscoveryProviderByHost = catalog.piLocalDiscoveryProviderByHost // {
+      hera = "omlx-clio";
+    };
   })
   (catalog.validate {
     piModelDiscoveryEndpoints = catalog.piModelDiscoveryEndpoints // {
