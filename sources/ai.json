@@ -3,14 +3,14 @@
   "sources": {
     "agent-deck": {
       "hashes": {
-        "vendorHash": "sha256-8BPwKIAIkrw6fLxIRgLW9Nn36vTOzDKjBeD2PeZUCLg="
+        "vendorHash": "sha256-a5wcWeauSsDmRZ9j7AG+QUOVkCRy0UnAOexPfl8mezo="
       },
       "source": {
         "args": {
-          "hash": "sha256-KRpsc6NYMhQtkAQxxGjqMEcN4tTuXJq31YiqLltvDLI=",
+          "hash": "sha256-V94mcoWmyso2yux0bgveeS2WB1CcGybbk/lPLNQer/8=",
           "owner": "asheshgoplani",
           "repo": "agent-deck",
-          "tag": "v1.13.0"
+          "tag": "v1.14.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/asheshgoplani/agent-deck"
@@ -20,7 +20,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "1.13.0"
+      "version": "1.14.0"
     },
     "agnix": {
       "hashes": {

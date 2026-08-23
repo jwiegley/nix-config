@@ -1,5 +1,5 @@
 diff --git a/internal/session/conductor_bridge.py b/internal/session/conductor_bridge.py
-index da0035042a7a7f0ae0eda065a51a53cea368b22f..a378c83349e0f4a51dae248f2ad9fb9fea05e759 100755
+index da003504..a378c833 100755
 --- a/internal/session/conductor_bridge.py
 +++ b/internal/session/conductor_bridge.py
 @@ -18,6 +18,7 @@ Dependencies: pip3 install toml aiogram slack-bolt slack-sdk discord.py

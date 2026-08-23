@@ -425,6 +425,22 @@ Every dirty drain reads, parses, prunes, marshals, and durably rewrites the full
 ]
 #+end_src
 
+* TODO [#B] Restore Pi oMLX and Factory model visibility on Hera and Clio
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-146i
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-22 Sat 23:26]
+:MODIFIED: [2026-08-22 Sat 23:26]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Diagnose and repair the active managed Pi configuration so both Darwin workstations expose the expected oMLX provider models and the newly installed Factory Droid SDK models. Correlate the exact active generation, immutable Gallery loader, provider registration, credential-reference handoff, and bounded runtime discovery without printing secrets or prompt/session content. Acceptance: Hera and Clio each register the intended providers; oMLX discovery returns its managed model roster; Factory authentication is recognized through the supported mutable Pi login or environment seam; behavioral tests cover the regression; both hosts are built and activated only under explicit deployment authority.
+
 * DONE [#B] Park VPS outside the active fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -2065,6 +2081,28 @@ DDGS 9.15.0 is selected; oMLX declares the exact selected DDGS version and adver
   }
 ]
 #+end_src
+
+* DONE [#C] Upgrade Agent Deck beyond 1.13.0
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-64nh
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-22 Sat 22:58]
+:MODIFIED: [2026-08-23 Sun 00:26]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-23 Sun 00:26]
+:CLOSE_REASON: Upgraded Agent Deck to official v1.14.0; rebased all three strict patches; updater, package, lifecycle, all-system evaluation, pre-commit, and independent audits passed. Residual rollback gaps tracked as nix-y8rg and nix-jax0.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Determine why the automatic catalog updater rejects the current Agent Deck release, port the existing lifecycle and state-ownership patch stack to the newest acceptable upstream release without weakening it, update source and vendor hashes atomically, and pass the focused package/runtime lifecycle plus updater contracts. Acceptance: the catalog selects the intended official release; every patch applies with fuzz=0; the Agent Deck package and runtime lifecycle checks pass on supported evaluation lanes; update validation no longer holds the target back; PLAN is synchronized with exact evidence.
+
+** Notes
+
+Selected official upstream v1.14.0 (commit 5bcd0c3626ea20bfaf29a80a7c8e0c2d7292bafc). Root cause: the automatic github-release updater was correct, but all three strict downstream patches needed rebasing. Final rebased patch identities: discord 904f634b716cb689e600b280fcef0d0e49a7448549fc5579c7333addb1cfdfe7; transition 3fae7335cd136b0aaa9d3f9212106230cd8c2953963e1dc1a9a8ca76a24a13fd; runtime 302d79065b2b6dfbae3c78d98959b1f0c1800c2d524fd1229c7853565b0b288b. Updater candidate reported catalog/agent-deck 1.13.0 -> 1.14.0 OK with vendorHash. PASS: ./build pkg agent-deck; root and portable aarch64-darwin agent-deck-go-compat + agent-deck-runtime-lifecycle; test/bin/unittest-strict.py test/bin/update-overlay-slow-test.py (131 tests); nix flake check ./config/ai --all-systems --no-build; fresh RestartFresh live-tmux cases for Gemini/Cursor/Hermes/DeepSeek passed count=5. Independent focused review CLEAR at scratch 8f318e3fa6a62538406c8f61d2175b3914f8b6dd. Residual rollback gaps are tracked separately as nix-y8rg and nix-jax0.
 
 * DONE [#C] Make the VPS Gitea credential helper read-only
 :PROPERTIES:
@@ -6433,6 +6471,42 @@ Change make update so an independently failing package candidate retains its pre
     "author": "johnw",
     "text": "Reopened: Independent fess found that ordinary positive nix build failures were too broadly classified as candidate rejection, allowing operational failures to be held back. Reopened until candidate-specific baseline revalidation and focused regressions pass.",
     "created_at": "2026-08-13T06:31:08Z"
+  }
+]
+#+end_src
+
+* TODO [#D] Restore DeepSeek transient binding on failed fresh restart
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-jax0
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-23 Sun 00:08]
+:MODIFIED: [2026-08-23 Sun 00:08]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The fresh-transition rollback snapshot does not currently retain DeepSeekSessionID, so a failed RestartFresh can lose the in-memory transient resume identity. Add it to the snapshot/restore contract and cover a post-clear failure.
+
+** Acceptance Criteria
+
+A failed DeepSeek RestartFresh restores the exact prior transient session ID; success remains fresh and does not rediscover or resume the predecessor.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-jax0",
+    "depends_on_id": "nix-64nh",
+    "type": "discovered-from",
+    "created_at": "2026-08-23T07:08:28.612145Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
@@ -17963,6 +18037,42 @@ Production fetch obeys the configured remote.origin.fetch, but signature verific
     "author": "johnw",
     "text": "2026-08-13 publication hardening also found local graft and shallow graph views could hide commits from ancestry/range enumeration. Current candidate moves graph verification into the isolated transport repository, disables replacement objects, and binds exact object IDs; tip, middle, replacement, and graft adversarial regressions pass. Final independent rereview remains pending.",
     "created_at": "2026-08-14T00:28:31Z"
+  }
+]
+#+end_src
+
+* TODO [#C] Make Agent Deck generic fresh restart rollback transactional
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-y8rg
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-23 Sun 00:08]
+:MODIFIED: [2026-08-23 Sun 00:08]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Generic tool bindings are still cleared eagerly during RestartFresh and can remain cleared if a later physical restart step fails. Preserve the existing binding until the replacement runtime commits, or restore it exactly on failure, with a durable failure-injection regression.
+
+** Acceptance Criteria
+
+A failed Generic RestartFresh preserves the previous durable and in-memory binding, while a successful replacement publishes only the new binding and generation atomically.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-y8rg",
+    "depends_on_id": "nix-64nh",
+    "type": "discovered-from",
+    "created_at": "2026-08-23T07:08:16.736798Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
