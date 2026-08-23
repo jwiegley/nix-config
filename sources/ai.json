@@ -44,14 +44,14 @@
     },
     "browser-control-mcp": {
       "hashes": {
-        "npmDepsHash": "sha256-NT0r3WHqg6ENVO4aPldUgs2doDJD+EEJcp78nNfbBnQ="
+        "npmDepsHash": "sha256-vlpzA64soZnb/L6QMh4HltctENB6aGpUhpgtVDpaQYw="
       },
       "source": {
         "args": {
-          "hash": "sha256-P0ZYjaHArngobtOf4C3j3LpuwfT4vZdJnoZnzeNoIWo=",
+          "hash": "sha256-lC8/gQKK0nnJ5RC+ABmL5Pavq03ztFm9TiURONSbvtQ=",
           "owner": "eyalzh",
           "repo": "browser-control-mcp",
-          "tag": "v1.5.1"
+          "tag": "v1.5.2"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/eyalzh/browser-control-mcp"
@@ -60,7 +60,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "1.5.1"
+      "version": "1.5.2"
     },
     "claude-replay": {
       "hashes": {
@@ -197,15 +197,15 @@
     },
     "llama-swap": {
       "hashes": {
-        "npmDepsHash": "sha256-6MPXQtmaz97D9PUU2Nn5DH/2HZNP/rnAWVSck/FiCyk=",
+        "npmDepsHash": "sha256-+J/C0yDjG0is5G5bNGfFY1ztA7dFqBind/VoS2mxT6s=",
         "vendorHash": "sha256-MhR8B2+Yb/xqrTlIxaVHLoQf1eTOO49c65l72IAuZyU="
       },
       "source": {
         "args": {
-          "hash": "sha256-LYdtxcuzt0Klk6LCgN2ddDVXBQzSJp/Z4apY77zbpfM=",
+          "hash": "sha256-TXNmOFFBEtYzRcllxorg4o53n6sq+mVZXK17v9gfkSQ=",
           "owner": "mostlygeek",
           "repo": "llama-swap",
-          "rev": "v250"
+          "rev": "v251"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/mostlygeek/llama-swap"
@@ -215,7 +215,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "250"
+      "version": "251"
     },
     "llm-mlx": {
       "source": {
@@ -979,10 +979,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-uW7wn57rp06ISq2rP6ogP4joD1+JWdxTb2TSxLUkjKY=",
+          "narHash": "sha256-JzRwvboh8r37Coj6UhtnDiL0LIdPyz3+0zknDqS1zi0=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "ac43040c34cd7853a8a1711513d0b1f688b5f217",
+          "rev": "5fae6955fa522382e640b65876fb2f456059f4c2",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1000,10 +1000,10 @@
     "mcp-servers-nix": {
       "source": {
         "args": {
-          "narHash": "sha256-hgrLFA05Ndh5cBfFJtmVZuWXCTxGGzC7FlV6pPjmOIM=",
+          "narHash": "sha256-mmgYC34YsiFzqEnJv9duH3Ru/B1S8Fd/vwVM+FZMS14=",
           "owner": "natsukium",
           "repo": "mcp-servers-nix",
-          "rev": "9ced2e7048a0cb43d801940d4b345b8027a4c02f",
+          "rev": "c30be6c96fceae9a91ac3b145862b507466a625d",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1105,10 +1105,10 @@
     "rust-overlay": {
       "source": {
         "args": {
-          "narHash": "sha256-YT4Fs2k7bi+7YzuLt93EtIRgjpwHK5ZfsQEIh5dEQSk=",
+          "narHash": "sha256-r4LDUF+zmJnkftvCVkCrUhSJazsf6EVJF+V2l4/MYbI=",
           "owner": "oxalica",
           "repo": "rust-overlay",
-          "rev": "fd2ebb9cc4323d0c5a1336138dab5c3c5a5d8bd9",
+          "rev": "f60c1b57ff805a46b5175c76fc981fb4f81efbcc",
           "type": "github"
         },
         "fetcher": "fetchTree",

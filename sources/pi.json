@@ -84,34 +84,34 @@
     "pi-agent-browser-native": {
       "source": {
         "args": {
-          "hash": "sha256-beS3DWbEOyNt6klfmJNYJtOOKUQG1YI6NNW4UJTgoRY=",
-          "url": "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.3.0.tgz"
+          "hash": "sha256-HlpqO7S13slSnsfq8ziPwLmxq2vfWl05WT5/ZBqJdoc=",
+          "url": "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.5.0.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.3.0.tgz"
+        "url": "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.5.0.tgz"
       },
       "update": {
         "buildPackage": "pi-agent-browser-native",
         "kind": "npm-release",
         "package": "pi-agent-browser-native"
       },
-      "version": "0.3.0"
+      "version": "0.5.0"
     },
     "pi-blackhole": {
       "source": {
         "args": {
-          "hash": "sha256-vqOQMcJq8f2aiKLosllGv/oiK89jAJhhPXx9iePMpik=",
-          "url": "https://registry.npmjs.org/pi-blackhole/-/pi-blackhole-0.4.7.tgz"
+          "hash": "sha256-A45IoM8J44oI+9fj5E7HBySPoK5JgdjHraqnuciegWE=",
+          "url": "https://registry.npmjs.org/pi-blackhole/-/pi-blackhole-0.4.8.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-blackhole/-/pi-blackhole-0.4.7.tgz"
+        "url": "https://registry.npmjs.org/pi-blackhole/-/pi-blackhole-0.4.8.tgz"
       },
       "update": {
         "buildPackage": "pi-blackhole",
         "kind": "npm-release",
         "package": "pi-blackhole"
       },
-      "version": "0.4.7"
+      "version": "0.4.8"
     },
     "pi-cache-optimizer": {
       "source": {
@@ -591,15 +591,15 @@
     },
     "pi-subagents": {
       "hashes": {
-        "npmDepsHash": "sha256-MccurZDbWj5Fu/Jbivq6nsQ0gfpAOkGQh5/YaU5RbP0="
+        "npmDepsHash": "sha256-bDxW0G76ueUcJaAUGMMokHv51gSmps/YCMEHKVKksdQ="
       },
       "source": {
         "args": {
-          "hash": "sha256-1IqTnvGBlc0REhyvwATFrdQnLbShV+oJYUlGcVe+YQ4=",
-          "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.54.0.tgz"
+          "hash": "sha256-+JgH5yCNMTP4f8JaogR6rZW0kV6dMCvxV5FmM9vIXWU=",
+          "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.55.0.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.54.0.tgz"
+        "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.55.0.tgz"
       },
       "update": {
         "artifacts": [
@@ -609,7 +609,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "pi-subagents"
       },
-      "version": "0.54.0"
+      "version": "0.55.0"
     },
     "pi-trace-extension": {
       "source": {

@@ -1094,8 +1094,8 @@
         "args": {
           "owner": "jdtsmith",
           "repo": "ultra-scroll-mac",
-          "rev": "0222f429955f5a2a3810f3c84d59ca441aa16eb2",
-          "sha256": "sha256-h9yKFnMrPFF7ZaEEqwDVQWGrrZQX69awG2WsGEwqUdk="
+          "rev": "af8dd38480f251a2a99b10b765ce8fd5eeab22ca",
+          "sha256": "sha256-Th2ciw6m5xoryT8j4C/ZeBRiuNNEhC+oDX7EPXOPjsc="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jdtsmith/ultra-scroll-mac"
