@@ -38,6 +38,7 @@ let
       managed-mcp-stdio = behavioral systems true;
       llm-mlx-plugin = behavioral darwinSystems false;
       mtplx-transformers-compat = behavioral darwinSystems false;
+      omlx-post-patch = behavioral systems true;
       pi-extension-tests = behavioral systems true;
       pi-fleet-theme = behavioral systems true;
       pi-gallery = behavioral systems true;
@@ -64,7 +65,6 @@ let
       model-sync-state = behavioral systems false;
       obr-ownership = evaluationOnly systems;
       omlx-proxy-boundary = behavioral darwinSystems false;
-      pi-blackhole-policy = behavioral systems false;
       pi-enabled-models-migration = behavioral darwinSystems false;
       pi-node-ca = behavioral darwinSystems false;
       samba-darwin-fixup = behavioral darwinSystems false;

@@ -16,7 +16,6 @@ let
   };
   # Managed-file preflight contract: collision, permission, and symlink safety.
   task9PreflightWithMcp = preflightFactory {
-    blackholeConfigPath = ".config/pi/agent/pi-blackhole/pi-blackhole-config.json";
     newPaths = [
       ".config/claude/personal/agents/new.md"
       ".config/claude/personal/agents/retained.md"
@@ -184,7 +183,6 @@ pkgs.runCommand "ai-managed-preflight"
     pi_keybindings_path=".config/pi/agent/keybindings.json"
     pi_loop_path=".config/pi/agent/extensions/pi-loop/index.ts"
     retired_pi_path=".config/pi/agent/extensions/auto-compact-resume/index.ts"
-    blackhole_path=".config/pi/agent/pi-blackhole/pi-blackhole-config.json"
     legacy_claude=".local/bin/claude"
 
     make_leaf() {
@@ -371,21 +369,6 @@ pkgs.runCommand "ai-managed-preflight"
             ;;
           retired-pi-*)
             expected_output="$fragment: retired extension must be absent or linked from a prior Home Manager generation"
-            ;;
-          blackhole-invalid-json)
-            expected_output="$fragment: configuration must be a valid JSON object"
-            ;;
-          blackhole-non-object)
-            expected_output="$fragment: configuration must be a valid JSON object"
-            ;;
-          blackhole-config-symlink)
-            expected_output="$fragment: configuration must be a regular file"
-            ;;
-          blackhole-directory-symlink)
-            expected_output="$fragment: parent must be a directory, not symlink"
-            ;;
-          blackhole-parent-file)
-            expected_output="$fragment: parent must be a directory, not regular file"
             ;;
           pi-* | prime-*)
             expected_output="$fragment: keep valid adapter JSON without top-level mcpServers or imports"
@@ -747,38 +730,6 @@ pkgs.runCommand "ai-managed-preflight"
       "${task9RetiredHomeManagerFiles}/$retired_pi_path")"
     ln -s "$relative_target" "$case_home/$retired_pi_path"
     run_checked fail retired-pi-relative-home-manager-link "$retired_pi_path" \
-      "${task9PreflightScript}" absent
-
-    setup_empty_case blackhole-valid-object
-    make_leaf "$case_home" "$blackhole_path" '{"memory":true}'
-    run_checked pass blackhole-valid-object "" "${task9PreflightScript}" absent
-
-    setup_empty_case blackhole-invalid-json
-    make_leaf "$case_home" "$blackhole_path" '{invalid'
-    run_checked fail blackhole-invalid-json "$blackhole_path" \
-      "${task9PreflightScript}" absent
-
-    setup_empty_case blackhole-non-object
-    make_leaf "$case_home" "$blackhole_path" '[]'
-    run_checked fail blackhole-non-object "$blackhole_path" \
-      "${task9PreflightScript}" absent
-
-    setup_empty_case blackhole-config-symlink
-    make_leaf "$case_root" blackhole-config '{}'
-    mkdir -p "$case_home/$(dirname "$blackhole_path")"
-    ln -s "$case_root/blackhole-config" "$case_home/$blackhole_path"
-    run_checked fail blackhole-config-symlink "$blackhole_path" \
-      "${task9PreflightScript}" absent
-
-    setup_empty_case blackhole-directory-symlink
-    mkdir -p "$case_root/blackhole-dir" "$case_home/.config/pi/agent"
-    ln -s "$case_root/blackhole-dir" "$case_home/.config/pi/agent/pi-blackhole"
-    run_checked fail blackhole-directory-symlink "$blackhole_path" \
-      "${task9PreflightScript}" absent
-
-    setup_empty_case blackhole-parent-file
-    make_leaf "$case_home" ".config/pi/agent/pi-blackhole" not-a-directory
-    run_checked fail blackhole-parent-file "$blackhole_path" \
       "${task9PreflightScript}" absent
 
     write_pi() {

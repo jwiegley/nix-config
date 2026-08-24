@@ -391,13 +391,6 @@
                 inherit src;
                 homeManagerLib = home-manager.lib;
               };
-              pi-blackhole-policy = pkgs.callPackage ./test/home/pi-blackhole-policy.nix {
-                inherit
-                  darwinConfigurations
-                  homeConfigurations
-                  nixosHomeEvaluationFixtures
-                  ;
-              };
               syncthing = pkgs.callPackage ./test/home/syncthing.nix {
                 inherit
                   darwinConfigurations

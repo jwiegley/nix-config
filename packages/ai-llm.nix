@@ -537,40 +537,68 @@ in
 
       patches = [ ../overlays/ai/patches/omlx-host-vm-info64-count.patch ];
 
-      # pyproject.toml pins mlx-lm/mlx-embeddings/mlx-vlm/dflash-mlx to git
-      # commits via PEP 508 direct references, which fail in the Nix sandbox.
-      # Strip the URLs (targeted replacements so an upstream format change
-      # surfaces as a build error rather than a silent dependency mismatch)
-      # so resolution lands on our overlay/nixpkgs versions.
-      #
-      # cmake and nanobind build only optional custom Metal kernels, which are
-      # disabled because the sandbox lacks that toolchain. Drop those two build
-      # requirements; the remaining MLX requirement is supplied by our wheel.
-      # This build ships no ABI-coupled custom kernels, so retarget upstream's
-      # three exact MLX pins to the selected 0.32.1 wheel.
+      # pyproject.toml pins MLX packages to exact versions or Git commits. Keep
+      # the manually coupled Git identities fail-closed while retargeting the
+      # sole bare DDGS requirement to the package-set version.
       postPatch = ''
+        replace_single_bare_exact_requirement() {
+          local dependency=$1 replacement=$2
+          local -a coordinates
+          mapfile -t coordinates < <(
+            grep -Eo "\"$dependency[^\"]*\"" pyproject.toml
+          )
+          if [[ ''${#coordinates[@]} -ne 1 ]]; then
+            echo "oMLX must declare exactly one bare $dependency==version requirement, found ''${#coordinates[@]}" >&2
+            return 1
+          fi
+          if ! printf '%s\n' "''${coordinates[0]}" \
+            | grep -Eq "^\"$dependency==[0-9][0-9A-Za-z.!+_-]*\"$"
+          then
+            echo "oMLX $dependency requirement must be a bare $dependency==version coordinate" >&2
+            return 1
+          fi
+          substituteInPlace pyproject.toml \
+            --replace-fail "''${coordinates[0]}" "$replacement"
+        }
+
+        replace_direct_reference() {
+          local dependency=$1 expected=$2
+          if ! grep -Fq "$expected" pyproject.toml; then
+            echo "oMLX must declare the exact $dependency source coordinate: $expected" >&2
+            return 1
+          fi
+          substituteInPlace pyproject.toml \
+            --replace-fail "$expected" "\"$dependency\""
+          if grep -Fq "\"$dependency @ git+" pyproject.toml; then
+            echo "oMLX declares an unexpected $dependency source coordinate" >&2
+            return 1
+          fi
+        }
+
         substituteInPlace pyproject.toml \
-          --replace-fail '"mlx==0.32.0"' '"mlx==0.32.1"'
-        substituteInPlace pyproject.toml \
-          --replace-fail '"ddgs==9.14.4"' '"ddgs==${ddgs.version}"' \
-          --replace-fail '    # DuckDuckGo backend for the chat web_search tool. Pinned to 9.14.1:' '    # DDGS backend for the chat web_search tool, pinned by the package set:' \
-          --replace-fail "    # the last release inside packaging/venvstacks.toml's exclude-newer" "" \
-          --replace-fail '    # cutoff (2026-04-23), and the last with the minimal dep tree' "" \
-          --replace-fail '    # (click/primp/lxml only; 9.14.2+ adds fake-useragent and httpx' "" \
-          --replace-fail '    # extras). Bump together with the cutoff.' ""
+          --replace-fail '"mlx==0.32.0"' '"mlx==${mlx.version}"'
+        replace_single_bare_exact_requirement ddgs '"ddgs==${ddgs.version}"'
+        replace_direct_reference \
+          mlx-lm \
+          '"mlx-lm @ git+https://github.com/${sources.mlx-lm.source.args.owner}/${sources.mlx-lm.source.args.repo}@${sources.mlx-lm.source.args.rev}"'
+        replace_direct_reference \
+          mlx-embeddings \
+          '"mlx-embeddings @ git+https://github.com/Blaizzy/mlx-embeddings@32981fa4e8064ed664b52071789dd18271fe4206"'
+        replace_direct_reference \
+          mlx-vlm \
+          '"mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm@78b96eb5462141447b9a6b4943ef553891da56dd"'
+        replace_direct_reference \
+          dflash-mlx \
+          '"dflash-mlx @ git+https://github.com/${sources.dflash-mlx.source.args.owner}/${sources.dflash-mlx.source.args.repo}@${sources.dflash-mlx.source.args.rev}"'
+        unset -f replace_single_bare_exact_requirement replace_direct_reference
+
         substituteInPlace omlx/websearch.py \
-          --replace-fail '# Text backends the pinned ddgs 9.14.1 actually registers (bing/google' '# Text backends the selected ddgs package registers (bing/google' \
           --replace-fail '    "yandex",' ""
         substituteInPlace omlx/admin/static/js/dashboard.js \
-          --replace-fail '// Engines selectable for the DDGS Custom provider (ddgs 9.14.1 text registry)' '// Engines selectable for the DDGS Custom provider (selected DDGS text registry)' \
           --replace-fail "ddgsBackendList: ['brave', 'duckduckgo', 'grokipedia', 'mojeek', 'wikipedia', 'yahoo', 'yandex']," "ddgsBackendList: ['brave', 'duckduckgo', 'grokipedia', 'mojeek', 'wikipedia', 'yahoo'],"
         substituteInPlace pyproject.toml \
           --replace-fail '"cmake>=3.27",' "" \
-          --replace-fail '"nanobind==2.13.0",' "" \
-          --replace-fail '"mlx-lm @ git+https://github.com/ml-explore/mlx-lm@ab1806e8f5d6aa035973af194a1b9198ab4754dc"' '"mlx-lm"' \
-          --replace-fail '"mlx-embeddings @ git+https://github.com/Blaizzy/mlx-embeddings@32981fa4e8064ed664b52071789dd18271fe4206"' '"mlx-embeddings"' \
-          --replace-fail '"mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm@78b96eb5462141447b9a6b4943ef553891da56dd"' '"mlx-vlm"' \
-          --replace-fail '"dflash-mlx @ git+https://github.com/${sources.dflash-mlx.source.args.owner}/${sources.dflash-mlx.source.args.repo}@${sources.dflash-mlx.source.args.rev}"' '"dflash-mlx"'
+          --replace-fail '"nanobind==2.13.0",' ""
       '';
 
       build-system = [

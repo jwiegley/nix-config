@@ -40,7 +40,6 @@ in
     "omlx-provider"
     "bifrost"
     "rewind"
-    "blackhole"
     "mem"
     "trace"
     "markdown-preview"
@@ -113,10 +112,6 @@ in
     rewind = member "pi-rewind" {
       publicName = "pi-rewind";
       extension = "src/index.ts";
-    };
-    blackhole = member "pi-blackhole" {
-      publicName = "pi-blackhole";
-      extension = "index.ts";
     };
     mem = member "pi-mem" {
       publicName = "@askjo/pi-mem";

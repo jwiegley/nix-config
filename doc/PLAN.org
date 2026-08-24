@@ -3864,6 +3864,49 @@ Metadata-only checks found both expected items absent initially. Hera items were
 ]
 #+end_src
 
+* DONE [#B] Make oMLX DDGS retargeting release-independent
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-befb
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-24 Mon 13:47]
+:MODIFIED: [2026-08-24 Mon 16:07]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 16:07]
+:CLOSE_REASON: Completed strict release-independent DDGS retargeting with exact dependency identity guards and updater validation. The current oMLX package builds; a mismatched future DFlash revision is now rejected instead of silently substituted.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+make update rejects each oMLX release when upstream changes its exact DDGS pin because packages/ai-llm.nix matches the old literal and cosmetic comments. Retarget the sole DDGS requirement to the catalog-selected version without encoding upstream's previous pin, retain fail-closed cardinality, and prove the current oMLX candidate builds.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-befb",
+    "depends_on_id": "nix-nyh4",
+    "type": "blocks",
+    "created_at": "2026-08-24T22:04:24.271680Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-befb",
+    "depends_on_id": "nix-wopw",
+    "type": "blocks",
+    "created_at": "2026-08-24T22:04:24.913854Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * TODO [#C] Register qanda command in commandMetadata (file is inert)
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -8256,6 +8299,24 @@ Runtime hook authority creation follows symlinked hooks-directory ancestors via 
 ]
 #+end_src
 
+* DONE [#B] Remove Pi Blackhole from managed AI configuration
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-mvh2
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-24 Mon 15:09]
+:MODIFIED: [2026-08-24 Mon 16:07]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 16:07]
+:CLOSE_REASON: Removed Blackhole package, gallery, source, patch, policy, activation, preflight, check, updater, test, and current documentation integration. Zero live references remain; all-systems evaluation, Gallery/root checks, and the non-activating system build pass. Mutable runtime state was intentionally untouched.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pi Blackhole is too invasive and is breaking other aspects of the environment. Remove its package/gallery/source integration, generated configuration and activation, managed preflight policy, dedicated tests and check wiring, updater inventory, and current documentation. Preserve every other Pi extension and do not delete mutable runtime state or activate any host as part of this repository change.
+
 * DONE [#B] Durably publish runtime hook authority records
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -8560,6 +8621,49 @@ With Pi Lens truly absent, Pi 0.83 still spent 37,303 ms importing the 25-member
     "author": "johnw",
     "text": "Implemented managed opt-in per-member Gallery timing at the shared loader seam: PI_TIMING=1 selects a timed diagnostic entrypoint, while the default entrypoint retains the raw static member imports. Both paths use one shared runtime for registration, tool ownership, factory invocation, and resource discovery. The focused check /nix/store/p42b6gdkpc1hlk12456y5k2vf3hchgvs-pi-gallery-check passed twice (normal build plus --rebuild) and mutation-checks exact import/factory records plus command, active-tool, tool-owner, and discovery parity. Two serialized warm diagnostic samples totaled 1,257/1,010 ms for imports and 23/19 ms for factories. Persistent leaders were dynamic-workflows 344/293 ms and blackhole 330/282 ms; next were rtk-optimizer 95/87 ms, subagents 84/71 ms, smart-fetch 98/67 ms, and smart-web-search 63/57 ms. These sequential dynamic-import durations are diagnostic and non-additive, not an independent decomposition of the static graph; the prior controlled static Gallery aggregate was 1,701 ms. Smallest proposed reductions: use the existing package bundle seam for dynamic-workflows only after adding raw-versus-bundle behavior parity, and defer Blackhole node:sqlite plus consolidation-agent imports until first use. No member was disabled or removed, and the transient unproven bundle experiment was discarded. Final abstraction, performance, and ponytail reviews are clear.",
     "created_at": "2026-08-16T21:42:16Z"
+  }
+]
+#+end_src
+
+* DONE [#B] Restore exact oMLX dependency source guards
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-nyh4
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-24 Mon 15:04]
+:MODIFIED: [2026-08-24 Mon 16:07]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 16:07]
+:CLOSE_REASON: Restored exact source-coordinate guards for catalog-coupled mlx-lm and dflash-mlx plus fixed upstream references for mlx-embeddings and mlx-vlm; real-source negative regressions and the oMLX package build pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The release-independent coordinate helper accepts any Git URL for manually coupled dflash-mlx and mlx-lm dependencies. oMLX v0.6.3rc3 requests DFlash c55324c while the catalog remains at b7f6255, so the generic rewrite masks a required atomic update. Restore catalog-derived exact owner/repo/revision checks and add a negative candidate/catalog mismatch regression.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-nyh4",
+    "depends_on_id": "nix-befb",
+    "type": "discovered-from",
+    "created_at": "2026-08-24T22:04:14.819493Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-nyh4",
+    "depends_on_id": "nix-zzao",
+    "type": "blocks",
+    "created_at": "2026-08-24T22:13:08.039763Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
@@ -18048,6 +18152,40 @@ cross-consumer-eval does not recognize valid GitHub URLs with explicit ports suc
 ]
 #+end_src
 
+* DONE [#B] Enforce exact oMLX DDGS requirement shape
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-wopw
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-24 Mon 15:04]
+:MODIFIED: [2026-08-24 Mon 16:07]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 16:07]
+:CLOSE_REASON: DDGS retargeting now counts raw occurrences and accepts exactly one bare ==version requirement; the production postPatch check covers alternate, missing, duplicate, composite, arbitrary-equality, and marked shapes.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The DDGS matcher counts distinct strings after sort -u and accepts composite specifiers or no-space markers, then rewrites them to an unconditional exact pin. Require exactly one bare ddgs==version occurrence and add alternate-pin, missing, duplicate, and changed-shape regression cases.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-wopw",
+    "depends_on_id": "nix-befb",
+    "type": "discovered-from",
+    "created_at": "2026-08-24T22:04:15.373378Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Reject stale-incarnation hook rebind in hydrated parent
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -19109,6 +19247,40 @@ The capture helper waits for a complete expected argv record without fixed sleep
     "depends_on_id": "nix-c0q0",
     "type": "discovered-from",
     "created_at": "2026-08-13T20:59:14.161267Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#B] Validate mlx-lm updates through oMLX
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-zzao
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-24 Mon 15:13]
+:MODIFIED: [2026-08-24 Mon 16:07]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 16:07]
+:CLOSE_REASON: Added oMLX pkg validation metadata for mlx-lm and extended the real updater routing regression; the 131-case strict updater suite and full Python tier pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The manually coupled mlx-lm catalog target lacks buildPackage/buildMode metadata, so a standalone mlx-lm candidate can update without building oMLX and exercising its exact source-identity guard. Route mlx-lm updates through the oMLX package build and extend the updater regression inventory.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-zzao",
+    "depends_on_id": "nix-nyh4",
+    "type": "discovered-from",
+    "created_at": "2026-08-24T22:13:01.682168Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""

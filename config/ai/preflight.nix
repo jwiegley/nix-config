@@ -1,7 +1,6 @@
 { lib, pkgs }:
 
 {
-  blackholeConfigPath ? null,
   newPaths,
   mcpGuards ? [ ],
   piAliasTarget ? null,
@@ -127,12 +126,6 @@ let
         ]
     ) mcpGuards;
   piAliasTargetValid = piAliasTarget == null || validRelativePath piAliasTarget;
-  blackholeConfigPathValid =
-    blackholeConfigPath == null
-    || (
-      validRelativePath blackholeConfigPath
-      && lib.hasSuffix "/pi/agent/pi-blackhole/pi-blackhole-config.json" blackholeConfigPath
-    );
   retiredPathsValid =
     retiredPaths == lib.sort builtins.lessThan (lib.unique retiredPaths)
     && builtins.all (
@@ -383,24 +376,6 @@ let
       fi
     '') retiredPaths}
 
-    ${lib.optionalString (blackholeConfigPath != null) ''
-      blackhole_path="$HOME/${blackholeConfigPath}"
-      blackhole_dir="''${blackhole_path%/*}"
-      if [ -L "$blackhole_dir" ] \
-        || { [ -e "$blackhole_dir" ] && [ ! -d "$blackhole_dir" ]; }; then
-        report_error \
-          "${blackholeConfigPath}: parent must be a directory, not $(path_kind "$blackhole_dir")"
-      elif [ -L "$blackhole_path" ] \
-        || { [ -e "$blackhole_path" ] && [ ! -f "$blackhole_path" ]; }; then
-        report_error \
-          "${blackholeConfigPath}: configuration must be a regular file"
-      elif [ -f "$blackhole_path" ] \
-        && ! ${pkgs.jq}/bin/jq -e 'type == "object"' "$blackhole_path" >/dev/null 2>&1; then
-        report_error \
-          "${blackholeConfigPath}: configuration must be a valid JSON object"
-      fi
-    ''}
-
     ${mcpGuardScript}
 
     if [ -s "$errors_file" ]; then
@@ -416,7 +391,6 @@ assert newPaths == sortedPaths;
 assert builtins.all validManagedPath newPaths;
 assert mcpGuardsValid;
 assert piAliasTargetValid;
-assert blackholeConfigPathValid;
 assert retiredPathsValid;
 {
   inherit script;

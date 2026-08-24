@@ -35,7 +35,6 @@ in
     "nix-scripts"
     "pi"
     "pi-agent-browser-native"
-    "pi-blackhole"
     "pi-btw"
     "pi-cache-optimizer"
     "pi-caveman"

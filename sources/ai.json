@@ -751,6 +751,8 @@
       },
       "update": {
         "branch": "main",
+        "buildMode": "pkg",
+        "buildPackage": "omlx",
         "kind": "github-commit",
         "policy": "manual",
         "reason": "oMLX pins this exact revision and imports its SequenceStateMachine API"
