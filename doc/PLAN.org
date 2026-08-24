@@ -8037,15 +8037,17 @@ Agent Deck's mandatory pre-push hook invokes golangci-lint, but the shared /User
 ]
 #+end_src
 
-* DOING [#C] Constrain shared-work Nix daemon CPU affinity on T2 and Delphi
+* DONE [#C] Constrain shared-work Nix daemon CPU affinity on T2 and Delphi
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-mkx1
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-23 Sun 03:52]
-:MODIFIED: [2026-08-23 Sun 22:22]
+:MODIFIED: [2026-08-23 Sun 22:56]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-23 Sun 22:56]
+:CLOSE_REASON: User clarified that Nix job and core limits are sufficient; CPU affinity is unnecessary. T2 and Delphi already have max-jobs=1 and cores=8. No systemd override, daemon restart, or host mutation is required.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
