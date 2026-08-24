@@ -9842,6 +9842,24 @@ Remove the managed pi-model-router package and its Hera-only generated router pr
 ]
 #+end_src
 
+* DONE [#B] Deploy voice-note Agent Deck dispatcher on Hera
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-qz62
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-24 Mon 13:33]
+:MODIFIED: [2026-08-24 Mon 13:44]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 13:44]
+:CLOSE_REASON: Updated scripts input to signed 7470223, built my-scripts and full Hera system, activated with make switch, and verified active watcher/sweep store paths and health.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Update the canonical scripts flake input to signed scripts commit 74702239e23c37bfffb40c0f27ebe9e9a3886e9a, build and activate Hera, and verify active flatten-recordings launchd jobs use the new dispatcher-capable package.
+
 * DONE [#B] Migrate or revoke runtime authority and hook status during forced live profile moves
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
