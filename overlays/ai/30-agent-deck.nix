@@ -21,6 +21,7 @@ in
         ./patches/agent-deck-discord-typing-best-effort.patch
         ./patches/agent-deck-transition-daemon-churn.patch
         ./patches/agent-deck-runtime-lifecycle.patch
+        ./patches/agent-deck-remote-json-diagnostics.patch
       ];
       patchFlags = [
         "-p1"
@@ -75,6 +76,7 @@ in
         # sandbox-private /tmp path instead.
         TMPDIR=/tmp CGO_ENABLED=1 make GOTOOLCHAIN=local test-runtime-lifecycle
         go test ./internal/session/ -run '^TestShouldRejectCodexSubagentRebind$'
+        go test ./cmd/agent-deck/ -run '^(TestRemoteSessionsAcceptsJSONAfterRemoteName|TestRemoteSessionFetchKeepsStructuredFailureAndStampsSuccess)$'
         runHook postCheck
       '';
 

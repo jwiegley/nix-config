@@ -1,0 +1,230 @@
+diff --git a/cmd/agent-deck/remote_cmd.go b/cmd/agent-deck/remote_cmd.go
+index a98fbe1..8cf6f8c 100644
+--- a/cmd/agent-deck/remote_cmd.go
++++ b/cmd/agent-deck/remote_cmd.go
+@@ -52,7 +52,7 @@ func printRemoteUsage() {
+ 	fmt.Println("  add <name> <user@host>    Add a remote agent-deck instance")
+ 	fmt.Println("  remove <name>             Remove a remote")
+ 	fmt.Println("  list                      List configured remotes")
+-	fmt.Println("  sessions [name]           Fetch sessions from remote(s)")
++	fmt.Println("  sessions [name] [--json]  Fetch sessions from remote(s)")
+ 	fmt.Println("  attach <name> <session>   Attach to a remote session")
+ 	fmt.Println("  rename <name> <session> <new-title>  Rename a remote session")
+ 	fmt.Println("  update [name]             Install/update agent-deck on remote(s)")
+@@ -61,7 +61,7 @@ func printRemoteUsage() {
+ 	fmt.Println("  agent-deck remote add dev user@dev-box")
+ 	fmt.Println("  agent-deck remote add prod user@prod-server --agent-deck-path /usr/local/bin/agent-deck")
+ 	fmt.Println("  agent-deck remote list")
+-	fmt.Println("  agent-deck remote sessions dev")
++	fmt.Println("  agent-deck remote sessions dev --json")
+ 	fmt.Println("  agent-deck remote attach dev my-session")
+ 	fmt.Println("  agent-deck remote rename dev my-session new-name")
+ 	fmt.Println("  agent-deck remote update          # Update all remotes")
+@@ -253,10 +253,70 @@ func handleRemoteList(args []string) {
+ 	fmt.Printf("\nTotal: %d remotes\n", len(config.Remotes))
+ }
+ 
++type remoteSessionError struct {
++	Name  string `json:"name"`
++	Host  string `json:"host"`
++	Error string `json:"error"`
++}
++
++type remoteSessionsOutput struct {
++	Sessions []session.RemoteSessionInfo `json:"sessions"`
++	Errors   []remoteSessionError       `json:"errors"`
++}
++
++func parseRemoteSessionsArgs(args []string) (remoteName string, jsonOutput bool, err error) {
++	fs := flag.NewFlagSet("remote sessions", flag.ContinueOnError)
++	fs.SetOutput(io.Discard)
++	jsonFlag := fs.Bool("json", false, "Output as JSON")
++	if err := fs.Parse(reorderRemoteArgs(fs, args)); err != nil {
++		return "", false, err
++	}
++	if len(fs.Args()) > 1 {
++		return "", false, fmt.Errorf("accepts at most one remote name")
++	}
++	if len(fs.Args()) == 1 {
++		remoteName = fs.Args()[0]
++	}
++	return remoteName, *jsonFlag, nil
++}
++
++func addRemoteSessionFetch(
++	output *remoteSessionsOutput,
++	name string,
++	host string,
++	sessions []session.RemoteSessionInfo,
++	err error,
++) bool {
++	if err != nil {
++		output.Errors = append(output.Errors, remoteSessionError{
++			Name:  name,
++			Host:  host,
++			Error: err.Error(),
++		})
++		return false
++	}
++	for i := range sessions {
++		sessions[i].RemoteName = name
++	}
++	output.Sessions = append(output.Sessions, sessions...)
++	return true
++}
++
++func writeRemoteSessionsJSON(output remoteSessionsOutput) {
++	encoded, err := json.MarshalIndent(output, "", "  ")
++	if err != nil {
++		fmt.Fprintf(os.Stderr, "Error: failed to format JSON: %v\n", err)
++		os.Exit(1)
++	}
++	fmt.Println(string(encoded))
++}
++
+ func handleRemoteSessions(args []string) {
+-	fs := flag.NewFlagSet("remote sessions", flag.ExitOnError)
+-	jsonOutput := fs.Bool("json", false, "Output as JSON")
+-	_ = fs.Parse(args)
++	remoteName, jsonOutput, err := parseRemoteSessionsArgs(args)
++	if err != nil {
++		fmt.Fprintf(os.Stderr, "Error: remote sessions flag parsing failed: %v\n", err)
++		os.Exit(2)
++	}
+ 
+ 	config, err := session.LoadUserConfig()
+ 	if err != nil {
+@@ -274,14 +334,29 @@ func handleRemoteSessions(args []string) {
+ 	// forever on the ControlMaster=auto reuse.
+ 	session.CleanStaleSSHSockets()
+ 
+-	// Filter to specific remote if name provided
+-	remoteName := ""
+-	if len(fs.Args()) > 0 {
+-		remoteName = fs.Args()[0]
++	if remoteName != "" {
++		if _, exists := config.Remotes[remoteName]; !exists {
++			output := remoteSessionsOutput{
++				Sessions: []session.RemoteSessionInfo{},
++				Errors: []remoteSessionError{{
++					Name:  remoteName,
++					Error: "remote not found",
++				}},
++			}
++			if jsonOutput {
++				writeRemoteSessionsJSON(output)
++			} else {
++				fmt.Printf("Error: remote '%s' not found\n", remoteName)
++			}
++			os.Exit(1)
++		}
+ 	}
+ 
+ 	ctx := context.Background()
+-	var allSessions []session.RemoteSessionInfo
++	output := remoteSessionsOutput{
++		Sessions: []session.RemoteSessionInfo{},
++		Errors:   []remoteSessionError{},
++	}
+ 
+ 	for name, rc := range config.Remotes {
+ 		if remoteName != "" && name != remoteName {
+@@ -290,19 +365,14 @@ func handleRemoteSessions(args []string) {
+ 
+ 		runner := session.NewSSHRunner(name, rc)
+ 		sessions, err := runner.FetchSessions(ctx)
+-		if err != nil {
+-			if !*jsonOutput {
++		if !addRemoteSessionFetch(&output, name, rc.Host, sessions, err) {
++			if !jsonOutput {
+ 				fmt.Printf("  [%s] Error: %v\n", name, err)
+ 			}
+ 			continue
+ 		}
+ 
+-		for i := range sessions {
+-			sessions[i].RemoteName = name
+-		}
+-		allSessions = append(allSessions, sessions...)
+-
+-		if !*jsonOutput {
++		if !jsonOutput {
+ 			fmt.Printf("\n═══ Remote: %s (%s) ═══\n\n", name, rc.Host)
+ 			if len(sessions) == 0 {
+ 				fmt.Println("  No sessions found.")
+@@ -324,20 +394,11 @@ func handleRemoteSessions(args []string) {
+ 		}
+ 	}
+ 
+-	if remoteName != "" {
+-		if _, exists := config.Remotes[remoteName]; !exists {
+-			fmt.Printf("Error: remote '%s' not found\n", remoteName)
+-			os.Exit(1)
+-		}
++	if jsonOutput {
++		writeRemoteSessionsJSON(output)
+ 	}
+-
+-	if *jsonOutput {
+-		output, err := json.MarshalIndent(allSessions, "", "  ")
+-		if err != nil {
+-			fmt.Printf("Error: failed to format JSON: %v\n", err)
+-			os.Exit(1)
+-		}
+-		fmt.Println(string(output))
++	if len(output.Errors) != 0 {
++		os.Exit(1)
+ 	}
+ }
+ 
+diff --git a/cmd/agent-deck/remote_cmd_test.go b/cmd/agent-deck/remote_cmd_test.go
+index 5330d3c..fa0e896 100644
+--- a/cmd/agent-deck/remote_cmd_test.go
++++ b/cmd/agent-deck/remote_cmd_test.go
+@@ -1,8 +1,11 @@
+ package main
+ 
+ import (
++	"errors"
+ 	"io"
+ 	"testing"
++
++	"github.com/asheshgoplani/agent-deck/internal/session"
+ )
+ 
+ func TestIsValidRemoteName(t *testing.T) {
+@@ -61,3 +64,34 @@ func TestShouldProceedWithRemoteUpdate(t *testing.T) {
+ 		})
+ 	}
+ }
++
++func TestRemoteSessionsAcceptsJSONAfterRemoteName(t *testing.T) {
++	remoteName, jsonOutput, err := parseRemoteSessionsArgs([]string{"clio", "--json"})
++	if err != nil {
++		t.Fatalf("parseRemoteSessionsArgs: %v", err)
++	}
++	if remoteName != "clio" || !jsonOutput {
++		t.Fatalf("parsed (%q, %t), want (clio, true)", remoteName, jsonOutput)
++	}
++}
++
++func TestRemoteSessionFetchKeepsStructuredFailureAndStampsSuccess(t *testing.T) {
++	output := remoteSessionsOutput{
++		Sessions: []session.RemoteSessionInfo{},
++		Errors:   []remoteSessionError{},
++	}
++	if addRemoteSessionFetch(&output, "clio", "johnw@clio", nil, errors.New("ssh unavailable")) {
++		t.Fatal("failed fetch reported success")
++	}
++	if len(output.Errors) != 1 || output.Errors[0].Name != "clio" || output.Errors[0].Host != "johnw@clio" || output.Errors[0].Error != "ssh unavailable" {
++		t.Fatalf("structured error = %#v", output.Errors)
++	}
++
++	sessions := []session.RemoteSessionInfo{{ID: "remote-session"}}
++	if !addRemoteSessionFetch(&output, "clio", "johnw@clio", sessions, nil) {
++		t.Fatal("successful fetch reported failure")
++	}
++	if len(output.Sessions) != 1 || output.Sessions[0].RemoteName != "clio" {
++		t.Fatalf("sessions = %#v", output.Sessions)
++	}
++}

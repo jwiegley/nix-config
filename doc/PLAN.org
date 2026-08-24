@@ -4513,15 +4513,17 @@ Hera registered Clio as johnw@192.168.1.5, bypassing the Host clio SSH stanza an
 ]
 #+end_src
 
-* DOING [#B] Expose both oMLX hosts to Pi on Hera and Clio
+* DONE [#B] Expose both oMLX hosts to Pi on Hera and Clio
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-dge2
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-20 Thu 17:49]
-:MODIFIED: [2026-08-20 Thu 17:49]
+:MODIFIED: [2026-08-23 Sun 21:54]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-23 Sun 21:54]
+:CLOSE_REASON: Completed in the final fleet rollout: Hera and Clio each expose Factory, omlx-clio, and omlx-hera; legacy omlx is absent, and both host generations are active.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -5562,15 +5564,17 @@ Partner observation .443Z: plaintext stage/backup copies can survive SIGKILL or 
 ]
 #+end_src
 
-* DOING [#B] Converge unpublished configuration across active fleet
+* DONE [#B] Converge unpublished configuration across active fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-fleet-converge-09ln
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-20 Thu 11:09]
-:MODIFIED: [2026-08-22 Sat 10:41]
+:MODIFIED: [2026-08-23 Sun 21:54]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-23 Sun 21:54]
+:CLOSE_REASON: Completed by signed source a0c5c779 and final documentation closeout 17c7673f: all non-VPS active hosts are clean/current and activated; VPS and dormant git-ai remained excluded.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -6434,15 +6438,17 @@ The shared MCP URL validator accepts scheme-only, authority-free, control-bearin
 ]
 #+end_src
 
-* DOING [#C] Adopt oMLX 0.6.3rc1 with its DFlash 2 dependency
+* DONE [#C] Adopt oMLX 0.6.3rc1 with its DFlash 2 dependency
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-htl4
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-20 Thu 02:29]
-:MODIFIED: [2026-08-20 Thu 14:10]
+:MODIFIED: [2026-08-23 Sun 21:54]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-23 Sun 21:54]
+:CLOSE_REASON: Completed by the accepted oMLX 0.6.3rc2/DFlash dependency update in signed source a0c5c779 and validated live deployment; this supersedes the earlier rc1 wording.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -8031,14 +8037,14 @@ Agent Deck's mandatory pre-push hook invokes golangci-lint, but the shared /User
 ]
 #+end_src
 
-* TODO [#C] Constrain shared-work Nix daemon CPU affinity on T2 and Delphi
+* DOING [#C] Constrain shared-work Nix daemon CPU affinity on T2 and Delphi
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-mkx1
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-23 Sun 03:52]
-:MODIFIED: [2026-08-23 Sun 03:52]
+:MODIFIED: [2026-08-23 Sun 21:55]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -17323,14 +17329,14 @@ Agent tooling never searches for executables by recursively traversing home, fil
 ]
 #+end_src
 
-* TODO [#C] Make Agent Deck remote JSON diagnostics preserve failures
+* DOING [#C] Make Agent Deck remote JSON diagnostics preserve failures
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-vjus
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-23 Sun 15:49]
-:MODIFIED: [2026-08-23 Sun 15:49]
+:MODIFIED: [2026-08-23 Sun 21:55]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
