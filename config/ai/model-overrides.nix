@@ -5,30 +5,6 @@ let
   omlxOverrides = {
     modelOverrides."DeepSeek-V4-Flash-0731-oQ8e-mtp".contextWindow = 262144;
   };
-  piRouterTarget = {
-    id = "Qwen3.6-27B-oQ6e-mtp";
-    contextLimit = 262144;
-    outputLimit = 65536;
-    defaultThinkingLevel = "off";
-    reasoning = true;
-    input = [ "text" ];
-    thinkingLevels = [
-      "off"
-      "high"
-    ];
-    thinkingLevelMap = {
-      minimal = null;
-      low = null;
-      medium = null;
-      high = "high";
-      xhigh = null;
-      max = null;
-    };
-    compat = {
-      supportsReasoningEffort = false;
-      thinkingFormat = "qwen-chat-template";
-    };
-  };
 in
 {
   nativeProviders = {
@@ -78,24 +54,8 @@ in
       llama-swap = llamaSwapOverrides;
       omlx-clio = { };
       omlx-hera = {
-        modelOverrides = omlxOverrides.modelOverrides // {
-          "${piRouterTarget.id}" = {
-            contextWindow = piRouterTarget.contextLimit;
-            maxTokens = piRouterTarget.outputLimit;
-            inherit (piRouterTarget)
-              compat
-              defaultThinkingLevel
-              input
-              reasoning
-              thinkingLevelMap
-              ;
-          };
-        };
+        inherit (omlxOverrides) modelOverrides;
       };
-    };
-    router = {
-      provider = "omlx-hera";
-      target = piRouterTarget;
     };
   };
 }

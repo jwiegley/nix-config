@@ -29,6 +29,7 @@ let
         cymbal
         pi-agent-browser-native
         pi-blackhole
+        pi-bifrost
         pi-btw
         pi-cache-optimizer
         pi-caveman
@@ -40,11 +41,9 @@ let
         pi-markdown-preview
         pi-rtk-optimizer
         pi-hashline-edit-pro
-        pi-insights
         pi-lens
         pi-loop
         pi-mem
-        pi-model-router
         pi-multi-pass
         pi-ponytail
         pi-provider-llama-swap
@@ -54,7 +53,6 @@ let
         pi-smart-web-search
         pi-subagents
         pi-trace-extension
-        pi-usage-extension
         rtk
         ;
     };
@@ -63,7 +61,6 @@ let
   localModelMemberIds = [
     "llama-swap-provider"
     "omlx-provider"
-    "router"
   ];
   # Keep Lens and Pi Mem packaged and projected while excluding their startup load.
   activeOrder = lib.subtractLists [ "lens" "mem" ] (
@@ -421,7 +418,6 @@ let
     lens = true;
   };
   markdownPreviewSource = mkMemberReleaseSource members.markdown-preview { };
-  insightsSource = mkMemberReleaseSource members.insights { };
   memSource = mkMemberReleaseSource members.mem { };
   dynamicWorkflowsSource = mkMemberReleaseSource members.dynamic-workflows { };
   subagentsSource = mkMemberReleaseSource members.subagents { };
@@ -564,12 +560,6 @@ let
       fi
     '';
   };
-  pi-insights = mkNpmPackageRoot {
-    pname = members.insights.attrName;
-    version = members.insights.version;
-    src = insightsSource;
-    npmDepsHash = members.insights.hashes.npmDepsHash;
-  };
   pi-mem = mkNpmPackageRoot {
     pname = members.mem.attrName;
     version = members.mem.version;
@@ -685,31 +675,6 @@ let
           --directory=${root} --strip=1 \
           < ${./patches/pi-agent-browser-bounded-history-0.5.patch}
       '';
-  };
-
-  pi-usage-extension = mkCopyRoot {
-    pname = members.usage.attrName;
-    version = members.usage.version;
-    install = root: ''
-      tar -xzf ${releaseTarballs.pi-usage-extension} -C ${root} --strip-components=1
-      ${buildPackages.jq}/bin/jq --exit-status '
-        if has("type") then
-          if .type == "module" then . else error("unexpected package module type") end
-        else
-          .type = "module"
-        end
-      ' ${root}/package.json > ${root}/package.json.with-type
-      mv ${root}/package.json.with-type ${root}/package.json
-      substituteInPlace ${root}/index.ts \
-        --replace-fail \
-          'writeFileSync(path, content);' \
-          'writeFileSync(path, content, { encoding: "utf8", mode: 0o600, flag: "wx" });'
-      cp -- ${./patches/pi-usage-stream-json.ts} ${root}/stream-json.ts
-      cp -- ${./patches/pi-usage-bounded-store.ts} ${root}/bounded-store.ts
-      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
-        --directory=${root} --strip=1 \
-        < ${./patches/pi-usage-bounded-history.patch}
-    '';
   };
 
   pi-cache-optimizer = mkCopyRoot {
@@ -941,15 +906,11 @@ let
     '';
   };
 
-  pi-model-router = mkCopyRoot {
-    pname = members.router.attrName;
-    version = members.router.version;
+  pi-bifrost = mkCopyRoot {
+    pname = members.bifrost.attrName;
+    version = members.bifrost.version;
     install = root: ''
-      tar -xzf ${releaseTarballs.pi-model-router} -C ${root} \
-        --strip-components=1
-      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
-        --directory=${root} --strip=1 \
-        < ${./patches/pi-model-router-bounded-history.patch}
+      tar -xzf ${releaseTarballs.pi-bifrost} -C ${root} --strip-components=1
     '';
   };
 

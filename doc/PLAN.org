@@ -183,6 +183,40 @@ Current-byte independent re-audit found the sandbox cost producer path, but exac
 ]
 #+end_src
 
+* DONE [#B] Remove stale Pi enabled-model migration entries
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-0dsr
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-24 Mon 02:34]
+:MODIFIED: [2026-08-24 Mon 02:34]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 02:34]
+:CLOSE_REASON: Retired enabled-model migration patterns were removed with idempotence coverage. The focused migration check and complete make test passed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Remove retired exact enabled-model patterns from the Pi migration and prove the migration does not reinsert them. Integrate the change with the Pi-Bifrost adoption/removal transaction and validate the focused migration check plus the complete repository suite.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-0dsr",
+    "depends_on_id": "nix-7ttl",
+    "type": "discovered-from",
+    "created_at": "2026-08-24T09:34:14.533448Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Fail full cross-consumer gates when any required consumer is skipped
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -3112,6 +3146,40 @@ The full session suite fails TestUpdateStatus_CLIvsTUIParity_Error with statedb 
     "depends_on_id": "nix-tcz.30.1",
     "type": "discovered-from",
     "created_at": "2026-08-13T20:32:27.717823Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#B] Remove Pi Insights and Usage Extension
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-8m2i
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-24 Mon 00:02]
+:MODIFIED: [2026-08-24 Mon 02:34]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 02:34]
+:CLOSE_REASON: Pi Insights and Pi Usage Extension have been removed from catalog, Gallery, normalizer, documentation, updater contracts, and behavioral tests. Complete make test and pre-commit passed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Remove pi-insights and pi-usage-extension completely from the Nix-managed Pi estate: source catalog, Gallery manifest/package exposure, active registration, updater contracts/tests, and current documentation. Preserve mutable user state outside Nix ownership; do not delete it. Validate the remaining Gallery contract and focused package/Gallery builds.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-8m2i",
+    "depends_on_id": "nix-qvpd",
+    "type": "discovered-from",
+    "created_at": "2026-08-24T07:02:47.272505Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
@@ -9733,6 +9801,40 @@ README names only a generic Gitea authority and ARCHITECTURE gives the URL but o
     "depends_on_id": "nix-kte7",
     "type": "discovered-from",
     "created_at": "2026-08-13T23:46:42.540566Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#B] Replace Pi Model Router with Pi-Bifrost
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-qvpd
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-23 Sun 23:59]
+:MODIFIED: [2026-08-24 Mon 02:34]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 02:34]
+:CLOSE_REASON: Pi-Bifrost is now the automatic Gallery member; Model Router package, policy, documentation, and tests were removed. Focused Bifrost/Gallery checks, portable evaluation, complete make test, and pre-commit passed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Remove the managed pi-model-router package and its Hera-only generated router provider/model-router.json policy. Add pi-bifrost through the Pi Gallery as an automatic npm-release member. Preserve Pi-owned provider credentials and mutable user/project routing state; do not generate a Bifrost model policy without an explicit review. Validate source/package shape, Gallery registration, platform/profile projections, updater contracts, docs, and focused package/Gallery checks.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-qvpd",
+    "depends_on_id": "nix-7ttl",
+    "type": "discovered-from",
+    "created_at": "2026-08-24T06:59:33.168982Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""

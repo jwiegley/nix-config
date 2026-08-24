@@ -4,9 +4,20 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const legacyPrefix = "omlx/";
+const staleModelPatterns = new Set(
+	[
+		"omlx-clio/DeepSeek-V4-Flash-0731-oQ8e-mtp",
+		"omlx-hera/Qwen3.6-27B-oQ6e-mtp",
+		"omlx-clio/Qwen3.6-27B-oQ6e-mtp",
+	].map((model) => model.toLowerCase()),
+);
 
 function hasPrefix(model, prefix) {
 	return model.slice(0, prefix.length).toLowerCase() === prefix;
+}
+
+function isStaleModelPattern(model) {
+	return staleModelPatterns.has(model.toLowerCase());
 }
 
 function legacyProviderOrder(localProvider) {
@@ -35,29 +46,34 @@ function requireEnabledModels(settings) {
 }
 
 function migratedModels(models, localProvider) {
-	if (
-		models === undefined ||
-		models.length === 0 ||
-		!models.some((model) => hasPrefix(model, legacyPrefix))
-	) {
-		return undefined;
-	}
-	const providers = legacyProviderOrder(localProvider);
+	if (models === undefined || models.length === 0) return undefined;
+	const hasLegacyModels = models.some((model) => hasPrefix(model, legacyPrefix));
+	if (!hasLegacyModels && !models.some(isStaleModelPattern)) return undefined;
+
+	const providers = hasLegacyModels ? legacyProviderOrder(localProvider) : [];
 	const existing = new Set(
 		models
-			.filter((model) => !hasPrefix(model, legacyPrefix))
+			.filter(
+				(model) =>
+					!hasPrefix(model, legacyPrefix) && !isStaleModelPattern(model),
+			)
 			.map((model) => model.toLowerCase()),
 	);
 	const result = [];
 	const generated = new Set();
 	let hasFactory = false;
 	for (const model of models) {
+		if (isStaleModelPattern(model)) continue;
 		if (hasPrefix(model, legacyPrefix)) {
 			const suffix = model.slice(legacyPrefix.length);
 			for (const provider of providers) {
 				const replacement = `${provider}/${suffix}`;
 				const key = replacement.toLowerCase();
-				if (!existing.has(key) && !generated.has(key)) {
+				if (
+					!isStaleModelPattern(replacement) &&
+					!existing.has(key) &&
+					!generated.has(key)
+				) {
 					generated.add(key);
 					result.push(replacement);
 				}

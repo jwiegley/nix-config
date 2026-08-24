@@ -55,6 +55,39 @@ pkgs.runCommand "pi-enabled-models-migration"
     cmp "$current.before" "$current.after"
     test ! -e "$current/settings.json.lock"
 
+    stale="$TMPDIR/stale"
+    mkdir "$stale"
+    printf '%s\n' \
+      '{"enabledModels":["anthropic/*","omlx-hera/DeepSeek-V4-Flash-0731-oQ8e-mtp","omlx-clio/DeepSeek-V4-Flash-0731-oQ8e-mtp","omlx-hera/Qwen3.6-27B-oQ6e-mtp","omlx-clio/Qwen3.6-27B-oQ6e-mtp","omlx-hera/Qwen3.8-27B-oQ6e-mtp-mlx","omlx-clio/Qwen3.8-27B-oQ4e-mtp","factory/*"]}' \
+      >"$stale/settings.json"
+    run_migration "$stale" omlx-hera
+    jq -e '
+      .enabledModels == [
+        "anthropic/*",
+        "omlx-hera/DeepSeek-V4-Flash-0731-oQ8e-mtp",
+        "omlx-hera/Qwen3.8-27B-oQ6e-mtp-mlx",
+        "omlx-clio/Qwen3.8-27B-oQ4e-mtp",
+        "factory/*"
+      ]
+    ' "$stale/settings.json" >/dev/null
+    snapshot "$stale/settings.json" >"$stale.rerun.before"
+    run_migration "$stale" omlx-hera
+    snapshot "$stale/settings.json" >"$stale.rerun.after"
+    cmp "$stale.rerun.before" "$stale.rerun.after"
+
+    stale_legacy="$TMPDIR/stale-legacy"
+    mkdir "$stale_legacy"
+    printf '%s\n' \
+      '{"enabledModels":["omlx/DeepSeek-V4-Flash-0731-oQ8e-mtp","omlx/Qwen3.6-27B-oQ6e-mtp"]}' \
+      >"$stale_legacy/settings.json"
+    run_migration "$stale_legacy" omlx-hera
+    jq -e '
+      .enabledModels == [
+        "omlx-hera/DeepSeek-V4-Flash-0731-oQ8e-mtp",
+        "factory/*"
+      ]
+    ' "$stale_legacy/settings.json" >/dev/null
+
     no_scope="$TMPDIR/no-scope"
     mkdir "$no_scope"
     printf '%s\n' '{"theme":"dark"}' >"$no_scope/settings.json"

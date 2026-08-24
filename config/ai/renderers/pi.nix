@@ -43,34 +43,6 @@ let
   hermesApiKeyScript = "secret=\"$(${hermesPassCommand})\" || exit; ${pkgs.coreutils}/bin/printf \"%s\\n\" \"$secret\" | ${pkgs.coreutils}/bin/head -n 1";
   hermesApiKeyCommand = "!${pkgs.bash}/bin/bash -c ${lib.escapeShellArg hermesApiKeyScript}";
 
-  routerTarget = modelOverrides.pi.router.target;
-  routerProvider = {
-    api = "router-local-api";
-    apiKey = "pi-model-router";
-    baseUrl = "router://local";
-    modelOverrides.sol = {
-      inherit (routerTarget)
-        defaultThinkingLevel
-        reasoning
-        input
-        thinkingLevelMap
-        ;
-    };
-    models = [
-      {
-        id = "sol";
-        name = "Router sol";
-        cost = {
-          input = 0;
-          output = 0;
-          cacheRead = 0;
-          cacheWrite = 0;
-        };
-        contextWindow = routerTarget.contextLimit;
-        maxTokens = routerTarget.outputLimit;
-      }
-    ];
-  };
   inherit (modelOverrides) nativeProviders;
   # Slow local inference owns its budgets; the global client defaults remain ordinary.
   localProviderTransport = {
@@ -95,13 +67,9 @@ let
       models = [ { id = "hermes-agent"; } ];
     };
   };
-  localProviders =
-    lib.mapAttrs (
-      _: provider: provider // { transport = localProviderTransport; }
-    ) localProviderOverrides
-    // {
-      router = routerProvider;
-    };
+  localProviders = lib.mapAttrs (
+    _: provider: provider // { transport = localProviderTransport; }
+  ) localProviderOverrides;
   localDiscoveryProviders = lib.mapAttrs (_: _: { transport = localProviderTransport; }) (
     if localModelDiscovery then localModelDiscoveryEndpoints else { }
   );
@@ -125,30 +93,7 @@ let
   );
   # Closed security boundary: adding or changing any apiKey-bearing provider
   # requires an explicit policy edit here.
-  approvedProviderApiKeyForms =
-    lib.optionalAttrs hermesRoute { hermes = hermesApiKeyCommand; }
-    // lib.optionalAttrs localModelRoutes { router = "pi-model-router"; };
-  modelRouter = {
-    debug = false;
-    phaseBias = 0.5;
-    models.sol = {
-      model = "${modelOverrides.pi.router.provider}/${routerTarget.id}";
-      contextWindow = routerTarget.contextLimit;
-      maxTokens = routerTarget.outputLimit;
-      inherit (routerTarget) reasoning thinkingLevels;
-    };
-    profiles.sol =
-      lib.genAttrs
-        [
-          "low"
-          "medium"
-          "high"
-        ]
-        (_: {
-          model = "sol";
-          thinking = "off";
-        });
-  };
+  approvedProviderApiKeyForms = lib.optionalAttrs hermesRoute { hermes = hermesApiKeyCommand; };
 
   keybindings = import ../keybindings.nix // {
     # Pi-specific: model cycling is disabled in favor of explicit selection.
@@ -229,7 +174,7 @@ assert xdgConfigHome == "${homeDirectory}/.config";
 assert !hermesRoute || (builtins.isString passwordStoreDir && builtins.isString gnupgHome);
 assert lib.assertMsg (
   providerApiKeyForms == approvedProviderApiKeyForms
-) "Pi model-provider apiKey fields escaped the closed Hermes-command/router-sentinel set";
+) "Pi model-provider apiKey fields escaped the closed Hermes-command set";
 assert selected.hooks == { };
 assert selected.marketplaces == { };
 assert selected.settings == { };
@@ -258,8 +203,5 @@ assert builtins.hasAttr "pi-loop" pkgs.pi-gallery.packages;
       "${root}/models.json".source = json.generate "pi-${profile.id}-models.json" models;
       "${root}/themes/dark-tool-backgrounds.json".source = fleetTheme;
     }
-    (lib.optionalAttrs localModelRoutes {
-      "${root}/model-router.json".source = json.generate "pi-${profile.id}-model-router.json" modelRouter;
-    })
   ];
 }

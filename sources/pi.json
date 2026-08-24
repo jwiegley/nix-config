@@ -113,6 +113,22 @@
       },
       "version": "0.4.8"
     },
+    "pi-bifrost": {
+      "source": {
+        "args": {
+          "hash": "sha256-FzQkIEOzh/mxwWW76aPP76VmOiMRu4N1TPipev6EpPE=",
+          "url": "https://registry.npmjs.org/pi-bifrost/-/pi-bifrost-0.4.0.tgz"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://registry.npmjs.org/pi-bifrost/-/pi-bifrost-0.4.0.tgz"
+      },
+      "update": {
+        "buildPackage": "pi-bifrost",
+        "kind": "npm-release",
+        "package": "pi-bifrost"
+      },
+      "version": "0.4.0"
+    },
     "pi-cache-optimizer": {
       "source": {
         "args": {
@@ -128,22 +144,6 @@
         "package": "pi-cache-optimizer"
       },
       "version": "2.8.6"
-    },
-    "pi-usage-extension": {
-      "source": {
-        "args": {
-          "hash": "sha256-CUHhru6UOC6NabBaLadZS+5fxwxp0x+meJ81X3N4VBM=",
-          "url": "https://registry.npmjs.org/@tmustier/pi-usage-extension/-/pi-usage-extension-0.9.4.tgz"
-        },
-        "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/@tmustier/pi-usage-extension/-/pi-usage-extension-0.9.4.tgz"
-      },
-      "update": {
-        "buildPackage": "pi-usage-extension",
-        "kind": "npm-release",
-        "package": "@tmustier/pi-usage-extension"
-      },
-      "version": "0.9.4"
     },
     "pi-btw": {
       "artifacts": {
@@ -312,28 +312,6 @@
       },
       "version": "0.17.5"
     },
-    "pi-insights": {
-      "hashes": {
-        "npmDepsHash": "sha256-JaRVe4RXIsXHBIppE0dCJwsgBG3c2+N+8pM68pKkoFI="
-      },
-      "source": {
-        "args": {
-          "hash": "sha256-vMNgilZxwQ5QOxcheTNrcPLQycmXYf5kvkLcLivwWEU=",
-          "url": "https://registry.npmjs.org/@ygncode/pi-insights/-/pi-insights-1.0.1.tgz"
-        },
-        "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/@ygncode/pi-insights/-/pi-insights-1.0.1.tgz"
-      },
-      "update": {
-        "artifacts": [
-          "packages/pi-gallery/locks/pi-insights-package-lock.json"
-        ],
-        "kind": "npm-release",
-        "normalizer": "pi-gallery-v1",
-        "package": "@ygncode/pi-insights"
-      },
-      "version": "1.0.1"
-    },
     "pi-lens": {
       "hashes": {
         "npmDepsHash": "sha256-kl+jPxYld5BBFlaITA/+MFjlrt6K8jAXJjFnB1N7/4o="
@@ -419,22 +397,6 @@
         "package": "@askjo/pi-mem"
       },
       "version": "1.2.0"
-    },
-    "pi-model-router": {
-      "source": {
-        "args": {
-          "hash": "sha256-i5vZzLamyFEbyy+rZas4euSEneB8emIYPR6OoR7oasg=",
-          "url": "https://registry.npmjs.org/@yeliu84/pi-model-router/-/pi-model-router-0.4.4.tgz"
-        },
-        "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/@yeliu84/pi-model-router/-/pi-model-router-0.4.4.tgz"
-      },
-      "update": {
-        "buildPackage": "pi-model-router",
-        "kind": "npm-release",
-        "package": "@yeliu84/pi-model-router"
-      },
-      "version": "0.4.4"
     },
     "pi-multi-pass": {
       "source": {

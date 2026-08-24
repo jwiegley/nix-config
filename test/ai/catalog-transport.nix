@@ -1137,7 +1137,6 @@ assert
       };
     }
   ));
-assert builtins.hasAttr modelOverrides.pi.router.provider catalog.piModelDiscoveryEndpoints;
 assert catalog.piModelDiscoveryEndpoints.llama-swap == "http://localhost:8080/v1";
 assert builtins.all
   (
@@ -1222,8 +1221,7 @@ assert builtins.all (
   && !(builtins.hasAttr ".config/mcp/mcp.json" files)
   && hasFessRubric files.${fessPaths.pi.agent}.text
   && hasFessRubric files.${fessPaths.pi.command}.text
-  &&
-    (builtins.hasAttr ".config/pi/agent/model-router.json" files) == (entry.localModelEndpoints != null)
+  && !(builtins.hasAttr ".config/pi/agent/model-router.json" files)
   && !(entry.rendered ? mutableMcpGuard)
 ) piRenderings;
 assert
@@ -1916,8 +1914,6 @@ pkgs.runCommand "ai-catalog-transport" { } ''
         )
         == (
           (if $hermesRoute then ["hermes"] else [] end)
-          + (if $localModelRoutes then ["router"] else [] end)
-          | sort
         )
       )
       and (
@@ -1949,61 +1945,11 @@ pkgs.runCommand "ai-catalog-transport" { } ''
           }
           and .providers["omlx-hera"] == {
             "modelOverrides": {
-              "DeepSeek-V4-Flash-0731-oQ8e-mtp": {"contextWindow": 262144},
-              "Qwen3.6-27B-oQ6e-mtp": {
-                "compat": {
-                  "supportsReasoningEffort": false,
-                  "thinkingFormat": "qwen-chat-template"
-                },
-                "contextWindow": 262144,
-                "defaultThinkingLevel": "off",
-                "input": ["text"],
-                "maxTokens": 65536,
-                "reasoning": true,
-                "thinkingLevelMap": {
-                  "high": "high",
-                  "low": null,
-                  "max": null,
-                  "medium": null,
-                  "minimal": null,
-                  "xhigh": null
-                }
-              }
+              "DeepSeek-V4-Flash-0731-oQ8e-mtp": {"contextWindow": 262144}
             },
             "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
           }
-          and .providers.router == {
-            "api": "router-local-api",
-            "apiKey": "pi-model-router",
-            "baseUrl": "router://local",
-            "modelOverrides": {
-              "sol": {
-                "defaultThinkingLevel": "off",
-                "input": ["text"],
-                "reasoning": true,
-                "thinkingLevelMap": {
-                  "high": "high",
-                  "low": null,
-                  "max": null,
-                  "medium": null,
-                  "minimal": null,
-                  "xhigh": null
-                }
-              }
-            },
-            "models": [{
-              "contextWindow": 262144,
-              "cost": {
-                "cacheRead": 0,
-                "cacheWrite": 0,
-                "input": 0,
-                "output": 0
-              },
-              "id": "sol",
-              "maxTokens": 65536,
-              "name": "Router sol"
-            }]
-          }
+          and (.providers | has("router") | not)
         else
           (if $localModelDiscovery then
             .providers["llama-swap"] == {
@@ -2020,7 +1966,6 @@ pkgs.runCommand "ai-catalog-transport" { } ''
             and (.providers | has("omlx-clio") | not)
             and (.providers | has("omlx-hera") | not)
           end)
-          and (.providers | has("router") | not)
         end
       )
       and (
@@ -2050,30 +1995,6 @@ pkgs.runCommand "ai-catalog-transport" { } ''
     ${pkgs.jq}/bin/jq -e '
       has("app.thinking.cycle") | not
     ' ${entry.rendered.files.".config/pi/agent/keybindings.json".source} >/dev/null
-    ${lib.optionalString (entry.localModelEndpoints != null) ''
-      ${pkgs.jq}/bin/jq -e '
-        . == {
-          "debug": false,
-          "models": {
-            "sol": {
-              "contextWindow": 262144,
-              "maxTokens": 65536,
-              "model": "omlx-hera/Qwen3.6-27B-oQ6e-mtp",
-              "reasoning": true,
-              "thinkingLevels": ["off", "high"]
-            }
-          },
-          "phaseBias": 0.5,
-          "profiles": {
-            "sol": {
-              "high": {"model": "sol", "thinking": "off"},
-              "low": {"model": "sol", "thinking": "off"},
-              "medium": {"model": "sol", "thinking": "off"}
-            }
-          }
-        }
-      ' ${entry.rendered.files.".config/pi/agent/model-router.json".source} >/dev/null
-    ''}
   '') piRenderings}
 
   ${pkgs.jq}/bin/jq -e '

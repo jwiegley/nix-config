@@ -45,9 +45,7 @@ let
     "llama-swap-provider"
     "omlx-provider"
   ];
-  localModelMemberIds = localProviderMemberIds ++ [
-    "router"
-  ];
+  localModelMemberIds = localProviderMemberIds;
   modelOverrides = import ../../config/ai/model-overrides.nix;
   galleryOwners =
     definitions: lib.unique (map (definition: definition.owner) (builtins.attrValues definitions));
@@ -152,11 +150,6 @@ let
   expectedActiveRegistrationRecords = map (id: "${id}|${galleryIdentifier id}") activeOrder;
   expectedGalleryTimingRecords =
     map (id: "${id}|module import") activeOrder ++ map (id: "${id}|factory") activeOrder;
-  routingExtension =
-    if stdenv.hostPlatform.isDarwin then
-      "${gallery}/index.ts"
-    else
-      "${roots.router}/extensions/index.ts";
 in
 assert lib.sort builtins.lessThan manifest.order == builtins.attrNames manifest.members;
 assert
@@ -289,8 +282,6 @@ runCommand "pi-gallery-check"
 
     echo "Pi gallery check: member versions"
     ${memberVersionChecks}
-    [ "$(jq -r .type ${roots.usage}/package.json)" = module ] \
-      || fail "Pi Usage package must declare ESM module type"
     echo "Pi gallery check: support versions"
     ${supportVersionChecks}
     echo "Pi gallery check: documented inventory"
@@ -405,10 +396,6 @@ runCommand "pi-gallery-check"
       PI_BTW_EXTENSION=${roots.btw}/extensions/btw.ts \
         bun test ./test/ai/pi-btw-escape.check.ts
     )
-    [ -f ${roots.insights}/index.ts ]
-    [ -f ${roots.insights}/dist/index.html ]
-    [ -d ${roots.insights}/node_modules/react ]
-    [ -d ${roots.insights}/node_modules/recharts ]
     [ -f ${roots.mem}/index.ts ]
     [ -f ${roots.mem}/lib.ts ]
     [ -f ${roots.mem}/README.md ]
@@ -1157,45 +1144,6 @@ runCommand "pi-gallery-check"
       || fail "managed pi-mem changed Git HEAD"
     [ "$(${git}/bin/git -C "$pi_mem_repo" status --porcelain=v1 -- repository-sentinel.txt)" = "$pi_mem_status_before" ] \
       || fail "managed pi-mem changed unrelated Git state"
-    [ -f ${roots.usage}/index.ts ]
-    [ ! -e ${roots.usage}/node_modules ]
-    usage_runtime="$TMPDIR/pi-usage-runtime"
-    mkdir -p "$usage_runtime"
-    cat > "$usage_runtime/probe.ts" <<EOF
-    import { Database } from "bun:sqlite";
-    import { mkdirSync } from "node:fs";
-    import { collectUsageData } from "${roots.usage}/data.ts";
-
-    mkdirSync(process.env.PI_USAGE_SESSIONS!, { recursive: true });
-    const legacy = new Database(process.env.PI_USAGE_CACHE!);
-    legacy.exec("PRAGMA user_version = 0");
-    legacy.close();
-    await collectUsageData({
-      sessionsDir: process.env.PI_USAGE_SESSIONS!,
-      cachePath: process.env.PI_USAGE_CACHE!,
-    });
-    EOF
-    PI_USAGE_CACHE="$usage_runtime/usage-extension-cache.json" \
-      PI_USAGE_SESSIONS="$usage_runtime/sessions" \
-      ${bun}/bin/bun "$usage_runtime/probe.ts"
-    [ "$(stat -c '%a' "$usage_runtime/usage-extension-cache.json")" = 600 ] \
-      || fail "Usage Dashboard cache mode is not 0600"
-    usage_history_stderr="$TMPDIR/pi-usage-bounded-history.stderr"
-    if PI_USAGE_ROOT=${roots.usage} \
-      ${nodejs_24}/bin/node --experimental-strip-types \
-        ${sourceForChecks}/test/ai/pi-usage-bounded-history.check.ts \
-        2>"$usage_history_stderr"
-    then
-      :
-    else
-      status=$?
-      cat "$usage_history_stderr" >&2
-      exit "$status"
-    fi
-    cat "$usage_history_stderr" >&2
-    if grep -Fq MODULE_TYPELESS_PACKAGE_JSON "$usage_history_stderr"; then
-      fail "Pi Usage bounded-history check emitted a module-type warning"
-    fi
     [ -f ${roots.multi-pass}/extensions/multi-sub.ts ]
     [ ! -e ${roots.multi-pass}/node_modules ]
     multi_pass_runtime="$TMPDIR/pi-multi-pass-runtime"
@@ -1217,9 +1165,10 @@ runCommand "pi-gallery-check"
       [ -f "$provider_root/LICENSE" ]
       [ ! -e "$provider_root/node_modules" ]
     done
-    [ -f ${roots.router}/extensions/index.ts ]
-    [ -f ${roots.router}/extensions/routing.ts ]
-    [ ! -e ${roots.router}/node_modules ]
+    [ -f ${roots.bifrost}/index.ts ]
+    [ -f ${roots.bifrost}/bifrost.json ]
+    [ -f ${roots.bifrost}/schema.json ]
+    [ ! -e ${roots.bifrost}/node_modules ]
     [ -f ${roots.rewind}/src/index.ts ]
     [ -f ${roots.rewind}/src/core.ts ]
     [ -f ${roots.rewind}/src/ui.ts ]
@@ -1804,92 +1753,8 @@ runCommand "pi-gallery-check"
     PI_SESSION_COMPACTION_EVERY=4 \
     PI_SESSION_MIN_COMPACTIONS=4 \
       ${nodejs_24}/bin/node ${sourceForChecks}/test/ai/pi-session-memory.check.mjs scale
-    routing_smoke="$TMPDIR/pi-model-router-smoke"
+    routing_smoke="$TMPDIR/pi-bifrost-smoke"
     mkdir -p "$routing_smoke/home" "$routing_smoke/agent" "$routing_smoke/project"
-    cat > "$routing_smoke/agent/models.json" <<'JSON'
-    {
-      "providers": {
-        "router": {
-          "api": "router-local-api",
-          "apiKey": "pi-model-router",
-          "baseUrl": "router://local",
-          "modelOverrides": {
-            "sol": {
-              "defaultThinkingLevel": "off",
-              "reasoning": true,
-              "input": ["text"],
-              "thinkingLevelMap": {
-                "minimal": null,
-                "low": null,
-                "medium": null,
-                "high": "high",
-                "xhigh": null,
-                "max": null
-              }
-            }
-          },
-          "models": [{
-            "id": "sol",
-            "name": "Router sol",
-            "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
-            "contextWindow": 128000,
-            "maxTokens": 16384
-          }]
-        },
-        "omlx": {
-          "api": "synthetic-api",
-          "apiKey": "synthetic",
-          "baseUrl": "synthetic://omlx",
-          "modelOverrides": {
-            "Qwen3.6-27B-oQ6e-mtp": {
-              "defaultThinkingLevel": "off",
-              "reasoning": true,
-              "input": ["text"],
-              "thinkingLevelMap": {
-                "minimal": null,
-                "low": null,
-                "medium": null,
-                "high": "high",
-                "xhigh": null,
-                "max": null
-              },
-              "compat": {
-                "supportsReasoningEffort": false,
-                "thinkingFormat": "qwen-chat-template"
-              }
-            }
-          }
-        }
-      }
-    }
-    JSON
-    cat > "$routing_smoke/agent/model-router.json" <<'JSON'
-    {
-      "models": {
-        "sol": {
-          "model": "synthetic/target",
-          "reasoning": true,
-          "thinkingLevels": ["off", "high"]
-        }
-      },
-      "profiles": {
-        "sol": {
-          "low": {
-            "model": "sol",
-            "thinking": "off"
-          },
-          "medium": {
-            "model": "sol",
-            "thinking": "off"
-          },
-          "high": {
-            "model": "sol",
-            "thinking": "off"
-          }
-        }
-      }
-    }
-    JSON
     cat > "$routing_smoke/synthetic.ts" <<'TS'
     import { appendFileSync } from "node:fs";
     import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
@@ -1899,8 +1764,8 @@ runCommand "pi-gallery-check"
       const stream = createAssistantMessageEventStream();
       queueMicrotask(() => {
         const text = options?.reasoning ?? "off";
-        if (process.env.PI_ROUTER_REASONING_LOG) {
-          appendFileSync(process.env.PI_ROUTER_REASONING_LOG, `''${text}\n`);
+        if (process.env.PI_MODEL_ROUTE_LOG) {
+          appendFileSync(process.env.PI_MODEL_ROUTE_LOG, model.provider + "/" + model.id + "\n");
         }
         const message: any = {
           role: "assistant",
@@ -1965,21 +1830,6 @@ runCommand "pi-gallery-check"
           maxTokens: 16384,
         }],
       });
-      pi.unregisterProvider("omlx");
-      pi.registerProvider("omlx", {
-        baseUrl: "synthetic://omlx",
-        apiKey: "synthetic",
-        api: "synthetic-api",
-        models: [{
-          id: "Qwen3.6-27B-oQ6e-mtp",
-          name: "Sparse Qwen",
-          reasoning: false,
-          input: ["text"],
-          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-          contextWindow: 262144,
-          maxTokens: 65536,
-        }],
-      });
       pi.registerProvider("cache-probe", {
         baseUrl: "https://cache-probe.invalid/v1",
         apiKey: "synthetic",
@@ -1996,129 +1846,48 @@ runCommand "pi-gallery-check"
       });
     }
     TS
-    while IFS='|' read -r prompt expected_tier; do
-      session_file="$routing_smoke/tier-$expected_tier.jsonl"
+    mkdir -p "$routing_smoke/project/.pi"
+    cat > "$routing_smoke/project/.pi/bifrost.json" <<'JSON'
+    {
+      "enabled": true,
+      "default": "general",
+      "strategy": "first",
+      "classifier": {"enabled": false},
+      "cache": {"enabled": false},
+      "reliability": {"enabled": false},
+      "models": {"general": ["synthetic/target"]}
+    }
+    JSON
+    (
+      cd "$routing_smoke/project"
       env -u OMLX_API_KEY -u OMLX_CLIO_API_KEY -u OMLX_HERA_API_KEY \
         -u LLAMA_SWAP_API_KEY \
-      HOME="$routing_smoke/home" \
-      PI_CODING_AGENT_DIR="$routing_smoke/agent" \
-      PI_ROUTER_REASONING_LOG="$routing_smoke/reasoning.log" \
-      PI_OFFLINE=1 \
+        HOME="$routing_smoke/home" \
+        PI_CODING_AGENT_DIR="$routing_smoke/agent" \
+        PI_MODEL_ROUTE_LOG="$routing_smoke/route.log" \
+        PI_OFFLINE=1 \
         ${coreutils}/bin/timeout 60 \
         ${lib.getExe piPackage} \
-        --print --offline --session "$session_file" --no-context-files \
+        --print --offline --session "$routing_smoke/bifrost.jsonl" --no-context-files \
         --no-extensions --no-skills --no-prompt-templates --no-approve \
-        --extension ${routingExtension} \
+        --extension ${roots.bifrost}/index.ts \
         --extension "$routing_smoke/synthetic.ts" \
-        --provider router --model sol "$prompt" \
-        </dev/null >"$routing_smoke/output" 2>"$routing_smoke/error" || {
-          status=$?
-          cat "$routing_smoke/error" >&2
-          fail "model router failed for a disabled tier with status $status"
-        }
-      [ "$(cat "$routing_smoke/output")" = off ] || {
-        cat "$routing_smoke/output" >&2
-        cat "$routing_smoke/error" >&2
-        fail "model router did not keep its selected tier at reasoning off"
-      }
-      jq -s -e --arg expected "$expected_tier" '
-        ([.[]
-          | select(
-              .type == "custom"
-              and .customType == "router-state"
-              and .data.lastDecision != null
-            )
-        ] | last | .data.lastDecision.tier) == $expected
-      ' "$session_file" >/dev/null || {
-        cat "$session_file" >&2
-        fail "model router did not retain its $expected_tier workload-tier decision"
-      }
-    done <<'CASES'
-    briefly answer|low
-    implement the change|medium
-    think deeply about this architecture|high
-    CASES
-    cat > "$routing_smoke/rpc-input.jsonl" <<'JSON'
-    {"id":"before","type":"get_state"}
-    {"id":"levels","type":"get_available_thinking_levels"}
-    {"id":"router-off","type":"prompt","message":"exercise the router disabled path","_wait_for_agent_settled":true}
-    {"id":"plain","type":"set_model","provider":"synthetic","modelId":"plain"}
-    {"id":"qwen","type":"set_model","provider":"omlx","modelId":"Qwen3.6-27B-oQ6e-mtp"}
-    {"id":"direct","type":"get_state"}
-    {"id":"direct-levels","type":"get_available_thinking_levels"}
-    {"id":"direct-off","type":"prompt","message":"exercise the direct disabled path","_wait_for_agent_settled":true}
-    {"id":"direct-cycle","type":"cycle_thinking_level"}
-    {"id":"direct-high","type":"prompt","message":"exercise the direct enabled path","_wait_for_agent_settled":true}
-    {"id":"direct-reset","type":"cycle_thinking_level"}
-    {"id":"router","type":"set_model","provider":"router","modelId":"sol"}
-    {"id":"router-cycle","type":"cycle_thinking_level"}
-    {"id":"router-high-state","type":"get_state"}
-    {"id":"router-high","type":"prompt","message":"exercise the router enabled path","_wait_for_agent_settled":true}
-    JSON
-    env -u OMLX_API_KEY -u OMLX_CLIO_API_KEY -u OMLX_HERA_API_KEY \
-      -u LLAMA_SWAP_API_KEY \
-      HOME="$routing_smoke/home" \
-      PI_CODING_AGENT_DIR="$routing_smoke/agent" \
-      PI_ROUTER_REASONING_LOG="$routing_smoke/reasoning.log" \
-      PI_OFFLINE=1 \
-        ${coreutils}/bin/timeout 60 \
-        ${python3}/bin/python3 "$rpc_sequence" \
-        "$routing_smoke/rpc-input.jsonl" \
-        "$routing_smoke/rpc-output.jsonl" \
-        "$routing_smoke/rpc-error.log" \
-        ${lib.getExe piPackage} \
-        --mode rpc --offline --no-session --no-context-files \
-        --no-extensions --no-skills --no-prompt-templates --no-approve \
-        --extension ${routingExtension} \
-        --extension "$routing_smoke/synthetic.ts" \
-        --provider router --model sol || {
+        --provider synthetic --model plain "route with Bifrost" \
+        </dev/null >"$routing_smoke/output" 2>"$routing_smoke/error"
+    ) || {
       status=$?
-      cat "$routing_smoke/rpc-output.jsonl" >&2
-      cat "$routing_smoke/rpc-error.log" >&2
-      fail "model router thinking-cycle RPC failed with status $status"
+      cat "$routing_smoke/error" >&2
+      fail "Bifrost did not route the configured default with status $status"
     }
-    jq -s -e '
-      any(.[]; .type == "response" and .id == "before" and .data.thinkingLevel == "off")
-      and any(.[]; .type == "response" and .id == "levels" and .data.levels == ["off", "high"])
-      and any(.[]; .type == "response" and .id == "router-off" and .success == true)
-      and any(.[]; .type == "response" and .id == "plain" and .success == true)
-      and any(.[]; .type == "response" and .id == "qwen" and .success == true)
-      and any(.[];
-        .type == "response"
-        and .id == "direct"
-        and .data.thinkingLevel == "off"
-        and .data.model.provider == "omlx"
-        and .data.model.id == "Qwen3.6-27B-oQ6e-mtp"
-        and .data.model.reasoning == true
-        and .data.model.input == ["text"]
-        and .data.model.defaultThinkingLevel == "off"
-      )
-      and any(.[]; .type == "response" and .id == "direct-levels" and .data.levels == ["off", "high"])
-      and any(.[]; .type == "response" and .id == "direct-off" and .success == true)
-      and any(.[]; .type == "response" and .id == "direct-cycle" and .data.level == "high")
-      and any(.[]; .type == "response" and .id == "direct-high" and .success == true)
-      and any(.[]; .type == "response" and .id == "direct-reset" and .data.level == "off")
-      and any(.[]; .type == "response" and .id == "router" and .success == true)
-      and any(.[]; .type == "response" and .id == "router-cycle" and .data.level == "high")
-      and any(.[];
-        .type == "response"
-        and .id == "router-high-state"
-        and .data.thinkingLevel == "high"
-        and .data.model.provider == "router"
-        and .data.model.id == "sol"
-      )
-      and any(.[]; .type == "response" and .id == "router-high" and .success == true)
-    ' "$routing_smoke/rpc-output.jsonl" >/dev/null || {
-      cat "$routing_smoke/rpc-output.jsonl" >&2
-      cat "$routing_smoke/rpc-error.log" >&2
-      fail "model router did not expose or cycle the exact off/high contract"
+    [ "$(cat "$routing_smoke/output")" = high ] || {
+      cat "$routing_smoke/output" >&2
+      cat "$routing_smoke/error" >&2
+      fail "Bifrost did not select synthetic/target from project configuration"
     }
-    [ "$(jq -R -s -c 'split("\n")[:-1]' "$routing_smoke/reasoning.log")" = \
-      '["off","off","off","off","off","high","high"]' ] || {
-      cat "$routing_smoke/reasoning.log" >&2
-      fail "model router did not delegate off by default and high after thinking-cycle"
+    [ "$(cat "$routing_smoke/route.log")" = synthetic/target ] || {
+      cat "$routing_smoke/route.log" >&2
+      fail "Bifrost did not route the request to synthetic/target"
     }
-
     loop_smoke="$TMPDIR/pi-loop-smoke"
     mkdir -p "$loop_smoke/home" "$loop_smoke/agent"
     env -u OMLX_API_KEY -u OMLX_CLIO_API_KEY -u OMLX_HERA_API_KEY \
@@ -2430,7 +2199,7 @@ runCommand "pi-gallery-check"
           "goal-unfocus",
           "sisyphus",
           "sisyphus-direct",
-          "insights",
+          "bifrost",
           "mp-preset",
           "pool",
           "subs",
@@ -2444,7 +2213,6 @@ runCommand "pi-gallery-check"
           "preview-pdf",
           "review-loop",
           "rewind",
-          ${lib.optionalString stdenv.hostPlatform.isDarwin ''"router",''}
           "rtk",
           "run",
           "subagents",
@@ -2453,7 +2221,6 @@ runCommand "pi-gallery-check"
           "subagents-models",
           "subagents-watchdog",
           "trace",
-          "usage",
           "workflows"
         ] - [.data.commands[].name] | length) == 0
         and ([.data.commands[].name

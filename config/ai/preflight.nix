@@ -70,7 +70,6 @@ let
     ".config/pi/agent/extensions/pi-mcp-adapter"
     ".config/pi/agent/extensions/pi-quiet"
     ".config/pi/agent/keybindings.json"
-    ".config/pi/agent/model-router.json"
     ".config/pi/agent/models.json"
     ".config/pi/agent/themes/dark-tool-backgrounds.json"
     ".config/transcribe/llm-route.json"

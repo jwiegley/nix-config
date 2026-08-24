@@ -157,7 +157,8 @@ def main() -> None:
         codex_home = root / "codex-home"
         sqlite_home = root / "sqlite"
         workspace = root / "workspace"
-        for path in (home, codex_home, sqlite_home, workspace):
+        temporary_home = root / "tmp"
+        for path in (home, codex_home, sqlite_home, temporary_home, workspace):
             path.mkdir()
         shutil.copyfile(args.mcp_probe_config, codex_home / "config.toml")
         environment = {
@@ -176,7 +177,9 @@ def main() -> None:
             "PATH": os.environ.get("PATH", ""),
             "PYTHONPATH": "/forbidden",
             "SSH_AUTH_SOCK": "/forbidden",
-            "TMPDIR": str(root),
+            # Codex refuses to create helper aliases inside its active temporary
+            # directory. Keep its mutable home beside, rather than below, TMPDIR.
+            "TMPDIR": str(temporary_home),
             "UNRELATED_SECRET": "unrelated-sentinel",
             "XDG_CACHE_HOME": str(root / "cache"),
             "XDG_CONFIG_HOME": str(root / "config"),

@@ -33,12 +33,6 @@
       ],
       "overrideDependencies": {}
     },
-    "pi-insights": {
-      "removeTopLevel": [],
-      "forbidDependencies": [],
-      "defensiveForbidDependencies": [],
-      "overrideDependencies": {}
-    },
     "pi-lens": {
       "removeTopLevel": [],
       "forbidDependencies": [],

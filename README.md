@@ -56,10 +56,10 @@ Darwin registers loopback `llama-swap` plus the stable `omlx-hera` and
 `omlx-clio` discovery providers automatically. Both workstations reach both oMLX
 providers through authenticated TLS. Pi prefers explicit or login-Keychain
 provider credentials and otherwise uses the services' non-secret compatibility
-sentinel. Fixed provider overrides and the synthetic router remain a separate
-Hera-only capability; the router targets
-`omlx-hera`. Linux retains the provider packages and router without registering
-them automatically.
+sentinel. Fixed provider overrides remain a separate Hera-only capability.
+Pi-Bifrost is a Gallery extension; its routing choices remain mutable project
+configuration rather than a generated Nix policy. Linux retains local-provider
+packages without registering them automatically.
 
 The complete ownership and data-flow contract is maintained in
 [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md).

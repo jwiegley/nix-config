@@ -1624,7 +1624,6 @@ let
           &&
             builtins.attrNames modelOverrides.pi.galleryProviders
             == builtins.attrNames piModelDiscoveryEndpoints
-          && builtins.hasAttr modelOverrides.pi.router.provider piModelDiscoveryEndpoints
           && piModelDiscoveryEndpoints.llama-swap == workstationLocalModelEndpoints.llama-swap
           && piLocalDiscoveryProviderByHost == catalogPiLocalDiscoveryProviderByHost
           && builtins.attrNames piLocalDiscoveryProviderByHost == workstationHosts

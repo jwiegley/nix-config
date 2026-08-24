@@ -34,13 +34,11 @@ in
     "browser"
     "btw"
     "copy-message"
-    "insights"
-    "usage"
     "multi-pass"
     "droid"
     "llama-swap-provider"
     "omlx-provider"
-    "router"
+    "bifrost"
     "rewind"
     "blackhole"
     "mem"
@@ -92,14 +90,6 @@ in
       publicName = "pi-copy-message";
       extension = "extensions/copy-message.ts";
     };
-    insights = member "pi-insights" {
-      publicName = "@ygncode/pi-insights";
-      extension = "index.ts";
-    };
-    usage = member "pi-usage-extension" {
-      publicName = "@tmustier/pi-usage-extension";
-      extension = "index.ts";
-    };
     multi-pass = member "pi-multi-pass" {
       publicName = "pi-multi-pass";
       extension = "extensions/multi-sub.ts";
@@ -116,9 +106,9 @@ in
       publicName = "pi-provider-omlx";
       extension = "index.ts";
     };
-    router = member "pi-model-router" {
-      publicName = "@yeliu84/pi-model-router";
-      extension = "extensions/index.ts";
+    bifrost = member "pi-bifrost" {
+      publicName = "pi-bifrost";
+      extension = "index.ts";
     };
     rewind = member "pi-rewind" {
       publicName = "pi-rewind";

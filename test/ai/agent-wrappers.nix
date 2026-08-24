@@ -221,49 +221,6 @@ let
     codexProbeTestDouble (identityAgent "codex")
   );
 
-  catalog = import ../../config/ai/catalog.nix {
-    inherit (pkgs) lib;
-    resources = pkgs.agent-resources;
-  };
-  claudeMcpProbeScript = pkgs.writeText "mcp-environment-probe.py" (
-    builtins.readFile ./mcp-environment-probe.py
-  );
-  claudeMcpProbeProfile = catalog.profiles.hera-claude-personal;
-  claudeMcpProbeSelected =
-    pkgs.lib.mapAttrs (_: items: catalog.select claudeMcpProbeProfile items) catalog.items
-    // {
-      mcpServers = catalog.select claudeMcpProbeProfile {
-        synthetic-managed = {
-          selectors.clients = [ "claude" ];
-          transport = {
-            command = "${pkgs.python3}/bin/python3";
-            args = [
-              { public = toString claudeMcpProbeScript; }
-              { public = pkgs.nix-managed-mcp-stdio.runtimePath; }
-            ];
-            env = {
-              ANTHROPIC_API_KEY.env = "ANTHROPIC_API_KEY";
-              DEFAULT_MODEL = "auto";
-              OPENAI_API_KEY.env = "OPENAI_API_KEY";
-            };
-          };
-        };
-      };
-    };
-  claudeMcpProbeRendered =
-    (import ../../config/ai/renderers/claude.nix {
-      inherit (pkgs) lib;
-      inherit pkgs;
-    })
-      {
-        profile = claudeMcpProbeProfile;
-        selected = claudeMcpProbeSelected;
-        homeDirectory = "/Users/test";
-        xdgConfigHome = "/Users/test/.config";
-      };
-  claudeMcpProbeConfig =
-    claudeMcpProbeRendered.files."${claudeMcpProbeProfile.root}/nix-managed-mcp.json".source;
-
   networkGuardSource = pkgs.writeText "agent-wrapper-network-guard.c" ''
     #define _GNU_SOURCE
     #include <dlfcn.h>
@@ -371,14 +328,12 @@ pkgs.runCommand "agent-wrappers-check"
 
     CLAUDE_BIN = "${wrappedClaude}/bin/claude";
     CLAUDE_REAL_BIN = "${wrappedClaude}/bin/claude-real";
-    CLAUDE_MCP_PROBE_CONFIG = claudeMcpProbeConfig;
     CODEX_BIN = "${wrappedCodex}/bin/codex";
     CODEX_NON_DARWIN_BIN = "${wrappedNonDarwinCodex}/bin/codex";
     CLAUDE_IDENTITY_BIN = "${identityWrappedClaude}/bin/claude";
     CLAUDE_REAL_IDENTITY_BIN = "${identityWrappedClaude}/bin/claude-real";
     CODEX_IDENTITY_BIN = "${identityWrappedCodex}/bin/codex";
     REAL_CLAUDE_BIN = "${realWrappedClaude}/bin/claude";
-    REAL_NATIVE_CLAUDE_BIN = "${claudePackage}/bin/.claude-wrapped";
     REAL_CODEX_BIN = "${codexPackage}/bin/codex";
     REAL_PROBED_CODEX_BIN = "${realWrappedCodex.unwrappedPackage}/bin/codex";
     REAL_WRAPPED_CODEX_BIN = "${realWrappedCodex}/bin/codex";

@@ -217,10 +217,9 @@ are presently excluded from the generated active order so their startup costs ca
 be isolated without uninstalling them.
 The Darwin gallery performs bounded loopback model discovery on both
 workstations, while `config/ai/catalog.nix` grants fixed local-provider overrides
-and synthetic router configuration only to profiles whose exact model inventory
-has been verified. These overrides are not a second inventory: endpoint
-availability, discovered inventory, and fixed route selection are distinct
-authorities.
+only to profiles whose exact model inventory has been verified. These overrides
+are not a second inventory: endpoint availability and discovered inventory are
+distinct authorities. Pi-Bifrost routing policy remains mutable project state.
 
 ## Source and update authority
 

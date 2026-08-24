@@ -728,8 +728,9 @@ assert
 assert
   !(darwinConfigurations.clio.config.system.defaults.CustomUserPreferences ? "org.gpgtools.common");
 assert builtins.all lacksLocalModelSessionVariables nonDesktopHomes;
-assert builtins.hasAttr ".config/pi/agent/model-router.json" desktopHomesByHost.hera.home.file;
-assert !(builtins.hasAttr ".config/pi/agent/model-router.json" desktopHomesByHost.clio.home.file);
+assert builtins.all (
+  home: !(builtins.hasAttr ".config/pi/agent/model-router.json" home.home.file)
+) desktopHomes;
 assert contains aiCatalog.localModelEndpointsByHost.hera.omlx
   desktopHomesByHost.hera.home.activation.aiManagedModelSync.data;
 assert !(builtins.hasAttr "aiManagedModelSync" desktopHomesByHost.clio.home.activation);

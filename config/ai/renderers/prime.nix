@@ -158,7 +158,7 @@ let
 
     The managed model file preserves safe built-in-provider context overrides. Local model
     discovery reuses the existing generic provider extensions. The secret-command-backed
-    provider and the Pi model router are intentionally omitted.
+    provider and Pi-specific routing extensions are intentionally omitted.
 
     Prime Agent's native MCP layer does not support local stdio servers. The managed
     `pi-mcp-adapter` package supplies those servers from the standard Nix-generated MCP file
