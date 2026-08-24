@@ -20,10 +20,10 @@
     "agent-browser-source": {
       "source": {
         "args": {
-          "narHash": "sha256-FtB7AXqrROZs8UZv8UtxtofZwj4VlEERRFhEIXsZ3Y0=",
+          "narHash": "sha256-sWCoK+1xzM7u8NizgLwpeHr4H575GDI2Xj9gPCt6hUE=",
           "owner": "vercel-labs",
           "repo": "agent-browser",
-          "rev": "f9a6cc34212340dad62b114559f7a306c4be0707",
+          "rev": "021d9255e543d2f1ab66b87f338d85c3d7a910be",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -591,15 +591,15 @@
     },
     "pi-subagents": {
       "hashes": {
-        "npmDepsHash": "sha256-bDxW0G76ueUcJaAUGMMokHv51gSmps/YCMEHKVKksdQ="
+        "npmDepsHash": "sha256-fa4KzWFSyt+5G4MCkZLzDEHCdp+nmtp4Wy3xqtwMEuM="
       },
       "source": {
         "args": {
-          "hash": "sha256-+JgH5yCNMTP4f8JaogR6rZW0kV6dMCvxV5FmM9vIXWU=",
-          "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.55.0.tgz"
+          "hash": "sha256-e2T5KfSeO2l2V9QRFtZXDRHwFZF7HfGGnP7xDSyeE9o=",
+          "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.56.0.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.55.0.tgz"
+        "url": "https://registry.npmjs.org/pi-subagents/-/pi-subagents-0.56.0.tgz"
       },
       "update": {
         "artifacts": [
@@ -609,7 +609,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "pi-subagents"
       },
-      "version": "0.55.0"
+      "version": "0.56.0"
     },
     "pi-trace-extension": {
       "source": {
