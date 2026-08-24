@@ -8044,7 +8044,7 @@ Agent Deck's mandatory pre-push hook invokes golangci-lint, but the shared /User
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-23 Sun 03:52]
-:MODIFIED: [2026-08-23 Sun 21:55]
+:MODIFIED: [2026-08-23 Sun 22:22]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -8065,6 +8065,20 @@ Andoria-T2 and Delphi currently expose unrestricted nix-daemon effective CPU set
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 526,
+    "issue_id": "nix-mkx1",
+    "author": "johnw",
+    "text": "2026-08-23 execution attempt: read-only verification confirmed T2 EffectiveCPUs=0-255 and Delphi EffectiveCPUs=0-287, with no existing nix-daemon drop-ins; both retain max-jobs=1, cores=8, require-sigs=true and only baseline failed units. Prepared the persistent systemd override [Service] AllowedCPUs=0-7 for /etc/systemd/system/nix-daemon.service.d/20-cpu-affinity.conf. Copy to T2 succeeded, but the first required sudo step failed before any system mutation because noninteractive sudo requires a terminal/password. Removed the remote /var/tmp staging file; Delphi was not touched. Completion requires an interactive authorized sudo session on each host to install the override, daemon-reload/restart nix-daemon, then re-verify EffectiveCPUs=0-7 and baseline health. Do not use sudo -S, environment/argv passphrases, askpass, or policy weakening.",
+    "created_at": "2026-08-24T05:22:16Z"
   }
 ]
 #+end_src
