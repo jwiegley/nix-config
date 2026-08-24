@@ -38,6 +38,7 @@ let
       managed-mcp-stdio = behavioral systems true;
       llm-mlx-plugin = behavioral darwinSystems false;
       mtplx-transformers-compat = behavioral darwinSystems false;
+      omlx-post-patch = behavioral systems true;
       pi-extension-tests = behavioral systems true;
       pi-fleet-theme = behavioral systems true;
       pi-gallery = behavioral systems true;

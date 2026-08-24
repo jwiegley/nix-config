@@ -4578,6 +4578,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         for source_name in (
             "mlx",
             "mlx-embeddings",
+            "mlx-lm",
             "mlx-vlm",
             "dflash-mlx",
             "ddgs",
@@ -4625,13 +4626,14 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         with mock.patch.dict(
             validate_catalog_target.__globals__, {"HashComputer": ConsumerHashes}
         ):
-            for source_name in ("mlx-embeddings", "mlx-vlm", "ddgs"):
+            for source_name in ("mlx-embeddings", "mlx-lm", "mlx-vlm", "ddgs"):
                 self.assertTrue(
                     validate_catalog_target(REPO, source_name, catalog[source_name])
                 )
         self.assertEqual(
             calls,
             [
+                (REPO, "omlx", "pkg"),
                 (REPO, "omlx", "pkg"),
                 (REPO, "omlx", "pkg"),
                 (REPO, "omlx", "pkg"),

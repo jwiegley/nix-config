@@ -481,6 +481,7 @@ in
       agent-deck-runtime-lifecycle = pkgs.agent-deck;
       fractal-smoke = pkgs.callPackage ../test/ai/overlays/plasma-fractal-smoke.nix { };
       llama-cpp-platform-compat = pkgs.callPackage ../test/ai/overlays/llama-cpp-platform-compat.nix { };
+      omlx-post-patch = pkgs.callPackage ../test/ai/overlays/omlx-post-patch.nix { };
       llm-agents-nixpkgs-independent =
         let
           portableLock = builtins.fromJSON (builtins.readFile ../config/ai/flake.lock);
