@@ -97,22 +97,6 @@
       },
       "version": "0.5.0"
     },
-    "pi-blackhole": {
-      "source": {
-        "args": {
-          "hash": "sha256-A45IoM8J44oI+9fj5E7HBySPoK5JgdjHraqnuciegWE=",
-          "url": "https://registry.npmjs.org/pi-blackhole/-/pi-blackhole-0.4.8.tgz"
-        },
-        "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-blackhole/-/pi-blackhole-0.4.8.tgz"
-      },
-      "update": {
-        "buildPackage": "pi-blackhole",
-        "kind": "npm-release",
-        "package": "pi-blackhole"
-      },
-      "version": "0.4.8"
-    },
     "pi-bifrost": {
       "source": {
         "args": {

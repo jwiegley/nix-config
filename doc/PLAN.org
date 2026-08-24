@@ -8299,6 +8299,24 @@ Runtime hook authority creation follows symlinked hooks-directory ancestors via 
 ]
 #+end_src
 
+* DONE [#B] Remove Pi Blackhole from managed AI configuration
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-mvh2
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-24 Mon 15:09]
+:MODIFIED: [2026-08-24 Mon 16:07]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 16:07]
+:CLOSE_REASON: Removed Blackhole package, gallery, source, patch, policy, activation, preflight, check, updater, test, and current documentation integration. Zero live references remain; all-systems evaluation, Gallery/root checks, and the non-activating system build pass. Mutable runtime state was intentionally untouched.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pi Blackhole is too invasive and is breaking other aspects of the environment. Remove its package/gallery/source integration, generated configuration and activation, managed preflight policy, dedicated tests and check wiring, updater inventory, and current documentation. Preserve every other Pi extension and do not delete mutable runtime state or activate any host as part of this repository change.
+
 * DONE [#B] Durably publish runtime hook authority records
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

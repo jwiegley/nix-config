@@ -626,9 +626,6 @@ assert builtins.all (
   config: renderedAutomaticPiExtensions config == automaticPiExtensions
 ) allHomes;
 assert builtins.all (
-  config: config.home.activation.aiManagedPiBlackholePolicy.after == [ "linkGeneration" ]
-) allHomes;
-assert builtins.all (
   config: config.home.activation.aiManagedPiEnabledModelsMigration.after == [ "linkGeneration" ]
 ) desktopHomes;
 assert lib.hasInfix "PI_OMLX_LOCAL_PROVIDER=omlx-hera"

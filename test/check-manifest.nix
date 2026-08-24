@@ -65,7 +65,6 @@ let
       model-sync-state = behavioral systems false;
       obr-ownership = evaluationOnly systems;
       omlx-proxy-boundary = behavioral darwinSystems false;
-      pi-blackhole-policy = behavioral systems false;
       pi-enabled-models-migration = behavioral darwinSystems false;
       pi-node-ca = behavioral darwinSystems false;
       samba-darwin-fixup = behavioral darwinSystems false;

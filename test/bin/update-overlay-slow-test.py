@@ -4291,7 +4291,6 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         expected_builds = {
             "agent-browser": "agent-browser",
             "pi-agent-browser-native": "pi-agent-browser-native",
-            "pi-blackhole": "pi-blackhole",
             "pi-bifrost": "pi-bifrost",
             "pi-btw": "pi-btw",
             "pi-cache-optimizer": "pi-cache-optimizer",

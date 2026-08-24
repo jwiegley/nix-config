@@ -1406,35 +1406,7 @@ runCommand "pi-gallery-check"
     PI_CODING_AGENT_ROOT=${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent \
       ${nodejs_24}/bin/node --expose-gc \
         ${sourceForChecks}/test/ai/pi-agent-browser-bounded-history.check.mjs
-    [ -f ${roots.blackhole}/index.ts ]
-    [ ! -e ${roots.blackhole}/node_modules ]
-    [ ! -e ${roots.blackhole}/dist ] \
-      || fail "Blackhole retains the unpatched upstream bundle"
-    [ "$(${jq}/bin/jq -r .main ${roots.blackhole}/package.json)" = "index.ts" ] \
-      || fail "Blackhole runtime would load the unpatched upstream bundle"
-    [ -f ${roots.blackhole}/src/om/compaction-threshold.ts ]
-    blackhole_typecheck="$TMPDIR/pi-blackhole-typecheck"
-    cp -R ${roots.blackhole} "$blackhole_typecheck"
-    chmod -R u+w "$blackhole_typecheck"
     pi_node_modules=${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent/node_modules
-    mkdir -p \
-      "$blackhole_typecheck/node_modules/@earendil-works" \
-      "$blackhole_typecheck/node_modules/@types"
-    ln -s ${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent \
-      "$blackhole_typecheck/node_modules/@earendil-works/pi-coding-agent"
-    for dependency in pi-agent-core pi-ai pi-tui; do
-      ln -s "$pi_node_modules/@earendil-works/$dependency" \
-        "$blackhole_typecheck/node_modules/@earendil-works/$dependency"
-    done
-    ln -s "$pi_node_modules/typebox" "$blackhole_typecheck/node_modules/typebox"
-    ln -s "$pi_node_modules/@types/node" "$blackhole_typecheck/node_modules/@types/node"
-    ln -s "$pi_node_modules/undici-types" "$blackhole_typecheck/node_modules/undici-types"
-    (
-      cd "$blackhole_typecheck"
-      tsc --noEmit --skipLibCheck --strict --allowImportingTsExtensions \
-        --module ESNext --moduleResolution Bundler --target ES2022 \
-        --lib ES2022 --types node index.ts
-    )
     local_provider_typecheck="$TMPDIR/pi-local-provider-typecheck"
     mkdir -p "$local_provider_typecheck/node_modules/@types"
     cp ${roots.omlx-provider}/index.ts "$local_provider_typecheck/omlx.ts"
@@ -1521,17 +1493,6 @@ runCommand "pi-gallery-check"
       cd "$local_provider_typecheck"
       ${bun}/bin/bun owner-isolation.ts
     )
-    (
-      cd ${sourceForChecks}
-      PI_BLACKHOLE_THRESHOLD_HELPER=${roots.blackhole}/src/om/compaction-threshold.ts \
-        bun test ./test/ai/pi-blackhole-compaction.check.ts
-    )
-    ${jq}/bin/jq -e '
-      .memory == true
-      and .compaction == "auto"
-      and .compactionEngine == "blackhole"
-    ' ${roots.blackhole}/example-config.json >/dev/null \
-      || fail "Blackhole does not ship memory and automatic Blackhole compaction defaults"
     [ -f ${roots.cache-optimizer}/index.ts ]
     [ ! -e ${roots.cache-optimizer}/node_modules ]
     [ -f ${roots.caveman}/extensions/caveman.ts ]
@@ -1704,16 +1665,6 @@ runCommand "pi-gallery-check"
     PI_SUBAGENTS_HISTORY_BYTES=67108864 \
     PI_SUBAGENTS_MAX_RSS_DELTA_BYTES=32505856 \
       ${bun}/bin/bun test ${sourceForChecks}/test/ai/pi-subagents-bounded-history.check.ts
-    PI_BLACKHOLE_ROOT=${roots.blackhole} \
-    PI_BLACKHOLE_CLEANUP_BODY_BYTES=67108864 \
-    PI_BLACKHOLE_CLEANUP_MAX_RSS_DELTA_BYTES=16777216 \
-      ${bun}/bin/bun ${sourceForChecks}/test/ai/pi-blackhole-bounded-history.check.ts
-    PI_BLACKHOLE_ROOT=${roots.blackhole} \
-      ${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/.bin/jiti \
-        ${sourceForChecks}/test/ai/pi-blackhole-exact-history.check.mts
-    PI_BLACKHOLE_ROOT=${roots.blackhole} \
-      ${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/.bin/jiti \
-        ${sourceForChecks}/test/ai/pi-blackhole-compaction-trigger.check.ts
     echo "Pi gallery check: patched agent-core history source"
     ${nodejs_24}/bin/node --input-type=module <<'EOF'
     import { Agent } from "${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core/dist/index.js";
@@ -2171,9 +2122,6 @@ runCommand "pi-gallery-check"
         and .command == "get_commands"
         and .success == true
         and ([
-          "blackhole",
-          "blackhole-memory",
-          "blackhole-recall",
           "btw",
           "btw:tangent",
           "cache-optimizer",
@@ -2271,7 +2219,6 @@ runCommand "pi-gallery-check"
             "batch_web_fetch",
             "edit",
             "read",
-            "recall",
             "web_fetch",
             "web_search",
             "write"
@@ -2297,10 +2244,6 @@ runCommand "pi-gallery-check"
     validate_web_tool_owners "$smoke/tool-owners.json" || {
       cat "$smoke/tool-owners.json" >&2
       fail "Pi gallery web tools do not have exactly one declared owner"
-    }
-    jq -e '.recall == ["blackhole"]' "$smoke/tool-owners.json" >/dev/null || {
-      cat "$smoke/tool-owners.json" >&2
-      fail "Blackhole does not exclusively own recall"
     }
     jq '.web_search += ["smart-fetch"]' "$smoke/tool-owners.json" \
       > "$smoke/tool-owners-duplicate.json"

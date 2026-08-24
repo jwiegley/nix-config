@@ -28,7 +28,6 @@ let
         agent-browser
         cymbal
         pi-agent-browser-native
-        pi-blackhole
         pi-bifrost
         pi-btw
         pi-cache-optimizer
@@ -765,21 +764,6 @@ let
       PY
       rm ${root}/README.md ${root}/README.zh-CN.md
     '';
-  };
-
-  pi-blackhole = mkCopyRoot {
-    pname = members.blackhole.attrName;
-    version = members.blackhole.version;
-    install =
-      root:
-      assert members.blackhole.version == "0.4.8";
-      ''
-        tar -xzf ${releaseTarballs.pi-blackhole} -C ${root} --strip-components=1
-        ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
-          --directory=${root} --strip=1 \
-          < ${./patches/pi-blackhole-managed-history-0.4.8.patch}
-        rm -r ${root}/dist
-      '';
   };
 
   pi-caveman = mkCopyRoot {
