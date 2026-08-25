@@ -855,7 +855,7 @@ let
   pi-goal-x = mkCopyRoot {
     pname = members.goal.attrName;
     version =
-      if members.goal.version == "0.30.0" then
+      if members.goal.version == "0.30.2" then
         members.goal.version
       else
         throw "unsupported pi-goal-x bounded-history patch version ${members.goal.version}";
@@ -867,7 +867,7 @@ let
           'return `''${prefix}: ''${statusLabel(goal)}''${usage}`;'
       ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
         --directory=${root} --strip=1 \
-        < ${./patches/pi-goal-x-bounded-history-0.30.0.patch}
+        < ${./patches/pi-goal-x-bounded-history-0.30.2.patch}
       patch_artifact="$(
         find ${root} -path '*/node_modules' -prune -o \
           -type f \( -name '*.orig' -o -name '*.rej' \) -print -quit

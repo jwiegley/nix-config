@@ -259,18 +259,18 @@
     "pi-goal-x": {
       "source": {
         "args": {
-          "hash": "sha256-g3PGSh+Coyha93Q3puG8oxEa1yxfX5vtAMn3Y+cRrjM=",
-          "url": "https://registry.npmjs.org/pi-goal-x/-/pi-goal-x-0.30.0.tgz"
+          "hash": "sha256-pFr3gYEcN9t8UUL0QNmo7t8wuDirHyp1Ir4pt5OntTE=",
+          "url": "https://registry.npmjs.org/pi-goal-x/-/pi-goal-x-0.30.2.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-goal-x/-/pi-goal-x-0.30.0.tgz"
+        "url": "https://registry.npmjs.org/pi-goal-x/-/pi-goal-x-0.30.2.tgz"
       },
       "update": {
         "buildPackage": "pi-goal-x",
         "kind": "npm-release",
         "package": "pi-goal-x"
       },
-      "version": "0.30.0"
+      "version": "0.30.2"
     },
     "pi-hashline-edit-pro": {
       "hashes": {

@@ -8897,6 +8897,24 @@ Partner observation 2026-08-10T19:49:52.586Z: restore the Home Manager runtime-o
 
 Make update quiet by default: emit one old-to-new line for each accepted catalog change, omit successful no-ops and progress, preserve failures and held-back warnings, and provide make update-verbose for the detailed transaction display.
 
+* DONE [#C] Adopt Pi Goal X 0.30.2
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-outz
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-25 Tue 01:32]
+:MODIFIED: [2026-08-25 Tue 01:32]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 01:32]
+:CLOSE_REASON: Goal X 0.30.2 is pinned with reviewed bounded-history patch; package and Gallery checks pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Advance pi-goal-x to 0.30.2, retain the bounded-history patch after exact review, and validate its real Gallery integration.
+
 * DONE [#C] Keep publication recovery inside bin/publish with readback
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
