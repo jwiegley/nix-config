@@ -31,7 +31,6 @@ let
       inputs
       ;
   };
-  claudeMemPin = import ./claude-mem-pin.nix { inherit pkgs; };
 in
 {
   _module.args.vars = vars;
@@ -189,16 +188,6 @@ in
       ".claude/skills/sherlock/sherlock".source = "${pkgs.sherlock-db}/bin/sherlock";
     };
 
-    # claude-mem needs the injection-free private command from the locally
-    # patched Claude package. Its settings remain mutable, so update only the path.
-    activation.claudeMemRealClaude = lib.mkIf (inputs ? llm-agents) (
-      lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        ${claudeMemPin}/bin/claude-mem-pin \
-          ${lib.escapeShellArg "${vars.home}/.claude-mem/settings.json"} \
-          ${lib.escapeShellArg "${config.home.profileDirectory}/bin/claude-real"} \
-          "''${DRY_RUN_CMD:-}"
-      ''
-    );
   };
 
   programs = {

@@ -3295,6 +3295,24 @@ Remove pi-insights and pi-usage-extension completely from the Nix-managed Pi est
 
 Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension using the existing source/package/catalog installation pattern. Verify the real package and managed Pi projection without activating hosts.
 
+* DONE [#B] Remove claude-mem integration
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-92ls
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-25 Tue 09:38]
+:MODIFIED: [2026-08-25 Tue 09:38]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 09:38]
+:CLOSE_REASON: All maintained claude-mem code, activation, check registration, helper implementation, and tests removed; repository search and full gates pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Remove the claude-mem activation hook, transactional pin helper, behavioral check registration, implementation, and dedicated tests. Preserve mutable ~/.claude-mem state unless separately authorized for deletion.
+
 * DONE [#B] Make Pi model catalog refresh update remote and local providers
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

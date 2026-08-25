@@ -369,9 +369,6 @@
                 homeManagerLib = home-manager.lib;
                 stockDarwinPkgs = stockPkgsFor."aarch64-darwin";
               };
-              claude-mem-pin = pkgs.callPackage ./test/home/claude-mem-pin.nix {
-                inherit darwinConfigurations;
-              };
               host-behavior = pkgs.callPackage ./test/home/host-behavior.nix {
                 inherit
                   darwinConfigurations
