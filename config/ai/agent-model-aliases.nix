@@ -32,7 +32,7 @@ let
     && target.model != ""
     && builtins.elem target.thinking thinkingLevels;
 
-  defaultAlias = "gpt sol";
+  defaultAlias = "deepseek";
   rawAliases = {
     deepseek = {
       harness = "pi";
