@@ -803,7 +803,7 @@ pkgs.runCommand "host-behavior" { } ''
           "thinking": "max"
         }
       },
-      "defaultAlias": "deepseek",
+      "defaultAlias": "gpt sol",
       "version": 1
     }
   ' ${heraAgentModelAliasesSource} >/dev/null

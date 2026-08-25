@@ -812,11 +812,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1787680451,
-        "narHash": "sha256-ofcZcTBovcMQh633aqyXw6Yf5rUlNqfiXdkrRS7wJy0=",
+        "lastModified": 1787682856,
+        "narHash": "sha256-b0NSJ7fPOvHr8x2CH85uLAzeWms53N6dnZskWk9aqTo=",
         "owner": "jwiegley",
         "repo": "scripts",
-        "rev": "2fb746f8c152a6a1ac2e9b194d9e28b3fb84965d",
+        "rev": "46b229e489cb965e1340d824a2e6cf3ee6f46c98",
         "type": "github"
       },
       "original": {
