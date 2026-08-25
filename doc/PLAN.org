@@ -1143,6 +1143,21 @@ After mlx-audio 0.5.0 built successfully, vllm-mlx 0.4.1 rejected the selected m
 
 Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and GIT_NAMESPACE from hermetic Git fixture environments, with a regression that proves both selectors cannot leak into fixture commands.
 
+* DONE [#C] Centralize managed AI model selections
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-3jyi
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-25 Tue 13:26]
+:MODIFIED: [2026-08-25 Tue 14:13]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 14:13]
+:CLOSE_REASON: Centralized managed model roles and added role-aware Pi enabledModels migration from retired IDs to current IDs. Fresh Pi and a temporary-copy migration verify omlx-hera resolves DeepSeek-V4-Flash-0731-MXFP4-MLX. Focused checks, flake evaluation, pre-commit, and Hera system build pass.
+:SOURCE_REPO: .
+:ORIGINAL_SIZE: 0
+:END:
+
 * DONE [#C] Update pre-push empty-range regression for current Lefthook semantics
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

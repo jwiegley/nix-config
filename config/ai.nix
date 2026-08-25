@@ -89,6 +89,7 @@ let
     inherit lib;
     resources = resourcePackage;
   };
+  inherit (catalog) models;
   registry = import ./hosts/registry.nix;
   renderers = {
     claude = import ./ai/renderers/claude.nix {
@@ -96,7 +97,7 @@ let
       pkgs = rendererPkgs;
     };
     codex = import ./ai/renderers/codex.nix {
-      inherit lib;
+      inherit lib models;
       pkgs = rendererPkgs;
       codexPackage = pairedCodexPackage;
     };
@@ -129,7 +130,7 @@ let
       null
     else
       catalog.recordingTranscriptionRoutesByHost.${profileHost} or null;
-  agentModelAliases = import ./ai/agent-model-aliases.nix { inherit lib; };
+  agentModelAliases = import ./ai/agent-model-aliases.nix { inherit lib models; };
   xdgConfigRelative = lib.removePrefix "${config.home.homeDirectory}/" config.xdg.configHome;
   recordingTranscriptionFiles = lib.optionalAttrs (recordingTranscriptionRoute != null) {
     "${xdgConfigRelative}/flatten-recordings/agent-model-aliases.json" = {
@@ -285,7 +286,7 @@ let
     retiredPaths = lib.optional piSelected retiredAutoCompactPath;
   };
   modelSync = import ./ai/model-sync.nix {
-    inherit lib pkgs;
+    inherit lib models pkgs;
     # Lazily forced only where the model-sync activation is gated in (hera).
     # The endpoint comes from the same home authority as rendered clients.
     omlxBaseUrl =
@@ -324,6 +325,8 @@ let
       set -euo pipefail
       PI_CODING_AGENT_DIR="$HOME/${piAgentRelative}" \
         PI_OMLX_LOCAL_PROVIDER=${lib.escapeShellArg piOmlxLocalProvider} \
+        PI_OMLX_MODEL_REPLACEMENTS=${lib.escapeShellArg (builtins.toJSON models.omlx.replacements)} \
+        PI_OMLX_STALE_MODEL_PATTERNS=${lib.escapeShellArg (builtins.toJSON models.omlx.stalePatterns)} \
         PI_CODING_AGENT_ROOT=${lib.escapeShellArg "${pairedPiPackage}/lib/node_modules/@earendil-works/pi-coding-agent"} \
         ${pkgs.nodejs_22}/bin/node ${./ai/pi-enabled-models-migration.mjs}
     )

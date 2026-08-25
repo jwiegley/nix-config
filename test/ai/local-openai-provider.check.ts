@@ -30,7 +30,9 @@ type ProviderModel = Record<string, unknown>;
 const warningProcess = process;
 const MAX_DISCOVERY_RESPONSE_BYTES = 1024 * 1024;
 const MAX_DISCOVERY_MODEL_ENTRIES = 4096;
-const QWEN_MODEL_ID = "Qwen3.8-27B-oQ4e-mtp";
+const LLAMA_MODEL_ID = "llama-reasoning-test-model";
+const OMLX_DEFAULTS_MODEL_ID = "omlx-defaults-test-model";
+const QWEN_MODEL_ID = "qwen-test-model";
 const QWEN_THINKING_LEVEL_MAP = {
 	minimal: null,
 	low: null,
@@ -112,7 +114,7 @@ try {
 				Response.json({
 					data: [
 						{
-							id: "GLM-5.2",
+							id: LLAMA_MODEL_ID,
 							type: "chat",
 							architecture: {
 								input_modalities: ["text"],
@@ -193,7 +195,7 @@ try {
 		return Promise.resolve(
 			Response.json({
 				data: [
-					{ id: "DeepSeek-V4-Flash-0731-MXFP4-MLX", max_model_len: 262144 },
+					{ id: OMLX_DEFAULTS_MODEL_ID, max_model_len: 262144 },
 					{
 						id: QWEN_MODEL_ID,
 						max_model_len: 262144,
@@ -327,7 +329,7 @@ try {
 	expectEqual(
 		llamaModels.map((model) => model.id),
 		[
-			"GLM-5.2",
+			LLAMA_MODEL_ID,
 			"bge-m3",
 			"vision-reasoning-model",
 			"plain-vision-capability",
@@ -340,8 +342,8 @@ try {
 	expectEqual(
 		llamaModels[0],
 		{
-			id: "GLM-5.2",
-			name: "GLM-5.2",
+			id: LLAMA_MODEL_ID,
+			name: LLAMA_MODEL_ID,
 			compat: {
 				supportsStore: false,
 				supportsDeveloperRole: false,
@@ -395,7 +397,7 @@ try {
 	);
 	expectEqual(
 		omlxModels.map((model) => model.id),
-		["DeepSeek-V4-Flash-0731-oQ8e-mtp", "Qwen3.8-27B-oQ4e-mtp"],
+		[OMLX_DEFAULTS_MODEL_ID, QWEN_MODEL_ID],
 		"oMLX filtering",
 	);
 	expectEqual(

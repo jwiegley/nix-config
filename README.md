@@ -19,7 +19,7 @@ sources/*.json
              |-> Hera and Clio        direct nix-darwin consumers
              `-> exported modules     external NixOS and Home Manager consumers
 
-config/ai/catalog.nix and renderers
+config/ai/models.nix, catalog.nix, and renderers
     -> config/ai.nix                  Home Manager AI policy and generated leaves
     -> direct and external consumers
 ```
@@ -31,7 +31,7 @@ The layers have distinct responsibilities:
 | Source catalogs | Updateable source coordinates, versions, and dependent hashes |
 | Packages and overlays | Reusable derivations, package sets, compatibility corrections, and package exposure |
 | Portable AI implementation | AI packages, applications, checks, overlays, and wrappers shared by both flakes |
-| AI Home Manager policy | Profiles, resource selection, client renderers, generated leaves, and activation safeguards |
+| AI Home Manager policy | Managed model roles, profiles, resource selection, client renderers, generated leaves, and activation safeguards |
 | Root flake and modules | Darwin systems, shared Home Manager policy, host capabilities, and repository checks |
 | Consumer checkouts | Lock selection, build, activation, rollback, and host-local state |
 

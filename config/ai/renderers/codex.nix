@@ -1,5 +1,6 @@
 {
   lib,
+  models ? import ../models.nix,
   pkgs,
   codexPackage,
 }:
@@ -29,7 +30,7 @@ let
   codexSourceCatalog = "${codexUnwrappedPackage.src}/codex-rs/models-manager/models.json";
   codexSourceCatalogData = builtins.fromJSON (builtins.readFile codexSourceCatalog);
   nativeSolModels = builtins.filter (
-    model: model.slug == "gpt-5.6-sol"
+    model: model.slug == models.codex.name
   ) codexSourceCatalogData.models;
   nativeSol =
     assert builtins.length nativeSolModels == 1;
@@ -117,11 +118,11 @@ let
     };
     profiles = {
       omlx = {
-        model = "Qwen3.8-27B-oQ4e-mtp";
+        model = models.omlx.primary.name;
         model_provider = "omlx";
       };
       llama-swap = {
-        model = "GLM-5.2";
+        model = models.llamaSwap.name;
         model_provider = "llama-swap";
       };
     };

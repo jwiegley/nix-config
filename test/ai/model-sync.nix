@@ -9,8 +9,10 @@ let
     inherit (homeManagerLib) hm;
   };
   runtimeCheck = "${src}/test/ai/model-sync-runtime-check.py";
+  modelSelection = import "${src}/config/ai/models.nix";
   modelSync = import "${src}/config/ai/model-sync.nix" {
     inherit lib pkgs;
+    models = modelSelection;
     omlxBaseUrl = "http://model-sync.invalid/v1";
     tools = {
       defaults = "fake-bin/defaults";

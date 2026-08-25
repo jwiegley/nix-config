@@ -88,6 +88,7 @@ def main() -> None:
     parser.add_argument("mcp_probe_config", type=Path)
     parser.add_argument("expected_catalog_path")
     parser.add_argument("expected_skill_description")
+    parser.add_argument("expected_model")
     args = parser.parse_args()
 
     source = load_json(args.source_catalog)
@@ -135,7 +136,7 @@ def main() -> None:
         for key in ("model", "model_provider", "model_reasoning_effort")
     }
     if selection != {
-        "model": "gpt-5.6-sol",
+        "model": args.expected_model,
         "model_provider": "openai",
         "model_reasoning_effort": "ultra",
     }:

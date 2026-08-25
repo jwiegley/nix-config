@@ -216,6 +216,7 @@ let
     inherit lib;
     resources = pkgs.agent-resources;
   };
+  modelSelection = aiCatalog.models;
   expectedPiGalleryEndpointsByOwner =
     (import ../../config/ai/renderers/project-provider-endpoints.nix { inherit lib; })
       {
@@ -223,7 +224,10 @@ let
         endpoints = aiCatalog.piModelDiscoveryEndpoints;
       };
   agentModelAliasesPath = ".config/flatten-recordings/agent-model-aliases.json";
-  agentModelAliases = import ../../config/ai/agent-model-aliases.nix { inherit lib; };
+  agentModelAliases = import ../../config/ai/agent-model-aliases.nix {
+    inherit lib;
+    models = modelSelection;
+  };
   heraAgentModelAliasesSource = desktopHomesByHost.hera.home.file.${agentModelAliasesPath}.source;
   expectedAgentModelAliasesSource =
     (pkgs.formats.json { }).generate "expected-agent-model-aliases.json"
@@ -792,13 +796,13 @@ pkgs.runCommand "host-behavior" { } ''
       "aliases": {
         "deepseek": {
           "harness": "pi",
-          "model": "DeepSeek-V4-Flash-0731-MXFP4-MLX",
+          "model": ${builtins.toJSON modelSelection.omlx.reasoning.name},
           "provider": "omlx-hera",
           "thinking": "off"
         },
         "gpt sol": {
           "harness": "pi",
-          "model": "gpt-5.6-sol",
+          "model": ${builtins.toJSON modelSelection.codex.name},
           "provider": "openai-codex",
           "thinking": "max"
         }

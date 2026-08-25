@@ -10,6 +10,7 @@ let
     inherit lib;
     resources = pkgs.agent-resources;
   };
+  modelSelection = catalog.models;
   profile = catalog.profiles.hera-prime;
   selected = lib.mapAttrs (_: items: catalog.select profile items) catalog.items;
   render =
@@ -207,10 +208,10 @@ runCommand "prime-agent-integration-check"
     test "$(jq '.providers | keys == ["llama-swap", "omlx", "openai-codex", "openrouter"]' ${models})" = true
     test "$(jq '.providers | keys == ["openai-codex", "openrouter"]' ${routesDisabledModels})" = true
     test "$(jq '[.. | objects | select(has("apiKey"))] | length' ${models})" -eq 0
-    test "$(jq -r '.providers["openai-codex"].modelOverrides["gpt-5.6-sol"].contextWindow' ${models})" -eq 1050000
-    test "$(jq -r '.providers.openrouter.modelOverrides["z-ai/glm-5.2"].contextWindow' ${models})" -eq 1048576
-    test "$(jq -r '.providers["llama-swap"].modelOverrides["GLM-5.2"].contextWindow' ${models})" -eq 262144
-    test "$(jq -r '.providers.omlx.modelOverrides["DeepSeek-V4-Flash-0731-MXFP4-MLX"].contextWindow' ${models})" -eq 262144
+    test "$(jq -r '.providers["openai-codex"].modelOverrides["${modelSelection.codex.name}"].contextWindow' ${models})" -eq ${toString modelSelection.codex.contextWindow}
+    test "$(jq -r '.providers.openrouter.modelOverrides["${modelSelection.openrouter.name}"].contextWindow' ${models})" -eq ${toString modelSelection.openrouter.contextWindow}
+    test "$(jq -r '.providers["llama-swap"].modelOverrides["${modelSelection.llamaSwap.name}"].contextWindow' ${models})" -eq ${toString modelSelection.llamaSwap.contextWindow}
+    test "$(jq -r '.providers.omlx.modelOverrides["${modelSelection.omlx.reasoning.name}"].contextWindow' ${models})" -eq ${toString modelSelection.omlx.reasoning.contextWindow}
 
     test "$(jq 'keys | length' ${keybindings})" -eq 10
     test "$(jq 'has("app.model.cycleForward") or has("app.model.cycleBackward")' ${keybindings})" = false
