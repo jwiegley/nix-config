@@ -133,7 +133,10 @@ Catalog records with manual update policy are intentionally excluded from the
 automatic pass. Inspect each record's `executor` in the JSON inventory. Use
 `bin/update --target NAME` for `update` records and `bin/update-overlay NAME` for
 `update-overlay` records. There is no unattended command that advances all
-manual-policy records.
+manual-policy records. GitHub release records may opt into `stableOnly`; those
+records scan release history for the newest numeric final tag and reject an
+explicit prerelease version even when GitHub incorrectly marks it as a normal
+release. Records without that field retain the existing latest-release strategy.
 
 The public operator options are `--all`, `--dry-run`, `--version`, `--verbose`,
 `--inventory`, and `--json`. `--no-build` is retired and returns an error.

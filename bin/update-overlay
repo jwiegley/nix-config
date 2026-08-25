@@ -86,6 +86,20 @@ ANSI_ESCAPE_RE = re.compile(
     r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\))"
 )
 CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
+FINAL_RELEASE_VERSION_RE = re.compile(
+    r"[0-9]+(?:\.[0-9]+)+(?:\+[0-9A-Za-z.-]+)?"
+)
+
+
+def _is_final_release_tag(tag: str, prefix: str = "") -> bool:
+    """Return whether a release tag denotes a final numeric version."""
+    if prefix:
+        if not tag.startswith(prefix):
+            return False
+        version = tag[len(prefix):]
+    else:
+        version = tag[1:] if tag.startswith("v") else tag
+    return FINAL_RELEASE_VERSION_RE.fullmatch(version) is not None
 
 
 def _catalog_change_coordinates(
@@ -321,6 +335,56 @@ class GitHubClient:
             self.last_error = _bounded_actionable_error(
                 f"GitHub release lookup failed for {owner}/{repo}: {detail}",
                 fallback="GitHub release lookup failed",
+            )
+            return None
+
+    def get_latest_stable_release(
+        self, owner: str, repo: str, prefix: str = ""
+    ) -> Optional[str]:
+        """Get the newest final release, ignoring metadata-misclassified prereleases."""
+        self.last_error = None
+        try:
+            result = subprocess.run(
+                ["gh", "api", f"repos/{owner}/{repo}/releases?per_page=100"],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0:
+                detail = _bounded_actionable_error(
+                    getattr(result, "stderr", ""),
+                    result.stdout,
+                    fallback=f"gh exited with status {result.returncode}",
+                )
+                self.last_error = _bounded_actionable_error(
+                    f"GitHub stable release lookup failed for {owner}/{repo}: {detail}",
+                    fallback="GitHub stable release lookup failed",
+                )
+                return None
+            payload = json.loads(result.stdout)
+            if isinstance(payload, list):
+                for release in payload:
+                    if (
+                        not isinstance(release, dict)
+                        or release.get("draft") is True
+                        or release.get("prerelease") is True
+                    ):
+                        continue
+                    tag = release.get("tag_name")
+                    if isinstance(tag, str) and _is_final_release_tag(tag, prefix):
+                        return tag
+            self.last_error = _bounded_actionable_error(
+                f"GitHub stable release lookup returned no final {prefix!r} tag for {owner}/{repo}",
+                fallback="GitHub stable release lookup returned no final tag",
+            )
+            return None
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            detail = _bounded_actionable_error(
+                error,
+                fallback="GitHub stable release lookup raised an exception",
+            )
+            self.last_error = _bounded_actionable_error(
+                f"GitHub stable release lookup failed for {owner}/{repo}: {detail}",
+                fallback="GitHub stable release lookup failed",
             )
             return None
 
@@ -1866,7 +1930,7 @@ def load_source_catalog(
         ),
         "github-release": (
             common_update_fields
-            | {"buildMode", "buildPackage", "normalizer", "tagPrefix"},
+            | {"buildMode", "buildPackage", "normalizer", "stableOnly", "tagPrefix"},
             set(),
         ),
         "github-tag": (
@@ -1980,6 +2044,11 @@ def load_source_catalog(
             ):
                 raise RuntimeError(
                     f"invalid GitHub release tag prefix for source catalog record: {name}"
+                )
+            stable_only = update.get("stableOnly")
+            if stable_only is not None and not isinstance(stable_only, bool):
+                raise RuntimeError(
+                    f"invalid stable-only policy for source catalog record: {name}"
                 )
             if build_mode is not None and kind in {
                 "github-commit",
@@ -3211,17 +3280,27 @@ def update_catalog_target(
                 if old_version and current_ref and current_ref.endswith(old_version)
                 else ""
             )
+        stable_only = kind == "github-release" and update.get("stableOnly", False)
         if args.version:
             new_ref = args.version if args.version.startswith(prefix) else f"{prefix}{args.version}"
-        else:
-            new_ref = (
-                github_client.get_latest_release(
-                    source_args["owner"], source_args["repo"]
+            if stable_only and not _is_final_release_tag(new_ref, prefix):
+                print(
+                    f"{display} {Colors.RED}✗ stable release required: {new_ref}{Colors.RESET}"
                 )
-                if kind == "github-release"
-                else github_client.get_latest_tag(
+                return "failed"
+        elif kind == "github-release":
+            new_ref = (
+                github_client.get_latest_stable_release(
                     source_args["owner"], source_args["repo"], prefix
                 )
+                if stable_only
+                else github_client.get_latest_release(
+                    source_args["owner"], source_args["repo"]
+                )
+            )
+        else:
+            new_ref = github_client.get_latest_tag(
+                source_args["owner"], source_args["repo"], prefix
             )
             if new_ref is None:
                 fetch_error = getattr(github_client, "last_error", None)

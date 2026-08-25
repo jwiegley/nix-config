@@ -257,10 +257,10 @@
     "omlx": {
       "source": {
         "args": {
-          "hash": "sha256-LuVR5FDE/M0querkf+6OmzAZDAI5GzXpG95uZKY8LqA=",
+          "hash": "sha256-7fYVMhbQKCEXDrtNYFF3tBpzeNV95iAJM6Q8nl3lxPI=",
           "owner": "jundot",
           "repo": "omlx",
-          "tag": "v0.6.3rc3"
+          "tag": "v0.6.2"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jundot/omlx"
@@ -269,9 +269,10 @@
         "buildMode": "pkg",
         "buildPackage": "omlx",
         "kind": "github-release",
+        "stableOnly": true,
         "tagPrefix": "v"
       },
-      "version": "0.6.3rc3"
+      "version": "0.6.2"
     },
     "prime-agent": {
       "commit": "be9e2fa0714e7cd1c6bd9bdb1b554d2cc6550387",
@@ -519,7 +520,7 @@
         "buildPackage": "omlx",
         "kind": "github-commit",
         "policy": "manual",
-        "reason": "oMLX pins this exact fork and commit for its speculative-decoding kernels"
+        "reason": "Shared reviewed DFlash fork; oMLX release pins are identity-validated then retargeted to this package"
       },
       "version": "0.1.10+omlx.7"
     },
