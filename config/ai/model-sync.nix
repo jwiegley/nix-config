@@ -38,7 +38,7 @@ let
   }
   // tools;
 
-  model = "DeepSeek-V4-Flash-0731-oQ8e-mtp";
+  model = "DeepSeek-V4-Flash-0731-MXFP4-MLX";
   chatUrl = "${omlxBaseUrl}/chat/completions";
 
   # One authority feeds stamp invalidation, preference writes, and read-back

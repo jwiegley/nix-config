@@ -30,7 +30,7 @@ type ProviderModel = Record<string, unknown>;
 const warningProcess = process;
 const MAX_DISCOVERY_RESPONSE_BYTES = 1024 * 1024;
 const MAX_DISCOVERY_MODEL_ENTRIES = 4096;
-const QWEN_MODEL_ID = "Qwen3.6-27B-oQ6e-mtp";
+const QWEN_MODEL_ID = "Qwen3.8-27B-oQ4e-mtp";
 const QWEN_THINKING_LEVEL_MAP = {
 	minimal: null,
 	low: null,
@@ -193,7 +193,7 @@ try {
 		return Promise.resolve(
 			Response.json({
 				data: [
-					{ id: "DeepSeek-V4-Flash-0731-oQ8e-mtp", max_model_len: 262144 },
+					{ id: "DeepSeek-V4-Flash-0731-MXFP4-MLX", max_model_len: 262144 },
 					{
 						id: QWEN_MODEL_ID,
 						max_model_len: 262144,
@@ -395,7 +395,7 @@ try {
 	);
 	expectEqual(
 		omlxModels.map((model) => model.id),
-		["DeepSeek-V4-Flash-0731-oQ8e-mtp", "Qwen3.6-27B-oQ6e-mtp"],
+		["DeepSeek-V4-Flash-0731-oQ8e-mtp", "Qwen3.8-27B-oQ4e-mtp"],
 		"oMLX filtering",
 	);
 	expectEqual(

@@ -1617,7 +1617,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
   }
   assert managed["profiles"] == {
       "llama-swap": {"model": "GLM-5.2", "model_provider": "llama-swap"},
-      "omlx": {"model": "Qwen3.6-27B-oQ6e-mtp", "model_provider": "omlx"},
+      "omlx": {"model": "Qwen3.8-27B-oQ4e-mtp", "model_provider": "omlx"},
   }
 
   with open(sys.argv[2], "rb") as stream:
@@ -1945,7 +1945,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
           }
           and .providers["omlx-hera"] == {
             "modelOverrides": {
-              "DeepSeek-V4-Flash-0731-oQ8e-mtp": {"contextWindow": 262144}
+              "DeepSeek-V4-Flash-0731-MXFP4-MLX": {"contextWindow": 262144}
             },
             "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
           }

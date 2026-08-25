@@ -6,9 +6,9 @@ import { pathToFileURL } from "node:url";
 const legacyPrefix = "omlx/";
 const staleModelPatterns = new Set(
 	[
-		"omlx-clio/DeepSeek-V4-Flash-0731-oQ8e-mtp",
-		"omlx-hera/Qwen3.6-27B-oQ6e-mtp",
-		"omlx-clio/Qwen3.6-27B-oQ6e-mtp",
+		"omlx-clio/DeepSeek-V4-Flash-0731-MXFP4-MLX",
+		"omlx-hera/Qwen3.8-27B-oQ4e-mtp",
+		"omlx-clio/Qwen3.8-27B-oQ4e-mtp",
 	].map((model) => model.toLowerCase()),
 );
 

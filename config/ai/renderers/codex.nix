@@ -117,7 +117,7 @@ let
     };
     profiles = {
       omlx = {
-        model = "Qwen3.6-27B-oQ6e-mtp";
+        model = "Qwen3.8-27B-oQ4e-mtp";
         model_provider = "omlx";
       };
       llama-swap = {

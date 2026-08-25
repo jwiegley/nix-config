@@ -792,7 +792,7 @@ pkgs.runCommand "host-behavior" { } ''
       "aliases": {
         "deepseek": {
           "harness": "pi",
-          "model": "DeepSeek-V4-Flash-0731-oQ8e-mtp",
+          "model": "DeepSeek-V4-Flash-0731-MXFP4-MLX",
           "provider": "omlx-hera",
           "thinking": "off"
         },

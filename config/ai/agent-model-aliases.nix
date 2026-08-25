@@ -37,7 +37,7 @@ let
     deepseek = {
       harness = "pi";
       provider = "omlx-hera";
-      model = "DeepSeek-V4-Flash-0731-oQ8e-mtp";
+      model = "DeepSeek-V4-Flash-0731-MXFP4-MLX";
       thinking = "off";
     };
     "gpt sol" = {

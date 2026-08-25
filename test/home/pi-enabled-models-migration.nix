@@ -58,14 +58,14 @@ pkgs.runCommand "pi-enabled-models-migration"
     stale="$TMPDIR/stale"
     mkdir "$stale"
     printf '%s\n' \
-      '{"enabledModels":["anthropic/*","omlx-hera/DeepSeek-V4-Flash-0731-oQ8e-mtp","omlx-clio/DeepSeek-V4-Flash-0731-oQ8e-mtp","omlx-hera/Qwen3.6-27B-oQ6e-mtp","omlx-clio/Qwen3.6-27B-oQ6e-mtp","omlx-hera/Qwen3.8-27B-oQ6e-mtp-mlx","omlx-clio/Qwen3.8-27B-oQ4e-mtp","factory/*"]}' \
+      '{"enabledModels":["anthropic/*","omlx-hera/DeepSeek-V4-Flash-0731-MXFP4-MLX","omlx-clio/DeepSeek-V4-Flash-0731-oQ8e-mtp","omlx-hera/Qwen3.8-27B-oQ4e-mtp","omlx-clio/Qwen3.8-27B-oQ4e-mtp","omlx-hera/Qwen3.8-27B-oQ4e-mtp","omlx-clio/Qwen3.8-27B-oQ4e-mtp","factory/*"]}' \
       >"$stale/settings.json"
     run_migration "$stale" omlx-hera
     jq -e '
       .enabledModels == [
         "anthropic/*",
-        "omlx-hera/DeepSeek-V4-Flash-0731-oQ8e-mtp",
-        "omlx-hera/Qwen3.8-27B-oQ6e-mtp-mlx",
+        "omlx-hera/DeepSeek-V4-Flash-0731-MXFP4-MLX",
+        "omlx-hera/Qwen3.8-27B-oQ4e-mtp",
         "omlx-clio/Qwen3.8-27B-oQ4e-mtp",
         "factory/*"
       ]
@@ -78,12 +78,12 @@ pkgs.runCommand "pi-enabled-models-migration"
     stale_legacy="$TMPDIR/stale-legacy"
     mkdir "$stale_legacy"
     printf '%s\n' \
-      '{"enabledModels":["omlx/DeepSeek-V4-Flash-0731-oQ8e-mtp","omlx/Qwen3.6-27B-oQ6e-mtp"]}' \
+      '{"enabledModels":["omlx/DeepSeek-V4-Flash-0731-MXFP4-MLX","omlx/Qwen3.8-27B-oQ4e-mtp"]}' \
       >"$stale_legacy/settings.json"
     run_migration "$stale_legacy" omlx-hera
     jq -e '
       .enabledModels == [
-        "omlx-hera/DeepSeek-V4-Flash-0731-oQ8e-mtp",
+        "omlx-hera/DeepSeek-V4-Flash-0731-MXFP4-MLX",
         "factory/*"
       ]
     ' "$stale_legacy/settings.json" >/dev/null

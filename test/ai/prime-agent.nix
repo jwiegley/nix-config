@@ -210,7 +210,7 @@ runCommand "prime-agent-integration-check"
     test "$(jq -r '.providers["openai-codex"].modelOverrides["gpt-5.6-sol"].contextWindow' ${models})" -eq 1050000
     test "$(jq -r '.providers.openrouter.modelOverrides["z-ai/glm-5.2"].contextWindow' ${models})" -eq 1048576
     test "$(jq -r '.providers["llama-swap"].modelOverrides["GLM-5.2"].contextWindow' ${models})" -eq 262144
-    test "$(jq -r '.providers.omlx.modelOverrides["DeepSeek-V4-Flash-0731-oQ8e-mtp"].contextWindow' ${models})" -eq 262144
+    test "$(jq -r '.providers.omlx.modelOverrides["DeepSeek-V4-Flash-0731-MXFP4-MLX"].contextWindow' ${models})" -eq 262144
 
     test "$(jq 'keys | length' ${keybindings})" -eq 10
     test "$(jq 'has("app.model.cycleForward") or has("app.model.cycleBackward")' ${keybindings})" = false

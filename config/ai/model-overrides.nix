@@ -3,7 +3,7 @@ let
     modelOverrides."GLM-5.2".contextWindow = 262144;
   };
   omlxOverrides = {
-    modelOverrides."DeepSeek-V4-Flash-0731-oQ8e-mtp".contextWindow = 262144;
+    modelOverrides."DeepSeek-V4-Flash-0731-MXFP4-MLX".contextWindow = 262144;
   };
 in
 {
