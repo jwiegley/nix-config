@@ -38,8 +38,8 @@
         "args": {
           "owner": "emacsmirror",
           "repo": "bookmark-plus",
-          "rev": "9b49af47db1ae090deba622b1954d722add926e1",
-          "sha256": "sha256-28KWCFFFFY7+tmk1cjTC/pP0ztqBrOUI/3ScLkjswZE="
+          "rev": "145c3fb9b124c75a5f89caba739c58969dc498d1",
+          "sha256": "sha256-nT9kgzlifLuByCEpRziaYJtOZaF/V/JlUk0hTyR0YC0="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/emacsmirror/bookmark-plus"
@@ -182,8 +182,8 @@
         "args": {
           "owner": "laurynas-biveinis",
           "repo": "elisp-mcp-dev",
-          "rev": "d70a8f38ededefb7e3d11f3e2b519bf754a54d1a",
-          "sha256": "sha256-7DewDcG9q61N6aMoGwyUFMkt/HNKf5LGxoocMe73pk4="
+          "rev": "1056379d74c8fd71b1c1457d1f3fb09b2ec375b8",
+          "sha256": "sha256-UFDq/bddNLhLAoc+V3vphEPMFhobYTakteEr6WbFsYE="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/laurynas-biveinis/elisp-mcp-dev"
@@ -262,8 +262,8 @@
         "args": {
           "owner": "karthink",
           "repo": "gptel",
-          "rev": "5d6312fd38959682aacf3972897d06c98aba5089",
-          "sha256": "sha256-apFHlOEnhTTp0TLpNz0eGzyng4BHyEEdI5mO1xINIu0="
+          "rev": "092bbc32fcada63404c572f6c3497c6d68d955f7",
+          "sha256": "sha256-TOnQcyQsKhmPAL0ZiJT18/GHwpLTN2deaJU0dalsq9A="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/karthink/gptel"
@@ -550,8 +550,8 @@
         "args": {
           "owner": "laurynas-biveinis",
           "repo": "mcp-server-lib.el",
-          "rev": "f7c34f5ab6ae4620cfa88a25ef9cbd47313322e4",
-          "sha256": "sha256-wc3w5x6ZQHJSKh4DgsBdEghcckbc4h9UIt9JMlPsAek="
+          "rev": "714f04fff23daff2cb236baff9a3579b958db462",
+          "sha256": "sha256-cWXTvRS4Ch8fGQrhvPudRUBm9HOqQIjULvPMGV4HtUs="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/laurynas-biveinis/mcp-server-lib.el"
