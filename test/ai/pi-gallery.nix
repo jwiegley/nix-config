@@ -1165,10 +1165,6 @@ runCommand "pi-gallery-check"
       [ -f "$provider_root/LICENSE" ]
       [ ! -e "$provider_root/node_modules" ]
     done
-    [ -f ${roots.bifrost}/index.ts ]
-    [ -f ${roots.bifrost}/bifrost.json ]
-    [ -f ${roots.bifrost}/schema.json ]
-    [ ! -e ${roots.bifrost}/node_modules ]
     [ -f ${roots.rewind}/src/index.ts ]
     [ -f ${roots.rewind}/src/core.ts ]
     [ -f ${roots.rewind}/src/ui.ts ]
@@ -1704,23 +1700,18 @@ runCommand "pi-gallery-check"
     PI_SESSION_COMPACTION_EVERY=4 \
     PI_SESSION_MIN_COMPACTIONS=4 \
       ${nodejs_24}/bin/node ${sourceForChecks}/test/ai/pi-session-memory.check.mjs scale
-    routing_smoke="$TMPDIR/pi-bifrost-smoke"
-    mkdir -p "$routing_smoke/home" "$routing_smoke/agent" "$routing_smoke/project"
-    cat > "$routing_smoke/synthetic.ts" <<'TS'
-    import { appendFileSync } from "node:fs";
+    provider_smoke="$TMPDIR/pi-provider-smoke"
+    mkdir -p "$provider_smoke"
+    cat > "$provider_smoke/synthetic.ts" <<'TS'
     import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
     import { registerApiProvider } from "@earendil-works/pi-ai/compat";
 
     function syntheticStream(model: any, _context: any, options: any) {
       const stream = createAssistantMessageEventStream();
       queueMicrotask(() => {
-        const text = options?.reasoning ?? "off";
-        if (process.env.PI_MODEL_ROUTE_LOG) {
-          appendFileSync(process.env.PI_MODEL_ROUTE_LOG, model.provider + "/" + model.id + "\n");
-        }
         const message: any = {
           role: "assistant",
-          content: [{ type: "text", text }],
+          content: [{ type: "text", text: options?.reasoning ?? "off" }],
           api: model.api,
           provider: model.provider,
           model: model.id,
@@ -1737,8 +1728,8 @@ runCommand "pi-gallery-check"
         };
         stream.push({ type: "start", partial: message });
         stream.push({ type: "text_start", contentIndex: 0, partial: message });
-        stream.push({ type: "text_delta", contentIndex: 0, delta: text, partial: message });
-        stream.push({ type: "text_end", contentIndex: 0, content: text, partial: message });
+        stream.push({ type: "text_delta", contentIndex: 0, delta: message.content[0].text, partial: message });
+        stream.push({ type: "text_end", contentIndex: 0, content: message.content[0].text, partial: message });
         stream.push({ type: "done", reason: "stop", message });
         stream.end();
       });
@@ -1763,22 +1754,7 @@ runCommand "pi-gallery-check"
           cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
           contextWindow: 128000,
           maxTokens: 16384,
-          thinkingLevelMap: {
-            minimal: null,
-            low: null,
-            medium: null,
-            high: "high",
-            xhigh: null,
-            max: null,
-          },
-        }, {
-          id: "plain",
-          name: "Plain",
-          reasoning: false,
-          input: ["text"],
-          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-          contextWindow: 128000,
-          maxTokens: 16384,
+          thinkingLevelMap: { high: "high" },
         }],
       });
       pi.registerProvider("cache-probe", {
@@ -1797,48 +1773,6 @@ runCommand "pi-gallery-check"
       });
     }
     TS
-    mkdir -p "$routing_smoke/project/.pi"
-    cat > "$routing_smoke/project/.pi/bifrost.json" <<'JSON'
-    {
-      "enabled": true,
-      "default": "general",
-      "strategy": "first",
-      "classifier": {"enabled": false},
-      "cache": {"enabled": false},
-      "reliability": {"enabled": false},
-      "models": {"general": ["synthetic/target"]}
-    }
-    JSON
-    (
-      cd "$routing_smoke/project"
-      env -u OMLX_API_KEY -u OMLX_CLIO_API_KEY -u OMLX_HERA_API_KEY \
-        -u LLAMA_SWAP_API_KEY \
-        HOME="$routing_smoke/home" \
-        PI_CODING_AGENT_DIR="$routing_smoke/agent" \
-        PI_MODEL_ROUTE_LOG="$routing_smoke/route.log" \
-        PI_OFFLINE=1 \
-        ${coreutils}/bin/timeout 60 \
-        ${lib.getExe piPackage} \
-        --print --offline --session "$routing_smoke/bifrost.jsonl" --no-context-files \
-        --no-extensions --no-skills --no-prompt-templates --no-approve \
-        --extension ${roots.bifrost}/index.ts \
-        --extension "$routing_smoke/synthetic.ts" \
-        --provider synthetic --model plain "route with Bifrost" \
-        </dev/null >"$routing_smoke/output" 2>"$routing_smoke/error"
-    ) || {
-      status=$?
-      cat "$routing_smoke/error" >&2
-      fail "Bifrost did not route the configured default with status $status"
-    }
-    [ "$(cat "$routing_smoke/output")" = high ] || {
-      cat "$routing_smoke/output" >&2
-      cat "$routing_smoke/error" >&2
-      fail "Bifrost did not select synthetic/target from project configuration"
-    }
-    [ "$(cat "$routing_smoke/route.log")" = synthetic/target ] || {
-      cat "$routing_smoke/route.log" >&2
-      fail "Bifrost did not route the request to synthetic/target"
-    }
     loop_smoke="$TMPDIR/pi-loop-smoke"
     mkdir -p "$loop_smoke/home" "$loop_smoke/agent"
     env -u OMLX_API_KEY -u OMLX_CLIO_API_KEY -u OMLX_HERA_API_KEY \
@@ -1851,7 +1785,7 @@ runCommand "pi-gallery-check"
         --print --offline --session "$loop_smoke/session.jsonl" --no-context-files \
         --no-extensions --no-skills --no-prompt-templates --no-approve \
         --extension ${piPackages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts \
-        --extension "$routing_smoke/synthetic.ts" \
+        --extension "$provider_smoke/synthetic.ts" \
         --provider synthetic --model target \
         '/loop --yes --delay 0 --max 2 test' \
         </dev/null >"$loop_smoke/output" 2>"$loop_smoke/error" || {
@@ -2026,7 +1960,7 @@ runCommand "pi-gallery-check"
         --mode rpc --no-session --offline \
         --no-prompt-templates \
         --no-context-files --no-approve \
-        --extension "$routing_smoke/synthetic.ts" \
+        --extension "$provider_smoke/synthetic.ts" \
         --extension "$smoke/active-tools.ts" \
         --provider cache-probe --model fixable
     ) || {
@@ -2147,7 +2081,6 @@ runCommand "pi-gallery-check"
           "goal-unfocus",
           "sisyphus",
           "sisyphus-direct",
-          "bifrost",
           "mp-preset",
           "pool",
           "subs",

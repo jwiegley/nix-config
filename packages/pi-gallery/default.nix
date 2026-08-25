@@ -28,7 +28,6 @@ let
         agent-browser
         cymbal
         pi-agent-browser-native
-        pi-bifrost
         pi-btw
         pi-cache-optimizer
         pi-caveman
@@ -887,14 +886,6 @@ let
       ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
         --directory=${root} --strip=1 \
         < ${./patches/pi-multi-pass-native-oauth.patch}
-    '';
-  };
-
-  pi-bifrost = mkCopyRoot {
-    pname = members.bifrost.attrName;
-    version = members.bifrost.version;
-    install = root: ''
-      tar -xzf ${releaseTarballs.pi-bifrost} -C ${root} --strip-components=1
     '';
   };
 

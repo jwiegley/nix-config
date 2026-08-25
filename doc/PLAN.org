@@ -2730,6 +2730,24 @@ Terminal audit found compatibility sidecar fallback can follow symlinked ancesto
 ]
 #+end_src
 
+* DONE [#B] Remove Pi Bifrost from managed gallery
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-84fh
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-25 Tue 01:32]
+:MODIFIED: [2026-08-25 Tue 01:32]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 01:32]
+:CLOSE_REASON: Bifrost removed from all maintained source, package, registration, documentation, updater, and runtime-check surfaces.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Remove pi-bifrost from source authority, package manifest/build, registration order, docs, updater contracts, runtime smoke, and command inventory as explicitly requested.
+
 * DONE [#D] Move the wiggum halt-request condition out of the ALL-must-hold exit list
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

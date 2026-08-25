@@ -45,7 +45,6 @@ in
     "pi-gallery"
     "pi-goal-x"
     "pi-hashline-edit-pro"
-    "pi-bifrost"
     "pi-lens"
     "pi-loop"
     "pi-markdown-preview"

@@ -49,7 +49,7 @@ that import this repository with `flake = false` declare `obr` as a direct input
 and pass it through their Home Manager module arguments; their lock adoption
 remains consumer-owned.
 
-The managed Pi profile makes the same complete 27-member extension gallery
+The managed Pi profile makes the same complete 26-member extension gallery
 available on every host. Pi Lens and Pi Mem remain packaged and projected but are
 excluded from automatic registration while their startup costs are isolated.
 Darwin registers loopback `llama-swap` plus the stable `omlx-hera` and
@@ -57,9 +57,7 @@ Darwin registers loopback `llama-swap` plus the stable `omlx-hera` and
 providers through authenticated TLS. Pi prefers explicit or login-Keychain
 provider credentials and otherwise uses the services' non-secret compatibility
 sentinel. Fixed provider overrides remain a separate Hera-only capability.
-Pi-Bifrost is a Gallery extension; its routing choices remain mutable project
-configuration rather than a generated Nix policy. Linux retains local-provider
-packages without registering them automatically.
+Linux retains local-provider packages without registering them automatically.
 
 The complete ownership and data-flow contract is maintained in
 [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md).

@@ -14,7 +14,7 @@ pi-version: 0.84.3
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: 24 gallery packages projected on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 22 of those packages on Darwin and 20 on Linux; Pi Lens and Pi Mem are retained but are not registered on any managed profile. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: 23 gallery packages projected on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 21 of those packages on Darwin and 19 on Linux; Pi Lens and Pi Mem are retained but are not registered on any managed profile. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope. The `agent-resources` package also carries `pi-openai-server-compaction` for compatibility testing, but no managed Pi profile renders or loads it, so it is not part of this configured inventory.
 
@@ -40,7 +40,6 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | `pi-droid-sdk` | 0.1.0 | Factory Droid models through the official Droid SDK and CLI | `/model`, `factory/*` |
 | `pi-provider-llama-swap` | `57583beb` | Discover chat models from local llama-swap | `/model`, `llama-swap/*` |
 | `pi-provider-omlx` | `57583beb` | Discover chat models from both authenticated workstation oMLX services | `/model`, `omlx-hera/*`, `omlx-clio/*` |
-| `pi-bifrost` | 0.4.0 | Per-prompt model routing from project configuration | `/bifrost` |
 | `pi-rewind` | 0.5.0 | Conversation and file checkpoints | `/rewind` |
 | `pi-trace-extension` | 0.1.15 | Local execution traces and HTML reports | `/trace` |
 | `pi-markdown-preview` | 0.14.1 | Terminal, browser, PDF, and artifact previews | `/preview`, `preview_export` |
@@ -61,7 +60,7 @@ These packages remain pinned, built, and present in the immutable Gallery projec
 | `pi-lens` | 4.0.1 | One packaged skill root exposing four Lens skills remains advertised, and Nix still renders the hidden Lens widget setting; Lens tools and commands are unavailable |
 | `@askjo/pi-mem` | 1.2.0 | Projection only; no Pi Mem imports, tools, commands, or managed state activation |
 
-The Factory Droid SDK provider is available and registered on every host. The llama-swap and oMLX provider packages are available everywhere, but the generated loader registers those two only on Darwin. Pi-Bifrost is loaded through the Gallery on every managed platform and owns no generated routing policy. Local llama-swap remains loopback-only. On both workstations the oMLX adapter registers the stable `omlx-hera` and `omlx-clio` identities and discovers both services through authenticated TLS. Hera receives fixed `omlx-hera` overrides; Clio retains bounded discovery so that Pi advertises only the models the two services actually return.
+The Factory Droid SDK provider is available and registered on every host. The llama-swap and oMLX provider packages are available everywhere, but the generated loader registers those two only on Darwin. Local llama-swap remains loopback-only. On both workstations the oMLX adapter registers the stable `omlx-hera` and `omlx-clio` identities and discovers both services through authenticated TLS. Hera receives fixed `omlx-hera` overrides; Clio retains bounded discovery so that Pi advertises only the models the two services actually return.
 
 ## Managed fleet configuration
 
@@ -72,7 +71,7 @@ The Hera, Clio, shared-work, VPS, and Vulcan Pi profiles are rendered by `~/src/
 | Surface | Current projection |
 | --- | --- |
 | Generated ownership | Individual leaves below `~/.config/pi/agent`, plus `~/.pi-lens/config.json` and the `~/.pi` compatibility link; Pi shares `~/.config/mcp/mcp.json` with Prime Agent |
-| Extension entries | Fleet Theme, Nix Gallery loader, Pi Loop, Pi MCP Adapter, and Quiet Display on every managed host; the Gallery loads the Factory Droid SDK provider and Pi-Bifrost everywhere; Darwin additionally loads loopback llama-swap and the bilateral authenticated oMLX discovery adapter, while Linux retains those local providers without registering them automatically |
+| Extension entries | Fleet Theme, Nix Gallery loader, Pi Loop, Pi MCP Adapter, and Quiet Display on every managed host; the Gallery loads the Factory Droid SDK provider everywhere; Darwin additionally loads loopback llama-swap and the bilateral authenticated oMLX discovery adapter, while Linux retains those local providers without registering them automatically |
 | Agent resources | 25 Nix-managed agent definitions |
 | Prompt resources | 63 files: 61 command prompts and the `emacs` and `spanish` prompts |
 | Skill resources | Shared catalog skills selected for Pi, plus five gallery package skill paths and one gallery prompt path advertised at runtime |
@@ -83,7 +82,7 @@ Shared skills remain in the common discovery estate rather than being copied int
 
 ### Model and routing policy
 
-The generated model files deliberately emit no default model. Model selection remains mutable at session scope. Hera configures fixed `llama-swap` and `omlx-hera` overrides plus the Hermes route. Clio retains Hermes and bounded runtime discovery for `llama-swap`, `omlx-hera`, and `omlx-clio`, but emits no fixed local-provider override. Linux generates only the native remote-provider context overrides even though the complete extension package projection is present. Pi-Bifrost reads project configuration and is not Nix-owned model policy.
+The generated model files deliberately emit no default model. Model selection remains mutable at session scope. Hera configures fixed `llama-swap` and `omlx-hera` overrides plus the Hermes route. Clio retains Hermes and bounded runtime discovery for `llama-swap`, `omlx-hera`, and `omlx-clio`, but emits no fixed local-provider override. Linux generates only the native remote-provider context overrides even though the complete extension package projection is present.
 
 | Item | Current value |
 | --- | --- |
@@ -363,13 +362,6 @@ Pi Droid SDK registers Factory's model catalog through the public `@factory/droi
 
 **Basic usage.** The managed configuration installs the official `droid` CLI. Set `FACTORY_API_KEY` in the launching environment or use Pi's `/login` flow for the `factory` provider, then open `/model` and select a `factory/*` model. After adding credentials to an already-running Pi process, run `/droid-refresh-models` to refresh the account's current catalog. Model availability and organization policy remain controlled by Factory.
 
-### Pi-Bifrost
-
-**Version:** 0.4.0 · **Links:** [Home](https://iamaamir.github.io/pi-bifrost/) · [Pi Packages](https://pi.dev/packages/pi-bifrost)
-
-Pi-Bifrost selects a model before a prompt is sent. Its routing configuration is mutable project state: the managed Gallery ships the extension but does not generate a model policy, select a default route, or write a project file.
-
-**Basic usage.** In the project that should route prompts, run `/bifrost init`, review its proposed `.pi/bifrost.json`, and confirm it. Use `/bifrost` to inspect or adjust its runtime controls. Its optional classifier, cache, reliability data, and routing rules remain outside Nix ownership.
 
 ## Companion runtimes
 

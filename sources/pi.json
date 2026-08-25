@@ -97,22 +97,6 @@
       },
       "version": "0.5.0"
     },
-    "pi-bifrost": {
-      "source": {
-        "args": {
-          "hash": "sha256-FzQkIEOzh/mxwWW76aPP76VmOiMRu4N1TPipev6EpPE=",
-          "url": "https://registry.npmjs.org/pi-bifrost/-/pi-bifrost-0.4.0.tgz"
-        },
-        "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-bifrost/-/pi-bifrost-0.4.0.tgz"
-      },
-      "update": {
-        "buildPackage": "pi-bifrost",
-        "kind": "npm-release",
-        "package": "pi-bifrost"
-      },
-      "version": "0.4.0"
-    },
     "pi-cache-optimizer": {
       "source": {
         "args": {
