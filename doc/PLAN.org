@@ -10405,6 +10405,24 @@ Partner observation 2026-08-10T21:51:54.606Z: remove already-resolved questions 
 ]
 #+end_src
 
+* DONE [#B] Enable jemalloc for tmux 3.7c on Darwin
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-rg9b
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-24 Mon 22:56]
+:MODIFIED: [2026-08-24 Mon 22:56]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 22:56]
+:CLOSE_REASON: Darwin tmux now builds with upstream-required jemalloc; exact candidate wiki/Nixpkgs closure and Fractal smoke pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+make update failed while validating plasma-wiki because candidate Nixpkgs selected tmux 3.7c, whose macOS configure now requires an explicit jemalloc policy. Add a Darwin compatibility override with jemalloc at the portable Fractal seam and verify the candidate runtime closure.
+
 * DONE [#B] Make Andoria builders accept peer-produced store paths
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
