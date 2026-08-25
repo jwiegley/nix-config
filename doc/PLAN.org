@@ -1705,6 +1705,24 @@ Managed stdio MCP clients may augment rather than replace their parent environme
 ]
 #+end_src
 
+* DONE [#B] Disable interactive SSH authentication fleet-wide
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-4m4q
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-24 Mon 23:31]
+:MODIFIED: [2026-08-24 Mon 23:31]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 23:31]
+:CLOSE_REASON: Managed SSH now disables password and keyboard-interactive fallback under BatchMode; all configured hosts pass key-only probes and both Home Manager APIs pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Managed SSH routes still allowed password and keyboard-interactive fallback, so an unavailable agent could prompt during unattended builds and rollouts. Make SSH fail closed with BatchMode and key-only authentication across both Home Manager APIs.
+
 * DONE [#B] Repair PAL MCP across managed machines
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

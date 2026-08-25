@@ -49,6 +49,9 @@ let
         HashKnownHosts = true;
         ServerAliveInterval = 60;
         ForwardAgent = false;
+        BatchMode = true;
+        KbdInteractiveAuthentication = false;
+        PasswordAuthentication = false;
 
         StrictHostKeyChecking = "yes";
         VerifyHostKeyDNS = "yes";
