@@ -5225,6 +5225,21 @@ Ruff reports two unused local variables in test/bin/publish-slow-test.py: the un
 ]
 #+end_src
 
+* DONE [#C] Remove live Droid discovery from Pi startup
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-eh61
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-25 Tue 14:31]
+:MODIFIED: [2026-08-25 Tue 14:42]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 14:42]
+:CLOSE_REASON: Pi now registers the bundled Factory roster at startup and session replacement without credential lookup, Droid spawn, or network discovery. /droid-refresh-models remains the explicit live refresh. Droid factory benchmark fell from 10.9s to 0ms; regression, flake eval, pre-commit, and Hera build pass.
+:SOURCE_REPO: .
+:ORIGINAL_SIZE: 0
+:END:
+
 * TODO [#D] cross-consumer-eval vulcan leg cannot run off-vulcan
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

@@ -114,7 +114,7 @@ type Provider = {
 	models?: Array<Record<string, unknown>>;
 };
 
-test("caches the credential-free Factory catalog until explicit refresh", async () => {
+test("uses the bundled Factory catalog until explicit refresh", async () => {
 	const providers = new Map<string, Provider>();
 	const commands = new Set<string>();
 	const tools = new Set<string>();
@@ -154,7 +154,7 @@ test("caches the credential-free Factory catalog until explicit refresh", async 
 	expect(provider?.apiKey).toBe("FACTORY_API_KEY");
 	expect(provider?.api).toBe("droid-sdk");
 	expect(provider?.models).toHaveLength(26);
-	expect(authQueries).toEqual(["factory"]);
+	expect(authQueries).toEqual([]);
 
 	const models = provider?.models ?? [];
 	const ids = models.map((model) => model.id);
@@ -172,7 +172,7 @@ test("caches the credential-free Factory catalog until explicit refresh", async 
 	await (
 		refreshModels as (args: string, ctx: { hasUI: boolean }) => Promise<void>
 	)("", { hasUI: false });
-	expect(authQueries).toEqual(["factory", "factory"]);
+	expect(authQueries).toEqual(["factory"]);
 });
 
 test("reads stored Factory auth through the current Pi credential API", async () => {

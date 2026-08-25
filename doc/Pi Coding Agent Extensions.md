@@ -358,9 +358,9 @@ The fleet-packaged [oMLX provider][pi-provider-omlx] uses the same bounded disco
 
 **Version:** 0.1.0, pinned at `ecc7e9e` · **Links:** [Pi extension](https://github.com/bentossell/pi-droid-sdk) · [Factory TypeScript SDK](https://docs.factory.ai/sdk/typescript) · [Factory models](https://docs.factory.ai/models)
 
-[Pi Droid SDK][pi-droid-sdk] registers Factory's model catalog through the public `@factory/droid-sdk` package and the official `droid` CLI. It presents those models under `factory/*` and maps Pi thinking levels to the model's advertised Droid reasoning levels. The managed Gallery enforces model-only operation with autonomy off and the Pi tool bridge disabled. When no credential is available, the extension loads a bundled fallback roster without contacting Factory; live discovery and requests require `FACTORY_API_KEY` or Pi's mutable `factory` login. Nix owns only the pinned extension and dependency closure.
+[Pi Droid SDK][pi-droid-sdk] registers Factory models through the public `@factory/droid-sdk` package and the official `droid` CLI. It presents those models under `factory/*` and maps Pi thinking levels to the model's advertised Droid reasoning levels. The managed Gallery enforces model-only operation with autonomy off and the Pi tool bridge disabled. Startup and session replacement load the bundled roster without reading Factory credentials, spawning Droid, or contacting Factory. Explicit `/droid-refresh-models` discovery and model requests require `FACTORY_API_KEY` or Pi's mutable `factory` login. Nix owns only the pinned extension and dependency closure.
 
-**Basic usage.** The managed configuration installs the official `droid` CLI. Set `FACTORY_API_KEY` in the launching environment or use Pi's `/login` flow for the `factory` provider, then open `/model` and select a `factory/*` model. After adding credentials to an already-running Pi process, run `/droid-refresh-models` to refresh the account's current catalog. Model availability and organization policy remain controlled by Factory.
+**Basic usage.** The managed configuration installs the official `droid` CLI. Open `/model` to select a bundled `factory/*` model. After setting `FACTORY_API_KEY`, using Pi's `/login` flow for the `factory` provider, or changing Factory authentication, run `/droid-refresh-models` to replace the process-local roster with the account's current catalog. Model availability and organization policy remain controlled by Factory.
 
 
 ## Companion runtimes
@@ -385,7 +385,7 @@ The Pi profile also installs the support toolchain expected by [Lens][pi-lens] a
 - The active profile root is `~/.config/pi/agent`; Nix owns only the generated leaves enumerated above.
 - Run `/reload` after a Nix activation when the current Pi process must adopt changed extension code.
 - On Hera and Clio, reopen `/model` after the llama-swap, `omlx-hera`, or `omlx-clio` roster changes; the picker continues to display its cached list while allowing up to 15 seconds for the combined catalog refresh. Each discovery request retains its separate 2.5-second bound.
-- Run `/droid-refresh-models` after adding or changing Factory authentication in an already-running Pi session.
+- Run `/droid-refresh-models` when the current Pi process needs Factory's live account catalog; startup deliberately stays on the bundled roster.
 - Mutable extension state remains outside Nix ownership. Examples include [Pi Mem][pi-mem] Markdown, scratchpad, and dashboard cache; [Pi Trace][pi-trace] files; the Usage Dashboard cache; [Cache Optimizer][pi-cache-optimizer], [Caveman][pi-caveman], [Quiet][pi-quiet], and [RTK Optimizer][pi-rtk-optimizer] preferences; [Pi Loop][pi-loop] presets and logs; [Pi MCP Adapter][pi-mcp-adapter] credentials and cache; [Pi Cymbal][pi-cymbal] indexes; and [Pi Subagents][pi-subagents], [Pi Dynamic Workflows][pi-dynamic-workflows], and [Pi Goal X][pi-goal-x] run state.
 - Style extensions retain distinct purposes: [Ponytail][ponytail] minimizes implementation; [Caveman][pi-caveman] compresses prose; [Quiet][pi-quiet] compresses tool presentation; [Fleet Theme][fleet-theme] changes TUI color treatment.
 

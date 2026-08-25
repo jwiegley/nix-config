@@ -1,32 +1,41 @@
 diff --git a/src/index.ts b/src/index.ts
-index 253cada..28697ee 100644
+index 253cada..965d8f7 100644
 --- a/src/index.ts
 +++ b/src/index.ts
-@@ -34,6 +34,23 @@ function registerDroidProvider(pi: Pick<ExtensionAPI, "registerProvider">, models: ProviderModelConfig[]): void {
+@@ -1,5 +1,5 @@
+ import type { ExtensionAPI, ExtensionContext, ProviderConfig, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
+-import { discoverModels, type DroidModelFallbackIssue } from "./model-discovery.js";
++import { discoverModels, fallbackModels, type DroidModelFallbackIssue } from "./model-discovery.js";
+ import { registerDroidPiToolBridge } from "./droid-pi-tool-bridge.js";
+ import { registerDroidQuestionTool } from "./droid-question-tool.js";
+ import { registerDroidSessionCwd } from "./droid-session-cwd.js";
+@@ -34,6 +34,25 @@
  	pi.registerProvider("factory", createDroidProviderConfig(models));
  }
  
-+async function discoverCatalog() {
++async function discoverCatalog(refresh: boolean) {
 +	let fallbackIssue: DroidModelFallbackIssue | undefined;
-+	const models = await discoverModels({
-+		onFallback: (issue) => {
-+			fallbackIssue = issue;
-+		},
-+	});
++	const models = refresh
++		? await discoverModels({
++			onFallback: (issue) => {
++				fallbackIssue = issue;
++			},
++		})
++		: fallbackModels();
 +	return { models, fallbackIssue };
 +}
 +
 +let catalogPromise: ReturnType<typeof discoverCatalog> | undefined;
 +
 +function loadCatalog(refresh = false) {
-+	if (refresh || !catalogPromise) catalogPromise = discoverCatalog();
++	if (refresh || !catalogPromise) catalogPromise = discoverCatalog(refresh);
 +	return catalogPromise;
 +}
 +
  export default async function (pi: DroidExtensionApi) {
  	registerDroidSessionCwd(pi);
  	registerDroidQuestionTool(pi);
-@@ -43,12 +60,7 @@ export default async function (pi: DroidExtensionApi) {
+@@ -43,12 +62,7 @@
  		setDroidAskUserUiContext({ hasUI: ctx.hasUI, ui: ctx.ui });
  	});
  
@@ -40,7 +49,7 @@ index 253cada..28697ee 100644
  
  	if (fallbackIssue) {
  		const issue = fallbackIssue;
-@@ -60,12 +72,8 @@ export default async function (pi: DroidExtensionApi) {
+@@ -60,12 +74,8 @@
  	pi.registerCommand("droid-refresh-models", {
  		description: "Refresh the live Factory model catalog without restarting pi",
  		handler: async (_args, ctx) => {
@@ -253,7 +262,7 @@ index 96f2b95..7809e66 100644
  		name: DROID_ASK_QUESTION_TOOL_NAME,
  		label: "Droid question",
 diff --git a/src/model-discovery.ts b/src/model-discovery.ts
-index 49460c0..e883616 100644
+index 49460c0..11b5b63 100644
 --- a/src/model-discovery.ts
 +++ b/src/model-discovery.ts
 @@ -1,16 +1,17 @@
@@ -276,7 +285,7 @@ index 49460c0..e883616 100644
  const CATALOG_REFRESH_HINT =
  	"After adding auth to an already-started pi session, run /droid-refresh-models to refresh the live Factory model catalog without restarting pi.";
  
-@@ -42,24 +43,6 @@ export interface DroidModelMetadata {
+@@ -42,24 +43,6 @@
  
  const metadataByPiModelId = new Map<string, DroidModelMetadata>();
  
@@ -301,7 +310,9 @@ index 49460c0..e883616 100644
  function normalizeApiKey(value: string | undefined): string | undefined {
  	const trimmed = value?.trim();
  	if (!trimmed) return undefined;
-@@ -69,16 +52,14 @@ function normalizeApiKey(value: string | undefined): string | undefined {
+@@ -67,18 +50,16 @@
+ 	return trimmed;
+ }
  
 -async function getStoredFactoryApiKey(): Promise<string | undefined> {
 +export async function getStoredFactoryApiKey(): Promise<string | undefined> {
@@ -321,7 +332,23 @@ index 49460c0..e883616 100644
  	const storedApiKey = await getStoredFactoryApiKey();
  	if (storedApiKey) return storedApiKey;
  
-@@ -248,7 +228,8 @@ export async function discoverModels(options: DiscoverModelsOptions = {}): Promi
+@@ -237,18 +218,23 @@
+ 	};
+ }
+ 
++export function fallbackModels(): ProviderModelConfig[] {
++	return registerMetadata(fallbackMetadataFromSnapshot());
++}
++
+ export async function discoverModels(options: DiscoverModelsOptions = {}): Promise<ProviderModelConfig[]> {
+ 	const apiKey = await getDiscoveryApiKey();
+ 	if (!apiKey) {
+ 		options.onFallback?.(missingApiKeyIssue());
+-		return registerMetadata(fallbackMetadataFromSnapshot());
++		return fallbackModels();
+ 	}
+ 
+ 	try {
  		const session = await createSession({
  			modelId: FALLBACK_MODEL_ITEMS[0]?.id ?? "kimi-k2.5",
  			cwd: process.cwd(),
