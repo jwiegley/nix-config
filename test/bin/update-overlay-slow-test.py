@@ -4243,6 +4243,11 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         updates = {
             name: target["_record"]["update"] for name, target in catalog.items()
         }
+        self.assertEqual(updates["llm-agents"]["kind"], "flake-input")
+        self.assertEqual(
+            updates["llm-agents"]["buildPackage"], "pi-extension-tests"
+        )
+        self.assertEqual(updates["llm-agents"]["buildMode"], "check")
         automatic_pypi = {
             name
             for name, update in updates.items()

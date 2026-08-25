@@ -7622,6 +7622,40 @@ The 2026-08-14 ./build system gate fails while evaluating git-all: its Nixpkgs 2
 
 Hermes MicroVM native web_search uses packaged Python/httpx against https://searxng.vulcan.lan. The host SearXNG/uWSGI/nginx service and the Node mcp-searxng adapter are healthy, but the hermes-agent service exports SEARXNG_URL without SSL_CERT_FILE. Exact packaged Python under env -i reproduces CERTIFICATE_VERIFY_FAILED; adding SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt returns HTTP 200 with results. Fix at Vulcan's authoritative /etc/nixos Hermes service environment, not in the root Node MCP wrapper. Add an evaluation assertion and an env-i behavioral TLS trust regression. No service restart or activation is authorized by this issue.
 
+* DONE [#B] Hold llm-agents updates on canonical Pi drift
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-kplq
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-24 Mon 23:31]
+:MODIFIED: [2026-08-24 Mon 23:31]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 23:31]
+:CLOSE_REASON: llm-agents now builds pi-extension-tests before acceptance; Pi 0.84.3 drift is held at the target boundary and updater regression passes.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+An llm-agents bump advanced packaged Pi beyond the manually reviewed source build, was accepted, then poisoned final update validation. Route llm-agents candidates through pi-extension-tests so version or patch drift is rejected at the target boundary.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-kplq",
+    "depends_on_id": "nix-86d8",
+    "type": "discovered-from",
+    "created_at": "2026-08-25T06:31:20.950691Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Fail task launch when the initial completion claim cannot be persisted
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
