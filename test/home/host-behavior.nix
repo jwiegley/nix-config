@@ -222,6 +222,12 @@ let
         definitions = (import ../../config/ai/model-overrides.nix).pi.galleryProviders;
         endpoints = aiCatalog.piModelDiscoveryEndpoints;
       };
+  agentModelAliasesPath = ".config/flatten-recordings/agent-model-aliases.json";
+  agentModelAliases = import ../../config/ai/agent-model-aliases.nix { inherit lib; };
+  heraAgentModelAliasesSource = desktopHomesByHost.hera.home.file.${agentModelAliasesPath}.source;
+  expectedAgentModelAliasesSource =
+    (pkgs.formats.json { }).generate "expected-agent-model-aliases.json"
+      agentModelAliases;
   recordingTranscriptionPath = ".config/transcribe/llm-route.json";
   recordingTranscriptionRoute = aiCatalog.recordingTranscriptionRoutesByHost.hera;
   heraRecordingTranscriptionSource =
@@ -698,6 +704,11 @@ assert builtins.all (
   config:
   config.home.sessionVariables.NODE_EXTRA_CA_CERTS == config.home.sessionVariables.SSL_CERT_FILE
 ) desktopHomes;
+assert builtins.hasAttr agentModelAliasesPath desktopHomesByHost.hera.home.file;
+assert !(builtins.hasAttr agentModelAliasesPath desktopHomesByHost.clio.home.file);
+assert builtins.all (
+  config: !(builtins.hasAttr agentModelAliasesPath config.home.file)
+) nonDesktopHomes;
 assert builtins.hasAttr recordingTranscriptionPath desktopHomesByHost.hera.home.file;
 assert !(builtins.hasAttr recordingTranscriptionPath desktopHomesByHost.clio.home.file);
 assert builtins.all (
@@ -773,6 +784,29 @@ pkgs.runCommand "host-behavior" { } ''
   ${pkgs.diffutils}/bin/cmp -s \
     ${heraRecordingTranscriptionSource} \
     ${expectedRecordingTranscriptionSource}
+  ${pkgs.diffutils}/bin/cmp -s \
+    ${heraAgentModelAliasesSource} \
+    ${expectedAgentModelAliasesSource}
+  ${pkgs.jq}/bin/jq -e '
+    . == {
+      "aliases": {
+        "deepseek": {
+          "harness": "pi",
+          "model": "DeepSeek-V4-Flash-0731-oQ8e-mtp",
+          "provider": "omlx-hera",
+          "thinking": "off"
+        },
+        "gpt sol": {
+          "harness": "pi",
+          "model": "gpt-5.6-sol",
+          "provider": "openai-codex",
+          "thinking": "max"
+        }
+      },
+      "defaultAlias": "gpt sol",
+      "version": 1
+    }
+  ' ${heraAgentModelAliasesSource} >/dev/null
   ${pkgs.jq}/bin/jq -e '
     type == "object"
     and keys == ["base_url", "model", "version"]

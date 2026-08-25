@@ -129,8 +129,12 @@ let
       null
     else
       catalog.recordingTranscriptionRoutesByHost.${profileHost} or null;
+  agentModelAliases = import ./ai/agent-model-aliases.nix { inherit lib; };
   xdgConfigRelative = lib.removePrefix "${config.home.homeDirectory}/" config.xdg.configHome;
   recordingTranscriptionFiles = lib.optionalAttrs (recordingTranscriptionRoute != null) {
+    "${xdgConfigRelative}/flatten-recordings/agent-model-aliases.json" = {
+      source = (pkgs.formats.json { }).generate "agent-model-aliases.json" agentModelAliases;
+    };
     "${xdgConfigRelative}/transcribe/llm-route.json" = {
       source = (pkgs.formats.json { }).generate "transcribe-llm-route.json" {
         version = 2;

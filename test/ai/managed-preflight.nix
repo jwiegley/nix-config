@@ -97,6 +97,9 @@ let
   primeManagedSettingsProbe = builtins.tryEval (preflightFactory {
     newPaths = [ ".prime/agent/managed-settings.json" ];
   });
+  agentModelAliasesProbe = builtins.tryEval (preflightFactory {
+    newPaths = [ ".config/flatten-recordings/agent-model-aliases.json" ];
+  });
   recordingTranscriptionProbe = builtins.tryEval (preflightFactory {
     newPaths = [ ".config/transcribe/llm-route.json" ];
   });
@@ -119,6 +122,7 @@ assert task9PreflightWithMcp.activation.after == [ ];
 assert !invalidPreflightProbe.success;
 assert !sherlockAncestorProbe.success;
 assert primeManagedSettingsProbe.success;
+assert agentModelAliasesProbe.success;
 assert recordingTranscriptionProbe.success;
 assert !primeUserSettingsProbe.success;
 assert !piMutableMcpProbe.success;
