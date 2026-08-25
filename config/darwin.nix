@@ -247,6 +247,12 @@ in
     };
   };
 
+  # Hermes Agent is intentionally allowed to act as John while he is away.
+  # Keep that full-autonomy policy confined to Hera.
+  security.sudo.extraConfig = lib.mkIf config.johnw.host.isHera ''
+    johnw ALL=(ALL:ALL) NOPASSWD: ALL
+  '';
+
   # Start GnuPG through its canonical sockets at login. The bootstrap exits
   # after gpg-agent daemonizes, so launchd never supervises or crash-loops it.
   launchd.user.agents.gnupg-agent.serviceConfig = {

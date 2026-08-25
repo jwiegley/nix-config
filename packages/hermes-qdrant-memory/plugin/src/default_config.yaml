@@ -1,0 +1,36 @@
+# Portable defaults. Host configuration overrides the endpoint and collection.
+# Memory-provider activation remains owned by the Hermes memory.provider key.
+
+plugins:
+  qdrant:
+    # Deployment authority must provide this explicitly. An empty default
+    # prevents a damaged/missing config from falling back into another agent's
+    # collection.
+    collection: ""
+
+    connection:
+      mode: remote
+      path: null
+      url: http://127.0.0.1:6333
+      api_key_env: QDRANT_API_KEY
+
+    embedding:
+      provider: gateway
+      model: bge-m3-mlx-fp16
+      dimension: 1024
+      sparse_model: bm25-local
+      api_key_env: OPENAI_API_KEY
+
+    retrieval:
+      mode: hybrid
+      top_k: 10
+      search_kinds: [fact]
+
+    write_filter:
+      exact: []
+      patterns: []
+      min_content_chars: 0
+
+    extraction:
+      enabled: false
+      min_turns: 3

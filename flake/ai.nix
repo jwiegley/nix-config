@@ -148,6 +148,47 @@ let
 
   canonicalDroidPackages = forAllSystems (system: (agentPackagesFor "droid" system).droid);
 
+  canonicalHermesPackages = forAllSystems (
+    system:
+    let
+      pkgs = pkgsFor.${system};
+      upstream = inputs.hermes-agent.packages.${system}.default;
+      hermesWebToolsSource =
+        pkgs.runCommand "hermes-web-tools-redacted-0.20.5"
+          {
+            nativeBuildInputs = [ pkgs.patch ];
+          }
+          ''
+                mkdir -p "$out"
+                cp -R ${inputs.hermes-agent.outPath}/tools "$out/tools"
+                chmod -R u+w "$out/tools"
+                patch --force --fuzz=0 --no-backup-if-mismatch \
+                  -p1 -d "$out" < ${./ai/patches/hermes-web-extract-redaction.patch}
+
+            HERMES_WEB_TOOLS_OUT="$out" ${pkgs.python3}/bin/python3 - <<'PY'
+            import os
+            from pathlib import Path
+
+            source_root = Path(os.environ["HERMES_WEB_TOOLS_OUT"])
+            for relative_path in ("tools/url_safety.py", "tools/web_tools.py"):
+                source_path = source_root / relative_path
+                compile(source_path.read_text(), str(source_path), "exec")
+            PY
+          '';
+    in
+    upstream.overrideAttrs (old: {
+      postFixup = (old.postFixup or "") + ''
+        for program in hermes hermes-agent hermes-acp; do
+          wrapProgram "$out/bin/$program" \
+            --set PYTHONPATH ${hermesWebToolsSource}
+        done
+      '';
+      passthru = (old.passthru or { }) // {
+        inherit hermesWebToolsSource;
+      };
+    })
+  );
+
   optAgent =
     pkgs: name:
     assert lib.assertMsg (agentExistsOnSupportedSystem name)
@@ -369,6 +410,15 @@ let
       '';
 in
 {
+  homeManagerModules.hermes-agent =
+    { lib, pkgs, ... }:
+    {
+      imports = [ inputs.hermes-agent.homeManagerModules.default ];
+      config.services.hermes-agent.package =
+        lib.mkDefault
+          canonicalHermesPackages.${pkgs.stdenv.hostPlatform.system};
+    };
+
   overlays = {
     default = lib.composeManyExtensions overlays;
     tools = toolsOverlay;
@@ -415,6 +465,7 @@ in
       inherit (toolPkgs) nix-scripts;
       codex = canonicalCodexPackages.${system};
       droid = canonicalDroidPackages.${system};
+      hermes-agent = canonicalHermesPackages.${system};
       pi = canonicalPiPackages.${system};
       inherit (pkgs)
         agent-resources
@@ -480,6 +531,17 @@ in
       agent-deck-go-compat = pkgs.callPackage ../test/ai/overlays/agent-deck-go-compat.nix { };
       agent-deck-runtime-lifecycle = pkgs.agent-deck;
       fractal-smoke = pkgs.callPackage ../test/ai/overlays/plasma-fractal-smoke.nix { };
+      hermes-web-extract-redaction = pkgs.runCommand "hermes-web-extract-redaction" { } ''
+        export HOME="$TMPDIR/home"
+        export HERMES_HOME="$TMPDIR/hermes"
+        export PYTHONDONTWRITEBYTECODE=1
+        export PYTHONPATH=${canonicalHermesPackages.${system}.hermesWebToolsSource}
+        mkdir -p "$HOME" "$HERMES_HOME"
+        ${canonicalHermesPackages.${system}.hermesVenv}/bin/python3 \
+          ${../test/ai/hermes-web-extract-redaction.py} \
+          ${canonicalHermesPackages.${system}.hermesWebToolsSource}
+        touch "$out"
+      '';
       llama-cpp-platform-compat = pkgs.callPackage ../test/ai/overlays/llama-cpp-platform-compat.nix { };
       omlx-post-patch = pkgs.callPackage ../test/ai/overlays/omlx-post-patch.nix { };
       llm-agents-nixpkgs-independent =

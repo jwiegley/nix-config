@@ -40,6 +40,7 @@ let
     ((import ../overlays/30-git-tools.nix) {
       gitScripts = inputs.git-scripts or null;
     })
+    ((import ../overlays/30-hermes-integrations.nix) { inherit inputs; })
     ((import ../overlays/30-ledger.nix) { ledger = inputs.ledger or null; })
     (import ../overlays/30-markless.nix)
     (import ../overlays/30-misc-tools.nix)

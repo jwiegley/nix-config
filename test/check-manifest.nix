@@ -32,6 +32,7 @@ let
       compatibility-contract = behavioral systems false;
       format = behavioral systems false;
       fractal-smoke = behavioral systems false;
+      hermes-web-extract-redaction = behavioral systems false;
       lint = behavioral systems false;
       llama-cpp-platform-compat = evaluationOnly systems;
       llm-agents-nixpkgs-independent = evaluationOnly systems;
@@ -60,6 +61,9 @@ let
       emacs-head = evaluationOnly darwinSystems;
       home-manager-release-skew = behavioral systems false;
       host-behavior = evaluationOnly systems;
+      hermes-agent = behavioral darwinSystems false;
+      hermes-agent-ops = behavioral darwinSystems false;
+      hermes-renderer = behavioral darwinSystems false;
       managed-agent-package-selection = evaluationOnly systems;
       model-sync-state = behavioral systems false;
       obr-ownership = evaluationOnly systems;

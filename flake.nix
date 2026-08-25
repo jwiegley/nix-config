@@ -415,6 +415,16 @@
               edit-env = pkgs.callPackage ./test/overlays/edit-env.nix { };
             }
             // pkgs.lib.optionalAttrs (system == "aarch64-darwin") {
+              hermes-agent = pkgs.callPackage ./test/home/hermes-agent.nix {
+                inherit
+                  darwinConfigurations
+                  homeConfigurations
+                  ;
+              };
+              hermes-agent-ops = pkgs.callPackage ./test/home/hermes-agent-ops.nix {
+                inherit pkgs;
+              };
+              hermes-renderer = agentTestPkgsFor.${system}.callPackage ./test/ai/hermes-renderer.nix { };
               emacs-head = pkgs.callPackage ./test/overlays/emacs-head.nix {
                 inherit darwinConfigurations;
                 configured = agentTestPkgsFor.${system};

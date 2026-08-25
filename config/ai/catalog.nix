@@ -10,13 +10,14 @@ let
   managedStdio = import ./managed-stdio.nix { inherit lib; };
   inherit (managedStdio) typedEnvironment;
   manageStdioTransport = managedStdio.normalize;
-  clients = [
+  contentClients = [
     "claude"
     "codex"
     "droid"
     "pi"
     "prime"
   ];
+  clients = contentClients ++ [ "hermes" ];
   allowedAgentCapabilities = [
     "read-files"
     "search-text"
@@ -31,7 +32,6 @@ let
     "find-files"
     "run-commands"
   ];
-  contentClients = clients;
   commandClients = [
     "claude"
     "codex"
@@ -133,6 +133,9 @@ let
       localModelRoutes = true;
     };
     hera-droid = mkProfile "droid" [ "personal" ] "hera" "darwin" ".config/factory";
+    hera-hermes = mkProfile "hermes" [ "personal" ] "hera" "darwin" ".hermes" // {
+      localModelRoutes = true;
+    };
     hera-pi = mkProfile "pi" [ "personal" ] "hera" "darwin" ".config/pi/agent" // {
       localModelRoutes = true;
       hermesRoute = true;
@@ -857,6 +860,7 @@ let
           env.SEARXNG_URL = "https://searxng.vulcan.lan";
         }
         {
+          clients = contentClients;
           hosts = [
             "clio"
             "hera"
@@ -877,8 +881,37 @@ let
       args = [ ];
     } baseMcpSelectors;
 
+    org-db =
+      (mkMcp
+        {
+          command = "org-db-mcp";
+          args = [ ];
+          env = {
+            ORG_CONFIG = "\${HOME}/.config/org/config.yaml";
+            ORG_DB_BASE_URL = "http://127.0.0.1:8000";
+            ORG_DB_MODEL = "bge-m3-mlx-fp16";
+            PGDATABASE = "org";
+            PGHOST = "vulcan.lan";
+            PGPASSWORD = typedEnv "PGPASSWORD";
+            PGPORT = "5432";
+            PGSSLMODE = "verify-full";
+            PGSSLROOTCERT = "\${SSL_CERT_FILE}";
+            PGUSER = "openclaw";
+          };
+        }
+        {
+          profiles = [ "hera-hermes" ];
+        }
+      )
+      // {
+        tools.include = [
+          "org_sql"
+          "org_search"
+        ];
+      };
+
     stock-trader =
-      mkMcp
+      (mkMcp
         {
           command = "/etc/profiles/per-user/johnw/bin/stock-trader-mcp";
           args = [ ];
@@ -889,10 +922,34 @@ let
             "clio-pi"
             "hera-claude-personal"
             "hera-droid"
+            "hera-hermes"
             "hera-pi"
             "hera-prime"
           ];
-        };
+        }
+      )
+      // {
+        tools.include = [
+          "get_quote"
+          "get_price_history"
+          "get_technical_analysis"
+          "get_news_sentiment"
+          "check_data_source_status"
+          "scan_market"
+          "analyze_options"
+          "assess_trade_risk"
+          "get_av_news_sentiment"
+          "get_forex_rate"
+          "get_crypto_quote"
+          "get_commodity"
+          "get_insider_transactions"
+          "get_etf_profile"
+          "get_earnings_calendar"
+          "get_ipo_calendar"
+          "get_listing_status"
+          "get_historical_options"
+        ];
+      };
   };
 
   hooks = {
@@ -1351,6 +1408,15 @@ let
       "http://localhost:8890"
       "https://searxng.vulcan.lan"
     ];
+    ORG_CONFIG = [ "\${HOME}/.config/org/config.yaml" ];
+    ORG_DB_BASE_URL = [ "http://127.0.0.1:8000" ];
+    ORG_DB_MODEL = [ "bge-m3-mlx-fp16" ];
+    PGDATABASE = [ "org" ];
+    PGHOST = [ "vulcan.lan" ];
+    PGPORT = [ "5432" ];
+    PGSSLMODE = [ "verify-full" ];
+    PGSSLROOTCERT = [ "\${SSL_CERT_FILE}" ];
+    PGUSER = [ "openclaw" ];
   };
 
   validEnvironmentValue =
@@ -1550,6 +1616,29 @@ let
         validUrl false transport.url
     );
 
+  validateMcpTools =
+    tools:
+    let
+      keys = builtins.attrNames tools;
+      validToolList =
+        values:
+        builtins.isList values
+        && values != [ ]
+        && builtins.length values == builtins.length (lib.unique values)
+        && builtins.all validItemName values;
+    in
+    builtins.isAttrs tools
+    && keys != [ ]
+    && builtins.all (
+      key:
+      builtins.elem key [
+        "exclude"
+        "include"
+      ]
+    ) keys
+    && builtins.all (key: validToolList tools.${key}) keys
+    && lib.intersectLists (tools.include or [ ]) (tools.exclude or [ ]) == [ ];
+
   validate =
     {
       profiles ? catalogProfiles,
@@ -1661,6 +1750,7 @@ let
             || (
               builtins.elem profile.client [
                 "codex"
+                "hermes"
                 "pi"
                 "prime"
               ]
@@ -1670,18 +1760,22 @@ let
           && (!profile.hermesRoute || (profile.client == "pi" && profile.platform == "darwin"))
         ) "invalid profile ${id}"
       ) profiles;
-      fessProjectionChecks = lib.mapAttrsToList (
-        id: profile:
-        let
-          selectedAgents = select profile items.agents;
-          selectedCommands = select profile items.commands;
-        in
-        ensure (
-          selectedAgents ? fess-auditor
-          && selectedCommands ? fess
-          && selectedAgents.fess-auditor.source == selectedCommands.fess.source
-        ) "fess auditor has no same-source direct command in profile ${id}"
-      ) profiles;
+      fessProjectionChecks = lib.concatLists (
+        lib.mapAttrsToList (
+          id: profile:
+          let
+            selectedAgents = select profile items.agents;
+            selectedCommands = select profile items.commands;
+          in
+          lib.optional (builtins.elem profile.client contentClients) (
+            ensure (
+              selectedAgents ? fess-auditor
+              && selectedCommands ? fess
+              && selectedAgents.fess-auditor.source == selectedCommands.fess.source
+            ) "fess auditor has no same-source direct command in profile ${id}"
+          )
+        ) profiles
+      );
       mcpChecks = lib.mapAttrsToList (
         name: server:
         let
@@ -1697,6 +1791,7 @@ let
           )
           && builtins.all (host: validateTransport hostTransports.${host}) (builtins.attrNames hostTransports)
           && validateOverrides (server.overrides or { })
+          && (!(server ? tools) || validateMcpTools server.tools)
         ) "invalid MCP server ${name}"
       ) items.mcpServers;
       mcpResolutionChecks = lib.concatMap (
@@ -1800,6 +1895,7 @@ in
   piModelDiscoveryEndpoints = catalogPiModelDiscoveryEndpoints;
   recordingTranscriptionRoutesByHost = catalogRecordingTranscriptionRoutesByHost;
   inherit
+    contentClients
     matches
     select
     sharedMcpClients

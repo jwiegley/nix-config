@@ -2649,6 +2649,38 @@ Run the canonical make update transaction from the clean signed/live main branch
 
 Completed fleet evidence on 2026-08-23. The final canonical make update processed all 164 catalog targets with zero held targets and accepted Agent Deck 1.15.0, git-ai source c395f546, llm-agents aa8a6076, pi-mcp-adapter 6c08147f, Pi Quiet 6fe09706, Pi Cache Optimizer 2.8.6, Goal-X 0.30.0, and gptel 5d6312fd. Signed source checkpoints b5e4b535, f1263ecd, cd5ada03, and final a0c5c779 are published and verified. Hera activated /nix/store/y1p41aqrqbjf96mgk36s6xlryhydkj6d-darwin-system-26.11.4cff07d; Clio fast-forwarded clean/live and activated /nix/store/4igmv5waybngd4an264331mjbfygcg3n-darwin-system-26.11.4cff07d. Vulcan signed consumer eb46cbbd is clean/live and activated /nix/store/1c7nicxq57ay3y6qxd47018vk2xllv9c-nixos-system-vulcan-25.11.20260630.b6018f8. Shared signed consumer b600ebd5 is clean/live; exact recursively signed 2268-path closure c2425b9214d5877e6f70362dcc5e8a18ac5344b00f5b5558998c2078d875ee4e was activated serially on Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server at /nix/store/jaarvhv490903a7xsnzkby7a4wz5v65r-home-manager-generation. Every active host reports Agent Deck 1.15.0 and Pi 0.84.2 with required health, rollback, trust, no-session, clean-checkout, and no-new-failure checks. Hera and Clio model inventories expose Factory plus omlx-clio and omlx-hera with legacy omlx absent. Hera Agent Deck sees the one waiting Clio Claude session after changing only the remote destination to johnw@clio. Hera non-card GPG signing is autonomous after a fresh agent start; Clio card support remains intact. Session inventories were unchanged. VPS and the dormant git-ai host were not contacted or activated. Explicit residuals remain tracked: nix-vjus for Agent Deck remote JSON error reporting, nix-ezv3 for the September certificate renewal validation, and the pre-existing T2/Delphi CPU-affinity debt.
 
+* TODO [#B] Back up and restore-test Vulcan Qdrant memory
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-7v7o
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-24 Mon 16:40]
+:MODIFIED: [2026-08-24 Mon 16:40]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix-hermes-agent-hera
+:SOURCE_REPO_PATH: /Users/johnw/Products/nix-hermes-agent-hera
+:ORIGINAL_SIZE: 0
+:END:
+
+Vulcan stores Qdrant on its ext4 root and declares no snapshot or backup job. Add scheduled Qdrant snapshots, copy them to an independent recovery location, monitor freshness, and complete a restoration drill for both memories and assistant collections. Correct any monitoring text that claims ZFS protection.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-7v7o",
+    "depends_on_id": "nix-hermes-agent-hera-ozhf",
+    "type": "discovered-from",
+    "created_at": "2026-08-24T23:40:21.217353Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Package Pi Quiet's complete imported source closure
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -6567,6 +6599,290 @@ Receipt-linked child cleanup validates the target incarnation but does not reval
     "author": "johnw",
     "text": "TOCTOU/lock-order requirement: receipt/incarnation validation under inbox tuple locks is insufficient because profile migration changes core rows under the global per-instance spawn lock. Cleanup must acquire affected parent spawn locks in sorted ID order before resolving/revalidating lineage, then acquire profile/parent tuple locks (matching migration's spawn-to-tuple order), re-list/retry if the parent set expands, and hold both through exact deletes. Add post-validation migration/reinsert blocking coverage.",
     "created_at": "2026-08-13T21:56:04Z"
+  }
+]
+#+end_src
+
+* DONE [#B] Deploy native autonomous Hermes Agent on Hera
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-hermes-agent-hera-ozhf
+:LABELS:   []
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-24 Mon 16:17]
+:MODIFIED: [2026-08-25 Tue 02:26]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 02:26]
+:CLOSE_REASON: Completed for owner review: native Hera-only Hermes implementation, integrations, security controls, monitoring, rollback documentation, and concurrent Pi changes are staged in the isolated uncommitted worktree; all non-activation gates and independent reviews are clear. Activation-only runtime acceptance remains intentionally unrun; Qdrant RBAC and backup remain tracked separately.
+:SOURCE_REPO: nix-hermes-agent-hera
+:SOURCE_REPO_PATH: /Users/johnw/Products/nix-hermes-agent-hera
+:ORIGINAL_SIZE: 0
+:END:
+
+Implement the approved native Hera Hermes design in an isolated worktree: pinned upstream Home Manager service, exact local DeepSeek/oMLX routing, Conduit over private Tailscale Serve, Qdrant collection assistant, org-db and read-only stock-trader integration, native SearXNG search, Keychain-only secrets, stable macOS identity, unrestricted Hera sudo autonomy, monitoring, rollback, and combined-tree verification. Preserve the concurrent Pi work. No commit, push, or activation before owner review of the uncommitted worktree.
+
+** Acceptance Criteria
+
+All planned source, package, catalog, renderer, service, security, test, monitoring, migration, and documentation changes are present as an uncommitted diff in the review worktree; focused and repository gates pass without activation; independent Nix/security/architecture/Fess reviews have no blockers; no secret or mutable user state is captured; concurrent Pi changes are incorporated in the final combined evidence; exact review path and remaining activation-only gates are recorded.
+
+* DONE [#B] Pin and package native Hermes Agent
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-hermes-agent-hera-ozhf.1
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-24 Mon 16:18]
+:MODIFIED: [2026-08-24 Mon 22:00]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 22:00]
+:CLOSE_REASON: Pinned Hermes 0.20.5 at fcbd1076, exported the coherent portable package/module pair, and passed portable all-systems plus aarch64-darwin package checks.
+:SOURCE_REPO: nix-hermes-agent-hera
+:SOURCE_REPO_PATH: /Users/johnw/Products/nix-hermes-agent-hera
+:ORIGINAL_SIZE: 0
+:END:
+
+Pin a reviewed upstream Hermes flake revision in the portable input set, keep lock coherence and manual update policy, expose the native package/module without duplicating upstream ownership, and add deterministic package/install contracts.
+
+** Acceptance Criteria
+
+Exact source/version recorded; root and portable locks coherent; package builds on aarch64-darwin; no runtime updater or duplicate package owner; non-Hera consumers evaluate unchanged.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-hermes-agent-hera-ozhf.1",
+    "depends_on_id": "nix-hermes-agent-hera-ozhf",
+    "type": "parent-child",
+    "created_at": "2026-08-24T23:18:01.108309Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#B] Add Hermes catalog profile and service adapter
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-hermes-agent-hera-ozhf.2
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-24 Mon 16:18]
+:MODIFIED: [2026-08-24 Mon 22:00]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 22:00]
+:CLOSE_REASON: Added the Hera-only catalog profile and renderer with exact local oMLX routing, native search, org-db, stock analysis, and upstream service ownership.
+:SOURCE_REPO: nix-hermes-agent-hera
+:SOURCE_REPO_PATH: /Users/johnw/Products/nix-hermes-agent-hera
+:ORIGINAL_SIZE: 0
+:END:
+
+Add a Hera-only Hermes catalog profile and attrset renderer feeding the upstream Home Manager module, exact oMLX model routing, native SearXNG, org-db and read-only stock-trader MCP, authoritative managed config, and mutable-state ownership.
+
+** Acceptance Criteria
+
+Catalog owns selection; renderer only adapts upstream options; upstream module remains sole serializer/service owner; exact model has no cloud fallback; removed MCP entries disappear; Clio/Linux remain disabled.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-hermes-agent-hera-ozhf.2",
+    "depends_on_id": "nix-hermes-agent-hera-ozhf",
+    "type": "parent-child",
+    "created_at": "2026-08-24T23:18:01.422391Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-hermes-agent-hera-ozhf.2",
+    "depends_on_id": "nix-hermes-agent-hera-ozhf.1",
+    "type": "blocks",
+    "created_at": "2026-08-24T23:18:12.354733Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-hermes-agent-hera-ozhf.2",
+    "depends_on_id": "nix-hermes-agent-hera-ozhf.5",
+    "type": "blocks",
+    "created_at": "2026-08-24T23:18:12.591127Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#B] Verify Hermes build behavior and rollback readiness
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-hermes-agent-hera-ozhf.3
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-24 Mon 16:18]
+:MODIFIED: [2026-08-25 Tue 02:26]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 02:26]
+:CLOSE_REASON: Completed: exact staged snapshot passed focused Hermes/oMLX behavior, full root aarch64-darwin closeout, portable/root no-build evaluation, formatting, pre-commit hooks, and build-only Hera system; independent lifecycle review and final Fess audit are CLEAR; no activation, commit, or push.
+:SOURCE_REPO: nix-hermes-agent-hera
+:SOURCE_REPO_PATH: /Users/johnw/Products/nix-hermes-agent-hera
+:ORIGINAL_SIZE: 0
+:END:
+
+Add bounded behavioral/package/security/host-scope tests, run focused and complete non-activation gates on the combined tree, perform independent reviews, and document migration, monitoring, activation acceptance and rollback.
+
+** Acceptance Criteria
+
+Dedicated Hermes behavioral check is mutation-resistant; formatting, hooks, unit tests, portable/root eval, package and system builds pass; independent reviews clear; no activation/commit/push; uncommitted worktree and exact evidence are ready for owner review.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-hermes-agent-hera-ozhf.3",
+    "depends_on_id": "nix-hermes-agent-hera-ozhf",
+    "type": "parent-child",
+    "created_at": "2026-08-24T23:18:01.739997Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-hermes-agent-hera-ozhf.3",
+    "depends_on_id": "nix-hermes-agent-hera-ozhf.1",
+    "type": "blocks",
+    "created_at": "2026-08-24T23:18:13.355563Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-hermes-agent-hera-ozhf.3",
+    "depends_on_id": "nix-hermes-agent-hera-ozhf.2",
+    "type": "blocks",
+    "created_at": "2026-08-24T23:18:14.120777Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-hermes-agent-hera-ozhf.3",
+    "depends_on_id": "nix-hermes-agent-hera-ozhf.4",
+    "type": "blocks",
+    "created_at": "2026-08-24T23:18:14.424184Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-hermes-agent-hera-ozhf.3",
+    "depends_on_id": "nix-hermes-agent-hera-ozhf.5",
+    "type": "blocks",
+    "created_at": "2026-08-24T23:18:13.771334Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#B] Add Hera native identity secrets network and autonomy
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-hermes-agent-hera-ozhf.4
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-24 Mon 16:18]
+:MODIFIED: [2026-08-24 Mon 22:00]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 22:00]
+:CLOSE_REASON: Added the stable signed launcher, Keychain-only credential wrapper, loopback API, explicit private Serve helper, Hera-only sudo, private logs, and max-jobs/cores policy without activation.
+:SOURCE_REPO: nix-hermes-agent-hera
+:SOURCE_REPO_PATH: /Users/johnw/Products/nix-hermes-agent-hera
+:ORIGINAL_SIZE: 0
+:END:
+
+Integrate stable signed macOS launcher identity with the upstream LaunchAgent, Keychain-only required credentials, loopback API, private Tailscale Serve intent, Hera-only unrestricted sudo, GPG/SSH environment, Nix max-jobs/cores, private logs and migration safeguards.
+
+** Acceptance Criteria
+
+No duplicate service; loopback-only API; no Funnel; no secret values in store/config/plist/argv/logs; stable bundle identity; Hera-only sudo and service policy; no CPU affinity; existing mutable Hermes state preserved.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-hermes-agent-hera-ozhf.4",
+    "depends_on_id": "nix-hermes-agent-hera-ozhf",
+    "type": "parent-child",
+    "created_at": "2026-08-24T23:18:02.033096Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-hermes-agent-hera-ozhf.4",
+    "depends_on_id": "nix-hermes-agent-hera-ozhf.2",
+    "type": "blocks",
+    "created_at": "2026-08-24T23:18:12.968284Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#B] Port configurable Hermes Qdrant memory
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-hermes-agent-hera-ozhf.5
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-24 Mon 16:18]
+:MODIFIED: [2026-08-24 Mon 22:00]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 22:00]
+:CLOSE_REASON: Ported configurable Qdrant memory, selected collection assistant, added fail-closed isolation/lifecycle/security contracts, and built the package.
+:SOURCE_REPO: nix-hermes-agent-hera
+:SOURCE_REPO_PATH: /Users/johnw/Products/nix-hermes-agent-hera
+:ORIGINAL_SIZE: 0
+:END:
+
+Port Vulcan hybrid Qdrant memory as a reusable package, parameterize the collection, select assistant on Hera, retain dense/BM25/RRF/fact/turn behavior, and add isolation/schema tests.
+
+** Acceptance Criteria
+
+Collection is configurable and exactly assistant on Hera; plugin package builds; fake endpoint proves no memories access; schema, embedding model and dimension contracts are tested; no secrets enter Nix.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-hermes-agent-hera-ozhf.5",
+    "depends_on_id": "nix-hermes-agent-hera-ozhf",
+    "type": "parent-child",
+    "created_at": "2026-08-24T23:18:02.287995Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  },
+  {
+    "issue_id": "nix-hermes-agent-hera-ozhf.5",
+    "depends_on_id": "nix-hermes-agent-hera-ozhf.1",
+    "type": "blocks",
+    "created_at": "2026-08-24T23:18:12.108057Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
@@ -17240,6 +17556,38 @@ Full isolated Agent Deck go test ./... failed TestKillStaleControlClients_Preser
     "depends_on_id": "nix-tcz.30.1",
     "type": "discovered-from",
     "created_at": "2026-08-13T22:43:30.040980Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* TODO [#B] Isolate Hermes assistant collection with Qdrant JWT RBAC
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-uasn
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-24 Mon 16:40]
+:MODIFIED: [2026-08-24 Mon 16:40]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix-hermes-agent-hera
+:SOURCE_REPO_PATH: /Users/johnw/Products/nix-hermes-agent-hera
+:ORIGINAL_SIZE: 0
+:END:
+
+Vulcan currently protects Qdrant with one global API key, so the Hera collection name assistant provides namespace separation but not an authorization boundary from memories. Design and deploy collection-scoped JWT RBAC on Vulcan, issue a least-privilege Hera credential, rotate the shared key, and prove Hera cannot read or mutate memories.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-uasn",
+    "depends_on_id": "nix-hermes-agent-hera-ozhf",
+    "type": "discovered-from",
+    "created_at": "2026-08-24T23:40:20.817375Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""

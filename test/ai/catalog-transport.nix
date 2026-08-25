@@ -57,6 +57,9 @@ let
   c1CsiModelIdentifier = builtins.fromJSON "\"model\\u009b1m\"";
   c1OscModelIdentifier = builtins.fromJSON "\"model\\u009dtitle\"";
   profiles = builtins.attrValues catalog.profiles;
+  contentProfiles = builtins.filter (
+    profile: builtins.elem profile.client catalog.contentClients
+  ) profiles;
   localModelEndpointsFor =
     profile:
     if profile.localModelRoutes then catalog.localModelEndpointsByHost.${profile.host} else null;
@@ -979,7 +982,7 @@ assert builtins.all (
   selected.agents ? fess-auditor
   && selected.commands ? fess
   && selected.agents.fess-auditor.source == selected.commands.fess.source
-) profiles;
+) contentProfiles;
 assert claudeSettings.base.model == "claude-opus-5[1m]";
 assert catalog.validate {
   items = withClaudeSettingsBase (
@@ -1004,7 +1007,7 @@ assert builtins.all (
 assert catalog.validate {
   items = withClaudeSettingsBase (claudeSettings.base // { model = "café/模型@版本"; });
 };
-assert builtins.all (profile: (selectFor profile).mcpServers ? pal) profiles;
+assert builtins.all (profile: (selectFor profile).mcpServers ? pal) contentProfiles;
 assert builtins.all (
   profile:
   builtins.all (
@@ -1169,6 +1172,7 @@ assert
     builtins.attrNames (lib.filterAttrs (_: profile: profile.localModelRoutes) catalog.profiles)
   ) == [
     "hera-codex"
+    "hera-hermes"
     "hera-pi"
     "hera-prime"
   ];

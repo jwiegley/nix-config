@@ -1,0 +1,58 @@
+diff --git a/bin/DB/Exec.hs b/bin/DB/Exec.hs
+index b4c66b5..f7b3bf8 100644
+--- a/bin/DB/Exec.hs
++++ b/bin/DB/Exec.hs
+@@ -179,7 +179,10 @@ execDb _cfg opts coll = do
+               , embedChunkSize = 8000
+               , embedConcurrency = 1
+               }
+-      vec <- embedQuery ecfg (T.pack (sopts ^. searchQuery))
++      query <- case sopts ^. searchQuery of
++        SearchQueryArgument value -> pure (T.pack value)
++        SearchQueryStdin -> TIO.getContents
++      vec <- embedQuery ecfg query
+       results <- querySimilar db vec (sopts ^. searchLimit)
+       case sopts ^. searchFormat of
+         TextFormat -> mapM_ (\(row, src, _, _) -> printSearchRow db row src) results
+diff --git a/bin/DB/Options.hs b/bin/DB/Options.hs
+index f030de1..64085fe 100644
+--- a/bin/DB/Options.hs
++++ b/bin/DB/Options.hs
+@@ -64,8 +64,13 @@ data DBEmbedOpts = DBEmbedOpts
+   }
+   deriving (Show, Eq, Typeable, Generic)
+ 
++data SearchQuery
++  = SearchQueryArgument !String
++  | SearchQueryStdin
++  deriving (Show, Eq, Typeable, Generic)
++
+ data DBSearchOpts = DBSearchOpts
+-  { _searchQuery :: !String
++  { _searchQuery :: !SearchQuery
+   , _searchLimit :: !Int
+   , _searchFormat :: !OutputFormat
+   , _searchBaseUrlOpt :: !String
+@@ -349,10 +354,18 @@ embedOpts =
+ searchOpts :: OA.Parser DBSearchOpts
+ searchOpts =
+   DBSearchOpts
+-    <$> strArgument
+-      ( metavar "QUERY"
+-          <> help "Search text"
+-      )
++    <$> ( flag'
++            SearchQueryStdin
++            ( long "query-stdin"
++                <> help "Read search text from standard input"
++            )
++            <|> ( SearchQueryArgument
++                    <$> strArgument
++                      ( metavar "QUERY"
++                          <> help "Search text"
++                      )
++                )
++        )
+     <*> option
+       auto
+       ( short 'n'

@@ -8,10 +8,13 @@
   keychainCommand ? "/usr/bin/security",
   keychainCredentials ? { },
   package,
-  program,
+  program ? null,
+  programs ? null,
+  requiredKeychainCredentials ? [ ],
 }:
 
 let
+  wrappedPrograms = if programs == null then [ program ] else programs;
   validEnvironmentName = name: builtins.match "[A-Z][A-Z0-9_]*" name != null;
   validMetadata =
     value:
@@ -50,18 +53,42 @@ let
       fi
     '') keychainCredentials
   );
+  requiredCredentialResets = lib.concatMapStringsSep "\n" (
+    environmentName: "unset ${environmentName}"
+  ) requiredKeychainCredentials;
   credentialPrelude = lib.optionalString (keychainCredentials != { }) ''
+    case "$-" in
+      *a*) set +a; _nix_managed_restore_allexport=1 ;;
+      *) _nix_managed_restore_allexport=0 ;;
+    esac
     _nix_managed_restore_xtrace=0
     case "$-" in
       *x*) _nix_managed_restore_xtrace=1; set +x ;;
     esac
+    unset _nix_managed_credential
+    ${requiredCredentialResets}
     ${credentialLookups}
     unset _nix_managed_credential
-    if [[ "$_nix_managed_restore_xtrace" == 1 ]]; then
-      unset _nix_managed_restore_xtrace
+    ${lib.concatMapStringsSep "\n" (environmentName: ''
+      if [[ -z "''${${environmentName}:-}" ]]; then
+        printf '%s\n' ${lib.escapeShellArg "required runtime credential ${environmentName} is unavailable"} >&2
+        exit 78
+      fi
+    '') requiredKeychainCredentials}
+    if [[ "$_nix_managed_restore_allexport" == 1 ]]; then
+      if [[ "$_nix_managed_restore_xtrace" == 1 ]]; then
+        unset _nix_managed_restore_allexport _nix_managed_restore_xtrace
+        set -a
+        set -x
+      else
+        unset _nix_managed_restore_allexport _nix_managed_restore_xtrace
+        set -a
+      fi
+    elif [[ "$_nix_managed_restore_xtrace" == 1 ]]; then
+      unset _nix_managed_restore_allexport _nix_managed_restore_xtrace
       set -x
     else
-      unset _nix_managed_restore_xtrace
+      unset _nix_managed_restore_allexport _nix_managed_restore_xtrace
     fi
   '';
   defaultArguments = lib.concatStringsSep " " (
@@ -70,7 +97,12 @@ let
     ) defaults
   );
 in
-assert builtins.isString program && builtins.match "[A-Za-z0-9][A-Za-z0-9._+-]*" program != null;
+assert (program == null) != (programs == null);
+assert builtins.isList wrappedPrograms && wrappedPrograms != [ ];
+assert builtins.length wrappedPrograms == builtins.length (lib.unique wrappedPrograms);
+assert builtins.all (
+  name: builtins.isString name && builtins.match "[A-Za-z0-9][A-Za-z0-9._+-]*" name != null
+) wrappedPrograms;
 assert
   builtins.isString keychainCommand
   && lib.hasPrefix "/" keychainCommand
@@ -79,6 +111,12 @@ assert
   && !lib.hasInfix "\r" keychainCommand;
 assert builtins.all validEnvironmentName (builtins.attrNames defaults);
 assert builtins.all validEnvironmentName (builtins.attrNames keychainCredentials);
+assert builtins.isList requiredKeychainCredentials;
+assert
+  builtins.length requiredKeychainCredentials
+  == builtins.length (lib.unique requiredKeychainCredentials);
+assert builtins.all validEnvironmentName requiredKeychainCredentials;
+assert builtins.all (name: builtins.hasAttr name keychainCredentials) requiredKeychainCredentials;
 assert
   lib.intersectLists (builtins.attrNames defaults) (builtins.attrNames keychainCredentials) == [ ];
 assert builtins.all validMetadata (builtins.attrValues keychainCredentials);
@@ -90,8 +128,10 @@ pkgs.symlinkJoin (
     paths = [ package ];
     nativeBuildInputs = [ pkgs.makeWrapper ];
     postBuild = ''
-      wrapProgram "$out/bin/"${lib.escapeShellArg program} ${defaultArguments} \
-        --run ${lib.escapeShellArg credentialPrelude}
+      for program in ${lib.escapeShellArgs wrappedPrograms}; do
+        wrapProgram "$out/bin/$program" ${defaultArguments} \
+          --run ${lib.escapeShellArg credentialPrelude}
+      done
     '';
   }
   // lib.optionalAttrs (package ? pname) { inherit (package) pname; }

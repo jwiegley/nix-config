@@ -9,6 +9,8 @@ let
   lib = inputs.nixpkgs.lib;
   sources = import ../../packages/source-catalog.nix "ai";
   implementationSource = builtins.readFile ../../flake/ai.nix;
+  portableLock = builtins.fromJSON (builtins.readFile ../../config/ai/flake.lock);
+  hermesLockNode = portableLock.nodes.${portableLock.nodes.root.inputs.hermes-agent};
   agentResourcesFormals = builtins.functionArgs (import ../../packages/agent-resources.nix);
   sortedNames = value: lib.sort builtins.lessThan (builtins.attrNames value);
   hasAll = actual: required: builtins.all (name: builtins.elem name actual) required;
@@ -18,6 +20,7 @@ let
     "checks"
     "devShells"
     "formatter"
+    "homeManagerModules"
     "lib"
     "overlays"
     "packages"
@@ -69,6 +72,26 @@ let
       };
       pinnedCodexPackage = inputs.llm-agents.packages.${system}.codex;
       pinnedDroidPackage = inputs.llm-agents.packages.${system}.droid;
+      upstreamHermesPackage = inputs.hermes-agent.packages.${system}.default;
+      hermesModule = actual.homeManagerModules.hermes-agent { inherit lib pkgs; };
+      hermesPackageFromModule =
+        rootModule:
+        (lib.evalModules {
+          modules = [
+            {
+              options.services.hermes-agent.package = lib.mkOption {
+                type = lib.types.package;
+                default = upstreamHermesPackage;
+              };
+            }
+            (builtins.removeAttrs hermesModule [ "imports" ])
+            rootModule
+          ];
+        }).config.services.hermes-agent.package;
+      hermesModuleDefaultPackage = hermesPackageFromModule { };
+      hermesModuleRootOverridePackage = hermesPackageFromModule {
+        services.hermes-agent.package = upstreamHermesPackage;
+      };
       upstreamPiPackage = inputs.llm-agents.packages.${system}.pi;
       toolPkgs = import inputs.nixpkgs {
         inherit system;
@@ -211,6 +234,22 @@ let
         actual.lib.aiPackagesFor pkgs
       )) "portable AI package policy lost the canonical Droid on ${system}")
       (lib.assertMsg (
+        actual.packages.${system}.hermes-agent.drvPath != upstreamHermesPackage.drvPath
+        && actual.packages.${system}.hermes-agent.version == "0.20.5"
+        &&
+          actual.packages.${system}.hermes-agent.hermesVenv.drvPath
+          == upstreamHermesPackage.hermesVenv.drvPath
+        && lib.isDerivation actual.packages.${system}.hermes-agent.hermesWebToolsSource
+      ) "portable Hermes Agent lost its reviewed 0.20.5 redaction wrapper on ${system}")
+      (lib.assertMsg (
+        builtins.length (hermesModule.imports or [ ]) == 1
+        && hermesModuleDefaultPackage.drvPath == actual.packages.${system}.hermes-agent.drvPath
+        && hermesModuleRootOverridePackage.drvPath == upstreamHermesPackage.drvPath
+      ) "portable Hermes Agent module lost its patched default or root override priority on ${system}")
+      (lib.assertMsg (builtins.all (
+        package: package.drvPath != actual.packages.${system}.hermes-agent.drvPath
+      ) activePackageSelections) "portable AI toolchain selected host-owned Hermes Agent on ${system}")
+      (lib.assertMsg (
         actual.packages.${system}.pi.drvPath == (actual.lib.patchAgentPackage pkgs "pi" upstreamPiPackage)
         .drvPath
       ) "portable Pi moved away from its canonical packaging substrate on ${system}")
@@ -223,6 +262,15 @@ let
     );
   assertions = [
     (lib.assertMsg (hasAll inputNames contract.inputs) "portable AI input contract lost a required input")
+    (lib.assertMsg (
+      (inputs.hermes-agent.rev or null) == "fcbd1076a93841fa88855acce810e342a5b78101"
+      && !(builtins.hasAttr "hermes-agent" sources)
+    ) "portable Hermes Agent must remain an exact, manually reviewed flake pin")
+    (lib.assertMsg (
+      hermesLockNode.inputs.nixpkgs == [ "nixpkgs" ]
+    ) "portable Hermes Agent must follow the consumer nixpkgs input")
+    (lib.assertMsg (hasAll (sortedNames actual.homeManagerModules) contract.homeManagerModules) "portable Home Manager module contract lost a required module")
+    (lib.assertMsg (builtins.isFunction actual.homeManagerModules.hermes-agent) "portable Hermes Agent Home Manager module is not callable")
     (lib.assertMsg (
       !(inputs.npm-cache-nixpkgs ? legacyPackages)
       && (inputs.npm-cache-nixpkgs.rev or null) == "a831408e6378bc02ebf8cc09b52c96ca86f6bab4"

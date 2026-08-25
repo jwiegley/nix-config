@@ -30,6 +30,11 @@
 
     llm-agents.url = "github:numtide/llm-agents.nix";
 
+    hermes-agent = {
+      url = "github:NousResearch/hermes-agent/fcbd1076a93841fa88855acce810e342a5b78101";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     ponytail = {
       url = "github:DietrichGebert/ponytail";
       flake = false;

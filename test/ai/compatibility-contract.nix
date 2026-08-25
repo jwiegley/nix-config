@@ -11,6 +11,7 @@ in
   inputs = [
     "agent-browser-source"
     "git-ai"
+    "hermes-agent"
     "llm-agents"
     "mcp-servers-nix"
     "npm-cache-nixpkgs"
@@ -32,6 +33,7 @@ in
     "codex"
     "default"
     "droid"
+    "hermes-agent"
     "nix-scripts"
     "pi"
     "pi-agent-browser-native"
@@ -64,6 +66,8 @@ in
     "prime-agent"
     "rtk"
   ];
+
+  homeManagerModules = [ "hermes-agent" ];
 
   # Truthful evidence-bearing app names plus the conventional `default` alias.
   # `no-warnings` is a real app running no-warnings.sh.

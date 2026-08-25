@@ -3,6 +3,7 @@ args@{
   hostname,
   lib,
   pkgs,
+  vars,
   ...
 }:
 
@@ -19,7 +20,8 @@ let
       { };
   pairedPiPackage = pairedAiPackages.pi or null;
   pairedDroidPackage = pairedAiPackages.droid or null;
-  piNodeExtraCaFallback = config.home.sessionVariables.SSL_CERT_FILE or null;
+  pairedHermesPackage = pairedAiPackages.hermes-agent or null;
+  piNodeExtraCaFallback = vars.ca-bundle_crt;
   wrapRuntimeEnvironment = import ../flake/ai/wrappers/runtime-environment.nix {
     inherit lib pkgs;
   };
@@ -101,6 +103,10 @@ let
       codexPackage = pairedCodexPackage;
     };
     droid = import ./ai/renderers/droid.nix {
+      inherit lib;
+      pkgs = rendererPkgs;
+    };
+    hermes = import ./ai/renderers/hermes.nix {
       inherit lib;
       pkgs = rendererPkgs;
     };
@@ -212,10 +218,14 @@ let
         gnupgHome = config.programs.gpg.homedir or null;
         inherit localModelDiscoveryEndpoints;
       }
+      // lib.optionalAttrs (profile.client == "hermes") {
+        caBundle = piNodeExtraCaFallback;
+      }
       //
         lib.optionalAttrs
           (builtins.elem profile.client [
             "codex"
+            "hermes"
             "pi"
             "prime"
           ])
@@ -225,6 +235,46 @@ let
     );
 
   renderedProfiles = map renderProfile profileIds;
+  hermesRenderings = builtins.filter (rendered: rendered ? hermesServiceOptions) renderedProfiles;
+  hermesSelected = hermesRenderings != [ ];
+  managedHermesPackage =
+    if !hermesSelected || pairedHermesPackage == null then
+      null
+    else
+      wrapRuntimeEnvironment {
+        package = pairedHermesPackage;
+        programs = [
+          "hermes"
+          "hermes-agent"
+          "hermes-acp"
+        ];
+        keychainCredentials = {
+          API_SERVER_KEY = {
+            account = "johnw";
+            service = "nix-config.hermes.api-server-key";
+          };
+          OPENAI_API_KEY = {
+            account = "johnw";
+            service = "nix-config.omlx-hera-client";
+          };
+          PGPASSWORD = {
+            account = "johnw";
+            service = "nix-config.hermes.org-db-password";
+          };
+          QDRANT_API_KEY = {
+            account = "johnw";
+            service = "nix-config.hermes.qdrant-api-key";
+          };
+        };
+        requiredKeychainCredentials = [
+          "API_SERVER_KEY"
+          "OPENAI_API_KEY"
+          "PGPASSWORD"
+          "QDRANT_API_KEY"
+        ];
+      };
+  hermesServiceOptions =
+    if !hermesSelected then { } else (builtins.head hermesRenderings).hermesServiceOptions;
   mcpRegistryProjection = catalog.sharedMcpRegistryFor { profiles = selectedProfiles; };
   mcpRegistrySelected = mcpRegistryProjection.mutableMcpPaths != [ ];
   mcpRegistryRendering =
@@ -413,6 +463,14 @@ in
       message = "inputs.nix-config-ai.packages.${system}.codex is missing";
     }
     {
+      assertion = builtins.length hermesRenderings <= 1;
+      message = "nix-managed AI selected more than one Hermes Agent profile";
+    }
+    {
+      assertion = !hermesSelected || pairedHermesPackage != null;
+      message = "inputs.nix-config-ai.packages.${system}.hermes-agent is missing";
+    }
+    {
       assertion = builtins.attrNames piOmlxKeychainCredentials == piOmlxCredentialEnvironmentNames;
       message = "Pi oMLX Keychain credentials must match the catalog environment references";
     }
@@ -475,4 +533,10 @@ in
       aiManagedModelSync = modelSync.activation;
     };
   };
+}
+// {
+  services.hermes-agent = lib.mkIf hermesSelected hermesServiceOptions;
+}
+// {
+  johnw.hermesAgent.runtimePackage = lib.mkIf hermesSelected managedHermesPackage;
 }

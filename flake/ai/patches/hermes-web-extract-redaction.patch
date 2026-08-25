@@ -1,0 +1,208 @@
+diff --git a/tools/web_tools.py b/tools/web_tools.py
+index d1ed934..389a65f 100644
+--- a/tools/web_tools.py
++++ b/tools/web_tools.py
+@@ -729,7 +729,10 @@ def _store_full_text(url: str, content: str) -> Optional[str]:
+         write_text_exclusive(path, content, private=False, overwrite=True)
+         return str(path)
+     except Exception as exc:  # noqa: BLE001
+-        logger.debug("Failed to store full web_extract text for %s: %s", url, exc)
++        logger.debug(
++            "Failed to store full web_extract text: %s",
++            type(exc).__name__,
++        )
+         return None
+ 
+ 
+@@ -1087,7 +1090,7 @@ async def web_extract_tool(
+ 
+     debug_call_data = {
+         "parameters": {
+-            "urls": normalized_urls,
++            "url_count": len(normalized_urls),
+             "format": format,
+             "char_limit": char_limit,
+         },
+@@ -1302,6 +1305,6 @@ async def web_extract_tool(
+         # head+tail window plus a footer pointing at the stored full text.
+         debug_call_data["processing_applied"].append("truncate_and_store")
+-        for result in response.get("results", []):
++        for result_index, result in enumerate(response.get("results", [])):
+             if result.get("error"):
+                 continue
+             url = result.get("url", "")
+@@ -1314,13 +1317,22 @@ async def web_extract_tool(
+             if truncated:
+                 debug_call_data["pages_truncated"] += 1
+                 debug_call_data["truncation_metrics"].append({
+-                    "url": url,
++                    "result_index": result_index,
+                     "original_size": len(clean),
+                     "sent_size": len(model_text),
+                 })
+-                logger.info("%s (truncated %d -> %d chars)", url, len(clean), len(model_text))
++                logger.info(
++                    "web_extract result %d (truncated %d -> %d chars)",
++                    result_index + 1,
++                    len(clean),
++                    len(model_text),
++                )
+             else:
+-                logger.info("%s (%d chars, whole)", url, len(clean))
++                logger.info(
++                    "web_extract result %d (%d chars, whole)",
++                    result_index + 1,
++                    len(clean),
++                )
+ 
+         # Trim output to minimal fields per entry: title, content, error
+         trimmed_results = [
+@@ -1355,11 +1367,11 @@ async def web_extract_tool(
+         return cleaned_result
+             
+     except Exception as e:
+-        error_msg = f"Error extracting content: {str(e)}"
+-        logger.debug("%s", error_msg)
++        error_msg = "Web extraction failed"
++        logger.debug("web_extract failed: %s", type(e).__name__)
+         
+-        debug_call_data["error"] = error_msg
++        debug_call_data["error"] = "web_extract failed"
+         _debug.log_call("web_extract_tool", debug_call_data)
+         _debug.save()
+         
+         return tool_error(error_msg)
+diff --git a/tools/url_safety.py b/tools/url_safety.py
+--- a/tools/url_safety.py
++++ b/tools/url_safety.py
+@@ -345,10 +345,7 @@
+ 
+         # Blocked-hostname check fires regardless of DNS resolution
+         if hostname in _BLOCKED_HOSTNAMES:
+-            logger.warning(
+-                "Blocked request to internal hostname (always-blocked floor): %s",
+-                hostname,
+-            )
++            logger.warning("Blocked request to internal hostname (always-blocked floor)")
+             return True
+ 
+         # Literal IP → check directly against the always-blocked set
+@@ -362,9 +359,7 @@
+                 ip in net for net in _ALWAYS_BLOCKED_NETWORKS
+             ):
+                 logger.warning(
+-                    "Blocked request to cloud metadata address "
+-                    "(always-blocked floor): %s",
+-                    hostname,
++                    "Blocked request to cloud metadata address (always-blocked floor)"
+                 )
+                 return True
+             return False
+@@ -385,16 +380,13 @@
+             try:
+                 resolved = ipaddress.ip_address(ip_str)
+             except ValueError:
+-                logger.warning("Unparseable IP address %r for hostname %s — skipping address", sockaddr[0], hostname)
++                logger.warning("Unparseable resolved address — skipping address")
+                 continue
+             if resolved in _ALWAYS_BLOCKED_IPS or any(
+                 resolved in net for net in _ALWAYS_BLOCKED_NETWORKS
+             ):
+                 logger.warning(
+-                    "Blocked request to cloud metadata address "
+-                    "(always-blocked floor): %s -> %s",
+-                    hostname,
+-                    ip_str,
++                    "Blocked request to cloud metadata address (always-blocked floor)"
+                 )
+                 return True
+ 
+@@ -403,7 +395,7 @@
+     except Exception as exc:
+         # Parse failures or unexpected errors — don't claim the URL is
+         # always-blocked.  Caller decides what to do with a malformed URL.
+-        logger.debug("is_always_blocked_url error for %s: %s", url, exc)
++        logger.debug("is_always_blocked_url error: %s", type(exc).__name__)
+         return False
+ 
+ 
+@@ -428,14 +420,14 @@
+         hostname = (parsed.hostname or "").strip().lower().rstrip(".")
+         scheme = (parsed.scheme or "").strip().lower()
+         if scheme not in {"http", "https"}:
+-            logger.warning("Blocked request — unsupported URL scheme: %s", scheme or "<empty>")
++            logger.warning("Blocked request — unsupported URL scheme")
+             return False
+         if not hostname:
+             return False
+ 
+         # Block known internal hostnames — ALWAYS, even with toggle on
+         if hostname in _BLOCKED_HOSTNAMES:
+-            logger.warning("Blocked request to internal hostname: %s", hostname)
++            logger.warning("Blocked request to internal hostname")
+             return False
+ 
+         # Check the global toggle AFTER blocking metadata hostnames
+@@ -465,12 +457,11 @@
+                 _is_literal_ip = False
+             if not _is_literal_ip and _proxy_is_configured():
+                 logger.debug(
+-                    "DNS resolution failed for %s — proxy configured, "
++                    "DNS resolution failed — proxy configured, "
+                     "allowing through for proxy-side resolution",
+-                    hostname,
+                 )
+                 return True
+-            logger.warning("Blocked request — DNS resolution failed for: %s", hostname)
++            logger.warning("Blocked request — DNS resolution failed")
+             return False
+ 
+         for family, _, _, _, sockaddr in addr_info:
+@@ -481,41 +472,29 @@
+                 ip = ipaddress.ip_address(ip_str)
+             except ValueError:
+                 # Still unparseable after scope ID strip — fail closed
+-                logger.warning("Blocked request — unparseable IP address %r for hostname %s", sockaddr[0], hostname)
++                logger.warning("Blocked request — unparseable resolved address")
+                 return False
+ 
+             # Always block cloud metadata IPs and link-local, even with toggle on
+             if ip in _ALWAYS_BLOCKED_IPS or any(ip in net for net in _ALWAYS_BLOCKED_NETWORKS):
+-                logger.warning(
+-                    "Blocked request to cloud metadata address: %s -> %s",
+-                    hostname, ip_str,
+-                )
++                logger.warning("Blocked request to cloud metadata address")
+                 return False
+ 
+             if not allow_all_private and not allow_private_ip and _is_blocked_ip(ip):
+-                logger.warning(
+-                    "Blocked request to private/internal address: %s -> %s",
+-                    hostname, ip_str,
+-                )
++                logger.warning("Blocked request to private/internal address")
+                 return False
+ 
+         if allow_all_private:
+-            logger.debug(
+-                "Allowing private/internal resolution (security.allow_private_urls=true): %s",
+-                hostname,
+-            )
++            logger.debug("Allowing private/internal resolution (security.allow_private_urls=true)")
+         elif allow_private_ip:
+-            logger.debug(
+-                "Allowing trusted hostname despite private/internal resolution: %s",
+-                hostname,
+-            )
++            logger.debug("Allowing trusted hostname despite private/internal resolution")
+ 
+         return True
+ 
+     except Exception as exc:
+         # Fail closed on unexpected errors — don't let parsing edge cases
+         # become SSRF bypass vectors
+-        logger.warning("Blocked request — URL safety check error for %s: %s", url, exc)
++        logger.warning("Blocked request — URL safety check error: %s", type(exc).__name__)
+         return False
+ 
+ 

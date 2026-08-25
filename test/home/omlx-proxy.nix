@@ -362,27 +362,28 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
   behavior_pid=$!
   behavior_term_seconds=5
   behavior_kill_seconds=1
+  wait_for_target_or_timer() {
+    local target_pid=$1 timer_pid=$2 target_status=0
+    while true; do
+      if ! jobs -r -p | ${pkgs.gnugrep}/bin/grep -Fxq "$target_pid"; then
+        wait "$target_pid" 2>/dev/null || target_status=$?
+        kill "$timer_pid" 2>/dev/null || true
+        wait "$timer_pid" 2>/dev/null || true
+        return "$target_status"
+      fi
+      if ! jobs -r -p | ${pkgs.gnugrep}/bin/grep -Fxq "$timer_pid"; then
+        wait "$timer_pid" 2>/dev/null || true
+        return 124
+      fi
+      ${pkgs.coreutils}/bin/sleep 0.01
+    done
+  }
   wait_with_deadline() {
-    target_pid=$1
-    seconds=$2
-    timed_out=0
-    shell_pid=$$
-    trap 'timed_out=1' USR1
+    local target_pid=$1 seconds=$2 timer_pid
     ${pkgs.perl}/bin/perl -e \
-      'select undef, undef, undef, shift; kill "USR1", shift' \
-      "$seconds" "$shell_pid" &
+      'select undef, undef, undef, shift' "$seconds" &
     timer_pid=$!
-    status=0
-    wait "$target_pid" 2>/dev/null || status=$?
-    if [ "$timed_out" -eq 0 ]; then
-      kill "$timer_pid" 2>/dev/null || true
-    fi
-    wait "$timer_pid" 2>/dev/null || true
-    trap - USR1
-    if [ "$timed_out" -ne 0 ]; then
-      return 124
-    fi
-    return "$status"
+    wait_for_target_or_timer "$target_pid" "$timer_pid"
   }
   cleanup_behavior() {
     kill "$behavior_pid" 2>/dev/null || true
@@ -420,6 +421,34 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
         ;;
     esac
   }
+
+  (
+    race_target_pid=
+    cleanup_race_target() {
+      if [ -n "$race_target_pid" ]; then
+        kill "$race_target_pid" 2>/dev/null || true
+        wait "$race_target_pid" 2>/dev/null || true
+      fi
+    }
+    trap cleanup_race_target EXIT
+    ${pkgs.perl}/bin/perl -e \
+      'select undef, undef, undef, 3' &
+    race_target_pid=$!
+    ${pkgs.perl}/bin/perl -e 'exit 0' &
+    expired_timer_pid=$!
+    wait "$expired_timer_pid"
+    race_status=0
+    wait_for_target_or_timer "$race_target_pid" "$expired_timer_pid" \
+      || race_status=$?
+    if [ "$race_status" -ne 124 ]; then
+      echo 'already-expired teardown timer did not win immediately' >&2
+      exit 1
+    fi
+    if ! kill -0 "$race_target_pid" 2>/dev/null; then
+      echo 'deadline regression waited for the finite target' >&2
+      exit 1
+    fi
+  )
   trap 'cleanup_behavior || true' EXIT
   attempts=0
   while [ ! -S "$behavior_root/front.sock" ]; do
@@ -462,25 +491,40 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
   trap - EXIT
 
   stubborn_ready="$behavior_root/stubborn-ready"
-  (
-    trap : TERM
-    ${pkgs.coreutils}/bin/touch "$stubborn_ready"
-    while true; do
-      ${pkgs.coreutils}/bin/sleep 1
-    done
-  ) &
+  stubborn_pid_file="$behavior_root/stubborn-pid"
+  ${pkgs.perl}/bin/perl -e '
+    $SIG{TERM} = "IGNORE";
+    my ($ready_path, $pid_path) = @ARGV;
+    open my $pid_file, ">", $pid_path or die "create PID marker: $!";
+    print {$pid_file} "$$\n" or die "write PID marker: $!";
+    close $pid_file or die "close PID marker: $!";
+    open my $ready, ">", $ready_path or die "create readiness marker: $!";
+    close $ready or die "close readiness marker: $!";
+    while (1) { select undef, undef, undef, 60; }
+  ' "$stubborn_ready" "$stubborn_pid_file" &
   behavior_pid=$!
-  behavior_term_seconds=0.1
+  behavior_term_seconds=0
   behavior_kill_seconds=1
   trap 'cleanup_behavior || true' EXIT
   attempts=0
-  while [ ! -e "$stubborn_ready" ]; do
+  while [ ! -e "$stubborn_ready" ] || [ ! -e "$stubborn_pid_file" ]; do
     attempts=$((attempts + 1))
     test "$attempts" -lt 100
     ${pkgs.coreutils}/bin/sleep 0.05
   done
-  if stop_behavior; then
+  if [ "$(${pkgs.coreutils}/bin/cat "$stubborn_pid_file")" != "$behavior_pid" ]; then
+    echo 'strict teardown fixture PID did not match its managed job' >&2
+    exit 1
+  fi
+  strict_status=0
+  stop_behavior 2>"$behavior_root/stubborn-stop.err" || strict_status=$?
+  if [ "$strict_status" -eq 0 ]; then
     echo 'strict teardown accepted forced termination' >&2
+    exit 1
+  fi
+  if [ "$(${pkgs.coreutils}/bin/cat "$behavior_root/stubborn-stop.err")" \
+    != 'nginx required forced termination' ]; then
+    echo 'strict teardown did not report exact forced termination' >&2
     exit 1
   fi
   if kill -0 "$behavior_pid" 2>/dev/null \

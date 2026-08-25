@@ -47,6 +47,8 @@ in
     ./ai.nix
     ./fractal.nix
     ./git-options.nix
+    ./hermes-agent.nix
+    inputs.nix-config-ai.homeManagerModules.hermes-agent
     ./host-options.nix
     ./obr.nix
     ./git.nix

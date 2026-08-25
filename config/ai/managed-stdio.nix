@@ -20,6 +20,7 @@ let
     "ANTHROPIC_API_KEY"
     "GEMINI_API_KEY"
     "OPENAI_API_KEY"
+    "PGPASSWORD"
   ];
 
   inheritArgument = name: [
@@ -68,6 +69,7 @@ let
             packageExecutable pkgs "mcp-server-sequential-thinking"
               "mcp-server-sequential-thinking";
           nix-managed-mcp-stdio = packageExecutable pkgs "nix-managed-mcp-stdio" "nix-managed-mcp-stdio";
+          org-db-mcp = packageExecutable pkgs "hermes-org-db-mcp" "org-db-mcp";
           pal-mcp-server = packageExecutable pkgs "pal-mcp-server" "pal-mcp-server";
           ssh = packageExecutable pkgs "openssh" "ssh";
         };

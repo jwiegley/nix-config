@@ -59,6 +59,14 @@ provider credentials and otherwise uses the services' non-secret compatibility
 sentinel. Fixed provider overrides remain a separate Hera-only capability.
 Linux retains local-provider packages without registering them automatically.
 
+Hera has a separate native Hermes Agent profile. It uses the pinned upstream
+Home Manager module as the sole configuration and LaunchAgent owner, drives the
+local DeepSeek model through loopback oMLX, and projects only its selected
+Qdrant, org-db, Stock Trader, and native web integrations. Mutable Hermes state,
+Keychain values, macOS privacy grants, and private Tailscale Serve state remain
+outside Nix. The operating and acceptance contract is maintained in
+[`doc/Hermes Agent.md`](<doc/Hermes Agent.md>).
+
 The complete ownership and data-flow contract is maintained in
 [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md).
 
@@ -188,6 +196,7 @@ whole-fleet runtime proof.
 - [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) — ownership, data flow, rollout, and state boundaries
 - [`doc/PLAN.org`](doc/PLAN.org) — tracked `obr` issue surface and current-work authority
 - [`doc/Pi Coding Agent Extensions.md`](<doc/Pi Coding Agent Extensions.md>) — managed Pi extension inventory
+- [`doc/Hermes Agent.md`](<doc/Hermes Agent.md>) — native Hera service, trust boundaries, operations, acceptance, and rollback
 
 `obr` and `doc/PLAN.org` are the sole current-work authority. Git history is the
 archive for completed plans and handoffs; architecture documents describe the

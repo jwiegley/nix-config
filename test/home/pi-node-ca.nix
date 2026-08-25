@@ -48,10 +48,37 @@ let
   };
   fakeKeychain = pkgs.writeShellScript "fake-keychain-security" ''
     set -eu
+    test "$#" -eq 6
+    test "$1" = find-generic-password
+    test "$2" = -s
+    test "$4" = -a
+    test "$5" = johnw
+    test "$6" = -w
     printf '%s\n' "$@" >>"$PI_TEST_SECURITY_LOG"
-    case " $* " in
-      *" -s nix-config.test-clio "*) printf '%s' lookup-sentinel ;;
-      *" -s nix-config.test-hera "*) exit 44 ;;
+    case "$3" in
+      nix-config.test-clio) printf '%s' lookup-sentinel ;;
+      nix-config.test-hera) exit 44 ;;
+      *) exit 64 ;;
+    esac
+  '';
+  requiredFakeKeychain = pkgs.writeShellScript "fake-required-keychain-security" ''
+    set -eu
+    test -z "''${_nix_managed_credential+x}"
+    test "$#" -eq 6
+    test "$1" = find-generic-password
+    test "$2" = -s
+    test "$4" = -a
+    test "$5" = johnw
+    test "$6" = -w
+    printf '%s\n' "$@" >>"$RUNTIME_TEST_SECURITY_LOG"
+    if [ "''${RUNTIME_TEST_MISSING_SERVICE-}" = "$3" ]; then
+      exit 44
+    fi
+    case "$3" in
+      nix-config.test-openai) printf '%s' openai-secret-sentinel ;;
+      nix-config.test-api-server) printf '%s' api-server-secret-sentinel ;;
+      nix-config.test-qdrant) printf '%s' qdrant-secret-sentinel ;;
+      nix-config.test-postgres) printf '%s' postgres-secret-sentinel ;;
       *) exit 64 ;;
     esac
   '';
@@ -112,6 +139,71 @@ let
     package = fallbackEnvironmentProbe;
     program = "runtime-environment-probe";
   };
+  requiredProbeScript = pkgs.writeShellScript "required-runtime-environment-probe" ''
+    set -eu
+    if [ -n "''${RUNTIME_TEST_INVOKED-}" ]; then
+      : >"$RUNTIME_TEST_INVOKED"
+    fi
+    case "''${RUNTIME_TEST_MODE-credentials}" in
+      credentials)
+        test "$OPENAI_API_KEY" = "$RUNTIME_TEST_EXPECT_OPENAI"
+        test "$API_SERVER_KEY" = "$RUNTIME_TEST_EXPECT_API_SERVER"
+        test "$QDRANT_API_KEY" = "$RUNTIME_TEST_EXPECT_QDRANT"
+        test "$PGPASSWORD" = "$RUNTIME_TEST_EXPECT_POSTGRES"
+        test "$#" -eq 3
+        test "$1" = first
+        test "$2" = "two words"
+        test -z "$3"
+        ;;
+      exit)
+        exit "$RUNTIME_TEST_EXIT"
+        ;;
+      signal)
+        trap 'exit 42' TERM
+        : >"$RUNTIME_TEST_READY"
+        for _ in $(${pkgs.coreutils}/bin/seq 1 100); do
+          ${pkgs.coreutils}/bin/sleep 0.1
+        done
+        exit 97
+        ;;
+      *) exit 64 ;;
+    esac
+  '';
+  requiredProbePackage = pkgs.runCommand "required-runtime-environment-probe" { } ''
+    mkdir -p "$out/bin"
+    for program in hermes hermes-agent hermes-acp; do
+      ln -s ${requiredProbeScript} "$out/bin/$program"
+    done
+  '';
+  requiredCredentialMetadata = {
+    OPENAI_API_KEY = {
+      account = "johnw";
+      service = "nix-config.test-openai";
+    };
+    API_SERVER_KEY = {
+      account = "johnw";
+      service = "nix-config.test-api-server";
+    };
+    QDRANT_API_KEY = {
+      account = "johnw";
+      service = "nix-config.test-qdrant";
+    };
+    PGPASSWORD = {
+      account = "johnw";
+      service = "nix-config.test-postgres";
+    };
+  };
+  requiredEnvironmentProbe = wrapRuntimeEnvironment {
+    keychainCommand = "${requiredFakeKeychain}";
+    keychainCredentials = requiredCredentialMetadata;
+    package = requiredProbePackage;
+    programs = [
+      "hermes"
+      "hermes-agent"
+      "hermes-acp"
+    ];
+    requiredKeychainCredentials = builtins.attrNames requiredCredentialMetadata;
+  };
   overlappingEnvironmentEvaluation =
     builtins.tryEval
       (wrapRuntimeEnvironment {
@@ -129,6 +221,22 @@ let
       (wrapRuntimeEnvironment {
         package = environmentProbe;
         program = "runtime environment probe";
+      }).outPath;
+  invalidRequiredCredentialEvaluation =
+    builtins.tryEval
+      (wrapRuntimeEnvironment {
+        keychainCommand = "${requiredFakeKeychain}";
+        keychainCredentials = requiredCredentialMetadata;
+        package = requiredProbePackage;
+        programs = [ "hermes" ];
+        requiredKeychainCredentials = [ "NOT_CONFIGURED" ];
+      }).outPath;
+  mixedProgramsEvaluation =
+    builtins.tryEval
+      (wrapRuntimeEnvironment {
+        package = requiredProbePackage;
+        program = "hermes";
+        programs = [ "hermes" ];
       }).outPath;
   probe = pkgs.writeText "pi-node-ca-probe.cjs" ''
     if (process.env.NODE_EXTRA_CA_CERTS !== process.env.PI_TEST_EXPECTED_CA) {
@@ -155,6 +263,8 @@ assert piPackage.version != null;
 assert piPackage.passthru.toolRendererWrapperAbi == 1;
 assert !overlappingEnvironmentEvaluation.success;
 assert !invalidProgramEvaluation.success;
+assert !invalidRequiredCredentialEvaluation.success;
+assert !mixedProgramsEvaluation.success;
 pkgs.runCommand "pi-node-ca" { } ''
   lookup_log="$TMPDIR/keychain-lookup.log"
   ${pkgs.coreutils}/bin/env -u OMLX_CLIO_API_KEY -u OMLX_HERA_API_KEY \
@@ -204,6 +314,125 @@ pkgs.runCommand "pi-node-ca" { } ''
   grep -F 'nix-config.test-clio' "$nested_log" >/dev/null
   grep -F 'nix-config.test-hera' "$nested_log" >/dev/null
   ! grep -F 'lookup-sentinel' "$nested_log"
+
+  openai_secret=openai-secret-sentinel
+  api_server_secret=api-server-secret-sentinel
+  qdrant_secret=qdrant-secret-sentinel
+  postgres_secret=postgres-secret-sentinel
+  for program in hermes hermes-agent hermes-acp; do
+    required_log="$TMPDIR/$program-required-keychain.log"
+    (
+      unset OPENAI_API_KEY API_SERVER_KEY QDRANT_API_KEY PGPASSWORD
+      export RUNTIME_TEST_SECURITY_LOG="$required_log"
+      export RUNTIME_TEST_EXPECT_OPENAI="$openai_secret"
+      export RUNTIME_TEST_EXPECT_API_SERVER="$api_server_secret"
+      export RUNTIME_TEST_EXPECT_QDRANT="$qdrant_secret"
+      export RUNTIME_TEST_EXPECT_POSTGRES="$postgres_secret"
+      ${requiredEnvironmentProbe}/bin/$program first 'two words' ""
+    )
+    test "$(grep -c '^find-generic-password$' "$required_log")" -eq 4
+    for secret in "$openai_secret" "$api_server_secret" "$qdrant_secret" "$postgres_secret"; do
+      ! grep -F "$secret" "$required_log"
+      ! grep -F "$secret" ${requiredEnvironmentProbe}/bin/$program
+    done
+  done
+
+  missing_log="$TMPDIR/required-keychain-missing.log"
+  missing_invoked="$TMPDIR/required-keychain-missing.invoked"
+  set +e
+  (
+    export OPENAI_API_KEY=untrusted-openai
+    export API_SERVER_KEY=untrusted-api-server
+    export QDRANT_API_KEY=untrusted-qdrant
+    export PGPASSWORD=untrusted-postgres
+    export RUNTIME_TEST_SECURITY_LOG="$missing_log"
+    export RUNTIME_TEST_MISSING_SERVICE=nix-config.test-qdrant
+    export RUNTIME_TEST_INVOKED="$missing_invoked"
+    ${requiredEnvironmentProbe}/bin/hermes first 'two words' ""
+  ) >"$TMPDIR/required-keychain-missing.out" 2>"$TMPDIR/required-keychain-missing.err"
+  missing_status=$?
+  set -e
+  test "$missing_status" -eq 78
+  test ! -e "$missing_invoked"
+  test ! -s "$TMPDIR/required-keychain-missing.out"
+  grep -Fx 'required runtime credential QDRANT_API_KEY is unavailable' \
+    "$TMPDIR/required-keychain-missing.err" >/dev/null
+  for secret in "$openai_secret" "$api_server_secret" "$qdrant_secret" "$postgres_secret"; do
+    ! grep -F "$secret" "$TMPDIR/required-keychain-missing.err"
+    ! grep -F "$secret" "$missing_log"
+  done
+
+  preseeded_log="$TMPDIR/required-keychain-preseeded.log"
+  (
+    export OPENAI_API_KEY=untrusted-openai
+    export API_SERVER_KEY=untrusted-api-server
+    export QDRANT_API_KEY=untrusted-qdrant
+    export PGPASSWORD=untrusted-postgres
+    export RUNTIME_TEST_SECURITY_LOG="$preseeded_log"
+    export RUNTIME_TEST_EXPECT_OPENAI="$openai_secret"
+    export RUNTIME_TEST_EXPECT_API_SERVER="$api_server_secret"
+    export RUNTIME_TEST_EXPECT_QDRANT="$qdrant_secret"
+    export RUNTIME_TEST_EXPECT_POSTGRES="$postgres_secret"
+    ${requiredEnvironmentProbe}/bin/hermes first 'two words' ""
+  )
+  test "$(grep -c '^find-generic-password$' "$preseeded_log")" -eq 4
+  for untrusted in untrusted-openai untrusted-api-server untrusted-qdrant untrusted-postgres; do
+    ! grep -F "$untrusted" "$preseeded_log"
+    ! grep -F "$untrusted" ${requiredEnvironmentProbe}/bin/hermes
+  done
+
+  required_xtrace_log="$TMPDIR/required-keychain-xtrace.log"
+  (
+    unset OPENAI_API_KEY API_SERVER_KEY QDRANT_API_KEY PGPASSWORD
+    export RUNTIME_TEST_SECURITY_LOG="$required_xtrace_log"
+    export RUNTIME_TEST_EXPECT_OPENAI="$openai_secret"
+    export RUNTIME_TEST_EXPECT_API_SERVER="$api_server_secret"
+    export RUNTIME_TEST_EXPECT_QDRANT="$qdrant_secret"
+    export RUNTIME_TEST_EXPECT_POSTGRES="$postgres_secret"
+    ${pkgs.bash}/bin/bash -ax ${requiredEnvironmentProbe}/bin/hermes first 'two words' ""
+  ) >"$TMPDIR/required-keychain-xtrace.out" 2>"$TMPDIR/required-keychain-xtrace.err"
+  test ! -s "$TMPDIR/required-keychain-xtrace.out"
+  for secret in "$openai_secret" "$api_server_secret" "$qdrant_secret" "$postgres_secret"; do
+    ! grep -F "$secret" "$TMPDIR/required-keychain-xtrace.err"
+    ! grep -F "$secret" "$required_xtrace_log"
+  done
+
+  for program in hermes hermes-agent hermes-acp; do
+    exit_log="$TMPDIR/$program-exit-keychain.log"
+    set +e
+    (
+      export RUNTIME_TEST_SECURITY_LOG="$exit_log"
+      export RUNTIME_TEST_MODE=exit
+      export RUNTIME_TEST_EXIT=37
+      ${requiredEnvironmentProbe}/bin/$program
+    )
+    exit_status=$?
+    set -e
+    test "$exit_status" -eq 37
+    test "$(grep -c '^find-generic-password$' "$exit_log")" -eq 4
+  done
+
+  signal_ready="$TMPDIR/required-keychain-signal.ready"
+  signal_log="$TMPDIR/required-keychain-signal.log"
+  (
+    export RUNTIME_TEST_SECURITY_LOG="$signal_log"
+    export RUNTIME_TEST_MODE=signal
+    export RUNTIME_TEST_READY="$signal_ready"
+    exec ${requiredEnvironmentProbe}/bin/hermes
+  ) &
+  signal_pid=$!
+  for _ in $(${pkgs.coreutils}/bin/seq 1 50); do
+    test ! -e "$signal_ready" || break
+    ${pkgs.coreutils}/bin/sleep 0.1
+  done
+  test -e "$signal_ready"
+  kill -TERM "$signal_pid"
+  set +e
+  wait "$signal_pid"
+  signal_status=$?
+  set -e
+  test "$signal_status" -eq 42
+  test "$(grep -c '^find-generic-password$' "$signal_log")" -eq 4
 
   for host in clio hera; do
     certificate=${../../config/certs}/omlx-$host.crt

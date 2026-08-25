@@ -1,0 +1,11 @@
+name: qdrant
+version: 0.1.0
+description: "Qdrant hybrid memory: embedded vector + sparse recall, workspace facts, transparent forget."
+requires_env:
+  - OPENAI_API_KEY
+  - QDRANT_API_KEY
+hooks:
+  - on_pre_compress
+  - on_session_end
+  - on_memory_write
+  - on_session_switch

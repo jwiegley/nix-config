@@ -107,7 +107,7 @@ need them for rollback.
 | `config/hosts/shell-routing.nix` | Build-time shell projection of registry routing data | Independent host identity policy or runtime Nix discovery |
 | `config/nix-trust.nix` | Shared binary-cache and client-signing trust data | Root-file installation or host activation |
 | `config/ai/catalog.nix` | Profiles, selectors, resources, validation | Client serialization or package builds |
-| `config/ai/renderers/*` | Generated documents for one client | Global resource selection |
+| `config/ai/renderers/*` | Client-specific documents and service-option projections | Global resource selection |
 | `config/ai.nix` | Home Manager composition and ownership guards | Package implementation |
 | `flake/ai.nix` | Portable package, app, and check composition | Host activation or root lock policy |
 | `packages/*` | Reusable package sets and multi-consumer build/runtime implementation | Host selection |
@@ -163,6 +163,32 @@ environment references. Nginx forwards each bearer header unchanged, and
 the destination oMLX instance validates its own credential. This keeps one
 authentication authority instead of consuming the OpenAI `Authorization` header
 in a second Basic-auth layer.
+
+### Hera Hermes Agent
+
+Hermes is a separate, lightweight `hera-hermes` catalog profile rather than a
+member of the shared content-client projection. Its renderer serializes one
+complete nonsecret configuration through the pinned upstream Home Manager
+module's authoritative `configFile` option. That upstream module remains the
+sole owner of package installation, the managed marker, plugin links, and the
+one Hermes LaunchAgent; local modules augment only the exact service leaves that
+macOS identity and Hera policy require.
+
+The LaunchAgent passes through a stable signed application supervisor and the
+shared Keychain runtime wrapper before invoking upstream Hermes. Nix owns the
+configuration leaves and public credential metadata, while sessions, memories,
+auth state, logs, the remainder of `~/.hermes`, macOS privacy consent, and
+Tailscale Serve configuration remain mutable. The API stays on loopback;
+private iPhone access is a separately authorized Tailscale Serve transaction.
+
+Qdrant, PostgreSQL, and SearXNG remain Vulcan-owned services. Stock Trader runs
+as a local stdio MCP server from the repository's reusable package and reaches
+its external market-data providers directly.
+Selecting the Qdrant collection `assistant` provides naming separation under
+the current shared server key, not a collection-scoped authorization boundary.
+The complete operating, risk, acceptance, and rollback contract is maintained
+in [`Hermes Agent.md`](<Hermes Agent.md>). Source inclusion and build success do
+not establish activation or runtime health.
 
 The initial Prime Agent profile is Hera-only. Its prompt commands and Agent Skills
 are direct catalog projections; static specialist definitions become native RLM
