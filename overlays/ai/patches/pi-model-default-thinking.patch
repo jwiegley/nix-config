@@ -1,8 +1,8 @@
 diff --git a/packages/ai/src/types.ts b/packages/ai/src/types.ts
-index 7e1fd00..7b66fea 100644
+index d35a48b84..5fa87263c 100644
 --- a/packages/ai/src/types.ts
 +++ b/packages/ai/src/types.ts
-@@ -798,6 +798,8 @@ export interface Model<TApi extends Api> {
+@@ -825,6 +825,8 @@ export interface Model<TApi extends Api> {
  	provider: ProviderId;
  	baseUrl: string;
  	reasoning: boolean;
@@ -12,120 +12,38 @@ index 7e1fd00..7b66fea 100644
  	 * Maps pi thinking levels to provider/model-specific values.
  	 * Missing keys use provider defaults. null marks a level as unsupported.
 diff --git a/packages/coding-agent/src/core/agent-session.ts b/packages/coding-agent/src/core/agent-session.ts
-index 48a5fc6..6c121dc 100644
+index 8e14b8081..b3eb145cc 100644
 --- a/packages/coding-agent/src/core/agent-session.ts
 +++ b/packages/coding-agent/src/core/agent-session.ts
-@@ -1628,13 +1628,13 @@ export class AgentSession {
- 		}
- 
- 		const previousModel = this.model;
--		const thinkingLevel = this._getThinkingLevelForModelSwitch();
-+		const { level: thinkingLevel, updateGlobalDefault } = this._getThinkingLevelForModelSwitch(model);
- 		this.agent.state.model = model;
- 		this.sessionManager.appendModelChange(model.provider, model.id);
- 		this.settingsManager.setDefaultModelAndProvider(model.provider, model.id);
- 
- 		// Re-clamp thinking level for new model's capabilities
--		this.setThinkingLevel(thinkingLevel);
-+		this._setThinkingLevel(thinkingLevel, updateGlobalDefault);
- 
- 		await this._emitModelSelect(model, previousModel, "set");
- 	}
-@@ -1668,7 +1668,10 @@ export class AgentSession {
- 		const len = scopedModels.length;
- 		const nextIndex = direction === "forward" ? (currentIndex + 1) % len : (currentIndex - 1 + len) % len;
- 		const next = scopedModels[nextIndex];
--		const thinkingLevel = this._getThinkingLevelForModelSwitch(next.thinkingLevel);
-+		const { level: thinkingLevel, updateGlobalDefault } = this._getThinkingLevelForModelSwitch(
-+			next.model,
-+			next.thinkingLevel,
-+		);
- 
- 		// Apply model
- 		this.agent.state.model = next.model;
-@@ -1677,9 +1680,9 @@ export class AgentSession {
- 
- 		// Apply thinking level.
- 		// - Explicit scoped model thinking level overrides current session level
--		// - Undefined scoped model thinking level inherits the current session preference
--		// setThinkingLevel clamps to model capabilities.
--		this.setThinkingLevel(thinkingLevel);
-+		// - Leaving a reasoning model preserves the current level; non-thinking models use configured defaults
-+		// The setter clamps to model capabilities.
-+		this._setThinkingLevel(thinkingLevel, updateGlobalDefault);
- 
- 		await this._emitModelSelect(next.model, currentModel, "cycle");
- 
-@@ -1698,13 +1701,13 @@ export class AgentSession {
- 		const nextIndex = direction === "forward" ? (currentIndex + 1) % len : (currentIndex - 1 + len) % len;
- 		const nextModel = availableModels[nextIndex];
- 
--		const thinkingLevel = this._getThinkingLevelForModelSwitch();
-+		const { level: thinkingLevel, updateGlobalDefault } = this._getThinkingLevelForModelSwitch(nextModel);
- 		this.agent.state.model = nextModel;
- 		this.sessionManager.appendModelChange(nextModel.provider, nextModel.id);
- 		this.settingsManager.setDefaultModelAndProvider(nextModel.provider, nextModel.id);
- 
- 		// Re-clamp thinking level for new model's capabilities
--		this.setThinkingLevel(thinkingLevel);
-+		this._setThinkingLevel(thinkingLevel, updateGlobalDefault);
- 
- 		await this._emitModelSelect(nextModel, currentModel, "cycle");
- 
-@@ -1721,6 +1724,10 @@ export class AgentSession {
- 	 * Saves to session and settings only if the level actually changes.
- 	 */
- 	setThinkingLevel(level: ThinkingLevel): void {
-+		this._setThinkingLevel(level, true);
-+	}
-+
-+	private _setThinkingLevel(level: ThinkingLevel, updateGlobalDefault: boolean): void {
- 		const availableLevels = this.getAvailableThinkingLevels();
- 		const effectiveLevel = availableLevels.includes(level) ? level : this._clampThinkingLevel(level, availableLevels);
- 
-@@ -1732,7 +1739,7 @@ export class AgentSession {
- 
- 		if (isChanging) {
- 			this.sessionManager.appendThinkingLevelChange(effectiveLevel);
--			if (this.supportsThinking() || effectiveLevel !== "off") {
-+			if (updateGlobalDefault && (this.supportsThinking() || effectiveLevel !== "off")) {
- 				this.settingsManager.setDefaultThinkingLevel(effectiveLevel);
- 			}
- 			this._emit({ type: "thinking_level_changed", level: effectiveLevel });
-@@ -1776,14 +1783,24 @@ export class AgentSession {
- 		return !!this.model?.reasoning;
+@@ -1797,17 +1797,15 @@ export class AgentSession {
  	}
  
--	private _getThinkingLevelForModelSwitch(explicitLevel?: ThinkingLevel): ThinkingLevel {
-+	private _getThinkingLevelForModelSwitch(
-+		targetModel: Model<any>,
-+		explicitLevel?: ThinkingLevel,
-+	): { level: ThinkingLevel; updateGlobalDefault: boolean } {
- 		if (explicitLevel !== undefined) {
+ 	private _getThinkingLevelForModelSwitch(targetModel?: Model<any>, explicitLevel?: ThinkingLevel): ThinkingLevel {
+-		if (explicitLevel !== undefined) {
 -			return explicitLevel;
-+			return { level: explicitLevel, updateGlobalDefault: true };
+-		}
+-		// Per-model default takes priority when switching to a model that has one
++		if (explicitLevel !== undefined) return explicitLevel;
+ 		if (targetModel) {
+ 			const perModel = this.settingsManager.getModelThinkingLevel(targetModel.provider, targetModel.id);
+-			if (perModel !== undefined) {
+-				return perModel;
+-			}
++			if (perModel !== undefined) return perModel;
  		}
- 		if (!this.supportsThinking()) {
--			return this.settingsManager.getDefaultThinkingLevel() ?? DEFAULT_THINKING_LEVEL;
-+			const globalDefault = this.settingsManager.getDefaultThinkingLevel();
-+			if (globalDefault !== undefined) {
-+				return { level: globalDefault, updateGlobalDefault: true };
-+			}
-+			if (targetModel.defaultThinkingLevel !== undefined) {
-+				return { level: targetModel.defaultThinkingLevel, updateGlobalDefault: false };
-+			}
-+			return { level: DEFAULT_THINKING_LEVEL, updateGlobalDefault: true };
- 		}
--		return this.thinkingLevel;
-+		return { level: this.thinkingLevel, updateGlobalDefault: true };
+-		return this.settingsManager.getDefaultThinkingLevel() ?? this.thinkingLevel ?? DEFAULT_THINKING_LEVEL;
++		const globalDefault = this.settingsManager.getDefaultThinkingLevel();
++		if (globalDefault !== undefined) return globalDefault;
++		if (this.supportsThinking()) return this.thinkingLevel;
++		return targetModel?.defaultThinkingLevel ?? DEFAULT_THINKING_LEVEL;
  	}
  
  	private _clampThinkingLevel(level: ThinkingLevel, _availableLevels: ThinkingLevel[]): ThinkingLevel {
 diff --git a/packages/coding-agent/src/core/extensions/types.ts b/packages/coding-agent/src/core/extensions/types.ts
-index db0ebac..24abd73 100644
+index bade46419..0f63d54df 100644
 --- a/packages/coding-agent/src/core/extensions/types.ts
 +++ b/packages/coding-agent/src/core/extensions/types.ts
-@@ -1499,6 +1499,8 @@ export interface ProviderModelConfig {
+@@ -1540,6 +1540,8 @@ export interface ProviderModelConfig {
  	baseUrl?: string;
  	/** Whether the model supports extended thinking. */
  	reasoning: boolean;
@@ -135,10 +53,10 @@ index db0ebac..24abd73 100644
  	thinkingLevelMap?: Model<Api>["thinkingLevelMap"];
  	/** Supported input types. */
 diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
-index cf6c36d..c486bd6 100644
+index 03a812392..c73158adb 100644
 --- a/packages/coding-agent/src/core/model-config.ts
 +++ b/packages/coding-agent/src/core/model-config.ts
-@@ -165,6 +165,7 @@ const ModelDefinitionSchema = Type.Object({
+@@ -167,6 +167,7 @@ const ModelDefinitionSchema = Type.Object({
  	api: Type.Optional(Type.String({ minLength: 1 })),
  	baseUrl: Type.Optional(Type.String({ minLength: 1 })),
  	reasoning: Type.Optional(Type.Boolean()),
@@ -146,7 +64,7 @@ index cf6c36d..c486bd6 100644
  	thinkingLevelMap: Type.Optional(ThinkingLevelMapSchema),
  	input: Type.Optional(Type.Array(Type.Union([Type.Literal("text"), Type.Literal("image")]))),
  	cost: Type.Optional(ModelCostSchema),
-@@ -178,6 +179,7 @@ const ModelDefinitionSchema = Type.Object({
+@@ -180,6 +181,7 @@ const ModelDefinitionSchema = Type.Object({
  const ModelOverrideSchema = Type.Object({
  	name: Type.Optional(Type.String({ minLength: 1 })),
  	reasoning: Type.Optional(Type.Boolean()),
@@ -155,7 +73,7 @@ index cf6c36d..c486bd6 100644
  	input: Type.Optional(Type.Array(Type.Union([Type.Literal("text"), Type.Literal("image")]))),
  	cost: Type.Optional(
 diff --git a/packages/coding-agent/src/core/provider-composer.ts b/packages/coding-agent/src/core/provider-composer.ts
-index 31c9a41..194efd6 100644
+index 31c9a4143..194efd63d 100644
 --- a/packages/coding-agent/src/core/provider-composer.ts
 +++ b/packages/coding-agent/src/core/provider-composer.ts
 @@ -58,6 +58,7 @@ export interface ProviderConfigInput {
@@ -183,47 +101,42 @@ index 31c9a41..194efd6 100644
  		input: (definition.input ?? ["text"]) as ("text" | "image")[],
  		cost: definition.cost ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 diff --git a/packages/coding-agent/src/core/sdk.ts b/packages/coding-agent/src/core/sdk.ts
-index 505d276..3618802 100644
+index 61d90e44b..1a4f27be0 100644
 --- a/packages/coding-agent/src/core/sdk.ts
 +++ b/packages/coding-agent/src/core/sdk.ts
-@@ -46,7 +46,7 @@ export interface CreateAgentSessionOptions {
+@@ -228,14 +228,12 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
  
- 	/** Model to use. Default: from settings, else first available */
- 	model?: Model<any>;
--	/** Thinking level. Default: from settings, else 'medium' (clamped to model capabilities) */
-+	/** Thinking level. Default: restored session, settings, model-local default, then 'medium'. */
- 	thinkingLevel?: ThinkingLevel;
- 	/** Models available for cycling (Ctrl+P in interactive mode) */
- 	scopedModels?: Array<{ model: Model<any>; thinkingLevel?: ThinkingLevel }>;
-@@ -223,18 +223,17 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
- 		}
- 	}
- 
-+	const defaultThinkingLevel = settingsManager.getDefaultThinkingLevel();
  	let thinkingLevel = options.thinkingLevel;
  
- 	// If session has data, restore thinking level from it
+-	// If session has data, restore thinking level from it
 -	if (thinkingLevel === undefined && hasExistingSession) {
 -		thinkingLevel = hasThinkingEntry
 -			? (existingSession.thinkingLevel as ThinkingLevel)
 -			: (settingsManager.getDefaultThinkingLevel() ?? DEFAULT_THINKING_LEVEL);
++	// If session has data, restore its explicit thinking level.
 +	if (thinkingLevel === undefined && hasExistingSession && hasThinkingEntry) {
 +		thinkingLevel = existingSession.thinkingLevel as ThinkingLevel;
  	}
  
--	// Fall back to settings default
-+	// Fall back to user, model-local, then built-in defaults.
+-	// Fall back to per-model override, then global default
++	// Fall back to user per-model, global, model-local, then built-in defaults.
+ 	if (thinkingLevel === undefined && model) {
+ 		const perModel = settingsManager.getModelThinkingLevel(model.provider, model.id);
+ 		if (perModel) {
+@@ -243,7 +241,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
+ 		}
+ 	}
  	if (thinkingLevel === undefined) {
 -		thinkingLevel = settingsManager.getDefaultThinkingLevel() ?? DEFAULT_THINKING_LEVEL;
-+		thinkingLevel = defaultThinkingLevel ?? model?.defaultThinkingLevel ?? DEFAULT_THINKING_LEVEL;
++		thinkingLevel = settingsManager.getDefaultThinkingLevel() ?? model?.defaultThinkingLevel ?? DEFAULT_THINKING_LEVEL;
  	}
  
  	// Clamp to model capabilities
 diff --git a/packages/coding-agent/src/main.ts b/packages/coding-agent/src/main.ts
-index b78e790..57be2ea 100644
+index 1b44ea343..61eca802b 100644
 --- a/packages/coding-agent/src/main.ts
 +++ b/packages/coding-agent/src/main.ts
-@@ -525,7 +525,8 @@ function buildSessionOptions(
+@@ -516,7 +516,8 @@ function buildSessionOptions(
  
  	// Scoped models for Ctrl+P cycling
  	// Keep thinking level undefined when not explicitly set in the model pattern.
@@ -235,7 +148,7 @@ index b78e790..57be2ea 100644
  			model: sm.model,
 diff --git a/packages/coding-agent/test/model-default-thinking.test.ts b/packages/coding-agent/test/model-default-thinking.test.ts
 new file mode 100644
-index 0000000..759b846
+index 000000000..759b84631
 --- /dev/null
 +++ b/packages/coding-agent/test/model-default-thinking.test.ts
 @@ -0,0 +1,178 @@
@@ -418,7 +331,7 @@ index 0000000..759b846
 +	});
 +});
 diff --git a/packages/server/src/protocol.ts b/packages/server/src/protocol.ts
-index 069828e..94ac605 100644
+index 069828e59..94ac60500 100644
 --- a/packages/server/src/protocol.ts
 +++ b/packages/server/src/protocol.ts
 @@ -64,6 +64,7 @@ type _AiModelFieldsAccountedFor = Assert<

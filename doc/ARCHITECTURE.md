@@ -219,7 +219,7 @@ The Darwin gallery performs bounded loopback model discovery on both
 workstations, while `config/ai/catalog.nix` grants fixed local-provider overrides
 only to profiles whose exact model inventory has been verified. These overrides
 are not a second inventory: endpoint availability and discovered inventory are
-distinct authorities. Pi-Bifrost routing policy remains mutable project state.
+distinct authorities.
 
 ## Source and update authority
 

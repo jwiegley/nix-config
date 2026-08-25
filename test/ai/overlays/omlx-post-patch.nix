@@ -68,10 +68,8 @@ runCommand "omlx-post-patch"
     work="$TMPDIR/omlx-post-patch-cases"
     mkdir -p "$work"
 
-    prepare_case current-source
-    current=$(current_ddgs_coordinate)
-    [ "$current" != '"ddgs==${selectedDdgsVersion}"' ] \
-      || fail "current source no longer exercises alternate DDGS retargeting"
+    prepare_case alternate-ddgs
+    replace_current_ddgs '"ddgs==0.0.1"'
     apply_post_patch "$case_dir"
     grep -Fq '"ddgs==${selectedDdgsVersion}"' "$case_dir/pyproject.toml" \
       || fail "DDGS was not retargeted to the package-set version"

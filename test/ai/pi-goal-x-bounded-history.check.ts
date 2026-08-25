@@ -32,7 +32,7 @@ const packageVersion = (
 	}
 ).version;
 assert(
-	packageVersion === "0.30.0",
+	packageVersion === "0.30.4",
 	`review Goal-X bounded-history behavior for ${String(packageVersion)}`,
 );
 const codingAgentRoot = process.env.PI_CODING_AGENT_ROOT;

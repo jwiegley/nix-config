@@ -38,7 +38,6 @@ in
     "droid"
     "llama-swap-provider"
     "omlx-provider"
-    "bifrost"
     "rewind"
     "mem"
     "trace"
@@ -103,10 +102,6 @@ in
     };
     omlx-provider = member "pi-provider-omlx" {
       publicName = "pi-provider-omlx";
-      extension = "index.ts";
-    };
-    bifrost = member "pi-bifrost" {
-      publicName = "pi-bifrost";
       extension = "index.ts";
     };
     rewind = member "pi-rewind" {

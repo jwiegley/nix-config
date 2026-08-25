@@ -14,6 +14,9 @@ nodePackage.overrideAttrs (old: {
     rm -rf dist
     cp -R ${piSourceBuild}/coding-agent/dist ./dist
     chmod -R u+w dist
+    # ponytail: keep the modular CLI until renderer wrappers are bundle-aware upstream.
+    substituteInPlace package.json \
+      --replace-fail '"pi": "dist/bundle/cli.js"' '"pi": "dist/cli.js"'
     rm -rf node_modules/@earendil-works/pi-agent-core/dist
     cp -R ${piSourceBuild}/agent/dist node_modules/@earendil-works/pi-agent-core/dist
     chmod -R u+w node_modules/@earendil-works/pi-agent-core/dist

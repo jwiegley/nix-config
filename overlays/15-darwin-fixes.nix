@@ -65,6 +65,15 @@ in
     else
       prev.gnupg;
 
+  # tmux 3.7c requires jemalloc on macOS to avoid an upstream calloc bug.
+  tmux = prev.tmux.overrideAttrs (
+    oldAttrs:
+    prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
+      buildInputs = prev.lib.unique ((oldAttrs.buildInputs or [ ]) ++ [ prev.jemalloc ]);
+      configureFlags = prev.lib.unique ((oldAttrs.configureFlags or [ ]) ++ [ "--enable-jemalloc" ]);
+    }
+  );
+
   # Preseed zsh's sigsuspend configure result on Darwin.
   zsh = prev.zsh.overrideAttrs (
     oldAttrs:

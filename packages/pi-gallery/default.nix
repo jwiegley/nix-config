@@ -28,7 +28,6 @@ let
         agent-browser
         cymbal
         pi-agent-browser-native
-        pi-bifrost
         pi-btw
         pi-cache-optimizer
         pi-caveman
@@ -855,7 +854,7 @@ let
   pi-goal-x = mkCopyRoot {
     pname = members.goal.attrName;
     version =
-      if members.goal.version == "0.30.0" then
+      if members.goal.version == "0.30.4" then
         members.goal.version
       else
         throw "unsupported pi-goal-x bounded-history patch version ${members.goal.version}";
@@ -867,7 +866,7 @@ let
           'return `''${prefix}: ''${statusLabel(goal)}''${usage}`;'
       ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
         --directory=${root} --strip=1 \
-        < ${./patches/pi-goal-x-bounded-history-0.30.0.patch}
+        < ${./patches/pi-goal-x-bounded-history-0.30.4.patch}
       patch_artifact="$(
         find ${root} -path '*/node_modules' -prune -o \
           -type f \( -name '*.orig' -o -name '*.rej' \) -print -quit
@@ -887,14 +886,6 @@ let
       ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
         --directory=${root} --strip=1 \
         < ${./patches/pi-multi-pass-native-oauth.patch}
-    '';
-  };
-
-  pi-bifrost = mkCopyRoot {
-    pname = members.bifrost.attrName;
-    version = members.bifrost.version;
-    install = root: ''
-      tar -xzf ${releaseTarballs.pi-bifrost} -C ${root} --strip-components=1
     '';
   };
 

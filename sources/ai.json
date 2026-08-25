@@ -24,14 +24,14 @@
     },
     "agnix": {
       "hashes": {
-        "cargoHash": "sha256-YrgtZ5mjZpYvUATPjstPVK1yElJo1kAJpXD6uHMcIR4="
+        "cargoHash": "sha256-R5+qeUZcqHk8fAeOWeayNV98UeAidirl7by1HZkA7oc="
       },
       "source": {
         "args": {
-          "hash": "sha256-1fS3n2FSxQH5ZUlWXRC35aKKaP2q09K57q27dH1TifY=",
+          "hash": "sha256-t0zc6iy1lB+GcTyUhSs4kq+vjA4oB2B28dymqPd3WP8=",
           "owner": "avifenesh",
           "repo": "agnix",
-          "tag": "v0.49.0"
+          "tag": "v0.50.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/avifenesh/agnix"
@@ -40,7 +40,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.49.0"
+      "version": "0.50.0"
     },
     "browser-control-mcp": {
       "hashes": {
@@ -180,10 +180,10 @@
       },
       "source": {
         "args": {
-          "hash": "sha256-46b+5YWwF5k1vBBzsjSCrn6k8dkPuBYy2bqWhgFqCbQ=",
+          "hash": "sha256-vVq7+eUN6NXZuqm7Jwlr4iFDV1PjNzQ6nK9AR2zvZYM=",
           "owner": "ggml-org",
           "repo": "llama.cpp",
-          "tag": "v0.2.0"
+          "tag": "v0.3.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/ggml-org/llama.cpp"
@@ -193,7 +193,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.2.0"
+      "version": "0.3.0"
     },
     "llama-swap": {
       "hashes": {
@@ -257,10 +257,10 @@
     "omlx": {
       "source": {
         "args": {
-          "hash": "sha256-2gN8E3vgnKDRD+n9nrUWFfbIRX287KSbmGUpiNDp/Mc=",
+          "hash": "sha256-LuVR5FDE/M0querkf+6OmzAZDAI5GzXpG95uZKY8LqA=",
           "owner": "jundot",
           "repo": "omlx",
-          "tag": "v0.6.3rc2"
+          "tag": "v0.6.3rc3"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jundot/omlx"
@@ -271,7 +271,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.6.3rc2"
+      "version": "0.6.3rc3"
     },
     "prime-agent": {
       "commit": "be9e2fa0714e7cd1c6bd9bdb1b554d2cc6550387",
@@ -384,11 +384,11 @@
             "abi": "cp311",
             "dist": "cp311",
             "format": "wheel",
-            "hash": "sha256-kP13CDdpD/HRFHxloGb3CET09XZjU8cl40gnYGGiVOc=",
+            "hash": "sha256-qFk+kJSJ7DleeCTsR9/D86nbI//aKq25ENf1UwvESOQ=",
             "platform": "macosx_11_0_arm64",
             "pname": "cohere_melody",
             "python": "cp311",
-            "version": "0.13.3"
+            "version": "0.13.4"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/cohere-melody"
@@ -398,11 +398,11 @@
             "abi": "cp312",
             "dist": "cp312",
             "format": "wheel",
-            "hash": "sha256-fCi4VXPlunqCj4JRhdpXAdOr0Iws6D/8toPvMLfS6ew=",
+            "hash": "sha256-dCRQpqYFv+bfUDdLeyXS7GuoL0jO5DF4opBcnerXICE=",
             "platform": "macosx_11_0_arm64",
             "pname": "cohere_melody",
             "python": "cp312",
-            "version": "0.13.3"
+            "version": "0.13.4"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/cohere-melody"
@@ -412,11 +412,11 @@
             "abi": "cp314",
             "dist": "cp314",
             "format": "wheel",
-            "hash": "sha256-y0q0I0ZUKo1M2SZP2s36Qw4Q/zTABnBS77c1wKGrwSU=",
+            "hash": "sha256-9xbZ5KTA0b+YtBGla8laTcPv25GA6ToanZnw4KRHgTc=",
             "platform": "macosx_11_0_arm64",
             "pname": "cohere_melody",
             "python": "cp314",
-            "version": "0.13.3"
+            "version": "0.13.4"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/cohere-melody"
@@ -427,11 +427,11 @@
           "abi": "cp313",
           "dist": "cp313",
           "format": "wheel",
-          "hash": "sha256-sey3A88Dvp191GI/ey23y4Sp+oqpwQ4Jdj9ud1Iem/A=",
+          "hash": "sha256-vaXsGfuIyo0zpLhutBcaoYoLuZWQrEKV+NCvtQ3w3OQ=",
           "platform": "macosx_11_0_arm64",
           "pname": "cohere_melody",
           "python": "cp313",
-          "version": "0.13.3"
+          "version": "0.13.4"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/cohere-melody"
@@ -442,7 +442,7 @@
         "kind": "pypi-release",
         "package": "cohere-melody"
       },
-      "version": "0.13.3"
+      "version": "0.13.4"
     },
     "crick": {
       "source": {
@@ -505,10 +505,10 @@
     "dflash-mlx": {
       "source": {
         "args": {
-          "hash": "sha256-g/UZJPMR6ImsnvwpLilp1oQ4OGMmJ2RFSjmcOtx3Sbg=",
+          "hash": "sha256-sRRwxSvUkJRx6h3yleDDukzOPm/AJs22a8fG9n+H/sc=",
           "owner": "jundot",
           "repo": "dflash-mlx",
-          "rev": "b7f625504a733216d9e06caa3f7847a048241d94"
+          "rev": "c55324c86540c369f6818a0f47eae544d405475b"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jundot/dflash-mlx"
@@ -521,7 +521,7 @@
         "policy": "manual",
         "reason": "oMLX pins this exact fork and commit for its speculative-decoding kernels"
       },
-      "version": "0.1.10+omlx.6"
+      "version": "0.1.10+omlx.7"
     },
     "espeakng-loader": {
       "source": {
@@ -629,11 +629,11 @@
             "abi": "cp311",
             "dist": "cp311",
             "format": "wheel",
-            "hash": "sha256-UIBR9DoIyokwNX4h4mSn67Ym04sIbO7+PSEto5hcnhs=",
+            "hash": "sha256-I4tQ0u45F8g25z+URgEVGLef8JSUDrAQf6bNF9AqLso=",
             "platform": "macosx_14_0_arm64",
             "pname": "mlx",
             "python": "cp311",
-            "version": "0.32.1"
+            "version": "0.32.2"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/mlx"
@@ -643,11 +643,11 @@
             "abi": "cp312",
             "dist": "cp312",
             "format": "wheel",
-            "hash": "sha256-8LaigInK6s3Ce4nhj/eG7pVrglPPiBl3hXX9kNKvjKo=",
+            "hash": "sha256-dyF3mKKwNrrp8hO4UdTN5FgYk3h8mWRFi31HH4YDa9Y=",
             "platform": "macosx_14_0_arm64",
             "pname": "mlx",
             "python": "cp312",
-            "version": "0.32.1"
+            "version": "0.32.2"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/mlx"
@@ -657,11 +657,11 @@
             "abi": "cp314",
             "dist": "cp314",
             "format": "wheel",
-            "hash": "sha256-6zsNEdIAVIGPMl5ZgRFwBOgpWGs0rLWQutjaSsDMCcg=",
+            "hash": "sha256-yZ47ZFG7SlUHHPGVlPVkQ1vYjedwCPN35hGkCou/syg=",
             "platform": "macosx_14_0_arm64",
             "pname": "mlx",
             "python": "cp314",
-            "version": "0.32.1"
+            "version": "0.32.2"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/mlx"
@@ -670,11 +670,11 @@
           "args": {
             "dist": "py3",
             "format": "wheel",
-            "hash": "sha256-P799PeeDaA53GBgYm8c0h3ybEprpExIzi17eQgzeRMk=",
+            "hash": "sha256-OCX/83nbwQfdNBPlZKBsrqokgZkQ7EnAQ55FTAahubg=",
             "platform": "macosx_14_0_arm64",
             "pname": "mlx_metal",
             "python": "py3",
-            "version": "0.32.1"
+            "version": "0.32.2"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/mlx-metal"
@@ -685,11 +685,11 @@
           "abi": "cp313",
           "dist": "cp313",
           "format": "wheel",
-          "hash": "sha256-PpquJ98WMZqBV7heUU1m4yIj8gQkDYU3bfstBKxV/Ew=",
+          "hash": "sha256-ZdPSm2YEXtjdLY5DfIdw3jJYQ8Nk97fDjNiukKfuyFQ=",
           "platform": "macosx_14_0_arm64",
           "pname": "mlx",
           "python": "cp313",
-          "version": "0.32.1"
+          "version": "0.32.2"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/mlx"
@@ -700,7 +700,7 @@
         "kind": "pypi-release",
         "package": "mlx"
       },
-      "version": "0.32.1"
+      "version": "0.32.2"
     },
     "mlx-audio": {
       "source": {
@@ -779,10 +779,10 @@
     "mlx-vlm": {
       "source": {
         "args": {
-          "hash": "sha256-16+f9jzsYoE5+1KWvL9/CcifbqwH82WdOeDrH3cLigM=",
+          "hash": "sha256-zSg/EaGc6/gHg5+czkMc9paYEZ+a7sQZgmvD7qaYAs0=",
           "owner": "Blaizzy",
           "repo": "mlx-vlm",
-          "tag": "v0.6.15"
+          "tag": "v0.6.16"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/Blaizzy/mlx-vlm"
@@ -793,14 +793,14 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.6.15"
+      "version": "0.6.16"
     },
     "mtplx": {
       "source": {
         "args": {
-          "hash": "sha256-czLIhkQmOZmfDAPYl8M0R/Er41AXUuOUB8/c3tGgQr4=",
+          "hash": "sha256-E3fAhrT3+qPSMc+EESBdWc+IKFpBHkMNsuAW0t5aJUI=",
           "pname": "mtplx",
-          "version": "2.9.1"
+          "version": "2.9.2"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/mtplx"
@@ -811,7 +811,7 @@
         "kind": "pypi-release",
         "package": "mtplx"
       },
-      "version": "2.9.1"
+      "version": "2.9.2"
     },
     "phonemizer-fork": {
       "source": {
@@ -893,10 +893,10 @@
         "args": {
           "dist": "py3",
           "format": "wheel",
-          "hash": "sha256-pEEYp4LEGloPWN1MlnYU5VtGcmguGhL7Bl/ZUa+HVSs=",
+          "hash": "sha256-i9hsPR4b43ZsGy23OcHXUYtGr6DfDDSkvduyA1lHR2o=",
           "pname": "plasma_wiki",
           "python": "py3",
-          "version": "1.2.0"
+          "version": "1.3.0"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/plasma-wiki"
@@ -907,7 +907,7 @@
         "kind": "pypi-release",
         "package": "plasma-wiki"
       },
-      "version": "1.2.0"
+      "version": "1.3.0"
     },
     "sherlock-db": {
       "artifacts": {
@@ -960,10 +960,10 @@
     "git-ai": {
       "source": {
         "args": {
-          "narHash": "sha256-c3rZFEZ6ZCf2BNWXD1BoNCHUDKYNNvozxvmwK+SVB+8=",
+          "narHash": "sha256-f5hs4WkF2hHJcJQ6A/1XAmNCS5o9CGfcsGEk4OqpRmo=",
           "owner": "git-ai-project",
           "repo": "git-ai",
-          "rev": "c395f5463e3fa51fc8f07191d0db1a94e8b06135",
+          "rev": "793066013ad137562d55bd33e29ad3b37612d14d",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -981,10 +981,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-zfumhlJTGDKSILebSBa8nTKG76ByIPlLkGPAKjxaiwE=",
+          "narHash": "sha256-4R2DeS9btVaawjYmkfA9c1QHYCwg0TM2PjlFOSlKk0Y=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "46e6a013fd49779cd2def2c98fa447f197da3fe7",
+          "rev": "60e7fc4eab599ae19f53818784955f2f5aab72ec",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1004,10 +1004,10 @@
     "mcp-servers-nix": {
       "source": {
         "args": {
-          "narHash": "sha256-mmgYC34YsiFzqEnJv9duH3Ru/B1S8Fd/vwVM+FZMS14=",
+          "narHash": "sha256-msOy9qZdwW4xlnxnhVrkKgDzvwENJ2CtADAeShwFnDQ=",
           "owner": "natsukium",
           "repo": "mcp-servers-nix",
-          "rev": "c30be6c96fceae9a91ac3b145862b507466a625d",
+          "rev": "bee98340effdb61e4e64855997723bbc5411a68a",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1079,22 +1079,22 @@
       "artifacts": {
         "piAiRelease": {
           "args": {
-            "hash": "sha256-g+7VNBsWcXAW+xmZ4wSfMZvWagfetfNI87A87Q4Ip4U=",
-            "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.2.tgz"
+            "hash": "sha256-3jbhoI1KQAlazKfAmV+QNyx7Ym9k7EQ7l/7DUcGV1xE=",
+            "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.3.tgz"
           },
           "fetcher": "fetchzip",
-          "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.2.tgz"
+          "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.3.tgz"
         }
       },
       "hashes": {
-        "npmDepsHash": "sha256-6J5Efe+6ptCuR3VZojwYPZO8BBnnZsOQ4OAeB64uYOY="
+        "npmDepsHash": "sha256-cDx28+c4bwtQpiy5+BCvZhZezoZb4WRqfZj2eoEeMbw="
       },
       "source": {
         "args": {
-          "hash": "sha256-d29ft9otYxdHRWYIAX8KMHPpppToX9ME5LbPb1rPcYo=",
+          "hash": "sha256-fC9pKgP2qD61ae5d7iOqP8anl88J1N1Bq8X8+aAjA2A=",
           "owner": "earendil-works",
           "repo": "pi",
-          "rev": "914cf1472e715297caa30db4b9535d534a9eb718"
+          "rev": "4e58f324fae8ebfa98a3d45181fb248072a2afac"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/earendil-works/pi"
@@ -1104,15 +1104,15 @@
         "policy": "manual",
         "reason": "Keep the patched source build and its packaged provider data on one reviewed Pi release"
       },
-      "version": "0.84.2"
+      "version": "0.84.3"
     },
     "rust-overlay": {
       "source": {
         "args": {
-          "narHash": "sha256-48/4bbmK3W3Av3YPnrFb/tVQXPvBwU6kyM3Pb13VVD8=",
+          "narHash": "sha256-QdVaU2WSCKsxZ0sBDIRnaaukp6Z5IMUE0gDEDoSRJd0=",
           "owner": "oxalica",
           "repo": "rust-overlay",
-          "rev": "ab450d47a3f906d19de1b332915bfc6e5b29c853",
+          "rev": "132a10336af9ae819bdf640c0dd1c789b12d7107",
           "type": "github"
         },
         "fetcher": "fetchTree",
