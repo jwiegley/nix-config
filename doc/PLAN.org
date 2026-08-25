@@ -7967,6 +7967,24 @@ The authoritative Andoria-T2 system configuration declaratively grants only the 
 ]
 #+end_src
 
+* DONE [#B] Adopt oMLX 0.6.3rc3 and coupled DFlash
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-llov
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-25 Tue 01:31]
+:MODIFIED: [2026-08-25 Tue 01:32]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 01:32]
+:CLOSE_REASON: oMLX 0.6.3rc3 and exact DFlash c55324c are pinned; package and postPatch contracts pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Advance oMLX to 0.6.3rc3 and its exact DFlash fork revision together, preserving DDGS/source identity guards and real package validation.
+
 * DOING [#B] Prime loses MCP: pi-mcp-adapter fails to load (pi-ai/compat subpath)
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

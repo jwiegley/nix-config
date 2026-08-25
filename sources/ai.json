@@ -257,10 +257,10 @@
     "omlx": {
       "source": {
         "args": {
-          "hash": "sha256-2gN8E3vgnKDRD+n9nrUWFfbIRX287KSbmGUpiNDp/Mc=",
+          "hash": "sha256-LuVR5FDE/M0querkf+6OmzAZDAI5GzXpG95uZKY8LqA=",
           "owner": "jundot",
           "repo": "omlx",
-          "tag": "v0.6.3rc2"
+          "tag": "v0.6.3rc3"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jundot/omlx"
@@ -271,7 +271,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.6.3rc2"
+      "version": "0.6.3rc3"
     },
     "prime-agent": {
       "commit": "be9e2fa0714e7cd1c6bd9bdb1b554d2cc6550387",
@@ -505,10 +505,10 @@
     "dflash-mlx": {
       "source": {
         "args": {
-          "hash": "sha256-g/UZJPMR6ImsnvwpLilp1oQ4OGMmJ2RFSjmcOtx3Sbg=",
+          "hash": "sha256-sRRwxSvUkJRx6h3yleDDukzOPm/AJs22a8fG9n+H/sc=",
           "owner": "jundot",
           "repo": "dflash-mlx",
-          "rev": "b7f625504a733216d9e06caa3f7847a048241d94"
+          "rev": "c55324c86540c369f6818a0f47eae544d405475b"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jundot/dflash-mlx"
@@ -521,7 +521,7 @@
         "policy": "manual",
         "reason": "oMLX pins this exact fork and commit for its speculative-decoding kernels"
       },
-      "version": "0.1.10+omlx.6"
+      "version": "0.1.10+omlx.7"
     },
     "espeakng-loader": {
       "source": {
