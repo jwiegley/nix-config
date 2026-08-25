@@ -564,7 +564,7 @@ try {
 			timer = realSetTimeout(() => {
 				onTimeout();
 				reject(new Error(label));
-			}, 1_000);
+			}, 5_000);
 		});
 		try {
 			return await Promise.race([promise, deadline]);
