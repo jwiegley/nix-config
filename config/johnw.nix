@@ -11,6 +11,7 @@
   pkgs,
   lib,
   config,
+  options,
   hostname,
   inputs,
   ...
@@ -226,7 +227,6 @@ in
 
     starship = {
       enable = true;
-      presets = [ "nerd-font-symbols" ];
       settings = {
         add_newline = false;
         scan_timeout = lib.mkDefault 50;
@@ -252,6 +252,9 @@ in
 
       enableBashIntegration = true;
       enableZshIntegration = true;
+    }
+    // lib.optionalAttrs (options.programs.starship ? presets) {
+      presets = [ "nerd-font-symbols" ];
     };
 
     tmux = {

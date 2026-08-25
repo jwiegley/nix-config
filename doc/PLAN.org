@@ -9281,6 +9281,24 @@ Partner observation 2026-08-11T05:53:30.821Z: signed commit 71870d60 reordered t
 ]
 #+end_src
 
+* DONE [#B] Gate Starship presets on Home Manager capability
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-pevz
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-24 Mon 19:21]
+:MODIFIED: [2026-08-24 Mon 19:21]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-24 Mon 19:21]
+:CLOSE_REASON: Capability-gated Starship presets; current host behavior and VPS release-25.11 cross-consumer evaluation pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+VPS cross-consumer evaluation failed because shared config set programs.starship.presets against release-25.11, which lacks that option. Gate the preset on the Home Manager option surface while retaining it on current consumers.
+
 * DONE [#B] host-behavior red: Agda disable left presence assertions in place
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
