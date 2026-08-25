@@ -1524,6 +1524,24 @@ Partner observation .445Z: the malformed claude-opus-5[1m value came from a trun
 ]
 #+end_src
 
+* DONE [#C] Adopt Pi Goal X 0.30.4
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-430v
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-25 Tue 04:33]
+:MODIFIED: [2026-08-25 Tue 04:34]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 04:34]
+:CLOSE_REASON: Goal X 0.30.4 network-recovery delta reviewed; bounded-history patch applies exactly and package/Gallery checks pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Goal X advanced from 0.30.2 to 0.30.4 during the update transaction. Review the network-recovery release delta, prove the bounded-history patch still applies with zero fuzz, and advance the exact npm pin and tests.
+
 * DONE [#B] Revalidate the Gitea publication destination immediately before push
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
