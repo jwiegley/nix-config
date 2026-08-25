@@ -3171,6 +3171,24 @@ The full session suite fails TestUpdateStatus_CLIvsTUIParity_Error with statedb 
 ]
 #+end_src
 
+* DONE [#B] Adopt reviewed Pi 0.84.3 source build
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-8k3k
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-25 Tue 01:32]
+:MODIFIED: [2026-08-25 Tue 01:32]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 01:32]
+:CLOSE_REASON: Pi 0.84.3 source/artifact/npm hashes and llm-agents locks are aligned; rebased source/wrapper patches and behavioral checks pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Advance llm-agents and the reviewed Pi source build to 0.84.3, rebase downstream patches without weakening behavior, and validate canonical Pi plus extension/gallery contracts.
+
 * DONE [#B] Remove Pi Insights and Usage Extension
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

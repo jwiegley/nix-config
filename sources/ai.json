@@ -981,10 +981,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-zfumhlJTGDKSILebSBa8nTKG76ByIPlLkGPAKjxaiwE=",
+          "narHash": "sha256-HR+GKxQuLbrpWJuJlbZxMWV9ECSs9WHSGoKtI1Dc3BU=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "46e6a013fd49779cd2def2c98fa447f197da3fe7",
+          "rev": "88dccae0669e6581694b930c5c2903f1ceb60c7e",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1079,22 +1079,22 @@
       "artifacts": {
         "piAiRelease": {
           "args": {
-            "hash": "sha256-g+7VNBsWcXAW+xmZ4wSfMZvWagfetfNI87A87Q4Ip4U=",
-            "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.2.tgz"
+            "hash": "sha256-3jbhoI1KQAlazKfAmV+QNyx7Ym9k7EQ7l/7DUcGV1xE=",
+            "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.3.tgz"
           },
           "fetcher": "fetchzip",
-          "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.2.tgz"
+          "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.3.tgz"
         }
       },
       "hashes": {
-        "npmDepsHash": "sha256-6J5Efe+6ptCuR3VZojwYPZO8BBnnZsOQ4OAeB64uYOY="
+        "npmDepsHash": "sha256-cDx28+c4bwtQpiy5+BCvZhZezoZb4WRqfZj2eoEeMbw="
       },
       "source": {
         "args": {
-          "hash": "sha256-d29ft9otYxdHRWYIAX8KMHPpppToX9ME5LbPb1rPcYo=",
+          "hash": "sha256-fC9pKgP2qD61ae5d7iOqP8anl88J1N1Bq8X8+aAjA2A=",
           "owner": "earendil-works",
           "repo": "pi",
-          "rev": "914cf1472e715297caa30db4b9535d534a9eb718"
+          "rev": "4e58f324fae8ebfa98a3d45181fb248072a2afac"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/earendil-works/pi"
@@ -1104,7 +1104,7 @@
         "policy": "manual",
         "reason": "Keep the patched source build and its packaged provider data on one reviewed Pi release"
       },
-      "version": "0.84.2"
+      "version": "0.84.3"
     },
     "rust-overlay": {
       "source": {

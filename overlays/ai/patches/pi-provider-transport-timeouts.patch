@@ -1,5 +1,5 @@
 diff --git a/packages/coding-agent/src/core/http-dispatcher.ts b/packages/coding-agent/src/core/http-dispatcher.ts
-index 0cae09a..eb4688b 100644
+index 0cae09a60..eb4688b69 100644
 --- a/packages/coding-agent/src/core/http-dispatcher.ts
 +++ b/packages/coding-agent/src/core/http-dispatcher.ts
 @@ -78,23 +78,47 @@ function createUndiciOriginDispatcher(origin: string | URL, options: object): un
@@ -63,10 +63,10 @@ index 0cae09a..eb4688b 100644
  	// Keep fetch and the dispatcher on the same undici implementation. Node 26.0's
  	// bundled fetch can otherwise consume compressed responses through npm undici's
 diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
-index 7ea12cb..cf6c36d 100644
+index 6036d5af9..03a812392 100644
 --- a/packages/coding-agent/src/core/model-config.ts
 +++ b/packages/coding-agent/src/core/model-config.ts
-@@ -139,6 +139,11 @@ const ProviderCompatSchema = Type.Union([
+@@ -141,6 +141,11 @@ const ProviderCompatSchema = Type.Union([
  	AnthropicMessagesCompatSchema,
  ]);
  
@@ -78,7 +78,7 @@ index 7ea12cb..cf6c36d 100644
  const ModelCostRatesSchema = {
  	input: Type.Number(),
  	output: Type.Number(),
-@@ -200,6 +205,7 @@ const ProviderConfigSchema = Type.Object({
+@@ -202,6 +207,7 @@ const ProviderConfigSchema = Type.Object({
  	headers: Type.Optional(Type.Record(Type.String(), Type.String())),
  	compat: Type.Optional(ProviderCompatSchema),
  	authHeader: Type.Optional(Type.Boolean()),
@@ -87,7 +87,7 @@ index 7ea12cb..cf6c36d 100644
  	modelOverrides: Type.Optional(Type.Record(Type.String(), ModelOverrideSchema)),
  });
 diff --git a/packages/coding-agent/src/core/model-runtime.ts b/packages/coding-agent/src/core/model-runtime.ts
-index 6f4071b..bcc37a3 100644
+index 6f4071b60..bcc37a35f 100644
 --- a/packages/coding-agent/src/core/model-runtime.ts
 +++ b/packages/coding-agent/src/core/model-runtime.ts
 @@ -40,6 +40,7 @@ import * as builtinProviderCatalog from "@earendil-works/pi-ai/providers/all";
@@ -129,7 +129,7 @@ index 6f4071b..bcc37a3 100644
  		let headers = mergeHeaders(resolution.auth.headers, providerOptions.headers);
  		if (transformHeaders) headers = await transformHeaders(headers ?? {});
 diff --git a/packages/coding-agent/src/core/provider-composer.ts b/packages/coding-agent/src/core/provider-composer.ts
-index 1be7fcd..31c9a41 100644
+index 1be7fcdb5..31c9a4143 100644
 --- a/packages/coding-agent/src/core/provider-composer.ts
 +++ b/packages/coding-agent/src/core/provider-composer.ts
 @@ -180,13 +180,14 @@ function applyModelsJson(
@@ -149,10 +149,10 @@ index 1be7fcd..31c9a41 100644
  	}
  
 diff --git a/packages/coding-agent/src/core/sdk.ts b/packages/coding-agent/src/core/sdk.ts
-index e61e67a..505d276 100644
+index b4cad1623..61d90e44b 100644
 --- a/packages/coding-agent/src/core/sdk.ts
 +++ b/packages/coding-agent/src/core/sdk.ts
-@@ -304,15 +304,21 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
+@@ -313,15 +313,21 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
  		convertToLlm: convertToLlmWithBlockImages,
  		streamFn: async (model, context, options) => {
  			const providerRetrySettings = settingsManager.getProviderRetrySettings();

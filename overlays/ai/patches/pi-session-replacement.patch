@@ -1,5 +1,5 @@
 diff --git a/packages/coding-agent/src/modes/interactive/components/footer.ts b/packages/coding-agent/src/modes/interactive/components/footer.ts
-index aec8776..36df086 100644
+index aec877691..36df0868e 100644
 --- a/packages/coding-agent/src/modes/interactive/components/footer.ts
 +++ b/packages/coding-agent/src/modes/interactive/components/footer.ts
 @@ -48,7 +48,7 @@ export function formatCwdForFooter(cwd: string, home: string | undefined): strin
@@ -83,10 +83,10 @@ index aec8776..36df086 100644
  		if (usageTotals.cost || usingSubscription) {
  			const costStr = `$${usageTotals.cost.toFixed(3)}${usingSubscription ? " (sub)" : ""}`;
 diff --git a/packages/coding-agent/src/modes/interactive/interactive-mode.ts b/packages/coding-agent/src/modes/interactive/interactive-mode.ts
-index a725312..92dfc23 100644
+index e8f4dc51b..edd8f6e52 100644
 --- a/packages/coding-agent/src/modes/interactive/interactive-mode.ts
 +++ b/packages/coding-agent/src/modes/interactive/interactive-mode.ts
-@@ -555,7 +555,11 @@ export class InteractiveMode {
+@@ -576,7 +576,11 @@ export class InteractiveMode {
  		this.options = { ...options, tuiMode };
  		this.autoTrustOnReloadCwd = options.autoTrustOnReloadCwd;
  		this.runtimeHost.setBeforeSessionInvalidate(() => {
@@ -99,7 +99,7 @@ index a725312..92dfc23 100644
  		});
  		this.runtimeHost.setRebindSession(async () => {
  			await this.rebindCurrentSession({ renderBeforeBind: true });
-@@ -1932,7 +1936,7 @@ export class InteractiveMode {
+@@ -1993,7 +1997,7 @@ export class InteractiveMode {
  	private applyRuntimeSettings(): void {
  		configureHttpDispatcher(this.settingsManager.getHttpIdleTimeoutMs());
  		this.applyFullscreenScrollbarSetting();
@@ -109,7 +109,7 @@ index a725312..92dfc23 100644
  		this.footerDataProvider.setCwd(this.sessionManager.getCwd());
  		this.hideThinkingBlock = this.settingsManager.getHideThinkingBlock();
 diff --git a/packages/coding-agent/test/agent-session-runtime-events.test.ts b/packages/coding-agent/test/agent-session-runtime-events.test.ts
-index 32bb828..c51dae9 100644
+index 32bb828ff..c51dae949 100644
 --- a/packages/coding-agent/test/agent-session-runtime-events.test.ts
 +++ b/packages/coding-agent/test/agent-session-runtime-events.test.ts
 @@ -1,4 +1,4 @@
@@ -187,7 +187,7 @@ index 32bb828..c51dae9 100644
  		const events: RecordedSessionEvent[] = [];
  		let cancelNextFork = false;
 diff --git a/packages/coding-agent/test/footer-width.test.ts b/packages/coding-agent/test/footer-width.test.ts
-index fc124b2..c90cf58 100644
+index fc124b22b..c90cf584e 100644
 --- a/packages/coding-agent/test/footer-width.test.ts
 +++ b/packages/coding-agent/test/footer-width.test.ts
 @@ -141,6 +141,30 @@ describe("FooterComponent width handling", () => {

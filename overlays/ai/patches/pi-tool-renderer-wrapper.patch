@@ -1,8 +1,8 @@
 diff --git a/dist/core/agent-session.js b/dist/core/agent-session.js
-index 5d69c97..5b6a747 100644
+index 9954635..0cc5619 100644
 --- a/dist/core/agent-session.js
 +++ b/dist/core/agent-session.js
-@@ -1965,13 +1965,13 @@ export class AgentSession {
+@@ -2044,13 +2044,13 @@ export class AgentSession {
              .map(([name, definition]) => [
              name,
              {
@@ -18,16 +18,20 @@ index 5d69c97..5b6a747 100644
                  sourceInfo: tool.sourceInfo,
              });
          }
+diff --git a/dist/core/agent-session.js b/dist/core/agent-session.js.orig
+similarity index 100%
+copy from dist/core/agent-session.js
+copy to dist/core/agent-session.js.orig
 diff --git a/dist/core/extensions/loader.js b/dist/core/extensions/loader.js
-index 324d30a..5f5ebae 100644
+index bb022d4..61c22a7 100644
 --- a/dist/core/extensions/loader.js
 +++ b/dist/core/extensions/loader.js
-@@ -220,6 +220,14 @@ function createExtensionAPI(extension, runtime, cwd, eventBus) {
+@@ -244,6 +244,14 @@ function createExtensionAPI(extension, runtime, cwd, eventBus) {
              });
              runtime.refreshTools();
          },
 +        registerToolRenderer(wrapper) {
-+            runtime.assertActive();
++            assertActive();
 +            if (typeof wrapper !== "function") {
 +                throw new TypeError("registerToolRenderer expects a one-argument wrapper function");
 +            }
@@ -35,9 +39,9 @@ index 324d30a..5f5ebae 100644
 +            runtime.refreshTools();
 +        },
          registerCommand(name, options) {
-             runtime.assertActive();
+             assertActive();
              extension.commands.set(name, {
-@@ -389,6 +397,7 @@ function createExtension(extensionPath, resolvedPath) {
+@@ -449,6 +457,7 @@ function createExtension(extensionPath, resolvedPath) {
          sourceInfo: createSyntheticSourceInfo(extensionPath, { source, baseDir }),
          handlers: new Map(),
          tools: new Map(),
@@ -45,8 +49,12 @@ index 324d30a..5f5ebae 100644
          messageRenderers: new Map(),
          entryRenderers: new Map(),
          commands: new Map(),
+diff --git a/dist/core/extensions/loader.js b/dist/core/extensions/loader.js.orig
+similarity index 100%
+copy from dist/core/extensions/loader.js
+copy to dist/core/extensions/loader.js.orig
 diff --git a/dist/core/extensions/runner.d.ts b/dist/core/extensions/runner.d.ts
-index 9b579db..c89b3cb 100644
+index 9b579db..830eaeb 100644
 --- a/dist/core/extensions/runner.d.ts
 +++ b/dist/core/extensions/runner.d.ts
 @@ -9,7 +9,7 @@ import type { KeybindingsConfig } from "../keybindings.ts";
@@ -67,7 +75,7 @@ index 9b579db..c89b3cb 100644
      setFlagValue(name: string, value: boolean | string): void;
      getFlagValues(): Map<string, boolean | string>;
 diff --git a/dist/core/extensions/runner.js b/dist/core/extensions/runner.js
-index b510002..74934e2 100644
+index b510002..8b7a2c5 100644
 --- a/dist/core/extensions/runner.js
 +++ b/dist/core/extensions/runner.js
 @@ -2,6 +2,7 @@
@@ -141,7 +149,7 @@ index 0000000..b7e4ea7
 +    return { ...definition, ...renderers };
 +}
 diff --git a/dist/core/extensions/types.d.ts b/dist/core/extensions/types.d.ts
-index 61dab06..4d92be1 100644
+index b162232..3a1ce40 100644
 --- a/dist/core/extensions/types.d.ts
 +++ b/dist/core/extensions/types.d.ts
 @@ -375,6 +375,16 @@ export interface ToolDefinition<TParams extends TSchema = TSchema, TDetails = un
@@ -161,7 +169,7 @@ index 61dab06..4d92be1 100644
  type AnyToolDefinition = ToolDefinition<any, any, any>;
  /**
   * Preserve parameter inference for standalone tool definitions.
-@@ -900,6 +910,8 @@ export interface ExtensionAPI {
+@@ -925,6 +935,8 @@ export interface ExtensionAPI {
      on(event: "input", handler: ExtensionHandler<InputEvent, InputEventResult>): void;
      /** Register a tool that the LLM can call. */
      registerTool<TParams extends TSchema = TSchema, TDetails = unknown, TState = any>(tool: ToolDefinition<TParams, TDetails, TState>): void;
@@ -170,7 +178,7 @@ index 61dab06..4d92be1 100644
      /** Register a custom command. */
      registerCommand(name: string, options: Omit<RegisteredCommand, "name" | "sourceInfo">): void;
      /** Register a keyboard shortcut. */
-@@ -1275,6 +1287,7 @@ export interface Extension {
+@@ -1304,6 +1316,7 @@ export interface Extension {
      sourceInfo: SourceInfo;
      handlers: Map<string, HandlerFn[]>;
      tools: Map<string, RegisteredTool>;
@@ -178,3 +186,7 @@ index 61dab06..4d92be1 100644
      messageRenderers: Map<string, MessageRenderer>;
      markdownTransformer?: MarkdownTransformer;
      entryRenderers?: Map<string, EntryRenderer>;
+diff --git a/dist/core/extensions/types.d.ts b/dist/core/extensions/types.d.ts.orig
+similarity index 100%
+copy from dist/core/extensions/types.d.ts
+copy to dist/core/extensions/types.d.ts.orig

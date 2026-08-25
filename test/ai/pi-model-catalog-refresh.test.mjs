@@ -72,7 +72,6 @@ try {
 	const healthySelector = new ModelSelectorComponent(
 		{ requestRender: () => healthyRenderCount++ },
 		undefined,
-		{},
 		healthyRuntime,
 		[],
 		() => {},
@@ -116,7 +115,6 @@ try {
 	const hungSelector = new ModelSelectorComponent(
 		{ requestRender: () => hungRenderCount++ },
 		undefined,
-		{},
 		{
 			getAvailableSnapshot: () => [],
 			getModel: () => undefined,
