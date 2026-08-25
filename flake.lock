@@ -84,11 +84,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1779905182,
-        "narHash": "sha256-ddGTzrFdc4+rdPr5l4tJcxc5l1eeNWTIWIWDLqRkIKU=",
+        "lastModified": 1787676577,
+        "narHash": "sha256-n/qqWUl5Qyu0ycwrpCZ4wotiqHn32kOG+FwtOJ0bhts=",
         "owner": "jwiegley",
         "repo": "dirscan",
-        "rev": "8e03e1bbd32d2f924deb858070f9c6a152e8e319",
+        "rev": "c7de80e65c113203317a8fc140d1714fae481a20",
         "type": "github"
       },
       "original": {
