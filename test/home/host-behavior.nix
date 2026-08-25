@@ -721,7 +721,9 @@ assert builtins.all (
 assert desktopHomesByHost.hera.home.sessionVariables.NIX_CONFIG == "cores = 8";
 assert desktopHomesByHost.clio.home.sessionVariables.NIX_CONFIG == "cores = 8";
 assert desktopHomesByHost.hera.services.gpg-agent.defaultCacheTtl == 2147483647;
+assert desktopHomesByHost.hera.services.gpg-agent.defaultCacheTtlSsh == 2147483647;
 assert desktopHomesByHost.hera.services.gpg-agent.maxCacheTtl == 2147483647;
+assert desktopHomesByHost.hera.services.gpg-agent.maxCacheTtlSsh == 2147483647;
 assert !desktopHomesByHost.hera.services.gpg-agent.enableScDaemon;
 assert !desktopHomesByHost.hera.services.gpg-agent.noAllowExternalCache;
 assert desktopHomesByHost.hera.programs.gpg.scdaemonSettings == { };

@@ -9353,6 +9353,21 @@ The shared root authority declares one CPU set for shared-work Nix daemons. The 
 ]
 #+end_src
 
+* DONE [#C] Set GnuPG SSH cache TTLs explicitly
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-p4v4
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-25 Tue 14:23]
+:MODIFIED: [2026-08-25 Tue 14:27]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 14:27]
+:CLOSE_REASON: Set defaultCacheTtlSsh and maxCacheTtlSsh to the existing maximum TTL alongside OpenPGP values. Host-behavior, candidate gpg-agent.conf, and full Hera system build verify all four directives.
+:SOURCE_REPO: .
+:ORIGINAL_SIZE: 0
+:END:
+
 * DONE [#B] Open sandbox bridge profile storage writable without migration
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

@@ -370,9 +370,11 @@ in
     gpg-agent = {
       enable = true;
       enableSshSupport = true;
-      # Use the maximum supported cache TTLs.
+      # Use the maximum supported cache TTLs for OpenPGP and SSH keys.
       defaultCacheTtl = 2147483647;
+      defaultCacheTtlSsh = 2147483647;
       maxCacheTtl = 2147483647;
+      maxCacheTtlSsh = 2147483647;
       enableScDaemon = !config.johnw.host.isHera;
       noAllowExternalCache = false;
       pinentry.package = pkgs.pinentry_mac;
