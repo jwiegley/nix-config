@@ -19412,6 +19412,24 @@ The correctness fix expands upstream Samba's Darwin SCRIPT to 96 additional Mach
 ]
 #+end_src
 
+* DONE [#B] Apply tmux 3.7c jemalloc fix to root Darwin packages
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-zqx7
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-25 Tue 06:16]
+:MODIFIED: [2026-08-25 Tue 06:16]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 06:16]
+:CLOSE_REASON: Exact accepted update candidate now builds the complete Hera Darwin system with tmux 3.7c and jemalloc.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The portable Fractal overlay fixed tmux only in the AI package set; full updated Hera still selected unfixed root tmux 3.7c and failed. Add the same upstream-required Darwin jemalloc compatibility fix to the root Darwin overlay.
+
 * DONE [#C] Stabilize Claude fork argv capture against partial log reads
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
