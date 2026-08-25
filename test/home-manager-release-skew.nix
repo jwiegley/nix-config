@@ -90,8 +90,11 @@ let
   # Compare only the durable Host * security contract. Other directives and
   # host blocks are intentionally additive and must not churn this fixture.
   expectedSecurityBaseline = {
+    BatchMode = "yes";
     ForwardAgent = "no";
     HashKnownHosts = "yes";
+    KbdInteractiveAuthentication = "no";
+    PasswordAuthentication = "no";
     StrictHostKeyChecking = "yes";
     UserKnownHostsFile = "/home/johnw/.config/ssh/known_hosts";
     VerifyHostKeyDNS = "yes";

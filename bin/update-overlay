@@ -1848,7 +1848,7 @@ def load_source_catalog(
         "explicit-rev": (common_update_fields | {"branch"}, set()),
         "fixed-flake-input": (common_update_fields | {"input"}, {"input"}),
         "flake-input": (
-            common_update_fields | {"buildPackage", "input"},
+            common_update_fields | {"buildMode", "buildPackage", "input"},
             {"input"},
         ),
         "flake-input+build": (
@@ -1945,7 +1945,7 @@ def load_source_catalog(
                 or (
                     build_mode == "check"
                     and (
-                        kind != "flake-input+copy"
+                        kind not in {"flake-input", "flake-input+copy"}
                         or build_package is None
                         or bool(hashes)
                     )

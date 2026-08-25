@@ -64,6 +64,15 @@ let
     };
   };
 
+  # tmux 3.7c requires jemalloc on macOS to avoid an upstream calloc bug.
+  tmux = prev.tmux.overrideAttrs (
+    oldAttrs:
+    lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
+      buildInputs = lib.unique ((oldAttrs.buildInputs or [ ]) ++ [ prev.jemalloc ]);
+      configureFlags = lib.unique ((oldAttrs.configureFlags or [ ]) ++ [ "--enable-jemalloc" ]);
+    }
+  );
+
   fractalRuntime = [
     plasmaWiki
     prev.bash
@@ -73,10 +82,11 @@ let
     prev.gnugrep
     prev.gnused
     prev.procps
-    prev.tmux
+    tmux
   ];
 in
 {
+  inherit tmux;
   plasma-wiki = plasmaWiki;
 
   plasma-fractal = ps.buildPythonApplication rec {

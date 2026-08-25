@@ -995,6 +995,8 @@
           "flake.lock",
           "config/ai/flake.lock"
         ],
+        "buildMode": "check",
+        "buildPackage": "pi-extension-tests",
         "input": "llm-agents",
         "kind": "flake-input"
       }
