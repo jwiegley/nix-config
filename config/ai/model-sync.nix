@@ -1,6 +1,7 @@
 {
   lib,
   pkgs,
+  models ? import ./models.nix,
   # Base URL of the omlx endpoint, supplied from the catalog's profile
   # declaration so this file cannot drift from the one endpoint authority.
   omlxBaseUrl,
@@ -38,7 +39,7 @@ let
   }
   // tools;
 
-  model = "DeepSeek-V4-Flash-0731-oQ8e-mtp";
+  model = models.omlx.reasoning.name;
   chatUrl = "${omlxBaseUrl}/chat/completions";
 
   # One authority feeds stamp invalidation, preference writes, and read-back

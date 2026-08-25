@@ -106,7 +106,8 @@ need them for rollback.
 | `config/hosts/registry.nix` | Host identity, capabilities, membership, rollout selection, daemon, local-build, and distributed-builder capacity, builder pools, and routing data | Module or shell implementation, private SSH key material, or activation |
 | `config/hosts/shell-routing.nix` | Build-time shell projection of registry routing data | Independent host identity policy or runtime Nix discovery |
 | `config/nix-trust.nix` | Shared binary-cache and client-signing trust data | Root-file installation or host activation |
-| `config/ai/catalog.nix` | Profiles, selectors, resources, validation | Client serialization or package builds |
+| `config/ai/models.nix` | Managed model roles, context limits, provider availability, and retired model migration data | Runtime model inventory or endpoint discovery |
+| `config/ai/catalog.nix` | Profiles, selectors, resources, validation, and composition of model roles | Client serialization or package builds |
 | `config/ai/renderers/*` | Generated documents for one client | Global resource selection |
 | `config/ai.nix` | Home Manager composition and ownership guards | Package implementation |
 | `flake/ai.nix` | Portable package, app, and check composition | Host activation or root lock policy |
@@ -139,7 +140,9 @@ Nix client-local transport/default/override policy
   -> Home Manager preflight and activation
 ```
 
-Nix owns endpoint wiring and client-specific policy, not a cross-client model
+`config/ai/models.nix` declares managed model roles, context limits, provider
+availability, and retired names used by mutable-settings migration. Nix owns those
+selections plus endpoint wiring and client-specific policy, not a cross-client runtime
 inventory. Codex retains its native catalog. Pi renders its cached model snapshot
 immediately, gives `/model` refreshes the upstream 15-second selector deadline,
 and discovers local models at startup and through its native provider-refresh contract.

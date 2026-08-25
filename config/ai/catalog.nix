@@ -4,6 +4,7 @@
 }:
 
 let
+  models = import ./models.nix;
   modelOverrides = import ./model-overrides.nix;
   omlxCredentialPolicy = import ./omlx-credential-policy.nix;
   envReference = import ./env-reference.nix;
@@ -106,16 +107,10 @@ let
       };
     }) workstationHosts
   );
-  recordingTranscriptionModels = builtins.attrNames modelOverrides.localProviderOverrides.omlx.modelOverrides;
-  recordingTranscriptionModel =
-    assert lib.assertMsg (
-      builtins.length recordingTranscriptionModels == 1
-    ) "recording transcription requires exactly one oMLX model override";
-    builtins.head recordingTranscriptionModels;
   catalogRecordingTranscriptionRoutesByHost = {
     hera = {
       provider = "omlx";
-      model = recordingTranscriptionModel;
+      model = models.omlx.reasoning.name;
     };
   };
 
@@ -1637,6 +1632,7 @@ let
           recordingTranscriptionRoutesByHost == catalogRecordingTranscriptionRoutesByHost
           && builtins.hasAttr "hera" localModelEndpointsByHost
           && builtins.hasAttr recordingTranscriptionRoutesByHost.hera.provider localModelEndpointsByHost.hera
+          && builtins.hasAttr recordingTranscriptionRoutesByHost.hera.model modelOverrides.localProviderOverrides.omlx.modelOverrides
         ) "recording transcription route authority")
       ];
       profileChecks = lib.mapAttrsToList (
@@ -1795,6 +1791,7 @@ in
 {
   profiles = catalogProfiles;
   items = catalogItems;
+  inherit models;
   localModelEndpointsByHost = catalogLocalModelEndpointsByHost;
   piLocalDiscoveryProviderByHost = catalogPiLocalDiscoveryProviderByHost;
   piModelDiscoveryEndpoints = catalogPiModelDiscoveryEndpoints;

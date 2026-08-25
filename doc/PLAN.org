@@ -904,6 +904,38 @@ Declarative git-ai enablement, packages, Trace2, and session variables are disab
 ]
 #+end_src
 
+* TODO [#C] Repair Pi gallery documentation inventory gate
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-28aw
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-25 Tue 12:12]
+:MODIFIED: [2026-08-25 Tue 12:12]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The pi-gallery check fails on clean HEAD before extension tests because expected inventory starts with plain names while doc/Pi Coding Agent Extensions.md contains Markdown reference links. Reconcile parser or expected format without weakening inventory coverage.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-28aw",
+    "depends_on_id": "nix-z1e2",
+    "type": "discovered-from",
+    "created_at": "2026-08-25T19:12:13.715234Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#D] Replace current nix-config package metadata homepage with Gitea authority
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -1110,6 +1142,21 @@ After mlx-audio 0.5.0 built successfully, vllm-mlx 0.4.1 rejected the selected m
 :END:
 
 Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and GIT_NAMESPACE from hermetic Git fixture environments, with a regression that proves both selectors cannot leak into fixture commands.
+
+* DONE [#C] Centralize managed AI model selections
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-3jyi
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-25 Tue 13:26]
+:MODIFIED: [2026-08-25 Tue 14:13]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 14:13]
+:CLOSE_REASON: Centralized managed model roles and added role-aware Pi enabledModels migration from retired IDs to current IDs. Fresh Pi and a temporary-copy migration verify omlx-hera resolves DeepSeek-V4-Flash-0731-MXFP4-MLX. Focused checks, flake evaluation, pre-commit, and Hera system build pass.
+:SOURCE_REPO: .
+:ORIGINAL_SIZE: 0
+:END:
 
 * DONE [#C] Update pre-push empty-range regression for current Lefthook semantics
 :PROPERTIES:
@@ -5177,6 +5224,21 @@ Ruff reports two unused local variables in test/bin/publish-slow-test.py: the un
   }
 ]
 #+end_src
+
+* DONE [#C] Remove live Droid discovery from Pi startup
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-eh61
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-25 Tue 14:31]
+:MODIFIED: [2026-08-25 Tue 14:42]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 14:42]
+:CLOSE_REASON: Pi now registers the bundled Factory roster at startup and session replacement without credential lookup, Droid spawn, or network discovery. /droid-refresh-models remains the explicit live refresh. Droid factory benchmark fell from 10.9s to 0ms; regression, flake eval, pre-commit, and Hera build pass.
+:SOURCE_REPO: .
+:ORIGINAL_SIZE: 0
+:END:
 
 * TODO [#D] cross-consumer-eval vulcan leg cannot run off-vulcan
 :PROPERTIES:
@@ -9305,6 +9367,21 @@ The shared root authority declares one CPU set for shared-work Nix daemons. The 
   }
 ]
 #+end_src
+
+* DONE [#C] Set GnuPG SSH cache TTLs explicitly
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-p4v4
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-25 Tue 14:23]
+:MODIFIED: [2026-08-25 Tue 14:27]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 14:27]
+:CLOSE_REASON: Set defaultCacheTtlSsh and maxCacheTtlSsh to the existing maximum TTL alongside OpenPGP values. Host-behavior, candidate gpg-agent.conf, and full Hera system build verify all four directives.
+:SOURCE_REPO: .
+:ORIGINAL_SIZE: 0
+:END:
 
 * DONE [#B] Open sandbox bridge profile storage writable without migration
 :PROPERTIES:
@@ -19288,6 +19365,21 @@ User correction on 2026-08-14: the declared Pi extensions are always wanted on a
 :END:
 
 Generate the Hera transcription route from the current AI catalog, remove the obsolete PromptDeploy-namespaced route and secret-bearing schema from scripts, preserve transaction retry identity, and verify the queued recordings complete.
+
+* DONE [#C] Cache Droid model catalog across Pi session rebuilds
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-z1e2
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-25 Tue 12:01]
+:MODIFIED: [2026-08-25 Tue 12:17]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 12:17]
+:CLOSE_REASON: Cached the Factory catalog promise across Droid extension initializations; explicit /droid-refresh-models replaces it. Regression and package checks pass.
+:SOURCE_REPO: .
+:ORIGINAL_SIZE: 0
+:END:
 
 * DONE [#C] Adopt the final declarative Nix builder pool
 :PROPERTIES:

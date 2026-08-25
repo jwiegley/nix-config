@@ -1,15 +1,16 @@
 let
+  models = import ./models.nix;
   llamaSwapOverrides = {
-    modelOverrides."GLM-5.2".contextWindow = 262144;
+    modelOverrides.${models.llamaSwap.name}.contextWindow = models.llamaSwap.contextWindow;
   };
   omlxOverrides = {
-    modelOverrides."DeepSeek-V4-Flash-0731-oQ8e-mtp".contextWindow = 262144;
+    modelOverrides.${models.omlx.reasoning.name}.contextWindow = models.omlx.reasoning.contextWindow;
   };
 in
 {
   nativeProviders = {
-    openai-codex.modelOverrides."gpt-5.6-sol".contextWindow = 1050000;
-    openrouter.modelOverrides."z-ai/glm-5.2".contextWindow = 1048576;
+    openai-codex.modelOverrides.${models.codex.name}.contextWindow = models.codex.contextWindow;
+    openrouter.modelOverrides.${models.openrouter.name}.contextWindow = models.openrouter.contextWindow;
   };
 
   # Generic local provider names are consumed by clients whose configuration

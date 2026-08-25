@@ -19,6 +19,7 @@ let
     inherit lib;
     resources = "/catalog-agent-resources";
   };
+  inherit (catalog) models;
   modelOverrides = import "${src}/config/ai/model-overrides.nix";
   projectProviderEndpoints = import "${src}/config/ai/renderers/project-provider-endpoints.nix" {
     inherit lib;
@@ -1158,8 +1159,8 @@ assert
     "provider"
   ];
 assert recordingTranscriptionRoute.provider == "omlx";
-assert builtins.length recordingTranscriptionModels == 1;
-assert recordingTranscriptionRoute.model == builtins.head recordingTranscriptionModels;
+assert recordingTranscriptionModels == [ models.omlx.reasoning.name ];
+assert recordingTranscriptionRoute.model == models.omlx.reasoning.name;
 assert builtins.hasAttr recordingTranscriptionRoute.provider catalog.localModelEndpointsByHost.hera;
 # Profile opt-ins drive generated Codex TOML, Pi local provider wiring, Prime
 # model overrides, and runtime credential injection. Pin the set so a gained
@@ -1616,8 +1617,14 @@ pkgs.runCommand "ai-catalog-transport" { } ''
       },
   }
   assert managed["profiles"] == {
-      "llama-swap": {"model": "GLM-5.2", "model_provider": "llama-swap"},
-      "omlx": {"model": "Qwen3.6-27B-oQ6e-mtp", "model_provider": "omlx"},
+      "llama-swap": {
+          "model": ${builtins.toJSON models.llamaSwap.name},
+          "model_provider": "llama-swap",
+      },
+      "omlx": {
+          "model": ${builtins.toJSON models.omlx.primary.name},
+          "model_provider": "omlx",
+      },
   }
 
   with open(sys.argv[2], "rb") as stream:
@@ -1631,7 +1638,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
   printf '{"models":[{"slug":"valid"}]}\n' >valid-codex-model.json
   if ${pkgs.python3}/bin/python3 ${./codex-catalog-smoke.py} \
     /bin/false invalid-codex-root.json valid-codex-model.json \
-    /dev/null /dev/null /dev/null unused unused \
+    /dev/null /dev/null /dev/null unused unused unused \
     >invalid-root.out 2>invalid-root.err; then
     fail "Codex catalog smoke accepted a non-object root"
   fi
@@ -1639,7 +1646,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
     invalid-root.err >/dev/null
   if ${pkgs.python3}/bin/python3 ${./codex-catalog-smoke.py} \
     /bin/false invalid-codex-model.json valid-codex-model.json \
-    /dev/null /dev/null /dev/null unused unused \
+    /dev/null /dev/null /dev/null unused unused unused \
     >invalid-model.out 2>invalid-model.err; then
     fail "Codex catalog smoke accepted a non-object model"
   fi
@@ -1656,6 +1663,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
       (toString codexMcpProbeConfig)
       "/Users/test/${codexProfile.root}/nix-managed-model-catalog.json"
       catalog.items.commands.fess.metadata.description
+      models.codex.name
     ]
   }
 
@@ -1937,7 +1945,9 @@ pkgs.runCommand "ai-catalog-transport" { } ''
       and (
         if $localModelRoutes then
           .providers["llama-swap"] == {
-            "modelOverrides": {"GLM-5.2": {"contextWindow": 262144}},
+            "modelOverrides": {
+              "${models.llamaSwap.name}": {"contextWindow": ${toString models.llamaSwap.contextWindow}}
+            },
             "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
           }
           and .providers["omlx-clio"] == {
@@ -1945,7 +1955,9 @@ pkgs.runCommand "ai-catalog-transport" { } ''
           }
           and .providers["omlx-hera"] == {
             "modelOverrides": {
-              "DeepSeek-V4-Flash-0731-oQ8e-mtp": {"contextWindow": 262144}
+              "${models.omlx.reasoning.name}": {
+                "contextWindow": ${toString models.omlx.reasoning.contextWindow}
+              }
             },
             "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
           }

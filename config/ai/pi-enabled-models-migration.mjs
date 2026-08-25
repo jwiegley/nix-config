@@ -4,19 +4,41 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const legacyPrefix = "omlx/";
-const staleModelPatterns = new Set(
-	[
-		"omlx-clio/DeepSeek-V4-Flash-0731-oQ8e-mtp",
-		"omlx-hera/Qwen3.6-27B-oQ6e-mtp",
-		"omlx-clio/Qwen3.6-27B-oQ6e-mtp",
-	].map((model) => model.toLowerCase()),
-);
+function normalizeStaleModelPatterns(patterns) {
+	if (
+		!Array.isArray(patterns) ||
+		patterns.some((pattern) => typeof pattern !== "string" || pattern === "")
+	) {
+		throw new Error("Pi stale model patterns must be an array of non-empty strings");
+	}
+	return new Set(patterns.map((pattern) => pattern.toLowerCase()));
+}
+
+function normalizeModelReplacements(replacements) {
+	if (
+		typeof replacements !== "object" ||
+		replacements === null ||
+		Array.isArray(replacements) ||
+		Object.entries(replacements).some(
+			([source, target]) =>
+				source === "" || typeof target !== "string" || target === "",
+		)
+	) {
+		throw new Error("Pi model replacements must map non-empty strings to non-empty strings");
+	}
+	return new Map(
+		Object.entries(replacements).map(([source, target]) => [
+			source.toLowerCase(),
+			target,
+		]),
+	);
+}
 
 function hasPrefix(model, prefix) {
 	return model.slice(0, prefix.length).toLowerCase() === prefix;
 }
 
-function isStaleModelPattern(model) {
+function isStaleModelPattern(model, staleModelPatterns) {
 	return staleModelPatterns.has(model.toLowerCase());
 }
 
@@ -45,17 +67,27 @@ function requireEnabledModels(settings) {
 	return models;
 }
 
-function migratedModels(models, localProvider) {
+function migratedModels(
+	models,
+	localProvider,
+	staleModelPatterns,
+	modelReplacements,
+) {
 	if (models === undefined || models.length === 0) return undefined;
 	const hasLegacyModels = models.some((model) => hasPrefix(model, legacyPrefix));
-	if (!hasLegacyModels && !models.some(isStaleModelPattern)) return undefined;
+	if (
+		!hasLegacyModels &&
+		!models.some((model) => isStaleModelPattern(model, staleModelPatterns))
+	)
+		return undefined;
 
 	const providers = hasLegacyModels ? legacyProviderOrder(localProvider) : [];
 	const existing = new Set(
 		models
 			.filter(
 				(model) =>
-					!hasPrefix(model, legacyPrefix) && !isStaleModelPattern(model),
+					!hasPrefix(model, legacyPrefix) &&
+					!isStaleModelPattern(model, staleModelPatterns),
 			)
 			.map((model) => model.toLowerCase()),
 	);
@@ -63,14 +95,28 @@ function migratedModels(models, localProvider) {
 	const generated = new Set();
 	let hasFactory = false;
 	for (const model of models) {
-		if (isStaleModelPattern(model)) continue;
+		if (isStaleModelPattern(model, staleModelPatterns)) {
+			const replacement = modelReplacements.get(model.toLowerCase());
+			const key = replacement?.toLowerCase();
+			if (
+				replacement !== undefined &&
+				!isStaleModelPattern(replacement, staleModelPatterns) &&
+				!existing.has(key) &&
+				!generated.has(key)
+			) {
+				generated.add(key);
+				result.push(replacement);
+			}
+			continue;
+		}
 		if (hasPrefix(model, legacyPrefix)) {
 			const suffix = model.slice(legacyPrefix.length);
 			for (const provider of providers) {
-				const replacement = `${provider}/${suffix}`;
+				const candidate = `${provider}/${suffix}`;
+				const replacement = modelReplacements.get(candidate.toLowerCase()) ?? candidate;
 				const key = replacement.toLowerCase();
 				if (
-					!isStaleModelPattern(replacement) &&
+					!isStaleModelPattern(replacement, staleModelPatterns) &&
 					!existing.has(key) &&
 					!generated.has(key)
 				) {
@@ -94,7 +140,11 @@ export async function migrateEnabledModels({
 	piRoot,
 	dryRun = false,
 	storage,
+	modelReplacements = {},
+	staleModelPatterns = [],
 }) {
+	const replacementModels = normalizeModelReplacements(modelReplacements);
+	const staleModels = normalizeStaleModelPatterns(staleModelPatterns);
 	const settingsPath = join(resolve(agentDir), "settings.json");
 	let originalStat;
 	try {
@@ -109,7 +159,12 @@ export async function migrateEnabledModels({
 	if (dryRun) {
 		const settings = JSON.parse(await readFile(settingsPath, "utf8"));
 		return (
-			migratedModels(requireEnabledModels(settings), localProvider) !== undefined
+			migratedModels(
+				requireEnabledModels(settings),
+				localProvider,
+				staleModels,
+				replacementModels,
+			) !== undefined
 		);
 	}
 
@@ -144,7 +199,12 @@ export async function migrateEnabledModels({
 			throw new Error("Pi settings.json changed during migration");
 		}
 		const settings = JSON.parse(current);
-		const next = migratedModels(requireEnabledModels(settings), localProvider);
+		const next = migratedModels(
+			requireEnabledModels(settings),
+			localProvider,
+			staleModels,
+			replacementModels,
+		);
 		if (next === undefined) return undefined;
 		changed = true;
 		return JSON.stringify({ ...settings, enabledModels: next }, null, 2);
@@ -157,10 +217,18 @@ if (
 	import.meta.url === pathToFileURL(resolve(process.argv[1])).href
 ) {
 	const dryRun = Object.hasOwn(process.env, "DRY_RUN");
+	const modelReplacements = JSON.parse(
+		process.env.PI_OMLX_MODEL_REPLACEMENTS ?? "null",
+	);
+	const staleModelPatterns = JSON.parse(
+		process.env.PI_OMLX_STALE_MODEL_PATTERNS ?? "null",
+	);
 	await migrateEnabledModels({
 		agentDir: process.env.PI_CODING_AGENT_DIR,
 		localProvider: process.env.PI_OMLX_LOCAL_PROVIDER,
 		piRoot: process.env.PI_CODING_AGENT_ROOT,
 		dryRun,
+		modelReplacements,
+		staleModelPatterns,
 	});
 }

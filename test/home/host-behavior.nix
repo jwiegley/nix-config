@@ -216,6 +216,7 @@ let
     inherit lib;
     resources = pkgs.agent-resources;
   };
+  modelSelection = aiCatalog.models;
   expectedPiGalleryEndpointsByOwner =
     (import ../../config/ai/renderers/project-provider-endpoints.nix { inherit lib; })
       {
@@ -223,7 +224,10 @@ let
         endpoints = aiCatalog.piModelDiscoveryEndpoints;
       };
   agentModelAliasesPath = ".config/flatten-recordings/agent-model-aliases.json";
-  agentModelAliases = import ../../config/ai/agent-model-aliases.nix { inherit lib; };
+  agentModelAliases = import ../../config/ai/agent-model-aliases.nix {
+    inherit lib;
+    models = modelSelection;
+  };
   heraAgentModelAliasesSource = desktopHomesByHost.hera.home.file.${agentModelAliasesPath}.source;
   expectedAgentModelAliasesSource =
     (pkgs.formats.json { }).generate "expected-agent-model-aliases.json"
@@ -717,7 +721,9 @@ assert builtins.all (
 assert desktopHomesByHost.hera.home.sessionVariables.NIX_CONFIG == "cores = 8";
 assert desktopHomesByHost.clio.home.sessionVariables.NIX_CONFIG == "cores = 8";
 assert desktopHomesByHost.hera.services.gpg-agent.defaultCacheTtl == 2147483647;
+assert desktopHomesByHost.hera.services.gpg-agent.defaultCacheTtlSsh == 2147483647;
 assert desktopHomesByHost.hera.services.gpg-agent.maxCacheTtl == 2147483647;
+assert desktopHomesByHost.hera.services.gpg-agent.maxCacheTtlSsh == 2147483647;
 assert !desktopHomesByHost.hera.services.gpg-agent.enableScDaemon;
 assert !desktopHomesByHost.hera.services.gpg-agent.noAllowExternalCache;
 assert desktopHomesByHost.hera.programs.gpg.scdaemonSettings == { };
@@ -792,13 +798,13 @@ pkgs.runCommand "host-behavior" { } ''
       "aliases": {
         "deepseek": {
           "harness": "pi",
-          "model": "DeepSeek-V4-Flash-0731-oQ8e-mtp",
+          "model": ${builtins.toJSON modelSelection.omlx.reasoning.name},
           "provider": "omlx-hera",
           "thinking": "off"
         },
         "gpt sol": {
           "harness": "pi",
-          "model": "gpt-5.6-sol",
+          "model": ${builtins.toJSON modelSelection.codex.name},
           "provider": "openai-codex",
           "thinking": "max"
         }

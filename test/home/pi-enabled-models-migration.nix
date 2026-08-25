@@ -7,6 +7,33 @@
 let
   piRoot = "${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent";
   migration = ../../config/ai/pi-enabled-models-migration.mjs;
+  models = import ../../config/ai/models.nix;
+  staleSettings.enabledModels = [
+    "anthropic/*"
+    "omlx-hera/${builtins.head models.omlx.reasoning.retiredNames}"
+    "omlx-clio/${builtins.head models.omlx.reasoning.retiredNames}"
+    "omlx-hera/${builtins.head models.omlx.primary.retiredNames}"
+    "omlx-clio/${builtins.head models.omlx.primary.retiredNames}"
+    "omlx-clio/${models.omlx.reasoning.name}"
+    "factory/*"
+  ];
+  staleExpected = [
+    "anthropic/*"
+    "omlx-hera/${models.omlx.reasoning.name}"
+    "omlx-hera/${models.omlx.primary.name}"
+    "omlx-clio/${models.omlx.primary.name}"
+    "factory/*"
+  ];
+  legacySettings.enabledModels = [
+    "omlx/${models.omlx.reasoning.name}"
+    "omlx/${models.omlx.primary.name}"
+  ];
+  legacyExpected = [
+    "omlx-hera/${models.omlx.reasoning.name}"
+    "omlx-hera/${models.omlx.primary.name}"
+    "omlx-clio/${models.omlx.primary.name}"
+    "factory/*"
+  ];
 in
 assert piPackage.pname == "pi";
 pkgs.runCommand "pi-enabled-models-migration"
@@ -22,6 +49,8 @@ pkgs.runCommand "pi-enabled-models-migration"
     run_migration() {
       PI_CODING_AGENT_DIR="$1" \
         PI_OMLX_LOCAL_PROVIDER="''${2:-omlx-clio}" \
+        PI_OMLX_MODEL_REPLACEMENTS=${lib.escapeShellArg (builtins.toJSON models.omlx.replacements)} \
+        PI_OMLX_STALE_MODEL_PATTERNS=${lib.escapeShellArg (builtins.toJSON models.omlx.stalePatterns)} \
         PI_CODING_AGENT_ROOT=${lib.escapeShellArg piRoot} \
         node ${migration}
     }
@@ -57,19 +86,11 @@ pkgs.runCommand "pi-enabled-models-migration"
 
     stale="$TMPDIR/stale"
     mkdir "$stale"
-    printf '%s\n' \
-      '{"enabledModels":["anthropic/*","omlx-hera/DeepSeek-V4-Flash-0731-oQ8e-mtp","omlx-clio/DeepSeek-V4-Flash-0731-oQ8e-mtp","omlx-hera/Qwen3.6-27B-oQ6e-mtp","omlx-clio/Qwen3.6-27B-oQ6e-mtp","omlx-hera/Qwen3.8-27B-oQ6e-mtp-mlx","omlx-clio/Qwen3.8-27B-oQ4e-mtp","factory/*"]}' \
+    printf '%s\n' ${lib.escapeShellArg (builtins.toJSON staleSettings)} \
       >"$stale/settings.json"
     run_migration "$stale" omlx-hera
-    jq -e '
-      .enabledModels == [
-        "anthropic/*",
-        "omlx-hera/DeepSeek-V4-Flash-0731-oQ8e-mtp",
-        "omlx-hera/Qwen3.8-27B-oQ6e-mtp-mlx",
-        "omlx-clio/Qwen3.8-27B-oQ4e-mtp",
-        "factory/*"
-      ]
-    ' "$stale/settings.json" >/dev/null
+    jq --argjson expected ${lib.escapeShellArg (builtins.toJSON staleExpected)} -e \
+      '.enabledModels == $expected' "$stale/settings.json" >/dev/null
     snapshot "$stale/settings.json" >"$stale.rerun.before"
     run_migration "$stale" omlx-hera
     snapshot "$stale/settings.json" >"$stale.rerun.after"
@@ -77,16 +98,11 @@ pkgs.runCommand "pi-enabled-models-migration"
 
     stale_legacy="$TMPDIR/stale-legacy"
     mkdir "$stale_legacy"
-    printf '%s\n' \
-      '{"enabledModels":["omlx/DeepSeek-V4-Flash-0731-oQ8e-mtp","omlx/Qwen3.6-27B-oQ6e-mtp"]}' \
+    printf '%s\n' ${lib.escapeShellArg (builtins.toJSON legacySettings)} \
       >"$stale_legacy/settings.json"
     run_migration "$stale_legacy" omlx-hera
-    jq -e '
-      .enabledModels == [
-        "omlx-hera/DeepSeek-V4-Flash-0731-oQ8e-mtp",
-        "factory/*"
-      ]
-    ' "$stale_legacy/settings.json" >/dev/null
+    jq --argjson expected ${lib.escapeShellArg (builtins.toJSON legacyExpected)} -e \
+      '.enabledModels == $expected' "$stale_legacy/settings.json" >/dev/null
 
     no_scope="$TMPDIR/no-scope"
     mkdir "$no_scope"

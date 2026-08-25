@@ -1,4 +1,7 @@
-{ lib }:
+{
+  lib,
+  models ? import ./models.nix,
+}:
 
 # Add spoken names under rawAliases; Home Manager renders the validated runtime JSON.
 
@@ -37,13 +40,13 @@ let
     deepseek = {
       harness = "pi";
       provider = "omlx-hera";
-      model = "DeepSeek-V4-Flash-0731-oQ8e-mtp";
+      model = models.omlx.reasoning.name;
       thinking = "off";
     };
     "gpt sol" = {
       harness = "pi";
       provider = "openai-codex";
-      model = "gpt-5.6-sol";
+      model = models.codex.name;
       thinking = "max";
     };
   };

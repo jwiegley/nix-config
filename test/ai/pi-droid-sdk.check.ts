@@ -114,31 +114,35 @@ type Provider = {
 	models?: Array<Record<string, unknown>>;
 };
 
-test("loads the pinned Factory provider without credentials or Droid startup", async () => {
+test("uses the bundled Factory catalog until explicit refresh", async () => {
 	const providers = new Map<string, Provider>();
 	const commands = new Set<string>();
 	const tools = new Set<string>();
 	let activeTools: string[] = [];
+	let refreshModels: unknown;
+	const extensionApi = () => ({
+		registerProvider(id: string, provider: Provider) {
+			providers.set(id, provider);
+		},
+		registerCommand(name: string, options: { handler: unknown }) {
+			commands.add(name);
+			if (name === "droid-refresh-models") refreshModels = options.handler;
+		},
+		registerTool(tool: { name: string }) {
+			tools.add(tool.name);
+		},
+		on() {},
+		getActiveTools: () => activeTools,
+		getAllTools: () => [],
+		setActiveTools(next: string[]) {
+			activeTools = [...next];
+		},
+	}) as never;
 	const originalArgvLength = process.argv.length;
 	process.argv.push("--api-key=cross-provider-decoy");
 	try {
-		await registerDroid({
-			registerProvider(id: string, provider: Provider) {
-				providers.set(id, provider);
-			},
-			registerCommand(name: string) {
-				commands.add(name);
-			},
-			registerTool(tool: { name: string }) {
-				tools.add(tool.name);
-			},
-			on() {},
-			getActiveTools: () => activeTools,
-			getAllTools: () => [],
-			setActiveTools(next: string[]) {
-				activeTools = [...next];
-			},
-		} as never);
+		await registerDroid(extensionApi());
+		await registerDroid(extensionApi());
 	} finally {
 		process.argv.length = originalArgvLength;
 	}
@@ -150,7 +154,7 @@ test("loads the pinned Factory provider without credentials or Droid startup", a
 	expect(provider?.apiKey).toBe("FACTORY_API_KEY");
 	expect(provider?.api).toBe("droid-sdk");
 	expect(provider?.models).toHaveLength(26);
-	expect(authQueries).toEqual(["factory"]);
+	expect(authQueries).toEqual([]);
 
 	const models = provider?.models ?? [];
 	const ids = models.map((model) => model.id);
@@ -164,6 +168,11 @@ test("loads the pinned Factory provider without credentials or Droid startup", a
 	expect(tools).not.toContain("droid_ask_question");
 	expect(activeTools).toEqual([]);
 	expect(createSessionCalls).toBe(0);
+	expect(refreshModels).toBeFunction();
+	await (
+		refreshModels as (args: string, ctx: { hasUI: boolean }) => Promise<void>
+	)("", { hasUI: false });
+	expect(authQueries).toEqual(["factory"]);
 });
 
 test("reads stored Factory auth through the current Pi credential API", async () => {
