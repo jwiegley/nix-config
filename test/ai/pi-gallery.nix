@@ -310,6 +310,8 @@ runCommand "pi-gallery-check"
         name = trim($2)
         version = trim($3)
         gsub(/`/, "", name)
+        sub(/^\[/, "", name)
+        sub(/\]\[[^]]+\]$/, "", name)
         gsub(/`/, "", version)
         print name "\t" version
         next
@@ -338,6 +340,8 @@ runCommand "pi-gallery-check"
         name = trim($2)
         version = trim($3)
         gsub(/`/, "", name)
+        sub(/^\[/, "", name)
+        sub(/\]\[[^]]+\]$/, "", name)
         gsub(/`/, "", version)
         print name "\t" version
         next
