@@ -4933,6 +4933,22 @@ Read-only adoption audit on 2026-08-19: Hera and Clio resolve the prepatch Darwi
 ]
 #+end_src
 
+* DOING [#B] Restore full make update and redeploy active fleet
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-dkmx
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-26 Wed 13:12]
+:MODIFIED: [2026-08-26 Wed 13:12]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Run the canonical make update transaction end to end, diagnose and repair every blocker without weakening gates, create and publish signed root changes, adopt paired root/AI inputs through signed Andoria and Vulcan consumer commits, and build, activate, and runtime-verify Hera, Clio, Vulcan, Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server. Exclude parked VPS and dormant git-ai. Preserve rollback generations, authoritative checkout ownership, secrets, mutable state, build locks, and concurrent unrelated work.
+
 * DONE [#B] Bound legacy consumed-turn ledger import
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -5563,15 +5579,17 @@ The 2026-08-17 automatic candidate 2.8.3 is incompatible with the fail-closed ma
 ]
 #+end_src
 
-* DOING [#B] Restore non-VPS fleet activation after andoria-08 failure
+* DONE [#B] Restore non-VPS fleet activation after andoria-08 failure
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-f9hq
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-26 Wed 01:05]
-:MODIFIED: [2026-08-26 Wed 02:00]
+:MODIFIED: [2026-08-26 Wed 13:12]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-26 Wed 13:12]
+:CLOSE_REASON: Fixed Gogcli builder-formal compatibility, published signed root and consumer revisions, and built/activated/runtime-verified the seven-host active fleet with rollback and signature barriers; VPS and dormant git-ai excluded.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -5589,6 +5607,13 @@ Activation is failing again on andoria-08. Reproduce the failure through the sup
     "author": "johnw",
     "text": "2026-08-26 diagnosis and pre-publication evidence: authoritative Andoria evaluation failed before activation because overlays/30-misc-tools.nix passed buildGoModule to Nixpkgs ac6b216 Gogcli, whose callPackage formal is buildGo127Module. The shared repair selects the single declared buildGo[0-9]*Module formal from override.__functionArgs; a two-signature regression failed before the fix and passes after it. Exact Andoria consumer override evaluation, ./build pkg gogcli, config/ai all-system no-build evaluation, the 133-test strict baseline, full make test, full Darwin system build, and the canonical pre-commit hook pass. Read-only fleet preflight reached Hera, Clio, Vulcan, Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server; neither VPS nor dormant git-ai was contacted. Deployment is paused at authority boundaries: root fix still needs an explicitly authorized signed commit/push; Andoria has six unpushed unsigned lock-only commits and Vulcan one, requiring explicit history-rewrite authorization before signed publication/adoption. Vulcan also has one unstaged DeepSeek model change that would restart Hermes if activated; preserve it and activate a clean committed flake reference unless the owner separately authorizes including it. Andoria-T2 and Delphi retain the separately tracked missing CPU ceiling, so the shared candidate must be realized once on a bounded producer, signed, copied, and activated without rebuilding there.",
     "created_at": "2026-08-26T09:00:56Z"
+  },
+  {
+    "id": 529,
+    "issue_id": "nix-f9hq",
+    "author": "johnw",
+    "text": "2026-08-26 completion evidence: signed root fix bc304048617be30cc3d805e9bb7e01dc88a5506b passed pre-push verification and Gitea readback. Signed consumer adoptions 08076aafea112198a936615d277e522a5cdaa9fe (Andoria) and 6e3babed8eef048fb94f8480deb7d6cce9fa0eb8 (Vulcan) replaced the previously unpublished unsigned lock-only chains; old heads remain under local backup refs. Hera activated lrwb20dl5d8nfk8hsjqgljs0ypz4vgxg, Clio activated 2yq87rh24i6iqg1nnc021r6dilxc658c, and Vulcan built/activated frazqxf1n0c5nypk131xki5l5i17w0iq through its locked driver from the clean commit ref while preserving the then-unstaged models.nix byte-for-byte. The shared consumer built exactly one activation candidate am8gzdvgq86jyvc9rfv2vvd76r95a47i on CPU-confined Andoria-08: 2,263-path closure digest b239c69cc018a93804b759587cf7c2945d6830d08830ea7bf7fc1744d8c0facd. Hera signed the closure remotely without moving the key; every shared store then verified zero unsigned and 2,263 trusted paths. Andoria-08 activation produced and signed dynamic profile 5l966qjqsv5nzn07dzv94x62isasmllp (1,890 paths, digest 72431b17110b6d9c1b79300cbc86ddec336586ea89c2e0e842fd15aca99d4920); it was distributed before T2/Delphi/GPU activation, which each built zero derivations. All four reported exact candidate/profile, clean signed checkout, scheduler 1/8, Gogcli v0.37.0, zero lingering Nix clients, and no new failed user units. T2/Delphi remained on their separately tracked unrestricted daemon CPU sets but performed no builds. VPS and dormant git-ai were never contacted. After this acceptance, concurrent work advanced and reactivated Vulcan at 0a4f6bbc/j6bsbz3 and Clio later became unreachable; those later states do not alter the completed repair evidence and belong to the following full-update rollout.",
+    "created_at": "2026-08-26T20:12:33Z"
   }
 ]
 #+end_src
