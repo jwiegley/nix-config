@@ -236,14 +236,14 @@
     },
     "mcp-searxng": {
       "hashes": {
-        "npmDepsHash": "sha256-4WUOJJU9fXLVPE8ryB1IMWKVg5OL743VjupctYpPH0Y="
+        "npmDepsHash": "sha256-YIH/5RIdF/iSnUT+rWFUCKiwn3oPr1GJsgYvriJt0co="
       },
       "source": {
         "args": {
-          "hash": "sha256-zakEU/6eeYClbj8VsSU0T6OqG0rl5iXUPSdAife4Juo=",
+          "hash": "sha256-Zq6oKXxmo+jaiSCGOsEB76y4xTEqU+WC1eQVFzsazXQ=",
           "owner": "ihor-sokoliuk",
           "repo": "mcp-searxng",
-          "tag": "v2.0.0"
+          "tag": "v2.1.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/ihor-sokoliuk/mcp-searxng"
@@ -252,7 +252,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "2.0.0"
+      "version": "2.1.0"
     },
     "omlx": {
       "source": {
@@ -706,10 +706,10 @@
     "mlx-audio": {
       "source": {
         "args": {
-          "hash": "sha256-JtFhrfhmsozVTktqKrjUr01KEsPJYz33Nebsy5zos3Q=",
+          "hash": "sha256-3qqSlh1IOtWGct4ZzuRlnuiqwj5HLJU+eYYWmN4KWCs=",
           "owner": "Blaizzy",
           "repo": "mlx-audio",
-          "rev": "ebf44dfcdcf28cac2993445e46e7c72a9eca7421"
+          "rev": "4da826f2d7771fe35df0ececc5694272d7dceaa1"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/Blaizzy/mlx-audio"
@@ -780,10 +780,10 @@
     "mlx-vlm": {
       "source": {
         "args": {
-          "hash": "sha256-zSg/EaGc6/gHg5+czkMc9paYEZ+a7sQZgmvD7qaYAs0=",
+          "hash": "sha256-fl1I7XPoddqz2/ygeCYaV426xeLqKiEMIGRS5/7wYyg=",
           "owner": "Blaizzy",
           "repo": "mlx-vlm",
-          "tag": "v0.6.16"
+          "tag": "v0.6.17"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/Blaizzy/mlx-vlm"
@@ -794,7 +794,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.6.16"
+      "version": "0.6.17"
     },
     "mtplx": {
       "source": {
@@ -894,10 +894,10 @@
         "args": {
           "dist": "py3",
           "format": "wheel",
-          "hash": "sha256-i9hsPR4b43ZsGy23OcHXUYtGr6DfDDSkvduyA1lHR2o=",
+          "hash": "sha256-gX61YtxMTZYcJUmXXIIaz/s7jxO61ZoJOd8YgTGQ4kw=",
           "pname": "plasma_wiki",
           "python": "py3",
-          "version": "1.3.0"
+          "version": "1.3.1"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/plasma-wiki"
@@ -908,7 +908,7 @@
         "kind": "pypi-release",
         "package": "plasma-wiki"
       },
-      "version": "1.3.0"
+      "version": "1.3.1"
     },
     "sherlock-db": {
       "artifacts": {
@@ -961,10 +961,10 @@
     "git-ai": {
       "source": {
         "args": {
-          "narHash": "sha256-f5hs4WkF2hHJcJQ6A/1XAmNCS5o9CGfcsGEk4OqpRmo=",
+          "narHash": "sha256-SW9DCf6dw57JoLNFgFYKa0qV6/GsRnNs8/6siEwRg+4=",
           "owner": "git-ai-project",
           "repo": "git-ai",
-          "rev": "793066013ad137562d55bd33e29ad3b37612d14d",
+          "rev": "6fbc1ef0f4d40232315efc1b907e7ff5526dbea7",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -982,10 +982,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-4R2DeS9btVaawjYmkfA9c1QHYCwg0TM2PjlFOSlKk0Y=",
+          "narHash": "sha256-ECaLDYtAqFCOihEg34odsWF2qleTzTHuKmQwnNJuxbQ=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "60e7fc4eab599ae19f53818784955f2f5aab72ec",
+          "rev": "ea9a3449487fcad2eb9bfde3152c490b73b498c1",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1005,10 +1005,10 @@
     "mcp-servers-nix": {
       "source": {
         "args": {
-          "narHash": "sha256-msOy9qZdwW4xlnxnhVrkKgDzvwENJ2CtADAeShwFnDQ=",
+          "narHash": "sha256-/DzHA8zcG6UJA0mXpIHt28Y6j4MIRDJIQT3k9pHuUf4=",
           "owner": "natsukium",
           "repo": "mcp-servers-nix",
-          "rev": "bee98340effdb61e4e64855997723bbc5411a68a",
+          "rev": "7b6fdc38f653779db5321f9d9d757e97660f66e3",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1110,10 +1110,10 @@
     "rust-overlay": {
       "source": {
         "args": {
-          "narHash": "sha256-QdVaU2WSCKsxZ0sBDIRnaaukp6Z5IMUE0gDEDoSRJd0=",
+          "narHash": "sha256-ZRYTEvDb8QZLCHRoMyIZle9V3Bvw905m0teeo1RvI7M=",
           "owner": "oxalica",
           "repo": "rust-overlay",
-          "rev": "132a10336af9ae819bdf640c0dd1c789b12d7107",
+          "rev": "494680f9ffa2b4bf9f2df0f442c7096e44adfa00",
           "type": "github"
         },
         "fetcher": "fetchTree",

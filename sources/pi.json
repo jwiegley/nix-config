@@ -4,26 +4,26 @@
     "agent-browser": {
       "source": {
         "args": {
-          "hash": "sha256-+D/7eMYHF63hJNU4uEtKynJXYxvTJG5zLJxE78OhhuU=",
-          "url": "https://registry.npmjs.org/agent-browser/-/agent-browser-0.35.0.tgz"
+          "hash": "sha256-f3npiJ7XuHZW/PLRkXdD+EYxl51S9a6Zku6bb+Ey3vw=",
+          "url": "https://registry.npmjs.org/agent-browser/-/agent-browser-0.35.1.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/agent-browser/-/agent-browser-0.35.0.tgz"
+        "url": "https://registry.npmjs.org/agent-browser/-/agent-browser-0.35.1.tgz"
       },
       "update": {
         "buildPackage": "agent-browser",
         "kind": "npm-release",
         "package": "agent-browser"
       },
-      "version": "0.35.0"
+      "version": "0.35.1"
     },
     "agent-browser-source": {
       "source": {
         "args": {
-          "narHash": "sha256-JwFswQgXziHoTXpF/fw3RgiRJdLuSnf+L6XbRoTq7k0=",
+          "narHash": "sha256-uz60SvvQYdUCjLJAcuCtQyGd0yNc82m+GYruMnn5CD4=",
           "owner": "vercel-labs",
           "repo": "agent-browser",
-          "rev": "585e740fcef069d74e21f0e88e8bf4ea7df34385",
+          "rev": "fbd046c23a2c1156891bda294aaaee715c23b3f1",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -197,15 +197,15 @@
     },
     "pi-dynamic-workflows": {
       "hashes": {
-        "npmDepsHash": "sha256-f/xx+awEnL8Kr7HQOF+mxFp+USi6sOY5uKPHuPGtxH8="
+        "npmDepsHash": "sha256-XkxsVL79WGjB2Li8S1Wob2cSGyPs6FUp/ELmTfTi738="
       },
       "source": {
         "args": {
-          "hash": "sha256-i1Ww9b9nXGkLSAQgvAXmecdMhxiHDVZyppwecGGSIjM=",
-          "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.7.0.tgz"
+          "hash": "sha256-5Rpz/e0QcM5vNeX0CRCxr5tU18B6cmAobtUDi1vQqzU=",
+          "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.8.0.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.7.0.tgz"
+        "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.8.0.tgz"
       },
       "update": {
         "artifacts": [
@@ -215,7 +215,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "@quintinshaw/pi-dynamic-workflows"
       },
-      "version": "3.7.0"
+      "version": "3.8.0"
     },
     "pi-droid-sdk": {
       "hashes": {
@@ -650,10 +650,10 @@
     "pi-quiet": {
       "source": {
         "args": {
-          "narHash": "sha256-/oWZM3sPMC1rM7AM7yqT3Y8GoYjxT677M1qlZthKfeo=",
+          "narHash": "sha256-P4gr+mwPsxHAuntdqUbigkwBG8iIP3En/QPDZj5tI3g=",
           "owner": "zenspc",
           "repo": "pi-extensions",
-          "rev": "74466cbda2d1a169bd5e1ce9e4034a0f3c92b78a",
+          "rev": "3a8169cef9e0b281230ce34db03824934c61a9ae",
           "type": "github"
         },
         "fetcher": "fetchTree",

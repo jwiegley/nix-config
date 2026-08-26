@@ -262,8 +262,8 @@
         "args": {
           "owner": "karthink",
           "repo": "gptel",
-          "rev": "092bbc32fcada63404c572f6c3497c6d68d955f7",
-          "sha256": "sha256-TOnQcyQsKhmPAL0ZiJT18/GHwpLTN2deaJU0dalsq9A="
+          "rev": "1f6556d9266c756a142337ccc82acfa5bba713ec",
+          "sha256": "sha256-xZRwURvp96c2peuG66/l/5Oyq1nToVf+8Q+dCZlqmyk="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/karthink/gptel"
@@ -1094,8 +1094,8 @@
         "args": {
           "owner": "jdtsmith",
           "repo": "ultra-scroll-mac",
-          "rev": "af8dd38480f251a2a99b10b765ce8fd5eeab22ca",
-          "sha256": "sha256-Th2ciw6m5xoryT8j4C/ZeBRiuNNEhC+oDX7EPXOPjsc="
+          "rev": "f29bbe0e5533bec26045366e99ce81e36bd6fb3e",
+          "sha256": "sha256-+dUz8y8hQA67mXi8D8GSLnbSmYgMDQkPLM3Blw5yu2c="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jdtsmith/ultra-scroll-mac"

@@ -117,10 +117,10 @@
       },
       "source": {
         "args": {
-          "hash": "sha256-UQa9Z7zv2IuH7GL1udNee2F+uB2BAZA5a0/2XtFcBWg=",
+          "hash": "sha256-AaChyDvbMnPkWkBCnpISQm8U2WjXvwBSCfuN6fuIHaY=",
           "owner": "openclaw",
           "repo": "gogcli",
-          "tag": "v0.37.0"
+          "tag": "v0.38.1"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/openclaw/gogcli"
@@ -129,7 +129,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.37.0"
+      "version": "0.38.1"
     },
     "hakyll-jw": {
       "source": {
