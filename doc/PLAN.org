@@ -2813,6 +2813,24 @@ Terminal audit found compatibility sidecar fallback can follow symlinked ancesto
 ]
 #+end_src
 
+* DONE [#B] Declare voice-agent project and machine aliases
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-8250
+:LABELS:   []
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-25 Tue 23:51]
+:MODIFIED: [2026-08-26 Wed 00:44]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-26 Wed 00:44]
+:CLOSE_REASON: Declared and verified Hera/andoria-08 machine routes plus nix, ares, agent-cat, and tron project aliases; updated scripts input; portable checks and system build pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Extend the managed flatten-recordings alias registry with Hera/andoria-08 machine routes and nix, ares, agent-cat, and tron project paths; update generated-config and host behavior tests.
+
 * DONE [#B] Remove Pi Bifrost from managed gallery
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

@@ -810,6 +810,17 @@ pkgs.runCommand "host-behavior" { } ''
         }
       },
       "defaultAlias": "gpt sol",
+      "defaultMachine": "hera",
+      "machines": {
+        "andoria-08": {"remote": "andoria-08"},
+        "hera": {"remote": null}
+      },
+      "projects": {
+        "agent-cat": {"machine": "hera", "path": "~/src/agent-cat"},
+        "ares": {"machine": "hera", "path": "~/hera/ares/main"},
+        "nix": {"machine": "hera", "path": "~/src/nix"},
+        "tron": {"machine": "andoria-08", "path": "~/tron/main"}
+      },
       "version": 1
     }
   ' ${heraAgentModelAliasesSource} >/dev/null
