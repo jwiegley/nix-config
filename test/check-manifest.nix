@@ -57,6 +57,7 @@ let
       coq-overlay = evaluationOnly systems;
       darwin-overrides-inactive = evaluationOnly linuxSystems;
       edit-env = behavioral systems false;
+      git-tools-tea-compat = evaluationOnly systems;
       emacs-head = evaluationOnly darwinSystems;
       home-manager-release-skew = behavioral systems false;
       host-behavior = evaluationOnly systems;

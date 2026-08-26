@@ -13,21 +13,24 @@ let
 in
 {
 
-  # go-git v5 lowercases extension names on read but the allowlist maps use
-  # mixed case, so repos with `extensions.worktreeConfig=true` (left behind by
-  # `git worktree` operations) fail the allowlist check. Patching the vendored
-  # copy preserves the extension and lets tea read worktree-enabled repos.
-  # Vendor tree is only materialized at configurePhase, so patch in preBuild.
-  tea = prev.tea.overrideAttrs (old: {
-    preBuild = (old.preBuild or "") + ''
-      chmod -R u+w vendor/github.com/go-git/go-git/v5
-      substituteInPlace vendor/github.com/go-git/go-git/v5/repository_extensions.go \
-        --replace-fail '"worktreeConfig":  {},' '"worktreeconfig":  {},'
-      substituteInPlace vendor/github.com/go-git/go-git/v5/repository_extensions.go \
-        --replace-fail '"noop-v1": {},' \
-        $'"noop-v1": {},\n\t\t"worktreeconfig": {},'
-    '';
-  });
+  # Tea before 0.15 used go-git v5, which lowercases extension names on read
+  # while the allowlist maps use mixed case. Patch its vendored copy so repos
+  # with extensions.worktreeConfig=true remain readable.
+  tea =
+    if prev.lib.versionOlder prev.tea.version "0.15.0" then
+      prev.tea.overrideAttrs (old: {
+        preBuild = (old.preBuild or "") + ''
+          chmod -R u+w vendor/github.com/go-git/go-git/v5
+          substituteInPlace vendor/github.com/go-git/go-git/v5/repository_extensions.go \
+            --replace-fail '"worktreeConfig":  {},' '"worktreeconfig":  {},'
+          substituteInPlace vendor/github.com/go-git/go-git/v5/repository_extensions.go \
+            --replace-fail '"noop-v1": {},' \
+            $'"noop-v1": {},\n\t\t"worktreeconfig": {},'
+        '';
+      })
+    else
+      # Tea 0.15 switched to a native Git CLI backend with worktree coverage.
+      prev.tea;
 
   # Build the catalog-pinned git-branchstack source and relax its git-revise
   # metadata constraint.

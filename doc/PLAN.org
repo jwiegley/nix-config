@@ -4940,7 +4940,7 @@ Read-only adoption audit on 2026-08-19: Hera and Clio resolve the prepatch Darwi
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-26 Wed 13:12]
-:MODIFIED: [2026-08-26 Wed 13:12]
+:MODIFIED: [2026-08-26 Wed 15:12]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -4948,6 +4948,20 @@ Read-only adoption audit on 2026-08-19: Hera and Clio resolve the prepatch Darwi
 :END:
 
 Run the canonical make update transaction end to end, diagnose and repair every blocker without weakening gates, create and publish signed root changes, adopt paired root/AI inputs through signed Andoria and Vulcan consumer commits, and build, activate, and runtime-verify Hera, Clio, Vulcan, Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server. Exclude parked VPS and dormant git-ai. Preserve rollback generations, authoritative checkout ownership, secrets, mutable state, build locks, and concurrent unrelated work.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 530,
+    "issue_id": "nix-dkmx",
+    "author": "johnw",
+    "text": "2026-08-26 first canonical update diagnosis: make update correctly held incompatible plasma-fractal, pi-mcp-adapter, pi-goal-x, and pi-subagents candidates, then its signed isolated candidate failed final Hera realization at tea 0.15.1. Exact failed derivation xyr592h5gs8mskq7igsa6s0al45274d4 reproduced: overlays/30-git-tools.nix preBuild tried to patch vendor/github.com/go-git/go-git/v5, which no longer exists. Tea 0.15.1 removed go-git from go.mod, switched modules/git to the native Git CLI backend, and ships an upstream worktree test, so silently skipping a missing path was not appropriate. The narrow compatibility correction applies the go-git patch only before Tea 0.15 and passes 0.15+ through unchanged. New git-tools-tea-compat evaluation fixture mutation-kills both branches: it failed before the fix with “Tea 0.15+ used retired go-git patch,” then passed on aarch64-darwin, aarch64-linux, and x86_64-linux. Current Tea built with the retained legacy patch; candidate Nixpkgs ac6b216 Tea 0.15.1 evaluated and resolved successfully through the corrected overlay. nix fmt, root all-system no-build evaluation, and full make test (21/21 suites, 521 seconds) pass. Next: sign/publish this guard and rerun the canonical transaction.",
+    "created_at": "2026-08-26T22:12:29Z"
+  }
+]
+#+end_src
 
 * DONE [#B] Bound legacy consumed-turn ledger import
 :PROPERTIES:

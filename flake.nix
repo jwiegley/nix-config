@@ -413,6 +413,7 @@
                 configured = agentTestPkgsFor.${system};
               };
               edit-env = pkgs.callPackage ./test/overlays/edit-env.nix { };
+              git-tools-tea-compat = pkgs.callPackage ./test/overlays/git-tools-tea-compat.nix { };
             }
             // pkgs.lib.optionalAttrs (system == "aarch64-darwin") {
               emacs-head = pkgs.callPackage ./test/overlays/emacs-head.nix {
