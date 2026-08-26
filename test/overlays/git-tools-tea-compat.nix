@@ -20,7 +20,7 @@ let
     (overlay { } {
       inherit lib;
       tea = {
-        version = "0.15.1";
+        version = "0.15.0";
         marker = "upstream";
         overrideAttrs = _: throw "Tea 0.15+ used retired go-git patch";
       };
@@ -29,5 +29,7 @@ in
 assert legacy.marker == "overridden";
 assert lib.hasPrefix "upstream-pre-build\n" legacy.preBuild;
 assert lib.hasInfix "repository_extensions.go" legacy.preBuild;
+assert lib.hasInfix "worktreeConfig" legacy.preBuild;
+assert builtins.length (lib.splitString "worktreeconfig" legacy.preBuild) == 3;
 assert current.marker == "upstream";
 runCommand "git-tools-tea-compat" { } "touch $out"
