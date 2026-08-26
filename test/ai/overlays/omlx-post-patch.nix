@@ -102,11 +102,14 @@ runCommand "omlx-post-patch"
     replace_current_ddgs "\"ddgs==0.0.1;python_version<'3.14'\""
     expect_rejected marked-ddgs "must be a bare ddgs==version coordinate"
 
-    prepare_case dflash-mismatch
+    prepare_case dflash-untrusted
+    dflash_coordinate="$(
+      grep -Eo '"dflash-mlx @ git\+https://github\.com/[^\"]+"' "$case_dir/pyproject.toml"
+    )"
     substituteInPlace "$case_dir/pyproject.toml" \
-      --replace-fail '${sources.dflash-mlx.source.args.rev}' \
-      '0000000000000000000000000000000000000000'
-    expect_rejected dflash-mismatch "exact dflash-mlx source coordinate"
+      --replace-fail "$dflash_coordinate" \
+      '"dflash-mlx @ git+https://github.com/untrusted/dflash-mlx@0000000000000000000000000000000000000000"'
+    expect_rejected dflash-untrusted "exactly one trusted dflash-mlx GitHub coordinate, found 0"
 
     prepare_case mlx-lm-mismatch
     substituteInPlace "$case_dir/pyproject.toml" \

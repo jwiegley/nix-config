@@ -538,8 +538,9 @@ in
       patches = [ ../overlays/ai/patches/omlx-host-vm-info64-count.patch ];
 
       # pyproject.toml pins MLX packages to exact versions or Git commits. Keep
-      # the manually coupled Git identities fail-closed while retargeting the
-      # sole bare DDGS requirement to the package-set version.
+      # the manually coupled MLX identities fail-closed. DFlash may advance its
+      # trusted fork revision with an oMLX release, so validate that identity
+      # before retargeting it and bare DDGS to the package-set versions.
       postPatch = ''
         replace_single_bare_exact_requirement() {
           local dependency=$1 replacement=$2
@@ -575,6 +576,24 @@ in
           fi
         }
 
+        replace_github_direct_reference() {
+          local dependency=$1 owner=$2 repo=$3
+          local -a coordinates
+          mapfile -t coordinates < <(
+            grep -Eo "\"$dependency @ git\\+https://github\\.com/$owner/$repo@[0-9a-f]{40}\"" pyproject.toml
+          )
+          if [[ ''${#coordinates[@]} -ne 1 ]]; then
+            echo "oMLX must declare exactly one trusted $dependency GitHub coordinate, found ''${#coordinates[@]}" >&2
+            return 1
+          fi
+          substituteInPlace pyproject.toml \
+            --replace-fail "''${coordinates[0]}" "\"$dependency\""
+          if grep -Fq "\"$dependency @ git+" pyproject.toml; then
+            echo "oMLX declares an unexpected $dependency source coordinate" >&2
+            return 1
+          fi
+        }
+
         substituteInPlace pyproject.toml \
           --replace-fail '"mlx==0.32.0"' '"mlx==${mlx.version}"'
         replace_single_bare_exact_requirement ddgs '"ddgs==${ddgs.version}"'
@@ -587,10 +606,11 @@ in
         replace_direct_reference \
           mlx-vlm \
           '"mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm@78b96eb5462141447b9a6b4943ef553891da56dd"'
-        replace_direct_reference \
+        replace_github_direct_reference \
           dflash-mlx \
-          '"dflash-mlx @ git+https://github.com/${sources.dflash-mlx.source.args.owner}/${sources.dflash-mlx.source.args.repo}@${sources.dflash-mlx.source.args.rev}"'
-        unset -f replace_single_bare_exact_requirement replace_direct_reference
+          ${sources.dflash-mlx.source.args.owner} \
+          ${sources.dflash-mlx.source.args.repo}
+        unset -f replace_single_bare_exact_requirement replace_direct_reference replace_github_direct_reference
 
         substituteInPlace omlx/websearch.py \
           --replace-fail '    "yandex",' ""

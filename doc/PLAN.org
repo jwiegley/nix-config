@@ -16935,6 +16935,21 @@ bin/yubikey-switch:3-24 checks /Volumes/File but copies from /Volumes/Files, and
 ]
 #+end_src
 
+* DONE [#C] Pin oMLX 0.6.2 and ignore prereleases
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tgfg
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-25 Tue 15:18]
+:MODIFIED: [2026-08-25 Tue 16:08]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-25 Tue 16:08]
+:CLOSE_REASON: Rolled oMLX back to stable 0.6.2 and added oMLX-only stable GitHub release selection. Semantic prerelease filtering ignores rc/alpha/beta even when GitHub metadata says normal release; explicit prerelease overrides fail. Package, 133 updater tests, post-patch check, portable evaluation, pre-commit, and Darwin build pass.
+:SOURCE_REPO: .
+:ORIGINAL_SIZE: 0
+:END:
+
 * DONE [#D] Preserve bare process-environment markers in edit-env
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

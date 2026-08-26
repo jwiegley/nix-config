@@ -3361,6 +3361,12 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         tag["update"] = {"kind": "github-release"}
         self.assertEqual(load(tag)["example"]["version"], "deadbeef")
 
+        stable = copy.deepcopy(tag)
+        stable["update"]["stableOnly"] = True
+        self.assertTrue(
+            load(stable)["example"]["_record"]["update"]["stableOnly"]
+        )
+
         manual = copy.deepcopy(valid)
         manual["update"].update(policy="manual", reason="Compatibility hold")
         self.assertEqual(
@@ -3368,6 +3374,13 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         )
 
         invalid = []
+        invalid_stable_type = copy.deepcopy(tag)
+        invalid_stable_type["update"]["stableOnly"] = "yes"
+        invalid.append(invalid_stable_type)
+
+        stable_on_commit = copy.deepcopy(valid)
+        stable_on_commit["update"]["stableOnly"] = True
+        invalid.append(stable_on_commit)
         both_refs = copy.deepcopy(valid)
         both_refs["source"]["args"]["tag"] = "v1.0.0"
         invalid.append(both_refs)
@@ -3519,6 +3532,41 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         self.assertEqual(command[:2], ["gh", "api"])
         self.assertIn(f"contents/locks/Cargo%20lock?ref={'b' * 40}", command[2])
         self.assertEqual(kwargs["timeout"], 60)
+
+    def test_github_stable_release_lookup_rejects_semantic_prereleases(self):
+        calls = []
+        response = SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps(
+                [
+                    {"tag_name": "v0.6.3rc3", "draft": False, "prerelease": False},
+                    {"tag_name": "v0.6.3-beta.1", "draft": False, "prerelease": False},
+                    {"tag_name": "v0.6.3a1", "draft": False, "prerelease": False},
+                    {"tag_name": "v9.0.0", "draft": True, "prerelease": False},
+                    {"tag_name": "v0.6.2", "draft": False, "prerelease": False},
+                ]
+            ),
+            stderr="",
+        )
+
+        def fake_run(command, **_kwargs):
+            calls.append(command)
+            return response
+
+        real_run = subprocess.run
+        subprocess.run = fake_run
+        try:
+            client = GitHubClient()
+            self.assertEqual(
+                client.get_latest_stable_release("jundot", "omlx", "v"),
+                "v0.6.2",
+            )
+            self.assertIsNone(client.last_error)
+        finally:
+            subprocess.run = real_run
+
+        self.assertEqual(len(calls), 1)
+        self.assertIn("repos/jundot/omlx/releases?per_page=100", calls[0][2])
 
     def test_github_tag_lookup_selects_first_matching_prefix(self):
         response = SimpleNamespace(
@@ -4274,6 +4322,9 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         ddgs = ai_catalog["ddgs"]
         self.assertEqual(ddgs["update"].get("buildPackage"), "omlx")
         self.assertEqual(ddgs["update"].get("buildMode"), "pkg")
+        omlx = ai_catalog["omlx"]
+        self.assertEqual(omlx["version"], "0.6.2")
+        self.assertTrue(omlx["update"].get("stableOnly"))
         pal = ai_catalog["pal-mcp-server"]
         self.assertEqual(pal["update"].get("buildPackage"), "pal-mcp-server")
         self.assertNotIn("buildMode", pal["update"])
@@ -4908,6 +4959,86 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 )
             self.assertEqual(transaction.rollback(), 1)
             self.assertEqual(path.read_bytes(), before_rejection)
+
+    def test_catalog_stable_github_release_updates_final_and_rejects_explicit_rc(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "sources").mkdir()
+            path = root / "sources/ai.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sources": {
+                            "omlx": {
+                                "version": "0.6.2",
+                                "source": {
+                                    "fetcher": "fetchFromGitHub",
+                                    "url": "https://github.com/jundot/omlx",
+                                    "args": {
+                                        "owner": "jundot",
+                                        "repo": "omlx",
+                                        "tag": "v0.6.2",
+                                        "hash": "sha256-old",
+                                    },
+                                },
+                                "update": {
+                                    "buildPackage": "omlx",
+                                    "kind": "github-release",
+                                    "stableOnly": True,
+                                    "tagPrefix": "v",
+                                },
+                            }
+                        },
+                    }
+                )
+            )
+            target = load_source_catalog(root)["omlx"]
+            github = SimpleNamespace(
+                get_latest_stable_release=lambda _owner, _repo, _prefix: "v0.6.3",
+                get_latest_release=lambda *_args: self.fail(
+                    "stable target used default release lookup"
+                ),
+            )
+            hashes = SimpleNamespace(
+                compute_native_hash=lambda _source, _replacements: "sha256-new",
+                validate_package_build=lambda _package, _mode: True,
+            )
+            transaction = SourceTransaction()
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = update_catalog_target(
+                    "omlx",
+                    target,
+                    SimpleNamespace(version=None, dry_run=False),
+                    github,
+                    SimpleNamespace(),
+                    SimpleNamespace(),
+                    hashes,
+                    transaction,
+                )
+            transaction.commit()
+            record = json.loads(path.read_text())["sources"]["omlx"]
+            self.assertEqual(status, "updated")
+            self.assertEqual(record["version"], "0.6.3")
+            self.assertEqual(record["source"]["args"]["tag"], "v0.6.3")
+
+            before_rc = path.read_bytes()
+            target = load_source_catalog(root)["omlx"]
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                status = update_catalog_target(
+                    "omlx",
+                    target,
+                    SimpleNamespace(version="0.6.4rc1", dry_run=False),
+                    github,
+                    SimpleNamespace(),
+                    SimpleNamespace(),
+                    hashes,
+                    SourceTransaction(),
+                )
+            self.assertEqual(status, "failed")
+            self.assertIn("stable release required", output.getvalue())
+            self.assertEqual(path.read_bytes(), before_rc)
 
     def test_catalog_github_tag_preserves_native_tag_field(self):
         with tempfile.TemporaryDirectory() as temp_dir:
