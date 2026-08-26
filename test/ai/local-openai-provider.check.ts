@@ -41,6 +41,14 @@ const QWEN_THINKING_LEVEL_MAP = {
 	xhigh: null,
 	max: null,
 };
+const DEEPSEEK_MAX_THINKING_LEVEL_MAP = {
+	minimal: null,
+	low: null,
+	medium: null,
+	high: null,
+	xhigh: null,
+	max: "max",
+};
 
 function modelsFor(
 	providers: Map<string, ProviderConfig>,
@@ -929,6 +937,68 @@ try {
 			},
 		],
 		"Qwen request shaping",
+	);
+	const deepseekMaxModel = {
+		...omlxModels[0],
+		api: "openai-completions",
+		provider: "omlx",
+		baseUrl: "http://localhost:8000/v1",
+		reasoning: true,
+		input: ["text"],
+		thinkingLevelMap: DEEPSEEK_MAX_THINKING_LEVEL_MAP,
+		compat: {
+			...(omlxModels[0].compat as Record<string, unknown>),
+			supportsReasoningEffort: true,
+			requiresReasoningContentOnAssistantMessages: true,
+			thinkingFormat: "deepseek",
+		},
+	};
+	expectEqual(
+		getSupportedThinkingLevels(deepseekMaxModel),
+		["off", "max"],
+		"DeepSeek Max thinking levels",
+	);
+	const deepseekPayloads: unknown[] = [];
+	for (const reasoning of [undefined, "max"] as const) {
+		const result = await streamSimple(
+			deepseekMaxModel,
+			{ messages: [{ role: "user", content: "probe", timestamp: 1 }] },
+			{
+				apiKey: "test",
+				reasoning,
+				onPayload: (payload: unknown) => {
+					deepseekPayloads.push(payload);
+					throw new Error("request captured before transport");
+				},
+			},
+		).result();
+		expect(
+			result.stopReason === "error",
+			"DeepSeek request capture did not stop transport",
+		);
+	}
+	expectEqual(
+		deepseekPayloads.map((payload) => {
+			const shaped = payload as Record<string, unknown>;
+			return {
+				thinking: shaped.thinking,
+				reasoningEffort: shaped.reasoning_effort,
+				hasChatTemplateKwargs: Object.hasOwn(shaped, "chat_template_kwargs"),
+			};
+		}),
+		[
+			{
+				thinking: { type: "disabled" },
+				reasoningEffort: undefined,
+				hasChatTemplateKwargs: false,
+			},
+			{
+				thinking: { type: "enabled" },
+				reasoningEffort: "max",
+				hasChatTemplateKwargs: false,
+			},
+		],
+		"DeepSeek Max request shaping",
 	);
 
 	let failedBodyCancelled = false;

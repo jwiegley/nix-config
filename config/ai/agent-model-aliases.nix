@@ -41,7 +41,7 @@ let
       harness = "pi";
       provider = "omlx-hera";
       model = models.omlx.reasoning.name;
-      thinking = "off";
+      thinking = "max";
     };
     "gpt sol" = {
       harness = "pi";

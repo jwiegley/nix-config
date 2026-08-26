@@ -1955,8 +1955,36 @@ pkgs.runCommand "ai-catalog-transport" { } ''
           }
           and .providers["omlx-hera"] == {
             "modelOverrides": {
+              "${models.omlx.primary.name}": {
+                "compat": {
+                  "supportsDeveloperRole": false,
+                  "supportsReasoningEffort": false,
+                  "thinkingFormat": "qwen-chat-template"
+                },
+                "contextWindow": ${toString models.omlx.primary.contextWindow},
+                "input": ["text"],
+                "maxTokens": ${toString models.omlx.primary.maxTokens},
+                "reasoning": false
+              },
               "${models.omlx.reasoning.name}": {
-                "contextWindow": ${toString models.omlx.reasoning.contextWindow}
+                "compat": {
+                  "requiresReasoningContentOnAssistantMessages": true,
+                  "supportsDeveloperRole": false,
+                  "supportsReasoningEffort": true,
+                  "thinkingFormat": "deepseek"
+                },
+                "contextWindow": ${toString models.omlx.reasoning.contextWindow},
+                "input": ["text"],
+                "maxTokens": ${toString models.omlx.reasoning.maxTokens},
+                "reasoning": true,
+                "thinkingLevelMap": {
+                  "high": null,
+                  "low": null,
+                  "max": "max",
+                  "medium": null,
+                  "minimal": null,
+                  "xhigh": null
+                }
               }
             },
             "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}

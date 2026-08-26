@@ -800,7 +800,7 @@ pkgs.runCommand "host-behavior" { } ''
           "harness": "pi",
           "model": ${builtins.toJSON modelSelection.omlx.reasoning.name},
           "provider": "omlx-hera",
-          "thinking": "off"
+          "thinking": "max"
         },
         "gpt sol": {
           "harness": "pi",

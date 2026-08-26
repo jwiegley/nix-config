@@ -14,12 +14,15 @@ let
         "Qwen3.6-27B-oQ6e-mtp"
         "Qwen3.8-27B-oQ6e-mtp-mlx"
       ];
+      contextWindow = 262144;
+      maxTokens = 81920;
     };
     reasoning = {
       name = "DeepSeek-V4-Flash-0731-MXFP4-MLX";
       providers = [ "omlx-hera" ];
       retiredNames = [ "DeepSeek-V4-Flash-0731-oQ8e-mtp" ];
       contextWindow = 262144;
+      maxTokens = 81920;
     };
   };
   omlxRoleValues = builtins.attrValues omlxRoles;

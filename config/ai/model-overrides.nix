@@ -1,10 +1,43 @@
 let
   models = import ./models.nix;
+  deepseekThinkingLevelMap = {
+    minimal = null;
+    low = null;
+    medium = null;
+    high = null;
+    xhigh = null;
+    max = "max";
+  };
   llamaSwapOverrides = {
     modelOverrides.${models.llamaSwap.name}.contextWindow = models.llamaSwap.contextWindow;
   };
+  qwenOverrides = {
+    modelOverrides.${models.omlx.primary.name} = {
+      contextWindow = models.omlx.primary.contextWindow;
+      maxTokens = models.omlx.primary.maxTokens;
+      reasoning = false;
+      input = [ "text" ];
+      compat = {
+        supportsDeveloperRole = false;
+        supportsReasoningEffort = false;
+        thinkingFormat = "qwen-chat-template";
+      };
+    };
+  };
   omlxOverrides = {
-    modelOverrides.${models.omlx.reasoning.name}.contextWindow = models.omlx.reasoning.contextWindow;
+    modelOverrides.${models.omlx.reasoning.name} = {
+      contextWindow = models.omlx.reasoning.contextWindow;
+      maxTokens = models.omlx.reasoning.maxTokens;
+      reasoning = true;
+      input = [ "text" ];
+      thinkingLevelMap = deepseekThinkingLevelMap;
+      compat = {
+        supportsDeveloperRole = false;
+        supportsReasoningEffort = true;
+        requiresReasoningContentOnAssistantMessages = true;
+        thinkingFormat = "deepseek";
+      };
+    };
   };
 in
 {
@@ -55,7 +88,7 @@ in
       llama-swap = llamaSwapOverrides;
       omlx-clio = { };
       omlx-hera = {
-        inherit (omlxOverrides) modelOverrides;
+        modelOverrides = qwenOverrides.modelOverrides // omlxOverrides.modelOverrides;
       };
     };
   };
