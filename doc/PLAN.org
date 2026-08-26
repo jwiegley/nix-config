@@ -5563,6 +5563,36 @@ The 2026-08-17 automatic candidate 2.8.3 is incompatible with the fail-closed ma
 ]
 #+end_src
 
+* DOING [#B] Restore non-VPS fleet activation after andoria-08 failure
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-f9hq
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-26 Wed 01:05]
+:MODIFIED: [2026-08-26 Wed 02:00]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Activation is failing again on andoria-08. Reproduce the failure through the supported consumer-owned rollout path, repair the narrowest shared root cause with regression coverage, and successfully activate every maintained host except the parked VPS. Preserve authoritative checkouts, rollback generations, host-local state, and signature/trust boundaries.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 528,
+    "issue_id": "nix-f9hq",
+    "author": "johnw",
+    "text": "2026-08-26 diagnosis and pre-publication evidence: authoritative Andoria evaluation failed before activation because overlays/30-misc-tools.nix passed buildGoModule to Nixpkgs ac6b216 Gogcli, whose callPackage formal is buildGo127Module. The shared repair selects the single declared buildGo[0-9]*Module formal from override.__functionArgs; a two-signature regression failed before the fix and passes after it. Exact Andoria consumer override evaluation, ./build pkg gogcli, config/ai all-system no-build evaluation, the 133-test strict baseline, full make test, full Darwin system build, and the canonical pre-commit hook pass. Read-only fleet preflight reached Hera, Clio, Vulcan, Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server; neither VPS nor dormant git-ai was contacted. Deployment is paused at authority boundaries: root fix still needs an explicitly authorized signed commit/push; Andoria has six unpushed unsigned lock-only commits and Vulcan one, requiring explicit history-rewrite authorization before signed publication/adoption. Vulcan also has one unstaged DeepSeek model change that would restart Hermes if activated; preserve it and activate a clean committed flake reference unless the owner separately authorizes including it. Andoria-T2 and Delphi retain the separately tracked missing CPU ceiling, so the shared candidate must be realized once on a bounded producer, signed, copied, and activated without rebuilding there.",
+    "created_at": "2026-08-26T09:00:56Z"
+  }
+]
+#+end_src
+
 * DONE [#B] Write comprehensive Nix architecture and operations guide
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

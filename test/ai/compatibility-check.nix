@@ -22,6 +22,32 @@ let
     "overlays"
     "packages"
   ];
+  gogcliBuilderFixture =
+    builderArg:
+    let
+      result = (import ../../overlays/30-misc-tools.nix) { } {
+        buildGo126Module.override = _: "catalog-go-builder";
+        fetchFromGitHub = args: args;
+        gogcli.override = {
+          __functionArgs = {
+            ${builderArg} = false;
+          };
+          __functor =
+            _: args:
+            assert builtins.attrNames args == [ builderArg ];
+            {
+              overrideAttrs =
+                transform:
+                transform { }
+                // {
+                  builder = args.${builderArg};
+                };
+            };
+        };
+        inherit lib;
+      };
+    in
+    result.gogcli.builder;
   # `default == check` is the only alias worth pinning: it is a convention, and it
   # claims no evidence of its own. The eleven pins removed here did the opposite —
   # they froze names like `coverage`, `fuzz`, `memory` and `profile` to whatever
@@ -171,6 +197,10 @@ let
       (lib.assertMsg (builtins.all (
         name: toolPkgs ? ${name}
       ) consumerTools) "portable tools overlay lost a supported consumer package on ${system}")
+      (lib.assertMsg (builtins.all (builderArg: gogcliBuilderFixture builderArg == "catalog-go-builder") [
+        "buildGoModule"
+        "buildGo127Module"
+      ]) "portable Gogcli overlay hard-coded a Nixpkgs Go builder formal")
       (lib.assertMsg (
         toolPkgs.nix-scripts.drvPath == actual.packages.${system}.nix-scripts.drvPath
       ) "portable nix-scripts package and tools overlay diverged on ${system}")

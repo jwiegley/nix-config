@@ -13,6 +13,13 @@ let
       prev.fetchurl sources.gogcli-go.source.args;
   };
   buildGoForGogcli = prev.buildGo126Module.override { go = gogcliGo; };
+  # Nixpkgs renames Gogcli's builder formal when its selected compiler changes.
+  gogcliBuilderArgs = builtins.filter (name: builtins.match "buildGo[0-9]*Module" name != null) (
+    builtins.attrNames prev.gogcli.override.__functionArgs
+  );
+  gogcliBuilderArg =
+    assert builtins.length gogcliBuilderArgs == 1;
+    builtins.head gogcliBuilderArgs;
 in
 {
 
@@ -109,7 +116,7 @@ in
 // prev.lib.optionalAttrs (prev ? gogcli) {
   # Bump gogcli ahead of nixpkgs when the consumer channel provides a base.
   # Older stable channels simply omit this optional package.
-  gogcli = (prev.gogcli.override { buildGoModule = buildGoForGogcli; }).overrideAttrs (_: {
+  gogcli = (prev.gogcli.override { ${gogcliBuilderArg} = buildGoForGogcli; }).overrideAttrs (_: {
     version = sources.gogcli.version;
     src =
       assert sources.gogcli.source.fetcher == "fetchFromGitHub";
