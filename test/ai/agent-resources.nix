@@ -864,7 +864,10 @@ else
 
         test "$(grep -Fc 'state.config.settings?.mcpFooterStatus ?? "full"' \
           "$mcp/init.ts")" -eq 1 \
-          || fail "pi-mcp-adapter native footer-status contract changed"
+          || fail "pi-mcp-adapter native footer-status default changed"
+        test "$(grep -Fc 'typeof theme?.fg === "function"' \
+          "$mcp/init.ts")" -eq 1 \
+          || fail "pi-mcp-adapter plain-theme footer fallback changed"
 
         [ -d "$mcp/skills" ] && [ ! -L "$mcp/skills" ] \
           || fail "missing regular pi-mcp-adapter skills root"

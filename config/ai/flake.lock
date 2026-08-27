@@ -240,11 +240,11 @@
     "pi-mcp-adapter": {
       "flake": false,
       "locked": {
-        "lastModified": 1787446800,
-        "narHash": "sha256-GRbhymazgB4zD1QHp5FuJPiVjlYHsCbKiM3293UnkBc=",
+        "lastModified": 1787786190,
+        "narHash": "sha256-xmF39gRGbI7b4UNA8HHz/rBunZ2b/2ph8NPV+piyyuY=",
         "owner": "nicobailon",
         "repo": "pi-mcp-adapter",
-        "rev": "6c08147f7a3c6eba670fa8fb73e1fe68a7ab471f",
+        "rev": "34f4c2c902b392a449a5b9f725664d515fc4f2d0",
         "type": "github"
       },
       "original": {

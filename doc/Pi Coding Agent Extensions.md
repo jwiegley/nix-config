@@ -27,7 +27,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [Nix Gallery loader][nix-gallery-loader] | local | Compose the managed package gallery | automatic |
 | [Fleet Theme][fleet-theme] | local | Discover and select the managed TUI theme | automatic |
 | [`@realvendex/pi-loop`][pi-loop] | 1.0.2 | Repeat prompts under explicit stop conditions | `/loop` |
-| [`pi-mcp-adapter`][pi-mcp-adapter] | 2.27.0 | Lazy, context-efficient MCP access | `mcp`, `/mcp` |
+| [`pi-mcp-adapter`][pi-mcp-adapter] | 2.29.0 | Lazy, context-efficient MCP access | `mcp`, `/mcp` |
 | [`@zenspc/pi-quiet`][pi-quiet] | 0.4.1 | Dense tool-result presentation | `/quiet` |
 | [`pi-hashline-edit-pro`][pi-hashline-edit-pro] | 0.17.5 | Hash-anchored reads and replacements | `read`, `replace` |
 | [`pi-smart-fetch`][pi-smart-fetch] | 0.3.17 | Browser-fingerprinted readable web fetching | `web_fetch`, `batch_web_fetch` |
@@ -153,7 +153,7 @@ The [Nix Gallery loader][nix-gallery-loader] projects the complete managed packa
 
 ### [Pi MCP Adapter][pi-mcp-adapter]
 
-**Version:** 2.27.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-mcp-adapter) · [Home](https://github.com/nicobailon/pi-mcp-adapter#readme) · [GitHub](https://github.com/nicobailon/pi-mcp-adapter)
+**Version:** 2.29.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-mcp-adapter) · [Home](https://github.com/nicobailon/pi-mcp-adapter#readme) · [GitHub](https://github.com/nicobailon/pi-mcp-adapter)
 
 [Pi MCP Adapter][pi-mcp-adapter] exposes Model Context Protocol servers through one compact proxy tool instead of placing every remote tool schema in the model context. Servers are lazy by default; metadata, instructions, resources, and prompts are cached; large results are guarded; selected tools may be promoted directly; and MCP Apps and remote OAuth retain explicit interactive surfaces.
 

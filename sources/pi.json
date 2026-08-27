@@ -624,14 +624,14 @@
     },
     "pi-mcp-adapter": {
       "hashes": {
-        "npmDepsHash": "sha256-dIJsGgjXnNt6iwCXkhNIg8ZczV9+o64oBXGku++ZtqE="
+        "npmDepsHash": "sha256-zfv+z41B84jvZ9FS/71PtIklVceO1qt5gygUjI4YF1g="
       },
       "source": {
         "args": {
-          "narHash": "sha256-GRbhymazgB4zD1QHp5FuJPiVjlYHsCbKiM3293UnkBc=",
+          "narHash": "sha256-xmF39gRGbI7b4UNA8HHz/rBunZ2b/2ph8NPV+piyyuY=",
           "owner": "nicobailon",
           "repo": "pi-mcp-adapter",
-          "rev": "6c08147f7a3c6eba670fa8fb73e1fe68a7ab471f",
+          "rev": "34f4c2c902b392a449a5b9f725664d515fc4f2d0",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -646,7 +646,7 @@
         "input": "pi-mcp-adapter",
         "kind": "flake-input+build"
       },
-      "version": "2.27.0"
+      "version": "2.29.0"
     },
     "pi-openai-server-compaction": {
       "source": {

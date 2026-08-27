@@ -90,8 +90,8 @@ let
     "prepublish"
     "prepublishOnly"
     "preprepare"
+    "prepare"
     "postprepare"
-    "prepack"
     "postpack"
     "publish"
     "postpublish"
@@ -110,10 +110,11 @@ let
     patches = [ ./agent-resources/pi-mcp-adapter-xdg-config-home.patch ];
     npmDepsHash = piSources.pi-mcp-adapter.hashes.npmDepsHash;
     npmDepsFetcherVersion = 2;
-    dontNpmBuild = true;
+    npmBuildScript = "build:public";
     postPatch = ''
-      # Keep the development graph needed by prepare's public build, while
-      # repairing the exact six nested Pi lock entries published without integrity.
+      # Build the public exports explicitly after upstream moved the lifecycle
+      # hook from prepare to prepack, while repairing the exact six nested Pi
+      # lock entries published without integrity.
       ${python3}/bin/python3 - <<'PY'
       import json
       from pathlib import Path
@@ -160,7 +161,7 @@ let
       files = package.get("files", [])
       if not (
           scripts.get("build:public") == "tsc -p tsconfig.public.json"
-          and scripts.get("prepare") == "npm run build:public"
+          and scripts.get("prepack") == "npm run build:public"
           and forbidden_build_scripts.isdisjoint(scripts)
           and "dist" in files
           and exports.get("./types", {}).get("import") == "./dist/types.js"
@@ -182,8 +183,12 @@ let
               raise SystemExit(f"pi-mcp-adapter lock source changed: {path}")
           metadata["integrity"] = integrity
 
-      native_footer_status = 'state.config.settings?.mcpFooterStatus ?? "full"'
-      if Path("init.ts").read_text().count(native_footer_status) != 1:
+      init_source = Path("init.ts").read_text()
+      native_footer_contract = (
+          'state.config.settings?.mcpFooterStatus ?? "full"',
+          'typeof theme?.fg === "function"',
+      )
+      if any(init_source.count(fragment) != 1 for fragment in native_footer_contract):
           raise SystemExit("pi-mcp-adapter native footer-status contract changed")
 
       lock_path.write_text(json.dumps(lock, indent=2) + "\n")
