@@ -9154,6 +9154,24 @@ During the 2026-08-13 authorized shared-work activation, gpu-server completed su
 ]
 #+end_src
 
+* DONE [#C] Run Hera pushme to Vulcan daily at 07:00
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-oh9q
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-27 Thu 01:27]
+:MODIFIED: [2026-08-27 Thu 01:27]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-27 Thu 01:27]
+:CLOSE_REASON: Changed Hera push-tank from StartInterval=3600 to a local 07:00 StartCalendarInterval; exact host-behavior projection passes and command/environment/logging/Clio ownership remain unchanged.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Replace the hourly Hera push-tank launchd trigger with one daily 07:00 local-time calendar trigger. Preserve the manual push command, exact tank route, environment, logs, and Clio absence; verify both removal of StartInterval and exact normalized StartCalendarInterval.
+
 * DONE [#B] pi-gallery baseline red: extensions doc not updated for pi-dynamic-workflows 3.7.0
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

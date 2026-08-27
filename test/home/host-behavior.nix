@@ -792,7 +792,15 @@ assert
   };
 assert !heraPushTankAgent.serviceConfig.RunAtLoad;
 assert heraPushTankAgent.serviceConfig.KeepAlive == null;
-assert heraPushTankAgent.serviceConfig.StartInterval == 3600;
+assert heraPushTankAgent.serviceConfig.StartInterval == null;
+assert
+  heraPushTankAgent.serviceConfig.StartCalendarInterval == {
+    Day = null;
+    Hour = 7;
+    Minute = 0;
+    Month = null;
+    Weekday = null;
+  };
 assert heraPushTankAgent.serviceConfig.StandardOutPath == "/Users/johnw/Library/Logs/push-tank.log";
 assert
   heraPushTankAgent.serviceConfig.StandardErrorPath == "/Users/johnw/Library/Logs/push-tank.log";

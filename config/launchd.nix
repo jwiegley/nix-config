@@ -529,7 +529,10 @@ in
             USER = "johnw";
           };
           RunAtLoad = false;
-          StartInterval = 3600;
+          StartCalendarInterval = {
+            Hour = 7;
+            Minute = 0;
+          };
           StandardOutPath = "${home}/Library/Logs/push-tank.log";
           StandardErrorPath = "${home}/Library/Logs/push-tank.log";
         };
