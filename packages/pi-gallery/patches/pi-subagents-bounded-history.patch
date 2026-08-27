@@ -1,8 +1,8 @@
-diff --git a/src/extension/index.ts b/src/extension/index.ts
-index 1e1a37d7..8165fd64 100644
---- a/src/extension/index.ts
-+++ b/src/extension/index.ts
-@@ -826,7 +826,10 @@ export default function registerSubagentExtension(pi: ExtensionAPI): void {
+diff --git i/src/extension/index.ts w/src/extension/index.ts
+index 10f6658580432b2f92dc79e86f2187c55538370f..987e3860c57b1b5f772dd74753ed37878efa83e9 100644
+--- i/src/extension/index.ts
++++ w/src/extension/index.ts
+@@ -917,7 +917,10 @@ export default function registerSubagentExtension(pi: ExtensionAPI): void {
  		scheduledRunManager.bindSession(ctx);
  		logSlowPhase("scheduled-runs", phaseStartedAt);
  		phaseStartedAt = Date.now();
@@ -14,10 +14,10 @@ index 1e1a37d7..8165fd64 100644
  		logSlowPhase("slash-snapshots", phaseStartedAt);
  		phaseStartedAt = Date.now();
  		waitSubscriptionManager.restore();
-diff --git a/src/shared/fork-context.ts b/src/shared/fork-context.ts
-index 6565a8dd..88a4d27d 100644
---- a/src/shared/fork-context.ts
-+++ b/src/shared/fork-context.ts
+diff --git i/src/shared/fork-context.ts w/src/shared/fork-context.ts
+index 5bb6760f05ecb9accfcce6ecba8d384ce14017e5..8d911af8fdf6a282c1d452e67273064d04786799 100644
+--- i/src/shared/fork-context.ts
++++ w/src/shared/fork-context.ts
 @@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
  import * as fs from "node:fs";
  import * as path from "node:path";
@@ -37,7 +37,7 @@ index 6565a8dd..88a4d27d 100644
  }
  
  interface ForkableSessionManager {
-@@ -83,62 +84,156 @@ function isUnsafeAnthropicThinkingBlock(message: BranchSessionEntry["message"],
+@@ -128,62 +129,156 @@ function isUnsafeAnthropicThinkingBlock(message: BranchSessionEntry["message"],
  	return record.redacted === true || (typeof signature === "string" && signature.length > 0);
  }
  
@@ -238,7 +238,7 @@ index 6565a8dd..88a4d27d 100644
  }
  
  export function createForkContextResolver(
-@@ -177,35 +272,22 @@ export function createForkContextResolver(
+@@ -241,35 +336,22 @@ export function createForkContextResolver(
  				throw new Error(`Parent session file does not exist: ${parentSessionFile}. Pi has not persisted enough history to fork yet.`);
  			}
  			const sourceManager = openSession(parentSessionFile, sessionDir);
@@ -288,11 +288,11 @@ index 6565a8dd..88a4d27d 100644
  			const resolution = { sessionFile, ...(thinkingOverride ? { thinkingOverride } : {}) };
  			cachedResolutions.set(index, resolution);
  			return resolution;
-diff --git a/src/shared/jsonl-lines.ts b/src/shared/jsonl-lines.ts
+diff --git i/src/shared/jsonl-lines.ts w/src/shared/jsonl-lines.ts
 new file mode 100644
-index 00000000..db8b37aa
+index 0000000000000000000000000000000000000000..db8b37aa399224ef87a262b10e3fe35e1ac13585
 --- /dev/null
-+++ b/src/shared/jsonl-lines.ts
++++ w/src/shared/jsonl-lines.ts
 @@ -0,0 +1,73 @@
 +import * as fs from "node:fs";
 +
@@ -367,10 +367,10 @@ index 00000000..db8b37aa
 +		offset += written;
 +	}
 +}
-diff --git a/src/shared/session-tokens.ts b/src/shared/session-tokens.ts
-index 3825268b..5f2718c1 100644
---- a/src/shared/session-tokens.ts
-+++ b/src/shared/session-tokens.ts
+diff --git i/src/shared/session-tokens.ts w/src/shared/session-tokens.ts
+index 693df93ba0dce36710974e1d9cbbb9364d2627d8..6a1874202c4bd19015641050e19f1a09001f5f38 100644
+--- i/src/shared/session-tokens.ts
++++ w/src/shared/session-tokens.ts
 @@ -1,5 +1,6 @@
  import * as fs from "node:fs";
  import * as path from "node:path";
@@ -378,13 +378,15 @@ index 3825268b..5f2718c1 100644
  import type { TokenUsage } from "./types.ts";
  
  function findLatestSessionFile(sessionDir: string): string | null {
-@@ -20,11 +21,11 @@ export function parseSessionTokens(sessionDir: string): TokenUsage | null {
+@@ -20,13 +21,13 @@ export function parseSessionTokens(sessionDir: string): TokenUsage | null {
  	const sessionFile = findLatestSessionFile(sessionDir);
  	if (!sessionFile) return null;
  	try {
 -		const content = fs.readFileSync(sessionFile, "utf-8");
  		let input = 0;
  		let output = 0;
+ 		let window: number | undefined;
+ 		let windowPeak: number | undefined;
 -		for (const line of content.split("\n")) {
 -			if (!line.trim()) continue;
 +		forEachJsonlLineSync(sessionFile, ({ bytes }) => {
@@ -393,20 +395,20 @@ index 3825268b..5f2718c1 100644
  			try {
  				const entry = JSON.parse(line);
  				const usage = entry.usage ?? entry.message?.usage;
-@@ -35,7 +36,7 @@ export function parseSessionTokens(sessionDir: string): TokenUsage | null {
+@@ -46,7 +47,7 @@ export function parseSessionTokens(sessionDir: string): TokenUsage | null {
  			} catch {
  				// Ignore malformed lines while scanning usage entries.
  			}
 -		}
 +		});
- 		return { input, output, total: input + output };
+ 		return { input, output, total: input + output, ...(window !== undefined ? { window, windowPeak } : {}) };
  	} catch {
  		// Usage extraction should not fail the run.
-diff --git a/src/slash/slash-commands.ts b/src/slash/slash-commands.ts
-index 536a0851..49ed51a9 100644
---- a/src/slash/slash-commands.ts
-+++ b/src/slash/slash-commands.ts
-@@ -383,23 +383,27 @@ function buildSubagentCostReport(ctx: ExtensionContext): string {
+diff --git i/src/slash/slash-commands.ts w/src/slash/slash-commands.ts
+index fd811ccbbebea1f4d5ff2e31d86ffa6847f941f7..0933dc25d83b7f4b5368ab474d4f07a49afe0bbd 100644
+--- i/src/slash/slash-commands.ts
++++ w/src/slash/slash-commands.ts
+@@ -400,23 +400,27 @@ function buildSubagentCostReport(ctx: ExtensionContext): string {
  	const childTotal = emptyUsage();
  	const total = emptyUsage();
  	const children: Array<{ label: string; usage: Usage; sessionFile?: string }> = [];
@@ -442,7 +444,7 @@ index 536a0851..49ed51a9 100644
  	addUsage(total, parent);
  	addUsage(total, childTotal);
  	const lines = [
-@@ -414,6 +418,7 @@ function buildSubagentCostReport(ctx: ExtensionContext): string {
+@@ -431,6 +435,7 @@ function buildSubagentCostReport(ctx: ExtensionContext): string {
  			lines.push(formatCostUsage(child.label, child.usage));
  			if (child.sessionFile) lines.push(`  Session: ${child.sessionFile}`);
  		}
@@ -450,7 +452,7 @@ index 536a0851..49ed51a9 100644
  	}
  	lines.push("────────────────────────────", formatCostUsage("Children", childTotal), formatCostUsage("Total", total));
  	return lines.join("\n");
-@@ -549,14 +554,12 @@ function persistSlashSessionSnapshot(ctx: ExtensionContext): void {
+@@ -566,14 +571,12 @@ function persistSlashSessionSnapshot(ctx: ExtensionContext): void {
  	try {
  		if (!ctx.sessionManager) return;
  		const sessionManager = ctx.sessionManager as typeof ctx.sessionManager & {

@@ -47,7 +47,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [`pi-rtk-optimizer`][pi-rtk-optimizer] | 0.9.0 | RTK command rewriting and output compaction | `/rtk` |
 | [`pi-cymbal`][pi-cymbal] | 0.5.3 | Indexed, symbol-oriented code navigation | `cymbal_*` |
 | [`pi-gpt-fast-mode`][pi-gpt-fast-mode] | 0.1.2 | Select OpenAI service tiers and hand preference to subagents | `/fast`, `--fast` |
-| [`pi-subagents`][pi-subagents] | 0.56.0 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
+| [`pi-subagents`][pi-subagents] | 0.58.0 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
 | [`@quintinshaw/pi-dynamic-workflows`][pi-dynamic-workflows] | 3.8.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
 | [`pi-goal-x`][pi-goal-x] | 0.30.5 | Durable goals and Sisyphus continuation | `/goal`, `get_goal` |
 | [`pi-cache-optimizer`][pi-cache-optimizer] | 2.8.6 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
@@ -311,7 +311,7 @@ The managed package keeps its dashboard summary local instead of making upstream
 
 ### [Subagents][pi-subagents]
 
-**Version:** 0.56.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-subagents) · [Home](https://github.com/nicobailon/pi-subagents#readme) · [GitHub](https://github.com/nicobailon/pi-subagents)
+**Version:** 0.58.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-subagents) · [Home](https://github.com/nicobailon/pi-subagents#readme) · [GitHub](https://github.com/nicobailon/pi-subagents)
 
 [Pi Subagents][pi-subagents] delegates focused work to child Pi sessions without replacing the parent as orchestrator. It supports single foreground and asynchronous runs, scripted sequential and parallel composition, fresh or forked context, fleet status, steering, and supervisor communication.
 

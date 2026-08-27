@@ -143,6 +143,7 @@ if (rssChildLane === "tokens" || rssChildLane === "fork") {
 		const branchFile = join(dir, "branch.jsonl");
 		let expectedInput = 0;
 		let expectedOutput = 0;
+		let expectedWindow = 0;
 		let previousId: string | null = null;
 		let historyBytes = 0;
 		let leafId = "";
@@ -156,6 +157,7 @@ if (rssChildLane === "tokens" || rssChildLane === "fork") {
 				leafId = `entry-${index}`;
 				expectedInput += index + 1;
 				expectedOutput += 2;
+				expectedWindow = index + 1;
 				const content =
 					index === 0
 						? [
@@ -246,6 +248,8 @@ if (rssChildLane === "tokens" || rssChildLane === "fork") {
 				input: warmEntries,
 				output: warmEntries,
 				total: warmEntries * 2,
+				window: 1,
+				windowPeak: 1,
 			});
 		} else {
 			expect(sanitizePersistedFork(warmFile, true)).toBe("off");
@@ -259,6 +263,8 @@ if (rssChildLane === "tokens" || rssChildLane === "fork") {
 					input: expectedInput,
 					output: expectedOutput,
 					total: expectedInput + expectedOutput,
+					window: expectedWindow,
+					windowPeak: expectedWindow,
 				});
 			} else {
 				const resolver = createForkContextResolver(
@@ -609,13 +615,15 @@ if (rssChildLane === "tokens" || rssChildLane === "fork") {
 						JSON.stringify({ usage: { inputTokens: 2, outputTokens: 3 } }),
 						"{malformed}",
 						"",
-						JSON.stringify({ message: { usage: { input: 5, output: 7 } } }),
+						JSON.stringify({ message: { usage: { input: 5, output: 7, cacheRead: 11 } } }),
 					].join("\n"),
 				);
 				expect(parseSessionTokens(dir)).toEqual({
 					input: 7,
 					output: 10,
 					total: 17,
+					window: 16,
+					windowPeak: 16,
 				});
 			} finally {
 				realFs.rmSync(dir, { recursive: true, force: true });
