@@ -119,7 +119,6 @@ let
         "claude-vault"
         "nix-managed-mcp-stdio"
         "pal-mcp-server"
-        "plasma-fractal"
         "plasma-wiki"
       ];
       gitAiDrvPaths = map (package: package.drvPath) (

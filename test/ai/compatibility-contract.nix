@@ -60,7 +60,6 @@ in
     "pi-smart-web-search"
     "pi-subagents"
     "pi-trace-extension"
-    "plasma-fractal"
     "plasma-wiki"
     "prime-agent"
     "rtk"

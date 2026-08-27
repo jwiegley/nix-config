@@ -625,6 +625,22 @@ Compound PyPI and source-only Python updates can currently rewrite hashes and pa
 ]
 #+end_src
 
+* DOING [#B] Eliminate updater holdbacks and remove Plasma Fractal
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-1ipp
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-26 Wed 22:36]
+:MODIFIED: [2026-08-26 Wed 22:36]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Remove Plasma Fractal while preserving Plasma Wiki and its security coverage. Upgrade DDGS with oMLX web search intact, Pi MCP Adapter, Pi Goal X, and Pi Subagents to their current candidates by repairing each exact validation failure without weakening gates. Finish with a canonical update showing none of these targets held back, then signed paired consumer adoption and seven-host activation; exclude VPS and dormant git-ai.
+
 * DONE [#C] Reconcile the reflowed wiggum halt override with its transport pin
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

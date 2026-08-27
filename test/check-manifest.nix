@@ -31,7 +31,7 @@ let
       build = behavioral systems false;
       compatibility-contract = behavioral systems false;
       format = behavioral systems false;
-      fractal-smoke = behavioral systems false;
+      wiki-smoke = behavioral systems false;
       lint = behavioral systems false;
       llama-cpp-platform-compat = evaluationOnly systems;
       llm-agents-nixpkgs-independent = evaluationOnly systems;

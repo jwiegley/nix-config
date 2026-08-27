@@ -45,7 +45,7 @@ in
   imports = [
     ./agent-deck.nix
     ./ai.nix
-    ./fractal.nix
+    ./wiki.nix
     ./git-options.nix
     ./host-options.nix
     ./obr.nix

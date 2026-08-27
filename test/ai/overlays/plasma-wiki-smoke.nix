@@ -1,8 +1,6 @@
 {
   coreutils,
-  git,
   gnugrep,
-  plasma-fractal,
   plasma-wiki,
   python3,
   runCommand,
@@ -11,7 +9,7 @@
 let
   testPython = python3.withPackages (ps: [ ps.typer ]);
 in
-runCommand "plasma-fractal-smoke"
+runCommand "plasma-wiki-smoke"
   {
     nativeBuildInputs = [
       coreutils
@@ -25,23 +23,9 @@ runCommand "plasma-fractal-smoke"
     export HOME="$TMPDIR/home"
     export XDG_CACHE_HOME="$HOME/.cache"
     export XDG_CONFIG_HOME="$HOME/.config"
-    export TMUX_TMPDIR="$TMPDIR/tmux"
-    export COLUMNS=120
-    mkdir -p "$HOME" "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME" "$TMUX_TMPDIR"
+    mkdir -p "$HOME" "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME"
 
-    clean_path="${plasma-fractal}/bin:${plasma-wiki}/bin"
-    run_fractal() {
-      env -i \
-        HOME="$HOME" \
-        XDG_CACHE_HOME="$XDG_CACHE_HOME" \
-        XDG_CONFIG_HOME="$XDG_CONFIG_HOME" \
-        TMUX_TMPDIR="$TMUX_TMPDIR" \
-        COLUMNS="$COLUMNS" \
-        OFFLINE_MODE=true \
-        PATH="$clean_path" \
-        TERM=xterm-256color \
-        ${plasma-fractal}/bin/fractal "$@"
-    }
+    clean_path="${plasma-wiki}/bin"
     run_wiki() {
       env -i \
         HOME="$HOME" \
@@ -53,77 +37,32 @@ runCommand "plasma-fractal-smoke"
         ${plasma-wiki}/bin/wiki "$@"
     }
 
-    test "$(run_fractal --version)" = "${plasma-fractal.version}"
-    run_fractal --help > "$TMPDIR/fractal-help.txt"
     run_wiki --help > "$TMPDIR/wiki-help.txt"
-    test -s "$TMPDIR/fractal-help.txt"
     test -s "$TMPDIR/wiki-help.txt"
 
-    test -f ${plasma-fractal}/share/skills/fractal/SKILL.md
-    test -f ${plasma-fractal}/share/skills/fractal/agents/openai.yaml
     test -f ${plasma-wiki}/share/skills/wiki/SKILL.md
     test -f ${plasma-wiki}/share/skills/wiki/agents/openai.yaml
 
-    fractal_roots=(${plasma-fractal}/lib/python*/site-packages/fractal)
     wiki_roots=(${plasma-wiki}/lib/python*/site-packages/wiki)
-    test "''${#fractal_roots[@]}" -eq 1
     test "''${#wiki_roots[@]}" -eq 1
-    fractal_root="''${fractal_roots[0]}"
     wiki_root="''${wiki_roots[0]}"
     wiki_site_packages="''${wiki_root%/wiki}"
-    test -f "$fractal_root/_node/NODE.md"
-    test -f "$fractal_root/_scripts/start.sh"
-    test -f "$fractal_root/core/schema.sql"
-    test -f "$fractal_root/tui/app.tcss"
     test -f "$wiki_root/_assets/git/merge_index.sh"
 
-    repo="$TMPDIR/fractal_smoke_repo"
-    mkdir -p "$repo"
-    ${git}/bin/git -C "$repo" init -b main
-    ${git}/bin/git -C "$repo" config user.name "Fractal Smoke"
-    ${git}/bin/git -C "$repo" config user.email "fractal-smoke@example.invalid"
-    touch "$repo/.gitignore"
-    ${git}/bin/git -C "$repo" add .gitignore
-    ${git}/bin/git -C "$repo" commit -m baseline
-
-    cd "$repo"
-    run_fractal init --agent=codex
-    test -f .fractal/main/config.json
-    test -f .fractal/main/.db
-    test -f wiki/_index.md
-    grep -F '# >>> fractal >>>' .git/info/exclude
-
-    run_fractal commit "initialize fractal" --init
-    run_fractal node init smoke --max-iters=1 \
-      > "$TMPDIR/node-init-stdout.txt" \
-      2> "$TMPDIR/node-init-stderr.txt"
-    cat "$TMPDIR/node-init-stdout.txt" "$TMPDIR/node-init-stderr.txt" \
-      > "$TMPDIR/node-init-output.txt"
-    if grep -F 'Could not download' "$TMPDIR/node-init-output.txt"; then
-      cat "$TMPDIR/node-init-output.txt" >&2
-      exit 1
-    fi
-    node_dir=.worktrees/main.smoke/.fractal/main.smoke
-    test -f "$node_dir/config.json"
-    test -w "$node_dir/NODE.md"
-    test -w "$node_dir/steps/00-PREPARE.md"
-    test -w "$node_dir/scripts/test.sh"
-    test -w "$node_dir/.codex/config.toml"
-    test -d "$node_dir/.codex/skills"
-    test ! -L "$node_dir/.codex/skills"
-    test -L "$node_dir/.codex/skills/fractal"
-    test ! -e "$node_dir/.codex/skills/.system"
-    run_wiki config --path="$node_dir/memory" > /dev/null
+    wiki_test_root="$TMPDIR/wiki-smoke"
+    mkdir -p "$wiki_test_root"
+    run_wiki init --path="$wiki_test_root" --quiet
+    run_wiki config --path="$wiki_test_root" > /dev/null
     symlink_target="$TMPDIR/wiki-symlink-target"
     touch "$symlink_target"
     chmod 0444 "$symlink_target"
     symlink_target_mode="$(${coreutils}/bin/stat -c '%a' "$symlink_target")"
     ln -s "$symlink_target" \
-      "$node_dir/memory/.wiki/obsidian/symlink-probe"
-    writable_0200="$node_dir/memory/.wiki/obsidian/writable-0200"
+      "$wiki_test_root/.wiki/obsidian/symlink-probe"
+    writable_0200="$wiki_test_root/.wiki/obsidian/writable-0200"
     touch "$writable_0200"
     chmod 0200 "$writable_0200"
-    metadata_source_dir="$node_dir/memory/.wiki/obsidian/plugins/metadata-contract"
+    metadata_source_dir="$wiki_test_root/.wiki/obsidian/plugins/metadata-contract"
     metadata_source="$metadata_source_dir/data"
     mkdir -p "$metadata_source_dir"
     echo metadata-contract > "$metadata_source"
@@ -143,16 +82,16 @@ runCommand "plasma-fractal-smoke"
     info = source.stat()
     expected.write_text(f'{info.st_atime_ns}\n{info.st_mtime_ns}\n')
     PY
-    run_wiki config --path="$node_dir/memory" > /dev/null
-    test -L "$node_dir/memory/.wiki/obsidian/symlink-probe"
+    run_wiki config --path="$wiki_test_root" > /dev/null
+    test -L "$wiki_test_root/.wiki/obsidian/symlink-probe"
     test "$(${coreutils}/bin/stat -c '%a' "$symlink_target")" \
       = "$symlink_target_mode"
     test ! -w "$symlink_target"
     test "$(${coreutils}/bin/stat -c '%a' "$writable_0200")" = 200
-    metadata_target="$node_dir/memory/.obsidian/plugins/metadata-contract/data"
+    metadata_target="$wiki_test_root/.obsidian/plugins/metadata-contract/data"
     test "$(${coreutils}/bin/stat -c '%a' "$metadata_target")" = 640
 
-    plugins_root="$node_dir/memory/.obsidian/plugins"
+    plugins_root="$wiki_test_root/.obsidian/plugins"
     external_plugins="$TMPDIR/external-plugins"
     external_plugin="$external_plugins/obsidian-front-matter-title-plugin"
     external_plugin_file="$external_plugin/data.json"
@@ -165,7 +104,7 @@ runCommand "plasma-fractal-smoke"
     ancestor_hash="$(${coreutils}/bin/sha256sum "$external_plugin_file")"
     mv "$plugins_root" "$plugins_root.real"
     ln -s "$external_plugins" "$plugins_root"
-    if run_wiki config --path="$node_dir/memory" \
+    if run_wiki config --path="$wiki_test_root" \
       > "$TMPDIR/wiki-symlink-ancestor-output.txt" 2>&1; then
       echo "wiki accepted a symlinked Obsidian destination ancestor" >&2
       exit 1
@@ -642,7 +581,7 @@ runCommand "plasma-fractal-smoke"
                 os.close(target_fd)
     PY
 
-    obsidian_root="$node_dir/memory/.wiki/obsidian"
+    obsidian_root="$wiki_test_root/.wiki/obsidian"
     external_obsidian="$TMPDIR/external-obsidian"
     external_dir="$external_obsidian/mode-probe"
     external_probe="$external_dir/leaf"
@@ -654,7 +593,7 @@ runCommand "plasma-fractal-smoke"
       "$external_obsidian" "$external_dir" "$external_probe")"
     mv "$obsidian_root" "$obsidian_root.real"
     ln -s "$external_obsidian" "$obsidian_root"
-    if run_wiki config --path="$node_dir/memory" \
+    if run_wiki config --path="$wiki_test_root" \
       > "$TMPDIR/wiki-symlink-root-output.txt" 2>&1; then
       echo "wiki accepted a symlink Obsidian root" >&2
       exit 1
@@ -667,10 +606,6 @@ runCommand "plasma-fractal-smoke"
     test -L "$obsidian_root"
     unlink "$obsidian_root"
     mv "$obsidian_root.real" "$obsidian_root"
-    run_fractal node list > "$TMPDIR/node-list.txt"
-    grep -F "main.smoke" "$TMPDIR/node-list.txt"
-
     mkdir -p "$out"
-    cp "$TMPDIR/fractal-help.txt" "$TMPDIR/wiki-help.txt" \
-      "$TMPDIR/node-init-output.txt" "$TMPDIR/node-list.txt" "$out/"
+    cp "$TMPDIR/wiki-help.txt" "$out/"
   ''

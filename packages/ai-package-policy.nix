@@ -35,7 +35,6 @@
       "agent-deck"
       "hfdownloader"
       "openai-whisper"
-      "plasma-fractal"
       "plasma-wiki"
     ];
 

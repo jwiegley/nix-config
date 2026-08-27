@@ -34,7 +34,7 @@
   ((import ./30-agent-resources.nix) { inherit inputs; })
   (import ./30-prime-agent.nix)
   (import ./30-agent-deck.nix)
-  (import ./30-fractal.nix)
+  (import ./30-wiki.nix)
   (import ./30-ai-python.nix)
   (import ./30-ai-llm.nix)
   ((import ./30-ai-mcp.nix) {

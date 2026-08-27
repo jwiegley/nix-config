@@ -420,7 +420,6 @@ in
         agent-resources
         pi-gallery
         prime-agent
-        plasma-fractal
         plasma-wiki
         ;
     }
@@ -479,7 +478,7 @@ in
       build = mkAiToolchain pkgs;
       agent-deck-go-compat = pkgs.callPackage ../test/ai/overlays/agent-deck-go-compat.nix { };
       agent-deck-runtime-lifecycle = pkgs.agent-deck;
-      fractal-smoke = pkgs.callPackage ../test/ai/overlays/plasma-fractal-smoke.nix { };
+      wiki-smoke = pkgs.callPackage ../test/ai/overlays/plasma-wiki-smoke.nix { };
       llama-cpp-platform-compat = pkgs.callPackage ../test/ai/overlays/llama-cpp-platform-compat.nix { };
       omlx-post-patch = pkgs.callPackage ../test/ai/overlays/omlx-post-patch.nix { };
       llm-agents-nixpkgs-independent =

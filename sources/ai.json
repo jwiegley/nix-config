@@ -868,27 +868,6 @@
       },
       "version": "3.11.9"
     },
-    "plasma-fractal": {
-      "source": {
-        "args": {
-          "dist": "py3",
-          "format": "wheel",
-          "hash": "sha256-YfJImZDx3s43osyFhl7BAXz+hvfVfnA9D+cNY+P4hrk=",
-          "pname": "plasma_fractal",
-          "python": "py3",
-          "version": "1.1.0"
-        },
-        "fetcher": "fetchPypi",
-        "url": "https://pypi.org/project/plasma-fractal"
-      },
-      "update": {
-        "buildMode": "pkg",
-        "buildPackage": "plasma-fractal",
-        "kind": "pypi-release",
-        "package": "plasma-fractal"
-      },
-      "version": "1.1.0"
-    },
     "plasma-wiki": {
       "source": {
         "args": {
@@ -904,7 +883,7 @@
       },
       "update": {
         "buildMode": "pkg",
-        "buildPackage": "plasma-fractal",
+        "buildPackage": "plasma-wiki",
         "kind": "pypi-release",
         "package": "plasma-wiki"
       },
