@@ -1125,6 +1125,22 @@ After mlx-audio 0.5.0 built successfully, vllm-mlx 0.4.1 rejected the selected m
 ]
 #+end_src
 
+* DOING [#C] Integrate pi-gpt-fast-mode with GPT-5.6 support
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-38tq
+:LABELS:   []
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-26 Wed 18:18]
+:MODIFIED: [2026-08-26 Wed 18:18]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Package devwithpug/pi-gpt-fast-mode through the Nix-owned Pi Gallery/source catalog, preserve documented session-only defaults, and manage the four upstream GPT-5.4/5.5 model keys plus openai/gpt-5.6 and openai-codex/gpt-5.6. Add upstream/package/manifest/gallery tests and behavior coverage for service-tier injection on both GPT-5.6 keys, unsupported-model suppression, and subagent handoff without a paid request. Publish and deploy the resulting signed revision across the seven active hosts; exclude VPS and dormant git-ai.
+
 * DONE [#C] Scrub inherited Git config and namespace selectors
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -4933,15 +4949,17 @@ Read-only adoption audit on 2026-08-19: Hera and Clio resolve the prepatch Darwi
 ]
 #+end_src
 
-* DOING [#B] Restore full make update and redeploy active fleet
+* DONE [#B] Restore full make update and redeploy active fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-dkmx
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-26 Wed 13:12]
-:MODIFIED: [2026-08-26 Wed 15:12]
+:MODIFIED: [2026-08-26 Wed 18:18]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-26 Wed 18:18]
+:CLOSE_REASON: Canonical full update succeeded with signed publication/readback, signed paired consumer adoptions, and fresh build/activation/runtime acceptance on the seven active hosts; VPS and dormant git-ai excluded.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -4959,6 +4977,13 @@ Run the canonical make update transaction end to end, diagnose and repair every 
     "author": "johnw",
     "text": "2026-08-26 first canonical update diagnosis: make update correctly held incompatible plasma-fractal, pi-mcp-adapter, pi-goal-x, and pi-subagents candidates, then its signed isolated candidate failed final Hera realization at tea 0.15.1. Exact failed derivation xyr592h5gs8mskq7igsa6s0al45274d4 reproduced: overlays/30-git-tools.nix preBuild tried to patch vendor/github.com/go-git/go-git/v5, which no longer exists. Tea 0.15.1 removed go-git from go.mod, switched modules/git to the native Git CLI backend, and ships an upstream worktree test, so silently skipping a missing path was not appropriate. The narrow compatibility correction applies the go-git patch only before Tea 0.15 and passes 0.15+ through unchanged. New git-tools-tea-compat evaluation fixture mutation-kills both branches: it failed before the fix with “Tea 0.15+ used retired go-git patch,” then passed on aarch64-darwin, aarch64-linux, and x86_64-linux. Current Tea built with the retained legacy patch; candidate Nixpkgs ac6b216 Tea 0.15.1 evaluated and resolved successfully through the corrected overlay. nix fmt, root all-system no-build evaluation, and full make test (21/21 suites, 521 seconds) pass. Next: sign/publish this guard and rerun the canonical transaction.",
     "created_at": "2026-08-26T22:12:29Z"
+  },
+  {
+    "id": 531,
+    "issue_id": "nix-dkmx",
+    "author": "johnw",
+    "text": "2026-08-27 completion evidence: canonical make update-verbose completed end to end after the signed Tea compatibility fix and review cleanup (2183b498, 46d94fb5). Signed update commit 74c4ed292ff2a589d147adda90cdcca49eeadd2b passed candidate validation, full pre-commit, final Hera realization/activation, pre-push signature verification, Gitea push, and exact readback. Accepted catalog changes: agent-browser 0.35.1, agent-browser-source fbd046c2, git-ai 6fbc1ef0, gogcli 0.38.1, gptel 1f6556d9, llm-agents ea9a3449, mcp-searxng 2.1.0, mcp-servers-nix 7b6fdc38, mlx-audio 4da826f2, mlx-vlm 0.6.17, pi-dynamic-workflows 3.8.0, pi-quiet 3a8169ce, plasma-wiki 1.3.1, rust-overlay 494680f9, and ultra-scroll-mac f29bbe0e. Incompatible plasma-fractal, DDGS, pi-mcp-adapter, pi-goal-x, and pi-subagents candidates were correctly held. Signed paired consumer adoptions are f77e6ef4b666aceb52a4a28ea3027035018fed64 (Andoria) and 72a809817ab1714a27e4abe541febd091f5926bd (Vulcan); a push race was resolved by preserving concurrent docs commit 58387bfd and rebuilding the signed lock commit on top. Hera activated 3ph7whrp9s8ws9f8m1hj72v2xlsp8bcv; Clio activated exact clean-commit candidate zqqc3zwnfw9kbdwmghxaa83d2vz6gr2w while its unrelated staged bin/upgrade diff remained byte-identical; Vulcan built/activated z88zjgzx9bx2zp5cypx5y5xvarljc6a4 through its locked driver with zero failed units and healthy Stock Trader/Hermes. The shared consumer realized exactly one producer candidate y6r6xs32wf0dsq1dabjh995ikx6ddvl3: 2,263 paths, digest 097a2e11a54ac9194ea717b25b15e72174a549140153a33701a8fcea070a646e, zero unsigned and 2,263 trusted on all four stores. Dynamic profile 93vcqj6j3ck3ai731vc9rsx9rrx75kqq (1,890 paths, digest 31f7afced49b27c6aacc1b60b111c47734041205a61c9c02d6ba85096f5bd7c3) was signed/distributed before T2/Delphi/GPU activation; all three then built zero derivations. Runtime matrix: Darwin Tea 0.15.1/Gogcli 0.38.1; shared Tea 0.14.0/Gogcli 0.38.1 with scheduler 1/8 and zero Nix clients; Vulcan Gogcli 0.38.1. Later concurrent Vulcan commits b1f30515/abc381fc changed only docs/PLAN.org; signed paired lock and active system remained unchanged. VPS and dormant git-ai were not contacted.",
+    "created_at": "2026-08-27T01:18:54Z"
   }
 ]
 #+end_src
