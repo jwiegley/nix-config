@@ -17,14 +17,16 @@ const expectedConfig = {
   models: [
     "openai/gpt-5.4",
     "openai/gpt-5.5",
-    "openai/gpt-5.6-luna"
-    "openai/gpt-5.6-terra"
-    "openai/gpt-5.6-sol"
+    "openai/gpt-5.6",
+    "openai/gpt-5.6-luna",
+    "openai/gpt-5.6-terra",
+    "openai/gpt-5.6-sol",
     "openai-codex/gpt-5.4",
     "openai-codex/gpt-5.5",
-    "openai-codex/gpt-5.6-luna"
-    "openai-codex/gpt-5.6-terra"
-    "openai-codex/gpt-5.6-sol"
+    "openai-codex/gpt-5.6",
+    "openai-codex/gpt-5.6-luna",
+    "openai-codex/gpt-5.6-terra",
+    "openai-codex/gpt-5.6-sol",
   ],
   indicator: "status",
 };
@@ -115,11 +117,11 @@ test("managed GPT Fast Mode supports GPT-5.6 and real subagent handoff without n
     ).toBeUndefined();
 
     const child = createHarness();
-    const openAi = context("openai", "gpt-5.6");
+    const openAi = context("openai", "gpt-5.6-luna");
     await child.emit("session_start", {}, openAi);
     expect(process.env.PI_GPT_FAST_MODE).toBe("1");
 
-    const firstPayload = { model: "gpt-5.6", messages: [] };
+    const firstPayload = { model: "gpt-5.6-luna", messages: [] };
     expect(
       await child.emit("before_provider_request", { payload: firstPayload }, openAi),
     ).toEqual({
@@ -128,7 +130,7 @@ test("managed GPT Fast Mode supports GPT-5.6 and real subagent handoff without n
     });
     expect(firstPayload).not.toHaveProperty("service_tier");
 
-    const codex = context("openai-codex", "gpt-5.6");
+    const codex = context("openai-codex", "gpt-5.6-sol");
     await child.emit("model_select", { model: codex.model }, codex);
     expect(await child.emit("before_provider_request", { payload: {} }, codex)).toEqual({
       service_tier: "priority",
