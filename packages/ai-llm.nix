@@ -691,6 +691,8 @@ in
         PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
           ${python.interpreter} ${../test/ai/overlays/omlx-ddgs-version-contract.py} ${ddgs.version}
         PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
+          ${python.interpreter} ${../test/ai/overlays/omlx-ddgs-dispatch-contract.py}
+        PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
           ${python.interpreter} ${../test/ai/overlays/omlx-mlx-version-contract.py} ${mlx.version}
         PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
           ${python.interpreter} ${../test/ai/overlays/omlx-direct-reference-contract.py} ${mlx-embeddings.version} ${mlx-vlm.version}

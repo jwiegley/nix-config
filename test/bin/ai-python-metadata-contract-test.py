@@ -104,8 +104,7 @@ class InstalledMetadataContractTests(unittest.TestCase):
     def make_ddgs_site(
         self,
         site: Path,
-        extras: set[str],
-        omlx_requirement: str = "ddgs==9.15.0",
+        omlx_requirement: str = "ddgs==9.16.0",
         omlx_backends: tuple[object, ...] = (
             "brave",
             "duckduckgo",
@@ -117,6 +116,7 @@ class InstalledMetadataContractTests(unittest.TestCase):
         registered_backends: tuple[str, ...] = (
             "brave",
             "duckduckgo",
+            "google",
             "grokipedia",
             "mojeek",
             "startpage",
@@ -124,47 +124,52 @@ class InstalledMetadataContractTests(unittest.TestCase):
             "yahoo",
         ),
         ui_backends: tuple[str, ...] | None = None,
-        timeout_required: bool = True,
-        ddgs_metadata_version: str = "9.15.0",
-        ddgs_module_version: str = "9.15.0",
-    ) -> None:
-        requirements = (
+        ddgs_metadata_version: str = "9.16.0",
+        ddgs_module_version: str = "9.16.0",
+        ddgs_requirements: tuple[str, ...] = (
             "click>=8.1.8",
-            "primp>=1.2.3",
+            "primp>=1.3.1",
             "lxml>=4.9.4",
-            f"httpx[{','.join(sorted(extras))}]>=0.28.1",
-            "fake-useragent>=2.2.0",
-        )
+        ),
+    ) -> None:
         for distribution, version in {
             "click": "8.3.1",
-            "primp": "1.2.3",
+            "primp": "1.3.1",
             "lxml": "6.0.2",
-            "httpx": "0.28.1",
-            "fake-useragent": "2.2.0",
         }.items():
             write_distribution(site, distribution, version)
-            module = distribution.replace("-", "_")
-            if module != "httpx":
-                write_module(site, module)
+            write_module(site, distribution)
         write_module(
             site,
-            "httpx",
+            "primp",
             "class Client:\n"
             "    def __init__(self, **kwargs):\n"
-            "        self.kwargs = kwargs\n"
-            "    def close(self):\n"
+            "        self.kwargs = kwargs\n",
+        )
+        write_distribution(
+            site, "ddgs", ddgs_metadata_version, ddgs_requirements
+        )
+        write_module(
+            site,
+            "ddgs.http_client",
+            "import primp\n"
+            "class HttpClient:\n"
+            "    def __init__(self, proxy=None, timeout=10):\n"
+            "        self.client = primp.Client(proxy=proxy, timeout=timeout)\n"
+            "    def request(self, *_args, **_kwargs):\n"
+            "        pass\n"
+            "    def get(self, *_args, **_kwargs):\n"
+            "        pass\n"
+            "    def post(self, *_args, **_kwargs):\n"
             "        pass\n",
         )
-        for module in ("brotli", "h2", "socksio"):
-            write_module(site, module)
-        write_distribution(site, "ddgs", ddgs_metadata_version, requirements)
-        timeout_default = "" if timeout_required else " = None"
         write_module(
             site,
             "ddgs.ddgs",
             "class DDGS:\n"
-            f"    def __init__(self, timeout{timeout_default}):\n"
+            "    def __init__(self, timeout, proxy=None):\n"
             "        self.timeout = timeout\n"
+            "        self.proxy = proxy\n"
             "    def __enter__(self):\n"
             "        return self\n"
             "    def __exit__(self, *_args):\n"
@@ -275,118 +280,126 @@ class InstalledMetadataContractTests(unittest.TestCase):
             self.assertNotEqual(rejected.returncode, 0)
             self.assertIn("mlx>=99 is not satisfied", rejected.stderr)
 
-    def test_ddgs_rejects_each_missing_httpx_extra(self):
-        expected_extras = {"brotli", "http2", "socks"}
+    def test_ddgs_rejects_runtime_dependency_drift(self):
+        expected_requirements = (
+            "click>=8.1.8",
+            "primp>=1.3.1",
+            "lxml>=4.9.4",
+        )
         with tempfile.TemporaryDirectory() as temp_dir:
             site = Path(temp_dir)
-            self.make_ddgs_site(site, expected_extras, timeout_required=False)
-            accepted = self.run_contract(site, "ddgs-dependency-contract.py", "9.15.0")
+            self.make_ddgs_site(site)
+            accepted = self.run_contract(
+                site, "ddgs-dependency-contract.py", "9.16.0"
+            )
             self.assertEqual(accepted.returncode, 0, accepted.stderr)
 
-        for missing in sorted(expected_extras):
+        drift_cases = [
+            (
+                f"missing-{name}",
+                tuple(
+                    requirement
+                    for requirement in expected_requirements
+                    if not requirement.startswith(f"{name}>")
+                ),
+            )
+            for name in ("click", "lxml", "primp")
+        ]
+        drift_cases.append(
+            ("extra-httpx", expected_requirements + ("httpx>=0.28.1",))
+        )
+        for label, requirements in drift_cases:
             with (
-                self.subTest(missing=missing),
+                self.subTest(label=label),
                 tempfile.TemporaryDirectory() as temp_dir,
             ):
                 site = Path(temp_dir)
-                self.make_ddgs_site(
-                    site, expected_extras - {missing}, timeout_required=False
-                )
+                self.make_ddgs_site(site, ddgs_requirements=requirements)
                 rejected = self.run_contract(
-                    site, "ddgs-dependency-contract.py", "9.15.0"
+                    site, "ddgs-dependency-contract.py", "9.16.0"
                 )
                 self.assertNotEqual(rejected.returncode, 0)
-                self.assertIn("DDGS HTTPX extras mismatch", rejected.stderr)
+                self.assertIn("DDGS runtime requirements mismatch", rejected.stderr)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            site = Path(temp_dir)
+            self.make_ddgs_site(
+                site,
+                ddgs_requirements=(
+                    "click>=8.1.8",
+                    "primp>=99",
+                    "lxml>=4.9.4",
+                ),
+            )
+            rejected = self.run_contract(
+                site, "ddgs-dependency-contract.py", "9.16.0"
+            )
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn("primp>=99 is not satisfied", rejected.stderr)
 
     def test_omlx_rejects_loosened_ddgs_requirement(self):
-        extras = {"brotli", "http2", "socks"}
+        contract = "omlx-ddgs-version-contract.py"
         with tempfile.TemporaryDirectory() as temp_dir:
             site = Path(temp_dir)
-            self.make_ddgs_site(site, extras)
-            accepted = self.run_contract(
-                site, "omlx-ddgs-version-contract.py", "9.15.0"
-            )
+            self.make_ddgs_site(site)
+            accepted = self.run_contract(site, contract, "9.16.0")
             self.assertEqual(accepted.returncode, 0, accepted.stderr)
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            site = Path(temp_dir)
-            self.make_ddgs_site(site, extras, "ddgs>=9.15.0")
-            rejected = self.run_contract(
-                site, "omlx-ddgs-version-contract.py", "9.15.0"
-            )
-            self.assertNotEqual(rejected.returncode, 0)
-            self.assertIn("must require exactly ddgs==9.15.0", rejected.stderr)
+        for requirement in (
+            "ddgs>=9.16.0",
+            'ddgs==9.16.0; python_version > "0"',
+            'ddgs==9.16.0; python_version < "0"',
+            "ddgs[bogus]==9.16.0",
+        ):
+            with (
+                self.subTest(requirement=requirement),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
+                site = Path(temp_dir)
+                self.make_ddgs_site(site, omlx_requirement=requirement)
+                rejected = self.run_contract(site, contract, "9.16.0")
+                self.assertNotEqual(rejected.returncode, 0)
+                self.assertIn("must require exactly ddgs==9.16.0", rejected.stderr)
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            site = Path(temp_dir)
-            self.make_ddgs_site(site, extras, 'ddgs==9.15.0; python_version > "0"')
-            rejected = self.run_contract(
-                site, "omlx-ddgs-version-contract.py", "9.15.0"
-            )
-            self.assertNotEqual(rejected.returncode, 0)
-            self.assertIn("must require exactly ddgs==9.15.0", rejected.stderr)
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            site = Path(temp_dir)
-            self.make_ddgs_site(site, extras, 'ddgs==9.15.0; python_version < "0"')
-            rejected = self.run_contract(
-                site, "omlx-ddgs-version-contract.py", "9.15.0"
-            )
-            self.assertNotEqual(rejected.returncode, 0)
-            self.assertIn("must require exactly ddgs==9.15.0", rejected.stderr)
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            site = Path(temp_dir)
-            self.make_ddgs_site(site, extras, "ddgs[bogus]==9.15.0")
-            rejected = self.run_contract(
-                site, "omlx-ddgs-version-contract.py", "9.15.0"
-            )
-            self.assertNotEqual(rejected.returncode, 0)
-            self.assertIn("must require exactly ddgs==9.15.0", rejected.stderr)
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            site = Path(temp_dir)
-            self.make_ddgs_site(
-                site,
-                extras,
-                omlx_backends=("brave", "yandex"),
-                registered_backends=("brave",),
-            )
-            rejected = self.run_contract(
-                site, "omlx-ddgs-version-contract.py", "9.15.0"
-            )
-            self.assertNotEqual(rejected.returncode, 0)
-            self.assertIn("unavailable DDGS text backends: ['yandex']", rejected.stderr)
+        backend_cases = (
+            (
+                {
+                    "omlx_backends": ("brave", "yandex"),
+                    "registered_backends": ("brave",),
+                },
+                "unavailable DDGS text backends: ['yandex']",
+            ),
+            (
+                {
+                    "omlx_backends": ("brave",),
+                    "registered_backends": ("brave",),
+                    "ui_backends": ("brave", "yandex"),
+                },
+                "DDGS backend UI mismatch",
+            ),
+        )
+        for kwargs, message in backend_cases:
+            with (
+                self.subTest(message=message),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
+                site = Path(temp_dir)
+                self.make_ddgs_site(site, **kwargs)
+                rejected = self.run_contract(site, contract, "9.16.0")
+                self.assertNotEqual(rejected.returncode, 0)
+                self.assertIn(message, rejected.stderr)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             site = Path(temp_dir)
             self.make_ddgs_site(
                 site,
-                extras,
-                omlx_backends=("brave",),
-                registered_backends=("brave",),
-                ui_backends=("brave", "yandex"),
-            )
-            rejected = self.run_contract(
-                site, "omlx-ddgs-version-contract.py", "9.15.0"
-            )
-            self.assertNotEqual(rejected.returncode, 0)
-            self.assertIn("DDGS backend UI mismatch", rejected.stderr)
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            site = Path(temp_dir)
-            self.make_ddgs_site(
-                site,
-                extras,
                 omlx_backends=("brave",),
                 registered_backends=("brave",),
             )
             (site / "omlx/admin/static/js/dashboard.js").write_text(
                 "ddgsBackendList: ['brave', injectedBackend],\n"
             )
-            rejected = self.run_contract(
-                site, "omlx-ddgs-version-contract.py", "9.15.0"
-            )
+            rejected = self.run_contract(site, contract, "9.16.0")
             self.assertNotEqual(rejected.returncode, 0)
             self.assertIn("must contain one literal string array", rejected.stderr)
 
@@ -396,10 +409,8 @@ class InstalledMetadataContractTests(unittest.TestCase):
                 tempfile.TemporaryDirectory() as temp_dir,
             ):
                 site = Path(temp_dir)
-                self.make_ddgs_site(site, extras, omlx_backends=invalid_backends)
-                rejected = self.run_contract(
-                    site, "omlx-ddgs-version-contract.py", "9.15.0"
-                )
+                self.make_ddgs_site(site, omlx_backends=invalid_backends)
+                rejected = self.run_contract(site, contract, "9.16.0")
                 self.assertNotEqual(rejected.returncode, 0)
                 self.assertIn("nonempty unique DDGS text backends", rejected.stderr)
 
@@ -414,22 +425,19 @@ class InstalledMetadataContractTests(unittest.TestCase):
                 site = Path(temp_dir)
                 self.make_ddgs_site(
                     site,
-                    extras,
                     omlx_backends=("brave",),
                     registered_backends=("brave",),
                 )
                 (site / "omlx/admin/static/js/dashboard.js").write_text(
                     dashboard_source
                 )
-                rejected = self.run_contract(
-                    site, "omlx-ddgs-version-contract.py", "9.15.0"
-                )
+                rejected = self.run_contract(site, contract, "9.16.0")
                 self.assertNotEqual(rejected.returncode, 0)
                 self.assertIn("must contain one literal string array", rejected.stderr)
 
         for metadata_version, module_version in (
-            ("9.14.4", "9.15.0"),
-            ("9.15.0", "9.14.4"),
+            ("9.15.0", "9.16.0"),
+            ("9.16.0", "9.15.0"),
         ):
             with (
                 self.subTest(
@@ -441,19 +449,16 @@ class InstalledMetadataContractTests(unittest.TestCase):
                 site = Path(temp_dir)
                 self.make_ddgs_site(
                     site,
-                    extras,
                     ddgs_metadata_version=metadata_version,
                     ddgs_module_version=module_version,
                 )
-                rejected = self.run_contract(
-                    site, "omlx-ddgs-version-contract.py", "9.15.0"
-                )
+                rejected = self.run_contract(site, contract, "9.16.0")
                 self.assertNotEqual(rejected.returncode, 0)
                 self.assertIn("DDGS version mismatch", rejected.stderr)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             site = Path(temp_dir)
-            self.make_ddgs_site(site, extras)
+            self.make_ddgs_site(site)
             (site / "ddgs/ddgs.py").write_text(
                 "class DDGS:\n"
                 "    def __init__(self, timeout):\n"
@@ -465,15 +470,13 @@ class InstalledMetadataContractTests(unittest.TestCase):
                 "    def text(self):\n"
                 "        return []\n"
             )
-            rejected = self.run_contract(
-                site, "omlx-ddgs-version-contract.py", "9.15.0"
-            )
+            rejected = self.run_contract(site, contract, "9.16.0")
             self.assertNotEqual(rejected.returncode, 0)
             self.assertIn("text search call shape is incompatible", rejected.stderr)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             site = Path(temp_dir)
-            self.make_ddgs_site(site, extras)
+            self.make_ddgs_site(site)
             (site / "ddgs/ddgs.py").write_text(
                 "class DDGS:\n"
                 "    def __init__(self, timeout):\n"
@@ -481,9 +484,7 @@ class InstalledMetadataContractTests(unittest.TestCase):
                 "    def text(self, query, *, max_results, backend):\n"
                 "        return []\n"
             )
-            rejected = self.run_contract(
-                site, "omlx-ddgs-version-contract.py", "9.15.0"
-            )
+            rejected = self.run_contract(site, contract, "9.16.0")
             self.assertNotEqual(rejected.returncode, 0)
             self.assertIn("context manager protocol", rejected.stderr)
 

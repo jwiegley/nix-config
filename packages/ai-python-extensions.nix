@@ -44,18 +44,11 @@ in
         src =
           assert sources.ddgs.source.fetcher == "fetchFromGitHub";
           prev.fetchFromGitHub sources.ddgs.source.args;
-        dependencies =
-          with pfinal;
-          [
-            click
-            fake-useragent
-            httpx
-            lxml
-            primp
-          ]
-          ++ httpx.optional-dependencies.brotli
-          ++ httpx.optional-dependencies.http2
-          ++ httpx.optional-dependencies.socks;
+        dependencies = with pfinal; [
+          click
+          lxml
+          primp
+        ];
         pythonImportsCheck = [ "ddgs" ];
         nativeCheckInputs = (oldAttrs.nativeCheckInputs or [ ]) ++ [ pfinal.packaging ];
         doCheck = true;
