@@ -347,15 +347,15 @@
     },
     "pi-markdown-preview": {
       "hashes": {
-        "npmDepsHash": "sha256-s/gmKVdoC6WJKWtZg6Rdsk4R65UTJZf044e7M8BcJCw="
+        "npmDepsHash": "sha256-XZjRQQ+h5om9Zxzro8d8e3FTxJUm87v2qrX1f47d10Q="
       },
       "source": {
         "args": {
-          "hash": "sha256-WgA9m3JPvLDnMgs4d3TQQjR4Ik1hLBgBCV37uZwJcKE=",
-          "url": "https://registry.npmjs.org/pi-markdown-preview/-/pi-markdown-preview-0.14.1.tgz"
+          "hash": "sha256-7ec1Qh0EeRpkrD4ia63jnD2b0BW2+bceC2U9fFS3i94=",
+          "url": "https://registry.npmjs.org/pi-markdown-preview/-/pi-markdown-preview-0.15.0.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-markdown-preview/-/pi-markdown-preview-0.14.1.tgz"
+        "url": "https://registry.npmjs.org/pi-markdown-preview/-/pi-markdown-preview-0.15.0.tgz"
       },
       "update": {
         "artifacts": [
@@ -365,7 +365,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "pi-markdown-preview"
       },
-      "version": "0.14.1"
+      "version": "0.15.0"
     },
     "pi-mem": {
       "hashes": {

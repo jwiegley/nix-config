@@ -24,14 +24,14 @@
     },
     "agnix": {
       "hashes": {
-        "cargoHash": "sha256-4nHyfnFQXpYVyRpKQ2fnLH/BEN0cpqMgpf3AylkEW5U="
+        "cargoHash": "sha256-3faNRbu/nfZ9ri6j3kx4K5EsRRo3ev0dXoPDOWuzNUw="
       },
       "source": {
         "args": {
-          "hash": "sha256-StCMrJPugiKlMGWBrI4SXpKo7wKK5qzUeH4Sc9m981U=",
+          "hash": "sha256-qanaYA680TlEfhF6PCP7jeuwFXPIioMiMgxoQo1YI6I=",
           "owner": "avifenesh",
           "repo": "agnix",
-          "tag": "v0.52.0"
+          "tag": "v0.52.1"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/avifenesh/agnix"
@@ -40,7 +40,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.52.0"
+      "version": "0.52.1"
     },
     "browser-control-mcp": {
       "hashes": {
@@ -592,10 +592,10 @@
     "huggingface-hub": {
       "source": {
         "args": {
-          "hash": "sha256-nUdBUBLM2NivmQiumY36GfUYREl+4hRszlJEM6ryj1w=",
+          "hash": "sha256-gfSlkefuNGLlD0rF4JMg/tdjo3qgZEUUzFjcVyTJ0PA=",
           "owner": "huggingface",
           "repo": "huggingface_hub",
-          "tag": "v1.28.0"
+          "tag": "v1.29.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/huggingface/huggingface_hub"
@@ -604,7 +604,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "1.28.0"
+      "version": "1.29.0"
     },
     "kaleido": {
       "source": {
@@ -706,10 +706,10 @@
     "mlx-audio": {
       "source": {
         "args": {
-          "hash": "sha256-3qqSlh1IOtWGct4ZzuRlnuiqwj5HLJU+eYYWmN4KWCs=",
+          "hash": "sha256-QCQ6Y5a9fFn29QIV3Q1IHGSTRHIYu/aAtnSNVsP4+uU=",
           "owner": "Blaizzy",
           "repo": "mlx-audio",
-          "rev": "4da826f2d7771fe35df0ececc5694272d7dceaa1"
+          "rev": "5522a2241129505e2ba5966d6572ce4962b766c4"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/Blaizzy/mlx-audio"
@@ -961,10 +961,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-xxPCzswSCZ63GYBfesxRJsWuj7Mk9YcAaHDb8X1tbjk=",
+          "narHash": "sha256-cAY2KaZSqc5lW9hYHWgnVL1Z/K49p9eKPxbJ8jEla0Y=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "be0eff8f6e0dd4f0edb15e80be8fab107f4768fa",
+          "rev": "f18e879662c83037f9c8d6ff1965058eb194e0d1",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1089,10 +1089,10 @@
     "rust-overlay": {
       "source": {
         "args": {
-          "narHash": "sha256-ZRYTEvDb8QZLCHRoMyIZle9V3Bvw905m0teeo1RvI7M=",
+          "narHash": "sha256-jXSvqn04IOecJCvSvl8+g3PsbDVNP6qKs6dKUs/b16k=",
           "owner": "oxalica",
           "repo": "rust-overlay",
-          "rev": "494680f9ffa2b4bf9f2df0f442c7096e44adfa00",
+          "rev": "dc2fd1acc537f3583744e1373597a5731ff7a6e3",
           "type": "github"
         },
         "fetcher": "fetchTree",
