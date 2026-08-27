@@ -1,8 +1,8 @@
-diff --git a/README.md b/README.md
-index 7dcec675..b648f4d0 100644
---- a/README.md
-+++ b/README.md
-@@ -387,7 +387,7 @@ the timestamped `.backup-*` file created next to the session.
+diff --git i/README.md w/README.md
+index faf42d9b2de630bb376004530e4d8cb06bb8223c..a5d3dc1789dd362fb573ded773f49dacfc2d69e3 100644
+--- i/README.md
++++ w/README.md
+@@ -400,7 +400,7 @@ the timestamped `.backup-*` file created next to the session.
  /goal-status verbose         Show the focused goal with full diagnostic detail
  /goal-status health          Check goal storage/runtime health (read-only)
  /goal-refresh                Re-read storage caches and report external changes
@@ -11,10 +11,10 @@ index 7dcec675..b648f4d0 100644
  /goal-focus                  Select an open goal
  /goal-unfocus                Remove the session’s focus
  /goal-tweak <change>         Revise the focused goal
-diff --git a/docs/agent-flow-design.md b/docs/agent-flow-design.md
-index 43d80f47..6ad534ef 100644
---- a/docs/agent-flow-design.md
-+++ b/docs/agent-flow-design.md
+diff --git i/docs/agent-flow-design.md w/docs/agent-flow-design.md
+index 43d80f47b4bbb99b44f829329a309cd357758ef9..6ad534ef9156a150770df043caaabdbb29f6bc5b 100644
+--- i/docs/agent-flow-design.md
++++ w/docs/agent-flow-design.md
 @@ -82,9 +82,9 @@ these files.
  ### 4.2 Ledger files
  
@@ -69,10 +69,10 @@ index 43d80f47..6ad534ef 100644
  
  ## 15. Hardening and runtime follow-up
  
-diff --git a/docs/agentic-runtime-prd.md b/docs/agentic-runtime-prd.md
-index 74f4f5c6..a7fc7d85 100644
---- a/docs/agentic-runtime-prd.md
-+++ b/docs/agentic-runtime-prd.md
+diff --git i/docs/agentic-runtime-prd.md w/docs/agentic-runtime-prd.md
+index 74f4f5c6b13b6c7cb985c7ec48eded55db8bb579..a7fc7d85d13032347fc86644208526976e9057b5 100644
+--- i/docs/agentic-runtime-prd.md
++++ w/docs/agentic-runtime-prd.md
 @@ -134,10 +134,10 @@ The agent should decide:
  
  The following behaviors remain runtime-enforced:
@@ -98,10 +98,10 @@ index 74f4f5c6..a7fc7d85 100644
  - Update prompts and tests.
  
  Exit criteria:
-diff --git a/docs/architecture.md b/docs/architecture.md
-index aabfcf9f..3abc0ae3 100644
---- a/docs/architecture.md
-+++ b/docs/architecture.md
+diff --git i/docs/architecture.md w/docs/architecture.md
+index aabfcf9ff61a841fbaf9eeaf050fdb6ab755d3e0..3abc0ae3c300679fea7376987c6aeaaad37a3ca2 100644
+--- i/docs/architecture.md
++++ w/docs/architecture.md
 @@ -31,7 +31,7 @@ handlers from their dedicated modules:
  | `goal-contract.ts` | Record/input parser: verification-contract extraction and objective prompt-safety |
  | `goal-policy.ts` | Lifecycle policy and validation (completion/blocked/resume/task gates), task-tree helpers, compaction policy, result reports |
@@ -195,10 +195,10 @@ index aabfcf9f..3abc0ae3 100644
  
  ## Tests
  
-diff --git a/docs/pi-autoresearch-survey.md b/docs/pi-autoresearch-survey.md
-index 775bd447..657b80ac 100644
---- a/docs/pi-autoresearch-survey.md
-+++ b/docs/pi-autoresearch-survey.md
+diff --git i/docs/pi-autoresearch-survey.md w/docs/pi-autoresearch-survey.md
+index 775bd4472326077e388c849f6ab73b78d08cf90c..657b80acdd455a442f5c08ba6299c6ed13c0f29a 100644
+--- i/docs/pi-autoresearch-survey.md
++++ w/docs/pi-autoresearch-survey.md
 @@ -27,10 +27,10 @@ This document records external patterns that are actually implemented in `pi-goa
  
  The current extension also adds behavior specific to goal drafting and lifecycle safety:
@@ -213,10 +213,10 @@ index 775bd447..657b80ac 100644
  - **Full draft confirmation and creation output**: draft confirmation uses a plain-text report, and after confirmation the finalized objective is printed directly into the conversation.
  - **Full completion output**: completion prints a report directly into the conversation, including optional evidence and full goal details.
  - **Built-in question tools**: `goal_question` and `goal_questionnaire` provide package-local user-dialogue tools with `goal_` prefixes.
-diff --git a/extensions/goal-activity.ts b/extensions/goal-activity.ts
-index ad96087e..dea8fb37 100644
---- a/extensions/goal-activity.ts
-+++ b/extensions/goal-activity.ts
+diff --git i/extensions/goal-activity.ts w/extensions/goal-activity.ts
+index ad96087ed2ceb1457639a71b926c3d2373b829f8..dea8fb377f293cc578fb9112312d59c19fb3aead 100644
+--- i/extensions/goal-activity.ts
++++ w/extensions/goal-activity.ts
 @@ -123,7 +123,7 @@ function mapEvent(event: GoalLedgerEvent, taskTitles: ReadonlyMap<string, string
  						: "Skipped independent completion review (auditor disabled).",
  			};
@@ -226,10 +226,10 @@ index ad96087e..dea8fb37 100644
  		// Low-value checkpoint noise / focus churn: excluded from the default feed.
  		case "goal_focused":
  		case "goal_unfocused":
-diff --git a/extensions/goal-commands.ts b/extensions/goal-commands.ts
-index 142e0e3e..723654c5 100644
---- a/extensions/goal-commands.ts
-+++ b/extensions/goal-commands.ts
+diff --git i/extensions/goal-commands.ts w/extensions/goal-commands.ts
+index 142e0e3e18e30eb5988b139dbdd1cf087d5a670e..723654c5da26e2117d93dd7e2dc9b685f515b2dc 100644
+--- i/extensions/goal-commands.ts
++++ w/extensions/goal-commands.ts
 @@ -22,11 +22,11 @@ import {
  	otherOpenGoalCount,
  } from "./goal-pool.ts";
@@ -362,10 +362,10 @@ index 142e0e3e..723654c5 100644
  		handler: async (rawArgs, ctx) => {
  			await runGoalRecovery((rawArgs ?? "").trim(), ctx);
  		},
-diff --git a/extensions/goal-compaction.ts b/extensions/goal-compaction.ts
-index 6822faab..a87590a5 100644
---- a/extensions/goal-compaction.ts
-+++ b/extensions/goal-compaction.ts
+diff --git i/extensions/goal-compaction.ts w/extensions/goal-compaction.ts
+index 6822faabc8226f4f491d57cb92ed9e948236a099..a87590a523315bec1d5c4f608042676353048b2a 100644
+--- i/extensions/goal-compaction.ts
++++ w/extensions/goal-compaction.ts
 @@ -9,7 +9,6 @@ import {
    latestEventsForGoal,
    reconstructGoalLedger,
@@ -473,10 +473,10 @@ index 6822faab..a87590a5 100644
    if (audit && audit.verdict === "disapproved") {
      lines.push(`Latest unresolved auditor finding: ${audit.report.slice(0, 300)}`);
    }
-diff --git a/extensions/goal-completion.ts b/extensions/goal-completion.ts
-index efee261c..23f4f54b 100644
---- a/extensions/goal-completion.ts
-+++ b/extensions/goal-completion.ts
+diff --git i/extensions/goal-completion.ts w/extensions/goal-completion.ts
+index efee261cceec7bcc26ba9d72df91d5e40463f77b..23f4f54bb942b1bf7cd84192a239c9657fbc65cf 100644
+--- i/extensions/goal-completion.ts
++++ w/extensions/goal-completion.ts
 @@ -8,8 +8,8 @@ import {
  } from "./goal-policy.ts";
  import { loadGoalSettings, loadGoalSettingsFileConfig } from "./goal-settings.ts";
@@ -682,10 +682,10 @@ index efee261c..23f4f54b 100644
 +	core.setAuditResult("approved", approvalReport);
 +	return completion;
  }
-diff --git a/extensions/goal-core-tools.ts b/extensions/goal-core-tools.ts
-index 2bc13932..53d56309 100644
---- a/extensions/goal-core-tools.ts
-+++ b/extensions/goal-core-tools.ts
+diff --git i/extensions/goal-core-tools.ts w/extensions/goal-core-tools.ts
+index 2bc13932fe21e4368ebc402218807e2db01e8a16..1526e4619de78d2a247c282dbec15da85e448cab 100644
+--- i/extensions/goal-core-tools.ts
++++ w/extensions/goal-core-tools.ts
 @@ -1,13 +1,13 @@
  import { StringEnum, Type } from "@earendil-works/pi-ai";
 -import { defineTool, type AgentToolResult, type ExtensionContext, type Theme } from "@earendil-works/pi-coding-agent";
@@ -746,9 +746,15 @@ index 2bc13932..53d56309 100644
  			return {
  				content: [{ type: "text", text: `${adviceText}\n\nThe goal was NOT marked blocked.` }],
  				details: goalDetails(goalAtBlock),
-@@ -366 +366 @@ pi.registerTool(defineTool({
+@@ -363,7 +363,7 @@ pi.registerTool(defineTool({
+ 		}]);
+ 	} catch { /* ledger append is best-effort for the started marker */ }
+ 
 -	const run = await runBlockerOracle({
 +	const run = await (core.dependencies.runBlockerOracle ?? runBlockerOracle)({
+ 		ctx,
+ 		goal: goalAtBlock,
+ 		reason,
 @@ -526,9 +526,6 @@ pi.registerTool(defineTool({
  	}, { additionalProperties: false }),
  	executionMode: "sequential",
@@ -759,10 +765,10 @@ index 2bc13932..53d56309 100644
  		if (params.status === "blocked") {
  			const attempted = Array.isArray((params as { attempted_actions?: unknown }).attempted_actions)
  				? ((params as { attempted_actions: unknown[] }).attempted_actions.filter((a): a is string => typeof a === "string"))
-diff --git a/extensions/goal-drafting.ts b/extensions/goal-drafting.ts
-index 43378796..8f1c220f 100644
---- a/extensions/goal-drafting.ts
-+++ b/extensions/goal-drafting.ts
+diff --git i/extensions/goal-drafting.ts w/extensions/goal-drafting.ts
+index 4337879606103fc51bce1761964202b54dd981ef..8f1c220ff2451b8cdbca2f38def84c642015d418 100644
+--- i/extensions/goal-drafting.ts
++++ w/extensions/goal-drafting.ts
 @@ -88,14 +88,8 @@ export function rehydrateDraft(core: GoalCore, ctx: ExtensionContext): void {
  	}
  	let session: GoalDraftSession | null = null;
@@ -788,10 +794,10 @@ index 43378796..8f1c220f 100644
  			if (resumed) {
  				try {
  					core.goalService.appendEvents(ctx, [{ type: "goal_resumed", goalId: result.goal.id, reason: "tweak", at: nowIso() }]);
-diff --git a/extensions/goal-events.ts b/extensions/goal-events.ts
-index 6a11eee1..59aa704b 100644
---- a/extensions/goal-events.ts
-+++ b/extensions/goal-events.ts
+diff --git i/extensions/goal-events.ts w/extensions/goal-events.ts
+index 6183250f706394125e6ed3e34abd6cf888a4e4e6..dd1f25987b24e126854e4410a8c5133eab3ac916 100644
+--- i/extensions/goal-events.ts
++++ w/extensions/goal-events.ts
 @@ -12,8 +12,8 @@ import {
  	isMeaningfulProgressToolCall,
  	isToolUseAssistantMessage,
@@ -835,10 +841,10 @@ index 6a11eee1..59aa704b 100644
 -		if (isAbortedAssistantMessage(message)) {
 +		if (aborted) {
 +			core.accountAbortedTokens(core.runningGoalId ?? core.state.goal?.id ?? null, tokens, ctx);
- 			core.pauseActiveGoal(ctx);
- 			return;
- 		}
-@@ -262,7 +264,6 @@ export function registerGoalEvents(core: GoalCore): void {
+ 			// Pause only on a genuine user abort (signal fired). A provider- or
+ 			// transport-side abort without the signal routes into recovery via
+ 			// agent_end instead of stranding the goal.
+@@ -265,7 +267,6 @@ export function registerGoalEvents(core: GoalCore): void {
  		) {
  			core.queueContinuation(ctx);
  		}
@@ -846,7 +852,7 @@ index 6a11eee1..59aa704b 100644
  	});
  
  	pi.on("message_end", async (event, ctx) => {
-@@ -280,8 +281,9 @@ export function registerGoalEvents(core: GoalCore): void {
+@@ -285,8 +286,9 @@ export function registerGoalEvents(core: GoalCore): void {
  		invalidateGoalSettingsCache();
  		invalidateGoalPoolCache();
  		invalidateGoalLedgerCache();
@@ -857,7 +863,7 @@ index 6a11eee1..59aa704b 100644
  		core.installGoalToolProfile(!loadGoalSettings(ctx.cwd).disableTasks);
  		rehydrateDraft(core, ctx);
  		syncTerminalInputPause(core, ctx);
-@@ -307,7 +309,11 @@ export function registerGoalEvents(core: GoalCore): void {
+@@ -312,7 +314,11 @@ export function registerGoalEvents(core: GoalCore): void {
  			const current = core.state.goal;
  			const shouldResume = await ctx.ui.confirm("Resume paused goal?", `Goal: ${current.objective}`);
  			if (shouldResume) {
@@ -870,7 +876,7 @@ index 6a11eee1..59aa704b 100644
  			}
  		}
  		core.beginAccounting();
-@@ -319,8 +325,6 @@ export function registerGoalEvents(core: GoalCore): void {
+@@ -324,8 +330,6 @@ export function registerGoalEvents(core: GoalCore): void {
  	});
  
  	pi.on("session_compact", async (_event, ctx) => {
@@ -879,7 +885,7 @@ index 6a11eee1..59aa704b 100644
  		core.beginAccounting();
  		// Arm a deterministic compaction summary for the next agent turn.
  		// This replaces the generic reminder with artifact-backed state.
-@@ -331,8 +335,9 @@ export function registerGoalEvents(core: GoalCore): void {
+@@ -336,8 +340,9 @@ export function registerGoalEvents(core: GoalCore): void {
  	});
  
  	pi.on("session_tree", async (_event, ctx) => {
@@ -891,7 +897,7 @@ index 6a11eee1..59aa704b 100644
  		rehydrateDraft(core, ctx);
  		syncTerminalInputPause(core, ctx);
  		core.beginAccounting();
-@@ -340,15 +345,13 @@ export function registerGoalEvents(core: GoalCore): void {
+@@ -345,15 +350,13 @@ export function registerGoalEvents(core: GoalCore): void {
  	});
  
  	pi.on("before_agent_start", async (event, ctx) => {
@@ -911,7 +917,7 @@ index 6a11eee1..59aa704b 100644
  		// If this turn was triggered by a hidden goal checkpoint that no longer
  		// matches the active goal, abort the whole turn instead of letting the
  		// model act on a stale instruction.
-@@ -405,11 +408,11 @@ export function registerGoalEvents(core: GoalCore): void {
+@@ -410,11 +413,11 @@ export function registerGoalEvents(core: GoalCore): void {
  				pauseExtras.push(`Pause reason: ${current.pauseReason ?? "(unknown)"}`);
  				if (current.pauseSuggestedAction) pauseExtras.push(`Suggested action: ${current.pauseSuggestedAction}`);
  			}
@@ -928,7 +934,7 @@ index 6a11eee1..59aa704b 100644
  				if (auditorResult && auditorResult.verdict === "disapproved") {
  					auditorExtra = `\n\n[AUDITOR REJECTION] An independent auditor previously rejected a completion request for this goal. Reason: ${auditorResult.report.slice(0, 300)}\nAddress the auditor's objections before requesting completion again.`;
  				}
-@@ -447,9 +450,9 @@ export function registerGoalEvents(core: GoalCore): void {
+@@ -452,9 +455,9 @@ export function registerGoalEvents(core: GoalCore): void {
  		if (stalledNote) prompt += stalledNote;
  		// Inject durable auditor feedback if the latest result was a rejection
  		try {
@@ -941,7 +947,7 @@ index 6a11eee1..59aa704b 100644
  				prompt = `${prompt}\n\n[AUDITOR REJECTION goalId=${activeGoal.id}]\nAn independent auditor previously rejected a completion request for this goal. Reason: ${auditorResult.report.slice(0, 300)}\nAddress the auditor's objections before requesting completion again.`;
  			}
  		} catch {
-@@ -462,9 +465,14 @@ export function registerGoalEvents(core: GoalCore): void {
+@@ -467,9 +470,14 @@ export function registerGoalEvents(core: GoalCore): void {
  			// compaction may have lost. Falls back to a generic note on ledger
  			// read failure.
  			try {
@@ -958,7 +964,7 @@ index 6a11eee1..59aa704b 100644
  				prompt = `${prompt}\n\n${delta}`;
  			} catch {
  				prompt = `${prompt}\n\n[POST-COMPACTION RESYNC goalId=${core.state.goal.id}]\nThe conversation was just compacted. Re-read the objective and continue from the actual artifacts/state; do not rely on memory of the prior chat.`;
-@@ -484,9 +492,7 @@ export function registerGoalEvents(core: GoalCore): void {
+@@ -489,9 +497,7 @@ export function registerGoalEvents(core: GoalCore): void {
  		const abortedTokens = event.messages
  			.filter(isAbortedAssistantMessage)
  			.reduce((sum, message) => sum + assistantTurnTokens(message), 0);
@@ -969,10 +975,10 @@ index 6a11eee1..59aa704b 100644
  
  		// Keep any prior recovery attempt while Pi finishes its own automatic
  		// retries. A user-driven path resets it through the default argument.
-@@ -502,18 +508,18 @@ export function registerGoalEvents(core: GoalCore): void {
+@@ -512,18 +518,18 @@ export function registerGoalEvents(core: GoalCore): void {
  		// display, but never queue a continuation for a run whose messages
  		// include an assistant error (danim47c pattern).
- 		if (hasNetworkErrorAssistantMessage(event.messages)) {
+ 		if (hasNetworkErrorAssistantMessage(event.messages) || hasAbortedAssistantMessage(event.messages)) {
 -			core.persist(ctx);
 +			core.persist(ctx, { mode: "coalesce" });
  			core.updateUI(ctx);
@@ -991,7 +997,7 @@ index 6a11eee1..59aa704b 100644
  		core.updateUI(ctx);
  		// agent_end runs before pi finishes retries, compaction, terminating-tool
  		// settlement, and queued messages. Starting the continuation timer here
-@@ -550,10 +556,17 @@ export function registerGoalEvents(core: GoalCore): void {
+@@ -566,10 +572,17 @@ export function registerGoalEvents(core: GoalCore): void {
  	pi.on("session_shutdown", async (_event, ctx) => {
  		continuationAfterSettleFor = null;
  		networkErrorRecoveryAfterSettleFor = null;
@@ -1014,10 +1020,10 @@ index 6a11eee1..59aa704b 100644
 +		}
  	});
  }
-diff --git a/extensions/goal-ledger.ts b/extensions/goal-ledger.ts
-index 8e9955c1..40b7cf83 100644
---- a/extensions/goal-ledger.ts
-+++ b/extensions/goal-ledger.ts
+diff --git i/extensions/goal-ledger.ts w/extensions/goal-ledger.ts
+index 8e9955c1d7289406ce9cd376094734a8e164f6fd..40b7cf8332c0fa57a2891c30fa9f83d885c30ae2 100644
+--- i/extensions/goal-ledger.ts
++++ w/extensions/goal-ledger.ts
 @@ -1,6 +1,15 @@
 +import { createHash } from "node:crypto";
  import * as fs from "node:fs";
@@ -2521,10 +2527,10 @@ index 8e9955c1..40b7cf83 100644
  export function latestAuditorResultForGoal(events: GoalLedgerEvent[], goalId: string): { verdict: "approved" | "disapproved" | "error"; report: string; at: string } | undefined {
    for (let i = events.length - 1; i >= 0; i--) {
      const event = events[i]!
-diff --git a/extensions/goal-oracle.ts b/extensions/goal-oracle.ts
-index ad950664..0169487f 100644
---- a/extensions/goal-oracle.ts
-+++ b/extensions/goal-oracle.ts
+diff --git i/extensions/goal-oracle.ts w/extensions/goal-oracle.ts
+index ad950664eaa35eefb77599c7a8463804eccd89d9..0169487f042a38bb1a494a726ab3752bf1caa14d 100644
+--- i/extensions/goal-oracle.ts
++++ w/extensions/goal-oracle.ts
 @@ -21,7 +21,8 @@ import { createHash } from "node:crypto";
  
  import { defineTool, type AgentToolResult, type ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -2598,10 +2604,10 @@ index ad950664..0169487f 100644
  export function hasPendingOracleAdviceForFocusedGoal(goalId: string): boolean {
  	return armedByGoalId.has(goalId);
  }
-diff --git a/extensions/goal-policy.ts b/extensions/goal-policy.ts
-index 8140e8fd..22ecebfe 100644
---- a/extensions/goal-policy.ts
-+++ b/extensions/goal-policy.ts
+diff --git i/extensions/goal-policy.ts w/extensions/goal-policy.ts
+index 8140e8fdf8ffea26db9a38c9d2e67443d2afe0c1..22ecebfede6be2350ea9cd2f599f3bb80c938f7d 100644
+--- i/extensions/goal-policy.ts
++++ w/extensions/goal-policy.ts
 @@ -1,4 +1,5 @@
  import { statusLabel, type GoalDisplayRecordLike } from "./goal-core.ts";
 +import { budgetReached } from "./goal-accounting.ts";
@@ -2624,10 +2630,10 @@ index 8140e8fd..22ecebfe 100644
  	if (goal.status === "active" && goal.autoContinue) return { ok: false, message: "Goal is already running." };
  	return { ok: true };
  }
-diff --git a/extensions/goal-pool.ts b/extensions/goal-pool.ts
-index d47f7042..b1d31bb6 100644
---- a/extensions/goal-pool.ts
-+++ b/extensions/goal-pool.ts
+diff --git i/extensions/goal-pool.ts w/extensions/goal-pool.ts
+index d47f70429f73db4d1c429aee39d2287e895e16c6..b1d31bb61f2cbf57b6a537ac0b1d206b44168e01 100644
+--- i/extensions/goal-pool.ts
++++ w/extensions/goal-pool.ts
 @@ -90,12 +90,3 @@ export function buildGoalListText(pool: Map<string, GoalRecord>, focusedGoalId:
  export function buildUnfocusedOpenGoalsSummary(openGoalCount: number): string {
  	return `No goal is focused in this session. ${openGoalCount} open goal${openGoalCount === 1 ? "" : "s"} exist in .pi/goals. Use /goal-focus to choose the session focus before doing goal work.`;
@@ -2641,10 +2647,10 @@ index d47f7042..b1d31bb6 100644
 -		usage: { tokensUsed, activeSeconds },
 -	};
 -}
-diff --git a/extensions/goal-record.ts b/extensions/goal-record.ts
-index 864cb844..cf91c0b9 100644
---- a/extensions/goal-record.ts
-+++ b/extensions/goal-record.ts
+diff --git i/extensions/goal-record.ts w/extensions/goal-record.ts
+index 864cb84415de54a69ed10ad4ecd21cace40eff4f..cf91c0b9a93bef0bd9a63aec6c6e95736a8e9697 100644
+--- i/extensions/goal-record.ts
++++ w/extensions/goal-record.ts
 @@ -68,6 +68,29 @@ export interface GoalRecord {
  	verificationContract?: string;
  }
@@ -2675,10 +2681,10 @@ index 864cb844..cf91c0b9 100644
  export interface GoalStateEntry {
  	version: 3;
  	goal: GoalRecord | null;
-diff --git a/extensions/goal-recovery.ts b/extensions/goal-recovery.ts
-index 1ebf5fc4..98b8df29 100644
---- a/extensions/goal-recovery.ts
-+++ b/extensions/goal-recovery.ts
+diff --git i/extensions/goal-recovery.ts w/extensions/goal-recovery.ts
+index 1ebf5fc4cf67f4edd6d38c71a933f4fe06cdb184..98b8df294c657739e8399d0d33c08a39aabb1e3f 100644
+--- i/extensions/goal-recovery.ts
++++ w/extensions/goal-recovery.ts
 @@ -1,29 +1,42 @@
  /**
   * /goal-recovery — read-only storage/recovery report + guarded repair.
@@ -3466,10 +3472,10 @@ index 1ebf5fc4..98b8df29 100644
  	}
  	return lines.join("\n");
  }
-diff --git a/extensions/goal-runtime.ts b/extensions/goal-runtime.ts
-index 5ef824ec..af6cabd4 100644
---- a/extensions/goal-runtime.ts
-+++ b/extensions/goal-runtime.ts
+diff --git i/extensions/goal-runtime.ts w/extensions/goal-runtime.ts
+index 59bb4595347da66bf468c617fc759802cf02e9e1..421e4c3c652c9c495286b036c83769c0ccb29fe1 100644
+--- i/extensions/goal-runtime.ts
++++ w/extensions/goal-runtime.ts
 @@ -84,6 +84,10 @@ export class GoalRuntime {
  	 * already-queued/scheduled dedup (used right after creation/resume).
  	 */
@@ -3550,10 +3556,10 @@ index 5ef824ec..af6cabd4 100644
  	}
  
  	// ── turn-stop guard ──────────────────────────────────────────────────
-diff --git a/extensions/goal-service.ts b/extensions/goal-service.ts
-index 8499e577..546e90d2 100644
---- a/extensions/goal-service.ts
-+++ b/extensions/goal-service.ts
+diff --git i/extensions/goal-service.ts w/extensions/goal-service.ts
+index 8499e5779e73e401bd0d0cc1642b653426840914..09c1bab016298c8c4e764d48e144cefdaf602b52 100644
+--- i/extensions/goal-service.ts
++++ w/extensions/goal-service.ts
 @@ -1,22 +1,23 @@
 -import { cloneGoal, nowIso, type GoalFocusReason, type GoalRecord, type GoalTask, type GoalUsage } from "./goal-record.ts";
 +import { budgetReached } from "./goal-accounting.ts";
@@ -4415,10 +4421,10 @@ index 8499e577..546e90d2 100644
  		this.appendLedgerEventsBestEffort(ctx, events);
  	}
  
-diff --git a/extensions/goal-state.ts b/extensions/goal-state.ts
-index 9a506a6f..42867f50 100644
---- a/extensions/goal-state.ts
-+++ b/extensions/goal-state.ts
+diff --git i/extensions/goal-state.ts w/extensions/goal-state.ts
+index 9a506a6f04e8058b163f69e7857183b1010dbdc9..d9d89d95db7eb3cb48818ea1cc2d52a2b8dcb2c4 100644
+--- i/extensions/goal-state.ts
++++ w/extensions/goal-state.ts
 @@ -13,6 +13,7 @@ import {
  	cloneGoal,
  	createGoal,
@@ -4436,9 +4442,15 @@ index 9a506a6f..42867f50 100644
  import { GoalAccounting } from "./goal-accounting.ts";
  import { GoalRuntime } from "./goal-runtime.ts";
  import {
-@@ -57 +58 @@ export interface GoalCore {
+@@ -54,7 +55,7 @@ import { runGoalCompletionAuditor } from "./goal-auditor.ts";
+  */
+ export interface GoalCore {
+ 	pi: ExtensionAPI;
 -	dependencies: { runCompletionAuditor?: typeof runGoalCompletionAuditor };
 +	dependencies: { runCompletionAuditor?: typeof runGoalCompletionAuditor; runBlockerOracle?: typeof import("./goal-oracle.ts").runBlockerOracle };
+ 	state: { goal: GoalRecord | null };
+ 	readonly goalsById: Map<string, GoalRecord>;
+ 	readonly focusedGoalId: string | null;
 @@ -102,7 +103,7 @@ export interface GoalCore {
  	toggleDashboardExpanded(): void;
  	/** §10: whether the unified dashboard is currently expanded. */
@@ -4478,10 +4490,14 @@ index 9a506a6f..42867f50 100644
  	replaceGoal(config: GoalCreationConfig, ctx: ExtensionContext, startNow?: boolean, verificationContract?: string, tokenBudget?: number): void;
  	/** F5: bump the last-activity timestamp (called on real work events). */
  	touchGoalActivity(): void;
-@@ -137 +141 @@ export function createGoalCore(
+@@ -134,12 +138,18 @@ export interface GoalCore {
+ 
+ export function createGoalCore(
+ 	pi: ExtensionAPI,
 -	dependencies: { runCompletionAuditor?: typeof runGoalCompletionAuditor } = {},
 +	dependencies: { runCompletionAuditor?: typeof runGoalCompletionAuditor; runBlockerOracle?: typeof import("./goal-oracle.ts").runBlockerOracle } = {},
-@@ -140,6 +144,12 @@ export function createGoalCore(
+ ): GoalCore {
+ 	let goalsById = new Map<string, GoalRecord>();
  	let focusedGoalId: string | null = null;
  	let focusRevision = 0;
  	let hasExplicitSessionFocus = false;
@@ -5289,10 +5305,10 @@ index 9a506a6f..42867f50 100644
  		touchGoalActivity,
  		checkStall,
  		replaceGoal,
-diff --git a/extensions/goal-task-tools.ts b/extensions/goal-task-tools.ts
-index e48f83eb..0288ee5c 100644
---- a/extensions/goal-task-tools.ts
-+++ b/extensions/goal-task-tools.ts
+diff --git i/extensions/goal-task-tools.ts w/extensions/goal-task-tools.ts
+index e48f83eb1b8b6bc4a7011431a0012fa555414eea..0288ee5c05dda16c8dfac328a5caa0bc1cb46da9 100644
+--- i/extensions/goal-task-tools.ts
++++ w/extensions/goal-task-tools.ts
 @@ -481,6 +481,7 @@ pi.registerTool(defineTool({
  					if (task.status === "complete") return { ok: false, message: `Task "${params.task_id}" is already complete.` };
  					return { ok: true };
@@ -5301,10 +5317,10 @@ index e48f83eb..0288ee5c 100644
  				update: (task) => {
  					const base = { ...task, status: "skipped" as const, skippedAt: now, skipReason: reason };
  					if (task.subtasks && task.subtasks.length > 0 && !task.lightweightSubtasks) {
-diff --git a/extensions/goal-widget.ts b/extensions/goal-widget.ts
-index cd5cb35f..99b86afc 100644
---- a/extensions/goal-widget.ts
-+++ b/extensions/goal-widget.ts
+diff --git i/extensions/goal-widget.ts w/extensions/goal-widget.ts
+index cd5cb35f63ae8ec34d8aa1bebe42f8a66cb3e7ec..99b86afc05d649cbad6ac7354753db7574d45df5 100644
+--- i/extensions/goal-widget.ts
++++ w/extensions/goal-widget.ts
 @@ -152,6 +152,7 @@ export function syncTerminalInputPause(core: GoalCore, ctx: ExtensionContext): v
  			// falls through to pi, which stops the current turn without any goal
  			// state change.
@@ -5327,11 +5343,13 @@ index cd5cb35f..99b86afc 100644
  		}
  
  		/** Stop mock audit timer if running */
-diff --git a/extensions/goal.ts b/extensions/goal.ts
-index 1a96c8d7..b3474735 100644
---- a/extensions/goal.ts
-+++ b/extensions/goal.ts
-@@ -23,6 +23,7 @@ export default function goalExtension(
+diff --git i/extensions/goal.ts w/extensions/goal.ts
+index 1a96c8d71ec0d43218503e7b3dbe54411b00f500..4fdc844d579dea2b5632f9dccd4718806184e8e4 100644
+--- i/extensions/goal.ts
++++ w/extensions/goal.ts
+@@ -21,8 +21,9 @@ import { registerGoalTools } from "./goal-tools.ts";
+  */
+ export default function goalExtension(
  	pi: ExtensionAPI,
 -	dependencies: { runCompletionAuditor?: typeof runGoalCompletionAuditor } = {},
 +	dependencies: { runCompletionAuditor?: typeof runGoalCompletionAuditor; runBlockerOracle?: typeof import("./goal-oracle.ts").runBlockerOracle } = {},
@@ -5340,10 +5358,10 @@ index 1a96c8d7..b3474735 100644
  	pi.registerMessageRenderer<GoalEventDetails>(GOAL_EVENT_ENTRY, renderGoalEvent);
  	pi.registerMessageRenderer<GoalAuditEventDetails>(GOAL_AUDIT_ENTRY, renderGoalAuditEvent);
  
-diff --git a/extensions/storage/goal-files.ts b/extensions/storage/goal-files.ts
-index 114c3c07..d5f1086f 100644
---- a/extensions/storage/goal-files.ts
-+++ b/extensions/storage/goal-files.ts
+diff --git i/extensions/storage/goal-files.ts w/extensions/storage/goal-files.ts
+index 114c3c0790da031dbd5c185710b4e2af1a085359..9d2baeaca0d2c01bdd92b16c85e31fd04611c80e 100644
+--- i/extensions/storage/goal-files.ts
++++ w/extensions/storage/goal-files.ts
 @@ -1,5 +1,6 @@
  import * as fs from "node:fs";
  import * as path from "node:path";
@@ -5678,14 +5696,6 @@ index 114c3c07..d5f1086f 100644
  }
  
 -export function archiveGoalFile(ctx: GoalFileContext, current: GoalRecord): GoalRecord {
--	const archivedPath = archivedPathForGoal(ctx, current);
--	const next = sanitizeGoalPaths(ctx, { ...current, archivedPath, updatedAt: nowIso() });
--	delete next.activePath;
--	atomicWriteGoalFile(ctx, ARCHIVED_GOALS_DIR, archivedPath, serializeGoalFile(next));
--	if (isSafeActivePath(ctx, current.activePath)) {
--		try {
--			safeUnlinkGoalFile(ctx, GOALS_DIR, current.activePath);
--		} catch {}
 +export function archiveGoalFile(
 +	ctx: GoalFileContext,
 +	current: GoalRecord,
@@ -5694,7 +5704,7 @@ index 114c3c07..d5f1086f 100644
 +): GoalRecord {
 +	if (!isSafeActivePath(ctx, current.activePath)) {
 +		throw new Error(`Cannot archive goal ${current.id}: active path is missing or unsafe.`);
- 	}
++	}
 +	const sourcePath = resolveGoalPath(ctx, GOALS_DIR, current.activePath);
 +	const observed = readGoalFileSnapshotChecked(ctx, sourcePath);
 +	if (!sameGoalFileSnapshot(observed, expectedSource)) {
@@ -5711,9 +5721,12 @@ index 114c3c07..d5f1086f 100644
 +		throw new Error(`Cannot archive goal ${current.id}: active file no longer matches.`);
 +	}
 +	const expected = expectedSource;
-+	const archivedPath = archivedPathForGoal(ctx, current);
+ 	const archivedPath = archivedPathForGoal(ctx, current);
+-	const next = sanitizeGoalPaths(ctx, { ...current, archivedPath, updatedAt: nowIso() });
 +	let next = sanitizeGoalPaths(ctx, { ...current, archivedPath, updatedAt: nowIso() });
-+	delete next.activePath;
+ 	delete next.activePath;
+-	atomicWriteGoalFile(ctx, ARCHIVED_GOALS_DIR, archivedPath, serializeGoalFile(next));
+-	if (isSafeActivePath(ctx, current.activePath)) {
 +	try {
 +		atomicWriteGoalFile(ctx, ARCHIVED_GOALS_DIR, archivedPath, serializeGoalFile(next), { replace: false });
 +	} catch (error) {
@@ -5771,7 +5784,8 @@ index 114c3c07..d5f1086f 100644
 +	// restored/preserved and reported instead of being deleted by pathname.
 +	const claim = claimRegularFile(ctx.cwd, sourcePath, MAX_CHECKED_GOAL_FILE_BYTES, "archive");
 +	if (!sameRegularFile(expected.identity, claim.file) || !expected.bytes.equals(claim.file.bytes)) {
-+		try {
+ 		try {
+-			safeUnlinkGoalFile(ctx, GOALS_DIR, current.activePath);
 +			restoreClaimedRegularFile(ctx.cwd, sourcePath, claim);
 +		} catch {
 +			// A successor owns the canonical path. Preserve the mismatched private
@@ -5787,8 +5801,8 @@ index 114c3c07..d5f1086f 100644
 +		// cannot find the removed active source. Diagnostics must not undo commit.
 +		try {
 +			onCleanupFailure(error, claim.quarantinePath);
-+		} catch {}
-+	}
+ 		} catch {}
+ 	}
 +	discardArchivedPoolSnapshots(ctx, sourcePath);
 +	return next;
 +}
@@ -6079,10 +6093,10 @@ index 114c3c07..d5f1086f 100644
  			if (!parsed || parsed.status === "complete") return null;
  			return sanitizeGoalPaths(ctx, { ...parsed, activePath: relPath });
  		} catch {
-diff --git a/extensions/storage/goal-lock.ts b/extensions/storage/goal-lock.ts
-index 5314fcb3..a8e53eb4 100644
---- a/extensions/storage/goal-lock.ts
-+++ b/extensions/storage/goal-lock.ts
+diff --git i/extensions/storage/goal-lock.ts w/extensions/storage/goal-lock.ts
+index 5314fcb31720ad89d7d8a87583ccc5942f79a820..a8e53eb42700ea544dd158094c8b959df4b92d6d 100644
+--- i/extensions/storage/goal-lock.ts
++++ w/extensions/storage/goal-lock.ts
 @@ -1,38 +1,114 @@
 -/**
 - * Short per-goal filesystem lock (follow-up Stage 4).
@@ -6795,11 +6809,11 @@ index 5314fcb3..a8e53eb4 100644
  	}
  	throw new Error(`Timed out acquiring the goal lock for ${goalId} (${attempts} attempts). Another writer may hold it.`);
  }
-diff --git a/extensions/storage/safe-fs.ts b/extensions/storage/safe-fs.ts
+diff --git i/extensions/storage/safe-fs.ts w/extensions/storage/safe-fs.ts
 new file mode 100644
-index 00000000..0cf53b6f
+index 0000000000000000000000000000000000000000..0cf53b6f04ff18dcf623db86adb12edf255f82be
 --- /dev/null
-+++ b/extensions/storage/safe-fs.ts
++++ w/extensions/storage/safe-fs.ts
 @@ -0,0 +1,584 @@
 +import * as fs from "node:fs";
 +import * as path from "node:path";
@@ -7385,10 +7399,10 @@ index 00000000..0cf53b6f
 +		// The protected inode is gone; an empty private directory is harmless.
 +	}
 +}
-diff --git a/extensions/widgets/goal-widget.ts b/extensions/widgets/goal-widget.ts
-index c91fda61..547d4f44 100644
---- a/extensions/widgets/goal-widget.ts
-+++ b/extensions/widgets/goal-widget.ts
+diff --git i/extensions/widgets/goal-widget.ts w/extensions/widgets/goal-widget.ts
+index c91fda61b935c9b24afb863301748d67aea81842..547d4f44d13284cae890d46c178b420393d7a2b2 100644
+--- i/extensions/widgets/goal-widget.ts
++++ w/extensions/widgets/goal-widget.ts
 @@ -541,29 +541,45 @@ export class GoalWidgetComponent implements Component {
  			return clampLinesToWidth(renderAuditResultCardView(auditResult, this.theme, width), width);
  		}

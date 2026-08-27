@@ -49,7 +49,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [`pi-gpt-fast-mode`][pi-gpt-fast-mode] | 0.1.2 | Select OpenAI service tiers and hand preference to subagents | `/fast`, `--fast` |
 | [`pi-subagents`][pi-subagents] | 0.56.0 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
 | [`@quintinshaw/pi-dynamic-workflows`][pi-dynamic-workflows] | 3.8.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
-| [`pi-goal-x`][pi-goal-x] | 0.30.4 | Durable goals and Sisyphus continuation | `/goal`, `get_goal` |
+| [`pi-goal-x`][pi-goal-x] | 0.30.5 | Durable goals and Sisyphus continuation | `/goal`, `get_goal` |
 | [`pi-cache-optimizer`][pi-cache-optimizer] | 2.8.6 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
 
 ### Packaged but inactive
@@ -303,7 +303,7 @@ The managed package keeps its dashboard summary local instead of making upstream
 
 ### [Goal X][pi-goal-x]
 
-**Version:** 0.30.4 · **Links:** [Pi Packages](https://pi.dev/packages/pi-goal-x) · [Home](https://github.com/tmonk/pi-goal-x#readme) · [GitHub](https://github.com/tmonk/pi-goal-x)
+**Version:** 0.30.5 · **Links:** [Pi Packages](https://pi.dev/packages/pi-goal-x) · [Home](https://github.com/tmonk/pi-goal-x#readme) · [GitHub](https://github.com/tmonk/pi-goal-x)
 
 [Pi Goal X][pi-goal-x] persists explicit objectives, lifecycle and task state, usage, ordered Sisyphus continuation, and a bounded append-only event ledger. Goals can pause, resume, be audited before completion, retain compact task and recent-ledger guidance across context compaction, retry transient network interruptions, and consult an optional blocker Oracle without restating the objective in the footer.
 

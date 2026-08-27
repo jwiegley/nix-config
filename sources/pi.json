@@ -243,18 +243,18 @@
     "pi-goal-x": {
       "source": {
         "args": {
-          "hash": "sha256-hJ7QMGDg6WL3hkxtxrHB6krB92icdZaNtRllG2eYVhg=",
-          "url": "https://registry.npmjs.org/pi-goal-x/-/pi-goal-x-0.30.4.tgz"
+          "hash": "sha256-XGx5JGGVXx9HM3IXzO8RdOn0a5W05iw2OFyOsBaTcQI=",
+          "url": "https://registry.npmjs.org/pi-goal-x/-/pi-goal-x-0.30.5.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-goal-x/-/pi-goal-x-0.30.4.tgz"
+        "url": "https://registry.npmjs.org/pi-goal-x/-/pi-goal-x-0.30.5.tgz"
       },
       "update": {
         "buildPackage": "pi-goal-x",
         "kind": "npm-release",
         "package": "pi-goal-x"
       },
-      "version": "0.30.4"
+      "version": "0.30.5"
     },
     "pi-gpt-fast-mode": {
       "hashes": {
