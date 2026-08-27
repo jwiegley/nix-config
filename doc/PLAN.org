@@ -1132,7 +1132,7 @@ After mlx-audio 0.5.0 built successfully, vllm-mlx 0.4.1 rejected the selected m
 :LABELS:   []
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-26 Wed 18:18]
-:MODIFIED: [2026-08-26 Wed 18:18]
+:MODIFIED: [2026-08-26 Wed 20:53]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1140,6 +1140,20 @@ After mlx-audio 0.5.0 built successfully, vllm-mlx 0.4.1 rejected the selected m
 :END:
 
 Package devwithpug/pi-gpt-fast-mode through the Nix-owned Pi Gallery/source catalog, preserve documented session-only defaults, and manage the four upstream GPT-5.4/5.5 model keys plus openai/gpt-5.6 and openai-codex/gpt-5.6. Add upstream/package/manifest/gallery tests and behavior coverage for service-tier injection on both GPT-5.6 keys, unsupported-model suppression, and subagent handoff without a paid request. Publish and deploy the resulting signed revision across the seven active hosts; exclude VPS and dormant git-ai.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 532,
+    "issue_id": "nix-38tq",
+    "author": "johnw",
+    "text": "2026-08-27 implementation checkpoint: pi-gpt-fast-mode 0.1.2 is pinned to reviewed Git commit 2ac61e03cff1a3c58175f12c20c55804a2fca7ae and source hash sha256-4H/xo+MhL30SnLhJ31heEakr95S7u8I3AtPGGJDHsaY=. The manual github-commit source record has a required buildPackage gate because upstream publishes no tags and package version/model policy must move together. A shared lock normalizer verifies the exact three nested Pi entries missing registry integrity before adding reviewed 0.79.10 values; Fast Mode and the existing Droid source now use that seam. buildNpmPackage uses fixed npmDepsHash sha256-fam7LUAdydm3eZ0r3HbwQq6+3dytEMFDEpjnCOxG2KY=, ignores lifecycle scripts, runs upstream TypeScript plus all 24 tests on Node 24, and installs only index.ts/src/manifest/docs/license with no node_modules. Gallery manifest/projection/portable package contract registers it before Subagents. Nix owns only .config/pi/agent/extensions/pi-gpt-fast-mode/config.json with persist=false, desired=false, tier=priority, indicator=status, and exact models openai/gpt-5.4, gpt-5.5, gpt-5.6 plus openai-codex/gpt-5.4, gpt-5.5, gpt-5.6. Exact preflight allowlist and unmanaged-file collision coverage remain fail-closed. The real packaged extension behavior test invokes parent /fast on, proves PI_GPT_FAST_MODE=1, creates a fresh child extension that inherits it, injects priority for both GPT-5.6 keys, suppresses an unsupported model, resumes on GPT-5.6, leaves payload/config immutable, and performs no network request. User-facing stale 5.4/5.5-only handoff text is strictly normalized. Passes: package/upstream checks on Darwin, aarch64-linux, x86_64-linux; full Gallery behavior on all three systems (x86 via documented single signed builder route); host-behavior; dedicated managed-preflight; portable and root all-system no-build evaluation; full Hera system build; and final make test with all 21 suites including 133 updater tests. The first x86 Gallery attempt hit the known unsigned multi-builder handoff; the exact dependency was signed and the single-builder rerun passed without bypassing signature policy. Independent review initially caught a handoff-test workaround; the corrected real-command/fresh-child regression was re-reviewed CLEAR. No paid API request occurred.",
+    "created_at": "2026-08-27T03:53:40Z"
+  }
+]
+#+end_src
 
 * DONE [#C] Scrub inherited Git config and namespace selectors
 :PROPERTIES:

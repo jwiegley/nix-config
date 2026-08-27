@@ -30,6 +30,7 @@ let
   localModelDiscovery = localModelDiscoveryEndpoints != null;
   inherit (profile) hermesRoute;
   modelOverrides = import ../model-overrides.nix;
+  fastModeConfig = import ../pi-gpt-fast-mode.nix;
   projectProviderEndpoints = import ./project-provider-endpoints.nix { inherit lib; };
   hermesPassCommand = lib.escapeShellArgs [
     "${pkgs.coreutils}/bin/env"
@@ -184,6 +185,7 @@ assert
 assert builtins.hasAttr "agent-resources" pkgs;
 assert builtins.hasAttr "pi-gallery" pkgs;
 assert builtins.hasAttr "pi-loop" pkgs.pi-gallery.packages;
+assert builtins.hasAttr "pi-gpt-fast-mode" pkgs.pi-gallery.packages;
 {
   files = mergeFiles [
     agentFiles
@@ -195,6 +197,8 @@ assert builtins.hasAttr "pi-loop" pkgs.pi-gallery.packages;
       };
       "${root}/extensions/fleet-theme/index.ts".source = fleetThemeSource;
       "${root}/extensions/nix-gallery/index.ts".source = "${galleryRoot}/index.ts";
+      "${root}/extensions/pi-gpt-fast-mode/config.json".source =
+        json.generate "pi-${profile.id}-gpt-fast-mode.json" fastModeConfig;
       "${root}/extensions/pi-loop/index.ts".source =
         "${pkgs.pi-gallery.packages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts";
       "${root}/extensions/pi-mcp-adapter".source = "${extensionRoot}/pi-mcp-adapter";

@@ -36,6 +36,7 @@ let
         pi-droid-sdk
         pi-dynamic-workflows
         pi-goal-x
+        pi-gpt-fast-mode
         pi-markdown-preview
         pi-rtk-optimizer
         pi-hashline-edit-pro
@@ -418,6 +419,66 @@ let
   markdownPreviewSource = mkMemberReleaseSource members.markdown-preview { };
   memSource = mkMemberReleaseSource members.mem { };
   dynamicWorkflowsSource = mkMemberReleaseSource members.dynamic-workflows { };
+  normalizeMissingPiIntegrities =
+    { lockFile, integrities }:
+    let
+      expectedPaths = lib.sort builtins.lessThan (builtins.attrNames integrities);
+    in
+    assert integrities != { };
+    ''
+      ${jq}/bin/jq -e --argjson expected '${builtins.toJSON expectedPaths}' '
+        ([
+          .packages
+          | to_entries[]
+          | select(
+              .key != ""
+              and .value.resolved != null
+              and .value.integrity == null
+            )
+          | .key
+        ] | sort) == $expected
+      ' "${lockFile}" >/dev/null
+      ${jq}/bin/jq --argjson integrities '${builtins.toJSON integrities}' '
+        reduce ($integrities | to_entries[]) as $entry (.;
+          .packages[$entry.key].integrity = $entry.value
+        )
+      ' "${lockFile}" > "${lockFile}.fixed"
+      mv "${lockFile}.fixed" "${lockFile}"
+    '';
+  fastModeUpstream = fetchFromGitHub members.fast-mode.source.args;
+  fastModeSource = runCommand "pi-gpt-fast-mode-source" { nativeBuildInputs = [ jq ]; } ''
+    mkdir -p "$out"
+    cp -R ${fastModeUpstream}/. "$out"
+    chmod -R u+w "$out"
+    [ "$(grep -Fc 'subagents on GPT-5.4/5.5' "$out/index.ts")" -eq 2 ]
+    substituteInPlace "$out/index.ts" \
+      --replace-fail 'subagents on GPT-5.4/5.5' 'subagents on a supported GPT model'
+    ${jq}/bin/jq -e --arg version ${lib.escapeShellArg members.fast-mode.version} '
+      .name == "pi-gpt-fast-mode"
+      and .version == $version
+      and .type == "module"
+      and .pi.extensions == ["./index.ts"]
+      and .peerDependencies == {"@earendil-works/pi-coding-agent": "*"}
+      and .scripts.check == "npm run typecheck && npm test"
+    ' "$out/package.json" >/dev/null
+    ${jq}/bin/jq -e '
+      .lockfileVersion == 3
+      and .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core"].version == "0.79.10"
+      and .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-ai"].version == "0.79.10"
+      and .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui"].version == "0.79.10"
+    ' "$out/package-lock.json" >/dev/null
+    ${normalizeMissingPiIntegrities {
+      lockFile = "$out/package-lock.json";
+      integrities = {
+        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core" =
+          "sha512-XKxgdjhcPuyjrthCOFSgfzT3xZ1uBrJ1IMVDxci1to6hIN6BIg9J5iY8q0pGXK1DLgATLP23da+1UyZLwA360Q==";
+        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-ai" =
+          "sha512-9jR23tOl0BIUdQMn70Gr72xYBpM7Xgl9Lyv7gAnU1USfkNRuYG/f/edLl+n/Dp/RafDW3JI4DF7y/GhgkORuew==";
+        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui" =
+          "sha512-FUVOjDn1DVwM1uHD5MNYboXQrXjIDbSt+BQ3py7nQWCY62tKfxgiM1OBMxTcwRWLfSdZHUPpV0hm1loIdUJnPw==";
+      };
+    }}
+  '';
   subagentsSource = mkMemberReleaseSource members.subagents { };
   droidSdkUpstream = fetchFromGitHub members.droid.source.args;
   droidRuntime = inputs.llm-agents.packages.${stdenv.hostPlatform.system}.droid;
@@ -438,20 +499,6 @@ let
       and .packages["node_modules/@factory/droid-sdk"].version == "0.2.0"
       and .packages["node_modules/zod"].version == "3.25.76"
       and ([
-        .packages
-        | to_entries[]
-        | select(
-            .key != ""
-            and .value.resolved != null
-            and .value.integrity == null
-          )
-        | .key
-      ] | sort) == [
-        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core",
-        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-ai",
-        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui"
-      ]
-      and ([
         .packages[]
         | select(
             (.dev != true and .peer != true)
@@ -459,12 +506,17 @@ let
           )
       ] | length == 0)
     ' "$out/package-lock.json" >/dev/null
-    ${jq}/bin/jq '
-      .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core"].integrity = "sha512-cGYbysb4EqUf0B28OeqFq2ppm1XF3bYBOP71q9dv38yf/UJfzMjiXBeNelrcio+QWIoVrW+xzYm7sMzYIUc9Og=="
-      | .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-ai"].integrity = "sha512-m/w8Hh3vQ0rAycwJiJWdzkypkn4295f4eq/966lDRy8aX5sk6bgYXH8TQmL16TO7Uwc7MbJG0QoyFHgX8RqXUQ=="
-      | .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui"].integrity = "sha512-PDhKU7u6fmEcvHUFHzrRwGc/Ytokj/hO+X4RPf+MWKEGpvg3B1vHv88Ee+Dy33004tYkQF5YeXV4btJZcp5x1g=="
-    ' "$out/package-lock.json" > "$out/package-lock.json.fixed"
-    mv "$out/package-lock.json.fixed" "$out/package-lock.json"
+    ${normalizeMissingPiIntegrities {
+      lockFile = "$out/package-lock.json";
+      integrities = {
+        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core" =
+          "sha512-cGYbysb4EqUf0B28OeqFq2ppm1XF3bYBOP71q9dv38yf/UJfzMjiXBeNelrcio+QWIoVrW+xzYm7sMzYIUc9Og==";
+        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-ai" =
+          "sha512-m/w8Hh3vQ0rAycwJiJWdzkypkn4295f4eq/966lDRy8aX5sk6bgYXH8TQmL16TO7Uwc7MbJG0QoyFHgX8RqXUQ==";
+        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui" =
+          "sha512-PDhKU7u6fmEcvHUFHzrRwGc/Ytokj/hO+X4RPf+MWKEGpvg3B1vHv88Ee+Dy33004tYkQF5YeXV4btJZcp5x1g==";
+      };
+    }}
     ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
       --directory="$out" --strip=1 \
       < ${./patches/pi-droid-sdk-managed-runtime.patch}
@@ -520,6 +572,30 @@ let
     version = members.dynamic-workflows.version;
     src = dynamicWorkflowsSource;
     npmDepsHash = members.dynamic-workflows.hashes.npmDepsHash;
+  };
+  pi-gpt-fast-mode = buildNpmPackage {
+    pname = members.fast-mode.attrName;
+    version = members.fast-mode.version;
+    src = fastModeSource;
+    npmDepsHash = members.fast-mode.hashes.npmDepsHash;
+    nodejs = buildPackages.nodejs_24;
+    npmInstallFlags = [ "--ignore-scripts" ];
+    dontNpmBuild = true;
+    makeCacheWritable = true;
+    doCheck = true;
+    checkPhase = ''
+      runHook preCheck
+      npm run check
+      runHook postCheck
+    '';
+    installPhase = ''
+      runHook preInstall
+      root="$out/share/pi-packages/pi-gpt-fast-mode"
+      mkdir -p "$root"
+      cp index.ts package.json README.md LICENSE "$root"/
+      cp -R src "$root"/
+      runHook postInstall
+    '';
   };
   pi-droid-sdk = mkNpmPackageRoot {
     pname = members.droid.attrName;

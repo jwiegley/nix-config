@@ -13,6 +13,7 @@ let
     pi-gallery = {
       outPath = "/catalog-pi-gallery";
       packages.pi-loop = "/catalog-pi-loop";
+      packages.pi-gpt-fast-mode = "/catalog-pi-gpt-fast-mode";
     };
   };
   catalog = import "${src}/config/ai/catalog.nix" {

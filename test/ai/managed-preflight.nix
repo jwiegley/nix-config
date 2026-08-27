@@ -51,6 +51,9 @@ let
   task9PiLoopPreflight = preflightFactory {
     newPaths = [ ".config/pi/agent/extensions/pi-loop/index.ts" ];
   };
+  task9PiFastModePreflight = preflightFactory {
+    newPaths = [ ".config/pi/agent/extensions/pi-gpt-fast-mode/config.json" ];
+  };
   task9SharedLeafPreflight = preflightFactory {
     newPaths = [
       ".agents/skills/nix-managed/SKILL.md"
@@ -87,6 +90,7 @@ let
   task9PiLeafPreflightScript = writePreflightScript "task9-ai-pi-leaf-preflight" task9PiLeafPreflight;
   task9PiKeybindingsPreflightScript = writePreflightScript "task9-ai-pi-keybindings-preflight" task9PiKeybindingsPreflight;
   task9PiLoopPreflightScript = writePreflightScript "task9-ai-pi-loop-preflight" task9PiLoopPreflight;
+  task9PiFastModePreflightScript = writePreflightScript "task9-ai-pi-fast-mode-preflight" task9PiFastModePreflight;
   task9SharedLeafPreflightScript = writePreflightScript "task9-ai-shared-leaf-preflight" task9SharedLeafPreflight;
   invalidPreflightProbe = builtins.tryEval (preflightFactory {
     newPaths = [ ".config/not-a-managed-ai-leaf" ];
@@ -186,6 +190,7 @@ pkgs.runCommand "ai-managed-preflight"
     pi_leaf_path=".config/pi/agent/agents/bash-reviewer.md"
     pi_keybindings_path=".config/pi/agent/keybindings.json"
     pi_loop_path=".config/pi/agent/extensions/pi-loop/index.ts"
+    pi_fast_mode_path=".config/pi/agent/extensions/pi-gpt-fast-mode/config.json"
     retired_pi_path=".config/pi/agent/extensions/auto-compact-resume/index.ts"
     legacy_claude=".local/bin/claude"
 
@@ -290,7 +295,7 @@ pkgs.runCommand "ai-managed-preflight"
       fi
       case "$script" in
         *task9-ai-pi-leaf-preflight | *task9-ai-pi-keybindings-preflight | \
-          *task9-ai-pi-loop-preflight)
+          *task9-ai-pi-loop-preflight | *task9-ai-pi-fast-mode-preflight)
           expected_count=1
           expected_noun=path
           ;;
@@ -362,7 +367,8 @@ pkgs.runCommand "ai-managed-preflight"
             expected_output="$new_path: blocking parent is a symlink into the Nix store: $case_home/.config/claude
     $retained_path: blocking parent is a symlink into the Nix store: $case_home/.config/claude"
             ;;
-          shared-pi-leaf-collision | pi-keybindings-collision | pi-loop-collision)
+          shared-pi-leaf-collision | pi-keybindings-collision | pi-loop-collision | \
+            pi-fast-mode-collision)
             expected_output="$fragment: blocking leaf is a regular file: $case_home/$fragment"
             ;;
           aggregate-*)
@@ -703,6 +709,11 @@ pkgs.runCommand "ai-managed-preflight"
     make_leaf "$case_home" "$pi_loop_path" unmanaged
     run_checked fail pi-loop-collision "$pi_loop_path" \
       "${task9PiLoopPreflightScript}" absent
+
+    setup_empty_case pi-fast-mode-collision
+    make_leaf "$case_home" "$pi_fast_mode_path" unmanaged
+    run_checked fail pi-fast-mode-collision "$pi_fast_mode_path" \
+      "${task9PiFastModePreflightScript}" absent
 
     setup_empty_case retired-pi-home-manager-link
     mkdir -p "$case_home/$(dirname "$retired_pi_path")"

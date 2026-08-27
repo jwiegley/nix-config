@@ -59,6 +59,22 @@ let
   gallerySourceFor =
     host:
     desktopHomesByHost.${host}.home.file.".config/pi/agent/extensions/nix-gallery/index.ts".source;
+  fastModeConfigPath = ".config/pi/agent/extensions/pi-gpt-fast-mode/config.json";
+  fastModeConfigSources = map (config: config.home.file.${fastModeConfigPath}.source) allHomes;
+  expectedFastModeConfig = (pkgs.formats.json { }).generate "expected-pi-gpt-fast-mode.json" {
+    persist = false;
+    desired = false;
+    tier = "priority";
+    models = [
+      "openai/gpt-5.4"
+      "openai/gpt-5.5"
+      "openai/gpt-5.6"
+      "openai-codex/gpt-5.4"
+      "openai-codex/gpt-5.5"
+      "openai-codex/gpt-5.6"
+    ];
+    indicator = "status";
+  };
   codexPackageFor =
     host:
     lib.findFirst (
@@ -336,6 +352,7 @@ let
   automaticPiExtensions = [
     ".config/pi/agent/extensions/fleet-theme/index.ts"
     ".config/pi/agent/extensions/nix-gallery/index.ts"
+    ".config/pi/agent/extensions/pi-gpt-fast-mode/config.json"
     ".config/pi/agent/extensions/pi-loop/index.ts"
     ".config/pi/agent/extensions/pi-mcp-adapter"
     ".config/pi/agent/extensions/pi-quiet"
@@ -832,6 +849,9 @@ pkgs.runCommand "host-behavior" { } ''
     and (.base_url | type == "string")
     and ([keys[] | ascii_downcase | test("credential|key|token|secret")] | any | not)
   ' ${heraRecordingTranscriptionSource} >/dev/null
+  for source in ${lib.escapeShellArgs (map toString fastModeConfigSources)}; do
+    cmp ${expectedFastModeConfig} "$source"
+  done
   grep -F -- ${lib.escapeShellArg "export default createNixGallery(${builtins.toJSON expectedPiGalleryEndpointsByOwner});"} ${gallerySourceFor "clio"} >/dev/null
   grep -F -- ${lib.escapeShellArg "export default createNixGallery(${builtins.toJSON expectedPiGalleryEndpointsByOwner});"} ${gallerySourceFor "hera"} >/dev/null
   if grep -Fq '/usr/bin/security find-generic-password' ${clioCodexPackage}/bin/codex; then

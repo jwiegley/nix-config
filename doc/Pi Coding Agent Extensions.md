@@ -8,13 +8,13 @@ tags:
   - ai-agents
   - developer-tools
 created: 2026-07-27
-updated: 2026-08-25
+updated: 2026-08-27
 pi-version: 0.84.3
 ---
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: 23 gallery packages projected on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 21 of those packages on Darwin and 19 on Linux; [Pi Lens][pi-lens] and [Pi Mem][pi-mem] are retained but are not registered on any managed profile. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: 24 gallery packages projected on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 22 of those packages on Darwin and 20 on Linux; [Pi Lens][pi-lens] and [Pi Mem][pi-mem] are retained but are not registered on any managed profile. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope. The `agent-resources` package also carries [`pi-openai-server-compaction`][pi-openai-server-compaction] for compatibility testing, but no managed Pi profile renders or loads it, so it is not part of this configured inventory.
 
@@ -46,8 +46,9 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [`pi-caveman`][pi-caveman] | 1.0.8 | Compressed response style | `/caveman` |
 | [`pi-rtk-optimizer`][pi-rtk-optimizer] | 0.9.0 | RTK command rewriting and output compaction | `/rtk` |
 | [`pi-cymbal`][pi-cymbal] | 0.5.3 | Indexed, symbol-oriented code navigation | `cymbal_*` |
+| [`pi-gpt-fast-mode`][pi-gpt-fast-mode] | 0.1.2 | Select OpenAI service tiers and hand preference to subagents | `/fast`, `--fast` |
 | [`pi-subagents`][pi-subagents] | 0.56.0 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
-| [`@quintinshaw/pi-dynamic-workflows`][pi-dynamic-workflows] | 3.7.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
+| [`@quintinshaw/pi-dynamic-workflows`][pi-dynamic-workflows] | 3.8.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
 | [`pi-goal-x`][pi-goal-x] | 0.30.4 | Durable goals and Sisyphus continuation | `/goal`, `get_goal` |
 | [`pi-cache-optimizer`][pi-cache-optimizer] | 2.8.6 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
 
@@ -71,12 +72,12 @@ The Hera, Clio, shared-work, VPS, and Vulcan Pi profiles are rendered by `~/src/
 | Surface | Current projection |
 | --- | --- |
 | Generated ownership | Individual leaves below `~/.config/pi/agent`, plus `~/.pi-lens/config.json` and the `~/.pi` compatibility link; Pi shares `~/.config/mcp/mcp.json` with Prime Agent |
-| Extension entries | [Fleet Theme][fleet-theme], [Nix Gallery loader][nix-gallery-loader], [Pi Loop][pi-loop], [Pi MCP Adapter][pi-mcp-adapter], and [Quiet Display][pi-quiet] on every managed host; the Gallery loads the [Factory Droid SDK provider][pi-droid-sdk] everywhere; Darwin additionally loads the loopback [llama-swap provider][pi-provider-llama-swap] and bilateral authenticated [oMLX discovery adapter][pi-provider-omlx], while Linux retains those local providers without registering them automatically |
+| Extension entries | [Fleet Theme][fleet-theme], [Nix Gallery loader][nix-gallery-loader], [Pi Loop][pi-loop], [Pi MCP Adapter][pi-mcp-adapter], and [Quiet Display][pi-quiet] on every managed host; the Gallery loads [GPT Fast Mode][pi-gpt-fast-mode] and the [Factory Droid SDK provider][pi-droid-sdk] everywhere; Darwin additionally loads the loopback [llama-swap provider][pi-provider-llama-swap] and bilateral authenticated [oMLX discovery adapter][pi-provider-omlx], while Linux retains those local providers without registering them automatically |
 | Agent resources | 25 Nix-managed agent definitions |
 | Prompt resources | 63 files: 61 command prompts and the `emacs` and `spanish` prompts |
 | Skill resources | Shared catalog skills selected for Pi, plus five gallery package skill paths and one gallery prompt path advertised at runtime |
-| Generated policy | `keybindings.json`, `models.json`, the managed theme, the hidden [Lens][pi-lens] widget setting, and the global MCP registry |
-| Deliberately absent | No Pi-specific Nix settings file, hooks, marketplaces, or companion leaves |
+| Generated policy | `keybindings.json`, `models.json`, the GPT Fast Mode config, the managed theme, the hidden [Lens][pi-lens] widget setting, and the global MCP registry |
+| Deliberately absent | No Pi-specific Nix settings file, hooks, marketplaces, or whole-directory ownership |
 
 Shared skills remain in the common discovery estate rather than being copied into a private Pi skill tree. Their ownership is independent of Codex, so Pi-only hosts receive them too. Package skills supplied by [Lens][pi-lens], [BTW][pi-btw], [Subagents][pi-subagents], and [Dynamic Workflows][pi-dynamic-workflows] enter through the gallery loader.
 
@@ -91,6 +92,7 @@ The generated model files deliberately emit no default model. Model selection re
 | Linux provider surface | Gallery provider `factory` plus native `openai-codex` and `openrouter` overrides; the llama-swap and oMLX discovery adapters are packaged but not registered automatically |
 | Hermes route | `hermes/hermes-agent` at `https://hermes.vulcan.lan/v1`; opt-in, with its bearer credential resolved from the Home Manager-configured password store and GnuPG home only when a request uses the provider; stale inherited `GPG_TTY` state is discarded before lookup, isolating credential resolution from Agent Deck/tmux terminal state; Pi session-affinity headers are enabled for stable upstream routing |
 | Native overrides | Managed native-provider model IDs, context windows, and output limits come from `config/ai/models.nix` |
+| GPT Fast Mode | Session-only and disabled by default; `priority` tier with status indicator; supported keys are `openai/gpt-5.4`, `openai/gpt-5.5`, `openai/gpt-5.6`, `openai-codex/gpt-5.4`, `openai-codex/gpt-5.5`, and `openai-codex/gpt-5.6` |
 | Hera managed oMLX models | `omlx-hera/Qwen3.8-27B-oQ4e-mtp` and `omlx-hera/DeepSeek-V4-Flash-0731-MXFP4-MLX` are pinned to 262,144 context and 81,920 output tokens. Qwen remains text-only and non-reasoning; its override carries the local Qwen chat-template compatibility flags |
 | Hera DeepSeek thinking | `omlx-hera/DeepSeek-V4-Flash-0731-MXFP4-MLX` exposes only `off` and `max`; `max` uses Pi's `deepseek` format and sends `thinking.type="enabled"` plus top-level `reasoning_effort="max"`. oMLX's model-level Enable Thinking setting must also be active |
 | Voice-agent routing aliases | The managed registry defaults to `gpt sol` on `hera`; maps `nix`, `ares`, and `agent-cat` to their Hera checkouts; maps `tron` to `~/tron/main` through the configured `andoria-08` Agent Deck remote; and retains `~/src/<project>` discovery on Hera |
@@ -129,7 +131,7 @@ The generated keymap retains the ordinary keys and adds Emacs-style editing:
 
 **Version:** local · **Links:** Nix authority: `~/src/nix/packages/pi-gallery/` · deployed leaf: `~/.config/pi/agent/extensions/nix-gallery/index.ts`
 
-The [Nix Gallery loader][nix-gallery-loader] projects the complete managed package set on every host. It imports and registers extensions in deterministic order, except that Linux does not automatically import the [llama-swap provider][pi-provider-llama-swap] or [oMLX provider][pi-provider-omlx], and [Pi Lens][pi-lens] and [Pi Mem][pi-mem] are temporarily excluded on every platform. All 24 immutable package paths, including [Lens][pi-lens] and [Pi Mem][pi-mem], remain in the projection. Before registration the loader suppresses [Ponytail][ponytail]'s footer status, disables [Lens][pi-lens] runtime installers, and enforces model-only [Pi Droid SDK][pi-droid-sdk] operation by setting autonomy off and disabling the Pi tool bridge. It is infrastructure rather than a public Pi package.
+The [Nix Gallery loader][nix-gallery-loader] projects the complete managed package set on every host. It imports and registers extensions in deterministic order, except that Linux does not automatically import the [llama-swap provider][pi-provider-llama-swap] or [oMLX provider][pi-provider-omlx], and [Pi Lens][pi-lens] and [Pi Mem][pi-mem] are temporarily excluded on every platform. All 25 immutable package paths, including [Lens][pi-lens], [Pi Mem][pi-mem], and the separately loaded [Pi Loop][pi-loop], remain available. Before registration the loader suppresses [Ponytail][ponytail]'s footer status, disables [Lens][pi-lens] runtime installers, and enforces model-only [Pi Droid SDK][pi-droid-sdk] operation by setting autonomy off and disabling the Pi tool bridge. It is infrastructure rather than a public Pi package.
 
 **Basic usage.** No direct command is required. Run `/reload` after activating a new Nix generation, or start a fresh Pi process, to load the current gallery. The loader itself owns no mutable state.
 
@@ -291,6 +293,14 @@ The managed package keeps its dashboard summary local instead of making upstream
 
 ## Models and conversational control
 
+### [GPT Fast Mode][pi-gpt-fast-mode]
+
+**Version:** 0.1.2, pinned at `2ac61e0` · **Links:** [Pi Packages](https://pi.dev/packages/pi-gpt-fast-mode) · [Home](https://github.com/devwithpug/pi-gpt-fast-mode#readme) · [GitHub](https://github.com/devwithpug/pi-gpt-fast-mode)
+
+[GPT Fast Mode][pi-gpt-fast-mode] requests OpenAI's `priority`, `flex`, `default`, or `auto` service tier through Pi's `before_provider_request` hook. Nix manages only `~/.config/pi/agent/extensions/pi-gpt-fast-mode/config.json`: persistence and desired state are disabled, the initial tier is `priority`, the indicator uses footer status, and the exact six-model allowlist includes the four upstream GPT-5.4/5.5 keys plus `openai/gpt-5.6` and `openai-codex/gpt-5.6`. Unsupported models suppress `service_tier` without clearing the desired preference. `PI_GPT_FAST_MODE` hands that preference to child Pi processes, which apply it only when their own model is supported. No credential or mutable session state enters the Nix store.
+
+**Basic usage.** Run `/fast` to toggle the selected tier, `/fast priority|flex|default|auto` to select and enable one, `/fast off` to disable, or `/fast status` to inspect desired versus active state. `pi --fast` requests priority at startup. Service-tier availability, latency, and billing remain controlled by OpenAI and the account; installation and local verification do not send a paid request.
+
 ### [Goal X][pi-goal-x]
 
 **Version:** 0.30.4 · **Links:** [Pi Packages](https://pi.dev/packages/pi-goal-x) · [Home](https://github.com/tmonk/pi-goal-x#readme) · [GitHub](https://github.com/tmonk/pi-goal-x)
@@ -311,7 +321,7 @@ Seven builtin definitions—delegate, gpt-pro, oracle, researcher, reviewer, sco
 
 ### [Dynamic Workflows][pi-dynamic-workflows]
 
-**Version:** 3.7.0 · **Links:** [Pi Packages](https://pi.dev/packages/@quintinshaw/pi-dynamic-workflows) · [Home](https://github.com/QuintinShaw/pi-dynamic-workflows#readme) · [GitHub](https://github.com/QuintinShaw/pi-dynamic-workflows)
+**Version:** 3.8.0 · **Links:** [Pi Packages](https://pi.dev/packages/@quintinshaw/pi-dynamic-workflows) · [Home](https://github.com/QuintinShaw/pi-dynamic-workflows#readme) · [GitHub](https://github.com/QuintinShaw/pi-dynamic-workflows)
 
 [Pi Dynamic Workflows][pi-dynamic-workflows] builds JavaScript orchestration over [Pi Subagents][pi-subagents]. A workflow may compose `agent()`, `parallel()`, and `pipeline()` calls, run in the background, retain resumable run state, isolate work in Git worktrees, or invoke the built-in deep-research, adversarial-review, code-review, multi-perspective, and codebase-audit patterns.
 
@@ -374,7 +384,7 @@ These binaries are not additional Pi extensions. They are the immediate runtime 
 | --- | ---: | --- | --- |
 | Pi | 0.84.3 | All extensions | [Home](https://pi.dev) · [GitHub](https://github.com/earendil-works/pi) |
 | Droid CLI | managed installation | [Factory Droid SDK Provider][pi-droid-sdk] | [Factory quickstart](https://docs.factory.ai/cli/getting-started/quickstart) |
-| `agent-browser` | 0.34.0 | [Pi Agent Browser Native][pi-agent-browser-native] | [GitHub](https://github.com/vercel-labs/agent-browser) |
+| `agent-browser` | 0.35.1 | [Pi Agent Browser Native][pi-agent-browser-native] | [GitHub](https://github.com/vercel-labs/agent-browser) |
 | RTK | 0.44.0 | [Pi RTK Optimizer][pi-rtk-optimizer] | [Home](https://www.rtk-ai.app) · [GitHub](https://github.com/rtk-ai/rtk) |
 | Cymbal | 0.14.0 | [Pi Cymbal][pi-cymbal] | [Home](https://chain.sh/cymbal/) · [GitHub](https://github.com/1broseidon/cymbal) |
 | llama-swap | v251 | [llama-swap Provider][pi-provider-llama-swap] | [GitHub](https://github.com/mostlygeek/llama-swap) |
@@ -388,6 +398,7 @@ The Pi profile also installs the support toolchain expected by [Lens][pi-lens] a
 - The active profile root is `~/.config/pi/agent`; Nix owns only the generated leaves enumerated above.
 - Run `/reload` after a Nix activation when the current Pi process must adopt changed extension code.
 - On Hera and Clio, reopen `/model` after the llama-swap, `omlx-hera`, or `omlx-clio` roster changes; the picker continues to display its cached list while allowing up to 15 seconds for the combined catalog refresh. Each discovery request retains its separate 2.5-second bound.
+- GPT Fast Mode starts disabled and session-only; `/fast` changes process state and `PI_GPT_FAST_MODE` handoff only, while Nix owns the immutable defaults and six-model allowlist.
 - Run `/droid-refresh-models` when the current Pi process needs Factory's live account catalog; startup deliberately stays on the bundled roster.
 - Mutable extension state remains outside Nix ownership. Examples include [Pi Mem][pi-mem] Markdown, scratchpad, and dashboard cache; [Pi Trace][pi-trace] files; the Usage Dashboard cache; [Cache Optimizer][pi-cache-optimizer], [Caveman][pi-caveman], [Quiet][pi-quiet], and [RTK Optimizer][pi-rtk-optimizer] preferences; [Pi Loop][pi-loop] presets and logs; [Pi MCP Adapter][pi-mcp-adapter] credentials and cache; [Pi Cymbal][pi-cymbal] indexes; and [Pi Subagents][pi-subagents], [Pi Dynamic Workflows][pi-dynamic-workflows], and [Pi Goal X][pi-goal-x] run state.
 - Style extensions retain distinct purposes: [Ponytail][ponytail] minimizes implementation; [Caveman][pi-caveman] compresses prose; [Quiet][pi-quiet] compresses tool presentation; [Fleet Theme][fleet-theme] changes TUI color treatment.
@@ -402,6 +413,7 @@ profile=~/.config/pi/agent
 for path in \
   "$profile/extensions/fleet-theme/index.ts" \
   "$profile/extensions/nix-gallery/index.ts" \
+  "$profile/extensions/pi-gpt-fast-mode/config.json" \
   "$profile/extensions/pi-loop/index.ts" \
   "$profile/extensions/pi-mcp-adapter" \
   "$profile/extensions/pi-quiet" \
@@ -439,6 +451,7 @@ Within a fresh Pi session, confirm the principal control surfaces:
 /loop list
 /trace
 /cache-optimizer doctor
+/fast status
 /rtk verify
 /subagents-doctor
 /workflows
@@ -448,7 +461,7 @@ Within a fresh Pi session, confirm the principal control surfaces:
 
 [Lens][pi-lens] commands and tools and [Pi Mem][pi-mem] tools should be absent while they remain excluded from the generated Gallery.
 
-Source policy last checked against the current `~/src/nix` fleet renderer on 2026-08-19. Activation evidence is recorded separately so this inventory does not imply that an unactivated source revision is already live.
+Source policy last checked against the current `~/src/nix` fleet renderer on 2026-08-27. Activation evidence is recorded separately so this inventory does not imply that an unactivated source revision is already live.
 
 [nix-gallery-loader]: https://github.com/jwiegley/nix-config/tree/main/packages/pi-gallery
 [fleet-theme]: https://github.com/jwiegley/nix-config/blob/main/config/ai/extensions/fleet-theme/index.ts
@@ -472,6 +485,7 @@ Source policy last checked against the current `~/src/nix` fleet renderer on 202
 [pi-caveman]: https://pi.dev/packages/pi-caveman
 [pi-rtk-optimizer]: https://pi.dev/packages/pi-rtk-optimizer
 [pi-cymbal]: https://pi.dev/packages/pi-cymbal
+[pi-gpt-fast-mode]: https://pi.dev/packages/pi-gpt-fast-mode
 [pi-subagents]: https://pi.dev/packages/pi-subagents
 [pi-dynamic-workflows]: https://pi.dev/packages/@quintinshaw/pi-dynamic-workflows
 [pi-goal-x]: https://pi.dev/packages/pi-goal-x

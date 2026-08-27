@@ -44,6 +44,7 @@ in
     "pi-dynamic-workflows"
     "pi-gallery"
     "pi-goal-x"
+    "pi-gpt-fast-mode"
     "pi-hashline-edit-pro"
     "pi-lens"
     "pi-loop"

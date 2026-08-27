@@ -11,6 +11,7 @@ let
     pi-gallery = {
       outPath = "/mcp-registry-pi-gallery";
       packages.pi-loop = "/mcp-registry-pi-loop";
+      packages.pi-gpt-fast-mode = "/mcp-registry-pi-gpt-fast-mode";
     };
   };
   catalog = import "${src}/config/ai/catalog.nix" {

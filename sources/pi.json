@@ -256,6 +256,29 @@
       },
       "version": "0.30.4"
     },
+    "pi-gpt-fast-mode": {
+      "hashes": {
+        "npmDepsHash": "sha256-fam7LUAdydm3eZ0r3HbwQq6+3dytEMFDEpjnCOxG2KY="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-4H/xo+MhL30SnLhJ31heEakr95S7u8I3AtPGGJDHsaY=",
+          "owner": "devwithpug",
+          "repo": "pi-gpt-fast-mode",
+          "rev": "2ac61e03cff1a3c58175f12c20c55804a2fca7ae"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/devwithpug/pi-gpt-fast-mode"
+      },
+      "update": {
+        "branch": "main",
+        "buildPackage": "pi-gpt-fast-mode",
+        "kind": "github-commit",
+        "policy": "manual",
+        "reason": "The repository has no release tags; source, package version, and managed model policy require coupled review"
+      },
+      "version": "0.1.2"
+    },
     "pi-hashline-edit-pro": {
       "hashes": {
         "npmDepsHash": "sha256-sk7mvBP3/SwAFt3GYN1OL2SwNk1s5nC47UUsT1cxB2Y="

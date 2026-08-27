@@ -45,6 +45,7 @@ in
     "caveman"
     "rtk-optimizer"
     "cymbal-extension"
+    "fast-mode"
     "subagents"
     "dynamic-workflows"
     "goal"
@@ -131,6 +132,10 @@ in
     cymbal-extension = member "pi-cymbal" {
       publicName = "pi-cymbal";
       extension = "dist/index.ts";
+    };
+    fast-mode = member "pi-gpt-fast-mode" {
+      publicName = "pi-gpt-fast-mode";
+      extension = "index.ts";
     };
     subagents = member "pi-subagents" {
       publicName = "pi-subagents";

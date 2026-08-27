@@ -49,7 +49,7 @@ that import this repository with `flake = false` declare `obr` as a direct input
 and pass it through their Home Manager module arguments; their lock adoption
 remains consumer-owned.
 
-The managed Pi profile makes the same complete 26-member extension gallery
+The managed Pi profile makes the same complete managed extension gallery
 available on every host. Pi Lens and Pi Mem remain packaged and projected but are
 excluded from automatic registration while their startup costs are isolated.
 Darwin registers loopback `llama-swap` plus the stable `omlx-hera` and

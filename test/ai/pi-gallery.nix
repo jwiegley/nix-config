@@ -24,6 +24,7 @@ let
     name = "pi-coding-agent-extensions.md";
   };
   manifest = piPackages.pi-gallery.manifest;
+  fastModeConfig = import ../../config/ai/pi-gpt-fast-mode.nix;
   catalogSourceIds = builtins.attrNames manifest.sourceCatalog;
   declaredSourceIds =
     map (record: record.sourceName) (builtins.attrValues (manifest.members // manifest.supportSources))
@@ -393,6 +394,16 @@ runCommand "pi-gallery-check"
     ! grep -E 'sessionManager\.get(Entries|Branch)\(' ${quiet} >/dev/null \
       || fail "Pi Quiet still consumes full session history"
 
+    [ -f ${roots.fast-mode}/index.ts ]
+    ! grep -Fq 'subagents on GPT-5.4/5.5' ${roots.fast-mode}/index.ts \
+      || fail "GPT Fast Mode retains a stale model-version message"
+    [ ! -e ${roots.fast-mode}/node_modules ]
+    fast_mode_runtime="$TMPDIR/pi-gpt-fast-mode"
+    mkdir -p "$fast_mode_runtime"
+    PI_GPT_FAST_MODE_ROOT=${roots.fast-mode} \
+    PI_GPT_FAST_MODE_RUNTIME="$fast_mode_runtime" \
+    PI_GPT_FAST_MODE_CONFIG_JSON=${lib.escapeShellArg (builtins.toJSON fastModeConfig)} \
+      ${bun}/bin/bun test ${sourceForChecks}/test/ai/pi-gpt-fast-mode.check.ts
     [ -f ${roots.btw}/extensions/btw.ts ]
     [ -f ${roots.btw}/skills/btw/SKILL.md ]
     (
