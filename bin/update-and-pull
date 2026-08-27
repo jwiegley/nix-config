@@ -3,7 +3,8 @@ find -L \
     ~/src/ \
     ~/Models/ \
     ~/doc/ \
-    ~/db/ \
+    ~/Databases/ \
+    ~/work/ \
     -name .git -type d \
     \! -path '*/gists/*' \
     -print0 |

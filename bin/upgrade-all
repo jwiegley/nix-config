@@ -1,47 +1,4 @@
 #!/usr/bin/env bash
-
 set -euo pipefail
-
-script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-pids=()
-job_names=()
-
-run_background_job() {
-    local name=$1
-    shift
-    "$@" &
-    pids+=("$!")
-    job_names+=("$name")
-}
-
-run_background_job repositories update-and-pull
-run_background_job shared-work-source pushme andoria hera
-
-initial_status=0
-for index in "${!pids[@]}"; do
-    if wait "${pids[$index]}"; then
-        printf 'upgrade-all: complete %s\n' "${job_names[$index]}"
-    else
-        status=$?
-        printf 'upgrade-all: failed %s (status %d)\n' \
-            "${job_names[$index]}" "$status" >&2
-        ((initial_status != 0)) || initial_status=$status
-    fi
-done
-((initial_status == 0)) || exit "$initial_status"
-
-# A failed Hera host upgrade must stop the rollout: everything below publishes
-# or activates state derived from it. Project maintenance is diagnostic and
-# must not gate the rollout, so it runs separately at the end.
-upgrade hera --host-only
-
-(
-    cd "$NIX_CONF"
-    changes
-)
-
-pushme hera@6 clio@6 tank@1
-
-"$script_dir/update-remote"
-
-upgrade hera --projects-only || echo "upgrade-projects reported failures; inspect its build logs" >&2
+update-and-pull
+exec upgrade hera
