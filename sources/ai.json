@@ -24,14 +24,14 @@
     },
     "agnix": {
       "hashes": {
-        "cargoHash": "sha256-R5+qeUZcqHk8fAeOWeayNV98UeAidirl7by1HZkA7oc="
+        "cargoHash": "sha256-4nHyfnFQXpYVyRpKQ2fnLH/BEN0cpqMgpf3AylkEW5U="
       },
       "source": {
         "args": {
-          "hash": "sha256-t0zc6iy1lB+GcTyUhSs4kq+vjA4oB2B28dymqPd3WP8=",
+          "hash": "sha256-StCMrJPugiKlMGWBrI4SXpKo7wKK5qzUeH4Sc9m981U=",
           "owner": "avifenesh",
           "repo": "agnix",
-          "tag": "v0.50.0"
+          "tag": "v0.52.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/avifenesh/agnix"
@@ -40,7 +40,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.50.0"
+      "version": "0.52.0"
     },
     "browser-control-mcp": {
       "hashes": {
@@ -982,10 +982,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-ECaLDYtAqFCOihEg34odsWF2qleTzTHuKmQwnNJuxbQ=",
+          "narHash": "sha256-5kNSIBFFcDTFbsm18NrgYl15FqPCYl1KaSOCEXKMHIg=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "ea9a3449487fcad2eb9bfde3152c490b73b498c1",
+          "rev": "fa4b5ffa9007ef847df52351575c25b733da85f4",
           "type": "github"
         },
         "fetcher": "fetchTree",
