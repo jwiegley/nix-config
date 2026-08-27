@@ -961,10 +961,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-5kNSIBFFcDTFbsm18NrgYl15FqPCYl1KaSOCEXKMHIg=",
+          "narHash": "sha256-xxPCzswSCZ63GYBfesxRJsWuj7Mk9YcAaHDb8X1tbjk=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "fa4b5ffa9007ef847df52351575c25b733da85f4",
+          "rev": "be0eff8f6e0dd4f0edb15e80be8fab107f4768fa",
           "type": "github"
         },
         "fetcher": "fetchTree",

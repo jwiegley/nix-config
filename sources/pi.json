@@ -197,15 +197,15 @@
     },
     "pi-dynamic-workflows": {
       "hashes": {
-        "npmDepsHash": "sha256-XkxsVL79WGjB2Li8S1Wob2cSGyPs6FUp/ELmTfTi738="
+        "npmDepsHash": "sha256-GRfCTAzmRPP2mPte/jemJOC5BlnSvahNZDmKjfK4KvM="
       },
       "source": {
         "args": {
-          "hash": "sha256-5Rpz/e0QcM5vNeX0CRCxr5tU18B6cmAobtUDi1vQqzU=",
-          "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.8.0.tgz"
+          "hash": "sha256-ZHcR+QADme2gHDuBN5GlQCS0ejj/4rqwnSiOxuIqgRc=",
+          "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.9.0.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.8.0.tgz"
+        "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.9.0.tgz"
       },
       "update": {
         "artifacts": [
@@ -215,7 +215,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "@quintinshaw/pi-dynamic-workflows"
       },
-      "version": "3.8.0"
+      "version": "3.9.0"
     },
     "pi-droid-sdk": {
       "hashes": {
@@ -673,10 +673,10 @@
     "pi-quiet": {
       "source": {
         "args": {
-          "narHash": "sha256-P4gr+mwPsxHAuntdqUbigkwBG8iIP3En/QPDZj5tI3g=",
+          "narHash": "sha256-ONIhYGH2sWGlqngxPdIZGatu5JFtR6Xdw1oVtRtWvF0=",
           "owner": "zenspc",
           "repo": "pi-extensions",
-          "rev": "3a8169cef9e0b281230ce34db03824934c61a9ae",
+          "rev": "cb5c6333c30e18b45912f59d42a5c4af68e8ea2e",
           "type": "github"
         },
         "fetcher": "fetchTree",

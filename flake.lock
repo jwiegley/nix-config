@@ -84,11 +84,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1787676577,
-        "narHash": "sha256-n/qqWUl5Qyu0ycwrpCZ4wotiqHn32kOG+FwtOJ0bhts=",
+        "lastModified": 1787812432,
+        "narHash": "sha256-W1z0grAWCdcnbYFhFVGXtob/wa7nWwxGQGEjeHZuu9k=",
         "owner": "jwiegley",
         "repo": "dirscan",
-        "rev": "c7de80e65c113203317a8fc140d1714fae481a20",
+        "rev": "34182e5ed0c5083e059312a9591ef60d51b8c75c",
         "type": "github"
       },
       "original": {
@@ -382,11 +382,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1787801184,
-        "narHash": "sha256-5kNSIBFFcDTFbsm18NrgYl15FqPCYl1KaSOCEXKMHIg=",
+        "lastModified": 1787814832,
+        "narHash": "sha256-xxPCzswSCZ63GYBfesxRJsWuj7Mk9YcAaHDb8X1tbjk=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "fa4b5ffa9007ef847df52351575c25b733da85f4",
+        "rev": "be0eff8f6e0dd4f0edb15e80be8fab107f4768fa",
         "type": "github"
       },
       "original": {
@@ -660,11 +660,11 @@
     "pi-quiet": {
       "flake": false,
       "locked": {
-        "lastModified": 1787750942,
-        "narHash": "sha256-P4gr+mwPsxHAuntdqUbigkwBG8iIP3En/QPDZj5tI3g=",
+        "lastModified": 1787815500,
+        "narHash": "sha256-ONIhYGH2sWGlqngxPdIZGatu5JFtR6Xdw1oVtRtWvF0=",
         "owner": "zenspc",
         "repo": "pi-extensions",
-        "rev": "3a8169cef9e0b281230ce34db03824934c61a9ae",
+        "rev": "cb5c6333c30e18b45912f59d42a5c4af68e8ea2e",
         "type": "github"
       },
       "original": {

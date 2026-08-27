@@ -48,7 +48,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [`pi-cymbal`][pi-cymbal] | 0.5.3 | Indexed, symbol-oriented code navigation | `cymbal_*` |
 | [`pi-gpt-fast-mode`][pi-gpt-fast-mode] | 0.1.2 | Select OpenAI service tiers and hand preference to subagents | `/fast`, `--fast` |
 | [`pi-subagents`][pi-subagents] | 0.58.0 | Focused child-agent delegation and orchestration | `subagent`, `/run` |
-| [`@quintinshaw/pi-dynamic-workflows`][pi-dynamic-workflows] | 3.8.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
+| [`@quintinshaw/pi-dynamic-workflows`][pi-dynamic-workflows] | 3.9.0 | JavaScript orchestration over parallel Pi subagents | `workflow`, `/workflows` |
 | [`pi-goal-x`][pi-goal-x] | 0.30.5 | Durable goals and Sisyphus continuation | `/goal`, `get_goal` |
 | [`pi-cache-optimizer`][pi-cache-optimizer] | 2.8.6 | Improve provider prompt-cache reuse and report cache statistics | `/cache-optimizer` |
 
@@ -321,7 +321,7 @@ Seven builtin definitions—delegate, gpt-pro, oracle, researcher, reviewer, sco
 
 ### [Dynamic Workflows][pi-dynamic-workflows]
 
-**Version:** 3.8.0 · **Links:** [Pi Packages](https://pi.dev/packages/@quintinshaw/pi-dynamic-workflows) · [Home](https://github.com/QuintinShaw/pi-dynamic-workflows#readme) · [GitHub](https://github.com/QuintinShaw/pi-dynamic-workflows)
+**Version:** 3.9.0 · **Links:** [Pi Packages](https://pi.dev/packages/@quintinshaw/pi-dynamic-workflows) · [Home](https://github.com/QuintinShaw/pi-dynamic-workflows#readme) · [GitHub](https://github.com/QuintinShaw/pi-dynamic-workflows)
 
 [Pi Dynamic Workflows][pi-dynamic-workflows] builds JavaScript orchestration over [Pi Subagents][pi-subagents]. A workflow may compose `agent()`, `parallel()`, and `pipeline()` calls, run in the background, retain resumable run state, isolate work in Git worktrees, or invoke the built-in deep-research, adversarial-review, code-review, multi-perspective, and codebase-audit patterns.
 
