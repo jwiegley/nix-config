@@ -8,13 +8,13 @@ tags:
   - ai-agents
   - developer-tools
 created: 2026-07-27
-updated: 2026-08-27
+updated: 2026-08-28
 pi-version: 0.84.3
 ---
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: 24 gallery packages projected on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 22 of those packages on Darwin and 20 on Linux; [Pi Lens][pi-lens] and [Pi Mem][pi-mem] are retained but are not registered on any managed profile. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: 25 gallery packages projected on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 23 of those packages on Darwin and 21 on Linux; [Pi Lens][pi-lens] and [Pi Mem][pi-mem] are retained but are not registered on any managed profile. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope. The `agent-resources` package also carries [`pi-openai-server-compaction`][pi-openai-server-compaction] for compatibility testing, but no managed Pi profile renders or loads it, so it is not part of this configured inventory.
 
@@ -41,6 +41,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [`pi-provider-llama-swap`][pi-provider-llama-swap] | `57583beb` | Discover chat models from local llama-swap | `/model`, `llama-swap/*` |
 | [`pi-provider-omlx`][pi-provider-omlx] | `57583beb` | Discover chat models from both authenticated workstation oMLX services | `/model`, `omlx-hera/*`, `omlx-clio/*` |
 | [`pi-rewind`][pi-rewind] | 0.5.0 | Conversation and file checkpoints | `/rewind` |
+| [`pi-idle-check`][pi-idle-check] | 0.1.0 | Offer compaction before a prompt after three idle minutes | automatic |
 | [`pi-trace-extension`][pi-trace] | 0.1.15 | Local execution traces and HTML reports | `/trace` |
 | [`pi-markdown-preview`][pi-markdown-preview] | 0.15.0 | Terminal, browser, PDF, and artifact previews | `/preview`, `preview_export` |
 | [`pi-caveman`][pi-caveman] | 1.0.8 | Compressed response style | `/caveman` |
@@ -72,7 +73,7 @@ The Hera, Clio, shared-work, VPS, and Vulcan Pi profiles are rendered by `~/src/
 | Surface | Current projection |
 | --- | --- |
 | Generated ownership | Individual leaves below `~/.config/pi/agent`, plus `~/.pi-lens/config.json` and the `~/.pi` compatibility link; Pi shares `~/.config/mcp/mcp.json` with Prime Agent |
-| Extension entries | [Fleet Theme][fleet-theme], [Nix Gallery loader][nix-gallery-loader], [Pi Loop][pi-loop], [Pi MCP Adapter][pi-mcp-adapter], and [Quiet Display][pi-quiet] on every managed host; the Gallery loads [GPT Fast Mode][pi-gpt-fast-mode] and the [Factory Droid SDK provider][pi-droid-sdk] everywhere; Darwin additionally loads the loopback [llama-swap provider][pi-provider-llama-swap] and bilateral authenticated [oMLX discovery adapter][pi-provider-omlx], while Linux retains those local providers without registering them automatically |
+| Extension entries | [Fleet Theme][fleet-theme], [Nix Gallery loader][nix-gallery-loader], [Pi Loop][pi-loop], [Pi MCP Adapter][pi-mcp-adapter], and [Quiet Display][pi-quiet] on every managed host; the Gallery loads [Idle Check][pi-idle-check], [GPT Fast Mode][pi-gpt-fast-mode], and the [Factory Droid SDK provider][pi-droid-sdk] everywhere; Darwin additionally loads the loopback [llama-swap provider][pi-provider-llama-swap] and bilateral authenticated [oMLX discovery adapter][pi-provider-omlx], while Linux retains those local providers without registering them automatically |
 | Agent resources | 25 Nix-managed agent definitions |
 | Prompt resources | 63 files: 61 command prompts and the `emacs` and `spanish` prompts |
 | Skill resources | Shared catalog skills selected for Pi, plus five gallery package skill paths and one gallery prompt path advertised at runtime |
@@ -131,7 +132,7 @@ The generated keymap retains the ordinary keys and adds Emacs-style editing:
 
 **Version:** local · **Links:** Nix authority: `~/src/nix/packages/pi-gallery/` · deployed leaf: `~/.config/pi/agent/extensions/nix-gallery/index.ts`
 
-The [Nix Gallery loader][nix-gallery-loader] projects the complete managed package set on every host. It imports and registers extensions in deterministic order, except that Linux does not automatically import the [llama-swap provider][pi-provider-llama-swap] or [oMLX provider][pi-provider-omlx], and [Pi Lens][pi-lens] and [Pi Mem][pi-mem] are temporarily excluded on every platform. All 25 immutable package paths, including [Lens][pi-lens], [Pi Mem][pi-mem], and the separately loaded [Pi Loop][pi-loop], remain available. Before registration the loader suppresses [Ponytail][ponytail]'s footer status, disables [Lens][pi-lens] runtime installers, and enforces model-only [Pi Droid SDK][pi-droid-sdk] operation by setting autonomy off and disabling the Pi tool bridge. It is infrastructure rather than a public Pi package.
+The [Nix Gallery loader][nix-gallery-loader] projects the complete managed package set on every host. It imports and registers extensions in deterministic order, except that Linux does not automatically import the [llama-swap provider][pi-provider-llama-swap] or [oMLX provider][pi-provider-omlx], and [Pi Lens][pi-lens] and [Pi Mem][pi-mem] are temporarily excluded on every platform. All 26 immutable package paths, including [Lens][pi-lens], [Pi Mem][pi-mem], and the separately loaded [Pi Loop][pi-loop], remain available. Before registration the loader suppresses [Ponytail][ponytail]'s footer status, disables [Lens][pi-lens] runtime installers, and enforces model-only [Pi Droid SDK][pi-droid-sdk] operation by setting autonomy off and disabling the Pi tool bridge. It is infrastructure rather than a public Pi package.
 
 **Basic usage.** No direct command is required. Run `/reload` after activating a new Nix generation, or start a fresh Pi process, to load the current gallery. The loader itself owns no mutable state.
 
@@ -192,6 +193,16 @@ The [Nix Gallery loader][nix-gallery-loader] projects the complete managed packa
 [Pi Rewind][pi-rewind] records per-tool checkpoints so conversation state, file changes, or both may be returned to an earlier point. Restoration is bounded to the recorded session history and retains a redo stack, making exploratory work recoverable without a broad Git reset.
 
 **Basic usage.** Run `/rewind` and choose the checkpoint and restoration scope. In interactive sessions, `Esc Esc` opens the quick files-only rewind.
+
+### [Idle Check][pi-idle-check]
+
+**Version:** 0.1.0, pinned at `abbdbef` · **Links:** [Home](https://github.com/jwiegley/pi-idle-check#readme) · [GitHub](https://github.com/jwiegley/pi-idle-check)
+
+[Idle Check][pi-idle-check] intercepts only interactive TUI input after a session with prior assistant activity has been continuously idle for strictly more than 180,000 milliseconds. Idle begins at `agent_settled`; active model, tool, retry, compaction, steering, follow-up, RPC, print, JSON, and extension-injected input never opens its selector. Pre-threshold terminal activity restarts the interval, while activity after the threshold latches the decision so returning and typing does not erase it. Resume seeding uses at most 64 parent-entry point reads rather than loading session history.
+
+The selector offers **Compact, then send**, **Send without compacting**, and **Cancel**. Compaction withholds the exact text and images until Pi's manual compaction succeeds, then replays them once with normal skill and prompt-template expansion. Cancellation and UI or compaction failure send nothing and restore text without overwriting a newer draft. The extension owns no command, mutable configuration, session record, or direct network client, and makes no provider-cost claim.
+
+**Basic usage.** No command is required. After activation, start a fresh Pi process or run `/reload`; the next qualifying interactive prompt opens the selector automatically.
 
 ### [Pi Mem][pi-mem]
 
@@ -461,7 +472,7 @@ Within a fresh Pi session, confirm the principal control surfaces:
 
 [Lens][pi-lens] commands and tools and [Pi Mem][pi-mem] tools should be absent while they remain excluded from the generated Gallery.
 
-Source policy last checked against the current `~/src/nix` fleet renderer on 2026-08-27. Activation evidence is recorded separately so this inventory does not imply that an unactivated source revision is already live.
+Source policy last checked against the current `~/src/nix` fleet renderer on 2026-08-28. Activation evidence is recorded separately so this inventory does not imply that an unactivated source revision is already live.
 
 [nix-gallery-loader]: https://github.com/jwiegley/nix-config/tree/main/packages/pi-gallery
 [fleet-theme]: https://github.com/jwiegley/nix-config/blob/main/config/ai/extensions/fleet-theme/index.ts
@@ -480,6 +491,7 @@ Source policy last checked against the current `~/src/nix` fleet renderer on 202
 [pi-provider-llama-swap]: https://github.com/jwiegley/nix-config/blob/main/packages/pi-gallery/providers/pi-provider-llama-swap.ts
 [pi-provider-omlx]: https://github.com/jwiegley/nix-config/blob/main/packages/pi-gallery/providers/pi-provider-omlx.ts
 [pi-rewind]: https://pi.dev/packages/pi-rewind
+[pi-idle-check]: https://github.com/jwiegley/pi-idle-check
 [pi-trace]: https://pi.dev/packages/pi-trace-extension
 [pi-markdown-preview]: https://pi.dev/packages/pi-markdown-preview
 [pi-caveman]: https://pi.dev/packages/pi-caveman

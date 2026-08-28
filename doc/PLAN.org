@@ -922,15 +922,17 @@ Declarative git-ai enablement, packages, Trace2, and session variables are disab
 ]
 #+end_src
 
-* TODO [#C] Repair Pi gallery documentation inventory gate
+* DONE [#C] Repair Pi gallery documentation inventory gate
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-28aw
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-25 Tue 12:12]
-:MODIFIED: [2026-08-25 Tue 12:12]
+:MODIFIED: [2026-08-28 Fri 00:07]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-28 Fri 00:07]
+:CLOSE_REASON: Verified repaired on clean 4ea2573f and with pi-idle-check: reference-link canonicalization and full pi-gallery inventory/count gate pass.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -3918,14 +3920,14 @@ Exact resume step:
 :LABELS:   []
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-27 Thu 23:33]
-:MODIFIED: [2026-08-27 Thu 23:33]
+:MODIFIED: [2026-08-27 Thu 23:41]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Pin jwiegley/pi-idle-check commit aa308353d0e7105614f2347586526972086090ca, package and register it through the managed Pi gallery, update inventory tests, publish the signed Nix change, and activate it on Hera.
+Pin jwiegley/pi-idle-check commit abbdbef31b79af403b064bb389ab0218a6c4dc50, package and register it through the managed Pi gallery, update inventory tests, publish the signed Nix change, and activate it on Hera.
 
 * DONE [#B] Pin inbox promotion source identity across publication
 :PROPERTIES:

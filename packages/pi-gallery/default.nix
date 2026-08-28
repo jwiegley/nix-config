@@ -37,6 +37,7 @@ let
         pi-dynamic-workflows
         pi-goal-x
         pi-gpt-fast-mode
+        pi-idle-check
         pi-markdown-preview
         pi-rtk-optimizer
         pi-hashline-edit-pro
@@ -479,6 +480,40 @@ let
       };
     }}
   '';
+  idleCheckUpstream = fetchFromGitHub members.idle-check.source.args;
+  idleCheckSource = runCommand "pi-idle-check-source" { nativeBuildInputs = [ jq ]; } ''
+    mkdir -p "$out"
+    cp -R ${idleCheckUpstream}/. "$out"
+    chmod -R u+w "$out"
+    ${jq}/bin/jq -e '
+      .lockfileVersion == 3
+      and ([
+        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core"].version,
+        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-ai"].version,
+        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-client"].version,
+        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-protocol"].version,
+        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-telemetry"].version,
+        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui"].version
+      ] | all(. == "0.84.3"))
+    ' "$out/package-lock.json" >/dev/null
+    ${normalizeMissingPiIntegrities {
+      lockFile = "$out/package-lock.json";
+      integrities = {
+        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core" =
+          "sha512-VURr+xBRl3RxYcw3kT9Pn3yfi6LbRoCJgHF7h1mAblMjtLNV/MfG/RyF0uJizBAM886AEakSiw3j9c/aSngppg==";
+        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-ai" =
+          "sha512-M0YUV8vNO3y2WwWSyY8ijKJV5W4gkSUixuvk+Z00ZBjsyMfsdXfITsHEwP1UIf09YRWXT6oGn0GlCamt+P32XQ==";
+        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-client" =
+          "sha512-zfErYane+390W0xpBJ/FWCp6aktPpkpcIcXUeZiAziWLoxE80ZNQALRyOSa/gGS5V+1OkNnMYxRxbzN0zUvnOA==";
+        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-protocol" =
+          "sha512-9a4g6WhLOvRqvsIOFaWxg/2gdrbY4Thclwj5ipLUPAWChfsDJ/8XdPc2sRhSOkD6EsxpEFJz3xppcfwI6EcZDg==";
+        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-telemetry" =
+          "sha512-sgEkWoKrvSGaKn+YfLLFZmn+/A7B/w62eLwTD57nI+C9to8ITlFFVbgC2OtwvPnT3NFGHdCd53qhBEMIlptD1g==";
+        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui" =
+          "sha512-fS6OEQKEEALnKa6Uw8LcgZZ+9CWck7f3MQSCETQp6leUgIFwMEDtKmOUnL9nsYm+RIPmy7OmplVxYRbV6hiaFg==";
+      };
+    }}
+  '';
   subagentsSource = mkMemberReleaseSource members.subagents { };
   droidSdkUpstream = fetchFromGitHub members.droid.source.args;
   droidRuntime = inputs.llm-agents.packages.${stdenv.hostPlatform.system}.droid;
@@ -593,6 +628,53 @@ let
       root="$out/share/pi-packages/pi-gpt-fast-mode"
       mkdir -p "$root"
       cp index.ts package.json README.md LICENSE "$root"/
+      cp -R src "$root"/
+      runHook postInstall
+    '';
+  };
+  pi-idle-check = buildNpmPackage {
+    pname = members.idle-check.attrName;
+    version = members.idle-check.version;
+    src = idleCheckSource;
+    npmDepsHash = members.idle-check.hashes.npmDepsHash;
+    nodejs = buildPackages.nodejs_24;
+    nativeBuildInputs = [ jq ];
+    npmInstallFlags = [ "--ignore-scripts" ];
+    dontNpmBuild = true;
+    makeCacheWritable = true;
+    doCheck = true;
+    checkPhase = ''
+      runHook preCheck
+      npm run check
+      runHook postCheck
+    '';
+    installPhase = ''
+      runHook preInstall
+      ${jq}/bin/jq -e --arg version ${lib.escapeShellArg members.idle-check.version} '
+        .name == "pi-idle-check"
+        and .version == $version
+        and .private == true
+        and .license == "UNLICENSED"
+        and .type == "module"
+        and .pi.extensions == ["./index.ts"]
+        and .peerDependencies == {
+          "@earendil-works/pi-coding-agent": ">=0.84.3 <0.85.0"
+        }
+        and (.dependencies == null)
+        and ([
+          .scripts
+          | keys[]
+          | select(
+              . == "preinstall"
+              or . == "install"
+              or . == "postinstall"
+              or . == "prepare"
+            )
+        ] | length == 0)
+      ' package.json >/dev/null
+      root="$out/share/pi-packages/pi-idle-check"
+      mkdir -p "$root"
+      cp index.ts package.json README.md "$root"/
       cp -R src "$root"/
       runHook postInstall
     '';

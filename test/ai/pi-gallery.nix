@@ -404,6 +404,13 @@ runCommand "pi-gallery-check"
     PI_GPT_FAST_MODE_RUNTIME="$fast_mode_runtime" \
     PI_GPT_FAST_MODE_CONFIG_JSON=${lib.escapeShellArg (builtins.toJSON fastModeConfig)} \
       ${bun}/bin/bun test ${sourceForChecks}/test/ai/pi-gpt-fast-mode.check.ts
+    [ -f ${roots.idle-check}/index.ts ]
+    [ -f ${roots.idle-check}/src/idle.ts ]
+    [ -f ${roots.idle-check}/README.md ]
+    [ ! -e ${roots.idle-check}/node_modules ]
+    grep -F 'IDLE_THRESHOLD_MS = 180_000' ${roots.idle-check}/src/idle.ts >/dev/null
+    grep -F 'SESSION_LOOKBACK_LIMIT = 64' ${roots.idle-check}/src/idle.ts >/dev/null
+    ! grep -R -E 'sessionManager\.get(Entries|Branch)\(' ${roots.idle-check} >/dev/null
     [ -f ${roots.btw}/extensions/btw.ts ]
     [ -f ${roots.btw}/skills/btw/SKILL.md ]
     (

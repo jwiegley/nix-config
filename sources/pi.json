@@ -303,6 +303,29 @@
       },
       "version": "0.17.5"
     },
+    "pi-idle-check": {
+      "hashes": {
+        "npmDepsHash": "sha256-Ymz1UqWMB+19a4NbXKxeV39muRoNzL9HoI6/YP++B2Y="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-zg+kOTOlZ11/vBCLqSnCWKEKxfvLz1Ww7lW80Lvcxuc=",
+          "owner": "jwiegley",
+          "repo": "pi-idle-check",
+          "rev": "abbdbef31b79af403b064bb389ab0218a6c4dc50"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/pi-idle-check"
+      },
+      "update": {
+        "branch": "main",
+        "buildPackage": "pi-idle-check",
+        "kind": "github-commit",
+        "policy": "manual",
+        "reason": "Standalone source, idle semantics, and managed Gallery policy require coupled review"
+      },
+      "version": "0.1.0"
+    },
     "pi-lens": {
       "hashes": {
         "npmDepsHash": "sha256-kl+jPxYld5BBFlaITA/+MFjlrt6K8jAXJjFnB1N7/4o="

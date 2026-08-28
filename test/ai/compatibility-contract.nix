@@ -46,6 +46,7 @@ in
     "pi-goal-x"
     "pi-gpt-fast-mode"
     "pi-hashline-edit-pro"
+    "pi-idle-check"
     "pi-lens"
     "pi-loop"
     "pi-markdown-preview"

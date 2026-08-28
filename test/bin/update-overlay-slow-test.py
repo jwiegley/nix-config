@@ -4353,6 +4353,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             "pi-droid-sdk": "pi-droid-sdk",
             "pi-goal-x": "pi-goal-x",
             "pi-gpt-fast-mode": "pi-gpt-fast-mode",
+            "pi-idle-check": "pi-idle-check",
             "pi-loop": "pi-loop",
             "pi-mcp-adapter": "agent-resources",
             "pi-multi-pass": "pi-multi-pass",
@@ -4378,6 +4379,10 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         self.assertEqual(fast_mode_update["kind"], "github-commit")
         self.assertEqual(fast_mode_update.get("policy"), "manual")
         self.assertIn("no release tags", fast_mode_update["reason"].lower())
+        idle_check_update = catalog["pi-idle-check"]["update"]
+        self.assertEqual(idle_check_update["kind"], "github-commit")
+        self.assertEqual(idle_check_update.get("policy"), "manual")
+        self.assertIn("gallery", idle_check_update["reason"].lower())
         loaded = load_source_catalog(REPO)
         for name, package in expected_builds.items():
             with self.subTest(name=name):
