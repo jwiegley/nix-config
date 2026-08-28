@@ -625,15 +625,17 @@ Compound PyPI and source-only Python updates can currently rewrite hashes and pa
 ]
 #+end_src
 
-* DOING [#B] Eliminate updater holdbacks and remove Plasma Fractal
+* DONE [#B] Eliminate updater holdbacks and remove Plasma Fractal
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-1ipp
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-26 Wed 22:36]
-:MODIFIED: [2026-08-26 Wed 22:36]
+:MODIFIED: [2026-08-27 Thu 23:24]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-27 Thu 23:24]
+:CLOSE_REASON: Completed. Plasma Fractal/package/patch/source/export/contracts were deleted while Wiki 1.3.1 security smoke remained. DDGS 9.16.0, MCP Adapter 2.29.0, Goal X 0.30.5, Subagents 0.58.0, and Workflows 3.9.0 passed repaired fail-closed gates; canonical targeted inventory had zero holds. Signed root 4ea2573f and paired consumers 591207db/5434ad6d were published/read back and accepted on seven active hosts; c27 moving-target pins were signed-reverted by owner direction.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1141,15 +1143,17 @@ After mlx-audio 0.5.0 built successfully, vllm-mlx 0.4.1 rejected the selected m
 ]
 #+end_src
 
-* DOING [#C] Integrate pi-gpt-fast-mode with GPT-5.6 support
+* DONE [#C] Integrate pi-gpt-fast-mode with GPT-5.6 support
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-38tq
 :LABELS:   []
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-26 Wed 18:18]
-:MODIFIED: [2026-08-26 Wed 20:53]
+:MODIFIED: [2026-08-27 Thu 23:24]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-27 Thu 23:24]
+:CLOSE_REASON: Completed. Fast Mode 0.1.2 is Nix/Gallery-owned with session-only defaults and the exact 12-key allowlist (required unsuffixed plus Luna/Terra/Sol GPT-5.6 variants). Offline injection/suppression/parent-child tests, all-system package/Gallery checks, full gates, signed root 4ea2573f, Andoria consumer 591207db, NixOS consumer 5434ad6d, Gitea readback, and runtime acceptance passed on Hera, Clio, Vulcan, Andoria-08, T2, Delphi, and GPU; VPS/git-ai excluded and no paid request made.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -3906,6 +3910,22 @@ Exact resume step:
   }
 ]
 #+end_src
+
+* DOING [#B] Integrate pi-idle-check into managed Pi gallery
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-alue
+:LABELS:   []
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-27 Thu 23:33]
+:MODIFIED: [2026-08-27 Thu 23:33]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pin jwiegley/pi-idle-check commit aa308353d0e7105614f2347586526972086090ca, package and register it through the managed Pi gallery, update inventory tests, publish the signed Nix change, and activate it on Hera.
 
 * DONE [#B] Pin inbox promotion source identity across publication
 :PROPERTIES:
