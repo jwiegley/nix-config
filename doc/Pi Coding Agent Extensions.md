@@ -388,7 +388,7 @@ These binaries are not additional Pi extensions. They are the immediate runtime 
 | RTK | 0.44.0 | [Pi RTK Optimizer][pi-rtk-optimizer] | [Home](https://www.rtk-ai.app) · [GitHub](https://github.com/rtk-ai/rtk) |
 | Cymbal | 0.14.0 | [Pi Cymbal][pi-cymbal] | [Home](https://chain.sh/cymbal/) · [GitHub](https://github.com/1broseidon/cymbal) |
 | llama-swap | v251 | [llama-swap Provider][pi-provider-llama-swap] | [GitHub](https://github.com/mostlygeek/llama-swap) |
-| oMLX | 0.6.3 | [oMLX Provider][pi-provider-omlx] and managed Sol route | [GitHub](https://github.com/jundot/omlx) |
+| oMLX | 0.6.2 | [oMLX Provider][pi-provider-omlx] and managed Sol route | [GitHub](https://github.com/jundot/omlx) |
 | Pandoc | 3.7.0.2 | [Markdown Preview][pi-markdown-preview] | [Home](https://pandoc.org) · [GitHub](https://github.com/jgm/pandoc) |
 
 The Pi profile also installs the support toolchain expected by [Lens][pi-lens] and the orchestration extensions: `actionlint`, ast-grep, Bash Language Server, Biome, `gopls`, `nil`, Node.js 22, Pyright, Ruff, Rust Analyzer, ShellCheck, shfmt, Taplo, Terraform Language Server, tmux, typos, TypeScript Language Server, and YAML Language Server. Agent Browser, Cymbal, RTK, llama-swap, and oMLX appear separately above.

@@ -4322,7 +4322,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         self.assertEqual(ddgs["update"].get("buildPackage"), "omlx")
         self.assertEqual(ddgs["update"].get("buildMode"), "pkg")
         omlx = ai_catalog["omlx"]
-        self.assertEqual(omlx["version"], "0.6.3")
+        self.assertEqual(omlx["version"], "0.6.2")
         self.assertTrue(omlx["update"].get("stableOnly"))
         pal = ai_catalog["pal-mcp-server"]
         self.assertEqual(pal["update"].get("buildPackage"), "pal-mcp-server")
