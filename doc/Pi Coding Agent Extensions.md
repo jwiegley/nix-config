@@ -196,9 +196,9 @@ The [Nix Gallery loader][nix-gallery-loader] projects the complete managed packa
 
 ### [Idle Check][pi-idle-check]
 
-**Version:** 0.1.0, pinned at `abbdbef` · **Links:** [Home](https://github.com/jwiegley/pi-idle-check#readme) · [GitHub](https://github.com/jwiegley/pi-idle-check)
+**Version:** 0.1.0, pinned at `b24d65b` · **Links:** [Home](https://github.com/jwiegley/pi-idle-check#readme) · [GitHub](https://github.com/jwiegley/pi-idle-check)
 
-[Idle Check][pi-idle-check] intercepts only interactive TUI input after a session with prior assistant activity has been continuously idle for strictly more than 180,000 milliseconds. Idle begins at `agent_settled`; active model, tool, retry, compaction, steering, follow-up, RPC, print, JSON, and extension-injected input never opens its selector. Pre-threshold terminal activity restarts the interval, while activity after the threshold latches the decision so returning and typing does not erase it. Resume seeding uses at most 64 parent-entry point reads rather than loading session history.
+[Idle Check][pi-idle-check] intercepts only interactive TUI input after a session with prior assistant activity has been continuously idle for strictly more than 180,000 milliseconds. Idle begins at `agent_settled`; active model, tool, retry, compaction, steering, follow-up, RPC, print, JSON, and extension-injected input never opens its selector. Pre-threshold terminal activity restarts the interval, while activity after the threshold latches the decision so returning and typing does not erase it. Resume seeding uses at most 64 parent-entry point reads rather than loading session history; if that bounded tail contains no completed assistant response, it fails closed and does not prompt.
 
 The selector offers **Compact, then send**, **Send without compacting**, and **Cancel**. Compaction withholds the exact text and images until Pi's manual compaction succeeds, then replays them once with normal skill and prompt-template expansion. Cancellation and UI or compaction failure send nothing and restore text without overwriting a newer draft. The extension owns no command, mutable configuration, session record, or direct network client, and makes no provider-cost claim.
 

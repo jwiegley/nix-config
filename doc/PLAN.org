@@ -313,6 +313,38 @@ Pin an immutable reviewed upstream revision and package it through the existing 
 ]
 #+end_src
 
+* DOING [#B] Repin pi-idle-check after completion audit fixes
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-0qat
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-28 Fri 01:30]
+:MODIFIED: [2026-08-28 Fri 01:30]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pin b24d65bffc18d3d48718fbfbdf32982cb6d4cf5c, whose bounded resume scan fails closed without an assistant and whose integration suite exercises real template, skill, tool, retry, reload, and resume behavior; rebuild, publish, and reactivate Hera.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-0qat",
+    "depends_on_id": "nix-alue",
+    "type": "discovered-from",
+    "created_at": "2026-08-28T08:30:29.978331Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Reject case-insensitive profile-root aliases during migration
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
