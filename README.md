@@ -174,11 +174,11 @@ Verification is intentionally layered:
 | Publication | The Gitea authority contains the signed revision | Consumer adoption |
 | Runtime acceptance | The affected executable or service works on the active generation | Health on another host |
 
-The ordinary pre-commit gate has a three-minute outer envelope while its fast
-Python suite keeps a separate two-minute deadline. Broader portable,
-cross-consumer, and native build assurance belongs at issue
-closeout or on the scheduled cadence. No single local check constitutes
-whole-fleet runtime proof.
+The ordinary pre-commit gate has a two-minute outer envelope and runs formatting
+plus static analysis only. Behavioral Python tests run in CI and explicit
+`make test`/`make expensive` assurance. Broader portable, cross-consumer, and
+native build assurance belongs at issue closeout or on the scheduled cadence.
+No single local check constitutes whole-fleet runtime proof.
 
 ## Documentation
 

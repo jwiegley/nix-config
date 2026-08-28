@@ -90,7 +90,7 @@ PRE_COMMIT_CORE_SUITES=(
     shell-lint
     shell-format
     python-lint
-    python-test
+    # Behavioral Python tests run in CI and explicit test/expensive tiers, not hooks.
 )
 
 EXPENSIVE_SUITES=(
@@ -722,7 +722,7 @@ if [[ -n $quality_tier ]]; then
     }
     case $quality_tier in
     pre-commit)
-        budget=180
+        budget=120
         python_tier=fast
         tier_suites=("${PRE_COMMIT_CORE_SUITES[@]}")
         ;;

@@ -7745,6 +7745,24 @@ The obr Nix package currently uses the whole repository as src, so PLAN/docs-onl
 ]
 #+end_src
 
+* DONE [#C] Move Python tests out of pre-commit
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-k1f0
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-28 Fri 11:29]
+:MODIFIED: [2026-08-28 Fri 11:35]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-28 Fri 11:35]
+:CLOSE_REASON: Removed behavioral Python tests from pre-commit while retaining them in CI and explicit test tiers; reduced hook envelope to 120s. Focused quality tests pass, static-only hook passes in 19.2s, and all 18 fast Python groups pass separately in 97s.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pre-commit currently runs 18 Python test programs after repo-wide static checks, taking about 142 seconds and sometimes crossing the 165-second work deadline under load. Keep formatting and static analysis in pre-commit; retain Python tests in CI and make test/expensive assurance.
+
 * DONE [#B] Strip ACLs and force 0600 on staged YubiKey keys
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

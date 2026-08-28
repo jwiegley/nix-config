@@ -16,7 +16,7 @@ consumer's authoritative checkout.
 |---|---|---|
 | Update all flake inputs and automatic catalog targets | `make update` | Pulls, validates, signs, switches the current host, and publishes only after validation and activation succeed |
 | Inspect every managed source and its executor | `bin/update-overlay --inventory --json` | Read-only catalog validation and machine-readable command routing |
-| Run the ordinary commit gate | `lefthook run pre-commit --all-files` | Essential formatting, lint, and fast tests; three-minute outer envelope with a two-minute fast-test deadline |
+| Run the ordinary commit gate | `lefthook run pre-commit --all-files` | Repository-wide formatting and static analysis; two-minute outer envelope; behavioral tests run in CI |
 | Run low-frequency expensive assurance | `make expensive` | Consumer assurance, every current-system behavioral check, evaluation-only gates, and a Darwin build; run the pre-commit gate separately for formatting and static lint |
 | Build the complete current Darwin system | `./build system` | Builds without activating; Hera and Clio only |
 | Inspect the Pi package version | `nix eval --raw .#packages.$(nix eval --impure --raw --expr builtins.currentSystem).pi.version` | Reports the package selected by this checkout, not necessarily the active binary |
@@ -210,9 +210,9 @@ make test
 ./build system
 ```
 
-The pre-commit tier has a 180-second outer envelope. Its fast Python tests retain
-their separate 120-second aggregate deadline, leaving scheduling headroom for the
-essential static suites. `nix fmt` or `make format` rewrites tracked Nix and shell
+The pre-commit tier has a 120-second outer envelope and runs formatting plus
+static analysis only. Python tests run in CI and explicit `make test`/`make
+expensive` assurance. `nix fmt` or `make format` rewrites tracked Nix and shell
 sources; retain `-- --check` when inspection alone is intended. `make test` is
 broader but is not a whole-fleet build.
 
