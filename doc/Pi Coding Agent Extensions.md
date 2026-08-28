@@ -42,7 +42,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [`pi-provider-omlx`][pi-provider-omlx] | `57583beb` | Discover chat models from both authenticated workstation oMLX services | `/model`, `omlx-hera/*`, `omlx-clio/*` |
 | [`pi-rewind`][pi-rewind] | 0.5.0 | Conversation and file checkpoints | `/rewind` |
 | [`pi-trace-extension`][pi-trace] | 0.1.15 | Local execution traces and HTML reports | `/trace` |
-| [`pi-markdown-preview`][pi-markdown-preview] | 0.14.1 | Terminal, browser, PDF, and artifact previews | `/preview`, `preview_export` |
+| [`pi-markdown-preview`][pi-markdown-preview] | 0.15.0 | Terminal, browser, PDF, and artifact previews | `/preview`, `preview_export` |
 | [`pi-caveman`][pi-caveman] | 1.0.8 | Compressed response style | `/caveman` |
 | [`pi-rtk-optimizer`][pi-rtk-optimizer] | 0.9.0 | RTK command rewriting and output compaction | `/rtk` |
 | [`pi-cymbal`][pi-cymbal] | 0.5.3 | Indexed, symbol-oriented code navigation | `cymbal_*` |
@@ -285,7 +285,7 @@ The managed package keeps its dashboard summary local instead of making upstream
 
 ### [Markdown Preview][pi-markdown-preview]
 
-**Version:** 0.14.1 · **Links:** [Pi Packages](https://pi.dev/packages/pi-markdown-preview) · [Home](https://github.com/omaclaren/pi-markdown-preview#readme) · [GitHub](https://github.com/omaclaren/pi-markdown-preview)
+**Version:** 0.15.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-markdown-preview) · [Home](https://github.com/omaclaren/pi-markdown-preview#readme) · [GitHub](https://github.com/omaclaren/pi-markdown-preview)
 
 [Pi Markdown Preview][pi-markdown-preview] renders assistant responses and local Markdown, LaTeX, source, and diff files in the terminal or browser, and exports PDF, HTML, or PNG artifacts. It supports syntax highlighting, mathematical notation, Mermaid diagrams, local images, response selection, and Pi-theme-aware styling.
 
