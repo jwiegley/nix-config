@@ -2,24 +2,16 @@ diff --git a/cmd/agent-deck/remote_cmd.go b/cmd/agent-deck/remote_cmd.go
 index a98fbe1..8cf6f8c 100644
 --- a/cmd/agent-deck/remote_cmd.go
 +++ b/cmd/agent-deck/remote_cmd.go
-@@ -52,7 +52,7 @@ func printRemoteUsage() {
- 	fmt.Println("  add <name> <user@host>    Add a remote agent-deck instance")
- 	fmt.Println("  remove <name>             Remove a remote")
+@@ -56,3 +56,3 @@ func printRemoteUsage() {
  	fmt.Println("  list                      List configured remotes")
 -	fmt.Println("  sessions [name]           Fetch sessions from remote(s)")
 +	fmt.Println("  sessions [name] [--json]  Fetch sessions from remote(s)")
- 	fmt.Println("  attach <name> <session>   Attach to a remote session")
- 	fmt.Println("  rename <name> <session> <new-title>  Rename a remote session")
- 	fmt.Println("  update [name]             Install/update agent-deck on remote(s)")
-@@ -61,7 +61,7 @@ func printRemoteUsage() {
- 	fmt.Println("  agent-deck remote add dev user@dev-box")
- 	fmt.Println("  agent-deck remote add prod user@prod-server --agent-deck-path /usr/local/bin/agent-deck")
+ 	fmt.Println("  drain <name|user@host>    Pull completion/transition records from a remote")
+@@ -67,3 +67,3 @@ func printRemoteUsage() {
  	fmt.Println("  agent-deck remote list")
 -	fmt.Println("  agent-deck remote sessions dev")
 +	fmt.Println("  agent-deck remote sessions dev --json")
- 	fmt.Println("  agent-deck remote attach dev my-session")
- 	fmt.Println("  agent-deck remote rename dev my-session new-name")
- 	fmt.Println("  agent-deck remote update          # Update all remotes")
+ 	fmt.Println("  agent-deck remote drain dev       # pull finished/stalled reports from dev")
 @@ -253,10 +253,70 @@ func handleRemoteList(args []string) {
  	fmt.Printf("\nTotal: %d remotes\n", len(config.Remotes))
  }

@@ -256,6 +256,15 @@ let
       !(inputs.npm-cache-nixpkgs ? legacyPackages)
       && (inputs.npm-cache-nixpkgs.rev or null) == "a831408e6378bc02ebf8cc09b52c96ca86f6bab4"
     ) "portable npm-cache nixpkgs input lost its independent exact pin")
+    (lib.assertMsg (
+      sources.agent-deck.source.fetcher == "fetchFromGitHub"
+      && sources.agent-deck.source.args.owner == "jwiegley"
+      && sources.agent-deck.source.args.repo == "agent-deck"
+      && sources.agent-deck.source.args ? rev
+      && sources.agent-deck.source.url == "https://github.com/jwiegley/agent-deck"
+      && sources.agent-deck.update.kind == "github-commit"
+      && sources.agent-deck.update.branch == "main"
+    ) "Agent Deck source authority moved away from the owner fork")
     (lib.assertMsg (hasAll (sortedNames actual) outputNames) "portable AI top-level output contract lost a required output")
     (lib.assertMsg (builtins.isFunction actual.overlays.default) "portable default overlay is not callable")
     (lib.assertMsg (builtins.isFunction actual.overlays.tools) "portable tools overlay is not callable")

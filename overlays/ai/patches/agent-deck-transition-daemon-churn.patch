@@ -875,7 +875,7 @@ index 65255680..119d287b 100644
  	}
  }
  
-@@ -145,11 +153,20 @@ func (d *TransitionDaemon) Run(ctx context.Context) error {
+@@ -160,16 +167,25 @@ func (d *TransitionDaemon) Run(ctx context.Context) error {
  // SyncOnce performs one full monitoring pass and returns the recommended delay
  // until the next pass.
  func (d *TransitionDaemon) SyncOnce(_ context.Context) time.Duration {
@@ -888,6 +888,11 @@ index 65255680..119d287b 100644
  	if len(profiles) == 0 {
  		return notifyPollSlow
  	}
+ 
+ 	// Stamp liveness BEFORE the work: the question a drain asks is "is a writer
+ 	// alive", and a daemon wedged inside a probe should still look alive for one
+ 	// staleness window rather than flipping to "absent" the moment it stalls.
+ 	WriteNotifyHeartbeat()
  
 +	// Match the TUI, web, and CLI status paths: warm each shared tmux cache
 +	// once for the whole pass, not once per profile or instance.
@@ -992,7 +997,7 @@ index 65255680..119d287b 100644
  			status := normalizeStatusString(string(inst.GetStatusThreadSafe()))
  			statuses[inst.ID] = status
  			if db != nil && status != previousStatus {
-@@ -514,6 +594,32 @@ func (d *TransitionDaemon) syncProfile(profile string) time.Duration {
+@@ -545,6 +625,32 @@ func (d *TransitionDaemon) syncProfile(profile string) time.Duration {
  	return choosePollInterval(statuses)
  }
  
@@ -1022,9 +1027,9 @@ index 65255680..119d287b 100644
 +	d.pollState[profile][inst.ID] = inst.pollingStateForIdentity(identity)
 +}
 +
- // emitDoneSignals turns a worker-printed completion sentinel (persisted into
- // the hook status file by the Stop-hook handler, issue #1186) into a distinct
- // "finished" event delivered to the parent. Per-task idempotency is enforced
+ // recordTerminalTurns records EVERY completed turn into the drainable ledgers,
+ // whether or not a completion sentinel was printed and whether or not the daemon
+ // happened to observe the session mid-`running`.
 diff --git a/internal/statedb/statedb.go b/internal/statedb/statedb.go
 index bf583149..9378261b 100644
 --- a/internal/statedb/statedb.go

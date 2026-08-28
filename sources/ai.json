@@ -7,18 +7,18 @@
       },
       "source": {
         "args": {
-          "hash": "sha256-LdpTOnru4r46BYwHdKknlzqnOMutH6zseQZxd/BFAOY=",
-          "owner": "asheshgoplani",
+          "hash": "sha256-UHkycwg4N/n0d1tHkQ0aZRACZ0XBPqdai0kq7Nlwz8I=",
+          "owner": "jwiegley",
           "repo": "agent-deck",
-          "tag": "v1.15.0"
+          "rev": "b255979c59957501c076e6827b397c24f1d89eec"
         },
         "fetcher": "fetchFromGitHub",
-        "url": "https://github.com/asheshgoplani/agent-deck"
+        "url": "https://github.com/jwiegley/agent-deck"
       },
       "update": {
+        "branch": "main",
         "buildMode": "pkg",
-        "kind": "github-release",
-        "tagPrefix": "v"
+        "kind": "github-commit"
       },
       "version": "1.15.0"
     },

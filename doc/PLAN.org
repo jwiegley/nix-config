@@ -4335,6 +4335,24 @@ Andoria validation requires flake.lock; rejects any root/config-ai GitHub source
 ]
 #+end_src
 
+* DONE [#B] Pin Agent Deck to owner GitHub fork
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-bjwz
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-28 Fri 10:45]
+:MODIFIED: [2026-08-28 Fri 11:14]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-28 Fri 11:14]
+:CLOSE_REASON: Pinned jwiegley/agent-deck main at b255979c with verified archive hash, rebased strict downstream patches, preserved vendor hash, added owner-fork authority assertion, and passed package/system builds plus portable and updater gates.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Replace the automatic asheshgoplani/agent-deck v1.15.0 release source with immutable commit b255979c59957501c076e6827b397c24f1d89eec from jwiegley/agent-deck main, refresh source and Go vendor hashes, and verify package plus portable AI checks without activation.
+
 * DONE [#C] Report unchanged PyPI catalog targets as up-to-date
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
