@@ -39,6 +39,27 @@
         "kind": "fixed-flake-input"
       }
     },
+    "agent-cat-pi-extension": {
+      "hashes": {
+        "npmDepsHash": "sha256-NLMp+kho4eXq5ypMI0E1XpcC5okWTdAeK2rVLhyNVtA="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-6SqnDTETVvHwVRVLsvN92ee68LtCT4ImkUKiq69LQ0s=",
+          "owner": "jwiegley",
+          "repo": "agent-cat",
+          "rev": "d236c49791beca77a8e4318d1f575d3c2f8181e8"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/agent-cat"
+      },
+      "update": {
+        "kind": "explicit-rev",
+        "policy": "manual",
+        "reason": "Keep the agent-cat runner and managed Pi extension on one reviewed Option B revision"
+      },
+      "version": "0.1.0"
+    },
     "cymbal": {
       "artifacts": {
         "aarch64-linux": {

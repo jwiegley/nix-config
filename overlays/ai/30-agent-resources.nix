@@ -5,6 +5,7 @@ let
     inherit (prev)
       buildNpmPackage
       buildPackages
+      callPackage
       chromium
       esbuild
       fetchFromGitHub

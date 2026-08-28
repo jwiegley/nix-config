@@ -3,7 +3,9 @@
   fetchFromGitHub,
   fetchzip,
   git,
+  lib,
   nodejs_24,
+  stdenv,
 }:
 
 let
@@ -29,6 +31,7 @@ buildNpmPackageWithNode24 {
     ../overlays/ai/patches/pi-provider-transport-timeouts.patch
     ../overlays/ai/patches/pi-session-replacement.patch
     ../overlays/ai/patches/pi-model-default-thinking.patch
+    ../overlays/ai/patches/pi-agent-cat-workflow-api.patch
   ];
   patchFlags = [
     "-p1"
@@ -49,12 +52,28 @@ buildNpmPackageWithNode24 {
   nativeCheckInputs = [ git ];
   checkPhase = ''
     runHook preCheck
+    ${lib.optionalString stdenv.hostPlatform.isDarwin "npm run check"}
+    ${lib.optionalString (!stdenv.hostPlatform.isDarwin) ''
+      npm run check:pinned-deps
+      npm run check:ts-imports
+      npm run check:shrinkwrap
+      npm run check:install-lock:coding-agent
+      npm exec -- tsgo --noEmit
+      npm run check:browser-smoke
+    ''}
     # Bounded history changes the SessionManager contract consumed throughout
     # the SDK, RPC, compaction, export, and interactive navigation paths. Run
     # every test changed by the downstream patches so their regressions
     # remain part of the package gate without importing unrelated upstream
     # tests whose external-tool assumptions are incompatible with Nix builds.
     npm exec -- vitest --run --testTimeout 30000 \
+      packages/protocol/test/protocol.test.ts \
+      packages/client/test/sessions.test.ts \
+      packages/server/test/sessions.test.ts \
+      packages/coding-agent/test/client/remote-session.test.ts \
+      packages/coding-agent/test/client/remote-session-lifecycle.test.ts \
+      packages/coding-agent/test/client/remote-session-ownership.test.ts \
+      packages/coding-agent/test/suite/agent-session-prompt.test.ts \
       packages/agent/test/agent.test.ts \
       packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts \
       packages/coding-agent/test/agent-session-jsonl-export.test.ts \
@@ -90,10 +109,25 @@ buildNpmPackageWithNode24 {
 
   installPhase = ''
     runHook preInstall
-    mkdir -p "$out/coding-agent" "$out/agent" "$out/ai"
+    mkdir -p "$out/coding-agent" "$out/agent" "$out/ai" "$out/workspace/packages"
     cp -R packages/coding-agent/dist "$out/coding-agent/dist"
     cp -R packages/agent/dist "$out/agent/dist"
     cp -R packages/ai/dist "$out/ai/dist"
+    for name in protocol client server coding-agent agent ai tui telemetry; do
+      mkdir -p "$out/workspace/packages/$name"
+      cp "packages/$name/package.json" "$out/workspace/packages/$name/"
+      cp -R "packages/$name/dist" "$out/workspace/packages/$name/dist"
+    done
+    scope="$out/workspace/node_modules/@earendil-works"
+    mkdir -p "$scope"
+    ln -s ../../packages/protocol "$scope/pi-protocol"
+    ln -s ../../packages/client "$scope/pi-client"
+    ln -s ../../packages/server "$scope/pi-server"
+    ln -s ../../packages/coding-agent "$scope/pi-coding-agent"
+    ln -s ../../packages/agent "$scope/pi-agent-core"
+    ln -s ../../packages/ai "$scope/pi-ai"
+    ln -s ../../packages/tui "$scope/pi-tui"
+    ln -s ../../packages/telemetry "$scope/pi-telemetry"
     runHook postInstall
   '';
 }

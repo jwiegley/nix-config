@@ -23,6 +23,23 @@ nodePackage.overrideAttrs (old: {
     rm -rf node_modules/@earendil-works/pi-ai/dist
     cp -R ${piSourceBuild}/ai/dist node_modules/@earendil-works/pi-ai/dist
     chmod -R u+w node_modules/@earendil-works/pi-ai/dist
+    for spec in pi-client:client pi-protocol:protocol; do
+      package="''${spec%%:*}"
+      directory="''${spec#*:}"
+      found=false
+      for target in \
+        "node_modules/@earendil-works/$package" \
+        "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/$package"
+      do
+        if [ -d "$target" ]; then
+          rm -rf "$target/dist"
+          cp -R "${piSourceBuild}/workspace/packages/$directory/dist" "$target/dist"
+          chmod -R u+w "$target/dist"
+          found=true
+        fi
+      done
+      "$found"
+    done
     patch -p1 --fuzz=0 < ${../../../overlays/ai/patches/pi-system-prompt-no-docs.patch}
     substituteInPlace dist/core/system-prompt.js \
       --replace-fail '//# sourceMappingURL=system-prompt.js.map' ""

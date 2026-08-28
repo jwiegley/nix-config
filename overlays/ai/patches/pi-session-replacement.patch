@@ -152,7 +152,7 @@ index 32bb828ff..c51dae949 100644
 +		copyFileSync(originalSessionFile, importPath);
 +
 +		const footerData = {
-+			getGitBranch: () => undefined,
++			getGitBranch: () => null,
 +			getExtensionStatuses: () => new Map<string, string>(),
 +			getAvailableProviderCount: () => 1,
 +			onBranchChange: () => () => {},

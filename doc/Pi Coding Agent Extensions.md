@@ -14,7 +14,7 @@ pi-version: 0.84.3
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: 25 gallery packages projected on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 23 of those packages on Darwin and 21 on Linux; [Pi Lens][pi-lens] and [Pi Mem][pi-mem] are retained but are not registered on any managed profile. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: 26 gallery packages projected on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 24 of those packages on Darwin and 22 on Linux; [Pi Lens][pi-lens] and [Pi Mem][pi-mem] are retained but are not registered on any managed profile. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope. The `agent-resources` package also carries [`pi-openai-server-compaction`][pi-openai-server-compaction] for compatibility testing, but no managed Pi profile renders or loads it, so it is not part of this configured inventory.
 
@@ -30,6 +30,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [`pi-mcp-adapter`][pi-mcp-adapter] | 2.29.0 | Lazy, context-efficient MCP access | `mcp`, `/mcp` |
 | [`@zenspc/pi-quiet`][pi-quiet] | 0.4.1 | Dense tool-result presentation | `/quiet` |
 | [`pi-hashline-edit-pro`][pi-hashline-edit-pro] | 0.17.5 | Hash-anchored reads and replacements | `read`, `replace` |
+| [`agent-cat-workflow`][agent-cat-workflow] | 0.1.0 | Discover, supervise, control, and resume typed agent-cat workflows | `/workflows`, `agent_cat_workflow` |
 | [`pi-smart-fetch`][pi-smart-fetch] | 0.3.17 | Browser-fingerprinted readable web fetching | `web_fetch`, `batch_web_fetch` |
 | [`pi-smart-web-search`][pi-smart-web-search] | 0.4.0 | Ranked batch web discovery | `web_search` |
 | [`@dietrichgebert/ponytail`][ponytail] | 4.9.0 | Minimal implementation discipline | `/ponytail` |
@@ -73,7 +74,7 @@ The Hera, Clio, shared-work, VPS, and Vulcan Pi profiles are rendered by `~/src/
 | Surface | Current projection |
 | --- | --- |
 | Generated ownership | Individual leaves below `~/.config/pi/agent`, plus `~/.pi-lens/config.json` and the `~/.pi` compatibility link; Pi shares `~/.config/mcp/mcp.json` with Prime Agent |
-| Extension entries | [Fleet Theme][fleet-theme], [Nix Gallery loader][nix-gallery-loader], [Pi Loop][pi-loop], [Pi MCP Adapter][pi-mcp-adapter], and [Quiet Display][pi-quiet] on every managed host; the Gallery loads [Idle Check][pi-idle-check], [GPT Fast Mode][pi-gpt-fast-mode], and the [Factory Droid SDK provider][pi-droid-sdk] everywhere; Darwin additionally loads the loopback [llama-swap provider][pi-provider-llama-swap] and bilateral authenticated [oMLX discovery adapter][pi-provider-omlx], while Linux retains those local providers without registering them automatically |
+| Extension entries | [Fleet Theme][fleet-theme], [Nix Gallery loader][nix-gallery-loader], [Pi Loop][pi-loop], [Pi MCP Adapter][pi-mcp-adapter], and [Quiet Display][pi-quiet] on every managed host; the Gallery loads [Agent-cat Workflows][agent-cat-workflow], [Idle Check][pi-idle-check], [GPT Fast Mode][pi-gpt-fast-mode], and the [Factory Droid SDK provider][pi-droid-sdk] everywhere; Darwin additionally loads the loopback [llama-swap provider][pi-provider-llama-swap] and bilateral authenticated [oMLX discovery adapter][pi-provider-omlx], while Linux retains those local providers without registering them automatically |
 | Agent resources | 25 Nix-managed agent definitions |
 | Prompt resources | 63 files: 61 command prompts and the `emacs` and `spanish` prompts |
 | Skill resources | Shared catalog skills selected for Pi, plus five gallery package skill paths and one gallery prompt path advertised at runtime |
@@ -479,6 +480,7 @@ Source policy last checked against the current `~/src/nix` fleet renderer on 202
 [pi-loop]: https://pi.dev/packages/@realvendex/pi-loop
 [pi-mcp-adapter]: https://pi.dev/packages/pi-mcp-adapter
 [pi-quiet]: https://pi.dev/packages/@zenspc/pi-quiet
+[agent-cat-workflow]: https://github.com/jwiegley/agent-cat/tree/main/pi-extension
 [pi-hashline-edit-pro]: https://pi.dev/packages/pi-hashline-edit-pro
 [pi-smart-fetch]: https://pi.dev/packages/pi-smart-fetch
 [pi-smart-web-search]: https://pi.dev/packages/pi-smart-web-search

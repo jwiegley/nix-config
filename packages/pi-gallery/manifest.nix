@@ -27,6 +27,7 @@ in
 
   order = [
     "hashline"
+    "agent-cat-workflow"
     "smart-fetch"
     "smart-web-search"
     "lens"
@@ -54,6 +55,10 @@ in
   ];
 
   members = {
+    agent-cat-workflow = member "agent-cat-pi-extension" {
+      publicName = "agent-cat-workflow";
+      extension = "src/index.ts";
+    };
     hashline = member "pi-hashline-edit-pro" {
       publicName = "pi-hashline-edit-pro";
       extension = "index.ts";

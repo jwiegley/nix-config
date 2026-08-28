@@ -303,6 +303,7 @@ let
       ../flake
       ../overlays/ai
       ../packages/agent-resources/pi-mcp-adapter-xdg-config-home.patch
+      ../packages/agent-cat-pi-extension.nix
       ../packages/agent-resources.nix
       ../packages/ai-package-policy.nix
       ../packages/ai-llm.nix
@@ -313,6 +314,7 @@ let
       ../packages/prime-agent
       ../packages/prime-agent.nix
       ../packages/pi-gallery
+      ../packages/pi-source-build.nix
       ../packages/source-catalog.nix
       ../sources/ai.json
       ../sources/pi.json

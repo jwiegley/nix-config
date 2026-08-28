@@ -1,6 +1,7 @@
 {
   buildNpmPackage,
   buildPackages,
+  callPackage,
   chromium,
   esbuild,
   fetchFromGitHub,
@@ -20,11 +21,13 @@
 
 let
   packageRoot = package: name: "${package}/share/pi-packages/${name}";
+  agent-cat-pi-extension = callPackage ../agent-cat-pi-extension.nix { };
 
   manifest = import ./manifest.nix {
     inherit inputs;
     packages = {
       inherit
+        agent-cat-pi-extension
         agent-browser
         cymbal
         pi-agent-browser-native

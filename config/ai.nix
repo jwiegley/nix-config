@@ -19,6 +19,7 @@ let
       { };
   pairedPiPackage = pairedAiPackages.pi or null;
   pairedDroidPackage = pairedAiPackages.droid or null;
+  pairedAgentCatPackage = pairedAiPackages.agent-cat-pi-extension or null;
   piNodeExtraCaFallback = config.home.sessionVariables.SSL_CERT_FILE or null;
   wrapRuntimeEnvironment = import ../flake/ai/wrappers/runtime-environment.nix {
     inherit lib pkgs;
@@ -404,6 +405,10 @@ in
       message = "inputs.nix-config-ai has no packages for ${system}";
     }
     {
+      assertion = !piSelected || pairedAgentCatPackage != null;
+      message = "inputs.nix-config-ai.packages.${system}.agent-cat-pi-extension is missing";
+    }
+    {
       assertion = pairedPiPackage != null;
       message = "inputs.nix-config-ai.packages.${system}.pi is missing";
     }
@@ -449,6 +454,7 @@ in
     packages =
       lib.optional (managedCodexPackage != null) managedCodexPackage
       ++ lib.optional (managedPiPackage != null) managedPiPackage
+      ++ lib.optional (piSelected && pairedAgentCatPackage != null) pairedAgentCatPackage
       ++ lib.optional (pairedDroidPackage != null) pairedDroidPackage
       ++ lib.optional (primeSelected && managedPrimePackage != null) managedPrimePackage
       ++ lib.optionals piSelected piRuntimePackages;
@@ -467,7 +473,11 @@ in
         ) profileIds)
         {
           LLAMA_SWAP_API_KEY = "dummy-key";
-        };
+        }
+      // lib.optionalAttrs (piSelected && pairedAgentCatPackage != null) {
+        AGENT_CAT_RUNNER = "${pairedAgentCatPackage}/bin/agentic-run";
+        AGENT_CAT_STATE_DIR = "${config.xdg.stateHome}/pi/agent-cat";
+      };
     activation = {
       aiManagedPreflight = preflight.activation;
     }
