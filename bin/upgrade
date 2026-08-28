@@ -54,12 +54,10 @@ if [[ $run_host == true ]]; then
     case $host in
     hera)
         cd "$HOME/src/nix"
-        ./bin/update --all-inputs --pull --commit --switch --push
-        u hera upgrade-tasks sign
+        u hera update upgrade-tasks sign
         ;;
     clio)
         cd "$HOME/src/nix"
-        ./build system
         u clio switch upgrade-tasks
         ;;
     vulcan | vps | shared-work)
