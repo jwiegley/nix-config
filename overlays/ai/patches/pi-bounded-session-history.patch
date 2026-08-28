@@ -2488,10 +2488,10 @@ index 3607242c3..dd9cc83a9 100644
  }
 diff --git a/packages/coding-agent/src/core/session-history-store.ts b/packages/coding-agent/src/core/session-history-store.ts
 new file mode 100644
-index 000000000..809857007
+index 000000000..f9d6c8582
 --- /dev/null
 +++ b/packages/coding-agent/src/core/session-history-store.ts
-@@ -0,0 +1,2841 @@
+@@ -0,0 +1,2843 @@
 +import { createHash, randomUUID } from "node:crypto";
 +import {
 +	chmodSync,
@@ -3066,14 +3066,14 @@ index 000000000..809857007
 +	}
 +}
 +
-+function isVerifiedAppendOnlyGrowth(
++function isVerifiedIndexedPrefix(
 +	state: SourceStateRow,
 +	filePath: string,
 +	fileSize: number,
 +	generation: SourceGeneration,
 +): boolean {
 +	return (
-+		fileSize > state.indexed_length &&
++		fileSize >= state.indexed_length &&
 +		state.final_line_terminated !== 0 &&
 +		sourceIdentityMatches(state, generation) &&
 +		indexedPrefixMatches(state, filePath)
@@ -3822,10 +3822,12 @@ index 000000000..809857007
 +			if (counts.count !== state.entry_count) return false;
 +			if (stats.size < state.indexed_length) return false;
 +			const generation = sourceGeneration(filePath);
-+			if (stats.size === state.indexed_length && !generationMatches(state, generation)) return false;
-+			if (stats.size > state.indexed_length)
-+				return isVerifiedAppendOnlyGrowth(state, filePath, stats.size, generation);
-+			return lastIndexedRecordMatches(state, filePath);
++			if (stats.size === state.indexed_length) {
++				return generationMatches(state, generation)
++					? lastIndexedRecordMatches(state, filePath)
++					: isVerifiedIndexedPrefix(state, filePath, stats.size, generation);
++			}
++			return isVerifiedIndexedPrefix(state, filePath, stats.size, generation);
 +		} catch {
 +			return false;
 +		}
@@ -3942,7 +3944,7 @@ index 000000000..809857007
 +			if (
 +				!generationMatches(state, generation) &&
 +				!controlledSourceGrowth &&
-+				!isVerifiedAppendOnlyGrowth(state, filePath, source.size, generation)
++				!isVerifiedIndexedPrefix(state, filePath, source.size, generation)
 +			) {
 +				throw new Error(
 +					"Session JSONL changed outside the indexed writer; close and reopen it to rebuild the index",
@@ -5334,10 +5336,10 @@ index 000000000..809857007
 +	}
 +}
 diff --git a/packages/coding-agent/src/core/session-manager.ts b/packages/coding-agent/src/core/session-manager.ts
-index f8db9b0e5..e57565664 100644
+index f8db9b0e5..6777ba58e 100644
 --- a/packages/coding-agent/src/core/session-manager.ts
 +++ b/packages/coding-agent/src/core/session-manager.ts
-@@ -1,20 +1,28 @@
+@@ -1,23 +1,31 @@
 -import type { AgentMessage } from "@earendil-works/pi-agent-core";
 +import type { AgentMessage, AgentMessageSource } from "@earendil-works/pi-agent-core";
  import { type ImageContent, type Message, type TextContent, type Usage, uuidv7 } from "@earendil-works/pi-ai";
@@ -5368,7 +5370,11 @@ index f8db9b0e5..e57565664 100644
 +import { basename, dirname, join, resolve } from "path";
  import { createInterface } from "readline";
  import { StringDecoder } from "string_decoder";
- import { APP_NAME, getAgentDir as getDefaultAgentDir, getSessionsDir } from "../config.ts";
+-import { APP_NAME, getAgentDir as getDefaultAgentDir, getSessionsDir } from "../config.ts";
++import { getAgentDir as getDefaultAgentDir, getSessionsDir } from "../config.ts";
+ import { normalizePath, resolvePath } from "../utils/paths.ts";
+ import {
+ 	type BashExecutionMessage,
 @@ -26,6 +34,22 @@ import {
  	createCompactionSummaryMessage,
  	createCustomMessage,
@@ -11165,10 +11171,10 @@ index c978b3200..93e43fb13 100644
  	});
 diff --git a/packages/coding-agent/test/session-manager/indexed-history-store.test.ts b/packages/coding-agent/test/session-manager/indexed-history-store.test.ts
 new file mode 100644
-index 000000000..d682d31a0
+index 000000000..6b12e6add
 --- /dev/null
 +++ b/packages/coding-agent/test/session-manager/indexed-history-store.test.ts
-@@ -0,0 +1,1336 @@
+@@ -0,0 +1,1357 @@
 +import { spawn } from "node:child_process";
 +import { createHash } from "node:crypto";
 +import {
@@ -11183,6 +11189,7 @@ index 000000000..d682d31a0
 +	rmSync,
 +	statSync,
 +	symlinkSync,
++	utimesSync,
 +	writeFileSync,
 +} from "node:fs";
 +import { tmpdir } from "node:os";
@@ -11380,6 +11387,26 @@ index 000000000..d682d31a0
 +		expect(store.getHistorySummary().entryCount).toBe(2);
 +		expect(statSync(store.indexPath).ino).toBe(indexInode);
 +		store.close();
++	});
++
++	it("keeps a byte-identical index across source metadata drift", () => {
++		const path = join(createRoot(), "session.jsonl");
++		writeSession(path, [header(), custom("01", null, "unchanged")]);
++		const first = IndexedJsonlSessionHistoryStore.open(path);
++		const indexPath = first.indexPath;
++		const indexInode = statSync(indexPath).ino;
++		first.close();
++
++		let stats = statSync(path);
++		utimesSync(path, stats.atime, new Date(stats.mtimeMs + 1000));
++		const reopened = IndexedJsonlSessionHistoryStore.open(path);
++		expect(statSync(indexPath).ino).toBe(indexInode);
++
++		stats = statSync(path);
++		utimesSync(path, stats.atime, new Date(stats.mtimeMs + 1000));
++		expect(() => reopened.flush()).not.toThrow();
++		expect(reopened.getEntry("01")).toMatchObject({ data: "unchanged" });
++		reopened.close();
 +	});
 +
 +	it("retries catch-up when the source grows after its size snapshot", async () => {

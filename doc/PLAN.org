@@ -18960,6 +18960,24 @@ The full session suite measures DrainInboxForParent n=25 at 8.757738ms against a
 ]
 #+end_src
 
+* DONE [#B] Accept byte-identical Pi session indexes after NFS metadata drift
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-x4zv
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-27 Thu 21:16]
+:MODIFIED: [2026-08-27 Thu 21:32]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-27 Thu 21:32]
+:CLOSE_REASON: Verified byte-identical prefix fallback for metadata drift; regression covers reopen and live flush; focused Vitest, exact patch application, portable evaluation, and final Pi Nix build pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pi bounded session history persists mtime/ctime as source identity. NFS attribute revalidation can change those timestamps while JSONL bytes remain identical, causing all later appends and Goal-X checkpoints to fail. Accept generation drift only after existing prefix-chain verification; retain rejection of edited prefixes. Add regression coverage for metadata-only drift.
+
 * DONE [#C] Make managed Pi oMLX reasoning and vision capabilities truthful
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
