@@ -3913,15 +3913,17 @@ Exact resume step:
 ]
 #+end_src
 
-* DOING [#B] Integrate pi-idle-check into managed Pi gallery
+* DONE [#B] Integrate pi-idle-check into managed Pi gallery
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-alue
 :LABELS:   []
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-27 Thu 23:33]
-:MODIFIED: [2026-08-27 Thu 23:41]
+:MODIFIED: [2026-08-28 Fri 01:11]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-28 Fri 01:11]
+:CLOSE_REASON: Published signed ff1d8d49 with pinned pi-idle-check abbdbef; package, Gallery, updater, portable, hook, full test, and Hera system gates passed; Hera activation and fresh Pi RPC load acceptance succeeded without a model request.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
