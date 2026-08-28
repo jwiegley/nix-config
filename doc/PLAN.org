@@ -313,15 +313,17 @@ Pin an immutable reviewed upstream revision and package it through the existing 
 ]
 #+end_src
 
-* DOING [#B] Repin pi-idle-check after completion audit fixes
+* DONE [#B] Repin pi-idle-check after completion audit fixes
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-0qat
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-28 Fri 01:30]
-:MODIFIED: [2026-08-28 Fri 01:30]
+:MODIFIED: [2026-08-28 Fri 01:55]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-28 Fri 01:55]
+:CLOSE_REASON: Pinned b24d65b; Nix ran all 33 upstream tests and Gallery/all-system/full-Hera gates; signed 826f42d1 published; Hera reactivated and fresh Pi RPC load passed without a model request.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
