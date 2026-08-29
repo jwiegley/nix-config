@@ -1,6 +1,7 @@
 {
   callPackage,
   fetchFromGitHub,
+  haskell,
   haskellPackages,
   inputs,
   lib,
@@ -18,7 +19,14 @@ let
   repo =
     assert source.source.fetcher == "fetchFromGitHub";
     fetchFromGitHub source.source.args;
-  runner = haskellPackages.callCabal2nix "agentic" (repo + "/haskell") { };
+  runnerBase = haskellPackages.callCabal2nix "agentic" (repo + "/haskell") { };
+  runner = haskell.lib.overrideCabal runnerBase (old: {
+    postPatch = (old.postPatch or "") + ''
+      substituteInPlace src/Agentic/Acp.hs \
+        --replace-fail 'stubScript = "../test/stub_adapter.py"' \
+          'stubScript = "${repo}/test/stub_adapter.py"'
+    '';
+  });
   piSourceBuild = callPackage ./pi-source-build.nix { };
 in
 npmCachePkgs.buildNpmPackage {
