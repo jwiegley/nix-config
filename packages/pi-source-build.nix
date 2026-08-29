@@ -44,6 +44,23 @@ buildNpmPackageWithNode24 {
   nativeCheckInputs = [ git ];
   checkPhase = ''
     runHook preCheck
+    # Backport vitest-dev/vitest#10893 for the bundled @vitest/utils 4.1.9.
+    substituteInPlace node_modules/@vitest/utils/dist/source-map/node.js \
+      --replace-fail \
+        $'\tconst map = (convertSourceMap.fromSource(code) || convertSourceMap.fromMapFileSource(code, createConvertSourceMapReadMap(filePath)))?.toObject();' \
+        $'\tlet map;\n\ttry {\n\t\tmap = (convertSourceMap.fromSource(code) || convertSourceMap.fromMapFileSource(code, createConvertSourceMapReadMap(filePath)))?.toObject();\n\t} catch {\n\t\treturn;\n\t}'
+    node --input-type=module <<'JS'
+    import assert from "node:assert/strict";
+    import { extractSourcemapFromFile } from "./node_modules/@vitest/utils/dist/source-map/node.js";
+
+    const map = { version: 3, sources: ["answer.ts"], mappings: "" };
+    const valid = "const answer = 42\n//# sourceMappingURL=data:application/json;base64,"
+      + Buffer.from(JSON.stringify(map)).toString("base64");
+    assert.deepEqual(extractSourcemapFromFile(valid, "/answer.js"), { map });
+
+    const malformed = "const sourceMapPrefix = `\n//# sourceMappingURL=data:application/json;base64,`, encode = map => btoa(JSON.stringify(map))";
+    assert.equal(extractSourcemapFromFile(malformed, "/answer.js"), undefined);
+    JS
     ${lib.optionalString stdenv.hostPlatform.isDarwin "npm run check"}
     ${lib.optionalString (!stdenv.hostPlatform.isDarwin) ''
       npm run check:pinned-deps

@@ -18884,6 +18884,26 @@ Profile-sidecar migration promises target-write-before-source-remove durability,
 ]
 #+end_src
 
+* DOING [#B] Fix pi-coding-agent 0.84.3 Vitest sourcemap build failure
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-wk8k
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-28 Fri 23:34]
+:MODIFIED: [2026-08-29 Sat 01:27]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Diagnose and fix the intermittent Vitest sourcemap JSON parse error that fails pi-coding-agent-source-build 0.84.3 despite passing tests, preserve the blocking suite, and verify the aarch64-linux package plus Vulcan downstream build. Consumer tracking issue: nixos-0zi.
+
+** Notes
+
+Root cause proved on Vulcan: Vitest 4.1.9 misparsed the source-map prefix string embedded in tsx 4.22.1 register-B4MtRGQg.cjs. The swallowed error was a real first-open SQLite lock-schema race (577 total - 2 skipped - 574 passed = 1 missing). Backported merged Vitest PR #10893, serialized lock metadata initialization under BEGIN EXCLUSIVE, passed 20/20 forced aarch64-linux derivations, full repo gates, and a non-mutating paired-input Vulcan system build. Exact flake update remains blocked until the fix is published and the dirty authoritative ~/src/nix checkout is safe.
+
 * DONE [#B] Reject explicit-port GitHub URLs in cross-consumer source gates
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -19001,6 +19021,44 @@ The DDGS matcher counts distinct strings after sort -u and accepts composite spe
     "depends_on_id": "nix-befb",
     "type": "discovered-from",
     "created_at": "2026-08-24T22:04:15.373378Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#C] Fix Pi session lock database initialization race
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-wpbe
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-29 Sat 00:21]
+:MODIFIED: [2026-08-29 Sat 01:27]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-29 Sat 01:27]
+:CLOSE_REASON: Serialized lock database ownership inspection and initialization; verified by 20/20 full-suite aarch64-linux rebuilds.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Repeated pi-coding-agent-source-build verification exposed a real race in indexed-history-store's simultaneous-process test: one worker can open the shared SQLite lock database before schema initialization completes and reject it as unrecognized, then the test times out. Observed once in 38 forced aarch64-linux builds while diagnosing nix-wk8k.
+
+** Notes
+
+Fixed by beginning the exclusive SQLite transaction before reading or initializing application_id/schema. Existing concurrent migration and append tests passed in 20/20 forced aarch64-linux builds.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-wpbe",
+    "depends_on_id": "nix-wk8k",
+    "type": "discovered-from",
+    "created_at": "2026-08-29T07:21:41.879211Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
