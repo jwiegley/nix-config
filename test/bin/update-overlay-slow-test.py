@@ -4295,6 +4295,10 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             updates["llm-agents"]["buildPackage"], "pi-extension-tests"
         )
         self.assertEqual(updates["llm-agents"]["buildMode"], "check")
+        pi_source_update = ai_catalog["pi-coding-agent-source-build"]["update"]
+        self.assertEqual(pi_source_update["kind"], "fixed-flake-input")
+        self.assertEqual(pi_source_update["input"], "pi")
+        self.assertNotIn("buildPackage", pi_source_update)
         automatic_pypi = {
             name
             for name, update in updates.items()
