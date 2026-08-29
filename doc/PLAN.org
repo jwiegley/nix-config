@@ -19860,15 +19860,17 @@ The full Agent Deck Go suite fails TestWatcherInstallSkill_DirMode because insta
 ]
 #+end_src
 
-* DOING [#B] Package and deploy agent-cat Pi workflows
+* DONE [#B] Package and deploy agent-cat Pi workflows
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-zg32
 :LABELS:   []
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-28 Fri 13:05]
-:MODIFIED: [2026-08-28 Fri 20:18]
+:MODIFIED: [2026-08-28 Fri 20:31]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-28 Fri 20:31]
+:CLOSE_REASON: Completion-audit patch provenance and stale bridge cleanup defects corrected
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -19886,6 +19888,13 @@ Pin jwiegley/agent-cat with the Option B runtime/extension, apply the required P
     "author": "johnw",
     "text": "Live Hera acceptance completed after activating e8ffd3ad.\n\nActive deployment:\n- Darwin system: /nix/store/z55v7gvx4q7f18pq7ani9i2ry078zcyw-darwin-system-26.11.4cff07d\n- Pi: /nix/store/86qqi3v7l484d88zky85rcx59xwn4pxy-pi-0.84.3/bin/pi\n- agentic-run: /nix/store/w7bvcd5p1s17xb47r6aw93c93p525qmv-agentic-0.1.0.0/bin/agentic-run\n- Gallery loader: /nix/store/whgf885yk5kkm50zhdslr5y8nss8wz1v-pi-managed-gallery/index.ts\n\nBounded matrix under fresh agent-deck/Pi sessions:\n- Scripted structured 9a61a37a-8770-4379-b870-a191f1b394a0: succeeded, fresh=1 memo=1; monitor/status verified.\n- Resume 87ea3e97-d0bb-4a3e-8775-b31da8e1f75a: succeeded with parent lineage, zero new attempts, one reused occurrence, fresh=1 memo=1.\n- Real current-Pi hello d6a73c5f-e302-4aaa-9489-1dad11430079: two consult answers completed; macOS say effect invoked; Agent Deck restarted the Pi process while the tool turn was outstanding, so the journal correctly ended run.cancelled with control input closed. Provider UI cost stopped at $0.210. No runner remained.\n- Native ACP harden b9e889e8-bbf2-4571-9e89-00e005d3d0cf: succeeded, fresh=7 memo=7; effect occurrence 6 has started and completed records. applied.c existed at 54 bytes with SHA-256 82ce01de47b60601a48c756df268063309e38c23666c5b04277ed449ab4be0e2 before scratch cleanup.\n\nThe live run exposed packaged `stub` resolving its source-tree-relative test fixture. e8ffd3ad fixes this by baking the catalog-pinned immutable agent-cat source path into the managed runner. Direct packaged harden smoke passed; normal make switch passed after the fix.\n\nEvidence sessions 4d98fbf9-1787967421 and db71bb54-1787970667 are archived/stopped. Failed setup sessions were removed. Both disposable worktrees and generated scratch artifacts were removed. Durable private run journals remain under the configured 0700 state root; run metadata files are 0600.\n",
     "created_at": "2026-08-29T02:44:16Z"
+  },
+  {
+    "id": 535,
+    "issue_id": "nix-zg32",
+    "author": "johnw",
+    "text": "Completion-audit defects corrected.\n\nPi patch provenance:\n- Catalog pin remains Pi 0.84.3 revision 4e58f324fae8ebfa98a3d45181fb248072a2afac.\n- The workflow API patch was regenerated from that exact Nix-fetched source, whose Git tree is 5e8d1334ebe94dbe79c1e51ade9f96f60dfda5f2.\n- Regeneration was byte-identical to the committed full-index patch; patched tree is aa604c329a60a8d59d69521e393bb4bef2d659b4 and patch SHA-256 is c66b5977dc102ea4edbb8e266e7b18264cc9f5c8b5d2d64b886f2cf3f7a2981e.\n- pi-source-build now asserts the exact version/revision and verifies every touched file's full Git preimage before applying any downstream patch. `--fuzz=0` remains enabled.\n- Managed package build passed its full focused gate: 37 test files, 575 passed, 2 skipped.\n\nCleanup:\n- Removed the dead current-session bridge socket and bearer-token file for PID 92706, plus its stale terminal owner record.\n- State bridge directory is empty; owner file count and agentic-run machine process count are zero; state and bridge directories remain mode 0700.\n\nNormal Hera switch passed after c121db81. Active system is /nix/store/whd18li1py5vi17wkkdxn759r545j86c-darwin-system-26.11.4cff07d; active Pi is /nix/store/jv59g3ph2wl6j00wf9wrgid5566fq60q-pi-0.84.3/bin/pi; configured extension runner is /nix/store/9qkzz5qjl986i8hvdj3kfpigyy1y1y5x-agent-cat-pi-extension-0.1.0/bin/agentic-run; Gallery loader is /nix/store/2h0lplnx5icr6bq5m4801xpwvd2yx1cg-pi-managed-gallery/index.ts.\n",
+    "created_at": "2026-08-29T03:31:01Z"
   }
 ]
 #+end_src
