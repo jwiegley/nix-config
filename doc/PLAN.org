@@ -18884,15 +18884,17 @@ Profile-sidecar migration promises target-write-before-source-remove durability,
 ]
 #+end_src
 
-* DOING [#B] Fix pi-coding-agent 0.84.3 Vitest sourcemap build failure
+* DONE [#B] Fix pi-coding-agent 0.84.3 Vitest sourcemap build failure
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-wk8k
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-28 Fri 23:34]
-:MODIFIED: [2026-08-29 Sat 01:27]
+:MODIFIED: [2026-08-29 Sat 08:52]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-29 Sat 08:52]
+:CLOSE_REASON: Backported Vitest malformed-sourcemap handling, pinned the fork lock-initialization fix, and passed deterministic, full-suite, package, repository, and non-activating Vulcan gates.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -18902,7 +18904,7 @@ Diagnose and fix the intermittent Vitest sourcemap JSON parse error that fails p
 
 ** Notes
 
-Root cause proved on Vulcan: Vitest 4.1.9 misparsed the source-map prefix string embedded in tsx 4.22.1 register-B4MtRGQg.cjs. The swallowed error was a real first-open SQLite lock-schema race (577 total - 2 skipped - 574 passed = 1 missing). Backported merged Vitest PR #10893, serialized lock metadata initialization under BEGIN EXCLUSIVE, passed 20/20 forced aarch64-linux derivations, full repo gates, and a non-mutating paired-input Vulcan system build. Exact flake update remains blocked until the fix is published and the dirty authoritative ~/src/nix checkout is safe.
+Root cause: Vitest 4.1.9 parsed the source-map prefix string embedded in tsx 4.22.1 register-B4MtRGQg.cjs; convert-source-map then JSON-parsed source bytes and reporter symbolization surfaced SyntaxError. The corrected reporter exposed a distinct first-open SQLite lock-schema race. Evidence: deterministic lock regression failed 5/5 before and passed 10/10 after; signed fork commit c3edb0260; signed nix-config commit 9914861c; fork full non-e2e suite, 43-file Nix suite (608 passed, 2 skipped) on Darwin and aarch64-linux, 133 focused tests, portable evaluation, make test, and pre-commit passed. Vulcan paired inputs updated exactly to 9914861c; ./build build produced /nix/store/bh0hl3srw6y8yfi9m056cbxjydsfvd5z-nixos-system-vulcan-25.11.20260630.b6018f8 while /run/current-system remained unchanged.
 
 * DONE [#B] Reject explicit-port GitHub URLs in cross-consumer source gates
 :PROPERTIES:
@@ -19035,7 +19037,7 @@ The DDGS matcher counts distinct strings after sort -u and accepts composite spe
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-29 Sat 00:21]
-:MODIFIED: [2026-08-29 Sat 01:27]
+:MODIFIED: [2026-08-29 Sat 08:52]
 :CREATED_BY: johnw
 :FINISHED: [2026-08-29 Sat 01:27]
 :CLOSE_REASON: Serialized lock database ownership inspection and initialization; verified by 20/20 full-suite aarch64-linux rebuilds.
@@ -19048,7 +19050,7 @@ Repeated pi-coding-agent-source-build verification exposed a real race in indexe
 
 ** Notes
 
-Fixed by beginning the exclusive SQLite transaction before reading or initializing application_id/schema. Existing concurrent migration and append tests passed in 20/20 forced aarch64-linux builds.
+Fixed at the source owner in signed jwiegley/pi commit c3edb0260 by acquiring BEGIN EXCLUSIVE before application_id/schema inspection. Fault-injected regression reproduced the exact foreign-schema error 5/5 before and passed 10/10 after; full fork and Nix package suites passed on Darwin and aarch64-linux.
 
 ** Dependencies
 
