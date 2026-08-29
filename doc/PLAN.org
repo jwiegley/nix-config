@@ -19860,21 +19860,37 @@ The full Agent Deck Go suite fails TestWatcherInstallSkill_DirMode because insta
 ]
 #+end_src
 
-* DOING [#B] Package and deploy agent-cat Pi workflows
+* DONE [#B] Package and deploy agent-cat Pi workflows
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-zg32
 :LABELS:   []
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-28 Fri 13:05]
-:MODIFIED: [2026-08-28 Fri 13:05]
+:MODIFIED: [2026-08-28 Fri 19:52]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-28 Fri 19:52]
+:CLOSE_REASON: Option B packaged, activated on Hera, and accepted under bounded real Pi sessions
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
 Pin jwiegley/agent-cat with the Option B runtime/extension, apply the required Pi 0.84.3 API delta through the existing source-build patch seam, register the extension and runner declaratively, validate and activate Hera, then run a bounded real agent-deck/Pi acceptance matrix.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 534,
+    "issue_id": "nix-zg32",
+    "author": "johnw",
+    "text": "Live Hera acceptance completed after activating e8ffd3ad.\n\nActive deployment:\n- Darwin system: /nix/store/z55v7gvx4q7f18pq7ani9i2ry078zcyw-darwin-system-26.11.4cff07d\n- Pi: /nix/store/86qqi3v7l484d88zky85rcx59xwn4pxy-pi-0.84.3/bin/pi\n- agentic-run: /nix/store/w7bvcd5p1s17xb47r6aw93c93p525qmv-agentic-0.1.0.0/bin/agentic-run\n- Gallery loader: /nix/store/whgf885yk5kkm50zhdslr5y8nss8wz1v-pi-managed-gallery/index.ts\n\nBounded matrix under fresh agent-deck/Pi sessions:\n- Scripted structured 9a61a37a-8770-4379-b870-a191f1b394a0: succeeded, fresh=1 memo=1; monitor/status verified.\n- Resume 87ea3e97-d0bb-4a3e-8775-b31da8e1f75a: succeeded with parent lineage, zero new attempts, one reused occurrence, fresh=1 memo=1.\n- Real current-Pi hello d6a73c5f-e302-4aaa-9489-1dad11430079: two consult answers completed; macOS say effect invoked; Agent Deck restarted the Pi process while the tool turn was outstanding, so the journal correctly ended run.cancelled with control input closed. Provider UI cost stopped at $0.210. No runner remained.\n- Native ACP harden b9e889e8-bbf2-4571-9e89-00e005d3d0cf: succeeded, fresh=7 memo=7; effect occurrence 6 has started and completed records. applied.c existed at 54 bytes with SHA-256 82ce01de47b60601a48c756df268063309e38c23666c5b04277ed449ab4be0e2 before scratch cleanup.\n\nThe live run exposed packaged `stub` resolving its source-tree-relative test fixture. e8ffd3ad fixes this by baking the catalog-pinned immutable agent-cat source path into the managed runner. Direct packaged harden smoke passed; normal make switch passed after the fix.\n\nEvidence sessions 4d98fbf9-1787967421 and db71bb54-1787970667 are archived/stopped. Failed setup sessions were removed. Both disposable worktrees and generated scratch artifacts were removed. Durable private run journals remain under the configured 0700 state root; run metadata files are 0600.\n",
+    "created_at": "2026-08-29T02:44:16Z"
+  }
+]
+#+end_src
 
 * DONE [#D] Batch Samba Darwin install-name rewrites
 :PROPERTIES:
