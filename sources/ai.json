@@ -1025,10 +1025,10 @@
     "pal-mcp-server": {
       "source": {
         "args": {
-          "narHash": "sha256-DUX7mxC1JsE9Mbp3T4XlKrts296ftV8llAQAwigcHoI=",
+          "narHash": "sha256-h5P+esKlZP/28mqdpDjfRp/091TiO53h+h706dJj3ks=",
           "owner": "jwiegley",
           "repo": "pal-mcp-server",
-          "rev": "d7ae8e1c34bbffea0e26d7f5a5987ac7014454a7",
+          "rev": "5102b2a2ac3f32b5dee11fdb6953e2b2e3e41156",
           "type": "github"
         },
         "fetcher": "fetchTree",
