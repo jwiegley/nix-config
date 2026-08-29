@@ -1242,15 +1242,17 @@ Package devwithpug/pi-gpt-fast-mode through the Nix-owned Pi Gallery/source cata
 
 Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and GIT_NAMESPACE from hermetic Git fixture environments, with a regression that proves both selectors cannot leak into fixture commands.
 
-* DOING [#B] Move Pi downstream patches into maintained fork
+* DONE [#B] Move Pi downstream patches into maintained fork
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-3ghq
 :LABELS:   []
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-28 Fri 22:05]
-:MODIFIED: [2026-08-29 Sat 00:46]
+:MODIFIED: [2026-08-29 Sat 12:46]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-29 Sat 12:46]
+:CLOSE_REASON: Published signed maintained-fork commits, removed downstream Pi patch application, activated Hera, and passed final native Pi, MCP, session, gallery, subagent, and workflow probes.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -5917,15 +5919,17 @@ Final completion-record persistence must succeed before delivery or acknowledgem
 ]
 #+end_src
 
-* DOING [#B] Define managed PAL provider credential authority
+* DONE [#B] Define managed PAL provider credential authority
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-ff4j
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-20 Thu 01:36]
-:MODIFIED: [2026-08-29 Sat 09:55]
+:MODIFIED: [2026-08-29 Sat 12:46]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-29 Sat 12:46]
+:CLOSE_REASON: Established the strict owner-only XDG PAL config authority, typed bounded transport, and exact live provider validation without exposing secret values.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -9223,21 +9227,23 @@ The release-independent coordinate helper accepts any Git URL for manually coupl
 ]
 #+end_src
 
-* DOING [#B] Add five-model PAL support across active fleet
+* DONE [#B] Add five-model PAL support across active fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-nzjz
 :LABELS:   []
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-28 Fri 22:31]
-:MODIFIED: [2026-08-29 Sat 09:55]
+:MODIFIED: [2026-08-29 Sat 12:46]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-29 Sat 12:46]
+:CLOSE_REASON: Published signed PAL and Nix integrations; all-system and full test matrices passed; final active Hera generation passed all five exact provider routes, including Factory through existing local Droid login.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Add exact PAL support for gpt-5.6-sol, gemini-3.1-pro-preview, claude-fable-5, grok-4.6, and Factory kimi-k3 through Droid SDK. Load provider values from the strict user-owned $XDG_CONFIG_HOME/pal-mcp/config boundary, preserve bounded stdio inheritance and child isolation, deploy and verify Hera, and prepare Clio/shared-work for owner activation. Vulcan, VPS, and Git AI are excluded.
+Add exact PAL support for gpt-5.6-sol, gemini-3.1-pro-preview, claude-fable-5, grok-4.6, and Factory deepseek-v4-pro through Droid SDK. Load provider values from the strict user-owned $XDG_CONFIG_HOME/pal-mcp/config boundary, preserve bounded stdio inheritance and child isolation, deploy and verify Hera, and prepare Clio/shared-work for owner activation. Vulcan, VPS, and Git AI are excluded.
 
 * DONE [#C] Remove stale dual-remote publication claims
 :PROPERTIES:
