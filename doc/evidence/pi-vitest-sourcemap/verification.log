@@ -1,0 +1,169 @@
+PI/VITEST VERIFICATION TRANSCRIPT
+Date: 2026-08-29
+Final Pi source revision: 9491864fe026284561a2920988ba6a3969c2bc3c
+Nix package check: doCheck = true
+
+== Standalone malformed-map reproducer ==
+
+$ npm init -y
+$ npm install --ignore-scripts @vitest/utils@4.1.9 tsx@4.22.1
+$ node doc/evidence/pi-vitest-sourcemap/repro.mjs
+THROWS register-B4MtRGQg.cjs -> SyntaxError: Unexpected token '�', "�" is not valid JSON
+THROWS register-HCiphi1e.mjs -> SyntaxError: Unexpected token '�', "�" is not valid JSON
+exit status: 1
+
+# After applying vitest-dev/vitest#10893 to @vitest/utils:
+NO_THROW register-B4MtRGQg.cjs result=undefined
+NO_THROW register-HCiphi1e.mjs result=undefined
+exit status: 0
+
+== Deterministic originating lock error ==
+
+# Vulnerable fork c3d353aa plus regression from c3edb026:
+lock-baseline 01 EXPECTED-FAIL
+lock-baseline 02 EXPECTED-FAIL
+lock-baseline 03 EXPECTED-FAIL
+lock-baseline 04 EXPECTED-FAIL
+lock-baseline 05 EXPECTED-FAIL
+
+# Fixed fork, same regression:
+lock-fixed 01 PASS
+lock-fixed 02 PASS
+lock-fixed 03 PASS
+lock-fixed 04 PASS
+lock-fixed 05 PASS
+lock-fixed 06 PASS
+lock-fixed 07 PASS
+lock-fixed 08 PASS
+lock-fixed 09 PASS
+lock-fixed 10 PASS
+
+Exact errors and stacks: baseline-failure.log and instrumented-failure.log.
+
+== Blocking Darwin package gate ==
+
+$ nix build ./config/ai#pi --no-link --print-out-paths --print-build-logs
+/nix/store/fml4chf7zx2a1r7hrvbixa118dl1h76f-pi-0.84.4
+source derivation: /nix/store/f35pjb146r0ssmmmk5j8anqms7rpixyg-pi-coding-agent-source-build-0.84.4.drv
+exit status: 0
+
+> @earendil-works/pi-agent-core@0.84.4 test
+ Test Files  23 passed (23)
+      Tests  424 passed | 1 skipped (425)
+> @earendil-works/pi-ai@0.84.4 test
+ Test Files  112 passed | 25 skipped (137)
+      Tests  956 passed | 834 skipped (1790)
+> @earendil-works/pi-client@0.84.4 test
+ Test Files  6 passed (6)
+      Tests  36 passed (36)
+> @earendil-works/pi-coding-agent@0.84.4 test
+ Test Files  255 passed | 6 skipped (261)
+      Tests  2242 passed | 50 skipped (2292)
+> @earendil-works/pi-evals@0.84.4 test
+ Test Files  4 passed (4)
+      Tests  23 passed (23)
+> @earendil-works/pi-protocol@0.84.4 test
+ Test Files  3 passed (3)
+      Tests  148 passed (148)
+> @earendil-works/pi-server@0.84.4 test
+ Test Files  7 passed (7)
+      Tests  51 passed (51)
+> @earendil-works/pi-telemetry@0.84.4 test
+ Test Files  2 passed (2)
+      Tests  15 passed (15)
+> @earendil-works/pi-session-backend-sqlite-node@0.84.4 test
+ Test Files  11 passed (11)
+      Tests  87 passed (87)
+
+$ nix-store --realise --check /nix/store/f35pjb146r0ssmmmk5j8anqms7rpixyg-pi-coding-agent-source-build-0.84.4.drv
+final-full-suite-rebuild 01 PASS
+final-full-suite-rebuild 02 PASS
+final-full-suite-rebuild 03 PASS
+final-full-suite-rebuild 04 PASS
+final-full-suite-rebuild 05 PASS
+final-full-suite-rebuild 06 PASS
+final-full-suite-rebuild 07 PASS
+final-full-suite-rebuild 08 PASS
+final-full-suite-rebuild 09 PASS
+final-full-suite-rebuild 10 PASS
+
+== Blocking aarch64-linux package gate ==
+
+$ ssh vulcan nix build ./config/ai#pi --no-link --print-out-paths --print-build-logs
+/nix/store/f3iy69vd3mqf0l3ar9dpbxx0dpwhxhcx-pi-0.84.4
+source derivation: /nix/store/nwg73qb4xn4f06wxx3pc0gk5narc2gds-pi-coding-agent-source-build-0.84.4.drv
+exit status: 0
+
+> @earendil-works/pi-agent-core@0.84.4 test
+ Test Files  23 passed (23)
+      Tests  424 passed | 1 skipped (425)
+> @earendil-works/pi-ai@0.84.4 test
+ Test Files  112 passed | 25 skipped (137)
+      Tests  956 passed | 834 skipped (1790)
+> @earendil-works/pi-client@0.84.4 test
+ Test Files  6 passed (6)
+      Tests  36 passed (36)
+> @earendil-works/pi-coding-agent@0.84.4 test
+ Test Files  255 passed | 6 skipped (261)
+      Tests  2242 passed | 50 skipped (2292)
+> @earendil-works/pi-evals@0.84.4 test
+ Test Files  4 passed (4)
+      Tests  23 passed (23)
+> @earendil-works/pi-protocol@0.84.4 test
+ Test Files  3 passed (3)
+      Tests  148 passed (148)
+> @earendil-works/pi-server@0.84.4 test
+ Test Files  7 passed (7)
+      Tests  51 passed (51)
+> @earendil-works/pi-telemetry@0.84.4 test
+ Test Files  2 passed (2)
+      Tests  15 passed (15)
+> @earendil-works/pi-session-backend-sqlite-node@0.84.4 test
+ Test Files  11 passed (11)
+      Tests  87 passed (87)
+
+== Source-owner flake regressions uncovered by complete gate ==
+
+footer-data-provider.test.ts with explicit FSWatcher events: 50/50 PASS
+nodejs-env.test.ts with PATH-resolved bash: 10/10 PASS
+resolve-config-value.test.ts with normal shell resolution: 10/10 PASS
+Pi source checks (`npm run check`): PASS after each source-owner commit
+All source-owner commits are signed and published through 9491864fe026284561a2920988ba6a3969c2bc3c.
+
+== Repository-required checks ==
+
+$ nix fmt
+quality: nix-format: rewrote 143 file(s)
+quality: shell-format: rewrote 38 file(s)
+quality: all requested suites passed (nix-format shell-format)
+exit status: 0
+
+$ test/bin/unittest-strict.py test/bin/update-overlay-slow-test.py
+Ran 133 tests in 221.807s
+OK
+exit status: 0
+
+$ nix flake check ./config/ai --all-systems --no-build
+208 successful check/package/app evaluations were reported.
+warning: The following flake outputs are unchecked: lib.
+exit status: 0
+
+$ make test
+quality: python-test: tier=full planned=21 ran=21 failed=0 timed-out=0 killed=0 budget-exceeded=0 not-reached=0 elapsed=451s budget=900s
+quality: all requested suites passed (python-test)
+check-manifest: build 9 behavioral checks for root on aarch64-darwin
+exit status: 0
+
+$ lefthook run pre-commit --all-files
+quality: nix-format: 143 file(s) OK
+quality: nix-lint: 143 file(s) OK
+quality: nix-deadcode: 143 file(s) OK
+quality: shell-lint: 38 file(s) OK
+quality: shell-format: 38 file(s) OK
+quality: python-lint: 54 file(s) OK (0 rendered template(s))
+quality: all requested suites passed
+exit status: 0
+
+== Downstream Vulcan system validation ==
+
+Pending publication of this evidence/package-gate commit. Final exact paired-input update, `./build build`, store path, and unchanged `/run/current-system` will be appended in the closure commit.
