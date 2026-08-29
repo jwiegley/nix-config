@@ -612,17 +612,17 @@
     "pi": {
       "flake": false,
       "locked": {
-        "lastModified": 1788023431,
-        "narHash": "sha256-W2JvLs0LOlfG++rmP/JgaM5KHIo0jTt18UeDRKZBf6I=",
+        "lastModified": 1788039716,
+        "narHash": "sha256-dZlgjdkBIxAevlZT15TuiNVWAu6nXAtbynqO3Tz/P5A=",
         "owner": "jwiegley",
         "repo": "pi",
-        "rev": "9491864fe026284561a2920988ba6a3969c2bc3c",
+        "rev": "7f7749495e2108c114fad0573f307e856edc3840",
         "type": "github"
       },
       "original": {
         "owner": "jwiegley",
         "repo": "pi",
-        "rev": "9491864fe026284561a2920988ba6a3969c2bc3c",
+        "rev": "7f7749495e2108c114fad0573f307e856edc3840",
         "type": "github"
       }
     },
