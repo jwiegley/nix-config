@@ -827,8 +827,10 @@ let
           args = [ ];
           env = {
             ANTHROPIC_API_KEY = typedEnv "ANTHROPIC_API_KEY";
+            FACTORY_API_KEY = typedEnv "FACTORY_API_KEY";
             GEMINI_API_KEY = typedEnv "GEMINI_API_KEY";
             OPENAI_API_KEY = typedEnv "OPENAI_API_KEY";
+            XAI_API_KEY = typedEnv "XAI_API_KEY";
             DISABLED_TOOLS = "testgen,secaudit,docgen,tracer";
             DEFAULT_MODEL = "auto";
             LOG_LEVEL = "WARNING";
@@ -841,6 +843,11 @@ let
             "droid"
             "pi"
             "prime"
+          ];
+          hosts = [
+            "clio"
+            "hera"
+            "shared-work"
           ];
         };
 

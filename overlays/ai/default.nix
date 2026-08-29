@@ -38,6 +38,7 @@
   (import ./30-ai-python.nix)
   (import ./30-ai-llm.nix)
   ((import ./30-ai-mcp.nix) {
+    llmAgents = inputs.llm-agents;
     palMcpServer = inputs.pal-mcp-server or null;
   })
   (import ./30-lazycodex.nix)

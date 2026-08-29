@@ -61,6 +61,38 @@ in
       });
     }
     // {
+      droid-sdk = pfinal.buildPythonPackage {
+        pname = "droid-sdk";
+        inherit (sources.droid-sdk) version;
+        pyproject = true;
+
+        src =
+          assert sources.droid-sdk.source.fetcher == "fetchPypi";
+          pfinal.fetchPypi sources.droid-sdk.source.args;
+
+        patches = [ ../overlays/ai/patches/droid-sdk-exact-environment.patch ];
+        build-system = [ pfinal.hatchling ];
+        dependencies = [
+          pfinal.pydantic
+          pfinal.typing-extensions
+        ];
+
+        doCheck = false;
+        pythonImportsCheck = [ "droid_sdk" ];
+        doInstallCheck = true;
+        installCheckPhase = ''
+          runHook preInstallCheck
+          PYTHONPATH="$out/${pfinal.python.sitePackages}:''${PYTHONPATH:-}" \
+            ${pfinal.python.interpreter} ${../test/ai/overlays/droid-sdk-environment-contract.py}
+          runHook postInstallCheck
+        '';
+
+        meta = {
+          description = "Python asyncio SDK for Factory Droid";
+          homepage = "https://docs.factory.ai/sdk/python";
+          license = prev.lib.licenses.asl20;
+        };
+      };
 
       mlx = pprev.mlx.overridePythonAttrs (
         oldAttrs:

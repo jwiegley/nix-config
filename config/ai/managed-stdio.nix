@@ -15,11 +15,14 @@ let
     "TERM"
     "TMPDIR"
     "USER"
+    "XDG_CONFIG_HOME"
   ];
   typedEnvironment = [
     "ANTHROPIC_API_KEY"
+    "FACTORY_API_KEY"
     "GEMINI_API_KEY"
     "OPENAI_API_KEY"
+    "XAI_API_KEY"
   ];
 
   inheritArgument = name: [

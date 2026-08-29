@@ -528,6 +528,10 @@ in
       };
       prime-agent = pkgs.callPackage ../test/ai/prime-agent.nix { inherit pkgs; };
       managed-mcp-stdio = pkgs.callPackage ../test/ai/managed-mcp-stdio.nix { inherit pkgs; };
+      pal-mcp-unit = pkgs.callPackage ../test/ai/pal-mcp-unit.nix {
+        inherit pkgs;
+        palMcpServer = inputs.pal-mcp-server;
+      };
       pi-extension-tests = pkgs.callPackage ../test/ai/pi-extension-tests.nix {
         inherit sourceForChecks;
       };

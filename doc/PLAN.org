@@ -5917,14 +5917,14 @@ Final completion-record persistence must succeed before delivery or acknowledgem
 ]
 #+end_src
 
-* TODO [#B] Define managed PAL provider credential authority
+* DOING [#B] Define managed PAL provider credential authority
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-ff4j
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-20 Thu 01:36]
-:MODIFIED: [2026-08-20 Thu 01:36]
+:MODIFIED: [2026-08-29 Sat 09:55]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -9222,6 +9222,22 @@ The release-independent coordinate helper accepts any Git URL for manually coupl
   }
 ]
 #+end_src
+
+* DOING [#B] Add five-model PAL support across active fleet
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-nzjz
+:LABELS:   []
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-28 Fri 22:31]
+:MODIFIED: [2026-08-29 Sat 09:55]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Add exact PAL support for gpt-5.6-sol, gemini-3.1-pro-preview, claude-fable-5, grok-4.6, and Factory kimi-k3 through Droid SDK. Load provider values from the strict user-owned $XDG_CONFIG_HOME/pal-mcp/config boundary, preserve bounded stdio inheritance and child isolation, deploy and verify Hera, and prepare Clio/shared-work for owner activation. Vulcan, VPS, and Git AI are excluded.
 
 * DONE [#C] Remove stale dual-remote publication claims
 :PROPERTIES:

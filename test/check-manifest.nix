@@ -36,6 +36,7 @@ let
       llama-cpp-platform-compat = evaluationOnly systems;
       llm-agents-nixpkgs-independent = evaluationOnly systems;
       managed-mcp-stdio = behavioral systems true;
+      pal-mcp-unit = behavioral systems true;
       llm-mlx-plugin = behavioral darwinSystems false;
       mtplx-transformers-compat = behavioral darwinSystems false;
       omlx-post-patch = behavioral systems true;

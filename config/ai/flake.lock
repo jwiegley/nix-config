@@ -207,11 +207,11 @@
     "pal-mcp-server": {
       "flake": false,
       "locked": {
-        "lastModified": 1786182173,
-        "narHash": "sha256-luHcXlltLWYXoG0TwHYSp7uWBL/oGoA/Mvv6d8L9rho=",
+        "lastModified": 1788022124,
+        "narHash": "sha256-GFbTOQkg/N0UMykJViNOJAnZT6UZC1D41dTvchSP610=",
         "owner": "jwiegley",
         "repo": "pal-mcp-server",
-        "rev": "592fe07ce66329c3b8bc9d39b986eee523528feb",
+        "rev": "24d096e25d436097d33b93ef5315df580e6cf8c4",
         "type": "github"
       },
       "original": {
