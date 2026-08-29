@@ -1,14 +1,18 @@
 {
-  buildNpmPackage,
   callPackage,
   fetchFromGitHub,
   haskellPackages,
+  inputs,
   lib,
   python3,
+  stdenv,
   unixtools,
 }:
 
 let
+  npmCachePkgs = import inputs.npm-cache-nixpkgs {
+    system = stdenv.hostPlatform.system;
+  };
   sources = import ./source-catalog.nix "pi";
   source = sources.agent-cat-pi-extension;
   repo =
@@ -17,7 +21,7 @@ let
   runner = haskellPackages.callCabal2nix "agentic" (repo + "/haskell") { };
   piSourceBuild = callPackage ./pi-source-build.nix { };
 in
-buildNpmPackage {
+npmCachePkgs.buildNpmPackage {
   pname = "agent-cat-pi-extension";
   inherit (source) version;
   src = repo + "/pi-extension";

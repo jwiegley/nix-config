@@ -21,7 +21,7 @@
 
 let
   packageRoot = package: name: "${package}/share/pi-packages/${name}";
-  agent-cat-pi-extension = callPackage ../agent-cat-pi-extension.nix { };
+  agent-cat-pi-extension = callPackage ../agent-cat-pi-extension.nix { inherit inputs; };
 
   manifest = import ./manifest.nix {
     inherit inputs;
