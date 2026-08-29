@@ -165,6 +165,7 @@ pkgs.runCommand "ai-mcp-registry" { } ''
           "--inherit", "NIX_SSL_CERT_FILE",
           "--inherit", "NODE_EXTRA_CA_CERTS",
           "--inherit", "OPENAI_API_KEY",
+          "--inherit", "PAL_FACTORY_DROID_USE_LOCAL_LOGIN",
           "--inherit", "SHELL",
           "--inherit", "SSL_CERT_FILE",
           "--inherit", "TERM",
@@ -177,7 +178,8 @@ pkgs.runCommand "ai-mcp-registry" { } ''
         env: {
           DEFAULT_MODEL: "auto",
           DISABLED_TOOLS: "testgen,secaudit,docgen,tracer",
-          LOG_LEVEL: "WARNING"
+          LOG_LEVEL: "WARNING",
+          PAL_FACTORY_DROID_USE_LOCAL_LOGIN: "true"
         }
       }
     ' "$registry" >/dev/null

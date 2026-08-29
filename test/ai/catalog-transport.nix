@@ -1828,6 +1828,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
       "DEFAULT_MODEL": "auto",
       "DISABLED_TOOLS": "testgen,secaudit,docgen,tracer",
       "LOG_LEVEL": "WARNING",
+      "PAL_FACTORY_DROID_USE_LOCAL_LOGIN": "true",
   }
   pal_environment_references = {
       "ANTHROPIC_API_KEY": "''${ANTHROPIC_API_KEY}",

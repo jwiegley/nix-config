@@ -60,8 +60,9 @@ sentinel. Fixed provider overrides remain a separate Hera-only capability.
 Linux retains local-provider packages without registering them automatically.
 Managed PAL reads its mutable provider credentials and exact-model allowlists from
 the owner-only `$XDG_CONFIG_HOME/pal-mcp/config` file at runtime; Nix owns only
-the typed environment boundary and executable. PAL is selected for Darwin and
-shared-work profiles and explicitly excluded from Vulcan.
+the typed environment boundary and executable. Factory calls deliberately reuse
+the existing mutable Droid login instead of overriding it with a file key. PAL is
+selected for Darwin and shared-work profiles and excluded from VPS and Vulcan.
 
 The complete ownership and data-flow contract is maintained in
 [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md).

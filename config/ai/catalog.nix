@@ -834,6 +834,7 @@ let
             DISABLED_TOOLS = "testgen,secaudit,docgen,tracer";
             DEFAULT_MODEL = "auto";
             LOG_LEVEL = "WARNING";
+            PAL_FACTORY_DROID_USE_LOCAL_LOGIN = "true";
           };
         }
         {
@@ -1349,6 +1350,7 @@ let
     DISABLED_TOOLS = [ "testgen,secaudit,docgen,tracer" ];
     DEFAULT_MODEL = [ "auto" ];
     LOG_LEVEL = [ "WARNING" ];
+    PAL_FACTORY_DROID_USE_LOCAL_LOGIN = [ "true" ];
     SEARXNG_URL = [
       "http://localhost:8890"
       "https://searxng.vulcan.lan"
