@@ -1,0 +1,40 @@
+$ ssh vulcan nix log /nix/store/zfisn1y6hlimxlsz10lv44glpm4jb4az-pi-coding-agent-source-build-0.84.3.drv
+
+[pi-vitest-sourcemap-probe] file=/build/source/node_modules/tsx/dist/register-B4MtRGQg.cjs error=SyntaxError: Unexpected token '�', "�" is not valid JSON
+[pi-vitest-sourcemap-probe] file=/build/source/node_modules/tsx/dist/register-B4MtRGQg.cjs error=SyntaxError: Unexpected token '�', "�" is not valid JSON
+
+⎯⎯⎯⎯⎯⎯⎯ Test Run Error ⎯⎯⎯⎯⎯⎯⎯
+SyntaxError: Unexpected token '�', "�" is not valid JSON
+ ❯ new Converter node_modules/convert-source-map/index.js:83:15
+ ❯ Object.exports.fromComment node_modules/convert-source-map/index.js:181:10
+ ❯ Object.exports.fromSource node_modules/convert-source-map/index.js:207:22
+ ❯ extractSourcemapFromFile node_modules/@vitest/utils/dist/source-map/node.js:10:27
+ ❯ Object.getSourceMap node_modules/vitest/dist/chunks/cli-api.24X8XwN1.js:12636:102
+ ❯ node_modules/@vitest/utils/dist/source-map.js:391:37
+ ❯ parseStacktrace node_modules/@vitest/utils/dist/source-map.js:387:16
+ ❯ parseErrorStacktrace node_modules/@vitest/utils/dist/source-map.js:438:51
+
+$ npm pack tsx@4.22.1 --ignore-scripts
+$ python3 inspect-marker.py package/dist/register-B4MtRGQg.cjs
+
+npm_integrity=sha512-TvncJykhxAzFCk0VQZKBTClall4Pm7qXDSodb6uxi8QFa8X8mT6ABjxxsQ2opDRYxG7AzcRWXaFtruz5HJKuWg==
+file=register-B4MtRGQg.cjs
+size=36299
+sha256=1710aefd9b856e256216166c7bf3c378249f696bccf367b80865e064b055494f
+marker_offsets=29191
+offset=29191 range=29095:29397
+escaped="athAlias\"),ot=f(e=>{if(e)return ye(e);try{return cn()??void 0}catch{}},\"loadTsconfig\"),hn=`\n//# sourceMappingURL=data:application/json;base64,`,st=f(()=>process.sourceMapsEnabled??!0,\"shouldApplySourceMap\"),Ce=f(({code:e,map:t})=>e+hn+Buffer.from(JSON.stringify(t),\"utf8\").toString(\"base64\"),\"inlineSou"
+hex=617468416c69617322292c6f743d6628653d3e7b696628652972657475726e2079652865293b7472797b72657475726e20636e28293f3f766f696420307d63617463687b7d7d2c226c6f61645473636f6e66696722292c686e3d600a2f2f2320736f757263654d617070696e6755524c3d646174613a6170706c69636174696f6e2f6a736f6e3b6261736536342c602c73743d662828293d3e70726f636573732e736f757263654d617073456e61626c65643f3f21302c2273686f756c644170706c79536f757263654d617022292c43653d6628287b636f64653a652c6d61703a747d293d3e652b686e2b4275666665722e66726f6d284a534f4e2e737472696e676966792874292c227574663822292e746f537472696e67282262617365363422292c22696e6c696e65536f75
+
+$ ssh vulcan nix log /nix/store/kwbp8lidkn92pmyfp2vs26skrn4xwpqb-pi-coding-agent-source-build-0.84.3.drv
+
+zw(u
+^
+
+SyntaxError: Unexpected token 'z', "zw(u" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at new Converter (/build/source/node_modules/convert-source-map/index.js:83:15)
+    at exports.fromComment (/build/source/node_modules/convert-source-map/index.js:181:10)
+    at exports.fromSource (/build/source/node_modules/convert-source-map/index.js:207:22)
+    at extractSourcemapFromFile (file:///build/source/node_modules/@vitest/utils/dist/source-map/node.js:8:32)
+    at file:///build/source/[eval1]:10:14

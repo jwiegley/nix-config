@@ -1,0 +1,59 @@
+$ ssh vulcan nix log /nix/store/ndxw1bgq7c70ls3lk4rc3mrqdf1yxmkl-pi-coding-agent-source-build-0.84.3.drv
+
+✓ packages/coding-agent/test/session-manager/indexed-history-store.test.ts (52 tests) 24791ms
+     ✓ serializes simultaneous appends from independent processes  1591ms
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯⎯⎯ Test Run Error ⎯⎯⎯⎯⎯⎯⎯
+SyntaxError: Unexpected token '�', "�" is not valid JSON
+ ❯ new Converter node_modules/convert-source-map/index.js:83:15
+ ❯ Object.exports.fromComment node_modules/convert-source-map/index.js:181:10
+ ❯ Object.exports.fromSource node_modules/convert-source-map/index.js:207:22
+ ❯ extractSourcemapFromFile node_modules/@vitest/utils/dist/source-map/node.js:8:32
+ ❯ Object.getSourceMap node_modules/vitest/dist/chunks/cli-api.24X8XwN1.js:12636:102
+ ❯ node_modules/@vitest/utils/dist/source-map.js:391:37
+ ❯ parseStacktrace node_modules/@vitest/utils/dist/source-map.js:387:16
+ ❯ parseErrorStacktrace node_modules/@vitest/utils/dist/source-map.js:438:51
+
+ Test Files  1 failed | 36 passed (37)
+      Tests  574 passed | 2 skipped (577)
+     Errors  1 error
+   Duration  25.44s (transform 8.28s, setup 0ms, import 22.30s, tests 80.20s, environment 2ms)
+
+$ node .../vitest/dist/cli.js --run test/session-manager/indexed-history-store.test.ts \
+    -t 'atomically initializes and serializes source locks across processes'
+# Vulnerable fork c3d353aa, fixed regression only; repeated five times.
+
+ FAIL  test/session-manager/indexed-history-store.test.ts > IndexedJsonlSessionHistoryStore > atomically initializes and serializes source locks across processes with different TMPDIR values
+Error: worker exited 1: .../src/core/session-history-store.ts:509
+Error: Unable to lock session file .../session.jsonl: Error: Refusing unrecognized session lock database: .../.pi-session-source-locks/d8a316a3b84fcd9eb76b6eef51d0757b799073b914c10d3902f25e59bf3a6d98.sqlite
+    at acquireSourceLock (.../src/core/session-history-store.ts:509:23)
+  code: 'ELOCKED',
+  cause: Error: Refusing unrecognized session lock database: .../.pi-session-source-locks/d8a316a3b84fcd9eb76b6eef51d0757b799073b914c10d3902f25e59bf3a6d98.sqlite
+      at acquireSqliteSourceLock (.../src/core/session-history-store.ts:468:11)
+      at acquireSourceLock (.../src/core/session-history-store.ts:504:10)
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 51 skipped (52)
+
+lock-baseline 01 EXPECTED-FAIL
+lock-baseline 02 EXPECTED-FAIL
+lock-baseline 03 EXPECTED-FAIL
+lock-baseline 04 EXPECTED-FAIL
+lock-baseline 05 EXPECTED-FAIL
+
+# Fixed fork c3edb026, same regression.
+lock-fixed 01 PASS
+lock-fixed 02 PASS
+lock-fixed 03 PASS
+lock-fixed 04 PASS
+lock-fixed 05 PASS
+lock-fixed 06 PASS
+lock-fixed 07 PASS
+lock-fixed 08 PASS
+lock-fixed 09 PASS
+lock-fixed 10 PASS

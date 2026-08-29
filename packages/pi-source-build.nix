@@ -1,10 +1,12 @@
 {
   buildNpmPackage,
+  fd,
   fetchzip,
   git,
   lib,
   nodejs_24,
   piSource,
+  ripgrep,
   stdenv,
 }:
 
@@ -41,7 +43,11 @@ buildNpmPackageWithNode24 {
   npmBuildScript = "build:offline";
 
   doCheck = true;
-  nativeCheckInputs = [ git ];
+  nativeCheckInputs = [
+    fd
+    git
+    ripgrep
+  ];
   checkPhase = ''
     runHook preCheck
     # Backport vitest-dev/vitest#10893 for the bundled @vitest/utils 4.1.9.
@@ -70,53 +76,8 @@ buildNpmPackageWithNode24 {
       npm exec -- tsgo --noEmit
       npm run check:browser-smoke
     ''}
-    # Keep the fork's source-level regressions in the package gate without
-    # importing unrelated upstream tests whose external-tool assumptions are
-    # incompatible with Nix builds.
-    npm exec -- vitest --run --testTimeout 30000 \
-      packages/protocol/test/protocol.test.ts \
-      packages/client/test/sessions.test.ts \
-      packages/server/test/sessions.test.ts \
-      packages/coding-agent/test/client/remote-session.test.ts \
-      packages/coding-agent/test/client/remote-session-lifecycle.test.ts \
-      packages/coding-agent/test/client/remote-session-ownership.test.ts \
-      packages/coding-agent/test/suite/agent-session-prompt.test.ts \
-      packages/coding-agent/test/suite/tool-renderer-wrapper.test.ts \
-      packages/agent/test/agent.test.ts \
-      packages/coding-agent/test/agent-session-auto-compaction-queue.test.ts \
-      packages/coding-agent/test/agent-session-concurrent.test.ts \
-      packages/coding-agent/test/agent-session-jsonl-export.test.ts \
-      packages/coding-agent/test/agent-session-runtime-events.test.ts \
-      packages/coding-agent/test/agent-session-runtime-ownership.test.ts \
-      packages/coding-agent/test/agent-session-stats.test.ts \
-      packages/coding-agent/test/compaction.test.ts \
-      packages/coding-agent/test/export-html-streaming.test.ts \
-      packages/coding-agent/test/export-html-whitespace.test.ts \
-      packages/coding-agent/test/export-html-write.test.ts \
-      packages/coding-agent/test/extensions-runner.test.ts \
-      packages/coding-agent/test/provider-transport.test.ts \
-      packages/coding-agent/test/footer-width.test.ts \
-      packages/coding-agent/test/git-update.test.ts \
-      packages/coding-agent/test/interactive-mode-history-cap.test.ts \
-      packages/coding-agent/test/interactive-mode-startup.test.ts \
-      packages/coding-agent/test/model-default-thinking.test.ts \
-      packages/coding-agent/test/print-mode.test.ts \
-      packages/coding-agent/test/rpc-client-paging.test.ts \
-      packages/coding-agent/test/rpc-prompt-response-semantics.test.ts \
-      packages/coding-agent/test/session-info-search-text.test.ts \
-      packages/coding-agent/test/session-manager/file-operations.test.ts \
-      packages/coding-agent/test/session-manager/indexed-history-store.test.ts \
-      packages/coding-agent/test/session-manager/migration.test.ts \
-      packages/coding-agent/test/session-manager/paged-navigation.test.ts \
-      packages/coding-agent/test/session-manager/tree-traversal.test.ts \
-      packages/coding-agent/test/session-selector-path-delete.test.ts \
-      packages/coding-agent/test/session-selector-rename.test.ts \
-      packages/coding-agent/test/session-selector-search.test.ts \
-      packages/coding-agent/test/system-prompt.test.ts \
-      packages/coding-agent/test/test-harness.test.ts \
-      packages/coding-agent/test/tool-renderers.test.ts \
-      packages/coding-agent/test/tree-selector.test.ts \
-      packages/coding-agent/test/user-message-selector.test.ts
+    # Run the fork's complete credential-free, non-e2e test gate.
+    bash ./test.sh
     runHook postCheck
   '';
 
