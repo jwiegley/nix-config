@@ -625,8 +625,14 @@ assert
 assert builtins.any isDesktopRuntimeReference (contextPackageNames runtimeContextProbe);
 assert
   sharedWork.programs.zsh.history.path == "${sharedWork.xdg.configHome}/zsh/history-\${HOST%%.*}";
-assert !sharedWork.programs.zsh.history.share;
+assert builtins.all (config: !config.programs.zsh.history.share) allHomes;
+assert builtins.all (
+  config:
+  config.johnw.host.isSharedWork
+  || builtins.elem "INC_APPEND_HISTORY_TIME" config.programs.zsh.setOptions
+) allHomes;
 assert builtins.elem "INC_APPEND_HISTORY" sharedWork.programs.zsh.setOptions;
+assert !(builtins.elem "INC_APPEND_HISTORY_TIME" sharedWork.programs.zsh.setOptions);
 assert builtins.all (
   config:
   config.programs.zsh.completionInit == ''

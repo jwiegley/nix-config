@@ -1042,16 +1042,17 @@ The installed user-scripts package metadata still advertises the retired GitHub 
 ]
 #+end_src
 
-* DEFER [#C] Investigate intermittent zsh first-prompt history stalls
+* DONE [#C] Replace live zsh history sharing to remove first-prompt stalls
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-2hjj
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-15 Sat 15:02]
-:MODIFIED: [2026-08-15 Sat 15:02]
+:MODIFIED: [2026-08-28 Fri 17:46]
 :CREATED_BY: johnw
-:DEFERRED: [2026-09-14 Mon 15:02]
+:FINISHED: [2026-08-28 Fri 17:46]
+:CLOSE_REASON: Replaced live SHARE_HISTORY with append-on-completion semantics while retaining per-host NFS histories; host behavior, full tests, and static gates pass.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -1099,12 +1100,10 @@ not yet filesystem-confirmed because no lock-owner snapshot was captured during
 the exact 15-second stall. Do not attribute the delay to Nix or direnv without
 new evidence.
 
-No history behavior change is authorized. In particular, do not disable
-`SHARE_HISTORY`, change persistence timing, reduce retained history, or activate
-a shell configuration merely to make the benchmark green. A possible future
-tradeoff, only after owner approval, is to replace live cross-shell importing
-with `INC_APPEND_HISTORY_TIME`: commands would still persist after completion,
-but already-open shells would not immediately import commands entered elsewhere.
+On 2026-08-28 the owner explicitly authorized replacing live `SHARE_HISTORY`
+with `INC_APPEND_HISTORY_TIME`. Commands must still persist after completion, but
+already-open shells will no longer import commands entered elsewhere. System or
+Home Manager activation remains a separate authorization.
 
 Future investigation should measure actual tmux time-to-first-prompt rather
 than conflate startup with `zsh -lic exit` history flushing; capture narrowly
@@ -1113,7 +1112,7 @@ compare unchanged behavior with any explicitly approved alternative.
 
 ** Acceptance Criteria
 
-Capture a slow tmux time-to-first-prompt sample and identify or falsify history locking with direct evidence; preserve current history semantics unless the owner explicitly approves a tradeoff; verify repeated real first prompts without Nix or direnv children before closing.
+Generated Hera zsh config contains INC_APPEND_HISTORY_TIME and NO_SHARE_HISTORY; shared-work retains its per-host INC_APPEND_HISTORY policy; focused host behavior and full Darwin system builds pass; after separately authorized activation, completed commands persist and repeated real fresh prompts no longer exhibit the intermittent stall.
 
 ** Dependencies
 
@@ -1127,6 +1126,20 @@ Capture a slow tmux time-to-first-prompt sample and identify or falsify history 
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 533,
+    "issue_id": "nix-2hjj",
+    "author": "johnw",
+    "text": "Owner authorized the history-semantics tradeoff. Candidate now disables live sharing globally, enables INC_APPEND_HISTORY_TIME for non-shared homes, preserves shared-work INC_APPEND_HISTORY, passes the host-behavior derivation and ./build system, and renders Hera with INC_APPEND_HISTORY_TIME plus NO_SHARE_HISTORY. Activation and post-activation prompt measurements remain pending separate authorization.",
+    "created_at": "2026-08-28T22:06:06Z"
   }
 ]
 #+end_src

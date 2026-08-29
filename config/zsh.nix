@@ -54,17 +54,19 @@ in
       # file so a stale shell on one host cannot replace another host's data.
       path = "${dotDir}/history${lib.optionalString config.johnw.host.isSharedWork "-\${HOST%%.*}"}";
       ignoreDups = true;
-      share = !config.johnw.host.isSharedWork;
+      # Persist completed commands below without importing other live shells.
+      share = false;
       append = true;
       extended = true;
     };
 
-    setOptions = lib.optionals config.johnw.host.isSharedWork [
-      "INC_APPEND_HISTORY"
-      "NO_INC_APPEND_HISTORY_TIME"
-      "HIST_SAVE_BY_COPY"
-    ];
-
+    setOptions =
+      lib.optionals (!config.johnw.host.isSharedWork) [ "INC_APPEND_HISTORY_TIME" ]
+      ++ lib.optionals config.johnw.host.isSharedWork [
+        "INC_APPEND_HISTORY"
+        "NO_INC_APPEND_HISTORY_TIME"
+        "HIST_SAVE_BY_COPY"
+      ];
     sessionVariables = {
       ALTERNATE_EDITOR = "${pkgs.vim}/bin/vi";
       LC_CTYPE = "en_US.UTF-8";
