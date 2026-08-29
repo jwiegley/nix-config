@@ -524,6 +524,26 @@
       },
       "version": "0.1.10+omlx.7"
     },
+    "droid-sdk": {
+      "source": {
+        "args": {
+          "hash": "sha256-Kl+P7Pie+6DE5Q5EMvxPvV0S1E5N12fH7HLD9ypETJg=",
+          "pname": "droid_sdk",
+          "version": "0.4.0"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/droid-sdk"
+      },
+      "update": {
+        "buildMode": "pkg",
+        "buildPackage": "pal-mcp-server",
+        "kind": "pypi-release",
+        "package": "droid-sdk",
+        "policy": "manual",
+        "reason": "Droid subprocess protocol and exact environment boundary require review"
+      },
+      "version": "0.4.0"
+    },
     "espeakng-loader": {
       "source": {
         "args": {
@@ -1005,10 +1025,10 @@
     "pal-mcp-server": {
       "source": {
         "args": {
-          "narHash": "sha256-luHcXlltLWYXoG0TwHYSp7uWBL/oGoA/Mvv6d8L9rho=",
+          "narHash": "sha256-GFbTOQkg/N0UMykJViNOJAnZT6UZC1D41dTvchSP610=",
           "owner": "jwiegley",
           "repo": "pal-mcp-server",
-          "rev": "592fe07ce66329c3b8bc9d39b986eee523528feb",
+          "rev": "24d096e25d436097d33b93ef5315df580e6cf8c4",
           "type": "github"
         },
         "fetcher": "fetchTree",

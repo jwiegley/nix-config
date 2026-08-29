@@ -167,9 +167,11 @@ four as follows:
 # Packaging substrate revision used for Pi and the other agents.
 jq -r '.nodes["llm-agents"].locked.rev' flake.lock
 
-# Reviewed Pi source revision; flake/ai.nix asserts the packaged version
-# agrees with this record.
-jq -r '.sources["pi-coding-agent-source-build"].source.args.rev' sources/ai.json
+# Reviewed maintained-fork revision. The source catalog is a checked projection
+fork_rev=$(jq -r '.nodes.pi.locked.rev' config/ai/flake.lock)
+catalog_rev=$(jq -r '.sources["pi-coding-agent-source-build"].source.args.rev' sources/ai.json)
+test "$fork_rev" = "$catalog_rev"
+printf '%s\n' "$fork_rev"
 
 # Version and store output selected by this checkout.
 system=$(nix eval --impure --raw --expr builtins.currentSystem)

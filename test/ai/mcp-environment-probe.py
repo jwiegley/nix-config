@@ -13,8 +13,10 @@ FORBIDDEN_ENVIRONMENT = (
     "FACTORY_DISABLE_DYNAMIC_CONFIG",
     "FACTORY_DROID_AUTO_UPDATE_ENABLED",
     "FACTORY_MCP_BLOCKING_LOAD_TIMEOUT_MS",
+    "FACTORY_API_KEY",
     "FACTORY_OTEL_ENABLED",
     "GEMINI_API_KEY",
+    "XAI_API_KEY",
     "GIT_AI_SOCKET",
     "GIT_TRACE2_EVENT",
     "LD_PRELOAD",
@@ -55,6 +57,7 @@ def main() -> None:
             "TERM": "dumb",
             "TMPDIR": sys.argv[4],
             "USER": "test",
+            "XDG_CONFIG_HOME": f"{sys.argv[3]}/.config",
         }
         for name, expected in expected_platform.items():
             if os.environ.get(name) != expected:

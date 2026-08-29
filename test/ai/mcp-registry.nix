@@ -155,6 +155,7 @@ pkgs.runCommand "ai-mcp-registry" { } ''
           "--inherit", "ANTHROPIC_API_KEY",
           "--inherit", "DEFAULT_MODEL",
           "--inherit", "DISABLED_TOOLS",
+          "--inherit", "FACTORY_API_KEY",
           "--inherit", "GEMINI_API_KEY",
           "--inherit", "HOME",
           "--inherit", "LANG",
@@ -169,6 +170,8 @@ pkgs.runCommand "ai-mcp-registry" { } ''
           "--inherit", "TERM",
           "--inherit", "TMPDIR",
           "--inherit", "USER",
+          "--inherit", "XAI_API_KEY",
+          "--inherit", "XDG_CONFIG_HOME",
           "--", $pal
         ],
         env: {

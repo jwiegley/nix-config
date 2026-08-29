@@ -54,11 +54,14 @@ int main(int argc, char **argv) {
   if (strcmp(argv[1], "present") == 0) {
     if (!present_with_value("OPENAI_API_KEY", "typed-sentinel") ||
         !present_with_value("ANTHROPIC_API_KEY", "anthropic-sentinel") ||
+        !present_with_value("FACTORY_API_KEY", "factory-sentinel") ||
+        !present_with_value("XAI_API_KEY", "xai-sentinel") ||
         !present_with_value("NODE_EXTRA_CA_CERTS", "/managed-node-ca")) {
       return 12;
     }
   } else if (strcmp(argv[1], "absent") == 0) {
     if (!absent("OPENAI_API_KEY") || !absent("ANTHROPIC_API_KEY") ||
+        !absent("FACTORY_API_KEY") || !absent("XAI_API_KEY") ||
         !absent("NODE_EXTRA_CA_CERTS")) {
       return 13;
     }

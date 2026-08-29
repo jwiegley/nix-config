@@ -1006,7 +1006,14 @@ assert builtins.all (
 assert catalog.validate {
   items = withClaudeSettingsBase (claudeSettings.base // { model = "café/模型@版本"; });
 };
-assert builtins.all (profile: (selectFor profile).mcpServers ? pal) profiles;
+assert builtins.all (
+  profile:
+  ((selectFor profile).mcpServers ? pal) == builtins.elem profile.host [
+    "clio"
+    "hera"
+    "shared-work"
+  ]
+) profiles;
 assert builtins.all (
   profile:
   builtins.all (
@@ -1679,6 +1686,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
   if ! ${pkgs.coreutils}/bin/timeout --signal=TERM --kill-after=1 20 \
     ${pkgs.coreutils}/bin/env -i \
       HOME="$droid_home" \
+      XDG_CONFIG_HOME="$droid_home/.config" \
       USER=test \
       LOGNAME=test \
       LANG=C.UTF-8 \
@@ -1823,8 +1831,10 @@ pkgs.runCommand "ai-catalog-transport" { } ''
   }
   pal_environment_references = {
       "ANTHROPIC_API_KEY": "''${ANTHROPIC_API_KEY}",
+      "FACTORY_API_KEY": "''${FACTORY_API_KEY}",
       "GEMINI_API_KEY": "''${GEMINI_API_KEY}",
       "OPENAI_API_KEY": "''${OPENAI_API_KEY}",
+      "XAI_API_KEY": "''${XAI_API_KEY}",
   }
   droid_environment_references = {
       name: "$" + "{" + name + ":-}"
@@ -1854,11 +1864,29 @@ pkgs.runCommand "ai-catalog-transport" { } ''
       raise SystemExit("Codex PAL environment projection changed")
   PY
   ${lib.concatMapStringsSep "\n" (entry: ''
-    ${pkgs.jq}/bin/jq -e '
+    ${pkgs.jq}/bin/jq -e \
+      --argjson palEnabled ${
+        if
+          builtins.elem entry.profile.host [
+            "clio"
+            "hera"
+            "shared-work"
+          ]
+        then
+          "true"
+        else
+          "false"
+      } '
       .mcpServers["synthetic-http"]
         == {"type": "http", "url": "https://example.invalid/mcp"}
-      and (.mcpServers.pal.command | type == "string")
-      and (.mcpServers.pal.args | type == "array")
+      and (
+        if $palEnabled then
+          (.mcpServers.pal.command | type == "string")
+          and (.mcpServers.pal.args | type == "array")
+        else
+          (.mcpServers | has("pal") | not)
+        end
+      )
     ' ${entry.rendered.files."${entry.profile.root}/nix-managed-mcp.json".source} >/dev/null
     ${pkgs.jq}/bin/jq -e \
       --argjson personalWorkstation ${

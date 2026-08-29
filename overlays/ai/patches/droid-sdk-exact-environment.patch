@@ -1,0 +1,20 @@
+diff --git a/src/droid_sdk/transport.py b/src/droid_sdk/transport.py
+index 2409f0d..3204cd0 100644
+--- a/src/droid_sdk/transport.py
++++ b/src/droid_sdk/transport.py
+@@ -10,7 +10,6 @@ import asyncio
+ import contextlib
+ import json
+ import logging
+-import os
+ import re
+ import signal
+ from collections.abc import AsyncIterator  # noqa: TC003
+@@ -140,7 +139,6 @@ class ProcessTransport:
+         self._stderr_capture = ""
+ 
+         env = {
+-            **os.environ,
+             **(self._env or {}),
+             **sdk_process_environment(),
+         }

@@ -8,8 +8,8 @@ tags:
   - ai-agents
   - developer-tools
 created: 2026-07-27
-updated: 2026-08-28
-pi-version: 0.84.3
+updated: 2026-08-29
+pi-version: 0.84.4
 ---
 
 # Pi Coding Agent Extensions
@@ -394,7 +394,7 @@ These binaries are not additional Pi extensions. They are the immediate runtime 
 
 | Runtime | Selected version | Consumer | Links |
 | --- | ---: | --- | --- |
-| Pi | 0.84.3 | All extensions | [Home](https://pi.dev) · [GitHub](https://github.com/earendil-works/pi) |
+| Pi | 0.84.4 | All extensions | [Home](https://pi.dev) · [Fork](https://github.com/jwiegley/pi) · [Upstream](https://github.com/earendil-works/pi) |
 | Droid CLI | managed installation | [Factory Droid SDK Provider][pi-droid-sdk] | [Factory quickstart](https://docs.factory.ai/cli/getting-started/quickstart) |
 | `agent-browser` | 0.35.1 | [Pi Agent Browser Native][pi-agent-browser-native] | [GitHub](https://github.com/vercel-labs/agent-browser) |
 | RTK | 0.44.0 | [Pi RTK Optimizer][pi-rtk-optimizer] | [Home](https://www.rtk-ai.app) · [GitHub](https://github.com/rtk-ai/rtk) |

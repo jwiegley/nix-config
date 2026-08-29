@@ -4,18 +4,20 @@
 {
   final,
   prev,
+  llmAgents ? null,
   palMcpServer ? null,
 }:
 
 let
   sources = import ./source-catalog.nix "ai";
+  droidPackage = llmAgents.packages.${prev.stdenv.hostPlatform.system}.droid;
   palPackage = builtins.fromTOML (builtins.readFile "${palMcpServer}/pyproject.toml");
   managedMcpPath = prev.lib.makeBinPath [
     prev.coreutils
     prev.openssh
   ];
 in
-prev.lib.optionalAttrs (palMcpServer != null) {
+prev.lib.optionalAttrs (palMcpServer != null && llmAgents != null) {
 
   # PAL MCP Server - Provider Abstraction Layer for multi-model AI collaboration
   # NOTE: Using 'final' because python3Packages may be modified by
@@ -47,8 +49,15 @@ prev.lib.optionalAttrs (palMcpServer != null) {
         google-genai
         openai
         anthropic
+        droid-sdk
         pydantic
         python-dotenv
+      ];
+
+      makeWrapperArgs = [
+        "--set"
+        "PAL_DROID_EXECUTABLE"
+        (lib.getExe droidPackage)
       ];
 
       env.SETUPTOOLS_SCM_PRETEND_VERSION = palPackage.project.version;
@@ -56,6 +65,8 @@ prev.lib.optionalAttrs (palMcpServer != null) {
       doCheck = true;
       installCheckPhase = ''
         runHook preInstallCheck
+        test -f "$out/${python.sitePackages}/conf/anthropic_models.json"
+        test -f "$out/${python.sitePackages}/conf/factory_models.json"
         ${python.interpreter} ${../test/ai/overlays/pal-mcp-contract.py} \
           "$out" "$out/bin/pal-mcp-server" \
           ${lib.escapeShellArg palPackage.project.version}

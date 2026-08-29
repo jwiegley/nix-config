@@ -50,9 +50,11 @@ pkgs.runCommand "managed-mcp-stdio-contract"
     inherited=(
       --inherit ANTHROPIC_API_KEY
       --inherit DEFAULT_MODEL
+      --inherit FACTORY_API_KEY
       --inherit HOME
       --inherit NODE_EXTRA_CA_CERTS
       --inherit OPENAI_API_KEY
+      --inherit XAI_API_KEY
     )
 
     result="$(
@@ -60,6 +62,7 @@ pkgs.runCommand "managed-mcp-stdio-contract"
         ANTHROPIC_API_KEY=anthropic-sentinel \
         BASH_ENV=/forbidden \
         DEFAULT_MODEL=auto \
+        FACTORY_API_KEY=factory-sentinel \
         DYLD_INSERT_LIBRARIES= \
         GEMINI_API_KEY=other-provider-sentinel \
         GIT_AI_SOCKET=/forbidden \
@@ -69,6 +72,7 @@ pkgs.runCommand "managed-mcp-stdio-contract"
         NODE_OPTIONS=--forbidden \
         NODE_EXTRA_CA_CERTS=/managed-node-ca \
         OPENAI_API_KEY=typed-sentinel \
+        XAI_API_KEY=xai-sentinel \
         PATH=/shadowed/path \
         PYTHONPATH=/forbidden \
         SSH_AUTH_SOCK=/forbidden \
@@ -144,9 +148,11 @@ pkgs.runCommand "managed-mcp-stdio-contract"
       fd-directory.err >/dev/null
 
     export ANTHROPIC_API_KEY=anthropic-sentinel
+    export FACTORY_API_KEY=factory-sentinel
     export GEMINI_API_KEY=other-provider-sentinel
     export NODE_EXTRA_CA_CERTS=/managed-node-ca
     export OPENAI_API_KEY=typed-sentinel
+    export XAI_API_KEY=xai-sentinel
     export UNRELATED_SECRET=unrelated-sentinel
     set +e
     env -i HOME=/managed-home PATH=/shadowed/path \
@@ -187,13 +193,13 @@ pkgs.runCommand "managed-mcp-stdio-contract"
     test "$non_executable_status" -eq 126
     test "$relative_target_status" -eq 64
     if grep -F -e typed-sentinel -e anthropic-sentinel \
-      -e other-provider-sentinel -e /managed-node-ca \
+      -e factory-sentinel -e xai-sentinel -e other-provider-sentinel \
       -e unrelated-sentinel usage.err >/dev/null; then
       echo "managed MCP launcher exposed an environment value" >&2
       exit 1
     fi
-    unset ANTHROPIC_API_KEY GEMINI_API_KEY NODE_EXTRA_CA_CERTS \
-      OPENAI_API_KEY UNRELATED_SECRET
+    unset ANTHROPIC_API_KEY FACTORY_API_KEY GEMINI_API_KEY \
+      NODE_EXTRA_CA_CERTS OPENAI_API_KEY UNRELATED_SECRET XAI_API_KEY
 
     ${pkgs.python3}/bin/python3 ${./overlays/pal-mcp-contract.py} \
       ${pkgs.pal-mcp-server} ${launcher} \
@@ -201,6 +207,7 @@ pkgs.runCommand "managed-mcp-stdio-contract"
       --inherit ANTHROPIC_API_KEY \
       --inherit DEFAULT_MODEL \
       --inherit DISABLED_TOOLS \
+      --inherit FACTORY_API_KEY \
       --inherit GEMINI_API_KEY \
       --inherit HOME \
       --inherit LANG \
@@ -218,6 +225,8 @@ pkgs.runCommand "managed-mcp-stdio-contract"
       --inherit TERM \
       --inherit TMPDIR \
       --inherit USER \
+      --inherit XAI_API_KEY \
+      --inherit XDG_CONFIG_HOME \
       -- ${networkGuardedPal}
 
     touch "$out"
