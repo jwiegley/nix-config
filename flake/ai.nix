@@ -122,7 +122,10 @@ let
         package = probedPackage;
       }
     else if name == "pi" then
-      import ./ai/wrappers/pi.nix { inherit pkgs package; }
+      import ./ai/wrappers/pi.nix {
+        inherit pkgs package;
+        piSource = inputs.pi;
+      }
     else
       package;
 

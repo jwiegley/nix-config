@@ -30,6 +30,11 @@
 
     llm-agents.url = "github:numtide/llm-agents.nix";
 
+    pi = {
+      url = "github:jwiegley/pi";
+      flake = false;
+    };
+
     ponytail = {
       url = "github:DietrichGebert/ponytail";
       flake = false;

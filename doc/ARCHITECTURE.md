@@ -204,13 +204,18 @@ the Home Manager module arguments. That explicit consumer lock is part of the
 separately authorized adoption step; the module fails closed when it is absent.
 
 Pi uses the floating `llm-agents` packaging substrate while replacing its built
-artifacts with the reviewed source build in `packages/pi-source-build.nix`
-(record `pi-coding-agent-source-build` in `sources/ai.json`). `flake/ai.nix`
-asserts that the feed package and reviewed source build have the same version,
-so an automatic feed advance fails at evaluation until the source, downstream
-patches, and Gallery compatibility surface are reviewed together. The
-`llm-agents-nixpkgs-independent` check keeps the feed's nixpkgs input independent
-from the consumer channel.
+artifacts with the maintained `github:jwiegley/pi` source through the `flake =
+false` `pi` input owned by the portable subflake. Root consumes that input
+transitively; root and portable locks plus the catalog projection must resolve
+the same immutable fork commit. The `pi-coding-agent-source-build` catalog
+record carries the matching version, NAR projection, npm dependency hash, and
+packaged provider-data artifact. `packages/pi-source-build.nix` fails evaluation
+unless those projections match the locked input, and `flake/ai.nix` separately
+requires the feed package and source build to have the same version. The wrapper
+requires `dist/bundle/cli.js` at build time and publishes `bundledCliAbi = 1`, so
+an accidental modular-entrypoint fallback fails the package and gallery gates.
+The `llm-agents-nixpkgs-independent` check keeps the feed's nixpkgs input
+independent from the consumer channel.
 
 Pi gallery normalization has one implementation:
 `packages/pi-gallery/normalization-policy.json` defines the closed policy and

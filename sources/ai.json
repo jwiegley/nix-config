@@ -961,10 +961,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-cAY2KaZSqc5lW9hYHWgnVL1Z/K49p9eKPxbJ8jEla0Y=",
+          "narHash": "sha256-OIkMTbUJV1NGAKcU0vBjAbgr8vDnqCCAn67vgT3CB+Q=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "f18e879662c83037f9c8d6ff1965058eb194e0d1",
+          "rev": "a213a4b8e48bc5cc2211a5d89be2dba8a98bddb6",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1059,32 +1059,36 @@
       "artifacts": {
         "piAiRelease": {
           "args": {
-            "hash": "sha256-3jbhoI1KQAlazKfAmV+QNyx7Ym9k7EQ7l/7DUcGV1xE=",
-            "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.3.tgz"
+            "hash": "sha256-5RUH1YbGFRRrPsljziBfmdRBX97XpBl9S4I1AehLaYM=",
+            "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.4.tgz"
           },
           "fetcher": "fetchzip",
-          "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.3.tgz"
+          "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.4.tgz"
         }
       },
       "hashes": {
-        "npmDepsHash": "sha256-cDx28+c4bwtQpiy5+BCvZhZezoZb4WRqfZj2eoEeMbw="
+        "npmDepsHash": "sha256-35GC3Q4Jf4URvqoEYHeM63x49tTmrth62//PvKm4I7Q="
       },
       "source": {
         "args": {
-          "hash": "sha256-fC9pKgP2qD61ae5d7iOqP8anl88J1N1Bq8X8+aAjA2A=",
-          "owner": "earendil-works",
+          "narHash": "sha256-QddtrrnG8L00dwE5oiCuU+ojr4/onGvbEJRH3wo9XcE=",
+          "owner": "jwiegley",
           "repo": "pi",
-          "rev": "4e58f324fae8ebfa98a3d45181fb248072a2afac"
+          "rev": "c3d353aa30cb8ebcdfa41fa8f5f5ef5bd4b2b864",
+          "type": "github"
         },
-        "fetcher": "fetchFromGitHub",
-        "url": "https://github.com/earendil-works/pi"
+        "fetcher": "fetchTree",
+        "url": "https://github.com/jwiegley/pi"
       },
       "update": {
-        "kind": "explicit-rev",
-        "policy": "manual",
-        "reason": "Keep the patched source build and its packaged provider data on one reviewed Pi release"
+        "artifacts": [
+          "flake.lock",
+          "config/ai/flake.lock"
+        ],
+        "input": "pi",
+        "kind": "fixed-flake-input"
       },
-      "version": "0.84.3"
+      "version": "0.84.4"
     },
     "rust-overlay": {
       "source": {

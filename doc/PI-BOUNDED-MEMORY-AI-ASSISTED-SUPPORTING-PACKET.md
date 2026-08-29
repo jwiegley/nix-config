@@ -149,13 +149,13 @@ no dependency on a later PR to make its own lifecycle safe.
 
 ## Evidence offered and limitations
 
-The downstream prototype is recorded by signed Nix commit
-`e2c002e06cc4378b5a55cc1659e99caaab408dcb`. Its
-`pi-bounded-session-history.patch` is 13,831 lines with SHA-256
+The maintained fork carries the bounded-history implementation in signed Pi
+commit `4a2f3374c`. It descends from the prototype recorded by signed Nix commit
+`e2c002e06cc4378b5a55cc1659e99caaab408dcb`; the retired patch had SHA-256
 `4bdb9524839764bf9639740be782e0719168d885332e5cf2b70da16c95f7494a`.
-It uses a rebuildable SQLite sidecar and supplies a large failure-oriented test
-corpus. It is causal evidence and a source of regression cases, not the intended
-upstream architecture.
+The implementation uses a rebuildable SQLite sidecar and supplies a large
+failure-oriented regression corpus. The earlier patch remains causal evidence;
+the fork commit is the maintained source identity.
 
 Older one-gibibyte prototype and eight-hour soak results remain historical,
 attributed evidence. Their raw artifacts are not present in this repository,
@@ -163,5 +163,6 @@ and one earlier one-gibibyte report has an unresolved 98,302-byte discrepancy.
 They must not be combined with the exact B1 result or used as current
 qualification. The contract ledger retains their exact provenance and caveats.
 
-This packet records no maintainer approval and grants no authority to publish an
-issue or RFC, create a branch, fork, or pull request, or contact a maintainer.
+This packet records no upstream maintainer approval and grants no authority to
+contact upstream or publish a pull request. Fork maintenance authority is tracked
+separately by the owning repository and operator.

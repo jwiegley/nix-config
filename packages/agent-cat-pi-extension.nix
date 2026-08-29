@@ -27,7 +27,7 @@ let
           'stubScript = "${repo}/test/stub_adapter.py"'
     '';
   });
-  piSourceBuild = callPackage ./pi-source-build.nix { };
+  piSourceBuild = callPackage ./pi-source-build.nix { piSource = inputs.pi; };
 in
 npmCachePkgs.buildNpmPackage {
   pname = "agent-cat-pi-extension";
@@ -93,14 +93,27 @@ npmCachePkgs.buildNpmPackage {
       pi-protocol:protocol \
       pi-client:client \
       pi-server:server \
-      pi-coding-agent:coding-agent
+      pi-coding-agent:coding-agent \
+      pi-agent-core:agent \
+      pi-ai:ai \
+      pi-tui:tui \
+      pi-telemetry:telemetry
     do
       package="''${spec%%:*}"
       directory="''${spec#*:}"
-      target="$scope/$package"
-      rm -rf "$target/dist"
-      cp "${piSourceBuild}/workspace/packages/$directory/package.json" "$target/package.json"
-      cp -R "${piSourceBuild}/workspace/packages/$directory/dist" "$target/dist"
+      found=false
+      for target in \
+        "$scope/$package" \
+        "$scope/pi-coding-agent/node_modules/@earendil-works/$package"
+      do
+        if [ -d "$target" ]; then
+          rm -rf "$target/dist"
+          cp "${piSourceBuild}/workspace/packages/$directory/package.json" "$target/package.json"
+          cp -R "${piSourceBuild}/workspace/packages/$directory/dist" "$target/dist"
+          found=true
+        fi
+      done
+      "$found"
     done
     AGENT_CAT_E2E_RUNNER="${runner}/bin/agentic-run" npm exec -- vitest run \
       test/native-targets-e2e.test.ts \

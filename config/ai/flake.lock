@@ -122,11 +122,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1787841814,
-        "narHash": "sha256-cAY2KaZSqc5lW9hYHWgnVL1Z/K49p9eKPxbJ8jEla0Y=",
+        "lastModified": 1787976978,
+        "narHash": "sha256-OIkMTbUJV1NGAKcU0vBjAbgr8vDnqCCAn67vgT3CB+Q=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "f18e879662c83037f9c8d6ff1965058eb194e0d1",
+        "rev": "a213a4b8e48bc5cc2211a5d89be2dba8a98bddb6",
         "type": "github"
       },
       "original": {
@@ -220,6 +220,22 @@
         "type": "github"
       }
     },
+    "pi": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787982111,
+        "narHash": "sha256-QddtrrnG8L00dwE5oiCuU+ojr4/onGvbEJRH3wo9XcE=",
+        "owner": "jwiegley",
+        "repo": "pi",
+        "rev": "c3d353aa30cb8ebcdfa41fa8f5f5ef5bd4b2b864",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jwiegley",
+        "repo": "pi",
+        "type": "github"
+      }
+    },
     "pi-btw": {
       "flake": false,
       "locked": {
@@ -310,6 +326,7 @@
         "nixpkgs": "nixpkgs_2",
         "npm-cache-nixpkgs": "npm-cache-nixpkgs",
         "pal-mcp-server": "pal-mcp-server",
+        "pi": "pi",
         "pi-btw": "pi-btw",
         "pi-mcp-adapter": "pi-mcp-adapter",
         "pi-openai-server-compaction": "pi-openai-server-compaction",

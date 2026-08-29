@@ -167,6 +167,7 @@ assert !(builtins.hasAttr "pi-artifacts" piPackages);
 assert piPackage.drvPath == canonicalPiPackage.drvPath;
 assert piPackage.outPath == canonicalPiPackage.outPath;
 assert (piPackage.src or null) == (upstreamPiPackage.src or null);
+assert (piPackage.bundledCliAbi or null) == 1;
 assert (piPackage.toolRendererWrapperAbi or null) == 1;
 runCommand "pi-gallery-check"
   {

@@ -1242,6 +1242,36 @@ Package devwithpug/pi-gpt-fast-mode through the Nix-owned Pi Gallery/source cata
 
 Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and GIT_NAMESPACE from hermetic Git fixture environments, with a regression that proves both selectors cannot leak into fixture commands.
 
+* DOING [#B] Move Pi downstream patches into maintained fork
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-3ghq
+:LABELS:   []
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-28 Fri 22:05]
+:MODIFIED: [2026-08-29 Sat 00:46]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Commit every active downstream Pi patch onto jwiegley/pi main, replace Nix patching with a locked flake input for that fork, validate, and activate Hera.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 536,
+    "issue_id": "nix-3ghq",
+    "author": "johnw",
+    "text": "Pre-activation implementation completed on the pi-perf candidate. Root and portable locks pin published signed jwiegley/pi commit c3d353aa30cb8ebcdfa41fa8f5f5ef5bd4b2b864 (Pi 0.84.4, NAR sha256-QddtrrnG8L00dwE5oiCuU+ojr4/onGvbEJRH3wo9XcE=); all eight former downstream patch behaviors are carried by signed fork commits and the patch files/application paths are removed. The exact source build passed 43 Vitest files (608 passed, 2 skipped), compiled-output probes, agent-cat child/remote ACP packaging, portable evaluation, focused integration checks, full make test, and a complete Hera build. Activation was not authorized, so this issue remains in progress with only separately authorized activation/post-activation acceptance outstanding.\n",
+    "created_at": "2026-08-29T07:46:39Z"
+  }
+]
+#+end_src
+
 * DONE [#C] Centralize managed AI model selections
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -9874,6 +9904,139 @@ Partner observation 2026-08-11T05:53:30.821Z: signed commit 71870d60 reordered t
 :END:
 
 VPS cross-consumer evaluation failed because shared config set programs.starship.presets against release-25.11, which lacks that option. Gate the preset on the Home Manager option surface while retaining it on current consumers.
+
+* TODO [#B] Restore Pi bundled startup performance on Hera without regressions :hera:performance:pi:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-pi-bundled-startup-performance-mdcb
+:LABELS:   ["hera","performance","pi"]
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-28 Fri 23:26]
+:MODIFIED: [2026-08-29 Sat 00:46]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Purpose
+
+Build, verify, and—only after separate explicit authorization—activate a Hera generation that restores Pi's bundled CLI entrypoint and its startup performance without removing or weakening any current behavior. This issue records the 2026-08-29 diagnosis so the failure signature remains searchable if it recurs. Do not treat issue creation or its activation wording as authorization to activate now.
+
+Regression
+
+Hera's active Pi 0.84.3 package runs `dist/cli.js`, not upstream's `dist/bundle/cli.js`. Commit `5d4af571` (`Adopt reviewed Pi 0.84.3`, 2026-08-25) added this rewrite in `flake/ai/wrappers/pi.nix`:
+
+    substituteInPlace package.json \
+      --replace-fail '"pi": "dist/bundle/cli.js"' '"pi": "dist/cli.js"'
+
+The rewrite was deliberate: downstream tool-renderer changes had been applied only to modular `dist` output, so using the bundle then would have recovered speed by silently losing renderer functionality. Hera's managed files show the affected generation active from 2026-08-28. The installed package is Pi 0.84.3 and its `package.json` confirms `bin.pi = dist/cli.js`.
+
+Observed failure signature on Hera (2026-08-29)
+
+- First controlled `pi --version` did not finish within 60 seconds.
+- A later cold-ish installed-wrapper run took 106.20 seconds.
+- Immediate repeats took 1.20 seconds and 0.47 seconds.
+- Direct modular `dist/cli.js --version` took 6.97 seconds in a warm-ish run.
+- Direct bundled `dist/bundle/cli.js --version` took 0.28 seconds.
+- `pi --help` took 20.47 seconds during diagnosis.
+- The installed package tree is 135 MB with 13,038 files, including 3,330 JavaScript files.
+- Process sampling during the stall showed Node's module loader performing synchronous `read`, `open`, `lstat`, `stat`, and package-JSON resolution in the Nix store.
+- No network sockets were open during the sampled delay.
+- Wrapper Keychain lookups measured 0.19 seconds for the Clio credential and 0.01 seconds for the Hera credential.
+- `--version` returns before extension and provider discovery, so oMLX, llama-swap, gallery extensions, MCP startup, and model refresh cannot explain the primary delay.
+- Large cold/warm variance identifies filesystem/page-cache-sensitive modular module loading as the recurrence signature. Repeatedly fast launches do not disprove the bug; test a fresh store path or otherwise cold candidate.
+
+Root cause
+
+The modular entrypoint forces Node to resolve and read a broad dependency graph as separate Nix-store files. The bundled entrypoint starts from one built artifact. On Hera, cold modular resolution can cost roughly 100 seconds; bundling reduced the isolated entrypoint measurement to 0.28 seconds. This is a package-entrypoint regression, not a provider/network outage or Keychain delay.
+
+Candidate fix and dependency
+
+Issue `nix-3ghq` moves every maintained downstream Pi source change into `github:jwiegley/pi` and consumes that fork as a locked source input. Its current worktree removes the package.json rewrite, allowing upstream's `dist/bundle/cli.js` entrypoint because the maintained fork now applies required behavior before producing the bundle. This activation issue depends on `nix-3ghq`; it must not activate an incomplete or uncommitted candidate.
+
+Functionality preservation contract
+
+Restoring performance must not be achieved by disabling features, extensions, tests, discovery, or mutable state. Candidate bundle must retain all behavior formerly supplied by these source patches:
+
+- `pi-bounded-session-history.patch`
+- `pi-provider-transport-timeouts.patch`
+- `pi-session-replacement.patch`
+- `pi-model-default-thinking.patch`
+- `pi-agent-cat-workflow-api.patch`
+
+It must also retain all behavior formerly patched into modular wrapper output:
+
+- `pi-system-prompt-no-docs.patch`
+- `pi-tool-renderer-wrapper.patch`, including `toolRendererWrapperAbi = 1`
+- `pi-model-catalog-refresh.patch`, including cached startup and bounded refresh
+
+Preserve additionally:
+
+- Nix-managed gallery and explicit extension loading; do not remove gallery members to improve timing. Pi Lens and Pi Mem remain excluded only by existing policy.
+- Agent-cat workflow APIs and child/remote ACP paths.
+- Custom tool renderer wrapping and renderer failure isolation.
+- Bounded session history, paging, replacement, resumption, export, compaction, and concurrent session behavior.
+- Provider-scoped local-model transport timeouts, cached model startup, bounded catalog refresh, model selection, and default thinking levels.
+- Darwin discovery for llama-swap, `omlx-clio`, and `omlx-hera`.
+- `PI_PACKAGE_DIR`, Node CA configuration, environment-only credentials, and both Keychain-backed oMLX wrappers.
+- Existing system-prompt policy that omits unwanted docs.
+- Mutable auth, sessions, goals, history, traces, caches, workflows, and other agent state. Do not delete caches or state as a performance workaround.
+
+Required verification before activation
+
+1. Prove candidate installed `package.json` has `bin.pi = dist/bundle/cli.js`; reject fallback to `dist/cli.js`.
+2. Build from the exact locked `jwiegley/pi` revision and verify source/package version agreement.
+3. Run all existing Pi package regressions without weakening or deleting tests, including tool renderer, provider transport, interactive startup, system prompt, model-default-thinking, extension runner, agent-cat workflow, bounded-history, session replacement, concurrency, RPC, export, and compaction coverage.
+4. Run repository wrapper/behavior checks including `test/ai/pi-tool-renderer-wrapper.test.mjs`, `test/ai/pi-provider-transport.test.mjs`, `test/ai/pi-model-catalog-refresh.test.mjs`, `test/ai/pi-session-replacement.nix`, and applicable compatibility/manifest checks.
+5. Build the complete Hera system without activation.
+6. Benchmark the exact candidate store path before activation. Record direct bundled and installed-wrapper `--version` timings plus a no-model PTY launch to usable TUI prompt, both with full managed resources and with discovery disabled for attribution.
+7. Confirm direct bundled `--version` is at most 1 second, first installed-wrapper invocation from the fresh candidate store is at most 5 seconds, and median of five immediate installed-wrapper runs is at most 1 second. Investigate rather than waive any miss.
+8. Demonstrate functionality through the bundle: managed extensions load, tool renderers work, agent-cat workflow API loads, sessions remain visible/resumable, and all three Darwin local providers remain discoverable. Do not send model requests merely for startup verification.
+9. Record current and candidate generation/store identities and retain the previous generation for rollback. Do not remove mutable Pi state.
+10. Request explicit authorization for Hera activation. After activation, repeat runtime acceptance against `/etc/profiles/per-user/johnw/bin/pi`; stop and report any behavior regression instead of trading functionality for speed.
+
+Historical diagnostic shortcut
+
+If Pi again takes tens of seconds before showing output, first compare `pi --version` with direct `dist/bundle/cli.js --version`, inspect installed `package.json`'s `bin.pi`, and sample for synchronous Node module-loader filesystem calls. If immediate reruns become fast and no socket exists, suspect an accidental modular entrypoint before investigating providers or extensions.
+
+** Acceptance Criteria
+
+- Issue remains open and blocked until `nix-3ghq` provides an exact locked, fully tested maintained-fork candidate.
+- Candidate runs `dist/bundle/cli.js`; direct bundled `--version` <=1s, fresh installed-wrapper first run <=5s, and five-run warm median <=1s on Hera.
+- Every listed downstream behavior passes existing source and repository regression checks through bundled output; no test, extension, provider, discovery path, or mutable state is removed to obtain speed.
+- Complete Hera system builds without activation, then exact candidate receives no-model TUI, extension, renderer, agent-cat, session, model-discovery, credential-wrapper, and state-continuity acceptance.
+- Hera activation occurs only after separate explicit authorization; previous generation remains available. Post-activation measurements and functionality checks pass against managed `pi`.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-pi-bundled-startup-performance-mdcb",
+    "depends_on_id": "nix-3ghq",
+    "type": "blocks",
+    "created_at": "2026-08-29T06:26:45.231069Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 537,
+    "issue_id": "nix-pi-bundled-startup-performance-mdcb",
+    "author": "johnw",
+    "text": "Pre-activation acceptance candidate:\n\n- Fork/source: signed published jwiegley/pi c3d353aa30cb8ebcdfa41fa8f5f5ef5bd4b2b864, Pi 0.84.4, NAR sha256-QddtrrnG8L00dwE5oiCuU+ojr4/onGvbEJRH3wo9XcE=; root and portable locks/catalog agree.\n- Installed base package: /nix/store/dsr5jffkhx6nskayz35gpsg80fj2szk7-pi-0.84.4; package.json bin.pi = dist/bundle/cli.js; build-time bundledCliAbi=1 and metadata guard prevent modular fallback.\n- Managed Hera wrapper: /nix/store/pa79i20r2h8jjxxwna5yna0gcm52w2rv-pi-0.84.4/bin/pi. Fresh first --version 0.633102s; direct bundle with candidate PI_PACKAGE_DIR 0.905371s; five immediate wrapper runs 0.202860, 0.208067, 0.211564, 0.213818, 0.202672s (median 0.208067s). All thresholds pass.\n- Isolated no-inference PTY readiness with all managed resources: 3.353162s with three-provider discovery, 3.239899s with only endpoint lists emptied for attribution. /session returned Session Info; no error markers.\n- Exact isolated RPC acceptance: 177 commands, 40 models, agent-cat and gallery commands present, llama-swap/omlx-clio/omlx-hera all present, no model request, no error markers.\n- Verification: source package 43 files/608 passed/2 skipped; compiled renderer/transport/catalog probes; strict update-overlay 133/133; nix flake check ./config/ai --all-systems --no-build; focused Pi gallery/extensions/resources/session/theme checks; root catalog/lock/MCP/package-selection/migration/CA checks; make test 21 suites with zero failures; complete Hera build without activation.\n- Candidate system: /nix/store/w4xwidykcjmp3s1vxy6n1vjvj4f026ka-darwin-system-26.11.4cff07d. Active system remains /nix/store/whd18li1py5vi17wkkdxn759r545j86c-darwin-system-26.11.4cff07d at generation 1171; generation 1170 remains available. No activation, push, merge, model inference, or mutable-state deletion occurred.\n\nIssue remains open for separately authorized activation and post-activation acceptance against /etc/profiles/per-user/johnw/bin/pi.\n",
+    "created_at": "2026-08-29T07:46:39Z"
+  }
+]
+#+end_src
 
 * DONE [#B] host-behavior red: Agda disable left presence assertions in place
 :PROPERTIES:
