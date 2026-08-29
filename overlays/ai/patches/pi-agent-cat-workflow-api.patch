@@ -1,5 +1,5 @@
 diff --git i/packages/client/README.md w/packages/client/README.md
-index 1d1a241e2..831d0ed21 100644
+index 1d1a241e237d585e50d69a26eda8225b2496ac93..831d0ed213e953855042c26ee501051083f54bd8 100644
 --- i/packages/client/README.md
 +++ w/packages/client/README.md
 @@ -27,10 +27,12 @@ Call `handlers.onData(chunk)` for inbound bytes, `handlers.onClose()` for an ord
@@ -17,7 +17,7 @@ index 1d1a241e2..831d0ed21 100644
  
  ## Limits and security
 diff --git i/packages/client/src/client.ts w/packages/client/src/client.ts
-index fad38b27e..5050faca5 100644
+index fad38b27efab6cde3d23d7164abd5c871fcb094d..5050faca50786659b3cb6e4843d7ec7b5b66696e 100644
 --- i/packages/client/src/client.ts
 +++ w/packages/client/src/client.ts
 @@ -160,7 +160,7 @@ export class PiClient {
@@ -43,7 +43,7 @@ index fad38b27e..5050faca5 100644
  			if (previous) this.#state.restoreSessionSnapshot(previous);
  			throw error;
 diff --git i/packages/client/src/session-handle.ts w/packages/client/src/session-handle.ts
-index 943baf196..4a7b3457b 100644
+index 943baf196050b27921389fdcabd87f6492cdb312..4a7b3457b5d7345608ab56bdda65b035a86a22eb 100644
 --- i/packages/client/src/session-handle.ts
 +++ w/packages/client/src/session-handle.ts
 @@ -27,6 +27,7 @@ export interface SessionLease extends AsyncDisposable {
@@ -66,7 +66,7 @@ index 943baf196..4a7b3457b 100644
  		return (await this.#request({ command: "abort", sessionId: this.id })).session;
  	}
 diff --git i/packages/client/test/sessions.test.ts w/packages/client/test/sessions.test.ts
-index 3bbe34e76..0d6c31f3e 100644
+index 3bbe34e764398eb96457701f197002f188a90dbf..0d6c31f3ee0062a4c38db3c362977f743237890c 100644
 --- i/packages/client/test/sessions.test.ts
 +++ w/packages/client/test/sessions.test.ts
 @@ -80,9 +80,11 @@ describe("PiClient", () => {
@@ -97,10 +97,10 @@ index 3bbe34e76..0d6c31f3e 100644
  			PiSessionOwnershipError,
  		);
 diff --git i/packages/coding-agent/README.md w/packages/coding-agent/README.md
-index 5ea32dac4..68ab87205 100644
+index 0a6c1e14fb4bb3186753496473f87e46d902b2c4..6bf8a80a0f1a73309ed3ce0675bbbbb77523cc8b 100644
 --- i/packages/coding-agent/README.md
 +++ w/packages/coding-agent/README.md
-@@ -695,6 +695,14 @@ Commands run by the LLM-callable `bash` and `powershell` tools also receive curr
+@@ -694,6 +694,14 @@ Commands run by the LLM-callable `bash` and `powershell` tools also receive curr
  
  These values are resolved when each command starts. See [Environment Variables](docs/environment-variables.md#shell-tool-session-environment) for semantics, examples, and custom-tool opt-out.
  
@@ -116,7 +116,7 @@ index 5ea32dac4..68ab87205 100644
  
  ## Contributing & Development
 diff --git i/packages/coding-agent/src/client/remote-session.ts w/packages/coding-agent/src/client/remote-session.ts
-index 436833141..d696cc2ea 100644
+index 436833141f69c61806ca5ddee9e860d28ea5cea7..d696cc2ea6989b5de5b2e94373aedb213b9df4cd 100644
 --- i/packages/coding-agent/src/client/remote-session.ts
 +++ w/packages/coding-agent/src/client/remote-session.ts
 @@ -23,7 +23,16 @@ import {
@@ -192,7 +192,7 @@ index 436833141..d696cc2ea 100644
  		const preemptingSubmit = this.#lifecycle.status === "busy" && this.#lifecycle.operation === "submit";
  		if (preemptingSubmit) this.#assertNotDisposed();
 diff --git i/packages/coding-agent/src/core/agent-session.ts w/packages/coding-agent/src/core/agent-session.ts
-index ea69b84ef..bd27c50b8 100644
+index 488f5e0aecfbe9f5a354534c84dccf5b61853187..0d9391168b36e58a96adc1d8f436063ce77d3a5b 100644
 --- i/packages/coding-agent/src/core/agent-session.ts
 +++ w/packages/coding-agent/src/core/agent-session.ts
 @@ -84,6 +84,7 @@ import {
@@ -203,7 +203,7 @@ index ea69b84ef..bd27c50b8 100644
  	type ToolDefinition,
  	type ToolExecutionEndEvent,
  	type ToolExecutionStartEvent,
-@@ -349,6 +350,9 @@ export class AgentSession {
+@@ -347,6 +348,9 @@ export class AgentSession {
  	// Extension system
  	private _extensionRunner!: ExtensionRunner;
  	private _turnIndex = 0;
@@ -213,7 +213,7 @@ index ea69b84ef..bd27c50b8 100644
  
  	private _resourceLoader: ResourceLoader;
  	private _customTools: ToolDefinition[];
-@@ -1137,6 +1141,9 @@ export class AgentSession {
+@@ -1125,6 +1129,9 @@ export class AgentSession {
  	 * @throws Error if no model selected or no API key available (when not streaming)
  	 */
  	async prompt(text: string, options?: PromptOptions): Promise<void> {
@@ -223,7 +223,7 @@ index ea69b84ef..bd27c50b8 100644
  		const expandPromptTemplates = options?.expandPromptTemplates ?? true;
  		const preflightResult = options?.preflightResult;
  		let messages: AgentMessage[] | undefined;
-@@ -1463,6 +1470,9 @@ export class AgentSession {
+@@ -1449,6 +1456,9 @@ export class AgentSession {
  		message: Pick<CustomMessage<T>, "customType" | "content" | "display" | "details">,
  		options?: { triggerTurn?: boolean; deliverAs?: "steer" | "followUp" | "nextTurn" },
  	): Promise<void> {
@@ -233,7 +233,7 @@ index ea69b84ef..bd27c50b8 100644
  		const appMessage = {
  			role: "custom" as const,
  			customType: message.customType,
-@@ -1559,6 +1569,43 @@ export class AgentSession {
+@@ -1521,6 +1531,43 @@ export class AgentSession {
  		});
  	}
  
@@ -277,7 +277,7 @@ index ea69b84ef..bd27c50b8 100644
  	/**
  	 * Clear all queued messages and return them.
  	 * Useful for restoring to editor when user aborts.
-@@ -2562,6 +2609,7 @@ export class AgentSession {
+@@ -2507,6 +2554,7 @@ export class AgentSession {
  						});
  					});
  				},
@@ -286,7 +286,7 @@ index ea69b84ef..bd27c50b8 100644
  					const entryId = this.sessionManager.appendCustomEntry(customType, data);
  					const entry = this.sessionManager.getEntry(entryId);
 diff --git i/packages/coding-agent/src/core/extensions/index.ts w/packages/coding-agent/src/core/extensions/index.ts
-index f19816a9a..f66eaf2e7 100644
+index 90c7860412f0cf8ccc673e0870873ef05097eb5d..7b64dac6da4576b535f34c17852ad28f5e22cebb 100644
 --- i/packages/coding-agent/src/core/extensions/index.ts
 +++ w/packages/coding-agent/src/core/extensions/index.ts
 @@ -147,6 +147,8 @@ export type {
@@ -299,7 +299,7 @@ index f19816a9a..f66eaf2e7 100644
  	// Events - Tool
  	ToolCallEvent,
 diff --git i/packages/coding-agent/src/core/extensions/loader.ts w/packages/coding-agent/src/core/extensions/loader.ts
-index 36df2da21..b7b07ff3a 100644
+index 36df2da21611720001660e5107eb531c6101faed..b7b07ff3ad588548f9e1cb8c86a9522b76accc06 100644
 --- i/packages/coding-agent/src/core/extensions/loader.ts
 +++ w/packages/coding-agent/src/core/extensions/loader.ts
 @@ -191,6 +191,7 @@ export function createExtensionRuntime(): ExtensionRuntime {
@@ -323,10 +323,10 @@ index 36df2da21..b7b07ff3a 100644
  			assertActive();
  			runtime.appendEntry(customType, data);
 diff --git i/packages/coding-agent/src/core/extensions/runner.ts w/packages/coding-agent/src/core/extensions/runner.ts
-index 3346645a1..3a630d2af 100644
+index fc486e4cd4d1768f2e8b34e6fbd0627e72bc40c7..480c8b46f591eca729fe0bfe4dcbcedbc43de23e 100644
 --- i/packages/coding-agent/src/core/extensions/runner.ts
 +++ w/packages/coding-agent/src/core/extensions/runner.ts
-@@ -326,6 +326,7 @@ export class ExtensionRunner {
+@@ -323,6 +323,7 @@ export class ExtensionRunner {
  		// Copy actions into the shared runtime (all extension APIs reference this)
  		this.runtime.sendMessage = actions.sendMessage;
  		this.runtime.sendUserMessage = actions.sendUserMessage;
@@ -335,10 +335,10 @@ index 3346645a1..3a630d2af 100644
  		this.runtime.setSessionName = actions.setSessionName;
  		this.runtime.getSessionName = actions.getSessionName;
 diff --git i/packages/coding-agent/src/core/extensions/types.ts w/packages/coding-agent/src/core/extensions/types.ts
-index 0b9474664..2fbf50413 100644
+index bade46419510aba601991b4be2a7790b52694d0b..47f22b760d23bcb210c9c078ae2baaad7e4f97a1 100644
 --- i/packages/coding-agent/src/core/extensions/types.ts
 +++ w/packages/coding-agent/src/core/extensions/types.ts
-@@ -1377,6 +1377,12 @@ export interface ExtensionAPI {
+@@ -1355,6 +1355,12 @@ export interface ExtensionAPI {
  		options?: { deliverAs?: "steer" | "followUp"; expandPromptTemplates?: boolean },
  	): void;
  
@@ -351,7 +351,7 @@ index 0b9474664..2fbf50413 100644
  	/** Append a custom entry to the session for state persistence (not sent to LLM). */
  	appendEntry<T = unknown>(customType: string, data?: T): void;
  
-@@ -1627,6 +1633,23 @@ export type SendUserMessageHandler = (
+@@ -1605,6 +1611,23 @@ export type SendUserMessageHandler = (
  	options?: { deliverAs?: "steer" | "followUp"; expandPromptTemplates?: boolean },
  ) => void;
  
@@ -375,7 +375,7 @@ index 0b9474664..2fbf50413 100644
  export type AppendEntryHandler = <T = unknown>(customType: string, data?: T) => void;
  
  export type SetSessionNameHandler = (name: string) => void;
-@@ -1690,6 +1713,7 @@ export interface ExtensionRuntimeState {
+@@ -1668,6 +1691,7 @@ export interface ExtensionRuntimeState {
  export interface ExtensionActions {
  	sendMessage: SendMessageHandler;
  	sendUserMessage: SendUserMessageHandler;
@@ -384,7 +384,7 @@ index 0b9474664..2fbf50413 100644
  	setSessionName: SetSessionNameHandler;
  	getSessionName: GetSessionNameHandler;
 diff --git i/packages/coding-agent/test/client/remote-session-lifecycle.test.ts w/packages/coding-agent/test/client/remote-session-lifecycle.test.ts
-index 721860b7c..e7b9a20c7 100644
+index 721860b7c90bb5cc9d29b574a59654346bf4b417..e7b9a20c75796acb480a90141514d58b12ce5839 100644
 --- i/packages/coding-agent/test/client/remote-session-lifecycle.test.ts
 +++ w/packages/coding-agent/test/client/remote-session-lifecycle.test.ts
 @@ -49,7 +49,9 @@ describe("RemoteSession lifecycle", () => {
@@ -399,7 +399,7 @@ index 721860b7c..e7b9a20c7 100644
  		const attachRequest = requests[0];
  		if (!attachRequest) throw new Error("Missing attach request");
 diff --git i/packages/coding-agent/test/client/remote-session.test.ts w/packages/coding-agent/test/client/remote-session.test.ts
-index 9e2371f34..4a250cdf4 100644
+index 9e2371f3488067d984bd02e476237bb0065503f1..4a250cdf4062240f65fed9608ec555a128acdaa3 100644
 --- i/packages/coding-agent/test/client/remote-session.test.ts
 +++ w/packages/coding-agent/test/client/remote-session.test.ts
 @@ -1,7 +1,25 @@
@@ -490,7 +490,7 @@ index 9e2371f34..4a250cdf4 100644
  		const server = new MemoryServer();
  		const remoteSession = await openRemoteSession(await connectClient(server), server, sessionSnapshot("session-1"));
 diff --git i/packages/coding-agent/test/extensions-runner.test.ts w/packages/coding-agent/test/extensions-runner.test.ts
-index 70f06a3cf..85c1fc11f 100644
+index 70f06a3cf64d88e0186bc2afa8a53e936f46a17f..85c1fc11f63401593576e064ad987e2c8879b233 100644
 --- i/packages/coding-agent/test/extensions-runner.test.ts
 +++ w/packages/coding-agent/test/extensions-runner.test.ts
 @@ -74,6 +74,9 @@ describe("ExtensionRunner", () => {
@@ -504,7 +504,7 @@ index 70f06a3cf..85c1fc11f 100644
  		setSessionName: () => {},
  		getSessionName: () => undefined,
 diff --git i/packages/coding-agent/test/suite/agent-session-prompt.test.ts w/packages/coding-agent/test/suite/agent-session-prompt.test.ts
-index 1fa23fbe2..771ac29ee 100644
+index 1fa23fbe29c3ee9d41dc53f01c93910e994772be..771ac29ee8779b0add013b7b29969aebd1443269 100644
 --- i/packages/coding-agent/test/suite/agent-session-prompt.test.ts
 +++ w/packages/coding-agent/test/suite/agent-session-prompt.test.ts
 @@ -4,7 +4,7 @@ import { join } from "node:path";
@@ -558,7 +558,7 @@ index 1fa23fbe2..771ac29ee 100644
  		const inputEvents: InputEvent[] = [];
  		const harness = await createHarness({
 diff --git i/packages/protocol/README.md w/packages/protocol/README.md
-index ddd1f6777..57f5d2e19 100644
+index ddd1f67775b86be3a7c93ccdf65f1c3f965f45a5..57f5d2e19681903a070f1e0ad3753b2eaf3fe033 100644
 --- i/packages/protocol/README.md
 +++ w/packages/protocol/README.md
 @@ -11,6 +11,9 @@ The first client message is always `hello`, containing `PROTOCOL_VERSION`. Subse
@@ -572,7 +572,7 @@ index ddd1f6777..57f5d2e19 100644
  
  `encodeClientMessage()` and `encodeServerMessage()` validate a message and return a complete framed `Uint8Array`. The incremental decoders accept arbitrary fragmentation or coalescing, so they work with streams, sockets, and custom byte transports.
 diff --git i/packages/protocol/src/schemas.ts w/packages/protocol/src/schemas.ts
-index a0b01a5a9..786926eb8 100644
+index a0b01a5a9a3ae84f453601ac557abc6bd7f99516..786926eb8a9badf575b6bbba0badb613dd6a94de 100644
 --- i/packages/protocol/src/schemas.ts
 +++ w/packages/protocol/src/schemas.ts
 @@ -296,10 +296,17 @@ export const CreateCommandSchema = StrictObject({
@@ -622,7 +622,7 @@ index a0b01a5a9..786926eb8 100644
  	SetModelResultSchema,
  	SetThinkingResultSchema,
 diff --git i/packages/protocol/test/protocol.test.ts w/packages/protocol/test/protocol.test.ts
-index 859d4e968..7bd0ee7f4 100644
+index 859d4e968d89782348e7150b57c781456af8b0fc..7bd0ee7f4c97eb9c7b5e1fbaed35d73db77f6818 100644
 --- i/packages/protocol/test/protocol.test.ts
 +++ w/packages/protocol/test/protocol.test.ts
 @@ -357,6 +357,24 @@ describe("validated framed protocol APIs", () => {
@@ -651,7 +651,7 @@ index 859d4e968..7bd0ee7f4 100644
  		const request: ClientMessage = {
  			type: "request",
 diff --git i/packages/server/README.md w/packages/server/README.md
-index c9ed59108..8a57861f0 100644
+index c9ed5910808052cc46c3b2825ce9c3a9a09b43a7..8a57861f0d7af9742781bfa8b6cd78e1c01884f1 100644
 --- i/packages/server/README.md
 +++ w/packages/server/README.md
 @@ -35,6 +35,9 @@ await server.start();
@@ -665,7 +665,7 @@ index c9ed59108..8a57861f0 100644
  
  `PiServerService.listSessions()` returns protocol `SessionMetadata`, not acquired runtime state. Services should map the durable fields their storage supports and may omit `updatedAt`, `parentSessionId`, `sessionName`, and `cwd`. `PiServer` refreshes available metadata from live snapshots without requiring stored sessions to fabricate phase, model, thinking-level, attachment, or lock values.
 diff --git i/packages/server/src/sessions.ts w/packages/server/src/sessions.ts
-index ad09959e1..1376831fb 100644
+index ad09959e185cbd657876e611b7049208eb65e2d1..1376831fba99cc984c4c40705210f04e90c9540f 100644
 --- i/packages/server/src/sessions.ts
 +++ w/packages/server/src/sessions.ts
 @@ -1,5 +1,11 @@
@@ -782,7 +782,7 @@ index ad09959e1..1376831fb 100644
  
  	private requireAttached(connection: ConnectionState, sessionId: string): LiveSession {
 diff --git i/packages/server/src/testing/service.ts w/packages/server/src/testing/service.ts
-index 32d4cc972..88ef8b4a8 100644
+index 32d4cc9720977c0ade9383f3e39c3f7a011a6522..88ef8b4a8e956c70c95153ae87660ea853935478 100644
 --- i/packages/server/src/testing/service.ts
 +++ w/packages/server/src/testing/service.ts
 @@ -53,6 +53,7 @@ export class TestSessionRuntime implements PiSessionRuntime {
@@ -818,7 +818,7 @@ index 32d4cc972..88ef8b4a8 100644
  		if (!this.pendingPrompt) throw new PiServerError("busy", "There is no active prompt to abort");
  		this.pendingPrompt.done.resolve("aborted");
 diff --git i/packages/server/src/types.ts w/packages/server/src/types.ts
-index d9d537d40..e95c5c5c7 100644
+index d9d537d405d07d6dd19750f6c185dbab53119b13..e95c5c5c721a1e775bf5c6c1934d80c2abf60d23 100644
 --- i/packages/server/src/types.ts
 +++ w/packages/server/src/types.ts
 @@ -23,6 +23,7 @@ export type MaybePromise<T> = T | Promise<T>;
@@ -838,7 +838,7 @@ index d9d537d40..e95c5c5c7 100644
  	setModel(model: ModelRef): Promise<void>;
  	setThinking(thinkingLevel: ThinkingLevel): Promise<void>;
 diff --git i/packages/server/test/sessions.test.ts w/packages/server/test/sessions.test.ts
-index a389796f1..43b587ec6 100644
+index a389796f1b3c4874b587af43be1ecaf82ba0035f..43b587ec64639a168d0dde051125bfa63aea82c3 100644
 --- i/packages/server/test/sessions.test.ts
 +++ w/packages/server/test/sessions.test.ts
 @@ -151,6 +151,29 @@ describe("PiServer Unix integration", () => {

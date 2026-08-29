@@ -21,7 +21,9 @@ buildNpmPackageWithNode24 {
   inherit (source) version;
 
   src =
+    assert source.version == "0.84.3";
     assert source.source.fetcher == "fetchFromGitHub";
+    assert source.source.args.rev == "4e58f324fae8ebfa98a3d45181fb248072a2afac";
     fetchFromGitHub source.source.args;
 
   # Temporary downstream patches against the exact v0.84.3 catalog pin.
@@ -38,6 +40,20 @@ buildNpmPackageWithNode24 {
     "--fuzz=0"
   ];
 
+  # Full-index preimages bind this patch to the pristine catalog revision.
+  prePatch = ''
+    awk '
+      /^diff --git / { path = $3; sub(/^i\//, "", path) }
+      /^index / { split($2, hashes, "\\.\\."); print hashes[1], path }
+    ' ${../overlays/ai/patches/pi-agent-cat-workflow-api.patch} |
+      while read -r expected path; do
+        actual="$(${git}/bin/git hash-object "$path")"
+        if [[ "$actual" != "$expected" ]]; then
+          echo "agent-cat Pi patch preimage mismatch: $path" >&2
+          exit 1
+        fi
+      done
+  '';
   postPatch = ''
     mkdir -p packages/ai/src/providers/data
     cp -R ${piAiRelease}/dist/providers/data/. packages/ai/src/providers/data/
