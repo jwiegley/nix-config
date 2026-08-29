@@ -1012,6 +1012,7 @@ assert builtins.all (
     "clio"
     "hera"
     "shared-work"
+    "vulcan"
   ]
 ) profiles;
 assert builtins.all (
@@ -1872,6 +1873,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
             "clio"
             "hera"
             "shared-work"
+            "vulcan"
           ]
         then
           "true"

@@ -116,6 +116,10 @@ assert
     mcpServers = { };
     mutableMcpPaths = [ ];
   };
+assert
+  (catalog.sharedMcpRegistryFor { profiles = [ catalog.profiles.vulcan-pi ]; }).mcpServers ? pal;
+assert
+  !((catalog.sharedMcpRegistryFor { profiles = [ catalog.profiles.vps-pi ]; }).mcpServers ? pal);
 assert !crossHomeProjection.success;
 assert builtins.all (rendered: builtins.attrNames rendered.files == [ registryPath ]) (
   builtins.attrValues cases

@@ -62,7 +62,7 @@ Managed PAL reads its mutable provider credentials and exact-model allowlists fr
 the owner-only `$XDG_CONFIG_HOME/pal-mcp/config` file at runtime; Nix owns only
 the typed environment boundary and executable. Factory calls deliberately reuse
 the existing mutable Droid login instead of overriding it with a file key. PAL is
-selected for Darwin and shared-work profiles and excluded from VPS and Vulcan.
+selected for Darwin, shared-work, and Vulcan profiles and excluded from VPS.
 
 The complete ownership and data-flow contract is maintained in
 [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md).

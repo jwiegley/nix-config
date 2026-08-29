@@ -147,8 +147,8 @@ inventory. Managed PAL obtains provider values from the user-owned
 `$XDG_CONFIG_HOME/pal-mcp/config` file through a strict non-shell parser; Nix owns
 only executable selection, typed environment names, and the generated MCP transport.
 Managed Factory requests reuse the mutable Droid login and suppress explicit Factory
-keys at the SDK boundary. The PAL resource is selected for Darwin and shared-work
-profiles and excluded from both VPS and Vulcan profiles.
+keys at the SDK boundary. The PAL resource is selected for Darwin, shared-work,
+and Vulcan profiles and excluded from the VPS profile.
 Codex retains its native catalog. Pi renders its cached model snapshot
 immediately, gives `/model` refreshes the upstream 15-second selector deadline,
 and discovers local models at startup and through its native provider-refresh contract.

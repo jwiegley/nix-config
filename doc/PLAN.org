@@ -9227,23 +9227,35 @@ The release-independent coordinate helper accepts any Git URL for manually coupl
 ]
 #+end_src
 
-* DONE [#B] Add five-model PAL support across active fleet
+* DOING [#B] Add five-model PAL support across active fleet
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-nzjz
 :LABELS:   []
 :ISSUE_TYPE: feature
 :CREATED:  [2026-08-28 Fri 22:31]
-:MODIFIED: [2026-08-29 Sat 12:46]
+:MODIFIED: [2026-08-29 Sat 13:45]
 :CREATED_BY: johnw
-:FINISHED: [2026-08-29 Sat 12:46]
-:CLOSE_REASON: Published signed PAL and Nix integrations; all-system and full test matrices passed; final active Hera generation passed all five exact provider routes, including Factory through existing local Droid login.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Add exact PAL support for gpt-5.6-sol, gemini-3.1-pro-preview, claude-fable-5, grok-4.6, and Factory deepseek-v4-pro through Droid SDK. Load provider values from the strict user-owned $XDG_CONFIG_HOME/pal-mcp/config boundary, preserve bounded stdio inheritance and child isolation, deploy and verify Hera, and prepare Clio/shared-work for owner activation. Vulcan, VPS, and Git AI are excluded.
+Add exact PAL support for gpt-5.6-sol, gemini-3.1-pro-preview, claude-fable-5, grok-4.6, and Factory deepseek-v4-pro through Droid SDK. Load provider values from the strict user-owned $XDG_CONFIG_HOME/pal-mcp/config boundary, preserve bounded stdio inheritance and child isolation, deploy and verify Hera, Clio, Vulcan, Andoria-08, Andoria-T2, Delphi-3BD4, and GPU Server. Dormant Git AI and parked VPS are excluded.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 538,
+    "issue_id": "nix-nzjz",
+    "author": "johnw",
+    "text": "Reopened: Goal revised to retain seven-host deployment and replace Kimi with deepseek-v4-pro; Vulcan and remaining active-host adoption now require completion.",
+    "created_at": "2026-08-29T20:45:32Z"
+  }
+]
+#+end_src
 
 * DONE [#C] Remove stale dual-remote publication claims
 :PROPERTIES:

@@ -849,6 +849,7 @@ let
             "clio"
             "hera"
             "shared-work"
+            "vulcan"
           ];
         };
 
