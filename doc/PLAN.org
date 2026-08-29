@@ -1975,6 +1975,24 @@ Watchman is absent from all rendered Home Manager package sets; focused host-beh
 ]
 #+end_src
 
+* DONE [#B] Make Pi session indexing durable across shared NFS identities
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-4zvl
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-28 Fri 16:55]
+:MODIFIED: [2026-08-28 Fri 17:46]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-28 Fri 17:46]
+:CLOSE_REASON: Made content hashes authoritative across shared NFS metadata, added cross-host source/ledger locks, rebound verified descriptors, read-back verified appends, and removed stale general ledger caching. Darwin/Linux Gallery and full repository gates pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Accept byte-identical indexed prefixes despite foreign dev/inode metadata, rebind replaced live descriptors, serialize cross-host appends, verify committed bytes, and keep Goal-X ledger reads/writes disk-authoritative.
+
 * DONE [#B] Rebase Codex wrapper policy patches for 0.149
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

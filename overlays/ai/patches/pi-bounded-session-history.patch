@@ -2488,10 +2488,10 @@ index 3607242c3..dd9cc83a9 100644
  }
 diff --git a/packages/coding-agent/src/core/session-history-store.ts b/packages/coding-agent/src/core/session-history-store.ts
 new file mode 100644
-index 000000000..f9d6c8582
+index 000000000..b61e97068
 --- /dev/null
 +++ b/packages/coding-agent/src/core/session-history-store.ts
-@@ -0,0 +1,2843 @@
+@@ -0,0 +1,3011 @@
 +import { createHash, randomUUID } from "node:crypto";
 +import {
 +	chmodSync,
@@ -2512,7 +2512,7 @@ index 000000000..f9d6c8582
 +	writeSync,
 +} from "node:fs";
 +import { homedir, tmpdir } from "node:os";
-+import { join } from "node:path";
++import { dirname, join, relative } from "node:path";
 +import type { AgentMessage, AgentMessageSource } from "@earendil-works/pi-agent-core";
 +import type {
 +	CursorPageOptions,
@@ -2527,6 +2527,7 @@ index 000000000..f9d6c8582
 +import { DatabaseSync, type StatementSync } from "./sqlite.ts";
 +
 +const INDEX_APPLICATION_ID = 0x50494853; // PIHS
++const SOURCE_LOCK_APPLICATION_ID = 0x50494c4b; // PILK
 +const INDEX_SCHEMA_VERSION = 7;
 +const READ_BUFFER_SIZE = 1024 * 1024;
 +const MAX_SESSION_RECORD_BYTES = 64 * 1024 * 1024;
@@ -2872,23 +2873,9 @@ index 000000000..f9d6c8582
 +	return canonical;
 +}
 +
-+let sourceLockRoot: string | undefined;
++let localSourceLockRoot: string | undefined;
 +
-+function getSourceLockRoot(): string {
-+	if (sourceLockRoot) return sourceLockRoot;
-+	const uid = typeof process.getuid === "function" ? process.getuid() : "default";
-+	// TMPDIR is process-local configuration and may differ between cooperating
-+	// writers. Use the OS-wide POSIX temporary namespace, or a stable per-user
-+	// directory on Windows, so every process resolves the same lock database.
-+	const root =
-+		process.platform === "win32"
-+			? join(homedir(), ".pi-session-source-locks")
-+			: join("/tmp", `pi-session-source-locks-${uid}`);
-+	try {
-+		mkdirSync(root, { mode: 0o700, recursive: process.platform === "win32" });
-+	} catch (error) {
-+		if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-+	}
++function validateSourceLockRoot(root: string): string {
 +	const stats = lstatSync(root);
 +	if (!stats.isDirectory() || stats.isSymbolicLink()) {
 +		throw new Error(`Unsafe session lock directory: ${root}`);
@@ -2899,20 +2886,87 @@ index 000000000..f9d6c8582
 +	if (process.platform !== "win32" && (stats.mode & 0o077) !== 0) {
 +		throw new Error(`Session lock directory permissions are too broad: ${root}`);
 +	}
-+	sourceLockRoot = root;
 +	return root;
 +}
 +
-+export function acquireSourceLock(filePath: string): () => void {
-+	const canonical = canonicalSessionPath(filePath);
-+	const key = createHash("sha256").update(canonical).digest("hex");
-+	const lockPath = join(getSourceLockRoot(), `${key}.sqlite`);
++function createSourceLockRoot(root: string, recursive = false): string {
++	try {
++		mkdirSync(root, { mode: 0o700, recursive });
++	} catch (error) {
++		if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
++	}
++	return validateSourceLockRoot(root);
++}
++
++function getLocalSourceLockRoot(): string {
++	if (localSourceLockRoot) return localSourceLockRoot;
++	const uid = typeof process.getuid === "function" ? process.getuid() : "default";
++	localSourceLockRoot = createSourceLockRoot(
++		process.platform === "win32"
++			? join(homedir(), ".pi-session-source-locks")
++			: join("/tmp", `pi-session-source-locks-${uid}`),
++		process.platform === "win32",
++	);
++	return localSourceLockRoot;
++}
++
++interface SharedSourceLockNamespace {
++	root: string;
++	identity: string;
++}
++
++function getSharedSourceLockNamespace(filePath: string): SharedSourceLockNamespace {
++	if (process.platform === "win32") {
++		const base = homedir();
++		return {
++			root: createSourceLockRoot(join(base, ".pi-session-source-locks"), true),
++			identity: relative(base, filePath),
++		};
++	}
++	const sourceDevice = statSync(filePath).dev;
++	const candidates: string[] = [];
++	let current = dirname(filePath);
++	while (true) {
++		if (statSync(current).dev !== sourceDevice) break;
++		candidates.push(current);
++		const parent = dirname(current);
++		if (parent === current) break;
++		current = parent;
++	}
++	for (const base of candidates.reverse()) {
++		try {
++			return {
++				root: createSourceLockRoot(join(base, ".pi-session-source-locks")),
++				identity: relative(base, filePath),
++			};
++		} catch (error) {
++			const code = (error as NodeJS.ErrnoException).code;
++			if (code !== "EACCES" && code !== "EPERM" && code !== "EROFS" && code !== "ENOENT") throw error;
++		}
++	}
++	throw Object.assign(new Error(`No writable shared lock namespace for ${filePath}`), { code: "EACCES" });
++}
++
++function acquireSqliteSourceLock(lockPath: string, allowLegacySchema = false): () => void {
 +	let db: DatabaseSync | undefined;
 +	try {
 +		db = new DatabaseSync(lockPath);
++		db.exec(`PRAGMA busy_timeout = ${SOURCE_LOCK_WAIT_MS}`);
++		const application = db.prepare("PRAGMA application_id").get() as { application_id: number };
++		if (application.application_id === 0) {
++			const schema = db
++				.prepare("SELECT name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY name")
++				.all() as unknown as { name: string }[];
++			const legacy = allowLegacySchema && schema.length === 1 && schema[0]?.name === "source_lock";
++			if (schema.length !== 0 && !legacy) {
++				throw new Error(`Refusing unrecognized session lock database: ${lockPath}`);
++			}
++			db.exec(`PRAGMA application_id = ${SOURCE_LOCK_APPLICATION_ID}`);
++		} else if (application.application_id !== SOURCE_LOCK_APPLICATION_ID) {
++			throw new Error(`Refusing unrecognized session lock database: ${lockPath}`);
++		}
 +		chmodSync(lockPath, 0o600);
 +		db.exec(`
-+			PRAGMA busy_timeout = ${SOURCE_LOCK_WAIT_MS};
 +			PRAGMA journal_mode = DELETE;
 +			CREATE TABLE IF NOT EXISTS source_lock (singleton INTEGER PRIMARY KEY CHECK (singleton = 1));
 +			BEGIN EXCLUSIVE;
@@ -2921,10 +2975,7 @@ index 000000000..f9d6c8582
 +		try {
 +			db?.close();
 +		} catch {}
-+		throw Object.assign(new Error(`Unable to lock session file ${canonical}: ${String(error)}`), {
-+			code: "ELOCKED",
-+			cause: error,
-+		});
++		throw error;
 +	}
 +	let released = false;
 +	return () => {
@@ -2936,6 +2987,27 @@ index 000000000..f9d6c8582
 +			db!.close();
 +		}
 +	};
++}
++
++export function acquireSourceLock(
++	filePath: string,
++	options: { allowLocalFallback?: boolean } = {},
++): () => void {
++	const canonical = canonicalSessionPath(filePath);
++	const localKey = createHash("sha256").update(canonical).digest("hex");
++	try {
++		const shared = getSharedSourceLockNamespace(canonical);
++		const sharedKey = createHash("sha256").update(shared.identity).digest("hex");
++		return acquireSqliteSourceLock(join(shared.root, `${sharedKey}.sqlite`));
++	} catch (error) {
++		if (options.allowLocalFallback && isReadOnlyPathError(error)) {
++			return acquireSqliteSourceLock(join(getLocalSourceLockRoot(), `${localKey}.sqlite`), true);
++		}
++		throw Object.assign(new Error(`Unable to lock session file ${canonical}: ${String(error)}`), {
++			code: "ELOCKED",
++			cause: error,
++		});
++	}
 +}
 +
 +function digest(bytes: Uint8Array): Buffer {
@@ -3032,13 +3104,6 @@ index 000000000..f9d6c8582
 +	);
 +}
 +
-+function sourceIdentityMatches(state: SourceStateRow, generation: SourceGeneration): boolean {
-+	return (
-+		(state.source_dev === null || state.source_dev === generation.dev) &&
-+		(state.source_ino === null || state.source_ino === generation.ino)
-+	);
-+}
-+
 +function lastIndexedRecordMatches(state: SourceStateRow, filePath: string): boolean {
 +	if (state.last_record_offset === null || state.last_record_length === null || !state.last_record_sha256) return true;
 +	const fd = openSync(filePath, "r");
@@ -3066,18 +3131,53 @@ index 000000000..f9d6c8582
 +	}
 +}
 +
-+function isVerifiedIndexedPrefix(
-+	state: SourceStateRow,
-+	filePath: string,
-+	fileSize: number,
-+	generation: SourceGeneration,
-+): boolean {
++function isVerifiedIndexedPrefix(state: SourceStateRow, filePath: string, fileSize: number): boolean {
 +	return (
 +		fileSize >= state.indexed_length &&
 +		state.final_line_terminated !== 0 &&
-+		sourceIdentityMatches(state, generation) &&
 +		indexedPrefixMatches(state, filePath)
 +	);
++}
++
++function indexedDescriptorMatches(state: SourceStateRow, fd: number, filePath: string): boolean {
++	try {
++		if (sourceDescriptorState(fd).size < state.indexed_length) return false;
++		const scan = scanPhysicalLinesFromDescriptor(
++			fd,
++			filePath,
++			0,
++			() => true,
++			EMPTY_PREFIX_CHAIN,
++			state.indexed_length,
++		);
++		return (
++			scan.indexedLength === state.indexed_length &&
++			scan.prefixChainSha256.equals(Buffer.from(state.prefix_chain_sha256))
++		);
++	} catch {
++		return false;
++	}
++}
++
++function openVerifiedIndexedDescriptor(
++	state: SourceStateRow,
++	filePath: string,
++): { fd: number; generation: SourceDescriptorState } {
++	for (let attempt = 0; attempt < 3; attempt++) {
++		const fd = openSync(filePath, "r");
++		try {
++			const before = sourceDescriptorState(fd);
++			if (indexedDescriptorMatches(state, fd, filePath)) {
++				const after = sourceDescriptorState(fd);
++				if (sameDescriptorState(before, after)) return { fd, generation: after };
++			}
++		} catch (error) {
++			closeSync(fd);
++			throw error;
++		}
++		closeSync(fd);
++	}
++	throw new SourceChangedDuringCatchUpError("Session JSONL changed while rebinding its indexed reader");
 +}
 +
 +export function normalizeStoredAgentMessage(message: AgentMessage): AgentMessage {
@@ -3261,14 +3361,14 @@ index 000000000..f9d6c8582
 +	return false;
 +}
 +
-+function scanPhysicalLines(
++function scanPhysicalLinesFromDescriptor(
++	fd: number,
 +	filePath: string,
 +	startOffset: number,
 +	visitor: (bytes: Buffer, offset: number, terminated: boolean) => boolean,
 +	initialPrefixChain: Uint8Array = EMPTY_PREFIX_CHAIN,
 +	endOffset?: number,
 +): ScanResult {
-+	const fd = openSync(filePath, "r");
 +	let absoluteOffset = startOffset;
 +	let lineOffset = startOffset;
 +	let pendingParts: Buffer[] = [];
@@ -3280,64 +3380,60 @@ index 000000000..f9d6c8582
 +	let finalLineTerminated = true;
 +	let prefixChainSha256: Buffer<ArrayBufferLike> = Buffer.from(initialPrefixChain);
 +
-+	try {
-+		const buffer = Buffer.allocUnsafe(READ_BUFFER_SIZE);
-+		while (true) {
-+			if (endOffset !== undefined && absoluteOffset >= endOffset) break;
-+			const readLength =
-+				endOffset === undefined ? buffer.length : Math.min(buffer.length, endOffset - absoluteOffset);
-+			const bytesRead = readSync(fd, buffer, 0, readLength, absoluteOffset);
-+			if (bytesRead === 0) break;
-+			absoluteOffset += bytesRead;
-+			const chunk = buffer.subarray(0, bytesRead);
-+			let cursor = 0;
-+			let newline = chunk.indexOf(0x0a, cursor);
-+			while (newline !== -1) {
-+				const tail = chunk.subarray(cursor, newline);
-+				if (pendingLength + tail.length > MAX_SESSION_RECORD_BYTES) {
-+					throw new Error(`Session record exceeds ${MAX_SESSION_RECORD_BYTES} bytes: ${filePath}`);
-+				}
-+				let line = tail;
-+				if (pendingLength > 0) {
-+					pendingParts.push(tail);
-+					line = Buffer.concat(pendingParts, pendingLength + tail.length);
-+					pendingParts = [];
-+					pendingLength = 0;
-+				}
-+				if (!visitor(line, lineOffset, true)) malformedLines++;
-+				prefixChainSha256 = extendPrefixChain(prefixChainSha256, line, true);
-+				lastRecordOffset = lineOffset;
-+				lastRecordLength = line.length;
-+				lastRecordSha256 = digest(line);
-+				lineOffset += line.length + 1;
-+				cursor = newline + 1;
-+				newline = chunk.indexOf(0x0a, cursor);
++	const buffer = Buffer.allocUnsafe(READ_BUFFER_SIZE);
++	while (true) {
++		if (endOffset !== undefined && absoluteOffset >= endOffset) break;
++		const readLength =
++			endOffset === undefined ? buffer.length : Math.min(buffer.length, endOffset - absoluteOffset);
++		const bytesRead = readSync(fd, buffer, 0, readLength, absoluteOffset);
++		if (bytesRead === 0) break;
++		absoluteOffset += bytesRead;
++		const chunk = buffer.subarray(0, bytesRead);
++		let cursor = 0;
++		let newline = chunk.indexOf(0x0a, cursor);
++		while (newline !== -1) {
++			const tail = chunk.subarray(cursor, newline);
++			if (pendingLength + tail.length > MAX_SESSION_RECORD_BYTES) {
++				throw new Error(`Session record exceeds ${MAX_SESSION_RECORD_BYTES} bytes: ${filePath}`);
 +			}
-+			if (cursor < chunk.length) {
-+				const tail = Buffer.from(chunk.subarray(cursor));
-+				if (pendingLength + tail.length > MAX_SESSION_RECORD_BYTES) {
-+					throw new Error(`Session record exceeds ${MAX_SESSION_RECORD_BYTES} bytes: ${filePath}`);
-+				}
++			let line = tail;
++			if (pendingLength > 0) {
 +				pendingParts.push(tail);
-+				pendingLength += tail.length;
++				line = Buffer.concat(pendingParts, pendingLength + tail.length);
++				pendingParts = [];
++				pendingLength = 0;
 +			}
++			if (!visitor(line, lineOffset, true)) malformedLines++;
++			prefixChainSha256 = extendPrefixChain(prefixChainSha256, line, true);
++			lastRecordOffset = lineOffset;
++			lastRecordLength = line.length;
++			lastRecordSha256 = digest(line);
++			lineOffset += line.length + 1;
++			cursor = newline + 1;
++			newline = chunk.indexOf(0x0a, cursor);
 +		}
++		if (cursor < chunk.length) {
++			const tail = Buffer.from(chunk.subarray(cursor));
++			if (pendingLength + tail.length > MAX_SESSION_RECORD_BYTES) {
++				throw new Error(`Session record exceeds ${MAX_SESSION_RECORD_BYTES} bytes: ${filePath}`);
++			}
++			pendingParts.push(tail);
++			pendingLength += tail.length;
++		}
++	}
 +
-+		if (pendingLength > 0) {
-+			const pending = pendingParts.length === 1 ? pendingParts[0] : Buffer.concat(pendingParts, pendingLength);
-+			finalLineTerminated = false;
-+			if (visitor(pending, lineOffset, false)) {
-+				prefixChainSha256 = extendPrefixChain(prefixChainSha256, pending, false);
-+				lastRecordOffset = lineOffset;
-+				lastRecordLength = pending.length;
-+				lastRecordSha256 = digest(pending);
-+				lineOffset += pending.length;
-+			} else {
-+				malformedLines++;
-+			}
++	if (pendingLength > 0) {
++		const pending = pendingParts.length === 1 ? pendingParts[0] : Buffer.concat(pendingParts, pendingLength);
++		finalLineTerminated = false;
++		if (visitor(pending, lineOffset, false)) {
++			prefixChainSha256 = extendPrefixChain(prefixChainSha256, pending, false);
++			lastRecordOffset = lineOffset;
++			lastRecordLength = pending.length;
++			lastRecordSha256 = digest(pending);
++			lineOffset += pending.length;
++		} else {
++			malformedLines++;
 +		}
-+	} finally {
-+		closeSync(fd);
 +	}
 +
 +	return {
@@ -3349,6 +3445,21 @@ index 000000000..f9d6c8582
 +		lastRecordSha256,
 +		prefixChainSha256,
 +	};
++}
++
++function scanPhysicalLines(
++	filePath: string,
++	startOffset: number,
++	visitor: (bytes: Buffer, offset: number, terminated: boolean) => boolean,
++	initialPrefixChain: Uint8Array = EMPTY_PREFIX_CHAIN,
++	endOffset?: number,
++): ScanResult {
++	const fd = openSync(filePath, "r");
++	try {
++		return scanPhysicalLinesFromDescriptor(fd, filePath, startOffset, visitor, initialPrefixChain, endOffset);
++	} finally {
++		closeSync(fd);
++	}
 +}
 +
 +function initializeDatabase(db: DatabaseSync): void {
@@ -3671,7 +3782,7 @@ index 000000000..f9d6c8582
 +		const canonical = canonicalSessionPath(filePath);
 +		let release: (() => void) | undefined;
 +		try {
-+			release = acquireSourceLock(canonical);
++			release = acquireSourceLock(canonical, { allowLocalFallback: true });
 +			return IndexedJsonlSessionHistoryStore.openWithIndex(canonical, `${canonical}.index.sqlite`, cacheBytes);
 +		} catch (error) {
 +			if (!(error instanceof IndexPathCollisionError) && !isReadOnlyPathError(error)) throw error;
@@ -3825,9 +3936,9 @@ index 000000000..f9d6c8582
 +			if (stats.size === state.indexed_length) {
 +				return generationMatches(state, generation)
 +					? lastIndexedRecordMatches(state, filePath)
-+					: isVerifiedIndexedPrefix(state, filePath, stats.size, generation);
++					: isVerifiedIndexedPrefix(state, filePath, stats.size);
 +			}
-+			return isVerifiedIndexedPrefix(state, filePath, stats.size, generation);
++			return isVerifiedIndexedPrefix(state, filePath, stats.size);
 +		} catch {
 +			return false;
 +		}
@@ -3944,7 +4055,7 @@ index 000000000..f9d6c8582
 +			if (
 +				!generationMatches(state, generation) &&
 +				!controlledSourceGrowth &&
-+				!isVerifiedIndexedPrefix(state, filePath, source.size, generation)
++				!isVerifiedIndexedPrefix(state, filePath, source.size)
 +			) {
 +				throw new Error(
 +					"Session JSONL changed outside the indexed writer; close and reopen it to rebuild the index",
@@ -4189,6 +4300,33 @@ index 000000000..f9d6c8582
 +
 +	private sourceState(): SourceStateRow {
 +		return this.sourceStateStatement.get() as unknown as SourceStateRow;
++	}
++
++	private rebindSourceDescriptorIfNeeded(): void {
++		if (this.sourceFd === undefined) throw new Error("Session history store is closed");
++		const state = this.sourceState();
++		const current = sourceDescriptorState(this.sourceFd);
++		if (current.size >= state.indexed_length && generationMatches(state, current)) return;
++
++		const replacement = openVerifiedIndexedDescriptor(state, this.filePath);
++		try {
++			this.db.prepare(`
++				UPDATE source_state
++				SET source_dev = ?, source_ino = ?, source_mtime_ns = ?, source_ctime_ns = ?
++				WHERE singleton = 1
++			`).run(
++				replacement.generation.dev,
++				replacement.generation.ino,
++				replacement.generation.mtimeNs,
++				replacement.generation.ctimeNs,
++			);
++		} catch (error) {
++			closeSync(replacement.fd);
++			throw error;
++		}
++		const previous = this.sourceFd;
++		this.sourceFd = replacement.fd;
++		closeSync(previous);
 +	}
 +
 +	get leafId(): string | null {
@@ -5058,6 +5196,7 @@ index 000000000..f9d6c8582
 +		let sourceMayHaveChanged = false;
 +		try {
 +			IndexedJsonlSessionHistoryStore.catchUp(this.db, this.filePath);
++			this.rebindSourceDescriptorIfNeeded();
 +			let state = this.sourceState();
 +			const previous =
 +				state.entry_count > 0
@@ -5078,7 +5217,13 @@ index 000000000..f9d6c8582
 +
 +			const fd = openSync(this.filePath, "a+");
 +			let offset = 0;
++			let generation: SourceDescriptorState | undefined;
++			let appendVerified = false;
++			let closeFailure: { error: unknown } | undefined;
 +			try {
++				if (!indexedDescriptorMatches(state, fd, this.filePath)) {
++					throw new Error("Session JSONL changed outside the indexed writer before append");
++				}
 +				let size = fstatSync(fd).size;
 +				if (size > 0) {
 +					const finalByte = Buffer.allocUnsafe(1);
@@ -5096,12 +5241,28 @@ index 000000000..f9d6c8582
 +				writeAllSync(fd, bytes);
 +				writeAllSync(fd, NEWLINE);
 +				fdatasyncSync(fd);
++				const committed = Buffer.allocUnsafe(bytes.length + 1);
++				if (
++					!readExactSync(fd, committed, offset)
++					|| !committed.subarray(0, bytes.length).equals(bytes)
++					|| committed[bytes.length] !== 0x0a
++				) throw new Error("Session JSONL append read-back did not match the committed entry");
++				generation = sourceDescriptorState(fd);
++				if (!sameDescriptorState(generation, sourcePathState(this.filePath))) {
++					throw new SourceChangedDuringCatchUpError("Session JSONL was replaced during append");
++				}
++				appendVerified = true;
 +			} finally {
-+				closeSync(fd);
++				try {
++					closeSync(fd);
++				} catch (error) {
++					closeFailure = { error };
++				}
 +			}
++			if (!appendVerified && closeFailure) throw closeFailure.error;
 +
++			if (!generation) throw new Error("Session append completed without a source generation");
 +			state = this.sourceState();
-+			const generation = sourceGeneration(this.filePath);
 +			this.db.exec("BEGIN IMMEDIATE");
 +			try {
 +				const row = IndexedJsonlSessionHistoryStore.insertEntry(
@@ -5163,12 +5324,18 @@ index 000000000..f9d6c8582
 +				} catch {}
 +				throw error;
 +			}
++			this.rebindSourceDescriptorIfNeeded();
 +			this.volatileLeafId = persisted.id;
 +			this.refreshActiveProjection();
 +		} catch (error) {
 +			if (sourceMayHaveChanged) {
 +				try {
-+					IndexedJsonlSessionHistoryStore.catchUp(this.db, this.filePath, true);
++					IndexedJsonlSessionHistoryStore.catchUp(
++						this.db,
++						this.filePath,
++						!(error instanceof SourceChangedDuringCatchUpError),
++					);
++					this.rebindSourceDescriptorIfNeeded();
 +				} catch {}
 +			}
 +			throw error;
@@ -5202,6 +5369,7 @@ index 000000000..f9d6c8582
 +		const release = acquireSourceLock(this.filePath);
 +		try {
 +			IndexedJsonlSessionHistoryStore.catchUp(this.db, this.filePath);
++			this.rebindSourceDescriptorIfNeeded();
 +			this.volatileLeafId = this.sourceState().current_leaf_id;
 +			this.refreshActiveProjection();
 +		} finally {
@@ -11171,10 +11339,10 @@ index c978b3200..93e43fb13 100644
  	});
 diff --git a/packages/coding-agent/test/session-manager/indexed-history-store.test.ts b/packages/coding-agent/test/session-manager/indexed-history-store.test.ts
 new file mode 100644
-index 000000000..6b12e6add
+index 000000000..bb70e4a32
 --- /dev/null
 +++ b/packages/coding-agent/test/session-manager/indexed-history-store.test.ts
-@@ -0,0 +1,1357 @@
+@@ -0,0 +1,1527 @@
 +import { spawn } from "node:child_process";
 +import { createHash } from "node:crypto";
 +import {
@@ -11186,6 +11354,7 @@ index 000000000..6b12e6add
 +	mkdtempSync,
 +	readdirSync,
 +	readFileSync,
++	renameSync,
 +	rmSync,
 +	statSync,
 +	symlinkSync,
@@ -11406,6 +11575,174 @@ index 000000000..6b12e6add
 +		utimesSync(path, stats.atime, new Date(stats.mtimeMs + 1000));
 +		expect(() => reopened.flush()).not.toThrow();
 +		expect(reopened.getEntry("01")).toMatchObject({ data: "unchanged" });
++		reopened.close();
++	});
++
++	it("continues checkpoint appends after foreign filesystem identity metadata", () => {
++		const path = join(createRoot(), "session.jsonl");
++		writeSession(path, [header(), custom("01", null, "first")]);
++		const store = IndexedJsonlSessionHistoryStore.open(path);
++		const indexInode = statSync(store.indexPath).ino;
++		const source = statSync(path);
++		const db = new DatabaseSync(store.indexPath);
++		db.prepare("UPDATE source_state SET source_dev = ?, source_ino = ? WHERE singleton = 1").run(
++			source.dev + 1,
++			source.ino + 1,
++		);
++		db.close();
++
++		expect(() => store.append(custom("02", "01", "checkpoint"))).not.toThrow();
++		expect(store.getEntry("02")).toMatchObject({ id: "02", parentId: "01", data: "checkpoint" });
++		expect(store.getSourceIdentity()).toEqual({ dev: statSync(path).dev, ino: statSync(path).ino });
++		expect(statSync(store.indexPath).ino).toBe(indexInode);
++		store.close();
++	});
++
++	it("rebinds a live reader after byte-identical atomic source replacement", () => {
++		const root = createRoot();
++		const path = join(root, "session.jsonl");
++		const replacementPath = join(root, "replacement.jsonl");
++		writeSession(path, [header(), custom("01", null, "first")]);
++		const store = IndexedJsonlSessionHistoryStore.open(path);
++		const indexInode = statSync(store.indexPath).ino;
++		const originalIdentity = store.getSourceIdentity();
++		writeFileSync(replacementPath, readFileSync(path));
++		renameSync(replacementPath, path);
++		const replacement = statSync(path);
++		expect({ dev: replacement.dev, ino: replacement.ino }).not.toEqual(originalIdentity);
++
++		expect(() => store.flush()).not.toThrow();
++		expect(store.getSourceIdentity()).toEqual({ dev: replacement.dev, ino: replacement.ino });
++		expect(() => store.append(custom("02", "01", "after-rebind"))).not.toThrow();
++		expect(store.getEntry("02")).toMatchObject({ id: "02", parentId: "01", data: "after-rebind" });
++		expect(statSync(store.indexPath).ino).toBe(indexInode);
++		store.close();
++	});
++
++	it("verifies a replacement opened at the append boundary", async () => {
++		const root = createRoot();
++		const path = join(root, "session.jsonl");
++		const replacementPath = join(root, "replacement.jsonl");
++		const workerPath = join(root, "replace-on-append.ts");
++		writeSession(path, [header(), custom("01", null, "first")]);
++		writeFileSync(
++			workerPath,
++			`import fs from "node:fs";
++			import { syncBuiltinESMExports } from "node:module";
++			const [path, replacementPath] = process.argv.slice(2);
++			const originalOpenSync = fs.openSync;
++			let replaced = false;
++			fs.openSync = function(pathArg, flags, mode) {
++			  if (!replaced && pathArg === path && flags === "a+") {
++			    fs.writeFileSync(replacementPath, fs.readFileSync(path));
++			    fs.renameSync(replacementPath, path);
++			    replaced = true;
++			  }
++			  return mode === undefined ? originalOpenSync(pathArg, flags) : originalOpenSync(pathArg, flags, mode);
++			};
++			syncBuiltinESMExports();
++			const { IndexedJsonlSessionHistoryStore } = await import(${JSON.stringify(new URL("../../src/core/session-history-store.ts", import.meta.url).href)});
++			const store = IndexedJsonlSessionHistoryStore.open(path);
++			store.append({
++			  type: "custom", id: "02", parentId: "01", timestamp: "2026-01-01T00:00:02.000Z",
++			  customType: "test", data: "append-boundary",
++			});
++			process.stdout.write("replaced=" + replaced + ":entry=" + store.getEntry("02")?.id + "\\n");
++			store.close();
++			`,
++		);
++
++		const child = spawn(process.execPath, ["--experimental-strip-types", workerPath, path, replacementPath], {
++			stdio: ["ignore", "pipe", "pipe"],
++		});
++		let stdout = "";
++		let stderr = "";
++		child.stdout.on("data", (chunk) => {
++			stdout += chunk.toString();
++		});
++		child.stderr.on("data", (chunk) => {
++			stderr += chunk.toString();
++		});
++		await new Promise<void>((resolve, reject) => {
++			child.once("exit", (code) => (code === 0 ? resolve() : reject(new Error(`worker exited ${code}: ${stderr}`))));
++			child.once("error", reject);
++		});
++		expect(stdout).toContain("replaced=true:entry=02");
++		const reopened = IndexedJsonlSessionHistoryStore.open(path);
++		expect(reopened.getEntry("02")).toMatchObject({ data: "append-boundary" });
++		reopened.close();
++	});
++
++	it("preserves a verified append when descriptor close reports failure", async () => {
++		const root = createRoot();
++		const path = join(root, "session.jsonl");
++		const workerPath = join(root, "close-failure-after-append.ts");
++		writeSession(path, [header(), custom("01", null, "first")]);
++		writeFileSync(
++			workerPath,
++			`import fs from "node:fs";
++			import { syncBuiltinESMExports } from "node:module";
++			const path = process.argv[2];
++			const originalOpenSync = fs.openSync;
++			const originalCloseSync = fs.closeSync;
++			let appendFd = -1;
++			let injected = false;
++			fs.openSync = function(pathArg, flags, mode) {
++			  const fd = mode === undefined ? originalOpenSync(pathArg, flags) : originalOpenSync(pathArg, flags, mode);
++			  if (pathArg === path && flags === "a+") appendFd = fd;
++			  return fd;
++			};
++			fs.closeSync = function(fd) {
++			  const result = originalCloseSync(fd);
++			  if (!injected && fd === appendFd) { injected = true; throw new Error("injected-close-after-append"); }
++			  return result;
++			};
++			syncBuiltinESMExports();
++			const { IndexedJsonlSessionHistoryStore } = await import(${JSON.stringify(new URL("../../src/core/session-history-store.ts", import.meta.url).href)});
++			const store = IndexedJsonlSessionHistoryStore.open(path);
++			store.append({
++			  type: "custom", id: "02", parentId: "01", timestamp: "2026-01-01T00:00:02.000Z",
++			  customType: "test", data: "close-failure",
++			});
++			process.stdout.write("injected=" + injected + ":entry=" + store.getEntry("02")?.id + "\\n");
++			store.close();
++			`,
++		);
++		const child = spawn(process.execPath, ["--experimental-strip-types", workerPath, path], {
++			stdio: ["ignore", "pipe", "pipe"],
++		});
++		let stdout = "";
++		let stderr = "";
++		child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
++		child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
++		await new Promise<void>((resolve, reject) => {
++			child.once("exit", (code) => (code === 0 ? resolve() : reject(new Error(`worker exited ${code}: ${stderr}`))));
++			child.once("error", reject);
++		});
++		expect(stdout).toContain("injected=true:entry=02");
++		const reopened = IndexedJsonlSessionHistoryStore.open(path);
++		expect(reopened.getEntry("02")).toMatchObject({ data: "close-failure" });
++		reopened.close();
++	});
++
++	it("rejects an identity-replaced mutated indexed prefix", () => {
++		const root = createRoot();
++		const path = join(root, "session.jsonl");
++		const replacementPath = join(root, "replacement.jsonl");
++		writeSession(path, [header(), custom("01", null, "first"), custom("02", "01", "middle")]);
++		const store = IndexedJsonlSessionHistoryStore.open(path);
++		const before = readFileSync(path, "utf8");
++		const edited = before.replace('"data":"middle"', '"data":"edited"');
++		expect(Buffer.byteLength(edited)).toBe(Buffer.byteLength(before));
++		writeFileSync(replacementPath, edited);
++		renameSync(replacementPath, path);
++
++		expect(() => store.flush()).toThrow("changed outside the indexed writer");
++		expect(store.getEntry("02")).toMatchObject({ data: "middle" });
++		store.close();
++
++		const reopened = IndexedJsonlSessionHistoryStore.open(path);
++		expect(reopened.getEntry("02")).toMatchObject({ data: "edited" });
 +		reopened.close();
 +	});
 +
@@ -12134,6 +12471,7 @@ index 000000000..6b12e6add
 +		expect(readFileSync(reaperPath, "utf8")).toBe("keep-reaper");
 +		store.close();
 +	});
++
 +
 +	it("serializes source locks across processes with different TMPDIR values", async () => {
 +		const root = createRoot();

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import {
+	appendFileSync,
 	closeSync,
 	cpSync,
 	existsSync,
@@ -227,7 +228,118 @@ try {
 		malformed: 0,
 		truncated: false,
 		validEvents: 0,
-	});
+});
+	const crossProcessLedgerWorkdir = join(workdir, "cross-process-ledger");
+	const crossProcessLedgerDir = join(crossProcessLedgerWorkdir, ".pi/goals");
+	const crossProcessLedgerPath = join(crossProcessLedgerDir, "goal_events.jsonl");
+	mkdirSync(crossProcessLedgerDir, { recursive: true });
+	assert.deepEqual(
+		appendGoalEvent({ cwd: crossProcessLedgerWorkdir }, {
+			type: "task_complete",
+			goalId: "shared",
+			taskId: "first",
+			at: "first",
+		}),
+		{ ok: true },
+	);
+	assert.deepEqual(
+		readGoalLedger({ cwd: crossProcessLedgerWorkdir }).events.map((event) =>
+			"taskId" in event ? event.taskId : undefined,
+		),
+		["first"],
+	);
+	appendFileSync(
+		crossProcessLedgerPath,
+		`${JSON.stringify({ type: "task_complete", goalId: "shared", taskId: "external", at: "external" })}\n`,
+		"utf8",
+	);
+	assert.deepEqual(
+		appendGoalEvent({ cwd: crossProcessLedgerWorkdir }, {
+			type: "task_complete",
+			goalId: "shared",
+			taskId: "local",
+			at: "local",
+		}),
+		{ ok: true },
+	);
+	assert.deepEqual(
+		readGoalLedger({ cwd: crossProcessLedgerWorkdir }).events.map((event) =>
+			"taskId" in event ? event.taskId : undefined,
+		),
+		["first", "external", "local"],
+		"general ledger reads must include successful external appends after a warm read",
+	);
+	const serializedLedgerWorkdir = join(workdir, "serialized-ledger-writers");
+	const serializedLedgerDir = join(serializedLedgerWorkdir, ".pi/goals");
+	const serializedLedgerStart = join(serializedLedgerWorkdir, "start");
+	const serializedLedgerWorker = join(serializedLedgerWorkdir, "writer.ts");
+	mkdirSync(serializedLedgerDir, { recursive: true });
+	writeFileSync(
+		serializedLedgerWorker,
+		`import fs from "node:fs";
+		import { syncBuiltinESMExports } from "node:module";
+		const [runtimeRoot, cwd, startPath, prefix] = process.argv.slice(2);
+		const originalOpenSync = fs.openSync;
+		const originalWriteSync = fs.writeSync;
+		let ledgerFd = -1;
+		fs.openSync = function(pathArg, flags, mode) {
+		  const fd = mode === undefined ? originalOpenSync(pathArg, flags) : originalOpenSync(pathArg, flags, mode);
+		  if (String(pathArg).endsWith("goal_events.jsonl")) ledgerFd = fd;
+		  return fd;
+		};
+		fs.writeSync = function(fd, buffer, offset, length, position) {
+		  if (fd !== ledgerFd) return originalWriteSync(fd, buffer, offset, length, position);
+		  const written = originalWriteSync(fd, buffer, offset, Math.min(length, 7), position);
+		  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1);
+		  return written;
+		};
+		syncBuiltinESMExports();
+		const { appendGoalEvents } = await import(runtimeRoot + "/extensions/goal-ledger.ts");
+		process.stdout.write("ready\\n");
+		const waiter = new Int32Array(new SharedArrayBuffer(4));
+		while (!fs.existsSync(startPath)) Atomics.wait(waiter, 0, 0, 5);
+		const result = appendGoalEvents({ cwd }, Array.from({ length: 40 }, (_, index) => ({
+		  type: "task_complete", goalId: prefix, taskId: prefix + "-" + index, at: prefix + "-" + index,
+		})));
+		process.stdout.write("done=" + result.ok + "\\n");
+		`,
+	);
+	const launchLedgerWriter = (prefix: string) => {
+		const child = spawn(
+			process.execPath,
+			["--experimental-transform-types", serializedLedgerWorker, runtimeRoot, serializedLedgerWorkdir, serializedLedgerStart, prefix],
+			{ stdio: ["ignore", "pipe", "pipe"] },
+		);
+		let stdout = "";
+		let stderr = "";
+		child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
+		child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+		const ready = new Promise<void>((resolve, reject) => {
+			const inspect = () => { if (stdout.includes("ready")) resolve(); };
+			child.stdout.on("data", inspect);
+			child.once("error", reject);
+			child.once("exit", (code) => {
+				inspect();
+				if (!stdout.includes("ready")) reject(new Error(`ledger writer exited ${code}: ${stderr}`));
+			});
+		});
+		const done = new Promise<void>((resolve, reject) => {
+			child.once("exit", (code) => code === 0 ? resolve() : reject(new Error(`ledger writer exited ${code}: ${stderr}`)));
+			child.once("error", reject);
+		});
+		return { ready, done, output: () => stdout };
+	};
+	const ledgerWriterA = launchLedgerWriter("writer-a");
+	const ledgerWriterB = launchLedgerWriter("writer-b");
+	await Promise.all([ledgerWriterA.ready, ledgerWriterB.ready]);
+	writeFileSync(serializedLedgerStart, "start", "utf8");
+	await Promise.all([ledgerWriterA.done, ledgerWriterB.done]);
+	assert.match(ledgerWriterA.output(), /done=true/);
+	assert.match(ledgerWriterB.output(), /done=true/);
+	const serializedLedger = readGoalLedger({ cwd: serializedLedgerWorkdir }, { maxEvents: 100 });
+	assert.equal(serializedLedger.malformed, 0);
+	assert.equal(serializedLedger.validEvents, 80);
+	assert.equal(new Set(serializedLedger.events.map((event) => "taskId" in event ? event.taskId : undefined)).size, 80);
 	const fifoLedgerWorkdir = join(workdir, "fifo-ledger");
 	const fifoLedgerPath = join(fifoLedgerWorkdir, ".pi/goals/goal_events.jsonl");
 	mkdirSync(join(fifoLedgerWorkdir, ".pi/goals"), { recursive: true });
