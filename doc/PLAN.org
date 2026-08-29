@@ -18891,7 +18891,7 @@ Profile-sidecar migration promises target-write-before-source-remove durability,
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-28 Fri 23:34]
-:MODIFIED: [2026-08-29 Sat 08:52]
+:MODIFIED: [2026-08-29 Sat 10:49]
 :CREATED_BY: johnw
 :FINISHED: [2026-08-29 Sat 08:52]
 :CLOSE_REASON: Backported Vitest malformed-sourcemap handling, pinned the fork lock-initialization fix, and passed deterministic, full-suite, package, repository, and non-activating Vulcan gates.
@@ -18904,7 +18904,7 @@ Diagnose and fix the intermittent Vitest sourcemap JSON parse error that fails p
 
 ** Notes
 
-Root cause: Vitest 4.1.9 parsed the source-map prefix string embedded in tsx 4.22.1 register-B4MtRGQg.cjs; convert-source-map then JSON-parsed source bytes and reporter symbolization surfaced SyntaxError. The corrected reporter exposed a distinct first-open SQLite lock-schema race. Evidence: deterministic lock regression failed 5/5 before and passed 10/10 after; signed fork commit c3edb0260; signed nix-config commit 9914861c; fork full non-e2e suite, 43-file Nix suite (608 passed, 2 skipped) on Darwin and aarch64-linux, 133 focused tests, portable evaluation, make test, and pre-commit passed. Vulcan paired inputs updated exactly to 9914861c; ./build build produced /nix/store/bh0hl3srw6y8yfi9m056cbxjydsfvd5z-nixos-system-vulcan-25.11.20260630.b6018f8 while /run/current-system remained unchanged.
+Root cause: Vitest 4.1.9 parsed the source-map prefix string embedded in tsx 4.22.1 register-B4MtRGQg.cjs; convert-source-map then JSON-parsed source bytes while parseErrorStacktrace formatted the underlying SQLite first-open lock error. Retained evidence and unpublished report: doc/PI-VITEST-SOURCEMAP-UPSTREAM-REPORT.md and doc/evidence/pi-vitest-sourcemap/. Final signed refs: Pi 9491864fe, nix-config a6ad28de. The blocking Nix gate now runs the fork complete credential-isolated suite: coding-agent 255 passed files plus 6 skipped files = all 261, 2242 passed tests plus 50 skipped, on Darwin and aarch64-linux; forced Darwin derivation passed 10/10. Focused 133 tests, portable all-system evaluation, make test, and pre-commit passed. Vulcan paired inputs updated exactly to a6ad28de; ./build build produced /nix/store/idxkgjf4646v4815qr6rn7mz5kwrglqb-nixos-system-vulcan-25.11.20260630.b6018f8 while /run/current-system remained unchanged.
 
 * DONE [#B] Reject explicit-port GitHub URLs in cross-consumer source gates
 :PROPERTIES:

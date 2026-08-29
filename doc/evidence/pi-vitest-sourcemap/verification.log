@@ -166,4 +166,22 @@ exit status: 0
 
 == Downstream Vulcan system validation ==
 
-Pending publication of this evidence/package-gate commit. Final exact paired-input update, `./build build`, store path, and unchanged `/run/current-system` will be appended in the closure commit.
+$ cd /etc/nixos
+$ nix flake update nix-config nix-config-ai
+nix-config    a6ad28de9176fdb9f7e0c0a88cf6b428b0324f77
+nix-config-ai a6ad28de9176fdb9f7e0c0a88cf6b428b0324f77
+nix-config-ai/pi 9491864fe026284561a2920988ba6a3969c2bc3c
+exit status: 0
+
+$ ./build build
+source derivation: /nix/store/ml7ay0yd7xpzj167v8xadmqp4yqi2gmn-pi-coding-agent-source-build-0.84.4.drv
+> @earendil-works/pi-coding-agent@0.84.4 test
+ Test Files  255 passed | 6 skipped (261)
+      Tests  2242 passed | 50 skipped (2292)
+Done. The new configuration is /nix/store/idxkgjf4646v4815qr6rn7mz5kwrglqb-nixos-system-vulcan-25.11.20260630.b6018f8
+exit status: 0
+
+before=/nix/store/mymlig8xv9c4ccyzk6nr8vsdqk68ar07-nixos-system-vulcan-25.11.20260630.b6018f8
+after=/nix/store/mymlig8xv9c4ccyzk6nr8vsdqk68ar07-nixos-system-vulcan-25.11.20260630.b6018f8
+/etc/nixos status: only flake.lock modified
+activation: not performed
