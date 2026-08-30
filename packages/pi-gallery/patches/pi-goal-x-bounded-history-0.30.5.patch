@@ -1087,7 +1087,7 @@ index 8e9955c1d..c4ad1ceb9 100644
  export interface ReconstructedGoalState {
    goalId: string;
    latestStatus: "active" | "paused" | "complete" | "aborted" | "unknown";
-@@ -69,21 +113,100 @@ function safeGoalId(value: string): string {
+@@ -69,21 +113,101 @@ function safeGoalId(value: string): string {
    return safeIdPart(value);
  }
  
@@ -1118,7 +1118,12 @@ index 8e9955c1d..c4ad1ceb9 100644
 +  let db: DatabaseSync | undefined;
 +  try {
 +    db = new DatabaseSync(lockPath);
-+    db.exec(`PRAGMA busy_timeout = ${GOAL_LEDGER_LOCK_WAIT_MS}`);
++    // Keep ownership inspection and initialization inside one transaction.
++    db.exec(`
++      PRAGMA busy_timeout = ${GOAL_LEDGER_LOCK_WAIT_MS};
++      PRAGMA journal_mode = DELETE;
++      BEGIN EXCLUSIVE;
++    `);
 +    const application = db.prepare("PRAGMA application_id").get() as { application_id: number };
 +    if (application.application_id === 0) {
 +      const schema = db
@@ -1130,11 +1135,7 @@ index 8e9955c1d..c4ad1ceb9 100644
 +      throw new Error(`Refusing unrecognized goal ledger lock database: ${lockPath}`);
 +    }
 +    fs.chmodSync(lockPath, 0o600);
-+    db.exec(`
-+      PRAGMA journal_mode = DELETE;
-+      CREATE TABLE IF NOT EXISTS ledger_lock (singleton INTEGER PRIMARY KEY CHECK (singleton = 1));
-+      BEGIN EXCLUSIVE;
-+    `);
++    db.exec("CREATE TABLE IF NOT EXISTS ledger_lock (singleton INTEGER PRIMARY KEY CHECK (singleton = 1))");
 +    const linked = fs.lstatSync(lockPath);
 +    if (linked.isSymbolicLink() || !linked.isFile()) {
 +      throw new Error(`Goal ledger lock path changed during acquisition: ${lockPath}`);
