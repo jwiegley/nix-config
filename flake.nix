@@ -4,6 +4,11 @@
   inputs = {
     nix-config-ai.url = "path:./config/ai";
 
+    agent-workflows = {
+      url = "github:jwiegley/agent-workflows";
+      inputs.nixpkgs.follows = "nix-config-ai/nixpkgs";
+    };
+
     obr.url = "github:jwiegley/obr";
 
     darwin = {
@@ -281,6 +286,7 @@
         system:
         portableAi.packages.${system}
         // {
+          agent-workflows = rootInputs.agent-workflows.packages.${system}.default;
           obr = rootInputs.obr.packages.${system}.default;
           python-test-env = pythonTestEnvFor.${system};
         }
@@ -375,6 +381,8 @@
                   homeConfigurations
                   nixosHomeEvaluationFixtures
                   ;
+                agentWorkflowsPackage = packages.${system}.agent-workflows;
+                agentWorkflowsUpstreamPackage = rootInputs.agent-workflows.packages.${system}.default;
               };
               managed-agent-package-selection = pkgs.callPackage ./test/home/managed-agent-package-selection.nix {
                 inherit inputs src;
