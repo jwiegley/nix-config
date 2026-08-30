@@ -10,17 +10,14 @@ let
     primary = {
       name = "Qwen3.8-27B-oQ4e-mtp";
       providers = omlxProviders;
-      retiredNames = [
-        "Qwen3.6-27B-oQ6e-mtp"
-        "Qwen3.8-27B-oQ6e-mtp-mlx"
-      ];
+      retiredNames = [];
       contextWindow = 262144;
       maxTokens = 81920;
     };
     reasoning = {
-      name = "DeepSeek-V4-Flash-0731-MXFP4-MLX";
+      name = "GLM-5.3-Flash-MLX-oQ4-MTP";
       providers = [ "omlx-hera" ];
-      retiredNames = [ "DeepSeek-V4-Flash-0731-oQ8e-mtp" ];
+      retiredNames = [];
       contextWindow = 262144;
       maxTokens = 81920;
     };
