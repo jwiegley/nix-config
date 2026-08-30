@@ -10,14 +10,14 @@ let
     primary = {
       name = "Qwen3.8-27B-oQ4e-mtp";
       providers = omlxProviders;
-      retiredNames = [];
+      retiredNames = [ ];
       contextWindow = 262144;
       maxTokens = 81920;
     };
     reasoning = {
       name = "GLM-5.3-Flash-MLX-oQ4-MTP";
       providers = [ "omlx-hera" ];
-      retiredNames = [];
+      retiredNames = [ ];
       contextWindow = 262144;
       maxTokens = 81920;
     };
