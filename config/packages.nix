@@ -65,7 +65,8 @@ let
     "pushme"
     "renamer"
     "trade-journal"
-  ];
+  ]
+  ++ lib.optionals caps.isHera [ "agent-workflows" ];
   sourceProjectApps = import ../packages/source-project-apps.nix { inherit inputs pkgs; };
   userPackageInputNames = lib.sort builtins.lessThan (
     lib.filter (

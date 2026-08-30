@@ -1,4 +1,6 @@
 {
+  agentWorkflowsPackage,
+  agentWorkflowsUpstreamPackage,
   darwinConfigurations,
   homeConfigurations,
   nixosHomeEvaluationFixtures,
@@ -312,7 +314,13 @@ let
     inherit (darwinConfigurations.hera) pkgs;
     inherit (darwinConfigurations.hera._module.specialArgs) inputs;
   };
+  clioPackageSelection = import ../../config/packages.nix {
+    hostname = "clio";
+    inherit (darwinConfigurations.clio) pkgs;
+    inherit (darwinConfigurations.clio._module.specialArgs) inputs;
+  };
   expectedHeraSourceProjectInputs = [
+    "agent-workflows"
     "gh-to-org"
     "git-all"
     "gitlib"
@@ -698,7 +706,11 @@ assert builtins.length physicalSharedWorkPackages > 0;
 assert builtins.length physicalMaintainedPackages > 0;
 assert !(hasSelectedPackage "agdaWithPackages" physicalSharedWorkPackages);
 assert !(hasSelectedPackage "agdaWithPackages" physicalMaintainedPackages);
+assert agentWorkflowsPackage == agentWorkflowsUpstreamPackage;
 assert heraPackageSelection.userPackageInputNames == expectedHeraSourceProjectInputs;
+assert hasSelectedPackage "agent-workflows" heraPackageSelection.package-list;
+assert !(hasSelectedPackage "agent-workflows" clioPackageSelection.package-list);
+assert builtins.all (config: !(hasPackage "agent-workflows" config)) nonDesktopHomes;
 assert builtins.all (hasPackage "obr") allHomes;
 assert builtins.all (config: !(ownsObrState config)) allHomes;
 assert builtins.all (
@@ -730,6 +742,9 @@ assert builtins.all (
 assert builtins.all (config: config.johnw.host.isDarwinWorkstation) desktopHomes;
 assert builtins.all (config: !config.johnw.host.isDarwinWorkstation) nonDesktopHomes;
 assert builtins.all hasSafeLocalModelSessionVariables desktopHomes;
+assert lib.hasSuffix "/bin/agentic-run"
+  desktopHomesByHost.hera.home.sessionVariables.AGENT_CAT_RUNNER;
+assert !(desktopHomesByHost.hera.home.sessionVariables ? AGENT_CAT_RUNNERS);
 assert clioCodexPackage != null;
 assert heraCodexPackage != null;
 assert heraPrimePackage != null;
