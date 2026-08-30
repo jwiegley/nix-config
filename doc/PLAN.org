@@ -5482,6 +5482,24 @@ Ruff reports two unused local variables in test/bin/publish-slow-test.py: the un
 :ORIGINAL_SIZE: 0
 :END:
 
+* DONE [#B] Track oMLX release dependency contract exactly
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-eik6
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-30 Sun 01:04]
+:MODIFIED: [2026-08-30 Sun 06:05]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-30 Sun 06:05]
+:CLOSE_REASON: oMLX now builds in a release-scoped dependency set matching 0.6.4, fails closed on source/version drift, and includes GLM quantized-loader compatibility fixes. Full tests/builds pass; Hera activation and bounded GLM/Qwen requests succeeded.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Nix-managed oMLX 0.6.4 rewrites or relaxes upstream dependencies, yielding MLX 0.32.2 instead of 0.32.0, transformers 5.15.0 outside >=5.12.1,<5.13, numpy 2.5.1 outside <2.4, DDGS 9.16.0 instead of 9.15.0, and a PyPI mlx-embeddings package instead of upstream's exact commit. Preserve each selected oMLX release's dependency contract, fail closed on drift, and verify GLM-5.3 plus Qwen3.8 on Hera.
+
 * TODO [#D] cross-consumer-eval vulcan leg cannot run off-vulcan
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -19521,6 +19539,40 @@ On each shared-work host, the supported switch path selects Home Manager, builds
     "author": "johnw",
     "text": "Fess fix: added explicit Darwin delegation and missing-checkout fallback tests that require the delegated u command and propagate its nonzero status. Independent isolated mutation probes killed both false-success changes: replacing Darwin delegation with exit 0 failed for Hera and Clio, and replacing fallback delegation with exit 0 failed for Andoria-08 and Vulcan. The focused strict routing suite passed 13 tests.",
     "created_at": "2026-08-16T19:33:27Z"
+  }
+]
+#+end_src
+
+* DONE [#B] Fix oMLX direct-reference unit fixture
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-xfmb
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-30 Sun 00:39]
+:MODIFIED: [2026-08-30 Sun 06:05]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-30 Sun 06:05]
+:CLOSE_REASON: Added the missing hermetic oMLX compatibility fixture; focused metadata contract and full make test pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+make test fails because the synthetic direct-reference fixture omits the omlx compatibility module imported by its contract. Add the minimal hermetic fixture and keep the real package install check unchanged.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-xfmb",
+    "depends_on_id": "nix-3ghq",
+    "type": "discovered-from",
+    "created_at": "2026-08-30T07:39:39.714205Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src

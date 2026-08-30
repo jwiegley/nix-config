@@ -134,11 +134,13 @@ class InstalledMetadataContractTests(unittest.TestCase):
     ) -> None:
         for distribution, version in {
             "click": "8.3.1",
+            "fake-useragent": "2.2.0",
+            "httpx": "0.28.1",
             "primp": "1.3.1",
             "lxml": "6.0.2",
         }.items():
             write_distribution(site, distribution, version)
-            write_module(site, distribution)
+            write_module(site, distribution.replace("-", "_"))
         write_module(
             site,
             "primp",
@@ -163,6 +165,7 @@ class InstalledMetadataContractTests(unittest.TestCase):
             "    def post(self, *_args, **_kwargs):\n"
             "        pass\n",
         )
+        write_module(site, "ddgs.http_client2")
         write_module(
             site,
             "ddgs.ddgs",
@@ -248,6 +251,71 @@ class InstalledMetadataContractTests(unittest.TestCase):
             "mlx_vlm.utils",
             vlm_utils,
         )
+        write_module(
+            site,
+            "omlx.patches.mlx_vlm_qwen4_exp_compat",
+            "from pathlib import Path\n"
+            "from types import ModuleType\n"
+            "import sys\n"
+            "class ShardedEmbedding:\n"
+            "    def __init__(self, *args):\n"
+            "        pass\n"
+            "    def parameters(self):\n"
+            "        return {'weight_scale': object()}\n"
+            "def apply_mlx_vlm_qwen4_exp_compat_patch():\n"
+            "    module = ModuleType('mlx_vlm.models.qwen4_exp.language')\n"
+            "    module.__file__ = str(Path(__file__).parent / 'vendor/qwen4_exp/language.py')\n"
+            "    module.ShardedEmbedding = ShardedEmbedding\n"
+            "    sys.modules[module.__name__] = module\n"
+            "    return True\n"
+            "def is_applied():\n"
+            "    return 'mlx_vlm.models.qwen4_exp.language' in sys.modules\n",
+        )
+
+    def make_omlx_release_site(
+        self,
+        site: Path,
+        *,
+        installed_versions: dict[str, str] | None = None,
+        direct_reference: bool = False,
+    ) -> None:
+        versions = {
+            "mlx": "0.32.0",
+            "mlx-lm": "0.31.3",
+            "mlx-embeddings": "0.1.0",
+            "mlx-vlm": "0.6.3",
+            "mlx-audio": "0.4.3",
+            "dflash-mlx": "0.1.10+omlx.7",
+            "ddgs": "9.15.0",
+            "transformers": "5.12.1",
+            "numpy": "2.3.5",
+            "librosa": "0.11.0",
+            "sounddevice": "0.5.3",
+        }
+        versions.update(installed_versions or {})
+        for name, version in versions.items():
+            write_distribution(site, name, version)
+        mlx_lm_requirement = (
+            "mlx-lm @ git+https://example.invalid/mlx-lm"
+            if direct_reference
+            else "mlx-lm"
+        )
+        write_distribution(
+            site,
+            "omlx",
+            "0.6.4",
+            (
+                "mlx==0.32.0",
+                mlx_lm_requirement,
+                "mlx-embeddings",
+                "mlx-vlm",
+                "dflash-mlx",
+                "ddgs==9.15.0",
+                "transformers>=5.12.1,<5.13",
+                "numpy>=1.24.0,<2.4",
+                'mlx-audio[tts,stt,sts]; extra == "audio"',
+            ),
+        )
 
     def test_mlx_audio_rejects_stale_catalog_version(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -291,6 +359,25 @@ class InstalledMetadataContractTests(unittest.TestCase):
             self.make_ddgs_site(site)
             accepted = self.run_contract(
                 site, "ddgs-dependency-contract.py", "9.16.0"
+            )
+            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            site = Path(temp_dir)
+            self.make_ddgs_site(
+                site,
+                ddgs_metadata_version="9.15.0",
+                ddgs_module_version="9.15.0",
+                ddgs_requirements=(
+                    "click>=8.1.8",
+                    "fake-useragent>=2.2.0",
+                    "httpx>=0.28.1",
+                    "lxml>=4.9.4",
+                    "primp>=1.3.1",
+                ),
+            )
+            accepted = self.run_contract(
+                site, "ddgs-dependency-contract.py", "9.15.0"
             )
             self.assertEqual(accepted.returncode, 0, accepted.stderr)
 
@@ -487,6 +574,68 @@ class InstalledMetadataContractTests(unittest.TestCase):
             rejected = self.run_contract(site, contract, "9.16.0")
             self.assertNotEqual(rejected.returncode, 0)
             self.assertIn("context manager protocol", rejected.stderr)
+
+    def test_omlx_release_dependencies_reject_drift(self):
+        contract = "omlx-release-dependency-contract.py"
+        expected = (
+            "mlx",
+            "0.32.0",
+            "mlx-embeddings",
+            "0.1.0",
+            "mlx-vlm",
+            "0.6.3",
+            "mlx-audio",
+            "0.4.3",
+            "dflash-mlx",
+            "0.1.10+omlx.7",
+            "ddgs",
+            "9.15.0",
+            "transformers",
+            "5.12.1",
+            "numpy",
+            "2.3.5",
+            "librosa",
+            "0.11.0",
+            "sounddevice",
+            "0.5.3",
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            site = Path(temp_dir)
+            self.make_omlx_release_site(site)
+            accepted = self.run_contract(site, contract, *expected)
+            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+
+        for name, version, diagnostic in (
+            ("transformers", "5.15.0", "transformers<5.13,>=5.12.1"),
+            ("numpy", "2.5.1", "numpy<2.4,>=1.24.0"),
+        ):
+            with (
+                self.subTest(name=name),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
+                site = Path(temp_dir)
+                self.make_omlx_release_site(
+                    site, installed_versions={name: version}
+                )
+                rejected = self.run_contract(site, contract, *expected)
+                self.assertNotEqual(rejected.returncode, 0)
+                self.assertIn(diagnostic, rejected.stderr)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            site = Path(temp_dir)
+            self.make_omlx_release_site(site, direct_reference=True)
+            rejected = self.run_contract(site, contract, *expected)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn("direct reference survived", rejected.stderr)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            site = Path(temp_dir)
+            self.make_omlx_release_site(site)
+            stale_expected = list(expected)
+            stale_expected[1] = "0.32.2"
+            rejected = self.run_contract(site, contract, *stale_expected)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn("selected 0.32.2, installed 0.32.0", rejected.stderr)
 
     def test_omlx_direct_references_match_selected_versions_and_apis(self):
         contract = "omlx-direct-reference-contract.py"

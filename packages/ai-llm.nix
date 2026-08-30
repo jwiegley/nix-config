@@ -522,37 +522,205 @@ in
         ln -s ${pyEnv}/bin/mtplx-tune $out/bin/mtplx-tune
       '';
 
-  # Build omlx on Python 3.13 with the extended MLX package set.
+  # Build omlx in a release-scoped Python package set so exact upstream pins
+  # cannot drift with the independently updateable shared MLX stack.
   omlx =
-    with final;
-    with final.python313Packages;
     let
-      omlxMlxVlm = mlx-vlm.overridePythonAttrs (oldAttrs: {
-        inherit (sources.omlx-mlx-vlm) version;
-        src =
-          assert sources.omlx-mlx-vlm.source.fetcher == "fetchFromGitHub";
-          fetchFromGitHub sources.omlx-mlx-vlm.source.args;
-        dependencies = oldAttrs.dependencies ++ [
-          datasets
-          mlx-lm
-        ];
-        installCheckPhase = ''
-          runHook preInstallCheck
-          PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
-            ${python.interpreter} ${../test/ai/overlays/mlx-vlm-dependency-contract.py} ${sources.omlx-mlx-vlm.version}
-          runHook postInstallCheck
-        '';
-      });
-      omlxMlxEmbeddings = mlx-embeddings.overridePythonAttrs (_oldAttrs: {
-        dependencies = [
-          mlx
-          omlxMlxVlm
-          transformers
-          huggingface-hub
-          sentencepiece
-        ];
-      });
+      omlxPython = final.python313.override {
+        packageOverrides =
+          pfinal: pprev:
+          let
+            omlxMlxMetal =
+              assert sources.omlx-mlx.artifacts.metal.fetcher == "fetchPypi";
+              pfinal.fetchPypi sources.omlx-mlx.artifacts.metal.args;
+          in
+          {
+            mlx = pprev.mlx.overridePythonAttrs (_oldAttrs: {
+              inherit (sources.omlx-mlx) version;
+              src =
+                assert sources.omlx-mlx.source.fetcher == "fetchPypi";
+                pfinal.fetchPypi sources.omlx-mlx.source.args;
+              postInstall = ''
+                unzip -o ${omlxMlxMetal} -d $TMPDIR/mlx-metal
+                siteDir=$out/${pfinal.python.sitePackages}/mlx
+                cp -r $TMPDIR/mlx-metal/mlx/lib      $siteDir/
+                cp -r $TMPDIR/mlx-metal/mlx/include  $siteDir/
+                cp -r $TMPDIR/mlx-metal/mlx/share    $siteDir/
+              '';
+            });
+
+            numpy = pprev.numpy.overridePythonAttrs (_oldAttrs: {
+              inherit (sources.omlx-numpy) version;
+              src =
+                assert sources.omlx-numpy.source.fetcher == "fetchPypi";
+                pfinal.fetchPypi sources.omlx-numpy.source.args;
+              patches = [ ];
+            });
+
+            # FastAPI's server-only closure does not participate in the ML ABI.
+            # Reuse it as one coherent package family rather than rebuilding its
+            # timing-sensitive HTTP test dependencies under the NumPy override.
+            inherit (final.python313Packages)
+              annotated-doc
+              annotated-types
+              anyio
+              fastapi
+              idna
+              pydantic
+              pydantic-core
+              starlette
+              pillow
+              typing-extensions
+              typing-inspection
+              ;
+
+            markitdown =
+              (final.python313Packages.markitdown.override { speechrecognition = null; }).overridePythonAttrs
+                (oldAttrs: {
+                  dependencies = map (
+                    dependency:
+                    let
+                      name = dependency.pname or "";
+                    in
+                    if name == "magika" then
+                      pfinal.magika
+                    else if name == "pandas" then
+                      pfinal.pandas
+                    else
+                      dependency
+                  ) (oldAttrs.dependencies or [ ]);
+                });
+
+            transformers = pprev.transformers.overridePythonAttrs (_oldAttrs: {
+              inherit (sources.omlx-transformers) version;
+              src =
+                assert sources.omlx-transformers.source.fetcher == "fetchPypi";
+                pfinal.fetchPypi sources.omlx-transformers.source.args;
+            });
+
+            ddgs = pprev.ddgs.overridePythonAttrs (_oldAttrs: {
+              inherit (sources.omlx-ddgs) version;
+              src =
+                assert sources.omlx-ddgs.source.fetcher == "fetchFromGitHub";
+                final.fetchFromGitHub sources.omlx-ddgs.source.args;
+              dependencies = (pprev.ddgs.dependencies or [ ]) ++ [
+                pfinal.brotli
+                pfinal.fake-useragent
+                pfinal.h2
+                pfinal.httpx
+                pfinal.socksio
+              ];
+              installCheckPhase = ''
+                runHook preInstallCheck
+                PYTHONPATH="$out/${pfinal.python.sitePackages}:''${PYTHONPATH:-}" \
+                  ${pfinal.python.interpreter} ${../test/ai/overlays/ddgs-dependency-contract.py} ${sources.omlx-ddgs.version}
+                runHook postInstallCheck
+              '';
+            });
+
+            librosa = pfinal.buildPythonPackage {
+              pname = "librosa";
+              inherit (sources.omlx-librosa) version;
+              pyproject = true;
+              src =
+                assert sources.omlx-librosa.source.fetcher == "fetchPypi";
+                pfinal.fetchPypi sources.omlx-librosa.source.args;
+              build-system = [ pfinal.setuptools ];
+              dependencies = with pfinal; [
+                audioread
+                decorator
+                joblib
+                lazy-loader
+                msgpack
+                numba
+                numpy
+                pooch
+                scikit-learn
+                scipy
+                soundfile
+                soxr
+                standard-aifc
+                standard-sunau
+                typing-extensions
+              ];
+              doCheck = false;
+              pythonImportsCheck = [ "librosa" ];
+            };
+
+            sounddevice = pprev.sounddevice.overridePythonAttrs (_oldAttrs: {
+              inherit (sources.omlx-sounddevice) version;
+              src =
+                assert sources.omlx-sounddevice.source.fetcher == "fetchPypi";
+                pfinal.fetchPypi sources.omlx-sounddevice.source.args;
+              patches = [
+                (final.replaceVars ../overlays/ai/patches/sounddevice-0.5.3-portaudio.patch {
+                  portaudio = "${final.portaudio}/lib/libportaudio${final.stdenv.hostPlatform.extensions.sharedLibrary}";
+                })
+              ];
+            });
+
+            mlx-audio = pprev.mlx-audio.overridePythonAttrs (oldAttrs: {
+              inherit (sources.omlx-mlx-audio) version;
+              src =
+                assert sources.omlx-mlx-audio.source.fetcher == "fetchFromGitHub";
+                final.fetchFromGitHub sources.omlx-mlx-audio.source.args;
+              # oMLX's declared resolver override selects its newer exact
+              # mlx-lm commit over mlx-audio's transitive 0.31.1 pin.
+              postPatch = (oldAttrs.postPatch or "") + ''
+                substituteInPlace pyproject.toml \
+                  --replace-fail '"mlx-lm==0.31.1"' '"mlx-lm"'
+              '';
+              installCheckPhase = ''
+                runHook preInstallCheck
+                PYTHONPATH="$out/${pfinal.python.sitePackages}:''${PYTHONPATH:-}" \
+                  ${pfinal.python.interpreter} ${../test/ai/overlays/mlx-audio-version-contract.py} ${sources.omlx-mlx-audio.version}
+                runHook postInstallCheck
+              '';
+            });
+
+            mlx-vlm = pprev.mlx-vlm.overridePythonAttrs (oldAttrs: {
+              inherit (sources.omlx-mlx-vlm) version;
+              src =
+                assert sources.omlx-mlx-vlm.source.fetcher == "fetchFromGitHub";
+                final.fetchFromGitHub sources.omlx-mlx-vlm.source.args;
+              patches = (oldAttrs.patches or [ ]) ++ [
+                ../overlays/ai/patches/mlx-vlm-omlx-quantization-aliases.patch
+              ];
+              dependencies = oldAttrs.dependencies ++ [
+                pfinal.datasets
+                pfinal.mlx-lm
+              ];
+              installCheckPhase = ''
+                runHook preInstallCheck
+                PYTHONPATH="$out/${pfinal.python.sitePackages}:''${PYTHONPATH:-}" \
+                  ${pfinal.python.interpreter} ${../test/ai/overlays/mlx-vlm-dependency-contract.py} ${sources.omlx-mlx-vlm.version}
+                runHook postInstallCheck
+              '';
+            });
+
+            mlx-embeddings = pfinal.buildPythonPackage {
+              pname = "mlx-embeddings";
+              inherit (sources.omlx-mlx-embeddings) version;
+              pyproject = true;
+              src =
+                assert sources.omlx-mlx-embeddings.source.fetcher == "fetchFromGitHub";
+                final.fetchFromGitHub sources.omlx-mlx-embeddings.source.args;
+              build-system = [ pfinal.setuptools ];
+              dependencies = with pfinal; [
+                mlx
+                mlx-vlm
+                transformers
+                huggingface-hub
+                sentencepiece
+              ];
+              pythonImportsCheck = [ "mlx_embeddings" ];
+            };
+          };
+      };
+      pythonPackages = omlxPython.pkgs;
     in
+    with final;
+    with pythonPackages;
     buildPythonApplication rec {
       pname = "omlx";
       version = sources.omlx.version;
@@ -562,87 +730,79 @@ in
         assert sources.omlx.source.fetcher == "fetchFromGitHub";
         fetchFromGitHub sources.omlx.source.args;
 
-      patches = [ ../overlays/ai/patches/omlx-host-vm-info64-count.patch ];
+      patches = [
+        ../overlays/ai/patches/omlx-host-vm-info64-count.patch
+        ../overlays/ai/patches/omlx-glm5-next-quantized-load.patch
+      ];
 
-      # pyproject.toml pins MLX packages to exact versions or Git commits. Keep
-      # the manually coupled MLX identities fail-closed. DFlash may advance its
-      # trusted fork revision with an oMLX release, so validate that identity
-      # before retargeting it and bare DDGS to the package-set versions.
+      # Validate every release-coupled coordinate before translating direct
+      # references into Nix package dependencies. Any future upstream drift
+      # therefore fails before an incompatible closure can be built.
       postPatch = ''
-        replace_single_bare_exact_requirement() {
-          local dependency=$1 replacement=$2
+        require_bare_exact_requirements() {
+          local dependency=$1 expected=$2 expected_count=$3
           local -a coordinates
           mapfile -t coordinates < <(
-            grep -Eo "\"$dependency[^\"]*\"" pyproject.toml
+            grep -Eo "\"$dependency==[^\"]*\"" pyproject.toml
           )
-          if [[ ''${#coordinates[@]} -ne 1 ]]; then
-            echo "oMLX must declare exactly one bare $dependency==version requirement, found ''${#coordinates[@]}" >&2
+          if [[ ''${#coordinates[@]} -ne $expected_count ]]; then
+            echo "oMLX must declare exactly $expected_count bare $dependency==$expected requirements, found ''${#coordinates[@]}" >&2
             return 1
           fi
-          if ! printf '%s\n' "''${coordinates[0]}" \
-            | grep -Eq "^\"$dependency==[0-9][0-9A-Za-z.!+_-]*\"$"
-          then
-            echo "oMLX $dependency requirement must be a bare $dependency==version coordinate" >&2
-            return 1
-          fi
-          substituteInPlace pyproject.toml \
-            --replace-fail "''${coordinates[0]}" "$replacement"
+          local coordinate
+          for coordinate in "''${coordinates[@]}"; do
+            if [[ $coordinate != "\"$dependency==$expected\"" ]]; then
+              echo "oMLX must declare exactly $dependency==$expected, got $coordinate" >&2
+              return 1
+            fi
+          done
         }
 
         replace_direct_reference() {
-          local dependency=$1 expected=$2
+          local dependency=$1 expected=$2 replacement=$3
           if ! grep -Fq "$expected" pyproject.toml; then
             echo "oMLX must declare the exact $dependency source coordinate: $expected" >&2
             return 1
           fi
           substituteInPlace pyproject.toml \
-            --replace-fail "$expected" "\"$dependency\""
-          if grep -Fq "\"$dependency @ git+" pyproject.toml; then
-            echo "oMLX declares an unexpected $dependency source coordinate" >&2
-            return 1
-          fi
+            --replace-fail "$expected" "$replacement"
         }
 
-        replace_github_direct_reference() {
-          local dependency=$1 owner=$2 repo=$3
-          local -a coordinates
-          mapfile -t coordinates < <(
-            grep -Eo "\"$dependency @ git\\+https://github\\.com/$owner/$repo@[0-9a-f]{40}\"" pyproject.toml
-          )
-          if [[ ''${#coordinates[@]} -ne 1 ]]; then
-            echo "oMLX must declare exactly one trusted $dependency GitHub coordinate, found ''${#coordinates[@]}" >&2
-            return 1
-          fi
-          substituteInPlace pyproject.toml \
-            --replace-fail "''${coordinates[0]}" "\"$dependency\""
-          if grep -Fq "\"$dependency @ git+" pyproject.toml; then
-            echo "oMLX declares an unexpected $dependency source coordinate" >&2
-            return 1
-          fi
-        }
-
-        substituteInPlace pyproject.toml \
-          --replace-fail '"mlx==0.32.0"' '"mlx==${mlx.version}"'
-        replace_single_bare_exact_requirement ddgs '"ddgs==${ddgs.version}"'
+        require_bare_exact_requirements mlx ${sources.omlx-mlx.version} 3
+        require_bare_exact_requirements ddgs ${sources.omlx-ddgs.version} 1
         replace_direct_reference \
           mlx-lm \
-          '"mlx-lm @ git+https://github.com/${sources.mlx-lm.source.args.owner}/${sources.mlx-lm.source.args.repo}@${sources.mlx-lm.source.args.rev}"'
+          '"mlx-lm @ git+https://github.com/${sources.mlx-lm.source.args.owner}/${sources.mlx-lm.source.args.repo}@${sources.mlx-lm.source.args.rev}"' \
+          '"mlx-lm"'
         replace_direct_reference \
           mlx-embeddings \
-          '"mlx-embeddings @ git+https://github.com/Blaizzy/mlx-embeddings@32981fa4e8064ed664b52071789dd18271fe4206"'
+          '"mlx-embeddings @ git+https://github.com/${sources.omlx-mlx-embeddings.source.args.owner}/${sources.omlx-mlx-embeddings.source.args.repo}@${sources.omlx-mlx-embeddings.source.args.rev}"' \
+          '"mlx-embeddings"'
         replace_direct_reference \
           mlx-vlm \
-          '"mlx-vlm @ git+https://github.com/${sources.omlx-mlx-vlm.source.args.owner}/${sources.omlx-mlx-vlm.source.args.repo}@${sources.omlx-mlx-vlm.source.args.rev}"'
-        replace_github_direct_reference \
+          '"mlx-vlm @ git+https://github.com/${sources.omlx-mlx-vlm.source.args.owner}/${sources.omlx-mlx-vlm.source.args.repo}@${sources.omlx-mlx-vlm.source.args.rev}"' \
+          '"mlx-vlm"'
+        replace_direct_reference \
           dflash-mlx \
-          ${sources.dflash-mlx.source.args.owner} \
-          ${sources.dflash-mlx.source.args.repo}
-        unset -f replace_single_bare_exact_requirement replace_direct_reference replace_github_direct_reference
+          '"dflash-mlx @ git+https://github.com/${sources.dflash-mlx.source.args.owner}/${sources.dflash-mlx.source.args.repo}@${sources.dflash-mlx.source.args.rev}"' \
+          '"dflash-mlx"'
+        replace_direct_reference \
+          mlx-audio \
+          '"mlx-audio[tts,stt,sts] @ git+https://github.com/${sources.omlx-mlx-audio.source.args.owner}/${sources.omlx-mlx-audio.source.args.repo}@${sources.omlx-mlx-audio.source.args.rev}"' \
+          '"mlx-audio[tts,stt,sts]"'
+        if grep -Eq '"(mlx-lm|mlx-embeddings|mlx-vlm|dflash-mlx|mlx-audio)[^\"]* @ git\+' pyproject.toml; then
+          echo "oMLX declares an unexpected direct dependency coordinate" >&2
+          return 1
+        fi
+        unset -f require_bare_exact_requirements replace_direct_reference
 
+        # DDGS 9.15 ships the Yandex engine module disabled, while oMLX 0.6.4
+        # still advertises it in both server and dashboard policy.
         substituteInPlace omlx/websearch.py \
           --replace-fail '    "yandex",' ""
         substituteInPlace omlx/admin/static/js/dashboard.js \
           --replace-fail "ddgsBackendList: ['brave', 'duckduckgo', 'grokipedia', 'mojeek', 'wikipedia', 'yahoo', 'yandex']," "ddgsBackendList: ['brave', 'duckduckgo', 'grokipedia', 'mojeek', 'wikipedia', 'yahoo'],"
+
         substituteInPlace pyproject.toml \
           --replace-fail '"cmake>=3.27",' "" \
           --replace-fail '"nanobind==2.13.0",' ""
@@ -655,18 +815,11 @@ in
 
       nativeCheckInputs = [ packaging ];
 
-      # Use the numpy and transformers versions shared by this MLX package set.
-      # The checks below exercise imports and CLI startup with those versions.
-      pythonRelaxDeps = [
-        "numpy"
-        "transformers"
-      ];
-
       dependencies = [
         mlx
         mlx-lm
-        omlxMlxEmbeddings
-        omlxMlxVlm
+        mlx-embeddings
+        mlx-vlm
         mlx-audio
         dflash-mlx
         ddgs
@@ -698,7 +851,7 @@ in
         pillow
         # File conversion uses MarkItDown's document backends, not its optional
         # speech-recognition audio backend.
-        (markitdown.override { speechrecognition = null; })
+        markitdown
       ];
 
       # Python packages route doCheck through installCheckPhase; setting
@@ -709,9 +862,6 @@ in
         "omlx.scheduler"
       ];
 
-      # Smoke-test CLI startup and the installed Mach adapter.
-      # Also exercise the installed Mach adapter with fake libc responses for
-      # the current ABI count and a bounded future-kernel retry.
       installCheckPhase = ''
         runHook preInstallCheck
         $out/bin/omlx --help > /dev/null
@@ -722,7 +872,21 @@ in
         PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
           ${python.interpreter} ${../test/ai/overlays/omlx-mlx-version-contract.py} ${mlx.version}
         PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
-          ${python.interpreter} ${../test/ai/overlays/omlx-direct-reference-contract.py} ${omlxMlxEmbeddings.version} ${omlxMlxVlm.version}
+          ${python.interpreter} ${../test/ai/overlays/omlx-direct-reference-contract.py} ${mlx-embeddings.version} ${mlx-vlm.version}
+        PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
+          ${python.interpreter} ${../test/ai/overlays/omlx-release-dependency-contract.py} \
+            mlx ${mlx.version} \
+            mlx-embeddings ${mlx-embeddings.version} \
+            mlx-vlm ${mlx-vlm.version} \
+            mlx-audio ${mlx-audio.version} \
+            dflash-mlx ${dflash-mlx.version} \
+            ddgs ${ddgs.version} \
+            transformers ${transformers.version} \
+            numpy ${numpy.version} \
+            librosa ${librosa.version} \
+            sounddevice ${sounddevice.version}
+        PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
+          ${python.interpreter} ${../test/ai/overlays/omlx-glm5-next-contract.py}
         PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
           ${python.interpreter} ${../test/ai/overlays/omlx-host-vm-info64-count.py}
         runHook postInstallCheck

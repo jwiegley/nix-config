@@ -2,13 +2,11 @@
   coreutils,
   gnugrep,
   omlx,
-  python313Packages,
   runCommand,
 }:
 
 let
   sources = import ../../../packages/source-catalog.nix "ai";
-  selectedDdgsVersion = python313Packages.ddgs.version;
 in
 runCommand "omlx-post-patch"
   {
@@ -68,54 +66,68 @@ runCommand "omlx-post-patch"
     work="$TMPDIR/omlx-post-patch-cases"
     mkdir -p "$work"
 
-    prepare_case alternate-ddgs
-    replace_current_ddgs '"ddgs==0.0.1"'
+    prepare_case accepted
     apply_post_patch "$case_dir"
-    grep -Fq '"ddgs==${selectedDdgsVersion}"' "$case_dir/pyproject.toml" \
-      || fail "DDGS was not retargeted to the package-set version"
+    grep -Fq '"mlx==${sources.omlx-mlx.version}"' "$case_dir/pyproject.toml" \
+      || fail "exact oMLX MLX requirement changed"
+    grep -Fq '"ddgs==${sources.omlx-ddgs.version}"' "$case_dir/pyproject.toml" \
+      || fail "exact oMLX DDGS requirement changed"
     grep -Fq '# omlx-post-patch-sentinel' "$case_dir/pyproject.toml" \
       || fail "postPatch changed unrelated source"
-    for dependency in mlx-lm mlx-embeddings mlx-vlm dflash-mlx; do
-      ! grep -Fq "\"$dependency @ git+" "$case_dir/pyproject.toml" \
-        || fail "$dependency direct reference survived postPatch"
-    done
+    if grep -Eq '"(mlx-lm|mlx-embeddings|mlx-vlm|dflash-mlx|mlx-audio)[^\"]* @ git\+' "$case_dir/pyproject.toml"; then
+      fail "a direct dependency reference survived postPatch"
+    fi
+
+    prepare_case alternate-ddgs
+    replace_current_ddgs '"ddgs==0.0.1"'
+    expect_rejected alternate-ddgs "must declare exactly ddgs==${sources.omlx-ddgs.version}"
 
     prepare_case missing-ddgs
     replace_current_ddgs '"not-ddgs==0.0.1"'
-    expect_rejected missing-ddgs "exactly one bare ddgs==version requirement, found 0"
+    expect_rejected missing-ddgs "exactly 1 bare ddgs==${sources.omlx-ddgs.version} requirements, found 0"
 
     prepare_case duplicate-ddgs
     current=$(current_ddgs_coordinate)
     duplicate="$current,"$'\n    '"$current"
     replace_current_ddgs "$duplicate"
-    expect_rejected duplicate-ddgs "exactly one bare ddgs==version requirement, found 2"
+    expect_rejected duplicate-ddgs "exactly 1 bare ddgs==${sources.omlx-ddgs.version} requirements, found 2"
 
     prepare_case composite-ddgs
-    replace_current_ddgs '"ddgs==0.0.1,!=0.0.0"'
-    expect_rejected composite-ddgs "must be a bare ddgs==version coordinate"
-
-    prepare_case arbitrary-equality-ddgs
-    replace_current_ddgs '"ddgs===0.0.1"'
-    expect_rejected arbitrary-equality-ddgs "must be a bare ddgs==version coordinate"
+    replace_current_ddgs '"ddgs==${sources.omlx-ddgs.version},!=0.0.0"'
+    expect_rejected composite-ddgs "must declare exactly ddgs==${sources.omlx-ddgs.version}"
 
     prepare_case marked-ddgs
-    replace_current_ddgs "\"ddgs==0.0.1;python_version<'3.14'\""
-    expect_rejected marked-ddgs "must be a bare ddgs==version coordinate"
+    replace_current_ddgs '"ddgs==${sources.omlx-ddgs.version};python_version<'"'"'3.14'"'"'"'
+    expect_rejected marked-ddgs "must declare exactly ddgs==${sources.omlx-ddgs.version}"
 
-    prepare_case dflash-untrusted
-    dflash_coordinate="$(
-      grep -Eo '"dflash-mlx @ git\+https://github\.com/[^\"]+"' "$case_dir/pyproject.toml"
-    )"
+    prepare_case mlx-mismatch
     substituteInPlace "$case_dir/pyproject.toml" \
-      --replace-fail "$dflash_coordinate" \
-      '"dflash-mlx @ git+https://github.com/untrusted/dflash-mlx@0000000000000000000000000000000000000000"'
-    expect_rejected dflash-untrusted "exactly one trusted dflash-mlx GitHub coordinate, found 0"
+      --replace-fail '"mlx==${sources.omlx-mlx.version}"' '"mlx==0.0.1"'
+    expect_rejected mlx-mismatch "must declare exactly mlx==${sources.omlx-mlx.version}"
 
     prepare_case mlx-lm-mismatch
     substituteInPlace "$case_dir/pyproject.toml" \
       --replace-fail '${sources.mlx-lm.source.args.rev}' \
       '0000000000000000000000000000000000000000'
     expect_rejected mlx-lm-mismatch "exact mlx-lm source coordinate"
+
+    prepare_case mlx-embeddings-mismatch
+    substituteInPlace "$case_dir/pyproject.toml" \
+      --replace-fail '${sources.omlx-mlx-embeddings.source.args.rev}' \
+      '0000000000000000000000000000000000000000'
+    expect_rejected mlx-embeddings-mismatch "exact mlx-embeddings source coordinate"
+
+    prepare_case dflash-mismatch
+    substituteInPlace "$case_dir/pyproject.toml" \
+      --replace-fail '${sources.dflash-mlx.source.args.rev}' \
+      '0000000000000000000000000000000000000000'
+    expect_rejected dflash-mismatch "exact dflash-mlx source coordinate"
+
+    prepare_case mlx-audio-mismatch
+    substituteInPlace "$case_dir/pyproject.toml" \
+      --replace-fail '${sources.omlx-mlx-audio.source.args.rev}' \
+      '0000000000000000000000000000000000000000'
+    expect_rejected mlx-audio-mismatch "exact mlx-audio source coordinate"
 
     touch "$out"
   ''

@@ -86,8 +86,8 @@ PYPI_CANDIDATE_BUILDS = {
     "cohere-melody": ("cohere-melody", "python"),
     "crick": ("aiperf", "pkg"),
     "espeakng-loader": ("mlx-audio", "python"),
-    "mlx": ("omlx", "pkg"),
-    "mlx-embeddings": ("omlx", "pkg"),
+    "mlx": ("mlx", "python"),
+    "mlx-embeddings": ("mlx-embeddings", "python"),
     "mtplx": ("mtplx", "pkg"),
     "phonemizer-fork": ("mlx-audio", "python"),
     "plasma-wiki": ("plasma-wiki", "pkg"),
@@ -4320,11 +4320,11 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         self.assertEqual(mlx_audio["update"].get("buildPackage"), "mlx-audio")
         self.assertEqual(mlx_audio["update"].get("buildMode"), "python")
         mlx_vlm = ai_catalog["mlx-vlm"]
-        self.assertEqual(mlx_vlm["update"].get("buildPackage"), "omlx")
-        self.assertEqual(mlx_vlm["update"].get("buildMode"), "pkg")
+        self.assertEqual(mlx_vlm["update"].get("buildPackage"), "mlx-vlm")
+        self.assertEqual(mlx_vlm["update"].get("buildMode"), "python")
         ddgs = ai_catalog["ddgs"]
-        self.assertEqual(ddgs["update"].get("buildPackage"), "omlx")
-        self.assertEqual(ddgs["update"].get("buildMode"), "pkg")
+        self.assertEqual(ddgs["update"].get("buildPackage"), "ddgs")
+        self.assertEqual(ddgs["update"].get("buildMode"), "python")
         omlx = ai_catalog["omlx"]
         self.assertEqual(omlx["version"], "0.6.4")
         self.assertTrue(omlx["update"].get("stableOnly"))
@@ -4639,19 +4639,24 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 with self.assertRaisesRegex(RuntimeError, expected):
                     load_source_catalog(root, validate_flake_projections=False)
 
-    def test_mlx_candidate_targets_omlx_exact_version_contract(self):
+    def test_omlx_candidate_targets_release_dependency_contract(self):
         sources = json.loads((REPO / "sources/ai.json").read_text())["sources"]
         catalog = load_source_catalog(REPO)
-        for source_name in (
-            "mlx",
-            "mlx-embeddings",
-            "mlx-lm",
-            "mlx-vlm",
+        omlx_sources = (
             "dflash-mlx",
-            "ddgs",
+            "mlx-lm",
             "omlx",
+            "omlx-ddgs",
+            "omlx-librosa",
+            "omlx-mlx",
+            "omlx-mlx-audio",
+            "omlx-mlx-embeddings",
             "omlx-mlx-vlm",
-        ):
+            "omlx-numpy",
+            "omlx-sounddevice",
+            "omlx-transformers",
+        )
+        for source_name in omlx_sources:
             with self.subTest(source=source_name):
                 update = sources[source_name]["update"]
                 self.assertEqual(
@@ -4659,27 +4664,40 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     ("omlx", "pkg"),
                 )
                 self.assertEqual(catalog[source_name]["executor"], "update")
-        self.assertEqual(sources["dflash-mlx"]["update"]["policy"], "manual")
+                if source_name != "omlx":
+                    self.assertEqual(update.get("policy"), "manual")
+
+        for source_name in ("ddgs", "mlx", "mlx-embeddings", "mlx-vlm"):
+            with self.subTest(shared_source=source_name):
+                update = sources[source_name]["update"]
+                self.assertEqual(
+                    (update.get("buildPackage"), update.get("buildMode")),
+                    (source_name, "python"),
+                )
+
         expression = HashComputer(REPO)._package_build_command("omlx", "pkg")[-1]
         self.assertIn('repoPath = builtins.getEnv "UPDATE_OVERLAY_REPO_DIR"', expression)
         self.assertIn('overlays = import (repo + "/config/overlays.nix")', expression)
         self.assertIn('builtins.getAttr "omlx" pkgs', expression)
+        package_source = (REPO / "packages/ai-llm.nix").read_text()
         self.assertIn(
             "${python.interpreter} "
             "${../test/ai/overlays/omlx-ddgs-version-contract.py} ${ddgs.version}",
-            (REPO / "packages/ai-llm.nix").read_text(),
+            package_source,
         )
         self.assertIn(
             "${python.interpreter} "
             "${../test/ai/overlays/omlx-mlx-version-contract.py} ${mlx.version}",
-            (REPO / "packages/ai-llm.nix").read_text(),
+            package_source,
         )
         self.assertIn(
             "${python.interpreter} "
             "${../test/ai/overlays/omlx-direct-reference-contract.py} "
-            "${omlxMlxEmbeddings.version} ${omlxMlxVlm.version}",
-            (REPO / "packages/ai-llm.nix").read_text(),
+            "${mlx-embeddings.version} ${mlx-vlm.version}",
+            package_source,
         )
+        self.assertIn("omlx-release-dependency-contract.py", package_source)
+        self.assertIn("omlx-glm5-next-contract.py", package_source)
 
         calls = []
 
@@ -4691,22 +4709,30 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 calls.append((self.nix_dir, package, build_mode))
                 return True
 
+        selected_sources = (
+            "ddgs",
+            "mlx",
+            "mlx-lm",
+            "omlx-ddgs",
+            "omlx-mlx",
+            "omlx-mlx-vlm",
+            "omlx-numpy",
+            "omlx-transformers",
+        )
         with mock.patch.dict(
             validate_catalog_target.__globals__, {"HashComputer": ConsumerHashes}
         ):
-            for source_name in ("mlx-embeddings", "mlx-lm", "mlx-vlm", "omlx-mlx-vlm", "ddgs"):
+            for source_name in selected_sources:
                 self.assertTrue(
                     validate_catalog_target(REPO, source_name, catalog[source_name])
                 )
         self.assertEqual(
             calls,
             [
-                (REPO, "omlx", "pkg"),
-                (REPO, "omlx", "pkg"),
-                (REPO, "omlx", "pkg"),
-                (REPO, "omlx", "pkg"),
-                (REPO, "omlx", "pkg"),
-            ],
+                (REPO, "ddgs", "python"),
+                (REPO, "mlx", "python"),
+            ]
+            + [(REPO, "omlx", "pkg")] * 6,
         )
 
         contract = REPO / "test/ai/overlays/omlx-mlx-version-contract.py"

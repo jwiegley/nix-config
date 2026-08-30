@@ -1,0 +1,46 @@
+diff --git a/mlx_vlm/utils.py b/mlx_vlm/utils.py
+--- a/mlx_vlm/utils.py
++++ b/mlx_vlm/utils.py
+@@ -344,6 +344,26 @@
+     return weights is not None and f"{path}.scales" in weights
+ 
+ 
++def _quantization_path_aliases(path: str, model: Optional[nn.Module] = None):
++    aliases = [path]
++    model_aliases = getattr(model, "quantization_path_aliases", None)
++    if callable(model_aliases):
++        aliases.extend(model_aliases(path))
++    return tuple(dict.fromkeys(aliases))
++
++
++def _quantization_for_module_path(
++    quantization: dict, path: str, model: Optional[nn.Module] = None
++):
++    for alias in _quantization_path_aliases(path, model):
++        value = quantization.get(alias)
++        if isinstance(value, dict):
++            return value
++        if value is False:
++            return {}
++    return None
++
++
+ def get_class_predicate(skip_vision=False, weights=None, quantization_config=None):
+     def predicate(p, m):
+         if (
+@@ -629,9 +649,12 @@
+                 and not _has_quantized_weights(p, weights)
+             ):
+                 return False
+-            # Handle custom per layer quantizations
+-            if p in config["quantization"]:
+-                return config["quantization"][p]
++            # Handle custom per-layer quantization through model path aliases.
++            per_module_quantization = _quantization_for_module_path(
++                config["quantization"], p, model
++            )
++            if per_module_quantization is not None:
++                return per_module_quantization
+             if not hasattr(m, "to_quantized"):
+                 return False
+             # Skip layers not divisible by 64

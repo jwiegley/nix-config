@@ -274,6 +274,171 @@
       },
       "version": "0.6.4"
     },
+    "omlx-ddgs": {
+      "source": {
+        "args": {
+          "hash": "sha256-hP9xcm9OnHXIWV//F+P9dGGt8+3x0t21EshjAJ6gZeo=",
+          "owner": "deedy5",
+          "repo": "ddgs",
+          "tag": "v9.15.0"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/deedy5/ddgs"
+      },
+      "update": {
+        "buildMode": "pkg",
+        "buildPackage": "omlx",
+        "kind": "github-release",
+        "policy": "manual",
+        "reason": "oMLX 0.6.4 pins this exact DDGS release",
+        "tagPrefix": "v"
+      },
+      "version": "9.15.0"
+    },
+    "omlx-librosa": {
+      "source": {
+        "args": {
+          "hash": "sha256-9e2VHKGJs3W74uM7Kr1+BAzu7jArm7ru/9/duNCs6Qg=",
+          "pname": "librosa",
+          "version": "0.11.0"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/librosa"
+      },
+      "update": {
+        "buildMode": "pkg",
+        "buildPackage": "omlx",
+        "kind": "pypi-release",
+        "package": "librosa",
+        "policy": "manual",
+        "reason": "oMLX 0.6.4 audio support pins mlx-audio with librosa 0.11.0"
+      },
+      "version": "0.11.0"
+    },
+    "omlx-mlx": {
+      "artifacts": {
+        "cp311": {
+          "args": {
+            "abi": "cp311",
+            "dist": "cp311",
+            "format": "wheel",
+            "hash": "sha256-csYFNo0UXHVodwV9fjxU8WnJiZ/h+DIyv7OmNCVh4jQ=",
+            "platform": "macosx_14_0_arm64",
+            "pname": "mlx",
+            "python": "cp311",
+            "version": "0.32.0"
+          },
+          "fetcher": "fetchPypi",
+          "url": "https://pypi.org/project/mlx"
+        },
+        "cp312": {
+          "args": {
+            "abi": "cp312",
+            "dist": "cp312",
+            "format": "wheel",
+            "hash": "sha256-6lpZQ1XInACV6rpBP9OdTKqGQvoTQy37DJNU0UEEZGc=",
+            "platform": "macosx_14_0_arm64",
+            "pname": "mlx",
+            "python": "cp312",
+            "version": "0.32.0"
+          },
+          "fetcher": "fetchPypi",
+          "url": "https://pypi.org/project/mlx"
+        },
+        "cp314": {
+          "args": {
+            "abi": "cp314",
+            "dist": "cp314",
+            "format": "wheel",
+            "hash": "sha256-LuebH4wsKjKa/JXs59zgvnmNQ/PedxpjcNK5+XArvZo=",
+            "platform": "macosx_14_0_arm64",
+            "pname": "mlx",
+            "python": "cp314",
+            "version": "0.32.0"
+          },
+          "fetcher": "fetchPypi",
+          "url": "https://pypi.org/project/mlx"
+        },
+        "metal": {
+          "args": {
+            "dist": "py3",
+            "format": "wheel",
+            "hash": "sha256-W2SyCsJLDEAfSJ3gHoIJ7cTTchJSAfGTFObznjhTIqo=",
+            "platform": "macosx_14_0_arm64",
+            "pname": "mlx_metal",
+            "python": "py3",
+            "version": "0.32.0"
+          },
+          "fetcher": "fetchPypi",
+          "url": "https://pypi.org/project/mlx-metal"
+        }
+      },
+      "source": {
+        "args": {
+          "abi": "cp313",
+          "dist": "cp313",
+          "format": "wheel",
+          "hash": "sha256-q7eG7h6WOHWb6CWDIi/H0JxWUO+QrSt8XafRkxqGdtw=",
+          "platform": "macosx_14_0_arm64",
+          "pname": "mlx",
+          "python": "cp313",
+          "version": "0.32.0"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/mlx"
+      },
+      "update": {
+        "buildMode": "pkg",
+        "buildPackage": "omlx",
+        "kind": "pypi-release",
+        "package": "mlx",
+        "policy": "manual",
+        "reason": "oMLX 0.6.4 and its release kernels are coupled to MLX 0.32.0"
+      },
+      "version": "0.32.0"
+    },
+    "omlx-mlx-audio": {
+      "source": {
+        "args": {
+          "hash": "sha256-2MbcOFk/lx1UNqFlyxYl03cL8yFUprZdgcb6eo5SX6w=",
+          "owner": "Blaizzy",
+          "repo": "mlx-audio",
+          "rev": "51753266e0a4f766fd5e6fbc46652224efc23981"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/Blaizzy/mlx-audio"
+      },
+      "update": {
+        "branch": "main",
+        "buildMode": "pkg",
+        "buildPackage": "omlx",
+        "kind": "github-commit",
+        "policy": "manual",
+        "reason": "oMLX 0.6.4 pins this exact audio-extra revision"
+      },
+      "version": "0.4.3"
+    },
+    "omlx-mlx-embeddings": {
+      "source": {
+        "args": {
+          "hash": "sha256-cuS/lW8y/dZJOEAtZbsM5rrp2ID5bjWBPaQTAOrdHeU=",
+          "owner": "Blaizzy",
+          "repo": "mlx-embeddings",
+          "rev": "32981fa4e8064ed664b52071789dd18271fe4206"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/Blaizzy/mlx-embeddings"
+      },
+      "update": {
+        "branch": "main",
+        "buildMode": "pkg",
+        "buildPackage": "omlx",
+        "kind": "github-commit",
+        "policy": "manual",
+        "reason": "oMLX 0.6.4 pins this exact embeddings revision"
+      },
+      "version": "0.1.0"
+    },
     "omlx-mlx-vlm": {
       "source": {
         "args": {
@@ -294,6 +459,66 @@
         "reason": "oMLX 0.6.4 pins this exact revision and its vendored Qwen4/GLM loader compatibility depends on that API"
       },
       "version": "0.6.3"
+    },
+    "omlx-numpy": {
+      "source": {
+        "args": {
+          "hash": "sha256-eE2x3Nq1a/BRd0PnRt+w+IX8aNlIq6hu7sLLojS98cA=",
+          "pname": "numpy",
+          "version": "2.3.5"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/numpy"
+      },
+      "update": {
+        "buildMode": "pkg",
+        "buildPackage": "omlx",
+        "kind": "pypi-release",
+        "package": "numpy",
+        "policy": "manual",
+        "reason": "oMLX 0.6.4 requires numpy >=1.24.0,<2.4 on Python 3.13"
+      },
+      "version": "2.3.5"
+    },
+    "omlx-sounddevice": {
+      "source": {
+        "args": {
+          "hash": "sha256-y6wrYBmPurhFM2l+fEkEzIlexp1fs5c1VsnrdKRimyw=",
+          "pname": "sounddevice",
+          "version": "0.5.3"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/sounddevice"
+      },
+      "update": {
+        "buildMode": "pkg",
+        "buildPackage": "omlx",
+        "kind": "pypi-release",
+        "package": "sounddevice",
+        "policy": "manual",
+        "reason": "oMLX 0.6.4 audio support pins mlx-audio with sounddevice 0.5.3"
+      },
+      "version": "0.5.3"
+    },
+    "omlx-transformers": {
+      "source": {
+        "args": {
+          "hash": "sha256-Z57nMcgiU0eImtT7OyySamLp2jt9KE6dEseR2nJyRms=",
+          "pname": "transformers",
+          "version": "5.12.1"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/transformers"
+      },
+      "update": {
+        "buildMode": "pkg",
+        "buildPackage": "omlx",
+        "kind": "pypi-release",
+        "package": "transformers",
+        "policy": "manual",
+        "reason": "oMLX 0.6.4 requires transformers >=5.12.1,<5.13"
+      },
+      "version": "5.12.1"
     },
     "prime-agent": {
       "commit": "be9e2fa0714e7cd1c6bd9bdb1b554d2cc6550387",
@@ -517,8 +742,8 @@
         "url": "https://github.com/deedy5/ddgs"
       },
       "update": {
-        "buildMode": "pkg",
-        "buildPackage": "omlx",
+        "buildMode": "python",
+        "buildPackage": "ddgs",
         "kind": "github-release",
         "tagPrefix": "v"
       },
@@ -737,8 +962,8 @@
         "url": "https://pypi.org/project/mlx"
       },
       "update": {
-        "buildMode": "pkg",
-        "buildPackage": "omlx",
+        "buildMode": "python",
+        "buildPackage": "mlx",
         "kind": "pypi-release",
         "package": "mlx"
       },
@@ -773,8 +998,8 @@
         "url": "https://files.pythonhosted.org/packages/78/18/05a341c811c9ee04f227cdbc064a635b84202cb8f85471adfdeebe0da32d/mlx_embeddings-0.1.0-py2.py3-none-any.whl"
       },
       "update": {
-        "buildMode": "pkg",
-        "buildPackage": "omlx",
+        "buildMode": "python",
+        "buildPackage": "mlx-embeddings",
         "kind": "pypi-release",
         "package": "mlx-embeddings"
       },
@@ -830,8 +1055,8 @@
         "url": "https://github.com/Blaizzy/mlx-vlm"
       },
       "update": {
-        "buildMode": "pkg",
-        "buildPackage": "omlx",
+        "buildMode": "python",
+        "buildPackage": "mlx-vlm",
         "kind": "github-release",
         "tagPrefix": "v"
       },

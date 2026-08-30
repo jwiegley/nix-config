@@ -1,0 +1,55 @@
+diff --git a/omlx/patches/mlx_vlm_glm5_next_compat/vendor/mlx_vlm/models/glm5_next/glm5_next.py b/omlx/patches/mlx_vlm_glm5_next_compat/vendor/mlx_vlm/models/glm5_next/glm5_next.py
+--- a/omlx/patches/mlx_vlm_glm5_next_compat/vendor/mlx_vlm/models/glm5_next/glm5_next.py
++++ b/omlx/patches/mlx_vlm_glm5_next_compat/vendor/mlx_vlm/models/glm5_next/glm5_next.py
+@@ -135,6 +135,8 @@
+                 nk = "vision_model." + nk[len("model.visual.") :]
+             elif nk.startswith("visual."):
+                 nk = "vision_model." + nk[len("visual.") :]
++            elif nk.startswith("vision_tower."):
++                nk = "vision_model." + nk[len("vision_tower.") :]
+             elif nk.startswith("model.language_model."):
+                 nk = "language_model.model." + nk[len("model.language_model.") :]
+             elif nk.startswith("lm_head."):
+@@ -154,7 +156,7 @@
+         if self.vision_model is not None:
+             vis = self.vision_model.sanitize(vis)
+         else:
+-            vis = VisionModel.sanitize(vis)
++            vis = {}
+ 
+         out = {f"language_model.{k}": v for k, v in lang.items()}
+         out.update({f"vision_model.{k}": v for k, v in vis.items()})
+@@ -165,6 +167,12 @@
+     def layers(self):
+         return self.language_model.model.layers
+ 
++    def quantization_path_aliases(self, path):
++        marker = ".self_attn.forget_gate."
++        if marker in path:
++            return [path.replace(marker, ".self_attn.")]
++        return []
++
+     @property
+     def quant_predicate(self):
+         return self.language_model.quant_predicate
+diff --git a/omlx/patches/mlx_vlm_glm5_next_compat/vendor/mlx_vlm/models/glm5_next/language.py b/omlx/patches/mlx_vlm_glm5_next_compat/vendor/mlx_vlm/models/glm5_next/language.py
+--- a/omlx/patches/mlx_vlm_glm5_next_compat/vendor/mlx_vlm/models/glm5_next/language.py
++++ b/omlx/patches/mlx_vlm_glm5_next_compat/vendor/mlx_vlm/models/glm5_next/language.py
+@@ -933,7 +933,16 @@
+ 
+         remapped = {}
+         conv_parts = {}
+-        fg_parts = ("A_log", "dt_bias", "f_a_proj.weight", "f_b_proj.weight")
++        fg_parts = (
++            "A_log",
++            "dt_bias",
++            "f_a_proj.weight",
++            "f_a_proj.scales",
++            "f_a_proj.biases",
++            "f_b_proj.weight",
++            "f_b_proj.scales",
++            "f_b_proj.biases",
++        )
+         for k, v in weights.items():
+             nk = k.replace(".hc_attn_", ".attn_hc.").replace(".hc_ffn_", ".ffn_hc.")
+ 

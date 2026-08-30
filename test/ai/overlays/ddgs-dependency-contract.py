@@ -10,10 +10,15 @@ from ddgs.http_client import HttpClient
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
-EXPECTED_RUNTIME_REQUIREMENTS = {"click", "lxml", "primp"}
-
-
 expected = sys.argv[1]
+requirements_by_version = {
+    "9.15.0": {"click", "fake-useragent", "httpx", "lxml", "primp"},
+    "9.16.0": {"click", "lxml", "primp"},
+}
+try:
+    expected_runtime_requirements = requirements_by_version[expected]
+except KeyError as exc:
+    raise SystemExit(f"DDGS dependency contract has no entry for {expected}") from exc
 installed = metadata.version("ddgs")
 if expected != installed or expected != ddgs.__version__:
     raise SystemExit(
@@ -29,10 +34,10 @@ active = [
 actual_requirements = {
     canonicalize_name(requirement.name) for requirement in active
 }
-if actual_requirements != EXPECTED_RUNTIME_REQUIREMENTS:
+if actual_requirements != expected_runtime_requirements:
     raise SystemExit(
         "DDGS runtime requirements mismatch: "
-        f"expected {sorted(EXPECTED_RUNTIME_REQUIREMENTS)}, got {sorted(actual_requirements)}"
+        f"expected {sorted(expected_runtime_requirements)}, got {sorted(actual_requirements)}"
     )
 
 for requirement in active:
@@ -45,6 +50,9 @@ for requirement in active:
         )
     name = canonicalize_name(requirement.name)
     importlib.import_module(name.replace("-", "_"))
+
+if expected == "9.15.0":
+    importlib.import_module("ddgs.http_client2")
 
 transport = HttpClient(proxy="socks5://127.0.0.1:1", timeout=1)
 if not isinstance(transport.client, primp.Client):
