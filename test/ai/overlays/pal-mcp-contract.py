@@ -283,7 +283,7 @@ Path(os.environ["PAL_NETWORK_GUARD_MARKER"]).touch()
         finally:
             process.stdin.close()
             try:
-                returncode = process.wait(timeout=5)
+                returncode = process.wait(timeout=30)
             except subprocess.TimeoutExpired:
                 process.kill()
                 returncode = process.wait(timeout=5)
