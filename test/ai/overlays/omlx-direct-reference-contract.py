@@ -1,10 +1,9 @@
 import sys
-from importlib import metadata
+from importlib import import_module, metadata
+from pathlib import Path
 
 from mlx_embeddings import generate as generate_embeddings
 from mlx_embeddings import load as load_embeddings
-from packaging.requirements import Requirement
-from packaging.utils import canonicalize_name
 from mlx_embeddings.utils import prepare_inputs
 from mlx_vlm.tokenizer_utils import load_tokenizer
 from mlx_vlm.utils import (
@@ -13,9 +12,14 @@ from mlx_vlm.utils import (
     load,
     load_model,
     load_processor,
-    prepare_inputs as prepare_vlm_inputs,
 )
-
+from mlx_vlm.utils import prepare_inputs as prepare_vlm_inputs
+from omlx.patches.mlx_vlm_qwen4_exp_compat import (
+    apply_mlx_vlm_qwen4_exp_compat_patch,
+    is_applied,
+)
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 
 expected_versions = {
     "mlx-embeddings": sys.argv[1],
@@ -61,3 +65,14 @@ required_apis = {
 missing = [name for name, value in required_apis.items() if not callable(value)]
 if missing:
     raise SystemExit(f"oMLX dependency APIs are not callable: {missing}")
+
+if not apply_mlx_vlm_qwen4_exp_compat_patch() and not is_applied():
+    raise SystemExit("oMLX Qwen4 compatibility patch did not apply")
+compat_module = import_module("omlx.patches.mlx_vlm_qwen4_exp_compat")
+qwen4_language = import_module("mlx_vlm.models.qwen4_exp.language")
+vendor_root = Path(compat_module.__file__).resolve().parent / "vendor"
+if not Path(qwen4_language.__file__).resolve().is_relative_to(vendor_root):
+    raise SystemExit("oMLX Qwen4 model did not resolve from its vendored compatibility tree")
+embedding = qwen4_language.ShardedEmbedding(8, 4, 2)
+if "weight_scale" not in embedding.parameters():
+    raise SystemExit("oMLX Qwen4 embedding omitted its strict-load weight_scale parameter")

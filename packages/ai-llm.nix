@@ -526,6 +526,33 @@ in
   omlx =
     with final;
     with final.python313Packages;
+    let
+      omlxMlxVlm = mlx-vlm.overridePythonAttrs (oldAttrs: {
+        inherit (sources.omlx-mlx-vlm) version;
+        src =
+          assert sources.omlx-mlx-vlm.source.fetcher == "fetchFromGitHub";
+          fetchFromGitHub sources.omlx-mlx-vlm.source.args;
+        dependencies = oldAttrs.dependencies ++ [
+          datasets
+          mlx-lm
+        ];
+        installCheckPhase = ''
+          runHook preInstallCheck
+          PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
+            ${python.interpreter} ${../test/ai/overlays/mlx-vlm-dependency-contract.py} ${sources.omlx-mlx-vlm.version}
+          runHook postInstallCheck
+        '';
+      });
+      omlxMlxEmbeddings = mlx-embeddings.overridePythonAttrs (_oldAttrs: {
+        dependencies = [
+          mlx
+          omlxMlxVlm
+          transformers
+          huggingface-hub
+          sentencepiece
+        ];
+      });
+    in
     buildPythonApplication rec {
       pname = "omlx";
       version = sources.omlx.version;
@@ -605,7 +632,7 @@ in
           '"mlx-embeddings @ git+https://github.com/Blaizzy/mlx-embeddings@32981fa4e8064ed664b52071789dd18271fe4206"'
         replace_direct_reference \
           mlx-vlm \
-          '"mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm@78b96eb5462141447b9a6b4943ef553891da56dd"'
+          '"mlx-vlm @ git+https://github.com/${sources.omlx-mlx-vlm.source.args.owner}/${sources.omlx-mlx-vlm.source.args.repo}@${sources.omlx-mlx-vlm.source.args.rev}"'
         replace_github_direct_reference \
           dflash-mlx \
           ${sources.dflash-mlx.source.args.owner} \
@@ -638,8 +665,8 @@ in
       dependencies = [
         mlx
         mlx-lm
-        mlx-embeddings
-        mlx-vlm
+        omlxMlxEmbeddings
+        omlxMlxVlm
         mlx-audio
         dflash-mlx
         ddgs
@@ -695,7 +722,7 @@ in
         PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
           ${python.interpreter} ${../test/ai/overlays/omlx-mlx-version-contract.py} ${mlx.version}
         PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
-          ${python.interpreter} ${../test/ai/overlays/omlx-direct-reference-contract.py} ${mlx-embeddings.version} ${mlx-vlm.version}
+          ${python.interpreter} ${../test/ai/overlays/omlx-direct-reference-contract.py} ${omlxMlxEmbeddings.version} ${omlxMlxVlm.version}
         PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
           ${python.interpreter} ${../test/ai/overlays/omlx-host-vm-info64-count.py}
         runHook postInstallCheck

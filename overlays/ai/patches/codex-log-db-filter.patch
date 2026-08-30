@@ -1,13 +1,13 @@
 --- a/state/src/log_db.rs
 +++ b/state/src/log_db.rs
-@@ -49,28 +49,74 @@
- const LOG_QUEUE_CAPACITY: usize = 2048;
+@@ -53,32 +53,79 @@
  const LOG_BATCH_SIZE: usize = 512;
  const LOG_FLUSH_INTERVAL: Duration = Duration::from_secs(10);
+ const SQLX_LOG_TARGETS: [&str; 3] = ["sqlx", "sqlx_core", "sqlx_sqlite"];
 +const MANDATORY_OFF_TARGETS: &[&str] = &[
 +    "log",
-+    "sqlx::query",
-+    "sqlx::pool::acquire",
++    "opentelemetry-otlp",
++    "opentelemetry-http",
 +    "codex_otel.log_only",
 +    "codex_otel.trace_safe",
 +    "codex_api::responses_websocket_timing",
@@ -17,12 +17,16 @@
  pub fn default_filter() -> Targets {
 -    Targets::new()
 -        .with_default(LevelFilter::TRACE)
+-        .with_target("h2", LevelFilter::WARN)
 -        .with_target("hyper_util", LevelFilter::WARN)
 -        .with_target("log", LevelFilter::OFF)
--        // SQLite warnings must not feed back into the same SQLite log writer.
--        .with_target("sqlx::query", LevelFilter::OFF)
--        .with_target("sqlx::pool::acquire", LevelFilter::OFF)
+-        // Avoid constructing backend diagnostics when no other layer needs them.
+-        .with_targets(SQLX_LOG_TARGETS.map(|target| (format!("{target}::"), LevelFilter::OFF)))
 -        .with_target("codex_rmcp_client", LevelFilter::INFO)
+-        .with_target("opentelemetry-otlp", LevelFilter::OFF)
+-        .with_target("opentelemetry-http", LevelFilter::OFF)
+-        .with_target("tonic::transport", LevelFilter::WARN)
+-        .with_target("tower::buffer", LevelFilter::WARN)
 -        .with_target("codex_otel.log_only", LevelFilter::OFF)
 -        .with_target("codex_otel.trace_safe", LevelFilter::OFF)
 -        .with_target("rmcp", LevelFilter::INFO)
@@ -35,12 +39,9 @@
 -        // Per-chunk streaming traces otherwise flood the bounded SQLite log queue.
 -        .with_target("codex_tui::streaming::controller", LevelFilter::DEBUG)
 -        .with_target("codex_tui::streaming::table_holdback", LevelFilter::DEBUG)
-+    // The persisted SQLite log database grows without bound under the
-+    // upstream TRACE default once sessions run for days or weeks, and every
-+    // cold start then stalls on its inline maintenance. Keep only warnings
-+    // and errors by default; CODEX_LOG_DB_FILTER accepts target/level `Targets`
-+    // syntax, for example "info" or "trace,hyper_util=warn", to restore richer
-+    // capture for a single session when diagnosing Codex itself.
++    // The persisted SQLite log database grows without bound under the upstream
++    // TRACE default. Keep warnings and errors by default; this environment
++    // variable restores richer capture for one diagnostic session.
 +    match std::env::var("CODEX_LOG_DB_FILTER") {
 +        Ok(spec) => filter_for_spec(Some(&spec)),
 +        Err(std::env::VarError::NotPresent) => filter_for_spec(None),
@@ -78,13 +79,21 @@
 +    for target in MANDATORY_OFF_TARGETS {
 +        sanitized = sanitized.with_target(*target, LevelFilter::OFF);
 +    }
-+    sanitized
++    sanitized.with_targets(
++        SQLX_LOG_TARGETS.map(|target| (format!("{target}::"), LevelFilter::OFF)),
++    )
 +}
 +
 +fn is_mandatory_off_target(target: &str) -> bool {
 +    MANDATORY_OFF_TARGETS
 +        .iter()
 +        .any(|blocked| target.starts_with(*blocked))
++        || SQLX_LOG_TARGETS.iter().any(|blocked| {
++            target == *blocked
++                || target
++                    .strip_prefix(*blocked)
++                    .is_some_and(|suffix| suffix.starts_with("::"))
++        })
 +}
 +
 +fn has_field_qualified_syntax(spec: &str) -> bool {
@@ -107,39 +116,98 @@
      let codex_home =
          std::env::temp_dir().join(format!("codex-state-log-db-filter-{}", Uuid::new_v4()));
      let _cleanup = scopeguard::guard(codex_home.clone(), |codex_home| {
-@@ -22,15 +21,27 @@
+@@ -20,132 +19,92 @@
+     .await
+     .expect("initialize runtime");
      let layer = start(runtime.clone());
- 
+-
      let guard = tracing_subscriber::registry()
 -        .with(layer.clone().with_filter(default_filter()))
 +        .with(layer.clone().with_filter(filter))
          .set_default();
  
-     tracing::trace!(target: "opentelemetry_sdk", "dropped-trace");
-     tracing::debug!(target: "opentelemetry_sdk", "dropped-debug");
-     tracing::info!(target: "opentelemetry_sdk", "retained-info");
-     tracing::warn!(target: "sqlx::query", "dropped-slow-query-warning");
-+    tracing::warn!(target: "sqlx::query::nested", "dropped-nested-query-warning");
-     tracing::warn!(target: "sqlx::pool::acquire", "dropped-slow-acquire-warning");
-     tracing::warn!(target: "sqlx::other", "retained-sqlx-warning");
+-    tracing::trace!(target: "opentelemetry_sdk", "dropped-trace");
+-    tracing::debug!(target: "opentelemetry_sdk", "dropped-debug");
+-    tracing::info!(target: "opentelemetry_sdk", "retained-info");
+-    tracing::warn!(target: "sqlx::query", "dropped-slow-query-warning");
+-    tracing::warn!(target: "sqlx::pool::acquire", "dropped-slow-acquire-warning");
+-    tracing::warn!(target: "sqlx::other", "dropped-sqlx-warning");
+-    tracing::info!(target: "sqlx_application", "retained-unrelated-target");
+-    tracing::debug!(target: "opentelemetry-otlp", "dropped-otlp-export");
+-    tracing::error!(target: "opentelemetry-http", "dropped-http-export");
+-    tracing::trace!(target: "h2::proto::streams", "dropped-http2-trace");
+-    tracing::debug!(target: "tonic::transport::channel", "dropped-grpc-transport-debug");
+-    tracing::debug!(target: "tower::buffer::worker", "dropped-grpc-buffer-debug");
++    tracing::trace!(target: "opentelemetry_sdk", "retained-trace");
++    tracing::warn!(target: "sqlx::query", "dropped-query-warning");
++    tracing::warn!(target: "sqlx_core::pool", "dropped-core-warning");
++    tracing::warn!(target: "sqlx_sqlite::connection", "dropped-sqlite-warning");
++    tracing::warn!(target: "sqlx_application", "retained-application-warning");
 +    tracing::warn!(target: "log", "dropped-log-warning");
++    tracing::warn!(target: "opentelemetry-otlp", "dropped-otlp-warning");
++    tracing::warn!(target: "opentelemetry-http", "dropped-http-warning");
 +    tracing::warn!(target: "codex_otel.log_only", "dropped-log-only-warning");
 +    tracing::warn!(target: "codex_otel.trace_safe", "dropped-trace-safe-warning");
-+    tracing::warn!(
-+        target: "codex_api::responses_websocket_timing",
+     tracing::warn!(
+-        target: "h2::proto::ping_pong",
+-        "recv PING ack that we never sent: {:?}",
+-        "synthetic-ack"
+-    );
+-    tracing::warn!(target: "h2::proto::ping_pong", "retained-http2-ping-warning");
+-    tracing::warn!(target: "h2::proto::streams", "retained-http2-warning");
+-    tracing::debug!(target: "rmcp::transport", "dropped-rmcp-debug");
+-    tracing::info!(target: "rmcp::transport", "retained-rmcp-info");
+-    tracing::debug!(
+-        target: "codex_rmcp_client::oauth",
+-        "dropped-codex-rmcp-client-debug"
+-    );
+-    tracing::info!(
+-        target: "codex_rmcp_client::oauth",
+-        "retained-codex-rmcp-client-info"
+-    );
+-    tracing::trace!(target: "codex_http_client::transport", "dropped-request-body");
+-    tracing::debug!(target: "codex_http_client::transport", "retained-request-diagnostic");
+-    tracing::trace!(target: "codex_api::sse", "dropped-sse-parent");
+-    tracing::trace!(target: "codex_api::sse::responses", "dropped-sse-payload");
+-    tracing::debug!(target: "codex_api::sse::responses", "retained-sse-diagnostic");
+-    tracing::trace!(target: "codex_state", "retained-trace");
+-    tracing::trace!(
+-        target: "codex_tui::streaming::controller",
+-        "dropped-controller-trace"
+-    );
+-    tracing::debug!(
+-        target: "codex_tui::streaming::controller",
+-        "retained-controller-debug"
+-    );
+-    tracing::trace!(
+-        target: "codex_tui::streaming::table_holdback",
+-        "dropped-table-holdback-trace"
+-    );
+-    tracing::debug!(
+-        target: "codex_tui::streaming::table_holdback",
+-        "retained-table-holdback-debug"
+-    );
+-    tracing::trace!(
+-        target: "codex_tui::streaming::commit_tick",
+-        "retained-commit-tick-trace"
+-    );
+-    tracing::trace!(
+         target: "codex_api::responses_websocket_timing",
+-        payload = "complete timing payload",
+-        "dropped-websocket-timing"
 +        "dropped-websocket-warning"
-+    );
+     );
 +    tracing::warn!(
 +        target: "codex_core::post_sampling_token_estimate",
 +        "dropped-token-estimate-warning"
 +    );
-     tracing::debug!(target: "rmcp::transport", "dropped-rmcp-debug");
-     tracing::info!(target: "rmcp::transport", "retained-rmcp-info");
-     tracing::debug!(
-@@ -76,52 +87,155 @@
++    tracing::debug!(target: "rmcp::transport", "retained-rmcp-debug");
++    tracing::info!(target: "rmcp::transport", "retained-rmcp-info");
++    tracing::warn!(target: "codex_state", "retained-state-warning");
+ 
      layer.flush().await;
      drop(guard);
- 
+-
 -    let logs = runtime
 +    runtime
          .query_logs(&crate::LogQuery::default())
@@ -151,41 +219,30 @@
 +        .collect()
 +}
 +
++fn entry(level: &str, target: &str, message: &str) -> (String, String, Option<String>) {
++    (level.to_string(), target.to_string(), Some(message.to_string()))
++}
++
 +#[tokio::test]
 +async fn sqlite_sink_defaults_to_warn_and_preserves_mandatory_off_targets() {
 +    assert_eq!(
 +        captured_logs(filter_for_spec(None)).await,
-+        vec![(
-+            "WARN".to_string(),
-+            "sqlx::other".to_string(),
-+            Some("retained-sqlx-warning".to_string()),
-+        )]
++        vec![
++            entry("WARN", "sqlx_application", "retained-application-warning"),
++            entry("WARN", "codex_state", "retained-state-warning"),
++        ]
 +    );
 +}
 +
 +#[tokio::test]
 +async fn sqlite_sink_preserves_nonblocked_directives() {
 +    assert_eq!(
-+        captured_logs(filter_for_spec(Some(
-+            "warn,sqlx::query:=trace,rmcp::transport=debug",
-+        )))
-+        .await,
++        captured_logs(filter_for_spec(Some("warn,rmcp::transport=debug"))).await,
 +        vec![
-+            (
-+                "WARN".to_string(),
-+                "sqlx::other".to_string(),
-+                Some("retained-sqlx-warning".to_string()),
-+            ),
-+            (
-+                "DEBUG".to_string(),
-+                "rmcp::transport".to_string(),
-+                Some("dropped-rmcp-debug".to_string()),
-+            ),
-+            (
-+                "INFO".to_string(),
-+                "rmcp::transport".to_string(),
-+                Some("retained-rmcp-info".to_string()),
-+            ),
++            entry("WARN", "sqlx_application", "retained-application-warning"),
++            entry("DEBUG", "rmcp::transport", "retained-rmcp-debug"),
++            entry("INFO", "rmcp::transport", "retained-rmcp-info"),
++            entry("WARN", "codex_state", "retained-state-warning"),
 +        ]
 +    );
 +}
@@ -194,11 +251,10 @@
 +async fn sqlite_sink_rejects_field_qualified_override() {
 +    assert_eq!(
 +        captured_logs(filter_for_spec(Some("trace,codex_state[{foo}]=trace"))).await,
-+        vec![(
-+            "WARN".to_string(),
-+            "sqlx::other".to_string(),
-+            Some("retained-sqlx-warning".to_string()),
-+        )]
++        vec![
++            entry("WARN", "sqlx_application", "retained-application-warning"),
++            entry("WARN", "codex_state", "retained-state-warning"),
++        ]
 +    );
 +}
 +
@@ -212,114 +268,57 @@
 -                row.message.as_deref()
 -            ))
 -            .collect::<Vec<_>>(),
-+        captured_logs(filter_for_spec(Some("trace,sqlx::query::nested=trace"))).await,
++        captured_logs(filter_for_spec(Some("trace,sqlx::query=trace"))).await,
          vec![
 -            ("INFO", "opentelemetry_sdk", Some("retained-info")),
--            ("WARN", "sqlx::other", Some("retained-sqlx-warning")),
+-            (
+-                "INFO",
+-                "sqlx_application",
+-                Some("retained-unrelated-target")
+-            ),
+-            (
+-                "WARN",
+-                "h2::proto::ping_pong",
+-                Some("retained-http2-ping-warning")
+-            ),
+-            ("WARN", "h2::proto::streams", Some("retained-http2-warning")),
 -            ("INFO", "rmcp::transport", Some("retained-rmcp-info")),
-             (
+-            (
 -                "INFO",
 -                "codex_rmcp_client::oauth",
 -                Some("retained-codex-rmcp-client-info")
-+                "INFO".to_string(),
-+                "opentelemetry_sdk".to_string(),
-+                Some("retained-info".to_string())
-+            ),
-+            (
-+                "WARN".to_string(),
-+                "sqlx::other".to_string(),
-+                Some("retained-sqlx-warning".to_string())
-+            ),
-+            (
-+                "DEBUG".to_string(),
-+                "rmcp::transport".to_string(),
-+                Some("dropped-rmcp-debug".to_string())
-+            ),
-+            (
-+                "INFO".to_string(),
-+                "rmcp::transport".to_string(),
-+                Some("retained-rmcp-info".to_string())
-+            ),
-+            (
-+                "DEBUG".to_string(),
-+                "codex_rmcp_client::oauth".to_string(),
-+                Some("dropped-codex-rmcp-client-debug".to_string())
-+            ),
-+            (
-+                "INFO".to_string(),
-+                "codex_rmcp_client::oauth".to_string(),
-+                Some("retained-codex-rmcp-client-info".to_string())
-+            ),
-+            (
-+                "TRACE".to_string(),
-+                "codex_http_client::transport".to_string(),
-+                Some("dropped-request-body".to_string())
-+            ),
-+            (
-+                "DEBUG".to_string(),
-+                "codex_http_client::transport".to_string(),
-+                Some("retained-request-diagnostic".to_string())
-+            ),
-+            (
-+                "TRACE".to_string(),
-+                "codex_api::sse".to_string(),
-+                Some("dropped-sse-parent".to_string())
-+            ),
-+            (
-+                "TRACE".to_string(),
-+                "codex_api::sse::responses".to_string(),
-+                Some("dropped-sse-payload".to_string())
-+            ),
-+            (
-+                "DEBUG".to_string(),
-+                "codex_api::sse::responses".to_string(),
-+                Some("retained-sse-diagnostic".to_string())
-+            ),
-+            (
-+                "TRACE".to_string(),
-+                "codex_state".to_string(),
-+                Some("retained-trace".to_string())
-             ),
-             (
+-            ),
+-            (
 -                "DEBUG",
 -                "codex_http_client::transport",
 -                Some("retained-request-diagnostic")
-+                "TRACE".to_string(),
-+                "codex_tui::streaming::controller".to_string(),
-+                Some("dropped-controller-trace".to_string()),
-             ),
-             (
+-            ),
+-            (
 -                "DEBUG",
 -                "codex_api::sse::responses",
 -                Some("retained-sse-diagnostic")
-+                "DEBUG".to_string(),
-+                "codex_tui::streaming::controller".to_string(),
-+                Some("retained-controller-debug".to_string()),
-             ),
+-            ),
 -            ("TRACE", "codex_state", Some("retained-trace")),
-             (
+-            (
 -                "DEBUG",
 -                "codex_tui::streaming::controller",
 -                Some("retained-controller-debug"),
-+                "TRACE".to_string(),
-+                "codex_tui::streaming::table_holdback".to_string(),
-+                Some("dropped-table-holdback-trace".to_string()),
-             ),
-             (
+-            ),
+-            (
 -                "DEBUG",
 -                "codex_tui::streaming::table_holdback",
 -                Some("retained-table-holdback-debug"),
-+                "DEBUG".to_string(),
-+                "codex_tui::streaming::table_holdback".to_string(),
-+                Some("retained-table-holdback-debug".to_string()),
-             ),
-             (
+-            ),
+-            (
 -                "TRACE",
 -                "codex_tui::streaming::commit_tick",
 -                Some("retained-commit-tick-trace"),
-+                "TRACE".to_string(),
-+                "codex_tui::streaming::commit_tick".to_string(),
-+                Some("retained-commit-tick-trace".to_string()),
-             ),
+-            ),
++            entry("TRACE", "opentelemetry_sdk", "retained-trace"),
++            entry("WARN", "sqlx_application", "retained-application-warning"),
++            entry("DEBUG", "rmcp::transport", "retained-rmcp-debug"),
++            entry("INFO", "rmcp::transport", "retained-rmcp-info"),
++            entry("WARN", "codex_state", "retained-state-warning"),
          ]
      );
+ }

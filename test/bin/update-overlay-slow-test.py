@@ -4326,7 +4326,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         self.assertEqual(ddgs["update"].get("buildPackage"), "omlx")
         self.assertEqual(ddgs["update"].get("buildMode"), "pkg")
         omlx = ai_catalog["omlx"]
-        self.assertEqual(omlx["version"], "0.6.2")
+        self.assertEqual(omlx["version"], "0.6.4")
         self.assertTrue(omlx["update"].get("stableOnly"))
         pal = ai_catalog["pal-mcp-server"]
         self.assertEqual(pal["update"].get("buildPackage"), "pal-mcp-server")
@@ -4650,6 +4650,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             "dflash-mlx",
             "ddgs",
             "omlx",
+            "omlx-mlx-vlm",
         ):
             with self.subTest(source=source_name):
                 update = sources[source_name]["update"]
@@ -4676,7 +4677,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         self.assertIn(
             "${python.interpreter} "
             "${../test/ai/overlays/omlx-direct-reference-contract.py} "
-            "${mlx-embeddings.version} ${mlx-vlm.version}",
+            "${omlxMlxEmbeddings.version} ${omlxMlxVlm.version}",
             (REPO / "packages/ai-llm.nix").read_text(),
         )
 
@@ -4693,13 +4694,14 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         with mock.patch.dict(
             validate_catalog_target.__globals__, {"HashComputer": ConsumerHashes}
         ):
-            for source_name in ("mlx-embeddings", "mlx-lm", "mlx-vlm", "ddgs"):
+            for source_name in ("mlx-embeddings", "mlx-lm", "mlx-vlm", "omlx-mlx-vlm", "ddgs"):
                 self.assertTrue(
                     validate_catalog_target(REPO, source_name, catalog[source_name])
                 )
         self.assertEqual(
             calls,
             [
+                (REPO, "omlx", "pkg"),
                 (REPO, "omlx", "pkg"),
                 (REPO, "omlx", "pkg"),
                 (REPO, "omlx", "pkg"),
