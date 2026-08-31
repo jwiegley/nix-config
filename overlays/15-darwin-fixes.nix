@@ -31,16 +31,16 @@ in
 
   # Apply the cataloged PopplerPage constructor/destructor patch on Darwin.
   poppler =
-    if prev.stdenv.hostPlatform.isDarwin then
-      prev.poppler.overrideAttrs (oldAttrs: {
-        patches = (oldAttrs.patches or [ ]) ++ [
-          (
-            assert popplerPatch.source.fetcher == "fetchpatch";
-            prev.fetchpatch popplerPatch.source.args
-          )
-        ];
-      })
-    else
+    # if prev.stdenv.hostPlatform.isDarwin then
+    #   prev.poppler.overrideAttrs (oldAttrs: {
+    #     patches = (oldAttrs.patches or [ ]) ++ [
+    #       (
+    #         assert popplerPatch.source.fetcher == "fetchpatch";
+    #         prev.fetchpatch popplerPatch.source.args
+    #       )
+    #     ];
+    #   })
+    # else
       prev.poppler;
 
   # Omit the optional Darwin purgeable-capacity query while retaining statfs
