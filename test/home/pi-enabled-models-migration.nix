@@ -9,20 +9,13 @@ let
   migration = ../../config/ai/pi-enabled-models-migration.mjs;
   models = import ../../config/ai/models.nix;
   staleSettings.enabledModels = [
-    "anthropic/*"
-    "omlx-hera/${builtins.head models.omlx.reasoning.retiredNames}"
-    "omlx-clio/${builtins.head models.omlx.reasoning.retiredNames}"
-    "omlx-hera/${builtins.head models.omlx.primary.retiredNames}"
-    "omlx-clio/${builtins.head models.omlx.primary.retiredNames}"
+    "anthropic/exact"
+    (builtins.head models.omlx.stalePatterns)
     "omlx-clio/${models.omlx.reasoning.name}"
     "factory/*"
   ];
   staleExpected = [
-    "anthropic/*"
-    "omlx-hera/${models.omlx.reasoning.name}"
-    "omlx-hera/${models.omlx.primary.name}"
-    "omlx-clio/${models.omlx.primary.name}"
-    "factory/*"
+    "anthropic/exact"
   ];
   legacySettings.enabledModels = [
     "omlx/${models.omlx.reasoning.name}"
@@ -32,7 +25,6 @@ let
     "omlx-hera/${models.omlx.reasoning.name}"
     "omlx-hera/${models.omlx.primary.name}"
     "omlx-clio/${models.omlx.primary.name}"
-    "factory/*"
   ];
 in
 assert piPackage.pname == "pi";
@@ -77,11 +69,9 @@ pkgs.runCommand "pi-enabled-models-migration"
 
     current="$TMPDIR/current"
     mkdir "$current"
-    printf '%s\n' '{"enabledModels":["anthropic/*","factory/*"]}' >"$current/settings.json"
-    snapshot "$current/settings.json" >"$current.before"
+    printf '%s\n' '{"enabledModels":["anthropic/exact","factory/*"]}' >"$current/settings.json"
     run_migration "$current"
-    snapshot "$current/settings.json" >"$current.after"
-    cmp "$current.before" "$current.after"
+    jq -e '.enabledModels == ["anthropic/exact"]' "$current/settings.json" >/dev/null
     test ! -e "$current/settings.json.lock"
 
     stale="$TMPDIR/stale"
@@ -126,7 +116,6 @@ pkgs.runCommand "pi-enabled-models-migration"
       .theme == "dark" and
       .enabledModels == [
         "anthropic/*",
-        "factory/*",
         "omlx-clio/qwen",
         "omlx-hera/qwen",
         "openai/gpt",
@@ -148,8 +137,7 @@ pkgs.runCommand "pi-enabled-models-migration"
         "anthropic/*",
         "omlx-hera/qwen",
         "omlx-clio/qwen",
-        "openai/gpt",
-        "factory/*"
+        "openai/gpt"
       ]
     ' "$legacy_hera/settings.json" >/dev/null
 
@@ -198,7 +186,6 @@ pkgs.runCommand "pi-enabled-models-migration"
       "anthropic/new",
       "omlx-clio/concurrent",
       "omlx-hera/concurrent",
-      "factory/*",
     ];
     if (actual.theme !== "light" || JSON.stringify(actual.enabledModels) !== JSON.stringify(expected)) {
       throw new Error("migration did not transform the lock-protected current settings");
@@ -212,7 +199,7 @@ pkgs.runCommand "pi-enabled-models-migration"
       >"$mixed_case/settings.json"
     run_migration "$mixed_case"
     jq -e \
-      '.enabledModels == ["Factory/*","omlx-clio/Qwen","omlx-hera/Qwen","openai/gpt"]' \
+      '.enabledModels == ["omlx-clio/Qwen","omlx-hera/Qwen","openai/gpt"]' \
       "$mixed_case/settings.json" >/dev/null
 
     vanished="$TMPDIR/vanished"
@@ -302,7 +289,7 @@ pkgs.runCommand "pi-enabled-models-migration"
       >"$dedupe/settings.json"
     run_migration "$dedupe"
     jq -e \
-      '.enabledModels == ["omlx-clio/a","other","factory/*","omlx-hera/a","other"]' \
+      '.enabledModels == ["omlx-clio/a","other","omlx-hera/a","other"]' \
       "$dedupe/settings.json" >/dev/null
 
     missing_host="$TMPDIR/missing-host"

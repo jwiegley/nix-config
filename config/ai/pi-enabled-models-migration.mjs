@@ -75,8 +75,10 @@ function migratedModels(
 ) {
 	if (models === undefined || models.length === 0) return undefined;
 	const hasLegacyModels = models.some((model) => hasPrefix(model, legacyPrefix));
+	const hasRetiredManagedFactoryScope = models.some((model) => model.toLowerCase() === "factory/*");
 	if (
 		!hasLegacyModels &&
+		!hasRetiredManagedFactoryScope &&
 		!models.some((model) => isStaleModelPattern(model, staleModelPatterns))
 	)
 		return undefined;
@@ -87,13 +89,13 @@ function migratedModels(
 			.filter(
 				(model) =>
 					!hasPrefix(model, legacyPrefix) &&
-					!isStaleModelPattern(model, staleModelPatterns),
+					!isStaleModelPattern(model, staleModelPatterns) &&
+					model.toLowerCase() !== "factory/*",
 			)
 			.map((model) => model.toLowerCase()),
 	);
 	const result = [];
 	const generated = new Set();
-	let hasFactory = false;
 	for (const model of models) {
 		if (isStaleModelPattern(model, staleModelPatterns)) {
 			const replacement = modelReplacements.get(model.toLowerCase());
@@ -124,13 +126,10 @@ function migratedModels(
 					result.push(replacement);
 				}
 			}
-		} else {
-			const isFactory = model.toLowerCase() === "factory/*";
-			if (!isFactory || !hasFactory) result.push(model);
-			if (isFactory) hasFactory = true;
+		} else if (model.toLowerCase() !== "factory/*") {
+			result.push(model);
 		}
 	}
-	if (!hasFactory) result.push("factory/*");
 	return result;
 }
 

@@ -6094,6 +6094,22 @@ The maintained /Users/johnw/src/nixos Vulcan flake is a distinct supported exter
 ]
 #+end_src
 
+* DOING [#B] Make Pi scoped models exact across providers
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-fiud
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-30 Sun 22:27]
+:MODIFIED: [2026-08-30 Sun 22:27]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pin the provider-neutral Pi strict-scope fix, remove the historical managed factory wildcard, deploy Hera, and expose omlx-hera plus OpenRouter on Vulcan with provider-free acceptance.
+
 * DONE [#B] Repair Samba 4.23.8 Darwin client linkage
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
