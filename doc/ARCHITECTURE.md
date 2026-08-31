@@ -52,6 +52,23 @@ External Home Manager and NixOS checkouts own their locks and activation. This
 repository exports implementation and modules; it does not overwrite another
 consumer's checkout or deployment state.
 
+#### Vulcan consumer policy
+
+> **Acceptance record (2026-08-31):** implemented and built in Vulcan's separate
+> authoritative `/etc/nixos` checkout, `gitea:johnw/nixos-config`, not in this
+> shared implementation repository.
+
+Vulcan's `/etc/nixos/build` refreshes `nix-config`, `nix-config-ai`, and its
+top-level Pi source while holding the consumer build lock, before ordinary
+`nixos-rebuild` evaluation. The driver records the resolved revisions. Its NixOS
+module graph remains on `nixos-25.11`; its Home Manager and standalone packages
+use a separate `nixpkgs-user` input following the portable AI nixpkgs line. The
+consumer commits `6ea1ad81`, `75cf0dc3`, and `f8158dbd` establish that policy;
+`8ddc933d` records a successful refresh. The final build-only candidate was
+`/nix/store/2612i5wh6n2wljny0rqhamdj3fz0cm5d-nixos-system-vulcan-25.11.20260630.b6018f8`.
+It was not switched, and its generated Pi model/Gallery artifacts were verified
+without credentials or provider calls.
+
 VPS remains a supported external consumer but is parked outside the default
 cross-consumer evaluation and active rollout sets. Its explicit consumer
 evaluation and consumer-owned build driver remain available for deliberate
@@ -223,6 +240,11 @@ an accidental modular-entrypoint fallback fails the package and gallery gates.
 The `llm-agents-nixpkgs-independent` check keeps the feed's nixpkgs input
 independent from the consumer channel.
 
+The portable pin is deliberately immutable for shared fleet reproducibility. Vulcan
+is the documented consumer-level exception: its external flake supplies a
+top-level unrevisioned `github:jwiegley/pi` input and makes `nix-config-ai/pi`
+follow it; its locked resolution is refreshed by the consumer build driver above.
+That exception does not broaden or mutate the shared portable input.
 Pi gallery normalization has one implementation:
 `packages/pi-gallery/normalization-policy.json` defines the closed policy and
 `packages/pi-gallery/normalize-manifest.jq` executes it for both builds and updates.
