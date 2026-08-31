@@ -31,7 +31,7 @@
     llm-agents.url = "github:numtide/llm-agents.nix";
 
     pi = {
-      url = "github:jwiegley/pi/73e351e403b15eee08b41b6367fd1dbe3176a7b5";
+      url = "github:jwiegley/pi/94c965e85f5825a6dd7b9063a93f92aae819539c";
       flake = false;
     };
 

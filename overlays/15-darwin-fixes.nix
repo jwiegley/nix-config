@@ -3,8 +3,6 @@
 # Dependencies: prev plus compatibility source catalog
 _final: prev:
 let
-  compatibilitySources = import ../packages/source-catalog.nix "compatibility";
-  popplerPatch = compatibilitySources.poppler-darwin-mutex-patch;
   useLld =
     package:
     if prev.stdenv.hostPlatform.isDarwin then
@@ -30,18 +28,8 @@ in
   spotify-player = useLld prev.spotify-player;
 
   # Apply the cataloged PopplerPage constructor/destructor patch on Darwin.
-  poppler =
-    # if prev.stdenv.hostPlatform.isDarwin then
-    #   prev.poppler.overrideAttrs (oldAttrs: {
-    #     patches = (oldAttrs.patches or [ ]) ++ [
-    #       (
-    #         assert popplerPatch.source.fetcher == "fetchpatch";
-    #         prev.fetchpatch popplerPatch.source.args
-    #       )
-    #     ];
-    #   })
-    # else
-      prev.poppler;
+  # The cataloged Poppler patch remains disabled pending a Darwin rebuild.
+  inherit (prev) poppler;
 
   # Omit the optional Darwin purgeable-capacity query while retaining statfs
   # filesystem metrics.
