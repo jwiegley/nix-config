@@ -325,22 +325,58 @@ class ModelSyncRuntimeTest(unittest.TestCase):
             self.assertEqual(result["events"], [])
             self.assertEqual(result["stamp"], f"{self.digest}\n".encode())
 
-    def test_running_applications_defer(self) -> None:
-        applications = ["DEVONthink", "DEVONthink 3", "iTerm2"]
-        for index, application in enumerate(applications, start=1):
+    def test_running_applications_sync_other_client(self) -> None:
+        security_event = {
+            "tool": "security",
+            "args": [
+                "find-generic-password",
+                "-s",
+                "iTerm2 API Keys",
+                "-a",
+                "OpenAI API Key for iTerm2",
+            ],
+        }
+        cases = [
+            (
+                "DEVONthink",
+                "com.googlecode.iterm2",
+                ["DEVONthink", "iTerm2"],
+                security_event,
+            ),
+            (
+                "DEVONthink 3",
+                "com.googlecode.iterm2",
+                ["DEVONthink", "DEVONthink 3", "iTerm2"],
+                security_event,
+            ),
+            (
+                "iTerm2",
+                "com.devon-technologies.think",
+                ["DEVONthink", "DEVONthink 3", "iTerm2"],
+                {"tool": "devonthink", "args": []},
+            ),
+        ]
+        for application, synced_domain, processes, credential_event in cases:
             with self.subTest(application=application):
                 result = self.run_case(running=application)
-                self.assertEqual(result["returncode"], 0)
-                self.assertEqual(
-                    result["stderr"],
-                    "nix-managed model sync: deferred while DEVONthink or iTerm2 is running\n",
-                )
+                default_events = [
+                    event
+                    for event in self.expected_default_events()
+                    if event["args"][1] == synced_domain
+                ]
+                self.assertEqual(result["returncode"], 0, result["stderr"])
+                self.assertEqual(result["stderr"], "")
                 self.assertIsNone(result["stamp"])
                 self.assertEqual(
-                    [event["tool"] for event in result["events"]],
-                    ["pgrep"] * index,
+                    result["events"],
+                    [
+                        {"tool": "pgrep", "args": ["-x", process]}
+                        for process in processes
+                    ]
+                    + [credential_event]
+                    + default_events
+                    + [credential_event],
                 )
-
     def test_process_probe_failure_is_fatal(self) -> None:
         result = self.run_case(failures="pgrep")
         self.assert_failure(result, "application process check failed")

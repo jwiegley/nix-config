@@ -224,33 +224,52 @@ let
           || fail "preference verification failed"
       }
 
-      if app_is_running "DEVONthink" \
-        || app_is_running "DEVONthink 3" \
-        || app_is_running "iTerm2"
-      then
-        printf '%s\n' \
-          "nix-managed model sync: deferred while DEVONthink or iTerm2 is running" \
-          >&2
-        exit 0
+      devonthink_running=0
+      if app_is_running "DEVONthink"; then
+        devonthink_running=1
+      elif app_is_running "DEVONthink 3"; then
+        devonthink_running=1
+      fi
+      iterm_running=0
+      if app_is_running "iTerm2"; then
+        iterm_running=1
       fi
 
-      "$devonthink_key_present" >/dev/null 2>&1 \
-        || fail "DEVONthink compatible credential is missing"
-      "$security_tool" find-generic-password \
-        -s "iTerm2 API Keys" \
-        -a "OpenAI API Key for iTerm2" \
-        >/dev/null 2>&1 \
-        || fail "iTerm2 credential metadata is missing"
+      if [[ "$devonthink_running" -eq 0 ]]; then
+        "$devonthink_key_present" >/dev/null 2>&1 \
+          || fail "DEVONthink compatible credential is missing"
+      fi
+      if [[ "$iterm_running" -eq 0 ]]; then
+        "$security_tool" find-generic-password \
+          -s "iTerm2 API Keys" \
+          -a "OpenAI API Key for iTerm2" \
+          >/dev/null 2>&1 \
+          || fail "iTerm2 credential metadata is missing"
+      fi
 
-      ${lib.concatMapStringsSep "\n" renderState desiredState}
+      if [[ "$devonthink_running" -eq 0 ]]; then
+        ${renderState (builtins.elemAt desiredState 0)}
+      fi
+      if [[ "$iterm_running" -eq 0 ]]; then
+        ${renderState (builtins.elemAt desiredState 1)}
+      fi
 
-      "$devonthink_key_present" >/dev/null 2>&1 \
-        || fail "DEVONthink compatible credential metadata changed"
-      "$security_tool" find-generic-password \
-        -s "iTerm2 API Keys" \
-        -a "OpenAI API Key for iTerm2" \
-        >/dev/null 2>&1 \
-        || fail "iTerm2 credential metadata changed"
+      if [[ "$devonthink_running" -eq 0 ]]; then
+        "$devonthink_key_present" >/dev/null 2>&1 \
+          || fail "DEVONthink compatible credential metadata changed"
+      fi
+      if [[ "$iterm_running" -eq 0 ]]; then
+        "$security_tool" find-generic-password \
+          -s "iTerm2 API Keys" \
+          -a "OpenAI API Key for iTerm2" \
+          >/dev/null 2>&1 \
+          || fail "iTerm2 credential metadata changed"
+      fi
+
+      # A partial run must leave the stamp stale for a later retry.
+      if [[ "$devonthink_running" -ne 0 || "$iterm_running" -ne 0 ]]; then
+        exit 0
+      fi
 
       "$mkdir_tool" -p -- "$state_dir" >/dev/null 2>&1 \
         || fail "state directory creation failed"
