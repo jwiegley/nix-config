@@ -234,31 +234,8 @@ pkgs.runCommand "pi-node-ca" { } ''
     >"$expected_bundle"
   ${pkgs.diffutils}/bin/cmp "$expected_bundle" ${lib.escapeShellArg expectedCa}
 
-  grep -F '/usr/bin/security find-generic-password' ${piPackage}/bin/pi >/dev/null
-  ${pkgs.python3}/bin/python3 - ${piPackage}/bin/pi <<'PY'
-  import pathlib
-  import sys
-
-  script = pathlib.Path(sys.argv[1]).read_text()
-  expected = {
-      "OMLX_CLIO_API_KEY": "nix-config.omlx-clio-client",
-      "OMLX_HERA_API_KEY": "nix-config.omlx-hera-client",
-  }
-  markers = {name: "''${" + name + "+x}" for name in expected}
-  positions = {name: script.index(marker) for name, marker in markers.items()}
-  cleanup = script.index("unset _nix_managed_credential", max(positions.values()))
-  for name, service in expected.items():
-      following = [position for other, position in positions.items() if other != name and position > positions[name]]
-      end = min(following + [cleanup])
-      block = script[positions[name]:end]
-      if service not in block:
-          raise SystemExit(f"{name} is not paired with its production Keychain service")
-      for other_service in set(expected.values()) - {service}:
-          if other_service in block:
-              raise SystemExit(f"{name} is paired with the wrong production Keychain service")
-  PY
-  grep -F '/usr/bin/security find-generic-password' \
-    ${piPackageWithoutSessionCa}/bin/pi >/dev/null
+  ! grep -F '/usr/bin/security find-generic-password' ${piPackage}/bin/pi >/dev/null
+  ! grep -F '/usr/bin/security find-generic-password' ${piPackageWithoutSessionCa}/bin/pi >/dev/null
   grep -F 'nix-config.omlx-hera-client' \
     ${logicalHeraCodexPackage}/bin/codex >/dev/null
 

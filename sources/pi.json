@@ -20,10 +20,10 @@
     "agent-browser-source": {
       "source": {
         "args": {
-          "narHash": "sha256-uz60SvvQYdUCjLJAcuCtQyGd0yNc82m+GYruMnn5CD4=",
+          "narHash": "sha256-VdAqTG1e4nmuqCpTxk2j5RbumQnvrGvp6LwHVU1gwZs=",
           "owner": "vercel-labs",
           "repo": "agent-browser",
-          "rev": "fbd046c23a2c1156891bda294aaaee715c23b3f1",
+          "rev": "b47da630e76567f2153a5547850efaeede9a066a",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -668,14 +668,14 @@
     },
     "pi-mcp-adapter": {
       "hashes": {
-        "npmDepsHash": "sha256-zfv+z41B84jvZ9FS/71PtIklVceO1qt5gygUjI4YF1g="
+        "npmDepsHash": "sha256-D4SUTS26Piaqx4S7sED4RrGfkqD70R+ts7A4lm61GmA="
       },
       "source": {
         "args": {
-          "narHash": "sha256-xmF39gRGbI7b4UNA8HHz/rBunZ2b/2ph8NPV+piyyuY=",
+          "narHash": "sha256-rK0mdEIiaqd9H9hCMeIUH1WAwc+yT87SrCEVuvB5+EE=",
           "owner": "nicobailon",
           "repo": "pi-mcp-adapter",
-          "rev": "34f4c2c902b392a449a5b9f725664d515fc4f2d0",
+          "rev": "ff234b862359e722bf4dc1c99cde62278d4b8eb3",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -690,7 +690,7 @@
         "input": "pi-mcp-adapter",
         "kind": "flake-input+build"
       },
-      "version": "2.29.0"
+      "version": "2.31.0"
     },
     "pi-openai-server-compaction": {
       "source": {
@@ -717,10 +717,10 @@
     "pi-quiet": {
       "source": {
         "args": {
-          "narHash": "sha256-ONIhYGH2sWGlqngxPdIZGatu5JFtR6Xdw1oVtRtWvF0=",
+          "narHash": "sha256-HzqtaiukKraNcv95gB4sWivXXG/Sc6Bui1H4ltAa2xs=",
           "owner": "zenspc",
           "repo": "pi-extensions",
-          "rev": "cb5c6333c30e18b45912f59d42a5c4af68e8ea2e",
+          "rev": "8cf3d6a63289f91df9cd00f77e82f76bf0fa48c5",
           "type": "github"
         },
         "fetcher": "fetchTree",

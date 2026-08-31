@@ -127,6 +127,7 @@ assert
   heraSettings.allowedSources == [
     "192.168.1.2/32"
     "192.168.1.5/32"
+    "192.168.3.9/32"
     "10.6.0.2/32"
   ];
 assert clioSettings.allowedSources == [ "192.168.1.4/32" ];

@@ -25,7 +25,6 @@ let
     inherit lib pkgs;
   };
   omlxCredentialPolicy = import ./ai/omlx-credential-policy.nix;
-  piOmlxKeychainCredentials = omlxCredentialPolicy.keychainByEnvironment;
   localOmlxKeychainCredential =
     if profileHost == null then
       null
@@ -40,28 +39,16 @@ let
   );
   piOmlxLocalProvider =
     if profileHost == null then "" else catalog.piLocalDiscoveryProviderByHost.${profileHost} or "";
-  # Preserve the pre-Keychain non-secret local sentinel as Pi's last-resort
-  # workstation fallback. The outer wrapper still prefers an explicit value or
-  # the matching login-Keychain item and never puts either value in the store.
-  piPackageWithOmlxFallback =
-    if pairedPiPackage == null || !isDarwin then
-      pairedPiPackage
-    else
-      wrapRuntimeEnvironment {
-        defaults = lib.genAttrs piOmlxCredentialEnvironmentNames (_: "dummy-key");
-        package = pairedPiPackage;
-        program = "pi";
-      };
   managedPiPackage =
     if pairedPiPackage == null || !isDarwin then
       pairedPiPackage
     else
       wrapRuntimeEnvironment {
-        defaults = lib.optionalAttrs (piNodeExtraCaFallback != null) {
+        # Local OMLX gateways require this CA; their API header is always dummy.
+        defaults = (lib.genAttrs piOmlxCredentialEnvironmentNames (_: "dummy-key")) // lib.optionalAttrs (piNodeExtraCaFallback != null) {
           NODE_EXTRA_CA_CERTS = piNodeExtraCaFallback;
         };
-        keychainCredentials = piOmlxKeychainCredentials;
-        package = piPackageWithOmlxFallback;
+        package = pairedPiPackage;
         program = "pi";
       };
   pairedCodexPackage = pairedAiPackages.codex or null;
@@ -423,10 +410,6 @@ in
     {
       assertion = pairedCodexPackage != null;
       message = "inputs.nix-config-ai.packages.${system}.codex is missing";
-    }
-    {
-      assertion = builtins.attrNames piOmlxKeychainCredentials == piOmlxCredentialEnvironmentNames;
-      message = "Pi oMLX Keychain credentials must match the catalog environment references";
     }
     {
       assertion = !(piSelected && isDarwin) || piOmlxLocalProvider != "";
