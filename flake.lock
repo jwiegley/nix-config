@@ -888,11 +888,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1788110332,
-        "narHash": "sha256-mOgqfBpPFdNOSyiLevN/I2gRbfcceTCEJPBZfXOw/t8=",
+        "lastModified": 1788146388,
+        "narHash": "sha256-FANAwgy6goNEwYo8S6tLXckL8yUaZHCLu8qaq2ACiBs=",
         "owner": "jwiegley",
         "repo": "scripts",
-        "rev": "e259f2682a7f279ba675b412d8d85a8655ef146c",
+        "rev": "1190f6d70734b4718d55ad91fc08eff34848a975",
         "type": "github"
       },
       "original": {
