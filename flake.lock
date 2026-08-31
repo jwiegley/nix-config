@@ -43,11 +43,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1788213152,
-        "narHash": "sha256-J3We0A+VQnfihUtRRdOrAEevkWWhE9XSDCcHU/Y/iaQ=",
+        "lastModified": 1788213968,
+        "narHash": "sha256-nTKv+O9pIwGhFE+qZlJBFdwunJnY8M3x2j3Vo1CHsXs=",
         "owner": "jwiegley",
         "repo": "agent-workflows",
-        "rev": "59c1f3b168d06a8fb27104983e3460491b8f27e6",
+        "rev": "a1bd3117e446d0c6ef3903dc69d13f7a3cbe4af5",
         "type": "github"
       },
       "original": {
