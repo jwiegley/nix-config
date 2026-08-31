@@ -30,7 +30,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [`pi-mcp-adapter`][pi-mcp-adapter] | 2.29.0 | Lazy, context-efficient MCP access | `mcp`, `/mcp` |
 | [`@zenspc/pi-quiet`][pi-quiet] | 0.4.1 | Dense tool-result presentation | `/quiet` |
 | [`pi-hashline-edit-pro`][pi-hashline-edit-pro] | 0.17.5 | Hash-anchored reads and replacements | `read`, `replace` |
-| [`agent-cat-workflow`][agent-cat-workflow] | 0.1.0 | Discover, supervise, control, and resume typed agent-cat workflows | `/workflows`, `agent_cat_workflow` |
+| [`agent-cat-workflow`][agent-cat-workflow] | 0.1.0 | Discover, supervise, control, and resume typed agent-cat workflows | `/wf`, `agent_cat_workflow` |
 | [`pi-smart-fetch`][pi-smart-fetch] | 0.3.17 | Browser-fingerprinted readable web fetching | `web_fetch`, `batch_web_fetch` |
 | [`pi-smart-web-search`][pi-smart-web-search] | 0.4.0 | Ranked batch web discovery | `web_search` |
 | [`@dietrichgebert/ponytail`][ponytail] | 4.9.0 | Minimal implementation discipline | `/ponytail` |
@@ -40,7 +40,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [`pi-multi-pass`][pi-multi-pass] | 1.3.0 | Multiple OAuth accounts and failover pools | `/subs`, `/pool`, `/mp-preset` |
 | [`pi-droid-sdk`][pi-droid-sdk] | 0.1.0 | Factory Droid models through the official Droid SDK and CLI | `/model`, `factory/*` |
 | [`pi-provider-llama-swap`][pi-provider-llama-swap] | `57583beb` | Discover chat models from local llama-swap | `/model`, `llama-swap/*` |
-| [`pi-provider-omlx`][pi-provider-omlx] | `57583beb` | Discover chat models from both authenticated workstation oMLX services | `/model`, `omlx-hera/*`, `omlx-clio/*` |
+| [`pi-provider-omlx`][pi-provider-omlx] | `57583beb` | Discover authenticated oMLX services selected for each host | `/model`, `omlx-hera/*`, `omlx-clio/*` |
 | [`pi-rewind`][pi-rewind] | 0.5.0 | Conversation and file checkpoints | `/rewind` |
 | [`pi-idle-check`][pi-idle-check] | 0.1.0 | Offer compaction before a prompt after three idle minutes | automatic |
 | [`pi-trace-extension`][pi-trace] | 0.1.15 | Local execution traces and HTML reports | `/trace` |
@@ -63,7 +63,7 @@ These packages remain pinned, built, and present in the immutable Gallery projec
 | [`pi-lens`][pi-lens] | 4.0.1 | One packaged skill root exposing four [Lens][pi-lens] skills remains advertised, and Nix still renders the hidden [Lens][pi-lens] widget setting; [Lens][pi-lens] tools and commands are unavailable |
 | [`@askjo/pi-mem`][pi-mem] | 1.2.0 | Projection only; no [Pi Mem][pi-mem] imports, tools, commands, or managed state activation |
 
-The [Factory Droid SDK provider][pi-droid-sdk] is available and registered on every host. The [llama-swap provider][pi-provider-llama-swap] and [oMLX provider][pi-provider-omlx] packages are available everywhere, but the generated loader registers those two only on Darwin. Local llama-swap remains loopback-only. On both workstations the [oMLX adapter][pi-provider-omlx] registers the stable `omlx-hera` and `omlx-clio` identities and discovers both services through authenticated TLS. Hera receives fixed `omlx-hera` overrides; Clio retains bounded discovery so that Pi advertises only the models the two services actually return.
+The [Factory Droid SDK provider][pi-droid-sdk] is available and registered on every host. Darwin registers the [llama-swap provider][pi-provider-llama-swap] and both workstation endpoints from the [oMLX provider][pi-provider-omlx]. Vulcan registers only the remote `omlx-hera` endpoint; other Linux profiles retain the packages without registering local-provider endpoints. Local llama-swap remains loopback-only. Hera receives fixed `omlx-hera` overrides; Clio retains bounded bilateral discovery; and Vulcan uses bounded authenticated discovery from Hera. OpenRouter remains a native provider on every managed Pi profile and becomes available when that host has mutable OpenRouter authentication.
 
 ## Managed fleet configuration
 
@@ -74,7 +74,7 @@ The Hera, Clio, shared-work, VPS, and Vulcan Pi profiles are rendered by `~/src/
 | Surface | Current projection |
 | --- | --- |
 | Generated ownership | Individual leaves below `~/.config/pi/agent`, plus `~/.pi-lens/config.json` and the `~/.pi` compatibility link; Pi shares `~/.config/mcp/mcp.json` with Prime Agent |
-| Extension entries | [Fleet Theme][fleet-theme], [Nix Gallery loader][nix-gallery-loader], [Pi Loop][pi-loop], [Pi MCP Adapter][pi-mcp-adapter], and [Quiet Display][pi-quiet] on every managed host; the Gallery loads [Agent-cat Workflows][agent-cat-workflow], [Idle Check][pi-idle-check], [GPT Fast Mode][pi-gpt-fast-mode], and the [Factory Droid SDK provider][pi-droid-sdk] everywhere; Darwin additionally loads the loopback [llama-swap provider][pi-provider-llama-swap] and bilateral authenticated [oMLX discovery adapter][pi-provider-omlx], while Linux retains those local providers without registering them automatically |
+| Extension entries | [Fleet Theme][fleet-theme], [Nix Gallery loader][nix-gallery-loader], [Pi Loop][pi-loop], [Pi MCP Adapter][pi-mcp-adapter], and [Quiet Display][pi-quiet] on every managed host; the Gallery loads [Agent-cat Workflows][agent-cat-workflow], [Idle Check][pi-idle-check], [GPT Fast Mode][pi-gpt-fast-mode], and the [Factory Droid SDK provider][pi-droid-sdk] everywhere; Darwin additionally loads loopback llama-swap and bilateral oMLX discovery, while Vulcan loads only remote `omlx-hera` discovery |
 | Agent resources | 25 Nix-managed agent definitions |
 | Prompt resources | 63 files: 61 command prompts and the `emacs` and `spanish` prompts |
 | Skill resources | Shared catalog skills selected for Pi, plus five gallery package skill paths and one gallery prompt path advertised at runtime |

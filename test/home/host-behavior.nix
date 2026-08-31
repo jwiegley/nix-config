@@ -247,6 +247,14 @@ let
         definitions = (import ../../config/ai/model-overrides.nix).pi.galleryProviders;
         endpoints = aiCatalog.piModelDiscoveryEndpoints;
       };
+  expectedVulcanPiGalleryEndpointsByOwner =
+    (import ../../config/ai/renderers/project-provider-endpoints.nix { inherit lib; })
+      {
+        definitions = lib.getAttrs [
+          "omlx-hera"
+        ] (import ../../config/ai/model-overrides.nix).pi.galleryProviders;
+        endpoints = lib.getAttrs [ "omlx-hera" ] aiCatalog.piModelDiscoveryEndpoints;
+      };
   agentModelAliasesPath = ".config/flatten-recordings/agent-model-aliases.json";
   agentModelAliases = import ../../config/ai/agent-model-aliases.nix {
     inherit lib;
@@ -300,6 +308,10 @@ let
     }).config;
   personalLinux = homeConfigurations."johnw@aarch64-linux".config;
   sharedWork = homeConfigurations."jwiegley@x86_64-linux".config;
+  vulcanHome = nixosHomeEvaluationFixtures.vulcan.config;
+  vulcanPiModelsSource = vulcanHome.home.file.".config/pi/agent/models.json".source;
+  vulcanPiGallerySource =
+    vulcanHome.home.file.".config/pi/agent/extensions/nix-gallery/index.ts".source;
   packageSelectionFor =
     hostname:
     (import ../../config/packages.nix {
@@ -901,5 +913,12 @@ pkgs.runCommand "host-behavior" { } ''
   grep -F 'nix-config.omlx-hera-client' ${heraPrimePackage}/bin/prime-agent >/dev/null
   test -f "$(dirname "$(realpath ${gallerySourceFor "clio"})")/projection.json"
   test -f "$(dirname "$(realpath ${gallerySourceFor "hera"})")/projection.json"
+  ${pkgs.jq}/bin/jq -e '
+    (.providers | keys | sort) == ["omlx-hera", "openai-codex", "openrouter"]
+    and .providers["omlx-hera"] == {
+      "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
+    }
+  ' ${vulcanPiModelsSource} >/dev/null
+  grep -F -- ${lib.escapeShellArg "export default createNixGallery(${builtins.toJSON expectedVulcanPiGalleryEndpointsByOwner});"} ${vulcanPiGallerySource} >/dev/null
   touch $out
 ''

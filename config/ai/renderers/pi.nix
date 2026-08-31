@@ -50,11 +50,14 @@ let
     requestTimeoutMs = localProviderTransportPolicy.client.requestTimeoutMilliseconds;
     idleTimeoutMs = localProviderTransportPolicy.client.streamIdleTimeoutMilliseconds;
   };
-  localProviderOverrides = modelOverrides.pi.localProviderOverrides;
+  localModelDiscoveryProviderNames =
+    if localModelDiscovery then builtins.attrNames localModelDiscoveryEndpoints else [ ];
+  localProviderOverrides = lib.getAttrs localModelDiscoveryProviderNames modelOverrides.pi.localProviderOverrides;
+  galleryProviderDefinitions = lib.getAttrs localModelDiscoveryProviderNames modelOverrides.pi.galleryProviders;
   galleryEndpointsByOwner =
     if localModelDiscovery then
       projectProviderEndpoints {
-        definitions = modelOverrides.pi.galleryProviders;
+        definitions = galleryProviderDefinitions;
         endpoints = localModelDiscoveryEndpoints;
       }
     else
@@ -160,15 +163,13 @@ in
 assert profile.client == "pi";
 assert profile.root == root;
 assert profile.localModelRoutes == localModelRoutes;
-assert localModelDiscovery == (profile.platform == "darwin");
+assert localModelDiscovery == (profile.platform == "darwin" || profile.id == "vulcan-pi");
 assert
   !localModelDiscovery
   || builtins.attrNames localModelDiscoveryEndpoints == builtins.attrNames localProviderOverrides;
 assert
   !localModelDiscovery
-  ||
-    builtins.attrNames localModelDiscoveryEndpoints
-    == builtins.attrNames modelOverrides.pi.galleryProviders;
+  || builtins.attrNames localModelDiscoveryEndpoints == builtins.attrNames galleryProviderDefinitions;
 assert builtins.isBool hermesRoute;
 assert builtins.isString homeDirectory;
 assert xdgConfigHome == "${homeDirectory}/.config";

@@ -64,8 +64,12 @@ let
     if profile.localModelRoutes then catalog.localModelEndpointsByHost.${profile.host} else null;
   localModelDiscoveryEndpointsFor =
     profile:
-    if profile.client == "pi" && profile.platform == "darwin" then
+    if profile.client != "pi" then
+      null
+    else if profile.platform == "darwin" then
       catalog.piModelDiscoveryEndpoints
+    else if profile.host == "vulcan" then
+      { inherit (catalog.piModelDiscoveryEndpoints) omlx-hera; }
     else
       null;
   profileFor =
@@ -1938,7 +1942,19 @@ pkgs.runCommand "ai-catalog-transport" { } ''
   ${lib.concatMapStringsSep "\n" (entry: ''
     ${pkgs.jq}/bin/jq -e \
       --argjson localModelRoutes ${if entry.localModelEndpoints != null then "true" else "false"} \
-      --argjson localModelDiscovery ${if entry.darwin then "true" else "false"} \
+      --argjson localModelDiscovery ${
+        if entry.localModelDiscoveryEndpoints != null then "true" else "false"
+      } \
+      --argjson localModelDiscoveryProviders ${
+        lib.escapeShellArg (
+          builtins.toJSON (
+            if entry.localModelDiscoveryEndpoints == null then
+              [ ]
+            else
+              builtins.attrNames entry.localModelDiscoveryEndpoints
+          )
+        )
+      } \
       --argjson hermesRoute ${if entry.profile.hermesRoute then "true" else "false"} '
       type == "object"
       and (.providers | type == "object")
@@ -2023,26 +2039,16 @@ pkgs.runCommand "ai-catalog-transport" { } ''
           }
           and (.providers | has("router") | not)
         else
-          (if $localModelDiscovery then
-            .providers["llama-swap"] == {
-              "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
-            }
-            and .providers["omlx-clio"] == {
-              "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
-            }
-            and .providers["omlx-hera"] == {
-              "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
-            }
-          else
-            (.providers | has("llama-swap") | not)
-            and (.providers | has("omlx-clio") | not)
-            and (.providers | has("omlx-hera") | not)
-          end)
+          (
+            [.providers | to_entries[] | select(.key as $provider | $localModelDiscoveryProviders | index($provider))] as $localProviders
+            | ($localProviders | map(.key) | sort) == ($localModelDiscoveryProviders | sort)
+            and ($localProviders | all(.value.transport == {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}))
+          )
         end
       )
       and (
         [.providers[] | select(has("transport"))] as $transportProviders
-        | ($transportProviders | length) == (if $localModelDiscovery then 3 else 0 end)
+        | ($transportProviders | length) == ($localModelDiscoveryProviders | length)
         and (
           $transportProviders
           | all(.transport == {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000})
@@ -2057,7 +2063,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
             { }
           else
             projectProviderEndpoints {
-              definitions = modelOverrides.pi.galleryProviders;
+              definitions = lib.getAttrs (builtins.attrNames entry.localModelDiscoveryEndpoints) modelOverrides.pi.galleryProviders;
               endpoints = entry.localModelDiscoveryEndpoints;
             }
         )

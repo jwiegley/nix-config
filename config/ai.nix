@@ -197,8 +197,12 @@ let
         else
           null;
       localModelDiscoveryEndpoints =
-        if profile.client == "pi" && profile.platform == "darwin" then
+        if profile.client != "pi" then
+          null
+        else if profile.platform == "darwin" then
           catalog.piModelDiscoveryEndpoints
+        else if profile.host == "vulcan" then
+          { inherit (catalog.piModelDiscoveryEndpoints) omlx-hera; }
         else
           null;
     in
