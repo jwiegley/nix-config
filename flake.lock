@@ -20,11 +20,11 @@
     "agent-cat": {
       "flake": false,
       "locked": {
-        "lastModified": 1787889606,
-        "narHash": "sha256-WfpJo5z25Q0X1nrULOtF67uQmej4we4auXzoznep9Ew=",
+        "lastModified": 1787942228,
+        "narHash": "sha256-2spKn/WnrN0Fctq6MaODSHLgHi/0W9nq6608faCug1U=",
         "owner": "jwiegley",
         "repo": "agent-cat",
-        "rev": "e448fc0f0953c61a39e73c57584c18b1342b3be1",
+        "rev": "8a10a68c2bdd1ce8f069bb0f92503f064a567986",
         "type": "github"
       },
       "original": {
@@ -43,11 +43,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1788022179,
-        "narHash": "sha256-TwWznzcSkamfuBfvo3orsCdTrKOHsmafWlaSJ1bm7t4=",
+        "lastModified": 1788213033,
+        "narHash": "sha256-TWFd1hA3M9UF0gwmXWnZIoBZV8bbZ9W0DfepCNoWT6o=",
         "owner": "jwiegley",
         "repo": "agent-workflows",
-        "rev": "73a2adb311def94fe1761891aff671942db47304",
+        "rev": "f27012e0227a351a75c892d1efd10c7135c2a815",
         "type": "github"
       },
       "original": {

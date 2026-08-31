@@ -45,9 +45,11 @@ let
     else
       wrapRuntimeEnvironment {
         # Local OMLX gateways require this CA; their API header is always dummy.
-        defaults = (lib.genAttrs piOmlxCredentialEnvironmentNames (_: "dummy-key")) // lib.optionalAttrs (piNodeExtraCaFallback != null) {
-          NODE_EXTRA_CA_CERTS = piNodeExtraCaFallback;
-        };
+        defaults =
+          (lib.genAttrs piOmlxCredentialEnvironmentNames (_: "dummy-key"))
+          // lib.optionalAttrs (piNodeExtraCaFallback != null) {
+            NODE_EXTRA_CA_CERTS = piNodeExtraCaFallback;
+          };
         package = pairedPiPackage;
         program = "pi";
       };
