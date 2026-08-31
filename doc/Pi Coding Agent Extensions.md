@@ -27,7 +27,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [Nix Gallery loader][nix-gallery-loader] | local | Compose the managed package gallery | automatic |
 | [Fleet Theme][fleet-theme] | local | Discover and select the managed TUI theme | automatic |
 | [`@realvendex/pi-loop`][pi-loop] | 1.0.2 | Repeat prompts under explicit stop conditions | `/loop` |
-| [`pi-mcp-adapter`][pi-mcp-adapter] | 2.29.0 | Lazy, context-efficient MCP access | `mcp`, `/mcp` |
+| [`pi-mcp-adapter`][pi-mcp-adapter] | 2.31.0 | Lazy, context-efficient MCP access | `mcp`, `/mcp` |
 | [`@zenspc/pi-quiet`][pi-quiet] | 0.4.1 | Dense tool-result presentation | `/quiet` |
 | [`pi-hashline-edit-pro`][pi-hashline-edit-pro] | 0.17.5 | Hash-anchored reads and replacements | `read`, `replace` |
 | [`agent-cat-workflow`][agent-cat-workflow] | 0.1.0 | Discover, supervise, control, and resume typed agent-cat workflows | `/wf`, `agent_cat_workflow` |
@@ -42,7 +42,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [`pi-provider-llama-swap`][pi-provider-llama-swap] | `57583beb` | Discover chat models from local llama-swap | `/model`, `llama-swap/*` |
 | [`pi-provider-omlx`][pi-provider-omlx] | `57583beb` | Discover authenticated oMLX services selected for each host | `/model`, `omlx-hera/*`, `omlx-clio/*` |
 | [`pi-rewind`][pi-rewind] | 0.5.0 | Conversation and file checkpoints | `/rewind` |
-| [`pi-idle-check`][pi-idle-check] | 0.1.0 | Offer compaction before a prompt after three idle minutes | automatic |
+| [`pi-idle-check`][pi-idle-check] | 0.1.0 | Offer context-aware send, compact, or new-session choices after idle time | automatic |
 | [`pi-trace-extension`][pi-trace] | 0.1.15 | Local execution traces and HTML reports | `/trace` |
 | [`pi-markdown-preview`][pi-markdown-preview] | 0.15.0 | Terminal, browser, PDF, and artifact previews | `/preview`, `preview_export` |
 | [`pi-caveman`][pi-caveman] | 1.0.8 | Compressed response style | `/caveman` |
@@ -155,7 +155,7 @@ The [Nix Gallery loader][nix-gallery-loader] projects the complete managed packa
 
 ### [Pi MCP Adapter][pi-mcp-adapter]
 
-**Version:** 2.29.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-mcp-adapter) · [Home](https://github.com/nicobailon/pi-mcp-adapter#readme) · [GitHub](https://github.com/nicobailon/pi-mcp-adapter)
+**Version:** 2.31.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-mcp-adapter) · [Home](https://github.com/nicobailon/pi-mcp-adapter#readme) · [GitHub](https://github.com/nicobailon/pi-mcp-adapter)
 
 [Pi MCP Adapter][pi-mcp-adapter] exposes Model Context Protocol servers through one compact proxy tool instead of placing every remote tool schema in the model context. Servers are lazy by default; metadata, instructions, resources, and prompts are cached; large results are guarded; selected tools may be promoted directly; and MCP Apps and remote OAuth retain explicit interactive surfaces.
 
@@ -197,11 +197,11 @@ The [Nix Gallery loader][nix-gallery-loader] projects the complete managed packa
 
 ### [Idle Check][pi-idle-check]
 
-**Version:** 0.1.0, pinned at `b24d65b` · **Links:** [Home](https://github.com/jwiegley/pi-idle-check#readme) · [GitHub](https://github.com/jwiegley/pi-idle-check)
+**Version:** 0.1.0, pinned at `407fcd9` · **Links:** [Home](https://github.com/jwiegley/pi-idle-check#readme) · [GitHub](https://github.com/jwiegley/pi-idle-check)
 
-[Idle Check][pi-idle-check] intercepts only interactive TUI input after a session with prior assistant activity has been continuously idle for strictly more than 180,000 milliseconds. Idle begins at `agent_settled`; active model, tool, retry, compaction, steering, follow-up, RPC, print, JSON, and extension-injected input never opens its selector. Pre-threshold terminal activity restarts the interval, while activity after the threshold latches the decision so returning and typing does not erase it. Resume seeding uses at most 64 parent-entry point reads rather than loading session history; if that bounded tail contains no completed assistant response, it fails closed and does not prompt.
+[Idle Check][pi-idle-check] intercepts only interactive TUI input after a session with prior assistant activity has been continuously idle for strictly more than 180,000 milliseconds and known context use reaches its configured threshold (5% by default). Idle begins at `agent_settled`; active model, tool, retry, compaction, steering, follow-up, RPC, print, JSON, and extension-injected input never opens its selector. Pre-threshold terminal activity restarts the interval, while activity after the threshold latches the decision. Resume seeding uses at most 64 parent-entry point reads; if that bounded tail contains no completed assistant response, it fails closed.
 
-The selector offers **Compact, then send**, **Send without compacting**, and **Cancel**. Compaction withholds the exact text and images until Pi's manual compaction succeeds, then replays them once with normal skill and prompt-template expansion. Cancellation and UI or compaction failure send nothing and restore text without overwriting a newer draft. The extension owns no command, mutable configuration, session record, or direct network client, and makes no provider-cost claim.
+The selector reports exact whole-second idle duration, then accepts **Enter — send**, **`c` — compact + send**, **`C` — new session + send**, or **Escape/Ctrl-C — cancel**. New session starts blank and replays the exact prompt with normal skill and prompt-template expansion. Compaction withholds the exact text and images until Pi's manual compaction succeeds, then replays once. Cancellation and failures send nothing and restore text without overwriting a newer draft. The extension owns only an internal handoff command; it stores no mutable configuration, session record, or direct network client.
 
 **Basic usage.** No command is required. After activation, start a fresh Pi process or run `/reload`; the next qualifying interactive prompt opens the selector automatically.
 

@@ -661,7 +661,8 @@ let
         and .type == "module"
         and .pi.extensions == ["./index.ts"]
         and .peerDependencies == {
-          "@earendil-works/pi-coding-agent": ">=0.84.3 <0.85.0"
+          "@earendil-works/pi-coding-agent": ">=0.84.3 <0.85.0",
+          "@earendil-works/pi-tui": "*"
         }
         and (.dependencies == null)
         and ([

@@ -6861,6 +6861,24 @@ The root make test gate fails because the Fleet Theme negative RPC probe observe
 ]
 #+end_src
 
+* DONE [#C] Deploy pi-idle-check context-aware idle actions
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-haqr
+:LABELS:   []
+:ISSUE_TYPE: feature
+:CREATED:  [2026-08-31 Mon 15:36]
+:MODIFIED: [2026-08-31 Mon 15:57]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-31 Mon 15:57]
+:CLOSE_REASON: Repinned to 407fcd9; refreshed hashes and Gallery peer contract; pi-gallery, portable evaluation, pre-commit, and Hera build passed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Repin managed Pi Gallery from b24d65b to 407fcd9, validate package and generated inventory, publish signed source update, activate Hera, and verify loaded selector.
+
 * DONE [#B] Remove deprecated stdenv platform aliases
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
