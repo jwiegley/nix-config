@@ -15,7 +15,7 @@ let
       maxTokens = 81920;
     };
     reasoning = {
-      name = "GLM-5.3-Flash-MLX-oQ4-MTP";
+      name = "GLM-5.3-Flash-oQ4e";
       providers = [ "omlx-hera" ];
       retiredNames = [ ];
       contextWindow = 262144;
