@@ -1337,10 +1337,10 @@
       },
       "source": {
         "args": {
-          "narHash": "sha256-zsyFHVUoHw8BHoJXWZcn4JFm2/HroKlyfR7aIbt7AZs=",
+          "narHash": "sha256-zLqWgh+bOVqkgaz996NXgXpF7csDLtruJTMiV2OAAZo=",
           "owner": "jwiegley",
           "repo": "pi",
-          "rev": "7c9df6456f1c6128352e670133c2ca693f4c066a",
+          "rev": "73e351e403b15eee08b41b6367fd1dbe3176a7b5",
           "type": "github"
         },
         "fetcher": "fetchTree",
