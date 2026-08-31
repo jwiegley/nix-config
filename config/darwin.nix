@@ -22,10 +22,10 @@ let
       legacyGatewayEnable = true;
       listenAddress = "192.168.1.4";
       allowedSources = [
-        "192.168.1.2/32" # vulcan
-        "192.168.1.5/32" # clio (Ethernet)
-        "192.168.3.9/32" # clio (WiFi at home)
-        "10.6.0.2/32" # clio (WiFi over WireGuard)
+        "192.168.1.0/24" # office network
+        "192.168.3.0/24" # WiFi at home
+        "10.6.0.0/24" # WireGuard WG1
+        "10.7.0.0/24" # WireGuard WG2
       ];
     };
   };
