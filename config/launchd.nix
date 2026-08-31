@@ -360,6 +360,12 @@ in
                 # Proxy all other requests to chat.vulcan.lan
                 ${lib.optionalString omlxProxy.legacyGatewayEnable ''
                   location / {
+                    allow ${omlxProxy.listenAddress};
+                    ${lib.concatMapStringsSep "\n                  " (
+                      source: "allow ${source};"
+                    ) omlxProxy.allowedSources}
+                    deny all;
+
                     proxy_pass https://chat.vulcan.lan;
                     proxy_ssl_verify on;
                     proxy_ssl_trusted_certificate ${omlxProxy.trustedCaFile};
