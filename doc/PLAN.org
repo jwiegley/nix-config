@@ -6391,15 +6391,17 @@ CI Python lint/test commands consume the same repository-pinned tools as direnv;
 ]
 #+end_src
 
-* DOING [#C] Deploy agent-cat /wf catalogue command
+* DONE [#C] Deploy agent-cat /wf catalogue command
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-gbae
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-30 Sun 20:00]
-:MODIFIED: [2026-08-30 Sun 20:00]
+:MODIFIED: [2026-08-30 Sun 20:33]
 :CREATED_BY: johnw
+:FINISHED: [2026-08-30 Sun 20:33]
+:CLOSE_REASON: Published signed agent-cat 4005e8ad, pinned Nix at 98061d4a, passed extension/Gallery/full Nix gates, activated Hera, and verified active /wf plus pi-dynamic-workflows /workflows ownership.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
