@@ -28,7 +28,8 @@
   inputs.git-ai.overlays.default
   (_final: prev: {
     github-mcp-server =
-      prev.callPackage (import "${inputs.nixpkgs}/pkgs/by-name/gi/github-mcp-server/package.nix")
+      inputs.nixpkgs.legacyPackages.${prev.stdenv.hostPlatform.system}.callPackage
+        (import "${inputs.nixpkgs}/pkgs/by-name/gi/github-mcp-server/package.nix")
         { };
   })
   ((import ./30-agent-resources.nix) { inherit inputs; })
