@@ -1351,8 +1351,10 @@
           "flake.lock",
           "config/ai/flake.lock"
         ],
+        "buildPackage": "pi-coding-agent-source-build",
         "input": "pi",
-        "kind": "fixed-flake-input"
+        "kind": "fixed-flake-input",
+        "versionPath": "packages/coding-agent/package.json"
       },
       "version": "0.84.4"
     },

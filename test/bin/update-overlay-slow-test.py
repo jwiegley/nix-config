@@ -847,6 +847,62 @@ class UpdateInventoryTests(unittest.TestCase):
             self.assertEqual(record["source"]["args"]["rev"], "a" * 40)
             self.assertEqual(record["hashes"]["npmDepsHash"], "sha256-new")
 
+    def test_fixed_flake_input_syncs_version_and_dependent_hash_after_lock_update(self):
+        def make_stale(document, _lock):
+            record = document["sources"]["example"]
+            record["version"] = "1.0.0"
+            record["hashes"] = {"npmDepsHash": "sha256-old"}
+            record["update"].update(
+                buildPackage="candidate-package",
+                kind="fixed-flake-input",
+                versionPath="packages/coding-agent/package.json",
+            )
+            record["source"]["args"]["rev"] = "0" * 40
+            record["source"]["args"]["narHash"] = "sha256-stale"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self._write_projection_fixture(root, make_stale)
+            (root / "config/ai/flake.nix").write_text(
+                "{\n  inputs = {\n"
+                f'    example.url = "github:example/project/{"a" * 40}";\n'
+                "  };\n}\n"
+            )
+            hash_calls = []
+
+            def resolve_version(_root, input_name, locked, version_path):
+                self.assertEqual((input_name, locked["rev"]), ("example", "a" * 40))
+                self.assertEqual(version_path, "packages/coding-agent/package.json")
+                return "2.0.0"
+
+            def resolve_hash(_root, package, hash_type):
+                record = json.loads((root / "sources/test.json").read_text())["sources"][
+                    "example"
+                ]
+                hash_calls.append((package, hash_type))
+                self.assertEqual(record["version"], "2.0.0")
+                self.assertEqual(record["source"]["args"]["rev"], "a" * 40)
+                self.assertEqual(
+                    record["hashes"]["npmDepsHash"],
+                    "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+                )
+                return "sha256-new"
+
+            self.assertEqual(
+                sync_flake_projections(
+                    root,
+                    "example",
+                    version_resolver=resolve_version,
+                    dependent_hash_resolver=resolve_hash,
+                ),
+                1,
+            )
+            self.assertEqual(hash_calls, [("candidate-package", "npmDepsHash")])
+            record = json.loads((root / "sources/test.json").read_text())["sources"][
+                "example"
+            ]
+            self.assertEqual(record["version"], "2.0.0")
+            self.assertEqual(record["hashes"]["npmDepsHash"], "sha256-new")
     def test_fod_hash_parser_requires_the_injected_dummy_pair(self):
         parse = MODULE["HashComputer"]._parse_dummy_hash_mismatch
         unrelated = """specified: sha256-old
@@ -1132,6 +1188,12 @@ error: Cannot build '/nix/store/package.drv'.
                 "pkg",
                 None,
                 r"^/nix/store/[a-z0-9]+-agent-resources\.drv$",
+            ),
+            (
+                "pi-coding-agent-source-build",
+                "pkg",
+                None,
+                r"^/nix/store/[a-z0-9]+-pi-coding-agent-source-build-[^/]+\.drv$",
             ),
             (
                 "markless",
@@ -2643,6 +2705,8 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                             "schemaVersion": 1,
                             "sources": {
                                 "example": {
+                                    "hashes": {"npmDepsHash": "sha256-old"},
+                                    "version": "1.0.0",
                                     "source": {
                                         "fetcher": "fetchTree",
                                         "url": "https://github.com/example/project",
@@ -2656,8 +2720,10 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                                     },
                                     "update": {
                                         "artifacts": ["config/ai/flake.nix"],
+                                        "buildPackage": "candidate-package",
                                         "input": "example",
                                         "kind": "fixed-flake-input",
+                                        "versionPath": "packages/coding-agent/package.json",
                                     },
                                 }
                             },
@@ -2698,6 +2764,11 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                     self.replacements = replacements
                     return new_hash
 
+                def _compute_fod_hash(self, *_args):
+                    raise AssertionError("fixed input hash must wait for lock sync")
+
+                def validate_package_build(self, *_args):
+                    raise AssertionError("fixed input validation must wait for lock sync")
             def update(transaction):
                 github = FakeGitHubClient()
                 hashes = FakeHashComputer()
@@ -4298,7 +4369,12 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         pi_source_update = ai_catalog["pi-coding-agent-source-build"]["update"]
         self.assertEqual(pi_source_update["kind"], "fixed-flake-input")
         self.assertEqual(pi_source_update["input"], "pi")
-        self.assertNotIn("buildPackage", pi_source_update)
+        self.assertEqual(
+            pi_source_update["buildPackage"], "pi-coding-agent-source-build"
+        )
+        self.assertEqual(
+            pi_source_update["versionPath"], "packages/coding-agent/package.json"
+        )
         automatic_pypi = {
             name
             for name, update in updates.items()
@@ -8259,7 +8335,7 @@ exec "$REAL_RM" "$@"
                 release.touch()
                 stdout_tail, stderr = process.communicate(timeout=30)
             self.assertEqual(process.returncode, 0, stderr.decode())
-            self.assertEqual(first + stdout_tail, b".......\n")
+            self.assertEqual(first + stdout_tail, b"...\n")
             self.assertEqual(stderr, b"")
 
     def test_update_agents_quiet_bounds_hard_failure_output(self):
@@ -8995,6 +9071,45 @@ exec "$REAL_RM" "$@"
                 self.assertFalse((decoy / ".git/worktrees").exists())
                 self._assert_update_agents_unchanged(root, baseline, before)
 
+    def test_update_agents_all_inputs_skips_package_validation_and_non_input_targets(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _root, environment, _baseline = self._create_update_agents_fixture(temp_dir)
+            interleaving_log = Path(temp_dir) / "interleaving.log"
+            command_log = Path(temp_dir) / "commands.log"
+            environment.update(
+                UPDATE_TEST_BUILD_TARGET="1",
+                UPDATE_TEST_COPY_TARGET="1",
+                UPDATE_TEST_NPM_LOCK_TARGET="1",
+                UPDATE_TEST_NPM_LOCK_AUTOMATIC="1",
+                UPDATE_TEST_INTERLEAVING_LOG=str(interleaving_log),
+                UPDATE_TEST_COMMAND_LOG=str(command_log),
+            )
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--all-inputs"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            events = interleaving_log.read_text().splitlines()
+            self.assertIn("overlay --prepare-target build", events)
+            self.assertIn("overlay --prepare-target copy", events)
+            self.assertNotIn("overlay --prepare-target fixture", events)
+            self.assertNotIn("overlay --prepare-target npm-lock", events)
+            self.assertFalse(
+                any("--validate-candidate-target" in event for event in events),
+                events,
+            )
+            self.assertFalse(
+                any(
+                    command.startswith("flake check")
+                    or command.startswith("flake show")
+                    for command in command_log.read_text().splitlines()
+                ),
+                command_log.read_text(),
+            )
+
     def test_update_agents_routes_flake_input_copy_through_named_locks(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, baseline = self._create_update_agents_fixture(temp_dir)
@@ -9499,7 +9614,7 @@ exec "$REAL_RM" "$@"
             self.assertNotEqual(result.returncode, 0)
             self._assert_update_agents_unchanged(root, baseline, before)
 
-    def test_all_inputs_runs_automatic_targets_after_uncatalogued_locks(self):
+    def test_all_inputs_skips_non_input_catalog_targets(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root, environment, _baseline = self._create_update_agents_fixture(temp_dir)
             interleaving_log = Path(temp_dir) / "interleaving.log"
@@ -9522,29 +9637,12 @@ exec "$REAL_RM" "$@"
             portable_target = events.index(
                 "nix flake update --flake ./config/ai copy-input"
             )
-            direct_target = events.index("overlay fixture")
-            npm_locks = events.index("overlay --prepare-target npm-lock")
-            projection_syncs = [
-                index
-                for index, event in enumerate(events)
-                if event.startswith("overlay --sync-flake-projections")
-            ]
-            inventory_checks = [
-                index
-                for index, event in enumerate(events)
-                if event == "overlay --inventory --json"
-            ]
-            self.assertEqual(len(inventory_checks), 2)
+            projection_sync = events.index("overlay --sync-flake-projections copy")
             self.assertLess(root_lock, portable_target)
-            self.assertEqual(
-                [events[index] for index in projection_syncs],
-                ["overlay --sync-flake-projections copy"],
-            )
-            self.assertLess(portable_target, projection_syncs[0])
-            self.assertLess(projection_syncs[0], npm_locks)
-            self.assertLess(npm_locks, direct_target)
-            self.assertLess(direct_target, inventory_checks[-1])
-            self.assertEqual((root / "npm-lock.txt").read_text(), "npm lock after\n")
+            self.assertLess(portable_target, projection_sync)
+            self.assertNotIn("overlay fixture", events)
+            self.assertNotIn("overlay --prepare-target npm-lock", events)
+            self.assertEqual((root / "npm-lock.txt").read_text(), "npm lock before\n")
 
     def test_all_inputs_separates_uncatalogued_and_named_catalog_inputs(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -9591,20 +9689,13 @@ exec "$REAL_RM" "$@"
                     "nix flake update --flake ./config/ai build-input",
                     "nix flake update nix-config-ai",
                     "overlay --sync-flake-projections build",
-                    "overlay --validate-candidate-target build",
                     "overlay --prepare-target copy",
                     "nix flake update --flake ./config/ai copy-input",
                     "nix flake update nix-config-ai",
                     "overlay --sync-flake-projections copy",
-                    "overlay --validate-candidate-target copy",
-                    "overlay fixture",
                     "overlay --inventory --json",
-                    "nix flake check ./config/ai --all-systems --no-build --no-eval-cache",
-                    "nix flake show --json --drv-paths --all-systems --option eval-cores 1 --option lazy-trees false --option eval-cache false",
-                    "nix flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false",
                 ],
             )
-            self.assertNotIn("overlay --sync-flake-projections", events)
             self.assertEqual(
                 json.loads((root / "projection.json").read_text()),
                 {"fixed": True, "build": True, "copy": True},

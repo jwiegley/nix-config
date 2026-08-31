@@ -58,11 +58,11 @@ usage: update [--all-inputs] [--target NAME] [--version VALUE] [--dry-run]
                      [--pull] [--commit] [--switch] [--push] [--brew]
                      [--quiet | --verbose]
 
-Update both repository locks and every catalog-managed package source.
+Update repository locks and catalog sources through an isolated transaction.
 By default, leave reviewed working-tree changes without external side effects.
 
 Options:
-  --all-inputs  Update every root and portable flake input
+  --all-inputs  Update flake inputs and catalog projections; realize only required dependent hashes
   --target NAME Update one catalog target through this transaction (repeatable)
   --version VALUE  Force the revision or release for one named projection target
   --dry-run     Validate the candidate without publishing it
@@ -873,11 +873,14 @@ quiet_finish_line
                             or .executor == "update-overlay"
                         )
                         and (
-                            (.policy // "automatic") == "automatic"
-                            or ($all_inputs and (.input // "") != "")
+                            if $all_inputs then
+                                (.input // "") != ""
+                            else
+                                (.policy // "automatic") == "automatic"
+                            end
                         )
                     end
-                )
+)
                 | [
                     phase,
                     .name,
@@ -913,7 +916,7 @@ quiet_finish_line
             run_hard nix flake update --flake ./config/ai "$input" || return $?
             run_hard nix flake update nix-config-ai || return $?
             python3 bin/update-overlay --sync-flake-projections "$name" || return $?
-            if [[ -n $build_package ]]; then
+            if [[ $run_all_inputs != true && -n $build_package ]]; then
                 run_hard git add -A -- || return $?
                 after_tree=$(run_hard git write-tree) || return $?
                 if [[ $after_tree != "$before_tree" ]]; then
@@ -1041,10 +1044,8 @@ quiet_finish_line
         fi
     fi
 
-    # Every target subprocess reloads the catalog. The global checks remain a
-    # fatal publication gate over the combined accepted candidate. In
-    # particular, the inventory reload rejects any unselected projection drift
-    # instead of attributing it to the selected target's candidate.
+    # Every target subprocess reloads the catalog. This rejects unselected
+    # projection drift before publication.
     quiet_progress
     python3 bin/update-overlay --inventory --json >/dev/null
     mapfile -t changed_nix < <(git diff --no-renames --name-only HEAD -- '*.nix')
@@ -1052,15 +1053,15 @@ quiet_finish_line
         quiet_progress
         nixfmt "${changed_nix[@]}"
     fi
-    quiet_progress
-    run_hard nix flake check ./config/ai --all-systems --no-build --no-eval-cache
-    # A no-build check makes Nix evaluation read-only. First force the root
-    # flake's displayed all-system derivation paths in writable mode so changed
-    # IFD inputs are valid, then run the cache-free check without final builds.
-    quiet_progress
-    run_hard nix flake show --json --drv-paths --all-systems --option eval-cores 1 --option lazy-trees false --option eval-cache false >/dev/null
-    quiet_progress
-    run_hard nix flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false
+    if [[ $run_all_inputs != true ]]; then
+        # Explicit target updates retain full candidate validation.
+        quiet_progress
+        run_hard nix flake check ./config/ai --all-systems --no-build --no-eval-cache
+        quiet_progress
+        run_hard nix flake show --json --drv-paths --all-systems --option eval-cores 1 --option lazy-trees false --option eval-cache false >/dev/null
+        quiet_progress
+        run_hard nix flake check --no-build --option eval-cores 1 --option lazy-trees false --option eval-cache false
+    fi
 
     declare -A allowed=()
     while IFS= read -r path; do

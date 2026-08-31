@@ -14,7 +14,7 @@ consumer's authoritative checkout.
 
 | Purpose | Command | Operational boundary |
 |---|---|---|
-| Update all flake inputs and automatic catalog targets | `make update` | Pulls, validates, signs, switches the current host, and publishes only after validation and activation succeed |
+| Update all flake inputs and catalog projections | `make update` | Pulls, validates, signs, switches the current host, and publishes only after validation and activation succeed |
 | Inspect every managed source and its executor | `bin/update-overlay --inventory --json` | Read-only catalog validation and machine-readable command routing |
 | Run the ordinary commit gate | `lefthook run pre-commit --all-files` | Repository-wide formatting and static analysis; two-minute outer envelope; behavioral tests run in CI |
 | Run low-frequency expensive assurance | `make expensive` | Consumer assurance, every current-system behavioral check, evaluation-only gates, and a Darwin build; run the pre-commit gate separately for formatting and static lint |
@@ -44,13 +44,15 @@ This delegates to:
 bin/update --quiet --all-inputs --pull --commit --switch --push
 ```
 
-The transaction updates both flake locks and every automatic source catalog
-record under `sources/`. Quiet mode streams progress dots, then reports accepted
-version or revision changes after the transaction succeeds;
-`make update-verbose` exposes the full diagnostic path. The transaction requires
-a clean checkout, takes a repository lock,
-constructs an isolated candidate worktree, rejects undeclared file changes, runs
-the required validation, creates a signed commit, activates the exact candidate,
+The transaction updates root and portable flake locks plus each catalog-backed
+flake-input projection under `sources/`. `--all-inputs` excludes ordinary catalog
+releases such as PyPI packages; it realizes only dependent hashes required by a
+changed flake-input projection, never its final package/check contract. Quiet mode
+streams progress dots, then reports accepted version or revision changes after the
+transaction succeeds; `make update-verbose` exposes the full diagnostic path. The
+transaction requires a clean checkout, takes a repository lock, constructs an
+isolated candidate worktree, rejects undeclared file changes, validates catalog
+projections, creates a signed commit, activates the exact candidate,
 fast-forwards the checked-out branch, and publishes through `bin/publish`.
 Homebrew is intentionally outside this transaction.
 
@@ -58,13 +60,11 @@ On Darwin, the candidate is evaluated and built by the invoking user. The
 switch phase elevates only the system-profile update and the already-built
 candidate's activation; it does not evaluate the flake again as root.
 
-Automatic catalog targets are attempted one at a time. If a resolved candidate
-fails its package build, that target's source record, hashes, generated locks,
-and flake locks are restored and its retained version is reported; later targets
-still run against the accepted on-disk state. One explicitly selected rejection,
-or a pass in which every selected target is rejected, exits nonzero. Command
-errors, signals, restore failures, undeclared mutations, and the final repository
-validation remain fatal to the whole transaction.
+Explicit catalog-target updates run their declared package build, final flake
+evaluation, and hold back a rejected source. `--all-inputs` does not: failure to
+resolve a required dependent hash remains fatal because it cannot safely retain a
+mismatched projection. Command errors, signals, restore failures, and undeclared
+mutations remain fatal to every transaction.
 
 The target checkout is selected in this order: `NIX_CONFIG_DIR`; the system
 checkout (`UPDATE_AGENTS_SYSTEM_CONFIG_DIR`, default `/etc/nixos`) when that
@@ -87,7 +87,7 @@ is deliberately retained for inspection and an explicit retry.
 Useful narrower forms are:
 
 ```sh
-# Validate all flake inputs and automatic targets without changing the checkout.
+# Validate all flake inputs and their catalog projections without changing checkout.
 bin/update --all-inputs --dry-run
 
 # Preview one target owned by the catalog executor.

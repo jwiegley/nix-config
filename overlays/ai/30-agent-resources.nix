@@ -27,4 +27,7 @@ in
 gallery
 // {
   agent-resources = prev.callPackage ../../packages/agent-resources.nix { inherit inputs; };
+  pi-coding-agent-source-build = prev.callPackage ../../packages/pi-source-build.nix {
+    piSource = inputs.pi;
+  };
 }

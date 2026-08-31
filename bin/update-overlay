@@ -1910,7 +1910,10 @@ def load_source_catalog(
     common_update_fields = {"artifacts", "kind", "policy", "reason"}
     update_schema = {
         "explicit-rev": (common_update_fields | {"branch"}, set()),
-        "fixed-flake-input": (common_update_fields | {"input"}, {"input"}),
+        "fixed-flake-input": (
+            common_update_fields | {"buildPackage", "input", "versionPath"},
+            {"input"},
+        ),
         "flake-input": (
             common_update_fields | {"buildMode", "buildPackage", "input"},
             {"input"},
@@ -2018,6 +2021,17 @@ def load_source_catalog(
                 raise RuntimeError(
                     f"invalid update build mode for source catalog record: {name}"
                 )
+            version_path = update.get("versionPath")
+            if version_path is not None and (
+                not isinstance(version_path, str)
+                or not version_path
+                or Path(version_path).is_absolute()
+                or ".." in Path(version_path).parts
+                or re.fullmatch(r"[A-Za-z0-9._/-]+", version_path) is None
+            ):
+                raise RuntimeError(
+                    f"invalid flake input version path for source catalog record: {name}"
+                )
             if kind == "flake-input+build" and (
                 not isinstance(update["buildPackage"], str)
                 or not update["buildPackage"]
@@ -2025,6 +2039,10 @@ def load_source_catalog(
             ):
                 raise RuntimeError(
                     f"invalid flake input build strategy for source catalog record: {name}"
+                )
+            if kind == "fixed-flake-input" and hashes and build_package is None:
+                raise RuntimeError(
+                    f"fixed flake input with dependent hashes requires a build package: {name}"
                 )
             source_args = record["source"]["args"]
             source_fetcher = record["source"]["fetcher"]
@@ -2293,7 +2311,11 @@ def load_source_catalog(
 
 
 def resolve_flake_input_version(
-    nix_dir: Path, input_name: str, locked: dict, runner=subprocess.run
+    nix_dir: Path,
+    input_name: str,
+    locked: dict,
+    version_path: str = "package.json",
+    runner=subprocess.run,
 ) -> str:
     fetch_args = {
         field: locked[field]
@@ -2302,7 +2324,7 @@ def resolve_flake_input_version(
     expression = f"""
 let
   input = builtins.fetchTree (builtins.fromJSON {json.dumps(json.dumps(fetch_args))});
-  package = builtins.fromJSON (builtins.readFile (input.outPath + "/package.json"));
+  package = builtins.fromJSON (builtins.readFile (input.outPath + "/{version_path}"));
 in
   package.version
 """
@@ -2375,13 +2397,21 @@ def sync_flake_projections(
         projection["url"] = projected_url
         record_changed = True
     update = record["update"]
-    if update["kind"] in {"flake-input+build", "flake-input+copy"}:
-        projected_version = version_resolver(nix_dir, input_name, locked)
+    version_path = update.get("versionPath")
+    if update["kind"] in {"flake-input+build", "flake-input+copy"} or version_path:
+        projected_version = (
+            version_resolver(nix_dir, input_name, locked, version_path)
+            if version_path
+            else version_resolver(nix_dir, input_name, locked)
+        )
         if record.get("version") != projected_version:
             record["version"] = projected_version
             record_changed = True
     path = target["_path"]
-    if update["kind"] == "flake-input+build" and record_changed:
+    needs_dependent_hashes = update["kind"] == "flake-input+build" or (
+        update["kind"] == "fixed-flake-input" and bool(record.get("hashes"))
+    )
+    if needs_dependent_hashes and record_changed:
         dependent_hashes = record["hashes"]
         for hash_type in dependent_hashes:
             dependent_hashes[hash_type] = DUMMY_SRI_HASH
@@ -3458,27 +3488,29 @@ def update_catalog_target(
 
     computed = []
     build_mode = update.get("buildMode")
-    for hash_type, old_dependent_hash in record.get("hashes", {}).items():
-        record["hashes"][hash_type] = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-        _write_catalog_target(target)
-        new_dependent_hash = (
-            hash_computer._compute_fod_hash(name, hash_type, build_mode)
-            if build_mode
-            else hash_computer._compute_fod_hash(name, hash_type)
-        )
-        if not new_dependent_hash:
-            record["hashes"][hash_type] = old_dependent_hash
+    defer_dependent_hashes = kind == "fixed-flake-input" and bool(record.get("hashes"))
+    if not defer_dependent_hashes:
+        for hash_type, old_dependent_hash in record.get("hashes", {}).items():
+            record["hashes"][hash_type] = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
             _write_catalog_target(target)
-            print(f"{display} {Colors.RED}✗ {hash_type} failed{Colors.RESET}")
-            return "failed"
-        record["hashes"][hash_type] = new_dependent_hash
-        computed.append(hash_type)
+            new_dependent_hash = (
+                hash_computer._compute_fod_hash(name, hash_type, build_mode)
+                if build_mode
+                else hash_computer._compute_fod_hash(name, hash_type)
+            )
+            if not new_dependent_hash:
+                record["hashes"][hash_type] = old_dependent_hash
+                _write_catalog_target(target)
+                print(f"{display} {Colors.RED}✗ {hash_type} failed{Colors.RESET}")
+                return "failed"
+            record["hashes"][hash_type] = new_dependent_hash
+            computed.append(hash_type)
     _write_catalog_target(target)
     validation_package = update.get("buildPackage")
     if validation_package is None and build_mode and computed:
         validation_package = name
     validation_mode = build_mode or "pkg"
-    if validation_package and not hash_computer.validate_package_build(
+    if not defer_dependent_hashes and validation_package and not hash_computer.validate_package_build(
         validation_package, validation_mode
     ):
         label = "package" if validation_mode == "pkg" else validation_mode
