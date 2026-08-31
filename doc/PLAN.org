@@ -6391,6 +6391,22 @@ CI Python lint/test commands consume the same repository-pinned tools as direnv;
 ]
 #+end_src
 
+* DOING [#C] Deploy agent-cat /wf catalogue command
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-gbae
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-30 Sun 20:00]
+:MODIFIED: [2026-08-30 Sun 20:00]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Advance the managed agent-cat Pi extension to the signed revision that renames /workflows to /wf, verify Gallery coexistence with pi-dynamic-workflows, and activate Hera.
+
 * DONE [#C] Restore Agda to shared-work packages after its build is healthy
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

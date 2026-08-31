@@ -45,10 +45,10 @@
       },
       "source": {
         "args": {
-          "hash": "sha256-6SqnDTETVvHwVRVLsvN92ee68LtCT4ImkUKiq69LQ0s=",
+          "hash": "sha256-6XfKbAw3W8Kf9Jm4Qu8GAziPgkPyFOA6JS7GabpyAqk=",
           "owner": "jwiegley",
           "repo": "agent-cat",
-          "rev": "d236c49791beca77a8e4318d1f575d3c2f8181e8"
+          "rev": "4005e8ad7204326e05498126be43706037ca9fd3"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jwiegley/agent-cat"
