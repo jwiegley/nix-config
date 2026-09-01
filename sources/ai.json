@@ -1227,10 +1227,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-UYCSXD6mIX04dBSkSR2lEifmDej0F4JvrEZLRJdhEik=",
+          "narHash": "sha256-ex0blV4+9IYBLD8W1IEpEUAGNrom7L3CUHaQ7rRhzh8=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "f46fd867d270eb1789b9f8c1ee5fc8d5e62a6b0b",
+          "rev": "8e6304612ad27dee203207cf0aa9e7af3ae26880",
           "type": "github"
         },
         "fetcher": "fetchTree",
