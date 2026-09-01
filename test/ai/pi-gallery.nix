@@ -405,8 +405,10 @@ runCommand "pi-gallery-check"
     [ -f ${roots.flag}/src/focus.ts ]
     [ -f ${roots.flag}/README.md ]
     [ ! -e ${roots.flag}/node_modules ]
-    grep -F 'sessionManager.getEntries()' ${roots.flag}/index.ts >/dev/null \
-      || fail "pi-flag must restore active session-scoped flags from the session journal"
+    ! grep -E 'sessionManager\.get(Entries|Branch)\(' ${roots.flag}/index.ts >/dev/null \
+      || fail "pi-flag still consumes full session history"
+    grep -F 'sessionManager.getEntriesPage({' ${roots.flag}/index.ts >/dev/null \
+      || fail "pi-flag must restore flags from a bounded history page"
     grep -F 'pi.on("before_agent_start"' ${roots.flag}/index.ts >/dev/null \
       || fail "pi-flag must project active flags before an agent starts"
 
@@ -1588,12 +1590,12 @@ runCommand "pi-gallery-check"
       PI_DROID_SDK_ROOT=${roots.droid} \
       ${bun}/bin/bun test ${sourceForChecks}/test/ai/pi-droid-sdk.check.ts
     for sdk_dist in \
-      ${roots.droid}/node_modules/@factory/droid-sdk/dist/index.js \
-      ${roots.droid}/node_modules/@factory/droid-sdk/dist/index.cjs
+      ${roots.droid}/node_modules/@factory/droid-sdk/dist/node.js \
+      ${roots.droid}/node_modules/@factory/droid-sdk/dist/node.mjs
     do
-      [ "$(grep -Fc 'const mergedEnv = this.env ?? {};' "$sdk_dist")" -eq 1 ] \
+      [ "$(grep -Fc '          ...config.env' "$sdk_dist")" -eq 1 ] \
         || fail "Factory SDK child environment is not fail-closed in $sdk_dist"
-      ! grep -Fq '{ ...process.env, ...this.env }' "$sdk_dist" \
+      ! grep -Fq '          ...process.env,' "$sdk_dist" \
         || fail "Factory SDK still merges the parent environment in $sdk_dist"
     done
     [ "$(grep -hF 'execPath: getDroidExecPath(),' \

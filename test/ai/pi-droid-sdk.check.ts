@@ -69,15 +69,29 @@ const factorySdk = await import(
 let createSessionCalls = 0;
 let createSessionOptions: Record<string, unknown> | undefined;
 let discoverySession: Record<string, unknown> | undefined;
-mock.module("@factory/droid-sdk", () => ({
-	...factorySdk,
-	createSession: (options: Record<string, unknown>) => {
-		createSessionCalls += 1;
-		createSessionOptions = options;
-		if (discoverySession) return discoverySession;
-		throw new Error("Droid startup is outside the credential-free load test");
-	},
-}));
+let nodeSdkLoads = 0;
+let listModelsCalls = 0;
+let listModelsOptions: Record<string, unknown> | undefined;
+let liveModels: unknown[] | undefined;
+let streamOptions: Record<string, unknown> | undefined;
+mock.module("@factory/droid-sdk", () => factorySdk);
+mock.module("@factory/droid-sdk/node", () => {
+	nodeSdkLoads += 1;
+	return {
+		createSession: (options: Record<string, unknown>) => {
+			createSessionCalls += 1;
+			createSessionOptions = options;
+			if (discoverySession) return discoverySession;
+			throw new Error("Droid startup is outside the credential-free load test");
+		},
+		listModels: async (options: Record<string, unknown>) => {
+			listModelsCalls += 1;
+			listModelsOptions = options;
+			if (liveModels) return liveModels;
+			throw new Error("Droid discovery is outside the credential-free load test");
+		},
+	};
+});
 
 const [
 	{ default: registerDroid },
@@ -96,14 +110,20 @@ const [
 ]);
 const { AutonomyLevel, ToolConfirmationOutcome, ToolConfirmationType } =
 	factorySdk;
-const factoryLiveModel = factorySdk.AvailableModelConfigSchema.parse({
-	id: "factory-live-test",
-	modelId: "factory-live-test",
-	displayName: "Factory live test",
-	shortDisplayName: "Live test",
+const factoryLiveModel = factorySdk.ModelInfoSchema.parse({
+	id: "gpt-5.6-sol",
+	displayName: "GPT-5.6 Sol",
+	shortDisplayName: "GPT-5.6 Sol",
 	modelProvider: factorySdk.ModelProvider.FACTORY,
-	supportedReasoningEfforts: [factorySdk.ReasoningEffort.Off],
-	defaultReasoningEffort: factorySdk.ReasoningEffort.Off,
+	supportedReasoningEfforts: [
+		factorySdk.ReasoningEffort.None,
+		factorySdk.ReasoningEffort.Low,
+		factorySdk.ReasoningEffort.Medium,
+		factorySdk.ReasoningEffort.High,
+		factorySdk.ReasoningEffort.ExtraHigh,
+		factorySdk.ReasoningEffort.Max,
+	],
+	defaultReasoningEffort: factorySdk.ReasoningEffort.Medium,
 });
 
 type Provider = {
@@ -168,11 +188,15 @@ test("uses the bundled Factory catalog until explicit refresh", async () => {
 	expect(tools).not.toContain("droid_ask_question");
 	expect(activeTools).toEqual([]);
 	expect(createSessionCalls).toBe(0);
+	expect(listModelsCalls).toBe(0);
+	expect(nodeSdkLoads).toBe(0);
 	expect(refreshModels).toBeFunction();
 	await (
 		refreshModels as (args: string, ctx: { hasUI: boolean }) => Promise<void>
 	)("", { hasUI: false });
 	expect(authQueries).toEqual(["factory"]);
+	expect(listModelsCalls).toBe(0);
+	expect(nodeSdkLoads).toBe(0);
 });
 
 test("reads stored Factory auth through the current Pi credential API", async () => {
@@ -186,14 +210,7 @@ test("reads stored Factory auth through the current Pi credential API", async ()
 		{ flag: "wx", mode: 0o600 },
 	);
 	useStoredFactoryCredential = true;
-	discoverySession = {
-		initResult: {
-			availableModels: [factoryLiveModel],
-		},
-		close: async () => {
-			closeCalls += 1;
-		},
-	};
+	liveModels = [factoryLiveModel];
 	try {
 		expect(await getDiscoveryApiKey()).toBe("stored-factory-key");
 		expect(await resolveFactoryApiKey("stored-factory-key")).toBe(
@@ -203,24 +220,34 @@ test("reads stored Factory auth through the current Pi credential API", async ()
 			await resolveFactoryApiKey("cross-provider-decoy"),
 		).toBeUndefined();
 		const models = await discoverModels();
-		expect(models.map((model) => model.id)).toEqual(["factory-live-test"]);
+		expect(models.map((model) => model.id)).toEqual(["gpt-5.6-sol"]);
+		expect(nodeSdkLoads).toBe(1);
 		const requestModel = models[0];
 		if (!requestModel) throw new Error("Factory discovery returned no model");
-		expect(createSessionOptions?.execPath).toBe(expectedExecPath);
-		expect(
-			(createSessionOptions?.env as Record<string, unknown>).FACTORY_API_KEY,
-		).toBe("stored-factory-key");
-		expect(closeCalls).toBe(1);
+		expect(listModelsOptions?.apiKey).toBe("stored-factory-key");
+		expect(listModelsOptions?.execPath).toBe(expectedExecPath);
+		expect(listModelsOptions?.env).toEqual(
+			buildDroidProcessEnv("stored-factory-key", process.env),
+		);
 
 		discoverySession = {
-			async *stream() {
-				yield { type: factorySdk.DroidMessageType.TurnComplete };
+			async *stream(_prompt: unknown, options: Record<string, unknown>) {
+				streamOptions = options;
+				yield {
+					type: factorySdk.DroidMessageType.Result,
+					subtype: "success",
+					success: true,
+					interrupted: false,
+					error: null,
+					tokenUsage: null,
+				};
 			},
 			close: async () => {
 				closeCalls += 1;
 			},
 		};
 		createSessionOptions = undefined;
+		streamOptions = undefined;
 		streamDroid(
 			{
 				...requestModel,
@@ -235,18 +262,26 @@ test("reads stored Factory auth through the current Pi credential API", async ()
 		);
 		if (!assistantStreamFinished) throw new Error("Factory stream did not start");
 		await assistantStreamFinished;
+		expect(createSessionOptions?.apiKey).toBe("stored-factory-key");
+		expect(createSessionOptions?.reasoningEffort).toBe(
+			factorySdk.ReasoningEffort.None,
+		);
 		expect(createSessionOptions?.execPath).toBe(expectedExecPath);
 		expect(createSessionOptions?.env).toEqual(
 			buildDroidProcessEnv("stored-factory-key", process.env),
 		);
+		expect(streamOptions?.includePartialMessages).toBe(true);
 		expect(assistantStreamEvents.map((event) => event.type)).toContain("done");
 		expect(assistantStreamEvents.map((event) => event.type)).not.toContain(
 			"error",
 		);
-		expect(closeCalls).toBe(2);
+		expect(closeCalls).toBe(1);
 	} finally {
 		discoverySession = undefined;
+		liveModels = undefined;
+		listModelsOptions = undefined;
 		createSessionOptions = undefined;
+		streamOptions = undefined;
 		useStoredFactoryCredential = false;
 		await unlink(authPath);
 	}
@@ -254,18 +289,12 @@ test("reads stored Factory auth through the current Pi credential API", async ()
 });
 
 test("reads Factory auth from the environment for model discovery", async () => {
-	let closeCalls = 0;
 	const originalOmlxKey = process.env.OMLX_API_KEY;
 	const originalSshAgent = process.env.SSH_AUTH_SOCK;
 	process.env.FACTORY_API_KEY = "environment-factory-key";
 	process.env.OMLX_API_KEY = "blocked-discovery-secret";
 	process.env.SSH_AUTH_SOCK = "/blocked/agent.sock";
-	discoverySession = {
-		initResult: { availableModels: [factoryLiveModel] },
-		close: async () => {
-			closeCalls += 1;
-		},
-	};
+	liveModels = [factoryLiveModel];
 	try {
 		expect(await getDiscoveryApiKey()).toBe("environment-factory-key");
 		const expectedDroidEnv = buildDroidProcessEnv(
@@ -273,17 +302,18 @@ test("reads Factory auth from the environment for model discovery", async () => 
 			process.env,
 		);
 		const models = await discoverModels();
-		expect(models.map((model) => model.id)).toEqual(["factory-live-test"]);
-		expect(createSessionOptions?.env).toEqual(expectedDroidEnv);
-		expect(closeCalls).toBe(1);
+		expect(models.map((model) => model.id)).toEqual(["gpt-5.6-sol"]);
+		expect(listModelsOptions?.apiKey).toBe("environment-factory-key");
+		expect(listModelsOptions?.execPath).toBe(expectedExecPath);
+		expect(listModelsOptions?.env).toEqual(expectedDroidEnv);
 	} finally {
 		delete process.env.FACTORY_API_KEY;
 		if (originalOmlxKey === undefined) delete process.env.OMLX_API_KEY;
 		else process.env.OMLX_API_KEY = originalOmlxKey;
 		if (originalSshAgent === undefined) delete process.env.SSH_AUTH_SOCK;
 		else process.env.SSH_AUTH_SOCK = originalSshAgent;
-		discoverySession = undefined;
-		createSessionOptions = undefined;
+		liveModels = undefined;
+		listModelsOptions = undefined;
 	}
 });
 

@@ -204,6 +204,7 @@ assert builtins.hasAttr "pi-gpt-fast-mode" pkgs.pi-gallery.packages;
       "${root}/extensions/pi-loop/index.ts".source =
         "${pkgs.pi-gallery.packages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts";
       "${root}/extensions/pi-flag/index.ts".source = "${pkgs.pi-flag}/share/pi-packages/pi-flag/index.ts";
+      "${root}/extensions/pi-flag/src".source = "${pkgs.pi-flag}/share/pi-packages/pi-flag/src";
       "${root}/extensions/pi-mcp-adapter".source = "${extensionRoot}/pi-mcp-adapter";
       "${root}/extensions/pi-quiet".source = "${extensionRoot}/pi-quiet";
       "${root}/keybindings.json".source = json.generate "pi-${profile.id}-keybindings.json" keybindings;

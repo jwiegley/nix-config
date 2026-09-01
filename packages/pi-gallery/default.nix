@@ -498,23 +498,23 @@ let
         .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-protocol"].version,
         .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-telemetry"].version,
         .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui"].version
-      ] | all(. == "0.84.3"))
+      ] | all(. == "0.84.4"))
     ' "$out/package-lock.json" >/dev/null
     ${normalizeMissingPiIntegrities {
       lockFile = "$out/package-lock.json";
       integrities = {
         "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core" =
-          "sha512-VURr+xBRl3RxYcw3kT9Pn3yfi6LbRoCJgHF7h1mAblMjtLNV/MfG/RyF0uJizBAM886AEakSiw3j9c/aSngppg==";
+          "sha512-HyUnjaOXj6oN/6SNcr8A1J/ElRQA50FtIE0XUTSKAQVqmdlb9qdojOyUQwF/jULE5+yOEtGuVgi/N1RnBiNG+g==";
         "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-ai" =
-          "sha512-M0YUV8vNO3y2WwWSyY8ijKJV5W4gkSUixuvk+Z00ZBjsyMfsdXfITsHEwP1UIf09YRWXT6oGn0GlCamt+P32XQ==";
+          "sha512-AClAZxf5+c4RRu44NJPS6wyQy+Nmq+Mzyyrdvm4ZVMNuixelO02RZX4G4Aq1F145Yzp43wnM5S+hLlSI7ypfVw==";
         "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-client" =
-          "sha512-zfErYane+390W0xpBJ/FWCp6aktPpkpcIcXUeZiAziWLoxE80ZNQALRyOSa/gGS5V+1OkNnMYxRxbzN0zUvnOA==";
+          "sha512-q398WY/3ZQHTizk7IKxApzqFV0xt4yM9LkSkwyqeLK5Bj5RwRjOWxESt26z4LgNp4O+8hqhqFPf/8fj4H5rE4A==";
         "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-protocol" =
-          "sha512-9a4g6WhLOvRqvsIOFaWxg/2gdrbY4Thclwj5ipLUPAWChfsDJ/8XdPc2sRhSOkD6EsxpEFJz3xppcfwI6EcZDg==";
+          "sha512-acyE9ozxkMiWiz/xyWpU0O9vwnYv0hyG889Vniv6Sg9c9zfsX+8MePnDNphBacY2Fvm1rxdsGmiVDSZl9yuDFA==";
         "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-telemetry" =
-          "sha512-sgEkWoKrvSGaKn+YfLLFZmn+/A7B/w62eLwTD57nI+C9to8ITlFFVbgC2OtwvPnT3NFGHdCd53qhBEMIlptD1g==";
+          "sha512-8e2CuxM+ht+hedQXTZmi5JVl6/xDK9RpSDL2+MbITevKYQhMZ/z6lJOTFgox3HQyGxO8mOZEtYGVeQNaD4OzqA==";
         "node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui" =
-          "sha512-fS6OEQKEEALnKa6Uw8LcgZZ+9CWck7f3MQSCETQp6leUgIFwMEDtKmOUnL9nsYm+RIPmy7OmplVxYRbV6hiaFg==";
+          "sha512-nPUnwDkLtupPXnZQYrCwPFcuTydCDqTY6ZbFqhsL4S4kVq0AT418kPa/6uXwtaCD+MjBNBltb7ScTYX65yeE1w==";
       };
     }}
   '';
@@ -579,6 +579,27 @@ let
           )
       ] | length == 0)
     ' "$out/package-lock.json" >/dev/null
+    ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+      --directory="$out" --strip=1 \
+      < ${./patches/pi-droid-sdk-managed-runtime.patch}
+    ${jq}/bin/jq -e '
+      .dependencies == {
+        "@factory/droid-sdk": "^0.9.0",
+        "zod": "^3.25.76"
+      }
+    ' "$out/package.json" >/dev/null
+    ${jq}/bin/jq -e '
+      .lockfileVersion == 3
+      and .packages["node_modules/@factory/droid-sdk"].version == "0.9.0"
+      and .packages["node_modules/zod"].version == "3.25.76"
+      and ([
+        .packages[]
+        | select(
+            (.dev != true and .peer != true)
+            and .hasInstallScript == true
+          )
+      ] | length == 0)
+    ' "$out/package-lock.json" >/dev/null
     ${normalizeMissingPiIntegrities {
       lockFile = "$out/package-lock.json";
       integrities = {
@@ -590,9 +611,6 @@ let
           "sha512-PDhKU7u6fmEcvHUFHzrRwGc/Ytokj/hO+X4RPf+MWKEGpvg3B1vHv88Ee+Dy33004tYkQF5YeXV4btJZcp5x1g==";
       };
     }}
-    ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
-      --directory="$out" --strip=1 \
-      < ${./patches/pi-droid-sdk-managed-runtime.patch}
     substituteInPlace "$out/src/droid-process-env.ts" \
       --replace-fail '@droid@' ${lib.escapeShellArg (lib.getExe droidRuntime)}
     patch_artifact="$(
@@ -696,8 +714,8 @@ let
         and .type == "module"
         and .pi.extensions == ["./index.ts"]
         and .peerDependencies == {
-          "@earendil-works/pi-coding-agent": ">=0.84.3 <0.85.0",
-          "@earendil-works/pi-tui": ">=0.84.3 <0.85.0"
+          "@earendil-works/pi-coding-agent": ">=0.84.4 <0.85.0",
+          "@earendil-works/pi-tui": ">=0.84.4 <0.85.0"
         }
         and (.dependencies == null)
         and ([
@@ -774,13 +792,11 @@ let
     prepareBundle = root: ''
       rmdir ${root}/node_modules/@earendil-works
       for sdk_dist in \
-        ${root}/node_modules/@factory/droid-sdk/dist/index.js \
-        ${root}/node_modules/@factory/droid-sdk/dist/index.cjs
+        ${root}/node_modules/@factory/droid-sdk/dist/node.js \
+        ${root}/node_modules/@factory/droid-sdk/dist/node.mjs
       do
         substituteInPlace "$sdk_dist" \
-          --replace-fail \
-            'const mergedEnv = this.env ? { ...process.env, ...this.env } : void 0;' \
-            'const mergedEnv = this.env ?? {};'
+          --replace-fail '          ...process.env,' '          '
       done
     '';
   };

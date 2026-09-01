@@ -1242,6 +1242,22 @@ Package devwithpug/pi-gpt-fast-mode through the Nix-owned Pi Gallery/source cata
 
 Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and GIT_NAMESPACE from hermetic Git fixture environments, with a regression that proves both selectors cannot leak into fixture commands.
 
+* TODO [#C] Update publish test after removing lefthook pre-push hook
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-3cuh
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-31 Mon 23:42]
+:MODIFIED: [2026-08-31 Mon 23:42]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+publish-slow-test still indexes a pre-push block removed by commit 3ff49de0, causing make test to fail on clean HEAD.
+
 * DONE [#B] Move Pi downstream patches into maintained fork
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -4947,6 +4963,24 @@ Agent Deck WriteInboxEvent fsyncs the file but does not durably sync a newly cre
   }
 ]
 #+end_src
+
+* DONE [#C] Require bounded pi-flag history before Gallery projection
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-d9f8
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-08-31 Mon 23:57]
+:MODIFIED: [2026-09-01 Tue 12:41]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-01 Tue 12:41]
+:CLOSE_REASON: Pinned bounded pi-flag history APIs and Gallery contract; package check passes.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+pi-flag calls sessionManager.getEntries() and getBranch(), violating managed Gallery bounded-history policy; replace with bounded APIs before projection.
 
 * DONE [#B] Repair Hera Agent Deck Clio remote SSH alias
 :PROPERTIES:
@@ -10013,14 +10047,14 @@ Partner observation 2026-08-11T05:53:30.821Z: signed commit 71870d60 reordered t
 
 VPS cross-consumer evaluation failed because shared config set programs.starship.presets against release-25.11, which lacks that option. Gate the preset on the Home Manager option surface while retaining it on current consumers.
 
-* TODO [#B] Restore Pi bundled startup performance on Hera without regressions :hera:performance:pi:
+* DOING [#B] Restore Pi bundled startup performance on Hera without regressions :hera:performance:pi:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-pi-bundled-startup-performance-mdcb
 :LABELS:   ["hera","performance","pi"]
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-28 Fri 23:26]
-:MODIFIED: [2026-08-31 Mon 14:07]
+:MODIFIED: [2026-09-01 Tue 12:21]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -18499,6 +18533,24 @@ Agent tooling never searches for executables by recursively traversing home, fil
 ]
 #+end_src
 
+* DONE [#C] Upgrade Factory Droid SDK to 0.9.0
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-veuh
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-31 Mon 21:47]
+:MODIFIED: [2026-08-31 Mon 23:05]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-31 Mon 23:05]
+:CLOSE_REASON: Upgraded managed Droid SDK to 0.9.0; live catalog refresh and child-env regressions pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Upgrade managed pi-droid-sdk from @factory/droid-sdk 0.2.0 to 0.9.0, use current model discovery API, retain credential and child-environment boundaries, and restore live Factory model refresh including gpt-5.6-sol.
+
 * DONE [#C] Make Agent Deck remote JSON diagnostics preserve failures
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -19415,6 +19467,24 @@ The full session suite measures DrainInboxForParent n=25 at 8.757738ms against a
   }
 ]
 #+end_src
+
+* DONE [#C] Refresh pi-mcp-adapter public dist parity inventory
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-x21f
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-08-31 Mon 23:32]
+:MODIFIED: [2026-08-31 Mon 23:32]
+:CREATED_BY: johnw
+:FINISHED: [2026-08-31 Mon 23:32]
+:CLOSE_REASON: Added mcp-bearer-store public artifact to parity inventory; agent-resources check passes.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Include the upstream mcp-bearer-store public build artifact in agent-resources parity coverage.
 
 * DONE [#B] Accept byte-identical Pi session indexes after NFS metadata drift
 :PROPERTIES:

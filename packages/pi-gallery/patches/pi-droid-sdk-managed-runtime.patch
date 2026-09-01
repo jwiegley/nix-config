@@ -1,74 +1,157 @@
-diff --git a/src/index.ts b/src/index.ts
-index 253cada..965d8f7 100644
---- a/src/index.ts
-+++ b/src/index.ts
-@@ -1,5 +1,5 @@
- import type { ExtensionAPI, ExtensionContext, ProviderConfig, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
--import { discoverModels, type DroidModelFallbackIssue } from "./model-discovery.js";
-+import { discoverModels, fallbackModels, type DroidModelFallbackIssue } from "./model-discovery.js";
- import { registerDroidPiToolBridge } from "./droid-pi-tool-bridge.js";
- import { registerDroidQuestionTool } from "./droid-question-tool.js";
- import { registerDroidSessionCwd } from "./droid-session-cwd.js";
-@@ -34,6 +34,25 @@
- 	pi.registerProvider("factory", createDroidProviderConfig(models));
- }
- 
-+async function discoverCatalog(refresh: boolean) {
-+	let fallbackIssue: DroidModelFallbackIssue | undefined;
-+	const models = refresh
-+		? await discoverModels({
-+			onFallback: (issue) => {
-+				fallbackIssue = issue;
-+			},
-+		})
-+		: fallbackModels();
-+	return { models, fallbackIssue };
-+}
-+
-+let catalogPromise: ReturnType<typeof discoverCatalog> | undefined;
-+
-+function loadCatalog(refresh = false) {
-+	if (refresh || !catalogPromise) catalogPromise = discoverCatalog(refresh);
-+	return catalogPromise;
-+}
-+
- export default async function (pi: DroidExtensionApi) {
- 	registerDroidSessionCwd(pi);
- 	registerDroidQuestionTool(pi);
-@@ -43,12 +62,7 @@
- 		setDroidAskUserUiContext({ hasUI: ctx.hasUI, ui: ctx.ui });
- 	});
- 
--	let fallbackIssue: DroidModelFallbackIssue | undefined;
--	const models = await discoverModels({
--		onFallback: (issue) => {
--			fallbackIssue = issue;
--		},
--	});
-+	const { models, fallbackIssue } = await loadCatalog();
- 
- 	if (fallbackIssue) {
- 		const issue = fallbackIssue;
-@@ -60,12 +74,8 @@
- 	pi.registerCommand("droid-refresh-models", {
- 		description: "Refresh the live Factory model catalog without restarting pi",
- 		handler: async (_args, ctx) => {
--			let refreshFallbackIssue: DroidModelFallbackIssue | undefined;
--			const refreshedModels = await discoverModels({
--				onFallback: (issue) => {
--					refreshFallbackIssue = issue;
--				},
--			});
-+			const { models: refreshedModels, fallbackIssue: refreshFallbackIssue } =
-+				await loadCatalog(true);
- 			registerDroidProvider(pi, refreshedModels);
- 			if (!ctx.hasUI) return;
- 			if (refreshFallbackIssue) {
+diff --git a/package-lock.json b/package-lock.json
+index da8d535..7aa24ba 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -9,7 +9,7 @@
+ 			"version": "0.1.0",
+ 			"license": "MIT",
+ 			"dependencies": {
+-				"@factory/droid-sdk": "^0.2.0",
++				"@factory/droid-sdk": "^0.9.0",
+ 				"zod": "^3.25.76"
+ 			},
+ 			"devDependencies": {
+@@ -2522,13 +2522,18 @@
+ 			}
+ 		},
+ 		"node_modules/@factory/droid-sdk": {
+-			"version": "0.2.0",
+-			"resolved": "https://registry.npmjs.org/@factory/droid-sdk/-/droid-sdk-0.2.0.tgz",
+-			"integrity": "sha512-m8Srp98pTvu5jAZtZpX6/Ojut6KV3CiqUGh0MXBUcsuKzsDw8hODZEbPTocxP6MrT0rsoKpqCS9SRTt0m+9cqw==",
++			"version": "0.9.0",
++			"resolved": "https://registry.npmjs.org/@factory/droid-sdk/-/droid-sdk-0.9.0.tgz",
++			"integrity": "sha512-JufTyFIahg4tbgPftzPTrw+cggGaq9UOGKAfVpRA0LsJoZeuPKVuCI6DF1TRGsjJKY7obgofcVM06ESzm2f2wg==",
+ 			"license": "Apache-2.0",
+ 			"dependencies": {
+ 				"@modelcontextprotocol/sdk": "^1.29.0",
+-				"uuid": "^11.1.0",
++				"@opentelemetry/api": "^1.9.0",
++				"eventemitter3": "^5.0.1",
++				"fast-deep-equal": "^3.1.3",
++				"isows": "^1.0.7",
++				"uuid": "^9.0.0",
++				"ws": "^8.21.0",
+ 				"zod": "^3.24.0"
+ 			},
+ 			"engines": {
+@@ -2663,6 +2668,15 @@
+ 			],
+ 			"license": "MIT"
+ 		},
++		"node_modules/@opentelemetry/api": {
++			"version": "1.9.1",
++			"resolved": "https://registry.npmjs.org/@opentelemetry/api/-/api-1.9.1.tgz",
++			"integrity": "sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q==",
++			"license": "Apache-2.0",
++			"engines": {
++				"node": ">=8.0.0"
++			}
++		},
+ 		"node_modules/@oxc-project/types": {
+ 			"version": "0.132.0",
+ 			"resolved": "https://registry.npmjs.org/@oxc-project/types/-/types-0.132.0.tgz",
+@@ -3738,6 +3752,12 @@
+ 				"node": ">= 0.6"
+ 			}
+ 		},
++		"node_modules/eventemitter3": {
++			"version": "5.0.4",
++			"resolved": "https://registry.npmjs.org/eventemitter3/-/eventemitter3-5.0.4.tgz",
++			"integrity": "sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw==",
++			"license": "MIT"
++		},
+ 		"node_modules/eventsource": {
+ 			"version": "3.0.7",
+ 			"resolved": "https://registry.npmjs.org/eventsource/-/eventsource-3.0.7.tgz",
+@@ -4269,6 +4289,21 @@
+ 			"integrity": "sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==",
+ 			"license": "ISC"
+ 		},
++		"node_modules/isows": {
++			"version": "1.0.7",
++			"resolved": "https://registry.npmjs.org/isows/-/isows-1.0.7.tgz",
++			"integrity": "sha512-I1fSfDCZL5P0v33sVqeTDSpcstAg/N+wF5HS033mogOVIp4B+oHC7oOCsA3axAbBSGTJ8QubbNmnIRN/h8U7hg==",
++			"funding": [
++				{
++					"type": "github",
++					"url": "https://github.com/sponsors/wevm"
++				}
++			],
++			"license": "MIT",
++			"peerDependencies": {
++				"ws": "*"
++			}
++		},
+ 		"node_modules/jose": {
+ 			"version": "6.2.3",
+ 			"resolved": "https://registry.npmjs.org/jose/-/jose-6.2.3.tgz",
+@@ -5492,16 +5527,17 @@
+ 			}
+ 		},
+ 		"node_modules/uuid": {
+-			"version": "11.1.1",
+-			"resolved": "https://registry.npmjs.org/uuid/-/uuid-11.1.1.tgz",
+-			"integrity": "sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ==",
++			"version": "9.0.1",
++			"resolved": "https://registry.npmjs.org/uuid/-/uuid-9.0.1.tgz",
++			"integrity": "sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==",
++			"deprecated": "uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).",
+ 			"funding": [
+ 				"https://github.com/sponsors/broofa",
+ 				"https://github.com/sponsors/ctavan"
+ 			],
+ 			"license": "MIT",
+ 			"bin": {
+-				"uuid": "dist/esm/bin/uuid"
++				"uuid": "dist/bin/uuid"
+ 			}
+ 		},
+ 		"node_modules/vary": {
+@@ -5733,7 +5769,6 @@
+ 			"version": "8.21.0",
+ 			"resolved": "https://registry.npmjs.org/ws/-/ws-8.21.0.tgz",
+ 			"integrity": "sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==",
+-			"dev": true,
+ 			"license": "MIT",
+ 			"engines": {
+ 				"node": ">=10.0.0"
+diff --git a/package.json b/package.json
+index 7547d04..3090c89 100644
+--- a/package.json
++++ b/package.json
+@@ -32,7 +32,7 @@
+ 		"refresh:droid-snapshots": "node scripts/refresh-droid-model-snapshots.mjs"
+ 	},
+ 	"dependencies": {
+-		"@factory/droid-sdk": "^0.2.0",
++		"@factory/droid-sdk": "^0.9.0",
+ 		"zod": "^3.25.76"
+ 	},
+ 	"peerDependencies": {
 diff --git a/src/droid-permissions.ts b/src/droid-permissions.ts
-index 18cbc62..38977b4 100644
+index 18cbc62..a8be03f 100644
 --- a/src/droid-permissions.ts
 +++ b/src/droid-permissions.ts
-@@ -25,15 +25,12 @@ export function resolveDroidAutonomyLevel(): AutonomyLevel {
+@@ -2,15 +2,16 @@ import {
+ 	AutonomyLevel,
+ 	ToolConfirmationOutcome,
+ 	ToolConfirmationType,
++	type RequestPermissionHandlerResult,
+ 	type RequestPermissionRequestParams,
+ } from "@factory/droid-sdk";
+ 
+ const DROID_AUTONOMY_LEVEL_ENV = "PI_DROID_AUTONOMY_LEVEL";
+ 
+-let permissionPromptHandler: ((params: RequestPermissionRequestParams) => Promise<ToolConfirmationOutcome>) | undefined;
++let permissionPromptHandler: ((params: RequestPermissionRequestParams) => Promise<RequestPermissionHandlerResult>) | undefined;
+ 
+ export function setDroidPermissionPromptHandler(
+-	handler: ((params: RequestPermissionRequestParams) => Promise<ToolConfirmationOutcome>) | undefined,
++	handler: ((params: RequestPermissionRequestParams) => Promise<RequestPermissionHandlerResult>) | undefined,
+ ): void {
+ 	permissionPromptHandler = handler;
+ }
+@@ -25,15 +26,12 @@ export function resolveDroidAutonomyLevel(): AutonomyLevel {
  		case "medium":
  			return AutonomyLevel.Medium;
  		case "high":
@@ -86,22 +169,56 @@ index 18cbc62..38977b4 100644
  function summarizePermissionRequest(params: RequestPermissionRequestParams): string {
  	return params.toolUses
  		.map((item) => {
-@@ -50,10 +47,6 @@ function summarizePermissionRequest(params: RequestPermissionRequestParams): str
+@@ -41,19 +39,15 @@ function summarizePermissionRequest(params: RequestPermissionRequestParams): str
+ 			if (type === ToolConfirmationType.Execute) return `Execute: ${item.details.command ?? "command"}`;
+ 			if (type === ToolConfirmationType.Create) return `Create: ${item.details.filePath ?? "file"}`;
+ 			if (type === ToolConfirmationType.Edit) return `Edit: ${item.details.filePath ?? "file"}`;
+-			if (type === ToolConfirmationType.McpTool) return `MCP tool: ${item.toolName ?? "tool"}`;
+-			return `${type}: ${item.toolName ?? "tool"}`;
++			if (type === ToolConfirmationType.McpTool) return `MCP tool: ${item.toolUse.name}`;
++			return `${type}: ${item.toolUse.name}`;
+ 		})
+ 		.join("; ");
+ }
+ 
  export async function handleDroidPermissionRequest(
  	params: RequestPermissionRequestParams,
- ): Promise<ToolConfirmationOutcome> {
+-): Promise<ToolConfirmationOutcome> {
 -	if (isBridgeMcpTool(params)) {
 -		return ToolConfirmationOutcome.ProceedOnce;
 -	}
 -
++): Promise<RequestPermissionHandlerResult> {
  	if (permissionPromptHandler) {
  		return permissionPromptHandler(params);
  	}
 diff --git a/src/droid-pi-tool-bridge.ts b/src/droid-pi-tool-bridge.ts
-index 64cbe9c..67f7d71 100644
+index 64cbe9c..68bfe8e 100644
 --- a/src/droid-pi-tool-bridge.ts
 +++ b/src/droid-pi-tool-bridge.ts
-@@ -80,7 +80,7 @@ function resolveEnvFlag(value: string | undefined, defaultEnabled: boolean): boo
+@@ -1,10 +1,6 @@
+ import { randomUUID } from "node:crypto";
+-import {
+-	createSdkMcpServer,
+-	tool,
+-	type DroidMcpServerConfig,
+-	type SdkMcpServer,
+-} from "@factory/droid-sdk";
++import type { DroidMcpServerConfig, SdkMcpServer } from "@factory/droid-sdk/node";
++type DroidSdkNode = Pick<typeof import("@factory/droid-sdk/node"), "createSdkMcpServer" | "tool">;
+ import type { Context, ToolResultMessage } from "@earendil-works/pi-ai";
+ import type {
+ 	ExtensionAPI,
+@@ -37,7 +33,7 @@ export interface DroidPiToolBridgeRun {
+ 	id: string;
+ 	enabled: boolean;
+ 	mcpServers: DroidMcpServerConfig[];
+-	sdkServer: SdkMcpServer;
++	sdkServer?: SdkMcpServer;
+ 	takeQueuedToolRequests(): DroidPiBridgeToolRequest[];
+ 	resolveToolResults(toolResults: readonly ToolResultMessage[]): void;
+ 	resolveToolResultsFromContext(context: Context): void;
+@@ -80,7 +76,7 @@ function resolveEnvFlag(value: string | undefined, defaultEnabled: boolean): boo
  }
  
  export function resolveDroidPiToolBridgeEnabled(env: Record<string, string | undefined> = process.env): boolean {
@@ -110,6 +227,73 @@ index 64cbe9c..67f7d71 100644
  }
  
  function resolveExposeOverlappingBuiltins(env: Record<string, string | undefined> = process.env): boolean {
+@@ -124,7 +120,7 @@ function toolResultEventToMessage(event: ToolResultEvent): ToolResultMessage {
+ class DroidPiToolBridgeRunImpl implements DroidPiToolBridgeRun {
+ 	readonly id = randomUUID();
+ 	readonly enabled: boolean;
+-	readonly sdkServer: SdkMcpServer;
++	readonly sdkServer?: SdkMcpServer;
+ 	readonly mcpServers: DroidMcpServerConfig[];
+ 	private readonly onToolRequest?: (request: DroidPiBridgeToolRequest) => void;
+ 	private readonly pendingByPiToolCallId = new Map<string, PendingBridgeCall>();
+@@ -136,16 +132,18 @@ class DroidPiToolBridgeRunImpl implements DroidPiToolBridgeRun {
+ 	constructor(options: {
+ 		enabled: boolean;
+ 		tools: ToolInfo[];
++		sdk?: DroidSdkNode;
+ 		onToolRequest?: (request: DroidPiBridgeToolRequest) => void;
+ 	}) {
+ 		this.enabled = options.enabled;
+ 		this.onToolRequest = options.onToolRequest;
+ 
+-		const droidTools = options.tools.map((toolInfo) => {
++		const sdk = options.sdk;
++		const droidTools = sdk ? options.tools.map((toolInfo) => {
+ 			const mcpToolName = toMcpToolName(toolInfo.name);
+ 			this.mcpToolNameToPiToolName.set(mcpToolName, toolInfo.name);
+ 			const inputSchema = jsonSchemaToZodShape(toolInfo.parameters as Record<string, unknown>);
+-			return tool(
++			return sdk.tool(
+ 				mcpToolName,
+ 				buildDroidPiBridgeMcpToolDescription({
+ 					piToolName: toolInfo.name,
+@@ -155,10 +153,10 @@ class DroidPiToolBridgeRunImpl implements DroidPiToolBridgeRun {
+ 				inputSchema,
+ 				(input) => this.enqueueToolRequest(mcpToolName, toolInfo.name, input),
+ 			);
+-		});
++		}) : [];
+ 
+-		this.sdkServer = createSdkMcpServer({ name: "pi_tools", tools: droidTools });
+-		this.mcpServers = [this.sdkServer];
++		this.sdkServer = sdk?.createSdkMcpServer({ name: "pi_tools", tools: droidTools });
++		this.mcpServers = this.sdkServer ? [this.sdkServer] : [];
+ 	}
+ 
+ 	takeQueuedToolRequests(): DroidPiBridgeToolRequest[] {
+@@ -205,7 +203,7 @@ class DroidPiToolBridgeRunImpl implements DroidPiToolBridgeRun {
+ 		if (this.disposed) return;
+ 		this.disposed = true;
+ 		this.cancel("Droid pi tool bridge run disposed");
+-		await this.sdkServer.close();
++		await this.sdkServer?.close();
+ 	}
+ 
+ 	private enqueueToolRequest(mcpToolName: string, piToolName: string, args: Record<string, unknown>): Promise<string> {
+@@ -272,9 +270,12 @@ class DroidPiToolBridgeRegistry implements DroidPiToolBridge {
+ 	async createRun(options: DroidPiToolBridgeRunOptions = {}): Promise<DroidPiToolBridgeRun> {
+ 		const enabled = this.isEnabled();
+ 		const tools = enabled ? this.buildSnapshot() : [];
++		const runEnabled = enabled && tools.length > 0;
++		const sdk = runEnabled ? await import("@factory/droid-sdk/node") : undefined;
+ 		const run = new DroidPiToolBridgeRunImpl({
+-			enabled: enabled && tools.length > 0,
++			enabled: runEnabled,
+ 			tools,
++			sdk,
+ 			onToolRequest: options.onToolRequest,
+ 		});
+ 		this.runs.add(run);
 diff --git a/src/droid-process-env.ts b/src/droid-process-env.ts
 new file mode 100644
 index 0000000..2efc719
@@ -179,12 +363,20 @@ index 0000000..2efc719
 +	return childEnv;
 +}
 diff --git a/src/droid-provider.ts b/src/droid-provider.ts
-index 4bd513d..6180ebc 100644
+index 4bd513d..a475291 100644
 --- a/src/droid-provider.ts
 +++ b/src/droid-provider.ts
-@@ -14,7 +14,11 @@ import {
- 	type DroidSession,
- } from "@factory/droid-sdk";
+@@ -8,13 +8,14 @@ import {
+ 	type AssistantMessage,
+ 	type ToolResultMessage,
+ } from "@earendil-works/pi-ai";
+-import {
+-	DroidMessageType,
+-	createSession,
+-	type DroidSession,
+-} from "@factory/droid-sdk";
++import { DroidMessageType } from "@factory/droid-sdk";
++import type { DroidSession } from "@factory/droid-sdk/node";
  import { buildDroidPrompt, estimateDroidPromptInputTokens } from "./context.js";
 -import { getDiscoveryApiKey, mapPiThinkingToReasoningEffort } from "./model-discovery.js";
 +import {
@@ -195,7 +387,7 @@ index 4bd513d..6180ebc 100644
  import { handleDroidAskUserRequest } from "./droid-ask-user.js";
  import { handleDroidPermissionRequest, resolveDroidAutonomyLevel } from "./droid-permissions.js";
  import {
-@@ -23,9 +27,10 @@ import {
+@@ -23,9 +24,10 @@ import {
  	type DroidPiToolBridgeRun,
  } from "./droid-pi-tool-bridge.js";
  import { getDroidSessionCwd } from "./droid-session-cwd.js";
@@ -207,7 +399,7 @@ index 4bd513d..6180ebc 100644
  const ZERO_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 };
  
  class DroidAbortError extends Error {
-@@ -78,11 +83,13 @@ function makeInitialMessage(model: Model<Api>): AssistantMessage {
+@@ -78,11 +80,13 @@ function makeInitialMessage(model: Model<Api>): AssistantMessage {
  	};
  }
  
@@ -225,6 +417,18 @@ index 4bd513d..6180ebc 100644
  }
  
  function getPendingLiveRun(context: Context): DroidLiveRun | undefined {
+@@ -238,7 +242,10 @@ function processStreamEvent(
+ 		return "continue";
+ 	}
+ 
+-	if (msg.type === DroidMessageType.TurnComplete) {
++	if (msg.type === DroidMessageType.Result) {
++		if (!msg.success && !msg.interrupted) {
++			throw new Error(msg.error?.message ?? `Droid request failed (${msg.subtype})`);
++		}
+ 		run.done = true;
+ 		if (msg.tokenUsage) {
+ 			run.usage = {
 @@ -372,8 +379,8 @@ export function streamDroid(
  				return;
  			}
@@ -236,8 +440,13 @@ index 4bd513d..6180ebc 100644
  			if (!apiKey) throw new Error(MISSING_API_KEY_MESSAGE);
  
  			const cwd = getDroidSessionCwd();
-@@ -394,10 +401,11 @@ export function streamDroid(
+@@ -391,13 +398,16 @@ export function streamDroid(
+ 					})
+ 				: undefined;
+ 
++			const { createSession } = await import("@factory/droid-sdk/node");
  			const session = await createSession({
++				apiKey,
  				modelId: model.id,
  				cwd,
 +				execPath: getDroidExecPath(),
@@ -249,6 +458,14 @@ index 4bd513d..6180ebc 100644
  				permissionHandler: handleDroidPermissionRequest,
  				askUserHandler: handleDroidAskUserRequest,
  				abortSignal: options?.signal,
+@@ -418,6 +428,7 @@ export function streamDroid(
+ 
+ 			const images = toDroidImages(prompt.images);
+ 			const generator = session.stream(prompt.text, {
++				includePartialMessages: true,
+ 				images: images.length > 0 ? images : undefined,
+ 				abortSignal: options?.signal,
+ 			});
 diff --git a/src/droid-question-tool.ts b/src/droid-question-tool.ts
 index 96f2b95..7809e66 100644
 --- a/src/droid-question-tool.ts
@@ -261,17 +478,84 @@ index 96f2b95..7809e66 100644
  	pi.registerTool({
  		name: DROID_ASK_QUESTION_TOOL_NAME,
  		label: "Droid question",
+diff --git a/src/index.ts b/src/index.ts
+index 253cada..965d8f7 100644
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -1,5 +1,5 @@
+ import type { ExtensionAPI, ExtensionContext, ProviderConfig, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
+-import { discoverModels, type DroidModelFallbackIssue } from "./model-discovery.js";
++import { discoverModels, fallbackModels, type DroidModelFallbackIssue } from "./model-discovery.js";
+ import { registerDroidPiToolBridge } from "./droid-pi-tool-bridge.js";
+ import { registerDroidQuestionTool } from "./droid-question-tool.js";
+ import { registerDroidSessionCwd } from "./droid-session-cwd.js";
+@@ -34,6 +34,25 @@ function registerDroidProvider(pi: Pick<ExtensionAPI, "registerProvider">, model
+ 	pi.registerProvider("factory", createDroidProviderConfig(models));
+ }
+ 
++async function discoverCatalog(refresh: boolean) {
++	let fallbackIssue: DroidModelFallbackIssue | undefined;
++	const models = refresh
++		? await discoverModels({
++			onFallback: (issue) => {
++				fallbackIssue = issue;
++			},
++		})
++		: fallbackModels();
++	return { models, fallbackIssue };
++}
++
++let catalogPromise: ReturnType<typeof discoverCatalog> | undefined;
++
++function loadCatalog(refresh = false) {
++	if (refresh || !catalogPromise) catalogPromise = discoverCatalog(refresh);
++	return catalogPromise;
++}
++
+ export default async function (pi: DroidExtensionApi) {
+ 	registerDroidSessionCwd(pi);
+ 	registerDroidQuestionTool(pi);
+@@ -43,12 +62,7 @@ export default async function (pi: DroidExtensionApi) {
+ 		setDroidAskUserUiContext({ hasUI: ctx.hasUI, ui: ctx.ui });
+ 	});
+ 
+-	let fallbackIssue: DroidModelFallbackIssue | undefined;
+-	const models = await discoverModels({
+-		onFallback: (issue) => {
+-			fallbackIssue = issue;
+-		},
+-	});
++	const { models, fallbackIssue } = await loadCatalog();
+ 
+ 	if (fallbackIssue) {
+ 		const issue = fallbackIssue;
+@@ -60,12 +74,8 @@ export default async function (pi: DroidExtensionApi) {
+ 	pi.registerCommand("droid-refresh-models", {
+ 		description: "Refresh the live Factory model catalog without restarting pi",
+ 		handler: async (_args, ctx) => {
+-			let refreshFallbackIssue: DroidModelFallbackIssue | undefined;
+-			const refreshedModels = await discoverModels({
+-				onFallback: (issue) => {
+-					refreshFallbackIssue = issue;
+-				},
+-			});
++			const { models: refreshedModels, fallbackIssue: refreshFallbackIssue } =
++				await loadCatalog(true);
+ 			registerDroidProvider(pi, refreshedModels);
+ 			if (!ctx.hasUI) return;
+ 			if (refreshFallbackIssue) {
 diff --git a/src/model-discovery.ts b/src/model-discovery.ts
-index 49460c0..11b5b63 100644
+index 49460c0..e28138a 100644
 --- a/src/model-discovery.ts
 +++ b/src/model-discovery.ts
-@@ -1,16 +1,17 @@
- import { createSession } from "@factory/droid-sdk";
- import type { AvailableModelConfig } from "@factory/droid-sdk";
+@@ -1,16 +1,15 @@
+-import { createSession } from "@factory/droid-sdk";
+-import type { AvailableModelConfig } from "@factory/droid-sdk";
 -import { AuthStorage, type ProviderModelConfig } from "@earendil-works/pi-coding-agent";
++import { type ModelInfo, ReasoningEffort } from "@factory/droid-sdk";
 +import { readStoredCredential, type ProviderModelConfig } from "@earendil-works/pi-coding-agent";
  import type { ModelThinkingLevel, ThinkingLevelMap } from "@earendil-works/pi-ai";
- import { ReasoningEffort } from "@factory/droid-sdk";
+-import { ReasoningEffort } from "@factory/droid-sdk";
  import { FALLBACK_MODEL_ITEMS } from "./droid-fallback-models.generated.js";
 +import { buildDroidProcessEnv, getDroidExecPath } from "./droid-process-env.js";
  
@@ -285,7 +569,7 @@ index 49460c0..11b5b63 100644
  const CATALOG_REFRESH_HINT =
  	"After adding auth to an already-started pi session, run /droid-refresh-models to refresh the live Factory model catalog without restarting pi.";
  
-@@ -42,24 +43,6 @@
+@@ -42,24 +41,6 @@ export interface DroidModelMetadata {
  
  const metadataByPiModelId = new Map<string, DroidModelMetadata>();
  
@@ -310,7 +594,7 @@ index 49460c0..11b5b63 100644
  function normalizeApiKey(value: string | undefined): string | undefined {
  	const trimmed = value?.trim();
  	if (!trimmed) return undefined;
-@@ -67,18 +50,16 @@
+@@ -67,18 +48,16 @@ function normalizeApiKey(value: string | undefined): string | undefined {
  	return trimmed;
  }
  
@@ -332,7 +616,18 @@ index 49460c0..11b5b63 100644
  	const storedApiKey = await getStoredFactoryApiKey();
  	if (storedApiKey) return storedApiKey;
  
-@@ -237,18 +218,23 @@
+@@ -124,8 +103,8 @@ function buildThinkingLevelMap(supported: ReasoningEffort[]): ThinkingLevelMap |
+ 	};
+ }
+ 
+-function toMetadata(item: AvailableModelConfig): DroidModelMetadata {
+-	const baseModelId = item.modelId ?? item.id;
++function toMetadata(item: ModelInfo): DroidModelMetadata {
++	const baseModelId = item.id;
+ 	const thinkingLevelMap = buildThinkingLevelMap(item.supportedReasoningEfforts);
+ 	return {
+ 		piModelId: baseModelId,
+@@ -237,32 +216,32 @@ function discoveryFailedIssue(error: unknown): DroidModelFallbackIssue {
  	};
  }
  
@@ -349,12 +644,36 @@ index 49460c0..11b5b63 100644
  	}
  
  	try {
- 		const session = await createSession({
- 			modelId: FALLBACK_MODEL_ITEMS[0]?.id ?? "kimi-k2.5",
- 			cwd: process.cwd(),
+-		const session = await createSession({
+-			modelId: FALLBACK_MODEL_ITEMS[0]?.id ?? "kimi-k2.5",
+-			cwd: process.cwd(),
 -			env: { ...process.env, FACTORY_API_KEY: apiKey },
++		const { listModels } = await import("@factory/droid-sdk/node");
++		const available = await listModels({
++			apiKey,
 +			execPath: getDroidExecPath(),
 +			env: buildDroidProcessEnv(apiKey),
  		});
- 		try {
- 			const available = session.initResult.availableModels ?? [];
+-		try {
+-			const available = session.initResult.availableModels ?? [];
+-			if (available.length === 0) {
+-				options.onFallback?.({
+-					reason: "empty-model-list",
+-					message: `Factory returned an empty model list. Using bundled fallback models. ${CATALOG_REFRESH_HINT}`,
+-				});
+-				return registerMetadata(fallbackMetadataFromSnapshot());
+-			}
+-			return registerMetadata(available.map(toMetadata));
+-		} finally {
+-			await session.close();
++		if (available.length === 0) {
++			options.onFallback?.({
++				reason: "empty-model-list",
++				message: `Factory returned an empty model list. Using bundled fallback models. ${CATALOG_REFRESH_HINT}`,
++			});
++			return registerMetadata(fallbackMetadataFromSnapshot());
+ 		}
++		return registerMetadata(available.map(toMetadata));
+ 	} catch (error) {
+ 		options.onFallback?.(discoveryFailedIssue(error));
+ 		return registerMetadata(fallbackMetadataFromSnapshot());

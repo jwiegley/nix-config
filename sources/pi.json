@@ -240,7 +240,7 @@
     },
     "pi-droid-sdk": {
       "hashes": {
-        "npmDepsHash": "sha256-Sxh4IJB1sSstw613JS6971CWJa4iidPjJDAIrLA70EI="
+        "npmDepsHash": "sha256-/rBDE3iIPmzUk3Fmmg6EHE5w0qcMoI5fCyJMCNfvdU8="
       },
       "source": {
         "args": {
@@ -279,14 +279,14 @@
     },
     "pi-flag": {
       "hashes": {
-        "npmDepsHash": "sha256-6s7GBj0sS3v9yatz/zcHz7r4T+3qKqS+VXFvhBLzIaY="
+        "npmDepsHash": "sha256-0WkrgfNYVIO5CT+Z4qB0gXpmK7eOFxFhfejLZzUx5gM="
       },
       "source": {
         "args": {
-          "hash": "sha256-N1vnCHk4BBrD1iw2GRxGqQbJ96FAhgoKyeO6NBaWvA0=",
+          "hash": "sha256-SgVVh4O+D3/+yk9b22bfVOAK2MQ6xt7uFiXew/rTzTM=",
           "owner": "jwiegley",
           "repo": "pi-flag",
-          "rev": "520be582f7d18e53fa886d32bd406587cce3269d"
+          "rev": "23c007d0a8ae7855af8fefac38a9552ae29d38b0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jwiegley/pi-flag"

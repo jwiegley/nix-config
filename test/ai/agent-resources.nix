@@ -258,6 +258,7 @@ let
     "agent-dir.ts"
     "agent-plugin-loader.ts"
     "config.ts"
+    "mcp-bearer-store.ts"
     "metadata-cache.ts"
     "package-mcp-loader.ts"
     "resource-tools.ts"
