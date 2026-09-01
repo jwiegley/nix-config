@@ -283,10 +283,10 @@
       },
       "source": {
         "args": {
-          "hash": "sha256-SgVVh4O+D3/+yk9b22bfVOAK2MQ6xt7uFiXew/rTzTM=",
+          "hash": "sha256-63Ta+sgWBZIfRikN5V/6ATGxf9uZEr9EtrIcw2OHaDI=",
           "owner": "jwiegley",
           "repo": "pi-flag",
-          "rev": "23c007d0a8ae7855af8fefac38a9552ae29d38b0"
+          "rev": "a01756615d588ef068bed89f4f7cb026a4b31b7d"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jwiegley/pi-flag"
