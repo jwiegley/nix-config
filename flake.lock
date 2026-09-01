@@ -831,6 +831,22 @@
         "type": "github"
       }
     },
+    "recordings": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788289563,
+        "narHash": "sha256-PN9pZinxleXpWnY9s9enF3yqLH+atpf3lZGkwxjfLdw=",
+        "owner": "jwiegley",
+        "repo": "recordings",
+        "rev": "4d79119e1ecfff220c55d251cfdc7303b6af1d2b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jwiegley",
+        "repo": "recordings",
+        "type": "github"
+      }
+    },
     "renamer": {
       "flake": false,
       "locked": {
@@ -869,6 +885,7 @@
         "org2tc": "org2tc",
         "pushme": "pushme",
         "rag-client": "rag-client",
+        "recordings": "recordings",
         "renamer": "renamer",
         "scripts": "scripts",
         "sizes": "sizes",

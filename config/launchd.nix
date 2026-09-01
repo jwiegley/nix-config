@@ -9,7 +9,6 @@ let
   home = "/Users/johnw";
   xdg_configHome = "${home}/.config";
   xdg_cacheHome = "${home}/.cache";
-  recordingCaBundle = "${pkgs.ca-bundle-with-vulcan or pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
   runsEternalTerminal = config.johnw.host.isDarwinWorkstation;
   serviceLaunchers = import ./launchd-service-launchers.nix { inherit lib pkgs; };
   mssqlImageSource = (import ../packages/source-catalog.nix "tools").mssql-server-image;
@@ -544,48 +543,33 @@ in
         };
       };
 
+    }
+    # The transcription daemon watches ~/Recordings itself (FSEvents plus a
+    # fallback poll), so it subsumes the old fswatch loop and the periodic
+    # sweep agent. It needs pkgs.recordings, which exists only where the
+    # flake provides a `recordings` input.
+    // lib.optionalAttrs (config.johnw.host.isHera && (pkgs ? recordings)) {
+
       flatten-recordings = {
         script = ''
-          export PATH="${pkgs.my-scripts}/bin:${pkgs.fswatch}/bin:/etc/profiles/per-user/johnw/bin:/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
-          export SSL_CERT_FILE="${recordingCaBundle}"
-
-          # Sweep anything that accumulated while we were not running.
-          ${pkgs.my-scripts}/bin/flatten-recordings || true
-
-          # Coalesce recursive events before running the serialized worker.
-          ${pkgs.fswatch}/bin/fswatch --recursive --latency 5 \
-                --event=Created --event=Updated \
-                --event=MovedTo --event=Renamed \
-                "${home}/Recordings" |
-            while read -r _; do
-              ${pkgs.my-scripts}/bin/flatten-recordings || true
-            done
+          # mlx-speech comes from the per-user profile; afconvert from macOS.
+          # When omlx serves cohere-transcribe correctly, replace the
+          # --asr-command line with --asr-url/--asr-model against
+          # https://hera.lan:8443/v1 and export SSL_CERT_FILE again.
+          export PATH="/etc/profiles/per-user/johnw/bin:$PATH"
+          exec ${pkgs.recordings}/bin/recordings "${home}/Recordings" \
+            --output "${home}/Recordings" \
+            --archive "${home}/Documents/Recordings" \
+            --prompt "${home}/doc/post-process.md" \
+            --asr-command "mlx-speech asr --model ${home}/src/mlx-speech/models/cohere/cohere_transcribe/mlx-int8 --language en --audio" \
+            --llm-url http://localhost:8000/v1 \
+            --llm-model GLM-5.3-Flash-oQ4e
         '';
         serviceConfig = {
-          RunAtLoad = true; # Initial sweep at login.
-          KeepAlive = true; # Relaunch the fswatch loop if it ever exits.
+          RunAtLoad = true; # Startup sweep catches anything that accumulated.
+          KeepAlive = true; # Long-running daemon; relaunch if it ever exits.
           # Prevent launchd from throttling the watcher's I/O while the display
           # is off.
-          LowPriorityIO = false;
-          LowPriorityBackgroundIO = false;
-          ProcessType = "Standard";
-          StandardOutPath = "${home}/Library/Logs/flatten-recordings.log";
-          StandardErrorPath = "${home}/Library/Logs/flatten-recordings.log";
-        };
-      };
-
-      # Periodically cover watcher misses; the worker lock handles overlap with
-      # event-triggered runs.
-      flatten-recordings-sweep = {
-        script = ''
-          export PATH="${pkgs.my-scripts}/bin:/etc/profiles/per-user/johnw/bin:/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
-          export SSL_CERT_FILE="${recordingCaBundle}"
-          ${pkgs.my-scripts}/bin/flatten-recordings || true
-        '';
-        serviceConfig = {
-          RunAtLoad = true; # Sweep once at login/activation.
-          StartInterval = 900; # And every 15 minutes thereafter.
-          # Match the fswatch agent's unthrottled I/O policy.
           LowPriorityIO = false;
           LowPriorityBackgroundIO = false;
           ProcessType = "Standard";

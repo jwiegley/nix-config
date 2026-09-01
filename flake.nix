@@ -106,6 +106,11 @@
       flake = false;
     };
 
+    recordings = {
+      url = "github:jwiegley/recordings";
+      flake = false;
+    };
+
     git-scripts = {
       url = "github:jwiegley/git-scripts";
       flake = false;

@@ -43,6 +43,7 @@ let
     ((import ../overlays/30-ledger.nix) { ledger = inputs.ledger or null; })
     (import ../overlays/30-markless.nix)
     (import ../overlays/30-misc-tools.nix)
+    ((import ../overlays/30-recordings.nix) { recordings = inputs.recordings or null; })
     ((import ../overlays/30-stock-trader-mcp.nix) {
       stockTrader = inputs.stock-trader or null;
     })
