@@ -3,7 +3,7 @@
 
   inputs = {
     agent-browser-source = {
-      url = "github:vercel-labs/agent-browser/b47da630e76567f2153a5547850efaeede9a066a";
+      url = "github:vercel-labs/agent-browser/eb05921bad874cd2a1b4fa5d1149f1ed26576cae";
       flake = false;
     };
 
