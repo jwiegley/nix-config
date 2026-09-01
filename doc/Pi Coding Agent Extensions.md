@@ -29,6 +29,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [`@realvendex/pi-loop`][pi-loop] | 1.0.2 | Repeat prompts under explicit stop conditions | `/loop` |
 | [`pi-mcp-adapter`][pi-mcp-adapter] | 2.31.0 | Lazy, context-efficient MCP access | `mcp`, `/mcp` |
 | [`@zenspc/pi-quiet`][pi-quiet] | 0.4.1 | Dense tool-result presentation | `/quiet` |
+| [`pi-flag`][pi-flag] | 0.1.0 | Mark user or assistant messages significant for later model turns | `/flag` |
 | [`pi-hashline-edit-pro`][pi-hashline-edit-pro] | 0.17.5 | Hash-anchored reads and replacements | `read`, `replace` |
 | [`agent-cat-workflow`][agent-cat-workflow] | 0.1.0 | Discover, supervise, control, and resume typed agent-cat workflows | `/wf`, `agent_cat_workflow` |
 | [`pi-smart-fetch`][pi-smart-fetch] | 0.3.17 | Browser-fingerprinted readable web fetching | `web_fetch`, `batch_web_fetch` |
@@ -42,7 +43,6 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [`pi-provider-llama-swap`][pi-provider-llama-swap] | `57583beb` | Discover chat models from local llama-swap | `/model`, `llama-swap/*` |
 | [`pi-provider-omlx`][pi-provider-omlx] | `57583beb` | Discover authenticated oMLX services selected for each host | `/model`, `omlx-hera/*`, `omlx-clio/*` |
 | [`pi-rewind`][pi-rewind] | 0.5.0 | Conversation and file checkpoints | `/rewind` |
-| [`pi-flag`][pi-flag] | 0.1.0 | Mark user or assistant messages significant for later model turns | `/flag` |
 | [`pi-idle-check`][pi-idle-check] | 0.1.0 | Offer context-aware send, compact, or new-session choices after idle time | automatic |
 | [`pi-trace-extension`][pi-trace] | 0.1.15 | Local execution traces and HTML reports | `/trace` |
 | [`pi-markdown-preview`][pi-markdown-preview] | 0.15.0 | Terminal, browser, PDF, and artifact previews | `/preview`, `preview_export` |
