@@ -158,7 +158,9 @@ in
       ''
       + lib.optionalString isDarwin ''
         else
-            . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
+            if [[ -n "$ITERM_SESSION_ID" ]]; then
+              . ${config.xdg.configHome}/zsh/plugins/iterm2_shell_integration
+            fi
             . ${config.xdg.configHome}/shellfish/shellfishrc
 
             ${lib.optionalString config.johnw.host.isHera ''
