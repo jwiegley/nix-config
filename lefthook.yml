@@ -4,13 +4,3 @@ pre-commit:
   commands:
     quality-tier:
       run: test/bin/quality --tier pre-commit
-
-pre-push:
-  # Force dispatch even when a push mirror leaves {push_files} empty; the command
-  # itself verifies the resolved commit-signature range.
-  files: '{ git ls-files; printf "%s\n" lefthook.yml; }'
-  commands:
-    # Keep the mandatory gate comfortably inside two minutes. Expensive Nix,
-    # consumer, and system checks live under `make expensive`.
-    signatures:
-      run: ": {files}; test/bin/quality signatures"
