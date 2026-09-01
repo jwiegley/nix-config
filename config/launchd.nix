@@ -558,7 +558,7 @@ in
           # https://hera.lan:8443/v1 and export SSL_CERT_FILE again.
           export PATH="/etc/profiles/per-user/johnw/bin:$PATH"
           exec ${pkgs.recordings}/bin/recordings "${home}/Recordings" \
-            --output "${home}/Recordings" \
+            --output "${home}/Documents/Inbox" \
             --archive "${home}/Documents/Recordings" \
             --prompt "${home}/doc/post-process.md" \
             --asr-command "mlx-speech asr --model ${home}/src/mlx-speech/models/cohere/cohere_transcribe/mlx-int8 --language en --audio" \
