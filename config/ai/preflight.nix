@@ -68,6 +68,7 @@ let
     ".config/pi/agent/extensions/nix-gallery/index.ts"
     ".config/pi/agent/extensions/pi-gpt-fast-mode/config.json"
     ".config/pi/agent/extensions/pi-loop/index.ts"
+    ".config/pi/agent/extensions/pi-flag/index.ts"
     ".config/pi/agent/extensions/pi-mcp-adapter"
     ".config/pi/agent/extensions/pi-quiet"
     ".config/pi/agent/keybindings.json"

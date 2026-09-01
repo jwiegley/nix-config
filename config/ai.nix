@@ -66,6 +66,7 @@ let
       };
   pairedAgentResources = pairedAiPackages.agent-resources or null;
   pairedPiGallery = pairedAiPackages.pi-gallery or null;
+  pairedPiFlagPackage = pairedAiPackages.pi-flag or null;
   resourcePackage = pkgs.agent-resources;
   rendererPkgs = pkgs // {
     agent-resources = resourcePackage;
@@ -73,6 +74,7 @@ let
   piRendererPkgs = rendererPkgs // {
     agent-resources = if pairedAgentResources != null then pairedAgentResources else resourcePackage;
     pi-gallery = if pairedPiGallery != null then pairedPiGallery else pkgs.pi-gallery;
+    pi-flag = pairedPiFlagPackage;
   };
 
   catalog = import ./ai/catalog.nix {
@@ -428,6 +430,10 @@ in
     {
       assertion = !(piSelected || primeSelected) || pairedPiGallery != null;
       message = "inputs.nix-config-ai.packages.${system}.pi-gallery is missing";
+    }
+    {
+      assertion = !piSelected || pairedPiFlagPackage != null;
+      message = "inputs.nix-config-ai.packages.${system}.pi-flag is missing";
     }
   ];
 

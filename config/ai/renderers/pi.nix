@@ -186,7 +186,7 @@ assert
 assert builtins.hasAttr "agent-resources" pkgs;
 assert builtins.hasAttr "pi-gallery" pkgs;
 assert builtins.hasAttr "pi-loop" pkgs.pi-gallery.packages;
-assert builtins.hasAttr "pi-flag" pkgs.pi-gallery.packages;
+assert builtins.hasAttr "pi-flag" pkgs;
 assert builtins.hasAttr "pi-gpt-fast-mode" pkgs.pi-gallery.packages;
 {
   files = mergeFiles [
@@ -203,6 +203,7 @@ assert builtins.hasAttr "pi-gpt-fast-mode" pkgs.pi-gallery.packages;
         json.generate "pi-${profile.id}-gpt-fast-mode.json" fastModeConfig;
       "${root}/extensions/pi-loop/index.ts".source =
         "${pkgs.pi-gallery.packages.pi-loop}/share/pi-packages/pi-loop/extensions/index.ts";
+      "${root}/extensions/pi-flag/index.ts".source = "${pkgs.pi-flag}/share/pi-packages/pi-flag/index.ts";
       "${root}/extensions/pi-mcp-adapter".source = "${extensionRoot}/pi-mcp-adapter";
       "${root}/extensions/pi-quiet".source = "${extensionRoot}/pi-quiet";
       "${root}/keybindings.json".source = json.generate "pi-${profile.id}-keybindings.json" keybindings;

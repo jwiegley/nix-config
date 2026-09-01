@@ -14,13 +14,13 @@ pi-version: 0.84.4
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: 27 gallery packages projected on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 25 of those packages on Darwin and 23 on Linux; [Pi Lens][pi-lens] and [Pi Mem][pi-mem] are retained but are not registered on any managed profile. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: 27 gallery packages projected on every managed host, five separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 24 of those packages on Darwin and 22 on Linux; [Pi Lens][pi-lens], [Pi Mem][pi-mem], and [pi-flag][pi-flag] are retained but not Gallery-registered. Pi Flag is separately deployed on every managed profile. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope. The `agent-resources` package also carries [`pi-openai-server-compaction`][pi-openai-server-compaction] for compatibility testing, but no managed Pi profile renders or loads it, so it is not part of this configured inventory.
 
 ## At a glance
 
-This table lists extensions that are active on at least one managed Pi profile. The retained but inactive Gallery packages are listed separately below.
+This table lists extensions that are active on at least one managed Pi profile. The Gallery-inactive packages are listed separately below.
 
 | Extension | Version | Principal purpose | Primary interface |
 | --- | ---: | --- | --- |
@@ -57,12 +57,13 @@ This table lists extensions that are active on at least one managed Pi profile. 
 
 ### Packaged but inactive
 
-These packages remain pinned, built, and present in the immutable Gallery projection, but their extension code is not imported or registered by any managed Pi profile.
+These packages remain pinned, built, and present in the immutable Gallery projection, but are not imported or registered by the Gallery loader.
 
 | Retained package | Version | Remaining use |
 | --- | ---: | --- |
 | [`pi-lens`][pi-lens] | 4.0.1 | One packaged skill root exposing four [Lens][pi-lens] skills remains advertised, and Nix still renders the hidden [Lens][pi-lens] widget setting; [Lens][pi-lens] tools and commands are unavailable |
 | [`@askjo/pi-mem`][pi-mem] | 1.2.0 | Projection only; no [Pi Mem][pi-mem] imports, tools, commands, or managed state activation |
+| [`pi-flag`][pi-flag] | 0.1.0 | Registered by a separate managed extension leaf to accommodate the paired package set |
 
 The [Factory Droid SDK provider][pi-droid-sdk] is available and registered on every host. Darwin registers the [llama-swap provider][pi-provider-llama-swap] and both workstation endpoints from the [oMLX provider][pi-provider-omlx]. Vulcan registers only the remote `omlx-hera` endpoint; other Linux profiles retain the packages without registering local-provider endpoints. Local llama-swap remains loopback-only. Hera receives fixed `omlx-hera` overrides; Clio retains bounded bilateral discovery; and Vulcan uses bounded authenticated discovery from Hera. OpenRouter remains a native provider on every managed Pi profile and becomes available when that host has mutable OpenRouter authentication.
 
@@ -75,7 +76,7 @@ The Hera, Clio, shared-work, VPS, and Vulcan Pi profiles are rendered by `~/src/
 | Surface | Current projection |
 | --- | --- |
 | Generated ownership | Individual leaves below `~/.config/pi/agent`, plus `~/.pi-lens/config.json` and the `~/.pi` compatibility link; Pi shares `~/.config/mcp/mcp.json` with Prime Agent |
-| Extension entries | [Fleet Theme][fleet-theme], [Nix Gallery loader][nix-gallery-loader], [Pi Loop][pi-loop], [Pi MCP Adapter][pi-mcp-adapter], and [Quiet Display][pi-quiet] on every managed host; the Gallery loads [Agent-cat Workflows][agent-cat-workflow], [Significance Flags][pi-flag], [Idle Check][pi-idle-check], [GPT Fast Mode][pi-gpt-fast-mode], and the [Factory Droid SDK provider][pi-droid-sdk] everywhere; Darwin additionally loads loopback llama-swap and bilateral oMLX discovery, while Vulcan loads only remote `omlx-hera` discovery |
+| Extension entries | [Fleet Theme][fleet-theme], [Nix Gallery loader][nix-gallery-loader], [Pi Loop][pi-loop], [Significance Flags][pi-flag], [Pi MCP Adapter][pi-mcp-adapter], and [Quiet Display][pi-quiet] on every managed host; the Gallery loads [Agent-cat Workflows][agent-cat-workflow], [Idle Check][pi-idle-check], [GPT Fast Mode][pi-gpt-fast-mode], and the [Factory Droid SDK provider][pi-droid-sdk] everywhere; Darwin additionally loads loopback llama-swap and bilateral oMLX discovery, while Vulcan loads only remote `omlx-hera` discovery |
 | Agent resources | 25 Nix-managed agent definitions |
 | Prompt resources | 63 files: 61 command prompts and the `emacs` and `spanish` prompts |
 | Skill resources | Shared catalog skills selected for Pi, plus five gallery package skill paths and one gallery prompt path advertised at runtime |
