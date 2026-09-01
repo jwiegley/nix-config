@@ -297,7 +297,7 @@ runCommand "pi-gallery-check"
         ${root manifest.supportSources.loop.package manifest.supportSources.loop.attrName}/package.json \
         ${piPackages.agent-resources}/share/agent-resources/pi-extensions/pi-mcp-adapter/package.json \
         ${piPackages.agent-resources}/share/agent-resources/pi-extensions/pi-quiet/package.json \
-        ${piPackages.pi-flag}/package.json
+        ${piPackages.pi-flag}/share/pi-packages/pi-flag/package.json
       cat <<'EOF'
     ${lib.concatStringsSep "\n" documentGalleryRows}
     EOF
