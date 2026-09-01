@@ -45,6 +45,7 @@ in
     "pi-gallery"
     "pi-goal-x"
     "pi-gpt-fast-mode"
+    "pi-flag"
     "pi-hashline-edit-pro"
     "pi-idle-check"
     "pi-lens"

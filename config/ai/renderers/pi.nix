@@ -186,6 +186,7 @@ assert
 assert builtins.hasAttr "agent-resources" pkgs;
 assert builtins.hasAttr "pi-gallery" pkgs;
 assert builtins.hasAttr "pi-loop" pkgs.pi-gallery.packages;
+assert builtins.hasAttr "pi-flag" pkgs.pi-gallery.packages;
 assert builtins.hasAttr "pi-gpt-fast-mode" pkgs.pi-gallery.packages;
 {
   files = mergeFiles [

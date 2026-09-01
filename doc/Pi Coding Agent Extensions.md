@@ -8,13 +8,13 @@ tags:
   - ai-agents
   - developer-tools
 created: 2026-07-27
-updated: 2026-08-29
+updated: 2026-09-01
 pi-version: 0.84.4
 ---
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: 26 gallery packages projected on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 24 of those packages on Darwin and 22 on Linux; [Pi Lens][pi-lens] and [Pi Mem][pi-mem] are retained but are not registered on any managed profile. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: 27 gallery packages projected on every managed host, four separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 25 of those packages on Darwin and 23 on Linux; [Pi Lens][pi-lens] and [Pi Mem][pi-mem] are retained but are not registered on any managed profile. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope. The `agent-resources` package also carries [`pi-openai-server-compaction`][pi-openai-server-compaction] for compatibility testing, but no managed Pi profile renders or loads it, so it is not part of this configured inventory.
 
@@ -42,6 +42,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [`pi-provider-llama-swap`][pi-provider-llama-swap] | `57583beb` | Discover chat models from local llama-swap | `/model`, `llama-swap/*` |
 | [`pi-provider-omlx`][pi-provider-omlx] | `57583beb` | Discover authenticated oMLX services selected for each host | `/model`, `omlx-hera/*`, `omlx-clio/*` |
 | [`pi-rewind`][pi-rewind] | 0.5.0 | Conversation and file checkpoints | `/rewind` |
+| [`pi-flag`][pi-flag] | 0.1.0 | Mark user or assistant messages significant for later model turns | `/flag` |
 | [`pi-idle-check`][pi-idle-check] | 0.1.0 | Offer context-aware send, compact, or new-session choices after idle time | automatic |
 | [`pi-trace-extension`][pi-trace] | 0.1.15 | Local execution traces and HTML reports | `/trace` |
 | [`pi-markdown-preview`][pi-markdown-preview] | 0.15.0 | Terminal, browser, PDF, and artifact previews | `/preview`, `preview_export` |
@@ -74,7 +75,7 @@ The Hera, Clio, shared-work, VPS, and Vulcan Pi profiles are rendered by `~/src/
 | Surface | Current projection |
 | --- | --- |
 | Generated ownership | Individual leaves below `~/.config/pi/agent`, plus `~/.pi-lens/config.json` and the `~/.pi` compatibility link; Pi shares `~/.config/mcp/mcp.json` with Prime Agent |
-| Extension entries | [Fleet Theme][fleet-theme], [Nix Gallery loader][nix-gallery-loader], [Pi Loop][pi-loop], [Pi MCP Adapter][pi-mcp-adapter], and [Quiet Display][pi-quiet] on every managed host; the Gallery loads [Agent-cat Workflows][agent-cat-workflow], [Idle Check][pi-idle-check], [GPT Fast Mode][pi-gpt-fast-mode], and the [Factory Droid SDK provider][pi-droid-sdk] everywhere; Darwin additionally loads loopback llama-swap and bilateral oMLX discovery, while Vulcan loads only remote `omlx-hera` discovery |
+| Extension entries | [Fleet Theme][fleet-theme], [Nix Gallery loader][nix-gallery-loader], [Pi Loop][pi-loop], [Pi MCP Adapter][pi-mcp-adapter], and [Quiet Display][pi-quiet] on every managed host; the Gallery loads [Agent-cat Workflows][agent-cat-workflow], [Significance Flags][pi-flag], [Idle Check][pi-idle-check], [GPT Fast Mode][pi-gpt-fast-mode], and the [Factory Droid SDK provider][pi-droid-sdk] everywhere; Darwin additionally loads loopback llama-swap and bilateral oMLX discovery, while Vulcan loads only remote `omlx-hera` discovery |
 | Agent resources | 25 Nix-managed agent definitions |
 | Prompt resources | 63 files: 61 command prompts and the `emacs` and `spanish` prompts |
 | Skill resources | Shared catalog skills selected for Pi, plus five gallery package skill paths and one gallery prompt path advertised at runtime |
@@ -194,6 +195,14 @@ The [Nix Gallery loader][nix-gallery-loader] projects the complete managed packa
 [Pi Rewind][pi-rewind] records per-tool checkpoints so conversation state, file changes, or both may be returned to an earlier point. Restoration is bounded to the recorded session history and retains a redo stack, making exploratory work recoverable without a broad Git reset.
 
 **Basic usage.** Run `/rewind` and choose the checkpoint and restoration scope. In interactive sessions, `Esc Esc` opens the quick files-only rewind.
+
+### [Significance Flags][pi-flag]
+
+**Version:** 0.1.0, pinned at `520be58` · **Links:** [Home](https://github.com/jwiegley/pi-flag#readme) · [GitHub](https://github.com/jwiegley/pi-flag)
+
+[Pi Flag][pi-flag] lets you mark complete user prompts or visible assistant responses as significant. It restores the session-scoped selections from Pi's journal and losslessly projects them as a deterministic focus block on later user-input model runs. It retains no separate mutable state, and selecting an image-bearing prompt is rejected because it cannot be reproduced losslessly in a text system prompt.
+
+**Basic usage.** Run `/flag`, select a user or assistant message, and confirm. The first selection requires acknowledgement that the full flagged text will be resent on subsequent user-input runs in the session; start a fresh Pi process or run `/reload` after activation.
 
 ### [Idle Check][pi-idle-check]
 
@@ -493,6 +502,7 @@ Source policy last checked against the current `~/src/nix` fleet renderer on 202
 [pi-provider-llama-swap]: https://github.com/jwiegley/nix-config/blob/main/packages/pi-gallery/providers/pi-provider-llama-swap.ts
 [pi-provider-omlx]: https://github.com/jwiegley/nix-config/blob/main/packages/pi-gallery/providers/pi-provider-omlx.ts
 [pi-rewind]: https://pi.dev/packages/pi-rewind
+[pi-flag]: https://github.com/jwiegley/pi-flag
 [pi-idle-check]: https://github.com/jwiegley/pi-idle-check
 [pi-trace]: https://pi.dev/packages/pi-trace-extension
 [pi-markdown-preview]: https://pi.dev/packages/pi-markdown-preview

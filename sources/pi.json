@@ -277,6 +277,29 @@
       },
       "version": "0.30.5"
     },
+    "pi-flag": {
+      "hashes": {
+        "npmDepsHash": "sha256-6s7GBj0sS3v9yatz/zcHz7r4T+3qKqS+VXFvhBLzIaY="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-N1vnCHk4BBrD1iw2GRxGqQbJ96FAhgoKyeO6NBaWvA0=",
+          "owner": "jwiegley",
+          "repo": "pi-flag",
+          "rev": "520be582f7d18e53fa886d32bd406587cce3269d"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/pi-flag"
+      },
+      "update": {
+        "branch": "main",
+        "buildPackage": "pi-flag",
+        "kind": "github-commit",
+        "policy": "manual",
+        "reason": "Lossless session significance flags and provider projection require coupled review"
+      },
+      "version": "0.1.0"
+    },
     "pi-gpt-fast-mode": {
       "hashes": {
         "npmDepsHash": "sha256-fam7LUAdydm3eZ0r3HbwQq6+3dytEMFDEpjnCOxG2KY="

@@ -40,6 +40,7 @@ in
     "llama-swap-provider"
     "omlx-provider"
     "rewind"
+    "flag"
     "idle-check"
     "mem"
     "trace"
@@ -114,6 +115,10 @@ in
     rewind = member "pi-rewind" {
       publicName = "pi-rewind";
       extension = "src/index.ts";
+    };
+    flag = member "pi-flag" {
+      publicName = "pi-flag";
+      extension = "index.ts";
     };
     idle-check = member "pi-idle-check" {
       publicName = "pi-idle-check";

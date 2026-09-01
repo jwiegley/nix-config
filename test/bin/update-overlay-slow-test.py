@@ -4433,6 +4433,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             "pi-droid-sdk": "pi-droid-sdk",
             "pi-goal-x": "pi-goal-x",
             "pi-gpt-fast-mode": "pi-gpt-fast-mode",
+            "pi-flag": "pi-flag",
             "pi-idle-check": "pi-idle-check",
             "pi-loop": "pi-loop",
             "pi-mcp-adapter": "agent-resources",

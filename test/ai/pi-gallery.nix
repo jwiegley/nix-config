@@ -63,6 +63,9 @@ let
   ];
   quiet = "${piPackages.agent-resources}/share/agent-resources/pi-extensions/pi-quiet/src/index.ts";
   packageRoots = lib.escapeShellArgs (builtins.attrValues roots);
+  boundedHistoryPackageRoots = lib.escapeShellArgs (
+    builtins.attrValues (builtins.removeAttrs roots [ "flag" ])
+  );
   memberVersionChecks = lib.concatMapStringsSep "\n" (
     id: "expect_version ${roots.${id}}/package.json ${manifest.members.${id}.version}"
   ) manifest.order;
@@ -383,7 +386,7 @@ runCommand "pi-gallery-check"
     done
 
     echo "Pi gallery check: bounded session-history consumers"
-    for package_root in ${packageRoots} ${piPackages.pi-loop}/share/pi-packages/pi-loop; do
+    for package_root in ${boundedHistoryPackageRoots} ${piPackages.pi-loop}/share/pi-packages/pi-loop; do
       offenders=$(
         find "$package_root" -path '*/node_modules' -prune -o \
           -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.mjs' \) \
@@ -394,6 +397,16 @@ runCommand "pi-gallery-check"
     done
     ! grep -E 'sessionManager\.get(Entries|Branch)\(' ${quiet} >/dev/null \
       || fail "Pi Quiet still consumes full session history"
+    ! grep -E 'sessionManager\.get(Entries|Branch)\(' ${quiet} >/dev/null \
+      || fail "Pi Quiet still consumes full session history"
+    [ -f ${roots.flag}/index.ts ]
+    [ -f ${roots.flag}/src/focus.ts ]
+    [ -f ${roots.flag}/README.md ]
+    [ ! -e ${roots.flag}/node_modules ]
+    grep -F 'sessionManager.getEntries()' ${roots.flag}/index.ts >/dev/null \
+      || fail "pi-flag must restore active session-scoped flags from the session journal"
+    grep -F 'pi.on("before_agent_start"' ${roots.flag}/index.ts >/dev/null \
+      || fail "pi-flag must project active flags before an agent starts"
 
     [ -f ${roots.fast-mode}/index.ts ]
     ! grep -Fq 'subagents on GPT-5.4/5.5' ${roots.fast-mode}/index.ts \
