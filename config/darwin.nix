@@ -16,11 +16,11 @@ let
     clio = {
       legacyGatewayEnable = false;
       listenAddress = "192.168.1.5";
-      allowedSources = [ "192.168.1.4/32" ];
+      allowedSources = [ "192.168.1.3/32" ];
     };
     hera = {
       legacyGatewayEnable = true;
-      listenAddress = "192.168.1.4";
+      listenAddress = "192.168.1.3";
       allowedSources = [
         "192.168.1.2/32" # vulcan
         "192.168.1.5/32" # clio (Ethernet)

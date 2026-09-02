@@ -16,9 +16,9 @@ let
       # Clio reaches Hera only through the route-gated WireGuard SSH tunnel.
       # At home Hera initiates the direct LAN connection to Clio instead.
       addresses = [ "tcp://127.0.0.1:22001" ];
-      listenAddress = "tcp://192.168.1.4:22000";
+      listenAddress = "tcp://192.168.1.3:22000";
       networks = [
-        "192.168.1.4/32"
+        "192.168.1.3/32"
         "127.0.0.1/32"
       ];
     };
@@ -28,7 +28,7 @@ let
       listenAddress = "tcp://127.0.0.1:22000";
       networks = [
         "192.168.1.5/32"
-        "192.168.1.4/32"
+        "192.168.1.3/32"
       ];
     };
     vulcan = {

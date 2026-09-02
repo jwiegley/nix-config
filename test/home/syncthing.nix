@@ -25,9 +25,9 @@ let
   expectedNodes = {
     hera = {
       addresses = [ "tcp://127.0.0.1:22001" ];
-      listen = "tcp://192.168.1.4:22000";
+      listen = "tcp://192.168.1.3:22000";
       networks = [
-        "192.168.1.4/32"
+        "192.168.1.3/32"
         "127.0.0.1/32"
       ];
     };
@@ -36,7 +36,7 @@ let
       listen = "tcp://127.0.0.1:22000";
       networks = [
         "192.168.1.5/32"
-        "192.168.1.4/32"
+        "192.168.1.3/32"
       ];
     };
     vulcan = {
@@ -513,7 +513,7 @@ pkgs.runCommand "syncthing-home-contract"
     grep -F -- '/bin/sleep 30' ${clioWireGuardTunnel} >/dev/null
     grep -F -- '/bin/sleep 30' ${clioHomeLanBridge} >/dev/null
     grep -F -- 'exec ' ${clioHomeLanBridge} | grep -F -- '/bin/socat \' >/dev/null
-    grep -F -- 'range=192.168.1.4/32,reuseaddr,fork' ${clioHomeLanBridge} >/dev/null
+    grep -F -- 'range=192.168.1.3/32,reuseaddr,fork' ${clioHomeLanBridge} >/dev/null
     DRY_RUN=1 bash ${heraPreflight}
     DRY_RUN=1 bash ${clioPreflight}
     cp ${./syncthing-runtime-check.py} runtime-check.py
@@ -840,13 +840,13 @@ pkgs.runCommand "syncthing-home-contract"
     expected = {
         "hera": {
             "addresses": ["tcp://127.0.0.1:22001"],
-            "listen": "tcp://192.168.1.4:22000",
-            "networks": ["192.168.1.4/32", "127.0.0.1/32"],
+            "listen": "tcp://192.168.1.3:22000",
+            "networks": ["192.168.1.3/32", "127.0.0.1/32"],
         },
         "clio": {
             "addresses": ["tcp://clio.lan:22000"],
             "listen": "tcp://127.0.0.1:22000",
-            "networks": ["192.168.1.5/32", "192.168.1.4/32"],
+            "networks": ["192.168.1.5/32", "192.168.1.3/32"],
         },
         "vulcan": {
             "addresses": ["tcp://192.168.1.2:22000"],

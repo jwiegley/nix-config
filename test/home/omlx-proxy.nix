@@ -131,7 +131,7 @@ assert
     "10.6.0.2/32"
     "10.7.0.5/32"
   ];
-assert clioSettings.allowedSources == [ "192.168.1.4/32" ];
+assert clioSettings.allowedSources == [ "192.168.1.3/32" ];
 assert builtins.elem "${clioSettings.listenAddress}/32" heraSettings.allowedSources;
 assert builtins.elem "${heraSettings.listenAddress}/32" clioSettings.allowedSources;
 assert builtins.all

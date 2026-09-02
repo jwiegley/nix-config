@@ -54,7 +54,7 @@ in
     listenAddress = lib.mkOption {
       type = lib.types.strMatching "[0-9.]+";
       default = "127.0.0.1";
-      example = "192.168.1.4";
+      example = "192.168.1.3";
       description = "Exact interface address used when the oMLX route is exposed.";
     };
 
