@@ -35,7 +35,7 @@ let
       addresses = [ "tcp://clio.lan:22000" ];
       listen = "tcp://127.0.0.1:22000";
       networks = [
-        "192.168.1.5/32"
+        "192.168.1.39/32"
         "192.168.1.3/32"
       ];
     };
@@ -846,7 +846,7 @@ pkgs.runCommand "syncthing-home-contract"
         "clio": {
             "addresses": ["tcp://clio.lan:22000"],
             "listen": "tcp://127.0.0.1:22000",
-            "networks": ["192.168.1.5/32", "192.168.1.3/32"],
+            "networks": ["192.168.1.39/32", "192.168.1.3/32"],
         },
         "vulcan": {
             "addresses": ["tcp://192.168.1.2:22000"],

@@ -231,7 +231,7 @@ let
     }
     // lib.optionalAttrs (pkgs ? my-scripts) {
       vulcan_wifi = lib.hm.dag.entryBefore [ "vulcan" ] {
-        header = ''Match host vulcan exec "${pkgs.bash}/bin/bash -c '[[ $(${pkgs.my-scripts}/bin/ipaddr bridge0) == 192.168.1.5 ]]'"'';
+        header = ''Match host vulcan exec "${pkgs.bash}/bin/bash -c '[[ $(${pkgs.my-scripts}/bin/ipaddr bridge0) == 192.168.1.39 ]]'"'';
         HostName = "192.168.3.16";
       };
     };

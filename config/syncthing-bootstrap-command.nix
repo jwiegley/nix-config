@@ -4,7 +4,7 @@
   documentsDirectory,
   guiSocket,
   lib,
-  listenAddress,
+  listenAddresses,
   localDeviceID,
   mode,
   peerPolicies,
@@ -20,9 +20,12 @@ lib.escapeShellArgs (
     "${stateDirectory}/config.xml"
     "--local-device-id"
     localDeviceID
-    "--listen-address"
-    listenAddress
   ]
+  ++ lib.concatMap (address: [
+    "--listen-address"
+    address
+  ]) listenAddresses
+  ++ [
   ++ lib.concatMap (policy: [
     "--peer-policy"
     (builtins.toJSON policy)

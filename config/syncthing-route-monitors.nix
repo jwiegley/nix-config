@@ -60,21 +60,21 @@
         "" | utun*) return 1 ;;
       esac
       ${tools.ifconfig} "$route_interface" 2>/dev/null \
-        | ${tools.awk} '$1 == "inet" && $2 == "192.168.1.5" { found = 1 } END { exit !found }' \
+        | ${tools.awk} '$1 == "inet" && $2 == "192.168.1.39" { found = 1 } END { exit !found }' \
         || return 1
       ${tools.printf} '%s\n' "$route_interface"
     }
 
     start_bridge() {
       exec ${tools.socat} \
-        "TCP4-LISTEN:22000,bind=192.168.1.5,range=192.168.1.3/32,reuseaddr,fork" \
+        "TCP4-LISTEN:22000,bind=192.168.1.39,range=192.168.1.3/32,reuseaddr,fork" \
         "TCP4:127.0.0.1:22000"
     }
 
     home_route_active >/dev/null || exit 0
     ${tools.ssh} \
       -T \
-      -b 192.168.1.5 \
+      -b 192.168.1.39 \
       -o BatchMode=yes \
       -o ClearAllForwardings=yes \
       -o ConnectTimeout=3 \

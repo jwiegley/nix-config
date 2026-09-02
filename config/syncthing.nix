@@ -7,34 +7,37 @@
 }:
 
 let
-  # Syncthing never binds Tailscale. Clio's route-aware launchd bridges below
-  # expose its loopback listener either on the home LAN or through SSH over
-  # WireGuard; Hera listens only on its home-LAN address.
+  # Static, direct listeners only. Discovery, relays, NAT, and route shims stay disabled.
   nodes = {
     hera = {
       deviceID = "MDOPNSZ-WLGJBFD-4YUV4S3-QEUZGWP-TLIRRVK-ZXFJ7Q2-IJ3FRBO-ZQVRPAD";
-      # Clio reaches Hera only through the route-gated WireGuard SSH tunnel.
-      # At home Hera initiates the direct LAN connection to Clio instead.
-      addresses = [ "tcp://127.0.0.1:22001" ];
-      listenAddress = "tcp://192.168.1.3:22000";
+      addresses = [
+        "tcp://10.55.0.1:22000"
+        "tcp://192.168.1.3:22000"
+      ];
+      listenAddresses = addresses;
       networks = [
+        "10.55.0.1/32"
         "192.168.1.3/32"
-        "127.0.0.1/32"
       ];
     };
     clio = {
       deviceID = "G3JLOH6-Y5SBVLA-RYANNWG-OXRNO6H-V2FDOSJ-NYYCVF2-UHLDQIU-IMV45A3";
-      addresses = [ "tcp://clio.lan:22000" ];
-      listenAddress = "tcp://127.0.0.1:22000";
+      addresses = [
+        "tcp://10.55.0.2:22000"
+        "tcp://192.168.1.39:22000"
+      ];
+      listenAddresses = addresses;
       networks = [
-        "192.168.1.5/32"
-        "192.168.1.3/32"
+        "10.55.0.2/32"
+        "192.163.3.9/32"
+        "10.6.0.2/32"
       ];
     };
     vulcan = {
       deviceID = "IPWC66H-N6RPNOM-HSX6NKH-Y7MEFTP-GNM75K7-5L6BRIW-OILLNGQ-VQK4ZA2";
       addresses = [ "tcp://192.168.1.2:22000" ];
-      listenAddress = "tcp://192.168.1.2:22000";
+      listenAddresses = addresses;
       networks = [ "192.168.1.2/32" ];
     };
   };
@@ -86,22 +89,6 @@ let
     folder = defaultFolderPolicy;
     ignores = defaultIgnorePatterns;
   };
-  monitorLibrary = pkgs.writeText "syncthing-monitor.sh" (builtins.readFile ./syncthing-monitor.sh);
-  monitorScripts = import ./syncthing-route-monitors.nix {
-    inherit monitorLibrary;
-    tools = {
-      awk = "/usr/bin/awk";
-      ifconfig = "/sbin/ifconfig";
-      printf = "/usr/bin/printf";
-      remoteTrue = "/usr/bin/true";
-      route = "/sbin/route";
-      sleep = "/bin/sleep";
-      socat = lib.getExe pkgs.socat;
-      ssh = "/usr/bin/ssh";
-    };
-  };
-  wireGuardTunnel = pkgs.writeShellScript "syncthing-wireguard-tunnel" monitorScripts.wireGuardTunnel;
-  homeLanBridge = pkgs.writeShellScript "syncthing-home-lan-bridge" monitorScripts.homeLanBridge;
   managedFolder =
     {
       id,
@@ -167,7 +154,7 @@ let
         mode
         stateDirectory
         ;
-      inherit (localNode) listenAddress;
+      inherit (localNode) listenAddresses;
       localDeviceID = localNode.deviceID;
       peerPolicies = map (name: {
         deviceID = nodes.${name}.deviceID;
@@ -282,7 +269,7 @@ in
       };
 
       options = {
-        listenAddresses = [ localNode.listenAddress ];
+        inherit (localNode) listenAddresses;
         alwaysLocalNets = peerNetworks;
         reconnectionIntervalS = 5;
         maxFolderConcurrency = 1;
@@ -354,31 +341,6 @@ in
           RunAtLoad = lib.mkForce true;
           KeepAlive = lib.mkForce { SuccessfulExit = false; };
           ThrottleInterval = lib.mkForce 5;
-        };
-      };
-    }
-    // lib.optionalAttrs config.johnw.host.isClio {
-      syncthing-home-lan-bridge = {
-        enable = true;
-        domain = "gui";
-        config = {
-          ProgramArguments = [ "${homeLanBridge}" ];
-          RunAtLoad = true;
-          StartInterval = 30;
-          StandardOutPath = "${logDirectory}/syncthing-home-lan-bridge.log";
-          StandardErrorPath = "${logDirectory}/syncthing-home-lan-bridge.log";
-        };
-      };
-
-      syncthing-wireguard-tunnel = {
-        enable = true;
-        domain = "gui";
-        config = {
-          ProgramArguments = [ "${wireGuardTunnel}" ];
-          RunAtLoad = true;
-          StartInterval = 30;
-          StandardOutPath = "${logDirectory}/syncthing-wireguard-tunnel.log";
-          StandardErrorPath = "${logDirectory}/syncthing-wireguard-tunnel.log";
         };
       };
     }

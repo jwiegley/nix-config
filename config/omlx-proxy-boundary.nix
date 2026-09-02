@@ -61,7 +61,7 @@ in
     allowedSources = lib.mkOption {
       type = lib.types.listOf (lib.types.strMatching "[A-Za-z0-9.:/-]+");
       default = [ ];
-      example = [ "192.168.1.5/32" ];
+      example = [ "192.168.1.39/32" ];
       description = "Singleton IPv4 /32 or IPv6 /128 peers permitted to use the oMLX route.";
     };
 

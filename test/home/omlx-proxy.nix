@@ -126,7 +126,7 @@ assert heraSettings.listenAddress != clioSettings.listenAddress;
 assert
   heraSettings.allowedSources == [
     "192.168.1.2/32"
-    "192.168.1.5/32"
+    "192.168.1.39/32"
     "192.168.3.9/32"
     "10.6.0.2/32"
     "10.7.0.5/32"

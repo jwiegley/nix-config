@@ -109,7 +109,7 @@ def parse_args() -> argparse.Namespace:
         type=parse_peer_policy,
         required=True,
     )
-    parser.add_argument("--listen-address", required=True)
+    parser.add_argument("--listen-address", dest="listen_addresses", action="append", required=True)
     parser.add_argument("--gui-socket", required=True)
     parser.add_argument("--default-policy", type=parse_default_policy, required=True)
     parser.add_argument("--documents", type=Path, required=True)
@@ -326,8 +326,8 @@ def harden(root: ET.Element, args: argparse.Namespace) -> bool:
         changed = True
     changed |= replace_values(default_ignores, "line", args.default_policy["ignores"])
 
+    changed |= replace_values(options, "listenAddress", args.listen_addresses)
     singleton_options = {
-        "listenAddress": args.listen_address,
         "globalAnnounceEnabled": "false",
         "localAnnounceEnabled": "false",
         "announceLANAddresses": "false",
