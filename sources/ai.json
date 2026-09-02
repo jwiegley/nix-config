@@ -1227,10 +1227,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-yxWlYf5LfJJa0AkyCE3qRuYO9KvXbF/fDcIJE7eOWSE=",
+          "narHash": "sha256-r7iTjwvO80DqELsdcDSk5iqRA/rxQYs9fSiFWevPeZg=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "a8f30a640faaa61eba952b7e87fa90dcd5dd195b",
+          "rev": "f45c8827235ca49c49ec7e477db01973295ae67a",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1340,7 +1340,7 @@
           "narHash": "sha256-CkdMY9itrTX8CTmcEEi/KHcMDEK6QXjDBN3CaxArnek=",
           "owner": "jwiegley",
           "repo": "pi",
-          "rev": "74bf9ae3cb0dfc2aa5b364c13224622cf037d9e5",
+          "rev": "37864ad59cf9fb533caf39f3214fbaae02c4e985",
           "type": "github"
         },
         "fetcher": "fetchTree",
