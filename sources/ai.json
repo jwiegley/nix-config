@@ -1349,7 +1349,8 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/ai/flake.lock"
+          "config/ai/flake.lock",
+          "config/ai/flake.nix"
         ],
         "buildPackage": "pi-coding-agent-source-build",
         "input": "pi",
