@@ -52,7 +52,7 @@ cleanup() {
         fi
     fi
 
-    if ((!rollback_failed && transaction_owned)) && [[ -d $transaction_dir ]] && ! rm -rf "$transaction_dir"; then
+    if ((! rollback_failed && transaction_owned)) && [[ -d $transaction_dir ]] && ! rm -rf "$transaction_dir"; then
         echo "Could not remove transaction directory $transaction_dir!" >&2
         cleanup_status=1
     fi
