@@ -1144,6 +1144,24 @@ Generated Hera zsh config contains INC_APPEND_HISTORY_TIME and NO_SHARE_HISTORY;
 ]
 #+end_src
 
+* DONE [#B] Expose oMLX TLS proxies on overlay and LAN listeners
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-2hkv
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-02 Wed 00:37]
+:MODIFIED: [2026-09-02 Wed 00:42]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-02 Wed 00:42]
+:CLOSE_REASON: Configured dual LAN and overlay oMLX proxy listeners with matching peer allow-lists; proxy contract and Hera system build pass.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Bind both Darwin oMLX TLS proxies to their LAN and overlay addresses, allow peer source addresses on both paths, and verify generated nginx configuration.
+
 * DONE [#B] Adopt mlx-vlm compatible with vllm-mlx 0.4.1
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

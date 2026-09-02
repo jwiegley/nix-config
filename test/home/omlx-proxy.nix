@@ -52,7 +52,7 @@ let
       proxyAssertionsFor settings
     )).assertion;
 
-  listenMessage = "oMLX proxy exposure requires an explicit non-wildcard listen address";
+  listenMessage = "oMLX proxy exposure requires explicit non-wildcard listen addresses";
   sourcesMessage = "oMLX proxy exposure requires a non-empty, restricted source allowlist";
   certificateMessage = "oMLX proxy exposure requires explicit absolute certificate and key paths";
   privateKeyMessage = "oMLX proxy exposure requires a host-local private key path";
@@ -63,7 +63,7 @@ let
     certificateKeyFile = "/Users/test/omlx-test.key";
     legacyGatewayEnable = true;
     trustedCaFile = "/Users/test/omlx-test-ca.crt";
-    listenAddress = "192.0.2.10";
+    listenAddresses = [ "192.0.2.10" ];
     allowedSources = [
       "192.0.2.20/32"
       "2001:db8::20/128"
@@ -122,7 +122,16 @@ assert builtins.all (entry: entry.assertion) (proxyAssertionsFor clioSettings);
 assert proxyAgentFor { } == null;
 assert heraSettings.enable;
 assert clioSettings.enable;
-assert heraSettings.listenAddress != clioSettings.listenAddress;
+assert
+  heraSettings.listenAddresses == [
+    "192.168.1.3"
+    "10.55.0.1"
+  ];
+assert
+  clioSettings.listenAddresses == [
+    "192.168.1.39"
+    "10.55.0.2"
+  ];
 assert
   heraSettings.allowedSources == [
     "192.168.1.2/32"
@@ -130,10 +139,19 @@ assert
     "192.168.3.9/32"
     "10.6.0.2/32"
     "10.7.0.5/32"
+    "10.55.0.2/32"
   ];
-assert clioSettings.allowedSources == [ "192.168.1.3/32" ];
-assert builtins.elem "${clioSettings.listenAddress}/32" heraSettings.allowedSources;
-assert builtins.elem "${heraSettings.listenAddress}/32" clioSettings.allowedSources;
+assert
+  clioSettings.allowedSources == [
+    "192.168.1.3/32"
+    "10.55.0.1/32"
+  ];
+assert builtins.all (
+  address: builtins.elem "${address}/32" heraSettings.allowedSources
+) clioSettings.listenAddresses;
+assert builtins.all (
+  address: builtins.elem "${address}/32" clioSettings.allowedSources
+) heraSettings.listenAddresses;
 assert builtins.all
   (
     host:
@@ -154,10 +172,11 @@ assert builtins.all
     "clio"
     "hera"
   ];
-assert !(assertionFor (validSettings // { listenAddress = "0.0.0.0"; }) listenMessage);
-assert !(assertionFor (validSettings // { listenAddress = "0"; }) listenMessage);
-assert !(assertionFor (validSettings // { listenAddress = "00.00.00.00"; }) listenMessage);
-assert !(assertionFor (validSettings // { listenAddress = "999.0.0.1"; }) listenMessage);
+assert !(assertionFor (validSettings // { listenAddresses = [ "0.0.0.0" ]; }) listenMessage);
+assert !(assertionFor (validSettings // { listenAddresses = [ ]; }) listenMessage);
+assert !(assertionFor (validSettings // { listenAddresses = [ "0" ]; }) listenMessage);
+assert !(assertionFor (validSettings // { listenAddresses = [ "00.00.00.00" ]; }) listenMessage);
+assert !(assertionFor (validSettings // { listenAddresses = [ "999.0.0.1" ]; }) listenMessage);
 assert !(assertionFor (validSettings // { allowedSources = [ ]; }) sourcesMessage);
 assert !(assertionFor (validSettings // { allowedSources = [ "all" ]; }) sourcesMessage);
 assert !(assertionFor (validSettings // { allowedSources = [ "0.0.0.0/0" ]; }) sourcesMessage);
@@ -270,7 +289,7 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
   grep -F 'proxy_ssl_trusted_certificate /Users/test/omlx-test-ca.crt;' "$valid_config"
   grep -F 'proxy_ssl_verify on;' "$valid_config"
   grep -F 'proxy_ssl_server_name on;' "$valid_config"
-  grep -F 'allow ${validSettings.listenAddress};' "$valid_config"
+  grep -F 'allow ${builtins.head validSettings.listenAddresses};' "$valid_config"
   test "$(grep -Fc 'return 404;' "$valid_config")" -eq 2
   test "$(grep -Fc 'return 404;' "$restricted_config")" -eq 3
   reject_fixed 'proxy_ssl_trusted_certificate' "$restricted_config"
@@ -283,18 +302,22 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
     case "$host" in
       hera)
         config="$hera_config"
-        listen=${lib.escapeShellArg heraSettings.listenAddress}
-        peer=${lib.escapeShellArg clioSettings.listenAddress}
+        listen_addresses=( ${lib.escapeShellArgs heraSettings.listenAddresses} )
+        peer_addresses=( ${lib.escapeShellArgs clioSettings.listenAddresses} )
         ;;
       clio)
         config="$clio_config"
-        listen=${lib.escapeShellArg clioSettings.listenAddress}
-        peer=${lib.escapeShellArg heraSettings.listenAddress}
+        listen_addresses=( ${lib.escapeShellArgs clioSettings.listenAddresses} )
+        peer_addresses=( ${lib.escapeShellArgs heraSettings.listenAddresses} )
         ;;
     esac
-    grep -F "listen $listen:8443 ssl;" "$config"
-    grep -F "allow $listen;" "$config"
-    grep -F "allow $peer/32;" "$config"
+    for listen in "''${listen_addresses[@]}"; do
+      grep -F "listen $listen:8443 ssl;" "$config"
+      grep -F "allow $listen;" "$config"
+    done
+    for peer in "''${peer_addresses[@]}"; do
+      grep -F "allow $peer/32;" "$config"
+    done
     grep -F 'location = /v1' "$config"
     grep -F 'location ^~ /v1/' "$config"
     grep -F 'location ~ ^/v1(?:[^/]|$)' "$config"

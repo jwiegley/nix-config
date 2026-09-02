@@ -307,7 +307,9 @@ in
             http {
               client_body_temp_path ${logDir}/client_body;
               server {
-                listen ${lib.optionalString omlxProxy.enable "${omlxProxy.listenAddress}:"}8443 ssl;
+                ${lib.concatMapStringsSep "\n                " (
+                  address: "listen ${address}:8443 ssl;"
+                ) omlxProxy.listenAddresses}
 
                 ssl_certificate ${omlxProxy.certificateFile};
                 ssl_certificate_key ${omlxProxy.certificateKeyFile};
@@ -326,7 +328,9 @@ in
                   }
 
                   location ^~ /v1/ {
-                    allow ${omlxProxy.listenAddress};
+                    ${lib.concatMapStringsSep "\n                  " (
+                      address: "allow ${address};"
+                    ) omlxProxy.listenAddresses}
                     ${lib.concatMapStringsSep "\n                  " (
                       source: "allow ${source};"
                     ) omlxProxy.allowedSources}
@@ -359,7 +363,9 @@ in
                 # Proxy all other requests to chat.vulcan.lan
                 ${lib.optionalString omlxProxy.legacyGatewayEnable ''
                   location / {
-                    allow ${omlxProxy.listenAddress};
+                    ${lib.concatMapStringsSep "\n                  " (
+                      address: "allow ${address};"
+                    ) omlxProxy.listenAddresses}
                     ${lib.concatMapStringsSep "\n                  " (
                       source: "allow ${source};"
                     ) omlxProxy.allowedSources}

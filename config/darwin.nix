@@ -15,18 +15,28 @@ let
   omlxProxyNetworkByHost = {
     clio = {
       legacyGatewayEnable = false;
-      listenAddress = "192.168.1.39";
-      allowedSources = [ "192.168.1.3/32" ];
+      listenAddresses = [
+        "192.168.1.39"
+        "10.55.0.2"
+      ];
+      allowedSources = [
+        "192.168.1.3/32"
+        "10.55.0.1/32"
+      ];
     };
     hera = {
       legacyGatewayEnable = true;
-      listenAddress = "192.168.1.3";
+      listenAddresses = [
+        "192.168.1.3"
+        "10.55.0.1"
+      ];
       allowedSources = [
         "192.168.1.2/32" # vulcan
         "192.168.1.39/32" # clio (Ethernet)
         "192.168.3.9/32" # clio (WiFi at home)
         "10.6.0.2/32" # clio (WireGuard WG1)
         "10.7.0.5/32" # stuart (WireGuard WG2)
+        "10.55.0.2/32" # clio (overlay)
       ];
     };
   };

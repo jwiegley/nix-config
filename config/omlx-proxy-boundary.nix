@@ -8,8 +8,11 @@ let
   cfg = config.johnw.omlxProxy;
   ipv4Octet = "(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]|[0-9])";
   canonicalIpv4 = "${ipv4Octet}(\\.${ipv4Octet}){3}";
-  listenIsExplicit =
-    cfg.listenAddress != "0.0.0.0" && builtins.match canonicalIpv4 cfg.listenAddress != null;
+  listenAddressesAreExplicit =
+    cfg.listenAddresses != [ ]
+    && builtins.all (
+      address: address != "0.0.0.0" && builtins.match canonicalIpv4 address != null
+    ) cfg.listenAddresses;
   validIpv6Singleton =
     source:
     let
@@ -51,11 +54,14 @@ in
   options.johnw.omlxProxy = {
     enable = lib.mkEnableOption "remote oMLX access through the TLS gateway";
 
-    listenAddress = lib.mkOption {
-      type = lib.types.strMatching "[0-9.]+";
-      default = "127.0.0.1";
-      example = "192.168.1.3";
-      description = "Exact interface address used when the oMLX route is exposed.";
+    listenAddresses = lib.mkOption {
+      type = lib.types.listOf (lib.types.strMatching "[0-9.]+");
+      default = [ "127.0.0.1" ];
+      example = [
+        "192.168.1.3"
+        "10.55.0.1"
+      ];
+      description = "Exact interface addresses used when the oMLX route is exposed.";
     };
 
     allowedSources = lib.mkOption {
@@ -89,8 +95,8 @@ in
 
   config.assertions = [
     {
-      assertion = !cfg.enable || listenIsExplicit;
-      message = "oMLX proxy exposure requires an explicit non-wildcard listen address";
+      assertion = !cfg.enable || listenAddressesAreExplicit;
+      message = "oMLX proxy exposure requires explicit non-wildcard listen addresses";
     }
     {
       assertion = !cfg.enable || sourcesAreRestricted;
