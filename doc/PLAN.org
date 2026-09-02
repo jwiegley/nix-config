@@ -11354,21 +11354,23 @@ A full x86_64-linux Obr realization from Hera scheduled rustc on andoria-08 and 
 ]
 #+end_src
 
-* DOING [#C] Route Syncthing directly across Hera and Clio networks
+* DONE [#C] Route Syncthing directly across Hera and Clio networks
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-s0ib
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-09-02 Wed 00:00]
-:MODIFIED: [2026-09-02 Wed 00:00]
+:MODIFIED: [2026-09-02 Wed 00:18]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-02 Wed 00:11]
+:CLOSE_REASON: Configured direct Hera and Clio listeners, source allow-lists, and multi-listener bootstrap; removed obsolete route shims; Syncthing contract passes.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Bind Hera to 192.168.1.3 and 10.55.0.1; bind Clio to 10.55.0.2 and 192.168.1.5; permit Clio's specified source addresses and retire obsolete SSH/bridge routing.
+Bind Hera to 192.168.1.3 and 10.55.0.1; bind Clio to 10.55.0.2 and 192.168.1.39; permit Clio’s specified source addresses and retire obsolete SSH/bridge routing.
 
 * DONE [#B] Adopt mtplx compatible with Transformers 5.15
 :PROPERTIES:

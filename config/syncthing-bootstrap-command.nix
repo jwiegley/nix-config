@@ -25,7 +25,6 @@ lib.escapeShellArgs (
     "--listen-address"
     address
   ]) listenAddresses
-  ++ [
   ++ lib.concatMap (policy: [
     "--peer-policy"
     (builtins.toJSON policy)

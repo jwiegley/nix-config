@@ -24,24 +24,37 @@ let
   managedSyncthing = pkgs.callPackage ../../packages/syncthing-next.nix { };
   expectedNodes = {
     hera = {
-      addresses = [ "tcp://127.0.0.1:22001" ];
-      listen = "tcp://192.168.1.3:22000";
+      addresses = [
+        "tcp://10.55.0.1:22000"
+        "tcp://192.168.1.3:22000"
+      ];
+      listenAddresses = [
+        "tcp://10.55.0.1:22000"
+        "tcp://192.168.1.3:22000"
+      ];
       networks = [
+        "10.55.0.1/32"
         "192.168.1.3/32"
-        "127.0.0.1/32"
       ];
     };
     clio = {
-      addresses = [ "tcp://clio.lan:22000" ];
-      listen = "tcp://127.0.0.1:22000";
+      addresses = [
+        "tcp://10.55.0.2:22000"
+        "tcp://192.168.1.39:22000"
+      ];
+      listenAddresses = [
+        "tcp://10.55.0.2:22000"
+        "tcp://192.168.1.39:22000"
+      ];
       networks = [
-        "192.168.1.39/32"
-        "192.168.1.3/32"
+        "10.55.0.2/32"
+        "192.163.3.9/32"
+        "10.6.0.2/32"
       ];
     };
     vulcan = {
       addresses = [ "tcp://192.168.1.2:22000" ];
-      listen = "tcp://192.168.1.2:22000";
+      listenAddresses = [ "tcp://192.168.1.2:22000" ];
       networks = [ "192.168.1.2/32" ];
     };
   };
@@ -50,49 +63,25 @@ let
       hera = {
         id = clio.services.syncthing.settings.devices.hera.id;
         addresses = clio.services.syncthing.settings.devices.hera.addresses;
-        listen = builtins.head hera.services.syncthing.settings.options.listenAddresses;
+        listenAddresses = hera.services.syncthing.settings.options.listenAddresses;
         networks = clio.services.syncthing.settings.devices.hera.allowedNetworks;
       };
       clio = {
         id = hera.services.syncthing.settings.devices.clio.id;
         addresses = hera.services.syncthing.settings.devices.clio.addresses;
-        listen = builtins.head clio.services.syncthing.settings.options.listenAddresses;
+        listenAddresses = clio.services.syncthing.settings.options.listenAddresses;
         networks = hera.services.syncthing.settings.devices.clio.allowedNetworks;
       };
       vulcan = {
         id = hera.services.syncthing.settings.devices.vulcan.id;
         addresses = hera.services.syncthing.settings.devices.vulcan.addresses;
-        listen = expectedNodes.vulcan.listen;
+        listenAddresses = expectedNodes.vulcan.listenAddresses;
         networks = hera.services.syncthing.settings.devices.vulcan.allowedNetworks;
       };
     }
   );
   heraPreflight = pkgs.writeText "syncthing-hera-preflight" hera.home.activation.prepareSyncthing.data;
   clioPreflight = pkgs.writeText "syncthing-clio-preflight" clio.home.activation.prepareSyncthing.data;
-  clioHomeLanBridge =
-    builtins.head
-      clio.launchd.agents."syncthing-home-lan-bridge".config.ProgramArguments;
-  clioWireGuardTunnel =
-    builtins.head
-      clio.launchd.agents."syncthing-wireguard-tunnel".config.ProgramArguments;
-  testMonitorLibrary = pkgs.writeText "syncthing-monitor-test-library" (
-    builtins.readFile ../../config/syncthing-monitor.sh
-  );
-  testMonitorScripts = import ../../config/syncthing-route-monitors.nix {
-    monitorLibrary = testMonitorLibrary;
-    tools = {
-      awk = "${pkgs.gawk}/bin/awk";
-      ifconfig = "wrapper-bin/ifconfig";
-      printf = "${pkgs.coreutils}/bin/printf";
-      remoteTrue = "/usr/bin/true";
-      route = "wrapper-bin/route";
-      sleep = "wrapper-bin/sleep";
-      socat = "wrapper-bin/socat";
-      ssh = "wrapper-bin/ssh";
-    };
-  };
-  testWireGuardTunnel = pkgs.writeText "syncthing-test-wireguard-tunnel" testMonitorScripts.wireGuardTunnel;
-  testHomeLanBridge = pkgs.writeText "syncthing-test-home-lan-bridge" testMonitorScripts.homeLanBridge;
   testDefaultPolicy = {
     folder = {
       path = "~/test-doc";
@@ -122,7 +111,7 @@ let
       desktopDirectory = "desktop";
       documentsDirectory = "documents";
       guiSocket = "runtime/gui.sock";
-      listenAddress = "tcp://127.0.0.1:22000";
+      listenAddresses = [ "tcp://127.0.0.1:22000" ];
       localDeviceID = "LOCAL-DEVICE";
       peerPolicies = testPeerPolicies;
       program = "fake-bin/bootstrap";
@@ -209,12 +198,9 @@ let
       defaultFolder = service.settings."defaults/folder";
       defaultIgnores = service.settings."defaults/ignores";
       options = service.settings.options;
-      localAddress = builtins.head options.listenAddresses;
       agent = home.launchd.agents.syncthing;
       bridgeAgent = home.launchd.agents.syncthing-gui-bridge;
       initAgent = home.launchd.agents.syncthing-init;
-      homeLanBridgeAgent = home.launchd.agents."syncthing-home-lan-bridge" or null;
-      wireGuardTunnelAgent = home.launchd.agents."syncthing-wireguard-tunnel" or null;
       preflight = home.home.activation.prepareSyncthing;
       localDeviceID =
         if isClio then
@@ -230,9 +216,11 @@ let
             "${home.home.homeDirectory}/Library/Application Support/Syncthing/config.xml"
             "--local-device-id"
             localDeviceID
-            "--listen-address"
-            localAddress
           ]
+          ++ lib.concatMap (address: [
+            "--listen-address"
+            address
+          ]) options.listenAddresses
           ++ lib.concatMap (name: [
             "--peer-policy"
             (builtins.toJSON {
@@ -260,10 +248,8 @@ let
       expectedAgentNames = [
         "syncthing"
         "syncthing-gui-bridge"
-      ]
-      ++ lib.optional isClio "syncthing-home-lan-bridge"
-      ++ [ "syncthing-init" ]
-      ++ lib.optional isClio "syncthing-wireguard-tunnel";
+        "syncthing-init"
+      ];
       validFolder =
         folder:
         {
@@ -355,8 +341,7 @@ let
     && defaultFolder.maxConcurrentWrites == 4
     && !defaultFolder.disableFsync
     && defaultIgnores.lines == defaultIgnorePatterns
-    && builtins.length options.listenAddresses == 1
-    && localAddress == localPolicy.listen
+    && options.listenAddresses == localPolicy.listenAddresses
     && options.alwaysLocalNets == peerNetworks
     && !options.globalAnnounceEnabled
     && options.globalAnnounceServers == [ ]
@@ -395,29 +380,6 @@ let
     && initAgent.config.RunAtLoad
     && initAgent.config.KeepAlive.SuccessfulExit == false
     && initAgent.config.ThrottleInterval == 5
-    && (
-      if isClio then
-        homeLanBridgeAgent.enable
-        && homeLanBridgeAgent.domain == "gui"
-        && builtins.length homeLanBridgeAgent.config.ProgramArguments == 1
-        && lib.hasInfix "syncthing-home-lan-bridge" (
-          builtins.head homeLanBridgeAgent.config.ProgramArguments
-        )
-        && homeLanBridgeAgent.config.RunAtLoad
-        && homeLanBridgeAgent.config.StartInterval == 30
-        && homeLanBridgeAgent.config.KeepAlive == null
-        && wireGuardTunnelAgent.enable
-        && wireGuardTunnelAgent.domain == "gui"
-        && builtins.length wireGuardTunnelAgent.config.ProgramArguments == 1
-        && lib.hasInfix "syncthing-wireguard-tunnel" (
-          builtins.head wireGuardTunnelAgent.config.ProgramArguments
-        )
-        && wireGuardTunnelAgent.config.RunAtLoad
-        && wireGuardTunnelAgent.config.StartInterval == 30
-        && wireGuardTunnelAgent.config.KeepAlive == null
-      else
-        homeLanBridgeAgent == null && wireGuardTunnelAgent == null
-    )
     && preflight.before == [ "setupLaunchAgents" ]
     && preflight.after == [ "linkGeneration" ]
     && lib.hasInfix "/bin/syncthing-bootstrap" preflight.data
@@ -505,15 +467,6 @@ pkgs.runCommand "syncthing-home-contract"
     }'
     bash -n ${heraPreflight}
     bash -n ${clioPreflight}
-    bash -n ${clioHomeLanBridge}
-    bash -n ${clioWireGuardTunnel}
-    grep -F -- '-B "$1"' ${clioWireGuardTunnel} >/dev/null
-    grep -F -- 'exec /usr/bin/ssh \' ${clioWireGuardTunnel} >/dev/null
-    grep -F -- '-b 10.6.0.2' ${clioWireGuardTunnel} >/dev/null
-    grep -F -- '/bin/sleep 30' ${clioWireGuardTunnel} >/dev/null
-    grep -F -- '/bin/sleep 30' ${clioHomeLanBridge} >/dev/null
-    grep -F -- 'exec ' ${clioHomeLanBridge} | grep -F -- '/bin/socat \' >/dev/null
-    grep -F -- 'range=192.168.1.3/32,reuseaddr,fork' ${clioHomeLanBridge} >/dev/null
     DRY_RUN=1 bash ${heraPreflight}
     DRY_RUN=1 bash ${clioPreflight}
     cp ${./syncthing-runtime-check.py} runtime-check.py
@@ -521,12 +474,8 @@ pkgs.runCommand "syncthing-home-contract"
     chmod +x fake-tool.sh
     python3 runtime-check.py \
       ${testPreflight} \
-      ${testMonitorLibrary} \
       ${pkgs.bash}/bin/bash \
-      "$PWD/fake-tool.sh" \
-      ${pkgs.coreutils}/bin/sleep \
-      ${testWireGuardTunnel} \
-      ${testHomeLanBridge}
+      "$PWD/fake-tool.sh"
     cp ${../../config/syncthing-bootstrap.py} bootstrap.py
     cat > config.xml <<'XML'
     <configuration version="52">
@@ -594,6 +543,7 @@ pkgs.runCommand "syncthing-home-contract"
       --peer-policy "$primary_policy"
       --peer-policy "$secondary_policy"
       --listen-address tcp://10.7.0.1:22000
+      --listen-address tcp://10.7.0.3:22000
       --gui-socket /Users/test/.local/state/syncthing/gui.sock
       --default-policy "$default_policy"
       --documents /Users/test/Documents
@@ -839,18 +789,18 @@ pkgs.runCommand "syncthing-home-contract"
     default_policy = json.loads(os.environ["DEFAULT_POLICY"])
     expected = {
         "hera": {
-            "addresses": ["tcp://127.0.0.1:22001"],
-            "listen": "tcp://192.168.1.3:22000",
-            "networks": ["192.168.1.3/32", "127.0.0.1/32"],
+            "addresses": ["tcp://10.55.0.1:22000", "tcp://192.168.1.3:22000"],
+            "listenAddresses": ["tcp://10.55.0.1:22000", "tcp://192.168.1.3:22000"],
+            "networks": ["10.55.0.1/32", "192.168.1.3/32"],
         },
         "clio": {
-            "addresses": ["tcp://clio.lan:22000"],
-            "listen": "tcp://127.0.0.1:22000",
-            "networks": ["192.168.1.39/32", "192.168.1.3/32"],
+            "addresses": ["tcp://10.55.0.2:22000", "tcp://192.168.1.39:22000"],
+            "listenAddresses": ["tcp://10.55.0.2:22000", "tcp://192.168.1.39:22000"],
+            "networks": ["10.55.0.2/32", "192.163.3.9/32", "10.6.0.2/32"],
         },
         "vulcan": {
             "addresses": ["tcp://192.168.1.2:22000"],
-            "listen": "tcp://192.168.1.2:22000",
+            "listenAddresses": ["tcp://192.168.1.2:22000"],
             "networks": ["192.168.1.2/32"],
         },
     }
@@ -909,7 +859,10 @@ pkgs.runCommand "syncthing-home-contract"
         assert folder.findtext("paused") == "false"
     for folder in folders.values():
         assert_folder_policy(folder, default_policy["folder"])
-    assert [node.text for node in options.findall("listenAddress")] == ["tcp://10.7.0.1:22000"]
+    assert [node.text for node in options.findall("listenAddress")] == [
+        "tcp://10.7.0.1:22000",
+        "tcp://10.7.0.3:22000",
+    ]
     assert [node.text for node in options.findall("alwaysLocalNet")] == [
         "10.7.0.2/32",
         "192.168.7.0/24",

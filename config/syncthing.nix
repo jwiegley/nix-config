@@ -15,7 +15,10 @@ let
         "tcp://10.55.0.1:22000"
         "tcp://192.168.1.3:22000"
       ];
-      listenAddresses = addresses;
+      listenAddresses = [
+        "tcp://10.55.0.1:22000"
+        "tcp://192.168.1.3:22000"
+      ];
       networks = [
         "10.55.0.1/32"
         "192.168.1.3/32"
@@ -27,7 +30,10 @@ let
         "tcp://10.55.0.2:22000"
         "tcp://192.168.1.39:22000"
       ];
-      listenAddresses = addresses;
+      listenAddresses = [
+        "tcp://10.55.0.2:22000"
+        "tcp://192.168.1.39:22000"
+      ];
       networks = [
         "10.55.0.2/32"
         "192.163.3.9/32"
@@ -37,7 +43,7 @@ let
     vulcan = {
       deviceID = "IPWC66H-N6RPNOM-HSX6NKH-Y7MEFTP-GNM75K7-5L6BRIW-OILLNGQ-VQK4ZA2";
       addresses = [ "tcp://192.168.1.2:22000" ];
-      listenAddresses = addresses;
+      listenAddresses = [ "tcp://192.168.1.2:22000" ];
       networks = [ "192.168.1.2/32" ];
     };
   };
@@ -305,44 +311,42 @@ in
     ''
   );
 
-  launchd.agents = lib.mkIf enabled (
-    {
-      syncthing-gui-bridge = {
-        enable = true;
-        domain = "gui";
-        config = {
-          ProgramArguments = [
-            (lib.getExe pkgs.socat)
-            "TCP4-LISTEN:8384,bind=127.0.0.1,reuseaddr,fork"
-            "UNIX-CONNECT:${guiSocket}"
-          ];
-          RunAtLoad = true;
-          KeepAlive = true;
-          StandardOutPath = "${logDirectory}/syncthing-gui-bridge.log";
-          StandardErrorPath = "${logDirectory}/syncthing-gui-bridge.log";
-        };
+  launchd.agents = lib.mkIf enabled {
+    syncthing-gui-bridge = {
+      enable = true;
+      domain = "gui";
+      config = {
+        ProgramArguments = [
+          (lib.getExe pkgs.socat)
+          "TCP4-LISTEN:8384,bind=127.0.0.1,reuseaddr,fork"
+          "UNIX-CONNECT:${guiSocket}"
+        ];
+        RunAtLoad = true;
+        KeepAlive = true;
+        StandardOutPath = "${logDirectory}/syncthing-gui-bridge.log";
+        StandardErrorPath = "${logDirectory}/syncthing-gui-bridge.log";
       };
+    };
 
-      syncthing = {
-        domain = lib.mkForce "gui";
-        config = {
-          KeepAlive = lib.mkForce true;
-          RunAtLoad = lib.mkForce true;
-          # Interactive removes launchd's implicit CPU limits; LowPriorityIO
-          # then applies only the disk policy requested for this daemon.
-          ProcessType = lib.mkForce "Interactive";
-          LowPriorityIO = true;
-        };
+    syncthing = {
+      domain = lib.mkForce "gui";
+      config = {
+        KeepAlive = lib.mkForce true;
+        RunAtLoad = lib.mkForce true;
+        # Interactive removes launchd's implicit CPU limits; LowPriorityIO
+        # then applies only the disk policy requested for this daemon.
+        ProcessType = lib.mkForce "Interactive";
+        LowPriorityIO = true;
       };
+    };
 
-      syncthing-init = {
-        domain = lib.mkForce "gui";
-        config = {
-          RunAtLoad = lib.mkForce true;
-          KeepAlive = lib.mkForce { SuccessfulExit = false; };
-          ThrottleInterval = lib.mkForce 5;
-        };
+    syncthing-init = {
+      domain = lib.mkForce "gui";
+      config = {
+        RunAtLoad = lib.mkForce true;
+        KeepAlive = lib.mkForce { SuccessfulExit = false; };
+        ThrottleInterval = lib.mkForce 5;
       };
-    }
-  );
+    };
+  };
 }
