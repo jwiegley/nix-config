@@ -123,7 +123,7 @@ if ! nix flake metadata --json --no-write-lock-file "$immutable_ref" \
     die "nix flake metadata failed for the immutable subflake reference"
 fi
 
-if ! python3 - "$metadata_json" "$committed_lock" "$prefetch_json" <<'PY'
+if ! python3 - "$metadata_json" "$committed_lock" "$prefetch_json" <<'PY'; then
 import json
 import sys
 from pathlib import Path
@@ -161,7 +161,6 @@ if metadata.get("locks") != committed:
         "immutable-subflake-check: metadata locks differ from the committed revision lock"
     )
 PY
-then
     die "immutable metadata validation failed"
 fi
 
