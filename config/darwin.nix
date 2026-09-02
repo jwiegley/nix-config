@@ -351,8 +351,6 @@ in
       "home-assistant"
       "iterm2"
       "itermai"
-      "jump-desktop"
-      "jump-desktop-connect"
       "key-codes"
       "keyboard-maestro"
       "kiwix"
@@ -416,12 +414,14 @@ in
     ]
     ++ lib.optionals config.johnw.host.isHera [
       "chronoagent"
+      "jump-desktop-connect"
     ]
     ++ lib.optionals config.johnw.host.isClio [
       "aldente"
       "betterdisplay"
       "chronosync"
       "wifi-explorer"
+      "jump-desktop"
     ];
   };
 
