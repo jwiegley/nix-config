@@ -556,7 +556,7 @@ in
     # flake provides a `recordings` input.
     // lib.optionalAttrs (config.johnw.host.isHera && (pkgs ? recordings)) {
 
-      flatten-recordings = {
+      recordings = {
         script = ''
           # mlx-speech comes from the per-user profile; afconvert from macOS.
           # When omlx serves cohere-transcribe correctly, replace the
@@ -579,8 +579,8 @@ in
           LowPriorityIO = false;
           LowPriorityBackgroundIO = false;
           ProcessType = "Standard";
-          StandardOutPath = "${home}/Library/Logs/flatten-recordings.log";
-          StandardErrorPath = "${home}/Library/Logs/flatten-recordings.log";
+          StandardOutPath = "${home}/Library/Logs/recordings.log";
+          StandardErrorPath = "${home}/Library/Logs/recordings.log";
         };
       };
     };
