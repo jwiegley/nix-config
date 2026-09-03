@@ -1297,7 +1297,10 @@ error: Cannot build '/nix/store/package.drv'.
             ]
             catalog_path.write_text(json.dumps(catalog, indent=2) + "\n")
 
-            computed = HashComputer(root)._compute_fod_hash("cpx", "cargoHash")
+            # This current-system probe must not drift onto the host's remote
+            # builder pool, whose scheduling is outside the 600-second hash bound.
+            with mock.patch.dict(os.environ, {"NIX_CONFIG": "builders ="}):
+                computed = HashComputer(root)._compute_fod_hash("cpx", "cargoHash")
             self.assertIsNotNone(computed)
             self.assertNotEqual(computed, MODULE["DUMMY_SRI_HASH"])
             self.assertRegex(computed, r"^sha256-[A-Za-z0-9+/=]+$")
