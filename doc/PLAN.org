@@ -20526,23 +20526,23 @@ The capture helper waits for a complete expected argv record without fixed sleep
 ]
 #+end_src
 
-* DONE [#C] Keep cpx hash probe on the local builder
+* DONE [#C] Investigate cpx hash probe timeout
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-zyay
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-02 Wed 20:13]
-:MODIFIED: [2026-09-02 Wed 20:32]
+:MODIFIED: [2026-09-02 Wed 21:25]
 :CREATED_BY: johnw
-:FINISHED: [2026-09-02 Wed 20:32]
-:CLOSE_REASON: Forced the current-system cpx hash regression onto the local builder; focused real dummy-hash build passes.
+:FINISHED: [2026-09-02 Wed 21:25]
+:CLOSE_REASON: Stopped by user request: do not run or extend super-slow tests. Reverted the local-builder and timeout-budget experiments; no test behavior changed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Prevent the current-system cpx fixed-output hash regression from inheriting remote builders whose scheduling and pipe lifetime exceed the probe timeout.
+The unrelated full Python gate repeatedly reached its aggregate deadline while the real cpx dummy-hash build was running.
 
 ** Dependencies
 
@@ -20556,6 +20556,20 @@ Prevent the current-system cpx fixed-output hash regression from inheriting remo
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 539,
+    "issue_id": "nix-zyay",
+    "author": "johnw",
+    "text": "Reopened: Local-only scheduling still exceeded the suite budget; root cause is inherited captured output handles.",
+    "created_at": "2026-09-03T03:55:54Z"
   }
 ]
 #+end_src
