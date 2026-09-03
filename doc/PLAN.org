@@ -18711,6 +18711,24 @@ Canonical update adopted pi-agent-browser-native 0.5.0. Cleanup now applies only
 ]
 #+end_src
 
+* DONE [#B] Deploy idle-dialog steering fix on Hera
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-vr81
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-02 Wed 22:00]
+:MODIFIED: [2026-09-02 Wed 22:14]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-02 Wed 22:14]
+:CLOSE_REASON: Pinned pi-idle-check 85f95f5, built the managed package and Hera system, switched the verified generation, and verified the deployed package source. Current busy Pi session was not interrupted for reload.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pin pi-idle-check commit 85f95f5, build the managed Gallery and Hera system, activate locally, and verify the active package source.
+
 * DONE [#B] Adopt llama-swap 251 after upstream UI layout rename
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
