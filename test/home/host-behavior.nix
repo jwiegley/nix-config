@@ -918,6 +918,7 @@ pkgs.runCommand "host-behavior" { } ''
   ${pkgs.jq}/bin/jq -e '
     (.providers | keys | sort) == ["omlx-hera", "openai-codex", "openrouter"]
     and .providers["omlx-hera"] == {
+      "compat": {"sendSessionAffinityHeaders": true},
       "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
     }
   ' ${vulcanPiModelsSource} >/dev/null

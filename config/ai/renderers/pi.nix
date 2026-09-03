@@ -74,9 +74,7 @@ let
   localProviders = lib.mapAttrs (
     _: provider: provider // { transport = localProviderTransport; }
   ) localProviderOverrides;
-  localDiscoveryProviders = lib.mapAttrs (_: _: { transport = localProviderTransport; }) (
-    if localModelDiscovery then localModelDiscoveryEndpoints else { }
-  );
+  localDiscoveryProviders = localProviders;
   gallerySource = pkgs.writeText "pi-managed-gallery.ts" ''
     import { createNixGallery } from ${builtins.toJSON "${pkgs.pi-gallery}/share/pi-gallery/loader.ts"};
 

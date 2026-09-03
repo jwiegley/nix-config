@@ -257,13 +257,13 @@
     "omlx": {
       "source": {
         "args": {
-          "hash": "sha256-QvLX4Z/jKxzJh9owtRtvoLIE1miT73flOrbXn75ifUw=",
-          "owner": "jundot",
+          "hash": "sha256-frbJNX0BTRCcrmLgS6pEF+nA5N8MMv/xSqhO/RK9KnQ=",
+          "owner": "jwiegley",
           "repo": "omlx",
-          "tag": "v0.6.4"
+          "rev": "6dda3fafac2b24001104f7ebbff9e380f9aef9fc"
         },
         "fetcher": "fetchFromGitHub",
-        "url": "https://github.com/jundot/omlx"
+        "url": "https://github.com/jwiegley/omlx"
       },
       "update": {
         "buildMode": "pkg",

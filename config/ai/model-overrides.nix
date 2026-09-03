@@ -86,8 +86,11 @@ in
     };
     localProviderOverrides = {
       llama-swap = llamaSwapOverrides;
-      omlx-clio = { };
+      omlx-clio = {
+        compat.sendSessionAffinityHeaders = true;
+      };
       omlx-hera = {
+        compat.sendSessionAffinityHeaders = true;
         modelOverrides = qwenOverrides.modelOverrides // omlxOverrides.modelOverrides;
       };
     };

@@ -1999,9 +1999,11 @@ pkgs.runCommand "ai-catalog-transport" { } ''
             "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
           }
           and .providers["omlx-clio"] == {
+            "compat": {"sendSessionAffinityHeaders": true},
             "transport": {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}
           }
           and .providers["omlx-hera"] == {
+            "compat": {"sendSessionAffinityHeaders": true},
             "modelOverrides": {
               "${models.omlx.primary.name}": {
                 "compat": {
@@ -2043,6 +2045,14 @@ pkgs.runCommand "ai-catalog-transport" { } ''
             [.providers | to_entries[] | select(.key as $provider | $localModelDiscoveryProviders | index($provider))] as $localProviders
             | ($localProviders | map(.key) | sort) == ($localModelDiscoveryProviders | sort)
             and ($localProviders | all(.value.transport == {"idleTimeoutMs": 7200000, "requestTimeoutMs": 7200000}))
+            and (
+              [
+                $localProviders[]
+                | select(.key == "omlx-clio" or .key == "omlx-hera")
+                | .value.compat
+              ]
+              | all(. == {"sendSessionAffinityHeaders": true})
+            )
           )
         end
       )

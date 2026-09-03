@@ -4805,6 +4805,22 @@ Rendered catalog is valid JSON; every model has the source-proven correctly type
 ]
 #+end_src
 
+* DOING [#C] Preserve requested model in oMLX SSE keepalive chunks
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-crym
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-03 Thu 09:38]
+:MODIFIED: [2026-09-03 Thu 09:38]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+oMLX emits model=keepalive before streamed OpenAI chat content. Pi persists it as responseModel, so cache optimizer attributes GLM cache statistics to invalid keepalive model. Patch dynamic keepalive chunks to preserve request.model and add a regression contract.
+
 * DEFER [#B] Migrate VPS nix-config inputs from GitHub to Gitea
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
