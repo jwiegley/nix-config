@@ -2772,7 +2772,8 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             def update(transaction):
                 github = FakeGitHubClient()
                 hashes = FakeHashComputer()
-                with contextlib.redirect_stdout(io.StringIO()):
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
                     status = update_catalog_target(
                         "example",
                         load_target(),
@@ -2784,6 +2785,10 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                         transaction,
                     )
                 self.assertEqual(status, "updated")
+                self.assertEqual(
+                    ANSI_ESCAPE_RE.sub("", output.getvalue()),
+                    f"catalog/example {old_rev[:8]} → {new_rev[:8]} ✓\n",
+                )
                 self.assertEqual(github.identity, ("example", "project"))
                 self.assertEqual(github.request, ("example", "project", "main"))
                 self.assertEqual(hashes.replacements, {"rev": new_rev})
@@ -2802,6 +2807,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             self.assertEqual(update(committed), "updated")
             committed.commit()
             record = json.loads(catalog_path.read_text())["sources"]["example"]
+            self.assertEqual(record["version"], "1.0.0")
             self.assertEqual(record["source"]["args"]["rev"], new_rev)
             self.assertEqual(record["source"]["args"]["narHash"], new_hash)
             self.assertIn(new_rev, flake_path.read_text())

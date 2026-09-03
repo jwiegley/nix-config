@@ -3272,7 +3272,7 @@ def update_catalog_target(
             elif branch:
                 fetch_error = getattr(github_client, "last_error", None)
         if new_ref:
-            new_version = new_ref
+            new_version = old_version
     elif kind == "npm-release":
         candidate = npm_client.get_version(update["package"], args.version)
         if candidate:
