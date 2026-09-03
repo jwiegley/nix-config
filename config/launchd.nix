@@ -569,7 +569,7 @@ in
             --prompt "${home}/doc/post-process.md" \
             --asr-command "mlx-speech asr --model ${home}/src/mlx-speech/models/cohere/cohere_transcribe/mlx-int8 --language en --audio" \
             --llm-url http://localhost:8000/v1 \
-            --llm-model GLM-5.3-Flash-oQ4e
+            --llm-model "Qwen3.8-27B-oQ4e-mtp"
         '';
         serviceConfig = {
           RunAtLoad = true; # Startup sweep catches anything that accumulated.
