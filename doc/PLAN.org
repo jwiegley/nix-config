@@ -8419,6 +8419,40 @@ The root checkout now has only origin=gitea@gitea:johnw/nix-config.git. Before f
 ]
 #+end_src
 
+* DONE [#C] Remove stale pre-push hook test
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ktfz
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-02 Wed 18:50]
+:MODIFIED: [2026-09-02 Wed 18:52]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-02 Wed 18:52]
+:CLOSE_REASON: Removed obsolete pre-push hook structural test; focused publish suite passes 58/58.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Delete the obsolete publish-suite assertion for lefthook pre-push commands after signed commit 3ff49de0 intentionally removed that hook.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-ktfz",
+    "depends_on_id": "nix-8n12",
+    "type": "discovered-from",
+    "created_at": "2026-09-03T01:50:04.922362Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Adopt pi-mcp-adapter 2.27 packaged namespace files
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

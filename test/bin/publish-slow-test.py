@@ -1670,14 +1670,6 @@ class TestSelfConsistency(unittest.TestCase):
                 self.assertIn("gitea@gitea:johnw/nix-config.git", body)
                 self.assertIn("GitHub must not be configured as a remote", body)
 
-    def test_pre_push_commands_use_tracked_tree_scope(self):
-        with open(os.path.join(REPO, "lefthook.yml")) as fh:
-            config = fh.read()
-        pre_push = config.split("\npre-push:\n", 1)[1]
-        self.assertIn("git ls-files", pre_push)
-        self.assertIn('printf "%s\\n" lefthook.yml', pre_push)
-        self.assertEqual(pre_push.count(": {files};"), pre_push.count("      run:"))
-
 
 if __name__ == "__main__":
     unittest.main()
