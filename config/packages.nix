@@ -187,6 +187,7 @@ rec {
     ++ [
       aria2
       autossh
+      bmon
       curl
       dstp
       fping
