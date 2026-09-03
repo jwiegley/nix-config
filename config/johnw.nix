@@ -106,7 +106,7 @@ in
     // lib.optionalAttrs config.johnw.host.isDarwinWorkstation {
       EDITOR = lib.mkDefault vars.emacsclient;
       EMACS_SERVER_FILE = "${vars.emacs-server}";
-      NIX_CONFIG = "cores = 8";
+      NIX_CONFIG = if config.johnw.host.isHera then "cores = 8\nmax-jobs = 8" else "cores = 8";
     }
     // lib.optionalAttrs isHeavy {
       GRAPHVIZ_DOT = "${pkgs.graphviz}/bin/dot";

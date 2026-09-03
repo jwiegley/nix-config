@@ -776,7 +776,7 @@ assert !(builtins.hasAttr recordingTranscriptionPath desktopHomesByHost.clio.hom
 assert builtins.all (
   config: !(builtins.hasAttr recordingTranscriptionPath config.home.file)
 ) nonDesktopHomes;
-assert desktopHomesByHost.hera.home.sessionVariables.NIX_CONFIG == "cores = 8";
+assert desktopHomesByHost.hera.home.sessionVariables.NIX_CONFIG == "cores = 8\nmax-jobs = 8";
 assert desktopHomesByHost.clio.home.sessionVariables.NIX_CONFIG == "cores = 8";
 assert desktopHomesByHost.hera.services.gpg-agent.defaultCacheTtl == 2147483647;
 assert desktopHomesByHost.hera.services.gpg-agent.defaultCacheTtlSsh == 2147483647;
