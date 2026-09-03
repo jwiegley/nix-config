@@ -567,7 +567,7 @@ in
             --output "${home}/Documents/Inbox" \
             --archive "${home}/Documents/Recordings" \
             --prompt "${home}/doc/post-process.md" \
-            --asr-command "mlx-speech asr --model ${home}/src/mlx-speech/models/cohere/cohere_transcribe/mlx-int8 --language en --audio" \
+            --asr-command "mlx-speech asr --model cohere-asr --language en --audio" \
             --llm-url http://localhost:8000/v1 \
             --llm-model "Qwen3.8-27B-oQ4e-mtp"
         '';

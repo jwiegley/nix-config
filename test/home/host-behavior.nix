@@ -25,6 +25,9 @@ let
     _: configuration: configuration.config.home-manager.users.johnw
   ) darwinConfigurations;
   heraPushTankAgent = darwinConfigurations.hera.config.launchd.user.agents.push-tank;
+  heraRecordingsAgent = darwinConfigurations.hera.config.launchd.user.agents.recordings;
+  heraRecordingsScript = builtins.unsafeDiscardStringContext heraRecordingsAgent.script;
+  recordingsAsrCommand = ''--asr-command "mlx-speech asr --model cohere-asr --language en --audio"'';
   heraPushTankPackages = darwinConfigurations.hera.pkgs;
   heraPushTankScript = builtins.unsafeDiscardStringContext heraPushTankAgent.script;
   expectedPushTankCommand = builtins.unsafeDiscardStringContext "${heraPushTankPackages.my-scripts}/bin/push tank";
@@ -840,6 +843,8 @@ assert heraPushTankAgent.serviceConfig.StandardOutPath == "/Users/johnw/Library/
 assert
   heraPushTankAgent.serviceConfig.StandardErrorPath == "/Users/johnw/Library/Logs/push-tank.log";
 assert heraPushTankScript == expectedPushTankScript;
+assert lib.hasInfix recordingsAsrCommand heraRecordingsScript;
+assert !lib.hasInfix "/src/mlx-speech" heraRecordingsScript;
 pkgs.runCommand "host-behavior" { } ''
   dateMarker="$TMPDIR/push-tank-date-ran"
   if marker="$dateMarker" ${pushTankDateFailureProbe} >/dev/null 2>&1; then
