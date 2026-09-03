@@ -430,9 +430,8 @@ in
             assert sources.mtplx.source.fetcher == "fetchPypi";
             fetchPypi sources.mtplx.source.args;
 
-          # MTPLX 2.8.3 still needs the pending Transformers 5.15
-          # compatibility backport.
-          # https://github.com/youssofal/MTPLX/pull/260
+          # Extend MTPLX's Transformers guard through the selected 5.16.1; the
+          # install check below verifies its metadata and MLX tokenizer import path.
           patches = [ ../overlays/ai/patches/mtplx-transformers-5.15.patch ];
 
           build-system = [
@@ -470,10 +469,19 @@ in
               PYTHONPATH="$out/${python.sitePackages}:''${PYTHONPATH:-}" \
                 ${python.interpreter} - <<'PY'
             from importlib import metadata
+            from pathlib import Path
+            from tempfile import TemporaryDirectory
 
             from packaging.requirements import Requirement
             from packaging.version import Version
+            from tokenizers import Tokenizer
+            from tokenizers.models import WordLevel
+            from tokenizers.pre_tokenizers import Whitespace
+            from transformers import PreTrainedTokenizerFast
+            import mtplx.runtime
             import transformers
+            from mlx_lm.tokenizer_utils import TokenizerWrapper
+            from mlx_lm.utils import load_tokenizer
 
             requirements = [
                 Requirement(value)
@@ -485,15 +493,27 @@ in
             assert Version("5.13.0") not in requirement.specifier, requirement
             assert Version("5.14.1") in requirement.specifier, requirement
             assert Version("5.15.0") in requirement.specifier, requirement
-            assert Version("5.15.999") in requirement.specifier, requirement
-            assert Version("5.16.0") not in requirement.specifier, requirement
+            assert Version("5.16.0") in requirement.specifier, requirement
+            assert Version("5.16.999") in requirement.specifier, requirement
+            assert Version("5.17.0") not in requirement.specifier, requirement
             assert str(requirement.marker) == (
                 'sys_platform == "darwin" and platform_machine == "arm64"'
             ), requirement
 
             selected = Version(transformers.__version__)
-            assert selected.release[:2] == (5, 15), selected
+            assert selected.release[:2] == (5, 16), selected
             assert selected in requirement.specifier, (selected, requirement)
+            with TemporaryDirectory() as temp_dir:
+                tokenizer = Tokenizer(WordLevel({"[UNK]": 0, "hello": 1}, unk_token="[UNK]"))
+                tokenizer.pre_tokenizer = Whitespace()
+                PreTrainedTokenizerFast(
+                    tokenizer_object=tokenizer,
+                    unk_token="[UNK]",
+                ).save_pretrained(temp_dir)
+                loaded = load_tokenizer(Path(temp_dir))
+                assert isinstance(loaded, TokenizerWrapper)
+                assert loaded.encode("hello") == [1]
+            assert callable(mtplx.runtime._load_tokenizer_resilient)
             PY
             )
             runHook postInstallCheck
@@ -590,6 +610,21 @@ in
                       dependency
                   ) (oldAttrs.dependencies or [ ]);
                 });
+
+            tokenizers = pprev.tokenizers.overridePythonAttrs (_oldAttrs: {
+              inherit (sources.omlx-tokenizers) version;
+              format = "wheel";
+              pyproject = null;
+              src =
+                assert sources.omlx-tokenizers.source.fetcher == "fetchPypi";
+                pfinal.fetchPypi sources.omlx-tokenizers.source.args;
+              cargoDeps = null;
+              nativeBuildInputs = [ ];
+              nativeCheckInputs = [ ];
+              postUnpack = "";
+              sourceRoot = ".";
+              doCheck = false;
+            });
 
             transformers = pprev.transformers.overridePythonAttrs (_oldAttrs: {
               inherit (sources.omlx-transformers) version;

@@ -1,26 +1,4 @@
-From d90eb3845cb96e39b3bcf02b9fc699d59524ed3e Mon Sep 17 00:00:00 2001
-From: "dependabot[bot]" <49699333+dependabot[bot]@users.noreply.github.com>
-Date: Sat, 15 Aug 2026 10:32:47 +0000
-Subject: [PATCH] build(deps): update transformers requirement
-
-Updates the requirements on [transformers](https://github.com/huggingface/transformers) to permit the latest version.
-- [Release notes](https://github.com/huggingface/transformers/releases)
-- [Commits](https://github.com/huggingface/transformers/compare/0.1.2...v5.15.0)
-
----
-updated-dependencies:
-- dependency-name: transformers
-  dependency-version: 5.15.0
-  dependency-type: direct:production
-...
-
-Signed-off-by: dependabot[bot] <support@github.com>
----
- pyproject.toml | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
 diff --git a/pyproject.toml b/pyproject.toml
-index 5c6905fd..60b1eeeb 100644
 --- a/pyproject.toml
 +++ b/pyproject.toml
 @@ -38,7 +38,7 @@ dependencies = [
@@ -28,7 +6,7 @@ index 5c6905fd..60b1eeeb 100644
    # chat template fingerprint-identical to 5.8.0 under transformers 5.14.1
    # (PR #175).
 -  "transformers!=5.13.0,<5.15; sys_platform == 'darwin' and platform_machine == 'arm64'",
-+  "transformers!=5.13.0,<5.16; sys_platform == 'darwin' and platform_machine == 'arm64'",
++  "transformers!=5.13.0,<5.17; sys_platform == 'darwin' and platform_machine == 'arm64'",
    "nanobind>=2; sys_platform == 'darwin' and platform_machine == 'arm64'",
    "numpy>=2",
    "pydantic>=2",

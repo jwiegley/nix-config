@@ -293,14 +293,24 @@ in
         };
       });
 
-      # Remove the cross-ABI visidata check input from the Python 3.13 closure.
+      # VisiData is a test-only extra resolved outside this Python package set.
+      # It is cross-ABI for Darwin Python 3.13, and its PyQt5 backend cannot
+      # build on Darwin Python 3.14.
       frictionless = pprev.frictionless.overridePythonAttrs (
         oldAttrs:
-        prev.lib.optionalAttrs (pfinal.python.pythonVersion == "3.13") {
-          nativeCheckInputs = builtins.filter (input: prev.lib.getName input != "visidata") (
-            oldAttrs.nativeCheckInputs or [ ]
-          );
-        }
+        prev.lib.optionalAttrs
+          (
+            prev.stdenv.hostPlatform.isDarwin
+            && builtins.elem pfinal.python.pythonVersion [
+              "3.13"
+              "3.14"
+            ]
+          )
+          {
+            nativeCheckInputs = builtins.filter (input: prev.lib.getName input != "visidata") (
+              oldAttrs.nativeCheckInputs or [ ]
+            );
+          }
       );
 
       # Remove the unused pandas-stubs check input from the Python 3.13 closure.

@@ -19590,6 +19590,22 @@ The full session suite measures DrainInboxForParent n=25 at 8.757738ms against a
 ]
 #+end_src
 
+* TODO [#D] Keep Pi fixed-input update status from rendering commit as version
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-x1ph
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-03 Thu 14:01]
+:MODIFIED: [2026-09-03 Thu 14:01]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+bin/update-overlay's fixed-flake-input preparation assigns catalog version to resolved Git revision, emits a version transition, then sync_flake_projections restores version from versionPath (packages/coding-agent/package.json). Final catalog state is correct but --all-inputs prints a misleading 0.84.4 -> SHA -> 0.84.4 ping-pong. Preserve package version during preparation and report only revision change; add output regression coverage.
+
 * DONE [#C] Refresh pi-mcp-adapter public dist parity inventory
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

@@ -500,6 +500,31 @@
       },
       "version": "0.5.3"
     },
+    "omlx-tokenizers": {
+      "source": {
+        "args": {
+          "abi": "abi3",
+          "dist": "cp39",
+          "format": "wheel",
+          "hash": "sha256-jU5IT3sIJwIaxfn3HUeUqu9iuXmrdghZPaIrHS48Ttw=",
+          "platform": "macosx_11_0_arm64",
+          "pname": "tokenizers",
+          "python": "cp39",
+          "version": "0.22.1"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/tokenizers"
+      },
+      "update": {
+        "buildMode": "pkg",
+        "buildPackage": "omlx",
+        "kind": "pypi-release",
+        "package": "tokenizers",
+        "policy": "manual",
+        "reason": "oMLX 0.6.4 pins transformers 5.12.1, which requires tokenizers >=0.22.0,<=0.23.0"
+      },
+      "version": "0.22.1"
+    },
     "omlx-transformers": {
       "source": {
         "args": {
@@ -1206,10 +1231,10 @@
     "git-ai": {
       "source": {
         "args": {
-          "narHash": "sha256-SW9DCf6dw57JoLNFgFYKa0qV6/GsRnNs8/6siEwRg+4=",
+          "narHash": "sha256-KrW84bv+JUW2dRKe+asn4PE6MBSQH2a5V1tMQY6yPeE=",
           "owner": "git-ai-project",
           "repo": "git-ai",
-          "rev": "6fbc1ef0f4d40232315efc1b907e7ff5526dbea7",
+          "rev": "49443a5bddf10af5ecdfe97edf3494c148516fea",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1227,10 +1252,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-Vk+oVo4FNa/McD2/K5BO2Off6Z8l9mKmT9f0xZ6mDYQ=",
+          "narHash": "sha256-fK0zJkRCVJPLPihSaI7Y6ftA8USQkNQcXE+OZRjQcSo=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "4ab625e16a6cc52fe3f606b95f1e2ac20dafa80b",
+          "rev": "a3378880b8abaeba5680fe49b6ebcc96fe6d79ce",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1250,10 +1275,10 @@
     "mcp-servers-nix": {
       "source": {
         "args": {
-          "narHash": "sha256-dxNiBryhedMsAYuXpHgzcyk2LsgPIs2N/ym8vsN/XhU=",
+          "narHash": "sha256-NmDBnUaLH/gh9Oq6j/CNydgju5SQuItcJ0zpZOMbCNE=",
           "owner": "natsukium",
           "repo": "mcp-servers-nix",
-          "rev": "3d67a2da6a482aa04c6b6ee31aaec092a068d8f8",
+          "rev": "ce64aff50b29eb66f8f88f5a774d2641edcfb520",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1362,10 +1387,10 @@
     "rust-overlay": {
       "source": {
         "args": {
-          "narHash": "sha256-BTFrmyh0oaVDsvA9NNw0YpbbeppTwU0t70iVx672Ew8=",
+          "narHash": "sha256-TxHC0sBjV2pmsBLKAX02JTXlye/EOLt6Do+WNtGofGw=",
           "owner": "oxalica",
           "repo": "rust-overlay",
-          "rev": "860d7c835ab91bfc8972b67092f5f2db8e9390a0",
+          "rev": "0b20a18e84d9164464739189c2b2a1b00f6f0e4b",
           "type": "github"
         },
         "fetcher": "fetchTree",

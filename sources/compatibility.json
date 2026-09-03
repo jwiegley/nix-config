@@ -19,6 +19,40 @@
         "reason": "Hold the last closure where the affected Darwin packages build and test"
       }
     },
+    "pyqt5-darwin": {
+      "source": {
+        "args": {
+          "hash": "sha256-/aRXQ+u0ontLGlHG2O9FXEwbXWEMkNKTTHgCtcFVfFI=",
+          "pname": "PyQt5",
+          "version": "5.15.11"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/PyQt5"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "policy": "manual",
+        "reason": "PyQt5 5.15.10 cannot target its SIP ABI on Darwin Python 3.14; remove once nixpkgs carries a working release"
+      },
+      "version": "5.15.11"
+    },
+    "sip-pyqt5-darwin": {
+      "source": {
+        "args": {
+          "hash": "sha256-OSDyZRVFbuIRFKH4KCFE+MFWsaq8O0RCQVXV+BOWAl8=",
+          "pname": "sip",
+          "version": "6.15.0"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/sip"
+      },
+      "update": {
+        "kind": "pypi-release",
+        "policy": "manual",
+        "reason": "PyQt5 needs the previous SIP generator for its ABI v12 bindings on Darwin Python 3.14"
+      },
+      "version": "6.15.0"
+    },
     "poppler-darwin-mutex-patch": {
       "source": {
         "args": {

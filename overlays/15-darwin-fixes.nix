@@ -3,6 +3,7 @@
 # Dependencies: prev plus compatibility source catalog
 _final: prev:
 let
+  compatibilitySources = import ../packages/source-catalog.nix "compatibility";
   useLld =
     package:
     if prev.stdenv.hostPlatform.isDarwin then
@@ -131,7 +132,7 @@ in
   # its passthru override function remains available.
   pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
     (
-      _pfinal: pprev:
+      pfinal: pprev:
       (prev.lib.optionalAttrs (pprev ? fsspec) {
         fsspec = pprev.fsspec.overridePythonAttrs (_: {
           doCheck = false;
@@ -156,6 +157,31 @@ in
           '';
         });
       })
+      // (prev.lib.optionalAttrs (prev.stdenv.hostPlatform.isDarwin && pprev ? pyqt5 && pprev ? sip) (
+        let
+          sipForPyQt5 = pprev.sip.overridePythonAttrs (_oldAttrs: {
+            inherit (compatibilitySources.sip-pyqt5-darwin) version;
+            src =
+              assert compatibilitySources.sip-pyqt5-darwin.source.fetcher == "fetchPypi";
+              pfinal.fetchPypi compatibilitySources.sip-pyqt5-darwin.source.args;
+          });
+        in
+        {
+          pyqt5 = pprev.pyqt5.overridePythonAttrs (oldAttrs: {
+            inherit (compatibilitySources.pyqt5-darwin) version;
+            src =
+              assert compatibilitySources.pyqt5-darwin.source.fetcher == "fetchPypi";
+              pfinal.fetchPypi compatibilitySources.pyqt5-darwin.source.args;
+            patches = prev.lib.filter (
+              patch: !prev.lib.hasSuffix "pyqt5-fix-dbus-mainloop-support.patch" (toString patch)
+            ) (oldAttrs.patches or [ ]);
+            nativeBuildInputs = map (input: if prev.lib.getName input == "sip" then sipForPyQt5 else input) (
+              oldAttrs.nativeBuildInputs or [ ]
+            );
+            postPatch = oldAttrs.postPatch or "";
+          });
+        }
+      ))
       // (prev.lib.optionalAttrs (pprev ? gradio) {
         gradio = pprev.gradio.overrideAttrs (_: {
           doInstallCheck = false;
