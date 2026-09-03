@@ -3525,6 +3525,22 @@ Remove pi-insights and pi-usage-extension completely from the Nix-managed Pi est
 ]
 #+end_src
 
+* DOING [#C] Deploy source-aware agent-cat workflows fleet-wide
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-8n12
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-02 Wed 18:16]
+:MODIFIED: [2026-09-02 Wed 18:16]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Publish signed agent-cat and agent-workflows revisions, advance managed source and workflow locks, verify and activate Hera, Clio, Vulcan, and four active shared-work hosts, then run no-inference runtime acceptance. Explicitly exclude parked VPS.
+
 * DONE [#C] Package and install pi-mem for Pi
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
