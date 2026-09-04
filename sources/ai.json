@@ -1231,10 +1231,10 @@
     "git-ai": {
       "source": {
         "args": {
-          "narHash": "sha256-KrW84bv+JUW2dRKe+asn4PE6MBSQH2a5V1tMQY6yPeE=",
+          "narHash": "sha256-KHosstkgYF79CLvhoAhJmxKyANEyJ/wQDNUvsiJLj8M=",
           "owner": "git-ai-project",
           "repo": "git-ai",
-          "rev": "49443a5bddf10af5ecdfe97edf3494c148516fea",
+          "rev": "1f16720db8553f19622fa83e728a8247ff825727",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1252,10 +1252,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-fK0zJkRCVJPLPihSaI7Y6ftA8USQkNQcXE+OZRjQcSo=",
+          "narHash": "sha256-XIbm3BHKwQbk2n8YRAHqxE27jltjZibmeYI1ylWGrpE=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "a3378880b8abaeba5680fe49b6ebcc96fe6d79ce",
+          "rev": "72f35adfd210f51bb574ecd560e8b5413a841bd8",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1275,10 +1275,10 @@
     "mcp-servers-nix": {
       "source": {
         "args": {
-          "narHash": "sha256-NmDBnUaLH/gh9Oq6j/CNydgju5SQuItcJ0zpZOMbCNE=",
+          "narHash": "sha256-mCo/II1IhCSnWZC3PuGcAUSRdzKrE4CrQ+butl+EaqA=",
           "owner": "natsukium",
           "repo": "mcp-servers-nix",
-          "rev": "ce64aff50b29eb66f8f88f5a774d2641edcfb520",
+          "rev": "ba9d1f61db2ecab6cebad320e219235f1fcd0f74",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1387,10 +1387,10 @@
     "rust-overlay": {
       "source": {
         "args": {
-          "narHash": "sha256-TxHC0sBjV2pmsBLKAX02JTXlye/EOLt6Do+WNtGofGw=",
+          "narHash": "sha256-PSPDCdbEBEbSDCWcqv5GkbyD2ACQ9Diz6vmEbWdy4dM=",
           "owner": "oxalica",
           "repo": "rust-overlay",
-          "rev": "0b20a18e84d9164464739189c2b2a1b00f6f0e4b",
+          "rev": "9eccf73c5b810052f08aa77ae0548c383259f17f",
           "type": "github"
         },
         "fetcher": "fetchTree",
