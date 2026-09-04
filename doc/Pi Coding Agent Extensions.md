@@ -111,12 +111,16 @@ Nix generates the shared, catalog-selected registry at `~/.config/mcp/mcp.json`;
 
 | Profiles | Servers |
 | --- | --- |
-| Hera and Clio | `devonthink`, `drafts`, `pal`, `searxng`, `sequential-thinking`, `stock-trader` |
-| shared-work and VPS | `pal`, `sequential-thinking` |
-| Vulcan | `pal`, `searxng`, `sequential-thinking` |
+| Hera and Clio | `devonthink`, `drafts`, `pal`, `searxng`, `sequential-thinking`, `stock-trader`, `zvec-grep` |
+| shared-work | `pal`, `sequential-thinking`, `zvec-grep` |
+| VPS | `pal`, `sequential-thinking` |
+| Vulcan | `pal`, `searxng`, `sequential-thinking`, `zvec-grep` |
 
 Credential-bearing values are environment references rather than literal secrets. The mutable `~/.config/pi/agent/mcp.json` may retain adapter state, but Nix preflight forbids `mcpServers` and `imports` there so that it cannot shadow the generated registry.
 
+`zvec-grep` is installed as `zg` on every managed home. Its Pi MCP entry, selected only for Hera, Clio, shared-work, and Vulcan, starts the immutable `zg-mcp` wrapper in `search-rg` mode: precisely `zvec_grep_search` and `zvec_grep_rg`. Hera, Clio, and Vulcan use `hera/bge-m3-mlx-fp16` through `https://hera.lan:8443/v1/embeddings` with the service's non-secret `dummy-key`. shared-work instead names `openai/text-embedding-3-large` and inherits its mutable `OPENAI_API_KEY`; Nix neither stores nor generates that credential. VPS receives the CLI but no default embedding route or Pi MCP entry.
+
+Index lifecycle is deliberately user-owned: Nix does not create, rebuild, inspect, or delete `.zvec-grep` indexes, and the two-tool MCP boundary cannot do so. A user must explicitly authorize any indexing operation or any search that sends workspace data to a remote embedding service.
 PAL may initialize and expose its provider-independent discovery tools without credentials. Its model-backed tools require at least one referenced provider variable to be present in the launching client's environment; the generated registry carries variable names, never their values. Nix limits PAL's stderr logging to warnings and errors and disables its upstream persistent file logging. The packaged server does not expose upstream `clink`: a same-UID nested CLI could inspect PAL's multi-provider ancestor environment and mutable client hooks, so filtering only the child environment would not provide a credential boundary.
 
 ### Keybindings

@@ -122,6 +122,8 @@ let
       null
     else
       catalog.recordingTranscriptionRoutesByHost.${profileHost} or null;
+  zvecEmbeddingRoute =
+    if profileHost == null then null else catalog.zvecEmbeddingRoutesByHost.${profileHost} or null;
   agentModelAliases = import ./ai/agent-model-aliases.nix { inherit lib models; };
   xdgConfigRelative = lib.removePrefix "${config.home.homeDirectory}/" config.xdg.configHome;
   recordingTranscriptionFiles = lib.optionalAttrs (recordingTranscriptionRoute != null) {
@@ -469,6 +471,17 @@ in
         {
           LLAMA_SWAP_API_KEY = "dummy-key";
         }
+      // lib.optionalAttrs (zvecEmbeddingRoute != null) (
+        {
+          ZVEC_GREP_EMBEDDING = zvecEmbeddingRoute.embedding;
+        }
+        // lib.optionalAttrs (zvecEmbeddingRoute.apiKey != null) {
+          ZVEC_GREP_API_KEY = zvecEmbeddingRoute.apiKey;
+        }
+        // lib.optionalAttrs (zvecEmbeddingRoute.endpoint != null) {
+          ZVEC_GREP_ENDPOINT = zvecEmbeddingRoute.endpoint;
+        }
+      )
       // lib.optionalAttrs (piSelected && pairedAgentCatPackage != null) {
         AGENT_CAT_RUNNER = "${pairedAgentCatPackage}/bin/agentic-run";
         AGENT_CAT_STATE_DIR = "${config.xdg.stateHome}/pi/agent-cat";

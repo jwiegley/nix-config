@@ -163,13 +163,14 @@ buildNpmPackageWithNode24 {
     cp -R packages/coding-agent/dist "$out/coding-agent/dist"
     cp -R packages/agent/dist "$out/agent/dist"
     cp -R packages/ai/dist "$out/ai/dist"
-    for name in protocol client server coding-agent agent ai tui telemetry; do
+    for name in chord protocol client server coding-agent agent ai tui telemetry; do
       mkdir -p "$out/workspace/packages/$name"
       cp "packages/$name/package.json" "$out/workspace/packages/$name/"
       cp -R "packages/$name/dist" "$out/workspace/packages/$name/dist"
     done
     scope="$out/workspace/node_modules/@earendil-works"
     mkdir -p "$scope"
+    ln -s ../../packages/chord "$scope/chord"
     ln -s ../../packages/protocol "$scope/pi-protocol"
     ln -s ../../packages/client "$scope/pi-client"
     ln -s ../../packages/server "$scope/pi-server"
@@ -178,6 +179,8 @@ buildNpmPackageWithNode24 {
     ln -s ../../packages/ai "$scope/pi-ai"
     ln -s ../../packages/tui "$scope/pi-tui"
     ln -s ../../packages/telemetry "$scope/pi-telemetry"
+    cp -R node_modules/esbuild "$out/workspace/node_modules/esbuild"
+    cp -R node_modules/@esbuild "$out/workspace/node_modules/@esbuild"
     runHook postInstall
   '';
 }

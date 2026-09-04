@@ -244,6 +244,10 @@ let
     resources = pkgs.agent-resources;
   };
   modelSelection = aiCatalog.models;
+  zvecMcpTransportFor =
+    profile: (aiCatalog.select profile aiCatalog.items.mcpServers).zvec-grep.transport;
+  zvecHeraMcpTransport = zvecMcpTransportFor aiCatalog.profiles.hera-pi;
+  zvecSharedWorkMcpTransport = zvecMcpTransportFor aiCatalog.profiles.shared-work-pi;
   expectedPiGalleryEndpointsByOwner =
     (import ../../config/ai/renderers/project-provider-endpoints.nix { inherit lib; })
       {
@@ -701,6 +705,7 @@ assert builtins.all (
 ) nonDesktopHomes;
 assert builtins.all (hasPackage "droid") allHomes;
 assert builtins.all (hasPackage "unisessions") allHomes;
+assert builtins.all (hasPackage "zvec-grep") allHomes;
 assert builtins.all (config: !(hasPackage "cass" config) && !(hasPackage "cm" config)) allHomes;
 assert builtins.all (config: !(hasPackage "claude-vault" config)) allHomes;
 assert builtins.all (
@@ -761,6 +766,33 @@ assert builtins.all (
 assert builtins.all (config: config.johnw.host.isDarwinWorkstation) desktopHomes;
 assert builtins.all (config: !config.johnw.host.isDarwinWorkstation) nonDesktopHomes;
 assert builtins.all hasSafeLocalModelSessionVariables desktopHomes;
+assert builtins.all (
+  config:
+  config.home.sessionVariables.ZVEC_GREP_API_KEY == "dummy-key"
+  && config.home.sessionVariables.ZVEC_GREP_EMBEDDING == "hera/bge-m3-mlx-fp16"
+  && config.home.sessionVariables.ZVEC_GREP_ENDPOINT == "https://hera.lan:8443/v1/embeddings"
+) (desktopHomes ++ [ vulcanHome ]);
+assert sharedWork.home.sessionVariables.ZVEC_GREP_EMBEDDING == "openai/text-embedding-3-large";
+assert !(sharedWork.home.sessionVariables ? ZVEC_GREP_API_KEY);
+assert !(sharedWork.home.sessionVariables ? ZVEC_GREP_ENDPOINT);
+assert !(sharedWork.home.sessionVariables ? OPENAI_API_KEY);
+assert
+  zvecHeraMcpTransport.env == {
+    ZVEC_GREP_API_KEY = "dummy-key";
+    ZVEC_GREP_EMBEDDING = "hera/bge-m3-mlx-fp16";
+    ZVEC_GREP_ENDPOINT = "https://hera.lan:8443/v1/embeddings";
+  };
+assert
+  zvecSharedWorkMcpTransport.env == {
+    OPENAI_API_KEY = {
+      env = "OPENAI_API_KEY";
+    };
+    ZVEC_GREP_EMBEDDING = "openai/text-embedding-3-large";
+  };
+assert
+  !(builtins.hasAttr "zvec-grep" (
+    aiCatalog.select aiCatalog.profiles.vps-pi aiCatalog.items.mcpServers
+  ));
 assert lib.hasSuffix "/bin/agentic-run"
   desktopHomesByHost.hera.home.sessionVariables.AGENT_CAT_RUNNER;
 assert !(desktopHomesByHost.hera.home.sessionVariables ? AGENT_CAT_RUNNERS);

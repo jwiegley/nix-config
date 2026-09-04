@@ -114,6 +114,29 @@ let
     };
   };
 
+  catalogZvecEmbeddingRoutesByHost = {
+    clio = {
+      apiKey = "dummy-key";
+      embedding = "hera/bge-m3-mlx-fp16";
+      endpoint = "https://hera.lan:8443/v1/embeddings";
+    };
+    hera = {
+      apiKey = "dummy-key";
+      embedding = "hera/bge-m3-mlx-fp16";
+      endpoint = "https://hera.lan:8443/v1/embeddings";
+    };
+    shared-work = {
+      apiKey = null;
+      embedding = "openai/text-embedding-3-large";
+      endpoint = null;
+    };
+    vulcan = {
+      apiKey = "dummy-key";
+      embedding = "hera/bge-m3-mlx-fp16";
+      endpoint = "https://hera.lan:8443/v1/embeddings";
+    };
+  };
+
   profileSpecs = {
     clio-claude-personal = mkProfile "claude" [ "personal" ] "clio" "darwin" ".config/claude/personal";
     clio-claude-positron = mkProfile "claude" [ "positron" ] "clio" "darwin" ".config/claude/positron";
@@ -853,6 +876,36 @@ let
           ];
         };
 
+    zvec-grep =
+      (mkMcp
+        {
+          command = "zvec-grep";
+          args = [ ];
+          env = {
+            ZVEC_GREP_API_KEY = "dummy-key";
+            ZVEC_GREP_EMBEDDING = "hera/bge-m3-mlx-fp16";
+            ZVEC_GREP_ENDPOINT = "https://hera.lan:8443/v1/embeddings";
+          };
+        }
+        {
+          profiles = [
+            "clio-pi"
+            "hera-pi"
+            "shared-work-pi"
+            "vulcan-pi"
+          ];
+        }
+      )
+      // {
+        transportByHost.shared-work = {
+          command = "zvec-grep";
+          args = [ ];
+          env = {
+            OPENAI_API_KEY = typedEnv "OPENAI_API_KEY";
+            ZVEC_GREP_EMBEDDING = "openai/text-embedding-3-large";
+          };
+        };
+      };
     searxng =
       (mkMcp
         {
@@ -1356,6 +1409,12 @@ let
       "http://localhost:8890"
       "https://searxng.vulcan.lan"
     ];
+    ZVEC_GREP_API_KEY = [ "dummy-key" ];
+    ZVEC_GREP_EMBEDDING = [
+      "hera/bge-m3-mlx-fp16"
+      "openai/text-embedding-3-large"
+    ];
+    ZVEC_GREP_ENDPOINT = [ "https://hera.lan:8443/v1/embeddings" ];
   };
 
   validEnvironmentValue =
@@ -1806,6 +1865,7 @@ in
   piLocalDiscoveryProviderByHost = catalogPiLocalDiscoveryProviderByHost;
   piModelDiscoveryEndpoints = catalogPiModelDiscoveryEndpoints;
   recordingTranscriptionRoutesByHost = catalogRecordingTranscriptionRoutesByHost;
+  zvecEmbeddingRoutesByHost = catalogZvecEmbeddingRoutesByHost;
   inherit
     matches
     select

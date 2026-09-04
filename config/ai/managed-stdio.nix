@@ -73,6 +73,7 @@ let
           nix-managed-mcp-stdio = packageExecutable pkgs "nix-managed-mcp-stdio" "nix-managed-mcp-stdio";
           pal-mcp-server = packageExecutable pkgs "pal-mcp-server" "pal-mcp-server";
           ssh = packageExecutable pkgs "openssh" "ssh";
+          zvec-grep = packageExecutable pkgs "zvec-grep" "zg-mcp";
         };
         resolveCommand =
           command:

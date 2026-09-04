@@ -512,6 +512,7 @@ rec {
     ++ optAgent "git-surgeon"
     ++ optAgent "opencode"
     ++ optPkg "unisessions"
+    ++ optPkg "zvec-grep"
 
     # ── MCP Servers & Agent Tools ────────────────────────────────────
     # drafts-mcp-server is macOS-only (drives Drafts.app via AppleScript)

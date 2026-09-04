@@ -1,0 +1,279 @@
+diff --git i/src/engine/models/backends/qwen.ts w/src/engine/models/backends/qwen.ts
+index 083cf89..389f554 100644
+--- i/src/engine/models/backends/qwen.ts
++++ w/src/engine/models/backends/qwen.ts
+@@ -9,6 +9,7 @@ import {
+   type NormalizedEmbeddingOptions,
+ } from "../embeddings.js";
+ import type {
++  OpenAiCompatibleTextEmbeddingCatalogEntry,
+   QwenMultimodalEmbeddingCatalogEntry,
+   QwenTextEmbeddingCatalogEntry,
+ } from "../catalog.js";
+@@ -28,6 +29,9 @@ const defaultDependencies: QwenDependencies = {
+   fetch: (...args) => globalThis.fetch(...args),
+ };
+ 
++type RemoteTextEmbeddingCatalogEntry =
++  OpenAiCompatibleTextEmbeddingCatalogEntry | QwenTextEmbeddingCatalogEntry;
++
+ type QwenTextEmbeddingSpec = {
+   displayName: string;
+   errorCodePrefix: string;
+@@ -56,7 +60,7 @@ type Qwen37TextEmbeddingCatalogEntry = Extract<
+ abstract class QwenTextEmbeddingModel extends BaseEmbeddingModel {
+   readonly info: EmbeddingModelInfo;
+ 
+-  private readonly entry: QwenTextEmbeddingCatalogEntry;
++  private readonly entry: RemoteTextEmbeddingCatalogEntry;
+   private readonly apiKey: string;
+   private readonly endpoint: string;
+   private readonly displayName: string;
+@@ -64,7 +68,7 @@ abstract class QwenTextEmbeddingModel extends BaseEmbeddingModel {
+   private readonly dependencies: QwenDependencies;
+ 
+   constructor(
+-    entry: QwenTextEmbeddingCatalogEntry,
++    entry: RemoteTextEmbeddingCatalogEntry,
+     spec: QwenTextEmbeddingSpec,
+     options: CreateEmbeddingModelOptions,
+     dependencies: Partial<QwenDependencies>,
+@@ -237,6 +241,21 @@ export class QwenTextEmbeddingV4Model extends QwenTextEmbeddingModel {
+   }
+ }
+ 
++const OPENAI_COMPATIBLE_TEXT_EMBEDDING_SPEC = {
++  displayName: "OpenAI-compatible text embedding",
++  errorCodePrefix: "OPENAI_COMPATIBLE_TEXT_EMBEDDING",
++} as const satisfies QwenTextEmbeddingSpec;
++
++export class OpenAiCompatibleTextEmbeddingModel extends QwenTextEmbeddingModel {
++  constructor(
++    entry: OpenAiCompatibleTextEmbeddingCatalogEntry,
++    options: CreateEmbeddingModelOptions,
++    dependencies: Partial<QwenDependencies> = {},
++  ) {
++    super(entry, OPENAI_COMPATIBLE_TEXT_EMBEDDING_SPEC, options, dependencies);
++  }
++}
++
+ export class Qwen37TextEmbeddingModel extends QwenTextEmbeddingModel {
+   constructor(
+     entry: Qwen37TextEmbeddingCatalogEntry,
+diff --git i/src/engine/models/catalog.ts w/src/engine/models/catalog.ts
+index 0df92bb..1b2fab3 100644
+--- i/src/engine/models/catalog.ts
++++ w/src/engine/models/catalog.ts
+@@ -56,6 +56,32 @@ export const EMBEDDING_MODEL_CATALOG = {
+     maxInputTokens: 128000,
+   },
+ 
++  "openai/text-embedding-3-large": {
++    backend: "openai-compatible",
++    kind: "text",
++    reference: "openai/text-embedding-3-large",
++    provider: "openai",
++    model: "text-embedding-3-large",
++    dimension: 3072,
++    metric: "cosine",
++    defaultEndpoint: "https://api.openai.com/v1/embeddings",
++    maxBatchSize: 2048,
++    maxInputTokens: 8191,
++  },
++
++  "hera/bge-m3-mlx-fp16": {
++    backend: "openai-compatible",
++    kind: "text",
++    reference: "hera/bge-m3-mlx-fp16",
++    provider: "hera",
++    model: "bge-m3-mlx-fp16",
++    dimension: 1024,
++    metric: "cosine",
++    defaultEndpoint: "https://hera.lan:8443/v1/embeddings",
++    maxBatchSize: 20,
++    maxInputTokens: 8192,
++  },
++
+   "qwen/qwen3-vl-embedding": {
+     backend: "qwen",
+     kind: "multimodal",
+@@ -249,6 +275,16 @@ export type QwenEmbeddingCatalogEntry = Extract<
+   { backend: "qwen" }
+ >;
+ 
++export type OpenAiCompatibleEmbeddingCatalogEntry = Extract<
++  EmbeddingCatalogEntry,
++  { backend: "openai-compatible" }
++>;
++
++export type OpenAiCompatibleTextEmbeddingCatalogEntry = Extract<
++  OpenAiCompatibleEmbeddingCatalogEntry,
++  { kind: "text" }
++>;
++
+ export type QwenTextEmbeddingCatalogEntry = Extract<
+   QwenEmbeddingCatalogEntry,
+   { kind: "text" }
+diff --git i/src/engine/models/factory.ts w/src/engine/models/factory.ts
+index 18f3d53..c4259ca 100644
+--- i/src/engine/models/factory.ts
++++ w/src/engine/models/factory.ts
+@@ -1,6 +1,7 @@
+ import { EngineError } from "../errors.js";
+ import {
+   getEmbeddingModelCatalogEntry,
++  type OpenAiCompatibleTextEmbeddingCatalogEntry,
+   type QwenEmbeddingCatalogEntry,
+ } from "./catalog.js";
+ import type {
+@@ -10,6 +11,7 @@ import type {
+ import { LlamaCppEmbeddingModel } from "./backends/llama-cpp.js";
+ import { Model2VecEmbeddingModel } from "./backends/model2vec.js";
+ import {
++  OpenAiCompatibleTextEmbeddingModel,
+   Qwen37TextEmbeddingModel,
+   Qwen3VlEmbeddingModel,
+   QwenTextEmbeddingV4Model,
+@@ -37,6 +39,8 @@ export function createEmbeddingModel(
+       return new TransformersJsEmbeddingModel(catalogEntry, options);
+     case "qwen":
+       return createQwenEmbeddingModel(catalogEntry, options);
++    case "openai-compatible":
++      return new OpenAiCompatibleTextEmbeddingModel(catalogEntry, options);
+     default:
+       return unsupportedCatalogEntry(catalogEntry);
+   }
+diff --git i/src/mcp/tools.ts w/src/mcp/tools.ts
+index 9f63015..715ea4b 100644
+--- i/src/mcp/tools.ts
++++ w/src/mcp/tools.ts
+@@ -268,6 +268,18 @@ export const ZVEC_GREP_AGENT_MCP_INSTRUCTIONS = formatPromptRules(
+   ],
+ );
+ 
++export const ZVEC_GREP_SEARCH_RG_MCP_INSTRUCTIONS = formatPromptRules(
++  "Use zvec-grep with these workspace retrieval rules:",
++  [
++    ...ZVEC_GREP_WORKSPACE_EVIDENCE_RULES,
++    ...ZVEC_GREP_FULL_SEARCH_MCP_INSTRUCTIONS,
++    "Every workspace operation requires an absolute root path visible to the daemon.",
++    "Read freshness and background_refresh directly from zvec_grep_search responses without a status preflight.",
++    "When results are served_from_current_index, use them immediately when they are sufficient; do not perform extra diagnostics merely because a background refresh is active.",
++    "When an index is missing, use zvec_grep_rg when exact lookup can answer the task. This toolset cannot create, rebuild, inspect, or delete persistent indexes.",
++  ],
++);
++
+ export const ZVEC_GREP_FULL_MCP_INSTRUCTIONS = formatPromptRules(
+   "Use zvec-grep with these workspace retrieval and lifecycle rules:",
+   [
+@@ -314,7 +326,9 @@ export function createZvecGrepMcpServer(
+       instructions:
+         toolset === "full"
+           ? ZVEC_GREP_FULL_MCP_INSTRUCTIONS
+-          : ZVEC_GREP_AGENT_MCP_INSTRUCTIONS,
++          : toolset === "search-rg"
++            ? ZVEC_GREP_SEARCH_RG_MCP_INSTRUCTIONS
++            : ZVEC_GREP_AGENT_MCP_INSTRUCTIONS,
+       cacheHints: {
+         "server/discover": { ttlMs: 60 * 60 * 1_000, cacheScope: "private" },
+         "tools/list": { ttlMs: 60 * 60 * 1_000, cacheScope: "private" },
+@@ -338,6 +352,7 @@ export function registerZvecGrepTools(
+ ): void {
+   const toolset = options.toolset ?? DEFAULT_MCP_TOOLSET;
+   const full = toolset === "full";
++  const searchAndRg = full || toolset === "search-rg";
+ 
+   if (full) {
+     server.registerTool(
+@@ -555,7 +570,7 @@ export function registerZvecGrepTools(
+     );
+   }
+ 
+-  if (full) {
++  if (searchAndRg) {
+     server.registerTool(
+       "zvec_grep_rg",
+       {
+diff --git i/src/mcp/toolset.ts w/src/mcp/toolset.ts
+index f835efe..fa7033b 100644
+--- i/src/mcp/toolset.ts
++++ w/src/mcp/toolset.ts
+@@ -2,12 +2,13 @@ export const MCP_TOOLSET_ENV = "ZVEC_GREP_MCP_TOOLSET";
+ 
+ export const DEFAULT_MCP_TOOLSET = "agent";
+ 
+-export type McpToolset = "agent" | "full";
++export type McpToolset = "agent" | "full" | "search-rg";
+ 
+ export function parseMcpToolset(value: string): McpToolset {
+-  if (value === "agent" || value === "full") return value;
++  if (value === "agent" || value === "full" || value === "search-rg")
++    return value;
+   throw new Error(
+-    `Unsupported MCP toolset "${value}". Expected "agent" or "full".`,
++    `Unsupported MCP toolset "${value}". Expected "agent", "search-rg", or "full".`,
+   );
+ }
+ 
+diff --git i/src/daemon/server-controller.ts w/src/daemon/server-controller.ts
+--- i/src/daemon/server-controller.ts
++++ w/src/daemon/server-controller.ts
+@@ -155,10 +155,10 @@ export async function serverStatus(
+     const response = await fetch(new URL("/healthz", record.serverUrl), {
+       signal: AbortSignal.timeout(1_000),
+     });
+     return {
+       running: true,
+-      ready: response.ok && record.ready,
++      ready: response.ok,
+       pid: record.pid,
+       serverUrl: record.serverUrl,
+       mcpToolset: record.mcpToolset,
+    };
+diff --git i/src/cli/help.ts w/src/cli/help.ts
+index c2080f2..45fa3a7 100644
+--- i/src/cli/help.ts
++++ w/src/cli/help.ts
+@@ -32,7 +32,7 @@ const ENVIRONMENT_VARIABLES = {
+   ZVEC_GREP_SERVER_URL: "MCP server URL used by CLI clients",
+   ZVEC_GREP_SERVER_TOKEN: "Server/client Bearer token",
+   ZVEC_GREP_SERVER_TOKEN_FILE: "File containing the Server/client Bearer token",
+-  ZVEC_GREP_MCP_TOOLSET: "Server MCP surface: agent or full",
++  ZVEC_GREP_MCP_TOOLSET: "Server MCP surface: agent, search-rg, or full",
+   ZVEC_GREP_EMBEDDING: "Default model for new indexes and auth grant",
+   ZVEC_GREP_API_KEY: "Embedding provider credential fallback",
+   ZVEC_GREP_ENDPOINT: "Remote Embedding endpoint fallback",
+@@ -272,11 +272,11 @@ ${formatEnvironmentVariables([
+ ])}`;
+     case "server":
+       return `Usage:
+-  zg server --stdio [--token-file <path>] [--mcp-toolset <agent|full>]
+-  zg server on [--listen 127.0.0.1:7999] [--token-file <path>] [--mcp-toolset <agent|full>]
++  zg server --stdio [--token-file <path>] [--mcp-toolset <agent|search-rg|full>]
++  zg server on [--listen 127.0.0.1:7999] [--token-file <path>] [--mcp-toolset <agent|search-rg|full>]
+   zg server off [--token-file <path>]
+   zg server status [--check-ready]
+-  zg server run [--listen 127.0.0.1:7999] [--token-file <path>] [--mcp-toolset <agent|full>]
++  zg server run [--listen 127.0.0.1:7999] [--token-file <path>] [--mcp-toolset <agent|search-rg|full>]
+ 
+ --stdio is the MCP client bootstrap transport. It safely starts or reuses the
+ shared daemon, proxies MCP over stdin/stdout, and leaves the daemon running
+@@ -285,7 +285,8 @@ when the client disconnects.
+ The server listens on loopback. Authentication is disabled by default; pass a
+ token file or set ZVEC_GREP_SERVER_TOKEN to require Bearer authentication.
+ The public MCP endpoint defaults to the agent toolset (indexed search only).
+-Use --mcp-toolset full, or ZVEC_GREP_MCP_TOOLSET=full, to expose managed rg and
++Use --mcp-toolset search-rg to expose exactly indexed search and managed rg.
++Use --mcp-toolset full, or ZVEC_GREP_MCP_TOOLSET=full, to expose those tools plus
+ the four index and status tools. CLI managed rg, index, and status commands
+ continue to use the daemon's internal administration endpoint.
+ --check-ready exits non-zero unless the server is ready.
+@@ -307,7 +308,7 @@ See zg help environment for daemon startup scope.`;
+ Options:
+   --target <agent>                  codex, claude, qwen, qoder, opencode, cursor, auto, or all; repeatable
+   --mcp-transport <stdio|http>      MCP connection mode (default: stdio)
+-  --mcp-toolset <agent|full>        Daemon MCP toolset (default: agent)
++  --mcp-toolset <agent|search-rg|full> Daemon MCP toolset (default: agent)
+   --mcp-tool-timeout <seconds>      MCP tool timeout where supported (default: 600)
+   --mcp-token-env <name>            HTTP mode Bearer token environment variable
+   --yes                             Install detected agents without prompting

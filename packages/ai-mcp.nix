@@ -203,6 +203,60 @@ prev.lib.optionalAttrs (palMcpServer != null && llmAgents != null) {
       };
     });
 
+  # zvec-grep with a deliberately narrow MCP launcher: semantic search and
+  # managed ripgrep only. Index lifecycle remains a user-owned CLI operation.
+  zvec-grep =
+    with prev;
+    buildNpmPackage (_finalAttrs: {
+      pname = "zvec-grep";
+      version = sources.zvec-grep.version;
+
+      src =
+        assert sources.zvec-grep.source.fetcher == "fetchFromGitHub";
+        fetchFromGitHub sources.zvec-grep.source.args;
+
+      patches = [
+        ../overlays/ai/patches/zvec-grep-openai-compatible-mcp.patch
+      ];
+
+      npmDepsHash = sources.zvec-grep.hashes.npmDepsHash;
+      nodejs = nodejs_22;
+      nativeBuildInputs = [ makeWrapper ];
+
+      postInstall = ''
+        install -d "$out/libexec"
+        mv "$out/bin/zg" "$out/libexec/zg"
+        makeWrapper "$out/libexec/zg" "$out/bin/zg" \
+          --run 'if [ -z "''${ZVEC_GREP_API_KEY-}" ] && [ -n "''${OPENAI_API_KEY-}" ]; then export ZVEC_GREP_API_KEY="$OPENAI_API_KEY"; fi'
+        makeWrapper "$out/bin/zg" "$out/bin/zg-mcp" \
+          --add-flags "server --stdio --mcp-toolset search-rg"
+      '';
+
+      nativeInstallCheckInputs = [ gnugrep ];
+      doInstallCheck = true;
+      installCheckPhase = ''
+        runHook preInstallCheck
+        test "$("$out/bin/zg" version)" = ${lib.escapeShellArg sources.zvec-grep.version}
+        "$out/bin/zg" help models | grep -F "hera/bge-m3-mlx-fp16" >/dev/null
+        "$out/bin/zg" help models | grep -F "openai/text-embedding-3-large" >/dev/null
+        "$out/bin/zg" help server | grep -F "<agent|search-rg|full>" >/dev/null
+        grep -F 'server --stdio --mcp-toolset search-rg' "$out/bin/zg-mcp" >/dev/null
+        grep -F 'OPENAI_API_KEY' "$out/bin/zg" >/dev/null
+        grep -F 'ZVEC_GREP_API_KEY' "$out/bin/zg" >/dev/null
+        grep -F 'toolset === "search-rg"' "$out/lib/node_modules/@zvec/zvec-grep/dist/mcp/tools.js" >/dev/null
+        grep -F 'if (searchAndRg)' "$out/lib/node_modules/@zvec/zvec-grep/dist/mcp/tools.js" >/dev/null
+        runHook postInstallCheck
+      '';
+
+      meta = with lib; {
+        description = "Agent-friendly hybrid workspace search";
+        homepage = "https://github.com/zvec-ai/zvec-grep";
+        license = licenses.asl20;
+        mainProgram = "zg";
+        platforms = platforms.all;
+      };
+    });
+
   # Private web search through the configured SearXNG instance.
   mcp-searxng =
     let

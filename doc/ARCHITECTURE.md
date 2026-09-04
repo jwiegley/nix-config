@@ -177,6 +177,8 @@ discovery map: local llama-swap plus the stable `omlx-clio` and `omlx-hera`
 providers. Both Pi homes therefore render the same provider identities while
 retaining their host-specific fixed-route policy.
 
+`zg` is installed on every managed home, while the catalog selects its two-tool Pi MCP transport only on Hera, Clio, shared-work, and Vulcan. Hera, Clio, and Vulcan use the Hera OpenAI-compatible embedding endpoint with its non-secret sentinel and `bge-m3-mlx-fp16`; shared-work inherits its mutable `OPENAI_API_KEY` for `text-embedding-3-large`. VPS has no default route or MCP entry. Nix owns neither `.zvec-grep` indexes nor user authorization for remote embedding requests.
+
 oMLX itself is loopback-only. Its TLS gateway route is absent by default; both
 Darwin workstations enable it on their exact LAN address and admit the other
 workstation, with Hera retaining its declared gateway sources. Nix supplies the
