@@ -835,11 +835,11 @@
     "recordings": {
       "flake": false,
       "locked": {
-        "lastModified": 1788294698,
-        "narHash": "sha256-q3gXwnIuapIXI6oRWI0rFNQBxM0njhmqHz97kA3NTaY=",
+        "lastModified": 1788545204,
+        "narHash": "sha256-BENdCaXAlYH2feaxrvZnKO3r3DteGPCe2m4aixUolnE=",
         "owner": "jwiegley",
         "repo": "recordings",
-        "rev": "1ab07f7a34e9a92d545886a6918379b00f35a35c",
+        "rev": "ae763cd3030c386028ca415dbf6152dfca463b6c",
         "type": "github"
       },
       "original": {
