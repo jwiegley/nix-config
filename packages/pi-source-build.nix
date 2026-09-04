@@ -35,6 +35,50 @@ buildNpmPackageWithNode24 {
   postPatch = ''
     mkdir -p packages/ai/src/providers/data
     cp -R ${piAiRelease}/dist/providers/data/. packages/ai/src/providers/data/
+    # ponytail: remove when a pi-ai release includes Astra's generated catalog data.
+    node --input-type=module <<'JS'
+    import { createHash } from "node:crypto";
+    import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+    import { join } from "node:path";
+
+    const dataDir = "packages/ai/src/providers/data";
+    const codexPath = join(dataDir, "openai-codex.json");
+    const codex = JSON.parse(readFileSync(codexPath, "utf8"));
+    codex["openai-codex-responses"]["gpt-6-astra"] = {
+      id: "gpt-6-astra",
+      name: "GPT-6 Astra",
+      api: "openai-codex-responses",
+      provider: "openai-codex",
+      baseUrl: "https://chatgpt.com/backend-api",
+      reasoning: true,
+      input: ["text", "image"],
+      cost: {
+        input: 10,
+        output: 50,
+        cacheRead: 1,
+        cacheWrite: 12.5,
+        tiers: [{ inputTokensAbove: 272000, input: 20, output: 75, cacheRead: 2, cacheWrite: 25 }],
+      },
+      contextWindow: 272000,
+      maxTokens: 128000,
+      thinkingLevelMap: { off: null, minimal: "low", low: "low", medium: "medium", high: "high", xhigh: "xhigh", max: "max" },
+      compat: { supportsOpenAIGrammarTools: true, supportsAdditionalTools: true, supportsToolSearch: true },
+    };
+    writeFileSync(codexPath, `''${JSON.stringify(codex)}\n`);
+
+    const hash = value => createHash("sha256").update(value).digest("hex");
+    const files = readdirSync(dataDir).filter(file => file.endsWith(".json")).sort();
+    const structure = Object.fromEntries(files.map(file => {
+      const groups = JSON.parse(readFileSync(join(dataDir, file), "utf8"));
+      return [file.slice(0, -5), Object.fromEntries(Object.entries(groups).flatMap(([api, models]) =>
+        Object.keys(models).map(modelId => [modelId, api])).sort(([a], [b]) => a.localeCompare(b)))];
+    }).sort(([a], [b]) => a.localeCompare(b)));
+    const manifestPath = join(dataDir, ".manifest.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    manifest.structureHash = hash(JSON.stringify(structure));
+    manifest.files = Object.fromEntries(files.map(file => [file, hash(readFileSync(join(dataDir, file), "utf8"))]));
+    writeFileSync(manifestPath, `''${JSON.stringify(manifest)}\n`);
+    JS
   '';
 
   npmDepsHash = source.hashes.npmDepsHash;
