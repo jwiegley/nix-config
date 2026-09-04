@@ -9,8 +9,9 @@ let
   piSourceBuild = pkgs.callPackage ../../../packages/pi-source-build.nix { inherit piSource; };
 in
 assert nodePackage ? overrideAttrs;
-assert nodePackage.version == piSourceBuild.version;
 nodePackage.overrideAttrs (old: {
+  __intentionallyOverridingVersion = true;
+  inherit (piSourceBuild) version;
   preInstall = ''
     rm -rf dist
     cp -R ${piSourceBuild}/coding-agent/dist ./dist

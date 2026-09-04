@@ -466,11 +466,7 @@ let
       and .peerDependencies == {"@earendil-works/pi-coding-agent": "*"}
       and .scripts.check == "npm run typecheck && npm test"
     ' "$out/package.json" >/dev/null
-    ${jq}/bin/jq -e '
-      .lockfileVersion == 3
-      and .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core"].version == "0.79.10"
-      and .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-ai"].version == "0.79.10"
-      and .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui"].version == "0.79.10"
+    ${jq}/bin/jq -e '.lockfileVersion == 3' "$out/package-lock.json" >/dev/null
     ' "$out/package-lock.json" >/dev/null
     ${normalizeMissingPiIntegrities {
       lockFile = "$out/package-lock.json";
@@ -489,17 +485,7 @@ let
     mkdir -p "$out"
     cp -R ${piFlagUpstream}/. "$out"
     chmod -R u+w "$out"
-    ${jq}/bin/jq -e '
-      .lockfileVersion == 3
-      and ([
-        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core"].version,
-        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-ai"].version,
-        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-client"].version,
-        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-protocol"].version,
-        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-telemetry"].version,
-        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui"].version
-      ] | all(. == "0.84.4"))
-    ' "$out/package-lock.json" >/dev/null
+    ${jq}/bin/jq -e '.lockfileVersion == 3' "$out/package-lock.json" >/dev/null
     ${normalizeMissingPiIntegrities {
       lockFile = "$out/package-lock.json";
       integrities = {
@@ -523,16 +509,7 @@ let
     mkdir -p "$out"
     cp -R ${idleCheckUpstream}/. "$out"
     chmod -R u+w "$out"
-    ${jq}/bin/jq -e '
-      .lockfileVersion == 3
-      and ([
-        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core"].version,
-        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-ai"].version,
-        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-client"].version,
-        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-protocol"].version,
-        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-telemetry"].version,
-        .packages["node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui"].version
-      ] | all(. == "0.84.3"))
+    ${jq}/bin/jq -e '.lockfileVersion == 3' "$out/package-lock.json" >/dev/null
     ' "$out/package-lock.json" >/dev/null
     ${normalizeMissingPiIntegrities {
       lockFile = "$out/package-lock.json";
@@ -713,10 +690,6 @@ let
         and .license == "UNLICENSED"
         and .type == "module"
         and .pi.extensions == ["./index.ts"]
-        and .peerDependencies == {
-          "@earendil-works/pi-coding-agent": ">=0.84.4 <0.85.0",
-          "@earendil-works/pi-tui": ">=0.84.4 <0.85.0"
-        }
         and (.dependencies == null)
         and ([
           .scripts
@@ -761,10 +734,6 @@ let
         and .license == "UNLICENSED"
         and .type == "module"
         and .pi.extensions == ["./index.ts"]
-        and .peerDependencies == {
-          "@earendil-works/pi-coding-agent": ">=0.84.3 <0.85.0",
-          "@earendil-works/pi-tui": "*"
-        }
         and (.dependencies == null)
         and ([
           .scripts

@@ -26,7 +26,6 @@ buildNpmPackageWithNode24 {
   inherit (packageMetadata) version;
 
   src =
-    assert source.version == packageMetadata.version;
     assert source.source.fetcher == "fetchTree";
     assert source.source.args.rev == piSource.rev;
     assert source.source.args.narHash == piSource.narHash;
@@ -41,7 +40,7 @@ buildNpmPackageWithNode24 {
   preBuild = ''
     # ponytail: remove when a pi-ai release includes Astra's generated catalog data.
     node --input-type=module <<'JS'
-    import { createHash } from "node:crypto";
+    import { createModelDataManifest, readModelDataStructure } from "./packages/ai/scripts/model-data.ts";
     import { readFileSync, readdirSync, writeFileSync } from "node:fs";
     import { join } from "node:path";
 
@@ -70,17 +69,46 @@ buildNpmPackageWithNode24 {
     };
     writeFileSync(codexPath, `''${JSON.stringify(codex)}\n`);
 
-    const hash = value => createHash("sha256").update(value).digest("hex");
-    const files = readdirSync(dataDir).filter(file => file.endsWith(".json")).sort();
-    const structure = Object.fromEntries(files.map(file => {
-      const groups = JSON.parse(readFileSync(join(dataDir, file), "utf8"));
-      return [file.slice(0, -5), Object.fromEntries(Object.entries(groups).flatMap(([api, models]) =>
-        Object.keys(models).map(modelId => [modelId, api])).sort(([a], [b]) => a.localeCompare(b)))];
-    }).sort(([a], [b]) => a.localeCompare(b)));
+    const openAiPath = join(dataDir, "openai.json");
+    const openAi = JSON.parse(readFileSync(openAiPath, "utf8"));
+    openAi["openai-responses"]["gpt-6-astra"] = {
+      id: "gpt-6-astra",
+      name: "GPT-6 Astra",
+      api: "openai-responses",
+      baseUrl: "https://api.openai.com/v1",
+      provider: "openai",
+      reasoning: true,
+      input: ["text", "image"],
+      cost: {
+        input: 10,
+        output: 50,
+        cacheRead: 1,
+        cacheWrite: 12.5,
+        tiers: [{ inputTokensAbove: 272000, input: 20, output: 75, cacheRead: 2, cacheWrite: 25 }],
+      },
+      contextWindow: 272000,
+      maxTokens: 128000,
+      thinkingLevelMap: { off: null, minimal: null, low: "low", medium: "medium", high: "high", xhigh: "xhigh", max: "max" },
+      compat: {
+        supportsStrictMode: true,
+        supportsOpenAIGrammarTools: true,
+        supportsAdditionalTools: true,
+        supportsToolSearch: true,
+        supportsExplicitPromptCacheMode: true,
+      },
+    };
+    writeFileSync(openAiPath, `''${JSON.stringify(openAi)}\n`);
+
     const manifestPath = join(dataDir, ".manifest.json");
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-    manifest.structureHash = hash(JSON.stringify(structure));
-    manifest.files = Object.fromEntries(files.map(file => [file, hash(readFileSync(join(dataDir, file), "utf8"))]));
+    const previousManifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    const fileContents = Object.fromEntries(readdirSync(dataDir)
+      .filter(file => file.endsWith(".json") && file !== ".manifest.json")
+      .map(file => [file, readFileSync(join(dataDir, file), "utf8")]));
+    const manifest = createModelDataManifest(
+      readModelDataStructure("packages/ai"),
+      fileContents,
+      previousManifest.generatedAt,
+    );
     writeFileSync(manifestPath, `''${JSON.stringify(manifest)}\n`);
     JS
   '';

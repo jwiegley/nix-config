@@ -1350,22 +1350,22 @@
       "artifacts": {
         "piAiRelease": {
           "args": {
-            "hash": "sha256-5RUH1YbGFRRrPsljziBfmdRBX97XpBl9S4I1AehLaYM=",
-            "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.4.tgz"
+            "hash": "sha256-A9g1o7e+oSfTxejvR1n53ziHhkMf30VoS+qvyX1letM=",
+            "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.85.0.tgz"
           },
           "fetcher": "fetchzip",
-          "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.84.4.tgz"
+          "url": "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-0.85.0.tgz"
         }
       },
       "hashes": {
-        "npmDepsHash": "sha256-35GC3Q4Jf4URvqoEYHeM63x49tTmrth62//PvKm4I7Q="
+        "npmDepsHash": "sha256-K/KiukwTHwu4HE8hUu7ur3bxggwfO0WL+QDI0FtxP3I="
       },
       "source": {
         "args": {
-          "narHash": "sha256-CkdMY9itrTX8CTmcEEi/KHcMDEK6QXjDBN3CaxArnek=",
+          "narHash": "sha256-N9oxlVaUWyJLvCD1Hf8KHgEsdND+hqjETrgxr1UVVD8=",
           "owner": "jwiegley",
           "repo": "pi",
-          "rev": "37864ad59cf9fb533caf39f3214fbaae02c4e985",
+          "rev": "f37c830d0dd27677222dfd2743cf939ecf9aa655",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1382,7 +1382,7 @@
         "kind": "fixed-flake-input",
         "versionPath": "packages/coding-agent/package.json"
       },
-      "version": "0.84.4"
+      "version": "0.85.0"
     },
     "rust-overlay": {
       "source": {
@@ -1425,6 +1425,28 @@
         "input": "translate-tool",
         "kind": "flake-input"
       }
+    },
+    "zvec-grep": {
+      "hashes": {
+        "npmDepsHash": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      },
+      "source": {
+        "args": {
+          "hash": "sha256-2JOMMXaOSQPZqPrHVzI9w/+9khwxBm/TSGmx2PZ99fI=",
+          "owner": "zvec-ai",
+          "repo": "zvec-grep",
+          "rev": "52653951b24617762f4ab0c71c34d594e5001617"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/zvec-ai/zvec-grep"
+      },
+      "update": {
+        "branch": "main",
+        "kind": "github-commit",
+        "policy": "manual",
+        "reason": "The managed two-tool MCP surface and OpenAI-compatible embedding catalog are downstream patches against this revision"
+      },
+      "version": "0.2.1"
     }
   }
 }
