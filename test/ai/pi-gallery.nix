@@ -50,17 +50,18 @@ let
   modelOverrides = import ../../config/ai/model-overrides.nix;
   galleryOwners =
     definitions: lib.unique (map (definition: definition.owner) (builtins.attrValues definitions));
-  activeOrder = lib.subtractLists [ "lens" "mem" "flag" ] (
+  activeOrder = lib.subtractLists [ "lens" "mem" "flag" "trace" ] (
     if stdenv.hostPlatform.isDarwin then
       manifest.order
     else
       lib.subtractLists localModelMemberIds manifest.order
   );
-  documentActiveOrder = lib.subtractLists [ "lens" "mem" "flag" ] manifest.order;
+  documentActiveOrder = lib.subtractLists [ "lens" "mem" "flag" "trace" ] manifest.order;
   documentInactiveOrder = [
     "lens"
     "mem"
     "flag"
+    "trace"
   ];
   quiet = "${piPackages.agent-resources}/share/agent-resources/pi-extensions/pi-quiet/src/index.ts";
   packageRoots = lib.escapeShellArgs (builtins.attrValues roots);
@@ -2141,7 +2142,6 @@ runCommand "pi-gallery-check"
           "subagents-fleet",
           "subagents-models",
           "subagents-watchdog",
-          "trace",
           "workflows"
         ] - [.data.commands[].name] | length) == 0
         and ([.data.commands[].name

@@ -66,8 +66,8 @@ let
     "llama-swap-provider"
     "omlx-provider"
   ];
-  # Keep Lens, Pi Mem, and pi-flag packaged and projected while excluding startup load.
-  activeOrder = lib.subtractLists [ "lens" "mem" "flag" ] (
+  # Keep Lens, Pi Mem, pi-flag, and Trace packaged and projected while excluding startup load.
+  activeOrder = lib.subtractLists [ "lens" "mem" "flag" "trace" ] (
     if stdenv.hostPlatform.isDarwin then order else lib.subtractLists localModelMemberIds order
   );
   piCatalogRecords = manifest.sourceCatalog;

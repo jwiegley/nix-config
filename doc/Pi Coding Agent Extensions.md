@@ -14,7 +14,7 @@ pi-version: 0.84.4
 
 # Pi Coding Agent Extensions
 
-This note records the Nix-managed Pi estate: 27 gallery packages projected on every managed host, five separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 24 of those packages on Darwin and 22 on Linux; [Pi Lens][pi-lens], [Pi Mem][pi-mem], and [pi-flag][pi-flag] are retained but not Gallery-registered. Pi Flag is separately deployed on every managed profile. Versions below are the versions selected by the current Nix source.
+This note records the Nix-managed Pi estate: 27 gallery packages projected on every managed host, five separately deployed extensions, one generated loader, the rendered fleet profiles, and the immediate runtime companions. The Gallery registers 23 of those packages on Darwin and 21 on Linux; [Pi Lens][pi-lens], [Pi Mem][pi-mem], [pi-flag][pi-flag], and [Trace][pi-trace] are retained but not Gallery-registered. Pi Flag is separately deployed on every managed profile. Versions below are the versions selected by the current Nix source.
 
 The inventory includes generated ownership, model routing, MCP registration, and keybindings. Pi core facilities, built-in tool implementations, ordinary skill bodies, mutable user state, MCP tool-by-tool APIs, and transitive npm dependencies remain outside its scope. The `agent-resources` package also carries [`pi-openai-server-compaction`][pi-openai-server-compaction] for compatibility testing, but no managed Pi profile renders or loads it, so it is not part of this configured inventory.
 
@@ -27,7 +27,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [Nix Gallery loader][nix-gallery-loader] | local | Compose the managed package gallery | automatic |
 | [Fleet Theme][fleet-theme] | local | Discover and select the managed TUI theme | automatic |
 | [`@realvendex/pi-loop`][pi-loop] | 1.0.2 | Repeat prompts under explicit stop conditions | `/loop` |
-| [`pi-mcp-adapter`][pi-mcp-adapter] | 2.31.0 | Lazy, context-efficient MCP access | `mcp`, `/mcp` |
+| [`pi-mcp-adapter`][pi-mcp-adapter] | 2.32.1 | Lazy, context-efficient MCP access | `mcp`, `/mcp` |
 | [`@zenspc/pi-quiet`][pi-quiet] | 0.4.1 | Dense tool-result presentation | `/quiet` |
 | [`pi-flag`][pi-flag] | 0.1.0 | Mark user or assistant messages significant for later model turns | `/flag` |
 | [`pi-hashline-edit-pro`][pi-hashline-edit-pro] | 0.17.5 | Hash-anchored reads and replacements | `read`, `replace` |
@@ -44,7 +44,6 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [`pi-provider-omlx`][pi-provider-omlx] | `57583beb` | Discover authenticated oMLX services selected for each host | `/model`, `omlx-hera/*`, `omlx-clio/*` |
 | [`pi-rewind`][pi-rewind] | 0.5.0 | Conversation and file checkpoints | `/rewind` |
 | [`pi-idle-check`][pi-idle-check] | 0.1.0 | Offer context-aware send, compact, or new-session choices after idle time | automatic |
-| [`pi-trace-extension`][pi-trace] | 0.1.15 | Local execution traces and HTML reports | `/trace` |
 | [`pi-markdown-preview`][pi-markdown-preview] | 0.15.0 | Terminal, browser, PDF, and artifact previews | `/preview`, `preview_export` |
 | [`pi-caveman`][pi-caveman] | 1.0.8 | Compressed response style | `/caveman` |
 | [`pi-rtk-optimizer`][pi-rtk-optimizer] | 0.9.0 | RTK command rewriting and output compaction | `/rtk` |
@@ -64,6 +63,7 @@ These packages remain pinned, built, and present in the immutable Gallery projec
 | [`pi-lens`][pi-lens] | 4.0.1 | One packaged skill root exposing four [Lens][pi-lens] skills remains advertised, and Nix still renders the hidden [Lens][pi-lens] widget setting; [Lens][pi-lens] tools and commands are unavailable |
 | [`@askjo/pi-mem`][pi-mem] | 1.2.0 | Projection only; no [Pi Mem][pi-mem] imports, tools, commands, or managed state activation |
 | [`pi-flag`][pi-flag] | 0.1.0 | Registered by a separate managed extension leaf to accommodate the paired package set |
+| [`pi-trace-extension`][pi-trace] | 0.1.15 | Disabled to prevent its session tracing runtime from consuming memory |
 
 The [Factory Droid SDK provider][pi-droid-sdk] is available and registered on every host. Darwin registers the [llama-swap provider][pi-provider-llama-swap] and both workstation endpoints from the [oMLX provider][pi-provider-omlx]. Vulcan registers only the remote `omlx-hera` endpoint; other Linux profiles retain the packages without registering local-provider endpoints. Local llama-swap remains loopback-only. Hera receives fixed `omlx-hera` overrides; Clio retains bounded bilateral discovery; and Vulcan uses bounded authenticated discovery from Hera. OpenRouter remains a native provider on every managed Pi profile and becomes available when that host has mutable OpenRouter authentication.
 
@@ -231,9 +231,9 @@ The managed package keeps its dashboard summary local instead of making upstream
 
 **Version:** 0.1.15 · **Links:** [Pi Packages](https://pi.dev/packages/pi-trace-extension) · [Home](https://github.com/npxcnency-ux/pi-trace-extension) · [GitHub](https://github.com/npxcnency-ux/pi-trace-extension)
 
-[Pi Trace][pi-trace] records the execution structure of each session—model requests, steps, tool calls, timings, usage, and outcomes—as local JSONL, then renders a self-contained HTML report. The Nix package sanitizes persisted values under secret-like key names, including common authorization, API-key, AWS-secret, and cookie fields; bounds nesting; truncates long strings; flushes pending events before rendering; supplies an immutable Python renderer; and handles unavailable browser launchers without crashing Pi. [Trace][pi-trace] directories are created with mode 0700 and their JSONL and HTML files with mode 0600.
+When registered, [Pi Trace][pi-trace] records the execution structure of each session—model requests, steps, tool calls, timings, usage, and outcomes—as local JSONL, then renders a self-contained HTML report. The Nix package sanitizes persisted values under secret-like key names, including common authorization, API-key, AWS-secret, and cookie fields; bounds nesting; truncates long strings; flushes pending events before rendering; supplies an immutable Python renderer; and handles unavailable browser launchers without crashing Pi. [Trace][pi-trace] directories are created with mode 0700 and their JSONL and HTML files with mode 0600.
 
-**Basic usage.** Tracing starts automatically. Run `/trace` for the current session or `/trace all` for the cross-session dashboard. Files live below `~/.pi/agent/traces/`. They still contain prompts, tool inputs and results, file paths, and model data; treat them as sensitive. The extension has no retention or rotation policy.
+**Current state.** Trace is packaged but not imported or registered by the Gallery loader, so it consumes no Pi process memory. Existing trace files below `~/.pi/agent/traces/` remain mutable user data.
 
 ### [Cache Optimizer][pi-cache-optimizer]
 

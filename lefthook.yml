@@ -3,4 +3,4 @@
 pre-commit:
   commands:
     quality-tier:
-      run: test/bin/quality --tier pre-commit
+      run: direnv exec . test/bin/quality --tier pre-commit
