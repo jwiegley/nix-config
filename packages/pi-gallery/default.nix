@@ -467,7 +467,6 @@ let
       and .scripts.check == "npm run typecheck && npm test"
     ' "$out/package.json" >/dev/null
     ${jq}/bin/jq -e '.lockfileVersion == 3' "$out/package-lock.json" >/dev/null
-    ' "$out/package-lock.json" >/dev/null
     ${normalizeMissingPiIntegrities {
       lockFile = "$out/package-lock.json";
       integrities = {
@@ -510,7 +509,6 @@ let
     cp -R ${idleCheckUpstream}/. "$out"
     chmod -R u+w "$out"
     ${jq}/bin/jq -e '.lockfileVersion == 3' "$out/package-lock.json" >/dev/null
-    ' "$out/package-lock.json" >/dev/null
     ${normalizeMissingPiIntegrities {
       lockFile = "$out/package-lock.json";
       integrities = {
