@@ -10784,7 +10784,9 @@ exec "$REAL_GIT" "$@"
                 ],
                 check=True,
             )
-            (root / ".git/update-agents.lock").mkdir()
+            lock = root / ".git/update-agents.lock"
+            lock.mkdir()
+            (lock / "owner").write_text(f"{os.getpid()}\n")
             result = subprocess.run(
                 [str(UPDATE_AGENTS)],
                 capture_output=True,
@@ -10803,6 +10805,27 @@ exec "$REAL_GIT" "$@"
                 ).stdout,
                 "",
             )
+
+    def test_update_agents_reclaims_dead_transaction_lock(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root, environment, baseline = self._create_update_agents_fixture(temp_dir)
+            before = self._update_agents_projection(root)
+            lock = root / ".git/update-agents.lock"
+            lock.mkdir()
+            (lock / "owner").write_text("999999999\n")
+
+            result = subprocess.run(
+                [str(UPDATE_AGENTS), "--dry-run"],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("reclaimed stale transaction lock", result.stderr)
+            self.assertFalse(lock.exists())
+            self._assert_update_agents_unchanged(root, baseline, before)
 
     def test_root_inputs_do_not_reference_external_filesystems(self):
         root = SCRIPT.parent.parent

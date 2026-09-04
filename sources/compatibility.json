@@ -31,6 +31,7 @@
       },
       "update": {
         "kind": "pypi-release",
+        "package": "PyQt5",
         "policy": "manual",
         "reason": "PyQt5 5.15.10 cannot target its SIP ABI on Darwin Python 3.14; remove once nixpkgs carries a working release"
       },
@@ -48,6 +49,7 @@
       },
       "update": {
         "kind": "pypi-release",
+        "package": "sip",
         "policy": "manual",
         "reason": "PyQt5 needs the previous SIP generator for its ABI v12 bindings on Darwin Python 3.14"
       },

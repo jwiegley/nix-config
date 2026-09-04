@@ -617,6 +617,10 @@ cleanup_transaction() {
             rollback_failed=true
         fi
     fi
+    if [[ $transaction_lock_acquired == true ]] && ! rm -f -- "$transaction_lock/owner"; then
+        echo "update: failed to release transaction lock owner" >&2
+        rollback_failed=true
+    fi
     if [[ $transaction_lock_acquired == true ]] && ! rmdir "$transaction_lock" 2>/dev/null; then
         echo "update: failed to release transaction lock" >&2
         rollback_failed=true
@@ -696,10 +700,22 @@ trap cleanup_transaction EXIT
 trap 'transaction_signal_status=129' HUP
 trap 'transaction_signal_status=130' INT
 trap 'transaction_signal_status=143' TERM
-if mkdir "$transaction_lock" 2>/dev/null; then
-    transaction_lock_acquired=true
-else
-    echo "update: another update transaction is active" >&2
+if ! mkdir "$transaction_lock" 2>/dev/null; then
+    transaction_owner=
+    if [[ -r $transaction_lock/owner ]] && IFS= read -r transaction_owner <"$transaction_lock/owner" &&
+        [[ $transaction_owner =~ ^[1-9][0-9]*$ ]] && ! kill -0 "$transaction_owner" 2>/dev/null; then
+        if rm -f -- "$transaction_lock/owner" && rmdir "$transaction_lock" 2>/dev/null; then
+            echo "update: reclaimed stale transaction lock (pid $transaction_owner)" >&2
+        fi
+    fi
+    if ! mkdir "$transaction_lock" 2>/dev/null; then
+        echo "update: another update transaction is active" >&2
+        exit 1
+    fi
+fi
+transaction_lock_acquired=true
+if ! printf '%s\n' "$$" >"$transaction_lock/owner"; then
+    echo "update: failed to record transaction lock owner" >&2
     exit 1
 fi
 trap 'exit 129' HUP
