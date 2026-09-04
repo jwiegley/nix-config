@@ -36,6 +36,9 @@ buildNpmPackageWithNode24 {
     mkdir -p packages/ai/src/providers/data
     cp -R ${piAiRelease}/dist/providers/data/. packages/ai/src/providers/data/
     chmod -R u+w packages/ai/src/providers/data
+  '';
+
+  preBuild = ''
     # ponytail: remove when a pi-ai release includes Astra's generated catalog data.
     node --input-type=module <<'JS'
     import { createHash } from "node:crypto";
