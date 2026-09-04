@@ -102,7 +102,7 @@ let
     newPaths = [ ".prime/agent/managed-settings.json" ];
   });
   agentModelAliasesProbe = builtins.tryEval (preflightFactory {
-    newPaths = [ ".config/flatten-recordings/agent-model-aliases.json" ];
+    newPaths = [ ".config/recordings/agent-model-aliases.json" ];
   });
   recordingTranscriptionProbe = builtins.tryEval (preflightFactory {
     newPaths = [ ".config/transcribe/llm-route.json" ];

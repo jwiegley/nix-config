@@ -61,7 +61,7 @@ let
     ".config/codex/nix-managed.config.toml"
     ".config/codex/nix-managed-model-catalog.json"
     ".config/factory/mcp.json"
-    ".config/flatten-recordings/agent-model-aliases.json"
+    ".config/recordings/agent-model-aliases.json"
     ".config/mcp/mcp.json"
     ".pi-lens/config.json"
     ".config/pi/agent/extensions/fleet-theme/index.ts"

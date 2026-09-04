@@ -258,7 +258,7 @@ let
         ] (import ../../config/ai/model-overrides.nix).pi.galleryProviders;
         endpoints = lib.getAttrs [ "omlx-hera" ] aiCatalog.piModelDiscoveryEndpoints;
       };
-  agentModelAliasesPath = ".config/flatten-recordings/agent-model-aliases.json";
+  agentModelAliasesPath = ".config/recordings/agent-model-aliases.json";
   agentModelAliases = import ../../config/ai/agent-model-aliases.nix {
     inherit lib;
     models = modelSelection;
