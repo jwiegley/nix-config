@@ -6325,6 +6325,22 @@ The user explicitly authorized commit, push, and activation on all maintained sy
 ]
 #+end_src
 
+* DOING [#C] Deploy pi-idle-check idle-delay configuration
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-fspj
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-04 Fri 00:16]
+:MODIFIED: [2026-09-04 Fri 00:16]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pin pi-idle-check commit 7d2ce31, validate the managed Gallery package and Hera system, activate Hera, and verify deployed source.
+
 * DONE [#B] Repair Hera make switch regression
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
