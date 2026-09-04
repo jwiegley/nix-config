@@ -551,6 +551,7 @@ rec {
       macmon
     ]
     ++ lib.optionals caps.isDarwinWorkstation [ pinentry_mac ]
+    ++ lib.optionals caps.isDarwinWorkstation (optPkg "recordings")
     ++ lib.optionals isDarwin [
       pngpaste
       terminal-notifier

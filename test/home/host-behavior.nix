@@ -715,6 +715,8 @@ assert builtins.all (
 ) allHomes;
 assert builtins.all (config: !(hasPackage "watchman" config)) allHomes;
 assert builtins.all (config: !(hasPackage "agdaWithPackages" config)) allHomes;
+assert builtins.all (hasPackage "recordings") desktopHomes;
+assert builtins.all (config: !(hasPackage "recordings" config)) nonDesktopHomes;
 assert heraGitAll != null;
 assert heraGitAll.version == "1.8.1";
 assert heraGitAll.src == gitAllSource;
@@ -820,6 +822,7 @@ assert builtins.all (
   && lib.hasAttrByPath [ "launchd" "user" "agents" "gnupg-agent" ] darwinConfigurations.${host}.config
 ) (builtins.attrNames darwinConfigurations);
 assert !(darwinConfigurations.clio.config.launchd.user.agents ? push-tank);
+assert !(darwinConfigurations.clio.config.launchd.user.agents ? recordings);
 assert
   heraPushTankAgent.serviceConfig.EnvironmentVariables == {
     HOME = "/Users/johnw";
