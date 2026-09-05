@@ -1,7 +1,7 @@
 # overlays/30-misc-tools.nix
 # Purpose: Miscellaneous utility tools (file management, shell, security)
 # Dependencies: prev.myLib plus tools source catalog
-# Packages: cmdperf, gogcli, hammer, linkdups, lipotell, sift, sshify, z
+# Packages: cmdperf, gogcli, hammer, linkdups, lipotell, sift, sshify, vibeproxy, z
 _final: prev:
 let
   sources = import ../packages/source-catalog.nix "tools";
@@ -112,6 +112,9 @@ in
       };
     };
 
+}
+// prev.lib.optionalAttrs (prev ? stdenv && prev.stdenv.hostPlatform.isDarwin) {
+  vibeproxy = prev.callPackage ../packages/vibeproxy.nix { };
 }
 // prev.lib.optionalAttrs (prev ? gogcli) {
   # Bump gogcli ahead of nixpkgs when the consumer channel provides a base.

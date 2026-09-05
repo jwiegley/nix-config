@@ -354,6 +354,57 @@
       },
       "version": "0.2.0"
     },
+    "vibeproxy": {
+      "source": {
+        "args": {
+          "hash": "sha256-L7FPV6VO9Hy0wOhgb04Mluo+FCHVGsBQEmOqiVLScWQ=",
+          "owner": "jwiegley",
+          "repo": "vibeproxy",
+          "rev": "9e803a158b744257196adbfa6591cc5ebf379db2"
+        },
+        "fetcher": "fetchFromGitHub",
+        "url": "https://github.com/jwiegley/vibeproxy"
+      },
+      "update": {
+        "branch": "main",
+        "kind": "github-commit"
+      },
+      "version": "9e803a15"
+    },
+    "vibeproxy-sparkle": {
+      "source": {
+        "args": {
+          "hash": "sha256-mV+ROTX+kD1Qs75TRPxSpjj1aznveYS/ekQkR4bShjg=",
+          "url": "https://github.com/sparkle-project/Sparkle/releases/download/2.8.1/Sparkle-for-Swift-Package-Manager.zip"
+        },
+        "fetcher": "fetchurl",
+        "url": "https://github.com/sparkle-project/Sparkle/releases/download/2.8.1/Sparkle-for-Swift-Package-Manager.zip"
+      },
+      "update": {
+        "kind": "url-release",
+        "policy": "manual",
+        "reason": "The binary framework version is coupled to VibeProxy's Package.resolved"
+      },
+      "version": "2.8.1"
+    },
+    "vibeproxy-yams": {
+      "source": {
+        "args": {
+          "fetchSubmodules": true,
+          "hash": "sha256-5uxD2eAJpMVHMStfWUzHcgjlp0d/EYcr1l+Qq2xlMxU=",
+          "rev": "3d6871d5b4a5cd519adf233fbb576e0a2af71c17",
+          "url": "https://github.com/jpsim/Yams"
+        },
+        "fetcher": "fetchgit",
+        "url": "https://github.com/jpsim/Yams"
+      },
+      "update": {
+        "kind": "explicit-rev",
+        "policy": "manual",
+        "reason": "The source revision is coupled to VibeProxy's Package.resolved"
+      },
+      "version": "5.4.0"
+    },
     "vlc": {
       "hashes": {
         "bundleTreeHash": "sha256-cCXSUXZTLCG1OYKOgOMRwq5sd9GTImCCrGQBGLa5ah8="

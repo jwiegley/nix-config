@@ -26,6 +26,9 @@ let
   ) darwinConfigurations;
   heraPushTankAgent = darwinConfigurations.hera.config.launchd.user.agents.push-tank;
   heraRecordingsAgent = darwinConfigurations.hera.config.launchd.user.agents.recordings;
+  heraVibeProxyAgent = darwinConfigurations.hera.config.launchd.user.agents.vibeproxy;
+  heraVibeProxyPackage = darwinConfigurations.hera.pkgs.vibeproxy;
+  expectedVibeProxyExecutable = "${heraVibeProxyPackage}/Applications/VibeProxy.app/Contents/MacOS/CLIProxyMenuBar";
   heraRecordingsScript = builtins.unsafeDiscardStringContext heraRecordingsAgent.script;
   recordingsAsrCommand = ''--asr-command "mlx-speech asr --model cohere-asr --language en --audio"'';
   heraPushTankPackages = darwinConfigurations.hera.pkgs;
@@ -735,6 +738,9 @@ assert heraPackageSelection.userPackageInputNames == expectedHeraSourceProjectIn
 assert hasSelectedPackage "agent-workflows" heraPackageSelection.package-list;
 assert !(hasSelectedPackage "agent-workflows" clioPackageSelection.package-list);
 assert builtins.all (config: !(hasPackage "agent-workflows" config)) nonDesktopHomes;
+assert hasPackage "vibeproxy" desktopHomesByHost.hera;
+assert !(hasPackage "vibeproxy" desktopHomesByHost.clio);
+assert builtins.all (config: !(hasPackage "vibeproxy" config)) nonDesktopHomes;
 assert builtins.all (hasPackage "obr") allHomes;
 assert builtins.all (config: !(ownsObrState config)) allHomes;
 assert builtins.all (
@@ -855,6 +861,11 @@ assert builtins.all (
 ) (builtins.attrNames darwinConfigurations);
 assert !(darwinConfigurations.clio.config.launchd.user.agents ? push-tank);
 assert !(darwinConfigurations.clio.config.launchd.user.agents ? recordings);
+assert !(darwinConfigurations.clio.config.launchd.user.agents ? vibeproxy);
+assert heraVibeProxyAgent.serviceConfig.ProgramArguments == [ expectedVibeProxyExecutable ];
+assert heraVibeProxyAgent.serviceConfig.RunAtLoad;
+assert !heraVibeProxyAgent.serviceConfig.KeepAlive;
+assert heraVibeProxyAgent.serviceConfig.ProcessType == "Interactive";
 assert
   heraPushTankAgent.serviceConfig.EnvironmentVariables == {
     HOME = "/Users/johnw";

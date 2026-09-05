@@ -576,6 +576,7 @@ rec {
         soco-cli
         spotify-player
       ]
+      ++ optPkg "vibeproxy"
       ++ optAgent "mcporter"
     );
 }

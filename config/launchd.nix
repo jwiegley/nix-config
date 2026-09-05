@@ -38,6 +38,7 @@ let
     imageReference = mssqlImageReference;
   };
   vlcApp = pkgs.callPackage ../packages/vlc-bin.nix { };
+  vibeproxyApp = "${pkgs.vibeproxy}/Applications/VibeProxy.app";
   vlcRuntimeHome = pkgs.runCommand "vlc-telnet-home" { } ''
     mkdir -p "$out/Library/Application Support/org.videolan.vlc"
   '';
@@ -457,6 +458,17 @@ in
           RunAtLoad = true;
           KeepAlive = false;
           ProcessType = "Interactive"; # GUI application
+        };
+      };
+
+      vibeproxy = {
+        serviceConfig = {
+          ProgramArguments = [ "${vibeproxyApp}/Contents/MacOS/CLIProxyMenuBar" ];
+          RunAtLoad = true;
+          KeepAlive = false;
+          ProcessType = "Interactive";
+          StandardOutPath = "${home}/Library/Logs/vibeproxy.log";
+          StandardErrorPath = "${home}/Library/Logs/vibeproxy.log";
         };
       };
 
