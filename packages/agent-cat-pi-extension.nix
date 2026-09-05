@@ -39,6 +39,7 @@ npmCachePkgs.buildNpmPackage {
   npmInstallFlags = [ "--ignore-scripts" ];
   npmRebuildFlags = [ "--ignore-scripts" ];
   dontNpmBuild = true;
+  patches = [ ../overlays/ai/patches/agent-cat-pi-chord.patch ];
 
   postPatch = ''
     ${python3}/bin/python3 - <<'PY'
@@ -85,11 +86,11 @@ npmCachePkgs.buildNpmPackage {
         '"--engine", "acp", "--adapter", "${python3}/bin/python3",' \
       --replace-fail '"--adapter-arg", "python3", "--adapter-arg", resolve' \
         '"--adapter-arg", resolve'
-    npm run check
-    npm test
 
     scope="$PWD/node_modules/@earendil-works"
+    nested_scope="$scope/pi-coding-agent/node_modules/@earendil-works"
     for spec in \
+      chord:chord \
       pi-protocol:protocol \
       pi-client:client \
       pi-server:server \
@@ -101,25 +102,36 @@ npmCachePkgs.buildNpmPackage {
     do
       package="''${spec%%:*}"
       directory="''${spec#*:}"
-      found=false
-      for target in \
-        "$scope/$package" \
-        "$scope/pi-coding-agent/node_modules/@earendil-works/$package"
-      do
-        if [ -d "$target" ]; then
-          rm -rf "$target/dist"
-          cp "${piSourceBuild}/workspace/packages/$directory/package.json" "$target/package.json"
-          cp -R "${piSourceBuild}/workspace/packages/$directory/dist" "$target/dist"
-          found=true
+      for peer_scope in "$nested_scope" "$scope"; do
+        target="$peer_scope/$package"
+        if [ "$peer_scope" = "$scope" ] && [ ! -e "$target" ]; then
+          ln -s "$nested_scope/$package" "$target"
+          continue
+        fi
+        mkdir -p "$target"
+        chmod -R u+w "$target"
+        rm -rf "$target/dist"
+        cp "${piSourceBuild}/workspace/packages/$directory/package.json" "$target/package.json"
+        cp -R "${piSourceBuild}/workspace/packages/$directory/dist" "$target/dist"
+      done
+    done
+    for module_root in "$PWD/node_modules" "$scope/pi-coding-agent/node_modules"; do
+      for target in "$module_root/esbuild" "$module_root/@esbuild"; do
+        if [ -e "$target" ]; then
+          chmod -R u+w "$target"
+          rm -rf "$target"
         fi
       done
-      "$found"
+      cp -R "${piSourceBuild}/workspace/node_modules/esbuild" "$module_root/esbuild"
+      cp -R "${piSourceBuild}/workspace/node_modules/@esbuild" "$module_root/@esbuild"
     done
+    npm run check
+    npm test
     AGENT_CAT_E2E_RUNNER="${runner}/bin/agentic-run" npm exec -- vitest run \
       test/native-targets-e2e.test.ts \
       test/current-bridge.test.ts \
-      test/pi-child-acp.test.ts \
-      test/pi-remote-acp.test.ts
+      test/pi-child-acp.test.ts
+    node test/pi-remote-current.mjs
     runHook postCheck
   '';
 

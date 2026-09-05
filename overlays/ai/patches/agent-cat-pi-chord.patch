@@ -1,0 +1,891 @@
+diff --git i/src/index.ts w/src/index.ts
+index fa44d97..93ad7e2 100644
+--- i/src/index.ts
++++ w/src/index.ts
+@@ -1,21 +1,8 @@
+-import { existsSync } from "node:fs";
+-import { dirname, join } from "node:path";
+-import { fileURLToPath, pathToFileURL } from "node:url";
++import { join } from "node:path";
++import { fileURLToPath } from "node:url";
+ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+ import { Text } from "@earendil-works/pi-tui";
+ import { Type } from "typebox";
+-
+-const packageParent = process.env.PI_PACKAGE_DIR ? dirname(process.env.PI_PACKAGE_DIR) : undefined;
+-const clientRoot = packageParent
+-  ? [
+-      join(packageParent, "pi-client"),
+-      join(packageParent, "client"),
+-      join(process.env.PI_PACKAGE_DIR!, "node_modules/@earendil-works/pi-client"),
+-    ].find(existsSync)
+-  : undefined;
+-const clientModule = clientRoot ? pathToFileURL(join(clientRoot, "dist/index.js")).href : "@earendil-works/pi-client";
+-const unixModule = clientRoot ? pathToFileURL(join(clientRoot, "dist/unix.js")).href : "@earendil-works/pi-client/unix";
+-const [{ PiClient }, { createUnixTransportFactory }] = await Promise.all([import(clientModule), import(unixModule)]);
+ import { discoverRunner, readHelp } from "./catalogue.ts";
+ import { configuredRemote, configuredRunners, retentionPolicy, stateDirectory } from "./config.ts";
+ import { CurrentSessionBridge } from "./current-bridge.ts";
+@@ -23,6 +10,7 @@ import { MutationGrants, type GrantScope } from "./grants.ts";
+ import { assertNoCredentialArgs, prepareLaunch, preflightLineage, previewPlan, type LineageEdit, type PreparedLaunch } from "./launch.ts";
+ import { formatMonitor } from "./monitor.ts";
+ import { WorkflowMonitorComponent } from "./monitor-ui.ts";
++import { openRemotePi } from "./pi-remote-runtime.mjs";
+ import { RunSupervisor } from "./supervisor.ts";
+ import type { ControlAckSnapshot, RunnerConfig, RunSnapshot, TargetKind, WorkflowDescriptor } from "./types.ts";
+ 
+@@ -818,18 +806,16 @@ function ownedChildTarget(): { args: string[]; env: NodeJS.ProcessEnv } {
+ 
+ export async function selectRemoteTarget(ctx: ExtensionContext, remote: { socket: string; sessionId?: string }): Promise<{ args: string[]; env: NodeJS.ProcessEnv } | undefined> {
+   if (remote.sessionId) return knownRemoteTarget({ socket: remote.socket, sessionId: remote.sessionId });
+-  const client = new PiClient({ transportFactory: createUnixTransportFactory({ path: remote.socket }) });
++  const connection = await openRemotePi(remote.socket);
+   try {
+-    await client.connect();
+-    const sessions = await client.listSessions() as Array<{ id: string; sessionName?: string; cwd?: string }>;
++    const sessions = connection.listSessions();
+     if (sessions.length === 0) { ctx.ui.notify("The authenticated Pi server reported no sessions", "warning"); return undefined; }
+-    const choices = sessions.map((session) => `${session.id} — ${session.sessionName ?? session.cwd ?? "unnamed"}`);
++    const choices = sessions.map((session) => session.sessionId);
+     const selected = await ctx.ui.select("Authenticated remote Pi session", choices);
+     if (!selected) return undefined;
+-    const index = choices.indexOf(selected);
+-    return knownRemoteTarget({ socket: remote.socket, sessionId: sessions[index].id });
++    return knownRemoteTarget({ socket: remote.socket, sessionId: sessions[choices.indexOf(selected)].sessionId });
+   } finally {
+-    await client.dispose();
++    await connection.dispose();
+   }
+ }
+ 
+diff --git i/src/pi-remote-acp.mjs w/src/pi-remote-acp.mjs
+index 3da8e15..aa09a9c 100644
+--- i/src/pi-remote-acp.mjs
++++ w/src/pi-remote-acp.mjs
+@@ -1,20 +1,9 @@
+ #!/usr/bin/env node
+-import { existsSync } from "node:fs";
+-import { dirname, isAbsolute, join } from "node:path";
+-import { pathToFileURL } from "node:url";
++import { randomUUID } from "node:crypto";
++import { open, readFile, unlink } from "node:fs/promises";
++import { isAbsolute } from "node:path";
+ import readline from "node:readline";
+-
+-const packageParent = process.env.PI_PACKAGE_DIR ? dirname(process.env.PI_PACKAGE_DIR) : undefined;
+-const clientRoot = packageParent
+-  ? [
+-      join(packageParent, "pi-client"),
+-      join(packageParent, "client"),
+-      join(process.env.PI_PACKAGE_DIR, "node_modules/@earendil-works/pi-client"),
+-    ].find(existsSync)
+-  : undefined;
+-const clientModule = clientRoot ? pathToFileURL(join(clientRoot, "dist/index.js")).href : "@earendil-works/pi-client";
+-const unixModule = clientRoot ? pathToFileURL(join(clientRoot, "dist/unix.js")).href : "@earendil-works/pi-client/unix";
+-const [{ PiClient }, { createUnixTransportFactory }] = await Promise.all([import(clientModule), import(unixModule)]);
++import { openRemotePi } from "./pi-remote-runtime.mjs";
+ 
+ const socketPath = process.env.AGENT_CAT_PI_REMOTE_SOCKET;
+ if (!socketPath || !isAbsolute(socketPath)) {
+@@ -26,11 +15,13 @@ if (!knownSessionId) {
+   process.stderr.write("AGENT_CAT_PI_REMOTE_SESSION must name a known remote session\n");
+   process.exit(2);
+ }
+-const client = new PiClient({ transportFactory: createUnixTransportFactory({ path: socketPath }) });
++
++const leasePath = `${socketPath}.agent-cat-${encodeURIComponent(knownSessionId)}.lock`;
++const leaseToken = `${process.pid}:${randomUUID()}`;
++let lease;
+ let remote;
+ let sessionId;
+ let activePromptId;
+-let connectedOnce = false;
+ const lines = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
+ const promptTasks = new Set();
+ 
+@@ -55,8 +46,8 @@ try {
+   }
+   await Promise.allSettled(promptTasks);
+ } finally {
+-  if (remote) await remote.dispose();
+-  await client.dispose();
++  await closeRemote();
++  await releaseLease();
+ }
+ 
+ async function handleControl(request) {
+@@ -65,30 +56,39 @@ async function handleControl(request) {
+     result(id, { protocolVersion: 1, agentCapabilities: { loadSession: false, agentCat: { steer: true } }, agentInfo: { name: "pi-known-remote", version: "1" } });
+   } else if (method === "session/new") {
+     if (activePromptId !== undefined) throw new Error("cannot replace a session during an active prompt");
+-    if (remote) await remote.dispose();
+     if (typeof params.cwd !== "string" || !isAbsolute(params.cwd)) throw new Error("session cwd must be absolute");
+-    if (!client.connected) {
+-      if (connectedOnce) await client.reconnect();
+-      else await client.connect();
+-      connectedOnce = true;
++    await acquireLease();
++    await closeRemote();
++    try {
++      remote = await openRemotePi(socketPath);
++      if (!remote.listSessions().some((session) => session.sessionId === knownSessionId)) {
++        throw new Error(`unknown remote session ${knownSessionId}`);
++      }
++      await remote.attach(knownSessionId);
++      sessionId = knownSessionId;
++      result(id, { sessionId });
++    } catch (failure) {
++      await closeRemote();
++      await releaseLease();
++      throw failure;
+     }
+-    remote = await client.acquireSession(knownSessionId, { mode: "exclusive" });
+-    sessionId = remote.id;
+-    result(id, { sessionId });
+   } else if (method === "session/steer") {
+     const validTiming = params.timing === "interrupt-now" || params.timing === "next-boundary";
+     let accepted = Boolean(remote && activePromptId !== undefined && params.sessionId === sessionId && typeof params.text === "string" && validTiming);
+     if (accepted) {
+       try {
+-        if (params.timing === "next-boundary") await remote.followUp(params.text);
+-        else await remote.steer(params.text);
++        const response = params.timing === "next-boundary"
++          ? await remote.followUp(params.text)
++          : await remote.steer(params.text);
++        accepted = response.accepted;
+       } catch {
+         accepted = false;
+       }
+     }
+     notification("session/steer_ack", { steerId: params.steerId, accepted });
+   } else if (method === "session/cancel") {
+-    if (remote) await remote.abort();
++    const operationId = remote?.activeOperationId();
++    if (operationId) await remote.requestAbort(operationId);
+   } else if (id !== undefined) {
+     error(id, -32601, `unknown method ${method}`);
+   }
+@@ -99,17 +99,76 @@ async function handlePrompt(request) {
+   if (!remote || params.sessionId !== sessionId) throw new Error("unknown session");
+   if (activePromptId !== undefined) throw new Error("a prompt is already active");
+   activePromptId = id;
++  let assistant;
++  const unsubscribe = remote.subscribe((value) => {
++    const event = value.event;
++    if (event?.type === "message_end" && event.message?.role === "assistant") assistant = event.message;
++  });
+   try {
+-    const snapshot = await remote.prompt(promptText(params.prompt));
+-    const assistant = lastAssistant(snapshot.transcript);
++    const response = await remote.prompt(promptText(params.prompt));
++    if (!response.accepted) throw new Error(response.error.message);
++    if (response.error) throw new Error(response.error.message);
++    assistant ??= lastAssistant(remote.snapshot()?.transcript);
+     const answer = assistant?.content.filter((part) => part.type === "text").map((part) => part.text).join("") ?? "";
+     if (answer) notification("session/update", { sessionId, update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: answer } } });
+     result(id, { stopReason: stopReason(assistant) });
+   } finally {
++    unsubscribe();
+     activePromptId = undefined;
+   }
+ }
+ 
++async function acquireLease() {
++  if (lease) return;
++  for (let attempt = 0; attempt < 2; attempt += 1) {
++    try {
++      lease = await open(leasePath, "wx", 0o600);
++      await lease.writeFile(`${leaseToken}\n`);
++      return;
++    } catch (failure) {
++      if (failure?.code !== "EEXIST") throw failure;
++      const owner = await readFile(leasePath, "utf8").catch(() => "");
++      const ownerPid = Number.parseInt(owner, 10);
++      if (!Number.isInteger(ownerPid) || processExists(ownerPid)) {
++        throw new Error(`remote session ${knownSessionId} is locked by another adapter`);
++      }
++      await unlink(leasePath).catch((error) => {
++        if (error?.code !== "ENOENT") throw error;
++      });
++    }
++  }
++  throw new Error(`remote session ${knownSessionId} is locked by another adapter`);
++}
++
++async function releaseLease() {
++  if (!lease) return;
++  const handle = lease;
++  lease = undefined;
++  await handle.close();
++  const owner = await readFile(leasePath, "utf8").catch(() => "");
++  if (owner.trim() === leaseToken) {
++    await unlink(leasePath).catch((error) => {
++      if (error?.code !== "ENOENT") throw error;
++    });
++  }
++}
++
++async function closeRemote() {
++  const connection = remote;
++  remote = undefined;
++  sessionId = undefined;
++  if (connection) await connection.dispose().catch(() => {});
++}
++
++function processExists(pid) {
++  try {
++    process.kill(pid, 0);
++    return true;
++  } catch (failure) {
++    return failure?.code === "EPERM";
++  }
++}
++
+ function promptText(value) {
+   if (!Array.isArray(value)) throw new Error("prompt is not an array");
+   return value.map((part) => {
+@@ -117,9 +176,11 @@ function promptText(value) {
+     return part.text;
+   }).join("");
+ }
+-function lastAssistant(transcript) {
+-  return [...transcript].reverse().find((item) => item.role === "assistant");
++
++function lastAssistant(transcript = []) {
++  return [...transcript].reverse().find((entry) => entry.type === "message" && entry.message?.role === "assistant")?.message;
+ }
++
+ function stopReason(assistant) {
+   switch (assistant?.stopReason) {
+     case "length": return "max_tokens";
+@@ -128,12 +189,15 @@ function stopReason(assistant) {
+     default: return "end_turn";
+   }
+ }
++
+ function result(id, value) {
+   process.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id, result: value })}\n`);
+ }
++
+ function error(id, code, message) {
+   process.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id, error: { code, message } })}\n`);
+ }
++
+ function notification(method, params) {
+   process.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method, params })}\n`);
+ }
+diff --git i/src/pi-remote-runtime.d.mts w/src/pi-remote-runtime.d.mts
+new file mode 100644
+index 0000000..c0be3bc
+--- /dev/null
++++ w/src/pi-remote-runtime.d.mts
+@@ -0,0 +1,12 @@
++export interface RemotePiSessionSummary {
++  serverId: string;
++  sessionId: string;
++  createdAt: number;
++}
++
++export interface RemotePiConnection {
++  listSessions(): readonly RemotePiSessionSummary[];
++  dispose(): Promise<void>;
++}
++
++export function openRemotePi(socketPath: string): Promise<RemotePiConnection>;
+diff --git i/src/pi-remote-runtime.mjs w/src/pi-remote-runtime.mjs
+new file mode 100644
+index 0000000..f5815b3
+--- /dev/null
++++ w/src/pi-remote-runtime.mjs
+@@ -0,0 +1,124 @@
++import { existsSync } from "node:fs";
++import { basename, dirname, join } from "node:path";
++import { fileURLToPath, pathToFileURL } from "node:url";
++
++const packageRoot = process.env.PI_PACKAGE_DIR
++  ?? dirname(dirname(fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent"))));
++const packageParent = dirname(packageRoot);
++
++function findPackage(name) {
++  const root = [
++    join(packageParent, name),
++    join(packageRoot, "node_modules/@earendil-works", name),
++  ].find(existsSync);
++  if (!root) throw new Error(`Pi runtime package ${name} is unavailable`);
++  return root;
++}
++
++function moduleUrl(root, path) {
++  return pathToFileURL(join(root, path)).href;
++}
++
++const clientRoot = findPackage("pi-client");
++const chordRoot = findPackage("chord");
++const [clientApi, unixApi, chordApi, contextApi] = await Promise.all([
++  import(moduleUrl(clientRoot, "dist/index.js")),
++  import(moduleUrl(clientRoot, "dist/unix.js")),
++  import(moduleUrl(chordRoot, "dist/index.js")),
++  import(moduleUrl(chordRoot, "dist/context/index.js")),
++]);
++const { Client, createClientServiceTransport } = clientApi;
++const { createUnixTransportFactory } = unixApi;
++const { createRemoteServiceBinding, defineService } = chordApi;
++const { BACKGROUND_CONTEXT } = contextApi;
++
++const SessionDirectory = defineService("pi.session-directory");
++const SessionManagement = defineService("pi.session-management");
++const AgentController = defineService("pi.agent-controller");
++const Transcript = defineService("pi.transcript");
++
++function serverIdFromSocket(socketPath) {
++  const name = basename(socketPath);
++  if (!name.endsWith(".sock")) throw new Error("remote Pi socket must end with <server-id>.sock");
++  return name.slice(0, -".sock".length);
++}
++
++export async function openRemotePi(socketPath) {
++  const serverId = serverIdFromSocket(socketPath);
++  const client = await Client.connect({
++    serverId,
++    transportFactory: createUnixTransportFactory({ path: socketPath }),
++  });
++  const serverBinding = createRemoteServiceBinding({
++    services: [SessionDirectory, SessionManagement],
++    transport: createClientServiceTransport(client, () => ({ serverId })),
++    bound: true,
++  });
++  const sessionBinding = createRemoteServiceBinding({
++    services: [AgentController, Transcript],
++    transport: createClientServiceTransport(client, () => client.attachment),
++    bound: false,
++  });
++  const directory = serverBinding.use(SessionDirectory);
++  const management = serverBinding.use(SessionManagement);
++  const agent = sessionBinding.use(AgentController);
++  const transcript = sessionBinding.use(Transcript);
++  try {
++    await serverBinding.ready(BACKGROUND_CONTEXT);
++  } catch (error) {
++    await disposeRemote(sessionBinding, serverBinding, client).catch(() => {});
++    throw error;
++  }
++
++  return {
++    listSessions() {
++      return directory.state.value?.sessions ?? [];
++    },
++    async attach(sessionId) {
++      await management.attach(sessionId, BACKGROUND_CONTEXT);
++      await sessionBinding.rebind(true, BACKGROUND_CONTEXT);
++      await sessionBinding.ready(BACKGROUND_CONTEXT);
++    },
++    prompt(message) {
++      return agent.prompt({ message, images: null }, BACKGROUND_CONTEXT);
++    },
++    steer(message) {
++      return agent.steer({ message, images: null }, BACKGROUND_CONTEXT);
++    },
++    followUp(message) {
++      return agent.followUp({ message, images: null }, BACKGROUND_CONTEXT);
++    },
++    requestAbort(operationId) {
++      return agent.requestAbort(operationId, BACKGROUND_CONTEXT);
++    },
++    subscribe(listener) {
++      return transcript.state.subscribe(listener);
++    },
++    snapshot() {
++      return transcript.state.value?.snapshot ?? null;
++    },
++    activeOperationId() {
++      return transcript.state.value?.snapshot?.operation?.id;
++    },
++    dispose() {
++      return disposeRemote(sessionBinding, serverBinding, client);
++    },
++  };
++}
++
++async function disposeRemote(sessionBinding, serverBinding, client) {
++  const errors = [];
++  for (const dispose of [
++    () => sessionBinding.dispose(BACKGROUND_CONTEXT),
++    () => serverBinding.dispose(BACKGROUND_CONTEXT),
++    () => client.dispose(),
++  ]) {
++    try {
++      await dispose();
++    } catch (error) {
++      errors.push(error);
++    }
++  }
++  if (errors.length === 1) throw errors[0];
++  if (errors.length > 1) throw new AggregateError(errors, "Failed to close remote Pi connection");
++}
+diff --git i/test/pi-remote-acp.test.ts w/test/pi-remote-acp.test.ts
+deleted file mode 100644
+index 05fe459..0000000
+--- i/test/pi-remote-acp.test.ts
++++ /dev/null
+@@ -1,131 +0,0 @@
+-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+-import { tmpdir } from "node:os";
+-import { join, resolve } from "node:path";
+-import readline from "node:readline";
+-import { RemoteSession } from "@earendil-works/pi-coding-agent/client";
+-import { createUnixServer } from "@earendil-works/pi-server/unix";
+-import { TestServerService } from "@earendil-works/pi-server/testing";
+-import { selectRemoteTarget } from "../src/index.ts";
+-import { afterEach, describe, expect, it } from "vitest";
+-import { piPackageRoot } from "./fixtures/pi-package-root.ts";
+-
+-const created: string[] = [];
+-afterEach(async () => Promise.all(created.splice(0).map((path) => rm(path, { recursive: true, force: true }))));
+-
+-describe.runIf(typeof (RemoteSession.prototype as unknown as { followUp?: unknown }).followUp === "function")("known remote Pi ACP adapter", () => {
+-  it("selects a session discovered through the authenticated transport", async () => {
+-    const directory = await mkdtemp(join(tmpdir(), "agent-cat-remote-discovery-"));
+-    created.push(directory);
+-    const socketPath = join(directory, "server.sock");
+-    const service = new TestServerService();
+-    service.seed("session-a", "Alpha", directory);
+-    service.seed("session-b", "Beta", directory);
+-    const server = createUnixServer(service, { path: socketPath });
+-    await server.start();
+-    try {
+-      const selected = await selectRemoteTarget({ ui: { select: async (_title: string, choices: string[]) => choices.find((choice) => choice.startsWith("session-b")) } } as never, { socket: socketPath });
+-      expect(selected?.env.AGENT_CAT_PI_REMOTE_SESSION).toBe("session-b");
+-      expect(selected?.env.AGENT_CAT_PI_REMOTE_SOCKET).toBe(socketPath);
+-    } finally {
+-      await server.close();
+-    }
+-  });
+-
+-  it("uses an exclusive lease, forwards snapshots, aborts, reconnects, releases, and reattaches", async () => {
+-    const directory = await mkdtemp(join(tmpdir(), "agent-cat-remote-"));
+-    created.push(directory);
+-    const socketPath = join(directory, "server.sock");
+-    const service = new TestServerService();
+-    service.seed("known-session", "Known", directory);
+-    const canary = join(directory, "live-session.jsonl");
+-    await writeFile(canary, "owner data\n", "utf8");
+-    let server = createUnixServer(service, { path: socketPath });
+-    await server.start();
+-    const first = await openAdapter(socketPath, directory);
+-    try {
+-      expect(first.sessionId).toBe("known-session");
+-      const competing = await spawnAdapter(socketPath);
+-      await initialize(competing);
+-      send(competing.child, { jsonrpc: "2.0", id: 1, method: "session/new", params: { cwd: directory, mcpServers: [] } });
+-      expect(JSON.parse((await competing.lines.next()).value).error.message).toMatch(/lease|locked|owned/i);
+-      expect(await close(competing.child)).toBe(0);
+-
+-      send(first.child, { jsonrpc: "2.0", id: 2, method: "session/prompt", params: { sessionId: first.sessionId, prompt: [{ type: "text", text: "hello" }] } });
+-      await until(() => service.latestRuntime("known-session").getPhase() === "turn");
+-      send(first.child, { jsonrpc: "2.0", method: "session/steer", params: { sessionId: first.sessionId, steerId: "remote-steer", timing: "next-boundary", text: "focus" } });
+-      expect(JSON.parse((await first.lines.next()).value).params).toEqual({ steerId: "remote-steer", accepted: true });
+-      await until(() => (service.latestRuntime("known-session") as unknown as { followUps: unknown[] }).followUps.length === 1);
+-      expect((service.latestRuntime("known-session") as unknown as { followUps: unknown[] }).followUps).toEqual([{ text: "focus" }]);
+-      send(first.child, { jsonrpc: "2.0", method: "session/steer", params: { sessionId: first.sessionId, steerId: "remote-interrupt", timing: "interrupt-now", text: "interrupt" } });
+-      expect(JSON.parse((await first.lines.next()).value).params).toEqual({ steerId: "remote-interrupt", accepted: true });
+-      await until(() => service.latestRuntime("known-session").steers.length === 1);
+-      expect(service.latestRuntime("known-session").steers).toEqual([{ text: "interrupt" }]);
+-      service.latestRuntime("known-session").finishPrompt();
+-      expect(JSON.parse((await first.lines.next()).value).params.update.content.text).toBe("reply:hello");
+-      expect(JSON.parse((await first.lines.next()).value).result.stopReason).toBe("end_turn");
+-      send(first.child, { jsonrpc: "2.0", method: "session/steer", params: { sessionId: first.sessionId, steerId: "remote-late", timing: "next-boundary", text: "late" } });
+-      expect(JSON.parse((await first.lines.next()).value).params).toEqual({ steerId: "remote-late", accepted: false });
+-
+-      send(first.child, { jsonrpc: "2.0", id: 3, method: "session/prompt", params: { sessionId: first.sessionId, prompt: [{ type: "text", text: "cancel me" }] } });
+-      await until(() => service.latestRuntime("known-session").getPhase() === "turn");
+-      send(first.child, { jsonrpc: "2.0", method: "session/cancel", params: { sessionId: first.sessionId } });
+-      expect(JSON.parse((await first.lines.next()).value).result.stopReason).toBe("cancelled");
+-      await server.close();
+-      server = createUnixServer(service, { path: socketPath });
+-      await server.start();
+-      send(first.child, { jsonrpc: "2.0", id: 4, method: "session/new", params: { cwd: directory, mcpServers: [] } });
+-      expect(JSON.parse((await first.lines.next()).value).result.sessionId).toBe("known-session");
+-      expect(await readFile(canary, "utf8")).toBe("owner data\n");
+-    } finally {
+-      expect(await close(first.child)).toBe(0);
+-    }
+-
+-    const reattached = await openAdapter(socketPath, directory);
+-    expect(reattached.sessionId).toBe("known-session");
+-    expect(await close(reattached.child)).toBe(0);
+-    await server.close();
+-  }, 30_000);
+-});
+-
+-async function openAdapter(socketPath: string, cwd: string) {
+-  const adapter = await spawnAdapter(socketPath);
+-  await initialize(adapter);
+-  send(adapter.child, { jsonrpc: "2.0", id: 1, method: "session/new", params: { cwd, mcpServers: [] } });
+-  const sessionId = JSON.parse((await adapter.lines.next()).value).result.sessionId;
+-  return { ...adapter, sessionId };
+-}
+-
+-async function spawnAdapter(socketPath: string): Promise<{ child: ChildProcessWithoutNullStreams; lines: AsyncIterator<string> }> {
+-  const child = spawn(process.execPath, [resolve("src/pi-remote-acp.mjs")], {
+-    env: { ...process.env, AGENT_CAT_PI_REMOTE_SOCKET: socketPath, AGENT_CAT_PI_REMOTE_SESSION: "known-session", PI_PACKAGE_DIR: piPackageRoot },
+-    stdio: ["pipe", "pipe", "pipe"],
+-  });
+-  const lines = readline.createInterface({ input: child.stdout })[Symbol.asyncIterator]();
+-  return { child, lines };
+-}
+-
+-async function initialize(adapter: { child: ChildProcessWithoutNullStreams; lines: AsyncIterator<string> }): Promise<void> {
+-  send(adapter.child, { jsonrpc: "2.0", id: 0, method: "initialize", params: { protocolVersion: 1 } });
+-  expect(JSON.parse((await adapter.lines.next()).value).result.protocolVersion).toBe(1);
+-}
+-
+-function send(child: ChildProcessWithoutNullStreams, value: unknown): void {
+-  child.stdin.write(`${JSON.stringify(value)}\n`);
+-}
+-
+-function close(child: ChildProcessWithoutNullStreams): Promise<number | null> {
+-  const closed = new Promise<number | null>((resolvePromise) => child.once("close", resolvePromise));
+-  child.stdin.end();
+-  return closed;
+-}
+-
+-async function until(predicate: () => boolean): Promise<void> {
+-  for (let count = 0; count < 500; count += 1) {
+-    try {
+-      if (predicate()) return;
+-    } catch {}
+-    await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
+-  }
+-  throw new Error("condition not reached");
+-}
+diff --git i/test/pi-remote-current.mjs w/test/pi-remote-current.mjs
+new file mode 100644
+index 0000000..a6101e5
+--- /dev/null
++++ w/test/pi-remote-current.mjs
+@@ -0,0 +1,324 @@
++import assert from "node:assert/strict";
++import { spawn } from "node:child_process";
++import { mkdtemp, rm } from "node:fs/promises";
++import { tmpdir } from "node:os";
++import { join, resolve } from "node:path";
++import readline from "node:readline";
++import {
++  createRemoteServiceEndpoint,
++  defineService,
++  RemoteServiceProvider,
++  replicatedState,
++} from "@earendil-works/chord";
++import { createUnixServer } from "@earendil-works/pi-server/unix";
++import { piPackageRoot } from "./fixtures/pi-package-root.ts";
++
++process.env.PI_PACKAGE_DIR = piPackageRoot;
++const { selectRemoteTarget } = await import("../src/index.ts");
++
++const serverId = "00000000-0000-4000-8000-000000000001";
++const SessionDirectory = defineService("pi.session-directory");
++const SessionManagement = defineService("pi.session-management");
++const AgentController = defineService("pi.agent-controller");
++const Transcript = defineService("pi.transcript");
++const children = new Set();
++const directory = await mkdtemp(join(tmpdir(), "agent-cat-pi-current-"));
++const socketPath = join(directory, `${serverId}.sock`);
++const host = createHost(["session-a", "session-b"]);
++let server = createUnixServer(host, { path: socketPath, serverId });
++
++try {
++  await server.start();
++  const selected = await selectRemoteTarget(
++    {
++      ui: {
++        notify() {},
++        select: async (_title, choices) => choices.find((choice) => choice === "session-b"),
++      },
++    },
++    { socket: socketPath },
++  );
++  assert.equal(selected?.env.AGENT_CAT_PI_REMOTE_SESSION, "session-b");
++  assert.equal(selected?.env.AGENT_CAT_PI_REMOTE_SOCKET, socketPath);
++
++  const first = await openAdapter(socketPath, "session-a");
++  const competing = await spawnAdapter(socketPath, "session-a");
++  await initialize(competing);
++  send(competing.child, {
++    jsonrpc: "2.0",
++    id: 1,
++    method: "session/new",
++    params: { cwd: directory, mcpServers: [] },
++  });
++  assert.match((await nextMessage(competing)).error.message, /locked/i);
++  assert.equal(await close(competing.child), 0);
++
++  send(first.child, {
++    jsonrpc: "2.0",
++    id: 2,
++    method: "session/prompt",
++    params: { sessionId: first.sessionId, prompt: [{ type: "text", text: "hello" }] },
++  });
++  await until(() => host.runtime("session-a").phase === "turn");
++  send(first.child, {
++    jsonrpc: "2.0",
++    method: "session/steer",
++    params: { sessionId: first.sessionId, steerId: "follow", timing: "next-boundary", text: "focus" },
++  });
++  assert.deepEqual((await nextMessage(first)).params, { steerId: "follow", accepted: true });
++  assert.deepEqual(host.runtime("session-a").followUps, ["focus"]);
++  send(first.child, {
++    jsonrpc: "2.0",
++    method: "session/steer",
++    params: { sessionId: first.sessionId, steerId: "steer", timing: "interrupt-now", text: "now" },
++  });
++  assert.deepEqual((await nextMessage(first)).params, { steerId: "steer", accepted: true });
++  assert.deepEqual(host.runtime("session-a").steers, ["now"]);
++  host.runtime("session-a").finishPrompt();
++  assert.equal((await nextMessage(first)).params.update.content.text, "reply:hello");
++  assert.equal((await nextMessage(first)).result.stopReason, "end_turn");
++
++  send(first.child, {
++    jsonrpc: "2.0",
++    id: 3,
++    method: "session/prompt",
++    params: { sessionId: first.sessionId, prompt: [{ type: "text", text: "cancel me" }] },
++  });
++  await until(() => host.runtime("session-a").phase === "turn");
++  send(first.child, { jsonrpc: "2.0", method: "session/cancel", params: { sessionId: first.sessionId } });
++  assert.equal((await nextMessage(first)).result.stopReason, "cancelled");
++
++  await server.close();
++  server = createUnixServer(host, { path: socketPath, serverId });
++  await server.start();
++  send(first.child, {
++    jsonrpc: "2.0",
++    id: 4,
++    method: "session/new",
++    params: { cwd: directory, mcpServers: [] },
++  });
++  assert.equal((await nextMessage(first)).result.sessionId, "session-a");
++  assert.equal(await close(first.child), 0);
++
++  const reattached = await openAdapter(socketPath, "session-a");
++  assert.equal(reattached.sessionId, "session-a");
++  assert.equal(await close(reattached.child), 0);
++} finally {
++  for (const child of children) child.kill("SIGKILL");
++  await server.close().catch(() => {});
++  await rm(directory, { recursive: true, force: true });
++}
++
++function createHost(sessionIds) {
++  const metadata = new Map(sessionIds.map((id, index) => [id, {
++    id,
++    createdAt: index + 1,
++    storageVersion: 1,
++    cwd: directory,
++  }]));
++  const runtimes = new Map(sessionIds.map((id) => [id, createRuntime()]));
++  const directoryState = replicatedState({
++    revision: 1,
++    sessions: [...metadata.values()].map(({ id, createdAt }) => ({ serverId, sessionId: id, createdAt })),
++  });
++
++  return {
++    serverServices: {
++      attachClient(presentation) {
++        const provider = new RemoteServiceProvider([
++          { service: SessionDirectory, mode: "singleton" },
++          { service: SessionManagement, mode: "singleton" },
++        ]);
++        provider.provide(SessionDirectory, { state: directoryState });
++        provider.provide(SessionManagement, {
++          async create() { throw new Error("not supported"); },
++          async remove() { throw new Error("not supported"); },
++          attach: (sessionId, context) => presentation.attachSession(sessionId, context),
++          detach: (context) => presentation.detachSession(context),
++        });
++        return endpointAttachment(provider);
++      },
++    },
++    async resolveSession(sessionId) {
++      const resolved = metadata.get(sessionId);
++      if (!resolved) throw new Error(`unknown session ${sessionId}`);
++      return resolved;
++    },
++    async openSession(resolved) {
++      const runtime = runtimes.get(resolved.id);
++      return {
++        attachClient() {
++          return endpointAttachment(runtime.provider());
++        },
++        async close() {},
++      };
++    },
++    runtime(sessionId) {
++      return runtimes.get(sessionId);
++    },
++  };
++}
++
++function createRuntime() {
++  const state = replicatedState({
++    snapshot: { transcript: [], operation: null, queues: [] },
++    event: null,
++  });
++  let sequence = 0;
++  let pending;
++  const runtime = {
++    phase: "idle",
++    steers: [],
++    followUps: [],
++    provider() {
++      const provider = new RemoteServiceProvider([
++        { service: AgentController, mode: "singleton" },
++        { service: Transcript, mode: "singleton" },
++      ]);
++      provider.provide(Transcript, { state });
++      provider.provide(AgentController, {
++        prompt({ message }, context) {
++          if (pending) return Promise.resolve({ accepted: false, operationId: null, error: { code: "busy", message: "busy" } });
++          const operationId = `operation-${++sequence}`;
++          runtime.phase = "turn";
++          state.state.snapshot = { ...state.state.snapshot, operation: { id: operationId } };
++          state.state.event = null;
++          state.publish(context);
++          return new Promise((resolvePromise) => {
++            pending = { message, operationId, context, resolve: resolvePromise };
++          });
++        },
++        async requestAbort(operationId) {
++          if (pending?.operationId !== operationId) throw new Error("unknown operation");
++          runtime.finishPrompt("aborted");
++        },
++        async steer({ message }) {
++          if (!pending) return { accepted: false, entryId: null, error: { code: "idle", message: "idle" } };
++          runtime.steers.push(message);
++          return { accepted: true, entryId: `steer-${runtime.steers.length}`, error: null };
++        },
++        async followUp({ message }) {
++          if (!pending) return { accepted: false, entryId: null, error: { code: "idle", message: "idle" } };
++          runtime.followUps.push(message);
++          return { accepted: true, entryId: `follow-${runtime.followUps.length}`, error: null };
++        },
++        async nextRun() { return { accepted: false, entryId: null, error: { code: "unsupported", message: "unsupported" } }; },
++        async cancelQueued() { return { outcome: "not_found" }; },
++        async resume() { return { accepted: false, operationId: null, error: { code: "unsupported", message: "unsupported" } }; },
++        async compact() { return { accepted: false, operationId: null, error: { code: "unsupported", message: "unsupported" } }; },
++        async navigate() { return { accepted: false, operationId: null, error: { code: "unsupported", message: "unsupported" } }; },
++      });
++      return provider;
++    },
++    finishPrompt(stopReason = "stop") {
++      if (!pending) throw new Error("no prompt is active");
++      const current = pending;
++      pending = undefined;
++      runtime.phase = "idle";
++      const timestamp = Date.now();
++      const assistant = {
++        role: "assistant",
++        content: stopReason === "aborted" ? [] : [{ type: "text", text: `reply:${current.message}` }],
++        api: "faux",
++        provider: "faux",
++        model: "faux",
++        usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
++        stopReason,
++        timestamp,
++      };
++      const entry = {
++        type: "message",
++        id: `entry-${sequence}`,
++        parentId: null,
++        timestamp: new Date(timestamp).toISOString(),
++        message: assistant,
++      };
++      state.state.snapshot = {
++        ...state.state.snapshot,
++        transcript: [...state.state.snapshot.transcript, entry],
++        operation: null,
++      };
++      state.state.event = { type: "message_end", runId: current.operationId, message: assistant };
++      state.publish(current.context);
++      current.resolve({ accepted: true, operationId: current.operationId, error: null });
++    },
++  };
++  return runtime;
++}
++
++function endpointAttachment(provider) {
++  const endpoint = createRemoteServiceEndpoint(provider);
++  return {
++    invokeService: (call, publish, context) => endpoint.invoke(call, publish, context),
++    release() {
++      endpoint.dispose();
++      provider.dispose();
++    },
++  };
++}
++
++async function openAdapter(socket, sessionId) {
++  const adapter = await spawnAdapter(socket, sessionId);
++  await initialize(adapter);
++  send(adapter.child, {
++    jsonrpc: "2.0",
++    id: 1,
++    method: "session/new",
++    params: { cwd: directory, mcpServers: [] },
++  });
++  const response = await nextMessage(adapter);
++  if (response.error) throw new Error(response.error.message);
++  return { ...adapter, sessionId: response.result.sessionId };
++}
++
++async function spawnAdapter(socket, sessionId) {
++  const child = spawn(process.execPath, [resolve("src/pi-remote-acp.mjs")], {
++    env: {
++      ...process.env,
++      AGENT_CAT_PI_REMOTE_SOCKET: socket,
++      AGENT_CAT_PI_REMOTE_SESSION: sessionId,
++      PI_PACKAGE_DIR: piPackageRoot,
++    },
++    stdio: ["pipe", "pipe", "pipe"],
++  });
++  children.add(child);
++  child.once("close", () => children.delete(child));
++  return {
++    child,
++    lines: readline.createInterface({ input: child.stdout })[Symbol.asyncIterator](),
++    stderr: child.stderr,
++  };
++}
++
++async function initialize(adapter) {
++  send(adapter.child, { jsonrpc: "2.0", id: 0, method: "initialize", params: { protocolVersion: 1 } });
++  assert.equal((await nextMessage(adapter)).result.protocolVersion, 1);
++}
++
++function send(child, value) {
++  child.stdin.write(`${JSON.stringify(value)}\n`);
++}
++
++async function nextMessage(adapter) {
++  const next = await adapter.lines.next();
++  if (!next.value) {
++    let stderr = "";
++    for await (const chunk of adapter.stderr) stderr += chunk;
++    throw new Error(`adapter exited without a response: ${stderr.trim()}`);
++  }
++  return JSON.parse(next.value);
++}
++
++function close(child) {
++  const closed = new Promise((resolvePromise) => child.once("close", resolvePromise));
++  child.stdin.end();
++  return closed;
++}
++
++async function until(predicate) {
++  for (let count = 0; count < 500; count += 1) {
++    if (predicate()) return;
++    await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
++  }
++  throw new Error("condition not reached");
++}
