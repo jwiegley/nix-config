@@ -312,45 +312,43 @@ in
         serviceConfig.KeepAlive = true;
       };
     }
-    // lib.optionalAttrs omlxProxy.enable {
-      llama-swap-https-proxy =
-        let
-          logDir = "${xdg_cacheHome}/llama-swap-proxy";
-          config = pkgs.writeText "nginx.conf" ''
-            worker_processes 1;
-            pid ${logDir}/nginx.pid;
-            error_log ${logDir}/error.log warn;
-            events {
-              worker_connections 1024;
-            }
-            http {
-              client_body_temp_path ${logDir}/client_body;
-              server {
-                ${lib.concatMapStringsSep "\n                " (
-                  address: "listen ${address}:${toString inferenceServices.omlx.gatewayPort} ssl;"
-                ) omlxProxy.listenAddresses}
+    // lib.optionalAttrs omlxProxy.enable (
+      lib.listToAttrs (
+        lib.imap0 (
+          index: address:
+          let
+            logDir = "${xdg_cacheHome}/llama-swap-proxy${
+              lib.optionalString (index != 0) "-${toString (index + 1)}"
+            }";
+            config = pkgs.writeText "nginx-${toString index}.conf" ''
+              worker_processes 1;
+              pid ${logDir}/nginx.pid;
+              error_log ${logDir}/error.log warn;
+              events {
+                worker_connections 1024;
+              }
+              http {
+                client_body_temp_path ${logDir}/client_body;
+                server {
+                  listen ${address}:${toString inferenceServices.omlx.gatewayPort} ssl;
 
-                ssl_certificate ${omlxProxy.certificateFile};
-                ssl_certificate_key ${omlxProxy.certificateKeyFile};
-                ssl_protocols TLSv1.2 TLSv1.3;
-                ssl_prefer_server_ciphers on;
-                ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+                  ssl_certificate ${omlxProxy.certificateFile};
+                  ssl_certificate_key ${omlxProxy.certificateKeyFile};
+                  ssl_protocols TLSv1.2 TLSv1.3;
+                  ssl_prefer_server_ciphers on;
+                  ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
 
-                access_log ${logDir}/access.log;
+                  access_log ${logDir}/access.log;
 
-                ${lib.optionalString omlxProxy.enable ''
-                  # Expose the loopback-only oMLX API only to explicitly
-                  # allowed clients. oMLX validates the forwarded bearer
-                  # credential itself.
                   location = /v1 {
                     return 404;
                   }
 
                   location ^~ /v1/ {
-                    ${lib.concatMapStringsSep "\n                  " (
-                      address: "allow ${address};"
+                    ${lib.concatMapStringsSep "\n                    " (
+                      listener: "allow ${listener};"
                     ) omlxProxy.listenAddresses}
-                    ${lib.concatMapStringsSep "\n                  " (
+                    ${lib.concatMapStringsSep "\n                    " (
                       source: "allow ${source};"
                     ) omlxProxy.allowedSources}
                     deny all;
@@ -377,68 +375,74 @@ in
                   location ~ ^/v1(?:[^/]|$) {
                     return 404;
                   }
-                ''}
 
-                # Proxy all other requests to the existing chat gateway.
-                ${lib.optionalString omlxProxy.legacyGatewayEnable ''
-                  location / {
-                    ${lib.concatMapStringsSep "\n                  " (
-                      address: "allow ${address};"
-                    ) omlxProxy.listenAddresses}
-                    ${lib.concatMapStringsSep "\n                  " (
-                      source: "allow ${source};"
-                    ) omlxProxy.allowedSources}
-                    deny all;
+                  # Proxy all other requests to the existing chat gateway.
+                  ${lib.optionalString omlxProxy.legacyGatewayEnable ''
+                    location / {
+                      ${lib.concatMapStringsSep "\n                      " (
+                        listener: "allow ${listener};"
+                      ) omlxProxy.listenAddresses}
+                      ${lib.concatMapStringsSep "\n                      " (
+                        source: "allow ${source};"
+                      ) omlxProxy.allowedSources}
+                      deny all;
 
-                    proxy_pass https://chat.${hostRegistry.hosts.vulcan.dnsName};
-                    proxy_ssl_verify on;
-                    proxy_ssl_trusted_certificate ${omlxProxy.trustedCaFile};
-                    proxy_ssl_server_name on;
+                      proxy_pass https://chat.${hostRegistry.hosts.vulcan.dnsName};
+                      proxy_ssl_verify on;
+                      proxy_ssl_trusted_certificate ${omlxProxy.trustedCaFile};
+                      proxy_ssl_server_name on;
 
-                    proxy_set_header Authorization "";
+                      proxy_set_header Authorization "";
 
-                    proxy_set_header Host chat.${hostRegistry.hosts.vulcan.dnsName};
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto $scheme;
+                      proxy_set_header Host chat.${hostRegistry.hosts.vulcan.dnsName};
+                      proxy_set_header X-Real-IP $remote_addr;
+                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                      proxy_set_header X-Forwarded-Proto $scheme;
 
-                    proxy_connect_timeout 600;
-                    proxy_send_timeout 600;
-                    proxy_read_timeout 600;
-                    send_timeout 600;
+                      proxy_connect_timeout 600;
+                      proxy_send_timeout 600;
+                      proxy_read_timeout 600;
+                      send_timeout 600;
 
-                    # WebSocket support for chat interface
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade $http_upgrade;
-                    proxy_set_header Connection "upgrade";
-                  }
-                ''}
-                ${lib.optionalString (!omlxProxy.legacyGatewayEnable) ''
-                  location / {
-                    return 404;
-                  }
-                ''}
+                      # WebSocket support for chat interface
+                      proxy_http_version 1.1;
+                      proxy_set_header Upgrade $http_upgrade;
+                      proxy_set_header Connection "upgrade";
+                    }
+                  ''}
+                  ${lib.optionalString (!omlxProxy.legacyGatewayEnable) ''
+                    location / {
+                      return 404;
+                    }
+                  ''}
+                }
               }
-            }
-          '';
-        in
-        {
-          script = ''
-            ${omlxProxyKeyPreflight}/bin/omlx-proxy-key-preflight \
-              ${lib.escapeShellArg omlxProxy.certificateFile} \
-              ${lib.escapeShellArg omlxProxy.certificateKeyFile} \
-              johnw
-            mkdir -p ${logDir} ${logDir}/client_body
-            ${pkgs.nginx}/bin/nginx -t -c ${config} -e ${logDir}/error.log >/dev/null
-            ${pkgs.nginx}/bin/nginx -c ${config} -g "daemon off;" -e ${logDir}/error.log
-          '';
-          serviceConfig = {
-            RunAtLoad = true;
-            KeepAlive = true;
-            SoftResourceLimits.NumberOfFiles = 4096;
-          };
-        };
-    }
+            '';
+          in
+          {
+            name =
+              if index == 0 then "llama-swap-https-proxy" else "llama-swap-https-proxy-${toString (index + 1)}";
+            value = {
+              script = ''
+                ${omlxProxyKeyPreflight}/bin/omlx-proxy-key-preflight \
+                  ${lib.escapeShellArg omlxProxy.certificateFile} \
+                  ${lib.escapeShellArg omlxProxy.certificateKeyFile} \
+                  johnw
+                mkdir -p ${logDir} ${logDir}/client_body
+                ${pkgs.nginx}/bin/nginx -t -c ${config} -e ${logDir}/error.log >/dev/null
+                ${pkgs.nginx}/bin/nginx -c ${config} -g "daemon off;" -e ${logDir}/error.log
+              '';
+              serviceConfig = {
+                RunAtLoad = true;
+                KeepAlive = true;
+                ThrottleInterval = 30;
+                SoftResourceLimits.NumberOfFiles = 4096;
+              };
+            };
+          }
+        ) omlxProxy.listenAddresses
+      )
+    )
     // {
       omlx = {
         script = "exec ${pkgs.omlx}/bin/omlx serve --host 127.0.0.1 --port ${toString inferenceServices.omlx.port} --base-path ${lib.escapeShellArg "${home}/.config/omlx/.omlx"}";

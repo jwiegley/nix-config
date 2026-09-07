@@ -39,7 +39,11 @@ let
       ];
     }).config;
   configFor = configForWithTransportPolicy localProviderTransport;
-  proxyAgentFor = settings: (configFor settings).launchd.user.agents.llama-swap-https-proxy or null;
+  proxyAgentsFor =
+    settings:
+    lib.filterAttrs (name: _: lib.hasPrefix "llama-swap-https-proxy" name)
+      (configFor settings).launchd.user.agents;
+  proxyAgentFor = settings: (proxyAgentsFor settings).llama-swap-https-proxy or null;
   proxyAgentForWithTransportPolicy =
     policy: settings:
     (configForWithTransportPolicy policy settings).launchd.user.agents.llama-swap-https-proxy or null;
@@ -69,6 +73,15 @@ let
       "2001:db8::20/128"
     ];
   };
+  dualSettings = validSettings // {
+    listenAddresses = [
+      "192.0.2.10"
+      "192.0.2.11"
+    ];
+  };
+  dualAgents = proxyAgentsFor dualSettings;
+  dualPrimaryScript = pkgs.writeText "omlx-proxy-dual-primary-script" dualAgents.llama-swap-https-proxy.script;
+  dualSecondaryScript = pkgs.writeText "omlx-proxy-dual-secondary-script" dualAgents.llama-swap-https-proxy-2.script;
   validScript = pkgs.writeText "omlx-proxy-valid-script" (proxyAgentFor validSettings).script;
   restrictedSettings = validSettings // {
     legacyGatewayEnable = false;
@@ -83,8 +96,12 @@ let
     clio = ../../config/certs/omlx-clio.crt;
     hera = ../../config/certs/omlx-hera.crt;
   };
-  heraScript = pkgs.writeText "omlx-proxy-hera-script" darwinConfigurations.hera.config.launchd.user.agents.llama-swap-https-proxy.script;
-  clioScript = pkgs.writeText "omlx-proxy-clio-script" darwinConfigurations.clio.config.launchd.user.agents.llama-swap-https-proxy.script;
+  heraAgents = proxyAgentsFor heraSettings;
+  clioAgents = proxyAgentsFor clioSettings;
+  heraScript = pkgs.writeText "omlx-proxy-hera-script" heraAgents.llama-swap-https-proxy.script;
+  heraOverlayScript = pkgs.writeText "omlx-proxy-hera-overlay-script" heraAgents.llama-swap-https-proxy-2.script;
+  clioScript = pkgs.writeText "omlx-proxy-clio-script" clioAgents.llama-swap-https-proxy.script;
+  clioOverlayScript = pkgs.writeText "omlx-proxy-clio-overlay-script" clioAgents.llama-swap-https-proxy-2.script;
   omlxScript = (configFor { }).launchd.user.agents.omlx.script;
   localProviderTransport = import ../../config/ai/local-provider-transport.nix;
   syntheticLocalProviderTransport = {
@@ -120,6 +137,13 @@ assert builtins.all (entry: entry.assertion) (proxyAssertionsFor restrictedSetti
 assert builtins.all (entry: entry.assertion) (proxyAssertionsFor heraSettings);
 assert builtins.all (entry: entry.assertion) (proxyAssertionsFor clioSettings);
 assert proxyAgentFor { } == null;
+assert
+  builtins.attrNames dualAgents == [
+    "llama-swap-https-proxy"
+    "llama-swap-https-proxy-2"
+  ];
+assert heraAgents ? llama-swap-https-proxy-2;
+assert clioAgents ? llama-swap-https-proxy-2;
 assert heraSettings.enable;
 assert clioSettings.enable;
 assert
@@ -255,14 +279,16 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
 
   valid_config=$(nginx_config ${validScript})
   restricted_config=$(nginx_config ${restrictedScript})
-  hera_config=$(nginx_config ${heraScript})
-  clio_config=$(nginx_config ${clioScript})
+  dual_primary_config=$(nginx_config ${dualPrimaryScript})
+  dual_secondary_config=$(nginx_config ${dualSecondaryScript})
+  hera_primary_config=$(nginx_config ${heraScript})
+  hera_overlay_config=$(nginx_config ${heraOverlayScript})
+  clio_primary_config=$(nginx_config ${clioScript})
+  clio_overlay_config=$(nginx_config ${clioOverlayScript})
   synthetic_transport_config=$(nginx_config ${syntheticTransportScript})
-  test -f "$valid_config"
-  test -f "$restricted_config"
-  test -f "$hera_config"
-  test -f "$clio_config"
-  test -f "$synthetic_transport_config"
+  for config in "$valid_config" "$restricted_config" "$dual_primary_config" "$dual_secondary_config" "$hera_primary_config" "$hera_overlay_config" "$clio_primary_config" "$clio_overlay_config" "$synthetic_transport_config"; do
+    test -f "$config"
+  done
 
   grep -F 'listen 192.0.2.10:8443 ssl;' "$valid_config"
   grep -F 'location = /v1' "$valid_config"
@@ -298,47 +324,58 @@ pkgs.runCommand "omlx-proxy-client-boundary" { } ''
   grep -F 'nginx -t -c' ${validScript}
   grep -F -- '-e /Users/johnw/.cache/llama-swap-proxy/error.log' ${validScript}
 
+  grep -F 'listen 192.0.2.10:8443 ssl;' "$dual_primary_config"
+  grep -F 'listen 192.0.2.11:8443 ssl;' "$dual_secondary_config"
+  test "$(grep -Fc 'listen ' "$dual_primary_config")" -eq 1
+  test "$(grep -Fc 'listen ' "$dual_secondary_config")" -eq 1
+  reject_fixed 'listen 192.0.2.11:8443 ssl;' "$dual_primary_config"
+  reject_fixed 'listen 192.0.2.10:8443 ssl;' "$dual_secondary_config"
   for host in hera clio; do
     case "$host" in
       hera)
-        config="$hera_config"
+        configs=( "$hera_primary_config" "$hera_overlay_config" )
         listen_addresses=( ${lib.escapeShellArgs heraSettings.listenAddresses} )
         peer_addresses=( ${lib.escapeShellArgs clioSettings.listenAddresses} )
         ;;
       clio)
-        config="$clio_config"
+        configs=( "$clio_primary_config" "$clio_overlay_config" )
         listen_addresses=( ${lib.escapeShellArgs clioSettings.listenAddresses} )
         peer_addresses=( ${lib.escapeShellArgs heraSettings.listenAddresses} )
         ;;
     esac
-    for listen in "''${listen_addresses[@]}"; do
+    for index in "''${!listen_addresses[@]}"; do
+      config="''${configs[$index]}"
+      listen="''${listen_addresses[$index]}"
       grep -F "listen $listen:8443 ssl;" "$config"
-      grep -F "allow $listen;" "$config"
+      test "$(grep -Fc 'listen ' "$config")" -eq 1
+      for own_listener in "''${listen_addresses[@]}"; do
+        grep -F "allow $own_listener;" "$config"
+      done
+      for peer in "''${peer_addresses[@]}"; do
+        grep -F "allow $peer/32;" "$config"
+      done
+      grep -F 'location = /v1' "$config"
+      grep -F 'location ^~ /v1/' "$config"
+      grep -F 'location ~ ^/v1(?:[^/]|$)' "$config"
+      grep -F 'proxy_pass http://127.0.0.1:8000;' "$config"
+      grep -F 'proxy_http_version 1.1;' "$config"
+      grep -F 'proxy_buffering off;' "$config"
+      grep -F 'proxy_set_header Authorization $http_authorization;' "$config"
+      grep -F 'proxy_send_timeout ${toString localProviderTransport.proxy.upstreamSendTimeoutSeconds};' "$config"
+      grep -F 'proxy_read_timeout ${toString localProviderTransport.proxy.upstreamReadTimeoutSeconds};' "$config"
+      grep -F 'send_timeout ${toString localProviderTransport.proxy.downstreamSendTimeoutSeconds};' "$config"
+      if [ "$host" = hera ]; then
+        grep -F 'proxy_ssl_trusted_certificate' "$config"
+        grep -F 'proxy_ssl_verify on;' "$config"
+        grep -F 'proxy_ssl_server_name on;' "$config"
+        test "$(grep -Fc 'proxy_set_header Authorization "";' "$config")" -eq 1
+        test "$(grep -Fc 'return 404;' "$config")" -eq 2
+      else
+        test "$(grep -Fc 'return 404;' "$config")" -eq 3
+        reject_fixed 'proxy_set_header Authorization "";' "$config"
+        reject_fixed 'proxy_ssl_trusted_certificate' "$config"
+      fi
     done
-    for peer in "''${peer_addresses[@]}"; do
-      grep -F "allow $peer/32;" "$config"
-    done
-    grep -F 'location = /v1' "$config"
-    grep -F 'location ^~ /v1/' "$config"
-    grep -F 'location ~ ^/v1(?:[^/]|$)' "$config"
-    grep -F 'proxy_pass http://127.0.0.1:8000;' "$config"
-    grep -F 'proxy_http_version 1.1;' "$config"
-    grep -F 'proxy_buffering off;' "$config"
-    grep -F 'proxy_set_header Authorization $http_authorization;' "$config"
-    grep -F 'proxy_send_timeout ${toString localProviderTransport.proxy.upstreamSendTimeoutSeconds};' "$config"
-    grep -F 'proxy_read_timeout ${toString localProviderTransport.proxy.upstreamReadTimeoutSeconds};' "$config"
-    grep -F 'send_timeout ${toString localProviderTransport.proxy.downstreamSendTimeoutSeconds};' "$config"
-    if [ "$host" = hera ]; then
-      grep -F 'proxy_ssl_trusted_certificate' "$config"
-      grep -F 'proxy_ssl_verify on;' "$config"
-      grep -F 'proxy_ssl_server_name on;' "$config"
-      test "$(grep -Fc 'proxy_set_header Authorization "";' "$config")" -eq 1
-      test "$(grep -Fc 'return 404;' "$config")" -eq 2
-    else
-      test "$(grep -Fc 'return 404;' "$config")" -eq 3
-      reject_fixed 'proxy_set_header Authorization "";' "$config"
-      reject_fixed 'proxy_ssl_trusted_certificate' "$config"
-    fi
   done
 
   nginx_test="$TMPDIR/nginx-test"

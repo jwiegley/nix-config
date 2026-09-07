@@ -3611,6 +3611,21 @@ Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension usin
 
 Remove the claude-mem activation hook, transactional pin helper, behavioral check registration, implementation, and dedicated tests. Preserve mutable ~/.claude-mem state unless separately authorized for deletion.
 
+* DONE [#C] Isolate optional oMLX proxy listeners from LAN availability
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-9bmj
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-07 Mon 07:29]
+:MODIFIED: [2026-09-07 Mon 07:33]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-07 Mon 07:33]
+:CLOSE_REASON: Isolated each oMLX listener so an unavailable overlay address cannot prevent the LAN gateway from starting
+:SOURCE_REPO: .
+:ORIGINAL_SIZE: 0
+:END:
+
 * DONE [#B] Make Pi model catalog refresh update remote and local providers
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
