@@ -11,7 +11,7 @@ let
   # packages.nix is NOT a module -- consumers `import` it as a plain function,
   # sometimes without `config` or `lib`. So it reads capabilities from the PURE
   # registry rather than from `config.johnw.host`.
-  registry = import ./hosts/registry.nix;
+  registry = import ./hosts.nix;
   caps = registry.capabilitiesFor {
     inherit hostname;
     homeClass = nixManagedAiHomeClass;

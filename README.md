@@ -100,7 +100,7 @@ selection.
 Canonical shared-work membership contains the four active machines plus dormant
 `git-ai`. Membership records identity only: it does not assert that a host is
 online or include it in a rollout. The active rollout remains the explicit
-four-host subset in `config/hosts/registry.nix`.
+four-host subset in `config/hosts.nix`.
 
 ## Operations
 

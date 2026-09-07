@@ -21,12 +21,14 @@ const expectedConfig = {
     "openai/gpt-5.6-luna",
     "openai/gpt-5.6-terra",
     "openai/gpt-5.6-sol",
+    "openai/gpt-6-astra",
     "openai-codex/gpt-5.4",
     "openai-codex/gpt-5.5",
     "openai-codex/gpt-5.6",
     "openai-codex/gpt-5.6-luna",
     "openai-codex/gpt-5.6-terra",
     "openai-codex/gpt-5.6-sol",
+    "openai-codex/gpt-6-astra",
   ],
   indicator: "status",
 };
@@ -130,7 +132,7 @@ test("managed GPT Fast Mode supports GPT-5.6 and real subagent handoff without n
     });
     expect(firstPayload).not.toHaveProperty("service_tier");
 
-    const codex = context("openai-codex", "gpt-5.6-sol");
+    const codex = context("openai-codex", "gpt-6-astra");
     await child.emit("model_select", { model: codex.model }, codex);
     expect(await child.emit("before_provider_request", { payload: {} }, codex)).toEqual({
       service_tier: "priority",

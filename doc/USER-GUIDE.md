@@ -14,7 +14,7 @@ Current work has one authority: `obr`, whose tracked projection is
 separate status or handoff document is a second current-work ledger.
 
 The principal source authorities for this guide are `README.md`,
-`doc/ARCHITECTURE.md`, `bin/README.md`, `config/hosts/registry.nix`, and
+`doc/ARCHITECTURE.md`, `bin/README.md`, `config/hosts.nix`, and
 `config/nix-trust.nix`. Compare observed Nix-owned or generated machine state
 with the exact source revision selected by that consumer, not automatically
 with the newest source checkout. An unexplained difference is evidence of
@@ -253,7 +253,7 @@ flake uses the same subflake locally through `path:./config/ai`.
 
 ### 3.4 Host registry
 
-`config/hosts/registry.nix` owns stable fleet facts: platform, activation class,
+`config/hosts.nix` owns stable fleet facts: platform, activation class,
 login name, coarse role, shared-work membership, active rollout membership,
 remote-builder records, ordered builder pools, shared-work daemon capacity, and
 shell routing. The shared-work policy presently records
@@ -387,7 +387,7 @@ is disabled.
 ## 6. Remote builders
 
 Remote builders are declared data, not mutable entries maintained by hand.
-`config/hosts/registry.nix` owns builder identity, platform, capacity, features,
+`config/hosts.nix` owns builder identity, platform, capacity, features,
 public host key, and ordered client pools. `config/darwin.nix` supplies the
 host-local private-key pathname and projects the records into nix-darwin.
 
@@ -1084,7 +1084,7 @@ return nonzero.
 
 ### A remote builder is missing or unreachable
 
-Compare `config/hosts/registry.nix`, the nix-darwin evaluation, the candidate
+Compare `config/hosts.nix`, the nix-darwin evaluation, the candidate
 `etc/nix/machines`, and the live `/etc/nix/machines` in that order. If source and
 candidate agree but live bytes differ, the problem is adoption or activation.
 Do not repair the live file by hand. Separately verify SSH reachability, pinned

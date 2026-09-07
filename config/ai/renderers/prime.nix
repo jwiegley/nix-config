@@ -1,4 +1,8 @@
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  modelPolicy ? import ../models.nix,
+}:
 
 {
   profile,
@@ -12,10 +16,9 @@ let
   root = ".prime/agent";
   json = pkgs.formats.json { };
   mergeFiles = import ./merge-files.nix { inherit lib; };
-  modelOverrides = import ../model-overrides.nix;
   projectProviderEndpoints = import ./project-provider-endpoints.nix { inherit lib; };
 
-  renderLib = import ./render-lib.nix { inherit lib; };
+  renderLib = import ./render-lib.nix { inherit lib modelPolicy; };
   inherit (renderLib) renderCommandMetadata;
   renderMarkdown = renderLib.renderMarkdownText;
   primeAgentCapabilities = [
@@ -75,25 +78,25 @@ let
   ) selected.agents;
 
   models.providers =
-    modelOverrides.nativeProviders
-    // lib.optionalAttrs (localModelEndpoints != null) modelOverrides.localProviderOverrides;
+    modelPolicy.nativeProviders
+    // lib.optionalAttrs (localModelEndpoints != null) modelPolicy.localProviderOverrides;
   galleryEndpointsByOwner =
     if localModelEndpoints == null then
       { }
     else
       projectProviderEndpoints {
-        definitions = modelOverrides.localGalleryProviders;
+        definitions = modelPolicy.localGalleryProviders;
         endpoints = localModelEndpoints;
       };
   localProviderPackages = lib.optionals (localModelEndpoints != null) [
     {
       name = "pi-provider-llama-swap";
-      owner = modelOverrides.localGalleryProviders.llama-swap.owner;
+      owner = modelPolicy.localGalleryProviders.llama-swap.owner;
       package = pkgs.pi-gallery.packages.pi-provider-llama-swap;
     }
     {
       name = "pi-provider-omlx";
-      owner = modelOverrides.localGalleryProviders.omlx.owner;
+      owner = modelPolicy.localGalleryProviders.omlx.owner;
       package = pkgs.pi-gallery.packages.pi-provider-omlx;
     }
   ];
@@ -127,7 +130,7 @@ let
   ];
   settings = {
     skills = [ "-skill-creator/SKILL.md" ];
-    defaultThinkingLevel = "xhigh";
+    defaultThinkingLevel = modelPolicy.prime.thinkingLevel;
     enableBuiltinSkills = true;
     enableSkillCommands = true;
     packages = packageRoots;
@@ -183,12 +186,10 @@ assert profile.platform == "darwin";
 assert profile.localModelRoutes == (localModelEndpoints != null);
 assert
   localModelEndpoints == null
-  ||
-    builtins.attrNames localModelEndpoints == builtins.attrNames modelOverrides.localProviderOverrides;
+  || builtins.attrNames localModelEndpoints == builtins.attrNames modelPolicy.localProviderOverrides;
 assert
   localModelEndpoints == null
-  ||
-    builtins.attrNames localModelEndpoints == builtins.attrNames modelOverrides.localGalleryProviders;
+  || builtins.attrNames localModelEndpoints == builtins.attrNames modelPolicy.localGalleryProviders;
 assert builtins.isString homeDirectory;
 assert xdgConfigHome == "${homeDirectory}/.config";
 assert selected.hooks == { };

@@ -35,19 +35,29 @@ let
   nativeSol =
     assert builtins.length nativeSolModels == 1;
     builtins.head nativeSolModels;
+  nativeModelOverrides = lib.mapAttrs (
+    _: override:
+    lib.optionalAttrs (override ? contextWindow) {
+      context_window = override.contextWindow;
+    }
+  ) models.codex.modelOverrides;
+  nativeContextWindow =
+    (nativeModelOverrides.${nativeSol.slug} or { }).context_window or nativeSol.context_window;
   nativeSolAutoCompactTokenLimit =
-    assert builtins.isInt nativeSol.context_window;
-    builtins.div (nativeSol.context_window * 4) 5;
-  # Codex's public serializer renders the canonical instruction template into
-  # the legacy field expected by external catalogs. Merge only that field so
-  # source metadata unknown to this renderer remains exact.
+    assert builtins.isInt nativeContextWindow && nativeContextWindow > 0;
+    assert builtins.isInt models.codex.autoCompactPercent;
+    assert models.codex.autoCompactPercent > 0 && models.codex.autoCompactPercent <= 100;
+    builtins.div (nativeContextWindow * models.codex.autoCompactPercent) 100;
+  # Preserve the upstream catalog, applying declared overrides and the public
+  # serializer's rendered instruction template.
   managedModelCatalog = pkgs.runCommand "codex-nix-managed-model-catalog.json" { } ''
     export HOME="$TMPDIR/home"
     export CODEX_HOME="$TMPDIR/codex-home"
     mkdir -p "$HOME" "$CODEX_HOME"
 
     ${codexUnwrappedPackage}/bin/codex debug models --bundled > "$TMPDIR/bundled.json"
-    ${pkgs.jq}/bin/jq --slurp '
+    ${pkgs.jq}/bin/jq --slurp \
+      --argjson overrides ${lib.escapeShellArg (builtins.toJSON nativeModelOverrides)} '
       .[0] as $source
       | .[1] as $bundled
       | ($source.models // []) as $sourceModels
@@ -66,12 +76,19 @@ let
               range(0; $sourceModels | length) as $index
               | $sourceModels[$index] + {
                   base_instructions: $bundledModels[$index].base_instructions
-                }
+                } + ($overrides[$sourceModels[$index].slug] // {})
             ]
         end
     ' ${codexSourceCatalog} "$TMPDIR/bundled.json" > "$out"
   '';
-  inherit (import ./render-lib.nix { inherit lib; }) isTypedEnv renderMarkdownText;
+  inherit
+    (import ./render-lib.nix {
+      inherit lib;
+      modelPolicy = models;
+    })
+    isTypedEnv
+    renderMarkdownText
+    ;
   managedStdio = import ../managed-stdio.nix { inherit lib; };
   renderManagedStdio = managedStdio.render pkgs;
 
@@ -132,7 +149,7 @@ let
     model_provider = "openai";
     model_auto_compact_token_limit = nativeSolAutoCompactTokenLimit;
     model_catalog_json = "${homeDirectory}/${profile.root}/nix-managed-model-catalog.json";
-    model_reasoning_effort = "ultra";
+    model_reasoning_effort = models.codex.reasoningEffort;
     notify = lib.concatMap (item: item.codex.notify or [ ]) hookItems;
     mcp_servers = lib.mapAttrs (_: renderMcpServer) selected.mcpServers;
   }

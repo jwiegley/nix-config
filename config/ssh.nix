@@ -1,4 +1,4 @@
-{
+args@{
   pkgs,
   lib,
   config,
@@ -9,12 +9,15 @@
 }:
 let
   inherit (vars) isDarwin identityDir;
+  hostRegistry = args.hostRegistry or (import ./hosts.nix);
+  inherit (hostRegistry) hosts networkPeers;
 
   # The authored SSH configuration, in home-manager's master
   # `programs.ssh.settings` (RFC42) shape: attribute names are `Host` patterns
   # (or a literal `header`), and each value is an attrset keyed by PascalCase
-  # ssh_config directive names. This attrset is the single source of truth for
-  # every host and is rendered UNCHANGED on any home-manager that ships
+  # ssh_config directive names. Shared machine identities and addresses come
+  # from the host registry. This connection policy is rendered unchanged on
+  # home-manager versions that ship
   # `settings` (see the capability gate below).
   sshSettings =
     let
@@ -63,30 +66,30 @@ let
       };
 
       hera = withIdentity {
-        HostName = "hera.lan";
+        HostName = hosts.hera.dnsName;
         Compression = false;
         ForwardAgent = true;
       };
 
-      mssql = onHost "hera" "192.168.64.3";
-      deimos = onHost "hera" "192.168.221.128";
-      simon = onHost "hera" "172.16.194.158";
+      mssql = onHost networkPeers.mssql.via networkPeers.mssql.ipv4.ssh;
+      deimos = onHost networkPeers.deimos.via networkPeers.deimos.ipv4.ssh;
+      simon = onHost networkPeers.simon.via networkPeers.simon.ipv4.ssh;
 
       minerva = {
-        HostName = "192.168.199.128";
+        HostName = networkPeers.minerva.ipv4.ssh;
         Compression = false;
       };
 
       clio = withIdentity {
-        HostName = "clio.lan";
+        HostName = hosts.clio.dnsName;
         Compression = false;
         ForwardAgent = true;
       };
 
-      neso = withIdentity (onHost "clio" "192.168.100.130");
+      neso = withIdentity (onHost networkPeers.neso.via networkPeers.neso.ipv4.ssh);
 
       vulcan = controlMastered (withIdentity {
-        HostName = "192.168.1.2";
+        HostName = hosts.vulcan.ipv4.lan;
         Compression = false;
         ForwardAgent = true;
 
@@ -97,19 +100,19 @@ let
 
       gitea = controlMastered (withIdentity {
         User = "gitea";
-        HostName = if config.johnw.host.isVulcan then "localhost" else "192.168.1.2";
+        HostName = if config.johnw.host.isVulcan then "localhost" else hosts.vulcan.ipv4.lan;
         Port = 2222;
         Compression = false;
       });
 
       "srp vps" = controlMastered {
-        User = "johnw";
-        HostName = "vps-b30dd5a8.vps.ovh.ca";
+        User = hosts.vps.username;
+        HostName = hosts.vps.dnsName;
       };
 
       ghpos = {
         User = "git";
-        HostName = "github.com";
+        HostName = networkPeers.github.dnsName;
         IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
         IdentitiesOnly = true;
 
@@ -120,13 +123,13 @@ let
       positron =
         controlMastered {
           header = "Host andoria-* delphi-* sw-dev-* agentsrv labmgr";
-          User = "jwiegley";
+          User = hosts.andoria.username;
           IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
           IdentitiesOnly = true;
           ForwardAgent = true;
         }
         // lib.optionalAttrs config.johnw.host.isClio {
-          ProxyJump = "johnw@hera";
+          ProxyJump = "${hosts.hera.username}@hera";
         };
 
       positron-api = controlMastered {
@@ -144,31 +147,31 @@ let
       };
 
       "pos andoria" = controlMastered {
-        User = "jwiegley";
-        HostName = "andoria-08";
+        User = hosts.andoria-08.username;
+        HostName = hosts.andoria-08.dnsName;
         IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
         IdentitiesOnly = true;
         ForwardAgent = true;
       };
 
       "gpu gpu-server" = controlMastered {
-        User = "jwiegley";
-        HostName = "gpu-server";
+        User = hosts.gpu-server.username;
+        HostName = hosts.gpu-server.dnsName;
         IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
         IdentitiesOnly = true;
         ForwardAgent = true;
       };
 
       dev = controlMastered {
-        User = "jwiegley";
-        HostName = "sw-dev-01";
+        User = hosts.andoria.username;
+        HostName = networkPeers.workDev.dnsName;
         IdentityFile = "${config.xdg.configHome}/ssh/id_positron";
         IdentitiesOnly = true;
       };
 
       ghai = {
         User = "git";
-        HostName = "github.com";
+        HostName = networkPeers.github.dnsName;
         IdentityFile = "${config.xdg.configHome}/ssh/id_git-ai";
         IdentitiesOnly = true;
 
@@ -177,39 +180,39 @@ let
       };
 
       git-ai = controlMastered {
-        HostName = "ec2-3-134-98-233.us-east-2.compute.amazonaws.com";
-        User = "ubuntu";
+        HostName = hosts.git-ai.dnsName;
+        User = hosts.git-ai.sshUser;
         IdentityFile = "${config.xdg.configHome}/ssh/id_git-ai";
         IdentitiesOnly = true;
       };
 
       router = withIdentity {
-        HostName = "192.168.1.1";
+        HostName = networkPeers.router.ipv4.lan;
         Compression = false;
       };
 
       asus1 = {
-        HostName = "asus-bq16-pro-ap.lan";
-        Port = 2204;
-        User = "router";
+        HostName = networkPeers.asus1.dnsName;
+        Port = networkPeers.asus1.sshPort;
+        User = networkPeers.asus1.sshUser;
         Compression = false;
       };
       asus2 = {
-        HostName = "asus-bq16-pro-node.lan";
-        Port = 2204;
-        User = "router";
+        HostName = networkPeers.asus2.dnsName;
+        Port = networkPeers.asus2.sshPort;
+        User = networkPeers.asus2.sshUser;
         Compression = false;
       };
 
       elpa = {
-        HostName = "elpa.gnu.org";
+        HostName = networkPeers.elpa.dnsName;
         User = "root";
       };
-      savannah.HostName = "git.sv.gnu.org";
-      fencepost.HostName = "fencepost.gnu.org";
+      savannah.HostName = networkPeers.savannah.dnsName;
+      fencepost.HostName = networkPeers.fencepost.dnsName;
 
       savannah_gnu_org = withIdentity {
-        header = "Host git.savannah.gnu.org git.sv.gnu.org git.savannah.nongnu.org git.sv.nongnu.org";
+        header = "Host ${lib.concatStringsSep " " networkPeers.savannah.aliases}";
       };
 
       "*haskell.org" = {
@@ -217,7 +220,7 @@ let
         IdentityFile = "${config.xdg.configHome}/ssh/id_haskell";
         IdentitiesOnly = true;
       };
-      mail.HostName = "mail.haskell.org";
+      mail.HostName = networkPeers.haskellMail.dnsName;
 
       "hf.co" = withIdentity {
         User = "git";
@@ -231,8 +234,8 @@ let
     }
     // lib.optionalAttrs (pkgs ? my-scripts) {
       vulcan_wifi = lib.hm.dag.entryBefore [ "vulcan" ] {
-        header = ''Match host vulcan exec "${pkgs.bash}/bin/bash -c '[[ $(${pkgs.my-scripts}/bin/ipaddr bridge0) == 192.168.1.39 ]]'"'';
-        HostName = "192.168.3.16";
+        header = ''Match host vulcan exec "${pkgs.bash}/bin/bash -c '[[ $(${pkgs.my-scripts}/bin/ipaddr bridge0) == ${hosts.clio.ipv4.lan} ]]'"'';
+        HostName = hosts.vulcan.ipv4.wifi;
       };
     };
 

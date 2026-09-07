@@ -2,6 +2,8 @@
   lib,
   pkgs,
   localProviderTransportPolicy ? import ../local-provider-transport.nix,
+  modelPolicy ? import ../models.nix,
+  hostRegistry ? import ../../hosts.nix,
 }:
 
 {
@@ -20,7 +22,7 @@ let
   json = pkgs.formats.json { };
   mergeFiles = import ./merge-files.nix { inherit lib; };
 
-  renderLib = import ./render-lib.nix { inherit lib; };
+  renderLib = import ./render-lib.nix { inherit lib modelPolicy; };
   inherit (renderLib) renderCommandMetadata;
   renderMarkdown = renderLib.renderMarkdownFile;
 
@@ -29,8 +31,7 @@ let
   localModelRoutes = localModelEndpoints != null;
   localModelDiscovery = localModelDiscoveryEndpoints != null;
   inherit (profile) hermesRoute;
-  modelOverrides = import ../model-overrides.nix;
-  fastModeConfig = import ../pi-gpt-fast-mode.nix;
+  fastModeConfig = modelPolicy.pi.fastMode;
   projectProviderEndpoints = import ./project-provider-endpoints.nix { inherit lib; };
   hermesPassCommand = lib.escapeShellArgs [
     "${pkgs.coreutils}/bin/env"
@@ -44,7 +45,7 @@ let
   hermesApiKeyScript = "secret=\"$(${hermesPassCommand})\" || exit; ${pkgs.coreutils}/bin/printf \"%s\\n\" \"$secret\" | ${pkgs.coreutils}/bin/head -n 1";
   hermesApiKeyCommand = "!${pkgs.bash}/bin/bash -c ${lib.escapeShellArg hermesApiKeyScript}";
 
-  inherit (modelOverrides) nativeProviders;
+  inherit (modelPolicy) nativeProviders;
   # Slow local inference owns its budgets; the global client defaults remain ordinary.
   localProviderTransport = {
     requestTimeoutMs = localProviderTransportPolicy.client.requestTimeoutMilliseconds;
@@ -52,8 +53,8 @@ let
   };
   localModelDiscoveryProviderNames =
     if localModelDiscovery then builtins.attrNames localModelDiscoveryEndpoints else [ ];
-  localProviderOverrides = lib.getAttrs localModelDiscoveryProviderNames modelOverrides.pi.localProviderOverrides;
-  galleryProviderDefinitions = lib.getAttrs localModelDiscoveryProviderNames modelOverrides.pi.galleryProviders;
+  localProviderOverrides = lib.getAttrs localModelDiscoveryProviderNames modelPolicy.pi.localProviderOverrides;
+  galleryProviderDefinitions = lib.getAttrs localModelDiscoveryProviderNames modelPolicy.pi.galleryProviders;
   galleryEndpointsByOwner =
     if localModelDiscovery then
       projectProviderEndpoints {
@@ -66,9 +67,9 @@ let
     hermes = {
       api = "openai-completions";
       apiKey = hermesApiKeyCommand;
-      baseUrl = "https://hermes.vulcan.lan/v1";
+      baseUrl = "https://hermes.${hostRegistry.hosts.vulcan.dnsName}/v1";
       compat.sendSessionAffinityHeaders = true;
-      models = [ { id = "hermes-agent"; } ];
+      models = [ { id = modelPolicy.hermes.name; } ];
     };
   };
   localProviders = lib.mapAttrs (

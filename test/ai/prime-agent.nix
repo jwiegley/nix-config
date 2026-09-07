@@ -32,7 +32,7 @@ let
     inherit lib;
   };
   syntheticGalleryEndpointsByOwner = projectProviderEndpoints {
-    definitions = (import ../../config/ai/model-overrides.nix).localGalleryProviders;
+    definitions = modelSelection.localGalleryProviders;
     endpoints = syntheticLocalModelEndpoints;
   };
   syntheticRendered = render syntheticLocalModelEndpoints;
@@ -208,7 +208,10 @@ runCommand "prime-agent-integration-check"
     test "$(jq '.providers | keys == ["llama-swap", "omlx", "openai-codex", "openrouter"]' ${models})" = true
     test "$(jq '.providers | keys == ["openai-codex", "openrouter"]' ${routesDisabledModels})" = true
     test "$(jq '[.. | objects | select(has("apiKey"))] | length' ${models})" -eq 0
-    test "$(jq -r '.providers["openai-codex"].modelOverrides["${modelSelection.codex.name}"].contextWindow' ${models})" -eq ${toString modelSelection.codex.contextWindow}
+    for models_file in ${models} ${routesDisabledModels}; do
+      jq -e --argjson overrides ${lib.escapeShellArg (builtins.toJSON modelSelection.codex.modelOverrides)} \
+        '.providers["openai-codex"].modelOverrides == $overrides' "$models_file" >/dev/null
+    done
     test "$(jq -r '.providers.openrouter.modelOverrides["${modelSelection.openrouter.name}"].contextWindow' ${models})" -eq ${toString modelSelection.openrouter.contextWindow}
     test "$(jq -r '.providers["llama-swap"].modelOverrides["${modelSelection.llamaSwap.name}"].contextWindow' ${models})" -eq ${toString modelSelection.llamaSwap.contextWindow}
     test "$(jq -r '.providers.omlx.modelOverrides["${modelSelection.omlx.reasoning.name}"].contextWindow' ${models})" -eq ${toString modelSelection.omlx.reasoning.contextWindow}

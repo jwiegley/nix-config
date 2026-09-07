@@ -80,9 +80,10 @@ let
   catalog = import ./ai/catalog.nix {
     inherit lib;
     resources = resourcePackage;
+    hostRegistry = registry;
   };
   inherit (catalog) models;
-  registry = import ./hosts/registry.nix;
+  registry = args.hostRegistry or (import ./hosts.nix);
   renderers = {
     claude = import ./ai/renderers/claude.nix {
       inherit lib;
@@ -100,6 +101,7 @@ let
     pi = import ./ai/renderers/pi.nix {
       inherit lib;
       pkgs = piRendererPkgs;
+      hostRegistry = registry;
     };
     prime = import ./ai/renderers/prime.nix {
       inherit lib;
@@ -126,6 +128,23 @@ let
     if profileHost == null then null else catalog.zvecEmbeddingRoutesByHost.${profileHost} or null;
   agentModelAliases = import ./ai/agent-model-aliases.nix { inherit lib models; };
   xdgConfigRelative = lib.removePrefix "${config.home.homeDirectory}/" config.xdg.configHome;
+  modelPolicyFiles = lib.optionalAttrs (profileHost != null) {
+    "${xdgConfigRelative}/ai/model-policy.json".source =
+      (pkgs.formats.json { }).generate "model-policy.json"
+        models;
+    "${xdgConfigRelative}/ai/host-policy.json".source =
+      (pkgs.formats.json { }).generate "host-policy.json"
+        {
+          inherit (registry)
+            hosts
+            usernames
+            inferenceServices
+            llmSetup
+            scriptEndpoints
+            ;
+          currentHost = profileHost;
+        };
+  };
   recordingTranscriptionFiles = lib.optionalAttrs (recordingTranscriptionRoute != null) {
     "${xdgConfigRelative}/recordings/agent-model-aliases.json" = {
       source = (pkgs.formats.json { }).generate "agent-model-aliases.json" agentModelAliases;
@@ -235,14 +254,30 @@ let
       }
     else
       null;
-  renderedSurfaces = renderedProfiles ++ lib.optional mcpRegistrySelected mcpRegistryRendering;
+  agentCatSelected = builtins.elem "agent-cat-routing" (
+    (registry.resolveFor { inherit hostname homeClass; }).registryRow.roles or [ ]
+  );
+  agentCatRendering =
+    (import ./ai/renderers/agent-cat.nix {
+      inherit lib pkgs;
+      modelPolicy = models;
+    })
+      {
+        homeDirectory = config.home.homeDirectory;
+        xdgConfigHome = config.xdg.configHome;
+      };
+  renderedSurfaces =
+    renderedProfiles
+    ++ lib.optional mcpRegistrySelected mcpRegistryRendering
+    ++ lib.optional agentCatSelected agentCatRendering;
   rawPaths =
     builtins.attrNames sharedSkillFiles
+    ++ builtins.attrNames modelPolicyFiles
     ++ builtins.attrNames recordingTranscriptionFiles
     ++ lib.concatMap (rendered: builtins.attrNames rendered.files) renderedSurfaces;
   paths = lib.sort builtins.lessThan (lib.unique rawPaths);
   mergedFiles = lib.foldl' (files: rendered: files // rendered.files) (
-    sharedSkillFiles // recordingTranscriptionFiles
+    sharedSkillFiles // modelPolicyFiles // recordingTranscriptionFiles
   ) renderedSurfaces;
   mcpGuards = if mcpRegistrySelected then mcpRegistryRendering.mutableMcpGuards else [ ];
   validRelativePath =

@@ -1,4 +1,8 @@
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  modelPolicy ? import ../models.nix,
+}:
 
 {
   profile,
@@ -15,7 +19,7 @@ let
   json = pkgs.formats.json { };
   mergeFiles = import ./merge-files.nix { inherit lib; };
 
-  renderLib = import ./render-lib.nix { inherit lib; };
+  renderLib = import ./render-lib.nix { inherit lib modelPolicy; };
   renderMarkdown = item: renderLib.renderMarkdownFile item.metadata item.source;
   claudeAgentCapabilities = [
     {

@@ -1,4 +1,4 @@
-{
+args@{
   config,
   hostname,
   lib,
@@ -8,56 +8,16 @@
 
 let
   # Static, direct listeners only. Discovery, relays, NAT, and route shims stay disabled.
-  nodes = {
-    hera = {
-      deviceID = "MDOPNSZ-WLGJBFD-4YUV4S3-QEUZGWP-TLIRRVK-ZXFJ7Q2-IJ3FRBO-ZQVRPAD";
-      addresses = [
-        "tcp://10.55.0.1:22000"
-        "tcp://192.168.1.3:22000"
-      ];
-      listenAddresses = [
-        "tcp://10.55.0.1:22000"
-        "tcp://192.168.1.3:22000"
-      ];
-      networks = [
-        "10.55.0.1/32"
-        "192.168.1.3/32"
-      ];
-    };
-    clio = {
-      deviceID = "G3JLOH6-Y5SBVLA-RYANNWG-OXRNO6H-V2FDOSJ-NYYCVF2-UHLDQIU-IMV45A3";
-      addresses = [
-        "tcp://10.55.0.2:22000"
-        "tcp://192.168.1.39:22000"
-      ];
-      listenAddresses = [
-        "tcp://10.55.0.2:22000"
-        "tcp://192.168.1.39:22000"
-      ];
-      networks = [
-        "10.55.0.2/32"
-        "192.163.3.9/32"
-        "10.6.0.2/32"
-      ];
-    };
-    vulcan = {
-      deviceID = "IPWC66H-N6RPNOM-HSX6NKH-Y7MEFTP-GNM75K7-5L6BRIW-OILLNGQ-VQK4ZA2";
-      addresses = [ "tcp://192.168.1.2:22000" ];
-      listenAddresses = [ "tcp://192.168.1.2:22000" ];
-      networks = [ "192.168.1.2/32" ];
-    };
-  };
+  hostRegistry = args.hostRegistry or (import ./hosts.nix);
+  inherit (hostRegistry.syncthing) nodes;
 
   enabled = config.johnw.host.isDarwinWorkstation;
   localNode = nodes.${hostname};
   peerNames =
     if config.johnw.host.isHera then
-      [
-        "clio"
-        "vulcan"
-      ]
+      hostRegistry.syncthing.peers.hera
     else
-      [ "hera" ];
+      hostRegistry.syncthing.peers.clio;
   peerNetworks = lib.unique (lib.concatMap (name: nodes.${name}.networks) peerNames);
   peerAutoAcceptFolders = name: config.johnw.host.isClio && name == "hera";
 

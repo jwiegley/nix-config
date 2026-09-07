@@ -88,7 +88,7 @@ def main() -> None:
     parser.add_argument("mcp_probe_config", type=Path)
     parser.add_argument("expected_catalog_path")
     parser.add_argument("expected_skill_description")
-    parser.add_argument("expected_model")
+    parser.add_argument("model_policy", type=Path)
     args = parser.parse_args()
 
     source = load_json(args.source_catalog)
@@ -114,6 +114,7 @@ def main() -> None:
     ]:
         raise AssertionError("managed catalog changed model membership or order")
 
+    policy = load_json(args.model_policy)
     for index, (source_model, managed_model) in enumerate(
         zip(source_models, managed_models, strict=True)
     ):
@@ -122,6 +123,9 @@ def main() -> None:
             raise AssertionError(f"model {index} has invalid base_instructions")
         source_metadata = dict(source_model)
         managed_metadata = dict(managed_model)
+        override = policy["modelOverrides"].get(source_model["slug"], {})
+        if "contextWindow" in override:
+            source_metadata["context_window"] = override["contextWindow"]
         source_metadata.pop("base_instructions", None)
         managed_metadata.pop("base_instructions", None)
         if source_metadata != managed_metadata:
@@ -136,9 +140,9 @@ def main() -> None:
         for key in ("model", "model_provider", "model_reasoning_effort")
     }
     if selection != {
-        "model": args.expected_model,
+        "model": policy["name"],
         "model_provider": "openai",
-        "model_reasoning_effort": "ultra",
+        "model_reasoning_effort": policy["reasoningEffort"],
     }:
         raise AssertionError(f"managed Codex selection changed: {selection!r}")
     selected_slug = config.get("model")
@@ -148,7 +152,7 @@ def main() -> None:
     selected_model = selected[0]
     if (
         config.get("model_auto_compact_token_limit")
-        != selected_model.get("context_window") * 4 // 5
+        != selected_model.get("context_window") * policy["autoCompactPercent"] // 100
     ):
         raise AssertionError("managed auto-compaction selection changed")
 

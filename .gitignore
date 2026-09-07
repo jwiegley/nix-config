@@ -3,5 +3,6 @@
 /result*
 /.claude
 /.pi
+/.zvec-grep/
 __pycache__/
 .worktrees/

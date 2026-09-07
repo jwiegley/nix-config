@@ -2,8 +2,8 @@
 name: forge
 description: 'Multi-phase, multi-model deep analysis workflow for complex problems.
   This skill should be used when the user wants rigorous, multi-model collaborative
-  analysis: deep research with Fable/Opus and PAL MCP consensus (GPT-5.5-Pro + Gemini
-  3 Pro), strategic planning, Fable/Opus execution with tests, comprehensive review,
+  analysis: deep research with a native orchestrator and PAL MCP consensus,
+  strategic planning, execution with tests, comprehensive review,
   and adversarial devil''s advocate critique. Invoke explicitly with /forge.
 
   '
@@ -16,19 +16,19 @@ Forge applies maximum analytical rigor to complex problems by orchestrating mult
 
 | Phase | Model(s) | Purpose |
 |-------|----------|---------|
-| 1. Research | Fable/Opus + GPT-5.5-Pro + Gemini 3 Pro | Deep analysis and consensus |
-| 2. Planning | Fable/Opus + GPT-5.5-Pro + Gemini 3 Pro | Strategic plan with validation |
-| 3. Execution | Fable/Opus | Code changes + test execution |
-| 4. Review | Fable/Opus + GPT-5.5-Pro + Gemini 3 Pro | Comprehensive change review |
-| 5. Critique | Fable/Opus + GPT-5.5-Pro + Gemini 3 Pro | Devil's advocate analysis |
-| 6. Final Report | Fable/Opus | Summary and remediation loop |
+| 1. Research | Configured orchestrator and PAL partners | Deep analysis and consensus |
+| 2. Planning | Configured orchestrator and PAL partners | Strategic plan with validation |
+| 3. Execution | Configured orchestrator | Code changes and test execution |
+| 4. Review | Configured orchestrator and PAL partners | Comprehensive change review |
+| 5. Critique | Configured orchestrator and PAL partners | Adversarial analysis |
+| 6. Final Report | Configured orchestrator | Summary and remediation loop |
 
-Each analytical phase (1, 2, 4, 5) uses Fable/Opus as orchestrator and builds multi-model consensus via PAL MCP with GPT-5.5-Pro and Gemini 3 Pro. Phase 3 uses Fable/Opus for execution.
+Each analytical phase (1, 2, 4, 5) uses the configured native orchestrator and builds consensus through PAL MCP with `@NIX_MODEL_PAL_PARTNER@` and `@NIX_MODEL_PAL_REASONING@`. Phase 3 uses the native orchestrator for execution.
 
 ## Prerequisites
 
-- The current session must be running on Fable or Opus
-- PAL MCP server must be running with access to `gpt-5.5-pro` and `gemini-3.1-pro-preview`
+- The current session must be running on @NIX_MODEL_FORGE_ORCHESTRATORS@.
+- PAL MCP server must be running with access to `@NIX_MODEL_PAL_PARTNER@` and `@NIX_MODEL_PAL_REASONING@`.
 - To verify model availability, call `mcp__pal__listmodels` before starting
 
 If PAL MCP is unavailable or a partner model is missing, inform the user and halt. Do not fall back to single-model operation -- the value of Forge comes from multi-model collaboration.
@@ -46,15 +46,15 @@ Conduct thorough investigation of the problem before any planning or coding.
 - Collect relevant file paths and code snippets for partner model consumption
 
 **Step 1.2 -- Systematic deep analysis:**
-Use `mcp__pal__thinkdeep` (for debugging/investigation) or `mcp__pal__analyze` (for architecture/feature analysis) to perform structured multi-step investigation. Pass `relevant_files` with absolute paths to all pertinent source files. Set model to `gemini-3.1-pro-preview`.
+Use `mcp__pal__thinkdeep` (for debugging/investigation) or `mcp__pal__analyze` (for architecture/feature analysis) to perform structured multi-step investigation. Pass `relevant_files` with absolute paths to all pertinent source files. Set model to `@NIX_MODEL_PAL_REASONING@`.
 
 **Step 1.3 -- Multi-model consensus on findings:**
 Use `mcp__pal__consensus` to gather perspectives from both partner models:
 
 ```
 models: [
-  {"model": "gpt-5.5-pro", "stance": "neutral"},
-  {"model": "gemini-3.1-pro-preview", "stance": "neutral"}
+  {"model": "@NIX_MODEL_PAL_PARTNER@", "stance": "neutral"},
+  {"model": "@NIX_MODEL_PAL_REASONING@", "stance": "neutral"}
 ]
 ```
 
@@ -91,8 +91,8 @@ Use `mcp__pal__consensus`:
 
 ```
 models: [
-  {"model": "gpt-5.5-pro", "stance": "neutral"},
-  {"model": "gemini-3.1-pro-preview", "stance": "neutral"}
+  {"model": "@NIX_MODEL_PAL_PARTNER@", "stance": "neutral"},
+  {"model": "@NIX_MODEL_PAL_REASONING@", "stance": "neutral"}
 ]
 ```
 
@@ -149,7 +149,7 @@ Run `git diff` (or `git diff HEAD~N..HEAD` if changes were committed) to capture
 
 **Step 4.2 -- Structured code review:**
 Use `mcp__pal__codereview` for systematic review:
-- Set `model` to `gemini-3.1-pro-preview`
+- Set `model` to `@NIX_MODEL_PAL_REASONING@`.
 - Set `review_type` to `full`
 - Include the diff via `relevant_files` (pass the changed file paths)
 - In the step narrative, cover: correctness, security, performance, architecture, and test coverage
@@ -159,8 +159,8 @@ Use `mcp__pal__consensus`:
 
 ```
 models: [
-  {"model": "gpt-5.5-pro", "stance": "neutral"},
-  {"model": "gemini-3.1-pro-preview", "stance": "neutral"}
+  {"model": "@NIX_MODEL_PAL_PARTNER@", "stance": "neutral"},
+  {"model": "@NIX_MODEL_PAL_REASONING@", "stance": "neutral"}
 ]
 ```
 
@@ -204,7 +204,7 @@ Use `mcp__pal__consensus` with adversarial stances:
 ```
 models: [
   {
-    "model": "gpt-5.5-pro",
+    "model": "@NIX_MODEL_PAL_PARTNER@",
     "stance": "against",
     "stance_prompt": "You are a hostile code reviewer. Find every possible
       flaw, vulnerability, edge case, race condition, and design mistake in
@@ -213,7 +213,7 @@ models: [
       review report -- what did the reviewers miss or dismiss too easily?"
   },
   {
-    "model": "gemini-3.1-pro-preview",
+    "model": "@NIX_MODEL_PAL_REASONING@",
     "stance": "against",
     "stance_prompt": "You are a security auditor and reliability engineer.
       Assume this code will be attacked by adversaries and subjected to
@@ -262,10 +262,10 @@ If no critical issues remain, confirm the implementation is ready and note any m
 
 | Role | PAL Model Name | Used In |
 |------|---------------|---------|
-| Orchestrator | (native Opus or Fable) | All phases |
-| Partner 1 | `gpt-5.5-pro` | Consensus in Phases 1, 2, 4, 5 |
-| Partner 2 | `gemini-3.1-pro-preview` | Consensus + codereview in Phases 1, 2, 4, 5 |
-| Executor | `fable` or `opus` (Task tool model param) | Phase 3 only |
+| Orchestrator | @NIX_MODEL_FORGE_ORCHESTRATORS@ | All phases |
+| Partner 1 | `@NIX_MODEL_PAL_PARTNER@` | Consensus in Phases 1, 2, 4, 5 |
+| Partner 2 | `@NIX_MODEL_PAL_REASONING@` | Consensus and code review in Phases 1, 2, 4, 5 |
+| Executor | @NIX_MODEL_FORGE_ORCHESTRATORS@ (Task model aliases) | Phase 3 |
 
 ## Constraints
 

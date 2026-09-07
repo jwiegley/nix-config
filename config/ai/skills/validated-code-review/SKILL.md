@@ -3,7 +3,7 @@ name: validated-code-review
 description: Use when the user requests a thorough pre-PR code review of the current branch — e.g. "run a validated code review".  "validated" is a key word
 ---
 
-MODELS: claude-fable-5, gpt-5.6-sol
+MODELS: @NIX_MODEL_VALIDATORS@
 
 # Multi-Model Code Review
 

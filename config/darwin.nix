@@ -1,4 +1,4 @@
-{
+args@{
   pkgs,
   lib,
   config,
@@ -9,34 +9,37 @@
 }:
 
 let
-  home = "/Users/johnw";
+  hostRegistry = args.hostRegistry or (import ./hosts.nix);
+  inherit (hostRegistry) hosts networkPeers;
+  host = hosts.${hostname};
+  home = host.homeDirectory;
   xdg_configHome = "${home}/.config";
   nixTrust = import ./nix-trust.nix;
   omlxProxyNetworkByHost = {
     clio = {
       legacyGatewayEnable = false;
       listenAddresses = [
-        "192.168.1.39"
-        "10.55.0.2"
+        hosts.clio.ipv4.lan
+        hosts.clio.ipv4.overlay
       ];
-      allowedSources = [
-        "192.168.1.3/32"
-        "10.55.0.1/32"
+      allowedSources = map (ip: "${ip}/32") [
+        hosts.hera.ipv4.lan
+        hosts.hera.ipv4.overlay
       ];
     };
     hera = {
       legacyGatewayEnable = true;
       listenAddresses = [
-        "192.168.1.3"
-        "10.55.0.1"
+        hosts.hera.ipv4.lan
+        hosts.hera.ipv4.overlay
       ];
-      allowedSources = [
-        "192.168.1.2/32" # vulcan
-        "192.168.1.39/32" # clio (Ethernet)
-        "192.168.3.9/32" # clio (WiFi at home)
-        "10.6.0.2/32" # clio (WireGuard WG1)
-        "10.7.0.5/32" # stuart (WireGuard WG2)
-        "10.55.0.2/32" # clio (overlay)
+      allowedSources = map (ip: "${ip}/32") [
+        hosts.vulcan.ipv4.lan
+        hosts.clio.ipv4.lan
+        hosts.clio.ipv4.wifi
+        hosts.clio.ipv4.wireguard1
+        networkPeers.stuart.ipv4.wireguard2
+        hosts.clio.ipv4.overlay
       ];
     };
   };
@@ -66,7 +69,7 @@ in
   ];
 
   # Prevent macOS from falling back to the case-preserving LocalHostName.
-  networking.hostName = hostname;
+  networking.hostName = host.hostName;
 
   # Both Darwin workstations expose their loopback oMLX service through the
   # same TLS boundary. The key remains host-local; only trust material is
@@ -96,7 +99,7 @@ in
         openssh.authorizedKeys = {
           keys =
             let
-              idRsyncForwarding = lib.optionalString config.johnw.host.isHera '',port-forwarding,permitopen="andoria-08:22"'';
+              idRsyncForwarding = lib.optionalString config.johnw.host.isHera '',port-forwarding,permitopen="${hosts.andoria-08.dnsName}:22"'';
               modelMetadataExtract = pkgs.writeShellScript "model-metadata-extract" ''
                 exec ${pkgs.gawk}/bin/awk '
                   BEGIN{IGNORECASE=1}
@@ -112,7 +115,7 @@ in
                       else if($i=="--embeddings"||$i=="--embedding") print "FLAG\tembeddings"
                       else if($i=="--pooling")         print "FLAG\tpooling"
                     }
-                  }' /Users/johnw/Models/llama-swap.yaml
+                  }' ${home}/Models/llama-swap.yaml
               '';
             in
             [
@@ -123,9 +126,9 @@ in
               # rrsync confines the forced command to reading under DIR; -ro also implies
               # -no-del. Hera alone receives the destination-limited forwarding
               # exception; its sshd Match below also permits only local TCP forwarding.
-              ''from="192.168.1.2",restrict${idRsyncForwarding},command="${pkgs.rrsync}/bin/rrsync -ro /Users/johnw" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG5gtakoBc1b52Jkj29dnrFb5ADlXTBf60VOBNbnwcLD id_rsync''
+              ''from="${hosts.vulcan.ipv4.lan}",restrict${idRsyncForwarding},command="${pkgs.rrsync}/bin/rrsync -ro ${home}" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG5gtakoBc1b52Jkj29dnrFb5ADlXTBf60VOBNbnwcLD id_rsync''
 
-              ''from="192.168.1.2",restrict,command="${modelMetadataExtract}" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFZYNrQfHWNV09OQz7uMhjQKflCWKwLG4pp1tJb2QRRq vulcan-model-metadata''
+              ''from="${hosts.vulcan.ipv4.lan}",restrict,command="${modelMetadataExtract}" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFZYNrQfHWNV09OQz7uMhjQKflCWKwLG4pp1tJb2QRRq vulcan-model-metadata''
             ]
             ++ lib.optionals config.johnw.host.isHera [
               # pushme positron sync (vulcan pushme-positron.timer) — JUMP HOST ONLY.
@@ -133,14 +136,14 @@ in
               # Hera-only sshd Match below permits local forwarding only; this key then
               # narrows that capability to Andoria. /usr/bin/false closes session/exec
               # channels. No shell, remote forward, pty, agent, or X11.
-              ''from="192.168.1.2",restrict,port-forwarding,permitopen="andoria-08:22",command="/usr/bin/false" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID/5S98ifv/slBhGzSLMK+/3JAHNzzglOfau6RlqKeYs johnw@vulcan''
+              ''from="${hosts.vulcan.ipv4.lan}",restrict,port-forwarding,permitopen="${hosts.andoria-08.dnsName}:22",command="/usr/bin/false" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID/5S98ifv/slBhGzSLMK+/3JAHNzzglOfau6RlqKeYs johnw@vulcan''
 
               # drafts-mcp bridge (vulcan drafts-mcp.service) — pinned to exec
               # drafts-mcp-server ONLY; SSH_ORIGINAL_COMMAND is ignored by the
               # forced command. `restrict` disables pty/forwarding/X11/agent.
               # This is the per-key least-privilege gate (NOT key-files.nix,
               # which grants an unrestricted login shell).
-              ''from="192.168.1.2",command="/etc/profiles/per-user/johnw/bin/drafts-mcp-server",restrict,no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINfhC6rPhjkSucPkTuL+On43E4udAss806oVAqNso3Qy drafts-bridge@vulcan''
+              ''from="${hosts.vulcan.ipv4.lan}",command="/etc/profiles/per-user/${host.username}/bin/drafts-mcp-server",restrict,no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINfhC6rPhjkSucPkTuL+On43E4udAss806oVAqNso3Qy drafts-bridge@vulcan''
             ];
           keyFiles =
             # Each machine accepts SSH key authentication from the rest
@@ -227,12 +230,14 @@ in
         };
       }
       (lib.mkIf config.johnw.host.isClio {
-        "nix/builder-known-hosts".text = ''
-          hera.lan ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE92Mnzmx/CVS6GiGbJ1vGC0Sdf+D7/vSU/PN7f1Y1MV
+        "nix/builder-known-hosts".source = pkgs.runCommand "nix-builder-known-hosts" { } ''
+          printf '%s ' ${lib.escapeShellArg hosts.hera.dnsName} > "$out"
+          printf '%s' ${lib.escapeShellArg hostRegistry.builders.hera.publicHostKey} \
+            | ${pkgs.coreutils}/bin/base64 --decode >> "$out"
         '';
         "ssh/ssh_config.d/050-nix-builders.conf".text = ''
           Host andoria-08 andoria-t2
-            ProxyCommand ssh -o BatchMode=yes -o IdentitiesOnly=yes -o UserKnownHostsFile=/etc/nix/builder-known-hosts -o StrictHostKeyChecking=yes -i ${home}/${hostname}/id_${hostname} -W %h:%p johnw@hera.lan
+            ProxyCommand ssh -o BatchMode=yes -o IdentitiesOnly=yes -o UserKnownHostsFile=/etc/nix/builder-known-hosts -o StrictHostKeyChecking=yes -i ${home}/${hostname}/id_${hostname} -W %h:%p ${hosts.hera.username}@${hosts.hera.dnsName}
         '';
       })
     ];
@@ -282,7 +287,7 @@ in
 
         # The Vulcan jump key may open direct-tcpip only. authorized_keys can
         # restrict its destination, but forwarding direction is sshd policy.
-        Match User johnw Address 192.168.1.2
+        Match User ${host.username} Address ${hosts.vulcan.ipv4.lan}
           AllowStreamLocalForwarding no
           AllowTcpForwarding local
           PermitListen none
@@ -368,6 +373,7 @@ in
       "lectrote"
       "ledger-wallet"
       "mactracker"
+      "mangodisk"
       "mellel"
       "microsoft-excel"
       "microsoft-powerpoint"
@@ -448,7 +454,6 @@ in
 
   nix =
     let
-      hostRegistry = import ./hosts/registry.nix;
       builderIdentityPaths = {
         host = "${home}/${hostname}/id_${hostname}";
         positron = "${xdg_configHome}/ssh/id_positron";

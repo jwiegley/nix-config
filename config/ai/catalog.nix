@@ -1,11 +1,15 @@
 {
   lib,
   resources,
+  models ? import ./models.nix,
+  hostRegistry ? import ../hosts.nix,
 }:
 
 let
-  models = import ./models.nix;
-  modelOverrides = import ./model-overrides.nix;
+  inherit (hostRegistry) inferenceServices;
+  embeddingEndpoint =
+    "https://${hostRegistry.hosts.${models.embeddings.host}.dnsName}:"
+    + "${toString inferenceServices.omlx.gatewayPort}/v1/embeddings";
   omlxCredentialPolicy = import ./omlx-credential-policy.nix;
   envReference = import ./env-reference.nix;
   managedStdio = import ./managed-stdio.nix { inherit lib; };
@@ -78,8 +82,8 @@ let
   # unmanaged configs (~/Models/llama-swap.yaml, ~/.config/omlx) actually
   # serve is mutable host state outside Nix.
   workstationLocalModelEndpoints = {
-    omlx = "http://localhost:8000/v1";
-    llama-swap = "http://localhost:8080/v1";
+    omlx = "http://localhost:${toString inferenceServices.omlx.port}/v1";
+    llama-swap = "http://localhost:${toString inferenceServices.llama-swap.port}/v1";
   };
   catalogLocalModelEndpointsByHost = {
     clio = workstationLocalModelEndpoints;
@@ -102,40 +106,30 @@ let
     map (host: {
       name = catalogPiLocalDiscoveryProviderByHost.${host};
       value = {
-        baseUrl = "https://${host}.lan:8443/v1";
+        baseUrl = "https://${
+          hostRegistry.hosts.${host}.dnsName
+        }:${toString inferenceServices.omlx.gatewayPort}/v1";
         apiKey.env = omlxPiCredentialEnvironmentByHost.${host};
       };
     }) workstationHosts
   );
   catalogRecordingTranscriptionRoutesByHost = {
-    hera = {
-      provider = "omlx";
-      model = models.omlx.reasoning.name;
-    };
+    hera = models.recordings.llm;
   };
 
-  catalogZvecEmbeddingRoutesByHost = {
-    clio = {
+  catalogZvecEmbeddingRoutesByHost =
+    lib.genAttrs hosts (_: {
       apiKey = "dummy-key";
-      embedding = "hera/bge-m3-mlx-fp16";
-      endpoint = "https://hera.lan:8443/v1/embeddings";
+      embedding = models.embeddings.local;
+      endpoint = embeddingEndpoint;
+    })
+    // {
+      shared-work = {
+        apiKey = null;
+        embedding = models.embeddings.remote;
+        endpoint = null;
+      };
     };
-    hera = {
-      apiKey = "dummy-key";
-      embedding = "hera/bge-m3-mlx-fp16";
-      endpoint = "https://hera.lan:8443/v1/embeddings";
-    };
-    shared-work = {
-      apiKey = null;
-      embedding = "openai/text-embedding-3-large";
-      endpoint = null;
-    };
-    vulcan = {
-      apiKey = "dummy-key";
-      embedding = "hera/bge-m3-mlx-fp16";
-      endpoint = "https://hera.lan:8443/v1/embeddings";
-    };
-  };
 
   profileSpecs = {
     clio-claude-personal = mkProfile "claude" [ "personal" ] "clio" "darwin" ".config/claude/personal";
@@ -707,8 +701,6 @@ let
     "persian"
     "swiftui"
     "toolkit"
-    "validated-code-review"
-    "wiggum"
   ];
   resourceBroadSkills = [
     "git-surgeon"
@@ -720,6 +712,8 @@ let
     "ponytail-review"
     "skill-creator"
     "translate-en"
+    "validated-code-review"
+    "wiggum"
   ];
   positronPyTorchSkills = [
     "add-uint-support"
@@ -747,7 +741,7 @@ let
     // broadResourceSkillItems
     // positronPyTorchSkillItems
     // {
-      forge = mkSkill ./skills "forge" { clients = [ "claude" ]; };
+      forge = mkSkill resourceSkills "forge" { clients = [ "claude" ]; };
       retest = mkSkill ./skills "retest" { audiences = [ "positron" ]; };
     };
 
@@ -833,8 +827,8 @@ let
               "ServerAliveInterval=30"
               "-o"
               "ServerAliveCountMax=3"
-              "johnw@hera.lan"
-              "/etc/profiles/per-user/johnw/bin/drafts-mcp-server"
+              "${hostRegistry.hosts.hera.username}@${hostRegistry.hosts.hera.dnsName}"
+              "/etc/profiles/per-user/${hostRegistry.hosts.hera.username}/bin/drafts-mcp-server"
             ];
         }
         {
@@ -883,17 +877,12 @@ let
           args = [ ];
           env = {
             ZVEC_GREP_API_KEY = "dummy-key";
-            ZVEC_GREP_EMBEDDING = "hera/bge-m3-mlx-fp16";
-            ZVEC_GREP_ENDPOINT = "https://hera.lan:8443/v1/embeddings";
+            ZVEC_GREP_EMBEDDING = models.embeddings.local;
+            ZVEC_GREP_ENDPOINT = embeddingEndpoint;
           };
         }
         {
-          profiles = [
-            "clio-pi"
-            "hera-pi"
-            "shared-work-pi"
-            "vulcan-pi"
-          ];
+          clients = [ "pi" ];
         }
       )
       // {
@@ -902,7 +891,7 @@ let
           args = [ ];
           env = {
             OPENAI_API_KEY = typedEnv "OPENAI_API_KEY";
-            ZVEC_GREP_EMBEDDING = "openai/text-embedding-3-large";
+            ZVEC_GREP_EMBEDDING = models.embeddings.remote;
           };
         };
       };
@@ -911,7 +900,7 @@ let
         {
           command = "mcp-searxng";
           args = [ ];
-          env.SEARXNG_URL = "https://searxng.vulcan.lan";
+          env.SEARXNG_URL = "https://searxng.${hostRegistry.hosts.vulcan.dnsName}";
         }
         {
           hosts = [
@@ -1142,13 +1131,13 @@ let
 
       base = {
         env = {
-          ANTHROPIC_DEFAULT_HAIKU_MODEL = "claude-sonnet-5";
+          ANTHROPIC_DEFAULT_HAIKU_MODEL = models.claude.haiku;
           CLAUDE_AUTOCOMPACT_PCT_OVERRIDE = "80";
           CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY = "1";
           CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
-          CLAUDE_CODE_MAX_OUTPUT_TOKENS = "64000";
+          CLAUDE_CODE_MAX_OUTPUT_TOKENS = toString models.claude.maxOutputTokens;
           CLAUDE_CODE_NO_FLICKER = "1";
-          CLAUDE_CODE_SUBAGENT_MODEL = "claude-opus-5";
+          CLAUDE_CODE_SUBAGENT_MODEL = models.claude.subagent;
           DISABLE_AUTOUPDATER = "1";
           ENABLE_LSP_TOOL = "1";
           ENABLE_TOOL_SEARCH = "1";
@@ -1173,13 +1162,13 @@ let
           };
           excludedCommands = [ "gh" ];
         };
-        effortLevel = "max";
+        effortLevel = models.claude.effort;
         showThinkingSummaries = true;
         skipDangerousModePermissionPrompt = true;
         verbose = true;
         remoteControlAtStartup = true;
         agentPushNotifEnabled = true;
-        model = "claude-opus-5[1m]";
+        model = models.claude.name;
         theme = "dark";
       };
 
@@ -1407,14 +1396,14 @@ let
     PAL_FACTORY_DROID_USE_LOCAL_LOGIN = [ "true" ];
     SEARXNG_URL = [
       "http://localhost:8890"
-      "https://searxng.vulcan.lan"
+      "https://searxng.${hostRegistry.hosts.vulcan.dnsName}"
     ];
     ZVEC_GREP_API_KEY = [ "dummy-key" ];
     ZVEC_GREP_EMBEDDING = [
-      "hera/bge-m3-mlx-fp16"
-      "openai/text-embedding-3-large"
+      models.embeddings.local
+      models.embeddings.remote
     ];
-    ZVEC_GREP_ENDPOINT = [ "https://hera.lan:8443/v1/embeddings" ];
+    ZVEC_GREP_ENDPOINT = [ embeddingEndpoint ];
   };
 
   validEnvironmentValue =
@@ -1668,14 +1657,12 @@ let
       ) localModelEndpointsByHost;
       galleryProviderChecks = [
         (ensure (
-          validGalleryProviderDefinitions modelOverrides.localGalleryProviders
+          validGalleryProviderDefinitions models.localGalleryProviders
           &&
-            builtins.attrNames modelOverrides.localGalleryProviders
-            == builtins.attrNames modelOverrides.localProviderOverrides
-          && validGalleryProviderDefinitions modelOverrides.pi.galleryProviders
+            builtins.attrNames models.localGalleryProviders == builtins.attrNames models.localProviderOverrides
+          && validGalleryProviderDefinitions models.pi.galleryProviders
           &&
-            builtins.attrNames modelOverrides.pi.galleryProviders
-            == builtins.attrNames modelOverrides.pi.localProviderOverrides
+            builtins.attrNames models.pi.galleryProviders == builtins.attrNames models.pi.localProviderOverrides
         ) "invalid local gallery provider definitions")
       ];
       piModelDiscoveryChecks = [
@@ -1683,11 +1670,8 @@ let
           validPiModelDiscoveryEndpoints piModelDiscoveryEndpoints
           && piModelDiscoveryEndpoints == catalogPiModelDiscoveryEndpoints
           &&
-            builtins.attrNames modelOverrides.pi.localProviderOverrides
-            == builtins.attrNames piModelDiscoveryEndpoints
-          &&
-            builtins.attrNames modelOverrides.pi.galleryProviders
-            == builtins.attrNames piModelDiscoveryEndpoints
+            builtins.attrNames models.pi.localProviderOverrides == builtins.attrNames piModelDiscoveryEndpoints
+          && builtins.attrNames models.pi.galleryProviders == builtins.attrNames piModelDiscoveryEndpoints
           && piModelDiscoveryEndpoints.llama-swap == workstationLocalModelEndpoints.llama-swap
           && piLocalDiscoveryProviderByHost == catalogPiLocalDiscoveryProviderByHost
           && builtins.attrNames piLocalDiscoveryProviderByHost == workstationHosts
@@ -1701,7 +1685,7 @@ let
           recordingTranscriptionRoutesByHost == catalogRecordingTranscriptionRoutesByHost
           && builtins.hasAttr "hera" localModelEndpointsByHost
           && builtins.hasAttr recordingTranscriptionRoutesByHost.hera.provider localModelEndpointsByHost.hera
-          && builtins.hasAttr recordingTranscriptionRoutesByHost.hera.model modelOverrides.localProviderOverrides.omlx.modelOverrides
+          && builtins.hasAttr recordingTranscriptionRoutesByHost.hera.model models.localProviderOverrides.omlx.modelOverrides
         ) "recording transcription route authority")
       ];
       profileChecks = lib.mapAttrsToList (

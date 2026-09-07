@@ -63,7 +63,7 @@ in
       cmp expected-source actual-source
 
       cmp ${../bin/lib/host-routing.sh} ${hostRouting} || {
-        echo "nix-scripts: bin/lib/host-routing.sh is stale; regenerate it from config/hosts/registry.nix" >&2
+        echo "nix-scripts: bin/lib/host-routing.sh is stale; regenerate it from config/hosts.nix" >&2
         exit 1
       }
       mkdir -p $out/libexec/nix-scripts
@@ -109,6 +109,7 @@ in
     # The locked source declares no repository-wide license.
     license = prev.lib.licenses.unfree;
     extraInstall = ''
+      test -x "$out/bin/model_policy.py"
       ${final.perl}/bin/perl -i -pe \
           's^#!/usr/bin/env runhaskell^#!${final.haskellPackages.ghc}/bin/runhaskell^;' $out/bin/*
     '';

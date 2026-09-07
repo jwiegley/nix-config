@@ -76,14 +76,41 @@ future updates.
 
 ## Host registry and shared-home policy
 
-`config/hosts/registry.nix` is the data authority for host system, activation,
-login, the lean-server role, shared-work membership, rollout targets, daemon and
-local-build capacity, distributed-builder identity and client pools, and shell
-host/output routing. `config/host-options.nix` gives the host tables a typed module surface
+`config/hosts.nix` is the data authority for host system, activation,
+login, declared home directories, DNS names and domains, NixOS host IDs, named
+IPv4 addresses, host roles, shared-work membership, rollout targets, daemon and local-build capacity,
+distributed-builder identity and client pools, and shell host/output routing.
+Its shared `inferenceServices` ports drive the Nix-managed inference launchers
+and catalog endpoints. Named resolver addresses reside in `networkPeers`, and
+`probeHostGroups` supplies the configured blackbox monitoring groups.
+Configured primary login IDs and home paths are projected from host rows, while
+`userAccounts` records the additional NixOS accounts. `networkRanges` supplies the
+LAN and Podman CIDRs used by the return-routing configuration.
+For example, `hosts.clio.ipv4.wireguard1` supplies Clio's WG1 address to the gateway
+policy without repeating the address. `config/host-options.nix` gives the host
+tables a typed module surface
 and derives the capability flags consumed by modules. Darwin projects each
 builder's named SSH identity to its host-local key path and writes the resulting
 ordered pool to `/etc/nix/machines`; the registry does not own private key
 material.
+
+The Vulcan and VPS flakes select their registry rows before choosing the package
+system and pass those rows to their modules as `hostPolicy`. The owning networking
+modules consume the declared hostname, with Vulcan also consuming its domain and
+host ID. The `vulcan` and `ovh-vps` flake output names remain stable references.
+Both flakes pass the complete host data as `hostRegistry` for cross-host
+references and additional accounts. Generated hardware declarations retain
+their existing ownership.
+
+The `andoria` row supplies shared-work account, home, system, and activation
+defaults. Each canonical shared-work member has a separate host row that inherits
+those defaults and records its declared connection name. These records do not
+infer system hostnames from connection names. The dormant `git-ai` row retains its
+distinct SSH login without changing the owner of the shared Home Manager policy.
+The Andoria consumer reads the shared defaults for its system, home settings,
+terminal log path, local cache path, and local-account guard. Its `andoria-08`
+evaluation identity and `jwiegley` flake output name remain stable references
+rather than separate definitions of the account or system.
 
 The four active shared-work machines use one generated Home Manager
 configuration. Their Nix-owned leaves must therefore remain byte-identical.
@@ -120,10 +147,10 @@ need them for rollback.
 
 | Path | Owns | Must not own |
 | --- | --- | --- |
-| `config/hosts/registry.nix` | Host identity, capabilities, membership, rollout selection, daemon, local-build, and distributed-builder capacity, builder pools, and routing data | Module or shell implementation, private SSH key material, or activation |
+| `config/hosts.nix` | Host identity, capabilities, membership, rollout selection, daemon, local-build, and distributed-builder capacity, builder pools, and routing data | Module or shell implementation, private SSH key material, or activation |
 | `config/hosts/shell-routing.nix` | Build-time shell projection of registry routing data | Independent host identity policy or runtime Nix discovery |
 | `config/nix-trust.nix` | Shared binary-cache and client-signing trust data | Root-file installation or host activation |
-| `config/ai/models.nix` | Managed model roles, context limits, provider availability, and retired model migration data | Runtime model inventory or endpoint discovery |
+| `config/ai/models.nix` | Managed model roles, provider overrides, context limits, provider availability, and retired model migration data | Runtime model inventory or endpoint discovery |
 | `config/ai/catalog.nix` | Profiles, selectors, resources, validation, and composition of model roles | Client serialization or package builds |
 | `config/ai/renderers/*` | Generated documents for one client | Global resource selection |
 | `config/ai.nix` | Home Manager composition and ownership guards | Package implementation |
@@ -157,16 +184,22 @@ Nix client-local transport/default/override policy
   -> Home Manager preflight and activation
 ```
 
-`config/ai/models.nix` declares managed model roles, context limits, provider
-availability, and retired names used by mutable-settings migration. Nix owns those
-selections plus endpoint wiring and client-specific policy, not a cross-client runtime
-inventory. Managed PAL obtains provider values from the user-owned
+`config/ai/models.nix` declares managed model roles, provider overrides, context
+limits, provider availability, and retired names used by mutable-settings migration.
+`codex.name` selects the default, while `codex.modelOverrides` holds independent
+overrides for each model ID. Pi and Prime render the complete map. Codex projects
+context-window overrides into its native catalog without changing membership or
+order. Other metadata remains unchanged apart from the native serializer's rendered
+instruction template. `codex.autoCompactPercent` determines the current default's
+compaction threshold from its effective context window.
+Nix owns those selections plus endpoint wiring and client-specific policy, not a
+cross-client runtime inventory. Managed PAL obtains provider values from the user-owned
 `$XDG_CONFIG_HOME/pal-mcp/config` file through a strict non-shell parser; Nix owns
 only executable selection, typed environment names, and the generated MCP transport.
 Managed Factory requests reuse the mutable Droid login and suppress explicit Factory
 keys at the SDK boundary. The PAL resource is selected for Darwin, shared-work,
 and Vulcan profiles and excluded from the VPS profile.
-Codex retains its native catalog. Pi renders its cached model snapshot
+Pi renders its cached model snapshot
 immediately, gives `/model` refreshes the upstream 15-second selector deadline,
 and discovers local models at startup and through its native provider-refresh contract.
 Droid receives no Nix-generated local-model list, and Prime Agent reuses the safe
@@ -177,7 +210,53 @@ discovery map: local llama-swap plus the stable `omlx-clio` and `omlx-hera`
 providers. Both Pi homes therefore render the same provider identities while
 retaining their host-specific fixed-route policy.
 
-`zg` is installed on every managed home, while the catalog selects its two-tool Pi MCP transport only on Hera, Clio, shared-work, and Vulcan. Hera, Clio, and Vulcan use the Hera OpenAI-compatible embedding endpoint with its non-secret sentinel and `bge-m3-mlx-fp16`; shared-work inherits its mutable `OPENAI_API_KEY` for `text-embedding-3-large`. VPS has no default route or MCP entry. Nix owns neither `.zvec-grep` indexes nor user authorization for remote embedding requests.
+`recordings.llm` selects the cleanup model and provider for both the launchd command
+and the generated transcription route. `recordings.asr` supplies the speech model
+and language. The `pi-gpt-fast-mode` extension consumes the settings in `pi.fastMode`.
+The `nixos` view preserves the runtime `/etc/models.json` schema and the
+service-specific retry and context budgets. NixOS modules import that view from
+the paired shared source input.
+
+The generated `ai/model-policy.json` leaf under `XDG_CONFIG_HOME` exposes the
+non-secret policy to Emacs. Its `emacs` view owns configured model families and
+instances, GPTel models, preset parent assignments, inference overrides, and
+llama-swap resident/preload selections. `llm-setup` materializes these definitions
+as its existing model structs instead of maintaining a second literal list.
+Runtime discovery remains read-only for Nix-managed definitions. Reloading the
+library and preset definitions refreshes the registered
+settings after activation without rewriting active request state. The companion
+`ai/host-policy.json` leaf projects host details from `hosts.nix`, including the
+current home class and model-tool endpoints. Both JSON files are generated
+views, not editable authorities.
+
+The `scripts` view supplies launch defaults, conversion models, inference token
+budgets, and MLX benchmark cases. The scripts repository consumes the generated
+JSON through `model_policy.py`, without runtime Nix evaluation. Explicit
+per-invocation model choices retain their existing precedence.
+
+The `agentCat` view defines the existing routing selectors, personas, and ordered
+fallback chains. The `agent-cat-routing` host role selects the generated
+`agent-cat/routing.yaml` leaf, currently on Hera only. Its renderer emits version
+2 without secret declarations. Stable profile names are references and do not
+select models by their spelling. The Emacs persona does not redirect GPTel calls.
+
+The managed-file preflight refuses to replace an existing regular routing file.
+Initial adoption preserves that file before linking the generated leaf, without
+claiming the containing directory or mutable runtime state. Offline inspection
+validates the routing document but leaves exact model selectors static-unverified.
+
+The `advisors` view selects PAL partners, validation models, and Forge model
+aliases. Shared Markdown renderers expand the named `NIX_MODEL` template fields.
+Model-dependent skills are materialized by `agent-resources` before deployment.
+Their source templates do not define a second editable model roster.
+
+Packaged upstream model catalogs remain inventories rather than policy. The Pi
+source-build catalog addition supplies missing upstream model metadata without
+selecting that model for a client. The custom local zg entry is different: its
+identity and limits come from `embeddings.localDefinition`, while its endpoint
+uses the declared host and shared inference port.
+
+`zg` and its two-tool Pi MCP transport are selected on every managed host. Hera, Clio, Vulcan, and VPS use Hera's OpenAI-compatible embedding endpoint with its non-secret sentinel and `bge-m3-mlx-fp16`; shared-work uses `text-embedding-3-large` through a user-supplied `OPENAI_API_KEY`. Nix owns neither `.zvec-grep` indexes nor user authorization for remote embedding requests.
 
 oMLX itself is loopback-only. Its TLS gateway route is absent by default; both
 Darwin workstations enable it on their exact LAN address and admit the other

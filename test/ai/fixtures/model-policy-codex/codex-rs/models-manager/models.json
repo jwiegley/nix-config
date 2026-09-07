@@ -1,0 +1,7 @@
+{
+  "fixture": "preserve root metadata and model order",
+  "models": [
+    { "slug": "gpt-6-astra", "context_window": 272000, "fixture": "astra metadata" },
+    { "slug": "gpt-5.6-sol", "context_window": 272000, "fixture": "sol metadata" }
+  ]
+}

@@ -61,14 +61,16 @@ let
       git-tools-tea-compat = evaluationOnly systems;
       emacs-head = evaluationOnly darwinSystems;
       home-manager-release-skew = behavioral systems false;
-      host-behavior = evaluationOnly systems;
+      host-connection-policy = evaluationOnly systems;
       managed-agent-package-selection = evaluationOnly systems;
+      model-policy = behavioral systems false;
       model-sync-state = behavioral systems false;
       obr-ownership = evaluationOnly systems;
       omlx-proxy-boundary = behavioral darwinSystems false;
       pi-enabled-models-migration = behavioral darwinSystems false;
       pi-node-ca = behavioral darwinSystems false;
       samba-darwin-fixup = behavioral darwinSystems false;
+      script-model-policy = behavioral systems false;
       service-credentials = behavioral darwinSystems false;
       syncthing = behavioral systems false;
     };

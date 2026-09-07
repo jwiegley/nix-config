@@ -2,15 +2,33 @@ moduleArgs@{
   pkgs,
   lib,
   config,
+  hostname,
   ...
 }:
 
 let
-  home = "/Users/johnw";
+  hostRegistry = moduleArgs.hostRegistry or (import ./hosts.nix);
+  inherit (hostRegistry) inferenceServices;
+  home = hostRegistry.hosts.${hostname}.homeDirectory;
   xdg_configHome = "${home}/.config";
   xdg_cacheHome = "${home}/.cache";
   runsEternalTerminal = config.johnw.host.isDarwinWorkstation;
   serviceLaunchers = import ./launchd-service-launchers.nix { inherit lib pkgs; };
+  models = moduleArgs.modelPolicy or (import ./ai/models.nix);
+  aiCatalog = import ./ai/catalog.nix {
+    inherit lib models hostRegistry;
+    resources = pkgs.agent-resources;
+  };
+  recordingsRoute = aiCatalog.recordingTranscriptionRoutesByHost.hera;
+  recordingsAsrCommand = lib.escapeShellArgs [
+    "mlx-speech"
+    "asr"
+    "--model"
+    models.recordings.asr.model
+    "--language"
+    models.recordings.asr.language
+    "--audio"
+  ];
   mssqlImageSource = (import ../packages/source-catalog.nix "tools").mssql-server-image;
   mssqlManifestPrefix = "https://mcr.microsoft.com/v2/mssql/server/manifests/";
   mssqlImageDigest =
@@ -287,7 +305,7 @@ in
       llama-swap = {
         script = ''
           ${pkgs.llama-swap}/bin/llama-swap       \
-          --listen "127.0.0.1:8080"         \
+          --listen "127.0.0.1:${toString inferenceServices.llama-swap.port}" \
           --config ${home}/Models/llama-swap.yaml
         '';
         serviceConfig.RunAtLoad = true;
@@ -309,7 +327,7 @@ in
               client_body_temp_path ${logDir}/client_body;
               server {
                 ${lib.concatMapStringsSep "\n                " (
-                  address: "listen ${address}:8443 ssl;"
+                  address: "listen ${address}:${toString inferenceServices.omlx.gatewayPort} ssl;"
                 ) omlxProxy.listenAddresses}
 
                 ssl_certificate ${omlxProxy.certificateFile};
@@ -338,7 +356,7 @@ in
                     deny all;
 
                     client_max_body_size 20M;
-                    proxy_pass http://127.0.0.1:8000;
+                    proxy_pass http://127.0.0.1:${toString inferenceServices.omlx.port};
                     proxy_http_version 1.1;
                     proxy_buffering off;
 
@@ -361,7 +379,7 @@ in
                   }
                 ''}
 
-                # Proxy all other requests to chat.vulcan.lan
+                # Proxy all other requests to the existing chat gateway.
                 ${lib.optionalString omlxProxy.legacyGatewayEnable ''
                   location / {
                     ${lib.concatMapStringsSep "\n                  " (
@@ -372,14 +390,14 @@ in
                     ) omlxProxy.allowedSources}
                     deny all;
 
-                    proxy_pass https://chat.vulcan.lan;
+                    proxy_pass https://chat.${hostRegistry.hosts.vulcan.dnsName};
                     proxy_ssl_verify on;
                     proxy_ssl_trusted_certificate ${omlxProxy.trustedCaFile};
                     proxy_ssl_server_name on;
 
                     proxy_set_header Authorization "";
 
-                    proxy_set_header Host chat.vulcan.lan;
+                    proxy_set_header Host chat.${hostRegistry.hosts.vulcan.dnsName};
                     proxy_set_header X-Real-IP $remote_addr;
                     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                     proxy_set_header X-Forwarded-Proto $scheme;
@@ -423,7 +441,7 @@ in
     }
     // {
       omlx = {
-        script = "exec ${pkgs.omlx}/bin/omlx serve --host 127.0.0.1 --port 8000 --base-path /Users/johnw/.config/omlx/.omlx";
+        script = "exec ${pkgs.omlx}/bin/omlx serve --host 127.0.0.1 --port ${toString inferenceServices.omlx.port} --base-path ${lib.escapeShellArg "${home}/.config/omlx/.omlx"}";
         serviceConfig = {
           RunAtLoad = true;
           # Restart on crash but not on clean exit, and throttle restarts so
@@ -431,8 +449,8 @@ in
           # off instead of spin-looping and flooding the log.
           KeepAlive.SuccessfulExit = false;
           ThrottleInterval = 30;
-          StandardOutPath = "/Users/johnw/.local/share/omlx/logs/launchd.log";
-          StandardErrorPath = "/Users/johnw/.local/share/omlx/logs/launchd.log";
+          StandardOutPath = "${home}/.local/share/omlx/logs/launchd.log";
+          StandardErrorPath = "${home}/.local/share/omlx/logs/launchd.log";
         };
       };
     }
@@ -484,7 +502,7 @@ in
               -o "ExitOnForwardFailure=yes"          \
               -L 127.0.0.1:15432:127.0.0.1:5432      \
               -R 127.0.0.1:8317:127.0.0.1:8317       \
-              -R 127.0.0.1:8090:127.0.0.1:8080       \
+              -R 127.0.0.1:8090:127.0.0.1:${toString inferenceServices.llama-swap.port} \
               -R 127.0.0.1:9222:127.0.0.1:9223
         '';
         serviceConfig = {
@@ -573,15 +591,17 @@ in
           # mlx-speech comes from the per-user profile; afconvert from macOS.
           # When omlx serves cohere-transcribe correctly, replace the
           # --asr-command line with --asr-url/--asr-model against
-          # https://hera.lan:8443/v1 and export SSL_CERT_FILE again.
+          # this host's TLS endpoint and export SSL_CERT_FILE again.
           export PATH="/etc/profiles/per-user/johnw/bin:$PATH"
           exec ${pkgs.recordings}/bin/recordings "${home}/Recordings" \
             --output "${home}/Documents/Inbox" \
             --archive "${home}/Documents/Recordings" \
             --prompt "${home}/doc/post-process.md" \
-            --asr-command "mlx-speech asr --model cohere-asr --language en --audio" \
-            --llm-url http://localhost:8000/v1 \
-            --llm-model "Qwen3.8-27B-oQ4e-mtp"
+            --asr-command ${lib.escapeShellArg recordingsAsrCommand} \
+            --llm-url ${
+              lib.escapeShellArg aiCatalog.localModelEndpointsByHost.hera.${recordingsRoute.provider}
+            } \
+            --llm-model ${lib.escapeShellArg recordingsRoute.model}
         '';
         serviceConfig = {
           RunAtLoad = true; # Startup sweep catches anything that accumulated.

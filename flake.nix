@@ -184,7 +184,7 @@
           overlays = import ./config/overlays.nix { inherit inputs; };
         }
       );
-      hostRegistry = import ./config/hosts/registry.nix;
+      hostRegistry = import ./config/hosts.nix;
       mkLinuxHome =
         {
           username,
@@ -380,14 +380,9 @@
                 homeManagerLib = home-manager.lib;
                 stockDarwinPkgs = stockPkgsFor."aarch64-darwin";
               };
-              host-behavior = pkgs.callPackage ./test/home/host-behavior.nix {
-                inherit
-                  darwinConfigurations
-                  homeConfigurations
-                  nixosHomeEvaluationFixtures
-                  ;
-                agentWorkflowsPackage = packages.${system}.agent-workflows;
-                agentWorkflowsUpstreamPackage = rootInputs.agent-workflows.packages.${system}.default;
+              host-connection-policy = pkgs.callPackage ./test/home/host-connection-policy.nix {
+                inherit pkgs;
+                homeManagerLib = home-manager.lib;
               };
               managed-agent-package-selection = pkgs.callPackage ./test/home/managed-agent-package-selection.nix {
                 inherit inputs src;
@@ -397,6 +392,10 @@
                 inherit inputs src;
                 rootObr = packages.${system}.obr;
               };
+              script-model-policy = pkgs.callPackage ./test/ai/script-model-policy.nix {
+                scriptsSource = inputs.scripts;
+              };
+              model-policy = pkgs.callPackage ./test/ai/model-policy.nix { inherit pkgs; };
               model-sync-state = pkgs.callPackage ./test/ai/model-sync.nix {
                 inherit src;
                 homeManagerLib = home-manager.lib;

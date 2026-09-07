@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Generated from config/hosts/registry.nix by config/hosts/shell-routing.nix.
+# Generated from config/hosts.nix by config/hosts/shell-routing.nix.
 # Edit the registry, not this projection.
 
 normalize_nix_host() {

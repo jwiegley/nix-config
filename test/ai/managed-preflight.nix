@@ -54,6 +54,9 @@ let
   task9PiFastModePreflight = preflightFactory {
     newPaths = [ ".config/pi/agent/extensions/pi-gpt-fast-mode/config.json" ];
   };
+  routingPreflight = preflightFactory {
+    newPaths = [ ".config/agent-cat/routing.yaml" ];
+  };
   task9SharedLeafPreflight = preflightFactory {
     newPaths = [
       ".agents/skills/nix-managed/SKILL.md"
@@ -91,6 +94,7 @@ let
   task9PiKeybindingsPreflightScript = writePreflightScript "task9-ai-pi-keybindings-preflight" task9PiKeybindingsPreflight;
   task9PiLoopPreflightScript = writePreflightScript "task9-ai-pi-loop-preflight" task9PiLoopPreflight;
   task9PiFastModePreflightScript = writePreflightScript "task9-ai-pi-fast-mode-preflight" task9PiFastModePreflight;
+  routingPreflightScript = writePreflightScript "task9-ai-routing-preflight" routingPreflight;
   task9SharedLeafPreflightScript = writePreflightScript "task9-ai-shared-leaf-preflight" task9SharedLeafPreflight;
   invalidPreflightProbe = builtins.tryEval (preflightFactory {
     newPaths = [ ".config/not-a-managed-ai-leaf" ];
@@ -100,6 +104,21 @@ let
   });
   primeManagedSettingsProbe = builtins.tryEval (preflightFactory {
     newPaths = [ ".prime/agent/managed-settings.json" ];
+  });
+  modelPolicyProbe = builtins.tryEval (preflightFactory {
+    newPaths = [ ".config/ai/model-policy.json" ];
+  });
+  hostPolicyProbe = builtins.tryEval (preflightFactory {
+    newPaths = [ ".config/ai/host-policy.json" ];
+  });
+  modelPolicySiblingProbe = builtins.tryEval (preflightFactory {
+    newPaths = [ ".config/ai/auth.json" ];
+  });
+  routingSiblingProbe = builtins.tryEval (preflightFactory {
+    newPaths = [ ".config/agent-cat/secrets.yaml" ];
+  });
+  routingParentProbe = builtins.tryEval (preflightFactory {
+    newPaths = [ ".config/agent-cat" ];
   });
   agentModelAliasesProbe = builtins.tryEval (preflightFactory {
     newPaths = [ ".config/recordings/agent-model-aliases.json" ];
@@ -126,6 +145,11 @@ assert task9PreflightWithMcp.activation.after == [ ];
 assert !invalidPreflightProbe.success;
 assert !sherlockAncestorProbe.success;
 assert primeManagedSettingsProbe.success;
+assert modelPolicyProbe.success;
+assert hostPolicyProbe.success;
+assert !modelPolicySiblingProbe.success;
+assert !routingSiblingProbe.success;
+assert !routingParentProbe.success;
 assert agentModelAliasesProbe.success;
 assert recordingTranscriptionProbe.success;
 assert !primeUserSettingsProbe.success;
@@ -295,7 +319,7 @@ pkgs.runCommand "ai-managed-preflight"
       fi
       case "$script" in
         *task9-ai-pi-leaf-preflight | *task9-ai-pi-keybindings-preflight | \
-          *task9-ai-pi-loop-preflight | *task9-ai-pi-fast-mode-preflight)
+          *task9-ai-pi-loop-preflight | *task9-ai-pi-fast-mode-preflight | *task9-ai-routing-preflight)
           expected_count=1
           expected_noun=path
           ;;
@@ -325,7 +349,7 @@ pkgs.runCommand "ai-managed-preflight"
         fi
       else
         case "$label" in
-          first-adoption-collision | new-file)
+          first-adoption-collision | new-file | routing-regular-file)
             expected_output="$fragment: blocking leaf is a regular file: $case_home/$fragment"
             ;;
           new-directory | new-old-directory-shadow)
@@ -808,6 +832,19 @@ pkgs.runCommand "ai-managed-preflight"
     make_leaf "$case_home" ".prime/agent/mcp.json" '{"imports":[]}'
     run_checked pass no-mcp-consumer-ignores-adapter "" \
       "${task9PreflightNoMcpScript}" absent
+
+    setup_empty_case routing-absent
+    run_checked pass routing-absent "" "${routingPreflightScript}" absent
+
+    setup_empty_case routing-regular-file
+    make_leaf "$case_home" ".config/agent-cat/routing.yaml" 'SECRET_SENTINEL'
+    run_checked fail routing-regular-file ".config/agent-cat/routing.yaml" \
+      "${routingPreflightScript}" absent
+
+    setup_empty_case routing-managed-link
+    mkdir -p "$case_home/.config/agent-cat"
+    ln -s ${task9RetainedStoreLeaf} "$case_home/.config/agent-cat/routing.yaml"
+    run_checked pass routing-managed-link "" "${routingPreflightScript}" absent
 
     touch "$out"
   ''

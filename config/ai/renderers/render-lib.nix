@@ -1,12 +1,44 @@
 # Shared rendering helpers for the client renderers. One recognizer for typed
 # environment references, one markdown front-matter format, and one command
 # front-matter policy, so none of them can drift into per-client variants.
-{ lib }:
+{
+  lib,
+  modelPolicy ? import ../models.nix,
+}:
 let
   envReference = import ../env-reference.nix;
 
+  renderModelText =
+    text:
+    if !(lib.hasInfix "@NIX_MODEL_" text) then
+      text
+    else
+      let
+        rendered =
+          lib.replaceStrings
+            [
+              "@NIX_MODEL_PAL_REASONING@"
+              "@NIX_MODEL_PAL_PARTNER@"
+              "@NIX_MODEL_VALIDATORS@"
+              "@NIX_MODEL_FORGE_ORCHESTRATORS@"
+            ]
+            [
+              modelPolicy.advisors.pal.reasoning
+              modelPolicy.advisors.pal.partner
+              (lib.concatStringsSep ", " modelPolicy.advisors.validation)
+              (lib.concatStringsSep " or " modelPolicy.advisors.forge)
+            ]
+            text;
+      in
+      assert !(lib.hasInfix "@NIX_MODEL_" rendered);
+      rendered;
+
   renderMarkdownText =
-    metadata: text: if metadata == { } then text else "---\n${builtins.toJSON metadata}\n---\n${text}";
+    metadata: text:
+    let
+      body = renderModelText text;
+    in
+    if metadata == { } then body else "---\n${builtins.toJSON metadata}\n---\n${body}";
 
   renderAgentCapabilities =
     mappings: capabilities:
@@ -23,7 +55,7 @@ let
 in
 {
   inherit (envReference) isTypedEnv;
-  inherit renderAgentCapabilities renderMarkdownText;
+  inherit renderAgentCapabilities renderMarkdownText renderModelText;
 
   renderMarkdownFile = metadata: source: renderMarkdownText metadata (builtins.readFile source);
 

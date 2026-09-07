@@ -19,12 +19,15 @@ let
   repo =
     assert source.source.fetcher == "fetchFromGitHub";
     fetchFromGitHub source.source.args;
-  runnerBase = haskellPackages.callCabal2nix "agentic" (repo + "/haskell") { };
+  runnerPackages = haskellPackages.extend (
+    import (repo + "/nix/haskell-overrides.nix") { inherit lib stdenv; }
+  );
+  runnerBase = runnerPackages.callCabal2nix "agentic" repo { };
   runner = haskell.lib.overrideCabal runnerBase (old: {
     postPatch = (old.postPatch or "") + ''
-      substituteInPlace src/Agentic/Acp.hs \
-        --replace-fail 'stubScript = "../test/stub_adapter.py"' \
-          'stubScript = "${repo}/test/stub_adapter.py"'
+      substituteInPlace engine/acp/src/Agentic/Acp.hs \
+        --replace-fail 'AdapterSpec ["python3", "engine/acp/test/stub_adapter.py"]' \
+          'AdapterSpec ["${python3}/bin/python3", "${repo}/engine/acp/test/stub_adapter.py"]'
     '';
   });
   piSourceBuild = callPackage ./pi-source-build.nix { piSource = inputs.pi; };
@@ -32,14 +35,13 @@ in
 npmCachePkgs.buildNpmPackage {
   pname = "agent-cat-pi-extension";
   inherit (source) version;
-  src = repo + "/pi-extension";
+  src = repo + "/ext-pi";
 
   npmDepsHash = source.hashes.npmDepsHash;
   npmDepsFetcherVersion = 2;
   npmInstallFlags = [ "--ignore-scripts" ];
   npmRebuildFlags = [ "--ignore-scripts" ];
   dontNpmBuild = true;
-  patches = [ ../overlays/ai/patches/agent-cat-pi-chord.patch ];
 
   postPatch = ''
     ${python3}/bin/python3 - <<'PY'
@@ -78,9 +80,9 @@ npmCachePkgs.buildNpmPackage {
   checkPhase = ''
     runHook preCheck
     export TMPDIR=/tmp
-    cp -R ${repo}/haskell ${repo}/test ..
-    chmod -R u+w ../haskell ../test
-    patchShebangs src test ../haskell/test ../test
+    cp -R ${repo}/engine ${repo}/test ..
+    chmod -R u+w ../engine ../test
+    patchShebangs src test ../engine/acp/test ../test
     substituteInPlace test/native-targets-e2e.test.ts \
       --replace-fail '"--engine", "acp", "--adapter", "/usr/bin/env",' \
         '"--engine", "acp", "--adapter", "${python3}/bin/python3",' \

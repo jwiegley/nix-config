@@ -1,7 +1,7 @@
 { lib }:
 
 let
-  registry = import ./registry.nix;
+  registry = import ../hosts.nix;
   routingNames = builtins.attrNames registry.routing;
   localBuildLimitNames = builtins.attrNames registry.localBuildLimits;
   validName = name: builtins.match "[a-z0-9][a-z0-9-]*" name != null;
@@ -58,7 +58,7 @@ assert builtins.all (route: builtins.all validName (route.exactNames ++ route.co
 );
 ''
   #!/usr/bin/env bash
-  # Generated from config/hosts/registry.nix by config/hosts/shell-routing.nix.
+  # Generated from config/hosts.nix by config/hosts/shell-routing.nix.
   # Edit the registry, not this projection.
 
   normalize_nix_host() {

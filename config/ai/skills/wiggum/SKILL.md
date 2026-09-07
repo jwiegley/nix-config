@@ -113,4 +113,4 @@ Use the `parallelize` skill. As coordinator you keep all git and shared-state ch
 
 ## Confer via PAL for real decisions
 
-For genuine plans, designs, significant decisions, or critical reviews -- not routine steps -- use PAL MCP to reach consensus with the strongest available reasoning models (currently `gpt-5.5-pro` and `gemini-3.1-pro-preview`). Think deeply, gather the relevant context, and let the consensus shape the plan.
+For genuine plans, designs, significant decisions, or critical reviews -- not routine steps -- use PAL MCP to reach consensus with the configured reasoning models, `@NIX_MODEL_PAL_PARTNER@` and `@NIX_MODEL_PAL_REASONING@`. Think deeply, gather the relevant context, and let the consensus shape the plan.

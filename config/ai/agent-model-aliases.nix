@@ -59,21 +59,8 @@ let
     && lib.hasPrefix "~/" target.path
     && builtins.all (part: part != "" && part != "." && part != "..") (lib.splitString "/" target.path);
 
-  defaultAlias = "gpt sol";
-  rawAliases = {
-    deepseek = {
-      harness = "pi";
-      provider = "omlx-hera";
-      model = models.omlx.reasoning.name;
-      thinking = "max";
-    };
-    "gpt sol" = {
-      harness = "pi";
-      provider = "openai-codex";
-      model = models.codex.name;
-      thinking = "max";
-    };
-  };
+  defaultAlias = models.agentAliases.default;
+  rawAliases = models.agentAliases.aliases;
   defaultMachine = "hera";
   rawMachines = {
     hera.remote = null;

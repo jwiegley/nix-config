@@ -24,7 +24,7 @@ let
     name = "pi-coding-agent-extensions.md";
   };
   manifest = piPackages.pi-gallery.manifest;
-  fastModeConfig = import ../../config/ai/pi-gpt-fast-mode.nix;
+  fastModeConfig = modelOverrides.pi.fastMode;
   catalogSourceIds = builtins.attrNames manifest.sourceCatalog;
   declaredSourceIds =
     map (record: record.sourceName) (builtins.attrValues (manifest.members // manifest.supportSources))
@@ -47,7 +47,7 @@ let
     "omlx-provider"
   ];
   localModelMemberIds = localProviderMemberIds;
-  modelOverrides = import ../../config/ai/model-overrides.nix;
+  modelOverrides = import ../../config/ai/models.nix;
   galleryOwners =
     definitions: lib.unique (map (definition: definition.owner) (builtins.attrValues definitions));
   activeOrder = lib.subtractLists [ "lens" "mem" "flag" "trace" ] (

@@ -14,7 +14,7 @@ args@{
 let
   inherit (lib) mkOption types;
 
-  registry = import ./hosts/registry.nix;
+  registry = args.hostRegistry or (import ./hosts.nix);
 
   # personal-linux selects VPS AI profiles but has no concrete registry row,
   # so it cannot inherit the VPS server-lean role.
@@ -46,9 +46,59 @@ let
         type = types.str;
         description = "Login user this host's configuration is built for.";
       };
+      sshUser = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Explicit SSH login when it differs from the managed home owner.";
+      };
+      hostName = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Declared system hostname, absent when unknown or for a logical policy class.";
+      };
+      dnsName = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Declared DNS name used to reach this machine.";
+      };
+      mdnsName = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Declared mDNS name used by configured host mappings.";
+      };
+      domain = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Declared system DNS domain, when configured.";
+      };
+      hostId = mkOption {
+        type = types.nullOr (types.strMatching "[0-9a-fA-F]{8}");
+        default = null;
+        description = "Declared NixOS host ID used by the storage stack.";
+      };
+      homeDirectory = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Home directory of this configuration's login user, when declared.";
+      };
+      uid = mkOption {
+        type = types.nullOr types.ints.unsigned;
+        default = null;
+        description = "Declared numeric ID of this configuration's login user.";
+      };
+      gid = mkOption {
+        type = types.nullOr types.ints.unsigned;
+        default = null;
+        description = "Declared numeric ID of the login user's primary group.";
+      };
+      ipv4 = mkOption {
+        type = types.attrsOf types.str;
+        default = { };
+        description = "Bare IPv4 addresses keyed by their declared network or interface role.";
+      };
       roles = mkOption {
         type = types.listOf types.str;
-        description = "Coarse role tags consumed by the lean/full profile seam (#42).";
+        description = "Declared host roles used by profile and generated-policy selection.";
       };
     };
   };
@@ -91,7 +141,7 @@ in
       type = types.attrsOf hostRow;
       description = ''
         Typed fleet metadata and capability inputs populated from
-        config/hosts/registry.nix.
+        config/hosts.nix.
       '';
     };
 
@@ -99,7 +149,7 @@ in
       type = types.attrsOf routingRow;
       description = ''
         Typed shell normalization and flake-output data populated from
-        config/hosts/registry.nix.
+        config/hosts.nix.
       '';
     };
 
@@ -107,7 +157,7 @@ in
       type = sharedWorkRow;
       description = ''
         Typed shared-work membership, rollout targets, and daemon resource policy
-        populated from config/hosts/registry.nix.
+        populated from config/hosts.nix.
       '';
     };
 
@@ -170,7 +220,7 @@ in
           config.johnw.hostRouting
           config.johnw.sharedWork
         ] true;
-        message = "fleet host registry failed typed-schema validation (config/hosts/registry.nix)";
+        message = "fleet host registry failed typed-schema validation (config/hosts.nix)";
       }
     ];
   };

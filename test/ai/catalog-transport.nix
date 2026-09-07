@@ -21,12 +21,11 @@ let
     resources = "/catalog-agent-resources";
   };
   inherit (catalog) models;
-  modelOverrides = import "${src}/config/ai/model-overrides.nix";
   projectProviderEndpoints = import "${src}/config/ai/renderers/project-provider-endpoints.nix" {
     inherit lib;
   };
   mcpEnvironment = import "${src}/config/ai/managed-stdio.nix" { inherit lib; };
-  recordingTranscriptionModels = builtins.attrNames modelOverrides.localProviderOverrides.omlx.modelOverrides;
+  recordingTranscriptionModels = builtins.attrNames models.localProviderOverrides.omlx.modelOverrides;
   recordingTranscriptionRoute = catalog.recordingTranscriptionRoutesByHost.hera;
   renderLib = import "${src}/config/ai/renderers/render-lib.nix" { inherit lib; };
   inherit (renderLib) renderMarkdownText;
@@ -491,7 +490,7 @@ let
     };
   };
   syntheticGalleryEndpointsByOwner = projectProviderEndpoints {
-    definitions = modelOverrides.pi.galleryProviders;
+    definitions = models.pi.galleryProviders;
     endpoints = syntheticLocalModelDiscoveryEndpoints;
   };
   syntheticDiscoveryProfile = catalog.profiles.clio-pi;
@@ -1020,6 +1019,25 @@ assert builtins.all (
   ]
 ) profiles;
 assert builtins.all (
+  profile: ((selectFor profile).mcpServers ? zvec-grep) == (profile.client == "pi")
+) profiles;
+assert builtins.all (
+  profile:
+  let
+    route = catalog.zvecEmbeddingRoutesByHost.${profile.host};
+    env = (selectFor profile).mcpServers.zvec-grep.transport.env;
+  in
+  env.ZVEC_GREP_EMBEDDING == route.embedding
+  && (
+    if route.apiKey == null then
+      env.OPENAI_API_KEY == { env = "OPENAI_API_KEY"; } && !(env ? ZVEC_GREP_API_KEY)
+    else
+      env.ZVEC_GREP_API_KEY == "dummy-key"
+      && env.ZVEC_GREP_ENDPOINT == route.endpoint
+      && !(env ? OPENAI_API_KEY)
+  )
+) piProfiles;
+assert builtins.all (
   profile:
   builtins.all (
     server:
@@ -1051,13 +1069,13 @@ assert
     hera = "omlx-hera";
   };
 assert
-  builtins.attrNames modelOverrides.pi.localProviderOverrides
+  builtins.attrNames models.pi.localProviderOverrides
   == builtins.attrNames catalog.piModelDiscoveryEndpoints;
 assert
-  builtins.attrNames modelOverrides.pi.galleryProviders
+  builtins.attrNames models.pi.galleryProviders
   == builtins.attrNames catalog.piModelDiscoveryEndpoints;
 assert
-  modelOverrides.localGalleryProviders == {
+  models.localGalleryProviders == {
     llama-swap = {
       name = "llama-swap";
       owner = "llama-swap-provider";
@@ -1069,7 +1087,7 @@ assert
     };
   };
 assert
-  modelOverrides.pi.galleryProviders == {
+  models.pi.galleryProviders == {
     llama-swap = {
       name = "llama-swap";
       owner = "llama-swap-provider";
@@ -1105,13 +1123,13 @@ assert
       }
     ];
   };
-assert catalog.validGalleryProviderDefinitions modelOverrides.localGalleryProviders;
-assert catalog.validGalleryProviderDefinitions modelOverrides.pi.galleryProviders;
+assert catalog.validGalleryProviderDefinitions models.localGalleryProviders;
+assert catalog.validGalleryProviderDefinitions models.pi.galleryProviders;
 assert
   !(catalog.validGalleryProviderDefinitions (
-    modelOverrides.pi.galleryProviders
+    models.pi.galleryProviders
     // {
-      omlx-clio = modelOverrides.pi.galleryProviders.omlx-clio // {
+      omlx-clio = models.pi.galleryProviders.omlx-clio // {
         apiKey.env = "invalid-lowercase-reference";
       };
     }
@@ -1172,8 +1190,13 @@ assert
     "provider"
   ];
 assert recordingTranscriptionRoute.provider == "omlx";
-assert recordingTranscriptionModels == [ models.omlx.reasoning.name ];
-assert recordingTranscriptionRoute.model == models.omlx.reasoning.name;
+assert
+  recordingTranscriptionModels == lib.sort builtins.lessThan [
+    models.omlx.primary.name
+    models.omlx.reasoning.name
+  ];
+assert recordingTranscriptionRoute == models.recordings.llm;
+assert recordingTranscriptionRoute.model == models.omlx.primary.name;
 assert builtins.hasAttr recordingTranscriptionRoute.provider catalog.localModelEndpointsByHost.hera;
 # Profile opt-ins drive generated Codex TOML, Pi local provider wiring, Prime
 # model overrides, and runtime credential injection. Pin the set so a gained
@@ -1249,12 +1272,12 @@ assert !(builtins.hasAttr ".config/mcp/mcp.json" primeRendered.files);
 assert !(primeRendered ? mutableMcpGuard);
 assert builtins.all reject [
   (projectProviderEndpoints {
-    definitions = modelOverrides.pi.galleryProviders;
+    definitions = models.pi.galleryProviders;
     endpoints = builtins.removeAttrs catalog.piModelDiscoveryEndpoints [ "omlx-hera" ];
   })
   (projectProviderEndpoints {
-    definitions = modelOverrides.pi.galleryProviders // {
-      omlx-clio = modelOverrides.pi.galleryProviders.omlx-clio // {
+    definitions = models.pi.galleryProviders // {
+      omlx-clio = models.pi.galleryProviders.omlx-clio // {
         apiKey.env = "OMLX_CLIO_API_KEY";
       };
     };
@@ -1676,7 +1699,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
       (toString codexMcpProbeConfig)
       "/Users/test/${codexProfile.root}/nix-managed-model-catalog.json"
       catalog.items.commands.fess.metadata.description
-      models.codex.name
+      (toString ((pkgs.formats.json { }).generate "codex-model-policy.json" models.codex))
     ]
   }
 
@@ -1955,9 +1978,11 @@ pkgs.runCommand "ai-catalog-transport" { } ''
           )
         )
       } \
+      --argjson codexOverrides ${lib.escapeShellArg (builtins.toJSON models.codex.modelOverrides)} \
       --argjson hermesRoute ${if entry.profile.hermesRoute then "true" else "false"} '
       type == "object"
       and (.providers | type == "object")
+      and .providers["openai-codex"].modelOverrides == $codexOverrides
       and (
         (
           [
@@ -2073,7 +2098,7 @@ pkgs.runCommand "ai-catalog-transport" { } ''
             { }
           else
             projectProviderEndpoints {
-              definitions = lib.getAttrs (builtins.attrNames entry.localModelDiscoveryEndpoints) modelOverrides.pi.galleryProviders;
+              definitions = lib.getAttrs (builtins.attrNames entry.localModelDiscoveryEndpoints) models.pi.galleryProviders;
               endpoints = entry.localModelDiscoveryEndpoints;
             }
         )

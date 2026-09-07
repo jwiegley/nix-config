@@ -20,11 +20,11 @@
     "agent-cat": {
       "flake": false,
       "locked": {
-        "lastModified": 1788456287,
-        "narHash": "sha256-LWrmBmtMMD0gFXRFcELeGor4FmvnBOmiKKKzym3pL5U=",
+        "lastModified": 1788749771,
+        "narHash": "sha256-x707YIbzoDIGAlvQsP5Uo3kW09FjeZY3Zwa7xwfMvvs=",
         "owner": "jwiegley",
         "repo": "agent-cat",
-        "rev": "9df3cd3b6d42fa315b82b43db1749643cb45d9c4",
+        "rev": "828e8cacb7ce37c0ffc01b8576562f8747a59868",
         "type": "github"
       },
       "original": {
@@ -43,11 +43,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1788457146,
-        "narHash": "sha256-0+hN1WgaByhvJU/dkYZpuB4/5ijBefH51nJ8OLex+34=",
+        "lastModified": 1788750854,
+        "narHash": "sha256-ZdTAczbA0B78LqNGYS3i8t32Rh9f5Y5c46FAVmSKB7w=",
         "owner": "jwiegley",
         "repo": "agent-workflows",
-        "rev": "e10c235a473310c20b46959db6d8355b3605aa3d",
+        "rev": "f0e76c69770db65dea4c3d1a9adc7ac74cdccf2f",
         "type": "github"
       },
       "original": {
@@ -941,11 +941,11 @@
     "scripts": {
       "flake": false,
       "locked": {
-        "lastModified": 1788417420,
-        "narHash": "sha256-rtH91TqDj4G5y/RUnODh1dUoxkzw8ouw9OZaEf1Hpec=",
+        "lastModified": 1788741803,
+        "narHash": "sha256-Qgyi8ivdEMQBr62d2G58jPR4XD6jztDch1E9Kr4pmHI=",
         "owner": "jwiegley",
         "repo": "scripts",
-        "rev": "9af24890eecdcaadc6e368e84c117155e20b0523",
+        "rev": "214db36a1e1ff09fd69ff9f67d8969337a143c72",
         "type": "github"
       },
       "original": {

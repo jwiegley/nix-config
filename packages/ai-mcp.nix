@@ -6,10 +6,20 @@
   prev,
   llmAgents ? null,
   palMcpServer ? null,
+  modelPolicy ? import ../config/ai/models.nix,
+  hostRegistry ? import ../config/hosts.nix,
 }:
 
 let
   sources = import ./source-catalog.nix "ai";
+  localEmbedding = modelPolicy.embeddings.localDefinition // {
+    defaultEndpoint =
+      "https://${hostRegistry.hosts.${modelPolicy.embeddings.host}.dnsName}:"
+      + "${toString hostRegistry.inferenceServices.omlx.gatewayPort}/v1/embeddings";
+  };
+  localEmbeddingModels = {
+    ${localEmbedding.reference} = localEmbedding;
+  };
   droidPackage = llmAgents.packages.${prev.stdenv.hostPlatform.system}.droid;
   palPackage = builtins.fromTOML (builtins.readFile "${palMcpServer}/pyproject.toml");
   managedMcpPath = prev.lib.makeBinPath [
@@ -219,9 +229,16 @@ prev.lib.optionalAttrs (palMcpServer != null && llmAgents != null) {
         ../overlays/ai/patches/zvec-grep-openai-compatible-mcp.patch
       ];
 
+      postPatch = ''
+        substituteInPlace src/engine/models/catalog.ts \
+          --replace-fail '@NIX_LOCAL_EMBEDDING_MODELS@' \
+          ${prev.lib.escapeShellArg (builtins.toJSON localEmbeddingModels)}
+      '';
       npmDepsHash = sources.zvec-grep.hashes.npmDepsHash;
       nodejs = nodejs_22;
       nativeBuildInputs = [ makeWrapper ];
+      # Remote embeddings do not need ONNX's optional build-time CUDA download.
+      env.ONNXRUNTIME_NODE_INSTALL_CUDA = "skip";
 
       postInstall = ''
         install -d "$out/libexec"
@@ -232,19 +249,24 @@ prev.lib.optionalAttrs (palMcpServer != null && llmAgents != null) {
           --add-flags "server --stdio --mcp-toolset search-rg"
       '';
 
-      nativeInstallCheckInputs = [ gnugrep ];
+      __darwinAllowLocalNetworking = true;
+      nativeInstallCheckInputs = [
+        gnugrep
+        coreutils
+      ];
       doInstallCheck = true;
       installCheckPhase = ''
         runHook preInstallCheck
         test "$("$out/bin/zg" version)" = ${lib.escapeShellArg sources.zvec-grep.version}
-        "$out/bin/zg" help models | grep -F "hera/bge-m3-mlx-fp16" >/dev/null
-        "$out/bin/zg" help models | grep -F "openai/text-embedding-3-large" >/dev/null
+        "$out/bin/zg" help models | grep -F ${lib.escapeShellArg modelPolicy.embeddings.local} >/dev/null
+        "$out/bin/zg" help models | grep -F ${lib.escapeShellArg modelPolicy.embeddings.remote} >/dev/null
         "$out/bin/zg" help server | grep -F "<agent|search-rg|full>" >/dev/null
         grep -F 'server --stdio --mcp-toolset search-rg' "$out/bin/zg-mcp" >/dev/null
         grep -F 'OPENAI_API_KEY' "$out/bin/zg" >/dev/null
         grep -F 'ZVEC_GREP_API_KEY' "$out/bin/zg" >/dev/null
-        grep -F 'toolset === "search-rg"' "$out/lib/node_modules/@zvec/zvec-grep/dist/mcp/tools.js" >/dev/null
-        grep -F 'if (searchAndRg)' "$out/lib/node_modules/@zvec/zvec-grep/dist/mcp/tools.js" >/dev/null
+        timeout 45s ${nodejs_22}/bin/node ${../test/ai/zvec-grep.check.mjs} "$out" \
+          ${lib.escapeShellArg (builtins.toJSON localEmbedding)} \
+          ${lib.escapeShellArg modelPolicy.embeddings.remote}
         runHook postInstallCheck
       '';
 

@@ -7,9 +7,31 @@
   python3,
   runCommand,
   stdenv,
+  modelPolicy ? import ../config/ai/models.nix,
 }:
 
 let
+  inherit (import ../config/ai/renderers/render-lib.nix { inherit lib modelPolicy; })
+    renderModelText
+    ;
+  modelSkills = [
+    "forge"
+    "validated-code-review"
+    "wiggum"
+  ];
+  copyModelSkills = lib.concatMapStringsSep "\n" (
+    name:
+    let
+      source = ../config/ai/skills + "/${name}";
+      rendered = builtins.toFile "${name}-SKILL.md" (
+        renderModelText (builtins.readFile (source + "/SKILL.md"))
+      );
+    in
+    ''
+      copy_skill ${lib.escapeShellArg "${source}"} ${lib.escapeShellArg name}
+      cp --remove-destination ${rendered} "$skills/${name}/SKILL.md"
+    ''
+  ) modelSkills;
   gitSurgeonSource = (callPackage "${inputs.llm-agents}/packages/git-surgeon/package.nix" { }).src;
   piSources = import ./source-catalog.nix "pi";
   skillCreatorPython = python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
@@ -235,6 +257,7 @@ runCommand "agent-resources" { } ''
   }
 
   ${copyPonytailSkills}
+  ${copyModelSkills}
   copy_skill ${lib.escapeShellArg "${../config/ai/skills/skill-creator}"} \
     skill-creator
   for script in ${skillCreatorScriptArgs}; do

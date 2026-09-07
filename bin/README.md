@@ -425,7 +425,7 @@ new generation and the affected executable or service passes a runtime check.
 | `yubikey-switch MODE` | Replace active GnuPG key files for a YubiKey arrangement | `MODE` is `restore` or a backup suffix. It preflights and privately stages the complete key set, rolls back replacement failures, then kills GPG agents, probes the card, updates a Git remote, and may create PAM challenge state. Those later external side effects are not rolled back. |
 
 [`lib/host-routing.sh`](lib/host-routing.sh) is an internal generated projection
-of `config/hosts/registry.nix`. It normalizes host identities, maps them to flake
+of `config/hosts.nix`. It normalizes host identities, maps them to flake
 outputs, and exposes canonical membership separately from active rollout
 targets. Installed packages render it during the build; runtime commands do not
 evaluate Nix. It is not a standalone command.

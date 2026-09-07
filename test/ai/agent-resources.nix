@@ -13,6 +13,12 @@
 let
   inherit (pkgs) lib;
   piSources = import ../../packages/source-catalog.nix "pi";
+  inherit (import ../../config/ai/renderers/render-lib.nix { inherit lib; }) renderModelText;
+  modelSkills = [
+    "forge"
+    "validated-code-review"
+    "wiggum"
+  ];
   skillCreatorSource = ../../config/ai/skills/skill-creator;
   skillCreatorPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
   skillCreatorScripts = [
@@ -30,11 +36,14 @@ let
     "ponytail-help"
   ];
 
-  expectedSkills = ponytailSkills ++ [
-    "git-surgeon"
-    "skill-creator"
-    "translate-en"
-  ];
+  expectedSkills =
+    ponytailSkills
+    ++ modelSkills
+    ++ [
+      "git-surgeon"
+      "skill-creator"
+      "translate-en"
+    ];
 
   resources = pkgs.agent-resources;
   haveSources = ponytail != null && translate-tool != null && gitSurgeonSource != null;
@@ -184,6 +193,7 @@ let
     "cli.js"
     "agent-dir.ts"
     "agent-plugin-loader.ts"
+    "claude-plugin-loader.ts"
     "index.ts"
     "error-signal.ts"
     "state.ts"
@@ -215,6 +225,7 @@ let
     "unix-socket-transport.ts"
     "json-schema-validator.ts"
     "session-recovery.ts"
+    "session-approvals.ts"
     "sampling-handler.ts"
     "elicitation-handler.ts"
     "tool-registrar.ts"
@@ -228,6 +239,7 @@ let
     "ui-resource-handler.ts"
     "consent-manager.ts"
     "ui-server.ts"
+    "sandbox-proxy-template.ts"
     "glimpse-ui.ts"
     "npx-resolver.ts"
     "oauth.ts"
@@ -257,6 +269,7 @@ let
   piMcpPublicSources = [
     "agent-dir.ts"
     "agent-plugin-loader.ts"
+    "claude-plugin-loader.ts"
     "config.ts"
     "mcp-bearer-store.ts"
     "metadata-cache.ts"
@@ -303,6 +316,21 @@ let
     copy_expected_tree ${lib.escapeShellArg "${ponytail}/skills/${name}"} "$expected/${name}"
     chmod --reference=${lib.escapeShellArg "${ponytail}/skills/${name}"} "$expected/${name}"
   '') ponytailSkills;
+
+  copyModelExpected = lib.concatMapStringsSep "\n" (
+    name:
+    let
+      source = ../../config/ai/skills + "/${name}";
+      rendered = builtins.toFile "${name}-SKILL.md" (
+        renderModelText (builtins.readFile (source + "/SKILL.md"))
+      );
+    in
+    ''
+      copy_expected_tree ${lib.escapeShellArg "${source}"} "$expected/${name}"
+      cp --remove-destination ${rendered} "$expected/${name}/SKILL.md"
+      chmod --reference=${lib.escapeShellArg "${source}"} "$expected/${name}"
+    ''
+  ) modelSkills;
 
   piClosureCheck = pkgs.writeText "check-pi-extension-closure.mjs" ''
     import fs from "node:fs";
@@ -499,6 +527,7 @@ else
       }
 
       ${copyPonytailExpected}
+      ${copyModelExpected}
       copy_expected_tree ${lib.escapeShellArg "${skillCreatorSource}"} \
         "$expected/skill-creator"
       for script in ${skillCreatorScriptArgs}; do

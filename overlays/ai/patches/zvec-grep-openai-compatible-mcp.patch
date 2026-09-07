@@ -1,8 +1,7 @@
-diff --git i/src/engine/models/backends/qwen.ts w/src/engine/models/backends/qwen.ts
-index 083cf89..389f554 100644
---- i/src/engine/models/backends/qwen.ts
-+++ w/src/engine/models/backends/qwen.ts
-@@ -9,6 +9,7 @@ import {
+diff --git a/src/engine/models/backends/qwen.ts b/src/engine/models/backends/qwen.ts
+--- a/src/engine/models/backends/qwen.ts
++++ b/src/engine/models/backends/qwen.ts
+@@ -9,6 +9,7 @@
    type NormalizedEmbeddingOptions,
  } from "../embeddings.js";
  import type {
@@ -10,7 +9,7 @@ index 083cf89..389f554 100644
    QwenMultimodalEmbeddingCatalogEntry,
    QwenTextEmbeddingCatalogEntry,
  } from "../catalog.js";
-@@ -28,6 +29,9 @@ const defaultDependencies: QwenDependencies = {
+@@ -28,9 +29,13 @@
    fetch: (...args) => globalThis.fetch(...args),
  };
  
@@ -20,7 +19,11 @@ index 083cf89..389f554 100644
  type QwenTextEmbeddingSpec = {
    displayName: string;
    errorCodePrefix: string;
-@@ -56,7 +60,7 @@ type Qwen37TextEmbeddingCatalogEntry = Extract<
++  requestTimeoutMs?: number;
+ };
+ 
+ const QWEN_TEXT_EMBEDDING_V4_SPEC = {
+@@ -56,15 +61,16 @@
  abstract class QwenTextEmbeddingModel extends BaseEmbeddingModel {
    readonly info: EmbeddingModelInfo;
  
@@ -29,8 +32,9 @@ index 083cf89..389f554 100644
    private readonly apiKey: string;
    private readonly endpoint: string;
    private readonly displayName: string;
-@@ -64,7 +68,7 @@ abstract class QwenTextEmbeddingModel extends BaseEmbeddingModel {
+   private readonly errorCodePrefix: string;
    private readonly dependencies: QwenDependencies;
++  private readonly requestTimeoutMs: number;
  
    constructor(
 -    entry: QwenTextEmbeddingCatalogEntry,
@@ -38,10 +42,47 @@ index 083cf89..389f554 100644
      spec: QwenTextEmbeddingSpec,
      options: CreateEmbeddingModelOptions,
      dependencies: Partial<QwenDependencies>,
-@@ -237,6 +241,21 @@ export class QwenTextEmbeddingV4Model extends QwenTextEmbeddingModel {
-   }
- }
+@@ -92,6 +98,7 @@
+     this.displayName = spec.displayName;
+     this.errorCodePrefix = spec.errorCodePrefix;
+     this.dependencies = { ...defaultDependencies, ...dependencies };
++    this.requestTimeoutMs = spec.requestTimeoutMs ?? DEFAULT_REMOTE_EMBEDDING_TIMEOUT_MS;
  
+     const apiKey = options.apiKey?.trim() ?? "";
+     if (apiKey.length === 0) {
+@@ -121,7 +128,7 @@
+     );
+ 
+     let response: Response;
+-    const signal = remoteEmbeddingSignal(options.signal);
++    const signal = remoteEmbeddingSignal(options.signal, this.requestTimeoutMs);
+ 
+     try {
+       response = await this.dependencies.fetch(this.endpoint, {
+@@ -143,7 +150,7 @@
+       throwIfEmbeddingCancelled(options.signal);
+       throw new EngineError(`${this.displayName} request failed`, {
+         code: this.errorCode("REQUEST_FAILED"),
+-        context: `model=${this.info.reference} endpoint=${this.endpoint} timeoutMs=${DEFAULT_REMOTE_EMBEDDING_TIMEOUT_MS}`,
++        context: `model=${this.info.reference} endpoint=${this.endpoint} timeoutMs=${this.requestTimeoutMs}`,
+         cause,
+       });
+     }
+@@ -153,6 +160,7 @@
+     try {
+       body = await response.json();
+     } catch (cause) {
++      signal.throwIfAborted();
+       throw new EngineError(`${this.displayName} response was not valid JSON`, {
+         code: this.errorCode("INVALID_JSON"),
+         context: `model=${this.info.reference} status=${response.status}`,
+@@ -234,6 +242,33 @@
+     dependencies: Partial<QwenDependencies> = {},
+   ) {
+     super(entry, QWEN_TEXT_EMBEDDING_V4_SPEC, options, dependencies);
++  }
++}
++
 +const OPENAI_COMPATIBLE_TEXT_EMBEDDING_SPEC = {
 +  displayName: "OpenAI-compatible text embedding",
 +  errorCodePrefix: "OPENAI_COMPATIBLE_TEXT_EMBEDDING",
@@ -53,18 +94,40 @@ index 083cf89..389f554 100644
 +    options: CreateEmbeddingModelOptions,
 +    dependencies: Partial<QwenDependencies> = {},
 +  ) {
-+    super(entry, OPENAI_COMPATIBLE_TEXT_EMBEDDING_SPEC, options, dependencies);
-+  }
-+}
-+
- export class Qwen37TextEmbeddingModel extends QwenTextEmbeddingModel {
-   constructor(
-     entry: Qwen37TextEmbeddingCatalogEntry,
-diff --git i/src/engine/models/catalog.ts w/src/engine/models/catalog.ts
-index 0df92bb..1b2fab3 100644
---- i/src/engine/models/catalog.ts
-+++ w/src/engine/models/catalog.ts
-@@ -56,6 +56,32 @@ export const EMBEDDING_MODEL_CATALOG = {
++    const endpoint = new URL(options.endpoint?.trim() ?? entry.defaultEndpoint);
++    if (["/", "/v1", "/v1/"].includes(endpoint.pathname)) {
++      endpoint.pathname = "/v1/embeddings";
++    }
++    super(
++      entry,
++      {
++        ...OPENAI_COMPATIBLE_TEXT_EMBEDDING_SPEC,
++        requestTimeoutMs: "requestTimeoutMs" in entry ? entry.requestTimeoutMs : undefined,
++      },
++      { ...options, endpoint: endpoint.href },
++      dependencies,
++    );
+   }
+ }
+ 
+@@ -583,8 +618,11 @@
+   return output;
+ }
+ 
+-function remoteEmbeddingSignal(signal: AbortSignal | undefined): AbortSignal {
+-  const timeout = AbortSignal.timeout(DEFAULT_REMOTE_EMBEDDING_TIMEOUT_MS);
++function remoteEmbeddingSignal(
++  signal: AbortSignal | undefined,
++  timeoutMs = DEFAULT_REMOTE_EMBEDDING_TIMEOUT_MS,
++): AbortSignal {
++  const timeout = AbortSignal.timeout(timeoutMs);
+   return signal ? AbortSignal.any([signal, timeout]) : timeout;
+ }
+ 
+diff --git a/src/engine/models/catalog.ts b/src/engine/models/catalog.ts
+--- a/src/engine/models/catalog.ts
++++ b/src/engine/models/catalog.ts
+@@ -56,6 +56,21 @@
      maxInputTokens: 128000,
    },
  
@@ -81,23 +144,12 @@ index 0df92bb..1b2fab3 100644
 +    maxInputTokens: 8191,
 +  },
 +
-+  "hera/bge-m3-mlx-fp16": {
-+    backend: "openai-compatible",
-+    kind: "text",
-+    reference: "hera/bge-m3-mlx-fp16",
-+    provider: "hera",
-+    model: "bge-m3-mlx-fp16",
-+    dimension: 1024,
-+    metric: "cosine",
-+    defaultEndpoint: "https://hera.lan:8443/v1/embeddings",
-+    maxBatchSize: 20,
-+    maxInputTokens: 8192,
-+  },
++  ...(@NIX_LOCAL_EMBEDDING_MODELS@ as const),
 +
    "qwen/qwen3-vl-embedding": {
      backend: "qwen",
      kind: "multimodal",
-@@ -249,6 +275,16 @@ export type QwenEmbeddingCatalogEntry = Extract<
+@@ -249,6 +264,16 @@
    { backend: "qwen" }
  >;
  
@@ -215,21 +267,37 @@ index f835efe..fa7033b 100644
    );
  }
  
-diff --git i/src/daemon/server-controller.ts w/src/daemon/server-controller.ts
---- i/src/daemon/server-controller.ts
-+++ w/src/daemon/server-controller.ts
-@@ -155,10 +155,10 @@ export async function serverStatus(
-     const response = await fetch(new URL("/healthz", record.serverUrl), {
-       signal: AbortSignal.timeout(1_000),
-     });
+diff --git a/src/daemon/server-controller.ts b/src/daemon/server-controller.ts
+--- a/src/daemon/server-controller.ts
++++ b/src/daemon/server-controller.ts
+@@ -13,6 +13,7 @@
+ import {
+   DEFAULT_MCP_TOOLSET,
+   MCP_TOOLSET_ENV,
++  parseMcpToolset,
+   resolveMcpToolset,
+   type McpToolset,
+ } from "../mcp/toolset.js";
+@@ -428,17 +429,14 @@
+       typeof value.startedAt !== "number" ||
+       typeof value.updatedAt !== "number" ||
+       typeof value.serverUrl !== "string" ||
+-      typeof value.ready !== "boolean" ||
+-      (value.mcpToolset !== undefined &&
+-        value.mcpToolset !== "agent" &&
+-        value.mcpToolset !== "full")
++      typeof value.ready !== "boolean"
+     )
+       return undefined;
      return {
-       running: true,
--      ready: response.ok && record.ready,
-+      ready: response.ok,
-       pid: record.pid,
-       serverUrl: record.serverUrl,
-       mcpToolset: record.mcpToolset,
-    };
+       ...(value as Omit<DaemonInstanceRecord, "mcpToolset">),
+       // Locks written before toolset profiles exposed the full six-tool MCP
+       // surface, so preserve that behavior when reporting a live legacy daemon.
+-      mcpToolset: value.mcpToolset ?? "full",
++      mcpToolset: parseMcpToolset(value.mcpToolset ?? "full"),
+     };
+   } catch {
+     return undefined;
 diff --git i/src/cli/help.ts w/src/cli/help.ts
 index c2080f2..45fa3a7 100644
 --- i/src/cli/help.ts

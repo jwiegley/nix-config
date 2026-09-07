@@ -217,6 +217,40 @@ Remove retired exact enabled-model patterns from the Pi migration and prove the 
 ]
 #+end_src
 
+* DONE [#B] Prevent ask from exposing authentication headers
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-0jvo
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-05 Sat 13:32]
+:MODIFIED: [2026-09-05 Sat 14:37]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-05 Sat 14:37]
+:CLOSE_REASON: ask passes authentication headers over stdin, rejects line breaks, and omits them from verbose output. Fake-credential regressions verify argv/output secrecy and JSON-safe model encoding; source owners and real credentials were untouched.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The existing sys/scripts/ask builds credential-bearing curl header argv and prints them in verbose mode. This was found during model-policy inventory. Fix using the existing credential owner and a non-argv, non-logging header channel; add fake-credential regressions. No real credentials or provider calls were used during this inspection.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-0jvo",
+    "depends_on_id": "nix-j72u",
+    "type": "discovered-from",
+    "created_at": "2026-09-05T20:32:03.135949Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Fail full cross-consumer gates when any required consumer is skipped
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -4719,6 +4753,38 @@ The fixture waits only within its existing bounded startup allowance for a posit
 ]
 #+end_src
 
+* TODO [#D] Diagnose missing patchelf diagnostics in Darwin zg fixup
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-cmij
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-05 Sat 11:33]
+:MODIFIED: [2026-09-05 Sat 11:33]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Both the accepted zg Darwin build and central-policy builds emit repeated patchelf: command not found during fixup, yet native behavioral checks pass. Inspect the Nix fixup inputs and vendored artifact handling without disabling meaningful fixup or runtime checks. Evidence: /tmp/zg-acceptance.kMJOd6/aarch64-darwin-timeout-retry.log and /tmp/zg-central-policy-build.log. No change to this behavior was made during centralization.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-cmij",
+    "depends_on_id": "nix-j72u",
+    "type": "discovered-from",
+    "created_at": "2026-09-05T18:33:53.113735Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#A] Fix Nix-managed Codex model catalog schema mismatch                    :ai:codex:nix:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -7515,6 +7581,101 @@ The 2026-08-17 automatic candidate 0.4.7 is incompatible with the fail-closed ma
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#C] Centralize model and machine policy across the managed fleet
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-j72u
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-04 Fri 20:25]
+:MODIFIED: [2026-09-06 Sun 14:34]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-06 Sun 14:34]
+:CLOSE_REASON: Completed the user-revised bounded two-file consolidation. Independent goal auditor approved the actual consumers, preserved policy, grouped verification evidence, and scoped diffs. No scoped blocker remains. Full-host builds, publication, deployment, lock adoption, and runtime repairs were excluded and are not claimed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Finish the existing two-file consolidation: config/ai/models.nix owns managed model details and config/hosts.nix owns configured host details. Model consolidation is complete. Finish the already-enumerated host/account references, including the account declarations currently being edited in NixOS, VPS, and their Home Manager wrappers. Then run the existing relevant gates together and review the scoped cross-repository diff. Batch related reads and mechanical edits, reuse existing verification, inspect interfaces before calling them, and do not create overlapping checks or restart a broad inventory. Preserve existing values, unrelated work, credentials, runtime state, accepted zg work, and the deleted host-behavior test. No package upgrades, runtime repairs, infrastructure redesign, new framework, publication, commits, pushes, lock updates, or activation. Finish by reporting the actual results and exact unresolved items, rather than inventing further milestones.
+
+** Design
+
+Latest completed local units: NixOS duplicate models.nix removed and all ten service/home imports now consume (import shared/config/ai/models.nix).nixos. Existing retry budgets, reasoning context override and JSON shape were preserved byte-for-byte against /tmp/nixos-model-policy-before.json. Actual NixOS model-config renderer output also matched, at /nix/store/xr7dp9i4fz6wnanlmrlgmx6jqijraghg-models.json. Current NixOS docs/comments updated; historical plans retained. Local NixOS checkout has no initialized Obr cache, so this cross-repository work is tracked here. Machine registry now declares known host/DNS names, shared usernames, known homes, and distinct IPv4 LAN/WiFi/WG1/overlay addresses, with canonical IPv4 validation. Darwin hostname/home/gateway inputs and managed SSH connection facts now reference it. Old builder/membership/capacity/routing data matched /tmp/nix-machine-registry-before.json. Gateway policy is byte-identical to /tmp/nix-omlx-network-before.json. /tmp/nix-host-connection-check.nix proved ten modern/legacy SSH configurations unchanged. New registered focused host-connection-policy check passed synthetic hostname/address/user/architecture/capacity changes, unrelated-data preservation, schema validation, invalid-IP and dangling-builder rejection. Both focused checks passed together after latest edits: /nix/store/pa9f7cymr7ha2x9i21mq9czpj6r16ky5-model-policy-propagation and /nix/store/i156k296yx3v4fcmjvjxwz5676ff18mr-host-connection-policy, log /tmp/nix-model-host-focused-checks.log. Source formatting and both-repository diff checks passed. Using the already-declared public CA, GET-only Hera inventory confirmed Qwen, current DeepSeek MXFP4 and GLM are advertised, but old DeepSeek oQ8e is absent; Clio metadata query timed out. No inference requests were sent. Remaining: complete inventories and all service/machine consumers, GPTel/llm-setup defaults and projection, prompt rosters, agent-cat routing, remaining package-owned model policy (including zg local catalog/timeout), full integrated/host gates, signed publication and authorized fleet activation including VPS. Zg final handoff and accepted tests remain preserved. Exclude unrelated pre-existing mangodisk addition in config/darwin.nix from scoped commits. New tests are intent-to-add only; no new commits, pushes or activations.
+
+** Notes
+
+Expanded goal mtntukar-0par6f covers model policy in models.nix and all managed-machine facts in hosts/registry.nix, including external NixOS, Andoria, scripts and Emacs integrations. Structural model merge baseline /tmp/nix-model-policy-before.4FcTB1 passed. Current local model changes centralize recordings Qwen/ASR roles, aliases, Claude choices/parameters, Prime effort, fast-mode policy, embeddings selection, and native Codex context overrides plus auto-compaction percentage. Fast-mode extension remains wired; its removed separate policy file was equal to models.pi.fastMode before removal. New test/ai/model-policy.nix built directly with the pinned stock package set: baseline and synthetic policies passed for generated Codex/Pi/Prime/Claude configuration, aliases, fast-mode settings and actual recordings argv, including quoted ASR input. Output /nix/store/h3ph9chncdj0z906xq01pjfz6mf73sgp-model-policy-propagation, log /tmp/nix-model-policy-check.log. New smoke validation rejects the cached pre-fix native Codex catalog before any executable launch, evidence /tmp/nix-model-policy-regression.VfmcWa. Focused nixfmt, ruff and diff checks passed. Whole integration attempt timed out after 900s and the registered root model-policy target timed out after 300s with no final result, under high host load; neither is claimed passing. Two new read-only Codex scouts failed version preflight ETIMEDOUT and produced no inventories. No machine-registry or external integration edits yet. Remaining model policy includes active prompt rosters, GPTel/llm-setup defaults/overrides, NixOS model policy, routing integration, and zg local embedding catalog identity/limits still in its patch. zg final handoff received and its five final exit-code files independently read as zero at /tmp/zg-acceptance.kMJOd6. User explicitly authorized VPS deployment in that handoff with manual one-job bounds, overriding its earlier rollout exclusion for this delivery; git-ai remains dormant. Preserve zg code, new runtime test, ignored index and intentional host-behavior deletion. No new commits, pushes or activations yet.
+
+Emacs model-policy integration completed locally: models.nix now declares Anthropic identities, emacs default/preset/provider/quick-model choices, preset-parent assignments, inference overrides and llama-swap residency/preload policy. Home Manager renders the non-secret .config/ai/model-policy.json leaf, with exact preflight permission and a denied sibling regression. llm-setup consumes policy through typed model/symbol getters, preserves inventory state, and initializes its default from Nix. Managed default now uses the MXFP4 DeepSeek instance already declared by the user and advertised by Hera, instead of the absent old oQ8e instance. GPTel presets/backends/ext model choices now read the central policy. Existing init.org is mode 0444 and was not changed; its Aider variable reference receives the centrally initialized model. No permissions were changed. New lisp/gptel-model-policy-test.el exercises actual pinned GPTel preset registration, applied rewrite roles and provider registration with credential/network lookups rejected. Baseline and source-mutated policies both passed: /nix/store/njbsjrg5zm2ps77zg8alrdvd5adbhw4n-gptel-model-policy-integration, recipe /tmp/nix-gptel-model-policy-check.nix and log /tmp/nix-gptel-model-policy-check.log. Library ERT 10/10 and warning-as-error compilation passed: /nix/store/kk641vkg7rvyq5v3mhrxg2d37sjrbnix-llm-setup-ert and /nix/store/bkwy8n46dwqmlr51igiyqjg1p28n201x-llm-setup-byte-compile. Package-lint, checkdoc and relint passed; format-all check passed at /nix/store/xyfcgg4lnw871zlqmcdbp6ch2g15fw3h-llm-setup-model-policy-format. Updated focused root results: /nix/store/960inskd7k0vhpa9whsnzd00hbn1a0bd-model-policy-propagation, /nix/store/bhjd9ddaygi8r8msaw8c7yiam9157vv3-ai-managed-preflight, and existing host-connection-policy check all passed. Current Nix and external diffs/formats checked. Docs describe policy loading and preset reload semantics. Machine-specific Emacs defaults/endpoints, script consumers, prompt rosters, zg custom model catalog policy, remaining machine/service facts, routing integration, full host gates and all publication/deployment remain unfinished. No new commits, pushes, activation, credential reads or inference requests.
+
+zg model/endpoint policy now centralized. models.embeddings.localDefinition owns its custom model ID, dimension, timeout and limits; models.embeddings.host chooses the registry host. Registry inferenceServices owns the shared oMLX/gateway/llama-swap ports. Catalog endpoints, oMLX and llama-swap launch arguments, gateway listener/upstream, and the forwarded llama-swap local port now reference those facts. Local zg catalog entry is injected into the patch with a const assertion, preserving discriminated-union typing. Default entry matched the accepted package exactly. Darwin package and native install checks passed at /nix/store/q4hx05fdfykkfxka28xp6y0d85yrwgdb-zvec-grep-0.2.1; synthetic model-name/dimension/timeout/host/port build passed at /nix/store/gany0yl2xwhlk0ah2z6r5ja3hbaii7dj-zvec-grep-0.2.1 (/tmp/zg-synthetic-policy-build.nix and log). Native tests still cover endpoint normalization, cancellation/body timeouts, readiness, two-tool MCP, rg and real native index/query against a fake embedding endpoint. Portable all-system no-build evaluation passed (/tmp/nix-central-policy-portable-check.log). Linux remote builds/install checks passed: aarch64 output /nix/store/0j2qdpig6bddwbhxrsb48x6vvnslrp6i-zvec-grep-0.2.1 is registered locally; x86 output /nix/store/mx8332yfwh8jzzm5vngm6amdjhn7v2ad-zvec-grep-0.2.1 remains on andoria-08. Initial combined invocation timed out during output copy. Direct x86 retry was explicitly refused for lacking a signature trusted by Hera; receipt /tmp/zg-central-copy.DfRmym exit 1. No signature bypass or key read was attempted. Resolve at delivery through existing signing policy, not disabled checks. Existing Darwin patchelf fixup diagnostics are confirmed in the old accepted build too, tracked nix-cmij.
+
+Active prompt model rosters now use explicit NIX_MODEL template fields. models.advisors owns PAL partner/reasoning IDs, validator pool and Forge aliases; render-lib expands these uniformly in client Markdown. Forge, wiggum and validated-code-review skills are materialized through agent-resources; catalog selection points to generated trees. Sample stage diagrams remain clearly labelled examples, not default policy. Prompt defaults and synthetic changes passed the model-policy check at /nix/store/kpz1zx0383mqf555ywj5lqkj24h05hmm-model-policy-propagation. The actual agent-resources package has all fields expanded, and full resource gate passed at /nix/store/bbyfc9kwmi3psrna918wmx0nhxk17qjg-agent-resources-check (106 runtime tests plus exact-tree/closure checks). Fixed our expected-tree chmod ordering and restored Nix store context for source paths. Also reconciled stale exact MCP inventories against pinned package.files and actual imports: claude-plugin-loader.ts, sandbox-proxy-template.ts, session-approvals.ts, and the first module public compiled outputs. No guard weakened. All changed Nix files formatted and git diff --check passed. The Pi Astra source-build addition is a missing upstream catalog backport, not a selection/override, and remains inventory. Machine service assignments, remaining machine/script consumers, agent-cat routing integration, final full-host gates, commits/publication and activation remain unfinished. No new activation/publication or paid inference requests.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 540,
+    "issue_id": "nix-j72u",
+    "author": "johnw",
+    "text": "Scope checkpoint: keep this an authority-and-propagation refactor. No infrastructure redesign, general package upgrades, stale runtime cleanup, or unrequested default changes. Completed script gate: 12 launcher/client cases with fixture and Nix policy, 131 transcript cases, 23 dispatcher cases in /nix/store/c1kj0kisqmm8ispshxavyrnn1h6nks4l-script-model-policy-check. Actual my-scripts build includes executable reader at /nix/store/ndyj2w9bgxymlib21ar884rc1xz9r1q1-my-scripts. Current unit moves the existing secret-free agent-cat routing policy into models.nix without changing it. Runtime-owned Aider/oMLX files were inspected only for non-secret selection/structure metadata and remain unchanged. No publication or activation.",
+    "created_at": "2026-09-05T22:47:47Z"
+  },
+  {
+    "id": 541,
+    "issue_id": "nix-j72u",
+    "author": "johnw",
+    "text": "Routing policy unit: models.agentCat now preserves the existing user v2 engines, exact selectors, personas, stable profile identifiers and fallback order. Parsed baseline equality against the original regular routing.yaml passed. The existing registry roles field now assigns agent-cat-routing to Hera only, and the Home Manager composer projects one exact leaf. Focused raw-module tests prove Hera inclusion, Clio exclusion, and removal after editing the central role. host-connection-policy evaluation/build passed at /nix/store/i156k296yx3v4fcmjvjxwz5676ff18mr-host-connection-policy. Model and source-mutated routing output tests passed at /nix/store/c5xnl1qw8jjmacj96hb1wh89w34nr2f1-model-policy-propagation. Preflight rejects neighboring/parent claims and refuses a regular routing file without mutation or content disclosure, while accepting absent/store-linked leaves: /nix/store/rq4f7cdinqfaqxxzznj55p1b7d3cqin3-ai-managed-preflight. Existing v2 runner build from the clean f77f5f61 worktree parsed both policies offline. Every selected native rung, bound, persona and static-unverified provenance matched; a dangling model reference was rejected. Evidence: /tmp/agent-cat-policy-runtime.60dB6n. Installed agentic-run still rejects --routing, so the already-required runner packaging update remains a delivery prerequisite, not a general upgrade. Full Hera home evaluation timed out at 180s without a result (/tmp/nix-routing-home-eval.log); focused module tests passed instead, not a full-host claim. Fixed new test diagnostic wiring, qualified synthetic source replacements and Nix syntax/format errors without weakening checks. User routing, Aider and oMLX runtime files remain untouched. No publication, activation or provider requests.",
+    "created_at": "2026-09-05T23:24:01Z"
+  },
+  {
+    "id": 542,
+    "issue_id": "nix-j72u",
+    "author": "johnw",
+    "text": "Shared-work machine unit completed locally. Added five concrete member rows inheriting the existing andoria class, without inferring system hostnames or adding rollout members. git-ai retains its separate ubuntu SSH login and existing EC2 connection name. Builder definitions now read concrete member facts. SSH aliases use the registry. Andoria flake system/account/home, ET log path, local cache path and SSSD local-account guard now read the shared host record. Existing hosts/builders/capacities/pools/membership/routing matched /tmp/shared-work-policy-before.json. All ten prior SSH configurations still match /tmp/nix-host-connection-check.nix. Andoria architecture, account/home/cache and ET text match the original module snapshot (/tmp/andoria-home-policy-before.json). New registered Andoria check passed baseline and independent architecture/account/home fixtures plus actual shell guard behavior with dot/plus usernames: /nix/store/sg30f8jf78a9crqd762s0yf9z1236hp8-andoria-host-policy. The focused root host check passed synthetic shared account, architecture, DNS and SSH-login changes and rejects a dangling member. Both checks evaluated for Darwin, aarch64 Linux and x86_64 Linux (/tmp/shared-work-platform-check.log). Fixed a test-only Nix string-whitespace redirection bug, retaining exact failure checks; the test never reads real passwd data. Formatting and both diffs pass. No source-tree index copying, credential inspection, activation or publication. Remaining inventory and service/machine projections, required runner packaging, final integrated gates, publication and fleet activation remain open.",
+    "created_at": "2026-09-06T00:22:11Z"
+  },
+  {
+    "id": 543,
+    "issue_id": "nix-j72u",
+    "author": "johnw",
+    "text": "User scope correction is authoritative: finish two data files and their references. Renaming the existing host authority from config/hosts/registry.nix to config/hosts.nix, without a duplicate file or compatibility layer, and updating maintained imports and existing fixtures. Broader package/runtime/deployment work is not part of the current refactor. The latest identity-only changes passed focused baseline/synthetic checks before the rename: Vulcan /nix/store/3ds5zzb4w7kcn7vryrbr2xw6zcm896dv-vulcan-host-identity and VPS /nix/store/y3y1z3sav3bwb7glpbmxz4lr000h1mpr-vps-host-identity. Their values matched /tmp/nixos-identity-before.json. No system activation occurred.",
+    "created_at": "2026-09-06T01:19:03Z"
+  },
+  {
+    "id": 544,
+    "issue_id": "nix-j72u",
+    "author": "johnw",
+    "text": "Focused consolidation progress: the host authority is now config/hosts.nix, with maintained imports, fixtures, source filesets and generated shell-header references updated. llm-setup no longer keeps a literal model list: all 15 configured families and instances come from models.nix and materialize as the same existing structs. Full object/host-default equality passed at /nix/store/xn8ciir3nx9w98vx46kb910rq8klgrdk-llm-two-authority-equivalence. Host defaults/endpoints are projected from hosts.nix as ai/host-policy.json and consumed by llm-setup/GPTel. Managed sync reports discoveries but refuses to write a second Lisp model list. SSH destination facts and Syncthing node/peer data moved to hosts.nix. The existing service-specific 192.163.3.9/32 entry was preserved rather than repaired. Syncthing node JSON and all ten prior SSH projections match exactly. Builder known-hosts now derives the same plaintext from its existing central public-key encoding, with byte equality verified. Existing focused model/host/preflight checks pass, and real pinned GPTel baseline/synthetic model+host tests pass at /nix/store/p3vgjcpi9i4f5x3p8lngml664d31snxb-gptel-model-policy-integration. ERT, warning-as-error byte compilation and library lints pass. The initial generic formatter lacked GPTel macro context; the corrected contextual check passes without source reformatting at /nix/store/3kjqvximm89gch9vbxs4jk5490sm8xnl-gptel-context-format-check. Remaining work is only remaining duplicated configuration details/references and final focused review, not upgrades, runtime repair or deployment.",
+    "created_at": "2026-09-06T04:11:15Z"
+  },
+  {
+    "id": 545,
+    "issue_id": "nix-j72u",
+    "author": "johnw",
+    "text": "Focused reference sweep continues. Scripts now use host_policy / model_policy.py --hosts against the generated host-policy.json, with endpoint and account values in hosts.nix. ai, hf.sh and Gemini conversion no longer carry their own managed host URLs or account-name tests. Gemini defaults and the trusted-remote comparison use the same declared endpoint, while explicit remote opt-in remains independent. Wrapper lookups remain lazy for disabled AI features. Script gate passes 13 tests with fixture and actual Nix policy, 132 transcript tests and 23 dispatcher tests: /nix/store/3hl4lvfahdw7fy9h6x8zpbh3vfd824nd-script-model-policy-check. Model consolidation task is complete for maintained configuration; remaining scanned identifiers are comments, fixtures or upstream/runtime inventory. NixOS common SSL and PostgreSQL-client defaults now use hostPolicy, and all direct helper importers pass it. Podman client gateway comes from hosts.vulcan.ipv4.podman without changing network configuration. Service vhosts and associated paths for Loki, Grafana, Qdrant, SearXNG, Glances, Aria2, Radicale, BudgetBoard, OpenProject, Open WebUI and PostgreSQL now reference the host DNS fact; ATD display links and local-mail domains also reference it. Existing identity check extended to validate actual virtual-host metadata on baseline and synthetic host data, passing at /nix/store/pqp68b9bba96jl2djq6lgzy6cycqrwfy-vulcan-host-identity. No certificate generation, daemon changes, package upgrades, activation or publication were performed. Remaining host literals in other maintained NixOS configuration are the next reference-only work.",
+    "created_at": "2026-09-06T16:43:16Z"
+  },
+  {
+    "id": 546,
+    "issue_id": "nix-j72u",
+    "author": "johnw",
+    "text": "Continued the two-file reference sweep without deployment or runtime changes. Container and Home Manager endpoints, generated monitoring links, Prometheus and VictoriaMetrics, Glance, Blackbox, ATD, Alertmanager, Immich, Vane, Zimit/Kiwix, Jellyfin, and Flume now reference host data. The Vulcan flake passes the existing complete data set as hostRegistry alongside hostPolicy. hosts.nix owns probeHostGroups and named resolver peers. Probe-group JSON equals the previous table, and the actual Blackbox YAML derivation plus every scrape definition equal the pre-edit module for both Grist states. Default-value substitution reproduces the complete original source for the simple reference-only batches. Preserved the Grist persisted login identity and the certificate exporter identifiers for already-retired certificates.\n\nExpanded the existing Vulcan identity check, not the deleted host-behavior matrix. It checks fifteen actual vhost name/certificate-path projections, remote-node address and native platform labels, probe groups, Hera endpoint/port, and DNS targets under baseline and independent synthetic data. Passed: /nix/store/6f7yshbqqpiykfijq5m6z9qfjjfbsawi-vulcan-host-identity. Evaluation also passed on Darwin, aarch64 Linux and x86_64 Linux. Eight rendered certificate/bootstrap scripts pass bash -n without executing them: /nix/store/dmiskhav2a3vv6x3vmln7nfzx1mqfawy-host-reference-script-syntax. Flume defaults match the old addresses and follow synthetic username/domain changes. Root host-connection-policy, managed preflight, and model-policy checks pass. All 34 changed root Nix files and 65 changed NixOS Nix files passed nixfmt, and both diffs pass whitespace checks. Corrected test-only module projections, required fixture arguments, and the mistaken assumption that the first DNS probe target was Vulcan, retaining full ordered DNS-target assertions.\n\nEvidence logs: /tmp/vulcan-vhost-expanded-check.log, /tmp/vulcan-host-sweep-platforms.json, /tmp/host-reference-script-syntax.log, /tmp/blackbox-host-ref-equivalence.json, /tmp/blackbox-host-groups-{before,after}.json, /tmp/host-reference-root-check.log, /tmp/host-sweep-model-check.log, /tmp/host-mail-policy-check.json. These are focused declaration/source checks, not a complete NixOS build or activation. Downstream locks remain unchanged. Remaining work is the reference-only sweep in networking, DNS/mail, Hermes/proxies and other service consumers, account declarations, and final cross-repository verification. Publication, activation, package upgrades and runtime repair remain excluded by the latest user scope.",
+    "created_at": "2026-09-06T19:01:19Z"
+  },
+  {
+    "id": 547,
+    "issue_id": "nix-j72u",
+    "author": "johnw",
+    "text": "Applied the user-requested pace and scope correction to the persistent goal itself, preserving task IDs and evidence. The superseded publication/rollout objective is removed. The finish line is the enumerated references plus grouped existing verification, without renewed inventories or overlapping test work.\n\nCompleted the enumerated host/account references. hosts.nix now supplies configured primary Linux IDs, independent UID/GID values, additional NixOS/VPS accounts, home paths, the existing mDNS mapping, gateway ports, named network peers, and routing ranges. NixOS and VPS account/Home Manager modules consume these values. Local gateway clients, DNS/mail/CA metadata, remaining service endpoints, Hermes parent-to-guest arguments, and session SSH settings use the central data. SSH -G proves identical effective baseline settings and propagation of independently changed remote users/hosts and local home, preserving Clio LAN-only selection. Authentication pins, CA/provisioner identities, Grist persisted login, retired-certificate identifiers, implementation-owned container IDs/data paths and diagnostic examples retain their existing owners and meaning.\n\nSeven existing Nix gates passed together on the edited source: model policy, host connections, managed preflight, scripts, Vulcan identity/accounts, VPS identity/accounts, and Andoria policy. Log: /tmp/two-authority-final-nix-checks.log. Latest account outputs: /nix/store/qn8y4f81cizw8f7ywjs6n19hbcp0hd4y-vulcan-host-identity and /nix/store/hhphh95lf7yv7fy0h24k6y9m066j2498-vps-host-identity. Script output: /nix/store/577vgj7vn5w0prksqqw7n9q97h2rmngb-script-model-policy-check. All five additional accounts passed independent user/UID/GID/home mutations (/tmp/two-authority-extra-accounts.json). Final Hermes parent/guest forwarding, bridge and guest addresses passed (/tmp/hermes-host-registry-check.json). Offline SSH output: /nix/store/xa6vhbs794p761zqzlizl7kfq90rhyxi-session-gather-host-policy. Mail/CA checks: /tmp/mail-ca-host-policy-check.json. Preserved-source comparisons passed, including the final networking commands under current values.\n\nAll five llm-setup checks and pinned GPTel integration passed (/tmp/two-authority-final-elisp-checks.log), with GPTel output /nix/store/s1j8kvsphslvnx4j1zsn119v62zw7cr9-gptel-model-policy-integration. Formatting passes for 34 root Nix, 90 NixOS, 7 VPS and 3 Andoria files, and scoped cross-repository diffs pass whitespace checks. Corrected test-only syntax/projection issues and legacy formatting without changing assertions or package selections. Reviewed the account and prior scoped reference diffs and updated the existing architecture documentation. Confirmed hosts.nix remains 0600, init.org remains 0444, and host-behavior remains deleted.\n\nNo remaining blocker in the bounded reference list. Limitations remain explicit: these are focused declaration/behavior checks with the edited shared input injected, not complete host builds. Downstream locks and deployed runtime files are unchanged. No commits, pushes, upgrades, key/certificate operations, paid requests, or activation were performed. The goal completion auditor is the remaining lifecycle step.",
+    "created_at": "2026-09-06T21:32:42Z"
   }
 ]
 #+end_src
@@ -10881,6 +11042,26 @@ forgetConsumedTurnsForChildWithStorage trims the child ID before exact deletes. 
 ]
 #+end_src
 
+* DOING [#B] Make zg base endpoint and all-host MCP usable
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-qouv
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-04 Fri 21:05]
+:MODIFIED: [2026-09-04 Fri 22:46]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+User now explicitly requests the exact zg index --embedding hera/bge-m3-mlx-fp16 --api-key dummy-key --endpoint https://hera.lan:8443 --embedding-concurrency 16 --rebuild command in ~/src/nix to complete, and two-tool zg MCP enabled on every managed host. Supersedes prior Hera-only scope; shared-work retains deferred mutable OpenAI key per earlier routing request. Remove slow host-behavior per nix-xnxb. Fix real daemon/toolset and endpoint seams, verify behavior with isolated runtime checks and requested rebuild, then hand off uncommitted changes to agent-deck session agent-cat for commit/push/fleet activation.
+
+** Notes
+
+Implementation/runtime acceptance complete; deployment handoff to main agent-cat Agent Deck session 47616e3a-1788417149. Exact base-URL --rebuild command passed: 534 files, 3450 entities, 0 failed, 18m48s. Live two-tool MCP vector search against the actual index passed. Darwin, aarch64-linux and x86_64-linux package builds with native indexing/search, MCP lifecycle, timeout/cancellation tests passed. Fixed endpoint normalization, search-rg lock parsing, Hera 10-minute body-inclusive timeout and optional ONNX CUDA download. All Pi profiles enabled; shared-work OpenAI key remains mutable/unprovided. Slow host-behavior fully removed under nix-xnxb. Pi declared input aligned with local fork HEAD a11a385aedc50aa3d0ef38f7c8346694a0dd14f2. Concurrent model work preserved. No commit/push/activation by this session. Full handoff and logs: /tmp/zg-acceptance.kMJOd6/handoff.md. Keep issue open until integrated review, signed commits, publication, all-host activation and deployed verification finish.
+
 * DONE [#D] State the canonical Gitea remote contract in top-level documentation
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -11407,6 +11588,38 @@ Partner observation 2026-08-10T21:51:54.606Z: remove already-resolved questions 
 :END:
 
 make update failed while validating plasma-wiki because candidate Nixpkgs selected tmux 3.7c, whose macOS configure now requires an explicit jemalloc policy. Add a Darwin compatibility override with jemalloc at the portable Fractal seam and verify the candidate runtime closure.
+
+* TODO [#B] Restore Chord runtime discovery for managed Pi subagents
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-rn4y
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-04 Fri 20:45]
+:MODIFIED: [2026-09-04 Fri 20:45]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Read-only scout launches fail before any work: managed nix-gallery cannot load Agent Cat because Pi runtime package chord is unavailable. Both service-model-policy and client-model-policy scouts failed at startup (workflow 098250b7-ff42-495d-9b1d-6524e67e8add). Diagnose package/runtime layout and test managed Pi child startup; do not disable the gallery or bypass failed tests.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-rn4y",
+    "depends_on_id": "nix-j72u",
+    "type": "discovered-from",
+    "created_at": "2026-09-05T03:45:37.515085Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
 
 * DONE [#B] Make Andoria builders accept peer-produced store paths
 :PROPERTIES:
@@ -18051,14 +18264,14 @@ A read-only fleet preflight printed the VPS Git remote URL, which contained an e
 ]
 #+end_src
 
-* TODO [#C] Align Pi flake literal with catalog projection
+* DOING [#C] Align Pi flake literal with catalog projection
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-u4ew
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-04 Fri 19:25]
-:MODIFIED: [2026-09-04 Fri 19:25]
+:MODIFIED: [2026-09-04 Fri 20:12]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
@@ -18935,6 +19148,36 @@ Final frozen file internal/session/hook_status_lock_test.go SHA-256 007e2209bf4c
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+* DOING [#B] Publish agent-cat TUI and activate Hera
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-w233
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-06 Sun 17:39]
+:MODIFIED: [2026-09-06 Sun 20:08]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+User explicitly authorized committing and pushing all pending work, publishing the approved agent-cat TUI implementation, updating agent-workflows and nix consumers, and activating Hera. Preserve existing work and upstream changes. Use signed commits, dependency-first publication, existing gates and host-owned activation. Do not publish mutable runtime state or secrets; do not weaken preflight or artifact trust.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 548,
+    "issue_id": "nix-w233",
+    "author": "johnw",
+    "text": "Published signed agent-cat 828e8cacb7ce37c0ffc01b8576562f8747a59868. Integrated approved TUI with current routing hardening and Chord rather than dropping either branch. Preserved path-derived authority, duplicate-YAML/URL/final-request bounds, cache identity and confined reads, per-alias ACP redactions, stable lineage, and protocol negotiation. Fixed shared Deck route identity after the new v2 gate reproduced crossed concurrent answers and 6 instead of 7 sends. Schema/discovery/routing, policies/examples, ACP/Deck, runtime/TUI tests and full PTY pass. Independent scoped merge review returned GO. Paired local-source Nix runner/Pi package passes at /nix/store/gm6kqqksmxg5vh793y871fr325q6k9a2-agent-cat-pi-extension-0.1.0. Standalone JS tests could not load Chord from the older inherited runtime; the paired Nix package tests provide matching runtime evidence. Scripts 214db36, llm-setup bc506f2, org-agents b74c9ee, and dot-emacs 9de8dd0de are signed and pushed. llm-setup hooks initially lacked Emacs, then exposed stale bytecode loading; used its declared Emacs and fixed load-prefer-newer without skipping hooks. Agent-workflows now pins 828e8cac, builds at /nix/store/ckc1nnz7w1x77fflkm0amapqi0i4bb88-agent-workflows, and its 74 descriptors plus scripted packaged wf --tui launch/result-copy/0600/terminal-restoration check pass. Root/downstream consolidation publication and Hera activation remain pending. Exact routing-file backup approval was requested and has not yet been received. Existing source gate scripts re-entered their own Nix shells; subsequent direct checks used declared tool paths through root direnv. No provider inference, activation or runtime-state migration performed.",
+    "created_at": "2026-09-07T03:08:20Z"
   }
 ]
 #+end_src
@@ -19994,6 +20237,24 @@ Pi-mem synchronously scans 130 legacy session directories during every session_s
 :END:
 
 Revise doc/USER-GUIDE.md so it explains the authoritative checkout topology, Andoria and VPS consumer roles, separate trust and CPU root leaves, exact updater holdback semantics, and the four-host rollout and acceptance model. Keep obr/doc/PLAN.org as the sole current-work authority and exclude transient rollout status.
+
+* DONE [#C] Remove slow host-behavior test
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-xnxb
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-04 Fri 21:01]
+:MODIFIED: [2026-09-04 Fri 21:04]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-04 Fri 21:04]
+:CLOSE_REASON: Deleted test/home/host-behavior.nix, root flake check, and manifest entry per user request. No live references outside issue history; scoped Nix parsing and formatting pass. No replacement full-host test.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+User explicitly requests deleting test/home/host-behavior.nix entirely because of its cost. Remove its root check wiring and manifest entry, retain other checks, and preserve unrelated concurrent working-tree edits. Verify with focused parsing and check-roster evaluation only; do not run host-behavior or replace it with another full-host test.
 
 * DONE [#B] Reproduce Clio Path Finder SMB mount failure
 :PROPERTIES:

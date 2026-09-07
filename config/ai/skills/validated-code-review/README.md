@@ -119,11 +119,11 @@ All configuration is conversational. State overrides in the same message that re
 
 | Input | Default | Notes |
 |-------|---------|-------|
-| Model list | The `MODELS:` line at the top of `SKILL.md` | The list must contain at least two models, because different-model verification is impossible with one. Add or substitute models of comparable strength. |
+| Model list | `advisors.validation` in the shared Nix `config/ai/models.nix`, rendered into `MODELS:` | The list must contain at least two models for different-model verification. A request may supply its own list. |
 | Base ref | `origin/main` | Set this to the parent branch when reviewing one PR in a stack, for example `origin/feature-part-1`. Otherwise the diff would include the parent PRs' changes. Prefer remote tracking refs. |
 | Extra categories | None | Additional focused review categories beyond the four defaults, for example concurrency or API compatibility. |
 
-To change the default model list for your whole team, edit the `MODELS:` line in `SKILL.md`.
+To change the managed default model list, edit `advisors.validation` in `config/ai/models.nix` and rebuild the generated resources. The stage diagram illustrates one sample run and does not define this policy.
 
 ## 6. Output
 

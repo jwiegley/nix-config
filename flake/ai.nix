@@ -303,6 +303,7 @@ let
     root = ../.;
     fileset = lib.fileset.unions [
       ../config/ai
+      ../config/hosts.nix
       ../flake
       ../overlays/ai
       ../packages/agent-resources/pi-mcp-adapter-xdg-config-home.patch
