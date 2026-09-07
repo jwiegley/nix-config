@@ -10698,6 +10698,21 @@ Preserve the pending test-only cleanup in test/ai/codex-catalog-smoke.py: remove
 ]
 #+end_src
 
+* DONE [#C] Fix Agent Cat Linux E2E runner path
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-q60q
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-07 Mon 08:13]
+:MODIFIED: [2026-09-07 Mon 14:36]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-07 Mon 14:36]
+:CLOSE_REASON: Use a Nix env wrapper and patch Agent Deck test fixture shebangs.
+:SOURCE_REPO: .
+:ORIGINAL_SIZE: 0
+:END:
+
 * DONE [#B] Pin repository Ruff policy across toolchain updates
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

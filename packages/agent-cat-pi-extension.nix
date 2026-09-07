@@ -1,5 +1,6 @@
 {
   callPackage,
+  coreutils,
   fetchFromGitHub,
   haskell,
   haskellPackages,
@@ -8,6 +9,7 @@
   python3,
   stdenv,
   unixtools,
+  writeShellScript,
 }:
 
 let
@@ -30,6 +32,9 @@ let
           'AdapterSpec ["${python3}/bin/python3", "${repo}/engine/acp/test/stub_adapter.py"]'
     '';
   });
+  runnerEnv = writeShellScript "agent-cat-runner-env" ''
+    exec ${coreutils}/bin/env "$@"
+  '';
   piSourceBuild = callPackage ./pi-source-build.nix { piSource = inputs.pi; };
 in
 npmCachePkgs.buildNpmPackage {
@@ -82,12 +87,14 @@ npmCachePkgs.buildNpmPackage {
     export TMPDIR=/tmp
     cp -R ${repo}/engine ${repo}/test ..
     chmod -R u+w ../engine ../test
-    patchShebangs src test ../engine/acp/test ../test
+    patchShebangs src test ../engine/acp/test ../engine/agent-deck/test ../test
     substituteInPlace test/native-targets-e2e.test.ts \
       --replace-fail '"--engine", "acp", "--adapter", "/usr/bin/env",' \
         '"--engine", "acp", "--adapter", "${python3}/bin/python3",' \
       --replace-fail '"--adapter-arg", "python3", "--adapter-arg", resolve' \
-        '"--adapter-arg", resolve'
+        '"--adapter-arg", resolve' \
+      --replace-fail 'executable: "/usr/bin/env",' \
+        'executable: "${runnerEnv}",'
 
     scope="$PWD/node_modules/@earendil-works"
     nested_scope="$scope/pi-coding-agent/node_modules/@earendil-works"
