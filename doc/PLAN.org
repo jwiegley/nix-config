@@ -19152,15 +19152,17 @@ Final frozen file internal/session/hook_status_lock_test.go SHA-256 007e2209bf4c
 ]
 #+end_src
 
-* DOING [#B] Publish agent-cat TUI and activate Hera
+* DONE [#B] Publish agent-cat TUI and activate Hera
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-w233
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-09-06 Sun 17:39]
-:MODIFIED: [2026-09-06 Sun 20:51]
+:MODIFIED: [2026-09-06 Sun 22:42]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-06 Sun 22:42]
+:CLOSE_REASON: Published the reviewed runner and consumers, preserved the approved Documents backup, activated Hera generation 1222, and verified active profiles and installed offline contracts.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
@@ -19185,6 +19187,13 @@ User explicitly authorized committing and pushing all pending work, publishing t
     "author": "johnw",
     "text": "Publication completed. Signed agent-cat main is 828e8cac, agent-workflows main is f0e76c6, and root configuration code is 00311c79. Published consumer commits are nixos 1da17e0e (including preserved upstream service/Home Assistant changes), vps 7463390, and andoria 22a217f. Both root and portable AI inputs in each consumer pin 00311c79. Native identity/account checks pass using actual published locks, without source overrides. Root model, host, managed-preflight and script gates pass again after publication. Root pre-commit quality passed after exact inherit-style lint corrections; no checks were skipped. The complete final Hera system built at /nix/store/3ybrk44sa3zvr2xzmz62ambn353qsqk2-darwin-system-26.11.4cff07d. All maintained source work is committed and published. Andoria was pushed to its Gitea main; its checked-out origin refused a direct push, and receive settings and that working tree were left unchanged. Local .worktrees and .pi runtime state remain excluded.\n\nActivation is not completed. Metadata confirms ~/.config/agent-cat/routing.yaml remains a regular file, so the exact-leaf Home Manager preflight will refuse it. Asked permission to preserve only that file in a private timestamped backup before installing the generated leaf; no affirmative response has arrived. No routing-file move, system-profile switch, activation, reboot, paid inference, or credential inspection was performed. hosts.nix remains 0600 and init.org remains 0444. Resume with the exact-file preservation approval, rebuild/verify the current Hera target if needed, and use the existing regular-user build plus root-only activation procedure.",
     "created_at": "2026-09-07T03:51:20Z"
+  },
+  {
+    "id": 550,
+    "issue_id": "nix-w233",
+    "author": "johnw",
+    "text": "User approved preserving the exact routing file and requested a copy under Documents. Created /Users/johnw/Documents/agent-cat-routing-backup-20260907T053115Z-wi1pi9s_/routing.yaml with mode 0600 inside a 0700 directory. Verified byte equality and preserved the original until the rebuilt candidate and sole-leaf preflight blocker were established. Removed only that verified original. Ran make verify-inputs and make lock-local as the regular user, then the supported make HOSTNAME=hera switch. No lock changes resulted. Activation completed successfully at Darwin generation 1222, with both the system profile and /run/current-system resolving to /nix/store/ykca4z355ar5jh080jmpp71n3nx8xb8y-darwin-system-26.11.4cff07d. The activation log reports success and has no failure markers. The routing leaf and model/host policy leaves are live Nix store links. Backup permissions remain private.\n\nVerified the actual installed binaries through /etc/profiles/per-user/johnw/bin: nine runner descriptors and 74 workflow descriptors all expose descriptor version 3 and protocol/store versions 1 and 2. Installed wf run hello --scripted passed in isolated XDG directories. The first smoke-output reader incorrectly assumed JSON Lines, then was corrected to parse the returned JSON array and all checks passed. No provider requests or paid inference were made. Published sources and the prior rollback generation remain preserved. Andoria remains published to Gitea, without bypassing its checked-out-origin push protection. Hera activation completes the requested rollout.",
+    "created_at": "2026-09-07T05:42:30Z"
   }
 ]
 #+end_src
