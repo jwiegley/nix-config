@@ -821,6 +821,29 @@ let
       )
     );
 
+  mkEmacsEnv =
+    name: emacs:
+    final.writeShellApplication {
+      name = "load-env-${name}";
+      runtimeInputs = [
+        emacs
+        final.bashInteractive
+        final.coreutils
+        final.findutils
+        final.gnumake
+      ];
+      text = ''
+        export INFOPATH=${emacs}/share/info''${INFOPATH:+:$INFOPATH}
+        export NIX_MYENV_NAME=${name}
+
+        if (( $# )); then
+          exec "$@"
+        else
+          exec ${final.bashInteractive}/bin/bash --norc
+        fi
+      '';
+    };
+
 in
 {
 
@@ -863,11 +886,7 @@ in
   emacs30MacPortPackagesNg = mkEmacsPackages final.emacs30-macport;
 
   emacs30MacPortEnv =
-    myPkgs:
-    prev.myEnvFun {
-      name = "emacs30MacPort";
-      buildInputs = [ (final.emacs30MacPortPackagesNg.emacsWithPackages myPkgs) ];
-    };
+    myPkgs: mkEmacsEnv "emacs30MacPort" (final.emacs30MacPortPackagesNg.emacsWithPackages myPkgs);
 
 }
 // {
@@ -888,12 +907,7 @@ in
   emacs30Packages = final.emacs30PackagesNg;
   emacs30PackagesNg = mkEmacsPackages final.emacs30;
 
-  emacs30Env =
-    myPkgs:
-    prev.myEnvFun {
-      name = "emacs30";
-      buildInputs = [ (final.emacs30PackagesNg.emacsWithPackages myPkgs) ];
-    };
+  emacs30Env = myPkgs: mkEmacsEnv "emacs30" (final.emacs30PackagesNg.emacsWithPackages myPkgs);
 
 }
 // prev.lib.optionalAttrs (emacsSrc != null) {
@@ -948,11 +962,6 @@ in
   emacsHEADPackages = final.emacsHEADPackagesNg;
   emacsHEADPackagesNg = mkEmacsPackages final.emacsHEAD;
 
-  emacsHEADEnv =
-    myPkgs:
-    prev.myEnvFun {
-      name = "emacsHEAD";
-      buildInputs = [ (final.emacsHEADPackagesNg.emacsWithPackages myPkgs) ];
-    };
+  emacsHEADEnv = myPkgs: mkEmacsEnv "emacsHEAD" (final.emacsHEADPackagesNg.emacsWithPackages myPkgs);
 
 }

@@ -15,12 +15,12 @@ assert configured.emacsHEAD.drvPath != "";
 assert configured.emacsHEADPackages.emacs.drvPath == configured.emacsHEAD.drvPath;
 assert configured.emacsHEADPackagesNg.emacs.drvPath == configured.emacsHEAD.drvPath;
 assert configuredHeadEnv.drvPath != "";
-assert lib.getName configuredHeadEnv == "env-emacsHEAD";
+assert lib.getName configuredHeadEnv == "load-env-emacsHEAD";
 assert builtins.all (
   configuration:
   let
     names = homePackageNames configuration;
   in
-  builtins.elem "env-emacs30MacPort" names && !(builtins.elem "env-emacsHEAD" names)
+  builtins.elem "load-env-emacs30MacPort" names && !(builtins.elem "load-env-emacsHEAD" names)
 ) (builtins.attrValues darwinConfigurations);
 runCommand "emacs-head-evaluation" { } "touch $out"
