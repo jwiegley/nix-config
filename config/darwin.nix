@@ -343,7 +343,7 @@ in
       "balenaetcher"
       "carbon-copy-cloner"
       "cardhop"
-      # "chatgpt"
+      "chatgpt"
       "choosy"
       "claude"
       "corelocationcli"
