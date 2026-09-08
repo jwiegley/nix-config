@@ -17,17 +17,6 @@ in
 
       vendorHash = source.hashes.vendorHash;
 
-      patches = [
-        ./patches/agent-deck-discord-typing-best-effort.patch
-        ./patches/agent-deck-transition-daemon-churn.patch
-        ./patches/agent-deck-runtime-lifecycle.patch
-        ./patches/agent-deck-remote-json-diagnostics.patch
-      ];
-      patchFlags = [
-        "-p1"
-        "--fuzz=0"
-      ];
-
       # Go 1.26's arm64 race runtime only supports a 48-bit VMA. Vulcan's
       # 16 KiB-page kernel exposes a different layout, so race binaries abort
       # before any test executes. Keep the complete lifecycle suite and every
@@ -61,7 +50,7 @@ in
       # artifacts, so the build needs no tailwind, npm, or go-generate step.
 
       # Run the source-owned, deterministic runtime lifecycle gate. It covers
-      # the patched SQLite/CAS boundary and fake runtime seams without using the
+      # the source-owned SQLite/CAS boundary and fake runtime seams without using the
       # user's tmux socket, database, or network. The installed-binary check
       # below still covers the built artifact.
       doCheck = true;
