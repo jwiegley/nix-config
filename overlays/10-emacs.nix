@@ -916,7 +916,7 @@ in
       ]
       ++ lib.optionals (stdenv.cc ? cc.lib.libgcc) [ "${lib.getLib stdenv.cc.cc.lib.libgcc}/lib" ];
     in
-    (emacs30.override {
+    (emacs.override {
       withImageMagick = true;
       withNativeCompilation = false;
     }).overrideAttrs
