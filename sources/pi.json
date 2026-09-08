@@ -474,10 +474,10 @@
     "pi-ponytail": {
       "source": {
         "args": {
-          "narHash": "sha256-ytmLscDv7OVFyX/9gsfGaZmTpEnaMDTZnwzUtcbbcS0=",
+          "narHash": "sha256-LPNMyHsri3+eeDmphEAKL1JgoRE4dLIPfZ4XZ+xu5UY=",
           "owner": "DietrichGebert",
           "repo": "ponytail",
-          "rev": "974d940a1c5344210874150b98ff0d2c861fab6a",
+          "rev": "356918eba965ee1eac64bd3a7f0dd02108350de5",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -690,14 +690,14 @@
     },
     "pi-mcp-adapter": {
       "hashes": {
-        "npmDepsHash": "sha256-dOdYmNJI8oXHMFJTxIlmGsIhpNcSuXrrSkT/u3LmhhM="
+        "npmDepsHash": "sha256-Q/DGtRE1l41QBnAelBBx7q17dNzjo7p/xCVK5OCiN4Y="
       },
       "source": {
         "args": {
-          "narHash": "sha256-SF5yIIdV9STZQtUvv0qqTTe6Es4A+mDZYZ24Z83U+SU=",
+          "narHash": "sha256-Z+Nc7aQJFnZKYAe6yQN0CFwYuekNahAcFRg+dDBpRVU=",
           "owner": "nicobailon",
           "repo": "pi-mcp-adapter",
-          "rev": "9d5db067bd5253b7e4aa1bce57266db217897bfc",
+          "rev": "8243eba3421e301c88c047444f34ab7d5d57163e",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -739,10 +739,10 @@
     "pi-quiet": {
       "source": {
         "args": {
-          "narHash": "sha256-7kmLJ+Pm8htN7xQrTz7PlaBfl+yhXzXp4WyeWYEma+M=",
+          "narHash": "sha256-cSgY1XFzOa/4sN5GM3FST1UmQiknBVjqlDCmmttMbLA=",
           "owner": "zenspc",
           "repo": "pi-extensions",
-          "rev": "cc88f99d2acdd51e3e91c1f8ddea21ea75c1f20e",
+          "rev": "88600500953dfa28f19441d9085c3e9edcfc5b5c",
           "type": "github"
         },
         "fetcher": "fetchTree",

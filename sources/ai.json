@@ -1252,10 +1252,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-XIbm3BHKwQbk2n8YRAHqxE27jltjZibmeYI1ylWGrpE=",
+          "narHash": "sha256-ByNLlNXbsvxwiJ004wVgp5oRJ8pvrgJafEeK7bTWwIo=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "72f35adfd210f51bb574ecd560e8b5413a841bd8",
+          "rev": "868527bc9eb4e8bee8610fa1d4027fbb37cfc012",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1275,10 +1275,10 @@
     "mcp-servers-nix": {
       "source": {
         "args": {
-          "narHash": "sha256-mCo/II1IhCSnWZC3PuGcAUSRdzKrE4CrQ+butl+EaqA=",
+          "narHash": "sha256-rbcTTqnrnvDRoVKJwG8rnSIpE1mImuOTp8ZncH9YtnI=",
           "owner": "natsukium",
           "repo": "mcp-servers-nix",
-          "rev": "ba9d1f61db2ecab6cebad320e219235f1fcd0f74",
+          "rev": "00cfd7e097a01ec9fe926dda007207e1dee06bd2",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1377,10 +1377,10 @@
     "rust-overlay": {
       "source": {
         "args": {
-          "narHash": "sha256-PSPDCdbEBEbSDCWcqv5GkbyD2ACQ9Diz6vmEbWdy4dM=",
+          "narHash": "sha256-pp8lb5CrKjmscZbTK34HuCaq18zDU4Q6zlaD5dS+Hi4=",
           "owner": "oxalica",
           "repo": "rust-overlay",
-          "rev": "9eccf73c5b810052f08aa77ae0548c383259f17f",
+          "rev": "ca7f624be3935a5bc46d2c240515491ab8675503",
           "type": "github"
         },
         "fetcher": "fetchTree",
