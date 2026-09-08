@@ -6839,6 +6839,24 @@ VERIFICATION: nix build --no-link .#checks.aarch64-darwin.pi-gallery passes on t
 ]
 #+end_src
 
+* DONE [#B] Pin sequential-thinking to TypeScript 5
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-gpvo
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-07 Mon 20:52]
+:MODIFIED: [2026-09-07 Mon 21:40]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-07 Mon 21:40]
+:CLOSE_REASON: Pinned mcp-server-sequential-thinking to TypeScript 5 in shared AI overlay; focused aarch64-darwin and x86_64-linux derivations build under Nixpkgs 42f17a5.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+A full portable AI flake update advances nixpkgs from TypeScript 5.9 to 7.0. mcp-servers-nix injects unversioned pkgs.typescript into mcp-server-sequential-thinking, whose upstream package requests TypeScript ^5.3.3; the TS7 build fails with TS2591 for Node process globals. Override only this derivation to typescript_5 and verify portable builds.
+
 * DONE [#B] Align inbox path regression with profile-scoped identity
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
