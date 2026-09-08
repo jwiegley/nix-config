@@ -27,7 +27,7 @@
   inputs.mcp-servers-nix.overlays.default
   (_final: prev: {
     mcp-server-sequential-thinking = prev.mcp-server-sequential-thinking.override {
-      typescript = prev.typescript_5;
+      typescript = prev.typescript_5 or prev.typescript;
     };
   })
   inputs.git-ai.overlays.default
