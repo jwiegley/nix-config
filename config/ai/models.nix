@@ -77,15 +77,16 @@ let
     initialDelay = 5;
     maxDelay = 60;
   };
-  omlxProviders = [
-    "omlx-clio"
-    "omlx-hera"
+  omlxHosts = [
+    "clio"
+    "hera"
   ];
+  omlxProviders = map (host: "omlx-${host}") omlxHosts;
   omlxRoles = {
     primary = {
       name = "Qwen3.8-27B-oQ4e-mtp";
       providers = omlxProviders;
-      retiredNames = [ ];
+      retiredNames = [ "Qwen3.8-27B-oQ6e-mtp-mlx" ];
       contextWindow = 262144;
       maxTokens = 81920;
     };
@@ -629,11 +630,7 @@ in
           instances = [
             {
               name = omlxRoles.primary.name;
-              hostnames = [ "clio" ];
-              provider = "omlx";
-            }
-            {
-              name = "Qwen3.8-27B-oQ6e-mtp-mlx";
+              hostnames = omlxHosts;
               provider = "omlx";
             }
           ];

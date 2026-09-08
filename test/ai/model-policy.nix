@@ -293,6 +293,21 @@ pkgs.runCommand "model-policy-propagation" { } ''
       assert routing["engines"]["deck-nix"]["backend"] == "deck:nix"
       assert set(routing["engines"]) == {"claude", "codex", "droid", "deck-nix"}
       qwen = policy["omlx"]["primary"]
+      qwen_families = [
+          model
+          for model in policy["emacs"]["models"]
+          if any(instance.get("name") == qwen["name"] for instance in model["instances"])
+      ]
+      assert len(qwen_families) == 1
+      assert qwen_families[0]["instances"] == [
+          {
+              "hostnames": [
+                  provider.removeprefix("omlx-") for provider in qwen["providers"]
+              ],
+              "name": qwen["name"],
+              "provider": "omlx",
+          }
+      ]
       overrides = policy["codex"]["modelOverrides"]
       nixos = policy["nixos"]
       assert nixos["llm"]["primary"]["name"] == qwen["name"]

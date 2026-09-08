@@ -13,9 +13,20 @@ let
       "clio"
     ];
     omlxApiBase = "http://${hosts.hera.dnsName}:${toString inferenceServices.omlx.port}";
+    gptelOmlxHosts = {
+      clio = [
+        "clio"
+        "hera"
+      ];
+      hera = [ "hera" ];
+    };
     gptelEndpoints = {
       llamaSwap = "127.0.0.1:${toString inferenceServices.llama-swap.port}";
       omlx = "127.0.0.1:${toString inferenceServices.omlx.port}";
+      omlxRemote = {
+        clio = "${hosts.clio.dnsName}:${toString inferenceServices.omlx.gatewayPort}";
+        hera = "${hosts.hera.dnsName}:${toString inferenceServices.omlx.gatewayPort}";
+      };
       vibeProxy = "127.0.0.1:${toString inferenceServices.vibe-proxy.port}";
       rinzler = "127.0.0.1:${toString inferenceServices.rinzler.port}";
       rinzlerAndoria = "${hosts.andoria-t2.dnsName}:${toString inferenceServices.rinzler-andoria.port}";
@@ -490,6 +501,15 @@ assert builtins.all (
   service:
   builtins.all (port: builtins.isInt port && port > 0 && port <= 65535) (builtins.attrValues service)
 ) (builtins.attrValues inferenceServices);
+assert builtins.all (
+  client:
+  let
+    modelHosts = llmSetup.gptelOmlxHosts.${client};
+  in
+  modelHosts != [ ]
+  && builtins.head modelHosts == client
+  && builtins.all (host: builtins.hasAttr host llmSetup.gptelEndpoints.omlxRemote) modelHosts
+) (builtins.attrNames llmSetup.gptelOmlxHosts);
 assert builtins.all (row: builtins.all validIpv4 (builtins.attrValues (row.ipv4 or { }))) (
   builtins.attrValues hosts ++ builtins.attrValues networkPeers
 );
