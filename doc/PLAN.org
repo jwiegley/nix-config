@@ -19210,6 +19210,38 @@ Final frozen file internal/session/hook_status_lock_test.go SHA-256 007e2209bf4c
 ]
 #+end_src
 
+* TODO [#C] Fix trust between shared x86_64 Nix builders
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-vzco
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-08 Tue 01:10]
+:MODIFIED: [2026-09-08 Tue 01:10]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+A portable x86_64-linux toolchain build split work between andoria-08 and andoria-t2. When one builder consumed an output produced by the other, its daemon rejected the path because it lacked a signature from a trusted key. Reproduced again with andoria-08 as sole builder because an already-realized pi-src-with-lock output from andoria-t2 remained unsigned. Define and verify one shared-work builder signing/trust policy; do not weaken require-sigs.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-vzco",
+    "depends_on_id": "nix-gpvo",
+    "type": "discovered-from",
+    "created_at": "2026-09-08T08:10:04.732697Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Publish agent-cat TUI and activate Hera
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
