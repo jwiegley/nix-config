@@ -3,17 +3,16 @@
     "agent-browser-source": {
       "flake": false,
       "locked": {
-        "lastModified": 1788455426,
-        "narHash": "sha256-EGK2Hh5a7IL0fM0C6G9vpoDgr6SKv7XaFolN1Uie9vI=",
+        "lastModified": 1788878591,
+        "narHash": "sha256-AgpKazIBT3CKd4Q7yQsEGhoTW+7R0Pflma6aH+6UI/U=",
         "owner": "vercel-labs",
         "repo": "agent-browser",
-        "rev": "4a98df79bd232fcde5ca3a4a48e1337b8108b160",
+        "rev": "72007a6788d863611b23bed0b59d0d659c638d8e",
         "type": "github"
       },
       "original": {
         "owner": "vercel-labs",
         "repo": "agent-browser",
-        "rev": "4a98df79bd232fcde5ca3a4a48e1337b8108b160",
         "type": "github"
       }
     },
@@ -224,17 +223,16 @@
     "pi": {
       "flake": false,
       "locked": {
-        "lastModified": 1788561380,
-        "narHash": "sha256-QTtLf766odwc/g5bfnJy0rwxEAFC/TH5hSYGUagYRVA=",
+        "lastModified": 1788850829,
+        "narHash": "sha256-e8+/0IuO/MJmxvcO5wyLVQZlzNLqxrYrPNeKMEx9RiU=",
         "owner": "jwiegley",
         "repo": "pi",
-        "rev": "a11a385aedc50aa3d0ef38f7c8346694a0dd14f2",
+        "rev": "319f54443c9104a123e6f22547a69a1c6f9188e8",
         "type": "github"
       },
       "original": {
         "owner": "jwiegley",
         "repo": "pi",
-        "rev": "a11a385aedc50aa3d0ef38f7c8346694a0dd14f2",
         "type": "github"
       }
     },

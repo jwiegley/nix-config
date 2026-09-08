@@ -1762,6 +1762,12 @@ def _validate_flake_projection(
     if "rev" in original and args.get("rev") != original["rev"]:
         raise RuntimeError(f"flake input projection {name} rev does not match declared input")
     literal = _flake_input_literal(nix_dir, input_name, name)
+    if record["update"]["kind"] in {
+        "flake-input",
+        "flake-input+build",
+        "flake-input+copy",
+    } and ("rev" in original or "rev" in literal):
+        raise RuntimeError(f"updateable flake input projection pins a revision: {name}")
     for field in ("type", "owner", "repo"):
         if args.get(field) != literal.get(field):
             raise RuntimeError(f"flake input projection {name} {field} does not match flake literal")
@@ -1919,7 +1925,7 @@ def load_source_catalog(
             {"input"},
         ),
         "flake-input+build": (
-            common_update_fields | {"buildPackage", "input"},
+            common_update_fields | {"buildPackage", "input", "versionPath"},
             {"buildPackage", "input"},
         ),
         "flake-input+copy": (

@@ -17,9 +17,10 @@ let
     builtins.readFile (piSource.outPath + "/packages/coding-agent/package.json")
   );
   buildNpmPackageWithNode24 = buildNpmPackage.override { nodejs = nodejs_24; };
-  piAiRelease =
-    assert source.artifacts.piAiRelease.fetcher == "fetchzip";
-    fetchzip source.artifacts.piAiRelease.args;
+  piAiRelease = fetchzip {
+    url = "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-${packageMetadata.version}.tgz";
+    hash = source.hashes.piAiReleaseHash;
+  };
 in
 buildNpmPackageWithNode24 {
   pname = "pi-coding-agent-source-build";

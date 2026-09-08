@@ -551,6 +551,20 @@ class UpdateInventoryTests(unittest.TestCase):
             ):
                 load_source_catalog(root)
 
+    def test_issue34_updateable_projection_rejects_literal_revision(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self._write_projection_fixture(root)
+            (root / "config/ai/flake.nix").write_text(
+                "{\n  inputs = {\n"
+                f'    example.url = "github:example/project/{"a" * 40}";\n'
+                "  };\n}\n"
+            )
+            with self.assertRaisesRegex(
+                RuntimeError, "updateable flake input projection pins a revision"
+            ):
+                load_source_catalog(root)
+
     def test_flake_projection_shapes_fail_closed_with_or_without_lock_validation(self):
         def wrong_fetcher(document):
             url = "https://example.invalid/project.tar.gz"
@@ -2813,7 +2827,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             self.assertIn(new_rev, flake_path.read_text())
             self.assertNotIn(old_rev, flake_path.read_text())
 
-    def test_fixed_flake_input_direct_invocation_delegates_to_update_agents(self):
+    def test_flake_input_direct_invocation_delegates_to_update_agents(self):
         calls = []
 
         def fake_delegate(nix_dir, names, args):
@@ -2828,8 +2842,6 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             sys.argv = [
                 str(SCRIPT),
                 "agent-browser-source",
-                "--version",
-                "b" * 40,
                 "--dry-run",
             ]
             with contextlib.redirect_stdout(io.StringIO()):
@@ -2843,7 +2855,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         nix_dir, names, version, dry_run = calls[0]
         self.assertEqual(nix_dir, SCRIPT.parent.parent.resolve())
         self.assertEqual(names, ["agent-browser-source"])
-        self.assertEqual(version, "b" * 40)
+        self.assertIsNone(version)
         self.assertTrue(dry_run)
 
         runner_calls = []
@@ -2855,7 +2867,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         delegated = MODULE["delegate_to_update"](
             Path("/repo"),
             ["agent-browser-source"],
-            SimpleNamespace(version="b" * 40, dry_run=True),
+            SimpleNamespace(version=None, dry_run=True),
             runner=fake_runner,
         )
         self.assertEqual(delegated, 23)
@@ -2865,8 +2877,6 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             [
                 "--target",
                 "agent-browser-source",
-                "--version",
-                "b" * 40,
                 "--dry-run",
             ],
         )
@@ -4373,7 +4383,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         )
         self.assertEqual(updates["llm-agents"]["buildMode"], "check")
         pi_source_update = ai_catalog["pi-coding-agent-source-build"]["update"]
-        self.assertEqual(pi_source_update["kind"], "fixed-flake-input")
+        self.assertEqual(pi_source_update["kind"], "flake-input+build")
         self.assertEqual(pi_source_update["input"], "pi")
         self.assertEqual(
             pi_source_update["buildPackage"], "pi-coding-agent-source-build"
@@ -4490,7 +4500,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
             "pi-subagents",
         }
         copy_only = {"pi-cymbal", "pi-rtk-optimizer"}
-        fixed_projection = {"agent-browser-source"}
+        input_projection = {"agent-browser-source"}
         self.assertTrue(
             all(
                 catalog[name]["update"].get("normalizer") == "pi-gallery-v1"
@@ -4508,9 +4518,9 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
         )
         self.assertTrue(
             all(
-                catalog[name]["update"]["kind"] == "fixed-flake-input"
+                catalog[name]["update"]["kind"] == "flake-input"
                 and "buildPackage" not in catalog[name]["update"]
-                for name in fixed_projection
+                for name in input_projection
             )
         )
 

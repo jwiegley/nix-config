@@ -20,10 +20,10 @@
     "agent-browser-source": {
       "source": {
         "args": {
-          "narHash": "sha256-EGK2Hh5a7IL0fM0C6G9vpoDgr6SKv7XaFolN1Uie9vI=",
+          "narHash": "sha256-AgpKazIBT3CKd4Q7yQsEGhoTW+7R0Pflma6aH+6UI/U=",
           "owner": "vercel-labs",
           "repo": "agent-browser",
-          "rev": "4a98df79bd232fcde5ca3a4a48e1337b8108b160",
+          "rev": "72007a6788d863611b23bed0b59d0d659c638d8e",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -32,11 +32,10 @@
       "update": {
         "artifacts": [
           "flake.lock",
-          "config/ai/flake.lock",
-          "config/ai/flake.nix"
+          "config/ai/flake.lock"
         ],
         "input": "agent-browser-source",
-        "kind": "fixed-flake-input"
+        "kind": "flake-input"
       }
     },
     "agent-cat-pi-extension": {

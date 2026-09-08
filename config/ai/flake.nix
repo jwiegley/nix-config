@@ -3,7 +3,7 @@
 
   inputs = {
     agent-browser-source = {
-      url = "github:vercel-labs/agent-browser/4a98df79bd232fcde5ca3a4a48e1337b8108b160";
+      url = "github:vercel-labs/agent-browser";
       flake = false;
     };
 
@@ -31,7 +31,7 @@
     llm-agents.url = "github:numtide/llm-agents.nix";
 
     pi = {
-      url = "github:jwiegley/pi/a11a385aedc50aa3d0ef38f7c8346694a0dd14f2";
+      url = "github:jwiegley/pi";
       flake = false;
     };
 
