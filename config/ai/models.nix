@@ -297,8 +297,8 @@ in
         };
       };
       models = {
-        claude-fable = model "claude" anthropic.fable;
-        claude-opus = model "claude" anthropic.opus;
+        claude-fable = model "claude" "claude-fable-5-1[1m]";
+        claude-opus = model "claude" "opus[1m]";
         codex-sol = model "codex" openai.sol;
         codex-terra = model "codex" openai.terra;
         codex-luna = model "codex" openai.luna;

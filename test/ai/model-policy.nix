@@ -287,7 +287,8 @@ pkgs.runCommand "model-policy-propagation" { } ''
       policy = load("policy.json")
       routing = yaml.safe_load((directory / "routing.yaml").read_text())
       assert routing == policy["agentCat"] | {"version": 2, "secrets": {}}
-      assert routing["models"]["claude-fable"]["select"] == [{"exact": policy["anthropic"]["fable"]}]
+      assert routing["models"]["claude-fable"]["select"] == [{"exact": "claude-fable-5-1[1m]"}]
+      assert routing["models"]["claude-opus"]["select"] == [{"exact": "opus[1m]"}]
       assert routing["models"]["codex-sol"]["select"] == [{"exact": policy["openai"]["sol"]}]
       assert routing["models"]["droid-gemini-3.1-pro"]["select"] == [{"exact": policy["advisors"]["pal"]["reasoning"]}]
       assert routing["engines"]["deck-nix"]["backend"] == "deck:nix"
