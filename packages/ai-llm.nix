@@ -622,6 +622,7 @@ in
               nativeBuildInputs = [ ];
               nativeCheckInputs = [ ];
               postUnpack = "";
+              postPatch = "";
               sourceRoot = ".";
               doCheck = false;
             });

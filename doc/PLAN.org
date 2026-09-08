@@ -6839,14 +6839,14 @@ VERIFICATION: nix build --no-link .#checks.aarch64-darwin.pi-gallery passes on t
 ]
 #+end_src
 
-* DONE [#B] Pin sequential-thinking to TypeScript 5
+* DONE [#B] Restore all-input builds after nixpkgs update
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-gpvo
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-07 Mon 20:52]
-:MODIFIED: [2026-09-07 Mon 21:40]
+:MODIFIED: [2026-09-07 Mon 23:03]
 :CREATED_BY: johnw
 :FINISHED: [2026-09-07 Mon 21:40]
 :CLOSE_REASON: Pinned mcp-server-sequential-thinking to TypeScript 5 in shared AI overlay; focused aarch64-darwin and x86_64-linux derivations build under Nixpkgs 42f17a5.
@@ -6855,7 +6855,17 @@ VERIFICATION: nix build --no-link .#checks.aarch64-darwin.pi-gallery passes on t
 :ORIGINAL_SIZE: 0
 :END:
 
-A full portable AI flake update advances nixpkgs from TypeScript 5.9 to 7.0. mcp-servers-nix injects unversioned pkgs.typescript into mcp-server-sequential-thinking, whose upstream package requests TypeScript ^5.3.3; the TS7 build fails with TS2591 for Node process globals. Override only this derivation to typescript_5 and verify portable builds.
+A full input update advances nixpkgs and exposes three inherited-tool/source mismatches:
+
+- mcp-servers-nix injects unversioned TypeScript 7 into sequential-thinking, whose workspace requests TypeScript 5;
+- the Darwin oMLX tokenizers wheel inherits nixpkgs tokenizers source-tree postPatch;
+- the Darwin PyQt5 SIP 6.15 compatibility source inherits nixpkgs SIP 6.16's patch.
+
+Apply narrow overrides at their existing package seams. Verify which host classes consume each fix; keep canonical changes in this repository rather than host-local checkouts.
+
+** Acceptance Criteria
+
+MCP builds with TypeScript 5 on portable systems; replacement-source overrides do not inherit incompatible hooks or patches; ./build system passes on Hera; portable flake evaluates on every supported system.
 
 * DONE [#B] Align inbox path regression with profile-scoped identity
 :PROPERTIES:

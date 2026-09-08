@@ -161,6 +161,7 @@ in
         let
           sipForPyQt5 = pprev.sip.overridePythonAttrs (_oldAttrs: {
             inherit (compatibilitySources.sip-pyqt5-darwin) version;
+            patches = [ ];
             src =
               assert compatibilitySources.sip-pyqt5-darwin.source.fetcher == "fetchPypi";
               pfinal.fetchPypi compatibilitySources.sip-pyqt5-darwin.source.args;
