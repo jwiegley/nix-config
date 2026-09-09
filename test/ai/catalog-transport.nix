@@ -739,7 +739,7 @@ let
     ) reviewCommandNames
   ) claudeRenderings;
   parallelizeSource = catalog.items.skills.parallelize.source;
-  validatedReviewSource = catalog.items.skills.validated-code-review.source;
+  validatedReviewSource = "${src}/config/ai/skills/validated-code-review";
   nodeRedSource = catalog.items.skills.node-red.source;
   nodeRedSkillText = builtins.readFile "${nodeRedSource}/SKILL.md";
   nodeRedApiReferenceText = builtins.readFile "${nodeRedSource}/references/api_reference.md";
@@ -1474,6 +1474,8 @@ assert builtins.all reject [
   })
 ];
 pkgs.runCommand "ai-catalog-transport" { } ''
+  trap 'echo "ai-catalog-transport: failed at line $LINENO" >&2' ERR
+
   ${pkgs.jq}/bin/jq -e '
     [.providers[] | select(has("transport"))]
     | length == 3

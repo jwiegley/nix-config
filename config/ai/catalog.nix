@@ -699,6 +699,7 @@ let
     "node-red"
     "parallelize"
     "persian"
+    "refocus"
     "swiftui"
     "toolkit"
   ];

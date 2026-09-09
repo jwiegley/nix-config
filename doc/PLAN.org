@@ -381,6 +381,44 @@ Pin b24d65bffc18d3d48718fbfbdf32982cb6d4cf5c, whose bounded resume scan fails cl
 ]
 #+end_src
 
+* DONE [#C] Diagnose silent ai-catalog-transport build failure
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-0rwb
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-09 Wed 10:44]
+:MODIFIED: [2026-09-09 Wed 10:56]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 10:55]
+:CLOSE_REASON: Diagnosed: duplicate of existing nix-satp. The instrumented build failed at generated line 253, the exact early connected-row grep. Readiness remediation remains tracked in nix-satp; no claim that this gate passes.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+During refocus validation, checks.aarch64-darwin.ai-catalog-transport evaluated and built after correcting its validated-code-review fixture path, but derivation /nix/store/2sjpxzpmq2pjj4ckv7i5bv3p8m523ixs-ai-catalog-transport.drv exited 1. Its entire retained log contains only: node-red skill contract: ok. The failure stage remains unlocalized. Prime-agent integration passed in the same invocation. Diagnose the failing command with bounded, non-secret diagnostics and repair the cause without weakening the gate. Existing HEAD separately fails earlier during evaluation because the validated-code-review resource fixture uses /catalog-agent-resources; that source-path correction is included with nix-ilej.
+
+** Notes
+
+Diagnosis completed. Independent pure-fixture checks passed; one instrumented Nix rebuild localized the silent failure to the Droid connected-row grep at generated line 253. Existing nix-satp owns readiness remediation. This issue is closed as a duplicate, without claiming the catalog gate passed. All diagnostic probes are terminal.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-0rwb",
+    "depends_on_id": "nix-ilej",
+    "type": "discovered-from",
+    "created_at": "2026-09-09T17:44:15.127995Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Reject case-insensitive profile-root aliases during migration
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -7459,6 +7497,28 @@ The nix-9e4y refresh callback exposed that the Pi Gallery router RPC fixture mer
 ]
 #+end_src
 
+* DONE [#C] Add hourly refocus skill and enable it throughout Wiggum
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ilej
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-09 Wed 10:37]
+:MODIFIED: [2026-09-09 Wed 11:10]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 11:10]
+:CLOSE_REASON: Implemented refocus and mandatory Wiggum integration with hourly checks and compaction recovery. Independent review, skill metadata, all 17 profile selections, Prime integration and pre-commit checks passed. Existing catalog readiness failure remains separately tracked as nix-satp.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Create the shared refocus skill. Re-read the user goal and completion criteria on entry, at least hourly during active work, and after resume or compaction; identify scope creep and return to the next necessary completion step without lowering the goal. Make Wiggum load and retain refocus automatically, preserve checkpoint state, and register it for every Wiggum consumer. Verify skill metadata, references, catalog selection, and affected gates. Activation and publication are separate from this source change.
+
+** Notes
+
+Implementation and independent requirement review PASS: refocus periodically rereads the goal, checks scope creep, and chooses the next required step. Wiggum loads it automatically, preserves hourly deadlines, and restores it after compaction. All 17 Wiggum profiles select refocus. Source skill metadata and built Wiggum metadata PASS; the built artifact is /nix/store/1qibdj8pbjiir262f91ya2zy4h7pb2v3-agent-resources. Prime integration PASS at /nix/store/bndznpmw0gk2dryqhpb3gj41viialgpj-prime-agent-integration-check. Final pre-commit rerun after the error diagnostic PASS (all six suites). Catalog transport remains FAILED at the known Droid readiness predicate tracked by nix-satp; diagnostic derivation /nix/store/77f3njrsq8rax41g67sykllnqavmhajd-ai-catalog-transport.drv identifies generated line 253. Duplicate diagnostic issue nix-0rwb is closed. Narrow support changes fix the validated-code-review fixture source path, format models.nix, update the Prime skill count to 28, and add non-secret error line reporting. Current signing policy verified: config/johnw.nix configures Hera to sign with its local secret key and disables smart-card support. The earlier card preflight blocker was inapplicable to this host; ordinary configured Git signing requires no signer changes. The user explicitly authorized commit and push. All diagnostic probes are terminal. Preserve all unrelated PLAN.org additions, including the original 120 lines. System activation remains outside this request.
+
 * DONE [#B] Restore Pi Sessions as a reviewed managed product :memory:pi:security:sessions:upstream:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -11989,7 +12049,7 @@ VERIFICATION: head -8 of the file shows --- delimited YAML; the skill listing sh
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-25 Tue 23:34]
-:MODIFIED: [2026-08-25 Tue 23:34]
+:MODIFIED: [2026-09-09 Wed 10:55]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -11997,6 +12057,10 @@ VERIFICATION: head -8 of the file shows --- delimited YAML; the skill listing sh
 :END:
 
 test/ai/catalog-transport.nix intermittently reaches droid mcp list before managed-environment-probe reports connected; the same derivation passes when shell tracing slows execution. Add a bounded readiness strategy that preserves environment-canary checks and emits stdout/stderr on timeout.
+
+** Notes
+
+Reproduced during refocus validation on 2026-09-09. Diagnostic derivation /nix/store/77f3njrsq8rax41g67sykllnqavmhajd-ai-catalog-transport.drv exits 1 at generated buildCommand line 253: the grep requiring managed-environment-probe stdio connected [user]. The following bad-state diagnostic is never reached. This localizes the earlier silent failure from /nix/store/2sjpxzpmq2pjj4ckv7i5bv3p8m523ixs-ai-catalog-transport.drv. A line-number-only ERR trap is included with nix-ilej so this gate no longer fails silently; the readiness repair remains open here. No client runtime or configuration changes were made.
 
 ** Dependencies
 

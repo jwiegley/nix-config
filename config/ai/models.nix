@@ -714,10 +714,13 @@ in
       # under logwatch.service's 45min, so a fallback allowed 3600s could never
       # run to completion anyway.
       fallbacks = [
-        (nixosRetryPolicy // {
-          name = "${omlxRoles.primary.name}:thinking";
-          maxSeconds = 900;
-        })
+        (
+          nixosRetryPolicy
+          // {
+            name = "${omlxRoles.primary.name}:thinking";
+            maxSeconds = 900;
+          }
+        )
       ];
     };
     embedding = {

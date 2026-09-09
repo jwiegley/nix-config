@@ -12,6 +12,12 @@ description: Methodology for the user-triggered /wiggum command (do not self-inv
 
 Run autonomously in a work -> checkpoint -> verify loop until the Definition of Done holds, or a stop-and-escalate condition fires. This skill is the methodology; the `/wiggum` command turns it on. Do not enter this mode on your own -- only when the user invokes it.
 
+Whenever Wiggum is invoked, load the `refocus` skill from the available skill
+catalog and keep it active for the entire loop. Perform its goal and scope check
+immediately, at least hourly during active work, and after every resume or
+compaction. No separate user invocation of `refocus` is needed. Keep its last
+check, next deadline, and next required step in the existing handoff state.
+
 You perform git operations directly, following the documented approach of the matching workflow. `commit`, `restack`, and `rebase` are user-triggered commands, so follow their procedure rather than invoking them as slash commands.
 
 "Parity" means the work matches a named reference target (for example, a source-of-truth implementation). If no target is given, "done" means every objective of the current plan is complete and independently verified.
@@ -81,11 +87,15 @@ Keep three distinct artifacts so work resumes exactly where it left off if the m
 
 ## Refresh after compaction
 
-After every context compaction, before any new work: re-read this skill, the frozen plan/target, and the `obr` issues or handoff document in full (including the attempt counts); if a journal is kept, re-read its preface plus the recent entries needed to recover the latest learnings. Then run a baseline verification -- build and tests, plus the parity check if a parity target exists -- to confirm the current state before touching anything new. Starting new work on an already-broken base only makes it worse.
+After every context compaction, before any new work: re-read this skill, the `refocus` skill, the frozen plan/target, and the `obr` issues or handoff document in full (including the attempt counts and refocus checkpoint); if a journal is kept, re-read its preface plus the recent entries needed to recover the latest learnings. Perform the refocus check, then run a baseline verification -- build and tests, plus the parity check if a parity target exists -- to confirm the current state before touching anything new. Starting new work on an already-broken base only makes it worse.
 
 ## The loop
 
 Each iteration:
+
+Check the `refocus` deadline before advancing work; if due, perform its check
+first. Also follow its clock checks around long-running tools and waits so an
+iteration that lasts over an hour still refocuses on time.
 
 1. Advance one logical unit of work -- a coherent change that builds and passes. However, if that logic unit is very small, then proceed in larger steps so that commits are not being generated too often -- since that feedback loop takes a lot of time, and doing so too frquently would slow down development unnecessarily.
 2. Commit it in a clean, logical sequence, following the `commit` workflow's approach (you perform the commits directly; `commit` is user-triggered).
@@ -94,9 +104,10 @@ Each iteration:
 5. On cadence (below), bring the branch current: rebase or restack it LOCALLY onto its base, resolving conflicts with the `resolve` workflow. Do NOT submit or push the stack as part of the loop -- pushing rewritten or shared history is a terminal, human-gated action (see Stop and escalate).
 6. Repeat until the Definition of Done holds or a stop condition fires.
 
-## Cadence -- by work, not by clock
+## Cadence
 
-You cannot track wall-clock time reliably across turns, so anchor cadence to work, not minutes:
+Use clock readings and persisted timestamps for the `refocus` skill's hourly
+deadline. Keep Git cadence anchored to work:
 
 - Commit at each completed logical unit.
 - Rebase or restack before starting a new independent unit, or whenever the base may have moved -- staggered from commits so a restack and a commit never collide in the same step.

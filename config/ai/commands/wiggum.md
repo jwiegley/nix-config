@@ -2,6 +2,6 @@ Enter autonomous-continuation mode for the current work: keep going, without pau
 
 Always read the environment you need from the current working tree's direnv. Never use `nix develop` to run commands, and never install dependencies on the fly. If you are blocked on a dependency requirement, stop working and ask for the dependency you need. If it can be added to the Nix environment, then do so, regenerate the environment using `de`, and then re-read the direnv environment and try again.
 
-Follow the `wiggum` skill for the full loop methodology: the Definition of Done and stop-and-escalate criteria; the durable plan/handoff/journal state; baseline re-verification after every context compaction; the work -> commit -> audit -> partner-cleanup -> restack loop; the work-unit (not wall-clock) cadence; subagent fan-out limits via the `parallelize` skill; and PAL consensus for significant decisions.
+Follow the `wiggum` skill for the full loop methodology: the Definition of Done and stop-and-escalate criteria; the durable plan/handoff/journal state; baseline re-verification after every context compaction; the work -> commit -> audit -> partner-cleanup -> restack loop; work-unit Git cadence and the always-active `refocus` skill's goal and scope checks at least hourly; subagent fan-out limits via the `parallelize` skill; and PAL consensus for significant decisions.
 
 $ARGUMENTS
