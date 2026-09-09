@@ -46,6 +46,7 @@ in
       ".thinkorswim".source = mkLink "${config.xdg.cacheHome}/thinkorswim";
 
       "dl".source = mkLink "${home}/Downloads";
+      "doc".source = mkLink "${home}/Documents";
       "db".source = mkLink "${home}/Databases";
       "Recordings".source =
         mkLink "${home}/Library/Mobile Documents/iCloud~com~openplanetsoftware~just-press-record/Documents";
