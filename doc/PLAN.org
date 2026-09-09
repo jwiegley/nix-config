@@ -7576,6 +7576,22 @@ The automatic updater selects upstream GitHub Latest v0.6.3rc1 but package valid
 ]
 #+end_src
 
+* DOING [#C] Deploy rounded pi-idle-check context percentage
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-hvpj
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-09 Wed 13:19]
+:MODIFIED: [2026-09-09 Wed 13:19]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pin pi-idle-check commit 080dcc9, validate managed package and Hera system, publish signed Nix change, activate Hera, and verify current percentage renders as a whole ceiling value.
+
 * DONE [#B] Adopt pi-blackhole 0.4.8 without losing bounded history
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -12337,15 +12353,17 @@ TestIssue1225_DrainInbox_ConcurrentDrainNoDoubleNoLoss silently returns on conte
 ]
 #+end_src
 
-* DOING [#C] Deploy pi-idle-check context-limit reporting
+* DONE [#C] Deploy pi-idle-check context-limit reporting
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-sh67
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-09-09 Wed 12:16]
-:MODIFIED: [2026-09-09 Wed 12:18]
+:MODIFIED: [2026-09-09 Wed 12:53]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 12:53]
+:CLOSE_REASON: Pinned pi-idle-check 82aeff3; published signed Nix revision 066402b; built package and Hera system; activated generation 1239 at ffncgq82; verified active Gallery package d1994371 and fresh offline Pi RPC startup without a model request.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
