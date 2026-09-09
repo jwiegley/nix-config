@@ -1705,6 +1705,47 @@ Owner decision is recorded. If dedicated: provision and configure the exact cons
 ]
 #+end_src
 
+* DOING [#C] Validate shared MCP registry membership per client selection
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-3wag
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-09 Wed 10:55]
+:MODIFIED: [2026-09-09 Wed 11:17]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The ai-mcp-registry behavioral check assumes Pi-only, Prime-only, and combined registries all have the same six members. Pi now selects zvec-grep while Prime does not, so the check exits 1 without diagnostics. Replace the duplicated fixed inventory with expected keys from each catalog projection, retain independent synthetic union/cross-home cases and exact PAL environment checks, and report which case is being verified.
+
+** Acceptance Criteria
+
+The registry behavior check passes for all three cases; a renderer that loses or invents members still fails; independent Pi-only/Prime-only/union selector cases and PAL security assertions remain.
+
+** Notes
+
+Registry membership is checked per catalog projection, with explicit synthetic Pi-only/Prime-only/union and cross-home cases plus exact PAL environment assertions retained. Native registry behavioral build passed.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-3wag",
+    "depends_on_id": "nix-ta9x",
+    "type": "discovered-from",
+    "created_at": "2026-09-09T17:55:29.609387Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#C] Make completion-ledger cancellation coverage bounded and side-effect aware
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -2042,6 +2083,31 @@ Managed stdio MCP clients may augment rather than replace their parent environme
 :END:
 
 Managed SSH routes still allowed password and keyboard-interactive fallback, so an unavailable agent could prompt during unattended builds and rollouts. Make SSH fail closed with BatchMode and key-only authentication across both Home Manager APIs.
+
+* DOING [#D] Remove historical execution records from architecture documentation :cleanup:ponytail:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-4vjc
+:LABELS:   ["cleanup","ponytail"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-09 Wed 10:34]
+:MODIFIED: [2026-09-09 Wed 11:17]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Remove retired portable-path migration narratives and old Vulcan acceptance dates, commit IDs, and build output. Preserve the current paired-input and consumer ownership contract. Correct the pre-commit verification table to match test/bin/quality.
+
+** Acceptance Criteria
+
+Documentation describes current ownership and implemented gate behavior; relevant links and diff checks pass.
+
+** Notes
+
+Architecture prose now states current paired-input and consumer ownership without old migration, dated acceptance, commit or store-path records. Precommit table matches the implemented static suites. Relative links and diff checks passed.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
 
 * DONE [#B] Repair PAL MCP across managed machines
 :PROPERTIES:
@@ -3649,6 +3715,56 @@ Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension usin
 
 Remove the claude-mem activation hook, transactional pin helper, behavioral check registration, implementation, and dedicated tests. Preserve mutable ~/.claude-mem state unless separately authorized for deletion.
 
+* DOING [#D] Consolidate Pi Flag and Idle Check package recipes                :cleanup:ponytail:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-93xc
+:LABELS:   ["cleanup","ponytail"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-09 Wed 10:34]
+:MODIFIED: [2026-09-09 Wed 11:17]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Replace the identical private Pi extension recipes with one small local helper parameterized only by catalog member and source. Preserve package metadata, manifest validation, npm lifecycle restrictions, checks, and installed files.
+
+** Acceptance Criteria
+
+Both package derivation identities match baseline or any difference is explained; both packages build; existing extension/gallery contracts remain intact.
+
+** Notes
+
+Pi Flag and Idle Check now share one private-extension recipe. Before/after .drv paths are identical and both packages realized successfully, preserving checks and installed bytes.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
+
+* DOING [#D] Trim obsolete comments and commented-out Agda configuration       :cleanup:ponytail:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-96sa
+:LABELS:   ["cleanup","ponytail"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-09 Wed 10:34]
+:MODIFIED: [2026-09-09 Wed 11:17]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Remove stale deadnix invocation commentary from the Droid renderer, historical rejected-edit narratives from AI preflight and gallery normalization comments, and commented-out Agda installation. Preserve security rationale and behavior.
+
+** Acceptance Criteria
+
+Only obsolete prose and commented-out configuration are removed; security checks remain unchanged; formatting, static gates, and focused checks pass.
+
+** Notes
+
+Removed stale deadnix invocation commentary, obsolete rejection narratives, and the commented Agda block. Kept safety rationale and all executable assertions; preflight and static gates passed.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
+
 * DONE [#C] Isolate optional oMLX proxy listeners from LAN availability
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -3681,6 +3797,46 @@ Remove the claude-mem activation hook, transactional pin helper, behavioral chec
 :END:
 
 Repair the shared Pi model refresh path so /model keeps cached models responsive, completes healthy cold pi.dev catalog refreshes without the downstream 2.5s false timeout, and re-discovers dynamic oMLX models through ProviderConfig.refreshModels rather than only at extension startup. Done requires secret-safe current-runtime reproduction, a bounded timeout, last-known-good behavior on local discovery failure, mutation-honest remote and local refresh regressions, affected package/full gates, and independent no-history audit. Activation/runtime acceptance is a separate explicitly authorized step.
+
+* TODO [#D] Investigate unreproduced Codex wrapper backup test failure
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-9fby
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-09 Wed 11:37]
+:MODIFIED: [2026-09-09 Wed 12:04]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Final make test passed all 21 Python suites and nine of ten Nix checks, but agent-wrappers failed at codex/22-host-state-managed with: codex: cannot create host-local memory backup. The instrumented Codex dependency completed successfully. Diagnose the backup failure at the runtime wrapper or fixture boundary, preserve shared-home state ownership and atomic backup behavior, and make the native wrapper gate pass without suppressions.
+
+** Acceptance Criteria
+
+Managed, shared-home, bypass, backup-race and failure-path wrapper cases pass; full baseline Nix gate passes.
+
+** Notes
+
+No production defect established. Initial unchanged k8da1znvv9rxwml9say4m21iz07ba3iq agent-wrappers derivation failed case 22 with a generic backup diagnostic; exact helper and five fake host-state cases passed under isolated outside-sandbox probes. A diagnostic copy first failed waiting for a child PID, then passed; that wait message also covers early child exit and does not establish a timeout. The original unchanged native derivation subsequently built successfully, with Claude, Codex, and passed markers; coordinator session 80913 returned exit 0. Keep this issue open for the unreproduced initial failure; do not claim a root cause or a production fix. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence/{wrapper-recheck.log,wrapper-recheck.out,sqlite-diagnostic*.log,wrapper-outside-probe/status.json}. A fresh aggregate make test is running for cleanup acceptance.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-9fby",
+    "depends_on_id": "nix-ta9x",
+    "type": "discovered-from",
+    "created_at": "2026-09-09T18:37:57.830344Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
 
 * DONE [#B] Restore full make update after Pi Subagents and Agent Deck upstream drift
 :PROPERTIES:
@@ -5060,6 +5216,47 @@ Temporarily disable Pi Lens registration without removing its package, source pi
     "author": "johnw",
     "text": "Final focused verification after review corrections passed at /nix/store/wkwdcj8a90wrydjw51rnbpqfyab35f50-pi-gallery-check. The current smoke keeps its generic active-Gallery installer sentinel, removes Lens-only assertions that became vacuous when Lens left activeOrder, and documents Lens interfaces as intentionally unavailable.",
     "created_at": "2026-08-16T05:43:32Z"
+  }
+]
+#+end_src
+
+* DOING [#C] Restore source-catalog ownership of the Pi provider-data artifact
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-cwo4
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-09 Wed 10:50]
+:MODIFIED: [2026-09-09 Wed 11:17]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The full updater suite fails IntegratedWorkflowTests.test_production_seams_have_no_undeclared_inline_source_coordinates on packages/pi-source-build.nix:20. The Pi source-build derivation constructs an inline npm pi-ai fetchzip URL from packageMetadata.version while its hash lives in sources/ai.json. This source seam is unchanged by the six ponytail cleanups. Reconcile the artifact with source-catalog/update ownership without weakening the inline-source gate or hiding the fetcher behind a local alias. Coordinate the update path so Pi version changes continue refreshing the matching provider data and dependent hash.
+
+** Acceptance Criteria
+
+The source-coordinate gate and updater tests pass; Pi source and provider artifact remain coupled and the package builds.
+
+** Notes
+
+Pi provider-data fetch coordinates and hash now live in artifacts.piAiRelease. flake-input+build projection sync validates a unique version coordinate, updates URLs and artifact hashes before package dependency hashes, and preserves no-op behavior. Four focused updater regression cases passed; the full 21-suite Python tier passed. The Pi .drv identity is unchanged.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-cwo4",
+    "depends_on_id": "nix-y5fn",
+    "type": "discovered-from",
+    "created_at": "2026-09-09T17:50:23.558188Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
@@ -12042,14 +12239,14 @@ VERIFICATION: head -8 of the file shows --- delimited YAML; the skill listing sh
 ]
 #+end_src
 
-* TODO [#C] Make Droid MCP catalog probe wait for connected readiness
+* DOING [#C] Make Droid MCP catalog probe wait for connected readiness
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-satp
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-25 Tue 23:34]
-:MODIFIED: [2026-09-09 Wed 10:55]
+:MODIFIED: [2026-09-09 Wed 11:18]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -12060,7 +12257,8 @@ test/ai/catalog-transport.nix intermittently reaches droid mcp list before manag
 
 ** Notes
 
-Reproduced during refocus validation on 2026-09-09. Diagnostic derivation /nix/store/77f3njrsq8rax41g67sykllnqavmhajd-ai-catalog-transport.drv exits 1 at generated buildCommand line 253: the grep requiring managed-environment-probe stdio connected [user]. The following bad-state diagnostic is never reached. This localizes the earlier silent failure from /nix/store/2sjpxzpmq2pjj4ckv7i5bv3p8m523ixs-ai-catalog-transport.drv. A line-number-only ERR trap is included with nix-ilej so this gate no longer fails silently; the readiness repair remains open here. No client runtime or configuration changes were made.
+The native Droid catalog probe now waits within one 20-second deadline and checks failures/authentication states and canaries before accepting connected on every attempt. Native catalog build passed. Seven tests of the extracted generated Bash loop passed: ready, delayed, failed, canary, never-ready, blocked command, and command exit; timeouts ended at about 19-20 seconds.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
 
 ** Dependencies
 
@@ -12302,6 +12500,31 @@ handleWatcherInstallSkill writes deterministic SKILL.md and README.md paths with
   }
 ]
 #+end_src
+
+* DOING [#D] Remove redundant renderer and agent-feed plumbing                 :cleanup:ponytail:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ta9x
+:LABELS:   ["cleanup","ponytail"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-09 Wed 10:34]
+:MODIFIED: [2026-09-09 Wed 11:17]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Replace the no-op rendererPkgs override with pkgs and remove the unused name parameter from agentPackagesFor and every caller. Preserve the actual paired Pi resource overrides.
+
+** Acceptance Criteria
+
+All callers are updated; package selection and renderer contracts pass; no public function signatures change.
+
+** Notes
+
+Removed only the no-op renderer package-set override and the unused private agent feed name argument. Paired Pi resource overrides remain. Managed-agent package selection, model-policy, preflight, and system builds passed.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
 
 * DONE [#A] Resolve whole-repository heavy review findings at c8b37be0
 :PROPERTIES:
@@ -19022,6 +19245,47 @@ Agent tooling never searches for executables by recursively traversing home, fil
 ]
 #+end_src
 
+* DOING [#C] Update Pi MCP adapter packaged-file contract for public build output
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ven6
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-09 Wed 10:59]
+:MODIFIED: [2026-09-09 Wed 11:18]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Retained agent-resources behavioral verification fails because the expected and actual pi-mcp-adapter top-level file inventories differ (first difference at byte 529). The source/package packaging and this test are unchanged by the six cleanups. Determine the exact added or missing file, preserve the security and public-export contract, and repair the stale expectation or packaging cause. Keep runtime adapter, generated-public-dist, file-integrity, and lifecycle checks.
+
+** Acceptance Criteria
+
+The exact packaged-file discrepancy is explained, existing runtime/public-export checks remain, and agent-resources behavioral verification passes.
+
+** Notes
+
+The added upstream file is mcp-panel-theme.ts. Expected top-level files now derive from the pinned upstream package manifest, constrained to literal top-level names. Exact content/type, public dist, skills and runtime checks remain. The repaired agent-resources behavioral build passed.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-ven6",
+    "depends_on_id": "nix-y5fn",
+    "type": "discovered-from",
+    "created_at": "2026-09-09T17:59:09.220795Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#C] Upgrade Factory Droid SDK to 0.9.0
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -20583,6 +20847,31 @@ Production fetch obeys the configured remote.origin.fetch, but signature verific
 ]
 #+end_src
 
+* DOING [#C] Retire cancelled Pi classic-core research harness                 :cleanup:ponytail:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-y5fn
+:LABELS:   ["cleanup","ponytail"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-09 Wed 10:34]
+:MODIFIED: [2026-09-09 Wed 11:17]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Remove the cancelled B1 classic-core baseline app and checks, their dedicated source-catalog record, test/ai/pi-bounded-memory bundle, three pi-classic-core derivations, and three PI-BOUNDED-MEMORY programme documents. nix-tcz.37.1 was explicitly dropped. Preserve current Pi gallery, lifecycle, and memory regression tests.
+
+** Acceptance Criteria
+
+Current exports, manifest, catalog, and maintained consumer references are reconciled; removed research paths have no active references; retained Pi contracts evaluate/build and repository checks are recorded.
+
+** Notes
+
+Removed the 17 dedicated research files, their source record, flake app and check declarations, and manifest entries. Active repository references are absent outside historical PLAN records. Authoritative Andoria and Vulcan consumer git searches returned no references. Live Pi gallery, extension, and session-replacement builds passed. No host was activated.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
+
 * TODO [#C] Make Agent Deck generic fresh restart rollback transactional
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -20930,6 +21219,31 @@ A separately authorized Hera switch adopts the final generated two-row machines 
   }
 ]
 #+end_src
+
+* DOING [#D] Simplify duplicate Pi local-provider merges                       :cleanup:ponytail:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-zc9k
+:LABELS:   ["cleanup","ponytail"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-09 Wed 10:34]
+:MODIFIED: [2026-09-09 Wed 11:17]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Remove the localDiscoveryProviders alias and redundant conditional provider merges. Preserve provider content, Hermes precedence, transport budgets, and all security/interface assertions.
+
+** Acceptance Criteria
+
+Rendered provider documents match baseline across maintained Pi profiles and injected transport/model cases; catalog transport and model policy contracts pass.
+
+** Notes
+
+The actual Pi renderer produces identical models.json data for five maintained profiles with default and injected transport policies (10 cases). Model-policy, native catalog transport, and managed-preflight checks passed; the readiness gate repair is tracked in nix-satp.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
 
 * DONE [#B] Preserve public modes when installing watcher skills
 :PROPERTIES:
