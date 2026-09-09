@@ -36,7 +36,7 @@ Common variations:
 ```
 run a validated code review against origin/feature-part-1
 run a validated code review, add a concurrency category
-run a validated code review with claude-fable-5 and gpt-5.6-sol
+run a validated code review with claude-fable-5-1 and gpt-6-astra
 ```
 
 The review takes a while because it launches many model calls. When it finishes,

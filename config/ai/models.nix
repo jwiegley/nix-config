@@ -13,11 +13,13 @@ let
     sonnet = "claude-sonnet-5";
     haiku = "claude-haiku-4-5-20251001";
     fable = "claude-fable-5";
+    fable51 = "claude-fable-5-1";
     sonnetLegacy = "claude-sonnet-4-20250514";
     opusLegacy = "claude-opus-4-20250514";
     sonnet45 = "claude-sonnet-4-5-20250929";
   };
   geminiPro = "gemini-3.1-pro-preview";
+  geminiFlash = "gemini-3.8-flash";
   deepseekFlash = "DeepSeek-V4-Flash-0731-MXFP4-MLX";
   claude = {
     name = "${anthropic.opus}[1m]";
@@ -235,12 +237,12 @@ in
   };
   advisors = {
     pal = {
-      reasoning = geminiPro;
+      reasoning = geminiFlash;
       partner = "gpt-5.5-pro";
     };
     validation = [
-      anthropic.fable
-      openai.sol
+      anthropic.fable51
+      openai.astra
     ];
     forge = [
       "fable"

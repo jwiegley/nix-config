@@ -11310,6 +11310,22 @@ The new conductor heartbeat test hard-codes /bin/bash and a /usr/bin:/bin PATH, 
 ]
 #+end_src
 
+* DOING [#B] Rebase PAL v1.5.0 and deploy next model set on Hera
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-qkeu
+:LABELS:   []
+:ISSUE_TYPE: feature
+:CREATED:  [2026-09-09 Wed 15:23]
+:MODIFIED: [2026-09-09 Wed 15:23]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Rebase jwiegley PAL fork onto mark v1.5.0; add gpt-6-astra, claude-fable-5-1, gemini-3.8-flash while retaining grok-4.6/deepseek-v4-pro; publish signed fork/Nix revisions; build, activate, and live-test Hera. Preserve unrelated working-tree changes.
+
 * DONE [#B] Namespace runtime hook authority and sandbox bridge artifacts by profile
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

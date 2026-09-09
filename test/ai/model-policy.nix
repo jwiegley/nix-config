@@ -47,15 +47,15 @@ let
       ''"asr probe's model"''
     ]
     [
-      "geminiPro = ${builtins.toJSON baseline.advisors.pal.reasoning};"
-      ''geminiPro = "model-policy-pal-reasoning";''
+      "geminiFlash = ${builtins.toJSON baseline.advisors.pal.reasoning};"
+      ''geminiFlash = "model-policy-pal-reasoning";''
     ]
     [
       "partner = ${builtins.toJSON baseline.advisors.pal.partner};"
       ''partner = "model-policy-pal-partner";''
     ]
     [
-      (builtins.toJSON baseline.anthropic.fable)
+      (builtins.toJSON baseline.anthropic.fable51)
       (builtins.toJSON "model-policy-validator")
     ]
     [
@@ -268,6 +268,12 @@ let
       ${pkgs.bash}/bin/bash ${script} > "$out/${name}/recordings-argv.json"
     '';
 in
+assert baseline.advisors.pal.reasoning == "gemini-3.8-flash";
+assert
+  baseline.advisors.validation == [
+    "claude-fable-5-1"
+    "gpt-6-astra"
+  ];
 pkgs.runCommand "model-policy-propagation" { } ''
   ${lib.concatStringsSep "\n" (lib.mapAttrsToList renderCase policies)}
   ${python}/bin/python3 - "$out" ${fixtureCatalog} <<'PY'
@@ -290,7 +296,7 @@ pkgs.runCommand "model-policy-propagation" { } ''
       assert routing["models"]["claude-fable"]["select"] == [{"exact": "claude-fable-5-1[1m]"}]
       assert routing["models"]["claude-opus"]["select"] == [{"exact": "opus[1m]"}]
       assert routing["models"]["codex-sol"]["select"] == [{"exact": policy["openai"]["sol"]}]
-      assert routing["models"]["droid-gemini-3.1-pro"]["select"] == [{"exact": policy["advisors"]["pal"]["reasoning"]}]
+      assert routing["models"]["droid-gemini-3.1-pro"]["select"] == [{"exact": "gemini-3.1-pro-preview"}]
       assert routing["engines"]["deck-nix"]["backend"] == "deck:nix"
       assert set(routing["engines"]) == {"claude", "codex", "droid", "deck-nix"}
       qwen = policy["omlx"]["primary"]
