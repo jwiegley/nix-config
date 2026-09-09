@@ -1705,15 +1705,17 @@ Owner decision is recorded. If dedicated: provision and configure the exact cons
 ]
 #+end_src
 
-* DOING [#C] Validate shared MCP registry membership per client selection
+* DONE [#C] Validate shared MCP registry membership per client selection
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-3wag
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-09 Wed 10:55]
-:MODIFIED: [2026-09-09 Wed 11:17]
+:MODIFIED: [2026-09-09 Wed 12:12]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 12:12]
+:CLOSE_REASON: Implemented and verified in cleanup/ponytail-six at /Users/johnw/Products/nix-ponytail-six. Focused checks, full make test, static gate, portable evaluation and Darwin system build passed; independent source audit found no defects. No activation or publication.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
@@ -1728,7 +1730,7 @@ The registry behavior check passes for all three cases; a renderer that loses or
 ** Notes
 
 Registry membership is checked per catalog projection, with explicit synthetic Pi-only/Prime-only/union and cross-home cases plus exact PAL environment assertions retained. Native registry behavioral build passed.
-Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Acceptance complete: make test passed all 21 Python suites and all 10 baseline Nix checks (make-test-accepted.log, coordinator session 92564 exit 0). Final static gate, portable all-system evaluation, and Darwin system build passed. The initial unreproduced wrapper failure is retained separately in nix-9fby; no production backup change was made. No merge, publication, or activation.
 
 ** Dependencies
 
@@ -2084,15 +2086,17 @@ Managed stdio MCP clients may augment rather than replace their parent environme
 
 Managed SSH routes still allowed password and keyboard-interactive fallback, so an unavailable agent could prompt during unattended builds and rollouts. Make SSH fail closed with BatchMode and key-only authentication across both Home Manager APIs.
 
-* DOING [#D] Remove historical execution records from architecture documentation :cleanup:ponytail:
+* DONE [#D] Remove historical execution records from architecture documentation :cleanup:ponytail:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-4vjc
 :LABELS:   ["cleanup","ponytail"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-09-09 Wed 10:34]
-:MODIFIED: [2026-09-09 Wed 11:17]
+:MODIFIED: [2026-09-09 Wed 12:12]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 12:12]
+:CLOSE_REASON: Implemented and verified in cleanup/ponytail-six at /Users/johnw/Products/nix-ponytail-six. Focused checks, full make test, static gate, portable evaluation and Darwin system build passed; independent source audit found no defects. No activation or publication.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
@@ -2107,7 +2111,7 @@ Documentation describes current ownership and implemented gate behavior; relevan
 ** Notes
 
 Architecture prose now states current paired-input and consumer ownership without old migration, dated acceptance, commit or store-path records. Precommit table matches the implemented static suites. Relative links and diff checks passed.
-Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Acceptance complete: make test passed all 21 Python suites and all 10 baseline Nix checks (make-test-accepted.log, coordinator session 92564 exit 0). Final static gate, portable all-system evaluation, and Darwin system build passed. The initial unreproduced wrapper failure is retained separately in nix-9fby; no production backup change was made. No merge, publication, or activation.
 
 * DONE [#B] Repair PAL MCP across managed machines
 :PROPERTIES:
@@ -3715,15 +3719,17 @@ Add jo-inc/pi-mem as a pinned, gallery-normalized Pi Coding Agent extension usin
 
 Remove the claude-mem activation hook, transactional pin helper, behavioral check registration, implementation, and dedicated tests. Preserve mutable ~/.claude-mem state unless separately authorized for deletion.
 
-* DOING [#D] Consolidate Pi Flag and Idle Check package recipes                :cleanup:ponytail:
+* DONE [#D] Consolidate Pi Flag and Idle Check package recipes                 :cleanup:ponytail:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-93xc
 :LABELS:   ["cleanup","ponytail"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-09-09 Wed 10:34]
-:MODIFIED: [2026-09-09 Wed 11:17]
+:MODIFIED: [2026-09-09 Wed 12:12]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 12:12]
+:CLOSE_REASON: Implemented and verified in cleanup/ponytail-six at /Users/johnw/Products/nix-ponytail-six. Focused checks, full make test, static gate, portable evaluation and Darwin system build passed; independent source audit found no defects. No activation or publication.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
@@ -3738,17 +3744,19 @@ Both package derivation identities match baseline or any difference is explained
 ** Notes
 
 Pi Flag and Idle Check now share one private-extension recipe. Before/after .drv paths are identical and both packages realized successfully, preserving checks and installed bytes.
-Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Acceptance complete: make test passed all 21 Python suites and all 10 baseline Nix checks (make-test-accepted.log, coordinator session 92564 exit 0). Final static gate, portable all-system evaluation, and Darwin system build passed. The initial unreproduced wrapper failure is retained separately in nix-9fby; no production backup change was made. No merge, publication, or activation.
 
-* DOING [#D] Trim obsolete comments and commented-out Agda configuration       :cleanup:ponytail:
+* DONE [#D] Trim obsolete comments and commented-out Agda configuration        :cleanup:ponytail:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-96sa
 :LABELS:   ["cleanup","ponytail"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-09-09 Wed 10:34]
-:MODIFIED: [2026-09-09 Wed 11:17]
+:MODIFIED: [2026-09-09 Wed 12:12]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 12:12]
+:CLOSE_REASON: Implemented and verified in cleanup/ponytail-six at /Users/johnw/Products/nix-ponytail-six. Focused checks, full make test, static gate, portable evaluation and Darwin system build passed; independent source audit found no defects. No activation or publication.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
@@ -3763,7 +3771,7 @@ Only obsolete prose and commented-out configuration are removed; security checks
 ** Notes
 
 Removed stale deadnix invocation commentary, obsolete rejection narratives, and the commented Agda block. Kept safety rationale and all executable assertions; preflight and static gates passed.
-Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Acceptance complete: make test passed all 21 Python suites and all 10 baseline Nix checks (make-test-accepted.log, coordinator session 92564 exit 0). Final static gate, portable all-system evaluation, and Darwin system build passed. The initial unreproduced wrapper failure is retained separately in nix-9fby; no production backup change was made. No merge, publication, or activation.
 
 * DONE [#C] Isolate optional oMLX proxy listeners from LAN availability
 :PROPERTIES:
@@ -3805,7 +3813,7 @@ Repair the shared Pi model refresh path so /model keeps cached models responsive
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-09 Wed 11:37]
-:MODIFIED: [2026-09-09 Wed 12:04]
+:MODIFIED: [2026-09-09 Wed 12:22]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
@@ -3820,7 +3828,7 @@ Managed, shared-home, bypass, backup-race and failure-path wrapper cases pass; f
 
 ** Notes
 
-No production defect established. Initial unchanged k8da1znvv9rxwml9say4m21iz07ba3iq agent-wrappers derivation failed case 22 with a generic backup diagnostic; exact helper and five fake host-state cases passed under isolated outside-sandbox probes. A diagnostic copy first failed waiting for a child PID, then passed; that wait message also covers early child exit and does not establish a timeout. The original unchanged native derivation subsequently built successfully, with Claude, Codex, and passed markers; coordinator session 80913 returned exit 0. Keep this issue open for the unreproduced initial failure; do not claim a root cause or a production fix. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence/{wrapper-recheck.log,wrapper-recheck.out,sqlite-diagnostic*.log,wrapper-outside-probe/status.json}. A fresh aggregate make test is running for cleanup acceptance.
+No production defect established. Initial unchanged k8da1znvv9rxwml9say4m21iz07ba3iq agent-wrappers derivation failed case 22 with a generic backup diagnostic; exact helper and five fake host-state cases passed under isolated outside-sandbox probes. A diagnostic copy first failed waiting for a child PID, then passed; that wait message also covers early child exit and does not establish a timeout. The original unchanged native derivation subsequently built successfully, with Claude, Codex, and passed markers; coordinator session 80913 returned exit 0. Keep this issue open for the unreproduced initial failure; do not claim a root cause or a production fix. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence/{wrapper-recheck.log,wrapper-recheck.out,sqlite-diagnostic*.log,wrapper-outside-probe/status.json}. Final aggregate make test passed: 21 Python suites and all 10 baseline Nix checks; coordinator session 92564 exited 0 (make-test-accepted.log). The original failure remains unexplained; no production backup change was made.
 
 ** Dependencies
 
@@ -5220,15 +5228,17 @@ Temporarily disable Pi Lens registration without removing its package, source pi
 ]
 #+end_src
 
-* DOING [#C] Restore source-catalog ownership of the Pi provider-data artifact
+* DONE [#C] Restore source-catalog ownership of the Pi provider-data artifact
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-cwo4
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-09 Wed 10:50]
-:MODIFIED: [2026-09-09 Wed 11:17]
+:MODIFIED: [2026-09-09 Wed 12:12]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 12:12]
+:CLOSE_REASON: Implemented and verified in cleanup/ponytail-six at /Users/johnw/Products/nix-ponytail-six. Focused checks, full make test, static gate, portable evaluation and Darwin system build passed; independent source audit found no defects. No activation or publication.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
@@ -5243,7 +5253,7 @@ The source-coordinate gate and updater tests pass; Pi source and provider artifa
 ** Notes
 
 Pi provider-data fetch coordinates and hash now live in artifacts.piAiRelease. flake-input+build projection sync validates a unique version coordinate, updates URLs and artifact hashes before package dependency hashes, and preserves no-op behavior. Four focused updater regression cases passed; the full 21-suite Python tier passed. The Pi .drv identity is unchanged.
-Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Acceptance complete: make test passed all 21 Python suites and all 10 baseline Nix checks (make-test-accepted.log, coordinator session 92564 exit 0). Final static gate, portable all-system evaluation, and Darwin system build passed. The initial unreproduced wrapper failure is retained separately in nix-9fby; no production backup change was made. No merge, publication, or activation.
 
 ** Dependencies
 
@@ -12239,15 +12249,17 @@ VERIFICATION: head -8 of the file shows --- delimited YAML; the skill listing sh
 ]
 #+end_src
 
-* DOING [#C] Make Droid MCP catalog probe wait for connected readiness
+* DONE [#C] Make Droid MCP catalog probe wait for connected readiness
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-satp
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-25 Tue 23:34]
-:MODIFIED: [2026-09-09 Wed 11:18]
+:MODIFIED: [2026-09-09 Wed 12:12]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 12:12]
+:CLOSE_REASON: Implemented and verified in cleanup/ponytail-six at /Users/johnw/Products/nix-ponytail-six. Focused checks, full make test, static gate, portable evaluation and Darwin system build passed; independent source audit found no defects. No activation or publication.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -12258,7 +12270,7 @@ test/ai/catalog-transport.nix intermittently reaches droid mcp list before manag
 ** Notes
 
 The native Droid catalog probe now waits within one 20-second deadline and checks failures/authentication states and canaries before accepting connected on every attempt. Native catalog build passed. Seven tests of the extracted generated Bash loop passed: ready, delayed, failed, canary, never-ready, blocked command, and command exit; timeouts ended at about 19-20 seconds.
-Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Acceptance complete: make test passed all 21 Python suites and all 10 baseline Nix checks (make-test-accepted.log, coordinator session 92564 exit 0). Final static gate, portable all-system evaluation, and Darwin system build passed. The initial unreproduced wrapper failure is retained separately in nix-9fby; no production backup change was made. No merge, publication, or activation.
 
 ** Dependencies
 
@@ -12517,15 +12529,17 @@ handleWatcherInstallSkill writes deterministic SKILL.md and README.md paths with
 ]
 #+end_src
 
-* DOING [#D] Remove redundant renderer and agent-feed plumbing                 :cleanup:ponytail:
+* DONE [#D] Remove redundant renderer and agent-feed plumbing                  :cleanup:ponytail:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-ta9x
 :LABELS:   ["cleanup","ponytail"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-09-09 Wed 10:34]
-:MODIFIED: [2026-09-09 Wed 11:17]
+:MODIFIED: [2026-09-09 Wed 12:12]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 12:12]
+:CLOSE_REASON: Implemented and verified in cleanup/ponytail-six at /Users/johnw/Products/nix-ponytail-six. Focused checks, full make test, static gate, portable evaluation and Darwin system build passed; independent source audit found no defects. No activation or publication.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
@@ -12540,7 +12554,7 @@ All callers are updated; package selection and renderer contracts pass; no publi
 ** Notes
 
 Removed only the no-op renderer package-set override and the unused private agent feed name argument. Paired Pi resource overrides remain. Managed-agent package selection, model-policy, preflight, and system builds passed.
-Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Acceptance complete: make test passed all 21 Python suites and all 10 baseline Nix checks (make-test-accepted.log, coordinator session 92564 exit 0). Final static gate, portable all-system evaluation, and Darwin system build passed. The initial unreproduced wrapper failure is retained separately in nix-9fby; no production backup change was made. No merge, publication, or activation.
 
 * DONE [#A] Resolve whole-repository heavy review findings at c8b37be0
 :PROPERTIES:
@@ -19261,15 +19275,17 @@ Agent tooling never searches for executables by recursively traversing home, fil
 ]
 #+end_src
 
-* DOING [#C] Update Pi MCP adapter packaged-file contract for public build output
+* DONE [#C] Update Pi MCP adapter packaged-file contract for public build output
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-ven6
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-09 Wed 10:59]
-:MODIFIED: [2026-09-09 Wed 11:18]
+:MODIFIED: [2026-09-09 Wed 12:12]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 12:12]
+:CLOSE_REASON: Implemented and verified in cleanup/ponytail-six at /Users/johnw/Products/nix-ponytail-six. Focused checks, full make test, static gate, portable evaluation and Darwin system build passed; independent source audit found no defects. No activation or publication.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
@@ -19284,7 +19300,7 @@ The exact packaged-file discrepancy is explained, existing runtime/public-export
 ** Notes
 
 The added upstream file is mcp-panel-theme.ts. Expected top-level files now derive from the pinned upstream package manifest, constrained to literal top-level names. Exact content/type, public dist, skills and runtime checks remain. The repaired agent-resources behavioral build passed.
-Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Acceptance complete: make test passed all 21 Python suites and all 10 baseline Nix checks (make-test-accepted.log, coordinator session 92564 exit 0). Final static gate, portable all-system evaluation, and Darwin system build passed. The initial unreproduced wrapper failure is retained separately in nix-9fby; no production backup change was made. No merge, publication, or activation.
 
 ** Dependencies
 
@@ -20863,15 +20879,17 @@ Production fetch obeys the configured remote.origin.fetch, but signature verific
 ]
 #+end_src
 
-* DOING [#C] Retire cancelled Pi classic-core research harness                 :cleanup:ponytail:
+* DONE [#C] Retire cancelled Pi classic-core research harness                  :cleanup:ponytail:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-y5fn
 :LABELS:   ["cleanup","ponytail"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-09-09 Wed 10:34]
-:MODIFIED: [2026-09-09 Wed 11:17]
+:MODIFIED: [2026-09-09 Wed 12:12]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 12:12]
+:CLOSE_REASON: Implemented and verified in cleanup/ponytail-six at /Users/johnw/Products/nix-ponytail-six. Focused checks, full make test, static gate, portable evaluation and Darwin system build passed; independent source audit found no defects. No activation or publication.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
@@ -20886,7 +20904,7 @@ Current exports, manifest, catalog, and maintained consumer references are recon
 ** Notes
 
 Removed the 17 dedicated research files, their source record, flake app and check declarations, and manifest entries. Active repository references are absent outside historical PLAN records. Authoritative Andoria and Vulcan consumer git searches returned no references. Live Pi gallery, extension, and session-replacement builds passed. No host was activated.
-Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Acceptance complete: make test passed all 21 Python suites and all 10 baseline Nix checks (make-test-accepted.log, coordinator session 92564 exit 0). Final static gate, portable all-system evaluation, and Darwin system build passed. The initial unreproduced wrapper failure is retained separately in nix-9fby; no production backup change was made. No merge, publication, or activation.
 
 * TODO [#C] Make Agent Deck generic fresh restart rollback transactional
 :PROPERTIES:
@@ -21236,15 +21254,17 @@ A separately authorized Hera switch adopts the final generated two-row machines 
 ]
 #+end_src
 
-* DOING [#D] Simplify duplicate Pi local-provider merges                       :cleanup:ponytail:
+* DONE [#D] Simplify duplicate Pi local-provider merges                        :cleanup:ponytail:
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-zc9k
 :LABELS:   ["cleanup","ponytail"]
 :ISSUE_TYPE: task
 :CREATED:  [2026-09-09 Wed 10:34]
-:MODIFIED: [2026-09-09 Wed 11:17]
+:MODIFIED: [2026-09-09 Wed 12:12]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 12:12]
+:CLOSE_REASON: Implemented and verified in cleanup/ponytail-six at /Users/johnw/Products/nix-ponytail-six. Focused checks, full make test, static gate, portable evaluation and Darwin system build passed; independent source audit found no defects. No activation or publication.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
@@ -21259,7 +21279,7 @@ Rendered provider documents match baseline across maintained Pi profiles and inj
 ** Notes
 
 The actual Pi renderer produces identical models.json data for five maintained profiles with default and injected transport policies (10 cases). Model-policy, native catalog transport, and managed-preflight checks passed; the readiness gate repair is tracked in nix-satp.
-Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Final make test Nix phase is still running; leave in progress until terminal acceptance. No merge, publication, or activation.
+Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Acceptance complete: make test passed all 21 Python suites and all 10 baseline Nix checks (make-test-accepted.log, coordinator session 92564 exit 0). Final static gate, portable all-system evaluation, and Darwin system build passed. The initial unreproduced wrapper failure is retained separately in nix-9fby; no production backup change was made. No merge, publication, or activation.
 
 * DONE [#B] Preserve public modes when installing watcher skills
 :PROPERTIES:
