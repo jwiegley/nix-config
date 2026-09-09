@@ -11310,15 +11310,17 @@ The new conductor heartbeat test hard-codes /bin/bash and a /usr/bin:/bin PATH, 
 ]
 #+end_src
 
-* DOING [#B] Rebase PAL v1.5.0 and deploy next model set on Hera
+* DONE [#B] Rebase PAL v1.5.0 and deploy next model set on Hera
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-qkeu
 :LABELS:   []
 :ISSUE_TYPE: feature
 :CREATED:  [2026-09-09 Wed 15:23]
-:MODIFIED: [2026-09-09 Wed 15:23]
+:MODIFIED: [2026-09-09 Wed 16:52]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 16:52]
+:CLOSE_REASON: Rebased and signed PAL v1.5.0 fork, published exact revisions, activated Hera, and passed exact five-model live acceptance.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0

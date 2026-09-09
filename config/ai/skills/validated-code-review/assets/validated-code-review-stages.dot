@@ -79,7 +79,7 @@ digraph validated_code_review {
             label=<<font point-size="10" color="#64748B">Broad reviewers — one per model, full diff</font>>;
             style="dashed,rounded,filled"; color="#C9D5E3"; fillcolor="#F2F6FA";
             r_broad_fable [label=<<b>Broad review</b><br/><font point-size="9" color="#2563AE">claude-fable-5-1</font>>, fillcolor="#EAF1FA", color="#93B4DF"];
-            r_broad_sol   [label=<<b>Broad review</b><br/><font point-size="9" color="#B15D0E">gpt-6-astra</font>>,    fillcolor="#FBF0E5", color="#DCA36A"];
+            r_broad_astra [label=<<b>Broad review</b><br/><font point-size="9" color="#B15D0E">gpt-6-astra</font>>,    fillcolor="#FBF0E5", color="#DCA36A"];
         }
     }
 
@@ -93,7 +93,7 @@ digraph validated_code_review {
         v_tests    [label=<<b>Verify test coverage</b><br/><font point-size="9" color="#B15D0E">gpt-6-astra</font>>,     fillcolor="#FBF0E5", color="#DCA36A"];
         v_extra    [label=<<b>Verify extra category</b><br/><font point-size="9" color="#2563AE">claude-fable-5-1</font>>, fillcolor="#EAF1FA", color="#93B4DF"];
         v_broad_fable [label=<<b>Verify broad (fable)</b><br/><font point-size="9" color="#B15D0E">gpt-6-astra</font>>,  fillcolor="#FBF0E5", color="#DCA36A"];
-        v_broad_sol   [label=<<b>Verify broad (astra)</b><br/><font point-size="9" color="#2563AE">claude-fable-5-1</font>>, fillcolor="#EAF1FA", color="#93B4DF"];
+        v_broad_astra [label=<<b>Verify broad (astra)</b><br/><font point-size="9" color="#2563AE">claude-fable-5-1</font>>, fillcolor="#EAF1FA", color="#93B4DF"];
     }
 
     // ---- Stage 3 -------------------------------------------------------------
@@ -126,7 +126,7 @@ digraph validated_code_review {
     setup -> r_tests;
     setup -> r_extra;
     setup -> r_broad_fable;
-    setup -> r_broad_sol;
+    setup -> r_broad_astra;
 
     // reviewer → its opposite-model verifier (color flips within each pair)
     r_correct     -> v_correct     [label="review-correctness.md"];
@@ -135,7 +135,7 @@ digraph validated_code_review {
     r_tests       -> v_tests       [label="review-test-coverage.md"];
     r_extra       -> v_extra       [label="review-<extra>.md"];
     r_broad_fable -> v_broad_fable [label="review-broad-fable.md"];
-    r_broad_sol   -> v_broad_sol   [label="review-broad-sol.md"];
+    r_broad_astra -> v_broad_astra [label="review-broad-gpt-6-astra.md"];
 
     v_correct     -> consolidate [label="verified-*.md"];
     v_memory      -> consolidate;
@@ -143,7 +143,7 @@ digraph validated_code_review {
     v_tests       -> consolidate;
     v_extra       -> consolidate;
     v_broad_fable -> consolidate;
-    v_broad_sol   -> consolidate;
+    v_broad_astra -> consolidate;
 
     consolidate -> pal   [label="two attested chat rounds", penwidth=1.6, color="#7C6FCF"];
     pal         -> final [label="confirmed blockers only",               penwidth=1.6, color="#5FAE87"];
