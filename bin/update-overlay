@@ -2046,6 +2046,17 @@ def load_source_catalog(
                 raise RuntimeError(
                     f"invalid flake input build strategy for source catalog record: {name}"
                 )
+            if kind == "flake-input+build" and artifacts:
+                version = record.get("version", "")
+                if not version or not all(
+                    artifact["fetcher"] in {"fetchurl", "fetchzip"}
+                    and isinstance(artifact["args"].get("url"), str)
+                    and artifact["args"]["url"].count(version) == 1
+                    for artifact in artifacts.values()
+                ):
+                    raise RuntimeError(
+                        f"flake input build artifacts require a unique version coordinate: {name}"
+                    )
             if kind == "fixed-flake-input" and hashes and build_package is None:
                 raise RuntimeError(
                     f"fixed flake input with dependent hashes requires a build package: {name}"
@@ -2403,6 +2414,7 @@ def sync_flake_projections(
         projection["url"] = projected_url
         record_changed = True
     update = record["update"]
+    old_version = record.get("version")
     version_path = update.get("versionPath")
     if update["kind"] in {"flake-input+build", "flake-input+copy"} or version_path:
         projected_version = (
@@ -2418,6 +2430,20 @@ def sync_flake_projections(
         update["kind"] == "fixed-flake-input" and bool(record.get("hashes"))
     )
     if needs_dependent_hashes and record_changed:
+        if update["kind"] == "flake-input+build":
+            artifacts = record.get("artifacts", {})
+            for artifact in artifacts.values():
+                artifact["args"]["url"] = artifact["args"]["url"].replace(
+                    old_version, record["version"], 1
+                )
+                artifact["url"] = artifact["args"]["url"]
+            for artifact_name, artifact in artifacts.items():
+                hash_field = next(iter({"hash", "sha256"} & artifact["args"].keys()))
+                artifact["args"][hash_field] = DUMMY_SRI_HASH
+                path.write_text(json.dumps(target["_document"], indent=2) + "\n")
+                artifact["args"][hash_field] = dependent_hash_resolver(
+                    nix_dir, update["buildPackage"], artifact_name
+                )
         dependent_hashes = record["hashes"]
         for hash_type in dependent_hashes:
             dependent_hashes[hash_type] = DUMMY_SRI_HASH

@@ -68,10 +68,7 @@ let
   pairedPiGallery = pairedAiPackages.pi-gallery or null;
   pairedPiFlagPackage = pairedAiPackages.pi-flag or null;
   resourcePackage = pkgs.agent-resources;
-  rendererPkgs = pkgs // {
-    agent-resources = resourcePackage;
-  };
-  piRendererPkgs = rendererPkgs // {
+  piRendererPkgs = pkgs // {
     agent-resources = if pairedAgentResources != null then pairedAgentResources else resourcePackage;
     pi-gallery = if pairedPiGallery != null then pairedPiGallery else pkgs.pi-gallery;
     pi-flag = pairedPiFlagPackage;
@@ -86,17 +83,14 @@ let
   registry = args.hostRegistry or (import ./hosts.nix);
   renderers = {
     claude = import ./ai/renderers/claude.nix {
-      inherit lib;
-      pkgs = rendererPkgs;
+      inherit lib pkgs;
     };
     codex = import ./ai/renderers/codex.nix {
-      inherit lib models;
-      pkgs = rendererPkgs;
+      inherit lib models pkgs;
       codexPackage = pairedCodexPackage;
     };
     droid = import ./ai/renderers/droid.nix {
-      inherit lib;
-      pkgs = rendererPkgs;
+      inherit lib pkgs;
     };
     pi = import ./ai/renderers/pi.nix {
       inherit lib;
@@ -109,8 +103,7 @@ let
     };
   };
   mcpRegistryRenderer = import ./ai/renderers/mcp-registry.nix {
-    inherit lib;
-    pkgs = rendererPkgs;
+    inherit lib pkgs;
   };
 
   homeClass = if nixManagedAiHomeClass != null then nixManagedAiHomeClass else hostname;

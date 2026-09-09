@@ -36,17 +36,10 @@ config/ai/flake.nix
 implementation tree. The root and portable locks must agree on shared inputs;
 host-only inputs stay outside the portable closure.
 
-The former root `flake-ai.nix` shim and later legacy subflake-path stub were
-retired after authoritative consumer evaluation and code search found no
-maintained import. Portable consumers use `flake/ai.nix` through `config/ai`.
-
 ### External consumers
 
 The supported shape is a paired root source and `dir=config/ai` input at one
-revision. Cleanup issue #114 verified the paired-revision mechanism on the
-then-canonical path in the authoritative shared-work, VPS, and Vulcan checkouts;
-issue #126 completed the cutover to `config/ai`. The source has no compatibility
-route at the retired path.
+revision.
 
 External Home Manager and NixOS checkouts own their locks and activation. This
 repository exports implementation and modules; it does not overwrite another
@@ -54,20 +47,11 @@ consumer's checkout or deployment state.
 
 #### Vulcan consumer policy
 
-> **Acceptance record (2026-08-31):** implemented and built in Vulcan's separate
-> authoritative `/etc/nixos` checkout, `gitea:johnw/nixos-config`, not in this
-> shared implementation repository.
-
 Vulcan's `/etc/nixos/build` refreshes `nix-config`, `nix-config-ai`, and its
 top-level Pi source while holding the consumer build lock, before ordinary
 `nixos-rebuild` evaluation. The driver records the resolved revisions. Its NixOS
 module graph remains on `nixos-25.11`; its Home Manager and standalone packages
-use a separate `nixpkgs-user` input following the portable AI nixpkgs line. The
-consumer commits `6ea1ad81`, `75cf0dc3`, and `f8158dbd` establish that policy;
-`8ddc933d` records a successful refresh. The final build-only candidate was
-`/nix/store/2612i5wh6n2wljny0rqhamdj3fz0cm5d-nixos-system-vulcan-25.11.20260630.b6018f8`.
-It was not switched, and its generated Pi model/Gallery artifacts were verified
-without credentials or provider calls.
+use a separate `nixpkgs-user` input following the portable AI nixpkgs line.
 
 VPS remains a supported external consumer but is parked outside the default
 cross-consumer evaluation and active rollout sets. Its explicit consumer
@@ -398,7 +382,7 @@ Verification tiers are intentionally distinct:
 
 | Tier | Purpose |
 | --- | --- |
-| Pre-commit | Formatting, lint, parsing, and bounded essential tests |
+| Pre-commit | Formatting, lint, and parsing |
 | Pre-push | Commit signatures |
 | Work-unit closeout | Slow focused tests, consumer evaluation, and affected builds |
 | Scheduled/expensive | Cross-system portable evaluation, native checks, and low-frequency evidence |

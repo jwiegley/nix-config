@@ -75,7 +75,6 @@ let
   localProviders = lib.mapAttrs (
     _: provider: provider // { transport = localProviderTransport; }
   ) localProviderOverrides;
-  localDiscoveryProviders = localProviders;
   gallerySource = pkgs.writeText "pi-managed-gallery.ts" ''
     import { createNixGallery } from ${builtins.toJSON "${pkgs.pi-gallery}/share/pi-gallery/loader.ts"};
 
@@ -87,10 +86,7 @@ let
     ln -s ${pkgs.pi-gallery}/share/pi-gallery/projection.json "$out/projection.json"
   '';
   models.providers =
-    nativeProviders
-    // lib.optionalAttrs localModelDiscovery localDiscoveryProviders
-    // lib.optionalAttrs hermesRoute hermesProvider
-    // lib.optionalAttrs localModelRoutes localProviders;
+    nativeProviders // localProviders // lib.optionalAttrs hermesRoute hermesProvider;
   providerApiKeyForms = lib.mapAttrs (_: provider: provider.apiKey) (
     lib.filterAttrs (_: provider: provider ? apiKey) models.providers
   );

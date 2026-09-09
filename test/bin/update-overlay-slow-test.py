@@ -861,6 +861,65 @@ class UpdateInventoryTests(unittest.TestCase):
             self.assertEqual(record["source"]["args"]["rev"], "a" * 40)
             self.assertEqual(record["hashes"]["npmDepsHash"], "sha256-new")
 
+    def test_flake_input_build_refreshes_versioned_artifacts_before_dependencies(self):
+        def with_artifact(document, _lock):
+            record = document["sources"]["example"]
+            record["version"] = "1.0.0"
+            record["hashes"] = {"npmDepsHash": "sha256-old-dependencies"}
+            record["update"].update(kind="flake-input+build", buildPackage="example")
+            url = "https://example.invalid/data-1.0.0.tgz"
+            record["artifacts"] = {
+                "data": {
+                    "fetcher": "fetchzip",
+                    "url": url,
+                    "args": {"url": url, "hash": "sha256-old-artifact"},
+                }
+            }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self._write_projection_fixture(root, with_artifact)
+            path = root / "sources/test.json"
+            calls = []
+
+            def resolve_hash(_root, package, name):
+                record = json.loads(path.read_text())["sources"]["example"]
+                artifact = record["artifacts"]["data"]
+                self.assertEqual(package, "example")
+                self.assertEqual(record["version"], "2.0.0")
+                self.assertEqual(artifact["url"], "https://example.invalid/data-2.0.0.tgz")
+                self.assertEqual(artifact["args"]["url"], artifact["url"])
+                if name == "data":
+                    self.assertEqual(artifact["args"]["hash"], MODULE["DUMMY_SRI_HASH"])
+                    self.assertEqual(record["hashes"]["npmDepsHash"], "sha256-old-dependencies")
+                else:
+                    self.assertEqual(artifact["args"]["hash"], "sha256-new-data")
+                    self.assertEqual(record["hashes"]["npmDepsHash"], MODULE["DUMMY_SRI_HASH"])
+                calls.append(name)
+                return f"sha256-new-{name}"
+
+            kwargs = {
+                "version_resolver": lambda *_args: "2.0.0",
+                "dependent_hash_resolver": resolve_hash,
+            }
+            self.assertEqual(sync_flake_projections(root, "example", **kwargs), 1)
+            self.assertEqual(calls, ["data", "npmDepsHash"])
+            self.assertEqual(sync_flake_projections(root, "example", **kwargs), 0)
+            self.assertEqual(calls, ["data", "npmDepsHash"])
+            record = load_source_catalog(root)["example"]["_record"]
+            self.assertEqual(record["hashes"]["npmDepsHash"], "sha256-new-npmDepsHash")
+            for url in (
+                "https://example.invalid/data.tgz",
+                "https://example.invalid/2.0.0/data-2.0.0.tgz",
+            ):
+                with self.subTest(url=url):
+                    document = json.loads(path.read_text())
+                    artifact = document["sources"]["example"]["artifacts"]["data"]
+                    artifact["url"] = artifact["args"]["url"] = url
+                    path.write_text(json.dumps(document))
+                    with self.assertRaisesRegex(RuntimeError, "unique version coordinate"):
+                        load_source_catalog(root)
+
     def test_fixed_flake_input_syncs_version_and_dependent_hash_after_lock_update(self):
         def make_stale(document, _lock):
             record = document["sources"]["example"]

@@ -152,6 +152,10 @@ targets owned by the lower-level executor, not every catalog record. Exit status
 3 identifies a resolved candidate rejected by package validation; other nonzero
 statuses remain hard failures.
 
+For `flake-input+build` records, fetchurl/fetchzip artifacts follow the selected
+package version through one occurrence in each artifact URL. Projection sync
+updates their URLs and hashes before resolving the package's dependent hashes.
+
 Only a candidate failure followed by a successful build of the restored
 pre-target state qualifies as candidate rejection. Persistent baseline,
 interruption, timeout, and process-launch failures remain fatal.

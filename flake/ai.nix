@@ -129,16 +129,16 @@ let
     else
       package;
 
-  agentPackagesFor = _name: system: llm-agents.packages.${system} or { };
+  agentPackagesFor = system: llm-agents.packages.${system} or { };
   agentExistsOnSupportedSystem =
-    name: builtins.any (system: builtins.hasAttr name (agentPackagesFor name system)) systems;
+    name: builtins.any (system: builtins.hasAttr name (agentPackagesFor system)) systems;
 
   canonicalPiPackages = forAllSystems (
     system:
     let
       pkgs = pkgsFor.${system};
     in
-    patchAgentPackage pkgs "pi" (agentPackagesFor "pi" system).pi
+    patchAgentPackage pkgs "pi" (agentPackagesFor system).pi
   );
 
   canonicalCodexPackages = forAllSystems (
@@ -146,10 +146,10 @@ let
     let
       pkgs = pkgsFor.${system};
     in
-    patchAgentPackage pkgs "codex" (agentPackagesFor "codex" system).codex
+    patchAgentPackage pkgs "codex" (agentPackagesFor system).codex
   );
 
-  canonicalDroidPackages = forAllSystems (system: (agentPackagesFor "droid" system).droid);
+  canonicalDroidPackages = forAllSystems (system: (agentPackagesFor system).droid);
 
   optAgent =
     pkgs: name:
@@ -157,7 +157,7 @@ let
       "optAgent: agent `${name}` is absent from every supported system feed";
     let
       system = pkgs.stdenv.hostPlatform.system;
-      agentPackages = agentPackagesFor name system;
+      agentPackages = agentPackagesFor system;
     in
     if !(builtins.hasAttr name agentPackages) then
       [ ]
@@ -436,14 +436,6 @@ in
     let
       pkgs = pkgsFor.${system};
       qualityDeps = qualityInputs pkgs;
-      classicCoreSource = pkgs.callPackage ../test/ai/pi-classic-core-source.nix { };
-      classicCoreFixtures = pkgs.callPackage ../test/ai/pi-classic-core-fixtures.nix {
-        classicPackage = classicCoreSource;
-      };
-      classicCoreBaseline = pkgs.callPackage ../test/ai/pi-classic-core-baseline.nix {
-        classicFixtures = classicCoreFixtures;
-        classicPackage = classicCoreSource;
-      };
       app =
         name: scriptName: runtimeInputs: extraEnv:
         mkScriptApp pkgs name scriptName runtimeInputs extraEnv;
@@ -459,12 +451,6 @@ in
       check = app "check" "check.sh" qualityDeps.all lintRoot;
       default = check;
     }
-    // lib.optionalAttrs (pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.hostPlatform.isAarch64) {
-      pi-classic-core-baseline = {
-        type = "app";
-        program = lib.getExe classicCoreBaseline;
-      };
-    }
   );
 
   checks = forAllSystems (
@@ -472,10 +458,6 @@ in
     let
       pkgs = pkgsFor.${system};
       qualityDeps = qualityInputs pkgs;
-      classicCoreSource = pkgs.callPackage ../test/ai/pi-classic-core-source.nix { };
-      classicCoreFixtures = pkgs.callPackage ../test/ai/pi-classic-core-fixtures.nix {
-        classicPackage = classicCoreSource;
-      };
       check =
         name: scriptName: runtimeInputs: extraEnv:
         mkScriptCheck pkgs name scriptName runtimeInputs extraEnv;
@@ -550,8 +532,6 @@ in
     // lib.optionalAttrs (pkgs.stdenv.hostPlatform.isDarwin && pkgs.stdenv.hostPlatform.isAarch64) {
       llm-mlx-plugin = pkgs.python3Packages.llm-mlx.passthru.tests.llm-plugin;
       mtplx-transformers-compat = pkgs.mtplx.passthru.tests.transformers-compat;
-      pi-classic-core-fixtures = classicCoreFixtures;
-      pi-classic-core-source = classicCoreSource;
     }
   );
 

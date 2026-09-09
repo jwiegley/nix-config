@@ -290,17 +290,6 @@ rec {
     # ── Programming Languages & Dev Tools ────────────────────────────
     ++ [
       act
-    ]
-    # ++ lib.optionals (!caps.isSharedWork) [
-    #   # Agda and agda2-mode derive from the same haskellPackages.Agda.
-    #   (agda.withPackages (
-    #     agda-pkgs: with agda-pkgs; [
-    #       agda-categories
-    #       standard-library
-    #     ]
-    #   ))
-    # ]
-    ++ [
       cmake
       cmdperf
       doxygen

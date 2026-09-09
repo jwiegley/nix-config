@@ -38,16 +38,15 @@ let
       projection = catalog.sharedMcpRegistryFor { inherit profiles items; };
       inherit homeDirectory xdgConfigHome;
     };
-  cases = {
-    piOnly = renderRegistry { profiles = [ piProfile ]; };
-    primeOnly = renderRegistry { profiles = [ primeProfile ]; };
-    combined = renderRegistry {
-      profiles = [
-        piProfile
-        primeProfile
-      ];
-    };
+  caseProfiles = {
+    piOnly = [ piProfile ];
+    primeOnly = [ primeProfile ];
+    combined = [
+      piProfile
+      primeProfile
+    ];
   };
+  cases = lib.mapAttrs (_: profiles: renderRegistry { inherit profiles; }) caseProfiles;
   unionItems = catalog.items // {
     mcpServers = {
       pi-only = catalog.items.mcpServers.pal // {
@@ -136,22 +135,19 @@ assert !(builtins.hasAttr registryPath primeRendered.files);
 assert !(piRendered ? mutableMcpGuard);
 assert !(primeRendered ? mutableMcpGuard);
 pkgs.runCommand "ai-mcp-registry" { } ''
-  for registry in \
-    ${cases.piOnly.files.${registryPath}.source} \
-    ${cases.primeOnly.files.${registryPath}.source} \
-    ${cases.combined.files.${registryPath}.source}
-  do
+  ${lib.concatMapStringsSep "\n" (name: ''
+    echo "Checking MCP registry: ${name}"
     ${pkgs.jq}/bin/jq -e \
+      --argjson members ${
+        lib.escapeShellArg (
+          builtins.toJSON (
+            builtins.attrNames (catalog.sharedMcpRegistryFor { profiles = caseProfiles.${name}; }).mcpServers
+          )
+        )
+      } \
       --arg launcher ${lib.escapeShellArg "${configured.nix-managed-mcp-stdio}/bin/nix-managed-mcp-stdio"} \
       --arg pal ${lib.escapeShellArg "${configured.pal-mcp-server}/bin/pal-mcp-server"} '
-      (.mcpServers | keys) == [
-        "devonthink",
-        "drafts",
-        "pal",
-        "searxng",
-        "sequential-thinking",
-        "stock-trader"
-      ]
+      (.mcpServers | keys) == $members
       and .settings.mcpFooterStatus == "compact"
       and .mcpServers.pal == {
         command: $launcher,
@@ -186,8 +182,8 @@ pkgs.runCommand "ai-mcp-registry" { } ''
           PAL_FACTORY_DROID_USE_LOCAL_LOGIN: "true"
         }
       }
-    ' "$registry" >/dev/null
-  done
+    ' ${cases.${name}.files.${registryPath}.source} >/dev/null
+  '') (builtins.attrNames cases)}
 
   ${pkgs.jq}/bin/jq -e \
     '(.mcpServers | keys) == ["pi-only"]' \

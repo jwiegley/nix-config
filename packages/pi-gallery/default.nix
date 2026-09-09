@@ -99,16 +99,9 @@ let
       )
     )
   );
-  # This eval-time validator deliberately duplicates the policy rules that
-  # normalize-manifest.jq enforces at build time — the two have distinct,
-  # load-bearing roles. The jq is the executor: it validates and applies the
-  # policy whenever a target is normalized, but only for the target at hand,
-  # and only when a derivation is actually built. This assert is the
-  # whole-contract gate: it runs on every evaluation, including
-  # `nix flake check --no-build` — bin/update's pre-sign validation — so a
-  # policy corruption can never be captured in a signed commit. A 2026-08
-  # attempt to delete it in favor of the jq alone was adversarially
-  # rejected on exactly those two gaps.
+  # Validate the complete policy during evaluation, including --no-build.
+  # normalize-manifest.jq validates and applies only the selected target when
+  # its derivation is built.
   stringList =
     value:
     builtins.isList value
@@ -663,94 +656,54 @@ let
       runHook postInstall
     '';
   };
-  pi-flag = buildNpmPackage {
-    pname = members.flag.attrName;
-    version = members.flag.version;
-    src = piFlagSource;
-    npmDepsHash = members.flag.hashes.npmDepsHash;
-    nodejs = buildPackages.nodejs_24;
-    nativeBuildInputs = [ jq ];
-    npmInstallFlags = [ "--ignore-scripts" ];
-    dontNpmBuild = true;
-    makeCacheWritable = true;
-    doCheck = true;
-    checkPhase = ''
-      runHook preCheck
-      npm run check
-      runHook postCheck
-    '';
-    installPhase = ''
-      runHook preInstall
-      ${jq}/bin/jq -e --arg version ${lib.escapeShellArg members.flag.version} '
-        .name == "pi-flag"
-        and .version == $version
-        and .private == true
-        and .license == "UNLICENSED"
-        and .type == "module"
-        and .pi.extensions == ["./index.ts"]
-        and (.dependencies == null)
-        and ([
-          .scripts
-          | keys[]
-          | select(
-              . == "preinstall"
-              or . == "install"
-              or . == "postinstall"
-              or . == "prepare"
-            )
-        ] | length == 0)
-      ' package.json >/dev/null
-      root="$out/share/pi-packages/pi-flag"
-      mkdir -p "$root"
-      cp index.ts package.json README.md "$root"/
-      cp -R src "$root"/
-      runHook postInstall
-    '';
-  };
-  pi-idle-check = buildNpmPackage {
-    pname = members.idle-check.attrName;
-    version = members.idle-check.version;
-    src = idleCheckSource;
-    npmDepsHash = members.idle-check.hashes.npmDepsHash;
-    nodejs = buildPackages.nodejs_24;
-    nativeBuildInputs = [ jq ];
-    npmInstallFlags = [ "--ignore-scripts" ];
-    dontNpmBuild = true;
-    makeCacheWritable = true;
-    doCheck = true;
-    checkPhase = ''
-      runHook preCheck
-      npm run check
-      runHook postCheck
-    '';
-    installPhase = ''
-      runHook preInstall
-      ${jq}/bin/jq -e --arg version ${lib.escapeShellArg members.idle-check.version} '
-        .name == "pi-idle-check"
-        and .version == $version
-        and .private == true
-        and .license == "UNLICENSED"
-        and .type == "module"
-        and .pi.extensions == ["./index.ts"]
-        and (.dependencies == null)
-        and ([
-          .scripts
-          | keys[]
-          | select(
-              . == "preinstall"
-              or . == "install"
-              or . == "postinstall"
-              or . == "prepare"
-            )
-        ] | length == 0)
-      ' package.json >/dev/null
-      root="$out/share/pi-packages/pi-idle-check"
-      mkdir -p "$root"
-      cp index.ts package.json README.md "$root"/
-      cp -R src "$root"/
-      runHook postInstall
-    '';
-  };
+  mkPrivatePiExtension =
+    member: src:
+    buildNpmPackage {
+      pname = member.attrName;
+      inherit (member) version;
+      inherit src;
+      npmDepsHash = member.hashes.npmDepsHash;
+      nodejs = buildPackages.nodejs_24;
+      nativeBuildInputs = [ jq ];
+      npmInstallFlags = [ "--ignore-scripts" ];
+      dontNpmBuild = true;
+      makeCacheWritable = true;
+      doCheck = true;
+      checkPhase = ''
+        runHook preCheck
+        npm run check
+        runHook postCheck
+      '';
+      installPhase = ''
+        runHook preInstall
+        ${jq}/bin/jq -e --arg version ${lib.escapeShellArg member.version} '
+          .name == "${member.attrName}"
+          and .version == $version
+          and .private == true
+          and .license == "UNLICENSED"
+          and .type == "module"
+          and .pi.extensions == ["./index.ts"]
+          and (.dependencies == null)
+          and ([
+            .scripts
+            | keys[]
+            | select(
+                . == "preinstall"
+                or . == "install"
+                or . == "postinstall"
+                or . == "prepare"
+              )
+          ] | length == 0)
+        ' package.json >/dev/null
+        root="$out/share/pi-packages/${member.attrName}"
+        mkdir -p "$root"
+        cp index.ts package.json README.md "$root"/
+        cp -R src "$root"/
+        runHook postInstall
+      '';
+    };
+  pi-flag = mkPrivatePiExtension members.flag piFlagSource;
+  pi-idle-check = mkPrivatePiExtension members.idle-check idleCheckSource;
   pi-droid-sdk = mkNpmPackageRoot {
     pname = members.droid.attrName;
     version = members.droid.version;

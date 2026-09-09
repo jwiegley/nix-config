@@ -1713,64 +1713,77 @@ pkgs.runCommand "ai-catalog-transport" { } ''
     --replace-fail '@DROID_HOME@' "$droid_home" \
     --replace-fail '@DROID_TMPDIR@' "$droid_tmp"
   ln -s "$droid_home/.config/factory" "$droid_home/.factory"
-  if ! ${pkgs.coreutils}/bin/timeout --signal=TERM --kill-after=1 20 \
-    ${pkgs.coreutils}/bin/env -i \
-      HOME="$droid_home" \
-      XDG_CONFIG_HOME="$droid_home/.config" \
-      USER=test \
-      LOGNAME=test \
-      LANG=C.UTF-8 \
-      LC_ALL=C.UTF-8 \
-      PATH=${
-        lib.escapeShellArg (
-          lib.makeBinPath [
-            droidPackage
-            pkgs.coreutils
-          ]
-        )
-      } \
-      TERM=dumb \
-      TMPDIR="$droid_tmp" \
-      NIX_SSL_CERT_FILE=/managed-ca \
-      SHELL=/managed-shell \
-      SSL_CERT_FILE=/managed-ssl \
-      ANTHROPIC_API_KEY= \
-      OPENAI_API_KEY=typed-sentinel \
-      DEFAULT_MODEL=parent-poison \
-      GEMINI_API_KEY=droid-gemini-sentinel \
-      GIT_AI_SOCKET=/forbidden \
-      GIT_TRACE2_EVENT=/forbidden \
-      SSH_AUTH_SOCK=/forbidden \
-      NODE_OPTIONS=--trace-warnings \
-      PYTHONPATH=/forbidden \
-      UNRELATED_SECRET=unrelated-sentinel \
-      FACTORY_AIRGAP_ENABLED=true \
-      FACTORY_OTEL_ENABLED=false \
-      FACTORY_DISABLE_DYNAMIC_CONFIG=true \
-      FACTORY_DROID_AUTO_UPDATE_ENABLED=false \
-      FACTORY_MCP_BLOCKING_LOAD_TIMEOUT_MS=5000 \
-      ${droidPackage}/bin/droid mcp list \
-      >"$TMPDIR/droid-managed-mcp.stdout" \
-      2>"$TMPDIR/droid-managed-mcp.stderr"; then
-    ${pkgs.coreutils}/bin/cat "$TMPDIR/droid-managed-mcp.stdout" >&2
-    ${pkgs.coreutils}/bin/cat "$TMPDIR/droid-managed-mcp.stderr" >&2
-    exit 1
-  fi
-  ${pkgs.gnugrep}/bin/grep -F \
-    'managed-environment-probe  stdio  connected  [user]' \
-    "$TMPDIR/droid-managed-mcp.stdout" >/dev/null
-  if ${pkgs.gnugrep}/bin/grep -E \
-    'managed-environment-probe.*(connecting|failed|needs authentication)' \
-    "$TMPDIR/droid-managed-mcp.stdout" >/dev/null; then
-    echo "Droid did not connect to the managed environment probe" >&2
-    exit 1
-  fi
-  if ${pkgs.gnugrep}/bin/grep -E \
-    '(typed-sentinel|droid-gemini-sentinel|parent-poison|unrelated-sentinel|/forbidden)' \
-    "$TMPDIR/droid-managed-mcp.stdout" "$TMPDIR/droid-managed-mcp.stderr" >/dev/null; then
-    echo "Droid disclosed managed MCP environment canaries" >&2
-    exit 1
-  fi
+  droid_deadline=$((SECONDS + 20))
+  while true; do
+    droid_remaining=$((droid_deadline - SECONDS))
+    if [ "$droid_remaining" -le 0 ]; then
+      echo "Droid did not report connected MCP readiness within 20 seconds" >&2
+      ${pkgs.coreutils}/bin/cat "$TMPDIR/droid-managed-mcp.stdout" >&2
+      ${pkgs.coreutils}/bin/cat "$TMPDIR/droid-managed-mcp.stderr" >&2
+      exit 1
+    fi
+    if ! ${pkgs.coreutils}/bin/timeout --signal=TERM --kill-after=1 "$droid_remaining" \
+      ${pkgs.coreutils}/bin/env -i \
+        HOME="$droid_home" \
+        XDG_CONFIG_HOME="$droid_home/.config" \
+        USER=test \
+        LOGNAME=test \
+        LANG=C.UTF-8 \
+        LC_ALL=C.UTF-8 \
+        PATH=${
+          lib.escapeShellArg (
+            lib.makeBinPath [
+              droidPackage
+              pkgs.coreutils
+            ]
+          )
+        } \
+        TERM=dumb \
+        TMPDIR="$droid_tmp" \
+        NIX_SSL_CERT_FILE=/managed-ca \
+        SHELL=/managed-shell \
+        SSL_CERT_FILE=/managed-ssl \
+        ANTHROPIC_API_KEY= \
+        OPENAI_API_KEY=typed-sentinel \
+        DEFAULT_MODEL=parent-poison \
+        GEMINI_API_KEY=droid-gemini-sentinel \
+        GIT_AI_SOCKET=/forbidden \
+        GIT_TRACE2_EVENT=/forbidden \
+        SSH_AUTH_SOCK=/forbidden \
+        NODE_OPTIONS=--trace-warnings \
+        PYTHONPATH=/forbidden \
+        UNRELATED_SECRET=unrelated-sentinel \
+        FACTORY_AIRGAP_ENABLED=true \
+        FACTORY_OTEL_ENABLED=false \
+        FACTORY_DISABLE_DYNAMIC_CONFIG=true \
+        FACTORY_DROID_AUTO_UPDATE_ENABLED=false \
+        FACTORY_MCP_BLOCKING_LOAD_TIMEOUT_MS=5000 \
+        ${droidPackage}/bin/droid mcp list \
+        >"$TMPDIR/droid-managed-mcp.stdout" \
+        2>"$TMPDIR/droid-managed-mcp.stderr"; then
+      ${pkgs.coreutils}/bin/cat "$TMPDIR/droid-managed-mcp.stdout" >&2
+      ${pkgs.coreutils}/bin/cat "$TMPDIR/droid-managed-mcp.stderr" >&2
+      exit 1
+    fi
+    if ${pkgs.gnugrep}/bin/grep -E \
+      'managed-environment-probe.*(failed|needs authentication)' \
+      "$TMPDIR/droid-managed-mcp.stdout" >/dev/null; then
+      echo "Droid did not connect to the managed environment probe" >&2
+      exit 1
+    fi
+    if ${pkgs.gnugrep}/bin/grep -E \
+      '(typed-sentinel|droid-gemini-sentinel|parent-poison|unrelated-sentinel|/forbidden)' \
+      "$TMPDIR/droid-managed-mcp.stdout" "$TMPDIR/droid-managed-mcp.stderr" >/dev/null; then
+      echo "Droid disclosed managed MCP environment canaries" >&2
+      exit 1
+    fi
+    if ${pkgs.gnugrep}/bin/grep -F \
+      'managed-environment-probe  stdio  connected  [user]' \
+      "$TMPDIR/droid-managed-mcp.stdout" >/dev/null; then
+      break
+    fi
+    ${pkgs.coreutils}/bin/sleep 0.2
+  done
 
   grep -F '**Fallback smuggling**' ${codexRendered.files.${fessPaths.codex.agent}.source} >/dev/null
   grep -F '**Fallback smuggling**' ${
