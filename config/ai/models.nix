@@ -688,7 +688,37 @@ in
           cacheWrite = 0;
         };
       };
-      fallbacks = [ ];
+      # Backup for the NixOS reasoning cascade when GLM is unavailable.
+      #
+      # Consumed ONLY by scripts/log-summarizer.py, which builds
+      # `[reasoning] + fallbacks` and walks it in order. Verified before adding:
+      # nothing else on vulcan reads llm.fallbacks -- the other two greps that
+      # matched the word were unrelated prose (an email-defaults comment in
+      # flume cross_check, and Hermes' own separate fallback chain in
+      # alerts/hermes.yaml).
+      #
+      # WHY A FALLBACK EXISTS AT ALL: on 2026-09-08 the reasoning model answered
+      # every request with HTTP 400 prefill_memory_exceeded and the summariser
+      # had nowhere to go, so logwatch degraded to a non-AI digest. The operator
+      # has since freed ~40GB on hera by disabling the in-memory KV cache and
+      # GLM now serves normally, but a single-entry cascade has no second chance
+      # by construction.
+      #
+      # The name is derived from the primary role rather than written out, so a
+      # model rename in omlxRoles carries here instead of silently pointing at a
+      # model the gateway no longer serves. `:thinking` is a served alias of that
+      # same base model with reasoning enabled (confirmed against /v1/models).
+      #
+      # maxSeconds 900 rather than the 3600 nixosRetryPolicy default: the
+      # summariser caps its whole AI stage at AI_TOTAL_BUDGET_S = 1800s, itself
+      # under logwatch.service's 45min, so a fallback allowed 3600s could never
+      # run to completion anyway.
+      fallbacks = [
+        (nixosRetryPolicy // {
+          name = "${omlxRoles.primary.name}:thinking";
+          maxSeconds = 900;
+        })
+      ];
     };
     embedding = {
       primary.name = embeddings.omlx;
