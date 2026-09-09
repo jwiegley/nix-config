@@ -432,6 +432,10 @@ runCommand "pi-gallery-check"
     ! grep -R -E 'sessionManager\.get(Entries|Branch)\(' ${roots.idle-check} >/dev/null
     [ -f ${roots.btw}/extensions/btw.ts ]
     [ -f ${roots.btw}/skills/btw/SKILL.md ]
+    grep -F 'return Math.max(18, Math.floor(terminalRows * 0.8));' ${roots.btw}/extensions/btw.ts >/dev/null \
+      || fail "pi-btw overlay height does not track 80% of terminal rows"
+    grep -F 'maxHeight: "80%"' ${roots.btw}/extensions/btw.ts >/dev/null \
+      || fail "pi-btw overlay cap does not match its 80% rendered height"
     (
       cd ${sourceForChecks}
       PI_BTW_EXTENSION=${roots.btw}/extensions/btw.ts \

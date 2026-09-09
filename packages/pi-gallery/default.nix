@@ -870,6 +870,9 @@ let
       ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
         --directory=${root} --strip=1 \
         < ${./patches/pi-btw-bounded-history.patch}
+      ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
+        --directory=${root} --strip=1 \
+        < ${./patches/pi-btw-responsive-height.patch}
     '';
   };
 

@@ -1,0 +1,20 @@
+--- a/extensions/btw.ts
++++ b/extensions/btw.ts
+@@ -1144,7 +1144,7 @@ class BtwOverlayComponent extends Container implements Focusable {
+ 
+   private getDialogHeight(): number {
+     const terminalRows = process.stdout.rows ?? 30;
+-    return Math.max(18, Math.min(32, Math.floor(terminalRows * 0.78)));
++    return Math.max(18, Math.floor(terminalRows * 0.8));
+   }
+ 
+   private scrollTranscript(delta: number): void {
+@@ -1715,7 +1715,7 @@ export default function (pi: ExtensionAPI) {
+           overlayOptions: {
+             width: "78%",
+             minWidth: 72,
+-            maxHeight: "78%",
++            maxHeight: "80%",
+             anchor: "top-center",
+             margin: { top: 1, left: 2, right: 2 },
+             nonCapturing: true,

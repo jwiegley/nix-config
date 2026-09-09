@@ -20151,6 +20151,24 @@ Live Hera Pi reports both omlx/Qwen3.6-27B-oQ6e-mtp and router/sol as thinking=n
 ]
 #+end_src
 
+* DONE [#C] Scale pi-btw overlay to 80% of terminal height
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-x8zh
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-08 Tue 21:16]
+:MODIFIED: [2026-09-08 Tue 21:24]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-08 Tue 21:24]
+:CLOSE_REASON: Removed pi-btw's 32-row cap, aligned rendered and overlay maximum height at 80%, and added gallery assertions.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Remove the 32-row cap from the managed pi-btw overlay so its rendered height tracks 80% of terminal window height; retain a focused package check.
+
 * DONE [#C] Keep inactive Pi Lens out of automatic updates
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
