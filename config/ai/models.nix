@@ -698,10 +698,13 @@ in
         # maxSeconds 900 rather than the 3600 default: the summariser caps its
         # whole AI stage at 1800s, itself under logwatch.service's 45min.
         fallbacks = [
-          (nixosRetryPolicy // {
-            name = "${omlxRoles.primary.name}:thinking";
-            maxSeconds = 900;
-          })
+          (
+            nixosRetryPolicy
+            // {
+              name = "${omlxRoles.primary.name}:thinking";
+              maxSeconds = 900;
+            }
+          )
         ];
       };
       fast = nixosRetryPolicy // {
