@@ -7576,15 +7576,17 @@ The automatic updater selects upstream GitHub Latest v0.6.3rc1 but package valid
 ]
 #+end_src
 
-* DOING [#C] Deploy rounded pi-idle-check context percentage
+* DONE [#C] Deploy rounded pi-idle-check context percentage
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-hvpj
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-09 Wed 13:19]
-:MODIFIED: [2026-09-09 Wed 13:19]
+:MODIFIED: [2026-09-09 Wed 13:33]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 13:33]
+:CLOSE_REASON: Pinned pi-idle-check 080dcc9; published signed Nix revision 7651a47; built managed package and Hera system; activated generation 1241 at xj45rwjf; verified active Gallery package 58w9pqpm and fresh offline Pi RPC startup.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
