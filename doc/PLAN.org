@@ -4735,6 +4735,61 @@ Replace the automatic asheshgoplani/agent-deck v1.15.0 release source with immut
 
 Generic source-only PyPI updates incorrectly assign the release version to a nonexistent source ref, so unchanged records are reported and rewritten as old-version to identical-version updates. Treat identical version/location/hash records as skipped and render the same concise up-to-date status used by compound PyPI targets.
 
+* DONE [#D] Restore shell formatting for project shfmt 3.13.1
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-bl8t
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-09 Wed 14:20]
+:MODIFIED: [2026-09-09 Wed 14:50]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 14:50]
+:CLOSE_REASON: Corrected transient ambient-shfmt commit ff33a10 with signed follow-up 2ba5c67; project-pinned shfmt 3.13.1 all-files pre-commit, 37 quality-runner tests, and publication pre-push gates pass; runtime behavior unchanged.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+A stale pre-activation environment exposed ambient shfmt 3.14.1 and produced four formatting-only changes opposite the project's pinned shfmt 3.13.1. Restore project formatter output in a signed follow-up commit; preserve published and concurrent history.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-bl8t",
+    "depends_on_id": "nix-kq6s",
+    "type": "discovered-from",
+    "created_at": "2026-09-09T21:20:34.464413Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 551,
+    "issue_id": "nix-bl8t",
+    "author": "johnw",
+    "text": "Reopened: Correct malformed close reason.",
+    "created_at": "2026-09-09T21:30:22Z"
+  },
+  {
+    "id": 552,
+    "issue_id": "nix-bl8t",
+    "author": "johnw",
+    "text": "Reopened: Activated project dev shell revealed shfmt 3.13.1 is authoritative; correcting transient ambient-formatter output without rewriting published history.",
+    "created_at": "2026-09-09T21:43:09Z"
+  }
+]
+#+end_src
+
 * DONE [#B] Preserve consumed-turn cleanup lineage across multi-hop profile moves
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -8822,6 +8877,45 @@ An llm-agents bump advanced packaged Pi beyond the manually reviewed source buil
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
+  }
+]
+#+end_src
+
+* DONE [#C] Deploy Pi-style idle context precision
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-kq6s
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-09 Wed 14:13]
+:MODIFIED: [2026-09-09 Wed 14:51]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 14:51]
+:CLOSE_REASON: Pinned pi-idle-check 8fa3af9 and published signed Nix revision ffb4f7a; corrected formatter-only detour ff33a10 with signed 2ba5c67; activated Hera generation 1242 at pwsd18pj after full recovery rerun; verified active Gallery package h79f43kl and fresh offline Pi RPC startup.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pin pi-idle-check commit 8fa3af9, validate managed package and Hera system, publish signed Nix change, activate Hera, and verify one-decimal current context display.
+
+** Comments
+
+#+begin_src json
+[
+  {
+    "id": 553,
+    "issue_id": "nix-kq6s",
+    "author": "johnw",
+    "text": "Reopened: Correct closeout wording after formatter follow-up.",
+    "created_at": "2026-09-09T21:50:47Z"
+  },
+  {
+    "id": 554,
+    "issue_id": "nix-kq6s",
+    "author": "johnw",
+    "text": "Reopened: Correct accidental truncated close reason.",
+    "created_at": "2026-09-09T21:51:03Z"
   }
 ]
 #+end_src
