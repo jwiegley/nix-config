@@ -352,10 +352,10 @@
       },
       "source": {
         "args": {
-          "hash": "sha256-ped8W0A1Rlea9WC1Vb6+rooXNd5HXyaqDFjBC3v1J+Y=",
+          "hash": "sha256-B4iHL7rKW+lROnwZe1g5MqA/yaYKIlZOXtFynPqZGu8=",
           "owner": "jwiegley",
           "repo": "pi-idle-check",
-          "rev": "7d2ce319cd6d9f0e6b885615b291dd0e5438b1c0"
+          "rev": "82aeff3bafdef609e49ce8ff047e9b611169535b"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jwiegley/pi-idle-check"

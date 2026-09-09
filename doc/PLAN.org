@@ -12325,6 +12325,22 @@ TestIssue1225_DrainInbox_ConcurrentDrainNoDoubleNoLoss silently returns on conte
 ]
 #+end_src
 
+* DOING [#C] Deploy pi-idle-check context-limit reporting
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-sh67
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-09 Wed 12:16]
+:MODIFIED: [2026-09-09 Wed 12:18]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pin pi-idle-check commit 82aeff3, build the managed package and Hera system, publish the signed Nix change, activate Hera, and verify the deployed source so the current Pi session can reload it.
+
 * DONE [#C] Add pi-droid-sdk Factory provider to managed Pi Gallery
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
