@@ -549,7 +549,7 @@ in
     # These agents shell out to pkgs.my-scripts, which exists only where the
     # flake provides a `scripts` input. Guard the whole set so a Darwin consumer
     # without that input still evaluates (mirrors the config/ssh.nix guard).
-    // lib.optionalAttrs (config.johnw.host.isHera && (pkgs ? my-scripts)) {
+    // lib.optionalAttrs (config.johnw.host.isClio && (pkgs ? my-scripts)) {
 
       push-tank = {
         script = ''
@@ -575,7 +575,7 @@ in
           };
           RunAtLoad = false;
           StartCalendarInterval = {
-            Hour = 7;
+            Hour = 3;
             Minute = 0;
           };
           StandardOutPath = "${home}/Library/Logs/push-tank.log";
