@@ -670,6 +670,39 @@ in
     llm = {
       primary = nixosRetryPolicy // {
         name = omlxRoles.primary.name;
+        # Backup models for THIS role, tried in order by the NixOS log
+        # summariser, which walks `[primary] + primary.fallbacks`.
+        #
+        # SCOPED BY NESTING, deliberately. This lived at llm.fallbacks for one
+        # commit, where it read as a fallback list for every model in the file
+        # rather than for one role. Nesting makes that misreading
+        # unrepresentable.
+        #
+        # It then briefly hung off `reasoning`, which was correct while the
+        # summariser used GLM. Operator policy on 2026-09-09 moved log analysis
+        # and spam detection to the non-thinking model and reserved GLM for the
+        # Hermes agent, so the backup follows the JOB rather than the model it
+        # used to run on -- left under `reasoning` it would be dead config that
+        # nothing reads.
+        #
+        # NOTE its value is narrower here than behind GLM: `:thinking` is the
+        # same base model with reasoning enabled on the same backend, so a
+        # failure taking out the primary will often take this with it. A second
+        # chance, not an independent one. Drop it if that is not worth the config.
+        #
+        # Safe to attach here: models.llm.primary is consumed only via `.name`
+        # (stock-trader, open-webui), never wholesale in restartTriggers, so
+        # adding a key restarts nothing -- unlike llm.reasoning, which feeds
+        # hermes-microvm.nix restartTriggers.
+        #
+        # maxSeconds 900 rather than the 3600 default: the summariser caps its
+        # whole AI stage at 1800s, itself under logwatch.service's 45min.
+        fallbacks = [
+          (nixosRetryPolicy // {
+            name = "${omlxRoles.primary.name}:thinking";
+            maxSeconds = 900;
+          })
+        ];
       };
       fast = nixosRetryPolicy // {
         name = omlxRoles.primary.name;
@@ -687,45 +720,6 @@ in
           cacheRead = 0;
           cacheWrite = 0;
         };
-        # Backup models for THIS role, tried in order when GLM is unavailable.
-        #
-        # NESTED INSIDE reasoning, deliberately. It lived as a sibling
-        # `llm.fallbacks` for one commit and that was wrong: structurally it read
-        # as a fallback list for the whole llm section -- primary and fast
-        # included -- when it only ever applied to reasoning. Nothing consumed it
-        # that way yet, but a future caller wiring llm.fallbacks to `primary`
-        # would silently have got a reasoning model. Scoping by nesting makes
-        # that mistake unrepresentable.
-        #
-        # Consumed by scripts/log-summarizer.py, which walks
-        # `[reasoning] + reasoning.fallbacks` in order. It is the only reader:
-        # checked across this repo and vulcan's modules before moving.
-        #
-        # WHY A FALLBACK EXISTS: on 2026-09-08 GLM answered every request with
-        # HTTP 400 prefill_memory_exceeded and the summariser had nowhere to go,
-        # so logwatch degraded to a non-AI digest. The operator has since freed
-        # ~40GB on hera by disabling the in-memory KV cache and GLM serves
-        # normally again, but a single-entry cascade has no second chance by
-        # construction.
-        #
-        # The name is derived from the primary role rather than written out, so a
-        # rename in omlxRoles carries here instead of silently pointing at a
-        # model the gateway no longer serves. `:thinking` is a served alias of
-        # that same base model with reasoning enabled.
-        #
-        # maxSeconds 900 rather than the 3600 nixosRetryPolicy default: the
-        # summariser caps its whole AI stage at 1800s, itself under
-        # logwatch.service's 45min, so a fallback allowed 3600s could never run
-        # to completion.
-        fallbacks = [
-          (
-            nixosRetryPolicy
-            // {
-              name = "${omlxRoles.primary.name}:thinking";
-              maxSeconds = 900;
-            }
-          )
-        ];
       };
     };
     embedding = {
