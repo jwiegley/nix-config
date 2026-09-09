@@ -48,6 +48,7 @@ let
       ];
       networks = [
         "10.55.0.2/32"
+        "192.168.1.39/32"
         "192.163.3.9/32"
         "10.6.0.2/32"
       ];
@@ -183,14 +184,7 @@ let
     home: localName:
     let
       localPolicy = expectedNodes.${localName};
-      peerNames =
-        if localName == "clio" then
-          [ "hera" ]
-        else
-          [
-            "clio"
-            "vulcan"
-          ];
+      peerNames = builtins.attrNames (builtins.removeAttrs expectedNodes [ localName ]);
       peerNetworks = lib.unique (lib.concatMap (name: expectedNodes.${name}.networks) peerNames);
       service = home.services.syncthing;
       folders = service.settings.folders;
@@ -796,7 +790,7 @@ pkgs.runCommand "syncthing-home-contract"
         "clio": {
             "addresses": ["tcp://10.55.0.2:22000", "tcp://192.168.1.39:22000"],
             "listenAddresses": ["tcp://10.55.0.2:22000", "tcp://192.168.1.39:22000"],
-            "networks": ["10.55.0.2/32", "192.163.3.9/32", "10.6.0.2/32"],
+            "networks": ["10.55.0.2/32", "192.168.1.39/32", "192.163.3.9/32", "10.6.0.2/32"],
         },
         "vulcan": {
             "addresses": ["tcp://192.168.1.2:22000"],

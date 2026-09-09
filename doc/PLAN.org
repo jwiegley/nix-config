@@ -9428,6 +9428,28 @@ The nix-scripts package installPhase executes upgrade-projects through its /usr/
 ]
 #+end_src
 
+* DONE [#C] Mesh Syncthing across Hera, Clio, and Vulcan                              :syncthing:
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-mbdm
+:LABELS:   ["syncthing"]
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-09 Wed 15:13]
+:MODIFIED: [2026-09-09 Wed 15:28]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 15:28]
+:CLOSE_REASON: Full mesh now derives every peer from the shared node set; Clio LAN source is admitted. Syncthing contract passed 17 tests, and Hera plus Clio Darwin systems built. Vulcan consumer completed under nixos-9ka. No activation performed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Replace the Hera-centered Syncthing topology with a direct full mesh across Hera, Clio, and Vulcan. Keep static direct listeners, disabled discovery/relays/NAT, shared Documents/Desktop folder IDs, and send-receive semantics. Coordinate Vulcan's authoritative /etc/nixos consumer without activation.
+
+** Acceptance Criteria
+
+Hera and Clio each configure both other devices and both folders; shared host policy permits Clio's direct LAN source; focused Syncthing contract passes; Vulcan source is updated and build-verified separately.
+
 * DONE [#B] Stream make update progress while suppressing unchanged targets
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

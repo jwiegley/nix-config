@@ -13,11 +13,7 @@ let
 
   enabled = config.johnw.host.isDarwinWorkstation;
   localNode = nodes.${hostname};
-  peerNames =
-    if config.johnw.host.isHera then
-      hostRegistry.syncthing.peers.hera
-    else
-      hostRegistry.syncthing.peers.clio;
+  peerNames = builtins.filter (name: name != hostname) (builtins.attrNames nodes);
   peerNetworks = lib.unique (lib.concatMap (name: nodes.${name}.networks) peerNames);
   peerAutoAcceptFolders = name: config.johnw.host.isClio && name == "hera";
 
@@ -226,9 +222,8 @@ in
         };
       };
 
-      # Auto-accepted folders use ~/doc/<remote label or folder ID>. Documents
-      # and Desktop follow peerNames: Clio-Hera and Hera-Vulcan, never
-      # Clio-Vulcan.
+      # Auto-accepted folders use ~/doc/<remote label or folder ID>. Managed
+      # folders form a full mesh across every declared Syncthing node.
       "defaults/folder" = defaultFolderPolicy;
       "defaults/ignores" = {
         lines = defaultIgnorePatterns;

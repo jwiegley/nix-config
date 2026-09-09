@@ -213,7 +213,8 @@ let
         listenAddresses = addresses;
         networks = [
           "${hosts.clio.ipv4.overlay}/32"
-          # Preserve this existing service-specific entry, not the Wi-Fi address.
+          "${hosts.clio.ipv4.lan}/32"
+          # Preserve this existing service-specific source.
           "192.163.3.9/32"
           "${hosts.clio.ipv4.wireguard1}/32"
         ];
@@ -225,11 +226,6 @@ let
         networks = [ "${hosts.vulcan.ipv4.lan}/32" ];
       };
     };
-    peers.hera = [
-      "clio"
-      "vulcan"
-    ];
-    peers.clio = [ "hera" ];
   };
   ipv4Octet = "(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]|[0-9])";
   validIpv4 =
