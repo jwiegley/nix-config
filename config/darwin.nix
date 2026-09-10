@@ -338,6 +338,7 @@ in
       "1password"
       "1password-cli"
       "affinity-photo"
+      "aside"
       "anki"
       "audacity"
       "balenaetcher"
