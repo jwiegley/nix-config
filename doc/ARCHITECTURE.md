@@ -236,11 +236,7 @@ Their source templates do not define a second editable model roster.
 
 Packaged upstream model catalogs remain inventories rather than policy. The Pi
 source-build catalog addition supplies missing upstream model metadata without
-selecting that model for a client. The custom local zg entry is different: its
-identity and limits come from `embeddings.localDefinition`, while its endpoint
-uses the declared host and shared inference port.
-
-`zg` and its two-tool Pi MCP transport are selected on every managed host. Hera, Clio, Vulcan, and VPS use Hera's OpenAI-compatible embedding endpoint with its non-secret sentinel and `bge-m3-mlx-fp16`; shared-work uses `text-embedding-3-large` through a user-supplied `OPENAI_API_KEY`. Nix owns neither `.zvec-grep` indexes nor user authorization for remote embedding requests.
+selecting that model for a client.
 
 oMLX itself is loopback-only. Its TLS gateway route is absent by default; both
 Darwin workstations enable it on their exact LAN address and admit the other

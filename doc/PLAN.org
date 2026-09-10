@@ -5089,15 +5089,17 @@ The fixture waits only within its existing bounded startup allowance for a posit
 ]
 #+end_src
 
-* TODO [#D] Diagnose missing patchelf diagnostics in Darwin zg fixup
+* DONE [#D] Diagnose missing patchelf diagnostics in Darwin zg fixup
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-cmij
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-05 Sat 11:33]
-:MODIFIED: [2026-09-05 Sat 11:33]
+:MODIFIED: [2026-09-09 Wed 22:20]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 22:20]
+:CLOSE_REASON: Obsolete under the owner-authorized retirement of zvec-grep in nix-rq3z: the package and its Darwin fixup path are being removed. No fixup repair or passing diagnostics is claimed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
@@ -11599,15 +11601,17 @@ forgetConsumedTurnsForChildWithStorage trims the child ID before exact deletes. 
 ]
 #+end_src
 
-* DOING [#B] Make zg base endpoint and all-host MCP usable
+* DONE [#B] Make zg base endpoint and all-host MCP usable
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-qouv
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-04 Fri 21:05]
-:MODIFIED: [2026-09-09 Wed 18:09]
+:MODIFIED: [2026-09-09 Wed 22:20]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 22:20]
+:CLOSE_REASON: Superseded by the owner on 2026-09-09: entirely retire zvec-grep due to excessive continuous indexing cost. All-host enablement is no longer wanted; retirement tracked by nix-rq3z. This closure does not claim the prior fleet rollout completed.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
@@ -21895,6 +21899,46 @@ The manually coupled mlx-lm catalog target lacks buildPackage/buildMode metadata
     "depends_on_id": "nix-nyh4",
     "type": "discovered-from",
     "created_at": "2026-08-24T22:13:01.682168Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
+* DOING [#C] Retire zvec-grep and activate the removal on Hera
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-rq3z
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-09 Wed 21:58]
+:MODIFIED: [2026-09-09 Wed 22:29]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+User explicitly retired zvec-grep because its continuous background indexing cost is not worthwhile. Remove its owned packages, source record, MCP registration, environment routing, exclusive patches/tests and operating guidance; retain shared embedding services and mutable indexes. Stop the verified Hera zg daemon, verify remaining configuration/tests and package absence, create a signed scoped commit, publish to canonical Gitea, and activate only Hera. Preserve the unpublished P1/P2 branch and unrelated state.
+
+** Acceptance Criteria
+
+No active zg/zvec-grep selection or executable mapping remains in managed configuration; supported consumer checks and Hera build pass; scoped signed commit is published and Hera activation succeeds; previous daemon is stopped and generated active configs contain no zg entry. Existing index data and other hosts are not mutated.
+
+** Notes
+
+2026-09-10: Removed owned source/package/MCP/environment routing and current documentation; negative catalog/package-selection guards cover retirement. Shared BGE/oMLX configuration and mutable indexes remain. Verified daemon PID 97113 was zg, stopped via zg server off (exit 0), then confirmed PID absence; observed GPU power fell from approximately 100-115 W to 0.293-0.528 W. Baseline and post-change verification PASS: make test (21 Python suites and 10 native baseline Nix checks), portable all-system no-build evaluation, managed-agent-package-selection, full pre-commit, and Hera system build. Hera/Clio evaluated session variables contain no ZVEC_GREP names. System closure delta is only zvec-grep 0.2.1 removed (540.1 MiB). Four mechanical shfmt 3.14.1 corrections were required by the fresh declared formatter; no shell behavior changed. Independent code and docs/test reviews CLEAR. Signed publication and Hera activation remain pending. Evidence: /Users/johnw/Products/nix-remove-zvec-evidence-20260910.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-rq3z",
+    "depends_on_id": "nix-qouv",
+    "type": "discovered-from",
+    "created_at": "2026-09-10T04:58:46.201990Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""

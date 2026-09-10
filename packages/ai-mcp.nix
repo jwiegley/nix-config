@@ -6,20 +6,10 @@
   prev,
   llmAgents ? null,
   palMcpServer ? null,
-  modelPolicy ? import ../config/ai/models.nix,
-  hostRegistry ? import ../config/hosts.nix,
 }:
 
 let
   sources = import ./source-catalog.nix "ai";
-  localEmbedding = modelPolicy.embeddings.localDefinition // {
-    defaultEndpoint =
-      "https://${hostRegistry.hosts.${modelPolicy.embeddings.host}.dnsName}:"
-      + "${toString hostRegistry.inferenceServices.omlx.gatewayPort}/v1/embeddings";
-  };
-  localEmbeddingModels = {
-    ${localEmbedding.reference} = localEmbedding;
-  };
   droidPackage = llmAgents.packages.${prev.stdenv.hostPlatform.system}.droid;
   palPackage = builtins.fromTOML (builtins.readFile "${palMcpServer}/pyproject.toml");
   managedMcpPath = prev.lib.makeBinPath [
@@ -209,72 +199,6 @@ prev.lib.optionalAttrs (palMcpServer != null && llmAgents != null) {
         homepage = "https://github.com/es617/claude-replay";
         license = licenses.mit;
         mainProgram = "claude-replay";
-        platforms = platforms.all;
-      };
-    });
-
-  # zvec-grep with a deliberately narrow MCP launcher: semantic search and
-  # managed ripgrep only. Index lifecycle remains a user-owned CLI operation.
-  zvec-grep =
-    with prev;
-    buildNpmPackage (_finalAttrs: {
-      pname = "zvec-grep";
-      version = sources.zvec-grep.version;
-
-      src =
-        assert sources.zvec-grep.source.fetcher == "fetchFromGitHub";
-        fetchFromGitHub sources.zvec-grep.source.args;
-
-      patches = [
-        ../overlays/ai/patches/zvec-grep-openai-compatible-mcp.patch
-      ];
-
-      postPatch = ''
-        substituteInPlace src/engine/models/catalog.ts \
-          --replace-fail '@NIX_LOCAL_EMBEDDING_MODELS@' \
-          ${prev.lib.escapeShellArg (builtins.toJSON localEmbeddingModels)}
-      '';
-      npmDepsHash = sources.zvec-grep.hashes.npmDepsHash;
-      nodejs = nodejs_22;
-      nativeBuildInputs = [ makeWrapper ];
-      # Remote embeddings do not need ONNX's optional build-time CUDA download.
-      env.ONNXRUNTIME_NODE_INSTALL_CUDA = "skip";
-
-      postInstall = ''
-        install -d "$out/libexec"
-        mv "$out/bin/zg" "$out/libexec/zg"
-        makeWrapper "$out/libexec/zg" "$out/bin/zg" \
-          --run 'if [ -z "''${ZVEC_GREP_API_KEY-}" ] && [ -n "''${OPENAI_API_KEY-}" ]; then export ZVEC_GREP_API_KEY="$OPENAI_API_KEY"; fi'
-        makeWrapper "$out/bin/zg" "$out/bin/zg-mcp" \
-          --add-flags "server --stdio --mcp-toolset search-rg"
-      '';
-
-      __darwinAllowLocalNetworking = true;
-      nativeInstallCheckInputs = [
-        gnugrep
-        coreutils
-      ];
-      doInstallCheck = true;
-      installCheckPhase = ''
-        runHook preInstallCheck
-        test "$("$out/bin/zg" version)" = ${lib.escapeShellArg sources.zvec-grep.version}
-        "$out/bin/zg" help models | grep -F ${lib.escapeShellArg modelPolicy.embeddings.local} >/dev/null
-        "$out/bin/zg" help models | grep -F ${lib.escapeShellArg modelPolicy.embeddings.remote} >/dev/null
-        "$out/bin/zg" help server | grep -F "<agent|search-rg|full>" >/dev/null
-        grep -F 'server --stdio --mcp-toolset search-rg' "$out/bin/zg-mcp" >/dev/null
-        grep -F 'OPENAI_API_KEY' "$out/bin/zg" >/dev/null
-        grep -F 'ZVEC_GREP_API_KEY' "$out/bin/zg" >/dev/null
-        timeout 45s ${nodejs_22}/bin/node ${../test/ai/zvec-grep.check.mjs} "$out" \
-          ${lib.escapeShellArg (builtins.toJSON localEmbedding)} \
-          ${lib.escapeShellArg modelPolicy.embeddings.remote}
-        runHook postInstallCheck
-      '';
-
-      meta = with lib; {
-        description = "Agent-friendly hybrid workspace search";
-        homepage = "https://github.com/zvec-ai/zvec-grep";
-        license = licenses.asl20;
-        mainProgram = "zg";
         platforms = platforms.all;
       };
     });

@@ -55,24 +55,9 @@ let
     name = "GLM-5.2";
     contextWindow = 262144;
   };
-  embeddings = rec {
+  embeddings = {
     gguf = "bge-m3";
     omlx = "bge-m3-mlx-fp16";
-    host = "hera";
-    local = "${host}/${omlx}";
-    remote = "openai/text-embedding-3-large";
-    localDefinition = {
-      backend = "openai-compatible";
-      kind = "text";
-      reference = local;
-      provider = host;
-      model = omlx;
-      dimension = 1024;
-      metric = "cosine";
-      requestTimeoutMs = 600000;
-      maxBatchSize = 20;
-      maxInputTokens = 8192;
-    };
   };
   nixosRetryPolicy = {
     maxSeconds = 3600;

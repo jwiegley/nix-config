@@ -1393,28 +1393,6 @@
         "input": "translate-tool",
         "kind": "flake-input"
       }
-    },
-    "zvec-grep": {
-      "hashes": {
-        "npmDepsHash": "sha256-pc04qzhnYaS0xpQAYwN6HEG8oPEqoBIBMVKC1OZ0L+8="
-      },
-      "source": {
-        "args": {
-          "hash": "sha256-2JOMMXaOSQPZqPrHVzI9w/+9khwxBm/TSGmx2PZ99fI=",
-          "owner": "zvec-ai",
-          "repo": "zvec-grep",
-          "rev": "52653951b24617762f4ab0c71c34d594e5001617"
-        },
-        "fetcher": "fetchFromGitHub",
-        "url": "https://github.com/zvec-ai/zvec-grep"
-      },
-      "update": {
-        "branch": "main",
-        "kind": "github-commit",
-        "policy": "manual",
-        "reason": "The managed two-tool MCP surface and OpenAI-compatible embedding catalog are downstream patches against this revision"
-      },
-      "version": "0.2.1"
     }
   }
 }

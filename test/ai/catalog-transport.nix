@@ -1018,25 +1018,7 @@ assert builtins.all (
     "vulcan"
   ]
 ) profiles;
-assert builtins.all (
-  profile: ((selectFor profile).mcpServers ? zvec-grep) == (profile.client == "pi")
-) profiles;
-assert builtins.all (
-  profile:
-  let
-    route = catalog.zvecEmbeddingRoutesByHost.${profile.host};
-    env = (selectFor profile).mcpServers.zvec-grep.transport.env;
-  in
-  env.ZVEC_GREP_EMBEDDING == route.embedding
-  && (
-    if route.apiKey == null then
-      env.OPENAI_API_KEY == { env = "OPENAI_API_KEY"; } && !(env ? ZVEC_GREP_API_KEY)
-    else
-      env.ZVEC_GREP_API_KEY == "dummy-key"
-      && env.ZVEC_GREP_ENDPOINT == route.endpoint
-      && !(env ? OPENAI_API_KEY)
-  )
-) piProfiles;
+assert builtins.all (profile: !((selectFor profile).mcpServers ? zvec-grep)) profiles;
 assert builtins.all (
   profile:
   builtins.all (

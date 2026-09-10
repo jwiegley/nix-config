@@ -38,6 +38,10 @@ let
   avoidsLegacyPackages = (builtins.tryEval (builtins.length packages.package-list)).success;
 
   baseAi = downstreamInputs.nix-config-ai;
+  excludesRetiredZvec =
+    !(configured ? zvec-grep)
+    && !(baseAi.packages.${pkgs.stdenv.hostPlatform.system} ? zvec-grep)
+    && !(builtins.any (package: configured.lib.getName package == "zvec-grep") packages.package-list);
   typoInputs = downstreamInputs // {
     nix-config-ai = baseAi // {
       lib = baseAi.lib // {
@@ -129,6 +133,8 @@ let
       builtins.all (package: builtins.hasAttr "name" package) unpatchable.package-list
     )).success;
 in
+assert configured.lib.assertMsg excludesRetiredZvec
+  "retired zvec-grep reappeared in managed package selection or exposure";
 assert configured.lib.assertMsg plainPackagesExcludeCanonicalCodex
   "config/packages.nix retained a duplicate Codex owner outside config/ai.nix";
 assert configured.lib.assertMsg plainPackagesExcludeCanonicalDroid

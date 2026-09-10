@@ -111,22 +111,12 @@ Nix generates the shared, catalog-selected registry at `~/.config/mcp/mcp.json`;
 
 | Profiles | Servers |
 | --- | --- |
-| Hera and Clio | `devonthink`, `drafts`, `pal`, `searxng`, `sequential-thinking`, `stock-trader`, `zvec-grep` |
-| shared-work | `pal`, `sequential-thinking`, `zvec-grep` |
-| VPS | `sequential-thinking`, `zvec-grep` |
-| Vulcan | `pal`, `searxng`, `sequential-thinking`, `zvec-grep` |
+| Hera and Clio | `devonthink`, `drafts`, `pal`, `searxng`, `sequential-thinking`, `stock-trader` |
+| shared-work | `pal`, `sequential-thinking` |
+| VPS | `sequential-thinking` |
+| Vulcan | `pal`, `searxng`, `sequential-thinking` |
 
 Credential-bearing values are environment references rather than literal secrets. The mutable `~/.config/pi/agent/mcp.json` may retain adapter state, but Nix preflight forbids `mcpServers` and `imports` there so that it cannot shadow the generated registry.
-
-`zvec-grep` installs `zg` and its Pi MCP entry on every managed host. The immutable `zg-mcp` wrapper exposes precisely `zvec_grep_search` and `zvec_grep_rg` through `search-rg` mode. Hera, Clio, Vulcan, and VPS use `hera/bge-m3-mlx-fp16` at `https://hera.lan:8443/v1/embeddings` with non-secret `dummy-key`. shared-work uses `openai/text-embedding-3-large` and inherits a user-supplied `OPENAI_API_KEY`; semantic search there requires that mutable credential, while ripgrep does not. Nix never stores real credentials.
-
-The OpenAI-compatible backend accepts a service root, `/v1` base, or complete embeddings URL. Hera's model has a ten-minute request budget, including response-body delivery, to accommodate concurrent batches; cancellation remains immediate. To rebuild this project's index explicitly on Hera:
-
-```sh
-zg index --embedding hera/bge-m3-mlx-fp16 --api-key dummy-key --endpoint https://hera.lan:8443 --embedding-concurrency 16 --rebuild
-```
-
-Nix never creates, rebuilds, or deletes `.zvec-grep` indexes. Index lifecycle tools are absent from the two-tool MCP surface; ordinary search may refresh an existing index. Indexing and remote embedding requests require user authorization. The stdio wrapper starts or reuses a user-owned daemon and leaves it running after Pi disconnects; `zg server off` stops it. A daemon using another toolset must be stopped explicitly before starting the managed two-tool server.
 
 PAL may initialize and expose its provider-independent discovery tools without credentials. Its model-backed tools require at least one referenced provider variable to be present in the launching client's environment; the generated registry carries variable names, never their values. Nix limits PAL's stderr logging to warnings and errors and disables its upstream persistent file logging. The packaged server does not expose upstream `clink`: a same-UID nested CLI could inspect PAL's multi-provider ancestor environment and mutable client hooks, so filtering only the child environment would not provide a credential boundary.
 

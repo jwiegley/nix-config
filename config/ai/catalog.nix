@@ -7,9 +7,6 @@
 
 let
   inherit (hostRegistry) inferenceServices;
-  embeddingEndpoint =
-    "https://${hostRegistry.hosts.${models.embeddings.host}.dnsName}:"
-    + "${toString inferenceServices.omlx.gatewayPort}/v1/embeddings";
   omlxCredentialPolicy = import ./omlx-credential-policy.nix;
   envReference = import ./env-reference.nix;
   managedStdio = import ./managed-stdio.nix { inherit lib; };
@@ -116,20 +113,6 @@ let
   catalogRecordingTranscriptionRoutesByHost = {
     hera = models.recordings.llm;
   };
-
-  catalogZvecEmbeddingRoutesByHost =
-    lib.genAttrs hosts (_: {
-      apiKey = "dummy-key";
-      embedding = models.embeddings.local;
-      endpoint = embeddingEndpoint;
-    })
-    // {
-      shared-work = {
-        apiKey = null;
-        embedding = models.embeddings.remote;
-        endpoint = null;
-      };
-    };
 
   profileSpecs = {
     clio-claude-personal = mkProfile "claude" [ "personal" ] "clio" "darwin" ".config/claude/personal";
@@ -871,31 +854,6 @@ let
           ];
         };
 
-    zvec-grep =
-      (mkMcp
-        {
-          command = "zvec-grep";
-          args = [ ];
-          env = {
-            ZVEC_GREP_API_KEY = "dummy-key";
-            ZVEC_GREP_EMBEDDING = models.embeddings.local;
-            ZVEC_GREP_ENDPOINT = embeddingEndpoint;
-          };
-        }
-        {
-          clients = [ "pi" ];
-        }
-      )
-      // {
-        transportByHost.shared-work = {
-          command = "zvec-grep";
-          args = [ ];
-          env = {
-            OPENAI_API_KEY = typedEnv "OPENAI_API_KEY";
-            ZVEC_GREP_EMBEDDING = models.embeddings.remote;
-          };
-        };
-      };
     searxng =
       (mkMcp
         {
@@ -1399,12 +1357,6 @@ let
       "http://localhost:8890"
       "https://searxng.${hostRegistry.hosts.vulcan.dnsName}"
     ];
-    ZVEC_GREP_API_KEY = [ "dummy-key" ];
-    ZVEC_GREP_EMBEDDING = [
-      models.embeddings.local
-      models.embeddings.remote
-    ];
-    ZVEC_GREP_ENDPOINT = [ embeddingEndpoint ];
   };
 
   validEnvironmentValue =
@@ -1850,7 +1802,6 @@ in
   piLocalDiscoveryProviderByHost = catalogPiLocalDiscoveryProviderByHost;
   piModelDiscoveryEndpoints = catalogPiModelDiscoveryEndpoints;
   recordingTranscriptionRoutesByHost = catalogRecordingTranscriptionRoutesByHost;
-  zvecEmbeddingRoutesByHost = catalogZvecEmbeddingRoutesByHost;
   inherit
     matches
     select
