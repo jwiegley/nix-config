@@ -21906,15 +21906,17 @@ The manually coupled mlx-lm catalog target lacks buildPackage/buildMode metadata
 ]
 #+end_src
 
-* DOING [#C] Retire zvec-grep and activate the removal on Hera
+* DONE [#C] Retire zvec-grep and activate the removal on Hera
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-rq3z
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-09-09 Wed 21:58]
-:MODIFIED: [2026-09-09 Wed 22:29]
+:MODIFIED: [2026-09-09 Wed 22:36]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 22:36]
+:CLOSE_REASON: Owner-requested retirement complete: signed removal published to Gitea main; Hera generation 1249 activated and live package/MCP/environment/daemon absence verified. Shared embedding services, indexes and unrelated work preserved.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
@@ -21928,7 +21930,7 @@ No active zg/zvec-grep selection or executable mapping remains in managed config
 
 ** Notes
 
-2026-09-10: Removed owned source/package/MCP/environment routing and current documentation; negative catalog/package-selection guards cover retirement. Shared BGE/oMLX configuration and mutable indexes remain. Verified daemon PID 97113 was zg, stopped via zg server off (exit 0), then confirmed PID absence; observed GPU power fell from approximately 100-115 W to 0.293-0.528 W. Baseline and post-change verification PASS: make test (21 Python suites and 10 native baseline Nix checks), portable all-system no-build evaluation, managed-agent-package-selection, full pre-commit, and Hera system build. Hera/Clio evaluated session variables contain no ZVEC_GREP names. System closure delta is only zvec-grep 0.2.1 removed (540.1 MiB). Four mechanical shfmt 3.14.1 corrections were required by the fresh declared formatter; no shell behavior changed. Independent code and docs/test reviews CLEAR. Signed publication and Hera activation remain pending. Evidence: /Users/johnw/Products/nix-remove-zvec-evidence-20260910.
+2026-09-10 completion: Signed removal 5c39fbe2caa11ab3b62880012b93fde04bd1962c published through bin/publish to Gitea main with exact final readback. Built from authoritative Hera checkout and activated generation 1249, /nix/store/h2k01hiy0fxkl7c9kwbalnq1nn3zclp5-darwin-system-26.11.4cff07d (activation exit 0); previous generation 1248 retained. Live acceptance PASS: immutable MCP registry has no zg entry and retains six other servers; zg/zg-mcp absent from active system/user profiles; generated session variables contain no ZVEC_GREP names; old PID 97113 absent and no listener on port 7999. Full make test passed 21 Python suites and 10 native baseline Nix checks. Portable all-system evaluation, package-selection check, pre-commit, Hera/Clio environment-absence evaluation, and independent commit audit passed. Closure comparison shows only zvec-grep 0.2.1 removed (540.1 MiB). Four mechanical shfmt 3.14.1 corrections satisfied declared formatting. Shared BGE/oMLX and mutable indexes preserved; no other hosts activated. All 498 unrelated PLAN blocks verified unchanged on integration. The earlier daemon stop reduced measured GPU power from approximately 100-115 W to 0.293-0.528 W. Evidence: /Users/johnw/Products/nix-remove-zvec-evidence-20260910.
 
 ** Dependencies
 
