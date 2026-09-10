@@ -4,18 +4,18 @@
     "agent-browser": {
       "source": {
         "args": {
-          "hash": "sha256-f3npiJ7XuHZW/PLRkXdD+EYxl51S9a6Zku6bb+Ey3vw=",
-          "url": "https://registry.npmjs.org/agent-browser/-/agent-browser-0.35.1.tgz"
+          "hash": "sha256-2HXFHs7kftiqZbVwwnAhqW6s3yU5mmIdaJeXNGwz2io=",
+          "url": "https://registry.npmjs.org/agent-browser/-/agent-browser-0.37.1.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/agent-browser/-/agent-browser-0.35.1.tgz"
+        "url": "https://registry.npmjs.org/agent-browser/-/agent-browser-0.37.1.tgz"
       },
       "update": {
         "buildPackage": "agent-browser",
         "kind": "npm-release",
         "package": "agent-browser"
       },
-      "version": "0.35.1"
+      "version": "0.37.1"
     },
     "agent-browser-source": {
       "source": {
@@ -102,20 +102,27 @@
       "version": "0.14.0"
     },
     "pi-agent-browser-native": {
+      "hashes": {
+        "npmDepsHash": "sha256-Zn5345WHf8/Rii59DgCyzvhOhw1K5BU18jUmN1QE9ro="
+      },
       "source": {
         "args": {
-          "hash": "sha256-HlpqO7S13slSnsfq8ziPwLmxq2vfWl05WT5/ZBqJdoc=",
-          "url": "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.5.0.tgz"
+          "hash": "sha256-pfEP3NjybCuLlce0chywws7ma/36sDe37vVuy4sFtnk=",
+          "url": "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.6.10.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.5.0.tgz"
+        "url": "https://registry.npmjs.org/pi-agent-browser-native/-/pi-agent-browser-native-0.6.10.tgz"
       },
       "update": {
+        "artifacts": [
+          "packages/pi-gallery/locks/pi-agent-browser-native-package-lock.json"
+        ],
         "buildPackage": "pi-agent-browser-native",
         "kind": "npm-release",
+        "normalizer": "pi-gallery-v1",
         "package": "pi-agent-browser-native"
       },
-      "version": "0.5.0"
+      "version": "0.6.10"
     },
     "pi-cache-optimizer": {
       "source": {

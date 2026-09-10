@@ -35,7 +35,7 @@ This table lists extensions that are active on at least one managed Pi profile. 
 | [`pi-smart-fetch`][pi-smart-fetch] | 0.3.17 | Browser-fingerprinted readable web fetching | `web_fetch`, `batch_web_fetch` |
 | [`pi-smart-web-search`][pi-smart-web-search] | 0.4.0 | Ranked batch web discovery | `web_search` |
 | [`@dietrichgebert/ponytail`][ponytail] | 4.9.0 | Minimal implementation discipline | `/ponytail` |
-| [`pi-agent-browser-native`][pi-agent-browser-native] | 0.5.0 | Native Pi interface to `agent-browser` | `agent_browser` |
+| [`pi-agent-browser-native`][pi-agent-browser-native] | 0.6.10 | Native Pi interface to `agent-browser` | `agent_browser` |
 | [`pi-btw`][pi-btw] | 0.4.1 | Side conversations without disturbing the main turn | `/btw` |
 | [`pi-copy-message`][pi-copy-message] | 2.1.0 | Search and copy raw session messages | `/copy-message`, `/copy-user` |
 | [`pi-multi-pass`][pi-multi-pass] | 1.3.0 | Multiple OAuth accounts and failover pools | `/subs`, `/pool`, `/mp-preset` |
@@ -292,11 +292,11 @@ When registered, [Pi Trace][pi-trace] records the execution structure of each se
 
 ### [Agent Browser Native][pi-agent-browser-native]
 
-**Version:** 0.5.0 · **Links:** [Pi Packages](https://pi.dev/packages/pi-agent-browser-native) · [Home](https://github.com/fitchmultz/pi-agent-browser-native#readme) · [GitHub](https://github.com/fitchmultz/pi-agent-browser-native) · [agent-browser](https://github.com/vercel-labs/agent-browser)
+**Version:** 0.6.10 · **Links:** [Pi Packages](https://pi.dev/packages/pi-agent-browser-native) · [Home](https://github.com/fitchmultz/pi-agent-browser-native#readme) · [GitHub](https://github.com/fitchmultz/pi-agent-browser-native) · [agent-browser](https://github.com/vercel-labs/agent-browser)
 
 [Pi Agent Browser Native][pi-agent-browser-native] presents `agent-browser` as the `agent_browser` Pi tool. It supports live browsing, semantic locators, multi-step jobs, screenshots, extraction, QA presets, authenticated browser profiles, and Electron application control while retaining explicit stopping points before consequential submissions.
 
-**Basic usage.** Follow the stable sequence `open` → interactive snapshot → action by current reference → new snapshot. Use the `job` input for bounded multi-step work, `qa` for page assertions and diagnostics, and `electron` only for desktop applications. The managed runtime companion is `agent-browser` 0.34.0.
+**Basic usage.** Follow the stable sequence `open` → interactive snapshot → action by current reference → new snapshot. Use the `job` input for bounded multi-step work, `qa` for page assertions and diagnostics, and `electron` only for desktop applications. The managed runtime companion is `agent-browser` 0.37.1.
 
 ### [RTK Optimizer][pi-rtk-optimizer]
 
@@ -417,7 +417,7 @@ These binaries are not additional Pi extensions. They are the immediate runtime 
 | --- | ---: | --- | --- |
 | Pi | 0.84.4 | All extensions | [Home](https://pi.dev) · [Fork](https://github.com/jwiegley/pi) · [Upstream](https://github.com/earendil-works/pi) |
 | Droid CLI | managed installation | [Factory Droid SDK Provider][pi-droid-sdk] | [Factory quickstart](https://docs.factory.ai/cli/getting-started/quickstart) |
-| `agent-browser` | 0.35.1 | [Pi Agent Browser Native][pi-agent-browser-native] | [GitHub](https://github.com/vercel-labs/agent-browser) |
+| `agent-browser` | 0.37.1 | [Pi Agent Browser Native][pi-agent-browser-native] | [GitHub](https://github.com/vercel-labs/agent-browser) |
 | RTK | 0.44.0 | [Pi RTK Optimizer][pi-rtk-optimizer] | [Home](https://www.rtk-ai.app) · [GitHub](https://github.com/rtk-ai/rtk) |
 | Cymbal | 0.14.0 | [Pi Cymbal][pi-cymbal] | [Home](https://chain.sh/cymbal/) · [GitHub](https://github.com/1broseidon/cymbal) |
 | llama-swap | v251 | [llama-swap Provider][pi-provider-llama-swap] | [GitHub](https://github.com/mostlygeek/llama-swap) |

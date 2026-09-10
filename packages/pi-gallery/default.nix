@@ -409,6 +409,7 @@ let
   hashlineSource = mkMemberReleaseSource members.hashline {
     hashline = true;
   };
+  browserSource = mkMemberReleaseSource members.browser { };
   smartFetchSource = mkMemberReleaseSource members.smart-fetch { };
   smartWebSearchSource = mkMemberReleaseSource members.smart-web-search { };
   lensSource = mkMemberReleaseSource members.lens {
@@ -844,18 +845,18 @@ let
     '';
   };
 
-  pi-agent-browser-native = mkCopyRoot {
+  pi-agent-browser-native = mkNpmPackageRoot {
     pname = members.browser.attrName;
     version = members.browser.version;
-    install =
+    src = browserSource;
+    npmDepsHash = members.browser.hashes.npmDepsHash;
+    prepareBundle =
       root:
-      assert members.browser.version == "0.5.0";
+      assert members.browser.version == "0.6.10";
       ''
-        tar -xzf ${releaseTarballs.pi-agent-browser-native} -C ${root} \
-          --strip-components=1
         ${buildPackages.patch}/bin/patch --force --fuzz=0 --no-backup-if-mismatch \
           --directory=${root} --strip=1 \
-          < ${./patches/pi-agent-browser-bounded-history-0.5.patch}
+          < ${./patches/pi-agent-browser-bounded-history-0.6.patch}
       '';
   };
 

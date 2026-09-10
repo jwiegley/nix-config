@@ -11,7 +11,17 @@ assert(codingAgentRoot, "PI_CODING_AGENT_ROOT must name the packaged Pi coding-a
 const extensionRelativePath = "dist/extensions/agent-browser/index.js";
 const extensionSource = readFileSync(join(packageRoot, extensionRelativePath), "utf8");
 const packageVersion = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8")).version;
-assert.equal(packageVersion, "0.5.0", "unexpected Browser Native version");
+assert.equal(packageVersion, "0.6.10", "unexpected Browser Native version");
+const managedAgentBrowserVersion = process.env.PI_AGENT_BROWSER_VERSION;
+assert(managedAgentBrowserVersion, "PI_AGENT_BROWSER_VERSION must name the managed companion version");
+const { getAgentBrowserVersionValidationError } = await import(
+	join(packageRoot, "dist/extensions/agent-browser/lib/upstream-version.js")
+);
+assert.equal(
+	getAgentBrowserVersionValidationError(`agent-browser ${managedAgentBrowserVersion}\n`),
+	undefined,
+	`Browser Native must support managed agent-browser ${managedAgentBrowserVersion}`,
+);
 assert.equal(
 	extensionSource.match(/sessionManager\.getRecentActiveEntries\(\{ type: "message", limit: 4096 \}\)/g)?.length,
 	1,

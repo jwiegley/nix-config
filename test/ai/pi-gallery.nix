@@ -1443,6 +1443,7 @@ runCommand "pi-gallery-check"
     [ -f ${roots.ponytail}/pi-extension/index.js ]
 
     [ -f ${roots.browser}/dist/extensions/agent-browser/index.js ]
+    PI_AGENT_BROWSER_VERSION=${manifest.supportSources.agent-browser.version} \
     PI_AGENT_BROWSER_NATIVE_ROOT=${roots.browser} \
     PI_CODING_AGENT_ROOT=${piPackage}/lib/node_modules/@earendil-works/pi-coding-agent \
       ${nodejs_24}/bin/node --expose-gc \

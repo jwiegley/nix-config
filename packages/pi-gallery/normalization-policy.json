@@ -17,6 +17,12 @@
     "overrideDependencies": {}
   },
   "targets": {
+    "pi-agent-browser-native": {
+      "removeTopLevel": [],
+      "forbidDependencies": [],
+      "defensiveForbidDependencies": [],
+      "overrideDependencies": {}
+    },
     "pi-dynamic-workflows": {
       "removeTopLevel": [],
       "forbidDependencies": [],
