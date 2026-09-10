@@ -2755,7 +2755,7 @@ All competing evaluators are drained; one serialized build-only Hera system eval
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-18 Tue 06:12]
-:MODIFIED: [2026-09-09 Wed 16:58]
+:MODIFIED: [2026-09-09 Wed 19:26]
 :CREATED_BY: johnw
 :FINISHED: [2026-09-09 Wed 16:58]
 :CLOSE_REASON: Final updater audit correction is complete: all161automatic targets have explicit final consumers or classifications, and all5 prior implicit manual paths retain real final/baseline contracts. Explicit validation without any contract fails hard. Syncthing-next now has one shared package exposure used by owner/check/updater. Final updater suite147PASS; all159distinct declared consumers evaluate (154original+5manual); Syncthing home contractPASS; actual Emacs/Prime/ABI negative and exact rollback/restored-baseline probesPASS; prior fullroot21Python+11Nix andHera buildPASS. Evidence /Users/johnw/Products/wg-p1p2-20260909/{updater-final-tests.log,updater-baseline-correction/manual-selector-results.json,updater-baseline-correction/focused-tests.log,updater-baseline-correction/syncthing-check.log}. Final campaign base-currency pass remains pending; no deployment claim.
@@ -2772,7 +2772,9 @@ Every automatic source record is either mapped to a mutation-honest maintained c
 
 ** Notes
 
-Final commit audit identified2 further manual restored-baseline no-op regressions: zvec-grep and syncthing-next. Correcting their explicit contracts and making explicitly requested validation fail closed when a manual record has no contract. Prior automatic coverage/native probes remain valid; final159consumer evaluation and current-base full suite remain required before re-close. No acceptance criteria or priorities changed.
+The updater repair is verified. Automatic targets declare an explicit final validation or classification; explicit validation without a contract fails closed. All five manual hash targets retain restored-baseline validation. The full 147-case updater suite, native Emacs/ABI/Prime negative controls with exact rollback, and original 159-consumer evaluation passed.
+
+After main advanced to browser update d762e354, the source contracts were rebased while preserving the newer browser pins and lock metadata. Both browser records now use the existing Darwin Pi Gallery check as their final consumer, enforcing the newly added companion-version assertion. The agent-browser Linux package entry remains. This reuses an existing check, leaving 157 distinct selectors. The root check resolves correctly; full baseline (21 Python suites and 11 Nix checks), Hera system build, portable all-system evaluation, and native Gallery checks on all three supported systems passed. Evidence: /Users/johnw/Products/wg-p1p2-20260909/browser-base-*.log and browser-native-gallery-results.json. Publication and host activation remain separate.
 
 ** Dependencies
 
@@ -12276,6 +12278,48 @@ A full x86_64-linux Obr realization from Hera scheduled rustc on andoria-08 and 
 ]
 #+end_src
 
+* DONE [#C] Retire zvec-grep and activate the removal on Hera
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-rq3z
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-09 Wed 21:58]
+:MODIFIED: [2026-09-09 Wed 22:36]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 22:36]
+:CLOSE_REASON: Owner-requested retirement complete: signed removal published to Gitea main; Hera generation 1249 activated and live package/MCP/environment/daemon absence verified. Shared embedding services, indexes and unrelated work preserved.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+User explicitly retired zvec-grep because its continuous background indexing cost is not worthwhile. Remove its owned packages, source record, MCP registration, environment routing, exclusive patches/tests and operating guidance; retain shared embedding services and mutable indexes. Stop the verified Hera zg daemon, verify remaining configuration/tests and package absence, create a signed scoped commit, publish to canonical Gitea, and activate only Hera. Preserve the unpublished P1/P2 branch and unrelated state.
+
+** Acceptance Criteria
+
+No active zg/zvec-grep selection or executable mapping remains in managed configuration; supported consumer checks and Hera build pass; scoped signed commit is published and Hera activation succeeds; previous daemon is stopped and generated active configs contain no zg entry. Existing index data and other hosts are not mutated.
+
+** Notes
+
+2026-09-10 completion: Signed removal 5c39fbe2caa11ab3b62880012b93fde04bd1962c published through bin/publish to Gitea main with exact final readback. Built from authoritative Hera checkout and activated generation 1249, /nix/store/h2k01hiy0fxkl7c9kwbalnq1nn3zclp5-darwin-system-26.11.4cff07d (activation exit 0); previous generation 1248 retained. Live acceptance PASS: immutable MCP registry has no zg entry and retains six other servers; zg/zg-mcp absent from active system/user profiles; generated session variables contain no ZVEC_GREP names; old PID 97113 absent and no listener on port 7999. Full make test passed 21 Python suites and 10 native baseline Nix checks. Portable all-system evaluation, package-selection check, pre-commit, Hera/Clio environment-absence evaluation, and independent commit audit passed. Closure comparison shows only zvec-grep 0.2.1 removed (540.1 MiB). Four mechanical shfmt 3.14.1 corrections satisfied declared formatting. Shared BGE/oMLX and mutable indexes preserved; no other hosts activated. All 498 unrelated PLAN blocks verified unchanged on integration. The earlier daemon stop reduced measured GPU power from approximately 100-115 W to 0.293-0.528 W. Evidence: /Users/johnw/Products/nix-remove-zvec-evidence-20260910.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-rq3z",
+    "depends_on_id": "nix-qouv",
+    "type": "discovered-from",
+    "created_at": "2026-09-10T04:58:46.201990Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#C] Route Syncthing directly across Hera and Clio networks
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -19947,7 +19991,7 @@ User explicitly authorized committing and pushing all pending work, publishing t
 :LABELS:   []
 :ISSUE_TYPE: epic
 :CREATED:  [2026-09-09 Wed 14:10]
-:MODIFIED: [2026-09-09 Wed 18:39]
+:MODIFIED: [2026-09-09 Wed 19:26]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
@@ -19966,11 +20010,17 @@ The frozen 21-issue roster and newly required P1/P2 dependencies meet the frozen
 
 ** Notes
 
-Refocus active; last 2026-09-10T01:39:46.719387+00:00, next deadline 2026-09-10T02:39:46.719387+00:00. Frozen21 plus required3 unchanged. Fifteen closed (13original+2required), nine remain pending source adoption or explicit owner operations/disposition. Source changes and nativecloseout through signed2d70ba1f pass final independent fess; local/live basecf9bf452 stillmatched. Full make test PASS21Python+11Nix, full Hera system PASS /nix/store/vbgw7dwr70jvh4lqmrhm64c02w759p0s-darwin-system-26.11.4cff07d, portable all-system no-build PASS. CurrentPAL1.5 managed-stdio PASS all3nativeplatforms; catalog/registry PASS bothLinux plus Darwinbaseline. final-integration-contracts.log exit0, final-native-contracts.json maps7outputs. No build/test remainsrunning.
+Refocus remains active. Last check: 2026-09-10T02:26:56.681500+00:00; next deadline: 2026-09-10T03:26:56.681500+00:00. The frozen 21 issues plus three required dependencies are unchanged. Fifteen are closed (13 original and two required); nine require source adoption or explicit owner operations/disposition.
 
-AgentDeck60819fc8 and Obrthroughf2d01c93 source builds/tests/finalfess PASS; signed andunpublished. Explicit upstream publication approval requested, no response yet. Prepared pin-adoption/adoption.patch changesonlyAgentDecksource,Obrlock andrequirednestedRustoverlay. NewarchiveNAR hashes computed andoldhashes reproduceexistinglocked sources; normalremotefetch validation awaitspublication, rootpinsunchanged. Certificatec29b8a49 signed onliveVulcan ec1c5cbb, unchangedpatch, nativecheckexit0 cachedpass andfinalfessCLEAR; no liveadoption. Hera local-key signing works; earlierhardware-cardpreflight wasinapplicable andneeded no signerrepair.
+The private branch is rebased onto main d762e354. Main already contained the latest shared Obr records, so those were preserved instead of replaying older checkpoint text. All seven implementation commits are signed. Twenty-six implementation files are byte-identical to the previous reviewed tip; the merged Pi catalog was independently checked against the exact three-way semantic merge. This checkpoint adds only two browser final-consumer changes and the verification notes. The browser versions and normalization metadata from main remain intact.
 
-Installed AgentCat descriptors/zg structure PASS Hera,Clio,Andoria08,Vulcan; Hera wf descriptorPASS. T2,Delphi,GPU gallery/MCP targets absentlocalstores: deploymentpending. Correctedgit-ai inventory:10dead checkpointrefs,3staleeditorregistryrows(HeraCursor+VSCode,ClioCursor),8olddaemonleaves(Clio+Vulcan), no recordedPID/socketowners observed. EarlierHera summarymissedextensions. Cliodirenvgap resolved via physicalcheckout; all7 nativeGit/processpassesdone. HeraCodeUser parseerror andGPUCodex missingstoretarget remainreadgaps; genericunknownstate/customroots/otherrepos/loadedclients preserved. No cleanup/clientcontrols, campaignpublication or system/HMactivation. PersistentHera signingconfig/reload,NSSchoice,parkedVPSadoption/disposition remainpending. Do not contactdormantgit-ai/VPS. Concrete actions operations/approval-packet.md, exactinventorygit-ai-residue-audit/cleanup-review.json, resumptionstate /Users/johnw/Products/wg-p1p2-20260909/state.json. Preserveunrelated canonicalPi-browser/PLAN work. Do not repeatexpensivepassingchecks withoutnewchanges/concerns.
+Current-base gates pass: full baseline (21 Python suites, 11 Nix checks), full Hera build at /nix/store/srj7cpjxdczwpn319x92s9ahz4jmfmv1-darwin-system-26.11.4cff07d, portable all-system evaluation, and native Pi Gallery checks on Darwin and both Linux architectures. Earlier current-PAL managed-stdio/catalog/registry checks also passed; their implementation is unchanged. No build or test remains running. Logs and exact native outputs are under /Users/johnw/Products/wg-p1p2-20260909.
+
+Agent Deck 60819fc8, Obr through f2d01c93, and certificate repair c29b8a49 are signed, built/tested and independently audited. Their worktrees remain clean. Agent Deck and Obr publication approval was requested and has not been received; their remote main branches still match the recorded bases. The Nix pin patch is prepared but not applied, and normal upstream fetch verification awaits publication. Certificate adoption on Vulcan remains unrun. Hera's ordinary local-key signing works; no signing repair is required.
+
+The bounded git-ai inventory covers 226 records: ten dead checkpoint references, three stale editor registrations, and eight old daemon leaves. All seven Git/process lanes were inspected. Hera's VS Code settings parse gap and GPU's Codex link to an absent store target remain explicit, along with custom roots, other repositories and already-loaded clients. No runtime cleanup or client restart was performed. Installed Agent Cat/zg structural acceptance passed on Hera, Clio, Andoria-08 and Vulcan; the other three shared hosts have missing local store targets.
+
+Remaining decisions and precise actions are in operations/approval-packet.md and git-ai-residue-audit/cleanup-review.json. No campaign publication or system/Home Manager activation has occurred. Persistent Hera signing configuration/reload, NSS routing choice, runtime cleanup, and parked VPS adoption/disposition remain pending. Do not contact the dormant git-ai host or VPS without the required owner selection. Resume from state.json, preserve unrelated canonical work, and do not repeat passing gates without new changes or concerns.
 
 * DONE [#C] Assert Darwin retains Agda while shared-work omits it
 :PROPERTIES:
@@ -21899,48 +21949,6 @@ The manually coupled mlx-lm catalog target lacks buildPackage/buildMode metadata
     "depends_on_id": "nix-nyh4",
     "type": "discovered-from",
     "created_at": "2026-08-24T22:13:01.682168Z",
-    "created_by": "johnw",
-    "metadata": "{}",
-    "thread_id": ""
-  }
-]
-#+end_src
-
-* DONE [#C] Retire zvec-grep and activate the removal on Hera
-:PROPERTIES:
-:OBR_SCHEMA_VERSION: 17
-:ID:       nix-rq3z
-:LABELS:   []
-:ISSUE_TYPE: task
-:CREATED:  [2026-09-09 Wed 21:58]
-:MODIFIED: [2026-09-09 Wed 22:36]
-:CREATED_BY: johnw
-:FINISHED: [2026-09-09 Wed 22:36]
-:CLOSE_REASON: Owner-requested retirement complete: signed removal published to Gitea main; Hera generation 1249 activated and live package/MCP/environment/daemon absence verified. Shared embedding services, indexes and unrelated work preserved.
-:SOURCE_REPO: nix
-:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
-:ORIGINAL_SIZE: 0
-:END:
-
-User explicitly retired zvec-grep because its continuous background indexing cost is not worthwhile. Remove its owned packages, source record, MCP registration, environment routing, exclusive patches/tests and operating guidance; retain shared embedding services and mutable indexes. Stop the verified Hera zg daemon, verify remaining configuration/tests and package absence, create a signed scoped commit, publish to canonical Gitea, and activate only Hera. Preserve the unpublished P1/P2 branch and unrelated state.
-
-** Acceptance Criteria
-
-No active zg/zvec-grep selection or executable mapping remains in managed configuration; supported consumer checks and Hera build pass; scoped signed commit is published and Hera activation succeeds; previous daemon is stopped and generated active configs contain no zg entry. Existing index data and other hosts are not mutated.
-
-** Notes
-
-2026-09-10 completion: Signed removal 5c39fbe2caa11ab3b62880012b93fde04bd1962c published through bin/publish to Gitea main with exact final readback. Built from authoritative Hera checkout and activated generation 1249, /nix/store/h2k01hiy0fxkl7c9kwbalnq1nn3zclp5-darwin-system-26.11.4cff07d (activation exit 0); previous generation 1248 retained. Live acceptance PASS: immutable MCP registry has no zg entry and retains six other servers; zg/zg-mcp absent from active system/user profiles; generated session variables contain no ZVEC_GREP names; old PID 97113 absent and no listener on port 7999. Full make test passed 21 Python suites and 10 native baseline Nix checks. Portable all-system evaluation, package-selection check, pre-commit, Hera/Clio environment-absence evaluation, and independent commit audit passed. Closure comparison shows only zvec-grep 0.2.1 removed (540.1 MiB). Four mechanical shfmt 3.14.1 corrections satisfied declared formatting. Shared BGE/oMLX and mutable indexes preserved; no other hosts activated. All 498 unrelated PLAN blocks verified unchanged on integration. The earlier daemon stop reduced measured GPU power from approximately 100-115 W to 0.293-0.528 W. Evidence: /Users/johnw/Products/nix-remove-zvec-evidence-20260910.
-
-** Dependencies
-
-#+begin_src json
-[
-  {
-    "issue_id": "nix-rq3z",
-    "depends_on_id": "nix-qouv",
-    "type": "discovered-from",
-    "created_at": "2026-09-10T04:58:46.201990Z",
     "created_by": "johnw",
     "metadata": "{}",
     "thread_id": ""
