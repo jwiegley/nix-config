@@ -1005,7 +1005,7 @@ Agent Deck StateDB writable and read-only openers still pass profile state.db pa
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-20 Thu 01:36]
-:MODIFIED: [2026-08-20 Thu 14:09]
+:MODIFIED: [2026-09-09 Wed 18:39]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -1013,6 +1013,10 @@ Agent Deck StateDB writable and read-only openers still pass profile state.db pa
 :END:
 
 Declarative git-ai enablement, packages, Trace2, and session variables are disabled, but historical install-hooks may have left mutable client hooks, Trace2 targets, daemon/socket state, editor extensions, repository-local hooks, and already-loaded sessions. Perform a fail-closed exact-identity audit and surgical cleanup on Hera, Clio, the four active shared-work hosts, and Vulcan; preserve unrelated hooks/config; use constrained unwrapped git-ai only where safe; independently verify postconditions and restart affected clients. Do not contact VPS or dormant git-ai host.
+
+** Notes
+
+2026-09-10 corrected bounded inventory: ten exact git-ai checkpoint hook references point to missing absolute executables (shared-home Droid2/Gemini2/Cursor3, VulcanCursor3). Three stale git-ai.git-ai-vscode editor registrations remain: HeraCursor andVSCode, ClioCursor; expectedpackage manifests absent at validated registry-relative locations. Earlier coordinator Hera summary missed the extension-count field and is superseded. Eight known olddaemon leaves remain onClio/Vulcan; recordedPIDs24817/955471 areabsent, Clio lsof reports no owners/no warnings forknown4leaves, Vulcan kernel table hasnoentries forknown2sockets. All7 native process inventories show no namedgit-ai process. All7 effectiveGit system/global/local/includes probes show zero relevantkeys and no git-ai repo-hookstate in the selectedauthoritative repo. Clio direnv path mismatch resolved by approving/loading samebyte-verified environment from physical /Users/johnw/src/sys/nix; no environmentcache/source/agent changes. HeraCode User settings remain parseblocked with normalizedJSON ExtraData; GPUCodex hooks symlink targetsabsentNixstorecontent. Preserveall generic flags/trust state/unknownschemas. Otherrepositories/customroots/remoteeditorprofiles and already-loadedclient behavior remain outside this bounded proof. No cleanup, git-ai launch or clientrestart. Exact candidates, metadata, digests and limits: /Users/johnw/Products/wg-p1p2-20260909/git-ai-residue-audit/cleanup-review.json and review.md.
 
 ** Comments
 
@@ -1332,15 +1336,17 @@ Package devwithpug/pi-gpt-fast-mode through the Nix-owned Pi Gallery/source cata
 
 Close observation 2026-08-11T01:07:39.152Z by removing GIT_CONFIG_PARAMETERS and GIT_NAMESPACE from hermetic Git fixture environments, with a regression that proves both selectors cannot leak into fixture commands.
 
-* TODO [#C] Update publish test after removing lefthook pre-push hook
+* DONE [#C] Update publish test after removing lefthook pre-push hook
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-3cuh
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-31 Mon 23:42]
-:MODIFIED: [2026-08-31 Mon 23:42]
+:MODIFIED: [2026-09-09 Wed 14:29]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 14:29]
+:CLOSE_REASON: Current baseline 774378827f182ca5588effd7d459ae9645a898e9 passes full make test:21 Python suites with no skipped/budget failures and10 Nix baseline checks. Publication suite passed58 cases using short private TMPDIR; current tests construct their own pre-push fixture instead of reading the removed repository hook. No source repair needed. Evidence /Users/johnw/Products/wg-p1p2-20260909/baseline-tests.log.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2015,15 +2021,17 @@ Frozen product docs: SESSION-PERSISTENCE-SPEC.md cbcba81331f37071b2acd907caaf488
 ]
 #+end_src
 
-* DOING [#C] Bound inherited environment for managed stdio MCP servers
+* DONE [#C] Bound inherited environment for managed stdio MCP servers
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-4jtb
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-19 Wed 00:21]
-:MODIFIED: [2026-08-20 Thu 14:09]
+:MODIFIED: [2026-09-09 Wed 18:18]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 18:18]
+:CLOSE_REASON: Common managed stdio boundary and fail-closed fd handling pass current PAL1.5 native direct/managed contracts on Darwin and both Linux architectures, with unrelated credential/agent-socket canaries and maintained client protocol coverage. Current catalog/registry native gates PASS and wrapper lifecycle/security gates PASS all3platforms after fixture-only Linux runtime-root repair nix-ypfh. Final source audit CLEAR. Provider availability and live fleet deployment are separate. Evidence final-native-contracts.json, wrapper-corrected-checks.log, wrapper-x86-signed-retry.log under /Users/johnw/Products/wg-p1p2-20260909.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2435,6 +2443,44 @@ The Drain25 walltime gate is labeled WARM/pure in-process, but even with fsync s
 ]
 #+end_src
 
+* DONE [#C] Patch Prime build-tool ELF interpreter before Linux checks
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-5v7l
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-09 Wed 14:50]
+:MODIFIED: [2026-09-09 Wed 16:36]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 16:36]
+:CLOSE_REASON: Exact current Prime resolver/package checks pass on all3 supported native systems. Darwin source-owned Prime integration and copied-tree native adapter negative/rollback passed; ARM Linux Prime integration passed after patching pinned native Biome ELF before checks; x86 Linux Prime integration passed after scoped signing of verified previously unsigned build outputs. Exact selected adapter8243eba3421e301c88c047444f34ab7d5d57163e registers mcp/mcp-auth and passes synthetic echo. No lint or behavior check bypassed. Evidence /Users/johnw/Products/wg-p1p2-20260909/{integration-darwin.log,prime-linux-checks-2.log,prime-x86-signed-retry.log}. Persistent signing configuration and fleet activation remain separate open work; this closes resolver/Linux-package acceptance.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Current aarch64-linux Prime package builds its TypeScript bundle, then its required Biome check fails spawning node_modules/@biomejs/cli-linux-arm64/biome with ENOENT. Linux autoPatchelfHook currently runs at fixup, after checkPhase; the native check tool must be runnable before checks. Fix native build/check tool preparation at packages/prime-agent.nix without bypassing lint/tests, changing package versions, or broadening runtime permissions. Evidence /Users/johnw/Products/wg-p1p2-20260909/prime-linux-package-failure.log.
+
+** Acceptance Criteria
+
+Exact Prime package required lint/test phase and Prime MCP integration pass on native aarch64-linux and x86_64-linux; Darwin remains valid; no check is skipped or weakened.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-5v7l",
+    "depends_on_id": "nix-lwka",
+    "type": "discovered-from",
+    "created_at": "2026-09-09T21:50:12.499643Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
+  }
+]
+#+end_src
+
 * DONE [#B] Align Clio advertised local routes with live inventory
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
@@ -2702,15 +2748,17 @@ All competing evaluators are drained; one serialized build-only Hera system eval
 ]
 #+end_src
 
-* TODO [#C] Complete catalog-wide candidate realization coverage
+* DONE [#C] Complete catalog-wide candidate realization coverage
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-73in
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-18 Tue 06:12]
-:MODIFIED: [2026-08-18 Tue 06:12]
+:MODIFIED: [2026-09-09 Wed 16:58]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 16:58]
+:CLOSE_REASON: Final updater audit correction is complete: all161automatic targets have explicit final consumers or classifications, and all5 prior implicit manual paths retain real final/baseline contracts. Explicit validation without any contract fails hard. Syncthing-next now has one shared package exposure used by owner/check/updater. Final updater suite147PASS; all159distinct declared consumers evaluate (154original+5manual); Syncthing home contractPASS; actual Emacs/Prime/ABI negative and exact rollback/restored-baseline probesPASS; prior fullroot21Python+11Nix andHera buildPASS. Evidence /Users/johnw/Products/wg-p1p2-20260909/{updater-final-tests.log,updater-baseline-correction/manual-selector-results.json,updater-baseline-correction/focused-tests.log,updater-baseline-correction/syncthing-check.log}. Final campaign base-currency pass remains pending; no deployment claim.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -2721,6 +2769,10 @@ Extend candidate realization beyond the current Python and Pi repair lanes to th
 ** Acceptance Criteria
 
 Every automatic source record is either mapped to a mutation-honest maintained consumer realization contract or documented/tested as true copy-only, inert, or projection-only; production dispatch reaches each declared contract; current-host, cross-platform, and interpreter-specific gaps are explicit and tested; full updater and portable evaluation gates pass.
+
+** Notes
+
+Final commit audit identified2 further manual restored-baseline no-op regressions: zvec-grep and syncthing-next. Correcting their explicit contracts and making explicitly requested validation fail closed when a manual record has no contract. Prior automatic coverage/native probes remain valid; final159consumer evaluation and current-base full suite remain required before re-close. No acceptance criteria or priorities changed.
 
 ** Dependencies
 
@@ -3285,15 +3337,17 @@ Every maintained checkout with a GitHub comparison/upstream remote has no usable
 ]
 #+end_src
 
-* TODO [#C] Run behavioral checks for flake-input bumps in update transactions
+* DONE [#C] Run behavioral checks for flake-input bumps in update transactions
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-86d8
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-08-18 Tue 12:55]
-:MODIFIED: [2026-08-18 Tue 12:55]
+:MODIFIED: [2026-09-09 Wed 16:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 16:00]
+:CLOSE_REASON: Catalog now declares final consumers or reasoned copy/projection/inert classification for all161automatic targets, preserving all prior manual final-build contracts. Hash producers remain separate; named flake candidates validate coherent paired locks/projections and restored baseline; explicit systems and PythonABIs prevent fallback acceptance.145-test updater suite and fullroot21Python+11Nix gates passed; added manual3target regression passes. Actual154consumer expressions resolve including corrected Linux-only cpx. Native Emacs compile-error, Prime missing-MCP while package succeeds, and wrong cp313 wheel all rejected by maintained consumers with exact-tree rollback and restored-baseline success. Portable all-system no-build passed. Review found and resolved manual-contract omission, no remaining verified finding. Evidence /Users/johnw/Products/wg-p1p2-20260909/{updater-candidate-tests-2.log,updater-manual-test.log,updater-review/REPORT.md,updater-native-probes}. Full final base-currency verification remains campaign gate; no activation/publication claim.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -3674,7 +3728,7 @@ Remove pi-insights and pi-usage-extension completely from the Nix-managed Pi est
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-09-02 Wed 18:16]
-:MODIFIED: [2026-09-02 Wed 18:16]
+:MODIFIED: [2026-09-09 Wed 17:37]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -3682,6 +3736,10 @@ Remove pi-insights and pi-usage-extension completely from the Nix-managed Pi est
 :END:
 
 Publish signed agent-cat and agent-workflows revisions, advance managed source and workflow locks, verify and activate Hera, Clio, Vulcan, and four active shared-work hosts, then run no-inference runtime acceptance. Explicitly exclude parked VPS.
+
+** Notes
+
+2026-09-10 installed immutable gallery lookup corrected and actual compiled agentic-run list --json proves source-aware stdin input descriptors on Hera,Clio,Andoria08,Vulcan. Hera installed wf list --json also passes descriptorVersion2 with171 prompt-source inputs. No inference or client/daemon launch. AndoriaT2,Delphi,GPU generated Pi gallery and MCP leaf symlinks point to absent local store roots, so deployed acceptance remains open on those3hosts. Packageversions are not source-revision proof; correlate exact immutable outputs and consumer locks on resumption. Sourcepins present; no new publication/activation in this campaign. Evidence /Users/johnw/Products/wg-p1p2-20260909/integration/installed-summary.json and installed-failed-leaves.json.
 
 * DONE [#C] Package and install pi-mem for Pi
 :PROPERTIES:
@@ -4548,15 +4606,17 @@ make update rejects each oMLX release when upstream changes its exact DDGS pin b
 ]
 #+end_src
 
-* TODO [#C] Register qanda command in commandMetadata (file is inert)
+* DONE [#C] Register qanda command in commandMetadata (file is inert)
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-ben7
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-18 Tue 12:14]
-:MODIFIED: [2026-08-18 Tue 12:14]
+:MODIFIED: [2026-09-09 Wed 15:56]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 15:56]
+:CLOSE_REASON: Registered qanda at the shared catalog seam, rejects unregistered regular command Markdown sources, and preserves fess override. Catalog rendering/selection and missing-registration mutant pass; Prime expected counts corrected94files/62commands and portable all-system evaluation passes. Full root make test21Python+11Nix baseline checks and fullHera system build pass. Evidence /Users/johnw/Products/wg-p1p2-20260909/{qanda-check.log,updater-portable-eval.log,root-current-tests.log,root-current-system.log}. No activation claim.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -4573,6 +4633,10 @@ IMPACT: The commit's intent (a usable /qanda command) is silently unmet in every
 SUGGESTED FIX: Add a commandMetadata entry for "qanda" (with description) so commandSelectors picks it up. Consider a follow-up guard: a check asserting every config/ai/commands/*.md has a commandMetadata entry (no test currently detects orphaned command files, so this class fails silently).
 
 VERIFICATION: nix eval of the catalog's rendered command set includes qanda for the intended profiles; a rendered client config (e.g. Claude commands dir) contains qanda.md; the orphan guard fails when a commands/*.md lacks metadata.
+
+** Notes
+
+Broader portable all-system evaluation found Prime fixed resource counts still at93files/61commands after qanda registration. Updating them to94/62; rerun portable evaluation before re-closing. Focused catalog check and fullHera build had passed. This is the same qanda unit verification dependency, not changed acceptance.
 
 * DONE [#B] Avoid compaudit on every interactive shell startup
 :PROPERTIES:
@@ -5143,15 +5207,17 @@ Rendered catalog is valid JSON; every model has the source-proven correctly type
 ]
 #+end_src
 
-* DOING [#C] Preserve requested model in oMLX SSE keepalive chunks
+* DONE [#C] Preserve requested model in oMLX SSE keepalive chunks
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-crym
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-03 Thu 09:38]
-:MODIFIED: [2026-09-03 Thu 09:38]
+:MODIFIED: [2026-09-09 Wed 14:35]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 14:35]
+:CLOSE_REASON: The exact selected upstream revision6dda3fafac2b24001104f7ebbff9e380f9aef9fc already preserves request.model in both chat keepalive call sites and JSON-encodes model identity. Ran the source-owned SSE keepalive regression from that exact revision against installed package /nix/store/ss26ksz8nk5zniww6rh54jwpwn7c7l1l-omlx-0.6.4 in isolated HOME:15 selected keepalive/generator tests passed,0 skipped;3 unrelated global-settings tests excluded from focused contract (initial full-file run skipped these without a server fixture). Quoted-model identity cases passed. No pin or source edit required. Evidence /Users/johnw/Products/wg-p1p2-20260909/omlx-keepalive-focused.log. No service activation/runtime request assertion.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -6199,15 +6265,17 @@ The fetchNpmDeps v2 repair was committed in signed checkpoint 216e5d19. Exact bi
 ]
 #+end_src
 
-* TODO [#B] Repair Vulcan certificate-validation service failure
+* DONE [#B] Repair Vulcan certificate-validation service failure
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-ezv3
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-23 Sun 12:43]
-:MODIFIED: [2026-08-23 Sun 16:51]
+:MODIFIED: [2026-09-09 Wed 14:29]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 14:29]
+:CLOSE_REASON: Fresh read-only Vulcan evidence: timer executed2026-09-09 06:00:04PDT, ExecMainStatus=0, Result=success,46valid and no failed units. Previously warned nginx/vulcan.lan certificate passes openssl checkend2592000(30days). Current inventory is46, not historical47. Exact validator source captured and matched secondary. Original renewal-warning failure is resolved; separately reproduced malformed-input severity defect remains active in nix-r9r0. Evidence /Users/johnw/Products/wg-p1p2-20260909/operations/certificate-current.json.
 :DEFERRED: [2026-09-01 Tue 09:00]
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -8236,7 +8304,7 @@ After mlx-audio 0.5.0 built successfully, the real oMLX 0.6.1 package failed its
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-15 Sat 20:22]
-:MODIFIED: [2026-08-15 Sat 20:22]
+:MODIFIED: [2026-09-09 Wed 17:29]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -8244,6 +8312,10 @@ After mlx-audio 0.5.0 built successfully, the real oMLX 0.6.1 package failed its
 :END:
 
 Outbound OpenSSH on andoria-08 exits before connection with 'No user exists for uid 158771033', even with an explicit home/config and forwarded agent. Diagnose the NSS/passwd source for the shared UID, repair only with explicit owner approval, prove outbound BatchMode SSH from andoria-08 to each shared peer, and avoid copying or exposing private keys.
+
+** Notes
+
+2026-09-10 bounded live evidence: native getent resolves shared UID, Nix OpenSSH10.5 fails before connect; native Ubuntu OpenSSH8.9 -G and actual peer BatchMode connection pass. Native SSSD/glibc integration is the seam, no account/key change needed. Native upstream nsncd1.5.2 Debian package and one-host Andoria-08 proxy canary/rollback proposal prepared at /Users/johnw/Products/wg-p1p2-20260909/operations/nss-proposal.md. Owner choice of native proxy versus working system SSH remains unanswered; no install/start/enable or root host mutation performed.
 
 ** Dependencies
 
@@ -9265,15 +9337,17 @@ The authoritative Andoria-T2 system configuration declaratively grants only the 
 
 Advance oMLX to 0.6.3rc3 and its exact DFlash fork revision together, preserving DDGS/source identity guards and real package validation.
 
-* DOING [#B] Prime loses MCP: pi-mcp-adapter fails to load (pi-ai/compat subpath)
+* DONE [#B] Prime loses MCP: pi-mcp-adapter fails to load (pi-ai/compat subpath)
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-lwka
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-18 Tue 12:55]
-:MODIFIED: [2026-08-20 Thu 14:09]
+:MODIFIED: [2026-09-09 Wed 16:36]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 16:36]
+:CLOSE_REASON: Exact current Prime resolver/package checks pass on all3 supported native systems. Darwin source-owned Prime integration and copied-tree native adapter negative/rollback passed; ARM Linux Prime integration passed after patching pinned native Biome ELF before checks; x86 Linux Prime integration passed after scoped signing of verified previously unsigned build outputs. Exact selected adapter8243eba3421e301c88c047444f34ab7d5d57163e registers mcp/mcp-auth and passes synthetic echo. No lint or behavior check bypassed. Evidence /Users/johnw/Products/wg-p1p2-20260909/{integration-darwin.log,prime-linux-checks-2.log,prime-x86-signed-retry.log}. Persistent signing configuration and fleet activation remain separate open work; this closes resolver/Linux-package acceptance.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -10665,15 +10739,17 @@ The first full-suite command forced GOSUMDB=off while TestSmoke_BuildVersion int
 ]
 #+end_src
 
-* DOING [#B] Disable PAL clink subprocess bridge
+* DONE [#B] Disable PAL clink subprocess bridge
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-pal-disable-clink-fuab
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-20 Thu 11:09]
-:MODIFIED: [2026-08-20 Thu 14:09]
+:MODIFIED: [2026-09-09 Wed 18:18]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 18:18]
+:CLOSE_REASON: Current PAL1.5.0 direct and shared managed-stdio behavioral contracts pass natively on aarch64-darwin, aarch64-linux and x86_64-linux: clink tool/prompt omission and denial, protocol identity, no canary/network disclosure, bounded stderr-only/no persistent logging. Existing documented exact-model chat replacement retained. Final source audit CLEAR. Source/package scope only; provider-backed availability and live fleet selection remain separately open. Evidence final-integration-contracts.log and final-native-contracts.json under /Users/johnw/Products/wg-p1p2-20260909.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -11065,14 +11141,14 @@ Signed commit, fast-forward publication, and activation on Hera plus the maintai
 ]
 #+end_src
 
-* TODO [#C] Align upstream Obr Nix nightly with rust-toolchain and checks
+* DOING [#C] Align upstream Obr Nix nightly with rust-toolchain and checks
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-pxru
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-18 Tue 01:54]
-:MODIFIED: [2026-08-18 Tue 01:54]
+:MODIFIED: [2026-09-09 Wed 17:29]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -11080,6 +11156,10 @@ Signed commit, fast-forward publication, and activation on Hera plus the maintai
 :END:
 
 Obr 0.3.2+1 pins nightly-2026-08-13 in rust-toolchain.toml, but its flake selects rust-bin.nightly.latest from an older lock and builds with nightly-2026-08-06 while claiming parity. The release package also sets doCheck=false; validation relies on separate baseline gates. Correct this in the upstream Obr repository, refresh its lock, and make the package/check contract state the exact compiler and executable tests truthfully. The Nix-config adoption is separately mitigated by running the exact source-owned unit/lint gates and forward/backward schema-17 migration smoke.
+
+** Notes
+
+2026-09-10 upstream repair ready at signed 77d53636,0937bbe0,f2d01c93cfefe61a615284241dc62f69ef910cc0 in /Users/johnw/Products/obr-nix-nightly-20260909. Toolchain reads rust-toolchain.toml; only rust-overlay lock refreshed. Native source-filter/compiler identity/format/strict all-target Clippy plus test-only negative control/release build/full unit gate including persisted Proptest corpus passed; final independent fess CLEAR. Full unit passed with bounded NIX_BUILD_CORES=8 after two earlier extra vacuum failures; no storage repair claimed. Old/new binary CRUD compatibility passed on a private current-schema workspace, not a new schema-17 migration. Publication and root pin adoption unrun. Evidence /Users/johnw/Products/wg-p1p2-20260909/obr-fess/REPORT.md.
 
 ** Dependencies
 
@@ -11526,7 +11606,7 @@ forgetConsumedTurnsForChildWithStorage trims the child ID before exact deletes. 
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-04 Fri 21:05]
-:MODIFIED: [2026-09-04 Fri 22:46]
+:MODIFIED: [2026-09-09 Wed 18:09]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
@@ -11538,6 +11618,8 @@ User now explicitly requests the exact zg index --embedding hera/bge-m3-mlx-fp16
 ** Notes
 
 Implementation/runtime acceptance complete; deployment handoff to main agent-cat Agent Deck session 47616e3a-1788417149. Exact base-URL --rebuild command passed: 534 files, 3450 entities, 0 failed, 18m48s. Live two-tool MCP vector search against the actual index passed. Darwin, aarch64-linux and x86_64-linux package builds with native indexing/search, MCP lifecycle, timeout/cancellation tests passed. Fixed endpoint normalization, search-rg lock parsing, Hera 10-minute body-inclusive timeout and optional ONNX CUDA download. All Pi profiles enabled; shared-work OpenAI key remains mutable/unprovided. Slow host-behavior fully removed under nix-xnxb. Pi declared input aligned with local fork HEAD a11a385aedc50aa3d0ef38f7c8346694a0dd14f2. Concurrent model work preserved. No commit/push/activation by this session. Full handoff and logs: /tmp/zg-acceptance.kMJOd6/handoff.md. Keep issue open until integrated review, signed commits, publication, all-host activation and deployed verification finish.
+
+2026-09-10 current installed structural acceptance: immutable zg registration, shared stdio launcher, two-tool wrapper and declared credential-ownership shape pass Hera,Clio,Andoria08,Vulcan. T2,Delphi,GPU shared MCP/gallery links point to absent local store roots, so deployed acceptance remains incomplete. This probe starts no daemon, performs no vector search and does not rebuild the index; it does not replace the earlier exact-index evidence. Shared-work mutable key remains unprovided. Evidence /Users/johnw/Products/wg-p1p2-20260909/integration/installed-summary.json and installed-failed-leaves.json. No new publication or activation in this campaign.
 
 * DONE [#D] State the canonical Gitea remote contract in top-level documentation
 :PROPERTIES:
@@ -11777,15 +11859,17 @@ The managed MSSQL launcher still uses mcr.microsoft.com/mssql/server:2022-latest
 ]
 #+end_src
 
-* DEFER [#B] Restore Delphi trust for signed shared-work closures
+* DONE [#B] Restore Delphi trust for signed shared-work closures
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-r9dh
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-15 Sat 20:22]
-:MODIFIED: [2026-08-15 Sat 20:22]
+:MODIFIED: [2026-09-09 Wed 14:40]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 14:40]
+:CLOSE_REASON: Fresh Delphi acceptance now passes without root mutation: its root-owned mode0644 policy leaf SHA256263538fe4fba1aab8286cb4c2760984151f7102aae0cd82a0ff02d7b061899cf and12 client trusted-key digests match T2/GPU; daemon active since2026-08-19. Two fresh distinct ordinary input-addressed probes were absent before transfer. Hera daemon-signed probe(1signature) copied successfully and is resident; equivalent unsigned probe(0signatures) was rejected for missing trusted signature and remains absent. No require-sigs/trusted-user change, trust-leaf install, daemon restart or activation was needed. Evidence /Users/johnw/Products/wg-p1p2-20260909/operations/{current-trust-metadata.json,trust-behavior.json}. Historical mismatch is resolved.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -11860,6 +11944,46 @@ After all maintained stdenv alias uses were removed, warning tracing identifies 
     "author": "johnw",
     "text": "The final Andoria lock is published at 37a580c and a fresh warnings-fatal locked x86_64 Home Manager evaluation passed. The active shared candidate reports qdrant 1.18.2. A separate optional standalone x86 Git-AI rebuild encountered an upstream GNU mirror 404 before Git-AI compilation; it is not part of the maintained shared package set and does not weaken the successful Darwin build or consumer gates.",
     "created_at": "2026-08-17T00:29:11Z"
+  }
+]
+#+end_src
+
+* DOING [#B] Make certificate validation report unreadable certificates as failures
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-r9r0
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-09 Wed 14:24]
+:MODIFIED: [2026-09-09 Wed 18:09]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+The exact current Vulcan validator exits 1 under set -e when invalid, empty, or date-parse inputs return from check_certificate_status before the final severity aggregation. Its systemd unit intentionally accepts exit 1 as a warning, so these severe failures can appear successful. An independent isolated fixture reproduced invalid, empty, date-parse, and mixed invalid/healthy inputs exiting 1 without a summary; the healthy production timer result is separately valid. Fix the source-owned validator and regression contract at /etc/nixos authority without changing warning semantics. Preserve root/activation boundaries.
+
+** Acceptance Criteria
+
+Isolated behavioral tests prove healthy=0, warning=1, critical/expired/unreadable/empty/date-parse=2; mixed inputs continue through the full inventory and report a summary. Authoritative source adoption is verified, with no credential or certificate payload exposure and no weakening of severe failure handling.
+
+** Notes
+
+2026-09-10 final signed source fix c29b8a49e83c3304a1506fa40f53a68eb99c9a9e in /Users/johnw/Products/nixos-certificate-severity-20260909 is rebased onto current authoritative Vulcan base ec1c5cbbfa2fbb1c4ba64aec07d440f9e80ec36b. Range-diff from39c03b66 is identical; all3 repair files unchanged. Native check reevaluation on newbase completed exit0 and reused prior passing /nix/store/0v73pgryq0wyg9h0ywp4jn132w752kqi-certificate-validator-check. Original8fixture executions and final independent fess CLEAR retained; no fresh fixture execution claimed forcachehit. Expected invalid branches aggregate exit2; warnings1/healthy0 preserved. OpenSSL stubbed, missing-file TOCTOU source-only. Liveunit reads /etc/nixos script directly, so adoption affects next invocation withoutswitch. No sourceadoption/publication/livevalidation; preserve authoritative changes. Evidence /Users/johnw/Products/wg-p1p2-20260909/certificate-fess/REPORT.md and certificate-final-check.log.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-r9r0",
+    "depends_on_id": "nix-ezv3",
+    "type": "discovered-from",
+    "created_at": "2026-09-09T21:24:35.466411Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
@@ -12066,15 +12190,17 @@ Partner observation 2026-08-10T21:51:54.606Z: remove already-resolved questions 
 
 make update failed while validating plasma-wiki because candidate Nixpkgs selected tmux 3.7c, whose macOS configure now requires an explicit jemalloc policy. Add a Darwin compatibility override with jemalloc at the portable Fractal seam and verify the candidate runtime closure.
 
-* TODO [#B] Restore Chord runtime discovery for managed Pi subagents
+* DONE [#B] Restore Chord runtime discovery for managed Pi subagents
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-rn4y
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-04 Fri 20:45]
-:MODIFIED: [2026-09-04 Fri 20:45]
+:MODIFIED: [2026-09-09 Wed 16:00]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 16:00]
+:CLOSE_REASON: Exact installed Darwin Pi0.85.1/gallery/AgentCat outputs passed a credential-free isolated child probe: complete gallery loads with AgentCat import/factory timing and correct command/tool ownership; synthetic provider roundtrip succeeds; installed AgentCat ACP adapter initializes, creates session, rejects idle steering and tears down cleanly against final PI_PACKAGE_DIR. No peer package reconstruction, gallery disabling, external inference, Keychain or user session access. Guard saw no forbidden operation; own bridge socket/token and descendants absent after exit. Evidence /Users/johnw/Products/3f/r-4m46rtfj/evidence.json and /Users/johnw/Products/wg-p1p2-20260909/agent-cat-child.log. This is exact installed Darwin behavioral acceptance, not fleet activation.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
@@ -18793,15 +18919,17 @@ A read-only fleet preflight printed the VPS Git remote URL, which contained an e
 ]
 #+end_src
 
-* DOING [#C] Align Pi flake literal with catalog projection
+* DONE [#C] Align Pi flake literal with catalog projection
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-u4ew
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-04 Fri 19:25]
-:MODIFIED: [2026-09-04 Fri 20:12]
+:MODIFIED: [2026-09-09 Wed 14:29]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 14:29]
+:CLOSE_REASON: Current baseline 774378827f182ca5588effd7d459ae9645a898e9 uses unrevisioned github:jwiegley/pi in portable flake source; both locks and source catalog agree on319f54443c9104a123e6f22547a69a1c6f9188e8. Full update-overlay suite and baseline ai-lock-coherence check passed in make test. Literal rejection regression remains active. This is source/coherence acceptance; no deployment assertion. Evidence /Users/johnw/Products/wg-p1p2-20260909/baseline-tests.log.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
@@ -19633,15 +19761,17 @@ Canonical update adopted llama-swap v251. The package now uses the sole current 
 ]
 #+end_src
 
-* DOING [#C] Align stdio MCP argument schema with every renderer
+* DONE [#C] Align stdio MCP argument schema with every renderer
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-vwn8
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-19 Wed 00:23]
-:MODIFIED: [2026-08-20 Thu 14:09]
+:MODIFIED: [2026-09-09 Wed 18:18]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 18:18]
+:CLOSE_REASON: Shared catalog normalizes omitted stdio args once; maintained renderer behavior and missing-args mutation pass. Current-root Darwin full catalog/registry baseline plus native ARM/x86 Linux catalog and registry checks PASS; portable all-system evaluation PASS, final source audit CLEAR. No new renderer workaround or fleet claim. Evidence final-main-tests.log and final-integration-contracts.log under /Users/johnw/Products/wg-p1p2-20260909.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
 :ORIGINAL_SIZE: 0
@@ -19724,14 +19854,14 @@ Final frozen file internal/session/hook_status_lock_test.go SHA-256 007e2209bf4c
 ]
 #+end_src
 
-* TODO [#C] Fix trust between shared x86_64 Nix builders
+* DOING [#C] Fix trust between shared x86_64 Nix builders
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-vzco
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-08 Tue 01:10]
-:MODIFIED: [2026-09-08 Tue 01:10]
+:MODIFIED: [2026-09-09 Wed 17:29]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
@@ -19739,6 +19869,10 @@ Final frozen file internal/session/hook_status_lock_test.go SHA-256 007e2209bf4c
 :END:
 
 A portable x86_64-linux toolchain build split work between andoria-08 and andoria-t2. When one builder consumed an output produced by the other, its daemon rejected the path because it lacked a signature from a trusted key. Reproduced again with andoria-08 as sole builder because an already-realized pi-src-with-lock output from andoria-t2 remained unsigned. Define and verify one shared-work builder signing/trust policy; do not weaken require-sigs.
+
+** Notes
+
+2026-09-10 reviewed hook committed in private root branch (rebased 0641c624). Actual Hera daemon canaries passed both 08->Hera->T2 and reverse directions, expected signatures on outputs, intentional hook failure prevented dependent build. Delphi signed fresh path accepted and equivalent unsigned fresh path rejected with require-sigs/keyset unchanged. Scoped52 existing outputs from failed Prime/wrapper dependency graphs had content and declared-deriver provenance verified, then signed with existing Hera key; exact Linux gates now pass. No key distribution or whole-store signing. Persistent included nix.custom.conf post-build-hook setting and targeted Hera daemon reload remain unrun; current invocations use scoped option. Concrete setting/adoption/rollback plan at /Users/johnw/Products/wg-p1p2-20260909/operations/signing-proposal.md.
 
 ** Dependencies
 
@@ -19801,6 +19935,38 @@ User explicitly authorized committing and pushing all pending work, publishing t
   }
 ]
 #+end_src
+
+* DOING [#C] Resolve outstanding P1 and P2 issues with verified closeout
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-w4rj
+:LABELS:   []
+:ISSUE_TYPE: epic
+:CREATED:  [2026-09-09 Wed 14:10]
+:MODIFIED: [2026-09-09 Wed 18:39]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Review and address every outstanding P1/P2 issue in this repository. Frozen initial roster: nix-qouv, nix-rn4y, nix-ezv3, nix-pal-disable-clink-fuab, nix-26zg, nix-lwka, nix-r9dh, nix-csxx, nix-vzco, nix-u4ew, nix-crym, nix-8n12, nix-3cuh, nix-y8rg, nix-vwn8, nix-4jtb, nix-86d8, nix-ben7, nix-73in, nix-pxru, nix-jiej.
+
+Definition of Done: every roster item has current evidence of its requested behavior and is resolved, or an explicit owner-approved disposition; no priority downgrade or closure by age. Preserve each issue's acceptance criteria, host/state ownership, existing commits, and unrelated changes. Any P1/P2 dependency repair needed during this campaign joins its tracked work. Full build and test gates pass for implemented changes, the final work commit has an independent no-history fess audit, partner observations are reconciled, and the local work branch is current with its base. Do not turn source/build results into activation or fleet-health claims.
+
+Execution: establish baseline; inspect existing implementations and current host state; close already-fixed issues only with fresh relevant checks; implement missing behavior at its owning shared boundary; verify, commit signed units and audit. Prepare concrete root/service/session or parked-VPS actions before seeking any missing explicit owner approval. Prior cleanup-specific push/Hera activation does not automatically authorize a new fleet rollout. No force-push or destructive state cleanup.
+
+** Acceptance Criteria
+
+The frozen 21-issue roster and newly required P1/P2 dependencies meet the frozen Definition of Done; each result has source/evaluation/build/runtime/fleet evidence at its required scope.
+
+** Notes
+
+Refocus active; last 2026-09-10T01:39:46.719387+00:00, next deadline 2026-09-10T02:39:46.719387+00:00. Frozen21 plus required3 unchanged. Fifteen closed (13original+2required), nine remain pending source adoption or explicit owner operations/disposition. Source changes and nativecloseout through signed2d70ba1f pass final independent fess; local/live basecf9bf452 stillmatched. Full make test PASS21Python+11Nix, full Hera system PASS /nix/store/vbgw7dwr70jvh4lqmrhm64c02w759p0s-darwin-system-26.11.4cff07d, portable all-system no-build PASS. CurrentPAL1.5 managed-stdio PASS all3nativeplatforms; catalog/registry PASS bothLinux plus Darwinbaseline. final-integration-contracts.log exit0, final-native-contracts.json maps7outputs. No build/test remainsrunning.
+
+AgentDeck60819fc8 and Obrthroughf2d01c93 source builds/tests/finalfess PASS; signed andunpublished. Explicit upstream publication approval requested, no response yet. Prepared pin-adoption/adoption.patch changesonlyAgentDecksource,Obrlock andrequirednestedRustoverlay. NewarchiveNAR hashes computed andoldhashes reproduceexistinglocked sources; normalremotefetch validation awaitspublication, rootpinsunchanged. Certificatec29b8a49 signed onliveVulcan ec1c5cbb, unchangedpatch, nativecheckexit0 cachedpass andfinalfessCLEAR; no liveadoption. Hera local-key signing works; earlierhardware-cardpreflight wasinapplicable andneeded no signerrepair.
+
+Installed AgentCat descriptors/zg structure PASS Hera,Clio,Andoria08,Vulcan; Hera wf descriptorPASS. T2,Delphi,GPU gallery/MCP targets absentlocalstores: deploymentpending. Correctedgit-ai inventory:10dead checkpointrefs,3staleeditorregistryrows(HeraCursor+VSCode,ClioCursor),8olddaemonleaves(Clio+Vulcan), no recordedPID/socketowners observed. EarlierHera summarymissedextensions. Cliodirenvgap resolved via physicalcheckout; all7 nativeGit/processpassesdone. HeraCodeUser parseerror andGPUCodex missingstoretarget remainreadgaps; genericunknownstate/customroots/otherrepos/loadedclients preserved. No cleanup/clientcontrols, campaignpublication or system/HMactivation. PersistentHera signingconfig/reload,NSSchoice,parkedVPSadoption/disposition remainpending. Do not contactdormantgit-ai/VPS. Concrete actions operations/approval-packet.md, exactinventorygit-ai-residue-audit/cleanup-review.json, resumptionstate /Users/johnw/Products/wg-p1p2-20260909/state.json. Preserveunrelated canonicalPi-browser/PLAN work. Do not repeatexpensivepassingchecks withoutnewchanges/concerns.
 
 * DONE [#C] Assert Darwin retains Agda while shared-work omits it
 :PROPERTIES:
@@ -21060,14 +21226,14 @@ Current exports, manifest, catalog, and maintained consumer references are recon
 Removed the 17 dedicated research files, their source record, flake app and check declarations, and manifest entries. Active repository references are absent outside historical PLAN records. Authoritative Andoria and Vulcan consumer git searches returned no references. Live Pi gallery, extension, and session-replacement builds passed. No host was activated.
 Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Acceptance complete: make test passed all 21 Python suites and all 10 baseline Nix checks (make-test-accepted.log, coordinator session 92564 exit 0). Final static gate, portable all-system evaluation, and Darwin system build passed. The initial unreproduced wrapper failure is retained separately in nix-9fby; no production backup change was made. No merge, publication, or activation.
 
-* TODO [#C] Make Agent Deck generic fresh restart rollback transactional
+* DOING [#C] Make Agent Deck generic fresh restart rollback transactional
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-y8rg
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-08-23 Sun 00:08]
-:MODIFIED: [2026-08-23 Sun 00:08]
+:MODIFIED: [2026-09-09 Wed 17:29]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/nix
@@ -21079,6 +21245,10 @@ Generic tool bindings are still cleared eagerly during RestartFresh and can rema
 ** Acceptance Criteria
 
 A failed Generic RestartFresh preserves the previous durable and in-memory binding, while a successful replacement publishes only the new binding and generation atomically.
+
+** Notes
+
+2026-09-10 source repair ready at signed 60819fc88ba536e31f7395ba14829a2fe869d965 in /Users/johnw/Products/agent-deck-generic-fresh-20260909. Generic physical failure preserves full in-memory and durable binding; success and delayed capture publish through existing generation-fenced CAS. Full source-owned runtime lifecycle/race gate and exact Nix package build passed; final independent fess CLEAR. Cold recovery without Generic intent fails closed, not claimed automatic recovery. Upstream publication, Nix pin adoption and activation remain unrun. Evidence /Users/johnw/Products/wg-p1p2-20260909/agent-deck-fess/REPORT.md.
 
 ** Dependencies
 
@@ -21312,6 +21482,44 @@ User correction on 2026-08-14: the declared Pi extensions are always wanted on a
     "author": "johnw",
     "text": "Unauthorized opt-in policy reversed in source. Renderer again owns exactly five automatic leaves: Fleet Theme, Nix Gallery, Pi Loop, Pi MCP Adapter, and Quiet. Preflight retires only auto-compact-resume; tests and documentation again state the always-on contract. Uncached Hera evaluation returned the exact five paths. A combined three-check build was stopped after roughly three minutes with no failure output to honor the bounded-test instruction; no result is claimed from that interrupted build. Diagnosis, without implementation: cold startup is dominated by eager Gallery/Jiti and MCP source loading; /new is dominated by synchronous Trace rendering plus Rewind, Lens, provider-discovery, and MCP lifecycle work. Candidate fixes require user approval.",
     "created_at": "2026-08-14T18:32:40Z"
+  }
+]
+#+end_src
+
+* DONE [#C] Make Linux agent-wrapper checks use a writable private runtime root
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ypfh
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-09 Wed 16:27]
+:MODIFIED: [2026-09-09 Wed 17:29]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-09 Wed 17:29]
+:CLOSE_REASON: Signed final wrapper fix 7c21df6e preserves production /var/tmp and uses Nix sandbox /tmp only for Linux fixtures. Actual wrapper security, zero/one/many-state and lifecycle cases pass on Darwin and both native Linux architectures; final source fess is CLEAR. Evidence wrapper-corrected-checks.log and wrapper-x86-signed-retry.log under /Users/johnw/Products/wg-p1p2-20260909.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Native aarch64-linux agent-wrappers check fails in its Codex zero-state case: mkdir cannot create /var (permission denied), then codex cannot create host-local state under /var/tmp/codex-928389946741. The Nix sandbox has no writable /var/tmp. Diagnose the fixture/host-local-state seam and preserve production host-local ownership, concurrency and isolation; do not disable sandbox or bypass checks. x86 also has separately tracked unsigned dependency failures. Evidence /Users/johnw/Products/wg-p1p2-20260909/integration-linux-independent.log; failing ARM drv5mnxxsakgxx04agbh3lzs5nyrjm9xygm-agent-wrappers-check.
+
+** Acceptance Criteria
+
+Native Linux agent-wrapper check passes all zero/one/many state and lifecycle/security cases using actual wrappers, with private writable fixture runtime paths; existing production host-local runtime policy stays intact.
+
+** Dependencies
+
+#+begin_src json
+[
+  {
+    "issue_id": "nix-ypfh",
+    "depends_on_id": "nix-4jtb",
+    "type": "discovered-from",
+    "created_at": "2026-09-09T23:27:49.779768Z",
+    "created_by": "johnw",
+    "metadata": "{}",
+    "thread_id": ""
   }
 ]
 #+end_src
