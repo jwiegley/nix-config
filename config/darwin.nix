@@ -348,6 +348,7 @@ in
       "cardhop"
       "chatgpt"
       "choosy"
+      "cirrus"
       "claude"
       "corelocationcli"
       "cursor"
