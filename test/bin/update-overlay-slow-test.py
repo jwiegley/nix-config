@@ -42,6 +42,7 @@ load_pi_normalization_contract = MODULE.get("load_pi_normalization_contract")
 pi_npm_lock_flags = MODULE.get("pi_npm_lock_flags")
 normalize_pi_manifest = MODULE.get("normalize_pi_manifest")
 validate_npm_manifest_lock = MODULE.get("validate_npm_manifest_lock")
+validate_npm_resolution_manifest = MODULE["validate_npm_resolution_manifest"]
 generate_npm_lock = MODULE.get("generate_npm_lock")
 npm_lock_documents_equal = MODULE.get("npm_lock_documents_equal")
 read_npm_tarball_manifest = MODULE.get("read_npm_tarball_manifest")
@@ -1461,6 +1462,7 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 "typebox": "1",
             },
             "devDependencies": {"dev": "1"},
+            "overrides": {"dev": "1.0.1"},
             "peerDependencies": {"peer": "1"},
             "peerDependenciesMeta": {"peer": {"optional": True}},
             "allowScripts": {"better-sqlite3": True},
@@ -1507,6 +1509,11 @@ const GENERIC_GLOBAL_CONFIG_PATH = join(homedir(), ".config", "mcp", "mcp.json")
                 )
                 self.assertIsNotNone(normalized_text)
                 normalized = json.loads(normalized_text)
+                if target == "pi-agent-browser-native":
+                    self.assertNotIn("overrides", normalized)
+                    self.assertTrue(validate_npm_resolution_manifest(normalized_text))
+                else:
+                    self.assertEqual(normalized["overrides"], {"dev": "1.0.1"})
                 self.assertNotIn("devDependencies", normalized)
                 self.assertNotIn("peerDependencies", normalized)
                 self.assertNotIn("peerDependenciesMeta", normalized)

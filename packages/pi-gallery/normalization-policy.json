@@ -18,7 +18,9 @@
   },
   "targets": {
     "pi-agent-browser-native": {
-      "removeTopLevel": [],
+      "removeTopLevel": [
+        "overrides"
+      ],
       "forbidDependencies": [],
       "defensiveForbidDependencies": [],
       "overrideDependencies": {}
