@@ -10,6 +10,7 @@ let
   codexSqliteBackup = pkgs.writeTextFile {
     name = "codex-sqlite-backup";
     executable = true;
+    destination = "/bin/codex-sqlite-backup";
     text = ''
       #!${pkgs.python3}/bin/python3
       import os
@@ -206,7 +207,7 @@ let
 
       ${pkgs.coreutils}/bin/timeout --signal=TERM --kill-after=1 \
         "$codex_sqlite_helper_timeout" \
-        ${codexSqliteBackup} "$@" >/dev/null 2>&1 &
+        ${codexSqliteBackup}/bin/codex-sqlite-backup "$@" >/dev/null 2>&1 &
       codex_sqlite_helper_pid=$!
 
       if wait "$codex_sqlite_helper_pid"; then

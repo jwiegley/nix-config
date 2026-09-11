@@ -1231,10 +1231,10 @@
     "git-ai": {
       "source": {
         "args": {
-          "narHash": "sha256-cijDQtZXo3FVoYcvU8J+Iz/FtbKSYO6XKMTzsCyfZxA=",
+          "narHash": "sha256-DjlsihbPyLoRp2Dggf1JrVjm3ducsGJpRGMMIF8Iutg=",
           "owner": "git-ai-project",
           "repo": "git-ai",
-          "rev": "bbf62f65d4c0cdfb2cfc156cbf36596a57f54073",
+          "rev": "0670e7ef27590af0e8ff5409267f3f4b09b8fcb4",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1252,10 +1252,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-rqeK3hPxa6960ivXTRb+wO74tKKecqeH2CiKIxxFJuU=",
+          "narHash": "sha256-9iJmspIpxKjkAIgDA8MI23Us2C7BRAc2PWcHedd3NcI=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "26c3794de36bba9afdb0cb269fa4ab390e09f9ca",
+          "rev": "f9d6a07194a3d5bfe2743e9b8460207fe87da15c",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -1355,10 +1355,10 @@
     "rust-overlay": {
       "source": {
         "args": {
-          "narHash": "sha256-czAKV0qN7TtdlGIREdDAJmoATGH0lfF7wNO8OMVToCw=",
+          "narHash": "sha256-kCy/MVLRIr95DJ4vspVzWj+kO/x+JuwSHmYZCvShg8w=",
           "owner": "oxalica",
           "repo": "rust-overlay",
-          "rev": "5280ed136f4359ce3f977b0c4c4dab6a34254201",
+          "rev": "577bb1e1fc5af0713169176c5c76622c21fa3ec0",
           "type": "github"
         },
         "fetcher": "fetchTree",

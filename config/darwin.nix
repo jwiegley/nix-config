@@ -177,6 +177,8 @@ in
         eternal-terminal
       ];
 
+    enableAllTerminfo = true;
+
     etc = lib.mkMerge [
       (lib.mkIf config.johnw.host.isHera {
         "nsmb.conf".text = ''
@@ -361,6 +363,7 @@ in
       "factory"
       "fantastical"
       "fujitsu-scansnap-home"
+      "ghostty"
       "github"
       "google-chrome"
       "gzdoom"

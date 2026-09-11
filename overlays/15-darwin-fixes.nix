@@ -23,6 +23,15 @@ in
     doCheck = false;
   });
 
+  # Keep Rio's PTY tests out of sandbox-blocked macOS login(1).
+  rio = prev.rio.overrideAttrs (oldAttrs: {
+    postPatch = (oldAttrs.postPatch or "") + ''
+      substituteInPlace librio/src/lib.rs \
+        --replace-fail '            shell: None,' \
+        '            shell: cfg!(test).then(|| "/bin/sh".to_string()),'
+    '';
+  });
+
   # Use lld for these packages on Darwin.
   contacts = useLld prev.contacts;
   caligula = useLld prev.caligula;

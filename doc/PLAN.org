@@ -3866,15 +3866,17 @@ Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, 
 
 Repair the shared Pi model refresh path so /model keeps cached models responsive, completes healthy cold pi.dev catalog refreshes without the downstream 2.5s false timeout, and re-discovers dynamic oMLX models through ProviderConfig.refreshModels rather than only at extension startup. Done requires secret-safe current-runtime reproduction, a bounded timeout, last-known-good behavior on local discovery failure, mutation-honest remote and local refresh regressions, affected package/full gates, and independent no-history audit. Activation/runtime acceptance is a separate explicitly authorized step.
 
-* TODO [#D] Investigate unreproduced Codex wrapper backup test failure
+* DONE [#D] Investigate unreproduced Codex wrapper backup test failure
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-9fby
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-09 Wed 11:37]
-:MODIFIED: [2026-09-09 Wed 12:22]
+:MODIFIED: [2026-09-10 Thu 16:31]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-10 Thu 16:31]
+:CLOSE_REASON: Found Python helper startup scanning /nix/store via sys.path; installed helper under /bin, reducing 20 backup launches to under one second. Agent-wrapper gate and full make test pass.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
@@ -18697,6 +18699,24 @@ Partner observation .444Z: changes now aggregates configured projects but Make a
   }
 ]
 #+end_src
+
+* DONE [#B] Rebase Codex patches for 0.154.0
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-tkh1
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-10 Thu 14:47]
+:MODIFIED: [2026-09-10 Thu 16:31]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-10 Thu 16:31]
+:CLOSE_REASON: Rebased strict Codex 0.154.0 argv-policy patch, kept log filter patch clean, repaired Rio Darwin PTY test sandbox behavior, and verified portable Codex plus non-activating Hera system builds.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Latest llm-agents.nix update selects Codex 0.154.0; local wrapper-policy and log DB patches must apply cleanly and Darwin system must build without activation.
 
 * DONE [#C] Synchronize CURRENT-WORK with the final authority queue
 :PROPERTIES:

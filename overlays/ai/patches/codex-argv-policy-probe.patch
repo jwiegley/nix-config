@@ -1,6 +1,6 @@
 --- a/cli/src/main.rs
 +++ b/cli/src/main.rs
-@@ -60,6 +60,7 @@
+@@ -74,6 +74,7 @@
  #[cfg(target_os = "windows")]
  mod sandbox_setup;
  mod state_db_recovery;
@@ -8,7 +8,7 @@
  #[cfg(not(windows))]
  mod wsl_paths;
  
-@@ -1038,6 +1039,10 @@
+@@ -1116,7 +1117,11 @@
  }
  
  fn main() -> anyhow::Result<()> {
@@ -16,10 +16,11 @@
 +        return Ok(());
 +    }
 +
+     codex_build_info::initialize!();
      let remote_control_disabled = codex_app_server::take_remote_control_disabled_env();
      arg0_dispatch_or_else(move |arg0_paths: Arg0DispatchPaths| async move {
          cli_main(arg0_paths, remote_control_disabled).await?;
-@@ -1829,27 +1834,35 @@
+@@ -1895,27 +1900,35 @@
          return Ok(None);
      };
  
@@ -70,7 +71,7 @@
 +}
 +
  async fn run_exec_server_command(
-     cmd: ExecServerCommand,
+     mut cmd: ExecServerCommand,
      arg0_paths: &Arg0DispatchPaths,
 --- /dev/null
 +++ b/cli/src/wrapper_policy_probe.rs

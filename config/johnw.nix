@@ -76,6 +76,7 @@ in
       CABAL_CONFIG = "${config.xdg.configHome}/cabal/config";
       CARGO_HOME = "${config.xdg.dataHome}/cargo";
       CLICOLOR = "yes";
+      CODEX_HOME = "${config.xdg.configHome}/codex";
       EMAIL = vars.userEmail;
       ET_NO_TELEMETRY = "1";
       FONTCONFIG_FILE = "${config.xdg.configHome}/fontconfig/fonts.conf";
