@@ -86,7 +86,7 @@ in
         });
     in
     with prev;
-    prev.llama-swap.overrideAttrs (_attrs: rec {
+    (prev.llama-swap.override { buildGoModule = final.buildGo127Module; }).overrideAttrs (_attrs: rec {
       inherit version src;
       vendorHash = sources.llama-swap.hashes.vendorHash;
       preBuild = ''

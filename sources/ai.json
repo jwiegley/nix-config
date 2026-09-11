@@ -257,13 +257,13 @@
     "omlx": {
       "source": {
         "args": {
-          "hash": "sha256-frbJNX0BTRCcrmLgS6pEF+nA5N8MMv/xSqhO/RK9KnQ=",
-          "owner": "jwiegley",
+          "hash": "sha256-QvLX4Z/jKxzJh9owtRtvoLIE1miT73flOrbXn75ifUw=",
+          "owner": "jundot",
           "repo": "omlx",
-          "rev": "6dda3fafac2b24001104f7ebbff9e380f9aef9fc"
+          "tag": "v0.6.4"
         },
         "fetcher": "fetchFromGitHub",
-        "url": "https://github.com/jwiegley/omlx"
+        "url": "https://github.com/jundot/omlx"
       },
       "update": {
         "buildMode": "pkg",
@@ -997,10 +997,10 @@
     "mlx-audio": {
       "source": {
         "args": {
-          "hash": "sha256-QCQ6Y5a9fFn29QIV3Q1IHGSTRHIYu/aAtnSNVsP4+uU=",
+          "hash": "sha256-93/NIcMcNtRoVaAM8V0LaEk3P51UJl/8Vz07/vFxGD0=",
           "owner": "Blaizzy",
           "repo": "mlx-audio",
-          "rev": "5522a2241129505e2ba5966d6572ce4962b766c4"
+          "rev": "ee0c65d12d0be748aed5fb8e1587dc7cc8f9e644"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/Blaizzy/mlx-audio"
@@ -1011,7 +1011,7 @@
         "buildPackage": "mlx-audio",
         "kind": "github-commit"
       },
-      "version": "0.5.0"
+      "version": "0.5.3"
     },
     "mlx-embeddings": {
       "source": {
