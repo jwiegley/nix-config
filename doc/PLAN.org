@@ -9751,6 +9751,22 @@ Runtime hook authority creation follows symlinked hooks-directory ancestors via 
 ]
 #+end_src
 
+* DOING [#C] Run Hera daily source, fork, and Nix updates
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-mtr6
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-11 Fri 12:11]
+:MODIFIED: [2026-09-11 Fri 12:11]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Authorized daily update goal mtx5dzej-knh8h3. Source exclusions: agent-workflows and work/git-ai; Databases absent. Pi, CLIProxyAPI, VibeProxy published after validation; PAL fixes published with live tests pending. Agent Deck lifecycle repair ongoing; oMLX validation pending. Autoagent/codex upstream-only checkout policy awaits user decision. Update Nix inputs, build, commit/publish, and activate Hera only after validation.
+
 * DONE [#B] Remove Pi Blackhole from managed AI configuration
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
