@@ -63,7 +63,6 @@ in
       ".emacs.d".source = mkLink "${home}/src/dot-emacs";
     }
     // lib.optionalAttrs (isDarwin && config.johnw.host.isClio) {
-      # "Archives".source = mkLink "/Volumes/ext/Archives";
       "Audio".source = mkLink "/Volumes/ext/Audio";
       "Photos".source = mkLink "/Volumes/ext/Photos";
     }
