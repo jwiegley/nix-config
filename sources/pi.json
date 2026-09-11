@@ -127,18 +127,18 @@
     "pi-cache-optimizer": {
       "source": {
         "args": {
-          "hash": "sha256-pWpHc76PFQQbhxVqyV7VOxuJZnYyR1zpDzMkBXnk6Ao=",
-          "url": "https://registry.npmjs.org/pi-cache-optimizer/-/pi-cache-optimizer-2.8.6.tgz"
+          "hash": "sha256-IflUpo1mt0Hd0NNOJ389KLoHOyCPwIzb33GpRPh8G94=",
+          "url": "https://registry.npmjs.org/pi-cache-optimizer/-/pi-cache-optimizer-2.8.7.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-cache-optimizer/-/pi-cache-optimizer-2.8.6.tgz"
+        "url": "https://registry.npmjs.org/pi-cache-optimizer/-/pi-cache-optimizer-2.8.7.tgz"
       },
       "update": {
         "buildPackage": "pi-cache-optimizer",
         "kind": "npm-release",
         "package": "pi-cache-optimizer"
       },
-      "version": "2.8.6"
+      "version": "2.8.7"
     },
     "pi-btw": {
       "artifacts": {
@@ -224,15 +224,15 @@
     },
     "pi-dynamic-workflows": {
       "hashes": {
-        "npmDepsHash": "sha256-GRfCTAzmRPP2mPte/jemJOC5BlnSvahNZDmKjfK4KvM="
+        "npmDepsHash": "sha256-RbmTkCy1laz9Lx+IetGdAFnBGghNixa7MBIPQq+xCnA="
       },
       "source": {
         "args": {
-          "hash": "sha256-ZHcR+QADme2gHDuBN5GlQCS0ejj/4rqwnSiOxuIqgRc=",
-          "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.9.0.tgz"
+          "hash": "sha256-8VqtIC/mx9r4J4ap0yX+PvHRBnQnp/hODufWELQIh1A=",
+          "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.10.1.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.9.0.tgz"
+        "url": "https://registry.npmjs.org/@quintinshaw/pi-dynamic-workflows/-/pi-dynamic-workflows-3.10.1.tgz"
       },
       "update": {
         "artifacts": [
@@ -242,7 +242,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "@quintinshaw/pi-dynamic-workflows"
       },
-      "version": "3.9.0"
+      "version": "3.10.1"
     },
     "pi-droid-sdk": {
       "hashes": {
@@ -420,15 +420,15 @@
     },
     "pi-markdown-preview": {
       "hashes": {
-        "npmDepsHash": "sha256-XZjRQQ+h5om9Zxzro8d8e3FTxJUm87v2qrX1f47d10Q="
+        "npmDepsHash": "sha256-okd54wHE+cFmM/LXC/FHrKZ1tOICnyWmptfIe3hM/4A="
       },
       "source": {
         "args": {
-          "hash": "sha256-7ec1Qh0EeRpkrD4ia63jnD2b0BW2+bceC2U9fFS3i94=",
-          "url": "https://registry.npmjs.org/pi-markdown-preview/-/pi-markdown-preview-0.15.0.tgz"
+          "hash": "sha256-GlGVyQR3zaMYsPu3eaVt0kmTDIvPu2AvL9Pa4f1wb1U=",
+          "url": "https://registry.npmjs.org/pi-markdown-preview/-/pi-markdown-preview-0.16.0.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-markdown-preview/-/pi-markdown-preview-0.15.0.tgz"
+        "url": "https://registry.npmjs.org/pi-markdown-preview/-/pi-markdown-preview-0.16.0.tgz"
       },
       "update": {
         "artifacts": [
@@ -438,7 +438,7 @@
         "normalizer": "pi-gallery-v1",
         "package": "pi-markdown-preview"
       },
-      "version": "0.15.0"
+      "version": "0.16.0"
     },
     "pi-mem": {
       "hashes": {
@@ -640,18 +640,18 @@
     "pi-trace-extension": {
       "source": {
         "args": {
-          "hash": "sha256-7wHkao22sv0YTADBlggNwp43KHHIq0wjBh5zw/OFEpQ=",
-          "url": "https://registry.npmjs.org/pi-trace-extension/-/pi-trace-extension-0.1.15.tgz"
+          "hash": "sha256-EKngiPSz81DgorDmGa3KIA+HXeaW05qpqgSKfSMG9Tc=",
+          "url": "https://registry.npmjs.org/pi-trace-extension/-/pi-trace-extension-0.1.16.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-trace-extension/-/pi-trace-extension-0.1.15.tgz"
+        "url": "https://registry.npmjs.org/pi-trace-extension/-/pi-trace-extension-0.1.16.tgz"
       },
       "update": {
         "buildPackage": "pi-trace-extension",
         "kind": "npm-release",
         "package": "pi-trace-extension"
       },
-      "version": "0.1.15"
+      "version": "0.1.16"
     },
     "rtk": {
       "artifacts": {
@@ -697,7 +697,7 @@
     },
     "pi-mcp-adapter": {
       "hashes": {
-        "npmDepsHash": "sha256-w96g6j7OY0znLJTsOsLe2XS7fAnp4wcLmOzJXHJFml0="
+        "npmDepsHash": "sha256-k+L107itkiRqdpPVa5OPS+fuCFH1wUrlwr3824UjHhs="
       },
       "source": {
         "args": {

@@ -7,10 +7,10 @@
       },
       "source": {
         "args": {
-          "hash": "sha256-wmWzl0JjNqvpm8FyyhN+dlqrz+jeR9sBIPEuGRcTZyo=",
+          "hash": "sha256-TwEEmo5nrChbKtQGqkEW6GJwULuALaVkoJO6YKmICI0=",
           "owner": "jwiegley",
           "repo": "agent-deck",
-          "rev": "754b7029fc2251d509e19c8a886395b8837830c3"
+          "rev": "d4917a28d142ea1fa54ca4d0829ab03fa4c818b3"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jwiegley/agent-deck"
@@ -180,10 +180,10 @@
       },
       "source": {
         "args": {
-          "hash": "sha256-vVq7+eUN6NXZuqm7Jwlr4iFDV1PjNzQ6nK9AR2zvZYM=",
+          "hash": "sha256-WImZjO3U9EXZUNP/FMpxo8PaTjQW8X2SBTfGwwFlZIM=",
           "owner": "ggml-org",
           "repo": "llama.cpp",
-          "tag": "v0.3.0"
+          "tag": "v0.4.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/ggml-org/llama.cpp"
@@ -193,19 +193,19 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.3.0"
+      "version": "0.4.0"
     },
     "llama-swap": {
       "hashes": {
-        "npmDepsHash": "sha256-+J/C0yDjG0is5G5bNGfFY1ztA7dFqBind/VoS2mxT6s=",
-        "vendorHash": "sha256-MhR8B2+Yb/xqrTlIxaVHLoQf1eTOO49c65l72IAuZyU="
+        "npmDepsHash": "sha256-lmhRJ8275PIQ+7vHdr9aZ31lYeXUkXrWnlvuwOadjRQ=",
+        "vendorHash": "sha256-sf3VZ9vJaO8LMrUgWBvw7xfywpzBolLdVb4oMF0nbT8="
       },
       "source": {
         "args": {
-          "hash": "sha256-TXNmOFFBEtYzRcllxorg4o53n6sq+mVZXK17v9gfkSQ=",
+          "hash": "sha256-Y7za/imsoW8RssciEe6g4MD23Ot27W+ABLYXpMjFVRE=",
           "owner": "mostlygeek",
           "repo": "llama-swap",
-          "rev": "v251"
+          "rev": "v255"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/mostlygeek/llama-swap"
@@ -215,7 +215,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "251"
+      "version": "255"
     },
     "llm-mlx": {
       "source": {
@@ -656,11 +656,11 @@
             "abi": "cp311",
             "dist": "cp311",
             "format": "wheel",
-            "hash": "sha256-qFk+kJSJ7DleeCTsR9/D86nbI//aKq25ENf1UwvESOQ=",
+            "hash": "sha256-mPZjainKFAil2uu7OL44CMUQVb5RR32roKwwgAietdw=",
             "platform": "macosx_11_0_arm64",
             "pname": "cohere_melody",
             "python": "cp311",
-            "version": "0.13.4"
+            "version": "0.14.0"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/cohere-melody"
@@ -670,11 +670,11 @@
             "abi": "cp312",
             "dist": "cp312",
             "format": "wheel",
-            "hash": "sha256-dCRQpqYFv+bfUDdLeyXS7GuoL0jO5DF4opBcnerXICE=",
+            "hash": "sha256-Bk4BSuUOi2t3nEnZCnOvjqbyyNBXvM7aSDFsHe/jb94=",
             "platform": "macosx_11_0_arm64",
             "pname": "cohere_melody",
             "python": "cp312",
-            "version": "0.13.4"
+            "version": "0.14.0"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/cohere-melody"
@@ -684,11 +684,11 @@
             "abi": "cp314",
             "dist": "cp314",
             "format": "wheel",
-            "hash": "sha256-9xbZ5KTA0b+YtBGla8laTcPv25GA6ToanZnw4KRHgTc=",
+            "hash": "sha256-0dwsYAhdOPI8rAj2T7rgjnu3w6iZPn/pMhH9SGelfJE=",
             "platform": "macosx_11_0_arm64",
             "pname": "cohere_melody",
             "python": "cp314",
-            "version": "0.13.4"
+            "version": "0.14.0"
           },
           "fetcher": "fetchPypi",
           "url": "https://pypi.org/project/cohere-melody"
@@ -699,11 +699,11 @@
           "abi": "cp313",
           "dist": "cp313",
           "format": "wheel",
-          "hash": "sha256-vaXsGfuIyo0zpLhutBcaoYoLuZWQrEKV+NCvtQ3w3OQ=",
+          "hash": "sha256-o1K8wOjammhrc77h4Gro283gvtsIaH8dANGCT/8zc7A=",
           "platform": "macosx_11_0_arm64",
           "pname": "cohere_melody",
           "python": "cp313",
-          "version": "0.13.4"
+          "version": "0.14.0"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/cohere-melody"
@@ -714,7 +714,7 @@
         "kind": "pypi-release",
         "package": "cohere-melody"
       },
-      "version": "0.13.4"
+      "version": "0.14.0"
     },
     "crick": {
       "source": {
@@ -1071,10 +1071,10 @@
     "mlx-vlm": {
       "source": {
         "args": {
-          "hash": "sha256-fl1I7XPoddqz2/ygeCYaV426xeLqKiEMIGRS5/7wYyg=",
+          "hash": "sha256-DI36+elt/617CVIrzOyyg6G2ilJTKh5UmgAsfDhSv9I=",
           "owner": "Blaizzy",
           "repo": "mlx-vlm",
-          "tag": "v0.6.17"
+          "tag": "v0.7.0"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/Blaizzy/mlx-vlm"
@@ -1085,14 +1085,14 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.6.17"
+      "version": "0.7.0"
     },
     "mtplx": {
       "source": {
         "args": {
-          "hash": "sha256-E3fAhrT3+qPSMc+EESBdWc+IKFpBHkMNsuAW0t5aJUI=",
+          "hash": "sha256-Ly5tjtYPlvXvVEViIrOdGDVUbZZD3xETOZbmlx30Z+g=",
           "pname": "mtplx",
-          "version": "2.9.2"
+          "version": "2.11.2"
         },
         "fetcher": "fetchPypi",
         "url": "https://pypi.org/project/mtplx"
@@ -1103,7 +1103,7 @@
         "kind": "pypi-release",
         "package": "mtplx"
       },
-      "version": "2.9.2"
+      "version": "2.11.2"
     },
     "mtplx-transformers": {
       "source": {
@@ -1272,10 +1272,10 @@
     "llm-agents": {
       "source": {
         "args": {
-          "narHash": "sha256-R6DjdXEg4gWt/INX5oRYkh17p66nuYr8qiAuBkZ4oqU=",
+          "narHash": "sha256-muQMGBb+f+3G2/242RCG7+84LvXhY+3Cwcvm/QnHbBs=",
           "owner": "numtide",
           "repo": "llm-agents.nix",
-          "rev": "d706bc302d3a7854659e3b5b5ad35270f7dcf8da",
+          "rev": "fb0bd52ca59afb93c89ad9ae442541a29cef98bd",
           "type": "github"
         },
         "fetcher": "fetchTree",

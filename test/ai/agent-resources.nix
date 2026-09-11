@@ -231,6 +231,7 @@ let
     [ "package.json" ]
     ++ piMcpFiles
     ++ [
+      "package-lock.json"
       "node_modules"
       "skills"
       "dist"
@@ -896,7 +897,7 @@ else
           || fail "invalid pi-mcp-adapter package manifest"
 
         node --experimental-import-meta-resolve ${piClosureCheck} \
-          "$mcp" ${lib.escapeShellArg "${piMcpAdapter}/package-lock.json"}
+          "$mcp" "$mcp/package-lock.json"
 
         pi_mcp_runtime="$TMPDIR/pi-mcp-round-trip"
         mkdir -p \

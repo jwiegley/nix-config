@@ -16,9 +16,9 @@ let
   sparkleSource = sources."vibeproxy-sparkle";
   yamsSource = sources."vibeproxy-yams";
 
-  appVersion = "1.8.287";
-  buildNumber = "1112";
-  cliProxyCommit = "7eb8b5c0c3f7224269ca49e3906984dc674b21c9";
+  appVersion = "1.8.293";
+  buildNumber = "1131";
+  cliProxyCommit = "0b2a7dd040f8507fcc4eadbc8cc4cf3c73b49594";
 
   yams =
     assert yamsSource.source.fetcher == "fetchgit";

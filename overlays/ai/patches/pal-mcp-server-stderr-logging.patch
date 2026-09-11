@@ -14,7 +14,7 @@ index f50d6a4..810f0e9 100644
  from typing import Any, Optional
  
  from mcp.server import Server  # noqa: E402
-@@ -104,52 +101,11 @@ stderr_handler.setFormatter(LocalTimeFormatter(log_format))
+@@ -108,51 +105,11 @@ stderr_handler.setFormatter(LocalTimeFormatter(log_format))
  root_logger.addHandler(stderr_handler)
  
 -# Note: MCP stdio_server interferes with stderr during tool execution
@@ -45,7 +45,6 @@ index f50d6a4..810f0e9 100644
 -    logging.getLogger().addHandler(file_handler)
 -
 -    # Create a special logger for MCP activity tracking with size-based rotation
--    mcp_logger = logging.getLogger("mcp_activity")
 -    mcp_file_handler = RotatingFileHandler(
 -        log_dir / "mcp_activity.log",
 -        maxBytes=10 * 1024 * 1024,  # 20MB max file size

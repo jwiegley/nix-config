@@ -9758,14 +9758,14 @@ Runtime hook authority creation follows symlinked hooks-directory ancestors via 
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-09-11 Fri 12:11]
-:MODIFIED: [2026-09-11 Fri 12:11]
+:MODIFIED: [2026-09-11 Fri 15:54]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Authorized daily update goal mtx5dzej-knh8h3. Source exclusions: agent-workflows and work/git-ai; Databases absent. Pi, CLIProxyAPI, VibeProxy published after validation; PAL fixes published with live tests pending. Agent Deck lifecycle repair ongoing; oMLX validation pending. Autoagent/codex upstream-only checkout policy awaits user decision. Update Nix inputs, build, commit/publish, and activate Hera only after validation.
+Daily goal mtx5dzej-knh8h3. Source update completed with user exclusions (agent-workflows, work/git-ai; Databases absent). Published verified fork tips: Pi b20a8180, CLIProxyAPI 0b2a7dd0, VibeProxy 9c510665, Agent Deck d4917a28, PAL 0ecacca. PAL unit suite: 961 passed with warnings-as-errors; live-provider tests not run. User redirected Nix oMLX to official jundot v0.6.4 and release-declared dependencies; package build verified. Nix input and complete automatic catalog updates succeeded after MTPLX isolation, Go 1.27 selection, mlx-audio metadata, Pi normalization and SDK cache repairs. System build passed; make test passed (21 Python suites plus 10 behavioral checks); portable flake evaluation passed for all systems. Final signed revision rebuild/publication pending. Activation held pending unresolved Autoagent/Codex policy: configured origin is upstream; jwiegley forks return 404; Autoagent has no release tags. Keep existing personal state and the Pi metadata marker. Logs are /tmp/hera-*20260911* and /tmp/hera-make-test-passed.log.
 
 * DONE [#B] Remove Pi Blackhole from managed AI configuration
 :PROPERTIES:

@@ -205,6 +205,22 @@ let
               raise SystemExit(f"pi-mcp-adapter lock source changed: {path}")
           metadata["integrity"] = integrity
 
+      # The client requests the short repository-qualified URL, not the
+      # root dependency's full-commit URL. Both tarballs have this locked integrity.
+      core = lock["packages"]["node_modules/@modelcontextprotocol/core"]
+      client = lock["packages"]["node_modules/@modelcontextprotocol/client"]
+      core_alias = "https://pkg.pr.new/modelcontextprotocol/typescript-sdk/@modelcontextprotocol/core@3b205e7"
+      if not (
+          client["dependencies"]["@modelcontextprotocol/core"] == core_alias
+          and core["resolved"] == "https://pkg.pr.new/@modelcontextprotocol/core@3b205e7dd2f997b6a87e479e36421f7eaa2058e0"
+          and core["integrity"] == "sha512-lJLq7wP4hNwRcckA1Hd1fF1vPyA0QCDUqi+EO6GKzoXlxM10oIlY+f8m2pq+WLQJsG+/VwlJ4GA6Mx3Ei8uXKw=="
+      ):
+          raise SystemExit("pi-mcp-adapter SDK alias contract changed")
+      core_path = "node_modules/@modelcontextprotocol/client/node_modules/@modelcontextprotocol/core"
+      if core_path in lock["packages"]:
+          raise SystemExit("pi-mcp-adapter SDK alias is already locked")
+      lock["packages"][core_path] = dict(core, resolved=core_alias)
+
       init_source = Path("init.ts").read_text()
       native_footer_contract = (
           'state.config.settings?.mcpFooterStatus ?? "full"',
@@ -217,6 +233,7 @@ let
       PY
     '';
     postInstall = ''
+      install -m 0444 package-lock.json "$out/lib/node_modules/pi-mcp-adapter/package-lock.json"
       ${python3}/bin/python3 - "$out/lib/node_modules/pi-mcp-adapter/package.json" <<'PY'
       import json
       from pathlib import Path
