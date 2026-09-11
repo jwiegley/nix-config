@@ -1105,6 +1105,26 @@
       },
       "version": "2.9.2"
     },
+    "mtplx-transformers": {
+      "source": {
+        "args": {
+          "hash": "sha256-F7DqxybdxV6ErFiUYGPgxtN/0ADEVrWB8FDqD06CKGk=",
+          "pname": "transformers",
+          "version": "5.16.1"
+        },
+        "fetcher": "fetchPypi",
+        "url": "https://pypi.org/project/transformers"
+      },
+      "update": {
+        "buildMode": "pkg",
+        "buildPackage": "mtplx",
+        "kind": "pypi-release",
+        "package": "transformers",
+        "policy": "manual",
+        "reason": "MTPLX tokenizer compatibility is verified against Transformers 5.16.x"
+      },
+      "version": "5.16.1"
+    },
     "phonemizer-fork": {
       "source": {
         "args": {

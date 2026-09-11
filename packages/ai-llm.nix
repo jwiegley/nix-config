@@ -418,9 +418,19 @@ in
   # sys.executable resolve the package.
   mtplx =
     let
+      mtplxPython = final.python3.override {
+        packageOverrides = pfinal: pprev: {
+          transformers = pprev.transformers.overridePythonAttrs (_: {
+            inherit (sources.mtplx-transformers) version;
+            src =
+              assert sources.mtplx-transformers.source.fetcher == "fetchPypi";
+              pfinal.fetchPypi sources.mtplx-transformers.source.args;
+          });
+        };
+      };
       pyPkg =
         with final;
-        with final.python3Packages;
+        with mtplxPython.pkgs;
         buildPythonPackage rec {
           pname = "mtplx";
           inherit (sources.mtplx) version;
@@ -522,7 +532,7 @@ in
           pythonImportsCheck = [ "mtplx" ];
         };
 
-      pyEnv = final.python3.withPackages (_: [ pyPkg ]);
+      pyEnv = mtplxPython.withPackages (_: [ pyPkg ]);
     in
     final.runCommand "mtplx-${pyPkg.version}"
       {
