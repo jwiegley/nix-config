@@ -66,8 +66,8 @@
         "args": {
           "owner": "novoid",
           "repo": "filetags",
-          "rev": "47ef6de3e39d17812818397e45f8761e74578fd2",
-          "sha256": "sha256-4kPnqSX7vxh4qGW+yjgMw5V4+FsmW6dW+KA1kjdLIYI="
+          "rev": "811c97b8c2805dc9aad5636963d5ffe5bb4a7784",
+          "sha256": "sha256-xLMXO7SsZ7q3kwEg+OhFqwkEpx+gUsidGqWbciT0u1w="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/novoid/filetags"
@@ -76,7 +76,7 @@
         "branch": "master",
         "kind": "github-commit"
       },
-      "version": "47ef6de3"
+      "version": "811c97b8"
     },
     "git-branchstack": {
       "source": {
@@ -113,14 +113,14 @@
     },
     "gogcli": {
       "hashes": {
-        "vendorHash": "sha256-+Nbuwok3dY/82gUDKeGgrC0F1ZqXSW8IpV6Q1yzIPvo="
+        "vendorHash": "sha256-GUOGvz6eDApnYxaALAVbHTpqzvIKys+fSpLcrpr2N70="
       },
       "source": {
         "args": {
-          "hash": "sha256-AaChyDvbMnPkWkBCnpISQm8U2WjXvwBSCfuN6fuIHaY=",
+          "hash": "sha256-217KA+gLC4FwtY+UnV4o6pp4/ZMUfib6jcTtUe7Sjpg=",
           "owner": "openclaw",
           "repo": "gogcli",
-          "tag": "v0.38.1"
+          "tag": "v0.39.1"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/openclaw/gogcli"
@@ -129,7 +129,7 @@
         "kind": "github-release",
         "tagPrefix": "v"
       },
-      "version": "0.38.1"
+      "version": "0.39.1"
     },
     "hakyll-jw": {
       "source": {
@@ -357,10 +357,10 @@
     "vibeproxy": {
       "source": {
         "args": {
-          "hash": "sha256-L7FPV6VO9Hy0wOhgb04Mluo+FCHVGsBQEmOqiVLScWQ=",
+          "hash": "sha256-fnaCiCJ0SnX11FZWXQVNQSrKDHEh6AJ82s2fxBHiIbw=",
           "owner": "jwiegley",
           "repo": "vibeproxy",
-          "rev": "9e803a158b744257196adbfa6591cc5ebf379db2"
+          "rev": "9c51066514575520e9571557f673d12ee643538d"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jwiegley/vibeproxy"
@@ -369,7 +369,7 @@
         "branch": "main",
         "kind": "github-commit"
       },
-      "version": "9e803a15"
+      "version": "9c510665"
     },
     "vibeproxy-sparkle": {
       "source": {

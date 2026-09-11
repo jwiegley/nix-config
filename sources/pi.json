@@ -20,10 +20,10 @@
     "agent-browser-source": {
       "source": {
         "args": {
-          "narHash": "sha256-IWfIculnqGnYDiPUygXzJ5kV+tZHyxT0rnxZsf5+T50=",
+          "narHash": "sha256-JhWiPZesclmQdNQnHFPnVWZYDlDYKvou7Mvx/hoiIVs=",
           "owner": "vercel-labs",
           "repo": "agent-browser",
-          "rev": "a156ff5760414dc7bfc1d9c074b9eb6441a79b4f",
+          "rev": "8c15ff9f71ae60c7e99e66afe1e2d4b9bf414fe2",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -210,17 +210,17 @@
     "pi-cymbal": {
       "source": {
         "args": {
-          "hash": "sha256-JC2I4MNtJBbKZdCIsxqaaJCK7L9u4pxZZ/baRbG9qyc=",
-          "url": "https://registry.npmjs.org/pi-cymbal/-/pi-cymbal-0.5.3.tgz"
+          "hash": "sha256-1z0Jek0Niqpos2qaax9Xv3x6OjIHP4EWlrcqwrOx8Ls=",
+          "url": "https://registry.npmjs.org/pi-cymbal/-/pi-cymbal-0.6.0.tgz"
         },
         "fetcher": "fetchurl",
-        "url": "https://registry.npmjs.org/pi-cymbal/-/pi-cymbal-0.5.3.tgz"
+        "url": "https://registry.npmjs.org/pi-cymbal/-/pi-cymbal-0.6.0.tgz"
       },
       "update": {
         "kind": "npm-release",
         "package": "pi-cymbal"
       },
-      "version": "0.5.3"
+      "version": "0.6.0"
     },
     "pi-dynamic-workflows": {
       "hashes": {
@@ -697,14 +697,14 @@
     },
     "pi-mcp-adapter": {
       "hashes": {
-        "npmDepsHash": "sha256-skRG0OzPxLfHMxURQ0eolTrAx7d4TPfpU3bZ7/F63SQ="
+        "npmDepsHash": "sha256-w96g6j7OY0znLJTsOsLe2XS7fAnp4wcLmOzJXHJFml0="
       },
       "source": {
         "args": {
-          "narHash": "sha256-BIQegddgAAIYULhJO4Swe0EUGZS3f0SkKnfh1L0Bbds=",
+          "narHash": "sha256-6p0uDmtGse+vIH0yiYKBSpQQG0eiWcj9Q+uDcRs/Ulg=",
           "owner": "nicobailon",
           "repo": "pi-mcp-adapter",
-          "rev": "2c861d7271ab8d37297e0f57178aaacbfed4caf3",
+          "rev": "32b67f916745b31a30a80371a86f00f70ba0a561",
           "type": "github"
         },
         "fetcher": "fetchTree",
@@ -719,7 +719,7 @@
         "input": "pi-mcp-adapter",
         "kind": "flake-input+build"
       },
-      "version": "2.32.1"
+      "version": "2.33.0"
     },
     "pi-openai-server-compaction": {
       "source": {

@@ -262,8 +262,8 @@
         "args": {
           "owner": "karthink",
           "repo": "gptel",
-          "rev": "1f6556d9266c756a142337ccc82acfa5bba713ec",
-          "sha256": "sha256-xZRwURvp96c2peuG66/l/5Oyq1nToVf+8Q+dCZlqmyk="
+          "rev": "ecc693d69e0f9737fa637abc88ec4ce0c3187b8e",
+          "sha256": "sha256-VPVhrbI35hHNKl7XQgi3aa+51Ljb59u8vOzc2qCZlr0="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/karthink/gptel"
@@ -598,8 +598,8 @@
         "args": {
           "owner": "jwiegley",
           "repo": "ob-gptel",
-          "rev": "4961120b7fc6bd2e2debd73f84cdef360188d3c7",
-          "sha256": "sha256-DiUFW0oh0rOEc0aUKUVh6i2tSYtuszCgqCJnDMV1XQQ="
+          "rev": "db030ea033e9cce0db6457ba530d6f29e5d181f2",
+          "sha256": "sha256-6oJQi5MwO2xG6SbIo10OJInP2qZep2Kp8WYfmvBbQ3w="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jwiegley/ob-gptel"
@@ -1094,8 +1094,8 @@
         "args": {
           "owner": "jdtsmith",
           "repo": "ultra-scroll-mac",
-          "rev": "f29bbe0e5533bec26045366e99ce81e36bd6fb3e",
-          "sha256": "sha256-+dUz8y8hQA67mXi8D8GSLnbSmYgMDQkPLM3Blw5yu2c="
+          "rev": "8aa8e7496b06fd7c3585fcae8275300a77e57730",
+          "sha256": "sha256-tsJyMd0tOx6WGRDMOKn+J2wRtJA34njzJB5pNLXm9oE="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jdtsmith/ultra-scroll-mac"
@@ -1158,8 +1158,8 @@
         "args": {
           "owner": "benthamite",
           "repo": "wikipedia",
-          "rev": "d7219cd453a93b93598a339d20927bdf60eded8d",
-          "sha256": "sha256-+gLcdDb3xZJS47dzScBT3ZkR+ZXaUhWt9bZvE1MDO7M="
+          "rev": "8a194efc91680a2ef3e321e73d7a2f071ce6b350",
+          "sha256": "sha256-ASiHTd/cSaTE8iRchJ1uFW1oxWwXKv5jPXCZp9+XE9A="
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/benthamite/wikipedia"

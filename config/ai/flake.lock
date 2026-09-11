@@ -3,11 +3,11 @@
     "agent-browser-source": {
       "flake": false,
       "locked": {
-        "lastModified": 1789005886,
-        "narHash": "sha256-IWfIculnqGnYDiPUygXzJ5kV+tZHyxT0rnxZsf5+T50=",
+        "lastModified": 1789077082,
+        "narHash": "sha256-JhWiPZesclmQdNQnHFPnVWZYDlDYKvou7Mvx/hoiIVs=",
         "owner": "vercel-labs",
         "repo": "agent-browser",
-        "rev": "a156ff5760414dc7bfc1d9c074b9eb6441a79b4f",
+        "rev": "8c15ff9f71ae60c7e99e66afe1e2d4b9bf414fe2",
         "type": "github"
       },
       "original": {
@@ -122,11 +122,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1789031966,
-        "narHash": "sha256-9iJmspIpxKjkAIgDA8MI23Us2C7BRAc2PWcHedd3NcI=",
+        "lastModified": 1789117782,
+        "narHash": "sha256-R6DjdXEg4gWt/INX5oRYkh17p66nuYr8qiAuBkZ4oqU=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "f9d6a07194a3d5bfe2743e9b8460207fe87da15c",
+        "rev": "d706bc302d3a7854659e3b5b5ad35270f7dcf8da",
         "type": "github"
       },
       "original": {
@@ -142,11 +142,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1788968403,
-        "narHash": "sha256-oD80hRB5gWv2XfrUFSqosQG3m660ziZkLkSBxNhMaLg=",
+        "lastModified": 1789141018,
+        "narHash": "sha256-0ap34rhjfjXsFV+xfXd56WGxfrbc9QWNUrEqzh1L+co=",
         "owner": "natsukium",
         "repo": "mcp-servers-nix",
-        "rev": "73f4ce60db4bf1e9c4478065d04529973dbe9a4c",
+        "rev": "11fe2419e274bb223a86dddc9e4803b01ad359e8",
         "type": "github"
       },
       "original": {
@@ -173,11 +173,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1789012029,
-        "narHash": "sha256-1CBkBf+Nhggykzlx0jvXrj5rk20btl+tK8Fa8Ml/BL4=",
+        "lastModified": 1789073787,
+        "narHash": "sha256-xfX/toC2QV707s06GbP4II/TxYF0fNQj7s5/LClNDKc=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "d5dfd8e6716dde34398bc14bc87c10dece9c8c68",
+        "rev": "aff8a0b28396750446e5537a96461bc4facdb287",
         "type": "github"
       },
       "original": {
@@ -207,11 +207,11 @@
     "pal-mcp-server": {
       "flake": false,
       "locked": {
-        "lastModified": 1788994610,
-        "narHash": "sha256-ybQPiX4mlVUw42gaamNjqCxlZv8W0ugemrJUasEse1E=",
+        "lastModified": 1789153811,
+        "narHash": "sha256-vZsNdBLVY3iXlM67H4ePBr/PwR5pgrZd7mIAF4oML1k=",
         "owner": "jwiegley",
         "repo": "pal-mcp-server",
-        "rev": "35d1fb20557ee0188146095c2e772602ef4febf2",
+        "rev": "0ecacca94e92576f5d5fa6c5aba9dcb0c99cd2f3",
         "type": "github"
       },
       "original": {
@@ -223,11 +223,11 @@
     "pi": {
       "flake": false,
       "locked": {
-        "lastModified": 1788850829,
-        "narHash": "sha256-e8+/0IuO/MJmxvcO5wyLVQZlzNLqxrYrPNeKMEx9RiU=",
+        "lastModified": 1789148288,
+        "narHash": "sha256-08eOjrFdYFgWNaOiDrou4fK4Io6KLmDhsTZg6V1aU0o=",
         "owner": "jwiegley",
         "repo": "pi",
-        "rev": "319f54443c9104a123e6f22547a69a1c6f9188e8",
+        "rev": "b20a8180b921f50900eef2a714066a6b39f0f09a",
         "type": "github"
       },
       "original": {
@@ -256,11 +256,11 @@
     "pi-mcp-adapter": {
       "flake": false,
       "locked": {
-        "lastModified": 1789063175,
-        "narHash": "sha256-BIQegddgAAIYULhJO4Swe0EUGZS3f0SkKnfh1L0Bbds=",
+        "lastModified": 1789072580,
+        "narHash": "sha256-6p0uDmtGse+vIH0yiYKBSpQQG0eiWcj9Q+uDcRs/Ulg=",
         "owner": "nicobailon",
         "repo": "pi-mcp-adapter",
-        "rev": "2c861d7271ab8d37297e0f57178aaacbfed4caf3",
+        "rev": "32b67f916745b31a30a80371a86f00f70ba0a561",
         "type": "github"
       },
       "original": {
@@ -343,11 +343,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789024335,
-        "narHash": "sha256-kCy/MVLRIr95DJ4vspVzWj+kO/x+JuwSHmYZCvShg8w=",
+        "lastModified": 1789110695,
+        "narHash": "sha256-llh6ZJN8/G4QCED9m6nHEfWhz2ONOzkKyvWHivNqW7A=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "577bb1e1fc5af0713169176c5c76622c21fa3ec0",
+        "rev": "ab777f900c3de943e117eb4814ddff6f645b28ad",
         "type": "github"
       },
       "original": {
