@@ -283,7 +283,7 @@ in
           # /usr/sbin/sysctl iogpu.wired_limit_mb=458752
 
           # This leaves 32 GiB outside the wired GPU allocation.
-          /usr/sbin/sysctl iogpu.wired_limit_mb=491520
+          /usr/sbin/sysctl iogpu.wired_limit_mb=506880
         '';
         serviceConfig.RunAtLoad = true;
       };
