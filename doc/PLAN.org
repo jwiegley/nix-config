@@ -7364,6 +7364,22 @@ make switch is blocked by the Syncthing.app process preflight even when the GUI 
 
 2026-08-13 independent history-isolated fess audit CLEAR on signed commit dbe0dcc12b817a7b6e153dee595f6061f085e5ae. Current files match the commit; no source or diff findings. Evidence gap: successful pre-commit output was not persisted and no focused Syncthing behavioral Nix build was added under the checkpoint cutoff.
 
+* DOING [#C] Deploy numeric pi-idle-check thresholds
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-h1p6
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-11 Fri 20:41]
+:MODIFIED: [2026-09-11 Fri 20:41]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Pin pi-idle-check commit 6ef1dd1326edac364ad80a074846b965a9c34d69, validate the managed Gallery package and Hera system, publish the signed Nix change, activate Hera, and verify deployed source plus numeric context configuration.
+
 * DONE [#D] Remove obsolete multi-remote loop from Gitea publication preflight
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
