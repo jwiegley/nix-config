@@ -9769,21 +9769,23 @@ Runtime hook authority creation follows symlinked hooks-directory ancestors via 
 ]
 #+end_src
 
-* DOING [#C] Run Hera daily source, fork, and Nix updates
+* DONE [#C] Run Hera daily source, fork, and Nix updates
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-mtr6
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-09-11 Fri 12:11]
-:MODIFIED: [2026-09-11 Fri 23:17]
+:MODIFIED: [2026-09-11 Fri 23:22]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-11 Fri 23:22]
+:CLOSE_REASON: Verified and activated Hera; requested scope revisions honored; Vulcan compatibility repair published without remote activation.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Daily goal mtx5dzej-knh8h3. Source updates completed with approved exclusions. Published fork tips: Pi b20a8180, CLIProxyAPI 0b2a7dd0, VibeProxy 9c510665, Agent Deck d4917a28, PAL 0ecacca. PAL unit validation: 961 passed with warnings-as-errors; live-provider tests unrun. User revised Autoagent/Codex to upstream-only: clean main=origin/main at eb3f185d and 53ff712a, fetch/fast-forward only, no publishing. Nix follows official oMLX v0.6.4 with release dependencies; package build passed, local fork preserved. Nix input/catalog updates published as 5f2b5f92; approved org-jw and another sessions idle changes already published through 93a423c9. Vulcan reported missing buildGo127Module: repaired shared llama-swap compiler selection in signed/published 5a9e515318e7a464fe41f0be498436e641ef8a8d. Consumer builder retained, explicit Go1.27.1 from independently locked llm-agents Nixpkgs. Regression fails before fix/passes after. Exact Vulcan Nixpkgs b6018f87 evaluates locally with Go1.27.1 despite missing buildGo127Module. No Vulcan build/switch/mutation performed; its full system build remains unverified. Signed Hera system build, make test (21 Python suites/10 behavioral checks), portable all-system evaluation and hooks passed. Hera make switch succeeded; current system, profile, and built output all /nix/store/ri6gs78bwdp9n38zjgkqkwcd4b8a5ihb-darwin-system-26.11.4cff07d. oMLX, llama-swap, two HTTPS proxies, VibeProxy have running PIDs and status0. Activation log /tmp/hera-activation-20260912.log; test/build evidence /tmp/hera-go-fix-*.log and /tmp/hera-final-signed-build.log; regression /tmp/hera-go-compat-{negative,positive}.log and /tmp/hera-vulcan-llama-swap-eval.log. Original full-fork validation remains incomplete for PAL live providers and oMLX local fork; do not claim the entire goal complete.
+Completed daily upgrade under explicit user scope revisions: nonexistent Databases omitted, agent-workflows and work/git-ai excluded; Autoagent/Codex upstream-only fast-forwards without publishing; official oMLX releases/dependencies instead of fork-specific Nix versions; oMLX/PAL testing limited to regular Nix system build, no extensive fork or live-provider testing. Source updates and complete Nix input/catalog update succeeded. Verified publications: Pi v0.85.1+b20a8180; CLIProxyAPI v7.2.158+0b2a7dd0; VibeProxy v1.8.293+9c510665; Agent Deck v1.16.4+d4917a28; PAL 0ecacca containing authoritative v9.8.2 release. Autoagent clean eb3f185d; Codex fast-forwarded by this run to53ff712a, subsequently advanced by another session to c4017a87, clean and matching origin/main. oMLX preserved clean7e0c22a1=origin/main containing officialv0.6.4; Nix uses officialv0.6.4. Pi pre-existing metadata marker preserved; other fork trees clean and equal origin/main. Root updates initially published5f2b5f92; approved org-jw update and separately authored idle changes retained. Shared Vulcan buildGo127Module failure fixed in signed/published5a9e5153: explicit Go1.27.1 from independently locked llm-agents, consumer module builder retained. Negative regression failed before fix, positive passed; local evaluation against exact Vulcan Nixpkgs b6018f87 succeeds without that attribute. No Vulcan build/switch/mutation; full Vulcan build not claimed. Hera signed system build, make test (21 Python suites and10 behavioral checks), portable all-system evaluation, and hooks passed. make switch succeeded and current/profile/built system match /nix/store/ri6gs78bwdp9n38zjgkqkwcd4b8a5ihb-darwin-system-26.11.4cff07d; oMLX, llama-swap, proxies, VibeProxy running status0. Activation evidence /tmp/hera-activation-20260912.log; final build /tmp/hera-final-signed-build.log; checks /tmp/hera-go-fix-{make-test,portable}.log; consumer reproduction /tmp/hera-vulcan-llama-swap-eval.log. Later root commits5ec13bb3 and53a31627 only command/documentation updates; deployment identity remains5a9e5153. No remaining blocker under approved scope.
 
 * DONE [#B] Remove Pi Blackhole from managed AI configuration
 :PROPERTIES:
