@@ -1937,21 +1937,23 @@ bin/publish validates raw/effective origin URLs, then runs a gate and later fetc
 ]
 #+end_src
 
-* DOING [#B] Fix Vulcan Pi prompt-event race build failure
+* DONE [#B] Fix Vulcan Pi prompt-event race build failure
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
 :ID:       nix-48or
 :LABELS:   []
 :ISSUE_TYPE: bug
 :CREATED:  [2026-09-11 Fri 23:42]
-:MODIFIED: [2026-09-12 Sat 00:52]
+:MODIFIED: [2026-09-12 Sat 11:39]
 :CREATED_BY: johnw
+:FINISHED: [2026-09-12 Sat 11:39]
+:CLOSE_REASON: Published Pi 10998453b and Agent Deck 9d2837fa source fixes; adopted them in signed Nix commits 6498ada2 and 7bafe971. Normal Vulcan ./build build and ./build switch both succeeded at /nix/store/cdprwf9526kl431kgwdkyzrabnhyw14n-nixos-system-vulcan-25.11.20260630.b6018f8. Current system and profile match; system state running, zero failed units, Home Manager success/0, Pi 0.85.1 and Agent Deck 1.16.4. Consumer lock committed locally as unsigned 11d7959de per Vulcan policy.
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Latest Vulcan failure at nix-config c2ab7346 had one live root: Pi non-interactive runClient unsubscribed after AgentController RPC before separately replicated message_end/run_end, returning empty text. Added matching run_end/run_suspend barrier. Full Pi gates then exposed two independent timing-flaky tests; replaced 30ms scheduler ordering with a deferred overlap proof and removed a redundant native-watcher timing assertion. Full Vulcan system next exposed Agent Deck packaged CAS contenders exhausting a synthetic zero-timeout 150ms retry budget under load; serialized post-lock retry-barrier release while retaining proof both contenders entered the operation under one external lock. Local Nix backports mirror prepared upstream diffs. Verified: Darwin Pi source package pass; Darwin Agent Deck package pass; Vulcan portable Pi pass (274 files, 2376 tests); patched Vulcan full system realization pass; portable all-system no-build evaluation pass; make test pass serially; pre-commit hooks pass. First concurrent make-test run alone timed out Agentic stubs while all-system evaluation competed; immediate serial rerun passed. Pending explicit authorization: source and Nix commits/pushes, normal Vulcan build, then separately authorized activation.
+Vulcan failure had two source roots. Pi runClient unsubscribed after AgentController RPC before separately replicated message_end/run_end, returning empty text; the source now waits for matching run_end/run_suspend and drains ordered delivery. Pi timing tests now use deterministic concurrency/debounce assertions. Agent Deck packaged CAS contenders now release post-lock retry barriers serially after both prove they entered the operation under the same external lock. Published source tips: Pi 10998453b, Agent Deck 9d2837fa. Nix pins: 6498ada2 and 7bafe971. Normal Vulcan build and switch pass at cdprwf9526kl; system running with zero failed units; consumer lock commit 11d7959de.
 
 * DONE [#B] Harden Gitea publication against caller Git state
 :PROPERTIES:
