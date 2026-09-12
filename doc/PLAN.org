@@ -21769,6 +21769,22 @@ Rendered provider documents match baseline across maintained Pi profiles and inj
 The actual Pi renderer produces identical models.json data for five maintained profiles with default and injected transport policies (10 cases). Model-policy, native catalog transport, and managed-preflight checks passed; the readiness gate repair is tracked in nix-satp.
 Implementation: /Users/johnw/Products/nix-ponytail-six on cleanup/ponytail-six, baseline 478f63f64b5372960e8f13d584af586f7289db81. Evidence: /Users/johnw/Products/nix-ponytail-six-evidence. Independent no-history source audit found no defects. Acceptance complete: make test passed all 21 Python suites and all 10 baseline Nix checks (make-test-accepted.log, coordinator session 92564 exit 0). Final static gate, portable all-system evaluation, and Darwin system build passed. The initial unreproduced wrapper failure is retained separately in nix-9fby; no production backup change was made. No merge, publication, or activation.
 
+* DOING [#B] Fix Hera osxphotos Homebrew tap activation
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-zcvr
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-12 Sat 09:58]
+:MODIFIED: [2026-09-12 Sat 09:58]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Hera make switch evaluates but Homebrew activation fails because config declares incomplete tap RhetTbull and two-segment formula RhetTbull/osxphotos. Use full tap RhetTbull/osxphotos and fully qualified formula RhetTbull/osxphotos/osxphotos; build, activate with explicit authorization, and verify installed command.
+
 * DONE [#B] Preserve public modes when installing watcher skills
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

@@ -54,10 +54,12 @@ let
       trustedtaps = [
         "graelo/tap"
         "withgraphite/tap"
+        "RhetTbull/osxphotos"
       ];
       trustedformulae = [
         "graelo/tap/pumas"
         "withgraphite/tap/graphite"
+        "RhetTbull/osxphotos/osxphotos"
       ];
     }
   );
@@ -321,6 +323,7 @@ in
     taps = [
       "graelo/tap"
       "withgraphite/tap"
+      "RhetTbull/osxphotos"
     ];
     brews = [
       "ykman"
@@ -329,6 +332,7 @@ in
       "llm"
       "sqlcmd"
       "graelo/tap/pumas"
+      "RhetTbull/osxphotos/osxphotos"
       "hf"
       "openssl"
       "z3"
