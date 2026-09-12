@@ -1937,6 +1937,22 @@ bin/publish validates raw/effective origin URLs, then runs a gate and later fetc
 ]
 #+end_src
 
+* DOING [#B] Fix Vulcan Pi prompt-event race build failure
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-48or
+:LABELS:   []
+:ISSUE_TYPE: bug
+:CREATED:  [2026-09-11 Fri 23:42]
+:MODIFIED: [2026-09-12 Sat 00:52]
+:CREATED_BY: johnw
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Latest Vulcan failure at nix-config c2ab7346 had one live root: Pi non-interactive runClient unsubscribed after AgentController RPC before separately replicated message_end/run_end, returning empty text. Added matching run_end/run_suspend barrier. Full Pi gates then exposed two independent timing-flaky tests; replaced 30ms scheduler ordering with a deferred overlap proof and removed a redundant native-watcher timing assertion. Full Vulcan system next exposed Agent Deck packaged CAS contenders exhausting a synthetic zero-timeout 150ms retry budget under load; serialized post-lock retry-barrier release while retaining proof both contenders entered the operation under one external lock. Local Nix backports mirror prepared upstream diffs. Verified: Darwin Pi source package pass; Darwin Agent Deck package pass; Vulcan portable Pi pass (274 files, 2376 tests); patched Vulcan full system realization pass; portable all-system no-build evaluation pass; make test pass serially; pre-commit hooks pass. First concurrent make-test run alone timed out Agentic stubs while all-system evaluation competed; immediate serial rerun passed. Pending explicit authorization: source and Nix commits/pushes, normal Vulcan build, then separately authorized activation.
+
 * DONE [#B] Harden Gitea publication against caller Git state
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17
