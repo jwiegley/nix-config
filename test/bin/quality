@@ -425,7 +425,7 @@ run_python_lint() {
     fi
     if [[ ${#templates[@]} -gt 0 ]]; then
         for f in "${templates[@]}"; do
-            if ! python3 - "$f" <<'PY' | ruff check "${ruff_policy[@]}" --stdin-filename "${f%.in}" -; then
+            if ! python3 - "$f" <<'PY' | ruff check "${ruff_policy[@]}" --stdin-filename "${f%.in}" -
 import re
 import sys
 from pathlib import Path
@@ -436,6 +436,7 @@ if count == 0:
     raise SystemExit(f"quality: Python template has no placeholders: {sys.argv[1]}")
 sys.stdout.write(rendered)
 PY
+            then
                 bad=1
             fi
         done

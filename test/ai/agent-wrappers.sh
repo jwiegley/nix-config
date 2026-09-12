@@ -1001,7 +1001,7 @@ assert_codex_sqlite_marker() {
     local database=$1
     local expected=$2
 
-    if ! "$PYTHON_BIN" - "$database" "$expected" <<'PY'; then
+    if ! "$PYTHON_BIN" - "$database" "$expected" <<'PY'
 import sqlite3
 import sys
 from pathlib import Path
@@ -1014,6 +1014,7 @@ with sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True) as database
     marker = database.execute("SELECT marker FROM seed").fetchone()
 raise SystemExit(0 if healthy and marker == (sys.argv[2],) else 1)
 PY
+    then
         fail "Codex SQLite marker is missing or the database is invalid: $expected"
     fi
 }
