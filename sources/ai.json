@@ -7,10 +7,10 @@
       },
       "source": {
         "args": {
-          "hash": "sha256-pDHmm1Qn3cplrv81zkaazpT61ihRzjoM8bhHVe0BS8M=",
+          "hash": "sha256-c+9f+dQ9SJPxD7lBc738XauXgl3O19DRs/c1Z2Ys9kM=",
           "owner": "jwiegley",
           "repo": "agent-deck",
-          "rev": "9d2837fa497d23a7b9376979505ce6f5de357b70"
+          "rev": "f73b1bbde6837a452a5c9ed1e21e14711c6d6aa6"
         },
         "fetcher": "fetchFromGitHub",
         "url": "https://github.com/jwiegley/agent-deck"
@@ -20,7 +20,7 @@
         "buildMode": "pkg",
         "kind": "github-commit"
       },
-      "version": "1.16.4"
+      "version": "1.16.7"
     },
     "agnix": {
       "hashes": {
