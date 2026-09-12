@@ -640,11 +640,11 @@
     "org-jw": {
       "flake": false,
       "locked": {
-        "lastModified": 1789157057,
-        "narHash": "sha256-W3qbP+KNs+1Jiq0eKArMsjq2FUSqvTbyfXFbgJ2uihw=",
+        "lastModified": 1789182758,
+        "narHash": "sha256-5+C3cDVegtF6wCYKoUZL1J4Q932p5zpN947BlBXAE40=",
         "owner": "jwiegley",
         "repo": "org-jw",
-        "rev": "3bba7fcdc05b994357fcd46869d72c6fd2509c8d",
+        "rev": "38fdfec09158e695483f0432b1ff5f95dae0d1a5",
         "type": "github"
       },
       "original": {
