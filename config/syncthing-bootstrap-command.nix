@@ -2,6 +2,7 @@
   defaultPolicy,
   desktopDirectory,
   documentsDirectory,
+  publicDirectory,
   guiSocket,
   lib,
   listenAddresses,
@@ -38,5 +39,7 @@ lib.escapeShellArgs (
     documentsDirectory
     "--desktop"
     desktopDirectory
+    "--public"
+    publicDirectory
   ]
 )

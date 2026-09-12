@@ -38,7 +38,10 @@ install)
         mode="$2"
         paths=("$3" "$4")
         case "$3:$4" in
-        /dev/null:runtime/login-items.* | expected-documents:documents/.stignore.tmp.* | expected-desktop:desktop/.stignore.tmp.*) ;;
+        /dev/null:runtime/login-items.* | \
+            expected-documents:documents/.stignore.tmp.* | \
+            expected-desktop:desktop/.stignore.tmp.* | \
+            expected-public:public/.stignore.tmp.*) ;;
         *) exit 64 ;;
         esac
     else
@@ -62,20 +65,22 @@ stat)
     [[ "$format" == %Su || "$format" == %Lp ]] || exit 64
     path="$3"
     case "$path" in
-    logs | runtime | documents | desktop | \
+    logs | runtime | documents | desktop | public | \
         "Library/Application Support/Syncthing" | \
         "Library/Application Support/Syncthing/cert.pem" | \
         "Library/Application Support/Syncthing/key.pem" | \
         "Library/Application Support/Syncthing/config.xml" | \
-        documents/.stignore | desktop/.stignore) ;;
+        documents/.stignore | desktop/.stignore | public/.stignore) ;;
     *) exit 64 ;;
     esac
     if [[ "$format" == %Su ]]; then
         [[ "${FAKE_WRONG_OWNER_PATH:-}" == "$path" ]] && printf 'other\n' || printf 'test\n'
     elif [[ "${FAKE_WRONG_MODE_PATH:-}" == "$path" ]]; then
-        printf '755\n'
+        [[ "$path" == public ]] && printf '700\n' || printf '755\n'
     elif [[ "$path" == Library/Application\ Support/Syncthing/* || "$path" == */.stignore ]]; then
         printf '600\n'
+    elif [[ "$path" == public ]]; then
+        printf '755\n'
     else
         printf '700\n'
     fi
@@ -150,7 +155,9 @@ ps)
 cmp)
     [[ $# == 3 && "$1" == -s ]] || exit 64
     case "$2:$3" in
-    expected-documents:documents/.stignore | expected-desktop:desktop/.stignore) ;;
+    expected-documents:documents/.stignore | \
+        expected-desktop:desktop/.stignore | \
+        expected-public:public/.stignore) ;;
     *) exit 64 ;;
     esac
     cmp -s "$2" "$3"
@@ -166,7 +173,9 @@ grep)
 mv)
     [[ $# == 3 && "$1" == -f ]] || exit 64
     case "$2:$3" in
-    documents/.stignore.tmp.*:documents/.stignore | desktop/.stignore.tmp.*:desktop/.stignore) ;;
+    documents/.stignore.tmp.*:documents/.stignore | \
+        desktop/.stignore.tmp.*:desktop/.stignore | \
+        public/.stignore.tmp.*:public/.stignore) ;;
     *) exit 64 ;;
     esac
     target="${!#}"
@@ -177,7 +186,8 @@ mv)
 rm)
     [[ $# == 2 && "$1" == -f ]] || exit 64
     case "$2" in
-    runtime/login-items.* | runtime/gui.sock | documents/.stignore.tmp.* | desktop/.stignore.tmp.*) ;;
+    runtime/login-items.* | runtime/gui.sock | \
+        documents/.stignore.tmp.* | desktop/.stignore.tmp.* | public/.stignore.tmp.*) ;;
     *) exit 64 ;;
     esac
     rm "$@"
@@ -185,12 +195,12 @@ rm)
 tmutil)
     if [[ "$1" == isexcluded ]]; then
         [[ $# == 3 && "$2" == -X ]] || exit 64
-        [[ "$3" == documents || "$3" == desktop ]] || exit 64
+        [[ "$3" == documents || "$3" == desktop || "$3" == public ]] || exit 64
         [[ "${FAKE_TM_INSPECT_FAILURE:-0}" == 0 ]] || exit 1
         printf '%s\n' "${FAKE_TM_EXCLUDED:-1}"
     else
         [[ $# == 2 && "$1" == addexclusion ]] || exit 64
-        [[ "$2" == documents || "$2" == desktop ]] || exit 64
+        [[ "$2" == documents || "$2" == desktop || "$2" == public ]] || exit 64
         append_log tmutil "${@: -1}"
         exit "${FAKE_TM_ADD_FAILURE:-0}"
     fi

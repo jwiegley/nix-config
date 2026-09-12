@@ -23,6 +23,7 @@ let
   guiSocket = "${runtimeDirectory}/gui.sock";
   documentsDirectory = "${config.home.homeDirectory}/Documents";
   desktopDirectory = "${config.home.homeDirectory}/Desktop";
+  publicDirectory = "${config.home.homeDirectory}/Public";
   defaultFolderPath = "~/doc";
   # 2.1.3 includes the Darwin-relevant fsync and case-filesystem cache
   # optimizations, but this repository's pinned nixpkgs still carries 2.1.2.
@@ -37,6 +38,17 @@ let
     "(?d)node_modules"
   ];
   defaultIgnorePatterns = [ "(?d).DS_Store" ] ++ regenerableIgnorePatterns;
+  publicIgnorePatterns = [
+    "(?d).DS_Store"
+    "(?d)._*"
+    "(?d).Spotlight-V100"
+    "(?d).Trashes"
+    "(?d).fseventsd"
+    "(?d).TemporaryItems"
+    "(?d).localized"
+    "(?d)desktop.ini"
+    "(?d)Thumbs.db"
+  ];
   defaultFolderPolicy = {
     path = defaultFolderPath;
     fsWatcherEnabled = true;
@@ -111,6 +123,7 @@ let
         defaultPolicy
         desktopDirectory
         documentsDirectory
+        publicDirectory
         guiSocket
         lib
         mode
@@ -152,6 +165,8 @@ let
       desktopIgnoreFile
       documentsDirectory
       documentsIgnoreFile
+      publicDirectory
+      publicIgnoreFile
       guiSocket
       lib
       logDirectory
@@ -169,11 +184,14 @@ let
   desktopIgnoreFile = pkgs.writeText "desktop-syncthing-ignore" ''
     ${lib.concatStringsSep "\n" defaultIgnorePatterns}
   '';
+  publicIgnoreFile = pkgs.writeText "public-syncthing-ignore" ''
+    ${lib.concatStringsSep "\n" publicIgnorePatterns}
+  '';
 in
 {
   assertions = lib.optional enabled {
     assertion = syncthingPackage.version == "2.1.3";
-    message = "The managed Documents sync policy must be reviewed for Syncthing ${syncthingPackage.version}";
+    message = "The managed folder policy must be reviewed for Syncthing ${syncthingPackage.version}";
   };
 
   services.syncthing = lib.mkIf enabled {
@@ -219,6 +237,12 @@ in
           label = "Desktop";
           path = desktopDirectory;
           ignorePatterns = defaultIgnorePatterns;
+        };
+        public = managedFolder {
+          id = "public";
+          label = "Public";
+          path = publicDirectory;
+          ignorePatterns = publicIgnorePatterns;
         };
       };
 

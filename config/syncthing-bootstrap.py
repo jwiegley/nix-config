@@ -114,6 +114,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--default-policy", type=parse_default_policy, required=True)
     parser.add_argument("--documents", type=Path, required=True)
     parser.add_argument("--desktop", type=Path, required=True)
+    parser.add_argument("--public", type=Path, required=True)
     return parser.parse_args()
 
 
@@ -258,6 +259,7 @@ def harden(root: ET.Element, args: argparse.Namespace) -> bool:
     managed_folders = {
         "documents": {"label": "Documents", "path": str(args.documents)},
         "desktop": {"label": "Desktop", "path": str(args.desktop)},
+        "public": {"label": "Public", "path": str(args.public)},
     }
     for folder_id, folder_policy in managed_folders.items():
         matches = [

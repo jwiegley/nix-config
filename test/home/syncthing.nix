@@ -17,6 +17,17 @@ let
     "(?d)node_modules"
   ];
   defaultIgnorePatterns = [ "(?d).DS_Store" ] ++ regenerableIgnorePatterns;
+  publicIgnorePatterns = [
+    "(?d).DS_Store"
+    "(?d)._*"
+    "(?d).Spotlight-V100"
+    "(?d).Trashes"
+    "(?d).fseventsd"
+    "(?d).TemporaryItems"
+    "(?d).localized"
+    "(?d)desktop.ini"
+    "(?d)Thumbs.db"
+  ];
   heraSystem = darwinConfigurations.hera.config;
   clioSystem = darwinConfigurations.clio.config;
   hera = heraSystem.home-manager.users.johnw;
@@ -111,6 +122,7 @@ let
       defaultPolicy = testDefaultPolicy;
       desktopDirectory = "desktop";
       documentsDirectory = "documents";
+      publicDirectory = "public";
       guiSocket = "runtime/gui.sock";
       listenAddresses = [ "tcp://127.0.0.1:22000" ];
       localDeviceID = "LOCAL-DEVICE";
@@ -130,6 +142,8 @@ let
       desktopIgnoreFile = "expected-desktop";
       documentsDirectory = "documents";
       documentsIgnoreFile = "expected-documents";
+      publicDirectory = "public";
+      publicIgnoreFile = "expected-public";
       guiSocket = "runtime/gui.sock";
       localDeviceID = "LOCAL-DEVICE";
       logDirectory = "logs";
@@ -178,6 +192,8 @@ let
       || lib.hasPrefix "Documents/" path
       || path == "Desktop"
       || lib.hasPrefix "Desktop/" path
+      || path == "Public"
+      || lib.hasPrefix "Public/" path
       || lib.hasPrefix "Library/Application Support/Syncthing/" path
     ) (builtins.attrNames home.home.file);
   validDarwinHome =
@@ -188,7 +204,7 @@ let
       peerNetworks = lib.unique (lib.concatMap (name: expectedNodes.${name}.networks) peerNames);
       service = home.services.syncthing;
       folders = service.settings.folders;
-      inherit (folders) desktop documents;
+      inherit (folders) desktop documents public;
       defaultFolder = service.settings."defaults/folder";
       defaultIgnores = service.settings."defaults/ignores";
       options = service.settings.options;
@@ -235,6 +251,8 @@ let
             "${home.home.homeDirectory}/Documents"
             "--desktop"
             "${home.home.homeDirectory}/Desktop"
+            "--public"
+            "${home.home.homeDirectory}/Public"
           ]
         );
       syncthingAgents = lib.filterAttrs (name: _: lib.hasInfix "syncthing" name) home.launchd.agents;
@@ -312,6 +330,7 @@ let
       builtins.attrNames folders == [
         "desktop"
         "documents"
+        "public"
       ]
     && lib.all validPeer peerNames
     && validFolder documents {
@@ -325,6 +344,12 @@ let
       label = "Desktop";
       path = "${home.home.homeDirectory}/Desktop";
       ignorePatterns = defaultIgnorePatterns;
+    }
+    && validFolder public {
+      id = "public";
+      label = "Public";
+      path = "${home.home.homeDirectory}/Public";
+      ignorePatterns = publicIgnorePatterns;
     }
     && defaultFolder.path == "~/doc"
     && defaultFolder.fsWatcherEnabled
@@ -379,8 +404,9 @@ let
     && lib.hasInfix "/bin/syncthing-bootstrap" preflight.data
     && lib.hasInfix (expectedBootstrapArguments "--check") preflight.data
     && lib.hasInfix (expectedBootstrapArguments "--apply") preflight.data
-    && lib.hasInfix "required private directory is missing or unsafe: $path" preflight.data
+    && lib.hasInfix "required managed directory is missing or unsafe: $path" preflight.data
     && lib.hasInfix "${home.home.homeDirectory}/Documents" preflight.data
+    && lib.hasInfix "${home.home.homeDirectory}/Public" preflight.data
     && !lib.hasInfix "${home.home.homeDirectory}/doc/obsidian" preflight.data
     && lib.hasInfix "SessionLoginItems" preflight.data
     && !lib.hasInfix "/Applications/Syncthing[.]app/Contents/MacOS/Syncthing" preflight.data
@@ -542,6 +568,7 @@ pkgs.runCommand "syncthing-home-contract"
       --default-policy "$default_policy"
       --documents /Users/test/Documents
       --desktop /Users/test/Desktop
+      --public /Users/test/Public
     )
 
     if python3 bootstrap.py --check "''${common_args[@]}"; then
@@ -623,7 +650,8 @@ pkgs.runCommand "syncthing-home-contract"
       --gui-socket /Users/test/.local/state/syncthing/gui.sock \
       --default-policy "$default_policy" \
       --documents /Users/test/Documents \
-      --desktop /Users/test/Desktop; then
+      --desktop /Users/test/Desktop \
+      --public /Users/test/Public; then
       echo "duplicate policy sections passed validation" >&2
       exit 1
     else
@@ -641,7 +669,8 @@ pkgs.runCommand "syncthing-home-contract"
       --gui-socket /Users/test/.local/state/syncthing/gui.sock \
       --default-policy "$default_policy" \
       --documents /Users/test/Documents \
-      --desktop /Users/test/Desktop; then
+      --desktop /Users/test/Desktop \
+      --public /Users/test/Public; then
       echo "mismatched synthetic identity passed validation" >&2
       exit 1
     else
@@ -709,7 +738,8 @@ pkgs.runCommand "syncthing-home-contract"
       --gui-socket /Users/test/.local/state/syncthing/gui.sock \
       --default-policy "$default_policy" \
       --documents /Users/test/Documents \
-      --desktop /Users/test/Desktop
+      --desktop /Users/test/Desktop \
+      --public /Users/test/Public
     syncthing generate --home roundtrip --no-port-probing >/dev/null 2>&1
     python3 bootstrap.py --check \
       --config roundtrip/config.xml \
@@ -720,7 +750,8 @@ pkgs.runCommand "syncthing-home-contract"
       --gui-socket /Users/test/.local/state/syncthing/gui.sock \
       --default-policy "$default_policy" \
       --documents /Users/test/Documents \
-      --desktop /Users/test/Desktop
+      --desktop /Users/test/Desktop \
+      --public /Users/test/Public
 
     ROUNDTRIP=roundtrip/config.xml ROUNDTRIP_LOCAL="$roundtrip_id" \
       DEFAULT_POLICY="$default_policy" TOPOLOGY=${topologyFile} python3 - <<'PY'
@@ -838,11 +869,12 @@ pkgs.runCommand "syncthing-home-contract"
     ]
     assert second_peer.findtext("autoAcceptFolders") == "false"
     folders = {folder.get("id"): folder for folder in root.findall("folder")}
-    assert set(folders) == {"documents", "desktop", "future-folder"}
+    assert set(folders) == {"documents", "desktop", "public", "future-folder"}
     assert folders["documents"].get("path") == "/Users/test/Documents"
     assert folders["desktop"].get("path") == "/Users/test/Desktop"
+    assert folders["public"].get("path") == "/Users/test/Public"
     assert folders["future-folder"].get("path") == "/Users/test/doc/Future"
-    for folder_id in ("documents", "desktop"):
+    for folder_id in ("documents", "desktop", "public"):
         folder = folders[folder_id]
         assert folder.get("type") == "sendreceive"
         assert {device.get("id") for device in folder.findall("device")} == {
@@ -916,9 +948,10 @@ pkgs.runCommand "syncthing-home-contract"
     roundtrip_folders = {
         folder.get("id"): folder for folder in roundtrip_root.findall("folder")
     }
-    assert set(roundtrip_folders) == {"documents", "desktop", "future-folder"}
+    assert set(roundtrip_folders) == {"documents", "desktop", "public", "future-folder"}
     assert roundtrip_folders["documents"].get("path") == "/Users/test/Documents"
     assert roundtrip_folders["desktop"].get("path") == "/Users/test/Desktop"
+    assert roundtrip_folders["public"].get("path") == "/Users/test/Public"
     assert roundtrip_folders["future-folder"].get("path") == "/Users/test/doc/Future"
     for folder in roundtrip_folders.values():
         assert {device.get("id") for device in folder.findall("device")} == {
@@ -957,7 +990,8 @@ pkgs.runCommand "syncthing-home-contract"
       --gui-socket /Users/test/.local/state/syncthing/gui.sock \
       --default-policy "$default_policy" \
       --documents /Users/test/Documents \
-      --desktop /Users/test/Desktop
+      --desktop /Users/test/Desktop \
+      --public /Users/test/Public
 
     touch "$out"
   ''

@@ -35,13 +35,14 @@ FAKE_TOOLS = {
 STATE_DIRECTORY = Path("Library/Application Support/Syncthing")
 LOG_DIRECTORY = Path("logs")
 RUNTIME_DIRECTORY = Path("runtime")
-PRIVATE_DIRECTORIES = (
-    STATE_DIRECTORY,
-    LOG_DIRECTORY,
-    RUNTIME_DIRECTORY,
-    Path("documents"),
-    Path("desktop"),
-)
+MANAGED_DIRECTORY_MODES = {
+    STATE_DIRECTORY: 0o700,
+    LOG_DIRECTORY: 0o700,
+    RUNTIME_DIRECTORY: 0o700,
+    Path("documents"): 0o700,
+    Path("desktop"): 0o700,
+    Path("public"): 0o755,
+}
 
 
 def read_argv_log(path: Path):
@@ -100,6 +101,8 @@ def expected_bootstrap_arguments(mode):
             "documents",
             "--desktop",
             "desktop",
+            "--public",
+            "public",
         ]
     )
     return arguments
@@ -122,10 +125,10 @@ class PreflightTests(unittest.TestCase):
     def fixture(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
-            for directory in PRIVATE_DIRECTORIES:
+            for directory, mode in MANAGED_DIRECTORY_MODES.items():
                 path = root / directory
                 path.mkdir(parents=True)
-                path.chmod(0o700)
+                path.chmod(mode)
             for name in ("cert.pem", "key.pem", "config.xml"):
                 path = root / STATE_DIRECTORY / name
                 path.write_text(name, encoding="utf-8")
@@ -133,6 +136,7 @@ class PreflightTests(unittest.TestCase):
             for directory, expected in (
                 ("documents", "expected-documents"),
                 ("desktop", "expected-desktop"),
+                ("public", "expected-public"),
             ):
                 (root / expected).write_text(f"{directory} ignore\n", encoding="utf-8")
                 ignore = root / directory / ".stignore"
@@ -194,24 +198,34 @@ class PreflightTests(unittest.TestCase):
             )
             self.assertFalse((root / ".tmutil-log").exists())
 
-    def test_every_private_directory_rejects_wrong_owner(self):
-        for path in PRIVATE_DIRECTORIES:
+    def test_every_managed_directory_rejects_wrong_owner(self):
+        for path in MANAGED_DIRECTORY_MODES:
             with self.subTest(path=path):
                 self.assert_failure(
-                    "private directory has the wrong owner",
+                    "managed directory has the wrong owner",
                     extra_environment={"FAKE_WRONG_OWNER_PATH": str(path)},
                 )
 
-    def test_required_private_directories_reject_wrong_mode(self):
-        for path in (STATE_DIRECTORY, Path("documents"), Path("desktop")):
+    def test_required_managed_directories_reject_wrong_mode(self):
+        for path in (
+            STATE_DIRECTORY,
+            Path("documents"),
+            Path("desktop"),
+            Path("public"),
+        ):
             with self.subTest(path=path):
                 self.assert_failure(
-                    "private directory has the wrong mode",
+                    "managed directory has the wrong mode",
                     extra_environment={"FAKE_WRONG_MODE_PATH": str(path)},
                 )
 
-    def test_private_directories_reject_missing_and_symlink_paths(self):
-        for path in (STATE_DIRECTORY, Path("documents"), Path("desktop")):
+    def test_managed_directories_reject_missing_and_symlink_paths(self):
+        for path in (
+            STATE_DIRECTORY,
+            Path("documents"),
+            Path("desktop"),
+            Path("public"),
+        ):
             for kind in ("missing", "symlink"):
 
                 def mutate(root, path=path, kind=kind):
@@ -221,7 +235,7 @@ class PreflightTests(unittest.TestCase):
 
                 with self.subTest(path=path, kind=kind):
                     self.assert_failure(
-                        f"required private directory is missing or unsafe: {path}",
+                        f"required managed directory is missing or unsafe: {path}",
                         mutate,
                     )
 
@@ -257,7 +271,7 @@ class PreflightTests(unittest.TestCase):
                     result = self.run_preflight(root, environment)
                     self.assertNotEqual(result.returncode, 0, result)
                     self.assertIn(
-                        f"required private directory is missing or unsafe: {directory}",
+                        f"required managed directory is missing or unsafe: {directory}",
                         result.stderr,
                     )
                     self.assertEqual(stat.S_IMODE(sentinel.stat().st_mode), 0o755)
@@ -269,7 +283,7 @@ class PreflightTests(unittest.TestCase):
                     result = self.run_preflight(root, environment)
                     self.assertNotEqual(result.returncode, 0, result)
                     self.assertIn(
-                        f"required private directory is missing or unsafe: {directory}",
+                        f"required managed directory is missing or unsafe: {directory}",
                         result.stderr,
                     )
 
@@ -421,8 +435,8 @@ class PreflightTests(unittest.TestCase):
                     self.assertEqual(result.returncode, 0, result)
                     self.assertEqual((root / ".daemon-pgrep-index").read_text(), "2")
 
-    def test_both_ignore_files_reject_unsafe_nodes(self):
-        for directory in ("documents", "desktop"):
+    def test_managed_ignore_files_reject_unsafe_nodes(self):
+        for directory in ("documents", "desktop", "public"):
             for kind in ("directory", "symlink"):
 
                 def mutate(root, directory=directory, kind=kind):
@@ -440,7 +454,7 @@ class PreflightTests(unittest.TestCase):
                     )
 
     def test_ignore_replacement_is_atomic_and_failure_is_fatal(self):
-        for directory in ("documents", "desktop"):
+        for directory in ("documents", "desktop", "public"):
             with self.subTest(directory=directory, result="success"):
                 with self.fixture() as (root, environment):
                     ignore = root / directory / ".stignore"
@@ -475,7 +489,7 @@ class PreflightTests(unittest.TestCase):
                         )
 
     def test_identical_ignore_files_replace_unsafe_metadata(self):
-        for directory in ("documents", "desktop"):
+        for directory in ("documents", "desktop", "public"):
             target = f"{directory}/.stignore"
             for variable in ("FAKE_WRONG_OWNER_PATH", "FAKE_WRONG_MODE_PATH"):
                 with self.subTest(directory=directory, variable=variable):
@@ -512,7 +526,10 @@ class PreflightTests(unittest.TestCase):
             environment["FAKE_TM_EXCLUDED"] = "0"
             result = self.run_preflight(root, environment)
             self.assertEqual(result.returncode, 0, result)
-            self.assertEqual((root / ".tmutil-log").read_text(), "documents\ndesktop\n")
+            self.assertEqual(
+                (root / ".tmutil-log").read_text(),
+                "documents\ndesktop\npublic\n",
+            )
 
     @staticmethod
     def create_socket(path: Path) -> None:

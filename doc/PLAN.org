@@ -19287,6 +19287,27 @@ flake.nix currently reuses rootInputs.nix-config-ai, but the compatibility sourc
 ]
 #+end_src
 
+* DONE [#C] Sync Public across Hera, Clio, and Vulcan
+:PROPERTIES:
+:OBR_SCHEMA_VERSION: 17
+:ID:       nix-ukrg
+:LABELS:   []
+:ISSUE_TYPE: task
+:CREATED:  [2026-09-12 Sat 14:02]
+:MODIFIED: [2026-09-12 Sat 14:26]
+:CREATED_BY: johnw
+:FINISHED: [2026-09-12 Sat 14:26]
+:CLOSE_REASON: Hera and Clio now manage the Vulcan public folder ID at ~/Public with full-mesh send-receive policy, 0755 validation, matching metadata ignores, atomic .stignore management, and Time Machine exclusion. Focused Syncthing contract, 13 bootstrap safety tests, pre-commit gate, and Hera Darwin system build passed. No activation performed.
+:SOURCE_REPO: nix
+:SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
+:ORIGINAL_SIZE: 0
+:END:
+
+Add the existing Vulcan Public Syncthing folder to managed Hera and Clio homes.
+
+Acceptance Criteria:
+Hera and Clio manage folder ID public at ~/Public with the existing full-mesh send-receive policy; activation validates the public directory without making Nix own it; bootstrap and runtime contracts cover Public; focused Syncthing checks pass.
+
 * DONE [#B] Fence legacy Agent Deck consumers during the schema-20 rollout
 :PROPERTIES:
 :OBR_SCHEMA_VERSION: 17

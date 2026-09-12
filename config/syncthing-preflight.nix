@@ -4,6 +4,8 @@
   desktopIgnoreFile,
   documentsDirectory,
   documentsIgnoreFile,
+  publicDirectory,
+  publicIgnoreFile,
   guiSocket,
   lib,
   localDeviceID,
@@ -25,11 +27,11 @@ in
   syncthing_require_directory() {
     local path="$1" expected_mode="$2"
     [[ -d "$path" && ! -L "$path" ]] \
-      || syncthing_fail "required private directory is missing or unsafe: $path"
+      || syncthing_fail "required managed directory is missing or unsafe: $path"
     [[ "$(${tools.stat} -f '%Su' "$path")" == ${quote username} ]] \
-      || syncthing_fail "private directory has the wrong owner: $path"
+      || syncthing_fail "managed directory has the wrong owner: $path"
     [[ "$(${tools.stat} -f '%Lp' "$path")" == "$expected_mode" ]] \
-      || syncthing_fail "private directory has the wrong mode: $path"
+      || syncthing_fail "managed directory has the wrong mode: $path"
   }
   syncthing_require_file() {
     local path="$1"
@@ -44,7 +46,7 @@ in
     local path="$1"
     if [[ -e "$path" || -L "$path" ]]; then
       [[ -d "$path" && ! -L "$path" ]] \
-        || syncthing_fail "required private directory is missing or unsafe: $path"
+        || syncthing_fail "required managed directory is missing or unsafe: $path"
     fi
     ${tools.install} -d -m 0700 "$path" \
       || syncthing_fail "could not create private directory: $path"
@@ -56,6 +58,7 @@ in
   syncthing_require_directory ${quote stateDirectory} 700
   syncthing_require_directory ${quote documentsDirectory} 700
   syncthing_require_directory ${quote desktopDirectory} 700
+  syncthing_require_directory ${quote publicDirectory} 755
   syncthing_require_file ${quote "${stateDirectory}/cert.pem"}
   syncthing_require_file ${quote "${stateDirectory}/key.pem"}
   syncthing_require_file ${quote "${stateDirectory}/config.xml"}
@@ -169,6 +172,23 @@ in
     ) || syncthing_fail "could not install the managed Desktop .stignore"
   fi
 
+  if [[ -L ${quote "${publicDirectory}/.stignore"} ]] \
+    || { [[ -e ${quote "${publicDirectory}/.stignore"} ]] \
+      && [[ ! -f ${quote "${publicDirectory}/.stignore"} ]]; }; then
+    syncthing_fail "Public .stignore is not a safe regular file"
+  fi
+  if ! ${tools.cmp} -s ${publicIgnoreFile} ${quote "${publicDirectory}/.stignore"} \
+    || [[ "$(${tools.stat} -f '%Su' ${quote "${publicDirectory}/.stignore"})" != ${quote username} ]] \
+    || [[ "$(${tools.stat} -f '%Lp' ${quote "${publicDirectory}/.stignore"})" != 600 ]]; then
+    (
+      set -e
+      ignore_tmp=${quote "${publicDirectory}/.stignore.tmp"}.$$
+      trap '${tools.rm} -f "$ignore_tmp"' EXIT
+      ${tools.install} -m 0600 ${publicIgnoreFile} "$ignore_tmp"
+      ${tools.mv} -f "$ignore_tmp" ${quote "${publicDirectory}/.stignore"}
+    ) || syncthing_fail "could not install the managed Public .stignore"
+  fi
+
   syncthing_exclude_from_time_machine() {
     local path="$1" excluded
     excluded="$(
@@ -182,6 +202,7 @@ in
   }
   syncthing_exclude_from_time_machine ${quote documentsDirectory}
   syncthing_exclude_from_time_machine ${quote desktopDirectory}
+  syncthing_exclude_from_time_machine ${quote publicDirectory}
 
   if [[ -e ${quote guiSocket} || -L ${quote guiSocket} ]]; then
     [[ -S ${quote guiSocket} && ! -L ${quote guiSocket} ]] \
