@@ -223,11 +223,11 @@
     "pi": {
       "flake": false,
       "locked": {
-        "lastModified": 1789148288,
-        "narHash": "sha256-08eOjrFdYFgWNaOiDrou4fK4Io6KLmDhsTZg6V1aU0o=",
+        "lastModified": 1789231987,
+        "narHash": "sha256-hGRA5W3A8di7Z8y7/bfGAPiLFEuM6kiTgbOM+47Qy1g=",
         "owner": "jwiegley",
         "repo": "pi",
-        "rev": "b20a8180b921f50900eef2a714066a6b39f0f09a",
+        "rev": "10998453bf8cd44487550290e32b6ccde77ad5c5",
         "type": "github"
       },
       "original": {
