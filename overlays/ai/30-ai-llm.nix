@@ -1,4 +1,5 @@
 # LLM package exposure and compatibility overrides.
+{ llamaSwapGoFor }:
 final: prev:
 
 let
@@ -46,7 +47,10 @@ let
     else
       prev.llama-cpp;
 in
-(import ../../packages/ai-llm.nix { inherit final prev; })
+(import ../../packages/ai-llm.nix {
+  inherit final prev;
+  llamaSwapGo = llamaSwapGoFor prev.stdenv.buildPlatform.system;
+})
 // {
   # Skip two Node fs.cp socket tests on Darwin.
   nodejs-slim_26 = prev.nodejs-slim_26.overrideAttrs (

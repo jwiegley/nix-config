@@ -1,5 +1,9 @@
 # Independent LLM application packages.
-{ final, prev }:
+{
+  final,
+  prev,
+  llamaSwapGo,
+}:
 
 let
   sources = import ./source-catalog.nix "ai";
@@ -86,28 +90,31 @@ in
         });
     in
     with prev;
-    (prev.llama-swap.override { buildGoModule = final.buildGo127Module; }).overrideAttrs (_attrs: rec {
-      inherit version src;
-      vendorHash = sources.llama-swap.hashes.vendorHash;
-      preBuild = ''
-        # The main binary embeds internal/server/ui_dist, which the source
-        # archive omits; populate it with the built Vite output.
-        rm -rf internal/server/ui_dist
-        cp -r ${ui}/ui_dist internal/server/
-      '';
-      ldflags = [
-        "-X main.version=${version}"
-        "-X main.date=unknown"
-        "-X main.commit=v${version}"
-      ];
-      doCheck = false;
-      meta = {
-        description = "Model swapping for llama.cpp (or any local OpenAPI compatible server)";
-        license = lib.licenses.mit;
-        platforms = lib.platforms.unix;
-        mainProgram = "llama-swap";
-      };
-    });
+    (prev.llama-swap.override {
+      buildGoModule = prev.buildGoModule.override { go = llamaSwapGo; };
+    }).overrideAttrs
+      (_attrs: rec {
+        inherit version src;
+        vendorHash = sources.llama-swap.hashes.vendorHash;
+        preBuild = ''
+          # The main binary embeds internal/server/ui_dist, which the source
+          # archive omits; populate it with the built Vite output.
+          rm -rf internal/server/ui_dist
+          cp -r ${ui}/ui_dist internal/server/
+        '';
+        ldflags = [
+          "-X main.version=${version}"
+          "-X main.date=unknown"
+          "-X main.commit=v${version}"
+        ];
+        doCheck = false;
+        meta = {
+          description = "Model swapping for llama.cpp (or any local OpenAPI compatible server)";
+          license = lib.licenses.mit;
+          platforms = lib.platforms.unix;
+          mainProgram = "llama-swap";
+        };
+      });
 
   # AIPerf - Generative AI model-server benchmarking
   aiperf =

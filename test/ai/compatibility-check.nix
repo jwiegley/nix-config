@@ -93,6 +93,16 @@ let
           (_final: _prev: { agent-deck = "caller-override"; })
         ];
       };
+      consumerGoBuilderPoisonedPackages = import inputs.nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+        overlays = [
+          (_final: _prev: {
+            buildGo127Module = throw "llama-swap used a consumer-owned Go 1.27 builder";
+          })
+          actual.overlays.default
+        ];
+      };
       pinnedCodexPackage = inputs.llm-agents.packages.${system}.codex;
       pinnedDroidPackage = inputs.llm-agents.packages.${system}.droid;
       upstreamPiPackage = inputs.llm-agents.packages.${system}.pi;
@@ -179,6 +189,13 @@ let
       (lib.assertMsg (
         consumerNpmBuilderPoisonedResources.drvPath == pkgs.agent-resources.drvPath
       ) "agent-resources regained a consumer-owned npm builder route on ${system}")
+      (lib.assertMsg (
+        consumerGoBuilderPoisonedPackages.llama-swap.drvPath == pkgs.llama-swap.drvPath
+        &&
+          pkgs.llama-swap.go.drvPath
+          == inputs.llm-agents.inputs.nixpkgs.legacyPackages.${system}.go_1_27.drvPath
+        && lib.versionAtLeast pkgs.llama-swap.go.version "1.27.1"
+      ) "llama-swap compiler depends on consumer Go availability on ${system}")
       (lib.assertMsg (
         overridden.agent-deck == "caller-override"
       ) "portable AI overlay prevents later caller overrides on ${system}")

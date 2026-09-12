@@ -9776,14 +9776,14 @@ Runtime hook authority creation follows symlinked hooks-directory ancestors via 
 :LABELS:   []
 :ISSUE_TYPE: task
 :CREATED:  [2026-09-11 Fri 12:11]
-:MODIFIED: [2026-09-11 Fri 15:54]
+:MODIFIED: [2026-09-11 Fri 23:11]
 :CREATED_BY: johnw
 :SOURCE_REPO: nix
 :SOURCE_REPO_PATH: /Users/johnw/src/sys/nix
 :ORIGINAL_SIZE: 0
 :END:
 
-Daily goal mtx5dzej-knh8h3. Source update completed with user exclusions (agent-workflows, work/git-ai; Databases absent). Published verified fork tips: Pi b20a8180, CLIProxyAPI 0b2a7dd0, VibeProxy 9c510665, Agent Deck d4917a28, PAL 0ecacca. PAL unit suite: 961 passed with warnings-as-errors; live-provider tests not run. User redirected Nix oMLX to official jundot v0.6.4 and release-declared dependencies; package build verified. Nix input and complete automatic catalog updates succeeded after MTPLX isolation, Go 1.27 selection, mlx-audio metadata, Pi normalization and SDK cache repairs. System build passed; make test passed (21 Python suites plus 10 behavioral checks); portable flake evaluation passed for all systems. Final signed revision rebuild/publication pending. Activation held pending unresolved Autoagent/Codex policy: configured origin is upstream; jwiegley forks return 404; Autoagent has no release tags. Keep existing personal state and the Pi metadata marker. Logs are /tmp/hera-*20260911* and /tmp/hera-make-test-passed.log.
+Daily goal mtx5dzej-knh8h3. Source updates completed with approved exclusions. Verified fork publications: Pi b20a8180, CLIProxyAPI 0b2a7dd0, VibeProxy 9c510665, Agent Deck d4917a28, PAL 0ecacca. PAL: 961 unit tests passed with warnings-as-errors; live-provider tests not run. User revised Autoagent/Codex to upstream-only: clean main=origin/main at eb3f185d and 53ff712a after fetch/fast-forward, no publishing. Nix uses official oMLX v0.6.4 with release dependencies; package build passed; local fork preserved. Nix update was built/tested/published as 5f2b5f92. Approved org-jw update was subsequently published by another session (3ffe79ff), along with idle-check changes through 93a423c9, already active when this session resumed. User reported Vulcan failure: latest log confirms missing buildGo127Module. Shared repair explicitly supplies llama-swap compiler from independently locked llm-agents Nixpkgs, retaining consumer module builder; no global Go override. Regression failed before fix, passes after. Exact Vulcan Nixpkgs b6018f87 local evaluation succeeds with Go1.27.1 while buildGo127Module is absent. No Vulcan builds, switches, or changes performed. Fixed llama-swap and Hera system builds passed; make test (21 Python suites, 10 behavioral checks) and portable all-system evaluation passed. Fix publication and requested Hera make switch pending. Evidence: /tmp/hera-go-compat-{negative,positive}.log, /tmp/hera-vulcan-llama-swap-eval.log, /tmp/hera-go-fix-{make-test,portable,system-build}.log.
 
 * DONE [#B] Remove Pi Blackhole from managed AI configuration
 :PROPERTIES:

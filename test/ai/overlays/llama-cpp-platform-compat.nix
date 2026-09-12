@@ -1,7 +1,9 @@
 { lib, runCommand }:
 
 let
-  overlay = import ../../../overlays/ai/30-ai-llm.nix;
+  overlay = import ../../../overlays/ai/30-ai-llm.nix {
+    llamaSwapGoFor = _: throw "llama-cpp unexpectedly forced llama-swap's compiler";
+  };
   source = (import ../../../packages/source-catalog.nix "ai").llama-cpp;
 
   linuxPackages = overlay { } {

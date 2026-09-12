@@ -43,7 +43,10 @@
   (import ./30-agent-deck.nix)
   (import ./30-wiki.nix)
   (import ./30-ai-python.nix)
-  (import ./30-ai-llm.nix)
+  ((import ./30-ai-llm.nix) {
+    # Consumer Nixpkgs may predate llama-swap's required Go compiler.
+    llamaSwapGoFor = system: inputs.llm-agents.inputs.nixpkgs.legacyPackages.${system}.go_1_27;
+  })
   ((import ./30-ai-mcp.nix) {
     llmAgents = inputs.llm-agents;
     palMcpServer = inputs.pal-mcp-server or null;
