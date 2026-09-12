@@ -105,6 +105,16 @@ let
         Compression = false;
       });
 
+      pi = {
+        User = "pi";
+        HostName = "raspberrypi.lan";
+        Compression = false;
+        # BatchMode = false;
+        # KbdInteractiveAuthentication = true;
+        # PasswordAuthentication = true;
+        # PreferredAuthentications = "password";
+      };
+
       "srp vps" = controlMastered {
         User = hosts.vps.username;
         HostName = hosts.vps.dnsName;
