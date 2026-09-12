@@ -11,7 +11,7 @@ I want to run through a daily upgrade of the entire system. The involves three t
 To update all of the Git projects that we track on this system, run:
 
 ```
-update ~/doc ~/src ~/Models ~/work
+update ~/doc ~/src ~/src/fork ~/src/sys ~/Models ~/work/*
 ```
 
 Make sure to notice and resolve any issues that arise.
